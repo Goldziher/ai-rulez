@@ -1,0 +1,17 @@
+{
+  "name": "ai_rules",
+  "version": "0.1.0",
+  "description": "A CLI tool for managing AI assistant rules",
+  "private": true,
+  "packageManager": "pnpm@9.15.2",
+  "scripts": {
+    "commitlint": "commitlint --edit"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0"
+  },
+  "commitlint": {
+    "extends": ["@commitlint/config-conventional"]
+  }
+}

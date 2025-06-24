@@ -39,3 +39,11 @@ Thumbs.db
 # Coverage
 coverage.txt
 coverage.html
+coverage.out
+
+# Node.js
+node_modules/
+pnpm-lock.yaml
+
+# GoReleaser
+dist/
