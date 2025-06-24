@@ -1,0 +1,33 @@
+repos:
+  - repo: https://github.com/Goldziher/airules
+    rev: v1.0.0  # Use the ref you want to point at
+    hooks:
+      - id: airules-validate
+        name: Validate airules configuration
+        description: Validate airules configuration files and ensure they would generate successfully
+        entry: airules generate --dry-run
+        language: golang
+        additional_dependencies: []
+        files: '^(\.airules\.yaml|airules\.yaml)$'
+        pass_filenames: false
+        always_run: false
+        
+      - id: airules-generate
+        name: Generate airules files
+        description: Generate airules output files from configuration
+        entry: airules generate
+        language: golang
+        additional_dependencies: []
+        files: '^(\.airules\.yaml|airules\.yaml)$'
+        pass_filenames: false
+        always_run: false
+        
+      - id: airules-recursive
+        name: Generate airules files (recursive)
+        description: Generate all airules output files in the repository
+        entry: airules generate --recursive
+        language: golang
+        additional_dependencies: []
+        files: '^(\.airules\.yaml|airules\.yaml)$'
+        pass_filenames: false
+        always_run: false

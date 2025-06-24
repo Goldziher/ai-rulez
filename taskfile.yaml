@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  BINARY_NAME: ai_rules
+  BINARY_NAME: airules
 
 tasks:
   build:
@@ -15,20 +15,34 @@ tasks:
       - go install .
 
   test:
-    desc: Run tests
+    desc: Run unit tests
     cmds:
-      - go test -v ./...
+      - go test -timeout=30s -v ./internal/...
 
   test:coverage:
-    desc: Run tests with coverage
+    desc: Run unit tests with coverage
     cmds:
-      - go test -v -coverprofile=coverage.out ./...
+      - go test -timeout=30s -v -coverprofile=coverage.out ./internal/...
       - go tool cover -html=coverage.out -o coverage.html
 
   test:race:
-    desc: Run tests with race detection
+    desc: Run unit tests with race detection
     cmds:
-      - go test -race -v ./...
+      - go test -timeout=30s -race -v ./internal/...
+
+  test:integration:
+    desc: Run integration tests
+    cmds:
+      - cd testing && go test -timeout=5m -v .
+
+  test:benchmark:
+    desc: Run benchmark tests
+    cmds:
+      - cd testing && go test -timeout=10m -bench=. -benchmem .
+
+  test:all:
+    desc: Run all tests (unit + integration)
+    deps: [test, test:integration]
 
   lint:
     desc: Lint the code
@@ -60,13 +74,31 @@ tasks:
       - rm -rf bin/
       - rm -f coverage.out coverage.html
 
+  setup:
+    desc: Initial development environment setup
+    cmds:
+      - go mod tidy
+      - go install github.com/evilmartians/lefthook@latest
+      - lefthook install
+      - pnpm install
+      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - echo "✅ Setup complete!"
+
   dev:
     desc: Development setup
     deps: [tidy, format, lint, test]
 
   ci:
     desc: Run all checks (like CI)
+    deps: [tidy, format, lint, test:race, test:integration]
+
+  ci:unit:
+    desc: Run CI unit tests only
     deps: [tidy, format, lint, test:race]
+
+  ci:integration:
+    desc: Run CI integration tests only
+    deps: [test:integration]
 
   build:all:
     desc: Build for multiple platforms

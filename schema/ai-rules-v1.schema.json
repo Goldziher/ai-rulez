@@ -1,8 +1,8 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json",
+  "$id": "https://github.com/Goldziher/airules/schema/ai-rules-v1.schema.json",
   "title": "AI Rules Configuration",
-  "description": "Schema for ai_rules YAML configuration files",
+  "description": "Schema for airules YAML configuration files",
   "type": "object",
   "required": ["metadata", "outputs"],
   "properties": {

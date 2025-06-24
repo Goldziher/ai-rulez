@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai_rules/internal/config"
+	"github.com/Goldziher/airules/internal/config"
 )
 
 func TestSchemaValidation(t *testing.T) {
@@ -29,7 +29,7 @@ outputs:
 		{
 			name: "valid_full_config",
 			yaml: `
-$schema: https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/airules/schema/ai-rules-v1.schema.json
 metadata:
   name: "Test Project"
   version: "1.0.0"

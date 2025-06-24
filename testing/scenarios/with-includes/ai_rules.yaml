@@ -16,7 +16,7 @@ outputs:
 
 rules:
   - name: "Project Specific"
-    priority: "high"
+    priority: 10
     content: |
       - Follow our company coding standards
       - All PRs must be reviewed by 2 people

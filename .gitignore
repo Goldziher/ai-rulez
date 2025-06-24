@@ -19,9 +19,13 @@ go.work
 go.work.sum
 
 # Build output
-dist/
-build/
-ai_rules
+/dist/
+/build/dist/
+/build/npm/bin/
+/build/python/dist/
+/build/python/*.egg-info/
+/build/python/build/
+airules
 
 # Generated AI rule files (but NOT ai_rules.yaml config)
 claude.md
@@ -49,6 +53,9 @@ coverage.html
 coverage.out
 *.coverprofile
 
+# Profiling
+*.prof
+
 # Test artifacts
 **/*.test
 **/testdata/
@@ -67,3 +74,4 @@ pnpm-lock.yaml
 
 # GoReleaser
 dist/
+.goreleaser/

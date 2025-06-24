@@ -6,11 +6,13 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/Goldziher/ai_rules/internal/config"
-	"github.com/Goldziher/ai_rules/internal/templates"
+	"github.com/Goldziher/airules/internal/config"
+	"github.com/Goldziher/airules/internal/templates"
 )
 
 // Generator handles the generation of output files from configuration.
@@ -49,6 +51,12 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 		return errors.New("no outputs defined in configuration")
 	}
 
+	// Use concurrent generation for larger file sets
+	if len(cfg.Outputs) >= 10 {
+		return g.GenerateAllConcurrent(cfg)
+	}
+
+	// Serial generation for smaller file sets
 	templateData := templates.NewTemplateData(cfg)
 
 	for i, output := range cfg.Outputs {
@@ -100,18 +108,32 @@ func (g *Generator) shouldWriteFile(filePath, newContent string) (bool, error) {
 	fullPath := filepath.Join(g.baseDir, filePath)
 
 	// If file doesn't exist, we should write it
-	existingContent, err := os.ReadFile(fullPath)
+	stat, err := os.Stat(fullPath)
 	if os.IsNotExist(err) {
 		return true, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("failed to read existing file %s: %w", fullPath, err)
+		return false, fmt.Errorf("failed to stat file %s: %w", fullPath, err)
 	}
 
-	// Compare content hashes
-	existingHash := computeContentHash(string(existingContent))
-	newHash := computeContentHash(newContent)
+	// For small files (< 1MB), read into memory
+	if stat.Size() < 1024*1024 {
+		existingContent, err := os.ReadFile(fullPath)
+		if err != nil {
+			return false, fmt.Errorf("failed to read existing file %s: %w", fullPath, err)
+		}
+		existingHash := computeContentHash(string(existingContent))
+		newHash := computeContentHash(newContent)
+		return existingHash != newHash, nil
+	}
 
+	// For larger files, use streaming hash
+	existingHash, err := computeFileHashStreaming(fullPath)
+	if err != nil {
+		return false, fmt.Errorf("failed to compute hash for %s: %w", fullPath, err)
+	}
+
+	newHash := computeContentHash(newContent)
 	return existingHash != newHash, nil
 }
 
@@ -134,6 +156,34 @@ func (g *Generator) renderTemplate(output config.Output, data *templates.Templat
 		templateName = output.Template
 	}
 
+	// Check if this is a file reference (starts with @)
+	if strings.HasPrefix(templateName, "@") {
+		templatePath := strings.TrimPrefix(templateName, "@")
+		// Resolve the template path relative to base directory
+		fullPath := filepath.Join(g.baseDir, templatePath)
+
+		// Read the template file
+		templateContent, err := os.ReadFile(fullPath)
+		if err != nil {
+			return "", fmt.Errorf("failed to read template file %s: %w", fullPath, err)
+		}
+
+		// Register and render the template
+		templateID := fmt.Sprintf("file:%s", templatePath)
+		if err := g.renderer.RegisterTemplate(templateID, string(templateContent)); err != nil {
+			return "", fmt.Errorf("failed to register template from %s: %w", templatePath, err)
+		}
+
+		return g.renderer.Render(templateID, data)
+	}
+
+	// Check if this is an inline template (contains newlines or template syntax)
+	if strings.Contains(templateName, "\n") || strings.Contains(templateName, "{{") {
+		// This is an inline template
+		return templates.RenderString(templateName, data)
+	}
+
+	// Otherwise, treat as a named template
 	content, err := g.renderer.Render(templateName, data)
 	if err != nil {
 		return "", fmt.Errorf("failed to render template %s: %w", templateName, err)
@@ -162,9 +212,27 @@ func (g *Generator) writeFile(filePath, content string) error {
 }
 
 // computeContentHash computes SHA256 hash of content.
+// Consider using ComputeContentHashPooled for better performance.
 func computeContentHash(content string) string {
 	hash := sha256.Sum256([]byte(content))
 	return hex.EncodeToString(hash[:])
+}
+
+
+// computeFileHashStreaming computes SHA256 hash of a file without loading entire content into memory.
+func computeFileHashStreaming(filePath string) (string, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = file.Close() }()
+
+	hash := sha256.New()
+	if _, err := io.Copy(hash, file); err != nil {
+		return "", err
+	}
+
+	return hex.EncodeToString(hash.Sum(nil)), nil
 }
 
 // RegisterTemplate adds a custom template to the generator's renderer.
@@ -194,4 +262,25 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 
 	// Render and return content
 	return g.renderTemplate(*targetOutput, templateData)
+}
+
+// PreviewAll generates all output content without writing files.
+// Returns a map of file paths to their generated content.
+func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
+	if len(cfg.Outputs) == 0 {
+		return nil, errors.New("no outputs defined in configuration")
+	}
+
+	templateData := templates.NewTemplateData(cfg)
+	results := make(map[string]string)
+
+	for i, output := range cfg.Outputs {
+		content, err := g.renderTemplate(output, templateData)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate output %d (%s): %w", i, output.File, err)
+		}
+		results[output.File] = content
+	}
+
+	return results, nil
 }

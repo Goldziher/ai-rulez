@@ -1,0 +1,79 @@
+{
+  "name": "Validation",
+  "description": "Test configuration validation functionality",
+  "tests": [
+    {
+      "name": "valid_basic_config",
+      "description": "Validate basic valid configuration",
+      "command": ["validate", "scenarios/basic/ai_rules.yaml"],
+      "expected_out": "✓ Configuration file * is valid",
+      "exit_code": 0
+    },
+    {
+      "name": "valid_minimal_config",
+      "description": "Validate minimal valid configuration",
+      "command": ["validate", "scenarios/minimal/ai_rules.yaml"],
+      "expected_out": "✓ Configuration file * is valid",
+      "exit_code": 0
+    },
+    {
+      "name": "valid_with_includes",
+      "description": "Validate configuration with includes",
+      "command": ["validate", "scenarios/with-includes/ai_rules.yaml"],
+      "expected_out": "✓ Configuration file * is valid",
+      "exit_code": 0
+    },
+    {
+      "name": "invalid_missing_name",
+      "description": "Invalid config missing required name",
+      "command": ["validate", "scenarios/invalid/missing-name.yaml"],
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "invalid_no_outputs",
+      "description": "Invalid config with no outputs",
+      "command": ["validate", "scenarios/invalid/no-outputs.yaml"],
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "invalid_bad_yaml",
+      "description": "Invalid YAML syntax",
+      "command": ["validate", "scenarios/invalid/bad-yaml.yaml"],
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "invalid_bad_priority",
+      "description": "Invalid priority value",
+      "command": ["validate", "scenarios/invalid/bad-priority.yaml"],
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "missing_include_file",
+      "description": "Missing included file",
+      "command": ["validate", "scenarios/invalid/missing-include.yaml"],
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "config_file_not_found",
+      "description": "Configuration file doesn't exist",
+      "command": ["validate", "nonexistent.yaml"],
+      "expected_err": "Configuration file * not found",
+      "exit_code": 1
+    },
+    {
+      "name": "validate_with_discovery",
+      "description": "Validate using config discovery",
+      "command": ["validate"],
+      "files": {
+        ".airules.yaml": "metadata:\n  name: \"Discovery Test\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "✓ Configuration file * is valid",
+      "exit_code": 0
+    }
+  ]
+}
