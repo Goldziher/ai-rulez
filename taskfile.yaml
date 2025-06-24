@@ -40,10 +40,14 @@ tasks:
     cmds:
       - golangci-lint run --fix
 
-  fmt:
-    desc: Format code
+  format:
+    desc: Format code with go fmt
     cmds:
       - go fmt ./...
+
+  fmt:
+    desc: Format code (alias for format)
+    deps: [format]
 
   tidy:
     desc: Tidy dependencies
@@ -58,11 +62,11 @@ tasks:
 
   dev:
     desc: Development setup
-    deps: [tidy, fmt, lint, test]
+    deps: [tidy, format, lint, test]
 
   ci:
     desc: Run all checks (like CI)
-    deps: [tidy, fmt, lint, test:race]
+    deps: [tidy, format, lint, test:race]
 
   build:all:
     desc: Build for multiple platforms
