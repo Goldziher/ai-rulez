@@ -1,0 +1,27 @@
+metadata:
+  name: "Security Rules"
+
+rules:
+  - name: "Input Validation"
+    priority: "critical"
+    content: |
+      - Validate all user inputs
+      - Sanitize data before database operations
+      - Use parameterized queries
+      - Implement rate limiting
+
+  - name: "Authentication"
+    priority: "critical"
+    content: |
+      - Use strong password policies
+      - Implement multi-factor authentication
+      - Use secure session management
+      - Log authentication attempts
+
+  - name: "Data Protection"
+    priority: "high"
+    content: |
+      - Encrypt sensitive data at rest
+      - Use HTTPS for all communications
+      - Implement proper access controls
+      - Regular security audits

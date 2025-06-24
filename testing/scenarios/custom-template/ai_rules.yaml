@@ -1,0 +1,26 @@
+metadata:
+  name: "Custom Template Project"
+  version: "1.5.0"
+  description: "Testing custom template functionality"
+
+outputs:
+  - file: "CLAUDE.md"
+  - file: "simple-rules.txt"
+    template: "simple"
+  - file: "detailed-rules.md"
+    template: "detailed"
+
+rules:
+  - name: "Performance"
+    priority: "high"
+    content: |
+      - Optimize critical paths
+      - Use efficient algorithms
+      - Monitor memory usage
+
+  - name: "Documentation"
+    priority: "low"
+    content: |
+      - Document public APIs
+      - Keep README up to date
+      - Write helpful comments
