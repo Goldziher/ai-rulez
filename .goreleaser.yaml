@@ -2,16 +2,16 @@ project_name: airules
 
 before:
   hooks:
-    - go mod tidy
     - go mod download
-    - go list -m
 
 builds:
   - id: airules
     binary: airules
-    main: ./main.go
+    main: .
     env:
       - CGO_ENABLED=0
+      - GOPROXY=direct
+      - GOSUMDB=off
     goos:
       - linux
       - windows
