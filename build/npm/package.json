@@ -1,6 +1,6 @@
 {
   "name": "airules",
-  "version": "0.1.0",
+  "version": "1.0.0rc1",
   "description": "AI rules configuration management tool",
   "keywords": ["ai", "rules", "configuration", "claude", "cursor", "windsurf"],
   "repository": {

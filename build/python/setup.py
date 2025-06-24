@@ -10,7 +10,7 @@ import requests
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 
-VERSION = "0.1.0"
+VERSION = "1.0.0rc1"
 REPO_NAME = "Goldziher/airules"
 
 class PostInstallCommand(install):
