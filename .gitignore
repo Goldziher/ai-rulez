@@ -20,11 +20,7 @@ go.work.sum
 
 # Build output
 /dist/
-/build/dist/
-/build/npm/bin/
-/build/python/dist/
-/build/python/*.egg-info/
-/build/python/build/
+/build/
 /airules
 
 # Generated AI rule files (but NOT ai_rules.yaml config)
@@ -46,6 +42,11 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+*.tgz
+*.tar.gz
+*.zip
+*.tar
+*.gz
 
 # Coverage
 coverage.txt
