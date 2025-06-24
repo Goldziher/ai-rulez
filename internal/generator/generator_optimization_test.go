@@ -74,8 +74,6 @@ func BenchmarkGenerateAllOptimized(b *testing.B) {
 		}
 	}
 }
-
-
 func BenchmarkComputeContentHashPooled(b *testing.B) {
 	content := "This is a test string that will be hashed repeatedly during the benchmark"
 

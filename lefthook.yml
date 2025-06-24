@@ -2,7 +2,7 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: golangci-lint run --fix
+      run: golangci-lint run --fix --config .golangci.yml
       fail_text: "Linting failed"
     test:
       run: go test -v ./...

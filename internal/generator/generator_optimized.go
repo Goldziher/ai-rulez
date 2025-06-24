@@ -121,7 +121,6 @@ func ComputeContentHashPooled(content string) string {
 	return hex.EncodeToString(h.Sum(result))
 }
 
-
 // renderTemplateOptimized renders a template using pooled string builders.
 func (g *Generator) renderTemplateOptimized(output config.Output, data *templates.TemplateData) (string, error) {
 	templateName := "default"
