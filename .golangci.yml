@@ -1,0 +1,93 @@
+run:
+    go: '1.24'
+
+linters-settings:
+    revive:
+        enable-all-rules: true
+        rules:
+            - name: file-header
+              disabled: true
+            - name: unchecked-type-assertion
+              disabled: true
+            - name: comment-spacings
+              disabled: true
+            - name: function-length
+              disabled: true
+            - name: banned-characters
+              disabled: true
+            - name: add-constant
+              disabled: true
+            - name: line-length-limit
+              disabled: true
+            - name: flag-parameter
+              disabled: true
+            - name: deep-exit
+              disabled: true
+            - name: cyclomatic
+              arguments: [25]
+            - name: cognitive-complexity
+              arguments: [25]
+            - name: max-public-structs
+              disabled: true
+            - name: function-result-limit
+              arguments: [2]
+            - name: argument-limit
+              arguments: [5]
+    goconst:
+        ignore-tests: true
+    govet:
+        check-shadowing: true
+        disable-all: true
+    decorder:
+        dec-order:
+            - const
+            - type
+            - var
+            - func
+    maintidx:
+        min-index: 80
+
+linters:
+    enable:
+        - asasalint
+        - bidichk
+        - decorder
+        - dupword
+        - durationcheck
+        - errcheck
+        - errorlint
+        - exhaustive
+        - exportloopref
+        - goconst
+        - gocritic
+        - godot
+        - goheader
+        - gomodguard
+        - goprintffuncname
+        - gosec
+        - gosimple
+        - govet
+        - ineffassign
+        - misspell
+        - nilnil
+        - nolintlint
+        - prealloc
+        - predeclared
+        - reassign
+        - revive
+        - sqlclosecheck
+        - staticcheck
+        - tagalign
+        - tenv
+        - testpackage
+        - thelper
+        - typecheck
+        - unconvert
+        - unparam
+        - unused
+        - usestdlibvars
+        - wastedassign
+        - whitespace
+
+issues:
+    fix: true

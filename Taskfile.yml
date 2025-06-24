@@ -1,0 +1,73 @@
+version: '3'
+
+vars:
+  BINARY_NAME: ai_rules
+
+tasks:
+  build:
+    desc: Build the binary
+    cmds:
+      - go build -o bin/{{.BINARY_NAME}} .
+
+  install:
+    desc: Install the binary
+    cmds:
+      - go install .
+
+  test:
+    desc: Run tests
+    cmds:
+      - go test -v ./...
+
+  test:coverage:
+    desc: Run tests with coverage
+    cmds:
+      - go test -v -coverprofile=coverage.out ./...
+      - go tool cover -html=coverage.out -o coverage.html
+
+  test:race:
+    desc: Run tests with race detection
+    cmds:
+      - go test -race -v ./...
+
+  lint:
+    desc: Lint the code
+    cmds:
+      - golangci-lint run
+
+  lint:fix:
+    desc: Fix linting issues
+    cmds:
+      - golangci-lint run --fix
+
+  fmt:
+    desc: Format code
+    cmds:
+      - go fmt ./...
+
+  tidy:
+    desc: Tidy dependencies
+    cmds:
+      - go mod tidy
+
+  clean:
+    desc: Clean build artifacts
+    cmds:
+      - rm -rf bin/
+      - rm -f coverage.out coverage.html
+
+  dev:
+    desc: Development setup
+    deps: [tidy, fmt, lint, test]
+
+  ci:
+    desc: Run all checks (like CI)
+    deps: [tidy, fmt, lint, test:race]
+
+  build:all:
+    desc: Build for multiple platforms
+    cmds:
+      - GOOS=linux GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-linux-amd64 .
+      - GOOS=windows GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-windows-amd64.exe .
+      - GOOS=darwin GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-darwin-amd64 .
+      - GOOS=darwin GOARCH=arm64 go build -o bin/{{.BINARY_NAME}}-darwin-arm64 .
