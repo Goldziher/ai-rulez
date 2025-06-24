@@ -218,7 +218,6 @@ func computeContentHash(content string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-
 // computeFileHashStreaming computes SHA256 hash of a file without loading entire content into memory.
 func computeFileHashStreaming(filePath string) (string, error) {
 	file, err := os.Open(filePath)
