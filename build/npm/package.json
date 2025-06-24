@@ -1,6 +1,6 @@
 {
   "name": "airules",
-  "version": "1.0.0-rc1",
+  "version": "0.0.0-placeholder",
   "description": "CLI tool for managing AI assistant rules - generate configuration files for Claude, Cursor, Windsurf and more",
   "keywords": ["ai", "rules", "configuration", "claude", "cursor", "windsurf", "cli", "assistant", "copilot", "generator"],
   "repository": {
