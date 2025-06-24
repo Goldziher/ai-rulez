@@ -34,7 +34,7 @@ linters:
         - staticcheck
         - tagalign
         - testpackage  # Keep enabled: tests should be in separate package
-        - thelper
+        # - thelper  # Disabled: we use anonymous test setup functions
         - unconvert
         - unparam
         - unused
@@ -77,6 +77,8 @@ linters:
                   disabled: true  # Allow underscores in package names (ai_rules)
                 - name: package-comments
                   disabled: true  # Don't require package comments for main
+                - name: call-to-gc
+                  disabled: true  # Allow runtime.GC() in profiling code
         goconst:
             ignore-tests: true
         govet:
@@ -101,30 +103,36 @@ linters:
 issues:
     exclude-rules:
         # Ignore gosec warnings about subprocess launching in test files
-        - path: _test\.go
+        - path: "_test\\.go"
           linters:
               - gosec
           text: "G204:"
         
         # Ignore complexity warnings in test files
-        - path: _test\.go
+        - path: "_test\\.go"
           linters:
               - revive
           text: "cognitive-complexity"
         
         # Ignore function result limit in test files
-        - path: _test\.go
+        - path: "_test\\.go"
           linters:
               - revive
           text: "function-result-limit"
         
         # Allow test helpers that don't use testing.T
-        - path: _test\.go
+        - path: "_test\\.go"
           linters:
               - thelper
         
         # Allow unused code in test files (test helpers)
-        - path: _test\.go
+        - path: "_test\\.go"
           linters:
               - unused
           text: "is unused"
+        
+        # Allow GC call in profile command
+        - path: "cmd/airules/profile\\.go"
+          linters:
+              - revive
+          text: "call-to-gc"
