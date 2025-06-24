@@ -1,0 +1,7 @@
+rules:
+  - name: "Framework Rules"
+    priority: "medium"
+    content: |
+      - Use the latest LTS version
+      - Follow framework conventions
+      - Keep dependencies up to date

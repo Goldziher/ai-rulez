@@ -1,0 +1,51 @@
+# {{.ProjectName}} - Detailed Rules
+
+**Project Information:**
+- Name: {{.ProjectName}}
+{{- if .Version}}
+- Version: {{.Version}}
+{{- end}}
+{{- if .Description}}
+- Description: {{.Description}}
+{{- end}}
+- Generated: {{.Timestamp.Format "January 2, 2006 at 3:04 PM"}}
+- Total Rules: {{.RuleCount}}
+
+---
+
+## Rules by Priority
+
+{{- $high := 0}}
+{{- $medium := 0}}
+{{- $low := 0}}
+{{- $none := 0}}
+{{- range .Rules}}
+  {{- if eq .Priority "high"}}{{$high = add $high 1}}{{end}}
+  {{- if eq .Priority "medium"}}{{$medium = add $medium 1}}{{end}}
+  {{- if eq .Priority "low"}}{{$low = add $low 1}}{{end}}
+  {{- if eq .Priority ""}}{{$none = add $none 1}}{{end}}
+{{- end}}
+
+### High Priority Rules
+{{range .Rules}}{{if eq .Priority "high"}}
+#### {{.Name}}
+{{.Content}}
+{{end}}{{end}}
+
+### Medium Priority Rules
+{{range .Rules}}{{if eq .Priority "medium"}}
+#### {{.Name}}
+{{.Content}}
+{{end}}{{end}}
+
+### Low Priority Rules
+{{range .Rules}}{{if eq .Priority "low"}}
+#### {{.Name}}
+{{.Content}}
+{{end}}{{end}}
+
+### Other Rules
+{{range .Rules}}{{if eq .Priority ""}}
+#### {{.Name}}
+{{.Content}}
+{{end}}{{end}}

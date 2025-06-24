@@ -1,0 +1,26 @@
+metadata:
+  name: "React Rules"
+
+rules:
+  - name: "React Components"
+    priority: "high"
+    content: |
+      - Use functional components with hooks
+      - Prefer composition over inheritance
+      - Keep components small and focused
+      - Use PropTypes or TypeScript for type checking
+
+  - name: "React State"
+    priority: "medium"
+    content: |
+      - Use useState for local state
+      - Use useReducer for complex state logic
+      - Avoid directly mutating state
+      - Use useEffect for side effects
+
+  - name: "React Performance"
+    priority: "medium"
+    content: |
+      - Use React.memo for expensive components
+      - Use useMemo and useCallback wisely
+      - Avoid creating objects in render

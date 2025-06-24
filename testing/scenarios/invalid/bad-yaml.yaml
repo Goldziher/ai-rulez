@@ -1,0 +1,11 @@
+metadata:
+  name: "Invalid YAML"
+  version: "1.0.0
+  # Missing closing quote above - invalid YAML
+
+outputs:
+  - file: "output.md"
+
+rules:
+  - name: "Test Rule"
+    content: "This will fail to parse"

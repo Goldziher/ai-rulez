@@ -1,0 +1,22 @@
+metadata:
+  name: "Project with Includes"
+  version: "2.1.0"
+  description: "A project demonstrating include functionality"
+
+includes:
+  - "../../includes/react.yaml"
+  - "../../includes/typescript.yaml"
+  - "local-rules.yaml"
+
+outputs:
+  - file: "CLAUDE.md"
+  - file: ".cursorrules"
+  - file: "docs/ai-guidelines.md"
+    template: "documentation"
+
+rules:
+  - name: "Project Specific"
+    priority: "high"
+    content: |
+      - Follow our company coding standards
+      - All PRs must be reviewed by 2 people

@@ -1,0 +1,12 @@
+metadata:
+  name: "Circular A"
+
+includes:
+  - "b.yaml"
+
+outputs:
+  - file: "output.md"
+
+rules:
+  - name: "Rule A"
+    content: "From file A"
