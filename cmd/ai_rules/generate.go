@@ -31,6 +31,7 @@ func init() {
 
 	// Cobra supports local flags which will only run when this command
 	// is called directly, e.g.:
-	generateCmd.Flags().StringP("format", "f", "", "Specify output format (claude, cursor, windsurf)")
+	generateCmd.Flags().
+		StringP("format", "f", "", "Specify output format (claude, cursor, windsurf)")
 	generateCmd.Flags().StringP("output", "o", "", "Output file path")
 }
