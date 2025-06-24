@@ -1,0 +1,75 @@
+$schema: ../schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Project with Sections"
+  version: "2.0.0"
+  description: "Demonstrates sections for informative content"
+
+outputs:
+  - file: "claude.md"
+  - file: "GUIDELINES.md"
+    template: "documentation"
+
+sections:
+  - title: "Introduction"
+    priority: 100  # Appears first
+    content: |
+      # Project Guidelines
+      
+      Welcome to our project! This document outlines the coding standards and practices
+      we follow to maintain high-quality, maintainable code.
+      
+      ## Why These Rules Matter
+      
+      - **Consistency**: Makes code easier to read and understand
+      - **Quality**: Reduces bugs and technical debt
+      - **Collaboration**: Helps team members work together effectively
+
+  - title: "Architecture Overview"
+    priority: 50
+    content: |
+      ## System Architecture
+      
+      Our application follows a microservices architecture:
+      
+      ```
+      ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+      │   Frontend  │────▶│     API     │────▶│  Database   │
+      │    React    │     │   Node.js   │     │ PostgreSQL  │
+      └─────────────┘     └─────────────┘     └─────────────┘
+      ```
+      
+      For detailed architecture documentation, see [docs/architecture.md](./docs/architecture.md).
+
+  - title: "Getting Help"
+    priority: 1  # Appears at the end
+    content: |
+      ## Need Help?
+      
+      - Check our [FAQ](./docs/faq.md)
+      - Ask in #dev-help Slack channel
+      - Create an issue on GitHub
+      
+      Remember: There are no stupid questions!
+
+rules:
+  - name: "Code Style"
+    priority: 10
+    content: |
+      - Use TypeScript strict mode
+      - Follow ESLint configuration
+      - Use Prettier for formatting
+
+  - name: "Testing Requirements"
+    priority: 10
+    content: |
+      - Write unit tests for all functions
+      - Maintain 80% code coverage
+      - Use integration tests for APIs
+
+  - name: "Git Workflow"
+    priority: 5
+    content: |
+      - Create feature branches from main
+      - Write descriptive commit messages
+      - Squash commits before merging

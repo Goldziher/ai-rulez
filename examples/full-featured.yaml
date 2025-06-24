@@ -1,0 +1,86 @@
+$schema: ../schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Full Featured Example"
+  version: "1.0.0"
+  description: "Demonstrates all ai_rules configuration features"
+
+includes:
+  - "./includes/base-rules.yaml"
+  - "../shared/security-rules.yaml"
+
+outputs:
+  # Using default built-in template
+  - file: "claude.md"
+  
+  # Using named built-in template
+  - file: ".cursorrules"
+    template: "default"
+  
+  # Using documentation built-in template
+  - file: "docs/detailed-rules.md"
+    template: "documentation"
+  
+  # Using inline template
+  - file: "CONTRIBUTING.md"
+    template: |
+      # Contributing to {{.ProjectName}}
+      
+      Version: {{.Version}}
+      
+      ## Priority Guidelines
+      {{range .Rules}}{{if ge .Priority 8}}
+      ### {{.Name}} (Priority: {{.Priority}})
+      {{.Content}}
+      {{end}}{{end}}
+      
+      ## All Rules ({{.RuleCount}} total)
+      {{range .Rules}}
+      - **{{.Name}}** (Priority {{.Priority}}): {{.Content}}
+      {{end}}
+      
+      Generated on: {{.Timestamp.Format "2006-01-02"}}
+  
+  # Using file reference template (relative to this config file)
+  - file: "docs/handbook.md"
+    template: "@templates/handbook.tmpl"
+  
+  # Using file reference with parent directory
+  - file: ".windsurfrules"
+    template: "@../templates/simple.tmpl"
+
+rules:
+  - name: "Code Quality"
+    priority: 10
+    content: |
+      - Write clean, readable, and maintainable code
+      - Follow the project's coding standards
+      - Use meaningful variable and function names
+  
+  - name: "Testing"
+    priority: 10
+    content: |
+      - Write unit tests for all new functionality
+      - Maintain test coverage above 80%
+      - Use TDD when appropriate
+  
+  - name: "Documentation"
+    priority: 5
+    content: |
+      - Document all public APIs
+      - Include examples in documentation
+      - Keep README up to date
+  
+  - name: "Performance"
+    priority: 5
+    content: |
+      - Profile before optimizing
+      - Consider memory usage
+      - Avoid premature optimization
+  
+  - name: "Code Reviews"
+    priority: 3
+    content: |
+      - Be constructive in reviews
+      - Review your own code first
+      - Respond to feedback promptly

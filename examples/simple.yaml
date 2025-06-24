@@ -1,0 +1,15 @@
+$schema: ../schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Simple Example"
+
+outputs:
+  - file: "claude.md"
+  - file: ".cursorrules"
+
+rules:
+  - name: "Best Practices"
+    content: "Follow language-specific best practices and conventions"
+  
+  - name: "Error Handling"
+    content: "Always handle errors appropriately and provide meaningful error messages"
