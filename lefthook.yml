@@ -14,6 +14,12 @@ pre-commit:
       run: go mod tidy
       fail_text: "go mod tidy failed"
 
+commit-msg:
+  commands:
+    commitlint:
+      run: pnpm commitlint --edit {1}
+      fail_text: "Commit message does not follow conventional commits format"
+
 pre-push:
   commands:
     test:
