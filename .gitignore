@@ -25,7 +25,7 @@ go.work.sum
 /build/python/dist/
 /build/python/*.egg-info/
 /build/python/build/
-airules
+/airules
 
 # Generated AI rule files (but NOT ai_rules.yaml config)
 claude.md
