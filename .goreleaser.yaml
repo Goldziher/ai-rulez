@@ -7,7 +7,7 @@ before:
 builds:
   - id: airules
     binary: airules
-    main: .
+    main: ./cmd/airules
     env:
       - CGO_ENABLED=0
       - GOPROXY=direct
