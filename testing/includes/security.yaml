@@ -1,9 +1,13 @@
 metadata:
   name: "Security Rules"
 
+# This is an include file - outputs not needed when included
+outputs:
+  - file: "security-rules.md"
+
 rules:
   - name: "Input Validation"
-    priority: "critical"
+    priority: 20
     content: |
       - Validate all user inputs
       - Sanitize data before database operations
@@ -11,7 +15,7 @@ rules:
       - Implement rate limiting
 
   - name: "Authentication"
-    priority: "critical"
+    priority: 20
     content: |
       - Use strong password policies
       - Implement multi-factor authentication
@@ -19,7 +23,7 @@ rules:
       - Log authentication attempts
 
   - name: "Data Protection"
-    priority: "high"
+    priority: 10
     content: |
       - Encrypt sensitive data at rest
       - Use HTTPS for all communications

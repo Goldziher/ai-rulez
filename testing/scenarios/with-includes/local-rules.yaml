@@ -1,16 +1,20 @@
 metadata:
   name: "Local Rules"
 
+# This is an include file - outputs not needed when included
+outputs:
+  - file: "local-rules.md"
+
 rules:
   - name: "API Design"
-    priority: "high"
+    priority: 10
     content: |
       - Use RESTful conventions
       - Always validate input parameters
       - Return consistent error formats
 
   - name: "Database"
-    priority: "medium"
+    priority: 5
     content: |
       - Use migrations for schema changes
       - Index frequently queried columns
