@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/naamanhirschfeld/ai_rules/internal/config"
-	"github.com/naamanhirschfeld/ai_rules/internal/templates"
+	"github.com/Goldziher/ai_rules/internal/config"
+	"github.com/Goldziher/ai_rules/internal/templates"
 )
 
 func TestNewTemplateData(t *testing.T) {
@@ -41,17 +41,24 @@ func TestRenderer_Render(t *testing.T) {
 	t.Parallel()
 
 	renderer := templates.NewRenderer()
-	data := &templates.TemplateData{
-		ProjectName: "Test Project",
-		Version:     "1.0.0",
-		Description: "Test description",
+
+	// Create config to generate proper template data
+	cfg := &config.Config{
+		Metadata: config.Metadata{
+			Name:        "Test Project",
+			Version:     "1.0.0",
+			Description: "Test description",
+		},
 		Rules: []config.Rule{
-			{Name: "Style Rules", Priority: "high", Content: "Use TypeScript strict mode"},
+			{Name: "Style Rules", Priority: 10, Content: "Use TypeScript strict mode"},
 			{Name: "Testing Rules", Content: "Write unit tests"},
 		},
-		Timestamp: time.Date(2023, 12, 25, 10, 30, 0, 0, time.UTC),
-		RuleCount: 2,
 	}
+
+	// Use NewTemplateData to properly initialize AllContent
+	data := templates.NewTemplateData(cfg)
+	// Override timestamp for consistent testing
+	data.Timestamp = time.Date(2023, 12, 25, 10, 30, 0, 0, time.UTC)
 
 	tests := []struct {
 		name   string
@@ -66,11 +73,12 @@ func TestRenderer_Render(t *testing.T) {
 				"Test description",
 				"Version: 1.0.0",
 				"Generated on 2023-12-25 10:30:00",
-				"Total rules: 2",
+				"Total content: 2 rules, 0 sections",
 				"## Style Rules",
-				"**Priority:** high",
+				"**Priority:** 10",
 				"Use TypeScript strict mode",
 				"## Testing Rules",
+				"**Priority:** 1",
 				"Write unit tests",
 			},
 		},
@@ -245,16 +253,20 @@ func TestBuiltinTemplates_NoErrors(t *testing.T) {
 
 	// Test that all builtin templates can be rendered without errors
 	renderer := templates.NewRenderer()
-	data := &templates.TemplateData{
-		ProjectName: "Test",
-		Version:     "1.0.0",
-		Description: "Description",
-		Rules: []config.Rule{
-			{Name: "Rule 1", Priority: "high", Content: "Content 1"},
+
+	// Create config to generate proper template data
+	cfg := &config.Config{
+		Metadata: config.Metadata{
+			Name:        "Test",
+			Version:     "1.0.0",
+			Description: "Description",
 		},
-		Timestamp: time.Now(),
-		RuleCount: 1,
+		Rules: []config.Rule{
+			{Name: "Rule 1", Priority: 10, Content: "Content 1"},
+		},
 	}
+
+	data := templates.NewTemplateData(cfg)
 
 	formats := []string{"default"}
 	for _, format := range formats {

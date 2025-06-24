@@ -1,0 +1,163 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json",
+  "title": "AI Rules Configuration",
+  "description": "Schema for ai_rules YAML configuration files",
+  "type": "object",
+  "required": ["metadata", "outputs"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this schema for editor support"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Project metadata information",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of your project",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "description": "Project version (e.g., 1.0.0)",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?$"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the project"
+        }
+      },
+      "additionalProperties": false
+    },
+    "includes": {
+      "type": "array",
+      "description": "List of other ai_rules files to include",
+      "items": {
+        "type": "string",
+        "description": "Path to another ai_rules YAML file (relative to this file)"
+      },
+      "uniqueItems": true
+    },
+    "outputs": {
+      "type": "array",
+      "description": "Output files to generate",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["file"],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Output file path (relative to this config file)",
+            "minLength": 1
+          },
+          "template": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+                "description": "Built-in template name (e.g., 'default', 'documentation')"
+              },
+              {
+                "type": "string",
+                "pattern": "^@.+$",
+                "description": "File path reference starting with @ (e.g., '@templates/custom.tmpl')"
+              },
+              {
+                "type": "string",
+                "pattern": "\\n",
+                "description": "Inline template string (multiline Go template syntax)"
+              }
+            ],
+            "description": "Template to use for output generation"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "List of rules for AI assistants",
+      "items": {
+        "type": "object",
+        "required": ["name", "content"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Rule name/title",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Rule priority (higher number = higher priority, default: 1)",
+            "minimum": 1,
+            "default": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "Rule content (can be multiline)",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sections": {
+      "type": "array",
+      "description": "List of informative text sections (rendered as-is)",
+      "items": {
+        "type": "object",
+        "required": ["title", "content"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Section title (for organization/merging)",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Section priority (higher number = higher priority, default: 1)",
+            "minimum": 1,
+            "default": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "Section content in markdown (rendered as-is)",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "$schema": "https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json",
+      "metadata": {
+        "name": "My Project",
+        "version": "1.0.0",
+        "description": "Example project configuration"
+      },
+      "outputs": [
+        {
+          "file": "claude.md"
+        },
+        {
+          "file": ".cursorrules",
+          "template": "default"
+        }
+      ],
+      "rules": [
+        {
+          "name": "Code Quality",
+          "priority": "high",
+          "content": "Write clean, maintainable code"
+        }
+      ]
+    }
+  ]
+}

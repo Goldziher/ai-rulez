@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/naamanhirschfeld/ai_rules/internal/config"
+	"github.com/Goldziher/ai_rules/internal/config"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -30,7 +30,7 @@ outputs:
   - file: "CLAUDE.md"
 rules:
   - name: "test rule"
-    priority: "high"
+    priority: 10
     content: "test content"`,
 			expected: &config.Config{
 				Metadata: config.Metadata{
@@ -46,7 +46,7 @@ rules:
 				Rules: []config.Rule{
 					{
 						Name:     "test rule",
-						Priority: "high",
+						Priority: 10,
 						Content:  "test content",
 					},
 				},
@@ -120,7 +120,7 @@ func TestSaveConfig(t *testing.T) {
 		Rules: []config.Rule{
 			{
 				Name:     "test rule",
-				Priority: "high",
+				Priority: 10,
 				Content:  "test content",
 			},
 		},

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/naamanhirschfeld/ai_rules/internal/config"
-	"github.com/naamanhirschfeld/ai_rules/internal/generator"
+	"github.com/Goldziher/ai_rules/internal/config"
+	"github.com/Goldziher/ai_rules/internal/generator"
 )
 
 func TestGenerator_GenerateAll(t *testing.T) {
@@ -25,17 +25,17 @@ func TestGenerator_GenerateAll(t *testing.T) {
 			Description: "Test description",
 		},
 		Outputs: []config.Output{
-			{File: filepath.Join(tmpDir, "CLAUDE.md")},
-			{File: filepath.Join(tmpDir, "rules", ".cursorrules")},
-			{File: filepath.Join(tmpDir, ".windsurfrules")},
+			{File: "CLAUDE.md"},
+			{File: filepath.Join("rules", ".cursorrules")},
+			{File: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
-			{Name: "Style Rule", Priority: "high", Content: "Use TypeScript strict mode"},
+			{Name: "Style Rule", Priority: 10, Content: "Use TypeScript strict mode"},
 			{Name: "Testing Rule", Content: "Write unit tests for all functions"},
 		},
 	}
 
-	gen := generator.New()
+	gen := generator.NewWithBaseDir(tmpDir)
 	err := gen.GenerateAll(cfg)
 	require.NoError(t, err)
 
@@ -55,7 +55,7 @@ func TestGenerator_GenerateAll(t *testing.T) {
 			// Check file has content
 			content, err := os.ReadFile(file)
 			require.NoError(t, err)
-			
+
 			contentStr := string(content)
 			assert.Contains(t, contentStr, "Test Project")
 			assert.Contains(t, contentStr, "Style Rule")
@@ -70,7 +70,7 @@ func TestGenerator_GenerateOutput(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	outputFile := filepath.Join(tmpDir, "output.md")
+	outputFile := "output.md"
 
 	cfg := &config.Config{
 		Metadata: config.Metadata{
@@ -78,26 +78,26 @@ func TestGenerator_GenerateOutput(t *testing.T) {
 		},
 		Outputs: []config.Output{
 			{File: outputFile},
-			{File: filepath.Join(tmpDir, "other.md")},
+			{File: "other.md"},
 		},
 		Rules: []config.Rule{
 			{Name: "Test Rule", Content: "Test content"},
 		},
 	}
 
-	gen := generator.New()
+	gen := generator.NewWithBaseDir(tmpDir)
 	err := gen.GenerateOutput(cfg, outputFile)
 	require.NoError(t, err)
 
 	// Check that only the specified file was created
-	_, err = os.Stat(outputFile)
+	_, err = os.Stat(filepath.Join(tmpDir, outputFile))
 	assert.NoError(t, err)
 
 	_, err = os.Stat(filepath.Join(tmpDir, "other.md"))
 	assert.True(t, os.IsNotExist(err), "Other file should not exist")
 
 	// Check content
-	content, err := os.ReadFile(outputFile)
+	content, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
 	require.NoError(t, err)
 	assert.Contains(t, string(content), "Single Output Test")
 	assert.Contains(t, string(content), "Test Rule")
@@ -122,7 +122,7 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	outputFile := filepath.Join(tmpDir, "custom.md")
+	outputFile := "custom.md"
 
 	cfg := &config.Config{
 		Metadata: config.Metadata{
@@ -136,7 +136,7 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 		},
 	}
 
-	gen := generator.New()
+	gen := generator.NewWithBaseDir(tmpDir)
 
 	// Register custom template
 	customTemplate := "Custom: {{.ProjectName}} has {{.RuleCount}} rules"
@@ -147,7 +147,7 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 	err = gen.GenerateOutput(cfg, outputFile)
 	require.NoError(t, err)
 
-	content, err := os.ReadFile(outputFile)
+	content, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
 	require.NoError(t, err)
 	assert.Equal(t, "Custom: Custom Template Test has 1 rules", string(content))
 }
@@ -262,7 +262,7 @@ func TestGenerator_DirectoryCreation(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	deepPath := filepath.Join(tmpDir, "deep", "nested", "path", "file.md")
+	deepPath := filepath.Join("deep", "nested", "path", "file.md")
 
 	cfg := &config.Config{
 		Metadata: config.Metadata{Name: "Directory Test"},
@@ -270,16 +270,16 @@ func TestGenerator_DirectoryCreation(t *testing.T) {
 		Rules:    []config.Rule{{Name: "Test", Content: "Content"}},
 	}
 
-	gen := generator.New()
+	gen := generator.NewWithBaseDir(tmpDir)
 	err := gen.GenerateAll(cfg)
 	require.NoError(t, err)
 
 	// Check that file was created and directories exist
-	_, err = os.Stat(deepPath)
+	_, err = os.Stat(filepath.Join(tmpDir, deepPath))
 	assert.NoError(t, err)
 
 	// Check that directories were created
-	_, err = os.Stat(filepath.Dir(deepPath))
+	_, err = os.Stat(filepath.Join(tmpDir, filepath.Dir(deepPath)))
 	assert.NoError(t, err)
 }
 
@@ -287,7 +287,7 @@ func TestGenerator_TemplateVariables(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	outputFile := filepath.Join(tmpDir, "variables.md")
+	outputFile := "variables.md"
 
 	cfg := &config.Config{
 		Metadata: config.Metadata{
@@ -299,12 +299,12 @@ func TestGenerator_TemplateVariables(t *testing.T) {
 			{File: outputFile, Template: "test-vars"},
 		},
 		Rules: []config.Rule{
-			{Name: "Rule 1", Priority: "high", Content: "Content 1"},
+			{Name: "Rule 1", Priority: 10, Content: "Content 1"},
 			{Name: "Rule 2", Content: "Content 2"},
 		},
 	}
 
-	gen := generator.New()
+	gen := generator.NewWithBaseDir(tmpDir)
 
 	// Register template that uses all variables
 	testTemplate := `Name: {{.ProjectName}}
@@ -323,7 +323,7 @@ Rules:
 	err = gen.GenerateOutput(cfg, outputFile)
 	require.NoError(t, err)
 
-	content, err := os.ReadFile(outputFile)
+	content, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
 	require.NoError(t, err)
 
 	contentStr := string(content)

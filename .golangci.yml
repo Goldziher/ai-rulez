@@ -16,7 +16,7 @@ linters:
         - exhaustive
         - goconst
         - gocritic
-        - godot
+        # - godot  # Disabled: Don't require periods at end of comments
         - goheader
         - gomodguard
         - goprintffuncname
@@ -33,7 +33,7 @@ linters:
         - sqlclosecheck
         - staticcheck
         - tagalign
-        - testpackage
+        - testpackage  # Keep enabled: tests should be in separate package
         - thelper
         - unconvert
         - unparam
@@ -73,11 +73,20 @@ linters:
                   arguments: [2]
                 - name: argument-limit
                   arguments: [5]
+                - name: var-naming
+                  disabled: true  # Allow underscores in package names (ai_rules)
+                - name: package-comments
+                  disabled: true  # Don't require package comments for main
         goconst:
             ignore-tests: true
         govet:
             check-shadowing: true
             disable-all: true
+        gosec:
+            excludes:
+                - G301  # Directory permissions 0755 are acceptable
+                - G304  # File path provided as argument is acceptable
+                - G306  # File permissions 0644 are acceptable
         decorder:
             dec-order:
                 - const

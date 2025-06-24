@@ -1,0 +1,10 @@
+metadata:
+  name: "Bad Priority Test"
+
+outputs:
+  - file: "output.md"
+
+rules:
+  - name: "Test Rule"
+    priority: "urgent"  # Invalid - should be high/medium/low
+    content: "This should fail validation"

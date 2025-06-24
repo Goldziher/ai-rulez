@@ -1,0 +1,25 @@
+$schema: ../../../schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Inline Template Test"
+  version: "1.0.0"
+
+outputs:
+  - file: "summary.md"
+    template: |
+      # {{.ProjectName}} Summary
+      
+      Total Rules: {{.RuleCount}}
+      
+      {{range .Rules}}
+      - {{.Name}}{{if .Priority}} [{{.Priority}}]{{end}}
+      {{end}}
+
+rules:
+  - name: "Feature A"
+    priority: "high"
+    content: "Implement feature A with tests"
+  
+  - name: "Documentation"
+    priority: "medium"
+    content: "Keep docs updated"

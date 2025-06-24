@@ -1,3 +1,5 @@
+$schema: ../../../schema/ai-rules-v1.schema.json
+
 metadata:
   name: "Basic Project"
   version: "1.0.0"
@@ -10,14 +12,14 @@ outputs:
 
 rules:
   - name: "Code Style"
-    priority: "high"
+    priority: 10
     content: |
       - Use TypeScript strict mode
       - Prefer functional components
       - Use meaningful variable names
 
   - name: "Testing"
-    priority: "medium"
+    priority: 5
     content: |
       - Write unit tests for all functions
       - Use describe/it pattern
