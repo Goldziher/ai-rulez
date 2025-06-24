@@ -6,8 +6,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// Version is the current version of airules
-const Version = "1.0.0rc1"
+// Version is the current version of airules (set at build time)
+var Version = "dev"
 
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
