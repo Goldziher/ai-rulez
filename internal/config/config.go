@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -10,10 +11,11 @@ import (
 
 // Config represents the main configuration structure
 type Config struct {
-	Metadata Metadata `yaml:"metadata"`
-	Includes []string `yaml:"includes,omitempty"`
-	Outputs  []Output `yaml:"outputs"`
-	Rules    []Rule   `yaml:"rules,omitempty"`
+	Metadata Metadata  `yaml:"metadata"`
+	Includes []string  `yaml:"includes,omitempty"`
+	Outputs  []Output  `yaml:"outputs"`
+	Rules    []Rule    `yaml:"rules,omitempty"`
+	Sections []Section `yaml:"sections,omitempty"`
 }
 
 // Metadata contains project metadata
@@ -32,7 +34,14 @@ type Output struct {
 // Rule represents a single rule definition
 type Rule struct {
 	Name     string `yaml:"name"`
-	Priority string `yaml:"priority,omitempty"`
+	Priority int    `yaml:"priority,omitempty"`
+	Content  string `yaml:"content"`
+}
+
+// Section represents an informative text section
+type Section struct {
+	Title    string `yaml:"title"`
+	Priority int    `yaml:"priority,omitempty"`
 	Content  string `yaml:"content"`
 }
 
@@ -43,9 +52,28 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, fmt.Errorf("failed to read config file %s: %w", filename, err)
 	}
 
+	// Validate against schema first
+	if err := ValidateWithSchema(data); err != nil {
+		return nil, fmt.Errorf("schema validation failed for %s: %w", filename, err)
+	}
+
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, fmt.Errorf("failed to parse config file %s: %w", filename, err)
+	}
+
+	// Set default priority for rules
+	for i := range config.Rules {
+		if config.Rules[i].Priority == 0 {
+			config.Rules[i].Priority = 1
+		}
+	}
+
+	// Set default priority for sections
+	for i := range config.Sections {
+		if config.Sections[i].Priority == 0 {
+			config.Sections[i].Priority = 1
+		}
 	}
 
 	return &config, nil
@@ -73,11 +101,11 @@ func SaveConfig(config *Config, filename string) error {
 // Validate checks the configuration for common errors
 func (c *Config) Validate() error {
 	if c.Metadata.Name == "" {
-		return fmt.Errorf("metadata.name is required")
+		return errors.New("metadata.name is required")
 	}
 
 	if len(c.Outputs) == 0 {
-		return fmt.Errorf("at least one output must be defined")
+		return errors.New("at least one output must be defined")
 	}
 
 	for i, output := range c.Outputs {

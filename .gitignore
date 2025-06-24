@@ -21,6 +21,13 @@ go.work.sum
 # Build output
 dist/
 build/
+ai_rules
+
+# Generated AI rule files (but NOT ai_rules.yaml config)
+claude.md
+CLAUDE.md
+.cursorrules
+.windsurfrules
 
 # IDE
 .vscode/
@@ -40,6 +47,19 @@ Thumbs.db
 coverage.txt
 coverage.html
 coverage.out
+*.coverprofile
+
+# Test artifacts
+**/*.test
+**/testdata/
+**/var/
+testing/**/CLAUDE.md
+testing/**/.cursorrules
+testing/**/.windsurfrules
+testing/**/claude.md
+
+# macOS temporary test directories
+/var/folders/
 
 # Node.js
 node_modules/

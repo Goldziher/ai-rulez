@@ -2,6 +2,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -56,20 +57,22 @@ func (l *configLoader) loadConfig(filename string) (*Config, error) {
 	return config, nil
 }
 
-// resolveIncludes processes all include paths and merges rules.
+// resolveIncludes processes all include paths and merges rules and sections.
 func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 	if len(config.Includes) == 0 {
 		return nil
 	}
 
 	var allRules []Rule
-	// Add existing rules first
+	var allSections []Section
+	// Add existing rules and sections first
 	allRules = append(allRules, config.Rules...)
+	allSections = append(allSections, config.Sections...)
 
 	// Process each include
 	for _, includePath := range config.Includes {
 		resolvedPath := l.resolvePath(includePath, baseDir)
-		
+
 		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
 			return fmt.Errorf("include file not found: %s (resolved to %s)", includePath, resolvedPath)
 		}
@@ -79,19 +82,35 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 			return fmt.Errorf("failed to load include %s: %w", includePath, err)
 		}
 
-		// Merge rules from included config
+		// Merge rules and sections from included config
 		allRules = append(allRules, includedConfig.Rules...)
+		allSections = append(allSections, includedConfig.Sections...)
 	}
 
-	// Update config with merged rules and clear includes
-	config.Rules = allRules
+	// Update config with merged rules and sections, clear includes
+	config.Rules = MergeRules(allRules)
+	config.Sections = MergeSections(allSections)
 	config.Includes = nil
+
+	// Ensure all rules have priority (default to 1)
+	for i := range config.Rules {
+		if config.Rules[i].Priority == 0 {
+			config.Rules[i].Priority = 1
+		}
+	}
+
+	// Ensure all sections have priority (default to 1)
+	for i := range config.Sections {
+		if config.Sections[i].Priority == 0 {
+			config.Sections[i].Priority = 1
+		}
+	}
 
 	return nil
 }
 
 // resolvePath resolves relative paths against the base directory.
-func (l *configLoader) resolvePath(includePath, baseDir string) string {
+func (*configLoader) resolvePath(includePath, baseDir string) string {
 	if filepath.IsAbs(includePath) {
 		return includePath
 	}
@@ -117,6 +136,30 @@ func MergeRules(ruleSets ...[]Rule) []Rule {
 	result := make([]Rule, 0, len(order))
 	for _, name := range order {
 		result = append(result, ruleMap[name])
+	}
+
+	return result
+}
+
+// MergeSections combines multiple section slices, with later sections taking precedence.
+func MergeSections(sectionSets ...[]Section) []Section {
+	sectionMap := make(map[string]Section)
+	var order []string
+
+	for _, sections := range sectionSets {
+		for _, section := range sections {
+			// Track order for consistent output
+			if _, exists := sectionMap[section.Title]; !exists {
+				order = append(order, section.Title)
+			}
+			sectionMap[section.Title] = section
+		}
+	}
+
+	// Rebuild slice in order
+	result := make([]Section, 0, len(order))
+	for _, title := range order {
+		result = append(result, sectionMap[title])
 	}
 
 	return result
@@ -149,7 +192,7 @@ func ValidateIncludes(config *Config, baseDir string) error {
 // ValidateOutputs checks that all outputs have valid file paths.
 func ValidateOutputs(outputs []Output) error {
 	if len(outputs) == 0 {
-		return fmt.Errorf("at least one output must be defined")
+		return errors.New("at least one output must be defined")
 	}
 
 	for i, output := range outputs {

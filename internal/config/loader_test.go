@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/naamanhirschfeld/ai_rules/internal/config"
+	"github.com/Goldziher/ai_rules/internal/config"
 )
 
 func TestLoadConfigWithIncludes(t *testing.T) {
@@ -28,19 +28,21 @@ func TestLoadConfigWithIncludes(t *testing.T) {
 includes:
   - "include.yaml"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"
+  - file: "CLAUDE.md"
 rules:
   - name: "main rule"
     content: "main content"`,
 				"include.yaml": `metadata:
   name: "included"
+outputs:
+  - file: "output.md"
 rules:
   - name: "included rule"
     content: "included content"`,
 			},
 			wantErr: false,
 			check: func(t *testing.T, cfg *config.Config) {
+				t.Helper()
 				assert.Equal(t, "main", cfg.Metadata.Name)
 				assert.Len(t, cfg.Rules, 2)
 				assert.Equal(t, "main rule", cfg.Rules[0].Name)
@@ -57,17 +59,25 @@ includes:
   - "first.yaml"
   - "second.yaml"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"`,
-				"first.yaml": `rules:
+  - file: "CLAUDE.md"`,
+				"first.yaml": `metadata:
+  name: "first"
+outputs:
+  - file: "output.md"
+rules:
   - name: "first rule"
     content: "first content"`,
-				"second.yaml": `rules:
+				"second.yaml": `metadata:
+  name: "second"
+outputs:
+  - file: "output.md"
+rules:
   - name: "second rule"
     content: "second content"`,
 			},
 			wantErr: false,
 			check: func(t *testing.T, cfg *config.Config) {
+				t.Helper()
 				assert.Len(t, cfg.Rules, 2)
 				assert.Equal(t, "first rule", cfg.Rules[0].Name)
 				assert.Equal(t, "second rule", cfg.Rules[1].Name)
@@ -81,19 +91,27 @@ outputs:
 includes:
   - "level1.yaml"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"`,
-				"level1.yaml": `includes:
+  - file: "CLAUDE.md"`,
+				"level1.yaml": `metadata:
+  name: "level1"
+outputs:
+  - file: "output.md"
+includes:
   - "level2.yaml"
 rules:
   - name: "level1 rule"
     content: "level1 content"`,
-				"level2.yaml": `rules:
+				"level2.yaml": `metadata:
+  name: "level2"
+outputs:
+  - file: "output.md"
+rules:
   - name: "level2 rule"
     content: "level2 content"`,
 			},
 			wantErr: false,
 			check: func(t *testing.T, cfg *config.Config) {
+				t.Helper()
 				assert.Len(t, cfg.Rules, 2)
 				assert.Equal(t, "level1 rule", cfg.Rules[0].Name)
 				assert.Equal(t, "level2 rule", cfg.Rules[1].Name)
@@ -107,8 +125,7 @@ rules:
 includes:
   - "missing.yaml"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"`,
+  - file: "CLAUDE.md"`,
 			},
 			wantErr: true,
 			check:   nil,
@@ -121,9 +138,12 @@ outputs:
 includes:
   - "circular.yaml"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"`,
-				"circular.yaml": `includes:
+  - file: "CLAUDE.md"`,
+				"circular.yaml": `metadata:
+  name: "circular"
+outputs:
+  - file: "output.md"
+includes:
   - "main.yaml"`,
 			},
 			wantErr: true,
@@ -235,8 +255,7 @@ func TestValidateIncludes(t *testing.T) {
 				"valid.yaml": `metadata:
   name: "valid"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"`,
+  - file: "CLAUDE.md"`,
 			},
 			wantErr: false,
 		},
