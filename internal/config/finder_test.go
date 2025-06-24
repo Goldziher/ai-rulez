@@ -74,6 +74,59 @@ func TestFindConfigFile(t *testing.T) {
 			wantFile: ".airules.yaml",
 		},
 		{
+			name: "finds ai_rules.yaml",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				configPath := filepath.Join(tmpDir, "ai_rules.yaml")
+				err := os.WriteFile(configPath, []byte("test"), 0644)
+				require.NoError(t, err)
+				return tmpDir
+			},
+			wantFile: "ai_rules.yaml",
+		},
+		{
+			name: "finds .ai_rules.yaml",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				configPath := filepath.Join(tmpDir, ".ai_rules.yaml")
+				err := os.WriteFile(configPath, []byte("test"), 0644)
+				require.NoError(t, err)
+				return tmpDir
+			},
+			wantFile: ".ai_rules.yaml",
+		},
+		{
+			name: "finds .yml variant",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+				configPath := filepath.Join(tmpDir, "airules.yml")
+				err := os.WriteFile(configPath, []byte("test"), 0644)
+				require.NoError(t, err)
+				return tmpDir
+			},
+			wantFile: "airules.yml",
+		},
+		{
+			name: "priority order: .airules.yaml first",
+			setup: func(t *testing.T) string {
+				tmpDir := t.TempDir()
+
+				// Create all variants
+				files := []string{
+					".airules.yaml", "airules.yaml",
+					".ai_rules.yaml", "ai_rules.yaml",
+					".airules.yml", "airules.yml",
+				}
+				for _, f := range files {
+					err := os.WriteFile(filepath.Join(tmpDir, f), []byte("test"), 0644)
+					require.NoError(t, err)
+				}
+
+				return tmpDir
+			},
+			wantFile: ".airules.yaml",
+		},
+		{
 			name: "no config file found",
 			setup: func(t *testing.T) string {
 				return t.TempDir()
@@ -91,7 +144,7 @@ func TestFindConfigFile(t *testing.T) {
 
 			if tt.wantError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "no airules configuration file found")
+				assert.Contains(t, err.Error(), "no configuration file found")
 			} else {
 				assert.NoError(t, err)
 				assert.Equal(t, tt.wantFile, filepath.Base(configPath))
@@ -120,6 +173,9 @@ func TestFindAllConfigFiles(t *testing.T) {
 					"project1/airules.yaml",
 					"project2/.airules.yaml",
 					"nested/deep/airules.yaml",
+					"project3/ai_rules.yaml",
+					"project4/.ai_rules.yml",
+					"project5/airules.yml",
 				}
 
 				for _, config := range configs {
@@ -132,7 +188,7 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 				return tmpDir
 			},
-			wantCount: 4,
+			wantCount: 7,
 		},
 		{
 			name: "skips hidden directories",
@@ -176,7 +232,7 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 			if tt.wantError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "no airules configuration files found")
+				assert.Contains(t, err.Error(), "no configuration files found")
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, configs, tt.wantCount)
