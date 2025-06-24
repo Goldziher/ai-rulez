@@ -8,7 +8,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Goldziher/ai_rules/internal/config"
+	"github.com/Goldziher/airules/internal/config"
 )
 
 // ContentItem represents a unified content item (rule or section).

@@ -1,0 +1,85 @@
+{
+  "name": "Config Discovery",
+  "description": "Test configuration file discovery behavior",
+  "tests": [
+    {
+      "name": "no_config_found",
+      "description": "Error when no config file is found",
+      "command": ["generate"],
+      "expected_err": "no airules configuration file found",
+      "exit_code": 1
+    },
+    {
+      "name": "finds_airules_yaml",
+      "description": "Finds airules.yaml in current directory",
+      "command": ["generate", "--dry-run"],
+      "files": {
+        "airules.yaml": "metadata:\n  name: \"Test Project\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Using config: airules.yaml",
+      "exit_code": 0
+    },
+    {
+      "name": "finds_dot_airules_yaml",
+      "description": "Finds .airules.yaml in current directory",
+      "command": ["generate", "--dry-run"],
+      "files": {
+        ".airules.yaml": "metadata:\n  name: \"Test Project\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Using config: .airules.yaml",
+      "exit_code": 0
+    },
+    {
+      "name": "prefers_dot_airules_yaml",
+      "description": "Prefers .airules.yaml over airules.yaml",
+      "command": ["generate", "--dry-run"],
+      "files": {
+        ".airules.yaml": "metadata:\n  name: \"Dot Config\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\"",
+        "airules.yaml": "metadata:\n  name: \"Plain Config\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Using config: .airules.yaml",
+      "exit_code": 0
+    },
+    {
+      "name": "upward_traversal",
+      "description": "Finds config file in parent directory",
+      "working_dir": "subdir",
+      "command": ["generate", "--dry-run"],
+      "setup": ["mkdir -p subdir"],
+      "files": {
+        "airules.yaml": "metadata:\n  name: \"Parent Config\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Using config: ../airules.yaml",
+      "exit_code": 0
+    },
+    {
+      "name": "recursive_discovery",
+      "description": "Finds multiple config files recursively",
+      "command": ["generate", "--recursive", "--dry-run"],
+      "setup": ["mkdir -p project1", "mkdir -p project2"],
+      "files": {
+        "project1/.airules.yaml": "metadata:\n  name: \"Project 1\"\noutputs:\n  - file: \"test1.md\"\nrules:\n  - name: \"Rule 1\"\n    content: \"Content 1\"",
+        "project2/airules.yaml": "metadata:\n  name: \"Project 2\"\noutputs:\n  - file: \"test2.md\"\nrules:\n  - name: \"Rule 2\"\n    content: \"Content 2\""
+      },
+      "expected_out": "Found 2 configuration file(s) for validation",
+      "exit_code": 0
+    },
+    {
+      "name": "explicit_config_file",
+      "description": "Uses explicitly specified config file",
+      "command": ["generate", "custom-config.yaml", "--dry-run"],
+      "files": {
+        "custom-config.yaml": "metadata:\n  name: \"Custom Config\"\noutputs:\n  - file: \"custom.md\"\nrules:\n  - name: \"Custom Rule\"\n    content: \"Custom content\""
+      },
+      "expected_out": "Configuration valid",
+      "exit_code": 0
+    },
+    {
+      "name": "explicit_config_not_found",
+      "description": "Error when explicitly specified config doesn't exist",
+      "command": ["generate", "nonexistent.yaml"],
+      "expected_err": "Configuration file 'nonexistent.yaml' not found",
+      "exit_code": 1
+    }
+  ]
+}

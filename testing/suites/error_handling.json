@@ -1,0 +1,90 @@
+{
+  "name": "Error Handling",
+  "description": "Test error handling and edge cases",
+  "tests": [
+    {
+      "name": "circular_dependency",
+      "description": "Handle circular dependencies in includes (may or may not fail)",
+      "command": ["generate", "scenarios/circular/a.yaml"],
+      "expected_out": "*",
+      "exit_code": 0
+    },
+    {
+      "name": "permission_denied",
+      "description": "Handle permission denied gracefully",
+      "command": ["generate", "readonly-config.yaml"],
+      "files": {
+        "readonly-config.yaml": "metadata:\n  name: \"Permission Test\"\noutputs:\n  - file: \"valid-output.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "invalid_template_reference",
+      "description": "Handle invalid template file reference",
+      "command": ["generate", "bad-template.yaml"],
+      "files": {
+        "bad-template.yaml": "metadata:\n  name: \"Bad Template Test\"\noutputs:\n  - file: \"output.md\"\n    template: \"@nonexistent/template.tmpl\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "invalid_template_syntax",
+      "description": "Handle invalid template syntax",
+      "command": ["generate", "invalid-template.yaml"],
+      "files": {
+        "invalid-template.yaml": "metadata:\n  name: \"Invalid Template Test\"\noutputs:\n  - file: \"output.md\"\n    template: \"{{.InvalidField}}\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "empty_config_file",
+      "description": "Handle empty configuration file",
+      "command": ["generate", "empty.yaml"],
+      "files": {
+        "empty.yaml": ""
+      },
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "malformed_json_schema",
+      "description": "Handle configuration that fails schema validation",
+      "command": ["generate", "bad-schema.yaml"],
+      "files": {
+        "bad-schema.yaml": "metadata:\n  name: 123\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_err": "*",
+      "exit_code": 1
+    },
+    {
+      "name": "recursive_no_configs",
+      "description": "Recursive mode with no configs found",
+      "command": ["generate", "--recursive"],
+      "expected_err": "no airules configuration files found",
+      "exit_code": 1
+    },
+    {
+      "name": "output_directory_creation_failure",
+      "description": "Handle failure to create output directories",
+      "command": ["generate", "deep-path.yaml"],
+      "files": {
+        "deep-path.yaml": "metadata:\n  name: \"Deep Path Test\"\noutputs:\n  - file: \"very/deep/nested/path/that/might/fail/output.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "timeout_handling",
+      "description": "Handle very large configurations gracefully",
+      "command": ["generate", "large-config.yaml", "--dry-run"],
+      "files": {
+        "large-config.yaml": "metadata:\n  name: \"Large Config Test\"\noutputs:\n  - file: \"output.md\"\nrules:\n  - name: \"Rule 1\"\n    content: \"Content that could be very long and complex to process\"\n  - name: \"Rule 2\"\n    content: \"More content\""
+      },
+      "expected_out": "Configuration valid",
+      "exit_code": 0
+    }
+  ]
+}
