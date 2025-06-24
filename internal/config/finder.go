@@ -7,11 +7,17 @@ import (
 	"path/filepath"
 )
 
-// FindConfigFile searches for .airules.yaml or airules.yaml starting from the current directory
+// FindConfigFile searches for config files starting from the current directory
 // and traversing up to the root. Returns the path to the first config file found.
+// Supports: airules.yaml, .airules.yaml, ai_rules.yaml, .ai_rules.yaml (and .yml variants)
 func FindConfigFile(startDir string) (string, error) {
-	// Config file names to search for
-	configNames := []string{".airules.yaml", "airules.yaml"}
+	// Config file names to search for (in priority order)
+	configNames := []string{
+		".airules.yaml", ".airules.yml",
+		"airules.yaml", "airules.yml",
+		".ai_rules.yaml", ".ai_rules.yml",
+		"ai_rules.yaml", "ai_rules.yml",
+	}
 
 	// Start from the given directory
 	dir, err := filepath.Abs(startDir)
@@ -42,16 +48,19 @@ func FindConfigFile(startDir string) (string, error) {
 		dir = parent
 	}
 
-	return "", errors.New("no airules configuration file found. Create an '.airules.yaml' or 'airules.yaml' file in your project")
+	return "", errors.New("no configuration file found. Create an 'airules.yaml', '.airules.yaml', 'ai_rules.yaml', or '.ai_rules.yaml' file in your project")
 }
 
-// FindAllConfigFiles recursively finds all .airules.yaml and airules.yaml files
+// FindAllConfigFiles recursively finds all config files
 // starting from the given directory.
+// Supports: airules.yaml, .airules.yaml, ai_rules.yaml, .ai_rules.yaml (and .yml variants)
 func FindAllConfigFiles(rootDir string) ([]string, error) {
 	var configs []string
 	configNames := map[string]bool{
-		".airules.yaml": true,
-		"airules.yaml":  true,
+		".airules.yaml": true, ".airules.yml": true,
+		"airules.yaml": true, "airules.yml": true,
+		".ai_rules.yaml": true, ".ai_rules.yml": true,
+		"ai_rules.yaml": true, "ai_rules.yml": true,
 	}
 
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
@@ -77,7 +86,7 @@ func FindAllConfigFiles(rootDir string) ([]string, error) {
 	}
 
 	if len(configs) == 0 {
-		return nil, fmt.Errorf("no airules configuration files found in %s", rootDir)
+		return nil, fmt.Errorf("no configuration files found in %s", rootDir)
 	}
 
 	return configs, nil
