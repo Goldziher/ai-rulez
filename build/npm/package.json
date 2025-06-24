@@ -1,0 +1,25 @@
+{
+  "name": "airules",
+  "version": "0.1.0",
+  "description": "AI rules configuration management tool",
+  "keywords": ["ai", "rules", "configuration", "claude", "cursor", "windsurf"],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Goldziher/airules"
+  },
+  "license": "MIT",
+  "author": "Goldziher",
+  "bin": {
+    "airules": "./bin/airules"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "bin",
+    "install.js"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}

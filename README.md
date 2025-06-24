@@ -1,4 +1,4 @@
-# ai_rules
+# airules
 
 A CLI tool for managing AI assistant rules with modular configuration and template support.
 
@@ -15,47 +15,56 @@ A CLI tool for managing AI assistant rules with modular configuration and templa
 
 ## Installation
 
-### From Source
+### From Go
 ```bash
-go install github.com/Goldziher/ai_rules@latest
+go install github.com/Goldziher/airules@latest
 ```
 
-### From npm (Coming Soon)
+### From npm
 ```bash
-npm install -g ai_rules
+npm install -g airules
 ```
 
-### From pip (Coming Soon)
+### From pip
 ```bash
-pip install ai_rules
+pip install airules
+```
+
+### From Homebrew (Coming Soon)
+```bash
+brew install goldziher/tap/airules
 ```
 
 ## Quick Start
 
 1. Initialize a new project:
 ```bash
-ai_rules init "My Project"
+airules init "My Project"
 
 # With templates
-ai_rules init --template react "My React App"
-ai_rules init --template typescript "My TS Project"
+airules init --template react "My React App"
+airules init --template typescript "My TS Project"
 ```
 
-2. Edit the generated `ai_rules.yaml` file
+2. Edit the generated `.airules.yaml` file
 
 3. Generate rule files:
 ```bash
-ai_rules generate
+# Automatically finds .airules.yaml or airules.yaml by searching upward
+airules generate
+
+# Process all config files in directory tree
+airules generate --recursive
 
 # Or specify a config file
-ai_rules generate path/to/config.yaml
+airules generate path/to/config.yaml
 ```
 
 ## Configuration Format
 
 ### Basic Example
 ```yaml
-$schema: https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/airules/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "My Project"
@@ -174,18 +183,25 @@ This ensures consistent, predictable output across regenerations.
 
 ## Commands
 
-### `ai_rules init [project-name]`
+### `airules init [project-name]`
 Initialize a new configuration file.
 
 Options:
 - `--template, -t`: Template to use (`basic`, `react`, `typescript`)
 
-### `ai_rules generate [config-file]`
+### `airules generate [config-file]`
 Generate output files from configuration. Files are only written if content changes.
 
-Default: `ai_rules.yaml` in current directory
+**Config File Discovery:**
+- Without arguments: Searches for `.airules.yaml` or `airules.yaml` starting from current directory, traversing upward to find the first config file
+- With `--recursive` flag: Finds and processes all config files in the current directory tree
+- With explicit path: Uses the specified config file
 
-### `ai_rules validate [config-file]`
+**Options:**
+- `--recursive, -r`: Recursively find and process all airules configuration files
+- `--dry-run`: Validate configuration and show what would be generated without writing files
+
+### `airules validate [config-file]`
 Validate configuration file against schema.
 
 ## Editor Support
@@ -196,7 +212,7 @@ Add the schema reference to your YAML files for:
 - Real-time validation
 
 ```yaml
-$schema: https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/airules/schema/ai-rules-v1.schema.json
 ```
 
 ## Development
@@ -224,8 +240,8 @@ task build     # Build binary
 
 ### Project Structure
 ```
-ai_rules/
-├── cmd/ai_rules/     # CLI commands
+airules/
+├── cmd/airules/     # CLI commands
 ├── internal/         # Internal packages
 │   ├── config/       # Configuration and validation
 │   ├── generator/    # Output generation
@@ -234,6 +250,75 @@ ai_rules/
 ├── examples/         # Example configurations
 └── testing/          # Test scenarios and data
 ```
+
+## Pre-commit Hooks
+
+airules can be integrated with git pre-commit hooks to automatically validate or generate files when committing changes.
+
+### Using pre-commit
+
+Add to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/Goldziher/airules
+    rev: v1.0.0  # Use the latest version
+    hooks:
+      # Validate configuration only (recommended for most projects)
+      - id: airules-validate
+      
+      # Or generate files automatically on commit
+      - id: airules-generate
+      
+      # Or process all config files recursively
+      - id: airules-recursive
+```
+
+**Hook Options:**
+- `airules-validate`: Validates configuration files using `--dry-run` mode
+- `airules-generate`: Generates output files from configuration
+- `airules-recursive`: Processes all airules config files in the repository
+
+### Using lefthook
+
+Add to your `lefthook.yml`:
+
+```yaml
+pre-commit:
+  commands:
+    airules:
+      glob: "{.airules.yaml,airules.yaml}"
+      run: airules generate --dry-run
+      
+    # Or to auto-generate files:
+    # airules:
+    #   glob: "{.airules.yaml,airules.yaml}"
+    #   run: airules generate && git add .
+```
+
+### Manual Setup
+
+For other git hook managers or manual setup:
+
+```bash
+# Validate only (recommended)
+airules generate --dry-run
+
+# Generate and stage files
+airules generate && git add .
+
+# Process all configs recursively
+airules generate --recursive
+```
+
+**Performance Notes:**
+- Use `--dry-run` for validation-only mode (fastest)
+- The tool uses incremental generation (only writes when content changes)
+- Consider using file glob patterns to only run when config files change
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and guidelines.
 
 ## License
 

@@ -1,0 +1,85 @@
+{
+  "name": "Generation",
+  "description": "Test file generation functionality",
+  "tests": [
+    {
+      "name": "basic_generation",
+      "description": "Generate files from basic configuration",
+      "command": ["generate", "scenarios/basic/ai_rules.yaml"],
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "dry_run_mode",
+      "description": "Dry run shows what would be generated",
+      "command": ["generate", "scenarios/basic/ai_rules.yaml", "--dry-run"],
+      "expected_out": "Configuration valid. Would generate * file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "minimal_config",
+      "description": "Generate from minimal configuration",
+      "command": ["generate", "scenarios/minimal/ai_rules.yaml"],
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "with_includes",
+      "description": "Generate with included files",
+      "command": ["generate", "scenarios/with-includes/ai_rules.yaml"],
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "nested_includes",
+      "description": "Generate with nested includes",
+      "command": ["generate", "scenarios/nested-includes/ai_rules.yaml"],
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "incremental_generation",
+      "description": "Incremental generation only writes changed files",
+      "command": ["generate", "test-config.yaml"],
+      "files": {
+        "test-config.yaml": "metadata:\n  name: \"Incremental Test\"\noutputs:\n  - file: \"output.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Original content\""
+      },
+      "setup": [
+        "mkdir -p outputs"
+      ],
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "custom_template",
+      "description": "Generate with custom file template",
+      "command": ["generate", "custom-template.yaml"],
+      "files": {
+        "custom-template.yaml": "metadata:\n  name: \"Custom Template Test\"\noutputs:\n  - file: \"custom.md\"\n    template: \"@templates/simple.tmpl\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\"",
+        "templates/simple.tmpl": "{{.ProjectName}} Rules\n\n{{range .Rules}}\n{{.Name}}: {{.Content}}\n{{end}}"
+      },
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "inline_template",
+      "description": "Generate with inline template",
+      "command": ["generate", "inline-template.yaml"],
+      "files": {
+        "inline-template.yaml": "metadata:\n  name: \"Inline Template Test\"\noutputs:\n  - file: \"inline.md\"\n    template: |\n      # {{.ProjectName}} Rules\n      {{range .Rules}}\n      ## {{.Name}}\n      {{.Content}}\n      {{end}}\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    },
+    {
+      "name": "relative_paths",
+      "description": "Generate files with relative paths",
+      "command": ["generate", "relative-test.yaml"],
+      "files": {
+        "relative-test.yaml": "metadata:\n  name: \"Relative Path Test\"\noutputs:\n  - file: \"docs/rules.md\"\n  - file: \"config/.cursorrules\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+      },
+      "expected_out": "Generated * output file(s)",
+      "exit_code": 0
+    }
+  ]
+}

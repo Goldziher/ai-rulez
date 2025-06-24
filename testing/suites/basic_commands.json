@@ -1,0 +1,48 @@
+{
+  "name": "Basic Commands",
+  "description": "Test basic CLI commands and help functionality",
+  "tests": [
+    {
+      "name": "help",
+      "description": "Show main help output",
+      "command": ["--help"],
+      "expected_out": "airules is a CLI tool that helps you manage and generate AI assistant rules",
+      "exit_code": 0
+    },
+    {
+      "name": "root_help",
+      "description": "Show root command help without flags", 
+      "command": [],
+      "expected_out": "airules is a CLI tool that helps you manage and generate AI assistant rules",
+      "exit_code": 0
+    },
+    {
+      "name": "generate_help",
+      "description": "Show generate command help",
+      "command": ["generate", "--help"],
+      "expected_out": "Generate AI rules files from your configuration",
+      "exit_code": 0
+    },
+    {
+      "name": "validate_help",
+      "description": "Show validate command help",
+      "command": ["validate", "--help"],
+      "expected_out": "Validate your AI rules configuration file",
+      "exit_code": 0
+    },
+    {
+      "name": "init_help",
+      "description": "Show init command help",
+      "command": ["init", "--help"],
+      "expected_out": "Initialize a new AI rules project",
+      "exit_code": 0
+    },
+    {
+      "name": "invalid_command",
+      "description": "Test invalid command handling",
+      "command": ["invalid-command"],
+      "expected_err": "unknown command",
+      "exit_code": 1
+    }
+  ]
+}

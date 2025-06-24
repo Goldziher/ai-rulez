@@ -1,9 +1,13 @@
 metadata:
   name: "TypeScript Rules"
 
+# This is an include file - outputs not needed when included  
+outputs:
+  - file: "typescript-rules.md"
+
 rules:
   - name: "TypeScript Basics"
-    priority: "high"
+    priority: 10
     content: |
       - Enable strict mode in tsconfig.json
       - Use explicit types for function parameters
@@ -11,7 +15,7 @@ rules:
       - Use interfaces for object shapes
 
   - name: "TypeScript Advanced"
-    priority: "medium"
+    priority: 5
     content: |
       - Use union types for multiple possibilities
       - Leverage generics for reusable code
@@ -19,7 +23,7 @@ rules:
       - Prefer type assertions over type casting
 
   - name: "TypeScript Style"
-    priority: "low"
+    priority: 1
     content: |
       - Use PascalCase for types and interfaces
       - Use camelCase for variables and functions
