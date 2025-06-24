@@ -8,7 +8,7 @@ from pathlib import Path
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 
-VERSION = "1.0.0-rc1"
+VERSION = os.environ.get("RELEASE_VERSION", "0.0.0-placeholder")
 REPO_NAME = "Goldziher/airules"
 
 def get_platform_info():

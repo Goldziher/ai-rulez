@@ -12,6 +12,8 @@ builds:
       - CGO_ENABLED=0
       - GOPROXY=direct
       - GOSUMDB=off
+    ldflags:
+      - -s -w -X main.Version={{.Version}}
     goos:
       - linux
       - windows

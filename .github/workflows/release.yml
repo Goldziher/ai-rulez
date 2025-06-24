@@ -44,7 +44,10 @@ jobs:
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
           cd build/npm
-          npm version $VERSION --no-git-tag-version
+          # Use sed to update version directly to avoid npm version conflicts
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+          echo "Updated package.json version to $VERSION"
+          cat package.json | grep version
 
       - name: Publish to npm
         run: |
@@ -67,15 +70,15 @@ jobs:
         run: |
           pip install build twine
 
-      - name: Update version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          sed -i "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" build/python/setup.py
-
       - name: Build package
         run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Building Python package with version $VERSION"
+          # Wait a bit for GitHub release to be fully available
+          echo "Waiting for GitHub release to be available..."
+          sleep 30
           cd build/python
-          python -m build
+          RELEASE_VERSION=$VERSION python -m build
 
       - name: Publish to PyPI
         run: |
