@@ -12,7 +12,7 @@
     "url": "https://github.com/Goldziher/airules/issues"
   },
   "license": "MIT",
-  "author": "Goldziher",
+  "author": "Na'aman Hirschfeld <nhirschfeld@gmail.com>",
   "bin": {
     "airules": "./bin/airules"
   },

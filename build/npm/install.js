@@ -23,9 +23,21 @@ function getPlatform() {
     'x32': '386'
   };
   
+  const mappedPlatform = platformMap[platform];
+  const mappedArch = archMap[arch];
+  
+  if (!mappedPlatform || !mappedArch) {
+    throw new Error(`Unsupported platform: ${platform} ${arch}`);
+  }
+  
+  // Windows ARM64 is not supported in our builds
+  if (mappedPlatform === 'windows' && mappedArch === 'arm64') {
+    throw new Error('Windows ARM64 is not supported');
+  }
+  
   return {
-    os: platformMap[platform] || platform,
-    arch: archMap[arch] || arch
+    os: mappedPlatform,
+    arch: mappedArch
   };
 }
 
@@ -85,19 +97,36 @@ async function install() {
     console.log(`Downloading from ${downloadUrl}...`);
     await download(downloadUrl, archivePath);
     
-    // Extract archive
+    // Extract archive to temp directory first
+    const tempDir = path.join(__dirname, 'temp');
+    if (fs.existsSync(tempDir)) {
+      fs.rmSync(tempDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(tempDir, { recursive: true });
+    
     if (platform.os === 'windows') {
       // Use PowerShell on Windows
-      execSync(`powershell -command "Expand-Archive -Path '${archivePath}' -DestinationPath '${binDir}' -Force"`);
+      execSync(`powershell -command "Expand-Archive -Path '${archivePath}' -DestinationPath '${tempDir}' -Force"`);
     } else {
       // Use tar on Unix-like systems
-      execSync(`tar -xzf "${archivePath}" -C "${binDir}"`);
+      execSync(`tar -xzf "${archivePath}" -C "${tempDir}"`);
     }
+    
+    // Find the binary in the extracted files and move it to bin directory
+    const extractedBinary = path.join(tempDir, binaryName);
+    if (!fs.existsSync(extractedBinary)) {
+      throw new Error(`Binary ${binaryName} not found in extracted archive`);
+    }
+    
+    fs.copyFileSync(extractedBinary, binPath);
     
     // Make binary executable on Unix-like systems
     if (platform.os !== 'windows') {
       fs.chmodSync(binPath, 0o755);
     }
+    
+    // Clean up temp directory
+    fs.rmSync(tempDir, { recursive: true, force: true });
     
     // Clean up archive
     fs.unlinkSync(archivePath);
