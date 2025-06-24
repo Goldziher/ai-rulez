@@ -2,11 +2,14 @@ project_name: airules
 
 before:
   hooks:
+    - go mod tidy
     - go mod download
+    - go list -m
 
 builds:
   - id: airules
     binary: airules
+    main: ./main.go
     env:
       - CGO_ENABLED=0
     goos:
