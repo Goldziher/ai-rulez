@@ -1,6 +1,6 @@
 {
   "name": "ai_rules",
-  "version": "0.1.0",
+  "version": "1.0.0rc1",
   "description": "A CLI tool for managing AI assistant rules",
   "private": true,
   "packageManager": "pnpm@9.15.2",
