@@ -1,0 +1,17 @@
+metadata:
+  name: "Local Rules"
+
+rules:
+  - name: "API Design"
+    priority: "high"
+    content: |
+      - Use RESTful conventions
+      - Always validate input parameters
+      - Return consistent error formats
+
+  - name: "Database"
+    priority: "medium"
+    content: |
+      - Use migrations for schema changes
+      - Index frequently queried columns
+      - Avoid N+1 queries

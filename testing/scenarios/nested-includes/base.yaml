@@ -1,0 +1,10 @@
+metadata:
+  name: "Base Configuration"
+
+includes:
+  - "../../includes/security.yaml"
+  - "framework.yaml"
+
+rules:
+  - name: "Base Rule"
+    content: "This is a base rule from base.yaml"

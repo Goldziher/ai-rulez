@@ -1,0 +1,9 @@
+metadata:
+  name: "Minimal Project"
+
+outputs:
+  - file: "rules.md"
+
+rules:
+  - name: "Only Rule"
+    content: "This is the only rule"

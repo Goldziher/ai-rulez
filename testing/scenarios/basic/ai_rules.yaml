@@ -1,0 +1,24 @@
+metadata:
+  name: "Basic Project"
+  version: "1.0.0"
+  description: "A simple test project with basic rules"
+
+outputs:
+  - file: "CLAUDE.md"
+  - file: ".cursorrules"
+  - file: ".windsurfrules"
+
+rules:
+  - name: "Code Style"
+    priority: "high"
+    content: |
+      - Use TypeScript strict mode
+      - Prefer functional components
+      - Use meaningful variable names
+
+  - name: "Testing"
+    priority: "medium"
+    content: |
+      - Write unit tests for all functions
+      - Use describe/it pattern
+      - Aim for 80% code coverage

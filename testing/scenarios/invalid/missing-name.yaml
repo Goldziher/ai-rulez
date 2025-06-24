@@ -1,0 +1,10 @@
+metadata:
+  # Missing name field
+  version: "1.0.0"
+
+outputs:
+  - file: "output.md"
+
+rules:
+  - name: "Test Rule"
+    content: "This should fail validation"

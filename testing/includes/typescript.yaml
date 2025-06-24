@@ -1,0 +1,26 @@
+metadata:
+  name: "TypeScript Rules"
+
+rules:
+  - name: "TypeScript Basics"
+    priority: "high"
+    content: |
+      - Enable strict mode in tsconfig.json
+      - Use explicit types for function parameters
+      - Avoid using 'any' type
+      - Use interfaces for object shapes
+
+  - name: "TypeScript Advanced"
+    priority: "medium"
+    content: |
+      - Use union types for multiple possibilities
+      - Leverage generics for reusable code
+      - Use type guards for runtime type checking
+      - Prefer type assertions over type casting
+
+  - name: "TypeScript Style"
+    priority: "low"
+    content: |
+      - Use PascalCase for types and interfaces
+      - Use camelCase for variables and functions
+      - Prefer const assertions where appropriate
