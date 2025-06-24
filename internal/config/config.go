@@ -25,7 +25,6 @@ type Metadata struct {
 
 // Output defines where and how to generate rule files
 type Output struct {
-	Format   string `yaml:"format"`
 	File     string `yaml:"file"`
 	Template string `yaml:"template,omitempty"`
 }
@@ -82,9 +81,6 @@ func (c *Config) Validate() error {
 	}
 
 	for i, output := range c.Outputs {
-		if output.Format == "" {
-			return fmt.Errorf("output[%d].format is required", i)
-		}
 		if output.File == "" {
 			return fmt.Errorf("output[%d].file is required", i)
 		}
