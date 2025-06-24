@@ -27,8 +27,7 @@ func TestLoadConfig(t *testing.T) {
   version: "1.0.0"
   description: "test description"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"
+  - file: "CLAUDE.md"
 rules:
   - name: "test rule"
     priority: "high"
@@ -41,8 +40,7 @@ rules:
 				},
 				Outputs: []config.Output{
 					{
-						Format: "claude",
-						File:   "CLAUDE.md",
+						File: "CLAUDE.md",
 					},
 				},
 				Rules: []config.Rule{
@@ -60,16 +58,14 @@ rules:
 			content: `metadata:
   name: "minimal"
 outputs:
-  - format: "claude"
-    file: "CLAUDE.md"`,
+  - file: "CLAUDE.md"`,
 			expected: &config.Config{
 				Metadata: config.Metadata{
 					Name: "minimal",
 				},
 				Outputs: []config.Output{
 					{
-						Format: "claude",
-						File:   "CLAUDE.md",
+						File: "CLAUDE.md",
 					},
 				},
 			},
@@ -118,8 +114,7 @@ func TestSaveConfig(t *testing.T) {
 		},
 		Outputs: []config.Output{
 			{
-				Format: "claude",
-				File:   "CLAUDE.md",
+				File: "CLAUDE.md",
 			},
 		},
 		Rules: []config.Rule{
@@ -161,7 +156,7 @@ func TestConfigValidate(t *testing.T) {
 			config: &config.Config{
 				Metadata: config.Metadata{Name: "test"},
 				Outputs: []config.Output{
-					{Format: "claude", File: "CLAUDE.md"},
+					{File: "CLAUDE.md"},
 				},
 			},
 			wantErr: false,
@@ -171,7 +166,7 @@ func TestConfigValidate(t *testing.T) {
 			config: &config.Config{
 				Metadata: config.Metadata{},
 				Outputs: []config.Output{
-					{Format: "claude", File: "CLAUDE.md"},
+					{File: "CLAUDE.md"},
 				},
 			},
 			wantErr: true,
@@ -187,22 +182,11 @@ func TestConfigValidate(t *testing.T) {
 			errMsg:  "at least one output must be defined",
 		},
 		{
-			name: "output missing format",
-			config: &config.Config{
-				Metadata: config.Metadata{Name: "test"},
-				Outputs: []config.Output{
-					{File: "CLAUDE.md"},
-				},
-			},
-			wantErr: true,
-			errMsg:  "output[0].format is required",
-		},
-		{
 			name: "output missing file",
 			config: &config.Config{
 				Metadata: config.Metadata{Name: "test"},
 				Outputs: []config.Output{
-					{Format: "claude"},
+					{},
 				},
 			},
 			wantErr: true,
