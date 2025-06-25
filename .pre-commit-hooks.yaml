@@ -1,33 +1,41 @@
-repos:
-  - repo: https://github.com/Goldziher/ai-rulez
-    rev: v1.0.0  # Use the ref you want to point at
-    hooks:
-      - id: airules-validate
-        name: Validate airules configuration
-        description: Validate airules configuration files and ensure they would generate successfully
-        entry: airules generate --dry-run
-        language: golang
-        additional_dependencies: []
-        files: '^(\.airules\.yaml|airules\.yaml)$'
-        pass_filenames: false
-        always_run: false
-        
-      - id: airules-generate
-        name: Generate airules files
-        description: Generate airules output files from configuration
-        entry: airules generate
-        language: golang
-        additional_dependencies: []
-        files: '^(\.airules\.yaml|airules\.yaml)$'
-        pass_filenames: false
-        always_run: false
-        
-      - id: airules-recursive
-        name: Generate airules files (recursive)
-        description: Generate all airules output files in the repository
-        entry: airules generate --recursive
-        language: golang
-        additional_dependencies: []
-        files: '^(\.airules\.yaml|airules\.yaml)$'
-        pass_filenames: false
-        always_run: false
+# Pre-commit hooks for ai-rulez
+# Usage: Add this to your .pre-commit-config.yaml:
+#
+# repos:
+#   - repo: https://github.com/Goldziher/ai-rulez
+#     rev: v1.0.0  # Use the ref you want to point at
+#     hooks:
+#       - id: ai-rulez-generate
+#
+- id: ai-rulez-validate
+  name: Validate AI rulez configuration
+  description: Validate ai-rulez configuration files and ensure they would generate successfully
+  entry: ai-rulez generate --dry-run
+  language: golang
+  additional_dependencies: []
+  files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
+  pass_filenames: false
+  always_run: false
+  require_serial: false
+
+- id: ai-rulez-generate
+  name: Generate AI assistant configuration files
+  description: Generate AI assistant configuration files from ai-rulez configuration
+  entry: ai-rulez generate
+  language: golang
+  additional_dependencies: []
+  files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
+  pass_filenames: false
+  always_run: false
+  require_serial: false
+
+- id: ai-rulez-recursive
+  name: Generate AI assistant files (recursive)
+  description: Generate all ai-rulez output files in the repository recursively
+  entry: ai-rulez generate --recursive
+  language: golang
+  additional_dependencies: []
+  files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
+  pass_filenames: false
+  always_run: false
+  require_serial: false
