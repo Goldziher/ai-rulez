@@ -3,7 +3,7 @@
 #
 # repos:
 #   - repo: https://github.com/Goldziher/ai-rulez
-#     rev: v1.0.0  # Use the ref you want to point at
+#     rev: v1.0.0  # Use the latest version
 #     hooks:
 #       - id: ai-rulez-generate
 #
