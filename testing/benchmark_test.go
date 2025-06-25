@@ -23,7 +23,7 @@ func BenchmarkBasicGeneration(b *testing.B) {
 	b.ResetTimer()
 	
 	for i := 0; i < b.N; i++ {
-		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rules.yaml")
+		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		
 		output, err := cmd.CombinedOutput()
@@ -49,7 +49,7 @@ func BenchmarkDryRunGeneration(b *testing.B) {
 	b.ResetTimer()
 	
 	for i := 0; i < b.N; i++ {
-		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rules.yaml", "--dry-run")
+		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rulez.yaml", "--dry-run")
 		cmd.Dir = tempDir
 		
 		output, err := cmd.CombinedOutput()
@@ -75,7 +75,7 @@ func BenchmarkValidation(b *testing.B) {
 	b.ResetTimer()
 	
 	for i := 0; i < b.N; i++ {
-		cmd := exec.Command(binaryPath, "validate", "scenarios/basic/ai_rules.yaml")
+		cmd := exec.Command(binaryPath, "validate", "scenarios/basic/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		
 		output, err := cmd.CombinedOutput()
@@ -151,7 +151,7 @@ func BenchmarkWithIncludes(b *testing.B) {
 	b.ResetTimer()
 	
 	for i := 0; i < b.N; i++ {
-		cmd := exec.Command(binaryPath, "generate", "scenarios/with-includes/ai_rules.yaml")
+		cmd := exec.Command(binaryPath, "generate", "scenarios/with-includes/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		
 		output, err := cmd.CombinedOutput()

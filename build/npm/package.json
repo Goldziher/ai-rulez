@@ -1,20 +1,20 @@
 {
-  "name": "@goldziher/airules",
+  "name": "ai-rulez",
   "version": "0.0.0-placeholder",
   "description": "CLI tool for managing AI assistant rules - generate configuration files for Claude, Cursor, Windsurf and more",
   "keywords": ["ai", "rules", "configuration", "claude", "cursor", "windsurf", "cli", "assistant", "copilot", "generator"],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Goldziher/airules"
+    "url": "https://github.com/Goldziher/ai-rulez"
   },
-  "homepage": "https://github.com/Goldziher/airules",
+  "homepage": "https://github.com/Goldziher/ai-rulez",
   "bugs": {
-    "url": "https://github.com/Goldziher/airules/issues"
+    "url": "https://github.com/Goldziher/ai-rulez/issues"
   },
   "license": "MIT",
   "author": "Na'aman Hirschfeld <nhirschfeld@gmail.com>",
   "bin": {
-    "airules": "./bin/airules"
+    "ai-rulez": "./bin/ai-rulez"
   },
   "scripts": {
     "postinstall": "node install.js"

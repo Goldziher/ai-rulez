@@ -12,8 +12,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Goldziher/airules/internal/config"
-	"github.com/Goldziher/airules/internal/templates"
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 // GenerateAllConcurrent generates all output files concurrently.

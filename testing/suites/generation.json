@@ -5,35 +5,35 @@
     {
       "name": "basic_generation",
       "description": "Generate files from basic configuration",
-      "command": ["generate", "scenarios/basic/ai_rules.yaml"],
+      "command": ["generate", "scenarios/basic/ai_rulez.yaml"],
       "expected_out": "Generated * output file(s)",
       "exit_code": 0
     },
     {
       "name": "dry_run_mode",
       "description": "Dry run shows what would be generated",
-      "command": ["generate", "scenarios/basic/ai_rules.yaml", "--dry-run"],
+      "command": ["generate", "scenarios/basic/ai_rulez.yaml", "--dry-run"],
       "expected_out": "Configuration valid. Would generate * file(s)",
       "exit_code": 0
     },
     {
       "name": "minimal_config",
       "description": "Generate from minimal configuration",
-      "command": ["generate", "scenarios/minimal/ai_rules.yaml"],
+      "command": ["generate", "scenarios/minimal/ai_rulez.yaml"],
       "expected_out": "Generated * output file(s)",
       "exit_code": 0
     },
     {
       "name": "with_includes",
       "description": "Generate with included files",
-      "command": ["generate", "scenarios/with-includes/ai_rules.yaml"],
+      "command": ["generate", "scenarios/with-includes/ai_rulez.yaml"],
       "expected_out": "Generated * output file(s)",
       "exit_code": 0
     },
     {
       "name": "nested_includes",
       "description": "Generate with nested includes",
-      "command": ["generate", "scenarios/nested-includes/ai_rules.yaml"],
+      "command": ["generate", "scenarios/nested-includes/ai_rulez.yaml"],
       "expected_out": "Generated * output file(s)",
       "exit_code": 0
     },
