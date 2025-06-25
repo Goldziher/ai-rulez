@@ -8,13 +8,13 @@ import (
 )
 
 func BenchmarkBasicGeneration(b *testing.B) {
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 	
-	// Create temp directory and copy scenarios
+	
 	tempDir := b.TempDir()
 	if err := copyTestScenariosForBench(b, tempDir); err != nil {
 		b.Fatalf("Failed to copy scenarios: %v", err)
@@ -34,13 +34,13 @@ func BenchmarkBasicGeneration(b *testing.B) {
 }
 
 func BenchmarkDryRunGeneration(b *testing.B) {
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 	
-	// Create temp directory and copy scenarios
+	
 	tempDir := b.TempDir()
 	if err := copyTestScenariosForBench(b, tempDir); err != nil {
 		b.Fatalf("Failed to copy scenarios: %v", err)
@@ -60,13 +60,13 @@ func BenchmarkDryRunGeneration(b *testing.B) {
 }
 
 func BenchmarkValidation(b *testing.B) {
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 	
-	// Create temp directory and copy scenarios
+	
 	tempDir := b.TempDir()
 	if err := copyTestScenariosForBench(b, tempDir); err != nil {
 		b.Fatalf("Failed to copy scenarios: %v", err)
@@ -86,19 +86,19 @@ func BenchmarkValidation(b *testing.B) {
 }
 
 func BenchmarkRecursiveGeneration(b *testing.B) {
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 	
-	// Create temp directory and copy scenarios
+	
 	tempDir := b.TempDir()
 	if err := copyTestScenariosForBench(b, tempDir); err != nil {
 		b.Fatalf("Failed to copy scenarios: %v", err)
 	}
 	
-	// Create some configs for recursive testing
+	
 	configs := []string{
 		"project1/.airules.yaml",
 		"project2/airules.yaml",
@@ -136,13 +136,13 @@ rules:
 }
 
 func BenchmarkWithIncludes(b *testing.B) {
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 	
-	// Create temp directory and copy scenarios
+	
 	tempDir := b.TempDir()
 	if err := copyTestScenariosForBench(b, tempDir); err != nil {
 		b.Fatalf("Failed to copy scenarios: %v", err)
@@ -162,20 +162,20 @@ func BenchmarkWithIncludes(b *testing.B) {
 }
 
 func BenchmarkConfigDiscovery(b *testing.B) {
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 	
-	// Create temp directory and copy scenarios
+	
 	tempDir := b.TempDir()
 	configDir := filepath.Join(tempDir, "deep", "nested", "directory")
 	if err := os.MkdirAll(configDir, 0755); err != nil {
 		b.Fatalf("Failed to create nested directory: %v", err)
 	}
 	
-	// Copy a basic config to root
+	
 	configContent := `metadata:
   name: "Benchmark Test"
 outputs:
@@ -192,7 +192,7 @@ rules:
 	
 	for i := 0; i < b.N; i++ {
 		cmd := exec.Command(binaryPath, "generate", "--dry-run")
-		cmd.Dir = configDir // Run from deep nested directory
+		cmd.Dir = configDir // ~keep Run from deep nested directory
 		
 		output, err := cmd.CombinedOutput()
 		if err != nil {
@@ -201,11 +201,11 @@ rules:
 	}
 }
 
-// Helper function for benchmarks
+
 func copyTestScenariosForBench(b *testing.B, destDir string) error {
 	b.Helper()
 	
-	// Get current testing directory
+	
 	testingDir, err := os.Getwd()
 	if err != nil {
 		return err
