@@ -51,6 +51,8 @@ def get_binary_name(platform_name):
 
 def download_and_extract_binary(platform_name, arch, version):
     """Download and extract the appropriate binary for the platform."""
+    import time
+    
     binary_name = get_binary_name(platform_name)
     archive_format = 'zip' if platform_name == 'windows' else 'tar.gz'
     archive_name = f"ai-rulez_{version}_{platform_name}_{arch}.{archive_format}"
@@ -59,34 +61,57 @@ def download_and_extract_binary(platform_name, arch, version):
     print(f"Downloading ai-rulez binary for {platform_name}/{arch}...")
     print(f"URL: {download_url}")
     
-    with tempfile.TemporaryDirectory() as temp_dir:
-        archive_path = Path(temp_dir) / archive_name
-        
-        # Download archive
+    # Retry logic for download
+    max_retries = 5
+    retry_delay = 30  # seconds
+    
+    for attempt in range(max_retries):
         try:
-            urllib.request.urlretrieve(download_url, archive_path)
+            if attempt > 0:
+                print(f"Retry attempt {attempt + 1}/{max_retries} after {retry_delay}s wait...")
+                time.sleep(retry_delay)
+            
+            with tempfile.TemporaryDirectory() as temp_dir:
+                archive_path = Path(temp_dir) / archive_name
+                
+                # Download archive with retry
+                urllib.request.urlretrieve(download_url, archive_path)
+                
+                # Check if download was successful (file size > 0)
+                if archive_path.stat().st_size == 0:
+                    raise RuntimeError("Downloaded file is empty")
+                
+                print(f"Successfully downloaded {archive_path.stat().st_size} bytes")
+                
+                # Extract archive
+                extract_dir = Path(temp_dir) / "extracted"
+                extract_dir.mkdir()
+                
+                if platform_name == 'windows':
+                    import zipfile
+                    with zipfile.ZipFile(archive_path, 'r') as zip_ref:
+                        zip_ref.extractall(extract_dir)
+                else:
+                    import tarfile
+                    with tarfile.open(archive_path, 'r:gz') as tar_ref:
+                        tar_ref.extractall(extract_dir)
+                
+                # Find the binary
+                binary_path = extract_dir / binary_name
+                if not binary_path.exists():
+                    raise RuntimeError(f"Binary {binary_name} not found in extracted archive")
+                
+                return binary_path.read_bytes()
+                
         except Exception as e:
-            raise RuntimeError(f"Failed to download binary: {e}")
-        
-        # Extract archive
-        extract_dir = Path(temp_dir) / "extracted"
-        extract_dir.mkdir()
-        
-        if platform_name == 'windows':
-            import zipfile
-            with zipfile.ZipFile(archive_path, 'r') as zip_ref:
-                zip_ref.extractall(extract_dir)
-        else:
-            import tarfile
-            with tarfile.open(archive_path, 'r:gz') as tar_ref:
-                tar_ref.extractall(extract_dir)
-        
-        # Find the binary
-        binary_path = extract_dir / binary_name
-        if not binary_path.exists():
-            raise RuntimeError(f"Binary {binary_name} not found in extracted archive")
-        
-        return binary_path.read_bytes()
+            error_msg = f"Attempt {attempt + 1} failed: {e}"
+            print(error_msg)
+            
+            if attempt == max_retries - 1:
+                raise RuntimeError(f"Failed to download binary after {max_retries} attempts: {e}")
+            
+            # Exponential backoff for subsequent retries
+            retry_delay = min(retry_delay * 2, 180)  # Cap at 3 minutes
 
 class PostInstallCommand(install):
     """Post-installation for downloading platform-specific binary."""
