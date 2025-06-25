@@ -1,61 +1,201 @@
-# ai-rulez
+# ai-rulez ⚡
 
-CLI tool for managing AI assistant rules across Claude, Cursor, Windsurf and other AI-powered development environments.
+> **Lightning-fast CLI tool (written in Go) for managing AI assistant rules**
 
-This Python package provides the `ai-rulez` command-line tool, which is written in Go for optimal performance and distributed as platform-specific binaries.
+Generate configuration files for Claude, Cursor, Windsurf, and other AI assistants from a single, centralized configuration.
 
-## Installation
+## 🚀 Features
+
+- ⚡ **Blazing Fast**: Written in Go for maximum performance
+- 🔧 **Multi-Assistant Support**: Generate configs for Claude (CLAUDE.md), Cursor (.cursorrules), Windsurf (.windsurfrules), and more
+- 📝 **Single Source of Truth**: Maintain all your AI rules in one YAML configuration
+- 🎯 **Smart Templates**: Built-in templates with custom template support
+- 🔍 **Validation**: Comprehensive configuration validation
+- 🔄 **Git Integration**: Perfect for pre-commit hooks and CI/CD
+- 🐍 **Python Integration**: Easy installation via pip
+
+## 📦 Installation
+
+### pip (Recommended)
 
 ```bash
 pip install ai-rulez
 ```
 
-The package will automatically download the appropriate binary for your platform during installation.
+The Python package automatically downloads and manages the Go binary for your platform.
 
-## Usage
+### Other Installation Methods
 
-Create an `ai_rules.yaml` configuration file in your project:
+- **npm**: `npm install -g ai-rulez`
+- **Go**: `go install github.com/Goldziher/ai-rulez@latest`
+- **Homebrew**: `brew install goldziher/tap/ai-rulez` *(coming soon)*
+- **Direct Download**: Download from [GitHub Releases](https://github.com/Goldziher/ai-rulez/releases)
+
+## 🎯 Quick Start
+
+1. **Create a configuration file** (`ai-rulez.yaml`):
 
 ```yaml
 metadata:
-  name: my-project
-  version: 1.0.0
+  name: "My AI Rules"
+  version: "1.0.0"
 
 rules:
-  - name: code-style
-    content: Follow the project's established coding conventions
-  - name: testing
-    content: Write comprehensive tests for all new features
+  - name: "Code Style"
+    priority: 10
+    content: |
+      - Use TypeScript strict mode
+      - Prefer functional components
+      - Use meaningful variable names
+
+  - name: "Testing"
+    priority: 5
+    content: |
+      - Write unit tests for all functions
+      - Use describe/it pattern
+      - Aim for 80% code coverage
 
 outputs:
-  - file: .cursorrules
-  - file: CLAUDE.md
+  - file: "CLAUDE.md"
+    template: "claude"
+  - file: ".cursorrules"
+    template: "cursor"
+  - file: ".windsurfrules" 
+    template: "windsurf"
 ```
 
-Then generate your AI assistant configuration files:
+2. **Generate configuration files**:
 
 ```bash
-# Generate files
+ai-rulez generate
+```
+
+This creates `CLAUDE.md`, `.cursorrules`, and `.windsurfrules` with your rules properly formatted for each AI assistant.
+
+## 🛠️ Commands
+
+```bash
+# Generate all configuration files
 ai-rulez generate
 
 # Validate configuration
 ai-rulez validate
 
-# Initialize a new configuration
-ai-rulez init
+# Generate recursively in subdirectories
+ai-rulez generate --recursive
+
+# Preview output without writing files
+ai-rulez generate --dry-run
+
+# Show help
+ai-rulez --help
 ```
 
-## Platform Support
+## 🔄 Git Integration
 
-Pre-built binaries are available for:
-- macOS (Intel and Apple Silicon)
-- Linux (x64, ARM64, and x86)
-- Windows (x64 and x86)
+### Pre-commit Hook
 
-## Documentation
+Add to your `.pre-commit-config.yaml`:
 
-For complete documentation, examples, and source code, visit the [GitHub repository](https://github.com/Goldziher/ai-rulez).
+```yaml
+repos:
+  - repo: https://github.com/Goldziher/ai-rulez
+    rev: v1.0.0
+    hooks:
+      - id: ai-rulez-generate
+```
 
-## License
+### Lefthook
 
-MIT
+Add to your `lefthook.yml`:
+
+```yaml
+pre-commit:
+  commands:
+    ai-rulez:
+      run: ai-rulez generate
+      files: git diff --cached --name-only
+      glob: "*.{ai-rulez,ai_rulez}.{yml,yaml}"
+```
+
+## 📚 Configuration
+
+The tool looks for configuration files in this order:
+- `.ai-rulez.yaml`
+- `ai-rulez.yaml` 
+- `.ai_rulez.yaml`
+- `ai_rulez.yaml`
+
+### Configuration Schema
+
+```yaml
+metadata:
+  name: string          # Required: Project name
+  version: string       # Required: Version
+  description: string   # Optional: Description
+
+rules:
+  - name: string        # Required: Rule name
+    priority: number    # Required: Priority (1-10)
+    content: string     # Required: Rule content
+
+sections:              # Optional: Organize rules into sections
+  - title: string      # Required: Section title
+    priority: number   # Required: Section priority
+    content: string    # Required: Section content
+
+outputs:               # Required: At least one output
+  - file: string       # Required: Output filename
+    template: string   # Required: Template name or path
+
+includes:              # Optional: Include other config files
+  - path/to/other.yaml
+```
+
+## 🎨 Templates
+
+Built-in templates:
+- `claude` - CLAUDE.md format
+- `cursor` - .cursorrules format  
+- `windsurf` - .windsurfrules format
+- `default` - Generic format
+
+Custom templates use Go template syntax with access to `.Rules`, `.Sections`, `.Metadata`, etc.
+
+## 🔧 Advanced Usage
+
+### Environment Variables
+
+- `AI_RULEZ_CONFIG` - Override config file path
+- `AI_RULEZ_DEBUG` - Enable debug output
+
+### Python API
+
+```python
+from ai_rulez.cli import main
+import sys
+
+# Run ai-rulez programmatically
+sys.argv = ['ai-rulez', 'generate', '--dry-run']
+main()
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please see our [Contributing Guide](https://github.com/Goldziher/ai-rulez/blob/main/CONTRIBUTING.md).
+
+## 📄 License
+
+MIT License - see [LICENSE](https://github.com/Goldziher/ai-rulez/blob/main/LICENSE)
+
+## 🔗 Links
+
+- [GitHub Repository](https://github.com/Goldziher/ai-rulez)
+- [Documentation](https://github.com/Goldziher/ai-rulez#readme)
+- [Issues](https://github.com/Goldziher/ai-rulez/issues)
+- [Releases](https://github.com/Goldziher/ai-rulez/releases)
+- [npm Package](https://www.npmjs.com/package/ai-rulez)
+
+---
+
+**Note**: This Python package is a wrapper around the Go binary. The actual tool is written in Go for maximum performance and cross-platform compatibility.

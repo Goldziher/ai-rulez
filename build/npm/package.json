@@ -1,18 +1,51 @@
 {
   "name": "ai-rulez",
   "version": "0.0.0-placeholder",
-  "description": "CLI tool for managing AI assistant rules - generate configuration files for Claude, Cursor, Windsurf and more",
-  "keywords": ["ai", "rules", "configuration", "claude", "cursor", "windsurf", "cli", "assistant", "copilot", "generator"],
+  "description": "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules - generate configuration files for Claude, Cursor, Windsurf and more",
+  "keywords": [
+    "ai",
+    "ai-assistant", 
+    "ai-rules",
+    "claude",
+    "cursor", 
+    "windsurf",
+    "codeium",
+    "copilot",
+    "cli",
+    "cli-tool",
+    "configuration",
+    "config",
+    "rules",
+    "generator",
+    "golang",
+    "go",
+    "fast",
+    "development",
+    "developer-tools",
+    "automation",
+    "workflow", 
+    "productivity",
+    "pre-commit",
+    "git-hooks",
+    "lefthook",
+    "code-generation",
+    "ai-development",
+    "assistant-configuration"
+  ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/Goldziher/ai-rulez"
+    "url": "https://github.com/Goldziher/ai-rulez.git"
   },
-  "homepage": "https://github.com/Goldziher/ai-rulez",
+  "homepage": "https://github.com/Goldziher/ai-rulez#readme",
   "bugs": {
     "url": "https://github.com/Goldziher/ai-rulez/issues"
   },
   "license": "MIT",
-  "author": "Na'aman Hirschfeld <nhirschfeld@gmail.com>",
+  "author": {
+    "name": "Na'aman Hirschfeld",
+    "email": "nhirschfeld@gmail.com",
+    "url": "https://github.com/Goldziher"
+  },
   "bin": {
     "ai-rulez": "./bin/ai-rulez"
   },
@@ -21,10 +54,20 @@
   },
   "files": [
     "bin",
-    "install.js",
+    "install.js", 
     "README.md"
   ],
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64", 
+    "arm64",
+    "ia32"
+  ]
 }
