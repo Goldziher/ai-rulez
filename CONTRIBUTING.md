@@ -10,8 +10,8 @@
 
 ```bash
 # Clone the repository
-git clone https://github.com/Goldziher/airules.git
-cd airules
+git clone https://github.com/Goldziher/ai-rulez.git
+cd ai-rulez
 
 # Run setup (installs dependencies and git hooks)
 task setup
