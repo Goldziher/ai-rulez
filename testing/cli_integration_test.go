@@ -7,7 +7,7 @@ import (
 )
 
 func TestCLIIntegration(t *testing.T) {
-	// Create temporary directory for all tests
+	
 	tempDir := t.TempDir()
 	
 	t.Run("Basic Commands", func(t *testing.T) {
@@ -39,7 +39,7 @@ func TestCLIIntegration(t *testing.T) {
 func copyTestScenarios(t *testing.T, destDir string) error {
 	t.Helper()
 	
-	// Get current testing directory
+	
 	testingDir, err := os.Getwd()
 	if err != nil {
 		return err

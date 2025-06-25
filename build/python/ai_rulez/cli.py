@@ -12,7 +12,7 @@ def main():
     binary_path = ensure_binary()
     
     try:
-        # Run the binary and forward all output
+        
         result = subprocess.run([binary_path] + sys.argv[1:], check=False)
         sys.exit(result.returncode)
     except FileNotFoundError:
