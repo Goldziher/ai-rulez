@@ -22,7 +22,7 @@ const (
 	testTimeout = 30 * time.Second
 )
 
-// TestCase represents a single integration test scenario
+
 type TestCase struct {
 	Name        string            `json:"name"`
 	Description string            `json:"description"`
@@ -37,7 +37,7 @@ type TestCase struct {
 	Cleanup     []string          `json:"cleanup,omitempty"`
 }
 
-// TestSuite represents a collection of related test cases
+
 type TestSuite struct {
 	Name        string     `json:"name"`
 	Description string     `json:"description"`
@@ -49,23 +49,23 @@ type TestSuite struct {
 var binaryPath string
 
 func TestMain(m *testing.M) {
-	// Build the binary before running tests
+	
 	if err := buildBinary(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to build binary: %v\n", err)
 		os.Exit(1)
 	}
 
-	// Run tests
+	
 	code := m.Run()
 
-	// Cleanup
+	
 	cleanupBinary()
 
 	os.Exit(code)
 }
 
 func buildBinary() error {
-	// Get the project root (parent of testing directory)
+	
 	testingDir, err := os.Getwd()
 	if err != nil {
 		return fmt.Errorf("failed to get working directory: %w", err)
@@ -74,7 +74,7 @@ func buildBinary() error {
 	projectRoot := filepath.Dir(testingDir)
 	binaryPath = filepath.Join(testingDir, binaryName)
 	
-	// Build the binary
+	
 	cmd := exec.Command("go", "build", "-o", binaryPath, ".")
 	cmd.Dir = projectRoot
 	
@@ -96,27 +96,27 @@ func cleanupBinary() {
 func runCommand(t *testing.T, testCase TestCase, testDir string) (string, string, int) {
 	t.Helper()
 	
-	// Prepare command
+	
 	cmd := exec.Command(binaryPath, testCase.Command...)
 	
-	// Set working directory
+	
 	if testCase.WorkingDir != "" {
 		cmd.Dir = filepath.Join(testDir, testCase.WorkingDir)
 	} else {
 		cmd.Dir = testDir
 	}
 	
-	// Set up input if provided
+	
 	if testCase.Input != "" {
 		cmd.Stdin = strings.NewReader(testCase.Input)
 	}
 	
-	// Capture output
+	
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	
-	// Set timeout
+	
 	done := make(chan error, 1)
 	go func() {
 		done <- cmd.Run()
@@ -145,7 +145,7 @@ func runCommand(t *testing.T, testCase TestCase, testDir string) (string, string
 func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 	t.Helper()
 	
-	// Copy test scenarios if command references them
+	
 	needsScenarios := false
 	for _, arg := range testCase.Command {
 		if strings.Contains(arg, "scenarios/") {
@@ -155,7 +155,7 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 	}
 	
 	if needsScenarios {
-		// Get current testing directory
+		
 		currentTestingDir, err := os.Getwd()
 		if err != nil {
 			t.Fatalf("Failed to get current directory: %v", err)
@@ -187,7 +187,7 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 		}
 	}
 	
-	// Run setup commands
+	
 	for _, setupCmd := range testCase.Setup {
 		parts := strings.Fields(setupCmd)
 		if len(parts) == 0 {
@@ -202,11 +202,11 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 		}
 	}
 	
-	// Create expected files
+	
 	for filePath, content := range testCase.Files {
 		fullPath := filepath.Join(testDir, filePath)
 		
-		// Ensure directory exists
+		
 		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
 			t.Fatalf("Failed to create directory for %s: %v", filePath, err)
 		}
@@ -220,7 +220,7 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 func cleanupTestCase(t *testing.T, testCase TestCase, testDir string) {
 	t.Helper()
 	
-	// Run cleanup commands
+	
 	for _, cleanupCmd := range testCase.Cleanup {
 		parts := strings.Fields(cleanupCmd)
 		if len(parts) == 0 {
@@ -229,16 +229,16 @@ func cleanupTestCase(t *testing.T, testCase TestCase, testDir string) {
 		
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = testDir
-		_ = cmd.Run() // Ignore errors in cleanup
+		_ = cmd.Run() // ~keep Ignore errors in cleanup
 	}
 }
 
 func normalizeOutput(output string) string {
-	// Remove ANSI color codes
+	
 	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*m`)
 	output = ansiRegex.ReplaceAllString(output, "")
 	
-	// Normalize whitespace
+	
 	lines := strings.Split(output, "\n")
 	var normalizedLines []string
 	for _, line := range lines {
@@ -267,7 +267,7 @@ func loadTestSuite(t *testing.T, suitePath string) TestSuite {
 func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 	t.Helper()
 	
-	// Run suite setup
+	
 	for _, setupCmd := range suite.Setup {
 		parts := strings.Fields(setupCmd)
 		if len(parts) == 0 {
@@ -282,21 +282,21 @@ func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 		}
 	}
 	
-	// Run each test case
+	
 	for _, testCase := range suite.Tests {
 		t.Run(testCase.Name, func(t *testing.T) {
-			// Create temporary directory for this test
+			
 			caseDir := filepath.Join(testDir, fmt.Sprintf("case_%s", strings.ReplaceAll(testCase.Name, " ", "_")))
 			err := os.MkdirAll(caseDir, 0755)
 			require.NoError(t, err)
 			
-			// Setup test case
+			
 			setupTestCase(t, testCase, caseDir)
 			
-			// Run the command
+			
 			stdout, stderr, exitCode := runCommand(t, testCase, caseDir)
 			
-			// Debug output
+			
 			if exitCode != testCase.ExitCode {
 				t.Logf("Command failed: %v %v", binaryPath, testCase.Command)
 				t.Logf("Working dir: %s", caseDir)
@@ -304,14 +304,14 @@ func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 				t.Logf("Stderr: %s", stderr)
 			}
 			
-			// Verify exit code
+			
 			assert.Equal(t, testCase.ExitCode, exitCode, "Exit code mismatch")
 			
-			// Verify stdout
+			
 			if testCase.ExpectedOut != "" {
 				normalizedOut := normalizeOutput(stdout)
 				if strings.Contains(testCase.ExpectedOut, "*") || strings.Contains(testCase.ExpectedOut, "?") {
-					// Convert simple glob patterns to regex
+					
 					pattern := regexp.QuoteMeta(testCase.ExpectedOut)
 					pattern = strings.ReplaceAll(pattern, "\\*", ".*")
 					pattern = strings.ReplaceAll(pattern, "\\?", ".")
@@ -326,11 +326,11 @@ func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 				}
 			}
 			
-			// Verify stderr
+			
 			if testCase.ExpectedErr != "" {
 				normalizedErr := normalizeOutput(stderr)
 				if strings.Contains(testCase.ExpectedErr, "*") || strings.Contains(testCase.ExpectedErr, "?") {
-					// Convert simple glob patterns to regex
+					
 					pattern := regexp.QuoteMeta(testCase.ExpectedErr)
 					pattern = strings.ReplaceAll(pattern, "\\*", ".*")
 					pattern = strings.ReplaceAll(pattern, "\\?", ".")
@@ -345,12 +345,12 @@ func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 				}
 			}
 			
-			// Cleanup test case
+			
 			cleanupTestCase(t, testCase, caseDir)
 		})
 	}
 	
-	// Run suite cleanup
+	
 	for _, cleanupCmd := range suite.Cleanup {
 		parts := strings.Fields(cleanupCmd)
 		if len(parts) == 0 {
@@ -359,6 +359,6 @@ func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 		
 		cmd := exec.Command(parts[0], parts[1:]...)
 		cmd.Dir = testDir
-		_ = cmd.Run() // Ignore errors in cleanup
+		_ = cmd.Run() // ~keep Ignore errors in cleanup
 	}
 }

@@ -32,7 +32,7 @@ function getPlatform() {
     throw new Error(`Unsupported platform: ${platform} ${arch}`);
   }
   
-  // Windows ARM64 is not supported in our builds
+  
   if (mappedPlatform === 'windows' && mappedArch === 'arm64') {
     throw new Error('Windows ARM64 is not supported');
   }
@@ -53,7 +53,7 @@ async function downloadBinary(url, dest) {
     
     https.get(url, (response) => {
       if (response.statusCode === 302 || response.statusCode === 301) {
-        // Handle redirect
+        
         https.get(response.headers.location, (redirectResponse) => {
           redirectResponse.pipe(file);
           file.on('finish', () => {
@@ -76,10 +76,10 @@ async function downloadBinary(url, dest) {
 
 async function extractArchive(archivePath, extractDir, platform) {
   if (platform === 'windows') {
-    // Use PowerShell to extract zip on Windows
+    
     await execAsync(`powershell -command "Expand-Archive -Path '${archivePath}' -DestinationPath '${extractDir}' -Force"`);
   } else {
-    // Use tar for Unix-like systems
+    
     await execAsync(`tar -xzf "${archivePath}" -C "${extractDir}"`);
   }
 }
@@ -89,11 +89,11 @@ async function install() {
     const { os, arch } = getPlatform();
     const binaryName = getBinaryName(os);
     
-    // Get version from package.json
+    
     const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     const version = packageJson.version;
     
-    // Construct download URL
+    
     const archiveExt = os === 'windows' ? 'zip' : 'tar.gz';
     const archiveName = `ai-rulez_${version}_${os}_${arch}.${archiveExt}`;
     const downloadUrl = `https://github.com/${REPO_NAME}/releases/download/v${version}/${archiveName}`;
@@ -101,27 +101,27 @@ async function install() {
     console.log(`Downloading ai-rulez ${version} for ${os}/${arch}...`);
     console.log(`URL: ${downloadUrl}`);
     
-    // Create bin directory
+    
     const binDir = path.join(__dirname, 'bin');
     if (!fs.existsSync(binDir)) {
       fs.mkdirSync(binDir, { recursive: true });
     }
     
-    // Download archive
+    
     const archivePath = path.join(__dirname, archiveName);
     await downloadBinary(downloadUrl, archivePath);
     
-    // Extract archive
+    
     console.log('Extracting binary...');
     await extractArchive(archivePath, binDir, os);
     
-    // Make binary executable on Unix-like systems
+    
     if (os !== 'windows') {
       const binaryPath = path.join(binDir, binaryName);
       fs.chmodSync(binaryPath, 0o755);
     }
     
-    // Clean up archive
+    
     fs.unlinkSync(archivePath);
     
     console.log(`✅ ai-rulez ${version} installed successfully for ${os}/${arch}!`);
@@ -134,7 +134,7 @@ async function install() {
   }
 }
 
-// Only run install during postinstall
+
 if (require.main === module) {
   install();
 }

@@ -14,14 +14,14 @@ def get_platform():
     system = platform.system().lower()
     machine = platform.machine().lower()
 
-    # Map platform names
+    
     platform_map = {
         'darwin': 'darwin',
         'linux': 'linux', 
         'windows': 'windows'
     }
     
-    # Map architecture names
+    
     arch_map = {
         'x86_64': 'amd64',
         'amd64': 'amd64',
@@ -37,7 +37,7 @@ def get_platform():
     if not mapped_platform or not mapped_arch:
         raise RuntimeError(f"Unsupported platform: {system} {machine}")
     
-    # Windows ARM64 is not supported
+    
     if mapped_platform == 'windows' and mapped_arch == 'arm64':
         raise RuntimeError("Windows ARM64 is not supported")
     
@@ -56,9 +56,9 @@ def download_binary(url, dest_path):
     """Download and extract the binary from the given URL."""
     import time
     
-    # Retry logic for download
+    
     max_retries = 3
-    retry_delay = 5  # seconds
+    retry_delay = 5  # ~keep seconds
     
     for attempt in range(max_retries):
         try:
@@ -67,13 +67,13 @@ def download_binary(url, dest_path):
                 time.sleep(retry_delay)
             
             with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-                # Download with proper headers
+                
                 request = Request(url, headers={'User-Agent': 'ai-rulez-python-wrapper'})
                 with urlopen(request, timeout=30) as response:
                     if response.status != 200:
                         raise RuntimeError(f"HTTP {response.status}")
                     
-                    # Read in chunks
+                    
                     while True:
                         chunk = response.read(8192)
                         if not chunk:
@@ -82,19 +82,19 @@ def download_binary(url, dest_path):
                 
                 tmp_file.flush()
                 
-                # Check if download was successful (file size > 0)
+                
                 if os.path.getsize(tmp_file.name) == 0:
                     raise RuntimeError("Downloaded file is empty")
                 
                 print(f"Successfully downloaded {os.path.getsize(tmp_file.name)} bytes", file=sys.stderr)
                 
-                # Extract the binary
+                
                 platform_name, _ = get_platform()
                 binary_name = 'ai-rulez.exe' if platform_name == 'windows' else 'ai-rulez'
                 
                 if url.endswith('.zip'):
                     with zipfile.ZipFile(tmp_file.name, 'r') as zip_ref:
-                        # Find the binary file in the archive
+                        
                         for member in zip_ref.namelist():
                             if member.endswith(binary_name):
                                 with zip_ref.open(member) as binary_file:
@@ -105,7 +105,7 @@ def download_binary(url, dest_path):
                             raise RuntimeError(f"No binary found in archive from {url}")
                 else:
                     with tarfile.open(tmp_file.name, 'r:gz') as tar:
-                        # Find the binary file in the archive
+                        
                         for member in tar.getmembers():
                             if member.name.endswith(binary_name):
                                 with tar.extractfile(member) as binary_file:
@@ -115,7 +115,7 @@ def download_binary(url, dest_path):
                         else:
                             raise RuntimeError(f"No binary found in archive from {url}")
                 
-                # Clean up temp file
+                
                 os.unlink(tmp_file.name)
                 return
                 
@@ -126,8 +126,8 @@ def download_binary(url, dest_path):
             if attempt == max_retries - 1:
                 raise RuntimeError(f"Failed to download binary after {max_retries} attempts: {e}")
             
-            # Exponential backoff for subsequent retries
-            retry_delay = min(retry_delay * 2, 30)  # Cap at 30 seconds
+            
+            retry_delay = min(retry_delay * 2, 30)  # ~keep Cap at 30 seconds
 
 
 def get_binary_path():
@@ -146,18 +146,18 @@ def ensure_binary():
     
     binary_path = get_binary_path()
     
-    # Check if binary exists and is executable
+    
     if binary_path.exists():
         if os.access(binary_path, os.X_OK):
             return str(binary_path)
     
-    # Download the binary
+    
     print(f"Downloading ai-rulez binary v{__version__}...", file=sys.stderr)
     url = get_binary_url(__version__)
     
     try:
         download_binary(url, binary_path)
-        os.chmod(binary_path, 0o755)  # Make executable
+        os.chmod(binary_path, 0o755)  # ~keep Make executable
         print("Binary downloaded successfully!", file=sys.stderr)
         return str(binary_path)
     except Exception as e:
