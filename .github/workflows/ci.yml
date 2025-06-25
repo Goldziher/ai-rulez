@@ -35,7 +35,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
-          version: v2.1.6
+          version: latest
           args: --timeout=5m
 
   test:
@@ -106,10 +106,10 @@ jobs:
 
       - name: Build for multiple platforms
         run: |
-          GOOS=linux GOARCH=amd64 go build -o bin/ai_rules-linux-amd64 .
-          GOOS=windows GOARCH=amd64 go build -o bin/ai_rules-windows-amd64.exe .
-          GOOS=darwin GOARCH=amd64 go build -o bin/ai_rules-darwin-amd64 .
-          GOOS=darwin GOARCH=arm64 go build -o bin/ai_rules-darwin-arm64 .
+          GOOS=linux GOARCH=amd64 go build -o bin/ai-rulez-linux-amd64 .
+          GOOS=windows GOARCH=amd64 go build -o bin/ai-rulez-windows-amd64.exe .
+          GOOS=darwin GOARCH=amd64 go build -o bin/ai-rulez-darwin-amd64 .
+          GOOS=darwin GOARCH=arm64 go build -o bin/ai-rulez-darwin-arm64 .
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
