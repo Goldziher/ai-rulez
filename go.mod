@@ -1,6 +1,8 @@
 module github.com/Goldziher/ai-rulez
 
-go 1.24.4
+go 1.24
+
+toolchain go1.24.4
 
 require (
 	github.com/spf13/cobra v1.9.1
