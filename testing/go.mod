@@ -1,4 +1,4 @@
-module github.com/Goldziher/airules/testing
+module github.com/Goldziher/ai-rulez/testing
 
 go 1.22
 
