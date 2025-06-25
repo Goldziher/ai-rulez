@@ -12,7 +12,7 @@ func TestProfileGeneration(t *testing.T) {
 		t.Skip("Skipping profiling in short mode")
 	}
 
-	// Create CPU profile
+	
 	cpuFile, err := os.Create("cpu.prof")
 	if err != nil {
 		t.Fatalf("Failed to create CPU profile: %v", err)
@@ -24,35 +24,35 @@ func TestProfileGeneration(t *testing.T) {
 	}
 	defer pprof.StopCPUProfile()
 
-	// Build binary first
+	
 	if err := buildBinary(); err != nil {
 		t.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
 
-	// Create temp directory and copy scenarios
+	
 	tempDir := t.TempDir()
 	if err := copyTestScenarios(t, tempDir); err != nil {
 		t.Fatalf("Failed to copy scenarios: %v", err)
 	}
 
-	// Run multiple generations to get good profile data
+	
 	for i := 0; i < 10; i++ {
-		// Test basic generation
+		
 		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 		}
 
-		// Test with includes
+		
 		cmd = exec.Command(binaryPath, "generate", "scenarios/with-includes/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 		}
 
-		// Test validation
+		
 		cmd = exec.Command(binaryPath, "validate", "scenarios/basic/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		if output, err := cmd.CombinedOutput(); err != nil {
@@ -60,7 +60,7 @@ func TestProfileGeneration(t *testing.T) {
 		}
 	}
 
-	// Write memory profile
+	
 	memFile, err := os.Create("mem.prof")
 	if err != nil {
 		t.Fatalf("Failed to create memory profile: %v", err)
