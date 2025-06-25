@@ -43,7 +43,7 @@ checksum:
 release:
   github:
     owner: Goldziher
-    name: airules
+    name: ai-rulez
 
 nfpms:
   - id: packages
