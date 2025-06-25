@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/airules/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
 func TestLoadConfig(t *testing.T) {

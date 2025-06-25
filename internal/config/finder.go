@@ -9,14 +9,14 @@ import (
 
 // FindConfigFile searches for config files starting from the current directory
 // and traversing up to the root. Returns the path to the first config file found.
-// Supports: airules.yaml, .airules.yaml, ai_rules.yaml, .ai_rules.yaml (and .yml variants)
+// Supports: ai-rulez.yaml, .ai-rulez.yaml, ai_rulez.yaml, .ai_rulez.yaml (and .yml variants)
 func FindConfigFile(startDir string) (string, error) {
 	// Config file names to search for (in priority order)
 	configNames := []string{
-		".airules.yaml", ".airules.yml",
-		"airules.yaml", "airules.yml",
-		".ai_rules.yaml", ".ai_rules.yml",
-		"ai_rules.yaml", "ai_rules.yml",
+		".ai-rulez.yaml", ".ai-rulez.yml",
+		"ai-rulez.yaml", "ai-rulez.yml",
+		".ai_rulez.yaml", ".ai_rulez.yml",
+		"ai_rulez.yaml", "ai_rulez.yml",
 	}
 
 	// Start from the given directory
@@ -48,19 +48,19 @@ func FindConfigFile(startDir string) (string, error) {
 		dir = parent
 	}
 
-	return "", errors.New("no configuration file found. Create an 'airules.yaml', '.airules.yaml', 'ai_rules.yaml', or '.ai_rules.yaml' file in your project")
+	return "", errors.New("no configuration file found. Create an 'ai-rulez.yaml', '.ai-rulez.yaml', 'ai_rulez.yaml', or '.ai_rulez.yaml' file in your project")
 }
 
 // FindAllConfigFiles recursively finds all config files
 // starting from the given directory.
-// Supports: airules.yaml, .airules.yaml, ai_rules.yaml, .ai_rules.yaml (and .yml variants)
+// Supports: ai-rulez.yaml, .ai-rulez.yaml, ai_rulez.yaml, .ai_rulez.yaml (and .yml variants)
 func FindAllConfigFiles(rootDir string) ([]string, error) {
 	var configs []string
 	configNames := map[string]bool{
-		".airules.yaml": true, ".airules.yml": true,
-		"airules.yaml": true, "airules.yml": true,
-		".ai_rules.yaml": true, ".ai_rules.yml": true,
-		"ai_rules.yaml": true, "ai_rules.yml": true,
+		".ai-rulez.yaml": true, ".ai-rulez.yml": true,
+		"ai-rulez.yaml": true, "ai-rulez.yml": true,
+		".ai_rulez.yaml": true, ".ai_rulez.yml": true,
+		"ai_rulez.yaml": true, "ai_rulez.yml": true,
 	}
 
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
@@ -68,7 +68,7 @@ func FindAllConfigFiles(rootDir string) ([]string, error) {
 			return err
 		}
 
-		// Skip hidden directories (except .airules.yaml itself)
+		// Skip hidden directories (except .ai-rulez.yaml itself)
 		if info.IsDir() && filepath.Base(path) != "." && filepath.Base(path)[0] == '.' {
 			return filepath.SkipDir
 		}

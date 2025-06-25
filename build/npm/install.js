@@ -6,7 +6,7 @@ const { promisify } = require('util');
 
 const execAsync = promisify(exec);
 
-const REPO_NAME = 'Goldziher/airules';
+const REPO_NAME = 'Goldziher/ai-rulez';
 
 function getPlatform() {
   const platform = process.platform;
@@ -44,7 +44,7 @@ function getPlatform() {
 }
 
 function getBinaryName(platform) {
-  return platform === 'windows' ? 'airules.exe' : 'airules';
+  return platform === 'windows' ? 'ai-rulez.exe' : 'ai-rulez';
 }
 
 async function downloadBinary(url, dest) {
@@ -95,10 +95,10 @@ async function install() {
     
     // Construct download URL
     const archiveExt = os === 'windows' ? 'zip' : 'tar.gz';
-    const archiveName = `airules_${version}_${os}_${arch}.${archiveExt}`;
+    const archiveName = `ai-rulez_${version}_${os}_${arch}.${archiveExt}`;
     const downloadUrl = `https://github.com/${REPO_NAME}/releases/download/v${version}/${archiveName}`;
     
-    console.log(`Downloading airules ${version} for ${os}/${arch}...`);
+    console.log(`Downloading ai-rulez ${version} for ${os}/${arch}...`);
     console.log(`URL: ${downloadUrl}`);
     
     // Create bin directory
@@ -124,10 +124,10 @@ async function install() {
     // Clean up archive
     fs.unlinkSync(archivePath);
     
-    console.log(`✅ airules ${version} installed successfully for ${os}/${arch}!`);
+    console.log(`✅ ai-rulez ${version} installed successfully for ${os}/${arch}!`);
     
   } catch (error) {
-    console.error('Failed to install airules binary:', error.message);
+    console.error('Failed to install ai-rulez binary:', error.message);
     console.error('You can manually download the binary from:');
     console.error(`https://github.com/${REPO_NAME}/releases`);
     process.exit(1);

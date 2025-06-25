@@ -3,8 +3,8 @@ package generator_test
 import (
 	"testing"
 
-	"github.com/Goldziher/airules/internal/config"
-	"github.com/Goldziher/airules/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator"
 )
 
 func BenchmarkGenerateAllOriginal(b *testing.B) {

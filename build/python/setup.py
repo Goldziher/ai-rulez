@@ -9,7 +9,7 @@ from setuptools import setup, find_packages
 from setuptools.command.install import install
 
 VERSION = os.environ.get("RELEASE_VERSION", "0.0.0-placeholder")
-REPO_NAME = "Goldziher/airules"
+REPO_NAME = "Goldziher/ai-rulez"
 
 def get_platform_info():
     """Get platform and architecture information."""
@@ -47,16 +47,16 @@ def get_platform_info():
 
 def get_binary_name(platform_name):
     """Get binary name based on platform."""
-    return 'airules.exe' if platform_name == 'windows' else 'airules'
+    return 'ai-rulez.exe' if platform_name == 'windows' else 'ai-rulez'
 
 def download_and_extract_binary(platform_name, arch, version):
     """Download and extract the appropriate binary for the platform."""
     binary_name = get_binary_name(platform_name)
     archive_format = 'zip' if platform_name == 'windows' else 'tar.gz'
-    archive_name = f"airules_{version}_{platform_name}_{arch}.{archive_format}"
+    archive_name = f"ai-rulez_{version}_{platform_name}_{arch}.{archive_format}"
     download_url = f"https://github.com/{REPO_NAME}/releases/download/v{version}/{archive_name}"
     
-    print(f"Downloading airules binary for {platform_name}/{arch}...")
+    print(f"Downloading ai-rulez binary for {platform_name}/{arch}...")
     print(f"URL: {download_url}")
     
     with tempfile.TemporaryDirectory() as temp_dir:
@@ -114,16 +114,16 @@ class PostInstallCommand(install):
             if platform_name != 'windows':
                 os.chmod(target_path, 0o755)
             
-            print(f"✅ airules v{VERSION} installed successfully for {platform_name}/{arch}!")
+            print(f"✅ ai-rulez v{VERSION} installed successfully for {platform_name}/{arch}!")
             
         except Exception as e:
-            print(f"Failed to install airules binary: {e}", file=sys.stderr)
+            print(f"Failed to install ai-rulez binary: {e}", file=sys.stderr)
             print("You can manually download the binary from:", file=sys.stderr)
             print(f"https://github.com/{REPO_NAME}/releases/tag/v{VERSION}", file=sys.stderr)
             sys.exit(1)
 
 setup(
-    name="airules",
+    name="ai-rulez",
     version=VERSION,
     description="CLI tool for managing AI assistant rules - generate configuration files for Claude, Cursor, Windsurf and more",
     long_description=open("README.md").read(),
@@ -145,7 +145,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'airules=airules:main',
+            'ai-rulez=ai_rulez:main',
         ],
     },
     classifiers=[

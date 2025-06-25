@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/airules/internal/config"
-	"github.com/Goldziher/airules/internal/templates"
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 // Generator handles the generation of output files from configuration.
