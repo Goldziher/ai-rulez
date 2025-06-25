@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/airules/internal/config"
-	"github.com/Goldziher/airules/internal/templates"
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 func TestNewTemplateData(t *testing.T) {

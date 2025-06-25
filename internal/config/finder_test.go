@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/airules/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
 func TestFindConfigFile(t *testing.T) {
@@ -21,26 +21,26 @@ func TestFindConfigFile(t *testing.T) {
 		wantError bool
 	}{
 		{
-			name: "finds .airules.yaml in current directory",
+			name: "finds .ai-rulez.yaml in current directory",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, ".airules.yaml")
+				configPath := filepath.Join(tmpDir, ".ai-rulez.yaml")
 				err := os.WriteFile(configPath, []byte("test"), 0644)
 				require.NoError(t, err)
 				return tmpDir
 			},
-			wantFile: ".airules.yaml",
+			wantFile: ".ai-rulez.yaml",
 		},
 		{
-			name: "finds airules.yaml in current directory",
+			name: "finds ai-rulez.yaml in current directory",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, "airules.yaml")
+				configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
 				err := os.WriteFile(configPath, []byte("test"), 0644)
 				require.NoError(t, err)
 				return tmpDir
 			},
-			wantFile: "airules.yaml",
+			wantFile: "ai-rulez.yaml",
 		},
 		{
 			name: "finds config in parent directory",
@@ -50,72 +50,72 @@ func TestFindConfigFile(t *testing.T) {
 				err := os.MkdirAll(subDir, 0755)
 				require.NoError(t, err)
 
-				configPath := filepath.Join(tmpDir, ".airules.yaml")
+				configPath := filepath.Join(tmpDir, ".ai-rulez.yaml")
 				err = os.WriteFile(configPath, []byte("test"), 0644)
 				require.NoError(t, err)
 
 				return subDir
 			},
-			wantFile: ".airules.yaml",
+			wantFile: ".ai-rulez.yaml",
 		},
 		{
-			name: "prefers .airules.yaml over airules.yaml",
+			name: "prefers .ai-rulez.yaml over ai-rulez.yaml",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 
 				// Create both files
-				err := os.WriteFile(filepath.Join(tmpDir, ".airules.yaml"), []byte("test"), 0644)
+				err := os.WriteFile(filepath.Join(tmpDir, ".ai-rulez.yaml"), []byte("test"), 0644)
 				require.NoError(t, err)
-				err = os.WriteFile(filepath.Join(tmpDir, "airules.yaml"), []byte("test"), 0644)
+				err = os.WriteFile(filepath.Join(tmpDir, "ai-rulez.yaml"), []byte("test"), 0644)
 				require.NoError(t, err)
 
 				return tmpDir
 			},
-			wantFile: ".airules.yaml",
+			wantFile: ".ai-rulez.yaml",
 		},
 		{
-			name: "finds ai_rules.yaml",
+			name: "finds ai_rulez.yaml",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, "ai_rules.yaml")
+				configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
 				err := os.WriteFile(configPath, []byte("test"), 0644)
 				require.NoError(t, err)
 				return tmpDir
 			},
-			wantFile: "ai_rules.yaml",
+			wantFile: "ai_rulez.yaml",
 		},
 		{
-			name: "finds .ai_rules.yaml",
+			name: "finds .ai_rulez.yaml",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, ".ai_rules.yaml")
+				configPath := filepath.Join(tmpDir, ".ai_rulez.yaml")
 				err := os.WriteFile(configPath, []byte("test"), 0644)
 				require.NoError(t, err)
 				return tmpDir
 			},
-			wantFile: ".ai_rules.yaml",
+			wantFile: ".ai_rulez.yaml",
 		},
 		{
 			name: "finds .yml variant",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
-				configPath := filepath.Join(tmpDir, "airules.yml")
+				configPath := filepath.Join(tmpDir, "ai-rulez.yml")
 				err := os.WriteFile(configPath, []byte("test"), 0644)
 				require.NoError(t, err)
 				return tmpDir
 			},
-			wantFile: "airules.yml",
+			wantFile: "ai-rulez.yml",
 		},
 		{
-			name: "priority order: .airules.yaml first",
+			name: "priority order: .ai-rulez.yaml first",
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 
 				// Create all variants
 				files := []string{
-					".airules.yaml", "airules.yaml",
-					".ai_rules.yaml", "ai_rules.yaml",
-					".airules.yml", "airules.yml",
+					".ai-rulez.yaml", "ai-rulez.yaml",
+					".ai_rulez.yaml", "ai_rulez.yaml",
+					".ai-rulez.yml", "ai-rulez.yml",
 				}
 				for _, f := range files {
 					err := os.WriteFile(filepath.Join(tmpDir, f), []byte("test"), 0644)
@@ -124,7 +124,7 @@ func TestFindConfigFile(t *testing.T) {
 
 				return tmpDir
 			},
-			wantFile: ".airules.yaml",
+			wantFile: ".ai-rulez.yaml",
 		},
 		{
 			name: "no config file found",
@@ -169,13 +169,13 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 				// Create config files in different directories
 				configs := []string{
-					".airules.yaml",
-					"project1/airules.yaml",
-					"project2/.airules.yaml",
-					"nested/deep/airules.yaml",
-					"project3/ai_rules.yaml",
-					"project4/.ai_rules.yml",
-					"project5/airules.yml",
+					".ai-rulez.yaml",
+					"project1/ai-rulez.yaml",
+					"project2/.ai-rulez.yaml",
+					"nested/deep/ai-rulez.yaml",
+					"project3/ai_rulez.yaml",
+					"project4/.ai_rulez.yml",
+					"project5/ai-rulez.yml",
 				}
 
 				for _, config := range configs {
@@ -197,9 +197,9 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 				// Create config files
 				configs := []string{
-					"airules.yaml",
-					".hidden/airules.yaml", // Should be skipped
-					"visible/.airules.yaml",
+					"ai-rulez.yaml",
+					".hidden/ai-rulez.yaml", // Should be skipped
+					"visible/.ai-rulez.yaml",
 				}
 
 				for _, config := range configs {

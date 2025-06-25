@@ -1,4 +1,4 @@
-module github.com/Goldziher/airules
+module github.com/Goldziher/ai-rulez
 
 go 1.24.4
 
