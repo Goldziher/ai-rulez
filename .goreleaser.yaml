@@ -1,13 +1,13 @@
-project_name: airules
+project_name: ai-rulez
 
 before:
   hooks:
     - go mod download
 
 builds:
-  - id: airules
-    binary: airules
-    main: ./cmd/airules/
+  - id: ai-rulez
+    binary: ai-rulez
+    main: .
     env:
       - CGO_ENABLED=0
       - GOPROXY=direct
@@ -43,7 +43,7 @@ checksum:
 release:
   github:
     owner: Goldziher
-    name: airules
+    name: ai-rulez
 
 nfpms:
   - id: packages

@@ -9,8 +9,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/airules/internal/config"
-	"github.com/Goldziher/airules/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator"
 )
 
 func TestGenerator_GenerateAll(t *testing.T) {
