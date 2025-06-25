@@ -28,7 +28,7 @@ go.work.sum
 /build/python/__pycache__/
 /build/npm/node_modules/
 /build/npm/*.tgz
-/airules
+/ai-rulez
 
 # Generated AI rule files (but NOT ai_rules.yaml config)
 claude.md
@@ -79,7 +79,11 @@ testing/**/claude.md
 # Node.js
 node_modules/
 pnpm-lock.yaml
+package-lock.json
 
 # GoReleaser
 dist/
 .goreleaser/
+
+# Release artifacts
+release-test/

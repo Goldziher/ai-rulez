@@ -1,7 +1,7 @@
 version: '3'
 
 vars:
-  BINARY_NAME: airules
+  BINARY_NAME: ai-rulez
 
 tasks:
   build:

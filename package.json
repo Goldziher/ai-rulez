@@ -1,7 +1,7 @@
 {
-  "name": "ai_rules",
-  "version": "1.0.0rc1",
-  "description": "A CLI tool for managing AI assistant rules",
+  "name": "ai-rulez",
+  "version": "1.0.0",
+  "description": "Lightning-fast CLI tool (written in Go) for managing AI assistant rules",
   "private": true,
   "packageManager": "pnpm@9.15.2",
   "scripts": {
