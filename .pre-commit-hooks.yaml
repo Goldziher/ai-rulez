@@ -1,5 +1,5 @@
 repos:
-  - repo: https://github.com/Goldziher/airules
+  - repo: https://github.com/Goldziher/ai-rulez
     rev: v1.0.0  # Use the ref you want to point at
     hooks:
       - id: airules-validate
