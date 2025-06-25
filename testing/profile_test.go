@@ -39,21 +39,21 @@ func TestProfileGeneration(t *testing.T) {
 	// Run multiple generations to get good profile data
 	for i := 0; i < 10; i++ {
 		// Test basic generation
-		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rules.yaml")
+		cmd := exec.Command(binaryPath, "generate", "scenarios/basic/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 		}
 
 		// Test with includes
-		cmd = exec.Command(binaryPath, "generate", "scenarios/with-includes/ai_rules.yaml")
+		cmd = exec.Command(binaryPath, "generate", "scenarios/with-includes/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("Command failed: %v\nOutput: %s", err, output)
 		}
 
 		// Test validation
-		cmd = exec.Command(binaryPath, "validate", "scenarios/basic/ai_rules.yaml")
+		cmd = exec.Command(binaryPath, "validate", "scenarios/basic/ai_rulez.yaml")
 		cmd.Dir = tempDir
 		if output, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("Command failed: %v\nOutput: %s", err, output)
