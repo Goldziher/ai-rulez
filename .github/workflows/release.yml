@@ -76,7 +76,7 @@ jobs:
           echo "Building Python package with version $VERSION"
           # Wait a bit for GitHub release to be fully available
           echo "Waiting for GitHub release to be available..."
-          sleep 60
+          sleep 120
           cd build/python
           RELEASE_VERSION=$VERSION python -m build
 
