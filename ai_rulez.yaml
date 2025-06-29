@@ -1,0 +1,178 @@
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "ai-rulez"
+  version: "1.0.0"
+  description: "Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
+
+outputs:
+  - file: "CLAUDE.md"
+    template: "default"
+
+rules:
+  - name: "Go Best Practices"
+    priority: 10
+    content: |
+      - Use Go 1.24+ features and idioms
+      - Follow effective Go guidelines
+      - Use meaningful package, variable, and function names
+      - Keep functions small and focused
+      - Handle errors explicitly, never ignore them
+      - Use context.Context for cancellation and timeouts
+      - Prefer composition over inheritance
+      - Use interfaces for abstraction
+      - Write idiomatic Go code
+
+  - name: "Code Quality"
+    priority: 9
+    content: |
+      - Write clean, readable, and maintainable code
+      - Follow SOLID principles where applicable
+      - Use consistent formatting (go fmt)
+      - Run go vet and golangci-lint before committing
+      - Keep cognitive complexity low
+      - Avoid premature optimization
+      - Use descriptive variable and function names
+      - Comment public APIs and complex logic
+
+  - name: "Testing Standards"
+    priority: 8
+    content: |
+      - Write unit tests for all new functionality
+      - Maintain test coverage above 80%
+      - Use table-driven tests where appropriate
+      - Test error conditions and edge cases
+      - Use testify/assert for readable assertions
+      - Run tests with race detection enabled
+      - Write integration tests for complex workflows
+      - Use benchmarks for performance-critical code
+
+  - name: "CLI Development"
+    priority: 7
+    content: |
+      - Use cobra for CLI command structure
+      - Provide helpful error messages and usage examples
+      - Support both flags and environment variables
+      - Implement proper exit codes
+      - Add command completion support
+      - Use spinners/progress bars for long operations
+      - Validate input parameters early
+      - Follow Unix CLI conventions
+
+  - name: "Performance Optimization"
+    priority: 6
+    content: |
+      - Profile before optimizing
+      - Use benchmarks to validate improvements
+      - Minimize memory allocations in hot paths
+      - Use sync.Pool for object reuse when appropriate
+      - Consider concurrency for I/O bound operations
+      - Cache expensive computations
+      - Avoid unnecessary file system operations
+      - Use efficient data structures
+
+  - name: "Error Handling"
+    priority: 8
+    content: |
+      - Always handle errors explicitly
+      - Provide context in error messages
+      - Use fmt.Errorf with %w verb for error wrapping
+      - Log errors at appropriate levels
+      - Return meaningful error types for different failure modes
+      - Don't panic in library code
+      - Use errors.Is and errors.As for error checking
+      - Include relevant details in error messages
+
+  - name: "Configuration Management"
+    priority: 6
+    content: |
+      - Use viper for configuration handling
+      - Support YAML, JSON, and environment variables
+      - Validate configuration early
+      - Provide sensible defaults
+      - Use JSON Schema for validation
+      - Support configuration file discovery
+      - Handle missing or invalid configuration gracefully
+
+  - name: "File Operations"
+    priority: 5
+    content: |
+      - Use filepath.Join for cross-platform paths
+      - Check file permissions before operations
+      - Use atomic writes for important files
+      - Handle concurrent file access properly
+      - Clean up temporary files
+      - Respect file modification times
+      - Use appropriate file modes (0644, 0755)
+
+  - name: "Documentation"
+    priority: 4
+    content: |
+      - Document all public APIs with Go doc comments
+      - Keep README.md up to date
+      - Include usage examples in documentation
+      - Document command-line flags and options
+      - Add inline comments for complex logic
+      - Use clear and concise language
+      - Include troubleshooting sections
+
+  - name: "Git and Version Control"
+    priority: 3
+    content: |
+      - Use conventional commits format
+      - Write clear commit messages
+      - Keep commits focused and atomic
+      - Use lefthook for pre-commit validation
+      - Tag releases following semantic versioning
+      - Update CHANGELOG.md for releases
+      - Don't commit sensitive information
+
+sections:
+  - title: "Development Environment"
+    priority: 50
+    content: |
+      ## Development Setup
+      
+      This project uses Go 1.24+ and Task for build automation.
+      
+      **Prerequisites:**
+      - Go 1.24+
+      - Task (taskfile.dev)
+      - golangci-lint v2
+      - lefthook (for git hooks)
+      - pnpm (for npm package management)
+      
+      **Setup:**
+      ```bash
+      task setup
+      ```
+      
+      **Common Commands:**
+      - `task build` - Build the binary
+      - `task test` - Run unit tests
+      - `task lint` - Run linting
+      - `task ci` - Run all CI checks
+      - `task dev` - Development workflow
+      
+  - title: "Architecture Overview"
+    priority: 40
+    content: |
+      ## Project Structure
+      
+      ```
+      ai-rulez/
+      ├── cmd/              # CLI entry point
+      ├── internal/         # Internal packages
+      │   ├── config/       # Configuration and validation
+      │   ├── generator/    # Output generation
+      │   └── templates/    # Template rendering
+      ├── schema/           # JSON Schema definitions
+      ├── examples/         # Example configurations
+      └── testing/          # Test scenarios and data
+      ```
+      
+      The tool is designed for high performance with:
+      - Incremental file generation (only writes when changed)
+      - Concurrent processing where possible
+      - Efficient memory usage
+      - Fast startup times
