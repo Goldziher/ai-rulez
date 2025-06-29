@@ -1,13 +1,18 @@
 package main
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -45,6 +50,7 @@ func init() {
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(mcpCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -424,4 +430,280 @@ func createTypescriptTemplate(projectName string) *config.Config {
 			},
 		},
 	}
+}
+
+// mcpCmd represents the mcp command
+var mcpCmd = &cobra.Command{
+	Use:   "mcp",
+	Short: "Start MCP server for AI assistant integration",
+	Long: `Start an MCP (Model Context Protocol) server that exposes ai-rulez functionality 
+to AI assistants like Claude Desktop, Cursor, and other MCP-compatible tools.
+
+The server runs in stdio mode and provides tools for:
+- Retrieving rules and sections
+- Generating output files
+- Validating configurations
+- Listing available templates
+
+Configure in your AI assistant by adding this server to the MCP configuration.`,
+	Run: func(cmd *cobra.Command, args []string) {
+		runMCPServer()
+	},
+}
+
+func runMCPServer() {
+	// Create MCP server
+	s := server.NewMCPServer(
+		"ai-rulez",
+		Version,
+		server.WithToolCapabilities(false),
+	)
+
+	// Add ai-rulez tools
+	addAIRulezTools(s)
+
+	// Start stdio server
+	if err := server.ServeStdio(s); err != nil {
+		fmt.Fprintf(os.Stderr, "MCP server error: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func addAIRulezTools(s *server.MCPServer) {
+	// Tool: Get rules
+	getRulesTool := mcp.NewTool("get_rules",
+		mcp.WithDescription("Get AI assistant rules from configuration"),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+		mcp.WithNumber("min_priority",
+			mcp.Description("Minimum priority level to include (optional)"),
+		),
+		mcp.WithString("name_filter",
+			mcp.Description("Filter rules by name (case-insensitive substring match, optional)"),
+		),
+	)
+	s.AddTool(getRulesTool, handleGetRules)
+
+	// Tool: Get sections
+	getSectionsTool := mcp.NewTool("get_sections",
+		mcp.WithDescription("Get documentation sections from configuration"),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(getSectionsTool, handleGetSections)
+
+	// Tool: Generate output
+	generateTool := mcp.NewTool("generate_output",
+		mcp.WithDescription("Generate AI rules output files"),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+		mcp.WithBoolean("dry_run",
+			mcp.Description("Show what would be generated without writing files (default: false)"),
+		),
+	)
+	s.AddTool(generateTool, handleGenerate)
+
+	// Tool: Validate config
+	validateTool := mcp.NewTool("validate_config",
+		mcp.WithDescription("Validate AI rules configuration file"),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(validateTool, handleValidate)
+
+	// Tool: List templates
+	templatesTool := mcp.NewTool("list_templates",
+		mcp.WithDescription("List available project templates for initialization"),
+	)
+	s.AddTool(templatesTool, handleListTemplates)
+}
+
+func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Apply filters
+	minPriority := request.GetFloat("min_priority", 0)
+	nameFilter := request.GetString("name_filter", "")
+
+	var filteredRules []config.Rule
+	for _, rule := range cfg.Rules {
+		// Priority filter
+		if minPriority > 0 && float64(rule.Priority) < minPriority {
+			continue
+		}
+		// Name filter
+		if nameFilter != "" && !strings.Contains(strings.ToLower(rule.Name), strings.ToLower(nameFilter)) {
+			continue
+		}
+		filteredRules = append(filteredRules, rule)
+	}
+
+	// Format response
+	result := map[string]interface{}{
+		"config_file": configFile,
+		"total_rules": len(cfg.Rules),
+		"rules_shown": len(filteredRules),
+		"rules":       filteredRules,
+		"metadata":    cfg.Metadata,
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Format response
+	result := map[string]interface{}{
+		"config_file":    configFile,
+		"total_sections": len(cfg.Sections),
+		"sections":       cfg.Sections,
+		"metadata":       cfg.Metadata,
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Check dry run flag
+	dryRun := request.GetBool("dry_run", false)
+
+	if dryRun {
+		result := map[string]interface{}{
+			"config_file":    configFile,
+			"dry_run":        true,
+			"would_generate": len(cfg.Outputs),
+			"outputs":        cfg.Outputs,
+			"metadata":       cfg.Metadata,
+			"total_rules":    len(cfg.Rules),
+			"total_sections": len(cfg.Sections),
+		}
+		jsonResult, _ := json.MarshalIndent(result, "", "  ")
+		return mcp.NewToolResultText(string(jsonResult)), nil
+	}
+
+	// Generate files
+	gen := generator.NewWithBaseDir(filepath.Dir(configFile))
+	err = gen.GenerateAll(cfg)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error generating files: %v", err)), nil
+	}
+
+	result := map[string]interface{}{
+		"config_file":     configFile,
+		"files_generated": len(cfg.Outputs),
+		"outputs":         cfg.Outputs,
+		"success":         true,
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleValidate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load and validate configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Configuration validation failed: %v", err)), nil
+	}
+
+	result := map[string]interface{}{
+		"config_file":    configFile,
+		"valid":          true,
+		"metadata":       cfg.Metadata,
+		"total_rules":    len(cfg.Rules),
+		"total_sections": len(cfg.Sections),
+		"total_outputs":  len(cfg.Outputs),
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleListTemplates(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	templates := []map[string]interface{}{
+		{
+			"name":        "basic",
+			"description": "Basic AI rules template with code quality, documentation, and testing rules",
+			"outputs":     []string{"claude.md", ".cursorrules", ".windsurfrules"},
+		},
+		{
+			"name":        "react",
+			"description": "React project template with component structure, state management, and performance rules",
+			"outputs":     []string{"claude.md", ".cursorrules", ".windsurfrules"},
+		},
+		{
+			"name":        "typescript",
+			"description": "TypeScript project template with type safety, interface design, and error handling rules",
+			"outputs":     []string{"claude.md", ".cursorrules", ".windsurfrules"},
+		},
+	}
+
+	result := map[string]interface{}{
+		"available_templates": templates,
+		"total_templates":     len(templates),
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
 }
