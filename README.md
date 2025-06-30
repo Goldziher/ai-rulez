@@ -23,7 +23,8 @@ A high-performance CLI tool for generating configuration files for Claude, Curso
 ```bash
 pip install ai-rulez
 ```
-*Automatically downloads and manages the Go binary for your platform*
+*Automatically downloads and manages the Go binary for your platform*  
+**Requirements**: Python 3.9+ (LTS and above)
 
 ### npm (Recommended for Node.js users)
 ```bash
@@ -33,7 +34,8 @@ npm install -g ai-rulez
 # Local project installation  
 npm install --save-dev ai-rulez
 ```
-*Automatically downloads and manages the Go binary for your platform*
+*Automatically downloads and manages the Go binary for your platform*  
+**Requirements**: Node.js 20+ (LTS and above)
 
 ### Go (Direct installation)
 ```bash

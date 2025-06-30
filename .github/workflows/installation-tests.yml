@@ -1,0 +1,52 @@
+name: Installation Tests
+
+on:
+  push:
+    paths:
+      - 'build/**'
+      - 'test/**'
+      - '.github/workflows/installation-tests.yml'
+      - '.github/actions/**'
+  pull_request:
+    paths:
+      - 'build/**'
+      - 'test/**'
+      - '.github/workflows/installation-tests.yml'
+      - '.github/actions/**'
+
+jobs:
+  python-tests:
+    name: Python Installation Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run Python Installation Tests
+        uses: ./.github/actions/run-python-tests
+        with:
+          python-version: ${{ matrix.python-version }}
+
+  javascript-tests:
+    name: JavaScript Installation Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ["20", "22"]
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Run JavaScript Installation Tests
+        uses: ./.github/actions/run-js-tests
+        with:
+          node-version: ${{ matrix.node-version }}

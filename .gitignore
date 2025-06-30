@@ -80,6 +80,60 @@ testing/**/claude.md
 node_modules/
 pnpm-lock.yaml
 package-lock.json
+*.log
+.pnpm-debug.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+.venv/
+.env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+*.egg
+*.egg-info/
+.eggs/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.whl
+
+# uv
+.uv/
+uv.lock
+
+# Testing artifacts
+.pytest_cache/
+.vitest/
+coverage/
+.nyc_output/
+
+# Linting and formatting
+.ruff_cache/
 
 # GoReleaser
 dist/
