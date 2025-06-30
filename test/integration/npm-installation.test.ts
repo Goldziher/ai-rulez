@@ -1,11 +1,11 @@
-import { describe, test, expect, beforeAll, afterAll } from 'vitest'
-import { execSync, spawn } from 'child_process'
-import { promisify } from 'util'
-import * as fs from 'fs'
-import * as path from 'path'
-import * as os from 'os'
+import { execSync, spawn } from 'node:child_process'
+import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
+import { promisify } from 'node:util'
+import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
-const exec = promisify(require('child_process').exec)
+const exec = promisify(require('node:child_process').exec)
 
 describe('NPM Installation Tests', () => {
   let tempDir: string
@@ -15,16 +15,16 @@ describe('NPM Installation Tests', () => {
     // Create temporary directory
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-rulez-npm-test-'))
     npmPackageDir = path.join(tempDir, 'npm-package')
-    
+
     // Check if npm build directory exists
     const npmSourceDir = path.join(__dirname, '../../build/npm')
     if (!fs.existsSync(npmSourceDir)) {
       throw new Error(`NPM source directory not found: ${npmSourceDir}`)
     }
-    
+
     // Copy npm package files to temp directory
     execSync(`cp -r "${npmSourceDir}" "${npmPackageDir}"`)
-    
+
     // Set a test version
     const packageJsonPath = path.join(npmPackageDir, 'package.json')
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
@@ -50,10 +50,10 @@ describe('NPM Installation Tests', () => {
         process.exit(1)
       }
     `
-    
+
     const { stdout } = await exec(`cd "${npmPackageDir}" && node -e "${testScript}"`)
     const platform = JSON.parse(stdout.trim())
-    
+
     expect(platform).toHaveProperty('os')
     expect(platform).toHaveProperty('arch')
     expect(['darwin', 'linux', 'windows']).toContain(platform.os)
@@ -64,7 +64,7 @@ describe('NPM Installation Tests', () => {
     // Test with invalid URL
     const invalidPackageDir = path.join(tempDir, 'invalid-npm')
     execSync(`cp -r "${npmPackageDir}" "${invalidPackageDir}"`)
-    
+
     // Modify install.js to use invalid URL
     const installJsPath = path.join(invalidPackageDir, 'install.js')
     const installJs = fs.readFileSync(installJsPath, 'utf8')
@@ -73,12 +73,15 @@ describe('NPM Installation Tests', () => {
       'https://github.com/nonexistent/invalid-repo'
     )
     fs.writeFileSync(installJsPath, modifiedJs)
-    
+
     try {
       await exec(`cd "${invalidPackageDir}" && timeout 30 node install.js`)
       throw new Error('Should have failed with invalid URL')
-    } catch (error: any) {
-      expect(error.stderr || error.stdout).toMatch(/Failed to download|Failed to install|Error|404|timeout/i)
+    } catch (error: unknown) {
+      const err = error as { stderr?: string; stdout?: string }
+      expect(err.stderr || err.stdout).toMatch(
+        /Failed to download|Failed to install|Error|404|timeout/i
+      )
     }
   })
 
@@ -96,12 +99,13 @@ describe('NPM Installation Tests', () => {
         process.exit(1)
       }
     `
-    
+
     try {
       await exec(`cd "${npmPackageDir}" && node -e "${testScript}"`)
       throw new Error('Should have failed with old Node.js version')
-    } catch (error: any) {
-      expect(error.stdout || error.stderr).toMatch(/Node\.js.*not supported|VERSION_ERROR_CAUGHT/i)
+    } catch (error: unknown) {
+      const err = error as { stderr?: string; stdout?: string }
+      expect(err.stdout || err.stderr).toMatch(/Node\.js.*not supported|VERSION_ERROR_CAUGHT/i)
     }
   })
 
@@ -139,7 +143,7 @@ describe('NPM Installation Tests', () => {
         }
       })()
     `
-    
+
     const { stdout } = await exec(`cd "${npmPackageDir}" && node -e "${checksumTestScript}"`)
     expect(stdout).toContain('HASH:')
     expect(stdout).toContain('EXPECTED:')
@@ -169,17 +173,17 @@ describe('NPM Installation Tests', () => {
       
       console.log('✅ ai-rulez mock installed successfully!')
     `
-    
+
     const mockPackageDir = path.join(tempDir, 'mock-npm')
     execSync(`cp -r "${npmPackageDir}" "${mockPackageDir}"`)
     fs.writeFileSync(path.join(mockPackageDir, 'install.js'), mockInstallJs)
-    
+
     const { stdout } = await exec(`cd "${mockPackageDir}" && node install.js`)
     expect(stdout).toContain('✅ ai-rulez mock installed successfully!')
-    
+
     const binDir = path.join(mockPackageDir, 'bin')
     expect(fs.existsSync(binDir)).toBe(true)
-    
+
     const binaryName = process.platform === 'win32' ? 'ai-rulez.exe' : 'ai-rulez'
     const binaryPath = path.join(binDir, binaryName)
     expect(fs.existsSync(binaryPath)).toBe(true)

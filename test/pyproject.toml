@@ -12,6 +12,7 @@ dev = [
     "pytest-mock>=3.14.0",
     "requests>=2.31.0",
     "packaging>=24.0",
+    "ruff>=0.8.0",
 ]
 
 [tool.pytest.ini_options]
