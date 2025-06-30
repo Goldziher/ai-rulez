@@ -4,7 +4,7 @@
   "description": "Integration tests for ai-rulez installation scripts",
   "private": true,
   "type": "module",
-  "packageManager": "pnpm@9.14.4",
+  "packageManager": "pnpm@10.12.4",
   "engines": {
     "node": ">=18.0.0"
   },
@@ -14,9 +14,13 @@
     "test:coverage": "vitest run --coverage",
     "test:smoke": "vitest run --grep=\"smoke\"",
     "test:integration": "vitest run --grep=\"integration\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write ."
   },
   "devDependencies": {
+    "@biomejs/biome": "^1.9.4",
     "@types/node": "^22.10.5",
     "@vitest/coverage-v8": "^2.1.8",
     "typescript": "^5.7.2",
