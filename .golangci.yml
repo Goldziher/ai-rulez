@@ -1,4 +1,4 @@
-version: 2
+version: "2"
 
 run:
   go: '1.24'
@@ -21,6 +21,6 @@ linters-settings:
     ignore-tests: true
 
 issues:
-  exclude-dirs:
-    - vendor
-    - build
+  exclude-rules:
+    - path: vendor/
+    - path: build/
