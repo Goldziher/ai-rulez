@@ -1,0 +1,39 @@
+[project]
+name = "ai-rulez-tests"
+version = "0.1.0"
+description = "Integration tests for AI Rulez installation scripts"
+requires-python = ">=3.9"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.25.0", 
+    "pytest-timeout>=2.3.0",
+    "pytest-mock>=3.14.0",
+    "requests>=2.31.0",
+    "packaging>=24.0",
+]
+
+[tool.pytest.ini_options]
+timeout = 60
+markers = [
+    "smoke: Quick smoke tests for basic functionality",
+    "integration: Integration tests for installation process", 
+    "platform: Platform-specific tests",
+]
+testpaths = ["integration"]
+python_files = ["*_test.py", "test_*.py"]
+addopts = [
+    "-v",
+    "--tb=short",
+    "--strict-markers",
+]
+
+[tool.ruff]
+target-version = "py39"
+line-length = 100
+src = ["integration"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP"]
+ignore = ["E501"]  # Line length handled by formatter
