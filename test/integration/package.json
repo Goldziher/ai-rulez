@@ -1,0 +1,19 @@
+{
+  "name": "ai-rulez-integration-tests",
+  "version": "1.0.0",
+  "description": "Integration tests for ai-rulez installation",
+  "private": true,
+  "scripts": {
+    "test": "jest",
+    "test:npm": "jest npm_install_test.js",
+    "test:python": "python -m pytest python_install_test.py -v"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 60000,
+    "verbose": true
+  }
+}
