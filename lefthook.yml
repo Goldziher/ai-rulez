@@ -15,16 +15,19 @@ pre-commit:
       fail_text: "go mod tidy failed"
     python-lint:
       glob: "test/**/*.py"
-      run: cd test && uv run ruff check --fix {staged_files}
+      run: cd test && uv run ruff check --fix .
       fail_text: "Python linting failed"
+      stage_fixed: true
     python-format:
-      glob: "test/**/*.py"
-      run: cd test && uv run ruff format {staged_files}
+      glob: "test/**/*.py"  
+      run: cd test && uv run ruff format .
       fail_text: "Python formatting failed"
+      stage_fixed: true
     js-lint:
       glob: "test/**/*.{js,ts,json}"
-      run: cd test/integration && pnpm biome check --write {staged_files}
+      run: cd test/integration && pnpm biome check --write .
       fail_text: "JavaScript/TypeScript linting failed"
+      stage_fixed: true
 
 commit-msg:
   commands:
