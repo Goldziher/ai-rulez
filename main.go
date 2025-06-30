@@ -510,7 +510,7 @@ you'll be prompted to enter new content via stdin.`,
 		newContent, _ := cmd.Flags().GetString("content")
 		priority, _ := cmd.Flags().GetInt("priority")
 		configFile, _ := cmd.Flags().GetString("config")
-		
+
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
@@ -519,14 +519,14 @@ you'll be prompted to enter new content via stdin.`,
 			}
 			configFile = foundConfig
 		}
-		
+
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Find the rule to update
 		ruleIndex := -1
 		for i, rule := range cfg.Rules {
@@ -535,12 +535,12 @@ you'll be prompted to enter new content via stdin.`,
 				break
 			}
 		}
-		
+
 		if ruleIndex == -1 {
 			fmt.Fprintf(os.Stderr, "Error: Rule '%s' not found\n", ruleName)
 			os.Exit(1)
 		}
-		
+
 		// Update content if not provided via flag
 		if newContent == "" && priority == 0 {
 			fmt.Printf("Current content: %s\n", cfg.Rules[ruleIndex].Content)
@@ -554,7 +554,7 @@ you'll be prompted to enter new content via stdin.`,
 				newContent = content
 			}
 		}
-		
+
 		// Update the rule
 		if newContent != "" {
 			cfg.Rules[ruleIndex].Content = newContent
@@ -562,13 +562,13 @@ you'll be prompted to enter new content via stdin.`,
 		if priority > 0 {
 			cfg.Rules[ruleIndex].Priority = priority
 		}
-		
+
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		fmt.Printf("✓ Updated rule '%s' in %s\n", ruleName, configFile)
 	},
 }
@@ -586,7 +586,7 @@ you'll be prompted to enter new content via stdin.`,
 		newContent, _ := cmd.Flags().GetString("content")
 		priority, _ := cmd.Flags().GetInt("priority")
 		configFile, _ := cmd.Flags().GetString("config")
-		
+
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
@@ -595,14 +595,14 @@ you'll be prompted to enter new content via stdin.`,
 			}
 			configFile = foundConfig
 		}
-		
+
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Find the section to update
 		sectionIndex := -1
 		for i, section := range cfg.Sections {
@@ -611,12 +611,12 @@ you'll be prompted to enter new content via stdin.`,
 				break
 			}
 		}
-		
+
 		if sectionIndex == -1 {
 			fmt.Fprintf(os.Stderr, "Error: Section '%s' not found\n", sectionTitle)
 			os.Exit(1)
 		}
-		
+
 		// Update content if not provided via flag
 		if newContent == "" && priority == 0 {
 			fmt.Printf("Current content: %s\n", cfg.Sections[sectionIndex].Content)
@@ -630,7 +630,7 @@ you'll be prompted to enter new content via stdin.`,
 				newContent = content
 			}
 		}
-		
+
 		// Update the section
 		if newContent != "" {
 			cfg.Sections[sectionIndex].Content = newContent
@@ -638,13 +638,13 @@ you'll be prompted to enter new content via stdin.`,
 		if priority > 0 {
 			cfg.Sections[sectionIndex].Priority = priority
 		}
-		
+
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		fmt.Printf("✓ Updated section '%s' in %s\n", sectionTitle, configFile)
 	},
 }
@@ -660,7 +660,7 @@ You can update the template used for the output file.`,
 		filename := args[0]
 		template, _ := cmd.Flags().GetString("template")
 		configFile, _ := cmd.Flags().GetString("config")
-		
+
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
@@ -669,14 +669,14 @@ You can update the template used for the output file.`,
 			}
 			configFile = foundConfig
 		}
-		
+
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Find the output to update
 		outputIndex := -1
 		for i, output := range cfg.Outputs {
@@ -685,21 +685,21 @@ You can update the template used for the output file.`,
 				break
 			}
 		}
-		
+
 		if outputIndex == -1 {
 			fmt.Fprintf(os.Stderr, "Error: Output file '%s' not found\n", filename)
 			os.Exit(1)
 		}
-		
+
 		// Update the output
 		cfg.Outputs[outputIndex].Template = template
-		
+
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		fmt.Printf("✓ Updated output '%s' template to '%s' in %s\n", filename, template, configFile)
 	},
 }
@@ -720,7 +720,7 @@ var deleteRuleCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ruleName := args[0]
 		configFile, _ := cmd.Flags().GetString("config")
-		
+
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
@@ -729,14 +729,14 @@ var deleteRuleCmd = &cobra.Command{
 			}
 			configFile = foundConfig
 		}
-		
+
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Find and remove the rule
 		ruleIndex := -1
 		for i, rule := range cfg.Rules {
@@ -745,21 +745,21 @@ var deleteRuleCmd = &cobra.Command{
 				break
 			}
 		}
-		
+
 		if ruleIndex == -1 {
 			fmt.Fprintf(os.Stderr, "Error: Rule '%s' not found\n", ruleName)
 			os.Exit(1)
 		}
-		
+
 		// Remove the rule
 		cfg.Rules = append(cfg.Rules[:ruleIndex], cfg.Rules[ruleIndex+1:]...)
-		
+
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		fmt.Printf("✓ Deleted rule '%s' from %s\n", ruleName, configFile)
 	},
 }
@@ -773,7 +773,7 @@ var deleteSectionCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		sectionTitle := args[0]
 		configFile, _ := cmd.Flags().GetString("config")
-		
+
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
@@ -782,14 +782,14 @@ var deleteSectionCmd = &cobra.Command{
 			}
 			configFile = foundConfig
 		}
-		
+
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Find and remove the section
 		sectionIndex := -1
 		for i, section := range cfg.Sections {
@@ -798,21 +798,21 @@ var deleteSectionCmd = &cobra.Command{
 				break
 			}
 		}
-		
+
 		if sectionIndex == -1 {
 			fmt.Fprintf(os.Stderr, "Error: Section '%s' not found\n", sectionTitle)
 			os.Exit(1)
 		}
-		
+
 		// Remove the section
 		cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
-		
+
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		fmt.Printf("✓ Deleted section '%s' from %s\n", sectionTitle, configFile)
 	},
 }
@@ -826,7 +826,7 @@ var deleteOutputCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		filename := args[0]
 		configFile, _ := cmd.Flags().GetString("config")
-		
+
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
@@ -835,14 +835,14 @@ var deleteOutputCmd = &cobra.Command{
 			}
 			configFile = foundConfig
 		}
-		
+
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		// Find and remove the output
 		outputIndex := -1
 		for i, output := range cfg.Outputs {
@@ -851,21 +851,21 @@ var deleteOutputCmd = &cobra.Command{
 				break
 			}
 		}
-		
+
 		if outputIndex == -1 {
 			fmt.Fprintf(os.Stderr, "Error: Output file '%s' not found\n", filename)
 			os.Exit(1)
 		}
-		
+
 		// Remove the output
 		cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
-		
+
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
 			os.Exit(1)
 		}
-		
+
 		fmt.Printf("✓ Deleted output '%s' from %s\n", filename, configFile)
 	},
 }
@@ -879,12 +879,12 @@ func init() {
 	addCmd.AddCommand(addRuleCmd)
 	addCmd.AddCommand(addSectionCmd)
 	addCmd.AddCommand(addOutputCmd)
-	
+
 	// Add subcommands to update command
 	updateCmd.AddCommand(updateRuleCmd)
 	updateCmd.AddCommand(updateSectionCmd)
 	updateCmd.AddCommand(updateOutputCmd)
-	
+
 	// Add subcommands to delete command
 	deleteCmd.AddCommand(deleteRuleCmd)
 	deleteCmd.AddCommand(deleteSectionCmd)
@@ -901,22 +901,22 @@ func init() {
 	// Add flags for add output command
 	addOutputCmd.Flags().StringP("template", "t", "", "Template to use for the output (optional)")
 	addOutputCmd.Flags().StringP("config", "c", "", "Config file to add output to (auto-discover if not provided)")
-	
+
 	// Add flags for update rule command
 	updateRuleCmd.Flags().StringP("content", "", "", "New content for the rule (optional, will prompt if not provided)")
 	updateRuleCmd.Flags().IntP("priority", "p", 0, "New priority level for the rule (optional)")
 	updateRuleCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
-	
+
 	// Add flags for update section command
 	updateSectionCmd.Flags().StringP("content", "", "", "New content for the section (optional, will prompt if not provided)")
 	updateSectionCmd.Flags().IntP("priority", "p", 0, "New priority level for the section (optional)")
 	updateSectionCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
-	
+
 	// Add flags for update output command
 	updateOutputCmd.Flags().StringP("template", "t", "", "New template for the output (required)")
 	updateOutputCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
 	_ = updateOutputCmd.MarkFlagRequired("template")
-	
+
 	// Add flags for delete commands
 	deleteRuleCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 	deleteSectionCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
@@ -1183,7 +1183,7 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(addOutputTool, handleAddOutput)
-	
+
 	// Tool: Update rule
 	updateRuleTool := mcp.NewTool("update_rule",
 		mcp.WithDescription("Update an existing rule in the configuration"),
@@ -1202,7 +1202,7 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(updateRuleTool, handleUpdateRule)
-	
+
 	// Tool: Update section
 	updateSectionTool := mcp.NewTool("update_section",
 		mcp.WithDescription("Update an existing section in the configuration"),
@@ -1221,7 +1221,7 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(updateSectionTool, handleUpdateSection)
-	
+
 	// Tool: Update output
 	updateOutputTool := mcp.NewTool("update_output",
 		mcp.WithDescription("Update an existing output file in the configuration"),
@@ -1238,7 +1238,7 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(updateOutputTool, handleUpdateOutput)
-	
+
 	// Tool: Delete rule
 	deleteRuleTool := mcp.NewTool("delete_rule",
 		mcp.WithDescription("Delete an existing rule from the configuration"),
@@ -1251,7 +1251,7 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(deleteRuleTool, handleDeleteRule)
-	
+
 	// Tool: Delete section
 	deleteSectionTool := mcp.NewTool("delete_section",
 		mcp.WithDescription("Delete an existing section from the configuration"),
@@ -1264,7 +1264,7 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(deleteSectionTool, handleDeleteSection)
-	
+
 	// Tool: Delete output
 	deleteOutputTool := mcp.NewTool("delete_output",
 		mcp.WithDescription("Delete an existing output file from the configuration"),
@@ -1663,10 +1663,10 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	if name == "" {
 		return mcp.NewToolResultError("Rule name is required"), nil
 	}
-	
+
 	newContent := request.GetString("content", "")
 	priority := int(request.GetFloat("priority", 0))
-	
+
 	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
@@ -1676,13 +1676,13 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		}
 		configFile = foundConfig
 	}
-	
+
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
-	
+
 	// Find the rule to update
 	ruleIndex := -1
 	for i, rule := range cfg.Rules {
@@ -1691,11 +1691,11 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 			break
 		}
 	}
-	
+
 	if ruleIndex == -1 {
 		return mcp.NewToolResultError(fmt.Sprintf("Rule '%s' not found", name)), nil
 	}
-	
+
 	// Update the rule
 	if newContent != "" {
 		cfg.Rules[ruleIndex].Content = newContent
@@ -1703,12 +1703,12 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	if priority > 0 {
 		cfg.Rules[ruleIndex].Priority = priority
 	}
-	
+
 	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
-	
+
 	result := map[string]interface{}{
 		"success":     true,
 		"config_file": configFile,
@@ -1719,7 +1719,7 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		},
 		"total_rules": len(cfg.Rules),
 	}
-	
+
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
@@ -1730,10 +1730,10 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	if title == "" {
 		return mcp.NewToolResultError("Section title is required"), nil
 	}
-	
+
 	newContent := request.GetString("content", "")
 	priority := int(request.GetFloat("priority", 0))
-	
+
 	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
@@ -1743,13 +1743,13 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		}
 		configFile = foundConfig
 	}
-	
+
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
-	
+
 	// Find the section to update
 	sectionIndex := -1
 	for i, section := range cfg.Sections {
@@ -1758,11 +1758,11 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 			break
 		}
 	}
-	
+
 	if sectionIndex == -1 {
 		return mcp.NewToolResultError(fmt.Sprintf("Section '%s' not found", title)), nil
 	}
-	
+
 	// Update the section
 	if newContent != "" {
 		cfg.Sections[sectionIndex].Content = newContent
@@ -1770,12 +1770,12 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	if priority > 0 {
 		cfg.Sections[sectionIndex].Priority = priority
 	}
-	
+
 	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
-	
+
 	result := map[string]interface{}{
 		"success":     true,
 		"config_file": configFile,
@@ -1786,7 +1786,7 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		},
 		"total_sections": len(cfg.Sections),
 	}
-	
+
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
@@ -1797,12 +1797,12 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	if filename == "" {
 		return mcp.NewToolResultError("Output filename is required"), nil
 	}
-	
+
 	template := request.GetString("template", "")
 	if template == "" {
 		return mcp.NewToolResultError("Template is required"), nil
 	}
-	
+
 	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
@@ -1812,13 +1812,13 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		}
 		configFile = foundConfig
 	}
-	
+
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
-	
+
 	// Find the output to update
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
@@ -1827,19 +1827,19 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 			break
 		}
 	}
-	
+
 	if outputIndex == -1 {
 		return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' not found", filename)), nil
 	}
-	
+
 	// Update the output
 	cfg.Outputs[outputIndex].Template = template
-	
+
 	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
-	
+
 	result := map[string]interface{}{
 		"success":     true,
 		"config_file": configFile,
@@ -1850,7 +1850,7 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		},
 		"total_outputs": len(cfg.Outputs),
 	}
-	
+
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
@@ -1861,7 +1861,7 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	if name == "" {
 		return mcp.NewToolResultError("Rule name is required"), nil
 	}
-	
+
 	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
@@ -1871,13 +1871,13 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		}
 		configFile = foundConfig
 	}
-	
+
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
-	
+
 	// Find and remove the rule
 	ruleIndex := -1
 	for i, rule := range cfg.Rules {
@@ -1886,26 +1886,26 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 			break
 		}
 	}
-	
+
 	if ruleIndex == -1 {
 		return mcp.NewToolResultError(fmt.Sprintf("Rule '%s' not found", name)), nil
 	}
-	
+
 	// Remove the rule
 	cfg.Rules = append(cfg.Rules[:ruleIndex], cfg.Rules[ruleIndex+1:]...)
-	
+
 	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
-	
+
 	result := map[string]interface{}{
 		"success":     true,
 		"config_file": configFile,
 		"deleted":     name,
 		"total_rules": len(cfg.Rules),
 	}
-	
+
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
@@ -1916,7 +1916,7 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	if title == "" {
 		return mcp.NewToolResultError("Section title is required"), nil
 	}
-	
+
 	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
@@ -1926,13 +1926,13 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		}
 		configFile = foundConfig
 	}
-	
+
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
-	
+
 	// Find and remove the section
 	sectionIndex := -1
 	for i, section := range cfg.Sections {
@@ -1941,26 +1941,26 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 			break
 		}
 	}
-	
+
 	if sectionIndex == -1 {
 		return mcp.NewToolResultError(fmt.Sprintf("Section '%s' not found", title)), nil
 	}
-	
+
 	// Remove the section
 	cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
-	
+
 	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
-	
+
 	result := map[string]interface{}{
-		"success":     true,
-		"config_file": configFile,
-		"deleted":     title,
+		"success":        true,
+		"config_file":    configFile,
+		"deleted":        title,
 		"total_sections": len(cfg.Sections),
 	}
-	
+
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
@@ -1971,7 +1971,7 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	if filename == "" {
 		return mcp.NewToolResultError("Output filename is required"), nil
 	}
-	
+
 	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
@@ -1981,13 +1981,13 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		}
 		configFile = foundConfig
 	}
-	
+
 	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
-	
+
 	// Find and remove the output
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
@@ -1996,26 +1996,26 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 			break
 		}
 	}
-	
+
 	if outputIndex == -1 {
 		return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' not found", filename)), nil
 	}
-	
+
 	// Remove the output
 	cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
-	
+
 	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
-	
+
 	result := map[string]interface{}{
-		"success":     true,
-		"config_file": configFile,
-		"deleted":     filename,
+		"success":       true,
+		"config_file":   configFile,
+		"deleted":       filename,
 		"total_outputs": len(cfg.Outputs),
 	}
-	
+
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
