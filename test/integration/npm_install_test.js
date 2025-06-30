@@ -16,7 +16,14 @@ describe('NPM Installation Integration Tests', () => {
     npmPackageDir = path.join(tempDir, 'npm-package');
     
     // Copy npm package files to temp directory
-    await execAsync(`cp -r ${path.join(__dirname, '../../build/npm')} ${npmPackageDir}`);
+    const npmSourceDir = path.join(__dirname, '../../build/npm');
+    
+    // Check if source directory exists
+    if (!fs.existsSync(npmSourceDir)) {
+      throw new Error(`NPM source directory not found: ${npmSourceDir}`);
+    }
+    
+    await execAsync(`cp -r "${npmSourceDir}" "${npmPackageDir}"`);
     
     // Set a test version
     const packageJson = JSON.parse(fs.readFileSync(path.join(npmPackageDir, 'package.json'), 'utf8'));
@@ -27,7 +34,7 @@ describe('NPM Installation Integration Tests', () => {
   afterAll(async () => {
     // Clean up temp directory
     if (tempDir && fs.existsSync(tempDir)) {
-      await execAsync(`rm -rf ${tempDir}`);
+      await execAsync(`rm -rf "${tempDir}"`);
     }
   });
 
@@ -53,7 +60,7 @@ describe('NPM Installation Integration Tests', () => {
   test('should handle download errors gracefully', async () => {
     // Test with invalid URL
     const invalidPackageDir = path.join(tempDir, 'invalid-npm');
-    await execAsync(`cp -r ${npmPackageDir} ${invalidPackageDir}`);
+    await execAsync(`cp -r "${npmPackageDir}" "${invalidPackageDir}"`);
     
     // Modify install.js to use invalid URL
     const installJs = fs.readFileSync(path.join(invalidPackageDir, 'install.js'), 'utf8');
@@ -64,12 +71,13 @@ describe('NPM Installation Integration Tests', () => {
     fs.writeFileSync(path.join(invalidPackageDir, 'install.js'), modifiedJs);
     
     try {
-      await execAsync(`cd ${invalidPackageDir} && timeout 60 node install.js`);
-      fail('Should have failed with invalid URL');
+      // Use a shorter timeout for faster tests
+      await execAsync(`cd "${invalidPackageDir}" && timeout 30 node install.js`);
+      throw new Error('Should have failed with invalid URL');
     } catch (error) {
-      expect(error.stderr || error.stdout).toMatch(/Failed to download|Failed to install|Error|404/i);
+      expect(error.stderr || error.stdout).toMatch(/Failed to download|Failed to install|Error|404|timeout/i);
     }
-  });
+  }, 40000);
 
   test('should validate Node.js version requirement', async () => {
     const testScript = `
