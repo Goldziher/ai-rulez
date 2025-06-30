@@ -246,8 +246,8 @@ async function install() {
     // Check Node.js version compatibility
     const nodeVersion = process.version;
     const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
-    if (majorVersion < 14) {
-      console.error(`Error: Node.js ${nodeVersion} is not supported. Please upgrade to Node.js 14 or later.`);
+    if (majorVersion < 20) {
+      console.error(`Error: Node.js ${nodeVersion} is not supported. Please upgrade to Node.js 20 or later.`);
       process.exit(1);
     }
     
