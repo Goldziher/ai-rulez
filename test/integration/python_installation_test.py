@@ -37,9 +37,10 @@ class TestPythonInstallation:
     @pytest.mark.smoke
     def test_platform_detection(self, python_package_dir):
         """Test platform detection functionality"""
+        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
-sys.path.insert(0, '{python_package_dir}')
+sys.path.insert(0, {repr(str(python_package_dir))})
 from ai_rulez.downloader import get_platform
 
 try:
@@ -63,9 +64,10 @@ except Exception as e:
     @pytest.mark.smoke
     def test_url_generation(self, python_package_dir):
         """Test binary URL generation"""
+        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
-sys.path.insert(0, '{python_package_dir}')
+sys.path.insert(0, {repr(str(python_package_dir))})
 from ai_rulez.downloader import get_binary_url, get_checksums_url
 
 try:
@@ -95,20 +97,22 @@ except Exception as e:
     @pytest.mark.integration
     def test_checksum_calculation(self, python_package_dir, temp_dir):
         """Test SHA256 checksum calculation"""
+        # Use repr() to properly escape paths and use Path for cross-platform compatibility
         test_script = f"""
 import sys
 import os
-sys.path.insert(0, '{python_package_dir}')
+from pathlib import Path
+sys.path.insert(0, {repr(str(python_package_dir))})
 from ai_rulez.downloader import calculate_sha256, get_expected_checksum
 
 try:
     # Create test file
-    test_file = '{temp_dir}/test.txt'
+    test_file = Path({repr(str(temp_dir))}) / 'test.txt'
     with open(test_file, 'w') as f:
         f.write('Hello, World!')
 
     # Calculate checksum
-    checksum = calculate_sha256(test_file)
+    checksum = calculate_sha256(str(test_file))
     print(f'Calculated hash: {{checksum}}')
 
     # Test checksum parsing
@@ -120,7 +124,7 @@ try:
     assert checksum == expected
 
     # Cleanup
-    os.unlink(test_file)
+    test_file.unlink()
     print('SUCCESS: Checksum calculation works')
 except Exception as e:
     print(f'ERROR: {{e}}')
@@ -137,9 +141,10 @@ except Exception as e:
     @pytest.mark.integration
     def test_binary_path_generation(self, python_package_dir):
         """Test binary path generation"""
+        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
-sys.path.insert(0, '{python_package_dir}')
+sys.path.insert(0, {repr(str(python_package_dir))})
 from ai_rulez.downloader import get_binary_path
 import platform
 
@@ -173,11 +178,12 @@ except Exception as e:
     @pytest.mark.integration
     def test_version_cache_management(self, python_package_dir):
         """Test version cache functionality"""
+        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
 import tempfile
 import os
-sys.path.insert(0, '{python_package_dir}')
+sys.path.insert(0, {repr(str(python_package_dir))})
 
 # Mock the version
 import ai_rulez.downloader as downloader
@@ -218,22 +224,24 @@ except Exception as e:
     @pytest.mark.skipif(platform.system() == "Windows", reason="Unix-specific test")
     def test_unix_permissions(self, python_package_dir, temp_dir):
         """Test Unix file permissions handling"""
+        # Use repr() to properly escape paths and use Path for cross-platform compatibility
         test_script = f"""
 import sys
 import os
 import stat
-sys.path.insert(0, '{python_package_dir}')
+from pathlib import Path
+sys.path.insert(0, {repr(str(python_package_dir))})
 from ai_rulez.downloader import verify_binary
 
 try:
     # Create mock binary file
-    mock_binary = '{temp_dir}/mock-ai-rulez'
+    mock_binary = Path({repr(str(temp_dir))}) / 'mock-ai-rulez'
     with open(mock_binary, 'w') as f:
         f.write('#!/bin/bash\\necho "mock binary"\\n')
 
     # Without execute permissions should fail
     os.chmod(mock_binary, 0o644)
-    assert not verify_binary(mock_binary)
+    assert not verify_binary(str(mock_binary))
 
     # With execute permissions should pass basic checks
     os.chmod(mock_binary, 0o755)
