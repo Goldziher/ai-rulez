@@ -2,366 +2,57 @@ name: Installation Tests
 
 on:
   push:
-    branches: [ main, develop, fix-installation-scripts ]
+    paths:
+      - 'build/**'
+      - 'test/**'
+      - '.github/workflows/installation-tests.yml'
+      - '.github/actions/**'
   pull_request:
-    branches: [ main ]
+    paths:
+      - 'build/**'
+      - 'test/**'
+      - '.github/workflows/installation-tests.yml'
+      - '.github/actions/**'
 
 jobs:
-  # Test NPM installation across platforms and Node.js versions
-  npm-installation:
-    name: NPM Installation Test
+  python-tests:
+    name: Python Installation Tests
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        node-version: ['14', '16', '18', '20', '22']
-        exclude:
-          # Skip some combinations to reduce CI time
-          - os: windows-latest
-            node-version: '14'
-          - os: windows-latest
-            node-version: '16'
-    runs-on: ${{ matrix.os }}
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ matrix.node-version }}
-
-      - name: Install test dependencies
-        run: |
-          cd test/integration
-          npm install jest --save-dev
-
-      - name: Run NPM installation tests
-        run: |
-          cd test/integration
-          npm test
-        env:
-          NODE_ENV: test
-
-      - name: Test actual NPM package installation (mock)
-        shell: bash
-        run: |
-          cd build/npm
-          # Test platform detection
-          node -e "
-            const { getPlatform } = require('./install.js');
-            try {
-              const platform = getPlatform();
-              console.log('Platform detected:', JSON.stringify(platform));
-              if (!platform.os || !platform.arch) {
-                throw new Error('Invalid platform detection');
-              }
-            } catch (e) {
-              console.error('Platform detection failed:', e.message);
-              process.exit(1);
-            }
-          "
-
-      - name: Test Node.js version validation
-        shell: bash
-        run: |
-          cd build/npm
-          # This should pass with current Node.js version
-          node -e "
-            const nodeVersion = process.version;
-            const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
-            console.log('Node.js version:', nodeVersion, 'Major:', majorVersion);
-            if (majorVersion < 14) {
-              console.log('Would fail with old version (expected)');
-            } else {
-              console.log('Version check passed');
-            }
-          "
-
-  # Test Python installation across platforms and Python versions  
-  python-installation:
-    name: Python Installation Test
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
-        exclude:
-          # Skip some combinations to reduce CI time
-          - os: windows-latest
-            python-version: '3.8'
-          - os: windows-latest
-            python-version: '3.9'
-    runs-on: ${{ matrix.os }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
+      
+      - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
+      
+      - name: Run Python Installation Tests
+        uses: ./.github/actions/run-python-tests
 
-      - name: Install test dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pytest pytest-mock
-
-      - name: Run Python installation tests
-        run: |
-          cd test/integration
-          PYTHONPATH=${{ github.workspace }}/build/python python -m pytest python_install_test.py -v
-
-      - name: Test platform detection
-        shell: bash
-        run: |
-          cd build/python
-          python -c "
-          import sys
-          sys.path.insert(0, '.')
-          from ai_rulez.downloader import get_platform
-          try:
-              platform_name, arch = get_platform()
-              print(f'Platform: {platform_name}, Arch: {arch}')
-              assert platform_name in ['darwin', 'linux', 'windows']
-              assert arch in ['amd64', 'arm64', '386']
-              print('Platform detection: PASSED')
-          except Exception as e:
-              print(f'Platform detection: FAILED - {e}')
-              sys.exit(1)
-          "
-
-      - name: Test URL generation
-        shell: bash
-        run: |
-          cd build/python
-          python -c "
-          import sys
-          sys.path.insert(0, '.')
-          from ai_rulez.downloader import get_binary_url, get_checksums_url
-          try:
-              binary_url = get_binary_url('1.0.0')
-              checksums_url = get_checksums_url('1.0.0')
-              print(f'Binary URL: {binary_url}')
-              print(f'Checksums URL: {checksums_url}')
-              assert 'github.com' in binary_url
-              assert 'github.com' in checksums_url
-              assert 'v1.0.0' in binary_url
-              print('URL generation: PASSED')
-          except Exception as e:
-              print(f'URL generation: FAILED - {e}')
-              sys.exit(1)
-          "
-
-  # Test installation scripts with actual releases (if available)
-  real-installation-test:
-    name: Real Installation Test
+  javascript-tests:
+    name: JavaScript Installation Tests
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, macos-latest]  # Skip Windows for real tests due to complexity
-        package-type: [npm, python]
-    runs-on: ${{ matrix.os }}
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: ["18", "20", "22"]
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Set up Node.js (for NPM tests)
-        if: matrix.package-type == 'npm'
+      
+      - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-
-      - name: Set up Python (for Python tests)
-        if: matrix.package-type == 'python'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Build and test release simulation
-        run: |
-          # Create a mock release for testing
-          mkdir -p /tmp/mock-release
-          
-          # Build a test binary
-          go build -o /tmp/mock-release/ai-rulez .
-          
-          # Create archives like GoReleaser would
-          cd /tmp/mock-release
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            tar -czf ai-rulez_test_linux_amd64.tar.gz ai-rulez
-            echo "$(sha256sum ai-rulez_test_linux_amd64.tar.gz | cut -d' ' -f1)  ai-rulez_test_linux_amd64.tar.gz" > checksums.txt
-          elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            tar -czf ai-rulez_test_darwin_amd64.tar.gz ai-rulez
-            echo "$(shasum -a 256 ai-rulez_test_darwin_amd64.tar.gz | cut -d' ' -f1)  ai-rulez_test_darwin_amd64.tar.gz" > checksums.txt
-          fi
-          
-          echo "Mock release created:"
-          ls -la
-          cat checksums.txt
-
-      - name: Test NPM installation with mock release
-        if: matrix.package-type == 'npm'
-        run: |
-          cd build/npm
-          # Test checksum calculation
-          node -e "
-            const crypto = require('crypto');
-            const fs = require('fs');
-            
-            // Test checksum functions
-            async function test() {
-              try {
-                const { calculateSHA256, getExpectedChecksum } = require('./install.js');
-                
-                // Create test file
-                fs.writeFileSync('test.txt', 'Hello World');
-                const hash = await calculateSHA256('test.txt');
-                console.log('Calculated hash:', hash);
-                
-                // Test checksum parsing
-                const checksumContent = hash + '  test.txt\n';
-                fs.writeFileSync('test-checksums.txt', checksumContent);
-                const expectedHash = await getExpectedChecksum('test-checksums.txt', 'test.txt');
-                console.log('Expected hash:', expectedHash);
-                
-                if (hash === expectedHash) {
-                  console.log('Checksum test: PASSED');
-                } else {
-                  throw new Error('Hash mismatch');
-                }
-                
-                // Cleanup
-                fs.unlinkSync('test.txt');
-                fs.unlinkSync('test-checksums.txt');
-              } catch (e) {
-                console.error('Checksum test: FAILED -', e.message);
-                process.exit(1);
-              }
-            }
-            test();
-          "
-
-      - name: Test Python installation with mock release
-        if: matrix.package-type == 'python'
-        run: |
-          cd build/python
-          python -c "
-          import sys
-          sys.path.insert(0, '.')
-          import tempfile
-          import os
-          from ai_rulez.downloader import calculate_sha256, get_expected_checksum
-          
-          try:
-              # Test checksum calculation
-              with tempfile.NamedTemporaryFile(mode='w', delete=False) as f:
-                  f.write('Hello World')
-                  test_file = f.name
-              
-              hash_result = calculate_sha256(test_file)
-              print(f'Calculated hash: {hash_result}')
-              
-              # Test checksum parsing
-              checksums_content = f'{hash_result}  test.txt'
-              expected = get_expected_checksum(checksums_content, 'test.txt')
-              print(f'Expected hash: {expected}')
-              
-              if hash_result == expected:
-                  print('Checksum test: PASSED')
-              else:
-                  raise Exception('Hash mismatch')
-              
-              # Cleanup
-              os.unlink(test_file)
-          except Exception as e:
-              print(f'Checksum test: FAILED - {e}')
-              sys.exit(1)
-          "
-
-  # Test package metadata and structure
-  package-structure:
-    name: Package Structure Test
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Validate NPM package structure
-        run: |
-          cd build/npm
-          echo "=== NPM Package Structure ==="
-          
-          # Check required files exist
-          test -f package.json || (echo "Missing package.json" && exit 1)
-          test -f install.js || (echo "Missing install.js" && exit 1)
-          test -f README.md || (echo "Missing README.md" && exit 1)
-          
-          # Validate package.json
-          node -e "
-            const pkg = require('./package.json');
-            if (!pkg.name || pkg.name !== 'ai-rulez') throw new Error('Invalid package name');
-            if (!pkg.scripts || !pkg.scripts.postinstall) throw new Error('Missing postinstall script');
-            if (!pkg.bin || !pkg.bin['ai-rulez']) throw new Error('Missing binary declaration');
-            if (!pkg.engines || !pkg.engines.node) throw new Error('Missing Node.js engine requirement');
-            console.log('NPM package.json: VALID');
-          "
-          
-          # Check install.js syntax
-          node -c install.js && echo "install.js syntax: VALID"
-          
-          echo "NPM package structure: PASSED"
-
-      - name: Validate Python package structure
-        run: |
-          cd build/python
-          echo "=== Python Package Structure ==="
-          
-          # Check required files exist
-          test -f setup.py || (echo "Missing setup.py" && exit 1)
-          test -d ai_rulez || (echo "Missing ai_rulez directory" && exit 1)
-          test -f ai_rulez/__init__.py || (echo "Missing __init__.py" && exit 1)
-          test -f ai_rulez/cli.py || (echo "Missing cli.py" && exit 1)
-          test -f ai_rulez/downloader.py || (echo "Missing downloader.py" && exit 1)
-          
-          # Validate Python syntax
-          python -m py_compile setup.py
-          python -m py_compile ai_rulez/__init__.py
-          python -m py_compile ai_rulez/cli.py
-          python -m py_compile ai_rulez/downloader.py
-          echo "Python syntax: VALID"
-          
-          # Test imports
-          python -c "import sys; sys.path.insert(0, '.'); import ai_rulez; print('Import test: PASSED')"
-          
-          echo "Python package structure: PASSED"
-
-  # Summary job that depends on all tests
-  installation-tests-summary:
-    name: Installation Tests Summary
-    runs-on: ubuntu-latest
-    needs: [npm-installation, python-installation, real-installation-test, package-structure]
-    if: always()
-    
-    steps:
-      - name: Check test results
-        run: |
-          echo "=== Installation Tests Summary ==="
-          echo "NPM Installation: ${{ needs.npm-installation.result }}"
-          echo "Python Installation: ${{ needs.python-installation.result }}"
-          echo "Real Installation Test: ${{ needs.real-installation-test.result }}"
-          echo "Package Structure: ${{ needs.package-structure.result }}"
-          
-          if [[ "${{ needs.npm-installation.result }}" == "failure" ]] || \
-             [[ "${{ needs.python-installation.result }}" == "failure" ]] || \
-             [[ "${{ needs.real-installation-test.result }}" == "failure" ]] || \
-             [[ "${{ needs.package-structure.result }}" == "failure" ]]; then
-            echo "❌ Some installation tests failed"
-            exit 1
-          else
-            echo "✅ All installation tests passed"
-          fi
+          node-version: ${{ matrix.node-version }}
+      
+      - name: Run JavaScript Installation Tests
+        uses: ./.github/actions/run-js-tests
