@@ -34,15 +34,13 @@ jobs:
 
       - name: Install test dependencies
         run: |
-          npm install -g jest
           cd test/integration
-          npm init -y
-          npm install jest
+          npm install jest --save-dev
 
       - name: Run NPM installation tests
         run: |
           cd test/integration
-          npx jest npm_install_test.js --verbose
+          npm test
         env:
           NODE_ENV: test
 
@@ -114,9 +112,7 @@ jobs:
       - name: Run Python installation tests
         run: |
           cd test/integration
-          python -m pytest python_install_test.py -v
-        env:
-          PYTHONPATH: ${{ github.workspace }}/build/python
+          PYTHONPATH=${{ github.workspace }}/build/python python -m pytest python_install_test.py -v
 
       - name: Test platform detection
         shell: bash
