@@ -74,13 +74,30 @@ describe('NPM Installation Tests', () => {
       }
     `
 
-    const { stdout } = await exec(`node -e "${testScript}"`, { cwd: npmPackageDir })
-    const platform = JSON.parse(stdout.trim())
+    // For Windows, write the script to a file to avoid command line escaping issues
+    if (process.platform === 'win32') {
+      const testFile = path.join(npmPackageDir, 'test-platform.js')
+      fs.writeFileSync(testFile, testScript)
 
-    expect(platform).toHaveProperty('os')
-    expect(platform).toHaveProperty('arch')
-    expect(['darwin', 'linux', 'windows']).toContain(platform.os)
-    expect(['amd64', 'arm64', '386']).toContain(platform.arch)
+      const { stdout } = await exec('node test-platform.js', { cwd: npmPackageDir })
+      const platform = JSON.parse(stdout.trim())
+
+      expect(platform).toHaveProperty('os')
+      expect(platform).toHaveProperty('arch')
+      expect(['darwin', 'linux', 'windows']).toContain(platform.os)
+      expect(['amd64', 'arm64', '386']).toContain(platform.arch)
+
+      // Clean up test file
+      fs.unlinkSync(testFile)
+    } else {
+      const { stdout } = await exec(`node -e "${testScript}"`, { cwd: npmPackageDir })
+      const platform = JSON.parse(stdout.trim())
+
+      expect(platform).toHaveProperty('os')
+      expect(platform).toHaveProperty('arch')
+      expect(['darwin', 'linux', 'windows']).toContain(platform.os)
+      expect(['amd64', 'arm64', '386']).toContain(platform.arch)
+    }
   })
 
   test('should handle download errors gracefully', { timeout: 40000 }, async () => {
@@ -207,10 +224,24 @@ describe('NPM Installation Tests', () => {
       })()
     `
 
-    const { stdout } = await exec(`node -e "${checksumTestScript}"`, { cwd: npmPackageDir })
-    expect(stdout).toContain('HASH:')
-    expect(stdout).toContain('EXPECTED:')
-    expect(stdout).toContain('MATCH: true')
+    // For Windows, write the script to a file to avoid command line escaping issues
+    if (process.platform === 'win32') {
+      const testFile = path.join(npmPackageDir, 'test-checksum.js')
+      fs.writeFileSync(testFile, checksumTestScript)
+
+      const { stdout } = await exec('node test-checksum.js', { cwd: npmPackageDir })
+      expect(stdout).toContain('HASH:')
+      expect(stdout).toContain('EXPECTED:')
+      expect(stdout).toContain('MATCH: true')
+
+      // Clean up test file
+      fs.unlinkSync(testFile)
+    } else {
+      const { stdout } = await exec(`node -e "${checksumTestScript}"`, { cwd: npmPackageDir })
+      expect(stdout).toContain('HASH:')
+      expect(stdout).toContain('EXPECTED:')
+      expect(stdout).toContain('MATCH: true')
+    }
   })
 
   test('should create mock binary installation', { timeout: 30000 }, async () => {
