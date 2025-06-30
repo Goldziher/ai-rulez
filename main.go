@@ -1,9 +1,11 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -51,6 +53,7 @@ func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(initCmd)
 	rootCmd.AddCommand(mcpCmd)
+	rootCmd.AddCommand(addCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -310,10 +313,202 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.`
 	},
 }
 
+// addCmd represents the add command
+var addCmd = &cobra.Command{
+	Use:   "add",
+	Short: "Add rules or sections to configuration",
+	Long:  `Add new rules or sections to your AI rules configuration file.`,
+}
+
+// addRuleCmd represents the add rule subcommand
+var addRuleCmd = &cobra.Command{
+	Use:   "rule [name]",
+	Short: "Add a new rule to configuration",
+	Long: `Add a new rule to your AI rules configuration file.
+The rule name is provided as an argument, and the content can be provided
+via stdin or will open an editor for you to enter the rule content.`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		ruleName := args[0]
+		priority, _ := cmd.Flags().GetInt("priority")
+		configFile, _ := cmd.Flags().GetString("config")
+		
+		if configFile == "" {
+			foundConfig, err := config.FindConfigFile(".")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			configFile = foundConfig
+		}
+		
+		// Load existing configuration
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			os.Exit(1)
+		}
+		
+		// Read content from stdin or prompt
+		fmt.Println("Enter rule content (press Ctrl+D when done):")
+		content, err := readFromStdin()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading content: %v\n", err)
+			os.Exit(1)
+		}
+		
+		// Add new rule
+		newRule := config.Rule{
+			Name:     ruleName,
+			Priority: priority,
+			Content:  content,
+		}
+		cfg.Rules = append(cfg.Rules, newRule)
+		
+		// Save configuration
+		if err := config.SaveConfig(cfg, configFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			os.Exit(1)
+		}
+		
+		fmt.Printf("✓ Added rule '%s' with priority %d to %s\n", ruleName, priority, configFile)
+	},
+}
+
+// addSectionCmd represents the add section subcommand
+var addSectionCmd = &cobra.Command{
+	Use:   "section [title]",
+	Short: "Add a new section to configuration",
+	Long: `Add a new section to your AI rules configuration file.
+The section title is provided as an argument, and the content can be provided
+via stdin or will open an editor for you to enter the section content.`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		sectionTitle := args[0]
+		priority, _ := cmd.Flags().GetInt("priority")
+		configFile, _ := cmd.Flags().GetString("config")
+		
+		if configFile == "" {
+			foundConfig, err := config.FindConfigFile(".")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			configFile = foundConfig
+		}
+		
+		// Load existing configuration
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			os.Exit(1)
+		}
+		
+		// Read content from stdin or prompt
+		fmt.Println("Enter section content (press Ctrl+D when done):")
+		content, err := readFromStdin()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error reading content: %v\n", err)
+			os.Exit(1)
+		}
+		
+		// Add new section
+		newSection := config.Section{
+			Title:    sectionTitle,
+			Priority: priority,
+			Content:  content,
+		}
+		cfg.Sections = append(cfg.Sections, newSection)
+		
+		// Save configuration
+		if err := config.SaveConfig(cfg, configFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			os.Exit(1)
+		}
+		
+		fmt.Printf("✓ Added section '%s' with priority %d to %s\n", sectionTitle, priority, configFile)
+	},
+}
+
+// addOutputCmd represents the add output subcommand
+var addOutputCmd = &cobra.Command{
+	Use:   "output [filename]",
+	Short: "Add a new output file to configuration",
+	Long: `Add a new output file to your AI rules configuration.
+The filename is provided as an argument, and you can optionally specify
+a template to use for rendering the output.`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		filename := args[0]
+		template, _ := cmd.Flags().GetString("template")
+		configFile, _ := cmd.Flags().GetString("config")
+		
+		if configFile == "" {
+			foundConfig, err := config.FindConfigFile(".")
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				os.Exit(1)
+			}
+			configFile = foundConfig
+		}
+		
+		// Load existing configuration
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			os.Exit(1)
+		}
+		
+		// Check if output already exists
+		for _, output := range cfg.Outputs {
+			if output.File == filename {
+				fmt.Fprintf(os.Stderr, "Error: Output file '%s' already exists in configuration\n", filename)
+				os.Exit(1)
+			}
+		}
+		
+		// Add new output
+		newOutput := config.Output{
+			File:     filename,
+			Template: template,
+		}
+		cfg.Outputs = append(cfg.Outputs, newOutput)
+		
+		// Save configuration
+		if err := config.SaveConfig(cfg, configFile); err != nil {
+			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			os.Exit(1)
+		}
+		
+		fmt.Printf("✓ Added output '%s'", filename)
+		if template != "" {
+			fmt.Printf(" with template '%s'", template)
+		}
+		fmt.Printf(" to %s\n", configFile)
+	},
+}
+
 func init() {
 	generateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Process all config files recursively")
 	generateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
 	initCmd.Flags().StringP("template", "t", "basic", "Template to use (basic, react, typescript)")
+	
+	// Add subcommands to add command
+	addCmd.AddCommand(addRuleCmd)
+	addCmd.AddCommand(addSectionCmd)
+	addCmd.AddCommand(addOutputCmd)
+	
+	// Add flags for add rule command
+	addRuleCmd.Flags().IntP("priority", "p", 5, "Priority level for the rule (1-10)")
+	addRuleCmd.Flags().StringP("config", "c", "", "Config file to add rule to (auto-discover if not provided)")
+	
+	// Add flags for add section command
+	addSectionCmd.Flags().IntP("priority", "p", 5, "Priority level for the section")
+	addSectionCmd.Flags().StringP("config", "c", "", "Config file to add section to (auto-discover if not provided)")
+	
+	// Add flags for add output command
+	addOutputCmd.Flags().StringP("template", "t", "", "Template to use for the output (optional)")
+	addOutputCmd.Flags().StringP("config", "c", "", "Config file to add output to (auto-discover if not provided)")
 }
 
 func createBasicTemplate(projectName string) *config.Config {
@@ -520,6 +715,62 @@ func addAIRulezTools(s *server.MCPServer) {
 		mcp.WithDescription("List available project templates for initialization"),
 	)
 	s.AddTool(templatesTool, handleListTemplates)
+	
+	// Tool: Add rule
+	addRuleTool := mcp.NewTool("add_rule",
+		mcp.WithDescription("Add a new rule to the configuration file"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("The name of the rule"),
+		),
+		mcp.WithString("content",
+			mcp.Required(),
+			mcp.Description("The content of the rule"),
+		),
+		mcp.WithNumber("priority",
+			mcp.Description("Priority level for the rule (default: 5)"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(addRuleTool, handleAddRule)
+	
+	// Tool: Add section
+	addSectionTool := mcp.NewTool("add_section",
+		mcp.WithDescription("Add a new section to the configuration file"),
+		mcp.WithString("title",
+			mcp.Required(),
+			mcp.Description("The title of the section"),
+		),
+		mcp.WithString("content",
+			mcp.Required(),
+			mcp.Description("The content of the section"),
+		),
+		mcp.WithNumber("priority",
+			mcp.Description("Priority level for the section (default: 5)"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(addSectionTool, handleAddSection)
+	
+	// Tool: Add output
+	addOutputTool := mcp.NewTool("add_output",
+		mcp.WithDescription("Add a new output file to the configuration"),
+		mcp.WithString("filename",
+			mcp.Required(),
+			mcp.Description("The output filename"),
+		),
+		mcp.WithString("template",
+			mcp.Description("Template to use for the output (optional)"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(addOutputTool, handleAddOutput)
 }
 
 func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -704,6 +955,198 @@ func handleListTemplates(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		"total_templates":     len(templates),
 	}
 
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+// readFromStdin reads content from standard input until EOF
+func readFromStdin() (string, error) {
+	reader := bufio.NewReader(os.Stdin)
+	var content strings.Builder
+	
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				content.WriteString(line)
+				break
+			}
+			return "", err
+		}
+		content.WriteString(line)
+	}
+	
+	return strings.TrimSpace(content.String()), nil
+}
+
+func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get parameters
+	name := request.GetString("name", "")
+	if name == "" {
+		return mcp.NewToolResultError("Rule name is required"), nil
+	}
+	
+	content := request.GetString("content", "")
+	if content == "" {
+		return mcp.NewToolResultError("Rule content is required"), nil
+	}
+	
+	priority := int(request.GetFloat("priority", 5))
+	
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+	
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+	
+	// Add new rule
+	newRule := config.Rule{
+		Name:     name,
+		Priority: priority,
+		Content:  content,
+	}
+	cfg.Rules = append(cfg.Rules, newRule)
+	
+	// Save configuration
+	if err := config.SaveConfig(cfg, configFile); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
+	}
+	
+	result := map[string]interface{}{
+		"success":     true,
+		"config_file": configFile,
+		"rule": map[string]interface{}{
+			"name":     name,
+			"priority": priority,
+		},
+		"total_rules": len(cfg.Rules),
+	}
+	
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get parameters
+	title := request.GetString("title", "")
+	if title == "" {
+		return mcp.NewToolResultError("Section title is required"), nil
+	}
+	
+	content := request.GetString("content", "")
+	if content == "" {
+		return mcp.NewToolResultError("Section content is required"), nil
+	}
+	
+	priority := int(request.GetFloat("priority", 5))
+	
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+	
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+	
+	// Add new section
+	newSection := config.Section{
+		Title:    title,
+		Priority: priority,
+		Content:  content,
+	}
+	cfg.Sections = append(cfg.Sections, newSection)
+	
+	// Save configuration
+	if err := config.SaveConfig(cfg, configFile); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
+	}
+	
+	result := map[string]interface{}{
+		"success":     true,
+		"config_file": configFile,
+		"section": map[string]interface{}{
+			"title":    title,
+			"priority": priority,
+		},
+		"total_sections": len(cfg.Sections),
+	}
+	
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get parameters
+	filename := request.GetString("filename", "")
+	if filename == "" {
+		return mcp.NewToolResultError("Output filename is required"), nil
+	}
+	
+	template := request.GetString("template", "")
+	
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+		}
+		configFile = foundConfig
+	}
+	
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+	
+	// Check if output already exists
+	for _, output := range cfg.Outputs {
+		if output.File == filename {
+			return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' already exists in configuration", filename)), nil
+		}
+	}
+	
+	// Add new output
+	newOutput := config.Output{
+		File:     filename,
+		Template: template,
+	}
+	cfg.Outputs = append(cfg.Outputs, newOutput)
+	
+	// Save configuration
+	if err := config.SaveConfig(cfg, configFile); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
+	}
+	
+	result := map[string]interface{}{
+		"success":     true,
+		"config_file": configFile,
+		"output": map[string]interface{}{
+			"file":     filename,
+			"template": template,
+		},
+		"total_outputs": len(cfg.Outputs),
+	}
+	
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
