@@ -1,19 +1,25 @@
 {
-  "name": "ai-rulez-integration-tests",
+  "name": "ai-rulez-installation-tests",
   "version": "1.0.0",
-  "description": "Integration tests for ai-rulez installation",
+  "description": "Integration tests for ai-rulez installation scripts",
   "private": true,
+  "type": "module",
+  "packageManager": "pnpm@9.14.4",
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
-    "test": "jest",
-    "test:npm": "jest npm_install_test.js",
-    "test:python": "python -m pytest python_install_test.py -v"
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "test:coverage": "vitest run --coverage",
+    "test:smoke": "vitest run --grep=\"smoke\"",
+    "test:integration": "vitest run --grep=\"integration\"",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "jest": "^29.7.0"
-  },
-  "jest": {
-    "testEnvironment": "node",
-    "testTimeout": 60000,
-    "verbose": true
+    "@types/node": "^22.10.5",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
   }
 }
