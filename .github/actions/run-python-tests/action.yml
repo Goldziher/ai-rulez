@@ -1,0 +1,25 @@
+name: "Run Python Installation Tests"
+description: "Set up Python environment and run installation tests"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+
+    - name: Install Dependencies
+      shell: bash
+      working-directory: test
+      run: uv sync --dev
+
+    - name: Run Python Installation Tests
+      shell: bash
+      working-directory: test
+      run: uv run pytest integration/python_installation_test.py -v
