@@ -4,6 +4,8 @@
 
 A high-performance CLI tool for generating configuration files for Claude, Cursor, Windsurf, and other AI assistants from a single, centralized YAML configuration.
 
+**Version 1.1.0** - Now with comprehensive installation testing and improved CI/CD!
+
 ## 🚀 Features
 
 - ⚡ **Blazing Fast**: Written in Go for maximum performance and cross-platform compatibility
@@ -382,6 +384,29 @@ ai-rulez generate --recursive
 - Use `--dry-run` for validation-only mode (fastest)
 - The tool uses incremental generation (only writes when content changes)
 - Consider using file glob patterns to only run when config files change
+
+## 📋 Changelog
+
+### v1.1.0 (2025-06-30)
+- ✅ Added comprehensive integration tests for Python and JavaScript installation scripts
+- ✅ Implemented multi-platform CI test matrix (Windows, macOS, Linux)
+- ✅ Fixed Windows-specific installation issues
+- ✅ Added support for Python 3.9+ (LTS) and Node.js 20+ (LTS)
+- ✅ Added ruff and biome for Python/JavaScript linting
+- ✅ Improved error handling and cross-platform compatibility
+- ✅ Updated documentation with LTS version requirements
+- 🔧 Fixed golangci-lint configuration issues
+- 🔧 Enhanced lefthook pre-commit hooks
+
+### v1.0.0 (2025-06-26)
+- 🎉 Initial release
+- ⚡ Lightning-fast Go implementation
+- 📦 Python and npm package wrappers
+- 🎯 Support for Claude, Cursor, and Windsurf
+- 📝 YAML-based configuration
+- 🔍 JSON Schema validation
+- 📚 Modular rules with includes
+- 🔄 Incremental file generation
 
 ## 🤝 Contributing
 
