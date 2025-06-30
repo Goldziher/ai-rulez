@@ -2,17 +2,32 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: golangci-lint run --fix --config .golangci.yml
-      fail_text: "Linting failed"
+      run: golangci-lint run --fix
+      fail_text: "Go linting failed"
     test:
       run: go test -v ./...
-      fail_text: "Tests failed"
+      fail_text: "Go tests failed"
     fmt:
       run: go fmt ./...
-      fail_text: "Formatting failed"
+      fail_text: "Go formatting failed"
     mod-tidy:
       run: go mod tidy
       fail_text: "go mod tidy failed"
+    python-lint:
+      glob: "test/**/*.py"
+      run: cd test && uv run ruff check --fix .
+      fail_text: "Python linting failed"
+      stage_fixed: true
+    python-format:
+      glob: "test/**/*.py"  
+      run: cd test && uv run ruff format .
+      fail_text: "Python formatting failed"
+      stage_fixed: true
+    js-lint:
+      glob: "test/**/*.{js,ts,json}"
+      run: cd test/integration && pnpm biome check --write .
+      fail_text: "JavaScript/TypeScript linting failed"
+      stage_fixed: true
 
 commit-msg:
   commands:
