@@ -74,7 +74,7 @@ describe('NPM Installation Tests', () => {
       }
     `
 
-    const { stdout } = await exec(`cd "${npmPackageDir}" && node -e "${testScript}"`)
+    const { stdout } = await exec(`node -e "${testScript}"`, { cwd: npmPackageDir })
     const platform = JSON.parse(stdout.trim())
 
     expect(platform).toHaveProperty('os')
@@ -104,8 +104,9 @@ describe('NPM Installation Tests', () => {
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
       try {
-        await exec(`cd "${invalidPackageDir}" && node install.js`, {
+        await exec(`node install.js`, {
           signal: controller.signal,
+          cwd: invalidPackageDir,
         })
         clearTimeout(timeoutId)
         throw new Error('Should have failed with invalid URL')
@@ -148,7 +149,7 @@ describe('NPM Installation Tests', () => {
     `
 
     try {
-      const result = await exec(`cd "${npmPackageDir}" && node -e "${testScript}"`)
+      const result = await exec(`node -e "${testScript}"`, { cwd: npmPackageDir })
       // If we get here, the script didn't exit with error, which is unexpected
       expect(result.stdout).toContain('SHOULD_HAVE_FAILED')
       throw new Error('Should have failed with old Node.js version')
@@ -201,7 +202,7 @@ describe('NPM Installation Tests', () => {
       })()
     `
 
-    const { stdout } = await exec(`cd "${npmPackageDir}" && node -e "${checksumTestScript}"`)
+    const { stdout } = await exec(`node -e "${checksumTestScript}"`, { cwd: npmPackageDir })
     expect(stdout).toContain('HASH:')
     expect(stdout).toContain('EXPECTED:')
     expect(stdout).toContain('MATCH: true')
@@ -235,7 +236,7 @@ describe('NPM Installation Tests', () => {
     copyDir(npmPackageDir, mockPackageDir)
     fs.writeFileSync(path.join(mockPackageDir, 'install.js'), mockInstallJs)
 
-    const { stdout } = await exec(`cd "${mockPackageDir}" && node install.js`)
+    const { stdout } = await exec(`node install.js`, { cwd: mockPackageDir })
     expect(stdout).toContain('✅ ai-rulez mock installed successfully!')
 
     const binDir = path.join(mockPackageDir, 'bin')
