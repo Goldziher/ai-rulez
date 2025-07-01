@@ -165,7 +165,7 @@ includes:
 
 			// Load config
 			mainPath := filepath.Join(tmpDir, "main.yaml")
-			cfg, err := config.LoadConfigWithIncludes(mainPath)
+			cfg, err := config.LoadConfigWithIncludesWithoutProfiles(mainPath)
 
 			if tt.wantErr {
 				assert.Error(t, err)
