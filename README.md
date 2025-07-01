@@ -42,7 +42,7 @@ npm install --save-dev ai-rulez
 go install github.com/Goldziher/ai-rulez@latest
 ```
 
-### Homebrew (Coming Soon)
+### Homebrew
 ```bash
 brew install goldziher/tap/ai-rulez
 ```
