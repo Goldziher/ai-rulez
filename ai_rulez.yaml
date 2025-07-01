@@ -2,7 +2,7 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "ai-rulez"
-  version: "1.0.0"
+  version: "1.1.2"
   description: "Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
 
 outputs:
@@ -126,6 +126,16 @@ rules:
       - Tag releases following semantic versioning
       - Update CHANGELOG.md for releases
       - Don't commit sensitive information
+
+  - name: "Release Management"
+    priority: 3
+    content: |
+      - Use GoReleaser for automated releases
+      - Support multiple package managers (homebrew, npm, pip)
+      - Maintain homebrew tap with automated formula updates
+      - Test package installations before final release
+      - Include checksums and signatures for security
+      - Update installation documentation after releases
 
 sections:
   - title: "Development Environment"
