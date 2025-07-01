@@ -45,12 +45,30 @@ release:
     owner: Goldziher
     name: ai-rulez
 
-nfpms:
-  - id: packages
-    description: "AI rules configuration management tool"
-    maintainer: "Goldziher"
+# Temporarily disabled for Homebrew testing
+# nfpms:
+#   - id: packages
+#     description: "AI rules configuration management tool"
+#     maintainer: "Goldziher"
+#     license: "MIT"
+#     formats:
+#       - deb
+#       - rpm
+#       - apk
+
+brews:
+  - name: ai-rulez
+    description: "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
+    homepage: "https://github.com/Goldziher/ai-rulez"
     license: "MIT"
-    formats:
-      - deb
-      - rpm
-      - apk
+    tap:
+      owner: Goldziher
+      name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    commit_author:
+      name: goreleaserbot
+      email: bot@goreleaser.com
+    install: |
+      bin.install "ai-rulez"
+    test: |
+      system "#{bin}/ai-rulez", "--version"
