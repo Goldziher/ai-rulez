@@ -56,6 +56,7 @@ func init() {
 	rootCmd.AddCommand(addCmd)
 	rootCmd.AddCommand(updateCmd)
 	rootCmd.AddCommand(deleteCmd)
+	rootCmd.AddCommand(listProfilesCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.
@@ -1037,6 +1038,60 @@ func createTypescriptTemplate(projectName string) *config.Config {
 			},
 		},
 	}
+}
+
+// listProfilesCmd represents the list-profiles command
+var listProfilesCmd = &cobra.Command{
+	Use:   "list-profiles",
+	Short: "List available built-in profiles",
+	Long: `List all available built-in profiles that can be used in configuration files.
+
+Profiles provide pre-configured sets of rules for specific project types:
+- default: Core engineering best practices
+- web-app: Frontend web application development
+- api: REST API and backend service development  
+- cli: Command-line tool development
+- library: Reusable library and package development
+
+Use profiles in your configuration with:
+  profile: "web-app"
+  # or
+  profile: ["web-app", "api"]`,
+	Run: func(cmd *cobra.Command, args []string) {
+		profiles, err := config.ListAvailableProfiles()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error listing profiles: %v\n", err)
+			os.Exit(1)
+		}
+
+		if len(profiles) == 0 {
+			fmt.Println("No profiles available")
+			return
+		}
+
+		fmt.Printf("Available profiles (%d):\n\n", len(profiles))
+
+		for _, profileName := range profiles {
+			profile, err := config.LoadProfile(profileName)
+			if err != nil {
+				fmt.Printf("  • %s (error loading: %v)\n", profileName, err)
+				continue
+			}
+
+			description := "No description available"
+			if profile.Metadata.Description != "" {
+				description = profile.Metadata.Description
+			}
+
+			fmt.Printf("  • %s\n", profileName)
+			fmt.Printf("    %s\n", description)
+			fmt.Printf("    Rules: %d\n\n", len(profile.Rules))
+		}
+
+		fmt.Println("Usage:")
+		fmt.Println("  profile: \"web-app\"           # Single profile")
+		fmt.Println("  profile: [\"web-app\", \"api\"]   # Multiple profiles")
+	},
 }
 
 // mcpCmd represents the mcp command

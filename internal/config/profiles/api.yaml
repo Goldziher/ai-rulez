@@ -1,0 +1,34 @@
+metadata:
+  name: "api"
+  description: "REST API and backend service development practices"
+
+rules:
+  - name: "API Design"
+    priority: 20
+    content: |
+      Design consistent, intuitive APIs. Use proper HTTP methods, status codes, and follow REST principles or GraphQL best practices.
+
+  - name: "Input Validation"
+    priority: 19
+    content: |
+      Validate all inputs at API boundaries. Use schema validation and sanitize data to prevent injection attacks.
+
+  - name: "Rate Limiting"
+    priority: 18
+    content: |
+      Implement rate limiting and throttling to protect against abuse and ensure fair resource usage.
+
+  - name: "Database Optimization"
+    priority: 17
+    content: |
+      Optimize database queries and use appropriate indexing. Avoid N+1 queries and implement connection pooling.
+
+  - name: "Logging & Monitoring"
+    priority: 16
+    content: |
+      Implement structured logging with correlation IDs. Monitor API performance, error rates, and key business metrics.
+
+  - name: "Authentication & Authorization"
+    priority: 15
+    content: |
+      Implement secure authentication and fine-grained authorization. Use standard protocols like OAuth2/JWT properly.
