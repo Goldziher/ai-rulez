@@ -28,62 +28,64 @@ jobs:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
-  publish-npm:
-    needs: goreleaser
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  # Temporarily disabled for Homebrew testing
+  # publish-npm:
+  #   needs: goreleaser
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #         registry-url: 'https://registry.npmjs.org'
 
-      - name: Update package version
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          cd build/npm
-          # Use sed to update version directly to avoid npm version conflicts
-          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-          echo "Updated package.json version to $VERSION"
-          cat package.json | grep version
+  #     - name: Update package version
+  #       run: |
+  #         VERSION=${GITHUB_REF#refs/tags/v}
+  #         cd build/npm
+  #         # Use sed to update version directly to avoid npm version conflicts
+  #         sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+  #         echo "Updated package.json version to $VERSION"
+  #         cat package.json | grep version
 
-      - name: Publish to npm
-        run: |
-          cd build/npm
-          npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+  #     - name: Publish to npm
+  #       run: |
+  #         cd build/npm
+  #         npm publish
+  #       env:
+  #         NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-  publish-pypi:
-    needs: goreleaser
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+  # publish-pypi:
+  #   needs: goreleaser
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
+  #     - uses: actions/setup-python@v5
+  #       with:
+  #         python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install build twine
+  #     - name: Install dependencies
+  #       run: |
+  #         pip install build twine
 
-      - name: Build package
-        run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
-          echo "Building Python package with version $VERSION"
-          # Wait a bit for GitHub release to be fully available
-          echo "Waiting for GitHub release to be available..."
-          sleep 120
-          cd build/python
-          RELEASE_VERSION=$VERSION python -m build
+  #     - name: Build package
+  #       run: |
+  #         VERSION=${GITHUB_REF#refs/tags/v}
+  #         echo "Building Python package with version $VERSION"
+  #         # Wait a bit for GitHub release to be fully available
+  #         echo "Waiting for GitHub release to be available..."
+  #         sleep 120
+  #         cd build/python
+  #         RELEASE_VERSION=$VERSION python -m build
 
-      - name: Publish to PyPI
-        run: |
-          cd build/python
-          twine upload dist/*
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+  #     - name: Publish to PyPI
+  #       run: |
+  #         cd build/python
+  #         twine upload dist/*
+  #       env:
+  #         TWINE_USERNAME: __token__
+  #         TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
