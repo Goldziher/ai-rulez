@@ -134,12 +134,12 @@ func matchesWildcard(filename, pattern string) bool {
 	if pattern == "*" {
 		return true
 	}
-	
+
 	if strings.HasPrefix(pattern, "*.") {
 		extension := strings.TrimPrefix(pattern, "*")
 		return strings.HasSuffix(filename, extension)
 	}
-	
+
 	if strings.HasSuffix(pattern, "*") {
 		prefix := strings.TrimSuffix(pattern, "*")
 		return strings.HasPrefix(filename, prefix)
