@@ -301,3 +301,48 @@ func TestBuiltinTemplates_EmptyRules(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerateHeader(t *testing.T) {
+	t.Parallel()
+
+	// Create test data
+	data := &templates.TemplateData{
+		ProjectName:  "Test Project",
+		Version:      "1.0.0",
+		ConfigFile:   "ai-rulez.yaml",
+		OutputFile:   "CLAUDE.md",
+		RuleCount:    5,
+		SectionCount: 2,
+		Timestamp:    time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC),
+	}
+
+	// Generate header
+	header := templates.GenerateHeader(data)
+
+	// Check that header contains expected content
+	expectedContent := []string{
+		"🤖 GENERATED FILE - DO NOT EDIT DIRECTLY",
+		"ai-rulez.yaml",
+		"CLAUDE.md",
+		"DO NOT modify this file directly",
+		"TO UPDATE RULES:",
+		"ai-rulez generate",
+		"2025-01-01 12:00:00",
+		"5 rules, 2 sections",
+		"https://github.com/Goldziher/ai-rulez",
+	}
+
+	for _, expected := range expectedContent {
+		if !strings.Contains(header, expected) {
+			t.Errorf("Header missing expected content: %s", expected)
+		}
+	}
+
+	// Check that header starts with comment and ends with newlines
+	if !strings.HasPrefix(header, "<!-- ") {
+		t.Error("Header should start with HTML comment")
+	}
+	if !strings.HasSuffix(header, "-->\n\n") {
+		t.Error("Header should end with comment close and newlines")
+	}
+}

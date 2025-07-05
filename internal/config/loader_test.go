@@ -165,7 +165,7 @@ includes:
 
 			// Load config
 			mainPath := filepath.Join(tmpDir, "main.yaml")
-			cfg, err := config.LoadConfigWithIncludesWithoutProfiles(mainPath)
+			cfg, err := config.LoadConfigWithIncludes(mainPath)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -404,7 +404,6 @@ func TestLoadConfigWithLocalFile(t *testing.T) {
 			files: map[string]string{
 				"test.yaml": `metadata:
   name: "main"
-profile: "none"
 outputs:
   - file: "CLAUDE.md"
 rules:
@@ -443,7 +442,7 @@ rules:
 			}
 
 			mainFile := filepath.Join(tmpDir, "test.yaml")
-			cfg, err := config.LoadConfigWithIncludesWithoutProfiles(mainFile)
+			cfg, err := config.LoadConfigWithIncludes(mainFile)
 
 			if tt.wantErr {
 				assert.Error(t, err)

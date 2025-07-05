@@ -39,7 +39,7 @@ func TestAddRule(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load config without profiles for testing
-	cfg, err := LoadConfigWithoutProfiles(configFile)
+	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Rules, 1)
 
@@ -56,7 +56,7 @@ func TestAddRule(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reload and verify
-	updatedCfg, err := LoadConfigWithoutProfiles(configFile)
+	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Rules, 2)
 	assert.Equal(t, "New Rule", updatedCfg.Rules[1].Name)
@@ -94,7 +94,7 @@ func TestAddSection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load config
-	cfg, err := LoadConfigWithoutProfiles(configFile)
+	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Sections, 1)
 
@@ -111,7 +111,7 @@ func TestAddSection(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reload and verify
-	updatedCfg, err := LoadConfigWithoutProfiles(configFile)
+	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Sections, 2)
 	assert.Equal(t, "New Section", updatedCfg.Sections[1].Title)
@@ -141,7 +141,7 @@ func TestAddRuleWithDefaults(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load config
-	cfg, err := LoadConfigWithoutProfiles(configFile)
+	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 
 	// Add rule with priority 0 (should default to 1)
@@ -155,7 +155,7 @@ func TestAddRuleWithDefaults(t *testing.T) {
 	err = SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	updatedCfg, err := LoadConfigWithoutProfiles(configFile)
+	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Rules, 1)
 	assert.Equal(t, 1, updatedCfg.Rules[0].Priority) // Should be defaulted to 1
@@ -184,7 +184,7 @@ func TestAddOutput(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load config
-	cfg, err := LoadConfigWithoutProfiles(configFile)
+	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Outputs, 1)
 
@@ -200,7 +200,7 @@ func TestAddOutput(t *testing.T) {
 	require.NoError(t, err)
 
 	// Reload and verify
-	updatedCfg, err := LoadConfigWithoutProfiles(configFile)
+	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Outputs, 2)
 	assert.Equal(t, ".cursorrules", updatedCfg.Outputs[1].File)
@@ -231,7 +231,7 @@ func TestAddOutputDuplicate(t *testing.T) {
 	require.NoError(t, err)
 
 	// Load config
-	cfg, err := LoadConfigWithoutProfiles(configFile)
+	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Outputs, 2)
 
