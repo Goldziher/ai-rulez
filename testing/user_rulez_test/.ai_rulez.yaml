@@ -1,0 +1,18 @@
+metadata:
+  name: "Additional Rules"
+  
+outputs:
+  - file: "additional.md"
+
+rules:
+  - name: "Security"
+    priority: 9
+    content: "Never commit secrets"
+  - name: "Performance"
+    priority: 6
+    content: "Optimize hot paths"
+
+sections:
+  - title: "Best Practices"
+    priority: 8
+    content: "Follow industry standards"
