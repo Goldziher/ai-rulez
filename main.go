@@ -24,11 +24,11 @@ import (
 var Version = "dev"
 
 var (
-	cfgFile       string
-	recursive     bool
-	dryRun        bool
+	cfgFile         string
+	recursive       bool
+	dryRun          bool
 	updateGitignore bool
-	rootCmd       = &cobra.Command{
+	rootCmd         = &cobra.Command{
 		Use:     "ai-rulez",
 		Version: Version,
 		Short:   "A CLI tool for managing AI assistant rules",
