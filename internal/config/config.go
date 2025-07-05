@@ -99,7 +99,6 @@ func LoadConfig(filename string) (*Config, error) {
 		}
 	}
 
-
 	return &config, nil
 }
 
@@ -140,7 +139,3 @@ func (c *Config) Validate() error {
 
 	return nil
 }
-
-
-
-
