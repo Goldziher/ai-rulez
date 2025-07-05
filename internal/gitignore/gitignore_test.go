@@ -113,7 +113,7 @@ func TestMatchesPattern(t *testing.T) {
 	for _, test := range tests {
 		result := matchesPattern(test.filename, test.pattern)
 		if result != test.expected {
-			t.Errorf("matchesPattern(%q, %q) = %v, expected %v", 
+			t.Errorf("matchesPattern(%q, %q) = %v, expected %v",
 				test.filename, test.pattern, result, test.expected)
 		}
 	}
@@ -132,12 +132,12 @@ func TestIsIgnored(t *testing.T) {
 		filename string
 		expected bool
 	}{
-		{"error.log", true},    // matches *.log
-		{"CLAUDE.md", true},    // exact match
-		{"README.md", false},   // no match
+		{"error.log", true},      // matches *.log
+		{"CLAUDE.md", true},      // exact match
+		{"README.md", false},     // no match
 		{"dist/bundle.js", true}, // matches dist/*
-		{"build", true},        // matches /build
-		{"src/build", false},   // doesn't match /build (absolute)
+		{"build", true},          // matches /build
+		{"src/build", false},     // doesn't match /build (absolute)
 	}
 
 	for _, test := range tests {
