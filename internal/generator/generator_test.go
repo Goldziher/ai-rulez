@@ -3,6 +3,7 @@ package generator_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -149,7 +150,12 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 
 	content, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
 	require.NoError(t, err)
-	assert.Equal(t, "Custom: Custom Template Test has 1 rules", string(content))
+
+	contentStr := string(content)
+	// Check that the header is present
+	assert.Contains(t, contentStr, "🤖 GENERATED FILE - DO NOT EDIT DIRECTLY")
+	// Check that the custom template content is present
+	assert.Contains(t, contentStr, "Custom: Custom Template Test has 1 rules")
 }
 
 func TestGenerator_PreviewOutput(t *testing.T) {
@@ -334,4 +340,94 @@ Rules:
 	assert.Contains(t, contentStr, time.Now().Format("2006-01-02"))
 	assert.Contains(t, contentStr, "- Rule 1: Content 1")
 	assert.Contains(t, contentStr, "- Rule 2: Content 2")
+}
+
+func TestGenerator_HeaderGeneration(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputFile := "test.md"
+
+	cfg := &config.Config{
+		Metadata: config.Metadata{
+			Name:        "Header Test",
+			Version:     "1.0.0",
+			Description: "Testing header generation",
+		},
+		Outputs: []config.Output{
+			{File: outputFile},
+		},
+		Rules: []config.Rule{
+			{Name: "Test Rule", Content: "Test content"},
+		},
+	}
+
+	// Use NewWithConfigFile to set the config file name
+	configFile := filepath.Join(tmpDir, "test-config.yaml")
+	gen := generator.NewWithConfigFile(configFile)
+
+	err := gen.GenerateOutput(cfg, outputFile)
+	require.NoError(t, err)
+
+	content, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
+	require.NoError(t, err)
+
+	contentStr := string(content)
+
+	// Check that header is present with expected content
+	expectedHeaderContent := []string{
+		"<!-- ",
+		"🤖 GENERATED FILE - DO NOT EDIT DIRECTLY",
+		"test-config.yaml",
+		"test.md",
+		"DO NOT modify this file directly",
+		"TO UPDATE RULES:",
+		"ai-rulez generate",
+		"https://github.com/Goldziher/ai-rulez",
+		"-->",
+	}
+
+	for _, expected := range expectedHeaderContent {
+		assert.Contains(t, contentStr, expected, "Header should contain: %s", expected)
+	}
+
+	// Check that the header comes before the actual content
+	headerEndIndex := strings.Index(contentStr, "-->\n\n")
+	contentStartIndex := strings.Index(contentStr, "# Header Test")
+	assert.True(t, headerEndIndex < contentStartIndex, "Header should come before main content")
+
+	// Check that the main content is still there
+	assert.Contains(t, contentStr, "# Header Test")
+	assert.Contains(t, contentStr, "## Test Rule")
+}
+
+func TestGenerator_HeaderInPreview(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	outputFile := "preview.md"
+
+	cfg := &config.Config{
+		Metadata: config.Metadata{
+			Name: "Preview Test",
+		},
+		Outputs: []config.Output{
+			{File: outputFile},
+		},
+		Rules: []config.Rule{
+			{Name: "Preview Rule", Content: "Preview content"},
+		},
+	}
+
+	configFile := filepath.Join(tmpDir, "preview-config.yaml")
+	gen := generator.NewWithConfigFile(configFile)
+
+	content, err := gen.PreviewOutput(cfg, outputFile)
+	require.NoError(t, err)
+
+	// Check that header is present in preview
+	assert.Contains(t, content, "🤖 GENERATED FILE - DO NOT EDIT DIRECTLY")
+	assert.Contains(t, content, "preview-config.yaml")
+	assert.Contains(t, content, "preview.md")
+	assert.Contains(t, content, "# Preview Test")
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // LoadConfigWithIncludes loads a configuration file and resolves all includes.
@@ -20,7 +21,24 @@ func LoadConfigWithIncludes(filename string) (*Config, error) {
 		baseDir: filepath.Dir(absPath),
 	}
 
-	return loader.loadConfig(absPath)
+	config, err := loader.loadConfig(absPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load and merge additional config files
+	baseDir := filepath.Dir(absPath)
+
+	// Load .local.yaml files for ID-based overrides (loaded last for highest precedence)
+	configBaseName := strings.TrimSuffix(filepath.Base(absPath), filepath.Ext(absPath))
+	localConfigPath := filepath.Join(baseDir, configBaseName+".local.yaml")
+	if _, err := os.Stat(localConfigPath); err == nil {
+		if err := loader.loadLocalOverrides(config, localConfigPath); err != nil {
+			return nil, fmt.Errorf("failed to load %s: %w", filepath.Base(localConfigPath), err)
+		}
+	}
+
+	return config, nil
 }
 
 // configLoader handles recursive include resolution with cycle detection.
@@ -118,48 +136,62 @@ func (*configLoader) resolvePath(includePath, baseDir string) string {
 }
 
 // MergeRules combines multiple rule slices, with later rules taking precedence.
+// Rules with IDs are matched by ID first, then by name for backward compatibility.
 func MergeRules(ruleSets ...[]Rule) []Rule {
-	ruleMap := make(map[string]Rule)
+	ruleMap := make(map[string]Rule) // key is ID if present, otherwise name
 	var order []string
 
 	for _, rules := range ruleSets {
 		for _, rule := range rules {
-			// Track order for consistent output
-			if _, exists := ruleMap[rule.Name]; !exists {
-				order = append(order, rule.Name)
+			// Use ID as key if present, otherwise use name
+			key := rule.Name
+			if rule.ID != "" {
+				key = rule.ID
 			}
-			ruleMap[rule.Name] = rule
+
+			// Track order for consistent output
+			if _, exists := ruleMap[key]; !exists {
+				order = append(order, key)
+			}
+			ruleMap[key] = rule
 		}
 	}
 
 	// Rebuild slice in order
 	result := make([]Rule, 0, len(order))
-	for _, name := range order {
-		result = append(result, ruleMap[name])
+	for _, key := range order {
+		result = append(result, ruleMap[key])
 	}
 
 	return result
 }
 
 // MergeSections combines multiple section slices, with later sections taking precedence.
+// Sections with IDs are matched by ID first, then by title for backward compatibility.
 func MergeSections(sectionSets ...[]Section) []Section {
-	sectionMap := make(map[string]Section)
+	sectionMap := make(map[string]Section) // key is ID if present, otherwise title
 	var order []string
 
 	for _, sections := range sectionSets {
 		for _, section := range sections {
-			// Track order for consistent output
-			if _, exists := sectionMap[section.Title]; !exists {
-				order = append(order, section.Title)
+			// Use ID as key if present, otherwise use title
+			key := section.Title
+			if section.ID != "" {
+				key = section.ID
 			}
-			sectionMap[section.Title] = section
+
+			// Track order for consistent output
+			if _, exists := sectionMap[key]; !exists {
+				order = append(order, key)
+			}
+			sectionMap[key] = section
 		}
 	}
 
 	// Rebuild slice in order
 	result := make([]Section, 0, len(order))
-	for _, title := range order {
-		result = append(result, sectionMap[title])
+	for _, key := range order {
+		result = append(result, sectionMap[key])
 	}
 
 	return result
@@ -198,6 +230,31 @@ func ValidateOutputs(outputs []Output) error {
 	for i, output := range outputs {
 		if output.File == "" {
 			return fmt.Errorf("output[%d].file is required", i)
+		}
+	}
+
+	return nil
+}
+
+// loadLocalOverrides loads local override rules from .local.yaml file
+func (l *configLoader) loadLocalOverrides(config *Config, filename string) error {
+	// Load the local config file
+	localConfig, err := l.loadConfig(filename)
+	if err != nil {
+		return fmt.Errorf("failed to load local config: %w", err)
+	}
+
+	// Merge rules and sections using ID-based merging
+	config.Rules = MergeRules(config.Rules, localConfig.Rules)
+	config.Sections = MergeSections(config.Sections, localConfig.Sections)
+
+	// Also merge user_rulez if present in local config
+	if localConfig.UserRulez != nil {
+		if config.UserRulez == nil {
+			config.UserRulez = localConfig.UserRulez
+		} else {
+			config.UserRulez.Rules = MergeRules(config.UserRulez.Rules, localConfig.UserRulez.Rules)
+			config.UserRulez.Sections = MergeSections(config.UserRulez.Sections, localConfig.UserRulez.Sections)
 		}
 	}
 

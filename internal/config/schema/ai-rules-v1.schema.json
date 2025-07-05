@@ -32,6 +32,26 @@
       },
       "additionalProperties": false
     },
+    "profile": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Single profile name",
+          "enum": ["none", "default", "web-app", "api", "cli", "library"]
+        },
+        {
+          "type": "array",
+          "description": "Multiple profiles to apply in order",
+          "items": {
+            "type": "string",
+            "enum": ["none", "default", "web-app", "api", "cli", "library"]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      ],
+      "description": "Built-in profile(s) to apply. Profiles add best-practice rules for specific project types."
+    },
     "includes": {
       "type": "array",
       "description": "List of other ai_rules files to include",
@@ -85,6 +105,11 @@
         "type": "object",
         "required": ["name", "content"],
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the rule (used for overriding in local files)",
+            "minLength": 1
+          },
           "name": {
             "type": "string",
             "description": "Rule name/title",
@@ -112,6 +137,11 @@
         "type": "object",
         "required": ["title", "content"],
         "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the section (used for overriding in local files)",
+            "minLength": 1
+          },
           "title": {
             "type": "string",
             "description": "Section title (for organization/merging)",
@@ -131,6 +161,77 @@
         },
         "additionalProperties": false
       }
+    },
+    "user_rulez": {
+      "type": "object",
+      "description": "User-specific rules and sections (overrides shared config, not committed to git)",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "description": "List of user-specific rules",
+          "items": {
+            "type": "object",
+            "required": ["name", "content"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Optional unique identifier for the rule (used for overriding in local files)",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "Rule name/title",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer",
+                "description": "Rule priority (higher number = higher priority, default: 1)",
+                "minimum": 1,
+                "default": 1
+              },
+              "content": {
+                "type": "string",
+                "description": "Rule content (can be multiline)",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "sections": {
+          "type": "array",
+          "description": "List of user-specific text sections",
+          "items": {
+            "type": "object",
+            "required": ["title", "content"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Optional unique identifier for the section (used for overriding in local files)",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "description": "Section title (for organization/merging)",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer",
+                "description": "Section priority (higher number = higher priority, default: 1)",
+                "minimum": 1,
+                "default": 1
+              },
+              "content": {
+                "type": "string",
+                "description": "Section content in markdown (rendered as-is)",
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,
