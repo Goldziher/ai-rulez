@@ -339,3 +339,119 @@ func TestValidateOutputs(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeRulesWithIDs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		ruleSets [][]config.Rule
+		expected []config.Rule
+	}{
+		{
+			name: "rules with IDs override by ID",
+			ruleSets: [][]config.Rule{
+				{
+					{ID: "rule1", Name: "Rule 1", Content: "original"},
+					{Name: "Rule 2", Content: "no ID rule"},
+				},
+				{
+					{ID: "rule1", Name: "Rule 1 Override", Content: "overridden"},
+				},
+			},
+			expected: []config.Rule{
+				{ID: "rule1", Name: "Rule 1 Override", Content: "overridden"},
+				{Name: "Rule 2", Content: "no ID rule"},
+			},
+		},
+		{
+			name: "rules without IDs still merge by name",
+			ruleSets: [][]config.Rule{
+				{
+					{Name: "Rule 1", Content: "original"},
+				},
+				{
+					{Name: "Rule 1", Content: "overridden"},
+				},
+			},
+			expected: []config.Rule{
+				{Name: "Rule 1", Content: "overridden"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := config.MergeRules(tt.ruleSets...)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestLoadConfigWithLocalFile(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		files   map[string]string
+		wantErr bool
+		check   func(t *testing.T, cfg *config.Config)
+	}{
+		{
+			name: "local file overrides rules by ID",
+			files: map[string]string{
+				"test.yaml": `metadata:
+  name: "main"
+profile: "none"
+outputs:
+  - file: "CLAUDE.md"
+rules:
+  - id: "rule1"
+    name: "Rule 1"
+    content: "original content"`,
+				"test.local.yaml": `metadata:
+  name: "local overrides"
+outputs:
+  - file: "local.md"
+rules:
+  - id: "rule1"
+    name: "Rule 1 Overridden"
+    content: "LOCAL: overridden content"`,
+			},
+			wantErr: false,
+			check: func(t *testing.T, cfg *config.Config) {
+				t.Helper()
+				assert.Equal(t, "main", cfg.Metadata.Name)
+				assert.Len(t, cfg.Rules, 1)
+				assert.Equal(t, "Rule 1 Overridden", cfg.Rules[0].Name)
+				assert.Equal(t, "LOCAL: overridden content", cfg.Rules[0].Content)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			tmpDir := t.TempDir()
+			for filename, content := range tt.files {
+				filePath := filepath.Join(tmpDir, filename)
+				err := os.WriteFile(filePath, []byte(content), 0o644)
+				require.NoError(t, err)
+			}
+
+			mainFile := filepath.Join(tmpDir, "test.yaml")
+			cfg, err := config.LoadConfigWithIncludesWithoutProfiles(mainFile)
+
+			if tt.wantErr {
+				assert.Error(t, err)
+				return
+			}
+
+			require.NoError(t, err)
+			tt.check(t, cfg)
+		})
+	}
+}
