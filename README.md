@@ -16,6 +16,7 @@ A high-performance CLI tool for generating configuration files for Claude, Curso
 - 🔄 **Git Integration**: Perfect for pre-commit hooks and CI/CD workflows
 - ⚡ **Incremental Generation**: Only writes files when content changes (performance optimized)
 - 🎨 **Smart Sorting**: Dual sorting by priority and name for consistent output
+- 🔧 **Local Overrides**: ID-based rule overriding with `.local.yaml` files for personal customization
 
 ## 📦 Installation
 
@@ -190,11 +191,13 @@ sections:
     - Inline: Multi-line template string
 
 - **rules**: Coding rules and guidelines
+  - `id`: Optional unique identifier for precise overriding
   - `name` (required): Rule identifier
   - `priority`: Integer ≥ 1 (default: 1)
   - `content` (required): Rule description
 
 - **sections**: Informative text blocks
+  - `id`: Optional unique identifier for precise overriding
   - `title` (required): Section identifier
   - `priority`: Integer ≥ 1 (default: 1)
   - `content` (required): Markdown content (rendered as-is)
@@ -203,6 +206,43 @@ sections:
   - Paths relative to config file
   - Supports nested includes
   - Circular dependencies detected
+
+### Local Configuration Overrides
+
+AI Rulez supports local configuration overrides through `.local.yaml` files that allow developers to customize shared configurations without affecting the committed config:
+
+- **Local files**: `{config-name}.local.yaml` (e.g., `ai-rulez.local.yaml`)
+  - Automatically loaded if present
+  - Highest precedence (overrides main config)
+  - Should be added to `.gitignore`
+  - Uses ID-based overriding for precise control
+
+- **Rule/Section IDs**: Optional `id` field for rules and sections
+  - Enables precise overriding by ID instead of name
+  - Backward compatible (name-based merging still works)
+
+**Example:**
+
+Main config (`ai-rulez.yaml`):
+```yaml
+rules:
+  - id: "code-style"
+    name: "Code Style"
+    content: "Use consistent formatting"
+  - name: "Testing"
+    content: "Write comprehensive tests"
+```
+
+Local overrides (`ai-rulez.local.yaml`):
+```yaml
+rules:
+  - id: "code-style"  # Same ID = override
+    name: "Code Style (Local)"
+    priority: 15
+    content: "LOCAL: Use 2 spaces, semicolons required"
+  - name: "Local Rule"
+    content: "Additional local rule"
+```
 
 ## Sorting and Output Order
 
