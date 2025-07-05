@@ -1060,7 +1060,6 @@ func createTypescriptTemplate(projectName string) *config.Config {
 	}
 }
 
-
 // mcpCmd represents the mcp command
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",

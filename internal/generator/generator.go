@@ -96,13 +96,13 @@ func (g *Generator) writeOutputFile(output config.Output, data *templates.Templa
 	// Set the file information for header generation
 	data.ConfigFile = g.configFile
 	data.OutputFile = output.File
-	
+
 	// Render the template
 	content, err := g.renderTemplate(output, data)
 	if err != nil {
 		return err
 	}
-	
+
 	// Prepend the header to the content
 	header := templates.GenerateHeader(data)
 	finalContent := header + content
@@ -280,13 +280,13 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 	// Set the file information for header generation
 	templateData.ConfigFile = g.configFile
 	templateData.OutputFile = targetOutput.File
-	
+
 	// Render the template
 	content, err := g.renderTemplate(*targetOutput, templateData)
 	if err != nil {
 		return "", err
 	}
-	
+
 	// Prepend the header and return
 	header := templates.GenerateHeader(templateData)
 	return header + content, nil
@@ -306,12 +306,12 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 		// Set the file information for header generation
 		templateData.ConfigFile = g.configFile
 		templateData.OutputFile = output.File
-		
+
 		content, err := g.renderTemplate(output, templateData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate output %d (%s): %w", i, output.File, err)
 		}
-		
+
 		// Prepend the header
 		header := templates.GenerateHeader(templateData)
 		results[output.File] = header + content
