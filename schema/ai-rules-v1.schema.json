@@ -32,26 +32,6 @@
       },
       "additionalProperties": false
     },
-    "profile": {
-      "oneOf": [
-        {
-          "type": "string",
-          "description": "Single profile name",
-          "enum": ["none", "default", "web-app", "api", "cli", "library"]
-        },
-        {
-          "type": "array",
-          "description": "Multiple profiles to apply in order",
-          "items": {
-            "type": "string",
-            "enum": ["none", "default", "web-app", "api", "cli", "library"]
-          },
-          "uniqueItems": true,
-          "minItems": 1
-        }
-      ],
-      "description": "Built-in profile(s) to apply. Profiles add best-practice rules for specific project types."
-    },
     "includes": {
       "type": "array",
       "description": "List of other ai_rules files to include",

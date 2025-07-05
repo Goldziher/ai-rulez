@@ -90,7 +90,7 @@ outputs:
 			require.NoError(t, err)
 
 			// Load config
-			result, err := config.LoadConfigWithoutProfiles(configFile)
+			result, err := config.LoadConfig(configFile)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -137,7 +137,7 @@ func TestSaveConfig(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Load and verify content
-	loaded, err := config.LoadConfigWithoutProfiles(configFile)
+	loaded, err := config.LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Equal(t, cfg, loaded)
 }

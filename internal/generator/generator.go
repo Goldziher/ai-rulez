@@ -17,8 +17,9 @@ import (
 
 // Generator handles the generation of output files from configuration.
 type Generator struct {
-	renderer *templates.Renderer
-	baseDir  string
+	renderer   *templates.Renderer
+	baseDir    string
+	configFile string // Source configuration file name
 }
 
 // New creates a new generator with the default template renderer.
@@ -34,6 +35,15 @@ func NewWithBaseDir(baseDir string) *Generator {
 	return &Generator{
 		renderer: templates.NewRenderer(),
 		baseDir:  baseDir,
+	}
+}
+
+// NewWithConfigFile creates a new generator with a specific config file.
+func NewWithConfigFile(configFile string) *Generator {
+	return &Generator{
+		renderer:   templates.NewRenderer(),
+		baseDir:    filepath.Dir(configFile),
+		configFile: filepath.Base(configFile),
 	}
 }
 
@@ -83,14 +93,22 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 
 // writeOutputFile writes a single output file.
 func (g *Generator) writeOutputFile(output config.Output, data *templates.TemplateData) error {
+	// Set the file information for header generation
+	data.ConfigFile = g.configFile
+	data.OutputFile = output.File
+	
 	// Render the template
 	content, err := g.renderTemplate(output, data)
 	if err != nil {
 		return err
 	}
+	
+	// Prepend the header to the content
+	header := templates.GenerateHeader(data)
+	finalContent := header + content
 
 	// Check if we need to write the file
-	shouldWrite, err := g.shouldWriteFile(output.File, content)
+	shouldWrite, err := g.shouldWriteFile(output.File, finalContent)
 	if err != nil {
 		return fmt.Errorf("failed to check if file should be written: %w", err)
 	}
@@ -99,7 +117,7 @@ func (g *Generator) writeOutputFile(output config.Output, data *templates.Templa
 	}
 
 	// Write the file
-	return g.writeFile(output.File, content)
+	return g.writeFile(output.File, finalContent)
 }
 
 // shouldWriteFile determines if a file should be written by comparing content hashes.
@@ -259,8 +277,19 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 		return "", fmt.Errorf("output file %s not found in configuration", outputFile)
 	}
 
-	// Render and return content
-	return g.renderTemplate(*targetOutput, templateData)
+	// Set the file information for header generation
+	templateData.ConfigFile = g.configFile
+	templateData.OutputFile = targetOutput.File
+	
+	// Render the template
+	content, err := g.renderTemplate(*targetOutput, templateData)
+	if err != nil {
+		return "", err
+	}
+	
+	// Prepend the header and return
+	header := templates.GenerateHeader(templateData)
+	return header + content, nil
 }
 
 // PreviewAll generates all output content without writing files.
@@ -274,11 +303,18 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 	results := make(map[string]string)
 
 	for i, output := range cfg.Outputs {
+		// Set the file information for header generation
+		templateData.ConfigFile = g.configFile
+		templateData.OutputFile = output.File
+		
 		content, err := g.renderTemplate(output, templateData)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate output %d (%s): %w", i, output.File, err)
 		}
-		results[output.File] = content
+		
+		// Prepend the header
+		header := templates.GenerateHeader(templateData)
+		results[output.File] = header + content
 	}
 
 	return results, nil
