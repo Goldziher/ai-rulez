@@ -16,12 +16,19 @@ var profilesFS embed.FS
 
 // Config represents the main configuration structure
 type Config struct {
-	Metadata Metadata    `yaml:"metadata"`
-	Profile  interface{} `yaml:"profile,omitempty"`
-	Includes []string    `yaml:"includes,omitempty"`
-	Outputs  []Output    `yaml:"outputs"`
-	Rules    []Rule      `yaml:"rules,omitempty"`
-	Sections []Section   `yaml:"sections,omitempty"`
+	Metadata  Metadata    `yaml:"metadata"`
+	Profile   interface{} `yaml:"profile,omitempty"`
+	Includes  []string    `yaml:"includes,omitempty"`
+	Outputs   []Output    `yaml:"outputs"`
+	Rules     []Rule      `yaml:"rules,omitempty"`
+	Sections  []Section   `yaml:"sections,omitempty"`
+	UserRulez *UserRulez  `yaml:"user_rulez,omitempty"`
+}
+
+// UserRulez contains user-specific rules and sections
+type UserRulez struct {
+	Rules    []Rule    `yaml:"rules,omitempty"`
+	Sections []Section `yaml:"sections,omitempty"`
 }
 
 // Metadata contains project metadata
@@ -39,6 +46,7 @@ type Output struct {
 
 // Rule represents a single rule definition
 type Rule struct {
+	ID       string `yaml:"id,omitempty"`
 	Name     string `yaml:"name"`
 	Priority int    `yaml:"priority,omitempty"`
 	Content  string `yaml:"content"`
@@ -46,6 +54,7 @@ type Rule struct {
 
 // Section represents an informative text section
 type Section struct {
+	ID       string `yaml:"id,omitempty"`
 	Title    string `yaml:"title"`
 	Priority int    `yaml:"priority,omitempty"`
 	Content  string `yaml:"content"`
@@ -79,6 +88,20 @@ func LoadConfig(filename string) (*Config, error) {
 	for i := range config.Sections {
 		if config.Sections[i].Priority == 0 {
 			config.Sections[i].Priority = 1
+		}
+	}
+
+	// Set default priority for user_rulez
+	if config.UserRulez != nil {
+		for i := range config.UserRulez.Rules {
+			if config.UserRulez.Rules[i].Priority == 0 {
+				config.UserRulez.Rules[i].Priority = 1
+			}
+		}
+		for i := range config.UserRulez.Sections {
+			if config.UserRulez.Sections[i].Priority == 0 {
+				config.UserRulez.Sections[i].Priority = 1
+			}
 		}
 	}
 
@@ -136,19 +159,16 @@ func (c *Config) GetProfileNames() []string {
 
 	switch v := c.Profile.(type) {
 	case string:
-		if v == "" {
-			return []string{"default"}
+		if v == "" || v == "none" {
+			return []string{}
 		}
 		return []string{v}
 	case []interface{}:
 		names := make([]string, 0, len(v))
 		for _, item := range v {
-			if str, ok := item.(string); ok && str != "" {
+			if str, ok := item.(string); ok && str != "" && str != "none" {
 				names = append(names, str)
 			}
-		}
-		if len(names) == 0 {
-			return []string{"default"}
 		}
 		return names
 	default:

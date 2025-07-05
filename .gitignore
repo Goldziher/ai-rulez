@@ -36,6 +36,12 @@ CLAUDE.md
 .cursorrules
 .windsurfrules
 
+# User-specific rules (should not be committed)
+.user_rulez.yaml
+
+# Local overrides (should not be committed)
+*.local.yaml
+
 # IDE
 .vscode/
 .idea/
