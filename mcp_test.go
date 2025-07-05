@@ -107,7 +107,7 @@ func TestMCPToolsIntegration(t *testing.T) {
 	// We can't easily test the actual MCP protocol without complex mocking
 	// But we can test that the underlying functionality works
 
-	cfg, err := config.LoadConfigWithoutProfiles(configFile)
+	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
