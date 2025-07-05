@@ -252,6 +252,35 @@ All content (rules and sections) uses dual sorting:
 
 This ensures consistent, predictable output across regenerations.
 
+## Gitignore Integration
+
+AI Rulez can automatically update `.gitignore` files to include generated output files when using the `--update-gitignore` flag with the `generate` command:
+
+```bash
+# Update .gitignore with generated files
+ai-rulez generate --update-gitignore
+
+# Works with recursive mode too
+ai-rulez generate --recursive --update-gitignore
+```
+
+**How it works:**
+- Finds the `.gitignore` file in the same directory as each configuration file
+- Adds output file names (e.g., `CLAUDE.md`, `.cursorrules`) if they're not already ignored
+- Creates a new `.gitignore` file if one doesn't exist
+- Adds a comment section to group AI-generated files
+- Skips files that are already covered by existing patterns (e.g., `*.md` would cover `CLAUDE.md`)
+
+**Example `.gitignore` addition:**
+```gitignore
+# AI Rules generated files
+CLAUDE.md
+.cursorrules
+.windsurfrules
+```
+
+This feature is especially useful in team environments where you want to ensure generated files don't get committed to version control.
+
 ## 🛠️ Commands
 
 ```bash
@@ -266,6 +295,9 @@ ai-rulez generate --recursive
 
 # Preview output without writing files
 ai-rulez generate --dry-run
+
+# Update .gitignore files with generated output files
+ai-rulez generate --update-gitignore
 
 # Initialize new project
 ai-rulez init "My Project"
@@ -307,6 +339,7 @@ Generate output files from configuration. Files are only written if content chan
 **Options:**
 - `--recursive, -r`: Recursively find and process all ai-rulez configuration files
 - `--dry-run`: Validate configuration and show what would be generated without writing files
+- `--update-gitignore`: Update .gitignore files to include generated output files
 
 ### `ai-rulez validate [config-file]`
 Validate configuration file against schema.
