@@ -150,7 +150,7 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 
 	content, err := os.ReadFile(filepath.Join(tmpDir, outputFile))
 	require.NoError(t, err)
-	
+
 	contentStr := string(content)
 	// Check that the header is present
 	assert.Contains(t, contentStr, "🤖 GENERATED FILE - DO NOT EDIT DIRECTLY")

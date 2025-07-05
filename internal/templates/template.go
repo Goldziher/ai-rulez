@@ -32,8 +32,8 @@ type TemplateData struct {
 	RuleCount    int
 	SectionCount int
 	// Header generation fields
-	ConfigFile   string // Source configuration file name
-	OutputFile   string // Target output file name
+	ConfigFile string // Source configuration file name
+	OutputFile string // Target output file name
 }
 
 // NewTemplateData creates template data from a config.
@@ -274,7 +274,7 @@ Learn more: https://github.com/Goldziher/ai-rulez
 -->
 
 `
-	
+
 	tmpl, err := template.New("header").Parse(headerTemplate)
 	if err != nil {
 		// Fallback to simple header if template parsing fails
@@ -282,7 +282,7 @@ Learn more: https://github.com/Goldziher/ai-rulez
 
 `, data.ConfigFile)
 	}
-	
+
 	var buf strings.Builder
 	if err := tmpl.Execute(&buf, data); err != nil {
 		// Fallback to simple header if execution fails
@@ -290,7 +290,7 @@ Learn more: https://github.com/Goldziher/ai-rulez
 
 `, data.ConfigFile)
 	}
-	
+
 	return buf.String()
 }
 
