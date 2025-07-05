@@ -1,0 +1,12 @@
+metadata:
+  name: "Simple Test"
+
+profile: "none"
+
+outputs:
+  - file: "simple_output.md"
+
+rules:
+  - id: "rule1"
+    name: "Rule 1"
+    content: "Original rule 1"

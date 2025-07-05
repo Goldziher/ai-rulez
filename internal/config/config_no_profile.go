@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -57,7 +58,24 @@ func LoadConfigWithIncludesWithoutProfiles(filename string) (*Config, error) {
 		baseDir: filepath.Dir(absPath),
 	}
 
-	return loader.loadConfig(absPath)
+	config, err := loader.loadConfig(absPath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load and merge additional config files (without profiles)
+	baseDir := filepath.Dir(absPath)
+
+	// Load .local.yaml files for ID-based overrides (loaded last for highest precedence)
+	configBaseName := strings.TrimSuffix(filepath.Base(absPath), filepath.Ext(absPath))
+	localConfigPath := filepath.Join(baseDir, configBaseName+".local.yaml")
+	if _, err := os.Stat(localConfigPath); err == nil {
+		if err := loader.loadLocalOverrides(config, localConfigPath); err != nil {
+			return nil, fmt.Errorf("failed to load %s: %w", filepath.Base(localConfigPath), err)
+		}
+	}
+
+	return config, nil
 }
 
 // configLoaderNoProfile handles recursive include resolution with cycle detection without profiles
@@ -152,4 +170,29 @@ func (*configLoaderNoProfile) resolvePath(includePath, baseDir string) string {
 		return includePath
 	}
 	return filepath.Join(baseDir, includePath)
+}
+
+// loadLocalOverrides loads local override rules from .local.yaml file (no-profile version)
+func (l *configLoaderNoProfile) loadLocalOverrides(config *Config, filename string) error {
+	// Load the local config file
+	localConfig, err := l.loadConfig(filename)
+	if err != nil {
+		return fmt.Errorf("failed to load local config: %w", err)
+	}
+
+	// Merge rules and sections using ID-based merging
+	config.Rules = MergeRules(config.Rules, localConfig.Rules)
+	config.Sections = MergeSections(config.Sections, localConfig.Sections)
+
+	// Also merge user_rulez if present in local config
+	if localConfig.UserRulez != nil {
+		if config.UserRulez == nil {
+			config.UserRulez = localConfig.UserRulez
+		} else {
+			config.UserRulez.Rules = MergeRules(config.UserRulez.Rules, localConfig.UserRulez.Rules)
+			config.UserRulez.Sections = MergeSections(config.UserRulez.Sections, localConfig.UserRulez.Sections)
+		}
+	}
+
+	return nil
 }

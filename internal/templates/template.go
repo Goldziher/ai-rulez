@@ -35,18 +35,28 @@ type TemplateData struct {
 
 // NewTemplateData creates template data from a config.
 func NewTemplateData(cfg *config.Config) *TemplateData {
-	// Create a copy of rules and sections to sort
-	sortedRules := make([]config.Rule, len(cfg.Rules))
-	copy(sortedRules, cfg.Rules)
+	// Merge main rules with user_rulez if present
+	allRules := cfg.Rules
+	allSections := cfg.Sections
 
-	sortedSections := make([]config.Section, len(cfg.Sections))
-	copy(sortedSections, cfg.Sections)
+	if cfg.UserRulez != nil {
+		// Merge user rules (user rules override main rules with same name)
+		allRules = config.MergeRules(allRules, cfg.UserRulez.Rules)
+		allSections = config.MergeSections(allSections, cfg.UserRulez.Sections)
+	}
+
+	// Create a copy of rules and sections to sort
+	sortedRules := make([]config.Rule, len(allRules))
+	copy(sortedRules, allRules)
+
+	sortedSections := make([]config.Section, len(allSections))
+	copy(sortedSections, allSections)
 
 	// Create unified content list
-	allContent := make([]ContentItem, 0, len(cfg.Rules)+len(cfg.Sections))
+	allContent := make([]ContentItem, 0, len(allRules)+len(allSections))
 
 	// Add rules
-	for _, rule := range cfg.Rules {
+	for _, rule := range allRules {
 		allContent = append(allContent, ContentItem{
 			Type:     "rule",
 			Title:    rule.Name,
@@ -57,7 +67,7 @@ func NewTemplateData(cfg *config.Config) *TemplateData {
 	}
 
 	// Add sections
-	for _, section := range cfg.Sections {
+	for _, section := range allSections {
 		allContent = append(allContent, ContentItem{
 			Type:     "section",
 			Title:    section.Title,
@@ -82,8 +92,8 @@ func NewTemplateData(cfg *config.Config) *TemplateData {
 		Sections:     sortedSections,
 		AllContent:   allContent,
 		Timestamp:    time.Now(),
-		RuleCount:    len(cfg.Rules),
-		SectionCount: len(cfg.Sections),
+		RuleCount:    len(allRules),
+		SectionCount: len(allSections),
 	}
 }
 
