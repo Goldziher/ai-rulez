@@ -1,0 +1,25 @@
+metadata:
+  name: "Test Project"
+  version: "1.0.0"
+  description: "Testing ID-based override functionality"
+
+profile: "none"
+
+outputs:
+  - file: "output.md"
+
+rules:
+  - id: "code-style"
+    name: "Code Style"
+    priority: 5
+    content: "Use consistent indentation and formatting"
+  - id: "testing"
+    name: "Testing"
+    priority: 3
+    content: "Write comprehensive tests"
+
+sections:
+  - id: "overview"
+    title: "Overview"
+    priority: 10
+    content: "Main project guidelines and setup instructions"
