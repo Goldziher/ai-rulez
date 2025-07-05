@@ -38,7 +38,7 @@ func TestAddRule(t *testing.T) {
 	err = SaveConfig(initialConfig, configFile)
 	require.NoError(t, err)
 
-	// Load config
+	// Load config without profiles for testing
 	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Rules, 1)
