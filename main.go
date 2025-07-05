@@ -7,12 +7,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
@@ -23,10 +23,11 @@ import (
 var Version = "dev"
 
 var (
-	cfgFile   string
-	recursive bool
-	dryRun    bool
-	rootCmd   = &cobra.Command{
+	cfgFile         string
+	recursive       bool
+	dryRun          bool
+	updateGitignore bool
+	rootCmd         = &cobra.Command{
 		Use:     "ai-rulez",
 		Version: Version,
 		Short:   "A CLI tool for managing AI assistant rules",
@@ -96,7 +97,10 @@ With the -r/--recursive flag, it will find and process all configuration
 files in the current directory tree.
 
 With the --dry-run flag, it will validate the configuration and show what would
-be generated without writing any files.`,
+be generated without writing any files.
+
+With the --update-gitignore flag, it will automatically update .gitignore files
+in config directories to include generated output files.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
 		if recursive {
@@ -154,10 +158,18 @@ be generated without writing any files.`,
 		}
 
 		// Generate files
-		gen := generator.NewWithBaseDir(filepath.Dir(configFile))
+		gen := generator.NewWithConfigFile(configFile)
 		if err := gen.GenerateAll(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating files: %v\n", err)
 			os.Exit(1)
+		}
+
+		// Update .gitignore if requested
+		if updateGitignore {
+			if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
+				fmt.Fprintf(os.Stderr, "Error updating .gitignore: %v\n", err)
+				os.Exit(1)
+			}
 		}
 
 		fmt.Printf("✓ Generated %d file(s) successfully\n", len(cfg.Outputs))
@@ -203,10 +215,18 @@ func runRecursiveGenerate() {
 		}
 
 		// Generate files
-		gen := generator.NewWithBaseDir(filepath.Dir(configFile))
+		gen := generator.NewWithConfigFile(configFile)
 		if err := gen.GenerateAll(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating files: %v\n", err)
 			continue
+		}
+
+		// Update .gitignore if requested
+		if updateGitignore {
+			if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
+				fmt.Fprintf(os.Stderr, "Error updating .gitignore: %v\n", err)
+				continue
+			}
 		}
 
 		fmt.Printf("✓ Generated %d file(s) successfully\n", len(cfg.Outputs))
@@ -873,6 +893,7 @@ var deleteOutputCmd = &cobra.Command{
 func init() {
 	generateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Process all config files recursively")
 	generateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
+	generateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Update .gitignore files to include generated output files")
 	initCmd.Flags().StringP("template", "t", "basic", "Template to use (basic, react, typescript)")
 
 	// Add subcommands to add command
@@ -1390,7 +1411,7 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	}
 
 	// Generate files
-	gen := generator.NewWithBaseDir(filepath.Dir(configFile))
+	gen := generator.NewWithConfigFile(configFile)
 	err = gen.GenerateAll(cfg)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error generating files: %v", err)), nil
