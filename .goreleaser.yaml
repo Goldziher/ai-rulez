@@ -63,7 +63,7 @@ brews:
     description: "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
     homepage: "https://github.com/Goldziher/ai-rulez"
     license: "MIT"
-    tap:
+    repository:
       owner: Goldziher
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
