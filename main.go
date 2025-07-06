@@ -1068,10 +1068,12 @@ var mcpCmd = &cobra.Command{
 to AI assistants like Claude Desktop, Cursor, and other MCP-compatible tools.
 
 The server runs in stdio mode and provides tools for:
-- Retrieving rules and sections
-- Generating output files
+- Retrieving rules and sections with filtering options
+- Generating output files with gitignore integration
 - Validating configurations
 - Listing available templates
+- Adding, updating, and deleting rules, sections, and outputs
+- Support for rule/section IDs for precise local overrides
 
 Configure in your AI assistant by adding this server to the MCP configuration.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -1131,6 +1133,9 @@ func addAIRulezTools(s *server.MCPServer) {
 		mcp.WithBoolean("dry_run",
 			mcp.Description("Show what would be generated without writing files (default: false)"),
 		),
+		mcp.WithBoolean("update_gitignore",
+			mcp.Description("Update .gitignore files to include generated output files (default: false)"),
+		),
 	)
 	s.AddTool(generateTool, handleGenerate)
 
@@ -1163,6 +1168,9 @@ func addAIRulezTools(s *server.MCPServer) {
 		mcp.WithNumber("priority",
 			mcp.Description("Priority level for the rule (default: 5)"),
 		),
+		mcp.WithString("id",
+			mcp.Description("Optional unique identifier for precise overriding in local configs"),
+		),
 		mcp.WithString("config_file",
 			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
 		),
@@ -1182,6 +1190,9 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 		mcp.WithNumber("priority",
 			mcp.Description("Priority level for the section (default: 5)"),
+		),
+		mcp.WithString("id",
+			mcp.Description("Optional unique identifier for precise overriding in local configs"),
 		),
 		mcp.WithString("config_file",
 			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
@@ -1395,16 +1406,18 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 
 	// Check dry run flag
 	dryRun := request.GetBool("dry_run", false)
+	updateGitignore := request.GetBool("update_gitignore", false)
 
 	if dryRun {
 		result := map[string]interface{}{
-			"config_file":    configFile,
-			"dry_run":        true,
-			"would_generate": len(cfg.Outputs),
-			"outputs":        cfg.Outputs,
-			"metadata":       cfg.Metadata,
-			"total_rules":    len(cfg.Rules),
-			"total_sections": len(cfg.Sections),
+			"config_file":      configFile,
+			"dry_run":          true,
+			"would_generate":   len(cfg.Outputs),
+			"outputs":          cfg.Outputs,
+			"metadata":         cfg.Metadata,
+			"total_rules":      len(cfg.Rules),
+			"total_sections":   len(cfg.Sections),
+			"update_gitignore": updateGitignore,
 		}
 		jsonResult, _ := json.MarshalIndent(result, "", "  ")
 		return mcp.NewToolResultText(string(jsonResult)), nil
@@ -1417,11 +1430,19 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		return mcp.NewToolResultError(fmt.Sprintf("Error generating files: %v", err)), nil
 	}
 
+	// Update .gitignore if requested
+	if updateGitignore {
+		if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
+			return mcp.NewToolResultError(fmt.Sprintf("Error updating .gitignore: %v", err)), nil
+		}
+	}
+
 	result := map[string]interface{}{
-		"config_file":     configFile,
-		"files_generated": len(cfg.Outputs),
-		"outputs":         cfg.Outputs,
-		"success":         true,
+		"config_file":      configFile,
+		"files_generated":  len(cfg.Outputs),
+		"outputs":          cfg.Outputs,
+		"success":          true,
+		"update_gitignore": updateGitignore,
 	}
 
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
@@ -1519,6 +1540,7 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	}
 
 	priority := int(request.GetFloat("priority", 5))
+	id := request.GetString("id", "")
 
 	// Get config file path
 	configFile := request.GetString("config_file", "")
@@ -1538,6 +1560,7 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 
 	// Add new rule
 	newRule := config.Rule{
+		ID:       id,
 		Name:     name,
 		Priority: priority,
 		Content:  content,
@@ -1553,6 +1576,7 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 		"success":     true,
 		"config_file": configFile,
 		"rule": map[string]interface{}{
+			"id":       id,
 			"name":     name,
 			"priority": priority,
 		},
@@ -1576,6 +1600,7 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	priority := int(request.GetFloat("priority", 5))
+	id := request.GetString("id", "")
 
 	// Get config file path
 	configFile := request.GetString("config_file", "")
@@ -1595,6 +1620,7 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 
 	// Add new section
 	newSection := config.Section{
+		ID:       id,
 		Title:    title,
 		Priority: priority,
 		Content:  content,
@@ -1610,6 +1636,7 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		"success":     true,
 		"config_file": configFile,
 		"section": map[string]interface{}{
+			"id":       id,
 			"title":    title,
 			"priority": priority,
 		},

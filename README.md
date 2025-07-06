@@ -222,6 +222,19 @@ AI Rulez supports local configuration overrides through `.local.yaml` files that
   - Enables precise overriding by ID instead of name
   - Backward compatible (name-based merging still works)
 
+#### User Rules vs. Coding Rules
+
+When creating AI rules, it's important to distinguish between two types of instructions:
+
+- **Coding Rules**: Technical guidelines about code quality, architecture, testing, etc.
+  - Examples: "Use TypeScript strict mode", "Write unit tests", "Follow REST conventions"
+  - Should be in the main configuration file committed to version control
+
+- **User Rules**: Personal preferences about communication style and interaction
+  - Examples: "Be concise in responses", "Use casual tone", "Address me as 'Chief'", "Always explain your reasoning"
+  - Perfect for `.local.yaml` files as they're personal and shouldn't affect the whole team
+  - Allow individual developers to customize AI behavior without impacting others
+
 **Example:**
 
 Main config (`ai-rulez.yaml`):
@@ -241,8 +254,10 @@ rules:
     name: "Code Style (Local)"
     priority: 15
     content: "LOCAL: Use 2 spaces, semicolons required"
-  - name: "Local Rule"
-    content: "Additional local rule"
+  - name: "Communication Style"
+    content: "Be concise and direct. Address me as 'Boss'. Always ask for clarification before making assumptions."
+  - name: "Response Format"
+    content: "Provide code examples for every suggestion. Use bullet points for lists."
 ```
 
 ## Sorting and Output Order
