@@ -144,6 +144,28 @@ The tool looks for configuration files in this order:
 - `.ai_rulez.yaml`
 - `ai_rulez.yaml`
 
+### User Rules vs. Coding Rules
+
+When creating AI rules, distinguish between two types of instructions:
+
+- **Coding Rules**: Technical guidelines about code quality, architecture, testing, etc.
+  - Examples: "Use TypeScript strict mode", "Write unit tests", "Follow REST conventions"
+  - Should be in the main configuration file committed to version control
+
+- **User Rules**: Personal preferences about communication style and interaction
+  - Examples: "Be concise in responses", "Use casual tone", "Address me as 'Chief'", "Always explain your reasoning"
+  - Perfect for `.local.yaml` files (e.g., `ai-rulez.local.yaml`) as they're personal and shouldn't affect the whole team
+  - Allow individual developers to customize AI behavior without impacting others
+
+**Example local config** (`ai-rulez.local.yaml`):
+```yaml
+rules:
+  - name: "Communication Style"
+    content: "Be concise and direct. Address me as 'Boss'. Always ask for clarification before making assumptions."
+  - name: "Response Format"
+    content: "Provide code examples for every suggestion. Use bullet points for lists."
+```
+
 ### Configuration Schema
 
 ```yaml
