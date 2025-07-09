@@ -18,6 +18,9 @@ A high-performance CLI tool for generating configuration files for Claude, Curso
 - 🎨 **Smart Sorting**: Dual sorting by priority and name for consistent output
 - 🔧 **Local Overrides**: ID-based rule overriding with `.local.yaml` files for personal customization
 - 🤖 **AI-First Headers**: Auto-generated headers that clearly instruct AI assistants not to edit files directly
+- 🌐 **MCP Server**: Built-in Model Context Protocol server for direct AI assistant integration
+- ✏️ **Rule Management**: CLI commands to add, update, and delete rules, sections, and outputs
+- 🔀 **Multiple Config Formats**: Supports various naming conventions (.ai-rulez.yaml, ai_rulez.yaml, etc.)
 
 ## 📦 Installation
 
@@ -338,6 +341,8 @@ This ensures that AI assistants like Claude, Cursor, and others understand that 
 
 ## 🛠️ Commands
 
+### Core Commands
+
 ```bash
 # Generate all configuration files
 ai-rulez generate
@@ -357,9 +362,101 @@ ai-rulez generate --update-gitignore
 # Initialize new project
 ai-rulez init "My Project"
 
+# Start MCP server for AI assistant integration
+ai-rulez mcp
+
+# Show version
+ai-rulez version
+
 # Show help
 ai-rulez --help
 ```
+
+### Managing Rules, Sections, and Outputs
+
+```bash
+# Add new rule
+ai-rulez add rule "Testing Standards" --priority 8
+
+# Add new section  
+ai-rulez add section "Architecture Guidelines" --priority 10
+
+# Add new output file
+ai-rulez add output "docs/AI_RULES.md" --template documentation
+
+# Update existing rule
+ai-rulez update rule "Testing Standards" --content "Write comprehensive tests"
+
+# Update existing section
+ai-rulez update section "Architecture Guidelines" --priority 15
+
+# Update output template
+ai-rulez update output "docs/AI_RULES.md" --template custom
+
+# Delete rule
+ai-rulez delete rule "Old Rule"
+
+# Delete section
+ai-rulez delete section "Deprecated Section"
+
+# Delete output
+ai-rulez delete output "unused-file.md"
+```
+
+## 🤖 MCP Server Integration
+
+ai-rulez includes a built-in MCP (Model Context Protocol) server that allows AI assistants like Claude Desktop to interact with your AI rules configuration directly.
+
+### Starting the MCP Server
+
+```bash
+ai-rulez mcp
+```
+
+This starts the MCP server in stdio mode, which can be configured in your AI assistant's MCP settings.
+
+### Available MCP Tools
+
+The MCP server exposes these tools:
+
+- **get_rules**: Retrieve rules with filtering by priority and name
+- **get_sections**: Get documentation sections from configuration
+- **generate_output**: Generate AI rules files with gitignore support
+- **validate_config**: Validate configuration files
+- **list_templates**: List available project templates
+- **add_rule/section/output**: Add new items to configuration
+- **update_rule/section/output**: Update existing items
+- **delete_rule/section/output**: Remove items from configuration
+
+### Configuring Claude Desktop
+
+Add to your Claude Desktop MCP configuration:
+
+```json
+{
+  "mcpServers": {
+    "ai-rulez": {
+      "command": "npx",
+      "args": ["ai-rulez", "mcp"]
+    }
+  }
+}
+```
+
+Or if you have ai-rulez installed globally:
+
+```json
+{
+  "mcpServers": {
+    "ai-rulez": {
+      "command": "ai-rulez",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+This enables Claude to directly manage your AI rules, generate files, and validate configurations without leaving the chat interface.
 
 ## 🎨 Template Variables
 
@@ -398,6 +495,83 @@ Generate output files from configuration. Files are only written if content chan
 
 ### `ai-rulez validate [config-file]`
 Validate configuration file against schema.
+
+### `ai-rulez mcp`
+Start MCP server for AI assistant integration. Runs in stdio mode for communication with MCP-compatible tools.
+
+### `ai-rulez add`
+Add new items to configuration. Has three subcommands:
+
+#### `ai-rulez add rule [name]`
+Add a new rule to the configuration.
+
+**Options:**
+- `--priority, -p`: Priority level (1-10, default: 5)
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+#### `ai-rulez add section [title]`
+Add a new documentation section to the configuration.
+
+**Options:**
+- `--priority, -p`: Priority level (default: 5)
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+#### `ai-rulez add output [filename]`
+Add a new output file to the configuration.
+
+**Options:**
+- `--template, -t`: Template to use for the output (optional)
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+### `ai-rulez update`
+Update existing items in configuration. Has three subcommands:
+
+#### `ai-rulez update rule [name]`
+Update an existing rule's content or priority.
+
+**Options:**
+- `--content`: New content for the rule (optional, will prompt if not provided)
+- `--priority, -p`: New priority level (optional)
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+#### `ai-rulez update section [title]`
+Update an existing section's content or priority.
+
+**Options:**
+- `--content`: New content for the section (optional, will prompt if not provided)
+- `--priority, -p`: New priority level (optional)
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+#### `ai-rulez update output [filename]`
+Update an output file's template.
+
+**Options:**
+- `--template, -t`: New template for the output (required)
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+### `ai-rulez delete`
+Delete items from configuration. Has three subcommands:
+
+#### `ai-rulez delete rule [name]`
+Delete a rule from the configuration.
+
+**Options:**
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+#### `ai-rulez delete section [title]`
+Delete a section from the configuration.
+
+**Options:**
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+#### `ai-rulez delete output [filename]`
+Delete an output file from the configuration.
+
+**Options:**
+- `--config, -c`: Config file path (auto-discover if not provided)
+
+### `ai-rulez version`
+Print the version of ai-rulez.
 
 ## Editor Support
 
