@@ -75,7 +75,7 @@ func buildBinary() error {
 	binaryPath = filepath.Join(testingDir, binaryName)
 	
 	
-	cmd := exec.Command("go", "build", "-o", binaryPath, ".")
+	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
 	cmd.Dir = projectRoot
 	
 	output, err := cmd.CombinedOutput()

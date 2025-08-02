@@ -232,7 +232,7 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 			if tt.wantError {
 				assert.Error(t, err)
-				assert.Contains(t, err.Error(), "no configuration files found")
+				assert.Contains(t, err.Error(), "no configuration file found")
 			} else {
 				assert.NoError(t, err)
 				assert.Len(t, configs, tt.wantCount)

@@ -29,6 +29,8 @@ go.work.sum
 /build/npm/node_modules/
 /build/npm/*.tgz
 /ai-rulez
+ai-rulez-test
+test-build
 
 # Generated AI rule files (but NOT ai_rules.yaml config)
 claude.md
@@ -41,6 +43,9 @@ CLAUDE.md
 
 # Local overrides (should not be committed)
 *.local.yaml
+
+# Embedded schema (generated from main schema)
+internal/config/ai-rules-v1.schema.json
 
 # IDE
 .vscode/
