@@ -9,7 +9,7 @@ before:
 builds:
   - id: ai-rulez
     binary: ai-rulez
-    main: .
+    main: ./cmd
     env:
       - CGO_ENABLED=0
       - GOPROXY=direct
