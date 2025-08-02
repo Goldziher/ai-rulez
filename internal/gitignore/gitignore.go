@@ -151,7 +151,7 @@ func matchesWildcard(filename, pattern string) bool {
 
 // appendToGitignore appends new entries to the .gitignore file
 func appendToGitignore(gitignorePath string, entries []string, isNewFile bool) error {
-	file, err := os.OpenFile(gitignorePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	file, err := os.OpenFile(gitignorePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to open .gitignore for writing: %w", err)
 	}

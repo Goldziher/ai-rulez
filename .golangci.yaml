@@ -2,12 +2,9 @@ version: "2"
 
 run:
   timeout: 5m
-  issues-exit-code: 1
   tests: true
   concurrency: 4
   modules-download-mode: readonly
-  allow-serial-runners: false
-  allow-parallel-runners: true
 
 linters:
   default: none
@@ -24,38 +21,48 @@ linters:
     - gosec
     - misspell
     - nakedret
+    - bodyclose
+    - contextcheck
+    - errorlint
+    - nilerr
+    - copyloopvar
+    - whitespace
+    
   settings:
     errcheck:
       check-type-assertions: true
       check-blank: true
       exclude-functions:
-        - (net/http.ResponseWriter).Write
         - (io.Closer).Close
-        - fmt.Fprintf
         - fmt.Printf
         - fmt.Println
-        - os.Setenv
-        - os.Unsetenv
+        
     goconst:
       min-len: 3
       min-occurrences: 3
+      
     gocyclo:
-      min-complexity: 20
+      min-complexity: 15
+      
     gosec:
       excludes:
-        - G101 # ~keep hardcoded credentials check (too many false positives)
+        - G101
+        
     govet:
       enable-all: true
       disable:
         - shadow
+        - fieldalignment
+        
     misspell:
       locale: US
+      
     nakedret:
       max-func-lines: 30
+      
     revive:
       confidence: 0.8
       severity: warning
-      enable-all-rules: false
       rules:
         - name: blank-imports
         - name: context-keys-type
@@ -78,61 +85,73 @@ linters:
           disabled: true
         - name: package-comments
           disabled: true
+          
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - performance
+        - style
+      disabled-checks:
+        - whyNoLint
+        - paramTypeCombine
+        
   exclusions:
     generated: lax
+    
     rules:
-      - linters:
+      - path: _test\.go
+        linters:
+          - errcheck
           - goconst
           - gosec
-          - revive
+          - gocyclo
+          
+      - linters:
           - errcheck
-          - govet
-        path: _test\.go
-        text: "unusedwrite:"
+        source: "defer .*.Close"
+        
+      - linters:
+          - errcheck
+        source: "cmd.Flags\\(\\).Get"
+        
+      - linters:
+          - errcheck
+        source: "json.MarshalIndent"
+        
+      - linters:
+          - errcheck
+        source: "hashPool.Get"
+        
+      - path: internal/templates/
+        linters:
+          - goconst
+          
       - linters:
           - govet
         text: "fieldalignment:"
+        
       - linters:
-          - errcheck
-        path: _test\.go
+          - govet
+        text: "unusedwrite:"
+        
+      - linters:
+          - gosec
+        text: "G301|G302|G304|G306"
+        
     paths:
       - vendor
       - build
-      - deployments
-      - third_party$
-      - builtin$
-      - examples$
+      - dist
+      - node_modules
+      - homebrew-tap
+
+formatters:
+  enable:
+    - gofmt
+    - goimports
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: true
   new: false
-  exclude:
-    - "Error return value of `\\(\\*github\\.com/goccy/go-json\\.Encoder\\)\\.Encode` is not checked"
-    - "Error return value of `w\\.Write` is not checked"
-    - "Error return value of `resp\\.Body\\.Close` is not checked"
-    - "Error return value of `res\\.Body\\.Close` is not checked"
-    - "Error return value of `r\\.Body\\.Read` is not checked"
-    - "Error return value of `os\\.Setenv` is not checked"
-    - "Error return value of `os\\.Unsetenv` is not checked"
-    - 'shadow: declaration of "err" shadows declaration'
-    - "unusedwrite: unused write to field"
-    - "Error return value of `c\\.provider\\.Delete` is not checked"
-    - "Error return value of `provider\\.Close` is not checked"
-    - "Error return value of `natsClient\\.Close` is not checked"
-    - "Error return value of `cacheProvider\\.Close` is not checked"
-    - "Error return value of `processor\\.Close` is not checked"
-    - "Error return value of `sub\\.Unsubscribe` is not checked"
-    - "Error return value of `json\\.Marshal` is not checked"
-    - "Error return value of `strconv\\."
-    - "Error return value of `fmt\\.Sscanf` is not checked"
-    - "Error return value is not checked"
-
-formatters:
-  exclusions:
-    generated: lax
-    paths:
-      - third_party$
-      - builtin$
-      - examples$

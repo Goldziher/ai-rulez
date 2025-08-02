@@ -73,7 +73,7 @@ func copyDir(src, dst string) error {
 		return err
 	}
 	
-	if err := os.MkdirAll(dst, 0755); err != nil {
+	if err := os.MkdirAll(dst, 0o755); err != nil {
 		return err
 	}
 	
@@ -101,5 +101,5 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	
-	return os.WriteFile(dst, data, 0644)
+	return os.WriteFile(dst, data, 0o644)
 }
