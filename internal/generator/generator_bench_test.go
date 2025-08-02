@@ -80,7 +80,7 @@ func BenchmarkGenerateAllParallel(b *testing.B) {
 		for pb.Next() {
 			// Each goroutine gets its own subdirectory
 			subDir := filepath.Join(tempDir, filepath.Base(b.TempDir()))
-			_ = os.MkdirAll(subDir, 0755)
+			_ = os.MkdirAll(subDir, 0o755)
 
 			gen := generator.NewWithBaseDir(subDir)
 			if err := gen.GenerateAll(cfg); err != nil {

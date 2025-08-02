@@ -48,15 +48,18 @@ func TestMCPCommandHelp(t *testing.T) {
 
 func TestAddAIRulezToolsDoesNotPanic(t *testing.T) {
 	// Test that addAIRulezTools doesn't panic with nil server
-	defer func() {
-		if r := recover(); r != nil {
-			t.Errorf("addAIRulezTools panicked: %v", r)
-		}
-	}()
-
 	// This will panic if there are issues with the tool definitions
 	// We can't easily test the actual MCP server without complex setup
 	// But we can test that the function doesn't crash
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				t.Errorf("addAIRulezTools panicked: %v", r)
+			}
+		}()
+		// Test would go here when we have a way to test MCP server
+	}()
 }
 
 func TestMCPToolsIntegration(t *testing.T) {
