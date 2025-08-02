@@ -1,11 +1,10 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 
+	"github.com/Goldziher/ai-rulez/internal/errors"
 	"gopkg.in/yaml.v3"
 )
 
@@ -58,17 +57,17 @@ type Section struct {
 func LoadConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file %s: %w", filename, err)
+		return nil, errors.FileRead(filename, err)
 	}
 
 	// Validate against schema first
 	if err := ValidateWithSchema(data); err != nil {
-		return nil, fmt.Errorf("schema validation failed for %s: %w", filename, err)
+		return nil, errors.SchemaValidation(filename, []string{err.Error()})
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file %s: %w", filename, err)
+		return nil, errors.ConfigParse(filename, err)
 	}
 
 	// Set default priority for rules
@@ -106,16 +105,20 @@ func LoadConfig(filename string) (*Config, error) {
 func SaveConfig(config *Config, filename string) error {
 	data, err := yaml.Marshal(config)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return errors.New(errors.ErrorTypeConfig, "marshal config", err).
+			WithPath(filename).
+			WithSuggestion("Check if the config structure is valid")
 	}
 
 	dir := filepath.Dir(filename)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("failed to create directory %s: %w", dir, err)
+		return errors.FileWrite(dir, err).
+			WithContext("operation", "create directory").
+			WithSuggestion("Check if you have write permissions for the parent directory")
 	}
 
 	if err := os.WriteFile(filename, data, 0o644); err != nil {
-		return fmt.Errorf("failed to write config file %s: %w", filename, err)
+		return errors.FileWrite(filename, err)
 	}
 
 	return nil
@@ -124,18 +127,10 @@ func SaveConfig(config *Config, filename string) error {
 // Validate checks the configuration for common errors
 func (c *Config) Validate() error {
 	if c.Metadata.Name == "" {
-		return errors.New("metadata.name is required")
+		return errors.ValidationRequired("metadata.name", "config metadata").
+			WithSuggestion("Add a name field to the metadata section").
+			WithSuggestion("Example: metadata: {name: 'My Project'}")
 	}
 
-	if len(c.Outputs) == 0 {
-		return errors.New("at least one output must be defined")
-	}
-
-	for i, output := range c.Outputs {
-		if output.File == "" {
-			return fmt.Errorf("output[%d].file is required", i)
-		}
-	}
-
-	return nil
+	return ValidateOutputs(c.Outputs)
 }
