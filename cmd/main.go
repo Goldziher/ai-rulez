@@ -50,7 +50,6 @@ func fmtError(err error) {
 	errors.FormatError(os.Stderr, err, false, true)
 }
 
-
 func init() {
 	cobra.OnInitialize(initConfig)
 
@@ -313,7 +312,7 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.`
 
 		// Check if ai_rulez.yaml already exists
 		if _, err := os.Stat("ai_rulez.yaml"); err == nil {
-			fmtError(errors.New(errors.ErrorTypeCommand, "init project", 
+			fmtError(errors.New(errors.ErrorTypeCommand, "init project",
 				fmt.Errorf("configuration file already exists")).
 				WithPath("ai_rulez.yaml").
 				WithSuggestion("Use a different directory or remove the existing file").

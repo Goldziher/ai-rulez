@@ -133,7 +133,7 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 	// Find the output configuration
 	targetOutput := g.findOutputConfig(cfg.Outputs, outputFile)
 	if targetOutput == nil {
-		return errors.New(errors.ErrorTypeGenerationOutputNotFound, "find output config", 
+		return errors.New(errors.ErrorTypeGenerationOutputNotFound, "find output config",
 			fmt.Errorf("output file not found in configuration")).
 			WithPath(outputFile).
 			WithContext("requested_file", outputFile).
@@ -390,7 +390,7 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 	// Find the output configuration
 	targetOutput := g.findOutputConfig(cfg.Outputs, outputFile)
 	if targetOutput == nil {
-		return "", errors.New(errors.ErrorTypeGenerationOutputNotFound, "find output config", 
+		return "", errors.New(errors.ErrorTypeGenerationOutputNotFound, "find output config",
 			fmt.Errorf("output file not found in configuration")).
 			WithPath(outputFile).
 			WithContext("requested_file", outputFile).
