@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/mark3labs/mcp-go/mcp"
@@ -39,8 +40,14 @@ like Claude, Cursor, and Windsurf.`,
 
 func main() {
 	if err := rootCmd.Execute(); err != nil {
+		fmtError(err)
 		os.Exit(1)
 	}
+}
+
+// fmtError formats and displays an error to stderr with rich error support
+func fmtError(err error) {
+	errors.FormatError(os.Stderr, err, false, true)
 }
 
 func init() {
@@ -180,12 +187,12 @@ func runRecursiveGenerate() {
 	// Find all config files
 	configs, err := config.FindAllConfigFiles(".")
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error finding configuration files: %v\n", err)
+		fmtError(err)
 		os.Exit(1)
 	}
 
 	if len(configs) == 0 {
-		fmt.Fprintf(os.Stderr, "No configuration files found\n")
+		fmtError(errors.ConfigNotFound("."))
 		os.Exit(1)
 	}
 
@@ -201,7 +208,7 @@ func runRecursiveGenerate() {
 		// Load configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			continue
 		}
 
@@ -217,14 +224,14 @@ func runRecursiveGenerate() {
 		// Generate files
 		gen := generator.NewWithConfigFile(configFile)
 		if err := gen.GenerateAll(cfg); err != nil {
-			fmt.Fprintf(os.Stderr, "Error generating files: %v\n", err)
+			fmtError(err)
 			continue
 		}
 
 		// Update .gitignore if requested
 		if updateGitignore {
 			if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
-				fmt.Fprintf(os.Stderr, "Error updating .gitignore: %v\n", err)
+				fmtError(err)
 				continue
 			}
 		}
@@ -256,7 +263,7 @@ schema compliance, and logical issues like circular dependencies.`,
 			// Find config file
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -265,7 +272,7 @@ schema compliance, and logical issues like circular dependencies.`,
 		// Load and validate configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -305,7 +312,11 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.`
 
 		// Check if ai_rulez.yaml already exists
 		if _, err := os.Stat("ai_rulez.yaml"); err == nil {
-			fmt.Fprintf(os.Stderr, "Error: ai_rulez.yaml already exists in current directory\n")
+			fmtError(errors.New(errors.ErrorTypeCommand, "init project",
+				fmt.Errorf("configuration file already exists")).
+				WithPath("ai_rulez.yaml").
+				WithSuggestion("Use a different directory or remove the existing file").
+				WithSuggestion("Try 'ai-rulez generate' if you want to regenerate files"))
 			os.Exit(1)
 		}
 
@@ -325,7 +336,7 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.`
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, "ai_rulez.yaml"); err != nil {
-			fmt.Fprintf(os.Stderr, "Error creating configuration file: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -358,7 +369,7 @@ via stdin or will open an editor for you to enter the rule content.`,
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -367,7 +378,7 @@ via stdin or will open an editor for you to enter the rule content.`,
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -389,7 +400,7 @@ via stdin or will open an editor for you to enter the rule content.`,
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -413,7 +424,7 @@ via stdin or will open an editor for you to enter the section content.`,
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -422,7 +433,7 @@ via stdin or will open an editor for you to enter the section content.`,
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -444,7 +455,7 @@ via stdin or will open an editor for you to enter the section content.`,
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -468,7 +479,7 @@ a template to use for rendering the output.`,
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -477,7 +488,7 @@ a template to use for rendering the output.`,
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -498,7 +509,7 @@ a template to use for rendering the output.`,
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -534,7 +545,7 @@ you'll be prompted to enter new content via stdin.`,
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -543,7 +554,7 @@ you'll be prompted to enter new content via stdin.`,
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -585,7 +596,7 @@ you'll be prompted to enter new content via stdin.`,
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -610,7 +621,7 @@ you'll be prompted to enter new content via stdin.`,
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -619,7 +630,7 @@ you'll be prompted to enter new content via stdin.`,
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -661,7 +672,7 @@ you'll be prompted to enter new content via stdin.`,
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -684,7 +695,7 @@ You can update the template used for the output file.`,
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -693,7 +704,7 @@ You can update the template used for the output file.`,
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -716,7 +727,7 @@ You can update the template used for the output file.`,
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -744,7 +755,7 @@ var deleteRuleCmd = &cobra.Command{
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -753,7 +764,7 @@ var deleteRuleCmd = &cobra.Command{
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -776,7 +787,7 @@ var deleteRuleCmd = &cobra.Command{
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -797,7 +808,7 @@ var deleteSectionCmd = &cobra.Command{
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -806,7 +817,7 @@ var deleteSectionCmd = &cobra.Command{
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -829,7 +840,7 @@ var deleteSectionCmd = &cobra.Command{
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -850,7 +861,7 @@ var deleteOutputCmd = &cobra.Command{
 		if configFile == "" {
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+				fmtError(err)
 				os.Exit(1)
 			}
 			configFile = foundConfig
@@ -859,7 +870,7 @@ var deleteOutputCmd = &cobra.Command{
 		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -882,7 +893,7 @@ var deleteOutputCmd = &cobra.Command{
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
-			fmt.Fprintf(os.Stderr, "Error saving configuration: %v\n", err)
+			fmtError(err)
 			os.Exit(1)
 		}
 
@@ -1096,7 +1107,7 @@ func runMCPServer() {
 
 	// Start stdio server
 	if err := server.ServeStdio(s); err != nil {
-		fmt.Fprintf(os.Stderr, "MCP server error: %v\n", err)
+		fmtError(errors.MCPError("start MCP server", err))
 		os.Exit(1)
 	}
 }
@@ -1319,7 +1330,7 @@ func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1327,7 +1338,7 @@ func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 	}
 
 	// Apply filters
@@ -1366,7 +1377,7 @@ func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1374,7 +1385,7 @@ func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 	}
 
 	// Format response
@@ -1395,7 +1406,7 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1403,7 +1414,7 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 	}
 
 	// Check dry run flag
@@ -1457,7 +1468,7 @@ func handleValidate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1549,7 +1560,7 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1609,7 +1620,7 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1663,7 +1674,7 @@ func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1722,7 +1733,7 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1789,7 +1800,7 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1858,7 +1869,7 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1917,7 +1928,7 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -1972,7 +1983,7 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}
@@ -2027,7 +2038,7 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("No configuration file found: %v", err)), nil
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 		}
 		configFile = foundConfig
 	}

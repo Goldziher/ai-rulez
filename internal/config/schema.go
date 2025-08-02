@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/xeipuuv/gojsonschema"
 	"gopkg.in/yaml.v3"
 )
 
 // Embed the schema file at compile time
 //
-//go:embed schema/ai-rules-v1.schema.json
+//go:embed ai-rules-v1.schema.json
 var schemaJSON string
 
 // ValidateWithSchema validates a configuration against the JSON Schema.
@@ -19,12 +20,15 @@ func ValidateWithSchema(configData []byte) error {
 	// Convert YAML to JSON for schema validation
 	var yamlData any
 	if err := yaml.Unmarshal(configData, &yamlData); err != nil {
-		return fmt.Errorf("failed to parse YAML: %w", err)
+		return errors.New(errors.ErrorTypeConfigInvalid, "parse YAML for validation", err).
+			WithSuggestion("Check the YAML syntax - ensure proper indentation").
+			WithSuggestion("Common issues: tabs instead of spaces, missing colons")
 	}
 
 	jsonData, err := json.Marshal(ConvertYAMLToJSON(yamlData))
 	if err != nil {
-		return fmt.Errorf("failed to convert to JSON: %w", err)
+		return errors.New(errors.ErrorTypeConfigInvalid, "convert YAML to JSON", err).
+			WithSuggestion("This is an internal error - the YAML structure may be invalid")
 	}
 
 	// Load schema and document
@@ -34,16 +38,16 @@ func ValidateWithSchema(configData []byte) error {
 	// Validate
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
-		return fmt.Errorf("schema validation error: %w", err)
+		return errors.New(errors.ErrorTypeConfigSchema, "schema validation", err).
+			WithSuggestion("This is an internal schema validation error")
 	}
 
 	if !result.Valid() {
-		var errors []string
+		var validationErrors []string
 		for _, desc := range result.Errors() {
-			errors = append(errors, fmt.Sprintf("- %s", desc))
+			validationErrors = append(validationErrors, desc.String())
 		}
-		return fmt.Errorf("configuration validation failed:\n%s",
-			stringSliceToString(errors, "\n"))
+		return errors.SchemaValidation("", validationErrors)
 	}
 
 	return nil
@@ -67,24 +71,13 @@ func ConvertYAMLToJSON(i any) any {
 	return i
 }
 
-// stringSliceToString joins a slice of strings.
-func stringSliceToString(slice []string, sep string) string {
-	result := ""
-	for i, s := range slice {
-		if i > 0 {
-			result += sep
-		}
-		result += s
-	}
-	return result
-}
-
 // ValidateConfigWithSchema validates a Config struct against the schema.
 func ValidateConfigWithSchema(cfg *Config) error {
 	// Marshal config to YAML first
 	yamlData, err := yaml.Marshal(cfg)
 	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
+		return errors.New(errors.ErrorTypeConfig, "marshal config for validation", err).
+			WithSuggestion("Check if the config structure is valid")
 	}
 
 	return ValidateWithSchema(yamlData)
