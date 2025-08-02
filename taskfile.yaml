@@ -6,8 +6,15 @@ vars:
 tasks:
   build:
     desc: Build the binary
+    deps:
+      - sync-schema
     cmds:
       - go build -o bin/{{.BINARY_NAME}} ./cmd
+
+  sync-schema:
+    desc: Sync schema from main directory to embedded location
+    cmds:
+      - cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
 
   install:
     desc: Install the binary
