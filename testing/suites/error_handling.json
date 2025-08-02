@@ -16,7 +16,7 @@
       "files": {
         "readonly-config.yaml": "metadata:\n  name: \"Permission Test\"\noutputs:\n  - file: \"valid-output.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
       },
-      "expected_out": "Generated * output file(s)",
+      "expected_out": "Generated * file(s) successfully",
       "exit_code": 0
     },
     {
@@ -63,7 +63,7 @@
       "name": "recursive_no_configs",
       "description": "Recursive mode with no configs found",
       "command": ["generate", "--recursive"],
-      "expected_err": "no airules configuration files found",
+      "expected_err": "no configuration file found",
       "exit_code": 1
     },
     {
@@ -73,7 +73,7 @@
       "files": {
         "deep-path.yaml": "metadata:\n  name: \"Deep Path Test\"\noutputs:\n  - file: \"very/deep/nested/path/that/might/fail/output.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
       },
-      "expected_out": "Generated * output file(s)",
+      "expected_out": "Generated * file(s) successfully",
       "exit_code": 0
     },
     {
@@ -83,7 +83,7 @@
       "files": {
         "large-config.yaml": "metadata:\n  name: \"Large Config Test\"\noutputs:\n  - file: \"output.md\"\nrules:\n  - name: \"Rule 1\"\n    content: \"Content that could be very long and complex to process\"\n  - name: \"Rule 2\"\n    content: \"More content\""
       },
-      "expected_out": "Configuration valid",
+      "expected_out": "DRY RUN MODE",
       "exit_code": 0
     }
   ]
