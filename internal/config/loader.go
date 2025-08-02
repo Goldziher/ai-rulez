@@ -2,18 +2,21 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/errors"
 )
 
 // LoadConfigWithIncludes loads a configuration file and resolves all includes.
 func LoadConfigWithIncludes(filename string) (*Config, error) {
 	absPath, err := filepath.Abs(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path for %s: %w", filename, err)
+		return nil, errors.FileRead(filename, err).
+			WithContext("operation", "resolve absolute path").
+			WithSuggestion("Check if the file path is valid and accessible")
 	}
 
 	loader := &configLoader{
@@ -34,7 +37,7 @@ func LoadConfigWithIncludes(filename string) (*Config, error) {
 	localConfigPath := filepath.Join(baseDir, configBaseName+".local.yaml")
 	if _, err := os.Stat(localConfigPath); err == nil {
 		if err := loader.loadLocalOverrides(config, localConfigPath); err != nil {
-			return nil, fmt.Errorf("failed to load %s: %w", filepath.Base(localConfigPath), err)
+			return nil, err // Already a rich error from loadLocalOverrides
 		}
 	}
 
@@ -51,12 +54,22 @@ type configLoader struct {
 func (l *configLoader) loadConfig(filename string) (*Config, error) {
 	absPath, err := filepath.Abs(filename)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path for %s: %w", filename, err)
+		return nil, errors.FileRead(filename, err).
+			WithContext("operation", "resolve absolute path").
+			WithSuggestion("Check if the file path is valid and accessible")
 	}
 
 	// Check for circular includes
 	if l.visited[absPath] {
-		return nil, fmt.Errorf("circular include detected: %s", absPath)
+		// Build include chain for better error context
+		chain := make([]string, 0)
+		for path := range l.visited {
+			if l.visited[path] {
+				chain = append(chain, path)
+			}
+		}
+		chain = append(chain, absPath)
+		return nil, errors.CircularInclude(chain)
 	}
 	l.visited[absPath] = true
 	defer func() { l.visited[absPath] = false }()
@@ -64,12 +77,13 @@ func (l *configLoader) loadConfig(filename string) (*Config, error) {
 	// Load the main config
 	config, err := LoadConfig(absPath)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config %s: %w", absPath, err)
+		return nil, errors.ConfigLoad(absPath, err).
+			WithContext("operation", "loading main config")
 	}
 
 	// Resolve includes
 	if err := l.resolveIncludes(config, filepath.Dir(absPath)); err != nil {
-		return nil, fmt.Errorf("failed to resolve includes in %s: %w", absPath, err)
+		return nil, err
 	}
 
 	return config, nil
@@ -92,12 +106,19 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 		resolvedPath := l.resolvePath(includePath, baseDir)
 
 		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return fmt.Errorf("include file not found: %s (resolved to %s)", includePath, resolvedPath)
+			return errors.New(errors.ErrorTypeConfigNotFound, "resolve include", 
+				fmt.Errorf("include file not found: %s", includePath)).
+				WithPath(resolvedPath).
+				WithContext("include_path", includePath).
+				WithContext("resolved_path", resolvedPath).
+				WithSuggestion("Check if the include file exists: %s", resolvedPath).
+				WithSuggestion("Verify the relative path is correct relative to %s", baseDir).
+				WithSuggestion("Use an absolute path if the relative path is unclear")
 		}
 
 		includedConfig, err := l.loadConfig(resolvedPath)
 		if err != nil {
-			return fmt.Errorf("failed to load include %s: %w", includePath, err)
+			return err // Already a rich error from loadConfig
 		}
 
 		// Merge rules and sections from included config
@@ -209,12 +230,20 @@ func ValidateIncludes(config *Config, baseDir string) error {
 
 		// Check if file exists
 		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return fmt.Errorf("include file not found: %s", includePath)
+			return errors.New(errors.ErrorTypeConfigNotFound, "validate include", 
+				fmt.Errorf("include file not found: %s", includePath)).
+				WithPath(resolvedPath).
+				WithContext("include_path", includePath).
+				WithContext("base_dir", baseDir).
+				WithSuggestion("Check if the include file exists: %s", resolvedPath).
+				WithSuggestion("Verify the path is correct relative to %s", baseDir)
 		}
 
 		// Check if it's a valid YAML file by attempting to parse
 		if _, err := LoadConfig(resolvedPath); err != nil {
-			return fmt.Errorf("invalid include file %s: %w", includePath, err)
+			return errors.ConfigLoad(resolvedPath, err).
+				WithContext("include_path", includePath).
+				WithContext("operation", "validate include syntax")
 		}
 	}
 
@@ -224,12 +253,17 @@ func ValidateIncludes(config *Config, baseDir string) error {
 // ValidateOutputs checks that all outputs have valid file paths.
 func ValidateOutputs(outputs []Output) error {
 	if len(outputs) == 0 {
-		return errors.New("at least one output must be defined")
+		return errors.ValidationRequired("outputs", "configuration").
+			WithSuggestion("Add at least one output file in the 'outputs' section").
+			WithSuggestion("Example: outputs: [{file: 'CLAUDE.md', template: 'default'}]")
 	}
 
 	for i, output := range outputs {
 		if output.File == "" {
-			return fmt.Errorf("output[%d].file is required", i)
+			return errors.ValidationRequired(fmt.Sprintf("outputs[%d].file", i), "output configuration").
+				WithContext("output_index", i).
+				WithSuggestion("Specify a file path for output[%d]", i).
+				WithSuggestion("Example: file: 'CLAUDE.md'")
 		}
 	}
 
@@ -241,7 +275,7 @@ func (l *configLoader) loadLocalOverrides(config *Config, filename string) error
 	// Load the local config file
 	localConfig, err := l.loadConfig(filename)
 	if err != nil {
-		return fmt.Errorf("failed to load local config: %w", err)
+		return err // Already a rich error from loadConfig
 	}
 
 	// Merge rules and sections using ID-based merging
