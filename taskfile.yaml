@@ -7,12 +7,12 @@ tasks:
   build:
     desc: Build the binary
     cmds:
-      - go build -o bin/{{.BINARY_NAME}} .
+      - go build -o bin/{{.BINARY_NAME}} ./cmd
 
   install:
     desc: Install the binary
     cmds:
-      - go install .
+      - go install ./cmd
 
   test:
     desc: Run unit tests
