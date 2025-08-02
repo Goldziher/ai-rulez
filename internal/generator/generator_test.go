@@ -116,7 +116,7 @@ func TestGenerator_GenerateOutput_FileNotFound(t *testing.T) {
 	gen := generator.New()
 	err := gen.GenerateOutput(cfg, "nonexistent.md")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "output file nonexistent.md not found")
+	assert.Contains(t, err.Error(), "output file not found in configuration")
 }
 
 func TestGenerator_CustomTemplate(t *testing.T) {
@@ -194,7 +194,7 @@ func TestGenerator_PreviewOutput_FileNotFound(t *testing.T) {
 	gen := generator.New()
 	_, err := gen.PreviewOutput(cfg, "nonexistent.md")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "output file nonexistent.md not found")
+	assert.Contains(t, err.Error(), "output file not found in configuration")
 }
 
 func TestGenerator_RegisterTemplate_Invalid(t *testing.T) {
@@ -261,7 +261,7 @@ func TestGenerator_NoOutputs(t *testing.T) {
 	gen := generator.New()
 	err := gen.GenerateAll(cfg)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no outputs defined")
+	assert.Contains(t, err.Error(), "required field 'outputs' is missing")
 }
 
 func TestGenerator_DirectoryCreation(t *testing.T) {
