@@ -29,6 +29,8 @@ go.work.sum
 /build/npm/node_modules/
 /build/npm/*.tgz
 /ai-rulez
+ai-rulez-test
+test-build
 
 # Generated AI rule files (but NOT ai_rules.yaml config)
 claude.md
