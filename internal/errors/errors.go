@@ -17,30 +17,30 @@ const (
 	ErrorTypeConfigInvalid
 	ErrorTypeConfigSchema
 	ErrorTypeConfigCircular
-	
+
 	// File operation errors
 	ErrorTypeFileRead
 	ErrorTypeFileWrite
 	ErrorTypeFilePermission
-	
+
 	// Template errors
 	ErrorTypeTemplate
 	ErrorTypeTemplateNotFound
 	ErrorTypeTemplateSyntax
-	
+
 	// Validation errors
 	ErrorTypeValidation
 	ErrorTypeValidationRequired
 	ErrorTypeValidationFormat
-	
+
 	// Command errors
 	ErrorTypeCommand
 	ErrorTypeCommandArgument
-	
+
 	// Generation errors
 	ErrorTypeGeneration
 	ErrorTypeGenerationOutputNotFound
-	
+
 	// MCP protocol errors
 	ErrorTypeMCP
 )
@@ -49,27 +49,27 @@ const (
 func (t ErrorType) String() string {
 	// Use a map for simpler lookup to reduce complexity
 	errorTypeStrings := map[ErrorType]string{
-		ErrorTypeConfig:                      "config",
-		ErrorTypeConfigNotFound:              "config_not_found",
-		ErrorTypeConfigInvalid:               "config_invalid",
-		ErrorTypeConfigSchema:                "config_schema",
-		ErrorTypeConfigCircular:              "config_circular",
-		ErrorTypeFileRead:                    "file_read",
-		ErrorTypeFileWrite:                   "file_write",
-		ErrorTypeFilePermission:              "file_permission",
-		ErrorTypeTemplate:                    "template",
-		ErrorTypeTemplateNotFound:            "template_not_found",
-		ErrorTypeTemplateSyntax:              "template_syntax",
-		ErrorTypeValidation:                  "validation",
-		ErrorTypeValidationRequired:          "validation_required",
-		ErrorTypeValidationFormat:            "validation_format",
-		ErrorTypeCommand:                     "command",
-		ErrorTypeCommandArgument:             "command_argument",
-		ErrorTypeGeneration:                  "generation",
-		ErrorTypeGenerationOutputNotFound:    "generation_output_not_found",
-		ErrorTypeMCP:                         "mcp",
+		ErrorTypeConfig:                   "config",
+		ErrorTypeConfigNotFound:           "config_not_found",
+		ErrorTypeConfigInvalid:            "config_invalid",
+		ErrorTypeConfigSchema:             "config_schema",
+		ErrorTypeConfigCircular:           "config_circular",
+		ErrorTypeFileRead:                 "file_read",
+		ErrorTypeFileWrite:                "file_write",
+		ErrorTypeFilePermission:           "file_permission",
+		ErrorTypeTemplate:                 "template",
+		ErrorTypeTemplateNotFound:         "template_not_found",
+		ErrorTypeTemplateSyntax:           "template_syntax",
+		ErrorTypeValidation:               "validation",
+		ErrorTypeValidationRequired:       "validation_required",
+		ErrorTypeValidationFormat:         "validation_format",
+		ErrorTypeCommand:                  "command",
+		ErrorTypeCommandArgument:          "command_argument",
+		ErrorTypeGeneration:               "generation",
+		ErrorTypeGenerationOutputNotFound: "generation_output_not_found",
+		ErrorTypeMCP:                      "mcp",
 	}
-	
+
 	if str, ok := errorTypeStrings[t]; ok {
 		return str
 	}
@@ -91,22 +91,22 @@ type RichError struct {
 // Error implements the error interface
 func (e *RichError) Error() string {
 	var b strings.Builder
-	
+
 	// Primary error message
 	if e.Op != "" {
 		b.WriteString(e.Op)
 		b.WriteString(": ")
 	}
-	
+
 	if e.Err != nil {
 		b.WriteString(e.Err.Error())
 	}
-	
+
 	// Add path context if available
 	if e.Path != "" {
 		b.WriteString(fmt.Sprintf(" (path: %s)", e.Path))
 	}
-	
+
 	return b.String()
 }
 
@@ -122,14 +122,14 @@ func (e *RichError) Format(f fmt.State, verb rune) {
 		if f.Flag('+') {
 			// Detailed format with suggestions
 			fmt.Fprintf(f, "%s\n", e.Error()) //nolint:errcheck
-			
+
 			if len(e.Context) > 0 {
 				fmt.Fprintf(f, "\nContext:\n") //nolint:errcheck
 				for k, v := range e.Context {
 					fmt.Fprintf(f, "  %s: %v\n", k, v) //nolint:errcheck
 				}
 			}
-			
+
 			if len(e.Suggestions) > 0 {
 				fmt.Fprintf(f, "\nSuggestions:\n") //nolint:errcheck
 				for i, s := range e.Suggestions {
@@ -186,15 +186,15 @@ func (e *RichError) Is(target error) bool {
 	if target == nil {
 		return false
 	}
-	
+
 	if e.Err != nil {
 		return e.Err == target
 	}
-	
+
 	t, ok := target.(*RichError)
 	if !ok {
 		return false
 	}
-	
+
 	return e.Type == t.Type
 }
