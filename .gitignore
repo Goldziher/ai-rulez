@@ -42,6 +42,9 @@ CLAUDE.md
 # Local overrides (should not be committed)
 *.local.yaml
 
+# Embedded schema (generated from main schema)
+internal/config/ai-rules-v1.schema.json
+
 # IDE
 .vscode/
 .idea/
