@@ -4,14 +4,16 @@ package generator
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
+	"hash"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -58,7 +60,9 @@ func NewWithRenderer(renderer *templates.Renderer) *Generator {
 // GenerateAll generates all output files defined in the configuration.
 func (g *Generator) GenerateAll(cfg *config.Config) error {
 	if len(cfg.Outputs) == 0 {
-		return errors.New("no outputs defined in configuration")
+		return errors.ValidationRequired("outputs", "configuration").
+			WithSuggestion("Add at least one output file in the configuration").
+			WithSuggestion("Example: outputs: [{file: 'CLAUDE.md', template: 'default'}]")
 	}
 
 	// Use concurrent generation for larger file sets
@@ -71,8 +75,52 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 
 	for i, output := range cfg.Outputs {
 		if err := g.writeOutputFile(output, templateData); err != nil {
-			return fmt.Errorf("failed to generate output %d (%s): %w", i, output.File, err)
+			return errors.New(errors.ErrorTypeGeneration, "generate output file", err).
+				WithPath(output.File).
+				WithContext("output_index", i).
+				WithContext("template", output.Template).
+				WithSuggestion("Check if the template '%s' is valid", output.Template).
+				WithSuggestion("Verify the output file path is writable: %s", output.File)
 		}
+	}
+
+	return nil
+}
+
+// GenerateAllConcurrent generates all output files concurrently.
+func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
+	if len(cfg.Outputs) == 0 {
+		return errors.ValidationRequired("outputs", "configuration").
+			WithSuggestion("Add at least one output file in the configuration")
+	}
+
+	templateData := templates.NewTemplateData(cfg)
+
+	// Use a wait group and error channel for concurrent processing
+	var wg sync.WaitGroup
+	errChan := make(chan error, len(cfg.Outputs))
+
+	for i, output := range cfg.Outputs {
+		wg.Add(1)
+		go func(idx int, out config.Output) {
+			defer wg.Done()
+			if err := g.writeOutputFile(out, templateData); err != nil {
+				errChan <- errors.New(errors.ErrorTypeGeneration, "generate output file", err).
+					WithPath(out.File).
+					WithContext("output_index", idx).
+					WithContext("template", out.Template).
+					WithContext("generation_mode", "concurrent")
+			}
+		}(i, output)
+	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+	close(errChan)
+
+	// Check for errors
+	for err := range errChan {
+		return err // Return first error
 	}
 
 	return nil
@@ -85,7 +133,12 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 	// Find the output configuration
 	targetOutput := g.findOutputConfig(cfg.Outputs, outputFile)
 	if targetOutput == nil {
-		return fmt.Errorf("output file %s not found in configuration", outputFile)
+		return errors.New(errors.ErrorTypeGenerationOutputNotFound, "find output config", 
+			fmt.Errorf("output file not found in configuration")).
+			WithPath(outputFile).
+			WithContext("requested_file", outputFile).
+			WithSuggestion("Check if '%s' is defined in the outputs section", outputFile).
+			WithSuggestion("Available outputs: %v", g.getOutputFileNames(cfg.Outputs))
 	}
 
 	return g.writeOutputFile(*targetOutput, templateData)
@@ -110,7 +163,7 @@ func (g *Generator) writeOutputFile(output config.Output, data *templates.Templa
 	// Check if we need to write the file
 	shouldWrite, err := g.shouldWriteFile(output.File, finalContent)
 	if err != nil {
-		return fmt.Errorf("failed to check if file should be written: %w", err)
+		return err
 	}
 	if !shouldWrite {
 		return nil // File content is unchanged, skip writing
@@ -131,27 +184,32 @@ func (g *Generator) shouldWriteFile(filePath, newContent string) (bool, error) {
 		return true, nil
 	}
 	if err != nil {
-		return false, fmt.Errorf("failed to stat file %s: %w", fullPath, err)
+		return false, errors.FileRead(fullPath, err).
+			WithContext("operation", "check file status").
+			WithSuggestion("Check if you have read permissions for the file")
 	}
 
 	// For small files (< 1MB), read into memory
 	if stat.Size() < 1024*1024 {
 		existingContent, err := os.ReadFile(fullPath)
 		if err != nil {
-			return false, fmt.Errorf("failed to read existing file %s: %w", fullPath, err)
+			return false, errors.FileRead(fullPath, err).
+				WithContext("operation", "read existing file for comparison")
 		}
-		existingHash := computeContentHash(string(existingContent))
-		newHash := computeContentHash(newContent)
+		existingHash := ComputeContentHashPooled(string(existingContent))
+		newHash := ComputeContentHashPooled(newContent)
 		return existingHash != newHash, nil
 	}
 
 	// For larger files, use streaming hash
-	existingHash, err := computeFileHashStreaming(fullPath)
+	existingHash, err := computeFileHash(fullPath)
 	if err != nil {
-		return false, fmt.Errorf("failed to compute hash for %s: %w", fullPath, err)
+		return false, errors.FileRead(fullPath, err).
+			WithContext("operation", "compute file hash").
+			WithSuggestion("Check if the file is not locked by another process")
 	}
 
-	newHash := computeContentHash(newContent)
+	newHash := ComputeContentHashPooled(newContent)
 	return existingHash != newHash, nil
 }
 
@@ -165,6 +223,15 @@ func (*Generator) findOutputConfig(outputs []config.Output, outputFile string) *
 		}
 	}
 	return nil
+}
+
+// getOutputFileNames returns a list of all output file names.
+func (*Generator) getOutputFileNames(outputs []config.Output) []string {
+	names := make([]string, len(outputs))
+	for i, output := range outputs {
+		names[i] = output.File
+	}
+	return names
 }
 
 // renderTemplate renders a template for the given output configuration.
@@ -183,28 +250,51 @@ func (g *Generator) renderTemplate(output config.Output, data *templates.Templat
 		// Read the template file
 		templateContent, err := os.ReadFile(fullPath)
 		if err != nil {
-			return "", fmt.Errorf("failed to read template file %s: %w", fullPath, err)
+			return "", errors.TemplateNotFound(templatePath, g.GetSupportedTemplates()).
+				WithPath(fullPath).
+				WithContext("template_type", "file").
+				WithSuggestion("Check if the template file exists: %s", fullPath).
+				WithSuggestion("Verify the path is correct relative to %s", g.baseDir)
 		}
 
 		// Register and render the template
 		templateID := fmt.Sprintf("file:%s", templatePath)
 		if err := g.renderer.RegisterTemplate(templateID, string(templateContent)); err != nil {
-			return "", fmt.Errorf("failed to register template from %s: %w", templatePath, err)
+			return "", errors.TemplateParse(templateID, err).
+				WithPath(fullPath).
+				WithContext("template_type", "file")
 		}
 
-		return g.renderer.Render(templateID, data)
+		content, err := g.renderer.Render(templateID, data)
+		if err != nil {
+			return "", errors.TemplateExecute(templateID, err).
+				WithPath(fullPath).
+				WithContext("template_type", "file")
+		}
+		return content, nil
 	}
 
 	// Check if this is an inline template (contains newlines or template syntax)
 	if strings.Contains(templateName, "\n") || strings.Contains(templateName, "{{") {
 		// This is an inline template
-		return templates.RenderString(templateName, data)
+		content, err := templates.RenderString(templateName, data)
+		if err != nil {
+			return "", errors.TemplateExecute("inline", err).
+				WithContext("template_type", "inline").
+				WithContext("template_content", templateName)
+		}
+		return content, nil
 	}
 
 	// Otherwise, treat as a named template
 	content, err := g.renderer.Render(templateName, data)
 	if err != nil {
-		return "", fmt.Errorf("failed to render template %s: %w", templateName, err)
+		if strings.Contains(err.Error(), "not found") {
+			return "", errors.TemplateNotFound(templateName, g.GetSupportedTemplates()).
+				WithContext("template_type", "named")
+		}
+		return "", errors.TemplateExecute(templateName, err).
+			WithContext("template_type", "named")
 	}
 
 	return content, nil
@@ -218,43 +308,64 @@ func (g *Generator) writeFile(filePath, content string) error {
 	// Ensure output directory exists
 	outputDir := filepath.Dir(fullPath)
 	if err := os.MkdirAll(outputDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create output directory %s: %w", outputDir, err)
+		return errors.FileWrite(outputDir, err).
+			WithContext("operation", "create output directory").
+			WithSuggestion("Check if you have write permissions for the parent directory")
 	}
 
 	// Write the file
 	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
-		return fmt.Errorf("failed to write output file %s: %w", fullPath, err)
+		return errors.FileWrite(fullPath, err)
 	}
 
 	return nil
 }
 
-// computeContentHash computes SHA256 hash of content.
-// Consider using ComputeContentHashPooled for better performance.
-func computeContentHash(content string) string {
-	hash := sha256.Sum256([]byte(content))
-	return hex.EncodeToString(hash[:])
-}
-
-// computeFileHashStreaming computes SHA256 hash of a file without loading entire content into memory.
-func computeFileHashStreaming(filePath string) (string, error) {
+// computeFileHash computes SHA256 hash of a file without loading entire content into memory.
+func computeFileHash(filePath string) (string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
 	defer func() { _ = file.Close() }()
 
-	hash := sha256.New()
-	if _, err := io.Copy(hash, file); err != nil {
+	h := sha256.New()
+	if _, err := io.Copy(h, file); err != nil {
 		return "", err
 	}
 
-	return hex.EncodeToString(hash.Sum(nil)), nil
+	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+// Hash pool to reduce allocations
+var hashPool = sync.Pool{
+	New: func() any {
+		return sha256.New()
+	},
+}
+
+// ComputeContentHashPooled computes SHA256 hash using a pooled hasher.
+func ComputeContentHashPooled(content string) string {
+	h := hashPool.Get().(hash.Hash)
+	defer func() {
+		h.Reset()
+		hashPool.Put(h)
+	}()
+
+	// Pre-allocate the result buffer
+	result := make([]byte, 0, sha256.Size)
+	_, _ = h.Write([]byte(content))
+	return hex.EncodeToString(h.Sum(result))
 }
 
 // RegisterTemplate adds a custom template to the generator's renderer.
 func (g *Generator) RegisterTemplate(name, templateStr string) error {
-	return g.renderer.RegisterTemplate(name, templateStr)
+	if err := g.renderer.RegisterTemplate(name, templateStr); err != nil {
+		return errors.TemplateParse(name, err).
+			WithContext("template_type", "custom").
+			WithSuggestion("Check the template syntax for errors")
+	}
+	return nil
 }
 
 // GetSupportedTemplates returns all available template names.
@@ -264,7 +375,12 @@ func (g *Generator) GetSupportedTemplates() []string {
 
 // ValidateTemplate checks if a template string is valid.
 func (*Generator) ValidateTemplate(templateStr string) error {
-	return templates.ValidateTemplate(templateStr)
+	if err := templates.ValidateTemplate(templateStr); err != nil {
+		return errors.TemplateParse("validation", err).
+			WithContext("template_content", templateStr).
+			WithSuggestion("Check the template syntax for errors")
+	}
+	return nil
 }
 
 // PreviewOutput generates output content without writing to file.
@@ -274,7 +390,11 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 	// Find the output configuration
 	targetOutput := g.findOutputConfig(cfg.Outputs, outputFile)
 	if targetOutput == nil {
-		return "", fmt.Errorf("output file %s not found in configuration", outputFile)
+		return "", errors.New(errors.ErrorTypeGenerationOutputNotFound, "find output config", 
+			fmt.Errorf("output file not found in configuration")).
+			WithPath(outputFile).
+			WithContext("requested_file", outputFile).
+			WithSuggestion("Check if '%s' is defined in the outputs section", outputFile)
 	}
 
 	// Set the file information for header generation
@@ -296,7 +416,8 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 // Returns a map of file paths to their generated content.
 func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 	if len(cfg.Outputs) == 0 {
-		return nil, errors.New("no outputs defined in configuration")
+		return nil, errors.ValidationRequired("outputs", "configuration").
+			WithSuggestion("Add at least one output file in the configuration")
 	}
 
 	templateData := templates.NewTemplateData(cfg)
@@ -309,7 +430,10 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 
 		content, err := g.renderTemplate(output, templateData)
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate output %d (%s): %w", i, output.File, err)
+			return nil, errors.New(errors.ErrorTypeGeneration, "preview output", err).
+				WithPath(output.File).
+				WithContext("output_index", i).
+				WithContext("template", output.Template)
 		}
 
 		// Prepend the header
