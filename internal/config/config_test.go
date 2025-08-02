@@ -170,7 +170,7 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			errMsg:  "metadata.name is required",
+			errMsg:  "required field 'metadata.name' is missing",
 		},
 		{
 			name: "no outputs",
@@ -179,7 +179,7 @@ func TestConfigValidate(t *testing.T) {
 				Outputs:  []config.Output{},
 			},
 			wantErr: true,
-			errMsg:  "at least one output must be defined",
+			errMsg:  "required field 'outputs' is missing",
 		},
 		{
 			name: "output missing file",
@@ -190,7 +190,7 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			errMsg:  "output[0].file is required",
+			errMsg:  "required field 'outputs[0].file' is missing",
 		},
 	}
 
