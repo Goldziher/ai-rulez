@@ -117,7 +117,7 @@ func ComputeContentHashPooled(content string) string {
 
 	// Pre-allocate the result buffer
 	result := make([]byte, 0, sha256.Size)
-	h.Write([]byte(content))
+	_, _ = h.Write([]byte(content))
 	return hex.EncodeToString(h.Sum(result))
 }
 

@@ -936,7 +936,9 @@ func init() {
 	// Add flags for update output command
 	updateOutputCmd.Flags().StringP("template", "t", "", "New template for the output (required)")
 	updateOutputCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
-	_ = updateOutputCmd.MarkFlagRequired("template")
+	if err := updateOutputCmd.MarkFlagRequired("template"); err != nil {
+		fmt.Fprintf(os.Stderr, "Error marking flag as required: %v\n", err)
+	}
 
 	// Add flags for delete commands
 	deleteRuleCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")

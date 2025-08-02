@@ -114,10 +114,10 @@ rules:
 	
 	for _, config := range configs {
 		fullPath := filepath.Join(tempDir, config)
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 			b.Fatalf("Failed to create directory: %v", err)
 		}
-		if err := os.WriteFile(fullPath, []byte(configContent), 0644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(configContent), 0o644); err != nil {
 			b.Fatalf("Failed to create config: %v", err)
 		}
 	}
@@ -171,7 +171,7 @@ func BenchmarkConfigDiscovery(b *testing.B) {
 	
 	tempDir := b.TempDir()
 	configDir := filepath.Join(tempDir, "deep", "nested", "directory")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
+	if err := os.MkdirAll(configDir, 0o755); err != nil {
 		b.Fatalf("Failed to create nested directory: %v", err)
 	}
 	
@@ -184,7 +184,7 @@ rules:
   - name: "Test Rule"
     content: "Test content"`
 	
-	if err := os.WriteFile(filepath.Join(tempDir, ".airules.yaml"), []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, ".airules.yaml"), []byte(configContent), 0o644); err != nil {
 		b.Fatalf("Failed to create config file: %v", err)
 	}
 	

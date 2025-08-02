@@ -25,7 +25,7 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configPath := filepath.Join(tmpDir, ".ai-rulez.yaml")
-				err := os.WriteFile(configPath, []byte("test"), 0644)
+				err := os.WriteFile(configPath, []byte("test"), 0o644)
 				require.NoError(t, err)
 				return tmpDir
 			},
@@ -36,7 +36,7 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
-				err := os.WriteFile(configPath, []byte("test"), 0644)
+				err := os.WriteFile(configPath, []byte("test"), 0o644)
 				require.NoError(t, err)
 				return tmpDir
 			},
@@ -47,11 +47,11 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				subDir := filepath.Join(tmpDir, "subdir", "nested")
-				err := os.MkdirAll(subDir, 0755)
+				err := os.MkdirAll(subDir, 0o755)
 				require.NoError(t, err)
 
 				configPath := filepath.Join(tmpDir, ".ai-rulez.yaml")
-				err = os.WriteFile(configPath, []byte("test"), 0644)
+				err = os.WriteFile(configPath, []byte("test"), 0o644)
 				require.NoError(t, err)
 
 				return subDir
@@ -64,9 +64,9 @@ func TestFindConfigFile(t *testing.T) {
 				tmpDir := t.TempDir()
 
 				// Create both files
-				err := os.WriteFile(filepath.Join(tmpDir, ".ai-rulez.yaml"), []byte("test"), 0644)
+				err := os.WriteFile(filepath.Join(tmpDir, ".ai-rulez.yaml"), []byte("test"), 0o644)
 				require.NoError(t, err)
-				err = os.WriteFile(filepath.Join(tmpDir, "ai-rulez.yaml"), []byte("test"), 0644)
+				err = os.WriteFile(filepath.Join(tmpDir, "ai-rulez.yaml"), []byte("test"), 0o644)
 				require.NoError(t, err)
 
 				return tmpDir
@@ -78,7 +78,7 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
-				err := os.WriteFile(configPath, []byte("test"), 0644)
+				err := os.WriteFile(configPath, []byte("test"), 0o644)
 				require.NoError(t, err)
 				return tmpDir
 			},
@@ -89,7 +89,7 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configPath := filepath.Join(tmpDir, ".ai_rulez.yaml")
-				err := os.WriteFile(configPath, []byte("test"), 0644)
+				err := os.WriteFile(configPath, []byte("test"), 0o644)
 				require.NoError(t, err)
 				return tmpDir
 			},
@@ -100,7 +100,7 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 				configPath := filepath.Join(tmpDir, "ai-rulez.yml")
-				err := os.WriteFile(configPath, []byte("test"), 0644)
+				err := os.WriteFile(configPath, []byte("test"), 0o644)
 				require.NoError(t, err)
 				return tmpDir
 			},
@@ -118,7 +118,7 @@ func TestFindConfigFile(t *testing.T) {
 					".ai-rulez.yml", "ai-rulez.yml",
 				}
 				for _, f := range files {
-					err := os.WriteFile(filepath.Join(tmpDir, f), []byte("test"), 0644)
+					err := os.WriteFile(filepath.Join(tmpDir, f), []byte("test"), 0o644)
 					require.NoError(t, err)
 				}
 
@@ -180,9 +180,9 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 				for _, config := range configs {
 					path := filepath.Join(tmpDir, config)
-					err := os.MkdirAll(filepath.Dir(path), 0755)
+					err := os.MkdirAll(filepath.Dir(path), 0o755)
 					require.NoError(t, err)
-					err = os.WriteFile(path, []byte("test"), 0644)
+					err = os.WriteFile(path, []byte("test"), 0o644)
 					require.NoError(t, err)
 				}
 
@@ -204,9 +204,9 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 				for _, config := range configs {
 					path := filepath.Join(tmpDir, config)
-					err := os.MkdirAll(filepath.Dir(path), 0755)
+					err := os.MkdirAll(filepath.Dir(path), 0o755)
 					require.NoError(t, err)
-					err = os.WriteFile(path, []byte("test"), 0644)
+					err = os.WriteFile(path, []byte("test"), 0o644)
 					require.NoError(t, err)
 				}
 
