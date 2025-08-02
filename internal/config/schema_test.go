@@ -1,12 +1,14 @@
 package config_test
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	internalErrors "github.com/Goldziher/ai-rulez/internal/errors"
 )
 
 func TestSchemaValidation(t *testing.T) {
@@ -278,7 +280,27 @@ sections:
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.errMsg != "" {
-					assert.Contains(t, err.Error(), tt.errMsg)
+					// Check if it's a rich error and look in the validation errors
+					var richErr *internalErrors.RichError
+					if errors.As(err, &richErr) {
+						if errs, ok := richErr.Context["errors"].([]string); ok {
+							found := false
+							for _, vErr := range errs {
+								if assert.Contains(t, vErr, tt.errMsg) {
+									found = true
+									break
+								}
+							}
+							if !found {
+								t.Errorf("Expected error message '%s' not found in validation errors: %v", tt.errMsg, errs)
+							}
+						} else {
+							t.Errorf("Expected validation errors in context but found: %v", richErr.Context)
+						}
+					} else {
+						// Fallback to checking main error message
+						assert.Contains(t, err.Error(), tt.errMsg)
+					}
 				}
 			} else {
 				require.NoError(t, err)
