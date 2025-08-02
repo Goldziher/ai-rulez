@@ -6,21 +6,21 @@
       "name": "valid_basic_config",
       "description": "Validate basic valid configuration",
       "command": ["validate", "scenarios/basic/ai_rulez.yaml"],
-      "expected_out": "✓ Configuration file * is valid",
+      "expected_out": "✓ Configuration is valid:",
       "exit_code": 0
     },
     {
       "name": "valid_minimal_config",
       "description": "Validate minimal valid configuration",
       "command": ["validate", "scenarios/minimal/ai_rulez.yaml"],
-      "expected_out": "✓ Configuration file * is valid",
+      "expected_out": "✓ Configuration is valid:",
       "exit_code": 0
     },
     {
       "name": "valid_with_includes",
       "description": "Validate configuration with includes",
       "command": ["validate", "scenarios/with-includes/ai_rulez.yaml"],
-      "expected_out": "✓ Configuration file * is valid",
+      "expected_out": "✓ Configuration is valid:",
       "exit_code": 0
     },
     {
@@ -70,9 +70,9 @@
       "description": "Validate using config discovery",
       "command": ["validate"],
       "files": {
-        ".airules.yaml": "metadata:\n  name: \"Discovery Test\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
+        ".ai-rulez.yaml": "metadata:\n  name: \"Discovery Test\"\noutputs:\n  - file: \"test.md\"\nrules:\n  - name: \"Test Rule\"\n    content: \"Test content\""
       },
-      "expected_out": "✓ Configuration file * is valid",
+      "expected_out": "✓ Configuration is valid:",
       "exit_code": 0
     }
   ]
