@@ -1,6 +1,7 @@
 package generator_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -116,7 +117,7 @@ func TestGenerator_GenerateOutput_FileNotFound(t *testing.T) {
 	gen := generator.New()
 	err := gen.GenerateOutput(cfg, "nonexistent.md")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "output file nonexistent.md not found")
+	assert.Contains(t, err.Error(), "output file not found in configuration")
 }
 
 func TestGenerator_CustomTemplate(t *testing.T) {
@@ -194,7 +195,7 @@ func TestGenerator_PreviewOutput_FileNotFound(t *testing.T) {
 	gen := generator.New()
 	_, err := gen.PreviewOutput(cfg, "nonexistent.md")
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "output file nonexistent.md not found")
+	assert.Contains(t, err.Error(), "output file not found in configuration")
 }
 
 func TestGenerator_RegisterTemplate_Invalid(t *testing.T) {
@@ -261,7 +262,7 @@ func TestGenerator_NoOutputs(t *testing.T) {
 	gen := generator.New()
 	err := gen.GenerateAll(cfg)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "no outputs defined")
+	assert.Contains(t, err.Error(), "required field 'outputs' is missing")
 }
 
 func TestGenerator_DirectoryCreation(t *testing.T) {
@@ -430,4 +431,83 @@ func TestGenerator_HeaderInPreview(t *testing.T) {
 	assert.Contains(t, content, "preview-config.yaml")
 	assert.Contains(t, content, "preview.md")
 	assert.Contains(t, content, "# Preview Test")
+}
+
+// BenchmarkComputeContentHashPooled benchmarks the pooled hash function.
+func BenchmarkComputeContentHashPooled(b *testing.B) {
+	content := "This is a test string that will be hashed repeatedly during the benchmark"
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_ = generator.ComputeContentHashPooled(content)
+	}
+}
+
+// BenchmarkGenerateAll benchmarks basic generation.
+func BenchmarkGenerateAll(b *testing.B) {
+	cfg := &config.Config{
+		Metadata: config.Metadata{
+			Name:        "Benchmark Project",
+			Version:     "1.0.0",
+			Description: "Test project for benchmarking",
+		},
+		Outputs: []config.Output{
+			{File: "output1.md"},
+			{File: "output2.md", Template: "documentation"},
+			{File: "output3.md"},
+		},
+		Rules: []config.Rule{
+			{Name: "Rule 1", Priority: 10, Content: "Content 1"},
+			{Name: "Rule 2", Priority: 5, Content: "Content 2"},
+			{Name: "Rule 3", Priority: 1, Content: "Content 3"},
+		},
+	}
+
+	tempDir := b.TempDir()
+	gen := generator.NewWithBaseDir(tempDir)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		if err := gen.GenerateAll(cfg); err != nil {
+			b.Fatalf("Failed to generate: %v", err)
+		}
+	}
+}
+
+// BenchmarkGenerateAllLarge benchmarks generation with many outputs.
+func BenchmarkGenerateAllLarge(b *testing.B) {
+	cfg := &config.Config{
+		Metadata: config.Metadata{
+			Name:        "Large Benchmark Project",
+			Version:     "1.0.0",
+			Description: "Test project with many outputs",
+		},
+		Outputs: make([]config.Output, 50),
+		Rules: []config.Rule{
+			{Name: "Rule 1", Priority: 10, Content: "Content 1"},
+			{Name: "Rule 2", Priority: 5, Content: "Content 2"},
+			{Name: "Rule 3", Priority: 1, Content: "Content 3"},
+		},
+	}
+
+	// Fill outputs
+	for i := 0; i < 50; i++ {
+		cfg.Outputs[i] = config.Output{File: fmt.Sprintf("output%d.md", i)}
+	}
+
+	tempDir := b.TempDir()
+	gen := generator.NewWithBaseDir(tempDir)
+
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		if err := gen.GenerateAll(cfg); err != nil {
+			b.Fatalf("Failed to generate: %v", err)
+		}
+	}
 }

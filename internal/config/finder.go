@@ -1,10 +1,10 @@
 package config
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/Goldziher/ai-rulez/internal/errors"
 )
 
 // FindConfigFile searches for config files starting from the current directory
@@ -22,7 +22,9 @@ func FindConfigFile(startDir string) (string, error) {
 	// Start from the given directory
 	dir, err := filepath.Abs(startDir)
 	if err != nil {
-		return "", fmt.Errorf("failed to get absolute path: %w", err)
+		return "", errors.FileRead(startDir, err).
+			WithContext("operation", "resolve absolute path").
+			WithSuggestion("Check if the directory exists and is accessible")
 	}
 
 	// Keep track of visited directories to avoid infinite loops
@@ -48,7 +50,7 @@ func FindConfigFile(startDir string) (string, error) {
 		dir = parent
 	}
 
-	return "", errors.New("no configuration file found. Create an 'ai-rulez.yaml', '.ai-rulez.yaml', 'ai_rulez.yaml', or '.ai_rulez.yaml' file in your project")
+	return "", errors.ConfigNotFound(startDir)
 }
 
 // FindAllConfigFiles recursively finds all config files
@@ -65,7 +67,8 @@ func FindAllConfigFiles(rootDir string) ([]string, error) {
 
 	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return err
+			return errors.FileRead(path, err).
+				WithContext("operation", "walk directory")
 		}
 
 		// Skip hidden directories (except .ai-rulez.yaml itself)
@@ -82,11 +85,15 @@ func FindAllConfigFiles(rootDir string) ([]string, error) {
 	})
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to walk directory tree: %w", err)
+		return nil, errors.FileRead(rootDir, err).
+			WithContext("operation", "walk directory tree").
+			WithSuggestion("Check if the directory exists and is accessible")
 	}
 
 	if len(configs) == 0 {
-		return nil, fmt.Errorf("no configuration files found in %s", rootDir)
+		return nil, errors.ConfigNotFound(rootDir).
+			WithContext("search_type", "recursive").
+			WithSuggestion("Run 'ai-rulez init' in the directory to create a config file")
 	}
 
 	return configs, nil
