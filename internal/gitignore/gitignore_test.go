@@ -50,7 +50,7 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 
 	// Test case 2: Existing .gitignore with some files already ignored
 	existingContent := "node_modules/\n.cursorrules\n"
-	err = os.WriteFile(gitignorePath, []byte(existingContent), 0644)
+	err = os.WriteFile(gitignorePath, []byte(existingContent), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write existing .gitignore: %v", err)
 	}
@@ -165,7 +165,7 @@ node_modules/
 dist/
 .env
 `
-	err = os.WriteFile(gitignorePath, []byte(content), 0644)
+	err = os.WriteFile(gitignorePath, []byte(content), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write .gitignore: %v", err)
 	}

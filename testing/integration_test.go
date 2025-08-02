@@ -207,11 +207,11 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 		fullPath := filepath.Join(testDir, filePath)
 		
 		
-		if err := os.MkdirAll(filepath.Dir(fullPath), 0755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(fullPath), 0o755); err != nil {
 			t.Fatalf("Failed to create directory for %s: %v", filePath, err)
 		}
 		
-		if err := os.WriteFile(fullPath, []byte(content), 0644); err != nil {
+		if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
 			t.Fatalf("Failed to create file %s: %v", filePath, err)
 		}
 	}
@@ -287,7 +287,7 @@ func runTestSuite(t *testing.T, suite TestSuite, testDir string) {
 		t.Run(testCase.Name, func(t *testing.T) {
 			
 			caseDir := filepath.Join(testDir, fmt.Sprintf("case_%s", strings.ReplaceAll(testCase.Name, " ", "_")))
-			err := os.MkdirAll(caseDir, 0755)
+			err := os.MkdirAll(caseDir, 0o755)
 			require.NoError(t, err)
 			
 			

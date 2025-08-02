@@ -216,9 +216,13 @@ All content is sorted by priority (highest first), then alphabetically by title.
 {{end}}
 `
 
-	// Register built-in templates (ignore errors since they're hardcoded and valid)
-	_ = r.RegisterTemplate("default", defaultTemplate)
-	_ = r.RegisterTemplate("documentation", documentationTemplate)
+	// Register built-in templates
+	if err := r.RegisterTemplate("default", defaultTemplate); err != nil {
+		panic(fmt.Sprintf("Failed to register default template: %v", err))
+	}
+	if err := r.RegisterTemplate("documentation", documentationTemplate); err != nil {
+		panic(fmt.Sprintf("Failed to register documentation template: %v", err))
+	}
 }
 
 // ValidateTemplate checks if a template string is valid.
