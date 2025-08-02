@@ -6,14 +6,14 @@
       "name": "help",
       "description": "Show main help output",
       "command": ["--help"],
-      "expected_out": "airules is a CLI tool that helps you manage and generate AI assistant rules",
+      "expected_out": "ai-rulez is a CLI tool that helps you manage and generate AI assistant rules",
       "exit_code": 0
     },
     {
       "name": "root_help",
       "description": "Show root command help without flags", 
       "command": [],
-      "expected_out": "airules is a CLI tool that helps you manage and generate AI assistant rules",
+      "expected_out": "ai-rulez is a CLI tool that helps you manage and generate AI assistant rules",
       "exit_code": 0
     },
     {
