@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Sync schema
+        run: cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
+
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
@@ -62,6 +65,9 @@ jobs:
 
       - name: Install dependencies
         run: go mod download
+
+      - name: Sync schema
+        run: cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
 
       - name: Run tests
         run: go test -v -race -coverprofile=coverage.out ./...
@@ -97,6 +103,9 @@ jobs:
 
       - name: Install dependencies
         run: go mod download
+
+      - name: Sync schema
+        run: cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
 
       - name: Build binary
         run: go build -v ./...
