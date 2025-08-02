@@ -12,7 +12,7 @@ import (
 
 // Embed the schema file at compile time
 //
-//go:embed schema/ai-rules-v1.schema.json
+//go:embed ai-rules-v1.schema.json
 var schemaJSON string
 
 // ValidateWithSchema validates a configuration against the JSON Schema.
@@ -70,7 +70,6 @@ func ConvertYAMLToJSON(i any) any {
 	}
 	return i
 }
-
 
 // ValidateConfigWithSchema validates a Config struct against the schema.
 func ValidateConfigWithSchema(cfg *Config) error {
