@@ -9,7 +9,7 @@ import (
 
 // ConfigNotFound creates an error for missing configuration files
 func ConfigNotFound(startDir string) *RichError {
-	err := New(ErrorTypeConfigNotFound, "find config", 
+	err := New(ErrorTypeConfigNotFound, "find config",
 		fmt.Errorf("no configuration file found"))
 	err.Path = startDir
 	err.Context["search_dir"] = startDir
@@ -44,12 +44,12 @@ func ConfigParse(filename string, underlying error) *RichError {
 		WithSuggestion("Check the YAML syntax - ensure proper indentation").
 		WithSuggestion("Validate your YAML at: https://www.yamllint.com/").
 		WithSuggestion("Common issues: tabs instead of spaces, missing colons, incorrect indentation")
-	
+
 	// Try to extract line information from YAML errors
 	if strings.Contains(underlying.Error(), "line") {
 		err.WithContext("parse_error", underlying.Error()) //nolint:errcheck
 	}
-	
+
 	return err
 }
 
@@ -61,14 +61,14 @@ func SchemaValidation(filename string, validationErrors []string) *RichError {
 	err.Context["filename"] = filename
 	err.Context["errors"] = validationErrors
 	err.Context["error_count"] = len(validationErrors)
-	
+
 	err.Suggestions = []string{
 		"Check the YAML syntax using a YAML validator",
 		"Ensure all required fields are present (metadata.name, outputs)",
 		"Verify the structure matches the schema at: https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v1.schema.json",
 		"Run 'ai-rulez validate' for detailed validation output",
 	}
-	
+
 	// Add specific suggestions based on common validation errors
 	for _, vErr := range validationErrors {
 		if strings.Contains(vErr, "metadata") {
@@ -81,7 +81,7 @@ func SchemaValidation(filename string, validationErrors []string) *RichError {
 			err.WithSuggestion("Priority must be a number between 1 and 20") //nolint:errcheck
 		}
 	}
-	
+
 	return err
 }
 
@@ -89,21 +89,21 @@ func SchemaValidation(filename string, validationErrors []string) *RichError {
 func CircularInclude(includeChain []string) *RichError {
 	err := New(ErrorTypeConfigCircular, "load includes",
 		fmt.Errorf("circular include detected"))
-	
+
 	if len(includeChain) > 0 {
 		err.Path = includeChain[len(includeChain)-1]
 	}
-	
+
 	err.Context["include_chain"] = includeChain
 	err.Context["circular_file"] = includeChain[len(includeChain)-1]
-	
+
 	err.Suggestions = []string{
 		fmt.Sprintf("Remove the circular reference in %s", includeChain[len(includeChain)-1]),
 		"Restructure your includes to avoid circular dependencies",
 		"Use a different include strategy (e.g., separate common rules)",
 		"Consider merging the circular files into a single file",
 	}
-	
+
 	return err
 }
 
@@ -129,12 +129,12 @@ func TemplateParse(name string, underlying error) *RichError {
 		WithSuggestion("Check the template syntax - common issues: unclosed '{{', invalid dot notation").
 		WithSuggestion("Validate your template at: https://golang.org/pkg/text/template/").
 		WithSuggestion("Use a built-in template as a reference: 'default' or 'documentation'")
-	
+
 	// Extract line information if available
 	if strings.Contains(underlying.Error(), "line") {
 		err.WithContext("parse_error", underlying.Error()) //nolint:errcheck
 	}
-	
+
 	return err
 }
 
@@ -145,7 +145,7 @@ func TemplateExecute(name string, underlying error) *RichError {
 		WithSuggestion("Check that all template variables are available in the data").
 		WithSuggestion("Common issue: accessing a field that doesn't exist").
 		WithSuggestion("Use {{if}} checks for optional fields")
-	
+
 	return err
 }
 
@@ -156,7 +156,7 @@ func FileRead(path string, underlying error) *RichError {
 		WithSuggestion("Check if the file exists: %s", path).
 		WithSuggestion("Verify you have read permissions for the file").
 		WithSuggestion("Ensure the path is correct and accessible")
-	
+
 	return err
 }
 
@@ -167,7 +167,7 @@ func FileWrite(path string, underlying error) *RichError {
 		WithSuggestion("Check if you have write permissions for: %s", path).
 		WithSuggestion("Ensure the parent directory exists").
 		WithSuggestion("Check available disk space")
-	
+
 	return err
 }
 
@@ -179,7 +179,7 @@ func FilePermission(path string, operation string) *RichError {
 		WithSuggestion("Check file permissions: try 'ls -la %s'", path).
 		WithSuggestion("You may need to run with appropriate permissions").
 		WithSuggestion("Ensure the file/directory is not locked by another process")
-	
+
 	return err
 }
 
@@ -191,7 +191,7 @@ func ValidationRequired(field string, context string) *RichError {
 		WithContext("context", context).
 		WithSuggestion("Add the required field '%s' to your configuration", field).
 		WithSuggestion("Check the documentation for the correct field structure")
-	
+
 	return err
 }
 
@@ -204,7 +204,7 @@ func CommandArgument(arg string, value string, reason string) *RichError {
 		WithContext("reason", reason).
 		WithSuggestion("Check the command help: 'ai-rulez [command] --help'").
 		WithSuggestion("Ensure the argument value is in the correct format")
-	
+
 	return err
 }
 
@@ -214,6 +214,6 @@ func MCPError(operation string, underlying error) *RichError {
 		WithSuggestion("Check the MCP connection and try again").
 		WithSuggestion("Ensure the MCP server is running correctly").
 		WithSuggestion("Verify the request format matches the MCP protocol")
-	
+
 	return err
 }

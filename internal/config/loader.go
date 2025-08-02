@@ -106,7 +106,7 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 		resolvedPath := l.resolvePath(includePath, baseDir)
 
 		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return errors.New(errors.ErrorTypeConfigNotFound, "resolve include", 
+			return errors.New(errors.ErrorTypeConfigNotFound, "resolve include",
 				fmt.Errorf("include file not found: %s", includePath)).
 				WithPath(resolvedPath).
 				WithContext("include_path", includePath).
@@ -230,7 +230,7 @@ func ValidateIncludes(config *Config, baseDir string) error {
 
 		// Check if file exists
 		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			return errors.New(errors.ErrorTypeConfigNotFound, "validate include", 
+			return errors.New(errors.ErrorTypeConfigNotFound, "validate include",
 				fmt.Errorf("include file not found: %s", includePath)).
 				WithPath(resolvedPath).
 				WithContext("include_path", includePath).
