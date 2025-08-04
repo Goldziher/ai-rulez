@@ -43,6 +43,20 @@ npm install --save-dev ai-rulez
 **Requirements**: Node.js 20+ (LTS and above)
 
 ### Go (Direct installation)
+
+#### As a Go Tool (Recommended for Go projects)
+```bash
+# Add to go.mod tools directive
+go mod edit -require=github.com/Goldziher/ai-rulez/cmd@latest
+
+# Run directly without installation
+go run github.com/Goldziher/ai-rulez/cmd@latest generate --recursive
+
+# Install globally
+go install github.com/Goldziher/ai-rulez/cmd@latest
+```
+
+#### Traditional Installation
 ```bash
 go install github.com/Goldziher/ai-rulez@latest
 ```
