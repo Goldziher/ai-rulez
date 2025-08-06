@@ -311,7 +311,7 @@ func TestValidateOutputs(t *testing.T) {
 	}{
 		{
 			name:    "valid outputs",
-			outputs: []config.Output{{File: "test.md"}},
+			outputs: []config.Output{{Path: "test.md"}},
 			wantErr: false,
 		},
 		{

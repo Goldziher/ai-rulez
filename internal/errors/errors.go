@@ -155,7 +155,7 @@ func New(errType ErrorType, op string, err error) *RichError {
 		Err:         err,
 		Context:     make(map[string]interface{}),
 		Suggestions: []string{},
-		File:        file,
+		Path:        file,
 		Line:        line,
 	}
 }
