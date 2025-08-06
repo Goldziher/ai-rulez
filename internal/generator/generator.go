@@ -76,11 +76,11 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 	for i, output := range cfg.Outputs {
 		if err := g.writeOutputFile(output, templateData); err != nil {
 			return errors.New(errors.ErrorTypeGeneration, "generate output file", err).
-				WithPath(output.File).
+				WithPath(output.GetPath()).
 				WithContext("output_index", i).
 				WithContext("template", output.Template).
 				WithSuggestion("Check if the template '%s' is valid", output.Template).
-				WithSuggestion("Verify the output file path is writable: %s", output.File)
+				WithSuggestion("Verify the output file path is writable: %s", output.GetPath())
 		}
 	}
 
@@ -106,7 +106,7 @@ func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
 			defer wg.Done()
 			if err := g.writeOutputFile(out, templateData); err != nil {
 				errChan <- errors.New(errors.ErrorTypeGeneration, "generate output file", err).
-					WithPath(out.File).
+					WithPath(out.GetPath()).
 					WithContext("output_index", idx).
 					WithContext("template", out.Template).
 					WithContext("generation_mode", "concurrent")
@@ -144,11 +144,19 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 	return g.writeOutputFile(*targetOutput, templateData)
 }
 
-// writeOutputFile writes a single output file.
+// writeOutputFile writes output based on whether it's a file or directory.
 func (g *Generator) writeOutputFile(output config.Output, data *templates.TemplateData) error {
+	if output.IsDirectory() {
+		return g.writeDirectoryOutput(output, data)
+	}
+	return g.writeSingleFile(output, data)
+}
+
+// writeSingleFile writes a single output file.
+func (g *Generator) writeSingleFile(output config.Output, data *templates.TemplateData) error {
 	// Set the file information for header generation
 	data.ConfigFile = g.configFile
-	data.OutputFile = output.File
+	data.OutputFile = output.GetPath()
 
 	// Render the template
 	content, err := g.renderTemplate(output, data)
@@ -161,7 +169,7 @@ func (g *Generator) writeOutputFile(output config.Output, data *templates.Templa
 	finalContent := header + content
 
 	// Check if we need to write the file
-	shouldWrite, err := g.shouldWriteFile(output.File, finalContent)
+	shouldWrite, err := g.shouldWriteFile(output.GetPath(), finalContent)
 	if err != nil {
 		return err
 	}
@@ -170,7 +178,117 @@ func (g *Generator) writeOutputFile(output config.Output, data *templates.Templa
 	}
 
 	// Write the file
-	return g.writeFile(output.File, finalContent)
+	return g.writeFile(output.GetPath(), finalContent)
+}
+
+// writeDirectoryOutput writes multiple files to a directory based on content type.
+func (g *Generator) writeDirectoryOutput(output config.Output, data *templates.TemplateData) error {
+	outputType := output.GetOutputType()
+	namingScheme := output.GetNamingScheme()
+	dirPath := output.GetPath()
+
+	// Ensure directory exists
+	fullDirPath := filepath.Join(g.baseDir, dirPath)
+	if err := os.MkdirAll(fullDirPath, 0o755); err != nil {
+		return errors.FileWrite(fullDirPath, err).
+			WithContext("operation", "create directory").
+			WithSuggestion("Ensure you have write permissions for %s", fullDirPath)
+	}
+
+	switch outputType {
+	case "agents":
+		return g.writeAgentFiles(dirPath, namingScheme, output, data)
+	case "rules":
+		// For rules in a directory, write all rules to a single file
+		return g.writeRulesFile(dirPath, namingScheme, output, data)
+	default:
+		return g.writeRulesFile(dirPath, namingScheme, output, data)
+	}
+}
+
+// writeAgentFiles writes individual agent files to a directory.
+func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output config.Output, data *templates.TemplateData) error {
+	for i, agent := range data.Agents {
+		// Generate filename from naming scheme
+		filename := strings.ReplaceAll(namingScheme, "{name}", agent.Name)
+		filename = strings.ReplaceAll(filename, "{type}", "agent")
+		filename = strings.ReplaceAll(filename, "{index}", fmt.Sprintf("%d", i+1))
+
+		filePath := filepath.Join(dirPath, filename)
+
+		// Create agent-specific template data
+		agentData := *data
+		agentData.Agents = []config.Agent{agent}
+		agentData.OutputFile = filePath
+
+		// Render agent template
+		content, err := g.renderAgentTemplate(output, agent, &agentData)
+		if err != nil {
+			return err
+		}
+
+		// Write the file
+		shouldWrite, err := g.shouldWriteFile(filePath, content)
+		if err != nil {
+			return err
+		}
+		if shouldWrite {
+			if err := g.writeFile(filePath, content); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// writeRulesFile writes all rules to a single file in a directory.
+func (g *Generator) writeRulesFile(dirPath, namingScheme string, output config.Output, data *templates.TemplateData) error {
+	// Generate filename from naming scheme
+	// Use project name or "rules" as default name
+	name := "rules"
+	if data.ProjectName != "" {
+		name = strings.ToLower(strings.ReplaceAll(data.ProjectName, " ", "-"))
+	}
+
+	filename := strings.ReplaceAll(namingScheme, "{name}", name)
+	filename = strings.ReplaceAll(filename, "{type}", "rules")
+	filename = strings.ReplaceAll(filename, "{index}", "1")
+	filePath := filepath.Join(dirPath, filename)
+
+	// Update output path for single file write
+	singleOutput := output
+	singleOutput.Path = filePath
+	return g.writeSingleFile(singleOutput, data)
+}
+
+// renderAgentTemplate renders a template specifically for an agent.
+func (g *Generator) renderAgentTemplate(output config.Output, agent config.Agent, data *templates.TemplateData) (string, error) {
+	// Generate agent frontmatter
+	frontmatter := "---\n"
+	frontmatter += fmt.Sprintf("name: %s\n", agent.Name)
+	frontmatter += fmt.Sprintf("description: %s\n", agent.Description)
+	if len(agent.Tools) > 0 {
+		frontmatter += "tools:\n"
+		for _, tool := range agent.Tools {
+			frontmatter += fmt.Sprintf("  - %s\n", tool)
+		}
+	}
+	frontmatter += "---\n\n"
+
+	// Get the system prompt
+	var systemPrompt string
+	if agent.Template != "" {
+		// Render template if specified
+		renderedPrompt, err := g.renderTemplate(output, data)
+		if err != nil {
+			return "", err
+		}
+		systemPrompt = renderedPrompt
+	} else {
+		systemPrompt = agent.SystemPrompt
+	}
+
+	return frontmatter + systemPrompt, nil
 }
 
 // shouldWriteFile determines if a file should be written by comparing content hashes.
@@ -218,7 +336,7 @@ func (g *Generator) shouldWriteFile(filePath, newContent string) (bool, error) {
 // findOutputConfig finds an output configuration by file path.
 func (*Generator) findOutputConfig(outputs []config.Output, outputFile string) *config.Output {
 	for _, output := range outputs {
-		if output.File == outputFile {
+		if output.GetPath() == outputFile {
 			return &output
 		}
 	}
@@ -229,7 +347,7 @@ func (*Generator) findOutputConfig(outputs []config.Output, outputFile string) *
 func (*Generator) getOutputFileNames(outputs []config.Output) []string {
 	names := make([]string, len(outputs))
 	for i, output := range outputs {
-		names[i] = output.File
+		names[i] = output.GetPath()
 	}
 	return names
 }
@@ -399,7 +517,7 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 
 	// Set the file information for header generation
 	templateData.ConfigFile = g.configFile
-	templateData.OutputFile = targetOutput.File
+	templateData.OutputFile = targetOutput.GetPath()
 
 	// Render the template
 	content, err := g.renderTemplate(*targetOutput, templateData)
@@ -426,19 +544,19 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 	for i, output := range cfg.Outputs {
 		// Set the file information for header generation
 		templateData.ConfigFile = g.configFile
-		templateData.OutputFile = output.File
+		templateData.OutputFile = output.GetPath()
 
 		content, err := g.renderTemplate(output, templateData)
 		if err != nil {
 			return nil, errors.New(errors.ErrorTypeGeneration, "preview output", err).
-				WithPath(output.File).
+				WithPath(output.GetPath()).
 				WithContext("output_index", i).
 				WithContext("template", output.Template)
 		}
 
 		// Prepend the header
 		header := templates.GenerateHeader(templateData)
-		results[output.File] = header + content
+		results[output.GetPath()] = header + content
 	}
 
 	return results, nil

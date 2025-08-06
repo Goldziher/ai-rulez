@@ -76,7 +76,7 @@ func TestMCPToolsIntegration(t *testing.T) {
 			Description: "Test configuration for MCP",
 		},
 		Outputs: []config.Output{
-			{File: "test.md"},
+			{Path: "test.md"},
 		},
 		Rules: []config.Rule{
 			{

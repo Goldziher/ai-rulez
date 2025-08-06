@@ -27,9 +27,9 @@ func TestGenerator_GenerateAll(t *testing.T) {
 			Description: "Test description",
 		},
 		Outputs: []config.Output{
-			{File: "CLAUDE.md"},
-			{File: filepath.Join("rules", ".cursorrules")},
-			{File: ".windsurfrules"},
+			{Path: "CLAUDE.md"},
+			{Path: filepath.Join("rules", ".cursorrules")},
+			{Path: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
 			{Name: "Style Rule", Priority: 10, Content: "Use TypeScript strict mode"},
@@ -79,8 +79,8 @@ func TestGenerator_GenerateOutput(t *testing.T) {
 			Name: "Single Output Test",
 		},
 		Outputs: []config.Output{
-			{File: outputFile},
-			{File: "other.md"},
+			{Path: outputFile},
+			{Path: "other.md"},
 		},
 		Rules: []config.Rule{
 			{Name: "Test Rule", Content: "Test content"},
@@ -110,7 +110,7 @@ func TestGenerator_GenerateOutput_FileNotFound(t *testing.T) {
 
 	cfg := &config.Config{
 		Outputs: []config.Output{
-			{File: "existing.md"},
+			{Path: "existing.md"},
 		},
 	}
 
@@ -131,7 +131,7 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 			Name: "Custom Template Test",
 		},
 		Outputs: []config.Output{
-			{File: outputFile, Template: "custom"},
+			{Path: outputFile, Template: "custom"},
 		},
 		Rules: []config.Rule{
 			{Name: "Test Rule", Content: "Test content"},
@@ -167,7 +167,7 @@ func TestGenerator_PreviewOutput(t *testing.T) {
 			Name: "Preview Test",
 		},
 		Outputs: []config.Output{
-			{File: "preview.md"},
+			{Path: "preview.md"},
 		},
 		Rules: []config.Rule{
 			{Name: "Preview Rule", Content: "Preview content"},
@@ -188,7 +188,7 @@ func TestGenerator_PreviewOutput_FileNotFound(t *testing.T) {
 
 	cfg := &config.Config{
 		Outputs: []config.Output{
-			{File: "existing.md"},
+			{Path: "existing.md"},
 		},
 	}
 
@@ -273,7 +273,7 @@ func TestGenerator_DirectoryCreation(t *testing.T) {
 
 	cfg := &config.Config{
 		Metadata: config.Metadata{Name: "Directory Test"},
-		Outputs:  []config.Output{{File: deepPath}},
+		Outputs:  []config.Output{{Path: deepPath}},
 		Rules:    []config.Rule{{Name: "Test", Content: "Content"}},
 	}
 
@@ -303,7 +303,7 @@ func TestGenerator_TemplateVariables(t *testing.T) {
 			Description: "Testing all variables",
 		},
 		Outputs: []config.Output{
-			{File: outputFile, Template: "test-vars"},
+			{Path: outputFile, Template: "test-vars"},
 		},
 		Rules: []config.Rule{
 			{Name: "Rule 1", Priority: 10, Content: "Content 1"},
@@ -356,7 +356,7 @@ func TestGenerator_HeaderGeneration(t *testing.T) {
 			Description: "Testing header generation",
 		},
 		Outputs: []config.Output{
-			{File: outputFile},
+			{Path: outputFile},
 		},
 		Rules: []config.Rule{
 			{Name: "Test Rule", Content: "Test content"},
@@ -413,7 +413,7 @@ func TestGenerator_HeaderInPreview(t *testing.T) {
 			Name: "Preview Test",
 		},
 		Outputs: []config.Output{
-			{File: outputFile},
+			{Path: outputFile},
 		},
 		Rules: []config.Rule{
 			{Name: "Preview Rule", Content: "Preview content"},
@@ -454,9 +454,9 @@ func BenchmarkGenerateAll(b *testing.B) {
 			Description: "Test project for benchmarking",
 		},
 		Outputs: []config.Output{
-			{File: "output1.md"},
-			{File: "output2.md", Template: "documentation"},
-			{File: "output3.md"},
+			{Path: "output1.md"},
+			{Path: "output2.md", Template: "documentation"},
+			{Path: "output3.md"},
 		},
 		Rules: []config.Rule{
 			{Name: "Rule 1", Priority: 10, Content: "Content 1"},
@@ -496,7 +496,7 @@ func BenchmarkGenerateAllLarge(b *testing.B) {
 
 	// Fill outputs
 	for i := 0; i < 50; i++ {
-		cfg.Outputs[i] = config.Output{File: fmt.Sprintf("output%d.md", i)}
+		cfg.Outputs[i] = config.Output{Path: fmt.Sprintf("output%d.md", i)}
 	}
 
 	tempDir := b.TempDir()
