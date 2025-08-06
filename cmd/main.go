@@ -153,7 +153,7 @@ in config directories to include generated output files.`,
 			}
 			fmt.Printf("\nWould generate %d output file(s):\n", len(cfg.Outputs))
 			for _, output := range cfg.Outputs {
-				fmt.Printf("  - %s", output.File)
+				fmt.Printf("  - %s", output.GetPath())
 				if output.Template != "" {
 					fmt.Printf(" (using template: %s)", output.Template)
 				}
@@ -494,7 +494,7 @@ a template to use for rendering the output.`,
 
 		// Check if output already exists
 		for _, output := range cfg.Outputs {
-			if output.File == filename {
+			if output.GetPath() == filename {
 				fmt.Fprintf(os.Stderr, "Error: Output file '%s' already exists in configuration\n", filename)
 				os.Exit(1)
 			}
@@ -502,7 +502,7 @@ a template to use for rendering the output.`,
 
 		// Add new output
 		newOutput := config.Output{
-			File:     filename,
+			Path:     filename,
 			Template: template,
 		}
 		cfg.Outputs = append(cfg.Outputs, newOutput)
@@ -711,7 +711,7 @@ You can update the template used for the output file.`,
 		// Find the output to update
 		outputIndex := -1
 		for i, output := range cfg.Outputs {
-			if output.File == filename {
+			if output.GetPath() == filename {
 				outputIndex = i
 				break
 			}
@@ -877,7 +877,7 @@ var deleteOutputCmd = &cobra.Command{
 		// Find and remove the output
 		outputIndex := -1
 		for i, output := range cfg.Outputs {
-			if output.File == filename {
+			if output.GetPath() == filename {
 				outputIndex = i
 				break
 			}
@@ -965,9 +965,9 @@ func createBasicTemplate(projectName string) *config.Config {
 			Description: "AI assistant rules configuration",
 		},
 		Outputs: []config.Output{
-			{File: "claude.md"},
-			{File: ".cursorrules"},
-			{File: ".windsurfrules"},
+			{Path: "claude.md"},
+			{Path: ".cursorrules"},
+			{Path: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
 			{
@@ -997,9 +997,9 @@ func createReactTemplate(projectName string) *config.Config {
 			Description: "React project AI assistant rules",
 		},
 		Outputs: []config.Output{
-			{File: "claude.md"},
-			{File: ".cursorrules"},
-			{File: ".windsurfrules"},
+			{Path: "claude.md"},
+			{Path: ".cursorrules"},
+			{Path: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
 			{
@@ -1039,9 +1039,9 @@ func createTypescriptTemplate(projectName string) *config.Config {
 			Description: "TypeScript project AI assistant rules",
 		},
 		Outputs: []config.Output{
-			{File: "claude.md"},
-			{File: ".cursorrules"},
-			{File: ".windsurfrules"},
+			{Path: "claude.md"},
+			{Path: ".cursorrules"},
+			{Path: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
 			{
@@ -1687,14 +1687,14 @@ func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 
 	// Check if output already exists
 	for _, output := range cfg.Outputs {
-		if output.File == filename {
+		if output.GetPath() == filename {
 			return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' already exists in configuration", filename)), nil
 		}
 	}
 
 	// Add new output
 	newOutput := config.Output{
-		File:     filename,
+		Path:     filename,
 		Template: template,
 	}
 	cfg.Outputs = append(cfg.Outputs, newOutput)
@@ -1883,7 +1883,7 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	// Find the output to update
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
-		if output.File == filename {
+		if output.GetPath() == filename {
 			outputIndex = i
 			break
 		}
@@ -2052,7 +2052,7 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	// Find and remove the output
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
-		if output.File == filename {
+		if output.GetPath() == filename {
 			outputIndex = i
 			break
 		}
