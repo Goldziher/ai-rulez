@@ -114,7 +114,7 @@ func TestSaveConfig(t *testing.T) {
 		},
 		Outputs: []config.Output{
 			{
-				File: "CLAUDE.md",
+				Path: "CLAUDE.md",
 			},
 		},
 		Rules: []config.Rule{
@@ -156,7 +156,7 @@ func TestConfigValidate(t *testing.T) {
 			config: &config.Config{
 				Metadata: config.Metadata{Name: "test"},
 				Outputs: []config.Output{
-					{File: "CLAUDE.md"},
+					{Path: "CLAUDE.md"},
 				},
 			},
 			wantErr: false,
@@ -166,7 +166,7 @@ func TestConfigValidate(t *testing.T) {
 			config: &config.Config{
 				Metadata: config.Metadata{},
 				Outputs: []config.Output{
-					{File: "CLAUDE.md"},
+					{Path: "CLAUDE.md"},
 				},
 			},
 			wantErr: true,
@@ -190,7 +190,7 @@ func TestConfigValidate(t *testing.T) {
 				},
 			},
 			wantErr: true,
-			errMsg:  "required field 'outputs[0].file' is missing",
+			errMsg:  "required field 'outputs[0].path or outputs[0].file' is missing",
 		},
 	}
 

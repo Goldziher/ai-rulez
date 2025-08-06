@@ -23,7 +23,7 @@ func TestAddRule(t *testing.T) {
 			Version: "1.0.0",
 		},
 		Outputs: []Output{
-			{File: "claude.md"},
+			{Path: "claude.md"},
 		},
 		Rules: []Rule{
 			{
@@ -78,7 +78,7 @@ func TestAddSection(t *testing.T) {
 			Version: "1.0.0",
 		},
 		Outputs: []Output{
-			{File: "claude.md"},
+			{Path: "claude.md"},
 		},
 		Sections: []Section{
 			{
@@ -132,7 +132,7 @@ func TestAddRuleWithDefaults(t *testing.T) {
 			Name: "Test Project",
 		},
 		Outputs: []Output{
-			{File: "claude.md"},
+			{Path: "claude.md"},
 		},
 	}
 
@@ -175,7 +175,7 @@ func TestAddOutput(t *testing.T) {
 			Version: "1.0.0",
 		},
 		Outputs: []Output{
-			{File: "claude.md"},
+			{Path: "claude.md"},
 		},
 	}
 
@@ -190,7 +190,7 @@ func TestAddOutput(t *testing.T) {
 
 	// Add new output
 	newOutput := Output{
-		File:     ".cursorrules",
+		Path:     ".cursorrules",
 		Template: "cursor",
 	}
 	cfg.Outputs = append(cfg.Outputs, newOutput)
@@ -203,7 +203,7 @@ func TestAddOutput(t *testing.T) {
 	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Outputs, 2)
-	assert.Equal(t, ".cursorrules", updatedCfg.Outputs[1].File)
+	assert.Equal(t, ".cursorrules", updatedCfg.Outputs[1].Path)
 	assert.Equal(t, "cursor", updatedCfg.Outputs[1].Template)
 }
 
@@ -221,8 +221,8 @@ func TestAddOutputDuplicate(t *testing.T) {
 			Version: "1.0.0",
 		},
 		Outputs: []Output{
-			{File: "claude.md"},
-			{File: ".cursorrules"},
+			{Path: "claude.md"},
+			{Path: ".cursorrules"},
 		},
 	}
 
@@ -238,7 +238,7 @@ func TestAddOutputDuplicate(t *testing.T) {
 	// Check if we can detect duplicate
 	duplicateExists := false
 	for _, output := range cfg.Outputs {
-		if output.File == "claude.md" {
+		if output.GetPath() == "claude.md" {
 			duplicateExists = true
 			break
 		}
