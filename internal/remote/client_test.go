@@ -356,3 +356,104 @@ func TestClient_CacheIntegration(t *testing.T) {
 		assert.Equal(t, 2, requestCount) // Both should hit cache
 	})
 }
+
+// TestClient_ComprehensiveScenarios provides extensive client testing
+func TestClient_ComprehensiveScenarios(t *testing.T) {
+	t.Run("yaml_content_types", func(t *testing.T) {
+		contentTypes := []string{
+			"text/yaml",
+			"application/yaml",
+			"text/x-yaml",
+			"application/x-yaml",
+		}
+
+		yamlContent := `metadata:
+  name: "Test Configuration"
+  version: "1.0.0"
+rules:
+  - name: "Example Rule"
+    content: "This is an example rule"
+    priority: 10`
+
+		for _, contentType := range contentTypes {
+			t.Run("content_type_"+strings.ReplaceAll(contentType, "/", "_"), func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Content-Type", contentType)
+					w.WriteHeader(http.StatusOK)
+					w.Write([]byte(yamlContent))
+				}))
+				defer server.Close()
+
+				client := NewTestClient(nil)
+				ctx := context.Background()
+
+				content, err := client.Fetch(ctx, server.URL)
+				require.NoError(t, err)
+				assert.Equal(t, strings.TrimSpace(yamlContent), strings.TrimSpace(string(content)))
+			})
+		}
+	})
+
+	t.Run("error_handling_comprehensive", func(t *testing.T) {
+		errorTests := []struct {
+			name           string
+			statusCode     int
+			responseBody   string
+			expectError    bool
+			errorSubstring string
+		}{
+			{"not_found", http.StatusNotFound, "Not Found", true, "HTTP 404"},
+			{"unauthorized", http.StatusUnauthorized, "Unauthorized", true, "HTTP 401"},
+			{"forbidden", http.StatusForbidden, "Forbidden", true, "HTTP 403"},
+			{"internal_server_error", http.StatusInternalServerError, "Internal Server Error", true, "HTTP 500"},
+			{"bad_gateway", http.StatusBadGateway, "Bad Gateway", true, "HTTP 502"},
+		}
+
+		for _, tc := range errorTests {
+			t.Run(tc.name, func(t *testing.T) {
+				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					w.WriteHeader(tc.statusCode)
+					w.Write([]byte(tc.responseBody))
+				}))
+				defer server.Close()
+
+				client := NewTestClient(nil)
+				ctx := context.Background()
+
+				_, err := client.Fetch(ctx, server.URL)
+				if tc.expectError {
+					require.Error(t, err)
+					assert.Contains(t, err.Error(), tc.errorSubstring)
+				} else {
+					require.NoError(t, err)
+				}
+			})
+		}
+	})
+
+	t.Run("github_raw_simulation", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("ETag", "\"abc123def456\"")
+			w.Header().Set("Cache-Control", "max-age=300")
+			w.WriteHeader(http.StatusOK)
+
+			content := `metadata:
+  name: "GitHub Config"
+rules:
+  - name: "Remote Rule"
+    content: "From GitHub repository"`
+
+			w.Write([]byte(content))
+		}))
+		defer server.Close()
+
+		client := NewTestClient(nil)
+		ctx := context.Background()
+
+		content, err := client.Fetch(ctx, server.URL)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "GitHub Config")
+		assert.Contains(t, string(content), "Remote Rule")
+	})
+}
