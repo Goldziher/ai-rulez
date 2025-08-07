@@ -5,6 +5,11 @@ metadata:
   version: "1.3.0"
   description: "Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
 
+# Example remote includes (commented out for this project):
+# includes:
+#   - "https://raw.githubusercontent.com/myorg/coding-standards/main/go-rules.yaml"
+#   - "https://api.company.com/ai-rules/security.yaml"
+
 outputs:
   - file: "CLAUDE.md"
     template: "default"
@@ -186,3 +191,27 @@ sections:
       - Concurrent processing where possible
       - Efficient memory usage
       - Fast startup times
+
+  - title: "Remote Configuration Support"
+    priority: 45
+    content: |
+      ## Remote Includes Feature
+      
+      ai-rulez now supports remote configuration includes via HTTP/HTTPS URLs:
+      
+      ```yaml
+      includes:
+        - "https://raw.githubusercontent.com/myorg/standards/main/backend.yaml"
+        - "https://api.company.com/ai-rules/security.yaml" 
+        - "./local-overrides.yaml"  # Mix with local files
+      ```
+      
+      **Security Features:**
+      - SSRF protection (blocks private IPs, localhost, metadata services)
+      - Content validation and size limits
+      - Timeout protection
+      
+      **Performance:**
+      - Multi-level caching (memory, disk, HTTP headers)
+      - Efficient concurrent fetching
+      - Smart cache invalidation with ETags

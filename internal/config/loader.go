@@ -236,13 +236,13 @@ func (l *configLoader) loadRemoteConfig(configURL string) (*Config, error) {
 	// Fetch the remote content
 	content, err := l.remoteClient.Fetch(ctx, configURL)
 	if err != nil {
-		return nil, fmt.Errorf("failed to fetch remote config from %s: %w", configURL, err)
+		return nil, errors.RemoteConfigFetch(configURL, err)
 	}
 
 	// Parse the YAML content
 	var config Config
 	if err := yaml.Unmarshal(content, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse remote config from %s: %w", configURL, err)
+		return nil, errors.RemoteConfigParse(configURL, err)
 	}
 
 	return &config, nil
