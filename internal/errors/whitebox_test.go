@@ -23,7 +23,7 @@ func TestRichError_FullFormatting(t *testing.T) {
 	// Test basic error message
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "test operation")
-	
+
 	// Test formatted output
 	var buf bytes.Buffer
 	FormatError(&buf, err, true, false)
@@ -89,7 +89,7 @@ func TestConfigParse(t *testing.T) {
 
 	baseErr := fmt.Errorf("unexpected character at line 5")
 	err := ConfigParse("config.yaml", baseErr)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "parse")
 }
@@ -115,7 +115,7 @@ func TestCircularInclude_Whitebox(t *testing.T) {
 
 	chain := []string{"a.yaml", "b.yaml", "c.yaml", "a.yaml"}
 	err := CircularInclude(chain)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "circular")
 }
@@ -135,7 +135,7 @@ func TestTemplateExecute(t *testing.T) {
 
 	baseErr := fmt.Errorf("undefined variable: .NonExistent")
 	err := TemplateExecute("output.md", baseErr)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "template")
 }
@@ -146,7 +146,7 @@ func TestFileRead(t *testing.T) {
 
 	baseErr := fmt.Errorf("permission denied")
 	err := FileRead("/protected/file", baseErr)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "read")
 }
@@ -157,7 +157,7 @@ func TestFileWrite(t *testing.T) {
 
 	baseErr := fmt.Errorf("disk full")
 	err := FileWrite("/output/file", baseErr)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "write")
 }
@@ -167,7 +167,7 @@ func TestValidationRequired(t *testing.T) {
 	t.Parallel()
 
 	err := ValidationRequired("metadata.name", "configuration file")
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "required")
 }
@@ -178,7 +178,7 @@ func TestMCPError(t *testing.T) {
 
 	baseErr := fmt.Errorf("connection refused")
 	err := MCPError("connect to server", baseErr)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "connection")
 }
@@ -189,7 +189,7 @@ func TestRichError_Unwrap_Whitebox(t *testing.T) {
 
 	baseErr := fmt.Errorf("base error")
 	richErr := New(ErrorTypeConfig, "operation", baseErr)
-	
+
 	unwrapped := richErr.Unwrap()
 	assert.Equal(t, baseErr, unwrapped)
 
@@ -239,7 +239,7 @@ func TestRichError_ComplexScenario(t *testing.T) {
 
 	// Simulate a complex error from config loading
 	baseErr := fmt.Errorf("yaml: line 10: found character that cannot start any token")
-	
+
 	err := New(ErrorTypeConfigInvalid, "parse YAML", baseErr).
 		WithPath("/project/ai_rulez.yaml").
 		WithContext("line", "10").
@@ -251,7 +251,7 @@ func TestRichError_ComplexScenario(t *testing.T) {
 	// Test error message
 	errMsg := err.Error()
 	assert.Contains(t, errMsg, "parse")
-	
+
 	// Test formatted output
 	var buf bytes.Buffer
 	FormatError(&buf, err, true, false)
@@ -269,7 +269,7 @@ func TestRichError_EmptyError(t *testing.T) {
 
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "validation")
-	
+
 	var buf bytes.Buffer
 	FormatError(&buf, err, true, false)
 	formatted := buf.String()
@@ -306,7 +306,7 @@ func TestTemplateParse(t *testing.T) {
 
 	baseErr := fmt.Errorf("unexpected EOF")
 	err := TemplateParse("template.tmpl", baseErr)
-	
+
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "parse")
 }
