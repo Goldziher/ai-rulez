@@ -3,8 +3,10 @@ package remote
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/go-resty/resty/v2"
 )
 
@@ -32,8 +34,6 @@ func DefaultHTTPConfig() *HTTPConfig {
 
 // getVersion returns the current version, falling back to "dev" if not available
 func getVersion() string {
-	// Try to get version from config metadata or build info
-	// For now, return a placeholder - this will be integrated with actual version info
 	return "dev"
 }
 
@@ -98,7 +98,7 @@ func NewClient(config *HTTPConfig) *Client {
 func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {
 	// Validate URL for SSRF protection (done again in OnBeforeRequest hook)
 	if err := c.validator.Validate(url); err != nil {
-		return nil, fmt.Errorf("URL validation failed: %w", err)
+		return nil, errors.RemoteSSRFError(url, err.Error())
 	}
 
 	// Check cache first
@@ -113,12 +113,20 @@ func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {
 		SetContext(ctx).
 		Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		// Classify the error type
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "timeout") || strings.Contains(errorMsg, "deadline exceeded") {
+			return nil, errors.RemoteTimeoutError(url, c.config.Timeout)
+		}
+		if strings.Contains(errorMsg, "connection refused") || strings.Contains(errorMsg, "no route") {
+			return nil, errors.RemoteNetworkError(url, err)
+		}
+		return nil, errors.RemoteNetworkError(url, err)
 	}
 
 	// Check status code
 	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode(), resp.Status())
+		return nil, errors.RemoteHTTPError(url, resp.StatusCode(), resp.Status())
 	}
 
 	body := resp.Body()
@@ -141,7 +149,7 @@ func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {
 func (c *Client) FetchWithHeaders(ctx context.Context, url string, headers map[string]string) ([]byte, error) {
 	// Validate URL for SSRF protection
 	if err := c.validator.Validate(url); err != nil {
-		return nil, fmt.Errorf("URL validation failed: %w", err)
+		return nil, errors.RemoteSSRFError(url, err.Error())
 	}
 
 	// Note: We don't cache requests with custom headers as they might affect the response
@@ -153,12 +161,20 @@ func (c *Client) FetchWithHeaders(ctx context.Context, url string, headers map[s
 		SetHeaders(headers).
 		Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP request failed: %w", err)
+		// Classify the error type
+		errorMsg := err.Error()
+		if strings.Contains(errorMsg, "timeout") || strings.Contains(errorMsg, "deadline exceeded") {
+			return nil, errors.RemoteTimeoutError(url, c.config.Timeout)
+		}
+		if strings.Contains(errorMsg, "connection refused") || strings.Contains(errorMsg, "no route") {
+			return nil, errors.RemoteNetworkError(url, err)
+		}
+		return nil, errors.RemoteNetworkError(url, err)
 	}
 
 	// Check status code
 	if resp.StatusCode() != 200 {
-		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode(), resp.Status())
+		return nil, errors.RemoteHTTPError(url, resp.StatusCode(), resp.Status())
 	}
 
 	return resp.Body(), nil
@@ -166,7 +182,5 @@ func (c *Client) FetchWithHeaders(ctx context.Context, url string, headers map[s
 
 // Close closes idle connections in the HTTP client
 func (c *Client) Close() {
-	// Resty handles connection cleanup automatically
-	// But we can set the client to nil to help with garbage collection
 	c.resty = nil
 }

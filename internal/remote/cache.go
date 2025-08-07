@@ -244,8 +244,6 @@ func (c *Cache) getFromDisk(ctx context.Context, key string) *CacheEntry {
 		Content:   content,
 		URL:       "", // URL not stored in simple disk implementation
 		FetchedAt: info.ModTime(),
-		// Note: ETag and LastModified are not stored in simple disk cache
-		// This could be enhanced to store metadata separately
 	}
 
 	return entry
@@ -348,7 +346,6 @@ func (c *Cache) evictOldDiskEntries() error {
 	entriesToRemove := len(cacheFiles) - c.config.MaxDiskEntries + 1
 	for i := 0; i < entriesToRemove && i < len(cacheFiles); i++ {
 		if err := os.Remove(cacheFiles[i].path); err != nil {
-			// Continue removing other files even if one fails
 			continue
 		}
 	}
@@ -381,8 +378,7 @@ func (c *Cache) ClearDisk(ctx context.Context) error {
 		if !entry.IsDir() && strings.Contains(entry.Name(), cacheFileName) {
 			filePath := filepath.Join(c.config.DiskCacheDir, entry.Name())
 			if err := os.Remove(filePath); err != nil {
-				// Continue removing other files even if one fails
-				continue
+					continue
 			}
 		}
 	}

@@ -74,7 +74,7 @@ func TestClient_Fetch(t *testing.T) {
 
 		_, err := client.Fetch(ctx, "http://127.0.0.1/test")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "URL validation failed")
+		assert.Contains(t, err.Error(), "URL blocked for security reasons")
 	})
 
 	t.Run("http_error_status", func(t *testing.T) {
@@ -106,7 +106,7 @@ func TestClient_Fetch(t *testing.T) {
 
 		_, err := client.Fetch(ctx, server.URL)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "context deadline exceeded")
+		assert.Contains(t, err.Error(), "request timed out")
 	})
 
 	t.Run("response_too_large", func(t *testing.T) {
@@ -235,13 +235,12 @@ func TestClient_RedirectSSRFProtection(t *testing.T) {
 	_, err := client.Fetch(ctx, server.URL)
 	require.Error(t, err)
 	// The initial URL validation will fail before even getting to redirect
-	assert.Contains(t, err.Error(), "URL validation failed")
+	assert.Contains(t, err.Error(), "URL blocked for security reasons")
 }
 
 func TestClient_Close(t *testing.T) {
 	client := NewTestClient(nil)
 
-	// Close should not panic and should close idle connections
 	assert.NotPanics(t, func() {
 		client.Close()
 	})
