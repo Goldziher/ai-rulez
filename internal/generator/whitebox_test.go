@@ -67,13 +67,12 @@ func TestGenerateAllConcurrent(t *testing.T) {
 	}
 }
 
-
 // TestComputeFileHash tests the file hash computation
 func TestComputeFileHash(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
-	
+
 	// Test with regular file
 	regularFile := filepath.Join(tmpDir, "regular.txt")
 	content := "Hello, World!"
@@ -83,7 +82,7 @@ func TestComputeFileHash(t *testing.T) {
 	hash, err := computeFileHash(regularFile)
 	require.NoError(t, err)
 	assert.NotEmpty(t, hash)
-	
+
 	// Verify hash is consistent
 	hash2, err := computeFileHash(regularFile)
 	require.NoError(t, err)
@@ -111,11 +110,11 @@ func TestComputeContentHashPooled(t *testing.T) {
 	content := "Test content for hashing"
 	hash1 := ComputeContentHashPooled(content)
 	hash2 := ComputeContentHashPooled(content)
-	
+
 	// Hashes should be consistent
 	assert.Equal(t, hash1, hash2)
 	assert.NotEmpty(t, hash1)
-	
+
 	// Different content should produce different hash
 	hash3 := ComputeContentHashPooled("Different content")
 	assert.NotEqual(t, hash1, hash3)
@@ -123,7 +122,7 @@ func TestComputeContentHashPooled(t *testing.T) {
 	// Test concurrent usage (ensure pool works correctly)
 	var wg sync.WaitGroup
 	hashes := make([]string, 100)
-	
+
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
 		go func(idx int) {
@@ -131,9 +130,9 @@ func TestComputeContentHashPooled(t *testing.T) {
 			hashes[idx] = ComputeContentHashPooled(content)
 		}(i)
 	}
-	
+
 	wg.Wait()
-	
+
 	// All hashes should be the same
 	for i := 1; i < 100; i++ {
 		assert.Equal(t, hashes[0], hashes[i], "Hash %d should match", i)
@@ -166,9 +165,9 @@ func TestPreviewAll(t *testing.T) {
 	gen := New()
 	previews, err := gen.PreviewAll(cfg)
 	require.NoError(t, err)
-	
+
 	assert.Len(t, previews, 3)
-	
+
 	// Check that all previews have content
 	for path, content := range previews {
 		assert.NotEmpty(t, content, "Preview for %s should have content", path)
@@ -177,7 +176,6 @@ func TestPreviewAll(t *testing.T) {
 		}
 	}
 }
-
 
 // TestWriteSingleFile_ErrorPaths tests error handling in writeSingleFile
 func TestWriteSingleFile_ErrorPaths(t *testing.T) {
@@ -359,7 +357,6 @@ func TestWriteFile_Errors(t *testing.T) {
 	assert.Error(t, err)
 }
 
-
 // TestWriteDirectoryOutput_EdgeCases tests edge cases in directory output
 func TestWriteDirectoryOutput_EdgeCases(t *testing.T) {
 	t.Parallel()
@@ -408,40 +405,40 @@ func TestGenerateAll_IncrementalWrite(t *testing.T) {
 	}
 
 	gen := NewWithBaseDir(tmpDir)
-	
+
 	// First generation
 	err := gen.GenerateAll(cfg)
 	require.NoError(t, err)
-	
+
 	// Get initial modification time
 	stat1, err := os.Stat(outputFile)
 	require.NoError(t, err)
 	modTime1 := stat1.ModTime()
-	
+
 	// Wait a bit to ensure different timestamp
 	time.Sleep(10 * time.Millisecond)
-	
+
 	// Generate again with same content
 	err = gen.GenerateAll(cfg)
 	require.NoError(t, err)
-	
+
 	// Check that file was not rewritten
 	stat2, err := os.Stat(outputFile)
 	require.NoError(t, err)
 	modTime2 := stat2.ModTime()
-	
+
 	assert.Equal(t, modTime1, modTime2, "File should not be rewritten with same content")
-	
+
 	// Change content and generate again
 	cfg.Rules[0].Content = "Different content"
 	err = gen.GenerateAll(cfg)
 	require.NoError(t, err)
-	
+
 	// Check that file was rewritten
 	stat3, err := os.Stat(outputFile)
 	require.NoError(t, err)
 	modTime3 := stat3.ModTime()
-	
+
 	assert.NotEqual(t, modTime2, modTime3, "File should be rewritten with different content")
 }
 

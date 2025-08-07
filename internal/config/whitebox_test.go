@@ -10,8 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-
-
 // TestSetDefaultPriorities tests the priority defaulting logic
 func TestSetDefaultPriorities(t *testing.T) {
 	t.Parallel()
@@ -162,8 +160,6 @@ agents:
 	assert.Len(t, cfg.Agents, 1)
 	assert.Empty(t, cfg.Includes)
 }
-
-
 
 // TestValidateIncludes tests include validation
 func TestValidateIncludes(t *testing.T) {
@@ -363,7 +359,6 @@ func TestResolvePath(t *testing.T) {
 	resolved = loader.resolvePath("../file.yaml", "/base/sub/dir")
 	assert.Equal(t, "/base/sub/file.yaml", resolved)
 }
-
 
 // TestSchemaEmbedding tests that schema is properly embedded
 func TestSchemaEmbedding(t *testing.T) {
