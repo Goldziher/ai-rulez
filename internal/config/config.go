@@ -44,7 +44,7 @@ type Output struct {
 }
 
 // GetPath returns the effective path, preferring Path over File
-func (o Output) GetPath() string {
+func (o *Output) GetPath() string {
 	if o.Path != "" {
 		return o.Path
 	}
@@ -52,26 +52,29 @@ func (o Output) GetPath() string {
 }
 
 // IsDirectory returns true if the output targets a directory
-func (o Output) IsDirectory() bool {
+func (o *Output) IsDirectory() bool {
 	path := o.GetPath()
 	return strings.HasSuffix(path, "/")
 }
 
 // GetOutputType returns the output type, defaulting to "rules"
-func (o Output) GetOutputType() string {
+func (o *Output) GetOutputType() string {
 	if o.Type == "" {
-		return "rules"
+		return "rule"
 	}
 	return o.Type
 }
 
 // GetNamingScheme returns the naming scheme for directory outputs
-func (o Output) GetNamingScheme() string {
+func (o *Output) GetNamingScheme() string {
 	if o.NamingScheme != "" {
 		return o.NamingScheme
 	}
-	// Default naming scheme for both agents and rules
-	return "{name}.md"
+	// Default naming scheme based on type
+	if o.GetOutputType() == "agent" {
+		return "{name}.md"
+	}
+	return "{type}.md"
 }
 
 // Rule represents a single rule definition
@@ -118,6 +121,14 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, errors.ConfigParse(filename, err)
 	}
 
+	// Set default priorities
+	setDefaultPriorities(&config)
+
+	return &config, nil
+}
+
+// setDefaultPriorities sets default priority values for all items that don't have one
+func setDefaultPriorities(config *Config) {
 	// Set default priority for rules
 	for i := range config.Rules {
 		if config.Rules[i].Priority == 0 {
@@ -157,8 +168,6 @@ func LoadConfig(filename string) (*Config, error) {
 			}
 		}
 	}
-
-	return &config, nil
 }
 
 // SaveConfig saves configuration to a YAML file

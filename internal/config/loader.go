@@ -97,9 +97,11 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 
 	var allRules []Rule
 	var allSections []Section
-	// Add existing rules and sections first
+	var allAgents []Agent
+	// Add existing rules, sections, and agents first
 	allRules = append(allRules, config.Rules...)
 	allSections = append(allSections, config.Sections...)
+	allAgents = append(allAgents, config.Agents...)
 
 	// Process each include
 	for _, includePath := range config.Includes {
@@ -121,14 +123,16 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 			return err // Already a rich error from loadConfig
 		}
 
-		// Merge rules and sections from included config
+		// Merge rules, sections, and agents from included config
 		allRules = append(allRules, includedConfig.Rules...)
 		allSections = append(allSections, includedConfig.Sections...)
+		allAgents = append(allAgents, includedConfig.Agents...)
 	}
 
-	// Update config with merged rules and sections, clear includes
+	// Update config with merged rules, sections, and agents, clear includes
 	config.Rules = MergeRules(allRules)
 	config.Sections = MergeSections(allSections)
+	config.Agents = MergeAgents(allAgents)
 	config.Includes = nil
 
 	// Ensure all rules have priority (default to 1)
@@ -142,6 +146,13 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 	for i := range config.Sections {
 		if config.Sections[i].Priority == 0 {
 			config.Sections[i].Priority = 1
+		}
+	}
+
+	// Ensure all agents have priority (default to 1)
+	for i := range config.Agents {
+		if config.Agents[i].Priority == 0 {
+			config.Agents[i].Priority = 1
 		}
 	}
 
