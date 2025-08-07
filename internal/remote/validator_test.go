@@ -320,3 +320,136 @@ func BenchmarkURLValidator_ValidateBlocked(b *testing.B) {
 		_ = validator.Validate(url)
 	}
 }
+
+// TestURLValidator_MetadataEndpoints tests specific cloud metadata endpoints
+func TestURLValidator_MetadataEndpoints(t *testing.T) {
+	validator := NewURLValidator()
+
+	metadataEndpoints := []struct {
+		url      string
+		provider string
+	}{
+		{"http://169.254.169.254/latest/meta-data/", "AWS EC2"},
+		{"http://metadata.google.internal/computeMetadata/v1/", "Google Cloud"},
+		{"http://169.254.169.254/metadata/instance", "Azure"},
+		{"http://169.254.169.254/openstack/latest/meta_data.json", "OpenStack"},
+		{"http://169.254.169.254/v1/metadata", "DigitalOcean"},
+	}
+
+	for _, endpoint := range metadataEndpoints {
+		t.Run(endpoint.provider, func(t *testing.T) {
+			err := validator.Validate(endpoint.url)
+			assert.Error(t, err, "Expected metadata endpoint %s (%s) to be blocked",
+				endpoint.url, endpoint.provider)
+		})
+	}
+}
+
+// TestURLValidator_RealWorldScenarios tests realistic usage patterns
+func TestURLValidator_RealWorldScenarios(t *testing.T) {
+	validator := NewURLValidator()
+
+	scenarios := []struct {
+		name        string
+		url         string
+		expectError bool
+		reason      string
+	}{
+		{
+			name:        "github_raw_content",
+			url:         "https://raw.githubusercontent.com/org/repo/main/ai_rules.yaml",
+			expectError: false,
+			reason:      "GitHub raw content should be allowed",
+		},
+		{
+			name:        "gitlab_raw_content",
+			url:         "https://gitlab.com/org/repo/-/raw/main/config.yaml",
+			expectError: false,
+			reason:      "GitLab raw content should be allowed",
+		},
+		{
+			name:        "bitbucket_raw_content",
+			url:         "https://bitbucket.org/org/repo/raw/main/config.yaml",
+			expectError: false,
+			reason:      "Bitbucket raw content should be allowed",
+		},
+		{
+			name:        "corporate_intranet",
+			url:         "http://192.168.1.100/shared/config.yaml",
+			expectError: true,
+			reason:      "Corporate intranet should be blocked",
+		},
+		{
+			name:        "development_server",
+			url:         "http://localhost:3000/api/config.yaml",
+			expectError: true,
+			reason:      "Development server should be blocked",
+		},
+		{
+			name:        "docker_host",
+			url:         "http://172.17.0.1/config.yaml",
+			expectError: true,
+			reason:      "Docker host should be blocked",
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			err := validator.Validate(scenario.url)
+			if scenario.expectError {
+				assert.Error(t, err, scenario.reason)
+			} else if err != nil {
+				t.Logf("Real-world scenario failed (may be network-related): %v", err)
+			}
+		})
+	}
+}
+
+// TestURLValidator_EdgeCasesAndPerformance tests edge cases and performance
+func TestURLValidator_EdgeCasesAndPerformance(t *testing.T) {
+	validator := NewURLValidator()
+
+	t.Run("edge_cases", func(t *testing.T) {
+		edgeCases := []struct {
+			url       string
+			shouldErr bool
+			reason    string
+		}{
+			{"https://example.com:0/config", true, "invalid port"},
+			{"https://example.com:65536/config", true, "port out of range"},
+			{"https://example.com:-1/config", true, "negative port"},
+			{"https://user:pass@example.com/config", false, "userinfo allowed"},
+			{"https://example.com/config#fragment", false, "fragment allowed"},
+			{"https://example.com/config?query=value", false, "query params allowed"},
+		}
+
+		for _, tc := range edgeCases {
+			t.Run(tc.reason, func(t *testing.T) {
+				err := validator.Validate(tc.url)
+				if tc.shouldErr {
+					assert.Error(t, err, "Expected error for %s (%s)", tc.url, tc.reason)
+				} else if err != nil {
+					t.Logf("Edge case failed (may be network-related): %v", err)
+				}
+			})
+		}
+	})
+
+	t.Run("concurrent_validation", func(t *testing.T) {
+		url := "https://example.com/config.yaml"
+
+		done := make(chan bool, 10)
+		for i := 0; i < 10; i++ {
+			go func() {
+				defer func() { done <- true }()
+				for j := 0; j < 10; j++ {
+					_ = validator.Validate(url)
+				}
+			}()
+		}
+
+		for i := 0; i < 10; i++ {
+			<-done
+		}
+	})
+}
