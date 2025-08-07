@@ -17,22 +17,19 @@ func TestDefaultHTTPConfig(t *testing.T) {
 	config := DefaultHTTPConfig()
 
 	assert.Equal(t, 30*time.Second, config.Timeout)
-	assert.Equal(t, 10*time.Second, config.ConnectTimeout)
-	assert.Equal(t, 20*time.Second, config.ResponseTimeout)
 	assert.Equal(t, 5, config.MaxRedirects)
 	assert.Contains(t, config.UserAgent, "ai-rulez")
 	assert.Equal(t, int64(10*1024*1024), config.MaxBodySize)
 
 	// Check default headers
 	assert.Contains(t, config.Headers["Accept"], "yaml")
-	assert.Contains(t, config.Headers["Accept-Encoding"], "gzip")
 }
 
 func TestNewClient(t *testing.T) {
 	t.Run("with_default_config", func(t *testing.T) {
 		client := NewTestClient(nil)
 		assert.NotNil(t, client)
-		assert.NotNil(t, client.http)
+		assert.NotNil(t, client.resty)
 		assert.NotNil(t, client.validator)
 		assert.NotNil(t, client.config)
 	})
@@ -115,8 +112,8 @@ func TestClient_Fetch(t *testing.T) {
 	t.Run("response_too_large", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			// Write exactly the max body size to trigger the limit
-			largeContent := strings.Repeat("a", int(DefaultHTTPConfig().MaxBodySize))
+			// Write one byte more than the max body size to trigger the limit
+			largeContent := strings.Repeat("a", int(DefaultHTTPConfig().MaxBodySize)+1)
 			w.Write([]byte(largeContent))
 		}))
 		defer server.Close()
@@ -170,7 +167,7 @@ func TestClient_Fetch(t *testing.T) {
 
 		_, err := client.Fetch(ctx, server.URL)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "too many redirects")
+		assert.Contains(t, err.Error(), "stopped after")
 	})
 }
 
