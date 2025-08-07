@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/errors"
 	"gopkg.in/yaml.v3"
@@ -15,13 +16,15 @@ type Config struct {
 	Outputs   []Output   `yaml:"outputs"`
 	Rules     []Rule     `yaml:"rules,omitempty"`
 	Sections  []Section  `yaml:"sections,omitempty"`
+	Agents    []Agent    `yaml:"agents,omitempty"`
 	UserRulez *UserRulez `yaml:"user_rulez,omitempty"`
 }
 
-// UserRulez contains user-specific rules and sections
+// UserRulez contains user-specific rules, sections, and agents
 type UserRulez struct {
 	Rules    []Rule    `yaml:"rules,omitempty"`
 	Sections []Section `yaml:"sections,omitempty"`
+	Agents   []Agent   `yaml:"agents,omitempty"`
 }
 
 // Metadata contains project metadata
@@ -33,8 +36,45 @@ type Metadata struct {
 
 // Output defines where and how to generate rule files
 type Output struct {
-	File     string `yaml:"file"`
-	Template string `yaml:"template,omitempty"`
+	File         string `yaml:"file,omitempty"` // Specific file output
+	Path         string `yaml:"path,omitempty"` // File or directory output
+	Type         string `yaml:"type,omitempty"` // "rules" (default) or "agents"
+	Template     string `yaml:"template,omitempty"`
+	NamingScheme string `yaml:"naming_scheme,omitempty"` // Pattern for directory outputs
+}
+
+// GetPath returns the effective path, preferring Path over File
+func (o *Output) GetPath() string {
+	if o.Path != "" {
+		return o.Path
+	}
+	return o.File
+}
+
+// IsDirectory returns true if the output targets a directory
+func (o *Output) IsDirectory() bool {
+	path := o.GetPath()
+	return strings.HasSuffix(path, "/")
+}
+
+// GetOutputType returns the output type, defaulting to "rules"
+func (o *Output) GetOutputType() string {
+	if o.Type == "" {
+		return "rule"
+	}
+	return o.Type
+}
+
+// GetNamingScheme returns the naming scheme for directory outputs
+func (o *Output) GetNamingScheme() string {
+	if o.NamingScheme != "" {
+		return o.NamingScheme
+	}
+	// Default naming scheme based on type
+	if o.GetOutputType() == "agent" {
+		return "{name}.md"
+	}
+	return "{type}.md"
 }
 
 // Rule represents a single rule definition
@@ -51,6 +91,17 @@ type Section struct {
 	Title    string `yaml:"title"`
 	Priority int    `yaml:"priority,omitempty"`
 	Content  string `yaml:"content"`
+}
+
+// Agent represents an AI sub-agent definition
+type Agent struct {
+	ID           string   `yaml:"id,omitempty"`
+	Name         string   `yaml:"name"`
+	Description  string   `yaml:"description"`
+	Priority     int      `yaml:"priority,omitempty"`
+	Tools        []string `yaml:"tools,omitempty"`
+	Template     string   `yaml:"template,omitempty"`
+	SystemPrompt string   `yaml:"system_prompt,omitempty"`
 }
 
 // LoadConfig loads configuration from a YAML file
@@ -70,6 +121,14 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, errors.ConfigParse(filename, err)
 	}
 
+	// Set default priorities
+	setDefaultPriorities(&config)
+
+	return &config, nil
+}
+
+// setDefaultPriorities sets default priority values for all items that don't have one
+func setDefaultPriorities(config *Config) {
 	// Set default priority for rules
 	for i := range config.Rules {
 		if config.Rules[i].Priority == 0 {
@@ -81,6 +140,13 @@ func LoadConfig(filename string) (*Config, error) {
 	for i := range config.Sections {
 		if config.Sections[i].Priority == 0 {
 			config.Sections[i].Priority = 1
+		}
+	}
+
+	// Set default priority for agents
+	for i := range config.Agents {
+		if config.Agents[i].Priority == 0 {
+			config.Agents[i].Priority = 1
 		}
 	}
 
@@ -96,9 +162,12 @@ func LoadConfig(filename string) (*Config, error) {
 				config.UserRulez.Sections[i].Priority = 1
 			}
 		}
+		for i := range config.UserRulez.Agents {
+			if config.UserRulez.Agents[i].Priority == 0 {
+				config.UserRulez.Agents[i].Priority = 1
+			}
+		}
 	}
-
-	return &config, nil
 }
 
 // SaveConfig saves configuration to a YAML file

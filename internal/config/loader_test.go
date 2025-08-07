@@ -311,7 +311,7 @@ func TestValidateOutputs(t *testing.T) {
 	}{
 		{
 			name:    "valid outputs",
-			outputs: []config.Output{{File: "test.md"}},
+			outputs: []config.Output{{Path: "test.md"}},
 			wantErr: false,
 		},
 		{
@@ -453,4 +453,274 @@ rules:
 			tt.check(t, cfg)
 		})
 	}
+}
+
+func TestMergeAgents(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		agentSets [][]config.Agent
+		expected  []config.Agent
+	}{
+		{
+			name: "single agent set",
+			agentSets: [][]config.Agent{
+				{
+					{Name: "agent1", Description: "First agent"},
+					{Name: "agent2", Description: "Second agent"},
+				},
+			},
+			expected: []config.Agent{
+				{Name: "agent1", Description: "First agent"},
+				{Name: "agent2", Description: "Second agent"},
+			},
+		},
+		{
+			name: "merge by name when no ID",
+			agentSets: [][]config.Agent{
+				{
+					{Name: "agent1", Description: "Original"},
+				},
+				{
+					{Name: "agent1", Description: "Override"},
+				},
+			},
+			expected: []config.Agent{
+				{Name: "agent1", Description: "Override"},
+			},
+		},
+		{
+			name: "merge by ID when present",
+			agentSets: [][]config.Agent{
+				{
+					{ID: "id1", Name: "agent1", Description: "Original", Priority: 5},
+				},
+				{
+					{ID: "id1", Name: "agent1-updated", Description: "Override", Priority: 10},
+				},
+			},
+			expected: []config.Agent{
+				{ID: "id1", Name: "agent1-updated", Description: "Override", Priority: 10},
+			},
+		},
+		{
+			name: "preserve order with multiple merges",
+			agentSets: [][]config.Agent{
+				{
+					{Name: "agent1", Description: "First"},
+					{Name: "agent2", Description: "Second"},
+				},
+				{
+					{Name: "agent3", Description: "Third"},
+				},
+				{
+					{Name: "agent2", Description: "Second Updated"},
+				},
+			},
+			expected: []config.Agent{
+				{Name: "agent1", Description: "First"},
+				{Name: "agent2", Description: "Second Updated"},
+				{Name: "agent3", Description: "Third"},
+			},
+		},
+		{
+			name: "merge with tools and system_prompt",
+			agentSets: [][]config.Agent{
+				{
+					{
+						Name:         "agent1",
+						Description:  "Original",
+						Tools:        []string{"tool1"},
+						SystemPrompt: "Original prompt",
+					},
+				},
+				{
+					{
+						Name:         "agent1",
+						Description:  "Updated",
+						Tools:        []string{"tool1", "tool2"},
+						SystemPrompt: "Updated prompt",
+					},
+				},
+			},
+			expected: []config.Agent{
+				{
+					Name:         "agent1",
+					Description:  "Updated",
+					Tools:        []string{"tool1", "tool2"},
+					SystemPrompt: "Updated prompt",
+				},
+			},
+		},
+		{
+			name: "empty agent sets",
+			agentSets: [][]config.Agent{
+				{},
+				{},
+			},
+			expected: []config.Agent{},
+		},
+		{
+			name: "nil agent sets",
+			agentSets: [][]config.Agent{
+				nil,
+				{
+					{Name: "agent1", Description: "First"},
+				},
+				nil,
+			},
+			expected: []config.Agent{
+				{Name: "agent1", Description: "First"},
+			},
+		},
+		{
+			name: "complex merge with IDs and names",
+			agentSets: [][]config.Agent{
+				{
+					{ID: "a1", Name: "agent1", Description: "First", Priority: 5},
+					{Name: "agent2", Description: "Second", Priority: 3},
+					{ID: "a3", Name: "agent3", Description: "Third"},
+				},
+				{
+					{ID: "a1", Name: "agent1-renamed", Description: "First Updated", Priority: 10},
+					{Name: "agent4", Description: "Fourth"},
+				},
+				{
+					{Name: "agent2", Description: "Second Updated", Priority: 8},
+					{ID: "a3", Name: "agent3", Description: "Third Updated", Tools: []string{"tool1"}},
+				},
+			},
+			expected: []config.Agent{
+				{ID: "a1", Name: "agent1-renamed", Description: "First Updated", Priority: 10},
+				{Name: "agent2", Description: "Second Updated", Priority: 8},
+				{ID: "a3", Name: "agent3", Description: "Third Updated", Tools: []string{"tool1"}},
+				{Name: "agent4", Description: "Fourth"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			result := config.MergeAgents(tt.agentSets...)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestLoadConfigWithIncludesForAgents(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+
+	// Create main config with agents and includes
+	mainConfig := `metadata:
+  name: "Main Config"
+  version: "1.0.0"
+
+includes:
+  - "agents1.yaml"
+  - "agents2.yaml"
+
+outputs:
+  - path: ".claude/agents/"
+    type: "agent"
+
+agents:
+  - name: "main-agent"
+    description: "Agent from main config"
+    priority: 10
+    tools:
+      - Read
+      - Write`
+
+	// Create first included file with agents
+	agents1Config := `metadata:
+  name: "Agents Include 1"
+  version: "1.0.0"
+outputs:
+  - path: "test.md"
+agents:
+  - name: "included-agent-1"
+    description: "Agent from first include"
+    priority: 5
+    tools:
+      - Execute
+  - id: "override-me"
+    name: "original-agent"
+    description: "Will be overridden"
+    priority: 3`
+
+	// Create second included file with agents (overrides one from agents1)
+	agents2Config := `metadata:
+  name: "Agents Include 2"
+  version: "1.0.0"
+outputs:
+  - path: "test.md"
+agents:
+  - name: "included-agent-2"
+    description: "Agent from second include"
+    priority: 7
+  - id: "override-me"
+    name: "overridden-agent"
+    description: "This overrides the original"
+    priority: 15
+    tools:
+      - Debug`
+
+	// Write all config files
+	mainPath := filepath.Join(tmpDir, "main.yaml")
+	agents1Path := filepath.Join(tmpDir, "agents1.yaml")
+	agents2Path := filepath.Join(tmpDir, "agents2.yaml")
+
+	require.NoError(t, os.WriteFile(mainPath, []byte(mainConfig), 0o644))
+	require.NoError(t, os.WriteFile(agents1Path, []byte(agents1Config), 0o644))
+	require.NoError(t, os.WriteFile(agents2Path, []byte(agents2Config), 0o644))
+
+	// Load config with includes
+	cfg, err := config.LoadConfigWithIncludes(mainPath)
+	require.NoError(t, err)
+
+	// Verify that all agents are present and properly merged
+	assert.Len(t, cfg.Agents, 4, "Should have 4 agents: main + 2 from first include + 1 from second (1 override)")
+
+	// Check that agents are present with correct properties
+	agentsByName := make(map[string]config.Agent)
+	for _, agent := range cfg.Agents {
+		key := agent.Name
+		if agent.ID != "" {
+			key = agent.ID
+		}
+		agentsByName[key] = agent
+	}
+
+	// Verify main agent
+	mainAgent, exists := agentsByName["main-agent"]
+	assert.True(t, exists, "main-agent should exist")
+	assert.Equal(t, "Agent from main config", mainAgent.Description)
+	assert.Equal(t, 10, mainAgent.Priority)
+
+	// Verify included agents
+	agent1, exists := agentsByName["included-agent-1"]
+	assert.True(t, exists, "included-agent-1 should exist")
+	assert.Equal(t, "Agent from first include", agent1.Description)
+	assert.Equal(t, 5, agent1.Priority)
+
+	agent2, exists := agentsByName["included-agent-2"]
+	assert.True(t, exists, "included-agent-2 should exist")
+	assert.Equal(t, "Agent from second include", agent2.Description)
+	assert.Equal(t, 7, agent2.Priority)
+
+	// Verify override worked correctly
+	overriddenAgent, exists := agentsByName["override-me"]
+	assert.True(t, exists, "override-me agent should exist")
+	assert.Equal(t, "overridden-agent", overriddenAgent.Name)
+	assert.Equal(t, "This overrides the original", overriddenAgent.Description)
+	assert.Equal(t, 15, overriddenAgent.Priority)
+	assert.Contains(t, overriddenAgent.Tools, "Debug")
+
+	// Verify no includes remain
+	assert.Empty(t, cfg.Includes, "Includes should be cleared after processing")
 }

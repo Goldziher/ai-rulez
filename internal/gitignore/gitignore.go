@@ -20,7 +20,7 @@ func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
 	// Get the list of output file names
 	var outputFiles []string
 	for _, output := range cfg.Outputs {
-		outputFiles = append(outputFiles, output.File)
+		outputFiles = append(outputFiles, output.GetPath())
 	}
 
 	if len(outputFiles) == 0 {

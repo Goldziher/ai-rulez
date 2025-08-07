@@ -97,9 +97,11 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 
 	var allRules []Rule
 	var allSections []Section
-	// Add existing rules and sections first
+	var allAgents []Agent
+	// Add existing rules, sections, and agents first
 	allRules = append(allRules, config.Rules...)
 	allSections = append(allSections, config.Sections...)
+	allAgents = append(allAgents, config.Agents...)
 
 	// Process each include
 	for _, includePath := range config.Includes {
@@ -121,14 +123,16 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 			return err // Already a rich error from loadConfig
 		}
 
-		// Merge rules and sections from included config
+		// Merge rules, sections, and agents from included config
 		allRules = append(allRules, includedConfig.Rules...)
 		allSections = append(allSections, includedConfig.Sections...)
+		allAgents = append(allAgents, includedConfig.Agents...)
 	}
 
-	// Update config with merged rules and sections, clear includes
+	// Update config with merged rules, sections, and agents, clear includes
 	config.Rules = MergeRules(allRules)
 	config.Sections = MergeSections(allSections)
+	config.Agents = MergeAgents(allAgents)
 	config.Includes = nil
 
 	// Ensure all rules have priority (default to 1)
@@ -142,6 +146,13 @@ func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
 	for i := range config.Sections {
 		if config.Sections[i].Priority == 0 {
 			config.Sections[i].Priority = 1
+		}
+	}
+
+	// Ensure all agents have priority (default to 1)
+	for i := range config.Agents {
+		if config.Agents[i].Priority == 0 {
+			config.Agents[i].Priority = 1
 		}
 	}
 
@@ -218,6 +229,37 @@ func MergeSections(sectionSets ...[]Section) []Section {
 	return result
 }
 
+// MergeAgents combines multiple agent slices, with later agents taking precedence.
+// Agents with IDs are matched by ID first, then by name for backward compatibility.
+func MergeAgents(agentSets ...[]Agent) []Agent {
+	agentMap := make(map[string]Agent) // key is ID if present, otherwise name
+	var order []string
+
+	for _, agents := range agentSets {
+		for _, agent := range agents {
+			// Use ID as key if present, otherwise use name
+			key := agent.Name
+			if agent.ID != "" {
+				key = agent.ID
+			}
+
+			// Track order for consistent output
+			if _, exists := agentMap[key]; !exists {
+				order = append(order, key)
+			}
+			agentMap[key] = agent
+		}
+	}
+
+	// Rebuild slice in order
+	result := make([]Agent, 0, len(order))
+	for _, key := range order {
+		result = append(result, agentMap[key])
+	}
+
+	return result
+}
+
 // ValidateIncludes checks that all include paths are valid and accessible.
 func ValidateIncludes(config *Config, baseDir string) error {
 	for _, includePath := range config.Includes {
@@ -259,11 +301,11 @@ func ValidateOutputs(outputs []Output) error {
 	}
 
 	for i, output := range outputs {
-		if output.File == "" {
-			return errors.ValidationRequired(fmt.Sprintf("outputs[%d].file", i), "output configuration").
+		if output.Path == "" && output.File == "" {
+			return errors.ValidationRequired(fmt.Sprintf("outputs[%d].path or outputs[%d].file", i, i), "output configuration").
 				WithContext("output_index", i).
-				WithSuggestion("Specify a file path for output[%d]", i).
-				WithSuggestion("Example: file: 'CLAUDE.md'")
+				WithSuggestion("Specify a path or file for output[%d]", i).
+				WithSuggestion("Example: path: 'CLAUDE.md' (preferred) or file: 'CLAUDE.md'")
 		}
 	}
 
@@ -278,9 +320,10 @@ func (l *configLoader) loadLocalOverrides(config *Config, filename string) error
 		return err // Already a rich error from loadConfig
 	}
 
-	// Merge rules and sections using ID-based merging
+	// Merge rules, sections, and agents using ID-based merging
 	config.Rules = MergeRules(config.Rules, localConfig.Rules)
 	config.Sections = MergeSections(config.Sections, localConfig.Sections)
+	config.Agents = MergeAgents(config.Agents, localConfig.Agents)
 
 	// Also merge user_rulez if present in local config
 	if localConfig.UserRulez != nil {
@@ -289,6 +332,7 @@ func (l *configLoader) loadLocalOverrides(config *Config, filename string) error
 		} else {
 			config.UserRulez.Rules = MergeRules(config.UserRulez.Rules, localConfig.UserRulez.Rules)
 			config.UserRulez.Sections = MergeSections(config.UserRulez.Sections, localConfig.UserRulez.Sections)
+			config.UserRulez.Agents = MergeAgents(config.UserRulez.Agents, localConfig.UserRulez.Agents)
 		}
 	}
 
