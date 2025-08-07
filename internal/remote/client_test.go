@@ -290,3 +290,69 @@ func BenchmarkClient_FetchWithValidation(b *testing.B) {
 		}
 	}
 }
+
+func TestClient_CacheIntegration(t *testing.T) {
+	requestCount := 0
+	content := "cached content"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		w.Header().Set("ETag", "test-etag-123")
+		w.Header().Set("Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(content))
+	}))
+	defer server.Close()
+
+	client := NewTestClient(nil)
+	ctx := context.Background()
+
+	t.Run("cache_miss_then_hit", func(t *testing.T) {
+		requestCount = 0
+
+		// First request should hit the server
+		response1, err := client.Fetch(ctx, server.URL)
+		require.NoError(t, err)
+		assert.Equal(t, content, string(response1))
+		assert.Equal(t, 1, requestCount)
+
+		// Second request should hit the cache
+		response2, err := client.Fetch(ctx, server.URL)
+		require.NoError(t, err)
+		assert.Equal(t, content, string(response2))
+		assert.Equal(t, 1, requestCount) // Should not increment
+	})
+
+	t.Run("fetch_with_headers_bypasses_cache", func(t *testing.T) {
+		requestCount = 0
+
+		// First request with headers
+		headers := map[string]string{"Authorization": "Bearer token"}
+		response1, err := client.FetchWithHeaders(ctx, server.URL, headers)
+		require.NoError(t, err)
+		assert.Equal(t, content, string(response1))
+		assert.Equal(t, 1, requestCount)
+
+		// Second request with headers should still hit server (not cached)
+		response2, err := client.FetchWithHeaders(ctx, server.URL, headers)
+		require.NoError(t, err)
+		assert.Equal(t, content, string(response2))
+		assert.Equal(t, 2, requestCount) // Should increment
+	})
+
+	t.Run("cache_isolation_per_url", func(t *testing.T) {
+		requestCount = 0
+
+		// Different URLs should not share cache entries
+		url1 := server.URL + "/path1"
+		url2 := server.URL + "/path2"
+
+		client.Fetch(ctx, url1)
+		client.Fetch(ctx, url2)
+		assert.Equal(t, 2, requestCount) // Both should hit server
+
+		client.Fetch(ctx, url1)
+		client.Fetch(ctx, url2)
+		assert.Equal(t, 2, requestCount) // Both should hit cache
+	})
+}
