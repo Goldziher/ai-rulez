@@ -84,8 +84,8 @@
           },
           "type": {
             "type": "string",
-            "enum": ["rules", "agents"],
-            "description": "Type of content to generate (defaults to rules)"
+            "enum": ["rule", "agent"],
+            "description": "Type of content to generate (defaults to rule)"
           },
           "naming_scheme": {
             "type": "string",
@@ -403,7 +403,7 @@
         },
         {
           "path": ".claude/agents/",
-          "type": "agents",
+          "type": "agent",
           "template": "agent"
         }
       ],
