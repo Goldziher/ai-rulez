@@ -378,7 +378,7 @@ func (c *Cache) ClearDisk(ctx context.Context) error {
 		if !entry.IsDir() && strings.Contains(entry.Name(), cacheFileName) {
 			filePath := filepath.Join(c.config.DiskCacheDir, entry.Name())
 			if err := os.Remove(filePath); err != nil {
-					continue
+				continue
 			}
 		}
 	}
