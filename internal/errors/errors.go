@@ -43,6 +43,13 @@ const (
 
 	// MCP protocol errors
 	ErrorTypeMCP
+
+	// Remote operation errors
+	ErrorTypeRemote
+	ErrorTypeRemoteNetwork
+	ErrorTypeRemoteSSRF
+	ErrorTypeRemoteTimeout
+	ErrorTypeRemoteHTTP
 )
 
 // String returns the string representation of the error type
@@ -68,6 +75,11 @@ func (t ErrorType) String() string {
 		ErrorTypeGeneration:               "generation",
 		ErrorTypeGenerationOutputNotFound: "generation_output_not_found",
 		ErrorTypeMCP:                      "mcp",
+		ErrorTypeRemote:                   "remote",
+		ErrorTypeRemoteNetwork:            "remote_network",
+		ErrorTypeRemoteSSRF:               "remote_ssrf",
+		ErrorTypeRemoteTimeout:            "remote_timeout",
+		ErrorTypeRemoteHTTP:               "remote_http",
 	}
 
 	if str, ok := errorTypeStrings[t]; ok {

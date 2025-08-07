@@ -127,7 +127,6 @@ func TestCache_TTLExpiration(t *testing.T) {
 }
 
 func TestCache_DiskOperations(t *testing.T) {
-	// Create temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "cache-test-*")
 	require.NoError(t, err)
 	defer os.RemoveAll(tmpDir)

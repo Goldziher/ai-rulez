@@ -217,3 +217,159 @@ func MCPError(operation string, underlying error) *RichError {
 
 	return err
 }
+
+// RemoteConfigFetch creates an error for remote configuration fetch failures
+func RemoteConfigFetch(url string, underlying error) *RichError {
+	err := New(ErrorTypeRemote, "fetch remote config", underlying).
+		WithPath(url).
+		WithContext("url", url).
+		WithSuggestion("Check if the URL is accessible: %s", url).
+		WithSuggestion("Verify your network connection").
+		WithSuggestion("Ensure the remote server is responding correctly").
+		WithSuggestion("Check if authentication is required for this resource")
+
+	// Add specific suggestions based on the underlying error
+	if underlying != nil {
+		errorMsg := underlying.Error()
+		if strings.Contains(errorMsg, "timeout") || strings.Contains(errorMsg, "deadline exceeded") {
+			err.WithSuggestion("The request timed out - try again or check server response time") //nolint:errcheck
+		}
+		if strings.Contains(errorMsg, "connection refused") {
+			err.WithSuggestion("Connection refused - check if the server is running") //nolint:errcheck
+		}
+		if strings.Contains(errorMsg, "no such host") {
+			err.WithSuggestion("DNS resolution failed - check the hostname") //nolint:errcheck
+		}
+	}
+
+	return err
+}
+
+// RemoteConfigParse creates an error for remote configuration parsing failures
+func RemoteConfigParse(url string, underlying error) *RichError {
+	err := New(ErrorTypeRemote, "parse remote config", underlying).
+		WithPath(url).
+		WithContext("url", url).
+		WithSuggestion("Check the YAML syntax in the remote file").
+		WithSuggestion("Ensure the remote file follows ai-rulez configuration format").
+		WithSuggestion("Verify the remote file content type is text/yaml or application/yaml")
+
+	// Try to extract parse information from YAML errors
+	if underlying != nil && strings.Contains(underlying.Error(), "line") {
+		err.WithContext("parse_error", underlying.Error()) //nolint:errcheck
+	}
+
+	return err
+}
+
+// RemoteSSRFError creates an error for SSRF protection violations
+func RemoteSSRFError(url string, reason string) *RichError {
+	err := New(ErrorTypeRemoteSSRF, "validate URL",
+		fmt.Errorf("URL blocked for security reasons: %s", reason)).
+		WithPath(url).
+		WithContext("url", url).
+		WithContext("block_reason", reason).
+		WithSuggestion("Use a public URL (not localhost, private IPs, or metadata services)").
+		WithSuggestion("Ensure the URL uses http:// or https:// scheme").
+		WithSuggestion("Avoid URLs that resolve to private IP ranges or loopback addresses")
+
+	if strings.Contains(reason, "metadata") {
+		err.WithSuggestion("Metadata service endpoints are blocked for security") //nolint:errcheck
+	}
+	if strings.Contains(reason, "localhost") || strings.Contains(reason, "127.0.0.1") {
+		err.WithSuggestion("localhost and loopback addresses are not allowed") //nolint:errcheck
+	}
+	if strings.Contains(reason, "private") || strings.Contains(reason, "192.168") || strings.Contains(reason, "10.0.0") {
+		err.WithSuggestion("Private IP ranges (RFC 1918) are not accessible") //nolint:errcheck
+	}
+
+	return err
+}
+
+// RemoteNetworkError creates an error for network-related failures
+func RemoteNetworkError(url string, underlying error) *RichError {
+	err := New(ErrorTypeRemoteNetwork, "network request", underlying).
+		WithPath(url).
+		WithContext("url", url).
+		WithSuggestion("Check your network connectivity").
+		WithSuggestion("Verify the URL is accessible from your location").
+		WithSuggestion("Check if a proxy or firewall is blocking the request")
+
+	if underlying != nil {
+		errorMsg := underlying.Error()
+		if strings.Contains(errorMsg, "timeout") {
+			err.WithSuggestion("Request timed out - the server may be slow or overloaded") //nolint:errcheck
+		}
+		if strings.Contains(errorMsg, "connection refused") {
+			err.WithSuggestion("Connection refused - the server may be down") //nolint:errcheck
+		}
+		if strings.Contains(errorMsg, "no route to host") {
+			err.WithSuggestion("No route to host - check network routing") //nolint:errcheck
+		}
+	}
+
+	return err
+}
+
+// RemoteHTTPError creates an error for HTTP status code failures
+func RemoteHTTPError(url string, statusCode int, status string) *RichError {
+	err := New(ErrorTypeRemoteHTTP, "HTTP request",
+		fmt.Errorf("HTTP %d: %s", statusCode, status)).
+		WithPath(url).
+		WithContext("url", url).
+		WithContext("status_code", statusCode).
+		WithContext("status", status)
+
+	// Add status-specific suggestions
+	switch statusCode {
+	case 400:
+		err.WithSuggestion("Bad Request (400) - check the URL format") //nolint:errcheck
+	case 401:
+		err.WithSuggestion("Unauthorized (401) - authentication may be required")  //nolint:errcheck
+		err.WithSuggestion("Check if you need to provide API keys or credentials") //nolint:errcheck
+	case 403:
+		err.WithSuggestion("Forbidden (403) - you don't have permission to access this resource") //nolint:errcheck
+		err.WithSuggestion("Check if the resource requires special permissions")                  //nolint:errcheck
+	case 404:
+		err.WithSuggestion("Not Found (404) - the resource doesn't exist at this URL") //nolint:errcheck
+		err.WithSuggestion("Verify the URL path is correct")                           //nolint:errcheck
+	case 429:
+		err.WithSuggestion("Too Many Requests (429) - you're being rate limited")  //nolint:errcheck
+		err.WithSuggestion("Wait before retrying or contact the service provider") //nolint:errcheck
+	case 500:
+		err.WithSuggestion("Internal Server Error (500) - the remote server has an issue") //nolint:errcheck
+		err.WithSuggestion("Try again later or contact the service provider")              //nolint:errcheck
+	case 502:
+		err.WithSuggestion("Bad Gateway (502) - upstream server error")  //nolint:errcheck
+		err.WithSuggestion("The service may be temporarily unavailable") //nolint:errcheck
+	case 503:
+		err.WithSuggestion("Service Unavailable (503) - the service is temporarily down") //nolint:errcheck
+		err.WithSuggestion("Try again later")                                             //nolint:errcheck
+	case 504:
+		err.WithSuggestion("Gateway Timeout (504) - the request timed out")   //nolint:errcheck
+		err.WithSuggestion("The upstream server is too slow or unresponsive") //nolint:errcheck
+	default:
+		if statusCode >= 400 && statusCode < 500 {
+			err.WithSuggestion("Client error (%d) - check your request", statusCode) //nolint:errcheck
+		} else if statusCode >= 500 {
+			err.WithSuggestion("Server error (%d) - the remote service has an issue", statusCode) //nolint:errcheck
+		}
+	}
+
+	return err
+}
+
+// RemoteTimeoutError creates an error for timeout failures
+func RemoteTimeoutError(url string, timeout interface{}) *RichError {
+	err := New(ErrorTypeRemoteTimeout, "request timeout",
+		fmt.Errorf("request timed out")).
+		WithPath(url).
+		WithContext("url", url).
+		WithContext("timeout", timeout).
+		WithSuggestion("The request took too long to complete").
+		WithSuggestion("Check if the remote server is responding slowly").
+		WithSuggestion("Try again later when the server may be less busy").
+		WithSuggestion("Consider using a local copy of the configuration if available")
+
+	return err
+}
