@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"gopkg.in/yaml.v3"
 )
 
 // Generator handles the generation of output files from configuration.
@@ -73,8 +74,9 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 	// Serial generation for smaller file sets
 	templateData := templates.NewTemplateData(cfg)
 
-	for i, output := range cfg.Outputs {
-		if err := g.writeOutputFile(output, templateData); err != nil {
+	for i := range cfg.Outputs {
+		if err := g.writeOutputFile(&cfg.Outputs[i], templateData); err != nil {
+			output := cfg.Outputs[i]
 			return errors.New(errors.ErrorTypeGeneration, "generate output file", err).
 				WithPath(output.GetPath()).
 				WithContext("output_index", i).
@@ -100,9 +102,9 @@ func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(cfg.Outputs))
 
-	for i, output := range cfg.Outputs {
+	for i := range cfg.Outputs {
 		wg.Add(1)
-		go func(idx int, out config.Output) {
+		go func(idx int, out *config.Output) {
 			defer wg.Done()
 			if err := g.writeOutputFile(out, templateData); err != nil {
 				errChan <- errors.New(errors.ErrorTypeGeneration, "generate output file", err).
@@ -111,7 +113,7 @@ func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
 					WithContext("template", out.Template).
 					WithContext("generation_mode", "concurrent")
 			}
-		}(i, output)
+		}(i, &cfg.Outputs[i])
 	}
 
 	// Wait for all goroutines to complete
@@ -141,11 +143,11 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 			WithSuggestion("Available outputs: %v", g.getOutputFileNames(cfg.Outputs))
 	}
 
-	return g.writeOutputFile(*targetOutput, templateData)
+	return g.writeOutputFile(targetOutput, templateData)
 }
 
 // writeOutputFile writes output based on whether it's a file or directory.
-func (g *Generator) writeOutputFile(output config.Output, data *templates.TemplateData) error {
+func (g *Generator) writeOutputFile(output *config.Output, data *templates.TemplateData) error {
 	if output.IsDirectory() {
 		return g.writeDirectoryOutput(output, data)
 	}
@@ -153,7 +155,7 @@ func (g *Generator) writeOutputFile(output config.Output, data *templates.Templa
 }
 
 // writeSingleFile writes a single output file.
-func (g *Generator) writeSingleFile(output config.Output, data *templates.TemplateData) error {
+func (g *Generator) writeSingleFile(output *config.Output, data *templates.TemplateData) error {
 	// Set the file information for header generation
 	data.ConfigFile = g.configFile
 	data.OutputFile = output.GetPath()
@@ -182,7 +184,7 @@ func (g *Generator) writeSingleFile(output config.Output, data *templates.Templa
 }
 
 // writeDirectoryOutput writes multiple files to a directory based on content type.
-func (g *Generator) writeDirectoryOutput(output config.Output, data *templates.TemplateData) error {
+func (g *Generator) writeDirectoryOutput(output *config.Output, data *templates.TemplateData) error {
 	outputType := output.GetOutputType()
 	namingScheme := output.GetNamingScheme()
 	dirPath := output.GetPath()
@@ -196,9 +198,9 @@ func (g *Generator) writeDirectoryOutput(output config.Output, data *templates.T
 	}
 
 	switch outputType {
-	case "agents":
+	case "agent":
 		return g.writeAgentFiles(dirPath, namingScheme, output, data)
-	case "rules":
+	case "rule":
 		// For rules in a directory, write all rules to a single file
 		return g.writeRulesFile(dirPath, namingScheme, output, data)
 	default:
@@ -207,18 +209,44 @@ func (g *Generator) writeDirectoryOutput(output config.Output, data *templates.T
 }
 
 // writeAgentFiles writes individual agent files to a directory.
-func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output config.Output, data *templates.TemplateData) error {
-	for i, agent := range data.Agents {
+func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output *config.Output, data *templates.TemplateData) error {
+	for i := range data.Agents {
+		agent := &data.Agents[i]
+		// Sanitize agent name for filename
+		sanitizedName := sanitizeFilename(agent.Name)
+
 		// Generate filename from naming scheme
-		filename := strings.ReplaceAll(namingScheme, "{name}", agent.Name)
+		filename := namingScheme
+		filename = strings.ReplaceAll(filename, "{name}", sanitizedName)
 		filename = strings.ReplaceAll(filename, "{type}", "agent")
-		filename = strings.ReplaceAll(filename, "{index}", fmt.Sprintf("%d", i+1))
+		filename = strings.ReplaceAll(filename, "{priority}", fmt.Sprintf("%d", agent.Priority))
+
+		// Handle formatted index patterns like {index:03d}
+		if strings.Contains(filename, "{index:") {
+			// Extract format specifier
+			start := strings.Index(filename, "{index:")
+			end := strings.Index(filename[start:], "}") + start
+			formatSpec := filename[start+7 : end]
+			formatted := fmt.Sprintf("%0"+formatSpec, i+1)
+			filename = filename[:start] + formatted + filename[end+1:]
+		} else {
+			filename = strings.ReplaceAll(filename, "{index}", fmt.Sprintf("%d", i+1))
+		}
+
+		// Handle formatted priority patterns like {priority:02d}
+		if strings.Contains(filename, "{priority:") {
+			start := strings.Index(filename, "{priority:")
+			end := strings.Index(filename[start:], "}") + start
+			formatSpec := filename[start+10 : end]
+			formatted := fmt.Sprintf("%0"+formatSpec, agent.Priority)
+			filename = filename[:start] + formatted + filename[end+1:]
+		}
 
 		filePath := filepath.Join(dirPath, filename)
 
 		// Create agent-specific template data
 		agentData := *data
-		agentData.Agents = []config.Agent{agent}
+		agentData.Agents = []config.Agent{*agent}
 		agentData.OutputFile = filePath
 
 		// Render agent template
@@ -242,7 +270,7 @@ func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output config.
 }
 
 // writeRulesFile writes all rules to a single file in a directory.
-func (g *Generator) writeRulesFile(dirPath, namingScheme string, output config.Output, data *templates.TemplateData) error {
+func (g *Generator) writeRulesFile(dirPath, namingScheme string, output *config.Output, data *templates.TemplateData) error {
 	// Generate filename from naming scheme
 	// Use project name or "rules" as default name
 	name := "rules"
@@ -251,35 +279,54 @@ func (g *Generator) writeRulesFile(dirPath, namingScheme string, output config.O
 	}
 
 	filename := strings.ReplaceAll(namingScheme, "{name}", name)
-	filename = strings.ReplaceAll(filename, "{type}", "rules")
+	filename = strings.ReplaceAll(filename, "{type}", "rule")
 	filename = strings.ReplaceAll(filename, "{index}", "1")
+
+	// Handle formatted index patterns
+	if strings.Contains(filename, "{index:") {
+		start := strings.Index(filename, "{index:")
+		end := strings.Index(filename[start:], "}") + start
+		formatSpec := filename[start+7 : end]
+		formatted := fmt.Sprintf("%0"+formatSpec, 1)
+		filename = filename[:start] + formatted + filename[end+1:]
+	}
 	filePath := filepath.Join(dirPath, filename)
 
 	// Update output path for single file write
-	singleOutput := output
+	singleOutput := *output
 	singleOutput.Path = filePath
-	return g.writeSingleFile(singleOutput, data)
+	return g.writeSingleFile(&singleOutput, data)
 }
 
 // renderAgentTemplate renders a template specifically for an agent.
-func (g *Generator) renderAgentTemplate(output config.Output, agent config.Agent, data *templates.TemplateData) (string, error) {
-	// Generate agent frontmatter
-	frontmatter := "---\n"
-	frontmatter += fmt.Sprintf("name: %s\n", agent.Name)
-	frontmatter += fmt.Sprintf("description: %s\n", agent.Description)
-	if len(agent.Tools) > 0 {
-		frontmatter += "tools:\n"
-		for _, tool := range agent.Tools {
-			frontmatter += fmt.Sprintf("  - %s\n", tool)
-		}
+func (g *Generator) renderAgentTemplate(output *config.Output, agent *config.Agent, data *templates.TemplateData) (string, error) {
+	// Create frontmatter data structure
+	frontmatterData := map[string]interface{}{
+		"name":        agent.Name,
+		"description": agent.Description,
 	}
-	frontmatter += "---\n\n"
+	if len(agent.Tools) > 0 {
+		frontmatterData["tools"] = agent.Tools
+	}
+
+	// Marshal to YAML
+	yamlBytes, err := yaml.Marshal(frontmatterData)
+	if err != nil {
+		return "", errors.New(errors.ErrorTypeGeneration, "marshal agent frontmatter", err).
+			WithContext("agent_name", agent.Name)
+	}
+
+	frontmatter := "---\n" + string(yamlBytes) + "---\n\n"
 
 	// Get the system prompt
 	var systemPrompt string
 	if agent.Template != "" {
+		// Create a temporary output with the agent's template
+		agentOutput := &config.Output{
+			Template: agent.Template,
+		}
 		// Render template if specified
-		renderedPrompt, err := g.renderTemplate(output, data)
+		renderedPrompt, err := g.renderTemplate(agentOutput, data)
 		if err != nil {
 			return "", err
 		}
@@ -289,6 +336,22 @@ func (g *Generator) renderAgentTemplate(output config.Output, agent config.Agent
 	}
 
 	return frontmatter + systemPrompt, nil
+}
+
+// sanitizeFilename removes or replaces characters that are problematic in filenames
+func sanitizeFilename(name string) string {
+	// Replace path separators and other problematic characters
+	name = strings.ReplaceAll(name, "/", "-")
+	name = strings.ReplaceAll(name, "\\", "-")
+	name = strings.ReplaceAll(name, "..", "")
+	name = strings.ReplaceAll(name, ":", "-")
+	name = strings.ReplaceAll(name, " ", "-")
+
+	// Remove any remaining path elements
+	name = filepath.Base(name)
+
+	// Convert to lowercase for consistency
+	return strings.ToLower(name)
 }
 
 // shouldWriteFile determines if a file should be written by comparing content hashes.
@@ -353,7 +416,7 @@ func (*Generator) getOutputFileNames(outputs []config.Output) []string {
 }
 
 // renderTemplate renders a template for the given output configuration.
-func (g *Generator) renderTemplate(output config.Output, data *templates.TemplateData) (string, error) {
+func (g *Generator) renderTemplate(output *config.Output, data *templates.TemplateData) (string, error) {
 	templateName := "default"
 	if output.Template != "" {
 		templateName = output.Template
@@ -520,7 +583,7 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 	templateData.OutputFile = targetOutput.GetPath()
 
 	// Render the template
-	content, err := g.renderTemplate(*targetOutput, templateData)
+	content, err := g.renderTemplate(targetOutput, templateData)
 	if err != nil {
 		return "", err
 	}
@@ -541,7 +604,8 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 	templateData := templates.NewTemplateData(cfg)
 	results := make(map[string]string)
 
-	for i, output := range cfg.Outputs {
+	for i := range cfg.Outputs {
+		output := &cfg.Outputs[i]
 		// Set the file information for header generation
 		templateData.ConfigFile = g.configFile
 		templateData.OutputFile = output.GetPath()

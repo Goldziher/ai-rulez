@@ -1,0 +1,58 @@
+metadata:
+  name: "Agent Integration Test"
+  version: "1.0.0"
+  description: "Testing agent generation with various configurations"
+
+outputs:
+  - path: ".claude/agents/"
+    type: "agent"
+  - path: "CLAUDE.md"
+    type: "rule"
+
+rules:
+  - name: "Code Quality"
+    priority: 10
+    content: "Maintain high code quality standards"
+  - name: "Testing"
+    priority: 8
+    content: "Write comprehensive tests"
+
+agents:
+  - name: "code-reviewer"
+    description: "Reviews code for quality and best practices"
+    priority: 10
+    tools:
+      - "Read"
+      - "Write"
+      - "Grep"
+    system_prompt: |
+      You are an expert code reviewer. Focus on:
+      - Code quality and maintainability
+      - Performance implications
+      - Security concerns
+      - Best practices
+  
+  - name: "test-writer"
+    description: "Writes comprehensive unit and integration tests"
+    priority: 8
+    tools:
+      - "Read"
+      - "Write"
+      - "Execute"
+    system_prompt: "Write thorough tests with good coverage"
+  
+  - name: "doc-generator"
+    description: "Generates clear and comprehensive documentation"
+    priority: 5
+    template: |
+      Generate documentation that is:
+      - Clear and concise
+      - Well-structured
+      - Includes examples
+  
+  - name: "security-auditor"
+    description: "Audits code for security vulnerabilities"
+    tools:
+      - "Read"
+      - "Grep"
+      - "WebSearch"
