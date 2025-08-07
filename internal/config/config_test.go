@@ -211,3 +211,187 @@ func TestConfigValidate(t *testing.T) {
 		})
 	}
 }
+
+func TestOutput_GetPath(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		output   config.Output
+		expected string
+	}{
+		{
+			name: "uses path when set",
+			output: config.Output{
+				Path: "/path/to/output/",
+				File: "file.md",
+			},
+			expected: "/path/to/output/",
+		},
+		{
+			name: "falls back to file when path empty",
+			output: config.Output{
+				File: "file.md",
+			},
+			expected: "file.md",
+		},
+		{
+			name: "path takes precedence",
+			output: config.Output{
+				Path: "agents/",
+				File: "old.md",
+			},
+			expected: "agents/",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.output.GetPath()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestOutput_IsDirectory(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		output   config.Output
+		expected bool
+	}{
+		{
+			name: "directory with trailing slash in path",
+			output: config.Output{
+				Path: "/path/to/output/",
+			},
+			expected: true,
+		},
+		{
+			name: "file without trailing slash in path",
+			output: config.Output{
+				Path: "/path/to/file.md",
+			},
+			expected: false,
+		},
+		{
+			name: "directory with trailing slash in file",
+			output: config.Output{
+				File: "output/",
+			},
+			expected: true,
+		},
+		{
+			name: "file without trailing slash",
+			output: config.Output{
+				File: "README.md",
+			},
+			expected: false,
+		},
+		{
+			name:     "empty path and file",
+			output:   config.Output{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.output.IsDirectory()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestOutput_GetOutputType(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		output   config.Output
+		expected string
+	}{
+		{
+			name: "explicitly set type",
+			output: config.Output{
+				Type: "agent",
+			},
+			expected: "agent",
+		},
+		{
+			name:     "default to rule when not set",
+			output:   config.Output{},
+			expected: "rule",
+		},
+		{
+			name: "custom type",
+			output: config.Output{
+				Type: "custom",
+			},
+			expected: "custom",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.output.GetOutputType()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestOutput_GetNamingScheme(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		output   config.Output
+		expected string
+	}{
+		{
+			name: "explicitly set naming scheme",
+			output: config.Output{
+				NamingScheme: "{type}-{name}.md",
+			},
+			expected: "{type}-{name}.md",
+		},
+		{
+			name: "default naming scheme for agents",
+			output: config.Output{
+				Type: "agent",
+			},
+			expected: "{name}.md",
+		},
+		{
+			name: "default naming scheme for rules",
+			output: config.Output{
+				Type: "rule",
+			},
+			expected: "{type}.md",
+		},
+		{
+			name:     "default when type not set",
+			output:   config.Output{},
+			expected: "{type}.md",
+		},
+		{
+			name: "custom naming with index",
+			output: config.Output{
+				NamingScheme: "{index:03d}-{name}.yaml",
+			},
+			expected: "{index:03d}-{name}.yaml",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			result := tt.output.GetNamingScheme()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
