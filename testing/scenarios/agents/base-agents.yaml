@@ -1,0 +1,14 @@
+agents:
+  - name: "base-reviewer"
+    description: "Base code reviewer"
+    priority: 5
+    tools:
+      - "read"
+    system_prompt: "Base reviewer prompt"
+  
+  - name: "base-tester"
+    description: "Base test writer"
+    priority: 3
+    tools:
+      - "write"
+    template: "default"

@@ -21,9 +21,9 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
 	cfg := &config.Config{
 		Outputs: []config.Output{
-			{File: "CLAUDE.md"},
-			{File: ".cursorrules"},
-			{File: ".windsurfrules"},
+			{Path: "CLAUDE.md"},
+			{Path: ".cursorrules"},
+			{Path: ".windsurfrules"},
 		},
 	}
 

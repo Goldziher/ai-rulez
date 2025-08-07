@@ -1,0 +1,117 @@
+{
+  "name": "Agents and Directory Outputs",
+  "description": "Tests for agent generation and directory output features",
+  "tests": [
+    {
+      "name": "Generate agents to directory",
+      "description": "Generate agent files to .claude/agents/ directory",
+      "working_dir": "scenarios/agents",
+      "command": ["generate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "files": {
+        ".claude/agents/code-reviewer.md": "name: code-reviewer",
+        ".claude/agents/test-generator.md": "name: test-generator",
+        ".claude/agents/doc-writer.md": "name: doc-writer"
+      }
+    },
+    {
+      "name": "Agent file content verification",
+      "description": "Verify agent files contain correct frontmatter and content",
+      "working_dir": "scenarios/agents",
+      "command": ["generate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "files": {
+        ".claude/agents/code-reviewer.md": "tools:\n  - read\n  - analyze\n  - comment\n---\n\nYou are an expert code reviewer",
+        ".claude/agents/test-generator.md": "description: Generates comprehensive test cases",
+        ".claude/agents/doc-writer.md": "technical documentation specialist"
+      }
+    },
+    {
+      "name": "Directory outputs with custom naming",
+      "description": "Generate files to directories with custom naming schemes",
+      "working_dir": "scenarios/directory-outputs",
+      "command": ["generate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "files": {
+        "docs/project-rules.md": "Architecture",
+        "ai/agents/agent_1_architect.yaml": "name: architect",
+        "ai/agents/agent_2_optimizer.yaml": "name: optimizer",
+        ".config/ai/agent_architect.md": "System architecture specialist",
+        ".config/ai/agent_optimizer.md": "Performance optimization expert"
+      }
+    },
+    {
+      "name": "Mixed file and directory outputs",
+      "description": "Generate both individual files and directory outputs",
+      "working_dir": "scenarios/directory-outputs",
+      "command": ["generate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "files": {
+        "README.md": "# Directory Output Test",
+        "docs/project-rules.md": "Follow clean architecture principles"
+      }
+    },
+    {
+      "name": "Agent includes and merging",
+      "description": "Test agent merging with includes",
+      "working_dir": "scenarios/agents",
+      "command": ["generate", "with-includes.yaml"],
+      "exit_code": 0,
+      "files": {
+        ".claude/agents/base-reviewer.md": "Enhanced code reviewer",
+        ".claude/agents/base-tester.md": "Base test writer",
+        ".claude/agents/performance-analyzer.md": "Analyzes performance issues"
+      }
+    },
+    {
+      "name": "Empty agents directory creation",
+      "description": "Create agent directory even when no agents defined",
+      "working_dir": "scenarios",
+      "command": ["generate", "-c", "empty-project/ai_rules.yaml"],
+      "exit_code": 0,
+      "setup": [
+        "mkdir -p empty-project",
+        "echo 'metadata:\n  name: \"Empty Test\"\noutputs:\n  - path: \".claude/agents/\"\n    type: \"agents\"' > empty-project/ai_rules.yaml"
+      ],
+      "cleanup": [
+        "rm -rf empty-project/.claude"
+      ]
+    },
+    {
+      "name": "Validate agent configuration",
+      "description": "Validate configuration with agents",
+      "working_dir": "scenarios/agents",
+      "command": ["validate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "expected_out": "valid"
+    },
+    {
+      "name": "Validate directory output configuration",
+      "description": "Validate configuration with directory outputs",
+      "working_dir": "scenarios/directory-outputs",
+      "command": ["validate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "expected_out": "valid"
+    },
+    {
+      "name": "Path and file field compatibility",
+      "description": "Test backward compatibility with file field",
+      "working_dir": "scenarios",
+      "command": ["generate", "-c", "basic/ai_rules.yaml"],
+      "exit_code": 0,
+      "files": {
+        "basic/CLAUDE.md": "# Test Project"
+      }
+    },
+    {
+      "name": "Agent priority sorting",
+      "description": "Verify agents are sorted by priority in output",
+      "working_dir": "scenarios/agents",
+      "command": ["generate", "ai_rules.yaml"],
+      "exit_code": 0,
+      "files": {
+        "CLAUDE.md": "code-reviewer.*test-generator.*doc-writer"
+      }
+    }
+  ]
+}

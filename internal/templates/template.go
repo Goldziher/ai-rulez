@@ -27,10 +27,12 @@ type TemplateData struct {
 	Description  string
 	Rules        []config.Rule
 	Sections     []config.Section
+	Agents       []config.Agent
 	AllContent   []ContentItem // Rules and sections combined and sorted
 	Timestamp    time.Time
 	RuleCount    int
 	SectionCount int
+	AgentCount   int
 	// Header generation fields
 	ConfigFile string // Source configuration file name
 	OutputFile string // Target output file name
@@ -41,11 +43,13 @@ func NewTemplateData(cfg *config.Config) *TemplateData {
 	// Merge main rules with user_rulez if present
 	allRules := cfg.Rules
 	allSections := cfg.Sections
+	allAgents := cfg.Agents
 
 	if cfg.UserRulez != nil {
 		// Merge user rules (user rules override main rules with same name)
 		allRules = config.MergeRules(allRules, cfg.UserRulez.Rules)
 		allSections = config.MergeSections(allSections, cfg.UserRulez.Sections)
+		allAgents = config.MergeAgents(allAgents, cfg.UserRulez.Agents)
 	}
 
 	// Create a copy of rules and sections to sort
@@ -87,16 +91,23 @@ func NewTemplateData(cfg *config.Config) *TemplateData {
 	sortRulesByPriority(sortedRules)
 	sortSectionsByPriority(sortedSections)
 
+	// Sort agents by priority
+	sortedAgents := make([]config.Agent, len(allAgents))
+	copy(sortedAgents, allAgents)
+	sortAgentsByPriority(sortedAgents)
+
 	return &TemplateData{
 		ProjectName:  cfg.Metadata.Name,
 		Version:      cfg.Metadata.Version,
 		Description:  cfg.Metadata.Description,
 		Rules:        sortedRules,
 		Sections:     sortedSections,
+		Agents:       sortedAgents,
 		AllContent:   allContent,
 		Timestamp:    time.Now(),
 		RuleCount:    len(allRules),
 		SectionCount: len(allSections),
+		AgentCount:   len(allAgents),
 	}
 }
 
@@ -325,5 +336,15 @@ func sortContent(items []ContentItem) {
 			return items[i].Priority > items[j].Priority
 		}
 		return items[i].Title < items[j].Title
+	})
+}
+
+// sortAgentsByPriority sorts agents by priority (descending) then by name (ascending).
+func sortAgentsByPriority(agents []config.Agent) {
+	sort.Slice(agents, func(i, j int) bool {
+		if agents[i].Priority != agents[j].Priority {
+			return agents[i].Priority > agents[j].Priority
+		}
+		return agents[i].Name < agents[j].Name
 	})
 }
