@@ -34,6 +34,11 @@ func TestCLIIntegration(t *testing.T) {
 		suite := loadTestSuite(t, "suites/error_handling.json")
 		runTestSuite(t, suite, tempDir)
 	})
+	
+	t.Run("Agents and Directory Outputs", func(t *testing.T) {
+		suite := loadTestSuite(t, "suites/agents_and_directories.json")
+		runTestSuite(t, suite, tempDir)
+	})
 }
 
 func copyTestScenarios(t *testing.T, destDir string) error {
@@ -51,6 +56,8 @@ func copyTestScenarios(t *testing.T, destDir string) error {
 		"scenarios/with-includes",
 		"scenarios/nested-includes",
 		"scenarios/invalid",
+		"scenarios/agents",
+		"scenarios/directory-outputs",
 		"includes",
 		"templates",
 	}
