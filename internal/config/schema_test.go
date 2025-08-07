@@ -271,6 +271,33 @@ sections:
 			wantErr: true,
 			errMsg:  "sections.0.priority",
 		},
+		{
+			name: "valid_remote_includes",
+			yaml: `
+metadata:
+  name: "Test"
+outputs:
+  - file: "output.md"
+includes:
+  - "local-file.yaml"
+  - "https://example.com/config.yaml"
+  - "http://example.com/rules.yaml"
+`,
+			wantErr: false,
+		},
+		{
+			name: "invalid_include_url_scheme",
+			yaml: `
+metadata:
+  name: "Test"
+outputs:
+  - file: "output.md"
+includes:
+  - "ftp://example.com/config.yaml"
+`,
+			wantErr: true,
+			errMsg:  "includes.0",
+		},
 	}
 
 	for _, tt := range tests {
