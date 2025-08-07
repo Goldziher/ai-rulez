@@ -47,6 +47,7 @@ type Client struct {
 	resty     *resty.Client
 	validator URLValidatorInterface
 	config    *HTTPConfig
+	cache     *Cache
 }
 
 // NewClient creates a new HTTP client with the specified configuration
@@ -57,18 +58,18 @@ func NewClient(config *HTTPConfig) *Client {
 
 	// Create resty client with configuration
 	client := resty.New()
-	
+
 	// Set timeout
 	client.SetTimeout(config.Timeout)
-	
+
 	// Set User-Agent
 	client.SetHeader("User-Agent", config.UserAgent)
-	
+
 	// Set custom headers
 	for key, value := range config.Headers {
 		client.SetHeader(key, value)
 	}
-	
+
 	// Configure redirects with SSRF validation
 	validator := NewURLValidator()
 	client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(config.MaxRedirects))
@@ -76,7 +77,7 @@ func NewClient(config *HTTPConfig) *Client {
 		// Validate URL for SSRF protection
 		return validator.Validate(r.URL)
 	})
-	
+
 	// Add response size validation hook
 	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
 		if int64(len(r.Body())) > config.MaxBodySize {
@@ -89,6 +90,7 @@ func NewClient(config *HTTPConfig) *Client {
 		resty:     client,
 		validator: validator,
 		config:    config,
+		cache:     NewCache(nil), // Use default cache config
 	}
 }
 
@@ -97,6 +99,13 @@ func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {
 	// Validate URL for SSRF protection (done again in OnBeforeRequest hook)
 	if err := c.validator.Validate(url); err != nil {
 		return nil, fmt.Errorf("URL validation failed: %w", err)
+	}
+
+	// Check cache first
+	if c.cache != nil {
+		if entry, found := c.cache.Get(ctx, url); found {
+			return entry.Content, nil
+		}
 	}
 
 	// Execute GET request with context
@@ -112,7 +121,20 @@ func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {
 		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode(), resp.Status())
 	}
 
-	return resp.Body(), nil
+	body := resp.Body()
+
+	// Store in cache if available
+	if c.cache != nil {
+		etag := resp.Header().Get("ETag")
+		lastModified := resp.Header().Get("Last-Modified")
+		if err := c.cache.Set(ctx, url, body, etag, lastModified); err != nil {
+			// Log error but don't fail the request
+			// In a production implementation, you might want to use a logger here
+			_ = err
+		}
+	}
+
+	return body, nil
 }
 
 // FetchWithHeaders retrieves content with custom headers for this request
@@ -121,6 +143,9 @@ func (c *Client) FetchWithHeaders(ctx context.Context, url string, headers map[s
 	if err := c.validator.Validate(url); err != nil {
 		return nil, fmt.Errorf("URL validation failed: %w", err)
 	}
+
+	// Note: We don't cache requests with custom headers as they might affect the response
+	// In a more sophisticated implementation, we could include headers in the cache key
 
 	// Execute GET request with custom headers and context
 	resp, err := c.resty.R().
