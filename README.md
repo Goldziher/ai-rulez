@@ -451,7 +451,7 @@ ai-rulez generate --update-gitignore
 ai-rulez init "My Project"
 
 # Start MCP server for AI assistant integration
-ai-rulez mcp
+npx ai-rulez mcp
 
 # Show version
 ai-rulez version
@@ -498,6 +498,10 @@ ai-rulez includes a built-in MCP (Model Context Protocol) server that allows AI 
 ### Starting the MCP Server
 
 ```bash
+# Using npx (recommended - no installation needed)
+npx ai-rulez mcp
+
+# Or if installed globally
 ai-rulez mcp
 ```
 
@@ -518,20 +522,29 @@ The MCP server exposes these tools:
 
 ### Configuring Claude Desktop
 
+#### Quick Setup with Claude CLI (Recommended)
+```bash
+# Add ai-rulez MCP server using Claude's CLI
+claude mcp add ai-rulez npx ai-rulez@latest mcp
+```
+
+#### Manual Configuration
 Add to your Claude Desktop MCP configuration:
 
+##### Using npx (no installation required)
 ```json
 {
   "mcpServers": {
     "ai-rulez": {
       "command": "npx",
-      "args": ["ai-rulez", "mcp"]
+      "args": ["ai-rulez@latest", "mcp"]
     }
   }
 }
 ```
 
-Or if you have ai-rulez installed globally:
+##### Alternative: Global installation
+If you have ai-rulez installed globally:
 
 ```json
 {
@@ -590,6 +603,14 @@ Validate configuration file against schema.
 
 ### `ai-rulez mcp`
 Start MCP server for AI assistant integration. Runs in stdio mode for communication with MCP-compatible tools.
+
+```bash
+# Recommended: using npx (no installation required)
+npx ai-rulez mcp
+
+# Alternative: if globally installed
+ai-rulez mcp
+```
 
 ### `ai-rulez add`
 Add new items to configuration. Has three subcommands:
