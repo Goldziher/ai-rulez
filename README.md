@@ -11,7 +11,8 @@ A high-performance CLI tool for generating configuration files for Claude, Curso
 - 📝 **Single Source of Truth**: Maintain all your AI rules in one YAML configuration
 - 🎯 **Smart Templates**: Built-in and custom templates with full Go template syntax
 - 🔍 **Validation**: Comprehensive configuration validation with JSON Schema
-- 📦 **Modular Rules**: Include system for rule composition with circular dependency detection  
+- 📦 **Modular Rules**: Include system for rule composition with circular dependency detection
+- 🌐 **Remote Includes**: Support for HTTP/HTTPS includes from GitHub, GitLab, APIs, and more
 - 📚 **Sections Support**: Mix informative content (docs, guidelines) with rules
 - 🔄 **Git Integration**: Perfect for pre-commit hooks and CI/CD workflows
 - ⚡ **Incremental Generation**: Only writes files when content changes (performance optimized)
@@ -126,6 +127,66 @@ ai-rulez init --template react "My React App"
 ai-rulez init --template typescript "My TS Project"
 ```
 
+## Remote Configuration Support
+
+ai-rulez supports remote configuration includes via HTTP/HTTPS URLs, enabling you to:
+
+- **Share configurations** across teams and projects
+- **Version control** rules in Git repositories (GitHub, GitLab, etc.)
+- **Centralize** common rules from APIs or content management systems
+- **Compose** configurations from multiple remote sources
+
+### Remote URLs Examples
+
+```yaml
+# GitHub raw content
+includes:
+  - "https://raw.githubusercontent.com/myorg/ai-rules/main/common.yaml"
+  - "https://raw.githubusercontent.com/myorg/ai-rules/main/typescript.yaml"
+
+# GitLab raw content
+includes:
+  - "https://gitlab.com/myorg/standards/-/raw/main/coding-rules.yaml"
+
+# API endpoints
+includes:
+  - "https://api.mycompany.com/ai-rules/backend-standards.yaml"
+  - "https://config.myteam.dev/rules/react.yaml"
+
+# Mix local and remote
+includes:
+  - "./local-overrides.yaml"  # Local file
+  - "https://shared.example.com/team-rules.yaml"  # Remote URL
+```
+
+### Security Features
+
+- **SSRF Protection**: Blocks requests to private IPs, localhost, and metadata services
+- **Content Validation**: Validates YAML format and structure
+- **Size Limits**: Prevents excessively large remote files (10MB default)
+- **Timeout Protection**: Configurable timeouts prevent hanging requests
+
+### Caching System
+
+Remote configurations are cached at multiple levels:
+
+1. **Memory Cache**: Fast in-memory storage for repeated access
+2. **Disk Cache**: Persistent storage across runs
+3. **HTTP Cache**: Respects ETags and Last-Modified headers for efficiency
+
+### Error Handling
+
+Robust error handling with helpful suggestions:
+
+```
+Error: Failed to fetch remote config from https://api.example.com/rules.yaml
+Reason: HTTP 404: Not Found
+Suggestions:
+- Verify the URL exists and is accessible
+- Check if the file path is correct
+- Ensure you have permission to access the resource
+```
+
 ## Configuration Format
 
 ### Basic Example
@@ -153,6 +214,39 @@ rules:
   - name: "Testing"
     priority: 5
     content: "Write unit tests for all new features"
+```
+
+### With Remote Includes
+```yaml
+metadata:
+  name: "Multi-Team Project"
+  version: "2.0.0"
+
+# Mix local and remote configurations
+includes:
+  # Team-specific rules from GitHub
+  - "https://raw.githubusercontent.com/myorg/standards/main/backend-rules.yaml"
+  - "https://raw.githubusercontent.com/myorg/standards/main/security-rules.yaml"
+  
+  # API standards from company server
+  - "https://api.mycompany.com/config/coding-standards.yaml"
+  
+  # Local project-specific overrides
+  - "./local-rules.yaml"
+
+outputs:
+  - path: "CLAUDE.md"
+    template: "claude"
+  - path: ".cursorrules"
+    template: "cursor"
+
+# Local rules that supplement remote ones
+rules:
+  - name: "Local Project Rules"
+    priority: 15  # Higher priority than remote rules
+    content: |
+      - Use project-specific naming conventions
+      - Follow local database schema patterns
 ```
 
 ### With Sections and Templates
@@ -295,9 +389,11 @@ rules:
   - `template`: Custom template for agent output
 
 - **includes**: External rule files to include
-  - Paths relative to config file
-  - Supports nested includes
-  - Circular dependencies detected
+  - Local paths (relative to config file) or remote URLs
+  - Supports HTTP/HTTPS URLs (GitHub, GitLab, APIs, etc.)
+  - Nested includes with circular dependency detection
+  - SSRF protection for secure remote fetching
+  - Multi-level caching (memory, disk, HTTP headers)
 
 ### Local Configuration Overrides
 
