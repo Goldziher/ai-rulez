@@ -1,64 +1,82 @@
 package remote
 
 import (
-	"crypto/tls"
 	"fmt"
-	"net"
-	"net/http"
-	"time"
+	
+	"github.com/go-resty/resty/v2"
 )
 
 // NewTestClient creates a client that bypasses URL validation for testing purposes
 func NewTestClient(config *HTTPConfig) *Client {
-	client := NewClient(config)
+	if config == nil {
+		config = DefaultHTTPConfig()
+	}
 
-	// Replace validator with a test validator that allows localhost
-	client.validator = &testURLValidator{}
+	// Create resty client with configuration but NO OnBeforeRequest hook
+	client := resty.New()
+	
+	// Set timeout
+	client.SetTimeout(config.Timeout)
+	
+	// Set User-Agent
+	client.SetHeader("User-Agent", config.UserAgent)
+	
+	// Set custom headers
+	for key, value := range config.Headers {
+		client.SetHeader(key, value)
+	}
+	
+	// Configure redirects without SSRF validation (for testing)
+	client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(config.MaxRedirects))
+	
+	// Add response size validation hook (same as production client)
+	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
+		if int64(len(r.Body())) > config.MaxBodySize {
+			return fmt.Errorf("response body too large (limit: %d bytes)", config.MaxBodySize)
+		}
+		return nil
+	})
 
-	return client
+	return &Client{
+		resty:     client,
+		validator: &testURLValidator{},
+		config:    config,
+	}
 }
 
-// NewTestClientWithRedirectValidation creates a test client that still validates redirects
+// NewTestClientWithRedirectValidation creates a test client that allows redirects but bypasses URL validation
 func NewTestClientWithRedirectValidation(config *HTTPConfig) *Client {
 	if config == nil {
 		config = DefaultHTTPConfig()
 	}
 
-	// Create custom transport with timeouts and connection limits
-	transport := &http.Transport{
-		DialContext: (&net.Dialer{
-			Timeout:   config.ConnectTimeout,
-			KeepAlive: 30 * time.Second,
-		}).DialContext,
-		TLSClientConfig: config.TLSConfig,
-
-		// Connection pool settings
-		MaxIdleConns:        10,
-		MaxIdleConnsPerHost: 2,
-		IdleConnTimeout:     60 * time.Second,
-
-		// Timeouts
-		TLSHandshakeTimeout:   10 * time.Second,
-		ResponseHeaderTimeout: config.ResponseTimeout,
-
-		// Disable HTTP/2 for better compatibility and predictable behavior
-		TLSNextProto: make(map[string]func(authority string, c *tls.Conn) http.RoundTripper),
+	// Create resty client with configuration
+	client := resty.New()
+	
+	// Set timeout
+	client.SetTimeout(config.Timeout)
+	
+	// Set User-Agent
+	client.SetHeader("User-Agent", config.UserAgent)
+	
+	// Set custom headers
+	for key, value := range config.Headers {
+		client.SetHeader(key, value)
 	}
-
-	// Create HTTP client with custom transport
-	httpClient := &http.Client{
-		Transport: transport,
-		Timeout:   config.Timeout,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= config.MaxRedirects {
-				return fmt.Errorf("too many redirects (limit: %d)", config.MaxRedirects)
-			}
-			return nil // Allow all redirects in tests
-		},
-	}
+	
+	// Configure redirects without SSRF validation (for testing)
+	client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(config.MaxRedirects))
+	
+	// Add response size validation hook (same as production client)
+	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
+		if int64(len(r.Body())) > config.MaxBodySize {
+			return fmt.Errorf("response body too large (limit: %d bytes)", config.MaxBodySize)
+		}
+		return nil
+	})
 
 	return &Client{
-		http:      httpClient,
+		resty:     client,
 		validator: &testURLValidator{},
 		config:    config,
 	}
