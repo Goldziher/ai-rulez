@@ -4,7 +4,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/remote"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -174,7 +176,7 @@ invalid: yaml: content: [unclosed
 
 		_, err := loader.loadRemoteConfig(server.URL + "/invalid-yaml.yaml")
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "failed to parse")
+		assert.Contains(t, err.Error(), "parse remote config")
 	})
 }
 
@@ -320,5 +322,146 @@ agents:
 		_, err := loader.loadConfig(testURL)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "circular include")
+	})
+}
+
+// TestConfigLoader_ErrorHandling tests error handling in remote config loading
+func TestConfigLoader_ErrorHandling(t *testing.T) {
+	t.Run("remote_fetch_errors", func(t *testing.T) {
+		// Create test server with error responses
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			switch r.URL.Path {
+			case "/404-config.yaml":
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte("Config not found"))
+			case "/500-config.yaml":
+				w.WriteHeader(http.StatusInternalServerError)
+				w.Write([]byte("Server error"))
+			case "/timeout-config.yaml":
+				// Simulate slow response
+				time.Sleep(200 * time.Millisecond)
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("rules: []"))
+			default:
+				http.NotFound(w, r)
+			}
+		}))
+		defer server.Close()
+
+		loader := &configLoader{
+			visited:      make(map[string]bool),
+			baseDir:      "/tmp",
+			remoteClient: remote.NewTestClient(nil),
+		}
+
+		t.Run("404_error", func(t *testing.T) {
+			_, err := loader.loadRemoteConfig(server.URL + "/404-config.yaml")
+			require.Error(t, err)
+
+			var richErr *errors.RichError
+			require.ErrorAs(t, err, &richErr)
+			assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
+			assert.Equal(t, "fetch remote config", richErr.Op)
+			assert.Equal(t, server.URL+"/404-config.yaml", richErr.Path)
+		})
+
+		t.Run("500_error", func(t *testing.T) {
+			_, err := loader.loadRemoteConfig(server.URL + "/500-config.yaml")
+			require.Error(t, err)
+
+			var richErr *errors.RichError
+			require.ErrorAs(t, err, &richErr)
+			assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
+			assert.Equal(t, "fetch remote config", richErr.Op)
+			assert.Equal(t, server.URL+"/500-config.yaml", richErr.Path)
+		})
+	})
+
+	t.Run("remote_parse_errors", func(t *testing.T) {
+		// Create test server with invalid YAML
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/yaml")
+			w.WriteHeader(http.StatusOK)
+			w.Write([]byte(`invalid: yaml: content: [unclosed`))
+		}))
+		defer server.Close()
+
+		loader := &configLoader{
+			visited:      make(map[string]bool),
+			baseDir:      "/tmp",
+			remoteClient: remote.NewTestClient(nil),
+		}
+
+		_, err := loader.loadRemoteConfig(server.URL + "/invalid.yaml")
+		require.Error(t, err)
+
+		var richErr *errors.RichError
+		require.ErrorAs(t, err, &richErr)
+		assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
+		assert.Contains(t, err.Error(), "parse remote config")
+		assert.Equal(t, server.URL+"/invalid.yaml", richErr.Path)
+		// Check that the underlying YAML error is preserved
+		assert.Contains(t, err.Error(), "yaml:")
+	})
+
+	t.Run("ssrf_protection_in_config_loading", func(t *testing.T) {
+		loader := &configLoader{
+			visited:      make(map[string]bool),
+			baseDir:      "/tmp",
+			remoteClient: remote.NewClient(nil), // Use production client for SSRF validation
+		}
+
+		testCases := []string{
+			"http://localhost:8080/config.yaml",
+			"http://127.0.0.1/config.yaml",
+			"http://192.168.1.1/config.yaml",
+			"http://169.254.169.254/config.yaml",
+		}
+
+		for _, url := range testCases {
+			t.Run(url, func(t *testing.T) {
+				_, err := loader.loadRemoteConfig(url)
+				require.Error(t, err)
+
+				var richErr *errors.RichError
+				require.ErrorAs(t, err, &richErr)
+				assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
+				assert.Equal(t, "fetch remote config", richErr.Op)
+				assert.Equal(t, url, richErr.Path)
+				assert.Contains(t, richErr.Context, "url")
+			})
+		}
+	})
+
+	t.Run("mixed_local_and_remote_error_propagation", func(t *testing.T) {
+		// Test that errors from remote includes propagate correctly
+		// through the main LoadConfigWithIncludes function
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte("Not found"))
+		}))
+		defer server.Close()
+
+		// Create main config that includes a remote file
+		loader := &configLoader{
+			visited:      make(map[string]bool),
+			baseDir:      "/tmp",
+			remoteClient: remote.NewTestClient(nil),
+		}
+
+		mainConfig := &Config{
+			Metadata: Metadata{Name: "Test", Version: "1.0.0"},
+			Includes: []string{server.URL + "/missing.yaml"},
+		}
+
+		err := loader.resolveIncludes(mainConfig, "/tmp")
+		require.Error(t, err)
+
+		// The error should propagate up as a rich error
+		var richErr *errors.RichError
+		require.ErrorAs(t, err, &richErr)
+		// The error gets wrapped again in resolveIncludes -> loadConfig
+		assert.Equal(t, errors.ErrorTypeConfig, richErr.Type)
+		assert.Equal(t, "load config", richErr.Op)
 	})
 }

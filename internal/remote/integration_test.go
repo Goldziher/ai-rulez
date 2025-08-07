@@ -129,7 +129,7 @@ rules:
 
 				_, err := client.Fetch(ctx, server.URL)
 				require.Error(t, err)
-				assert.Contains(t, err.Error(), "context deadline exceeded")
+				assert.Contains(t, err.Error(), "request timed out")
 			})
 		})
 
