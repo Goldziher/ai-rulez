@@ -156,9 +156,12 @@ func (g *Generator) writeOutputFile(output *config.Output, data *templates.Templ
 
 // writeSingleFile writes a single output file.
 func (g *Generator) writeSingleFile(output *config.Output, data *templates.TemplateData) error {
+	// Create a copy of the data to avoid race conditions in concurrent generation
+	localData := *data
 	// Set the file information for header generation
-	data.ConfigFile = g.configFile
-	data.OutputFile = output.GetPath()
+	localData.ConfigFile = g.configFile
+	localData.OutputFile = output.GetPath()
+	data = &localData
 
 	// Render the template
 	content, err := g.renderTemplate(output, data)
