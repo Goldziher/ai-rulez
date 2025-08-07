@@ -54,10 +54,22 @@
     },
     "includes": {
       "type": "array",
-      "description": "List of other ai_rules files to include",
+      "description": "List of other ai_rules files to include (local paths or remote URLs)",
       "items": {
         "type": "string",
-        "description": "Path to another ai_rules YAML file (relative to this file)"
+        "description": "Path to another ai_rules YAML file (relative to this file) or HTTP/HTTPS URL",
+        "anyOf": [
+          {
+            "pattern": "^https?://[^\\s]+$",
+            "description": "Remote HTTP/HTTPS URL to an ai_rules YAML file"
+          },
+          {
+            "not": {
+              "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://"
+            },
+            "description": "Local file path (relative or absolute) to an ai_rules YAML file"
+          }
+        ]
       },
       "uniqueItems": true
     },
@@ -393,6 +405,10 @@
         "version": "1.0.0",
         "description": "Example project configuration"
       },
+      "includes": [
+        "shared/common-rules.yaml",
+        "https://example.com/shared/team-standards.yaml"
+      ],
       "outputs": [
         {
           "path": "claude.md"

@@ -278,7 +278,7 @@ func TestCache_GenerateKey(t *testing.T) {
 	assert.Regexp(t, "^[0-9a-f]+$", key1)
 }
 
-func TestCache_ConcurrentAccess(t *testing.T) {
+func TestCache_ExtendedConcurrentAccess(t *testing.T) {
 	cache := NewCache(&CacheConfig{
 		MaxMemoryEntries: 100,
 		MemoryTTL:        1 * time.Hour,
@@ -316,7 +316,7 @@ func TestCache_ConcurrentAccess(t *testing.T) {
 	}
 }
 
-func TestCache_ErrorHandling(t *testing.T) {
+func TestCache_ExtendedErrorHandling(t *testing.T) {
 	t.Run("disabled_disk_cache", func(t *testing.T) {
 		cache := NewCache(&CacheConfig{
 			DiskCacheDir:     "", // Disabled
@@ -401,5 +401,104 @@ func BenchmarkCache_MemoryOperations(b *testing.B) {
 			url := fmt.Sprintf("https://example.com/bench/%d", i%100)
 			cache.Get(ctx, url)
 		}
+	})
+}
+
+// TestCache_ComprehensiveOperations provides extensive cache testing
+func TestCache_ComprehensiveOperations(t *testing.T) {
+	t.Run("cache_expiration_scenarios", func(t *testing.T) {
+		config := &CacheConfig{
+			MaxMemoryEntries: 10,
+			MemoryTTL:        50 * time.Millisecond,
+			DiskCacheDir:     "",
+			MaxDiskEntries:   0,
+			DiskTTL:          time.Hour,
+			RespectHTTPCache: false,
+			DefaultTTL:       time.Hour,
+		}
+		cache := NewCache(config)
+		ctx := context.Background()
+
+		url := "https://example.com/config.yaml"
+		content := []byte("expiring content")
+
+		// Store in cache
+		err := cache.Set(ctx, url, content, "", "")
+		require.NoError(t, err)
+
+		// Should be available immediately
+		entry, found := cache.Get(ctx, url)
+		assert.True(t, found)
+		assert.NotNil(t, entry)
+
+		// Wait for expiration
+		time.Sleep(100 * time.Millisecond)
+
+		// Should be expired
+		entry, found = cache.Get(ctx, url)
+		assert.False(t, found)
+		assert.Nil(t, entry)
+	})
+
+	t.Run("multiple_url_isolation", func(t *testing.T) {
+		cache := NewCache(nil)
+		ctx := context.Background()
+
+		testData := map[string][]byte{
+			"https://example.com/config1.yaml": []byte("config 1 content"),
+			"https://example.com/config2.yaml": []byte("config 2 content"),
+			"https://other.com/config.yaml":    []byte("other config content"),
+		}
+
+		// Store all entries
+		for url, content := range testData {
+			err := cache.Set(ctx, url, content, "", "")
+			require.NoError(t, err)
+		}
+
+		// Retrieve and verify isolation
+		for expectedURL, expectedContent := range testData {
+			entry, found := cache.Get(ctx, expectedURL)
+			assert.True(t, found, "URL %s should be found", expectedURL)
+			require.NotNil(t, entry)
+			assert.Equal(t, expectedContent, entry.Content)
+			assert.Equal(t, expectedURL, entry.URL)
+		}
+	})
+
+	t.Run("error_handling_scenarios", func(t *testing.T) {
+		t.Run("nil_config_default", func(t *testing.T) {
+			cache := NewCache(nil)
+			assert.NotNil(t, cache)
+			assert.NotNil(t, cache.config)
+
+			ctx := context.Background()
+			url := "https://example.com/nil-config.yaml"
+			content := []byte("nil config content")
+
+			err := cache.Set(ctx, url, content, "", "")
+			assert.NoError(t, err)
+
+			entry, found := cache.Get(ctx, url)
+			assert.True(t, found)
+			assert.NotNil(t, entry)
+		})
+
+		t.Run("empty_content_handling", func(t *testing.T) {
+			cache := NewCache(nil)
+			ctx := context.Background()
+
+			url := "https://example.com/empty.yaml"
+			emptyContent := []byte("")
+
+			err := cache.Set(ctx, url, emptyContent, "", "")
+			require.NoError(t, err)
+
+			entry, found := cache.Get(ctx, url)
+			assert.True(t, found)
+			require.NotNil(t, entry)
+			assert.Equal(t, emptyContent, entry.Content)
+			assert.Len(t, entry.Content, 0)
+		})
 	})
 }
