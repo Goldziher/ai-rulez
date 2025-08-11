@@ -6,7 +6,7 @@ toolchain go1.24.4
 
 require (
 	github.com/go-resty/resty/v2 v2.16.5
-	github.com/mark3labs/mcp-go v0.36.0
+	github.com/mark3labs/mcp-go v0.37.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
