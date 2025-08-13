@@ -1,0 +1,90 @@
+{
+  "name": "CRUD Operations",
+  "description": "Test add, update, delete operations on rules, sections, and outputs",
+  "tests": [
+    {
+      "name": "Add rule help",
+      "description": "Show help for add rule command",
+      "command": ["add", "rule", "--help"],
+      "expected_out": "Add a new rule to your AI rules configuration file",
+      "exit_code": 0
+    },
+    {
+      "name": "Add section help",
+      "description": "Show help for add section command",
+      "command": ["add", "section", "--help"],
+      "expected_out": "Add a new section to your AI rules configuration file",
+      "exit_code": 0
+    },
+    {
+      "name": "Add output help",
+      "description": "Show help for add output command",
+      "command": ["add", "output", "--help"],
+      "expected_out": "Add a new output file to your AI rules configuration",
+      "exit_code": 0
+    },
+    {
+      "name": "Update rule help",
+      "description": "Show help for update rule command",
+      "command": ["update", "rule", "--help"],
+      "expected_out": "Update an existing rule",
+      "exit_code": 0
+    },
+    {
+      "name": "Update section help", 
+      "description": "Show help for update section command",
+      "command": ["update", "section", "--help"],
+      "expected_out": "Update an existing section",
+      "exit_code": 0
+    },
+    {
+      "name": "Update output help",
+      "description": "Show help for update output command", 
+      "command": ["update", "output", "--help"],
+      "expected_out": "Update an existing output file in your AI rules configuration",
+      "exit_code": 0
+    },
+    {
+      "name": "Delete rule help",
+      "description": "Show help for delete rule command",
+      "command": ["delete", "rule", "--help"],
+      "expected_out": "Delete an existing rule",
+      "exit_code": 0
+    },
+    {
+      "name": "Delete section help",
+      "description": "Show help for delete section command",
+      "command": ["delete", "section", "--help"],
+      "expected_out": "Delete an existing section",
+      "exit_code": 0
+    },
+    {
+      "name": "Delete output help",
+      "description": "Show help for delete output command",
+      "command": ["delete", "output", "--help"],
+      "expected_out": "Delete an existing output file from your AI rules configuration",
+      "exit_code": 0
+    },
+    {
+      "name": "Add command help",
+      "description": "Show help for add command",
+      "command": ["add", "--help"],
+      "expected_out": "Add new rules or sections to your AI rules configuration file",
+      "exit_code": 0
+    },
+    {
+      "name": "Update command help",
+      "description": "Show help for update command",
+      "command": ["update", "--help"],
+      "expected_out": "Update existing rules, sections, or outputs",
+      "exit_code": 0
+    },
+    {
+      "name": "Delete command help",
+      "description": "Show help for delete command",
+      "command": ["delete", "--help"],
+      "expected_out": "Delete existing rules, sections, or outputs",
+      "exit_code": 0
+    }
+  ]
+}
