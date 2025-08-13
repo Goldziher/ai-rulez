@@ -31,11 +31,32 @@
       "exit_code": 0
     },
     {
-      "name": "recursive_flag_shows_help",
-      "description": "Recursive flag is documented in help",
-      "command": ["generate", "--help"],
-      "expected_out": "--recursive",
+      "name": "recursive_generation_functional",
+      "description": "Recursive generation finds and processes multiple configs",
+      "command": ["generate", "--recursive", "--dry-run"],
+      "working_dir": "recursive_test",
+      "files": {
+        "recursive_test/project1/ai_rulez.yaml": "metadata:\n  name: Project 1\noutputs:\n  - path: P1_OUTPUT.md\nrules:\n  - name: P1 Rule\n    content: Project 1 content",
+        "recursive_test/project2/ai_rulez.yaml": "metadata:\n  name: Project 2\noutputs:\n  - path: P2_OUTPUT.md\nrules:\n  - name: P2 Rule\n    content: Project 2 content"
+      },
+      "expected_out": "Found 2 configuration",
       "exit_code": 0
+    },
+    {
+      "name": "recursive_actual_generation",
+      "description": "Recursive generation actually creates files",
+      "command": ["generate", "--recursive"],
+      "working_dir": "recursive_actual",
+      "files": {
+        "recursive_actual/proj1/ai_rulez.yaml": "metadata:\n  name: Proj1\noutputs:\n  - path: PROJ1.md\nrules:\n  - name: Rule1\n    content: Content1",
+        "recursive_actual/proj2/ai_rulez.yaml": "metadata:\n  name: Proj2\noutputs:\n  - path: PROJ2.md\nrules:\n  - name: Rule2\n    content: Content2"
+      },
+      "expected_out": "Generated",
+      "exit_code": 0,
+      "files_check": {
+        "recursive_actual/proj1/PROJ1.md": "Rule1",
+        "recursive_actual/proj2/PROJ2.md": "Rule2"
+      }
     },
     {
       "name": "gitignore_flag_with_dry_run",

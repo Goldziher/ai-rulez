@@ -942,6 +942,223 @@ var deleteOutputCmd = &cobra.Command{
 	},
 }
 
+// addAgentCmd represents the add agent subcommand
+var addAgentCmd = &cobra.Command{
+	Use:   "agent [name]",
+	Short: "Add a new agent to configuration",
+	Long: `Add a new agent to your AI rules configuration file.
+The agent name is provided as an argument, and you can specify
+description, priority, tools, and system prompt. The system prompt
+will be read from stdin if not provided via flag.`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		agentName := args[0]
+		description, _ := cmd.Flags().GetString("description")
+		priority, _ := cmd.Flags().GetInt("priority")
+		tools, _ := cmd.Flags().GetStringSlice("tools")
+		systemPrompt, _ := cmd.Flags().GetString("system-prompt")
+		id, _ := cmd.Flags().GetString("id")
+		configFile, _ := cmd.Flags().GetString("config")
+
+		if configFile == "" {
+			foundConfig, err := config.FindConfigFile(".")
+			if err != nil {
+				fmtError(err)
+				os.Exit(1)
+			}
+			configFile = foundConfig
+		}
+
+		// Load existing configuration
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+
+		// Check if agent already exists
+		for _, agent := range cfg.Agents {
+			if agent.Name == agentName {
+				fmt.Fprintf(os.Stderr, "Error: Agent '%s' already exists in configuration\n", agentName)
+				os.Exit(1)
+			}
+		}
+
+		// Read system prompt from stdin if not provided
+		if systemPrompt == "" {
+			fmt.Println("Enter agent system prompt (press Ctrl+D when done):")
+			content, err := readFromStdin()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error reading system prompt: %v\n", err)
+				os.Exit(1)
+			}
+			systemPrompt = content
+		}
+
+		// Add new agent
+		newAgent := config.Agent{
+			ID:           id,
+			Name:         agentName,
+			Description:  description,
+			Priority:     priority,
+			Tools:        tools,
+			SystemPrompt: systemPrompt,
+		}
+		cfg.Agents = append(cfg.Agents, newAgent)
+
+		// Save configuration
+		if err := config.SaveConfig(cfg, configFile); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("✓ Added agent '%s'", agentName)
+		if priority > 0 {
+			fmt.Printf(" with priority %d", priority)
+		}
+		fmt.Printf(" to %s\n", configFile)
+	},
+}
+
+// updateAgentCmd represents the update agent subcommand
+var updateAgentCmd = &cobra.Command{
+	Use:   "agent [name]",
+	Short: "Update an existing agent",
+	Long: `Update an existing agent in your AI rules configuration file.
+You can update the description, priority, tools, or system prompt.
+If no system prompt is provided via flag, you'll be prompted to enter
+it via stdin.`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		agentName := args[0]
+		description, _ := cmd.Flags().GetString("description")
+		priority, _ := cmd.Flags().GetInt("priority")
+		tools, _ := cmd.Flags().GetStringSlice("tools")
+		systemPrompt, _ := cmd.Flags().GetString("system-prompt")
+		configFile, _ := cmd.Flags().GetString("config")
+
+		if configFile == "" {
+			foundConfig, err := config.FindConfigFile(".")
+			if err != nil {
+				fmtError(err)
+				os.Exit(1)
+			}
+			configFile = foundConfig
+		}
+
+		// Load existing configuration
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+
+		// Find the agent to update
+		agentIndex := -1
+		for i, agent := range cfg.Agents {
+			if agent.Name == agentName {
+				agentIndex = i
+				break
+			}
+		}
+
+		if agentIndex == -1 {
+			fmt.Fprintf(os.Stderr, "Error: Agent '%s' not found\n", agentName)
+			os.Exit(1)
+		}
+
+		// Update system prompt if not provided via flag and no other flags provided
+		if systemPrompt == "" && description == "" && priority == 0 && len(tools) == 0 {
+			fmt.Printf("Current system prompt: %s\n", cfg.Agents[agentIndex].SystemPrompt)
+			fmt.Println("Enter new system prompt (press Ctrl+D when done, or press Enter to keep current):")
+			content, err := readFromStdin()
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error reading system prompt: %v\n", err)
+				os.Exit(1)
+			}
+			if strings.TrimSpace(content) != "" {
+				systemPrompt = content
+			}
+		}
+
+		// Update the agent
+		if description != "" {
+			cfg.Agents[agentIndex].Description = description
+		}
+		if priority > 0 {
+			cfg.Agents[agentIndex].Priority = priority
+		}
+		if len(tools) > 0 {
+			cfg.Agents[agentIndex].Tools = tools
+		}
+		if systemPrompt != "" {
+			cfg.Agents[agentIndex].SystemPrompt = systemPrompt
+		}
+
+		// Save configuration
+		if err := config.SaveConfig(cfg, configFile); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("✓ Updated agent '%s' in %s\n", agentName, configFile)
+	},
+}
+
+// deleteAgentCmd represents the delete agent subcommand
+var deleteAgentCmd = &cobra.Command{
+	Use:   "agent [name]",
+	Short: "Delete an existing agent",
+	Long: `Delete an existing agent from your AI rules configuration file.
+This will permanently remove the agent and cannot be undone.`,
+	Args: cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		agentName := args[0]
+		configFile, _ := cmd.Flags().GetString("config")
+
+		if configFile == "" {
+			foundConfig, err := config.FindConfigFile(".")
+			if err != nil {
+				fmtError(err)
+				os.Exit(1)
+			}
+			configFile = foundConfig
+		}
+
+		// Load existing configuration
+		cfg, err := config.LoadConfig(configFile)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+
+		// Find and remove the agent
+		agentIndex := -1
+		for i, agent := range cfg.Agents {
+			if agent.Name == agentName {
+				agentIndex = i
+				break
+			}
+		}
+
+		if agentIndex == -1 {
+			fmt.Fprintf(os.Stderr, "Error: Agent '%s' not found\n", agentName)
+			os.Exit(1)
+		}
+
+		// Remove the agent
+		cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
+
+		// Save configuration
+		if err := config.SaveConfig(cfg, configFile); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+
+		fmt.Printf("✓ Deleted agent '%s' from %s\n", agentName, configFile)
+	},
+}
+
 func init() {
 	generateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Process all config files recursively")
 	generateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
@@ -974,16 +1191,19 @@ func init() {
 	addCmd.AddCommand(addRuleCmd)
 	addCmd.AddCommand(addSectionCmd)
 	addCmd.AddCommand(addOutputCmd)
+	addCmd.AddCommand(addAgentCmd)
 
 	// Add subcommands to update command
 	updateCmd.AddCommand(updateRuleCmd)
 	updateCmd.AddCommand(updateSectionCmd)
 	updateCmd.AddCommand(updateOutputCmd)
+	updateCmd.AddCommand(updateAgentCmd)
 
 	// Add subcommands to delete command
 	deleteCmd.AddCommand(deleteRuleCmd)
 	deleteCmd.AddCommand(deleteSectionCmd)
 	deleteCmd.AddCommand(deleteOutputCmd)
+	deleteCmd.AddCommand(deleteAgentCmd)
 
 	// Add flags for add rule command
 	addRuleCmd.Flags().IntP("priority", "p", 5, "Priority level for the rule (1-10)")
@@ -1018,6 +1238,24 @@ func init() {
 	deleteRuleCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 	deleteSectionCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 	deleteOutputCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
+
+	// Add flags for add agent command
+	addAgentCmd.Flags().StringP("description", "d", "", "Description of the agent")
+	addAgentCmd.Flags().IntP("priority", "p", 5, "Priority level for the agent (1-10)")
+	addAgentCmd.Flags().StringSliceP("tools", "t", []string{}, "Comma-separated list of tools the agent can use")
+	addAgentCmd.Flags().StringP("system-prompt", "s", "", "System prompt for the agent (will prompt via stdin if not provided)")
+	addAgentCmd.Flags().StringP("id", "", "", "Optional unique identifier for the agent")
+	addAgentCmd.Flags().StringP("config", "c", "", "Config file to add agent to (auto-discover if not provided)")
+
+	// Add flags for update agent command
+	updateAgentCmd.Flags().StringP("description", "d", "", "New description for the agent")
+	updateAgentCmd.Flags().IntP("priority", "p", 0, "New priority level for the agent (1-10)")
+	updateAgentCmd.Flags().StringSliceP("tools", "t", []string{}, "New comma-separated list of tools the agent can use")
+	updateAgentCmd.Flags().StringP("system-prompt", "s", "", "New system prompt for the agent (will prompt via stdin if not provided)")
+	updateAgentCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
+
+	// Add flags for delete agent command
+	deleteAgentCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 }
 
 // ProviderConfig holds the configuration for enabled providers
@@ -1308,11 +1546,11 @@ var mcpCmd = &cobra.Command{
 to AI assistants like Claude Desktop, Cursor, and other MCP-compatible tools.
 
 The server runs in stdio mode and provides tools for:
-- Retrieving rules and sections with filtering options
+- Retrieving rules, sections, and agents with filtering options
 - Generating output files with gitignore integration
 - Validating configurations
-- Adding, updating, and deleting rules, sections, and outputs
-- Support for rule/section IDs for precise local overrides
+- Adding, updating, and deleting rules, sections, outputs, and agents
+- Support for rule/section/agent IDs for precise local overrides
 
 Configure in your AI assistant by adding this server to the MCP configuration.`,
 	Run: func(cmd *cobra.Command, args []string) {
@@ -1374,6 +1612,9 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 		mcp.WithBoolean("update_gitignore",
 			mcp.Description("Update .gitignore files to include generated output files (default: false)"),
+		),
+		mcp.WithBoolean("recursive",
+			mcp.Description("Process all config files recursively (default: false)"),
 		),
 	)
 	s.AddTool(generateTool, handleGenerate)
@@ -1542,6 +1783,148 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(deleteOutputTool, handleDeleteOutput)
+
+	// Tool: Get agents
+	getAgentsTool := mcp.NewTool("get_agents",
+		mcp.WithDescription("Get AI agents from configuration"),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+		mcp.WithString("name_filter",
+			mcp.Description("Filter agents by name (case-insensitive substring match, optional)"),
+		),
+	)
+	s.AddTool(getAgentsTool, handleGetAgents)
+
+	// Tool: Add agent
+	addAgentTool := mcp.NewTool("add_agent",
+		mcp.WithDescription("Add a new agent to the configuration file"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("The name of the agent"),
+		),
+		mcp.WithString("system_prompt",
+			mcp.Required(),
+			mcp.Description("The system prompt for the agent"),
+		),
+		mcp.WithString("description",
+			mcp.Description("Description of the agent (optional)"),
+		),
+		mcp.WithNumber("priority",
+			mcp.Description("Priority level for the agent (default: 5)"),
+		),
+		mcp.WithString("tools",
+			mcp.Description("Comma-separated list of tools the agent can use (optional)"),
+		),
+		mcp.WithString("id",
+			mcp.Description("Optional unique identifier for precise overriding in local configs"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(addAgentTool, handleAddAgent)
+
+	// Tool: Update agent
+	updateAgentTool := mcp.NewTool("update_agent",
+		mcp.WithDescription("Update an existing agent in the configuration"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("The name of the agent to update"),
+		),
+		mcp.WithString("system_prompt",
+			mcp.Description("New system prompt for the agent (optional)"),
+		),
+		mcp.WithString("description",
+			mcp.Description("New description for the agent (optional)"),
+		),
+		mcp.WithNumber("priority",
+			mcp.Description("New priority level for the agent (optional)"),
+		),
+		mcp.WithString("tools",
+			mcp.Description("New comma-separated list of tools the agent can use (optional)"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(updateAgentTool, handleUpdateAgent)
+
+	// Tool: Delete agent
+	deleteAgentTool := mcp.NewTool("delete_agent",
+		mcp.WithDescription("Delete an existing agent from the configuration"),
+		mcp.WithString("name",
+			mcp.Required(),
+			mcp.Description("The name of the agent to delete"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (optional, will auto-discover if not provided)"),
+		),
+	)
+	s.AddTool(deleteAgentTool, handleDeleteAgent)
+
+	// Tool: Initialize project
+	initProjectTool := mcp.NewTool("init_project",
+		mcp.WithDescription("Initialize a new AI rules project with configuration file"),
+		mcp.WithString("project_name",
+			mcp.Description("Name of the project (default: 'My Project')"),
+		),
+		mcp.WithString("config_file",
+			mcp.Description("Path to configuration file (default: 'ai_rulez.yaml')"),
+		),
+		// Provider flags
+		mcp.WithBoolean("claude",
+			mcp.Description("Enable Claude (CLAUDE.md + agents) - default if no providers specified"),
+		),
+		mcp.WithBoolean("cursor",
+			mcp.Description("Enable Cursor (.cursor/rules/)"),
+		),
+		mcp.WithBoolean("windsurf",
+			mcp.Description("Enable Windsurf (.windsurfrules)"),
+		),
+		mcp.WithBoolean("gemini",
+			mcp.Description("Enable Gemini (GEMINI.md)"),
+		),
+		mcp.WithBoolean("copilot",
+			mcp.Description("Enable GitHub Copilot (.github/copilot-instructions.md)"),
+		),
+		mcp.WithBoolean("cline",
+			mcp.Description("Enable Cline (.clinerules/)"),
+		),
+		mcp.WithBoolean("continue",
+			mcp.Description("Enable Continue.dev (.continuerules)"),
+		),
+		// Convenience flags
+		mcp.WithBoolean("all",
+			mcp.Description("Enable all major providers"),
+		),
+		mcp.WithBoolean("popular",
+			mcp.Description("Enable Claude, Cursor, Windsurf, Copilot (most common)"),
+		),
+		mcp.WithBoolean("minimal",
+			mcp.Description("Only Claude without agents or sections"),
+		),
+		// Configuration flags
+		mcp.WithBoolean("with_agents",
+			mcp.Description("Include example agent configurations"),
+		),
+		mcp.WithBoolean("with_sections",
+			mcp.Description("Include example sections in config"),
+		),
+		mcp.WithBoolean("no_comments",
+			mcp.Description("Skip explanatory comments in generated files"),
+		),
+		mcp.WithBoolean("setup_hooks",
+			mcp.Description("Auto-detect and setup git hooks (lefthook, pre-commit, or husky)"),
+		),
+	)
+	s.AddTool(initProjectTool, handleInitProject)
+
+	// Tool: Get version
+	versionTool := mcp.NewTool("get_version",
+		mcp.WithDescription("Get the version of ai-rulez"),
+	)
+	s.AddTool(versionTool, handleGetVersion)
 }
 
 func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
@@ -1621,7 +2004,70 @@ func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 }
 
 func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get config file path
+	// Check recursive flag
+	recursive := request.GetBool("recursive", false)
+	dryRun := request.GetBool("dry_run", false)
+	updateGitignore := request.GetBool("update_gitignore", false)
+
+	if recursive {
+		// Find all config files
+		configs, err := config.FindAllConfigFiles(".")
+		if err != nil {
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
+		}
+
+		if len(configs) == 0 {
+			return mcp.NewToolResultError("No configuration files found"), nil
+		}
+
+		// Sort configs for consistent output
+		sort.Strings(configs)
+
+		result := map[string]interface{}{
+			"success":          true,
+			"recursive":        true,
+			"configs_found":    len(configs),
+			"configs":          configs,
+			"dry_run":          dryRun,
+			"update_gitignore": updateGitignore,
+		}
+
+		if dryRun {
+			result["message"] = "Dry run: would process all config files recursively"
+			jsonResult, _ := json.MarshalIndent(result, "", "  ")
+			return mcp.NewToolResultText(string(jsonResult)), nil
+		}
+
+		successCount := 0
+		errorMsgs := []string{}
+
+		for _, configFile := range configs {
+			cfg, err := config.LoadConfig(configFile)
+			if err != nil {
+				errorMsgs = append(errorMsgs, fmt.Sprintf("%s: %v", configFile, err))
+				continue
+			}
+
+			gen := generator.NewWithConfigFile(configFile)
+			err = gen.GenerateAll(cfg)
+			if err != nil {
+				errorMsgs = append(errorMsgs, fmt.Sprintf("%s: %v", configFile, err))
+				continue
+			}
+			successCount++
+		}
+
+		result["processed"] = successCount
+		result["failed"] = len(errorMsgs)
+		if len(errorMsgs) > 0 {
+			result["errors"] = errorMsgs
+		}
+
+		jsonResult, _ := json.MarshalIndent(result, "", "  ")
+		return mcp.NewToolResultText(string(jsonResult)), nil
+	}
+
+	// Get config file path for single file processing
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -1636,10 +2082,6 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	if err != nil {
 		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 	}
-
-	// Check dry run flag
-	dryRun := request.GetBool("dry_run", false)
-	updateGitignore := request.GetBool("update_gitignore", false)
 
 	if dryRun {
 		result := map[string]interface{}{
@@ -2515,6 +2957,381 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		"config_file":   configFile,
 		"deleted":       filename,
 		"total_outputs": len(cfg.Outputs),
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleGetAgents(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Get name filter
+	nameFilter := request.GetString("name_filter", "")
+
+	// Filter agents by name if filter is provided
+	var agents []config.Agent
+	for _, agent := range cfg.Agents {
+		if nameFilter == "" || strings.Contains(strings.ToLower(agent.Name), strings.ToLower(nameFilter)) {
+			agents = append(agents, agent)
+		}
+	}
+
+	result := map[string]interface{}{
+		"config_file":  configFile,
+		"total_agents": len(agents),
+		"agents":       agents,
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get required parameters
+	name := request.GetString("name", "")
+	if name == "" {
+		return mcp.NewToolResultError("Agent name is required"), nil
+	}
+
+	systemPrompt := request.GetString("system_prompt", "")
+	if systemPrompt == "" {
+		return mcp.NewToolResultError("System prompt is required"), nil
+	}
+
+	// Get optional parameters
+	description := request.GetString("description", "")
+	priority := int(request.GetFloat("priority", 5))
+	toolsStr := request.GetString("tools", "")
+	id := request.GetString("id", "")
+
+	// Parse tools list
+	var tools []string
+	if toolsStr != "" {
+		tools = strings.Split(toolsStr, ",")
+		for i, tool := range tools {
+			tools[i] = strings.TrimSpace(tool)
+		}
+	}
+
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Check if agent already exists
+	for _, agent := range cfg.Agents {
+		if agent.Name == name {
+			return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' already exists", name)), nil
+		}
+	}
+
+	// Add new agent
+	newAgent := config.Agent{
+		ID:           id,
+		Name:         name,
+		Description:  description,
+		Priority:     priority,
+		Tools:        tools,
+		SystemPrompt: systemPrompt,
+	}
+	cfg.Agents = append(cfg.Agents, newAgent)
+
+	// Save configuration
+	if err := config.SaveConfig(cfg, configFile); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
+	}
+
+	result := map[string]interface{}{
+		"success":      true,
+		"config_file":  configFile,
+		"agent_name":   name,
+		"priority":     priority,
+		"total_agents": len(cfg.Agents),
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get required parameters
+	name := request.GetString("name", "")
+	if name == "" {
+		return mcp.NewToolResultError("Agent name is required"), nil
+	}
+
+	// Get optional parameters
+	description := request.GetString("description", "")
+	priority := int(request.GetFloat("priority", 0))
+	systemPrompt := request.GetString("system_prompt", "")
+	toolsStr := request.GetString("tools", "")
+
+	// Parse tools list
+	var tools []string
+	if toolsStr != "" {
+		tools = strings.Split(toolsStr, ",")
+		for i, tool := range tools {
+			tools[i] = strings.TrimSpace(tool)
+		}
+	}
+
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Find the agent to update
+	agentIndex := -1
+	for i, agent := range cfg.Agents {
+		if agent.Name == name {
+			agentIndex = i
+			break
+		}
+	}
+
+	if agentIndex == -1 {
+		return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' not found", name)), nil
+	}
+
+	// Update the agent
+	if description != "" {
+		cfg.Agents[agentIndex].Description = description
+	}
+	if priority > 0 {
+		cfg.Agents[agentIndex].Priority = priority
+	}
+	if systemPrompt != "" {
+		cfg.Agents[agentIndex].SystemPrompt = systemPrompt
+	}
+	if len(tools) > 0 {
+		cfg.Agents[agentIndex].Tools = tools
+	}
+
+	// Save configuration
+	if err := config.SaveConfig(cfg, configFile); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
+	}
+
+	result := map[string]interface{}{
+		"success":     true,
+		"config_file": configFile,
+		"agent_name":  name,
+		"updated":     true,
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get required parameters
+	name := request.GetString("name", "")
+	if name == "" {
+		return mcp.NewToolResultError("Agent name is required"), nil
+	}
+
+	// Get config file path
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		foundConfig, err := config.FindConfigFile(".")
+		if err != nil {
+			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
+		}
+		configFile = foundConfig
+	}
+
+	// Load existing configuration
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
+	}
+
+	// Find and remove the agent
+	agentIndex := -1
+	for i, agent := range cfg.Agents {
+		if agent.Name == name {
+			agentIndex = i
+			break
+		}
+	}
+
+	if agentIndex == -1 {
+		return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' not found", name)), nil
+	}
+
+	// Remove the agent
+	cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
+
+	// Save configuration
+	if err := config.SaveConfig(cfg, configFile); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
+	}
+
+	result := map[string]interface{}{
+		"success":      true,
+		"config_file":  configFile,
+		"deleted":      name,
+		"total_agents": len(cfg.Agents),
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	// Get parameters with defaults
+	projectName := request.GetString("project_name", "My Project")
+	configFile := request.GetString("config_file", "ai_rulez.yaml")
+
+	// Check if config file already exists
+	if _, err := os.Stat(configFile); err == nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Configuration file already exists: %s", configFile)), nil
+	}
+
+	// Parse provider flags from the request
+	providers := ProviderConfig{
+		Enabled:      []string{},
+		WithAgents:   request.GetBool("with_agents", false),
+		WithSections: request.GetBool("with_sections", false),
+		NoComments:   request.GetBool("no_comments", false),
+	}
+
+	// Check convenience flags first
+	all := request.GetBool("all", false)
+	popular := request.GetBool("popular", false)
+	minimal := request.GetBool("minimal", false)
+
+	if all {
+		providers.Enabled = []string{"claude", "cursor", "windsurf", "gemini", "copilot", "cline", "continue"}
+	} else if popular {
+		providers.Enabled = []string{"claude", "cursor", "windsurf", "copilot"}
+	} else if minimal {
+		providers.Enabled = []string{"claude"}
+		providers.WithAgents = false
+		providers.WithSections = false
+	} else {
+		// Check individual provider flags
+		if request.GetBool("claude", false) {
+			providers.Enabled = append(providers.Enabled, "claude")
+		}
+		if request.GetBool("cursor", false) {
+			providers.Enabled = append(providers.Enabled, "cursor")
+		}
+		if request.GetBool("windsurf", false) {
+			providers.Enabled = append(providers.Enabled, "windsurf")
+		}
+		if request.GetBool("gemini", false) {
+			providers.Enabled = append(providers.Enabled, "gemini")
+		}
+		if request.GetBool("copilot", false) {
+			providers.Enabled = append(providers.Enabled, "copilot")
+		}
+		if request.GetBool("cline", false) {
+			providers.Enabled = append(providers.Enabled, "cline")
+		}
+		if request.GetBool("continue", false) {
+			providers.Enabled = append(providers.Enabled, "continue")
+		}
+
+		// Default to Claude if no providers specified
+		if len(providers.Enabled) == 0 {
+			providers.Enabled = []string{"claude"}
+		}
+	}
+
+	// Create configuration with selected providers
+	if err := createProviderConfigFile(projectName, configFile, providers); err != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("Error creating configuration: %v", err)), nil
+	}
+
+	result := map[string]interface{}{
+		"success":       true,
+		"project_name":  projectName,
+		"config_file":   configFile,
+		"providers":     providers.Enabled,
+		"with_agents":   providers.WithAgents,
+		"with_sections": providers.WithSections,
+		"no_comments":   providers.NoComments,
+	}
+
+	// Handle setup hooks if requested
+	setupHooks := request.GetBool("setup_hooks", false)
+	if setupHooks {
+		messages := []string{}
+
+		if detectLefthook() {
+			messages = append(messages, "Found lefthook configuration")
+			if err := setupLefthookConfig(); err != nil {
+				result["setup_hooks_error"] = fmt.Sprintf("Error setting up lefthook: %v", err)
+			} else {
+				messages = append(messages, "✓ Added ai-rulez validation to lefthook.yml")
+			}
+		} else if detectPreCommit() {
+			messages = append(messages, "Found pre-commit configuration")
+			if err := setupPreCommitConfig(); err != nil {
+				result["setup_hooks_error"] = fmt.Sprintf("Error setting up pre-commit: %v", err)
+			} else {
+				messages = append(messages, "✓ Added ai-rulez validation to .pre-commit-config.yaml")
+			}
+		} else if detectHusky() {
+			messages = append(messages, "Found husky configuration")
+			if err := setupHuskyConfig(); err != nil {
+				result["setup_hooks_error"] = fmt.Sprintf("Error setting up husky: %v", err)
+			} else {
+				messages = append(messages, "✓ Added ai-rulez validation to .husky/pre-commit")
+			}
+		} else {
+			messages = append(messages, "No git hook manager detected (lefthook, pre-commit, or husky)")
+		}
+
+		result["setup_hooks_messages"] = messages
+	}
+
+	jsonResult, _ := json.MarshalIndent(result, "", "  ")
+	return mcp.NewToolResultText(string(jsonResult)), nil
+}
+
+func handleGetVersion(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	result := map[string]interface{}{
+		"version": Version,
+		"success": true,
 	}
 
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
