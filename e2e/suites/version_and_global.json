@@ -1,0 +1,63 @@
+{
+  "name": "Version and Global Options",
+  "description": "Test version command and global configuration options",
+  "tests": [
+    {
+      "name": "version_flag",
+      "description": "Show version with --version flag",
+      "command": ["--version"],
+      "expected_out": "ai-rulez version",
+      "exit_code": 0
+    },
+    {
+      "name": "version_short_flag", 
+      "description": "Show version with -v flag",
+      "command": ["-v"],
+      "expected_out": "ai-rulez version",
+      "exit_code": 0
+    },
+    {
+      "name": "version_command",
+      "description": "Show version with version command",
+      "command": ["version"],
+      "expected_out": "ai-rulez version",
+      "exit_code": 0
+    },
+    {
+      "name": "global_config_file",
+      "description": "Use custom config file with --config flag",
+      "command": ["validate", "--config", "custom_config.yaml"],
+      "setup": [
+        "echo 'metadata:\n  name: \"Custom Config Test\"\noutputs:\n  - file: \"custom.md\"\nrules:\n  - name: \"Custom Rule\"\n    content: \"Custom content\"' > custom_config.yaml"
+      ],
+      "expected_out": "✓ Configuration is valid:",
+      "exit_code": 0,
+      "cleanup": [
+        "rm -f custom_config.yaml"
+      ]
+    },
+    {
+      "name": "global_config_with_explicit_path",
+      "description": "Use explicit config path that exists",
+      "command": ["validate", "--config", "scenarios/basic/ai_rulez.yaml"],
+      "expected_out": "✓ Configuration is valid:",
+      "exit_code": 0
+    },
+    {
+      "name": "generate_with_global_config",
+      "description": "Generate using global config flag",
+      "command": ["generate", "--config", "global_test.yaml"],
+      "setup": [
+        "echo 'metadata:\n  name: \"Global Test\"\noutputs:\n  - file: \"GLOBAL_TEST.md\"\nrules:\n  - name: \"Global Rule\"\n    content: \"Global content\"' > global_test.yaml"
+      ],
+      "expected_out": "Generated",
+      "exit_code": 0,
+      "files": {
+        "GLOBAL_TEST.md": "Global Rule"
+      },
+      "cleanup": [
+        "rm -f global_test.yaml GLOBAL_TEST.md"
+      ]
+    }
+  ]
+}

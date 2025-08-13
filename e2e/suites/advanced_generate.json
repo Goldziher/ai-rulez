@@ -1,0 +1,48 @@
+{
+  "name": "Advanced Generation",
+  "description": "Test advanced generate command features",
+  "tests": [
+    {
+      "name": "generate_help_shows_flags",
+      "description": "Generate command help shows all flags",
+      "command": ["generate", "--help"],
+      "expected_out": "--dry-run",
+      "exit_code": 0
+    },
+    {
+      "name": "generate_help_shows_recursive",
+      "description": "Generate command help shows recursive flag",
+      "command": ["generate", "--help"],
+      "expected_out": "--recursive",
+      "exit_code": 0
+    },
+    {
+      "name": "generate_help_shows_gitignore",
+      "description": "Generate command help shows gitignore flag",
+      "command": ["generate", "--help"],
+      "expected_out": "--update-gitignore",
+      "exit_code": 0
+    },
+    {
+      "name": "dry_run_flag_works",
+      "description": "Dry run flag works with existing config",
+      "command": ["generate", "scenarios/basic/ai_rulez.yaml", "--dry-run"],
+      "expected_out": "Would generate",
+      "exit_code": 0
+    },
+    {
+      "name": "recursive_flag_works",
+      "description": "Recursive flag works and finds configs",
+      "command": ["generate", "--recursive", "--dry-run"],
+      "expected_out": "Found",
+      "exit_code": 0
+    },
+    {
+      "name": "gitignore_flag_with_dry_run",
+      "description": "Gitignore flag works in dry run mode",
+      "command": ["generate", "scenarios/basic/ai_rulez.yaml", "--update-gitignore", "--dry-run"],
+      "expected_out": "Would generate",
+      "exit_code": 0
+    }
+  ]
+}
