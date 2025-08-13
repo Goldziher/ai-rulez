@@ -13,9 +13,10 @@ outputs:
   # Using default built-in template
   - file: "claude.md"
   
-  # Using named built-in template
-  - file: ".cursorrules"
-    template: "default"
+  # Using new Cursor rules format (directory with .mdc files)
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "rules.mdc"
   
   # Using documentation built-in template
   - file: "docs/detailed-rules.md"
