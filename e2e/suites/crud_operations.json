@@ -3,88 +3,148 @@
   "description": "Test add, update, delete operations on rules, sections, and outputs",
   "tests": [
     {
-      "name": "Add rule help",
-      "description": "Show help for add rule command",
-      "command": ["add", "rule", "--help"],
-      "expected_out": "Add a new rule to your AI rules configuration file",
+      "name": "Add rule functional test",
+      "description": "Add a new rule to configuration file",
+      "command": ["add", "rule", "Test Rule", "--priority", "8", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []"
+      },
+      "input": "This is a test rule for validation",
+      "expected_out": "✓ Added rule 'Test Rule' with priority 8",
       "exit_code": 0
     },
     {
-      "name": "Add section help",
-      "description": "Show help for add section command",
-      "command": ["add", "section", "--help"],
-      "expected_out": "Add a new section to your AI rules configuration file",
+      "name": "Add rule with default priority",
+      "description": "Add a rule with default priority (5)",
+      "command": ["add", "rule", "Default Priority Rule", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []"
+      },
+      "input": "Rule with default priority",
+      "expected_out": "✓ Added rule 'Default Priority Rule' with priority 5",
       "exit_code": 0
     },
     {
-      "name": "Add output help",
-      "description": "Show help for add output command",
-      "command": ["add", "output", "--help"],
-      "expected_out": "Add a new output file to your AI rules configuration",
+      "name": "Add section functional test",
+      "description": "Add a new section to configuration file",
+      "command": ["add", "section", "Test Section", "--priority", "7", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []\nsections: []"
+      },
+      "input": "This is test section content with multiple lines\nfor comprehensive testing",
+      "expected_out": "✓ Added section 'Test Section' with priority 7",
       "exit_code": 0
     },
     {
-      "name": "Update rule help",
-      "description": "Show help for update rule command",
-      "command": ["update", "rule", "--help"],
-      "expected_out": "Update an existing rule",
+      "name": "Add output file",
+      "description": "Add a new output file to configuration",
+      "command": ["add", "output", "NEW_FILE.md", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: existing.md\nrules: []"
+      },
+      "expected_out": "✓ Added output 'NEW_FILE.md'",
       "exit_code": 0
     },
     {
-      "name": "Update section help", 
-      "description": "Show help for update section command",
-      "command": ["update", "section", "--help"],
-      "expected_out": "Update an existing section",
+      "name": "Add output with template",
+      "description": "Add output file with custom template",
+      "command": ["add", "output", "TEMPLATE_FILE.md", "--template", "custom", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: existing.md\nrules: []"
+      },
+      "expected_out": "✓ Added output 'TEMPLATE_FILE.md'",
       "exit_code": 0
     },
     {
-      "name": "Update output help",
-      "description": "Show help for update output command", 
-      "command": ["update", "output", "--help"],
-      "expected_out": "Update an existing output file in your AI rules configuration",
+      "name": "Update existing rule",
+      "description": "Update an existing rule's content and priority",
+      "command": ["update", "rule", "Existing Rule", "--priority", "9", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules:\n  - name: Existing Rule\n    priority: 5\n    content: Old content"
+      },
+      "input": "Updated rule content with new information",
+      "expected_out": "✓ Updated rule 'Existing Rule'",
       "exit_code": 0
     },
     {
-      "name": "Delete rule help",
-      "description": "Show help for delete rule command",
-      "command": ["delete", "rule", "--help"],
-      "expected_out": "Delete an existing rule",
+      "name": "Update existing section",
+      "description": "Update an existing section's content",
+      "command": ["update", "section", "Existing Section", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []\nsections:\n  - title: Existing Section\n    priority: 5\n    content: Old section content"
+      },
+      "input": "Updated section content",
+      "expected_out": "✓ Updated section 'Existing Section'",
       "exit_code": 0
     },
     {
-      "name": "Delete section help",
-      "description": "Show help for delete section command",
-      "command": ["delete", "section", "--help"],
-      "expected_out": "Delete an existing section",
+      "name": "Update output template",
+      "description": "Update an existing output's template",
+      "command": ["update", "output", "existing.md", "--template", "updated", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: existing.md\n    template: old\nrules: []"
+      },
+      "expected_out": "✓ Updated output 'existing.md'",
       "exit_code": 0
     },
     {
-      "name": "Delete output help",
-      "description": "Show help for delete output command",
-      "command": ["delete", "output", "--help"],
-      "expected_out": "Delete an existing output file from your AI rules configuration",
+      "name": "Delete existing rule",
+      "description": "Delete an existing rule from configuration",
+      "command": ["delete", "rule", "Rule To Delete", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules:\n  - name: Rule To Delete\n    content: This will be deleted\n  - name: Keep This Rule\n    content: This stays"
+      },
+      "expected_out": "✓ Deleted rule 'Rule To Delete'",
       "exit_code": 0
     },
     {
-      "name": "Add command help",
-      "description": "Show help for add command",
-      "command": ["add", "--help"],
-      "expected_out": "Add new rules or sections to your AI rules configuration file",
+      "name": "Delete existing section",
+      "description": "Delete an existing section from configuration",
+      "command": ["delete", "section", "Section To Delete", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []\nsections:\n  - title: Section To Delete\n    content: This will be deleted\n  - title: Keep This Section\n    content: This stays"
+      },
+      "expected_out": "✓ Deleted section 'Section To Delete'",
       "exit_code": 0
     },
     {
-      "name": "Update command help",
-      "description": "Show help for update command",
-      "command": ["update", "--help"],
-      "expected_out": "Update existing rules, sections, or outputs",
+      "name": "Delete existing output",
+      "description": "Delete an existing output from configuration",
+      "command": ["delete", "output", "delete_me.md", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: delete_me.md\n  - path: keep_me.md\nrules: []"
+      },
+      "expected_out": "✓ Deleted output 'delete_me.md'",
       "exit_code": 0
     },
     {
-      "name": "Delete command help",
-      "description": "Show help for delete command",
-      "command": ["delete", "--help"],
-      "expected_out": "Delete existing rules, sections, or outputs",
-      "exit_code": 0
+      "name": "Add rule to non-existent config error",
+      "description": "Error when trying to add rule without config file",
+      "command": ["add", "rule", "Test Rule", "-c", "nonexistent.yaml"],
+      "input": "Test content",
+      "expected_err": "open nonexistent.yaml: no such file or directory",
+      "exit_code": 1
+    },
+    {
+      "name": "Update non-existent rule error",
+      "description": "Error when trying to update non-existent rule",
+      "command": ["update", "rule", "Non Existent Rule", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []"
+      },
+      "input": "New content",
+      "expected_err": "Rule 'Non Existent Rule' not found",
+      "exit_code": 1
+    },
+    {
+      "name": "Delete non-existent rule error",
+      "description": "Error when trying to delete non-existent rule",
+      "command": ["delete", "rule", "Non Existent Rule", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nrules: []"
+      },
+      "expected_err": "Rule 'Non Existent Rule' not found",
+      "exit_code": 1
     }
   ]
 }
