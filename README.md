@@ -361,14 +361,15 @@ npx ai-rulez mcp     # Via npx
 
 ### Pre-commit Hooks
 
-Using pre-commit framework:
+Using pre-commit framework (uses Python package, no Go required):
 ```yaml
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
     rev: v1.4.3
     hooks:
-      - id: ai-rulez-validate
+      - id: ai-rulez-validate    # Validate configuration
+      - id: ai-rulez-generate    # Auto-generate files
 ```
 
 Using Lefthook:
