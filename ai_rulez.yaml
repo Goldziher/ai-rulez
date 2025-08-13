@@ -2,8 +2,8 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "ai-rulez"
-  version: "1.4.4"
-  description: "Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
+  version: "1.5.0"
+  description: "Lightning-fast CLI tool and MCP server for managing AI assistant rules across multiple platforms"
 
 # Example remote includes (commented out for this project):
 # includes:
@@ -63,6 +63,8 @@ rules:
       - Use spinners/progress bars for long operations
       - Validate input parameters early
       - Follow Unix CLI conventions
+      - Support CRUD operations for all configuration elements
+      - Implement interactive prompts for missing required fields
 
   - name: "Performance Optimization"
     priority: 6
@@ -141,6 +143,32 @@ rules:
       - Test package installations before final release
       - Include checksums and signatures for security
       - Update installation documentation after releases
+      - Maintain cross-platform compatibility (Windows, macOS, Linux)
+      - Support both binary releases and package manager distributions
+
+  - name: "MCP Development"
+    priority: 7
+    content: |
+      - Follow MCP specification for tool definitions and responses
+      - Implement proper JSON-RPC 2.0 protocol handling
+      - Provide comprehensive tool descriptions and parameter schemas
+      - Handle errors gracefully with proper error codes
+      - Support both stdin/stdout and server transport modes
+      - Validate all tool inputs and outputs
+      - Use structured logging for MCP operations
+      - Test MCP tools with real AI assistant integrations
+
+  - name: "Schema and Validation"
+    priority: 6
+    content: |
+      - Use JSON Schema for all configuration validation
+      - Provide clear validation error messages with context
+      - Support schema evolution and backward compatibility
+      - Validate remote includes for security and structure
+      - Generate TypeScript definitions from schemas when needed
+      - Test schema validation with edge cases and malformed input
+      - Keep schemas in sync with Go structs
+      - Document schema changes in release notes
 
 sections:
   - title: "Development Environment"
@@ -176,21 +204,26 @@ sections:
       
       ```
       ai-rulez/
-      ├── cmd/              # CLI entry point
+      ├── cmd/              # CLI entry point and command definitions
       ├── internal/         # Internal packages
-      │   ├── config/       # Configuration and validation
-      │   ├── generator/    # Output generation
-      │   └── templates/    # Template rendering
-      ├── schema/           # JSON Schema definitions
-      ├── examples/         # Example configurations
-      └── testing/          # Test scenarios and data
+      │   ├── config/       # Configuration loading, validation, and CRUD
+      │   ├── generator/    # Output generation and template rendering
+      │   ├── templates/    # Built-in templates for various AI platforms
+      │   └── mcp/          # Model Context Protocol server implementation
+      ├── schema/           # JSON Schema definitions for validation
+      ├── examples/         # Example configurations and use cases
+      ├── e2e/              # End-to-end integration tests
+      │   └── suites/       # Test suites for different functionality
+      └── testing/          # Test scenarios and mock data
       ```
       
       The tool is designed for high performance with:
       - Incremental file generation (only writes when changed)
-      - Concurrent processing where possible
-      - Efficient memory usage
-      - Fast startup times
+      - Concurrent processing for remote includes and generation
+      - Efficient memory usage with streaming processing
+      - Fast startup times with optimized initialization
+      - Comprehensive test coverage (unit, integration, e2e)
+      - Multi-platform support (CLI + MCP server)
 
   - title: "Remote Configuration Support"
     priority: 45
@@ -252,3 +285,97 @@ sections:
       4. **Update .gitignore**: Use `.cursor/` instead of `.cursorrules`
       
       The new format is fully backward compatible - your existing rules work the same way.
+
+  - title: "MCP Server Integration"
+    priority: 48
+    content: |
+      ## Model Context Protocol (MCP) Server
+      
+      ai-rulez includes a built-in MCP server that allows AI assistants to dynamically manage configuration:
+      
+      ```bash
+      # Start MCP server
+      ai-rulez mcp
+      
+      # With custom config
+      ai-rulez mcp --config custom-config.yaml
+      ```
+      
+      **Available MCP Tools:**
+      - `get_rules`, `get_sections`, `get_agents` - Retrieve configuration elements
+      - `add_rule`, `add_section`, `add_agent` - Create new configuration elements  
+      - `update_rule`, `update_section`, `update_agent` - Modify existing elements
+      - `delete_rule`, `delete_section`, `delete_agent` - Remove elements
+      - `add_output`, `update_output`, `delete_output` - Manage output configurations
+      - `generate_output` - Generate files from current configuration
+      - `validate_config` - Validate configuration syntax and structure
+      - `init_project` - Initialize new projects with provider templates
+      - `get_version` - Get current ai-rulez version
+      
+      **Integration Benefits:**
+      - Real-time configuration updates without file editing
+      - Seamless AI assistant workflow integration
+      - Automatic validation and error handling
+      - Support for all configuration operations via API
+
+  - title: "Agent System and CRUD Operations"
+    priority: 42
+    content: |
+      ## Agent Management
+      
+      ai-rulez supports comprehensive agent management with full CRUD operations:
+      
+      ```bash
+      # Add new agent
+      ai-rulez add agent code-reviewer --description "Reviews code quality" \
+        --priority 8 --tools "Read,Grep,Edit" --system-prompt "You are a code reviewer..."
+      
+      # Update existing agent
+      ai-rulez update agent code-reviewer --priority 9 --tools "Read,Grep,Edit,MultiEdit"
+      
+      # Delete agent
+      ai-rulez delete agent code-reviewer
+      ```
+      
+      **Agent Features:**
+      - Specialized system prompts for different use cases
+      - Tool restrictions for focused functionality
+      - Priority-based ordering and selection
+      - Template-based prompt generation
+      - Directory-based output organization
+      
+      **Common Agent Types:**
+      - `code-reviewer` - Code quality and best practices
+      - `debugger` - Error analysis and troubleshooting  
+      - `documenter` - Documentation generation and updates
+      - `tester` - Test case generation and validation
+      - `refactor` - Code restructuring and optimization
+
+  - title: "Testing and Quality Assurance"
+    priority: 38
+    content: |
+      ## Comprehensive Test Coverage
+      
+      The project maintains high quality through extensive testing:
+      
+      **Test Types:**
+      ```bash
+      task test          # Run unit tests
+      task test-e2e      # Run end-to-end tests  
+      task test-race     # Run with race detection
+      task coverage      # Generate coverage report
+      ```
+      
+      **Test Structure:**
+      - **Unit Tests** - Individual function and method testing
+      - **Integration Tests** - Component interaction testing
+      - **E2E Tests** - Full CLI workflow testing with real scenarios
+      - **MCP Tests** - Model Context Protocol functionality testing
+      - **JSON Suite Tests** - Configuration validation and generation
+      
+      **Quality Gates:**
+      - Minimum 80% test coverage required
+      - All tests must pass before merge
+      - Race condition detection enabled
+      - Performance benchmarks for critical paths
+      - Schema validation for all configurations

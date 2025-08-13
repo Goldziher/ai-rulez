@@ -1,6 +1,6 @@
 # ai-rulez ⚡
 
-Lightning-fast CLI tool for managing AI assistant rules across Claude, Cursor, Windsurf, and other tools from a single YAML configuration.
+Lightning-fast CLI tool and MCP server for managing AI assistant rules across Claude, Cursor, Windsurf, and other tools from a single YAML configuration.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -28,12 +28,15 @@ ai-rulez generate
 ## Features
 
 - **Single Source of Truth** - One YAML file manages all AI assistant configurations
-- **Lightning Fast** - Written in Go, with incremental generation (only writes changes)
+- **Lightning Fast** - Written in Go, with incremental generation (only writes changes)  
 - **Multi-Platform** - Supports Claude, Cursor, Windsurf, and custom outputs
+- **MCP Server** - Built-in Model Context Protocol server for dynamic AI integration
+- **Complete CRUD Operations** - Add, update, delete rules, sections, agents, and outputs via CLI
 - **Remote Includes** - Share rules via URLs with caching and SSRF protection
 - **AI Agents** - Define specialized sub-agents with tools and system prompts
 - **Rich Templates** - Built-in and custom templates with full Go template syntax
-- **Enterprise Ready** - Security features, validation, and error handling
+- **Enterprise Ready** - Security features, validation, and comprehensive testing
+- **Git Integration** - Pre-commit hooks and automated configuration management
 
 ## Installation
 
@@ -252,19 +255,21 @@ ai-rulez validate -r              # Validate recursively
 
 ### CRUD Operations
 ```bash
-# Add items
+# Rules and sections
 ai-rulez add rule "API Security" --id "sec-001"
 ai-rulez add section "Overview"
-ai-rulez add output "docs/rules.md"
-
-# Update items
 ai-rulez update rule "API Security"
-ai-rulez update section "Overview"
-ai-rulez update output "docs/rules.md"
-
-# Delete items
 ai-rulez delete rule "API Security"
-ai-rulez delete section "Overview"
+
+# Agents with full CRUD support
+ai-rulez add agent code-reviewer --description "Reviews code quality" \
+  --priority 8 --tools "Read,Grep,Edit" --system-prompt "You are a code reviewer..."
+ai-rulez update agent code-reviewer --priority 9
+ai-rulez delete agent code-reviewer
+
+# Outputs  
+ai-rulez add output "docs/rules.md"
+ai-rulez update output "docs/rules.md"
 ai-rulez delete output "docs/rules.md"
 ```
 
@@ -366,7 +371,7 @@ Using pre-commit framework (uses Python package, no Go required):
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v1.4.3
+    rev: v1.5.0
     hooks:
       - id: ai-rulez-validate    # Validate configuration
       - id: ai-rulez-generate    # Auto-generate files

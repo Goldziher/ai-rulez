@@ -50,6 +50,11 @@ func TestCLIIntegration(t *testing.T) {
 		runTestSuite(t, suite, tempDir)
 	})
 	
+	t.Run("Agent CRUD Operations", func(t *testing.T) {
+		suite := loadTestSuite(t, "suites/agent_crud.json")
+		runTestSuite(t, suite, tempDir)
+	})
+	
 	t.Run("Shell Completion", func(t *testing.T) {
 		suite := loadTestSuite(t, "suites/completion.json")
 		runTestSuite(t, suite, tempDir)
