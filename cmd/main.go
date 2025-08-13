@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -325,10 +326,7 @@ validation if lefthook, pre-commit, or husky is detected in your project.`,
 		}
 
 		// Create basic configuration
-		cfg := createBasicTemplate(projectName)
-
-		// Save configuration
-		if err := config.SaveConfig(cfg, "ai_rulez.yaml"); err != nil {
+		if err := createSkeletonConfigFile(projectName, "ai_rulez.yaml"); err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
@@ -979,36 +977,134 @@ func init() {
 	deleteOutputCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 }
 
-func createBasicTemplate(projectName string) *config.Config {
-	return &config.Config{
-		Metadata: config.Metadata{
-			Name:        projectName,
-			Version:     "1.0.0",
-			Description: "AI assistant rules configuration",
-		},
-		Outputs: []config.Output{
-			{Path: "claude.md"},
-			{Path: ".cursor/rules/", Type: "rule", NamingScheme: "rules.mdc"},
-			{Path: ".windsurfrules"},
-		},
-		Rules: []config.Rule{
-			{
-				Name:     "Code Quality",
-				Priority: 10,
-				Content:  "Write clean, readable, and maintainable code following best practices.",
-			},
-			{
-				Name:     "Documentation",
-				Priority: 5,
-				Content:  "Document functions, classes, and complex logic with clear comments.",
-			},
-			{
-				Name:     "Testing",
-				Priority: 5,
-				Content:  "Write unit tests for all new functionality.",
-			},
-		},
+func createSkeletonConfigFile(projectName, filename string) error {
+	template := `$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "` + projectName + `"
+  version: "1.0.0"
+  description: "AI assistant rules configuration"
+
+# Uncomment and customize remote includes to share rules across projects:
+# includes:
+#   - "https://raw.githubusercontent.com/myorg/standards/main/coding-standards.yaml"
+#   - "./local-rules.yaml"
+
+# Output configurations - where to generate AI assistant files
+outputs:
+  # Primary Claude configuration
+  - file: "CLAUDE.md"
+
+  # Uncomment for additional AI assistants:
+  # - file: "GEMINI.md"          # Google Gemini
+  # - file: ".windsurfrules"     # Windsurf editor
+  # - path: ".cursor/rules/"     # Cursor editor (new format)
+  #   type: "rule" 
+  #   naming_scheme: "rules.mdc"
+  
+  # Uncomment for AI agents (specialized sub-assistants for Claude):
+  # - path: ".claude/agents/"
+  #   type: "agent"
+  #   naming_scheme: "{name}.md"
+
+# Uncomment to define specialized AI agents (sub-assistants for Claude):
+# agents:
+#   - name: "code-reviewer"
+#     description: "Code review and quality analysis specialist"
+#     system_prompt: |
+#       You are a senior code reviewer focusing on:
+#       - Code quality and maintainability
+#       - Security vulnerabilities  
+#       - Performance implications
+#       - Best practices and conventions
+#       
+#       Always provide constructive feedback with specific suggestions.
+#   
+#   - name: "test-writer"
+#     description: "Testing and quality assurance specialist"
+#     system_prompt: |
+#       You are a testing expert specializing in:
+#       - Writing comprehensive test cases
+#       - Test automation and CI/CD
+#       - Quality assurance processes
+#       - Test-driven development (TDD)
+
+rules:
+  - name: "Code Quality"
+    priority: 10
+    content: |
+      - Write clean, readable, and maintainable code
+      - Follow consistent coding standards and conventions
+      - Use meaningful variable and function names
+      - Keep functions small and focused
+      - Avoid code duplication and follow DRY principles
+
+  - name: "Testing Standards"
+    priority: 9
+    content: |
+      - Write comprehensive unit tests for all new functionality
+      - Maintain test coverage above 80%
+      - Test edge cases and error conditions
+      - Use descriptive test names that explain the scenario
+      - Follow testing best practices (AAA pattern, mocking, etc.)
+
+  - name: "Documentation"
+    priority: 8
+    content: |
+      - Document all public APIs and complex logic
+      - Keep README and documentation up to date
+      - Write clear, descriptive commit messages
+      - Add inline comments for non-obvious code
+      - Include usage examples in documentation
+
+  - name: "Error Handling"
+    priority: 8
+    content: |
+      - Always handle errors appropriately
+      - Provide meaningful error messages to users
+      - Log errors with sufficient context for debugging
+      - Fail fast and fail clearly
+      - Use proper exception handling patterns
+
+  - name: "Security"
+    priority: 7
+    content: |
+      - Validate all user inputs and sanitize data
+      - Use parameterized queries to prevent SQL injection
+      - Implement proper authentication and authorization
+      - Keep dependencies up to date
+      - Follow security best practices for your technology stack
+
+# Uncomment to add informational sections that appear before rules:
+# sections:
+#   - title: "Project Overview"
+#     priority: 20
+#     content: |
+#       ## Getting Started
+#       
+#       This project uses ai-rulez for managing AI assistant configurations.
+#       
+#       **Key Commands:**
+#       - ` + "`ai-rulez generate`" + ` - Generate AI assistant files
+#       - ` + "`ai-rulez validate`" + ` - Validate configuration
+#       - ` + "`ai-rulez add rule \"Name\"`" + ` - Add new rule interactively
+#       
+#       **Configuration:**
+#       Edit this file (ai_rulez.yaml) to customize rules and outputs for your project.
+`
+
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return errors.FileWrite(dir, err).
+			WithContext("operation", "create directory").
+			WithSuggestion("Check if you have write permissions for the parent directory")
 	}
+
+	if err := os.WriteFile(filename, []byte(template), 0o644); err != nil {
+		return errors.FileWrite(filename, err)
+	}
+
+	return nil
 }
 
 // mcpCmd represents the mcp command
