@@ -190,8 +190,9 @@ func TestAddOutput(t *testing.T) {
 
 	// Add new output
 	newOutput := Output{
-		Path:     ".cursorrules",
-		Template: "cursor",
+		Path:         ".cursor/rules/",
+		Type:         "rule",
+		NamingScheme: "rules.mdc",
 	}
 	cfg.Outputs = append(cfg.Outputs, newOutput)
 
@@ -203,8 +204,9 @@ func TestAddOutput(t *testing.T) {
 	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Outputs, 2)
-	assert.Equal(t, ".cursorrules", updatedCfg.Outputs[1].Path)
-	assert.Equal(t, "cursor", updatedCfg.Outputs[1].Template)
+	assert.Equal(t, ".cursor/rules/", updatedCfg.Outputs[1].Path)
+	assert.Equal(t, "rule", updatedCfg.Outputs[1].Type)
+	assert.Equal(t, "rules.mdc", updatedCfg.Outputs[1].NamingScheme)
 }
 
 func TestAddOutputDuplicate(t *testing.T) {
@@ -222,7 +224,7 @@ func TestAddOutputDuplicate(t *testing.T) {
 		},
 		Outputs: []Output{
 			{Path: "claude.md"},
-			{Path: ".cursorrules"},
+			{Path: ".cursor/rules/", Type: "rule", NamingScheme: "rules.mdc"},
 		},
 	}
 
