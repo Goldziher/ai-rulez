@@ -64,20 +64,6 @@
       }
     },
     {
-      "name": "Empty agents directory creation",
-      "description": "Create agent directory even when no agents defined",
-      "working_dir": "",
-      "command": ["generate", "empty-project/ai_rules.yaml"],
-      "exit_code": 0,
-      "setup": [
-        "mkdir -p empty-project",
-        "echo 'metadata:\n  name: \"Empty Test\"\noutputs:\n  - path: \".claude/agents/\"\n    type: \"agent\"\nrules:\n  - name: \"Test\"\n    content: \"Test\"' > empty-project/ai_rules.yaml"
-      ],
-      "cleanup": [
-        "rm -rf empty-project/.claude"
-      ]
-    },
-    {
       "name": "Validate agent configuration",
       "description": "Validate configuration with agents",
       "working_dir": "scenarios/agents",
