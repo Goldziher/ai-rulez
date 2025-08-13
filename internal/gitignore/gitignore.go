@@ -20,7 +20,17 @@ func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
 	// Get the list of output file names
 	var outputFiles []string
 	for _, output := range cfg.Outputs {
-		outputFiles = append(outputFiles, output.GetPath())
+		path := output.GetPath()
+		// For directory outputs, add just the top-level directory
+		if output.IsDirectory() {
+			// Extract the top-level directory (e.g. ".cursor/rules/" -> ".cursor/")
+			dirs := strings.Split(strings.TrimSuffix(path, "/"), "/")
+			if len(dirs) > 0 {
+				outputFiles = append(outputFiles, dirs[0]+"/")
+			}
+		} else {
+			outputFiles = append(outputFiles, path)
+		}
 	}
 
 	if len(outputFiles) == 0 {
@@ -109,9 +119,16 @@ func matchesPattern(filename, pattern string) bool {
 		return true
 	}
 
-	// Pattern ends with / - directory only
+	// Pattern ends with / - directory pattern
 	if strings.HasSuffix(pattern, "/") {
-		return false // We're dealing with files, not directories
+		// Check if filename is or starts with this directory
+		if strings.HasSuffix(filename, "/") {
+			// Both are directory patterns
+			return pattern == filename
+		}
+		// Pattern is directory, filename might be a file in that directory
+		dirPrefix := strings.TrimSuffix(pattern, "/")
+		return strings.HasPrefix(filename, dirPrefix+"/") || filename == dirPrefix
 	}
 
 	// Pattern with wildcards

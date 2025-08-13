@@ -33,8 +33,20 @@ jobs:
   publish-npm:
     needs: goreleaser
     runs-on: ubuntu-latest
+    if: always() && (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'failure')
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check if GitHub release exists
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if ! gh release view v$VERSION > /dev/null 2>&1; then
+            echo "GitHub release v$VERSION does not exist, skipping npm publish"
+            exit 1
+          fi
+          echo "GitHub release v$VERSION exists, proceeding with npm publish"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -60,8 +72,20 @@ jobs:
   publish-pypi:
     needs: goreleaser
     runs-on: ubuntu-latest
+    if: always() && (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'failure')
     steps:
       - uses: actions/checkout@v4
+
+      - name: Check if GitHub release exists
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          if ! gh release view v$VERSION > /dev/null 2>&1; then
+            echo "GitHub release v$VERSION does not exist, skipping PyPI publish"
+            exit 1
+          fi
+          echo "GitHub release v$VERSION exists, proceeding with PyPI publish"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v5
         with:
