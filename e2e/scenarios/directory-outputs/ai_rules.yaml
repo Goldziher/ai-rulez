@@ -6,26 +6,26 @@ metadata:
 outputs:
   # Rules to a directory with custom naming
   - path: "docs/"
-    type: "rules"
+    type: "rule"
     naming_scheme: "project-rules.md"
     template: "default"
   
   # Agents with index-based naming
   - path: "ai/agents/"
-    type: "agents"
+    type: "agent"
     naming_scheme: "agent_{index}_{name}.yaml"
   
   # Another agent directory with type prefix
   - path: ".config/ai/"
-    type: "agents"
-    naming_scheme: "{type}_{name}.md"
+    type: "agent"
+    naming_scheme: "agent_{name}.md"
   
   # Mixed - regular file
   - file: "README.md"
     template: |
       # {{ .ProjectName }}
       
-      {{ .ProjectDescription }}
+      {{ .Description }}
       
       ## Rules
       {{ range .Rules }}

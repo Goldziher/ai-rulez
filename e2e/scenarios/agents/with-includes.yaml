@@ -8,7 +8,11 @@ includes:
 
 outputs:
   - path: ".claude/agents/"
-    type: "agents"
+    type: "agent"
+
+rules:
+  - name: "Test Rule"
+    content: "Test content"
 
 agents:
   # Override base-reviewer
