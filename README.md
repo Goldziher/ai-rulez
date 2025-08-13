@@ -132,7 +132,7 @@ npx ai-rulez mcp
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v1.4.2
+    rev: v1.4.3
     hooks:
       - id: ai-rulez-validate
 ```
