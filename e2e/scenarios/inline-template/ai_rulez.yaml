@@ -17,9 +17,9 @@ outputs:
 
 rules:
   - name: "Feature A"
-    priority: "high"
+    priority: 8
     content: "Implement feature A with tests"
   
   - name: "Documentation"
-    priority: "medium"
+    priority: 5
     content: "Keep docs updated"

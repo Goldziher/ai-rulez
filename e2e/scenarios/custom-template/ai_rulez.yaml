@@ -12,14 +12,14 @@ outputs:
 
 rules:
   - name: "Performance"
-    priority: "high"
+    priority: 8
     content: |
       - Optimize critical paths
       - Use efficient algorithms
       - Monitor memory usage
 
   - name: "Documentation"
-    priority: "low"
+    priority: 3
     content: |
       - Document public APIs
       - Keep README up to date
