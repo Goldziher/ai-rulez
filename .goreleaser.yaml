@@ -29,15 +29,14 @@ builds:
         goarch: arm64
 
 archives:
-  - format: tar.gz
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_
       {{- .Version }}_
       {{- .Os }}_
       {{- .Arch }}
-    format_overrides:
-      - goos: windows
-        format: zip
+    files:
+      - README.md
+      - LICENSE
 
 checksum:
   name_template: 'checksums.txt'
@@ -46,6 +45,9 @@ release:
   github:
     owner: Goldziher
     name: ai-rulez
+  # Skip if release already exists to prevent asset conflicts
+  skip_upload: false
+  replace_existing_draft: true
 
 # Temporarily disabled for Homebrew testing
 # nfpms:
@@ -67,9 +69,12 @@ brews:
       owner: Goldziher
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+      branch: main
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    skip_upload: false
     install: |
       bin.install "ai-rulez"
     test: |

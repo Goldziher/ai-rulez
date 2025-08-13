@@ -28,7 +28,7 @@ func TestGenerator_GenerateAll(t *testing.T) {
 		},
 		Outputs: []config.Output{
 			{Path: "CLAUDE.md"},
-			{Path: filepath.Join("rules", ".cursorrules")},
+			{Path: ".cursor/rules/", Type: "rule", NamingScheme: "rules.mdc"},
 			{Path: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
@@ -44,7 +44,7 @@ func TestGenerator_GenerateAll(t *testing.T) {
 	// Check that all files were created
 	expectedFiles := []string{
 		filepath.Join(tmpDir, "CLAUDE.md"),
-		filepath.Join(tmpDir, "rules", ".cursorrules"),
+		filepath.Join(tmpDir, ".cursor", "rules", "rules.mdc"),
 		filepath.Join(tmpDir, ".windsurfrules"),
 	}
 

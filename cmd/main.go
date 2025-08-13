@@ -18,6 +18,7 @@ import (
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 // Version is the current version of ai-rulez (set at build time)
@@ -302,7 +303,10 @@ var initCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new AI rules project",
 	Long: `Initialize a new AI rules project with a basic configuration file
-and example rules. This creates an ai_rulez.yaml file in the current directory.`,
+and example rules. This creates an ai_rulez.yaml file in the current directory.
+
+Optionally, use --setup-hooks to automatically configure git hooks for ai-rulez
+validation if lefthook, pre-commit, or husky is detected in your project.`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		projectName := "My Project"
@@ -320,19 +324,8 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.`
 			os.Exit(1)
 		}
 
-		// Get template type from flag
-		template, _ := cmd.Flags().GetString("template")
-
-		// Create configuration based on template
-		var cfg *config.Config
-		switch template {
-		case "react":
-			cfg = createReactTemplate(projectName)
-		case "typescript":
-			cfg = createTypescriptTemplate(projectName)
-		default:
-			cfg = createBasicTemplate(projectName)
-		}
+		// Create basic configuration
+		cfg := createBasicTemplate(projectName)
 
 		// Save configuration
 		if err := config.SaveConfig(cfg, "ai_rulez.yaml"); err != nil {
@@ -343,6 +336,33 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.`
 		fmt.Printf("✓ Initialized new AI rules project: %s\n", projectName)
 		fmt.Println("  - Created ai_rulez.yaml")
 		fmt.Println("  - Run 'ai-rulez generate' to create rule files")
+
+		// Check for --setup-hooks flag
+		setupHooks, _ := cmd.Flags().GetBool("setup-hooks")
+		if setupHooks {
+			fmt.Println("\nDetecting git hook managers...")
+
+			// Auto-detect and setup hooks
+			if detectLefthook() {
+				fmt.Println("  - Found lefthook configuration")
+				if err := setupLefthookConfig(); err != nil {
+					fmt.Printf("    Warning: Failed to setup lefthook: %v\n", err)
+				}
+			} else if detectPreCommit() {
+				fmt.Println("  - Found pre-commit configuration")
+				if err := setupPreCommitConfig(); err != nil {
+					fmt.Printf("    Warning: Failed to setup pre-commit: %v\n", err)
+				}
+			} else if detectHusky() {
+				fmt.Println("  - Found husky configuration")
+				if err := setupHuskyConfig(); err != nil {
+					fmt.Printf("    Warning: Failed to setup husky: %v\n", err)
+				}
+			} else {
+				fmt.Println("  - No git hook manager detected")
+				fmt.Println("    Install lefthook, pre-commit, or husky to enable automatic validation")
+			}
+		}
 	},
 }
 
@@ -905,7 +925,9 @@ func init() {
 	generateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Process all config files recursively")
 	generateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
 	generateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Update .gitignore files to include generated output files")
-	initCmd.Flags().StringP("template", "t", "basic", "Template to use (basic, react, typescript)")
+
+	// Add flags for init command
+	initCmd.Flags().Bool("setup-hooks", false, "Auto-detect and setup git hooks (lefthook, pre-commit, or husky)")
 
 	// Add subcommands to add command
 	addCmd.AddCommand(addRuleCmd)
@@ -966,7 +988,7 @@ func createBasicTemplate(projectName string) *config.Config {
 		},
 		Outputs: []config.Output{
 			{Path: "claude.md"},
-			{Path: ".cursorrules"},
+			{Path: ".cursor/rules/", Type: "rule", NamingScheme: "rules.mdc"},
 			{Path: ".windsurfrules"},
 		},
 		Rules: []config.Rule{
@@ -989,90 +1011,6 @@ func createBasicTemplate(projectName string) *config.Config {
 	}
 }
 
-func createReactTemplate(projectName string) *config.Config {
-	return &config.Config{
-		Metadata: config.Metadata{
-			Name:        projectName,
-			Version:     "1.0.0",
-			Description: "React project AI assistant rules",
-		},
-		Outputs: []config.Output{
-			{Path: "claude.md"},
-			{Path: ".cursorrules"},
-			{Path: ".windsurfrules"},
-		},
-		Rules: []config.Rule{
-			{
-				Name:     "React Best Practices",
-				Priority: 10,
-				Content:  "Use functional components with hooks. Prefer composition over inheritance.",
-			},
-			{
-				Name:     "Component Structure",
-				Priority: 10,
-				Content:  "Keep components small and focused. Extract custom hooks for reusable logic.",
-			},
-			{
-				Name:     "State Management",
-				Priority: 5,
-				Content:  "Use useState for local state, useContext for shared state, consider Redux for complex apps.",
-			},
-			{
-				Name:     "Performance",
-				Priority: 5,
-				Content:  "Use React.memo, useMemo, and useCallback to optimize performance when needed.",
-			},
-			{
-				Name:     "Testing",
-				Priority: 5,
-				Content:  "Write unit tests with React Testing Library. Test behavior, not implementation.",
-			},
-		},
-	}
-}
-
-func createTypescriptTemplate(projectName string) *config.Config {
-	return &config.Config{
-		Metadata: config.Metadata{
-			Name:        projectName,
-			Version:     "1.0.0",
-			Description: "TypeScript project AI assistant rules",
-		},
-		Outputs: []config.Output{
-			{Path: "claude.md"},
-			{Path: ".cursorrules"},
-			{Path: ".windsurfrules"},
-		},
-		Rules: []config.Rule{
-			{
-				Name:     "Type Safety",
-				Priority: 10,
-				Content:  "Use strict TypeScript settings. Avoid 'any' type unless absolutely necessary.",
-			},
-			{
-				Name:     "Interface Design",
-				Priority: 10,
-				Content:  "Define clear interfaces for data structures. Use union types for controlled variations.",
-			},
-			{
-				Name:     "Generic Programming",
-				Priority: 5,
-				Content:  "Use generics to create reusable, type-safe functions and classes.",
-			},
-			{
-				Name:     "Error Handling",
-				Priority: 5,
-				Content:  "Use Result/Option patterns or proper error types instead of throwing exceptions.",
-			},
-			{
-				Name:     "Documentation",
-				Priority: 3,
-				Content:  "Use TSDoc comments for public APIs. Document complex type definitions.",
-			},
-		},
-	}
-}
-
 // mcpCmd represents the mcp command
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
@@ -1084,7 +1022,6 @@ The server runs in stdio mode and provides tools for:
 - Retrieving rules and sections with filtering options
 - Generating output files with gitignore integration
 - Validating configurations
-- Listing available templates
 - Adding, updating, and deleting rules, sections, and outputs
 - Support for rule/section IDs for precise local overrides
 
@@ -1160,12 +1097,6 @@ func addAIRulezTools(s *server.MCPServer) {
 		),
 	)
 	s.AddTool(validateTool, handleValidate)
-
-	// Tool: List templates
-	templatesTool := mcp.NewTool("list_templates",
-		mcp.WithDescription("List available project templates for initialization"),
-	)
-	s.AddTool(templatesTool, handleListTemplates)
 
 	// Tool: Add rule
 	addRuleTool := mcp.NewTool("add_rule",
@@ -1492,32 +1423,252 @@ func handleValidate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
 
-func handleListTemplates(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	templates := []map[string]interface{}{
-		{
-			"name":        "basic",
-			"description": "Basic AI rules template with code quality, documentation, and testing rules",
-			"outputs":     []string{"claude.md", ".cursorrules", ".windsurfrules"},
-		},
-		{
-			"name":        "react",
-			"description": "React project template with component structure, state management, and performance rules",
-			"outputs":     []string{"claude.md", ".cursorrules", ".windsurfrules"},
-		},
-		{
-			"name":        "typescript",
-			"description": "TypeScript project template with type safety, interface design, and error handling rules",
-			"outputs":     []string{"claude.md", ".cursorrules", ".windsurfrules"},
-		},
+// detectLefthook checks if lefthook is configured in the project
+func detectLefthook() bool {
+	files := []string{"lefthook.yaml", "lefthook.yml", ".lefthook.yml"}
+	for _, file := range files {
+		if _, err := os.Stat(file); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// detectPreCommit checks if pre-commit is configured in the project
+func detectPreCommit() bool {
+	files := []string{".pre-commit-config.yaml", ".pre-commit-config.yml"}
+	for _, file := range files {
+		if _, err := os.Stat(file); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+// detectHusky checks if husky is configured in the project
+func detectHusky() bool {
+	if info, err := os.Stat(".husky"); err == nil && info.IsDir() {
+		return true
+	}
+	return false
+}
+
+// setupLefthookConfig adds ai-rulez hooks to lefthook configuration
+func setupLefthookConfig() error {
+	configFile := ""
+	files := []string{"lefthook.yaml", "lefthook.yml", ".lefthook.yml"}
+	for _, file := range files {
+		if _, err := os.Stat(file); err == nil {
+			configFile = file
+			break
+		}
 	}
 
-	result := map[string]interface{}{
-		"available_templates": templates,
-		"total_templates":     len(templates),
+	if configFile == "" {
+		return fmt.Errorf("lefthook configuration file not found")
 	}
 
-	jsonResult, _ := json.MarshalIndent(result, "", "  ")
-	return mcp.NewToolResultText(string(jsonResult)), nil
+	// Read existing config
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read lefthook config: %w", err)
+	}
+
+	// Parse YAML
+	var configData map[string]interface{}
+	if err := yaml.Unmarshal(data, &configData); err != nil {
+		return fmt.Errorf("failed to parse lefthook config: %w", err)
+	}
+
+	// Add ai-rulez hook to pre-commit
+	if preCommit, ok := configData["pre-commit"].(map[string]interface{}); ok {
+		if commands, ok := preCommit["commands"].(map[string]interface{}); ok {
+			// Check if ai-rulez already exists
+			if _, exists := commands["ai-rulez"]; !exists {
+				commands["ai-rulez"] = map[string]interface{}{
+					"glob":      "**/*.{ai-rulez,ai_rulez}.{yaml,yml}",
+					"run":       "ai-rulez generate --dry-run",
+					"fail_text": "AI rules validation failed",
+				}
+
+				// Write back
+				updatedData, err := yaml.Marshal(configData)
+				if err != nil {
+					return fmt.Errorf("failed to marshal updated config: %w", err)
+				}
+
+				if err := os.WriteFile(configFile, updatedData, 0o644); err != nil {
+					return fmt.Errorf("failed to write updated config: %w", err)
+				}
+
+				fmt.Printf("✓ Added ai-rulez hook to %s\n", configFile)
+			} else {
+				fmt.Printf("  - ai-rulez hook already exists in %s\n", configFile)
+			}
+		}
+	} else {
+		// Create pre-commit section if it doesn't exist
+		if configData["pre-commit"] == nil {
+			configData["pre-commit"] = make(map[string]interface{})
+		}
+		preCommit, ok := configData["pre-commit"].(map[string]interface{})
+		if !ok {
+			preCommit = make(map[string]interface{})
+			configData["pre-commit"] = preCommit
+		}
+		preCommit["commands"] = map[string]interface{}{
+			"ai-rulez": map[string]interface{}{
+				"glob":      "**/*.{ai-rulez,ai_rulez}.{yaml,yml}",
+				"run":       "ai-rulez generate --dry-run",
+				"fail_text": "AI rules validation failed",
+			},
+		}
+
+		// Write back
+		updatedData, err := yaml.Marshal(configData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal updated config: %w", err)
+		}
+
+		if err := os.WriteFile(configFile, updatedData, 0o644); err != nil {
+			return fmt.Errorf("failed to write updated config: %w", err)
+		}
+
+		fmt.Printf("✓ Added ai-rulez hook to %s\n", configFile)
+	}
+
+	return nil
+}
+
+// setupHuskyConfig adds ai-rulez hooks to husky configuration
+func setupHuskyConfig() error {
+	// Check if .husky directory exists
+	if _, err := os.Stat(".husky"); os.IsNotExist(err) {
+		return fmt.Errorf(".husky directory not found")
+	}
+
+	// Check if pre-commit hook already exists
+	preCommitPath := ".husky/pre-commit"
+	var hookContent string
+
+	if data, err := os.ReadFile(preCommitPath); err == nil {
+		// Pre-commit hook exists, append to it
+		hookContent = string(data)
+
+		// Check if ai-rulez is already in the hook
+		if strings.Contains(hookContent, "ai-rulez") {
+			fmt.Printf("  - ai-rulez hook already exists in %s\n", preCommitPath)
+			return nil
+		}
+
+		// Append ai-rulez command
+		if !strings.HasSuffix(hookContent, "\n") {
+			hookContent += "\n"
+		}
+		hookContent += "\n# Validate AI rules configuration\n"
+		hookContent += "echo 'Validating AI rules...'\n"
+		hookContent += "npx ai-rulez generate --dry-run || exit 1\n"
+	} else {
+		// Create new pre-commit hook
+		hookContent = `#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Validate AI rules configuration
+echo 'Validating AI rules...'
+npx ai-rulez generate --dry-run || exit 1
+`
+	}
+
+	// Write the hook file
+	if err := os.WriteFile(preCommitPath, []byte(hookContent), 0o755); err != nil {
+		return fmt.Errorf("failed to write husky pre-commit hook: %w", err)
+	}
+
+	fmt.Printf("✓ Added ai-rulez hook to %s\n", preCommitPath)
+	fmt.Println("  - Using npx ai-rulez for validation")
+	fmt.Println("  - Make sure ai-rulez is in your package.json devDependencies")
+
+	return nil
+}
+
+// setupPreCommitConfig adds ai-rulez hooks to pre-commit configuration
+func setupPreCommitConfig() error {
+	configFile := ""
+	files := []string{".pre-commit-config.yaml", ".pre-commit-config.yml"}
+	for _, file := range files {
+		if _, err := os.Stat(file); err == nil {
+			configFile = file
+			break
+		}
+	}
+
+	if configFile == "" {
+		return fmt.Errorf("pre-commit configuration file not found")
+	}
+
+	// Read existing config
+	data, err := os.ReadFile(configFile)
+	if err != nil {
+		return fmt.Errorf("failed to read pre-commit config: %w", err)
+	}
+
+	// Parse YAML
+	var configData map[string]interface{}
+	if err := yaml.Unmarshal(data, &configData); err != nil {
+		return fmt.Errorf("failed to parse pre-commit config: %w", err)
+	}
+
+	// Check if repos exists
+	repos, ok := configData["repos"].([]interface{})
+	if !ok {
+		repos = []interface{}{}
+	}
+
+	// Check if ai-rulez repo already exists
+	aiRulezExists := false
+	for _, repo := range repos {
+		if repoMap, ok := repo.(map[string]interface{}); ok {
+			if repoURL, ok := repoMap["repo"].(string); ok {
+				if strings.Contains(repoURL, "Goldziher/ai-rulez") {
+					aiRulezExists = true
+					break
+				}
+			}
+		}
+	}
+
+	if !aiRulezExists {
+		// Add ai-rulez repo
+		aiRulezRepo := map[string]interface{}{
+			"repo": "https://github.com/Goldziher/ai-rulez",
+			"rev":  "v1.4.1", // Use latest version
+			"hooks": []interface{}{
+				map[string]interface{}{
+					"id": "ai-rulez-validate",
+				},
+			},
+		}
+		repos = append(repos, aiRulezRepo)
+		configData["repos"] = repos
+
+		// Write back
+		updatedData, err := yaml.Marshal(configData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal updated config: %w", err)
+		}
+
+		if err := os.WriteFile(configFile, updatedData, 0o644); err != nil {
+			return fmt.Errorf("failed to write updated config: %w", err)
+		}
+
+		fmt.Printf("✓ Added ai-rulez hooks to %s\n", configFile)
+		fmt.Println("  - Using ai-rulez-validate hook")
+		fmt.Println("  - Run 'pre-commit install' to activate the hooks")
+	} else {
+		fmt.Printf("  - ai-rulez hooks already exist in %s\n", configFile)
+	}
+
+	return nil
 }
 
 // readFromStdin reads content from standard input until EOF
