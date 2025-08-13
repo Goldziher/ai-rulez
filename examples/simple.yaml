@@ -5,7 +5,9 @@ metadata:
 
 outputs:
   - file: "claude.md"
-  - file: ".cursorrules"
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "rules.mdc"
 
 rules:
   - name: "Best Practices"
