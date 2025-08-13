@@ -306,6 +306,20 @@ var initCmd = &cobra.Command{
 	Long: `Initialize a new AI rules project with a basic configuration file
 and example rules. This creates an ai_rulez.yaml file in the current directory.
 
+Provider Flags:
+  --claude     Enable Claude (CLAUDE.md + agents) [DEFAULT]
+  --cursor     Enable Cursor (.cursor/rules/)
+  --windsurf   Enable Windsurf (.windsurfrules)
+  --gemini     Enable Gemini (GEMINI.md)
+  --copilot    Enable GitHub Copilot (.github/copilot-instructions.md)
+  --cline      Enable Cline (.clinerules/)
+  --continue   Enable Continue.dev (.continuerules)
+
+Convenience Flags:
+  --all        Enable all major providers
+  --popular    Enable Claude, Cursor, Windsurf, Copilot (most common)
+  --minimal    Only Claude without agents or sections
+
 Optionally, use --setup-hooks to automatically configure git hooks for ai-rulez
 validation if lefthook, pre-commit, or husky is detected in your project.`,
 	Args: cobra.MaximumNArgs(1),
@@ -325,14 +339,23 @@ validation if lefthook, pre-commit, or husky is detected in your project.`,
 			os.Exit(1)
 		}
 
-		// Create basic configuration
-		if err := createSkeletonConfigFile(projectName, "ai_rulez.yaml"); err != nil {
+		// Parse provider flags
+		providers := parseProviderFlags(cmd)
+
+		// Create configuration with selected providers
+		if err := createProviderConfigFile(projectName, "ai_rulez.yaml", providers); err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
 		fmt.Printf("✓ Initialized new AI rules project: %s\n", projectName)
 		fmt.Println("  - Created ai_rulez.yaml")
+
+		// Show which providers were configured
+		if len(providers.Enabled) > 0 {
+			fmt.Printf("  - Configured for: %s\n", strings.Join(providers.Enabled, ", "))
+		}
+
 		fmt.Println("  - Run 'ai-rulez generate' to create rule files")
 
 		// Check for --setup-hooks flag
@@ -925,6 +948,26 @@ func init() {
 	generateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Update .gitignore files to include generated output files")
 
 	// Add flags for init command
+	// Provider flags
+	initCmd.Flags().Bool("claude", false, "Enable Claude (CLAUDE.md + agents)")
+	initCmd.Flags().Bool("cursor", false, "Enable Cursor (.cursor/rules/)")
+	initCmd.Flags().Bool("windsurf", false, "Enable Windsurf (.windsurfrules)")
+	initCmd.Flags().Bool("gemini", false, "Enable Gemini (GEMINI.md)")
+	initCmd.Flags().Bool("copilot", false, "Enable GitHub Copilot (.github/copilot-instructions.md)")
+	initCmd.Flags().Bool("cline", false, "Enable Cline (.clinerules/)")
+	initCmd.Flags().Bool("continue", false, "Enable Continue.dev (.continuerules)")
+
+	// Convenience flags
+	initCmd.Flags().Bool("all", false, "Enable all major providers")
+	initCmd.Flags().Bool("popular", false, "Enable Claude, Cursor, Windsurf, Copilot")
+	initCmd.Flags().Bool("minimal", false, "Only Claude without agents or sections")
+
+	// Configuration options
+	initCmd.Flags().Bool("with-agents", false, "Include example agent configurations")
+	initCmd.Flags().Bool("with-sections", false, "Include example sections in config")
+	initCmd.Flags().Bool("no-comments", false, "Skip explanatory comments in generated files")
+
+	// Git hooks flag
 	initCmd.Flags().Bool("setup-hooks", false, "Auto-detect and setup git hooks (lefthook, pre-commit, or husky)")
 
 	// Add subcommands to add command
@@ -977,59 +1020,206 @@ func init() {
 	deleteOutputCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 }
 
-func createSkeletonConfigFile(projectName, filename string) error {
-	template := `$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+// ProviderConfig holds the configuration for enabled providers
+type ProviderConfig struct {
+	Enabled      []string
+	WithAgents   bool
+	WithSections bool
+	NoComments   bool
+}
 
-metadata:
-  name: "` + projectName + `"
+// parseProviderFlags parses command flags and returns enabled providers
+func parseProviderFlags(cmd *cobra.Command) ProviderConfig {
+	providerConfig := ProviderConfig{
+		Enabled: []string{},
+	}
+
+	// Get configuration options
+	providerConfig.WithAgents, _ = cmd.Flags().GetBool("with-agents")
+	providerConfig.WithSections, _ = cmd.Flags().GetBool("with-sections")
+	providerConfig.NoComments, _ = cmd.Flags().GetBool("no-comments")
+
+	// Check convenience flags first
+	all, _ := cmd.Flags().GetBool("all")
+	popular, _ := cmd.Flags().GetBool("popular")
+	minimal, _ := cmd.Flags().GetBool("minimal")
+
+	if all {
+		providerConfig.Enabled = []string{"claude", "cursor", "windsurf", "gemini", "copilot", "cline", "continue"}
+		return providerConfig
+	}
+
+	if popular {
+		providerConfig.Enabled = []string{"claude", "cursor", "windsurf", "copilot"}
+		return providerConfig
+	}
+
+	if minimal {
+		providerConfig.Enabled = []string{"claude"}
+		providerConfig.WithAgents = false
+		providerConfig.WithSections = false
+		return providerConfig
+	}
+
+	// Check individual provider flags
+	hasExplicitProvider := false
+	providers := []string{"claude", "cursor", "windsurf", "gemini", "copilot", "cline", "continue"}
+	for _, provider := range providers {
+		enabled, _ := cmd.Flags().GetBool(provider)
+		if enabled {
+			providerConfig.Enabled = append(providerConfig.Enabled, provider)
+			hasExplicitProvider = true
+			// Enable agents by default when Claude is explicitly selected
+			if provider == "claude" && !cmd.Flags().Changed("with-agents") {
+				providerConfig.WithAgents = true
+			}
+		}
+	}
+
+	// Default to Claude if no providers specified
+	if !hasExplicitProvider {
+		providerConfig.Enabled = []string{"claude"}
+		providerConfig.WithAgents = true // Default includes agents for better experience
+	}
+
+	return providerConfig
+}
+
+// createProviderConfigFile creates a config file with selected providers
+func createProviderConfigFile(projectName, filename string, providers ProviderConfig) error {
+	template := generateConfigTemplate(projectName, providers)
+
+	dir := filepath.Dir(filename)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return errors.FileWrite(dir, err).
+			WithContext("operation", "create directory").
+			WithSuggestion("Check if you have write permissions for the parent directory")
+	}
+
+	if err := os.WriteFile(filename, []byte(template), 0o644); err != nil {
+		return errors.FileWrite(filename, err)
+	}
+
+	return nil
+}
+
+// generateConfigTemplate generates the YAML template based on selected providers
+func generateConfigTemplate(projectName string, providers ProviderConfig) string {
+	var builder strings.Builder
+
+	// Add schema
+	builder.WriteString(`$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+
+`)
+
+	// Add metadata
+	builder.WriteString(fmt.Sprintf(`metadata:
+  name: "%s"
   version: "1.0.0"
   description: "AI assistant rules configuration"
 
-# Uncomment and customize remote includes to share rules across projects:
+`, projectName))
+
+	// Add includes section if not no-comments
+	if !providers.NoComments {
+		builder.WriteString(`# Uncomment and customize remote includes to share rules across projects:
 # includes:
 #   - "https://raw.githubusercontent.com/myorg/standards/main/coding-standards.yaml"
 #   - "./local-rules.yaml"
 
-# Output configurations - where to generate AI assistant files
-outputs:
-  # Primary Claude configuration
-  - file: "CLAUDE.md"
+`)
+	}
 
-  # Uncomment for additional AI assistants:
-  # - file: "GEMINI.md"          # Google Gemini
-  # - file: ".windsurfrules"     # Windsurf editor
-  # - path: ".cursor/rules/"     # Cursor editor (new format)
-  #   type: "rule" 
-  #   naming_scheme: "rules.mdc"
+	// Add outputs section
+	builder.WriteString(`# Output configurations - where to generate AI assistant files
+outputs:`)
+
+	// Add outputs based on enabled providers
+	for _, provider := range providers.Enabled {
+		switch provider {
+		case "claude":
+			builder.WriteString(`
+  # Claude configuration
+  - file: "CLAUDE.md"`)
+			if providers.WithAgents {
+				builder.WriteString(`
   
-  # Uncomment for AI agents (specialized sub-assistants for Claude):
-  # - path: ".claude/agents/"
-  #   type: "agent"
-  #   naming_scheme: "{name}.md"
+  # Claude agents (specialized sub-assistants)
+  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"`)
+			}
+		case "cursor":
+			builder.WriteString(`
+  
+  # Cursor editor (new format)
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "rules.mdc"`)
+		case "windsurf":
+			builder.WriteString(`
+  
+  # Windsurf editor
+  - file: ".windsurfrules"`)
+		case "gemini":
+			builder.WriteString(`
+  
+  # Google Gemini
+  - file: "GEMINI.md"`)
+		case "copilot":
+			builder.WriteString(`
+  
+  # GitHub Copilot
+  - file: ".github/copilot-instructions.md"`)
+		case "cline":
+			builder.WriteString(`
+  
+  # Cline assistant
+  - file: ".clinerules"`)
+		case "continue":
+			builder.WriteString(`
+  
+  # Continue.dev
+  - file: ".continuerules"`)
+		}
+	}
 
-# Uncomment to define specialized AI agents (sub-assistants for Claude):
-# agents:
-#   - name: "code-reviewer"
-#     description: "Code review and quality analysis specialist"
-#     system_prompt: |
-#       You are a senior code reviewer focusing on:
-#       - Code quality and maintainability
-#       - Security vulnerabilities  
-#       - Performance implications
-#       - Best practices and conventions
-#       
-#       Always provide constructive feedback with specific suggestions.
-#   
-#   - name: "test-writer"
-#     description: "Testing and quality assurance specialist"
-#     system_prompt: |
-#       You are a testing expert specializing in:
-#       - Writing comprehensive test cases
-#       - Test automation and CI/CD
-#       - Quality assurance processes
-#       - Test-driven development (TDD)
+	builder.WriteString("\n\n")
 
-rules:
+	// Add agents section if enabled
+	if providers.WithAgents && sliceContains(providers.Enabled, "claude") {
+		if providers.NoComments {
+			builder.WriteString(`agents:`)
+		} else {
+			builder.WriteString(`# AI agents (specialized sub-assistants for Claude)
+agents:`)
+		}
+		builder.WriteString(`
+  - name: "code-reviewer"
+    description: "Code review and quality analysis specialist"
+    system_prompt: |
+      You are a senior code reviewer focusing on:
+      - Code quality and maintainability
+      - Security vulnerabilities
+      - Performance implications
+      - Best practices and conventions
+      
+      Always provide constructive feedback with specific suggestions.
+  
+  - name: "test-writer"
+    description: "Testing and quality assurance specialist"
+    system_prompt: |
+      You are a testing expert specializing in:
+      - Writing comprehensive test cases
+      - Test automation and CI/CD
+      - Quality assurance processes
+      - Test-driven development (TDD)
+
+`)
+	}
+
+	// Add rules section
+	builder.WriteString(`rules:
   - name: "Code Quality"
     priority: 10
     content: |
@@ -1074,38 +1264,42 @@ rules:
       - Implement proper authentication and authorization
       - Keep dependencies up to date
       - Follow security best practices for your technology stack
+`)
 
-# Uncomment to add informational sections that appear before rules:
-# sections:
-#   - title: "Project Overview"
-#     priority: 20
-#     content: |
-#       ## Getting Started
-#       
-#       This project uses ai-rulez for managing AI assistant configurations.
-#       
-#       **Key Commands:**
-#       - ` + "`ai-rulez generate`" + ` - Generate AI assistant files
-#       - ` + "`ai-rulez validate`" + ` - Validate configuration
-#       - ` + "`ai-rulez add rule \"Name\"`" + ` - Add new rule interactively
-#       
-#       **Configuration:**
-#       Edit this file (ai_rulez.yaml) to customize rules and outputs for your project.
-`
-
-	dir := filepath.Dir(filename)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return errors.FileWrite(dir, err).
-			WithContext("operation", "create directory").
-			WithSuggestion("Check if you have write permissions for the parent directory")
+	// Add sections if enabled
+	if providers.WithSections {
+		builder.WriteString(`
+sections:
+  - title: "Project Overview"
+    priority: 20
+    content: |
+      ## Getting Started
+      
+      This project uses ai-rulez for managing AI assistant configurations.
+      
+      **Key Commands:**
+      - ` + "`ai-rulez generate`" + ` - Generate AI assistant files
+      - ` + "`ai-rulez validate`" + ` - Validate configuration
+      - ` + "`ai-rulez add rule \"Name\"`" + ` - Add new rule interactively
+      
+      **Configuration:**
+      Edit this file (ai_rulez.yaml) to customize rules and outputs for your project.
+`)
 	}
 
-	if err := os.WriteFile(filename, []byte(template), 0o644); err != nil {
-		return errors.FileWrite(filename, err)
-	}
-
-	return nil
+	return builder.String()
 }
+
+// sliceContains checks if a string is in a slice
+func sliceContains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
 
 // mcpCmd represents the mcp command
 var mcpCmd = &cobra.Command{
