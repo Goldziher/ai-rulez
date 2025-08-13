@@ -1,4 +1,4 @@
-package integration_test
+package e2e
 
 import (
 	"os"
@@ -25,7 +25,7 @@ func TestProfileGeneration(t *testing.T) {
 	defer pprof.StopCPUProfile()
 
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		t.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
