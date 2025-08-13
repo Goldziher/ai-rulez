@@ -11,8 +11,8 @@
   name: Validate AI rulez configuration
   description: Validate ai-rulez configuration files and ensure they would generate successfully
   entry: ai-rulez generate --dry-run
-  language: golang
-  additional_dependencies: []
+  language: python
+  additional_dependencies: ["ai-rulez"]
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
   always_run: false
@@ -22,8 +22,8 @@
   name: Generate AI assistant configuration files
   description: Generate AI assistant configuration files from ai-rulez configuration
   entry: ai-rulez generate
-  language: golang
-  additional_dependencies: []
+  language: python
+  additional_dependencies: ["ai-rulez"]
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
   always_run: false
@@ -33,8 +33,8 @@
   name: Generate AI assistant files (recursive)
   description: Generate all ai-rulez output files in the repository recursively
   entry: ai-rulez generate --recursive
-  language: golang
-  additional_dependencies: []
+  language: python
+  additional_dependencies: ["ai-rulez"]
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
   always_run: false
