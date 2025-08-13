@@ -32,8 +32,13 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
       - name: Sync schema
-        run: cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
+        run: task sync-schema
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
@@ -66,11 +71,16 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
-      - name: Sync schema
-        run: cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
 
-      - name: Run tests
-        run: go test -v -race -coverprofile=coverage.out ./...
+      - name: Sync schema
+        run: task sync-schema
+
+      - name: Run tests with coverage
+        run: task test:coverage
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -78,10 +88,15 @@ jobs:
           files: ./coverage.out
           fail_ci_if_error: false
 
-  build:
-    name: Build
+  e2e-test:
+    name: E2E Tests
     runs-on: ubuntu-latest
     needs: [lint, test]
+    timeout-minutes: 15
+    strategy:
+      matrix:
+        test-suite: [init, cli, agents, profile]
+      fail-fast: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -104,18 +119,118 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
       - name: Sync schema
-        run: cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
+        run: task sync-schema
+
+      - name: Build binary for tests
+        run: task build
+
+      - name: Run e2e tests - ${{ matrix.test-suite }}
+        run: |
+          echo "::group::E2E Tests - ${{ matrix.test-suite }}"
+          task test:e2e:${{ matrix.test-suite }}
+          echo "::endgroup::"
+        
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-results-${{ matrix.test-suite }}
+          path: e2e/*.log
+          retention-days: 7
+
+  benchmarks:
+    name: Benchmarks
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    timeout-minutes: 20
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - name: Sync schema
+        run: task sync-schema
+
+      - name: Build binary for benchmarks
+        run: task build
+
+      - name: Run benchmarks
+        run: task test:e2e:benchmark | tee benchmark-results.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.txt
+          retention-days: 30
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: [lint, test, e2e-test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+
+      - name: Sync schema
+        run: task sync-schema
 
       - name: Build binary
-        run: go build -v ./...
+        run: task build
 
       - name: Build for multiple platforms
-        run: |
-          GOOS=linux GOARCH=amd64 go build -o bin/ai-rulez-linux-amd64 ./cmd
-          GOOS=windows GOARCH=amd64 go build -o bin/ai-rulez-windows-amd64.exe ./cmd
-          GOOS=darwin GOARCH=amd64 go build -o bin/ai-rulez-darwin-amd64 ./cmd
-          GOOS=darwin GOARCH=arm64 go build -o bin/ai-rulez-darwin-arm64 ./cmd
+        run: task build:all
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
