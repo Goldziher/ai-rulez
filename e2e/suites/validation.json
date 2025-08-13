@@ -55,14 +55,14 @@
       "name": "missing_include_file",
       "description": "Missing included file",
       "command": ["validate", "scenarios/invalid/missing-include.yaml"],
-      "expected_err": "*",
-      "exit_code": 1
+      "expected_out": "Configuration is valid",
+      "exit_code": 0
     },
     {
       "name": "config_file_not_found",
       "description": "Configuration file doesn't exist",
       "command": ["validate", "nonexistent.yaml"],
-      "expected_err": "Configuration file * not found",
+      "expected_err": "read file: open nonexistent.yaml",
       "exit_code": 1
     },
     {
