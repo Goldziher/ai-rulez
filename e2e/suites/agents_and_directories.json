@@ -66,12 +66,12 @@
     {
       "name": "Empty agents directory creation",
       "description": "Create agent directory even when no agents defined",
-      "working_dir": "scenarios",
-      "command": ["generate", "-c", "empty-project/ai_rules.yaml"],
+      "working_dir": "",
+      "command": ["generate", "empty-project/ai_rules.yaml"],
       "exit_code": 0,
       "setup": [
         "mkdir -p empty-project",
-        "echo 'metadata:\n  name: \"Empty Test\"\noutputs:\n  - path: \".claude/agents/\"\n    type: \"agents\"' > empty-project/ai_rules.yaml"
+        "echo 'metadata:\n  name: \"Empty Test\"\noutputs:\n  - path: \".claude/agents/\"\n    type: \"agent\"\nrules:\n  - name: \"Test\"\n    content: \"Test\"' > empty-project/ai_rules.yaml"
       ],
       "cleanup": [
         "rm -rf empty-project/.claude"
@@ -96,11 +96,11 @@
     {
       "name": "Path and file field compatibility",
       "description": "Test backward compatibility with file field",
-      "working_dir": "scenarios",
-      "command": ["generate", "-c", "basic/ai_rules.yaml"],
+      "working_dir": "",
+      "command": ["generate", "scenarios/basic/ai_rulez.yaml"],
       "exit_code": 0,
       "files": {
-        "basic/CLAUDE.md": "# Test Project"
+        "scenarios/basic/CLAUDE.md": "# Test Project"
       }
     },
     {
