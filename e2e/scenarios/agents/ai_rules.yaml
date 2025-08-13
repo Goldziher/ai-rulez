@@ -10,7 +10,7 @@ outputs:
   
   # Agent outputs to directory
   - path: ".claude/agents/"
-    type: "agents"
+    type: "agent"
     naming_scheme: "{name}.md"
 
 rules:
