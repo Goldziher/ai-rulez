@@ -1641,7 +1641,7 @@ func setupPreCommitConfig() error {
 		// Add ai-rulez repo
 		aiRulezRepo := map[string]interface{}{
 			"repo": "https://github.com/Goldziher/ai-rulez",
-			"rev":  "v1.4.2", // Use latest version
+			"rev":  "v1.4.3", // Use latest version
 			"hooks": []interface{}{
 				map[string]interface{}{
 					"id": "ai-rulez-validate",
