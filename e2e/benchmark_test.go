@@ -1,4 +1,4 @@
-package integration_test
+package e2e
 
 import (
 	"os"
@@ -9,7 +9,7 @@ import (
 
 func BenchmarkBasicGeneration(b *testing.B) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
@@ -35,7 +35,7 @@ func BenchmarkBasicGeneration(b *testing.B) {
 
 func BenchmarkDryRunGeneration(b *testing.B) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
@@ -61,7 +61,7 @@ func BenchmarkDryRunGeneration(b *testing.B) {
 
 func BenchmarkValidation(b *testing.B) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
@@ -87,7 +87,7 @@ func BenchmarkValidation(b *testing.B) {
 
 func BenchmarkRecursiveGeneration(b *testing.B) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
@@ -137,7 +137,7 @@ rules:
 
 func BenchmarkWithIncludes(b *testing.B) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()
@@ -163,7 +163,7 @@ func BenchmarkWithIncludes(b *testing.B) {
 
 func BenchmarkConfigDiscovery(b *testing.B) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		b.Fatalf("Failed to build binary: %v", err)
 	}
 	defer cleanupBinary()

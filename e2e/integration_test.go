@@ -1,4 +1,4 @@
-package integration_test
+package e2e
 
 import (
 	"bytes"
@@ -50,7 +50,7 @@ var binaryPath string
 
 func TestMain(m *testing.M) {
 	
-	if err := buildBinary(); err != nil {
+	if err := buildTestBinary(); err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to build binary: %v\n", err)
 		os.Exit(1)
 	}
@@ -64,7 +64,7 @@ func TestMain(m *testing.M) {
 	os.Exit(code)
 }
 
-func buildBinary() error {
+func buildTestBinary() error {
 	
 	testingDir, err := os.Getwd()
 	if err != nil {

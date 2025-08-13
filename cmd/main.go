@@ -1300,7 +1300,6 @@ func sliceContains(slice []string, item string) bool {
 	return false
 }
 
-
 // mcpCmd represents the mcp command
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
