@@ -2,7 +2,7 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "ai-rulez"
-  version: "1.4.1"
+  version: "1.4.2"
   description: "Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
 
 # Example remote includes (commented out for this project):
