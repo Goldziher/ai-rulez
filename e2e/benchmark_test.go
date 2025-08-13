@@ -184,7 +184,7 @@ rules:
   - name: "Test Rule"
     content: "Test content"`
 	
-	if err := os.WriteFile(filepath.Join(tempDir, ".airules.yaml"), []byte(configContent), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(tempDir, ".ai-rulez.yaml"), []byte(configContent), 0o644); err != nil {
 		b.Fatalf("Failed to create config file: %v", err)
 	}
 	
