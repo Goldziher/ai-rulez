@@ -1,0 +1,119 @@
+{
+  "name": "Agent CRUD Operations",
+  "description": "Test add, update, delete operations on agents",
+  "tests": [
+    {
+      "name": "Add agent with all fields",
+      "description": "Add a new agent with all optional fields",
+      "command": ["add", "agent", "test-agent", "--description", "Test agent for validation", "--priority", "7", "--tools", "tool1,tool2", "--system-prompt", "You are a test agent", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "expected_out": "✓ Added agent 'test-agent' with priority 7",
+      "exit_code": 0
+    },
+    {
+      "name": "Add agent with minimal fields",
+      "description": "Add a new agent with only required fields",
+      "command": ["add", "agent", "minimal-agent", "--system-prompt", "You are minimal", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "expected_out": "✓ Added agent 'minimal-agent' with priority 5",
+      "exit_code": 0
+    },
+    {
+      "name": "Add agent with default priority",
+      "description": "Add agent without specifying priority (should default to 5)",
+      "command": ["add", "agent", "default-priority-agent", "--description", "Default priority agent", "--system-prompt", "You have default priority", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "expected_out": "✓ Added agent 'default-priority-agent' with priority 5",
+      "exit_code": 0
+    },
+    {
+      "name": "Update existing agent all fields",
+      "description": "Update an existing agent with new values for all fields",
+      "command": ["update", "agent", "existing-agent", "--description", "Updated description", "--priority", "9", "--tools", "new-tool1,new-tool2", "--system-prompt", "Updated system prompt", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents:\n  - name: existing-agent\n    description: Original description\n    priority: 5\n    tools:\n      - old-tool\n    system_prompt: Original prompt"
+      },
+      "expected_out": "✓ Updated agent 'existing-agent'",
+      "exit_code": 0
+    },
+    {
+      "name": "Update existing agent partial fields",
+      "description": "Update only some fields of an existing agent",
+      "command": ["update", "agent", "existing-agent", "--description", "Only description updated", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents:\n  - name: existing-agent\n    description: Original description\n    priority: 5\n    system_prompt: Original prompt"
+      },
+      "expected_out": "✓ Updated agent 'existing-agent'",
+      "exit_code": 0
+    },
+    {
+      "name": "Update non-existent agent error",
+      "description": "Error when trying to update non-existent agent",
+      "command": ["update", "agent", "non-existent-agent", "--description", "Should fail", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "expected_err": "Agent 'non-existent-agent' not found",
+      "exit_code": 1
+    },
+    {
+      "name": "Delete existing agent",
+      "description": "Delete an existing agent from configuration",
+      "command": ["delete", "agent", "agent-to-delete", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents:\n  - name: agent-to-delete\n    description: Will be deleted\n    system_prompt: Delete me\n  - name: agent-to-keep\n    description: Will be kept\n    system_prompt: Keep me"
+      },
+      "expected_out": "✓ Deleted agent 'agent-to-delete'",
+      "exit_code": 0
+    },
+    {
+      "name": "Delete non-existent agent error",
+      "description": "Error when trying to delete non-existent agent",
+      "command": ["delete", "agent", "non-existent-agent", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "expected_err": "Agent 'non-existent-agent' not found",
+      "exit_code": 1
+    },
+    {
+      "name": "Add agent to non-existent config error",
+      "description": "Error when trying to add agent without config file",
+      "command": ["add", "agent", "test-agent", "--system-prompt", "Should fail", "-c", "nonexistent.yaml"],
+      "expected_err": "open nonexistent.yaml: no such file or directory",
+      "exit_code": 1
+    },
+    {
+      "name": "Add agent prompts for system prompt",
+      "description": "CLI prompts for system prompt when not provided via flag",
+      "command": ["add", "agent", "prompted-agent", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "input": "You are a prompted agent",
+      "expected_out": "✓ Added agent 'prompted-agent' with priority 5",
+      "exit_code": 0
+    },
+    {
+      "name": "Validate agent fields after addition",
+      "description": "Verify agent is correctly added with proper field values",
+      "command": ["add", "agent", "validation-agent", "--description", "Agent for field validation", "--priority", "6", "--tools", "validate,check,test", "--system-prompt", "You validate things", "-c", "test_config.yaml"],
+      "files": {
+        "test_config.yaml": "metadata:\n  name: Test Project\noutputs:\n  - path: test.md\nagents: []"
+      },
+      "expected_out": "✓ Added agent 'validation-agent' with priority 6",
+      "exit_code": 0,
+      "post_check": {
+        "command": ["validate", "test_config.yaml"],
+        "expected_out": "Configuration is valid",
+        "exit_code": 0
+      }
+    }
+  ]
+}
