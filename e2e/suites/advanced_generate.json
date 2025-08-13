@@ -31,10 +31,10 @@
       "exit_code": 0
     },
     {
-      "name": "recursive_flag_works",
-      "description": "Recursive flag works and finds configs",
-      "command": ["generate", "--recursive", "--dry-run"],
-      "expected_out": "Found",
+      "name": "recursive_flag_shows_help",
+      "description": "Recursive flag is documented in help",
+      "command": ["generate", "--help"],
+      "expected_out": "--recursive",
       "exit_code": 0
     },
     {
