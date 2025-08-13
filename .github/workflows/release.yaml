@@ -95,6 +95,15 @@ jobs:
         run: |
           pip install build twine
 
+      - name: Update Python package version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "Updating Python package version to $VERSION"
+          # Update version in __init__.py files
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" build/python/ai_rulez/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" build/python/__init__.py
+          echo "Updated __init__.py files to version $VERSION"
+          
       - name: Build package
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
