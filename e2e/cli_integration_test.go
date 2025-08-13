@@ -39,6 +39,26 @@ func TestCLIIntegration(t *testing.T) {
 		suite := loadTestSuite(t, "suites/agents_and_directories.json")
 		runTestSuite(t, suite, tempDir)
 	})
+	
+	t.Run("CRUD Operations", func(t *testing.T) {
+		suite := loadTestSuite(t, "suites/crud_operations.json")
+		runTestSuite(t, suite, tempDir)
+	})
+	
+	t.Run("Advanced Generation", func(t *testing.T) {
+		suite := loadTestSuite(t, "suites/advanced_generate.json")
+		runTestSuite(t, suite, tempDir)
+	})
+	
+	t.Run("Shell Completion", func(t *testing.T) {
+		suite := loadTestSuite(t, "suites/completion.json")
+		runTestSuite(t, suite, tempDir)
+	})
+	
+	t.Run("Version and Global Options", func(t *testing.T) {
+		suite := loadTestSuite(t, "suites/version_and_global.json")
+		runTestSuite(t, suite, tempDir)
+	})
 }
 
 func copyTestScenarios(t *testing.T, destDir string) error {
