@@ -44,7 +44,7 @@ func TestDetectLefthook(t *testing.T) {
 
 			// Create test files
 			for _, file := range tt.files {
-				if err := os.WriteFile(file, []byte("test"), 0644); err != nil {
+				if err := os.WriteFile(file, []byte("test"), 0o644); err != nil {
 					t.Fatalf("Failed to create test file: %v", err)
 				}
 			}
@@ -91,7 +91,7 @@ func TestDetectPreCommit(t *testing.T) {
 
 			// Create test files
 			for _, file := range tt.files {
-				if err := os.WriteFile(file, []byte("test"), 0644); err != nil {
+				if err := os.WriteFile(file, []byte("test"), 0o644); err != nil {
 					t.Fatalf("Failed to create test file: %v", err)
 				}
 			}
@@ -114,7 +114,7 @@ func TestDetectHusky(t *testing.T) {
 		{
 			name: "detects .husky directory",
 			setup: func(tmpDir string) error {
-				return os.Mkdir(".husky", 0755)
+				return os.Mkdir(".husky", 0o755)
 			},
 			expected: true,
 		},
@@ -128,7 +128,7 @@ func TestDetectHusky(t *testing.T) {
 		{
 			name: ".husky is a file not directory",
 			setup: func(tmpDir string) error {
-				return os.WriteFile(".husky", []byte("test"), 0644)
+				return os.WriteFile(".husky", []byte("test"), 0o644)
 			},
 			expected: false,
 		},
@@ -200,7 +200,7 @@ func TestSetupLefthookConfig(t *testing.T) {
 			os.Chdir(tmpDir)
 
 			// Create lefthook.yaml with test content
-			if err := os.WriteFile("lefthook.yaml", []byte(tt.existingYAML), 0644); err != nil {
+			if err := os.WriteFile("lefthook.yaml", []byte(tt.existingYAML), 0o644); err != nil {
 				t.Fatalf("Failed to create lefthook.yaml: %v", err)
 			}
 
@@ -274,7 +274,7 @@ func TestSetupPreCommitConfig(t *testing.T) {
 			os.Chdir(tmpDir)
 
 			// Create .pre-commit-config.yaml with test content
-			if err := os.WriteFile(".pre-commit-config.yaml", []byte(tt.existingYAML), 0644); err != nil {
+			if err := os.WriteFile(".pre-commit-config.yaml", []byte(tt.existingYAML), 0o644); err != nil {
 				t.Fatalf("Failed to create .pre-commit-config.yaml: %v", err)
 			}
 
@@ -312,7 +312,7 @@ func TestSetupHuskyConfig(t *testing.T) {
 		{
 			name: "creates new pre-commit hook",
 			setupFiles: func(tmpDir string) error {
-				return os.Mkdir(".husky", 0755)
+				return os.Mkdir(".husky", 0o755)
 			},
 			expectedCheck: "ai-rulez generate --dry-run",
 			expectError:   false,
@@ -320,7 +320,7 @@ func TestSetupHuskyConfig(t *testing.T) {
 		{
 			name: "appends to existing pre-commit hook",
 			setupFiles: func(tmpDir string) error {
-				if err := os.Mkdir(".husky", 0755); err != nil {
+				if err := os.Mkdir(".husky", 0o755); err != nil {
 					return err
 				}
 				content := `#!/usr/bin/env sh
@@ -328,7 +328,7 @@ func TestSetupHuskyConfig(t *testing.T) {
 
 npm test
 `
-				return os.WriteFile(".husky/pre-commit", []byte(content), 0755)
+				return os.WriteFile(".husky/pre-commit", []byte(content), 0o755)
 			},
 			expectedCheck: "ai-rulez generate --dry-run",
 			expectError:   false,
@@ -336,7 +336,7 @@ npm test
 		{
 			name: "doesn't duplicate existing ai-rulez command",
 			setupFiles: func(tmpDir string) error {
-				if err := os.Mkdir(".husky", 0755); err != nil {
+				if err := os.Mkdir(".husky", 0o755); err != nil {
 					return err
 				}
 				content := `#!/usr/bin/env sh
@@ -344,7 +344,7 @@ npm test
 
 npx ai-rulez generate --dry-run
 `
-				return os.WriteFile(".husky/pre-commit", []byte(content), 0755)
+				return os.WriteFile(".husky/pre-commit", []byte(content), 0o755)
 			},
 			expectedCheck: "ai-rulez",
 			expectError:   false,
@@ -396,7 +396,7 @@ npx ai-rulez generate --dry-run
 				if err != nil {
 					t.Fatalf("Failed to stat %s: %v", hookPath, err)
 				}
-				if info.Mode()&0111 == 0 {
+				if info.Mode()&0o111 == 0 {
 					t.Errorf("Hook file is not executable")
 				}
 			}
@@ -406,7 +406,7 @@ npx ai-rulez generate --dry-run
 
 // Helper function
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(s) > 0 && s[0:len(substr)] == substr || len(s) > len(substr) && s[len(s)-len(substr):] == substr || len(substr) > 0 && len(s) > len(substr) && findSubstring(s, substr))
+	return len(s) >= len(substr) && (s == substr || s != "" && s[0:len(substr)] == substr || len(s) > len(substr) && s[len(s)-len(substr):] == substr || substr != "" && len(s) > len(substr) && findSubstring(s, substr))
 }
 
 func findSubstring(s, substr string) bool {
