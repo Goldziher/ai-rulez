@@ -22,7 +22,7 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	cfg := &config.Config{
 		Outputs: []config.Output{
 			{Path: "CLAUDE.md"},
-			{Path: ".cursorrules"},
+			{Path: ".cursor/rules/", Type: "rule", NamingScheme: "rules.mdc"},
 			{Path: ".windsurfrules"},
 		},
 	}
@@ -41,7 +41,7 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	}
 
 	contentStr := string(content)
-	expectedFiles := []string{"CLAUDE.md", ".cursorrules", ".windsurfrules"}
+	expectedFiles := []string{"CLAUDE.md", ".cursor/", ".windsurfrules"}
 	for _, file := range expectedFiles {
 		if !strings.Contains(contentStr, file) {
 			t.Errorf("Expected .gitignore to contain %s, but it doesn't", file)
@@ -49,7 +49,7 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	}
 
 	// Test case 2: Existing .gitignore with some files already ignored
-	existingContent := "node_modules/\n.cursorrules\n"
+	existingContent := "node_modules/\n.cursor/\n"
 	err = os.WriteFile(gitignorePath, []byte(existingContent), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write existing .gitignore: %v", err)
@@ -73,10 +73,10 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	if !strings.Contains(contentStr, ".windsurfrules") {
 		t.Error("Expected .gitignore to contain .windsurfrules")
 	}
-	// .cursorrules should appear only once (from the original content)
-	count := strings.Count(contentStr, ".cursorrules")
+	// .cursor/ should appear only once (from the original content)
+	count := strings.Count(contentStr, ".cursor/")
 	if count != 1 {
-		t.Errorf("Expected .cursorrules to appear once, but found %d occurrences", count)
+		t.Errorf("Expected .cursor/ to appear once, but found %d occurrences", count)
 	}
 }
 

@@ -10,7 +10,9 @@ includes:
 
 outputs:
   - file: "CLAUDE.md"
-  - file: ".cursorrules"
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "rules.mdc"
   - file: "docs/ai-guidelines.md"
     template: "documentation"
 

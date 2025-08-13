@@ -2,7 +2,7 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "ai-rulez"
-  version: "1.4.0"
+  version: "1.4.1"
   description: "Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
 
 # Example remote includes (commented out for this project):
@@ -215,3 +215,40 @@ sections:
       - Multi-level caching (memory, disk, HTTP headers)
       - Efficient concurrent fetching
       - Smart cache invalidation with ETags
+
+  - title: "Cursor Rules Migration Guide"
+    priority: 35
+    content: |
+      ## ✨ Cursor Rules Migration (.cursorrules → .cursor/rules/)
+      
+      **Important:** Cursor has deprecated the old `.cursorrules` format in favor of the new `.cursor/rules/` directory with `.mdc` files.
+      
+      ### New Format Usage
+      
+      Instead of generating a single `.cursorrules` file, use directory outputs:
+      
+      ```yaml
+      outputs:
+        - path: ".cursor/rules/"
+          type: "rule" 
+          naming_scheme: "rules.mdc"
+      ```
+      
+      This generates `.cursor/rules/rules.mdc` with proper MDC (Markdown with Content) format and metadata headers.
+      
+      ### Benefits of New Format
+      
+      - **Better organization** with multiple rule files in a directory
+      - **Scoped rules** using file patterns (globs)
+      - **Version control friendly** with individual files  
+      - **Enhanced metadata** support with frontmatter
+      - **Subdirectory support** for folder-specific rules
+      
+      ### Migration Steps
+      
+      1. **Update your configuration** to use directory format above
+      2. **Regenerate files**: `ai-rulez generate`
+      3. **Remove old file**: Delete `.cursorrules` from your project  
+      4. **Update .gitignore**: Use `.cursor/` instead of `.cursorrules`
+      
+      The new format is fully backward compatible - your existing rules work the same way.
