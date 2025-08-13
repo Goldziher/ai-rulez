@@ -1,0 +1,280 @@
+$schema: ../schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Enterprise Configuration"
+  version: "3.0.0"
+  description: "Complete enterprise setup with all features"
+
+# Remote includes for organization standards
+includes:
+  - "https://standards.company.com/ai-rules/global.yaml"
+  - "https://standards.company.com/ai-rules/security.yaml"
+  - "./department-rules.yaml"
+  - "./team-rules.yaml"
+  - "./ai-rulez.local.yaml"  # Personal overrides
+
+outputs:
+  # Main assistant files
+  - path: "CLAUDE.md"
+    template: "default"
+  
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.mdc"
+  
+  - path: ".windsurfrules"
+  
+  # Agent definitions for Claude
+  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
+  
+  # Documentation outputs
+  - path: "docs/ai-assistants/"
+    type: "rule"
+    naming_scheme: "{type}-{name}.md"
+    template: |
+      # {{.Name}}
+      
+      **Priority**: {{.Priority}}/10
+      **Type**: Rule
+      **Generated**: {{.Timestamp.Format "2006-01-02"}}
+      
+      ## Guidelines
+      
+      {{.Content}}
+      
+      ---
+      *Part of {{.ProjectName}} v{{.Version}}*
+  
+  # Team handbook
+  - file: "TEAM_HANDBOOK.md"
+    template: "documentation"
+
+agents:
+  - name: "security-scanner"
+    id: "agent-sec-01"
+    description: "Scans code for security vulnerabilities"
+    priority: 10
+    tools:
+      - "read_file"
+      - "search"
+      - "grep"
+      - "run_command"
+    system_prompt: |
+      You are a security expert specializing in application security.
+      
+      Your responsibilities:
+      - Identify OWASP Top 10 vulnerabilities
+      - Check for hardcoded secrets
+      - Review authentication/authorization
+      - Validate input sanitization
+      - Check dependency vulnerabilities
+      
+      Report all findings with severity levels and remediation steps.
+
+  - name: "performance-analyzer"
+    id: "agent-perf-01"
+    description: "Analyzes and optimizes performance"
+    priority: 8
+    tools:
+      - "read_file"
+      - "run_command"
+      - "search"
+    system_prompt: |
+      You are a performance optimization specialist.
+      
+      Focus on:
+      - Database query optimization
+      - API response times
+      - Memory usage patterns
+      - Caching opportunities
+      - Algorithm complexity
+      
+      Provide specific, measurable improvements.
+
+  - name: "compliance-checker"
+    id: "agent-comp-01"
+    description: "Ensures regulatory compliance"
+    priority: 9
+    tools:
+      - "read_file"
+      - "search"
+    template: "@templates/compliance-agent.tmpl"
+
+rules:
+  - name: "Security Standards"
+    id: "rule-sec-01"
+    priority: 10
+    content: |
+      ## Security Requirements
+      
+      - All data must be encrypted in transit (TLS 1.3+)
+      - PII must be encrypted at rest (AES-256)
+      - Implement zero-trust architecture
+      - Use principle of least privilege
+      - Enable audit logging for all access
+      - Rotate secrets every 90 days
+      - Implement MFA for admin access
+
+  - name: "Code Quality Standards"
+    id: "rule-quality-01"
+    priority: 9
+    content: |
+      ## Quality Gates
+      
+      - Minimum 80% test coverage
+      - Zero critical SonarQube issues
+      - All functions must have JSDoc/JavaDoc
+      - Cyclomatic complexity < 10
+      - No TODO comments in production
+      - All PRs require 2 approvals
+      - Automated CI/CD pipeline required
+
+  - name: "Performance Requirements"
+    id: "rule-perf-01"
+    priority: 8
+    content: |
+      ## Performance SLAs
+      
+      - API p99 latency < 500ms
+      - Database queries < 100ms
+      - Frontend TTI < 3 seconds
+      - Memory usage < 512MB per instance
+      - Error rate < 0.1%
+      - Availability > 99.95%
+
+  - name: "Compliance Requirements"
+    id: "rule-comp-01"
+    priority: 10
+    content: |
+      ## Regulatory Compliance
+      
+      - GDPR compliance for EU users
+      - CCPA compliance for California users
+      - SOC 2 Type II certification
+      - HIPAA compliance for health data
+      - PCI DSS for payment processing
+      - Data residency requirements
+
+  - name: "Documentation Standards"
+    id: "rule-docs-01"
+    priority: 7
+    content: |
+      ## Documentation Requirements
+      
+      - API documentation with OpenAPI 3.0
+      - Architecture Decision Records (ADRs)
+      - Runbooks for all services
+      - Incident response procedures
+      - Onboarding documentation
+      - Video tutorials for complex features
+
+sections:
+  - title: "Enterprise Architecture"
+    priority: 100
+    content: |
+      # Enterprise AI Assistant Configuration
+      
+      This configuration provides comprehensive AI assistant rules for our enterprise environment.
+      
+      ## Architecture Overview
+      
+      ```mermaid
+      graph TB
+          A[Global Standards] --> B[Department Rules]
+          B --> C[Team Rules]
+          C --> D[Personal Overrides]
+          D --> E[Generated Configs]
+          E --> F[AI Assistants]
+      ```
+      
+      ## Configuration Hierarchy
+      
+      1. **Global Standards** - Company-wide requirements
+      2. **Department Rules** - Division-specific guidelines
+      3. **Team Rules** - Team conventions and practices
+      4. **Personal Overrides** - Individual preferences
+      
+      ## Governance
+      
+      All rules are version controlled and require approval:
+      - Global: CTO approval
+      - Department: Director approval
+      - Team: Tech lead approval
+      - Personal: No approval needed
+
+  - title: "Security Posture"
+    priority: 90
+    content: |
+      ## Security Configuration
+      
+      ### Threat Model
+      
+      We consider these threat vectors:
+      - External attackers
+      - Insider threats
+      - Supply chain attacks
+      - Social engineering
+      
+      ### Defense in Depth
+      
+      Multiple layers of security:
+      1. Network security (WAF, DDoS protection)
+      2. Application security (SAST, DAST)
+      3. Data security (encryption, DLP)
+      4. Identity security (MFA, SSO)
+      5. Monitoring (SIEM, anomaly detection)
+
+  - title: "Compliance Matrix"
+    priority: 80
+    content: |
+      ## Compliance Requirements
+      
+      | Regulation | Scope | Owner | Status |
+      |------------|-------|-------|--------|
+      | GDPR | EU Users | Legal | ✅ Compliant |
+      | CCPA | CA Users | Legal | ✅ Compliant |
+      | SOC 2 | All Systems | Security | 🔄 In Progress |
+      | HIPAA | Health Data | Compliance | ✅ Compliant |
+      | PCI DSS | Payments | Finance | ✅ Compliant |
+
+  - title: "Support and Resources"
+    priority: 10
+    content: |
+      ## Getting Help
+      
+      ### Internal Resources
+      - Slack: #ai-assistants
+      - Wiki: https://wiki.company.com/ai-assistants
+      - Training: https://learn.company.com/ai-tools
+      
+      ### External Resources
+      - GitHub: https://github.com/company/ai-rules
+      - Support: ai-support@company.com
+      - Office Hours: Thursdays 2-3 PM
+
+userRulez:
+  # Personal overrides - these are examples
+  # Users should create their own ai-rulez.local.yaml
+  
+  - name: "Personal Debug Mode"
+    content: |
+      When debugging:
+      - Add verbose logging
+      - Include stack traces
+      - Show all variable values
+      - Add performance timing
+  
+  - name: "Code Quality Standards"
+    id: "rule-quality-01"
+    priority: 10  # Override priority
+    content: |
+      ## Enhanced Quality Standards (Personal)
+      
+      All original requirements plus:
+      - Minimum 90% test coverage (personal goal)
+      - Prefer functional programming patterns
+      - Use TypeScript strict mode always
+      - No any types allowed
+      - Prettier + ESLint mandatory
