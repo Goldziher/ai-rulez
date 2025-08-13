@@ -154,6 +154,11 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 		}
 	}
 	
+	// Also check if working directory contains scenarios
+	if strings.Contains(testCase.WorkingDir, "scenarios/") {
+		needsScenarios = true
+	}
+	
 	if needsScenarios {
 		
 		currentTestingDir, err := os.Getwd()
@@ -171,6 +176,8 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 			"scenarios/custom-template",
 			"scenarios/empty-project",
 			"scenarios/inline-template",
+			"scenarios/agents",
+			"scenarios/directory-outputs",
 			"includes",
 			"templates",
 		}

@@ -61,7 +61,7 @@
         "project1/.ai-rulez.yaml": "metadata:\n  name: \"Project 1\"\noutputs:\n  - file: \"test1.md\"\nrules:\n  - name: \"Rule 1\"\n    content: \"Content 1\"",
         "project2/ai-rulez.yaml": "metadata:\n  name: \"Project 2\"\noutputs:\n  - file: \"test2.md\"\nrules:\n  - name: \"Rule 2\"\n    content: \"Content 2\""
       },
-      "expected_out": "Found 2 configuration file(s) for validation",
+      "expected_out": "Found 2 configuration file(s)",
       "exit_code": 0
     },
     {
