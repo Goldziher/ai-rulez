@@ -9,20 +9,139 @@ Lightning-fast CLI tool and MCP server for managing AI assistant rules across Cl
 
 ## Quick Start
 
+### Run Directly (No Installation)
+
+Run ai-rulez directly without installing:
+
+#### Using Go
 ```bash
-# Install (choose your preferred method)
-brew install goldziher/tap/ai-rulez     # macOS/Linux via Homebrew
-npm install -g ai-rulez                 # Node.js/npm
-pip install ai-rulez                    # Python/pip
-go install github.com/Goldziher/ai-rulez@latest  # Go
+go run github.com/Goldziher/ai-rulez/cmd@latest --help
+```
 
-# Initialize your project
-ai-rulez init my-project
+#### Using Python (uvx)
+```bash
+uvx ai-rulez --help
+```
 
-# Edit ai-rulez.yaml to add your rules
+#### Using Node.js (npx)
+```bash
+npx ai-rulez@latest --help
+```
 
-# Generate AI assistant files
+#### Using Python (pipx)
+```bash
+pipx run ai-rulez --help
+```
+
+### Install Globally
+
+Install ai-rulez as a global tool:
+
+#### Homebrew (macOS/Linux)
+```bash
+brew install goldziher/tap/ai-rulez
+```
+
+#### Go
+```bash
+go install github.com/Goldziher/ai-rulez/cmd@latest
+```
+
+#### Python (pip)
+```bash
+pip install --user ai-rulez
+```
+
+#### Python (pipx) - Recommended
+```bash
+pipx install ai-rulez
+```
+
+#### Node.js (npm)
+```bash
+npm install -g ai-rulez
+```
+
+#### Node.js (yarn)
+```bash
+yarn global add ai-rulez
+```
+
+#### Node.js (pnpm)
+```bash
+pnpm add -g ai-rulez
+```
+
+#### From Source
+```bash
+git clone https://github.com/Goldziher/ai-rulez.git
+```
+```bash
+cd ai-rulez
+```
+```bash
+go build -o ai-rulez ./cmd
+```
+
+### Basic Usage
+
+#### Initialize with interactive prompts
+```bash
+ai-rulez init
+```
+
+#### Initialize with project name and common providers
+```bash
+ai-rulez init "My Project" --claude --cursor --windsurf
+```
+
+#### Initialize with all providers and features
+```bash
+ai-rulez init "My Project" --all --with-agents --with-sections
+```
+
+#### Initialize minimal setup (Claude only)
+```bash
+ai-rulez init "My Project" --minimal
+```
+
+#### Initialize and set up git hooks
+```bash
+ai-rulez init "My Project" --popular --setup-hooks
+```
+
+#### Generate AI assistant files
+```bash
 ai-rulez generate
+```
+
+#### Validate configuration
+```bash
+ai-rulez validate
+```
+
+### MCP Server Configuration
+
+Configure the MCP server in Claude Desktop or other MCP-compatible tools:
+
+#### Using npx (Node.js)
+```bash
+claude mcp add ai-rulez "npx" "-y" "ai-rulez@latest" "mcp"
+```
+
+#### Using uvx (Python)
+```bash
+claude mcp add ai-rulez "uvx" "ai-rulez" "mcp"
+```
+
+#### Using installed binary
+```bash
+claude mcp add ai-rulez "ai-rulez" "mcp"
+```
+
+#### Using Go
+```bash
+claude mcp add ai-rulez "go" "run" "github.com/Goldziher/ai-rulez/cmd@latest" "mcp"
 ```
 
 ## Features
@@ -37,38 +156,6 @@ ai-rulez generate
 - **Rich Templates** - Built-in and custom templates with full Go template syntax
 - **Enterprise Ready** - Security features, validation, and comprehensive testing
 - **Git Integration** - Pre-commit hooks and automated configuration management
-
-## Installation
-
-### macOS/Linux (Homebrew)
-```bash
-brew install goldziher/tap/ai-rulez
-```
-
-### Node.js (npm/yarn/pnpm)
-```bash
-npm install -g ai-rulez
-yarn global add ai-rulez
-pnpm add -g ai-rulez
-```
-
-### Python (pip)
-```bash
-pip install ai-rulez
-pipx install ai-rulez  # Recommended for global install
-```
-
-### Go
-```bash
-go install github.com/Goldziher/ai-rulez@latest
-```
-
-### From Source
-```bash
-git clone https://github.com/Goldziher/ai-rulez.git
-cd ai-rulez
-go build -o ai-rulez ./cmd
-```
 
 ## Complete Configuration Example
 
@@ -235,41 +322,116 @@ userRulez:
 ## Core Commands
 
 ### Initialize and Generate
-```bash
-ai-rulez init                    # Interactive setup
-ai-rulez init my-project         # With project name
-ai-rulez init --setup-hooks      # Auto-configure git hooks
 
-ai-rulez generate                # Generate all outputs
-ai-rulez generate --dry-run      # Preview changes
-ai-rulez generate --update-gitignore  # Update .gitignore
-ai-rulez generate -r              # Recursive (all subdirs)
+#### Interactive setup
+```bash
+ai-rulez init
+```
+
+#### With project name
+```bash
+ai-rulez init my-project
+```
+
+#### Auto-configure git hooks
+```bash
+ai-rulez init --setup-hooks
+```
+
+#### Generate all outputs
+```bash
+ai-rulez generate
+```
+
+#### Preview changes (dry run)
+```bash
+ai-rulez generate --dry-run
+```
+
+#### Generate and update .gitignore
+```bash
+ai-rulez generate --update-gitignore
+```
+
+#### Recursive generation (all subdirectories)
+```bash
+ai-rulez generate -r
 ```
 
 ### Validate
+
+#### Validate current config
 ```bash
-ai-rulez validate                # Validate current config
-ai-rulez validate config.yaml    # Validate specific file
-ai-rulez validate -r              # Validate recursively
+ai-rulez validate
+```
+
+#### Validate specific file
+```bash
+ai-rulez validate config.yaml
+```
+
+#### Validate recursively
+```bash
+ai-rulez validate -r
 ```
 
 ### CRUD Operations
+
+#### Rules
+
+##### Add rule
 ```bash
-# Rules and sections
 ai-rulez add rule "API Security" --id "sec-001"
-ai-rulez add section "Overview"
+```
+
+##### Update rule
+```bash
 ai-rulez update rule "API Security"
+```
+
+##### Delete rule
+```bash
 ai-rulez delete rule "API Security"
+```
 
-# Agents with full CRUD support
-ai-rulez add agent code-reviewer --description "Reviews code quality" \
-  --priority 8 --tools "Read,Grep,Edit" --system-prompt "You are a code reviewer..."
+#### Sections
+
+##### Add section
+```bash
+ai-rulez add section "Overview"
+```
+
+#### Agents
+
+##### Add agent with full configuration
+```bash
+ai-rulez add agent code-reviewer --description "Reviews code quality" --priority 8 --tools "Read,Grep,Edit" --system-prompt "You are a code reviewer..."
+```
+
+##### Update agent priority
+```bash
 ai-rulez update agent code-reviewer --priority 9
-ai-rulez delete agent code-reviewer
+```
 
-# Outputs  
+##### Delete agent
+```bash
+ai-rulez delete agent code-reviewer
+```
+
+#### Outputs
+
+##### Add output
+```bash
 ai-rulez add output "docs/rules.md"
+```
+
+##### Update output
+```bash
 ai-rulez update output "docs/rules.md"
+```
+
+##### Delete output
+```bash
 ai-rulez delete output "docs/rules.md"
 ```
 
@@ -357,9 +519,15 @@ Add to Claude's configuration file:
 ```
 
 ### Starting the Server
+
+#### Standalone
 ```bash
-ai-rulez mcp         # Standalone
-npx ai-rulez mcp     # Via npx
+ai-rulez mcp
+```
+
+#### Via npx
+```bash
+npx ai-rulez mcp
 ```
 
 ## Git Integration
@@ -406,22 +574,67 @@ ai-rulez validate -v     # Show detailed errors
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
 
 ### Development Setup
-```bash
-# Initialize project with git hooks
-ai-rulez init dev --setup-hooks
 
-# Or manually setup
+#### Initialize project with git hooks
+```bash
+ai-rulez init dev --setup-hooks
+```
+
+#### Or manually setup
+
+##### Clone repository
+```bash
 git clone https://github.com/Goldziher/ai-rulez.git
+```
+
+##### Enter directory
+```bash
 cd ai-rulez
-task setup      # Install dependencies
-task test       # Run tests
-task build      # Build binary
+```
+
+##### Install dependencies
+```bash
+task setup
+```
+
+##### Run tests
+```bash
+task test
+```
+
+##### Build binary
+```bash
+task build
 ```
 
 ### Running Tests
+
+#### Unit tests
 ```bash
-task test              # Unit tests
-task test:integration  # Integration tests
-task test:all         # All tests
-task coverage         # Coverage report
+task test
 ```
+
+#### Integration tests
+```bash
+task test:integration
+```
+
+#### All tests
+```bash
+task test:all
+```
+
+#### Coverage report
+```bash
+task coverage
+```
+
+## Support
+
+- **Documentation**: [GitHub Wiki](https://github.com/Goldziher/ai-rulez/wiki)
+- **Issues**: [GitHub Issues](https://github.com/Goldziher/ai-rulez/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/Goldziher/ai-rulez/discussions)
+
+## License
+
+MIT License - see [LICENSE](LICENSE) file for details.
