@@ -2003,6 +2003,7 @@ func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
 
+//nolint:gocyclo // This function handles multiple generation scenarios
 func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Check recursive flag
 	recursive := request.GetBool("recursive", false)
@@ -3215,6 +3216,7 @@ func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
 
+//nolint:gocyclo // This function handles complex initialization logic with multiple providers
 func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	// Get parameters with defaults
 	projectName := request.GetString("project_name", "My Project")
@@ -3238,6 +3240,7 @@ func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	popular := request.GetBool("popular", false)
 	minimal := request.GetBool("minimal", false)
 
+	//nolint:gocritic // if-else chain is clearer here than switch
 	if all {
 		providers.Enabled = []string{"claude", "cursor", "windsurf", "gemini", "copilot", "cline", "continue"}
 	} else if popular {
@@ -3296,6 +3299,7 @@ func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	if setupHooks {
 		messages := []string{}
 
+		//nolint:gocritic // if-else chain is clearer here than switch
 		if detectLefthook() {
 			messages = append(messages, "Found lefthook configuration")
 			if err := setupLefthookConfig(); err != nil {
