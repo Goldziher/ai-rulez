@@ -519,9 +519,4 @@ For complete configuration examples and templates, see the [examples directory](
 
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
-- Development setup with Task
-- Running tests and linting
-- Project structure
-- Commit conventions
-- Pull request process
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md).
