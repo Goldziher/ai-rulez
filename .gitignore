@@ -21,7 +21,8 @@ go.work.sum
 # Build output
 /dist/
 /build/dist/
-/build/npm/bin/
+/build/npm/bin/*
+!/build/npm/bin/ai-rulez
 /build/python/dist/
 /build/python/*.egg-info/
 /build/python/build/
