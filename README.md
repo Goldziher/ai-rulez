@@ -9,28 +9,23 @@ Lightning-fast CLI tool and MCP server for managing AI assistant rules across Cl
 
 ## Quick Start
 
-### Run Directly (No Installation)
+You can either run ai-rulez directly or install it as a global tool:
 
-Run ai-rulez directly without installing:
+### Run Directly (No Installation)
 
 #### Using Go
 ```bash
 go run github.com/Goldziher/ai-rulez/cmd@latest --help
 ```
 
-#### Using Python (uvx)
+#### Using Python
 ```bash
 uvx ai-rulez --help
 ```
 
-#### Using Node.js (npx)
+#### Using Node
 ```bash
 npx ai-rulez@latest --help
-```
-
-#### Using Python (pipx)
-```bash
-pipx run ai-rulez --help
 ```
 
 ### Install Globally
@@ -52,62 +47,31 @@ go install github.com/Goldziher/ai-rulez/cmd@latest
 pip install --user ai-rulez
 ```
 
-#### Python (pipx) - Recommended
-```bash
-pipx install ai-rulez
-```
-
 #### Node.js (npm)
 ```bash
 npm install -g ai-rulez
 ```
 
-#### Node.js (yarn)
-```bash
-yarn global add ai-rulez
-```
-
-#### Node.js (pnpm)
-```bash
-pnpm add -g ai-rulez
-```
-
-#### From Source
-```bash
-git clone https://github.com/Goldziher/ai-rulez.git
-```
-```bash
-cd ai-rulez
-```
-```bash
-go build -o ai-rulez ./cmd
-```
-
 ### Basic Usage
 
-#### Initialize with interactive prompts
+#### Initialize a project
+
+Begin by initializing a project configuration file (`ai-rulez.yaml`) in the current directory:
+
 ```bash
 ai-rulez init
 ```
 
-#### Initialize with project name and common providers
+Optionally use arguments to configure the schema:
+
+##### Initialize with project name and common providers
 ```bash
 ai-rulez init "My Project" --claude --cursor --windsurf
 ```
 
-#### Initialize with all providers and features
+##### Initialize with all providers, sub-agents support and sections
 ```bash
 ai-rulez init "My Project" --all --with-agents --with-sections
-```
-
-#### Initialize minimal setup (Claude only)
-```bash
-ai-rulez init "My Project" --minimal
-```
-
-#### Initialize and set up git hooks
-```bash
-ai-rulez init "My Project" --popular --setup-hooks
 ```
 
 #### Generate AI assistant files
@@ -122,44 +86,47 @@ ai-rulez validate
 
 ### MCP Server Configuration
 
-Configure the MCP server in Claude Desktop or other MCP-compatible tools:
+`ai-rulez` has a built-in MCP server that allows AI assistants to dynamically manage configuration. 
 
-#### Using npx (Node.js)
-```bash
+Some examples configurations:
+
+#### Claude Desktop Compatible
+
+```json
+{
+  "mcpServers": {
+    "browser-mcp": {
+      "command": "npx",
+      "args": ["-y", "ai-rulez@latest", "mcp"]
+    }
+  }
+}
+```
+
+#### Cursor Compatible
+
+```json
+{
+  "ai-rulez": {
+    "command": "npx",
+    "args": ["-y", "ai-rulez@latest", "mcp"]
+  }
+}
+```
+
+#### Claude Code
+
+Run the following command in your project root:
+
+```shell
 claude mcp add ai-rulez "npx" "-y" "ai-rulez@latest" "mcp"
 ```
 
-#### Using uvx (Python)
-```bash
-claude mcp add ai-rulez "uvx" "ai-rulez" "mcp"
-```
+### Note on MCP and Package Management
 
-#### Using installed binary
-```bash
-claude mcp add ai-rulez "ai-rulez" "mcp"
-```
+All the above examples use `npx` to run ai-rulez for mcp, but you can replace the command to use `uvx`, or `go`, and of course you can also use `pnpm` etc. 
 
-#### Using Go
-```bash
-claude mcp add ai-rulez "go" "run" "github.com/Goldziher/ai-rulez/cmd@latest" "mcp"
-```
-
-## Features
-
-- **Single Source of Truth** - One YAML file manages all AI assistant configurations
-- **Lightning Fast** - Written in Go, with incremental generation (only writes changes)  
-- **Multi-Platform** - Supports Claude, Cursor, Windsurf, and custom outputs
-- **MCP Server** - Built-in Model Context Protocol server for dynamic AI integration
-- **Complete CRUD Operations** - Add, update, delete rules, sections, agents, and outputs via CLI
-- **Remote Includes** - Share rules via URLs with caching and SSRF protection
-- **AI Agents** - Define specialized sub-agents with tools and system prompts
-- **Rich Templates** - Built-in and custom templates with full Go template syntax
-- **Enterprise Ready** - Security features, validation, and comprehensive testing
-- **Git Integration** - Pre-commit hooks and automated configuration management
-
-## Complete Configuration Example
-
-Here's a comprehensive example showing all major features with explanatory comments:
+## Configuration File Format
 
 ```yaml
 # ai-rulez.yaml
@@ -319,7 +286,7 @@ userRulez:
       - Test edge cases and error conditions
 ```
 
-## Core Commands
+## CLI Reference
 
 ### Initialize and Generate
 
@@ -518,23 +485,9 @@ Add to Claude's configuration file:
 }
 ```
 
-### Starting the Server
+## Pre-commit Hooks
 
-#### Standalone
-```bash
-ai-rulez mcp
-```
-
-#### Via npx
-```bash
-npx ai-rulez mcp
-```
-
-## Git Integration
-
-### Pre-commit Hooks
-
-Using pre-commit framework (uses Python package, no Go required):
+Using pre-commit framework (requires Go):
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -551,7 +504,7 @@ Using Lefthook:
 pre-commit:
   commands:
     ai-rulez:
-      run: ai-rulez generate --dry-run
+      run: npx -y ai-rulez@latest generate
 ```
 
 Automatic Setup:
