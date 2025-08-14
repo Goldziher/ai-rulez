@@ -487,7 +487,7 @@ Add to Claude's configuration file:
 
 ## Pre-commit Hooks
 
-Using pre-commit framework (requires Go):
+### Using pre-commit (requires Golang >= 1.18 to be installed):
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -498,7 +498,7 @@ repos:
       - id: ai-rulez-generate    # Auto-generate files
 ```
 
-Using Lefthook:
+### Using Lefthook:
 ```yaml
 # lefthook.yml
 pre-commit:
@@ -507,87 +507,12 @@ pre-commit:
       run: npx -y ai-rulez@latest generate
 ```
 
-Automatic Setup:
+Note, you can auto configure hooks with the `--setup-hooks` flag when initializing the project, e.g.:
+
 ```bash
-ai-rulez init --setup-hooks
-```
-
-## Configuration Schema
-
-Full JSON Schema available at [`schema/ai-rules-v1.schema.json`](schema/ai-rules-v1.schema.json)
-
-### Validation
-```bash
-ai-rulez validate        # Validate against schema
-ai-rulez validate -v     # Show detailed errors
+npx -y ai-rulez init --setup-hooks
 ```
 
 ## Contributing
 
 Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
-
-### Development Setup
-
-#### Initialize project with git hooks
-```bash
-ai-rulez init dev --setup-hooks
-```
-
-#### Or manually setup
-
-##### Clone repository
-```bash
-git clone https://github.com/Goldziher/ai-rulez.git
-```
-
-##### Enter directory
-```bash
-cd ai-rulez
-```
-
-##### Install dependencies
-```bash
-task setup
-```
-
-##### Run tests
-```bash
-task test
-```
-
-##### Build binary
-```bash
-task build
-```
-
-### Running Tests
-
-#### Unit tests
-```bash
-task test
-```
-
-#### Integration tests
-```bash
-task test:integration
-```
-
-#### All tests
-```bash
-task test:all
-```
-
-#### Coverage report
-```bash
-task coverage
-```
-
-## Support
-
-- **Documentation**: [GitHub Wiki](https://github.com/Goldziher/ai-rulez/wiki)
-- **Issues**: [GitHub Issues](https://github.com/Goldziher/ai-rulez/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Goldziher/ai-rulez/discussions)
-
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
