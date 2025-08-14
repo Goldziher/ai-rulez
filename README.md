@@ -492,7 +492,7 @@ Add to Claude's configuration file:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v1.5.0
+    rev: v1.5.1
     hooks:
       - id: ai-rulez-validate    # Validate configuration
       - id: ai-rulez-generate    # Auto-generate files
@@ -513,6 +513,15 @@ Note, you can auto configure hooks with the `--setup-hooks` flag when initializi
 npx -y ai-rulez init --setup-hooks
 ```
 
+## Examples
+
+For complete configuration examples and templates, see the [examples directory](examples/).
+
 ## Contributing
 
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details.
+Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) for details on:
+- Development setup with Task
+- Running tests and linting
+- Project structure
+- Commit conventions
+- Pull request process

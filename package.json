@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "Lightning-fast CLI tool (written in Go) for managing AI assistant rules",
   "bin": {
     "ai-rulez": "./bin/ai-rulez"
