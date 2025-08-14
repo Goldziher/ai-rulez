@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules - generate configuration files for Claude, Cursor, Windsurf and more",
   "keywords": [
     "ai",
