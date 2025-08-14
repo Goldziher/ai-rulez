@@ -47,12 +47,12 @@ func TestAddAgentCommand(t *testing.T) {
 		validateConfig func(*testing.T, *config.Config)
 	}{
 		{
-			name:         "add basic agent",
-			agentName:    "test-agent",
-			description:  "Test agent for validation",
-			priority:     5,
-			tools:        []string{"tool1", "tool2"},
-			systemPrompt: "You are a test agent",
+			name:          "add basic agent",
+			agentName:     "test-agent",
+			description:   "Test agent for validation",
+			priority:      5,
+			tools:         []string{"tool1", "tool2"},
+			systemPrompt:  "You are a test agent",
 			expectedError: false,
 			validateConfig: func(t *testing.T, cfg *config.Config) {
 				if len(cfg.Agents) != 1 {
@@ -77,12 +77,12 @@ func TestAddAgentCommand(t *testing.T) {
 			},
 		},
 		{
-			name:         "add agent with default priority",
-			agentName:    "default-agent",
-			description:  "Agent with default priority",
-			priority:     0, // Should default to 5
-			tools:        []string{},
-			systemPrompt: "Default agent",
+			name:          "add agent with default priority",
+			agentName:     "default-agent",
+			description:   "Agent with default priority",
+			priority:      0, // Should default to 5
+			tools:         []string{},
+			systemPrompt:  "Default agent",
 			expectedError: false,
 			validateConfig: func(t *testing.T, cfg *config.Config) {
 				if len(cfg.Agents) != 2 {

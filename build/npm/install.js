@@ -82,7 +82,8 @@ function getPlatform() {
 }
 
 function getBinaryName(platform) {
-  return platform === 'windows' ? 'ai-rulez.exe' : 'ai-rulez';
+  // Use a different name to avoid conflict with the wrapper script
+  return platform === 'windows' ? 'ai-rulez-bin.exe' : 'ai-rulez-bin';
 }
 
 async function downloadBinary(url, dest, retryCount = 0) {
@@ -242,7 +243,11 @@ async function extractArchive(archivePath, extractDir, platform) {
 }
 
 async function install() {
+  const DEBUG = process.env.AI_RULEZ_DEBUG === '1';
+  
   try {
+    if (DEBUG) console.error('[install.js] Starting installation');
+    
     // Check Node.js version compatibility
     const nodeVersion = process.version;
     const majorVersion = parseInt(nodeVersion.slice(1).split('.')[0]);
@@ -254,6 +259,7 @@ async function install() {
     const { os, arch } = getPlatform();
     const binaryName = getBinaryName(os);
     
+    if (DEBUG) console.error(`[install.js] Platform: ${os}/${arch}, Binary name: ${binaryName}`);
     
     const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8'));
     const version = packageJson.version;
@@ -303,10 +309,35 @@ async function install() {
     
     
     console.log('Extracting binary...');
-    await extractArchive(archivePath, binDir, os);
     
+    // Extract to a temp directory first to avoid overwriting the wrapper script
+    const tempExtractDir = path.join(__dirname, '.extract-temp');
+    if (fs.existsSync(tempExtractDir)) {
+      fs.rmSync(tempExtractDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(tempExtractDir, { recursive: true });
     
+    await extractArchive(archivePath, tempExtractDir, os);
+    
+    // The archive contains 'ai-rulez' or 'ai-rulez.exe', but we need to rename it
+    // to avoid conflict with the wrapper script
+    const extractedName = os === 'windows' ? 'ai-rulez.exe' : 'ai-rulez';
+    const extractedPath = path.join(tempExtractDir, extractedName);
     const binaryPath = path.join(binDir, binaryName);
+    
+    // Move the extracted binary to the final location
+    if (fs.existsSync(extractedPath)) {
+      // Remove old binary if it exists
+      if (fs.existsSync(binaryPath)) {
+        fs.unlinkSync(binaryPath);
+      }
+      // Move binary from temp to final location
+      fs.renameSync(extractedPath, binaryPath);
+    }
+    
+    // Clean up temp directory
+    fs.rmSync(tempExtractDir, { recursive: true, force: true });
+    
     if (!fs.existsSync(binaryPath)) {
       throw new Error(`Binary not found after extraction: ${binaryPath}`);
     }
@@ -347,7 +378,17 @@ async function install() {
     
     console.log(`✅ ai-rulez ${version} installed successfully for ${os}/${arch}!`);
     
+    if (DEBUG) {
+      console.error(`[install.js] Installation complete`);
+      console.error(`[install.js] Binary location: ${binaryPath}`);
+      console.error(`[install.js] Exiting with code 0`);
+    }
+    
+    // Explicitly exit with success code
+    process.exit(0);
+    
   } catch (error) {
+    if (DEBUG) console.error(`[install.js] Installation failed: ${error.message}`);
     console.error('Failed to install ai-rulez binary:', error.message);
     console.error('You can manually download the binary from:');
     console.error(`https://github.com/${REPO_NAME}/releases`);
