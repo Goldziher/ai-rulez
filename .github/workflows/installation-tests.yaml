@@ -26,7 +26,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Run Python Installation Tests
         uses: ./.github/actions/run-python-tests
@@ -44,7 +44,7 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       
       - name: Run JavaScript Installation Tests
         uses: ./.github/actions/run-js-tests
