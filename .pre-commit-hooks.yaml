@@ -3,7 +3,7 @@
 #
 # repos:
 #   - repo: https://github.com/Goldziher/ai-rulez
-#     rev: v1.5.1  # Use the latest version
+#     rev: v1.6.0  # Use the latest version
 #     hooks:
 #       - id: ai-rulez-validate
 #
