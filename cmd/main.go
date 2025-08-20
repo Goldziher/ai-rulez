@@ -2986,9 +2986,9 @@ func handleGetAgents(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 
 	// Filter agents by name if filter is provided
 	var agents []config.Agent
-	for _, agent := range cfg.Agents {
-		if nameFilter == "" || strings.Contains(strings.ToLower(agent.Name), strings.ToLower(nameFilter)) {
-			agents = append(agents, agent)
+	for i := range cfg.Agents {
+		if nameFilter == "" || strings.Contains(strings.ToLower(cfg.Agents[i].Name), strings.ToLower(nameFilter)) {
+			agents = append(agents, cfg.Agents[i])
 		}
 	}
 
@@ -3046,8 +3046,8 @@ func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	}
 
 	// Check if agent already exists
-	for _, agent := range cfg.Agents {
-		if agent.Name == name {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
 			return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' already exists", name)), nil
 		}
 	}
@@ -3120,8 +3120,8 @@ func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 
 	// Find the agent to update
 	agentIndex := -1
-	for i, agent := range cfg.Agents {
-		if agent.Name == name {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
 			agentIndex = i
 			break
 		}
@@ -3186,8 +3186,8 @@ func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 
 	// Find and remove the agent
 	agentIndex := -1
-	for i, agent := range cfg.Agents {
-		if agent.Name == name {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
 			agentIndex = i
 			break
 		}
