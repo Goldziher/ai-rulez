@@ -283,7 +283,12 @@ func buildBinary(t *testing.T) string {
 	binPath := filepath.Join(t.TempDir(), binName)
 	
 	// Build from parent directory
-	cmd := exec.Command("go", "build", "-o", binPath, "../cmd")
+	testDir, err := os.Getwd()
+	require.NoError(t, err, "Failed to get working directory")
+	projectRoot := filepath.Dir(testDir)
+	
+	cmd := exec.Command("go", "build", "-o", binPath, "./cmd")
+	cmd.Dir = projectRoot
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Failed to build binary: %s", string(output))
 	
