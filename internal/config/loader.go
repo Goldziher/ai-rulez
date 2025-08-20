@@ -317,18 +317,18 @@ func MergeAgents(agentSets ...[]Agent) []Agent {
 	var order []string
 
 	for _, agents := range agentSets {
-		for _, agent := range agents {
+		for i := range agents {
 			// Use ID as key if present, otherwise use name
-			key := agent.Name
-			if agent.ID != "" {
-				key = agent.ID
+			key := agents[i].Name
+			if agents[i].ID != "" {
+				key = agents[i].ID
 			}
 
 			// Track order for consistent output
 			if _, exists := agentMap[key]; !exists {
 				order = append(order, key)
 			}
-			agentMap[key] = agent
+			agentMap[key] = agents[i]
 		}
 	}
 
