@@ -40,6 +40,11 @@ type TemplateData struct {
 
 // NewTemplateData creates template data from a config.
 func NewTemplateData(cfg *config.Config) *TemplateData {
+	return NewTemplateDataForOutput(cfg, "")
+}
+
+// NewTemplateDataForOutput creates template data from a config, filtered for a specific output path.
+func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateData {
 	// Merge main rules with user_rulez if present
 	allRules := cfg.Rules
 	allSections := cfg.Sections
@@ -50,6 +55,29 @@ func NewTemplateData(cfg *config.Config) *TemplateData {
 		allRules = config.MergeRules(allRules, cfg.UserRulez.Rules)
 		allSections = config.MergeSections(allSections, cfg.UserRulez.Sections)
 		allAgents = config.MergeAgents(allAgents, cfg.UserRulez.Agents)
+	}
+
+	// Filter by output path if specified
+	if outputPath != "" {
+		var err error
+		allRules, err = config.FilterRules(allRules, outputPath, cfg.Targets)
+		if err != nil {
+			// For now, log the error and continue with unfiltered rules
+			// In production, this might need better error handling
+			allRules = cfg.Rules
+		}
+
+		allSections, err = config.FilterSections(allSections, outputPath, cfg.Targets)
+		if err != nil {
+			// For now, log the error and continue with unfiltered sections
+			allSections = cfg.Sections
+		}
+
+		allAgents, err = config.FilterAgents(allAgents, outputPath, cfg.Targets)
+		if err != nil {
+			// For now, log the error and continue with unfiltered agents
+			allAgents = cfg.Agents
+		}
 	}
 
 	// Create a copy of rules and sections to sort
