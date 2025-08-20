@@ -72,9 +72,9 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 	}
 
 	// Serial generation for smaller file sets
-	templateData := templates.NewTemplateData(cfg)
-
 	for i := range cfg.Outputs {
+		// Create filtered template data for each output
+		templateData := templates.NewTemplateDataForOutput(cfg, cfg.Outputs[i].GetPath())
 		if err := g.writeOutputFile(&cfg.Outputs[i], templateData); err != nil {
 			output := cfg.Outputs[i]
 			return errors.New(errors.ErrorTypeGeneration, "generate output file", err).
@@ -96,8 +96,6 @@ func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
 			WithSuggestion("Add at least one output file in the configuration")
 	}
 
-	templateData := templates.NewTemplateData(cfg)
-
 	// Use a wait group and error channel for concurrent processing
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(cfg.Outputs))
@@ -106,6 +104,8 @@ func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
 		wg.Add(1)
 		go func(idx int, out *config.Output) {
 			defer wg.Done()
+			// Create filtered template data for each output
+			templateData := templates.NewTemplateDataForOutput(cfg, out.GetPath())
 			if err := g.writeOutputFile(out, templateData); err != nil {
 				errChan <- errors.New(errors.ErrorTypeGeneration, "generate output file", err).
 					WithPath(out.GetPath()).
@@ -130,8 +130,6 @@ func (g *Generator) GenerateAllConcurrent(cfg *config.Config) error {
 
 // GenerateOutput generates a single output file.
 func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error {
-	templateData := templates.NewTemplateData(cfg)
-
 	// Find the output configuration
 	targetOutput := g.findOutputConfig(cfg.Outputs, outputFile)
 	if targetOutput == nil {
@@ -143,6 +141,8 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 			WithSuggestion("Available outputs: %v", g.getOutputFileNames(cfg.Outputs))
 	}
 
+	// Create filtered template data for the specific output
+	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.GetPath())
 	return g.writeOutputFile(targetOutput, templateData)
 }
 
@@ -213,6 +213,7 @@ func (g *Generator) writeDirectoryOutput(output *config.Output, data *templates.
 
 // writeAgentFiles writes individual agent files to a directory.
 func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output *config.Output, data *templates.TemplateData) error {
+	// Note: data is already filtered for this output path
 	for i := range data.Agents {
 		agent := &data.Agents[i]
 		// Sanitize agent name for filename
@@ -247,7 +248,7 @@ func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output *config
 
 		filePath := filepath.Join(dirPath, filename)
 
-		// Create agent-specific template data
+		// Create agent-specific template data (preserve filtering)
 		agentData := *data
 		agentData.Agents = []config.Agent{*agent}
 		agentData.OutputFile = filePath
@@ -569,8 +570,6 @@ func (*Generator) ValidateTemplate(templateStr string) error {
 
 // PreviewOutput generates output content without writing to file.
 func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string, error) {
-	templateData := templates.NewTemplateData(cfg)
-
 	// Find the output configuration
 	targetOutput := g.findOutputConfig(cfg.Outputs, outputFile)
 	if targetOutput == nil {
@@ -581,6 +580,8 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 			WithSuggestion("Check if '%s' is defined in the outputs section", outputFile)
 	}
 
+	// Create filtered template data for the specific output
+	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.GetPath())
 	// Set the file information for header generation
 	templateData.ConfigFile = g.configFile
 	templateData.OutputFile = targetOutput.GetPath()
@@ -604,11 +605,12 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 			WithSuggestion("Add at least one output file in the configuration")
 	}
 
-	templateData := templates.NewTemplateData(cfg)
 	results := make(map[string]string)
 
 	for i := range cfg.Outputs {
 		output := &cfg.Outputs[i]
+		// Create filtered template data for each output
+		templateData := templates.NewTemplateDataForOutput(cfg, output.GetPath())
 		// Set the file information for header generation
 		templateData.ConfigFile = g.configFile
 		templateData.OutputFile = output.GetPath()

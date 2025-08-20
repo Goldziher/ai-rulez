@@ -137,6 +137,20 @@ metadata:
   version: "1.0.0"
   description: "AI assistant configuration for my project"
 
+# Define reusable target groups (optional)
+targets:
+  claude-files:
+    - "CLAUDE.md"
+    - ".claude/**/*.md"
+  
+  cursor-files:
+    - ".cursor/**/*.mdc"
+    - ".cursorrules"
+  
+  docs:
+    - "docs/*.md"
+    - "*.md"
+
 # Include shared configurations (remote or local)
 includes:
   # Organization standards from GitHub
@@ -182,6 +196,7 @@ agents:
     id: "reviewer-001"  # Optional: for precise matching in overrides
     description: "Reviews code for quality and security"
     priority: 10  # Higher priority agents appear first
+    targets: ["@claude-files"]  # Only for Claude using named target
     tools:  # Tools the agent can use
       - "read_file"
       - "search"
@@ -199,6 +214,7 @@ agents:
     id: "tester-001"
     description: "Writes comprehensive tests"
     priority: 8
+    targets: ["@claude-files"]  # Only for Claude
     tools:
       - "read_file"
       - "write_file"
@@ -215,15 +231,33 @@ rules:
   - name: "Code Quality"
     id: "quality-001"  # Optional: for precise matching
     priority: 10  # 1-10, higher = more important
+    # No targets = applies to all outputs (default behavior)
     content: |
       - Write clean, readable, and maintainable code
       - Follow SOLID principles
       - Keep functions small and focused
       - Use meaningful variable names
   
+  - name: "Claude-Specific Instructions"
+    priority: 9
+    targets: ["CLAUDE.md"]  # Only for Claude (inline target)
+    content: |
+      - Use Claude's Task tool for specialized operations
+      - Leverage MCP tools when available
+      - Follow structured reasoning approach
+  
+  - name: "Cursor-Specific Instructions"
+    priority: 9
+    targets: ["@cursor-files"]  # Only for Cursor (named target)
+    content: |
+      - Use Cursor's AI features for code generation
+      - Leverage Cursor's context awareness
+      - Follow Cursor's best practices
+  
   - name: "Testing Standards"
     id: "testing-001"
     priority: 9
+    targets: ["@docs", "*.md"]  # Mix named and inline targets
     content: |
       - Write unit tests for all new features
       - Maintain minimum 80% code coverage
@@ -404,6 +438,67 @@ ai-rulez delete output "docs/rules.md"
 
 ## Advanced Features
 
+### Target Filtering
+
+Control which rules, sections, and agents appear in specific outputs using target patterns:
+
+#### Inline Targets
+Specify target patterns directly in rules, sections, or agents:
+
+```yaml
+rules:
+  - name: "Claude-Only Rule"
+    targets: ["CLAUDE.md"]  # Only appears in CLAUDE.md
+    content: "This rule only applies to Claude"
+  
+  - name: "Markdown Files"
+    targets: ["*.md"]  # Appears in all .md files
+    content: "This rule applies to all markdown files"
+  
+  - name: "Universal Rule"
+    # No targets = appears in all outputs (default)
+    content: "This rule applies everywhere"
+```
+
+#### Named Targets
+Define reusable target groups and reference them with `@` prefix:
+
+```yaml
+# Define named target groups
+targets:
+  claude-files:
+    - "CLAUDE.md"
+    - ".claude/**/*.md"
+  
+  docs:
+    - "docs/*.md"
+    - "README.md"
+
+# Reference named targets
+rules:
+  - name: "Claude-Specific"
+    targets: ["@claude-files"]  # Uses named target
+    content: "Only for Claude files"
+  
+  - name: "Mixed Targets"
+    targets: ["@docs", "*.txt"]  # Mix named and inline
+    content: "Appears in docs and text files"
+
+agents:
+  - name: "code-reviewer"
+    targets: ["@claude-files"]  # Agent only for Claude
+    description: "Reviews code quality"
+```
+
+#### Supported Patterns
+- **Exact match**: `"CLAUDE.md"` - matches exactly CLAUDE.md
+- **Glob patterns**: `"*.md"` - matches all .md files
+- **Directory patterns**: `"docs/*"` - matches files in docs/
+- **Recursive patterns**: `".claude/**/*.md"` - matches .md files in .claude/ and subdirectories
+- **Named references**: `"@target-name"` - references a named target group
+
+When no `targets` are specified, the rule/section/agent appears in all outputs.
+
 ### Remote Includes
 
 Share configurations across projects and teams:
@@ -492,7 +587,7 @@ Add to Claude's configuration file:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v1.5.1
+    rev: v1.6.0
     hooks:
       - id: ai-rulez-validate    # Validate configuration
       - id: ai-rulez-generate    # Auto-generate files
