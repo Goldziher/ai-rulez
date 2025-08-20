@@ -1,0 +1,115 @@
+$schema: ../schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Target-Based Filtering Example"
+  version: "1.0.0"
+  description: "Demonstrates how to use target patterns to filter rules, sections, and agents for specific outputs"
+
+outputs:
+  - file: "CLAUDE.md"
+    template: "default"
+  - file: "README.md"
+    template: "documentation"
+  - path: "docs/"
+    type: "rule"
+    naming_scheme: "guidelines.md"
+  - path: "ai/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
+
+# Global sections that appear in all outputs (no targets specified)
+sections:
+  - title: "Project Overview"
+    priority: 100
+    content: |
+      # Welcome to Our Project
+      
+      This section appears in all generated files because no targets are specified.
+
+  - title: "Claude-Specific Instructions"
+    priority: 90
+    targets: ["CLAUDE.md"]  # Only appears in CLAUDE.md
+    content: |
+      ## Special Instructions for Claude
+      
+      These instructions are specifically tailored for Claude AI assistant usage.
+      They won't appear in other documentation files.
+
+  - title: "Documentation Header"
+    priority: 80
+    targets: ["docs/*", "README.md"]  # Appears in docs directory and README
+    content: |
+      ## Documentation Guidelines
+      
+      This header appears in documentation files but not in Claude-specific outputs.
+
+# Rules with different target patterns
+rules:
+  - name: "Universal Code Standards"
+    priority: 50
+    content: |
+      - Use consistent naming conventions
+      - Write clear, self-documenting code
+      - Follow the project's style guide
+    # No targets = applies to all outputs
+
+  - name: "Claude AI Guidelines"
+    priority: 40
+    targets: ["CLAUDE.md"]
+    content: |
+      - Always ask for clarification when requirements are ambiguous
+      - Provide step-by-step explanations for complex tasks
+      - Suggest best practices and alternatives when appropriate
+
+  - name: "Documentation Standards"
+    priority: 30
+    targets: ["*.md", "docs/*"]  # All markdown files and docs directory
+    content: |
+      - Keep documentation up to date with code changes
+      - Use clear headings and proper markdown formatting
+      - Include examples and code snippets where helpful
+
+  - name: "Agent-Specific Rules"
+    priority: 35
+    targets: ["ai/agents/*"]  # Only for agent files
+    content: |
+      - Define clear agent roles and responsibilities
+      - Specify required tools and capabilities
+      - Include example interactions and use cases
+
+  - name: "README Guidelines"
+    priority: 25
+    targets: ["README.md"]
+    content: |
+      - Start with a clear project description
+      - Include installation and usage instructions
+      - Add badges for build status, version, etc.
+
+# Agents with target-specific deployment
+agents:
+  - name: "code-reviewer"
+    description: "Reviews code for quality and best practices"
+    priority: 20
+    targets: ["CLAUDE.md", "ai/agents/*"]  # Available in Claude and agent files
+    tools: ["file_reader", "git_operations"]
+    system_prompt: |
+      You are a senior code reviewer with expertise in multiple programming languages.
+      Focus on code quality, maintainability, and adherence to best practices.
+
+  - name: "documentation-writer"
+    description: "Helps write and maintain project documentation"
+    priority: 15
+    targets: ["README.md", "docs/*"]  # Only for documentation outputs
+    tools: ["file_writer", "web_search"]
+    system_prompt: |
+      You are a technical writer specializing in developer documentation.
+      Create clear, comprehensive documentation that helps developers understand and use the project.
+
+  - name: "general-assistant"
+    description: "General-purpose AI assistant for various tasks"
+    priority: 10
+    # No targets = available in all outputs
+    tools: ["file_operations", "web_search", "calculator"]
+    system_prompt: |
+      You are a helpful AI assistant ready to help with a wide variety of tasks.
+      Be thorough, accurate, and always ask for clarification when needed.

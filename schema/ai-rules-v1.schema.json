@@ -155,6 +155,15 @@
             "type": "string",
             "description": "Rule content (can be multiline)",
             "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         },
         "additionalProperties": false
@@ -187,6 +196,15 @@
             "type": "string",
             "description": "Section content in markdown (rendered as-is)",
             "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         },
         "additionalProperties": false
@@ -253,6 +271,15 @@
             "type": "string",
             "description": "Agent system prompt (used when template is not specified)",
             "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
           }
         },
         "additionalProperties": false
@@ -289,6 +316,15 @@
                 "type": "string",
                 "description": "Rule content (can be multiline)",
                 "minLength": 1
+              },
+              "targets": {
+                "type": "array",
+                "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
               }
             },
             "additionalProperties": false
@@ -321,6 +357,15 @@
                 "type": "string",
                 "description": "Section content in markdown (rendered as-is)",
                 "minLength": 1
+              },
+              "targets": {
+                "type": "array",
+                "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
               }
             },
             "additionalProperties": false
@@ -387,6 +432,15 @@
                 "type": "string",
                 "description": "Agent system prompt (used when template is not specified)",
                 "minLength": 1
+              },
+              "targets": {
+                "type": "array",
+                "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
               }
             },
             "additionalProperties": false
