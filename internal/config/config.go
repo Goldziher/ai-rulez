@@ -11,13 +11,14 @@ import (
 
 // Config represents the main configuration structure
 type Config struct {
-	Metadata  Metadata   `yaml:"metadata"`
-	Includes  []string   `yaml:"includes,omitempty"`
-	Outputs   []Output   `yaml:"outputs"`
-	Rules     []Rule     `yaml:"rules,omitempty"`
-	Sections  []Section  `yaml:"sections,omitempty"`
-	Agents    []Agent    `yaml:"agents,omitempty"`
-	UserRulez *UserRulez `yaml:"user_rulez,omitempty"`
+	Metadata  Metadata            `yaml:"metadata"`
+	Includes  []string            `yaml:"includes,omitempty"`
+	Targets   map[string][]string `yaml:"targets,omitempty"`
+	Outputs   []Output            `yaml:"outputs"`
+	Rules     []Rule              `yaml:"rules,omitempty"`
+	Sections  []Section           `yaml:"sections,omitempty"`
+	Agents    []Agent             `yaml:"agents,omitempty"`
+	UserRulez *UserRulez          `yaml:"user_rulez,omitempty"`
 }
 
 // UserRulez contains user-specific rules, sections, and agents
@@ -79,18 +80,20 @@ func (o *Output) GetNamingScheme() string {
 
 // Rule represents a single rule definition
 type Rule struct {
-	ID       string `yaml:"id,omitempty"`
-	Name     string `yaml:"name"`
-	Priority int    `yaml:"priority,omitempty"`
-	Content  string `yaml:"content"`
+	ID       string   `yaml:"id,omitempty"`
+	Name     string   `yaml:"name"`
+	Priority int      `yaml:"priority,omitempty"`
+	Content  string   `yaml:"content"`
+	Targets  []string `yaml:"targets,omitempty"`
 }
 
 // Section represents an informative text section
 type Section struct {
-	ID       string `yaml:"id,omitempty"`
-	Title    string `yaml:"title"`
-	Priority int    `yaml:"priority,omitempty"`
-	Content  string `yaml:"content"`
+	ID       string   `yaml:"id,omitempty"`
+	Title    string   `yaml:"title"`
+	Priority int      `yaml:"priority,omitempty"`
+	Content  string   `yaml:"content"`
+	Targets  []string `yaml:"targets,omitempty"`
 }
 
 // Agent represents an AI sub-agent definition
@@ -102,6 +105,7 @@ type Agent struct {
 	Tools        []string `yaml:"tools,omitempty"`
 	Template     string   `yaml:"template,omitempty"`
 	SystemPrompt string   `yaml:"system_prompt,omitempty"`
+	Targets      []string `yaml:"targets,omitempty"`
 }
 
 // LoadConfig loads configuration from a YAML file
