@@ -72,6 +72,8 @@ func MatchesTarget(outputPath string, targets []string) bool {
 
 	// Normalize the output path for comparison
 	normalizedPath := filepath.Clean(outputPath)
+	baseName := filepath.Base(normalizedPath)
+	isDirectory := !strings.Contains(baseName, ".") || strings.HasSuffix(normalizedPath, "/")
 
 	for _, target := range targets {
 		// Clean the target pattern
@@ -80,31 +82,71 @@ func MatchesTarget(outputPath string, targets []string) bool {
 			continue
 		}
 
-		// Try exact match first
-		if cleanTarget == normalizedPath {
+		// Check various matching strategies
+		if matchesExact(cleanTarget, normalizedPath) {
 			return true
 		}
 
-		// Try glob pattern match
-		matched, err := filepath.Match(cleanTarget, normalizedPath)
-		if err == nil && matched {
+		if matchesGlob(cleanTarget, normalizedPath) {
 			return true
 		}
 
-		// Try matching with the base name only (for patterns like *.md)
-		baseName := filepath.Base(normalizedPath)
-		matched, err = filepath.Match(cleanTarget, baseName)
-		if err == nil && matched {
+		if matchesBaseName(cleanTarget, baseName) {
 			return true
 		}
 
-		// Try matching directory patterns (e.g., .claude/*)
-		if strings.Contains(cleanTarget, "/") {
-			// For directory-based patterns, check if the path matches
-			matched, err = filepath.Match(cleanTarget, normalizedPath)
-			if err == nil && matched {
+		// Special handling for directory outputs
+		if isDirectory && matchesDirectoryPatterns(cleanTarget, normalizedPath) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// matchesExact checks for exact string match
+func matchesExact(pattern, path string) bool {
+	return pattern == path
+}
+
+// matchesGlob checks if path matches the glob pattern
+func matchesGlob(pattern, path string) bool {
+	matched, err := filepath.Match(pattern, path)
+	return err == nil && matched
+}
+
+// matchesBaseName checks if the base name matches the pattern
+func matchesBaseName(pattern, baseName string) bool {
+	matched, err := filepath.Match(pattern, baseName)
+	return err == nil && matched
+}
+
+// matchesDirectoryPatterns handles special matching for directory outputs
+func matchesDirectoryPatterns(pattern, dirPath string) bool {
+	// For patterns like .claude/**/*.md, check if directory is under .claude/
+	if strings.Contains(pattern, "**") {
+		parts := strings.Split(pattern, "**")
+		if len(parts) > 0 {
+			prefix := strings.TrimSuffix(parts[0], "/")
+			if prefix != "" && (dirPath == prefix || strings.HasPrefix(dirPath, prefix+"/")) {
 				return true
 			}
+		}
+	}
+
+	// For patterns like path/*.ext, check if directory is under the path part
+	if strings.Contains(pattern, "*") && !strings.Contains(pattern, "**") {
+		dir := filepath.Dir(pattern)
+		if dir != "." && strings.HasPrefix(dirPath, dir+"/") {
+			return true
+		}
+	}
+
+	// Try matching directory patterns (e.g., .claude/*)
+	if strings.Contains(pattern, "/") {
+		matched, err := filepath.Match(pattern, dirPath)
+		if err == nil && matched {
+			return true
 		}
 	}
 
