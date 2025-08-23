@@ -96,6 +96,36 @@ func TestMatchesTarget(t *testing.T) {
 			expected:   false,
 		},
 		{
+			name:       "directory path matches ** pattern",
+			outputPath: ".claude/agents",
+			targets:    []string{".claude/**/*.md"},
+			expected:   true,
+		},
+		{
+			name:       "directory path with trailing slash matches ** pattern",
+			outputPath: ".claude/agents/",
+			targets:    []string{".claude/**/*.md"},
+			expected:   true,
+		},
+		{
+			name:       "nested directory path matches ** pattern",
+			outputPath: ".claude/foo/bar",
+			targets:    []string{".claude/**/*.md"},
+			expected:   true,
+		},
+		{
+			name:       "subdirectory path does not match simple wildcard pattern",
+			outputPath: ".claude",
+			targets:    []string{".claude/*.md"},
+			expected:   false,
+		},
+		{
+			name:       "nested subdirectory path matches simple wildcard pattern",
+			outputPath: ".claude/agents",
+			targets:    []string{".claude/*.md"},
+			expected:   true,
+		},
+		{
 			name:       "empty string in targets is ignored",
 			outputPath: "CLAUDE.md",
 			targets:    []string{"", "CLAUDE.md"},
