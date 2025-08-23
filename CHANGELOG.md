@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.1] - 2025-08-23
+
+### Fixed
+- **Agent Generation with Targets**: Fixed issue where agents with target filters were not being generated in directory outputs
+  - Directory paths like `.claude/agents/` now correctly match target patterns like `.claude/**/*.md`
+  - Added special handling for directory outputs to check if files within would match the patterns
+  - Ensures agents are properly filtered and generated based on their target specifications
+
 ## [1.6.0] - 2025-08-20
 
 ### Added
