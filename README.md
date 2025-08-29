@@ -7,6 +7,14 @@ Lightning-fast CLI tool and MCP server for managing AI assistant rules across Cl
 [![PyPI Version](https://img.shields.io/pypi/v/ai-rulez)](https://pypi.org/project/ai-rulez/)
 [![Homebrew](https://img.shields.io/badge/Homebrew-tap-orange)](https://github.com/Goldziher/homebrew-tap)
 
+## Support This Project
+
+If you find ai-rulez helpful, please consider sponsoring the development:
+
+<a href="https://github.com/sponsors/Goldziher"><img src="https://img.shields.io/badge/Sponsor-%E2%9D%A4-pink?logo=github-sponsors" alt="Sponsor on GitHub" height="32"></a>
+
+Your support helps maintain and improve this tool for the community! 🚀
+
 ## Quick Start
 
 You can either run ai-rulez directly or install it as a global tool:
