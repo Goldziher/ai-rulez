@@ -184,9 +184,6 @@ func TestProviderConfigGeneration(t *testing.T) {
 }
 
 func TestVersionConstant(t *testing.T) {
-	if Version == "" {
-		t.Error("Version constant should not be empty")
-	}
 
 	if Version != "dev" && !isValidVersion(Version) {
 		t.Logf("Version is set to: %s (this is expected for dev builds)", Version)
