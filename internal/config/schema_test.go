@@ -307,7 +307,6 @@ includes:
 			if tt.wantErr {
 				require.Error(t, err)
 				if tt.errMsg != "" {
-					// Check if it's a rich error and look in the validation errors
 					var richErr *internalErrors.RichError
 					if errors.As(err, &richErr) {
 						if errs, ok := richErr.Context["errors"].([]string); ok {
@@ -325,7 +324,6 @@ includes:
 							t.Errorf("Expected validation errors in context but found: %v", richErr.Context)
 						}
 					} else {
-						// Fallback to checking main error message
 						assert.Contains(t, err.Error(), tt.errMsg)
 					}
 				}
@@ -353,25 +351,20 @@ func TestConvertYAMLToJSON(t *testing.T) {
 
 	result := config.ConvertYAMLToJSON(input)
 
-	// Check that it's now a map[string]any
 	m, ok := result.(map[string]any)
 	require.True(t, ok)
 
-	// Check values
 	assert.Equal(t, "value", m["string"])
 	assert.Equal(t, 42, m["number"])
 
-	// Check nested map
 	nested, ok := m["nested"].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "value", nested["key"])
 
-	// Check array
 	arr, ok := m["array"].([]any)
 	require.True(t, ok)
 	assert.Equal(t, "item1", arr[0])
 
-	// Check nested map in array
 	arrNested, ok := arr[1].(map[string]any)
 	require.True(t, ok)
 	assert.Equal(t, "value", arrNested["nested"])

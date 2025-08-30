@@ -11,30 +11,25 @@ describe('NPM Installation Integration Tests', () => {
   let npmPackageDir
 
   beforeAll(async () => {
-    // Create temp directory for testing
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-rulez-npm-test-'))
     npmPackageDir = path.join(tempDir, 'npm-package')
 
-    // Copy npm package files to temp directory
     const npmSourceDir = path.join(__dirname, '../../build/npm')
 
-    // Check if source directory exists
     if (!fs.existsSync(npmSourceDir)) {
       throw new Error(`NPM source directory not found: ${npmSourceDir}`)
     }
 
     await execAsync(`cp -r "${npmSourceDir}" "${npmPackageDir}"`)
 
-    // Set a test version
     const packageJson = JSON.parse(
       fs.readFileSync(path.join(npmPackageDir, 'package.json'), 'utf8')
     )
-    packageJson.version = '1.0.0' // Use a stable version for testing
+    packageJson.version = '1.0.0'
     fs.writeFileSync(path.join(npmPackageDir, 'package.json'), JSON.stringify(packageJson, null, 2))
   })
 
   afterAll(async () => {
-    // Clean up temp directory
     if (tempDir && fs.existsSync(tempDir)) {
       await execAsync(`rm -rf "${tempDir}"`)
     }
@@ -60,11 +55,9 @@ describe('NPM Installation Integration Tests', () => {
   })
 
   test('should handle download errors gracefully', async () => {
-    // Test with invalid URL
     const invalidPackageDir = path.join(tempDir, 'invalid-npm')
     await execAsync(`cp -r "${npmPackageDir}" "${invalidPackageDir}"`)
 
-    // Modify install.js to use invalid URL
     const installJs = fs.readFileSync(path.join(invalidPackageDir, 'install.js'), 'utf8')
     const modifiedJs = installJs.replace(
       'https://github.com/Goldziher/ai-rulez',
@@ -73,7 +66,6 @@ describe('NPM Installation Integration Tests', () => {
     fs.writeFileSync(path.join(invalidPackageDir, 'install.js'), modifiedJs)
 
     try {
-      // Use a shorter timeout for faster tests
       await execAsync(`cd "${invalidPackageDir}" && timeout 30 node install.js`)
       throw new Error('Should have failed with invalid URL')
     } catch (error) {
@@ -105,7 +97,6 @@ describe('NPM Installation Integration Tests', () => {
   })
 
   test('should create bin directory and download binary (mock)', async () => {
-    // Create a mock test that simulates successful download
     const mockInstallJs = `
       const fs = require('fs');
       const path = require('path');
@@ -144,7 +135,6 @@ describe('NPM Installation Integration Tests', () => {
   })
 
   test('should handle checksum verification', async () => {
-    // Test checksum functionality with mock data
     const checksumTestScript = `
       const { calculateSHA256, getExpectedChecksum } = require('./install.js');
       const fs = require('fs');

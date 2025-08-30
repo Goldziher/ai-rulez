@@ -16,8 +16,8 @@ func TestFindConfigFile(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		setup     func(t *testing.T) string // Returns the start directory
-		wantFile  string                    // Expected filename (not full path)
+		setup     func(t *testing.T) string
+		wantFile  string
 		wantError bool
 	}{
 		{
@@ -63,7 +63,6 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 
-				// Create both files
 				err := os.WriteFile(filepath.Join(tmpDir, ".ai-rulez.yaml"), []byte("test"), 0o644)
 				require.NoError(t, err)
 				err = os.WriteFile(filepath.Join(tmpDir, "ai-rulez.yaml"), []byte("test"), 0o644)
@@ -111,7 +110,6 @@ func TestFindConfigFile(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 
-				// Create all variants
 				files := []string{
 					".ai-rulez.yaml", "ai-rulez.yaml",
 					".ai_rulez.yaml", "ai_rulez.yaml",
@@ -158,7 +156,7 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		setup     func(t *testing.T) string // Returns the root directory
+		setup     func(t *testing.T) string
 		wantCount int
 		wantError bool
 	}{
@@ -167,7 +165,6 @@ func TestFindAllConfigFiles(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 
-				// Create config files in different directories
 				configs := []string{
 					".ai-rulez.yaml",
 					"project1/ai-rulez.yaml",
@@ -195,10 +192,9 @@ func TestFindAllConfigFiles(t *testing.T) {
 			setup: func(t *testing.T) string {
 				tmpDir := t.TempDir()
 
-				// Create config files
 				configs := []string{
 					"ai-rulez.yaml",
-					".hidden/ai-rulez.yaml", // Should be skipped
+					".hidden/ai-rulez.yaml",
 					"visible/.ai-rulez.yaml",
 				}
 
@@ -212,7 +208,7 @@ func TestFindAllConfigFiles(t *testing.T) {
 
 				return tmpDir
 			},
-			wantCount: 2, // Only non-hidden directories
+			wantCount: 2,
 		},
 		{
 			name: "no config files found",

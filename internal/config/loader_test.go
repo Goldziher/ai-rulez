@@ -155,7 +155,6 @@ includes:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Create temporary directory and files
 			tmpDir := t.TempDir()
 			for filename, content := range tt.files {
 				filePath := filepath.Join(tmpDir, filename)
@@ -163,7 +162,6 @@ includes:
 				require.NoError(t, err)
 			}
 
-			// Load config
 			mainPath := filepath.Join(tmpDir, "main.yaml")
 			cfg, err := config.LoadConfigWithIncludes(mainPath)
 
@@ -615,7 +613,6 @@ func TestLoadConfigWithIncludesForAgents(t *testing.T) {
 
 	tmpDir := t.TempDir()
 
-	// Create main config with agents and includes
 	mainConfig := `metadata:
   name: "Main Config"
   version: "1.0.0"
@@ -636,7 +633,6 @@ agents:
       - Read
       - Write`
 
-	// Create first included file with agents
 	agents1Config := `metadata:
   name: "Agents Include 1"
   version: "1.0.0"
@@ -653,7 +649,6 @@ agents:
     description: "Will be overridden"
     priority: 3`
 
-	// Create second included file with agents (overrides one from agents1)
 	agents2Config := `metadata:
   name: "Agents Include 2"
   version: "1.0.0"
@@ -670,7 +665,6 @@ agents:
     tools:
       - Debug`
 
-	// Write all config files
 	mainPath := filepath.Join(tmpDir, "main.yaml")
 	agents1Path := filepath.Join(tmpDir, "agents1.yaml")
 	agents2Path := filepath.Join(tmpDir, "agents2.yaml")
@@ -679,14 +673,11 @@ agents:
 	require.NoError(t, os.WriteFile(agents1Path, []byte(agents1Config), 0o644))
 	require.NoError(t, os.WriteFile(agents2Path, []byte(agents2Config), 0o644))
 
-	// Load config with includes
 	cfg, err := config.LoadConfigWithIncludes(mainPath)
 	require.NoError(t, err)
 
-	// Verify that all agents are present and properly merged
 	assert.Len(t, cfg.Agents, 4, "Should have 4 agents: main + 2 from first include + 1 from second (1 override)")
 
-	// Check that agents are present with correct properties
 	agentsByName := make(map[string]config.Agent)
 	for _, agent := range cfg.Agents {
 		key := agent.Name
@@ -696,13 +687,11 @@ agents:
 		agentsByName[key] = agent
 	}
 
-	// Verify main agent
 	mainAgent, exists := agentsByName["main-agent"]
 	assert.True(t, exists, "main-agent should exist")
 	assert.Equal(t, "Agent from main config", mainAgent.Description)
 	assert.Equal(t, 10, mainAgent.Priority)
 
-	// Verify included agents
 	agent1, exists := agentsByName["included-agent-1"]
 	assert.True(t, exists, "included-agent-1 should exist")
 	assert.Equal(t, "Agent from first include", agent1.Description)
@@ -713,7 +702,6 @@ agents:
 	assert.Equal(t, "Agent from second include", agent2.Description)
 	assert.Equal(t, 7, agent2.Priority)
 
-	// Verify override worked correctly
 	overriddenAgent, exists := agentsByName["override-me"]
 	assert.True(t, exists, "override-me agent should exist")
 	assert.Equal(t, "overridden-agent", overriddenAgent.Name)
@@ -721,11 +709,9 @@ agents:
 	assert.Equal(t, 15, overriddenAgent.Priority)
 	assert.Contains(t, overriddenAgent.Tools, "Debug")
 
-	// Verify no includes remain
 	assert.Empty(t, cfg.Includes, "Includes should be cleared after processing")
 }
 
-// TestConfigLoaderRemoteIntegration tests remote config loading scenarios
 func TestConfigLoaderRemoteIntegration(t *testing.T) {
 	t.Run("url_detection_logic", func(t *testing.T) {
 		testCases := []struct {
@@ -734,7 +720,7 @@ func TestConfigLoaderRemoteIntegration(t *testing.T) {
 		}{
 			{"https://example.com/config.yaml", true},
 			{"http://example.com/config.yaml", true},
-			{"HTTP://EXAMPLE.COM/CONFIG.YAML", true}, // Case insensitive
+			{"HTTP://EXAMPLE.COM/CONFIG.YAML", true},
 			{"ftp://example.com/config.yaml", false},
 			{"/absolute/path/config.yaml", false},
 			{"relative/path/config.yaml", false},
@@ -743,15 +729,11 @@ func TestConfigLoaderRemoteIntegration(t *testing.T) {
 			{"", false},
 		}
 
-		// We can't easily test internal methods, but we can test the behavior
-		// through the public LoadConfigWithIncludes function with mocked servers
 		for _, tc := range testCases {
 			t.Run(tc.path, func(t *testing.T) {
 				if tc.expected {
-					// URL case - would need network, skip for unit test
 					t.Skip("URL validation test requires network")
 				} else if tc.path != "" {
-					// Test that non-URL paths are treated as local paths
 					assert.True(t, true, "Non-URL path %s handled as local", tc.path)
 				}
 			})
@@ -759,10 +741,8 @@ func TestConfigLoaderRemoteIntegration(t *testing.T) {
 	})
 
 	t.Run("error_propagation_scenarios", func(t *testing.T) {
-		// Test how different error conditions are handled
 		tmpDir := t.TempDir()
 
-		// Test missing include file
 		mainConfig := `metadata:
   name: "Error Test"
 includes:

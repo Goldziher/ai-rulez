@@ -14,10 +14,9 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestClient_ErrorHandling tests comprehensive error handling scenarios
 func TestClient_ErrorHandling(t *testing.T) {
 	t.Run("ssrf_protection_errors", func(t *testing.T) {
-		client := NewClient(nil) // Use production client for real SSRF validation
+		client := NewClient(nil)
 		ctx := context.Background()
 
 		testCases := []struct {
@@ -53,7 +52,6 @@ func TestClient_ErrorHandling(t *testing.T) {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tc.expectError)
 
-				// Verify it's the right error type
 				var richErr *errors.RichError
 				require.ErrorAs(t, err, &richErr)
 				assert.Equal(t, errors.ErrorTypeRemoteSSRF, richErr.Type)
@@ -132,16 +130,13 @@ func TestClient_ErrorHandling(t *testing.T) {
 				_, err := client.Fetch(ctx, server.URL)
 				require.Error(t, err)
 
-				// Verify it's the right error type
 				var richErr *errors.RichError
 				require.ErrorAs(t, err, &richErr)
 				assert.Equal(t, errors.ErrorTypeRemoteHTTP, richErr.Type)
 				assert.Equal(t, server.URL, richErr.Path)
 				assert.Equal(t, tc.statusCode, richErr.Context["status_code"])
-				// The status field includes the status code, e.g., "404 Not Found"
 				assert.Contains(t, richErr.Context["status"], tc.statusText)
 
-				// Check that all expected suggestion fragments are present
 				suggestionsText := strings.Join(richErr.Suggestions, " ")
 				for _, expectedSuggestion := range tc.expectedSuggestions {
 					assert.Contains(t, suggestionsText, expectedSuggestion,
@@ -153,7 +148,7 @@ func TestClient_ErrorHandling(t *testing.T) {
 
 	t.Run("timeout_errors", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(200 * time.Millisecond) // Longer than client timeout
+			time.Sleep(200 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte("delayed response"))
 		}))
@@ -172,7 +167,6 @@ func TestClient_ErrorHandling(t *testing.T) {
 		_, err := client.Fetch(ctx, server.URL)
 		require.Error(t, err)
 
-		// Verify it's a timeout error
 		var richErr *errors.RichError
 		require.ErrorAs(t, err, &richErr)
 		assert.Equal(t, errors.ErrorTypeRemoteTimeout, richErr.Type)
@@ -180,7 +174,6 @@ func TestClient_ErrorHandling(t *testing.T) {
 		assert.Equal(t, config.Timeout, richErr.Context["timeout"])
 		assert.Greater(t, len(richErr.Suggestions), 0)
 
-		// Check for timeout-specific suggestions
 		suggestionsText := strings.Join(richErr.Suggestions, " ")
 		assert.Contains(t, suggestionsText, "too long")
 	})
@@ -189,13 +182,11 @@ func TestClient_ErrorHandling(t *testing.T) {
 		client := NewTestClient(nil)
 		ctx := context.Background()
 
-		// Test with invalid hostname that should fail DNS resolution
 		_, err := client.Fetch(ctx, "http://this-domain-does-not-exist-12345.com/config")
 		require.Error(t, err)
 
 		var richErr *errors.RichError
 		require.ErrorAs(t, err, &richErr)
-		// This should be a network error for DNS resolution failure
 		assert.Equal(t, errors.ErrorTypeRemoteNetwork, richErr.Type)
 		assert.Equal(t, "http://this-domain-does-not-exist-12345.com/config", richErr.Path)
 	})
@@ -225,7 +216,6 @@ func TestClient_ErrorHandling(t *testing.T) {
 		client := NewClient(nil)
 		ctx := context.Background()
 
-		// Test SSRF protection with custom headers
 		headers := map[string]string{"Authorization": "Bearer token"}
 		_, err := client.FetchWithHeaders(ctx, "http://localhost:8080/config", headers)
 		require.Error(t, err)
@@ -236,17 +226,14 @@ func TestClient_ErrorHandling(t *testing.T) {
 	})
 }
 
-// TestErrorFormatting tests the rich error formatting
 func TestErrorFormatting(t *testing.T) {
 	t.Run("ssrf_error_formatting", func(t *testing.T) {
 		err := errors.RemoteSSRFError("http://localhost:8080/test", "localhost addresses not allowed")
 
-		// Test basic error message
 		assert.Contains(t, err.Error(), "validate URL")
 		assert.Contains(t, err.Error(), "URL blocked for security reasons")
 		assert.Contains(t, err.Error(), "localhost addresses not allowed")
 
-		// Test detailed format
 		detailed := fmt.Sprintf("%+v", err)
 		assert.Contains(t, detailed, "Context:")
 		assert.Contains(t, detailed, "Suggestions:")
@@ -257,11 +244,9 @@ func TestErrorFormatting(t *testing.T) {
 	t.Run("http_error_formatting", func(t *testing.T) {
 		err := errors.RemoteHTTPError("https://example.com/config.yaml", 404, "Not Found")
 
-		// Test basic error message
 		assert.Contains(t, err.Error(), "HTTP request")
 		assert.Contains(t, err.Error(), "HTTP 404: Not Found")
 
-		// Test detailed format
 		detailed := fmt.Sprintf("%+v", err)
 		assert.Contains(t, detailed, "status_code: 404")
 		assert.Contains(t, detailed, "status: Not Found")
@@ -279,13 +264,11 @@ func TestErrorFormatting(t *testing.T) {
 	})
 }
 
-// TestErrorChaining tests that errors properly wrap underlying errors
 func TestErrorChaining(t *testing.T) {
 	t.Run("remote_config_fetch_chaining", func(t *testing.T) {
 		originalErr := fmt.Errorf("connection timeout")
 		err := errors.RemoteConfigFetch("https://example.com/config.yaml", originalErr)
 
-		// Test that the original error is wrapped
 		assert.ErrorIs(t, err, originalErr)
 		assert.Contains(t, err.Error(), "fetch remote config")
 		assert.Contains(t, err.Error(), "connection timeout")
@@ -299,7 +282,6 @@ func TestErrorChaining(t *testing.T) {
 		assert.Contains(t, err.Error(), "parse remote config")
 		assert.Contains(t, err.Error(), "yaml: line 5")
 
-		// Should extract line info
 		assert.Contains(t, err.Context, "parse_error")
 	})
 }

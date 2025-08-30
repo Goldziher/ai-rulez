@@ -8,11 +8,9 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestRichError_FullFormatting tests the complete formatting of rich errors
 func TestRichError_FullFormatting(t *testing.T) {
 	t.Parallel()
 
-	// Create a rich error with all fields
 	err := New(ErrorTypeConfig, "test operation", fmt.Errorf("base error")).
 		WithPath("/path/to/file").
 		WithContext("key1", "value1").
@@ -20,11 +18,9 @@ func TestRichError_FullFormatting(t *testing.T) {
 		WithSuggestion("Try this first").
 		WithSuggestion("Or try this")
 
-	// Test basic error message
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "test operation")
 
-	// Test formatted output
 	var buf bytes.Buffer
 	FormatError(&buf, err, true, false)
 	formatted := buf.String()
@@ -33,21 +29,17 @@ func TestRichError_FullFormatting(t *testing.T) {
 	assert.Contains(t, formatted, "value2")
 }
 
-// TestRichError_NilFields tests handling of nil/empty fields
 func TestRichError_NilFields(t *testing.T) {
 	t.Parallel()
 
-	// Error with no base error
 	err := New(ErrorTypeTemplate, "operation", nil)
 	assert.NotNil(t, err)
 	assert.Contains(t, err.Error(), "operation")
 
-	// Error with empty operation
 	err = New(ErrorTypeValidation, "", fmt.Errorf("error"))
 	assert.Contains(t, err.Error(), "error")
 }
 
-// TestErrorType_AllTypes tests all error type strings
 func TestErrorType_AllTypes(t *testing.T) {
 	t.Parallel()
 
@@ -63,7 +55,7 @@ func TestErrorType_AllTypes(t *testing.T) {
 		ErrorTypeValidation,
 		ErrorTypeGeneration,
 		ErrorTypeMCP,
-		ErrorType(999), // Unknown type
+		ErrorType(999),
 	}
 
 	for _, errType := range types {
@@ -74,7 +66,6 @@ func TestErrorType_AllTypes(t *testing.T) {
 	}
 }
 
-// TestConfigNotFound_Whitebox tests ConfigNotFound error creation details
 func TestConfigNotFound_Whitebox(t *testing.T) {
 	t.Parallel()
 
@@ -83,7 +74,6 @@ func TestConfigNotFound_Whitebox(t *testing.T) {
 	assert.Contains(t, err.Error(), "config")
 }
 
-// TestConfigParse tests ConfigParse error creation
 func TestConfigParse(t *testing.T) {
 	t.Parallel()
 
@@ -94,7 +84,6 @@ func TestConfigParse(t *testing.T) {
 	assert.Contains(t, err.Error(), "parse")
 }
 
-// TestSchemaValidation tests SchemaValidation error creation
 func TestSchemaValidation(t *testing.T) {
 	t.Parallel()
 
@@ -109,7 +98,6 @@ func TestSchemaValidation(t *testing.T) {
 	assert.Contains(t, err.Error(), "validation")
 }
 
-// TestCircularInclude_Whitebox tests CircularInclude error creation details
 func TestCircularInclude_Whitebox(t *testing.T) {
 	t.Parallel()
 
@@ -120,7 +108,6 @@ func TestCircularInclude_Whitebox(t *testing.T) {
 	assert.Contains(t, err.Error(), "circular")
 }
 
-// TestTemplateNotFound tests TemplateNotFound error creation
 func TestTemplateNotFound(t *testing.T) {
 	t.Parallel()
 
@@ -129,7 +116,6 @@ func TestTemplateNotFound(t *testing.T) {
 	assert.Contains(t, err.Error(), "template")
 }
 
-// TestTemplateExecute tests TemplateExecute error creation
 func TestTemplateExecute(t *testing.T) {
 	t.Parallel()
 
@@ -140,7 +126,6 @@ func TestTemplateExecute(t *testing.T) {
 	assert.Contains(t, err.Error(), "template")
 }
 
-// TestFileRead tests FileRead error creation
 func TestFileRead(t *testing.T) {
 	t.Parallel()
 
@@ -151,7 +136,6 @@ func TestFileRead(t *testing.T) {
 	assert.Contains(t, err.Error(), "read")
 }
 
-// TestFileWrite tests FileWrite error creation
 func TestFileWrite(t *testing.T) {
 	t.Parallel()
 
@@ -162,7 +146,6 @@ func TestFileWrite(t *testing.T) {
 	assert.Contains(t, err.Error(), "write")
 }
 
-// TestValidationRequired tests ValidationRequired error creation
 func TestValidationRequired(t *testing.T) {
 	t.Parallel()
 
@@ -172,7 +155,6 @@ func TestValidationRequired(t *testing.T) {
 	assert.Contains(t, err.Error(), "required")
 }
 
-// TestMCPError tests MCPError creation
 func TestMCPError(t *testing.T) {
 	t.Parallel()
 
@@ -183,7 +165,6 @@ func TestMCPError(t *testing.T) {
 	assert.Contains(t, err.Error(), "connection")
 }
 
-// TestRichError_Unwrap_Whitebox tests error unwrapping internals
 func TestRichError_Unwrap_Whitebox(t *testing.T) {
 	t.Parallel()
 
@@ -193,13 +174,11 @@ func TestRichError_Unwrap_Whitebox(t *testing.T) {
 	unwrapped := richErr.Unwrap()
 	assert.Equal(t, baseErr, unwrapped)
 
-	// Test with nil base error
 	richErr = New(ErrorTypeConfig, "operation", nil)
 	unwrapped = richErr.Unwrap()
 	assert.Nil(t, unwrapped)
 }
 
-// TestRichError_ChainedContext tests adding multiple contexts
 func TestRichError_ChainedContext(t *testing.T) {
 	t.Parallel()
 
@@ -216,7 +195,6 @@ func TestRichError_ChainedContext(t *testing.T) {
 	assert.Contains(t, formatted, "15")
 }
 
-// TestRichError_ChainedSuggestions tests adding multiple suggestions
 func TestRichError_ChainedSuggestions(t *testing.T) {
 	t.Parallel()
 
@@ -233,11 +211,9 @@ func TestRichError_ChainedSuggestions(t *testing.T) {
 	assert.Contains(t, formatted, "Third suggestion")
 }
 
-// TestRichError_ComplexScenario tests a complex error scenario
 func TestRichError_ComplexScenario(t *testing.T) {
 	t.Parallel()
 
-	// Simulate a complex error from config loading
 	baseErr := fmt.Errorf("yaml: line 10: found character that cannot start any token")
 
 	err := New(ErrorTypeConfigInvalid, "parse YAML", baseErr).
@@ -248,11 +224,9 @@ func TestRichError_ComplexScenario(t *testing.T) {
 		WithSuggestion("Ensure proper YAML indentation").
 		WithSuggestion("Validate special characters are properly escaped")
 
-	// Test error message
 	errMsg := err.Error()
 	assert.Contains(t, errMsg, "parse")
 
-	// Test formatted output
 	var buf bytes.Buffer
 	FormatError(&buf, err, true, false)
 	formatted := buf.String()
@@ -260,7 +234,6 @@ func TestRichError_ComplexScenario(t *testing.T) {
 	assert.Contains(t, formatted, "10")
 }
 
-// TestRichError_EmptyError tests creating error without base error
 func TestRichError_EmptyError(t *testing.T) {
 	t.Parallel()
 
@@ -276,7 +249,6 @@ func TestRichError_EmptyError(t *testing.T) {
 	assert.Contains(t, formatted, "missing required field")
 }
 
-// TestFormatErrorJSON tests JSON formatting
 func TestFormatErrorJSON(t *testing.T) {
 	t.Parallel()
 
@@ -290,7 +262,6 @@ func TestFormatErrorJSON(t *testing.T) {
 	assert.Contains(t, jsonData, "type")
 }
 
-// TestFormatErrorSimple tests simple formatting
 func TestFormatErrorSimple(t *testing.T) {
 	t.Parallel()
 
@@ -300,7 +271,6 @@ func TestFormatErrorSimple(t *testing.T) {
 	assert.Contains(t, simple, "test")
 }
 
-// TestTemplateParse tests TemplateParse error creation
 func TestTemplateParse(t *testing.T) {
 	t.Parallel()
 

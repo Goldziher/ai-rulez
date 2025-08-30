@@ -4,23 +4,19 @@ metadata:
   description: "Test various directory output configurations"
 
 outputs:
-  # Rules to a directory with custom naming
   - path: "docs/"
     type: "rule"
     naming_scheme: "project-rules.md"
     template: "default"
   
-  # Agents with index-based naming
   - path: "ai/agents/"
     type: "agent"
     naming_scheme: "agent_{index}_{name}.yaml"
   
-  # Another agent directory with type prefix
   - path: ".config/ai/"
     type: "agent"
     naming_scheme: "agent_{name}.md"
   
-  # Mixed - regular file
   - file: "README.md"
     template: |
       # {{ .ProjectName }}

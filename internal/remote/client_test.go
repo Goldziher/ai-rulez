@@ -21,7 +21,6 @@ func TestDefaultHTTPConfig(t *testing.T) {
 	assert.Contains(t, config.UserAgent, "ai-rulez")
 	assert.Equal(t, int64(10*1024*1024), config.MaxBodySize)
 
-	// Check default headers
 	assert.Contains(t, config.Headers["Accept"], "yaml")
 }
 
@@ -49,7 +48,6 @@ func TestClient_Fetch(t *testing.T) {
 	t.Run("successful_fetch", func(t *testing.T) {
 		expectedContent := "test: yaml content\nrules:\n  - name: test"
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Verify headers
 			assert.Contains(t, r.Header.Get("Accept"), "yaml")
 			assert.Contains(t, r.Header.Get("User-Agent"), "ai-rulez")
 
@@ -68,7 +66,6 @@ func TestClient_Fetch(t *testing.T) {
 	})
 
 	t.Run("invalid_url", func(t *testing.T) {
-		// Use regular client to test validation
 		client := NewClient(nil)
 		ctx := context.Background()
 
@@ -112,7 +109,6 @@ func TestClient_Fetch(t *testing.T) {
 	t.Run("response_too_large", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusOK)
-			// Write one byte more than the max body size to trigger the limit
 			largeContent := strings.Repeat("a", int(DefaultHTTPConfig().MaxBodySize)+1)
 			w.Write([]byte(largeContent))
 		}))
@@ -129,7 +125,6 @@ func TestClient_Fetch(t *testing.T) {
 	t.Run("redirect_handling", func(t *testing.T) {
 		finalContent := "final content"
 
-		// Create a server that redirects to itself once, then serves content
 		var redirectCount int
 		var server *httptest.Server
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -155,7 +150,6 @@ func TestClient_Fetch(t *testing.T) {
 	t.Run("too_many_redirects", func(t *testing.T) {
 		var server *httptest.Server
 		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Always redirect to create infinite loop
 			http.Redirect(w, r, server.URL+"/redirect", http.StatusMovedPermanently)
 		}))
 		defer server.Close()
@@ -175,11 +169,9 @@ func TestClient_FetchWithHeaders(t *testing.T) {
 	t.Run("custom_headers", func(t *testing.T) {
 		expectedAuth := "Bearer test-token"
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// Verify custom headers
 			assert.Equal(t, expectedAuth, r.Header.Get("Authorization"))
 			assert.Equal(t, "application/json", r.Header.Get("Accept"))
 
-			// Verify User-Agent is still set (not overridden)
 			assert.Contains(t, r.Header.Get("User-Agent"), "ai-rulez")
 
 			w.WriteHeader(http.StatusOK)
@@ -222,9 +214,7 @@ func TestClient_FetchWithHeaders(t *testing.T) {
 }
 
 func TestClient_RedirectSSRFProtection(t *testing.T) {
-	// This test verifies that redirects to unsafe URLs are blocked
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Redirect to localhost (should be blocked)
 		http.Redirect(w, r, "http://127.0.0.1:8080/evil", http.StatusMovedPermanently)
 	}))
 	defer server.Close()
@@ -234,7 +224,6 @@ func TestClient_RedirectSSRFProtection(t *testing.T) {
 
 	_, err := client.Fetch(ctx, server.URL)
 	require.Error(t, err)
-	// The initial URL validation will fail before even getting to redirect
 	assert.Contains(t, err.Error(), "URL blocked for security reasons")
 }
 
@@ -246,7 +235,6 @@ func TestClient_Close(t *testing.T) {
 	})
 }
 
-// Benchmark tests to ensure client performance is acceptable
 func BenchmarkClient_Fetch(b *testing.B) {
 	content := "test: yaml content"
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -278,10 +266,8 @@ func BenchmarkClient_FetchWithValidation(b *testing.B) {
 	client := NewTestClient(nil)
 	ctx := context.Background()
 
-	// This benchmark includes URL validation overhead
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		// Use different URLs to test validation each time
 		url := fmt.Sprintf("%s?test=%d", server.URL, i)
 		_, err := client.Fetch(ctx, url)
 		if err != nil {
@@ -309,54 +295,48 @@ func TestClient_CacheIntegration(t *testing.T) {
 	t.Run("cache_miss_then_hit", func(t *testing.T) {
 		requestCount = 0
 
-		// First request should hit the server
 		response1, err := client.Fetch(ctx, server.URL)
 		require.NoError(t, err)
 		assert.Equal(t, content, string(response1))
 		assert.Equal(t, 1, requestCount)
 
-		// Second request should hit the cache
 		response2, err := client.Fetch(ctx, server.URL)
 		require.NoError(t, err)
 		assert.Equal(t, content, string(response2))
-		assert.Equal(t, 1, requestCount) // Should not increment
+		assert.Equal(t, 1, requestCount)
 	})
 
 	t.Run("fetch_with_headers_bypasses_cache", func(t *testing.T) {
 		requestCount = 0
 
-		// First request with headers
 		headers := map[string]string{"Authorization": "Bearer token"}
 		response1, err := client.FetchWithHeaders(ctx, server.URL, headers)
 		require.NoError(t, err)
 		assert.Equal(t, content, string(response1))
 		assert.Equal(t, 1, requestCount)
 
-		// Second request with headers should still hit server (not cached)
 		response2, err := client.FetchWithHeaders(ctx, server.URL, headers)
 		require.NoError(t, err)
 		assert.Equal(t, content, string(response2))
-		assert.Equal(t, 2, requestCount) // Should increment
+		assert.Equal(t, 2, requestCount)
 	})
 
 	t.Run("cache_isolation_per_url", func(t *testing.T) {
 		requestCount = 0
 
-		// Different URLs should not share cache entries
 		url1 := server.URL + "/path1"
 		url2 := server.URL + "/path2"
 
 		client.Fetch(ctx, url1)
 		client.Fetch(ctx, url2)
-		assert.Equal(t, 2, requestCount) // Both should hit server
+		assert.Equal(t, 2, requestCount)
 
 		client.Fetch(ctx, url1)
 		client.Fetch(ctx, url2)
-		assert.Equal(t, 2, requestCount) // Both should hit cache
+		assert.Equal(t, 2, requestCount)
 	})
 }
 
-// TestClient_ComprehensiveScenarios provides extensive client testing
 func TestClient_ComprehensiveScenarios(t *testing.T) {
 	t.Run("yaml_content_types", func(t *testing.T) {
 		contentTypes := []string{
