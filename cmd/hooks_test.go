@@ -37,20 +37,17 @@ func TestDetectLefthook(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tmpDir := t.TempDir()
 			oldWd, _ := os.Getwd()
 			defer os.Chdir(oldWd)
 			os.Chdir(tmpDir)
 
-			// Create test files
 			for _, file := range tt.files {
 				if err := os.WriteFile(file, []byte("test"), 0o644); err != nil {
 					t.Fatalf("Failed to create test file: %v", err)
 				}
 			}
 
-			// Test detection
 			result := detectLefthook()
 			if result != tt.expected {
 				t.Errorf("detectLefthook() = %v, want %v", result, tt.expected)
@@ -84,20 +81,17 @@ func TestDetectPreCommit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tmpDir := t.TempDir()
 			oldWd, _ := os.Getwd()
 			defer os.Chdir(oldWd)
 			os.Chdir(tmpDir)
 
-			// Create test files
 			for _, file := range tt.files {
 				if err := os.WriteFile(file, []byte("test"), 0o644); err != nil {
 					t.Fatalf("Failed to create test file: %v", err)
 				}
 			}
 
-			// Test detection
 			result := detectPreCommit()
 			if result != tt.expected {
 				t.Errorf("detectPreCommit() = %v, want %v", result, tt.expected)
@@ -137,18 +131,15 @@ func TestDetectHusky(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tmpDir := t.TempDir()
 			oldWd, _ := os.Getwd()
 			defer os.Chdir(oldWd)
 			os.Chdir(tmpDir)
 
-			// Setup test scenario
 			if err := tt.setup(tmpDir); err != nil {
 				t.Fatalf("Failed to setup test: %v", err)
 			}
 
-			// Test detection
 			result := detectHusky()
 			if result != tt.expected {
 				t.Errorf("detectHusky() = %v, want %v", result, tt.expected)
@@ -194,24 +185,20 @@ func TestSetupLefthookConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tmpDir := t.TempDir()
 			oldWd, _ := os.Getwd()
 			defer os.Chdir(oldWd)
 			os.Chdir(tmpDir)
 
-			// Create lefthook.yaml with test content
 			if err := os.WriteFile("lefthook.yaml", []byte(tt.existingYAML), 0o644); err != nil {
 				t.Fatalf("Failed to create lefthook.yaml: %v", err)
 			}
 
-			// Run setup
 			err := setupLefthookConfig()
 			if (err != nil) != tt.expectError {
 				t.Errorf("setupLefthookConfig() error = %v, expectError %v", err, tt.expectError)
 			}
 
-			// Check result if no error expected
 			if !tt.expectError {
 				content, err := os.ReadFile("lefthook.yaml")
 				if err != nil {
@@ -220,7 +207,7 @@ func TestSetupLefthookConfig(t *testing.T) {
 
 				if tt.expectedCheck != "" {
 					contentStr := string(content)
-					if !contains(contentStr, tt.expectedCheck) {
+					if !strings.Contains(contentStr, tt.expectedCheck) {
 						t.Errorf("Expected content to contain %q, got:\n%s", tt.expectedCheck, contentStr)
 					}
 				}
@@ -268,24 +255,20 @@ func TestSetupPreCommitConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tmpDir := t.TempDir()
 			oldWd, _ := os.Getwd()
 			defer os.Chdir(oldWd)
 			os.Chdir(tmpDir)
 
-			// Create .pre-commit-config.yaml with test content
 			if err := os.WriteFile(".pre-commit-config.yaml", []byte(tt.existingYAML), 0o644); err != nil {
 				t.Fatalf("Failed to create .pre-commit-config.yaml: %v", err)
 			}
 
-			// Run setup
 			err := setupPreCommitConfig()
 			if (err != nil) != tt.expectError {
 				t.Errorf("setupPreCommitConfig() error = %v, expectError %v", err, tt.expectError)
 			}
 
-			// Check result if no error expected
 			if !tt.expectError {
 				content, err := os.ReadFile(".pre-commit-config.yaml")
 				if err != nil {
@@ -294,7 +277,7 @@ func TestSetupPreCommitConfig(t *testing.T) {
 
 				if tt.expectedCheck != "" {
 					contentStr := string(content)
-					if !contains(contentStr, tt.expectedCheck) {
+					if !strings.Contains(contentStr, tt.expectedCheck) {
 						t.Errorf("Expected content to contain %q, got:\n%s", tt.expectedCheck, contentStr)
 					}
 				}
@@ -362,24 +345,20 @@ npx ai-rulez generate --dry-run
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tmpDir := t.TempDir()
 			oldWd, _ := os.Getwd()
 			defer os.Chdir(oldWd)
 			os.Chdir(tmpDir)
 
-			// Setup test files
 			if err := tt.setupFiles(tmpDir); err != nil {
 				t.Fatalf("Failed to setup test files: %v", err)
 			}
 
-			// Run setup
 			err := setupHuskyConfig()
 			if (err != nil) != tt.expectError {
 				t.Errorf("setupHuskyConfig() error = %v, expectError %v", err, tt.expectError)
 			}
 
-			// Check result if no error expected
 			if !tt.expectError && tt.expectedCheck != "" {
 				hookPath := filepath.Join(".husky", "pre-commit")
 				content, err := os.ReadFile(hookPath)
@@ -388,11 +367,10 @@ npx ai-rulez generate --dry-run
 				}
 
 				contentStr := string(content)
-				if !contains(contentStr, tt.expectedCheck) {
+				if !strings.Contains(contentStr, tt.expectedCheck) {
 					t.Errorf("Expected content to contain %q, got:\n%s", tt.expectedCheck, contentStr)
 				}
 
-				// Check file is executable
 				info, err := os.Stat(hookPath)
 				if err != nil {
 					t.Fatalf("Failed to stat %s: %v", hookPath, err)
@@ -403,9 +381,4 @@ npx ai-rulez generate --dry-run
 			}
 		})
 	}
-}
-
-// Helper function
-func contains(s, substr string) bool {
-	return strings.Contains(s, substr)
 }

@@ -10,19 +10,15 @@ includes:
   - "../shared/security-rules.yaml"
 
 outputs:
-  # Using default built-in template
   - file: "claude.md"
   
-  # Using new Cursor rules format (directory with .mdc files)
   - path: ".cursor/rules/"
     type: "rule"
     naming_scheme: "rules.mdc"
   
-  # Using documentation built-in template
   - file: "docs/detailed-rules.md"
     template: "documentation"
   
-  # Using inline template
   - file: "CONTRIBUTING.md"
     template: |
       # Contributing to {{.ProjectName}}
@@ -42,11 +38,9 @@ outputs:
       
       Generated on: {{.Timestamp.Format "2006-01-02"}}
   
-  # Using file reference template (relative to this config file)
   - file: "docs/handbook.md"
     template: "@templates/handbook.tmpl"
   
-  # Using file reference with parent directory
   - file: ".windsurfrules"
     template: "@../templates/simple.tmpl"
 

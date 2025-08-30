@@ -154,7 +154,6 @@ func setupTestCase(t *testing.T, testCase TestCase, testDir string) {
 		}
 	}
 	
-	// Also check if working directory contains scenarios
 	if strings.Contains(testCase.WorkingDir, "scenarios/") {
 		needsScenarios = true
 	}

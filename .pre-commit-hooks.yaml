@@ -1,12 +1,4 @@
-# Pre-commit hooks for ai-rulez
-# Usage: Add this to your .pre-commit-config.yaml:
-#
-# repos:
-#   - repo: https://github.com/Goldziher/ai-rulez
 #     rev: v1.6.0  # Use the latest version
-#     hooks:
-#       - id: ai-rulez-validate
-#
 - id: ai-rulez-validate
   name: Validate AI rulez configuration
   description: Validate ai-rulez configuration files and ensure they would generate successfully

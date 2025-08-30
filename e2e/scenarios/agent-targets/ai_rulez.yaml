@@ -3,7 +3,6 @@ metadata:
   version: "1.0.0"
   description: "Test that agents with targets are correctly filtered for directory outputs"
 
-# Define target groups for agent filtering
 targets:
   claude-files:
     - "CLAUDE.md"
@@ -19,7 +18,6 @@ outputs:
       {{ .Content }}
       {{ end }}
   
-  # Generate individual agent files for Claude
   - path: ".claude/agents/"
     type: "agent"
     naming_scheme: "{priority:02d}-{name}.md"
@@ -32,7 +30,6 @@ outputs:
       ## System Prompt
       {{ .SystemPrompt }}
 
-# Define agents that should only appear in Claude outputs
 agents:
   - name: "test-agent-with-target"
     description: "Agent that targets Claude files"

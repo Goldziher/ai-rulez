@@ -6,12 +6,10 @@ metadata:
   description: "Demonstrates AI agent definitions for sub-agent patterns"
 
 outputs:
-  # Output individual agent files to a directory
   - path: ".claude/agents/"
     type: "agent"
     naming_scheme: "{name}.md"
   
-  # Also include agents in main Claude file
   - file: "CLAUDE.md"
     template: "default"
 

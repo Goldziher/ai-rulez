@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestRemoteIntegration provides end-to-end integration tests
 func TestRemoteIntegration(t *testing.T) {
 	t.Run("end_to_end_scenarios", func(t *testing.T) {
 		t.Run("successful_remote_fetch_with_caching", func(t *testing.T) {
@@ -40,19 +39,16 @@ rules:
 			client := NewTestClient(nil)
 			ctx := context.Background()
 
-			// First fetch - should hit server
 			content1, err := client.Fetch(ctx, server.URL)
 			require.NoError(t, err)
 			assert.Equal(t, yamlContent, string(content1))
 			assert.Equal(t, 1, requestCount)
 
-			// Second fetch - should use cache
 			content2, err := client.Fetch(ctx, server.URL)
 			require.NoError(t, err)
 			assert.Equal(t, yamlContent, string(content2))
-			assert.Equal(t, 1, requestCount) // Should not increment
+			assert.Equal(t, 1, requestCount)
 
-			// Verify cache stats
 			if client.cache != nil {
 				stats := client.cache.Stats()
 				assert.True(t, stats.MemoryEntries > 0 || stats.DiskEntries > 0)
@@ -135,7 +131,7 @@ rules:
 
 		t.Run("large_content_handling", func(t *testing.T) {
 			t.Run("content_within_limits", func(t *testing.T) {
-				content := strings.Repeat("a", 500*1024) // 500KB
+				content := strings.Repeat("a", 500*1024)
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
 					w.Write([]byte(content))
@@ -151,7 +147,7 @@ rules:
 			})
 
 			t.Run("content_exceeds_limits", func(t *testing.T) {
-				largeContent := strings.Repeat("b", 2*1024*1024) // 2MB
+				largeContent := strings.Repeat("b", 2*1024*1024)
 				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusOK)
 					w.Write([]byte(largeContent))
@@ -159,7 +155,7 @@ rules:
 				defer server.Close()
 
 				config := DefaultHTTPConfig()
-				config.MaxBodySize = 1024 * 1024 // 1MB limit
+				config.MaxBodySize = 1024 * 1024
 				client := NewTestClient(config)
 				ctx := context.Background()
 
@@ -216,7 +212,6 @@ rules:
 			close(results)
 			close(errors)
 
-			// Check results
 			successCount := 0
 			for result := range results {
 				assert.Equal(t, content, result)
@@ -232,10 +227,8 @@ rules:
 			assert.Equal(t, numRequests, successCount+errorCount)
 			assert.Equal(t, 0, errorCount)
 
-			// Performance check - should complete within reasonable time
 			assert.Less(t, elapsed, 5*time.Second, "Concurrent requests took too long")
 
-			// Due to caching, actual server requests should be fewer
 			mu.Lock()
 			finalRequestCount := requestCount
 			mu.Unlock()
@@ -245,10 +238,8 @@ rules:
 	})
 }
 
-// TestRemoteComplexScenarios tests complex real-world scenarios
 func TestRemoteComplexScenarios(t *testing.T) {
 	t.Run("multi_server_federation", func(t *testing.T) {
-		// Simulate multiple servers providing different parts of config
 		servers := make([]*httptest.Server, 3)
 		contents := []string{
 			`metadata:
@@ -265,7 +256,7 @@ rules:
 		}
 
 		for i := 0; i < 3; i++ {
-			content := contents[i] // Capture loop variable
+			content := contents[i]
 			servers[i] = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "text/yaml")
 				w.WriteHeader(http.StatusOK)
@@ -281,7 +272,6 @@ rules:
 		client := NewTestClient(nil)
 		ctx := context.Background()
 
-		// Fetch from all servers
 		var responses []string
 		for _, server := range servers {
 			content, err := client.Fetch(ctx, server.URL)
@@ -289,16 +279,13 @@ rules:
 			responses = append(responses, string(content))
 		}
 
-		// Verify each response
 		for i, response := range responses {
 			assert.Contains(t, response, fmt.Sprintf("Server %d", i+1))
 		}
 	})
 
 	t.Run("real_world_github_like_server", func(t *testing.T) {
-		// Simulate GitHub raw content server behavior
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			// GitHub-like headers
 			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 			w.Header().Set("ETag", "\"github-etag-123\"")
 			w.Header().Set("Cache-Control", "max-age=300")
@@ -327,7 +314,6 @@ rules:
 	})
 }
 
-// BenchmarkRemoteIntegration provides integration performance benchmarks
 func BenchmarkRemoteIntegration(b *testing.B) {
 	content := strings.Repeat("benchmark content ", 50)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -345,7 +331,6 @@ func BenchmarkRemoteIntegration(b *testing.B) {
 		b.ReportAllocs()
 
 		for i := 0; i < b.N; i++ {
-			// Clear cache to force full fetch each time
 			if client.cache != nil {
 				client.cache.ClearMemory()
 			}
@@ -361,7 +346,6 @@ func BenchmarkRemoteIntegration(b *testing.B) {
 		client := NewTestClient(nil)
 		ctx := context.Background()
 
-		// Pre-warm cache
 		client.Fetch(ctx, server.URL)
 
 		b.ResetTimer()

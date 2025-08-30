@@ -5,16 +5,14 @@ metadata:
   version: "3.0.0"
   description: "Complete enterprise setup with all features"
 
-# Remote includes for organization standards
 includes:
   - "https://standards.company.com/ai-rules/global.yaml"
   - "https://standards.company.com/ai-rules/security.yaml"
   - "./department-rules.yaml"
   - "./team-rules.yaml"
-  - "./ai-rulez.local.yaml"  # Personal overrides
+  - "./ai-rulez.local.yaml"  
 
 outputs:
-  # Main assistant files
   - path: "CLAUDE.md"
     template: "default"
   
@@ -24,12 +22,10 @@ outputs:
   
   - path: ".windsurfrules"
   
-  # Agent definitions for Claude
   - path: ".claude/agents/"
     type: "agent"
     naming_scheme: "{name}.md"
   
-  # Documentation outputs
   - path: "docs/ai-assistants/"
     type: "rule"
     naming_scheme: "{type}-{name}.md"
@@ -47,7 +43,6 @@ outputs:
       ---
       *Part of {{.ProjectName}} v{{.Version}}*
   
-  # Team handbook
   - file: "TEAM_HANDBOOK.md"
     template: "documentation"
 
@@ -255,8 +250,6 @@ sections:
       - Office Hours: Thursdays 2-3 PM
 
 userRulez:
-  # Personal overrides - these are examples
-  # Users should create their own ai-rulez.local.yaml
   
   - name: "Personal Debug Mode"
     content: |
@@ -268,7 +261,7 @@ userRulez:
   
   - name: "Code Quality Standards"
     id: "rule-quality-01"
-    priority: 10  # Override priority
+    priority: 10  
     content: |
       ## Enhanced Quality Standards (Personal)
       

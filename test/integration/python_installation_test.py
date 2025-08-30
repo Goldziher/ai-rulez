@@ -1,8 +1,3 @@
-#!/usr/bin/env python3
-"""
-Integration tests for Python installation functionality
-"""
-
 import platform
 import shutil
 import subprocess
@@ -14,18 +9,14 @@ import pytest
 
 
 class TestPythonInstallation:
-    """Test Python package installation functionality"""
-
     @pytest.fixture
     def temp_dir(self):
-        """Create temporary directory for tests"""
         temp_dir = tempfile.mkdtemp(prefix="ai-rulez-python-test-")
         yield temp_dir
         shutil.rmtree(temp_dir, ignore_errors=True)
 
     @pytest.fixture
     def python_package_dir(self, temp_dir):
-        """Copy Python package to temp directory"""
         build_dir = Path(__file__).parent.parent.parent / "build" / "python"
         if not build_dir.exists():
             pytest.skip(f"Python build directory not found: {build_dir}")
@@ -36,8 +27,6 @@ class TestPythonInstallation:
 
     @pytest.mark.smoke
     def test_platform_detection(self, python_package_dir):
-        """Test platform detection functionality"""
-        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
 sys.path.insert(0, {repr(str(python_package_dir))})
@@ -63,8 +52,6 @@ except Exception as e:
 
     @pytest.mark.smoke
     def test_url_generation(self, python_package_dir):
-        """Test binary URL generation"""
-        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
 sys.path.insert(0, {repr(str(python_package_dir))})
@@ -96,8 +83,6 @@ except Exception as e:
 
     @pytest.mark.integration
     def test_checksum_calculation(self, python_package_dir, temp_dir):
-        """Test SHA256 checksum calculation"""
-        # Use repr() to properly escape paths and use Path for cross-platform compatibility
         test_script = f"""
 import sys
 import os
@@ -140,8 +125,6 @@ except Exception as e:
 
     @pytest.mark.integration
     def test_binary_path_generation(self, python_package_dir):
-        """Test binary path generation"""
-        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
 sys.path.insert(0, {repr(str(python_package_dir))})
@@ -177,8 +160,6 @@ except Exception as e:
 
     @pytest.mark.integration
     def test_version_cache_management(self, python_package_dir):
-        """Test version cache functionality"""
-        # Use repr() to properly escape the path for all platforms
         test_script = f"""
 import sys
 import tempfile
@@ -223,8 +204,6 @@ except Exception as e:
     @pytest.mark.platform
     @pytest.mark.skipif(platform.system() == "Windows", reason="Unix-specific test")
     def test_unix_permissions(self, python_package_dir, temp_dir):
-        """Test Unix file permissions handling"""
-        # Use repr() to properly escape paths and use Path for cross-platform compatibility
         test_script = f"""
 import sys
 import os
