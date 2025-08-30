@@ -1,4 +1,3 @@
-// Package templates provides template rendering for ai_rules output generation.
 package templates
 
 import (
@@ -11,16 +10,14 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// ContentItem represents a unified content item (rule or section).
 type ContentItem struct {
-	Type     string // "rule" or "section"
-	Title    string // Name for rules, Title for sections
+	Type     string
+	Title    string
 	Priority int
 	Content  string
 	IsRule   bool
 }
 
-// TemplateData contains all variables available for template substitution.
 type TemplateData struct {
 	ProjectName  string
 	Version      string
@@ -28,69 +25,56 @@ type TemplateData struct {
 	Rules        []config.Rule
 	Sections     []config.Section
 	Agents       []config.Agent
-	AllContent   []ContentItem // Rules and sections combined and sorted
+	AllContent   []ContentItem
 	Timestamp    time.Time
 	RuleCount    int
 	SectionCount int
 	AgentCount   int
-	// Header generation fields
-	ConfigFile string // Source configuration file name
-	OutputFile string // Target output file name
+	ConfigFile   string
+	OutputFile   string
 }
 
-// NewTemplateData creates template data from a config.
 func NewTemplateData(cfg *config.Config) *TemplateData {
 	return NewTemplateDataForOutput(cfg, "")
 }
 
-// NewTemplateDataForOutput creates template data from a config, filtered for a specific output path.
 func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateData {
-	// Merge main rules with user_rulez if present
 	allRules := cfg.Rules
 	allSections := cfg.Sections
 	allAgents := cfg.Agents
 
 	if cfg.UserRulez != nil {
-		// Merge user rules (user rules override main rules with same name)
 		allRules = config.MergeRules(allRules, cfg.UserRulez.Rules)
 		allSections = config.MergeSections(allSections, cfg.UserRulez.Sections)
 		allAgents = config.MergeAgents(allAgents, cfg.UserRulez.Agents)
 	}
 
-	// Filter by output path if specified
 	if outputPath != "" {
 		var err error
 		allRules, err = config.FilterRules(allRules, outputPath, cfg.Targets)
 		if err != nil {
-			// For now, log the error and continue with unfiltered rules
-			// In production, this might need better error handling
 			allRules = cfg.Rules
 		}
 
 		allSections, err = config.FilterSections(allSections, outputPath, cfg.Targets)
 		if err != nil {
-			// For now, log the error and continue with unfiltered sections
 			allSections = cfg.Sections
 		}
 
 		allAgents, err = config.FilterAgents(allAgents, outputPath, cfg.Targets)
 		if err != nil {
-			// For now, log the error and continue with unfiltered agents
 			allAgents = cfg.Agents
 		}
 	}
 
-	// Create a copy of rules and sections to sort
 	sortedRules := make([]config.Rule, len(allRules))
 	copy(sortedRules, allRules)
 
 	sortedSections := make([]config.Section, len(allSections))
 	copy(sortedSections, allSections)
 
-	// Create unified content list
 	allContent := make([]ContentItem, 0, len(allRules)+len(allSections))
 
-	// Add rules
 	for _, rule := range allRules {
 		allContent = append(allContent, ContentItem{
 			Type:     "rule",
@@ -101,7 +85,6 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		})
 	}
 
-	// Add sections
 	for _, section := range allSections {
 		allContent = append(allContent, ContentItem{
 			Type:     "section",
@@ -112,14 +95,10 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		})
 	}
 
-	// Sort all content by priority (descending) then by title (ascending)
 	sortContent(allContent)
-
-	// Sort individual lists for backward compatibility
 	sortRulesByPriority(sortedRules)
 	sortSectionsByPriority(sortedSections)
 
-	// Sort agents by priority
 	sortedAgents := make([]config.Agent, len(allAgents))
 	copy(sortedAgents, allAgents)
 	sortAgentsByPriority(sortedAgents)
@@ -139,24 +118,20 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	}
 }
 
-// Renderer handles template rendering with different output formats.
 type Renderer struct {
 	templates map[string]*template.Template
 }
 
-// NewRenderer creates a new template renderer with built-in templates.
 func NewRenderer() *Renderer {
 	r := &Renderer{
 		templates: make(map[string]*template.Template),
 	}
 
-	// Register built-in templates
 	r.registerBuiltinTemplates()
 
 	return r
 }
 
-// Render processes a template with the given data and returns the result.
 func (r *Renderer) Render(format string, data *TemplateData) (string, error) {
 	tmpl, exists := r.templates[format]
 	if !exists {
@@ -171,7 +146,6 @@ func (r *Renderer) Render(format string, data *TemplateData) (string, error) {
 	return buf.String(), nil
 }
 
-// RegisterTemplate adds a custom template for a format.
 func (r *Renderer) RegisterTemplate(format, templateStr string) error {
 	tmpl, err := template.New(format).Parse(templateStr)
 	if err != nil {
@@ -182,7 +156,6 @@ func (r *Renderer) RegisterTemplate(format, templateStr string) error {
 	return nil
 }
 
-// GetSupportedFormats returns all registered template formats.
 func (r *Renderer) GetSupportedFormats() []string {
 	formats := make([]string, 0, len(r.templates))
 	for format := range r.templates {
@@ -191,9 +164,7 @@ func (r *Renderer) GetSupportedFormats() []string {
 	return formats
 }
 
-// registerBuiltinTemplates sets up the default template.
 func (r *Renderer) registerBuiltinTemplates() {
-	// Default markdown template - works for all AI assistant formats
 	defaultTemplate := `# {{.ProjectName}}
 {{- if .Description}}
 
@@ -224,7 +195,6 @@ Total content: {{.RuleCount}} rules, {{.SectionCount}} sections
 {{- end}}
 `
 
-	// Documentation template - more detailed format
 	documentationTemplate := `# {{.ProjectName}} - Detailed Rules
 
 **Project Information:**
@@ -255,7 +225,6 @@ All content is sorted by priority (highest first), then alphabetically by title.
 {{end}}
 `
 
-	// Register built-in templates
 	if err := r.RegisterTemplate("default", defaultTemplate); err != nil {
 		panic(fmt.Sprintf("Failed to register default template: %v", err))
 	}
@@ -264,7 +233,6 @@ All content is sorted by priority (highest first), then alphabetically by title.
 	}
 }
 
-// ValidateTemplate checks if a template string is valid.
 func ValidateTemplate(templateStr string) error {
 	_, err := template.New("validation").Parse(templateStr)
 	if err != nil {
@@ -273,7 +241,6 @@ func ValidateTemplate(templateStr string) error {
 	return nil
 }
 
-// RenderString is a utility function to render a template string directly.
 func RenderString(templateStr string, data *TemplateData) (string, error) {
 	tmpl, err := template.New("inline").Parse(templateStr)
 	if err != nil {
@@ -288,8 +255,6 @@ func RenderString(templateStr string, data *TemplateData) (string, error) {
 	return buf.String(), nil
 }
 
-// GenerateHeader creates a standard header for generated files that instructs AI agents
-// and users not to edit the file directly.
 func GenerateHeader(data *TemplateData) string {
 	headerTemplate := `<!-- 
 🤖 GENERATED FILE - DO NOT EDIT DIRECTLY
@@ -320,7 +285,6 @@ Learn more: https://github.com/Goldziher/ai-rulez
 
 	tmpl, err := template.New("header").Parse(headerTemplate)
 	if err != nil {
-		// Fallback to simple header if template parsing fails
 		return fmt.Sprintf(`<!-- Generated by ai-rulez from %s - DO NOT EDIT DIRECTLY -->
 
 `, data.ConfigFile)
@@ -328,7 +292,6 @@ Learn more: https://github.com/Goldziher/ai-rulez
 
 	var buf strings.Builder
 	if err := tmpl.Execute(&buf, data); err != nil {
-		// Fallback to simple header if execution fails
 		return fmt.Sprintf(`<!-- Generated by ai-rulez from %s - DO NOT EDIT DIRECTLY -->
 
 `, data.ConfigFile)
@@ -337,7 +300,6 @@ Learn more: https://github.com/Goldziher/ai-rulez
 	return buf.String()
 }
 
-// sortRulesByPriority sorts rules by priority (descending) then by name (ascending).
 func sortRulesByPriority(rules []config.Rule) {
 	sort.Slice(rules, func(i, j int) bool {
 		if rules[i].Priority != rules[j].Priority {
@@ -347,7 +309,6 @@ func sortRulesByPriority(rules []config.Rule) {
 	})
 }
 
-// sortSectionsByPriority sorts sections by priority (descending) then by title (ascending).
 func sortSectionsByPriority(sections []config.Section) {
 	sort.Slice(sections, func(i, j int) bool {
 		if sections[i].Priority != sections[j].Priority {
@@ -357,7 +318,6 @@ func sortSectionsByPriority(sections []config.Section) {
 	})
 }
 
-// sortContent sorts content items by priority (descending) then by title (ascending).
 func sortContent(items []ContentItem) {
 	sort.Slice(items, func(i, j int) bool {
 		if items[i].Priority != items[j].Priority {
@@ -367,7 +327,6 @@ func sortContent(items []ContentItem) {
 	})
 }
 
-// sortAgentsByPriority sorts agents by priority (descending) then by name (ascending).
 func sortAgentsByPriority(agents []config.Agent) {
 	sort.Slice(agents, func(i, j int) bool {
 		if agents[i].Priority != agents[j].Priority {

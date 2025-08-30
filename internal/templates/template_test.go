@@ -42,7 +42,6 @@ func TestRenderer_Render(t *testing.T) {
 
 	renderer := templates.NewRenderer()
 
-	// Create config to generate proper template data
 	cfg := &config.Config{
 		Metadata: config.Metadata{
 			Name:        "Test Project",
@@ -55,15 +54,13 @@ func TestRenderer_Render(t *testing.T) {
 		},
 	}
 
-	// Use NewTemplateData to properly initialize AllContent
 	data := templates.NewTemplateData(cfg)
-	// Override timestamp for consistent testing
 	data.Timestamp = time.Date(2023, 12, 25, 10, 30, 0, 0, time.UTC)
 
 	tests := []struct {
 		name   string
 		format string
-		checks []string // Strings that should be present in output
+		checks []string
 	}{
 		{
 			name:   "default format",
@@ -114,12 +111,10 @@ func TestRenderer_RegisterTemplate(t *testing.T) {
 
 	renderer := templates.NewRenderer()
 
-	// Register a custom template
 	customTemplate := "Custom: {{.ProjectName}} ({{.RuleCount}} rules)"
 	err := renderer.RegisterTemplate("custom", customTemplate)
 	require.NoError(t, err)
 
-	// Test rendering with custom template
 	data := &templates.TemplateData{
 		ProjectName: "Test",
 		RuleCount:   3,
@@ -251,10 +246,8 @@ func TestRenderString(t *testing.T) {
 func TestBuiltinTemplates_NoErrors(t *testing.T) {
 	t.Parallel()
 
-	// Test that all builtin templates can be rendered without errors
 	renderer := templates.NewRenderer()
 
-	// Create config to generate proper template data
 	cfg := &config.Config{
 		Metadata: config.Metadata{
 			Name:        "Test",
@@ -282,7 +275,6 @@ func TestBuiltinTemplates_NoErrors(t *testing.T) {
 func TestBuiltinTemplates_EmptyRules(t *testing.T) {
 	t.Parallel()
 
-	// Test templates with no rules
 	renderer := templates.NewRenderer()
 	data := &templates.TemplateData{
 		ProjectName: "Empty Project",
@@ -296,7 +288,6 @@ func TestBuiltinTemplates_EmptyRules(t *testing.T) {
 		t.Run(format, func(t *testing.T) {
 			result, err := renderer.Render(format, data)
 			assert.NoError(t, err)
-			// Should not panic and should produce some output
 			assert.NotEmpty(t, strings.TrimSpace(result))
 		})
 	}
@@ -305,7 +296,6 @@ func TestBuiltinTemplates_EmptyRules(t *testing.T) {
 func TestGenerateHeader(t *testing.T) {
 	t.Parallel()
 
-	// Create test data
 	data := &templates.TemplateData{
 		ProjectName:  "Test Project",
 		Version:      "1.0.0",
@@ -316,10 +306,8 @@ func TestGenerateHeader(t *testing.T) {
 		Timestamp:    time.Date(2025, 1, 1, 12, 0, 0, 0, time.UTC),
 	}
 
-	// Generate header
 	header := templates.GenerateHeader(data)
 
-	// Check that header contains expected content
 	expectedContent := []string{
 		"🤖 GENERATED FILE - DO NOT EDIT DIRECTLY",
 		"ai-rulez.yaml",
@@ -338,7 +326,6 @@ func TestGenerateHeader(t *testing.T) {
 		}
 	}
 
-	// Check that header starts with comment and ends with newlines
 	if !strings.HasPrefix(header, "<!-- ") {
 		t.Error("Header should start with HTML comment")
 	}

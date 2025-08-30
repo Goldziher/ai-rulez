@@ -45,20 +45,9 @@ release:
   github:
     owner: Goldziher
     name: ai-rulez
-  # Skip if release already exists to prevent asset conflicts
   skip_upload: false
   replace_existing_draft: true
 
-# Temporarily disabled for Homebrew testing
-# nfpms:
-#   - id: packages
-#     description: "AI rules configuration management tool"
-#     maintainer: "Goldziher"
-#     license: "MIT"
-#     formats:
-#       - deb
-#       - rpm
-#       - apk
 
 brews:
   - name: ai-rulez

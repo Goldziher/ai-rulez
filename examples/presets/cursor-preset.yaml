@@ -1,0 +1,64 @@
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Cursor Preset Example"
+  version: "1.0.0"
+  description: "Example configuration generated with --preset cursor"
+
+
+outputs:
+  - file: "AGENTS.md"
+    description: "Shared configuration for AMP, Codex, and Cursor"
+  
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "rules.mdc"
+    description: "Cursor editor rules in MDC format"
+
+rules:
+  - name: "Cursor IDE Integration"
+    priority: 10
+    content: |
+      - Utilize Cursor's AI capabilities for code completion
+      - Follow the project's existing code patterns
+      - Use Cursor's chat for complex refactoring
+      - Leverage multi-file editing capabilities
+  
+  - name: "Code Quality Standards"
+    priority: 9
+    content: |
+      - Write clean, readable, and maintainable code
+      - Follow consistent coding standards
+      - Use meaningful variable and function names
+      - Keep functions small and focused
+  
+  - name: "Development Workflow"
+    priority: 8
+    content: |
+      - Test changes before committing
+      - Use descriptive commit messages
+      - Keep pull requests focused and small
+      - Document significant changes
+
+sections:
+  - title: "Cursor-Specific Features"
+    priority: 10
+    content: |
+      ## Cursor IDE Features
+      
+      Take advantage of Cursor's unique capabilities:
+      
+      ### AI-Powered Editing
+      - Use Cmd+K for inline AI edits
+      - Chat with Cmd+L for complex questions
+      - Apply AI suggestions with Tab
+      
+      ### Multi-File Operations
+      - Edit multiple files simultaneously
+      - Refactor across the entire codebase
+      - Use AI to understand file relationships
+      
+      ### Context Management
+      - Add relevant files to chat context
+      - Use @mentions to reference specific files
+      - Leverage project-wide understanding

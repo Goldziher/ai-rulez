@@ -58,9 +58,9 @@ pnpm install
 cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
 ```
 
-## Available Tasks
+## Build System (Taskfile)
 
-We use [Taskfile](https://taskfile.dev) for task automation. Run `task --list` to see all available tasks:
+The project uses [Task](https://taskfile.dev) as its build system. The Taskfile provides consistent commands for building, testing, and maintaining the project.
 
 ### Core Development Tasks
 
@@ -68,7 +68,10 @@ We use [Taskfile](https://taskfile.dev) for task automation. Run `task --list` t
 # Build the binary
 task build
 
-# Run all tests
+# Install the binary to $GOPATH/bin
+task install
+
+# Run unit tests
 task test
 
 # Run tests with coverage
@@ -77,30 +80,65 @@ task test:coverage
 # Run tests with race detection
 task test:race
 
-# Run integration tests
+# Run all CI checks (lint, format, tests)
+task ci
+```
+
+### Testing Tasks
+
+```bash
+# Unit tests only
+task test
+
+# Integration tests
 task test:integration
 
-# Run end-to-end tests
+# End-to-end tests (all suites)
 task test:e2e
 
+# Specific e2e test suites
+task test:e2e:init      # Init provider tests
+task test:e2e:cli       # CLI integration tests
+task test:e2e:agents    # Agent tests
+task test:e2e:profile   # Profile tests
+
+# Benchmarks
+task test:benchmark
+
+# All tests (unit + integration)
+task test:all
+```
+
+### Code Quality Tasks
+
+```bash
 # Run linting
 task lint
+
+# Fix linting issues automatically
+task lint:fix
 
 # Format code
 task fmt
 
-# Run all CI checks
-task ci
+# Tidy Go modules
+task tidy
+
+# Full development cycle (tidy, format, lint, test)
+task dev
 ```
 
-### Development Workflow
+### Utility Tasks
 
 ```bash
-# Full development cycle
-task dev
-
 # Clean build artifacts
 task clean
+
+# Sync JSON schema to embedded location
+task sync-schema
+
+# Build for multiple platforms
+task build:all
 
 # Update dependencies
 task deps
@@ -176,12 +214,31 @@ task coverage
 task test:race
 ```
 
+### AI Agent Integration Tests
+
+Some integration tests require AI agents to be installed locally. These tests are gated by an environment variable to prevent CI failures:
+
+```bash
+# Run agent integration tests (requires AI tools like claude, gemini, etc.)
+AI_RULEZ_INTEGRATION_TEST=1 go test ./e2e -run TestAgentIntegration
+
+# Or use the task command with the environment variable
+AI_RULEZ_INTEGRATION_TEST=1 task test:e2e
+```
+
+The agent integration tests will:
+- Detect available AI CLI tools (claude, gemini, amp, codex, cursor-agent)
+- Test preset configurations for each tool
+- Test agent-assisted configuration generation
+- Validate generated configurations
+
 ### Writing Tests
 
 - Place unit tests next to the code they test (e.g., `config_test.go`)
 - Use table-driven tests for multiple test cases
 - Use `testify/assert` for assertions
 - Aim for >80% code coverage
+- Gate integration tests with environment variables when they require external tools
 - Test error conditions and edge cases
 
 ## Code Style
