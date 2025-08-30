@@ -17,7 +17,6 @@ func TestURLValidator_Validate(t *testing.T) {
 		shouldError bool
 		errorMsg    string
 	}{
-		// Valid URLs (using real domains that resolve)
 		{
 			name:        "valid_https_url",
 			url:         "https://google.com/path/to/file.yaml",
@@ -34,7 +33,6 @@ func TestURLValidator_Validate(t *testing.T) {
 			shouldError: false,
 		},
 
-		// Invalid schemes
 		{
 			name:        "ftp_scheme_blocked",
 			url:         "ftp://example.com/file.yaml",
@@ -48,7 +46,6 @@ func TestURLValidator_Validate(t *testing.T) {
 			errorMsg:    "scheme \"file\" not allowed",
 		},
 
-		// Empty and malformed URLs
 		{
 			name:        "empty_url",
 			url:         "",
@@ -68,7 +65,6 @@ func TestURLValidator_Validate(t *testing.T) {
 			errorMsg:    "missing hostname in URL",
 		},
 
-		// Localhost and loopback addresses
 		{
 			name:        "localhost_blocked",
 			url:         "http://localhost:8080/file.yaml",
@@ -94,7 +90,6 @@ func TestURLValidator_Validate(t *testing.T) {
 			errorMsg:    "IP address ::1 is blocked",
 		},
 
-		// Private IP ranges (RFC 1918)
 		{
 			name:        "private_10_blocked",
 			url:         "http://10.0.0.1/file.yaml",
@@ -114,7 +109,6 @@ func TestURLValidator_Validate(t *testing.T) {
 			errorMsg:    "IP address 192.168.1.1 is blocked",
 		},
 
-		// Metadata service endpoints
 		{
 			name:        "aws_metadata_blocked",
 			url:         "http://169.254.169.254/latest/meta-data/",
@@ -128,7 +122,6 @@ func TestURLValidator_Validate(t *testing.T) {
 			errorMsg:    "failed to resolve hostname",
 		},
 
-		// Invalid ports
 		{
 			name:        "invalid_port_zero",
 			url:         "https://example.com:0/file.yaml",
@@ -198,25 +191,20 @@ func TestURLValidator_isBlockedIP(t *testing.T) {
 		ip       string
 		expected bool
 	}{
-		// Public IPs (should not be blocked)
 		{"public_ip_1", "8.8.8.8", false},
 		{"public_ip_2", "1.1.1.1", false},
 		{"public_ip_3", "208.67.222.222", false},
 
-		// Private IPs (should be blocked)
 		{"private_10", "10.0.0.1", true},
 		{"private_172", "172.16.0.1", true},
 		{"private_192", "192.168.1.1", true},
 
-		// Loopback (should be blocked)
 		{"loopback_127", "127.0.0.1", true},
 		{"loopback_ipv6", "::1", true},
 
-		// Link-local (should be blocked)
 		{"link_local", "169.254.1.1", true},
 		{"link_local_ipv6", "fe80::1", true},
 
-		// Multicast (should be blocked)
 		{"multicast_ipv4", "224.0.0.1", true},
 		{"multicast_ipv6", "ff02::1", true},
 	}
@@ -241,18 +229,15 @@ func TestURLValidator_validateHostnamePatterns(t *testing.T) {
 		shouldError bool
 		errorMsg    string
 	}{
-		// Valid hostnames
 		{"valid_domain", "example.com", false, ""},
 		{"valid_subdomain", "api.example.com", false, ""},
 		{"valid_with_dash", "my-service.example.com", false, ""},
 
-		// Localhost patterns
 		{"localhost", "localhost", true, "localhost/loopback addresses not allowed"},
 		{"localhost_caps", "LOCALHOST", true, "localhost/loopback addresses not allowed"},
 		{"localhost_subdomain", "api.localhost", true, "localhost/loopback addresses not allowed"},
 		{"contains_127", "test.127.0.0.1", true, "localhost/loopback addresses not allowed"},
 
-		// Metadata services
 		{"aws_metadata", "169.254.169.254", true, "metadata service endpoints not allowed"},
 		{"gcp_metadata", "metadata.google.internal", true, "metadata service endpoints not allowed"},
 		{"azure_metadata", "metadata.azure.com", true, "metadata service endpoints not allowed"},
@@ -277,10 +262,8 @@ func TestURLValidator_validateHostnamePatterns(t *testing.T) {
 func TestGetDefaultBlockedNetworks(t *testing.T) {
 	networks := getDefaultBlockedNetworks()
 
-	// Should have multiple blocked networks
 	assert.Greater(t, len(networks), 10, "Should have multiple blocked networks")
 
-	// Check that some key networks are included
 	expectedCIDRs := []string{
 		"10.0.0.0/8",
 		"127.0.0.0/8",
@@ -300,7 +283,6 @@ func TestGetDefaultBlockedNetworks(t *testing.T) {
 	}
 }
 
-// Benchmark tests to ensure validation is performant
 func BenchmarkURLValidator_Validate(b *testing.B) {
 	validator := NewURLValidator()
 	url := "https://example.com/path/to/config.yaml"
@@ -321,7 +303,6 @@ func BenchmarkURLValidator_ValidateBlocked(b *testing.B) {
 	}
 }
 
-// TestURLValidator_MetadataEndpoints tests specific cloud metadata endpoints
 func TestURLValidator_MetadataEndpoints(t *testing.T) {
 	validator := NewURLValidator()
 
@@ -345,7 +326,6 @@ func TestURLValidator_MetadataEndpoints(t *testing.T) {
 	}
 }
 
-// TestURLValidator_RealWorldScenarios tests realistic usage patterns
 func TestURLValidator_RealWorldScenarios(t *testing.T) {
 	validator := NewURLValidator()
 
@@ -405,7 +385,6 @@ func TestURLValidator_RealWorldScenarios(t *testing.T) {
 	}
 }
 
-// TestURLValidator_EdgeCasesAndPerformance tests edge cases and performance
 func TestURLValidator_EdgeCasesAndPerformance(t *testing.T) {
 	validator := NewURLValidator()
 

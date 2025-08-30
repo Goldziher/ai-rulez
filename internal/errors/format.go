@@ -7,7 +7,6 @@ import (
 	"strings"
 )
 
-// FormatError formats a RichError for display with color support
 func FormatError(w io.Writer, err error, verbose bool, color bool) {
 	if err == nil {
 		return
@@ -16,12 +15,10 @@ func FormatError(w io.Writer, err error, verbose bool, color bool) {
 	var richErr *RichError
 	ok := errors.As(err, &richErr)
 	if !ok {
-		// Fallback for non-rich errors
 		fmt.Fprintf(w, "Error: %v\n", err) //nolint:errcheck
 		return
 	}
 
-	// Color codes
 	var (
 		red    = "\033[31m"
 		yellow = "\033[33m"
@@ -38,30 +35,46 @@ func FormatError(w io.Writer, err error, verbose bool, color bool) {
 		bold = ""
 	}
 
-	// Primary error message
 	fmt.Fprintf(w, "%s%sError:%s %s\n", bold, red, reset, richErr.Error()) //nolint:errcheck
 
-	// Show context in verbose mode
+	if validationErrors, ok := richErr.Context["errors"].([]string); ok && len(validationErrors) > 0 {
+		fmt.Fprintf(w, "\n%sValidation Errors:%s\n", red, reset) //nolint:errcheck
+		for _, errMsg := range validationErrors {
+			fmt.Fprintf(w, "  %s\n", errMsg) //nolint:errcheck
+		}
+	}
+
 	if verbose && len(richErr.Context) > 0 {
-		fmt.Fprintf(w, "\n%sContext:%s\n", yellow, reset) //nolint:errcheck
-		for k, v := range richErr.Context {
-			// Format context values nicely
-			switch val := v.(type) {
-			case []string:
-				if len(val) > 0 {
-					fmt.Fprintf(w, "  %s: %s\n", k, strings.Join(val, " -> ")) //nolint:errcheck
+		hasOtherContext := false
+		for k := range richErr.Context {
+			if k != "errors" && k != "error_count" {
+				hasOtherContext = true
+				break
+			}
+		}
+
+		if hasOtherContext {
+			fmt.Fprintf(w, "\n%sContext:%s\n", yellow, reset) //nolint:errcheck
+			for k, v := range richErr.Context {
+				if k == "errors" || k == "error_count" {
+					continue
 				}
-			case string:
-				if val != "" {
-					fmt.Fprintf(w, "  %s: %s\n", k, val) //nolint:errcheck
+				switch val := v.(type) {
+				case []string:
+					if len(val) > 0 {
+						fmt.Fprintf(w, "  %s: %s\n", k, strings.Join(val, " -> ")) //nolint:errcheck
+					}
+				case string:
+					if val != "" {
+						fmt.Fprintf(w, "  %s: %s\n", k, val) //nolint:errcheck
+					}
+				default:
+					fmt.Fprintf(w, "  %s: %v\n", k, v) //nolint:errcheck
 				}
-			default:
-				fmt.Fprintf(w, "  %s: %v\n", k, v) //nolint:errcheck
 			}
 		}
 	}
 
-	// Always show suggestions if available
 	if len(richErr.Suggestions) > 0 {
 		fmt.Fprintf(w, "\n%sSuggestions:%s\n", cyan, reset) //nolint:errcheck
 		for i, suggestion := range richErr.Suggestions {
@@ -69,13 +82,11 @@ func FormatError(w io.Writer, err error, verbose bool, color bool) {
 		}
 	}
 
-	// Show error type in verbose mode
 	if verbose {
 		fmt.Fprintf(w, "\n%sError Type:%s %s\n", yellow, reset, richErr.Type.String()) //nolint:errcheck
 	}
 }
 
-// FormatErrorSimple formats just the error message without suggestions
 func FormatErrorSimple(err error) string {
 	if err == nil {
 		return ""
@@ -90,7 +101,6 @@ func FormatErrorSimple(err error) string {
 	return richErr.Error()
 }
 
-// FormatErrorJSON formats a RichError as JSON for MCP or API responses
 func FormatErrorJSON(err error) map[string]interface{} {
 	if err == nil {
 		return nil
@@ -125,7 +135,6 @@ func FormatErrorJSON(err error) map[string]interface{} {
 	return result
 }
 
-// ExtractRootCause extracts the root cause from a chain of wrapped errors
 func ExtractRootCause(err error) error {
 	if err == nil {
 		return nil

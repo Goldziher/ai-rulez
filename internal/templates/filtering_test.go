@@ -24,7 +24,7 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 				Name:     "Global Rule",
 				Priority: 10,
 				Content:  "Applies everywhere",
-				Targets:  []string{}, // No targets
+				Targets:  []string{},
 			},
 			{
 				Name:     "Claude Only Rule",
@@ -50,7 +50,7 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 				Title:    "Global Section",
 				Priority: 100,
 				Content:  "Appears everywhere",
-				Targets:  []string{}, // No targets
+				Targets:  []string{},
 			},
 			{
 				Title:    "Claude Intro",
@@ -70,7 +70,7 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 				Name:        "Universal Agent",
 				Priority:    50,
 				Description: "Works everywhere",
-				Targets:     []string{}, // No targets
+				Targets:     []string{},
 			},
 			{
 				Name:        "Claude Agent",
@@ -125,17 +125,14 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 			data := templates.NewTemplateDataForOutput(cfg, tt.outputPath)
 			require.NotNil(t, data)
 
-			// Check metadata is preserved
 			assert.Equal(t, "Test Project", data.ProjectName)
 			assert.Equal(t, "1.0.0", data.Version)
 			assert.Equal(t, "Test configuration", data.Description)
 
-			// Check counts match filtered items
 			assert.Equal(t, len(tt.expectedRules), data.RuleCount)
 			assert.Equal(t, len(tt.expectedSects), data.SectionCount)
 			assert.Equal(t, len(tt.expectedAgents), data.AgentCount)
 
-			// Extract names for comparison
 			var ruleNames []string
 			for _, rule := range data.Rules {
 				ruleNames = append(ruleNames, rule.Name)
@@ -154,7 +151,6 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 			}
 			assert.ElementsMatch(t, tt.expectedAgents, agentNames)
 
-			// Check AllContent is correctly filtered and merged
 			expectedAllContentCount := len(tt.expectedRules) + len(tt.expectedSects)
 			assert.Equal(t, expectedAllContentCount, len(data.AllContent))
 		})
@@ -185,7 +181,7 @@ func TestNewTemplateDataForOutputWithUserRulez(t *testing.T) {
 					Targets:  []string{"CLAUDE.md"},
 				},
 				{
-					Name:     "Main Rule", // Override main rule
+					Name:     "Main Rule",
 					Priority: 15,
 					Content:  "Overridden content",
 					Targets:  []string{"*.md"},
@@ -197,11 +193,9 @@ func TestNewTemplateDataForOutputWithUserRulez(t *testing.T) {
 	data := templates.NewTemplateDataForOutput(cfg, "CLAUDE.md")
 	require.NotNil(t, data)
 
-	// Should have 2 rules: User Rule + overridden Main Rule
 	assert.Equal(t, 2, data.RuleCount)
 	assert.Len(t, data.Rules, 2)
 
-	// Find the rules
 	var userRule, mainRule *config.Rule
 	for i := range data.Rules {
 		switch data.Rules[i].Name {
@@ -215,7 +209,6 @@ func TestNewTemplateDataForOutputWithUserRulez(t *testing.T) {
 	require.NotNil(t, userRule, "User Rule should be present")
 	require.NotNil(t, mainRule, "Main Rule should be present")
 
-	// Check that Main Rule was overridden by UserRulez
 	assert.Equal(t, "Overridden content", mainRule.Content)
 	assert.Equal(t, 15, mainRule.Priority)
 }
@@ -231,15 +224,12 @@ func TestNewTemplateDataBackwardCompatibility(t *testing.T) {
 		},
 	}
 
-	// Test that NewTemplateData (without output path) still works
 	data := templates.NewTemplateData(cfg)
 	require.NotNil(t, data)
 
-	// Should get all rules since no filtering is applied
 	assert.Equal(t, 2, data.RuleCount)
 	assert.Len(t, data.Rules, 2)
 
-	// Test that it's equivalent to calling NewTemplateDataForOutput with empty path
 	dataForOutput := templates.NewTemplateDataForOutput(cfg, "")
 	require.NotNil(t, dataForOutput)
 

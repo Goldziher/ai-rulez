@@ -5,22 +5,15 @@ metadata:
   version: "2.0.0"
   description: "Demonstrates remote configuration includes with caching"
 
-# Include configurations from remote sources
-# These are fetched and cached locally for performance
 includes:
-  # Organization-wide standards (public GitHub)
   - "https://raw.githubusercontent.com/myorg/coding-standards/main/backend-rules.yaml"
   
-  # Team-specific rules (private repo with auth)
   - "https://raw.githubusercontent.com/myteam/standards/main/api-rules.yaml"
   
-  # Configuration API endpoint
   - "https://api.company.com/ai-rules/v1/security.yaml"
   
-  # Local team overrides
   - "./team-overrides.yaml"
   
-  # Personal preferences (not committed)
   - "./ai-rulez.local.yaml"
 
 outputs:
@@ -30,11 +23,9 @@ outputs:
     naming_scheme: "{priority:02d}-{name}.mdc"
 
 rules:
-  # These rules will be merged with included rules
-  # Later rules override earlier ones with same name/ID
   
   - name: "API Security"
-    id: "sec-001"  # Use ID for precise matching
+    id: "sec-001"  
     priority: 10
     content: |
       - Validate all input parameters
@@ -51,8 +42,6 @@ rules:
       - Use caching for repeated queries
       - Implement pagination for lists
 
-# UserRulez section for user-specific overrides
-# These take precedence over all other rules
 userRulez:
   - name: "Personal Code Style"
     content: |
@@ -60,7 +49,7 @@ userRulez:
       - Prefer const over let
       - Always use semicolons
       
-  - name: "API Security"  # Overrides the rule above
+  - name: "API Security"  
     id: "sec-001"
     priority: 10
     content: |

@@ -49,13 +49,11 @@ func TestRichError_Format(t *testing.T) {
 		WithSuggestion("Run 'ai-rulez init'").
 		WithSuggestion("Check the directory")
 
-	// Test basic format
 	basic := fmt.Sprintf("%s", err)
 	if !strings.Contains(basic, "find config: not found") {
 		t.Errorf("Basic format missing error message: %s", basic)
 	}
 
-	// Test verbose format
 	verbose := fmt.Sprintf("%+v", err)
 	if !strings.Contains(verbose, "Context:") {
 		t.Errorf("Verbose format missing context: %s", verbose)
@@ -71,7 +69,6 @@ func TestRichError_Format(t *testing.T) {
 func TestRichError_WithMethods(t *testing.T) {
 	err := New(ErrorTypeConfig, "test", fmt.Errorf("base error"))
 
-	// Test method chaining
 	result := err.
 		WithPath("/test/path").
 		WithContext("key", "value").
@@ -135,7 +132,6 @@ func TestConfigNotFound(t *testing.T) {
 		t.Error("ConfigNotFound() should have suggestions")
 	}
 
-	// Check for specific suggestions
 	suggestions := strings.Join(err.Suggestions, " ")
 	if !strings.Contains(suggestions, "ai-rulez init") {
 		t.Error("ConfigNotFound() should suggest running init")

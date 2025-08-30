@@ -7,7 +7,6 @@ import { afterAll, beforeAll, describe, expect, test } from 'vitest'
 
 const exec = promisify(require('node:child_process').exec)
 
-// Cross-platform copy directory function
 function copyDir(src: string, dest: string) {
   if (process.platform === 'win32') {
     execSync(`xcopy "${src}" "${dest}" /E /I /Q`, { stdio: 'inherit' })
@@ -16,7 +15,6 @@ function copyDir(src: string, dest: string) {
   }
 }
 
-// Cross-platform remove directory function
 function removeDir(dir: string) {
   if (process.platform === 'win32') {
     execSync(`rmdir /S /Q "${dir}"`, { stdio: 'inherit' })
@@ -30,20 +28,16 @@ describe('NPM Installation Tests', () => {
   let npmPackageDir: string
 
   beforeAll(async () => {
-    // Create temporary directory
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ai-rulez-npm-test-'))
     npmPackageDir = path.join(tempDir, 'npm-package')
 
-    // Check if npm build directory exists
     const npmSourceDir = path.join(__dirname, '../../build/npm')
     if (!fs.existsSync(npmSourceDir)) {
       throw new Error(`NPM source directory not found: ${npmSourceDir}`)
     }
 
-    // Copy npm package files to temp directory
     copyDir(npmSourceDir, npmPackageDir)
 
-    // Set a test version
     const packageJsonPath = path.join(npmPackageDir, 'package.json')
     const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'))
     packageJson.version = '1.0.0'
@@ -51,12 +45,10 @@ describe('NPM Installation Tests', () => {
   })
 
   afterAll(async () => {
-    // Clean up temp directory
     if (tempDir && fs.existsSync(tempDir)) {
       try {
         removeDir(tempDir)
       } catch (error) {
-        // Ignore cleanup errors in tests
         console.warn('Failed to clean up temp directory:', error)
       }
     }
@@ -74,7 +66,6 @@ describe('NPM Installation Tests', () => {
       }
     `
 
-    // For Windows, write the script to a file to avoid command line escaping issues
     if (process.platform === 'win32') {
       const testFile = path.join(npmPackageDir, 'test-platform.js')
       fs.writeFileSync(testFile, testScript)
@@ -87,7 +78,6 @@ describe('NPM Installation Tests', () => {
       expect(['darwin', 'linux', 'windows']).toContain(platform.os)
       expect(['amd64', 'arm64', '386']).toContain(platform.arch)
 
-      // Clean up test file
       fs.unlinkSync(testFile)
     } else {
       const { stdout } = await exec(`node -e "${testScript}"`, { cwd: npmPackageDir })
@@ -101,11 +91,9 @@ describe('NPM Installation Tests', () => {
   })
 
   test('should handle download errors gracefully', { timeout: 40000 }, async () => {
-    // Test with invalid URL
     const invalidPackageDir = path.join(tempDir, 'invalid-npm')
     copyDir(npmPackageDir, invalidPackageDir)
 
-    // Modify install.js to use invalid URL
     const installJsPath = path.join(invalidPackageDir, 'install.js')
     const installJs = fs.readFileSync(installJsPath, 'utf8')
     const modifiedJs = installJs.replace(
@@ -115,7 +103,6 @@ describe('NPM Installation Tests', () => {
     fs.writeFileSync(installJsPath, modifiedJs)
 
     try {
-      // Use process timeout instead of shell timeout command for cross-platform compatibility
       const timeoutMs = 30000
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
@@ -131,9 +118,7 @@ describe('NPM Installation Tests', () => {
         clearTimeout(timeoutId)
         const err = execError as { stderr?: string; stdout?: string; code?: string }
 
-        // Check if it was aborted (timeout) or actual error
         if (err.code === 'ABORT_ERR') {
-          // Timeout is acceptable as an error condition
           return
         }
 
@@ -150,7 +135,6 @@ describe('NPM Installation Tests', () => {
   })
 
   test('should validate Node.js version requirement', { timeout: 30000 }, async () => {
-    // Create a modified install.js with hardcoded old version check
     const modifiedInstallJs = `
       const fs = require('fs');
       const path = require('path');
@@ -172,18 +156,15 @@ describe('NPM Installation Tests', () => {
 
     try {
       const result = await exec('node install.js', { cwd: testPackageDir })
-      // If we get here, the script didn't exit with error, which is unexpected
       expect(result.stdout).toContain('SHOULD_HAVE_FAILED')
       throw new Error('Should have failed with old Node.js version')
     } catch (error: unknown) {
       const err = error as { stderr?: string; stdout?: string; code?: number }
 
-      // Check if it's the expected error (exit code 1)
       if (err.code === 1) {
         const output = err.stdout || err.stderr || ''
         expect(output).toMatch(/Node\.js.*not supported/i)
       } else {
-        // Unexpected error, re-throw
         throw error
       }
     }
@@ -224,7 +205,6 @@ describe('NPM Installation Tests', () => {
       })()
     `
 
-    // For Windows, write the script to a file to avoid command line escaping issues
     if (process.platform === 'win32') {
       const testFile = path.join(npmPackageDir, 'test-checksum.js')
       fs.writeFileSync(testFile, checksumTestScript)
@@ -234,7 +214,6 @@ describe('NPM Installation Tests', () => {
       expect(stdout).toContain('EXPECTED:')
       expect(stdout).toContain('MATCH: true')
 
-      // Clean up test file
       fs.unlinkSync(testFile)
     } else {
       const { stdout } = await exec(`node -e "${checksumTestScript}"`, { cwd: npmPackageDir })
@@ -245,7 +224,6 @@ describe('NPM Installation Tests', () => {
   })
 
   test('should create mock binary installation', { timeout: 30000 }, async () => {
-    // Create a mock test that simulates successful installation
     const mockInstallJs = `
       const fs = require('fs')
       const path = require('path')

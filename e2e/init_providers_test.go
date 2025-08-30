@@ -12,7 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the ai_rulez.yaml structure for testing
 type Config struct {
 	Schema   string   `yaml:"$schema"`
 	Metadata Metadata `yaml:"metadata"`
@@ -54,7 +53,6 @@ type Section struct {
 }
 
 func TestInitProviders(t *testing.T) {
-	// Build the binary
 	binPath := buildBinary(t)
 
 	tests := []struct {
@@ -139,10 +137,8 @@ func TestInitProviders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create temp directory
 			tempDir := t.TempDir()
 			
-			// Run init command
 			args := append([]string{"init"}, tt.args...)
 			cmd := exec.Command(binPath, args...)
 			cmd.Dir = tempDir
@@ -156,11 +152,9 @@ func TestInitProviders(t *testing.T) {
 			
 			require.NoError(t, err, "Command failed: %s", string(output))
 			
-			// Verify ai_rulez.yaml exists
 			configPath := filepath.Join(tempDir, "ai_rulez.yaml")
 			require.FileExists(t, configPath)
 			
-			// Load and parse config
 			data, err := os.ReadFile(configPath)
 			require.NoError(t, err)
 			
@@ -168,10 +162,8 @@ func TestInitProviders(t *testing.T) {
 			err = yaml.Unmarshal(data, &cfg)
 			require.NoError(t, err)
 			
-			// Check schema
 			assert.Equal(t, "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json", cfg.Schema)
 			
-			// Check outputs
 			for _, expected := range tt.expectedOutputs {
 				found := false
 				for _, output := range cfg.Outputs {
@@ -187,26 +179,22 @@ func TestInitProviders(t *testing.T) {
 				assert.True(t, found, "Expected output %s not found in config", expected)
 			}
 			
-			// Check agents
 			if tt.hasAgents {
 				assert.NotEmpty(t, cfg.Agents, "Expected agents but found none")
 			} else {
 				assert.Empty(t, cfg.Agents, "Expected no agents but found some")
 			}
 			
-			// Check sections
 			if tt.hasSections {
 				assert.NotEmpty(t, cfg.Sections, "Expected sections but found none")
 			} else {
 				assert.Empty(t, cfg.Sections, "Expected no sections but found some")
 			}
 			
-			// Check comments
 			if tt.noComments {
 				assert.NotContains(t, string(data), "# Uncomment", "Should not contain comment instructions")
 			}
 			
-			// Verify rules exist
 			assert.NotEmpty(t, cfg.Rules, "Should have rules")
 			assert.GreaterOrEqual(t, len(cfg.Rules), 5, "Should have at least 5 rules")
 		})
@@ -217,12 +205,10 @@ func TestInitExistingFile(t *testing.T) {
 	binPath := buildBinary(t)
 	tempDir := t.TempDir()
 	
-	// Create existing config
 	configPath := filepath.Join(tempDir, "ai_rulez.yaml")
 	err := os.WriteFile(configPath, []byte("# existing"), 0644)
 	require.NoError(t, err)
 	
-	// Try to init (should fail)
 	cmd := exec.Command(binPath, "init", "TestProject")
 	cmd.Dir = tempDir
 	
@@ -235,21 +221,18 @@ func TestInitAndGenerate(t *testing.T) {
 	binPath := buildBinary(t)
 	tempDir := t.TempDir()
 	
-	// Init with popular providers
 	cmd := exec.Command(binPath, "init", "TestGen", "--popular", "--with-agents")
 	cmd.Dir = tempDir
 	
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Init failed: %s", string(output))
 	
-	// Run generate
 	cmd = exec.Command(binPath, "generate")
 	cmd.Dir = tempDir
 	
 	output, err = cmd.CombinedOutput()
 	require.NoError(t, err, "Generate failed: %s", string(output))
 	
-	// Check generated files
 	expectedFiles := []string{
 		"CLAUDE.md",
 		".windsurfrules", 
@@ -261,28 +244,23 @@ func TestInitAndGenerate(t *testing.T) {
 		path := filepath.Join(tempDir, file)
 		assert.FileExists(t, path, "Expected %s to be generated", file)
 		
-		// Verify files have content
 		if info, err := os.Stat(path); err == nil {
 			assert.Greater(t, info.Size(), int64(100), "File %s should have content", file)
 		}
 	}
 	
-	// Check agent files
 	agentDir := filepath.Join(tempDir, ".claude/agents")
 	entries, err := os.ReadDir(agentDir)
 	require.NoError(t, err)
 	assert.GreaterOrEqual(t, len(entries), 2, "Should have generated at least 2 agent files")
 }
 
-// Helper function to build the binary
 func buildBinary(t *testing.T) string {
 	t.Helper()
 	
-	// Check if we're in CI or local
 	binName := "ai-rulez-e2e-test"
 	binPath := filepath.Join(t.TempDir(), binName)
 	
-	// Build from parent directory
 	testDir, err := os.Getwd()
 	require.NoError(t, err, "Failed to get working directory")
 	projectRoot := filepath.Dir(testDir)

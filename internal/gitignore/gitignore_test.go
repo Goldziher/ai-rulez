@@ -10,14 +10,12 @@ import (
 )
 
 func TestUpdateGitignoreFiles(t *testing.T) {
-	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "gitignore_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create a test config file
 	configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
 	cfg := &config.Config{
 		Outputs: []config.Output{
@@ -27,13 +25,11 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 		},
 	}
 
-	// Test case 1: No existing .gitignore file
 	err = UpdateGitignoreFiles(configPath, cfg)
 	if err != nil {
 		t.Fatalf("UpdateGitignoreFiles failed: %v", err)
 	}
 
-	// Check that .gitignore was created with correct content
 	gitignorePath := filepath.Join(tmpDir, ".gitignore")
 	content, err := os.ReadFile(gitignorePath)
 	if err != nil {
@@ -48,7 +44,6 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 		}
 	}
 
-	// Test case 2: Existing .gitignore with some files already ignored
 	existingContent := "node_modules/\n.cursor/\n"
 	err = os.WriteFile(gitignorePath, []byte(existingContent), 0o644)
 	if err != nil {
@@ -60,7 +55,6 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 		t.Fatalf("UpdateGitignoreFiles failed on second run: %v", err)
 	}
 
-	// Check that only new files were added
 	content, err = os.ReadFile(gitignorePath)
 	if err != nil {
 		t.Fatalf("Failed to read .gitignore after second update: %v", err)
@@ -73,7 +67,6 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	if !strings.Contains(contentStr, ".windsurfrules") {
 		t.Error("Expected .gitignore to contain .windsurfrules")
 	}
-	// .cursor/ should appear only once (from the original content)
 	count := strings.Count(contentStr, ".cursor/")
 	if count != 1 {
 		t.Errorf("Expected .cursor/ to appear once, but found %d occurrences", count)
@@ -86,26 +79,21 @@ func TestMatchesPattern(t *testing.T) {
 		pattern  string
 		expected bool
 	}{
-		// Exact matches
 		{"CLAUDE.md", "CLAUDE.md", true},
 		{"test.txt", "test.txt", true},
 		{"test.txt", "other.txt", false},
 
-		// Wildcard patterns
 		{"test.md", "*.md", true},
 		{"README.md", "*.md", true},
 		{"test.txt", "*.md", false},
 		{"prefix_test", "prefix*", true},
 		{"test_suffix", "*suffix", true},
 
-		// Directory patterns (should not match files)
 		{"test.md", "docs/", false},
 
-		// Absolute path patterns
 		{"CLAUDE.md", "/CLAUDE.md", true},
 		{"subdir/CLAUDE.md", "/CLAUDE.md", false},
 
-		// Substring matching
 		{"generated_file.md", "generated", true},
 		{"my_file.txt", "generated", false},
 	}
@@ -132,12 +120,12 @@ func TestIsIgnored(t *testing.T) {
 		filename string
 		expected bool
 	}{
-		{"error.log", true},      // matches *.log
-		{"CLAUDE.md", true},      // exact match
-		{"README.md", false},     // no match
-		{"dist/bundle.js", true}, // matches dist/*
-		{"build", true},          // matches /build
-		{"src/build", false},     // doesn't match /build (absolute)
+		{"error.log", true},
+		{"CLAUDE.md", true},
+		{"README.md", false},
+		{"dist/bundle.js", true},
+		{"build", true},
+		{"src/build", false},
 	}
 
 	for _, test := range tests {
@@ -149,7 +137,6 @@ func TestIsIgnored(t *testing.T) {
 }
 
 func TestReadGitignoreEntries(t *testing.T) {
-	// Create a temporary file
 	tmpDir, err := os.MkdirTemp("", "gitignore_read_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
@@ -188,26 +175,22 @@ dist/
 }
 
 func TestUpdateGitignoreFilesWithNoOutputs(t *testing.T) {
-	// Create a temporary directory for testing
 	tmpDir, err := os.MkdirTemp("", "gitignore_no_outputs_test")
 	if err != nil {
 		t.Fatalf("Failed to create temp dir: %v", err)
 	}
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create a test config file with no outputs
 	configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
 	cfg := &config.Config{
-		Outputs: []config.Output{}, // No outputs
+		Outputs: []config.Output{},
 	}
 
-	// Should not create .gitignore if no outputs
 	err = UpdateGitignoreFiles(configPath, cfg)
 	if err != nil {
 		t.Fatalf("UpdateGitignoreFiles failed: %v", err)
 	}
 
-	// Check that .gitignore was not created
 	gitignorePath := filepath.Join(tmpDir, ".gitignore")
 	if _, err := os.Stat(gitignorePath); err == nil {
 		t.Error("Expected .gitignore not to be created when there are no outputs")
