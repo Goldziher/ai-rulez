@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// Helper functions for common error scenarios
-
-// ConfigNotFound creates an error for missing configuration files
 func ConfigNotFound(startDir string) *RichError {
 	err := New(ErrorTypeConfigNotFound, "find config",
 		fmt.Errorf("no configuration file found"))
@@ -28,7 +25,6 @@ func ConfigNotFound(startDir string) *RichError {
 	return err
 }
 
-// ConfigLoad creates an error for config loading failures
 func ConfigLoad(filename string, underlying error) *RichError {
 	err := New(ErrorTypeConfig, "load config", underlying)
 	err.Path = filename
@@ -36,7 +32,6 @@ func ConfigLoad(filename string, underlying error) *RichError {
 	return err
 }
 
-// ConfigParse creates an error for YAML parsing failures
 func ConfigParse(filename string, underlying error) *RichError {
 	err := New(ErrorTypeConfigInvalid, "parse config", underlying).
 		WithPath(filename).
@@ -45,7 +40,6 @@ func ConfigParse(filename string, underlying error) *RichError {
 		WithSuggestion("Validate your YAML at: https://www.yamllint.com/").
 		WithSuggestion("Common issues: tabs instead of spaces, missing colons, incorrect indentation")
 
-	// Try to extract line information from YAML errors
 	if strings.Contains(underlying.Error(), "line") {
 		err.WithContext("parse_error", underlying.Error()) //nolint:errcheck
 	}
@@ -53,7 +47,6 @@ func ConfigParse(filename string, underlying error) *RichError {
 	return err
 }
 
-// SchemaValidation creates an error for schema validation failures
 func SchemaValidation(filename string, validationErrors []string) *RichError {
 	err := New(ErrorTypeConfigSchema, "validate schema",
 		fmt.Errorf("configuration validation failed: %d errors", len(validationErrors)))
@@ -69,7 +62,6 @@ func SchemaValidation(filename string, validationErrors []string) *RichError {
 		"Run 'ai-rulez validate' for detailed validation output",
 	}
 
-	// Add specific suggestions based on common validation errors
 	for _, vErr := range validationErrors {
 		if strings.Contains(vErr, "metadata") {
 			err.WithSuggestion("Ensure 'metadata' section exists with 'name' field") //nolint:errcheck
@@ -85,7 +77,6 @@ func SchemaValidation(filename string, validationErrors []string) *RichError {
 	return err
 }
 
-// CircularInclude creates an error for circular include detection
 func CircularInclude(includeChain []string) *RichError {
 	err := New(ErrorTypeConfigCircular, "load includes",
 		fmt.Errorf("circular include detected"))
@@ -107,7 +98,6 @@ func CircularInclude(includeChain []string) *RichError {
 	return err
 }
 
-// TemplateNotFound creates an error for missing templates
 func TemplateNotFound(name string, available []string) *RichError {
 	err := New(ErrorTypeTemplateNotFound, "load template",
 		fmt.Errorf("template '%s' not found", name))
@@ -122,7 +112,6 @@ func TemplateNotFound(name string, available []string) *RichError {
 	return err
 }
 
-// TemplateParse creates an error for template parsing failures
 func TemplateParse(name string, underlying error) *RichError {
 	err := New(ErrorTypeTemplateSyntax, "parse template", underlying).
 		WithContext("template", name).
@@ -130,7 +119,6 @@ func TemplateParse(name string, underlying error) *RichError {
 		WithSuggestion("Validate your template at: https://golang.org/pkg/text/template/").
 		WithSuggestion("Use a built-in template as a reference: 'default' or 'documentation'")
 
-	// Extract line information if available
 	if strings.Contains(underlying.Error(), "line") {
 		err.WithContext("parse_error", underlying.Error()) //nolint:errcheck
 	}
@@ -138,7 +126,6 @@ func TemplateParse(name string, underlying error) *RichError {
 	return err
 }
 
-// TemplateExecute creates an error for template execution failures
 func TemplateExecute(name string, underlying error) *RichError {
 	err := New(ErrorTypeTemplate, "execute template", underlying).
 		WithContext("template", name).
@@ -149,7 +136,6 @@ func TemplateExecute(name string, underlying error) *RichError {
 	return err
 }
 
-// FileRead creates an error for file read failures
 func FileRead(path string, underlying error) *RichError {
 	err := New(ErrorTypeFileRead, "read file", underlying).
 		WithPath(path).
@@ -160,7 +146,6 @@ func FileRead(path string, underlying error) *RichError {
 	return err
 }
 
-// FileWrite creates an error for file write failures
 func FileWrite(path string, underlying error) *RichError {
 	err := New(ErrorTypeFileWrite, "write file", underlying).
 		WithPath(path).
@@ -171,7 +156,6 @@ func FileWrite(path string, underlying error) *RichError {
 	return err
 }
 
-// FilePermission creates an error for permission issues
 func FilePermission(path string, operation string) *RichError {
 	err := New(ErrorTypeFilePermission, operation,
 		fmt.Errorf("permission denied")).
@@ -183,7 +167,6 @@ func FilePermission(path string, operation string) *RichError {
 	return err
 }
 
-// ValidationRequired creates an error for missing required fields
 func ValidationRequired(field string, context string) *RichError {
 	err := New(ErrorTypeValidationRequired, "validate field",
 		fmt.Errorf("required field '%s' is missing", field)).
@@ -195,7 +178,6 @@ func ValidationRequired(field string, context string) *RichError {
 	return err
 }
 
-// CommandArgument creates an error for invalid command arguments
 func CommandArgument(arg string, value string, reason string) *RichError {
 	err := New(ErrorTypeCommandArgument, "parse argument",
 		fmt.Errorf("invalid argument '%s': %s", arg, reason)).
@@ -208,7 +190,6 @@ func CommandArgument(arg string, value string, reason string) *RichError {
 	return err
 }
 
-// MCPError creates an error for MCP protocol issues
 func MCPError(operation string, underlying error) *RichError {
 	err := New(ErrorTypeMCP, operation, underlying).
 		WithSuggestion("Check the MCP connection and try again").
@@ -218,7 +199,6 @@ func MCPError(operation string, underlying error) *RichError {
 	return err
 }
 
-// RemoteConfigFetch creates an error for remote configuration fetch failures
 func RemoteConfigFetch(url string, underlying error) *RichError {
 	err := New(ErrorTypeRemote, "fetch remote config", underlying).
 		WithPath(url).
@@ -228,7 +208,6 @@ func RemoteConfigFetch(url string, underlying error) *RichError {
 		WithSuggestion("Ensure the remote server is responding correctly").
 		WithSuggestion("Check if authentication is required for this resource")
 
-	// Add specific suggestions based on the underlying error
 	if underlying != nil {
 		errorMsg := underlying.Error()
 		if strings.Contains(errorMsg, "timeout") || strings.Contains(errorMsg, "deadline exceeded") {
@@ -245,7 +224,6 @@ func RemoteConfigFetch(url string, underlying error) *RichError {
 	return err
 }
 
-// RemoteConfigParse creates an error for remote configuration parsing failures
 func RemoteConfigParse(url string, underlying error) *RichError {
 	err := New(ErrorTypeRemote, "parse remote config", underlying).
 		WithPath(url).
@@ -254,7 +232,6 @@ func RemoteConfigParse(url string, underlying error) *RichError {
 		WithSuggestion("Ensure the remote file follows ai-rulez configuration format").
 		WithSuggestion("Verify the remote file content type is text/yaml or application/yaml")
 
-	// Try to extract parse information from YAML errors
 	if underlying != nil && strings.Contains(underlying.Error(), "line") {
 		err.WithContext("parse_error", underlying.Error()) //nolint:errcheck
 	}
@@ -262,7 +239,6 @@ func RemoteConfigParse(url string, underlying error) *RichError {
 	return err
 }
 
-// RemoteSSRFError creates an error for SSRF protection violations
 func RemoteSSRFError(url string, reason string) *RichError {
 	err := New(ErrorTypeRemoteSSRF, "validate URL",
 		fmt.Errorf("URL blocked for security reasons: %s", reason)).
@@ -286,7 +262,6 @@ func RemoteSSRFError(url string, reason string) *RichError {
 	return err
 }
 
-// RemoteNetworkError creates an error for network-related failures
 func RemoteNetworkError(url string, underlying error) *RichError {
 	err := New(ErrorTypeRemoteNetwork, "network request", underlying).
 		WithPath(url).
@@ -311,7 +286,6 @@ func RemoteNetworkError(url string, underlying error) *RichError {
 	return err
 }
 
-// RemoteHTTPError creates an error for HTTP status code failures
 func RemoteHTTPError(url string, statusCode int, status string) *RichError {
 	err := New(ErrorTypeRemoteHTTP, "HTTP request",
 		fmt.Errorf("HTTP %d: %s", statusCode, status)).
@@ -320,7 +294,6 @@ func RemoteHTTPError(url string, statusCode int, status string) *RichError {
 		WithContext("status_code", statusCode).
 		WithContext("status", status)
 
-	// Add status-specific suggestions
 	switch statusCode {
 	case 400:
 		err.WithSuggestion("Bad Request (400) - check the URL format") //nolint:errcheck
@@ -359,7 +332,6 @@ func RemoteHTTPError(url string, statusCode int, status string) *RichError {
 	return err
 }
 
-// RemoteTimeoutError creates an error for timeout failures
 func RemoteTimeoutError(url string, timeout interface{}) *RichError {
 	err := New(ErrorTypeRemoteTimeout, "request timeout",
 		fmt.Errorf("request timed out")).

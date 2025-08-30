@@ -10,14 +10,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Embed the schema file at compile time
-//
 //go:embed ai-rules-v1.schema.json
 var schemaJSON string
 
-// ValidateWithSchema validates a configuration against the JSON Schema.
 func ValidateWithSchema(configData []byte) error {
-	// Convert YAML to JSON for schema validation
 	var yamlData any
 	if err := yaml.Unmarshal(configData, &yamlData); err != nil {
 		return errors.New(errors.ErrorTypeConfigInvalid, "parse YAML for validation", err).
@@ -31,11 +27,9 @@ func ValidateWithSchema(configData []byte) error {
 			WithSuggestion("This is an internal error - the YAML structure may be invalid")
 	}
 
-	// Load schema and document
 	schemaLoader := gojsonschema.NewStringLoader(schemaJSON)
 	documentLoader := gojsonschema.NewBytesLoader(jsonData)
 
-	// Validate
 	result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 	if err != nil {
 		return errors.New(errors.ErrorTypeConfigSchema, "schema validation", err).
@@ -45,7 +39,11 @@ func ValidateWithSchema(configData []byte) error {
 	if !result.Valid() {
 		var validationErrors []string
 		for _, desc := range result.Errors() {
-			validationErrors = append(validationErrors, desc.String())
+			errMsg := fmt.Sprintf("- %s: %s", desc.Field(), desc.Description())
+			if desc.Value() != nil {
+				errMsg = fmt.Sprintf("%s (got: %v)", errMsg, desc.Value())
+			}
+			validationErrors = append(validationErrors, errMsg)
 		}
 		return errors.SchemaValidation("", validationErrors)
 	}
@@ -53,8 +51,6 @@ func ValidateWithSchema(configData []byte) error {
 	return nil
 }
 
-// ConvertYAMLToJSON converts YAML data to JSON-compatible format.
-// This is needed because YAML uses map[any]any while JSON needs map[string]any.
 func ConvertYAMLToJSON(i any) any {
 	switch x := i.(type) {
 	case map[any]any:
@@ -71,9 +67,7 @@ func ConvertYAMLToJSON(i any) any {
 	return i
 }
 
-// ValidateConfigWithSchema validates a Config struct against the schema.
 func ValidateConfigWithSchema(cfg *Config) error {
-	// Marshal config to YAML first
 	yamlData, err := yaml.Marshal(cfg)
 	if err != nil {
 		return errors.New(errors.ErrorTypeConfig, "marshal config for validation", err).

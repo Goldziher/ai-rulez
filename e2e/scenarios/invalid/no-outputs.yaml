@@ -2,7 +2,6 @@ metadata:
   name: "No Outputs Project"
   version: "1.0.0"
 
-# No outputs defined - should fail
 
 rules:
   - name: "Test Rule"

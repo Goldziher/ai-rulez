@@ -12,38 +12,33 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// Test performance with many rules and complex patterns
 func TestFilterPerformance(t *testing.T) {
 	t.Parallel()
 
-	// Create many rules with different target patterns
 	rules := make([]config.Rule, 1000)
 	for i := 0; i < 1000; i++ {
 		rules[i] = config.Rule{
 			Name:    fmt.Sprintf("Rule %d", i),
 			Content: fmt.Sprintf("Content %d", i),
 			Targets: []string{
-				fmt.Sprintf("*.%d", i%10),          // File extension patterns
-				fmt.Sprintf("dir%d/*", i%20),       // Directory patterns
-				fmt.Sprintf("specific%d.md", i),    // Specific files
-				fmt.Sprintf("path/to/file%d.*", i), // Path patterns
+				fmt.Sprintf("*.%d", i%10),
+				fmt.Sprintf("dir%d/*", i%20),
+				fmt.Sprintf("specific%d.md", i),
+				fmt.Sprintf("path/to/file%d.*", i),
 			},
 		}
 	}
 
-	// Test filtering performance
 	start := time.Now()
 	filtered, err := config.FilterRules(rules, "dir5/file.5", nil)
 	duration := time.Since(start)
 
 	assert.NoError(t, err)
 
-	// Should complete quickly even with many rules
 	assert.Less(t, duration, 100*time.Millisecond, "Filtering should be fast")
 	assert.NotEmpty(t, filtered, "Should match some rules")
 }
 
-// Test concurrent access safety
 func TestFilterConcurrency(t *testing.T) {
 	t.Parallel()
 
@@ -53,7 +48,6 @@ func TestFilterConcurrency(t *testing.T) {
 		{Name: "Docs", Content: "Docs rule", Targets: []string{"docs/*"}},
 	}
 
-	// Run filtering concurrently from multiple goroutines
 	const numGoroutines = 100
 	const numIterations = 100
 
@@ -67,7 +61,6 @@ func TestFilterConcurrency(t *testing.T) {
 				path := fmt.Sprintf("docs/file%d_%d.md", gID, j)
 				filtered, err := config.FilterRules(rules, path, nil)
 				assert.NoError(t, err)
-				// Should always get global and docs rules for docs/* paths
 				assert.Len(t, filtered, 3, "Should match all rules for path: %s", path)
 			}
 		}(i)
@@ -76,11 +69,9 @@ func TestFilterConcurrency(t *testing.T) {
 	wg.Wait()
 }
 
-// Test complex real-world scenarios
 func TestComplexFilteringScenarios(t *testing.T) {
 	t.Parallel()
 
-	// Create a realistic configuration with mixed content types
 	rules := []config.Rule{
 		{Name: "Global Style Guide", Content: "Applies everywhere", Targets: []string{}},
 		{Name: "API Documentation", Content: "For API docs", Targets: []string{"docs/api/*", "*.api.md"}},
@@ -109,46 +100,46 @@ func TestComplexFilteringScenarios(t *testing.T) {
 		expectedRules    int
 		expectedSections int
 		expectedAgents   int
-		mustContain      []string // Rule names that must be present
+		mustContain      []string
 	}{
 		{
 			name:             "CLAUDE.md gets specific targeting",
 			outputPath:       "CLAUDE.md",
-			expectedRules:    2, // Global + Claude
-			expectedSections: 1, // Project Overview only
-			expectedAgents:   2, // General + Documentation Writer
+			expectedRules:    2,
+			expectedSections: 1,
+			expectedAgents:   2,
 			mustContain:      []string{"Global Style Guide", "Claude Instructions"},
 		},
 		{
 			name:             "API documentation gets comprehensive rules",
 			outputPath:       "docs/api/users.md",
-			expectedRules:    2, // Global + API
-			expectedSections: 2, // Project Overview + API Reference
-			expectedAgents:   2, // General + Documentation Writer
+			expectedRules:    2,
+			expectedSections: 2,
+			expectedAgents:   2,
 			mustContain:      []string{"Global Style Guide", "API Documentation"},
 		},
 		{
 			name:             "Backend Go file gets relevant rules",
 			outputPath:       "src/backend/server.go",
-			expectedRules:    2, // Global + Backend
-			expectedSections: 1, // Project Overview
-			expectedAgents:   2, // General + Code Reviewer
+			expectedRules:    2,
+			expectedSections: 1,
+			expectedAgents:   2,
 			mustContain:      []string{"Global Style Guide", "Backend Guidelines"},
 		},
 		{
 			name:             "Test file gets test-specific rules",
 			outputPath:       "src/backend/server_test.go",
-			expectedRules:    3, // Global + Backend + Test
-			expectedSections: 1, // Project Overview
-			expectedAgents:   2, // General + Code Reviewer
+			expectedRules:    3,
+			expectedSections: 1,
+			expectedAgents:   2,
 			mustContain:      []string{"Global Style Guide", "Backend Guidelines", "Test Guidelines"},
 		},
 		{
 			name:             "Config file gets config rules",
 			outputPath:       "config/database.yaml",
-			expectedRules:    2, // Global + Config
-			expectedSections: 1, // Project Overview
-			expectedAgents:   1, // General only
+			expectedRules:    2,
+			expectedSections: 1,
+			expectedAgents:   1,
 			mustContain:      []string{"Global Style Guide", "Config Files"},
 		},
 	}
@@ -168,7 +159,6 @@ func TestComplexFilteringScenarios(t *testing.T) {
 			assert.Len(t, filteredSections, tt.expectedSections, "Wrong number of sections for %s", tt.outputPath)
 			assert.Len(t, filteredAgents, tt.expectedAgents, "Wrong number of agents for %s", tt.outputPath)
 
-			// Check that required rules are present
 			ruleNames := make([]string, len(filteredRules))
 			for i, rule := range filteredRules {
 				ruleNames[i] = rule.Name
@@ -181,7 +171,6 @@ func TestComplexFilteringScenarios(t *testing.T) {
 	}
 }
 
-// Test invalid glob patterns and error handling
 func TestMatchesTargetErrorHandling(t *testing.T) {
 	t.Parallel()
 
@@ -189,19 +178,19 @@ func TestMatchesTargetErrorHandling(t *testing.T) {
 		name       string
 		outputPath string
 		targets    []string
-		expected   bool // Should gracefully handle errors and not match
+		expected   bool
 	}{
 		{
 			name:       "invalid glob pattern with malformed brackets",
 			outputPath: "file.md",
-			targets:    []string{"file[.md"}, // Malformed bracket pattern
+			targets:    []string{"file[.md"},
 			expected:   false,
 		},
 		{
 			name:       "valid path with invalid pattern mixed with valid",
 			outputPath: "docs/file.md",
-			targets:    []string{"docs/*", "file[.md", "*.md"}, // Mixed valid/invalid
-			expected:   true,                                   // Should match valid patterns
+			targets:    []string{"docs/*", "file[.md", "*.md"},
+			expected:   true,
 		},
 		{
 			name:       "extremely long pattern",
@@ -214,14 +203,12 @@ func TestMatchesTargetErrorHandling(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
-			// Should not panic and should return expected result
 			result := config.MatchesTarget(tt.outputPath, tt.targets)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
-// Benchmark the core MatchesTarget function
 func BenchmarkMatchesTarget(b *testing.B) {
 	targets := []string{"*.md", "docs/*", "src/**/*.go", "config/*.yaml"}
 	path := "docs/api/readme.md"
@@ -232,7 +219,6 @@ func BenchmarkMatchesTarget(b *testing.B) {
 	}
 }
 
-// Benchmark filtering with many rules
 func BenchmarkFilterRules(b *testing.B) {
 	rules := make([]config.Rule, 1000)
 	for i := 0; i < 1000; i++ {

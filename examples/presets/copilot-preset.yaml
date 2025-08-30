@@ -1,0 +1,60 @@
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "GitHub Copilot Preset Example"
+  version: "1.0.0"
+  description: "Example configuration generated with --preset copilot"
+
+
+outputs:
+  - file: ".github/copilot-instructions.md"
+    description: "Repository-wide GitHub Copilot instructions"
+
+rules:
+  - name: "Copilot Usage Guidelines"
+    priority: 10
+    content: |
+      - Review all Copilot suggestions before accepting
+      - Use Copilot for boilerplate and repetitive code
+      - Customize suggestions to match project style
+      - Don't rely solely on Copilot for critical logic
+  
+  - name: "Code Quality"
+    priority: 9
+    content: |
+      - Ensure generated code follows project standards
+      - Add proper error handling to suggestions
+      - Include appropriate tests for new code
+      - Document complex generated functions
+  
+  - name: "Security Considerations"
+    priority: 10
+    content: |
+      - Never accept suggestions with hardcoded secrets
+      - Review authentication and authorization code carefully
+      - Validate all user inputs in generated code
+      - Check for potential security vulnerabilities
+
+sections:
+  - title: "GitHub Copilot Best Practices"
+    priority: 10
+    content: |
+      ## Working with GitHub Copilot
+      
+      ### Effective Usage
+      - Write clear comments to guide suggestions
+      - Use descriptive function and variable names
+      - Provide context through existing code patterns
+      - Break complex tasks into smaller functions
+      
+      ### Review Process
+      1. Read suggestions thoroughly before accepting
+      2. Modify suggestions to fit project conventions
+      3. Test generated code comprehensively
+      4. Document any non-obvious logic
+      
+      ### Common Patterns
+      - Use Copilot for test generation
+      - Leverage it for documentation comments
+      - Generate boilerplate code efficiently
+      - Create mock data and fixtures

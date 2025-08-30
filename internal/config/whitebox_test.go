@@ -10,7 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// TestSetDefaultPriorities tests the priority defaulting logic
 func TestSetDefaultPriorities(t *testing.T) {
 	t.Parallel()
 
@@ -32,7 +31,6 @@ func TestSetDefaultPriorities(t *testing.T) {
 
 	setDefaultPriorities(cfg)
 
-	// Check that zero priorities were set to 1
 	assert.Equal(t, 1, cfg.Rules[0].Priority)
 	assert.Equal(t, 5, cfg.Rules[1].Priority)
 	assert.Equal(t, 1, cfg.Rules[2].Priority)
@@ -42,7 +40,6 @@ func TestSetDefaultPriorities(t *testing.T) {
 	assert.Equal(t, 7, cfg.Agents[1].Priority)
 }
 
-// TestValidate_ComplexValidation tests complex validation scenarios
 func TestValidate_ComplexValidation(t *testing.T) {
 	t.Parallel()
 
@@ -62,7 +59,7 @@ func TestValidate_ComplexValidation(t *testing.T) {
 					{ID: "rule1", Name: "Rule 2", Content: "Content"},
 				},
 			},
-			wantErr: false, // IDs can be duplicate (for overriding)
+			wantErr: false,
 		},
 		{
 			name: "section with priority edge case",
@@ -105,7 +102,6 @@ func TestValidate_ComplexValidation(t *testing.T) {
 	}
 }
 
-// TestLoadConfigWithIncludes_ComplexPaths tests include resolution with complex paths
 func TestLoadConfigWithIncludes_ComplexPaths(t *testing.T) {
 	t.Parallel()
 
@@ -114,7 +110,6 @@ func TestLoadConfigWithIncludes_ComplexPaths(t *testing.T) {
 	err := os.MkdirAll(subDir, 0o755)
 	require.NoError(t, err)
 
-	// Create main config in subdir
 	mainConfig := `metadata:
   name: "Main"
   version: "1.0.0"
@@ -124,7 +119,6 @@ includes:
 outputs:
   - path: "output.md"`
 
-	// Create shared config in parent
 	sharedConfig := `metadata:
   name: "Shared"
   version: "1.0.0"
@@ -134,7 +128,6 @@ rules:
   - name: "Shared Rule"
     content: "Shared content"`
 
-	// Create local config in same dir
 	localConfig := `metadata:
   name: "Local"
   version: "1.0.0"
@@ -161,13 +154,11 @@ agents:
 	assert.Empty(t, cfg.Includes)
 }
 
-// TestValidateIncludes tests include validation
 func TestValidateIncludes(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
-	// Create valid include file
 	validConfig := `metadata:
   name: "Valid"
   version: "1.0.0"
@@ -178,25 +169,21 @@ outputs:
 	err := os.WriteFile(validPath, []byte(validConfig), 0o644)
 	require.NoError(t, err)
 
-	// Test with valid includes
 	cfg := &Config{
 		Includes: []string{"valid.yaml"},
 	}
 	err = ValidateIncludes(cfg, tmpDir)
 	assert.NoError(t, err)
 
-	// Test with non-existent include
 	cfg.Includes = append(cfg.Includes, "missing.yaml")
 	err = ValidateIncludes(cfg, tmpDir)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "not found")
 }
 
-// TestValidateOutputs tests output validation
 func TestValidateOutputs(t *testing.T) {
 	t.Parallel()
 
-	// Test with valid outputs
 	outputs := []Output{
 		{Path: "test.md"},
 		{File: "legacy.md"},
@@ -205,19 +192,16 @@ func TestValidateOutputs(t *testing.T) {
 	err := ValidateOutputs(outputs)
 	assert.NoError(t, err)
 
-	// Test with empty outputs
 	err = ValidateOutputs([]Output{})
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "required field 'outputs' is missing")
 
-	// Test with invalid output (no file or path)
 	outputs = []Output{{}}
 	err = ValidateOutputs(outputs)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "path or outputs[0].file' is missing")
 }
 
-// TestMergeSections tests section merging
 func TestMergeSections(t *testing.T) {
 	t.Parallel()
 
@@ -234,7 +218,6 @@ func TestMergeSections(t *testing.T) {
 	merged := MergeSections(sections1, sections2)
 
 	assert.Len(t, merged, 3)
-	// Find section with ID "s1"
 	var s1 *Section
 	for i := range merged {
 		if merged[i].ID == "s1" {
@@ -246,7 +229,6 @@ func TestMergeSections(t *testing.T) {
 	assert.Equal(t, "Overridden", s1.Content)
 }
 
-// TestSaveConfig tests configuration saving
 func TestSaveConfig(t *testing.T) {
 	t.Parallel()
 
@@ -273,7 +255,6 @@ func TestSaveConfig(t *testing.T) {
 	err := SaveConfig(cfg, configPath)
 	require.NoError(t, err)
 
-	// Load it back and verify
 	loaded, err := LoadConfig(configPath)
 	require.NoError(t, err)
 
@@ -285,7 +266,6 @@ func TestSaveConfig(t *testing.T) {
 	assert.Equal(t, cfg.Agents[0].Name, loaded.Agents[0].Name)
 }
 
-// TestSaveConfig_Errors tests error conditions in SaveConfig
 func TestSaveConfig_Errors(t *testing.T) {
 	t.Parallel()
 
@@ -294,18 +274,15 @@ func TestSaveConfig_Errors(t *testing.T) {
 		Outputs:  []Output{{Path: "test.md"}},
 	}
 
-	// Test with invalid path
 	err := SaveConfig(cfg, "/nonexistent/path/config.yaml")
 	assert.Error(t, err)
 }
 
-// TestCircularIncludeDetection tests circular include detection
 func TestCircularIncludeDetection(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
-	// Create config A that includes B
 	configA := `metadata:
   name: "Config A"
   version: "1.0.0"
@@ -314,7 +291,6 @@ includes:
 outputs:
   - path: "a.md"`
 
-	// Create config B that includes A (circular)
 	configB := `metadata:
   name: "Config B"
   version: "1.0.0"
@@ -334,44 +310,36 @@ outputs:
 	assert.Contains(t, err.Error(), "circular include")
 }
 
-// TestResolvePath tests path resolution
 func TestResolvePath(t *testing.T) {
 	t.Parallel()
 
 	loader := &configLoader{}
 
-	// Test with absolute path
 	absPath := "/absolute/path/file.yaml"
 	resolved := loader.resolvePath(absPath, "/base/dir")
 	assert.Equal(t, absPath, resolved)
 
-	// Test with relative path
 	relPath := "relative/file.yaml"
 	baseDir := "/base/dir"
 	resolved = loader.resolvePath(relPath, baseDir)
 	assert.Equal(t, filepath.Join(baseDir, relPath), resolved)
 
-	// Test with current directory reference
 	resolved = loader.resolvePath("./file.yaml", baseDir)
 	assert.Equal(t, filepath.Join(baseDir, "file.yaml"), resolved)
 
-	// Test with parent directory reference
 	resolved = loader.resolvePath("../file.yaml", "/base/sub/dir")
 	assert.Equal(t, "/base/sub/file.yaml", resolved)
 }
 
-// TestSchemaEmbedding tests that schema is properly embedded
 func TestSchemaEmbedding(t *testing.T) {
 	t.Parallel()
 
-	// schemaJSON should not be empty
 	assert.NotEmpty(t, schemaJSON)
 	assert.Contains(t, schemaJSON, "ai-rules-v1")
 	assert.Contains(t, schemaJSON, "metadata")
 	assert.Contains(t, schemaJSON, "outputs")
 	assert.Contains(t, schemaJSON, "agents")
 
-	// Verify it's valid JSON
 	var schemaMap map[string]interface{}
 	err := yaml.Unmarshal([]byte(schemaJSON), &schemaMap)
 	assert.NoError(t, err)

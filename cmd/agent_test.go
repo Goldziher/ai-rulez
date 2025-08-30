@@ -9,11 +9,9 @@ import (
 )
 
 func TestAddAgentCommand(t *testing.T) {
-	// Create temporary directory and config file
 	tempDir := t.TempDir()
 	configFile := filepath.Join(tempDir, "ai_rulez.yaml")
 
-	// Create initial config
 	initialConfig := &config.Config{
 		Metadata: config.Metadata{
 			Name: "Test Project",
@@ -29,7 +27,6 @@ func TestAddAgentCommand(t *testing.T) {
 		t.Fatalf("Failed to save initial config: %v", err)
 	}
 
-	// Change to temp directory
 	originalDir, _ := os.Getwd()
 	defer func() {
 		_ = os.Chdir(originalDir)
@@ -80,7 +77,7 @@ func TestAddAgentCommand(t *testing.T) {
 			name:          "add agent with default priority",
 			agentName:     "default-agent",
 			description:   "Agent with default priority",
-			priority:      0, // Should default to 5
+			priority:      0,
 			tools:         []string{},
 			systemPrompt:  "Default agent",
 			expectedError: false,
@@ -88,7 +85,7 @@ func TestAddAgentCommand(t *testing.T) {
 				if len(cfg.Agents) != 2 {
 					t.Errorf("Expected 2 agents, got %d", len(cfg.Agents))
 				}
-				agent := cfg.Agents[1] // Second agent
+				agent := cfg.Agents[1]
 				if agent.Priority != 5 {
 					t.Errorf("Expected default priority 5, got %d", agent.Priority)
 				}
@@ -98,13 +95,11 @@ func TestAddAgentCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Load current config
 			cfg, err := config.LoadConfig(configFile)
 			if err != nil {
 				t.Fatalf("Failed to load config: %v", err)
 			}
 
-			// Create new agent
 			newAgent := config.Agent{
 				Name:         tt.agentName,
 				Description:  tt.description,
@@ -113,15 +108,12 @@ func TestAddAgentCommand(t *testing.T) {
 				SystemPrompt: tt.systemPrompt,
 			}
 
-			// Set default priority if not specified
 			if newAgent.Priority == 0 {
 				newAgent.Priority = 5
 			}
 
-			// Add agent to config
 			cfg.Agents = append(cfg.Agents, newAgent)
 
-			// Save config
 			err = config.SaveConfig(cfg, configFile)
 			if tt.expectedError {
 				if err == nil {
@@ -134,7 +126,6 @@ func TestAddAgentCommand(t *testing.T) {
 				t.Fatalf("Unexpected error: %v", err)
 			}
 
-			// Reload and validate
 			reloadedCfg, err := config.LoadConfig(configFile)
 			if err != nil {
 				t.Fatalf("Failed to reload config: %v", err)
@@ -146,11 +137,9 @@ func TestAddAgentCommand(t *testing.T) {
 }
 
 func TestUpdateAgentCommand(t *testing.T) {
-	// Create temporary directory and config file
 	tempDir := t.TempDir()
 	configFile := filepath.Join(tempDir, "ai_rulez.yaml")
 
-	// Create initial config with an agent
 	initialConfig := &config.Config{
 		Metadata: config.Metadata{
 			Name: "Test Project",
@@ -174,7 +163,6 @@ func TestUpdateAgentCommand(t *testing.T) {
 		t.Fatalf("Failed to save initial config: %v", err)
 	}
 
-	// Change to temp directory
 	originalDir, _ := os.Getwd()
 	defer func() {
 		_ = os.Chdir(originalDir)
@@ -182,13 +170,11 @@ func TestUpdateAgentCommand(t *testing.T) {
 	_ = os.Chdir(tempDir)
 
 	t.Run("update existing agent", func(t *testing.T) {
-		// Load config
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			t.Fatalf("Failed to load config: %v", err)
 		}
 
-		// Find and update agent
 		agentIndex := -1
 		for i, agent := range cfg.Agents {
 			if agent.Name == "existing-agent" {
@@ -201,19 +187,16 @@ func TestUpdateAgentCommand(t *testing.T) {
 			t.Fatal("Agent 'existing-agent' not found")
 		}
 
-		// Update agent
 		cfg.Agents[agentIndex].Description = "Updated description"
 		cfg.Agents[agentIndex].Priority = 8
 		cfg.Agents[agentIndex].Tools = []string{"new-tool1", "new-tool2"}
 		cfg.Agents[agentIndex].SystemPrompt = "Updated prompt"
 
-		// Save config
 		err = config.SaveConfig(cfg, configFile)
 		if err != nil {
 			t.Fatalf("Failed to save config: %v", err)
 		}
 
-		// Reload and validate
 		reloadedCfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			t.Fatalf("Failed to reload config: %v", err)
@@ -239,13 +222,11 @@ func TestUpdateAgentCommand(t *testing.T) {
 	})
 
 	t.Run("update non-existent agent", func(t *testing.T) {
-		// Load config
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			t.Fatalf("Failed to load config: %v", err)
 		}
 
-		// Try to find non-existent agent
 		agentIndex := -1
 		for i, agent := range cfg.Agents {
 			if agent.Name == "non-existent-agent" {
@@ -261,11 +242,9 @@ func TestUpdateAgentCommand(t *testing.T) {
 }
 
 func TestDeleteAgentCommand(t *testing.T) {
-	// Create temporary directory and config file
 	tempDir := t.TempDir()
 	configFile := filepath.Join(tempDir, "ai_rulez.yaml")
 
-	// Create initial config with agents
 	initialConfig := &config.Config{
 		Metadata: config.Metadata{
 			Name: "Test Project",
@@ -294,7 +273,6 @@ func TestDeleteAgentCommand(t *testing.T) {
 		t.Fatalf("Failed to save initial config: %v", err)
 	}
 
-	// Change to temp directory
 	originalDir, _ := os.Getwd()
 	defer func() {
 		_ = os.Chdir(originalDir)
@@ -302,13 +280,11 @@ func TestDeleteAgentCommand(t *testing.T) {
 	_ = os.Chdir(tempDir)
 
 	t.Run("delete existing agent", func(t *testing.T) {
-		// Load config
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			t.Fatalf("Failed to load config: %v", err)
 		}
 
-		// Find and remove agent
 		agentIndex := -1
 		for i, agent := range cfg.Agents {
 			if agent.Name == "agent-to-delete" {
@@ -321,16 +297,13 @@ func TestDeleteAgentCommand(t *testing.T) {
 			t.Fatal("Agent 'agent-to-delete' not found")
 		}
 
-		// Remove agent
 		cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
 
-		// Save config
 		err = config.SaveConfig(cfg, configFile)
 		if err != nil {
 			t.Fatalf("Failed to save config: %v", err)
 		}
 
-		// Reload and validate
 		reloadedCfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			t.Fatalf("Failed to reload config: %v", err)
@@ -346,13 +319,11 @@ func TestDeleteAgentCommand(t *testing.T) {
 	})
 
 	t.Run("delete non-existent agent", func(t *testing.T) {
-		// Load config
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			t.Fatalf("Failed to load config: %v", err)
 		}
 
-		// Try to find non-existent agent
 		agentIndex := -1
 		for i, agent := range cfg.Agents {
 			if agent.Name == "non-existent-agent" {

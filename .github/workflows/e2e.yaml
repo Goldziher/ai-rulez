@@ -1,9 +1,9 @@
 name: E2E Tests
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:  
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+    - cron: '0 2 * * *'  
   push:
     paths:
       - 'e2e/**'

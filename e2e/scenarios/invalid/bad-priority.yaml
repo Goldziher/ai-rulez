@@ -6,5 +6,5 @@ outputs:
 
 rules:
   - name: "Test Rule"
-    priority: "urgent"  # Invalid - should be high/medium/low
+    priority: "urgent"  
     content: "This should fail validation"
