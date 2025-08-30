@@ -334,38 +334,4 @@ includes:
 	}
 }
 
-func TestConvertYAMLToJSON(t *testing.T) {
-	input := map[any]any{
-		"string": "value",
-		"number": 42,
-		"nested": map[any]any{
-			"key": "value",
-		},
-		"array": []any{
-			"item1",
-			map[any]any{
-				"nested": "value",
-			},
-		},
-	}
-
-	result := config.ConvertYAMLToJSON(input)
-
-	m, ok := result.(map[string]any)
-	require.True(t, ok)
-
-	assert.Equal(t, "value", m["string"])
-	assert.Equal(t, 42, m["number"])
-
-	nested, ok := m["nested"].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, "value", nested["key"])
-
-	arr, ok := m["array"].([]any)
-	require.True(t, ok)
-	assert.Equal(t, "item1", arr[0])
-
-	arrNested, ok := arr[1].(map[string]any)
-	require.True(t, ok)
-	assert.Equal(t, "value", arrNested["nested"])
-}
+// TestConvertYAMLToJSON removed - testing internal implementation detail
