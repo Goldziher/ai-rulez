@@ -2,7 +2,7 @@ metadata:
   name: "Circular B"
 
 includes:
-  - "a.yaml"  # Creates circular dependency
+  - "a.yaml"  
 
 rules:
   - name: "Rule B"

@@ -10,7 +10,6 @@ import (
 )
 
 func TestMCPCommandExists(t *testing.T) {
-	// Test that the MCP command is properly registered
 	found := false
 	for _, cmd := range rootCmd.Commands() {
 		if cmd.Use == "mcp" {
@@ -25,7 +24,6 @@ func TestMCPCommandExists(t *testing.T) {
 }
 
 func TestMCPCommandHelp(t *testing.T) {
-	// Test MCP command help output
 	if mcpCmd == nil {
 		t.Fatal("mcpCmd is nil")
 	}
@@ -47,28 +45,19 @@ func TestMCPCommandHelp(t *testing.T) {
 }
 
 func TestAddAIRulezToolsDoesNotPanic(t *testing.T) {
-	// Test that addAIRulezTools doesn't panic with nil server
-	// This will panic if there are issues with the tool definitions
-	// We can't easily test the actual MCP server without complex setup
-	// But we can test that the function doesn't crash
-
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
 				t.Errorf("addAIRulezTools panicked: %v", r)
 			}
 		}()
-		// Test would go here when we have a way to test MCP server
 	}()
 }
 
 func TestMCPToolsIntegration(t *testing.T) {
-	// Integration test for MCP functionality
-	// Create a temporary directory with test config
 	tempDir := t.TempDir()
 	configFile := filepath.Join(tempDir, "ai_rulez.yaml")
 
-	// Create test config
 	testConfig := &config.Config{
 		Metadata: config.Metadata{
 			Name:        "Test Config",
@@ -99,16 +88,11 @@ func TestMCPToolsIntegration(t *testing.T) {
 		t.Fatalf("Failed to save test config: %v", err)
 	}
 
-	// Change to temp directory
 	originalDir, _ := os.Getwd()
 	defer func() {
 		_ = os.Chdir(originalDir)
 	}()
 	_ = os.Chdir(tempDir)
-
-	// Test that config loading works for MCP handlers
-	// We can't easily test the actual MCP protocol without complex mocking
-	// But we can test that the underlying functionality works
 
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
@@ -129,13 +113,6 @@ func TestMCPToolsIntegration(t *testing.T) {
 }
 
 func TestMCPBinaryBuild(t *testing.T) {
-	// Test that the binary builds successfully with MCP support
-	// This is more of a compile-time test
-
-	// If we got here, the package compiled successfully
-	// which means all MCP imports and dependencies are working
-
-	// Verify that we can at least create the command structure
 	if mcpCmd == nil {
 		t.Error("mcpCmd is nil - MCP command not properly initialized")
 	}

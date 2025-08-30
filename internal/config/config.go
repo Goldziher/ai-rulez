@@ -1,6 +1,7 @@
 package config
 
 import (
+	errorsStd "errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,7 +10,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config represents the main configuration structure
 type Config struct {
 	Metadata  Metadata            `yaml:"metadata"`
 	Includes  []string            `yaml:"includes,omitempty"`
@@ -21,30 +21,26 @@ type Config struct {
 	UserRulez *UserRulez          `yaml:"user_rulez,omitempty"`
 }
 
-// UserRulez contains user-specific rules, sections, and agents
 type UserRulez struct {
 	Rules    []Rule    `yaml:"rules,omitempty"`
 	Sections []Section `yaml:"sections,omitempty"`
 	Agents   []Agent   `yaml:"agents,omitempty"`
 }
 
-// Metadata contains project metadata
 type Metadata struct {
 	Name        string `yaml:"name"`
 	Version     string `yaml:"version,omitempty"`
 	Description string `yaml:"description,omitempty"`
 }
 
-// Output defines where and how to generate rule files
 type Output struct {
-	File         string `yaml:"file,omitempty"` // Specific file output
-	Path         string `yaml:"path,omitempty"` // File or directory output
-	Type         string `yaml:"type,omitempty"` // "rules" (default) or "agents"
+	File         string `yaml:"file,omitempty"`
+	Path         string `yaml:"path,omitempty"`
+	Type         string `yaml:"type,omitempty"`
 	Template     string `yaml:"template,omitempty"`
-	NamingScheme string `yaml:"naming_scheme,omitempty"` // Pattern for directory outputs
+	NamingScheme string `yaml:"naming_scheme,omitempty"`
 }
 
-// GetPath returns the effective path, preferring Path over File
 func (o *Output) GetPath() string {
 	if o.Path != "" {
 		return o.Path
@@ -52,13 +48,11 @@ func (o *Output) GetPath() string {
 	return o.File
 }
 
-// IsDirectory returns true if the output targets a directory
 func (o *Output) IsDirectory() bool {
 	path := o.GetPath()
 	return strings.HasSuffix(path, "/")
 }
 
-// GetOutputType returns the output type, defaulting to "rules"
 func (o *Output) GetOutputType() string {
 	if o.Type == "" {
 		return "rule"
@@ -66,19 +60,16 @@ func (o *Output) GetOutputType() string {
 	return o.Type
 }
 
-// GetNamingScheme returns the naming scheme for directory outputs
 func (o *Output) GetNamingScheme() string {
 	if o.NamingScheme != "" {
 		return o.NamingScheme
 	}
-	// Default naming scheme based on type
 	if o.GetOutputType() == "agent" {
 		return "{name}.md"
 	}
 	return "{type}.md"
 }
 
-// Rule represents a single rule definition
 type Rule struct {
 	ID       string   `yaml:"id,omitempty"`
 	Name     string   `yaml:"name"`
@@ -87,7 +78,6 @@ type Rule struct {
 	Targets  []string `yaml:"targets,omitempty"`
 }
 
-// Section represents an informative text section
 type Section struct {
 	ID       string   `yaml:"id,omitempty"`
 	Title    string   `yaml:"title"`
@@ -96,7 +86,6 @@ type Section struct {
 	Targets  []string `yaml:"targets,omitempty"`
 }
 
-// Agent represents an AI sub-agent definition
 type Agent struct {
 	ID           string   `yaml:"id,omitempty"`
 	Name         string   `yaml:"name"`
@@ -108,15 +97,19 @@ type Agent struct {
 	Targets      []string `yaml:"targets,omitempty"`
 }
 
-// LoadConfig loads configuration from a YAML file
 func LoadConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		return nil, errors.FileRead(filename, err)
 	}
 
-	// Validate against schema first
 	if err := ValidateWithSchema(data); err != nil {
+		var richErr *errors.RichError
+		if errorsStd.As(err, &richErr) {
+			if validationErrors, ok := richErr.Context["errors"].([]string); ok && len(validationErrors) > 0 {
+				return nil, errors.SchemaValidation(filename, validationErrors)
+			}
+		}
 		return nil, errors.SchemaValidation(filename, []string{err.Error()})
 	}
 
@@ -125,36 +118,30 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, errors.ConfigParse(filename, err)
 	}
 
-	// Set default priorities
 	setDefaultPriorities(&config)
 
 	return &config, nil
 }
 
-// setDefaultPriorities sets default priority values for all items that don't have one
 func setDefaultPriorities(config *Config) {
-	// Set default priority for rules
 	for i := range config.Rules {
 		if config.Rules[i].Priority == 0 {
 			config.Rules[i].Priority = 1
 		}
 	}
 
-	// Set default priority for sections
 	for i := range config.Sections {
 		if config.Sections[i].Priority == 0 {
 			config.Sections[i].Priority = 1
 		}
 	}
 
-	// Set default priority for agents
 	for i := range config.Agents {
 		if config.Agents[i].Priority == 0 {
 			config.Agents[i].Priority = 1
 		}
 	}
 
-	// Set default priority for user_rulez
 	if config.UserRulez != nil {
 		for i := range config.UserRulez.Rules {
 			if config.UserRulez.Rules[i].Priority == 0 {
@@ -174,7 +161,6 @@ func setDefaultPriorities(config *Config) {
 	}
 }
 
-// SaveConfig saves configuration to a YAML file
 func SaveConfig(config *Config, filename string) error {
 	data, err := yaml.Marshal(config)
 	if err != nil {
@@ -197,7 +183,6 @@ func SaveConfig(config *Config, filename string) error {
 	return nil
 }
 
-// Validate checks the configuration for common errors
 func (c *Config) Validate() error {
 	if c.Metadata.Name == "" {
 		return errors.ValidationRequired("metadata.name", "config metadata").

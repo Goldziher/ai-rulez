@@ -4,11 +4,9 @@ metadata:
   description: "Test project with AI agents"
 
 outputs:
-  # Regular rules output
   - path: "CLAUDE.md"
     template: "default"
   
-  # Agent outputs to directory
   - path: ".claude/agents/"
     type: "agent"
     naming_scheme: "{name}.md"

@@ -12,7 +12,7 @@ outputs:
 
 sections:
   - title: "Introduction"
-    priority: 100  # Appears first
+    priority: 100  
     content: |
       # Project Guidelines
       
@@ -42,7 +42,7 @@ sections:
       For detailed architecture documentation, see [docs/architecture.md](./docs/architecture.md).
 
   - title: "Getting Help"
-    priority: 1  # Appears at the end
+    priority: 1  
     content: |
       ## Need Help?
       

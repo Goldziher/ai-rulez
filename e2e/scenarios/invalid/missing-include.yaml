@@ -3,7 +3,7 @@ metadata:
   version: "1.0.0"
 
 includes:
-  - "nonexistent.yaml"  # This file doesn't exist
+  - "nonexistent.yaml"  
 
 outputs:
   - file: "output.md"

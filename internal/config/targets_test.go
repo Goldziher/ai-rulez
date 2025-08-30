@@ -147,7 +147,7 @@ func TestMatchesTarget(t *testing.T) {
 			name:       "nested directory pattern",
 			outputPath: "docs/api/endpoints.md",
 			targets:    []string{"docs/**"},
-			expected:   false, // filepath.Match doesn't support ** patterns
+			expected:   false,
 		},
 		{
 			name:       "single star in middle of path",
@@ -173,7 +173,7 @@ func TestFilterRules(t *testing.T) {
 		{
 			Name:    "Global Rule",
 			Content: "Applies to all outputs",
-			Targets: []string{}, // No targets = applies everywhere
+			Targets: []string{},
 		},
 		{
 			Name:    "Claude Only",
@@ -200,7 +200,7 @@ func TestFilterRules(t *testing.T) {
 	tests := []struct {
 		name       string
 		outputPath string
-		expected   []string // Rule names that should be included
+		expected   []string
 	}{
 		{
 			name:       "CLAUDE.md gets global, claude-specific, and markdown rules",
@@ -235,7 +235,6 @@ func TestFilterRules(t *testing.T) {
 			filtered, err := config.FilterRules(rules, tt.outputPath, nil)
 			assert.NoError(t, err)
 
-			// Extract rule names for comparison
 			var ruleNames []string
 			for _, rule := range filtered {
 				ruleNames = append(ruleNames, rule.Name)
@@ -253,7 +252,7 @@ func TestFilterSections(t *testing.T) {
 		{
 			Title:   "Global Section",
 			Content: "Appears everywhere",
-			Targets: []string{}, // No targets
+			Targets: []string{},
 		},
 		{
 			Title:   "Claude Intro",
@@ -270,7 +269,7 @@ func TestFilterSections(t *testing.T) {
 	tests := []struct {
 		name       string
 		outputPath string
-		expected   []string // Section titles that should be included
+		expected   []string
 	}{
 		{
 			name:       "CLAUDE.md gets global and claude sections",
@@ -295,7 +294,6 @@ func TestFilterSections(t *testing.T) {
 			filtered, err := config.FilterSections(sections, tt.outputPath, nil)
 			assert.NoError(t, err)
 
-			// Extract section titles for comparison
 			var sectionTitles []string
 			for _, section := range filtered {
 				sectionTitles = append(sectionTitles, section.Title)
@@ -313,7 +311,7 @@ func TestFilterAgents(t *testing.T) {
 		{
 			Name:        "Universal Agent",
 			Description: "Works everywhere",
-			Targets:     []string{}, // No targets
+			Targets:     []string{},
 		},
 		{
 			Name:        "Claude Assistant",
@@ -330,7 +328,7 @@ func TestFilterAgents(t *testing.T) {
 	tests := []struct {
 		name       string
 		outputPath string
-		expected   []string // Agent names that should be included
+		expected   []string
 	}{
 		{
 			name:       "CLAUDE.md gets universal and claude agents",
@@ -355,7 +353,6 @@ func TestFilterAgents(t *testing.T) {
 			filtered, err := config.FilterAgents(agents, tt.outputPath, nil)
 			assert.NoError(t, err)
 
-			// Extract agent names for comparison
 			var agentNames []string
 			for _, agent := range filtered {
 				agentNames = append(agentNames, agent.Name)
@@ -369,7 +366,6 @@ func TestFilterAgents(t *testing.T) {
 func TestFilterEmptySlices(t *testing.T) {
 	t.Parallel()
 
-	// Test that filtering empty slices returns empty slices
 	rules, err := config.FilterRules([]config.Rule{}, "CLAUDE.md", nil)
 	assert.NoError(t, err)
 	assert.Empty(t, rules)
@@ -382,7 +378,6 @@ func TestFilterEmptySlices(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Empty(t, agents)
 
-	// Test that filtering nil slices works
 	rules, err = config.FilterRules(nil, "CLAUDE.md", nil)
 	assert.NoError(t, err)
 	assert.Nil(t, rules)
@@ -396,7 +391,6 @@ func TestFilterEmptySlices(t *testing.T) {
 	assert.Nil(t, agents)
 }
 
-// Test edge cases and complex scenarios
 func TestMatchesTargetEdgeCases(t *testing.T) {
 	t.Parallel()
 
@@ -518,7 +512,7 @@ func TestMatchesTargetEdgeCases(t *testing.T) {
 			name:       "multiple directory levels with glob",
 			outputPath: "src/main/java/com/example/App.java",
 			targets:    []string{"src/main/java/*/*.java"},
-			expected:   false, // glob doesn't match across directory separators
+			expected:   false,
 		},
 		{
 			name:       "file with no extension exact match",
@@ -548,7 +542,7 @@ func TestMatchesTargetEdgeCases(t *testing.T) {
 			name:       "multiple mixed targets",
 			outputPath: "docs/api.md",
 			targets:    []string{"CLAUDE.md", "*.txt", "docs/*", "src/*.go"},
-			expected:   true, // matches docs/*
+			expected:   true,
 		},
 	}
 
@@ -718,7 +712,7 @@ func TestFilterRulesWithNamedTargets(t *testing.T) {
 		{
 			Name:    "Global Rule",
 			Content: "Applies to all outputs",
-			Targets: []string{}, // No targets = applies everywhere
+			Targets: []string{},
 		},
 		{
 			Name:    "Claude Named Target",
@@ -740,7 +734,7 @@ func TestFilterRulesWithNamedTargets(t *testing.T) {
 	tests := []struct {
 		name        string
 		outputPath  string
-		expected    []string // Rule names that should be included
+		expected    []string
 		expectError bool
 	}{
 		{
@@ -786,7 +780,6 @@ func TestFilterRulesWithNamedTargets(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 
-				// Extract rule names for comparison
 				var ruleNames []string
 				for _, rule := range filtered {
 					ruleNames = append(ruleNames, rule.Name)

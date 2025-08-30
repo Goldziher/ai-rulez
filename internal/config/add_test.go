@@ -10,12 +10,10 @@ import (
 )
 
 func TestAddRule(t *testing.T) {
-	// Create a temporary directory for test
 	tmpDir, err := os.MkdirTemp("", "ai-rulez-test-*")
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create initial config
 	configFile := filepath.Join(tmpDir, "ai_rulez.yaml")
 	initialConfig := &Config{
 		Metadata: Metadata{
@@ -34,16 +32,13 @@ func TestAddRule(t *testing.T) {
 		},
 	}
 
-	// Save initial config
 	err = SaveConfig(initialConfig, configFile)
 	require.NoError(t, err)
 
-	// Load config without profiles for testing
 	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Rules, 1)
 
-	// Add new rule
 	newRule := Rule{
 		Name:     "New Rule",
 		Priority: 5,
@@ -51,11 +46,9 @@ func TestAddRule(t *testing.T) {
 	}
 	cfg.Rules = append(cfg.Rules, newRule)
 
-	// Save updated config
 	err = SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	// Reload and verify
 	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Rules, 2)
@@ -65,12 +58,10 @@ func TestAddRule(t *testing.T) {
 }
 
 func TestAddSection(t *testing.T) {
-	// Create a temporary directory for test
 	tmpDir, err := os.MkdirTemp("", "ai-rulez-test-*")
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create initial config
 	configFile := filepath.Join(tmpDir, "ai_rulez.yaml")
 	initialConfig := &Config{
 		Metadata: Metadata{
@@ -89,16 +80,13 @@ func TestAddSection(t *testing.T) {
 		},
 	}
 
-	// Save initial config
 	err = SaveConfig(initialConfig, configFile)
 	require.NoError(t, err)
 
-	// Load config
 	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Sections, 1)
 
-	// Add new section
 	newSection := Section{
 		Title:    "New Section",
 		Priority: 5,
@@ -106,11 +94,9 @@ func TestAddSection(t *testing.T) {
 	}
 	cfg.Sections = append(cfg.Sections, newSection)
 
-	// Save updated config
 	err = SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	// Reload and verify
 	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Sections, 2)
@@ -120,12 +106,10 @@ func TestAddSection(t *testing.T) {
 }
 
 func TestAddRuleWithDefaults(t *testing.T) {
-	// Create a temporary directory for test
 	tmpDir, err := os.MkdirTemp("", "ai-rulez-test-*")
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create minimal config
 	configFile := filepath.Join(tmpDir, "ai_rulez.yaml")
 	initialConfig := &Config{
 		Metadata: Metadata{
@@ -136,38 +120,32 @@ func TestAddRuleWithDefaults(t *testing.T) {
 		},
 	}
 
-	// Save initial config
 	err = SaveConfig(initialConfig, configFile)
 	require.NoError(t, err)
 
-	// Load config
 	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 
-	// Add rule with priority 0 (should default to 1)
 	newRule := Rule{
 		Name:    "Default Priority Rule",
 		Content: "This rule should have default priority",
 	}
 	cfg.Rules = append(cfg.Rules, newRule)
 
-	// Save and reload
 	err = SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
 	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Rules, 1)
-	assert.Equal(t, 1, updatedCfg.Rules[0].Priority) // Should be defaulted to 1
+	assert.Equal(t, 1, updatedCfg.Rules[0].Priority)
 }
 
 func TestAddOutput(t *testing.T) {
-	// Create a temporary directory for test
 	tmpDir, err := os.MkdirTemp("", "ai-rulez-test-*")
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create initial config
 	configFile := filepath.Join(tmpDir, "ai_rulez.yaml")
 	initialConfig := &Config{
 		Metadata: Metadata{
@@ -179,16 +157,13 @@ func TestAddOutput(t *testing.T) {
 		},
 	}
 
-	// Save initial config
 	err = SaveConfig(initialConfig, configFile)
 	require.NoError(t, err)
 
-	// Load config
 	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Outputs, 1)
 
-	// Add new output
 	newOutput := Output{
 		Path:         ".cursor/rules/",
 		Type:         "rule",
@@ -196,11 +171,9 @@ func TestAddOutput(t *testing.T) {
 	}
 	cfg.Outputs = append(cfg.Outputs, newOutput)
 
-	// Save updated config
 	err = SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	// Reload and verify
 	updatedCfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, updatedCfg.Outputs, 2)
@@ -210,12 +183,10 @@ func TestAddOutput(t *testing.T) {
 }
 
 func TestAddOutputDuplicate(t *testing.T) {
-	// Create a temporary directory for test
 	tmpDir, err := os.MkdirTemp("", "ai-rulez-test-*")
 	require.NoError(t, err)
 	defer func() { _ = os.RemoveAll(tmpDir) }()
 
-	// Create initial config with an output
 	configFile := filepath.Join(tmpDir, "ai_rulez.yaml")
 	initialConfig := &Config{
 		Metadata: Metadata{
@@ -228,16 +199,13 @@ func TestAddOutputDuplicate(t *testing.T) {
 		},
 	}
 
-	// Save initial config
 	err = SaveConfig(initialConfig, configFile)
 	require.NoError(t, err)
 
-	// Load config
 	cfg, err := LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, cfg.Outputs, 2)
 
-	// Check if we can detect duplicate
 	duplicateExists := false
 	for _, output := range cfg.Outputs {
 		if output.GetPath() == "claude.md" {
