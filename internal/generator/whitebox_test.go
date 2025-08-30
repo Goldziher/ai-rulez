@@ -16,7 +16,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
-// TestNewWithRenderer tests the NewWithRenderer constructor
 func TestNewWithRenderer(t *testing.T) {
 	t.Parallel()
 
@@ -29,13 +28,11 @@ func TestNewWithRenderer(t *testing.T) {
 	assert.Equal(t, renderer, gen.renderer)
 }
 
-// TestGenerateAllConcurrent tests concurrent generation
 func TestGenerateAllConcurrent(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
-	// Create a config with many outputs to trigger concurrent processing
 	outputs := make([]config.Output, 15)
 	for i := 0; i < 15; i++ {
 		outputs[i] = config.Output{
@@ -59,7 +56,6 @@ func TestGenerateAllConcurrent(t *testing.T) {
 	err := gen.GenerateAllConcurrent(cfg)
 	require.NoError(t, err)
 
-	// Verify all files were created
 	for i := 0; i < 15; i++ {
 		filePath := filepath.Join(tmpDir, fmt.Sprintf("output%d.md", i))
 		_, err := os.Stat(filePath)
@@ -67,13 +63,11 @@ func TestGenerateAllConcurrent(t *testing.T) {
 	}
 }
 
-// TestComputeFileHash tests the file hash computation
 func TestComputeFileHash(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 
-	// Test with regular file
 	regularFile := filepath.Join(tmpDir, "regular.txt")
 	content := "Hello, World!"
 	err := os.WriteFile(regularFile, []byte(content), 0o644)
@@ -83,18 +77,15 @@ func TestComputeFileHash(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, hash)
 
-	// Verify hash is consistent
 	hash2, err := computeFileHash(regularFile)
 	require.NoError(t, err)
 	assert.Equal(t, hash, hash2)
 
-	// Test with non-existent file
 	_, err = computeFileHash(filepath.Join(tmpDir, "nonexistent.txt"))
 	assert.Error(t, err)
 
-	// Test with large file (>1MB)
 	largeFile := filepath.Join(tmpDir, "large.txt")
-	largeContent := strings.Repeat("a", 1024*1024+100) // Just over 1MB
+	largeContent := strings.Repeat("a", 1024*1024+100)
 	err = os.WriteFile(largeFile, []byte(largeContent), 0o644)
 	require.NoError(t, err)
 
@@ -103,7 +94,6 @@ func TestComputeFileHash(t *testing.T) {
 	assert.NotEmpty(t, largeHash)
 }
 
-// TestComputeContentHashPooled tests the pooled hash function
 func TestComputeContentHashPooled(t *testing.T) {
 	t.Parallel()
 
@@ -111,15 +101,12 @@ func TestComputeContentHashPooled(t *testing.T) {
 	hash1 := ComputeContentHashPooled(content)
 	hash2 := ComputeContentHashPooled(content)
 
-	// Hashes should be consistent
 	assert.Equal(t, hash1, hash2)
 	assert.NotEmpty(t, hash1)
 
-	// Different content should produce different hash
 	hash3 := ComputeContentHashPooled("Different content")
 	assert.NotEqual(t, hash1, hash3)
 
-	// Test concurrent usage (ensure pool works correctly)
 	var wg sync.WaitGroup
 	hashes := make([]string, 100)
 
@@ -133,13 +120,11 @@ func TestComputeContentHashPooled(t *testing.T) {
 
 	wg.Wait()
 
-	// All hashes should be the same
 	for i := 1; i < 100; i++ {
 		assert.Equal(t, hashes[0], hashes[i], "Hash %d should match", i)
 	}
 }
 
-// TestPreviewAll tests the PreviewAll function
 func TestPreviewAll(t *testing.T) {
 	t.Parallel()
 
@@ -168,7 +153,6 @@ func TestPreviewAll(t *testing.T) {
 
 	assert.Len(t, previews, 3)
 
-	// Check that all previews have content
 	for path, content := range previews {
 		assert.NotEmpty(t, content, "Preview for %s should have content", path)
 		if strings.HasSuffix(path, ".md") {
@@ -177,7 +161,6 @@ func TestPreviewAll(t *testing.T) {
 	}
 }
 
-// TestWriteSingleFile_ErrorPaths tests error handling in writeSingleFile
 func TestWriteSingleFile_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
@@ -189,7 +172,6 @@ func TestWriteSingleFile_ErrorPaths(t *testing.T) {
 		Rules:       []config.Rule{{Name: "Test", Content: "Content"}},
 	}
 
-	// Test with invalid template reference
 	output := &config.Output{
 		Path:     "test.md",
 		Template: "@/nonexistent/template.tmpl",
@@ -198,7 +180,6 @@ func TestWriteSingleFile_ErrorPaths(t *testing.T) {
 	assert.Error(t, err)
 	assert.Error(t, err)
 
-	// Test with invalid inline template
 	output = &config.Output{
 		Path:     "test.md",
 		Template: "{{.Invalid}",
@@ -208,15 +189,13 @@ func TestWriteSingleFile_ErrorPaths(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestWriteDirectoryOutput_ErrorPaths tests error handling in writeDirectoryOutput
 func TestWriteDirectoryOutput_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
-	// Test with read-only directory (permission denied)
-	if os.Getuid() != 0 { // Skip if running as root
+	if os.Getuid() != 0 {
 		tmpDir := t.TempDir()
 		readOnlyDir := filepath.Join(tmpDir, "readonly")
-		err := os.Mkdir(readOnlyDir, 0o555) // Read-only directory
+		err := os.Mkdir(readOnlyDir, 0o555)
 		require.NoError(t, err)
 
 		gen := NewWithBaseDir(readOnlyDir)
@@ -236,14 +215,12 @@ func TestWriteDirectoryOutput_ErrorPaths(t *testing.T) {
 	}
 }
 
-// TestWriteAgentFiles_ErrorPaths tests error handling in writeAgentFiles
 func TestWriteAgentFiles_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 	gen := NewWithBaseDir(tmpDir)
 
-	// Test with agent that has invalid template
 	output := &config.Output{
 		Path: "agents/",
 		Type: "agent",
@@ -263,7 +240,6 @@ func TestWriteAgentFiles_ErrorPaths(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestRenderTemplate_ErrorPaths tests error handling in renderTemplate
 func TestRenderTemplate_ErrorPaths(t *testing.T) {
 	t.Parallel()
 
@@ -274,7 +250,6 @@ func TestRenderTemplate_ErrorPaths(t *testing.T) {
 		ProjectName: "Test",
 	}
 
-	// Test with file reference template that doesn't exist
 	output := &config.Output{
 		Template: "@/nonexistent/path.tmpl",
 	}
@@ -282,14 +257,12 @@ func TestRenderTemplate_ErrorPaths(t *testing.T) {
 	assert.Error(t, err)
 	assert.Error(t, err)
 
-	// Test with invalid inline template
 	output = &config.Output{
 		Template: "{{range .Invalid}}{{end}}",
 	}
 	_, err = gen.renderTemplate(output, data)
 	assert.Error(t, err)
 
-	// Test with file reference in read-only location
 	output = &config.Output{
 		Template: "@/root/protected.tmpl",
 	}
@@ -297,74 +270,63 @@ func TestRenderTemplate_ErrorPaths(t *testing.T) {
 	assert.Error(t, err)
 }
 
-// TestShouldWriteFile_LargeFile tests shouldWriteFile with large files
 func TestShouldWriteFile_LargeFile(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 	gen := NewWithBaseDir(tmpDir)
 
-	// Create a large file (>1MB)
 	largeFile := "large.txt"
 	largeContent := strings.Repeat("a", 1024*1024+100)
 	fullPath := filepath.Join(tmpDir, largeFile)
 	err := os.WriteFile(fullPath, []byte(largeContent), 0o644)
 	require.NoError(t, err)
 
-	// Test with same content (should not write)
 	shouldWrite, err := gen.shouldWriteFile(largeFile, largeContent)
 	require.NoError(t, err)
 	assert.False(t, shouldWrite, "Should not write identical content")
 
-	// Test with different content (should write)
 	newContent := strings.Repeat("b", 1024*1024+100)
 	shouldWrite, err = gen.shouldWriteFile(largeFile, newContent)
 	require.NoError(t, err)
 	assert.True(t, shouldWrite, "Should write different content")
 }
 
-// TestShouldWriteFile_Errors tests error conditions in shouldWriteFile
 func TestShouldWriteFile_Errors(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 	gen := NewWithBaseDir(tmpDir)
 
-	// Test with file that exists but can't be read
-	if os.Getuid() != 0 { // Skip if running as root
+	if os.Getuid() != 0 {
 		unreadableFile := "unreadable.txt"
 		fullPath := filepath.Join(tmpDir, unreadableFile)
-		err := os.WriteFile(fullPath, []byte("content"), 0o000) // No permissions
+		err := os.WriteFile(fullPath, []byte("content"), 0o000)
 		require.NoError(t, err)
 
 		_, err = gen.shouldWriteFile(unreadableFile, "new content")
 		assert.Error(t, err)
 		assert.Error(t, err)
 
-		// Clean up
 		os.Chmod(fullPath, 0o644)
 	}
 }
 
-// TestWriteFile_Errors tests error conditions in writeFile
 func TestWriteFile_Errors(t *testing.T) {
 	t.Parallel()
 
-	// Test with invalid path
 	gen := NewWithBaseDir("/nonexistent/base/dir")
 	err := gen.writeFile("test.txt", "content")
 	assert.Error(t, err)
 	assert.Error(t, err)
 }
 
-// TestWriteDirectoryOutput_EdgeCases tests edge cases in directory output
 func TestWriteDirectoryOutput_EdgeCases(t *testing.T) {
 	t.Parallel()
 
 	tmpDir := t.TempDir()
 	gen := NewWithBaseDir(tmpDir)
 
-	// Test with unknown output type (defaults to rules)
 	output := &config.Output{
 		Path: "output/",
 		Type: "unknown",
@@ -379,13 +341,11 @@ func TestWriteDirectoryOutput_EdgeCases(t *testing.T) {
 	err := gen.writeDirectoryOutput(output, data)
 	require.NoError(t, err)
 
-	// Check that rule file was created
 	files, err := os.ReadDir(filepath.Join(tmpDir, "output"))
 	require.NoError(t, err)
 	assert.Len(t, files, 1)
 }
 
-// TestGenerateAll_IncrementalWrite tests that files are only written when changed
 func TestGenerateAll_IncrementalWrite(t *testing.T) {
 	t.Parallel()
 
@@ -406,35 +366,28 @@ func TestGenerateAll_IncrementalWrite(t *testing.T) {
 
 	gen := NewWithBaseDir(tmpDir)
 
-	// First generation
 	err := gen.GenerateAll(cfg)
 	require.NoError(t, err)
 
-	// Get initial modification time
 	stat1, err := os.Stat(outputFile)
 	require.NoError(t, err)
 	modTime1 := stat1.ModTime()
 
-	// Wait a bit to ensure different timestamp
 	time.Sleep(10 * time.Millisecond)
 
-	// Generate again with same content
 	err = gen.GenerateAll(cfg)
 	require.NoError(t, err)
 
-	// Check that file was not rewritten
 	stat2, err := os.Stat(outputFile)
 	require.NoError(t, err)
 	modTime2 := stat2.ModTime()
 
 	assert.Equal(t, modTime1, modTime2, "File should not be rewritten with same content")
 
-	// Change content and generate again
 	cfg.Rules[0].Content = "Different content"
 	err = gen.GenerateAll(cfg)
 	require.NoError(t, err)
 
-	// Check that file was rewritten
 	stat3, err := os.Stat(outputFile)
 	require.NoError(t, err)
 	modTime3 := stat3.ModTime()
@@ -442,7 +395,6 @@ func TestGenerateAll_IncrementalWrite(t *testing.T) {
 	assert.NotEqual(t, modTime2, modTime3, "File should be rewritten with different content")
 }
 
-// TestFormatSpecifierParsing tests the formatted index/priority parsing
 func TestFormatSpecifierParsing(t *testing.T) {
 	t.Parallel()
 
@@ -465,7 +417,6 @@ func TestFormatSpecifierParsing(t *testing.T) {
 	err := gen.writeAgentFiles("agents/", output.GetNamingScheme(), output, data)
 	require.NoError(t, err)
 
-	// Check generated filenames
 	expectedFiles := []string{
 		"agent-0001-05-first.md",
 		"agent-0002-15-second.md",

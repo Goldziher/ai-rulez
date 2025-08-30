@@ -17,7 +17,6 @@ outputs:
     type: "agent"
     naming_scheme: "{name}.md"
 
-# Global sections that appear in all outputs (no targets specified)
 sections:
   - title: "Project Overview"
     priority: 100
@@ -28,7 +27,7 @@ sections:
 
   - title: "Claude-Specific Instructions"
     priority: 90
-    targets: ["CLAUDE.md"]  # Only appears in CLAUDE.md
+    targets: ["CLAUDE.md"]  
     content: |
       ## Special Instructions for Claude
       
@@ -37,13 +36,12 @@ sections:
 
   - title: "Documentation Header"
     priority: 80
-    targets: ["docs/*", "README.md"]  # Appears in docs directory and README
+    targets: ["docs/*", "README.md"]  
     content: |
       ## Documentation Guidelines
       
       This header appears in documentation files but not in Claude-specific outputs.
 
-# Rules with different target patterns
 rules:
   - name: "Universal Code Standards"
     priority: 50
@@ -51,7 +49,6 @@ rules:
       - Use consistent naming conventions
       - Write clear, self-documenting code
       - Follow the project's style guide
-    # No targets = applies to all outputs
 
   - name: "Claude AI Guidelines"
     priority: 40
@@ -63,7 +60,7 @@ rules:
 
   - name: "Documentation Standards"
     priority: 30
-    targets: ["*.md", "docs/*"]  # All markdown files and docs directory
+    targets: ["*.md", "docs/*"]  
     content: |
       - Keep documentation up to date with code changes
       - Use clear headings and proper markdown formatting
@@ -71,7 +68,7 @@ rules:
 
   - name: "Agent-Specific Rules"
     priority: 35
-    targets: ["ai/agents/*"]  # Only for agent files
+    targets: ["ai/agents/*"]  
     content: |
       - Define clear agent roles and responsibilities
       - Specify required tools and capabilities
@@ -85,12 +82,11 @@ rules:
       - Include installation and usage instructions
       - Add badges for build status, version, etc.
 
-# Agents with target-specific deployment
 agents:
   - name: "code-reviewer"
     description: "Reviews code for quality and best practices"
     priority: 20
-    targets: ["CLAUDE.md", "ai/agents/*"]  # Available in Claude and agent files
+    targets: ["CLAUDE.md", "ai/agents/*"]  
     tools: ["file_reader", "git_operations"]
     system_prompt: |
       You are a senior code reviewer with expertise in multiple programming languages.
@@ -99,7 +95,7 @@ agents:
   - name: "documentation-writer"
     description: "Helps write and maintain project documentation"
     priority: 15
-    targets: ["README.md", "docs/*"]  # Only for documentation outputs
+    targets: ["README.md", "docs/*"]  
     tools: ["file_writer", "web_search"]
     system_prompt: |
       You are a technical writer specializing in developer documentation.
@@ -108,7 +104,6 @@ agents:
   - name: "general-assistant"
     description: "General-purpose AI assistant for various tasks"
     priority: 10
-    # No targets = available in all outputs
     tools: ["file_operations", "web_search", "calculator"]
     system_prompt: |
       You are a helpful AI assistant ready to help with a wide variety of tasks.

@@ -10,7 +10,9 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/agents"
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/generator"
@@ -22,7 +24,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Version is the current version of ai-rulez (set at build time)
 var Version = "dev"
 
 var (
@@ -47,7 +48,6 @@ func main() {
 	}
 }
 
-// fmtError formats and displays an error to stderr with rich error support
 func fmtError(err error) {
 	errors.FormatError(os.Stderr, err, false, true)
 }
@@ -57,7 +57,6 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.ai-rulez.yaml)")
 
-	// Add commands
 	rootCmd.AddCommand(generateCmd)
 	rootCmd.AddCommand(validateCmd)
 	rootCmd.AddCommand(versionCmd)
@@ -68,7 +67,6 @@ func init() {
 	rootCmd.AddCommand(deleteCmd)
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)
@@ -89,7 +87,6 @@ func initConfig() {
 	}
 }
 
-// generateCmd represents the generate command
 var generateCmd = &cobra.Command{
 	Use:   "generate [config-file]",
 	Short: "Generate AI rules files",
@@ -120,13 +117,11 @@ in config directories to include generated output files.`,
 		var configFile string
 		if len(args) > 0 {
 			configFile = args[0]
-			// Check if specified config file exists
 			if _, err := os.Stat(configFile); os.IsNotExist(err) {
 				fmt.Fprintf(os.Stderr, "Error: Configuration file '%s' not found\n", configFile)
 				os.Exit(1)
 			}
 		} else {
-			// Find config file
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -135,17 +130,13 @@ in config directories to include generated output files.`,
 			configFile = foundConfig
 		}
 
-		// Show which config file we're using
 		fmt.Println("Using config file:", configFile)
 
-		// Load configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error loading configuration: %v\n", err)
 			os.Exit(1)
 		}
-
-		// Configuration is already validated during LoadConfig
 
 		if dryRun {
 			fmt.Println("\n=== DRY RUN MODE ===")
@@ -166,14 +157,12 @@ in config directories to include generated output files.`,
 			return
 		}
 
-		// Generate files
 		gen := generator.NewWithConfigFile(configFile)
 		if err := gen.GenerateAll(cfg); err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating files: %v\n", err)
 			os.Exit(1)
 		}
 
-		// Update .gitignore if requested
 		if updateGitignore {
 			if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
 				fmt.Fprintf(os.Stderr, "Error updating .gitignore: %v\n", err)
@@ -186,7 +175,6 @@ in config directories to include generated output files.`,
 }
 
 func runRecursiveGenerate() {
-	// Find all config files
 	configs, err := config.FindAllConfigFiles(".")
 	if err != nil {
 		fmtError(err)
@@ -198,7 +186,6 @@ func runRecursiveGenerate() {
 		os.Exit(1)
 	}
 
-	// Sort configs for consistent output
 	sort.Strings(configs)
 
 	fmt.Printf("Found %d configuration file(s)\n", len(configs))
@@ -207,14 +194,11 @@ func runRecursiveGenerate() {
 	for _, configFile := range configs {
 		fmt.Printf("\n--- Processing: %s ---\n", configFile)
 
-		// Load configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			continue
 		}
-
-		// Configuration is already validated during LoadConfig
 
 		if dryRun {
 			fmt.Printf("Configuration: %s (v%s)\n", cfg.Metadata.Name, cfg.Metadata.Version)
@@ -223,14 +207,12 @@ func runRecursiveGenerate() {
 			continue
 		}
 
-		// Generate files
 		gen := generator.NewWithConfigFile(configFile)
 		if err := gen.GenerateAll(cfg); err != nil {
 			fmtError(err)
 			continue
 		}
 
-		// Update .gitignore if requested
 		if updateGitignore {
 			if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
 				fmtError(err)
@@ -250,7 +232,6 @@ func runRecursiveGenerate() {
 	}
 }
 
-// validateCmd represents the validate command
 var validateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
 	Short: "Validate AI rules configuration",
@@ -262,7 +243,6 @@ schema compliance, and logical issues like circular dependencies.`,
 		if len(args) > 0 {
 			configFile = args[0]
 		} else {
-			// Find config file
 			foundConfig, err := config.FindConfigFile(".")
 			if err != nil {
 				fmtError(err)
@@ -271,14 +251,11 @@ schema compliance, and logical issues like circular dependencies.`,
 			configFile = foundConfig
 		}
 
-		// Load and validate configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
-
-		// Configuration is already validated during LoadConfig
 
 		fmt.Printf("✓ Configuration is valid: %s\n", configFile)
 		fmt.Printf("  Name: %s\n", cfg.Metadata.Name)
@@ -289,7 +266,6 @@ schema compliance, and logical issues like circular dependencies.`,
 	},
 }
 
-// versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print the version of ai-rulez",
@@ -299,7 +275,6 @@ var versionCmd = &cobra.Command{
 	},
 }
 
-// initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new AI rules project",
@@ -308,17 +283,21 @@ and example rules. This creates an ai_rulez.yaml file in the current directory.
 
 Provider Flags:
   --claude     Enable Claude (CLAUDE.md + agents) [DEFAULT]
-  --cursor     Enable Cursor (.cursor/rules/)
-  --windsurf   Enable Windsurf (.windsurfrules)
+  --amp        Enable AMP - Sourcegraph (AGENTS.md)
+  --codex      Enable Codex - OpenAI (AGENTS.md)
+  --cursor     Enable Cursor (AGENTS.md + .cursor/rules/)
+  --windsurf   Enable Windsurf (.windsurf/)
   --gemini     Enable Gemini (GEMINI.md)
-  --copilot    Enable GitHub Copilot (.github/copilot-instructions.md)
-  --cline      Enable Cline (.clinerules/)
-  --continue   Enable Continue.dev (.continuerules)
+  --copilot       Enable GitHub Copilot (.github/copilot-instructions.md)
+  --cline         Enable Cline (.clinerules/)
+  --continue-dev  Enable Continue.dev (.continue/rules/)
 
 Convenience Flags:
-  --all        Enable all major providers
-  --popular    Enable Claude, Cursor, Windsurf, Copilot (most common)
-  --minimal    Only Claude without agents or sections
+  --preset <tool>  Use a preset for a specific tool (e.g., --preset claude)
+                   Available presets: claude, amp, codex, cursor, gemini, 
+                   windsurf, copilot, cline, continue
+  --all            Enable all supported providers
+  --popular        Enable Claude, Cursor, Windsurf, Copilot (most common)
 
 Optionally, use --setup-hooks to automatically configure git hooks for ai-rulez
 validation if lefthook, pre-commit, or husky is detected in your project.`,
@@ -329,7 +308,20 @@ validation if lefthook, pre-commit, or husky is detected in your project.`,
 			projectName = args[0]
 		}
 
-		// Check if ai_rulez.yaml already exists
+		listAgents, _ := cmd.Flags().GetBool("list-agents")
+		if listAgents {
+			available, _ := agents.DetectAvailableAgents()
+			if len(available) == 0 {
+				fmt.Println("No AI agents found. Install one of: claude, amp, codex, cursor, gemini")
+			} else {
+				fmt.Println("Available AI agents:")
+				for _, agent := range available {
+					fmt.Printf("  - %s: %s\n", agent.ID, agent.Display)
+				}
+			}
+			os.Exit(0)
+		}
+
 		if _, err := os.Stat("ai_rulez.yaml"); err == nil {
 			fmtError(errors.New(errors.ErrorTypeCommand, "init project",
 				fmt.Errorf("configuration file already exists")).
@@ -339,31 +331,63 @@ validation if lefthook, pre-commit, or husky is detected in your project.`,
 			os.Exit(1)
 		}
 
-		// Parse provider flags
-		providers := parseProviderFlags(cmd)
+		presetFlag, _ := cmd.Flags().GetString("preset")
+		var providers ProviderConfig
 
-		// Create configuration with selected providers
-		if err := createProviderConfigFile(projectName, "ai_rulez.yaml", providers); err != nil {
-			fmtError(err)
-			os.Exit(1)
+		if presetFlag != "" {
+			if err := agents.ValidatePreset(presetFlag); err != nil {
+				fmtError(errors.New(errors.ErrorTypeCommand, "init", err))
+				os.Exit(1)
+			}
+
+			presetProviders := agents.GetPresetProviders(presetFlag)
+			presetOptions := agents.GetPresetOptions(presetFlag)
+
+			providers = ProviderConfig{
+				Enabled:      presetProviders,
+				WithAgents:   presetOptions.WithAgents,
+				WithSections: presetOptions.WithSections,
+				NoComments:   presetOptions.NoComments,
+			}
+		} else {
+			providers = parseProviderFlags(cmd)
 		}
 
-		fmt.Printf("✓ Initialized new AI rules project: %s\n", projectName)
-		fmt.Println("  - Created ai_rulez.yaml")
+		noAgent, _ := cmd.Flags().GetBool("no-agent")
+		useAgentFlag, _ := cmd.Flags().GetString("use-agent")
 
-		// Show which providers were configured
+		var configContent string
+		var useAIAgent bool
+
+		if !noAgent && (useAgentFlag != "" || shouldPromptForAgent()) {
+			configContent, useAIAgent = handleAgentGeneration(cmd, projectName, providers, useAgentFlag)
+		}
+
+		if useAIAgent && configContent != "" {
+			if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0o644); err != nil {
+				fmtError(errors.FileWrite("ai_rulez.yaml", err))
+				os.Exit(1)
+			}
+			fmt.Printf("✓ Generated ai_rulez.yaml with AI assistance\n")
+		} else {
+			if err := createProviderConfigFile(projectName, "ai_rulez.yaml", providers); err != nil {
+				fmtError(err)
+				os.Exit(1)
+			}
+			fmt.Printf("✓ Initialized new AI rules project: %s\n", projectName)
+			fmt.Println("  - Created ai_rulez.yaml")
+		}
+
 		if len(providers.Enabled) > 0 {
 			fmt.Printf("  - Configured for: %s\n", strings.Join(providers.Enabled, ", "))
 		}
 
 		fmt.Println("  - Run 'ai-rulez generate' to create rule files")
 
-		// Check for --setup-hooks flag
 		setupHooks, _ := cmd.Flags().GetBool("setup-hooks")
 		if setupHooks {
 			fmt.Println("\nDetecting git hook managers...")
 
-			// Auto-detect and setup hooks
 			if detectLefthook() {
 				fmt.Println("  - Found lefthook configuration")
 				if err := setupLefthookConfig(); err != nil {
@@ -387,14 +411,12 @@ validation if lefthook, pre-commit, or husky is detected in your project.`,
 	},
 }
 
-// addCmd represents the add command
 var addCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add rules or sections to configuration",
 	Long:  `Add new rules or sections to your AI rules configuration file.`,
 }
 
-// addRuleCmd represents the add rule subcommand
 var addRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Add a new rule to configuration",
@@ -416,14 +438,12 @@ via stdin or will open an editor for you to enter the rule content.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Read content from stdin or prompt
 		fmt.Println("Enter rule content (press Ctrl+D when done):")
 		content, err := readFromStdin()
 		if err != nil {
@@ -431,7 +451,6 @@ via stdin or will open an editor for you to enter the rule content.`,
 			os.Exit(1)
 		}
 
-		// Add new rule
 		newRule := config.Rule{
 			Name:     ruleName,
 			Priority: priority,
@@ -439,7 +458,6 @@ via stdin or will open an editor for you to enter the rule content.`,
 		}
 		cfg.Rules = append(cfg.Rules, newRule)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -449,7 +467,6 @@ via stdin or will open an editor for you to enter the rule content.`,
 	},
 }
 
-// addSectionCmd represents the add section subcommand
 var addSectionCmd = &cobra.Command{
 	Use:   "section [title]",
 	Short: "Add a new section to configuration",
@@ -471,14 +488,12 @@ via stdin or will open an editor for you to enter the section content.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Read content from stdin or prompt
 		fmt.Println("Enter section content (press Ctrl+D when done):")
 		content, err := readFromStdin()
 		if err != nil {
@@ -486,7 +501,6 @@ via stdin or will open an editor for you to enter the section content.`,
 			os.Exit(1)
 		}
 
-		// Add new section
 		newSection := config.Section{
 			Title:    sectionTitle,
 			Priority: priority,
@@ -494,7 +508,6 @@ via stdin or will open an editor for you to enter the section content.`,
 		}
 		cfg.Sections = append(cfg.Sections, newSection)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -504,7 +517,6 @@ via stdin or will open an editor for you to enter the section content.`,
 	},
 }
 
-// addOutputCmd represents the add output subcommand
 var addOutputCmd = &cobra.Command{
 	Use:   "output [filename]",
 	Short: "Add a new output file to configuration",
@@ -526,14 +538,12 @@ a template to use for rendering the output.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Check if output already exists
 		for _, output := range cfg.Outputs {
 			if output.GetPath() == filename {
 				fmt.Fprintf(os.Stderr, "Error: Output file '%s' already exists in configuration\n", filename)
@@ -541,14 +551,12 @@ a template to use for rendering the output.`,
 			}
 		}
 
-		// Add new output
 		newOutput := config.Output{
 			Path:     filename,
 			Template: template,
 		}
 		cfg.Outputs = append(cfg.Outputs, newOutput)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -562,14 +570,12 @@ a template to use for rendering the output.`,
 	},
 }
 
-// updateCmd represents the update command
 var updateCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Update existing rules, sections, or outputs",
 	Long:  `Update existing rules, sections, or outputs in your AI rules configuration file.`,
 }
 
-// updateRuleCmd represents the update rule subcommand
 var updateRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Update an existing rule",
@@ -592,14 +598,12 @@ you'll be prompted to enter new content via stdin.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find the rule to update
 		ruleIndex := -1
 		for i, rule := range cfg.Rules {
 			if rule.Name == ruleName {
@@ -613,7 +617,6 @@ you'll be prompted to enter new content via stdin.`,
 			os.Exit(1)
 		}
 
-		// Update content if not provided via flag
 		if newContent == "" && priority == 0 {
 			fmt.Printf("Current content: %s\n", cfg.Rules[ruleIndex].Content)
 			fmt.Println("Enter new rule content (press Ctrl+D when done, or press Enter to keep current):")
@@ -627,7 +630,6 @@ you'll be prompted to enter new content via stdin.`,
 			}
 		}
 
-		// Update the rule
 		if newContent != "" {
 			cfg.Rules[ruleIndex].Content = newContent
 		}
@@ -635,7 +637,6 @@ you'll be prompted to enter new content via stdin.`,
 			cfg.Rules[ruleIndex].Priority = priority
 		}
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -645,7 +646,6 @@ you'll be prompted to enter new content via stdin.`,
 	},
 }
 
-// updateSectionCmd represents the update section subcommand
 var updateSectionCmd = &cobra.Command{
 	Use:   "section [title]",
 	Short: "Update an existing section",
@@ -668,14 +668,12 @@ you'll be prompted to enter new content via stdin.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find the section to update
 		sectionIndex := -1
 		for i, section := range cfg.Sections {
 			if section.Title == sectionTitle {
@@ -689,7 +687,6 @@ you'll be prompted to enter new content via stdin.`,
 			os.Exit(1)
 		}
 
-		// Update content if not provided via flag
 		if newContent == "" && priority == 0 {
 			fmt.Printf("Current content: %s\n", cfg.Sections[sectionIndex].Content)
 			fmt.Println("Enter new section content (press Ctrl+D when done, or press Enter to keep current):")
@@ -703,7 +700,6 @@ you'll be prompted to enter new content via stdin.`,
 			}
 		}
 
-		// Update the section
 		if newContent != "" {
 			cfg.Sections[sectionIndex].Content = newContent
 		}
@@ -711,7 +707,6 @@ you'll be prompted to enter new content via stdin.`,
 			cfg.Sections[sectionIndex].Priority = priority
 		}
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -721,7 +716,6 @@ you'll be prompted to enter new content via stdin.`,
 	},
 }
 
-// updateOutputCmd represents the update output subcommand
 var updateOutputCmd = &cobra.Command{
 	Use:   "output [filename]",
 	Short: "Update an existing output file configuration",
@@ -742,14 +736,12 @@ You can update the template used for the output file.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find the output to update
 		outputIndex := -1
 		for i, output := range cfg.Outputs {
 			if output.GetPath() == filename {
@@ -763,10 +755,8 @@ You can update the template used for the output file.`,
 			os.Exit(1)
 		}
 
-		// Update the output
 		cfg.Outputs[outputIndex].Template = template
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -776,14 +766,12 @@ You can update the template used for the output file.`,
 	},
 }
 
-// deleteCmd represents the delete command
 var deleteCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Delete rules, sections, or outputs",
 	Long:  `Delete existing rules, sections, or outputs from your AI rules configuration file.`,
 }
 
-// deleteRuleCmd represents the delete rule subcommand
 var deleteRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Delete an existing rule",
@@ -802,14 +790,12 @@ var deleteRuleCmd = &cobra.Command{
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find and remove the rule
 		ruleIndex := -1
 		for i, rule := range cfg.Rules {
 			if rule.Name == ruleName {
@@ -823,10 +809,8 @@ var deleteRuleCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Remove the rule
 		cfg.Rules = append(cfg.Rules[:ruleIndex], cfg.Rules[ruleIndex+1:]...)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -836,7 +820,6 @@ var deleteRuleCmd = &cobra.Command{
 	},
 }
 
-// deleteSectionCmd represents the delete section subcommand
 var deleteSectionCmd = &cobra.Command{
 	Use:   "section [title]",
 	Short: "Delete an existing section",
@@ -855,14 +838,12 @@ var deleteSectionCmd = &cobra.Command{
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find and remove the section
 		sectionIndex := -1
 		for i, section := range cfg.Sections {
 			if section.Title == sectionTitle {
@@ -876,10 +857,8 @@ var deleteSectionCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Remove the section
 		cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -889,7 +868,6 @@ var deleteSectionCmd = &cobra.Command{
 	},
 }
 
-// deleteOutputCmd represents the delete output subcommand
 var deleteOutputCmd = &cobra.Command{
 	Use:   "output [filename]",
 	Short: "Delete an existing output file configuration",
@@ -908,14 +886,12 @@ var deleteOutputCmd = &cobra.Command{
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find and remove the output
 		outputIndex := -1
 		for i, output := range cfg.Outputs {
 			if output.GetPath() == filename {
@@ -929,10 +905,8 @@ var deleteOutputCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		// Remove the output
 		cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -942,7 +916,6 @@ var deleteOutputCmd = &cobra.Command{
 	},
 }
 
-// addAgentCmd represents the add agent subcommand
 var addAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Add a new agent to configuration",
@@ -969,14 +942,12 @@ will be read from stdin if not provided via flag.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Check if agent already exists
 		for _, agent := range cfg.Agents {
 			if agent.Name == agentName {
 				fmt.Fprintf(os.Stderr, "Error: Agent '%s' already exists in configuration\n", agentName)
@@ -984,7 +955,6 @@ will be read from stdin if not provided via flag.`,
 			}
 		}
 
-		// Read system prompt from stdin if not provided
 		if systemPrompt == "" {
 			fmt.Println("Enter agent system prompt (press Ctrl+D when done):")
 			content, err := readFromStdin()
@@ -995,7 +965,6 @@ will be read from stdin if not provided via flag.`,
 			systemPrompt = content
 		}
 
-		// Add new agent
 		newAgent := config.Agent{
 			ID:           id,
 			Name:         agentName,
@@ -1006,7 +975,6 @@ will be read from stdin if not provided via flag.`,
 		}
 		cfg.Agents = append(cfg.Agents, newAgent)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -1020,7 +988,6 @@ will be read from stdin if not provided via flag.`,
 	},
 }
 
-// updateAgentCmd represents the update agent subcommand
 var updateAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Update an existing agent",
@@ -1046,14 +1013,12 @@ it via stdin.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find the agent to update
 		agentIndex := -1
 		for i, agent := range cfg.Agents {
 			if agent.Name == agentName {
@@ -1067,7 +1032,6 @@ it via stdin.`,
 			os.Exit(1)
 		}
 
-		// Update system prompt if not provided via flag and no other flags provided
 		if systemPrompt == "" && description == "" && priority == 0 && len(tools) == 0 {
 			fmt.Printf("Current system prompt: %s\n", cfg.Agents[agentIndex].SystemPrompt)
 			fmt.Println("Enter new system prompt (press Ctrl+D when done, or press Enter to keep current):")
@@ -1081,7 +1045,6 @@ it via stdin.`,
 			}
 		}
 
-		// Update the agent
 		if description != "" {
 			cfg.Agents[agentIndex].Description = description
 		}
@@ -1095,7 +1058,6 @@ it via stdin.`,
 			cfg.Agents[agentIndex].SystemPrompt = systemPrompt
 		}
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -1105,7 +1067,6 @@ it via stdin.`,
 	},
 }
 
-// deleteAgentCmd represents the delete agent subcommand
 var deleteAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Delete an existing agent",
@@ -1125,14 +1086,12 @@ This will permanently remove the agent and cannot be undone.`,
 			configFile = foundConfig
 		}
 
-		// Load existing configuration
 		cfg, err := config.LoadConfig(configFile)
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		// Find and remove the agent
 		agentIndex := -1
 		for i, agent := range cfg.Agents {
 			if agent.Name == agentName {
@@ -1146,10 +1105,8 @@ This will permanently remove the agent and cannot be undone.`,
 			os.Exit(1)
 		}
 
-		// Remove the agent
 		cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
 
-		// Save configuration
 		if err := config.SaveConfig(cfg, configFile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -1164,82 +1121,73 @@ func init() {
 	generateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
 	generateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Update .gitignore files to include generated output files")
 
-	// Add flags for init command
-	// Provider flags
 	initCmd.Flags().Bool("claude", false, "Enable Claude (CLAUDE.md + agents)")
-	initCmd.Flags().Bool("cursor", false, "Enable Cursor (.cursor/rules/)")
-	initCmd.Flags().Bool("windsurf", false, "Enable Windsurf (.windsurfrules)")
+	initCmd.Flags().Bool("amp", false, "Enable AMP - Sourcegraph (AGENTS.md)")
+	initCmd.Flags().Bool("codex", false, "Enable Codex - OpenAI (AGENTS.md)")
+	initCmd.Flags().Bool("cursor", false, "Enable Cursor (AGENTS.md + .cursor/rules/)")
+	initCmd.Flags().Bool("windsurf", false, "Enable Windsurf (.windsurf/)")
 	initCmd.Flags().Bool("gemini", false, "Enable Gemini (GEMINI.md)")
 	initCmd.Flags().Bool("copilot", false, "Enable GitHub Copilot (.github/copilot-instructions.md)")
 	initCmd.Flags().Bool("cline", false, "Enable Cline (.clinerules/)")
-	initCmd.Flags().Bool("continue", false, "Enable Continue.dev (.continuerules)")
+	initCmd.Flags().Bool("continue-dev", false, "Enable Continue.dev (.continue/rules/)")
 
-	// Convenience flags
 	initCmd.Flags().Bool("all", false, "Enable all major providers")
 	initCmd.Flags().Bool("popular", false, "Enable Claude, Cursor, Windsurf, Copilot")
-	initCmd.Flags().Bool("minimal", false, "Only Claude without agents or sections")
 
-	// Configuration options
 	initCmd.Flags().Bool("with-agents", false, "Include example agent configurations")
 	initCmd.Flags().Bool("with-sections", false, "Include example sections in config")
 	initCmd.Flags().Bool("no-comments", false, "Skip explanatory comments in generated files")
 
-	// Git hooks flag
+	initCmd.Flags().String("preset", "", "Use a preset configuration for a specific tool (claude, cursor, gemini, etc.)")
+
+	initCmd.Flags().String("use-agent", "", "Use AI agent(s) to generate config (comma-separated: claude,amp,codex,cursor,gemini)")
+	initCmd.Flags().Bool("no-agent", false, "Skip AI agent detection and usage")
+	initCmd.Flags().Bool("list-agents", false, "List available AI agents and exit")
+
 	initCmd.Flags().Bool("setup-hooks", false, "Auto-detect and setup git hooks (lefthook, pre-commit, or husky)")
 
-	// Add subcommands to add command
 	addCmd.AddCommand(addRuleCmd)
 	addCmd.AddCommand(addSectionCmd)
 	addCmd.AddCommand(addOutputCmd)
 	addCmd.AddCommand(addAgentCmd)
 
-	// Add subcommands to update command
 	updateCmd.AddCommand(updateRuleCmd)
 	updateCmd.AddCommand(updateSectionCmd)
 	updateCmd.AddCommand(updateOutputCmd)
 	updateCmd.AddCommand(updateAgentCmd)
 
-	// Add subcommands to delete command
 	deleteCmd.AddCommand(deleteRuleCmd)
 	deleteCmd.AddCommand(deleteSectionCmd)
 	deleteCmd.AddCommand(deleteOutputCmd)
 	deleteCmd.AddCommand(deleteAgentCmd)
 
-	// Add flags for add rule command
 	addRuleCmd.Flags().IntP("priority", "p", 5, "Priority level for the rule (1-10)")
 	addRuleCmd.Flags().StringP("config", "c", "", "Config file to add rule to (auto-discover if not provided)")
 
-	// Add flags for add section command
 	addSectionCmd.Flags().IntP("priority", "p", 5, "Priority level for the section")
 	addSectionCmd.Flags().StringP("config", "c", "", "Config file to add section to (auto-discover if not provided)")
 
-	// Add flags for add output command
 	addOutputCmd.Flags().StringP("template", "t", "", "Template to use for the output (optional)")
 	addOutputCmd.Flags().StringP("config", "c", "", "Config file to add output to (auto-discover if not provided)")
 
-	// Add flags for update rule command
 	updateRuleCmd.Flags().StringP("content", "", "", "New content for the rule (optional, will prompt if not provided)")
 	updateRuleCmd.Flags().IntP("priority", "p", 0, "New priority level for the rule (optional)")
 	updateRuleCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
 
-	// Add flags for update section command
 	updateSectionCmd.Flags().StringP("content", "", "", "New content for the section (optional, will prompt if not provided)")
 	updateSectionCmd.Flags().IntP("priority", "p", 0, "New priority level for the section (optional)")
 	updateSectionCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
 
-	// Add flags for update output command
 	updateOutputCmd.Flags().StringP("template", "t", "", "New template for the output (required)")
 	updateOutputCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
 	if err := updateOutputCmd.MarkFlagRequired("template"); err != nil {
 		fmt.Fprintf(os.Stderr, "Error marking flag as required: %v\n", err)
 	}
 
-	// Add flags for delete commands
 	deleteRuleCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 	deleteSectionCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 	deleteOutputCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 
-	// Add flags for add agent command
 	addAgentCmd.Flags().StringP("description", "d", "", "Description of the agent")
 	addAgentCmd.Flags().IntP("priority", "p", 5, "Priority level for the agent (1-10)")
 	addAgentCmd.Flags().StringSliceP("tools", "t", []string{}, "Comma-separated list of tools the agent can use")
@@ -1247,18 +1195,15 @@ func init() {
 	addAgentCmd.Flags().StringP("id", "", "", "Optional unique identifier for the agent")
 	addAgentCmd.Flags().StringP("config", "c", "", "Config file to add agent to (auto-discover if not provided)")
 
-	// Add flags for update agent command
 	updateAgentCmd.Flags().StringP("description", "d", "", "New description for the agent")
 	updateAgentCmd.Flags().IntP("priority", "p", 0, "New priority level for the agent (1-10)")
 	updateAgentCmd.Flags().StringSliceP("tools", "t", []string{}, "New comma-separated list of tools the agent can use")
 	updateAgentCmd.Flags().StringP("system-prompt", "s", "", "New system prompt for the agent (will prompt via stdin if not provided)")
 	updateAgentCmd.Flags().StringP("config", "c", "", "Config file to update (auto-discover if not provided)")
 
-	// Add flags for delete agent command
 	deleteAgentCmd.Flags().StringP("config", "c", "", "Config file to delete from (auto-discover if not provided)")
 }
 
-// ProviderConfig holds the configuration for enabled providers
 type ProviderConfig struct {
 	Enabled      []string
 	WithAgents   bool
@@ -1266,24 +1211,20 @@ type ProviderConfig struct {
 	NoComments   bool
 }
 
-// parseProviderFlags parses command flags and returns enabled providers
 func parseProviderFlags(cmd *cobra.Command) ProviderConfig {
 	providerConfig := ProviderConfig{
 		Enabled: []string{},
 	}
 
-	// Get configuration options
 	providerConfig.WithAgents, _ = cmd.Flags().GetBool("with-agents")
 	providerConfig.WithSections, _ = cmd.Flags().GetBool("with-sections")
 	providerConfig.NoComments, _ = cmd.Flags().GetBool("no-comments")
 
-	// Check convenience flags first
 	all, _ := cmd.Flags().GetBool("all")
 	popular, _ := cmd.Flags().GetBool("popular")
-	minimal, _ := cmd.Flags().GetBool("minimal")
 
 	if all {
-		providerConfig.Enabled = []string{"claude", "cursor", "windsurf", "gemini", "copilot", "cline", "continue"}
+		providerConfig.Enabled = []string{"claude", "amp", "codex", "cursor", "windsurf", "gemini", "copilot", "cline", "continue-dev"}
 		return providerConfig
 	}
 
@@ -1292,38 +1233,27 @@ func parseProviderFlags(cmd *cobra.Command) ProviderConfig {
 		return providerConfig
 	}
 
-	if minimal {
-		providerConfig.Enabled = []string{"claude"}
-		providerConfig.WithAgents = false
-		providerConfig.WithSections = false
-		return providerConfig
-	}
-
-	// Check individual provider flags
 	hasExplicitProvider := false
-	providers := []string{"claude", "cursor", "windsurf", "gemini", "copilot", "cline", "continue"}
+	providers := []string{"claude", "amp", "codex", "cursor", "windsurf", "gemini", "copilot", "cline", "continue-dev"}
 	for _, provider := range providers {
 		enabled, _ := cmd.Flags().GetBool(provider)
 		if enabled {
 			providerConfig.Enabled = append(providerConfig.Enabled, provider)
 			hasExplicitProvider = true
-			// Enable agents by default when Claude is explicitly selected
 			if provider == "claude" && !cmd.Flags().Changed("with-agents") {
 				providerConfig.WithAgents = true
 			}
 		}
 	}
 
-	// Default to Claude if no providers specified
 	if !hasExplicitProvider {
 		providerConfig.Enabled = []string{"claude"}
-		providerConfig.WithAgents = true // Default includes agents for better experience
+		providerConfig.WithAgents = true
 	}
 
 	return providerConfig
 }
 
-// createProviderConfigFile creates a config file with selected providers
 func createProviderConfigFile(projectName, filename string, providers ProviderConfig) error {
 	template := generateConfigTemplate(projectName, providers)
 
@@ -1341,16 +1271,13 @@ func createProviderConfigFile(projectName, filename string, providers ProviderCo
 	return nil
 }
 
-// generateConfigTemplate generates the YAML template based on selected providers
 func generateConfigTemplate(projectName string, providers ProviderConfig) string {
 	var builder strings.Builder
 
-	// Add schema
 	builder.WriteString(`$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 `)
 
-	// Add metadata
 	builder.WriteString(fmt.Sprintf(`metadata:
   name: "%s"
   version: "1.0.0"
@@ -1358,7 +1285,6 @@ func generateConfigTemplate(projectName string, providers ProviderConfig) string
 
 `, projectName))
 
-	// Add includes section if not no-comments
 	if !providers.NoComments {
 		builder.WriteString(`# Uncomment and customize remote includes to share rules across projects:
 # includes:
@@ -1368,11 +1294,11 @@ func generateConfigTemplate(projectName string, providers ProviderConfig) string
 `)
 	}
 
-	// Add outputs section
 	builder.WriteString(`# Output configurations - where to generate AI assistant files
 outputs:`)
 
-	// Add outputs based on enabled providers
+	var processedProviders []string
+
 	for _, provider := range providers.Enabled {
 		switch provider {
 		case "claude":
@@ -1387,18 +1313,29 @@ outputs:`)
     type: "agent"
     naming_scheme: "{name}.md"`)
 			}
-		case "cursor":
-			builder.WriteString(`
+		case "amp", "codex", "cursor":
+			if !contains(processedProviders, "AGENTS.md") {
+				builder.WriteString(`
   
-  # Cursor editor (new format)
+  # AGENTS.md (shared by AMP, Codex, Cursor)
+  - file: "AGENTS.md"`)
+				processedProviders = append(processedProviders, "AGENTS.md")
+			}
+			if provider == "cursor" {
+				builder.WriteString(`
+  
+  # Cursor editor rules
   - path: ".cursor/rules/"
     type: "rule"
     naming_scheme: "rules.mdc"`)
+			}
 		case "windsurf":
 			builder.WriteString(`
   
-  # Windsurf editor
-  - file: ".windsurfrules"`)
+  # Windsurf editor (new directory format)
+  - path: ".windsurf/"
+    type: "rule"
+    naming_scheme: "{name}.md"`)
 		case "gemini":
 			builder.WriteString(`
   
@@ -1407,24 +1344,27 @@ outputs:`)
 		case "copilot":
 			builder.WriteString(`
   
-  # GitHub Copilot
+  # GitHub Copilot repository instructions
   - file: ".github/copilot-instructions.md"`)
 		case "cline":
 			builder.WriteString(`
   
-  # Cline assistant
-  - file: ".clinerules"`)
-		case "continue":
+  # Cline rules (directory format)
+  - path: ".clinerules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"`)
+		case "continue-dev":
 			builder.WriteString(`
   
-  # Continue.dev
-  - file: ".continuerules"`)
+  # Continue.dev rules (directory format with frontmatter)
+  - path: ".continue/rules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"`)
 		}
 	}
 
 	builder.WriteString("\n\n")
 
-	// Add agents section if enabled
 	if providers.WithAgents && sliceContains(providers.Enabled, "claude") {
 		if providers.NoComments {
 			builder.WriteString(`agents:`)
@@ -1456,7 +1396,6 @@ agents:`)
 `)
 	}
 
-	// Add rules section
 	builder.WriteString(`rules:
   - name: "Code Quality"
     priority: 10
@@ -1504,7 +1443,6 @@ agents:`)
       - Follow security best practices for your technology stack
 `)
 
-	// Add sections if enabled
 	if providers.WithSections {
 		builder.WriteString(`
 sections:
@@ -1528,7 +1466,6 @@ sections:
 	return builder.String()
 }
 
-// sliceContains checks if a string is in a slice
 func sliceContains(slice []string, item string) bool {
 	for _, s := range slice {
 		if s == item {
@@ -1538,7 +1475,6 @@ func sliceContains(slice []string, item string) bool {
 	return false
 }
 
-// mcpCmd represents the mcp command
 var mcpCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Start MCP server for AI assistant integration",
@@ -1559,17 +1495,14 @@ Configure in your AI assistant by adding this server to the MCP configuration.`,
 }
 
 func runMCPServer() {
-	// Create MCP server
 	s := server.NewMCPServer(
 		"ai-rulez",
 		Version,
 		server.WithToolCapabilities(false),
 	)
 
-	// Add ai-rulez tools
 	addAIRulezTools(s)
 
-	// Start stdio server
 	if err := server.ServeStdio(s); err != nil {
 		fmtError(errors.MCPError("start MCP server", err))
 		os.Exit(1)
@@ -1577,7 +1510,6 @@ func runMCPServer() {
 }
 
 func addAIRulezTools(s *server.MCPServer) {
-	// Tool: Get rules
 	getRulesTool := mcp.NewTool("get_rules",
 		mcp.WithDescription("Get AI assistant rules from configuration"),
 		mcp.WithString("config_file",
@@ -1592,7 +1524,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(getRulesTool, handleGetRules)
 
-	// Tool: Get sections
 	getSectionsTool := mcp.NewTool("get_sections",
 		mcp.WithDescription("Get documentation sections from configuration"),
 		mcp.WithString("config_file",
@@ -1601,7 +1532,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(getSectionsTool, handleGetSections)
 
-	// Tool: Generate output
 	generateTool := mcp.NewTool("generate_output",
 		mcp.WithDescription("Generate AI rules output files"),
 		mcp.WithString("config_file",
@@ -1619,7 +1549,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(generateTool, handleGenerate)
 
-	// Tool: Validate config
 	validateTool := mcp.NewTool("validate_config",
 		mcp.WithDescription("Validate AI rules configuration file"),
 		mcp.WithString("config_file",
@@ -1628,7 +1557,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(validateTool, handleValidate)
 
-	// Tool: Add rule
 	addRuleTool := mcp.NewTool("add_rule",
 		mcp.WithDescription("Add a new rule to the configuration file"),
 		mcp.WithString("name",
@@ -1651,7 +1579,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(addRuleTool, handleAddRule)
 
-	// Tool: Add section
 	addSectionTool := mcp.NewTool("add_section",
 		mcp.WithDescription("Add a new section to the configuration file"),
 		mcp.WithString("title",
@@ -1674,7 +1601,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(addSectionTool, handleAddSection)
 
-	// Tool: Add output
 	addOutputTool := mcp.NewTool("add_output",
 		mcp.WithDescription("Add a new output file to the configuration"),
 		mcp.WithString("filename",
@@ -1690,7 +1616,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(addOutputTool, handleAddOutput)
 
-	// Tool: Update rule
 	updateRuleTool := mcp.NewTool("update_rule",
 		mcp.WithDescription("Update an existing rule in the configuration"),
 		mcp.WithString("name",
@@ -1709,7 +1634,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(updateRuleTool, handleUpdateRule)
 
-	// Tool: Update section
 	updateSectionTool := mcp.NewTool("update_section",
 		mcp.WithDescription("Update an existing section in the configuration"),
 		mcp.WithString("title",
@@ -1728,7 +1652,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(updateSectionTool, handleUpdateSection)
 
-	// Tool: Update output
 	updateOutputTool := mcp.NewTool("update_output",
 		mcp.WithDescription("Update an existing output file in the configuration"),
 		mcp.WithString("filename",
@@ -1745,7 +1668,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(updateOutputTool, handleUpdateOutput)
 
-	// Tool: Delete rule
 	deleteRuleTool := mcp.NewTool("delete_rule",
 		mcp.WithDescription("Delete an existing rule from the configuration"),
 		mcp.WithString("name",
@@ -1758,7 +1680,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(deleteRuleTool, handleDeleteRule)
 
-	// Tool: Delete section
 	deleteSectionTool := mcp.NewTool("delete_section",
 		mcp.WithDescription("Delete an existing section from the configuration"),
 		mcp.WithString("title",
@@ -1771,7 +1692,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(deleteSectionTool, handleDeleteSection)
 
-	// Tool: Delete output
 	deleteOutputTool := mcp.NewTool("delete_output",
 		mcp.WithDescription("Delete an existing output file from the configuration"),
 		mcp.WithString("filename",
@@ -1784,7 +1704,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(deleteOutputTool, handleDeleteOutput)
 
-	// Tool: Get agents
 	getAgentsTool := mcp.NewTool("get_agents",
 		mcp.WithDescription("Get AI agents from configuration"),
 		mcp.WithString("config_file",
@@ -1796,7 +1715,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(getAgentsTool, handleGetAgents)
 
-	// Tool: Add agent
 	addAgentTool := mcp.NewTool("add_agent",
 		mcp.WithDescription("Add a new agent to the configuration file"),
 		mcp.WithString("name",
@@ -1825,7 +1743,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(addAgentTool, handleAddAgent)
 
-	// Tool: Update agent
 	updateAgentTool := mcp.NewTool("update_agent",
 		mcp.WithDescription("Update an existing agent in the configuration"),
 		mcp.WithString("name",
@@ -1850,7 +1767,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(updateAgentTool, handleUpdateAgent)
 
-	// Tool: Delete agent
 	deleteAgentTool := mcp.NewTool("delete_agent",
 		mcp.WithDescription("Delete an existing agent from the configuration"),
 		mcp.WithString("name",
@@ -1863,7 +1779,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(deleteAgentTool, handleDeleteAgent)
 
-	// Tool: Initialize project
 	initProjectTool := mcp.NewTool("init_project",
 		mcp.WithDescription("Initialize a new AI rules project with configuration file"),
 		mcp.WithString("project_name",
@@ -1872,7 +1787,6 @@ func addAIRulezTools(s *server.MCPServer) {
 		mcp.WithString("config_file",
 			mcp.Description("Path to configuration file (default: 'ai_rulez.yaml')"),
 		),
-		// Provider flags
 		mcp.WithBoolean("claude",
 			mcp.Description("Enable Claude (CLAUDE.md + agents) - default if no providers specified"),
 		),
@@ -1894,7 +1808,6 @@ func addAIRulezTools(s *server.MCPServer) {
 		mcp.WithBoolean("continue",
 			mcp.Description("Enable Continue.dev (.continuerules)"),
 		),
-		// Convenience flags
 		mcp.WithBoolean("all",
 			mcp.Description("Enable all major providers"),
 		),
@@ -1904,7 +1817,6 @@ func addAIRulezTools(s *server.MCPServer) {
 		mcp.WithBoolean("minimal",
 			mcp.Description("Only Claude without agents or sections"),
 		),
-		// Configuration flags
 		mcp.WithBoolean("with_agents",
 			mcp.Description("Include example agent configurations"),
 		),
@@ -1920,7 +1832,6 @@ func addAIRulezTools(s *server.MCPServer) {
 	)
 	s.AddTool(initProjectTool, handleInitProject)
 
-	// Tool: Get version
 	versionTool := mcp.NewTool("get_version",
 		mcp.WithDescription("Get the version of ai-rulez"),
 	)
@@ -1928,7 +1839,6 @@ func addAIRulezTools(s *server.MCPServer) {
 }
 
 func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -1938,30 +1848,25 @@ func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		configFile = foundConfig
 	}
 
-	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 	}
 
-	// Apply filters
 	minPriority := request.GetFloat("min_priority", 0)
 	nameFilter := request.GetString("name_filter", "")
 
 	var filteredRules []config.Rule
 	for _, rule := range cfg.Rules {
-		// Priority filter
 		if minPriority > 0 && float64(rule.Priority) < minPriority {
 			continue
 		}
-		// Name filter
 		if nameFilter != "" && !strings.Contains(strings.ToLower(rule.Name), strings.ToLower(nameFilter)) {
 			continue
 		}
 		filteredRules = append(filteredRules, rule)
 	}
 
-	// Format response
 	result := map[string]interface{}{
 		"config_file": configFile,
 		"total_rules": len(cfg.Rules),
@@ -1975,7 +1880,6 @@ func handleGetRules(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 }
 
 func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -1985,13 +1889,11 @@ func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		configFile = foundConfig
 	}
 
-	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
 	}
 
-	// Format response
 	result := map[string]interface{}{
 		"config_file":    configFile,
 		"total_sections": len(cfg.Sections),
@@ -2005,13 +1907,11 @@ func handleGetSections(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 
 //nolint:gocyclo // This function handles multiple generation scenarios
 func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Check recursive flag
 	recursive := request.GetBool("recursive", false)
 	dryRun := request.GetBool("dry_run", false)
 	updateGitignore := request.GetBool("update_gitignore", false)
 
 	if recursive {
-		// Find all config files
 		configs, err := config.FindAllConfigFiles(".")
 		if err != nil {
 			return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
@@ -2021,7 +1921,6 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 			return mcp.NewToolResultError("No configuration files found"), nil
 		}
 
-		// Sort configs for consistent output
 		sort.Strings(configs)
 
 		result := map[string]interface{}{
@@ -2068,7 +1967,6 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		return mcp.NewToolResultText(string(jsonResult)), nil
 	}
 
-	// Get config file path for single file processing
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2078,7 +1976,6 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		configFile = foundConfig
 	}
 
-	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(errors.FormatErrorSimple(err)), nil
@@ -2099,14 +1996,12 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		return mcp.NewToolResultText(string(jsonResult)), nil
 	}
 
-	// Generate files
 	gen := generator.NewWithConfigFile(configFile)
 	err = gen.GenerateAll(cfg)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error generating files: %v", err)), nil
 	}
 
-	// Update .gitignore if requested
 	if updateGitignore {
 		if err := gitignore.UpdateGitignoreFiles(configFile, cfg); err != nil {
 			return mcp.NewToolResultError(fmt.Sprintf("Error updating .gitignore: %v", err)), nil
@@ -2126,7 +2021,6 @@ func handleGenerate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 }
 
 func handleValidate(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2136,7 +2030,6 @@ func handleValidate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		configFile = foundConfig
 	}
 
-	// Load and validate configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Configuration validation failed: %v", err)), nil
@@ -2155,7 +2048,96 @@ func handleValidate(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	return mcp.NewToolResultText(string(jsonResult)), nil
 }
 
-// detectLefthook checks if lefthook is configured in the project
+func shouldPromptForAgent() bool {
+	if os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
+		return false
+	}
+
+	stat, _ := os.Stdin.Stat()
+	return (stat.Mode() & os.ModeCharDevice) != 0
+}
+
+func handleAgentGeneration(cmd *cobra.Command, projectName string, providers ProviderConfig, useAgentFlag string) (string, bool) {
+	var selectedAgents []agents.AgentInfo
+	var err error
+
+	if useAgentFlag != "" {
+		selectedAgents, err = agents.ParseAgentList(useAgentFlag)
+		if err != nil {
+			fmt.Printf("Error parsing agent list: %v\n", err)
+			return "", false
+		}
+	} else {
+		available, err := agents.DetectAvailableAgents()
+		if err != nil || len(available) == 0 {
+			return "", false
+		}
+
+		fmt.Println("\nDetected AI assistants:")
+		for i, agent := range available {
+			fmt.Printf("  %d. %s\n", i+1, agent.Display)
+		}
+		fmt.Print("\nSelect AI assistant [1-", len(available), "] or press Enter to skip: ")
+
+		var choice string
+		fmt.Scanln(&choice)
+
+		if choice == "" {
+			return "", false
+		}
+
+		var idx int
+		if _, err := fmt.Sscanf(choice, "%d", &idx); err != nil || idx < 1 || idx > len(available) {
+			fmt.Println("Invalid selection")
+			return "", false
+		}
+
+		selectedAgents = []agents.AgentInfo{available[idx-1]}
+	}
+
+	for _, agent := range selectedAgents {
+		fmt.Printf("\nUsing %s to generate configuration...\n", agent.Display)
+
+		prompt := agents.GeneratePrompt(agent, projectName, providers.Enabled)
+
+		maxRetries := 3
+		timeout := 30 * time.Second
+
+		for attempt := 1; attempt <= maxRetries; attempt++ {
+			output, err := agents.InvokeAgent(agent, prompt, timeout)
+			if err != nil {
+				fmt.Printf("  Attempt %d failed: %v\n", attempt, err)
+				continue
+			}
+
+			yamlContent := agents.ExtractYAMLFromResponse(output)
+
+			validationErrors, err := agents.ValidateGeneratedConfig(yamlContent)
+			if err == nil {
+				return yamlContent, true
+			}
+
+			if len(validationErrors) > 0 && attempt < maxRetries {
+				fmt.Printf("  Validation failed, retrying with feedback...\n")
+				prompt = agents.GenerateFeedbackPrompt(prompt, yamlContent, validationErrors)
+			}
+		}
+
+		fmt.Printf("  Failed to generate valid configuration with %s\n", agent.Display)
+	}
+
+	return "", false
+}
+
+func contains(slice []string, item string) bool {
+	for _, s := range slice {
+		if s == item {
+			return true
+		}
+	}
+	return false
+}
+
 func detectLefthook() bool {
 	files := []string{"lefthook.yaml", "lefthook.yml", ".lefthook.yml"}
 	for _, file := range files {
@@ -2166,7 +2148,6 @@ func detectLefthook() bool {
 	return false
 }
 
-// detectPreCommit checks if pre-commit is configured in the project
 func detectPreCommit() bool {
 	files := []string{".pre-commit-config.yaml", ".pre-commit-config.yml"}
 	for _, file := range files {
@@ -2177,7 +2158,6 @@ func detectPreCommit() bool {
 	return false
 }
 
-// detectHusky checks if husky is configured in the project
 func detectHusky() bool {
 	if info, err := os.Stat(".husky"); err == nil && info.IsDir() {
 		return true
@@ -2185,7 +2165,6 @@ func detectHusky() bool {
 	return false
 }
 
-// setupLefthookConfig adds ai-rulez hooks to lefthook configuration
 func setupLefthookConfig() error {
 	configFile := ""
 	files := []string{"lefthook.yaml", "lefthook.yml", ".lefthook.yml"}
@@ -2200,22 +2179,18 @@ func setupLefthookConfig() error {
 		return fmt.Errorf("lefthook configuration file not found")
 	}
 
-	// Read existing config
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("failed to read lefthook config: %w", err)
 	}
 
-	// Parse YAML
 	var configData map[string]interface{}
 	if err := yaml.Unmarshal(data, &configData); err != nil {
 		return fmt.Errorf("failed to parse lefthook config: %w", err)
 	}
 
-	// Add ai-rulez hook to pre-commit
 	if preCommit, ok := configData["pre-commit"].(map[string]interface{}); ok {
 		if commands, ok := preCommit["commands"].(map[string]interface{}); ok {
-			// Check if ai-rulez already exists
 			if _, exists := commands["ai-rulez"]; !exists {
 				commands["ai-rulez"] = map[string]interface{}{
 					"glob":      "**/*.{ai-rulez,ai_rulez}.{yaml,yml}",
@@ -2223,7 +2198,6 @@ func setupLefthookConfig() error {
 					"fail_text": "AI rules validation failed",
 				}
 
-				// Write back
 				updatedData, err := yaml.Marshal(configData)
 				if err != nil {
 					return fmt.Errorf("failed to marshal updated config: %w", err)
@@ -2239,7 +2213,6 @@ func setupLefthookConfig() error {
 			}
 		}
 	} else {
-		// Create pre-commit section if it doesn't exist
 		if configData["pre-commit"] == nil {
 			configData["pre-commit"] = make(map[string]interface{})
 		}
@@ -2256,7 +2229,6 @@ func setupLefthookConfig() error {
 			},
 		}
 
-		// Write back
 		updatedData, err := yaml.Marshal(configData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal updated config: %w", err)
@@ -2272,28 +2244,22 @@ func setupLefthookConfig() error {
 	return nil
 }
 
-// setupHuskyConfig adds ai-rulez hooks to husky configuration
 func setupHuskyConfig() error {
-	// Check if .husky directory exists
 	if _, err := os.Stat(".husky"); os.IsNotExist(err) {
 		return fmt.Errorf(".husky directory not found")
 	}
 
-	// Check if pre-commit hook already exists
 	preCommitPath := ".husky/pre-commit"
 	var hookContent string
 
 	if data, err := os.ReadFile(preCommitPath); err == nil {
-		// Pre-commit hook exists, append to it
 		hookContent = string(data)
 
-		// Check if ai-rulez is already in the hook
 		if strings.Contains(hookContent, "ai-rulez") {
 			fmt.Printf("  - ai-rulez hook already exists in %s\n", preCommitPath)
 			return nil
 		}
 
-		// Append ai-rulez command
 		if !strings.HasSuffix(hookContent, "\n") {
 			hookContent += "\n"
 		}
@@ -2301,7 +2267,6 @@ func setupHuskyConfig() error {
 		hookContent += "echo 'Validating AI rules...'\n"
 		hookContent += "npx ai-rulez generate --dry-run || exit 1\n"
 	} else {
-		// Create new pre-commit hook
 		hookContent = `#!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
@@ -2311,7 +2276,6 @@ npx ai-rulez generate --dry-run || exit 1
 `
 	}
 
-	// Write the hook file
 	if err := os.WriteFile(preCommitPath, []byte(hookContent), 0o755); err != nil {
 		return fmt.Errorf("failed to write husky pre-commit hook: %w", err)
 	}
@@ -2323,7 +2287,6 @@ npx ai-rulez generate --dry-run || exit 1
 	return nil
 }
 
-// setupPreCommitConfig adds ai-rulez hooks to pre-commit configuration
 func setupPreCommitConfig() error {
 	configFile := ""
 	files := []string{".pre-commit-config.yaml", ".pre-commit-config.yml"}
@@ -2338,25 +2301,21 @@ func setupPreCommitConfig() error {
 		return fmt.Errorf("pre-commit configuration file not found")
 	}
 
-	// Read existing config
 	data, err := os.ReadFile(configFile)
 	if err != nil {
 		return fmt.Errorf("failed to read pre-commit config: %w", err)
 	}
 
-	// Parse YAML
 	var configData map[string]interface{}
 	if err := yaml.Unmarshal(data, &configData); err != nil {
 		return fmt.Errorf("failed to parse pre-commit config: %w", err)
 	}
 
-	// Check if repos exists
 	repos, ok := configData["repos"].([]interface{})
 	if !ok {
 		repos = []interface{}{}
 	}
 
-	// Check if ai-rulez repo already exists
 	aiRulezExists := false
 	for _, repo := range repos {
 		if repoMap, ok := repo.(map[string]interface{}); ok {
@@ -2370,10 +2329,9 @@ func setupPreCommitConfig() error {
 	}
 
 	if !aiRulezExists {
-		// Add ai-rulez repo
 		aiRulezRepo := map[string]interface{}{
 			"repo": "https://github.com/Goldziher/ai-rulez",
-			"rev":  "v1.4.3", // Use latest version
+			"rev":  "v1.4.3",
 			"hooks": []interface{}{
 				map[string]interface{}{
 					"id": "ai-rulez-validate",
@@ -2383,7 +2341,6 @@ func setupPreCommitConfig() error {
 		repos = append(repos, aiRulezRepo)
 		configData["repos"] = repos
 
-		// Write back
 		updatedData, err := yaml.Marshal(configData)
 		if err != nil {
 			return fmt.Errorf("failed to marshal updated config: %w", err)
@@ -2403,7 +2360,6 @@ func setupPreCommitConfig() error {
 	return nil
 }
 
-// readFromStdin reads content from standard input until EOF
 func readFromStdin() (string, error) {
 	reader := bufio.NewReader(os.Stdin)
 	var content strings.Builder
@@ -2424,7 +2380,6 @@ func readFromStdin() (string, error) {
 }
 
 func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	name := request.GetString("name", "")
 	if name == "" {
 		return mcp.NewToolResultError("Rule name is required"), nil
@@ -2438,7 +2393,6 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	priority := int(request.GetFloat("priority", 5))
 	id := request.GetString("id", "")
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2448,13 +2402,11 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Add new rule
 	newRule := config.Rule{
 		ID:       id,
 		Name:     name,
@@ -2463,7 +2415,6 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 	}
 	cfg.Rules = append(cfg.Rules, newRule)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2484,7 +2435,6 @@ func handleAddRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallT
 }
 
 func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	title := request.GetString("title", "")
 	if title == "" {
 		return mcp.NewToolResultError("Section title is required"), nil
@@ -2498,7 +2448,6 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	priority := int(request.GetFloat("priority", 5))
 	id := request.GetString("id", "")
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2508,13 +2457,11 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Add new section
 	newSection := config.Section{
 		ID:       id,
 		Title:    title,
@@ -2523,7 +2470,6 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	}
 	cfg.Sections = append(cfg.Sections, newSection)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2544,7 +2490,6 @@ func handleAddSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 }
 
 func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	filename := request.GetString("filename", "")
 	if filename == "" {
 		return mcp.NewToolResultError("Output filename is required"), nil
@@ -2552,7 +2497,6 @@ func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 
 	template := request.GetString("template", "")
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2562,27 +2506,23 @@ func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Check if output already exists
 	for _, output := range cfg.Outputs {
 		if output.GetPath() == filename {
 			return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' already exists in configuration", filename)), nil
 		}
 	}
 
-	// Add new output
 	newOutput := config.Output{
 		Path:     filename,
 		Template: template,
 	}
 	cfg.Outputs = append(cfg.Outputs, newOutput)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2602,7 +2542,6 @@ func handleAddOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 }
 
 func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	name := request.GetString("name", "")
 	if name == "" {
 		return mcp.NewToolResultError("Rule name is required"), nil
@@ -2611,7 +2550,6 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	newContent := request.GetString("content", "")
 	priority := int(request.GetFloat("priority", 0))
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2621,13 +2559,11 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find the rule to update
 	ruleIndex := -1
 	for i, rule := range cfg.Rules {
 		if rule.Name == name {
@@ -2640,7 +2576,6 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("Rule '%s' not found", name)), nil
 	}
 
-	// Update the rule
 	if newContent != "" {
 		cfg.Rules[ruleIndex].Content = newContent
 	}
@@ -2648,7 +2583,6 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		cfg.Rules[ruleIndex].Priority = priority
 	}
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2669,7 +2603,6 @@ func handleUpdateRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 }
 
 func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	title := request.GetString("title", "")
 	if title == "" {
 		return mcp.NewToolResultError("Section title is required"), nil
@@ -2678,7 +2611,6 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	newContent := request.GetString("content", "")
 	priority := int(request.GetFloat("priority", 0))
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2688,13 +2620,11 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find the section to update
 	sectionIndex := -1
 	for i, section := range cfg.Sections {
 		if section.Title == title {
@@ -2707,7 +2637,6 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		return mcp.NewToolResultError(fmt.Sprintf("Section '%s' not found", title)), nil
 	}
 
-	// Update the section
 	if newContent != "" {
 		cfg.Sections[sectionIndex].Content = newContent
 	}
@@ -2715,7 +2644,6 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		cfg.Sections[sectionIndex].Priority = priority
 	}
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2736,7 +2664,6 @@ func handleUpdateSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 }
 
 func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	filename := request.GetString("filename", "")
 	if filename == "" {
 		return mcp.NewToolResultError("Output filename is required"), nil
@@ -2747,7 +2674,6 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError("Template is required"), nil
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2757,13 +2683,11 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find the output to update
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
 		if output.GetPath() == filename {
@@ -2776,10 +2700,8 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' not found", filename)), nil
 	}
 
-	// Update the output
 	cfg.Outputs[outputIndex].Template = template
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2800,13 +2722,11 @@ func handleUpdateOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	name := request.GetString("name", "")
 	if name == "" {
 		return mcp.NewToolResultError("Rule name is required"), nil
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2816,13 +2736,11 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find and remove the rule
 	ruleIndex := -1
 	for i, rule := range cfg.Rules {
 		if rule.Name == name {
@@ -2835,10 +2753,8 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		return mcp.NewToolResultError(fmt.Sprintf("Rule '%s' not found", name)), nil
 	}
 
-	// Remove the rule
 	cfg.Rules = append(cfg.Rules[:ruleIndex], cfg.Rules[ruleIndex+1:]...)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2855,13 +2771,11 @@ func handleDeleteRule(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 }
 
 func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	title := request.GetString("title", "")
 	if title == "" {
 		return mcp.NewToolResultError("Section title is required"), nil
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2871,13 +2785,11 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find and remove the section
 	sectionIndex := -1
 	for i, section := range cfg.Sections {
 		if section.Title == title {
@@ -2890,10 +2802,8 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		return mcp.NewToolResultError(fmt.Sprintf("Section '%s' not found", title)), nil
 	}
 
-	// Remove the section
 	cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2910,13 +2820,11 @@ func handleDeleteSection(ctx context.Context, request mcp.CallToolRequest) (*mcp
 }
 
 func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters
 	filename := request.GetString("filename", "")
 	if filename == "" {
 		return mcp.NewToolResultError("Output filename is required"), nil
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2926,13 +2834,11 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find and remove the output
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
 		if output.GetPath() == filename {
@@ -2945,10 +2851,8 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		return mcp.NewToolResultError(fmt.Sprintf("Output file '%s' not found", filename)), nil
 	}
 
-	// Remove the output
 	cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -2965,7 +2869,6 @@ func handleDeleteOutput(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 }
 
 func handleGetAgents(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -2975,27 +2878,24 @@ func handleGetAgents(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 		configFile = foundConfig
 	}
 
-	// Load configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Get name filter
 	nameFilter := request.GetString("name_filter", "")
 
-	// Filter agents by name if filter is provided
-	var agents []config.Agent
+	var agentsList []config.Agent
 	for i := range cfg.Agents {
 		if nameFilter == "" || strings.Contains(strings.ToLower(cfg.Agents[i].Name), strings.ToLower(nameFilter)) {
-			agents = append(agents, cfg.Agents[i])
+			agentsList = append(agentsList, cfg.Agents[i])
 		}
 	}
 
 	result := map[string]interface{}{
 		"config_file":  configFile,
-		"total_agents": len(agents),
-		"agents":       agents,
+		"total_agents": len(agentsList),
+		"agents":       agentsList,
 	}
 
 	jsonResult, _ := json.MarshalIndent(result, "", "  ")
@@ -3003,7 +2903,6 @@ func handleGetAgents(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 }
 
 func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get required parameters
 	name := request.GetString("name", "")
 	if name == "" {
 		return mcp.NewToolResultError("Agent name is required"), nil
@@ -3014,13 +2913,11 @@ func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		return mcp.NewToolResultError("System prompt is required"), nil
 	}
 
-	// Get optional parameters
 	description := request.GetString("description", "")
 	priority := int(request.GetFloat("priority", 5))
 	toolsStr := request.GetString("tools", "")
 	id := request.GetString("id", "")
 
-	// Parse tools list
 	var tools []string
 	if toolsStr != "" {
 		tools = strings.Split(toolsStr, ",")
@@ -3029,7 +2926,6 @@ func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		}
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -3039,20 +2935,17 @@ func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Check if agent already exists
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == name {
 			return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' already exists", name)), nil
 		}
 	}
 
-	// Add new agent
 	newAgent := config.Agent{
 		ID:           id,
 		Name:         name,
@@ -3063,7 +2956,6 @@ func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	}
 	cfg.Agents = append(cfg.Agents, newAgent)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -3081,19 +2973,16 @@ func handleAddAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 }
 
 func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get required parameters
 	name := request.GetString("name", "")
 	if name == "" {
 		return mcp.NewToolResultError("Agent name is required"), nil
 	}
 
-	// Get optional parameters
 	description := request.GetString("description", "")
 	priority := int(request.GetFloat("priority", 0))
 	systemPrompt := request.GetString("system_prompt", "")
 	toolsStr := request.GetString("tools", "")
 
-	// Parse tools list
 	var tools []string
 	if toolsStr != "" {
 		tools = strings.Split(toolsStr, ",")
@@ -3102,7 +2991,6 @@ func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		}
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -3112,13 +3000,11 @@ func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find the agent to update
 	agentIndex := -1
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == name {
@@ -3131,7 +3017,6 @@ func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' not found", name)), nil
 	}
 
-	// Update the agent
 	if description != "" {
 		cfg.Agents[agentIndex].Description = description
 	}
@@ -3145,7 +3030,6 @@ func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		cfg.Agents[agentIndex].Tools = tools
 	}
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -3162,13 +3046,11 @@ func handleUpdateAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 }
 
 func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get required parameters
 	name := request.GetString("name", "")
 	if name == "" {
 		return mcp.NewToolResultError("Agent name is required"), nil
 	}
 
-	// Get config file path
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		foundConfig, err := config.FindConfigFile(".")
@@ -3178,13 +3060,11 @@ func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		configFile = foundConfig
 	}
 
-	// Load existing configuration
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error loading configuration: %v", err)), nil
 	}
 
-	// Find and remove the agent
 	agentIndex := -1
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == name {
@@ -3197,10 +3077,8 @@ func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return mcp.NewToolResultError(fmt.Sprintf("Agent '%s' not found", name)), nil
 	}
 
-	// Remove the agent
 	cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configFile); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error saving configuration: %v", err)), nil
 	}
@@ -3218,16 +3096,13 @@ func handleDeleteAgent(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 
 //nolint:gocyclo // This function handles complex initialization logic with multiple providers
 func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	// Get parameters with defaults
 	projectName := request.GetString("project_name", "My Project")
 	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
-	// Check if config file already exists
 	if _, err := os.Stat(configFile); err == nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Configuration file already exists: %s", configFile)), nil
 	}
 
-	// Parse provider flags from the request
 	providers := ProviderConfig{
 		Enabled:      []string{},
 		WithAgents:   request.GetBool("with_agents", false),
@@ -3235,7 +3110,6 @@ func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		NoComments:   request.GetBool("no_comments", false),
 	}
 
-	// Check convenience flags first
 	all := request.GetBool("all", false)
 	popular := request.GetBool("popular", false)
 	minimal := request.GetBool("minimal", false)
@@ -3250,7 +3124,6 @@ func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		providers.WithAgents = false
 		providers.WithSections = false
 	} else {
-		// Check individual provider flags
 		if request.GetBool("claude", false) {
 			providers.Enabled = append(providers.Enabled, "claude")
 		}
@@ -3273,13 +3146,11 @@ func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 			providers.Enabled = append(providers.Enabled, "continue")
 		}
 
-		// Default to Claude if no providers specified
 		if len(providers.Enabled) == 0 {
 			providers.Enabled = []string{"claude"}
 		}
 	}
 
-	// Create configuration with selected providers
 	if err := createProviderConfigFile(projectName, configFile, providers); err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Error creating configuration: %v", err)), nil
 	}
@@ -3294,7 +3165,6 @@ func handleInitProject(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		"no_comments":   providers.NoComments,
 	}
 
-	// Handle setup hooks if requested
 	setupHooks := request.GetBool("setup_hooks", false)
 	if setupHooks {
 		messages := []string{}

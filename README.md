@@ -1,6 +1,6 @@
 # ai-rulez ⚡
 
-Lightning-fast CLI tool and MCP server for managing AI assistant rules across Claude, Cursor, Windsurf, and other tools from a single YAML configuration.
+Lightning-fast CLI tool and MCP server for managing AI assistant rules across Claude, Cursor, Windsurf, Copilot, and other AI tools from a single YAML configuration.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -70,15 +70,51 @@ Begin by initializing a project configuration file (`ai-rulez.yaml`) in the curr
 ai-rulez init
 ```
 
-Optionally use arguments to configure the schema:
+##### Using Presets
 
-##### Initialize with project name and common providers
+Presets provide tool-specific configurations:
+
 ```bash
-ai-rulez init "My Project" --claude --cursor --windsurf
+# Initialize for Claude with agents support
+ai-rulez init "My Project" --preset claude
+
+# Initialize for Cursor
+ai-rulez init "My Project" --preset cursor
+
+# Initialize for GitHub Copilot
+ai-rulez init "My Project" --preset copilot
 ```
 
-##### Initialize with all providers, sub-agents support and sections
+Available presets: `claude`, `amp`, `codex`, `cursor`, `gemini`, `windsurf`, `copilot`, `cline`, `continue`
+
+##### Using AI Agents for Generation
+
+If you have AI CLI tools installed (Claude, AMP, Codex, Cursor Agent, Gemini), ai-rulez can use them to generate your configuration:
+
 ```bash
+# Interactive mode - prompts for available agents
+ai-rulez init "My Project"
+
+# Use specific agent
+ai-rulez init "My Project" --use-agent claude
+
+# List available agents
+ai-rulez init --list-agents
+
+# Skip agent detection
+ai-rulez init "My Project" --no-agent
+```
+
+##### Manual Provider Selection
+
+```bash
+# Initialize with specific providers
+ai-rulez init "My Project" --claude --cursor --windsurf
+
+# Initialize with popular providers
+ai-rulez init "My Project" --popular
+
+# Initialize with all providers
 ai-rulez init "My Project" --all --with-agents --with-sections
 ```
 
@@ -91,6 +127,28 @@ ai-rulez generate
 ```bash
 ai-rulez validate
 ```
+
+## Supported AI Tools
+
+ai-rulez supports configuration generation for the following AI assistants and IDEs:
+
+### AI Assistants & Agents
+- **Claude (Anthropic)** - `CLAUDE.md` + `.claude/agents/` for specialized sub-agents
+- **AMP (Sourcegraph)** - `AGENTS.md` shared configuration
+- **Codex (OpenAI)** - `AGENTS.md` shared configuration  
+- **Gemini (Google)** - `GEMINI.md` configuration
+
+### IDE & Editor Integrations
+- **Cursor** - `AGENTS.md` + `.cursor/rules/` directory with `.mdc` files
+- **Windsurf** - `.windsurf/` directory with markdown files
+- **GitHub Copilot** - `.github/copilot-instructions.md` repository instructions
+- **Cline** - `.clinerules/` directory with numbered markdown files
+- **Continue.dev** - `.continue/rules/` directory with frontmatter-enabled markdown
+
+### Shared Configuration
+Some tools share the `AGENTS.md` file format:
+- AMP, Codex, and Cursor all read from `AGENTS.md` at the project root
+- Cursor additionally supports its own `.cursor/rules/` directory
 
 ### MCP Server Configuration
 
@@ -179,8 +237,26 @@ outputs:
     type: "rule"
     naming_scheme: "rules.mdc"  # All rules in one file named rules.mdc
   
-  # Windsurf
-  - path: ".windsurfrules"
+  # Windsurf - new directory format
+  - path: ".windsurf/"
+    type: "rule"
+    naming_scheme: "{name}.md"
+  
+  # GitHub Copilot
+  - file: ".github/copilot-instructions.md"
+  
+  # Cline - numbered markdown files
+  - path: ".clinerules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"
+  
+  # Continue.dev - with frontmatter
+  - path: ".continue/rules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"
+  
+  # Shared AGENTS.md for AMP, Codex, Cursor
+  - file: "AGENTS.md"
   
   # Generate individual agent files for Claude
   - path: ".claude/agents/"

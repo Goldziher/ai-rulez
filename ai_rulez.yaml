@@ -5,14 +5,11 @@ metadata:
   version: "1.6.1"
   description: "Lightning-fast CLI tool and MCP server for managing AI assistant rules across multiple platforms"
 
-# Example remote includes (commented out for this project):
-# includes:
-#   - "https://raw.githubusercontent.com/myorg/coding-standards/main/go-rules.yaml"
-#   - "https://api.company.com/ai-rules/security.yaml"
 
 outputs:
   - file: "CLAUDE.md"
     template: "default"
+
   - path: ".claude/agents/"
     type: "agent"
     naming_scheme: "{name}.md"
@@ -29,7 +26,7 @@ agents:
       - Use appropriate data structures and algorithms
       - Implement proper context handling and cancellation
       - Follow Go naming conventions and project patterns
-  
+
   - name: "schema-engineer"
     description: "JSON Schema evolution and validation specialist"
     priority: 9
@@ -41,7 +38,7 @@ agents:
       - Write clear validation error messages
       - Handle schema versioning and migration
       - Test edge cases and malformed inputs
-  
+
   - name: "test-engineer"
     description: "Testing strategy and implementation specialist"
     priority: 9
@@ -53,7 +50,7 @@ agents:
       - Test error conditions and edge cases
       - Create E2E test scenarios for new features
       - Use testify/assert for readable assertions
-  
+
   - name: "cli-engineer"
     description: "CLI/UX specialist for command-line interface"
     priority: 8
@@ -65,7 +62,7 @@ agents:
       - Add interactive prompts for missing fields
       - Follow Unix CLI conventions
       - Support both flags and environment variables
-  
+
   - name: "mcp-engineer"
     description: "MCP server integration specialist"
     priority: 8
@@ -77,7 +74,7 @@ agents:
       - Write comprehensive tool descriptions
       - Test with real AI assistant integrations
       - Validate all inputs and outputs
-  
+
   - name: "devops-engineer"
     description: "CI/CD and release management specialist"
     priority: 7
@@ -89,7 +86,7 @@ agents:
       - Test cross-platform compatibility
       - Manage package manager distributions
       - Handle versioning and changelog updates
-  
+
   - name: "code-reviewer"
     description: "Code quality and convention compliance reviewer"
     priority: 10
@@ -102,7 +99,7 @@ agents:
       - Ensure consistent error handling
       - Verify proper documentation
       - Run golangci-lint and go vet
-  
+
   - name: "documentation-engineer"
     description: "Documentation and examples specialist"
     priority: 6
@@ -276,33 +273,42 @@ sections:
     priority: 50
     content: |
       ## Development Setup
-      
+
       This project uses Go 1.24+ and Task for build automation.
-      
+
       **Prerequisites:**
       - Go 1.24+
       - Task (taskfile.dev)
       - golangci-lint v2
       - lefthook (for git hooks)
       - pnpm (for npm package management)
-      
+
       **Setup:**
       ```bash
       task setup
       ```
-      
-      **Common Commands:**
-      - `task build` - Build the binary
-      - `task test` - Run unit tests
-      - `task lint` - Run linting
-      - `task ci` - Run all CI checks
-      - `task dev` - Development workflow
-      
+
+      **Common Task Commands:**
+      ```bash
+      task build         # Build the binary
+      task test          # Run unit tests
+      task test:e2e      # Run end-to-end tests
+      task test:coverage # Run tests with coverage
+      task lint          # Run golangci-lint
+      task lint:fix      # Auto-fix linting issues
+      task fmt           # Format code with go fmt
+      task ci            # Run all CI checks
+      task dev           # Full dev cycle (tidy, format, lint, test)
+      task clean         # Clean build artifacts
+      ```
+
+      **See CONTRIBUTING.md for complete Taskfile documentation**
+
   - title: "Architecture Overview"
     priority: 40
     content: |
       ## Project Structure
-      
+
       ```
       ai-rulez/
       ├── cmd/              # CLI entry point and command definitions
@@ -317,7 +323,7 @@ sections:
       │   └── suites/       # Test suites for different functionality
       └── testing/          # Test scenarios and mock data
       ```
-      
+
       The tool is designed for high performance with:
       - Incremental file generation (only writes when changed)
       - Concurrent processing for remote includes and generation
@@ -330,21 +336,21 @@ sections:
     priority: 45
     content: |
       ## Remote Includes Feature
-      
+
       ai-rulez now supports remote configuration includes via HTTP/HTTPS URLs:
-      
+
       ```yaml
       includes:
         - "https://raw.githubusercontent.com/myorg/standards/main/backend.yaml"
-        - "https://api.company.com/ai-rules/security.yaml" 
+        - "https://api.company.com/ai-rules/security.yaml"
         - "./local-overrides.yaml"  # Mix with local files
       ```
-      
+
       **Security Features:**
       - SSRF protection (blocks private IPs, localhost, metadata services)
       - Content validation and size limits
       - Timeout protection
-      
+
       **Performance:**
       - Multi-level caching (memory, disk, HTTP headers)
       - Efficient concurrent fetching
@@ -354,57 +360,57 @@ sections:
     priority: 35
     content: |
       ## ✨ Cursor Rules Migration (.cursorrules → .cursor/rules/)
-      
+
       **Important:** Cursor has deprecated the old `.cursorrules` format in favor of the new `.cursor/rules/` directory with `.mdc` files.
-      
+
       ### New Format Usage
-      
+
       Instead of generating a single `.cursorrules` file, use directory outputs:
-      
+
       ```yaml
       outputs:
         - path: ".cursor/rules/"
-          type: "rule" 
+          type: "rule"
           naming_scheme: "rules.mdc"
       ```
-      
+
       This generates `.cursor/rules/rules.mdc` with proper MDC (Markdown with Content) format and metadata headers.
-      
+
       ### Benefits of New Format
-      
+
       - **Better organization** with multiple rule files in a directory
       - **Scoped rules** using file patterns (globs)
-      - **Version control friendly** with individual files  
+      - **Version control friendly** with individual files
       - **Enhanced metadata** support with frontmatter
       - **Subdirectory support** for folder-specific rules
-      
+
       ### Migration Steps
-      
+
       1. **Update your configuration** to use directory format above
       2. **Regenerate files**: `ai-rulez generate`
-      3. **Remove old file**: Delete `.cursorrules` from your project  
+      3. **Remove old file**: Delete `.cursorrules` from your project
       4. **Update .gitignore**: Use `.cursor/` instead of `.cursorrules`
-      
+
       The new format is fully backward compatible - your existing rules work the same way.
 
   - title: "MCP Server Integration"
     priority: 48
     content: |
       ## Model Context Protocol (MCP) Server
-      
+
       ai-rulez includes a built-in MCP server that allows AI assistants to dynamically manage configuration:
-      
+
       ```bash
       # Start MCP server
       ai-rulez mcp
-      
+
       # With custom config
       ai-rulez mcp --config custom-config.yaml
       ```
-      
+
       **Available MCP Tools:**
       - `get_rules`, `get_sections`, `get_agents` - Retrieve configuration elements
-      - `add_rule`, `add_section`, `add_agent` - Create new configuration elements  
+      - `add_rule`, `add_section`, `add_agent` - Create new configuration elements
       - `update_rule`, `update_section`, `update_agent` - Modify existing elements
       - `delete_rule`, `delete_section`, `delete_agent` - Remove elements
       - `add_output`, `update_output`, `delete_output` - Manage output configurations
@@ -412,7 +418,7 @@ sections:
       - `validate_config` - Validate configuration syntax and structure
       - `init_project` - Initialize new projects with provider templates
       - `get_version` - Get current ai-rulez version
-      
+
       **Integration Benefits:**
       - Real-time configuration updates without file editing
       - Seamless AI assistant workflow integration
@@ -423,31 +429,31 @@ sections:
     priority: 42
     content: |
       ## Agent Management
-      
+
       ai-rulez supports comprehensive agent management with full CRUD operations:
-      
+
       ```bash
       # Add new agent
       ai-rulez add agent code-reviewer --description "Reviews code quality" \
         --priority 8 --tools "Read,Grep,Edit" --system-prompt "You are a code reviewer..."
-      
+
       # Update existing agent
       ai-rulez update agent code-reviewer --priority 9 --tools "Read,Grep,Edit,MultiEdit"
-      
+
       # Delete agent
       ai-rulez delete agent code-reviewer
       ```
-      
+
       **Agent Features:**
       - Specialized system prompts for different use cases
       - Tool restrictions for focused functionality
       - Priority-based ordering and selection
       - Template-based prompt generation
       - Directory-based output organization
-      
+
       **Common Agent Types:**
       - `code-reviewer` - Code quality and best practices
-      - `debugger` - Error analysis and troubleshooting  
+      - `debugger` - Error analysis and troubleshooting
       - `documenter` - Documentation generation and updates
       - `tester` - Test case generation and validation
       - `refactor` - Code restructuring and optimization
@@ -456,27 +462,87 @@ sections:
     priority: 38
     content: |
       ## Comprehensive Test Coverage
-      
+
       The project maintains high quality through extensive testing:
-      
+
       **Test Types:**
       ```bash
       task test          # Run unit tests
-      task test-e2e      # Run end-to-end tests  
-      task test-race     # Run with race detection
-      task coverage      # Generate coverage report
+      task test:e2e      # Run end-to-end tests
+      task test:race     # Run with race detection
+      task test:coverage # Generate coverage report
       ```
-      
+
       **Test Structure:**
       - **Unit Tests** - Individual function and method testing
       - **Integration Tests** - Component interaction testing
       - **E2E Tests** - Full CLI workflow testing with real scenarios
       - **MCP Tests** - Model Context Protocol functionality testing
-      - **JSON Suite Tests** - Configuration validation and generation
-      
+      - **Agent Integration Tests** - AI agent detection and invocation testing
+
+      **AI Agent Integration Tests:**
+      ```bash
+      # Run with environment variable to enable agent tests
+      AI_RULEZ_INTEGRATION_TEST=1 task test:e2e
+      ```
+
       **Quality Gates:**
       - Minimum 80% test coverage required
       - All tests must pass before merge
       - Race condition detection enabled
       - Performance benchmarks for critical paths
       - Schema validation for all configurations
+
+  - title: "AI Agent Integration and Presets"
+    priority: 46
+    content: |
+      ## AI Agent Integration
+
+      The init command now supports AI agent integration for configuration generation:
+
+      ```bash
+      # Use Claude to generate configuration
+      ai-rulez init "MyProject" --use-agent claude
+
+      # Use specific preset configuration
+      ai-rulez init "MyProject" --preset claude
+
+      # Combine preset with agent assistance
+      ai-rulez init "MyProject" --preset cursor --use-agent gemini
+      ```
+
+      **Supported AI Agents:**
+      - `claude` - Claude (Anthropic)
+      - `gemini` - Gemini (Google)
+      - `amp` - AMP (Sourcegraph)
+      - `codex` - Codex (OpenAI)
+      - `cursor-agent` - Cursor Agent (Cursor IDE)
+
+      **Available Presets:**
+      - `claude` - Claude with agents support
+      - `cursor` - Cursor IDE configuration
+      - `windsurf` - Windsurf editor setup
+      - `copilot` - GitHub Copilot instructions
+      - `gemini` - Google Gemini configuration
+      - `amp` - AMP configuration (shares AGENTS.md)
+      - `codex` - Codex configuration (shares AGENTS.md)
+      - `cline` - Cline assistant rules
+      - `continue-dev` - Continue.dev rules
+
+      **Non-Interactive Mode:**
+      ```bash
+      # List available agents
+      ai-rulez init --list-agents
+
+      # Skip agent detection
+      ai-rulez init "MyProject" --no-agent
+
+      # Use specific providers
+      ai-rulez init "MyProject" --claude --cursor --copilot
+      ```
+
+      **Directory-Based Formats:**
+      - `.windsurf/` - New Windsurf format (not `.windsurfrules`)
+      - `.clinerules/` - Cline rules directory
+      - `.continue/rules/` - Continue.dev rules
+      - `.cursor/rules/` - Cursor MDC format

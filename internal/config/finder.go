@@ -7,11 +7,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/errors"
 )
 
-// FindConfigFile searches for config files starting from the current directory
-// and traversing up to the root. Returns the path to the first config file found.
-// Supports: ai-rulez.yaml, .ai-rulez.yaml, ai_rulez.yaml, .ai_rulez.yaml (and .yml variants)
 func FindConfigFile(startDir string) (string, error) {
-	// Config file names to search for (in priority order)
 	configNames := []string{
 		".ai-rulez.yaml", ".ai-rulez.yml",
 		"ai-rulez.yaml", "ai-rulez.yml",
@@ -19,7 +15,6 @@ func FindConfigFile(startDir string) (string, error) {
 		"ai_rulez.yaml", "ai_rulez.yml",
 	}
 
-	// Start from the given directory
 	dir, err := filepath.Abs(startDir)
 	if err != nil {
 		return "", errors.FileRead(startDir, err).
@@ -27,13 +22,11 @@ func FindConfigFile(startDir string) (string, error) {
 			WithSuggestion("Check if the directory exists and is accessible")
 	}
 
-	// Keep track of visited directories to avoid infinite loops
 	visited := make(map[string]bool)
 
 	for !visited[dir] {
 		visited[dir] = true
 
-		// Check for each config file name
 		for _, name := range configNames {
 			configPath := filepath.Join(dir, name)
 			if _, err := os.Stat(configPath); err == nil {
@@ -41,10 +34,8 @@ func FindConfigFile(startDir string) (string, error) {
 			}
 		}
 
-		// Move to parent directory
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			// We've reached the root
 			break
 		}
 		dir = parent
@@ -53,9 +44,6 @@ func FindConfigFile(startDir string) (string, error) {
 	return "", errors.ConfigNotFound(startDir)
 }
 
-// FindAllConfigFiles recursively finds all config files
-// starting from the given directory.
-// Supports: ai-rulez.yaml, .ai-rulez.yaml, ai_rulez.yaml, .ai_rulez.yaml (and .yml variants)
 func FindAllConfigFiles(rootDir string) ([]string, error) {
 	var configs []string
 	configNames := map[string]bool{
@@ -71,12 +59,10 @@ func FindAllConfigFiles(rootDir string) ([]string, error) {
 				WithContext("operation", "walk directory")
 		}
 
-		// Skip hidden directories (except .ai-rulez.yaml itself)
 		if info.IsDir() && filepath.Base(path) != "." && filepath.Base(path)[0] == '.' {
 			return filepath.SkipDir
 		}
 
-		// Check if this is a config file
 		if !info.IsDir() && configNames[filepath.Base(path)] {
 			configs = append(configs, path)
 		}

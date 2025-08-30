@@ -80,7 +80,6 @@ func TestSortAgentsByPriority(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Sort agents (this happens in NewTemplateData)
 			cfg := &config.Config{
 				Metadata: config.Metadata{Name: "Test"},
 				Outputs:  []config.Output{{Path: "test.md"}},
@@ -130,19 +129,16 @@ func TestNewTemplateData_WithAgents(t *testing.T) {
 
 	data := templates.NewTemplateData(cfg)
 
-	// Check basic fields
 	assert.Equal(t, "Agent Project", data.ProjectName)
 	assert.Equal(t, "1.0.0", data.Version)
 	assert.Equal(t, "Project with agents", data.Description)
 
-	// Check agents are included and sorted
 	assert.Len(t, data.Agents, 2)
-	assert.Equal(t, "agent1", data.Agents[0].Name) // Higher priority first
+	assert.Equal(t, "agent1", data.Agents[0].Name)
 	assert.Equal(t, 10, data.Agents[0].Priority)
 	assert.Equal(t, "agent2", data.Agents[1].Name)
 	assert.Equal(t, 5, data.Agents[1].Priority)
 
-	// Check other fields still work
 	assert.Len(t, data.Rules, 1)
 	assert.Len(t, data.Sections, 1)
 	assert.Equal(t, 1, data.RuleCount)
@@ -171,12 +167,10 @@ func TestTemplateData_AllContent(t *testing.T) {
 
 	data := templates.NewTemplateData(cfg)
 
-	// Check counts
 	assert.Equal(t, 2, data.RuleCount)
 	assert.Equal(t, 2, data.SectionCount)
 	assert.Len(t, data.Agents, 2)
 
-	// Check sorting - all should be sorted by priority descending
 	assert.Equal(t, 10, data.Rules[0].Priority)
 	assert.Equal(t, 5, data.Rules[1].Priority)
 
@@ -196,13 +190,13 @@ func TestTemplateData_EmptyAgents(t *testing.T) {
 		Rules: []config.Rule{
 			{Name: "Rule1", Priority: 5, Content: "Content"},
 		},
-		Agents: []config.Agent{}, // Empty agents
+		Agents: []config.Agent{},
 	}
 
 	data := templates.NewTemplateData(cfg)
 
 	assert.Empty(t, data.Agents)
-	assert.NotNil(t, data.Agents) // Should be empty slice, not nil
+	assert.NotNil(t, data.Agents)
 	assert.Len(t, data.Rules, 1)
 }
 
@@ -227,17 +221,14 @@ func TestTemplateData_UserRulezWithAgents(t *testing.T) {
 
 	data := templates.NewTemplateData(cfg)
 
-	// Main agents and user agents should be merged
 	assert.Len(t, data.Agents, 2)
 
-	// Higher priority user agent should come first
 	assert.Equal(t, "user-agent", data.Agents[0].Name)
 	assert.Equal(t, 10, data.Agents[0].Priority)
 
 	assert.Equal(t, "main-agent", data.Agents[1].Name)
 	assert.Equal(t, 5, data.Agents[1].Priority)
 
-	// User rules should also be included
 	assert.Len(t, data.Rules, 1)
 	assert.Equal(t, "user-rule", data.Rules[0].Name)
 }

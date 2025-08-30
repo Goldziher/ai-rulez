@@ -1,0 +1,170 @@
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+
+metadata:
+  name: "Full Configuration Example"
+  version: "1.0.0"
+  description: "Comprehensive example showing all supported AI tools and configurations"
+
+outputs:
+  - file: "CLAUDE.md"
+    description: "Main Claude configuration"
+  
+  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
+    description: "Individual agent files for Claude"
+  
+  - file: "AGENTS.md"
+    description: "Shared configuration for AMP (Sourcegraph), Codex (OpenAI), and Cursor"
+  
+  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "rules.mdc"
+    description: "Cursor editor rules in MDC format"
+  
+  - path: ".windsurf/"
+    type: "rule"
+    naming_scheme: "{name}.md"
+    description: "Windsurf editor rules"
+  
+  - file: "GEMINI.md"
+    description: "Google Gemini configuration"
+  
+  - file: ".github/copilot-instructions.md"
+    description: "Repository-wide Copilot instructions"
+  
+  - path: ".clinerules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"
+    description: "Cline assistant rules with numeric prefixes"
+  
+  - path: ".continue/rules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"
+    description: "Continue.dev rules with frontmatter support"
+
+agents:
+  - name: "code-reviewer"
+    description: "Code review and quality analysis specialist"
+    priority: 10
+    system_prompt: |
+      You are a senior code reviewer focusing on:
+      - Code quality and maintainability
+      - Security vulnerabilities
+      - Performance implications
+      - Best practices and conventions
+      
+      Always provide constructive feedback with specific suggestions.
+  
+  - name: "test-writer"
+    description: "Testing and quality assurance specialist"
+    priority: 9
+    system_prompt: |
+      You are a testing expert specializing in:
+      - Writing comprehensive test cases
+      - Test automation and CI/CD
+      - Quality assurance processes
+      - Test-driven development (TDD)
+      
+      Focus on edge cases and maintain high code coverage.
+  
+  - name: "doc-writer"
+    description: "Documentation and technical writing specialist"
+    priority: 8
+    system_prompt: |
+      You are a technical documentation expert who:
+      - Writes clear, concise documentation
+      - Creates helpful code examples
+      - Maintains API documentation
+      - Ensures documentation stays up-to-date
+      
+      Use simple language and provide practical examples.
+
+rules:
+  - name: "Code Quality"
+    priority: 10
+    content: |
+      - Write clean, readable, and maintainable code
+      - Follow consistent coding standards and conventions
+      - Use meaningful variable and function names
+      - Keep functions small and focused on a single task
+  
+  - name: "Error Handling"
+    priority: 9
+    content: |
+      - Always handle errors appropriately
+      - Provide meaningful error messages
+      - Use proper logging for debugging
+      - Never silently swallow exceptions
+  
+  - name: "Testing"
+    priority: 8
+    content: |
+      - Write tests for all new code
+      - Maintain test coverage above 80%
+      - Include unit, integration, and e2e tests where appropriate
+      - Test edge cases and error conditions
+  
+  - name: "Documentation"
+    priority: 7
+    content: |
+      - Document all public APIs and functions
+      - Include examples in documentation
+      - Keep README files up-to-date
+      - Add inline comments for complex logic
+  
+  - name: "Performance"
+    priority: 6
+    content: |
+      - Optimize for readability first, then performance
+      - Profile before optimizing
+      - Consider memory usage and allocation
+      - Use appropriate data structures
+  
+  - name: "Security"
+    priority: 10
+    content: |
+      - Never expose sensitive information in logs or errors
+      - Validate all user inputs
+      - Use parameterized queries for database operations
+      - Keep dependencies up-to-date
+      - Follow OWASP guidelines
+
+sections:
+  - title: "Project Architecture"
+    priority: 9
+    content: |
+      ## Architecture Overview
+      
+      This project follows a modular architecture with:
+      - Clear separation of concerns
+      - Dependency injection for testability
+      - Interface-based design for flexibility
+      
+      ### Key Components
+      - **Core**: Business logic and domain models
+      - **API**: HTTP handlers and middleware
+      - **Storage**: Database and file system operations
+      - **Utils**: Shared utilities and helpers
+  
+  - title: "Development Workflow"
+    priority: 8
+    content: |
+      ## Development Process
+      
+      1. Create feature branch from main
+      2. Write tests first (TDD approach)
+      3. Implement feature
+      4. Run linting and tests locally
+      5. Create pull request with description
+      6. Address code review feedback
+      7. Merge after approval
+      
+      ### Commit Message Format
+      Use conventional commits:
+      - feat: New feature
+      - fix: Bug fix
+      - docs: Documentation changes
+      - test: Test additions or changes
+      - refactor: Code refactoring
+      - chore: Maintenance tasks

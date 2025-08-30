@@ -83,13 +83,11 @@ outputs:
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Create temporary file
 			tmpDir := t.TempDir()
 			configFile := filepath.Join(tmpDir, "config.yaml")
 			err := os.WriteFile(configFile, []byte(tt.content), 0o644)
 			require.NoError(t, err)
 
-			// Load config
 			result, err := config.LoadConfig(configFile)
 
 			if tt.wantErr {
@@ -132,11 +130,9 @@ func TestSaveConfig(t *testing.T) {
 	err := config.SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	// Verify file exists
 	_, err = os.Stat(configFile)
 	assert.NoError(t, err)
 
-	// Load and verify content
 	loaded, err := config.LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Equal(t, cfg, loaded)
