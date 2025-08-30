@@ -21,7 +21,7 @@ func ValidateWithSchema(configData []byte) error {
 			WithSuggestion("Common issues: tabs instead of spaces, missing colons")
 	}
 
-	jsonData, err := json.Marshal(ConvertYAMLToJSON(yamlData))
+	jsonData, err := json.Marshal(convertYAMLToJSON(yamlData))
 	if err != nil {
 		return errors.New(errors.ErrorTypeConfigInvalid, "convert YAML to JSON", err).
 			WithSuggestion("This is an internal error - the YAML structure may be invalid")
@@ -51,17 +51,17 @@ func ValidateWithSchema(configData []byte) error {
 	return nil
 }
 
-func ConvertYAMLToJSON(i any) any {
+func convertYAMLToJSON(i any) any {
 	switch x := i.(type) {
 	case map[any]any:
 		m2 := map[string]any{}
 		for k, v := range x {
-			m2[fmt.Sprint(k)] = ConvertYAMLToJSON(v)
+			m2[fmt.Sprint(k)] = convertYAMLToJSON(v)
 		}
 		return m2
 	case []any:
 		for i, v := range x {
-			x[i] = ConvertYAMLToJSON(v)
+			x[i] = convertYAMLToJSON(v)
 		}
 	}
 	return i
