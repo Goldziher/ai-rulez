@@ -34,7 +34,7 @@ This will:
 - Install lefthook for git hooks
 - Install Node.js dependencies with pnpm
 - Set up pre-commit hooks
-- Sync the JSON schema
+- Install golangci-lint
 
 ### 3. Manual Setup (Alternative)
 
@@ -54,8 +54,7 @@ lefthook install
 # Install Node.js dependencies
 pnpm install
 
-# Sync schema file
-cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
+# The schema is now embedded directly from schema/ directory - no sync needed
 ```
 
 ## Build System (Taskfile)

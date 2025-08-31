@@ -253,7 +253,7 @@ func TestGenerator_NoOutputs(t *testing.T) {
 	gen := generator.New()
 	err := gen.GenerateAll(cfg)
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "required field 'outputs' is missing")
+	assert.Contains(t, err.Error(), "outputs is required")
 }
 
 func TestGenerator_DirectoryCreation(t *testing.T) {
@@ -450,14 +450,24 @@ func TestGenerator_DirectoryOutput(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, info.IsDir())
 
-	expectedFile := filepath.Join(dirPath, "rule-01.md")
-	content, err := os.ReadFile(expectedFile)
-	require.NoError(t, err)
+	// Check that individual rule files were created
+	expectedFiles := []struct {
+		filename     string
+		expectedRule string
+	}{
+		{"rule-01.md", "Rule One"},
+		{"rule-02.md", "Rule Two"},
+		{"rule-03.md", "Rule Three"},
+	}
 
-	contentStr := string(content)
-	assert.Contains(t, contentStr, "Rule One")
-	assert.Contains(t, contentStr, "Rule Two")
-	assert.Contains(t, contentStr, "Rule Three")
+	for _, expected := range expectedFiles {
+		filePath := filepath.Join(dirPath, expected.filename)
+		content, err := os.ReadFile(filePath)
+		require.NoError(t, err, "File %s should exist", expected.filename)
+
+		contentStr := string(content)
+		assert.Contains(t, contentStr, expected.expectedRule)
+	}
 }
 
 func TestGenerator_AgentFiles(t *testing.T) {

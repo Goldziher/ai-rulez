@@ -8,17 +8,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/remote"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
-func LoadConfigWithIncludes(filename string) (*Config, error) {
+func LoadConfigWithIncludes(ctx context.Context, filename string) (*Config, error) {
 	absPath, err := filepath.Abs(filename)
 	if err != nil {
-		return nil, errors.FileRead(filename, err).
-			WithContext("operation", "resolve absolute path").
-			WithSuggestion("Check if the file path is valid and accessible")
+		return nil, oops.
+			With("path", filename).
+			With("operation", "resolve absolute path").
+			Hint("Check if the file path is valid and accessible").
+			Wrapf(err, "resolve absolute path")
 	}
 
 	loader := &configLoader{
@@ -27,7 +29,7 @@ func LoadConfigWithIncludes(filename string) (*Config, error) {
 		remoteClient: remote.NewClient(nil),
 	}
 
-	config, err := loader.loadConfig(absPath)
+	config, err := loader.loadConfig(ctx, absPath)
 	if err != nil {
 		return nil, err
 	}
@@ -37,7 +39,7 @@ func LoadConfigWithIncludes(filename string) (*Config, error) {
 	configBaseName := strings.TrimSuffix(filepath.Base(absPath), filepath.Ext(absPath))
 	localConfigPath := filepath.Join(baseDir, configBaseName+".local.yaml")
 	if _, err := os.Stat(localConfigPath); err == nil {
-		if err := loader.loadLocalOverrides(config, localConfigPath); err != nil {
+		if err := loader.loadLocalOverrides(ctx, config, localConfigPath); err != nil {
 			return nil, err
 		}
 	}
@@ -51,16 +53,22 @@ type configLoader struct {
 	remoteClient *remote.Client
 }
 
-func (l *configLoader) loadConfig(filename string) (*Config, error) {
+func (l *configLoader) loadConfig(ctx context.Context, filename string) (*Config, error) {
+	return l.loadConfigInternal(ctx, filename, false)
+}
+
+func (l *configLoader) loadConfigInternal(ctx context.Context, filename string, isInclude bool) (*Config, error) {
 	configKey := filename
 	if l.isURL(filename) {
 		configKey = filename
 	} else {
 		absPath, err := filepath.Abs(filename)
 		if err != nil {
-			return nil, errors.FileRead(filename, err).
-				WithContext("operation", "resolve absolute path").
-				WithSuggestion("Check if the file path is valid and accessible")
+			return nil, oops.
+				With("path", filename).
+				With("operation", "resolve absolute path").
+				Hint("Check if the file path is valid and accessible").
+				Wrapf(err, "resolve absolute path")
 		}
 		configKey = absPath
 	}
@@ -73,7 +81,12 @@ func (l *configLoader) loadConfig(filename string) (*Config, error) {
 			}
 		}
 		chain = append(chain, configKey)
-		return nil, errors.CircularInclude(chain)
+		return nil, oops.
+			With("path", chain[len(chain)-1]).
+			With("include_chain", chain).
+			With("circular_file", chain[len(chain)-1]).
+			Hint(fmt.Sprintf("Remove the circular reference in %s\nRestructure your includes to avoid circular dependencies\nUse a different include strategy (e.g., separate common rules)\nConsider merging the circular files into a single file", chain[len(chain)-1])).
+			Errorf("circular include detected")
 	}
 	l.visited[configKey] = true
 	defer func() { l.visited[configKey] = false }()
@@ -81,13 +94,18 @@ func (l *configLoader) loadConfig(filename string) (*Config, error) {
 	var config *Config
 	var err error
 	if l.isURL(filename) {
-		config, err = l.loadRemoteConfig(filename)
+		config, err = l.loadRemoteConfig(ctx, filename)
+	} else if isInclude {
+		config, err = LoadPartialConfig(filename)
 	} else {
 		config, err = LoadConfig(filename)
 	}
 	if err != nil {
-		return nil, errors.ConfigLoad(filename, err).
-			WithContext("operation", "loading main config")
+		return nil, oops.
+			With("path", filename).
+			With("filename", filename).
+			With("operation", "loading main config").
+			Wrapf(err, "loading main config")
 	}
 
 	var baseDir string
@@ -96,73 +114,32 @@ func (l *configLoader) loadConfig(filename string) (*Config, error) {
 	} else {
 		baseDir = filepath.Dir(filename)
 	}
-	if err := l.resolveIncludes(config, baseDir); err != nil {
+	if err := l.resolveIncludes(ctx, config, baseDir); err != nil {
 		return nil, err
 	}
 
 	return config, nil
 }
 
-func (l *configLoader) resolveIncludes(config *Config, baseDir string) error {
+func (l *configLoader) resolveIncludes(ctx context.Context, config *Config, baseDir string) error {
 	if len(config.Includes) == 0 {
 		return nil
 	}
 
-	var allRules []Rule
-	var allSections []Section
-	var allAgents []Agent
-	allRules = append(allRules, config.Rules...)
-	allSections = append(allSections, config.Sections...)
-	allAgents = append(allAgents, config.Agents...)
-
-	for _, includePath := range config.Includes {
-		resolvedPath := l.resolvePath(includePath, baseDir)
-
-		if !l.isURL(resolvedPath) {
-			if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-				return errors.New(errors.ErrorTypeConfigNotFound, "resolve include",
-					fmt.Errorf("include file not found: %s", includePath)).
-					WithPath(resolvedPath).
-					WithContext("include_path", includePath).
-					WithContext("resolved_path", resolvedPath).
-					WithSuggestion("Check if the include file exists: %s", resolvedPath).
-					WithSuggestion("Verify the relative path is correct relative to %s", baseDir).
-					WithSuggestion("Use an absolute path if the relative path is unclear")
-			}
-		}
-
-		includedConfig, err := l.loadConfig(resolvedPath)
-		if err != nil {
-			return err
-		}
-
-		allRules = append(allRules, includedConfig.Rules...)
-		allSections = append(allSections, includedConfig.Sections...)
-		allAgents = append(allAgents, includedConfig.Agents...)
+	// Collect all content from includes
+	allRules, allSections, allAgents, err := l.collectIncludedContent(ctx, config, baseDir)
+	if err != nil {
+		return err
 	}
 
+	// Merge and set the results
 	config.Rules = MergeRules(allRules)
 	config.Sections = MergeSections(allSections)
 	config.Agents = MergeAgents(allAgents)
 	config.Includes = nil
 
-	for i := range config.Rules {
-		if config.Rules[i].Priority == 0 {
-			config.Rules[i].Priority = 1
-		}
-	}
-
-	for i := range config.Sections {
-		if config.Sections[i].Priority == 0 {
-			config.Sections[i].Priority = 1
-		}
-	}
-
-	for i := range config.Agents {
-		if config.Agents[i].Priority == 0 {
-			config.Agents[i].Priority = 1
-		}
-	}
+	// Set default priorities
+	setDefaultPriorities(config)
 
 	return nil
 }
@@ -200,17 +177,39 @@ func (*configLoader) isURL(path string) bool {
 	return parsedURL.Scheme == "http" || parsedURL.Scheme == "https"
 }
 
-func (l *configLoader) loadRemoteConfig(configURL string) (*Config, error) {
-	ctx := context.Background()
-
+func (l *configLoader) loadRemoteConfig(ctx context.Context, configURL string) (*Config, error) {
 	content, err := l.remoteClient.Fetch(ctx, configURL)
 	if err != nil {
-		return nil, errors.RemoteConfigFetch(configURL, err)
+		errorMsg := err.Error()
+		hintMsg := fmt.Sprintf("Check if the URL is accessible: %s\nVerify your network connection\nEnsure the remote server is responding correctly\nCheck if authentication is required for this resource", configURL)
+
+		if strings.Contains(errorMsg, "timeout") || strings.Contains(errorMsg, "deadline exceeded") {
+			hintMsg += "\nThe request timed out - try again or check server response time"
+		}
+		if strings.Contains(errorMsg, "connection refused") {
+			hintMsg += "\nConnection refused - check if the server is running"
+		}
+		if strings.Contains(errorMsg, "no such host") {
+			hintMsg += "\nDNS resolution failed - check the hostname"
+		}
+
+		return nil, oops.
+			With("path", configURL).
+			With("url", configURL).
+			Hint(hintMsg).
+			Wrapf(err, "fetch remote config")
 	}
 
 	var config Config
 	if err := yaml.Unmarshal(content, &config); err != nil {
-		return nil, errors.RemoteConfigParse(configURL, err)
+		hintMsg := "Check the YAML syntax in the remote file\nEnsure the remote file follows ai-rulez configuration format\nVerify the remote file content type is text/yaml or application/yaml"
+
+		return nil, oops.
+			With("path", configURL).
+			With("url", configURL).
+			With("parse_error", err.Error()).
+			Hint(hintMsg).
+			Wrapf(err, "parse remote config")
 	}
 
 	return &config, nil
@@ -248,7 +247,7 @@ func MergeSections(sectionSets ...[]Section) []Section {
 
 	for _, sections := range sectionSets {
 		for _, section := range sections {
-			key := section.Title
+			key := section.Name
 			if section.ID != "" {
 				key = section.ID
 			}
@@ -306,26 +305,28 @@ func ValidateIncludes(config *Config, baseDir string) error {
 
 		if !loader.isURL(resolvedPath) {
 			if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-				return errors.New(errors.ErrorTypeConfigNotFound, "validate include",
-					fmt.Errorf("include file not found: %s", includePath)).
-					WithPath(resolvedPath).
-					WithContext("include_path", includePath).
-					WithContext("base_dir", baseDir).
-					WithSuggestion("Check if the include file exists: %s", resolvedPath).
-					WithSuggestion("Verify the path is correct relative to %s", baseDir)
+				return oops.
+					With("path", resolvedPath).
+					With("include_path", includePath).
+					With("base_dir", baseDir).
+					Hint(fmt.Sprintf("Check if the include file exists: %s\nVerify the path is correct relative to %s", resolvedPath, baseDir)).
+					Errorf("include file not found: %s", includePath)
 			}
 		}
 
 		var err error
 		if loader.isURL(resolvedPath) {
-			_, err = loader.loadRemoteConfig(resolvedPath)
+			_, err = loader.loadRemoteConfig(context.Background(), resolvedPath)
 		} else {
-			_, err = LoadConfig(resolvedPath)
+			_, err = LoadPartialConfig(resolvedPath)
 		}
 		if err != nil {
-			return errors.ConfigLoad(resolvedPath, err).
-				WithContext("include_path", includePath).
-				WithContext("operation", "validate include syntax")
+			return oops.
+				With("path", resolvedPath).
+				With("filename", resolvedPath).
+				With("include_path", includePath).
+				With("operation", "validate include syntax").
+				Wrapf(err, "validate include syntax")
 		}
 	}
 
@@ -334,25 +335,29 @@ func ValidateIncludes(config *Config, baseDir string) error {
 
 func ValidateOutputs(outputs []Output) error {
 	if len(outputs) == 0 {
-		return errors.ValidationRequired("outputs", "configuration").
-			WithSuggestion("Add at least one output file in the 'outputs' section").
-			WithSuggestion("Example: outputs: [{file: 'CLAUDE.md', template: 'default'}]")
+		return oops.
+			With("field", "outputs").
+			With("context", "configuration").
+			Hint("Add the required field 'outputs' to your configuration\nAdd at least one output file in the 'outputs' section\nExample: outputs: [{file: 'CLAUDE.md', template: 'default'}]").
+			Errorf("required field 'outputs' is missing")
 	}
 
 	for i, output := range outputs {
 		if output.Path == "" && output.File == "" {
-			return errors.ValidationRequired(fmt.Sprintf("outputs[%d].path or outputs[%d].file", i, i), "output configuration").
-				WithContext("output_index", i).
-				WithSuggestion("Specify a path or file for output[%d]", i).
-				WithSuggestion("Example: path: 'CLAUDE.md' (preferred) or file: 'CLAUDE.md'")
+			return oops.
+				With("field", fmt.Sprintf("outputs[%d].path or outputs[%d].file", i, i)).
+				With("context", "output configuration").
+				With("output_index", i).
+				Hint(fmt.Sprintf("Add the required field 'outputs[%d].path or outputs[%d].file' to your configuration\nSpecify a path or file for output[%d]\nExample: path: 'CLAUDE.md' (preferred) or file: 'CLAUDE.md'", i, i, i)).
+				Errorf("required field 'outputs[%d].path or outputs[%d].file' is missing", i, i)
 		}
 	}
 
 	return nil
 }
 
-func (l *configLoader) loadLocalOverrides(config *Config, filename string) error {
-	localConfig, err := l.loadConfig(filename)
+func (l *configLoader) loadLocalOverrides(ctx context.Context, config *Config, filename string) error {
+	localConfig, err := l.loadConfig(ctx, filename)
 	if err != nil {
 		return err
 	}
