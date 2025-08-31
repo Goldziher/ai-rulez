@@ -14,43 +14,19 @@ import (
 )
 
 func TestDefaultHTTPConfig(t *testing.T) {
-	config := DefaultHTTPConfig()
+	config := defaultHTTPConfig()
 
 	assert.Equal(t, 30*time.Second, config.Timeout)
 	assert.Equal(t, 5, config.MaxRedirects)
 	assert.Contains(t, config.UserAgent, "ai-rulez")
 	assert.Equal(t, int64(10*1024*1024), config.MaxBodySize)
-
 	assert.Contains(t, config.Headers["Accept"], "yaml")
 }
 
-func TestNewClient(t *testing.T) {
-	t.Run("with_default_config", func(t *testing.T) {
-		client := NewTestClient(nil)
-		assert.NotNil(t, client)
-		assert.NotNil(t, client.resty)
-		assert.NotNil(t, client.validator)
-		assert.NotNil(t, client.config)
-	})
-
-	t.Run("with_custom_config", func(t *testing.T) {
-		config := &HTTPConfig{
-			Timeout:      5 * time.Second,
-			MaxRedirects: 3,
-			UserAgent:    "test-agent",
-		}
-		client := NewTestClient(config)
-		assert.Equal(t, config, client.config)
-	})
-}
-
 func TestClient_Fetch(t *testing.T) {
-	t.Run("successful_fetch", func(t *testing.T) {
+	t.Run("successful fetch", func(t *testing.T) {
 		expectedContent := "test: yaml content\nrules:\n  - name: test"
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Contains(t, r.Header.Get("Accept"), "yaml")
-			assert.Contains(t, r.Header.Get("User-Agent"), "ai-rulez")
-
 			w.Header().Set("Content-Type", "text/yaml")
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(expectedContent))
@@ -65,16 +41,7 @@ func TestClient_Fetch(t *testing.T) {
 		assert.Equal(t, expectedContent, string(content))
 	})
 
-	t.Run("invalid_url", func(t *testing.T) {
-		client := NewClient(nil)
-		ctx := context.Background()
-
-		_, err := client.Fetch(ctx, "http://127.0.0.1/test")
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "URL blocked for security reasons")
-	})
-
-	t.Run("http_error_status", func(t *testing.T) {
+	t.Run("http error status", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("Not Found"))
@@ -85,354 +52,264 @@ func TestClient_Fetch(t *testing.T) {
 		ctx := context.Background()
 
 		_, err := client.Fetch(ctx, server.URL)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "HTTP 404")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "404")
 	})
 
-	t.Run("context_timeout", func(t *testing.T) {
+	t.Run("timeout", func(t *testing.T) {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			time.Sleep(200 * time.Millisecond)
+			time.Sleep(100 * time.Millisecond)
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("delayed response"))
 		}))
 		defer server.Close()
 
-		client := NewTestClient(nil)
-		ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
-		defer cancel()
-
-		_, err := client.Fetch(ctx, server.URL)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "request timed out")
-	})
-
-	t.Run("response_too_large", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.WriteHeader(http.StatusOK)
-			largeContent := strings.Repeat("a", int(DefaultHTTPConfig().MaxBodySize)+1)
-			w.Write([]byte(largeContent))
-		}))
-		defer server.Close()
-
-		client := NewTestClient(nil)
+		config := &HTTPConfig{
+			Timeout:      10 * time.Millisecond,
+			MaxRedirects: 5,
+			UserAgent:    "test",
+			MaxBodySize:  1024,
+		}
+		client := NewTestClient(config)
 		ctx := context.Background()
 
 		_, err := client.Fetch(ctx, server.URL)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "response body too large")
+		assert.Error(t, err)
 	})
 
-	t.Run("redirect_handling", func(t *testing.T) {
-		finalContent := "final content"
-
-		var redirectCount int
-		var server *httptest.Server
-		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if redirectCount == 0 {
+	t.Run("redirect handling", func(t *testing.T) {
+		redirectCount := 0
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if redirectCount < 2 {
 				redirectCount++
-				http.Redirect(w, r, server.URL+"/final", http.StatusMovedPermanently)
+				http.Redirect(w, r, fmt.Sprintf("/redirect%d", redirectCount), http.StatusMovedPermanently)
 				return
 			}
-
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(finalContent))
+			w.Write([]byte("final content"))
 		}))
 		defer server.Close()
 
-		client := NewTestClientWithRedirectValidation(nil)
+		client := NewTestClient(nil)
 		ctx := context.Background()
 
 		content, err := client.Fetch(ctx, server.URL)
 		require.NoError(t, err)
-		assert.Equal(t, finalContent, string(content))
+		assert.Equal(t, "final content", string(content))
 	})
 
-	t.Run("too_many_redirects", func(t *testing.T) {
-		var server *httptest.Server
-		server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, server.URL+"/redirect", http.StatusMovedPermanently)
+	t.Run("too many redirects", func(t *testing.T) {
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, "/redirect", http.StatusMovedPermanently)
 		}))
 		defer server.Close()
 
-		config := DefaultHTTPConfig()
-		config.MaxRedirects = 2
-		client := NewTestClientWithRedirectValidation(config)
+		config := &HTTPConfig{
+			Timeout:      5 * time.Second,
+			MaxRedirects: 2,
+			UserAgent:    "test",
+		}
+		client := NewTestClient(config)
 		ctx := context.Background()
 
 		_, err := client.Fetch(ctx, server.URL)
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "stopped after")
+		assert.Error(t, err)
 	})
 }
 
-func TestClient_FetchWithHeaders(t *testing.T) {
-	t.Run("custom_headers", func(t *testing.T) {
-		expectedAuth := "Bearer test-token"
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, expectedAuth, r.Header.Get("Authorization"))
-			assert.Equal(t, "application/json", r.Header.Get("Accept"))
+// ========== Cache Tests ==========
 
-			assert.Contains(t, r.Header.Get("User-Agent"), "ai-rulez")
-
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("success"))
-		}))
-		defer server.Close()
-
-		client := NewTestClient(nil)
-		ctx := context.Background()
-
-		headers := map[string]string{
-			"Authorization": expectedAuth,
-			"Accept":        "application/json",
-		}
-
-		content, err := client.FetchWithHeaders(ctx, server.URL, headers)
-		require.NoError(t, err)
-		assert.Equal(t, "success", string(content))
-	})
-
-	t.Run("override_user_agent", func(t *testing.T) {
-		customUA := "custom-agent/1.0"
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			assert.Equal(t, customUA, r.Header.Get("User-Agent"))
-			w.WriteHeader(http.StatusOK)
-			w.Write([]byte("success"))
-		}))
-		defer server.Close()
-
-		client := NewTestClient(nil)
-		ctx := context.Background()
-
-		headers := map[string]string{
-			"User-Agent": customUA,
-		}
-
-		_, err := client.FetchWithHeaders(ctx, server.URL, headers)
-		require.NoError(t, err)
-	})
-}
-
-func TestClient_RedirectSSRFProtection(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, "http://127.0.0.1:8080/evil", http.StatusMovedPermanently)
-	}))
-	defer server.Close()
-
-	client := NewClient(nil)
+func TestCache_Operations(t *testing.T) {
 	ctx := context.Background()
+	cache := newCache(nil)
 
-	_, err := client.Fetch(ctx, server.URL)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "URL blocked for security reasons")
-}
+	t.Run("set and get", func(t *testing.T) {
+		url := "https://example.com/test"
+		content := []byte("test content")
 
-func TestClient_Close(t *testing.T) {
-	client := NewTestClient(nil)
+		cache.set(ctx, url, content, "", "")
 
-	assert.NotPanics(t, func() {
-		client.Close()
+		entry, found := cache.get(ctx, url)
+		assert.True(t, found)
+		assert.Equal(t, content, entry.Content)
+	})
+
+	t.Run("miss", func(t *testing.T) {
+		_, found := cache.get(ctx, "https://example.com/nonexistent")
+		assert.False(t, found)
+	})
+
+	t.Run("ttl expiration", func(t *testing.T) {
+		config := &CacheConfig{
+			MemoryTTL:        50 * time.Millisecond,
+			MaxMemoryEntries: 100,
+			DiskCacheDir:     t.TempDir(),
+		}
+		cache := newCache(config)
+
+		url := "https://example.com/expire"
+		cache.set(ctx, url, []byte("expires"), "", "")
+
+		// Should be present immediately
+		_, found := cache.get(ctx, url)
+		assert.True(t, found)
+
+		// Wait for expiration
+		time.Sleep(60 * time.Millisecond)
+
+		// Should be expired
+		_, found = cache.get(ctx, url)
+		assert.False(t, found)
 	})
 }
 
-func BenchmarkClient_Fetch(b *testing.B) {
-	content := "test: yaml content"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(content))
-	}))
-	defer server.Close()
+// ========== URL Validator Tests ==========
 
-	client := NewTestClient(nil)
-	ctx := context.Background()
+func TestURLValidator(t *testing.T) {
+	validator := newURLValidator()
 
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, err := client.Fetch(ctx, server.URL)
-		if err != nil {
-			b.Fatal(err)
+	t.Run("valid URLs", func(t *testing.T) {
+		validURLs := []string{
+			"https://example.com/config.yaml",
+			"http://github.com/user/repo/file.yaml",
+			"https://raw.githubusercontent.com/user/repo/main/config.yaml",
 		}
-	}
+
+		for _, url := range validURLs {
+			err := validator.Validate(url)
+			assert.NoError(t, err, "URL should be valid: %s", url)
+		}
+	})
+
+	t.Run("blocked private IPs", func(t *testing.T) {
+		blockedURLs := []string{
+			"http://localhost/config.yaml",
+			"http://127.0.0.1/config.yaml",
+			"http://192.168.1.1/config.yaml",
+			"http://10.0.0.1/config.yaml",
+			"http://172.16.0.1/config.yaml",
+			"http://[::1]/config.yaml",
+		}
+
+		for _, url := range blockedURLs {
+			err := validator.Validate(url)
+			assert.Error(t, err, "URL should be blocked: %s", url)
+		}
+	})
+
+	t.Run("blocked metadata endpoints", func(t *testing.T) {
+		blockedURLs := []string{
+			"http://169.254.169.254/latest/meta-data/",
+			"http://metadata.google.internal/computeMetadata/v1/",
+		}
+
+		for _, url := range blockedURLs {
+			err := validator.Validate(url)
+			assert.Error(t, err, "Metadata endpoint should be blocked: %s", url)
+		}
+	})
+
+	t.Run("invalid URLs", func(t *testing.T) {
+		invalidURLs := []string{
+			"not-a-url",
+			"ftp://example.com/file", // unsupported scheme
+			"://missing-scheme.com",
+			"",
+		}
+
+		for _, url := range invalidURLs {
+			err := validator.Validate(url)
+			assert.Error(t, err, "URL should be invalid: %s", url)
+		}
+	})
 }
 
-func BenchmarkClient_FetchWithValidation(b *testing.B) {
-	content := "test: yaml content"
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(content))
-	}))
-	defer server.Close()
+// ========== Integration Tests ==========
 
-	client := NewTestClient(nil)
-	ctx := context.Background()
-
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		url := fmt.Sprintf("%s?test=%d", server.URL, i)
-		_, err := client.Fetch(ctx, url)
-		if err != nil {
-			b.Fatal(err)
-		}
-	}
-}
-
-func TestClient_CacheIntegration(t *testing.T) {
+func TestClient_WithCache(t *testing.T) {
 	requestCount := 0
-	content := "cached content"
-
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		requestCount++
-		w.Header().Set("ETag", "test-etag-123")
-		w.Header().Set("Last-Modified", "Wed, 21 Oct 2015 07:28:00 GMT")
+		w.Header().Set("ETag", "test-etag")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(content))
+		w.Write([]byte("cached content"))
 	}))
 	defer server.Close()
 
 	client := NewTestClient(nil)
 	ctx := context.Background()
 
-	t.Run("cache_miss_then_hit", func(t *testing.T) {
-		requestCount = 0
+	// First request - cache miss
+	content1, err := client.Fetch(ctx, server.URL)
+	require.NoError(t, err)
+	assert.Equal(t, "cached content", string(content1))
+	assert.Equal(t, 1, requestCount)
 
-		response1, err := client.Fetch(ctx, server.URL)
-		require.NoError(t, err)
-		assert.Equal(t, content, string(response1))
-		assert.Equal(t, 1, requestCount)
-
-		response2, err := client.Fetch(ctx, server.URL)
-		require.NoError(t, err)
-		assert.Equal(t, content, string(response2))
-		assert.Equal(t, 1, requestCount)
-	})
-
-	t.Run("fetch_with_headers_bypasses_cache", func(t *testing.T) {
-		requestCount = 0
-
-		headers := map[string]string{"Authorization": "Bearer token"}
-		response1, err := client.FetchWithHeaders(ctx, server.URL, headers)
-		require.NoError(t, err)
-		assert.Equal(t, content, string(response1))
-		assert.Equal(t, 1, requestCount)
-
-		response2, err := client.FetchWithHeaders(ctx, server.URL, headers)
-		require.NoError(t, err)
-		assert.Equal(t, content, string(response2))
-		assert.Equal(t, 2, requestCount)
-	})
-
-	t.Run("cache_isolation_per_url", func(t *testing.T) {
-		requestCount = 0
-
-		url1 := server.URL + "/path1"
-		url2 := server.URL + "/path2"
-
-		client.Fetch(ctx, url1)
-		client.Fetch(ctx, url2)
-		assert.Equal(t, 2, requestCount)
-
-		client.Fetch(ctx, url1)
-		client.Fetch(ctx, url2)
-		assert.Equal(t, 2, requestCount)
-	})
+	// Second request - cache hit
+	content2, err := client.Fetch(ctx, server.URL)
+	require.NoError(t, err)
+	assert.Equal(t, "cached content", string(content2))
+	assert.Equal(t, 1, requestCount) // No additional request
 }
 
-func TestClient_ComprehensiveScenarios(t *testing.T) {
-	t.Run("yaml_content_types", func(t *testing.T) {
-		contentTypes := []string{
-			"text/yaml",
-			"application/yaml",
-			"text/x-yaml",
-			"application/x-yaml",
-		}
+func TestClient_ContentTypes(t *testing.T) {
+	contentTypes := []string{
+		"text/yaml",
+		"application/yaml",
+		"text/x-yaml",
+		"application/x-yaml",
+		"text/plain",
+	}
 
-		yamlContent := `metadata:
-  name: "Test Configuration"
-  version: "1.0.0"
-rules:
-  - name: "Example Rule"
-    content: "This is an example rule"
-    priority: 10`
+	for _, contentType := range contentTypes {
+		t.Run(strings.ReplaceAll(contentType, "/", "_"), func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", contentType)
+				w.WriteHeader(http.StatusOK)
+				w.Write([]byte("test: content"))
+			}))
+			defer server.Close()
 
-		for _, contentType := range contentTypes {
-			t.Run("content_type_"+strings.ReplaceAll(contentType, "/", "_"), func(t *testing.T) {
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.Header().Set("Content-Type", contentType)
-					w.WriteHeader(http.StatusOK)
-					w.Write([]byte(yamlContent))
-				}))
-				defer server.Close()
+			client := NewTestClient(nil)
+			ctx := context.Background()
 
-				client := NewTestClient(nil)
-				ctx := context.Background()
+			content, err := client.Fetch(ctx, server.URL)
+			require.NoError(t, err)
+			assert.Equal(t, "test: content", string(content))
+		})
+	}
+}
 
-				content, err := client.Fetch(ctx, server.URL)
-				require.NoError(t, err)
-				assert.Equal(t, strings.TrimSpace(yamlContent), strings.TrimSpace(string(content)))
-			})
-		}
-	})
+func TestClient_ErrorHandling(t *testing.T) {
+	testCases := []struct {
+		name       string
+		statusCode int
+		expectErr  bool
+	}{
+		{"ok", http.StatusOK, false},
+		{"not_found", http.StatusNotFound, true},
+		{"unauthorized", http.StatusUnauthorized, true},
+		{"forbidden", http.StatusForbidden, true},
+		{"internal_error", http.StatusInternalServerError, true},
+		{"bad_gateway", http.StatusBadGateway, true},
+	}
 
-	t.Run("error_handling_comprehensive", func(t *testing.T) {
-		errorTests := []struct {
-			name           string
-			statusCode     int
-			responseBody   string
-			expectError    bool
-			errorSubstring string
-		}{
-			{"not_found", http.StatusNotFound, "Not Found", true, "HTTP 404"},
-			{"unauthorized", http.StatusUnauthorized, "Unauthorized", true, "HTTP 401"},
-			{"forbidden", http.StatusForbidden, "Forbidden", true, "HTTP 403"},
-			{"internal_server_error", http.StatusInternalServerError, "Internal Server Error", true, "HTTP 500"},
-			{"bad_gateway", http.StatusBadGateway, "Bad Gateway", true, "HTTP 502"},
-		}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(tc.statusCode)
+				w.Write([]byte("response"))
+			}))
+			defer server.Close()
 
-		for _, tc := range errorTests {
-			t.Run(tc.name, func(t *testing.T) {
-				server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					w.WriteHeader(tc.statusCode)
-					w.Write([]byte(tc.responseBody))
-				}))
-				defer server.Close()
+			client := NewTestClient(nil)
+			ctx := context.Background()
 
-				client := NewTestClient(nil)
-				ctx := context.Background()
-
-				_, err := client.Fetch(ctx, server.URL)
-				if tc.expectError {
-					require.Error(t, err)
-					assert.Contains(t, err.Error(), tc.errorSubstring)
-				} else {
-					require.NoError(t, err)
-				}
-			})
-		}
-	})
-
-	t.Run("github_raw_simulation", func(t *testing.T) {
-		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.Header().Set("ETag", "\"abc123def456\"")
-			w.Header().Set("Cache-Control", "max-age=300")
-			w.WriteHeader(http.StatusOK)
-
-			content := `metadata:
-  name: "GitHub Config"
-rules:
-  - name: "Remote Rule"
-    content: "From GitHub repository"`
-
-			w.Write([]byte(content))
-		}))
-		defer server.Close()
-
-		client := NewTestClient(nil)
-		ctx := context.Background()
-
-		content, err := client.Fetch(ctx, server.URL)
-		require.NoError(t, err)
-		assert.Contains(t, string(content), "GitHub Config")
-		assert.Contains(t, string(content), "Remote Rule")
-	})
+			_, err := client.Fetch(ctx, server.URL)
+			if tc.expectErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }

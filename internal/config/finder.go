@@ -4,7 +4,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Goldziher/ai-rulez/internal/errors"
+	"github.com/samber/oops"
 )
 
 func FindConfigFile(startDir string) (string, error) {
@@ -17,9 +17,11 @@ func FindConfigFile(startDir string) (string, error) {
 
 	dir, err := filepath.Abs(startDir)
 	if err != nil {
-		return "", errors.FileRead(startDir, err).
-			WithContext("operation", "resolve absolute path").
-			WithSuggestion("Check if the directory exists and is accessible")
+		return "", oops.
+			With("path", startDir).
+			With("operation", "resolve absolute path").
+			Hint("Check if the directory exists and is accessible").
+			Wrapf(err, "resolve absolute path")
 	}
 
 	visited := make(map[string]bool)
@@ -41,46 +43,14 @@ func FindConfigFile(startDir string) (string, error) {
 		dir = parent
 	}
 
-	return "", errors.ConfigNotFound(startDir)
-}
-
-func FindAllConfigFiles(rootDir string) ([]string, error) {
-	var configs []string
-	configNames := map[string]bool{
-		".ai-rulez.yaml": true, ".ai-rulez.yml": true,
-		"ai-rulez.yaml": true, "ai-rulez.yml": true,
-		".ai_rulez.yaml": true, ".ai_rulez.yml": true,
-		"ai_rulez.yaml": true, "ai_rulez.yml": true,
-	}
-
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return errors.FileRead(path, err).
-				WithContext("operation", "walk directory")
-		}
-
-		if info.IsDir() && filepath.Base(path) != "." && filepath.Base(path)[0] == '.' {
-			return filepath.SkipDir
-		}
-
-		if !info.IsDir() && configNames[filepath.Base(path)] {
-			configs = append(configs, path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, errors.FileRead(rootDir, err).
-			WithContext("operation", "walk directory tree").
-			WithSuggestion("Check if the directory exists and is accessible")
-	}
-
-	if len(configs) == 0 {
-		return nil, errors.ConfigNotFound(rootDir).
-			WithContext("search_type", "recursive").
-			WithSuggestion("Run 'ai-rulez init' in the directory to create a config file")
-	}
-
-	return configs, nil
+	return "", oops.
+		With("search_dir", startDir).
+		With("supported_names", []string{
+			"ai-rulez.yaml", "ai-rulez.yml",
+			".ai-rulez.yaml", ".ai-rulez.yml",
+			"ai_rulez.yaml", "ai_rulez.yml",
+			".ai_rulez.yaml", ".ai_rulez.yml",
+		}).
+		Hint("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly").
+		Errorf("no configuration file found")
 }

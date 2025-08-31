@@ -34,20 +34,6 @@ func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
 	return updateGitignoreFile(gitignorePath, outputFiles)
 }
 
-func UpdateGitignoreFilesRecursive(configFiles []string) error {
-	for _, configFile := range configFiles {
-		cfg, err := config.LoadConfig(configFile)
-		if err != nil {
-			return fmt.Errorf("failed to load config %s: %w", configFile, err)
-		}
-
-		if err := UpdateGitignoreFiles(configFile, cfg); err != nil {
-			return fmt.Errorf("failed to update gitignore for %s: %w", configFile, err)
-		}
-	}
-	return nil
-}
-
 func updateGitignoreFile(gitignorePath string, outputFiles []string) error {
 	existingEntries, err := readGitignoreEntries(gitignorePath)
 	if err != nil && !os.IsNotExist(err) {
