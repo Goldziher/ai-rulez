@@ -1,8 +1,0 @@
-metadata:
-  name: "Empty Test"
-outputs:
-  - path: ".claude/agents/"
-    type: "agent"
-rules:
-  - name: "Test"
-    content: "Test"

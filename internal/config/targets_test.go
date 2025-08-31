@@ -250,17 +250,17 @@ func TestFilterSections(t *testing.T) {
 
 	sections := []config.Section{
 		{
-			Title:   "Global Section",
+			Name:   "Global Section",
 			Content: "Appears everywhere",
 			Targets: []string{},
 		},
 		{
-			Title:   "Claude Intro",
+			Name:   "Claude Intro",
 			Content: "Only in CLAUDE.md",
 			Targets: []string{"CLAUDE.md"},
 		},
 		{
-			Title:   "Documentation Header",
+			Name:   "Documentation Header",
 			Content: "For all docs",
 			Targets: []string{"docs/*"},
 		},
@@ -296,7 +296,7 @@ func TestFilterSections(t *testing.T) {
 
 			var sectionTitles []string
 			for _, section := range filtered {
-				sectionTitles = append(sectionTitles, section.Title)
+				sectionTitles = append(sectionTitles, section.Name)
 			}
 
 			assert.ElementsMatch(t, tt.expected, sectionTitles)
@@ -821,12 +821,12 @@ func TestFilterSectionsWithNamedTargets(t *testing.T) {
 
 	sections := []config.Section{
 		{
-			Title:   "Global Section",
+			Name:   "Global Section",
 			Content: "Appears everywhere",
 			Targets: []string{},
 		},
 		{
-			Title:   "Doc Section",
+			Name:   "Doc Section",
 			Content: "For documentation",
 			Targets: []string{"@doc-files"},
 		},
@@ -863,7 +863,7 @@ func TestFilterSectionsWithNamedTargets(t *testing.T) {
 
 			var sectionTitles []string
 			for _, section := range filtered {
-				sectionTitles = append(sectionTitles, section.Title)
+				sectionTitles = append(sectionTitles, section.Name)
 			}
 
 			assert.ElementsMatch(t, tt.expected, sectionTitles)
