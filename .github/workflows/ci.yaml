@@ -95,7 +95,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        test-suite: [init, cli, agents, profile]
+        test-suite: [cli, mcp, integration]
       fail-fast: false
     steps:
       - name: Checkout code
@@ -141,7 +141,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-results-${{ matrix.test-suite }}
-          path: e2e/*.log
+          path: testing/e2e/*.log
           retention-days: 7
 
   benchmarks:
@@ -183,7 +183,7 @@ jobs:
         run: task build
 
       - name: Run benchmarks
-        run: task test:e2e:benchmark | tee benchmark-results.txt
+        run: task test:benchmark | tee benchmark-results.txt
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4

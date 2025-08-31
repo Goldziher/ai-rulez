@@ -1,12 +1,19 @@
 package agents
 
 import (
+	"bufio"
 	"context"
+	"errors"
 	"fmt"
+	"io"
+	"os"
 	"os/exec"
-	"sort"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/spf13/cobra"
 )
 
 type AgentInfo struct {
@@ -15,9 +22,7 @@ type AgentInfo struct {
 	Display string
 }
 
-type Preset string
-
-var SupportedAgents = []AgentInfo{
+var supportedAgents = []AgentInfo{
 	{ID: "amp", Command: "amp", Display: "AMP (Sourcegraph)"},
 	{ID: "claude", Command: "claude", Display: "Claude (Anthropic)"},
 	{ID: "codex", Command: "codex", Display: "Codex (OpenAI)"},
@@ -25,94 +30,10 @@ var SupportedAgents = []AgentInfo{
 	{ID: "gemini", Command: "gemini", Display: "Gemini (Google)"},
 }
 
-var PresetOutputs = map[string][]string{
-	"claude": {
-		"claude",
-	},
-	"amp": {
-		"amp",
-	},
-	"codex": {
-		"codex",
-	},
-	"cursor": {
-		"cursor",
-	},
-	"gemini": {
-		"gemini",
-	},
-	"windsurf": {
-		"windsurf",
-	},
-	"copilot": {
-		"copilot",
-	},
-	"cline": {
-		"cline",
-	},
-	"continue": {
-		"continue-dev",
-	},
-}
-
-type PresetOptions struct {
-	WithAgents   bool
-	WithSections bool
-	NoComments   bool
-}
-
-var PresetConfigs = map[string]PresetOptions{
-	"claude": {
-		WithAgents:   true,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"amp": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"codex": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"cursor": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"gemini": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"windsurf": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"copilot": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"cline": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-	"continue": {
-		WithAgents:   false,
-		WithSections: false,
-		NoComments:   false,
-	},
-}
-
-func DetectAvailableAgents() ([]AgentInfo, error) {
+func detectAvailableAgents() ([]AgentInfo, error) {
 	var available []AgentInfo
 
-	for _, agent := range SupportedAgents {
+	for _, agent := range supportedAgents {
 		if isCommandAvailable(agent.Command) {
 			available = append(available, agent)
 		}
@@ -126,9 +47,9 @@ func isCommandAvailable(command string) bool {
 	return err == nil
 }
 
-func GetAgentByID(id string) (*AgentInfo, error) {
+func getAgentByID(id string) (*AgentInfo, error) {
 	id = strings.ToLower(strings.TrimSpace(id))
-	for _, agent := range SupportedAgents {
+	for _, agent := range supportedAgents {
 		if agent.ID == id {
 			return &agent, nil
 		}
@@ -136,42 +57,7 @@ func GetAgentByID(id string) (*AgentInfo, error) {
 	return nil, fmt.Errorf("unknown agent: %s", id)
 }
 
-func ParseAgentList(agentList string) ([]AgentInfo, error) {
-	if agentList == "" {
-		return nil, nil
-	}
-
-	parts := strings.Split(agentList, ",")
-	var agents []AgentInfo
-	seen := make(map[string]bool)
-
-	for _, part := range parts {
-		id := strings.ToLower(strings.TrimSpace(part))
-		if id == "" {
-			continue
-		}
-
-		if seen[id] {
-			continue
-		}
-
-		agent, err := GetAgentByID(id)
-		if err != nil {
-			return nil, err
-		}
-
-		agents = append(agents, *agent)
-		seen[id] = true
-	}
-
-	sort.Slice(agents, func(i, j int) bool {
-		return agents[i].ID < agents[j].ID
-	})
-
-	return agents, nil
-}
-
-func InvokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string, error) {
+func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
@@ -179,17 +65,17 @@ func InvokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 
 	switch agent.ID {
 	case "claude":
-		cmd = exec.CommandContext(ctx, agent.Command, "--no-conversation", "--max-tokens", "4000")
+		cmd = exec.CommandContext(ctx, agent.Command, "--no-conversation", "--max-tokens", "4000") //nolint:gosec // Intentional subprocess execution
 		cmd.Stdin = strings.NewReader(prompt)
 
 	case "amp", "codex", "cursor":
-		cmd = exec.CommandContext(ctx, agent.Command, prompt)
+		cmd = exec.CommandContext(ctx, agent.Command, prompt) //nolint:gosec // Intentional subprocess execution
 
 	case "gemini":
-		cmd = exec.CommandContext(ctx, agent.Command, prompt)
+		cmd = exec.CommandContext(ctx, agent.Command, prompt) //nolint:gosec // Intentional subprocess execution
 
 	default:
-		cmd = exec.CommandContext(ctx, agent.Command)
+		cmd = exec.CommandContext(ctx, agent.Command) //nolint:gosec // Intentional subprocess execution
 		cmd.Stdin = strings.NewReader(prompt)
 	}
 
@@ -204,26 +90,160 @@ func InvokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	return string(output), nil
 }
 
-func ValidatePreset(preset string) error {
-	presetLower := strings.ToLower(preset)
+// ListAvailableAgents lists all available AI agents
+func ListAvailableAgents() {
+	logger.Info("Available AI agents for configuration generation:")
+	logger.Info("")
 
-	if _, exists := PresetOutputs[presetLower]; exists {
-		return nil
+	available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored for display purposes
+
+	for _, agent := range supportedAgents {
+		status := "❌ Not installed"
+		for _, avail := range available {
+			if avail.ID == agent.ID {
+				status = "✅ Available"
+				break
+			}
+		}
+		logger.Info(fmt.Sprintf("  %-15s %-25s %s", agent.ID, agent.Display, status))
 	}
 
-	var validPresets []string
-	for k := range PresetOutputs {
-		validPresets = append(validPresets, k)
+	logger.Info("")
+	logger.Info("To use an agent, install its CLI tool and run:")
+	logger.Info("  ai-rulez init --use-agent <agent-name>")
+}
+
+// ShouldPromptForAgent determines if we should prompt the user about using an AI agent
+func ShouldPromptForAgent() bool {
+	// Check if running in non-interactive mode
+	if os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
+		return false
 	}
-	sort.Strings(validPresets)
 
-	return fmt.Errorf("invalid preset: %s (valid options: %s)", preset, strings.Join(validPresets, ", "))
+	// Check if stdin is a terminal
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		return false
+	}
+
+	// Check if any AI agent CLIs are available
+	available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored - fail safe to false
+	return len(available) > 0
 }
 
-func GetPresetProviders(preset string) []string {
-	return PresetOutputs[strings.ToLower(preset)]
+// HandleAgentGeneration handles AI agent-based configuration generation
+func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string) (string, bool) {
+	var selectedAgent *AgentInfo
+
+	if useAgent != "" {
+		// Use specified agent
+		agent, err := getAgentByID(useAgent)
+		if err != nil {
+			logger.Error("Unknown agent", "agent", useAgent)
+			return "", false
+		}
+		selectedAgent = agent
+	} else {
+		// Auto-detect available agent (prefer claude)
+		available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored
+		if len(available) == 0 {
+			return "", false
+		}
+
+		// Prefer claude if available
+		for _, agent := range available {
+			if agent.ID == "claude" {
+				selectedAgent = &agent
+				break
+			}
+		}
+		if selectedAgent == nil {
+			selectedAgent = &available[0] // Use first available
+		}
+	}
+
+	// Build the prompt for the AI agent
+	prompt := buildAgentPrompt(projectName, config)
+
+	// Ask user for confirmation
+	logger.Info(fmt.Sprintf("🤖 Would you like to use %s to generate your configuration? (y/N): ", selectedAgent.Display))
+	reader := bufio.NewReader(os.Stdin)
+	response, err := reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		logger.LogError("Failed to read user input", err)
+		return "", false
+	}
+	response = strings.TrimSpace(strings.ToLower(response))
+
+	if response != "y" && response != "yes" {
+		return "", false
+	}
+
+	logger.Info("🤖 Generating configuration...", "agent", selectedAgent.ID)
+
+	// Execute the agent with timeout
+	result, err := invokeAgent(*selectedAgent, prompt, 60*time.Second)
+	if err != nil {
+		logger.LogError("Failed to generate configuration", err, "agent", selectedAgent.ID)
+		return "", false
+	}
+
+	// Clean up the output - remove markdown code blocks if present
+	result = strings.TrimPrefix(result, "```yaml\n")
+	result = strings.TrimPrefix(result, "```yml\n")
+	result = strings.TrimPrefix(result, "```\n")
+	result = strings.TrimSuffix(result, "\n```")
+	result = strings.TrimSuffix(result, "```")
+
+	return strings.TrimSpace(result), true
 }
 
-func GetPresetOptions(preset string) PresetOptions {
-	return PresetConfigs[strings.ToLower(preset)]
+// buildAgentPrompt builds the prompt for the AI agent
+func buildAgentPrompt(projectName string, config templates.ProviderConfig) string {
+	var prompt strings.Builder
+
+	prompt.WriteString(fmt.Sprintf("Generate an ai-rulez configuration file (ai_rulez.yaml) for a project called '%s'. ", projectName))
+	prompt.WriteString("The configuration should follow the ai-rulez schema and include:\n\n")
+
+	prompt.WriteString("1. Metadata section with project name and version\n")
+	prompt.WriteString("2. Output configurations for:\n")
+
+	if config.Claude {
+		prompt.WriteString("   - Claude (CLAUDE.md and .claude/agents/)\n")
+	}
+	if config.Cursor {
+		prompt.WriteString("   - Cursor (.cursor/rules/)\n")
+	}
+	if config.Windsurf {
+		prompt.WriteString("   - Windsurf (.windsurf/)\n")
+	}
+	if config.Copilot {
+		prompt.WriteString("   - GitHub Copilot (.github/copilot-instructions.md)\n")
+	}
+	if config.Gemini {
+		prompt.WriteString("   - Gemini (GEMINI.md)\n")
+	}
+	if config.Amp || config.Codex {
+		prompt.WriteString("   - AMP/Codex (AGENTS.md)\n")
+	}
+	if config.Cline {
+		prompt.WriteString("   - Cline (.clinerules/)\n")
+	}
+	if config.ContinueDev {
+		prompt.WriteString("   - Continue.dev (.continue/rules/)\n")
+	}
+
+	prompt.WriteString("\n3. At least 5 high-quality rules for software development best practices\n")
+	prompt.WriteString("4. At least 3 documentation sections\n")
+
+	if config.Claude {
+		prompt.WriteString("5. At least 2 agent configurations for Claude\n")
+	}
+
+	prompt.WriteString("\nGenerate only the YAML content, no explanations or markdown code blocks.")
+
+	return prompt.String()
 }

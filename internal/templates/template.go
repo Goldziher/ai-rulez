@@ -1,8 +1,9 @@
 package templates
 
 import (
+	"cmp"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 	"text/template"
 	"time"
@@ -10,7 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-type ContentItem struct {
+type contentItem struct {
 	Type     string
 	Title    string
 	Priority int
@@ -25,7 +26,7 @@ type TemplateData struct {
 	Rules        []config.Rule
 	Sections     []config.Section
 	Agents       []config.Agent
-	AllContent   []ContentItem
+	AllContent   []contentItem
 	Timestamp    time.Time
 	RuleCount    int
 	SectionCount int
@@ -73,10 +74,10 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	sortedSections := make([]config.Section, len(allSections))
 	copy(sortedSections, allSections)
 
-	allContent := make([]ContentItem, 0, len(allRules)+len(allSections))
+	allContent := make([]contentItem, 0, len(allRules)+len(allSections))
 
 	for _, rule := range allRules {
-		allContent = append(allContent, ContentItem{
+		allContent = append(allContent, contentItem{
 			Type:     "rule",
 			Title:    rule.Name,
 			Priority: rule.Priority,
@@ -86,9 +87,9 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	}
 
 	for _, section := range allSections {
-		allContent = append(allContent, ContentItem{
+		allContent = append(allContent, contentItem{
 			Type:     "section",
-			Title:    section.Title,
+			Title:    section.Name,
 			Priority: section.Priority,
 			Content:  section.Content,
 			IsRule:   false,
@@ -115,6 +116,7 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		RuleCount:    len(allRules),
 		SectionCount: len(allSections),
 		AgentCount:   len(allAgents),
+		OutputFile:   outputPath,
 	}
 }
 
@@ -165,71 +167,12 @@ func (r *Renderer) GetSupportedFormats() []string {
 }
 
 func (r *Renderer) registerBuiltinTemplates() {
-	defaultTemplate := `# {{.ProjectName}}
-{{- if .Description}}
+	builtinTemplates := getBuiltinTemplates()
 
-{{.Description}}
-{{- end}}
-{{- if .Version}}
-
-Version: {{.Version}}
-{{- end}}
-
-Generated on {{.Timestamp.Format "2006-01-02 15:04:05"}}
-{{- if or .RuleCount .SectionCount}}
-
-Total content: {{.RuleCount}} rules, {{.SectionCount}} sections
-{{- end}}
-{{- range .AllContent}}
-{{- if .IsRule}}
-
-## {{.Title}}
-
-**Priority:** {{.Priority}}
-
-{{.Content}}
-{{- else}}
-
-{{.Content}}
-{{- end}}
-{{- end}}
-`
-
-	documentationTemplate := `# {{.ProjectName}} - Detailed Rules
-
-**Project Information:**
-- Name: {{.ProjectName}}
-{{- if .Version}}
-- Version: {{.Version}}
-{{- end}}
-{{- if .Description}}
-- Description: {{.Description}}
-{{- end}}
-- Generated: {{.Timestamp.Format "January 2, 2006 at 3:04 PM"}}
-- Total Rules: {{.RuleCount}}
-
----
-
-## Content
-
-All content is sorted by priority (highest first), then alphabetically by title.
-
-{{range .AllContent}}
-{{- if .IsRule}}
-### [Rule] {{.Title}} (Priority: {{.Priority}})
-{{.Content}}
-{{- else}}
-{{.Content}}
-{{- end}}
-
-{{end}}
-`
-
-	if err := r.RegisterTemplate("default", defaultTemplate); err != nil {
-		panic(fmt.Sprintf("Failed to register default template: %v", err))
-	}
-	if err := r.RegisterTemplate("documentation", documentationTemplate); err != nil {
-		panic(fmt.Sprintf("Failed to register documentation template: %v", err))
+	for name, template := range builtinTemplates {
+		if err := r.RegisterTemplate(name, template); err != nil {
+			panic(fmt.Sprintf("Failed to register %s template: %v", name, err))
+		}
 	}
 }
 
@@ -242,6 +185,21 @@ func ValidateTemplate(templateStr string) error {
 }
 
 func RenderString(templateStr string, data *TemplateData) (string, error) {
+	tmpl, err := template.New("inline").Parse(templateStr)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse template: %w", err)
+	}
+
+	var buf strings.Builder
+	if err := tmpl.Execute(&buf, data); err != nil {
+		return "", fmt.Errorf("failed to execute template: %w", err)
+	}
+
+	return buf.String(), nil
+}
+
+// ExecuteTemplate executes a template with any data type
+func ExecuteTemplate(templateStr string, data interface{}) (string, error) {
 	tmpl, err := template.New("inline").Parse(templateStr)
 	if err != nil {
 		return "", fmt.Errorf("failed to parse template: %w", err)
@@ -301,37 +259,37 @@ Learn more: https://github.com/Goldziher/ai-rulez
 }
 
 func sortRulesByPriority(rules []config.Rule) {
-	sort.Slice(rules, func(i, j int) bool {
-		if rules[i].Priority != rules[j].Priority {
-			return rules[i].Priority > rules[j].Priority
+	slices.SortFunc(rules, func(a, b config.Rule) int {
+		if a.Priority != b.Priority {
+			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
 		}
-		return rules[i].Name < rules[j].Name
+		return cmp.Compare(a.Name, b.Name)
 	})
 }
 
 func sortSectionsByPriority(sections []config.Section) {
-	sort.Slice(sections, func(i, j int) bool {
-		if sections[i].Priority != sections[j].Priority {
-			return sections[i].Priority > sections[j].Priority
+	slices.SortFunc(sections, func(a, b config.Section) int {
+		if a.Priority != b.Priority {
+			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
 		}
-		return sections[i].Title < sections[j].Title
+		return cmp.Compare(a.Name, b.Name)
 	})
 }
 
-func sortContent(items []ContentItem) {
-	sort.Slice(items, func(i, j int) bool {
-		if items[i].Priority != items[j].Priority {
-			return items[i].Priority > items[j].Priority
+func sortContent(items []contentItem) {
+	slices.SortFunc(items, func(a, b contentItem) int {
+		if a.Priority != b.Priority {
+			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
 		}
-		return items[i].Title < items[j].Title
+		return cmp.Compare(a.Title, b.Title)
 	})
 }
 
 func sortAgentsByPriority(agents []config.Agent) {
-	sort.Slice(agents, func(i, j int) bool {
-		if agents[i].Priority != agents[j].Priority {
-			return agents[i].Priority > agents[j].Priority
+	slices.SortFunc(agents, func(a, b config.Agent) int {
+		if a.Priority != b.Priority {
+			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
 		}
-		return agents[i].Name < agents[j].Name
+		return cmp.Compare(a.Name, b.Name)
 	})
 }

@@ -1,5 +1,5 @@
 {
-  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json",
   "title": "AI Rules Configuration",
   "description": "Schema for ai-rulez YAML configuration files",
@@ -72,6 +72,23 @@
         ]
       },
       "uniqueItems": true
+    },
+    "targets": {
+      "type": "object",
+      "description": "Named target definitions for reuse in rules, sections, and agents",
+      "patternProperties": {
+        "^[a-zA-Z][a-zA-Z0-9_-]*$": {
+          "type": "array",
+          "description": "Array of target patterns (glob patterns, file paths, etc.)",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      },
+      "additionalProperties": false
     },
     "outputs": {
       "type": "array",
@@ -158,7 +175,7 @@
           },
           "targets": {
             "type": "array",
-            "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md, and named target references like @target-name",
             "items": {
               "type": "string",
               "minLength": 1
@@ -174,16 +191,16 @@
       "description": "List of informative text sections (rendered as-is)",
       "items": {
         "type": "object",
-        "required": ["title", "content"],
+        "required": ["name", "content"],
         "properties": {
           "id": {
             "type": "string",
             "description": "Optional unique identifier for the section (used for overriding in local files)",
             "minLength": 1
           },
-          "title": {
+          "name": {
             "type": "string",
-            "description": "Section title (for organization/merging)",
+            "description": "Section name (for organization/merging)",
             "minLength": 1
           },
           "priority": {
@@ -199,7 +216,7 @@
           },
           "targets": {
             "type": "array",
-            "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md, and named target references like @target-name",
             "items": {
               "type": "string",
               "minLength": 1
@@ -274,7 +291,7 @@
           },
           "targets": {
             "type": "array",
-            "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md, and named target references like @target-name",
             "items": {
               "type": "string",
               "minLength": 1
@@ -319,7 +336,7 @@
               },
               "targets": {
                 "type": "array",
-                "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md, and named target references like @target-name",
                 "items": {
                   "type": "string",
                   "minLength": 1
@@ -335,16 +352,16 @@
           "description": "List of user-specific text sections",
           "items": {
             "type": "object",
-            "required": ["title", "content"],
+            "required": ["name", "content"],
             "properties": {
               "id": {
                 "type": "string",
                 "description": "Optional unique identifier for the section (used for overriding in local files)",
                 "minLength": 1
               },
-              "title": {
+              "name": {
                 "type": "string",
-                "description": "Section title (for organization/merging)",
+                "description": "Section name (for organization/merging)",
                 "minLength": 1
               },
               "priority": {
@@ -360,7 +377,7 @@
               },
               "targets": {
                 "type": "array",
-                "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md, and named target references like @target-name",
                 "items": {
                   "type": "string",
                   "minLength": 1
@@ -435,7 +452,7 @@
               },
               "targets": {
                 "type": "array",
-                "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md, and named target references like @target-name",
                 "items": {
                   "type": "string",
                   "minLength": 1
@@ -453,44 +470,86 @@
   "additionalProperties": false,
   "examples": [
     {
-      "$schema": "https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json",
+      "$schema": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json",
       "metadata": {
-        "name": "My Project",
-        "version": "1.0.0",
-        "description": "Example project configuration"
+        "name": "Modern Web Application",
+        "version": "2.0.0",
+        "description": "Full-stack TypeScript application with AI assistant integration"
+      },
+      "profile": "web-app",
+      "targets": {
+        "claude-only": [
+          "CLAUDE.md",
+          ".claude/**/*.md"
+        ],
+        "all-platforms": [
+          "CLAUDE.md",
+          ".cursor/**/*.mdc",
+          ".github/copilot-instructions.md"
+        ]
       },
       "includes": [
-        "shared/common-rules.yaml",
-        "https://example.com/shared/team-standards.yaml"
+        "https://raw.githubusercontent.com/myorg/standards/main/typescript.yaml"
       ],
       "outputs": [
         {
-          "path": "claude.md"
+          "file": "CLAUDE.md"
         },
         {
-          "path": ".cursorrules",
-          "template": "default"
+          "path": ".cursor/",
+          "type": "rule",
+          "naming_scheme": "rules.mdc"
+        },
+        {
+          "file": ".github/copilot-instructions.md"
         },
         {
           "path": ".claude/agents/",
           "type": "agent",
-          "template": "agent"
+          "naming_scheme": "{name}.md"
         }
       ],
       "agents": [
         {
+          "name": "fullstack-architect",
+          "description": "System architecture and design decisions",
+          "targets": ["@claude-only"],
+          "priority": 10,
+          "tools": ["Read", "Grep", "Edit", "MultiEdit"],
+          "system_prompt": "Senior architect specializing in scalable web application design, database optimization, and modern TypeScript patterns."
+        },
+        {
           "name": "code-reviewer",
-          "description": "Reviews code for quality and best practices",
-          "priority": 5,
-          "tools": ["Read", "Grep"],
-          "system_prompt": "You are a code quality specialist..."
+          "description": "Code quality and security analysis",
+          "targets": ["@claude-only"],
+          "priority": 9,
+          "system_prompt": "Expert code reviewer focused on TypeScript best practices, security vulnerabilities, performance optimization, and maintainability."
         }
       ],
       "rules": [
         {
-          "name": "Code Quality",
-          "priority": "high",
-          "content": "Write clean, maintainable code"
+          "name": "System Workflow",
+          "priority": 100,
+          "targets": ["@claude-only"],
+          "content": "Always use specialized agents via Task tool for domain-specific work. Follow: design → implement → test → review workflow."
+        },
+        {
+          "name": "Tech Stack",
+          "priority": 90,
+          "targets": ["@all-platforms"],
+          "content": "Next.js 15, React 19, TypeScript 5.8, Tailwind CSS, PostgreSQL, Vercel deployment"
+        },
+        {
+          "name": "Code Standards",
+          "priority": 85,
+          "content": "TypeScript strict mode, 90%+ test coverage, ESLint + Biome, comprehensive error handling"
+        }
+      ],
+      "sections": [
+        {
+          "name": "Development Environment",
+          "priority": 10,
+          "content": "Use Node.js 20+, pnpm package manager, and Docker for local PostgreSQL. Enable TypeScript strict mode and configure ESLint with Biome formatter."
         }
       ]
     }

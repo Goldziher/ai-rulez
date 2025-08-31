@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/errors"
+	"github.com/samber/oops"
 )
 
 func ResolveTargets(targets []string, namedTargets map[string][]string) ([]string, error) {
@@ -24,15 +24,16 @@ func ResolveTargets(targets []string, namedTargets map[string][]string) ([]strin
 		if strings.HasPrefix(target, "@") {
 			targetName := target[1:]
 			if targetName == "" {
-				return nil, errors.New(errors.ErrorTypeConfigInvalid, "resolve named target", fmt.Errorf("empty target name after @")).
-					WithSuggestion("Named target references should be in the format '@target-name'")
+				return nil, oops.
+					Hint("Named target references should be in the format '@target-name'").
+					Errorf("empty target name after @")
 			}
 
 			patterns, exists := namedTargets[targetName]
 			if !exists {
-				return nil, errors.New(errors.ErrorTypeConfigInvalid, "resolve named target", fmt.Errorf("named target '%s' not found", targetName)).
-					WithSuggestion(fmt.Sprintf("Define the named target '%s' in the targets section", targetName)).
-					WithSuggestion("Available named targets: " + getAvailableTargetNames(namedTargets))
+				return nil, oops.
+					Hint(fmt.Sprintf("Define the named target '%s' in the targets section\nAvailable named targets: %s", targetName, getAvailableTargetNames(namedTargets))).
+					Errorf("named target '%s' not found", targetName)
 			}
 
 			resolved = append(resolved, patterns...)
@@ -118,7 +119,7 @@ func matchesDirectoryPatterns(pattern, dirPath string) bool {
 
 	if strings.Contains(pattern, "*") && !strings.Contains(pattern, "**") {
 		dir := filepath.Dir(pattern)
-		if dir != "." && strings.HasPrefix(dirPath, dir+"/") {
+		if dir != "." && (dirPath == dir || strings.HasPrefix(dirPath, dir+"/")) {
 			return true
 		}
 	}
@@ -162,7 +163,7 @@ func FilterSections(sections []Section, outputPath string, namedTargets map[stri
 	for _, section := range sections {
 		resolvedTargets, err := ResolveTargets(section.Targets, namedTargets)
 		if err != nil {
-			return nil, fmt.Errorf("error resolving targets for section '%s': %w", section.Title, err)
+			return nil, fmt.Errorf("error resolving targets for section '%s': %w", section.Name, err)
 		}
 
 		if MatchesTarget(outputPath, resolvedTargets) {
