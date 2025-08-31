@@ -1,20 +1,24 @@
 package remote
 
 import (
+	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/dgraph-io/ristretto/v2"
 )
 
 const cacheFileName = ".ai_rulez_cache"
 
-type CacheEntry struct {
+type cacheEntry struct {
 	Content      []byte
 	URL          string
 	FetchedAt    time.Time
@@ -34,7 +38,7 @@ type CacheConfig struct {
 	DefaultTTL       time.Duration
 }
 
-func DefaultCacheConfig() *CacheConfig {
+func defaultCacheConfig() *CacheConfig {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
 		homeDir = "."
@@ -55,54 +59,82 @@ func DefaultCacheConfig() *CacheConfig {
 }
 
 type Cache struct {
-	config      *CacheConfig
-	memoryMux   sync.RWMutex
-	memoryCache map[string]*CacheEntry
-	diskMux     sync.RWMutex
+	config       *CacheConfig
+	memoryCache  *ristretto.Cache[string, *cacheEntry]
+	diskMux      sync.RWMutex
+	diskCacheDir string
+	diskTTL      time.Duration
 }
 
-func NewCache(config *CacheConfig) *Cache {
+func newCache(config *CacheConfig) *Cache {
 	if config == nil {
-		config = DefaultCacheConfig()
+		config = defaultCacheConfig()
+	}
+
+	// Configure ristretto cache
+	// NumCounters should be 10x max entries, MaxCost is total memory cost in bytes
+	// We'll estimate 10KB per entry on average
+	estimatedCostPerEntry := int64(10 * 1024) // 10KB
+	ristrettoCache, err := ristretto.NewCache(&ristretto.Config[string, *cacheEntry]{
+		NumCounters: int64(config.MaxMemoryEntries * 10),
+		MaxCost:     int64(config.MaxMemoryEntries) * estimatedCostPerEntry,
+		BufferItems: 64,
+		Metrics:     true,
+	})
+	if err != nil {
+		// Fallback: create a minimal cache if config fails
+		//nolint:errcheck // Fallback cache creation, errors ignored
+		ristrettoCache, _ = ristretto.NewCache(&ristretto.Config[string, *cacheEntry]{
+			NumCounters: 1000,
+			MaxCost:     100 * estimatedCostPerEntry,
+			BufferItems: 64,
+		})
 	}
 
 	cache := &Cache{
-		config:      config,
-		memoryCache: make(map[string]*CacheEntry),
+		config:       config,
+		memoryCache:  ristrettoCache,
+		diskCacheDir: config.DiskCacheDir,
+		diskTTL:      config.DiskTTL,
 	}
 
 	if config.DiskCacheDir != "" {
+		//nolint:errcheck // Directory creation errors are non-critical for cache
 		_ = os.MkdirAll(config.DiskCacheDir, 0o755)
 	}
 
 	return cache
 }
 
-func (c *Cache) Get(ctx context.Context, url string) (*CacheEntry, bool) {
+func (c *Cache) get(ctx context.Context, url string) (*cacheEntry, bool) {
 	key := c.generateKey(url)
 
-	if entry := c.getFromMemory(key); entry != nil {
-		if c.isMemoryEntryValid(entry) {
-			return entry, true
-		}
-		c.removeFromMemory(key)
+	// Try memory cache first
+	if entry, found := c.memoryCache.Get(key); found {
+		// Entry is still valid (TTL handled by ristretto)
+		return entry, true
 	}
 
+	// Try disk cache
 	if entry := c.getFromDisk(ctx, key); entry != nil {
 		if c.isDiskEntryValid(entry) {
-			c.setInMemory(key, entry)
+			// Add to memory cache with TTL
+			cost := int64(len(entry.Content) + 256)
+			c.memoryCache.SetWithTTL(key, entry, cost, c.config.MemoryTTL)
+			c.memoryCache.Wait()
 			return entry, true
 		}
+		//nolint:errcheck // Cleanup errors are non-critical
 		_ = c.removeFromDisk(ctx, key)
 	}
 
 	return nil, false
 }
 
-func (c *Cache) Set(ctx context.Context, url string, content []byte, etag, lastModified string) error {
+func (c *Cache) set(ctx context.Context, url string, content []byte, etag, lastModified string) error {
 	key := c.generateKey(url)
 
-	entry := &CacheEntry{
+	entry := &cacheEntry{
 		Content:      content,
 		URL:          url,
 		FetchedAt:    time.Now(),
@@ -110,7 +142,15 @@ func (c *Cache) Set(ctx context.Context, url string, content []byte, etag, lastM
 		LastModified: lastModified,
 	}
 
-	c.setInMemory(key, entry)
+	// Set in memory cache with TTL
+	// Cost is the size of the content plus some overhead
+	cost := int64(len(entry.Content) + 256) // content + metadata overhead
+	success := c.memoryCache.SetWithTTL(key, entry, cost, c.config.MemoryTTL)
+	if success {
+		c.memoryCache.Wait()
+	}
+
+	// Also persist to disk
 	return c.setOnDisk(ctx, key, entry)
 }
 
@@ -119,141 +159,132 @@ func (c *Cache) generateKey(url string) string {
 	return hex.EncodeToString(hash[:])
 }
 
-func (c *Cache) getFromMemory(key string) *CacheEntry {
-	c.memoryMux.RLock()
-	defer c.memoryMux.RUnlock()
-
-	entry, exists := c.memoryCache[key]
-	if !exists {
-		return nil
-	}
-
-	entryCopy := *entry
-	contentCopy := make([]byte, len(entry.Content))
-	copy(contentCopy, entry.Content)
-	entryCopy.Content = contentCopy
-
-	return &entryCopy
-}
-
-func (c *Cache) setInMemory(key string, entry *CacheEntry) {
-	c.memoryMux.Lock()
-	defer c.memoryMux.Unlock()
-
-	if len(c.memoryCache) >= c.config.MaxMemoryEntries {
-		c.evictOldestMemoryEntry()
-	}
-
-	entryCopy := *entry
-	contentCopy := make([]byte, len(entry.Content))
-	copy(contentCopy, entry.Content)
-	entryCopy.Content = contentCopy
-
-	c.memoryCache[key] = &entryCopy
-}
-
-func (c *Cache) removeFromMemory(key string) {
-	c.memoryMux.Lock()
-	defer c.memoryMux.Unlock()
-	delete(c.memoryCache, key)
-}
-
-func (c *Cache) isMemoryEntryValid(entry *CacheEntry) bool {
-	return time.Since(entry.FetchedAt) < c.config.MemoryTTL
-}
-
-func (c *Cache) evictOldestMemoryEntry() {
-	var oldestKey string
-	var oldestTime time.Time
-
-	for key, entry := range c.memoryCache {
-		if oldestKey == "" || entry.FetchedAt.Before(oldestTime) {
-			oldestKey = key
-			oldestTime = entry.FetchedAt
-		}
-	}
-
-	if oldestKey != "" {
-		delete(c.memoryCache, oldestKey)
-	}
-}
-
-func (c *Cache) getFromDisk(_ context.Context, key string) *CacheEntry {
-	if c.config.DiskCacheDir == "" {
+func (c *Cache) getFromDisk(_ context.Context, key string) *cacheEntry {
+	if c.diskCacheDir == "" {
 		return nil
 	}
 
 	c.diskMux.RLock()
 	defer c.diskMux.RUnlock()
 
-	filePath := filepath.Join(c.config.DiskCacheDir, key+"-"+cacheFileName)
+	filePath := filepath.Join(c.diskCacheDir, key+"-"+cacheFileName)
 
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil
+	}
+
+	// Try to decode JSON metadata + content
+	var metadata struct {
+		URL          string    `json:"url"`
+		FetchedAt    time.Time `json:"fetched_at"`
+		ETag         string    `json:"etag"`
+		LastModified string    `json:"last_modified"`
+		ContentSize  int       `json:"content_size"`
+	}
+
+	// Find JSON metadata boundary
+	boundary := []byte("\n---CONTENT---\n")
+	if idx := bytes.Index(data, boundary); idx > 0 {
+		metadataBytes := data[:idx]
+		contentBytes := data[idx+len(boundary):]
+
+		if err := json.Unmarshal(metadataBytes, &metadata); err == nil {
+			return &cacheEntry{
+				Content:      contentBytes,
+				URL:          metadata.URL,
+				FetchedAt:    metadata.FetchedAt,
+				ETag:         metadata.ETag,
+				LastModified: metadata.LastModified,
+			}
+		}
+	}
+
+	// Fallback for old format (content only)
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return nil
 	}
 
-	content, err := os.ReadFile(filePath)
-	if err != nil {
-		return nil
-	}
-
-	entry := &CacheEntry{
-		Content:   content,
+	return &cacheEntry{
+		Content:   data,
 		URL:       "",
 		FetchedAt: info.ModTime(),
 	}
-
-	return entry
 }
 
-func (c *Cache) setOnDisk(_ context.Context, key string, entry *CacheEntry) error {
-	if c.config.DiskCacheDir == "" {
+func (c *Cache) setOnDisk(_ context.Context, key string, entry *cacheEntry) error {
+	if c.diskCacheDir == "" {
 		return nil
 	}
 
 	c.diskMux.Lock()
 	defer c.diskMux.Unlock()
 
-	if err := os.MkdirAll(c.config.DiskCacheDir, 0o755); err != nil {
+	if err := os.MkdirAll(c.diskCacheDir, 0o755); err != nil {
 		return nil
 	}
 
+	// Check disk entries and evict if needed
 	if err := c.evictOldDiskEntries(); err != nil {
+		// Log but don't fail
 		_ = err
 	}
 
-	filePath := filepath.Join(c.config.DiskCacheDir, key+"-"+cacheFileName)
+	filePath := filepath.Join(c.diskCacheDir, key+"-"+cacheFileName)
 
-	if err := os.WriteFile(filePath, entry.Content, 0o644); err != nil {
-		return nil
+	// Store metadata + content
+	metadata := struct {
+		URL          string    `json:"url"`
+		FetchedAt    time.Time `json:"fetched_at"`
+		ETag         string    `json:"etag"`
+		LastModified string    `json:"last_modified"`
+		ContentSize  int       `json:"content_size"`
+	}{
+		URL:          entry.URL,
+		FetchedAt:    entry.FetchedAt,
+		ETag:         entry.ETag,
+		LastModified: entry.LastModified,
+		ContentSize:  len(entry.Content),
 	}
 
-	return nil
+	metadataBytes, err := json.Marshal(metadata)
+	if err != nil {
+		// Fallback: just write content
+		return os.WriteFile(filePath, entry.Content, 0o644)
+	}
+
+	// Combine metadata and content with separator
+	var data []byte
+	data = append(data, metadataBytes...)
+	data = append(data, "\n---CONTENT---\n"...)
+	data = append(data, entry.Content...)
+
+	return os.WriteFile(filePath, data, 0o644)
 }
 
 func (c *Cache) removeFromDisk(_ context.Context, key string) error {
-	if c.config.DiskCacheDir == "" {
+	if c.diskCacheDir == "" {
 		return nil
 	}
 
 	c.diskMux.Lock()
 	defer c.diskMux.Unlock()
 
-	filePath := filepath.Join(c.config.DiskCacheDir, key+"-"+cacheFileName)
+	filePath := filepath.Join(c.diskCacheDir, key+"-"+cacheFileName)
 	return os.Remove(filePath)
 }
 
-func (c *Cache) isDiskEntryValid(entry *CacheEntry) bool {
-	return time.Since(entry.FetchedAt) < c.config.DiskTTL
+func (c *Cache) isDiskEntryValid(entry *cacheEntry) bool {
+	return time.Since(entry.FetchedAt) < c.diskTTL
 }
 
 func (c *Cache) evictOldDiskEntries() error {
-	if c.config.DiskCacheDir == "" {
+	if c.diskCacheDir == "" {
 		return nil
 	}
 
-	entries, err := os.ReadDir(c.config.DiskCacheDir)
+	entries, err := os.ReadDir(c.diskCacheDir)
 	if err != nil {
 		return fmt.Errorf("failed to read cache directory: %w", err)
 	}
@@ -275,12 +306,13 @@ func (c *Cache) evictOldDiskEntries() error {
 				continue
 			}
 			cacheFiles = append(cacheFiles, fileInfo{
-				path:    filepath.Join(c.config.DiskCacheDir, entry.Name()),
+				path:    filepath.Join(c.diskCacheDir, entry.Name()),
 				modTime: info.ModTime(),
 			})
 		}
 	}
 
+	// Sort by modification time (oldest first)
 	for i := 0; i < len(cacheFiles)-1; i++ {
 		for j := i + 1; j < len(cacheFiles); j++ {
 			if cacheFiles[i].modTime.After(cacheFiles[j].modTime) {
@@ -289,60 +321,56 @@ func (c *Cache) evictOldDiskEntries() error {
 		}
 	}
 
+	// Remove oldest entries to make room
 	entriesToRemove := len(cacheFiles) - c.config.MaxDiskEntries + 1
 	for i := 0; i < entriesToRemove && i < len(cacheFiles); i++ {
-		if err := os.Remove(cacheFiles[i].path); err != nil {
-			continue
-		}
+		//nolint:errcheck // File cleanup errors are non-critical
+		_ = os.Remove(cacheFiles[i].path)
 	}
 
 	return nil
 }
 
-func (c *Cache) ClearMemory() {
-	c.memoryMux.Lock()
-	defer c.memoryMux.Unlock()
-	c.memoryCache = make(map[string]*CacheEntry)
+func (c *Cache) clearMemory() {
+	c.memoryCache.Clear()
 }
 
-func (c *Cache) ClearDisk(_ context.Context) error {
-	if c.config.DiskCacheDir == "" {
+func (c *Cache) clearDisk(_ context.Context) error {
+	if c.diskCacheDir == "" {
 		return nil
 	}
 
 	c.diskMux.Lock()
 	defer c.diskMux.Unlock()
 
-	entries, err := os.ReadDir(c.config.DiskCacheDir)
+	entries, err := os.ReadDir(c.diskCacheDir)
 	if err != nil {
 		return fmt.Errorf("failed to read cache directory: %w", err)
 	}
 
 	for _, entry := range entries {
 		if !entry.IsDir() && strings.Contains(entry.Name(), cacheFileName) {
-			filePath := filepath.Join(c.config.DiskCacheDir, entry.Name())
-			if err := os.Remove(filePath); err != nil {
-				continue
-			}
+			filePath := filepath.Join(c.diskCacheDir, entry.Name())
+			//nolint:errcheck // File cleanup errors are non-critical
+			_ = os.Remove(filePath)
 		}
 	}
 
 	return nil
 }
 
-func (c *Cache) Clear(ctx context.Context) error {
-	c.ClearMemory()
-	return c.ClearDisk(ctx)
+func (c *Cache) clear(ctx context.Context) error {
+	c.clearMemory()
+	return c.clearDisk(ctx)
 }
 
-func (c *Cache) Stats() CacheStats {
-	c.memoryMux.RLock()
-	memoryEntries := len(c.memoryCache)
-	c.memoryMux.RUnlock()
+func (c *Cache) stats() cacheStats {
+	// Get memory cache metrics
+	metrics := c.memoryCache.Metrics
 
 	diskEntries := 0
-	if c.config.DiskCacheDir != "" {
-		if entries, err := os.ReadDir(c.config.DiskCacheDir); err == nil {
+	if c.diskCacheDir != "" {
+		if entries, err := os.ReadDir(c.diskCacheDir); err == nil {
 			for _, entry := range entries {
 				if !entry.IsDir() && strings.Contains(entry.Name(), cacheFileName) {
 					diskEntries++
@@ -351,7 +379,16 @@ func (c *Cache) Stats() CacheStats {
 		}
 	}
 
-	return CacheStats{
+	memoryEntries := 0
+	if metrics != nil {
+		keysAdded := metrics.KeysAdded()
+		keysEvicted := metrics.KeysEvicted()
+		if keysAdded >= keysEvicted {
+			memoryEntries = int(keysAdded - keysEvicted) //nolint:gosec // Conversion is safe in this context
+		}
+	}
+
+	return cacheStats{
 		MemoryEntries:    memoryEntries,
 		DiskEntries:      diskEntries,
 		MaxMemoryEntries: c.config.MaxMemoryEntries,
@@ -359,7 +396,7 @@ func (c *Cache) Stats() CacheStats {
 	}
 }
 
-type CacheStats struct {
+type cacheStats struct {
 	MemoryEntries    int
 	DiskEntries      int
 	MaxMemoryEntries int

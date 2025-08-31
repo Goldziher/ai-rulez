@@ -1,16 +1,22 @@
 package config
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/errors"
 	"github.com/Goldziher/ai-rulez/internal/remote"
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// createTestClient creates a remote client for testing
+func createTestClient() *remote.Client {
+	return remote.NewTestClient(nil)
+}
 
 func TestConfigLoader_RemoteIncludes(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,7 +35,7 @@ rules:
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`
 sections:
-  - title: "Remote Section"
+  - name: "Remote Section"
     content: "This is a remote section"
     priority: 3
 `))
@@ -52,10 +58,10 @@ rules:
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
-		config, err := loader.loadRemoteConfig(server.URL + "/remote-rules.yaml")
+		config, err := loader.loadRemoteConfig(context.Background(), server.URL+"/remote-rules.yaml")
 		require.NoError(t, err)
 		require.NotNil(t, config)
 		assert.Len(t, config.Rules, 1)
@@ -67,7 +73,7 @@ rules:
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		resolved := loader.resolvePath(server.URL+"/test.yaml", "/some/local/path")
@@ -95,10 +101,10 @@ rules:
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
-		_, err := loader.loadRemoteConfig(server.URL + "/nonexistent.yaml")
+		_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/nonexistent.yaml")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "404")
 	})
@@ -132,7 +138,7 @@ invalid: yaml: content: [unclosed
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/some/base/dir",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		config := &Config{
@@ -143,7 +149,7 @@ invalid: yaml: content: [unclosed
 
 		for _, includePath := range config.Includes {
 			resolvedPath := loader.resolvePath(includePath, "/some/base/dir")
-			_, err := loader.loadRemoteConfig(resolvedPath)
+			_, err := loader.loadRemoteConfig(context.Background(), resolvedPath)
 			assert.NoError(t, err)
 		}
 	})
@@ -152,10 +158,10 @@ invalid: yaml: content: [unclosed
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/some/base/dir",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
-		_, err := loader.loadRemoteConfig(server.URL + "/nonexistent.yaml")
+		_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/nonexistent.yaml")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "404")
 	})
@@ -164,10 +170,10 @@ invalid: yaml: content: [unclosed
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/some/base/dir",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
-		_, err := loader.loadRemoteConfig(server.URL + "/invalid-yaml.yaml")
+		_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/invalid-yaml.yaml")
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parse remote config")
 	})
@@ -193,7 +199,7 @@ rules:
 			w.WriteHeader(http.StatusOK)
 			w.Write([]byte(`
 sections:
-  - title: "Remote Section"
+  - name: "Remote Section"
     content: "This is a remote section"
     priority: 2
 rules:
@@ -221,7 +227,7 @@ agents:
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		mainConfig := &Config{
@@ -243,7 +249,7 @@ agents:
 			},
 		}
 
-		err := loader.resolveIncludes(mainConfig, "/tmp")
+		err := loader.resolveIncludes(context.Background(), mainConfig, "/tmp")
 		require.NoError(t, err)
 
 		assert.Len(t, mainConfig.Rules, 4)
@@ -265,7 +271,7 @@ agents:
 		assert.Equal(t, []string{"tool1", "tool2"}, mainConfig.Agents[0].Tools)
 		assert.Equal(t, 4, mainConfig.Agents[0].Priority)
 
-		assert.Equal(t, "Remote Section", mainConfig.Sections[0].Title)
+		assert.Equal(t, "Remote Section", mainConfig.Sections[0].Name)
 		assert.Equal(t, "This is a remote section", mainConfig.Sections[0].Content)
 		assert.Equal(t, 2, mainConfig.Sections[0].Priority)
 	})
@@ -274,7 +280,7 @@ agents:
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      server.URL + "/base/",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		mainConfig := &Config{
@@ -283,7 +289,7 @@ agents:
 			},
 		}
 
-		err := loader.resolveIncludes(mainConfig, server.URL+"/base/")
+		err := loader.resolveIncludes(context.Background(), mainConfig, server.URL+"/base/")
 		require.NoError(t, err)
 
 		assert.Len(t, mainConfig.Rules, 2)
@@ -294,13 +300,13 @@ agents:
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		testURL := server.URL + "/test.yaml"
 		loader.visited[testURL] = true
 
-		_, err := loader.loadConfig(testURL)
+		_, err := loader.loadConfig(context.Background(), testURL)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "circular include")
 	})
@@ -329,29 +335,31 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		t.Run("404_error", func(t *testing.T) {
-			_, err := loader.loadRemoteConfig(server.URL + "/404-config.yaml")
+			_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/404-config.yaml")
 			require.Error(t, err)
 
-			var richErr *errors.RichError
-			require.ErrorAs(t, err, &richErr)
-			assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
-			assert.Equal(t, "fetch remote config", richErr.Op)
-			assert.Equal(t, server.URL+"/404-config.yaml", richErr.Path)
+			// Check that it's an oops error with the expected context
+			oopsErr, ok := oops.AsOops(err)
+			require.True(t, ok, "expected oops error")
+			ctx := oopsErr.Context()
+			assert.Equal(t, server.URL+"/404-config.yaml", ctx["url"])
+			assert.Contains(t, err.Error(), "404")
 		})
 
 		t.Run("500_error", func(t *testing.T) {
-			_, err := loader.loadRemoteConfig(server.URL + "/500-config.yaml")
+			_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/500-config.yaml")
 			require.Error(t, err)
 
-			var richErr *errors.RichError
-			require.ErrorAs(t, err, &richErr)
-			assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
-			assert.Equal(t, "fetch remote config", richErr.Op)
-			assert.Equal(t, server.URL+"/500-config.yaml", richErr.Path)
+			// Check that it's an oops error with the expected context
+			oopsErr, ok := oops.AsOops(err)
+			require.True(t, ok, "expected oops error")
+			ctx := oopsErr.Context()
+			assert.Equal(t, server.URL+"/500-config.yaml", ctx["url"])
+			assert.Contains(t, err.Error(), "500")
 		})
 	})
 
@@ -366,17 +374,18 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
-		_, err := loader.loadRemoteConfig(server.URL + "/invalid.yaml")
+		_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/invalid.yaml")
 		require.Error(t, err)
 
-		var richErr *errors.RichError
-		require.ErrorAs(t, err, &richErr)
-		assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
+		// Check that it's an oops error with the expected context
+		oopsErr, ok := oops.AsOops(err)
+		require.True(t, ok, "expected oops error")
+		ctx := oopsErr.Context()
+		assert.Equal(t, server.URL+"/invalid.yaml", ctx["url"])
 		assert.Contains(t, err.Error(), "parse remote config")
-		assert.Equal(t, server.URL+"/invalid.yaml", richErr.Path)
 		assert.Contains(t, err.Error(), "yaml:")
 	})
 
@@ -396,15 +405,16 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 
 		for _, url := range testCases {
 			t.Run(url, func(t *testing.T) {
-				_, err := loader.loadRemoteConfig(url)
+				_, err := loader.loadRemoteConfig(context.Background(), url)
 				require.Error(t, err)
 
-				var richErr *errors.RichError
-				require.ErrorAs(t, err, &richErr)
-				assert.Equal(t, errors.ErrorTypeRemote, richErr.Type)
-				assert.Equal(t, "fetch remote config", richErr.Op)
-				assert.Equal(t, url, richErr.Path)
-				assert.Contains(t, richErr.Context, "url")
+				// Check that it's an oops error with expected context
+				oopsErr, ok := oops.AsOops(err)
+				require.True(t, ok, "expected oops error")
+				assert.Contains(t, err.Error(), "URL blocked for security reasons")
+				ctx := oopsErr.Context()
+				assert.Equal(t, url, ctx["url"])
+				assert.Contains(t, err.Error(), "fetch remote config")
 			})
 		}
 	})
@@ -419,7 +429,7 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      "/tmp",
-			remoteClient: remote.NewTestClient(nil),
+			remoteClient: createTestClient(),
 		}
 
 		mainConfig := &Config{
@@ -427,12 +437,13 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 			Includes: []string{server.URL + "/missing.yaml"},
 		}
 
-		err := loader.resolveIncludes(mainConfig, "/tmp")
+		err := loader.resolveIncludes(context.Background(), mainConfig, "/tmp")
 		require.Error(t, err)
 
-		var richErr *errors.RichError
-		require.ErrorAs(t, err, &richErr)
-		assert.Equal(t, errors.ErrorTypeConfig, richErr.Type)
-		assert.Equal(t, "load config", richErr.Op)
+		// Check that it's an oops error
+		_, ok := oops.AsOops(err)
+		require.True(t, ok, "expected oops error")
+		assert.Contains(t, err.Error(), "fetch remote config")
+		assert.Contains(t, err.Error(), "404")
 	})
 }
