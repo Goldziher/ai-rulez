@@ -13,7 +13,7 @@ type URLValidator struct {
 	allowedSchemes  []string
 }
 
-func NewURLValidator() *URLValidator {
+func newURLValidator() *URLValidator {
 	return &URLValidator{
 		blockedNetworks: getDefaultBlockedNetworks(),
 		allowedSchemes:  []string{"https", "http"},
