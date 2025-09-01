@@ -141,12 +141,12 @@ func (g *Generator) renderRuleTemplate(output *config.Output, rule *config.Rule,
 		"Priority": rule.Priority,
 		"Content":  rule.Content,
 	}
-	
+
 	// Use the custom template if provided, otherwise use a default rule template
 	templateContent := output.Template
 	if templateContent == "" {
 		templateContent = "# {{.Name}}\n\n**Priority:** {{.Priority}}\n\n{{.Content}}"
 	}
-	
+
 	return templates.ExecuteTemplate(templateContent, ruleData)
 }

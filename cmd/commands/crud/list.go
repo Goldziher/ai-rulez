@@ -146,7 +146,7 @@ func runListSections(cmd *cobra.Command, args []string) {
 	if listDetailed {
 		for i, section := range filteredSections {
 			fmt.Printf("Section %d:\n", i+1)
-			fmt.Printf("  Title: %s\n", section.Name)
+			fmt.Printf("  Name: %s\n", section.Name)
 			fmt.Printf("  Priority: %d\n", section.Priority)
 			fmt.Printf("  Content:\n%s\n", indentContent(section.Content, "    "))
 			if i < len(filteredSections)-1 {
@@ -156,9 +156,9 @@ func runListSections(cmd *cobra.Command, args []string) {
 	} else {
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
 		//nolint:errcheck
-		fmt.Fprintln(w, "TITLE\tPRIORITY\tCONTENT PREVIEW")
+		fmt.Fprintln(w, "NAME\tPRIORITY\tCONTENT PREVIEW")
 		//nolint:errcheck
-		fmt.Fprintln(w, "-----\t--------\t---------------")
+		fmt.Fprintln(w, "----\t--------\t---------------")
 
 		for _, section := range filteredSections {
 			preview := truncateString(section.Content, 50)

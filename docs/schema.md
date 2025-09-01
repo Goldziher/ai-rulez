@@ -27,7 +27,7 @@ outputs:
 - `metadata.name` - Project name (minimum 1 character)
 - `outputs` - At least one output configuration
 - Each `rule` must have `name` and `content`
-- Each `section` must have `title` and `content` 
+- Each `section` must have `name` and `content` 
 - Each `agent` must have `name` and `description`
 
 ### Field Constraints

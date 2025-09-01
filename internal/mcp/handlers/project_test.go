@@ -53,7 +53,7 @@ func setupTestConfig(t *testing.T) string {
 		},
 		Sections: []config.Section{
 			{
-				Name:    "Test Section",
+				Name:     "Test Section",
 				Content:  "Test section content",
 				Priority: 3,
 			},

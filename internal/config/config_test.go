@@ -231,7 +231,7 @@ func TestAddSection(t *testing.T) {
 	}
 
 	newSection := config.Section{
-		Name:    "New Section",
+		Name:     "New Section",
 		Content:  "Section content",
 		Priority: 3,
 	}

@@ -203,7 +203,7 @@ func (s *MCPToolsTestSuite) TestUpdateSection() {
 	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
 	sections, _ := getSectionsResult["sections"].([]interface{})
 	firstSection, _ := sections[0].(map[string]interface{})
-	s.Equal("Updated Section Title", firstSection["Name"])
+	s.Equal("Updated Section Title", firstSection["Title"])
 }
 
 func (s *MCPToolsTestSuite) TestDeleteSection() {

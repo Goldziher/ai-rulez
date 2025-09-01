@@ -2,17 +2,17 @@
 
 Start with the simplest setup and progressively build more complex, real-world configurations.
 
-## 1. Quick Start with Presets
+## 1. Quick Start
 
-The fastest way to get started - use presets for instant best practices:
+The fastest way to get started:
 
 ```bash
 # Create a new project with popular AI tools
 ai-rulez init "My Project" --popular
 
-# Or use specific presets
-ai-rulez init "My API" --preset api --gemini
-ai-rulez init "My App" --preset web-app --claude --cursor
+# Or use specific providers
+ai-rulez init "My API" --claude --gemini
+ai-rulez init "My App" --claude --cursor --windsurf
 ```
 
 This generates a complete configuration with agents, rules, and multi-platform support.
@@ -26,9 +26,6 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "My Project"
-
-# Use built-in profile for instant best practices  
-profile: "web-app"
 
 rules:
   - name: "Tech Stack"
@@ -50,8 +47,6 @@ Organize rules by target platform using named targets:
 ```yaml
 metadata:
   name: "My Project"
-
-profile: "web-app"
 
 targets:
   claude-only:
@@ -90,9 +85,6 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 metadata:
   name: "E-commerce Platform"
   version: "2.1.0"
-  
-# Use web-app profile for frontend best practices
-profile: "web-app"
 
 targets:
   claude-agents:
@@ -228,9 +220,6 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "User Management API"
-  
-# Use API profile for backend best practices
-profile: "api"
 
 agents:
   - name: "backend-engineer"
@@ -291,9 +280,6 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "SaaS Dashboard"
-  
-# Use web-app profile for frontend best practices  
-profile: "web-app"
 
 targets:
   claude-agents:
@@ -381,9 +367,6 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
 
 metadata:
   name: "Payment Service"
-  
-# Use api profile for service best practices
-profile: "api"
 
 agents:
   - name: "go-engineer"
