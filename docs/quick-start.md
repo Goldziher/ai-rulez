@@ -2,23 +2,23 @@
 
 Get started instantly with presets, then customize for your project.
 
-## 1. Create Configuration with Presets
+## 1. Create Configuration
 
 **For popular AI tools (Recommended):**
 ```bash
 ai-rulez init "My Project" --popular
 ```
 
-**For specific project types:**
+**For specific providers:**
 ```bash
 # Web application with Claude + Cursor
-ai-rulez init "My App" --preset web-app --claude --cursor
+ai-rulez init "My App" --claude --cursor
 
 # Backend API with multiple tools  
-ai-rulez init "My API" --preset api --popular
+ai-rulez init "My API" --claude --gemini --copilot
 
-# CLI tool with focused setup
-ai-rulez init "My CLI" --preset cli --claude
+# All supported platforms
+ai-rulez init "My Project" --all
 ```
 
 This creates `ai_rulez.yaml` with complete setup including agents, best practices, and multi-platform support.
@@ -60,9 +60,6 @@ metadata:
   name: "My Project"
   version: "1.0.0"
 
-# Keep the web-app profile for best practices
-profile: "web-app"
-
 rules:
   - name: "Tech Stack"
     priority: 10
@@ -81,7 +78,6 @@ rules:
       4. Use ESLint + Biome for formatting
       5. Open PR with comprehensive description
 
-# Profile provides: Code Quality, Testing Standards, Error Handling, Documentation
 outputs:
   - path: "CLAUDE.md"
   - path: ".cursor/rules/rules.mdc"
