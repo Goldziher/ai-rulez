@@ -22,7 +22,7 @@ This generates a complete configuration with agents, rules, and multi-platform s
 Start from scratch with just the essentials:
 
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "My Project"
@@ -80,7 +80,7 @@ outputs:
 Production-ready configuration with specialized agents and comprehensive rules:
 
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "E-commerce Platform"
@@ -216,7 +216,7 @@ Build on the foundation above with these complete project examples.
 FastAPI microservice with comprehensive setup:
 
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "User Management API"
@@ -276,7 +276,7 @@ outputs:
 Modern React app with TypeScript and comprehensive tooling:
 
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "SaaS Dashboard"
@@ -363,7 +363,7 @@ outputs:
 High-performance service with modern Go patterns:
 
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "Payment Service"

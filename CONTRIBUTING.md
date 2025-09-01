@@ -166,7 +166,7 @@ ai-rulez/
 │   │   └── tools.go     # MCP tool definitions
 │   └── templates/       # Built-in templates
 ├── schema/               # JSON Schema definitions
-│   └── ai-rules-v1.schema.json
+│   └── ai-rules-v2.schema.json
 ├── build/                # Package build files
 │   ├── npm/             # npm package files
 │   │   ├── bin/         # Wrapper script
