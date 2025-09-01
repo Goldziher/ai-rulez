@@ -73,7 +73,7 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	claudeContent := testutil.ReadFile(s.T(), claudePath)
 	s.Contains(claudeContent, "WorkflowTest")
 	s.Contains(claudeContent, "Custom workflow rule")
-	s.Contains(claudeContent, "Development Guidelines")  // From init template
+	s.Contains(claudeContent, "Development Guidelines") // From init template
 
 	agentContent := testutil.ReadFile(s.T(), agentPath)
 	s.Contains(agentContent, "workflow-agent")
@@ -94,7 +94,7 @@ func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
 		"--content", "Claude-specific rule")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "Cursor Rule", 
+		"--name", "Cursor Rule",
 		"--content", "Cursor-specific rule")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
@@ -110,7 +110,7 @@ func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
 	claudeContent := testutil.ReadFile(s.T(), claudePath)
 	s.Contains(claudeContent, "Claude-specific rule")
 	s.Contains(claudeContent, "Universal rule")
-	s.Contains(claudeContent, "Cursor-specific rule")  // Will appear in all outputs without targeting
+	s.Contains(claudeContent, "Cursor-specific rule") // Will appear in all outputs without targeting
 
 	cursorPath := filepath.Join(s.workingDir, ".cursor", "rules")
 	s.True(testutil.FileExists(s.T(), cursorPath))
