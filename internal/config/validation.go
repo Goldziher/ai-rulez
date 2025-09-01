@@ -45,16 +45,16 @@ func (c *Config) Validate() error {
 	}
 
 	// Validate target references in agents
-	for _, agent := range c.Agents {
-		if len(agent.Targets) > 0 {
-			_, err := ResolveTargets(agent.Targets, c.Targets)
+	for i := range c.Agents {
+		if len(c.Agents[i].Targets) > 0 {
+			_, err := ResolveTargets(c.Agents[i].Targets, c.Targets)
 			if err != nil {
 				return oops.
 					With("field", "agents").
-					With("agent_name", agent.Name).
-					With("targets", agent.Targets).
+					With("agent_name", c.Agents[i].Name).
+					With("targets", c.Agents[i].Targets).
 					Hint("Check that all target references in agents are defined in the targets section\nDefine missing targets in the targets section\nExample: targets:\n  backend: ['src/**/*.go']\n  frontend: ['web/**/*.ts']").
-					Wrapf(err, "invalid target reference in agent '%s'", agent.Name)
+					Wrapf(err, "invalid target reference in agent '%s'", c.Agents[i].Name)
 			}
 		}
 	}
