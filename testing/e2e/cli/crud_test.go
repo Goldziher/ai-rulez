@@ -141,7 +141,7 @@ func (s *CRUDCLITestSuite) TestUpdateSection() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "Original Section") // Title doesn't change
+	s.Contains(content, "Original Section") // Name doesn't change
 	s.Contains(content, "Updated content")
 }
 
