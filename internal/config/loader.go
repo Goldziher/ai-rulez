@@ -93,11 +93,12 @@ func (l *configLoader) loadConfigInternal(ctx context.Context, filename string, 
 
 	var config *Config
 	var err error
-	if l.isURL(filename) {
+	switch {
+	case l.isURL(filename):
 		config, err = l.loadRemoteConfig(ctx, filename)
-	} else if isInclude {
+	case isInclude:
 		config, err = LoadPartialConfig(filename)
-	} else {
+	default:
 		config, err = LoadConfig(filename)
 	}
 	if err != nil {

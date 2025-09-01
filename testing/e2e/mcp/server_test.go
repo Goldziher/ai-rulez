@@ -173,7 +173,7 @@ func (s *MCPServerTestSuite) TestServerMemoryUsage() {
 
 func (s *MCPServerTestSuite) TestServerCustomConfigPath() {
 	// Create config in custom location
-	err := os.MkdirAll(filepath.Join(s.workingDir, "custom"), 0755)
+	err := os.MkdirAll(filepath.Join(s.workingDir, "custom"), 0o755)
 	require.NoError(s.T(), err)
 	testutil.WriteFile(s.T(), s.workingDir, "custom/config.yaml", testutil.MinimalConfig)
 
