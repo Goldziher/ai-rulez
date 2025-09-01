@@ -20,7 +20,7 @@ rules:
     content: "This is a high priority rule"
 
 sections:
-  - title: "Development Guidelines"
+  - name: "Development Guidelines"
     priority: 8
     content: "Follow these guidelines for development"
 `
