@@ -93,8 +93,7 @@ func (s *TemplatesTestSuite) TestTemplateWithSections() {
 	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
 	content := testutil.ReadFile(s.T(), outputPath)
 
-	// Check sections are included
-	s.Contains(content, "Development Guidelines")
+	// Check section content is included (section names are not shown in default template)
 	s.Contains(content, "Follow these guidelines for development")
 }
 
@@ -143,7 +142,7 @@ rules:
     content: "Test content"
 
 sections:
-  - title: "Test Section"
+  - name: "Test Section"
     content: "Test section content"
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)

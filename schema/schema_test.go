@@ -223,10 +223,10 @@ metadata:
 outputs:
   - file: "output.md"
 sections:
-  - title: "Introduction"
+  - name: "Introduction"
     priority: 10
     content: "Welcome to the project"
-  - title: "Usage"
+  - name: "Usage"
     content: "How to use this"
 `,
 			wantErr: false,

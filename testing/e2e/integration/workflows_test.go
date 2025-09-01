@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"path/filepath"
 	"testing"
 
@@ -73,7 +72,7 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	claudeContent := testutil.ReadFile(s.T(), claudePath)
 	s.Contains(claudeContent, "WorkflowTest")
 	s.Contains(claudeContent, "Custom workflow rule")
-	s.Contains(claudeContent, "Development Guidelines") // From init template
+	s.Contains(claudeContent, "Follow the project's established coding conventions") // From init template section content
 
 	agentContent := testutil.ReadFile(s.T(), agentPath)
 	s.Contains(agentContent, "workflow-agent")
@@ -151,11 +150,6 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	s.NotContains(content, "Updated CRUD rule")
 }
 
-func (s *WorkflowsTestSuite) xTestMCPWorkflow() {
-	// MCP test temporarily disabled due to compilation issues
-	s.T().Skip("MCP test disabled - waiting for MCP fixes")
-}
-
 func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
 	// Start with valid config
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
@@ -202,7 +196,7 @@ func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
 	// Evolve: Add sections (CLI doesn't support --content, so modify file)
 	configPath3 := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	config3 := testutil.ReadFile(s.T(), configPath3)
-	config3 = config3 + `
+	config3 += `
 sections:
   - name: "New Guidelines"
     content: "Added after initial setup"
@@ -227,7 +221,7 @@ sections:
 	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "CLAUDE.md")))
 
 	claudeContent := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, "CLAUDE.md"))
-	s.Contains(claudeContent, "New Guidelines")
+	s.Contains(claudeContent, "Added after initial setup") // Section content
 	s.Contains(claudeContent, "Additional rule")
 
 	// Original output should still exist and be updated
@@ -235,49 +229,4 @@ sections:
 
 	updatedOutput := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, "output.md"))
 	s.NotEqual(initialOutput, updatedOutput, "Output should be updated with new content")
-}
-
-func (s *WorkflowsTestSuite) xTestConcurrentAccessWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
-
-	// Start multiple MCP clients concurrently
-	client1 := testutil.StartMCPServer(s.T(), s.workingDir)
-	defer client1.Close()
-
-	// Test concurrent operations
-	done := make(chan bool, 2)
-
-	// Client 1: Add rules
-	go func() {
-		for i := 0; i < 3; i++ {
-			response := client1.CallTool(s.T(), "add_rule", map[string]interface{}{
-				"content": "Concurrent rule from client 1",
-			})
-			response.AssertToolSuccess(s.T())
-		}
-		done <- true
-	}()
-
-	// CLI operations concurrently
-	go func() {
-		for i := 0; i < 3; i++ {
-			result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-				"--name", fmt.Sprintf("CLI Rule %d", i),
-				"--content", "Concurrent rule from CLI")
-			result.AssertOutputContains(s.T(), "Added rule")
-		}
-		done <- true
-	}()
-
-	// Wait for completion
-	<-done
-	<-done
-
-	// Verify final state
-	response := client1.CallTool(s.T(), "get_rules", map[string]interface{}{})
-	response.AssertToolSuccess(s.T())
-
-	// rules, _ := response.Result["rules"].([]interface{})
-	// s.GreaterOrEqual(len(rules), 8, "Should have original 2 rules plus at least 6 added rules")
-	s.T().Skip("MCP functionality temporarily disabled")
 }
