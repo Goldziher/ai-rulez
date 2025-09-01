@@ -26,9 +26,9 @@ type MCPClient struct {
 
 // MCPResponse represents a response from the MCP server
 type MCPResponse struct {
-	ID     interface{}                 `json:"id"`
-	Result *MCPResult                  `json:"result,omitempty"`
-	Error  *MCPError                   `json:"error,omitempty"`
+	ID     interface{} `json:"id"`
+	Result *MCPResult  `json:"result,omitempty"`
+	Error  *MCPError   `json:"error,omitempty"`
 }
 
 // MCPResult represents the result field in an MCP response
@@ -224,10 +224,10 @@ func (c *MCPClient) sendRequest(t *testing.T, request map[string]interface{}) *M
 // GetParsedResult returns the parsed JSON content as a map for backward compatibility
 func (r *MCPResponse) GetParsedResult(t *testing.T) map[string]interface{} {
 	t.Helper()
-	
+
 	parsed, err := r.GetParsedContent()
 	require.NoError(t, err, "Failed to parse response content")
-	
+
 	return parsed
 }
 
@@ -239,12 +239,12 @@ func (r *MCPResponse) GetParsedContent() (map[string]interface{}, error) {
 
 	// Get the first text content
 	textContent := r.Result.Content[0].Text
-	
+
 	var parsed map[string]interface{}
 	if err := json.Unmarshal([]byte(textContent), &parsed); err != nil {
 		return nil, fmt.Errorf("failed to parse JSON content: %w", err)
 	}
-	
+
 	return parsed, nil
 }
 
@@ -272,10 +272,10 @@ func (r *MCPResponse) GetResultString(t *testing.T, key string) string {
 	t.Helper()
 
 	r.AssertToolSuccess(t)
-	
+
 	parsed, err := r.GetParsedContent()
 	require.NoError(t, err, "Failed to parse response content")
-	
+
 	value, exists := parsed[key]
 	require.True(t, exists, "Result should contain key: %s", key)
 

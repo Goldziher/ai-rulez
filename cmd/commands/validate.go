@@ -52,14 +52,14 @@ func loadAndValidateConfig(configPath string) *config.Config {
 		fmtError(err)
 		os.Exit(1)
 	}
-	
+
 	// Perform configuration validation
 	if err := cfg.Validate(); err != nil {
 		logger.Error("❌ Configuration validation failed", "path", configPath)
 		fmtError(err)
 		os.Exit(1)
 	}
-	
+
 	return cfg
 }
 
@@ -101,7 +101,7 @@ func checkDuplicateSections(cfg *config.Config) []string {
 	return checkDuplicateNames(
 		len(cfg.Sections),
 		func(i int) string { return cfg.Sections[i].Name },
-		"section title",
+		"section name",
 	)
 }
 

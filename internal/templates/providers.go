@@ -118,7 +118,7 @@ outputs:`)
 	if providers.Claude {
 		builder.WriteString(`# AI agents (specialized sub-assistants for Claude)
 agents:
-  - name: "code-reviewer"
+  - title: "code-reviewer"
     description: "Code review and quality analysis specialist"
     system_prompt: |
       You are a senior code reviewer focusing on:
@@ -129,7 +129,7 @@ agents:
       
       Always provide constructive feedback with specific suggestions.
   
-  - name: "test-writer"
+  - title: "test-writer"
     description: "Testing and quality assurance specialist"
     system_prompt: |
       You are a testing expert specializing in:
@@ -143,7 +143,7 @@ agents:
 
 	// Add default rules
 	builder.WriteString(`rules:
-  - name: "Code Quality"
+  - title: "Code Quality"
     priority: 10
     content: |
       - Write clean, readable, and maintainable code
@@ -152,7 +152,7 @@ agents:
       - Keep functions small and focused
       - Avoid code duplication and follow DRY principles
 
-  - name: "Testing Standards"
+  - title: "Testing Standards"
     priority: 9
     content: |
       - Write comprehensive unit tests for all new functionality
@@ -161,7 +161,7 @@ agents:
       - Use descriptive test names that explain the scenario
       - Follow testing best practices (AAA pattern, mocking, etc.)
 
-  - name: "Documentation"
+  - title: "Documentation"
     priority: 8
     content: |
       - Document all public APIs and complex logic
@@ -170,7 +170,7 @@ agents:
       - Include usage examples for complex functionality
       - Document design decisions and architecture
 
-  - name: "Error Handling"
+  - title: "Error Handling"
     priority: 7
     content: |
       - Always handle errors explicitly
@@ -183,14 +183,14 @@ agents:
 
 	// Add sections
 	builder.WriteString(`sections:
-  - name: "Project Context"
+  - title: "Project Context"
     priority: 10
     content: |
       This project follows industry best practices for software development.
       All code should be production-ready, well-tested, and properly documented.
       We prioritize maintainability, performance, and security.
 
-  - name: "Development Guidelines"
+  - title: "Development Guidelines"
     priority: 9
     content: |
       - Follow the project's established coding conventions

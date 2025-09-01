@@ -19,9 +19,6 @@ Instead of maintaining separate `.cursorrules`, `CLAUDE.md`, `.github/copilot-in
 # ai_rulez.yaml
 metadata:
   name: "My Project"
-  
-# Use built-in profile for instant best practices
-profile: "web-app"
 
 targets:
   claude-only:
