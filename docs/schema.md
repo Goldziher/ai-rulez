@@ -5,13 +5,13 @@ ai-rulez uses JSON Schema to validate configuration files and provide editor sup
 ## Schema URL
 
 ```yaml
-$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json"
+$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"
 ```
 
 Add this to your `ai_rulez.yaml` for editor autocompletion and validation:
 
 ```yaml
-$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json"
+$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"
 metadata:
   name: "My Project"
 rules:
@@ -44,7 +44,7 @@ outputs:
 
 ## Complete Schema Reference
 
-The full JSON Schema is available at: [schema/ai-rules-v1.schema.json](https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v1.schema.json)
+The full JSON Schema is available at: [schema/ai-rules-v2.schema.json](https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v2.schema.json)
 
 ### Schema Features
 - ✅ Complete validation for all configuration fields
@@ -66,7 +66,7 @@ Most modern editors automatically detect JSON Schema from the `$schema` field. F
 
 ### Valid Configuration
 ```yaml
-$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json"
+$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"
 metadata:
   name: "My Project"
   version: "1.0.0"

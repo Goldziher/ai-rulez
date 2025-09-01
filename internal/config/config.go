@@ -28,7 +28,7 @@ func LoadConfig(filename string) (*Config, error) {
 					With("filename", filename).
 					With("errors", validationErrors).
 					With("error_count", len(validationErrors)).
-					Hint("Check the YAML syntax using a YAML validator\nEnsure all required fields are present (metadata.name, outputs)\nVerify the structure matches the schema at: https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v1.schema.json\nRun 'ai-rulez validate' for detailed validation output").
+					Hint("Check the YAML syntax using a YAML validator\nEnsure all required fields are present (metadata.name, outputs)\nVerify the structure matches the schema at: https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v2.schema.json\nRun 'ai-rulez validate' for detailed validation output").
 					Errorf("configuration validation failed: %d errors", len(validationErrors))
 			}
 		}

@@ -1,4 +1,4 @@
-#     rev: v1.6.0  # Use the latest version
+#     rev: v2.0.0  # Use the latest version
 - id: ai-rulez-validate
   name: Validate AI rulez configuration
   description: Validate ai-rulez configuration files and ensure they would generate successfully

@@ -28,7 +28,7 @@ func (p ProviderConfig) HasAny() bool {
 func GenerateConfigTemplate(projectName string, providers ProviderConfig) string {
 	var builder strings.Builder
 
-	builder.WriteString(`$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+	builder.WriteString(`$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 `)
 
