@@ -54,7 +54,7 @@ ai-rulez validate
 Add your tech stack and workflow details to `ai_rulez.yaml`:
 
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "My Project"

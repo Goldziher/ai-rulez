@@ -1,6 +1,6 @@
 metadata:
     name: ai-rulez
-    version: 1.6.1
+    version: 2.0.0
     description: Lightning-fast CLI tool and MCP server for managing AI assistant rules across multiple platforms
 outputs:
     - file: CLAUDE.md
