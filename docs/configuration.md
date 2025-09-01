@@ -74,7 +74,7 @@ rules:
     priority: 10
 
 sections:
-  - title: "Section Title" 
+  - name: "Section Name" 
     content: "Longer documentation content"
     priority: 5
 
@@ -110,7 +110,7 @@ Longer documentation blocks:
 
 ```yaml
 sections:
-  - title: "Project Setup"
+  - name: "Project Setup"
     content: |
       This project uses:
       - TypeScript 5.0+
@@ -206,7 +206,7 @@ user_rulez:
       content: "Development-only rule"
       priority: 10
   sections:
-    - title: "Dev Environment"
+    - name: "Dev Environment"
       content: "Local development setup"
   agents:
     - name: "dev-helper"

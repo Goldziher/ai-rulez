@@ -143,7 +143,7 @@ rules:
     content: "Test content"
 
 sections:
-  - name: "Test Section"
+  - title: "Test Section"
     content: "Test section content"
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
@@ -354,7 +354,7 @@ agents:
 	s.Contains(reviewerContent, "name: reviewer")
 	s.Contains(reviewerContent, "description: Code review agent")
 	s.Contains(reviewerContent, "- Read")
-	s.Contains(reviewerContent, "- Edit") 
+	s.Contains(reviewerContent, "- Edit")
 	s.Contains(reviewerContent, "- Grep")
 	s.Contains(reviewerContent, "You are a code reviewer")
 }

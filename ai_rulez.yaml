@@ -158,7 +158,7 @@ rules:
       priority: 5
       content: This is a test rule
 sections:
-    - title: Development Environment
+    - name: Development Environment
       priority: 50
       content: |
         ## Development Setup
@@ -192,7 +192,7 @@ sections:
         ```
 
         **See CONTRIBUTING.md for complete Taskfile documentation**
-    - title: Architecture Overview
+    - name: Architecture Overview
       priority: 40
       content: |
         ## Project Structure
@@ -219,7 +219,7 @@ sections:
         - Fast startup times with optimized initialization
         - Comprehensive test coverage (unit, integration, e2e)
         - Multi-platform support (CLI + MCP server)
-    - title: Remote Configuration Support
+    - name: Remote Configuration Support
       priority: 45
       content: |
         ## Remote Includes Feature
@@ -242,7 +242,7 @@ sections:
         - Multi-level caching (memory, disk, HTTP headers)
         - Efficient concurrent fetching
         - Smart cache invalidation with ETags
-    - title: Cursor Rules Migration Guide
+    - name: Cursor Rules Migration Guide
       priority: 35
       content: |
         ## ✨ Cursor Rules Migration (.cursorrules → .cursor/rules/)
@@ -278,7 +278,7 @@ sections:
         4. **Update .gitignore**: Use `.cursor/` instead of `.cursorrules`
 
         The new format is fully backward compatible - your existing rules work the same way.
-    - title: MCP Server Integration
+    - name: MCP Server Integration
       priority: 48
       content: |
         ## Model Context Protocol (MCP) Server
@@ -309,7 +309,7 @@ sections:
         - Seamless AI assistant workflow integration
         - Automatic validation and error handling
         - Support for all configuration operations via API
-    - title: Agent System and CRUD Operations
+    - name: Agent System and CRUD Operations
       priority: 42
       content: |
         ## Agent Management
@@ -341,7 +341,7 @@ sections:
         - `documenter` - Documentation generation and updates
         - `tester` - Test case generation and validation
         - `refactor` - Code restructuring and optimization
-    - title: Testing and Quality Assurance
+    - name: Testing and Quality Assurance
       priority: 38
       content: |
         ## Comprehensive Test Coverage
@@ -375,7 +375,7 @@ sections:
         - Race condition detection enabled
         - Performance benchmarks for critical paths
         - Schema validation for all configurations
-    - title: AI Agent Integration and Presets
+    - name: AI Agent Integration and Presets
       priority: 46
       content: |
         ## AI Agent Integration
