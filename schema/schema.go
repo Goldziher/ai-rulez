@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed ai-rules-v1.schema.json
+//go:embed ai-rules-v2.schema.json
 var schemaJSON []byte
 
 var compiler = jsonschema.NewCompiler()
