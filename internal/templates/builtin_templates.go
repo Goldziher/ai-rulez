@@ -27,8 +27,6 @@ Total content: {{.RuleCount}} rules, {{.SectionCount}} sections
 {{.Content}}
 {{- else}}
 
-## {{.Title}}
-
 {{.Content}}
 {{- end}}
 {{- end}}
@@ -47,7 +45,7 @@ Total content: {{.RuleCount}} rules, {{.SectionCount}} sections
 Generated on {{.Timestamp.Format "2006-01-02 15:04:05"}}
 
 {{- range .Sections}}
-## {{.Title}}
+## {{.Name}}
 
 {{.Content}}
 

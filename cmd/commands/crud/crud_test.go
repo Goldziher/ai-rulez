@@ -117,7 +117,7 @@ func TestSectionCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		newSection := config.Section{
-			Name:    "Test Section",
+			Name:     "Test Section",
 			Content:  "Section content",
 			Priority: 5,
 		}

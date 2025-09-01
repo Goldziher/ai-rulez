@@ -25,7 +25,7 @@ func TestSectionHandlers(t *testing.T) {
 		require.NoError(t, err)
 
 		newSection := config.Section{
-			Name:    "New Section",
+			Name:     "New Section",
 			Content:  "New content",
 			Priority: 10,
 		}
