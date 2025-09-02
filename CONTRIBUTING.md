@@ -133,9 +133,6 @@ task dev
 # Clean build artifacts
 task clean
 
-# Sync JSON schema to embedded location
-task sync-schema
-
 # Build for multiple platforms
 task build:all
 
