@@ -15,7 +15,6 @@ import (
 )
 
 var (
-	// Provider flags
 	allProviders     bool
 	popularProviders bool
 	withAgents       bool
@@ -25,9 +24,8 @@ var (
 	useAgent         string
 	noAgent          bool
 	listAgents       bool
-	setupHooks       bool // Added for git hooks setup
+	setupHooks       bool
 
-	// Individual provider flags
 	claudeFlag      bool
 	cursorFlag      bool
 	windsurfFlag    bool
@@ -51,12 +49,10 @@ configures outputs for your selected AI assistants.`,
 }
 
 func init() {
-	// Provider selection flags
 	InitCmd.Flags().BoolVar(&allProviders, "all", false, "Enable all supported providers")
 	InitCmd.Flags().BoolVar(&popularProviders, "popular", false, "Enable popular providers (Claude, Cursor, Windsurf, Copilot)")
 	InitCmd.Flags().StringVar(&preset, "preset", "", "Use a preset configuration (claude, cursor, windsurf, copilot, etc.)")
 
-	// Individual provider flags
 	InitCmd.Flags().BoolVar(&claudeFlag, "claude", false, "Include Claude configuration")
 	InitCmd.Flags().BoolVar(&cursorFlag, "cursor", false, "Include Cursor configuration")
 	InitCmd.Flags().BoolVar(&windsurfFlag, "windsurf", false, "Include Windsurf configuration")
@@ -67,17 +63,14 @@ func init() {
 	InitCmd.Flags().BoolVar(&clineFlag, "cline", false, "Include Cline configuration")
 	InitCmd.Flags().BoolVar(&continueDevFlag, "continue-dev", false, "Include Continue.dev configuration")
 
-	// Configuration options
 	InitCmd.Flags().BoolVar(&withAgents, "with-agents", false, "Include agent configurations (for Claude)")
 	InitCmd.Flags().BoolVar(&withSections, "with-sections", true, "Include documentation sections")
 	InitCmd.Flags().BoolVar(&noComments, "no-comments", false, "Omit explanatory comments from the generated config")
 
-	// AI agent flags
 	InitCmd.Flags().StringVar(&useAgent, "use-agent", "", "Use an AI agent to generate configuration (claude, gemini, etc.)")
 	InitCmd.Flags().BoolVar(&noAgent, "no-agent", false, "Skip AI agent detection and usage")
 	InitCmd.Flags().BoolVar(&listAgents, "list-agents", false, "List available AI agents and exit")
 
-	// Git hooks setup
 	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation if lefthook, pre-commit, or husky is detected")
 }
 
@@ -97,7 +90,6 @@ func runInit(cmd *cobra.Command, args []string) {
 	generateAndWriteConfig(projectName, providerConfig)
 	displaySuccessMessage(projectName, providerConfig)
 
-	// Setup git hooks if requested
 	if setupHooks {
 		handleHooksSetup()
 	}
@@ -124,7 +116,6 @@ func getProjectName(args []string) string {
 	if len(args) > 0 {
 		projectName = args[0]
 	} else {
-		// Try to get from current directory name
 		if cwd, err := os.Getwd(); err == nil {
 			projectName = filepath.Base(cwd)
 		}
@@ -279,12 +270,10 @@ func parseIndividualFlags(cmd *cobra.Command) templates.ProviderConfig {
 		ContinueDev: continueDevFlag,
 	}
 
-	// If no providers specified, default to Claude
 	if !pc.HasAny() {
 		pc.Claude = true
 	}
 
-	// Auto-enable agents for Claude if not explicitly disabled
 	if pc.Claude && !cmd.Flags().Changed("with-agents") {
 		withAgents = true
 	}

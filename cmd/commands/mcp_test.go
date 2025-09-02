@@ -13,7 +13,6 @@ func TestMCPCommand(t *testing.T) {
 	assert.Equal(t, "mcp", commands.MCPCmd.Use)
 	assert.Contains(t, commands.MCPCmd.Long, "Model Context Protocol")
 
-	// Check hidden flags for future use
 	flags := commands.MCPCmd.Flags()
 
 	transportFlag := flags.Lookup("transport")

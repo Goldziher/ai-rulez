@@ -18,7 +18,6 @@ func (g *Generator) renderTemplate(output *config.Output, data *templates.Templa
 		templateName = output.Template
 	}
 
-	// Handle file-based templates
 	if strings.HasPrefix(templateName, "@") {
 		templatePath := strings.TrimPrefix(templateName, "@")
 		fullPath := filepath.Join(g.baseDir, templatePath)
@@ -64,7 +63,6 @@ func (g *Generator) renderTemplate(output *config.Output, data *templates.Templa
 		return content, nil
 	}
 
-	// Handle inline templates
 	if strings.Contains(templateName, "\n") || strings.Contains(templateName, "{{") {
 		content, err := templates.RenderString(templateName, data)
 		if err != nil {
@@ -78,7 +76,6 @@ func (g *Generator) renderTemplate(output *config.Output, data *templates.Templa
 		return content, nil
 	}
 
-	// Handle named templates
 	content, err := g.renderer.Render(templateName, data)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
@@ -135,14 +132,12 @@ func (g *Generator) renderAgentTemplate(output *config.Output, agent *config.Age
 }
 
 func (g *Generator) renderRuleTemplate(output *config.Output, rule *config.Rule, data *templates.TemplateData) (string, error) {
-	// Create template data with individual rule fields accessible
 	ruleData := map[string]interface{}{
 		"Name":     rule.Name,
 		"Priority": rule.Priority,
 		"Content":  rule.Content,
 	}
 
-	// Use the custom template if provided, otherwise use a default rule template
 	templateContent := output.Template
 	if templateContent == "" {
 		templateContent = "# {{.Name}}\n\n**Priority:** {{.Priority}}\n\n{{.Content}}"

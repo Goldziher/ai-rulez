@@ -29,11 +29,9 @@ func (s *InitCLITestSuite) TearDownSuite() {
 func (s *InitCLITestSuite) TestBasicInit() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "TestProject")
 
-	// Init uses logger.Info, so output goes to stderr
 	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
 	result.AssertStderrContains(s.T(), "TestProject")
 
-	// Check config file was created
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 
@@ -56,11 +54,9 @@ func (s *InitCLITestSuite) TestInitClaudePreset() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ClaudeProject", "--preset", "claude")
 
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
-	// Agents are auto-enabled for claude preset, check output
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "CLAUDE.md")
-	// Agent directory output should be included
 	s.Contains(content, ".claude/agents/")
 }
 
@@ -135,14 +131,11 @@ func (s *InitCLITestSuite) TestInitNoComments() {
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 
-	// Should have minimal comments (some may still exist in template structure)
-	// Count the comment lines - should be fewer than normal config
 	commentLines := strings.Count(content, "# ")
 	s.LessOrEqual(commentLines, 5, "Should have minimal comments with --no-comments flag")
 }
 
 func (s *InitCLITestSuite) TestInitExistingConfig() {
-	// Create existing config
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", "existing: config")
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "init", "TestProject")
@@ -152,7 +145,6 @@ func (s *InitCLITestSuite) TestInitExistingConfig() {
 func (s *InitCLITestSuite) TestInitListAgents() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "--list-agents")
 
-	// List agents command might output to stdout, check both
 	result.AssertOutputContains(s.T(), "Available")
 }
 
@@ -165,7 +157,6 @@ func (s *InitCLITestSuite) TestInitNoAgent() {
 func (s *InitCLITestSuite) TestInitInvalidPreset() {
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "InvalidPresetProject", "--preset", "nonexistent")
 
-	// Should still create basic config with default Claude
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
 }

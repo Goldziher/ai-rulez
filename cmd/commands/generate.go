@@ -41,7 +41,6 @@ func init() {
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
-	// Set quiet mode from viper
 	progress.SetQuiet(viper.GetBool("quiet"))
 
 	if recursive {
@@ -66,18 +65,15 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Load configuration
 	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
 	if err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}
 
-	// Create generator
 	gen := generator.NewWithConfigFile(configPath)
 
 	if dryRun {
-		// Dry run mode - just show what would be generated
 		preview, err := gen.PreviewAll(cfg)
 		if err != nil {
 			fmtError(err)
@@ -90,23 +86,19 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Generate files
 	if err := gen.GenerateAll(cfg); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}
 
-	// Update gitignore if requested
 	if updateGitignore {
 		if err := gitignore.UpdateGitignoreFiles(configPath, cfg); err != nil {
-			// Just log warning, don't fail
 			if !progress.IsQuiet() {
 				fmt.Printf("  ⚠️  Warning: Could not update .gitignore: %v\n", err)
 			}
 		}
 	}
 
-	// Success message
 	progress.PrintIfNotQuiet("✅ Generated %d file(s) successfully\n", len(cfg.Outputs))
 	for _, output := range cfg.Outputs {
 		progress.PrintIfNotQuiet("  - %s\n", output.GetPath())
@@ -218,7 +210,6 @@ func handleGeneration(gen *generator.Generator, cfg *config.Config, configPath s
 func handleGitignoreUpdate(configPath string, cfg *config.Config) {
 	if updateGitignore {
 		if err := gitignore.UpdateGitignoreFiles(configPath, cfg); err != nil {
-			// Just log warning, don't fail
 			if !progress.IsQuiet() {
 				fmt.Printf("  ⚠️  Warning: Could not update .gitignore: %v\n", err)
 			}

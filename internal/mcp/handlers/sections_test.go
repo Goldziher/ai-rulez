@@ -33,7 +33,6 @@ func TestSectionHandlers(t *testing.T) {
 		cfg.Sections = append(cfg.Sections, newSection)
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
-		// Verify
 		reloaded, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 		assert.Greater(t, len(reloaded.Sections), 1)
@@ -48,7 +47,6 @@ func TestSectionHandlers(t *testing.T) {
 			cfg.Sections[0].Priority = 10
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "Updated content", reloaded.Sections[0].Content)
@@ -64,7 +62,6 @@ func TestSectionHandlers(t *testing.T) {
 			cfg.Sections = cfg.Sections[1:]
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify deletion
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Less(t, len(reloaded.Sections), len(cfg.Sections)+1)

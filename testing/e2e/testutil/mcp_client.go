@@ -78,7 +78,6 @@ func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 		cancel: cancel,
 	}
 
-	// Initialize the MCP connection
 	client.initialize(t)
 
 	return client
@@ -151,11 +150,9 @@ func (c *MCPClient) GetInfo(t *testing.T) *MCPResponse {
 func (c *MCPClient) initialize(t *testing.T) {
 	t.Helper()
 
-	// Send initialize request
 	response := c.GetInfo(t)
 	require.Nil(t, response.Error, "MCP initialization should succeed")
 
-	// Send initialized notification
 	notification := map[string]interface{}{
 		"jsonrpc": "2.0",
 		"method":  "notifications/initialized",
@@ -170,28 +167,24 @@ func (c *MCPClient) initialize(t *testing.T) {
 	err = c.stdin.Flush()
 	require.NoError(t, err)
 
-	// Small delay to let server process initialization
 	time.Sleep(100 * time.Millisecond)
 }
 
 func (c *MCPClient) sendRequest(t *testing.T, request map[string]interface{}) *MCPResponse {
 	t.Helper()
 
-	// Synchronize access to stdin/stdout
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	data, err := json.Marshal(request)
 	require.NoError(t, err, "Failed to marshal request")
 
-	// Send request
 	_, err = c.stdin.WriteString(string(data) + "\n")
 	require.NoError(t, err, "Failed to write request")
 
 	err = c.stdin.Flush()
 	require.NoError(t, err, "Failed to flush request")
 
-	// Read response with timeout
 	responseChan := make(chan *MCPResponse, 1)
 	errorChan := make(chan error, 1)
 
@@ -237,7 +230,6 @@ func (r *MCPResponse) GetParsedContent() (map[string]interface{}, error) {
 		return nil, fmt.Errorf("no content in response")
 	}
 
-	// Get the first text content
 	textContent := r.Result.Content[0].Text
 
 	var parsed map[string]interface{}
