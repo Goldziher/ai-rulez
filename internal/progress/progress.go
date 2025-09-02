@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	// Global quiet mode flag
 	quiet bool
 	mu    sync.RWMutex
 )
@@ -282,7 +281,6 @@ func (fc *FileCounter) Error(err error) {
 	defer fc.mu.Unlock()
 
 	if !fc.bar.quiet && fc.currentFile != "" {
-		// Clear the progress bar temporarily to show error
 		//nolint:errcheck // Progress bar errors are non-critical
 		_ = fc.bar.Clear()
 		fmt.Fprintf(os.Stderr, "❌ Error processing %s: %v\n", fc.currentFile, err)

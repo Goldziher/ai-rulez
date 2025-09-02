@@ -64,7 +64,6 @@ func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return nil, err
 	}
 
-	// Check for duplicate title
 	for _, section := range cfg.Sections {
 		if section.Name == params.Name {
 			return nil, fmt.Errorf("section with title '%s' already exists", params.Name)
@@ -139,7 +138,6 @@ func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mc
 		return nil, fmt.Errorf("section with title '%s' not found", params.Name)
 	}
 
-	// Check for duplicate new title
 	if params.NewName != "" && params.NewName != params.Name {
 		for _, section := range cfg.Sections {
 			if section.Name == params.NewName {
@@ -209,7 +207,6 @@ func DeleteSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mc
 		return nil, fmt.Errorf("section with title '%s' not found", params.Name)
 	}
 
-	// Remove the section
 	cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
 
 	if err := saveConfig(cfg, configPath); err != nil {

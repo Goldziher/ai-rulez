@@ -115,7 +115,6 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 
 	data := templates.NewTemplateDataForOutput(cfg, outputPath)
 
-	// Should include rules that match the target: "All" (empty targets match all), "Claude" (matches claude.md)
 	assert.Len(t, data.Rules, 2)
 	assert.Equal(t, "claude.md", data.OutputFile)
 }
@@ -126,12 +125,10 @@ func TestBuiltinTemplates(t *testing.T) {
 	renderer := templates.NewRenderer()
 	formats := renderer.GetSupportedFormats()
 
-	// Check that essential formats exist
 	assert.Contains(t, formats, "default")
 	assert.Contains(t, formats, "minimal")
 	assert.Contains(t, formats, "documentation")
 
-	// Verify each template can render without error
 	data := &templates.TemplateData{
 		ProjectName: "Test",
 		Rules:       []config.Rule{{Name: "R1", Content: "C1"}},

@@ -9,7 +9,6 @@ import (
 )
 
 func TestCRUDCommands(t *testing.T) {
-	// Verify CRUD parent commands exist and have subcommands
 	assert.NotNil(t, commands.AddCmd)
 	assert.Equal(t, "add", commands.AddCmd.Use)
 	assert.True(t, commands.AddCmd.HasSubCommands())

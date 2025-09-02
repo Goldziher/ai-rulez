@@ -56,16 +56,13 @@ func ValidateWithSchema(configData []byte) error {
 func extractDetailedErrors(result *jsonschema.EvaluationResult) []string {
 	var errors []string
 
-	// Process top-level errors first
 	for field, validationErr := range result.Errors {
 		msg := formatError(field, validationErr, "")
 		errors = append(errors, msg)
 	}
 
-	// Process detailed nested errors for more specific information
 	errors = append(errors, extractNestedErrors(result.ToList(), "")...)
 
-	// Remove duplicates and generic messages
 	return deduplicateErrors(errors)
 }
 
@@ -81,13 +78,11 @@ func formatError(field string, err *jsonschema.EvaluationError, path string) str
 				}
 				return fmt.Sprintf("- %s: required field is missing", propertyName)
 			case "property_mismatch":
-				// Skip generic property mismatch - nested errors are more specific
 				return ""
 			}
 		}
 	}
 
-	// Handle specific validation codes
 	switch err.Code {
 	case "minItems":
 		return fmt.Sprintf("- %s: must have at least 1 item", field)
@@ -108,7 +103,6 @@ func formatError(field string, err *jsonschema.EvaluationError, path string) str
 		}
 	}
 
-	// Fallback to generic message
 	return fmt.Sprintf("- %s: %s", field, err.Message)
 }
 
@@ -120,7 +114,6 @@ func extractNestedErrors(list *jsonschema.List, parentPath string) []string {
 	}
 
 	for _, detail := range list.Details {
-		// Build the path for this error
 		path := parentPath
 		if detail.InstanceLocation != "" {
 			if path != "" {
@@ -130,7 +123,6 @@ func extractNestedErrors(list *jsonschema.List, parentPath string) []string {
 			}
 		}
 
-		// Process errors for this detail
 		for field, errObj := range detail.Errors {
 			msg := formatNestedError(field, errObj, path)
 			if msg != "" {
@@ -138,7 +130,6 @@ func extractNestedErrors(list *jsonschema.List, parentPath string) []string {
 			}
 		}
 
-		// Recursively process nested details
 		if len(detail.Details) > 0 {
 			nested := &jsonschema.List{Details: detail.Details}
 			errors = append(errors, extractNestedErrors(nested, path)...)
@@ -153,12 +144,9 @@ func formatNestedError(field string, errMsg string, path string) string {
 	cleanPath := strings.ReplaceAll(path, "/", ".")
 	cleanPath = strings.Trim(cleanPath, ".")
 
-	// Parse common error patterns from the message string
 	switch field {
 	case "required":
-		// Messages like "Required property 'metadata' is missing"
 		if strings.Contains(errMsg, "Required property") {
-			// Extract property name from message
 			start := strings.Index(errMsg, "'")
 			end := strings.LastIndex(errMsg, "'")
 			if start != -1 && end != -1 && end > start {
@@ -181,8 +169,6 @@ func formatNestedError(field string, errMsg string, path string) string {
 			return fmt.Sprintf("- %s: must have at least 1 item", cleanPath)
 		}
 	case "additionalProperties":
-		// Messages like "Additional property 'unknown' does not match the schema"
-		// or "Additional properties 'prop1', 'prop2' do not match the schema"
 		if strings.Contains(errMsg, "Additional propert") {
 			// Extract property names from single quotes
 			var properties []string
@@ -209,21 +195,17 @@ func formatNestedError(field string, errMsg string, path string) string {
 			}
 		}
 	case propertiesField:
-		// Often too generic, rely on nested errors
 		return ""
 	case "schema":
 		if strings.Contains(errMsg, "No values are allowed") {
-			// This is for additionalProperties: false - skip, parent handles it
 			return ""
 		}
 	}
 
-	// Skip generic messages that don't add value
 	if field == propertiesField && strings.Contains(errMsg, "does not match the schema") {
 		return ""
 	}
 
-	// Fallback - use field and message if specific handling didn't apply
 	if cleanPath != "" && field != propertiesField {
 		return fmt.Sprintf("- %s.%s: %s", cleanPath, field, errMsg)
 	}

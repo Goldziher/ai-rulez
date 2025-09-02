@@ -72,7 +72,6 @@ func TestSaveConfig(t *testing.T) {
 	err := config.SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	// Verify by loading it back
 	loaded, err := config.LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Equal(t, cfg.Metadata.Name, loaded.Metadata.Name)
@@ -84,7 +83,6 @@ func TestLoadConfigWithIncludes(t *testing.T) {
 	t.Run("simple include", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		// Create included file
 		includeFile := filepath.Join(tempDir, "include.yaml")
 		includeContent := `
 rules:
@@ -94,7 +92,6 @@ rules:
 `
 		require.NoError(t, os.WriteFile(includeFile, []byte(includeContent), 0o644))
 
-		// Create main config
 		mainFile := filepath.Join(tempDir, "main.yaml")
 		mainContent := `
 metadata:
@@ -114,7 +111,6 @@ rules:
 		require.NoError(t, err)
 		assert.Len(t, cfg.Rules, 2)
 
-		// Check both rules are present
 		ruleNames := make([]string, len(cfg.Rules))
 		for i, r := range cfg.Rules {
 			ruleNames[i] = r.Name
@@ -126,7 +122,6 @@ rules:
 	t.Run("circular include detection", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		// Create file A that includes B
 		fileA := filepath.Join(tempDir, "a.yaml")
 		contentA := `
 metadata:
@@ -138,7 +133,6 @@ includes:
 `
 		require.NoError(t, os.WriteFile(fileA, []byte(contentA), 0o644))
 
-		// Create file B that includes A (circular)
 		fileB := filepath.Join(tempDir, "b.yaml")
 		contentB := `
 includes:
@@ -219,7 +213,6 @@ func TestAddRule(t *testing.T) {
 		Priority: 5,
 	}
 
-	// Test adding
 	cfg.Rules = append(cfg.Rules, newRule)
 	assert.Len(t, cfg.Rules, 2)
 	assert.Equal(t, "New Rule", cfg.Rules[1].Name)
@@ -268,14 +261,13 @@ func TestMergeRules(t *testing.T) {
 	}
 
 	rules2 := []config.Rule{
-		{Name: "Rule2", Content: "Updated2", Priority: 3}, // Should override
+		{Name: "Rule2", Content: "Updated2", Priority: 3},
 		{Name: "Rule3", Content: "Content3", Priority: 4},
 	}
 
 	merged := config.MergeRules(rules1, rules2)
 	assert.Len(t, merged, 3)
 
-	// Check that Rule2 was overridden
 	for _, r := range merged {
 		if r.Name == "Rule2" {
 			assert.Equal(t, "Updated2", r.Content)
@@ -316,7 +308,7 @@ func TestValidateOutputs(t *testing.T) {
 
 	t.Run("output without path", func(t *testing.T) {
 		outputs := []config.Output{
-			{Template: "default"}, // Missing path
+			{Template: "default"},
 		}
 		err := config.ValidateOutputs(outputs)
 		assert.Error(t, err)
@@ -327,7 +319,6 @@ func TestValidateIncludes(t *testing.T) {
 	t.Run("valid local include", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		// Create include file
 		includeFile := filepath.Join(tempDir, "include.yaml")
 		require.NoError(t, os.WriteFile(includeFile, []byte("rules: []"), 0o644))
 

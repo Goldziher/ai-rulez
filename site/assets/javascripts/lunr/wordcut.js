@@ -195,7 +195,6 @@ var WordcutDict = {
   },
 
   flatten: function(a){
-    //[[1,2],[3]] -> [1,2,3]
     return [].concat.apply([], a);
   }
 };
@@ -261,7 +260,7 @@ var SpaceRule = {
             isFinal: false,
             transit: function(ch) {
               if (ch == " " || ch == "\t" || ch == "\r" || ch == "\n" ||
-                  ch == "\u00A0" || ch=="\u2003"//nbsp and emsp
+                  ch == "\u00A0" || ch=="\u2003"
                  ) {
                 this.isFinal = true;
                 this.strOffset++;
@@ -308,16 +307,6 @@ var _ = require("underscore")
   , WordcutCore = require("./wordcut_core");
 var PathInfoBuilder = {
 
-  /*
-    buildByPartAcceptors: function(path, acceptors, i) {
-    var 
-    var genInfos = partAcceptors.reduce(function(genInfos, acceptor) {
-      
-    }, []);
-    
-    return genInfos;
-  } 
-  */
 
   buildByAcceptors: function(path, finalAcceptors, i) {
     var self = this;
@@ -353,12 +342,6 @@ var PathInfoBuilder = {
               w: 1 + _info.w,
               unk: 1 + _info.unk,
               type: "UNK"};      
-/*    } else if(leftBoundary > 0 && path[leftBoundary].type !== "UNK") {
-      leftBoundary = path[leftBoundary].p;
-      return {p: leftBoundary,
-              w: 1 + _info.w,
-              unk: 1 + _info.unk,
-              type: "UNK"};            */
     } else {      
       return {p: leftBoundary,
               mw: _info.mw,
@@ -617,48 +600,15 @@ var WordcutCore = {
 module.exports = WordcutCore;
 
 },{}],9:[function(require,module,exports){
-// http://wiki.commonjs.org/wiki/Unit_Testing/1.0
-//
-// THIS IS NOT TESTED NOR LIKELY TO WORK OUTSIDE V8!
-//
-// Originally from narwhal.js (http://narwhaljs.org)
-// Copyright (c) 2009 Thomas Robinson <280north.com>
-//
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the 'Software'), to
-// deal in the Software without restriction, including without limitation the
-// rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
-// sell copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-//
-// The above copyright notice and this permission notice shall be included in
-// all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED 'AS IS', WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN
-// ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-// WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// when used in node, this will actually load the util module we depend on
-// versus loading the builtin util module as happens otherwise
-// this is a bug in node module loading as far as I am concerned
 var util = require('util/');
 
 var pSlice = Array.prototype.slice;
 var hasOwn = Object.prototype.hasOwnProperty;
 
-// 1. The assert module provides functions that throw
-// AssertionError's when particular conditions are not met. The
-// assert module must conform to the following interface.
 
 var assert = module.exports = ok;
 
-// 2. The AssertionError is defined in assert.
-// new assert.AssertionError({ message: message,
-//                             actual: actual,
-//                             expected: expected })
 
 assert.AssertionError = function AssertionError(options) {
   this.name = 'AssertionError';
@@ -678,17 +628,13 @@ assert.AssertionError = function AssertionError(options) {
     Error.captureStackTrace(this, stackStartFunction);
   }
   else {
-    // non v8 browsers so we can have a stacktrace
     var err = new Error();
     if (err.stack) {
       var out = err.stack;
 
-      // try to strip useless frames
       var fn_name = stackStartFunction.name;
       var idx = out.indexOf('\n' + fn_name);
       if (idx >= 0) {
-        // once we have located the function frame
-        // we need to strip out everything before it (and its line)
         var next_line = out.indexOf('\n', idx + 1);
         out = out.substring(next_line + 1);
       }
@@ -698,7 +644,6 @@ assert.AssertionError = function AssertionError(options) {
   }
 };
 
-// assert.AssertionError instanceof Error
 util.inherits(assert.AssertionError, Error);
 
 function replacer(key, value) {
@@ -728,16 +673,7 @@ function getMessage(self) {
          truncate(JSON.stringify(self.expected, replacer), 128);
 }
 
-// At present only the three keys mentioned above are used and
-// understood by the spec. Implementations or sub modules can pass
-// other keys to the AssertionError's constructor - they will be
-// ignored.
 
-// 3. All of the following functions must throw an AssertionError
-// when a corresponding condition is not met, with a message that
-// may be undefined if not provided.  All assertion methods provide
-// both the actual and expected values to the assertion error for
-// display purposes.
 
 function fail(actual, expected, message, operator, stackStartFunction) {
   throw new assert.AssertionError({
@@ -749,31 +685,19 @@ function fail(actual, expected, message, operator, stackStartFunction) {
   });
 }
 
-// EXTENSION! allows for well behaved errors defined elsewhere.
 assert.fail = fail;
 
-// 4. Pure assertion tests whether a value is truthy, as determined
-// by !!guard.
-// assert.ok(guard, message_opt);
-// This statement is equivalent to assert.equal(true, !!guard,
-// message_opt);. To test strictly for the value true, use
-// assert.strictEqual(true, guard, message_opt);.
 
 function ok(value, message) {
   if (!value) fail(value, true, message, '==', assert.ok);
 }
 assert.ok = ok;
 
-// 5. The equality assertion tests shallow, coercive equality with
-// ==.
-// assert.equal(actual, expected, message_opt);
 
 assert.equal = function equal(actual, expected, message) {
   if (actual != expected) fail(actual, expected, message, '==', assert.equal);
 };
 
-// 6. The non-equality assertion tests for whether two objects are not equal
-// with != assert.notEqual(actual, expected, message_opt);
 
 assert.notEqual = function notEqual(actual, expected, message) {
   if (actual == expected) {
@@ -781,8 +705,6 @@ assert.notEqual = function notEqual(actual, expected, message) {
   }
 };
 
-// 7. The equivalence assertion tests a deep equality relation.
-// assert.deepEqual(actual, expected, message_opt);
 
 assert.deepEqual = function deepEqual(actual, expected, message) {
   if (!_deepEqual(actual, expected)) {
@@ -791,7 +713,6 @@ assert.deepEqual = function deepEqual(actual, expected, message) {
 };
 
 function _deepEqual(actual, expected) {
-  // 7.1. All identical values are equivalent, as determined by ===.
   if (actual === expected) {
     return true;
 
@@ -804,14 +725,9 @@ function _deepEqual(actual, expected) {
 
     return true;
 
-  // 7.2. If the expected value is a Date object, the actual value is
-  // equivalent if it is also a Date object that refers to the same time.
   } else if (util.isDate(actual) && util.isDate(expected)) {
     return actual.getTime() === expected.getTime();
 
-  // 7.3 If the expected value is a RegExp object, the actual value is
-  // equivalent if it is also a RegExp object with the same source and
-  // properties (`global`, `multiline`, `lastIndex`, `ignoreCase`).
   } else if (util.isRegExp(actual) && util.isRegExp(expected)) {
     return actual.source === expected.source &&
            actual.global === expected.global &&
@@ -819,17 +735,9 @@ function _deepEqual(actual, expected) {
            actual.lastIndex === expected.lastIndex &&
            actual.ignoreCase === expected.ignoreCase;
 
-  // 7.4. Other pairs that do not both pass typeof value == 'object',
-  // equivalence is determined by ==.
   } else if (!util.isObject(actual) && !util.isObject(expected)) {
     return actual == expected;
 
-  // 7.5 For all other Object pairs, including Array objects, equivalence is
-  // determined by having the same number of owned properties (as verified
-  // with Object.prototype.hasOwnProperty.call), the same set of keys
-  // (although not necessarily the same order), equivalent values for every
-  // corresponding key, and an identical 'prototype' property. Note: this
-  // accounts for both named and indexed properties on Arrays.
   } else {
     return objEquiv(actual, expected);
   }
@@ -842,9 +750,7 @@ function isArguments(object) {
 function objEquiv(a, b) {
   if (util.isNullOrUndefined(a) || util.isNullOrUndefined(b))
     return false;
-  // an identical 'prototype' property.
   if (a.prototype !== b.prototype) return false;
-  // if one is a primitive, the other must be same
   if (util.isPrimitive(a) || util.isPrimitive(b)) {
     return a === b;
   }
@@ -860,20 +766,14 @@ function objEquiv(a, b) {
   var ka = objectKeys(a),
       kb = objectKeys(b),
       key, i;
-  // having the same number of owned properties (keys incorporates
-  // hasOwnProperty)
   if (ka.length != kb.length)
     return false;
-  //the same set of keys (although not necessarily the same order),
   ka.sort();
   kb.sort();
-  //~~~cheap key test
   for (i = ka.length - 1; i >= 0; i--) {
     if (ka[i] != kb[i])
       return false;
   }
-  //equivalent values for every corresponding key, and
-  //~~~possibly expensive deep test
   for (i = ka.length - 1; i >= 0; i--) {
     key = ka[i];
     if (!_deepEqual(a[key], b[key])) return false;
@@ -881,8 +781,6 @@ function objEquiv(a, b) {
   return true;
 }
 
-// 8. The non-equivalence assertion tests for any deep inequality.
-// assert.notDeepEqual(actual, expected, message_opt);
 
 assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
   if (_deepEqual(actual, expected)) {
@@ -890,8 +788,6 @@ assert.notDeepEqual = function notDeepEqual(actual, expected, message) {
   }
 };
 
-// 9. The strict equality assertion tests strict equality, as determined by ===.
-// assert.strictEqual(actual, expected, message_opt);
 
 assert.strictEqual = function strictEqual(actual, expected, message) {
   if (actual !== expected) {
@@ -899,8 +795,6 @@ assert.strictEqual = function strictEqual(actual, expected, message) {
   }
 };
 
-// 10. The strict non-equality assertion tests for strict inequality, as
-// determined by !==.  assert.notStrictEqual(actual, expected, message_opt);
 
 assert.notStrictEqual = function notStrictEqual(actual, expected, message) {
   if (actual === expected) {
@@ -955,15 +849,12 @@ function _throws(shouldThrow, block, expected, message) {
   }
 }
 
-// 11. Expected to throw an error:
-// assert.throws(block, Error_opt, message_opt);
 
-assert.throws = function(block, /*optional*/error, /*optional*/message) {
+assert.throws = function(block, error, message) {
   _throws.apply(this, [true].concat(pSlice.call(arguments)));
 };
 
-// EXTENSION! This is annoying to write outside this module.
-assert.doesNotThrow = function(block, /*optional*/message) {
+assert.doesNotThrow = function(block, message) {
   _throws.apply(this, [false].concat(pSlice.call(arguments)));
 };
 
@@ -1073,9 +964,6 @@ function unescapeBraces(str) {
 }
 
 
-// Basically just str.split(","), but handling cases
-// where we have nested braced sections, which should be
-// treated as individual members, like {a,{b,c},d}
 function parseCommaParts(str) {
   if (!str)
     return [''];
@@ -1107,12 +995,6 @@ function expandTop(str) {
   if (!str)
     return [];
 
-  // I don't know why Bash 4.3 does this, but it does.
-  // Anything starting with {} will have the first two bytes preserved
-  // but *only* at the top level, so {},a}b will not expand to anything,
-  // but a{},b}c will be expanded to [a}c,abc].
-  // One could argue that this is a bug in Bash, but since the goal of
-  // this module is to match Bash's rules, we escape a leading {}
   if (str.substr(0, 2) === '{}') {
     str = '\\{\\}' + str.substr(2);
   }
@@ -1149,7 +1031,6 @@ function expand(str, isTop) {
   var isSequence = isNumericSequence || isAlphaSequence;
   var isOptions = m.body.indexOf(',') >= 0;
   if (!isSequence && !isOptions) {
-    // {a},b}
     if (m.post.match(/,.*\}/)) {
       str = m.pre + '{' + m.body + escClose + m.post;
       return expand(str);
@@ -1163,7 +1044,6 @@ function expand(str, isTop) {
   } else {
     n = parseCommaParts(m.body);
     if (n.length === 1) {
-      // x{{a,b}}y ==> x{a}y x{b}y
       n = expand(n[0], false).map(embrace);
       if (n.length === 1) {
         var post = m.post.length
@@ -1176,10 +1056,7 @@ function expand(str, isTop) {
     }
   }
 
-  // at this point, n is the parts, and we know it's not a comma set
-  // with a single entry.
 
-  // no need to expand pre, since it is guaranteed to be free of brace-sets
   var pre = m.pre;
   var post = m.post.length
     ? expand(m.post, false)
@@ -1259,26 +1136,7 @@ var isArray = Array.isArray || function (xs) {
 };
 
 },{}],14:[function(require,module,exports){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
 // NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 function EventEmitter() {
   this._events = this._events || {};
@@ -1286,18 +1144,13 @@ function EventEmitter() {
 }
 module.exports = EventEmitter;
 
-// Backwards-compat with node 0.10.x
 EventEmitter.EventEmitter = EventEmitter;
 
 EventEmitter.prototype._events = undefined;
 EventEmitter.prototype._maxListeners = undefined;
 
-// By default EventEmitters will print a warning if more than 10 listeners are
-// added to it. This is a useful default which helps finding memory leaks.
 EventEmitter.defaultMaxListeners = 10;
 
-// Obviously not all Emitters should be limited to 10. This function allows
-// that to be increased. Set to zero for unlimited.
 EventEmitter.prototype.setMaxListeners = function(n) {
   if (!isNumber(n) || n < 0 || isNaN(n))
     throw TypeError('n must be a positive number');
@@ -1311,13 +1164,12 @@ EventEmitter.prototype.emit = function(type) {
   if (!this._events)
     this._events = {};
 
-  // If there is no 'error' event listener then throw.
   if (type === 'error') {
     if (!this._events.error ||
         (isObject(this._events.error) && !this._events.error.length)) {
       er = arguments[1];
       if (er instanceof Error) {
-        throw er; // Unhandled 'error' event
+        throw er; 
       }
       throw TypeError('Uncaught, unspecified "error" event.');
     }
@@ -1330,7 +1182,6 @@ EventEmitter.prototype.emit = function(type) {
 
   if (isFunction(handler)) {
     switch (arguments.length) {
-      // fast cases
       case 1:
         handler.call(this);
         break;
@@ -1340,7 +1191,6 @@ EventEmitter.prototype.emit = function(type) {
       case 3:
         handler.call(this, arguments[1], arguments[2]);
         break;
-      // slower
       default:
         len = arguments.length;
         args = new Array(len - 1);
@@ -1372,24 +1222,18 @@ EventEmitter.prototype.addListener = function(type, listener) {
   if (!this._events)
     this._events = {};
 
-  // To avoid recursion in the case that type === "newListener"! Before
-  // adding it to the listeners, first emit "newListener".
   if (this._events.newListener)
     this.emit('newListener', type,
               isFunction(listener.listener) ?
               listener.listener : listener);
 
   if (!this._events[type])
-    // Optimize the case of one listener. Don't need the extra array object.
     this._events[type] = listener;
   else if (isObject(this._events[type]))
-    // If we've already got an array, just append.
     this._events[type].push(listener);
   else
-    // Adding the second element, need to change to array.
     this._events[type] = [this._events[type], listener];
 
-  // Check for listener leak
   if (isObject(this._events[type]) && !this._events[type].warned) {
     var m;
     if (!isUndefined(this._maxListeners)) {
@@ -1405,7 +1249,6 @@ EventEmitter.prototype.addListener = function(type, listener) {
                     'Use emitter.setMaxListeners() to increase limit.',
                     this._events[type].length);
       if (typeof console.trace === 'function') {
-        // not supported in IE 10
         console.trace();
       }
     }
@@ -1437,7 +1280,6 @@ EventEmitter.prototype.once = function(type, listener) {
   return this;
 };
 
-// emits a 'removeListener' event iff the listener was removed
 EventEmitter.prototype.removeListener = function(type, listener) {
   var list, position, length, i;
 
@@ -1489,7 +1331,6 @@ EventEmitter.prototype.removeAllListeners = function(type) {
   if (!this._events)
     return this;
 
-  // not listening for removeListener, no need to emit
   if (!this._events.removeListener) {
     if (arguments.length === 0)
       this._events = {};
@@ -1498,7 +1339,6 @@ EventEmitter.prototype.removeAllListeners = function(type) {
     return this;
   }
 
-  // emit removeListener for all listeners on all events
   if (arguments.length === 0) {
     for (key in this._events) {
       if (key === 'removeListener') continue;
@@ -1514,7 +1354,6 @@ EventEmitter.prototype.removeAllListeners = function(type) {
   if (isFunction(listeners)) {
     this.removeListener(type, listeners);
   } else {
-    // LIFO order
     while (listeners.length)
       this.removeListener(type, listeners[listeners.length - 1]);
   }
@@ -1618,7 +1457,6 @@ function setopts (self, pattern, options) {
   if (!options)
     options = {}
 
-  // base-matching: just use globstar for that.
   if (options.matchBase && -1 === pattern.indexOf("/")) {
     if (options.noglobstar) {
       throw new Error("base matching requires globstar")
@@ -1668,8 +1506,6 @@ function setopts (self, pattern, options) {
 
   self.nomount = !!options.nomount
 
-  // disable comments and negation unless the user explicitly
-  // passes in false as the option.
   options.nonegate = options.nonegate === false ? false : true
   options.nocomment = options.nocomment === false ? false : true
   deprecationWarning(options)
@@ -1679,7 +1515,6 @@ function setopts (self, pattern, options) {
 }
 
 // TODO(isaacs): remove entirely in v6
-// exported to reset in tests
 exports.deprecationWarned
 function deprecationWarning(options) {
   if (!options.nonegate || !options.nocomment) {
@@ -1705,7 +1540,6 @@ function finish (self) {
     var matches = self.matches[i]
     if (!matches || Object.keys(matches).length === 0) {
       if (self.nonull) {
-        // do like the shell, and spit out the literal glob
         var literal = self.minimatch.globSet[i]
         if (nou)
           all.push(literal)
@@ -1713,7 +1547,6 @@ function finish (self) {
           all[literal] = true
       }
     } else {
-      // had matches
       var m = Object.keys(matches)
       if (nou)
         all.push.apply(all, m)
@@ -1730,7 +1563,6 @@ function finish (self) {
   if (!self.nosort)
     all = all.sort(self.nocase ? alphasorti : alphasort)
 
-  // at *some* point we statted all of these
   if (self.mark) {
     for (var i = 0; i < all.length; i++) {
       all[i] = self._mark(all[i])
@@ -1773,7 +1605,6 @@ function mark (self, p) {
   return m
 }
 
-// lotta situps...
 function makeAbs (self, f) {
   var abs = f
   if (f.charAt(0) === '/') {
@@ -1789,8 +1620,6 @@ function makeAbs (self, f) {
 }
 
 
-// Return true, if pattern ends with globstar '**', for the accompanying parent directory.
-// Ex:- If node_modules/** is the pattern, add 'node_modules' to ignore list along with it's contents
 function isIgnored (self, path) {
   if (!self.ignore.length)
     return false
@@ -1812,45 +1641,6 @@ function childrenIgnored (self, path) {
 }).call(this,require('_process'))
 },{"_process":24,"minimatch":20,"path":22,"path-is-absolute":23}],16:[function(require,module,exports){
 (function (process){
-// Approach:
-//
-// 1. Get the minimatch set
-// 2. For each pattern in the set, PROCESS(pattern, false)
-// 3. Store matches per-set, then uniq them
-//
-// PROCESS(pattern, inGlobStar)
-// Get the first [n] items from pattern that are all strings
-// Join these together.  This is PREFIX.
-//   If there is no more remaining, then stat(PREFIX) and
-//   add to matches if it succeeds.  END.
-//
-// If inGlobStar and PREFIX is symlink and points to dir
-//   set ENTRIES = []
-// else readdir(PREFIX) as ENTRIES
-//   If fail, END
-//
-// with ENTRIES
-//   If pattern[n] is GLOBSTAR
-//     // handle the case where the globstar match is empty
-//     // by pruning it out, and testing the resulting pattern
-//     PROCESS(pattern[0..n] + pattern[n+1 .. $], false)
-//     // handle other cases.
-//     for ENTRY in ENTRIES (not dotfiles)
-//       // attach globstar + tail onto the entry
-//       // Mark that this entry is a globstar match
-//       PROCESS(pattern[0..n] + ENTRY + pattern[n .. $], true)
-//
-//   else // not globstar
-//     for ENTRY in ENTRIES (not dotfiles, unless pattern[n] is dot)
-//       Test ENTRY against pattern[n]
-//       If fails, continue
-//       If passes, PROCESS(pattern[0..n] + item + pattern[n+1 .. $])
-//
-// Caveat:
-//   Cache all stats and readdirs results to minimize syscall.  Since all
-//   we ever care about is existence and directory-ness, we can just keep
-//   `true` for files, and [children,...] for directories, or `false` for
-//   things that don't exist.
 
 module.exports = glob
 
@@ -1891,7 +1681,6 @@ function glob (pattern, options, cb) {
 glob.sync = globSync
 var GlobSync = glob.GlobSync = globSync.GlobSync
 
-// old api surface
 glob.glob = glob
 
 glob.hasMagic = function (pattern, options_) {
@@ -1931,13 +1720,8 @@ function Glob (pattern, options, cb) {
   setopts(this, pattern, options)
   this._didRealPath = false
 
-  // process each pattern in the minimatch set
   var n = this.minimatch.set.length
 
-  // The matches are stored as {<filename>: true,...} so that
-  // duplicates are automagically pruned.
-  // Later, we do an Object.keys() on these.
-  // Keep them as a list so we can fill in when nonull is set.
   this.matches = new Array(n)
 
   if (typeof cb === 'function') {
@@ -2020,9 +1804,6 @@ Glob.prototype._realpathSet = function (index, cb) {
 
   var set = this.matches[index] = Object.create(null)
   found.forEach(function (p, i) {
-    // If there's a problem with the stat, then it means that
-    // one or more of the links in the realpath couldn't be
-    // resolved.  just return the abs value in that case.
     p = self._makeAbs(p)
     fs.realpath(p, self.realpathCache, function (er, real) {
       if (!er)
@@ -2030,7 +1811,7 @@ Glob.prototype._realpathSet = function (index, cb) {
       else if (er.syscall === 'stat')
         set[p] = true
       else
-        self.emit('error', er) // srsly wtf right here
+        self.emit('error', er) 
 
       if (--n === 0) {
         self.matches[index] = set
@@ -2097,40 +1878,29 @@ Glob.prototype._process = function (pattern, index, inGlobStar, cb) {
     return
   }
 
-  //console.error('PROCESS %d', this._processing, pattern)
 
-  // Get the first [n] parts of pattern that are all strings.
   var n = 0
   while (typeof pattern[n] === 'string') {
     n ++
   }
-  // now n is the index of the first one that is *not* a string.
 
-  // see if there's anything else
   var prefix
   switch (n) {
-    // if not, then this is rather simple
     case pattern.length:
       this._processSimple(pattern.join('/'), index, cb)
       return
 
     case 0:
-      // pattern *starts* with some non-trivial item.
-      // going to readdir(cwd), but not include the prefix in matches.
       prefix = null
       break
 
     default:
-      // pattern has some string bits in the front.
-      // whatever it starts with, whether that's 'absolute' like /foo/bar,
-      // or 'relative' like '../baz'
       prefix = pattern.slice(0, n).join('/')
       break
   }
 
   var remain = pattern.slice(n)
 
-  // get the list of entries.
   var read
   if (prefix === null)
     read = '.'
@@ -2143,7 +1913,6 @@ Glob.prototype._process = function (pattern, index, inGlobStar, cb) {
 
   var abs = this._makeAbs(read)
 
-  //if ignored, skip _processing
   if (childrenIgnored(this, read))
     return cb()
 
@@ -2163,12 +1932,9 @@ Glob.prototype._processReaddir = function (prefix, read, abs, remain, index, inG
 
 Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, inGlobStar, entries, cb) {
 
-  // if the abs isn't a dir, then nothing can match!
   if (!entries)
     return cb()
 
-  // It will only match dot entries if it starts with a dot, or if
-  // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
   var pn = remain[0]
   var negate = !!this.minimatch.negate
   var rawGlob = pn._glob
@@ -2189,17 +1955,11 @@ Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, in
     }
   }
 
-  //console.error('prd2', prefix, entries, remain[0]._glob, matchedEntries)
 
   var len = matchedEntries.length
-  // If there are no matched entries, then nothing matches.
   if (len === 0)
     return cb()
 
-  // if this is the last remaining pattern bit, then no need for
-  // an additional stat *unless* the user has specified mark or
-  // stat explicitly.  We know they exist, since readdir returned
-  // them.
 
   if (remain.length === 1 && !this.mark && !this.stat) {
     if (!this.matches[index])
@@ -2219,12 +1979,9 @@ Glob.prototype._processReaddir2 = function (prefix, read, abs, remain, index, in
       }
       this._emitMatch(index, e)
     }
-    // This was the last one, and no stats were needed
     return cb()
   }
 
-  // now test all matched entries as stand-ins for that part
-  // of the pattern.
   remain.shift()
   for (var i = 0; i < len; i ++) {
     var e = matchedEntries[i]
@@ -2279,8 +2036,6 @@ Glob.prototype._readdirInGlobStar = function (abs, cb) {
   if (this.aborted)
     return
 
-  // follow all symlinked directories forever
-  // just proceed as if this is a non-globstar situation
   if (this.follow)
     return this._readdir(abs, false, cb)
 
@@ -2298,8 +2053,6 @@ Glob.prototype._readdirInGlobStar = function (abs, cb) {
     var isSym = lstat.isSymbolicLink()
     self.symlinks[abs] = isSym
 
-    // If it's not a symlink or a dir, then it's definitely a regular file.
-    // don't bother doing a readdir in that case.
     if (!isSym && !lstat.isDirectory()) {
       self.cache[abs] = 'FILE'
       cb()
@@ -2316,7 +2069,6 @@ Glob.prototype._readdir = function (abs, inGlobStar, cb) {
   if (!cb)
     return
 
-  //console.error('RD %j %j', +inGlobStar, abs)
   if (inGlobStar && !ownProp(this.symlinks, abs))
     return this._readdirInGlobStar(abs, cb)
 
@@ -2346,9 +2098,6 @@ Glob.prototype._readdirEntries = function (abs, entries, cb) {
   if (this.aborted)
     return
 
-  // if we haven't asked to stat everything, then just
-  // assume that everything in there exists, so we can avoid
-  // having to stat it a second time.
   if (!this.mark && !this.stat) {
     for (var i = 0; i < entries.length; i ++) {
       var e = entries[i]
@@ -2368,26 +2117,23 @@ Glob.prototype._readdirError = function (f, er, cb) {
   if (this.aborted)
     return
 
-  // handle errors, and cache the information
   switch (er.code) {
-    case 'ENOTSUP': // https://github.com/isaacs/node-glob/issues/205
-    case 'ENOTDIR': // totally normal. means it *does* exist.
+    case 'ENOTSUP': 
+    case 'ENOTDIR': 
       this.cache[this._makeAbs(f)] = 'FILE'
       break
 
-    case 'ENOENT': // not terribly unusual
+    case 'ENOENT': 
     case 'ELOOP':
     case 'ENAMETOOLONG':
     case 'UNKNOWN':
       this.cache[this._makeAbs(f)] = false
       break
 
-    default: // some unusual error.  Treat as failure.
+    default: 
       this.cache[this._makeAbs(f)] = false
       if (this.strict) {
         this.emit('error', er)
-        // If the error is handled, then we abort
-        // if not, we threw out of here
         this.abort()
       }
       if (!this.silent)
@@ -2407,26 +2153,19 @@ Glob.prototype._processGlobStar = function (prefix, read, abs, remain, index, in
 
 
 Glob.prototype._processGlobStar2 = function (prefix, read, abs, remain, index, inGlobStar, entries, cb) {
-  //console.error('pgs2', prefix, remain[0], entries)
 
-  // no entries means not a dir, so it can never have matches
-  // foo.txt/** doesn't match foo.txt
   if (!entries)
     return cb()
 
-  // test without the globstar, and with every child both below
-  // and replacing the globstar.
   var remainWithoutGlobStar = remain.slice(1)
   var gspref = prefix ? [ prefix ] : []
   var noGlobStar = gspref.concat(remainWithoutGlobStar)
 
-  // the noGlobStar pattern exits the inGlobStar state
   this._process(noGlobStar, index, false, cb)
 
   var isSym = this.symlinks[abs]
   var len = entries.length
 
-  // If it's a symlink, and we're in a globstar, then stop
   if (isSym && inGlobStar)
     return cb()
 
@@ -2435,7 +2174,6 @@ Glob.prototype._processGlobStar2 = function (prefix, read, abs, remain, index, i
     if (e.charAt(0) === '.' && !this.dot)
       continue
 
-    // these two cases enter the inGlobStar state
     var instead = gspref.concat(entries[i], remainWithoutGlobStar)
     this._process(instead, index, true, cb)
 
@@ -2447,8 +2185,6 @@ Glob.prototype._processGlobStar2 = function (prefix, read, abs, remain, index, i
 }
 
 Glob.prototype._processSimple = function (prefix, index, cb) {
-  // XXX review this.  Shouldn't it be doing the mounting etc
-  // before doing stat?  kinda weird?
   var self = this
   this._stat(prefix, function (er, exists) {
     self._processSimple2(prefix, index, er, exists, cb)
@@ -2456,12 +2192,10 @@ Glob.prototype._processSimple = function (prefix, index, cb) {
 }
 Glob.prototype._processSimple2 = function (prefix, index, er, exists, cb) {
 
-  //console.error('ps2', prefix, exists)
 
   if (!this.matches[index])
     this.matches[index] = Object.create(null)
 
-  // If it doesn't exist, then just mark the lack of results
   if (!exists)
     return cb()
 
@@ -2479,12 +2213,10 @@ Glob.prototype._processSimple2 = function (prefix, index, er, exists, cb) {
   if (process.platform === 'win32')
     prefix = prefix.replace(/\\/g, '/')
 
-  // Mark this as a match
   this._emitMatch(index, prefix)
   cb()
 }
 
-// Returns either 'DIR', 'FILE', or false
 Glob.prototype._stat = function (f, cb) {
   var abs = this._makeAbs(f)
   var needDir = f.slice(-1) === '/'
@@ -2498,15 +2230,12 @@ Glob.prototype._stat = function (f, cb) {
     if (Array.isArray(c))
       c = 'DIR'
 
-    // It exists, but maybe not how we need it
     if (!needDir || c === 'DIR')
       return cb(null, c)
 
     if (needDir && c === 'FILE')
       return cb()
 
-    // otherwise we have to stat, because maybe c=true
-    // if we know it exists, but not what it is.
   }
 
   var exists
@@ -2530,8 +2259,6 @@ Glob.prototype._stat = function (f, cb) {
 
   function lstatcb_ (er, lstat) {
     if (lstat && lstat.isSymbolicLink()) {
-      // If it's a symlink, then treat it as the target, unless
-      // the target does not exist, then treat it as a file.
       return fs.stat(abs, function (er, stat) {
         if (er)
           self._stat2(f, abs, null, lstat, cb)
@@ -2645,38 +2372,28 @@ GlobSync.prototype._finish = function () {
 GlobSync.prototype._process = function (pattern, index, inGlobStar) {
   assert(this instanceof GlobSync)
 
-  // Get the first [n] parts of pattern that are all strings.
   var n = 0
   while (typeof pattern[n] === 'string') {
     n ++
   }
-  // now n is the index of the first one that is *not* a string.
 
-  // See if there's anything else
   var prefix
   switch (n) {
-    // if not, then this is rather simple
     case pattern.length:
       this._processSimple(pattern.join('/'), index)
       return
 
     case 0:
-      // pattern *starts* with some non-trivial item.
-      // going to readdir(cwd), but not include the prefix in matches.
       prefix = null
       break
 
     default:
-      // pattern has some string bits in the front.
-      // whatever it starts with, whether that's 'absolute' like /foo/bar,
-      // or 'relative' like '../baz'
       prefix = pattern.slice(0, n).join('/')
       break
   }
 
   var remain = pattern.slice(n)
 
-  // get the list of entries.
   var read
   if (prefix === null)
     read = '.'
@@ -2689,7 +2406,6 @@ GlobSync.prototype._process = function (pattern, index, inGlobStar) {
 
   var abs = this._makeAbs(read)
 
-  //if ignored, skip processing
   if (childrenIgnored(this, read))
     return
 
@@ -2704,12 +2420,9 @@ GlobSync.prototype._process = function (pattern, index, inGlobStar) {
 GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index, inGlobStar) {
   var entries = this._readdir(abs, inGlobStar)
 
-  // if the abs isn't a dir, then nothing can match!
   if (!entries)
     return
 
-  // It will only match dot entries if it starts with a dot, or if
-  // dot is set.  Stuff like @(.foo|.bar) isn't allowed.
   var pn = remain[0]
   var negate = !!this.minimatch.negate
   var rawGlob = pn._glob
@@ -2731,14 +2444,9 @@ GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index,
   }
 
   var len = matchedEntries.length
-  // If there are no matched entries, then nothing matches.
   if (len === 0)
     return
 
-  // if this is the last remaining pattern bit, then no need for
-  // an additional stat *unless* the user has specified mark or
-  // stat explicitly.  We know they exist, since readdir returned
-  // them.
 
   if (remain.length === 1 && !this.mark && !this.stat) {
     if (!this.matches[index])
@@ -2758,12 +2466,9 @@ GlobSync.prototype._processReaddir = function (prefix, read, abs, remain, index,
       }
       this.matches[index][e] = true
     }
-    // This was the last one, and no stats were needed
     return
   }
 
-  // now test all matched entries as stand-ins for that part
-  // of the pattern.
   remain.shift()
   for (var i = 0; i < len; i ++) {
     var e = matchedEntries[i]
@@ -2798,8 +2503,6 @@ GlobSync.prototype._emitMatch = function (index, e) {
 
 
 GlobSync.prototype._readdirInGlobStar = function (abs) {
-  // follow all symlinked directories forever
-  // just proceed as if this is a non-globstar situation
   if (this.follow)
     return this._readdir(abs, false)
 
@@ -2809,15 +2512,12 @@ GlobSync.prototype._readdirInGlobStar = function (abs) {
   try {
     lstat = fs.lstatSync(abs)
   } catch (er) {
-    // lstat failed, doesn't exist
     return null
   }
 
   var isSym = lstat.isSymbolicLink()
   this.symlinks[abs] = isSym
 
-  // If it's not a symlink or a dir, then it's definitely a regular file.
-  // don't bother doing a readdir in that case.
   if (!isSym && !lstat.isDirectory())
     this.cache[abs] = 'FILE'
   else
@@ -2850,9 +2550,6 @@ GlobSync.prototype._readdir = function (abs, inGlobStar) {
 }
 
 GlobSync.prototype._readdirEntries = function (abs, entries) {
-  // if we haven't asked to stat everything, then just
-  // assume that everything in there exists, so we can avoid
-  // having to stat it a second time.
   if (!this.mark && !this.stat) {
     for (var i = 0; i < entries.length; i ++) {
       var e = entries[i]
@@ -2866,26 +2563,24 @@ GlobSync.prototype._readdirEntries = function (abs, entries) {
 
   this.cache[abs] = entries
 
-  // mark and cache dir-ness
   return entries
 }
 
 GlobSync.prototype._readdirError = function (f, er) {
-  // handle errors, and cache the information
   switch (er.code) {
-    case 'ENOTSUP': // https://github.com/isaacs/node-glob/issues/205
-    case 'ENOTDIR': // totally normal. means it *does* exist.
+    case 'ENOTSUP': 
+    case 'ENOTDIR': 
       this.cache[this._makeAbs(f)] = 'FILE'
       break
 
-    case 'ENOENT': // not terribly unusual
+    case 'ENOENT': 
     case 'ELOOP':
     case 'ENAMETOOLONG':
     case 'UNKNOWN':
       this.cache[this._makeAbs(f)] = false
       break
 
-    default: // some unusual error.  Treat as failure.
+    default: 
       this.cache[this._makeAbs(f)] = false
       if (this.strict)
         throw er
@@ -2899,24 +2594,18 @@ GlobSync.prototype._processGlobStar = function (prefix, read, abs, remain, index
 
   var entries = this._readdir(abs, inGlobStar)
 
-  // no entries means not a dir, so it can never have matches
-  // foo.txt/** doesn't match foo.txt
   if (!entries)
     return
 
-  // test without the globstar, and with every child both below
-  // and replacing the globstar.
   var remainWithoutGlobStar = remain.slice(1)
   var gspref = prefix ? [ prefix ] : []
   var noGlobStar = gspref.concat(remainWithoutGlobStar)
 
-  // the noGlobStar pattern exits the inGlobStar state
   this._process(noGlobStar, index, false)
 
   var len = entries.length
   var isSym = this.symlinks[abs]
 
-  // If it's a symlink, and we're in a globstar, then stop
   if (isSym && inGlobStar)
     return
 
@@ -2925,7 +2614,6 @@ GlobSync.prototype._processGlobStar = function (prefix, read, abs, remain, index
     if (e.charAt(0) === '.' && !this.dot)
       continue
 
-    // these two cases enter the inGlobStar state
     var instead = gspref.concat(entries[i], remainWithoutGlobStar)
     this._process(instead, index, true)
 
@@ -2935,14 +2623,11 @@ GlobSync.prototype._processGlobStar = function (prefix, read, abs, remain, index
 }
 
 GlobSync.prototype._processSimple = function (prefix, index) {
-  // XXX review this.  Shouldn't it be doing the mounting etc
-  // before doing stat?  kinda weird?
   var exists = this._stat(prefix)
 
   if (!this.matches[index])
     this.matches[index] = Object.create(null)
 
-  // If it doesn't exist, then just mark the lack of results
   if (!exists)
     return
 
@@ -2960,11 +2645,9 @@ GlobSync.prototype._processSimple = function (prefix, index) {
   if (process.platform === 'win32')
     prefix = prefix.replace(/\\/g, '/')
 
-  // Mark this as a match
   this.matches[index][prefix] = true
 }
 
-// Returns either 'DIR', 'FILE', or false
 GlobSync.prototype._stat = function (f) {
   var abs = this._makeAbs(f)
   var needDir = f.slice(-1) === '/'
@@ -2978,15 +2661,12 @@ GlobSync.prototype._stat = function (f) {
     if (Array.isArray(c))
       c = 'DIR'
 
-    // It exists, but maybe not how we need it
     if (!needDir || c === 'DIR')
       return c
 
     if (needDir && c === 'FILE')
       return false
 
-    // otherwise we have to stat, because maybe c=true
-    // if we know it exists, but not what it is.
   }
 
   var exists
@@ -3054,20 +2734,12 @@ function makeres (key) {
     var len = cbs.length
     var args = slice(arguments)
 
-    // XXX It's somewhat ambiguous whether a new callback added in this
-    // pass should be queued for later execution if something in the
-    // list of callbacks throws, or if it should just be discarded.
-    // However, it's such an edge case that it hardly matters, and either
-    // choice is likely as surprising as the other.
-    // As it happens, we do go ahead and schedule it for later execution.
     try {
       for (var i = 0; i < len; i++) {
         cbs[i].apply(null, args)
       }
     } finally {
       if (cbs.length > len) {
-        // added more in the interim.
-        // de-zalgo, just in case, but don't call again.
         cbs.splice(0, len)
         process.nextTick(function () {
           RES.apply(null, args)
@@ -3090,7 +2762,6 @@ function slice (args) {
 }).call(this,require('_process'))
 },{"_process":24,"once":21,"wrappy":29}],19:[function(require,module,exports){
 if (typeof Object.create === 'function') {
-  // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
     ctor.super_ = superCtor
     ctor.prototype = Object.create(superCtor.prototype, {
@@ -3103,7 +2774,6 @@ if (typeof Object.create === 'function') {
     });
   };
 } else {
-  // old school shim for old browsers
   module.exports = function inherits(ctor, superCtor) {
     ctor.super_ = superCtor
     var TempCtor = function () {}
@@ -3133,26 +2803,16 @@ var plTypes = {
   '@': { open: '(?:', close: ')' }
 }
 
-// any single thing other than /
-// don't need to escape / when using new RegExp()
 var qmark = '[^/]'
 
-// * => any number of characters
 var star = qmark + '*?'
 
-// ** when dots are allowed.  Anything goes, except .. and .
-// not (^ or / followed by one or two dots followed by $ or /),
-// followed by anything, any number of times.
 var twoStarDot = '(?:(?!(?:\\\/|^)(?:\\.{1,2})($|\\\/)).)*?'
 
-// not a ^ or / followed by a dot,
-// followed by anything, any number of times.
 var twoStarNoDot = '(?:(?!(?:\\\/|^)\\.).)*?'
 
-// characters that need to be escaped in RegExp.
 var reSpecials = charSet('().*{}+?[]^$\\!')
 
-// "abc" -> { a:true, b:true, c:true }
 function charSet (s) {
   return s.split('').reduce(function (set, c) {
     set[c] = true
@@ -3160,7 +2820,6 @@ function charSet (s) {
   }, {})
 }
 
-// normalizes slashes.
 var slashSplit = /\/+/
 
 minimatch.filter = filter
@@ -3212,12 +2871,10 @@ function minimatch (p, pattern, options) {
 
   if (!options) options = {}
 
-  // shortcut: comments match nothing.
   if (!options.nocomment && pattern.charAt(0) === '#') {
     return false
   }
 
-  // "" only matches ""
   if (pattern.trim() === '') return p === ''
 
   return new Minimatch(pattern, options).match(p)
@@ -3235,7 +2892,6 @@ function Minimatch (pattern, options) {
   if (!options) options = {}
   pattern = pattern.trim()
 
-  // windows support: need to use /, not \
   if (path.sep !== '/') {
     pattern = pattern.split(path.sep).join('/')
   }
@@ -3248,7 +2904,6 @@ function Minimatch (pattern, options) {
   this.comment = false
   this.empty = false
 
-  // make the set of regexps etc.
   this.make()
 }
 
@@ -3256,13 +2911,11 @@ Minimatch.prototype.debug = function () {}
 
 Minimatch.prototype.make = make
 function make () {
-  // don't do it more than once.
   if (this._made) return
 
   var pattern = this.pattern
   var options = this.options
 
-  // empty patterns and comments match nothing.
   if (!options.nocomment && pattern.charAt(0) === '#') {
     this.comment = true
     return
@@ -3272,35 +2925,26 @@ function make () {
     return
   }
 
-  // step 1: figure out negation, etc.
   this.parseNegate()
 
-  // step 2: expand braces
   var set = this.globSet = this.braceExpand()
 
   if (options.debug) this.debug = console.error
 
   this.debug(this.pattern, set)
 
-  // step 3: now we have a set, so turn each one into a series of path-portion
-  // matching patterns.
-  // These will be regexps, except in the case of "**", which is
-  // set to the GLOBSTAR object for globstar behavior,
-  // and will not contain any / characters
   set = this.globParts = set.map(function (s) {
     return s.split(slashSplit)
   })
 
   this.debug(this.pattern, set)
 
-  // glob --> regexps
   set = set.map(function (s, si, set) {
     return s.map(this.parse, this)
   }, this)
 
   this.debug(this.pattern, set)
 
-  // filter out everything that didn't compile properly.
   set = set.filter(function (s) {
     return s.indexOf(false) === -1
   })
@@ -3330,16 +2974,6 @@ function parseNegate () {
   this.negate = negate
 }
 
-// Brace expansion:
-// a{b,c}d -> abd acd
-// a{b,}c -> abc ac
-// a{0..3}d -> a0d a1d a2d a3d
-// a{b,c{d,e}f}g -> abg acdfg acefg
-// a{b,c}d{e,f}g -> abdeg acdeg abdeg abdfg
-//
-// Invalid sets are not expanded.
-// a{2..}b -> a{2..}b
-// a{b}c -> a{b}c
 minimatch.braceExpand = function (pattern, options) {
   return braceExpand(pattern, options)
 }
@@ -3364,24 +2998,12 @@ function braceExpand (pattern, options) {
 
   if (options.nobrace ||
     !pattern.match(/\{.*\}/)) {
-    // shortcut. no need to expand.
     return [pattern]
   }
 
   return expand(pattern)
 }
 
-// parse a component of the expanded set.
-// At this point, no pattern may contain "/" in it
-// so we're going to return a 2d array, where each entry is the full
-// pattern, split on '/', and then turned into a regular expression.
-// A regexp is made at the end which joins each array with an
-// escaped /, and another full one which joins each regexp with |.
-//
-// Following the lead of Bash 4.1, note that "**" only has special meaning
-// when it is the *only* thing in a path portion.  Otherwise, any series
-// of * is equivalent to a single *.  Globstar behavior is enabled by
-// default, and can be disabled by setting options.noglobstar.
 Minimatch.prototype.parse = parse
 var SUBPARSE = {}
 function parse (pattern, isSub) {
@@ -3391,32 +3013,25 @@ function parse (pattern, isSub) {
 
   var options = this.options
 
-  // shortcuts
   if (!options.noglobstar && pattern === '**') return GLOBSTAR
   if (pattern === '') return ''
 
   var re = ''
   var hasMagic = !!options.nocase
   var escaping = false
-  // ? => one single character
   var patternListStack = []
   var negativeLists = []
   var stateChar
   var inClass = false
   var reClassStart = -1
   var classStart = -1
-  // . and .. never match anything that doesn't start with .,
-  // even when options.dot is set.
-  var patternStart = pattern.charAt(0) === '.' ? '' // anything
-  // not (start or / followed by . or .. followed by / or end)
+  var patternStart = pattern.charAt(0) === '.' ? '' 
   : options.dot ? '(?!(?:^|\\\/)\\.{1,2}(?:$|\\\/))'
   : '(?!\\.)'
   var self = this
 
   function clearStateChar () {
     if (stateChar) {
-      // we had some state-tracking character
-      // that wasn't consumed by this pass.
       switch (stateChar) {
         case '*':
           re += star
@@ -3440,7 +3055,6 @@ function parse (pattern, isSub) {
     ; i++) {
     this.debug('%s\t%s %s %j', pattern, i, re, c)
 
-    // skip over any that are escaped.
     if (escaping && reSpecials[c]) {
       re += '\\' + c
       escaping = false
@@ -3449,8 +3063,6 @@ function parse (pattern, isSub) {
 
     switch (c) {
       case '/':
-        // completely not allowed, even escaped.
-        // Should already be path-split by now.
         return false
 
       case '\\':
@@ -3458,8 +3070,6 @@ function parse (pattern, isSub) {
         escaping = true
       continue
 
-      // the various stateChar values
-      // for the "extglob" stuff.
       case '?':
       case '*':
       case '+':
@@ -3467,8 +3077,6 @@ function parse (pattern, isSub) {
       case '!':
         this.debug('%s\t%s %s %j <-- stateChar', pattern, i, re, c)
 
-        // all of those are literals inside a class, except that
-        // the glob [!a] means [^a] in regexp
         if (inClass) {
           this.debug('  in class')
           if (c === '!' && i === classStart + 1) c = '^'
@@ -3476,15 +3084,9 @@ function parse (pattern, isSub) {
           continue
         }
 
-        // if we already have a stateChar, then it means
-        // that there was something like ** or +? in there.
-        // Handle the stateChar, then proceed with this one.
         self.debug('call clearStateChar %j', stateChar)
         clearStateChar()
         stateChar = c
-        // if extglob is disabled, then +(asdf|foo) isn't a thing.
-        // just clear the statechar *now*, rather than even diving into
-        // the patternList stuff.
         if (options.noext) clearStateChar()
       continue
 
@@ -3506,7 +3108,6 @@ function parse (pattern, isSub) {
           open: plTypes[stateChar].open,
           close: plTypes[stateChar].close
         })
-        // negation is (?:(?!js)[^/]*)
         re += stateChar === '!' ? '(?:(?!(?:' : '(?:'
         this.debug('plType %j %j', stateChar, re)
         stateChar = false
@@ -3521,8 +3122,6 @@ function parse (pattern, isSub) {
         clearStateChar()
         hasMagic = true
         var pl = patternListStack.pop()
-        // negation is (?:(?!js)[^/]*)
-        // The others are (?:<pattern>)<type>
         re += pl.close
         if (pl.type === '!') {
           negativeLists.push(pl)
@@ -3541,9 +3140,7 @@ function parse (pattern, isSub) {
         re += '|'
       continue
 
-      // these are mostly the same in regexp and glob
       case '[':
-        // swallow any state-tracking char before the [
         clearStateChar()
 
         if (inClass) {
@@ -3558,31 +3155,18 @@ function parse (pattern, isSub) {
       continue
 
       case ']':
-        //  a right bracket shall lose its special
-        //  meaning and represent itself in
-        //  a bracket expression if it occurs
-        //  first in the list.  -- POSIX.2 2.8.3.2
         if (i === classStart + 1 || !inClass) {
           re += '\\' + c
           escaping = false
           continue
         }
 
-        // handle the case where we left a class open.
-        // "[z-a]" is valid, equivalent to "\[z-a\]"
         if (inClass) {
-          // split where the last [ was, make sure we don't have
-          // an invalid re. if so, re-walk the contents of the
-          // would-be class to re-translate any characters that
-          // were passed through as-is
           // TODO: It would probably be faster to determine this
-          // without a try/catch and a new RegExp, but it's tricky
-          // to do safely.  For now, this is safe and works.
           var cs = pattern.substring(classStart + 1, i)
           try {
             RegExp('[' + cs + ']')
           } catch (er) {
-            // not a valid class!
             var sp = this.parse(cs, SUBPARSE)
             re = re.substr(0, reClassStart) + '\\[' + sp[0] + '\\]'
             hasMagic = hasMagic || sp[1]
@@ -3591,18 +3175,15 @@ function parse (pattern, isSub) {
           }
         }
 
-        // finish up the class.
         hasMagic = true
         inClass = false
         re += c
       continue
 
       default:
-        // swallow any state char that wasn't consumed
         clearStateChar()
 
         if (escaping) {
-          // no need
           escaping = false
         } else if (reSpecials[c]
           && !(c === '^' && inClass)) {
@@ -3611,44 +3192,24 @@ function parse (pattern, isSub) {
 
         re += c
 
-    } // switch
-  } // for
+    } 
+  } 
 
-  // handle the case where we left a class open.
-  // "[abc" is valid, equivalent to "\[abc"
   if (inClass) {
-    // split where the last [ was, and escape it
-    // this is a huge pita.  We now have to re-walk
-    // the contents of the would-be class to re-translate
-    // any characters that were passed through as-is
     cs = pattern.substr(classStart + 1)
     sp = this.parse(cs, SUBPARSE)
     re = re.substr(0, reClassStart) + '\\[' + sp[0]
     hasMagic = hasMagic || sp[1]
   }
 
-  // handle the case where we had a +( thing at the *end*
-  // of the pattern.
-  // each pattern list stack adds 3 chars, and we need to go through
-  // and escape any | chars that were passed through as-is for the regexp.
-  // Go through and escape them, taking care not to double-escape any
-  // | chars that were already escaped.
   for (pl = patternListStack.pop(); pl; pl = patternListStack.pop()) {
     var tail = re.slice(pl.reStart + pl.open.length)
     this.debug('setting tail', re, pl)
-    // maybe some even number of \, then maybe 1 \, followed by a |
     tail = tail.replace(/((?:\\{2}){0,64})(\\?)\|/g, function (_, $1, $2) {
       if (!$2) {
-        // the | isn't already escaped, so escape it.
         $2 = '\\'
       }
 
-      // need to escape all those slashes *again*, without escaping the
-      // one that we need for escaping the | character.  As it works out,
-      // escaping an even number of slashes can be done by simply repeating
-      // it exactly after itself.  That's why this trick works.
-      //
-      // I am sorry that you have to see this.
       return $1 + $1 + $2 + '|'
     })
 
@@ -3661,15 +3222,11 @@ function parse (pattern, isSub) {
     re = re.slice(0, pl.reStart) + t + '\\(' + tail
   }
 
-  // handle trailing things that only matter at the very end.
   clearStateChar()
   if (escaping) {
-    // trailing \\
     re += '\\\\'
   }
 
-  // only need to apply the nodot start if the re starts with
-  // something that could conceivably capture a dot
   var addPatternStart = false
   switch (re.charAt(0)) {
     case '.':
@@ -3677,11 +3234,6 @@ function parse (pattern, isSub) {
     case '(': addPatternStart = true
   }
 
-  // Hack to work around lack of negative lookbehind in JS
-  // A pattern like: *.!(x).!(y|z) needs to ensure that a name
-  // like 'a.xyz.yz' doesn't match.  So, the first negative
-  // lookahead, has to look ALL the way ahead, to the end of
-  // the pattern.
   for (var n = negativeLists.length - 1; n > -1; n--) {
     var nl = negativeLists[n]
 
@@ -3692,9 +3244,6 @@ function parse (pattern, isSub) {
 
     nlLast += nlAfter
 
-    // Handle nested stuff like *(*.js|!(*.json)), where open parens
-    // mean that we should *not* include the ) in the bit that is considered
-    // "after" the negated section.
     var openParensBefore = nlBefore.split('(').length - 1
     var cleanAfter = nlAfter
     for (i = 0; i < openParensBefore; i++) {
@@ -3710,9 +3259,6 @@ function parse (pattern, isSub) {
     re = newRe
   }
 
-  // if the re is not "" at this point, then we need to make sure
-  // it doesn't match against an empty path part.
-  // Otherwise a/* will match a/, which it should not.
   if (re !== '' && hasMagic) {
     re = '(?=.)' + re
   }
@@ -3721,14 +3267,10 @@ function parse (pattern, isSub) {
     re = patternStart + re
   }
 
-  // parsing just a piece of a larger pattern.
   if (isSub === SUBPARSE) {
     return [re, hasMagic]
   }
 
-  // skip the regexp for non-magical patterns
-  // unescape anything in it, though, so that it'll be
-  // an exact match against a file etc.
   if (!hasMagic) {
     return globUnescape(pattern)
   }
@@ -3737,10 +3279,6 @@ function parse (pattern, isSub) {
   try {
     var regExp = new RegExp('^' + re + '$', flags)
   } catch (er) {
-    // If it was an invalid regular expression, then it can't match
-    // anything.  This trick looks for a character after the end of
-    // the string, which is of course impossible, except in multi-line
-    // mode, but it's not a /m regex.
     return new RegExp('$.')
   }
 
@@ -3758,12 +3296,6 @@ Minimatch.prototype.makeRe = makeRe
 function makeRe () {
   if (this.regexp || this.regexp === false) return this.regexp
 
-  // at this point, this.set is a 2d array of partial
-  // pattern strings, or "**".
-  //
-  // It's better to use .match().  This function shouldn't
-  // be used, really, but it's pretty convenient sometimes,
-  // when you just want to work with a regex.
   var set = this.set
 
   if (!set.length) {
@@ -3785,11 +3317,8 @@ function makeRe () {
     }).join('\\\/')
   }).join('|')
 
-  // must match entire pattern
-  // ending in a * or ** will make it less strict.
   re = '^(?:' + re + ')$'
 
-  // can match anything, as long as it's not this.
   if (this.negate) re = '^(?!' + re + ').*$'
 
   try {
@@ -3815,8 +3344,6 @@ minimatch.match = function (list, pattern, options) {
 Minimatch.prototype.match = match
 function match (f, partial) {
   this.debug('match', f, this.pattern)
-  // short-circuit in the case of busted things.
-  // comments, etc.
   if (this.comment) return false
   if (this.empty) return f === ''
 
@@ -3824,24 +3351,17 @@ function match (f, partial) {
 
   var options = this.options
 
-  // windows: need to use /, not \
   if (path.sep !== '/') {
     f = f.split(path.sep).join('/')
   }
 
-  // treat the test path as a set of pathparts.
   f = f.split(slashSplit)
   this.debug(this.pattern, 'split', f)
 
-  // just ONE of the pattern sets in this.set needs to match
-  // in order for it to be valid.  If negating, then just one
-  // match means that we have failed.
-  // Either way, return on the first hit.
 
   var set = this.set
   this.debug(this.pattern, 'set', set)
 
-  // Find the basename of the path by looking for the last non-empty segment
   var filename
   var i
   for (i = f.length - 1; i >= 0; i--) {
@@ -3862,17 +3382,10 @@ function match (f, partial) {
     }
   }
 
-  // didn't get any hits.  this is success if it's a negative
-  // pattern, failure otherwise.
   if (options.flipNegate) return false
   return this.negate
 }
 
-// set partial to true to test if, for example,
-// "/a/b" matches the start of "/*/b/*/d"
-// Partial means, if you run out of file before you run
-// out of pattern, then that's fine, as long as all
-// the parts match.
 Minimatch.prototype.matchOne = function (file, pattern, partial) {
   var options = this.options
 
@@ -3893,45 +3406,15 @@ Minimatch.prototype.matchOne = function (file, pattern, partial) {
 
     this.debug(pattern, p, f)
 
-    // should be impossible.
-    // some invalid regexp stuff in the set.
     if (p === false) return false
 
     if (p === GLOBSTAR) {
       this.debug('GLOBSTAR', [pattern, p, f])
 
-      // "**"
-      // a/**/b/**/c would match the following:
-      // a/b/x/y/z/c
-      // a/x/y/z/b/c
-      // a/b/x/b/x/c
-      // a/b/c
-      // To do this, take the rest of the pattern after
-      // the **, and see if it would match the file remainder.
-      // If so, return success.
-      // If not, the ** "swallows" a segment, and try again.
-      // This is recursively awful.
-      //
-      // a/**/b/**/c matching a/b/x/y/z/c
-      // - a matches a
-      // - doublestar
-      //   - matchOne(b/x/y/z/c, b/**/c)
-      //     - b matches b
-      //     - doublestar
-      //       - matchOne(x/y/z/c, c) -> no
-      //       - matchOne(y/z/c, c) -> no
-      //       - matchOne(z/c, c) -> no
-      //       - matchOne(c, c) yes, hit
       var fr = fi
       var pr = pi + 1
       if (pr === pl) {
         this.debug('** at the end')
-        // a ** at the end will just swallow the rest.
-        // We have found a match.
-        // however, it will not swallow /.x, unless
-        // options.dot is set.
-        // . and .. are *never* matched by **, for explosively
-        // exponential reasons.
         for (; fi < fl; fi++) {
           if (file[fi] === '.' || file[fi] === '..' ||
             (!options.dot && file[fi].charAt(0) === '.')) return false
@@ -3939,46 +3422,33 @@ Minimatch.prototype.matchOne = function (file, pattern, partial) {
         return true
       }
 
-      // ok, let's see if we can swallow whatever we can.
       while (fr < fl) {
         var swallowee = file[fr]
 
         this.debug('\nglobstar while', file, fr, pattern, pr, swallowee)
 
-        // XXX remove this slice.  Just pass the start index.
         if (this.matchOne(file.slice(fr), pattern.slice(pr), partial)) {
           this.debug('globstar found match!', fr, fl, swallowee)
-          // found a match.
           return true
         } else {
-          // can't swallow "." or ".." ever.
-          // can only swallow ".foo" when explicitly asked.
           if (swallowee === '.' || swallowee === '..' ||
             (!options.dot && swallowee.charAt(0) === '.')) {
             this.debug('dot detected!', file, fr, pattern, pr)
             break
           }
 
-          // ** swallows a segment, and continue.
           this.debug('globstar swallow a segment, and continue')
           fr++
         }
       }
 
-      // no match was found.
-      // However, in partial mode, we can't say this is necessarily over.
-      // If there's more *pattern* left, then
       if (partial) {
-        // ran out of file
         this.debug('\n>>> no match, partial?', file, fr, pattern, pr)
         if (fr === fl) return true
       }
       return false
     }
 
-    // something other than **
-    // non-magic patterns just have to match exactly
-    // patterns with magic have been turned into regexps.
     var hit
     if (typeof p === 'string') {
       if (options.nocase) {
@@ -3995,41 +3465,19 @@ Minimatch.prototype.matchOne = function (file, pattern, partial) {
     if (!hit) return false
   }
 
-  // Note: ending in / means that we'll get a final ""
-  // at the end of the pattern.  This can only match a
-  // corresponding "" at the end of the file.
-  // If the file ends in /, then it can only match a
-  // a pattern that ends in /, unless the pattern just
-  // doesn't have any more for it. But, a/b/ should *not*
-  // match "a/b/*", even though "" matches against the
-  // [^/]*? pattern, except in partial mode, where it might
-  // simply not be reached yet.
-  // However, a/b/ should still satisfy a/*
 
-  // now either we fell off the end of the pattern, or we're done.
   if (fi === fl && pi === pl) {
-    // ran out of pattern and filename at the same time.
-    // an exact hit!
     return true
   } else if (fi === fl) {
-    // ran out of file, but still had pattern left.
-    // this is ok if we're doing the match as part of
-    // a glob fs traversal.
     return partial
   } else if (pi === pl) {
-    // ran out of pattern, still have file left.
-    // this is only acceptable if we're on the very last
-    // empty segment of a file with a trailing slash.
-    // a/* should match a/b/
     var emptyFileEnd = (fi === fl - 1) && (file[fi] === '')
     return emptyFileEnd
   }
 
-  // should be unreachable.
   throw new Error('wtf?')
 }
 
-// replace stuff like \* with *
 function globUnescape (s) {
   return s.replace(/\\(.)/g, '$1')
 }
@@ -4084,33 +3532,9 @@ function onceStrict (fn) {
 
 },{"wrappy":29}],22:[function(require,module,exports){
 (function (process){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
 // NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-// resolves . and .. elements in a path array with directory names there
-// must be no slashes, empty elements, or device names (c:\) in the array
-// (so also no leading and trailing slashes - it does not distinguish
-// relative and absolute paths)
 function normalizeArray(parts, allowAboveRoot) {
-  // if the path tries to go above the root, `up` ends up > 0
   var up = 0;
   for (var i = parts.length - 1; i >= 0; i--) {
     var last = parts[i];
@@ -4125,7 +3549,6 @@ function normalizeArray(parts, allowAboveRoot) {
     }
   }
 
-  // if the path is allowed to go above the root, restore leading ..s
   if (allowAboveRoot) {
     for (; up--; up) {
       parts.unshift('..');
@@ -4135,16 +3558,12 @@ function normalizeArray(parts, allowAboveRoot) {
   return parts;
 }
 
-// Split a filename into [root, dir, basename, ext], unix version
-// 'root' is just a slash, or nothing.
 var splitPathRe =
     /^(\/?|)([\s\S]*?)((?:\.{1,2}|[^\/]+?|)(\.[^.\/]*|))(?:[\/]*)$/;
 var splitPath = function(filename) {
   return splitPathRe.exec(filename).slice(1);
 };
 
-// path.resolve([from ...], to)
-// posix version
 exports.resolve = function() {
   var resolvedPath = '',
       resolvedAbsolute = false;
@@ -4152,7 +3571,6 @@ exports.resolve = function() {
   for (var i = arguments.length - 1; i >= -1 && !resolvedAbsolute; i--) {
     var path = (i >= 0) ? arguments[i] : process.cwd();
 
-    // Skip empty and invalid entries
     if (typeof path !== 'string') {
       throw new TypeError('Arguments to path.resolve must be strings');
     } else if (!path) {
@@ -4163,10 +3581,7 @@ exports.resolve = function() {
     resolvedAbsolute = path.charAt(0) === '/';
   }
 
-  // At this point the path should be resolved to a full absolute path, but
-  // handle relative paths to be safe (might happen when process.cwd() fails)
 
-  // Normalize the path
   resolvedPath = normalizeArray(filter(resolvedPath.split('/'), function(p) {
     return !!p;
   }), !resolvedAbsolute).join('/');
@@ -4174,13 +3589,10 @@ exports.resolve = function() {
   return ((resolvedAbsolute ? '/' : '') + resolvedPath) || '.';
 };
 
-// path.normalize(path)
-// posix version
 exports.normalize = function(path) {
   var isAbsolute = exports.isAbsolute(path),
       trailingSlash = substr(path, -1) === '/';
 
-  // Normalize the path
   path = normalizeArray(filter(path.split('/'), function(p) {
     return !!p;
   }), !isAbsolute).join('/');
@@ -4195,12 +3607,10 @@ exports.normalize = function(path) {
   return (isAbsolute ? '/' : '') + path;
 };
 
-// posix version
 exports.isAbsolute = function(path) {
   return path.charAt(0) === '/';
 };
 
-// posix version
 exports.join = function() {
   var paths = Array.prototype.slice.call(arguments, 0);
   return exports.normalize(filter(paths, function(p, index) {
@@ -4212,8 +3622,6 @@ exports.join = function() {
 };
 
 
-// path.relative(from, to)
-// posix version
 exports.relative = function(from, to) {
   from = exports.resolve(from).substr(1);
   to = exports.resolve(to).substr(1);
@@ -4264,12 +3672,10 @@ exports.dirname = function(path) {
       dir = result[1];
 
   if (!root && !dir) {
-    // No dirname whatsoever
     return '.';
   }
 
   if (dir) {
-    // It has a dirname, strip trailing slash
     dir = dir.substr(0, dir.length - 1);
   }
 
@@ -4300,7 +3706,6 @@ function filter (xs, f) {
     return res;
 }
 
-// String.prototype.substr - negative index don't work in IE8
 var substr = 'ab'.substr(-1) === 'b'
     ? function (str, start, len) { return str.substr(start, len) }
     : function (str, start, len) {
@@ -4319,13 +3724,11 @@ function posix(path) {
 }
 
 function win32(path) {
-	// https://github.com/nodejs/node/blob/b3fcc245fb25539909ef1d5eaa01dbf92e168633/lib/path.js#L56
 	var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/;
 	var result = splitDeviceRe.exec(path);
 	var device = result[1] || '';
 	var isUnc = Boolean(device && device.charAt(1) !== ':');
 
-	// UNC paths are always absolute
 	return Boolean(result[2] || isUnc);
 }
 
@@ -4335,13 +3738,8 @@ module.exports.win32 = win32;
 
 }).call(this,require('_process'))
 },{"_process":24}],24:[function(require,module,exports){
-// shim for using process in browser
 var process = module.exports = {};
 
-// cached from whatever global is present so that test runners that stub it
-// don't break things.  But we need to wrap it in a try catch in case it is
-// wrapped in strict mode code which doesn't define any globals.  It's inside a
-// function because try/catches deoptimize in certain engines.
 
 var cachedSetTimeout;
 var cachedClearTimeout;
@@ -4374,23 +3772,18 @@ function defaultClearTimeout () {
 } ())
 function runTimeout(fun) {
     if (cachedSetTimeout === setTimeout) {
-        //normal enviroments in sane situations
         return setTimeout(fun, 0);
     }
-    // if setTimeout wasn't available but was latter defined
     if ((cachedSetTimeout === defaultSetTimout || !cachedSetTimeout) && setTimeout) {
         cachedSetTimeout = setTimeout;
         return setTimeout(fun, 0);
     }
     try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
         return cachedSetTimeout(fun, 0);
     } catch(e){
         try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't trust the global object when called normally
             return cachedSetTimeout.call(null, fun, 0);
         } catch(e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error
             return cachedSetTimeout.call(this, fun, 0);
         }
     }
@@ -4399,24 +3792,18 @@ function runTimeout(fun) {
 }
 function runClearTimeout(marker) {
     if (cachedClearTimeout === clearTimeout) {
-        //normal enviroments in sane situations
         return clearTimeout(marker);
     }
-    // if clearTimeout wasn't available but was latter defined
     if ((cachedClearTimeout === defaultClearTimeout || !cachedClearTimeout) && clearTimeout) {
         cachedClearTimeout = clearTimeout;
         return clearTimeout(marker);
     }
     try {
-        // when when somebody has screwed with setTimeout but no I.E. maddness
         return cachedClearTimeout(marker);
     } catch (e){
         try {
-            // When we are in I.E. but the script has been evaled so I.E. doesn't  trust the global object when called normally
             return cachedClearTimeout.call(null, marker);
         } catch (e){
-            // same as above but when it's a version of I.E. that must have the global object for 'this', hopfully our context correct otherwise it will throw a global error.
-            // Some versions of I.E. have different rules for clearTimeout vs setTimeout
             return cachedClearTimeout.call(this, marker);
         }
     }
@@ -4481,7 +3868,6 @@ process.nextTick = function (fun) {
     }
 };
 
-// v8 likes predictible objects
 function Item(fun, array) {
     this.fun = fun;
     this.array = array;
@@ -4493,7 +3879,7 @@ process.title = 'browser';
 process.browser = true;
 process.env = {};
 process.argv = [];
-process.version = ''; // empty string to avoid regexp issues
+process.version = ''; 
 process.versions = {};
 
 function noop() {}
@@ -4521,53 +3907,36 @@ process.chdir = function (dir) {
 process.umask = function() { return 0; };
 
 },{}],25:[function(require,module,exports){
-//     Underscore.js 1.8.3
-//     http://underscorejs.org
-//     (c) 2009-2015 Jeremy Ashkenas, DocumentCloud and Investigative Reporters & Editors
-//     Underscore may be freely distributed under the MIT license.
 
 (function() {
 
-  // Baseline setup
-  // --------------
 
-  // Establish the root object, `window` in the browser, or `exports` on the server.
   var root = this;
 
-  // Save the previous value of the `_` variable.
   var previousUnderscore = root._;
 
-  // Save bytes in the minified (but not gzipped) version:
   var ArrayProto = Array.prototype, ObjProto = Object.prototype, FuncProto = Function.prototype;
 
-  // Create quick reference variables for speed access to core prototypes.
   var
     push             = ArrayProto.push,
     slice            = ArrayProto.slice,
     toString         = ObjProto.toString,
     hasOwnProperty   = ObjProto.hasOwnProperty;
 
-  // All **ECMAScript 5** native function implementations that we hope to use
-  // are declared here.
   var
     nativeIsArray      = Array.isArray,
     nativeKeys         = Object.keys,
     nativeBind         = FuncProto.bind,
     nativeCreate       = Object.create;
 
-  // Naked function reference for surrogate-prototype-swapping.
   var Ctor = function(){};
 
-  // Create a safe reference to the Underscore object for use below.
   var _ = function(obj) {
     if (obj instanceof _) return obj;
     if (!(this instanceof _)) return new _(obj);
     this._wrapped = obj;
   };
 
-  // Export the Underscore object for **Node.js**, with
-  // backwards-compatibility for the old `require()` API. If we're in
-  // the browser, add `_` as a global object.
   if (typeof exports !== 'undefined') {
     if (typeof module !== 'undefined' && module.exports) {
       exports = module.exports = _;
@@ -4577,12 +3946,8 @@ process.umask = function() { return 0; };
     root._ = _;
   }
 
-  // Current version.
   _.VERSION = '1.8.3';
 
-  // Internal function that returns an efficient (for current engines) version
-  // of the passed-in callback, to be repeatedly applied in other Underscore
-  // functions.
   var optimizeCb = function(func, context, argCount) {
     if (context === void 0) return func;
     switch (argCount == null ? 3 : argCount) {
@@ -4604,9 +3969,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // A mostly-internal function to generate callbacks that can be applied
-  // to each element in a collection, returning the desired result — either
-  // identity, an arbitrary callback, a property matcher, or a property accessor.
   var cb = function(value, context, argCount) {
     if (value == null) return _.identity;
     if (_.isFunction(value)) return optimizeCb(value, context, argCount);
@@ -4617,7 +3979,6 @@ process.umask = function() { return 0; };
     return cb(value, context, Infinity);
   };
 
-  // An internal function for creating assigner functions.
   var createAssigner = function(keysFunc, undefinedOnly) {
     return function(obj) {
       var length = arguments.length;
@@ -4635,7 +3996,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // An internal function for creating a new object that inherits from another.
   var baseCreate = function(prototype) {
     if (!_.isObject(prototype)) return {};
     if (nativeCreate) return nativeCreate(prototype);
@@ -4651,10 +4011,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Helper for collection methods to determine whether a collection
-  // should be iterated as an array or as an object
-  // Related: http://people.mozilla.org/~jorendorff/es6-draft.html#sec-tolength
-  // Avoids a very nasty iOS 8 JIT bug on ARM-64. #2094
   var MAX_ARRAY_INDEX = Math.pow(2, 53) - 1;
   var getLength = property('length');
   var isArrayLike = function(collection) {
@@ -4662,12 +4018,7 @@ process.umask = function() { return 0; };
     return typeof length == 'number' && length >= 0 && length <= MAX_ARRAY_INDEX;
   };
 
-  // Collection Functions
-  // --------------------
 
-  // The cornerstone, an `each` implementation, aka `forEach`.
-  // Handles raw objects in addition to array-likes. Treats all
-  // sparse array-likes as if they were dense.
   _.each = _.forEach = function(obj, iteratee, context) {
     iteratee = optimizeCb(iteratee, context);
     var i, length;
@@ -4684,7 +4035,6 @@ process.umask = function() { return 0; };
     return obj;
   };
 
-  // Return the results of applying the iteratee to each element.
   _.map = _.collect = function(obj, iteratee, context) {
     iteratee = cb(iteratee, context);
     var keys = !isArrayLike(obj) && _.keys(obj),
@@ -4697,10 +4047,7 @@ process.umask = function() { return 0; };
     return results;
   };
 
-  // Create a reducing function iterating left or right.
   function createReduce(dir) {
-    // Optimized iterator function as using arguments.length
-    // in the main function will deoptimize the, see #1991.
     function iterator(obj, iteratee, memo, keys, index, length) {
       for (; index >= 0 && index < length; index += dir) {
         var currentKey = keys ? keys[index] : index;
@@ -4714,7 +4061,6 @@ process.umask = function() { return 0; };
       var keys = !isArrayLike(obj) && _.keys(obj),
           length = (keys || obj).length,
           index = dir > 0 ? 0 : length - 1;
-      // Determine the initial value if none is provided.
       if (arguments.length < 3) {
         memo = obj[keys ? keys[index] : index];
         index += dir;
@@ -4723,14 +4069,10 @@ process.umask = function() { return 0; };
     };
   }
 
-  // **Reduce** builds up a single result from a list of values, aka `inject`,
-  // or `foldl`.
   _.reduce = _.foldl = _.inject = createReduce(1);
 
-  // The right-associative version of reduce, also known as `foldr`.
   _.reduceRight = _.foldr = createReduce(-1);
 
-  // Return the first value which passes a truth test. Aliased as `detect`.
   _.find = _.detect = function(obj, predicate, context) {
     var key;
     if (isArrayLike(obj)) {
@@ -4741,8 +4083,6 @@ process.umask = function() { return 0; };
     if (key !== void 0 && key !== -1) return obj[key];
   };
 
-  // Return all the elements that pass a truth test.
-  // Aliased as `select`.
   _.filter = _.select = function(obj, predicate, context) {
     var results = [];
     predicate = cb(predicate, context);
@@ -4752,13 +4092,10 @@ process.umask = function() { return 0; };
     return results;
   };
 
-  // Return all the elements for which a truth test fails.
   _.reject = function(obj, predicate, context) {
     return _.filter(obj, _.negate(cb(predicate)), context);
   };
 
-  // Determine whether all of the elements match a truth test.
-  // Aliased as `all`.
   _.every = _.all = function(obj, predicate, context) {
     predicate = cb(predicate, context);
     var keys = !isArrayLike(obj) && _.keys(obj),
@@ -4770,8 +4107,6 @@ process.umask = function() { return 0; };
     return true;
   };
 
-  // Determine if at least one element in the object matches a truth test.
-  // Aliased as `any`.
   _.some = _.any = function(obj, predicate, context) {
     predicate = cb(predicate, context);
     var keys = !isArrayLike(obj) && _.keys(obj),
@@ -4783,15 +4118,12 @@ process.umask = function() { return 0; };
     return false;
   };
 
-  // Determine if the array or object contains a given item (using `===`).
-  // Aliased as `includes` and `include`.
   _.contains = _.includes = _.include = function(obj, item, fromIndex, guard) {
     if (!isArrayLike(obj)) obj = _.values(obj);
     if (typeof fromIndex != 'number' || guard) fromIndex = 0;
     return _.indexOf(obj, item, fromIndex) >= 0;
   };
 
-  // Invoke a method (with arguments) on every item in a collection.
   _.invoke = function(obj, method) {
     var args = slice.call(arguments, 2);
     var isFunc = _.isFunction(method);
@@ -4801,24 +4133,18 @@ process.umask = function() { return 0; };
     });
   };
 
-  // Convenience version of a common use case of `map`: fetching a property.
   _.pluck = function(obj, key) {
     return _.map(obj, _.property(key));
   };
 
-  // Convenience version of a common use case of `filter`: selecting only objects
-  // containing specific `key:value` pairs.
   _.where = function(obj, attrs) {
     return _.filter(obj, _.matcher(attrs));
   };
 
-  // Convenience version of a common use case of `find`: getting the first object
-  // containing specific `key:value` pairs.
   _.findWhere = function(obj, attrs) {
     return _.find(obj, _.matcher(attrs));
   };
 
-  // Return the maximum element (or element-based computation).
   _.max = function(obj, iteratee, context) {
     var result = -Infinity, lastComputed = -Infinity,
         value, computed;
@@ -4843,7 +4169,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Return the minimum element (or element-based computation).
   _.min = function(obj, iteratee, context) {
     var result = Infinity, lastComputed = Infinity,
         value, computed;
@@ -4868,8 +4193,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Shuffle a collection, using the modern version of the
-  // [Fisher-Yates shuffle](http://en.wikipedia.org/wiki/Fisher–Yates_shuffle).
   _.shuffle = function(obj) {
     var set = isArrayLike(obj) ? obj : _.values(obj);
     var length = set.length;
@@ -4882,9 +4205,6 @@ process.umask = function() { return 0; };
     return shuffled;
   };
 
-  // Sample **n** random values from a collection.
-  // If **n** is not specified, returns a single random element.
-  // The internal `guard` argument allows it to work with `map`.
   _.sample = function(obj, n, guard) {
     if (n == null || guard) {
       if (!isArrayLike(obj)) obj = _.values(obj);
@@ -4893,7 +4213,6 @@ process.umask = function() { return 0; };
     return _.shuffle(obj).slice(0, Math.max(0, n));
   };
 
-  // Sort the object's values by a criterion produced by an iteratee.
   _.sortBy = function(obj, iteratee, context) {
     iteratee = cb(iteratee, context);
     return _.pluck(_.map(obj, function(value, index, list) {
@@ -4913,7 +4232,6 @@ process.umask = function() { return 0; };
     }), 'value');
   };
 
-  // An internal function used for aggregate "group by" operations.
   var group = function(behavior) {
     return function(obj, iteratee, context) {
       var result = {};
@@ -4926,26 +4244,18 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Groups the object's values by a criterion. Pass either a string attribute
-  // to group by, or a function that returns the criterion.
   _.groupBy = group(function(result, value, key) {
     if (_.has(result, key)) result[key].push(value); else result[key] = [value];
   });
 
-  // Indexes the object's values by a criterion, similar to `groupBy`, but for
-  // when you know that your index values will be unique.
   _.indexBy = group(function(result, value, key) {
     result[key] = value;
   });
 
-  // Counts instances of an object that group by a certain criterion. Pass
-  // either a string attribute to count by, or a function that returns the
-  // criterion.
   _.countBy = group(function(result, value, key) {
     if (_.has(result, key)) result[key]++; else result[key] = 1;
   });
 
-  // Safely create a real, live array from anything iterable.
   _.toArray = function(obj) {
     if (!obj) return [];
     if (_.isArray(obj)) return slice.call(obj);
@@ -4953,14 +4263,11 @@ process.umask = function() { return 0; };
     return _.values(obj);
   };
 
-  // Return the number of elements in an object.
   _.size = function(obj) {
     if (obj == null) return 0;
     return isArrayLike(obj) ? obj.length : _.keys(obj).length;
   };
 
-  // Split a collection into two arrays: one whose elements all satisfy the given
-  // predicate, and one whose elements all do not satisfy the predicate.
   _.partition = function(obj, predicate, context) {
     predicate = cb(predicate, context);
     var pass = [], fail = [];
@@ -4970,52 +4277,36 @@ process.umask = function() { return 0; };
     return [pass, fail];
   };
 
-  // Array Functions
-  // ---------------
 
-  // Get the first element of an array. Passing **n** will return the first N
-  // values in the array. Aliased as `head` and `take`. The **guard** check
-  // allows it to work with `_.map`.
   _.first = _.head = _.take = function(array, n, guard) {
     if (array == null) return void 0;
     if (n == null || guard) return array[0];
     return _.initial(array, array.length - n);
   };
 
-  // Returns everything but the last entry of the array. Especially useful on
-  // the arguments object. Passing **n** will return all the values in
-  // the array, excluding the last N.
   _.initial = function(array, n, guard) {
     return slice.call(array, 0, Math.max(0, array.length - (n == null || guard ? 1 : n)));
   };
 
-  // Get the last element of an array. Passing **n** will return the last N
-  // values in the array.
   _.last = function(array, n, guard) {
     if (array == null) return void 0;
     if (n == null || guard) return array[array.length - 1];
     return _.rest(array, Math.max(0, array.length - n));
   };
 
-  // Returns everything but the first entry of the array. Aliased as `tail` and `drop`.
-  // Especially useful on the arguments object. Passing an **n** will return
-  // the rest N values in the array.
   _.rest = _.tail = _.drop = function(array, n, guard) {
     return slice.call(array, n == null || guard ? 1 : n);
   };
 
-  // Trim out all falsy values from an array.
   _.compact = function(array) {
     return _.filter(array, _.identity);
   };
 
-  // Internal implementation of a recursive `flatten` function.
   var flatten = function(input, shallow, strict, startIndex) {
     var output = [], idx = 0;
     for (var i = startIndex || 0, length = getLength(input); i < length; i++) {
       var value = input[i];
       if (isArrayLike(value) && (_.isArray(value) || _.isArguments(value))) {
-        //flatten current level of array or arguments object
         if (!shallow) value = flatten(value, shallow, strict);
         var j = 0, len = value.length;
         output.length += len;
@@ -5029,19 +4320,14 @@ process.umask = function() { return 0; };
     return output;
   };
 
-  // Flatten out an array, either recursively (by default), or just one level.
   _.flatten = function(array, shallow) {
     return flatten(array, shallow, false);
   };
 
-  // Return a version of the array that does not contain the specified value(s).
   _.without = function(array) {
     return _.difference(array, slice.call(arguments, 1));
   };
 
-  // Produce a duplicate-free version of the array. If the array has already
-  // been sorted, you have the option of using a faster algorithm.
-  // Aliased as `unique`.
   _.uniq = _.unique = function(array, isSorted, iteratee, context) {
     if (!_.isBoolean(isSorted)) {
       context = iteratee;
@@ -5069,14 +4355,10 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Produce an array that contains the union: each distinct element from all of
-  // the passed-in arrays.
   _.union = function() {
     return _.uniq(flatten(arguments, true, true));
   };
 
-  // Produce an array that contains every item shared between all the
-  // passed-in arrays.
   _.intersection = function(array) {
     var result = [];
     var argsLength = arguments.length;
@@ -5091,8 +4373,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Take the difference between one array and a number of other arrays.
-  // Only the elements present in just the first array will remain.
   _.difference = function(array) {
     var rest = flatten(arguments, true, true, 1);
     return _.filter(array, function(value){
@@ -5100,14 +4380,10 @@ process.umask = function() { return 0; };
     });
   };
 
-  // Zip together multiple lists into a single array -- elements that share
-  // an index go together.
   _.zip = function() {
     return _.unzip(arguments);
   };
 
-  // Complement of _.zip. Unzip accepts an array of arrays and groups
-  // each array's elements on shared indices
   _.unzip = function(array) {
     var length = array && _.max(array, getLength).length || 0;
     var result = Array(length);
@@ -5118,9 +4394,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Converts lists into objects. Pass either a single array of `[key, value]`
-  // pairs, or two parallel arrays of the same length -- one of keys, and one of
-  // the corresponding values.
   _.object = function(list, values) {
     var result = {};
     for (var i = 0, length = getLength(list); i < length; i++) {
@@ -5133,7 +4406,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Generator function to create the findIndex and findLastIndex functions
   function createPredicateIndexFinder(dir) {
     return function(array, predicate, context) {
       predicate = cb(predicate, context);
@@ -5146,12 +4418,9 @@ process.umask = function() { return 0; };
     };
   }
 
-  // Returns the first index on an array-like that passes a predicate test
   _.findIndex = createPredicateIndexFinder(1);
   _.findLastIndex = createPredicateIndexFinder(-1);
 
-  // Use a comparator function to figure out the smallest index at which
-  // an object should be inserted so as to maintain order. Uses binary search.
   _.sortedIndex = function(array, obj, iteratee, context) {
     iteratee = cb(iteratee, context, 1);
     var value = iteratee(obj);
@@ -5163,7 +4432,6 @@ process.umask = function() { return 0; };
     return low;
   };
 
-  // Generator function to create the indexOf and lastIndexOf functions
   function createIndexFinder(dir, predicateFind, sortedIndex) {
     return function(array, item, idx) {
       var i = 0, length = getLength(array);
@@ -5188,16 +4456,9 @@ process.umask = function() { return 0; };
     };
   }
 
-  // Return the position of the first occurrence of an item in an array,
-  // or -1 if the item is not included in the array.
-  // If the array is large and already in sort order, pass `true`
-  // for **isSorted** to use binary search.
   _.indexOf = createIndexFinder(1, _.findIndex, _.sortedIndex);
   _.lastIndexOf = createIndexFinder(-1, _.findLastIndex);
 
-  // Generate an integer Array containing an arithmetic progression. A port of
-  // the native Python `range()` function. See
-  // [the Python documentation](http://docs.python.org/library/functions.html#range).
   _.range = function(start, stop, step) {
     if (stop == null) {
       stop = start || 0;
@@ -5215,11 +4476,7 @@ process.umask = function() { return 0; };
     return range;
   };
 
-  // Function (ahem) Functions
-  // ------------------
 
-  // Determines whether to execute a function as a constructor
-  // or a normal function with the provided arguments
   var executeBound = function(sourceFunc, boundFunc, context, callingContext, args) {
     if (!(callingContext instanceof boundFunc)) return sourceFunc.apply(context, args);
     var self = baseCreate(sourceFunc.prototype);
@@ -5228,9 +4485,6 @@ process.umask = function() { return 0; };
     return self;
   };
 
-  // Create a function bound to a given object (assigning `this`, and arguments,
-  // optionally). Delegates to **ECMAScript 5**'s native `Function.bind` if
-  // available.
   _.bind = function(func, context) {
     if (nativeBind && func.bind === nativeBind) return nativeBind.apply(func, slice.call(arguments, 1));
     if (!_.isFunction(func)) throw new TypeError('Bind must be called on a function');
@@ -5241,9 +4495,6 @@ process.umask = function() { return 0; };
     return bound;
   };
 
-  // Partially apply a function by creating a version that has had some of its
-  // arguments pre-filled, without changing its dynamic `this` context. _ acts
-  // as a placeholder, allowing any combination of arguments to be pre-filled.
   _.partial = function(func) {
     var boundArgs = slice.call(arguments, 1);
     var bound = function() {
@@ -5258,9 +4509,6 @@ process.umask = function() { return 0; };
     return bound;
   };
 
-  // Bind a number of an object's methods to that object. Remaining arguments
-  // are the method names to be bound. Useful for ensuring that all callbacks
-  // defined on an object belong to it.
   _.bindAll = function(obj) {
     var i, length = arguments.length, key;
     if (length <= 1) throw new Error('bindAll must be passed function names');
@@ -5271,7 +4519,6 @@ process.umask = function() { return 0; };
     return obj;
   };
 
-  // Memoize an expensive function by storing its results.
   _.memoize = function(func, hasher) {
     var memoize = function(key) {
       var cache = memoize.cache;
@@ -5283,8 +4530,6 @@ process.umask = function() { return 0; };
     return memoize;
   };
 
-  // Delays a function for the given number of milliseconds, and then calls
-  // it with the arguments supplied.
   _.delay = function(func, wait) {
     var args = slice.call(arguments, 2);
     return setTimeout(function(){
@@ -5292,15 +4537,8 @@ process.umask = function() { return 0; };
     }, wait);
   };
 
-  // Defers a function, scheduling it to run after the current call stack has
-  // cleared.
   _.defer = _.partial(_.delay, _, 1);
 
-  // Returns a function, that, when invoked, will only be triggered at most once
-  // during a given window of time. Normally, the throttled function will run
-  // as much as it can, without ever going more than once per `wait` duration;
-  // but if you'd like to disable the execution on the leading edge, pass
-  // `{leading: false}`. To disable execution on the trailing edge, ditto.
   _.throttle = function(func, wait, options) {
     var context, args, result;
     var timeout = null;
@@ -5333,10 +4571,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Returns a function, that, as long as it continues to be invoked, will not
-  // be triggered. The function will be called after it stops being called for
-  // N milliseconds. If `immediate` is passed, trigger the function on the
-  // leading edge, instead of the trailing.
   _.debounce = function(func, wait, immediate) {
     var timeout, args, context, timestamp, result;
 
@@ -5369,22 +4603,16 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Returns the first function passed as an argument to the second,
-  // allowing you to adjust arguments, run code before and after, and
-  // conditionally execute the original function.
   _.wrap = function(func, wrapper) {
     return _.partial(wrapper, func);
   };
 
-  // Returns a negated version of the passed-in predicate.
   _.negate = function(predicate) {
     return function() {
       return !predicate.apply(this, arguments);
     };
   };
 
-  // Returns a function that is the composition of a list of functions, each
-  // consuming the return value of the function that follows.
   _.compose = function() {
     var args = arguments;
     var start = args.length - 1;
@@ -5396,7 +4624,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Returns a function that will only be executed on and after the Nth call.
   _.after = function(times, func) {
     return function() {
       if (--times < 1) {
@@ -5405,7 +4632,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Returns a function that will only be executed up to (but not including) the Nth call.
   _.before = function(times, func) {
     var memo;
     return function() {
@@ -5417,14 +4643,9 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Returns a function that will be executed at most one time, no matter how
-  // often you call it. Useful for lazy initialization.
   _.once = _.partial(_.before, 2);
 
-  // Object Functions
-  // ----------------
 
-  // Keys in IE < 9 that won't be iterated by `for key in ...` and thus missed.
   var hasEnumBug = !{toString: null}.propertyIsEnumerable('toString');
   var nonEnumerableProps = ['valueOf', 'isPrototypeOf', 'toString',
                       'propertyIsEnumerable', 'hasOwnProperty', 'toLocaleString'];
@@ -5434,7 +4655,6 @@ process.umask = function() { return 0; };
     var constructor = obj.constructor;
     var proto = (_.isFunction(constructor) && constructor.prototype) || ObjProto;
 
-    // Constructor is a special case.
     var prop = 'constructor';
     if (_.has(obj, prop) && !_.contains(keys, prop)) keys.push(prop);
 
@@ -5446,29 +4666,23 @@ process.umask = function() { return 0; };
     }
   }
 
-  // Retrieve the names of an object's own properties.
-  // Delegates to **ECMAScript 5**'s native `Object.keys`
   _.keys = function(obj) {
     if (!_.isObject(obj)) return [];
     if (nativeKeys) return nativeKeys(obj);
     var keys = [];
     for (var key in obj) if (_.has(obj, key)) keys.push(key);
-    // Ahem, IE < 9.
     if (hasEnumBug) collectNonEnumProps(obj, keys);
     return keys;
   };
 
-  // Retrieve all the property names of an object.
   _.allKeys = function(obj) {
     if (!_.isObject(obj)) return [];
     var keys = [];
     for (var key in obj) keys.push(key);
-    // Ahem, IE < 9.
     if (hasEnumBug) collectNonEnumProps(obj, keys);
     return keys;
   };
 
-  // Retrieve the values of an object's properties.
   _.values = function(obj) {
     var keys = _.keys(obj);
     var length = keys.length;
@@ -5479,8 +4693,6 @@ process.umask = function() { return 0; };
     return values;
   };
 
-  // Returns the results of applying the iteratee to each element of the object
-  // In contrast to _.map it returns an object
   _.mapObject = function(obj, iteratee, context) {
     iteratee = cb(iteratee, context);
     var keys =  _.keys(obj),
@@ -5494,7 +4706,6 @@ process.umask = function() { return 0; };
       return results;
   };
 
-  // Convert an object into a list of `[key, value]` pairs.
   _.pairs = function(obj) {
     var keys = _.keys(obj);
     var length = keys.length;
@@ -5505,7 +4716,6 @@ process.umask = function() { return 0; };
     return pairs;
   };
 
-  // Invert the keys and values of an object. The values must be serializable.
   _.invert = function(obj) {
     var result = {};
     var keys = _.keys(obj);
@@ -5515,8 +4725,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-  // Return a sorted list of the function names available on the object.
-  // Aliased as `methods`
   _.functions = _.methods = function(obj) {
     var names = [];
     for (var key in obj) {
@@ -5525,14 +4733,10 @@ process.umask = function() { return 0; };
     return names.sort();
   };
 
-  // Extend a given object with all the properties in passed-in object(s).
   _.extend = createAssigner(_.allKeys);
 
-  // Assigns a given object with all the own properties in the passed-in object(s)
-  // (https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/Object/assign)
   _.extendOwn = _.assign = createAssigner(_.keys);
 
-  // Returns the first key on an object that passes a predicate test
   _.findKey = function(obj, predicate, context) {
     predicate = cb(predicate, context);
     var keys = _.keys(obj), key;
@@ -5542,7 +4746,6 @@ process.umask = function() { return 0; };
     }
   };
 
-  // Return a copy of the object only containing the whitelisted properties.
   _.pick = function(object, oiteratee, context) {
     var result = {}, obj = object, iteratee, keys;
     if (obj == null) return result;
@@ -5562,7 +4765,6 @@ process.umask = function() { return 0; };
     return result;
   };
 
-   // Return a copy of the object without the blacklisted properties.
   _.omit = function(obj, iteratee, context) {
     if (_.isFunction(iteratee)) {
       iteratee = _.negate(iteratee);
@@ -5575,33 +4777,24 @@ process.umask = function() { return 0; };
     return _.pick(obj, iteratee, context);
   };
 
-  // Fill in a given object with default properties.
   _.defaults = createAssigner(_.allKeys, true);
 
-  // Creates an object that inherits from the given prototype object.
-  // If additional properties are provided then they will be added to the
-  // created object.
   _.create = function(prototype, props) {
     var result = baseCreate(prototype);
     if (props) _.extendOwn(result, props);
     return result;
   };
 
-  // Create a (shallow-cloned) duplicate of an object.
   _.clone = function(obj) {
     if (!_.isObject(obj)) return obj;
     return _.isArray(obj) ? obj.slice() : _.extend({}, obj);
   };
 
-  // Invokes interceptor with the obj, and then returns obj.
-  // The primary purpose of this method is to "tap into" a method chain, in
-  // order to perform operations on intermediate results within the chain.
   _.tap = function(obj, interceptor) {
     interceptor(obj);
     return obj;
   };
 
-  // Returns whether an object has a given set of `key:value` pairs.
   _.isMatch = function(object, attrs) {
     var keys = _.keys(attrs), length = keys.length;
     if (object == null) return !length;
@@ -5614,38 +4807,22 @@ process.umask = function() { return 0; };
   };
 
 
-  // Internal recursive comparison function for `isEqual`.
   var eq = function(a, b, aStack, bStack) {
-    // Identical objects are equal. `0 === -0`, but they aren't identical.
-    // See the [Harmony `egal` proposal](http://wiki.ecmascript.org/doku.php?id=harmony:egal).
     if (a === b) return a !== 0 || 1 / a === 1 / b;
-    // A strict comparison is necessary because `null == undefined`.
     if (a == null || b == null) return a === b;
-    // Unwrap any wrapped objects.
     if (a instanceof _) a = a._wrapped;
     if (b instanceof _) b = b._wrapped;
-    // Compare `[[Class]]` names.
     var className = toString.call(a);
     if (className !== toString.call(b)) return false;
     switch (className) {
-      // Strings, numbers, regular expressions, dates, and booleans are compared by value.
       case '[object RegExp]':
-      // RegExps are coerced to strings for comparison (Note: '' + /a/i === '/a/i')
       case '[object String]':
-        // Primitives and their corresponding object wrappers are equivalent; thus, `"5"` is
-        // equivalent to `new String("5")`.
         return '' + a === '' + b;
       case '[object Number]':
-        // `NaN`s are equivalent, but non-reflexive.
-        // Object(NaN) is equivalent to NaN
         if (+a !== +a) return +b !== +b;
-        // An `egal` comparison is performed for other numeric values.
         return +a === 0 ? 1 / +a === 1 / b : +a === +b;
       case '[object Date]':
       case '[object Boolean]':
-        // Coerce dates and booleans to numeric primitive values. Dates are compared by their
-        // millisecond representations. Note that invalid dates with millisecond representations
-        // of `NaN` are not equivalent.
         return +a === +b;
     }
 
@@ -5653,8 +4830,6 @@ process.umask = function() { return 0; };
     if (!areArrays) {
       if (typeof a != 'object' || typeof b != 'object') return false;
 
-      // Objects with different constructors are not equivalent, but `Object`s or `Array`s
-      // from different frames are.
       var aCtor = a.constructor, bCtor = b.constructor;
       if (aCtor !== bCtor && !(_.isFunction(aCtor) && aCtor instanceof aCtor &&
                                _.isFunction(bCtor) && bCtor instanceof bCtor)
@@ -5662,151 +4837,112 @@ process.umask = function() { return 0; };
         return false;
       }
     }
-    // Assume equality for cyclic structures. The algorithm for detecting cyclic
-    // structures is adapted from ES 5.1 section 15.12.3, abstract operation `JO`.
 
-    // Initializing stack of traversed objects.
-    // It's done here since we only need them for objects and arrays comparison.
     aStack = aStack || [];
     bStack = bStack || [];
     var length = aStack.length;
     while (length--) {
-      // Linear search. Performance is inversely proportional to the number of
-      // unique nested structures.
       if (aStack[length] === a) return bStack[length] === b;
     }
 
-    // Add the first object to the stack of traversed objects.
     aStack.push(a);
     bStack.push(b);
 
-    // Recursively compare objects and arrays.
     if (areArrays) {
-      // Compare array lengths to determine if a deep comparison is necessary.
       length = a.length;
       if (length !== b.length) return false;
-      // Deep compare the contents, ignoring non-numeric properties.
       while (length--) {
         if (!eq(a[length], b[length], aStack, bStack)) return false;
       }
     } else {
-      // Deep compare objects.
       var keys = _.keys(a), key;
       length = keys.length;
-      // Ensure that both objects contain the same number of properties before comparing deep equality.
       if (_.keys(b).length !== length) return false;
       while (length--) {
-        // Deep compare each member
         key = keys[length];
         if (!(_.has(b, key) && eq(a[key], b[key], aStack, bStack))) return false;
       }
     }
-    // Remove the first object from the stack of traversed objects.
     aStack.pop();
     bStack.pop();
     return true;
   };
 
-  // Perform a deep comparison to check if two objects are equal.
   _.isEqual = function(a, b) {
     return eq(a, b);
   };
 
-  // Is a given array, string, or object empty?
-  // An "empty" object has no enumerable own-properties.
   _.isEmpty = function(obj) {
     if (obj == null) return true;
     if (isArrayLike(obj) && (_.isArray(obj) || _.isString(obj) || _.isArguments(obj))) return obj.length === 0;
     return _.keys(obj).length === 0;
   };
 
-  // Is a given value a DOM element?
   _.isElement = function(obj) {
     return !!(obj && obj.nodeType === 1);
   };
 
-  // Is a given value an array?
-  // Delegates to ECMA5's native Array.isArray
   _.isArray = nativeIsArray || function(obj) {
     return toString.call(obj) === '[object Array]';
   };
 
-  // Is a given variable an object?
   _.isObject = function(obj) {
     var type = typeof obj;
     return type === 'function' || type === 'object' && !!obj;
   };
 
-  // Add some isType methods: isArguments, isFunction, isString, isNumber, isDate, isRegExp, isError.
   _.each(['Arguments', 'Function', 'String', 'Number', 'Date', 'RegExp', 'Error'], function(name) {
     _['is' + name] = function(obj) {
       return toString.call(obj) === '[object ' + name + ']';
     };
   });
 
-  // Define a fallback version of the method in browsers (ahem, IE < 9), where
-  // there isn't any inspectable "Arguments" type.
   if (!_.isArguments(arguments)) {
     _.isArguments = function(obj) {
       return _.has(obj, 'callee');
     };
   }
 
-  // Optimize `isFunction` if appropriate. Work around some typeof bugs in old v8,
-  // IE 11 (#1621), and in Safari 8 (#1929).
   if (typeof /./ != 'function' && typeof Int8Array != 'object') {
     _.isFunction = function(obj) {
       return typeof obj == 'function' || false;
     };
   }
 
-  // Is a given object a finite number?
   _.isFinite = function(obj) {
     return isFinite(obj) && !isNaN(parseFloat(obj));
   };
 
-  // Is the given value `NaN`? (NaN is the only number which does not equal itself).
   _.isNaN = function(obj) {
     return _.isNumber(obj) && obj !== +obj;
   };
 
-  // Is a given value a boolean?
   _.isBoolean = function(obj) {
     return obj === true || obj === false || toString.call(obj) === '[object Boolean]';
   };
 
-  // Is a given value equal to null?
   _.isNull = function(obj) {
     return obj === null;
   };
 
-  // Is a given variable undefined?
   _.isUndefined = function(obj) {
     return obj === void 0;
   };
 
-  // Shortcut function for checking if an object has a given property directly
-  // on itself (in other words, not on a prototype).
   _.has = function(obj, key) {
     return obj != null && hasOwnProperty.call(obj, key);
   };
 
-  // Utility Functions
-  // -----------------
 
-  // Run Underscore.js in *noConflict* mode, returning the `_` variable to its
-  // previous owner. Returns a reference to the Underscore object.
   _.noConflict = function() {
     root._ = previousUnderscore;
     return this;
   };
 
-  // Keep the identity function around for default iteratees.
   _.identity = function(value) {
     return value;
   };
 
-  // Predicate-generating functions. Often useful outside of Underscore.
   _.constant = function(value) {
     return function() {
       return value;
@@ -5817,15 +4953,12 @@ process.umask = function() { return 0; };
 
   _.property = property;
 
-  // Generates a function for a given object that returns a given property.
   _.propertyOf = function(obj) {
     return obj == null ? function(){} : function(key) {
       return obj[key];
     };
   };
 
-  // Returns a predicate for checking whether an object has a given set of
-  // `key:value` pairs.
   _.matcher = _.matches = function(attrs) {
     attrs = _.extendOwn({}, attrs);
     return function(obj) {
@@ -5833,7 +4966,6 @@ process.umask = function() { return 0; };
     };
   };
 
-  // Run a function **n** times.
   _.times = function(n, iteratee, context) {
     var accum = Array(Math.max(0, n));
     iteratee = optimizeCb(iteratee, context, 1);
@@ -5841,7 +4973,6 @@ process.umask = function() { return 0; };
     return accum;
   };
 
-  // Return a random integer between min and max (inclusive).
   _.random = function(min, max) {
     if (max == null) {
       max = min;
@@ -5850,12 +4981,10 @@ process.umask = function() { return 0; };
     return min + Math.floor(Math.random() * (max - min + 1));
   };
 
-  // A (possibly faster) way to get the current timestamp as an integer.
   _.now = Date.now || function() {
     return new Date().getTime();
   };
 
-   // List of HTML entities for escaping.
   var escapeMap = {
     '&': '&amp;',
     '<': '&lt;',
@@ -5866,12 +4995,10 @@ process.umask = function() { return 0; };
   };
   var unescapeMap = _.invert(escapeMap);
 
-  // Functions for escaping and unescaping strings to/from HTML interpolation.
   var createEscaper = function(map) {
     var escaper = function(match) {
       return map[match];
     };
-    // Regexes for identifying a key that needs to be escaped
     var source = '(?:' + _.keys(map).join('|') + ')';
     var testRegexp = RegExp(source);
     var replaceRegexp = RegExp(source, 'g');
@@ -5883,8 +5010,6 @@ process.umask = function() { return 0; };
   _.escape = createEscaper(escapeMap);
   _.unescape = createEscaper(unescapeMap);
 
-  // If the value of the named `property` is a function then invoke it with the
-  // `object` as context; otherwise, return it.
   _.result = function(object, property, fallback) {
     var value = object == null ? void 0 : object[property];
     if (value === void 0) {
@@ -5893,29 +5018,20 @@ process.umask = function() { return 0; };
     return _.isFunction(value) ? value.call(object) : value;
   };
 
-  // Generate a unique integer id (unique within the entire client session).
-  // Useful for temporary DOM ids.
   var idCounter = 0;
   _.uniqueId = function(prefix) {
     var id = ++idCounter + '';
     return prefix ? prefix + id : id;
   };
 
-  // By default, Underscore uses ERB-style template delimiters, change the
-  // following template settings to use alternative delimiters.
   _.templateSettings = {
     evaluate    : /<%([\s\S]+?)%>/g,
     interpolate : /<%=([\s\S]+?)%>/g,
     escape      : /<%-([\s\S]+?)%>/g
   };
 
-  // When customizing `templateSettings`, if you don't want to define an
-  // interpolation, evaluation or escaping regex, we need one that is
-  // guaranteed not to match.
   var noMatch = /(.)^/;
 
-  // Certain characters need to be escaped so that they can be put into a
-  // string literal.
   var escapes = {
     "'":      "'",
     '\\':     '\\',
@@ -5931,22 +5047,16 @@ process.umask = function() { return 0; };
     return '\\' + escapes[match];
   };
 
-  // JavaScript micro-templating, similar to John Resig's implementation.
-  // Underscore templating handles arbitrary delimiters, preserves whitespace,
-  // and correctly escapes quotes within interpolated code.
-  // NB: `oldSettings` only exists for backwards compatibility.
   _.template = function(text, settings, oldSettings) {
     if (!settings && oldSettings) settings = oldSettings;
     settings = _.defaults({}, settings, _.templateSettings);
 
-    // Combine delimiters into one regular expression via alternation.
     var matcher = RegExp([
       (settings.escape || noMatch).source,
       (settings.interpolate || noMatch).source,
       (settings.evaluate || noMatch).source
     ].join('|') + '|$', 'g');
 
-    // Compile the template source, escaping string literals appropriately.
     var index = 0;
     var source = "__p+='";
     text.replace(matcher, function(match, escape, interpolate, evaluate, offset) {
@@ -5961,12 +5071,10 @@ process.umask = function() { return 0; };
         source += "';\n" + evaluate + "\n__p+='";
       }
 
-      // Adobe VMs need the match returned to produce the correct offest.
       return match;
     });
     source += "';\n";
 
-    // If a variable is not specified, place data values in local scope.
     if (!settings.variable) source = 'with(obj||{}){\n' + source + '}\n';
 
     source = "var __t,__p='',__j=Array.prototype.join," +
@@ -5984,32 +5092,23 @@ process.umask = function() { return 0; };
       return render.call(this, data, _);
     };
 
-    // Provide the compiled source as a convenience for precompilation.
     var argument = settings.variable || 'obj';
     template.source = 'function(' + argument + '){\n' + source + '}';
 
     return template;
   };
 
-  // Add a "chain" function. Start chaining a wrapped Underscore object.
   _.chain = function(obj) {
     var instance = _(obj);
     instance._chain = true;
     return instance;
   };
 
-  // OOP
-  // ---------------
-  // If Underscore is called as a function, it returns a wrapped object that
-  // can be used OO-style. This wrapper holds altered versions of all the
-  // underscore functions. Wrapped objects may be chained.
 
-  // Helper function to continue chaining intermediate results.
   var result = function(instance, obj) {
     return instance._chain ? _(obj).chain() : obj;
   };
 
-  // Add your own custom functions to the Underscore object.
   _.mixin = function(obj) {
     _.each(_.functions(obj), function(name) {
       var func = _[name] = obj[name];
@@ -6021,10 +5120,8 @@ process.umask = function() { return 0; };
     });
   };
 
-  // Add all of the Underscore functions to the wrapper object.
   _.mixin(_);
 
-  // Add all mutator Array functions to the wrapper.
   _.each(['pop', 'push', 'reverse', 'shift', 'sort', 'splice', 'unshift'], function(name) {
     var method = ArrayProto[name];
     _.prototype[name] = function() {
@@ -6035,7 +5132,6 @@ process.umask = function() { return 0; };
     };
   });
 
-  // Add all accessor Array functions to the wrapper.
   _.each(['concat', 'join', 'slice'], function(name) {
     var method = ArrayProto[name];
     _.prototype[name] = function() {
@@ -6043,26 +5139,16 @@ process.umask = function() { return 0; };
     };
   });
 
-  // Extracts the result from a wrapped and chained object.
   _.prototype.value = function() {
     return this._wrapped;
   };
 
-  // Provide unwrapping proxy for some methods used in engine operations
-  // such as arithmetic and JSON stringification.
   _.prototype.valueOf = _.prototype.toJSON = _.prototype.value;
 
   _.prototype.toString = function() {
     return '' + this._wrapped;
   };
 
-  // AMD registration happens at the end for compatibility with AMD loaders
-  // that may not enforce next-turn semantics on modules. Even though general
-  // practice for AMD registration is to be anonymous, underscore registers
-  // as a named module because, like jQuery, it is a base library that is
-  // popular enough to be bundled in a third party lib, but not be part of
-  // an AMD load request. Those cases could generate an error when an
-  // anonymous define() is called outside of a loader request.
   if (typeof define === 'function' && define.amd) {
     define('underscore', [], function() {
       return _;
@@ -6081,26 +5167,7 @@ module.exports = function isBuffer(arg) {
 }
 },{}],28:[function(require,module,exports){
 (function (process,global){
-// Copyright Joyent, Inc. and other Node contributors.
-//
-// Permission is hereby granted, free of charge, to any person obtaining a
-// copy of this software and associated documentation files (the
-// "Software"), to deal in the Software without restriction, including
-// without limitation the rights to use, copy, modify, merge, publish,
-// distribute, sublicense, and/or sell copies of the Software, and to permit
-// persons to whom the Software is furnished to do so, subject to the
-// following conditions:
-//
-// The above copyright notice and this permission notice shall be included
-// in all copies or substantial portions of the Software.
-//
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
-// OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-// MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
 // NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
-// DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
-// OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE
-// USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 var formatRegExp = /%[sdj%]/g;
 exports.format = function(f) {
@@ -6142,11 +5209,7 @@ exports.format = function(f) {
 };
 
 
-// Mark that a method should not be used.
-// Returns a modified function which warns once by default.
-// If --no-deprecation is set, then it is a no-op.
 exports.deprecate = function(fn, msg) {
-  // Allow for deprecating things in the process of starting up.
   if (isUndefined(global.process)) {
     return function() {
       return exports.deprecate(fn, msg).apply(this, arguments);
@@ -6204,24 +5267,18 @@ exports.debuglog = function(set) {
  * @param {Object} obj The object to print out.
  * @param {Object} opts Optional options object that alters the output.
  */
-/* legacy: obj, showHidden, depth, colors*/
 function inspect(obj, opts) {
-  // default options
   var ctx = {
     seen: [],
     stylize: stylizeNoColor
   };
-  // legacy...
   if (arguments.length >= 3) ctx.depth = arguments[2];
   if (arguments.length >= 4) ctx.colors = arguments[3];
   if (isBoolean(opts)) {
-    // legacy...
     ctx.showHidden = opts;
   } else if (opts) {
-    // got an "options" object
     exports._extend(ctx, opts);
   }
-  // set default options
   if (isUndefined(ctx.showHidden)) ctx.showHidden = false;
   if (isUndefined(ctx.depth)) ctx.depth = 2;
   if (isUndefined(ctx.colors)) ctx.colors = false;
@@ -6232,7 +5289,6 @@ function inspect(obj, opts) {
 exports.inspect = inspect;
 
 
-// http://en.wikipedia.org/wiki/ANSI_escape_code#graphics
 inspect.colors = {
   'bold' : [1, 22],
   'italic' : [3, 23],
@@ -6249,7 +5305,6 @@ inspect.colors = {
   'yellow' : [33, 39]
 };
 
-// Don't use 'blue' not visible on cmd.exe
 inspect.styles = {
   'special': 'cyan',
   'number': 'yellow',
@@ -6258,7 +5313,6 @@ inspect.styles = {
   'null': 'bold',
   'string': 'green',
   'date': 'magenta',
-  // "name": intentionally not styling
   'regexp': 'red'
 };
 
@@ -6292,14 +5346,10 @@ function arrayToHash(array) {
 
 
 function formatValue(ctx, value, recurseTimes) {
-  // Provide a hook for user-specified inspect functions.
-  // Check that value is an object with an inspect function on it
   if (ctx.customInspect &&
       value &&
       isFunction(value.inspect) &&
-      // Filter out the util module, it's inspect function is special
       value.inspect !== exports.inspect &&
-      // Also filter out any prototype objects using the circular check.
       !(value.constructor && value.constructor.prototype === value)) {
     var ret = value.inspect(recurseTimes, ctx);
     if (!isString(ret)) {
@@ -6308,13 +5358,11 @@ function formatValue(ctx, value, recurseTimes) {
     return ret;
   }
 
-  // Primitive types cannot have properties
   var primitive = formatPrimitive(ctx, value);
   if (primitive) {
     return primitive;
   }
 
-  // Look up the keys of the object.
   var keys = Object.keys(value);
   var visibleKeys = arrayToHash(keys);
 
@@ -6322,14 +5370,11 @@ function formatValue(ctx, value, recurseTimes) {
     keys = Object.getOwnPropertyNames(value);
   }
 
-  // IE doesn't make error fields non-enumerable
-  // http://msdn.microsoft.com/en-us/library/ie/dww52sbt(v=vs.94).aspx
   if (isError(value)
       && (keys.indexOf('message') >= 0 || keys.indexOf('description') >= 0)) {
     return formatError(value);
   }
 
-  // Some type of object without properties can be shortcutted.
   if (keys.length === 0) {
     if (isFunction(value)) {
       var name = value.name ? ': ' + value.name : '';
@@ -6348,29 +5393,24 @@ function formatValue(ctx, value, recurseTimes) {
 
   var base = '', array = false, braces = ['{', '}'];
 
-  // Make Array say that they are Array
   if (isArray(value)) {
     array = true;
     braces = ['[', ']'];
   }
 
-  // Make functions say that they are functions
   if (isFunction(value)) {
     var n = value.name ? ': ' + value.name : '';
     base = ' [Function' + n + ']';
   }
 
-  // Make RegExps say that they are RegExps
   if (isRegExp(value)) {
     base = ' ' + RegExp.prototype.toString.call(value);
   }
 
-  // Make dates with properties first say the date
   if (isDate(value)) {
     base = ' ' + Date.prototype.toUTCString.call(value);
   }
 
-  // Make error with message first say the error
   if (isError(value)) {
     base = ' ' + formatError(value);
   }
@@ -6417,7 +5457,6 @@ function formatPrimitive(ctx, value) {
     return ctx.stylize('' + value, 'number');
   if (isBoolean(value))
     return ctx.stylize('' + value, 'boolean');
-  // For some reason typeof null is "object", so special case here.
   if (isNull(value))
     return ctx.stylize('null', 'null');
 }
@@ -6529,7 +5568,6 @@ function reduceToSingleString(output, base, braces) {
 
 
 // NOTE: These type checking functions intentionally don't use `instanceof`
-// because it is fragile and can be easily faked with `Object.create()`.
 function isArray(ar) {
   return Array.isArray(ar);
 }
@@ -6601,7 +5639,7 @@ function isPrimitive(arg) {
          typeof arg === 'boolean' ||
          typeof arg === 'number' ||
          typeof arg === 'string' ||
-         typeof arg === 'symbol' ||  // ES6 symbol
+         typeof arg === 'symbol' ||  
          typeof arg === 'undefined';
 }
 exports.isPrimitive = isPrimitive;
@@ -6621,7 +5659,6 @@ function pad(n) {
 var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep',
               'Oct', 'Nov', 'Dec'];
 
-// 26 Feb 16:19:34
 function timestamp() {
   var d = new Date();
   var time = [pad(d.getHours()),
@@ -6631,7 +5668,6 @@ function timestamp() {
 }
 
 
-// log is just a thin wrapper to console.log that prepends a timestamp
 exports.log = function() {
   console.log('%s - %s', timestamp(), exports.format.apply(exports, arguments));
 };
@@ -6653,7 +5689,6 @@ exports.log = function() {
 exports.inherits = require('inherits');
 
 exports._extend = function(origin, add) {
-  // Don't do anything if add isn't an object
   if (!add || !isObject(add)) return origin;
 
   var keys = Object.keys(add);
@@ -6670,11 +5705,6 @@ function hasOwnProperty(obj, prop) {
 
 }).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"./support/isBuffer":27,"_process":24,"inherits":26}],29:[function(require,module,exports){
-// Returns a wrapper function that returns a wrapped callback
-// The wrapper function should do some stuff, and return a
-// presumably different callback function.
-// This makes sure that own properties are retained, so that
-// decorations and such are not lost along the way.
 module.exports = wrappy
 function wrappy (fn, cb) {
   if (fn && cb) return wrappy(fn)(cb)

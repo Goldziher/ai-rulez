@@ -319,7 +319,7 @@ func TestSchemaValidationErrorMessages(t *testing.T) {
 		name           string
 		yaml           string
 		expectedErrors []string
-		unexpectedText []string // ensure certain text does NOT appear
+		unexpectedText []string
 	}{
 		{
 			name: "missing_metadata_field",
@@ -517,10 +517,8 @@ includes:
 				}
 			}
 
-			// Check that we got some error messages
 			require.NotEmpty(t, errorMessages, "Expected to extract error messages from validation error")
 
-			// Verify expected errors are present
 			for _, expectedErr := range tt.expectedErrors {
 				found := false
 				for _, actualErr := range errorMessages {
@@ -532,14 +530,12 @@ includes:
 				assert.True(t, found, "Expected error message containing '%s' not found. Got errors: %v", expectedErr, errorMessages)
 			}
 
-			// Verify unwanted text is NOT present
 			for _, unwantedText := range tt.unexpectedText {
 				for _, actualErr := range errorMessages {
 					assert.NotContains(t, actualErr, unwantedText, "Error message should not contain generic placeholder: %s", unwantedText)
 				}
 			}
 
-			// Log actual errors for debugging
 			t.Logf("Actual errors for %s:\n", tt.name)
 			for _, err := range errorMessages {
 				t.Logf("  %s\n", err)

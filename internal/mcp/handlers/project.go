@@ -182,7 +182,6 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 		}
 	}
 
-	// Load and validate the configuration
 	cfg, err := config.LoadConfigWithIncludes(ctx, configPath)
 	if err != nil {
 		return &mcp.CallToolResult{
@@ -195,7 +194,6 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 		}, nil
 	}
 
-	// Additional validation can be performed here
 	result := map[string]interface{}{
 		"valid":    true,
 		"file":     configPath,
@@ -239,12 +237,10 @@ func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		}
 	}
 
-	// Check if configuration already exists
 	if _, err := config.FindConfigFile("."); err == nil {
 		return nil, fmt.Errorf("configuration file already exists in the current directory")
 	}
 
-	// Build provider configuration
 	providers := templates.ProviderConfig{
 		Claude:      params.Claude || params.Preset == "claude",
 		Cursor:      params.Cursor || params.Preset == "cursor",
@@ -257,15 +253,12 @@ func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		ContinueDev: params.ContinueDev || params.Preset == "continue-dev",
 	}
 
-	// If no providers specified and no preset, use Claude as default
 	if !providers.HasAny() {
 		providers.Claude = true
 	}
 
-	// Generate configuration template
 	configContent := templates.GenerateConfigTemplate(params.ProjectName, providers)
 
-	// Write configuration file
 	configPath := "ai_rulez.yaml"
 	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return nil, oops.Wrapf(err, "MCP: write configuration file")

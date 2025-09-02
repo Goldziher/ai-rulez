@@ -36,7 +36,6 @@ func TestAgentHandlers(t *testing.T) {
 		cfg.Agents = append(cfg.Agents, newAgent)
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
-		// Verify
 		reloaded, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 		assert.Greater(t, len(reloaded.Agents), 1)
@@ -63,7 +62,6 @@ func TestAgentHandlers(t *testing.T) {
 			cfg.Agents[0].Tools = []string{"execute"}
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "Updated description", reloaded.Agents[0].Description)
@@ -81,7 +79,6 @@ func TestAgentHandlers(t *testing.T) {
 			cfg.Agents = cfg.Agents[1:]
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Len(t, reloaded.Agents, initialCount-1)
