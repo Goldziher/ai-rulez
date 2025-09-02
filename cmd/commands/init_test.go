@@ -12,7 +12,6 @@ func TestInitCommand(t *testing.T) {
 	assert.NotNil(t, commands.InitCmd)
 	assert.Equal(t, "init [project-name]", commands.InitCmd.Use)
 
-	// Check important flags exist
 	flags := commands.InitCmd.Flags()
 	assert.NotNil(t, flags.Lookup("preset"))
 	assert.NotNil(t, flags.Lookup("all"))

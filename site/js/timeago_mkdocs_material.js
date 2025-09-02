@@ -1,5 +1,3 @@
-// Script to ensure timeago keeps working when
-// used with mkdocs-material's instant loading feature
 
 function getLocale(element) {
     var raw_locale = element.getAttribute('locale');

@@ -54,14 +54,11 @@ func FmtError(err error) {
 		return
 	}
 
-	// Simple error formatting for oops errors
 	fmt.Fprintf(os.Stderr, "\033[31mError:\033[0m %v\n", err)
 
-	// Check if it's an oops error to show hints
 	if oopsErr, ok := oops.AsOops(err); ok {
 		ctx := oopsErr.Context()
 
-		// Show validation errors if present
 		if validationErrors, ok := ctx["errors"].([]string); ok && len(validationErrors) > 0 {
 			fmt.Fprintf(os.Stderr, "\n\033[31mValidation Errors:\033[0m\n")
 			for _, errMsg := range validationErrors {
@@ -69,7 +66,6 @@ func FmtError(err error) {
 			}
 		}
 
-		// Show hint if available
 		if hint := oopsErr.Hint(); hint != "" {
 			fmt.Fprintf(os.Stderr, "\n\033[36mHint:\033[0m %s\n", hint)
 		}

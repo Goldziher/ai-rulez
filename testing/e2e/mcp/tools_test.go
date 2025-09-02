@@ -54,7 +54,6 @@ func (s *MCPToolsTestSuite) TestGetRules() {
 	s.True(ok, "Rules should be an array")
 	s.Len(rules, 2, "Should have 2 rules from basic config")
 
-	// Check rule structure
 	firstRule, ok := rules[0].(map[string]interface{})
 	s.True(ok, "Rule should be an object")
 	s.Contains(firstRule, "Name")
@@ -85,7 +84,6 @@ func (s *MCPToolsTestSuite) TestAddRule() {
 	result := response.GetParsedResult(s.T())
 	s.Contains(result, "message")
 
-	// Verify rule was added
 	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
@@ -103,7 +101,6 @@ func (s *MCPToolsTestSuite) TestAddRuleWithAllParameters() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify rule was added with correct parameters
 	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
@@ -133,7 +130,6 @@ func (s *MCPToolsTestSuite) TestUpdateRule() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify rule was updated
 	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
@@ -150,7 +146,6 @@ func (s *MCPToolsTestSuite) TestDeleteRule() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify rule was deleted
 	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
@@ -179,7 +174,6 @@ func (s *MCPToolsTestSuite) TestAddSection() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify section was added
 	getSectionsResponse := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
@@ -196,7 +190,6 @@ func (s *MCPToolsTestSuite) TestUpdateSection() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify section was updated
 	getSectionsResponse := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
@@ -212,7 +205,6 @@ func (s *MCPToolsTestSuite) TestDeleteSection() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify section was deleted
 	getSectionsResponse := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
@@ -224,7 +216,6 @@ func (s *MCPToolsTestSuite) TestDeleteSection() {
 // ========== Agents Tools ==========
 
 func (s *MCPToolsTestSuite) TestGetAgents() {
-	// Use config with agents
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.ConfigWithAgents)
 
 	response := s.client.CallTool(s.T(), "get_agents", map[string]interface{}{})
@@ -248,7 +239,6 @@ func (s *MCPToolsTestSuite) TestAddAgent() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify agent was added
 	getAgentsResponse := s.client.CallTool(s.T(), "get_agents", map[string]interface{}{})
 	getAgentsResponse.AssertToolSuccess(s.T())
 
@@ -275,7 +265,6 @@ func (s *MCPToolsTestSuite) TestAddOutput() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify output was added
 	getOutputsResponse := s.client.CallTool(s.T(), "get_outputs", map[string]interface{}{})
 	getOutputsResponse.AssertToolSuccess(s.T())
 
@@ -307,11 +296,9 @@ func (s *MCPToolsTestSuite) TestValidateInvalidConfig() {
 	s.True(ok, "Should return valid flag")
 	s.False(isValid, "Invalid config should return false")
 
-	// For invalid config, the response should contain error information
 	if errorMsg, exists := result["error"]; exists {
 		s.NotEmpty(errorMsg, "Should have error message for invalid config")
 	} else {
-		// Alternative: check if there are validation errors in a different format
 		s.False(isValid, "Invalid config should return false")
 	}
 }
@@ -325,14 +312,12 @@ func (s *MCPToolsTestSuite) TestGenerateOutput() {
 	s.True(ok, "Should return results list")
 	s.Greater(len(results), 0, "Should generate at least one file")
 
-	// Check that file was actually created
 	s.True(testutil.FileExists(s.T(), s.workingDir+"/CLAUDE.md"))
 }
 
 func (s *MCPToolsTestSuite) TestInitProject() {
 	emptyDir := testutil.CreateTempDir(s.T())
 
-	// Create new client in empty directory
 	emptyClient := testutil.StartMCPServer(s.T(), emptyDir)
 	defer emptyClient.Close()
 
@@ -342,7 +327,6 @@ func (s *MCPToolsTestSuite) TestInitProject() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	// Verify config was created
 	s.True(testutil.FileExists(s.T(), emptyDir+"/ai_rulez.yaml"))
 
 	content := testutil.ReadFile(s.T(), emptyDir+"/ai_rulez.yaml")
@@ -352,16 +336,12 @@ func (s *MCPToolsTestSuite) TestInitProject() {
 // ========== Error Cases ==========
 
 func (s *MCPToolsTestSuite) TestInvalidToolParameters() {
-	// Test error conditions that should fail
-
-	// Invalid parameter - rule name doesn't exist
 	response := s.client.CallTool(s.T(), "update_rule", map[string]interface{}{
 		"name":    "nonexistent_rule",
 		"content": "test",
 	})
 	response.AssertToolError(s.T(), "not found")
 
-	// Non-existent rule name
 	response = s.client.CallTool(s.T(), "delete_rule", map[string]interface{}{
 		"name": "nonexistent_rule",
 	})

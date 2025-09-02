@@ -34,7 +34,6 @@ func (s *TemplatesTestSuite) TestDefaultTemplate() {
 	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
 	content := testutil.ReadFile(s.T(), outputPath)
 
-	// Check default template structure
 	s.Contains(content, "# Test Project")
 	s.Contains(content, "Generated on")
 	s.Contains(content, "## Basic Rule")
@@ -43,7 +42,6 @@ func (s *TemplatesTestSuite) TestDefaultTemplate() {
 	s.Contains(content, "## High Priority Rule")
 	s.Contains(content, "**Priority:** 9")
 
-	// Higher priority should come first
 	basicPos := s.findPosition(content, "Basic Rule")
 	highPos := s.findPosition(content, "High Priority Rule")
 	s.Less(highPos, basicPos, "High priority rule should appear before basic rule")
@@ -93,7 +91,6 @@ func (s *TemplatesTestSuite) TestTemplateWithSections() {
 	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
 	content := testutil.ReadFile(s.T(), outputPath)
 
-	// Check section content is included (section names are not shown in default template)
 	s.Contains(content, "Follow these guidelines for development")
 }
 
@@ -103,12 +100,10 @@ func (s *TemplatesTestSuite) TestTemplateWithAgents() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	// Check main output
 	claudePath := filepath.Join(s.workingDir, "CLAUDE.md")
 	claudeContent := testutil.ReadFile(s.T(), claudePath)
 	s.Contains(claudeContent, "Project with Agents")
 
-	// Check agent-specific output
 	agentPath := filepath.Join(s.workingDir, ".claude", "agents", "code-reviewer.md")
 	agentContent := testutil.ReadFile(s.T(), agentPath)
 
@@ -160,7 +155,6 @@ sections:
 	s.Contains(content, "Sections: 1")
 	s.Contains(content, "Agents: 0")
 
-	// Timestamp should be today's date
 	s.Regexp(`Timestamp: \d{4}-\d{2}-\d{2}`, content)
 }
 
@@ -207,7 +201,7 @@ rules:
 
 	s.Contains(content, "# Conditionals Test")
 	s.Contains(content, "Version: 1.0.0")
-	s.NotContains(content, "Description:") // No description provided
+	s.NotContains(content, "Description:")
 	s.Contains(content, "## Rules")
 	s.Contains(content, "- Rule 1")
 	s.Contains(content, "- Rule 2")
@@ -284,7 +278,6 @@ rules:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	// Check individual rule files were created
 	highPriorityPath := filepath.Join(s.workingDir, ".test-rules", "9-High Priority.md")
 	s.True(testutil.FileExists(s.T(), highPriorityPath))
 
@@ -345,7 +338,6 @@ agents:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	// Check reviewer agent file
 	reviewerPath := filepath.Join(s.workingDir, ".custom-agents", "reviewer-agent.md")
 	s.True(testutil.FileExists(s.T(), reviewerPath))
 

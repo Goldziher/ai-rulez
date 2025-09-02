@@ -19,7 +19,6 @@ func TestProjectOperations(t *testing.T) {
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 
-		// Validate required fields
 		assert.NotEmpty(t, cfg.Metadata.Name)
 		assert.NotEmpty(t, cfg.Outputs)
 	})
@@ -72,7 +71,6 @@ func setupTestConfig(t *testing.T) string {
 	err := config.SaveConfig(cfg, configFile)
 	require.NoError(t, err)
 
-	// Change to temp directory for tests
 	originalDir, _ := os.Getwd()
 	t.Cleanup(func() {
 		_ = os.Chdir(originalDir)

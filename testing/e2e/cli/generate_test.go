@@ -26,7 +26,6 @@ func (s *GenerateCLITestSuite) TearDownSuite() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateBasicConfig() {
-	// Create a basic config file
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
@@ -34,7 +33,6 @@ func (s *GenerateCLITestSuite) TestGenerateBasicConfig() {
 	result.AssertOutputContains(s.T(), "Generated")
 	result.AssertOutputContains(s.T(), "CLAUDE.md")
 
-	// Check that the output file was created
 	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
 	s.True(testutil.FileExists(s.T(), outputPath), "Output file should be created")
 
@@ -42,7 +40,7 @@ func (s *GenerateCLITestSuite) TestGenerateBasicConfig() {
 	s.Contains(content, "Test Project")
 	s.Contains(content, "Basic Rule")
 	s.Contains(content, "This is a basic rule for testing")
-	s.Contains(content, "High Priority Rule") // Should be ordered by priority
+	s.Contains(content, "High Priority Rule")
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithCustomConfig() {
@@ -68,15 +66,12 @@ func (s *GenerateCLITestSuite) TestGenerateWithAgents() {
 
 	result.AssertOutputContains(s.T(), "Generated")
 
-	// Check main output file
 	claudePath := filepath.Join(s.workingDir, "CLAUDE.md")
 	s.True(testutil.FileExists(s.T(), claudePath))
 
-	// Check agent directory was created
 	agentsDir := filepath.Join(s.workingDir, ".claude", "agents")
 	s.True(testutil.FileExists(s.T(), agentsDir))
 
-	// Check agent file was created
 	agentPath := filepath.Join(agentsDir, "code-reviewer.md")
 	s.True(testutil.FileExists(s.T(), agentPath))
 
@@ -92,7 +87,6 @@ func (s *GenerateCLITestSuite) TestGenerateWithTargets() {
 
 	result.AssertOutputContains(s.T(), "Generated")
 
-	// Check frontend output
 	frontendPath := filepath.Join(s.workingDir, "frontend.md")
 	s.True(testutil.FileExists(s.T(), frontendPath))
 	frontendContent := testutil.ReadFile(s.T(), frontendPath)
@@ -100,7 +94,6 @@ func (s *GenerateCLITestSuite) TestGenerateWithTargets() {
 	s.Contains(frontendContent, "Universal Rule")
 	s.NotContains(frontendContent, "Backend Rule")
 
-	// Check backend output
 	backendPath := filepath.Join(s.workingDir, "backend.md")
 	s.True(testutil.FileExists(s.T(), backendPath))
 	backendContent := testutil.ReadFile(s.T(), backendPath)
@@ -137,7 +130,6 @@ func (s *GenerateCLITestSuite) TestGenerateVerboseOutput() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--verbose")
 
 	result.AssertOutputContains(s.T(), "Generated")
-	// Verbose should show more details
 }
 
 func (s *GenerateCLITestSuite) TestGenerateQuietOutput() {
@@ -145,26 +137,22 @@ func (s *GenerateCLITestSuite) TestGenerateQuietOutput() {
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--quiet")
 
-	// Quiet mode should have minimal output
 	s.Empty(result.Stdout)
 }
 
 func (s *GenerateCLITestSuite) TestGenerateIdempotent() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 
-	// Generate first time
 	result1 := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result1.AssertOutputContains(s.T(), "Generated")
 
 	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
 	_ = testutil.ReadFile(s.T(), outputPath)
 
-	// Generate second time
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
 	content2 := testutil.ReadFile(s.T(), outputPath)
 
-	// Content should be the same (except timestamp)
 	s.Contains(content2, "Test Project")
 	s.Contains(content2, "Basic Rule")
 }
@@ -188,7 +176,6 @@ rules:
 
 	result.AssertOutputContains(s.T(), "Generated")
 
-	// Check directory output was created
 	outputPath := filepath.Join(s.workingDir, ".cursor", "rules", "rules.mdc")
 	s.True(testutil.FileExists(s.T(), outputPath))
 

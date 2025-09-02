@@ -17,7 +17,6 @@ func TestNewServer(t *testing.T) {
 }
 
 func TestServerToolRegistration(t *testing.T) {
-	// Expected MCP tools that should be registered
 	expectedTools := []string{
 		"get_rules",
 		"get_sections",
@@ -41,6 +40,5 @@ func TestServerToolRegistration(t *testing.T) {
 		"get_version",
 	}
 
-	// Just verify the expected tool count
 	assert.Equal(t, 20, len(expectedTools), "Should have 20 MCP tools")
 }

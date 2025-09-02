@@ -36,7 +36,6 @@ func determineConfigPath(args []string) string {
 		return cfgFile
 	}
 
-	// Auto-discover config file
 	configPath, err := config.FindConfigFile(".")
 	if err != nil {
 		fmtError(err)
@@ -53,7 +52,6 @@ func loadAndValidateConfig(configPath string) *config.Config {
 		os.Exit(1)
 	}
 
-	// Perform configuration validation
 	if err := cfg.Validate(); err != nil {
 		logger.Error("❌ Configuration validation failed", "path", configPath)
 		fmtError(err)

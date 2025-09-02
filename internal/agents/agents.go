@@ -115,12 +115,10 @@ func ListAvailableAgents() {
 
 // ShouldPromptForAgent determines if we should prompt the user about using an AI agent
 func ShouldPromptForAgent() bool {
-	// Check if running in non-interactive mode
 	if os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
 		return false
 	}
 
-	// Check if stdin is a terminal
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		return false
@@ -129,7 +127,6 @@ func ShouldPromptForAgent() bool {
 		return false
 	}
 
-	// Check if any AI agent CLIs are available
 	available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored - fail safe to false
 	return len(available) > 0
 }
@@ -139,7 +136,6 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 	var selectedAgent *AgentInfo
 
 	if useAgent != "" {
-		// Use specified agent
 		agent, err := getAgentByID(useAgent)
 		if err != nil {
 			logger.Error("Unknown agent", "agent", useAgent)
@@ -147,13 +143,11 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 		}
 		selectedAgent = agent
 	} else {
-		// Auto-detect available agent (prefer claude)
 		available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored
 		if len(available) == 0 {
 			return "", false
 		}
 
-		// Prefer claude if available
 		for _, agent := range available {
 			if agent.ID == "claude" {
 				selectedAgent = &agent
@@ -161,14 +155,12 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 			}
 		}
 		if selectedAgent == nil {
-			selectedAgent = &available[0] // Use first available
+			selectedAgent = &available[0]
 		}
 	}
 
-	// Build the prompt for the AI agent
 	prompt := buildAgentPrompt(projectName, config)
 
-	// Ask user for confirmation
 	logger.Info(fmt.Sprintf("🤖 Would you like to use %s to generate your configuration? (y/N): ", selectedAgent.Display))
 	reader := bufio.NewReader(os.Stdin)
 	response, err := reader.ReadString('\n')
@@ -184,14 +176,12 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 
 	logger.Info("🤖 Generating configuration...", "agent", selectedAgent.ID)
 
-	// Execute the agent with timeout
 	result, err := invokeAgent(*selectedAgent, prompt, 60*time.Second)
 	if err != nil {
 		logger.LogError("Failed to generate configuration", err, "agent", selectedAgent.ID)
 		return "", false
 	}
 
-	// Clean up the output - remove markdown code blocks if present
 	result = strings.TrimPrefix(result, "```yaml\n")
 	result = strings.TrimPrefix(result, "```yml\n")
 	result = strings.TrimPrefix(result, "```\n")

@@ -85,14 +85,12 @@ func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output *config
 }
 
 func (g *Generator) writeRulesFile(dirPath, namingScheme string, output *config.Output, data *templates.TemplateData) error {
-	// Check if the naming scheme contains placeholders
 	hasPlaceholders := strings.Contains(namingScheme, "{name}") ||
 		strings.Contains(namingScheme, "{priority}") ||
 		strings.Contains(namingScheme, "{type}") ||
 		strings.Contains(namingScheme, "{index")
 
 	if !hasPlaceholders {
-		// Single file mode - write all rules to one file using standard template
 		filePath := filepath.Join(dirPath, namingScheme)
 		localData := *data
 		localData.ConfigFile = g.configFile
@@ -106,7 +104,6 @@ func (g *Generator) writeRulesFile(dirPath, namingScheme string, output *config.
 		return g.writeContentToFile(filePath, content, &localData)
 	}
 
-	// Individual files mode - write each rule to separate files
 	for i := range data.Rules {
 		rule := &data.Rules[i]
 		sanitizedName := sanitizeFilename(rule.Name)

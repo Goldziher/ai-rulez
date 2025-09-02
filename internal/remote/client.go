@@ -107,7 +107,7 @@ func NewTestClient(config *HTTPConfig) *Client {
 
 	return &Client{
 		resty:     client,
-		validator: &testURLValidator{}, // Test validator that allows all URLs
+		validator: &testURLValidator{},
 		config:    config,
 		cache:     newCache(nil),
 	}
@@ -117,7 +117,7 @@ func NewTestClient(config *HTTPConfig) *Client {
 type testURLValidator struct{}
 
 func (v *testURLValidator) Validate(url string) error {
-	return nil // Allow all URLs in tests
+	return nil
 }
 
 func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {

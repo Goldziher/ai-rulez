@@ -43,19 +43,16 @@ func loadConfigWithPath(ctx context.Context, configFile string) (*config.Config,
 
 // saveConfig saves the configuration to the specified file
 func saveConfig(cfg *config.Config, configPath string) error {
-	// Marshal the config to YAML
 	data, err := yaml.Marshal(cfg)
 	if err != nil {
 		return oops.Wrapf(err, "MCP: marshal configuration")
 	}
 
-	// Ensure the directory exists
 	dir := filepath.Dir(configPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return oops.Wrapf(err, "MCP: create config directory")
 	}
 
-	// Write the file
 	if err := os.WriteFile(configPath, data, 0o644); err != nil {
 		return oops.Wrapf(err, "MCP: write configuration file")
 	}
@@ -79,7 +76,7 @@ func validateOutputType(outputType string) error {
 		"rule":    true,
 		"section": true,
 		"both":    true,
-		"":        true, // empty is valid, defaults to both
+		"":        true,
 	}
 
 	if !validTypes[outputType] {

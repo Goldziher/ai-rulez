@@ -78,7 +78,6 @@ func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		return nil, err
 	}
 
-	// Check for duplicate name
 	for _, rule := range cfg.Rules {
 		if rule.Name == params.Name {
 			return nil, fmt.Errorf("rule with name '%s' already exists", params.Name)
@@ -153,7 +152,6 @@ func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return nil, fmt.Errorf("rule with name '%s' not found", params.Name)
 	}
 
-	// Check for duplicate new name
 	if params.NewName != "" && params.NewName != params.Name {
 		for _, rule := range cfg.Rules {
 			if rule.Name == params.NewName {
@@ -223,7 +221,6 @@ func DeleteRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		return nil, fmt.Errorf("rule with name '%s' not found", params.Name)
 	}
 
-	// Remove the rule
 	cfg.Rules = append(cfg.Rules[:ruleIndex], cfg.Rules[ruleIndex+1:]...)
 
 	if err := saveConfig(cfg, configPath); err != nil {

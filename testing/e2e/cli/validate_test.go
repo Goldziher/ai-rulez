@@ -59,7 +59,6 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithAgents() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithTargets() {
-	// Use a simpler config without complex targets since they may not be fully implemented yet
 	config := `metadata:
   name: "Test Project"
 
@@ -158,15 +157,12 @@ func (s *ValidateCLITestSuite) TestValidateVerboseOutput() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--verbose")
 
 	result.AssertOutputContains(s.T(), "valid")
-	// Verbose mode should show more validation details
 }
 
 func (s *ValidateCLITestSuite) TestValidateQuietOutput() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--quiet")
-
-	// Quiet mode should have minimal output but still indicate success
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithWarnings() {

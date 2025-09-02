@@ -42,7 +42,6 @@ func GenerateConfigTemplate(projectName string, providers ProviderConfig) string
 	builder.WriteString(`# Output configurations - where to generate AI assistant files
 outputs:`)
 
-	// Process each enabled provider
 	if providers.Claude {
 		builder.WriteString(`
   # Claude configuration
@@ -54,7 +53,6 @@ outputs:`)
     naming_scheme: "{name}.md"`)
 	}
 
-	// AMP, Codex, and Cursor share AGENTS.md
 	if providers.Amp || providers.Codex || providers.Cursor {
 		builder.WriteString(`
   
@@ -114,7 +112,6 @@ outputs:`)
 
 	builder.WriteString("\n\n")
 
-	// Add agents section if Claude is enabled
 	if providers.Claude {
 		builder.WriteString(`# AI agents (specialized sub-assistants for Claude)
 agents:
@@ -141,7 +138,6 @@ agents:
 `)
 	}
 
-	// Add default rules
 	builder.WriteString(`rules:
   - name: "Code Quality"
     priority: 10
@@ -181,7 +177,6 @@ agents:
 
 `)
 
-	// Add sections
 	builder.WriteString(`sections:
   - name: "Project Context"
     priority: 10

@@ -261,7 +261,7 @@ Learn more: https://github.com/Goldziher/ai-rulez
 func sortRulesByPriority(rules []config.Rule) {
 	slices.SortFunc(rules, func(a, b config.Rule) int {
 		if a.Priority != b.Priority {
-			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
+			return cmp.Compare(b.Priority, a.Priority)
 		}
 		return cmp.Compare(a.Name, b.Name)
 	})
@@ -270,7 +270,7 @@ func sortRulesByPriority(rules []config.Rule) {
 func sortSectionsByPriority(sections []config.Section) {
 	slices.SortFunc(sections, func(a, b config.Section) int {
 		if a.Priority != b.Priority {
-			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
+			return cmp.Compare(b.Priority, a.Priority)
 		}
 		return cmp.Compare(a.Name, b.Name)
 	})
@@ -279,7 +279,7 @@ func sortSectionsByPriority(sections []config.Section) {
 func sortContent(items []contentItem) {
 	slices.SortFunc(items, func(a, b contentItem) int {
 		if a.Priority != b.Priority {
-			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
+			return cmp.Compare(b.Priority, a.Priority)
 		}
 		return cmp.Compare(a.Title, b.Title)
 	})
@@ -288,7 +288,7 @@ func sortContent(items []contentItem) {
 func sortAgentsByPriority(agents []config.Agent) {
 	slices.SortFunc(agents, func(a, b config.Agent) int {
 		if a.Priority != b.Priority {
-			return cmp.Compare(b.Priority, a.Priority) // Reverse for descending
+			return cmp.Compare(b.Priority, a.Priority)
 		}
 		return cmp.Compare(a.Name, b.Name)
 	})

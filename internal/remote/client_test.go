@@ -149,14 +149,11 @@ func TestCache_Operations(t *testing.T) {
 		url := "https://example.com/expire"
 		cache.set(ctx, url, []byte("expires"), "", "")
 
-		// Should be present immediately
 		_, found := cache.get(ctx, url)
 		assert.True(t, found)
 
-		// Wait for expiration
 		time.Sleep(60 * time.Millisecond)
 
-		// Should be expired
 		_, found = cache.get(ctx, url)
 		assert.False(t, found)
 	})
@@ -211,7 +208,7 @@ func TestURLValidator(t *testing.T) {
 	t.Run("invalid URLs", func(t *testing.T) {
 		invalidURLs := []string{
 			"not-a-url",
-			"ftp://example.com/file", // unsupported scheme
+			"ftp://example.com/file",
 			"://missing-scheme.com",
 			"",
 		}
@@ -238,17 +235,15 @@ func TestClient_WithCache(t *testing.T) {
 	client := NewTestClient(nil)
 	ctx := context.Background()
 
-	// First request - cache miss
 	content1, err := client.Fetch(ctx, server.URL)
 	require.NoError(t, err)
 	assert.Equal(t, "cached content", string(content1))
 	assert.Equal(t, 1, requestCount)
 
-	// Second request - cache hit
 	content2, err := client.Fetch(ctx, server.URL)
 	require.NoError(t, err)
 	assert.Equal(t, "cached content", string(content2))
-	assert.Equal(t, 1, requestCount) // No additional request
+	assert.Equal(t, 1, requestCount)
 }
 
 func TestClient_ContentTypes(t *testing.T) {
