@@ -41,31 +41,28 @@ var DeleteRuleCmd = &cobra.Command{
 }
 
 func init() {
-	// Add rule flags
 	AddRuleCmd.Flags().StringVar(&ruleName, "name", "", "Name of the rule (required)")
 	AddRuleCmd.Flags().StringVar(&ruleContent, "content", "", "Content of the rule (required)")
 	AddRuleCmd.Flags().IntVar(&rulePriority, "priority", 5, "Priority of the rule (1-10)")
 	if err := AddRuleCmd.MarkFlagRequired("name"); err != nil {
-		panic(err) // Should never happen during initialization
+		panic(err)
 	}
 	if err := AddRuleCmd.MarkFlagRequired("content"); err != nil {
-		panic(err) // Should never happen during initialization
+		panic(err)
 	}
 
-	// Update rule flags
 	UpdateRuleCmd.Flags().StringVar(&ruleName, "name", "", "Name of the rule to update (required)")
 	UpdateRuleCmd.Flags().StringVar(&newRuleName, "new-name", "", "New name for the rule")
 	UpdateRuleCmd.Flags().StringVar(&ruleContent, "content", "", "New content for the rule")
 	UpdateRuleCmd.Flags().IntVar(&rulePriority, "priority", 0, "New priority for the rule")
 	if err := UpdateRuleCmd.MarkFlagRequired("name"); err != nil {
-		panic(err) // Should never happen during initialization
+		panic(err)
 	}
 }
 
 func runAddRule(cmd *cobra.Command, args []string) {
 	configPath, cfg := loadConfiguration()
 
-	// Check for duplicate
 	for _, rule := range cfg.Rules {
 		if rule.Name == ruleName {
 			fmt.Printf("❌ Rule '%s' already exists\n", ruleName)
@@ -73,7 +70,6 @@ func runAddRule(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Add new rule
 	newRule := config.Rule{
 		Name:     ruleName,
 		Content:  ruleContent,
@@ -81,7 +77,6 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	}
 	cfg.Rules = append(cfg.Rules, newRule)
 
-	// Save configuration
 	saveConfiguration(cfg, configPath)
 	fmt.Printf("✅ Added rule '%s' successfully\n", ruleName)
 }
@@ -89,7 +84,6 @@ func runAddRule(cmd *cobra.Command, args []string) {
 func runUpdateRule(cmd *cobra.Command, args []string) {
 	configPath, cfg := loadConfiguration()
 
-	// Find rule
 	ruleIndex := -1
 	for i, rule := range cfg.Rules {
 		if rule.Name == ruleName {
@@ -103,9 +97,7 @@ func runUpdateRule(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Update fields
 	if newRuleName != "" {
-		// Check for duplicate new name
 		for i, rule := range cfg.Rules {
 			if i != ruleIndex && rule.Name == newRuleName {
 				fmt.Printf("❌ Rule '%s' already exists\n", newRuleName)
@@ -123,7 +115,6 @@ func runUpdateRule(cmd *cobra.Command, args []string) {
 		cfg.Rules[ruleIndex].Priority = rulePriority
 	}
 
-	// Save configuration
 	saveConfiguration(cfg, configPath)
 	fmt.Printf("✅ Updated rule '%s' successfully\n", ruleName)
 }
@@ -132,7 +123,6 @@ func runDeleteRule(cmd *cobra.Command, args []string) {
 	ruleName := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find and remove rule
 	ruleIndex := -1
 	for i, rule := range cfg.Rules {
 		if rule.Name == ruleName {
@@ -146,10 +136,8 @@ func runDeleteRule(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Remove the rule
 	cfg.Rules = append(cfg.Rules[:ruleIndex], cfg.Rules[ruleIndex+1:]...)
 
-	// Save configuration
 	saveConfiguration(cfg, configPath)
 	fmt.Printf("✅ Deleted rule '%s' successfully\n", ruleName)
 }

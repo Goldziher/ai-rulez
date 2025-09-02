@@ -50,7 +50,6 @@ var ListOutputsCmd = &cobra.Command{
 }
 
 func init() {
-	// Add flags to all list commands
 	for _, cmd := range []*cobra.Command{ListRulesCmd, ListSectionsCmd, ListAgentsCmd, ListOutputsCmd} {
 		cmd.Flags().BoolVar(&listDetailed, "detailed", false, "Show detailed information")
 		cmd.Flags().BoolVar(&listJSON, "json", false, "Output in JSON format")
@@ -339,7 +338,6 @@ func printOutputsTable(outputs []config.Output) {
 
 // Helper functions
 func truncateString(s string, maxLen int) string {
-	// Remove newlines and replace with spaces
 	s = strings.ReplaceAll(s, "\n", " ")
 	s = strings.TrimSpace(s)
 

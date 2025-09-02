@@ -44,11 +44,9 @@ var DeleteOutputCmd = &cobra.Command{
 }
 
 func init() {
-	// Add output flags
 	AddOutputCmd.Flags().StringVar(&outputTemplate, "template", "", "Template to use for rendering")
 	AddOutputCmd.Flags().StringVar(&outputType, "type", "", "Type of output (rule, section, both)")
 
-	// Update output flags
 	UpdateOutputCmd.Flags().StringVar(&outputTemplate, "template", "", "New template for the output")
 	UpdateOutputCmd.Flags().StringVar(&outputType, "type", "", "New type for the output")
 }
@@ -57,7 +55,6 @@ func runAddOutput(cmd *cobra.Command, args []string) {
 	filename := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Check for duplicate
 	for _, output := range cfg.Outputs {
 		if output.Path == filename {
 			fmt.Fprintf(os.Stderr, "Error: Output file '%s' already exists in configuration\n", filename)
@@ -65,7 +62,6 @@ func runAddOutput(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Add new output
 	newOutput := config.Output{
 		Path:     filename,
 		Template: outputTemplate,
@@ -73,7 +69,6 @@ func runAddOutput(cmd *cobra.Command, args []string) {
 	}
 	cfg.Outputs = append(cfg.Outputs, newOutput)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)
 		os.Exit(1)
@@ -90,7 +85,6 @@ func runUpdateOutput(cmd *cobra.Command, args []string) {
 	filename := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find output
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
 		if output.Path == filename {
@@ -104,7 +98,6 @@ func runUpdateOutput(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Update fields
 	if outputTemplate != "" {
 		cfg.Outputs[outputIndex].Template = outputTemplate
 	}
@@ -112,7 +105,6 @@ func runUpdateOutput(cmd *cobra.Command, args []string) {
 		cfg.Outputs[outputIndex].Type = outputType
 	}
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)
 		os.Exit(1)
@@ -125,7 +117,6 @@ func runDeleteOutput(cmd *cobra.Command, args []string) {
 	filename := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find and remove output
 	outputIndex := -1
 	for i, output := range cfg.Outputs {
 		if output.Path == filename {
@@ -139,10 +130,8 @@ func runDeleteOutput(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Remove the output
 	cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)
 		os.Exit(1)

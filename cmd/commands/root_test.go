@@ -14,10 +14,8 @@ func TestRootCommand(t *testing.T) {
 	assert.Equal(t, "ai-rulez", commands.RootCmd.Use)
 	assert.True(t, commands.RootCmd.HasSubCommands())
 
-	// Verify key subcommands are registered
 	cmdNames := make(map[string]bool)
 	for _, cmd := range commands.RootCmd.Commands() {
-		// Extract command name without arguments
 		if cmd.Use != "" {
 			parts := strings.Fields(cmd.Use)
 			if len(parts) > 0 {

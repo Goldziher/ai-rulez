@@ -45,10 +45,8 @@ var DeleteSectionCmd = &cobra.Command{
 }
 
 func init() {
-	// Add section flags
 	AddSectionCmd.Flags().IntVar(&sectionPriority, "priority", 5, "Priority of the section (1-10)")
 
-	// Update section flags
 	UpdateSectionCmd.Flags().StringVar(&sectionContent, "content", "", "New content for the section")
 	UpdateSectionCmd.Flags().IntVar(&sectionPriority, "priority", 0, "New priority for the section")
 }
@@ -57,7 +55,6 @@ func runAddSection(cmd *cobra.Command, args []string) {
 	sectionTitle := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Check for duplicate
 	for _, section := range cfg.Sections {
 		if section.Name == sectionTitle {
 			fmt.Printf("❌ Section '%s' already exists\n", sectionTitle)
@@ -65,7 +62,6 @@ func runAddSection(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Read content from stdin if not provided
 	if sectionContent == "" {
 		fmt.Println("Enter section content (press Ctrl+D when done):")
 		content, err := readFromStdin()
@@ -76,7 +72,6 @@ func runAddSection(cmd *cobra.Command, args []string) {
 		sectionContent = content
 	}
 
-	// Add new section
 	newSection := config.Section{
 		Name:     sectionTitle,
 		Content:  sectionContent,
@@ -84,7 +79,6 @@ func runAddSection(cmd *cobra.Command, args []string) {
 	}
 	cfg.Sections = append(cfg.Sections, newSection)
 
-	// Save configuration
 	saveConfiguration(cfg, configPath)
 	fmt.Printf("✅ Added section '%s' with priority %d to %s\n", sectionTitle, sectionPriority, configPath)
 }
@@ -93,7 +87,6 @@ func runUpdateSection(cmd *cobra.Command, args []string) {
 	sectionTitle := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find section
 	sectionIndex := -1
 	for i, section := range cfg.Sections {
 		if section.Name == sectionTitle {
@@ -107,11 +100,9 @@ func runUpdateSection(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Update fields
 	if sectionContent != "" {
 		cfg.Sections[sectionIndex].Content = sectionContent
 	} else if !cmd.Flags().Changed("priority") {
-		// If no content or priority specified, read from stdin
 		fmt.Println("Enter new section content (press Ctrl+D when done):")
 		content, err := readFromStdin()
 		if err != nil {
@@ -125,7 +116,6 @@ func runUpdateSection(cmd *cobra.Command, args []string) {
 		cfg.Sections[sectionIndex].Priority = sectionPriority
 	}
 
-	// Save configuration
 	saveConfiguration(cfg, configPath)
 	fmt.Printf("✅ Updated section '%s' in %s\n", sectionTitle, configPath)
 }
@@ -134,7 +124,6 @@ func runDeleteSection(cmd *cobra.Command, args []string) {
 	sectionTitle := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find and remove section
 	sectionIndex := -1
 	for i, section := range cfg.Sections {
 		if section.Name == sectionTitle {
@@ -148,10 +137,8 @@ func runDeleteSection(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Remove the section
 	cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
 
-	// Save configuration
 	saveConfiguration(cfg, configPath)
 	fmt.Printf("✅ Deleted section '%s' from %s\n", sectionTitle, configPath)
 }

@@ -25,14 +25,12 @@ func SetupTestBinary(t *testing.T) string {
 		return binaryPath
 	}
 
-	// Get project root (two levels up from testing/e2e/testutil)
 	testDir, err := os.Getwd()
 	require.NoError(t, err)
 
 	projectRoot := filepath.Join(testDir, "..", "..", "..")
 	binaryPath = filepath.Join(testDir, TestBinaryName)
 
-	// Build binary
 	//nolint:gosec // G204: Test utility needs to build binary with variables
 	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
 	cmd.Dir = projectRoot

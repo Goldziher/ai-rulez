@@ -51,12 +51,10 @@ func (l *configLoader) collectIncludedContent(ctx context.Context, config *Confi
 	var allSections []Section
 	var allAgents []Agent
 
-	// Start with the base config's content
 	allRules = append(allRules, config.Rules...)
 	allSections = append(allSections, config.Sections...)
 	allAgents = append(allAgents, config.Agents...)
 
-	// Process each include
 	for _, includePath := range config.Includes {
 		rules, sections, agents, err := l.processInclude(ctx, includePath, baseDir)
 		if err != nil {
@@ -75,14 +73,12 @@ func (l *configLoader) collectIncludedContent(ctx context.Context, config *Confi
 func (l *configLoader) processInclude(ctx context.Context, includePath, baseDir string) ([]Rule, []Section, []Agent, error) {
 	resolvedPath := l.resolvePath(includePath, baseDir)
 
-	// Validate the include path exists (for local files)
 	if !l.isURL(resolvedPath) {
 		if err := l.validateLocalInclude(resolvedPath, includePath, baseDir); err != nil {
 			return nil, nil, nil, err
 		}
 	}
 
-	// Load the included configuration
 	includedConfig, err := l.loadConfigInternal(ctx, resolvedPath, true)
 	if err != nil {
 		return nil, nil, nil, err
