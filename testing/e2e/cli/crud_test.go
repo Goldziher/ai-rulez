@@ -19,7 +19,6 @@ func TestCRUDCLISuite(t *testing.T) {
 
 func (s *CRUDCLITestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
-	// Create a basic config for CRUD operations
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 }
 
@@ -37,7 +36,6 @@ func (s *CRUDCLITestSuite) TestAddRule() {
 
 	result.AssertStdoutContains(s.T(), "Added rule")
 
-	// Verify rule was added to config
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "New test rule content")
@@ -71,7 +69,6 @@ func (s *CRUDCLITestSuite) TestAddRuleWithPriority() {
 }
 
 func (s *CRUDCLITestSuite) TestUpdateRule() {
-	// First add a rule
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"--name", "Original Rule",
 		"--content", "Original content")
@@ -96,7 +93,7 @@ func (s *CRUDCLITestSuite) TestDeleteRule() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.NotContains(content, "Basic Rule") // Should remove the rule by name
+	s.NotContains(content, "Basic Rule")
 }
 
 func (s *CRUDCLITestSuite) TestDeleteRuleInvalidName() {
@@ -108,7 +105,6 @@ func (s *CRUDCLITestSuite) TestDeleteRuleInvalidName() {
 // ========== Section CRUD Tests ==========
 
 func (s *CRUDCLITestSuite) TestAddSection() {
-	// Sections read content from stdin
 	result := testutil.RunCLIExpectSuccessWithStdin(s.T(), s.workingDir, "New section content", "add", "section", "New Section", "--priority", "7")
 
 	result.AssertStdoutContains(s.T(), "Added section")
@@ -131,7 +127,6 @@ func (s *CRUDCLITestSuite) TestAddSectionWithPriority() {
 }
 
 func (s *CRUDCLITestSuite) TestUpdateSection() {
-	// First add a section
 	testutil.RunCLIExpectSuccessWithStdin(s.T(), s.workingDir, "Original content", "add", "section", "Original Section")
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "section", "Original Section",
@@ -141,7 +136,7 @@ func (s *CRUDCLITestSuite) TestUpdateSection() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "Original Section") // Name doesn't change
+	s.Contains(content, "Original Section")
 	s.Contains(content, "Updated content")
 }
 
@@ -188,7 +183,6 @@ func (s *CRUDCLITestSuite) TestAddAgentWithSystemPrompt() {
 }
 
 func (s *CRUDCLITestSuite) TestUpdateAgent() {
-	// First add an agent
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "agent", "original-agent",
 		"--description", "Original description",
 		"--system-prompt", "Original prompt")
@@ -205,7 +199,6 @@ func (s *CRUDCLITestSuite) TestUpdateAgent() {
 }
 
 func (s *CRUDCLITestSuite) TestDeleteAgent() {
-	// First add an agent
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "agent", "delete-me",
 		"--description", "This will be deleted",
 		"--system-prompt", "Delete me")
@@ -244,7 +237,6 @@ func (s *CRUDCLITestSuite) TestAddOutputWithType() {
 }
 
 func (s *CRUDCLITestSuite) TestUpdateOutput() {
-	// First add an output so we can update it
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "output", "TEST.md")
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "output", "TEST.md",
@@ -259,7 +251,6 @@ func (s *CRUDCLITestSuite) TestUpdateOutput() {
 }
 
 func (s *CRUDCLITestSuite) TestDeleteOutput() {
-	// First add an output so we can delete it
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "output", "DELETE_ME.md")
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "delete", "output", "DELETE_ME.md")
@@ -274,7 +265,6 @@ func (s *CRUDCLITestSuite) TestDeleteOutput() {
 // ========== Error Cases ==========
 
 func (s *CRUDCLITestSuite) TestCRUDWithoutConfig() {
-	// Try to add a rule without config in empty directory
 	emptyDir := testutil.CreateTempDir(s.T())
 	result := testutil.RunCLIExpectError(s.T(), emptyDir, "add", "rule", "--name", "Test", "--content", "Test")
 
@@ -288,21 +278,18 @@ func (s *CRUDCLITestSuite) TestAddRuleMissingContent() {
 }
 
 func (s *CRUDCLITestSuite) TestAddSectionMissingTitle() {
-	// Section command requires a title argument, test with no arguments
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "add", "section")
 
 	result.AssertStderrContains(s.T(), "accepts 1 arg(s), received 0")
 }
 
 func (s *CRUDCLITestSuite) TestAddAgentMissingName() {
-	// Agent command requires a name argument, test with no arguments
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "add", "agent")
 
 	result.AssertStderrContains(s.T(), "accepts 1 arg(s), received 0")
 }
 
 func (s *CRUDCLITestSuite) TestAddOutputMissingPath() {
-	// Output command requires a filename argument, test with no arguments
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "add", "output")
 
 	result.AssertStderrContains(s.T(), "accepts 1 arg(s), received 0")

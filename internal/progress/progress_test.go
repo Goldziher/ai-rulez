@@ -13,15 +13,12 @@ import (
 
 func TestQuietMode(t *testing.T) {
 	t.Run("set and get quiet mode", func(t *testing.T) {
-		// Reset to default
 		SetQuiet(false)
 		assert.False(t, IsQuiet())
 
-		// Set to quiet
 		SetQuiet(true)
 		assert.True(t, IsQuiet())
 
-		// Reset back
 		SetQuiet(false)
 		assert.False(t, IsQuiet())
 	})
@@ -40,7 +37,6 @@ func TestQuietMode(t *testing.T) {
 		}
 		wg.Wait()
 
-		// Should not panic
 		_ = IsQuiet()
 	})
 }
@@ -59,7 +55,6 @@ func TestProgressBar(t *testing.T) {
 		assert.True(t, bar.quiet)
 		assert.Nil(t, bar.bar)
 
-		// Reset
 		SetQuiet(false)
 	})
 
@@ -67,14 +62,12 @@ func TestProgressBar(t *testing.T) {
 		SetQuiet(true)
 		bar := New(100, "Test progress")
 
-		// All operations should succeed without errors
 		assert.NoError(t, bar.Add(10))
 		assert.NoError(t, bar.Set(50))
 		assert.NoError(t, bar.Finish())
 		assert.NoError(t, bar.Clear())
 
 		bar.ChangeDescription("New description")
-		// Should not panic
 
 		SetQuiet(false)
 	})
@@ -83,7 +76,6 @@ func TestProgressBar(t *testing.T) {
 		SetQuiet(false)
 		bar := New(100, "Test progress")
 
-		// Operations should work
 		assert.NoError(t, bar.Add(10))
 		assert.NoError(t, bar.Set(50))
 
@@ -101,7 +93,6 @@ func TestProgressBarBytes(t *testing.T) {
 		assert.NotNil(t, bar)
 		assert.NotNil(t, bar.bar)
 
-		// Test 64-bit operations
 		assert.NoError(t, bar.Add64(1024))
 		assert.NoError(t, bar.Set64(512*1024))
 		assert.NoError(t, bar.Finish())
@@ -113,7 +104,6 @@ func TestProgressBarBytes(t *testing.T) {
 		assert.NotNil(t, bar)
 		assert.Nil(t, bar.bar)
 
-		// Should not error in quiet mode
 		assert.NoError(t, bar.Add64(1024))
 		assert.NoError(t, bar.Set64(512*1024))
 
@@ -177,7 +167,6 @@ func TestIOWrappers(t *testing.T) {
 		wrappedReader := NewReader(reader, int64(len(data)), "Reading test")
 		assert.NotNil(t, wrappedReader)
 
-		// Read all data
 		result, err := io.ReadAll(wrappedReader)
 		assert.NoError(t, err)
 		assert.Equal(t, data, result)
@@ -191,7 +180,6 @@ func TestIOWrappers(t *testing.T) {
 
 		wrappedReader := NewReader(reader, int64(len(data)), "Reading test")
 		assert.NotNil(t, wrappedReader)
-		// In quiet mode, should return original reader
 		assert.Equal(t, reader, wrappedReader)
 
 		SetQuiet(false)
@@ -217,7 +205,6 @@ func TestIOWrappers(t *testing.T) {
 		var buf bytes.Buffer
 		wrappedWriter := NewWriter(&buf, 1024, "Writing test")
 		assert.NotNil(t, wrappedWriter)
-		// In quiet mode, should return original writer
 		assert.Equal(t, &buf, wrappedWriter)
 
 		SetQuiet(false)
@@ -226,17 +213,14 @@ func TestIOWrappers(t *testing.T) {
 
 func TestPrintFunctions(t *testing.T) {
 	t.Run("print if not quiet", func(t *testing.T) {
-		// Capture stdout for testing
 		old := captureOutput()
 		defer restoreOutput(old)
 
 		SetQuiet(false)
 		PrintIfNotQuiet("Test %s %d\n", "message", 123)
-		// Output should be produced (hard to test without mocking)
 
 		SetQuiet(true)
 		PrintIfNotQuiet("Test %s %d\n", "message", 123)
-		// No output should be produced
 
 		SetQuiet(false)
 	})
@@ -247,11 +231,9 @@ func TestPrintFunctions(t *testing.T) {
 
 		SetQuiet(false)
 		PrintlnIfNotQuiet("Test message")
-		// Output should be produced
 
 		SetQuiet(true)
 		PrintlnIfNotQuiet("Test message")
-		// No output should be produced
 
 		SetQuiet(false)
 	})
@@ -266,7 +248,6 @@ func TestFileCounter(t *testing.T) {
 		assert.Equal(t, 5, fc.total)
 		assert.Equal(t, 0, fc.current)
 
-		// Process files
 		fc.StartFile("file1.txt")
 		assert.Equal(t, "file1.txt", fc.currentFile)
 		fc.FinishFile()
@@ -290,7 +271,7 @@ func TestFileCounter(t *testing.T) {
 
 		fc.StartFile("file2.txt")
 		fc.Error(assert.AnError)
-		assert.Equal(t, 2, fc.current) // Should increment even on error
+		assert.Equal(t, 2, fc.current)
 
 		fc.StartFile("file3.txt")
 		fc.FinishFile()
@@ -306,7 +287,6 @@ func TestFileCounter(t *testing.T) {
 		assert.NotNil(t, fc)
 		assert.True(t, fc.bar.quiet)
 
-		// Operations should work without output
 		fc.StartFile("file1.txt")
 		fc.FinishFile()
 
@@ -334,7 +314,7 @@ func TestFileCounter(t *testing.T) {
 
 				filename := strings.Repeat("file", idx) + ".txt"
 				fc.StartFile(filename)
-				time.Sleep(time.Millisecond) // Simulate work
+				time.Sleep(time.Millisecond)
 				if idx%3 == 0 {
 					fc.Error(assert.AnError)
 				} else {
@@ -346,7 +326,6 @@ func TestFileCounter(t *testing.T) {
 		wg.Wait()
 		fc.Finish()
 
-		// Should have processed all files
 		assert.Equal(t, 10, fc.current)
 	})
 }
@@ -358,7 +337,6 @@ func TestProgressBarEdgeCases(t *testing.T) {
 			bar:   nil,
 		}
 
-		// All operations should be safe with nil bar
 		assert.NoError(t, bar.Add(10))
 		assert.NoError(t, bar.Add64(100))
 		assert.NoError(t, bar.Set(50))
@@ -388,8 +366,6 @@ func TestProgressBarEdgeCases(t *testing.T) {
 		bar := New(0, "Zero max")
 		assert.NotNil(t, bar)
 
-		// progressbar library doesn't allow zero max values, so operations may error
-		// That's expected behavior, so we test that it doesn't panic
 		_ = bar.Add(1)
 		_ = bar.Finish()
 	})
@@ -400,7 +376,6 @@ func TestProgressBarEdgeCases(t *testing.T) {
 		spinner := NewSpinner("Indeterminate")
 		assert.NotNil(t, spinner)
 
-		// Spinner should work with Add
 		assert.NoError(t, spinner.Add(1))
 		assert.NoError(t, spinner.Add(1))
 		assert.NoError(t, spinner.Finish())
@@ -409,12 +384,10 @@ func TestProgressBarEdgeCases(t *testing.T) {
 
 // Helper functions for testing
 func captureOutput() *bytes.Buffer {
-	// This is a simplified version - in real tests you'd redirect stdout
 	return &bytes.Buffer{}
 }
 
 func restoreOutput(old *bytes.Buffer) {
-	// This would restore stdout in real tests
 }
 
 func BenchmarkProgressBar(b *testing.B) {
@@ -456,12 +429,9 @@ func BenchmarkProgressBar(b *testing.B) {
 }
 
 func ExampleNew() {
-	// Create a progress bar for 100 items
 	bar := New(100, "Processing items")
 
-	// Process items
 	for i := 0; i < 100; i++ {
-		// Do work...
 		bar.Add(1)
 	}
 
@@ -469,12 +439,9 @@ func ExampleNew() {
 }
 
 func ExampleNewBytes() {
-	// Create a progress bar for downloading 10MB
 	bar := NewBytes(10*1024*1024, "Downloading file")
 
-	// Simulate download
 	for i := 0; i < 10; i++ {
-		// Download 1MB chunk
 		bar.Add64(1024 * 1024)
 	}
 
@@ -482,13 +449,11 @@ func ExampleNewBytes() {
 }
 
 func ExampleFileCounter() {
-	// Process multiple files with progress tracking
 	files := []string{"file1.txt", "file2.txt", "file3.txt"}
 	fc := NewFileCounter(len(files), "Processing files")
 
 	for _, file := range files {
 		fc.StartFile(file)
-		// Process file...
 		fc.FinishFile()
 	}
 

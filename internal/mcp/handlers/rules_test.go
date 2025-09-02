@@ -33,7 +33,6 @@ func TestRuleHandlers(t *testing.T) {
 		cfg.Rules = append(cfg.Rules, newRule)
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
-		// Verify
 		reloaded, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 		assert.Len(t, reloaded.Rules, 2)
@@ -49,7 +48,6 @@ func TestRuleHandlers(t *testing.T) {
 			cfg.Rules[0].Priority = 10
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "Updated content", reloaded.Rules[0].Content)
@@ -58,7 +56,6 @@ func TestRuleHandlers(t *testing.T) {
 	})
 
 	t.Run("delete rule", func(t *testing.T) {
-		// Setup: ensure we have at least 2 rules
 		cfg, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 
@@ -76,7 +73,6 @@ func TestRuleHandlers(t *testing.T) {
 		cfg.Rules = cfg.Rules[1:]
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
-		// Verify
 		reloaded, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 		assert.Len(t, reloaded.Rules, initialCount-1)

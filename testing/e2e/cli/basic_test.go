@@ -40,12 +40,10 @@ func (s *BasicCLITestSuite) TestRootHelpWithoutArgs() {
 
 func (s *BasicCLITestSuite) TestVersion() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "version")
-	// Version command uses logger.Info which outputs to stderr with color
 	result.AssertStderrContains(s.T(), "ai-rulez version")
 }
 
 func (s *BasicCLITestSuite) TestVersionShortFlag() {
-	// Root command doesn't have --version flag, test the version subcommand instead
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "version")
 	result.AssertStderrContains(s.T(), "ai-rulez version")
 }

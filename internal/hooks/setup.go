@@ -53,7 +53,6 @@ func setupLefthook() error {
 		return fmt.Errorf("failed to parse lefthook config: %w", err)
 	}
 
-	// Ensure pre-commit section exists
 	if configData["pre-commit"] == nil {
 		configData["pre-commit"] = map[string]interface{}{
 			"commands": map[string]interface{}{},
@@ -74,19 +73,16 @@ func setupLefthook() error {
 		return fmt.Errorf("invalid lefthook commands structure")
 	}
 
-	// Check if ai-rulez is already configured
 	if _, exists := commands["ai-rulez"]; exists {
-		return nil // Already configured
+		return nil
 	}
 
-	// Add ai-rulez command
 	commands["ai-rulez"] = map[string]interface{}{
 		"glob":      "**/*.{ai-rulez,ai_rulez}.{yaml,yml}",
 		"run":       "ai-rulez validate",
 		"fail_text": "AI rules validation failed",
 	}
 
-	// Write back the configuration
 	updatedData, err := yaml.Marshal(configData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal lefthook config: %w", err)
@@ -115,14 +111,13 @@ func setupPreCommit() error {
 		return fmt.Errorf("failed to parse pre-commit config: %w", err)
 	}
 
-	// Check if ai-rulez hook already exists
 	for _, repo := range config.Repos {
 		if repo["repo"] == "local" {
 			if hooks, ok := repo["hooks"].([]interface{}); ok {
 				for _, hook := range hooks {
 					if h, ok := hook.(map[string]interface{}); ok {
 						if h["id"] == "ai-rulez" {
-							return nil // Already configured
+							return nil
 						}
 					}
 				}
@@ -147,7 +142,6 @@ func setupPreCommit() error {
 		config.Repos = append(config.Repos, localRepo)
 	}
 
-	// Add ai-rulez hook
 	hooks, ok := localRepo["hooks"].([]interface{})
 	if !ok {
 		hooks = []interface{}{}
@@ -163,7 +157,6 @@ func setupPreCommit() error {
 	}
 	localRepo["hooks"] = append(hooks, aiRulezHook)
 
-	// Write back the configuration
 	updatedData, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal pre-commit config: %w", err)
@@ -187,12 +180,10 @@ func setupHusky() error {
 	if data, err := os.ReadFile(preCommitPath); err == nil {
 		hookContent = string(data)
 
-		// Check if ai-rulez is already configured
 		if strings.Contains(hookContent, "ai-rulez") {
-			return nil // Already configured
+			return nil
 		}
 
-		// Append ai-rulez validation
 		if !strings.HasSuffix(hookContent, "\n") {
 			hookContent += "\n"
 		}
@@ -200,7 +191,6 @@ func setupHusky() error {
 		hookContent += "echo 'Validating AI rules...'\n"
 		hookContent += "npx ai-rulez validate || exit 1\n"
 	} else {
-		// Create new pre-commit hook
 		hookContent = `#!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
@@ -210,7 +200,6 @@ npx ai-rulez validate || exit 1
 `
 	}
 
-	// Write the hook file
 	if err := os.WriteFile(preCommitPath, []byte(hookContent), 0o755); err != nil {
 		return fmt.Errorf("failed to write husky pre-commit hook: %w", err)
 	}
