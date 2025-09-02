@@ -13,7 +13,6 @@ func TestGenerateCommand(t *testing.T) {
 	assert.Equal(t, "generate [config-file]", commands.GenerateCmd.Use)
 	assert.Contains(t, commands.GenerateCmd.Aliases, "gen")
 
-	// Check that important flags exist
 	flags := commands.GenerateCmd.Flags()
 	assert.NotNil(t, flags.Lookup("dry-run"))
 	assert.NotNil(t, flags.Lookup("update-gitignore"))

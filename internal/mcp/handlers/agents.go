@@ -66,7 +66,6 @@ func AddAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 		return nil, err
 	}
 
-	// Check for duplicate name
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == params.Name {
 			return nil, fmt.Errorf("agent with name '%s' already exists", params.Name)
@@ -249,7 +248,6 @@ func DeleteAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		return nil, fmt.Errorf("agent with name '%s' not found", params.Name)
 	}
 
-	// Remove the agent
 	cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
 
 	if err := saveConfig(cfg, configPath); err != nil {

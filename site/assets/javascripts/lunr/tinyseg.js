@@ -4,7 +4,6 @@
  */
 ;(function (root, factory) {
     if (typeof define === 'function' && define.amd) {
-        // AMD. Register as an anonymous module.
         define(factory)
     } else if (typeof exports === 'object') {
         /**
@@ -14,7 +13,6 @@
          */
         module.exports = factory()
     } else {
-        // Browser globals (root is window)
         factory()(root.lunr);
     }
 }(this, function () {
@@ -25,10 +23,6 @@
      */
 
     return function(lunr) {
-        // TinySegmenter 0.1 -- Super compact Japanese tokenizer in Javascript
-        // (c) 2008 Taku Kudo <taku@chasen.org>
-        // TinySegmenter is freely distributable under the terms of a new BSD licence.
-        // For details, see http://chasen.org/~taku/software/TinySegmenter/LICENCE.txt
 
         function TinySegmenter() {
           var patterns = {
@@ -172,7 +166,6 @@
             score += this.ts_(this.TC2__[c2 + c3 + c4]);
             score += this.ts_(this.TC3__[c3 + c4 + c5]);
             score += this.ts_(this.TC4__[c4 + c5 + c6]);
-        //  score += this.ts_(this.TC5__[c4 + c5 + c6]);    
             score += this.ts_(this.UQ1__[p1 + c1]);
             score += this.ts_(this.UQ2__[p2 + c2]);
             score += this.ts_(this.UQ3__[p3 + c3]);

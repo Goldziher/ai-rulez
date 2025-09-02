@@ -342,7 +342,6 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 			_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/404-config.yaml")
 			require.Error(t, err)
 
-			// Check that it's an oops error with the expected context
 			oopsErr, ok := oops.AsOops(err)
 			require.True(t, ok, "expected oops error")
 			ctx := oopsErr.Context()
@@ -354,7 +353,6 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 			_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/500-config.yaml")
 			require.Error(t, err)
 
-			// Check that it's an oops error with the expected context
 			oopsErr, ok := oops.AsOops(err)
 			require.True(t, ok, "expected oops error")
 			ctx := oopsErr.Context()
@@ -380,7 +378,6 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 		_, err := loader.loadRemoteConfig(context.Background(), server.URL+"/invalid.yaml")
 		require.Error(t, err)
 
-		// Check that it's an oops error with the expected context
 		oopsErr, ok := oops.AsOops(err)
 		require.True(t, ok, "expected oops error")
 		ctx := oopsErr.Context()
@@ -408,7 +405,6 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 				_, err := loader.loadRemoteConfig(context.Background(), url)
 				require.Error(t, err)
 
-				// Check that it's an oops error with expected context
 				oopsErr, ok := oops.AsOops(err)
 				require.True(t, ok, "expected oops error")
 				assert.Contains(t, err.Error(), "URL blocked for security reasons")
@@ -440,7 +436,6 @@ func TestConfigLoader_ErrorHandling(t *testing.T) {
 		err := loader.resolveIncludes(context.Background(), mainConfig, "/tmp")
 		require.Error(t, err)
 
-		// Check that it's an oops error
 		_, ok := oops.AsOops(err)
 		require.True(t, ok, "expected oops error")
 		assert.Contains(t, err.Error(), "fetch remote config")

@@ -68,7 +68,6 @@ func AddOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 		return nil, err
 	}
 
-	// Check for duplicate path
 	for _, output := range cfg.Outputs {
 		if output.Path == params.Path {
 			return nil, fmt.Errorf("output with path '%s' already exists", params.Path)
@@ -137,7 +136,6 @@ func UpdateOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		return nil, fmt.Errorf("output with path '%s' not found", params.Path)
 	}
 
-	// Check for duplicate new path
 	if params.NewPath != "" && params.NewPath != params.Path {
 		for _, output := range cfg.Outputs {
 			if output.Path == params.NewPath {
@@ -200,7 +198,6 @@ func DeleteOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 		return nil, fmt.Errorf("output with path '%s' not found", params.Path)
 	}
 
-	// Remove the output
 	cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
 
 	if err := saveConfig(cfg, configPath); err != nil {

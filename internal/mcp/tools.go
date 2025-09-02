@@ -17,7 +17,6 @@ func (s *Server) registerTools() {
 
 // registerRulesTools registers rule-related tools
 func (s *Server) registerRulesTools() {
-	// Get rules
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_rules",
 			mcp.WithDescription("Get all rules from the configuration"),
@@ -28,7 +27,6 @@ func (s *Server) registerRulesTools() {
 		handlers.GetRulesHandler,
 	)
 
-	// Add rule
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_rule",
 			mcp.WithDescription("Add a new rule to the configuration"),
@@ -50,7 +48,6 @@ func (s *Server) registerRulesTools() {
 		handlers.AddRuleHandler,
 	)
 
-	// Update rule
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_rule",
 			mcp.WithDescription("Update an existing rule"),
@@ -71,7 +68,6 @@ func (s *Server) registerRulesTools() {
 		handlers.UpdateRuleHandler,
 	)
 
-	// Delete rule
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_rule",
 			mcp.WithDescription("Delete a rule from the configuration"),
@@ -86,7 +82,6 @@ func (s *Server) registerRulesTools() {
 
 // registerSectionsTools registers section-related tools
 func (s *Server) registerSectionsTools() {
-	// Get sections
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_sections",
 			mcp.WithDescription("Get all sections from the configuration"),
@@ -97,7 +92,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.GetSectionsHandler,
 	)
 
-	// Add section
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_section",
 			mcp.WithDescription("Add a new section to the configuration"),
@@ -116,7 +110,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.AddSectionHandler,
 	)
 
-	// Update section
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_section",
 			mcp.WithDescription("Update an existing section"),
@@ -137,7 +130,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.UpdateSectionHandler,
 	)
 
-	// Delete section
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_section",
 			mcp.WithDescription("Delete a section from the configuration"),
@@ -152,7 +144,6 @@ func (s *Server) registerSectionsTools() {
 
 // registerAgentsTools registers agent-related tools
 func (s *Server) registerAgentsTools() {
-	// Get agents
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_agents",
 			mcp.WithDescription("Get all agents from the configuration"),
@@ -163,7 +154,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.GetAgentsHandler,
 	)
 
-	// Add agent
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_agent",
 			mcp.WithDescription("Add a new agent to the configuration"),
@@ -188,7 +178,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.AddAgentHandler,
 	)
 
-	// Update agent
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_agent",
 			mcp.WithDescription("Update an existing agent"),
@@ -215,7 +204,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.UpdateAgentHandler,
 	)
 
-	// Delete agent
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_agent",
 			mcp.WithDescription("Delete an agent from the configuration"),
@@ -230,7 +218,6 @@ func (s *Server) registerAgentsTools() {
 
 // registerOutputsTools registers output-related tools
 func (s *Server) registerOutputsTools() {
-	// Get outputs
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_outputs",
 			mcp.WithDescription("Get all outputs from the configuration"),
@@ -241,7 +228,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.GetOutputsHandler,
 	)
 
-	// Add output
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_output",
 			mcp.WithDescription("Add a new output to the configuration"),
@@ -259,7 +245,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.AddOutputHandler,
 	)
 
-	// Update output
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_output",
 			mcp.WithDescription("Update an existing output"),
@@ -280,7 +265,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.UpdateOutputHandler,
 	)
 
-	// Delete output
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_output",
 			mcp.WithDescription("Delete an output from the configuration"),
@@ -295,7 +279,6 @@ func (s *Server) registerOutputsTools() {
 
 // registerProjectTools registers project-related tools
 func (s *Server) registerProjectTools() {
-	// Generate output
 	s.mcpServer.AddTool(
 		mcp.NewTool("generate_output",
 			mcp.WithDescription("Generate output files from the current configuration"),
@@ -306,7 +289,6 @@ func (s *Server) registerProjectTools() {
 		handlers.GenerateOutputHandler,
 	)
 
-	// Validate config
 	s.mcpServer.AddTool(
 		mcp.NewTool("validate_config",
 			mcp.WithDescription("Validate the configuration file"),
@@ -318,7 +300,6 @@ func (s *Server) registerProjectTools() {
 		handlers.ValidateConfigHandler,
 	)
 
-	// Init project
 	s.mcpServer.AddTool(
 		mcp.NewTool("init_project",
 			mcp.WithDescription("Initialize a new ai-rulez project"),
@@ -339,7 +320,6 @@ func (s *Server) registerProjectTools() {
 
 // registerUtilityTools registers utility tools
 func (s *Server) registerUtilityTools() {
-	// Get version
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_version",
 			mcp.WithDescription("Get the ai-rulez version"),

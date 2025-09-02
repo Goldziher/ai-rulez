@@ -52,14 +52,12 @@ This will permanently remove the agent and cannot be undone.`,
 }
 
 func init() {
-	// Add agent flags
 	AddAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "Description of the agent")
 	AddAgentCmd.Flags().IntVarP(&agentPriority, "priority", "p", 5, "Priority level for the agent (1-10)")
 	AddAgentCmd.Flags().StringSliceVarP(&agentTools, "tools", "t", []string{}, "Comma-separated list of tools the agent can use")
 	AddAgentCmd.Flags().StringVarP(&agentSystemPrompt, "system-prompt", "s", "", "System prompt for the agent (will prompt via stdin if not provided)")
 	AddAgentCmd.Flags().StringVar(&agentID, "id", "", "Optional unique identifier for the agent")
 
-	// Update agent flags
 	UpdateAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "New description for the agent")
 	UpdateAgentCmd.Flags().IntVarP(&agentPriority, "priority", "p", 0, "New priority level for the agent (1-10)")
 	UpdateAgentCmd.Flags().StringSliceVarP(&agentTools, "tools", "t", []string{}, "New comma-separated list of tools the agent can use")
@@ -70,7 +68,6 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 	agentName := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Check for duplicate
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == agentName {
 			fmt.Fprintf(os.Stderr, "Error: Agent '%s' already exists in configuration\n", agentName)
@@ -78,7 +75,6 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Get system prompt if not provided
 	if agentSystemPrompt == "" {
 		fmt.Println("Enter agent system prompt (press Ctrl+D when done):")
 		content, err := readFromStdin()
@@ -89,7 +85,6 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 		agentSystemPrompt = content
 	}
 
-	// Add new agent
 	newAgent := config.Agent{
 		ID:           agentID,
 		Name:         agentName,
@@ -100,7 +95,6 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 	}
 	cfg.Agents = append(cfg.Agents, newAgent)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)
 		os.Exit(1)
@@ -117,7 +111,6 @@ func runUpdateAgent(cmd *cobra.Command, args []string) {
 	agentName := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find agent
 	agentIndex := -1
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == agentName {
@@ -131,7 +124,6 @@ func runUpdateAgent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// If no flags provided, prompt for system prompt
 	if agentSystemPrompt == "" && agentDescription == "" && agentPriority == 0 && len(agentTools) == 0 {
 		fmt.Printf("Current system prompt: %s\n", cfg.Agents[agentIndex].SystemPrompt)
 		fmt.Println("Enter new system prompt (press Ctrl+D when done, or press Enter to keep current):")
@@ -145,7 +137,6 @@ func runUpdateAgent(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	// Update fields
 	if agentDescription != "" {
 		cfg.Agents[agentIndex].Description = agentDescription
 	}
@@ -159,7 +150,6 @@ func runUpdateAgent(cmd *cobra.Command, args []string) {
 		cfg.Agents[agentIndex].SystemPrompt = agentSystemPrompt
 	}
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)
 		os.Exit(1)
@@ -172,7 +162,6 @@ func runDeleteAgent(cmd *cobra.Command, args []string) {
 	agentName := args[0]
 	configPath, cfg := loadConfiguration()
 
-	// Find and remove agent
 	agentIndex := -1
 	for i := range cfg.Agents {
 		if cfg.Agents[i].Name == agentName {
@@ -186,10 +175,8 @@ func runDeleteAgent(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Remove the agent
 	cfg.Agents = append(cfg.Agents[:agentIndex], cfg.Agents[agentIndex+1:]...)
 
-	// Save configuration
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)
 		os.Exit(1)

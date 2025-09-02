@@ -14,7 +14,6 @@ func (c *Config) Validate() error {
 			Errorf("required field 'metadata.name' is missing")
 	}
 
-	// Validate target references in rules
 	for _, rule := range c.Rules {
 		if len(rule.Targets) > 0 {
 			_, err := ResolveTargets(rule.Targets, c.Targets)
@@ -29,7 +28,6 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// Validate target references in sections
 	for _, section := range c.Sections {
 		if len(section.Targets) > 0 {
 			_, err := ResolveTargets(section.Targets, c.Targets)
@@ -44,7 +42,6 @@ func (c *Config) Validate() error {
 		}
 	}
 
-	// Validate target references in agents
 	for i := range c.Agents {
 		if len(c.Agents[i].Targets) > 0 {
 			_, err := ResolveTargets(c.Agents[i].Targets, c.Targets)

@@ -71,10 +71,7 @@ func newCache(config *CacheConfig) *Cache {
 		config = defaultCacheConfig()
 	}
 
-	// Configure ristretto cache
-	// NumCounters should be 10x max entries, MaxCost is total memory cost in bytes
-	// We'll estimate 10KB per entry on average
-	estimatedCostPerEntry := int64(10 * 1024) // 10KB
+	estimatedCostPerEntry := int64(10 * 1024)
 	ristrettoCache, err := ristretto.NewCache(&ristretto.Config[string, *cacheEntry]{
 		NumCounters: int64(config.MaxMemoryEntries * 10),
 		MaxCost:     int64(config.MaxMemoryEntries) * estimatedCostPerEntry,
@@ -82,7 +79,6 @@ func newCache(config *CacheConfig) *Cache {
 		Metrics:     true,
 	})
 	if err != nil {
-		// Fallback: create a minimal cache if config fails
 		//nolint:errcheck // Fallback cache creation, errors ignored
 		ristrettoCache, _ = ristretto.NewCache(&ristretto.Config[string, *cacheEntry]{
 			NumCounters: 1000,
@@ -109,16 +105,12 @@ func newCache(config *CacheConfig) *Cache {
 func (c *Cache) get(ctx context.Context, url string) (*cacheEntry, bool) {
 	key := c.generateKey(url)
 
-	// Try memory cache first
 	if entry, found := c.memoryCache.Get(key); found {
-		// Entry is still valid (TTL handled by ristretto)
 		return entry, true
 	}
 
-	// Try disk cache
 	if entry := c.getFromDisk(ctx, key); entry != nil {
 		if c.isDiskEntryValid(entry) {
-			// Add to memory cache with TTL
 			cost := int64(len(entry.Content) + 256)
 			c.memoryCache.SetWithTTL(key, entry, cost, c.config.MemoryTTL)
 			c.memoryCache.Wait()
@@ -142,15 +134,12 @@ func (c *Cache) set(ctx context.Context, url string, content []byte, etag, lastM
 		LastModified: lastModified,
 	}
 
-	// Set in memory cache with TTL
-	// Cost is the size of the content plus some overhead
-	cost := int64(len(entry.Content) + 256) // content + metadata overhead
+	cost := int64(len(entry.Content) + 256)
 	success := c.memoryCache.SetWithTTL(key, entry, cost, c.config.MemoryTTL)
 	if success {
 		c.memoryCache.Wait()
 	}
 
-	// Also persist to disk
 	return c.setOnDisk(ctx, key, entry)
 }
 
@@ -183,7 +172,6 @@ func (c *Cache) getFromDisk(_ context.Context, key string) *cacheEntry {
 		ContentSize  int       `json:"content_size"`
 	}
 
-	// Find JSON metadata boundary
 	boundary := []byte("\n---CONTENT---\n")
 	if idx := bytes.Index(data, boundary); idx > 0 {
 		metadataBytes := data[:idx]
@@ -200,7 +188,6 @@ func (c *Cache) getFromDisk(_ context.Context, key string) *cacheEntry {
 		}
 	}
 
-	// Fallback for old format (content only)
 	info, err := os.Stat(filePath)
 	if err != nil {
 		return nil
@@ -225,15 +212,12 @@ func (c *Cache) setOnDisk(_ context.Context, key string, entry *cacheEntry) erro
 		return nil
 	}
 
-	// Check disk entries and evict if needed
 	if err := c.evictOldDiskEntries(); err != nil {
-		// Log but don't fail
 		_ = err
 	}
 
 	filePath := filepath.Join(c.diskCacheDir, key+"-"+cacheFileName)
 
-	// Store metadata + content
 	metadata := struct {
 		URL          string    `json:"url"`
 		FetchedAt    time.Time `json:"fetched_at"`
@@ -250,7 +234,6 @@ func (c *Cache) setOnDisk(_ context.Context, key string, entry *cacheEntry) erro
 
 	metadataBytes, err := json.Marshal(metadata)
 	if err != nil {
-		// Fallback: just write content
 		return os.WriteFile(filePath, entry.Content, 0o644)
 	}
 
@@ -312,7 +295,6 @@ func (c *Cache) evictOldDiskEntries() error {
 		}
 	}
 
-	// Sort by modification time (oldest first)
 	for i := 0; i < len(cacheFiles)-1; i++ {
 		for j := i + 1; j < len(cacheFiles); j++ {
 			if cacheFiles[i].modTime.After(cacheFiles[j].modTime) {
@@ -321,7 +303,6 @@ func (c *Cache) evictOldDiskEntries() error {
 		}
 	}
 
-	// Remove oldest entries to make room
 	entriesToRemove := len(cacheFiles) - c.config.MaxDiskEntries + 1
 	for i := 0; i < entriesToRemove && i < len(cacheFiles); i++ {
 		//nolint:errcheck // File cleanup errors are non-critical
@@ -365,7 +346,6 @@ func (c *Cache) clear(ctx context.Context) error {
 }
 
 func (c *Cache) stats() cacheStats {
-	// Get memory cache metrics
 	metrics := c.memoryCache.Metrics
 
 	diskEntries := 0
