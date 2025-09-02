@@ -37,9 +37,6 @@ jobs:
         with:
           version: 3.x
 
-      - name: Sync schema
-        run: task sync-schema
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
@@ -75,9 +72,6 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
-
-      - name: Sync schema
-        run: task sync-schema
 
       - name: Run tests with coverage
         run: task test:coverage
@@ -123,9 +117,6 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
-
-      - name: Sync schema
-        run: task sync-schema
 
       - name: Build binary for tests
         run: task build
@@ -176,9 +167,6 @@ jobs:
         with:
           version: 3.x
 
-      - name: Sync schema
-        run: task sync-schema
-
       - name: Build binary for benchmarks
         run: task build
 
@@ -222,9 +210,6 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
-
-      - name: Sync schema
-        run: task sync-schema
 
       - name: Build binary
         run: task build
