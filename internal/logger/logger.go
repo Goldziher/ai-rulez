@@ -17,7 +17,6 @@ var (
 	instance *slog.Logger
 	once     sync.Once
 
-	// Default settings
 	defaultLevel = slog.LevelInfo
 	colorOutput  = true
 	jsonOutput   = false
@@ -50,7 +49,6 @@ func New(w io.Writer, level slog.Level) *slog.Logger {
 		handler = slog.NewJSONHandler(w, &slog.HandlerOptions{
 			Level: level,
 			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				// Customize JSON output if needed
 				if a.Key == slog.TimeKey {
 					return slog.String("timestamp", a.Value.Time().Format(time.RFC3339))
 				}
@@ -107,7 +105,6 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 	var output strings.Builder
 
-	// Format timestamp (only in debug mode)
 	if h.level <= slog.LevelDebug {
 		timestamp := r.Time.Format("15:04:05")
 		if h.colorOutput {
@@ -120,7 +117,6 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 		}
 	}
 
-	// Format level with color
 	levelStr, levelColor := h.formatLevel(r.Level)
 	if h.colorOutput {
 		output.WriteString(levelColor)
@@ -131,22 +127,18 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 	}
 	output.WriteString(" ")
 
-	// Format message
 	output.WriteString(r.Message)
 
-	// Add attributes
 	attrs := make([]slog.Attr, 0, r.NumAttrs())
 	r.Attrs(func(a slog.Attr) bool {
 		attrs = append(attrs, a)
 		return true
 	})
 
-	// Combine with handler attributes
 	allAttrs := make([]slog.Attr, len(h.attrs)+len(attrs))
 	copy(allAttrs, h.attrs)
 	copy(allAttrs[len(h.attrs):], attrs)
 
-	// Format attributes in a readable way
 	if len(allAttrs) > 0 {
 		output.WriteString(" ")
 		if h.colorOutput {
@@ -166,7 +158,6 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 	output.WriteString("\n")
 
-	// Write to output
 	_, err := h.w.Write([]byte(output.String()))
 	return err
 }
@@ -207,14 +198,12 @@ func (h *prettyHandler) formatLevel(level slog.Level) (levelStr, levelColor stri
 }
 
 func (h *prettyHandler) formatAttr(attr slog.Attr) string {
-	// Special handling for errors
 	if attr.Key == "error" {
 		if err, ok := attr.Value.Any().(error); ok {
 			return h.formatError(err)
 		}
 	}
 
-	// Special handling for common attributes
 	switch attr.Key {
 	case "path", "file":
 		if h.colorOutput {
@@ -234,7 +223,6 @@ func (h *prettyHandler) formatAttr(attr slog.Attr) string {
 func (h *prettyHandler) formatError(err error) string {
 	var result strings.Builder
 
-	// Check if it's an oops error with rich context
 	if oopsErr, ok := oops.AsOops(err); ok {
 		result.WriteString("error=")
 		if h.colorOutput {
@@ -245,7 +233,6 @@ func (h *prettyHandler) formatError(err error) string {
 			result.WriteString(colorReset)
 		}
 
-		// Add hint if available
 		if hint := oopsErr.Hint(); hint != "" {
 			result.WriteString(" hint=")
 			if h.colorOutput {
@@ -281,7 +268,6 @@ func Info(msg string, args ...any) {
 }
 
 func Success(msg string, args ...any) {
-	// Log success messages as info level with green color
 	Get().Info(msg, args...)
 }
 

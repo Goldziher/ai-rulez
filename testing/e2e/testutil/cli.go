@@ -29,7 +29,6 @@ func RunCLI(t *testing.T, workingDir string, args ...string) *CLIResult {
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = workingDir
 
-	// Set timeout
 	done := make(chan *CLIResult, 1)
 
 	go func() {
@@ -64,7 +63,6 @@ func RunCLIWithStdin(t *testing.T, workingDir string, stdin string, args ...stri
 	cmd.Dir = workingDir
 	cmd.Stdin = bytes.NewBufferString(stdin)
 
-	// Set timeout
 	done := make(chan *CLIResult, 1)
 
 	go func() {

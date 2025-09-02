@@ -450,7 +450,6 @@ func TestGenerator_DirectoryOutput(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, info.IsDir())
 
-	// Check that individual rule files were created
 	expectedFiles := []struct {
 		filename     string
 		expectedRule string

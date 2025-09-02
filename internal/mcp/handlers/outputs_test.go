@@ -32,7 +32,6 @@ func TestOutputHandlers(t *testing.T) {
 		cfg.Outputs = append(cfg.Outputs, newOutput)
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
-		// Verify
 		reloaded, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 		assert.Greater(t, len(reloaded.Outputs), 1)
@@ -46,7 +45,6 @@ func TestOutputHandlers(t *testing.T) {
 			cfg.Outputs[0].Template = "updated-template"
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "updated-template", reloaded.Outputs[0].Template)
@@ -57,7 +55,6 @@ func TestOutputHandlers(t *testing.T) {
 		cfg, err := config.LoadConfig(configFile)
 		require.NoError(t, err)
 
-		// Ensure we have multiple outputs
 		if len(cfg.Outputs) == 1 {
 			cfg.Outputs = append(cfg.Outputs, config.Output{
 				Path: "to-delete.md",
@@ -69,11 +66,9 @@ func TestOutputHandlers(t *testing.T) {
 
 		if len(cfg.Outputs) > 1 {
 			initialCount := len(cfg.Outputs)
-			// Keep only the first output
 			cfg.Outputs = cfg.Outputs[:1]
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
-			// Verify
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Less(t, len(reloaded.Outputs), initialCount)

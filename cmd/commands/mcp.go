@@ -24,10 +24,8 @@ with AI assistants that support the Model Context Protocol.`,
 }
 
 func runMCPServer(cmd *cobra.Command, args []string) {
-	// Create the MCP server
 	srv := mcp.NewServer(Version)
 
-	// Start the server
 	if err := server.ServeStdio(srv.GetMCPServer()); err != nil {
 		fmtError(oops.Wrapf(err, "MCP: start MCP server"))
 		os.Exit(1)
@@ -35,12 +33,10 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 }
 
 func init() {
-	// MCP-specific flags could be added here if needed
 	MCPCmd.Flags().String("transport", "stdio", "Transport method (stdio, websocket)")
 	MCPCmd.Flags().String("address", "", "Address to bind to (for websocket transport)")
 	MCPCmd.Flags().Int("port", 3000, "Port to bind to (for websocket transport)")
 
-	// These flags are defined but not yet implemented - they're for future expansion
 	if err := MCPCmd.Flags().MarkHidden("transport"); err != nil {
 		logger.Debug("Failed to hide transport flag", "error", err)
 	}

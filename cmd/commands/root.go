@@ -12,7 +12,7 @@ import (
 
 var (
 	cfgFile string
-	Version = "dev" // Set during build
+	Version = "dev"
 )
 
 // RootCmd represents the base command when called without any subcommands
@@ -37,13 +37,11 @@ func Execute() {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	// Global flags
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is to auto-discover)")
 	RootCmd.PersistentFlags().Bool("verbose", false, "enable verbose output")
 	RootCmd.PersistentFlags().Bool("debug", false, "enable debug output")
 	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress progress bars and non-essential output")
 
-	// Bind flags to viper
 	if err := viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose")); err != nil {
 		logger.Debug("Failed to bind verbose flag", "error", err)
 	}
@@ -54,7 +52,6 @@ func init() {
 		logger.Debug("Failed to bind quiet flag", "error", err)
 	}
 
-	// Add all commands
 	RootCmd.AddCommand(GenerateCmd)
 	RootCmd.AddCommand(ValidateCmd)
 	RootCmd.AddCommand(VersionCmd)
@@ -65,7 +62,6 @@ func init() {
 	RootCmd.AddCommand(ListCmd)
 	RootCmd.AddCommand(MCPCmd)
 
-	// Add subcommands to add, update, delete
 	AddCmd.AddCommand(crud.AddRuleCmd)
 	AddCmd.AddCommand(crud.AddSectionCmd)
 	AddCmd.AddCommand(crud.AddOutputCmd)
@@ -90,23 +86,19 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
-		// Use config file from the flag
 		viper.SetConfigFile(cfgFile)
 	} else {
-		// Search for config file in home directory
 		home, err := os.UserHomeDir()
 		if err == nil {
 			viper.AddConfigPath(home)
 		}
 
-		// Search config in current directory
 		viper.AddConfigPath(".")
 		viper.SetConfigName(".ai-rulez")
 	}
 
-	viper.AutomaticEnv() // read in environment variables that match
+	viper.AutomaticEnv()
 
-	// If a config file is found, read it in
 	if err := viper.ReadInConfig(); err == nil && viper.GetBool("verbose") {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}

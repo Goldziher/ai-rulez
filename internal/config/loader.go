@@ -127,19 +127,16 @@ func (l *configLoader) resolveIncludes(ctx context.Context, config *Config, base
 		return nil
 	}
 
-	// Collect all content from includes
 	allRules, allSections, allAgents, err := l.collectIncludedContent(ctx, config, baseDir)
 	if err != nil {
 		return err
 	}
 
-	// Merge and set the results
 	config.Rules = MergeRules(allRules)
 	config.Sections = MergeSections(allSections)
 	config.Agents = MergeAgents(allAgents)
 	config.Includes = nil
 
-	// Set default priorities
 	setDefaultPriorities(config)
 
 	return nil
