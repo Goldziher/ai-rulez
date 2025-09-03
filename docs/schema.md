@@ -1,102 +1,60 @@
 # Configuration Schema
 
-ai-rulez uses JSON Schema to validate configuration files and provide editor support.
+The `ai-rulez` configuration is validated against a formal JSON Schema to provide editor support like autocompletion and real-time validation.
 
-## Schema URL
+## Enabling Schema Validation
 
-```yaml
-$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"
-```
-
-Add this to your `ai_rulez.yaml` for editor autocompletion and validation:
+To enable editor support, add the `$schema` key to the top of your `ai_rulez.yaml` file.
 
 ```yaml
 $schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"
+
 metadata:
   name: "My Project"
-rules:
-  - name: "example"
-    content: "Example rule"
-outputs:
-  - path: "CLAUDE.md"
+# ... rest of your configuration
 ```
+
+Most modern editors will automatically detect this and provide assistance.
+
+---
 
 ## Key Validation Rules
 
 ### Required Fields
-- `metadata.name` - Project name (minimum 1 character)
-- `outputs` - At least one output configuration
-- Each `rule` must have `name` and `content`
-- Each `section` must have `name` and `content` 
-- Each `agent` must have `name` and `description`
+
+- `metadata.name`: Every project must have a name.
+- `outputs`: At least one output must be defined.
+- `rule`: Every rule must have a `name` and `content`.
+- `section`: Every section must have a `name` and `content`.
+- `agent`: Every agent must have a `name` and `description`.
+- `mcp_server`: Every server must have a `name`.
+- `command`: Every command must have a `name` and `description`.
 
 ### Field Constraints
-- **Version**: Must follow semantic versioning (e.g., `1.0.0`)
-- **Priority**: One of `critical`, `high`, `medium`, `low`, `minimal` (defaults to `minimal`)
-- **Agent names**: Must be lowercase with hyphens only (`^[a-z][a-z0-9-]*$`)
-- **Includes**: Must be valid HTTP/HTTPS URLs or local file paths
-- **Output paths**: Must have either `path` or `file` field (prefer `path`)
 
-### Advanced Features
-- **Targets**: Glob patterns for applying rules/sections to specific outputs
-- **Templates**: Built-in names, file references (`@file.tmpl`), or inline templates
-- **User Rules**: Personal overrides in `user_rulez` section
+- **`version`**: Must follow semantic versioning (e.g., `1.0.0`).
+- **`priority`**: Must be one of `critical`, `high`, `medium`, `low`, or `minimal`.
+- **`agent.name`**: Must be lowercase and can only contain hyphens (e.g., `code-reviewer`).
+- **`command.name`**: Must be alphanumeric and can contain hyphens or underscores (e.g., `new-task`).
+- **`output.path`**: Must be a valid file or directory path.
+
+### Structured Templates
+
+The `template` property for `outputs` and `agents` is a structured object:
+
+```yaml
+outputs:
+  - path: "CUSTOM.md"
+    template:
+      type: "inline" # Can be "inline", "file", or "builtin"
+      value: "# {{ .ProjectName }}\n{{ range .Rules }}{{ .Content }}{{ end }}"
+```
+
+---
 
 ## Complete Schema Reference
 
-The full JSON Schema is available at: [schema/ai-rules-v2.schema.json](https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v2.schema.json)
+The full JSON Schema is available at:
+[schema/ai-rules-v2.schema.json](https://github.com/Goldziher/ai-rulez/blob/main/schema/ai-rules-v2.schema.json)
 
-### Schema Features
-- ✅ Complete validation for all configuration fields
-- ✅ Editor autocompletion support (VS Code, IntelliJ, etc.)
-- ✅ Detailed error messages with field descriptions
-- ✅ Examples and constraints for each field
-- ✅ Support for remote includes validation
-- ✅ Template validation (built-in, file references, inline)
-
-### Editor Setup
-
-Most modern editors automatically detect JSON Schema from the `$schema` field. For manual setup:
-
-**VS Code**: Install the YAML extension by Red Hat
-**IntelliJ/WebStorm**: Built-in YAML support with schema detection
-**Vim/Neovim**: Use coc-yaml or similar LSP plugins
-
-## Validation Examples
-
-### Valid Configuration
-```yaml
-$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"
-metadata:
-  name: "My Project"
-  version: "1.0.0"
-rules:
-  - name: "code-quality"
-    content: "Write clean code"
-    priority: critical
-outputs:
-  - path: "CLAUDE.md"
-```
-
-### Common Validation Errors
-```yaml
-# ❌ Missing required name
-metadata: {}
-
-# ❌ Invalid version format  
-metadata:
-  name: "Project"
-  version: "1.0"  # Should be "1.0.0"
-
-# ❌ Invalid agent name
-agents:
-  - name: "Code_Reviewer"  # Should be "code-reviewer"
-    description: "Reviews code"
-
-# ❌ Missing outputs
-metadata:
-  name: "Project"
-# outputs: []  # At least one output required
-```
-
-Use `ai-rulez validate` to check your configuration against the schema.
+Use the `ai-rulez validate` command to check your configuration against the schema at any time.

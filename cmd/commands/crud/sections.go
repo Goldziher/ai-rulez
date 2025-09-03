@@ -1,14 +1,14 @@
 package crud
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/crud"
 	"github.com/spf13/cobra"
 )
 
 var (
+	sectionID       string
+	sectionName     string
 	sectionContent  string
 	sectionPriority string
 	sectionTargets  []string
@@ -16,137 +16,107 @@ var (
 
 // AddSectionCmd adds a new section to the configuration
 var AddSectionCmd = &cobra.Command{
-	Use:   "section [title]",
-	Short: "Add a new section to configuration",
-	Long: `Add a new section to your AI rules configuration file.
-The section title is provided as an argument, and the content can be provided
-via stdin or will open an editor for you to enter the section content.`,
-	Args: cobra.ExactArgs(1),
-	Run:  runAddSection,
+	Use:   "section [name]",
+	Short: "Add a new section to the configuration",
+	Long:  `Adds a new section to the sections list in your ai_rulez.yaml file.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		sectionName = args[0]
+
+		priority, err := config.ParsePriority(sectionPriority)
+		if err != nil {
+			crud.FmtError(err)
+		}
+
+		newSection := &config.Section{
+			ID:       sectionID,
+			Name:     sectionName,
+			Content:  sectionContent,
+			Priority: priority,
+			Targets:  sectionTargets,
+		}
+
+		crud.AddElement("sections", newSection)
+	},
 }
 
 // UpdateSectionCmd updates an existing section
 var UpdateSectionCmd = &cobra.Command{
-	Use:   "section [title]",
+	Use:   "section [name]",
 	Short: "Update an existing section",
-	Long: `Update an existing section in your AI rules configuration file.
-You can update the content, priority, or both. If no flags are provided,
-you'll be prompted to enter new content via stdin.`,
-	Args: cobra.ExactArgs(1),
-	Run:  runUpdateSection,
+	Long:  `Updates an existing section in your ai_rulez.yaml file.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+
+		updates := make(map[string]interface{})
+		if cmd.Flags().Changed("id") {
+			updates["ID"] = sectionID
+		}
+		if cmd.Flags().Changed("content") {
+			updates["Content"] = sectionContent
+		}
+		if cmd.Flags().Changed("priority") {
+			priority, err := config.ParsePriority(sectionPriority)
+			if err != nil {
+				crud.FmtError(err)
+			}
+			updates["Priority"] = priority
+		}
+		if cmd.Flags().Changed("target") {
+			updates["Targets"] = sectionTargets
+		}
+
+		crud.UpdateElement("sections", name, updates)
+	},
 }
 
 // DeleteSectionCmd deletes a section
 var DeleteSectionCmd = &cobra.Command{
-	Use:   "section [title]",
-	Short: "Delete a section from configuration",
-	Long:  `Delete a section by title from your AI rules configuration.`,
+	Use:   "section [name]",
+	Short: "Delete a section from the configuration",
+	Long:  `Deletes a section by name from your ai_rulez.yaml file.`,
 	Args:  cobra.ExactArgs(1),
-	Run:   runDeleteSection,
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+		crud.DeleteElement("sections", name)
+	},
+}
+
+// GetSectionCmd gets a section
+var GetSectionCmd = &cobra.Command{
+	Use:   "section [name]",
+	Short: "Get a section from the configuration",
+	Long:  `Retrieves a section by name from your ai_rulez.yaml file.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		name := args[0]
+		crud.GetElement("sections", name)
+	},
+}
+
+// ListSectionsCmd lists all sections
+var ListSectionsCmd = &cobra.Command{
+	Use:     "sections",
+	Short:   "List all sections in the configuration",
+	Long:    `Lists all sections defined in your AI rules configuration.`,
+	Aliases: []string{"section"},
+	Run: func(cmd *cobra.Command, args []string) {
+		crud.ListElements("sections")
+	},
 }
 
 func init() {
-	AddSectionCmd.Flags().StringVar(&sectionPriority, "priority", "medium", "Priority of the section (critical, high, medium, low, minimal)")
-	AddSectionCmd.Flags().StringSliceVar(&sectionTargets, "targets", []string{}, "Target file patterns (glob patterns)")
+	// Flags for Add command
+	AddSectionCmd.Flags().StringVar(&sectionID, "id", "", "Optional unique identifier for the section")
+	AddSectionCmd.Flags().StringVarP(&sectionContent, "content", "c", "", "Content of the section (required)")
+	AddSectionCmd.MarkFlagRequired("content")
+	AddSectionCmd.Flags().StringVarP(&sectionPriority, "priority", "p", "medium", "Priority of the section (critical, high, medium, low, minimal)")
+	AddSectionCmd.Flags().StringSliceVarP(&sectionTargets, "target", "t", []string{}, "Output target for this section (can be specified multiple times)")
 
-	UpdateSectionCmd.Flags().StringVar(&sectionContent, "content", "", "New content for the section")
-	UpdateSectionCmd.Flags().StringVar(&sectionPriority, "priority", "", "New priority for the section (critical, high, medium, low, minimal)")
-	UpdateSectionCmd.Flags().StringSliceVar(&sectionTargets, "targets", []string{}, "Target file patterns (glob patterns)")
-}
-
-func runAddSection(cmd *cobra.Command, args []string) {
-	sectionTitle := args[0]
-	configPath, cfg := loadConfiguration()
-
-	for _, section := range cfg.Sections {
-		if section.Name == sectionTitle {
-			fmt.Printf("❌ Section '%s' already exists\n", sectionTitle)
-			os.Exit(1)
-		}
-	}
-
-	if sectionContent == "" {
-		fmt.Println("Enter section content (press Ctrl+D when done):")
-		content, err := readFromStdin()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading content: %v\n", err)
-			os.Exit(1)
-		}
-		sectionContent = content
-	}
-
-	newSection := config.Section{
-		Name:     sectionTitle,
-		Content:  sectionContent,
-		Priority: config.Priority(sectionPriority),
-		Targets:  sectionTargets,
-	}
-	cfg.Sections = append(cfg.Sections, newSection)
-
-	saveConfiguration(cfg, configPath)
-	fmt.Printf("✅ Added section '%s' with priority %s to %s\n", sectionTitle, sectionPriority, configPath)
-}
-
-func runUpdateSection(cmd *cobra.Command, args []string) {
-	sectionTitle := args[0]
-	configPath, cfg := loadConfiguration()
-
-	sectionIndex := -1
-	for i, section := range cfg.Sections {
-		if section.Name == sectionTitle {
-			sectionIndex = i
-			break
-		}
-	}
-
-	if sectionIndex == -1 {
-		fmt.Printf("❌ Section '%s' not found\n", sectionTitle)
-		os.Exit(1)
-	}
-
-	if sectionContent != "" {
-		cfg.Sections[sectionIndex].Content = sectionContent
-	} else if !cmd.Flags().Changed("priority") {
-		fmt.Println("Enter new section content (press Ctrl+D when done):")
-		content, err := readFromStdin()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error reading content: %v\n", err)
-			os.Exit(1)
-		}
-		cfg.Sections[sectionIndex].Content = content
-	}
-
-	if sectionPriority != "" {
-		cfg.Sections[sectionIndex].Priority = config.Priority(sectionPriority)
-	}
-
-	if len(sectionTargets) > 0 {
-		cfg.Sections[sectionIndex].Targets = sectionTargets
-	}
-
-	saveConfiguration(cfg, configPath)
-	fmt.Printf("✅ Updated section '%s' in %s\n", sectionTitle, configPath)
-}
-
-func runDeleteSection(cmd *cobra.Command, args []string) {
-	sectionTitle := args[0]
-	configPath, cfg := loadConfiguration()
-
-	sectionIndex := -1
-	for i, section := range cfg.Sections {
-		if section.Name == sectionTitle {
-			sectionIndex = i
-			break
-		}
-	}
-
-	if sectionIndex == -1 {
-		fmt.Printf("❌ Section '%s' not found\n", sectionTitle)
-		os.Exit(1)
-	}
-
-	cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
-
-	saveConfiguration(cfg, configPath)
-	fmt.Printf("✅ Deleted section '%s' from %s\n", sectionTitle, configPath)
+	// Flags for Update command
+	UpdateSectionCmd.Flags().StringVar(&sectionID, "id", "", "New unique identifier for the section")
+	UpdateSectionCmd.Flags().StringVarP(&sectionContent, "content", "c", "", "New content for the section")
+	UpdateSectionCmd.Flags().StringVarP(&sectionPriority, "priority", "p", "", "New priority for the section")
+	UpdateSectionCmd.Flags().StringSliceVarP(&sectionTargets, "target", "t", []string{}, "New set of output targets for the section")
 }

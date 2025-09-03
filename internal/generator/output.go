@@ -185,29 +185,29 @@ func (g *Generator) isMCPTemplate(output *config.Output) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	if template == nil {
 		return false
 	}
-	
+
 	// Check if it's a builtin MCP template
 	if template.Type == config.TemplateBuiltin {
 		mcpTemplates := []string{
 			"claude-code-mcp",
-			"cursor-mcp", 
+			"cursor-mcp",
 			"windsurf-mcp",
 			"vscode-mcp",
 			"continuedev-mcp",
 			"cline-mcp",
 		}
-		
+
 		for _, mcpTemplate := range mcpTemplates {
 			if template.Value == mcpTemplate {
 				return true
 			}
 		}
 	}
-	
+
 	return false
 }
 
@@ -220,6 +220,6 @@ func (g *Generator) writeFileWithoutHeader(filePath, content string) error {
 	if !shouldWrite {
 		return nil
 	}
-	
+
 	return g.writeFile(filePath, content)
 }
