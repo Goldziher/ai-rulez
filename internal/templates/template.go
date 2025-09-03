@@ -44,25 +44,19 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	allSections := cfg.Sections
 	allAgents := cfg.Agents
 
-	if cfg.UserRulez != nil {
-		allRules = config.MergeRules(allRules, cfg.UserRulez.Rules)
-		allSections = config.MergeSections(allSections, cfg.UserRulez.Sections)
-		allAgents = config.MergeAgents(allAgents, cfg.UserRulez.Agents)
-	}
-
 	if outputPath != "" {
 		var err error
-		allRules, err = config.FilterRules(allRules, outputPath, cfg.Targets)
+		allRules, err = config.FilterRules(allRules, outputPath, nil)
 		if err != nil {
 			allRules = cfg.Rules
 		}
 
-		allSections, err = config.FilterSections(allSections, outputPath, cfg.Targets)
+		allSections, err = config.FilterSections(allSections, outputPath, nil)
 		if err != nil {
 			allSections = cfg.Sections
 		}
 
-		allAgents, err = config.FilterAgents(allAgents, outputPath, cfg.Targets)
+		allAgents, err = config.FilterAgents(allAgents, outputPath, nil)
 		if err != nil {
 			allAgents = cfg.Agents
 		}
@@ -80,7 +74,7 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		allContent = append(allContent, contentItem{
 			Type:     "rule",
 			Title:    rule.Name,
-			Priority: rule.Priority,
+			Priority: rule.Priority.ToInt(),
 			Content:  rule.Content,
 			IsRule:   true,
 		})
@@ -90,7 +84,7 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		allContent = append(allContent, contentItem{
 			Type:     "section",
 			Title:    section.Name,
-			Priority: section.Priority,
+			Priority: section.Priority.ToInt(),
 			Content:  section.Content,
 			IsRule:   false,
 		})

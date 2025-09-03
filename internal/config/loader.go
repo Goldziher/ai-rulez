@@ -34,11 +34,13 @@ func LoadConfigWithIncludes(ctx context.Context, filename string) (*Config, erro
 		return nil, err
 	}
 
-	baseDir := filepath.Dir(absPath)
+	// Check for local config file using our discovery logic
+	localConfigPath, err := FindLocalConfigFile(absPath)
+	if err != nil {
+		return nil, oops.Wrapf(err, "find local config file")
+	}
 
-	configBaseName := strings.TrimSuffix(filepath.Base(absPath), filepath.Ext(absPath))
-	localConfigPath := filepath.Join(baseDir, configBaseName+".local.yaml")
-	if _, err := os.Stat(localConfigPath); err == nil {
+	if localConfigPath != "" {
 		if err := loader.loadLocalOverrides(ctx, config, localConfigPath); err != nil {
 			return nil, err
 		}
@@ -132,9 +134,9 @@ func (l *configLoader) resolveIncludes(ctx context.Context, config *Config, base
 		return err
 	}
 
-	config.Rules = MergeRules(allRules)
-	config.Sections = MergeSections(allSections)
-	config.Agents = MergeAgents(allAgents)
+	config.Rules = allRules
+	config.Sections = allSections
+	config.Agents = allAgents
 	config.Includes = nil
 
 	setDefaultPriorities(config)
@@ -213,84 +215,6 @@ func (l *configLoader) loadRemoteConfig(ctx context.Context, configURL string) (
 	return &config, nil
 }
 
-func MergeRules(ruleSets ...[]Rule) []Rule {
-	ruleMap := make(map[string]Rule)
-	var order []string
-
-	for _, rules := range ruleSets {
-		for _, rule := range rules {
-			key := rule.Name
-			if rule.ID != "" {
-				key = rule.ID
-			}
-
-			if _, exists := ruleMap[key]; !exists {
-				order = append(order, key)
-			}
-			ruleMap[key] = rule
-		}
-	}
-
-	result := make([]Rule, 0, len(order))
-	for _, key := range order {
-		result = append(result, ruleMap[key])
-	}
-
-	return result
-}
-
-func MergeSections(sectionSets ...[]Section) []Section {
-	sectionMap := make(map[string]Section)
-	var order []string
-
-	for _, sections := range sectionSets {
-		for _, section := range sections {
-			key := section.Name
-			if section.ID != "" {
-				key = section.ID
-			}
-
-			if _, exists := sectionMap[key]; !exists {
-				order = append(order, key)
-			}
-			sectionMap[key] = section
-		}
-	}
-
-	result := make([]Section, 0, len(order))
-	for _, key := range order {
-		result = append(result, sectionMap[key])
-	}
-
-	return result
-}
-
-func MergeAgents(agentSets ...[]Agent) []Agent {
-	agentMap := make(map[string]Agent)
-	var order []string
-
-	for _, agents := range agentSets {
-		for i := range agents {
-			key := agents[i].Name
-			if agents[i].ID != "" {
-				key = agents[i].ID
-			}
-
-			if _, exists := agentMap[key]; !exists {
-				order = append(order, key)
-			}
-			agentMap[key] = agents[i]
-		}
-	}
-
-	result := make([]Agent, 0, len(order))
-	for _, key := range order {
-		result = append(result, agentMap[key])
-	}
-
-	return result
-}
-
 func ValidateIncludes(config *Config, baseDir string) error {
 	loader := &configLoader{
 		visited:      make(map[string]bool),
@@ -341,13 +265,13 @@ func ValidateOutputs(outputs []Output) error {
 	}
 
 	for i, output := range outputs {
-		if output.Path == "" && output.File == "" {
+		if output.Path == "" {
 			return oops.
-				With("field", fmt.Sprintf("outputs[%d].path or outputs[%d].file", i, i)).
+				With("field", fmt.Sprintf("outputs[%d].path", i)).
 				With("context", "output configuration").
 				With("output_index", i).
-				Hint(fmt.Sprintf("Add the required field 'outputs[%d].path or outputs[%d].file' to your configuration\nSpecify a path or file for output[%d]\nExample: path: 'CLAUDE.md' (preferred) or file: 'CLAUDE.md'", i, i, i)).
-				Errorf("required field 'outputs[%d].path or outputs[%d].file' is missing", i, i)
+				Hint(fmt.Sprintf("Add the required field 'outputs[%d].path' to your configuration\nSpecify a path for output[%d]\nExample: path: 'CLAUDE.md'", i, i)).
+				Errorf("required field 'outputs[%d].path' is missing", i)
 		}
 	}
 
@@ -360,18 +284,20 @@ func (l *configLoader) loadLocalOverrides(ctx context.Context, config *Config, f
 		return err
 	}
 
-	config.Rules = MergeRules(config.Rules, localConfig.Rules)
-	config.Sections = MergeSections(config.Sections, localConfig.Sections)
-	config.Agents = MergeAgents(config.Agents, localConfig.Agents)
+	// Merge the configs using our new ID-based merging logic
+	merged := MergeConfigs(config, localConfig)
 
-	if localConfig.UserRulez != nil {
-		if config.UserRulez == nil {
-			config.UserRulez = localConfig.UserRulez
-		} else {
-			config.UserRulez.Rules = MergeRules(config.UserRulez.Rules, localConfig.UserRulez.Rules)
-			config.UserRulez.Sections = MergeSections(config.UserRulez.Sections, localConfig.UserRulez.Sections)
-			config.UserRulez.Agents = MergeAgents(config.UserRulez.Agents, localConfig.UserRulez.Agents)
-		}
+	// Update the original config in place
+	config.Rules = merged.Rules
+	config.Sections = merged.Sections
+	config.Agents = merged.Agents
+
+	// Local configs can also add outputs and includes
+	if len(localConfig.Outputs) > 0 {
+		config.Outputs = append(config.Outputs, localConfig.Outputs...)
+	}
+	if len(localConfig.Includes) > 0 {
+		config.Includes = append(config.Includes, localConfig.Includes...)
 	}
 
 	return nil

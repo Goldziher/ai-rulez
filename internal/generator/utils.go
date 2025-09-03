@@ -110,7 +110,7 @@ func ComputeContentHashPooled(content string) string {
 
 func (*Generator) findOutputConfig(outputs []config.Output, outputFile string) *config.Output {
 	for _, output := range outputs {
-		if output.GetPath() == outputFile {
+		if output.Path == outputFile {
 			return &output
 		}
 	}
@@ -120,7 +120,7 @@ func (*Generator) findOutputConfig(outputs []config.Output, outputFile string) *
 func (*Generator) getOutputFileNames(outputs []config.Output) []string {
 	names := make([]string, len(outputs))
 	for i, output := range outputs {
-		names[i] = output.GetPath()
+		names[i] = output.Path
 	}
 	return names
 }
