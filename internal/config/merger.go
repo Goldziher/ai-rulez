@@ -8,12 +8,14 @@ func MergeConfigs(main *Config, local *Config) *Config {
 	}
 
 	merged := &Config{
-		Metadata: main.Metadata,
-		Includes: main.Includes,
-		Outputs:  main.Outputs,
-		Rules:    mergeRules(main.Rules, local.Rules),
-		Sections: mergeSections(main.Sections, local.Sections),
-		Agents:   mergeAgents(main.Agents, local.Agents),
+		Metadata:   main.Metadata,
+		Includes:   main.Includes,
+		Outputs:    main.Outputs,
+		Rules:      mergeRules(main.Rules, local.Rules),
+		Sections:   mergeSections(main.Sections, local.Sections),
+		Agents:     mergeAgents(main.Agents, local.Agents),
+		MCPServers: mergeMCPServers(main.MCPServers, local.MCPServers),
+		Commands:   mergeCommands(main.Commands, local.Commands),
 	}
 
 	// Local outputs and includes can extend main config
@@ -70,11 +72,9 @@ func mergeRules(main, local []Rule) []Rule {
 	for _, rule := range localByID {
 		result = append(result, rule)
 	}
-	for _, rule := range localWithoutID {
-		if localByName[rule.Name].Name != "" {
-			result = append(result, rule)
-			delete(localByName, rule.Name)
-		}
+	// Add remaining local rules by name that didn't override anything
+	for _, rule := range localByName {
+		result = append(result, rule)
 	}
 
 	return result
@@ -123,11 +123,9 @@ func mergeSections(main, local []Section) []Section {
 	for _, section := range localByID {
 		result = append(result, section)
 	}
-	for _, section := range localWithoutID {
-		if localByName[section.Name].Name != "" {
-			result = append(result, section)
-			delete(localByName, section.Name)
-		}
+	// Add remaining local sections by name that didn't override anything
+	for _, section := range localByName {
+		result = append(result, section)
 	}
 
 	return result
@@ -178,12 +176,9 @@ func mergeAgents(main, local []Agent) []Agent {
 	for id := range localByID {
 		result = append(result, localByID[id])
 	}
-	for i := range localWithoutID {
-		agent := &localWithoutID[i]
-		if localByName[agent.Name].Name != "" {
-			result = append(result, *agent)
-			delete(localByName, agent.Name)
-		}
+	// Add remaining local agents by name that didn't override anything
+	for _, agent := range localByName {
+		result = append(result, agent)
 	}
 
 	return result
@@ -197,4 +192,114 @@ func MergeRules(main []Rule, local []Rule) []Rule {
 // MergeSections is a public wrapper around mergeSections for testing
 func MergeSections(main []Section, local []Section) []Section {
 	return mergeSections(main, local)
+}
+
+// mergeMCPServers merges MCP servers with ID-based overrides
+func mergeMCPServers(main, local []MCPServer) []MCPServer {
+	if len(local) == 0 {
+		return main
+	}
+
+	// Create lookup map for local MCP servers by ID
+	localByID := make(map[string]MCPServer)
+	localByName := make(map[string]MCPServer)
+
+	for _, server := range local {
+		if server.ID != "" {
+			localByID[server.ID] = server
+		} else {
+			localByName[server.Name] = server
+		}
+	}
+
+	var result []MCPServer
+
+	// Process main MCP servers - override if local has matching ID or name
+	for i := range main {
+		server := &main[i]
+		switch {
+		case server.ID != "" && localByID[server.ID].Name != "":
+			// Override by ID
+			result = append(result, localByID[server.ID])
+			delete(localByID, server.ID)
+		case localByName[server.Name].Name != "":
+			// Override by name if no ID match
+			result = append(result, localByName[server.Name])
+			delete(localByName, server.Name)
+		default:
+			// No override, keep original
+			result = append(result, *server)
+		}
+	}
+
+	// Add remaining local MCP servers that didn't override anything
+	for id := range localByID {
+		result = append(result, localByID[id])
+	}
+	// Add remaining local MCP servers by name that didn't override anything
+	for _, server := range localByName {
+		result = append(result, server)
+	}
+
+	return result
+}
+
+// mergeCommands merges commands with ID-based overrides
+func mergeCommands(main, local []Command) []Command {
+	if len(local) == 0 {
+		return main
+	}
+
+	// Create lookup map for local commands by ID
+	localByID := make(map[string]Command)
+	localByName := make(map[string]Command)
+
+	for _, cmd := range local {
+		if cmd.ID != "" {
+			localByID[cmd.ID] = cmd
+		} else {
+			localByName[cmd.Name] = cmd
+		}
+	}
+
+	var result []Command
+
+	// Process main commands - override if local has matching ID or name
+	for i := range main {
+		cmd := &main[i]
+		switch {
+		case cmd.ID != "" && localByID[cmd.ID].Name != "":
+			// Override by ID
+			result = append(result, localByID[cmd.ID])
+			delete(localByID, cmd.ID)
+		case localByName[cmd.Name].Name != "":
+			// Override by name if no ID match
+			result = append(result, localByName[cmd.Name])
+			delete(localByName, cmd.Name)
+		default:
+			// No override, keep original
+			result = append(result, *cmd)
+		}
+	}
+
+	// Add remaining local commands that didn't override anything
+	for id := range localByID {
+		result = append(result, localByID[id])
+	}
+	// Add remaining local commands by name that didn't override anything
+	for _, cmd := range localByName {
+		result = append(result, cmd)
+	}
+
+	return result
+}
+
+// MergeMCPServers is a public wrapper around mergeMCPServers for testing
+func MergeMCPServers(main []MCPServer, local []MCPServer) []MCPServer {
+	return mergeMCPServers(main, local)
+}
+
+// MergeCommands is a public wrapper around mergeCommands for testing
+func MergeCommands(main []Command, local []Command) []Command {
+	return mergeCommands(main, local)
 }

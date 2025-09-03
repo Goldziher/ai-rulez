@@ -99,7 +99,7 @@ func (l *configLoader) loadConfigInternal(ctx context.Context, filename string, 
 	case l.isURL(filename):
 		config, err = l.loadRemoteConfig(ctx, filename)
 	case isInclude:
-		config, err = LoadPartialConfig(filename)
+		config, err = l.loadIncludeFile(ctx, filename)
 	default:
 		config, err = LoadConfig(filename)
 	}
@@ -117,6 +117,13 @@ func (l *configLoader) loadConfigInternal(ctx context.Context, filename string, 
 	} else {
 		baseDir = filepath.Dir(filename)
 	}
+	
+	// Resolve extends first (inheritance)
+	if err := l.resolveExtends(ctx, config, baseDir); err != nil {
+		return nil, err
+	}
+	
+	// Then resolve includes (additive merging)
 	if err := l.resolveIncludes(ctx, config, baseDir); err != nil {
 		return nil, err
 	}
@@ -142,6 +149,89 @@ func (l *configLoader) resolveIncludes(ctx context.Context, config *Config, base
 	setDefaultPriorities(config)
 
 	return nil
+}
+
+func (l *configLoader) resolveExtends(ctx context.Context, config *Config, baseDir string) error {
+	if config.Extends == "" {
+		return nil
+	}
+
+	extendsPath := l.resolvePath(config.Extends, baseDir)
+	
+	// Load base configuration
+	baseConfig, err := l.loadConfigInternal(ctx, extendsPath, true)
+	if err != nil {
+		return oops.
+			With("extends_path", config.Extends).
+			With("resolved_path", extendsPath).
+			With("operation", "loading extended config").
+			Hint("Check if the extended configuration file exists and is accessible\nVerify the extends path is correct\nFor remote URLs, ensure network connectivity").
+			Wrapf(err, "loading extended config")
+	}
+
+	// Apply inheritance: base config is inherited, child config overrides
+	extendedConfig := l.applyExtends(baseConfig, config)
+	
+	// Replace current config with extended version
+	*config = *extendedConfig
+	config.Extends = "" // Clear extends to prevent re-processing
+
+	return nil
+}
+
+func (l *configLoader) applyExtends(base, child *Config) *Config {
+	// Start with base config
+	result := &Config{
+		Metadata: base.Metadata,
+		Extends:  "",
+		Includes: nil, // Don't copy base includes - they were already resolved
+		Outputs:  base.Outputs,
+		Rules:    base.Rules,
+		Sections: base.Sections,
+		Agents:   base.Agents,
+	}
+
+	// Override with child config values (child takes precedence)
+	if child.Metadata.Name != "" {
+		result.Metadata.Name = child.Metadata.Name
+	}
+	if child.Metadata.Version != "" {
+		result.Metadata.Version = child.Metadata.Version
+	}
+	if child.Metadata.Description != "" {
+		result.Metadata.Description = child.Metadata.Description
+	}
+
+	// Only use child includes (base includes were already resolved)
+	result.Includes = child.Includes
+	
+	// Append child outputs to base outputs
+	result.Outputs = append(result.Outputs, child.Outputs...)
+
+	// For rules, sections, and agents, merge using existing merge logic
+	result.Rules = mergeRules(result.Rules, child.Rules)
+	result.Sections = mergeSections(result.Sections, child.Sections)
+	result.Agents = mergeAgents(result.Agents, child.Agents)
+
+	return result
+}
+
+// loadIncludeFile loads an include file, handling cases where the include itself has extends or includes
+func (l *configLoader) loadIncludeFile(ctx context.Context, filename string) (*Config, error) {
+	// First, try to load as partial config to check if it has extends/includes
+	partialConfig, err := LoadPartialConfig(filename)
+	if err != nil {
+		return nil, err
+	}
+	
+	// If include file has extends or includes, process it fully
+	if partialConfig.Extends != "" || len(partialConfig.Includes) > 0 {
+		// Use LoadConfigWithIncludes to process the extends/includes
+		return LoadConfigWithIncludes(ctx, filename)
+	}
+	
+	// Simple include file, return the partial config
+	return partialConfig, nil
 }
 
 func (l *configLoader) resolvePath(includePath, baseDir string) string {

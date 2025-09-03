@@ -119,7 +119,8 @@ func (g *Generator) renderAgentTemplate(output *config.Output, agent *config.Age
 		"description": agent.Description,
 	}
 	if len(agent.Tools) > 0 {
-		frontmatterData["tools"] = agent.Tools
+		// Convert tools array to comma-separated string for Claude Code format
+		frontmatterData["tools"] = strings.Join(agent.Tools, ", ")
 	}
 
 	yamlBytes, err := yaml.Marshal(frontmatterData)

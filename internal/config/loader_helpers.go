@@ -41,23 +41,27 @@ func setAgentsPriorities(agents []Agent) {
 
 // collectIncludedContent gathers all rules, sections, and agents from includes
 func (l *configLoader) collectIncludedContent(ctx context.Context, config *Config, baseDir string) ([]Rule, []Section, []Agent, error) {
-	var allRules []Rule
-	var allSections []Section
-	var allAgents []Agent
+	// Start with current config content
+	allRules := make([]Rule, len(config.Rules))
+	copy(allRules, config.Rules)
+	
+	allSections := make([]Section, len(config.Sections))
+	copy(allSections, config.Sections)
+	
+	allAgents := make([]Agent, len(config.Agents))
+	copy(allAgents, config.Agents)
 
-	allRules = append(allRules, config.Rules...)
-	allSections = append(allSections, config.Sections...)
-	allAgents = append(allAgents, config.Agents...)
-
+	// Process includes and merge them in order (includes override existing items with same name)
 	for _, includePath := range config.Includes {
 		rules, sections, agents, err := l.processInclude(ctx, includePath, baseDir)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		allRules = append(allRules, rules...)
-		allSections = append(allSections, sections...)
-		allAgents = append(allAgents, agents...)
+		// Use merge logic to handle overrides by name/ID
+		allRules = mergeRules(allRules, rules)
+		allSections = mergeSections(allSections, sections)
+		allAgents = mergeAgents(allAgents, agents)
 	}
 
 	return allRules, allSections, allAgents, nil

@@ -183,7 +183,160 @@ rules:
       - Bundle size monitoring
 ```
 
-## 6. Remote Configuration Sharing
+## 5. Configuration Inheritance (Extends)
+
+Create specialized configurations that inherit from a base configuration:
+
+### Base Configuration (shared across projects)
+```yaml
+# https://raw.githubusercontent.com/myorg/standards/main/typescript-base.yaml
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+
+metadata:
+  description: Base TypeScript configuration for all projects
+
+outputs:
+  - path: "CLAUDE.md"
+  - path: ".cursor/rules/rules.mdc"
+
+rules:
+  - name: "TypeScript Standards" 
+    priority: critical
+    content: |
+      **Language**: TypeScript 5.8+ with strict mode enabled
+      **Formatting**: ESLint + Biome with automated fixes
+      **Testing**: Vitest for unit tests, Playwright for E2E
+      **Build**: Vite for bundling and development server
+      
+  - name: "Code Quality"
+    priority: high
+    content: |
+      - Use explicit return types for functions
+      - No `any` types - use proper typing
+      - Prefer composition over inheritance
+      - Keep functions small and focused
+
+agents:
+  - name: "typescript-specialist"
+    description: "TypeScript development specialist"
+    system_prompt: |
+      TypeScript expert focusing on:
+      - Modern TypeScript patterns and best practices
+      - Type safety and advanced type system features
+      - Performance optimization and bundle analysis
+      - Testing strategies with TypeScript
+```
+
+### Child Configuration (inherits and customizes)
+```yaml
+# Frontend project extends the base
+extends: "https://raw.githubusercontent.com/myorg/standards/main/typescript-base.yaml"
+
+metadata:
+  name: "E-commerce Frontend"
+  version: "2.1.0"
+
+# Adds additional outputs beyond base
+outputs:
+  - path: ".github/copilot-instructions.md"
+
+rules:
+  - name: "Frontend Framework"  # New rule specific to frontend
+    priority: critical
+    content: |
+      **Framework**: React 19 with concurrent features
+      **State**: Zustand for client state, TanStack Query for server state
+      **Styling**: Tailwind CSS v4 with design system tokens
+      **Routing**: React Router v6 with data loading patterns
+
+  - name: "Code Quality"        # Overrides base rule
+    priority: critical          # Higher priority than base
+    content: |
+      **Frontend Code Quality**:
+      - Component composition patterns
+      - Custom hooks for reusable logic  
+      - Proper error boundaries and loading states
+      - Accessibility (WCAG 2.1 AA compliance)
+      - Performance: lazy loading, code splitting, memoization
+
+agents:
+  - name: "react-specialist"    # Additional agent for frontend
+    description: "React development and UI specialist" 
+    system_prompt: |
+      React expert specializing in:
+      - Component design patterns and composition
+      - State management and data fetching
+      - Performance optimization (React DevTools, Profiler)
+      - Accessibility and responsive design principles
+```
+
+**Result**: Child inherits base TypeScript standards + agents, adds React-specific rules and agents, and overrides the Code Quality rule with frontend-specific content.
+
+## 6. Extends + Includes Combined (Maximum Flexibility)
+
+Use both extends and includes together for maximum configuration power:
+
+```yaml
+# Project inherits base + composes additional pieces
+extends: "https://company.com/base-typescript.yaml"
+includes:
+  - "https://company.com/security-standards.yaml"
+  - "https://company.com/testing-standards.yaml"
+  - "./local-team-rules.yaml"
+
+metadata:
+  name: "E-commerce Frontend"
+  version: "2.1.0"
+
+outputs:
+  - path: "CLAUDE.md"
+  - path: ".cursor/rules/rules.mdc"
+  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
+
+agents:
+  - name: "ecommerce-specialist"
+    description: "E-commerce domain expert"
+    system_prompt: |
+      E-commerce specialist focusing on:
+      - Shopping cart and checkout flows
+      - Payment processing integration
+      - Product catalog management
+      - Performance optimization for large catalogs
+
+rules:
+  - name: "E-commerce Patterns"
+    priority: critical
+    content: |
+      **Shopping Cart**:
+      - Persist cart state across sessions
+      - Handle inventory updates in real-time
+      - Implement optimistic UI updates
+      
+      **Product Catalog**:
+      - Use virtualization for large product lists
+      - Implement smart search with filters
+      - Optimize images with next/image
+      
+      **Checkout Process**:
+      - Multi-step form validation
+      - Payment method flexibility
+      - Order confirmation flows
+```
+
+**Processing Flow:**
+1. **Extends**: Inherits base TypeScript configuration (standards, tooling, base agents)
+2. **Includes**: Merges security standards, testing patterns, and local team rules
+3. **Local**: Adds e-commerce specific agent and rules
+
+**Benefits:**
+- Base standards provide consistency across all projects
+- Includes add specialized knowledge (security, testing) 
+- Local config customizes for specific domain (e-commerce)
+- Include files can themselves have extends for nested inheritance
+
+## 7. Remote Configuration Sharing
 
 Share common rules across projects:
 
