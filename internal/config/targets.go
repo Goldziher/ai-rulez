@@ -5,6 +5,33 @@ import (
 	"strings"
 )
 
+// resolveTargets expands named targets (those starting with @) using the namedTargets map
+func resolveTargets(targets []string, namedTargets map[string][]string) []string {
+	if len(targets) == 0 {
+		return targets
+	}
+
+	resolved := make([]string, 0, len(targets))
+	for _, target := range targets {
+		cleanTarget := strings.TrimSpace(target)
+		if cleanTarget == "" {
+			continue
+		}
+		
+		if strings.HasPrefix(cleanTarget, "@") {
+			namedTarget := cleanTarget[1:] // Remove the @ prefix
+			if patterns, exists := namedTargets[namedTarget]; exists {
+				resolved = append(resolved, patterns...)
+			}
+			// If named target doesn't exist, ignore it (could log a warning)
+		} else {
+			resolved = append(resolved, cleanTarget)
+		}
+	}
+	
+	return resolved
+}
+
 func MatchesTarget(outputPath string, targets []string) bool {
 	if len(targets) == 0 {
 		return true
@@ -89,7 +116,8 @@ func FilterRules(rules []Rule, outputPath string, namedTargets map[string][]stri
 
 	filtered := make([]Rule, 0, len(rules))
 	for _, rule := range rules {
-		if MatchesTarget(outputPath, rule.Targets) {
+		resolvedTargets := resolveTargets(rule.Targets, namedTargets)
+		if MatchesTarget(outputPath, resolvedTargets) {
 			filtered = append(filtered, rule)
 		}
 	}
@@ -104,7 +132,8 @@ func FilterSections(sections []Section, outputPath string, namedTargets map[stri
 
 	filtered := make([]Section, 0, len(sections))
 	for _, section := range sections {
-		if MatchesTarget(outputPath, section.Targets) {
+		resolvedTargets := resolveTargets(section.Targets, namedTargets)
+		if MatchesTarget(outputPath, resolvedTargets) {
 			filtered = append(filtered, section)
 		}
 	}
@@ -119,7 +148,8 @@ func FilterAgents(agents []Agent, outputPath string, namedTargets map[string][]s
 
 	filtered := make([]Agent, 0, len(agents))
 	for i := range agents {
-		if MatchesTarget(outputPath, agents[i].Targets) {
+		resolvedTargets := resolveTargets(agents[i].Targets, namedTargets)
+		if MatchesTarget(outputPath, resolvedTargets) {
 			filtered = append(filtered, agents[i])
 		}
 	}
