@@ -177,8 +177,8 @@ func mergeAgents(main, local []Agent) []Agent {
 		result = append(result, localByID[id])
 	}
 	// Add remaining local agents by name that didn't override anything
-	for _, agent := range localByName {
-		result = append(result, agent)
+	for name := range localByName {
+		result = append(result, localByName[name])
 	}
 
 	return result
@@ -204,11 +204,11 @@ func mergeMCPServers(main, local []MCPServer) []MCPServer {
 	localByID := make(map[string]MCPServer)
 	localByName := make(map[string]MCPServer)
 
-	for _, server := range local {
-		if server.ID != "" {
-			localByID[server.ID] = server
+	for i := range local {
+		if local[i].ID != "" {
+			localByID[local[i].ID] = local[i]
 		} else {
-			localByName[server.Name] = server
+			localByName[local[i].Name] = local[i]
 		}
 	}
 
@@ -237,8 +237,8 @@ func mergeMCPServers(main, local []MCPServer) []MCPServer {
 		result = append(result, localByID[id])
 	}
 	// Add remaining local MCP servers by name that didn't override anything
-	for _, server := range localByName {
-		result = append(result, server)
+	for name := range localByName {
+		result = append(result, localByName[name])
 	}
 
 	return result
@@ -254,11 +254,11 @@ func mergeCommands(main, local []Command) []Command {
 	localByID := make(map[string]Command)
 	localByName := make(map[string]Command)
 
-	for _, cmd := range local {
-		if cmd.ID != "" {
-			localByID[cmd.ID] = cmd
+	for i := range local {
+		if local[i].ID != "" {
+			localByID[local[i].ID] = local[i]
 		} else {
-			localByName[cmd.Name] = cmd
+			localByName[local[i].Name] = local[i]
 		}
 	}
 
@@ -287,8 +287,8 @@ func mergeCommands(main, local []Command) []Command {
 		result = append(result, localByID[id])
 	}
 	// Add remaining local commands by name that didn't override anything
-	for _, cmd := range localByName {
-		result = append(result, cmd)
+	for name := range localByName {
+		result = append(result, localByName[name])
 	}
 
 	return result

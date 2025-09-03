@@ -216,15 +216,15 @@ generated_agents = [
 // getBuiltinTemplates returns all built-in templates
 func getBuiltinTemplates() map[string]string {
 	return map[string]string{
-		"default":             defaultTemplate,
-		"minimal":             minimalTemplate,
-		"documentation":       documentationTemplate,
-		"claude-code-mcp":     claudeCodeMCPTemplate,
-		"cursor-mcp":          cursorMCPTemplate,
-		"windsurf-mcp":        windsurfMCPTemplate,
-		"vscode-mcp":          vscodeMCPTemplate,
-		"continuedev-mcp":     continuedevMCPTemplate,
-		"cline-mcp":           clineMCPTemplate,
-		"continuedev-agents":  continuedevAgentsTemplate,
+		"default":            defaultTemplate,
+		"minimal":            minimalTemplate,
+		"documentation":      documentationTemplate,
+		"claude-code-mcp":    claudeCodeMCPTemplate,
+		"cursor-mcp":         cursorMCPTemplate,
+		"windsurf-mcp":       windsurfMCPTemplate,
+		"vscode-mcp":         vscodeMCPTemplate,
+		"continuedev-mcp":    continuedevMCPTemplate,
+		"cline-mcp":          clineMCPTemplate,
+		"continuedev-agents": continuedevAgentsTemplate,
 	}
 }
