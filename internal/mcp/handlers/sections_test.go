@@ -27,7 +27,7 @@ func TestSectionHandlers(t *testing.T) {
 		newSection := config.Section{
 			Name:     "New Section",
 			Content:  "New content",
-			Priority: 10,
+			Priority: config.PriorityCritical,
 		}
 
 		cfg.Sections = append(cfg.Sections, newSection)
@@ -44,13 +44,13 @@ func TestSectionHandlers(t *testing.T) {
 
 		if len(cfg.Sections) > 0 {
 			cfg.Sections[0].Content = "Updated content"
-			cfg.Sections[0].Priority = 10
+			cfg.Sections[0].Priority = config.PriorityCritical
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "Updated content", reloaded.Sections[0].Content)
-			assert.Equal(t, 10, reloaded.Sections[0].Priority)
+			assert.Equal(t, config.PriorityCritical, reloaded.Sections[0].Priority)
 		}
 	})
 

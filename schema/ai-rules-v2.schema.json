@@ -59,16 +59,8 @@
       "minItems": 1,
       "items": {
         "type": "object",
-        "anyOf": [
-          {"required": ["path"]},
-          {"required": ["file"]}
-        ],
+        "required": ["path"],
         "properties": {
-          "file": {
-            "type": "string",
-            "description": "Specific output file path (relative to this config file)",
-            "minLength": 1
-          },
           "path": {
             "type": "string",
             "description": "Output path - can be a file or directory. If directory (ends with /), generates multiple files based on content",
@@ -88,18 +80,24 @@
             "oneOf": [
               {
                 "type": "string",
-                "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
-                "description": "Built-in template name (e.g., 'default', 'documentation')"
+                "description": "Legacy format: built-in template name, file path (@file), or inline template"
               },
               {
-                "type": "string",
-                "pattern": "^@.+$",
-                "description": "File path reference starting with @ (e.g., '@templates/custom.tmpl')"
-              },
-              {
-                "type": "string",
-                "pattern": "\\n",
-                "description": "Inline template string (multiline Go template syntax)"
+                "type": "object",
+                "required": ["type", "value"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["builtin", "file", "inline"],
+                    "description": "Template type: builtin (built-in template), file (external file), inline (inline template string)"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Template value: template name for builtin, file path for file, template content for inline"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Structured template configuration"
               }
             ],
             "description": "Template to use for output generation"
@@ -126,10 +124,10 @@
             "minLength": 1
           },
           "priority": {
-            "type": "integer",
-            "description": "Rule priority (higher number = higher priority, default: 1)",
-            "minimum": 1,
-            "default": 1
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low", "minimal"],
+            "description": "Rule priority (critical=10, high=8, medium=5, low=3, minimal=1, default: medium)",
+            "default": "medium"
           },
           "content": {
             "type": "string",
@@ -167,10 +165,10 @@
             "minLength": 1
           },
           "priority": {
-            "type": "integer",
-            "description": "Section priority (higher number = higher priority, default: 1)",
-            "minimum": 1,
-            "default": 1
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low", "minimal"],
+            "description": "Section priority (critical=10, high=8, medium=5, low=3, minimal=1, default: medium)",
+            "default": "medium"
           },
           "content": {
             "type": "string",
@@ -214,10 +212,10 @@
             "minLength": 1
           },
           "priority": {
-            "type": "integer",
-            "description": "Agent priority (higher number = higher priority, default: 1)",
-            "minimum": 1,
-            "default": 1
+            "type": "string",
+            "enum": ["critical", "high", "medium", "low", "minimal"],
+            "description": "Agent priority (critical=10, high=8, medium=5, low=3, minimal=1, default: medium)",
+            "default": "medium"
           },
           "tools": {
             "type": "array",
@@ -231,18 +229,24 @@
             "oneOf": [
               {
                 "type": "string",
-                "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
-                "description": "Built-in template name (e.g., 'default', 'specialized')"
+                "description": "Legacy format: built-in template name, file path (@file), or inline template"
               },
               {
-                "type": "string",
-                "pattern": "^@.+$",
-                "description": "File path reference starting with @ (e.g., '@templates/agent.tmpl')"
-              },
-              {
-                "type": "string",
-                "pattern": "\n",
-                "description": "Inline template string (multiline Go template syntax)"
+                "type": "object",
+                "required": ["type", "value"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["builtin", "file", "inline"],
+                    "description": "Template type: builtin (built-in template), file (external file), inline (inline template string)"
+                  },
+                  "value": {
+                    "type": "string",
+                    "description": "Template value: template name for builtin, file path for file, template content for inline"
+                  }
+                },
+                "additionalProperties": false,
+                "description": "Structured template configuration"
               }
             ],
             "description": "Template to use for agent system prompt generation"
@@ -264,170 +268,6 @@
         },
         "additionalProperties": false
       }
-    },
-    "user_rulez": {
-      "type": "object",
-      "description": "User-specific rules and sections (overrides shared config, not committed to git)",
-      "properties": {
-        "rules": {
-          "type": "array",
-          "description": "List of user-specific rules",
-          "items": {
-            "type": "object",
-            "required": ["name", "content"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Optional unique identifier for the rule (used for overriding in local files)",
-                "minLength": 1
-              },
-              "name": {
-                "type": "string",
-                "description": "Rule name/title",
-                "minLength": 1
-              },
-              "priority": {
-                "type": "integer",
-                "description": "Rule priority (higher number = higher priority, default: 1)",
-                "minimum": 1,
-                "default": 1
-              },
-              "content": {
-                "type": "string",
-                "description": "Rule content (can be multiline)",
-                "minLength": 1
-              },
-              "targets": {
-                "type": "array",
-                "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "uniqueItems": true
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "sections": {
-          "type": "array",
-          "description": "List of user-specific text sections",
-          "items": {
-            "type": "object",
-            "required": ["name", "content"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Optional unique identifier for the section (used for overriding in local files)",
-                "minLength": 1
-              },
-              "name": {
-                "type": "string",
-                "description": "Section name (for organization/merging)",
-                "minLength": 1
-              },
-              "priority": {
-                "type": "integer",
-                "description": "Section priority (higher number = higher priority, default: 1)",
-                "minimum": 1,
-                "default": 1
-              },
-              "content": {
-                "type": "string",
-                "description": "Section content in markdown (rendered as-is)",
-                "minLength": 1
-              },
-              "targets": {
-                "type": "array",
-                "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "uniqueItems": true
-              }
-            },
-            "additionalProperties": false
-          }
-        },
-        "agents": {
-          "type": "array",
-          "description": "List of user-specific agents",
-          "items": {
-            "type": "object",
-            "required": ["name", "description"],
-            "properties": {
-              "id": {
-                "type": "string",
-                "description": "Optional unique identifier for the agent (used for overriding in local files)",
-                "minLength": 1
-              },
-              "name": {
-                "type": "string",
-                "description": "Agent name (lowercase, alphanumeric with hyphens)",
-                "pattern": "^[a-z][a-z0-9-]*$",
-                "minLength": 1
-              },
-              "description": {
-                "type": "string",
-                "description": "When to use this agent",
-                "minLength": 1
-              },
-              "priority": {
-                "type": "integer",
-                "description": "Agent priority (higher number = higher priority, default: 1)",
-                "minimum": 1,
-                "default": 1
-              },
-              "tools": {
-                "type": "array",
-                "description": "List of tools available to this agent (omit for all tools)",
-                "items": {
-                  "type": "string"
-                },
-                "uniqueItems": true
-              },
-              "template": {
-                "oneOf": [
-                  {
-                    "type": "string",
-                    "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
-                    "description": "Built-in template name (e.g., 'default', 'specialized')"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "^@.+$",
-                    "description": "File path reference starting with @ (e.g., '@templates/agent.tmpl')"
-                  },
-                  {
-                    "type": "string",
-                    "pattern": "\n",
-                    "description": "Inline template string (multiline Go template syntax)"
-                  }
-                ],
-                "description": "Template to use for agent system prompt generation"
-              },
-              "system_prompt": {
-                "type": "string",
-                "description": "Agent system prompt (used when template is not specified)",
-                "minLength": 1
-              },
-              "targets": {
-                "type": "array",
-                "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
-                "items": {
-                  "type": "string",
-                  "minLength": 1
-                },
-                "uniqueItems": true
-              }
-            },
-            "additionalProperties": false
-          }
-        }
-      },
-      "additionalProperties": false
     }
   },
   "additionalProperties": false,

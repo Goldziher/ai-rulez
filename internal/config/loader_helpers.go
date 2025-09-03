@@ -13,34 +13,28 @@ func setDefaultPriorities(config *Config) {
 	setRulesPriorities(config.Rules)
 	setSectionsPriorities(config.Sections)
 	setAgentsPriorities(config.Agents)
-
-	if config.UserRulez != nil {
-		setRulesPriorities(config.UserRulez.Rules)
-		setSectionsPriorities(config.UserRulez.Sections)
-		setAgentsPriorities(config.UserRulez.Agents)
-	}
 }
 
 func setRulesPriorities(rules []Rule) {
 	for i := range rules {
-		if rules[i].Priority == 0 {
-			rules[i].Priority = 1
+		if rules[i].Priority == "" {
+			rules[i].Priority = PriorityMedium
 		}
 	}
 }
 
 func setSectionsPriorities(sections []Section) {
 	for i := range sections {
-		if sections[i].Priority == 0 {
-			sections[i].Priority = 1
+		if sections[i].Priority == "" {
+			sections[i].Priority = PriorityMedium
 		}
 	}
 }
 
 func setAgentsPriorities(agents []Agent) {
 	for i := range agents {
-		if agents[i].Priority == 0 {
-			agents[i].Priority = 1
+		if agents[i].Priority == "" {
+			agents[i].Priority = PriorityMedium
 		}
 	}
 }

@@ -16,7 +16,7 @@ func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
 
 	var outputFiles []string
 	for _, output := range cfg.Outputs {
-		path := output.GetPath()
+		path := output.Path
 		if output.IsDirectory() {
 			dirs := strings.Split(strings.TrimSuffix(path, "/"), "/")
 			if len(dirs) > 0 {

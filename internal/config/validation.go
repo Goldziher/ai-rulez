@@ -1,6 +1,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/samber/oops"
 )
 
@@ -16,42 +18,45 @@ func (c *Config) Validate() error {
 
 	for _, rule := range c.Rules {
 		if len(rule.Targets) > 0 {
-			_, err := ResolveTargets(rule.Targets, c.Targets)
-			if err != nil {
-				return oops.
-					With("field", "rules").
-					With("rule_name", rule.Name).
-					With("targets", rule.Targets).
-					Hint("Check that all target references in rules are defined in the targets section\nDefine missing targets in the targets section\nExample: targets:\n  backend: ['src/**/*.go']\n  frontend: ['web/**/*.ts']").
-					Wrapf(err, "invalid target reference in rule '%s'", rule.Name)
+			for _, target := range rule.Targets {
+				if strings.HasPrefix(target, "@") {
+					return oops.
+						With("field", "rules").
+						With("rule_name", rule.Name).
+						With("invalid_target", target).
+						Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
+						Errorf("invalid target pattern '%s' in rule '%s'", target, rule.Name)
+				}
 			}
 		}
 	}
 
 	for _, section := range c.Sections {
 		if len(section.Targets) > 0 {
-			_, err := ResolveTargets(section.Targets, c.Targets)
-			if err != nil {
-				return oops.
-					With("field", "sections").
-					With("section_name", section.Name).
-					With("targets", section.Targets).
-					Hint("Check that all target references in sections are defined in the targets section\nDefine missing targets in the targets section\nExample: targets:\n  backend: ['src/**/*.go']\n  frontend: ['web/**/*.ts']").
-					Wrapf(err, "invalid target reference in section '%s'", section.Name)
+			for _, target := range section.Targets {
+				if strings.HasPrefix(target, "@") {
+					return oops.
+						With("field", "sections").
+						With("section_name", section.Name).
+						With("invalid_target", target).
+						Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
+						Errorf("invalid target pattern '%s' in section '%s'", target, section.Name)
+				}
 			}
 		}
 	}
 
 	for i := range c.Agents {
 		if len(c.Agents[i].Targets) > 0 {
-			_, err := ResolveTargets(c.Agents[i].Targets, c.Targets)
-			if err != nil {
-				return oops.
-					With("field", "agents").
-					With("agent_name", c.Agents[i].Name).
-					With("targets", c.Agents[i].Targets).
-					Hint("Check that all target references in agents are defined in the targets section\nDefine missing targets in the targets section\nExample: targets:\n  backend: ['src/**/*.go']\n  frontend: ['web/**/*.ts']").
-					Wrapf(err, "invalid target reference in agent '%s'", c.Agents[i].Name)
+			for _, target := range c.Agents[i].Targets {
+				if strings.HasPrefix(target, "@") {
+					return oops.
+						With("field", "agents").
+						With("agent_name", c.Agents[i].Name).
+						With("invalid_target", target).
+						Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
+						Errorf("invalid target pattern '%s' in agent '%s'", target, c.Agents[i].Name)
+				}
 			}
 		}
 	}

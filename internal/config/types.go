@@ -4,18 +4,9 @@ import "strings"
 
 // Config represents the main configuration structure
 type Config struct {
-	Metadata  Metadata            `yaml:"metadata"`
-	Includes  []string            `yaml:"includes,omitempty"`
-	Targets   map[string][]string `yaml:"targets,omitempty"`
-	Outputs   []Output            `yaml:"outputs"`
-	Rules     []Rule              `yaml:"rules,omitempty"`
-	Sections  []Section           `yaml:"sections,omitempty"`
-	Agents    []Agent             `yaml:"agents,omitempty"`
-	UserRulez *UserRulez          `yaml:"user_rulez,omitempty"`
-}
-
-// UserRulez contains user-specific rules configuration
-type UserRulez struct {
+	Metadata Metadata  `yaml:"metadata"`
+	Includes []string  `yaml:"includes,omitempty"`
+	Outputs  []Output  `yaml:"outputs"`
 	Rules    []Rule    `yaml:"rules,omitempty"`
 	Sections []Section `yaml:"sections,omitempty"`
 	Agents   []Agent   `yaml:"agents,omitempty"`
@@ -30,25 +21,20 @@ type Metadata struct {
 
 // Output represents an output file configuration
 type Output struct {
-	File         string `yaml:"file,omitempty"`
-	Path         string `yaml:"path,omitempty"`
-	Type         string `yaml:"type,omitempty"`
-	Template     string `yaml:"template,omitempty"`
-	NamingScheme string `yaml:"naming_scheme,omitempty"`
+	Path         string         `yaml:"path"`
+	Type         string         `yaml:"type,omitempty"`
+	Template     TemplateConfig `yaml:"template,omitempty"`
+	NamingScheme string         `yaml:"naming_scheme,omitempty"`
 }
 
-// GetPath returns the output path
-func (o *Output) GetPath() string {
-	if o.Path != "" {
-		return o.Path
-	}
-	return o.File
+// GetTemplate parses the template configuration
+func (o *Output) GetTemplate() (*Template, error) {
+	return ParseTemplate(o.Template)
 }
 
 // IsDirectory checks if the output is a directory
 func (o *Output) IsDirectory() bool {
-	path := o.GetPath()
-	return strings.HasSuffix(path, "/")
+	return strings.HasSuffix(o.Path, "/")
 }
 
 // GetOutputType returns the output type with default
@@ -74,7 +60,7 @@ func (o *Output) GetNamingScheme() string {
 type Rule struct {
 	ID       string   `yaml:"id,omitempty"`
 	Name     string   `yaml:"name"`
-	Priority int      `yaml:"priority,omitempty"`
+	Priority Priority `yaml:"priority,omitempty"`
 	Content  string   `yaml:"content"`
 	Targets  []string `yaml:"targets,omitempty"`
 }
@@ -83,19 +69,24 @@ type Rule struct {
 type Section struct {
 	ID       string   `yaml:"id,omitempty"`
 	Name     string   `yaml:"name"`
-	Priority int      `yaml:"priority,omitempty"`
+	Priority Priority `yaml:"priority,omitempty"`
 	Content  string   `yaml:"content"`
 	Targets  []string `yaml:"targets,omitempty"`
 }
 
 // Agent represents an AI agent configuration
 type Agent struct {
-	ID           string   `yaml:"id,omitempty"`
-	Name         string   `yaml:"name"`
-	Description  string   `yaml:"description"`
-	Priority     int      `yaml:"priority,omitempty"`
-	Tools        []string `yaml:"tools,omitempty"`
-	Template     string   `yaml:"template,omitempty"`
-	SystemPrompt string   `yaml:"system_prompt,omitempty"`
-	Targets      []string `yaml:"targets,omitempty"`
+	ID           string         `yaml:"id,omitempty"`
+	Name         string         `yaml:"name"`
+	Description  string         `yaml:"description"`
+	Priority     Priority       `yaml:"priority,omitempty"`
+	Tools        []string       `yaml:"tools,omitempty"`
+	Template     TemplateConfig `yaml:"template,omitempty"`
+	SystemPrompt string         `yaml:"system_prompt,omitempty"`
+	Targets      []string       `yaml:"targets,omitempty"`
+}
+
+// GetTemplate parses the template configuration
+func (a *Agent) GetTemplate() (*Template, error) {
+	return ParseTemplate(a.Template)
 }

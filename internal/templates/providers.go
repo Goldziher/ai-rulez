@@ -140,7 +140,7 @@ agents:
 
 	builder.WriteString(`rules:
   - name: "Code Quality"
-    priority: 10
+    priority: critical
     content: |
       - Write clean, readable, and maintainable code
       - Follow consistent coding standards and conventions
@@ -149,7 +149,7 @@ agents:
       - Avoid code duplication and follow DRY principles
 
   - name: "Testing Standards"
-    priority: 9
+    priority: critical
     content: |
       - Write comprehensive unit tests for all new functionality
       - Maintain test coverage above 80%
@@ -158,7 +158,7 @@ agents:
       - Follow testing best practices (AAA pattern, mocking, etc.)
 
   - name: "Documentation"
-    priority: 8
+    priority: high
     content: |
       - Document all public APIs and complex logic
       - Keep README and documentation up to date
@@ -167,7 +167,7 @@ agents:
       - Document design decisions and architecture
 
   - name: "Error Handling"
-    priority: 7
+    priority: high
     content: |
       - Always handle errors explicitly
       - Provide meaningful error messages with context
@@ -179,14 +179,14 @@ agents:
 
 	builder.WriteString(`sections:
   - name: "Project Context"
-    priority: 10
+    priority: critical
     content: |
       This project follows industry best practices for software development.
       All code should be production-ready, well-tested, and properly documented.
       We prioritize maintainability, performance, and security.
 
   - name: "Development Guidelines"
-    priority: 9
+    priority: critical
     content: |
       - Follow the project's established coding conventions
       - Run tests before committing code

@@ -28,7 +28,7 @@ func TestAgentHandlers(t *testing.T) {
 		newAgent := config.Agent{
 			Name:         "new-agent",
 			Description:  "New agent",
-			Priority:     10,
+			Priority:     config.PriorityCritical,
 			Tools:        []string{"read", "write"},
 			SystemPrompt: "You are a new agent",
 		}
@@ -58,14 +58,14 @@ func TestAgentHandlers(t *testing.T) {
 
 		if len(cfg.Agents) > 0 {
 			cfg.Agents[0].Description = "Updated description"
-			cfg.Agents[0].Priority = 10
+			cfg.Agents[0].Priority = config.PriorityCritical
 			cfg.Agents[0].Tools = []string{"execute"}
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "Updated description", reloaded.Agents[0].Description)
-			assert.Equal(t, 10, reloaded.Agents[0].Priority)
+			assert.Equal(t, config.PriorityCritical, reloaded.Agents[0].Priority)
 			assert.Equal(t, []string{"execute"}, reloaded.Agents[0].Tools)
 		}
 	})

@@ -63,7 +63,7 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithTargets() {
   name: "Test Project"
 
 outputs:
-  - file: "test.md"
+  - path: "test.md"
 
 rules:
   - name: "Test Rule"
@@ -137,7 +137,7 @@ targets:
   frontend: ["*.ts"]
 
 outputs:
-  - file: "test.md"
+  - path: "test.md"
 
 rules:
   - name: "Test Rule"
@@ -170,11 +170,11 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithWarnings() {
   name: "Test Project"
 
 outputs:
-  - file: "test.md"
+  - path: "test.md"
 
 rules:
   - name: "Rule with Zero Priority"
-    priority: 1
+    priority: minimal
     content: "This rule has low priority"
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)

@@ -47,21 +47,21 @@ func setupTestConfig(t *testing.T) string {
 			{
 				Name:     "test-rule",
 				Content:  "Test rule content",
-				Priority: 5,
+				Priority: config.PriorityMedium,
 			},
 		},
 		Sections: []config.Section{
 			{
 				Name:     "Test Section",
 				Content:  "Test section content",
-				Priority: 3,
+				Priority: config.PriorityLow,
 			},
 		},
 		Agents: []config.Agent{
 			{
 				Name:         "test-agent",
 				Description:  "Test agent",
-				Priority:     5,
+				Priority:     config.PriorityMedium,
 				Tools:        []string{"tool1", "tool2"},
 				SystemPrompt: "You are a test agent",
 			},

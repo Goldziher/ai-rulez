@@ -1,61 +1,9 @@
 package config
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
-
-	"github.com/samber/oops"
 )
-
-func ResolveTargets(targets []string, namedTargets map[string][]string) ([]string, error) {
-	if len(targets) == 0 {
-		return targets, nil
-	}
-
-	resolved := make([]string, 0, len(targets))
-
-	for _, target := range targets {
-		target = strings.TrimSpace(target)
-		if target == "" {
-			continue
-		}
-
-		if strings.HasPrefix(target, "@") {
-			targetName := target[1:]
-			if targetName == "" {
-				return nil, oops.
-					Hint("Named target references should be in the format '@target-name'").
-					Errorf("empty target name after @")
-			}
-
-			patterns, exists := namedTargets[targetName]
-			if !exists {
-				return nil, oops.
-					Hint(fmt.Sprintf("Define the named target '%s' in the targets section\nAvailable named targets: %s", targetName, getAvailableTargetNames(namedTargets))).
-					Errorf("named target '%s' not found", targetName)
-			}
-
-			resolved = append(resolved, patterns...)
-		} else {
-			resolved = append(resolved, target)
-		}
-	}
-
-	return resolved, nil
-}
-
-func getAvailableTargetNames(namedTargets map[string][]string) string {
-	if len(namedTargets) == 0 {
-		return "none defined"
-	}
-
-	names := make([]string, 0, len(namedTargets))
-	for name := range namedTargets {
-		names = append(names, "@"+name)
-	}
-	return strings.Join(names, ", ")
-}
 
 func MatchesTarget(outputPath string, targets []string) bool {
 	if len(targets) == 0 {
@@ -141,12 +89,7 @@ func FilterRules(rules []Rule, outputPath string, namedTargets map[string][]stri
 
 	filtered := make([]Rule, 0, len(rules))
 	for _, rule := range rules {
-		resolvedTargets, err := ResolveTargets(rule.Targets, namedTargets)
-		if err != nil {
-			return nil, fmt.Errorf("error resolving targets for rule '%s': %w", rule.Name, err)
-		}
-
-		if MatchesTarget(outputPath, resolvedTargets) {
+		if MatchesTarget(outputPath, rule.Targets) {
 			filtered = append(filtered, rule)
 		}
 	}
@@ -161,12 +104,7 @@ func FilterSections(sections []Section, outputPath string, namedTargets map[stri
 
 	filtered := make([]Section, 0, len(sections))
 	for _, section := range sections {
-		resolvedTargets, err := ResolveTargets(section.Targets, namedTargets)
-		if err != nil {
-			return nil, fmt.Errorf("error resolving targets for section '%s': %w", section.Name, err)
-		}
-
-		if MatchesTarget(outputPath, resolvedTargets) {
+		if MatchesTarget(outputPath, section.Targets) {
 			filtered = append(filtered, section)
 		}
 	}
@@ -181,12 +119,7 @@ func FilterAgents(agents []Agent, outputPath string, namedTargets map[string][]s
 
 	filtered := make([]Agent, 0, len(agents))
 	for i := range agents {
-		resolvedTargets, err := ResolveTargets(agents[i].Targets, namedTargets)
-		if err != nil {
-			return nil, fmt.Errorf("error resolving targets for agent '%s': %w", agents[i].Name, err)
-		}
-
-		if MatchesTarget(outputPath, resolvedTargets) {
+		if MatchesTarget(outputPath, agents[i].Targets) {
 			filtered = append(filtered, agents[i])
 		}
 	}

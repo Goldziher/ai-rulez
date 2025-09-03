@@ -32,7 +32,7 @@ func (s *CRUDCLITestSuite) TestAddRule() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"--name", "Test Rule",
 		"--content", "New test rule content",
-		"--priority", "7")
+		"--priority", "high")
 
 	result.AssertStdoutContains(s.T(), "Added rule")
 
@@ -45,7 +45,7 @@ func (s *CRUDCLITestSuite) TestAddRuleWithName() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"--name", "Custom Rule Name",
 		"--content", "Custom rule content",
-		"--priority", "6")
+		"--priority", "medium")
 
 	result.AssertOutputContains(s.T(), "Added rule")
 
@@ -59,7 +59,7 @@ func (s *CRUDCLITestSuite) TestAddRuleWithPriority() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"--name", "Priority Rule",
 		"--content", "Priority rule content",
-		"--priority", "8")
+		"--priority", "high")
 
 	result.AssertStdoutContains(s.T(), "Added rule")
 
@@ -76,7 +76,7 @@ func (s *CRUDCLITestSuite) TestUpdateRule() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "rule",
 		"--name", "Original Rule",
 		"--content", "Updated content",
-		"--priority", "8")
+		"--priority", "high")
 
 	result.AssertStdoutContains(s.T(), "Updated rule")
 
@@ -105,7 +105,7 @@ func (s *CRUDCLITestSuite) TestDeleteRuleInvalidName() {
 // ========== Section CRUD Tests ==========
 
 func (s *CRUDCLITestSuite) TestAddSection() {
-	result := testutil.RunCLIExpectSuccessWithStdin(s.T(), s.workingDir, "New section content", "add", "section", "New Section", "--priority", "7")
+	result := testutil.RunCLIExpectSuccessWithStdin(s.T(), s.workingDir, "New section content", "add", "section", "New Section", "--priority", "high")
 
 	result.AssertStdoutContains(s.T(), "Added section")
 
@@ -116,7 +116,7 @@ func (s *CRUDCLITestSuite) TestAddSection() {
 }
 
 func (s *CRUDCLITestSuite) TestAddSectionWithPriority() {
-	result := testutil.RunCLIExpectSuccessWithStdin(s.T(), s.workingDir, "Priority section content", "add", "section", "Priority Section", "--priority", "8")
+	result := testutil.RunCLIExpectSuccessWithStdin(s.T(), s.workingDir, "Priority section content", "add", "section", "Priority Section", "--priority", "high")
 
 	result.AssertStdoutContains(s.T(), "Added section")
 
@@ -155,7 +155,7 @@ func (s *CRUDCLITestSuite) TestDeleteSection() {
 func (s *CRUDCLITestSuite) TestAddAgent() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "agent", "test-agent",
 		"--description", "Test agent description",
-		"--priority", "8",
+		"--priority", "high",
 		"--tools", "Read,Edit,Grep",
 		"--system-prompt", "You are a test agent")
 
@@ -189,7 +189,7 @@ func (s *CRUDCLITestSuite) TestUpdateAgent() {
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "agent", "original-agent",
 		"--description", "Updated description",
-		"--priority", "9")
+		"--priority", "critical")
 
 	result.AssertStdoutContains(s.T(), "Updated agent")
 
@@ -272,7 +272,7 @@ func (s *CRUDCLITestSuite) TestCRUDWithoutConfig() {
 }
 
 func (s *CRUDCLITestSuite) TestAddRuleMissingContent() {
-	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "add", "rule", "--name", "Test Rule", "--priority", "5")
+	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "add", "rule", "--name", "Test Rule", "--priority", "medium")
 
 	result.AssertStderrContains(s.T(), "required")
 }

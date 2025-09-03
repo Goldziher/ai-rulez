@@ -52,14 +52,14 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 	}
 
 	for i := range cfg.Outputs {
-		templateData := templates.NewTemplateDataForOutput(cfg, cfg.Outputs[i].GetPath())
+		templateData := templates.NewTemplateDataForOutput(cfg, cfg.Outputs[i].Path)
 		if err := g.writeOutputFile(&cfg.Outputs[i], templateData); err != nil {
 			output := cfg.Outputs[i]
 			return oops.
-				With("path", output.GetPath()).
+				With("path", output.Path).
 				With("output_index", i).
 				With("template", output.Template).
-				Hint(fmt.Sprintf("Check if the template '%s' is valid\nVerify the output file path is writable: %s", output.Template, output.GetPath())).
+				Hint(fmt.Sprintf("Check if the template '%s' is valid\nVerify the output file path is writable: %s", output.Template, output.Path)).
 				Wrapf(err, "generate output file")
 		}
 	}
@@ -83,10 +83,10 @@ func (g *Generator) generateAllConcurrent(cfg *config.Config) error {
 		wg.Add(1)
 		go func(idx int, out *config.Output) {
 			defer wg.Done()
-			templateData := templates.NewTemplateDataForOutput(cfg, out.GetPath())
+			templateData := templates.NewTemplateDataForOutput(cfg, out.Path)
 			if err := g.writeOutputFile(out, templateData); err != nil {
 				errChan <- oops.
-					With("path", out.GetPath()).
+					With("path", out.Path).
 					With("output_index", idx).
 					With("template", out.Template).
 					With("generation_mode", "concurrent").
@@ -115,7 +115,7 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 			Errorf("output file not found in configuration")
 	}
 
-	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.GetPath())
+	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.Path)
 	return g.writeOutputFile(targetOutput, templateData)
 }
 
@@ -155,9 +155,9 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 			Errorf("output file not found in configuration")
 	}
 
-	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.GetPath())
+	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.Path)
 	templateData.ConfigFile = g.configFile
-	templateData.OutputFile = targetOutput.GetPath()
+	templateData.OutputFile = targetOutput.Path
 
 	content, err := g.renderTemplate(targetOutput, templateData)
 	if err != nil {
@@ -181,21 +181,21 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 
 	for i := range cfg.Outputs {
 		output := &cfg.Outputs[i]
-		templateData := templates.NewTemplateDataForOutput(cfg, output.GetPath())
+		templateData := templates.NewTemplateDataForOutput(cfg, output.Path)
 		templateData.ConfigFile = g.configFile
-		templateData.OutputFile = output.GetPath()
+		templateData.OutputFile = output.Path
 
 		content, err := g.renderTemplate(output, templateData)
 		if err != nil {
 			return nil, oops.
-				With("path", output.GetPath()).
+				With("path", output.Path).
 				With("output_index", i).
 				With("template", output.Template).
 				Wrapf(err, "preview output")
 		}
 
 		header := templates.GenerateHeader(templateData)
-		results[output.GetPath()] = header + content
+		results[output.Path] = header + content
 	}
 
 	return results, nil
