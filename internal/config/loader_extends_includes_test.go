@@ -18,7 +18,7 @@ import (
 func TestLoadConfigWithExtendsAndIncludes(t *testing.T) {
 	t.Run("local extends with local includes", func(t *testing.T) {
 		tempDir := t.TempDir()
-		
+
 		// Create base config
 		baseConfigFile := filepath.Join(tempDir, "base.yaml")
 		baseContent := `
@@ -38,7 +38,7 @@ agents:
     priority: low
 `
 		require.NoError(t, os.WriteFile(baseConfigFile, []byte(baseContent), 0o644))
-		
+
 		// Create include file
 		includeFile := filepath.Join(tempDir, "include.yaml")
 		includeContent := `
@@ -53,7 +53,7 @@ agents:
     priority: medium
 `
 		require.NoError(t, os.WriteFile(includeFile, []byte(includeContent), 0o644))
-		
+
 		// Create child config with both extends and includes
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := `
@@ -74,33 +74,33 @@ rules:
     priority: critical
 `
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
-		
+
 		// Load configuration
 		cfg, err := LoadConfigWithIncludes(context.Background(), childConfigFile)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
-		
+
 		// Check metadata inheritance and override
 		assert.Equal(t, "Child Project", cfg.Metadata.Name)
 		assert.Equal(t, "2.0.0", cfg.Metadata.Version)
 		assert.Equal(t, "Base description", cfg.Metadata.Description) // Inherited from base
-		
+
 		// Check outputs are combined (base + child)
 		assert.Len(t, cfg.Outputs, 2)
 		outputPaths := []string{cfg.Outputs[0].Path, cfg.Outputs[1].Path}
 		assert.Contains(t, outputPaths, "base-output.md")
 		assert.Contains(t, outputPaths, "child-output.md")
-		
+
 		// Check rules are combined from all sources (base + include + child)
 		assert.Len(t, cfg.Rules, 3)
 		ruleNames := make(map[string]string)
 		for _, rule := range cfg.Rules {
 			ruleNames[rule.Name] = rule.Content
 		}
-		assert.Equal(t, "Overridden base rule", ruleNames["Base Rule"]) // Child overrides base
+		assert.Equal(t, "Overridden base rule", ruleNames["Base Rule"])    // Child overrides base
 		assert.Equal(t, "Include rule content", ruleNames["Include Rule"]) // From include
-		assert.Equal(t, "Child rule content", ruleNames["Child Rule"]) // From child
-		
+		assert.Equal(t, "Child rule content", ruleNames["Child Rule"])     // From child
+
 		// Check agents are combined from all sources (base + include)
 		assert.Len(t, cfg.Agents, 2)
 		agentNames := make([]string, len(cfg.Agents))
@@ -110,7 +110,7 @@ rules:
 		assert.Contains(t, agentNames, "base-agent")
 		assert.Contains(t, agentNames, "include-agent")
 	})
-	
+
 	t.Run("remote extends with local includes", func(t *testing.T) {
 		// Create remote base config
 		baseConfigContent := `
@@ -136,7 +136,7 @@ agents:
 		defer server.Close()
 
 		tempDir := t.TempDir()
-		
+
 		// Create local include file
 		includeFile := filepath.Join(tempDir, "local-include.yaml")
 		includeContent := `
@@ -150,7 +150,7 @@ sections:
     priority: medium
 `
 		require.NoError(t, os.WriteFile(includeFile, []byte(includeContent), 0o644))
-		
+
 		// Create child config with remote extends and local includes
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := fmt.Sprintf(`
@@ -166,17 +166,17 @@ rules:
     priority: critical
 `, server.URL)
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
-		
+
 		// Create test loader
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      tempDir,
 			remoteClient: createTestClient(),
 		}
-		
+
 		cfg, err := loader.loadConfig(context.Background(), childConfigFile)
 		require.NoError(t, err)
-		
+
 		// Should have rules from remote base + local include + child
 		assert.Len(t, cfg.Rules, 3)
 		ruleNames := make([]string, len(cfg.Rules))
@@ -186,19 +186,19 @@ rules:
 		assert.Contains(t, ruleNames, "Remote Rule")
 		assert.Contains(t, ruleNames, "Local Include Rule")
 		assert.Contains(t, ruleNames, "Child Rule")
-		
+
 		// Should have sections from local include
 		assert.Len(t, cfg.Sections, 1)
 		assert.Equal(t, "Local Section", cfg.Sections[0].Name)
-		
+
 		// Should have agents from remote base
 		assert.Len(t, cfg.Agents, 1)
 		assert.Equal(t, "remote-agent", cfg.Agents[0].Name)
 	})
-	
+
 	t.Run("extends with includes that have extends (nested)", func(t *testing.T) {
 		tempDir := t.TempDir()
-		
+
 		// Create grandparent config
 		grandparentFile := filepath.Join(tempDir, "grandparent.yaml")
 		grandparentContent := `
@@ -211,7 +211,7 @@ rules:
     priority: low
 `
 		require.NoError(t, os.WriteFile(grandparentFile, []byte(grandparentContent), 0o644))
-		
+
 		// Create parent config that extends grandparent
 		parentFile := filepath.Join(tempDir, "parent.yaml")
 		parentContent := `
@@ -226,7 +226,7 @@ rules:
     priority: medium
 `
 		require.NoError(t, os.WriteFile(parentFile, []byte(parentContent), 0o644))
-		
+
 		// Create include file that also extends
 		includeFile := filepath.Join(tempDir, "include.yaml")
 		includeContent := `
@@ -240,7 +240,7 @@ rules:
     priority: high
 `
 		require.NoError(t, os.WriteFile(includeFile, []byte(includeContent), 0o644))
-		
+
 		// Create child config that extends parent and includes the include
 		childFile := filepath.Join(tempDir, "child.yaml")
 		childContent := `
@@ -256,16 +256,16 @@ rules:
     priority: critical
 `
 		require.NoError(t, os.WriteFile(childFile, []byte(childContent), 0o644))
-		
+
 		cfg, err := LoadConfigWithIncludes(context.Background(), childFile)
 		require.NoError(t, err)
-		
+
 		// Check complex inheritance and merging
 		assert.Equal(t, "Child", cfg.Metadata.Name)
 		assert.Equal(t, "1.0.0", cfg.Metadata.Version)
 		assert.Equal(t, "Grandparent description", cfg.Metadata.Description) // From grandparent via parent
-		
-		// Should have rules from all levels  
+
+		// Should have rules from all levels
 		assert.Len(t, cfg.Rules, 4)
 		ruleNames := make(map[string]string)
 		for _, rule := range cfg.Rules {
@@ -275,7 +275,7 @@ rules:
 		assert.Contains(t, ruleNames, "Parent Rule")
 		assert.Contains(t, ruleNames, "Include Rule")
 		assert.Contains(t, ruleNames, "Child Rule")
-		
+
 		// The include should override grandparent rule (include processing happens after extends)
 		assert.Equal(t, "Include overrides grandparent", ruleNames["Grandparent Rule"])
 	})
