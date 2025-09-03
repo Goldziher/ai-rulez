@@ -46,7 +46,7 @@ agents:
 
 rules:
   - name: "Tech Stack"
-    priority: 10
+    priority: critical
     content: |
       **Frontend**: React 19, TypeScript 5.8, Tailwind CSS
       **Backend**: Node.js, PostgreSQL, Redis

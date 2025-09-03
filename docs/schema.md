@@ -32,7 +32,7 @@ outputs:
 
 ### Field Constraints
 - **Version**: Must follow semantic versioning (e.g., `1.0.0`)
-- **Priority**: Integer ≥ 1 (defaults to 1)
+- **Priority**: One of `critical`, `high`, `medium`, `low`, `minimal` (defaults to `minimal`)
 - **Agent names**: Must be lowercase with hyphens only (`^[a-z][a-z0-9-]*$`)
 - **Includes**: Must be valid HTTP/HTTPS URLs or local file paths
 - **Output paths**: Must have either `path` or `file` field (prefer `path`)
@@ -73,7 +73,7 @@ metadata:
 rules:
   - name: "code-quality"
     content: "Write clean code"
-    priority: 10
+    priority: critical
 outputs:
   - path: "CLAUDE.md"
 ```

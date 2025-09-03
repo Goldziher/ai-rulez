@@ -17,7 +17,7 @@ metadata:
 rules:
   - name: "code-style"
     content: "Use TypeScript with strict mode"
-    priority: 10
+    priority: critical
 
 outputs:
   - path: "CLAUDE.md"
