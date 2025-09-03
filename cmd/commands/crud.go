@@ -32,3 +32,10 @@ var GetCmd = &cobra.Command{
 	Short: "Get configuration elements (rules, sections, outputs, agents)",
 	Long:  `Retrieve and display information about specific configuration elements from your ai-rulez configuration file.`,
 }
+
+// SetCmd represents the set command group
+var SetCmd = &cobra.Command{
+	Use:   "set",
+	Short: "Set top-level configuration properties (metadata, extends, includes)",
+	Long:  `Set or update top-level singleton properties in your ai-rulez configuration file.`,
+}

@@ -93,7 +93,7 @@ func TestFilterMCPServers_WithNamedTargets(t *testing.T) {
 			Targets: []string{"@doc-files"},
 		},
 		{
-			Name:    "api-server", 
+			Name:    "api-server",
 			Targets: []string{"@api-files"},
 		},
 	}

@@ -44,10 +44,10 @@ func (l *configLoader) collectIncludedContent(ctx context.Context, config *Confi
 	// Start with current config content
 	allRules := make([]Rule, len(config.Rules))
 	copy(allRules, config.Rules)
-	
+
 	allSections := make([]Section, len(config.Sections))
 	copy(allSections, config.Sections)
-	
+
 	allAgents := make([]Agent, len(config.Agents))
 	copy(allAgents, config.Agents)
 
