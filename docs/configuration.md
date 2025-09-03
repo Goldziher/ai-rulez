@@ -178,6 +178,57 @@ outputs:
       {{end}}
 ```
 
+### Configuration Inheritance (Extends)
+
+Inherit from a base configuration and customize for specific projects:
+
+```yaml
+# Child config inherits everything from base and can override
+extends: "https://raw.githubusercontent.com/myorg/standards/main/base-config.yaml"
+
+metadata:
+  name: "My Specific Project"  # Overrides base name
+
+rules:
+  - name: "Base Rule"          # Overrides rule from base config
+    content: "Customized rule content"
+    priority: critical
+  - name: "Project Specific"   # Adds new rule
+    content: "This rule is unique to this project"
+    priority: medium
+```
+
+**Extends vs Includes:**
+- **`extends`**: Inherits from a single base config (inheritance)
+- **`includes`**: Merges content from multiple files (composition)
+- **Both together**: Use extends for base inheritance, includes for additional composition
+
+**Using Both Extends + Includes:**
+```yaml
+extends: "https://company.com/base-typescript.yaml"     # Inherit base setup
+includes:                                               # Add additional pieces
+  - "https://company.com/security-rules.yaml"          # Security standards
+  - "./local-overrides.yaml"                           # Local customizations
+
+metadata:
+  name: "My Specific Project"
+  
+rules:
+  - name: "Project Specific"
+    content: "Custom rule for this project"
+```
+
+**Processing Order:**
+1. Load and apply `extends` (base inheritance)
+2. Load and merge `includes` (additional composition)  
+3. Apply local config (final overrides)
+
+**Inheritance Rules:**
+- Child metadata overrides parent metadata (name, version, description)
+- Child outputs are appended to parent outputs
+- Child rules/sections/agents merge with parent (child overrides parent for same name)
+- Include files can themselves have `extends` or `includes` fields
+
 ### Remote Includes
 
 Share configurations across projects:

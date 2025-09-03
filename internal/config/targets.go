@@ -156,3 +156,35 @@ func FilterAgents(agents []Agent, outputPath string, namedTargets map[string][]s
 
 	return filtered, nil
 }
+
+func FilterMCPServers(mcpServers []MCPServer, outputPath string, namedTargets map[string][]string) ([]MCPServer, error) {
+	if len(mcpServers) == 0 {
+		return mcpServers, nil
+	}
+
+	filtered := make([]MCPServer, 0, len(mcpServers))
+	for _, server := range mcpServers {
+		resolvedTargets := resolveTargets(server.Targets, namedTargets)
+		if MatchesTarget(outputPath, resolvedTargets) {
+			filtered = append(filtered, server)
+		}
+	}
+
+	return filtered, nil
+}
+
+func FilterCommands(commands []Command, outputPath string, namedTargets map[string][]string) ([]Command, error) {
+	if len(commands) == 0 {
+		return commands, nil
+	}
+
+	filtered := make([]Command, 0, len(commands))
+	for _, cmd := range commands {
+		resolvedTargets := resolveTargets(cmd.Targets, namedTargets)
+		if MatchesTarget(outputPath, resolvedTargets) {
+			filtered = append(filtered, cmd)
+		}
+	}
+
+	return filtered, nil
+}
