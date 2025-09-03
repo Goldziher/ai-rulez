@@ -27,7 +27,7 @@ func TestRuleHandlers(t *testing.T) {
 		newRule := config.Rule{
 			Name:     "new-rule",
 			Content:  "New content",
-			Priority: 10,
+			Priority: config.PriorityCritical,
 		}
 
 		cfg.Rules = append(cfg.Rules, newRule)
@@ -45,13 +45,13 @@ func TestRuleHandlers(t *testing.T) {
 
 		if len(cfg.Rules) > 0 {
 			cfg.Rules[0].Content = "Updated content"
-			cfg.Rules[0].Priority = 10
+			cfg.Rules[0].Priority = config.PriorityCritical
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
 			assert.Equal(t, "Updated content", reloaded.Rules[0].Content)
-			assert.Equal(t, 10, reloaded.Rules[0].Priority)
+			assert.Equal(t, config.PriorityCritical, reloaded.Rules[0].Priority)
 		}
 	})
 

@@ -40,7 +40,7 @@ func (s *TemplatesTestSuite) TestDefaultTemplate() {
 	s.Contains(content, "**Priority:** 5")
 	s.Contains(content, "This is a basic rule for testing")
 	s.Contains(content, "## High Priority Rule")
-	s.Contains(content, "**Priority:** 9")
+	s.Contains(content, "**Priority:** 10")
 
 	basicPos := s.findPosition(content, "Basic Rule")
 	highPos := s.findPosition(content, "High Priority Rule")
@@ -52,7 +52,7 @@ func (s *TemplatesTestSuite) TestCustomTemplate() {
   name: "Custom Template Test"
 
 outputs:
-  - file: "custom.md"
+  - path: "custom.md"
     template: |
       # Custom Template for {{.ProjectName}}
       
@@ -122,7 +122,7 @@ func (s *TemplatesTestSuite) TestTemplateVariables() {
   description: "Testing template variables"
 
 outputs:
-  - file: "variables.md"
+  - path: "variables.md"
     template: |
       Project: {{.ProjectName}}
       Version: {{.Version}}
@@ -164,7 +164,7 @@ func (s *TemplatesTestSuite) TestTemplateConditionals() {
   version: "1.0.0"
 
 outputs:
-  - file: "conditionals.md"
+  - path: "conditionals.md"
     template: |
       # {{.ProjectName}}
       {{- if .Version}}
@@ -213,7 +213,7 @@ func (s *TemplatesTestSuite) TestInvalidTemplate() {
   name: "Invalid Template Test"
 
 outputs:
-  - file: "invalid.md"
+  - path: "invalid.md"
     template: |
       {{.NonExistentField}}
       {{range .Rules}}
@@ -235,7 +235,7 @@ func (s *TemplatesTestSuite) TestMalformedTemplate() {
   name: "Malformed Template Test"
 
 outputs:
-  - file: "malformed.md"
+  - path: "malformed.md"
     template: |
       {{.ProjectName}
       {{range .Rules}}
@@ -267,10 +267,10 @@ outputs:
 
 rules:
   - name: "High Priority"
-    priority: 9
+    priority: critical
     content: "High priority content"
   - name: "Low Priority"
-    priority: 3
+    priority: low
     content: "Low priority content"
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
@@ -278,12 +278,12 @@ rules:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	highPriorityPath := filepath.Join(s.workingDir, ".test-rules", "9-High Priority.md")
+	highPriorityPath := filepath.Join(s.workingDir, ".test-rules", "10-High Priority.md")
 	s.True(testutil.FileExists(s.T(), highPriorityPath))
 
 	highContent := testutil.ReadFile(s.T(), highPriorityPath)
 	s.Contains(highContent, "# Rule: High Priority")
-	s.Contains(highContent, "Priority: 9")
+	s.Contains(highContent, "Priority: critical")
 	s.Contains(highContent, "High priority content")
 
 	lowPriorityPath := filepath.Join(s.workingDir, ".test-rules", "3-Low Priority.md")
@@ -291,7 +291,7 @@ rules:
 
 	lowContent := testutil.ReadFile(s.T(), lowPriorityPath)
 	s.Contains(lowContent, "# Rule: Low Priority")
-	s.Contains(lowContent, "Priority: 3")
+	s.Contains(lowContent, "Priority: low")
 	s.Contains(lowContent, "Low priority content")
 }
 
@@ -324,12 +324,12 @@ outputs:
 agents:
   - name: "reviewer"
     description: "Code review agent"
-    priority: 8
+    priority: high
     tools: ["Read", "Edit", "Grep"]
     system_prompt: "You are a code reviewer"
   - name: "documenter"
     description: "Documentation agent"
-    priority: 6
+    priority: medium
     tools: ["Read", "Write"]
     system_prompt: "You write documentation"
 `

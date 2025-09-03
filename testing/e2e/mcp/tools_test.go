@@ -77,7 +77,7 @@ func (s *MCPToolsTestSuite) TestAddRule() {
 	response := s.client.CallTool(s.T(), "add_rule", map[string]interface{}{
 		"name":     "New MCP Rule",
 		"content":  "New MCP rule content",
-		"priority": 8,
+		"priority": "high",
 	})
 	response.AssertToolSuccess(s.T())
 
@@ -97,7 +97,7 @@ func (s *MCPToolsTestSuite) TestAddRuleWithAllParameters() {
 		"name":     "Complete Rule",
 		"content":  "Complete rule content",
 		"section":  "Test Section",
-		"priority": 7,
+		"priority": "high",
 	})
 	response.AssertToolSuccess(s.T())
 
@@ -119,14 +119,14 @@ func (s *MCPToolsTestSuite) TestAddRuleWithAllParameters() {
 
 	s.NotNil(newRule, "New rule should be found")
 	s.Equal("Complete Rule", newRule["Name"])
-	s.Equal(float64(7), newRule["Priority"])
+	s.Equal("high", newRule["Priority"])
 }
 
 func (s *MCPToolsTestSuite) TestUpdateRule() {
 	response := s.client.CallTool(s.T(), "update_rule", map[string]interface{}{
 		"name":     "Basic Rule",
 		"content":  "Updated rule content",
-		"priority": 9,
+		"priority": "critical",
 	})
 	response.AssertToolSuccess(s.T())
 
@@ -137,7 +137,7 @@ func (s *MCPToolsTestSuite) TestUpdateRule() {
 	rules, _ := getRulesResult["rules"].([]interface{})
 	firstRule, _ := rules[0].(map[string]interface{})
 	s.Equal("Updated rule content", firstRule["Content"])
-	s.Equal(float64(9), firstRule["Priority"])
+	s.Equal("critical", firstRule["Priority"])
 }
 
 func (s *MCPToolsTestSuite) TestDeleteRule() {
@@ -170,7 +170,7 @@ func (s *MCPToolsTestSuite) TestAddSection() {
 	response := s.client.CallTool(s.T(), "add_section", map[string]interface{}{
 		"name":     "New MCP Section",
 		"content":  "New section content via MCP",
-		"priority": 6,
+		"priority": "medium",
 	})
 	response.AssertToolSuccess(s.T())
 
@@ -234,7 +234,7 @@ func (s *MCPToolsTestSuite) TestAddAgent() {
 	response := s.client.CallTool(s.T(), "add_agent", map[string]interface{}{
 		"name":        "test-agent",
 		"description": "Test agent via MCP",
-		"priority":    7,
+		"priority":    "high",
 		"tools":       []string{"Read", "Edit"},
 	})
 	response.AssertToolSuccess(s.T())

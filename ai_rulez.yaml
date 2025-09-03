@@ -3,14 +3,16 @@ metadata:
     version: 2.0.0
     description: Lightning-fast CLI tool and MCP server for managing AI assistant rules across multiple platforms
 outputs:
-    - file: CLAUDE.md
-      template: default
+    - path: CLAUDE.md
+      template:
+        type: builtin
+        value: default
     - path: .claude/agents/
       type: agent
       naming_scheme: '{name}.md'
 rules:
     - name: Go Best Practices
-      priority: 10
+      priority: critical
       content: |
         - Use Go 1.24+ features and idioms
         - Follow effective Go guidelines
@@ -22,7 +24,7 @@ rules:
         - Use interfaces for abstraction
         - Write idiomatic Go code
     - name: Code Quality
-      priority: 9
+      priority: high
       content: |
         - Write clean, readable, and maintainable code
         - Follow SOLID principles where applicable
@@ -33,7 +35,7 @@ rules:
         - Use descriptive variable and function names
         - Comment public APIs and complex logic
     - name: Testing Standards
-      priority: 8
+      priority: high
       content: |
         - Write unit tests for all new functionality
         - Maintain test coverage above 80%
@@ -44,7 +46,7 @@ rules:
         - Write integration tests for complex workflows
         - Use benchmarks for performance-critical code
     - name: CLI Development
-      priority: 7
+      priority: high
       content: |
         - Use cobra for CLI command structure
         - Provide helpful error messages and usage examples
@@ -57,7 +59,7 @@ rules:
         - Support CRUD operations for all configuration elements
         - Implement interactive prompts for missing required fields
     - name: Performance Optimization
-      priority: 6
+      priority: medium
       content: |
         - Profile before optimizing
         - Use benchmarks to validate improvements
@@ -68,7 +70,7 @@ rules:
         - Avoid unnecessary file system operations
         - Use efficient data structures
     - name: Error Handling
-      priority: 8
+      priority: high
       content: |
         - Always handle errors explicitly
         - Provide context in error messages
@@ -79,7 +81,7 @@ rules:
         - Use errors.Is and errors.As for error checking
         - Include relevant details in error messages
     - name: Configuration Management
-      priority: 6
+      priority: medium
       content: |
         - Use viper for configuration handling
         - Support YAML, JSON, and environment variables
@@ -89,7 +91,7 @@ rules:
         - Support configuration file discovery
         - Handle missing or invalid configuration gracefully
     - name: File Operations
-      priority: 5
+      priority: medium
       content: |
         - Use filepath.Join for cross-platform paths
         - Check file permissions before operations
@@ -99,7 +101,7 @@ rules:
         - Respect file modification times
         - Use appropriate file modes (0644, 0755)
     - name: Documentation
-      priority: 4
+      priority: low
       content: |
         - Document all public APIs with Go doc comments
         - Keep README.md up to date
@@ -109,7 +111,7 @@ rules:
         - Use clear and concise language
         - Include troubleshooting sections
     - name: Git and Version Control
-      priority: 3
+      priority: low
       content: |
         - Use conventional commits format
         - Write clear commit messages
@@ -119,7 +121,7 @@ rules:
         - Update CHANGELOG.md for releases
         - Don't commit sensitive information
     - name: Release Management
-      priority: 3
+      priority: low
       content: |
         - Use GoReleaser for automated releases
         - Support multiple package managers (homebrew, npm, pip)
@@ -130,7 +132,7 @@ rules:
         - Maintain cross-platform compatibility (Windows, macOS, Linux)
         - Support both binary releases and package manager distributions
     - name: MCP Development
-      priority: 7
+      priority: high
       content: |
         - Follow MCP specification for tool definitions and responses
         - Implement proper JSON-RPC 2.0 protocol handling
@@ -141,7 +143,7 @@ rules:
         - Use structured logging for MCP operations
         - Test MCP tools with real AI assistant integrations
     - name: Schema and Validation
-      priority: 6
+      priority: medium
       content: |
         - Use JSON Schema for all configuration validation
         - Provide clear validation error messages with context
@@ -152,14 +154,20 @@ rules:
         - Keep schemas in sync with Go structs
         - Document schema changes in release notes
     - name: Test
-      priority: 1
+      priority: minimal
       content: Test content
     - name: Test Rule
-      priority: 5
+      priority: medium
       content: This is a test rule
+    - name: Test Targets Rule
+      priority: high
+      content: This is a test rule with targets
+      targets:
+        - '*.md'
+        - '*.yaml'
 sections:
     - name: Development Environment
-      priority: 50
+      priority: critical
       content: |
         ## Development Setup
 
@@ -193,7 +201,7 @@ sections:
 
         **See CONTRIBUTING.md for complete Taskfile documentation**
     - name: Architecture Overview
-      priority: 40
+      priority: critical
       content: |
         ## Project Structure
 
@@ -220,7 +228,7 @@ sections:
         - Comprehensive test coverage (unit, integration, e2e)
         - Multi-platform support (CLI + MCP server)
     - name: Remote Configuration Support
-      priority: 45
+      priority: critical
       content: |
         ## Remote Includes Feature
 
@@ -243,7 +251,7 @@ sections:
         - Efficient concurrent fetching
         - Smart cache invalidation with ETags
     - name: Cursor Rules Migration Guide
-      priority: 35
+      priority: critical
       content: |
         ## ✨ Cursor Rules Migration (.cursorrules → .cursor/rules/)
 
@@ -279,7 +287,7 @@ sections:
 
         The new format is fully backward compatible - your existing rules work the same way.
     - name: MCP Server Integration
-      priority: 48
+      priority: critical
       content: |
         ## Model Context Protocol (MCP) Server
 
@@ -310,7 +318,7 @@ sections:
         - Automatic validation and error handling
         - Support for all configuration operations via API
     - name: Agent System and CRUD Operations
-      priority: 42
+      priority: critical
       content: |
         ## Agent Management
 
@@ -342,7 +350,7 @@ sections:
         - `tester` - Test case generation and validation
         - `refactor` - Code restructuring and optimization
     - name: Testing and Quality Assurance
-      priority: 38
+      priority: critical
       content: |
         ## Comprehensive Test Coverage
 
@@ -376,7 +384,7 @@ sections:
         - Performance benchmarks for critical paths
         - Schema validation for all configurations
     - name: AI Agent Integration and Presets
-      priority: 46
+      priority: critical
       content: |
         ## AI Agent Integration
 
@@ -428,10 +436,16 @@ sections:
         - `.clinerules/` - Cline rules directory
         - `.continue/rules/` - Continue.dev rules
         - `.cursor/rules/` - Cursor MDC format
+    - name: Test Section
+      priority: low
+      content: Test section with targets
+      targets:
+        - tests/**
+        - spec/**
 agents:
     - name: go-engineer
       description: Go implementation specialist for core features
-      priority: 10
+      priority: critical
       system_prompt: |
         Go 1.24+ expert for ai-rulez implementation.
         Focus: idiomatic Go, error handling, concurrency, performance
@@ -442,7 +456,7 @@ agents:
         - Follow Go naming conventions and project patterns
     - name: schema-engineer
       description: JSON Schema evolution and validation specialist
-      priority: 9
+      priority: high
       system_prompt: |
         JSON Schema specialist for configuration validation.
         Focus: schema evolution, backward compatibility, validation
@@ -453,7 +467,7 @@ agents:
         - Test edge cases and malformed inputs
     - name: test-engineer
       description: Testing strategy and implementation specialist
-      priority: 9
+      priority: high
       system_prompt: |
         Testing specialist for comprehensive test coverage.
         Focus: unit tests, integration tests, E2E tests, table-driven tests
@@ -464,7 +478,7 @@ agents:
         - Use testify/assert for readable assertions
     - name: cli-engineer
       description: CLI/UX specialist for command-line interface
-      priority: 8
+      priority: high
       system_prompt: |
         CLI/UX specialist for cobra commands and user experience.
         Focus: cobra commands, user experience, error messages
@@ -475,7 +489,7 @@ agents:
         - Support both flags and environment variables
     - name: mcp-engineer
       description: MCP server integration specialist
-      priority: 8
+      priority: high
       system_prompt: |
         MCP (Model Context Protocol) specialist.
         Focus: JSON-RPC 2.0, MCP tools, AI assistant integration
@@ -486,7 +500,7 @@ agents:
         - Validate all inputs and outputs
     - name: devops-engineer
       description: CI/CD and release management specialist
-      priority: 7
+      priority: high
       system_prompt: |
         DevOps specialist for CI/CD and releases.
         Focus: GitHub Actions, GoReleaser, cross-platform testing
@@ -497,7 +511,7 @@ agents:
         - Handle versioning and changelog updates
     - name: code-reviewer
       description: Code quality and convention compliance reviewer
-      priority: 10
+      priority: critical
       system_prompt: |
         Code review specialist for quality assurance.
         Focus: Go best practices, test coverage, conventions
@@ -509,7 +523,7 @@ agents:
         - Run golangci-lint and go vet
     - name: documentation-engineer
       description: Documentation and examples specialist
-      priority: 6
+      priority: medium
       system_prompt: |
         Documentation specialist for clear communication.
         Focus: README updates, examples, API documentation

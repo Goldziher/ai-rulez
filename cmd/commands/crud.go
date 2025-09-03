@@ -25,3 +25,10 @@ var DeleteCmd = &cobra.Command{
 	Long:    `Delete configuration elements from your ai-rulez configuration file.`,
 	Aliases: []string{"del", "remove", "rm"},
 }
+
+// GetCmd represents the get command group
+var GetCmd = &cobra.Command{
+	Use:   "get",
+	Short: "Get configuration elements (rules, sections, outputs, agents)",
+	Long:  `Retrieve and display information about specific configuration elements from your ai-rulez configuration file.`,
+}

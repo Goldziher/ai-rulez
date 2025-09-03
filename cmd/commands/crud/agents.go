@@ -11,10 +11,11 @@ import (
 
 var (
 	agentDescription  string
-	agentPriority     int
+	agentPriority     string
 	agentTools        []string
 	agentSystemPrompt string
 	agentID           string
+	agentTargets      []string
 )
 
 // AddAgentCmd adds a new agent to the configuration
@@ -53,15 +54,17 @@ This will permanently remove the agent and cannot be undone.`,
 
 func init() {
 	AddAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "Description of the agent")
-	AddAgentCmd.Flags().IntVarP(&agentPriority, "priority", "p", 5, "Priority level for the agent (1-10)")
+	AddAgentCmd.Flags().StringVarP(&agentPriority, "priority", "p", "medium", "Priority level for the agent (critical, high, medium, low, minimal)")
 	AddAgentCmd.Flags().StringSliceVarP(&agentTools, "tools", "t", []string{}, "Comma-separated list of tools the agent can use")
 	AddAgentCmd.Flags().StringVarP(&agentSystemPrompt, "system-prompt", "s", "", "System prompt for the agent (will prompt via stdin if not provided)")
 	AddAgentCmd.Flags().StringVar(&agentID, "id", "", "Optional unique identifier for the agent")
+	AddAgentCmd.Flags().StringSliceVar(&agentTargets, "targets", []string{}, "Target file patterns (glob patterns)")
 
 	UpdateAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "New description for the agent")
-	UpdateAgentCmd.Flags().IntVarP(&agentPriority, "priority", "p", 0, "New priority level for the agent (1-10)")
+	UpdateAgentCmd.Flags().StringVarP(&agentPriority, "priority", "p", "", "New priority level for the agent (critical, high, medium, low, minimal)")
 	UpdateAgentCmd.Flags().StringSliceVarP(&agentTools, "tools", "t", []string{}, "New comma-separated list of tools the agent can use")
 	UpdateAgentCmd.Flags().StringVarP(&agentSystemPrompt, "system-prompt", "s", "", "New system prompt for the agent (will prompt via stdin if not provided)")
+	UpdateAgentCmd.Flags().StringSliceVar(&agentTargets, "targets", []string{}, "Target file patterns (glob patterns)")
 }
 
 func runAddAgent(cmd *cobra.Command, args []string) {
@@ -89,9 +92,10 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 		ID:           agentID,
 		Name:         agentName,
 		Description:  agentDescription,
-		Priority:     agentPriority,
+		Priority:     config.Priority(agentPriority),
 		Tools:        agentTools,
 		SystemPrompt: agentSystemPrompt,
+		Targets:      agentTargets,
 	}
 	cfg.Agents = append(cfg.Agents, newAgent)
 
@@ -101,54 +105,77 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 	}
 
 	fmt.Printf("✅ Added agent '%s'", agentName)
-	if agentPriority > 0 {
-		fmt.Printf(" with priority %d", agentPriority)
+	if agentPriority != "" && agentPriority != "medium" {
+		fmt.Printf(" with priority %s", agentPriority)
 	}
 	fmt.Printf(" to %s\n", configPath)
+}
+
+// findAgentIndex returns the index of the agent with the given name, or -1 if not found
+func findAgentIndex(cfg *config.Config, agentName string) int {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == agentName {
+			return i
+		}
+	}
+	return -1
+}
+
+// promptForSystemPrompt prompts the user for a new system prompt if none was provided
+func promptForSystemPrompt(currentPrompt string) (string, error) {
+	fmt.Printf("Current system prompt: %s\n", currentPrompt)
+	fmt.Println("Enter new system prompt (press Ctrl+D when done, or press Enter to keep current):")
+	content, err := readFromStdin()
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(content) != "" {
+		return content, nil
+	}
+	return "", nil
+}
+
+// updateAgentFields updates the agent's fields if new values were provided
+func updateAgentFields(agent *config.Agent, description string, priority string, tools []string, systemPrompt string, targets []string) {
+	if description != "" {
+		agent.Description = description
+	}
+	if priority != "" {
+		agent.Priority = config.Priority(priority)
+	}
+	if len(tools) > 0 {
+		agent.Tools = tools
+	}
+	if systemPrompt != "" {
+		agent.SystemPrompt = systemPrompt
+	}
+	if len(targets) > 0 {
+		agent.Targets = targets
+	}
 }
 
 func runUpdateAgent(cmd *cobra.Command, args []string) {
 	agentName := args[0]
 	configPath, cfg := loadConfiguration()
 
-	agentIndex := -1
-	for i := range cfg.Agents {
-		if cfg.Agents[i].Name == agentName {
-			agentIndex = i
-			break
-		}
-	}
-
+	agentIndex := findAgentIndex(cfg, agentName)
 	if agentIndex == -1 {
 		fmt.Fprintf(os.Stderr, "Error: Agent '%s' not found\n", agentName)
 		os.Exit(1)
 	}
 
-	if agentSystemPrompt == "" && agentDescription == "" && agentPriority == 0 && len(agentTools) == 0 {
-		fmt.Printf("Current system prompt: %s\n", cfg.Agents[agentIndex].SystemPrompt)
-		fmt.Println("Enter new system prompt (press Ctrl+D when done, or press Enter to keep current):")
-		content, err := readFromStdin()
+	// If no flags provided, prompt for system prompt
+	if agentSystemPrompt == "" && agentDescription == "" && agentPriority == "" && len(agentTools) == 0 && len(agentTargets) == 0 {
+		newPrompt, err := promptForSystemPrompt(cfg.Agents[agentIndex].SystemPrompt)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error reading system prompt: %v\n", err)
 			os.Exit(1)
 		}
-		if strings.TrimSpace(content) != "" {
-			agentSystemPrompt = content
-		}
+		agentSystemPrompt = newPrompt
 	}
 
-	if agentDescription != "" {
-		cfg.Agents[agentIndex].Description = agentDescription
-	}
-	if agentPriority > 0 {
-		cfg.Agents[agentIndex].Priority = agentPriority
-	}
-	if len(agentTools) > 0 {
-		cfg.Agents[agentIndex].Tools = agentTools
-	}
-	if agentSystemPrompt != "" {
-		cfg.Agents[agentIndex].SystemPrompt = agentSystemPrompt
-	}
+	// Update agent fields
+	updateAgentFields(&cfg.Agents[agentIndex], agentDescription, agentPriority, agentTools, agentSystemPrompt, agentTargets)
 
 	if err := config.SaveConfig(cfg, configPath); err != nil {
 		FmtError(err)

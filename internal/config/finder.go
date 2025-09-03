@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/samber/oops"
 )
@@ -53,4 +54,38 @@ func FindConfigFile(startDir string) (string, error) {
 		}).
 		Hint("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly").
 		Errorf("no configuration file found")
+}
+
+// FindLocalConfigFile finds the corresponding local config file for a given main config
+func FindLocalConfigFile(mainConfigPath string) (string, error) {
+	dir := filepath.Dir(mainConfigPath)
+	base := filepath.Base(mainConfigPath)
+	ext := filepath.Ext(base)
+	nameWithoutExt := strings.TrimSuffix(base, ext)
+
+	// Generate local config name by inserting .local before extension
+	localConfigName := nameWithoutExt + ".local" + ext
+	localConfigPath := filepath.Join(dir, localConfigName)
+
+	if _, err := os.Stat(localConfigPath); err == nil {
+		return localConfigPath, nil
+	}
+
+	// Return empty string if no local config exists (this is not an error)
+	return "", nil
+}
+
+// FindConfigFiles finds both main and local config files
+func FindConfigFiles(startDir string) (mainConfig, localConfig string, err error) {
+	mainConfig, err = FindConfigFile(startDir)
+	if err != nil {
+		return "", "", err
+	}
+
+	localConfig, err = FindLocalConfigFile(mainConfig)
+	if err != nil {
+		return "", "", err
+	}
+
+	return mainConfig, localConfig, nil
 }
