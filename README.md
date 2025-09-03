@@ -17,6 +17,8 @@ Instead of maintaining separate `.cursorrules`, `CLAUDE.md`, `.github/copilot-in
 
 ```yaml
 # ai_rulez.yaml
+# extends: "https://raw.githubusercontent.com/myorg/base-config/main/typescript.yaml"  # Optional: inherit from base config
+
 metadata:
   name: "My Project"
 
@@ -62,7 +64,9 @@ Run `ai-rulez generate` → get all three files, perfectly synchronized.
 ✅ **Multi-Platform** - Supports 10+ AI tools (Claude, Cursor, Windsurf, Copilot, etc.)  
 ✅ **Monorepo Ready** - Multiple scoped configurations reduce context size and improve focus  
 ✅ **Built-in MCP Server** - Dynamic configuration management via Model Context Protocol  
+✅ **Configuration Inheritance** - Extend base configurations with project-specific customizations  
 ✅ **Remote Includes** - Share configurations across projects and teams  
+✅ **Flexible Composition** - Use extends + includes together for maximum configuration power  
 ✅ **Git Hooks Integration** - Auto-validate and generate on commit  
 ✅ **Agent Support** - Specialized sub-agents for different tasks (Claude)
 

@@ -20,19 +20,23 @@ type contentItem struct {
 }
 
 type TemplateData struct {
-	ProjectName  string
-	Version      string
-	Description  string
-	Rules        []config.Rule
-	Sections     []config.Section
-	Agents       []config.Agent
-	AllContent   []contentItem
-	Timestamp    time.Time
-	RuleCount    int
-	SectionCount int
-	AgentCount   int
-	ConfigFile   string
-	OutputFile   string
+	ProjectName    string
+	Version        string
+	Description    string
+	Rules          []config.Rule
+	Sections       []config.Section
+	Agents         []config.Agent
+	MCPServers     []config.MCPServer
+	Commands       []config.Command
+	AllContent     []contentItem
+	Timestamp      time.Time
+	RuleCount      int
+	SectionCount   int
+	AgentCount     int
+	MCPServerCount int
+	CommandCount   int
+	ConfigFile     string
+	OutputFile     string
 }
 
 func NewTemplateData(cfg *config.Config) *TemplateData {
@@ -43,6 +47,8 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	allRules := cfg.Rules
 	allSections := cfg.Sections
 	allAgents := cfg.Agents
+	allMCPServers := cfg.MCPServers
+	allCommands := cfg.Commands
 
 	if outputPath != "" {
 		var err error
@@ -59,6 +65,16 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		allAgents, err = config.FilterAgents(allAgents, outputPath, nil)
 		if err != nil {
 			allAgents = cfg.Agents
+		}
+
+		allMCPServers, err = config.FilterMCPServers(allMCPServers, outputPath, nil)
+		if err != nil {
+			allMCPServers = cfg.MCPServers
+		}
+
+		allCommands, err = config.FilterCommands(allCommands, outputPath, nil)
+		if err != nil {
+			allCommands = cfg.Commands
 		}
 	}
 
@@ -98,19 +114,29 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	copy(sortedAgents, allAgents)
 	sortAgentsByPriority(sortedAgents)
 
+	sortedMCPServers := make([]config.MCPServer, len(allMCPServers))
+	copy(sortedMCPServers, allMCPServers)
+
+	sortedCommands := make([]config.Command, len(allCommands))
+	copy(sortedCommands, allCommands)
+
 	return &TemplateData{
-		ProjectName:  cfg.Metadata.Name,
-		Version:      cfg.Metadata.Version,
-		Description:  cfg.Metadata.Description,
-		Rules:        sortedRules,
-		Sections:     sortedSections,
-		Agents:       sortedAgents,
-		AllContent:   allContent,
-		Timestamp:    time.Now(),
-		RuleCount:    len(allRules),
-		SectionCount: len(allSections),
-		AgentCount:   len(allAgents),
-		OutputFile:   outputPath,
+		ProjectName:    cfg.Metadata.Name,
+		Version:        cfg.Metadata.Version,
+		Description:    cfg.Metadata.Description,
+		Rules:          sortedRules,
+		Sections:       sortedSections,
+		Agents:         sortedAgents,
+		MCPServers:     sortedMCPServers,
+		Commands:       sortedCommands,
+		AllContent:     allContent,
+		Timestamp:      time.Now(),
+		RuleCount:      len(allRules),
+		SectionCount:   len(allSections),
+		AgentCount:     len(allAgents),
+		MCPServerCount: len(allMCPServers),
+		CommandCount:   len(allCommands),
+		OutputFile:     outputPath,
 	}
 }
 

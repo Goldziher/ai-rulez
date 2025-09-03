@@ -32,6 +32,10 @@
       },
       "additionalProperties": false
     },
+    "extends": {
+      "type": "string",
+      "description": "Path or URL to a base configuration to inherit from (local path or remote HTTP/HTTPS URL)"
+    },
     "includes": {
       "type": "array",
       "description": "List of other ai_rules files to include (local paths or remote URLs)",
@@ -268,6 +272,137 @@
         },
         "additionalProperties": false
       }
+    },
+    "mcp_servers": {
+      "type": "array",
+      "description": "List of Model Context Protocol (MCP) servers for tool integration",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the MCP server (used for overriding in local files)",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "MCP server name/identifier",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the MCP server capabilities"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to start the MCP server (e.g., 'npx', 'python', 'node')",
+            "minLength": 1
+          },
+          "args": {
+            "type": "array",
+            "description": "Command line arguments for the MCP server",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "description": "Environment variables for the MCP server",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "sse", "http"],
+            "description": "Transport protocol for MCP server communication (default: stdio)",
+            "default": "stdio"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL for remote MCP servers (when transport is sse or http)",
+            "pattern": "^https?://[^\\s]+$"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this MCP server is enabled (default: true)",
+            "default": true
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this MCP server. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "commands": {
+      "type": "array",
+      "description": "List of custom slash commands for AI assistant interaction",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the command (used for overriding in local files)",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Command name (without the / prefix, e.g., 'newtask', 'smol')",
+            "minLength": 1,
+            "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+          },
+          "aliases": {
+            "type": "array",
+            "description": "Alternative names for the command",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$"
+            },
+            "uniqueItems": true
+          },
+          "description": {
+            "type": "string",
+            "description": "Description of what the command does",
+            "minLength": 1
+          },
+          "usage": {
+            "type": "string",
+            "description": "Usage example or pattern (e.g., '/newtask <description>')"
+          },
+          "system_prompt": {
+            "type": "string",
+            "description": "System prompt or instructions for the AI when this command is used"
+          },
+          "shortcut": {
+            "type": "string",
+            "description": "Keyboard shortcut for the command (if supported by the AI tool)"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this command is enabled (default: true)",
+            "default": true
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this command. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false,
@@ -311,6 +446,38 @@
           "name": "Code Quality",
           "priority": "high",
           "content": "Write clean, maintainable code"
+        }
+      ],
+      "mcp_servers": [
+        {
+          "name": "github",
+          "description": "GitHub integration for PR management",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-github"],
+          "env": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+          }
+        },
+        {
+          "name": "postgres",
+          "description": "PostgreSQL database access",
+          "command": "uvx",
+          "args": ["mcp-server-postgres", "--connection-string", "postgresql://user:pass@localhost:5432/db"]
+        }
+      ],
+      "commands": [
+        {
+          "name": "newtask",
+          "description": "Start a new task with fresh context",
+          "usage": "/newtask <description>",
+          "system_prompt": "You are starting a new focused task. Ignore previous context and focus only on the new task description."
+        },
+        {
+          "name": "smol",
+          "aliases": ["compact"],
+          "description": "Condense the current chat history to reduce token usage",
+          "usage": "/smol",
+          "system_prompt": "Summarize the conversation history concisely while preserving key context and decisions."
         }
       ]
     }
