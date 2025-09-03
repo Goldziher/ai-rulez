@@ -109,6 +109,127 @@ rules:
     # Missing required 'content' field
 `
 
+const ConfigWithMCPServers = `metadata:
+  name: "MCP Server Test Project"
+  description: "Testing MCP server generation"
+
+outputs:
+  - path: ".mcp.json"
+    template: "claude-code-mcp"
+  - path: ".cursor/mcp.json" 
+    template: "cursor-mcp"
+  - path: "mcp_config.json"
+    template: "windsurf-mcp"
+  - path: ".vscode/mcp.json"
+    template: "vscode-mcp"
+  - path: ".continue/mcpServers/servers.yaml"
+    template: "continuedev-mcp"
+  - path: "cline_mcp_settings.json"
+    template: "cline-mcp"
+
+mcp_servers:
+  - name: "github"
+    description: "GitHub integration"
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    env:
+      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
+    transport: "stdio"
+    enabled: true
+    
+  - name: "postgres"  
+    description: "PostgreSQL database"
+    command: "uvx"
+    args: ["mcp-server-postgres", "--connection-string", "postgresql://user:pass@localhost/db"]
+    
+  - name: "remote-api"
+    description: "Remote API server"
+    url: "https://api.example.com/mcp"
+    transport: "http"
+    enabled: true
+    
+  - name: "disabled-server"
+    description: "Disabled server"
+    command: "python"
+    args: ["server.py"]
+    enabled: false
+
+rules:
+  - name: "Test Rule"
+    content: "Test content for MCP servers"
+`
+
+const ConfigWithCommands = `metadata:
+  name: "Commands Test Project"
+  description: "Testing custom commands"
+
+outputs:
+  - path: "commands-output.md"
+    template:
+      type: "inline"
+      value: |
+        # {{.ProjectName}} Commands
+        
+        {{if .Commands}}
+        ## Available Commands
+        {{range .Commands}}
+        ### /{{.Name}}{{if .Aliases}} (aliases: {{range .Aliases}}/{{.}} {{end}}){{end}}
+        {{.Description}}
+        {{if .Usage}}**Usage:** {{.Usage}}{{end}}
+        {{if .SystemPrompt}}**System Prompt:** {{.SystemPrompt}}{{end}}
+        {{if .Shortcut}}**Shortcut:** {{.Shortcut}}{{end}}
+        - Enabled: {{.IsEnabled}}
+        {{end}}
+        {{end}}
+
+commands:
+  - name: "newtask"
+    description: "Start a new task with fresh context"
+    usage: "/newtask <description>"
+    system_prompt: "You are starting a new focused task"
+    enabled: true
+    
+  - name: "smol"
+    aliases: ["compact", "summarize"]
+    description: "Condense chat history"
+    usage: "/smol"
+    system_prompt: "Summarize conversation concisely"
+    shortcut: "Ctrl+Shift+S"
+    
+  - name: "review"
+    description: "Request code review"
+    usage: "/review [file]"
+    system_prompt: "Focus on code quality and best practices"
+    enabled: false
+
+rules:
+  - name: "Command Rule"
+    content: "Use commands appropriately"
+`
+
+const ConfigWithMCPAndCommands = `metadata:
+  name: "Full Feature Test"
+  description: "Testing both MCP servers and commands"
+
+outputs:
+  - path: "full-output.md"
+    
+mcp_servers:
+  - name: "test-server"
+    description: "Test MCP server"
+    command: "test"
+    args: ["--mode", "test"]
+    
+commands:
+  - name: "test"
+    description: "Test command"
+    usage: "/test"
+
+rules:
+  - name: "Integration Rule"
+    content: "Integration test content"
+`
+
 // Provider configurations for init tests
 var ClaudeProviderOutputs = []string{"CLAUDE.md", ".claude/agents/"}
 var CursorProviderOutputs = []string{".cursor/rules/"}

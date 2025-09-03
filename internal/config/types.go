@@ -4,12 +4,15 @@ import "strings"
 
 // Config represents the main configuration structure
 type Config struct {
-	Metadata Metadata  `yaml:"metadata"`
-	Includes []string  `yaml:"includes,omitempty"`
-	Outputs  []Output  `yaml:"outputs"`
-	Rules    []Rule    `yaml:"rules,omitempty"`
-	Sections []Section `yaml:"sections,omitempty"`
-	Agents   []Agent   `yaml:"agents,omitempty"`
+	Metadata   Metadata    `yaml:"metadata"`
+	Extends    string      `yaml:"extends,omitempty"`
+	Includes   []string    `yaml:"includes,omitempty"`
+	Outputs    []Output    `yaml:"outputs"`
+	Rules      []Rule      `yaml:"rules,omitempty"`
+	Sections   []Section   `yaml:"sections,omitempty"`
+	Agents     []Agent     `yaml:"agents,omitempty"`
+	MCPServers []MCPServer `yaml:"mcp_servers,omitempty"`
+	Commands   []Command   `yaml:"commands,omitempty"`
 }
 
 // Metadata contains project metadata
@@ -89,4 +92,55 @@ type Agent struct {
 // GetTemplate parses the template configuration
 func (a *Agent) GetTemplate() (*Template, error) {
 	return ParseTemplate(a.Template)
+}
+
+// MCPServer represents a Model Context Protocol server configuration
+type MCPServer struct {
+	ID          string            `yaml:"id,omitempty"`
+	Name        string            `yaml:"name"`
+	Description string            `yaml:"description,omitempty"`
+	Command     string            `yaml:"command,omitempty"`
+	Args        []string          `yaml:"args,omitempty"`
+	Env         map[string]string `yaml:"env,omitempty"`
+	Transport   string            `yaml:"transport,omitempty"`
+	URL         string            `yaml:"url,omitempty"`
+	Enabled     *bool             `yaml:"enabled,omitempty"`
+	Targets     []string          `yaml:"targets,omitempty"`
+}
+
+// IsEnabled returns whether the MCP server is enabled (default: true)
+func (m *MCPServer) IsEnabled() bool {
+	if m.Enabled == nil {
+		return true
+	}
+	return *m.Enabled
+}
+
+// GetTransport returns the transport protocol with default
+func (m *MCPServer) GetTransport() string {
+	if m.Transport == "" {
+		return "stdio"
+	}
+	return m.Transport
+}
+
+// Command represents a custom slash command configuration
+type Command struct {
+	ID           string   `yaml:"id,omitempty"`
+	Name         string   `yaml:"name"`
+	Aliases      []string `yaml:"aliases,omitempty"`
+	Description  string   `yaml:"description"`
+	Usage        string   `yaml:"usage,omitempty"`
+	SystemPrompt string   `yaml:"system_prompt,omitempty"`
+	Shortcut     string   `yaml:"shortcut,omitempty"`
+	Enabled      *bool    `yaml:"enabled,omitempty"`
+	Targets      []string `yaml:"targets,omitempty"`
+}
+
+// IsEnabled returns whether the command is enabled (default: true)
+func (c *Command) IsEnabled() bool {
+	if c.Enabled == nil {
+		return true
+	}
+	return *c.Enabled
 }

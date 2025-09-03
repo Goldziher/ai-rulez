@@ -107,7 +107,11 @@ outputs:`)
   # Continue.dev rules (directory format with frontmatter)
   - path: ".continue/rules/"
     type: "rule"
-    naming_scheme: "{priority:02d}-{name}.md"`)
+    naming_scheme: "{priority:02d}-{name}.md"
+
+  # Continue.dev agents (imported into config.py)
+  - path: ".continue/ai_rulez_agents.py"
+    template: "continuedev-agents"`)
 	}
 
 	builder.WriteString("\n\n")
@@ -117,6 +121,7 @@ outputs:`)
 agents:
   - name: "code-reviewer"
     description: "Code review and quality analysis specialist"
+    model: "claude-3-opus-20240229"
     system_prompt: |
       You are a senior code reviewer focusing on:
       - Code quality and maintainability
@@ -128,6 +133,33 @@ agents:
   
   - name: "test-writer"
     description: "Testing and quality assurance specialist"
+    model: "claude-3-haiku-20240307"
+    system_prompt: |
+      You are a testing expert specializing in:
+      - Writing comprehensive test cases
+      - Test automation and CI/CD
+      - Quality assurance processes
+      - Test-driven development (TDD)
+
+`)
+	} else if providers.ContinueDev {
+		builder.WriteString(`# AI agents (specialized sub-assistants for Continue.dev)
+agents:
+  - name: "code-reviewer"
+    description: "Code review and quality analysis specialist"
+    model: "gpt-4-turbo"
+    system_prompt: |
+      You are a senior code reviewer focusing on:
+      - Code quality and maintainability
+      - Security vulnerabilities
+      - Performance implications
+      - Best practices and conventions
+      
+      Always provide constructive feedback with specific suggestions.
+  
+  - name: "test-writer"
+    description: "Testing and quality assurance specialist"
+    model: "gpt-4-turbo"
     system_prompt: |
       You are a testing expert specializing in:
       - Writing comprehensive test cases

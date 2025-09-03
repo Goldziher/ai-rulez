@@ -341,3 +341,210 @@ func TestValidateIncludes(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
+
+// ========== Extends Functionality Tests ==========
+
+func TestLoadConfigWithExtends(t *testing.T) {
+	t.Run("local extends", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		// Create base config
+		baseConfigFile := filepath.Join(tempDir, "base.yaml")
+		baseContent := `
+metadata:
+  name: Base Project
+  version: 1.0.0
+  description: Base description
+outputs:
+  - path: base-output.md
+rules:
+  - name: Base Rule
+    content: Base rule content
+    priority: medium
+sections:
+  - name: Base Section
+    content: Base section content
+    priority: low
+agents:
+  - name: base-agent
+    description: Base agent
+    system_prompt: Base prompt
+    priority: medium
+`
+		require.NoError(t, os.WriteFile(baseConfigFile, []byte(baseContent), 0o644))
+		
+		// Create child config that extends base
+		childConfigFile := filepath.Join(tempDir, "child.yaml")
+		childContent := `
+extends: base.yaml
+metadata:
+  name: Child Project
+  version: 2.0.0
+outputs:
+  - path: child-output.md
+rules:
+  - name: Child Rule
+    content: Child rule content
+    priority: high
+  - name: Base Rule  # Override base rule
+    content: Overridden base rule
+    priority: critical
+`
+		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
+		
+		cfg, err := config.LoadConfigWithIncludes(context.Background(), childConfigFile)
+		require.NoError(t, err)
+		assert.NotNil(t, cfg)
+		
+		// Check metadata inheritance and overrides
+		assert.Equal(t, "Child Project", cfg.Metadata.Name)     // Overridden
+		assert.Equal(t, "2.0.0", cfg.Metadata.Version)         // Overridden
+		assert.Equal(t, "Base description", cfg.Metadata.Description) // Inherited
+		
+		// Check outputs are combined
+		assert.Len(t, cfg.Outputs, 2)
+		outputPaths := []string{cfg.Outputs[0].Path, cfg.Outputs[1].Path}
+		assert.Contains(t, outputPaths, "base-output.md")
+		assert.Contains(t, outputPaths, "child-output.md")
+		
+		// Check rules are merged (child overrides base)
+		assert.Len(t, cfg.Rules, 2)
+		ruleNames := make(map[string]string)
+		for _, rule := range cfg.Rules {
+			ruleNames[rule.Name] = rule.Content
+		}
+		assert.Equal(t, "Overridden base rule", ruleNames["Base Rule"])
+		assert.Equal(t, "Child rule content", ruleNames["Child Rule"])
+		
+		// Check sections are inherited
+		assert.Len(t, cfg.Sections, 1)
+		assert.Equal(t, "Base Section", cfg.Sections[0].Name)
+		
+		// Check agents are inherited
+		assert.Len(t, cfg.Agents, 1)
+		assert.Equal(t, "base-agent", cfg.Agents[0].Name)
+	})
+	
+	t.Run("extends with includes", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		// Create included config
+		includeConfigFile := filepath.Join(tempDir, "include.yaml")
+		includeContent := `
+rules:
+  - name: Include Rule
+    content: Include rule content
+    priority: low
+`
+		require.NoError(t, os.WriteFile(includeConfigFile, []byte(includeContent), 0o644))
+		
+		// Create base config
+		baseConfigFile := filepath.Join(tempDir, "base.yaml")
+		baseContent := `
+metadata:
+  name: Base Project
+outputs:
+  - path: base-output.md
+rules:
+  - name: Base Rule
+    content: Base rule content
+    priority: medium
+`
+		require.NoError(t, os.WriteFile(baseConfigFile, []byte(baseContent), 0o644))
+		
+		// Create child config that extends base and includes additional content
+		childConfigFile := filepath.Join(tempDir, "child.yaml")
+		childContent := `
+extends: base.yaml
+includes:
+  - include.yaml
+metadata:
+  name: Child Project
+rules:
+  - name: Child Rule
+    content: Child rule content
+    priority: high
+`
+		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
+		
+		cfg, err := config.LoadConfigWithIncludes(context.Background(), childConfigFile)
+		require.NoError(t, err)
+		
+		// Should have rules from base + includes + child
+		assert.Len(t, cfg.Rules, 3)
+		ruleNames := make([]string, len(cfg.Rules))
+		for i, rule := range cfg.Rules {
+			ruleNames[i] = rule.Name
+		}
+		assert.Contains(t, ruleNames, "Base Rule")
+		assert.Contains(t, ruleNames, "Include Rule")
+		assert.Contains(t, ruleNames, "Child Rule")
+	})
+	
+	t.Run("extends not found", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		childConfigFile := filepath.Join(tempDir, "child.yaml")
+		childContent := `
+extends: nonexistent.yaml
+metadata:
+  name: Child Project
+outputs:
+  - path: output.md
+`
+		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
+		
+		_, err := config.LoadConfigWithIncludes(context.Background(), childConfigFile)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "loading extended config")
+	})
+	
+	t.Run("circular extends", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		// Create config A that extends B
+		configAFile := filepath.Join(tempDir, "a.yaml")
+		configAContent := `
+extends: b.yaml
+metadata:
+  name: Config A
+outputs:
+  - path: a-output.md
+`
+		require.NoError(t, os.WriteFile(configAFile, []byte(configAContent), 0o644))
+		
+		// Create config B that extends A (circular)
+		configBFile := filepath.Join(tempDir, "b.yaml")
+		configBContent := `
+extends: a.yaml
+metadata:
+  name: Config B
+outputs:
+  - path: b-output.md
+`
+		require.NoError(t, os.WriteFile(configBFile, []byte(configBContent), 0o644))
+		
+		_, err := config.LoadConfigWithIncludes(context.Background(), configAFile)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "circular include detected")
+	})
+	
+	t.Run("empty extends field", func(t *testing.T) {
+		tempDir := t.TempDir()
+		
+		configFile := filepath.Join(tempDir, "config.yaml")
+		configContent := `
+extends: ""
+metadata:
+  name: Test Project
+outputs:
+  - path: output.md
+`
+		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
+		
+		cfg, err := config.LoadConfigWithIncludes(context.Background(), configFile)
+		require.NoError(t, err)
+		assert.Equal(t, "Test Project", cfg.Metadata.Name)
+		assert.Empty(t, cfg.Extends) // Should be cleared
+	})
+}

@@ -124,6 +124,46 @@ ai-rulez add rule "error-handling" --content "Handle all errors explicitly" --pr
 ai-rulez add output --path ".windsurf/rules.md"
 ```
 
+### Configuration Inheritance (Extends)
+
+Inherit from existing configurations instead of starting from scratch:
+
+```yaml
+# Extend a shared base configuration
+extends: "https://raw.githubusercontent.com/myorg/standards/main/typescript-base.yaml"
+
+metadata:
+  name: "My Frontend Project"  # Override the base name
+
+rules:
+  - name: "Project Specific"   # Add project-specific rules
+    priority: critical
+    content: "Use React 19 with concurrent features"
+```
+
+**Using Extends + Includes Together:**
+```yaml
+# Maximum flexibility: inherit base + compose additional pieces
+extends: "https://company.com/base-config.yaml"
+includes:
+  - "https://company.com/security-rules.yaml"
+  - "./local-customizations.yaml"
+
+metadata:
+  name: "My Project"
+  
+rules:
+  - name: "Project Specific"
+    content: "Custom rule for this project"
+```
+
+**Benefits:**
+- **Extends**: Inherit team/organization standards automatically
+- **Includes**: Compose additional shared components (security, testing, etc.)
+- **Combined**: Get base foundation + specialized add-ons + local customizations
+- Maintain consistency across related projects while allowing flexibility
+- Reduce configuration duplication
+
 ### Advanced: Add Agents (Claude)
 
 For specialized sub-tasks:
