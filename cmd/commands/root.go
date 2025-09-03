@@ -17,12 +17,9 @@ var (
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
-	Use:   "ai-rulez",
-	Short: "Lightning-fast CLI tool for managing AI assistant rules",
-	Long: `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules 
-across multiple platforms including Claude, Cursor, Windsurf, GitHub Copilot, 
-and more. It provides a unified configuration format with support for remote 
-includes, dynamic generation, and MCP server integration.`,
+	Use:          "ai-rulez",
+	Short:        "Lightning-fast CLI tool for managing AI assistant rules",
+	Long:         `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules \nacross multiple platforms including Claude, Cursor, Windsurf, GitHub Copilot, \nand more. It provides a unified configuration format with support for remote \nincludes, dynamic generation, and MCP server integration.`,
 	SilenceUsage: true,
 }
 
@@ -62,31 +59,51 @@ func init() {
 	RootCmd.AddCommand(GetCmd)
 	RootCmd.AddCommand(ListCmd)
 	RootCmd.AddCommand(MCPCmd)
+	RootCmd.AddCommand(SetCmd)
 
 	AddCmd.AddCommand(crud.AddRuleCmd)
 	AddCmd.AddCommand(crud.AddSectionCmd)
 	AddCmd.AddCommand(crud.AddOutputCmd)
 	AddCmd.AddCommand(crud.AddAgentCmd)
+	AddCmd.AddCommand(crud.AddMCPServerCmd)
+	AddCmd.AddCommand(crud.AddCommandCmd)
+	AddCmd.AddCommand(crud.AddIncludeCmd)
 
 	UpdateCmd.AddCommand(crud.UpdateRuleCmd)
 	UpdateCmd.AddCommand(crud.UpdateSectionCmd)
 	UpdateCmd.AddCommand(crud.UpdateOutputCmd)
 	UpdateCmd.AddCommand(crud.UpdateAgentCmd)
+	UpdateCmd.AddCommand(crud.UpdateMCPServerCmd)
+	UpdateCmd.AddCommand(crud.UpdateCommandCmd)
 
 	DeleteCmd.AddCommand(crud.DeleteRuleCmd)
 	DeleteCmd.AddCommand(crud.DeleteSectionCmd)
 	DeleteCmd.AddCommand(crud.DeleteOutputCmd)
 	DeleteCmd.AddCommand(crud.DeleteAgentCmd)
+	DeleteCmd.AddCommand(crud.DeleteMCPServerCmd)
+	DeleteCmd.AddCommand(crud.DeleteCommandCmd)
+	DeleteCmd.AddCommand(crud.DeleteExtendsCmd)
+	DeleteCmd.AddCommand(crud.DeleteIncludeCmd)
 
 	GetCmd.AddCommand(crud.GetRuleCmd)
 	GetCmd.AddCommand(crud.GetSectionCmd)
 	GetCmd.AddCommand(crud.GetOutputCmd)
 	GetCmd.AddCommand(crud.GetAgentCmd)
+	GetCmd.AddCommand(crud.GetMCPServerCmd)
+	GetCmd.AddCommand(crud.GetCommandCmd)
+	GetCmd.AddCommand(crud.GetMetadataCmd)
+	GetCmd.AddCommand(crud.GetExtendsCmd)
+
+	SetCmd.AddCommand(crud.SetMetadataCmd)
+	SetCmd.AddCommand(crud.SetExtendsCmd)
 
 	ListCmd.AddCommand(crud.ListRulesCmd)
 	ListCmd.AddCommand(crud.ListSectionsCmd)
 	ListCmd.AddCommand(crud.ListOutputsCmd)
 	ListCmd.AddCommand(crud.ListAgentsCmd)
+	ListCmd.AddCommand(crud.ListMCPServersCmd)
+	ListCmd.AddCommand(crud.ListCommandsCmd)
+	ListCmd.AddCommand(crud.ListIncludesCmd)
 }
 
 // initConfig reads in config file and ENV variables if set.

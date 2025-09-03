@@ -18,7 +18,7 @@ func TestMergeMCPServers(t *testing.T) {
 	extension := &config.Config{
 		MCPServers: []config.MCPServer{
 			{Name: "server2", URL: "http://localhost:9090"}, // Overwrite
-			{Name: "server3", Command: "cmd3"},             // Add
+			{Name: "server3", Command: "cmd3"},              // Add
 		},
 	}
 

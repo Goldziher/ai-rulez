@@ -1,93 +1,45 @@
-# ai-rulez ⚡
+# Why ai-rulez?
 
-Lightning-fast CLI tool and MCP server for managing AI assistant rules across Claude, Cursor, Windsurf, Copilot, and other AI tools from a single YAML configuration.
+Managing context for AI assistants is complex. As projects grow, keeping instructions for different tools like Claude, Cursor, and Copilot in sync becomes a tedious, error-prone task. `ai-rulez` solves this by providing a single source of truth and a powerful toolkit to manage it.
+
+<div class="grid cards" markdown>
+
+-   __Manage Complexity__
+
+    ---
+
+    Define your rules, agents, and context once in a clean `ai_rulez.yaml` file. Eliminate context drift and ensure all your AI tools operate with the same instructions.
+
+-   __Automate Everything__
+
+    ---
+
+    Use the comprehensive CLI to manage your entire configuration programmatically. Add a rule, update an agent, or generate all files with a single command. Never edit YAML by hand again.
+
+-   __Integrate Seamlessly__
+
+    ---
+
+    Enable the built-in MCP Server to allow your AI assistant to safely and programmatically interact with your configuration, enabling powerful automated workflows.
+
+-   __Scale with Your Project__
+
+    ---
+
+    Use `extends` and `includes` to create composable, reusable configurations that can be shared across your entire organization, ensuring consistency while maintaining flexibility.
+
+</div>
+
+---
 
 ## What is ai-rulez?
 
-ai-rulez generates AI assistant instruction files from a single configuration. Instead of maintaining separate `.cursorrules`, `CLAUDE.md`, `.github/copilot-instructions.md` files, you write one `ai_rulez.yaml` and generate all formats.
+`ai-rulez` is a lightning-fast CLI tool and server for managing AI assistant rules and context across multiple platforms. It takes a single `ai_rulez.yaml` file and generates native configuration files for all supported tools, keeping them perfectly in sync.
 
-## Quick Example
-
-Create an `ai_rulez.yaml`:
-
-```yaml
-metadata:
-  name: "My Project"
-
-rules:
-  - name: "code-style"
-    content: "Use TypeScript with strict mode"
-    priority: critical
-
-outputs:
-  - path: "CLAUDE.md"
-    template: "claude"
-  - path: ".cursor/rules/"
-    template: "cursor"
-```
-
-Run `ai-rulez generate` and get both files automatically generated and kept in sync.
-
-## Key Features
-
-- **Single Source of Truth** - One YAML file generates all AI assistant formats
-- **Multiple AI Platforms** - Claude, Cursor, Windsurf, Copilot, Gemini, and more
-- **MCP Server** - Built-in Model Context Protocol server for dynamic configuration
-- **Git Hooks Integration** - Automatic validation with lefthook, pre-commit, or husky
-- **Remote Includes** - Share configurations across projects
-- **Agent Support** - Specialized sub-agents for different tasks
-
-## Supported AI Platforms
-
-| Platform | Output | Format |
-|----------|--------|---------|
-| Claude | `CLAUDE.md` | Markdown |
-| Claude Agents | `.claude/agents/` | Directory with specialized agents |
-| Cursor | `.cursor/rules/` | MDC files |
-| Windsurf | `.windsurf/` | Markdown files |
-| GitHub Copilot | `.github/copilot-instructions.md` | Markdown |
-| Gemini | `GEMINI.md` | Markdown |
-| Cline | `.clinerules/` | Numbered markdown files |
-| Continue.dev | `.continue/rules/` | Frontmatter markdown |
-| AMP/Codex | `AGENTS.md` | Shared format |
-
-## Installation
-
-=== "Homebrew"
-    ```bash
-    brew install goldziher/tap/ai-rulez
-    ```
-
-=== "Go"
-    ```bash
-    go install github.com/Goldziher/ai-rulez/cmd@latest
-    ```
-
-=== "npm"
-    ```bash
-    npm install -g ai-rulez
-    ```
-
-=== "pip"
-    ```bash
-    pip install ai-rulez
-    ```
-
-=== "Run without installing"
-    ```bash
-    # Go
-    go run github.com/Goldziher/ai-rulez/cmd@latest --help
-    
-    # Python
-    uvx ai-rulez --help
-    
-    # Node.js
-    npx ai-rulez@latest --help
-    ```
+But it's more than just a generator. It's a complete, scriptable toolkit for managing your AI's behavior at scale.
 
 ## Next Steps
 
-1. [Install ai-rulez](installation.md)
-2. [Follow the Quick Start guide](quick-start.md)
-3. [Learn about Configuration](configuration.md)
-4. [Browse Examples](examples.md)
+- **[Quick Start Guide](quick-start.md)**: Get up and running in minutes.
+- **[Best Practices](monorepo.md)**: Learn how to structure your configurations for large projects.
+- **[Full CLI Reference](cli.md)**: Explore every command and flag.

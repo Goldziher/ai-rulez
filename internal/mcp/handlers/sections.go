@@ -2,232 +2,77 @@ package handlers
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/crud"
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// GetSectionsHandler GetSections handles the get_sections MCP tool
-func GetSectionsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	params := struct {
-		ConfigFile string `json:"config_file"`
-	}{}
-
-	if request.Params.Arguments != nil {
-		if data, err := json.Marshal(request.Params.Arguments); err == nil {
-			//nolint:errcheck // Ignore JSON unmarshal errors, use defaults
-			_ = json.Unmarshal(data, &params)
-		}
-	}
-
-	cfg, err := loadConfig(ctx, params.ConfigFile)
-	if err != nil {
-		return nil, err
-	}
-
-	result := map[string]interface{}{
-		"sections": cfg.Sections,
-		"count":    len(cfg.Sections),
-	}
-
-	content, _ := json.MarshalIndent(result, "", "  ")
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(content),
-			},
-		},
-	}, nil
+// ListSectionsHandler handles the list_sections MCP tool
+func ListSectionsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	return crud.HandleList(ctx, "sections")
 }
 
-// AddSectionHandler AddSection handles the add_section MCP tool
+// GetSectionHandler handles the get_section MCP tool
+func GetSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+	name, _ := request.Params.GetString("name")
+	return crud.HandleGet(ctx, "sections", name)
+}
+
+// AddSectionHandler handles the add_section MCP tool
 func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	params := struct {
-		ConfigFile string      `json:"config_file"`
-		Name       string      `json:"name"`
-		Content    string      `json:"content"`
-		Priority   interface{} `json:"priority"`
-	}{}
+	name, _ := request.Params.GetString("name")
+	content, _ := request.Params.GetString("content")
+	id, _ := request.Params.GetString("id")
+	priorityStr, _ := request.Params.GetString("priority")
+	targets, _ := request.Params.GetArray("targets")
 
-	if request.Params.Arguments != nil {
-		if data, err := json.Marshal(request.Params.Arguments); err == nil {
-			//nolint:errcheck // Ignore JSON unmarshal errors, use defaults
-			_ = json.Unmarshal(data, &params)
-		}
-	}
-
-	cfg, configPath, err := loadConfigWithPath(ctx, params.ConfigFile)
+	priority, err := config.ParsePriority(priorityStr)
 	if err != nil {
-		return nil, err
+		return crud.ToolError(err)
 	}
 
-	for _, section := range cfg.Sections {
-		if section.Name == params.Name {
-			return nil, fmt.Errorf("section with title '%s' already exists", params.Name)
-		}
-	}
-
-	priority, err := config.ParsePriority(params.Priority)
-	if err != nil {
-		priority = config.PriorityMedium
-	}
-
-	newSection := config.Section{
-		Name:     params.Name,
-		Content:  params.Content,
+	newSection := &config.Section{
+		ID:       id,
+		Name:     name,
+		Content:  content,
 		Priority: priority,
+		Targets:  crud.InterfaceSliceToStringSlice(targets),
 	}
 
-	cfg.Sections = append(cfg.Sections, newSection)
-
-	if err := saveConfig(cfg, configPath); err != nil {
-		return nil, err
-	}
-
-	result := map[string]interface{}{
-		"success": true,
-		"message": fmt.Sprintf("Section '%s' added successfully", params.Name),
-		"section": newSection,
-	}
-
-	content, _ := json.MarshalIndent(result, "", "  ")
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(content),
-			},
-		},
-	}, nil
+	return crud.HandleAdd(ctx, "sections", newSection)
 }
 
-// UpdateSectionHandler UpdateSection handles the update_section MCP tool
+// UpdateSectionHandler handles the update_section MCP tool
 func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	params := struct {
-		ConfigFile string      `json:"config_file"`
-		Name       string      `json:"name"`
-		NewName    string      `json:"new_name"`
-		Content    string      `json:"content"`
-		Priority   interface{} `json:"priority"`
-	}{}
+	name, _ := request.Params.GetString("name")
 
-	if request.Params.Arguments != nil {
-		if data, err := json.Marshal(request.Params.Arguments); err == nil {
-			//nolint:errcheck // Ignore JSON unmarshal errors, use defaults
-			_ = json.Unmarshal(data, &params)
+	updates := make(map[string]interface{})
+	if newName, ok := request.Params.GetString("new_name"); ok {
+		updates["Name"] = newName
+	}
+	if id, ok := request.Params.GetString("id"); ok {
+		updates["ID"] = id
+	}
+	if content, ok := request.Params.GetString("content"); ok {
+		updates["Content"] = content
+	}
+	if priorityStr, ok := request.Params.GetString("priority"); ok {
+		priority, err := config.ParsePriority(priorityStr)
+		if err != nil {
+			return crud.ToolError(err)
 		}
+		updates["Priority"] = priority
+	}
+	if targets, ok := request.Params.GetArray("targets"); ok {
+		updates["Targets"] = crud.InterfaceSliceToStringSlice(targets)
 	}
 
-	cfg, configPath, err := loadConfigWithPath(ctx, params.ConfigFile)
-	if err != nil {
-		return nil, err
-	}
-
-	sectionIndex := -1
-	for i, section := range cfg.Sections {
-		if section.Name == params.Name {
-			sectionIndex = i
-			break
-		}
-	}
-
-	if sectionIndex == -1 {
-		return nil, fmt.Errorf("section with title '%s' not found", params.Name)
-	}
-
-	if params.NewName != "" && params.NewName != params.Name {
-		for _, section := range cfg.Sections {
-			if section.Name == params.NewName {
-				return nil, fmt.Errorf("section with title '%s' already exists", params.NewName)
-			}
-		}
-		cfg.Sections[sectionIndex].Name = params.NewName
-	}
-
-	if params.Content != "" {
-		cfg.Sections[sectionIndex].Content = params.Content
-	}
-
-	if params.Priority != nil {
-		priority, err := config.ParsePriority(params.Priority)
-		if err == nil {
-			cfg.Sections[sectionIndex].Priority = priority
-		}
-	}
-
-	if err := saveConfig(cfg, configPath); err != nil {
-		return nil, err
-	}
-
-	result := map[string]interface{}{
-		"success": true,
-		"message": fmt.Sprintf("Section '%s' updated successfully", params.Name),
-		"section": cfg.Sections[sectionIndex],
-	}
-
-	content, _ := json.MarshalIndent(result, "", "  ")
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(content),
-			},
-		},
-	}, nil
+	return crud.HandleUpdate(ctx, "sections", name, updates)
 }
 
-// DeleteSectionHandler DeleteSection handles the delete_section MCP tool
+// DeleteSectionHandler handles the delete_section MCP tool
 func DeleteSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	params := struct {
-		ConfigFile string `json:"config_file"`
-		Name       string `json:"name"`
-	}{}
-
-	if request.Params.Arguments != nil {
-		if data, err := json.Marshal(request.Params.Arguments); err == nil {
-			//nolint:errcheck // Ignore JSON unmarshal errors, use defaults
-			_ = json.Unmarshal(data, &params)
-		}
-	}
-
-	cfg, configPath, err := loadConfigWithPath(ctx, params.ConfigFile)
-	if err != nil {
-		return nil, err
-	}
-
-	sectionIndex := -1
-	for i, section := range cfg.Sections {
-		if section.Name == params.Name {
-			sectionIndex = i
-			break
-		}
-	}
-
-	if sectionIndex == -1 {
-		return nil, fmt.Errorf("section with title '%s' not found", params.Name)
-	}
-
-	cfg.Sections = append(cfg.Sections[:sectionIndex], cfg.Sections[sectionIndex+1:]...)
-
-	if err := saveConfig(cfg, configPath); err != nil {
-		return nil, err
-	}
-
-	result := map[string]interface{}{
-		"success": true,
-		"message": fmt.Sprintf("Section '%s' deleted successfully", params.Name),
-	}
-
-	content, _ := json.MarshalIndent(result, "", "  ")
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(content),
-			},
-		},
-	}, nil
+	name, _ := request.Params.GetString("name")
+	return crud.HandleDelete(ctx, "sections", name)
 }

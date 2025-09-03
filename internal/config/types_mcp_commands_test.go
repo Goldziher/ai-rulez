@@ -53,9 +53,9 @@ func TestMCPServer_GetTransport(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name      string
-		server    config.MCPServer
-		expected  string
+		name     string
+		server   config.MCPServer
+		expected string
 	}{
 		{
 			name:     "empty transport defaults to stdio",
