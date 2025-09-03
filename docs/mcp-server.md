@@ -1,41 +1,22 @@
-# MCP Server
+# Enabling the MCP Server
 
-ai-rulez includes a built-in MCP server for dynamic configuration management with AI assistants.
+The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `ai_rulez.yaml` configuration. Instead of asking the AI to manually edit the YAML file, the assistant can use the server to add rules, update agents, or generate files directly.
 
-## Quick Start
+**You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
 
-```bash
-ai-rulez mcp
-```
+---
 
-## Integration
+## Configuration Examples
 
-### Claude Desktop
+To enable the server, add one of the following snippets to your AI assistant's configuration file (e.g., Cursor's `settings.json`).
 
-Add to `~/Library/Application Support/Claude/claude_desktop_config.json`:
+### Using `npx` (Recommended for Node.js users)
 
-```json
-{
-  "mcpServers": {
-    "ai-rulez": {
-      "command": "ai-rulez",
-      "args": ["mcp"]
-    }
-  }
-}
-```
-
-### Claude Code
-
-```bash
-claude mcp add ai-rulez "ai-rulez" "mcp"
-```
-
-### Via Package Managers
+This method ensures you are always using the latest version of `ai-rulez` without needing to install it globally.
 
 ```json
 {
-  "mcpServers": {
+  "mcp_servers": {
     "ai-rulez": {
       "command": "npx",
       "args": ["-y", "ai-rulez@latest", "mcp"]
@@ -44,65 +25,46 @@ claude mcp add ai-rulez "ai-rulez" "mcp"
 }
 ```
 
-## Available Tools
+### Using `uvx` (Recommended for Python users)
 
-The MCP server provides 19 tools for managing configuration:
+This method uses `uvx` to run `ai-rulez` in an ephemeral environment.
 
-### Configuration Retrieval
-- **`get_rules`** - List all rules (supports `min_priority`, `name_filter` parameters)
-- **`get_sections`** - List all sections (supports `name` filter parameter)
-- **`get_agents`** - List all agents (supports `name` filter parameter)
-- **`get_outputs`** - List all outputs (supports `path` filter parameter)
-
-### Add Elements
-- **`add_rule`** - Add new rule (`content` required, `section`, `priority` optional)
-- **`add_section`** - Add new section (`name` required, `priority` optional)
-- **`add_agent`** - Add new agent (`name`, `description` required, `priority`, `tools`, `system_prompt` optional)
-- **`add_output`** - Add new output (`path` required, `type`, `naming_scheme` optional)
-
-### Update Elements (Index-Based)
-- **`update_rule`** - Update rule by index (`index`, `content` required, `priority` optional)
-- **`update_section`** - Update section by index (`index`, `name` required, `priority` optional)
-- **`update_agent`** - Update agent by index (`index` required, all other fields optional)
-- **`update_output`** - Update output by index (`index` required, all other fields optional)
-
-### Delete Elements (Index-Based)
-- **`delete_rule`** - Delete rule by index (`index` required)
-- **`delete_section`** - Delete section by index (`index` required)
-- **`delete_agent`** - Delete agent by index (`index` required)
-- **`delete_output`** - Delete output by index (`index` required)
-
-### Project Operations
-- **`generate_output`** - Generate files (`config_file` optional)
-- **`validate_config`** - Validate configuration (`config_file` required)
-- **`init_project`** - Initialize project (`name` required, `preset`, `use_agent` optional)
-- **`get_version`** - Get ai-rulez version (no parameters)
-
-## Usage Examples
-
-Simply ask your AI assistant to manage configurations:
-
-> "Add a rule with content 'Write unit tests' and priority 8"
-
-> "Update rule at index 0 with new content 'Write comprehensive unit tests'"
-
-> "Generate the AI files from my configuration"
-
-> "Get all rules with priority higher than 5"
-
-> "Initialize a new project called 'My API' with preset claude"
-
-**Note**: Update and delete operations use zero-based indices. Use `get_*` tools first to find the correct index.
-
-## Benefits
-
-- **Dynamic Updates** - No file editing required
-- **Real-time Generation** - Immediate file generation after changes  
-- **Automatic Validation** - All changes are validated
-- **Seamless Integration** - Natural AI assistant workflow
-
-## Custom Configuration
-
-```bash
-ai-rulez mcp --config custom.yaml
+```json
+{
+  "mcp_servers": {
+    "ai-rulez": {
+      "command": "uvx",
+      "args": ["ai-rulez", "mcp"]
+    }
+  }
+}
 ```
+
+### Using a Local Go Installation
+
+If you have installed `ai-rulez` locally with `go install`.
+
+```json
+{
+  "mcp_servers": {
+    "ai-rulez": {
+      "command": "ai-rulez",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+---
+
+## Server Capabilities
+
+When enabled, the MCP server provides your AI assistant with a comprehensive set of tools to safely manage your entire `ai_rulez.yaml` configuration. The assistant can:
+
+- **Manage Rules, Sections, and Agents:** Add, update, delete, and list all core configuration elements.
+- **Manage Outputs:** Add or remove new output targets for generation.
+- **Manage Tools:** Configure MCP servers and custom slash commands.
+- **Manage Metadata:** Get or set top-level properties like the project name, `extends`, and `includes`.
+- **Trigger Core Actions:** Programmatically run the `generate` and `validate` commands.
+
+This allows for powerful, automated workflows, such as asking your AI assistant to "add a new rule for our Python standards and then regenerate the output files."

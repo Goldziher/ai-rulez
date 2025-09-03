@@ -27,6 +27,32 @@ func (s *MCPCommandsCLITestSuite) TearDownSuite() {
 	testutil.CleanupTestBinary()
 }
 
+func (s *MCPCommandsCLITestSuite) TestGenerateWithInvalidTemplate() {
+	// Create a syntactically invalid template file
+	invalidTemplateContent := `Hello, {{ .ProjectName ` // Missing closing braces
+	testutil.WriteFile(s.T(), s.workingDir, "broken.tmpl", invalidTemplateContent)
+
+	// Create a config that uses the broken template
+	configContent := `
+metadata:
+  name: "Invalid Template Test"
+outputs:
+  - path: "output.txt"
+    template:
+      type: "file"
+      path: "broken.tmpl"
+`
+	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", configContent)
+
+	// Run generate and expect an error
+	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
+
+	// Assert that the command failed with a clear error message
+	result.AssertStderrContains(s.T(), "Failed to render template")
+	result.AssertStderrContains(s.T(), "broken.tmpl")
+	result.AssertStderrContains(s.T(), "template: file:1: unclosed action") // This is the specific Go template error
+}
+
 // Test MCP server generation in different formats
 func (s *MCPCommandsCLITestSuite) TestGenerateMCPServers() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.ConfigWithMCPServers)
@@ -37,19 +63,19 @@ func (s *MCPCommandsCLITestSuite) TestGenerateMCPServers() {
 
 	// Test Claude Code format (.mcp.json)
 	s.verifyClaudeCodeMCPFormat()
-	
+
 	// Test Cursor format (.cursor/mcp.json)
 	s.verifyCursorMCPFormat()
-	
+
 	// Test Windsurf format (mcp_config.json)
 	s.verifyWindsurfMCPFormat()
-	
+
 	// Test VS Code format (.vscode/mcp.json)
 	s.verifyVSCodeMCPFormat()
-	
+
 	// Test Continue.dev format (.continue/mcpServers/servers.yaml)
 	s.verifyContinueDevMCPFormat()
-	
+
 	// Test Cline format (cline_mcp_settings.json)
 	s.verifyClineMCPFormat()
 }
@@ -57,29 +83,29 @@ func (s *MCPCommandsCLITestSuite) TestGenerateMCPServers() {
 func (s *MCPCommandsCLITestSuite) verifyClaudeCodeMCPFormat() {
 	path := filepath.Join(s.workingDir, ".mcp.json")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
-	
+
 	// Parse JSON to verify structure
 	var config map[string]interface{}
 	err := json.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid JSON")
-	
+
 	// Verify Claude Code specific format requirements
 	github, exists := config["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("stdio", github["type"], "Should have type field")
 	s.Equal("npx", github["command"], "Should have correct command")
-	
+
 	args, ok := github["args"].([]interface{})
 	s.True(ok && len(args) == 2, "Should have correct args")
 	s.Equal("-y", args[0])
 	s.Equal("@modelcontextprotocol/server-github", args[1])
-	
+
 	env, ok := github["env"].(map[string]interface{})
 	s.True(ok, "Should have env section")
 	s.Equal("${GITHUB_TOKEN}", env["GITHUB_PERSONAL_ACCESS_TOKEN"])
-	
+
 	// Test remote server format
 	remoteAPI, exists := config["remote-api"].(map[string]interface{})
 	s.True(exists, "Should have remote-api server")
@@ -90,21 +116,21 @@ func (s *MCPCommandsCLITestSuite) verifyClaudeCodeMCPFormat() {
 func (s *MCPCommandsCLITestSuite) verifyCursorMCPFormat() {
 	path := filepath.Join(s.workingDir, ".cursor", "mcp.json")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
-	
+
 	var config map[string]interface{}
 	err := json.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid JSON")
-	
+
 	// Verify Cursor specific format with McpServers wrapper
 	mcpServers, exists := config["McpServers"].(map[string]interface{})
 	s.True(exists, "Should have McpServers wrapper (capitalized)")
-	
+
 	github, exists := mcpServers["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("npx", github["command"], "Should have command")
-	
+
 	// Remote servers should use url field
 	remoteAPI, exists := mcpServers["remote-api"].(map[string]interface{})
 	s.True(exists, "Should have remote-api server")
@@ -116,21 +142,21 @@ func (s *MCPCommandsCLITestSuite) verifyCursorMCPFormat() {
 func (s *MCPCommandsCLITestSuite) verifyWindsurfMCPFormat() {
 	path := filepath.Join(s.workingDir, "mcp_config.json")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
-	
+
 	var config map[string]interface{}
 	err := json.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid JSON")
-	
+
 	// Verify Windsurf specific format with mcpServers wrapper (camelCase)
 	mcpServers, exists := config["mcpServers"].(map[string]interface{})
 	s.True(exists, "Should have mcpServers wrapper (camelCase)")
-	
+
 	github, exists := mcpServers["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("npx", github["command"], "Should have command")
-	
+
 	// Windsurf may include remote servers - it depends on implementation
 	// For this test, let's just verify structure is correct
 	s.NotNil(mcpServers, "Should have mcpServers structure")
@@ -139,17 +165,17 @@ func (s *MCPCommandsCLITestSuite) verifyWindsurfMCPFormat() {
 func (s *MCPCommandsCLITestSuite) verifyVSCodeMCPFormat() {
 	path := filepath.Join(s.workingDir, ".vscode", "mcp.json")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
-	
+
 	var config map[string]interface{}
 	err := json.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid JSON")
-	
+
 	// Verify VS Code specific format with servers wrapper
 	servers, exists := config["servers"].(map[string]interface{})
 	s.True(exists, "Should have servers wrapper")
-	
+
 	github, exists := servers["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("stdio", github["type"], "Should have type field")
@@ -159,23 +185,23 @@ func (s *MCPCommandsCLITestSuite) verifyVSCodeMCPFormat() {
 func (s *MCPCommandsCLITestSuite) verifyContinueDevMCPFormat() {
 	path := filepath.Join(s.workingDir, ".continue", "mcpServers", "servers.yaml")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
-	
+
 	// Parse YAML
 	var config map[string]interface{}
 	err := yaml.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid YAML")
-	
+
 	// Verify Continue.dev specific YAML format
 	s.Equal("MCP Server Test Project MCP Configuration", config["name"])
 	s.Equal("1.0.0", config["version"])
 	s.Equal("v1", config["schema"])
-	
+
 	mcpServers, exists := config["mcpServers"].([]interface{})
 	s.True(exists, "Should have mcpServers array")
 	s.True(len(mcpServers) > 0, "Should have at least one server")
-	
+
 	// Find GitHub server
 	var githubServer map[string]interface{}
 	for _, server := range mcpServers {
@@ -189,10 +215,10 @@ func (s *MCPCommandsCLITestSuite) verifyContinueDevMCPFormat() {
 	s.NotNil(githubServer, "Should find GitHub server")
 	s.Equal("GitHub integration", githubServer["description"])
 	s.Equal("npx", githubServer["command"])
-	
+
 	args, ok := githubServer["args"].([]interface{})
 	s.True(ok && len(args) == 2, "Should have args array")
-	
+
 	// Find remote server
 	var remoteServer map[string]interface{}
 	for _, server := range mcpServers {
@@ -211,22 +237,22 @@ func (s *MCPCommandsCLITestSuite) verifyContinueDevMCPFormat() {
 func (s *MCPCommandsCLITestSuite) verifyClineMCPFormat() {
 	path := filepath.Join(s.workingDir, "cline_mcp_settings.json")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
-	
+
 	var config map[string]interface{}
 	err := json.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid JSON")
-	
+
 	// Verify Cline specific format with disabled field
 	mcpServers, exists := config["mcpServers"].(map[string]interface{})
 	s.True(exists, "Should have mcpServers wrapper")
-	
+
 	github, exists := mcpServers["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("npx", github["command"], "Should have command")
 	s.Equal(false, github["disabled"], "Should have disabled field set to false")
-	
+
 	disabledServer, exists := mcpServers["disabled-server"].(map[string]interface{})
 	s.True(exists, "Should have disabled server")
 	s.Equal(true, disabledServer["disabled"], "Should have disabled field set to true")
@@ -243,23 +269,23 @@ func (s *MCPCommandsCLITestSuite) TestGenerateCommands() {
 	// Verify commands output
 	path := filepath.Join(s.workingDir, "commands-output.md")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
 	s.Contains(content, "Commands Test Project Commands")
 	s.Contains(content, "## Available Commands")
-	
+
 	// Verify individual commands
 	s.Contains(content, "### /newtask")
 	s.Contains(content, "Start a new task with fresh context")
 	s.Contains(content, "**Usage:** /newtask <description>")
 	s.Contains(content, "**System Prompt:** You are starting a new focused task")
 	s.Contains(content, "- Enabled: true")
-	
+
 	// Verify command with aliases
 	s.Contains(content, "### /smol (aliases: /compact /summarize )")
 	s.Contains(content, "Condense chat history")
 	s.Contains(content, "**Shortcut:** Ctrl+Shift+S")
-	
+
 	// Verify disabled command
 	s.Contains(content, "### /review")
 	s.Contains(content, "- Enabled: false")
@@ -272,7 +298,7 @@ func (s *MCPCommandsCLITestSuite) TestValidateMCPAndCommands() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
 	result.AssertOutputContains(s.T(), "✅ Configuration file is valid")
-	
+
 	// Validate command writes to stdout, so it should have output
 	s.True(len(result.Stdout) > 0 || len(result.Stderr) > 0, "Should have some output")
 }
@@ -300,7 +326,7 @@ rules:
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", invalidConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
-	
+
 	// Should still validate (command is optional in our schema)
 	result.AssertOutputContains(s.T(), "✅ Configuration file is valid")
 }
@@ -324,7 +350,7 @@ rules:
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", invalidConfig)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
-	
+
 	result.AssertStderrContains(s.T(), "validation failed")
 }
 
@@ -377,11 +403,11 @@ rules:
 	claudePath := filepath.Join(s.workingDir, "claude-mcp.json")
 	s.True(testutil.FileExists(s.T(), claudePath))
 	claudeContent := testutil.ReadFile(s.T(), claudePath)
-	
+
 	var claudeConfig map[string]interface{}
 	err := json.Unmarshal([]byte(claudeContent), &claudeConfig)
 	s.NoError(err)
-	
+
 	// Should have Claude-targeted and universal servers
 	s.Contains(claudeContent, "claude-only-server")
 	s.Contains(claudeContent, "universal-server")
@@ -391,18 +417,18 @@ rules:
 	cursorPath := filepath.Join(s.workingDir, "cursor-mcp.json")
 	s.True(testutil.FileExists(s.T(), cursorPath))
 	cursorContent := testutil.ReadFile(s.T(), cursorPath)
-	
+
 	var cursorConfig map[string]interface{}
 	err = json.Unmarshal([]byte(cursorContent), &cursorConfig)
 	s.NoError(err)
-	
+
 	mcpServers := cursorConfig["McpServers"].(map[string]interface{})
-	
+
 	// Should have Cursor-targeted and universal servers
 	_, hasCursorServer := mcpServers["cursor-only-server"]
 	_, hasUniversalServer := mcpServers["universal-server"]
 	_, hasClaudeServer := mcpServers["claude-only-server"]
-	
+
 	s.True(hasCursorServer, "Should have cursor-only-server")
 	s.True(hasUniversalServer, "Should have universal-server")
 	s.False(hasClaudeServer, "Should not have claude-only-server")
@@ -452,9 +478,9 @@ rules:
 
 	path := filepath.Join(s.workingDir, "counts.md")
 	s.True(testutil.FileExists(s.T(), path))
-	
+
 	content := testutil.ReadFile(s.T(), path)
 	s.Contains(content, "- MCP Servers: 2")
-	s.Contains(content, "- Commands: 3")  
+	s.Contains(content, "- Commands: 3")
 	s.Contains(content, "- Rules: 1")
 }

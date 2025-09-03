@@ -1,287 +1,131 @@
-# Configuration
+# Configuration (`ai_rulez.yaml`)
 
-## Basic Structure
+This page provides a complete reference for the `ai_rulez.yaml` file format, with explanations for key concepts.
 
-Start with the minimal configuration, then add complexity as needed.
+## Top-Level Properties
 
-### Minimal Configuration
+These are the main keys at the root of your configuration file.
 
-```yaml
-metadata:
-  name: "My Project"
+### `metadata`
 
-rules:
-  - name: "code-quality"
-    content: "Write clean, readable code"
-
-outputs:
-  - path: "CLAUDE.md"
-```
-
-### Add Priorities
-
-Control the order of rules in generated files:
+An object containing essential information about your project.
 
 ```yaml
 metadata:
   name: "My Project"
-
-rules:
-  - name: "security"
-    content: "Validate all inputs"
-    priority: critical          # Higher = appears first
-    
-  - name: "code-quality"
-    content: "Write clean, readable code"
-    priority: medium
-
-outputs:
-  - path: "CLAUDE.md"
-```
-
-### Multiple AI Platforms
-
-Generate files for different AI tools:
-
-```yaml
-metadata:
-  name: "My Project"
-
-rules:
-  - name: "code-quality"
-    content: "Write clean, readable code"
-    priority: critical
-
-outputs:
-  - path: "CLAUDE.md"
-  - path: ".cursor/rules/rules.mdc"
-  - path: ".github/copilot-instructions.md"
-```
-
-### Complete Structure
-
-All available configuration options:
-
-```yaml
-metadata:
-  name: "My Project"
-  description: "Optional description"
   version: "1.0.0"
-
-rules:
-  - name: "rule-name"
-    content: "Rule description"
-    priority: critical
-
-sections:
-  - name: "Section Name" 
-    content: "Longer documentation content"
-    priority: medium
-
-agents:
-  - name: "agent-name"
-    description: "Agent purpose"
-    system_prompt: "You are a..."
-    tools: ["read", "write"]
-    priority: high
-
-outputs:
-  - path: "CLAUDE.md"
+  description: "A brief description of the project."
 ```
+
+### `extends`
+
+A string specifying a single base configuration file to inherit from. The path can be a local file or a remote URL.
+
+!!! info "Why use `extends`?"
+    The `extends` property is for **inheritance**. It allows you to create a foundational configuration (e.g., for your entire organization) and have individual projects inherit and build upon it. This is the best way to enforce common standards while allowing for project-specific customization.
+
+### `includes`
+
+A list of strings specifying other `ai_rulez.yaml` files to merge into your configuration. Paths can be local files or remote URLs.
+
+!!! info "Why use `includes`?"
+    The `includes` property is for **composition**. It allows you to create modular, reusable sets of rules (e.g., for a specific language, framework, or security standard) and mix them into any project as needed.
+
+### `outputs`
+
+A list of objects defining the files to be generated. See the `output` object reference below for details.
+
+### `rules`
+
+A list of rule objects that define instructions for your AI assistant. See the `rule` object reference below for details.
+
+### `sections`
+
+A list of section objects that define large blocks of documentation or context. See the `section` object reference below for details.
+
+### `agents`
+
+A list of agent objects that define specialized sub-assistants. See the `agent` object reference below for details.
+
+### `mcp_servers`
+
+A list of MCP server objects for integrating external tools. See the `mcp_server` object reference below for details.
+
+### `commands`
+
+A list of custom slash command objects for your AI assistant. See the `command` object reference below for details.
 
 ---
 
-## Configuration Details
+## Object Reference
 
-### Rules
+This section details the fields for each type of object in the configuration.
 
-Individual instructions for AI assistants:
+### `output` Object
 
-```yaml
-rules:
-  - name: "typescript-strict"
-    content: "Use TypeScript strict mode with explicit return types"
-    priority: critical              # Higher priority = appears first
-```
+Defines a file or directory to be generated.
 
-### Sections
+- `path` (string, required): The output path. If it ends with a `/`, it is treated as a directory.
+- `type` (string): For directory outputs, specifies the content type to generate (`rule` or `agent`).
+- `naming_scheme` (string): For directory outputs, a pattern for filenames (e.g., `{name}.md`).
+- `template` (object): A structured object to define the template.
+  - `type` (string, required): `builtin`, `file`, or `inline`.
+  - `value` (string, required): The name, path, or content of the template.
 
-Longer documentation blocks:
+### `rule` Object
 
-```yaml
-sections:
-  - name: "Project Setup"
-    content: |
-      This project uses:
-      - TypeScript 5.0+
-      - React 18
-    priority: critical
-```
+- `name` (string, required): The name of the rule.
+- `content` (string, required): The content of the rule.
+- `id` (string): An optional unique identifier.
+- `priority` (string): `critical`, `high`, `medium`, `low`, or `minimal`.
+- `targets` (array of strings): A list of output paths this rule applies to.
 
-### Agents (Claude Only)
+!!! tip "When to use an `id`"
+    The `id` field is used to create a stable identifier for a rule that is independent of its `name`. This is useful when you want to override a rule from an included or extended configuration file without relying on the `name`, which might change.
 
-Specialized sub-agents for specific tasks:
+### `section` Object
 
-```yaml
-agents:
-  - name: "code-reviewer"
-    description: "Reviews code for best practices"
-    system_prompt: "You are a senior code reviewer focused on quality"
-    tools: ["read", "grep", "edit"]
-    priority: critical
-```
+- `name` (string, required): The name of the section.
+- `content` (string, required): The content of the section.
+- `id` (string): An optional unique identifier for overriding.
+- `priority` (string): `critical`, `high`, `medium`, `low`, or `minimal`.
+- `targets` (array of strings): A list of output paths this section applies to.
 
-**Available Tools**: `read`, `write`, `edit`, `grep`, `bash`, `multiedit`
+### `agent` Object
 
-### Outputs
+- `name` (string, required): The name of the agent.
+- `description` (string, required): A description of the agent's purpose.
+- `id` (string): An optional unique identifier for overriding.
+- `priority` (string): The agent's priority.
+- `tools` (array of strings): A list of tools available to the agent.
+- `system_prompt` (string): The system prompt for the agent.
+- `template` (object): A structured template object for the system prompt.
+- `targets` (array of strings): A list of output paths this agent applies to.
 
-Define which files to generate:
+!!! info "The Power of Agents"
+    Agents allow you to create specialized "experts" for different tasks. For example, you can create a `database-expert` with a system prompt full of details about your schema and query patterns. This provides the AI with deep, focused context, resulting in much more accurate and helpful responses for domain-specific questions.
 
-```yaml
-outputs:
-  # Single files (most common)
-  - path: "CLAUDE.md"
-  - path: ".cursor/rules/rules.mdc"
-  - path: ".github/copilot-instructions.md"
-    
-  # Directory outputs  
-  - path: ".windsurf/"
-    type: "rule"
-    naming_scheme: "{name}.md"           # One file per rule
-    
-  - path: ".claude/agents/"
-    type: "agent" 
-    naming_scheme: "{name}.md"           # One file per agent
-```
+### `mcp_server` Object
 
-**Output Field Options:**
+- `name` (string, required): The name of the server.
+- `id` (string): An optional unique identifier for overriding.
+- `description` (string): A description of the server.
+- `command` (string): The command to start the server.
+- `args` (array of strings): Arguments for the command.
+- `env` (object): Environment variables for the server.
+- `transport` (string): `stdio`, `sse`, or `http`.
+- `url` (string): The URL for remote servers.
+- `enabled` (boolean): Whether the server is enabled.
+- `targets` (array of strings): A list of output paths this server applies to.
 
-- **`path`**: File or directory path (recommended)
-- **`file`**: ⚠️ **DEPRECATED** - Use `path` instead. Will be removed in v2.0
-- **`type`**: Content type for directory outputs (`rule`, `section`, `agent`)  
-- **`naming_scheme`**: File naming pattern for directory outputs
-- **`template`**: Custom template (optional - uses default if not specified)
+### `command` Object
 
-**Available Templates:**
-
-- **`default`**: Standard markdown template (used when no template specified)
-- **Inline templates**: Define custom templates directly in configuration:
-
-```yaml
-outputs:
-  - path: "CUSTOM.md"
-    template: |
-      # {{.ProjectName}}
-      {{range .Rules}}
-      ## {{.Name}} (Priority: {{.Priority}})
-      {{.Content}}
-      {{end}}
-```
-
-### Configuration Inheritance (Extends)
-
-Inherit from a base configuration and customize for specific projects:
-
-```yaml
-# Child config inherits everything from base and can override
-extends: "https://raw.githubusercontent.com/myorg/standards/main/base-config.yaml"
-
-metadata:
-  name: "My Specific Project"  # Overrides base name
-
-rules:
-  - name: "Base Rule"          # Overrides rule from base config
-    content: "Customized rule content"
-    priority: critical
-  - name: "Project Specific"   # Adds new rule
-    content: "This rule is unique to this project"
-    priority: medium
-```
-
-**Extends vs Includes:**
-- **`extends`**: Inherits from a single base config (inheritance)
-- **`includes`**: Merges content from multiple files (composition)
-- **Both together**: Use extends for base inheritance, includes for additional composition
-
-**Using Both Extends + Includes:**
-```yaml
-extends: "https://company.com/base-typescript.yaml"     # Inherit base setup
-includes:                                               # Add additional pieces
-  - "https://company.com/security-rules.yaml"          # Security standards
-  - "./local-overrides.yaml"                           # Local customizations
-
-metadata:
-  name: "My Specific Project"
-  
-rules:
-  - name: "Project Specific"
-    content: "Custom rule for this project"
-```
-
-**Processing Order:**
-1. Load and apply `extends` (base inheritance)
-2. Load and merge `includes` (additional composition)  
-3. Apply local config (final overrides)
-
-**Inheritance Rules:**
-- Child metadata overrides parent metadata (name, version, description)
-- Child outputs are appended to parent outputs
-- Child rules/sections/agents merge with parent (child overrides parent for same name)
-- Include files can themselves have `extends` or `includes` fields
-
-### Remote Includes
-
-Share configurations across projects:
-
-```yaml
-includes:
-  - "https://raw.githubusercontent.com/myorg/standards/main/backend.yaml"
-
-rules:
-  - name: "project-specific"
-    content: "This rule is specific to this project"
-```
-
-Remote rules are merged with local ones. Local rules override remote rules with the same name.
-
-### Advanced Configuration
-
-#### User-Specific Rules
-
-Override rules for specific users or environments:
-
-```yaml
-user_rulez:
-  rules:
-    - name: "dev-specific"
-      content: "Development-only rule"
-      priority: critical
-  sections:
-    - name: "Dev Environment"
-      content: "Local development setup"
-  agents:
-    - name: "dev-helper"
-      description: "Development assistant"
-```
-
-#### Targets (Advanced)
-
-Target specific file patterns or directories:
-
-```yaml  
-targets:
-  backend: ["src/**/*.go", "internal/**/*.go"]
-  frontend: ["web/**/*.ts", "web/**/*.tsx"]
-```
-
-*Note: This is an advanced feature - most users should use the standard `outputs` configuration.*
-
----
-
-## Validation
-
-```bash
-ai-rulez validate
-```
-
-See the [Examples page](examples.md) for complete configurations.
+- `name` (string, required): The name of the command (e.g., `new-task`).
+- `description` (string, required): A description of the command.
+- `id` (string): An optional unique identifier for overriding.
+- `aliases` (array of strings): Alternative names for the command.
+- `usage` (string): A usage example (e.g., `/new-task <description>`).
+- `system_prompt` (string): The system prompt to use for this command.
+- `shortcut` (string): A keyboard shortcut.
+- `enabled` (boolean): Whether the command is enabled.
+- `targets` (array of strings): A list of output paths this command applies to.

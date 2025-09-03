@@ -163,10 +163,10 @@ func FilterMCPServers(mcpServers []MCPServer, outputPath string, namedTargets ma
 	}
 
 	filtered := make([]MCPServer, 0, len(mcpServers))
-	for _, server := range mcpServers {
-		resolvedTargets := resolveTargets(server.Targets, namedTargets)
+	for i := range mcpServers {
+		resolvedTargets := resolveTargets(mcpServers[i].Targets, namedTargets)
 		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, server)
+			filtered = append(filtered, mcpServers[i])
 		}
 	}
 
@@ -179,10 +179,10 @@ func FilterCommands(commands []Command, outputPath string, namedTargets map[stri
 	}
 
 	filtered := make([]Command, 0, len(commands))
-	for _, cmd := range commands {
-		resolvedTargets := resolveTargets(cmd.Targets, namedTargets)
+	for i := range commands {
+		resolvedTargets := resolveTargets(commands[i].Targets, namedTargets)
 		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, cmd)
+			filtered = append(filtered, commands[i])
 		}
 	}
 
