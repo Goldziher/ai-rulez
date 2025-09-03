@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -29,7 +30,11 @@ func SetupTestBinary(t *testing.T) string {
 	require.NoError(t, err)
 
 	projectRoot := filepath.Join(testDir, "..", "..", "..")
-	binaryPath = filepath.Join(testDir, TestBinaryName)
+	binaryName := TestBinaryName
+	if runtime.GOOS == "windows" {
+		binaryName += ".exe"
+	}
+	binaryPath = filepath.Join(testDir, binaryName)
 
 	//nolint:gosec // G204: Test utility needs to build binary with variables
 	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
