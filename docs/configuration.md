@@ -29,11 +29,11 @@ metadata:
 rules:
   - name: "security"
     content: "Validate all inputs"
-    priority: 10          # Higher = appears first
+    priority: critical          # Higher = appears first
     
   - name: "code-quality"
     content: "Write clean, readable code"
-    priority: 5
+    priority: medium
 
 outputs:
   - path: "CLAUDE.md"
@@ -50,7 +50,7 @@ metadata:
 rules:
   - name: "code-quality"
     content: "Write clean, readable code"
-    priority: 10
+    priority: critical
 
 outputs:
   - path: "CLAUDE.md"
@@ -71,19 +71,19 @@ metadata:
 rules:
   - name: "rule-name"
     content: "Rule description"
-    priority: 10
+    priority: critical
 
 sections:
   - name: "Section Name" 
     content: "Longer documentation content"
-    priority: 5
+    priority: medium
 
 agents:
   - name: "agent-name"
     description: "Agent purpose"
     system_prompt: "You are a..."
     tools: ["read", "write"]
-    priority: 8
+    priority: high
 
 outputs:
   - path: "CLAUDE.md"
@@ -101,7 +101,7 @@ Individual instructions for AI assistants:
 rules:
   - name: "typescript-strict"
     content: "Use TypeScript strict mode with explicit return types"
-    priority: 10              # Higher = appears first
+    priority: critical              # Higher priority = appears first
 ```
 
 ### Sections
@@ -115,7 +115,7 @@ sections:
       This project uses:
       - TypeScript 5.0+
       - React 18
-    priority: 10
+    priority: critical
 ```
 
 ### Agents (Claude Only)
@@ -128,7 +128,7 @@ agents:
     description: "Reviews code for best practices"
     system_prompt: "You are a senior code reviewer focused on quality"
     tools: ["read", "grep", "edit"]
-    priority: 10
+    priority: critical
 ```
 
 **Available Tools**: `read`, `write`, `edit`, `grep`, `bash`, `multiedit`
@@ -204,7 +204,7 @@ user_rulez:
   rules:
     - name: "dev-specific"
       content: "Development-only rule"
-      priority: 10
+      priority: critical
   sections:
     - name: "Dev Environment"
       content: "Local development setup"

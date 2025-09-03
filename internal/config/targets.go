@@ -17,7 +17,7 @@ func resolveTargets(targets []string, namedTargets map[string][]string) []string
 		if cleanTarget == "" {
 			continue
 		}
-		
+
 		if strings.HasPrefix(cleanTarget, "@") {
 			namedTarget := cleanTarget[1:] // Remove the @ prefix
 			if patterns, exists := namedTargets[namedTarget]; exists {
@@ -28,7 +28,7 @@ func resolveTargets(targets []string, namedTargets map[string][]string) []string
 			resolved = append(resolved, cleanTarget)
 		}
 	}
-	
+
 	return resolved
 }
 
