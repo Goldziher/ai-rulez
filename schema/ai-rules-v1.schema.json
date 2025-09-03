@@ -1,0 +1,498 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json",
+  "title": "AI Rules Configuration",
+  "description": "Schema for ai-rulez YAML configuration files",
+  "type": "object",
+  "required": ["metadata", "outputs"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this schema for editor support"
+    },
+    "metadata": {
+      "type": "object",
+      "description": "Project metadata information",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of your project",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "description": "Project version (e.g., 1.0.0)",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?$"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the project"
+        }
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "oneOf": [
+        {
+          "type": "string",
+          "description": "Single profile name",
+          "enum": ["none", "default", "web-app", "api", "cli", "library"]
+        },
+        {
+          "type": "array",
+          "description": "Multiple profiles to apply in order",
+          "items": {
+            "type": "string",
+            "enum": ["none", "default", "web-app", "api", "cli", "library"]
+          },
+          "uniqueItems": true,
+          "minItems": 1
+        }
+      ],
+      "description": "Built-in profile(s) to apply. Profiles add best-practice rules for specific project types."
+    },
+    "includes": {
+      "type": "array",
+      "description": "List of other ai_rules files to include (local paths or remote URLs)",
+      "items": {
+        "type": "string",
+        "description": "Path to another ai_rules YAML file (relative to this file) or HTTP/HTTPS URL",
+        "anyOf": [
+          {
+            "pattern": "^https?://[^\\s]+$",
+            "description": "Remote HTTP/HTTPS URL to an ai_rules YAML file"
+          },
+          {
+            "not": {
+              "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*://"
+            },
+            "description": "Local file path (relative or absolute) to an ai_rules YAML file"
+          }
+        ]
+      },
+      "uniqueItems": true
+    },
+    "outputs": {
+      "type": "array",
+      "description": "Output files to generate",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "anyOf": [
+          {"required": ["path"]},
+          {"required": ["file"]}
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "description": "Specific output file path (relative to this config file)",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "description": "Output path - can be a file or directory. If directory (ends with /), generates multiple files based on content",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": ["rule", "agent"],
+            "description": "Type of content to generate (defaults to rule)"
+          },
+          "naming_scheme": {
+            "type": "string",
+            "description": "Naming pattern for files when path is a directory. Variables: {name}, {type}, {index}. Default: '{name}.md' for agents, '{name}.md' for rules",
+            "default": "{name}.md"
+          },
+          "template": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+                "description": "Built-in template name (e.g., 'default', 'documentation')"
+              },
+              {
+                "type": "string",
+                "pattern": "^@.+$",
+                "description": "File path reference starting with @ (e.g., '@templates/custom.tmpl')"
+              },
+              {
+                "type": "string",
+                "pattern": "\\n",
+                "description": "Inline template string (multiline Go template syntax)"
+              }
+            ],
+            "description": "Template to use for output generation"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "List of rules for AI assistants",
+      "items": {
+        "type": "object",
+        "required": ["name", "content"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the rule (used for overriding in local files)",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Rule name/title",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Rule priority (higher number = higher priority, default: 1)",
+            "minimum": 1,
+            "default": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "Rule content (can be multiline)",
+            "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "sections": {
+      "type": "array",
+      "description": "List of informative text sections (rendered as-is)",
+      "items": {
+        "type": "object",
+        "required": ["title", "content"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the section (used for overriding in local files)",
+            "minLength": 1
+          },
+          "title": {
+            "type": "string",
+            "description": "Section title (for organization/merging)",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Section priority (higher number = higher priority, default: 1)",
+            "minimum": 1,
+            "default": 1
+          },
+          "content": {
+            "type": "string",
+            "description": "Section content in markdown (rendered as-is)",
+            "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "agents": {
+      "type": "array",
+      "description": "List of AI sub-agents to generate",
+      "items": {
+        "type": "object",
+        "required": ["name", "description"],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Optional unique identifier for the agent (used for overriding in local files)",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Agent name (lowercase, alphanumeric with hyphens)",
+            "pattern": "^[a-z][a-z0-9-]*$",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "When to use this agent",
+            "minLength": 1
+          },
+          "priority": {
+            "type": "integer",
+            "description": "Agent priority (higher number = higher priority, default: 1)",
+            "minimum": 1,
+            "default": 1
+          },
+          "tools": {
+            "type": "array",
+            "description": "List of tools available to this agent (omit for all tools)",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "template": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+                "description": "Built-in template name (e.g., 'default', 'specialized')"
+              },
+              {
+                "type": "string",
+                "pattern": "^@.+$",
+                "description": "File path reference starting with @ (e.g., '@templates/agent.tmpl')"
+              },
+              {
+                "type": "string",
+                "pattern": "\n",
+                "description": "Inline template string (multiline Go template syntax)"
+              }
+            ],
+            "description": "Template to use for agent system prompt generation"
+          },
+          "system_prompt": {
+            "type": "string",
+            "description": "Agent system prompt (used when template is not specified)",
+            "minLength": 1
+          },
+          "targets": {
+            "type": "array",
+            "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "user_rulez": {
+      "type": "object",
+      "description": "User-specific rules and sections (overrides shared config, not committed to git)",
+      "properties": {
+        "rules": {
+          "type": "array",
+          "description": "List of user-specific rules",
+          "items": {
+            "type": "object",
+            "required": ["name", "content"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Optional unique identifier for the rule (used for overriding in local files)",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "Rule name/title",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer",
+                "description": "Rule priority (higher number = higher priority, default: 1)",
+                "minimum": 1,
+                "default": 1
+              },
+              "content": {
+                "type": "string",
+                "description": "Rule content (can be multiline)",
+                "minLength": 1
+              },
+              "targets": {
+                "type": "array",
+                "description": "Target patterns for this rule. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "sections": {
+          "type": "array",
+          "description": "List of user-specific text sections",
+          "items": {
+            "type": "object",
+            "required": ["title", "content"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Optional unique identifier for the section (used for overriding in local files)",
+                "minLength": 1
+              },
+              "title": {
+                "type": "string",
+                "description": "Section title (for organization/merging)",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer",
+                "description": "Section priority (higher number = higher priority, default: 1)",
+                "minimum": 1,
+                "default": 1
+              },
+              "content": {
+                "type": "string",
+                "description": "Section content in markdown (rendered as-is)",
+                "minLength": 1
+              },
+              "targets": {
+                "type": "array",
+                "description": "Target patterns for this section. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "agents": {
+          "type": "array",
+          "description": "List of user-specific agents",
+          "items": {
+            "type": "object",
+            "required": ["name", "description"],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Optional unique identifier for the agent (used for overriding in local files)",
+                "minLength": 1
+              },
+              "name": {
+                "type": "string",
+                "description": "Agent name (lowercase, alphanumeric with hyphens)",
+                "pattern": "^[a-z][a-z0-9-]*$",
+                "minLength": 1
+              },
+              "description": {
+                "type": "string",
+                "description": "When to use this agent",
+                "minLength": 1
+              },
+              "priority": {
+                "type": "integer",
+                "description": "Agent priority (higher number = higher priority, default: 1)",
+                "minimum": 1,
+                "default": 1
+              },
+              "tools": {
+                "type": "array",
+                "description": "List of tools available to this agent (omit for all tools)",
+                "items": {
+                  "type": "string"
+                },
+                "uniqueItems": true
+              },
+              "template": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z][a-zA-Z0-9_-]*$",
+                    "description": "Built-in template name (e.g., 'default', 'specialized')"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "^@.+$",
+                    "description": "File path reference starting with @ (e.g., '@templates/agent.tmpl')"
+                  },
+                  {
+                    "type": "string",
+                    "pattern": "\n",
+                    "description": "Inline template string (multiline Go template syntax)"
+                  }
+                ],
+                "description": "Template to use for agent system prompt generation"
+              },
+              "system_prompt": {
+                "type": "string",
+                "description": "Agent system prompt (used when template is not specified)",
+                "minLength": 1
+              },
+              "targets": {
+                "type": "array",
+                "description": "Target patterns for this agent. Empty means applies to all outputs. Supports glob patterns like *.md, docs/*, CLAUDE.md",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "uniqueItems": true
+              }
+            },
+            "additionalProperties": false
+          }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "$schema": "https://github.com/Goldziher/ai_rules/schema/ai-rules-v1.schema.json",
+      "metadata": {
+        "name": "My Project",
+        "version": "1.0.0",
+        "description": "Example project configuration"
+      },
+      "includes": [
+        "shared/common-rules.yaml",
+        "https://example.com/shared/team-standards.yaml"
+      ],
+      "outputs": [
+        {
+          "path": "claude.md"
+        },
+        {
+          "path": ".cursorrules",
+          "template": "default"
+        },
+        {
+          "path": ".claude/agents/",
+          "type": "agent",
+          "template": "agent"
+        }
+      ],
+      "agents": [
+        {
+          "name": "code-reviewer",
+          "description": "Reviews code for quality and best practices",
+          "priority": 5,
+          "tools": ["Read", "Grep"],
+          "system_prompt": "You are a code quality specialist..."
+        }
+      ],
+      "rules": [
+        {
+          "name": "Code Quality",
+          "priority": "high",
+          "content": "Write clean, maintainable code"
+        }
+      ]
+    }
+  ]
+}
