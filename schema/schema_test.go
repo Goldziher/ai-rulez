@@ -25,7 +25,7 @@ func TestSchemaValidation(t *testing.T) {
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 `,
 			wantErr: false,
 		},
@@ -40,10 +40,10 @@ metadata:
 includes:
   - "other.yaml"
 outputs:
-  - file: "output.md"
-  - file: "custom.md"
+  - path: "output.md"
+  - path: "custom.md"
     template: "documentation"
-  - file: "inline.md"
+  - path: "inline.md"
     template: |
       # {{.ProjectName}}
       {{range .Rules}}
@@ -51,7 +51,7 @@ outputs:
       {{end}}
 rules:
   - name: "Rule 1"
-    priority: 10
+    priority: critical
     content: "Content 1"
   - name: "Rule 2"
     content: "Content 2"
@@ -62,7 +62,7 @@ rules:
 			name: "missing_metadata",
 			yaml: `
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 `,
 			wantErr: true,
 			errMsg:  "metadata is required",
@@ -73,7 +73,7 @@ outputs:
 metadata:
   version: "1.0.0"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 `,
 			wantErr: true,
 			errMsg:  "metadata: name is required",
@@ -103,10 +103,10 @@ outputs: []
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Rule"
-    priority: "critical"
+    priority: "invalid_priority"
     content: "Content"
 `,
 			wantErr: true,
@@ -118,7 +118,7 @@ rules:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Rule"
     priority: 0
@@ -133,7 +133,7 @@ rules:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Rule"
     priority: -5
@@ -148,7 +148,7 @@ rules:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - content: "Content"
 `,
@@ -161,7 +161,7 @@ rules:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Rule"
 `,
@@ -175,7 +175,7 @@ metadata:
   name: "Test"
   version: "v1.0"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 `,
 			wantErr: true,
 			errMsg:  "metadata.version",
@@ -186,7 +186,7 @@ outputs:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
     template: "@templates/custom.tmpl"
 `,
 			wantErr: false,
@@ -197,8 +197,8 @@ outputs:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
-    template: "123-invalid"
+  - path: "output.md"
+    template: 123
 `,
 			wantErr: true,
 			errMsg:  "outputs.0.template",
@@ -210,7 +210,7 @@ metadata:
   name: "Test"
   unknown: "field"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 `,
 			wantErr: true,
 			errMsg:  "Additional property",
@@ -221,10 +221,10 @@ outputs:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 sections:
   - name: "Introduction"
-    priority: 10
+    priority: critical
     content: "Welcome to the project"
   - name: "Usage"
     content: "How to use this"
@@ -237,7 +237,7 @@ sections:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 sections:
   - content: "Some content"
 `,
@@ -250,7 +250,7 @@ sections:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 sections:
   - title: "Introduction"
 `,
@@ -263,9 +263,9 @@ sections:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 sections:
-  - title: "Introduction"
+  - name: "Introduction"
     priority: 0
     content: "Welcome"
 `,
@@ -278,7 +278,7 @@ sections:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 includes:
   - "local-file.yaml"
   - "https://example.com/config.yaml"
@@ -292,7 +292,7 @@ includes:
 metadata:
   name: "Test"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 includes:
   - "ftp://example.com/config.yaml"
 `,
@@ -325,7 +325,7 @@ func TestSchemaValidationErrorMessages(t *testing.T) {
 			name: "missing_metadata_field",
 			yaml: `
 outputs:
-  - file: "output.md"`,
+  - path: "output.md"`,
 			expectedErrors: []string{
 				"'metadata': required field is missing",
 				"metadata: required field is missing (expected object)",
@@ -341,7 +341,7 @@ outputs:
 metadata:
   version: "1.0.0"
 outputs:
-  - file: "output.md"`,
+  - path: "output.md"`,
 			expectedErrors: []string{
 				"metadata.name: required field is missing",
 			},
@@ -384,7 +384,7 @@ metadata:
   unknown: "value"
   another_unknown: 123
 outputs:
-  - file: "output.md"`,
+  - path: "output.md"`,
 			expectedErrors: []string{
 				"metadata.additionalProperties:",
 				"'unknown'",
@@ -401,7 +401,7 @@ metadata:
 outputs:
   - template: "custom"`,
 			expectedErrors: []string{
-				"outputs.0.file: required field is missing",
+				"outputs.0.path: required field is missing",
 			},
 		},
 		{
@@ -410,10 +410,10 @@ outputs:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Rule 1"
-    priority: 0
+    priority: 999
     content: "Content"
   - name: "Rule 2"
     priority: -5
@@ -429,9 +429,9 @@ rules:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
-  - priority: 10`,
+  - priority: critical`,
 			expectedErrors: []string{
 				"rules.0.name: required field is missing",
 				"rules.0.content: required field is missing",
@@ -443,10 +443,10 @@ rules:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 sections:
-  - title: "Intro"
-    priority: 0
+  - name: "Intro" 
+    priority: 999
     content: "Welcome"`,
 			expectedErrors: []string{
 				"sections.0.priority",
@@ -461,12 +461,12 @@ metadata:
 outputs:
   - template: "test"
 sections:
-  - priority: 5
+  - priority: medium
 rules:
   - name: "Test"`,
 			expectedErrors: []string{
 				"metadata.name: required field is missing",
-				"outputs.0.file: required field is missing",
+				"outputs.0.path: required field is missing",
 				"sections.0.name: required field is missing",
 				"sections.0.content: required field is missing",
 				"rules.0.content: required field is missing",
@@ -478,13 +478,13 @@ rules:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 agents:
   - name: "test-agent"
-    priority: 0
+    priority: minimal
     tools: ["invalid"]`,
 			expectedErrors: []string{
-				"agents.0.priority",
+				"agents.0.description: required field is missing",
 			},
 		},
 		{
@@ -493,7 +493,7 @@ agents:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 includes:
   - "ftp://invalid.com/config.yaml"
   - "file:///etc/passwd"`,
@@ -557,7 +557,7 @@ func TestSchemaValidationEdgeCases(t *testing.T) {
 metadata:
   name: "Test
   outputs:
-    - file: "test.md"`,
+    - path: "test.md"`,
 			wantErr: true,
 			errCheck: func(t *testing.T, err error) {
 				assert.Contains(t, err.Error(), "parse YAML")
@@ -583,7 +583,7 @@ metadata:
 metadata:
   name: "Test Project" # inline comment
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 # Another comment`,
 			wantErr: false,
 		},
@@ -593,7 +593,7 @@ outputs:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Multi-line Rule"
     content: |
@@ -608,7 +608,7 @@ rules:
 metadata:
   name: "测试项目 🚀"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 rules:
   - name: "Unicode Rule"
     content: "This contains émojis 😊 and special çharacters ñ"`,
@@ -620,7 +620,7 @@ rules:
 metadata:
   name: "Test Project"
 outputs:
-  - file: "output.md"
+  - path: "output.md"
     template: |
       {{range .Rules}}
         {{range .SubRules}}
@@ -637,7 +637,7 @@ outputs:
 metadata:
   name: "Test\"Project'with special"
 outputs:
-  - file: "output.md"`,
+  - path: "output.md"`,
 			wantErr: false,
 		},
 	}

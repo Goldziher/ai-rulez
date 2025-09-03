@@ -30,7 +30,7 @@ metadata:
 rules:
   - name: "Tech Stack"
     content: "React 19, TypeScript 5.8, Tailwind CSS"
-    priority: 10
+    priority: critical
 
 outputs:
   - path: "CLAUDE.md"
@@ -62,12 +62,12 @@ rules:
   - name: "Agent Usage"
     targets: ["@claude-only"]
     content: "Always use specialized agents via Task tool for complex work"
-    priority: 10
+    priority: critical
     
   - name: "Code Quality"
     targets: ["@all-platforms"]
     content: "Write clean, tested, documented code"
-    priority: 9
+    priority: high
 
 outputs:
   - path: "CLAUDE.md"
@@ -146,14 +146,14 @@ agents:
 
 rules:
   - name: "System Workflow"
-    priority: 100
+    priority: critical0
     content: |
       Follow systematic development process: design → implement → test → review
       
       **Always use specialized agents**: Use Task tool with appropriate agent for domain expertise
   
   - name: "Tech Stack"
-    priority: 90
+    priority: high0
     content: |
       **Frontend**: Next.js 15, React 19, TypeScript 5.8, Tailwind CSS
       **Backend**: Node.js 20, Express/Fastify, PostgreSQL 16
@@ -163,7 +163,7 @@ rules:
       **Database**: PostgreSQL with Prisma ORM
       
   - name: "Development Standards"
-    priority: 85
+    priority: high5
     content: |
       **Code Quality**:
       - TypeScript strict mode, no `any` types
@@ -197,7 +197,7 @@ metadata:
 rules:
   - name: "service-specific"
     content: "Handle user authentication with JWT"
-    priority: 10
+    priority: critical
 
 outputs:
   - path: "CLAUDE.md"
@@ -235,7 +235,7 @@ agents:
 
 rules:
   - name: "Python Standards"
-    priority: 10
+    priority: critical
     content: |
       **Language**: Python 3.12+ with strict typing
       **Framework**: FastAPI with async/await patterns
@@ -245,7 +245,7 @@ rules:
       **Linting**: ruff for linting/formatting, mypy for type checking
 
   - name: "API Patterns" 
-    priority: 9
+    priority: high
     content: |
       ```python
       from fastapi import FastAPI, Depends, HTTPException
@@ -300,7 +300,7 @@ agents:
 
 rules:
   - name: "Tech Stack"
-    priority: 10
+    priority: critical
     content: |
       **Framework**: Next.js 15 App Router with TypeScript 5.8
       **Styling**: Tailwind CSS v4 with custom design system
@@ -311,7 +311,7 @@ rules:
       **Auth**: NextAuth.js v5 with multiple providers
       
   - name: "Code Patterns"
-    priority: 9  
+    priority: high  
     content: |
       **Server Components**:
       ```tsx
@@ -381,7 +381,7 @@ agents:
 
 rules:
   - name: "Go Standards"
-    priority: 10
+    priority: critical
     content: |
       **Language**: Go 1.23+ with generics and structured logging
       **Architecture**: Clean architecture with dependency injection
@@ -391,7 +391,7 @@ rules:
       **Observability**: slog for logging, OpenTelemetry for tracing
       
   - name: "Service Patterns"
-    priority: 9
+    priority: high
     content: |
       ```go
       // Domain service with dependency injection
