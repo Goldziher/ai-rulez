@@ -33,7 +33,7 @@ Creates all configured files:
 - `CLAUDE.md` + `.claude/agents/` (Claude with specialized agents)
 - `.cursor/rules/rules.mdc` (Cursor IDE rules)  
 - `.github/copilot-instructions.md` (GitHub Copilot)
-- `.windsurfrules` (Windsurf editor)
+- `.windsurf/rules.md` (Windsurf editor)
 
 ## 3. Validate and Test
 
@@ -62,7 +62,7 @@ metadata:
 
 rules:
   - name: "Tech Stack"
-    priority: 10
+    priority: critical
     content: |
       **Frontend**: React 19, TypeScript 5.8, Tailwind CSS
       **Backend**: Node.js, PostgreSQL, Redis  
@@ -70,7 +70,7 @@ rules:
       **Deployment**: Vercel, GitHub Actions
     
   - name: "Development Workflow"
-    priority: 9
+    priority: high
     content: |
       1. Create feature branch from main
       2. Implement with TypeScript strict mode

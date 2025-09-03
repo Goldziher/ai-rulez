@@ -45,7 +45,7 @@ agents:
 
 rules:
   - name: "Project Structure"
-    priority: 100
+    priority: critical
     content: |
       **Monorepo Structure**:
       - `backend/` - Fastify API, PostgreSQL, Docker
@@ -67,7 +67,7 @@ metadata:
 
 rules:
   - name: "API Patterns"
-    priority: 80
+    priority: high
     content: |
       **Route Pattern**:
       ```typescript
@@ -81,7 +81,7 @@ rules:
       ```
 
   - name: "Database Operations"
-    priority: 75
+    priority: high
     content: |
       - Use transactions for multi-table operations
       - Handle unique constraints gracefully
@@ -100,7 +100,7 @@ metadata:
 
 rules:
   - name: "Component Patterns"
-    priority: 80
+    priority: high
     content: |
       **Component Structure**:
       ```typescript
@@ -113,7 +113,7 @@ rules:
       ```
 
   - name: "State Management"
-    priority: 75
+    priority: high
     content: |
       - Use Zustand for client state
       - Use SWR for server state
@@ -188,14 +188,14 @@ agents:
 
 rules:
   - name: "Architecture Overview" 
-    priority: 100
+    priority: critical
     content: |
       **System Architecture**: Microservices with React frontend
       **Key Patterns**: Repository pattern, CQRS, Event sourcing
       **Technology**: Node.js, PostgreSQL, Redis, Docker
 
   - name: "Cross-Cutting Concerns"
-    priority: 90
+    priority: high
     content: |
       - All services use structured logging with correlation IDs
       - Error handling follows standard HTTP status codes
@@ -219,7 +219,7 @@ metadata:
 
 rules:
   - name: "API Route Pattern"
-    priority: 80  # Lower than root rules
+    priority: high  # Lower than root rules
     content: |
       **Standard Route**:
       ```javascript
@@ -362,7 +362,7 @@ metadata:
   
 rules:
   - name: "System Overview"
-    priority: 100
+    priority: critical
     content: "High-level architecture and patterns"
     
 agents:
