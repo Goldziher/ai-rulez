@@ -29,6 +29,11 @@ func (g *Generator) writeSingleFile(output *config.Output, data *templates.Templ
 		return err
 	}
 
+	// Check if this is an MCP template that should not have headers
+	if g.isMCPTemplate(output) {
+		return g.writeFileWithoutHeader(output.Path, content)
+	}
+
 	return g.writeContentToFile(output.Path, content, data)
 }
 
@@ -77,7 +82,7 @@ func (g *Generator) writeAgentFiles(dirPath, namingScheme string, output *config
 				Wrapf(err, "render agent template")
 		}
 
-		if err := g.writeContentToFile(filePath, content, data); err != nil {
+		if err := g.writeAgentContentToFile(filePath, content); err != nil {
 			return err
 		}
 	}
@@ -147,6 +152,18 @@ func (g *Generator) writeContentToFile(filePath, content string, data *templates
 	return g.writeFile(filePath, finalContent)
 }
 
+// writeAgentContentToFile writes agent content without header (agents have their own frontmatter)
+func (g *Generator) writeAgentContentToFile(filePath, content string) error {
+	shouldWrite, err := g.shouldWriteFile(filePath, content)
+	if err != nil {
+		return err
+	}
+	if !shouldWrite {
+		return nil
+	}
+	return g.writeFile(filePath, content)
+}
+
 func sanitizeFilename(name string) string {
 	replacer := strings.NewReplacer(
 		"/", "-",
@@ -160,4 +177,49 @@ func sanitizeFilename(name string) string {
 		"\"", "-",
 	)
 	return replacer.Replace(name)
+}
+
+// isMCPTemplate checks if the output uses an MCP template that should not have headers
+func (g *Generator) isMCPTemplate(output *config.Output) bool {
+	template, err := output.GetTemplate()
+	if err != nil {
+		return false
+	}
+	
+	if template == nil {
+		return false
+	}
+	
+	// Check if it's a builtin MCP template
+	if template.Type == config.TemplateBuiltin {
+		mcpTemplates := []string{
+			"claude-code-mcp",
+			"cursor-mcp", 
+			"windsurf-mcp",
+			"vscode-mcp",
+			"continuedev-mcp",
+			"cline-mcp",
+		}
+		
+		for _, mcpTemplate := range mcpTemplates {
+			if template.Value == mcpTemplate {
+				return true
+			}
+		}
+	}
+	
+	return false
+}
+
+// writeFileWithoutHeader writes content directly without adding generated header
+func (g *Generator) writeFileWithoutHeader(filePath, content string) error {
+	shouldWrite, err := g.shouldWriteFile(filePath, content)
+	if err != nil {
+		return err
+	}
+	if !shouldWrite {
+		return nil
+	}
+	
+	return g.writeFile(filePath, content)
 }
