@@ -38,7 +38,7 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"--name", "Custom Workflow Rule",
 		"--content", "Custom workflow rule",
-		"--priority", "8")
+		"--priority", "high")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "agent", "workflow-agent",
 		"--description", "Agent for workflow testing",
@@ -116,7 +116,7 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "rule",
 		"--name", "CRUD Test Rule",
 		"--content", "Updated CRUD rule",
-		"--priority", "9")
+		"--priority", "critical")
 	result.AssertOutputContains(s.T(), "Updated rule")
 
 	content = testutil.ReadFile(s.T(), configPath)
@@ -169,7 +169,7 @@ func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
 sections:
   - name: "New Guidelines"
     content: "Added after initial setup"
-    priority: 5
+    priority: medium
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config3)
 

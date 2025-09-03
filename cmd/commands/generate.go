@@ -101,7 +101,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	progress.PrintIfNotQuiet("✅ Generated %d file(s) successfully\n", len(cfg.Outputs))
 	for _, output := range cfg.Outputs {
-		progress.PrintIfNotQuiet("  - %s\n", output.GetPath())
+		progress.PrintIfNotQuiet("  - %s\n", output.Path)
 	}
 }
 

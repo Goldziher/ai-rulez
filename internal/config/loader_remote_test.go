@@ -28,7 +28,7 @@ func TestConfigLoader_RemoteIncludes(t *testing.T) {
 rules:
   - name: "Remote Rule"
     content: "This is a remote rule"
-    priority: 5
+    priority: medium
 `))
 		case "/remote-sections.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
@@ -37,7 +37,7 @@ rules:
 sections:
   - name: "Remote Section"
     content: "This is a remote section"
-    priority: 3
+    priority: low
 `))
 		case "/relative-include.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
@@ -46,7 +46,7 @@ sections:
 rules:
   - name: "Relative Remote Rule"
     content: "This is from a relative include"
-    priority: 2
+    priority: low
 `))
 		default:
 			http.NotFound(w, r)
@@ -66,7 +66,7 @@ rules:
 		require.NotNil(t, config)
 		assert.Len(t, config.Rules, 1)
 		assert.Equal(t, "Remote Rule", config.Rules[0].Name)
-		assert.Equal(t, 5, config.Rules[0].Priority)
+		assert.Equal(t, "medium", string(config.Rules[0].Priority))
 	})
 
 	t.Run("resolve_remote_url_path", func(t *testing.T) {
@@ -120,7 +120,7 @@ func TestValidateIncludes_Remote(t *testing.T) {
 rules:
   - name: "Valid Remote Rule"
     content: "This is valid"
-    priority: 1
+    priority: minimal
 `))
 		case "/invalid-yaml.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
@@ -189,10 +189,10 @@ func TestLoadConfigWithIncludes_RemoteIntegration(t *testing.T) {
 rules:
   - name: "Remote Rule 1"
     content: "This is remote rule 1"
-    priority: 5
+    priority: medium
   - name: "Remote Rule 2"
     content: "This is remote rule 2"
-    priority: 3
+    priority: low
 `))
 		case "/nested/remote-sections.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
@@ -201,11 +201,11 @@ rules:
 sections:
   - name: "Remote Section"
     content: "This is a remote section"
-    priority: 2
+    priority: low
 rules:
   - name: "Nested Remote Rule"
     content: "From nested include"
-    priority: 1
+    priority: minimal
 `))
 		case "/agents.yaml":
 			w.Header().Set("Content-Type", "text/yaml")
@@ -215,7 +215,7 @@ agents:
   - name: "Remote Agent"
     system_prompt: "You are a remote agent"
     tools: ["tool1", "tool2"]
-    priority: 4
+    priority: medium
 `))
 		default:
 			http.NotFound(w, r)
@@ -244,7 +244,7 @@ agents:
 				{
 					Name:     "Local Rule",
 					Content:  "This is a local rule",
-					Priority: 6,
+					Priority: PriorityMedium,
 				},
 			},
 		}
@@ -269,11 +269,11 @@ agents:
 		assert.Equal(t, "Remote Agent", mainConfig.Agents[0].Name)
 		assert.Equal(t, "You are a remote agent", mainConfig.Agents[0].SystemPrompt)
 		assert.Equal(t, []string{"tool1", "tool2"}, mainConfig.Agents[0].Tools)
-		assert.Equal(t, 4, mainConfig.Agents[0].Priority)
+		assert.Equal(t, "medium", string(mainConfig.Agents[0].Priority))
 
 		assert.Equal(t, "Remote Section", mainConfig.Sections[0].Name)
 		assert.Equal(t, "This is a remote section", mainConfig.Sections[0].Content)
-		assert.Equal(t, 2, mainConfig.Sections[0].Priority)
+		assert.Equal(t, "low", string(mainConfig.Sections[0].Priority))
 	})
 
 	t.Run("relative_url_resolution", func(t *testing.T) {

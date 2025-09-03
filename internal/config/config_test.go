@@ -28,7 +28,7 @@ outputs:
 rules:
   - name: Test Rule
     content: Test content
-    priority: 5
+    priority: medium
 `
 		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
 
@@ -88,7 +88,7 @@ func TestLoadConfigWithIncludes(t *testing.T) {
 rules:
   - name: Included Rule
     content: From include
-    priority: 3
+    priority: low
 `
 		require.NoError(t, os.WriteFile(includeFile, []byte(includeContent), 0o644))
 
@@ -103,7 +103,7 @@ includes:
 rules:
   - name: Main Rule
     content: From main
-    priority: 5
+    priority: medium
 `
 		require.NoError(t, os.WriteFile(mainFile, []byte(mainContent), 0o644))
 
@@ -210,7 +210,7 @@ func TestAddRule(t *testing.T) {
 	newRule := config.Rule{
 		Name:     "New Rule",
 		Content:  "New content",
-		Priority: 5,
+		Priority: config.PriorityMedium,
 	}
 
 	cfg.Rules = append(cfg.Rules, newRule)
@@ -226,7 +226,7 @@ func TestAddSection(t *testing.T) {
 	newSection := config.Section{
 		Name:     "New Section",
 		Content:  "Section content",
-		Priority: 3,
+		Priority: config.PriorityLow,
 	}
 
 	cfg.Sections = append(cfg.Sections, newSection)
@@ -242,7 +242,7 @@ func TestAddAgent(t *testing.T) {
 	newAgent := config.Agent{
 		Name:         "test-agent",
 		Description:  "Test agent",
-		Priority:     5,
+		Priority:     config.PriorityMedium,
 		Tools:        []string{"read", "write"},
 		SystemPrompt: "You are a test agent",
 	}
@@ -256,13 +256,13 @@ func TestAddAgent(t *testing.T) {
 
 func TestMergeRules(t *testing.T) {
 	rules1 := []config.Rule{
-		{Name: "Rule1", Content: "Content1", Priority: 1},
-		{Name: "Rule2", Content: "Content2", Priority: 2},
+		{Name: "Rule1", Content: "Content1", Priority: config.PriorityMinimal},
+		{Name: "Rule2", Content: "Content2", Priority: config.PriorityLow},
 	}
 
 	rules2 := []config.Rule{
-		{Name: "Rule2", Content: "Updated2", Priority: 3},
-		{Name: "Rule3", Content: "Content3", Priority: 4},
+		{Name: "Rule2", Content: "Updated2", Priority: config.PriorityLow},
+		{Name: "Rule3", Content: "Content3", Priority: config.PriorityMedium},
 	}
 
 	merged := config.MergeRules(rules1, rules2)
@@ -271,7 +271,7 @@ func TestMergeRules(t *testing.T) {
 	for _, r := range merged {
 		if r.Name == "Rule2" {
 			assert.Equal(t, "Updated2", r.Content)
-			assert.Equal(t, 3, r.Priority)
+			assert.Equal(t, config.PriorityLow, r.Priority)
 		}
 	}
 }
