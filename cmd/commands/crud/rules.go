@@ -11,8 +11,9 @@ import (
 var (
 	ruleName     string
 	ruleContent  string
-	rulePriority int
+	rulePriority string
 	newRuleName  string
+	ruleTargets  []string
 )
 
 // AddRuleCmd adds a new rule to the configuration
@@ -43,7 +44,8 @@ var DeleteRuleCmd = &cobra.Command{
 func init() {
 	AddRuleCmd.Flags().StringVar(&ruleName, "name", "", "Name of the rule (required)")
 	AddRuleCmd.Flags().StringVar(&ruleContent, "content", "", "Content of the rule (required)")
-	AddRuleCmd.Flags().IntVar(&rulePriority, "priority", 5, "Priority of the rule (1-10)")
+	AddRuleCmd.Flags().StringVar(&rulePriority, "priority", "medium", "Priority of the rule (critical/high/medium/low/minimal)")
+	AddRuleCmd.Flags().StringSliceVar(&ruleTargets, "targets", []string{}, "Target file patterns (glob patterns)")
 	if err := AddRuleCmd.MarkFlagRequired("name"); err != nil {
 		panic(err)
 	}
@@ -54,7 +56,8 @@ func init() {
 	UpdateRuleCmd.Flags().StringVar(&ruleName, "name", "", "Name of the rule to update (required)")
 	UpdateRuleCmd.Flags().StringVar(&newRuleName, "new-name", "", "New name for the rule")
 	UpdateRuleCmd.Flags().StringVar(&ruleContent, "content", "", "New content for the rule")
-	UpdateRuleCmd.Flags().IntVar(&rulePriority, "priority", 0, "New priority for the rule")
+	UpdateRuleCmd.Flags().StringVar(&rulePriority, "priority", "", "New priority for the rule (critical/high/medium/low/minimal)")
+	UpdateRuleCmd.Flags().StringSliceVar(&ruleTargets, "targets", []string{}, "Target file patterns (glob patterns)")
 	if err := UpdateRuleCmd.MarkFlagRequired("name"); err != nil {
 		panic(err)
 	}
@@ -70,10 +73,17 @@ func runAddRule(cmd *cobra.Command, args []string) {
 		}
 	}
 
+	priority, err := config.ParsePriority(rulePriority)
+	if err != nil {
+		fmt.Printf("❌ Invalid priority '%s'. Valid values: critical, high, medium, low, minimal\n", rulePriority)
+		os.Exit(1)
+	}
+
 	newRule := config.Rule{
 		Name:     ruleName,
 		Content:  ruleContent,
-		Priority: rulePriority,
+		Priority: priority,
+		Targets:  ruleTargets,
 	}
 	cfg.Rules = append(cfg.Rules, newRule)
 
@@ -111,8 +121,17 @@ func runUpdateRule(cmd *cobra.Command, args []string) {
 		cfg.Rules[ruleIndex].Content = ruleContent
 	}
 
-	if rulePriority > 0 {
-		cfg.Rules[ruleIndex].Priority = rulePriority
+	if rulePriority != "" {
+		priority, err := config.ParsePriority(rulePriority)
+		if err != nil {
+			fmt.Printf("❌ Invalid priority '%s'. Valid values: critical, high, medium, low, minimal\n", rulePriority)
+			return
+		}
+		cfg.Rules[ruleIndex].Priority = priority
+	}
+
+	if len(ruleTargets) > 0 {
+		cfg.Rules[ruleIndex].Targets = ruleTargets
 	}
 
 	saveConfiguration(cfg, configPath)

@@ -46,12 +46,12 @@ func GetAgentsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 // AddAgentHandler handles the add_agent MCP tool
 func AddAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	params := struct {
-		ConfigFile   string   `json:"config_file"`
-		Name         string   `json:"name"`
-		Description  string   `json:"description"`
-		SystemPrompt string   `json:"system_prompt"`
-		Tools        []string `json:"tools"`
-		Priority     float64  `json:"priority"`
+		ConfigFile   string      `json:"config_file"`
+		Name         string      `json:"name"`
+		Description  string      `json:"description"`
+		SystemPrompt string      `json:"system_prompt"`
+		Tools        []string    `json:"tools"`
+		Priority     interface{} `json:"priority"`
 	}{}
 
 	if request.Params.Arguments != nil {
@@ -72,9 +72,9 @@ func AddAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 		}
 	}
 
-	priority := 5
-	if params.Priority > 0 {
-		priority = int(params.Priority)
+	priority, err := config.ParsePriority(params.Priority)
+	if err != nil {
+		priority = config.PriorityMedium
 	}
 
 	newAgent := config.Agent{
@@ -184,8 +184,11 @@ func updateAgentFields(cfg *config.Config, params *updateAgentParams, agentIndex
 	if params.Tools != nil {
 		agent.Tools = params.Tools
 	}
-	if params.Priority > 0 {
-		agent.Priority = int(params.Priority)
+	if params.Priority != nil {
+		priority, err := config.ParsePriority(params.Priority)
+		if err == nil {
+			agent.Priority = priority
+		}
 	}
 }
 
@@ -208,13 +211,13 @@ func createUpdateAgentResponse(originalName string, agent *config.Agent) (*mcp.C
 }
 
 type updateAgentParams struct {
-	ConfigFile   string   `json:"config_file"`
-	Name         string   `json:"name"`
-	NewName      string   `json:"new_name"`
-	Description  string   `json:"description"`
-	SystemPrompt string   `json:"system_prompt"`
-	Tools        []string `json:"tools"`
-	Priority     float64  `json:"priority"`
+	ConfigFile   string      `json:"config_file"`
+	Name         string      `json:"name"`
+	NewName      string      `json:"new_name"`
+	Description  string      `json:"description"`
+	SystemPrompt string      `json:"system_prompt"`
+	Tools        []string    `json:"tools"`
+	Priority     interface{} `json:"priority"`
 }
 
 // DeleteAgentHandler handles the delete_agent MCP tool

@@ -21,7 +21,7 @@ func (g *Generator) writeOutputFile(output *config.Output, data *templates.Templ
 func (g *Generator) writeSingleFile(output *config.Output, data *templates.TemplateData) error {
 	localData := *data
 	localData.ConfigFile = g.configFile
-	localData.OutputFile = output.GetPath()
+	localData.OutputFile = output.Path
 	data = &localData
 
 	content, err := g.renderTemplate(output, data)
@@ -29,13 +29,13 @@ func (g *Generator) writeSingleFile(output *config.Output, data *templates.Templ
 		return err
 	}
 
-	return g.writeContentToFile(output.GetPath(), content, data)
+	return g.writeContentToFile(output.Path, content, data)
 }
 
 func (g *Generator) writeDirectoryOutput(output *config.Output, data *templates.TemplateData) error {
 	outputType := output.GetOutputType()
 	namingScheme := output.GetNamingScheme()
-	dirPath := output.GetPath()
+	dirPath := output.Path
 
 	fullDirPath := filepath.Join(g.baseDir, dirPath)
 	if err := os.MkdirAll(fullDirPath, 0o755); err != nil {
@@ -109,7 +109,7 @@ func (g *Generator) writeRulesFile(dirPath, namingScheme string, output *config.
 		sanitizedName := sanitizeFilename(rule.Name)
 
 		filename := strings.ReplaceAll(namingScheme, "{name}", sanitizedName)
-		filename = strings.ReplaceAll(filename, "{priority}", fmt.Sprintf("%d", rule.Priority))
+		filename = strings.ReplaceAll(filename, "{priority}", fmt.Sprintf("%d", rule.Priority.ToInt()))
 		filename = strings.ReplaceAll(filename, "{index:02d}", fmt.Sprintf("%02d", i+1))
 		filename = strings.ReplaceAll(filename, "{index}", fmt.Sprintf("%d", i+1))
 		filename = strings.ReplaceAll(filename, "{type}", "rule")

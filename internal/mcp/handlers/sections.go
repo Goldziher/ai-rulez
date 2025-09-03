@@ -46,10 +46,10 @@ func GetSectionsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 // AddSectionHandler AddSection handles the add_section MCP tool
 func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	params := struct {
-		ConfigFile string  `json:"config_file"`
-		Name       string  `json:"name"`
-		Content    string  `json:"content"`
-		Priority   float64 `json:"priority"`
+		ConfigFile string      `json:"config_file"`
+		Name       string      `json:"name"`
+		Content    string      `json:"content"`
+		Priority   interface{} `json:"priority"`
 	}{}
 
 	if request.Params.Arguments != nil {
@@ -70,9 +70,9 @@ func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		}
 	}
 
-	priority := 5
-	if params.Priority > 0 {
-		priority = int(params.Priority)
+	priority, err := config.ParsePriority(params.Priority)
+	if err != nil {
+		priority = config.PriorityMedium
 	}
 
 	newSection := config.Section{
@@ -107,11 +107,11 @@ func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 // UpdateSectionHandler UpdateSection handles the update_section MCP tool
 func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	params := struct {
-		ConfigFile string  `json:"config_file"`
-		Name       string  `json:"name"`
-		NewName    string  `json:"new_name"`
-		Content    string  `json:"content"`
-		Priority   float64 `json:"priority"`
+		ConfigFile string      `json:"config_file"`
+		Name       string      `json:"name"`
+		NewName    string      `json:"new_name"`
+		Content    string      `json:"content"`
+		Priority   interface{} `json:"priority"`
 	}{}
 
 	if request.Params.Arguments != nil {
@@ -151,8 +151,11 @@ func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mc
 		cfg.Sections[sectionIndex].Content = params.Content
 	}
 
-	if params.Priority > 0 {
-		cfg.Sections[sectionIndex].Priority = int(params.Priority)
+	if params.Priority != nil {
+		priority, err := config.ParsePriority(params.Priority)
+		if err == nil {
+			cfg.Sections[sectionIndex].Priority = priority
+		}
 	}
 
 	if err := saveConfig(cfg, configPath); err != nil {
