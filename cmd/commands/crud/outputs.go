@@ -1,141 +1,107 @@
 package crud
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/crud"
 	"github.com/spf13/cobra"
 )
 
 var (
-	outputTemplate string
-	outputType     string
+	outputType          string
+	outputNamingScheme  string
+	outputTemplateType  string
+	outputTemplateValue string
 )
 
 // AddOutputCmd adds a new output to the configuration
 var AddOutputCmd = &cobra.Command{
-	Use:   "output [filename]",
-	Short: "Add a new output file to configuration",
-	Long: `Add a new output file to your AI rules configuration.
-The filename is provided as an argument, and you can optionally specify
-a template to use for rendering the output.`,
-	Args: cobra.ExactArgs(1),
-	Run:  runAddOutput,
+	Use:   "output [path]",
+	Short: "Add a new output to the configuration",
+	Long:  `Adds a new output to the outputs list in your ai_rulez.yaml file.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		path := args[0]
+
+		newOutput := &config.Output{
+			Path:         path,
+			Type:         outputType,
+			NamingScheme: outputNamingScheme,
+			Template:     crud.CreateTemplateConfig(outputTemplateType, outputTemplateValue),
+		}
+
+		crud.AddElement("outputs", newOutput)
+	},
 }
 
 // UpdateOutputCmd updates an existing output
 var UpdateOutputCmd = &cobra.Command{
-	Use:   "output [filename]",
+	Use:   "output [path]",
 	Short: "Update an existing output",
-	Long: `Update an existing output in your AI rules configuration file.
-You can update the template or other properties.`,
-	Args: cobra.ExactArgs(1),
-	Run:  runUpdateOutput,
+	Long:  `Updates an existing output in your ai_rulez.yaml file.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		path := args[0]
+
+		updates := make(map[string]interface{})
+		if cmd.Flags().Changed("type") {
+			updates["Type"] = outputType
+		}
+		if cmd.Flags().Changed("naming-scheme") {
+			updates["NamingScheme"] = outputNamingScheme
+		}
+		if cmd.Flags().Changed("template-type") || cmd.Flags().Changed("template-value") {
+			updates["Template"] = crud.CreateTemplateConfig(outputTemplateType, outputTemplateValue)
+		}
+
+		crud.UpdateElement("outputs", path, updates)
+	},
 }
 
 // DeleteOutputCmd deletes an output
 var DeleteOutputCmd = &cobra.Command{
 	Use:   "output [filename]",
 	Short: "Delete an output from configuration",
-	Long:  `Delete an output by filename from your AI rules configuration.`,
+	Long:  `Deletes an output by filename from your AI rules configuration.`,
 	Args:  cobra.ExactArgs(1),
-	Run:   runDeleteOutput,
+	Run: func(cmd *cobra.Command, args []string) {
+		path := args[0]
+		crud.DeleteElement("outputs", path)
+	},
+}
+
+// GetOutputCmd gets an output
+var GetOutputCmd = &cobra.Command{
+	Use:   "output [filename]",
+	Short: "Get an output from configuration",
+	Long:  `Retrieves an output by filename from your AI rules configuration.`,
+	Args:  cobra.ExactArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		path := args[0]
+		crud.GetElement("outputs", path)
+	},
+}
+
+// ListOutputsCmd lists all outputs
+var ListOutputsCmd = &cobra.Command{
+	Use:     "outputs",
+	Short:   "List all outputs in the configuration",
+	Long:    `Lists all outputs defined in your AI rules configuration.`,
+	Aliases: []string{"output"},
+	Run: func(cmd *cobra.Command, args []string) {
+		crud.ListElements("outputs")
+	},
 }
 
 func init() {
-	AddOutputCmd.Flags().StringVar(&outputTemplate, "template", "", "Template to use for rendering")
-	AddOutputCmd.Flags().StringVar(&outputType, "type", "", "Type of output (rule, section, both)")
+	// Flags for Add command
+	AddOutputCmd.Flags().StringVar(&outputType, "type", "", "Type of output (rule or agent)")
+	AddOutputCmd.Flags().StringVar(&outputNamingScheme, "naming-scheme", "", "Naming pattern for files when path is a directory (e.g., '{name}.md')")
+	AddOutputCmd.Flags().StringVar(&outputTemplateType, "template-type", "", "Template type: builtin, file, or inline")
+	AddOutputCmd.Flags().StringVar(&outputTemplateValue, "template-value", "", "Template value (name, path, or content)")
 
-	UpdateOutputCmd.Flags().StringVar(&outputTemplate, "template", "", "New template for the output")
+	// Flags for Update command
 	UpdateOutputCmd.Flags().StringVar(&outputType, "type", "", "New type for the output")
-}
-
-func runAddOutput(cmd *cobra.Command, args []string) {
-	filename := args[0]
-	configPath, cfg := loadConfiguration()
-
-	for _, output := range cfg.Outputs {
-		if output.Path == filename {
-			fmt.Fprintf(os.Stderr, "Error: Output file '%s' already exists in configuration\n", filename)
-			os.Exit(1)
-		}
-	}
-
-	newOutput := config.Output{
-		Path:     filename,
-		Template: outputTemplate,
-		Type:     outputType,
-	}
-	cfg.Outputs = append(cfg.Outputs, newOutput)
-
-	if err := config.SaveConfig(cfg, configPath); err != nil {
-		FmtError(err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("✅ Added output '%s'", filename)
-	if outputTemplate != "" {
-		fmt.Printf(" with template '%s'", outputTemplate)
-	}
-	fmt.Printf(" to %s\n", configPath)
-}
-
-func runUpdateOutput(cmd *cobra.Command, args []string) {
-	filename := args[0]
-	configPath, cfg := loadConfiguration()
-
-	outputIndex := -1
-	for i, output := range cfg.Outputs {
-		if output.Path == filename {
-			outputIndex = i
-			break
-		}
-	}
-
-	if outputIndex == -1 {
-		fmt.Fprintf(os.Stderr, "Error: Output '%s' not found\n", filename)
-		os.Exit(1)
-	}
-
-	if outputTemplate != "" {
-		cfg.Outputs[outputIndex].Template = outputTemplate
-	}
-	if outputType != "" {
-		cfg.Outputs[outputIndex].Type = outputType
-	}
-
-	if err := config.SaveConfig(cfg, configPath); err != nil {
-		FmtError(err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("✅ Updated output '%s' in %s\n", filename, configPath)
-}
-
-func runDeleteOutput(cmd *cobra.Command, args []string) {
-	filename := args[0]
-	configPath, cfg := loadConfiguration()
-
-	outputIndex := -1
-	for i, output := range cfg.Outputs {
-		if output.Path == filename {
-			outputIndex = i
-			break
-		}
-	}
-
-	if outputIndex == -1 {
-		fmt.Fprintf(os.Stderr, "Error: Output '%s' not found\n", filename)
-		os.Exit(1)
-	}
-
-	cfg.Outputs = append(cfg.Outputs[:outputIndex], cfg.Outputs[outputIndex+1:]...)
-
-	if err := config.SaveConfig(cfg, configPath); err != nil {
-		FmtError(err)
-		os.Exit(1)
-	}
-
-	fmt.Printf("✅ Deleted output '%s' from %s\n", filename, configPath)
+	UpdateOutputCmd.Flags().StringVar(&outputNamingScheme, "naming-scheme", "", "New naming pattern for the output")
+	UpdateOutputCmd.Flags().StringVar(&outputTemplateType, "template-type", "", "New template type for the output")
+	UpdateOutputCmd.Flags().StringVar(&outputTemplateValue, "template-value", "", "New template value for the output")
 }

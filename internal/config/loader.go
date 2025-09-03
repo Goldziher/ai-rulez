@@ -117,12 +117,12 @@ func (l *configLoader) loadConfigInternal(ctx context.Context, filename string, 
 	} else {
 		baseDir = filepath.Dir(filename)
 	}
-	
+
 	// Resolve extends first (inheritance)
 	if err := l.resolveExtends(ctx, config, baseDir); err != nil {
 		return nil, err
 	}
-	
+
 	// Then resolve includes (additive merging)
 	if err := l.resolveIncludes(ctx, config, baseDir); err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (l *configLoader) resolveExtends(ctx context.Context, config *Config, baseD
 	}
 
 	extendsPath := l.resolvePath(config.Extends, baseDir)
-	
+
 	// Load base configuration
 	baseConfig, err := l.loadConfigInternal(ctx, extendsPath, true)
 	if err != nil {
@@ -171,7 +171,7 @@ func (l *configLoader) resolveExtends(ctx context.Context, config *Config, baseD
 
 	// Apply inheritance: base config is inherited, child config overrides
 	extendedConfig := l.applyExtends(baseConfig, config)
-	
+
 	// Replace current config with extended version
 	*config = *extendedConfig
 	config.Extends = "" // Clear extends to prevent re-processing
@@ -204,7 +204,7 @@ func (l *configLoader) applyExtends(base, child *Config) *Config {
 
 	// Only use child includes (base includes were already resolved)
 	result.Includes = child.Includes
-	
+
 	// Append child outputs to base outputs
 	result.Outputs = append(result.Outputs, child.Outputs...)
 
@@ -223,13 +223,13 @@ func (l *configLoader) loadIncludeFile(ctx context.Context, filename string) (*C
 	if err != nil {
 		return nil, err
 	}
-	
+
 	// If include file has extends or includes, process it fully
 	if partialConfig.Extends != "" || len(partialConfig.Includes) > 0 {
 		// Use LoadConfigWithIncludes to process the extends/includes
 		return LoadConfigWithIncludes(ctx, filename)
 	}
-	
+
 	// Simple include file, return the partial config
 	return partialConfig, nil
 }

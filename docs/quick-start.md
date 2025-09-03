@@ -1,191 +1,67 @@
-# Quick Start
+# Quick Start Guide
 
-Get started instantly with presets, then customize for your project.
+Get up and running with `ai-rulez` in minutes. This guide will walk you through the recommended workflow for creating, customizing, and generating a powerful configuration for your AI assistants.
 
-## 1. Create Configuration
+---
 
-**For popular AI tools (Recommended):**
+### Step 1: Initialize Your Project
+
+First, navigate to your project's root directory and run the `init` command. This creates a new `ai_rulez.yaml` file, pre-filled with best-practice rules and configurations for popular AI tools.
+
 ```bash
-ai-rulez init "My Project" --popular
+# Initialize a new configuration for your project
+ai-rulez init "My Awesome Project" --popular
 ```
 
-**For specific providers:**
+!!! tip "Choosing Providers"
+
+    You can initialize for a specific tool using the `--preset` flag (e.g., `--preset cursor`) or for individual tools (e.g., `--claude --continue-dev`). The `--popular` flag is a great starting point.
+
+### Step 2: Add Your Project's Context
+
+Next, teach `ai-rulez` about your project using the `add` command. This is the most important step for getting high-quality, context-aware responses from your AI. The goal is to describe your tech stack, architecture, and workflow.
+
 ```bash
-# Web application with Claude + Cursor
-ai-rulez init "My App" --claude --cursor
+# Add a rule for your tech stack
+ai-rulez add rule "Tech Stack" --priority critical --content "Frontend: React, TypeScript, Tailwind CSS. Backend: Go, PostgreSQL."
 
-# Backend API with multiple tools  
-ai-rulez init "My API" --claude --gemini --copilot
+# Add a rule for your development workflow
+ai-rulez add rule "Workflow" --priority high --content "All new features must have 90%+ unit test coverage."
 
-# All supported platforms
-ai-rulez init "My Project" --all
+# Add a documentation section for high-level context
+ai-rulez add section "Project Goal" --content "This is a web service for managing customer invoices."
 ```
 
-This creates `ai_rulez.yaml` with complete setup including agents, best practices, and multi-platform support.
+!!! info "Why use `add` instead of editing YAML?"
 
-## 2. Generate AI Files
+    Using the CLI ensures your configuration remains valid and consistent. It also makes it easy to manage your rules programmatically in scripts.
+
+### Step 3: Generate Your Files
+
+Now, run the `generate` command. `ai-rulez` will use your configuration to create tailored instruction files for all the providers you enabled during initialization.
 
 ```bash
 ai-rulez generate
 ```
 
-Creates all configured files:
-- `CLAUDE.md` + `.claude/agents/` (Claude with specialized agents)
-- `.cursor/rules/rules.mdc` (Cursor IDE rules)  
-- `.github/copilot-instructions.md` (GitHub Copilot)
-- `.windsurf/rules.md` (Windsurf editor)
+This will create files like `CLAUDE.md`, `.cursor/rules/rules.mdc`, and `.github/copilot-instructions.md`, all perfectly in sync.
 
-## 3. Validate and Test
+### Step 4: Validate Your Configuration
+
+Any time you make a change, you can run the `validate` command to ensure your configuration is syntactically correct and logically consistent.
 
 ```bash
 ai-rulez validate
 ```
 
-✅ Validates configuration syntax and structure  
-✅ Checks for common issues and provides warnings  
-✅ Confirms all targets and references work correctly
+!!! success "You're All Set!"
+
+    That's it! You now have a powerful, maintainable, and synchronized configuration for all your AI tools. Your AI assistants will now have the context they need to provide much more accurate and relevant responses.
 
 ---
 
-## Customizing Your Configuration
+## What's Next?
 
-### Add Project-Specific Rules
-
-Add your tech stack and workflow details to `ai_rulez.yaml`:
-
-```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-
-metadata:
-  name: "My Project"
-  version: "1.0.0"
-
-rules:
-  - name: "Tech Stack"
-    priority: critical
-    content: |
-      **Frontend**: React 19, TypeScript 5.8, Tailwind CSS
-      **Backend**: Node.js, PostgreSQL, Redis  
-      **Testing**: Vitest, Playwright
-      **Deployment**: Vercel, GitHub Actions
-    
-  - name: "Development Workflow"
-    priority: high
-    content: |
-      1. Create feature branch from main
-      2. Implement with TypeScript strict mode
-      3. Write tests (90%+ coverage required)
-      4. Use ESLint + Biome for formatting
-      5. Open PR with comprehensive description
-
-outputs:
-  - path: "CLAUDE.md"
-  - path: ".cursor/rules/rules.mdc"
-```
-
-### Add Specialized Agents
-
-Create domain experts for complex tasks:
-
-```yaml
-agents:
-  - name: "database-specialist"
-    description: "PostgreSQL optimization and schema design"
-    system_prompt: |
-      Database expert specializing in:
-      - PostgreSQL query optimization and indexing
-      - Schema design and migration strategies
-      - Performance monitoring and tuning
-      - Data integrity and consistency patterns
-      
-  - name: "security-auditor"
-    description: "Security vulnerability assessment and fixes"
-    system_prompt: |
-      Security specialist focusing on:
-      - Input validation and sanitization
-      - Authentication and authorization flaws
-      - SQL injection and XSS prevention
-      - Dependency vulnerability scanning
-
-outputs:
-  - path: "CLAUDE.md"
-  - path: ".claude/agents/"
-    type: "agent"
-    naming_scheme: "{name}.md"
-```
-
-### Use CLI Commands
-
-```bash
-# Add a new rule
-ai-rulez add rule "error-handling" --content "Handle all errors explicitly" --priority 8
-
-# Add an output  
-ai-rulez add output --path ".windsurf/rules.md"
-```
-
-### Configuration Inheritance (Extends)
-
-Inherit from existing configurations instead of starting from scratch:
-
-```yaml
-# Extend a shared base configuration
-extends: "https://raw.githubusercontent.com/myorg/standards/main/typescript-base.yaml"
-
-metadata:
-  name: "My Frontend Project"  # Override the base name
-
-rules:
-  - name: "Project Specific"   # Add project-specific rules
-    priority: critical
-    content: "Use React 19 with concurrent features"
-```
-
-**Using Extends + Includes Together:**
-```yaml
-# Maximum flexibility: inherit base + compose additional pieces
-extends: "https://company.com/base-config.yaml"
-includes:
-  - "https://company.com/security-rules.yaml"
-  - "./local-customizations.yaml"
-
-metadata:
-  name: "My Project"
-  
-rules:
-  - name: "Project Specific"
-    content: "Custom rule for this project"
-```
-
-**Benefits:**
-- **Extends**: Inherit team/organization standards automatically
-- **Includes**: Compose additional shared components (security, testing, etc.)
-- **Combined**: Get base foundation + specialized add-ons + local customizations
-- Maintain consistency across related projects while allowing flexibility
-- Reduce configuration duplication
-
-### Advanced: Add Agents (Claude)
-
-For specialized sub-tasks:
-
-```bash
-ai-rulez add agent "code-reviewer" \
-  --description "Reviews code quality" \
-  --system-prompt "You are a senior code reviewer"
-```
-
-## Git Hooks (Optional)
-
-Automatically validate configuration on git commit:
-
-```bash
-ai-rulez init "My Project" --setup-hooks
-```
-
-Works with lefthook, pre-commit, or husky.
-
-## Next Steps
-
-- [Learn about Configuration](configuration.md)
-- [Explore CLI Commands](cli.md)  
-- [See More Examples](examples.md)
+- **[Best Practices](monorepo.md)**: Learn how to structure your configurations for large projects.
+- **[Full CLI Reference](cli.md)**: Explore every command and flag for advanced management.
+- **[Configuration Guide](configuration.md)**: Dive deeper into advanced topics like `extends` and `includes`.
