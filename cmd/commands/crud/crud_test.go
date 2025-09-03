@@ -42,7 +42,7 @@ func TestRuleCRUD(t *testing.T) {
 		newRule := config.Rule{
 			Name:     "test-rule",
 			Content:  "Test rule content",
-			Priority: 5,
+			Priority: config.PriorityMedium,
 		}
 
 		cfg.Rules = append(cfg.Rules, newRule)
@@ -58,17 +58,17 @@ func TestRuleCRUD(t *testing.T) {
 		configFile, _ := createTestConfig(t)
 
 		cfg, _ := config.LoadConfig(configFile)
-		cfg.Rules = []config.Rule{{Name: "rule1", Content: "Original", Priority: 3}}
+		cfg.Rules = []config.Rule{{Name: "rule1", Content: "Original", Priority: config.PriorityLow}}
 		config.SaveConfig(cfg, configFile)
 
 		cfg, _ = config.LoadConfig(configFile)
 		cfg.Rules[0].Content = "Updated"
-		cfg.Rules[0].Priority = 10
+		cfg.Rules[0].Priority = config.PriorityCritical
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
 		reloaded, _ := config.LoadConfig(configFile)
 		assert.Equal(t, "Updated", reloaded.Rules[0].Content)
-		assert.Equal(t, 10, reloaded.Rules[0].Priority)
+		assert.Equal(t, config.PriorityCritical, reloaded.Rules[0].Priority)
 	})
 
 	t.Run("delete rule", func(t *testing.T) {
@@ -112,7 +112,7 @@ func TestSectionCRUD(t *testing.T) {
 		newSection := config.Section{
 			Name:     "Test Section",
 			Content:  "Section content",
-			Priority: 5,
+			Priority: config.PriorityMedium,
 		}
 
 		cfg.Sections = append(cfg.Sections, newSection)
@@ -128,17 +128,17 @@ func TestSectionCRUD(t *testing.T) {
 		configFile, _ := createTestConfig(t)
 
 		cfg, _ := config.LoadConfig(configFile)
-		cfg.Sections = []config.Section{{Name: "Section1", Content: "Original", Priority: 3}}
+		cfg.Sections = []config.Section{{Name: "Section1", Content: "Original", Priority: config.PriorityLow}}
 		config.SaveConfig(cfg, configFile)
 
 		cfg, _ = config.LoadConfig(configFile)
 		cfg.Sections[0].Content = "Updated"
-		cfg.Sections[0].Priority = 10
+		cfg.Sections[0].Priority = config.PriorityCritical
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
 		reloaded, _ := config.LoadConfig(configFile)
 		assert.Equal(t, "Updated", reloaded.Sections[0].Content)
-		assert.Equal(t, 10, reloaded.Sections[0].Priority)
+		assert.Equal(t, config.PriorityCritical, reloaded.Sections[0].Priority)
 	})
 
 	t.Run("delete section", func(t *testing.T) {
@@ -173,7 +173,7 @@ func TestAgentCRUD(t *testing.T) {
 		newAgent := config.Agent{
 			Name:         "test-agent",
 			Description:  "Test agent",
-			Priority:     5,
+			Priority:     config.PriorityMedium,
 			Tools:        []string{"read", "write"},
 			SystemPrompt: "You are a test agent",
 		}
@@ -193,19 +193,19 @@ func TestAgentCRUD(t *testing.T) {
 
 		cfg, _ := config.LoadConfig(configFile)
 		cfg.Agents = []config.Agent{
-			{Name: "agent1", Description: "Original", Priority: 3},
+			{Name: "agent1", Description: "Original", Priority: config.PriorityLow},
 		}
 		config.SaveConfig(cfg, configFile)
 
 		cfg, _ = config.LoadConfig(configFile)
 		cfg.Agents[0].Description = "Updated"
-		cfg.Agents[0].Priority = 10
+		cfg.Agents[0].Priority = config.PriorityCritical
 		cfg.Agents[0].Tools = []string{"execute"}
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
 		reloaded, _ := config.LoadConfig(configFile)
 		assert.Equal(t, "Updated", reloaded.Agents[0].Description)
-		assert.Equal(t, 10, reloaded.Agents[0].Priority)
+		assert.Equal(t, config.PriorityCritical, reloaded.Agents[0].Priority)
 		assert.Equal(t, []string{"execute"}, reloaded.Agents[0].Tools)
 	})
 
@@ -239,8 +239,11 @@ func TestOutputCRUD(t *testing.T) {
 		require.NoError(t, err)
 
 		newOutput := config.Output{
-			Path:     "new-output.md",
-			Template: "custom",
+			Path: "new-output.md",
+			Template: map[string]interface{}{
+				"type":  "builtin",
+				"value": "minimal",
+			},
 		}
 
 		cfg.Outputs = append(cfg.Outputs, newOutput)
@@ -256,11 +259,16 @@ func TestOutputCRUD(t *testing.T) {
 		configFile, _ := createTestConfig(t)
 
 		cfg, _ := config.LoadConfig(configFile)
-		cfg.Outputs[0].Template = "updated-template"
+		cfg.Outputs[0].Template = map[string]interface{}{
+			"type":  "builtin",
+			"value": "documentation",
+		}
 		require.NoError(t, config.SaveConfig(cfg, configFile))
 
 		reloaded, _ := config.LoadConfig(configFile)
-		assert.Equal(t, "updated-template", reloaded.Outputs[0].Template)
+		template, err := reloaded.Outputs[0].GetTemplate()
+		require.NoError(t, err)
+		assert.Equal(t, "documentation", template.Value)
 	})
 
 	t.Run("delete output", func(t *testing.T) {
@@ -299,7 +307,121 @@ func TestDefaultPriorities(t *testing.T) {
 	reloaded, err := config.LoadConfigWithIncludes(context.Background(), configFile)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, reloaded.Rules[0].Priority)
-	assert.Equal(t, 1, reloaded.Sections[0].Priority)
-	assert.Equal(t, 1, reloaded.Agents[0].Priority)
+	assert.Equal(t, config.PriorityMedium, reloaded.Rules[0].Priority)
+	assert.Equal(t, config.PriorityMedium, reloaded.Sections[0].Priority)
+	assert.Equal(t, config.PriorityMedium, reloaded.Agents[0].Priority)
+}
+
+// ========== Get Commands Tests ==========
+
+func TestGetRule(t *testing.T) {
+	configFile, _ := createTestConfig(t)
+
+	cfg, _ := config.LoadConfig(configFile)
+	cfg.Rules = []config.Rule{
+		{Name: "test-rule", Content: "Test content", Priority: config.PriorityHigh, Targets: []string{"*.go"}},
+	}
+	config.SaveConfig(cfg, configFile)
+
+	// Test that rule exists and has expected values
+	reloaded, err := config.LoadConfig(configFile)
+	require.NoError(t, err)
+	assert.Len(t, reloaded.Rules, 1)
+	assert.Equal(t, "test-rule", reloaded.Rules[0].Name)
+	assert.Equal(t, "Test content", reloaded.Rules[0].Content)
+	assert.Equal(t, config.PriorityHigh, reloaded.Rules[0].Priority)
+	assert.Equal(t, []string{"*.go"}, reloaded.Rules[0].Targets)
+}
+
+func TestGetSection(t *testing.T) {
+	configFile, _ := createTestConfig(t)
+
+	cfg, _ := config.LoadConfig(configFile)
+	cfg.Sections = []config.Section{
+		{Name: "test-section", Content: "Section content", Priority: config.PriorityLow, Targets: []string{"*.md"}},
+	}
+	config.SaveConfig(cfg, configFile)
+
+	// Test that section exists and has expected values
+	reloaded, err := config.LoadConfig(configFile)
+	require.NoError(t, err)
+	assert.Len(t, reloaded.Sections, 1)
+	assert.Equal(t, "test-section", reloaded.Sections[0].Name)
+	assert.Equal(t, "Section content", reloaded.Sections[0].Content)
+	assert.Equal(t, config.PriorityLow, reloaded.Sections[0].Priority)
+	assert.Equal(t, []string{"*.md"}, reloaded.Sections[0].Targets)
+}
+
+func TestGetAgent(t *testing.T) {
+	configFile, _ := createTestConfig(t)
+
+	cfg, _ := config.LoadConfig(configFile)
+	cfg.Agents = []config.Agent{
+		{
+			Name:         "test-agent",
+			Description:  "Test agent",
+			Priority:     config.PriorityCritical,
+			Tools:        []string{"Read", "Edit"},
+			SystemPrompt: "You are a test agent",
+			Targets:      []string{"*.yaml"},
+		},
+	}
+	config.SaveConfig(cfg, configFile)
+
+	// Test that agent exists and has expected values
+	reloaded, err := config.LoadConfig(configFile)
+	require.NoError(t, err)
+	assert.Len(t, reloaded.Agents, 1)
+	assert.Equal(t, "test-agent", reloaded.Agents[0].Name)
+	assert.Equal(t, "Test agent", reloaded.Agents[0].Description)
+	assert.Equal(t, config.PriorityCritical, reloaded.Agents[0].Priority)
+	assert.Equal(t, []string{"Read", "Edit"}, reloaded.Agents[0].Tools)
+	assert.Equal(t, "You are a test agent", reloaded.Agents[0].SystemPrompt)
+	assert.Equal(t, []string{"*.yaml"}, reloaded.Agents[0].Targets)
+}
+
+// ========== Targets Tests ==========
+
+func TestTargetsSupport(t *testing.T) {
+	t.Run("rule targets", func(t *testing.T) {
+		configFile, _ := createTestConfig(t)
+
+		cfg, _ := config.LoadConfig(configFile)
+		cfg.Rules = []config.Rule{
+			{Name: "go-rule", Content: "Go specific rule", Targets: []string{"*.go", "go.mod"}},
+		}
+		config.SaveConfig(cfg, configFile)
+
+		reloaded, err := config.LoadConfig(configFile)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"*.go", "go.mod"}, reloaded.Rules[0].Targets)
+	})
+
+	t.Run("section targets", func(t *testing.T) {
+		configFile, _ := createTestConfig(t)
+
+		cfg, _ := config.LoadConfig(configFile)
+		cfg.Sections = []config.Section{
+			{Name: "docs-section", Content: "Documentation section", Targets: []string{"docs/**", "*.md"}},
+		}
+		config.SaveConfig(cfg, configFile)
+
+		reloaded, err := config.LoadConfig(configFile)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"docs/**", "*.md"}, reloaded.Sections[0].Targets)
+	})
+
+	t.Run("agent targets", func(t *testing.T) {
+		configFile, _ := createTestConfig(t)
+
+		cfg, _ := config.LoadConfig(configFile)
+		cfg.Agents = []config.Agent{
+			{Name: "typescript-agent", Description: "TS specialist", Targets: []string{"**/*.ts", "**/*.tsx"}},
+		}
+		config.SaveConfig(cfg, configFile)
+
+		reloaded, err := config.LoadConfig(configFile)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"**/*.ts", "**/*.tsx"}, reloaded.Agents[0].Targets)
+	})
 }

@@ -10,7 +10,8 @@ import (
 
 var (
 	sectionContent  string
-	sectionPriority int
+	sectionPriority string
+	sectionTargets  []string
 )
 
 // AddSectionCmd adds a new section to the configuration
@@ -45,10 +46,12 @@ var DeleteSectionCmd = &cobra.Command{
 }
 
 func init() {
-	AddSectionCmd.Flags().IntVar(&sectionPriority, "priority", 5, "Priority of the section (1-10)")
+	AddSectionCmd.Flags().StringVar(&sectionPriority, "priority", "medium", "Priority of the section (critical, high, medium, low, minimal)")
+	AddSectionCmd.Flags().StringSliceVar(&sectionTargets, "targets", []string{}, "Target file patterns (glob patterns)")
 
 	UpdateSectionCmd.Flags().StringVar(&sectionContent, "content", "", "New content for the section")
-	UpdateSectionCmd.Flags().IntVar(&sectionPriority, "priority", 0, "New priority for the section")
+	UpdateSectionCmd.Flags().StringVar(&sectionPriority, "priority", "", "New priority for the section (critical, high, medium, low, minimal)")
+	UpdateSectionCmd.Flags().StringSliceVar(&sectionTargets, "targets", []string{}, "Target file patterns (glob patterns)")
 }
 
 func runAddSection(cmd *cobra.Command, args []string) {
@@ -75,12 +78,13 @@ func runAddSection(cmd *cobra.Command, args []string) {
 	newSection := config.Section{
 		Name:     sectionTitle,
 		Content:  sectionContent,
-		Priority: sectionPriority,
+		Priority: config.Priority(sectionPriority),
+		Targets:  sectionTargets,
 	}
 	cfg.Sections = append(cfg.Sections, newSection)
 
 	saveConfiguration(cfg, configPath)
-	fmt.Printf("✅ Added section '%s' with priority %d to %s\n", sectionTitle, sectionPriority, configPath)
+	fmt.Printf("✅ Added section '%s' with priority %s to %s\n", sectionTitle, sectionPriority, configPath)
 }
 
 func runUpdateSection(cmd *cobra.Command, args []string) {
@@ -112,8 +116,12 @@ func runUpdateSection(cmd *cobra.Command, args []string) {
 		cfg.Sections[sectionIndex].Content = content
 	}
 
-	if sectionPriority > 0 {
-		cfg.Sections[sectionIndex].Priority = sectionPriority
+	if sectionPriority != "" {
+		cfg.Sections[sectionIndex].Priority = config.Priority(sectionPriority)
+	}
+
+	if len(sectionTargets) > 0 {
+		cfg.Sections[sectionIndex].Targets = sectionTargets
 	}
 
 	saveConfiguration(cfg, configPath)
