@@ -39,8 +39,20 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Cache Task binary
+        uses: actions/cache@v4
+        id: task-cache
+        with:
+          path: |
+            ~/.task
+            ~/bin/task
+          key: ${{ runner.os }}-task-3.x
+          restore-keys: |
+            ${{ runner.os }}-task-
+
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
           version: 3.x
 
@@ -91,8 +103,20 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Cache Task binary
+        uses: actions/cache@v4
+        id: task-cache
+        with:
+          path: |
+            ~/.task
+            ~/bin/task
+          key: ${{ runner.os }}-task-3.x
+          restore-keys: |
+            ${{ runner.os }}-task-
+
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
           version: 3.x
 
