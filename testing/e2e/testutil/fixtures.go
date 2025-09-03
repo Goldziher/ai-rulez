@@ -8,20 +8,20 @@ const BasicConfig = `metadata:
   description: "A test project for ai-rulez"
 
 outputs:
-  - file: "CLAUDE.md"
+  - path: "CLAUDE.md"
 
 rules:
   - name: "Basic Rule"
-    priority: 5
+    priority: medium
     content: "This is a basic rule for testing"
 
   - name: "High Priority Rule"  
-    priority: 9
+    priority: critical
     content: "This is a high priority rule"
 
 sections:
   - name: "Development Guidelines"
-    priority: 8
+    priority: high
     content: "Follow these guidelines for development"
 `
 
@@ -29,7 +29,7 @@ const MinimalConfig = `metadata:
   name: "Minimal Project"
 
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 
 rules:
   - name: "Only Rule"
@@ -40,19 +40,19 @@ const ConfigWithAgents = `metadata:
   name: "Project with Agents"
 
 outputs:
-  - file: "CLAUDE.md"
+  - path: "CLAUDE.md"
   - path: ".claude/agents/"
     type: "agent"
 
 rules:
   - name: "Code Quality"
-    priority: 8
+    priority: high
     content: "Maintain high code quality"
 
 agents:
   - name: "code-reviewer"
     description: "Reviews code for quality and best practices"
-    priority: 9
+    priority: critical
     tools: ["Read", "Edit", "Grep"]
     system_prompt: "You are a code reviewer focused on quality"
 `
@@ -61,8 +61,8 @@ const ConfigWithTargets = `metadata:
   name: "Project with Targets"
 
 outputs:
-  - file: "frontend.md"
-  - file: "backend.md"
+  - path: "frontend.md"
+  - path: "backend.md"
 
 rules:
   - name: "Frontend Rule"
@@ -84,7 +84,7 @@ includes:
   - "https://raw.githubusercontent.com/example/standards/main/base.yaml"
 
 outputs:
-  - file: "output.md"
+  - path: "output.md"
 
 rules:
   - name: "Local Rule"
@@ -95,7 +95,7 @@ const InvalidYAMLConfig = `metadata:
   name: "Invalid Config"
   invalid_yaml: [unclosed_list
 outputs:
-  - file: "test.md"
+  - path: "test.md"
 `
 
 const InvalidSchemaConfig = `metadata:

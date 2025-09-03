@@ -21,7 +21,7 @@ func TestRenderer_Render(t *testing.T) {
 				Name: "Test Project",
 			},
 			Rules: []config.Rule{
-				{Name: "Rule1", Content: "Content1", Priority: 5},
+				{Name: "Rule1", Content: "Content1", Priority: config.PriorityMedium},
 			},
 		}
 
@@ -79,13 +79,13 @@ func TestNewTemplateData(t *testing.T) {
 			Version:     "1.0.0",
 		},
 		Rules: []config.Rule{
-			{Name: "Rule1", Content: "Content1", Priority: 5},
+			{Name: "Rule1", Content: "Content1", Priority: config.PriorityMedium},
 		},
 		Sections: []config.Section{
-			{Name: "Section1", Content: "Section content", Priority: 3},
+			{Name: "Section1", Content: "Section content", Priority: config.PriorityLow},
 		},
 		Agents: []config.Agent{
-			{Name: "Agent1", Description: "Agent desc", Priority: 7},
+			{Name: "Agent1", Description: "Agent desc", Priority: config.PriorityHigh},
 		},
 	}
 

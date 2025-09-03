@@ -59,6 +59,7 @@ func init() {
 	RootCmd.AddCommand(AddCmd)
 	RootCmd.AddCommand(UpdateCmd)
 	RootCmd.AddCommand(DeleteCmd)
+	RootCmd.AddCommand(GetCmd)
 	RootCmd.AddCommand(ListCmd)
 	RootCmd.AddCommand(MCPCmd)
 
@@ -76,6 +77,11 @@ func init() {
 	DeleteCmd.AddCommand(crud.DeleteSectionCmd)
 	DeleteCmd.AddCommand(crud.DeleteOutputCmd)
 	DeleteCmd.AddCommand(crud.DeleteAgentCmd)
+
+	GetCmd.AddCommand(crud.GetRuleCmd)
+	GetCmd.AddCommand(crud.GetSectionCmd)
+	GetCmd.AddCommand(crud.GetOutputCmd)
+	GetCmd.AddCommand(crud.GetAgentCmd)
 
 	ListCmd.AddCommand(crud.ListRulesCmd)
 	ListCmd.AddCommand(crud.ListSectionsCmd)

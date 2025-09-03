@@ -32,7 +32,7 @@ func GetRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 
 	var filteredRules []config.Rule
 	for _, rule := range cfg.Rules {
-		if params.MinPriority > 0 && rule.Priority < int(params.MinPriority) {
+		if params.MinPriority > 0 && rule.Priority.ToInt() < int(params.MinPriority) {
 			continue
 		}
 		if params.NameFilter != "" && !strings.Contains(strings.ToLower(rule.Name), strings.ToLower(params.NameFilter)) {
@@ -60,10 +60,10 @@ func GetRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 // AddRuleHandler AddRule handles the add_rule MCP tool
 func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	params := struct {
-		ConfigFile string  `json:"config_file"`
-		Name       string  `json:"name"`
-		Content    string  `json:"content"`
-		Priority   float64 `json:"priority"`
+		ConfigFile string      `json:"config_file"`
+		Name       string      `json:"name"`
+		Content    string      `json:"content"`
+		Priority   interface{} `json:"priority"`
 	}{}
 
 	if request.Params.Arguments != nil {
@@ -84,9 +84,9 @@ func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		}
 	}
 
-	priority := 5
-	if params.Priority > 0 {
-		priority = int(params.Priority)
+	priority, err := config.ParsePriority(params.Priority)
+	if err != nil {
+		priority = config.PriorityMedium
 	}
 
 	newRule := config.Rule{
@@ -121,11 +121,11 @@ func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 // UpdateRuleHandler UpdateRule handles the update_rule MCP tool
 func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	params := struct {
-		ConfigFile string  `json:"config_file"`
-		Name       string  `json:"name"`
-		NewName    string  `json:"new_name"`
-		Content    string  `json:"content"`
-		Priority   float64 `json:"priority"`
+		ConfigFile string      `json:"config_file"`
+		Name       string      `json:"name"`
+		NewName    string      `json:"new_name"`
+		Content    string      `json:"content"`
+		Priority   interface{} `json:"priority"`
 	}{}
 
 	if request.Params.Arguments != nil {
@@ -165,8 +165,11 @@ func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		cfg.Rules[ruleIndex].Content = params.Content
 	}
 
-	if params.Priority > 0 {
-		cfg.Rules[ruleIndex].Priority = int(params.Priority)
+	if params.Priority != nil {
+		priority, err := config.ParsePriority(params.Priority)
+		if err == nil {
+			cfg.Rules[ruleIndex].Priority = priority
+		}
 	}
 
 	if err := saveConfig(cfg, configPath); err != nil {
