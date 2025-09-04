@@ -103,7 +103,9 @@ outputs:`)
   
   # Continue.dev prompts (custom commands in YAML format)
   - path: ".continue/prompts/ai_rulez_prompts.yaml"
-    template: "continuedev-prompts"
+    template:
+      type: builtin
+      value: continuedev-prompts
     
   # Continue.dev rules (directory format with frontmatter)
   - path: ".continue/rules/"

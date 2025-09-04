@@ -42,13 +42,17 @@ includes:
 outputs:
   - path: "output.md"
   - path: "custom.md"
-    template: "documentation"
+    template:
+      type: builtin
+      value: documentation
   - path: "inline.md"
-    template: |
-      # {{.ProjectName}}
-      {{range .Rules}}
-      - {{.Name}}
-      {{end}}
+    template:
+      type: inline
+      value: |
+        # {{.ProjectName}}
+        {{range .Rules}}
+        - {{.Name}}
+        {{end}}
 rules:
   - name: "Rule 1"
     priority: critical
@@ -187,7 +191,9 @@ metadata:
   name: "Test"
 outputs:
   - path: "output.md"
-    template: "@templates/custom.tmpl"
+    template:
+      type: file
+      value: templates/custom.tmpl
 `,
 			wantErr: false,
 		},
@@ -399,7 +405,9 @@ outputs:
 metadata:
   name: "Test Project"
 outputs:
-  - template: "custom"`,
+  - template:
+      type: builtin
+      value: custom`,
 			expectedErrors: []string{
 				"outputs.0.path: required field is missing",
 			},
@@ -459,7 +467,9 @@ metadata:
   version: "invalid-version"
   extra_field: "not allowed"
 outputs:
-  - template: "test"
+  - template:
+      type: builtin
+      value: test
 sections:
   - priority: medium
 rules:
