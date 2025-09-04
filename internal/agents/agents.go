@@ -90,7 +90,6 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	return string(output), nil
 }
 
-// ListAvailableAgents lists all available AI agents
 func ListAvailableAgents() {
 	logger.Info("Available AI agents for configuration generation:")
 	logger.Info("")
@@ -113,7 +112,6 @@ func ListAvailableAgents() {
 	logger.Info("  ai-rulez init --use-agent <agent-name>")
 }
 
-// ShouldPromptForAgent determines if we should prompt the user about using an AI agent
 func ShouldPromptForAgent() bool {
 	if os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
 		return false
@@ -131,7 +129,6 @@ func ShouldPromptForAgent() bool {
 	return len(available) > 0
 }
 
-// HandleAgentGeneration handles AI agent-based configuration generation
 func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string) (string, bool) {
 	var selectedAgent *AgentInfo
 
@@ -191,7 +188,6 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 	return strings.TrimSpace(result), true
 }
 
-// buildAgentPrompt builds the prompt for the AI agent
 func buildAgentPrompt(projectName string, config templates.ProviderConfig) string {
 	var prompt strings.Builder
 

@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ValidateCmd represents the validate command
 var ValidateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
 	Short: "Validate AI rules configuration file",
@@ -156,7 +155,6 @@ func checkTargetExistence(cfg *config.Config) []string {
 		outputPaths[output.Path] = true
 	}
 
-	// Check rule targets
 	for _, rule := range cfg.Rules {
 		for _, target := range rule.Targets {
 			if !outputPaths[target] {
@@ -165,7 +163,6 @@ func checkTargetExistence(cfg *config.Config) []string {
 		}
 	}
 
-	// Check agent targets
 	for i := range cfg.Agents {
 		for _, target := range cfg.Agents[i].Targets {
 			if !outputPaths[target] {
@@ -174,7 +171,6 @@ func checkTargetExistence(cfg *config.Config) []string {
 		}
 	}
 
-	// Check MCP server targets
 	for i := range cfg.MCPServers {
 		for _, target := range cfg.MCPServers[i].Targets {
 			if !outputPaths[target] {
@@ -183,7 +179,6 @@ func checkTargetExistence(cfg *config.Config) []string {
 		}
 	}
 
-	// Check command targets
 	for i := range cfg.Commands {
 		for _, target := range cfg.Commands[i].Targets {
 			if !outputPaths[target] {

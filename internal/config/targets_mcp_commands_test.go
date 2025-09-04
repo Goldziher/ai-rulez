@@ -8,8 +8,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// ========== FilterMCPServers Tests ==========
-
 func TestFilterMCPServers(t *testing.T) {
 	t.Parallel()
 
@@ -27,7 +25,7 @@ func TestFilterMCPServers(t *testing.T) {
 		{
 			Name:        "universal",
 			Description: "Universal server",
-			Targets:     []string{}, // Empty targets = applies to all
+			Targets:     []string{},
 		},
 		{
 			Name:        "cursor-only",
@@ -40,7 +38,7 @@ func TestFilterMCPServers(t *testing.T) {
 		name         string
 		outputPath   string
 		namedTargets map[string][]string
-		expected     []string // server names
+		expected     []string
 	}{
 		{
 			name:       "json file matches github and universal",
@@ -169,7 +167,7 @@ func TestFilterMCPServers_EdgeCases(t *testing.T) {
 		servers := []config.MCPServer{
 			{
 				Name:    "test-server",
-				Targets: nil, // nil targets should match all
+				Targets: nil,
 			},
 		}
 
@@ -179,8 +177,6 @@ func TestFilterMCPServers_EdgeCases(t *testing.T) {
 		assert.Equal(t, "test-server", result[0].Name)
 	})
 }
-
-// ========== FilterCommands Tests ==========
 
 func TestFilterCommands(t *testing.T) {
 	t.Parallel()
@@ -199,7 +195,7 @@ func TestFilterCommands(t *testing.T) {
 		{
 			Name:        "universal",
 			Description: "Universal command",
-			Targets:     []string{}, // Empty targets = applies to all
+			Targets:     []string{},
 		},
 		{
 			Name:        "claude-only",
@@ -212,7 +208,7 @@ func TestFilterCommands(t *testing.T) {
 		name         string
 		outputPath   string
 		namedTargets map[string][]string
-		expected     []string // command names
+		expected     []string
 	}{
 		{
 			name:       "markdown file matches newtask, claude-only and universal",
@@ -337,7 +333,7 @@ func TestFilterCommands_EdgeCases(t *testing.T) {
 			{
 				Name:        "universal-cmd",
 				Description: "Universal command",
-				Targets:     []string{}, // Empty targets should match all
+				Targets:     []string{},
 			},
 		}
 
@@ -351,7 +347,7 @@ func TestFilterCommands_EdgeCases(t *testing.T) {
 		commands := []config.Command{
 			{
 				Name:    "test-cmd",
-				Targets: []string{"*.md", "", "  ", "*.txt"}, // Contains empty and whitespace
+				Targets: []string{"*.md", "", "  ", "*.txt"},
 			},
 		}
 

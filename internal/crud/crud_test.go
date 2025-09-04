@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// TestMain sets up a dummy config for all tests
 var testConfig *config.Config
 
 func setup() {
@@ -93,18 +92,15 @@ func TestHandleDeleteFromList(t *testing.T) {
 
 func TestSingletonGetSetDelete(t *testing.T) {
 	setup()
-	// Test Get
 	getResult, err := HandleGet(context.Background(), "metadata", "", testConfig)
 	assert.NoError(t, err)
 	assert.Contains(t, getResult.Content[0].(mcp.TextContent).Text, "Test Project")
 
-	// Test Update
 	updates := map[string]interface{}{"Name": "New Project Name"}
 	_, err = HandleUpdate(context.Background(), "metadata", "", updates, testConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, "New Project Name", testConfig.Metadata.Name)
 
-	// Test Extends
 	_, err = HandleUpdate(context.Background(), "extends", "", map[string]interface{}{"Extends": "./base.yaml"}, testConfig)
 	assert.NoError(t, err)
 	assert.Equal(t, "./base.yaml", testConfig.Extends)

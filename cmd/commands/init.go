@@ -37,7 +37,6 @@ var (
 	continueDevFlag bool
 )
 
-// InitCmd represents the init command
 var InitCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new AI rules configuration",
@@ -101,8 +100,6 @@ func handleContinueDevSetup(providerConfig templates.ProviderConfig) {
 		return
 	}
 
-	// Continue.dev now uses YAML configuration
-	// The prompts will be generated via the template system
 	logger.Info("  - Continue.dev now uses YAML configuration")
 	logger.Info("  - Custom prompts will be generated in .continue/prompts/")
 	logger.Info("  - For more info, see: https://docs.continue.dev/reference")

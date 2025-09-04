@@ -27,35 +27,27 @@ func (s *InitCLITestSuite) TearDownSuite() {
 }
 
 func (s *InitCLITestSuite) TestInitSetupHooks() {
-	// Create a dummy lefthook.yml file
 	lefthookContent := `pre-commit:\n  commands:\n    lint:\n      run: npm run lint\n`
 	testutil.WriteFile(s.T(), s.workingDir, "lefthook.yml", lefthookContent)
 
-	// Run init with the --setup-hooks flag
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "HookProject", "--setup-hooks")
 
-	// Check that the CLI reported success
 	result.AssertStderrContains(s.T(), "Successfully configured Lefthook")
 
-	// Read the modified lefthook.yml and verify the change
 	modifiedContent := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, "lefthook.yml"))
 	s.Contains(modifiedContent, "ai-rulez validate", "The validate command should be added to lefthook.yml")
 }
 
 func (s *InitCLITestSuite) TestInitConflictingProviders() {
-	// Run init with two providers that both want to create an 'agents' block
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ConflictProject", "--claude", "--continue-dev")
 
 	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
 
-	// Read the generated config
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 
-	// 1. Assert that there is only one 'agents:' block
 	s.Equal(1, strings.Count(content, "agents:"), "Should only be one agents block in the config")
 
-	// 2. Assert that the Claude configuration took precedence
 	s.Contains(content, "# AI agents (specialized sub-assistants for Claude)")
 	s.NotContains(content, "# AI agents (specialized sub-assistants for Continue.dev)")
 }
@@ -75,14 +67,11 @@ func (s *InitCLITestSuite) TestBasicInit() {
 }
 
 func (s *InitCLITestSuite) TestInitContinueDevPreset() {
-	// Part 1: Test with no existing config.py
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ContinueDevProject", "--preset", "continue-dev")
 
-	// Check for correct output during init
 	result.AssertStderrContains(s.T(), "Continue.dev rules")
 	result.AssertStderrContains(s.T(), "Continue.dev prompts")
 
-	// Check that ai_rulez.yaml is correct
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
 	s.Contains(configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
@@ -90,9 +79,6 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	s.Contains(configContent, "agents:")
 	s.Contains(configContent, "name: \"code-reviewer\"")
 
-	// Continue.dev now uses YAML configuration, not Python
-
-	// Run generate and check for the generated prompts file
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
 	promptsPath := filepath.Join(s.workingDir, ".continue", "prompts", "ai_rulez_prompts.yaml")
@@ -102,12 +88,10 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	s.Contains(promptsContent, "name: code-reviewer")
 	s.Contains(promptsContent, "description: Code review and quality analysis specialist")
 
-	// Part 2: Test again in a new directory
 	secondWorkingDir := testutil.CreateTempDir(s.T())
 
 	resultSecond := testutil.RunCLIExpectSuccess(s.T(), secondWorkingDir, "init", "ProjectSecond", "--preset", "continue-dev")
 
-	// Check that it creates configuration for Continue.dev YAML format
 	resultSecond.AssertStderrContains(s.T(), "Continue.dev now uses YAML configuration")
 	resultSecond.AssertStderrContains(s.T(), "Custom prompts will be generated in .continue/prompts/")
 }

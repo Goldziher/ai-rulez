@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListCommandsCmd represents the command to list all custom commands
 var ListCommandsCmd = &cobra.Command{
 	Use:     "commands",
 	Short:   "List all configured custom commands",

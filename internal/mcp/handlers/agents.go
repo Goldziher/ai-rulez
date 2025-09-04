@@ -8,18 +8,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// ListAgentsHandler handles the list_agents MCP tool
 func ListAgentsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleListMCP(ctx, "agents")
 }
 
-// GetAgentHandler handles the get_agent MCP tool
 func GetAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleGetMCP(ctx, "agents", name)
 }
 
-// AddAgentHandler handles the add_agent MCP tool
 func AddAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	description := request.GetString("description", "")
@@ -50,7 +47,6 @@ func AddAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Cal
 	return crud.HandleAddMCP(ctx, "agents", newAgent)
 }
 
-// UpdateAgentHandler handles the update_agent MCP tool
 func UpdateAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
@@ -89,7 +85,6 @@ func UpdateAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	return crud.HandleUpdateMCP(ctx, "agents", name, updates)
 }
 
-// DeleteAgentHandler handles the delete_agent MCP tool
 func DeleteAgentHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleDeleteMCP(ctx, "agents", name)

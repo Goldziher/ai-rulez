@@ -17,8 +17,8 @@ func TestMergeMCPServers(t *testing.T) {
 
 	extension := &config.Config{
 		MCPServers: []config.MCPServer{
-			{Name: "server2", URL: "http://localhost:9090"}, // Overwrite
-			{Name: "server3", Command: "cmd3"},              // Add
+			{Name: "server2", URL: "http://localhost:9090"},
+			{Name: "server3", Command: "cmd3"},
 		},
 	}
 
@@ -75,8 +75,8 @@ func TestMergeCommands(t *testing.T) {
 
 	extension := &config.Config{
 		Commands: []config.Command{
-			{Name: "cmd2", SystemPrompt: "New system prompt 2"}, // Overwrite
-			{Name: "cmd3", Description: "Command 3"},            // Add
+			{Name: "cmd2", SystemPrompt: "New system prompt 2"},
+			{Name: "cmd3", Description: "Command 3"},
 		},
 	}
 
@@ -123,7 +123,6 @@ func TestMergeCommands_EmptyExtension(t *testing.T) {
 	assert.Equal(t, "cmd1", merged[0].Name)
 }
 
-// Helper to find a server by name
 func findMCPServer(servers []config.MCPServer, name string) *config.MCPServer {
 	for i := range servers {
 		if servers[i].Name == name {
@@ -133,7 +132,6 @@ func findMCPServer(servers []config.MCPServer, name string) *config.MCPServer {
 	return nil
 }
 
-// Helper to find a command by name
 func findCommand(commands []config.Command, name string) *config.Command {
 	for i := range commands {
 		if commands[i].Name == name {

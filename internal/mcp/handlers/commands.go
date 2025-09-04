@@ -8,18 +8,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// ListCommandsHandler handles the list_commands MCP tool
 func ListCommandsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleListMCP(ctx, "commands")
 }
 
-// GetCommandHandler handles the get_command MCP tool
 func GetCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleGetMCP(ctx, "commands", name)
 }
 
-// AddCommandHandler handles the add_command MCP tool
 func AddCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := request.GetString("id", "")
 	name := request.GetString("name", "")
@@ -47,7 +44,6 @@ func AddCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return crud.HandleAddMCP(ctx, "commands", newCmd)
 }
 
-// UpdateCommandHandler handles the update_command MCP tool
 func UpdateCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
@@ -85,7 +81,6 @@ func UpdateCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mc
 	return crud.HandleUpdateMCP(ctx, "commands", name, updates)
 }
 
-// DeleteCommandHandler handles the delete_command MCP tool
 func DeleteCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleDeleteMCP(ctx, "commands", name)
