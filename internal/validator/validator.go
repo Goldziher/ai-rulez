@@ -27,15 +27,12 @@ func (v *Validator) Validate(ctx context.Context) ([]string, error) {
 		return nil, fmt.Errorf("validation failed: %w", err)
 	}
 
-	var warnings []string
+	warnings := make([]string, 0, 16)
 
 	warnings = append(warnings, v.checkEmptyConfiguration(cfg)...)
 	warnings = append(warnings, v.checkOutputsExist(cfg)...)
-
 	warnings = append(warnings, v.checkDuplicateNames(cfg)...)
-
 	warnings = append(warnings, v.checkMCPServerLogic(cfg)...)
-
 	warnings = append(warnings, v.checkTargetExistence(cfg)...)
 
 	return warnings, nil
@@ -58,7 +55,8 @@ func (v *Validator) checkOutputsExist(cfg *config.Config) []string {
 }
 
 func (v *Validator) checkDuplicateNames(cfg *config.Config) []string {
-	var warnings []string
+	maxPossibleDuplicates := len(cfg.Rules) + len(cfg.Sections) + len(cfg.Agents) + len(cfg.MCPServers) + len(cfg.Commands)
+	warnings := make([]string, 0, maxPossibleDuplicates)
 
 	warnings = append(warnings, checkDuplicateNames(
 		len(cfg.Rules),
@@ -155,8 +153,8 @@ func (v *Validator) checkTargetExistence(cfg *config.Config) []string {
 }
 
 func checkDuplicateNames(count int, getName func(int) string, itemType string) []string {
-	names := make(map[string]bool)
-	var warnings []string
+	names := make(map[string]bool, count)
+	warnings := make([]string, 0, count/4)
 
 	for i := 0; i < count; i++ {
 		name := getName(i)

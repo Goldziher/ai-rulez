@@ -126,7 +126,10 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 			Name: "Custom Template Test",
 		},
 		Outputs: []config.Output{
-			{Path: outputFile, Template: "custom"},
+			{Path: outputFile, Template: map[string]interface{}{
+				"type":  "builtin",
+				"value": "custom",
+			}},
 		},
 		Rules: []config.Rule{
 			{Name: "Test Rule", Content: "Test content"},
@@ -292,7 +295,10 @@ func TestGenerator_TemplateVariables(t *testing.T) {
 			Description: "Testing all variables",
 		},
 		Outputs: []config.Output{
-			{Path: outputFile, Template: "test-vars"},
+			{Path: outputFile, Template: map[string]interface{}{
+				"type":  "builtin",
+				"value": "test-vars",
+			}},
 		},
 		Rules: []config.Rule{
 			{Name: "Rule 1", Priority: config.PriorityCritical, Content: "Content 1"},

@@ -46,32 +46,26 @@ type Client struct {
 }
 
 func NewClient(config *HTTPConfig) *Client {
+	return newClientWithValidator(config, newURLValidator())
+}
+
+func NewTestClient(config *HTTPConfig) *Client {
+	return newClientWithValidator(config, &testURLValidator{})
+}
+
+func newClientWithValidator(config *HTTPConfig, validator URLValidatorInterface) *Client {
 	if config == nil {
 		config = defaultHTTPConfig()
 	}
 
 	client := resty.New()
+	setupHTTPClient(client, config)
 
-	client.SetTimeout(config.Timeout)
-
-	client.SetHeader("User-Agent", config.UserAgent)
-
-	for key, value := range config.Headers {
-		client.SetHeader(key, value)
+	if _, isTest := validator.(*testURLValidator); !isTest {
+		client.OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
+			return validator.Validate(r.URL)
+		})
 	}
-
-	validator := newURLValidator()
-	client.SetRedirectPolicy(resty.FlexibleRedirectPolicy(config.MaxRedirects))
-	client.OnBeforeRequest(func(c *resty.Client, r *resty.Request) error {
-		return validator.Validate(r.URL)
-	})
-
-	client.OnAfterResponse(func(c *resty.Client, r *resty.Response) error {
-		if int64(len(r.Body())) > config.MaxBodySize {
-			return fmt.Errorf("response body too large (limit: %d bytes)", config.MaxBodySize)
-		}
-		return nil
-	})
 
 	return &Client{
 		resty:     client,
@@ -81,13 +75,7 @@ func NewClient(config *HTTPConfig) *Client {
 	}
 }
 
-func NewTestClient(config *HTTPConfig) *Client {
-	if config == nil {
-		config = defaultHTTPConfig()
-	}
-
-	client := resty.New()
-
+func setupHTTPClient(client *resty.Client, config *HTTPConfig) {
 	client.SetTimeout(config.Timeout)
 	client.SetHeader("User-Agent", config.UserAgent)
 
@@ -103,13 +91,6 @@ func NewTestClient(config *HTTPConfig) *Client {
 		}
 		return nil
 	})
-
-	return &Client{
-		resty:     client,
-		validator: &testURLValidator{},
-		config:    config,
-		cache:     newCache(nil),
-	}
 }
 
 type testURLValidator struct{}

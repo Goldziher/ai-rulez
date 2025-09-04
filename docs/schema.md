@@ -40,7 +40,13 @@ Most modern editors will automatically detect this and provide assistance.
 
 ### Structured Templates
 
-The `template` property for `outputs` and `agents` is a structured object:
+!!! important "Breaking Change in v2.0"
+    As of v2.0, templates **must** use the structured object format. String-based templates are no longer supported.
+
+The `template` property for `outputs` and `agents` is a structured object with two required fields:
+
+- **`type`**: Must be `"builtin"`, `"file"`, or `"inline"`
+- **`value`**: The template name, file path, or inline content
 
 ```yaml
 outputs:
@@ -48,6 +54,30 @@ outputs:
     template:
       type: "inline" # Can be "inline", "file", or "builtin"
       value: "# {{ .ProjectName }}\n{{ range .Rules }}{{ .Content }}{{ end }}"
+```
+
+#### Template Types
+
+- **`builtin`**: Use a built-in template (e.g., `default`, `minimal`, `documentation`)
+- **`file`**: Reference an external template file relative to your config file
+- **`inline`**: Provide the template content directly in the configuration
+
+#### Migration from v1.x
+
+If you're upgrading from v1.x, update any string-based templates:
+
+```yaml
+# ❌ Old v1.x format (no longer supported)
+outputs:
+  - path: "rules.md"
+    template: "documentation"
+
+# ✅ New v2.x format (required)
+outputs:
+  - path: "rules.md"
+    template:
+      type: "builtin"
+      value: "documentation"
 ```
 
 ---
