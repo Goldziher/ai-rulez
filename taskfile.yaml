@@ -29,11 +29,6 @@ tasks:
     cmds:
       - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/...
 
-  test:integration:
-    desc: Run integration tests (legacy e2e path)
-    cmds:
-      - echo "⚠️  Legacy e2e tests removed. Use 'task test:e2e' instead."
-
   test:benchmark:
     desc: Run benchmark tests
     cmds:
@@ -128,15 +123,15 @@ tasks:
 
   ci:
     desc: Run all checks (like CI)
-    deps: [tidy, format, lint, test:race, test:integration]
+    deps: [tidy, format, lint, test:race, test:e2e]
 
   ci:unit:
     desc: Run CI unit tests only
     deps: [tidy, format, lint, test:race]
 
-  ci:integration:
-    desc: Run CI integration tests only
-    deps: [test:integration]
+  ci:e2e:
+    desc: Run CI e2e tests only
+    deps: [test:e2e]
 
   build:all:
     desc: Build for multiple platforms

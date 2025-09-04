@@ -75,20 +75,6 @@ rules:
     content: "Rule for everyone"
 `
 
-const ConfigWithRemoteIncludes = `metadata:
-  name: "Project with Remote Includes"
-
-includes:
-  - "https://raw.githubusercontent.com/example/standards/main/base.yaml"
-
-outputs:
-  - path: "output.md"
-
-rules:
-  - name: "Local Rule"
-    content: "This is a local rule"
-`
-
 const InvalidYAMLConfig = `metadata:
   name: "Invalid Config"
   invalid_yaml: [unclosed_list
@@ -113,17 +99,29 @@ const ConfigWithMCPServers = `metadata:
 
 outputs:
   - path: ".mcp.json"
-    template: "claude-code-mcp"
+    template:
+      type: builtin
+      value: claude-code-mcp
   - path: ".cursor/mcp.json" 
-    template: "cursor-mcp"
+    template:
+      type: builtin
+      value: cursor-mcp
   - path: "mcp_config.json"
-    template: "windsurf-mcp"
+    template:
+      type: builtin
+      value: windsurf-mcp
   - path: ".vscode/mcp.json"
-    template: "vscode-mcp"
+    template:
+      type: builtin
+      value: vscode-mcp
   - path: ".continue/mcpServers/servers.yaml"
-    template: "continuedev-mcp"
+    template:
+      type: builtin
+      value: continuedev-mcp
   - path: "cline_mcp_settings.json"
-    template: "cline-mcp"
+    template:
+      type: builtin
+      value: cline-mcp
 
 mcp_servers:
   - name: "github"
@@ -227,14 +225,3 @@ rules:
   - name: "Integration Rule"
     content: "Integration test content"
 `
-
-var ClaudeProviderOutputs = []string{"CLAUDE.md", ".claude/agents/"}
-var CursorProviderOutputs = []string{".cursor/rules/"}
-var WindsurfProviderOutputs = []string{".windsurf/"}
-var CopilotProviderOutputs = []string{".github/copilot-instructions.md"}
-var AllProviderOutputs = []string{
-	"CLAUDE.md", ".claude/agents/",
-	".cursor/rules/", ".windsurf/",
-	".github/copilot-instructions.md",
-	"GEMINI.md", "AGENTS.md", ".clinerules/", ".continue/rules/",
-}
