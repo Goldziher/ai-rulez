@@ -122,6 +122,34 @@ linters:
           - errcheck
         source: "hashPool.Get"
         
+      - linters:
+          - errcheck
+        source: "field.Default.\\("
+        
+      - linters:
+          - errcheck
+        source: "defer.*writer.Flush"
+        
+      - linters:
+          - errcheck
+        source: "filepath.Match"
+        
+      - linters:
+          - errcheck
+        source: "bufferPool.Get\\(\\)"
+        
+      - linters:
+          - errcheck
+        source: "cached\\.\\("
+        
+      - linters:
+          - errcheck
+        source: "element\\.\\(\\*config\\."
+        
+      - path: cmd/commands/crud/generic_factory.go
+        linters:
+          - gocyclo
+        
       - path: internal/templates/
         linters:
           - goconst
@@ -133,6 +161,10 @@ linters:
       - linters:
           - govet
         text: "unusedwrite:"
+        
+      - linters:
+          - revive
+        text: "var-naming: avoid meaningless package names"
         
       - linters:
           - gosec

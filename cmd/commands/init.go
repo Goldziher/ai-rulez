@@ -25,6 +25,7 @@ var (
 	noAgent          bool
 	listAgents       bool
 	setupHooks       bool
+	autoYes          bool
 
 	claudeFlag      bool
 	cursorFlag      bool
@@ -69,6 +70,7 @@ func init() {
 	InitCmd.Flags().StringVar(&useAgent, "use-agent", "", "Use an AI agent to generate configuration (claude, gemini, etc.)")
 	InitCmd.Flags().BoolVar(&noAgent, "no-agent", false, "Skip AI agent detection and usage")
 	InitCmd.Flags().BoolVar(&listAgents, "list-agents", false, "List available AI agents and exit")
+	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
 
 	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation if lefthook, pre-commit, or husky is detected")
 }
@@ -135,7 +137,7 @@ func getProjectName(args []string) string {
 
 func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig templates.ProviderConfig) bool {
 	if !noAgent && (useAgent != "" || agents.ShouldPromptForAgent()) {
-		generatedConfig, handled := agents.HandleAgentGeneration(cmd, projectName, providerConfig, useAgent)
+		generatedConfig, handled := agents.HandleAgentGeneration(cmd, projectName, providerConfig, useAgent, autoYes)
 		if handled {
 			writeConfigFile(generatedConfig)
 			logger.Info("✅ Configuration generated successfully with AI assistance")

@@ -2,7 +2,9 @@ package generator
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -11,30 +13,43 @@ import (
 )
 
 type Generator struct {
-	renderer   *templates.Renderer
-	baseDir    string
-	configFile string
+	renderer             *templates.Renderer
+	baseDir              string
+	configFile           string
+	concurrencyThreshold int
+}
+
+func getConcurrencyThreshold() int {
+	if threshold := os.Getenv("AI_RULEZ_CONCURRENCY_THRESHOLD"); threshold != "" {
+		if val, err := strconv.Atoi(threshold); err == nil && val > 0 {
+			return val
+		}
+	}
+	return 10
 }
 
 func New() *Generator {
 	return &Generator{
-		renderer: templates.NewRenderer(),
-		baseDir:  ".",
+		renderer:             templates.NewRenderer(),
+		baseDir:              ".",
+		concurrencyThreshold: getConcurrencyThreshold(),
 	}
 }
 
 func NewWithBaseDir(baseDir string) *Generator {
 	return &Generator{
-		renderer: templates.NewRenderer(),
-		baseDir:  baseDir,
+		renderer:             templates.NewRenderer(),
+		baseDir:              baseDir,
+		concurrencyThreshold: getConcurrencyThreshold(),
 	}
 }
 
 func NewWithConfigFile(configFile string) *Generator {
 	return &Generator{
-		renderer:   templates.NewRenderer(),
-		baseDir:    filepath.Dir(configFile),
-		configFile: filepath.Base(configFile),
+		renderer:             templates.NewRenderer(),
+		baseDir:              filepath.Dir(configFile),
+		configFile:           filepath.Base(configFile),
+		concurrencyThreshold: getConcurrencyThreshold(),
 	}
 }
 
@@ -47,35 +62,19 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 			Errorf("validation error: outputs is required in configuration")
 	}
 
-	if len(cfg.Outputs) >= 10 {
-		return g.generateAllConcurrent(cfg)
+	if len(cfg.Outputs) >= g.concurrencyThreshold {
+		return g.generateConcurrent(cfg)
 	}
 
 	for i := range cfg.Outputs {
-		templateData := templates.NewTemplateDataForOutput(cfg, cfg.Outputs[i].Path)
-		if err := g.writeOutputFile(&cfg.Outputs[i], templateData); err != nil {
-			output := cfg.Outputs[i]
-			return oops.
-				With("path", output.Path).
-				With("output_index", i).
-				With("template", output.Template).
-				Hint(fmt.Sprintf("Check if the template '%s' is valid\nVerify the output file path is writable: %s", output.Template, output.Path)).
-				Wrapf(err, "generate output file")
+		if err := g.generateOutput(cfg, &cfg.Outputs[i], i); err != nil {
+			return err
 		}
 	}
-
 	return nil
 }
 
-func (g *Generator) generateAllConcurrent(cfg *config.Config) error {
-	if len(cfg.Outputs) == 0 {
-		return oops.
-			With("field", "outputs").
-			With("parent", "configuration").
-			Hint("Add at least one output file in the configuration").
-			Errorf("validation error: outputs is required in configuration")
-	}
-
+func (g *Generator) generateConcurrent(cfg *config.Config) error {
 	var wg sync.WaitGroup
 	errChan := make(chan error, len(cfg.Outputs))
 
@@ -83,14 +82,8 @@ func (g *Generator) generateAllConcurrent(cfg *config.Config) error {
 		wg.Add(1)
 		go func(idx int, out *config.Output) {
 			defer wg.Done()
-			templateData := templates.NewTemplateDataForOutput(cfg, out.Path)
-			if err := g.writeOutputFile(out, templateData); err != nil {
-				errChan <- oops.
-					With("path", out.Path).
-					With("output_index", idx).
-					With("template", out.Template).
-					With("generation_mode", "concurrent").
-					Wrapf(err, "generate output file")
+			if err := g.generateOutput(cfg, out, idx); err != nil {
+				errChan <- err
 			}
 		}(i, &cfg.Outputs[i])
 	}
@@ -101,7 +94,19 @@ func (g *Generator) generateAllConcurrent(cfg *config.Config) error {
 	for err := range errChan {
 		return err
 	}
+	return nil
+}
 
+func (g *Generator) generateOutput(cfg *config.Config, output *config.Output, index int) error {
+	templateData := templates.NewTemplateDataForOutput(cfg, output.Path)
+	if err := g.writeOutputFile(output, templateData); err != nil {
+		return oops.
+			With("path", output.Path).
+			With("output_index", index).
+			With("template", output.Template).
+			Hint(fmt.Sprintf("Check if the template '%v' is valid\nVerify the output file path is writable: %s", output.Template, output.Path)).
+			Wrapf(err, "generate output file")
+	}
 	return nil
 }
 

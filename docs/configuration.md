@@ -1,14 +1,14 @@
-# Configuration (`ai_rulez.yaml`)
+# Configuration Reference
 
-This page provides a complete reference for the `ai_rulez.yaml` file format, with explanations for key concepts.
+Everything you can put in your `ai_rulez.yaml` file.
 
-## Top-Level Properties
+## Main Structure
 
-These are the main keys at the root of your configuration file.
+The key sections in your config file.
 
 ### `metadata`
 
-An object containing essential information about your project.
+Basic info about your project.
 
 ```yaml
 metadata:
@@ -72,6 +72,9 @@ Defines a file or directory to be generated.
   - `type` (string, required): `builtin`, `file`, or `inline`.
   - `value` (string, required): The name, path, or content of the template.
 
+!!! info "Template Format"
+    Templates must always use the structured object format with `type` and `value` fields. String-based templates are no longer supported as of v2.0.
+
 ### `rule` Object
 
 - `name` (string, required): The name of the rule.
@@ -101,6 +104,8 @@ Defines a file or directory to be generated.
 - `model` (string): An optional model identifier (e.g., `claude-3-opus-20240229`, `gpt-4`).
 - `system_prompt` (string): The system prompt for the agent.
 - `template` (object): A structured template object for the system prompt.
+  - `type` (string, required): `builtin`, `file`, or `inline`.
+  - `value` (string, required): The template content, file path, or builtin name.
 - `targets` (array of strings): A list of output paths this agent applies to.
 
 !!! info "The Power of Agents"
