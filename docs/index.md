@@ -1,45 +1,48 @@
-# Why ai-rulez?
+# Welcome to ai-rulez
 
-Managing context for AI assistants is complex. As projects grow, keeping instructions for different tools like Claude, Cursor, and Copilot in sync becomes a tedious, error-prone task. `ai-rulez` solves this by providing a single source of truth and a powerful toolkit to manage it.
+Ever notice how your `.cursorrules` file says one thing, your `CLAUDE.md` says another, and your team's Copilot setup is completely different? 
+
+You're not alone. Managing AI context across multiple tools is messy. `ai-rulez` fixes this with one simple approach: write your AI instructions once, generate the rest.
 
 <div class="grid cards" markdown>
 
--   __Manage Complexity__
+-   __One File, Multiple Outputs__
 
     ---
 
-    Define your rules, agents, and context once in a clean `ai_rulez.yaml` file. Eliminate context drift and ensure all your AI tools operate with the same instructions.
+    Write your AI context in a single `ai_rulez.yaml` file. Generate `.cursorrules`, `CLAUDE.md`, and other formats automatically.
 
--   __Automate Everything__
-
-    ---
-
-    Use the comprehensive CLI to manage your entire configuration programmatically. Add a rule, update an agent, or generate all files with a single command. Never edit YAML by hand again.
-
--   __Integrate Seamlessly__
+-   __CLI for Everything__
 
     ---
 
-    Enable the built-in MCP Server to allow your AI assistant to safely and programmatically interact with your configuration, enabling powerful automated workflows.
+    Add rules, update agents, generate files—all from the command line. No more hunting through YAML files.
 
--   __Scale with Your Project__
+-   __MCP Integration__
 
     ---
 
-    Use `extends` and `includes` to create composable, reusable configurations that can be shared across your entire organization, ensuring consistency while maintaining flexibility.
+    Let your AI assistant manage the configuration directly through the built-in MCP server. Perfect for automated workflows.
+
+-   __Team Collaboration__
+
+    ---
+
+    Share configurations across your team with `extends` and `includes`. Everyone stays in sync.
 
 </div>
 
 ---
 
-## What is ai-rulez?
+## How it works
 
-`ai-rulez` is a lightning-fast CLI tool and server for managing AI assistant rules and context across multiple platforms. It takes a single `ai_rulez.yaml` file and generates native configuration files for all supported tools, keeping them perfectly in sync.
+`ai-rulez` is a CLI tool that takes one `ai_rulez.yaml` file and generates native configuration files for all your AI tools. 
 
-But it's more than just a generator. It's a complete, scriptable toolkit for managing your AI's behavior at scale.
+Think of it as a build system for AI context—you write the source once, and it compiles to whatever format each tool needs.
 
 ## Next Steps
 
 - **[Quick Start Guide](quick-start.md)**: Get up and running in minutes.
+- **[Migration Guide](migration-guide.md)**: Upgrading from v1.x to v2.0.
 - **[Best Practices](monorepo.md)**: Learn how to structure your configurations for large projects.
 - **[Full CLI Reference](cli.md)**: Explore every command and flag.

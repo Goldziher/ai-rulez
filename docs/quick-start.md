@@ -1,25 +1,22 @@
-# Quick Start Guide
+# Quick Start
 
-Get up and running with `ai-rulez` in minutes. This guide will walk you through the recommended workflow for creating, customizing, and generating a powerful configuration for your AI assistants.
+Let's get you set up with `ai-rulez`. This takes about 5 minutes and will sync all your AI tools automatically.
 
 ---
 
-### Step 1: Initialize Your Project
+### Step 1: Create your config
 
-First, navigate to your project's root directory and run the `init` command. This creates a new `ai_rulez.yaml` file, pre-filled with best-practice rules and configurations for popular AI tools.
+Navigate to your project root and run the `init` command. This creates an `ai_rulez.yaml` file with sensible defaults.
 
 ```bash
-# Initialize a new configuration for your project
-ai-rulez init "My Awesome Project" --popular
+ai-rulez init "My Project" --popular
 ```
 
-!!! tip "Choosing Providers"
+The `--popular` flag sets up Claude, Cursor, Windsurf, and Copilot. You can also use `--preset cursor` for just Cursor, or see `ai-rulez init --help` for all options.
 
-    You can initialize for a specific tool using the `--preset` flag (e.g., `--preset cursor`) or for individual tools (e.g., `--claude --continue-dev`). The `--popular` flag is a great starting point.
+### Step 2: Add your project details
 
-### Step 2: Add Your Project's Context
-
-Next, teach `ai-rulez` about your project using the `add` command. This is the most important step for getting high-quality, context-aware responses from your AI. The goal is to describe your tech stack, architecture, and workflow.
+Now add some context about your project. This helps your AI understand your tech stack and workflow.
 
 ```bash
 # Add a rule for your tech stack
@@ -32,23 +29,21 @@ ai-rulez add rule "Workflow" --priority high --content "All new features must ha
 ai-rulez add section "Project Goal" --content "This is a web service for managing customer invoices."
 ```
 
-!!! info "Why use `add` instead of editing YAML?"
+Using the CLI keeps your config valid and makes it easy to script changes later.
 
-    Using the CLI ensures your configuration remains valid and consistent. It also makes it easy to manage your rules programmatically in scripts.
+### Step 3: Generate files
 
-### Step 3: Generate Your Files
-
-Now, run the `generate` command. `ai-rulez` will use your configuration to create tailored instruction files for all the providers you enabled during initialization.
+Run the `generate` command to create all your AI instruction files.
 
 ```bash
 ai-rulez generate
 ```
 
-This will create files like `CLAUDE.md`, `.cursor/rules/rules.mdc`, and `.github/copilot-instructions.md`, all perfectly in sync.
+This creates files like `CLAUDE.md`, `.cursor/rules/rules.mdc`, and `.github/copilot-instructions.md`—all automatically synced.
 
-### Step 4: Validate Your Configuration
+### Step 4: Validate (optional)
 
-Any time you make a change, you can run the `validate` command to ensure your configuration is syntactically correct and logically consistent.
+Check that everything looks good:
 
 ```bash
 ai-rulez validate

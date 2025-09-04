@@ -1,12 +1,14 @@
 package remote
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -148,6 +150,56 @@ func (c *Cache) generateKey(url string) string {
 	return hex.EncodeToString(hash[:])
 }
 
+func readFileBuffered(filePath string) ([]byte, error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = file.Close() }()
+
+	stat, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	bufferSize := 8192
+	if stat.Size() > 64*1024 {
+		bufferSize = 32768
+	}
+
+	reader := bufio.NewReaderSize(file, bufferSize)
+	return io.ReadAll(reader)
+}
+
+func writeBufferedCacheEntry(filePath string, metadataBytes, content []byte) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = file.Close() }()
+
+	totalSize := len(metadataBytes) + len(content) + 16
+	bufferSize := 8192
+	if totalSize > 64*1024 {
+		bufferSize = 32768
+	}
+
+	writer := bufio.NewWriterSize(file, bufferSize)
+	defer func() { _ = writer.Flush() }()
+
+	if _, err := writer.Write(metadataBytes); err != nil {
+		return err
+	}
+	if _, err := writer.WriteString("\n---CONTENT---\n"); err != nil {
+		return err
+	}
+	if _, err := writer.Write(content); err != nil {
+		return err
+	}
+
+	return writer.Flush()
+}
+
 func (c *Cache) getFromDisk(_ context.Context, key string) *cacheEntry {
 	if c.diskCacheDir == "" {
 		return nil
@@ -158,7 +210,7 @@ func (c *Cache) getFromDisk(_ context.Context, key string) *cacheEntry {
 
 	filePath := filepath.Join(c.diskCacheDir, key+"-"+cacheFileName)
 
-	data, err := os.ReadFile(filePath)
+	data, err := readFileBuffered(filePath)
 	if err != nil {
 		return nil
 	}
@@ -236,12 +288,7 @@ func (c *Cache) setOnDisk(_ context.Context, key string, entry *cacheEntry) erro
 		return os.WriteFile(filePath, entry.Content, 0o644)
 	}
 
-	var data []byte
-	data = append(data, metadataBytes...)
-	data = append(data, "\n---CONTENT---\n"...)
-	data = append(data, entry.Content...)
-
-	return os.WriteFile(filePath, data, 0o644)
+	return writeBufferedCacheEntry(filePath, metadataBytes, entry.Content)
 }
 
 func (c *Cache) removeFromDisk(_ context.Context, key string) error {

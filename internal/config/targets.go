@@ -2,8 +2,42 @@ package config
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 )
+
+type Targeted interface {
+	Rule | Section | Agent | MCPServer | Command
+}
+
+func getTargets[T Targeted](item T) []string {
+	switch v := any(item).(type) {
+	case Rule:
+		return v.Targets
+	case Section:
+		return v.Targets
+	case Agent:
+		return v.Targets
+	case MCPServer:
+		return v.Targets
+	case Command:
+		return v.Targets
+	}
+	return nil
+}
+
+func Filter[T Targeted](items []T, outputPath string, namedTargets map[string][]string) ([]T, error) {
+	if len(items) == 0 {
+		return items, nil
+	}
+
+	filtered := slices.DeleteFunc(slices.Clone(items), func(item T) bool {
+		resolvedTargets := resolveTargets(getTargets(item), namedTargets)
+		return !MatchesTarget(outputPath, resolvedTargets)
+	})
+
+	return filtered, nil
+}
 
 func resolveTargets(targets []string, namedTargets map[string][]string) []string {
 	if len(targets) == 0 {
@@ -112,81 +146,21 @@ func matchesDirectoryPatterns(pattern, dirPath string) bool {
 }
 
 func FilterRules(rules []Rule, outputPath string, namedTargets map[string][]string) ([]Rule, error) {
-	if len(rules) == 0 {
-		return rules, nil
-	}
-
-	filtered := make([]Rule, 0, len(rules))
-	for _, rule := range rules {
-		resolvedTargets := resolveTargets(rule.Targets, namedTargets)
-		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, rule)
-		}
-	}
-
-	return filtered, nil
+	return Filter(rules, outputPath, namedTargets)
 }
 
 func FilterSections(sections []Section, outputPath string, namedTargets map[string][]string) ([]Section, error) {
-	if len(sections) == 0 {
-		return sections, nil
-	}
-
-	filtered := make([]Section, 0, len(sections))
-	for _, section := range sections {
-		resolvedTargets := resolveTargets(section.Targets, namedTargets)
-		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, section)
-		}
-	}
-
-	return filtered, nil
+	return Filter(sections, outputPath, namedTargets)
 }
 
 func FilterAgents(agents []Agent, outputPath string, namedTargets map[string][]string) ([]Agent, error) {
-	if len(agents) == 0 {
-		return agents, nil
-	}
-
-	filtered := make([]Agent, 0, len(agents))
-	for i := range agents {
-		resolvedTargets := resolveTargets(agents[i].Targets, namedTargets)
-		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, agents[i])
-		}
-	}
-
-	return filtered, nil
+	return Filter(agents, outputPath, namedTargets)
 }
 
 func FilterMCPServers(mcpServers []MCPServer, outputPath string, namedTargets map[string][]string) ([]MCPServer, error) {
-	if len(mcpServers) == 0 {
-		return mcpServers, nil
-	}
-
-	filtered := make([]MCPServer, 0, len(mcpServers))
-	for i := range mcpServers {
-		resolvedTargets := resolveTargets(mcpServers[i].Targets, namedTargets)
-		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, mcpServers[i])
-		}
-	}
-
-	return filtered, nil
+	return Filter(mcpServers, outputPath, namedTargets)
 }
 
 func FilterCommands(commands []Command, outputPath string, namedTargets map[string][]string) ([]Command, error) {
-	if len(commands) == 0 {
-		return commands, nil
-	}
-
-	filtered := make([]Command, 0, len(commands))
-	for i := range commands {
-		resolvedTargets := resolveTargets(commands[i].Targets, namedTargets)
-		if MatchesTarget(outputPath, resolvedTargets) {
-			filtered = append(filtered, commands[i])
-		}
-	}
-
-	return filtered, nil
+	return Filter(commands, outputPath, namedTargets)
 }

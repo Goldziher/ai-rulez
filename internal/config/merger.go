@@ -1,5 +1,123 @@
 package config
 
+import (
+	"slices"
+	"strings"
+)
+
+type Identifiable interface {
+	Rule | Section | Agent | MCPServer | Command
+}
+
+func getID[T Identifiable](item T) string {
+	switch v := any(item).(type) {
+	case Rule:
+		return v.ID
+	case Section:
+		return v.ID
+	case Agent:
+		return v.ID
+	case MCPServer:
+		return v.ID
+	case Command:
+		return v.ID
+	}
+	return ""
+}
+
+func getName[T Identifiable](item T) string {
+	switch v := any(item).(type) {
+	case Rule:
+		return v.Name
+	case Section:
+		return v.Name
+	case Agent:
+		return v.Name
+	case MCPServer:
+		return v.Name
+	case Command:
+		return v.Name
+	}
+	return ""
+}
+
+func Merge[T Identifiable](main, local []T) []T {
+	if len(local) == 0 {
+		return main
+	}
+
+	localByID := make(map[string]T)
+	localByName := make(map[string]T)
+
+	for _, item := range local {
+		if id := getID(item); id != "" {
+			localByID[id] = item
+		} else {
+			localByName[getName(item)] = item
+		}
+	}
+
+	var result []T
+
+	for _, item := range main {
+		id := getID(item)
+		name := getName(item)
+
+		if id != "" {
+			if override, exists := localByID[id]; exists && getName(override) != "" {
+				result = append(result, override)
+				delete(localByID, id)
+				continue
+			}
+		}
+
+		if override, exists := localByName[name]; exists && getName(override) != "" {
+			result = append(result, override)
+			delete(localByName, name)
+			continue
+		}
+
+		result = append(result, item)
+	}
+
+	for _, item := range localByID {
+		result = append(result, item)
+	}
+	for _, item := range localByName {
+		result = append(result, item)
+	}
+
+	return result
+}
+
+func RemoveDuplicates[T Identifiable](items []T) []T {
+	if len(items) <= 1 {
+		return items
+	}
+
+	slices.SortFunc(items, func(a, b T) int {
+		aID, bID := getID(a), getID(b)
+		if aID != bID {
+			if aID == "" {
+				return 1
+			}
+			if bID == "" {
+				return -1
+			}
+			return strings.Compare(aID, bID)
+		}
+		return strings.Compare(getName(a), getName(b))
+	})
+
+	return slices.CompactFunc(items, func(a, b T) bool {
+		aID, bID := getID(a), getID(b)
+		if aID != "" && bID != "" {
+			return aID == bID
+		}
+		return getName(a) == getName(b)
+	})
+}
+
 func MergeConfigs(main *Config, local *Config) *Config {
 	if local == nil {
 		return main
@@ -9,11 +127,11 @@ func MergeConfigs(main *Config, local *Config) *Config {
 		Metadata:   main.Metadata,
 		Includes:   main.Includes,
 		Outputs:    main.Outputs,
-		Rules:      mergeRules(main.Rules, local.Rules),
-		Sections:   mergeSections(main.Sections, local.Sections),
-		Agents:     mergeAgents(main.Agents, local.Agents),
-		MCPServers: mergeMCPServers(main.MCPServers, local.MCPServers),
-		Commands:   mergeCommands(main.Commands, local.Commands),
+		Rules:      Merge(main.Rules, local.Rules),
+		Sections:   Merge(main.Sections, local.Sections),
+		Agents:     Merge(main.Agents, local.Agents),
+		MCPServers: Merge(main.MCPServers, local.MCPServers),
+		Commands:   Merge(main.Commands, local.Commands),
 	}
 
 	if len(local.Outputs) > 0 {
@@ -27,128 +145,15 @@ func MergeConfigs(main *Config, local *Config) *Config {
 }
 
 func mergeRules(main, local []Rule) []Rule {
-	if len(local) == 0 {
-		return main
-	}
-
-	localByID := make(map[string]Rule)
-	localByName := make(map[string]Rule)
-
-	for _, rule := range local {
-		if rule.ID != "" {
-			localByID[rule.ID] = rule
-		} else {
-			localByName[rule.Name] = rule
-		}
-	}
-
-	var result []Rule
-
-	for _, rule := range main {
-		switch {
-		case rule.ID != "" && localByID[rule.ID].Name != "":
-			result = append(result, localByID[rule.ID])
-			delete(localByID, rule.ID)
-		case localByName[rule.Name].Name != "":
-			result = append(result, localByName[rule.Name])
-			delete(localByName, rule.Name)
-		default:
-			result = append(result, rule)
-		}
-	}
-
-	for _, rule := range localByID {
-		result = append(result, rule)
-	}
-	for _, rule := range localByName {
-		result = append(result, rule)
-	}
-
-	return result
+	return Merge(main, local)
 }
 
 func mergeSections(main, local []Section) []Section {
-	if len(local) == 0 {
-		return main
-	}
-
-	localByID := make(map[string]Section)
-	localByName := make(map[string]Section)
-
-	for _, section := range local {
-		if section.ID != "" {
-			localByID[section.ID] = section
-		} else {
-			localByName[section.Name] = section
-		}
-	}
-
-	var result []Section
-
-	for _, section := range main {
-		switch {
-		case section.ID != "" && localByID[section.ID].Name != "":
-			result = append(result, localByID[section.ID])
-			delete(localByID, section.ID)
-		case localByName[section.Name].Name != "":
-			result = append(result, localByName[section.Name])
-			delete(localByName, section.Name)
-		default:
-			result = append(result, section)
-		}
-	}
-
-	for _, section := range localByID {
-		result = append(result, section)
-	}
-	for _, section := range localByName {
-		result = append(result, section)
-	}
-
-	return result
+	return Merge(main, local)
 }
 
 func mergeAgents(main, local []Agent) []Agent {
-	if len(local) == 0 {
-		return main
-	}
-
-	localByID := make(map[string]Agent)
-	localByName := make(map[string]Agent)
-
-	for i := range local {
-		agent := &local[i]
-		if agent.ID != "" {
-			localByID[agent.ID] = *agent
-		} else {
-			localByName[agent.Name] = *agent
-		}
-	}
-
-	var result []Agent
-
-	for i := range main {
-		agent := &main[i]
-		switch {
-		case agent.ID != "" && localByID[agent.ID].Name != "":
-			result = append(result, localByID[agent.ID])
-			delete(localByID, agent.ID)
-		case localByName[agent.Name].Name != "":
-			result = append(result, localByName[agent.Name])
-			delete(localByName, agent.Name)
-		default:
-			result = append(result, *agent)
-		}
-	}
-
-	for id := range localByID {
-		result = append(result, localByID[id])
-	}
-	for name := range localByName {
-		result = append(result, localByName[name])
-	}
-
-	return result
+	return Merge(main, local)
 }
 
 func MergeRules(main []Rule, local []Rule) []Rule {
@@ -160,87 +165,11 @@ func MergeSections(main []Section, local []Section) []Section {
 }
 
 func mergeMCPServers(main, local []MCPServer) []MCPServer {
-	if len(local) == 0 {
-		return main
-	}
-
-	localByID := make(map[string]MCPServer)
-	localByName := make(map[string]MCPServer)
-
-	for i := range local {
-		if local[i].ID != "" {
-			localByID[local[i].ID] = local[i]
-		} else {
-			localByName[local[i].Name] = local[i]
-		}
-	}
-
-	var result []MCPServer
-
-	for i := range main {
-		server := &main[i]
-		switch {
-		case server.ID != "" && localByID[server.ID].Name != "":
-			result = append(result, localByID[server.ID])
-			delete(localByID, server.ID)
-		case localByName[server.Name].Name != "":
-			result = append(result, localByName[server.Name])
-			delete(localByName, server.Name)
-		default:
-			result = append(result, *server)
-		}
-	}
-
-	for id := range localByID {
-		result = append(result, localByID[id])
-	}
-	for name := range localByName {
-		result = append(result, localByName[name])
-	}
-
-	return result
+	return Merge(main, local)
 }
 
 func mergeCommands(main, local []Command) []Command {
-	if len(local) == 0 {
-		return main
-	}
-
-	localByID := make(map[string]Command)
-	localByName := make(map[string]Command)
-
-	for i := range local {
-		if local[i].ID != "" {
-			localByID[local[i].ID] = local[i]
-		} else {
-			localByName[local[i].Name] = local[i]
-		}
-	}
-
-	var result []Command
-
-	for i := range main {
-		cmd := &main[i]
-		switch {
-		case cmd.ID != "" && localByID[cmd.ID].Name != "":
-			result = append(result, localByID[cmd.ID])
-			delete(localByID, cmd.ID)
-		case localByName[cmd.Name].Name != "":
-			result = append(result, localByName[cmd.Name])
-			delete(localByName, cmd.Name)
-		default:
-			result = append(result, *cmd)
-		}
-	}
-
-	for id := range localByID {
-		result = append(result, localByID[id])
-	}
-	for name := range localByName {
-		result = append(result, localByName[name])
-	}
-
-	return result
+	return Merge(main, local)
 }
 
 func MergeMCPServers(main []MCPServer, local []MCPServer) []MCPServer {

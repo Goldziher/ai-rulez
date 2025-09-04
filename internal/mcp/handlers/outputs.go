@@ -8,14 +8,8 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-func ListOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return crud.HandleListMCP(ctx, "outputs")
-}
-
-func GetOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	path := request.GetString("path", "")
-	return crud.HandleGetMCP(ctx, "outputs", path)
-}
+var ListOutputsHandler = CreateListHandler("outputs", false)
+var GetOutputHandler = CreateGetOutputHandler()
 
 func AddOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")

@@ -34,21 +34,53 @@ func (s *MCPServerE2ETestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 
+	originalDir, err := os.Getwd()
+	s.Require().NoError(err)
+
+	err = os.Chdir(s.workingDir)
+	s.Require().NoError(err)
+
 	s.server = mcp.NewServer("test")
+
+	err = os.Chdir(originalDir)
+	s.Require().NoError(err)
+
 	lis, err := net.Listen("tcp", ":0")
 	s.Require().NoError(err)
 
-	mcpHTTPServer := server.NewStreamableHTTPServer(s.server.GetMCPServer())
+	mcpHTTPServer := server.NewStreamableHTTPServer(s.server.GetMCPServer(), server.WithStateLess(true))
+
+	workingDir := s.workingDir
+	wrappedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		originalDir, err := os.Getwd()
+		if err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		if err := os.Chdir(workingDir); err != nil {
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
+
+		defer func() {
+			_ = os.Chdir(originalDir)
+		}()
+
+		mcpHTTPServer.ServeHTTP(w, r)
+	})
 
 	s.serverURL = fmt.Sprintf("http://localhost:%d", lis.Addr().(*net.TCPAddr).Port)
 
 	s.httpServer = &http.Server{
 		Addr:    lis.Addr().String(),
-		Handler: mcpHTTPServer,
+		Handler: wrappedHandler,
 	}
 
 	go func() {
-		_ = s.httpServer.Serve(lis)
+		if err := s.httpServer.Serve(lis); err != nil && err != http.ErrServerClosed {
+			fmt.Printf("HTTP server error: %v\n", err)
+		}
 	}()
 
 	time.Sleep(100 * time.Millisecond)
@@ -64,68 +96,84 @@ func (s *MCPServerE2ETestSuite) TearDownTest() {
 	}
 }
 
-func (s *MCPServerE2ETestSuite) TestGetVersion() {
-	var result string
-	resp, err := s.client.Call(context.Background(), "get_version", nil)
+func (s *MCPServerE2ETestSuite) callTool(toolName string, args map[string]interface{}) string {
+	params := map[string]interface{}{
+		"name":      toolName,
+		"arguments": args,
+	}
+
+	resp, err := s.client.Call(context.Background(), "tools/call", params)
 	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&result))
-	s.Contains(result, "test")
+
+	var toolResult struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	s.Require().NoError(resp.GetObject(&toolResult))
+
+	if len(toolResult.Content) > 0 {
+		return toolResult.Content[0].Text
+	}
+	return ""
+}
+
+func (s *MCPServerE2ETestSuite) TestGetVersion() {
+	params := map[string]interface{}{
+		"name":      "get_version",
+		"arguments": map[string]interface{}{},
+	}
+
+	resp, err := s.client.Call(context.Background(), "tools/call", params)
+	s.Require().NoError(err)
+
+	var toolResult struct {
+		Content []struct {
+			Type string `json:"type"`
+			Text string `json:"text"`
+		} `json:"content"`
+	}
+	s.Require().NoError(resp.GetObject(&toolResult))
+
+	s.Require().NotEmpty(toolResult.Content, "Tool result should have content")
+	s.Contains(toolResult.Content[0].Text, "test")
 }
 
 func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
 	addParams := map[string]interface{}{"name": "Test Rule", "content": "Test Content", "id": "rule-1"}
-	var addResult interface{}
-	resp, err := s.client.Call(context.Background(), "add_rule", addParams)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&addResult))
+	addResult := s.callTool("add_rule", addParams)
+	s.Contains(addResult, "Added rule")
 
-	var getResult interface{}
-	resp, err = s.client.Call(context.Background(), "get_rule", map[string]string{"name": "Test Rule"})
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&getResult))
-	s.Contains(fmt.Sprintf("%v", getResult), "rule-1")
+	getResult := s.callTool("get_rule", map[string]interface{}{"name": "Test Rule"})
+	s.Contains(getResult, "rule-1")
 }
 
 func (s *MCPServerE2ETestSuite) TestOutputCRUD_FullCycle() {
 	addParams := map[string]interface{}{"path": "test.md", "type": "agent"}
-	var addResult interface{}
-	resp, err := s.client.Call(context.Background(), "add_output", addParams)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&addResult))
+	addResult := s.callTool("add_output", addParams)
+	s.Contains(addResult, "Added output")
 
-	var getResult interface{}
-	resp, err = s.client.Call(context.Background(), "get_output", map[string]string{"path": "test.md"})
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&getResult))
-	s.Contains(fmt.Sprintf("%v", getResult), "type:agent")
+	getResult := s.callTool("get_output", map[string]interface{}{"path": "test.md"})
+	s.Contains(getResult, "agent")
 }
 
 func (s *MCPServerE2ETestSuite) TestMCPServerCRUD_FullCycle() {
 	addParams := map[string]interface{}{"name": "test-server", "command": "test", "id": "server-1"}
-	var addResult interface{}
-	resp, err := s.client.Call(context.Background(), "add_mcp_server", addParams)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&addResult))
+	addResult := s.callTool("add_mcp_server", addParams)
+	s.Contains(addResult, "Added mcp_servers: test-server")
 
-	var getResult interface{}
-	resp, err = s.client.Call(context.Background(), "get_mcp_server", map[string]string{"name": "test-server"})
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&getResult))
-	s.Contains(fmt.Sprintf("%v", getResult), "server-1")
+	getResult := s.callTool("get_mcp_server", map[string]interface{}{"name": "test-server"})
+	s.Contains(getResult, "server-1")
 }
 
 func (s *MCPServerE2ETestSuite) TestCommandCRUD_FullCycle() {
 	addParams := map[string]interface{}{"name": "test-cmd", "description": "Test Desc", "id": "cmd-1"}
-	var addResult interface{}
-	resp, err := s.client.Call(context.Background(), "add_command", addParams)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&addResult))
+	addResult := s.callTool("add_command", addParams)
+	s.Contains(addResult, "Added command")
 
-	var getResult interface{}
-	resp, err = s.client.Call(context.Background(), "get_command", map[string]string{"name": "test-cmd"})
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&getResult))
-	s.Contains(fmt.Sprintf("%v", getResult), "cmd-1")
+	getResult := s.callTool("get_command", map[string]interface{}{"name": "test-cmd"})
+	s.Contains(getResult, "cmd-1")
 }
 
 func (s *MCPServerE2ETestSuite) TestInitProject() {
@@ -139,32 +187,24 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 		"providers":    []string{"claude", "continue-dev"},
 		"with_agents":  true,
 	}
-	var result interface{}
-	resp, err := s.client.Call(context.Background(), "init_project", params)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&result))
+	result := s.callTool("init_project", params)
+	s.Contains(result, "initialized")
 
 	configPath := filepath.Join(initDir, "ai_rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
-	configPyPath := filepath.Join(initDir, "config.py")
-	s.True(testutil.FileExists(s.T(), configPyPath), "config.py for continue-dev should be created")
+	configJSONPath := filepath.Join(initDir, ".continue", "config.json")
+	s.True(testutil.FileExists(s.T(), configJSONPath), "config.json for continue-dev should be created")
 
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "name: MCP-Initialized-Project")
-	s.Contains(content, "path: .claude/agents/")
-	s.Contains(content, "path: .continue/ai_rulez_agents.py")
+	s.Contains(content, "name: \"MCP-Initialized-Project\"")
+	s.Contains(content, "path: \".claude/agents/\"")
+	s.Contains(content, "path: \".continue/rules/\"")
 }
 
 func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {
-	var validateResult interface{}
-	resp, err := s.client.Call(context.Background(), "validate_config", nil)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&validateResult))
-	s.Contains(fmt.Sprintf("%v", validateResult), "valid:true")
+	validateResult := s.callTool("validate_config", map[string]interface{}{})
+	s.Contains(validateResult, "valid")
 
-	var generateResult interface{}
-	resp, err = s.client.Call(context.Background(), "generate_outputs", nil)
-	s.Require().NoError(err)
-	s.Require().NoError(resp.GetObject(&generateResult))
-	s.Contains(fmt.Sprintf("%v", generateResult), "CLAUDE.md")
+	generateResult := s.callTool("generate_outputs", map[string]interface{}{})
+	s.Contains(generateResult, "generated")
 }
