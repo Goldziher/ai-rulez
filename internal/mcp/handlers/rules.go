@@ -8,19 +8,16 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// ListRulesHandler handles the list_rules MCP tool
 func ListRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	nameFilter := request.GetString("name_filter", "")
 	return crud.HandleListMCPWithFilter(ctx, "rules", nameFilter)
 }
 
-// GetRuleHandler handles the get_rule MCP tool
 func GetRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleGetMCP(ctx, "rules", name)
 }
 
-// AddRuleHandler handles the add_rule MCP tool
 func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
@@ -44,7 +41,6 @@ func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	return crud.HandleAddMCP(ctx, "rules", newRule)
 }
 
-// UpdateRuleHandler handles the update_rule MCP tool
 func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
@@ -72,7 +68,6 @@ func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return crud.HandleUpdateMCP(ctx, "rules", name, updates)
 }
 
-// DeleteRuleHandler handles the delete_rule MCP tool
 func DeleteRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleDeleteMCP(ctx, "rules", name)

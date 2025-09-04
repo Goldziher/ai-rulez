@@ -13,7 +13,6 @@ var (
 	outputTemplateValue string
 )
 
-// AddOutputCmd adds a new output to the configuration
 var AddOutputCmd = &cobra.Command{
 	Use:   "output [path]",
 	Short: "Add a new output to the configuration",
@@ -33,7 +32,6 @@ var AddOutputCmd = &cobra.Command{
 	},
 }
 
-// UpdateOutputCmd updates an existing output
 var UpdateOutputCmd = &cobra.Command{
 	Use:   "output [path]",
 	Short: "Update an existing output",
@@ -57,7 +55,6 @@ var UpdateOutputCmd = &cobra.Command{
 	},
 }
 
-// DeleteOutputCmd deletes an output
 var DeleteOutputCmd = &cobra.Command{
 	Use:   "output [filename]",
 	Short: "Delete an output from configuration",
@@ -69,7 +66,6 @@ var DeleteOutputCmd = &cobra.Command{
 	},
 }
 
-// GetOutputCmd gets an output
 var GetOutputCmd = &cobra.Command{
 	Use:   "output [filename]",
 	Short: "Get an output from configuration",
@@ -81,7 +77,6 @@ var GetOutputCmd = &cobra.Command{
 	},
 }
 
-// ListOutputsCmd lists all outputs
 var ListOutputsCmd = &cobra.Command{
 	Use:     "outputs",
 	Short:   "List all outputs in the configuration",
@@ -93,13 +88,11 @@ var ListOutputsCmd = &cobra.Command{
 }
 
 func init() {
-	// Flags for Add command
 	AddOutputCmd.Flags().StringVar(&outputType, "type", "", "Type of output (rule or agent)")
 	AddOutputCmd.Flags().StringVar(&outputNamingScheme, "naming-scheme", "", "Naming pattern for files when path is a directory (e.g., '{name}.md')")
 	AddOutputCmd.Flags().StringVar(&outputTemplateType, "template-type", "", "Template type: builtin, file, or inline")
 	AddOutputCmd.Flags().StringVar(&outputTemplateValue, "template-value", "", "Template value (name, path, or content)")
 
-	// Flags for Update command
 	UpdateOutputCmd.Flags().StringVar(&outputType, "type", "", "New type for the output")
 	UpdateOutputCmd.Flags().StringVar(&outputNamingScheme, "naming-scheme", "", "New naming pattern for the output")
 	UpdateOutputCmd.Flags().StringVar(&outputTemplateType, "template-type", "", "New template type for the output")

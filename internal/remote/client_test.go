@@ -116,8 +116,6 @@ func TestClient_Fetch(t *testing.T) {
 	})
 }
 
-// ========== Cache Tests ==========
-
 func TestCache_Operations(t *testing.T) {
 	ctx := context.Background()
 	cache := newCache(nil)
@@ -158,8 +156,6 @@ func TestCache_Operations(t *testing.T) {
 		assert.False(t, found)
 	})
 }
-
-// ========== URL Validator Tests ==========
 
 func TestURLValidator(t *testing.T) {
 	validator := newURLValidator()
@@ -219,8 +215,6 @@ func TestURLValidator(t *testing.T) {
 		}
 	})
 }
-
-// ========== Integration Tests ==========
 
 func TestClient_WithCache(t *testing.T) {
 	requestCount := 0

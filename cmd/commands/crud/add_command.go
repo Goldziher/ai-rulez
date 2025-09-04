@@ -19,7 +19,6 @@ var (
 	cmdTargets      []string
 )
 
-// AddCommandCmd represents the command to add a new custom command
 var AddCommandCmd = &cobra.Command{
 	Use:   "command [name]",
 	Short: "Add a new custom command to the configuration",

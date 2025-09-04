@@ -33,8 +33,6 @@ func (s *MCPToolsTestSuite) TearDownSuite() {
 	testutil.CleanupTestBinary()
 }
 
-// ========== Version and Info Tools ==========
-
 func (s *MCPToolsTestSuite) TestGetVersion() {
 	response := s.client.CallTool(s.T(), "get_version", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
@@ -42,8 +40,6 @@ func (s *MCPToolsTestSuite) TestGetVersion() {
 	version := response.GetResultString(s.T(), "version")
 	s.NotEmpty(version)
 }
-
-// ========== Rules Tools ==========
 
 func (s *MCPToolsTestSuite) TestGetRules() {
 	response := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
@@ -107,7 +103,6 @@ func (s *MCPToolsTestSuite) TestAddRuleWithAllParameters() {
 	getRulesResult := getRulesResponse.GetParsedResult(s.T())
 	rules, _ := getRulesResult["rules"].([]interface{})
 
-	// Find the new rule
 	var newRule map[string]interface{}
 	for _, r := range rules {
 		rule, _ := r.(map[string]interface{})
@@ -153,8 +148,6 @@ func (s *MCPToolsTestSuite) TestDeleteRule() {
 	rules, _ := getRulesResult["rules"].([]interface{})
 	s.Len(rules, 1, "Should now have 1 rule")
 }
-
-// ========== Sections Tools ==========
 
 func (s *MCPToolsTestSuite) TestGetSections() {
 	response := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
@@ -213,8 +206,6 @@ func (s *MCPToolsTestSuite) TestDeleteSection() {
 	s.Len(sections, 0, "Should now have 0 sections")
 }
 
-// ========== Agents Tools ==========
-
 func (s *MCPToolsTestSuite) TestGetAgents() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.ConfigWithAgents)
 
@@ -247,8 +238,6 @@ func (s *MCPToolsTestSuite) TestAddAgent() {
 	s.Len(agents, 1, "Should now have 1 agent")
 }
 
-// ========== Outputs Tools ==========
-
 func (s *MCPToolsTestSuite) TestGetOutputs() {
 	response := s.client.CallTool(s.T(), "list_outputs", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
@@ -272,8 +261,6 @@ func (s *MCPToolsTestSuite) TestAddOutput() {
 	outputs, _ := getOutputsResult["outputs"].([]interface{})
 	s.Len(outputs, 2, "Should now have 2 outputs")
 }
-
-// ========== Utility Tools ==========
 
 func (s *MCPToolsTestSuite) TestValidateConfig() {
 	response := s.client.CallTool(s.T(), "validate_config", map[string]interface{}{})
@@ -332,8 +319,6 @@ func (s *MCPToolsTestSuite) TestInitProject() {
 	content := testutil.ReadFile(s.T(), emptyDir+"/ai_rulez.yaml")
 	s.Contains(content, "MCP Test Project")
 }
-
-// ========== Error Cases ==========
 
 func (s *MCPToolsTestSuite) TestInvalidToolParameters() {
 	response := s.client.CallTool(s.T(), "update_rule", map[string]interface{}{

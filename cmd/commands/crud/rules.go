@@ -15,7 +15,6 @@ var (
 	ruleTargets  []string
 )
 
-// AddRuleCmd adds a new rule to the configuration
 var AddRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Add a new rule to the configuration",
@@ -41,7 +40,6 @@ var AddRuleCmd = &cobra.Command{
 	},
 }
 
-// UpdateRuleCmd updates an existing rule
 var UpdateRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Update an existing rule",
@@ -72,7 +70,6 @@ var UpdateRuleCmd = &cobra.Command{
 	},
 }
 
-// DeleteRuleCmd deletes a rule
 var DeleteRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Delete a rule from the configuration",
@@ -84,7 +81,6 @@ var DeleteRuleCmd = &cobra.Command{
 	},
 }
 
-// GetRuleCmd gets a rule
 var GetRuleCmd = &cobra.Command{
 	Use:   "rule [name]",
 	Short: "Get a rule from the configuration",
@@ -96,7 +92,6 @@ var GetRuleCmd = &cobra.Command{
 	},
 }
 
-// ListRulesCmd lists all rules
 var ListRulesCmd = &cobra.Command{
 	Use:     "rules",
 	Short:   "List all rules in the configuration",
@@ -108,14 +103,12 @@ var ListRulesCmd = &cobra.Command{
 }
 
 func init() {
-	// Flags for Add command
 	AddRuleCmd.Flags().StringVar(&ruleID, "id", "", "Optional unique identifier for the rule")
 	AddRuleCmd.Flags().StringVarP(&ruleContent, "content", "c", "", "Content of the rule (required)")
 	errutils.LogIfErr(AddRuleCmd.MarkFlagRequired("content"))
 	AddRuleCmd.Flags().StringVarP(&rulePriority, "priority", "p", "medium", "Priority of the rule (critical, high, medium, low, minimal)")
 	AddRuleCmd.Flags().StringSliceVarP(&ruleTargets, "target", "t", []string{}, "Output target for this rule (can be specified multiple times)")
 
-	// Flags for Update command
 	UpdateRuleCmd.Flags().StringVar(&ruleID, "id", "", "New unique identifier for the rule")
 	UpdateRuleCmd.Flags().StringVarP(&ruleContent, "content", "c", "", "New content for the rule")
 	UpdateRuleCmd.Flags().StringVarP(&rulePriority, "priority", "p", "", "New priority for the rule")
