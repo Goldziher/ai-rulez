@@ -3,7 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/internal/errutils"
 	"github.com/spf13/cobra"
 )
 
@@ -127,7 +127,7 @@ func init() {
 	// Flags for Add command
 	AddAgentCmd.Flags().StringVar(&agentID, "id", "", "Optional unique identifier for the agent")
 	AddAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "Description of the agent (required)")
-	utils.LogIfErr(AddAgentCmd.MarkFlagRequired("description"))
+	errutils.LogIfErr(AddAgentCmd.MarkFlagRequired("description"))
 	AddAgentCmd.Flags().StringVarP(&agentPriority, "priority", "p", "medium", "Priority of the agent (critical, high, medium, low, minimal)")
 	AddAgentCmd.Flags().StringSliceVar(&agentTools, "tools", []string{}, "Comma-separated list of tools the agent can use")
 	AddAgentCmd.Flags().StringVarP(&agentSystemPrompt, "system-prompt", "s", "", "System prompt for the agent")

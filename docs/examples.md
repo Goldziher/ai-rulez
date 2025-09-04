@@ -93,6 +93,7 @@ outputs:
 agents:
   - name: "go-expert"
     description: "For Go-specific questions about our backend services."
+    model: "claude-3-opus-20240229"  # Optional: for providers that support it (e.g., Continue.dev)
     system_prompt: "You are an expert in Go, gRPC, and PostgreSQL..."
 
 rules:

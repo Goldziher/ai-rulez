@@ -133,16 +133,16 @@ func checkDuplicateCommands(cfg *config.Config) []string {
 
 func checkMCPServerLogic(cfg *config.Config) []string {
 	var warnings []string
-	for _, server := range cfg.MCPServers {
-		transport := server.GetTransport()
+	for i := range cfg.MCPServers {
+		transport := cfg.MCPServers[i].GetTransport()
 		switch transport {
 		case "http", "sse":
-			if server.URL == "" {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport '%s' but is missing a 'url'", server.Name, transport))
+			if cfg.MCPServers[i].URL == "" {
+				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport '%s' but is missing a 'url'", cfg.MCPServers[i].Name, transport))
 			}
 		case "stdio":
-			if server.Command == "" {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport 'stdio' but is missing a 'command'", server.Name))
+			if cfg.MCPServers[i].Command == "" {
+				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport 'stdio' but is missing a 'command'", cfg.MCPServers[i].Name))
 			}
 		}
 	}
@@ -166,28 +166,28 @@ func checkTargetExistence(cfg *config.Config) []string {
 	}
 
 	// Check agent targets
-	for _, agent := range cfg.Agents {
-		for _, target := range agent.Targets {
+	for i := range cfg.Agents {
+		for _, target := range cfg.Agents[i].Targets {
 			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Agent '%s' targets non-existent output '%s'", agent.Name, target))
+				warnings = append(warnings, fmt.Sprintf("Agent '%s' targets non-existent output '%s'", cfg.Agents[i].Name, target))
 			}
 		}
 	}
 
 	// Check MCP server targets
-	for _, server := range cfg.MCPServers {
-		for _, target := range server.Targets {
+	for i := range cfg.MCPServers {
+		for _, target := range cfg.MCPServers[i].Targets {
 			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' targets non-existent output '%s'", server.Name, target))
+				warnings = append(warnings, fmt.Sprintf("MCP server '%s' targets non-existent output '%s'", cfg.MCPServers[i].Name, target))
 			}
 		}
 	}
 
 	// Check command targets
-	for _, command := range cfg.Commands {
-		for _, target := range command.Targets {
+	for i := range cfg.Commands {
+		for _, target := range cfg.Commands[i].Targets {
 			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Command '%s' targets non-existent output '%s'", command.Name, target))
+				warnings = append(warnings, fmt.Sprintf("Command '%s' targets non-existent output '%s'", cfg.Commands[i].Name, target))
 			}
 		}
 	}
