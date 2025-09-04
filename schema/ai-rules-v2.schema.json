@@ -81,30 +81,21 @@
             "default": "{name}.md"
           },
           "template": {
-            "oneOf": [
-              {
+            "type": "object",
+            "required": ["type", "value"],
+            "properties": {
+              "type": {
                 "type": "string",
-                "description": "Legacy format: built-in template name, file path (@file), or inline template"
+                "enum": ["builtin", "file", "inline"],
+                "description": "Template type: builtin (built-in template), file (external file), inline (inline template string)"
               },
-              {
-                "type": "object",
-                "required": ["type", "value"],
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": ["builtin", "file", "inline"],
-                    "description": "Template type: builtin (built-in template), file (external file), inline (inline template string)"
-                  },
-                  "value": {
-                    "type": "string",
-                    "description": "Template value: template name for builtin, file path for file, template content for inline"
-                  }
-                },
-                "additionalProperties": false,
-                "description": "Structured template configuration"
+              "value": {
+                "type": "string",
+                "description": "Template value: template name for builtin, file path for file, template content for inline"
               }
-            ],
-            "description": "Template to use for output generation"
+            },
+            "additionalProperties": false,
+            "description": "Template configuration for output generation"
           }
         },
         "additionalProperties": false
@@ -235,30 +226,21 @@
             "minLength": 1
           },
           "template": {
-            "oneOf": [
-              {
+            "type": "object",
+            "required": ["type", "value"],
+            "properties": {
+              "type": {
                 "type": "string",
-                "description": "Legacy format: built-in template name, file path (@file), or inline template"
+                "enum": ["builtin", "file", "inline"],
+                "description": "Template type: builtin (built-in template), file (external file), inline (inline template string)"
               },
-              {
-                "type": "object",
-                "required": ["type", "value"],
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": ["builtin", "file", "inline"],
-                    "description": "Template type: builtin (built-in template), file (external file), inline (inline template string)"
-                  },
-                  "value": {
-                    "type": "string",
-                    "description": "Template value: template name for builtin, file path for file, template content for inline"
-                  }
-                },
-                "additionalProperties": false,
-                "description": "Structured template configuration"
+              "value": {
+                "type": "string",
+                "description": "Template value: template name for builtin, file path for file, template content for inline"
               }
-            ],
-            "description": "Template to use for agent system prompt generation"
+            },
+            "additionalProperties": false,
+            "description": "Template configuration for agent system prompt generation"
           },
           "system_prompt": {
             "type": "string",

@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"strings"
 )
 
 type TemplateType string
@@ -26,41 +25,13 @@ func ParseTemplate(templateConfig TemplateConfig) (*Template, error) {
 	}
 
 	switch t := templateConfig.(type) {
-	case string:
-		return parseStringTemplate(t)
 	case map[string]interface{}:
 		return parseObjectTemplate(t)
 	case Template:
 		return &t, nil
 	default:
-		return nil, fmt.Errorf("unsupported template format: %T", templateConfig)
+		return nil, fmt.Errorf("unsupported template format: %T - templates must be objects with 'type' and 'value' fields", templateConfig)
 	}
-}
-
-func parseStringTemplate(template string) (*Template, error) {
-	template = strings.TrimSpace(template)
-	if template == "" {
-		return nil, nil
-	}
-
-	if strings.HasPrefix(template, "@") {
-		return &Template{
-			Type:  TemplateFile,
-			Value: strings.TrimPrefix(template, "@"),
-		}, nil
-	}
-
-	if strings.Contains(template, "\n") {
-		return &Template{
-			Type:  TemplateInline,
-			Value: template,
-		}, nil
-	}
-
-	return &Template{
-		Type:  TemplateBuiltin,
-		Value: template,
-	}, nil
 }
 
 func parseObjectTemplate(obj map[string]interface{}) (*Template, error) {
@@ -93,15 +64,7 @@ func (t *Template) String() string {
 	if t == nil {
 		return ""
 	}
-
-	switch t.Type {
-	case TemplateFile:
-		return "@" + t.Value
-	case TemplateBuiltin, TemplateInline:
-		return t.Value
-	default:
-		return t.Value
-	}
+	return t.Value
 }
 
 func (t *Template) IsBuiltin() bool {

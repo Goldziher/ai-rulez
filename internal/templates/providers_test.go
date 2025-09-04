@@ -20,7 +20,8 @@ func TestGenerateConfigTemplate_ContinueDev(t *testing.T) {
 
 	assert.Contains(t, configContent, "# Continue.dev prompts (custom commands in YAML format)")
 	assert.Contains(t, configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
-	assert.Contains(t, configContent, "template: \"continuedev-prompts\"")
+	assert.Contains(t, configContent, "type: builtin")
+	assert.Contains(t, configContent, "value: continuedev-prompts")
 	assert.Contains(t, configContent, "# Continue.dev rules (directory format with frontmatter)")
 	assert.Contains(t, configContent, "path: \".continue/rules/\"")
 

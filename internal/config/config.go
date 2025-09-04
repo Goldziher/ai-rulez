@@ -11,31 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func LoadConfigWithLocal(filename string) (*Config, error) {
-	mainConfig, err := LoadConfig(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	localConfigPath, err := FindLocalConfigFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	if localConfigPath == "" {
-		return mainConfig, nil
-	}
-
-	localConfig, err := LoadPartialConfig(localConfigPath)
-	if err != nil {
-		return nil, oops.
-			With("local_config_path", localConfigPath).
-			Wrapf(err, "load local config")
-	}
-
-	return MergeConfigs(mainConfig, localConfig), nil
-}
-
 func LoadConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {

@@ -1,7 +1,6 @@
 package testutil
 
 import (
-	"bytes"
 	"errors"
 	"os/exec"
 	"strings"
@@ -50,39 +49,6 @@ func RunCLI(t *testing.T, workingDir string, args ...string) *CLIResult {
 	}
 }
 
-func RunCLIWithStdin(t *testing.T, workingDir string, stdin string, args ...string) *CLIResult {
-	t.Helper()
-
-	binaryPath := SetupTestBinary(t)
-
-	//nolint:gosec // G204: Test utility needs to run subprocess with variables
-	cmd := exec.Command(binaryPath, args...)
-	cmd.Dir = workingDir
-	cmd.Stdin = bytes.NewBufferString(stdin)
-
-	done := make(chan *CLIResult, 1)
-
-	go func() {
-		stdout, stderr, exitCode, err := runCommand(cmd)
-		done <- &CLIResult{
-			Stdout:   stdout,
-			Stderr:   stderr,
-			ExitCode: exitCode,
-			Err:      err,
-		}
-	}()
-
-	select {
-	case result := <-done:
-		return result
-	case <-time.After(TestTimeout):
-		//nolint:errcheck,gosec
-		cmd.Process.Kill()
-		t.Fatalf("Command timed out after %v: %v", TestTimeout, args)
-		return nil
-	}
-}
-
 func RunCLIExpectSuccess(t *testing.T, workingDir string, args ...string) *CLIResult {
 	t.Helper()
 
@@ -98,16 +64,6 @@ func RunCLIExpectError(t *testing.T, workingDir string, args ...string) *CLIResu
 
 	result := RunCLI(t, workingDir, args...)
 	require.NotEqual(t, 0, result.ExitCode, "CLI command should fail: %v\nStdout: %s", args, result.Stdout)
-
-	return result
-}
-
-func RunCLIExpectSuccessWithStdin(t *testing.T, workingDir string, stdin string, args ...string) *CLIResult {
-	t.Helper()
-
-	result := RunCLIWithStdin(t, workingDir, stdin, args...)
-	require.NoError(t, result.Err, "CLI command should succeed: %v\nStderr: %s", args, result.Stderr)
-	require.Equal(t, 0, result.ExitCode, "CLI command should exit with code 0: %v\nStderr: %s", args, result.Stderr)
 
 	return result
 }
