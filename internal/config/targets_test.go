@@ -556,7 +556,6 @@ func TestMatchesTargetEdgeCases(t *testing.T) {
 }
 
 // NOTE: TestResolveTargets was removed because ResolveTargets function was removed in v2.0
-// Global targets are no longer supported - only direct glob patterns are used
 
 func TestFilterRulesWithNamedTargets(t *testing.T) {
 	t.Parallel()
@@ -650,26 +649,6 @@ func TestFilterRulesWithNamedTargets(t *testing.T) {
 }
 
 // TODO: Implement named target validation in FilterRules
-// func TestFilterRulesWithInvalidNamedTargets(t *testing.T) {
-// 	t.Parallel()
-
-// 	namedTargets := map[string][]string{
-// 		"valid-target": {"*.md"},
-// 	}
-
-// 	rules := []config.Rule{
-// 		{
-// 			Name:    "Invalid Target Rule",
-// 			Content: "Uses undefined named target",
-// 			Targets: []string{"@invalid-target"},
-// 		},
-// 	}
-
-// 	filtered, err := config.FilterRules(rules, "CLAUDE.md", namedTargets)
-// 	assert.Error(t, err)
-// 	assert.Contains(t, err.Error(), "named target 'invalid-target' not found")
-// 	assert.Nil(t, filtered)
-// }
 
 func TestFilterSectionsWithNamedTargets(t *testing.T) {
 	t.Parallel()

@@ -33,7 +33,6 @@ const (
 	colorGray   = "\033[90m"
 )
 
-// Get returns the global logger instance
 func Get() *slog.Logger {
 	once.Do(func() {
 		instance = New(os.Stderr, defaultLevel)
@@ -41,7 +40,6 @@ func Get() *slog.Logger {
 	return instance
 }
 
-// New creates a new logger with the specified writer and level
 func New(w io.Writer, level slog.Level) *slog.Logger {
 	var handler slog.Handler
 
@@ -66,25 +64,21 @@ func New(w io.Writer, level slog.Level) *slog.Logger {
 	return slog.New(handler)
 }
 
-// SetLevel sets the global log level
 func SetLevel(level slog.Level) {
 	defaultLevel = level
 	instance = New(os.Stderr, level)
 }
 
-// SetColorOutput enables or disables colored output
 func SetColorOutput(enabled bool) {
 	colorOutput = enabled
 	instance = New(os.Stderr, defaultLevel)
 }
 
-// SetJSONOutput enables or disables JSON output
 func SetJSONOutput(enabled bool) {
 	jsonOutput = enabled
 	instance = New(os.Stderr, defaultLevel)
 }
 
-// prettyHandler implements a CLI-friendly slog handler
 type prettyHandler struct {
 	w           io.Writer
 	level       slog.Level
@@ -257,8 +251,6 @@ func (h *prettyHandler) formatError(err error) string {
 	return result.String()
 }
 
-// Convenience functions using the global logger
-
 func Debug(msg string, args ...any) {
 	Get().Debug(msg, args...)
 }
@@ -279,7 +271,6 @@ func Error(msg string, args ...any) {
 	Get().Error(msg, args...)
 }
 
-// LogError logs an error with appropriate context
 func LogError(msg string, err error, args ...any) {
 	allArgs := append([]any{"error", err}, args...)
 	Get().Error(msg, allArgs...)

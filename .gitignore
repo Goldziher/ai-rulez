@@ -9,7 +9,7 @@ Thumbs.db
 # Local configuration overrides
 *.local.yaml
 .env
-
+bin/
 
 # --- Go --- #
 # Binaries

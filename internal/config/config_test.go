@@ -13,8 +13,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// ========== Core Config Loading Tests ==========
-
 func TestLoadConfig(t *testing.T) {
 	t.Run("valid config", func(t *testing.T) {
 		tempDir := t.TempDir()
@@ -77,8 +75,6 @@ func TestSaveConfig(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, cfg.Metadata.Name, loaded.Metadata.Name)
 }
-
-// ========== Config with Includes Tests ==========
 
 func TestLoadConfigWithIncludes(t *testing.T) {
 	t.Run("simple include", func(t *testing.T) {
@@ -145,7 +141,6 @@ includes:
 
 		_, err := config.LoadConfigWithIncludes(context.Background(), fileA)
 		assert.Error(t, err)
-		// The error should indicate a circular dependency or validation failure
 		assert.True(t, strings.Contains(err.Error(), "circular") || strings.Contains(err.Error(), "validation failed"))
 	})
 
@@ -167,8 +162,6 @@ includes:
 		assert.Error(t, err)
 	})
 }
-
-// ========== Config Finder Tests ==========
 
 func TestFindConfigFile(t *testing.T) {
 	t.Run("finds config in current directory", func(t *testing.T) {
@@ -201,8 +194,6 @@ func TestFindConfigFile(t *testing.T) {
 		assert.Error(t, err)
 	})
 }
-
-// ========== CRUD Operations Tests ==========
 
 func TestAddRule(t *testing.T) {
 	cfg := &config.Config{
@@ -256,8 +247,6 @@ func TestAddAgent(t *testing.T) {
 	assert.Equal(t, "test-agent", cfg.Agents[0].Name)
 }
 
-// ========== Merge Functions Tests ==========
-
 func TestMergeRules(t *testing.T) {
 	rules1 := []config.Rule{
 		{Name: "Rule1", Content: "Content1", Priority: config.PriorityMinimal},
@@ -292,8 +281,6 @@ func TestMergeSections(t *testing.T) {
 	merged := config.MergeSections(sections1, sections2)
 	assert.Len(t, merged, 2)
 }
-
-// ========== Validation Tests ==========
 
 func TestValidateOutputs(t *testing.T) {
 	t.Run("valid outputs", func(t *testing.T) {
@@ -346,13 +333,10 @@ func TestValidateIncludes(t *testing.T) {
 	})
 }
 
-// ========== Extends Functionality Tests ==========
-
 func TestLoadConfigWithExtends(t *testing.T) {
 	t.Run("local extends", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		// Create base config
 		baseConfigFile := filepath.Join(tempDir, "base.yaml")
 		baseContent := `
 metadata:
@@ -377,7 +361,6 @@ agents:
 `
 		require.NoError(t, os.WriteFile(baseConfigFile, []byte(baseContent), 0o644))
 
-		// Create child config that extends base
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := `
 extends: base.yaml
@@ -400,18 +383,15 @@ rules:
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 
-		// Check metadata inheritance and overrides
-		assert.Equal(t, "Child Project", cfg.Metadata.Name)           // Overridden
-		assert.Equal(t, "2.0.0", cfg.Metadata.Version)                // Overridden
-		assert.Equal(t, "Base description", cfg.Metadata.Description) // Inherited
+		assert.Equal(t, "Child Project", cfg.Metadata.Name)
+		assert.Equal(t, "2.0.0", cfg.Metadata.Version)
+		assert.Equal(t, "Base description", cfg.Metadata.Description)
 
-		// Check outputs are combined
 		assert.Len(t, cfg.Outputs, 2)
 		outputPaths := []string{cfg.Outputs[0].Path, cfg.Outputs[1].Path}
 		assert.Contains(t, outputPaths, "base-output.md")
 		assert.Contains(t, outputPaths, "child-output.md")
 
-		// Check rules are merged (child overrides base)
 		assert.Len(t, cfg.Rules, 2)
 		ruleNames := make(map[string]string)
 		for _, rule := range cfg.Rules {
@@ -420,11 +400,9 @@ rules:
 		assert.Equal(t, "Overridden base rule", ruleNames["Base Rule"])
 		assert.Equal(t, "Child rule content", ruleNames["Child Rule"])
 
-		// Check sections are inherited
 		assert.Len(t, cfg.Sections, 1)
 		assert.Equal(t, "Base Section", cfg.Sections[0].Name)
 
-		// Check agents are inherited
 		assert.Len(t, cfg.Agents, 1)
 		assert.Equal(t, "base-agent", cfg.Agents[0].Name)
 	})
@@ -432,7 +410,6 @@ rules:
 	t.Run("extends with includes", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		// Create included config
 		includeConfigFile := filepath.Join(tempDir, "include.yaml")
 		includeContent := `
 rules:
@@ -442,7 +419,6 @@ rules:
 `
 		require.NoError(t, os.WriteFile(includeConfigFile, []byte(includeContent), 0o644))
 
-		// Create base config
 		baseConfigFile := filepath.Join(tempDir, "base.yaml")
 		baseContent := `
 metadata:
@@ -456,7 +432,6 @@ rules:
 `
 		require.NoError(t, os.WriteFile(baseConfigFile, []byte(baseContent), 0o644))
 
-		// Create child config that extends base and includes additional content
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := `
 extends: base.yaml
@@ -474,7 +449,6 @@ rules:
 		cfg, err := config.LoadConfigWithIncludes(context.Background(), childConfigFile)
 		require.NoError(t, err)
 
-		// Should have rules from base + includes + child
 		assert.Len(t, cfg.Rules, 3)
 		ruleNames := make([]string, len(cfg.Rules))
 		for i, rule := range cfg.Rules {
@@ -507,7 +481,6 @@ outputs:
 		t.Skip("Skipping temporarily due to infinite recursion in YAML parsing")
 		tempDir := t.TempDir()
 
-		// Create config A that extends B
 		configAFile := filepath.Join(tempDir, "a.yaml")
 		configAContent := `
 extends: b.yaml
@@ -518,7 +491,6 @@ outputs:
 `
 		require.NoError(t, os.WriteFile(configAFile, []byte(configAContent), 0o644))
 
-		// Create config B that extends A (circular)
 		configBFile := filepath.Join(tempDir, "b.yaml")
 		configBContent := `
 extends: a.yaml
@@ -550,6 +522,6 @@ outputs:
 		cfg, err := config.LoadConfigWithIncludes(context.Background(), configFile)
 		require.NoError(t, err)
 		assert.Equal(t, "Test Project", cfg.Metadata.Name)
-		assert.Empty(t, cfg.Extends) // Should be cleared
+		assert.Empty(t, cfg.Extends)
 	})
 }

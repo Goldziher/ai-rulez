@@ -2,7 +2,6 @@ package config
 
 import "strings"
 
-// Config represents the main configuration structure
 type Config struct {
 	Metadata   Metadata    `yaml:"metadata"`
 	Extends    string      `yaml:"extends,omitempty"`
@@ -15,14 +14,12 @@ type Config struct {
 	Commands   []Command   `yaml:"commands,omitempty"`
 }
 
-// Metadata contains project metadata
 type Metadata struct {
 	Name        string `yaml:"name"`
 	Version     string `yaml:"version,omitempty"`
 	Description string `yaml:"description,omitempty"`
 }
 
-// Output represents an output file configuration
 type Output struct {
 	Path         string         `yaml:"path"`
 	Type         string         `yaml:"type,omitempty"`
@@ -30,17 +27,14 @@ type Output struct {
 	NamingScheme string         `yaml:"naming_scheme,omitempty"`
 }
 
-// GetTemplate parses the template configuration
 func (o *Output) GetTemplate() (*Template, error) {
 	return ParseTemplate(o.Template)
 }
 
-// IsDirectory checks if the output is a directory
 func (o *Output) IsDirectory() bool {
 	return strings.HasSuffix(o.Path, "/")
 }
 
-// GetOutputType returns the output type with default
 func (o *Output) GetOutputType() string {
 	if o.Type == "" {
 		return "rule"
@@ -48,7 +42,6 @@ func (o *Output) GetOutputType() string {
 	return o.Type
 }
 
-// GetNamingScheme returns the naming scheme for directory outputs
 func (o *Output) GetNamingScheme() string {
 	if o.NamingScheme != "" {
 		return o.NamingScheme
@@ -59,7 +52,6 @@ func (o *Output) GetNamingScheme() string {
 	return "{type}.md"
 }
 
-// Rule represents a single rule configuration
 type Rule struct {
 	ID       string   `yaml:"id,omitempty"`
 	Name     string   `yaml:"name"`
@@ -68,7 +60,6 @@ type Rule struct {
 	Targets  []string `yaml:"targets,omitempty"`
 }
 
-// Section represents a documentation section
 type Section struct {
 	ID       string   `yaml:"id,omitempty"`
 	Name     string   `yaml:"name"`
@@ -77,7 +68,6 @@ type Section struct {
 	Targets  []string `yaml:"targets,omitempty"`
 }
 
-// Agent represents an AI agent configuration
 type Agent struct {
 	ID           string         `yaml:"id,omitempty"`
 	Name         string         `yaml:"name"`
@@ -90,12 +80,10 @@ type Agent struct {
 	Targets      []string       `yaml:"targets,omitempty"`
 }
 
-// GetTemplate parses the template configuration
 func (a *Agent) GetTemplate() (*Template, error) {
 	return ParseTemplate(a.Template)
 }
 
-// MCPServer represents a Model Context Protocol server configuration
 type MCPServer struct {
 	ID          string            `yaml:"id,omitempty"`
 	Name        string            `yaml:"name"`
@@ -109,7 +97,6 @@ type MCPServer struct {
 	Targets     []string          `yaml:"targets,omitempty"`
 }
 
-// IsEnabled returns whether the MCP server is enabled (default: true)
 func (m *MCPServer) IsEnabled() bool {
 	if m.Enabled == nil {
 		return true
@@ -117,7 +104,6 @@ func (m *MCPServer) IsEnabled() bool {
 	return *m.Enabled
 }
 
-// GetTransport returns the transport protocol with default
 func (m *MCPServer) GetTransport() string {
 	if m.Transport == "" {
 		return "stdio"
@@ -125,7 +111,6 @@ func (m *MCPServer) GetTransport() string {
 	return m.Transport
 }
 
-// Command represents a custom slash command configuration
 type Command struct {
 	ID           string   `yaml:"id,omitempty"`
 	Name         string   `yaml:"name"`
@@ -138,7 +123,6 @@ type Command struct {
 	Targets      []string `yaml:"targets,omitempty"`
 }
 
-// IsEnabled returns whether the command is enabled (default: true)
 func (c *Command) IsEnabled() bool {
 	if c.Enabled == nil {
 		return true

@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateMCPServerCmd represents the command to update an existing MCP server
 var UpdateMCPServerCmd = &cobra.Command{
 	Use:   "mcp-server [name]",
 	Short: "Update an existing MCP server in the configuration",

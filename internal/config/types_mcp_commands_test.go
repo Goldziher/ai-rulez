@@ -8,8 +8,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// ========== MCPServer Tests ==========
-
 func TestMCPServer_IsEnabled(t *testing.T) {
 	t.Parallel()
 
@@ -96,8 +94,6 @@ func TestMCPServer_GetTransport(t *testing.T) {
 	}
 }
 
-// ========== Command Tests ==========
-
 func TestCommand_IsEnabled(t *testing.T) {
 	t.Parallel()
 
@@ -138,8 +134,6 @@ func TestCommand_IsEnabled(t *testing.T) {
 		})
 	}
 }
-
-// ========== Full MCPServer Configuration Tests ==========
 
 func TestMCPServer_CompleteConfiguration(t *testing.T) {
 	t.Parallel()
@@ -195,11 +189,9 @@ func TestMCPServer_CompleteConfiguration(t *testing.T) {
 		assert.Equal(t, "disabled-server", server.Name)
 		assert.Equal(t, "python", server.Command)
 		assert.False(t, server.IsEnabled())
-		assert.Equal(t, "stdio", server.GetTransport()) // Default transport
+		assert.Equal(t, "stdio", server.GetTransport())
 	})
 }
-
-// ========== Full Command Configuration Tests ==========
 
 func TestCommand_CompleteConfiguration(t *testing.T) {
 	t.Parallel()
@@ -240,7 +232,7 @@ func TestCommand_CompleteConfiguration(t *testing.T) {
 		assert.Empty(t, command.Usage)
 		assert.Empty(t, command.SystemPrompt)
 		assert.Empty(t, command.Shortcut)
-		assert.True(t, command.IsEnabled()) // Default enabled
+		assert.True(t, command.IsEnabled())
 		assert.Empty(t, command.Targets)
 	})
 

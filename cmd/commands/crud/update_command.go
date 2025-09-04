@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// UpdateCommandCmd represents the command to update an existing custom command
 var UpdateCommandCmd = &cobra.Command{
 	Use:   "command [name]",
 	Short: "Update an existing custom command in the configuration",

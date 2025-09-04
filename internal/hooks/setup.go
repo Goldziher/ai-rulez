@@ -14,7 +14,6 @@ const (
 	huskySystem     = "husky"
 )
 
-// SetupHooks sets up git hooks for the detected hook system
 func SetupHooks() error {
 	hookSystem := DetectGitHooks()
 	switch hookSystem {
@@ -125,7 +124,6 @@ func setupPreCommit() error {
 		}
 	}
 
-	// Find or create local repo
 	var localRepo map[string]interface{}
 	for _, repo := range config.Repos {
 		if repo["repo"] == "local" {
@@ -207,7 +205,6 @@ npx ai-rulez validate || exit 1
 	return nil
 }
 
-// GetHookSystemName returns a user-friendly name for the detected hook system
 func GetHookSystemName(system string) string {
 	switch system {
 	case "lefthook":
