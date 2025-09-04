@@ -277,7 +277,6 @@ agents:
 	})
 
 	t.Run("relative_url_resolution", func(t *testing.T) {
-		t.Skip("Skipping flaky remote URL test until it can be stabilized")
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      server.URL + "/base/",
@@ -294,7 +293,14 @@ agents:
 		require.NoError(t, err)
 
 		assert.Len(t, mainConfig.Rules, 2)
-		assert.Equal(t, "Remote Rule 1", mainConfig.Rules[0].Name)
+		
+		// Check both rules are present without assuming order
+		ruleNames := make([]string, len(mainConfig.Rules))
+		for i, rule := range mainConfig.Rules {
+			ruleNames[i] = rule.Name
+		}
+		assert.Contains(t, ruleNames, "Remote Rule 1")
+		assert.Contains(t, ruleNames, "Remote Rule 2")
 	})
 
 	t.Run("circular_include_detection_with_remote", func(t *testing.T) {
