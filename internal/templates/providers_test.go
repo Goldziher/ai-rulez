@@ -20,17 +20,16 @@ func TestGenerateConfigTemplate_ContinueDev(t *testing.T) {
 	assert.Contains(t, configContent, "name: \"TestProject\"")
 
 	// Check for Continue.dev outputs
+	assert.Contains(t, configContent, "# Continue.dev prompts (custom commands in YAML format)")
+	assert.Contains(t, configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
+	assert.Contains(t, configContent, "template: \"continuedev-prompts\"")
 	assert.Contains(t, configContent, "# Continue.dev rules (directory format with frontmatter)")
 	assert.Contains(t, configContent, "path: \".continue/rules/\"")
-	assert.Contains(t, configContent, "# Continue.dev agents (imported into config.py)")
-	assert.Contains(t, configContent, "path: \".continue/ai_rulez_agents.py\"")
-	assert.Contains(t, configContent, "template: \"continuedev-agents\"")
 
 	// Check for sample agents section
 	assert.Contains(t, configContent, "# AI agents (specialized sub-assistants for Continue.dev)")
 	assert.Contains(t, configContent, "agents:")
 	assert.Contains(t, configContent, "name: \"code-reviewer\"")
-	assert.Contains(t, configContent, "model: \"gpt-4-turbo\"")
 }
 
 func TestGenerateConfigTemplate_ContinueDevAndClaude(t *testing.T) {
@@ -44,7 +43,8 @@ func TestGenerateConfigTemplate_ContinueDevAndClaude(t *testing.T) {
 
 	// Check that Claude's agent config takes precedence
 	assert.Contains(t, configContent, "# AI agents (specialized sub-assistants for Claude)")
-	assert.Contains(t, configContent, "model: \"claude-3-opus-20240229\"")
+	// Claude Code doesn't support per-agent model specification, so it shouldn't be present
+	assert.NotContains(t, configContent, "model:")
 
 	// Check that Continue.dev's agent config is not present
 	assert.NotContains(t, configContent, "# AI agents (specialized sub-assistants for Continue.dev)")

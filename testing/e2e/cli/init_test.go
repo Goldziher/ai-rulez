@@ -57,8 +57,7 @@ func (s *InitCLITestSuite) TestInitConflictingProviders() {
 
 	// 2. Assert that the Claude configuration took precedence
 	s.Contains(content, "# AI agents (specialized sub-assistants for Claude)")
-	s.Contains(content, "model: \"claude-3-opus-20240229\"")
-	s.NotContains(content, "model: \"gpt-4-turbo\"")
+	s.NotContains(content, "# AI agents (specialized sub-assistants for Continue.dev)")
 }
 
 func (s *InitCLITestSuite) TestBasicInit() {
@@ -81,49 +80,36 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 
 	// Check for correct output during init
 	result.AssertStderrContains(s.T(), "Continue.dev rules")
-	result.AssertStderrContains(s.T(), "Continue.dev agents")
-	result.AssertStderrContains(s.T(), "Created sample config.py")
+	result.AssertStderrContains(s.T(), "Continue.dev prompts")
 
 	// Check that ai_rulez.yaml is correct
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
-	s.Contains(configContent, "path: \".continue/ai_rulez_agents.py\"")
-	s.Contains(configContent, "template: \"continuedev-agents\"")
+	s.Contains(configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
+	s.Contains(configContent, "template: \"continuedev-prompts\"")
 	s.Contains(configContent, "agents:")
 	s.Contains(configContent, "name: \"code-reviewer\"")
 
-	// Check that sample config.py was created
-	configPyPath := filepath.Join(s.workingDir, "config.py")
-	s.True(testutil.FileExists(s.T(), configPyPath), "Sample config.py should be created")
-	configPyContent := testutil.ReadFile(s.T(), configPyPath)
-	s.Contains(configPyContent, "from .continue.ai_rulez_agents import generated_agents")
-	s.Contains(configPyContent, "custom_llms=generated_agents")
+	// Continue.dev now uses YAML configuration, not Python
 
-	// Run generate and check for the generated agents file
-	genResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
-	genResult.AssertStderrContains(s.T(), "Generated 1 file(s)")
+	// Run generate and check for the generated prompts file
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
-	agentsPyPath := filepath.Join(s.workingDir, ".continue", "ai_rulez_agents.py")
-	s.True(testutil.FileExists(s.T(), agentsPyPath), "agents.py file should be generated")
-	agentsPyContent := testutil.ReadFile(s.T(), agentsPyPath)
-	s.Contains(agentsPyContent, "GENERATED FILE - DO NOT EDIT DIRECTLY")
-	s.Contains(agentsPyContent, "title=\"code-reviewer\"")
-	s.Contains(agentsPyContent, "model=\"gpt-4-turbo\"")
+	promptsPath := filepath.Join(s.workingDir, ".continue", "prompts", "ai_rulez_prompts.yaml")
+	s.True(testutil.FileExists(s.T(), promptsPath), "prompts YAML file should be generated")
+	promptsContent := testutil.ReadFile(s.T(), promptsPath)
+	s.Contains(promptsContent, "GENERATED FILE - DO NOT EDIT DIRECTLY")
+	s.Contains(promptsContent, "name: code-reviewer")
+	s.Contains(promptsContent, "description: Code review and quality analysis specialist")
 
-	// Part 2: Test with an existing config.py
+	// Part 2: Test again in a new directory
 	secondWorkingDir := testutil.CreateTempDir(s.T())
-	testutil.WriteFile(s.T(), secondWorkingDir, "config.py", "# Existing user config")
 
-	resultWithExisting := testutil.RunCLIExpectSuccess(s.T(), secondWorkingDir, "init", "ProjectWithExisting", "--preset", "continue-dev")
+	resultSecond := testutil.RunCLIExpectSuccess(s.T(), secondWorkingDir, "init", "ProjectSecond", "--preset", "continue-dev")
 
-	// Check that it printed instructions instead of creating the file
-	resultWithExisting.AssertStderrContains(s.T(), "Found existing config.py")
-	resultWithExisting.AssertStderrContains(s.T(), "1. Import the generated agents")
-	resultWithExisting.AssertStderrContains(s.T(), "2. Add the imported agents")
-
-	// Verify it didn't overwrite the file
-	existingContent := testutil.ReadFile(s.T(), filepath.Join(secondWorkingDir, "config.py"))
-	s.Equal("# Existing user config", existingContent)
+	// Check that it creates configuration for Continue.dev YAML format
+	resultSecond.AssertStderrContains(s.T(), "Continue.dev now uses YAML configuration")
+	resultSecond.AssertStderrContains(s.T(), "Custom prompts will be generated in .continue/prompts/")
 }
 
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
