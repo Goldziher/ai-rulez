@@ -14,7 +14,7 @@ import (
 	"github.com/Goldziher/ai-rulez/testing/e2e/testutil"
 	"github.com/mark3labs/mcp-go/server"
 	"github.com/stretchr/testify/suite"
-	jsonrpc "github.com/ybbus/jsonrpc/v3"
+	"github.com/ybbus/jsonrpc/v3"
 )
 
 type MCPServerE2ETestSuite struct {

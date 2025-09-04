@@ -75,7 +75,8 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
 	s.Contains(configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
-	s.Contains(configContent, "template: \"continuedev-prompts\"")
+	s.Contains(configContent, "type: builtin")
+	s.Contains(configContent, "value: continuedev-prompts")
 	s.Contains(configContent, "agents:")
 	s.Contains(configContent, "name: \"code-reviewer\"")
 

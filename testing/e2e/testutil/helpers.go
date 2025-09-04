@@ -82,17 +82,3 @@ func ReadFile(t *testing.T, path string) string {
 	require.NoError(t, err, "Failed to read file %s", path)
 	return string(content)
 }
-
-func AssertFileContent(t *testing.T, path, expectedContent string) {
-	t.Helper()
-
-	require.True(t, FileExists(t, path), "File should exist: %s", path)
-	content := ReadFile(t, path)
-	require.Contains(t, content, expectedContent, "File content mismatch in %s", path)
-}
-
-func AssertFileNotExists(t *testing.T, path string) {
-	t.Helper()
-
-	require.False(t, FileExists(t, path), "File should not exist: %s", path)
-}
