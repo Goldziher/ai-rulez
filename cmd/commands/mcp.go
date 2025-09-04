@@ -10,7 +10,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// MCPCmd represents the mcp command
 var MCPCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Start Model Context Protocol (MCP) server",

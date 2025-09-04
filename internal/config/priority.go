@@ -5,10 +5,8 @@ import (
 	"strings"
 )
 
-// Priority represents the priority level as an enum
 type Priority string
 
-// Priority constants
 const (
 	PriorityCritical Priority = "critical"
 	PriorityHigh     Priority = "high"
@@ -17,7 +15,6 @@ const (
 	PriorityMinimal  Priority = "minimal"
 )
 
-// ToInt converts priority enum to integer value
 func (p Priority) ToInt() int {
 	switch p {
 	case PriorityCritical:
@@ -31,16 +28,14 @@ func (p Priority) ToInt() int {
 	case PriorityMinimal:
 		return 1
 	default:
-		return 5 // default to medium
+		return 5
 	}
 }
 
-// String returns the string representation
 func (p Priority) String() string {
 	return string(p)
 }
 
-// IsValid checks if the priority value is valid
 func (p Priority) IsValid() bool {
 	switch p {
 	case PriorityCritical, PriorityHigh, PriorityMedium, PriorityLow, PriorityMinimal:
@@ -50,7 +45,6 @@ func (p Priority) IsValid() bool {
 	}
 }
 
-// ParsePriority converts string or int to Priority
 func ParsePriority(value interface{}) (Priority, error) {
 	if value == nil {
 		return PriorityMedium, nil
@@ -78,7 +72,6 @@ func ParsePriority(value interface{}) (Priority, error) {
 	}
 }
 
-// IntToPriority converts integer to closest Priority enum
 func IntToPriority(i int) Priority {
 	switch {
 	case i >= 10:
@@ -94,7 +87,6 @@ func IntToPriority(i int) Priority {
 	}
 }
 
-// AllPriorities returns all valid priority values
 func AllPriorities() []Priority {
 	return []Priority{
 		PriorityCritical,
@@ -105,7 +97,6 @@ func AllPriorities() []Priority {
 	}
 }
 
-// PriorityFromString safely converts string to Priority with fallback
 func PriorityFromString(s string) Priority {
 	p, err := ParsePriority(s)
 	if err != nil {

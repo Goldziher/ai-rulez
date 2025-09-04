@@ -8,18 +8,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// ListOutputsHandler handles the list_outputs MCP tool
 func ListOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleListMCP(ctx, "outputs")
 }
 
-// GetOutputHandler handles the get_output MCP tool
 func GetOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 	return crud.HandleGetMCP(ctx, "outputs", path)
 }
 
-// AddOutputHandler handles the add_output MCP tool
 func AddOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 	outputType := request.GetString("type", "")
@@ -37,7 +34,6 @@ func AddOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	return crud.HandleAddMCP(ctx, "outputs", newOutput)
 }
 
-// UpdateOutputHandler handles the update_output MCP tool
 func UpdateOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 
@@ -60,7 +56,6 @@ func UpdateOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	return crud.HandleUpdateMCP(ctx, "outputs", path, updates)
 }
 
-// DeleteOutputHandler handles the delete_output MCP tool
 func DeleteOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 	return crud.HandleDeleteMCP(ctx, "outputs", path)

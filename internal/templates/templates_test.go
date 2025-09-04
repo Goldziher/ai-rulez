@@ -10,8 +10,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
-// ========== Template Rendering Tests ==========
-
 func TestRenderer_Render(t *testing.T) {
 	renderer := templates.NewRenderer()
 
@@ -69,8 +67,6 @@ func TestRenderer_Render(t *testing.T) {
 	})
 }
 
-// ========== Template Data Tests ==========
-
 func TestNewTemplateData(t *testing.T) {
 	cfg := &config.Config{
 		Metadata: config.Metadata{
@@ -118,8 +114,6 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 	assert.Len(t, data.Rules, 2)
 	assert.Equal(t, "claude.md", data.OutputFile)
 }
-
-// ========== Built-in Templates Tests ==========
 
 func TestBuiltinTemplates(t *testing.T) {
 	renderer := templates.NewRenderer()

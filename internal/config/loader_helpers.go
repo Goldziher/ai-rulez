@@ -8,7 +8,6 @@ import (
 	"github.com/samber/oops"
 )
 
-// setDefaultPriorities ensures all items have a priority set
 func setDefaultPriorities(config *Config) {
 	setRulesPriorities(config.Rules)
 	setSectionsPriorities(config.Sections)
@@ -39,9 +38,7 @@ func setAgentsPriorities(agents []Agent) {
 	}
 }
 
-// collectIncludedContent gathers all rules, sections, and agents from includes
 func (l *configLoader) collectIncludedContent(ctx context.Context, config *Config, baseDir string) ([]Rule, []Section, []Agent, error) {
-	// Start with current config content
 	allRules := make([]Rule, len(config.Rules))
 	copy(allRules, config.Rules)
 
@@ -51,14 +48,12 @@ func (l *configLoader) collectIncludedContent(ctx context.Context, config *Confi
 	allAgents := make([]Agent, len(config.Agents))
 	copy(allAgents, config.Agents)
 
-	// Process includes and merge them in order (includes override existing items with same name)
 	for _, includePath := range config.Includes {
 		rules, sections, agents, err := l.processInclude(ctx, includePath, baseDir)
 		if err != nil {
 			return nil, nil, nil, err
 		}
 
-		// Use merge logic to handle overrides by name/ID
 		allRules = mergeRules(allRules, rules)
 		allSections = mergeSections(allSections, sections)
 		allAgents = mergeAgents(allAgents, agents)
@@ -67,7 +62,6 @@ func (l *configLoader) collectIncludedContent(ctx context.Context, config *Confi
 	return allRules, allSections, allAgents, nil
 }
 
-// processInclude loads a single include file and returns its content
 func (l *configLoader) processInclude(ctx context.Context, includePath, baseDir string) ([]Rule, []Section, []Agent, error) {
 	resolvedPath := l.resolvePath(includePath, baseDir)
 
@@ -85,7 +79,6 @@ func (l *configLoader) processInclude(ctx context.Context, includePath, baseDir 
 	return includedConfig.Rules, includedConfig.Sections, includedConfig.Agents, nil
 }
 
-// validateLocalInclude checks if a local include file exists
 func (l *configLoader) validateLocalInclude(resolvedPath, includePath, baseDir string) error {
 	if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
 		return oops.

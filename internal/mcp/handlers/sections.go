@@ -8,18 +8,15 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// ListSectionsHandler handles the list_sections MCP tool
 func ListSectionsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleListMCP(ctx, "sections")
 }
 
-// GetSectionHandler handles the get_section MCP tool
 func GetSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleGetMCP(ctx, "sections", name)
 }
 
-// AddSectionHandler handles the add_section MCP tool
 func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
@@ -43,7 +40,6 @@ func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return crud.HandleAddMCP(ctx, "sections", newSection)
 }
 
-// UpdateSectionHandler handles the update_section MCP tool
 func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
@@ -71,7 +67,6 @@ func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mc
 	return crud.HandleUpdateMCP(ctx, "sections", name, updates)
 }
 
-// DeleteSectionHandler handles the delete_section MCP tool
 func DeleteSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleDeleteMCP(ctx, "sections", name)

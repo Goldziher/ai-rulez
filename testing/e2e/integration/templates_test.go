@@ -348,7 +348,6 @@ agents:
 	s.Contains(reviewerContent, "You are a code reviewer")
 }
 
-// Helper method to find the position of text in content
 func (s *TemplatesTestSuite) findPosition(content, text string) int {
 	pos := 0
 	for i := range content {

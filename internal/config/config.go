@@ -11,7 +11,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LoadConfigWithLocal loads main config and merges with local override if it exists
 func LoadConfigWithLocal(filename string) (*Config, error) {
 	mainConfig, err := LoadConfig(filename)
 	if err != nil {
@@ -24,7 +23,6 @@ func LoadConfigWithLocal(filename string) (*Config, error) {
 	}
 
 	if localConfigPath == "" {
-		// No local config, return main config
 		return mainConfig, nil
 	}
 
@@ -47,7 +45,6 @@ func LoadConfig(filename string) (*Config, error) {
 			Wrapf(err, "read file")
 	}
 
-	// Parse the config first to check if it has extends field
 	var tempConfig Config
 	if err := yaml.Unmarshal(data, &tempConfig); err != nil {
 		parseErr := oops.
@@ -58,7 +55,6 @@ func LoadConfig(filename string) (*Config, error) {
 		return nil, parseErr
 	}
 
-	// Skip full schema validation if config has extends field (it can inherit required fields)
 	if tempConfig.Extends == "" {
 		if err := schema.ValidateWithSchema(data); err != nil {
 			if oopsErr, ok := oops.AsOops(err); ok {
@@ -81,15 +77,12 @@ func LoadConfig(filename string) (*Config, error) {
 		}
 	}
 
-	// Use the already-parsed config
 	config := tempConfig
 	setDefaultPriorities(&config)
 
 	return &config, nil
 }
 
-// LoadPartialConfig loads a configuration fragment without full schema validation
-// This is used for included files that may contain only partial configuration
 func LoadPartialConfig(filename string) (*Config, error) {
 	data, err := os.ReadFile(filename)
 	if err != nil {

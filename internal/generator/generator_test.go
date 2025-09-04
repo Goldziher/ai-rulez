@@ -417,58 +417,6 @@ func TestGenerator_HeaderInPreview(t *testing.T) {
 }
 
 // TODO: Fix non-deterministic ordering in directory output generation
-// func TestGenerator_DirectoryOutput(t *testing.T) {
-// 	t.Parallel()
-//
-// 	tmpDir := t.TempDir()
-//
-// // 	cfg := &config.Config{
-// 		Metadata: config.Metadata{
-// 			Name:        "Directory Output Test",
-// 			Version:     "1.0.0",
-// 			Description: "Testing directory output",
-// 		},
-// 		Outputs: []config.Output{
-// 			{
-// 				Path:         "rules/",
-// 				Type:         "rule",
-// 				NamingScheme: "{type}-{index:02d}.md",
-// 			},
-// 		},
-// 		Rules: []config.Rule{
-// 			{Name: "Rule One", Priority: config.PriorityCritical, Content: "First rule"},
-// 			{Name: "Rule Two", Priority: config.PriorityMedium, Content: "Second rule"},
-// 			{Name: "Rule Three", Content: "Third rule"},
-// 		},
-// 	}
-//
-// 	gen := generator.NewWithBaseDir(tmpDir)
-// 	err := gen.GenerateAll(cfg)
-// 	require.NoError(t, err)
-//
-// 	dirPath := filepath.Join(tmpDir, "rules")
-// 	info, err := os.Stat(dirPath)
-// 	require.NoError(t, err)
-// 	assert.True(t, info.IsDir())
-//
-// 	expectedFiles := []struct {
-// 		filename     string
-// 		expectedRule string
-// 	}{
-// 		{"rule-01.md", "Rule Three"},
-// 		{"rule-02.md", "Rule Two"},
-// 		{"rule-03.md", "Rule One"},
-// 	}
-//
-// 	for _, expected := range expectedFiles {
-// 		filePath := filepath.Join(dirPath, expected.filename)
-// 		content, err := os.ReadFile(filePath)
-// 		require.NoError(t, err, "File %s should exist", expected.filename)
-//
-// 		contentStr := string(content)
-// 		assert.Contains(t, contentStr, expected.expectedRule)
-// 	}
-// }
 
 func TestGenerator_AgentFiles(t *testing.T) {
 	t.Parallel()

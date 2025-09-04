@@ -15,7 +15,6 @@ var (
 	sectionTargets  []string
 )
 
-// AddSectionCmd adds a new section to the configuration
 var AddSectionCmd = &cobra.Command{
 	Use:   "section [name]",
 	Short: "Add a new section to the configuration",
@@ -41,7 +40,6 @@ var AddSectionCmd = &cobra.Command{
 	},
 }
 
-// UpdateSectionCmd updates an existing section
 var UpdateSectionCmd = &cobra.Command{
 	Use:   "section [name]",
 	Short: "Update an existing section",
@@ -72,7 +70,6 @@ var UpdateSectionCmd = &cobra.Command{
 	},
 }
 
-// DeleteSectionCmd deletes a section
 var DeleteSectionCmd = &cobra.Command{
 	Use:   "section [name]",
 	Short: "Delete a section from the configuration",
@@ -84,7 +81,6 @@ var DeleteSectionCmd = &cobra.Command{
 	},
 }
 
-// GetSectionCmd gets a section
 var GetSectionCmd = &cobra.Command{
 	Use:   "section [name]",
 	Short: "Get a section from the configuration",
@@ -96,7 +92,6 @@ var GetSectionCmd = &cobra.Command{
 	},
 }
 
-// ListSectionsCmd lists all sections
 var ListSectionsCmd = &cobra.Command{
 	Use:     "sections",
 	Short:   "List all sections in the configuration",
@@ -108,14 +103,12 @@ var ListSectionsCmd = &cobra.Command{
 }
 
 func init() {
-	// Flags for Add command
 	AddSectionCmd.Flags().StringVar(&sectionID, "id", "", "Optional unique identifier for the section")
 	AddSectionCmd.Flags().StringVarP(&sectionContent, "content", "c", "", "Content of the section (required)")
 	errutils.LogIfErr(AddSectionCmd.MarkFlagRequired("content"))
 	AddSectionCmd.Flags().StringVarP(&sectionPriority, "priority", "p", "medium", "Priority of the section (critical, high, medium, low, minimal)")
 	AddSectionCmd.Flags().StringSliceVarP(&sectionTargets, "target", "t", []string{}, "Output target for this section (can be specified multiple times)")
 
-	// Flags for Update command
 	UpdateSectionCmd.Flags().StringVar(&sectionID, "id", "", "New unique identifier for the section")
 	UpdateSectionCmd.Flags().StringVarP(&sectionContent, "content", "c", "", "New content for the section")
 	UpdateSectionCmd.Flags().StringVarP(&sectionPriority, "priority", "p", "", "New priority for the section")

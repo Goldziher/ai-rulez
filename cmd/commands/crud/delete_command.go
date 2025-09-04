@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DeleteCommandCmd represents the command to delete a custom command
 var DeleteCommandCmd = &cobra.Command{
 	Use:     "command [name]",
 	Short:   "Delete a custom command from the configuration",
