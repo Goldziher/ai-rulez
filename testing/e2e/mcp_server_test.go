@@ -4,13 +4,17 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"net/http"
+	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/mcp"
 	"github.com/Goldziher/ai-rulez/testing/e2e/testutil"
+	"github.com/mark3labs/mcp-go/server"
 	"github.com/stretchr/testify/suite"
-	"github.com/ybbus/jsonrpc/v3"
+	jsonrpc "github.com/ybbus/jsonrpc/v3"
 )
 
 type MCPServerE2ETestSuite struct {
@@ -18,7 +22,8 @@ type MCPServerE2ETestSuite struct {
 	workingDir string
 	server     *mcp.Server
 	client     jsonrpc.RPCClient
-	lis        net.Listener
+	httpServer *http.Server
+	serverURL  string
 }
 
 func TestMCPServerE2ESuite(t *testing.T) {
@@ -33,29 +38,46 @@ func (s *MCPServerE2ETestSuite) SetupTest() {
 	s.server = mcp.NewServer("test")
 	lis, err := net.Listen("tcp", ":0") // Use a random free port
 	s.Require().NoError(err)
-	s.lis = lis
+
+	// Create HTTP server from MCP server
+	mcpHTTPServer := server.NewStreamableHTTPServer(s.server.GetMCPServer())
+
+	// Set up HTTP server URL
+	s.serverURL = fmt.Sprintf("http://localhost:%d", lis.Addr().(*net.TCPAddr).Port)
+
+	// Start the HTTP server
+	s.httpServer = &http.Server{
+		Addr:    lis.Addr().String(),
+		Handler: mcpHTTPServer,
+	}
 
 	go func() {
-		_ = s.server.GetMCPServer().Start(s.lis)
+		_ = s.httpServer.Serve(lis)
 	}()
 
-	// Create a JSON-RPC client to connect to the server
-	conn, err := net.Dial("tcp", s.lis.Addr().String())
-	s.Require().NoError(err)
-	s.client = jsonrpc.NewClient(conn)
+	// Wait a moment for the server to start
+	time.Sleep(100 * time.Millisecond)
+
+	// Create a JSON-RPC client to connect to the HTTP server
+	s.client = jsonrpc.NewClient(s.serverURL)
 }
 
 func (s *MCPServerE2ETestSuite) TearDownTest() {
-	s.client.Close()
-	s.lis.Close() // This will stop the server goroutine
+	// Shutdown the HTTP server gracefully
+	if s.httpServer != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = s.httpServer.Shutdown(ctx)
+	}
 }
 
 // ========== Test Cases ==========
 
 func (s *MCPServerE2ETestSuite) TestGetVersion() {
 	var result string
-	err := s.client.Call(context.Background(), "get_version", nil, &result)
+	resp, err := s.client.Call(context.Background(), "get_version", nil)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&result))
 	s.Contains(result, "test")
 }
 
@@ -63,13 +85,15 @@ func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
 	// ADD with ID
 	addParams := map[string]interface{}{"name": "Test Rule", "content": "Test Content", "id": "rule-1"}
 	var addResult interface{}
-	err := s.client.Call(context.Background(), "add_rule", addParams, &addResult)
+	resp, err := s.client.Call(context.Background(), "add_rule", addParams)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&addResult))
 
 	// GET
 	var getResult interface{}
-	err = s.client.Call(context.Background(), "get_rule", map[string]string{"name": "Test Rule"}, &getResult)
+	resp, err = s.client.Call(context.Background(), "get_rule", map[string]string{"name": "Test Rule"})
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&getResult))
 	s.Contains(fmt.Sprintf("%v", getResult), "rule-1")
 }
 
@@ -77,13 +101,15 @@ func (s *MCPServerE2ETestSuite) TestOutputCRUD_FullCycle() {
 	// ADD with Type
 	addParams := map[string]interface{}{"path": "test.md", "type": "agent"}
 	var addResult interface{}
-	err := s.client.Call(context.Background(), "add_output", addParams, &addResult)
+	resp, err := s.client.Call(context.Background(), "add_output", addParams)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&addResult))
 
 	// GET
 	var getResult interface{}
-	err = s.client.Call(context.Background(), "get_output", map[string]string{"path": "test.md"}, &getResult)
+	resp, err = s.client.Call(context.Background(), "get_output", map[string]string{"path": "test.md"})
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&getResult))
 	s.Contains(fmt.Sprintf("%v", getResult), "type:agent")
 }
 
@@ -91,13 +117,15 @@ func (s *MCPServerE2ETestSuite) TestMCPServerCRUD_FullCycle() {
 	// ADD with ID
 	addParams := map[string]interface{}{"name": "test-server", "command": "test", "id": "server-1"}
 	var addResult interface{}
-	err := s.client.Call(context.Background(), "add_mcp_server", addParams, &addResult)
+	resp, err := s.client.Call(context.Background(), "add_mcp_server", addParams)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&addResult))
 
 	// GET
 	var getResult interface{}
-	err = s.client.Call(context.Background(), "get_mcp_server", map[string]string{"name": "test-server"}, &getResult)
+	resp, err = s.client.Call(context.Background(), "get_mcp_server", map[string]string{"name": "test-server"})
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&getResult))
 	s.Contains(fmt.Sprintf("%v", getResult), "server-1")
 }
 
@@ -105,13 +133,15 @@ func (s *MCPServerE2ETestSuite) TestCommandCRUD_FullCycle() {
 	// ADD with ID
 	addParams := map[string]interface{}{"name": "test-cmd", "description": "Test Desc", "id": "cmd-1"}
 	var addResult interface{}
-	err := s.client.Call(context.Background(), "add_command", addParams, &addResult)
+	resp, err := s.client.Call(context.Background(), "add_command", addParams)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&addResult))
 
 	// GET
 	var getResult interface{}
-	err = s.client.Call(context.Background(), "get_command", map[string]string{"name": "test-cmd"}, &getResult)
+	resp, err = s.client.Call(context.Background(), "get_command", map[string]string{"name": "test-cmd"})
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&getResult))
 	s.Contains(fmt.Sprintf("%v", getResult), "cmd-1")
 }
 
@@ -129,8 +159,9 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 		"with_agents":  true,
 	}
 	var result interface{}
-	err := s.client.Call(context.Background(), "init_project", params, &result)
+	resp, err := s.client.Call(context.Background(), "init_project", params)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&result))
 
 	// Assert that the files were created
 	configPath := filepath.Join(initDir, "ai_rulez.yaml")
@@ -148,13 +179,15 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {
 	// VALIDATE
 	var validateResult interface{}
-	err := s.client.Call(context.Background(), "validate_config", nil, &validateResult)
+	resp, err := s.client.Call(context.Background(), "validate_config", nil)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&validateResult))
 	s.Contains(fmt.Sprintf("%v", validateResult), "valid:true")
 
 	// GENERATE
 	var generateResult interface{}
-	err = s.client.Call(context.Background(), "generate_outputs", nil, &generateResult)
+	resp, err = s.client.Call(context.Background(), "generate_outputs", nil)
 	s.Require().NoError(err)
+	s.Require().NoError(resp.GetObject(&generateResult))
 	s.Contains(fmt.Sprintf("%v", generateResult), "CLAUDE.md")
 }

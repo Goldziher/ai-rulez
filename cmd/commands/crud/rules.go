@@ -3,6 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	"github.com/Goldziher/ai-rulez/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +26,7 @@ var AddRuleCmd = &cobra.Command{
 
 		priority, err := config.ParsePriority(rulePriority)
 		if err != nil {
-			crud.FmtError(err)
+			crud.FmtError("%v", err)
 		}
 
 		newRule := &config.Rule{
@@ -59,7 +60,7 @@ var UpdateRuleCmd = &cobra.Command{
 		if cmd.Flags().Changed("priority") {
 			priority, err := config.ParsePriority(rulePriority)
 			if err != nil {
-				crud.FmtError(err)
+				crud.FmtError("%v", err)
 			}
 			updates["Priority"] = priority
 		}
@@ -110,7 +111,7 @@ func init() {
 	// Flags for Add command
 	AddRuleCmd.Flags().StringVar(&ruleID, "id", "", "Optional unique identifier for the rule")
 	AddRuleCmd.Flags().StringVarP(&ruleContent, "content", "c", "", "Content of the rule (required)")
-	AddRuleCmd.MarkFlagRequired("content")
+	utils.LogIfErr(AddRuleCmd.MarkFlagRequired("content"))
 	AddRuleCmd.Flags().StringVarP(&rulePriority, "priority", "p", "medium", "Priority of the rule (critical, high, medium, low, minimal)")
 	AddRuleCmd.Flags().StringSliceVarP(&ruleTargets, "target", "t", []string{}, "Output target for this rule (can be specified multiple times)")
 
