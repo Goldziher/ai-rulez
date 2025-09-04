@@ -334,7 +334,7 @@ func ValidateOutputs(outputs []Output) error {
 		return oops.
 			With("field", "outputs").
 			With("context", "configuration").
-			Hint("Add the required field 'outputs' to your configuration\nAdd at least one output file in the 'outputs' section\nExample: outputs: [{file: 'CLAUDE.md', template: 'default'}]").
+			Hint("Add the required field 'outputs' to your configuration\nAdd at least one output file in the 'outputs' section\nExample: outputs: [{path: 'CLAUDE.md', template: {type: 'builtin', value: 'default'}}]").
 			Errorf("required field 'outputs' is missing")
 	}
 

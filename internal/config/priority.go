@@ -86,21 +86,3 @@ func IntToPriority(i int) Priority {
 		return PriorityMinimal
 	}
 }
-
-func AllPriorities() []Priority {
-	return []Priority{
-		PriorityCritical,
-		PriorityHigh,
-		PriorityMedium,
-		PriorityLow,
-		PriorityMinimal,
-	}
-}
-
-func PriorityFromString(s string) Priority {
-	p, err := ParsePriority(s)
-	if err != nil {
-		return PriorityMedium
-	}
-	return p
-}

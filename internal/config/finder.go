@@ -71,17 +71,3 @@ func FindLocalConfigFile(mainConfigPath string) (string, error) {
 
 	return "", nil
 }
-
-func FindConfigFiles(startDir string) (mainConfig, localConfig string, err error) {
-	mainConfig, err = FindConfigFile(startDir)
-	if err != nil {
-		return "", "", err
-	}
-
-	localConfig, err = FindLocalConfigFile(mainConfig)
-	if err != nil {
-		return "", "", err
-	}
-
-	return mainConfig, localConfig, nil
-}
