@@ -3,7 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/internal/errutils"
 	"github.com/spf13/cobra"
 )
 
@@ -111,7 +111,7 @@ func init() {
 	// Flags for Add command
 	AddSectionCmd.Flags().StringVar(&sectionID, "id", "", "Optional unique identifier for the section")
 	AddSectionCmd.Flags().StringVarP(&sectionContent, "content", "c", "", "Content of the section (required)")
-	utils.LogIfErr(AddSectionCmd.MarkFlagRequired("content"))
+	errutils.LogIfErr(AddSectionCmd.MarkFlagRequired("content"))
 	AddSectionCmd.Flags().StringVarP(&sectionPriority, "priority", "p", "medium", "Priority of the section (critical, high, medium, low, minimal)")
 	AddSectionCmd.Flags().StringSliceVarP(&sectionTargets, "target", "t", []string{}, "Output target for this section (can be specified multiple times)")
 

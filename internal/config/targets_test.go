@@ -48,10 +48,10 @@ func TestMatchesTarget(t *testing.T) {
 			expected:   true,
 		},
 		{
-			name:       "glob pattern *.md matches with path",
+			name:       "glob pattern *.md does not match with path",
 			outputPath: "docs/README.md",
 			targets:    []string{"*.md"},
-			expected:   true,
+			expected:   false,
 		},
 		{
 			name:       "glob pattern docs/* matches",
@@ -213,14 +213,14 @@ func TestFilterRules(t *testing.T) {
 			expected:   []string{"Global Rule", "Markdown Files"},
 		},
 		{
-			name:       "docs/api.md gets global, markdown, and docs rules",
+			name:       "docs/api.md gets global and docs rules",
 			outputPath: "docs/api.md",
-			expected:   []string{"Global Rule", "Markdown Files", "Docs Directory"},
+			expected:   []string{"Global Rule", "Docs Directory"},
 		},
 		{
-			name:       "ai/agents/test.md gets global, markdown, and specific rules",
+			name:       "ai/agents/test.md gets global and specific rules",
 			outputPath: "ai/agents/test.md",
-			expected:   []string{"Global Rule", "Markdown Files", "Specific Path"},
+			expected:   []string{"Global Rule", "Specific Path"},
 		},
 		{
 			name:       "src/main.go gets only global rule",
@@ -764,7 +764,7 @@ func TestFilterAgentsWithNamedTargets(t *testing.T) {
 		{
 			name:       "ai/agents/test.md gets universal and agent specialist",
 			outputPath: "ai/agents/test.md",
-			expected:   []string{"Universal Agent", "Agent Specialist", "Claude Assistant"},
+			expected:   []string{"Universal Agent", "Agent Specialist"},
 		},
 		{
 			name:       "CLAUDE.md gets universal and claude assistant",
@@ -772,9 +772,9 @@ func TestFilterAgentsWithNamedTargets(t *testing.T) {
 			expected:   []string{"Universal Agent", "Claude Assistant"},
 		},
 		{
-			name:       "docs/readme.md gets universal and claude assistant (*.md)",
+			name:       "docs/readme.md gets universal only (*.md no longer matches subdirs)",
 			outputPath: "docs/readme.md",
-			expected:   []string{"Universal Agent", "Claude Assistant"},
+			expected:   []string{"Universal Agent"},
 		},
 		{
 			name:       "other.txt gets only universal",

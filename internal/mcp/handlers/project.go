@@ -75,7 +75,7 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	projectName := request.GetString("project_name", "")
 	providersInterface := request.GetArguments()["providers"]
-	withAgents := request.GetBool("with_agents", false)
+	_ = request.GetBool("with_agents", false) // Reserved for future agent configuration
 	allProviders := request.GetBool("all_providers", false)
 	popularProviders := request.GetBool("popular_providers", false)
 
@@ -86,11 +86,12 @@ func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	}
 
 	providerConfig := templates.ProviderConfig{}
-	if allProviders {
+	switch {
+	case allProviders:
 		providerConfig = templates.ProviderConfig{Claude: true, Cursor: true, Windsurf: true, Copilot: true, Gemini: true, Amp: true, Codex: true, Cline: true, ContinueDev: true}
-	} else if popularProviders {
+	case popularProviders:
 		providerConfig = templates.ProviderConfig{Claude: true, Cursor: true, Windsurf: true, Copilot: true}
-	} else {
+	default:
 		for _, p := range providers {
 			if provider, ok := p.(string); ok {
 				switch provider {
@@ -109,12 +110,10 @@ func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		}
 	}
 
-	if providerConfig.Claude && withAgents {
-		// This logic is handled by the template generation, but we could add more here if needed
-	}
+	// Agent configuration is handled by the template generation system
 
 	configContent := templates.GenerateConfigTemplate(projectName, providerConfig)
-	if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0o644); err != nil {
 		return crud.ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 

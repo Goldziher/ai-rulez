@@ -10,32 +10,45 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/internal/errutils"
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
+// Constants for element types
+const (
+	ElementTypeRules      = "rules"
+	ElementTypeSections   = "sections"
+	ElementTypeAgents     = "agents"
+	ElementTypeOutputs    = "outputs"
+	ElementTypeCommands   = "commands"
+	ElementTypeMCPServers = "mcp_servers"
+	ElementTypeIncludes   = "includes"
+	ElementTypeExtends    = "extends"
+	ElementTypeMetadata   = "metadata"
+)
+
 // Helper function to get singular form of element type
 func getSingular(elementType string) string {
 	switch elementType {
-	case "rules":
+	case ElementTypeRules:
 		return "rule"
-	case "sections":
+	case ElementTypeSections:
 		return "section"
-	case "agents":
+	case ElementTypeAgents:
 		return "agent"
-	case "outputs":
+	case ElementTypeOutputs:
 		return "output"
-	case "commands":
+	case ElementTypeCommands:
 		return "command"
-	case "mcp_servers":
+	case ElementTypeMCPServers:
 		return "MCP server"
-	case "includes":
+	case ElementTypeIncludes:
 		return "include"
-	case "extends":
+	case ElementTypeExtends:
 		return "extends"
-	case "metadata":
+	case ElementTypeMetadata:
 		return "metadata"
 	default:
 		return strings.TrimSuffix(elementType, "s")
@@ -49,8 +62,8 @@ func formatConfigError(err error) string {
 		details.WriteString(err.Error())
 
 		// Check if there are validation errors stored in the oops error
-		context := oopsErr.Context()
-		if errors, exists := context["errors"]; exists {
+		errContext := oopsErr.Context()
+		if errors, exists := errContext["errors"]; exists {
 			details.WriteString("\n\nValidation errors:")
 			if errorList, ok := errors.([]string); ok {
 				for _, validationErr := range errorList {
@@ -166,7 +179,7 @@ func ListElements(elementType string) {
 	var err error
 
 	// For includes, use raw config loading to avoid processing includes
-	if elementType == "includes" {
+	if elementType == ElementTypeIncludes {
 		configPath, findErr := config.FindConfigFile(".")
 		if findErr != nil {
 			fmt.Fprintf(os.Stderr, "Error finding config: %s\n", formatConfigError(findErr))
@@ -282,8 +295,8 @@ func DeleteFromList(listType, value string) {
 // MCP handler functions
 func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch elementType {
-	case "rules":
-		rule := element.(*config.Rule) // Type assertion guaranteed by switch
+	case ElementTypeRules:
+		rule, _ := element.(*config.Rule) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Rules = append(cfg.Rules, *rule)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -293,8 +306,8 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 				},
 			},
 		}, nil
-	case "sections":
-		section := element.(*config.Section) // Type assertion guaranteed by switch
+	case ElementTypeSections:
+		section, _ := element.(*config.Section) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Sections = append(cfg.Sections, *section)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -304,8 +317,8 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 				},
 			},
 		}, nil
-	case "agents":
-		agent := element.(*config.Agent) // Type assertion guaranteed by switch
+	case ElementTypeAgents:
+		agent, _ := element.(*config.Agent) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Agents = append(cfg.Agents, *agent)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -315,8 +328,8 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 				},
 			},
 		}, nil
-	case "outputs":
-		output := element.(*config.Output) // Type assertion guaranteed by switch
+	case ElementTypeOutputs:
+		output, _ := element.(*config.Output) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Outputs = append(cfg.Outputs, *output)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -326,8 +339,8 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 				},
 			},
 		}, nil
-	case "commands":
-		cmd := element.(*config.Command) // Type assertion guaranteed by switch
+	case ElementTypeCommands:
+		cmd, _ := element.(*config.Command) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Commands = append(cfg.Commands, *cmd)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -337,8 +350,8 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 				},
 			},
 		}, nil
-	case "mcp_servers":
-		server := element.(*config.MCPServer) // Type assertion guaranteed by switch
+	case ElementTypeMCPServers:
+		server, _ := element.(*config.MCPServer) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.MCPServers = append(cfg.MCPServers, *server)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -355,14 +368,98 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 
 func HandleGet(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch elementType {
-	case "metadata":
-		var output strings.Builder
-		output.WriteString(fmt.Sprintf("Name:        %s\n", cfg.Metadata.Name))
-		if cfg.Metadata.Version != "" {
-			output.WriteString(fmt.Sprintf("Version:     %s\n", cfg.Metadata.Version))
+	case ElementTypeMetadata:
+		return handleGetMetadata(cfg)
+	case ElementTypeExtends:
+		return handleGetExtends()
+	case ElementTypeRules:
+		return handleGetRule(cfg, name)
+	case ElementTypeSections:
+		return handleGetSection(cfg, name)
+	case ElementTypeAgents:
+		return handleGetAgent(cfg, name)
+	case ElementTypeOutputs:
+		return handleGetOutput(cfg, name)
+	case ElementTypeCommands:
+		return handleGetCommand(cfg, name)
+	case ElementTypeMCPServers:
+		return handleGetMCPServer(cfg, name)
+	default:
+		return nil, fmt.Errorf("unsupported element type: %s", elementType)
+	}
+}
+
+func handleGetMetadata(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var output strings.Builder
+	output.WriteString(fmt.Sprintf("Name:        %s\n", cfg.Metadata.Name))
+	if cfg.Metadata.Version != "" {
+		output.WriteString(fmt.Sprintf("Version:     %s\n", cfg.Metadata.Version))
+	}
+	if cfg.Metadata.Description != "" {
+		output.WriteString(fmt.Sprintf("Description: %s", cfg.Metadata.Description))
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: strings.TrimSpace(output.String()),
+			},
+		},
+	}, nil
+}
+
+func handleGetExtends() (*mcp.CallToolResult, error) {
+	// For extends, we need to load the raw config to get the original extends value
+	// because the merged config doesn't preserve the extends field
+	configPath, err := config.FindConfigFile(".")
+	if err != nil {
+		configPath = "ai_rulez.yaml"
+	}
+	rawCfg, err := config.LoadConfig(configPath)
+	if err != nil {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Extends: not set",
+				},
+			},
+		}, err
+	}
+	if rawCfg.Extends == "" {
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: "Extends: not set",
+				},
+			},
+		}, nil
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Extends: %s", rawCfg.Extends),
+			},
+		},
+	}, nil
+}
+
+func handleGetRule(cfg *config.Config, name string) (*mcp.CallToolResult, error) {
+	for _, rule := range cfg.Rules {
+		if rule.Name != name {
+			continue
 		}
-		if cfg.Metadata.Description != "" {
-			output.WriteString(fmt.Sprintf("Description: %s", cfg.Metadata.Description))
+		var output strings.Builder
+		output.WriteString(fmt.Sprintf("Name:     %s\n", rule.Name))
+		if rule.ID != "" {
+			output.WriteString(fmt.Sprintf("ID:       %s\n", rule.ID))
+		}
+		output.WriteString(fmt.Sprintf("Content:  %s\n", rule.Content))
+		output.WriteString(fmt.Sprintf("Priority: %s\n", rule.Priority))
+		if len(rule.Targets) > 0 {
+			output.WriteString(fmt.Sprintf("Targets:  %v", rule.Targets))
 		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -372,682 +469,733 @@ func HandleGet(ctx context.Context, elementType, name string, cfg *config.Config
 				},
 			},
 		}, nil
-	case "extends":
-		// For extends, we need to load the raw config to get the original extends value
-		// because the merged config doesn't preserve the extends field
-		configPath, err := config.FindConfigFile(".")
-		if err != nil {
-			configPath = "ai_rulez.yaml"
+	}
+	return nil, fmt.Errorf("rule not found: %s", name)
+}
+
+func handleGetSection(cfg *config.Config, name string) (*mcp.CallToolResult, error) {
+	for _, section := range cfg.Sections {
+		if section.Name != name {
+			continue
 		}
-		rawCfg, err := config.LoadConfig(configPath)
-		if err != nil {
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: "Extends: not set",
-					},
-				},
-			}, nil
+		var output strings.Builder
+		output.WriteString(fmt.Sprintf("Name:     %s\n", section.Name))
+		if section.ID != "" {
+			output.WriteString(fmt.Sprintf("ID:       %s\n", section.ID))
 		}
-		if rawCfg.Extends == "" {
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: "Extends: not set",
-					},
-				},
-			}, nil
+		output.WriteString(fmt.Sprintf("Content:  %s\n", section.Content))
+		output.WriteString(fmt.Sprintf("Priority: %s\n", section.Priority))
+		if len(section.Targets) > 0 {
+			output.WriteString(fmt.Sprintf("Targets:  %v", section.Targets))
 		}
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
 				mcp.TextContent{
 					Type: "text",
-					Text: fmt.Sprintf("Extends: %s", rawCfg.Extends),
+					Text: strings.TrimSpace(output.String()),
 				},
 			},
 		}, nil
-	case "rules":
-		for _, rule := range cfg.Rules {
-			if rule.Name == name {
-				var output strings.Builder
-				output.WriteString(fmt.Sprintf("Name:     %s\n", rule.Name))
-				if rule.ID != "" {
-					output.WriteString(fmt.Sprintf("ID:       %s\n", rule.ID))
+	}
+	return nil, fmt.Errorf("section not found: %s", name)
+}
+
+func handleGetAgent(cfg *config.Config, name string) (*mcp.CallToolResult, error) {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name != name {
+			continue
+		}
+		var output strings.Builder
+		output.WriteString(fmt.Sprintf("Name:         %s\n", cfg.Agents[i].Name))
+		if cfg.Agents[i].ID != "" {
+			output.WriteString(fmt.Sprintf("ID:           %s\n", cfg.Agents[i].ID))
+		}
+		if cfg.Agents[i].Description != "" {
+			output.WriteString(fmt.Sprintf("Description:   %s\n", cfg.Agents[i].Description))
+		}
+		output.WriteString(fmt.Sprintf("Priority:     %s\n", cfg.Agents[i].Priority))
+		if len(cfg.Agents[i].Tools) > 0 {
+			output.WriteString(fmt.Sprintf("Tools:        [%s]\n", strings.Join(cfg.Agents[i].Tools, " ")))
+		}
+		if cfg.Agents[i].Model != "" {
+			output.WriteString(fmt.Sprintf("Model:        %s\n", cfg.Agents[i].Model))
+		}
+		if cfg.Agents[i].SystemPrompt != "" {
+			output.WriteString(fmt.Sprintf("System Prompt: %s\n", cfg.Agents[i].SystemPrompt))
+		}
+		if cfg.Agents[i].Template != nil {
+			// Handle template display based on type
+			switch t := cfg.Agents[i].Template.(type) {
+			case string:
+				output.WriteString(fmt.Sprintf("Template:     %s\n", t))
+			case map[string]interface{}:
+				if inline, ok := t["inline"].(string); ok {
+					output.WriteString("Template Type: inline\n")
+					output.WriteString(fmt.Sprintf("Template Value: %s\n", inline))
+				} else if file, ok := t["file"].(string); ok {
+					output.WriteString("Template Type: file\n")
+					output.WriteString(fmt.Sprintf("Template Value: %s\n", file))
+				} else {
+					output.WriteString(fmt.Sprintf("Template:     %v\n", cfg.Agents[i].Template))
 				}
-				output.WriteString(fmt.Sprintf("Content:  %s\n", rule.Content))
-				output.WriteString(fmt.Sprintf("Priority: %s\n", rule.Priority))
-				if len(rule.Targets) > 0 {
-					output.WriteString(fmt.Sprintf("Targets:  %v", rule.Targets))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: strings.TrimSpace(output.String()),
-						},
-					},
-				}, nil
+			default:
+				output.WriteString(fmt.Sprintf("Template:     %v\n", cfg.Agents[i].Template))
 			}
 		}
-		return nil, fmt.Errorf("rule not found: %s", name)
-	case "sections":
-		for _, section := range cfg.Sections {
-			if section.Name == name {
-				var output strings.Builder
-				output.WriteString(fmt.Sprintf("Name:     %s\n", section.Name))
-				if section.ID != "" {
-					output.WriteString(fmt.Sprintf("ID:       %s\n", section.ID))
-				}
-				output.WriteString(fmt.Sprintf("Content:  %s\n", section.Content))
-				output.WriteString(fmt.Sprintf("Priority: %s\n", section.Priority))
-				if len(section.Targets) > 0 {
-					output.WriteString(fmt.Sprintf("Targets:  %v", section.Targets))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: strings.TrimSpace(output.String()),
-						},
-					},
-				}, nil
-			}
+		if len(cfg.Agents[i].Targets) > 0 {
+			output.WriteString(fmt.Sprintf("Targets:      [%s]", strings.Join(cfg.Agents[i].Targets, " ")))
 		}
-		return nil, fmt.Errorf("section not found: %s", name)
-	case "agents":
-		for _, agent := range cfg.Agents {
-			if agent.Name == name {
-				var output strings.Builder
-				output.WriteString(fmt.Sprintf("Name:         %s\n", agent.Name))
-				if agent.ID != "" {
-					output.WriteString(fmt.Sprintf("ID:           %s\n", agent.ID))
-				}
-				if agent.Description != "" {
-					output.WriteString(fmt.Sprintf("Description:   %s\n", agent.Description))
-				}
-				output.WriteString(fmt.Sprintf("Priority:     %s\n", agent.Priority))
-				if len(agent.Tools) > 0 {
-					output.WriteString(fmt.Sprintf("Tools:        [%s]\n", strings.Join(agent.Tools, " ")))
-				}
-				if agent.SystemPrompt != "" {
-					output.WriteString(fmt.Sprintf("System Prompt: %s\n", agent.SystemPrompt))
-				}
-				if agent.Template != nil {
-					// Handle template display based on type
-					switch t := agent.Template.(type) {
-					case string:
-						output.WriteString(fmt.Sprintf("Template:     %s\n", t))
-					case map[string]interface{}:
-						if inline, ok := t["inline"].(string); ok {
-							output.WriteString("Template Type: inline\n")
-							output.WriteString(fmt.Sprintf("Template Value: %s\n", inline))
-						} else if file, ok := t["file"].(string); ok {
-							output.WriteString("Template Type: file\n")
-							output.WriteString(fmt.Sprintf("Template Value: %s\n", file))
-						} else {
-							output.WriteString(fmt.Sprintf("Template:     %v\n", agent.Template))
-						}
-					default:
-						output.WriteString(fmt.Sprintf("Template:     %v\n", agent.Template))
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: strings.TrimSpace(output.String()),
+				},
+			},
+		}, nil
+	}
+	return nil, fmt.Errorf("agent not found: %s", name)
+}
+
+func handleGetOutput(cfg *config.Config, name string) (*mcp.CallToolResult, error) {
+	for i := range cfg.Outputs {
+		if cfg.Outputs[i].Path != name {
+			continue
+		}
+		var outputStr strings.Builder
+		outputStr.WriteString(fmt.Sprintf("Path:         %s\n", cfg.Outputs[i].Path))
+		if cfg.Outputs[i].Type != "" {
+			outputStr.WriteString(fmt.Sprintf("Type:         %s\n", cfg.Outputs[i].Type))
+		}
+		if cfg.Outputs[i].Template != nil {
+			// Handle template display based on type
+			switch t := cfg.Outputs[i].Template.(type) {
+			case string:
+				outputStr.WriteString(fmt.Sprintf("Template:     %s\n", t))
+			case map[string]interface{}:
+				// Handle new structured template format
+				if templateType, ok := t["type"].(string); ok {
+					if templateValue, ok := t["value"].(string); ok {
+						outputStr.WriteString(fmt.Sprintf("Template Type: %s\n", templateType))
+						outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", templateValue))
+					} else {
+						outputStr.WriteString(fmt.Sprintf("Template Type: %s\n", templateType))
+						outputStr.WriteString("Template Value: (invalid)\n")
+					}
+				} else {
+					// Fallback for legacy formats
+					if inline, ok := t["inline"].(string); ok {
+						outputStr.WriteString("Template Type: inline\n")
+						outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", inline))
+					} else if file, ok := t["file"].(string); ok {
+						outputStr.WriteString("Template Type: file\n")
+						outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", file))
+					} else {
+						outputStr.WriteString(fmt.Sprintf("Template:     %v\n", cfg.Outputs[i].Template))
 					}
 				}
-				if len(agent.Targets) > 0 {
-					output.WriteString(fmt.Sprintf("Targets:      [%s]", strings.Join(agent.Targets, " ")))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: strings.TrimSpace(output.String()),
-						},
-					},
-				}, nil
+			default:
+				outputStr.WriteString(fmt.Sprintf("Template:     %v\n", cfg.Outputs[i].Template))
 			}
 		}
-		return nil, fmt.Errorf("agent not found: %s", name)
-	case "outputs":
-		for _, output := range cfg.Outputs {
-			if output.Path == name {
-				var outputStr strings.Builder
-				outputStr.WriteString(fmt.Sprintf("Path:         %s\n", output.Path))
-				if output.Type != "" {
-					outputStr.WriteString(fmt.Sprintf("Type:         %s\n", output.Type))
-				}
-				if output.Template != nil {
-					// Handle template display based on type
-					switch t := output.Template.(type) {
-					case string:
-						outputStr.WriteString(fmt.Sprintf("Template:     %s\n", t))
-					case map[string]interface{}:
-						// Handle new structured template format
-						if templateType, ok := t["type"].(string); ok {
-							if templateValue, ok := t["value"].(string); ok {
-								outputStr.WriteString(fmt.Sprintf("Template Type: %s\n", templateType))
-								outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", templateValue))
-							} else {
-								outputStr.WriteString(fmt.Sprintf("Template Type: %s\n", templateType))
-								outputStr.WriteString("Template Value: (invalid)\n")
-							}
-						} else {
-							// Fallback for legacy formats
-							if inline, ok := t["inline"].(string); ok {
-								outputStr.WriteString("Template Type: inline\n")
-								outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", inline))
-							} else if file, ok := t["file"].(string); ok {
-								outputStr.WriteString("Template Type: file\n")
-								outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", file))
-							} else {
-								outputStr.WriteString(fmt.Sprintf("Template:     %v\n", output.Template))
-							}
-						}
-					default:
-						outputStr.WriteString(fmt.Sprintf("Template:     %v\n", output.Template))
-					}
-				}
-				if output.NamingScheme != "" {
-					outputStr.WriteString(fmt.Sprintf("Naming Scheme: %s", output.NamingScheme))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: strings.TrimSpace(outputStr.String()),
-						},
-					},
-				}, nil
-			}
+		if cfg.Outputs[i].NamingScheme != "" {
+			outputStr.WriteString(fmt.Sprintf("Naming Scheme: %s", cfg.Outputs[i].NamingScheme))
 		}
-		return nil, fmt.Errorf("output not found: %s", name)
-	case "commands":
-		for _, cmd := range cfg.Commands {
-			if cmd.Name == name {
-				var output strings.Builder
-				output.WriteString(fmt.Sprintf("Name:         %s\n", cmd.Name))
-				if cmd.ID != "" {
-					output.WriteString(fmt.Sprintf("ID:           %s\n", cmd.ID))
-				}
-				if cmd.Description != "" {
-					output.WriteString(fmt.Sprintf("Description:  %s\n", cmd.Description))
-				}
-				if len(cmd.Aliases) > 0 {
-					output.WriteString(fmt.Sprintf("Aliases:      [%s]\n", strings.Join(cmd.Aliases, " ")))
-				}
-				if cmd.Usage != "" {
-					output.WriteString(fmt.Sprintf("Usage:        %s\n", cmd.Usage))
-				}
-				if cmd.SystemPrompt != "" {
-					output.WriteString(fmt.Sprintf("System Prompt: %s\n", cmd.SystemPrompt))
-				}
-				if cmd.Shortcut != "" {
-					output.WriteString(fmt.Sprintf("Shortcut:     %s\n", cmd.Shortcut))
-				}
-				if cmd.Enabled != nil {
-					output.WriteString(fmt.Sprintf("Enabled:      %t\n", *cmd.Enabled))
-				}
-				if len(cmd.Targets) > 0 {
-					output.WriteString(fmt.Sprintf("Targets:      [%s]", strings.Join(cmd.Targets, " ")))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: strings.TrimSpace(output.String()),
-						},
-					},
-				}, nil
-			}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: strings.TrimSpace(outputStr.String()),
+				},
+			},
+		}, nil
+	}
+	return nil, fmt.Errorf("output not found: %s", name)
+}
+
+func handleGetCommand(cfg *config.Config, name string) (*mcp.CallToolResult, error) {
+	for i := range cfg.Commands {
+		if cfg.Commands[i].Name != name {
+			continue
 		}
-		return nil, fmt.Errorf("command not found: %s", name)
-	case "mcp_servers":
-		for _, server := range cfg.MCPServers {
-			if server.Name == name {
-				var output strings.Builder
-				output.WriteString(fmt.Sprintf("Name:         %s\n", server.Name))
-				if server.ID != "" {
-					output.WriteString(fmt.Sprintf("ID:           %s\n", server.ID))
-				}
-				if server.Description != "" {
-					output.WriteString(fmt.Sprintf("Description:  %s\n", server.Description))
-				}
-				if server.Command != "" {
-					output.WriteString(fmt.Sprintf("Command:      %s\n", server.Command))
-				}
-				if len(server.Args) > 0 {
-					output.WriteString(fmt.Sprintf("Args:         [%s]\n", strings.Join(server.Args, " ")))
-				}
-				if len(server.Env) > 0 {
-					var envStrs []string
-					for k, v := range server.Env {
-						envStrs = append(envStrs, fmt.Sprintf("%s=%s", k, v))
-					}
-					output.WriteString(fmt.Sprintf("Env:          [%s]\n", strings.Join(envStrs, " ")))
-				}
-				if server.Transport != "" {
-					output.WriteString(fmt.Sprintf("Transport:    %s\n", server.Transport))
-				}
-				if server.URL != "" {
-					output.WriteString(fmt.Sprintf("URL:          %s\n", server.URL))
-				}
-				if server.Enabled != nil {
-					output.WriteString(fmt.Sprintf("Enabled:      %t\n", *server.Enabled))
-				}
-				if len(server.Targets) > 0 {
-					output.WriteString(fmt.Sprintf("Targets:      [%s]", strings.Join(server.Targets, " ")))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: strings.TrimSpace(output.String()),
-						},
-					},
-				}, nil
-			}
+		var output strings.Builder
+		output.WriteString(fmt.Sprintf("Name:         %s\n", cfg.Commands[i].Name))
+		if cfg.Commands[i].ID != "" {
+			output.WriteString(fmt.Sprintf("ID:           %s\n", cfg.Commands[i].ID))
 		}
-		return nil, fmt.Errorf("MCP server not found: %s", name)
+		if cfg.Commands[i].Description != "" {
+			output.WriteString(fmt.Sprintf("Description:  %s\n", cfg.Commands[i].Description))
+		}
+		if len(cfg.Commands[i].Aliases) > 0 {
+			output.WriteString(fmt.Sprintf("Aliases:      [%s]\n", strings.Join(cfg.Commands[i].Aliases, " ")))
+		}
+		if cfg.Commands[i].Usage != "" {
+			output.WriteString(fmt.Sprintf("Usage:        %s\n", cfg.Commands[i].Usage))
+		}
+		if cfg.Commands[i].SystemPrompt != "" {
+			output.WriteString(fmt.Sprintf("System Prompt: %s\n", cfg.Commands[i].SystemPrompt))
+		}
+		if cfg.Commands[i].Shortcut != "" {
+			output.WriteString(fmt.Sprintf("Shortcut:     %s\n", cfg.Commands[i].Shortcut))
+		}
+		if cfg.Commands[i].Enabled != nil {
+			output.WriteString(fmt.Sprintf("Enabled:      %t\n", *cfg.Commands[i].Enabled))
+		}
+		if len(cfg.Commands[i].Targets) > 0 {
+			output.WriteString(fmt.Sprintf("Targets:      [%s]", strings.Join(cfg.Commands[i].Targets, " ")))
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: strings.TrimSpace(output.String()),
+				},
+			},
+		}, nil
+	}
+	return nil, fmt.Errorf("command not found: %s", name)
+}
+
+func handleGetMCPServer(cfg *config.Config, name string) (*mcp.CallToolResult, error) {
+	for i := range cfg.MCPServers {
+		if cfg.MCPServers[i].Name != name {
+			continue
+		}
+		var output strings.Builder
+		output.WriteString(fmt.Sprintf("Name:         %s\n", cfg.MCPServers[i].Name))
+		if cfg.MCPServers[i].ID != "" {
+			output.WriteString(fmt.Sprintf("ID:           %s\n", cfg.MCPServers[i].ID))
+		}
+		if cfg.MCPServers[i].Description != "" {
+			output.WriteString(fmt.Sprintf("Description:  %s\n", cfg.MCPServers[i].Description))
+		}
+		if cfg.MCPServers[i].Command != "" {
+			output.WriteString(fmt.Sprintf("Command:      %s\n", cfg.MCPServers[i].Command))
+		}
+		if len(cfg.MCPServers[i].Args) > 0 {
+			output.WriteString(fmt.Sprintf("Args:         [%s]\n", strings.Join(cfg.MCPServers[i].Args, " ")))
+		}
+		if len(cfg.MCPServers[i].Env) > 0 {
+			var envStrs []string
+			for k, v := range cfg.MCPServers[i].Env {
+				envStrs = append(envStrs, fmt.Sprintf("%s=%s", k, v))
+			}
+			output.WriteString(fmt.Sprintf("Env:          [%s]\n", strings.Join(envStrs, " ")))
+		}
+		if cfg.MCPServers[i].Transport != "" {
+			output.WriteString(fmt.Sprintf("Transport:    %s\n", cfg.MCPServers[i].Transport))
+		}
+		if cfg.MCPServers[i].URL != "" {
+			output.WriteString(fmt.Sprintf("URL:          %s\n", cfg.MCPServers[i].URL))
+		}
+		if cfg.MCPServers[i].Enabled != nil {
+			output.WriteString(fmt.Sprintf("Enabled:      %t\n", *cfg.MCPServers[i].Enabled))
+		}
+		if len(cfg.MCPServers[i].Targets) > 0 {
+			output.WriteString(fmt.Sprintf("Targets:      [%s]", strings.Join(cfg.MCPServers[i].Targets, " ")))
+		}
+		return &mcp.CallToolResult{
+			Content: []mcp.Content{
+				mcp.TextContent{
+					Type: "text",
+					Text: strings.TrimSpace(output.String()),
+				},
+			},
+		}, nil
+	}
+	return nil, fmt.Errorf("MCP server not found: %s", name)
+}
+
+func HandleList(ctx context.Context, elementType string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	switch elementType {
+	case ElementTypeRules:
+		return handleListRules(cfg)
+	case ElementTypeSections:
+		return handleListSections(cfg)
+	case ElementTypeAgents:
+		return handleListAgents(cfg)
+	case ElementTypeOutputs:
+		return handleListOutputs(cfg)
+	case ElementTypeCommands:
+		return handleListCommands(cfg)
+	case ElementTypeMCPServers:
+		return handleListMCPServers(cfg)
+	case ElementTypeIncludes:
+		return handleListIncludes(cfg)
 	default:
 		return nil, fmt.Errorf("unsupported element type: %s", elementType)
 	}
 }
 
-func HandleList(ctx context.Context, elementType string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func handleListRules(cfg *config.Config) (*mcp.CallToolResult, error) {
 	var items []string
-	switch elementType {
-	case "rules":
-		if len(cfg.Rules) == 0 {
-			items = append(items, "No rules found")
-		} else {
-			for _, rule := range cfg.Rules {
-				desc := fmt.Sprintf("Name: %s, Priority: %s", rule.Name, rule.Priority)
-				if len(rule.Targets) > 0 {
-					desc += fmt.Sprintf(", Targets: [%s]", strings.Join(rule.Targets, " "))
-				}
-				items = append(items, fmt.Sprintf("  %s", desc))
+	if len(cfg.Rules) == 0 {
+		items = append(items, "No rules found")
+	} else {
+		for _, rule := range cfg.Rules {
+			desc := fmt.Sprintf("Name: %s, Priority: %s", rule.Name, rule.Priority)
+			if len(rule.Targets) > 0 {
+				desc += fmt.Sprintf(", Targets: [%s]", strings.Join(rule.Targets, " "))
 			}
+			items = append(items, fmt.Sprintf("  %s", desc))
 		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Rules (%d):\n%s", len(cfg.Rules), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	case "sections":
-		if len(cfg.Sections) == 0 {
-			items = append(items, "No sections found")
-		} else {
-			for _, section := range cfg.Sections {
-				desc := fmt.Sprintf("Name: %s, Priority: %s", section.Name, section.Priority)
-				if len(section.Targets) > 0 {
-					desc += fmt.Sprintf(", Targets: [%s]", strings.Join(section.Targets, " "))
-				}
-				items = append(items, fmt.Sprintf("  %s", desc))
-			}
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Sections (%d):\n%s", len(cfg.Sections), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	case "agents":
-		if len(cfg.Agents) == 0 {
-			items = append(items, "No agents found")
-		} else {
-			for _, agent := range cfg.Agents {
-				desc := fmt.Sprintf("Name: %s", agent.Name)
-				if agent.Description != "" {
-					desc += fmt.Sprintf(", Description: %s", agent.Description)
-				}
-				if len(agent.Tools) > 0 {
-					desc += fmt.Sprintf(", Tools: [%s]", strings.Join(agent.Tools, " "))
-				}
-				items = append(items, fmt.Sprintf("  %s", desc))
-			}
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Agents (%d):\n%s", len(cfg.Agents), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	case "outputs":
-		if len(cfg.Outputs) == 0 {
-			items = append(items, "No outputs found")
-		} else {
-			for _, output := range cfg.Outputs {
-				desc := fmt.Sprintf("Path: %s", output.Path)
-				if output.Type != "" {
-					desc += fmt.Sprintf(", Type: %s", output.Type)
-				}
-				items = append(items, fmt.Sprintf("  %s", desc))
-			}
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Outputs (%d):\n%s", len(cfg.Outputs), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	case "commands":
-		if len(cfg.Commands) == 0 {
-			items = append(items, "No commands found")
-		} else {
-			for _, cmd := range cfg.Commands {
-				desc := fmt.Sprintf("Name: %s", cmd.Name)
-				if cmd.Description != "" {
-					desc += fmt.Sprintf(", Description: %s", cmd.Description)
-				}
-				if len(cmd.Aliases) > 0 {
-					desc += fmt.Sprintf(", Aliases: [%s]", strings.Join(cmd.Aliases, " "))
-				}
-				items = append(items, fmt.Sprintf("  %s", desc))
-			}
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Commands (%d):\n%s", len(cfg.Commands), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	case "mcp_servers":
-		if len(cfg.MCPServers) == 0 {
-			items = append(items, "No MCP servers found")
-		} else {
-			for _, server := range cfg.MCPServers {
-				desc := fmt.Sprintf("Name: %s", server.Name)
-				if server.Description != "" {
-					desc += fmt.Sprintf(", Description: %s", server.Description)
-				}
-				if server.Command != "" {
-					desc += fmt.Sprintf(", Command: %s", server.Command)
-				}
-				items = append(items, fmt.Sprintf("  %s", desc))
-			}
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("MCP Servers (%d):\n%s", len(cfg.MCPServers), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	case "includes":
-		if len(cfg.Includes) == 0 {
-			items = append(items, "No includes found")
-		} else {
-			for _, include := range cfg.Includes {
-				items = append(items, fmt.Sprintf("  %s", include))
-			}
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Includes (%d):\n%s", len(cfg.Includes), strings.Join(items, "\n")),
-				},
-			},
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported element type: %s", elementType)
 	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Rules (%d):\n%s", len(cfg.Rules), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
+}
+
+func handleListSections(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var items []string
+	if len(cfg.Sections) == 0 {
+		items = append(items, "No sections found")
+	} else {
+		for _, section := range cfg.Sections {
+			desc := fmt.Sprintf("Name: %s, Priority: %s", section.Name, section.Priority)
+			if len(section.Targets) > 0 {
+				desc += fmt.Sprintf(", Targets: [%s]", strings.Join(section.Targets, " "))
+			}
+			items = append(items, fmt.Sprintf("  %s", desc))
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Sections (%d):\n%s", len(cfg.Sections), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
+}
+
+func handleListAgents(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var items []string
+	if len(cfg.Agents) == 0 {
+		items = append(items, "No agents found")
+	} else {
+		for i := range cfg.Agents {
+			desc := fmt.Sprintf("Name: %s", cfg.Agents[i].Name)
+			if cfg.Agents[i].Description != "" {
+				desc += fmt.Sprintf(", Description: %s", cfg.Agents[i].Description)
+			}
+			if len(cfg.Agents[i].Tools) > 0 {
+				desc += fmt.Sprintf(", Tools: [%s]", strings.Join(cfg.Agents[i].Tools, " "))
+			}
+			items = append(items, fmt.Sprintf("  %s", desc))
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Agents (%d):\n%s", len(cfg.Agents), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
+}
+
+func handleListOutputs(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var items []string
+	if len(cfg.Outputs) == 0 {
+		items = append(items, "No outputs found")
+	} else {
+		for i := range cfg.Outputs {
+			desc := fmt.Sprintf("Path: %s", cfg.Outputs[i].Path)
+			if cfg.Outputs[i].Type != "" {
+				desc += fmt.Sprintf(", Type: %s", cfg.Outputs[i].Type)
+			}
+			items = append(items, fmt.Sprintf("  %s", desc))
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Outputs (%d):\n%s", len(cfg.Outputs), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
+}
+
+func handleListCommands(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var items []string
+	if len(cfg.Commands) == 0 {
+		items = append(items, "No commands found")
+	} else {
+		for i := range cfg.Commands {
+			desc := fmt.Sprintf("Name: %s", cfg.Commands[i].Name)
+			if cfg.Commands[i].Description != "" {
+				desc += fmt.Sprintf(", Description: %s", cfg.Commands[i].Description)
+			}
+			if len(cfg.Commands[i].Aliases) > 0 {
+				desc += fmt.Sprintf(", Aliases: [%s]", strings.Join(cfg.Commands[i].Aliases, " "))
+			}
+			items = append(items, fmt.Sprintf("  %s", desc))
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Commands (%d):\n%s", len(cfg.Commands), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
+}
+
+func handleListMCPServers(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var items []string
+	if len(cfg.MCPServers) == 0 {
+		items = append(items, "No MCP servers found")
+	} else {
+		for i := range cfg.MCPServers {
+			desc := fmt.Sprintf("Name: %s", cfg.MCPServers[i].Name)
+			if cfg.MCPServers[i].Description != "" {
+				desc += fmt.Sprintf(", Description: %s", cfg.MCPServers[i].Description)
+			}
+			if cfg.MCPServers[i].Command != "" {
+				desc += fmt.Sprintf(", Command: %s", cfg.MCPServers[i].Command)
+			}
+			items = append(items, fmt.Sprintf("  %s", desc))
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("MCP Servers (%d):\n%s", len(cfg.MCPServers), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
+}
+
+func handleListIncludes(cfg *config.Config) (*mcp.CallToolResult, error) {
+	var items []string
+	if len(cfg.Includes) == 0 {
+		items = append(items, "No includes found")
+	} else {
+		for _, include := range cfg.Includes {
+			items = append(items, fmt.Sprintf("  %s", include))
+		}
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Includes (%d):\n%s", len(cfg.Includes), strings.Join(items, "\n")),
+			},
+		},
+	}, nil
 }
 
 func HandleUpdate(ctx context.Context, elementType, name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch elementType {
-	case "metadata":
-		for key, value := range updates {
-			utils.LogIfErr(setFieldValue(&cfg.Metadata, key, value))
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Updated metadata",
-				},
-			},
-		}, nil
-	case "extends":
-		if extends, ok := updates["Extends"].(string); ok {
-			cfg.Extends = extends
-		}
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Updated extends to: %s", cfg.Extends),
-				},
-			},
-		}, nil
-	case "rules":
-		for i, rule := range cfg.Rules {
-			if rule.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Rules[i], key, value))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Updated rule: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("rule not found: %s", name)
-	case "sections":
-		for i, section := range cfg.Sections {
-			if section.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Sections[i], key, value))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Updated section: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("section not found: %s", name)
-	case "agents":
-		for i, agent := range cfg.Agents {
-			if agent.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Agents[i], key, value))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Updated agent: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("agent not found: %s", name)
-	case "outputs":
-		for i, output := range cfg.Outputs {
-			if output.Path == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Outputs[i], key, value))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Updated output: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("output not found: %s", name)
-	case "commands":
-		for i, cmd := range cfg.Commands {
-			if cmd.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Commands[i], key, value))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Updated command: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("command not found: %s", name)
-	case "mcp_servers":
-		for i, server := range cfg.MCPServers {
-			if server.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.MCPServers[i], key, value))
-				}
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Updated MCP server: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("MCP server not found: %s", name)
+	case ElementTypeMetadata:
+		return handleUpdateMetadata(updates, cfg)
+	case ElementTypeExtends:
+		return handleUpdateExtends(updates, cfg)
+	case ElementTypeRules:
+		return handleUpdateRule(name, updates, cfg)
+	case ElementTypeSections:
+		return handleUpdateSection(name, updates, cfg)
+	case ElementTypeAgents:
+		return handleUpdateAgent(name, updates, cfg)
+	case ElementTypeOutputs:
+		return handleUpdateOutput(name, updates, cfg)
+	case ElementTypeCommands:
+		return handleUpdateCommand(name, updates, cfg)
+	case ElementTypeMCPServers:
+		return handleUpdateMCPServer(name, updates, cfg)
 	default:
 		return nil, fmt.Errorf("unsupported element type: %s", elementType)
 	}
+}
+
+func handleUpdateMetadata(updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for key, value := range updates {
+		errutils.LogIfErr(setFieldValue(&cfg.Metadata, key, value))
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: "Updated metadata",
+			},
+		},
+	}, nil
+}
+
+func handleUpdateExtends(updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	if extends, ok := updates["Extends"].(string); ok {
+		cfg.Extends = extends
+	}
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: fmt.Sprintf("Updated extends to: %s", cfg.Extends),
+			},
+		},
+	}, nil
+}
+
+func handleUpdateRule(name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i, rule := range cfg.Rules {
+		if rule.Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Rules[i], key, value))
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Updated rule: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("rule not found: %s", name)
+}
+
+func handleUpdateSection(name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i, section := range cfg.Sections {
+		if section.Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Sections[i], key, value))
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Updated section: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("section not found: %s", name)
+}
+
+func handleUpdateAgent(name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Agents[i], key, value))
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Updated agent: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("agent not found: %s", name)
+}
+
+func handleUpdateOutput(name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i, output := range cfg.Outputs {
+		if output.Path == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Outputs[i], key, value))
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Updated output: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("output not found: %s", name)
+}
+
+func handleUpdateCommand(name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i := range cfg.Commands {
+		if cfg.Commands[i].Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Commands[i], key, value))
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Updated command: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("command not found: %s", name)
+}
+
+func handleUpdateMCPServer(name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i := range cfg.MCPServers {
+		if cfg.MCPServers[i].Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.MCPServers[i], key, value))
+			}
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Updated MCP server: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("MCP server not found: %s", name)
 }
 
 func HandleDelete(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch elementType {
-	case "extends":
-		cfg.Extends = ""
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Deleted extends configuration",
-				},
-			},
-		}, nil
-	case "rules":
-		for i, rule := range cfg.Rules {
-			if rule.Name == name {
-				cfg.Rules = append(cfg.Rules[:i], cfg.Rules[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted rule: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("rule not found: %s", name)
-	case "sections":
-		for i, section := range cfg.Sections {
-			if section.Name == name {
-				cfg.Sections = append(cfg.Sections[:i], cfg.Sections[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted section: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("section not found: %s", name)
-	case "agents":
-		for i, agent := range cfg.Agents {
-			if agent.Name == name {
-				cfg.Agents = append(cfg.Agents[:i], cfg.Agents[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted agent: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("agent not found: %s", name)
-	case "outputs":
-		for i, output := range cfg.Outputs {
-			if output.Path == name {
-				cfg.Outputs = append(cfg.Outputs[:i], cfg.Outputs[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted output: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("output not found: %s", name)
-	case "commands":
-		for i, cmd := range cfg.Commands {
-			if cmd.Name == name {
-				cfg.Commands = append(cfg.Commands[:i], cfg.Commands[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted command: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("command not found: %s", name)
-	case "mcp_servers":
-		for i, server := range cfg.MCPServers {
-			if server.Name == name {
-				cfg.MCPServers = append(cfg.MCPServers[:i], cfg.MCPServers[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted MCP server: %s", name),
-						},
-					},
-				}, nil
-			}
-		}
-		return nil, fmt.Errorf("MCP server not found: %s", name)
+	case ElementTypeExtends:
+		return handleDeleteExtends(cfg)
+	case ElementTypeRules:
+		return handleDeleteRule(name, cfg)
+	case ElementTypeSections:
+		return handleDeleteSection(name, cfg)
+	case ElementTypeAgents:
+		return handleDeleteAgent(name, cfg)
+	case ElementTypeOutputs:
+		return handleDeleteOutput(name, cfg)
+	case ElementTypeCommands:
+		return handleDeleteCommand(name, cfg)
+	case ElementTypeMCPServers:
+		return handleDeleteMCPServer(name, cfg)
 	default:
 		return nil, fmt.Errorf("unsupported element type: %s", elementType)
 	}
 }
 
+func handleDeleteExtends(cfg *config.Config) (*mcp.CallToolResult, error) {
+	cfg.Extends = ""
+	return &mcp.CallToolResult{
+		Content: []mcp.Content{
+			mcp.TextContent{
+				Type: "text",
+				Text: "Deleted extends configuration",
+			},
+		},
+	}, nil
+}
+
+func handleDeleteRule(name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i, rule := range cfg.Rules {
+		if rule.Name == name {
+			cfg.Rules = append(cfg.Rules[:i], cfg.Rules[i+1:]...)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Deleted rule: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("rule not found: %s", name)
+}
+
+func handleDeleteSection(name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i, section := range cfg.Sections {
+		if section.Name == name {
+			cfg.Sections = append(cfg.Sections[:i], cfg.Sections[i+1:]...)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Deleted section: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("section not found: %s", name)
+}
+
+func handleDeleteAgent(name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
+			cfg.Agents = append(cfg.Agents[:i], cfg.Agents[i+1:]...)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Deleted agent: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("agent not found: %s", name)
+}
+
+func handleDeleteOutput(name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i, output := range cfg.Outputs {
+		if output.Path == name {
+			cfg.Outputs = append(cfg.Outputs[:i], cfg.Outputs[i+1:]...)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Deleted output: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("output not found: %s", name)
+}
+
+func handleDeleteCommand(name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i := range cfg.Commands {
+		if cfg.Commands[i].Name == name {
+			cfg.Commands = append(cfg.Commands[:i], cfg.Commands[i+1:]...)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Deleted command: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("command not found: %s", name)
+}
+
+func handleDeleteMCPServer(name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+	for i := range cfg.MCPServers {
+		if cfg.MCPServers[i].Name == name {
+			cfg.MCPServers = append(cfg.MCPServers[:i], cfg.MCPServers[i+1:]...)
+			return &mcp.CallToolResult{
+				Content: []mcp.Content{
+					mcp.TextContent{
+						Type: "text",
+						Text: fmt.Sprintf("Deleted MCP server: %s", name),
+					},
+				},
+			}, nil
+		}
+	}
+	return nil, fmt.Errorf("MCP server not found: %s", name)
+}
+
 func HandleAddToList(ctx context.Context, listType, value string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch listType {
-	case "includes":
+	case ElementTypeIncludes:
 		cfg.Includes = append(cfg.Includes, value)
 		return &mcp.CallToolResult{
 			Content: []mcp.Content{
@@ -1064,7 +1212,7 @@ func HandleAddToList(ctx context.Context, listType, value string, cfg *config.Co
 
 func HandleDeleteFromList(ctx context.Context, listType, value string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch listType {
-	case "includes":
+	case ElementTypeIncludes:
 		for i, include := range cfg.Includes {
 			if include == value {
 				cfg.Includes = append(cfg.Includes[:i], cfg.Includes[i+1:]...)
@@ -1114,27 +1262,27 @@ func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config)
 	var responseData map[string]interface{}
 
 	switch elementType {
-	case "rules":
+	case ElementTypeRules:
 		responseData = map[string]interface{}{
 			"rules": cfg.Rules,
 		}
-	case "sections":
+	case ElementTypeSections:
 		responseData = map[string]interface{}{
 			"sections": cfg.Sections,
 		}
-	case "agents":
+	case ElementTypeAgents:
 		responseData = map[string]interface{}{
 			"agents": cfg.Agents,
 		}
-	case "outputs":
+	case ElementTypeOutputs:
 		responseData = map[string]interface{}{
 			"outputs": cfg.Outputs,
 		}
-	case "mcp_servers":
+	case ElementTypeMCPServers:
 		responseData = map[string]interface{}{
 			"mcp_servers": cfg.MCPServers,
 		}
-	case "commands":
+	case ElementTypeCommands:
 		responseData = map[string]interface{}{
 			"commands": cfg.Commands,
 		}
@@ -1160,50 +1308,23 @@ func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config)
 // HandleListJSONWithFilter returns structured JSON data for MCP tools with name filtering
 func HandleListJSONWithFilter(ctx context.Context, elementType string, cfg *config.Config, nameFilter string) (*mcp.CallToolResult, error) {
 	var responseData map[string]interface{}
+	var err error
 
 	switch elementType {
-	case "rules":
-		var filteredRules []config.Rule
-		for _, rule := range cfg.Rules {
-			if nameFilter == "" || strings.Contains(strings.ToLower(rule.Name), strings.ToLower(nameFilter)) {
-				filteredRules = append(filteredRules, rule)
-			}
-		}
-		responseData = map[string]interface{}{
-			"rules": filteredRules,
-		}
-	case "sections":
-		var filteredSections []config.Section
-		for _, section := range cfg.Sections {
-			if nameFilter == "" || strings.Contains(strings.ToLower(section.Name), strings.ToLower(nameFilter)) {
-				filteredSections = append(filteredSections, section)
-			}
-		}
-		responseData = map[string]interface{}{
-			"sections": filteredSections,
-		}
-	case "agents":
-		var filteredAgents []config.Agent
-		for _, agent := range cfg.Agents {
-			if nameFilter == "" || strings.Contains(strings.ToLower(agent.Name), strings.ToLower(nameFilter)) {
-				filteredAgents = append(filteredAgents, agent)
-			}
-		}
-		responseData = map[string]interface{}{
-			"agents": filteredAgents,
-		}
-	case "outputs":
-		var filteredOutputs []config.Output
-		for _, output := range cfg.Outputs {
-			if nameFilter == "" || strings.Contains(strings.ToLower(output.Path), strings.ToLower(nameFilter)) {
-				filteredOutputs = append(filteredOutputs, output)
-			}
-		}
-		responseData = map[string]interface{}{
-			"outputs": filteredOutputs,
-		}
+	case ElementTypeRules:
+		responseData, err = handleListJSONFilteredRules(cfg, nameFilter)
+	case ElementTypeSections:
+		responseData, err = handleListJSONFilteredSections(cfg, nameFilter)
+	case ElementTypeAgents:
+		responseData, err = handleListJSONFilteredAgents(cfg, nameFilter)
+	case ElementTypeOutputs:
+		responseData, err = handleListJSONFilteredOutputs(cfg, nameFilter)
 	default:
 		return nil, fmt.Errorf("unknown element type: %s", elementType)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	jsonData, err := json.Marshal(responseData)
@@ -1221,67 +1342,78 @@ func HandleListJSONWithFilter(ctx context.Context, elementType string, cfg *conf
 	}, nil
 }
 
+func handleListJSONFilteredRules(cfg *config.Config, nameFilter string) (map[string]interface{}, error) {
+	var filteredRules []config.Rule
+	for _, rule := range cfg.Rules {
+		if nameFilter == "" || strings.Contains(strings.ToLower(rule.Name), strings.ToLower(nameFilter)) {
+			filteredRules = append(filteredRules, rule)
+		}
+	}
+	return map[string]interface{}{
+		"rules": filteredRules,
+	}, nil
+}
+
+func handleListJSONFilteredSections(cfg *config.Config, nameFilter string) (map[string]interface{}, error) {
+	var filteredSections []config.Section
+	for _, section := range cfg.Sections {
+		if nameFilter == "" || strings.Contains(strings.ToLower(section.Name), strings.ToLower(nameFilter)) {
+			filteredSections = append(filteredSections, section)
+		}
+	}
+	return map[string]interface{}{
+		"sections": filteredSections,
+	}, nil
+}
+
+func handleListJSONFilteredAgents(cfg *config.Config, nameFilter string) (map[string]interface{}, error) {
+	var filteredAgents []config.Agent
+	for i := range cfg.Agents {
+		if nameFilter == "" || strings.Contains(strings.ToLower(cfg.Agents[i].Name), strings.ToLower(nameFilter)) {
+			filteredAgents = append(filteredAgents, cfg.Agents[i])
+		}
+	}
+	return map[string]interface{}{
+		"agents": filteredAgents,
+	}, nil
+}
+
+func handleListJSONFilteredOutputs(cfg *config.Config, nameFilter string) (map[string]interface{}, error) {
+	var filteredOutputs []config.Output
+	for _, output := range cfg.Outputs {
+		if nameFilter == "" || strings.Contains(strings.ToLower(output.Path), strings.ToLower(nameFilter)) {
+			filteredOutputs = append(filteredOutputs, output)
+		}
+	}
+	return map[string]interface{}{
+		"outputs": filteredOutputs,
+	}, nil
+}
+
 // HandleGetJSON returns structured JSON data for a single item
 func HandleGetJSON(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	var responseData map[string]interface{}
+	var err error
 
 	switch elementType {
-	case "rules":
-		for _, rule := range cfg.Rules {
-			if rule.Name == name {
-				responseData = map[string]interface{}{
-					"rule": rule,
-				}
-				break
-			}
-		}
-	case "sections":
-		for _, section := range cfg.Sections {
-			if section.Name == name {
-				responseData = map[string]interface{}{
-					"section": section,
-				}
-				break
-			}
-		}
-	case "agents":
-		for _, agent := range cfg.Agents {
-			if agent.Name == name {
-				responseData = map[string]interface{}{
-					"agent": agent,
-				}
-				break
-			}
-		}
-	case "outputs":
-		for _, output := range cfg.Outputs {
-			if output.Path == name {
-				responseData = map[string]interface{}{
-					"output": output,
-				}
-				break
-			}
-		}
-	case "mcp_servers":
-		for _, server := range cfg.MCPServers {
-			if server.Name == name {
-				responseData = map[string]interface{}{
-					"mcp_server": server,
-				}
-				break
-			}
-		}
-	case "commands":
-		for _, command := range cfg.Commands {
-			if command.Name == name {
-				responseData = map[string]interface{}{
-					"command": command,
-				}
-				break
-			}
-		}
+	case ElementTypeRules:
+		responseData, err = handleGetJSONRule(cfg, name)
+	case ElementTypeSections:
+		responseData, err = handleGetJSONSection(cfg, name)
+	case ElementTypeAgents:
+		responseData, err = handleGetJSONAgent(cfg, name)
+	case ElementTypeOutputs:
+		responseData, err = handleGetJSONOutput(cfg, name)
+	case ElementTypeMCPServers:
+		responseData, err = handleGetJSONMCPServer(cfg, name)
+	case ElementTypeCommands:
+		responseData, err = handleGetJSONCommand(cfg, name)
 	default:
 		return nil, fmt.Errorf("unknown element type: %s", elementType)
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	if responseData == nil {
@@ -1303,6 +1435,72 @@ func HandleGetJSON(ctx context.Context, elementType, name string, cfg *config.Co
 	}, nil
 }
 
+func handleGetJSONRule(cfg *config.Config, name string) (map[string]interface{}, error) {
+	for _, rule := range cfg.Rules {
+		if rule.Name == name {
+			return map[string]interface{}{
+				"rule": rule,
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func handleGetJSONSection(cfg *config.Config, name string) (map[string]interface{}, error) {
+	for _, section := range cfg.Sections {
+		if section.Name == name {
+			return map[string]interface{}{
+				"section": section,
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func handleGetJSONAgent(cfg *config.Config, name string) (map[string]interface{}, error) {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
+			return map[string]interface{}{
+				"agent": cfg.Agents[i],
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func handleGetJSONOutput(cfg *config.Config, name string) (map[string]interface{}, error) {
+	for i := range cfg.Outputs {
+		if cfg.Outputs[i].Path == name {
+			return map[string]interface{}{
+				"output": cfg.Outputs[i],
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func handleGetJSONMCPServer(cfg *config.Config, name string) (map[string]interface{}, error) {
+	for i := range cfg.MCPServers {
+		if cfg.MCPServers[i].Name == name {
+			return map[string]interface{}{
+				"mcp_server": cfg.MCPServers[i],
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
+func handleGetJSONCommand(cfg *config.Config, name string) (map[string]interface{}, error) {
+	for i := range cfg.Commands {
+		if cfg.Commands[i].Name == name {
+			return map[string]interface{}{
+				"command": cfg.Commands[i],
+			}, nil
+		}
+	}
+	return nil, nil
+}
+
 func HandleAddMCP(ctx context.Context, elementType string, element interface{}) (*mcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
@@ -1312,28 +1510,28 @@ func HandleAddMCP(ctx context.Context, elementType string, element interface{}) 
 	// Add element to config
 	var elementName string
 	switch elementType {
-	case "rules":
-		rule := element.(*config.Rule) // Type assertion guaranteed by switch
+	case ElementTypeRules:
+		rule, _ := element.(*config.Rule) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Rules = append(cfg.Rules, *rule)
 		elementName = rule.Name
-	case "sections":
-		section := element.(*config.Section) // Type assertion guaranteed by switch
+	case ElementTypeSections:
+		section, _ := element.(*config.Section) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Sections = append(cfg.Sections, *section)
 		elementName = section.Name
-	case "agents":
-		agent := element.(*config.Agent) // Type assertion guaranteed by switch
+	case ElementTypeAgents:
+		agent, _ := element.(*config.Agent) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Agents = append(cfg.Agents, *agent)
 		elementName = agent.Name
-	case "outputs":
-		output := element.(*config.Output) // Type assertion guaranteed by switch
+	case ElementTypeOutputs:
+		output, _ := element.(*config.Output) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Outputs = append(cfg.Outputs, *output)
 		elementName = output.Path
-	case "mcp_servers":
-		server := element.(*config.MCPServer) // Type assertion guaranteed by switch
+	case ElementTypeMCPServers:
+		server, _ := element.(*config.MCPServer) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.MCPServers = append(cfg.MCPServers, *server)
 		elementName = server.Name
-	case "commands":
-		command := element.(*config.Command) // Type assertion guaranteed by switch
+	case ElementTypeCommands:
+		command, _ := element.(*config.Command) //nolint:errcheck // Type assertion guaranteed by switch
 		cfg.Commands = append(cfg.Commands, *command)
 		elementName = command.Name
 	default:
@@ -1364,66 +1562,18 @@ func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[
 	// Update the element
 	found := false
 	switch elementType {
-	case "rules":
-		for i, rule := range cfg.Rules {
-			if rule.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Rules[i], key, value))
-				}
-				found = true
-				break
-			}
-		}
-	case "sections":
-		for i, section := range cfg.Sections {
-			if section.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Sections[i], key, value))
-				}
-				found = true
-				break
-			}
-		}
-	case "agents":
-		for i, agent := range cfg.Agents {
-			if agent.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Agents[i], key, value))
-				}
-				found = true
-				break
-			}
-		}
-	case "outputs":
-		for i, output := range cfg.Outputs {
-			if output.Path == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Outputs[i], key, value))
-				}
-				found = true
-				break
-			}
-		}
-	case "mcp_servers":
-		for i, server := range cfg.MCPServers {
-			if server.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.MCPServers[i], key, value))
-				}
-				found = true
-				break
-			}
-		}
-	case "commands":
-		for i, command := range cfg.Commands {
-			if command.Name == name {
-				for key, value := range updates {
-					utils.LogIfErr(setFieldValue(&cfg.Commands[i], key, value))
-				}
-				found = true
-				break
-			}
-		}
+	case ElementTypeRules:
+		found = handleUpdateMCPRule(cfg, name, updates)
+	case ElementTypeSections:
+		found = handleUpdateMCPSection(cfg, name, updates)
+	case ElementTypeAgents:
+		found = handleUpdateMCPAgent(cfg, name, updates)
+	case ElementTypeOutputs:
+		found = handleUpdateMCPOutput(cfg, name, updates)
+	case ElementTypeMCPServers:
+		found = handleUpdateMCPMCPServer(cfg, name, updates)
+	case ElementTypeCommands:
+		found = handleUpdateMCPCommand(cfg, name, updates)
 	default:
 		return nil, fmt.Errorf("unknown element type: %s", elementType)
 	}
@@ -1447,6 +1597,78 @@ func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[
 	}, nil
 }
 
+func handleUpdateMCPRule(cfg *config.Config, name string, updates map[string]interface{}) bool {
+	for i, rule := range cfg.Rules {
+		if rule.Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Rules[i], key, value))
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func handleUpdateMCPSection(cfg *config.Config, name string, updates map[string]interface{}) bool {
+	for i, section := range cfg.Sections {
+		if section.Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Sections[i], key, value))
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func handleUpdateMCPAgent(cfg *config.Config, name string, updates map[string]interface{}) bool {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Agents[i], key, value))
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func handleUpdateMCPOutput(cfg *config.Config, name string, updates map[string]interface{}) bool {
+	for i, output := range cfg.Outputs {
+		if output.Path == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Outputs[i], key, value))
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func handleUpdateMCPMCPServer(cfg *config.Config, name string, updates map[string]interface{}) bool {
+	for i := range cfg.MCPServers {
+		if cfg.MCPServers[i].Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.MCPServers[i], key, value))
+			}
+			return true
+		}
+	}
+	return false
+}
+
+func handleUpdateMCPCommand(cfg *config.Config, name string, updates map[string]interface{}) bool {
+	for i := range cfg.Commands {
+		if cfg.Commands[i].Name == name {
+			for key, value := range updates {
+				errutils.LogIfErr(setFieldValue(&cfg.Commands[i], key, value))
+			}
+			return true
+		}
+	}
+	return false
+}
+
 func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
@@ -1456,54 +1678,18 @@ func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallTo
 	// Delete the element
 	found := false
 	switch elementType {
-	case "rules":
-		for i, rule := range cfg.Rules {
-			if rule.Name == name {
-				cfg.Rules = append(cfg.Rules[:i], cfg.Rules[i+1:]...)
-				found = true
-				break
-			}
-		}
-	case "sections":
-		for i, section := range cfg.Sections {
-			if section.Name == name {
-				cfg.Sections = append(cfg.Sections[:i], cfg.Sections[i+1:]...)
-				found = true
-				break
-			}
-		}
-	case "agents":
-		for i, agent := range cfg.Agents {
-			if agent.Name == name {
-				cfg.Agents = append(cfg.Agents[:i], cfg.Agents[i+1:]...)
-				found = true
-				break
-			}
-		}
-	case "outputs":
-		for i, output := range cfg.Outputs {
-			if output.Path == name {
-				cfg.Outputs = append(cfg.Outputs[:i], cfg.Outputs[i+1:]...)
-				found = true
-				break
-			}
-		}
-	case "mcp_servers":
-		for i, server := range cfg.MCPServers {
-			if server.Name == name {
-				cfg.MCPServers = append(cfg.MCPServers[:i], cfg.MCPServers[i+1:]...)
-				found = true
-				break
-			}
-		}
-	case "commands":
-		for i, command := range cfg.Commands {
-			if command.Name == name {
-				cfg.Commands = append(cfg.Commands[:i], cfg.Commands[i+1:]...)
-				found = true
-				break
-			}
-		}
+	case ElementTypeRules:
+		found = handleDeleteMCPRule(cfg, name)
+	case ElementTypeSections:
+		found = handleDeleteMCPSection(cfg, name)
+	case ElementTypeAgents:
+		found = handleDeleteMCPAgent(cfg, name)
+	case ElementTypeOutputs:
+		found = handleDeleteMCPOutput(cfg, name)
+	case ElementTypeMCPServers:
+		found = handleDeleteMCPMCPServer(cfg, name)
+	case ElementTypeCommands:
+		found = handleDeleteMCPCommand(cfg, name)
 	default:
 		return nil, fmt.Errorf("unknown element type: %s", elementType)
 	}
@@ -1525,6 +1711,66 @@ func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallTo
 			},
 		},
 	}, nil
+}
+
+func handleDeleteMCPRule(cfg *config.Config, name string) bool {
+	for i, rule := range cfg.Rules {
+		if rule.Name == name {
+			cfg.Rules = append(cfg.Rules[:i], cfg.Rules[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func handleDeleteMCPSection(cfg *config.Config, name string) bool {
+	for i, section := range cfg.Sections {
+		if section.Name == name {
+			cfg.Sections = append(cfg.Sections[:i], cfg.Sections[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func handleDeleteMCPAgent(cfg *config.Config, name string) bool {
+	for i := range cfg.Agents {
+		if cfg.Agents[i].Name == name {
+			cfg.Agents = append(cfg.Agents[:i], cfg.Agents[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func handleDeleteMCPOutput(cfg *config.Config, name string) bool {
+	for i, output := range cfg.Outputs {
+		if output.Path == name {
+			cfg.Outputs = append(cfg.Outputs[:i], cfg.Outputs[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func handleDeleteMCPMCPServer(cfg *config.Config, name string) bool {
+	for i := range cfg.MCPServers {
+		if cfg.MCPServers[i].Name == name {
+			cfg.MCPServers = append(cfg.MCPServers[:i], cfg.MCPServers[i+1:]...)
+			return true
+		}
+	}
+	return false
+}
+
+func handleDeleteMCPCommand(cfg *config.Config, name string) bool {
+	for i := range cfg.Commands {
+		if cfg.Commands[i].Name == name {
+			cfg.Commands = append(cfg.Commands[:i], cfg.Commands[i+1:]...)
+			return true
+		}
+	}
+	return false
 }
 
 func HandleAddToListMCP(ctx context.Context, listType, value string) (*mcp.CallToolResult, error) {
@@ -1650,7 +1896,7 @@ func ToolSuccess(result interface{}) (*mcp.CallToolResult, error) {
 func CreateContinueDevConfig() error {
 	// Create .continue directory if it doesn't exist
 	continueDir := ".continue"
-	if err := os.MkdirAll(continueDir, 0755); err != nil {
+	if err := os.MkdirAll(continueDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .continue directory: %w", err)
 	}
 
@@ -1694,7 +1940,7 @@ func CreateContinueDevConfig() error {
 }`
 
 	configPath := filepath.Join(continueDir, "config.json")
-	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write continue config: %w", err)
 	}
 
@@ -1750,13 +1996,13 @@ func saveConfig(cfg *config.Config, configPath string) error {
 	if err := os.WriteFile(configPath, data, 0o644); err != nil {
 		// Try to restore backup on write failure
 		if _, statErr := os.Stat(backupPath); statErr == nil {
-			_ = os.Rename(backupPath, configPath)
+			errutils.LogIfErr(os.Rename(backupPath, configPath))
 		}
 		return oops.Wrapf(err, "write configuration file")
 	}
 
 	// Remove backup on successful write
-	_ = os.Remove(backupPath)
+	errutils.LogIfErr(os.Remove(backupPath))
 
 	return nil
 }

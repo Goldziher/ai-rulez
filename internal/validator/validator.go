@@ -32,15 +32,40 @@ func (v *Validator) Validate(ctx context.Context) ([]string, error) {
 
 	var warnings []string
 
-	// Check for empty configuration
+	// Basic configuration checks
+	warnings = append(warnings, v.checkEmptyConfiguration(cfg)...)
+	warnings = append(warnings, v.checkOutputsExist(cfg)...)
+
+	// Duplicate name checks
+	warnings = append(warnings, v.checkDuplicateNames(cfg)...)
+
+	// MCP server validation
+	warnings = append(warnings, v.checkMCPServerLogic(cfg)...)
+
+	// Target existence checks
+	warnings = append(warnings, v.checkTargetExistence(cfg)...)
+
+	return warnings, nil
+}
+
+func (v *Validator) checkEmptyConfiguration(cfg *config.Config) []string {
+	var warnings []string
 	if len(cfg.Rules) == 0 && len(cfg.Sections) == 0 {
 		warnings = append(warnings, "Configuration has no rules or sections defined")
 	}
+	return warnings
+}
 
-	// Check for outputs
+func (v *Validator) checkOutputsExist(cfg *config.Config) []string {
+	var warnings []string
 	if len(cfg.Outputs) == 0 {
 		warnings = append(warnings, "No output files configured - generation will have no effect")
 	}
+	return warnings
+}
+
+func (v *Validator) checkDuplicateNames(cfg *config.Config) []string {
+	var warnings []string
 
 	// Check for duplicate rules
 	warnings = append(warnings, checkDuplicateNames(
@@ -77,22 +102,31 @@ func (v *Validator) Validate(ctx context.Context) ([]string, error) {
 		"command",
 	)...)
 
-	// Check MCP server logic
-	for _, server := range cfg.MCPServers {
-		transport := server.GetTransport()
+	return warnings
+}
+
+func (v *Validator) checkMCPServerLogic(cfg *config.Config) []string {
+	var warnings []string
+	for i := range cfg.MCPServers {
+		transport := cfg.MCPServers[i].GetTransport()
 		switch transport {
 		case "http", "sse":
-			if server.URL == "" {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport '%s' but is missing a 'url'", server.Name, transport))
+			if cfg.MCPServers[i].URL == "" {
+				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport '%s' but is missing a 'url'", cfg.MCPServers[i].Name, transport))
 			}
 		case "stdio":
-			if server.Command == "" {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport 'stdio' but is missing a 'command'", server.Name))
+			if cfg.MCPServers[i].Command == "" {
+				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport 'stdio' but is missing a 'command'", cfg.MCPServers[i].Name))
 			}
 		}
 	}
+	return warnings
+}
 
-	// Check target existence
+func (v *Validator) checkTargetExistence(cfg *config.Config) []string {
+	var warnings []string
+
+	// Build map of output paths
 	outputPaths := make(map[string]bool)
 	for _, output := range cfg.Outputs {
 		outputPaths[output.Path] = true
@@ -108,33 +142,33 @@ func (v *Validator) Validate(ctx context.Context) ([]string, error) {
 	}
 
 	// Check agent targets
-	for _, agent := range cfg.Agents {
-		for _, target := range agent.Targets {
+	for i := range cfg.Agents {
+		for _, target := range cfg.Agents[i].Targets {
 			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Agent '%s' targets non-existent output '%s'", agent.Name, target))
+				warnings = append(warnings, fmt.Sprintf("Agent '%s' targets non-existent output '%s'", cfg.Agents[i].Name, target))
 			}
 		}
 	}
 
 	// Check MCP server targets
-	for _, server := range cfg.MCPServers {
-		for _, target := range server.Targets {
+	for i := range cfg.MCPServers {
+		for _, target := range cfg.MCPServers[i].Targets {
 			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' targets non-existent output '%s'", server.Name, target))
+				warnings = append(warnings, fmt.Sprintf("MCP server '%s' targets non-existent output '%s'", cfg.MCPServers[i].Name, target))
 			}
 		}
 	}
 
 	// Check command targets
-	for _, command := range cfg.Commands {
-		for _, target := range command.Targets {
+	for i := range cfg.Commands {
+		for _, target := range cfg.Commands[i].Targets {
 			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Command '%s' targets non-existent output '%s'", command.Name, target))
+				warnings = append(warnings, fmt.Sprintf("Command '%s' targets non-existent output '%s'", cfg.Commands[i].Name, target))
 			}
 		}
 	}
 
-	return warnings, nil
+	return warnings
 }
 
 func checkDuplicateNames(count int, getName func(int) string, itemType string) []string {
