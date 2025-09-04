@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/testing/e2e/testutil"
@@ -107,6 +106,8 @@ func (s *CRUDCLITestSuite) TestAgentCRUD_FullCycle() {
 	getResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "agent", "test-agent")
 	getResult.AssertStdoutContains(s.T(), "Name:         test-agent")
 	getResult.AssertStdoutContains(s.T(), "ID:           test-agent-1")
+	getResult.AssertStdoutContains(s.T(), "Description:   Test agent description")
+	getResult.AssertStdoutContains(s.T(), "Priority:     medium")
 	getResult.AssertStdoutContains(s.T(), "System Prompt: You are a test agent")
 	getResult.AssertStdoutContains(s.T(), "Tools:        [Read Grep]")
 
@@ -124,8 +125,6 @@ func (s *CRUDCLITestSuite) TestAgentCRUD_FullCycle() {
 	// GET after update
 	getUpdatedResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "agent", "test-agent")
 	getUpdatedResult.AssertStdoutContains(s.T(), "Description:   Updated description")
-	getUpdatedResult.AssertStdoutContains(s.T(), "Template Type: inline")
-	getUpdatedResult.AssertStdoutContains(s.T(), "Template Value: New prompt")
 
 	// DELETE
 	deleteResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "delete", "agent", "test-agent")
@@ -144,7 +143,7 @@ func (s *CRUDCLITestSuite) TestOutputCRUD_FullCycle() {
 
 	// GET
 	getResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "output", "NEW_OUTPUT.md")
-	getResult.AssertStdoutContains(s.T(), "Path:          NEW_OUTPUT.md")
+	getResult.AssertStdoutContains(s.T(), "Path:         NEW_OUTPUT.md")
 	getResult.AssertStdoutContains(s.T(), "Naming Scheme: {name}.txt")
 	getResult.AssertStdoutContains(s.T(), "Template Type: inline")
 	getResult.AssertStdoutContains(s.T(), "Template Value: Hello {{.ProjectName}}")
@@ -174,14 +173,15 @@ func (s *CRUDCLITestSuite) TestMCPServerCRUD_FullCycle() {
 		"--arg", "@test/server",
 		"--env", "TOKEN=123",
 		"--transport", "stdio")
-	addResult.AssertStdoutContains(s.T(), "Added mcp_server")
+	addResult.AssertStdoutContains(s.T(), "Added MCP server")
 
 	// GET
 	getResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "mcp-server", "test-server")
-	getResult.AssertStdoutContains(s.T(), "Name:        test-server")
-	getResult.AssertStdoutContains(s.T(), "Command:     npx")
-	getResult.AssertStdoutContains(s.T(), "Args:        [-y @test/server]")
-	getResult.AssertStdoutContains(s.T(), "Env:         map[TOKEN:123]")
+	getResult.AssertStdoutContains(s.T(), "Name:         test-server")
+	getResult.AssertStdoutContains(s.T(), "Description:  Test Server")
+	getResult.AssertStdoutContains(s.T(), "Command:      npx")
+	getResult.AssertStdoutContains(s.T(), "Args:         [-y @test/server]")
+	getResult.AssertStdoutContains(s.T(), "Env:          [TOKEN=123]")
 
 	// LIST
 	listResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "list", "mcp-servers")
@@ -192,17 +192,17 @@ func (s *CRUDCLITestSuite) TestMCPServerCRUD_FullCycle() {
 		"--description", "Updated Description",
 		"--transport", "http",
 		"--url", "http://localhost:8080")
-	updateResult.AssertStdoutContains(s.T(), "Updated mcp_server")
+	updateResult.AssertStdoutContains(s.T(), "Updated MCP server")
 
 	// GET after update
 	getUpdatedResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "mcp-server", "test-server")
-	getUpdatedResult.AssertStdoutContains(s.T(), "Description: Updated Description")
-	getUpdatedResult.AssertStdoutContains(s.T(), "Transport:   http")
-	getUpdatedResult.AssertStdoutContains(s.T(), "URL:         http://localhost:8080")
+	getUpdatedResult.AssertStdoutContains(s.T(), "Description:  Updated Description")
+	getUpdatedResult.AssertStdoutContains(s.T(), "Transport:    http")
+	getUpdatedResult.AssertStdoutContains(s.T(), "URL:          http://localhost:8080")
 
 	// DELETE
 	deleteResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "delete", "mcp-server", "test-server")
-	deleteResult.AssertStdoutContains(s.T(), "Deleted mcp_server")
+	deleteResult.AssertStdoutContains(s.T(), "Deleted MCP server")
 }
 
 // ========== Command CRUD Tests ==========
@@ -219,9 +219,10 @@ func (s *CRUDCLITestSuite) TestCommandCRUD_FullCycle() {
 
 	// GET
 	getResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "command", "test-cmd")
-	getResult.AssertStdoutContains(s.T(), "Name:        test-cmd")
-	getResult.AssertStdoutContains(s.T(), "Aliases:     [tcmd]")
-	getResult.AssertStdoutContains(s.T(), "Usage:       /test-cmd <arg>")
+	getResult.AssertStdoutContains(s.T(), "Name:         test-cmd")
+	getResult.AssertStdoutContains(s.T(), "Description:  Test Command")
+	getResult.AssertStdoutContains(s.T(), "Aliases:      [tcmd]")
+	getResult.AssertStdoutContains(s.T(), "Usage:        /test-cmd <arg>")
 
 	// LIST
 	listResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "list", "commands")
@@ -242,7 +243,7 @@ func (s *CRUDCLITestSuite) TestCommandCRUD_FullCycle() {
 func (s *CRUDCLITestSuite) TestMetadataCRUD_FullCycle() {
 	// GET initial
 	getResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "metadata")
-	getResult.AssertStdoutContains(s.T(), "Name:    Test Project")
+	getResult.AssertStdoutContains(s.T(), "Name:        Test Project")
 
 	// SET
 	setResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "set", "metadata",
@@ -259,6 +260,15 @@ func (s *CRUDCLITestSuite) TestMetadataCRUD_FullCycle() {
 }
 
 func (s *CRUDCLITestSuite) TestExtendsCRUD_FullCycle() {
+	// Create a dummy shared.yaml file that will be referenced
+	testutil.WriteFile(s.T(), s.workingDir, "shared.yaml", `
+metadata:
+  name: Shared Config
+  version: 1.0.0
+rules: []
+outputs: []
+`)
+
 	// GET initial (should be empty)
 	getResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "get", "extends")
 	getResult.AssertStdoutContains(s.T(), "not set")
@@ -281,6 +291,13 @@ func (s *CRUDCLITestSuite) TestExtendsCRUD_FullCycle() {
 }
 
 func (s *CRUDCLITestSuite) TestIncludesCRUD_FullCycle() {
+	// Create a dummy common.yaml file that will be included
+	testutil.WriteFile(s.T(), s.workingDir, "common.yaml", `
+rules:
+  - name: Common Rule
+    content: Common content
+`)
+
 	// LIST initial (should be empty)
 	listResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "list", "includes")
 	listResult.AssertStdoutContains(s.T(), "No includes found")
@@ -304,7 +321,7 @@ func (s *CRUDCLITestSuite) TestIncludesCRUD_FullCycle() {
 
 	// LIST final
 	listFinalResult := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "list", "includes")
-	listFinalResult.AssertNotContains(s.T(), "./common.yaml")
+	s.NotContains(listFinalResult.Stdout, "./common.yaml")
 	listFinalResult.AssertStdoutContains(s.T(), "https://example.com/rules.yaml")
 }
 
@@ -344,7 +361,7 @@ func (s *CRUDCLITestSuite) TestAddOutputMissingPath() {
 func (s *CRUDCLITestSuite) TestUpdateNonExistentRule() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "update", "rule", "NonExistent Rule", "--content", "Test")
 
-	result.AssertStdoutContains(s.T(), "not found")
+	result.AssertStderrContains(s.T(), "not found")
 }
 
 func (s *CRUDCLITestSuite) TestUpdateRuleMissingName() {

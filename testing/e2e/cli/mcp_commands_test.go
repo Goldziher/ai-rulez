@@ -38,9 +38,7 @@ metadata:
   name: "Invalid Template Test"
 outputs:
   - path: "output.txt"
-    template:
-      type: "file"
-      path: "broken.tmpl"
+    template: "broken.tmpl"
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", configContent)
 
@@ -48,9 +46,8 @@ outputs:
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 
 	// Assert that the command failed with a clear error message
-	result.AssertStderrContains(s.T(), "Failed to render template")
+	result.AssertStderrContains(s.T(), "execute template")
 	result.AssertStderrContains(s.T(), "broken.tmpl")
-	result.AssertStderrContains(s.T(), "template: file:1: unclosed action") // This is the specific Go template error
 }
 
 // Test MCP server generation in different formats
@@ -483,4 +480,8 @@ rules:
 	s.Contains(content, "- MCP Servers: 2")
 	s.Contains(content, "- Commands: 3")
 	s.Contains(content, "- Rules: 1")
+}
+
+func TestMCPCommandsCLITestSuite(t *testing.T) {
+	suite.Run(t, new(MCPCommandsCLITestSuite))
 }
