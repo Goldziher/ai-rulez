@@ -121,7 +121,6 @@ outputs:`)
 agents:
   - name: "code-reviewer"
     description: "Code review and quality analysis specialist"
-    model: "claude-3-opus-20240229"
     system_prompt: |
       You are a senior code reviewer focusing on:
       - Code quality and maintainability
@@ -133,7 +132,6 @@ agents:
   
   - name: "test-writer"
     description: "Testing and quality assurance specialist"
-    model: "claude-3-haiku-20240307"
     system_prompt: |
       You are a testing expert specializing in:
       - Writing comprehensive test cases
@@ -147,7 +145,6 @@ agents:
 agents:
   - name: "code-reviewer"
     description: "Code review and quality analysis specialist"
-    model: "gpt-4-turbo"
     system_prompt: |
       You are a senior code reviewer focusing on:
       - Code quality and maintainability
@@ -159,7 +156,6 @@ agents:
   
   - name: "test-writer"
     description: "Testing and quality assurance specialist"
-    model: "gpt-4-turbo"
     system_prompt: |
       You are a testing expert specializing in:
       - Writing comprehensive test cases

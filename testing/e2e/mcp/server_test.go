@@ -70,7 +70,7 @@ func (s *MCPServerTestSuite) TestServerWithInvalidConfig() {
 	client := testutil.StartMCPServer(s.T(), s.workingDir)
 	defer client.Close()
 
-	response := client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	response := client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	response.AssertToolError(s.T(), "")
 }
 
@@ -80,7 +80,7 @@ func (s *MCPServerTestSuite) TestServerWithoutConfig() {
 	client := testutil.StartMCPServer(s.T(), emptyDir)
 	defer client.Close()
 
-	response := client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	response := client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	response.AssertToolError(s.T(), "configuration")
 }
 
@@ -162,6 +162,6 @@ func (s *MCPServerTestSuite) TestServerCustomConfigPath() {
 	client := testutil.StartMCPServer(s.T(), s.workingDir)
 	defer client.Close()
 
-	response := client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	response := client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 }
