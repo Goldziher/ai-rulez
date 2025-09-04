@@ -10,22 +10,23 @@ import (
 
 // ListRulesHandler handles the list_rules MCP tool
 func ListRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return crud.HandleList(ctx, "rules")
+	nameFilter := request.GetString("name_filter", "")
+	return crud.HandleListMCPWithFilter(ctx, "rules", nameFilter)
 }
 
 // GetRuleHandler handles the get_rule MCP tool
 func GetRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
-	return crud.HandleGet(ctx, "rules", name)
+	name := request.GetString("name", "")
+	return crud.HandleGetMCP(ctx, "rules", name)
 }
 
 // AddRuleHandler handles the add_rule MCP tool
 func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
-	content, _ := request.Params.GetString("content")
-	id, _ := request.Params.GetString("id")
-	priorityStr, _ := request.Params.GetString("priority")
-	targets, _ := request.Params.GetArray("targets")
+	name := request.GetString("name", "")
+	content := request.GetString("content", "")
+	id := request.GetString("id", "")
+	priorityStr := request.GetString("priority", "")
+	targets := request.GetStringSlice("targets", []string{})
 
 	priority, err := config.ParsePriority(priorityStr)
 	if err != nil {
@@ -37,42 +38,42 @@ func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 		Name:     name,
 		Content:  content,
 		Priority: priority,
-		Targets:  crud.InterfaceSliceToStringSlice(targets),
+		Targets:  targets,
 	}
 
-	return crud.HandleAdd(ctx, "rules", newRule)
+	return crud.HandleAddMCP(ctx, "rules", newRule)
 }
 
 // UpdateRuleHandler handles the update_rule MCP tool
 func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
+	name := request.GetString("name", "")
 
 	updates := make(map[string]interface{})
-	if newName, ok := request.Params.GetString("new_name"); ok {
+	if newName := request.GetString("new_name", ""); newName != "" {
 		updates["Name"] = newName
 	}
-	if id, ok := request.Params.GetString("id"); ok {
+	if id := request.GetString("id", ""); id != "" {
 		updates["ID"] = id
 	}
-	if content, ok := request.Params.GetString("content"); ok {
+	if content := request.GetString("content", ""); content != "" {
 		updates["Content"] = content
 	}
-	if priorityStr, ok := request.Params.GetString("priority"); ok {
+	if priorityStr := request.GetString("priority", ""); priorityStr != "" {
 		priority, err := config.ParsePriority(priorityStr)
 		if err != nil {
 			return crud.ToolError(err)
 		}
 		updates["Priority"] = priority
 	}
-	if targets, ok := request.Params.GetArray("targets"); ok {
-		updates["Targets"] = crud.InterfaceSliceToStringSlice(targets)
+	if targets := request.GetStringSlice("targets", nil); targets != nil {
+		updates["Targets"] = targets
 	}
 
-	return crud.HandleUpdate(ctx, "rules", name, updates)
+	return crud.HandleUpdateMCP(ctx, "rules", name, updates)
 }
 
 // DeleteRuleHandler handles the delete_rule MCP tool
 func DeleteRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
-	return crud.HandleDelete(ctx, "rules", name)
+	name := request.GetString("name", "")
+	return crud.HandleDeleteMCP(ctx, "rules", name)
 }

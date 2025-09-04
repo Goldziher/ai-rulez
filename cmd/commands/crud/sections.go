@@ -3,6 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	"github.com/Goldziher/ai-rulez/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -25,7 +26,7 @@ var AddSectionCmd = &cobra.Command{
 
 		priority, err := config.ParsePriority(sectionPriority)
 		if err != nil {
-			crud.FmtError(err)
+			crud.FmtError("%v", err)
 		}
 
 		newSection := &config.Section{
@@ -59,7 +60,7 @@ var UpdateSectionCmd = &cobra.Command{
 		if cmd.Flags().Changed("priority") {
 			priority, err := config.ParsePriority(sectionPriority)
 			if err != nil {
-				crud.FmtError(err)
+				crud.FmtError("%v", err)
 			}
 			updates["Priority"] = priority
 		}
@@ -110,7 +111,7 @@ func init() {
 	// Flags for Add command
 	AddSectionCmd.Flags().StringVar(&sectionID, "id", "", "Optional unique identifier for the section")
 	AddSectionCmd.Flags().StringVarP(&sectionContent, "content", "c", "", "Content of the section (required)")
-	AddSectionCmd.MarkFlagRequired("content")
+	utils.LogIfErr(AddSectionCmd.MarkFlagRequired("content"))
 	AddSectionCmd.Flags().StringVarP(&sectionPriority, "priority", "p", "medium", "Priority of the section (critical, high, medium, low, minimal)")
 	AddSectionCmd.Flags().StringSliceVarP(&sectionTargets, "target", "t", []string{}, "Output target for this section (can be specified multiple times)")
 
