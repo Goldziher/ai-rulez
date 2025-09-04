@@ -17,18 +17,17 @@ tasks:
   test:
     desc: Run unit tests
     cmds:
-      - go test -timeout=30s -v ./internal/...
+      - go test -timeout=30s -v ./cmd/... ./internal/... ./schema/...
 
   test:coverage:
     desc: Run unit tests with coverage
     cmds:
-      - go test -timeout=30s -v -coverprofile=coverage.out ./internal/...
-      - go tool cover -html=coverage.out -o coverage.html
+      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/...
 
   test:race:
     desc: Run unit tests with race detection
     cmds:
-      - go test -timeout=30s -race -v ./internal/...
+      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/...
 
   test:integration:
     desc: Run integration tests (legacy e2e path)
