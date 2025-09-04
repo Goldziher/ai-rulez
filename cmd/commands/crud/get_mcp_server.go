@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GetMCPServerCmd represents the command to get a specific MCP server
 var GetMCPServerCmd = &cobra.Command{
 	Use:   "mcp-server [name]",
 	Short: "Get details of a specific MCP server",

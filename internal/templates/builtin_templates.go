@@ -1,6 +1,5 @@
 package templates
 
-// Built-in template definitions
 const (
 	defaultTemplate = `# {{.ProjectName}}
 {{- if .Description}}
@@ -60,7 +59,6 @@ Generated on {{.Timestamp.Format "2006-01-02 15:04:05"}}
 {{- end}}
 `
 
-	// MCP Server templates for different tools
 	claudeCodeMCPTemplate = `{
 {{- range $i, $server := .MCPServers}}
 {{- if ne $i 0}},{{end}}
@@ -219,7 +217,6 @@ prompts:
 `
 )
 
-// getBuiltinTemplates returns all built-in templates
 func getBuiltinTemplates() map[string]string {
 	return map[string]string{
 		"default":             defaultTemplate,

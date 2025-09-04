@@ -81,7 +81,6 @@ func NewClient(config *HTTPConfig) *Client {
 	}
 }
 
-// NewTestClient creates a client without URL validation for testing purposes
 func NewTestClient(config *HTTPConfig) *Client {
 	if config == nil {
 		config = defaultHTTPConfig()
@@ -113,7 +112,6 @@ func NewTestClient(config *HTTPConfig) *Client {
 	}
 }
 
-// testURLValidator allows all URLs for testing
 type testURLValidator struct{}
 
 func (v *testURLValidator) Validate(url string) error {
@@ -176,7 +174,6 @@ func (c *Client) Fetch(ctx context.Context, url string) ([]byte, error) {
 	return body, nil
 }
 
-// createHTTPError creates an error for HTTP status codes
 func createHTTPError(url string, statusCode int, status string) error {
 	var hint string
 

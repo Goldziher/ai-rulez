@@ -20,7 +20,6 @@ func (g *Generator) renderTemplate(output *config.Output, data *templates.Templa
 			Wrapf(err, "parse template configuration")
 	}
 
-	// Default template if none specified
 	if template == nil {
 		template = &config.Template{
 			Type:  config.TemplateBuiltin,
@@ -119,7 +118,6 @@ func (g *Generator) renderAgentTemplate(output *config.Output, agent *config.Age
 		"description": agent.Description,
 	}
 	if len(agent.Tools) > 0 {
-		// Convert tools array to comma-separated string for Claude Code format
 		frontmatterData["tools"] = strings.Join(agent.Tools, ", ")
 	}
 

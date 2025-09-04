@@ -11,17 +11,15 @@ var (
 	metaDescription string
 )
 
-// GetMetadataCmd represents the command to get the project metadata
 var GetMetadataCmd = &cobra.Command{
 	Use:   "metadata",
 	Short: "Get the project metadata",
 	Long:  `Retrieves and displays the project metadata (name, version, description) from your ai_rulez.yaml file.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		crud.GetElement("metadata", "") // Name is not used for singleton
+		crud.GetElement("metadata", "")
 	},
 }
 
-// SetMetadataCmd represents the command to set the project metadata
 var SetMetadataCmd = &cobra.Command{
 	Use:   "metadata",
 	Short: "Set the project metadata",
@@ -38,12 +36,11 @@ var SetMetadataCmd = &cobra.Command{
 			updates["Description"] = metaDescription
 		}
 
-		crud.UpdateElement("metadata", "", updates) // Name is not used for singleton
+		crud.UpdateElement("metadata", "", updates)
 	},
 }
 
 func init() {
-	// Flags for Set command
 	SetMetadataCmd.Flags().StringVar(&metaName, "name", "", "The name of your project")
 	SetMetadataCmd.Flags().StringVar(&metaVersion, "version", "", "The project version (e.g., 1.0.0)")
 	SetMetadataCmd.Flags().StringVar(&metaDescription, "description", "", "A brief description of the project")

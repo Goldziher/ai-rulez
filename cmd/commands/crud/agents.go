@@ -19,7 +19,6 @@ var (
 	agentTargets       []string
 )
 
-// AddAgentCmd adds a new agent to the configuration
 var AddAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Add a new agent to the configuration",
@@ -48,7 +47,6 @@ var AddAgentCmd = &cobra.Command{
 	},
 }
 
-// UpdateAgentCmd updates an existing agent
 var UpdateAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Update an existing agent",
@@ -88,7 +86,6 @@ var UpdateAgentCmd = &cobra.Command{
 	},
 }
 
-// DeleteAgentCmd deletes an agent
 var DeleteAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Delete an agent from the configuration",
@@ -100,7 +97,6 @@ var DeleteAgentCmd = &cobra.Command{
 	},
 }
 
-// GetAgentCmd gets an agent
 var GetAgentCmd = &cobra.Command{
 	Use:   "agent [name]",
 	Short: "Get an agent from the configuration",
@@ -112,7 +108,6 @@ var GetAgentCmd = &cobra.Command{
 	},
 }
 
-// ListAgentsCmd lists all agents
 var ListAgentsCmd = &cobra.Command{
 	Use:     "agents",
 	Short:   "List all agents in the configuration",
@@ -124,7 +119,6 @@ var ListAgentsCmd = &cobra.Command{
 }
 
 func init() {
-	// Flags for Add command
 	AddAgentCmd.Flags().StringVar(&agentID, "id", "", "Optional unique identifier for the agent")
 	AddAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "Description of the agent (required)")
 	errutils.LogIfErr(AddAgentCmd.MarkFlagRequired("description"))
@@ -135,7 +129,6 @@ func init() {
 	AddAgentCmd.Flags().StringVar(&agentTemplateValue, "template-value", "", "Template value (name, path, or content)")
 	AddAgentCmd.Flags().StringSliceVarP(&agentTargets, "target", "t", []string{}, "Output target for this agent (can be specified multiple times)")
 
-	// Flags for Update command
 	UpdateAgentCmd.Flags().StringVar(&agentID, "id", "", "New unique identifier for the agent")
 	UpdateAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "New description for the agent")
 	UpdateAgentCmd.Flags().StringVarP(&agentPriority, "priority", "p", "", "New priority for the agent")

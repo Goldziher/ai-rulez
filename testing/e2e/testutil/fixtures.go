@@ -1,7 +1,5 @@
 package testutil
 
-// Sample configurations for testing
-
 const BasicConfig = `metadata:
   name: "Test Project"
   version: "1.0.0"
@@ -230,7 +228,6 @@ rules:
     content: "Integration test content"
 `
 
-// Provider configurations for init tests
 var ClaudeProviderOutputs = []string{"CLAUDE.md", ".claude/agents/"}
 var CursorProviderOutputs = []string{".cursor/rules/"}
 var WindsurfProviderOutputs = []string{".windsurf/"}

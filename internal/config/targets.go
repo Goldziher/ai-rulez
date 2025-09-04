@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// resolveTargets expands named targets (those starting with @) using the namedTargets map
 func resolveTargets(targets []string, namedTargets map[string][]string) []string {
 	if len(targets) == 0 {
 		return targets
@@ -19,11 +18,10 @@ func resolveTargets(targets []string, namedTargets map[string][]string) []string
 		}
 
 		if strings.HasPrefix(cleanTarget, "@") {
-			namedTarget := cleanTarget[1:] // Remove the @ prefix
+			namedTarget := cleanTarget[1:]
 			if patterns, exists := namedTargets[namedTarget]; exists {
 				resolved = append(resolved, patterns...)
 			}
-			// If named target doesn't exist, ignore it (could log a warning)
 		} else {
 			resolved = append(resolved, cleanTarget)
 		}
@@ -55,16 +53,11 @@ func MatchesTarget(outputPath string, targets []string) bool {
 			return true
 		}
 
-		// For simple extension patterns (*.ext) only match files at root level
-		// For specific files or directory patterns, use the full matching logic
 		if !strings.Contains(cleanTarget, "/") && strings.HasPrefix(cleanTarget, "*.") {
-			// This is a simple extension pattern like *.json or *.md
-			// Only match if the file is at root level (no directory separators in path)
 			if !strings.Contains(normalizedPath, "/") && matchesBaseName(cleanTarget, baseName) {
 				return true
 			}
 		} else if matchesBaseName(cleanTarget, baseName) {
-			// For other patterns (specific files, etc.) use the original logic
 			return true
 		}
 
