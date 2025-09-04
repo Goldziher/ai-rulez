@@ -3,7 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/internal/errutils"
 	"github.com/spf13/cobra"
 )
 
@@ -111,7 +111,7 @@ func init() {
 	// Flags for Add command
 	AddRuleCmd.Flags().StringVar(&ruleID, "id", "", "Optional unique identifier for the rule")
 	AddRuleCmd.Flags().StringVarP(&ruleContent, "content", "c", "", "Content of the rule (required)")
-	utils.LogIfErr(AddRuleCmd.MarkFlagRequired("content"))
+	errutils.LogIfErr(AddRuleCmd.MarkFlagRequired("content"))
 	AddRuleCmd.Flags().StringVarP(&rulePriority, "priority", "p", "medium", "Priority of the rule (critical, high, medium, low, minimal)")
 	AddRuleCmd.Flags().StringSliceVarP(&ruleTargets, "target", "t", []string{}, "Output target for this rule (can be specified multiple times)")
 

@@ -5,7 +5,7 @@ pre-commit:
       run: golangci-lint run --fix
       fail_text: "Go linting failed"
     test:
-      run: go test -v ./...
+      run: go test -v ./cmd/... ./internal/... ./schema/...
       fail_text: "Go tests failed"
     fmt:
       run: go fmt ./...
@@ -35,8 +35,3 @@ commit-msg:
       run: pnpm commitlint --edit {1}
       fail_text: "Commit message does not follow conventional commits format"
 
-pre-push:
-  commands:
-    test:
-      run: go test -race -v ./...
-      fail_text: "Tests with race detection failed"

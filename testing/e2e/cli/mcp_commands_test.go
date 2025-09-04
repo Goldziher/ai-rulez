@@ -297,7 +297,7 @@ func (s *MCPCommandsCLITestSuite) TestValidateMCPAndCommands() {
 	result.AssertOutputContains(s.T(), "✅ Configuration file is valid")
 
 	// Validate command writes to stdout, so it should have output
-	s.True(len(result.Stdout) > 0 || len(result.Stderr) > 0, "Should have some output")
+	s.True(result.Stdout != "" || result.Stderr != "", "Should have some output")
 }
 
 // Test error cases

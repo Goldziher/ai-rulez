@@ -229,6 +229,11 @@
             },
             "uniqueItems": true
           },
+          "model": {
+            "type": "string",
+            "description": "Optional model identifier for this agent (e.g., 'claude-3-opus-20240229', 'gpt-4'). If not specified, uses the default model.",
+            "minLength": 1
+          },
           "template": {
             "oneOf": [
               {
