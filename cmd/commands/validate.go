@@ -135,11 +135,12 @@ func checkMCPServerLogic(cfg *config.Config) []string {
 	var warnings []string
 	for _, server := range cfg.MCPServers {
 		transport := server.GetTransport()
-		if transport == "http" || transport == "sse" {
+		switch transport {
+		case "http", "sse":
 			if server.URL == "" {
 				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport '%s' but is missing a 'url'", server.Name, transport))
 			}
-		} else if transport == "stdio" {
+		case "stdio":
 			if server.Command == "" {
 				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport 'stdio' but is missing a 'command'", server.Name))
 			}

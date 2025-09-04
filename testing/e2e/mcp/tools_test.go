@@ -46,7 +46,7 @@ func (s *MCPToolsTestSuite) TestGetVersion() {
 // ========== Rules Tools ==========
 
 func (s *MCPToolsTestSuite) TestGetRules() {
-	response := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	response := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
 	result := response.GetParsedResult(s.T())
@@ -62,7 +62,7 @@ func (s *MCPToolsTestSuite) TestGetRules() {
 }
 
 func (s *MCPToolsTestSuite) TestGetRulesWithFilter() {
-	response := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{
+	response := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{
 		"name_filter": "high priority",
 	})
 	response.AssertToolSuccess(s.T())
@@ -84,7 +84,7 @@ func (s *MCPToolsTestSuite) TestAddRule() {
 	result := response.GetParsedResult(s.T())
 	s.Contains(result, "message")
 
-	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
 	getRulesResult := getRulesResponse.GetParsedResult(s.T())
@@ -101,7 +101,7 @@ func (s *MCPToolsTestSuite) TestAddRuleWithAllParameters() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
 	getRulesResult := getRulesResponse.GetParsedResult(s.T())
@@ -130,7 +130,7 @@ func (s *MCPToolsTestSuite) TestUpdateRule() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
 	getRulesResult := getRulesResponse.GetParsedResult(s.T())
@@ -146,7 +146,7 @@ func (s *MCPToolsTestSuite) TestDeleteRule() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getRulesResponse := s.client.CallTool(s.T(), "get_rules", map[string]interface{}{})
+	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
 	getRulesResult := getRulesResponse.GetParsedResult(s.T())
@@ -157,7 +157,7 @@ func (s *MCPToolsTestSuite) TestDeleteRule() {
 // ========== Sections Tools ==========
 
 func (s *MCPToolsTestSuite) TestGetSections() {
-	response := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
+	response := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
 	result := response.GetParsedResult(s.T())
@@ -174,7 +174,7 @@ func (s *MCPToolsTestSuite) TestAddSection() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getSectionsResponse := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
+	getSectionsResponse := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
 	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
@@ -190,7 +190,7 @@ func (s *MCPToolsTestSuite) TestUpdateSection() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getSectionsResponse := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
+	getSectionsResponse := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
 	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
@@ -205,7 +205,7 @@ func (s *MCPToolsTestSuite) TestDeleteSection() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getSectionsResponse := s.client.CallTool(s.T(), "get_sections", map[string]interface{}{})
+	getSectionsResponse := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
 	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
@@ -218,7 +218,7 @@ func (s *MCPToolsTestSuite) TestDeleteSection() {
 func (s *MCPToolsTestSuite) TestGetAgents() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.ConfigWithAgents)
 
-	response := s.client.CallTool(s.T(), "get_agents", map[string]interface{}{})
+	response := s.client.CallTool(s.T(), "list_agents", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
 	result := response.GetParsedResult(s.T())
@@ -239,7 +239,7 @@ func (s *MCPToolsTestSuite) TestAddAgent() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getAgentsResponse := s.client.CallTool(s.T(), "get_agents", map[string]interface{}{})
+	getAgentsResponse := s.client.CallTool(s.T(), "list_agents", map[string]interface{}{})
 	getAgentsResponse.AssertToolSuccess(s.T())
 
 	getAgentsResult := getAgentsResponse.GetParsedResult(s.T())
@@ -250,7 +250,7 @@ func (s *MCPToolsTestSuite) TestAddAgent() {
 // ========== Outputs Tools ==========
 
 func (s *MCPToolsTestSuite) TestGetOutputs() {
-	response := s.client.CallTool(s.T(), "get_outputs", map[string]interface{}{})
+	response := s.client.CallTool(s.T(), "list_outputs", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
 	result := response.GetParsedResult(s.T())
@@ -265,7 +265,7 @@ func (s *MCPToolsTestSuite) TestAddOutput() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	getOutputsResponse := s.client.CallTool(s.T(), "get_outputs", map[string]interface{}{})
+	getOutputsResponse := s.client.CallTool(s.T(), "list_outputs", map[string]interface{}{})
 	getOutputsResponse.AssertToolSuccess(s.T())
 
 	getOutputsResult := getOutputsResponse.GetParsedResult(s.T())
@@ -304,7 +304,7 @@ func (s *MCPToolsTestSuite) TestValidateInvalidConfig() {
 }
 
 func (s *MCPToolsTestSuite) TestGenerateOutput() {
-	response := s.client.CallTool(s.T(), "generate_output", map[string]interface{}{})
+	response := s.client.CallTool(s.T(), "generate_outputs", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
 	result := response.GetParsedResult(s.T())

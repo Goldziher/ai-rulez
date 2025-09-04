@@ -36,7 +36,7 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	result.AssertOutputContains(s.T(), "valid")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "Custom Workflow Rule",
+		"Custom Workflow Rule",
 		"--content", "Custom workflow rule",
 		"--priority", "high")
 
@@ -77,15 +77,15 @@ func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
 	result.AssertStderrContains(s.T(), "Copilot")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "Claude Rule",
+		"Claude Rule",
 		"--content", "Claude-specific rule")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "Cursor Rule",
+		"Cursor Rule",
 		"--content", "Cursor-specific rule")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "Universal Rule",
+		"Universal Rule",
 		"--content", "Universal rule for all providers")
 
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
@@ -105,7 +105,7 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "CRUD Test Rule",
+		"CRUD Test Rule",
 		"--content", "CRUD test rule")
 	result.AssertOutputContains(s.T(), "Added rule")
 
@@ -114,7 +114,7 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 	s.Contains(content, "CRUD test rule")
 
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "rule",
-		"--name", "CRUD Test Rule",
+		"CRUD Test Rule",
 		"--content", "Updated CRUD rule",
 		"--priority", "critical")
 	result.AssertOutputContains(s.T(), "Updated rule")
@@ -174,7 +174,7 @@ sections:
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config3)
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
-		"--name", "Additional Rule",
+		"Additional Rule",
 		"--content", "Additional rule for evolved config")
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
