@@ -1781,14 +1781,6 @@ func HandleDeleteFromListMCP(ctx context.Context, listType, value string) (*mcp.
 	return result, nil
 }
 
-func InterfaceSliceToStringSlice(arr []interface{}) []string {
-	result := make([]string, len(arr))
-	for i, v := range arr {
-		result[i] = fmt.Sprintf("%v", v)
-	}
-	return result
-}
-
 func ParseEnvVars(envVars []string) map[string]string {
 	env := make(map[string]string)
 	for _, envVar := range envVars {
