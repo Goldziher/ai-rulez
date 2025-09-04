@@ -104,14 +104,14 @@ outputs:`)
 	if providers.ContinueDev {
 		builder.WriteString(`
   
+  # Continue.dev prompts (custom commands in YAML format)
+  - path: ".continue/prompts/ai_rulez_prompts.yaml"
+    template: "continuedev-prompts"
+    
   # Continue.dev rules (directory format with frontmatter)
   - path: ".continue/rules/"
     type: "rule"
-    naming_scheme: "{priority:02d}-{name}.md"
-
-  # Continue.dev agents (imported into config.py)
-  - path: ".continue/ai_rulez_agents.py"
-    template: "continuedev-agents"`)
+    naming_scheme: "{priority:02d}-{name}.md"`)
 	}
 
 	builder.WriteString("\n\n")

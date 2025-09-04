@@ -55,7 +55,16 @@ func MatchesTarget(outputPath string, targets []string) bool {
 			return true
 		}
 
-		if matchesBaseName(cleanTarget, baseName) {
+		// For simple extension patterns (*.ext) only match files at root level
+		// For specific files or directory patterns, use the full matching logic
+		if !strings.Contains(cleanTarget, "/") && strings.HasPrefix(cleanTarget, "*.") {
+			// This is a simple extension pattern like *.json or *.md
+			// Only match if the file is at root level (no directory separators in path)
+			if !strings.Contains(normalizedPath, "/") && matchesBaseName(cleanTarget, baseName) {
+				return true
+			}
+		} else if matchesBaseName(cleanTarget, baseName) {
+			// For other patterns (specific files, etc.) use the original logic
 			return true
 		}
 
