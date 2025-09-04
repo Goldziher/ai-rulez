@@ -88,40 +88,37 @@ func matchesPattern(filename, pattern string) bool {
 	}
 
 	if strings.HasSuffix(pattern, "/") {
-		if strings.HasSuffix(filename, "/") {
-			return pattern == filename
-		}
-		dirPrefix := strings.TrimSuffix(pattern, "/")
-		return strings.HasPrefix(filename, dirPrefix+"/") || filename == dirPrefix
+		return matchesDirectory(filename, pattern)
 	}
 
-	if strings.Contains(pattern, "*") {
-		return matchesWildcard(filename, pattern)
+	if strings.Contains(pattern, "*") || strings.Contains(pattern, "?") {
+		if matched, _ := filepath.Match(pattern, filename); matched {
+			return true
+		}
+		if matched, _ := filepath.Match(pattern, filepath.Base(filename)); matched {
+			return true
+		}
+		return false
 	}
 
 	if strings.HasPrefix(pattern, "/") {
 		return filename == strings.TrimPrefix(pattern, "/")
 	}
 
-	return filename == pattern || strings.HasSuffix(filename, "/"+pattern) || strings.Contains(filename, pattern)
+	return filename == pattern ||
+		strings.HasSuffix(filename, "/"+pattern) ||
+		strings.Contains(filename, "/"+pattern+"/") ||
+		strings.Contains(filename, pattern)
 }
 
-func matchesWildcard(filename, pattern string) bool {
-	if pattern == "*" {
-		return true
+func matchesDirectory(filename, pattern string) bool {
+	dirPrefix := strings.TrimSuffix(pattern, "/")
+
+	if strings.HasSuffix(filename, "/") {
+		return pattern == filename || strings.TrimSuffix(filename, "/") == dirPrefix
 	}
 
-	if strings.HasPrefix(pattern, "*.") {
-		extension := strings.TrimPrefix(pattern, "*")
-		return strings.HasSuffix(filename, extension)
-	}
-
-	if strings.HasSuffix(pattern, "*") {
-		prefix := strings.TrimSuffix(pattern, "*")
-		return strings.HasPrefix(filename, prefix)
-	}
-
-	return strings.Contains(filename, strings.ReplaceAll(pattern, "*", ""))
+	return strings.HasPrefix(filename, dirPrefix+"/") || filename == dirPrefix
 }
 
 func appendToGitignore(gitignorePath string, entries []string, isNewFile bool) error {
@@ -131,21 +128,24 @@ func appendToGitignore(gitignorePath string, entries []string, isNewFile bool) e
 	}
 	defer func() { _ = file.Close() }()
 
+	writer := bufio.NewWriter(file)
+	defer func() { _ = writer.Flush() }()
+
 	if isNewFile {
-		if _, err := file.WriteString("# AI Rules generated files\n"); err != nil {
+		if _, err := writer.WriteString("# AI Rules generated files\n"); err != nil {
 			return err
 		}
 	} else {
-		if _, err := file.WriteString("\n# AI Rules generated files\n"); err != nil {
+		if _, err := writer.WriteString("\n# AI Rules generated files\n"); err != nil {
 			return err
 		}
 	}
 
 	for _, entry := range entries {
-		if _, err := file.WriteString(entry + "\n"); err != nil {
+		if _, err := writer.WriteString(entry + "\n"); err != nil {
 			return err
 		}
 	}
 
-	return nil
+	return writer.Flush()
 }

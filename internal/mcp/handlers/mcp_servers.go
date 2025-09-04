@@ -26,14 +26,9 @@ func convertInterfaceMapToStringMap(input interface{}) map[string]string {
 	return nil
 }
 
-func ListMCPServersHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return crud.HandleListMCP(ctx, "mcp_servers")
-}
-
-func GetMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := request.GetString("name", "")
-	return crud.HandleGetMCP(ctx, "mcp_servers", name)
-}
+var ListMCPServersHandler = CreateListHandler("mcp_servers", false)
+var GetMCPServerHandler = CreateGetHandler("mcp_servers")
+var DeleteMCPServerHandler = CreateDeleteHandler("mcp_servers")
 
 func AddMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := request.GetString("id", "")
@@ -103,9 +98,4 @@ func UpdateMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	}
 
 	return crud.HandleUpdateMCP(ctx, "mcp_servers", name, updates)
-}
-
-func DeleteMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name := request.GetString("name", "")
-	return crud.HandleDeleteMCP(ctx, "mcp_servers", name)
 }

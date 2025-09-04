@@ -80,6 +80,15 @@ type Agent struct {
 	Targets      []string       `yaml:"targets,omitempty"`
 }
 
+func (r *Rule) GetName() string       { return r.Name }
+func (r *Rule) GetPriority() Priority { return r.Priority }
+
+func (s *Section) GetName() string       { return s.Name }
+func (s *Section) GetPriority() Priority { return s.Priority }
+
+func (a *Agent) GetName() string       { return a.Name }
+func (a *Agent) GetPriority() Priority { return a.Priority }
+
 func (a *Agent) GetTemplate() (*Template, error) {
 	return ParseTemplate(a.Template)
 }
