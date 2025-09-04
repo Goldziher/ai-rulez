@@ -36,7 +36,9 @@ metadata:
   name: "Invalid Template Test"
 outputs:
   - path: "output.txt"
-    template: "broken.tmpl"
+    template:
+      type: builtin
+      value: broken.tmpl
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", configContent)
 
@@ -274,7 +276,9 @@ func (s *MCPCommandsCLITestSuite) TestInvalidMCPConfiguration() {
 
 outputs:
   - path: "test.json"
-    template: "claude-code-mcp"
+    template:
+      type: builtin
+      value: claude-code-mcp
 
 mcp_servers:
   - name: "invalid-server"
@@ -323,9 +327,13 @@ func (s *MCPCommandsCLITestSuite) TestMCPAndCommandsWithTargets() {
 
 outputs:
   - path: "claude-mcp.json"
-    template: "claude-code-mcp"
+    template:
+      type: builtin
+      value: claude-code-mcp
   - path: "cursor-mcp.json" 
-    template: "cursor-mcp"
+    template:
+      type: builtin
+      value: cursor-mcp
 
 mcp_servers:
   - name: "claude-only-server"

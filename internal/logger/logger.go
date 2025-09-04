@@ -8,7 +8,6 @@ import (
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/samber/oops"
 )
@@ -18,8 +17,6 @@ var (
 	once     sync.Once
 
 	defaultLevel = slog.LevelInfo
-	colorOutput  = true
-	jsonOutput   = false
 )
 
 const (
@@ -41,51 +38,19 @@ func Get() *slog.Logger {
 }
 
 func New(w io.Writer, level slog.Level) *slog.Logger {
-	var handler slog.Handler
-
-	if jsonOutput {
-		handler = slog.NewJSONHandler(w, &slog.HandlerOptions{
-			Level: level,
-			ReplaceAttr: func(groups []string, a slog.Attr) slog.Attr {
-				if a.Key == slog.TimeKey {
-					return slog.String("timestamp", a.Value.Time().Format(time.RFC3339))
-				}
-				return a
-			},
-		})
-	} else {
-		handler = &prettyHandler{
-			w:           w,
-			level:       level,
-			colorOutput: colorOutput,
-		}
+	handler := &prettyHandler{
+		w:     w,
+		level: level,
 	}
-
 	return slog.New(handler)
 }
 
-func SetLevel(level slog.Level) {
-	defaultLevel = level
-	instance = New(os.Stderr, level)
-}
-
-func SetColorOutput(enabled bool) {
-	colorOutput = enabled
-	instance = New(os.Stderr, defaultLevel)
-}
-
-func SetJSONOutput(enabled bool) {
-	jsonOutput = enabled
-	instance = New(os.Stderr, defaultLevel)
-}
-
 type prettyHandler struct {
-	w           io.Writer
-	level       slog.Level
-	colorOutput bool
-	mu          sync.Mutex
-	attrs       []slog.Attr
-	groups      []string
+	w      io.Writer
+	level  slog.Level
+	mu     sync.Mutex
+	attrs  []slog.Attr
+	groups []string
 }
 
 func (h *prettyHandler) Enabled(_ context.Context, level slog.Level) bool {
@@ -101,24 +66,16 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 	if h.level <= slog.LevelDebug {
 		timestamp := r.Time.Format("15:04:05")
-		if h.colorOutput {
-			output.WriteString(colorGray)
-		}
+		output.WriteString(colorGray)
 		output.WriteString(timestamp)
 		output.WriteString(" ")
-		if h.colorOutput {
-			output.WriteString(colorReset)
-		}
+		output.WriteString(colorReset)
 	}
 
 	levelStr, levelColor := h.formatLevel(r.Level)
-	if h.colorOutput {
-		output.WriteString(levelColor)
-	}
+	output.WriteString(levelColor)
 	output.WriteString(levelStr)
-	if h.colorOutput {
-		output.WriteString(colorReset)
-	}
+	output.WriteString(colorReset)
 	output.WriteString(" ")
 
 	output.WriteString(r.Message)
@@ -135,19 +92,14 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 	if len(allAttrs) > 0 {
 		output.WriteString(" ")
-		if h.colorOutput {
-			output.WriteString(colorGray)
-		}
+		output.WriteString(colorGray)
 
 		parts := make([]string, 0, len(allAttrs))
 		for _, attr := range allAttrs {
 			parts = append(parts, h.formatAttr(attr))
 		}
 		output.WriteString(strings.Join(parts, " "))
-
-		if h.colorOutput {
-			output.WriteString(colorReset)
-		}
+		output.WriteString(colorReset)
 	}
 
 	output.WriteString("\n")
@@ -158,21 +110,19 @@ func (h *prettyHandler) Handle(_ context.Context, r slog.Record) error {
 
 func (h *prettyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &prettyHandler{
-		w:           h.w,
-		level:       h.level,
-		colorOutput: h.colorOutput,
-		attrs:       append(h.attrs, attrs...),
-		groups:      h.groups,
+		w:      h.w,
+		level:  h.level,
+		attrs:  append(h.attrs, attrs...),
+		groups: h.groups,
 	}
 }
 
 func (h *prettyHandler) WithGroup(name string) slog.Handler {
 	return &prettyHandler{
-		w:           h.w,
-		level:       h.level,
-		colorOutput: h.colorOutput,
-		attrs:       h.attrs,
-		groups:      append(h.groups, name),
+		w:      h.w,
+		level:  h.level,
+		attrs:  h.attrs,
+		groups: append(h.groups, name),
 	}
 }
 
@@ -200,15 +150,9 @@ func (h *prettyHandler) formatAttr(attr slog.Attr) string {
 
 	switch attr.Key {
 	case "path", "file":
-		if h.colorOutput {
-			return fmt.Sprintf("%s%s=%v%s", colorCyan, attr.Key, attr.Value, colorReset)
-		}
-		return fmt.Sprintf("%s=%v", attr.Key, attr.Value)
+		return fmt.Sprintf("%s%s=%v%s", colorCyan, attr.Key, attr.Value, colorReset)
 	case "duration", "elapsed":
-		if h.colorOutput {
-			return fmt.Sprintf("%s%s=%v%s", colorBlue, attr.Key, attr.Value, colorReset)
-		}
-		return fmt.Sprintf("%s=%v", attr.Key, attr.Value)
+		return fmt.Sprintf("%s%s=%v%s", colorBlue, attr.Key, attr.Value, colorReset)
 	default:
 		return fmt.Sprintf("%s=%v", attr.Key, attr.Value)
 	}
@@ -217,33 +161,16 @@ func (h *prettyHandler) formatAttr(attr slog.Attr) string {
 func (h *prettyHandler) formatError(err error) string {
 	var result strings.Builder
 
-	if oopsErr, ok := oops.AsOops(err); ok {
-		result.WriteString("error=")
-		if h.colorOutput {
-			result.WriteString(colorRed)
-		}
-		result.WriteString(err.Error())
-		if h.colorOutput {
-			result.WriteString(colorReset)
-		}
+	result.WriteString("error=")
+	result.WriteString(colorRed)
+	result.WriteString(err.Error())
+	result.WriteString(colorReset)
 
+	if oopsErr, ok := oops.AsOops(err); ok {
 		if hint := oopsErr.Hint(); hint != "" {
 			result.WriteString(" hint=")
-			if h.colorOutput {
-				result.WriteString(colorCyan)
-			}
+			result.WriteString(colorCyan)
 			result.WriteString(hint)
-			if h.colorOutput {
-				result.WriteString(colorReset)
-			}
-		}
-	} else {
-		result.WriteString("error=")
-		if h.colorOutput {
-			result.WriteString(colorRed)
-		}
-		result.WriteString(err.Error())
-		if h.colorOutput {
 			result.WriteString(colorReset)
 		}
 	}

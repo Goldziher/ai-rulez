@@ -43,7 +43,7 @@ func (g *Generator) GenerateAll(cfg *config.Config) error {
 		return oops.
 			With("field", "outputs").
 			With("parent", "configuration").
-			Hint("Add at least one output file in the configuration\nExample: outputs: [{file: 'CLAUDE.md', template: 'default'}]").
+			Hint("Add at least one output file in the configuration\nExample: outputs: [{path: 'CLAUDE.md', template: {type: 'builtin', value: 'default'}}]").
 			Errorf("validation error: outputs is required in configuration")
 	}
 
