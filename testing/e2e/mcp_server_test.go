@@ -34,18 +34,14 @@ func (s *MCPServerE2ETestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
 	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
 
-	// Start the MCP server in-process
 	s.server = mcp.NewServer("test")
-	lis, err := net.Listen("tcp", ":0") // Use a random free port
+	lis, err := net.Listen("tcp", ":0")
 	s.Require().NoError(err)
 
-	// Create HTTP server from MCP server
 	mcpHTTPServer := server.NewStreamableHTTPServer(s.server.GetMCPServer())
 
-	// Set up HTTP server URL
 	s.serverURL = fmt.Sprintf("http://localhost:%d", lis.Addr().(*net.TCPAddr).Port)
 
-	// Start the HTTP server
 	s.httpServer = &http.Server{
 		Addr:    lis.Addr().String(),
 		Handler: mcpHTTPServer,
@@ -55,23 +51,18 @@ func (s *MCPServerE2ETestSuite) SetupTest() {
 		_ = s.httpServer.Serve(lis)
 	}()
 
-	// Wait a moment for the server to start
 	time.Sleep(100 * time.Millisecond)
 
-	// Create a JSON-RPC client to connect to the HTTP server
 	s.client = jsonrpc.NewClient(s.serverURL)
 }
 
 func (s *MCPServerE2ETestSuite) TearDownTest() {
-	// Shutdown the HTTP server gracefully
 	if s.httpServer != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		_ = s.httpServer.Shutdown(ctx)
 	}
 }
-
-// ========== Test Cases ==========
 
 func (s *MCPServerE2ETestSuite) TestGetVersion() {
 	var result string
@@ -82,14 +73,12 @@ func (s *MCPServerE2ETestSuite) TestGetVersion() {
 }
 
 func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
-	// ADD with ID
 	addParams := map[string]interface{}{"name": "Test Rule", "content": "Test Content", "id": "rule-1"}
 	var addResult interface{}
 	resp, err := s.client.Call(context.Background(), "add_rule", addParams)
 	s.Require().NoError(err)
 	s.Require().NoError(resp.GetObject(&addResult))
 
-	// GET
 	var getResult interface{}
 	resp, err = s.client.Call(context.Background(), "get_rule", map[string]string{"name": "Test Rule"})
 	s.Require().NoError(err)
@@ -98,14 +87,12 @@ func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
 }
 
 func (s *MCPServerE2ETestSuite) TestOutputCRUD_FullCycle() {
-	// ADD with Type
 	addParams := map[string]interface{}{"path": "test.md", "type": "agent"}
 	var addResult interface{}
 	resp, err := s.client.Call(context.Background(), "add_output", addParams)
 	s.Require().NoError(err)
 	s.Require().NoError(resp.GetObject(&addResult))
 
-	// GET
 	var getResult interface{}
 	resp, err = s.client.Call(context.Background(), "get_output", map[string]string{"path": "test.md"})
 	s.Require().NoError(err)
@@ -114,14 +101,12 @@ func (s *MCPServerE2ETestSuite) TestOutputCRUD_FullCycle() {
 }
 
 func (s *MCPServerE2ETestSuite) TestMCPServerCRUD_FullCycle() {
-	// ADD with ID
 	addParams := map[string]interface{}{"name": "test-server", "command": "test", "id": "server-1"}
 	var addResult interface{}
 	resp, err := s.client.Call(context.Background(), "add_mcp_server", addParams)
 	s.Require().NoError(err)
 	s.Require().NoError(resp.GetObject(&addResult))
 
-	// GET
 	var getResult interface{}
 	resp, err = s.client.Call(context.Background(), "get_mcp_server", map[string]string{"name": "test-server"})
 	s.Require().NoError(err)
@@ -130,14 +115,12 @@ func (s *MCPServerE2ETestSuite) TestMCPServerCRUD_FullCycle() {
 }
 
 func (s *MCPServerE2ETestSuite) TestCommandCRUD_FullCycle() {
-	// ADD with ID
 	addParams := map[string]interface{}{"name": "test-cmd", "description": "Test Desc", "id": "cmd-1"}
 	var addResult interface{}
 	resp, err := s.client.Call(context.Background(), "add_command", addParams)
 	s.Require().NoError(err)
 	s.Require().NoError(resp.GetObject(&addResult))
 
-	// GET
 	var getResult interface{}
 	resp, err = s.client.Call(context.Background(), "get_command", map[string]string{"name": "test-cmd"})
 	s.Require().NoError(err)
@@ -146,9 +129,7 @@ func (s *MCPServerE2ETestSuite) TestCommandCRUD_FullCycle() {
 }
 
 func (s *MCPServerE2ETestSuite) TestInitProject() {
-	// Create a new directory for the init test
 	initDir := testutil.CreateTempDir(s.T())
-	// We need to change the working directory for the handler to work correctly
 	wd, _ := os.Getwd()
 	os.Chdir(initDir)
 	defer os.Chdir(wd)
@@ -163,13 +144,11 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 	s.Require().NoError(err)
 	s.Require().NoError(resp.GetObject(&result))
 
-	// Assert that the files were created
 	configPath := filepath.Join(initDir, "ai_rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
 	configPyPath := filepath.Join(initDir, "config.py")
 	s.True(testutil.FileExists(s.T(), configPyPath), "config.py for continue-dev should be created")
 
-	// Assert content of ai_rulez.yaml
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "name: MCP-Initialized-Project")
 	s.Contains(content, "path: .claude/agents/")
@@ -177,14 +156,12 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 }
 
 func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {
-	// VALIDATE
 	var validateResult interface{}
 	resp, err := s.client.Call(context.Background(), "validate_config", nil)
 	s.Require().NoError(err)
 	s.Require().NoError(resp.GetObject(&validateResult))
 	s.Contains(fmt.Sprintf("%v", validateResult), "valid:true")
 
-	// GENERATE
 	var generateResult interface{}
 	resp, err = s.client.Call(context.Background(), "generate_outputs", nil)
 	s.Require().NoError(err)

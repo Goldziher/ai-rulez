@@ -19,7 +19,6 @@ var (
 	mcpTargets     []string
 )
 
-// AddMCPServerCmd represents the command to add a new MCP server
 var AddMCPServerCmd = &cobra.Command{
 	Use:   "mcp-server [name]",
 	Short: "Add a new MCP server to the configuration",

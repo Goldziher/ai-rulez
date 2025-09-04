@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// DeleteMCPServerCmd represents the command to delete an MCP server
 var DeleteMCPServerCmd = &cobra.Command{
 	Use:     "mcp-server [name]",
 	Short:   "Delete an MCP server from the configuration",

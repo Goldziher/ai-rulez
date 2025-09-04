@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// createTestClient creates a remote client for testing
 func createTestClient() *remote.Client {
 	return remote.NewTestClient(nil)
 }
@@ -293,8 +292,7 @@ agents:
 		require.NoError(t, err)
 
 		assert.Len(t, mainConfig.Rules, 2)
-		
-		// Check both rules are present without assuming order
+
 		ruleNames := make([]string, len(mainConfig.Rules))
 		for i, rule := range mainConfig.Rules {
 			ruleNames[i] = rule.Name

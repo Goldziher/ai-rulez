@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// GetCommandCmd represents the command to get a specific custom command
 var GetCommandCmd = &cobra.Command{
 	Use:   "command [name]",
 	Short: "Get details of a specific custom command",

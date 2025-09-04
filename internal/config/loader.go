@@ -34,7 +34,6 @@ func LoadConfigWithIncludes(ctx context.Context, filename string) (*Config, erro
 		return nil, err
 	}
 
-	// Check for local config file using our discovery logic
 	localConfigPath, err := FindLocalConfigFile(absPath)
 	if err != nil {
 		return nil, oops.Wrapf(err, "find local config file")
@@ -118,12 +117,10 @@ func (l *configLoader) loadConfigInternal(ctx context.Context, filename string, 
 		baseDir = filepath.Dir(filename)
 	}
 
-	// Resolve extends first (inheritance)
 	if err := l.resolveExtends(ctx, config, baseDir); err != nil {
 		return nil, err
 	}
 
-	// Then resolve includes (additive merging)
 	if err := l.resolveIncludes(ctx, config, baseDir); err != nil {
 		return nil, err
 	}
@@ -158,7 +155,6 @@ func (l *configLoader) resolveExtends(ctx context.Context, config *Config, baseD
 
 	extendsPath := l.resolvePath(config.Extends, baseDir)
 
-	// Load base configuration
 	baseConfig, err := l.loadConfigInternal(ctx, extendsPath, true)
 	if err != nil {
 		return oops.
@@ -169,29 +165,25 @@ func (l *configLoader) resolveExtends(ctx context.Context, config *Config, baseD
 			Wrapf(err, "loading extended config")
 	}
 
-	// Apply inheritance: base config is inherited, child config overrides
 	extendedConfig := l.applyExtends(baseConfig, config)
 
-	// Replace current config with extended version
 	*config = *extendedConfig
-	config.Extends = "" // Clear extends to prevent re-processing
+	config.Extends = ""
 
 	return nil
 }
 
 func (l *configLoader) applyExtends(base, child *Config) *Config {
-	// Start with base config
 	result := &Config{
 		Metadata: base.Metadata,
 		Extends:  "",
-		Includes: nil, // Don't copy base includes - they were already resolved
+		Includes: nil,
 		Outputs:  base.Outputs,
 		Rules:    base.Rules,
 		Sections: base.Sections,
 		Agents:   base.Agents,
 	}
 
-	// Override with child config values (child takes precedence)
 	if child.Metadata.Name != "" {
 		result.Metadata.Name = child.Metadata.Name
 	}
@@ -202,13 +194,10 @@ func (l *configLoader) applyExtends(base, child *Config) *Config {
 		result.Metadata.Description = child.Metadata.Description
 	}
 
-	// Only use child includes (base includes were already resolved)
 	result.Includes = child.Includes
 
-	// Append child outputs to base outputs
 	result.Outputs = append(result.Outputs, child.Outputs...)
 
-	// For rules, sections, and agents, merge using existing merge logic
 	result.Rules = mergeRules(result.Rules, child.Rules)
 	result.Sections = mergeSections(result.Sections, child.Sections)
 	result.Agents = mergeAgents(result.Agents, child.Agents)
@@ -216,21 +205,16 @@ func (l *configLoader) applyExtends(base, child *Config) *Config {
 	return result
 }
 
-// loadIncludeFile loads an include file, handling cases where the include itself has extends or includes
 func (l *configLoader) loadIncludeFile(ctx context.Context, filename string) (*Config, error) {
-	// First, try to load as partial config to check if it has extends/includes
 	partialConfig, err := LoadPartialConfig(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	// If include file has extends or includes, process it fully
 	if partialConfig.Extends != "" || len(partialConfig.Includes) > 0 {
-		// Use LoadConfigWithIncludes to process the extends/includes
 		return LoadConfigWithIncludes(ctx, filename)
 	}
 
-	// Simple include file, return the partial config
 	return partialConfig, nil
 }
 
@@ -374,15 +358,12 @@ func (l *configLoader) loadLocalOverrides(ctx context.Context, config *Config, f
 		return err
 	}
 
-	// Merge the configs using our new ID-based merging logic
 	merged := MergeConfigs(config, localConfig)
 
-	// Update the original config in place
 	config.Rules = merged.Rules
 	config.Sections = merged.Sections
 	config.Agents = merged.Agents
 
-	// Local configs can also add outputs and includes
 	if len(localConfig.Outputs) > 0 {
 		config.Outputs = append(config.Outputs, localConfig.Outputs...)
 	}

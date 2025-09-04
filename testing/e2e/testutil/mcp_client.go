@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MCPClient represents a test client for the MCP server
 type MCPClient struct {
 	cmd    *exec.Cmd
 	stdin  *bufio.Writer
@@ -24,32 +23,27 @@ type MCPClient struct {
 	mutex  sync.Mutex
 }
 
-// MCPResponse represents a response from the MCP server
 type MCPResponse struct {
 	ID     interface{} `json:"id"`
 	Result *MCPResult  `json:"result,omitempty"`
 	Error  *MCPError   `json:"error,omitempty"`
 }
 
-// MCPResult represents the result field in an MCP response
 type MCPResult struct {
 	Content []MCPContent `json:"content,omitempty"`
 }
 
-// MCPContent represents content in an MCP response
 type MCPContent struct {
 	Type string `json:"type"`
 	Text string `json:"text"`
 }
 
-// MCPError represents an MCP error response
 type MCPError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
 	Data    interface{} `json:"data,omitempty"`
 }
 
-// StartMCPServer starts the MCP server and returns a client
 func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 	t.Helper()
 
@@ -83,7 +77,6 @@ func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 	return client
 }
 
-// Close stops the MCP server and cleans up
 func (c *MCPClient) Close() {
 	if c.cancel != nil {
 		c.cancel()
@@ -96,7 +89,6 @@ func (c *MCPClient) Close() {
 	}
 }
 
-// CallTool calls an MCP tool with the given parameters
 func (c *MCPClient) CallTool(t *testing.T, toolName string, params map[string]interface{}) *MCPResponse {
 	t.Helper()
 
@@ -113,7 +105,6 @@ func (c *MCPClient) CallTool(t *testing.T, toolName string, params map[string]in
 	return c.sendRequest(t, request)
 }
 
-// ListTools lists all available MCP tools
 func (c *MCPClient) ListTools(t *testing.T) *MCPResponse {
 	t.Helper()
 
@@ -126,7 +117,6 @@ func (c *MCPClient) ListTools(t *testing.T) *MCPResponse {
 	return c.sendRequest(t, request)
 }
 
-// GetInfo gets server information
 func (c *MCPClient) GetInfo(t *testing.T) *MCPResponse {
 	t.Helper()
 
@@ -214,7 +204,6 @@ func (c *MCPClient) sendRequest(t *testing.T, request map[string]interface{}) *M
 	}
 }
 
-// GetParsedResult returns the parsed JSON content as a map for backward compatibility
 func (r *MCPResponse) GetParsedResult(t *testing.T) map[string]interface{} {
 	t.Helper()
 
@@ -224,7 +213,6 @@ func (r *MCPResponse) GetParsedResult(t *testing.T) map[string]interface{} {
 	return parsed
 }
 
-// GetParsedContent parses JSON content from the MCP response
 func (r *MCPResponse) GetParsedContent() (map[string]interface{}, error) {
 	if r.Result == nil || len(r.Result.Content) == 0 {
 		return nil, fmt.Errorf("no content in response")
@@ -240,7 +228,6 @@ func (r *MCPResponse) GetParsedContent() (map[string]interface{}, error) {
 	return parsed, nil
 }
 
-// AssertToolSuccess checks that a tool call was successful
 func (r *MCPResponse) AssertToolSuccess(t *testing.T) {
 	t.Helper()
 
@@ -248,7 +235,6 @@ func (r *MCPResponse) AssertToolSuccess(t *testing.T) {
 	require.NotNil(t, r.Result, "Tool call should return result")
 }
 
-// AssertToolError checks that a tool call returned an error
 func (r *MCPResponse) AssertToolError(t *testing.T, expectedMessage string) {
 	t.Helper()
 
@@ -259,7 +245,6 @@ func (r *MCPResponse) AssertToolError(t *testing.T, expectedMessage string) {
 	}
 }
 
-// GetResultString gets a string value from the result
 func (r *MCPResponse) GetResultString(t *testing.T, key string) string {
 	t.Helper()
 

@@ -96,7 +96,6 @@ func computeFileHash(filePath string) (string, error) {
 	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
-// ComputeContentHashPooled computes SHA256 hash using a pooled hasher
 func ComputeContentHashPooled(content string) string {
 	h := hashPool.Get().(hash.Hash)
 	defer func() {

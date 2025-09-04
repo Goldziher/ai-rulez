@@ -2,8 +2,6 @@ package testutil
 
 import "fmt"
 
-// ConvertYAMLToJSON is a test helper that mimics the internal convertYAMLToJSON function
-// It converts YAML-like structures (map[any]any) to JSON-like structures (map[string]any)
 func ConvertYAMLToJSON(i any) any {
 	switch x := i.(type) {
 	case map[any]any:

@@ -11,7 +11,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// Helper function to create a test config
 func createTestConfig(t *testing.T) (string, *config.Config) {
 	tempDir := t.TempDir()
 	configFile := filepath.Join(tempDir, "ai_rulez.yaml")
@@ -29,8 +28,6 @@ func createTestConfig(t *testing.T) (string, *config.Config) {
 	require.NoError(t, err)
 	return configFile, cfg
 }
-
-// ========== Rules CRUD Tests ==========
 
 func TestRuleCRUD(t *testing.T) {
 	t.Run("add rule", func(t *testing.T) {
@@ -100,8 +97,6 @@ func TestRuleCRUD(t *testing.T) {
 	})
 }
 
-// ========== Sections CRUD Tests ==========
-
 func TestSectionCRUD(t *testing.T) {
 	t.Run("add section", func(t *testing.T) {
 		configFile, _ := createTestConfig(t)
@@ -160,8 +155,6 @@ func TestSectionCRUD(t *testing.T) {
 		assert.Equal(t, "Section2", reloaded.Sections[0].Name)
 	})
 }
-
-// ========== Agents CRUD Tests ==========
 
 func TestAgentCRUD(t *testing.T) {
 	t.Run("add agent", func(t *testing.T) {
@@ -229,8 +222,6 @@ func TestAgentCRUD(t *testing.T) {
 	})
 }
 
-// ========== Outputs CRUD Tests ==========
-
 func TestOutputCRUD(t *testing.T) {
 	t.Run("add output", func(t *testing.T) {
 		configFile, _ := createTestConfig(t)
@@ -293,8 +284,6 @@ func TestOutputCRUD(t *testing.T) {
 	})
 }
 
-// ========== Validation Tests ==========
-
 func TestDefaultPriorities(t *testing.T) {
 	configFile, _ := createTestConfig(t)
 
@@ -312,8 +301,6 @@ func TestDefaultPriorities(t *testing.T) {
 	assert.Equal(t, config.PriorityMedium, reloaded.Agents[0].Priority)
 }
 
-// ========== Get Commands Tests ==========
-
 func TestGetRule(t *testing.T) {
 	configFile, _ := createTestConfig(t)
 
@@ -323,7 +310,6 @@ func TestGetRule(t *testing.T) {
 	}
 	config.SaveConfig(cfg, configFile)
 
-	// Test that rule exists and has expected values
 	reloaded, err := config.LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, reloaded.Rules, 1)
@@ -342,7 +328,6 @@ func TestGetSection(t *testing.T) {
 	}
 	config.SaveConfig(cfg, configFile)
 
-	// Test that section exists and has expected values
 	reloaded, err := config.LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, reloaded.Sections, 1)
@@ -368,7 +353,6 @@ func TestGetAgent(t *testing.T) {
 	}
 	config.SaveConfig(cfg, configFile)
 
-	// Test that agent exists and has expected values
 	reloaded, err := config.LoadConfig(configFile)
 	require.NoError(t, err)
 	assert.Len(t, reloaded.Agents, 1)
@@ -379,8 +363,6 @@ func TestGetAgent(t *testing.T) {
 	assert.Equal(t, "You are a test agent", reloaded.Agents[0].SystemPrompt)
 	assert.Equal(t, []string{"*.yaml"}, reloaded.Agents[0].Targets)
 }
-
-// ========== Targets Tests ==========
 
 func TestTargetsSupport(t *testing.T) {
 	t.Run("rule targets", func(t *testing.T) {

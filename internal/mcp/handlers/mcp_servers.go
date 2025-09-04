@@ -8,7 +8,6 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// convertInterfaceMapToStringMap converts map[string]interface{} to map[string]string
 func convertInterfaceMapToStringMap(input interface{}) map[string]string {
 	if input == nil {
 		return nil
@@ -27,25 +26,22 @@ func convertInterfaceMapToStringMap(input interface{}) map[string]string {
 	return nil
 }
 
-// ListMCPServersHandler handles the list_mcp_servers MCP tool
 func ListMCPServersHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleListMCP(ctx, "mcp_servers")
 }
 
-// GetMCPServerHandler handles the get_mcp_server MCP tool
 func GetMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleGetMCP(ctx, "mcp_servers", name)
 }
 
-// AddMCPServerHandler handles the add_mcp_server MCP tool
 func AddMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	id := request.GetString("id", "")
 	name := request.GetString("name", "")
 	description := request.GetString("description", "")
 	command := request.GetString("command", "")
 	args := request.GetStringSlice("args", []string{})
-	envInterface := request.GetArguments()["env"] // Get env as interface{} since it's a map
+	envInterface := request.GetArguments()["env"]
 	env := convertInterfaceMapToStringMap(envInterface)
 	transport := request.GetString("transport", "")
 	url := request.GetString("url", "")
@@ -69,7 +65,6 @@ func AddMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	return crud.HandleAddMCP(ctx, "mcp_servers", newServer)
 }
 
-// UpdateMCPServerHandler handles the update_mcp_server MCP tool
 func UpdateMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
@@ -110,7 +105,6 @@ func UpdateMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	return crud.HandleUpdateMCP(ctx, "mcp_servers", name, updates)
 }
 
-// DeleteMCPServerHandler handles the delete_mcp_server MCP tool
 func DeleteMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 	return crud.HandleDeleteMCP(ctx, "mcp_servers", name)

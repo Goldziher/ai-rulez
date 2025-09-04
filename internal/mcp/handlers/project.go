@@ -13,25 +13,20 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// GenerateOutputsHandler handles the generate_outputs MCP tool
 func GenerateOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
-	// Load config
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return crud.ToolError(err)
 	}
 
-	// Create generator
 	gen := generator.NewWithConfigFile(configFile)
 
-	// Generate all outputs
 	if err := gen.GenerateAll(cfg); err != nil {
 		return crud.ToolError(err)
 	}
 
-	// Get list of generated files
 	results := make([]string, len(cfg.Outputs))
 	for i, output := range cfg.Outputs {
 		results[i] = output.Path
@@ -44,7 +39,6 @@ func GenerateOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	})
 }
 
-// ValidateConfigHandler handles the validate_config MCP tool
 func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
@@ -55,7 +49,6 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 
 	warnings, err := val.Validate(ctx)
 	if err != nil {
-		// Validation failed - return success response with valid: false and error details
 		result := map[string]interface{}{
 			"valid": false,
 			"error": err.Error(),
@@ -71,15 +64,13 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 	return crud.ToolSuccess(result)
 }
 
-// InitProjectHandler handles the init_project MCP tool
 func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	projectName := request.GetString("project_name", "")
 	providersInterface := request.GetArguments()["providers"]
-	_ = request.GetBool("with_agents", false) // Reserved for future agent configuration
+	_ = request.GetBool("with_agents", false)
 	allProviders := request.GetBool("all_providers", false)
 	popularProviders := request.GetBool("popular_providers", false)
 
-	// Convert providers interface{} to []interface{}
 	var providers []interface{}
 	if providersSlice, ok := providersInterface.([]interface{}); ok {
 		providers = providersSlice
@@ -110,14 +101,11 @@ func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		}
 	}
 
-	// Agent configuration is handled by the template generation system
-
 	configContent := templates.GenerateConfigTemplate(projectName, providerConfig)
 	if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0o644); err != nil {
 		return crud.ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 
-	// Handle continue.dev specific setup
 	if providerConfig.ContinueDev {
 		if err := crud.CreateContinueDevConfig(); err != nil {
 			return crud.ToolError(fmt.Errorf("failed to create continue.dev config: %w", err))

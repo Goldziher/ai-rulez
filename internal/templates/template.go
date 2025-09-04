@@ -218,7 +218,6 @@ func RenderString(templateStr string, data *TemplateData) (string, error) {
 	return buf.String(), nil
 }
 
-// ExecuteTemplate executes a template with any data type
 func ExecuteTemplate(templateStr string, data interface{}) (string, error) {
 	tmpl, err := template.New("inline").Parse(templateStr)
 	if err != nil {

@@ -13,11 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// ========== Remote Extends Tests ==========
-
 func TestLoadConfigWithRemoteExtends(t *testing.T) {
 	t.Run("remote extends success", func(t *testing.T) {
-		// Create a mock HTTP server for the base config
 		baseConfigContent := `
 metadata:
   name: Remote Base Project
@@ -44,7 +41,6 @@ agents:
 
 		tempDir := t.TempDir()
 
-		// Create child config that extends remote base
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := fmt.Sprintf(`
 extends: %s
@@ -63,7 +59,6 @@ rules:
 `, server.URL)
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
 
-		// Create test loader with test client that doesn't have SSRF protection
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      tempDir,
@@ -74,18 +69,15 @@ rules:
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 
-		// Check metadata inheritance and overrides
 		assert.Equal(t, "Child Project", cfg.Metadata.Name)
 		assert.Equal(t, "2.0.0", cfg.Metadata.Version)
-		assert.Equal(t, "Remote base description", cfg.Metadata.Description) // Inherited from remote
+		assert.Equal(t, "Remote base description", cfg.Metadata.Description)
 
-		// Check outputs are combined
 		assert.Len(t, cfg.Outputs, 2)
 		outputPaths := []string{cfg.Outputs[0].Path, cfg.Outputs[1].Path}
 		assert.Contains(t, outputPaths, "remote-base-output.md")
 		assert.Contains(t, outputPaths, "child-output.md")
 
-		// Check rules are merged (child overrides remote)
 		assert.Len(t, cfg.Rules, 2)
 		ruleNames := make(map[string]string)
 		for _, rule := range cfg.Rules {
@@ -94,14 +86,12 @@ rules:
 		assert.Equal(t, "Overridden remote rule", ruleNames["Remote Base Rule"])
 		assert.Equal(t, "Child rule content", ruleNames["Child Rule"])
 
-		// Check agents are inherited from remote
 		assert.Len(t, cfg.Agents, 1)
 		assert.Equal(t, "remote-base-agent", cfg.Agents[0].Name)
 		assert.Equal(t, "Remote base agent", cfg.Agents[0].Description)
 	})
 
 	t.Run("remote extends with relative remote includes", func(t *testing.T) {
-		// Create mock server for included config
 		includeContent := `
 rules:
   - name: Remote Include Rule
@@ -109,7 +99,6 @@ rules:
     priority: minimal
 `
 
-		// Create mock server for base config that includes the other
 		baseConfigContent := `
 metadata:
   name: Remote Base with Include
@@ -140,7 +129,6 @@ rules:
 
 		tempDir := t.TempDir()
 
-		// Create child config that extends remote base
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := fmt.Sprintf(`
 extends: %s/base.yaml
@@ -153,7 +141,6 @@ rules:
 `, server.URL)
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
 
-		// Create test loader with test client that doesn't have SSRF protection
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      tempDir,
@@ -163,7 +150,6 @@ rules:
 		cfg, err := loader.loadConfig(context.Background(), childConfigFile)
 		require.NoError(t, err)
 
-		// Should have rules from remote base + remote include + child
 		assert.Len(t, cfg.Rules, 3)
 		ruleNames := make([]string, len(cfg.Rules))
 		for i, rule := range cfg.Rules {
@@ -175,7 +161,6 @@ rules:
 	})
 
 	t.Run("remote extends not found", func(t *testing.T) {
-		// Create server that returns 404
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte("Not Found"))
@@ -194,7 +179,6 @@ outputs:
 `, server.URL)
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
 
-		// Create test loader with test client that doesn't have SSRF protection
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      tempDir,
@@ -208,7 +192,6 @@ outputs:
 	})
 
 	t.Run("remote extends invalid yaml", func(t *testing.T) {
-		// Create server that returns invalid YAML
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "text/yaml")
 			w.WriteHeader(http.StatusOK)
@@ -228,7 +211,6 @@ outputs:
 `, server.URL)
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
 
-		// Create test loader with test client that doesn't have SSRF protection
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      tempDir,
@@ -241,7 +223,6 @@ outputs:
 	})
 
 	t.Run("remote extends with local child includes", func(t *testing.T) {
-		// Create remote base config
 		baseConfigContent := `
 metadata:
   name: Remote Base
@@ -261,7 +242,6 @@ rules:
 
 		tempDir := t.TempDir()
 
-		// Create local include file
 		localIncludeFile := filepath.Join(tempDir, "local-include.yaml")
 		localIncludeContent := `
 rules:
@@ -271,7 +251,6 @@ rules:
 `
 		require.NoError(t, os.WriteFile(localIncludeFile, []byte(localIncludeContent), 0o644))
 
-		// Create child config that extends remote and includes local
 		childConfigFile := filepath.Join(tempDir, "child.yaml")
 		childContent := fmt.Sprintf(`
 extends: %s
@@ -286,7 +265,6 @@ rules:
 `, server.URL)
 		require.NoError(t, os.WriteFile(childConfigFile, []byte(childContent), 0o644))
 
-		// Create test loader with test client that doesn't have SSRF protection
 		loader := &configLoader{
 			visited:      make(map[string]bool),
 			baseDir:      tempDir,
@@ -296,7 +274,6 @@ rules:
 		cfg, err := loader.loadConfig(context.Background(), childConfigFile)
 		require.NoError(t, err)
 
-		// Should have rules from remote base + local include + child
 		assert.Len(t, cfg.Rules, 3)
 		ruleNames := make([]string, len(cfg.Rules))
 		for i, rule := range cfg.Rules {

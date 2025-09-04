@@ -7,19 +7,16 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-// Validator handles configuration validation
 type Validator struct {
 	configFile string
 }
 
-// NewValidator creates a new validator instance
 func NewValidator(configFile string) (*Validator, error) {
 	return &Validator{
 		configFile: configFile,
 	}, nil
 }
 
-// Validate validates the configuration and returns warnings
 func (v *Validator) Validate(ctx context.Context) ([]string, error) {
 	cfg, err := config.LoadConfigWithIncludes(ctx, v.configFile)
 	if err != nil {
@@ -32,17 +29,13 @@ func (v *Validator) Validate(ctx context.Context) ([]string, error) {
 
 	var warnings []string
 
-	// Basic configuration checks
 	warnings = append(warnings, v.checkEmptyConfiguration(cfg)...)
 	warnings = append(warnings, v.checkOutputsExist(cfg)...)
 
-	// Duplicate name checks
 	warnings = append(warnings, v.checkDuplicateNames(cfg)...)
 
-	// MCP server validation
 	warnings = append(warnings, v.checkMCPServerLogic(cfg)...)
 
-	// Target existence checks
 	warnings = append(warnings, v.checkTargetExistence(cfg)...)
 
 	return warnings, nil
@@ -67,35 +60,30 @@ func (v *Validator) checkOutputsExist(cfg *config.Config) []string {
 func (v *Validator) checkDuplicateNames(cfg *config.Config) []string {
 	var warnings []string
 
-	// Check for duplicate rules
 	warnings = append(warnings, checkDuplicateNames(
 		len(cfg.Rules),
 		func(i int) string { return cfg.Rules[i].Name },
 		"rule",
 	)...)
 
-	// Check for duplicate sections
 	warnings = append(warnings, checkDuplicateNames(
 		len(cfg.Sections),
 		func(i int) string { return cfg.Sections[i].Name },
 		"section",
 	)...)
 
-	// Check for duplicate agents
 	warnings = append(warnings, checkDuplicateNames(
 		len(cfg.Agents),
 		func(i int) string { return cfg.Agents[i].Name },
 		"agent",
 	)...)
 
-	// Check for duplicate MCP servers
 	warnings = append(warnings, checkDuplicateNames(
 		len(cfg.MCPServers),
 		func(i int) string { return cfg.MCPServers[i].Name },
 		"mcp_server",
 	)...)
 
-	// Check for duplicate commands
 	warnings = append(warnings, checkDuplicateNames(
 		len(cfg.Commands),
 		func(i int) string { return cfg.Commands[i].Name },
@@ -126,13 +114,11 @@ func (v *Validator) checkMCPServerLogic(cfg *config.Config) []string {
 func (v *Validator) checkTargetExistence(cfg *config.Config) []string {
 	var warnings []string
 
-	// Build map of output paths
 	outputPaths := make(map[string]bool)
 	for _, output := range cfg.Outputs {
 		outputPaths[output.Path] = true
 	}
 
-	// Check rule targets
 	for _, rule := range cfg.Rules {
 		for _, target := range rule.Targets {
 			if !outputPaths[target] {
@@ -141,7 +127,6 @@ func (v *Validator) checkTargetExistence(cfg *config.Config) []string {
 		}
 	}
 
-	// Check agent targets
 	for i := range cfg.Agents {
 		for _, target := range cfg.Agents[i].Targets {
 			if !outputPaths[target] {
@@ -150,7 +135,6 @@ func (v *Validator) checkTargetExistence(cfg *config.Config) []string {
 		}
 	}
 
-	// Check MCP server targets
 	for i := range cfg.MCPServers {
 		for _, target := range cfg.MCPServers[i].Targets {
 			if !outputPaths[target] {
@@ -159,7 +143,6 @@ func (v *Validator) checkTargetExistence(cfg *config.Config) []string {
 		}
 	}
 
-	// Check command targets
 	for i := range cfg.Commands {
 		for _, target := range cfg.Commands[i].Targets {
 			if !outputPaths[target] {

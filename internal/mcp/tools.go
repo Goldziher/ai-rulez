@@ -5,7 +5,6 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 )
 
-// registerTools registers all MCP tools with their handlers
 func (s *Server) registerTools() {
 	s.registerRulesTools()
 	s.registerSectionsTools()
@@ -18,9 +17,7 @@ func (s *Server) registerTools() {
 	s.registerUtilityTools()
 }
 
-// registerRulesTools registers rule-related tools
 func (s *Server) registerRulesTools() {
-	// list_rules - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_rules",
 			mcp.WithDescription("List all rules from the configuration"),
@@ -28,7 +25,6 @@ func (s *Server) registerRulesTools() {
 		handlers.ListRulesHandler,
 	)
 
-	// New: Get a single rule by name
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_rule",
 			mcp.WithDescription("Get a specific rule by name"),
@@ -40,7 +36,6 @@ func (s *Server) registerRulesTools() {
 		handlers.GetRuleHandler,
 	)
 
-	// Enhanced: Add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_rule",
 			mcp.WithDescription("Add a new rule to the configuration"),
@@ -53,7 +48,6 @@ func (s *Server) registerRulesTools() {
 		handlers.AddRuleHandler,
 	)
 
-	// Enhanced: Use name identifier and add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_rule",
 			mcp.WithDescription("Update an existing rule"),
@@ -67,7 +61,6 @@ func (s *Server) registerRulesTools() {
 		handlers.UpdateRuleHandler,
 	)
 
-	// Enhanced: Use name identifier
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_rule",
 			mcp.WithDescription("Delete a rule from the configuration"),
@@ -80,9 +73,7 @@ func (s *Server) registerRulesTools() {
 	)
 }
 
-// registerSectionsTools registers section-related tools
 func (s *Server) registerSectionsTools() {
-	// list_sections - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_sections",
 			mcp.WithDescription("List all sections from the configuration"),
@@ -90,7 +81,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.ListSectionsHandler,
 	)
 
-	// New: Get a single section by name
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_section",
 			mcp.WithDescription("Get a specific section by name"),
@@ -102,7 +92,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.GetSectionHandler,
 	)
 
-	// Enhanced: Add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_section",
 			mcp.WithDescription("Add a new section to the configuration"),
@@ -115,7 +104,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.AddSectionHandler,
 	)
 
-	// Enhanced: Use name identifier and add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_section",
 			mcp.WithDescription("Update an existing section"),
@@ -129,7 +117,6 @@ func (s *Server) registerSectionsTools() {
 		handlers.UpdateSectionHandler,
 	)
 
-	// Enhanced: Use name identifier
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_section",
 			mcp.WithDescription("Delete a section from the configuration"),
@@ -142,9 +129,7 @@ func (s *Server) registerSectionsTools() {
 	)
 }
 
-// registerAgentsTools registers agent-related tools
 func (s *Server) registerAgentsTools() {
-	// list_agents - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_agents",
 			mcp.WithDescription("List all agents from the configuration"),
@@ -152,7 +137,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.ListAgentsHandler,
 	)
 
-	// New: Get a single agent by name
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_agent",
 			mcp.WithDescription("Get a specific agent by name"),
@@ -164,7 +148,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.GetAgentHandler,
 	)
 
-	// Enhanced: Add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_agent",
 			mcp.WithDescription("Add a new agent to the configuration"),
@@ -181,7 +164,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.AddAgentHandler,
 	)
 
-	// Enhanced: Use name identifier and add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_agent",
 			mcp.WithDescription("Update an existing agent"),
@@ -199,7 +181,6 @@ func (s *Server) registerAgentsTools() {
 		handlers.UpdateAgentHandler,
 	)
 
-	// Enhanced: Use name identifier
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_agent",
 			mcp.WithDescription("Delete an agent from the configuration"),
@@ -212,9 +193,7 @@ func (s *Server) registerAgentsTools() {
 	)
 }
 
-// registerOutputsTools registers output-related tools
 func (s *Server) registerOutputsTools() {
-	// list_outputs - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_outputs",
 			mcp.WithDescription("List all outputs from the configuration"),
@@ -222,7 +201,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.ListOutputsHandler,
 	)
 
-	// New: Get a single output by path
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_output",
 			mcp.WithDescription("Get a specific output by path"),
@@ -234,7 +212,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.GetOutputHandler,
 	)
 
-	// Enhanced: Add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("add_output",
 			mcp.WithDescription("Add a new output to the configuration"),
@@ -247,7 +224,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.AddOutputHandler,
 	)
 
-	// Enhanced: Use path identifier and add all schema fields
 	s.mcpServer.AddTool(
 		mcp.NewTool("update_output",
 			mcp.WithDescription("Update an existing output"),
@@ -261,7 +237,6 @@ func (s *Server) registerOutputsTools() {
 		handlers.UpdateOutputHandler,
 	)
 
-	// Enhanced: Use path identifier
 	s.mcpServer.AddTool(
 		mcp.NewTool("delete_output",
 			mcp.WithDescription("Delete an output from the configuration"),
@@ -274,7 +249,6 @@ func (s *Server) registerOutputsTools() {
 	)
 }
 
-// registerMCPServersTools registers mcp_server-related tools
 func (s *Server) registerMCPServersTools() {
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_mcp_servers", mcp.WithDescription("List all MCP servers")),
@@ -333,7 +307,6 @@ func (s *Server) registerMCPServersTools() {
 	)
 }
 
-// registerCommandsTools registers command-related tools
 func (s *Server) registerCommandsTools() {
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_commands", mcp.WithDescription("List all custom commands")),
@@ -390,9 +363,7 @@ func (s *Server) registerCommandsTools() {
 	)
 }
 
-// registerSingletonTools registers tools for managing top-level singleton properties
 func (s *Server) registerSingletonTools() {
-	// Metadata
 	s.mcpServer.AddTool(mcp.NewTool("get_metadata", mcp.WithDescription("Get project metadata")),
 		handlers.GetMetadataHandler)
 	s.mcpServer.AddTool(
@@ -405,7 +376,6 @@ func (s *Server) registerSingletonTools() {
 		handlers.SetMetadataHandler,
 	)
 
-	// Extends
 	s.mcpServer.AddTool(mcp.NewTool("get_extends", mcp.WithDescription("Get the extends property")),
 		handlers.GetExtendsHandler)
 	s.mcpServer.AddTool(
@@ -418,7 +388,6 @@ func (s *Server) registerSingletonTools() {
 	s.mcpServer.AddTool(mcp.NewTool("delete_extends", mcp.WithDescription("Delete the extends property")),
 		handlers.DeleteExtendsHandler)
 
-	// Includes
 	s.mcpServer.AddTool(mcp.NewTool("list_includes", mcp.WithDescription("List all include paths")),
 		handlers.ListIncludesHandler)
 	s.mcpServer.AddTool(
@@ -437,7 +406,6 @@ func (s *Server) registerSingletonTools() {
 	)
 }
 
-// registerProjectTools registers project-related tools
 func (s *Server) registerProjectTools() {
 	s.mcpServer.AddTool(
 		mcp.NewTool("generate_outputs",
@@ -455,7 +423,6 @@ func (s *Server) registerProjectTools() {
 		handlers.ValidateConfigHandler,
 	)
 
-	// Overhauled init_project to match CLI capabilities
 	s.mcpServer.AddTool(
 		mcp.NewTool("init_project",
 			mcp.WithDescription("Initialize a new ai-rulez project in the current directory"),
@@ -469,7 +436,6 @@ func (s *Server) registerProjectTools() {
 	)
 }
 
-// registerUtilityTools registers utility tools
 func (s *Server) registerUtilityTools() {
 	s.mcpServer.AddTool(
 		mcp.NewTool("get_version",

@@ -22,7 +22,6 @@ var (
 	recursive       bool
 )
 
-// GenerateCmd represents the generate command
 var GenerateCmd = &cobra.Command{
 	Use:   "generate [config-file]",
 	Short: "Generate AI assistant rule files from configuration",
@@ -48,7 +47,6 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Single file generation
 	var configPath string
 	//nolint:gocritic // Simple if-else chain is more readable than switch
 	if len(args) > 0 {
@@ -56,7 +54,6 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	} else if cfgFile != "" {
 		configPath = cfgFile
 	} else {
-		// Auto-discover config file
 		var err error
 		configPath, err = config.FindConfigFile(".")
 		if err != nil {
@@ -217,7 +214,6 @@ func handleGitignoreUpdate(configPath string, cfg *config.Config) {
 	}
 }
 
-// fmtError formats an error for display
 func fmtError(err error) {
 	if oopsErr, ok := oops.AsOops(err); ok {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
