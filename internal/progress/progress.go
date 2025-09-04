@@ -33,29 +33,42 @@ type Bar struct {
 	prefix string
 }
 
-func New(maximum int, description string) *Bar {
-	if IsQuiet() {
-		return &Bar{
-			quiet:  true,
-			prefix: description,
-		}
-	}
+var defaultTheme = progressbar.Theme{
+	Saucer:        "[green]=[reset]",
+	SaucerHead:    "[green]>[reset]",
+	SaucerPadding: " ",
+	BarStart:      "[",
+	BarEnd:        "]",
+}
 
-	bar := progressbar.NewOptions(maximum,
+func commonOptions(description string) []progressbar.Option {
+	return []progressbar.Option{
 		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionShowBytes(false),
 		progressbar.OptionSetWidth(40),
 		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
-		progressbar.OptionShowCount(),
+		progressbar.OptionSetTheme(defaultTheme),
 		progressbar.OptionClearOnFinish(),
+	}
+}
+
+func createQuietBar(description string) *Bar {
+	return &Bar{
+		quiet:  true,
+		prefix: description,
+	}
+}
+
+func New(maximum int, description string) *Bar {
+	if IsQuiet() {
+		return createQuietBar(description)
+	}
+
+	opts := append(commonOptions(description),
+		progressbar.OptionShowBytes(false),
+		progressbar.OptionShowCount(),
 	)
+
+	bar := progressbar.NewOptions(maximum, opts...)
 
 	return &Bar{
 		bar:    bar,
@@ -66,30 +79,18 @@ func New(maximum int, description string) *Bar {
 
 func NewBytes(maxBytes int64, description string) *Bar {
 	if IsQuiet() {
-		return &Bar{
-			quiet:  true,
-			prefix: description,
-		}
+		return createQuietBar(description)
 	}
 
-	bar := progressbar.NewOptions64(maxBytes,
-		progressbar.OptionEnableColorCodes(true),
+	opts := append(commonOptions(description),
 		progressbar.OptionShowBytes(true),
-		progressbar.OptionSetWidth(40),
-		progressbar.OptionSetDescription(description),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}),
 		progressbar.OptionShowIts(),
 		progressbar.OptionSetItsString("B"),
 		progressbar.OptionThrottle(65*time.Millisecond),
-		progressbar.OptionClearOnFinish(),
 		progressbar.OptionShowElapsedTimeOnFinish(),
 	)
+
+	bar := progressbar.NewOptions64(maxBytes, opts...)
 
 	return &Bar{
 		bar:    bar,
@@ -100,18 +101,17 @@ func NewBytes(maxBytes int64, description string) *Bar {
 
 func NewSpinner(description string) *Bar {
 	if IsQuiet() {
-		return &Bar{
-			quiet:  true,
-			prefix: description,
-		}
+		return createQuietBar(description)
 	}
 
-	bar := progressbar.NewOptions(-1,
+	opts := []progressbar.Option{
 		progressbar.OptionEnableColorCodes(true),
 		progressbar.OptionSetDescription(description),
 		progressbar.OptionSpinnerType(14),
 		progressbar.OptionClearOnFinish(),
-	)
+	}
+
+	bar := progressbar.NewOptions(-1, opts...)
 
 	return &Bar{
 		bar:    bar,

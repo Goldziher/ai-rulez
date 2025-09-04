@@ -45,9 +45,7 @@ func (s *MCPToolsTestSuite) TestGetRules() {
 	response := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
-	result := response.GetParsedResult(s.T())
-	rules, ok := result["rules"].([]interface{})
-	s.True(ok, "Rules should be an array")
+	rules := response.GetParsedArrayResult(s.T())
 	s.Len(rules, 2, "Should have 2 rules from basic config")
 
 	firstRule, ok := rules[0].(map[string]interface{})
@@ -63,9 +61,7 @@ func (s *MCPToolsTestSuite) TestGetRulesWithFilter() {
 	})
 	response.AssertToolSuccess(s.T())
 
-	result := response.GetParsedResult(s.T())
-	rules, ok := result["rules"].([]interface{})
-	s.True(ok)
+	rules := response.GetParsedArrayResult(s.T())
 	s.Len(rules, 1, "Should filter to only matching rules")
 }
 
@@ -83,8 +79,7 @@ func (s *MCPToolsTestSuite) TestAddRule() {
 	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
-	getRulesResult := getRulesResponse.GetParsedResult(s.T())
-	rules, _ := getRulesResult["rules"].([]interface{})
+	rules := getRulesResponse.GetParsedArrayResult(s.T())
 	s.Len(rules, 3, "Should now have 3 rules")
 }
 
@@ -100,8 +95,7 @@ func (s *MCPToolsTestSuite) TestAddRuleWithAllParameters() {
 	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
-	getRulesResult := getRulesResponse.GetParsedResult(s.T())
-	rules, _ := getRulesResult["rules"].([]interface{})
+	rules := getRulesResponse.GetParsedArrayResult(s.T())
 
 	var newRule map[string]interface{}
 	for _, r := range rules {
@@ -128,8 +122,7 @@ func (s *MCPToolsTestSuite) TestUpdateRule() {
 	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
-	getRulesResult := getRulesResponse.GetParsedResult(s.T())
-	rules, _ := getRulesResult["rules"].([]interface{})
+	rules := getRulesResponse.GetParsedArrayResult(s.T())
 	firstRule, _ := rules[0].(map[string]interface{})
 	s.Equal("Updated rule content", firstRule["Content"])
 	s.Equal("critical", firstRule["Priority"])
@@ -144,8 +137,7 @@ func (s *MCPToolsTestSuite) TestDeleteRule() {
 	getRulesResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
 	getRulesResponse.AssertToolSuccess(s.T())
 
-	getRulesResult := getRulesResponse.GetParsedResult(s.T())
-	rules, _ := getRulesResult["rules"].([]interface{})
+	rules := getRulesResponse.GetParsedArrayResult(s.T())
 	s.Len(rules, 1, "Should now have 1 rule")
 }
 
@@ -153,9 +145,7 @@ func (s *MCPToolsTestSuite) TestGetSections() {
 	response := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
-	result := response.GetParsedResult(s.T())
-	sections, ok := result["sections"].([]interface{})
-	s.True(ok, "Sections should be an array")
+	sections := response.GetParsedArrayResult(s.T())
 	s.Len(sections, 1, "Should have 1 section from basic config")
 }
 
@@ -170,8 +160,7 @@ func (s *MCPToolsTestSuite) TestAddSection() {
 	getSectionsResponse := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
-	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
-	sections, _ := getSectionsResult["sections"].([]interface{})
+	sections := getSectionsResponse.GetParsedArrayResult(s.T())
 	s.Len(sections, 2, "Should now have 2 sections")
 }
 
@@ -186,8 +175,7 @@ func (s *MCPToolsTestSuite) TestUpdateSection() {
 	getSectionsResponse := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
-	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
-	sections, _ := getSectionsResult["sections"].([]interface{})
+	sections := getSectionsResponse.GetParsedArrayResult(s.T())
 	firstSection, _ := sections[0].(map[string]interface{})
 	s.Equal("Updated Section Title", firstSection["Name"])
 }
@@ -201,8 +189,7 @@ func (s *MCPToolsTestSuite) TestDeleteSection() {
 	getSectionsResponse := s.client.CallTool(s.T(), "list_sections", map[string]interface{}{})
 	getSectionsResponse.AssertToolSuccess(s.T())
 
-	getSectionsResult := getSectionsResponse.GetParsedResult(s.T())
-	sections, _ := getSectionsResult["sections"].([]interface{})
+	sections := getSectionsResponse.GetParsedArrayResult(s.T())
 	s.Len(sections, 0, "Should now have 0 sections")
 }
 
@@ -212,10 +199,8 @@ func (s *MCPToolsTestSuite) TestGetAgents() {
 	response := s.client.CallTool(s.T(), "list_agents", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
-	result := response.GetParsedResult(s.T())
-	agents, ok := result["agents"].([]interface{})
-	s.True(ok, "Agents should be an array")
-	s.Len(agents, 1, "Should have 1 agent")
+	agents := response.GetParsedArrayResult(s.T())
+	s.Len(agents, 3, "Should have 3 agents from ConfigWithAgents")
 
 	firstAgent, _ := agents[0].(map[string]interface{})
 	s.Equal("code-reviewer", firstAgent["Name"])
@@ -233,8 +218,7 @@ func (s *MCPToolsTestSuite) TestAddAgent() {
 	getAgentsResponse := s.client.CallTool(s.T(), "list_agents", map[string]interface{}{})
 	getAgentsResponse.AssertToolSuccess(s.T())
 
-	getAgentsResult := getAgentsResponse.GetParsedResult(s.T())
-	agents, _ := getAgentsResult["agents"].([]interface{})
+	agents := getAgentsResponse.GetParsedArrayResult(s.T())
 	s.Len(agents, 1, "Should now have 1 agent")
 }
 
@@ -242,9 +226,7 @@ func (s *MCPToolsTestSuite) TestGetOutputs() {
 	response := s.client.CallTool(s.T(), "list_outputs", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 
-	result := response.GetParsedResult(s.T())
-	outputs, ok := result["outputs"].([]interface{})
-	s.True(ok, "Outputs should be an array")
+	outputs := response.GetParsedArrayResult(s.T())
 	s.Len(outputs, 1, "Should have 1 output from basic config")
 }
 
@@ -257,8 +239,7 @@ func (s *MCPToolsTestSuite) TestAddOutput() {
 	getOutputsResponse := s.client.CallTool(s.T(), "list_outputs", map[string]interface{}{})
 	getOutputsResponse.AssertToolSuccess(s.T())
 
-	getOutputsResult := getOutputsResponse.GetParsedResult(s.T())
-	outputs, _ := getOutputsResult["outputs"].([]interface{})
+	outputs := getOutputsResponse.GetParsedArrayResult(s.T())
 	s.Len(outputs, 2, "Should now have 2 outputs")
 }
 

@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/crud"
 )
 
 func TestOutputHandlers(t *testing.T) {
@@ -26,7 +27,7 @@ func TestOutputHandlers(t *testing.T) {
 
 		newOutput := config.Output{
 			Path:     "new-output.md",
-			Template: "custom",
+			Template: crud.CreateTemplateConfig("builtin", "custom"),
 		}
 
 		cfg.Outputs = append(cfg.Outputs, newOutput)
@@ -42,12 +43,16 @@ func TestOutputHandlers(t *testing.T) {
 		require.NoError(t, err)
 
 		if len(cfg.Outputs) > 0 {
-			cfg.Outputs[0].Template = "updated-template"
+			cfg.Outputs[0].Template = crud.CreateTemplateConfig("builtin", "updated-template")
 			require.NoError(t, config.SaveConfig(cfg, configFile))
 
 			reloaded, err := config.LoadConfig(configFile)
 			require.NoError(t, err)
-			assert.Equal(t, "updated-template", reloaded.Outputs[0].Template)
+			template, err := reloaded.Outputs[0].GetTemplate()
+			require.NoError(t, err)
+			if template != nil {
+				assert.Equal(t, "updated-template", template.Value)
+			}
 		}
 	})
 

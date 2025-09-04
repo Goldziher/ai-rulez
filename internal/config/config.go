@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -112,11 +113,34 @@ func SaveConfig(config *Config, filename string) error {
 			Wrapf(err, "create directory")
 	}
 
-	if err := os.WriteFile(filename, data, 0o644); err != nil {
+	return writeFileBuffered(filename, data)
+}
+
+func writeFileBuffered(filename string, data []byte) error {
+	file, err := os.Create(filename)
+	if err != nil {
 		return oops.
 			With("path", filename).
 			Hint(fmt.Sprintf("Check if you have write permissions for: %s\nEnsure the parent directory exists\nCheck available disk space", filename)).
+			Wrapf(err, "create file")
+	}
+	defer func() { _ = file.Close() }()
+
+	writer := bufio.NewWriterSize(file, 8192)
+	defer func() { _ = writer.Flush() }()
+
+	if _, err := writer.Write(data); err != nil {
+		return oops.
+			With("path", filename).
+			Hint(fmt.Sprintf("Check available disk space and write permissions for: %s", filename)).
 			Wrapf(err, "write file")
+	}
+
+	if err := writer.Flush(); err != nil {
+		return oops.
+			With("path", filename).
+			Hint("Check available disk space").
+			Wrapf(err, "flush file")
 	}
 
 	return nil

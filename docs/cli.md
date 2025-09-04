@@ -1,47 +1,38 @@
 # CLI Reference
 
-This page provides a comprehensive reference for all `ai-rulez` CLI commands.
+All the `ai-rulez` commands you need to know.
 
 ## Core Commands
 
-These are the primary commands for managing your project.
+The essentials for day-to-day use.
 
 ### `init`
 
-Initializes a new `ai_rulez.yaml` configuration file in the current directory.
+Create a new `ai_rulez.yaml` file in the current directory.
 
 ```bash
-# Create a default configuration for a new project
-ai-rulez init "My New Project"
-
-# Initialize with support for popular providers
-ai-rulez init --popular
-
-# Initialize for a specific provider
-ai-rulez init --preset continue-dev
+ai-rulez init "My Project" --popular
 ```
 
 ### `generate`
 
-Generates all output files defined in the `outputs` section of your configuration.
+Create all your AI instruction files.
 
 ```bash
-# Generate all configured outputs
 ai-rulez generate
 ```
 
 ### `validate`
 
-Validates the syntax and logical consistency of your `ai_rulez.yaml` file.
+Check your configuration for errors.
 
 ```bash
-# Validate the configuration in the current directory
 ai-rulez validate
 ```
 
 ### `version`
 
-Displays the current version of the `ai-rulez` CLI.
+Show the current version.
 
 ```bash
 ai-rulez version
