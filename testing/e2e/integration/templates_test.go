@@ -344,9 +344,7 @@ agents:
 	reviewerContent := testutil.ReadFile(s.T(), reviewerPath)
 	s.Contains(reviewerContent, "name: reviewer")
 	s.Contains(reviewerContent, "description: Code review agent")
-	s.Contains(reviewerContent, "- Read")
-	s.Contains(reviewerContent, "- Edit")
-	s.Contains(reviewerContent, "- Grep")
+	s.Contains(reviewerContent, "tools: Read, Edit, Grep")
 	s.Contains(reviewerContent, "You are a code reviewer")
 }
 

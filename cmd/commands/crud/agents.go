@@ -3,6 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	"github.com/Goldziher/ai-rulez/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -29,7 +30,7 @@ var AddAgentCmd = &cobra.Command{
 
 		priority, err := config.ParsePriority(agentPriority)
 		if err != nil {
-			crud.FmtError(err)
+			crud.FmtError("%v", err)
 		}
 
 		newAgent := &config.Agent{
@@ -66,7 +67,7 @@ var UpdateAgentCmd = &cobra.Command{
 		if cmd.Flags().Changed("priority") {
 			priority, err := config.ParsePriority(agentPriority)
 			if err != nil {
-				crud.FmtError(err)
+				crud.FmtError("%v", err)
 			}
 			updates["Priority"] = priority
 		}
@@ -126,7 +127,7 @@ func init() {
 	// Flags for Add command
 	AddAgentCmd.Flags().StringVar(&agentID, "id", "", "Optional unique identifier for the agent")
 	AddAgentCmd.Flags().StringVarP(&agentDescription, "description", "d", "", "Description of the agent (required)")
-	AddAgentCmd.MarkFlagRequired("description")
+	utils.LogIfErr(AddAgentCmd.MarkFlagRequired("description"))
 	AddAgentCmd.Flags().StringVarP(&agentPriority, "priority", "p", "medium", "Priority of the agent (critical, high, medium, low, minimal)")
 	AddAgentCmd.Flags().StringSliceVar(&agentTools, "tools", []string{}, "Comma-separated list of tools the agent can use")
 	AddAgentCmd.Flags().StringVarP(&agentSystemPrompt, "system-prompt", "s", "", "System prompt for the agent")
