@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/templates"
@@ -14,33 +15,52 @@ import (
 
 // GenerateOutputsHandler handles the generate_outputs MCP tool
 func GenerateOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	configFile, _ := request.Params.GetString("config_file")
+	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
-	gen, err := generator.NewGenerator(configFile)
+	// Load config
+	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
 		return crud.ToolError(err)
 	}
 
-	results, err := gen.Generate()
-	if err != nil {
+	// Create generator
+	gen := generator.NewWithConfigFile(configFile)
+
+	// Generate all outputs
+	if err := gen.GenerateAll(cfg); err != nil {
 		return crud.ToolError(err)
 	}
 
-	return crud.ToolSuccess(results)
+	// Get list of generated files
+	results := make([]string, len(cfg.Outputs))
+	for i, output := range cfg.Outputs {
+		results[i] = output.Path
+	}
+
+	return crud.ToolSuccess(map[string]interface{}{
+		"message": "Outputs generated successfully",
+		"config":  configFile,
+		"results": results,
+	})
 }
 
 // ValidateConfigHandler handles the validate_config MCP tool
 func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	configFile, _ := request.Params.GetString("config_file")
+	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
 	val, err := validator.NewValidator(configFile)
 	if err != nil {
 		return crud.ToolError(err)
 	}
 
-	warnings, err := val.Validate()
+	warnings, err := val.Validate(ctx)
 	if err != nil {
-		return crud.ToolError(err)
+		// Validation failed - return success response with valid: false and error details
+		result := map[string]interface{}{
+			"valid": false,
+			"error": err.Error(),
+		}
+		return crud.ToolSuccess(result)
 	}
 
 	result := map[string]interface{}{
@@ -53,11 +73,17 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 
 // InitProjectHandler handles the init_project MCP tool
 func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	projectName, _ := request.Params.GetString("project_name")
-	providers, _ := request.Params.GetArray("providers")
-	withAgents, _ := request.Params.GetBoolean("with_agents")
-	allProviders, _ := request.Params.GetBoolean("all_providers")
-	popularProviders, _ := request.Params.GetBoolean("popular_providers")
+	projectName := request.GetString("project_name", "")
+	providersInterface := request.GetArguments()["providers"]
+	withAgents := request.GetBool("with_agents", false)
+	allProviders := request.GetBool("all_providers", false)
+	popularProviders := request.GetBool("popular_providers", false)
+
+	// Convert providers interface{} to []interface{}
+	var providers []interface{}
+	if providersSlice, ok := providersInterface.([]interface{}); ok {
+		providers = providersSlice
+	}
 
 	providerConfig := templates.ProviderConfig{}
 	if allProviders {

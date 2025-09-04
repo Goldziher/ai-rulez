@@ -10,22 +10,22 @@ import (
 
 // ListSectionsHandler handles the list_sections MCP tool
 func ListSectionsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return crud.HandleList(ctx, "sections")
+	return crud.HandleListMCP(ctx, "sections")
 }
 
 // GetSectionHandler handles the get_section MCP tool
 func GetSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
-	return crud.HandleGet(ctx, "sections", name)
+	name := request.GetString("name", "")
+	return crud.HandleGetMCP(ctx, "sections", name)
 }
 
 // AddSectionHandler handles the add_section MCP tool
 func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
-	content, _ := request.Params.GetString("content")
-	id, _ := request.Params.GetString("id")
-	priorityStr, _ := request.Params.GetString("priority")
-	targets, _ := request.Params.GetArray("targets")
+	name := request.GetString("name", "")
+	content := request.GetString("content", "")
+	id := request.GetString("id", "")
+	priorityStr := request.GetString("priority", "")
+	targets := request.GetStringSlice("targets", []string{})
 
 	priority, err := config.ParsePriority(priorityStr)
 	if err != nil {
@@ -37,42 +37,42 @@ func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 		Name:     name,
 		Content:  content,
 		Priority: priority,
-		Targets:  crud.InterfaceSliceToStringSlice(targets),
+		Targets:  targets,
 	}
 
-	return crud.HandleAdd(ctx, "sections", newSection)
+	return crud.HandleAddMCP(ctx, "sections", newSection)
 }
 
 // UpdateSectionHandler handles the update_section MCP tool
 func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
+	name := request.GetString("name", "")
 
 	updates := make(map[string]interface{})
-	if newName, ok := request.Params.GetString("new_name"); ok {
+	if newName := request.GetString("new_name", ""); newName != "" {
 		updates["Name"] = newName
 	}
-	if id, ok := request.Params.GetString("id"); ok {
+	if id := request.GetString("id", ""); id != "" {
 		updates["ID"] = id
 	}
-	if content, ok := request.Params.GetString("content"); ok {
+	if content := request.GetString("content", ""); content != "" {
 		updates["Content"] = content
 	}
-	if priorityStr, ok := request.Params.GetString("priority"); ok {
+	if priorityStr := request.GetString("priority", ""); priorityStr != "" {
 		priority, err := config.ParsePriority(priorityStr)
 		if err != nil {
 			return crud.ToolError(err)
 		}
 		updates["Priority"] = priority
 	}
-	if targets, ok := request.Params.GetArray("targets"); ok {
-		updates["Targets"] = crud.InterfaceSliceToStringSlice(targets)
+	if targets := request.GetStringSlice("targets", nil); targets != nil {
+		updates["Targets"] = targets
 	}
 
-	return crud.HandleUpdate(ctx, "sections", name, updates)
+	return crud.HandleUpdateMCP(ctx, "sections", name, updates)
 }
 
 // DeleteSectionHandler handles the delete_section MCP tool
 func DeleteSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	name, _ := request.Params.GetString("name")
-	return crud.HandleDelete(ctx, "sections", name)
+	name := request.GetString("name", "")
+	return crud.HandleDeleteMCP(ctx, "sections", name)
 }

@@ -20,7 +20,7 @@ func (s *Server) registerTools() {
 
 // registerRulesTools registers rule-related tools
 func (s *Server) registerRulesTools() {
-	// Replaces get_rules for consistency
+	// list_rules - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_rules",
 			mcp.WithDescription("List all rules from the configuration"),
@@ -82,7 +82,7 @@ func (s *Server) registerRulesTools() {
 
 // registerSectionsTools registers section-related tools
 func (s *Server) registerSectionsTools() {
-	// Replaces get_sections for consistency
+	// list_sections - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_sections",
 			mcp.WithDescription("List all sections from the configuration"),
@@ -144,7 +144,7 @@ func (s *Server) registerSectionsTools() {
 
 // registerAgentsTools registers agent-related tools
 func (s *Server) registerAgentsTools() {
-	// Replaces get_agents for consistency
+	// list_agents - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_agents",
 			mcp.WithDescription("List all agents from the configuration"),
@@ -214,7 +214,7 @@ func (s *Server) registerAgentsTools() {
 
 // registerOutputsTools registers output-related tools
 func (s *Server) registerOutputsTools() {
-	// Replaces get_outputs for consistency
+	// list_outputs - consistent naming
 	s.mcpServer.AddTool(
 		mcp.NewTool("list_outputs",
 			mcp.WithDescription("List all outputs from the configuration"),

@@ -37,7 +37,7 @@ var AddMCPServerCmd = &cobra.Command{
 			Env:         crud.ParseEnvVars(mcpEnv),
 			Transport:   mcpTransport,
 			URL:         mcpURL,
-			Enabled:     mcpEnabled,
+			Enabled:     &mcpEnabled,
 			Targets:     mcpTargets,
 		}
 
