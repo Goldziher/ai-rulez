@@ -630,14 +630,16 @@ metadata:
   name: "Test Project"
 outputs:
   - path: "output.md"
-    template: |
-      {{range .Rules}}
-        {{range .SubRules}}
-          {{range .Items}}
-            {{.Content}}
+    template:
+      type: inline
+      value: |
+        {{range .Rules}}
+          {{range .SubRules}}
+            {{range .Items}}
+              {{.Content}}
+            {{end}}
           {{end}}
-        {{end}}
-      {{end}}`,
+        {{end}}`,
 			wantErr: false,
 		},
 		{

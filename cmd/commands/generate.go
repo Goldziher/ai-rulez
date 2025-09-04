@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/migration"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -60,6 +61,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 			fmtError(err)
 			os.Exit(1)
 		}
+	}
+
+	if err := migration.MigrateIfNeeded(configPath); err != nil {
+		fmtError(err)
+		os.Exit(1)
 	}
 
 	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
@@ -122,7 +128,7 @@ func findConfigFilesRecursively() []string {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && isConfigFile(filepath.Base(path)) {
+		if !info.IsDir() && migration.IsConfigFile(filepath.Base(path)) {
 			configFiles = append(configFiles, path)
 			if err := spinner.Add(1); err != nil {
 				logger.Debug("Failed to update spinner", "error", err)
@@ -143,10 +149,6 @@ func findConfigFilesRecursively() []string {
 	return configFiles
 }
 
-func isConfigFile(basename string) bool {
-	return basename == "ai_rules.yaml" || basename == "ai_rulez.yaml" || basename == "ai-rules.yaml"
-}
-
 func processConfigFiles(configFiles []string) int {
 	fileCounter := progress.NewFileCounter(len(configFiles), "Processing configurations")
 	totalGenerated := 0
@@ -162,6 +164,16 @@ func processConfigFiles(configFiles []string) int {
 
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) int {
 	fileCounter.StartFile(configPath)
+
+	version, err := migration.DetectAndMigrate(configPath)
+	if err != nil {
+		fileCounter.Error(err)
+		return 0
+	}
+
+	if version == "v1" {
+		logger.Debug("Migrated config", "path", configPath, "from", "v1", "to", "v2")
+	}
 
 	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
 	if err != nil {

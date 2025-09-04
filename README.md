@@ -2,7 +2,7 @@
 
 **One config to rule them all.**
 
-Stop manually synchronizing AI instructions across dozens of files. `ai-rulez` provides a single, elegant `ai_rulez.yaml` to manage context for Claude, Cursor, Copilot, and all your other AI tools, with a powerful CLI and programmatic API to automate everything.
+Tired of manually copying AI instructions between `.cursorrules`, `CLAUDE.md`, and a dozen other files? `ai-rulez` gives you one `ai_rulez.yaml` file that generates them all. Keep your AI context in sync across every tool you use.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -15,17 +15,17 @@ Stop manually synchronizing AI instructions across dozens of files. `ai-rulez` p
 
 ## Why ai-rulez?
 
-- **Single Source of Truth:** Define rules, agents, and context once. Generate everywhere. Eliminate context drift and ensure all your AI tools operate with the same instructions.
+- **Write once, generate everywhere:** Define your AI context in one place. `ai-rulez` creates the right format for each tool automatically.
 
-- **Complete CLI Toolkit:** Manage your entire configuration from the command line. Add a rule, update an agent, or manage include files programmatically. Never hand-edit YAML again.
+- **CLI for everything:** Add rules, update configs, generate files—all from the command line. No more hand-editing YAML files.
 
-- **Full Programmatic API:** A built-in MCP Server exposes the entire `ai-rulez` feature set, allowing for deep, programmatic integration with AI assistants and custom tools.
+- **MCP integration:** Your AI assistant can manage your configuration directly through the built-in MCP server.
 
-- **Built for Scale:** Use `extends` and `includes` to create composable, reusable configurations that can be shared across your entire organization, ensuring consistency while maintaining flexibility.
+- **Team-friendly:** Share configs with `extends` and `includes`. Perfect for teams and organizations.
 
-## Future-Facing by Design
+## Future-Ready
 
-The AI landscape is evolving rapidly. `ai-rulez` is designed to be an extensible, future-facing platform. Its provider-based architecture and powerful templating system make it simple to add support for new AI assistants, agentic tools, and novel configuration formats as they emerge.
+As new AI tools emerge, `ai-rulez` grows with them. The extensible design makes it easy to add support for new assistants and platforms.
 
 ## Supported Tools & Platforms
 
@@ -115,7 +115,7 @@ ai-rulez generate
 - **[Quick Start Guide](./docs/quick-start.md)**
 - **[Full CLI Reference](./docs/cli.md)**
 - **[Configuration Guide](./docs/configuration.md)**
-- **[Best Practices](./docs/best-practices.md)**
+- **[Migration Guide](./docs/migration-guide.md)** - Upgrading from v1.x to v2.0
 
 ## Contributing
 

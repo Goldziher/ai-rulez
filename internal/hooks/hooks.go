@@ -3,40 +3,33 @@ package hooks
 import "os"
 
 func DetectGitHooks() string {
-	if detectLefthook() {
-		return "lefthook"
+	hooks := []struct {
+		name  string
+		files []string
+	}{
+		{"lefthook", []string{"lefthook.yml", ".lefthook.yml", "lefthook.yaml", ".lefthook.yaml"}},
+		{"pre-commit", []string{".pre-commit-config.yaml"}},
+		{"husky", []string{".husky"}},
 	}
-	if detectPreCommit() {
-		return "pre-commit"
-	}
-	if detectHusky() {
-		return "husky"
+
+	for _, hook := range hooks {
+		if checkAnyFileExists(hook.files) {
+			return hook.name
+		}
 	}
 	return ""
 }
 
-func detectLefthook() bool {
-	if _, err := os.Stat("lefthook.yml"); err == nil {
-		return true
-	}
-	if _, err := os.Stat(".lefthook.yml"); err == nil {
-		return true
-	}
-	if _, err := os.Stat("lefthook.yaml"); err == nil {
-		return true
-	}
-	if _, err := os.Stat(".lefthook.yaml"); err == nil {
-		return true
+func checkAnyFileExists(files []string) bool {
+	for _, file := range files {
+		if fileExists(file) {
+			return true
+		}
 	}
 	return false
 }
 
-func detectPreCommit() bool {
-	_, err := os.Stat(".pre-commit-config.yaml")
-	return err == nil
-}
-
-func detectHusky() bool {
-	_, err := os.Stat(".husky")
+func fileExists(path string) bool {
+	_, err := os.Stat(path)
 	return err == nil
 }

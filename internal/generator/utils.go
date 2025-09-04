@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"bufio"
 	"crypto/sha256"
 	"encoding/hex"
 	"hash"
@@ -72,10 +73,39 @@ func (g *Generator) writeFile(filePath, content string) error {
 			Wrapf(err, "failed to create output directory")
 	}
 
-	if err := os.WriteFile(fullPath, []byte(content), 0o644); err != nil {
+	return writeFileBuffered(fullPath, content)
+}
+
+func writeFileBuffered(filePath, content string) error {
+	file, err := os.Create(filePath)
+	if err != nil {
 		return oops.
-			With("path", fullPath).
-			Wrapf(err, "failed to write file")
+			With("path", filePath).
+			Hint("Check write permissions and available disk space").
+			Wrapf(err, "create file")
+	}
+	defer func() { _ = file.Close() }()
+
+	bufferSize := 8192
+	if len(content) > 64*1024 {
+		bufferSize = 32768
+	}
+
+	writer := bufio.NewWriterSize(file, bufferSize)
+	defer func() { _ = writer.Flush() }()
+
+	if _, err := writer.WriteString(content); err != nil {
+		return oops.
+			With("path", filePath).
+			Hint("Check available disk space").
+			Wrapf(err, "write content")
+	}
+
+	if err := writer.Flush(); err != nil {
+		return oops.
+			With("path", filePath).
+			Hint("Check available disk space").
+			Wrapf(err, "flush content")
 	}
 
 	return nil
@@ -88,8 +118,15 @@ func computeFileHash(filePath string) (string, error) {
 	}
 	defer func() { _ = file.Close() }()
 
-	h := sha256.New()
-	if _, err := io.Copy(h, file); err != nil {
+	reader := bufio.NewReaderSize(file, 32768)
+
+	h := hashPool.Get().(hash.Hash)
+	defer func() {
+		h.Reset()
+		hashPool.Put(h)
+	}()
+
+	if _, err := io.Copy(h, reader); err != nil {
 		return "", err
 	}
 
