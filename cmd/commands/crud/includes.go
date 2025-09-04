@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// AddIncludeCmd represents the command to add a new include path
 var AddIncludeCmd = &cobra.Command{
 	Use:   "include [path-or-url]",
 	Short: "Add a new include path to the configuration",
@@ -17,7 +16,6 @@ var AddIncludeCmd = &cobra.Command{
 	},
 }
 
-// DeleteIncludeCmd represents the command to delete an include path
 var DeleteIncludeCmd = &cobra.Command{
 	Use:   "include [path-or-url]",
 	Short: "Delete an include path from the configuration",
@@ -29,7 +27,6 @@ var DeleteIncludeCmd = &cobra.Command{
 	},
 }
 
-// ListIncludesCmd represents the command to list all include paths
 var ListIncludesCmd = &cobra.Command{
 	Use:     "includes",
 	Short:   "List all include paths in the configuration",

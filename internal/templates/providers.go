@@ -5,7 +5,6 @@ import (
 	"strings"
 )
 
-// ProviderConfig contains the configuration for different AI providers
 type ProviderConfig struct {
 	Claude      bool
 	Cursor      bool
@@ -18,13 +17,11 @@ type ProviderConfig struct {
 	ContinueDev bool
 }
 
-// HasAny returns true if any provider is enabled
 func (p ProviderConfig) HasAny() bool {
 	return p.Claude || p.Cursor || p.Windsurf || p.Copilot ||
 		p.Gemini || p.Amp || p.Codex || p.Cline || p.ContinueDev
 }
 
-// GenerateConfigTemplate generates a configuration template for the given project and providers
 func GenerateConfigTemplate(projectName string, providers ProviderConfig) string {
 	var builder strings.Builder
 

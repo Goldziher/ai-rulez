@@ -170,7 +170,6 @@ func formatNestedError(field string, errMsg string, path string) string {
 		}
 	case "additionalProperties":
 		if strings.Contains(errMsg, "Additional propert") {
-			// Extract property names from single quotes
 			var properties []string
 			inQuote := false
 			currentProp := ""

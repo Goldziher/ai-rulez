@@ -15,7 +15,6 @@ var (
 	Version = "dev"
 )
 
-// RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
 	Use:          "ai-rulez",
 	Short:        "Lightning-fast CLI tool for managing AI assistant rules",
@@ -23,7 +22,6 @@ var RootCmd = &cobra.Command{
 	SilenceUsage: true,
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	if err := RootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -106,7 +104,6 @@ func init() {
 	ListCmd.AddCommand(crud.ListIncludesCmd)
 }
 
-// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
 		viper.SetConfigFile(cfgFile)

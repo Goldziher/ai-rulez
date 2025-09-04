@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// CLIResult represents the result of running a CLI command
 type CLIResult struct {
 	Stdout   string
 	Stderr   string
@@ -19,7 +18,6 @@ type CLIResult struct {
 	Err      error
 }
 
-// RunCLI runs the ai-rulez CLI with the given arguments
 func RunCLI(t *testing.T, workingDir string, args ...string) *CLIResult {
 	t.Helper()
 
@@ -52,7 +50,6 @@ func RunCLI(t *testing.T, workingDir string, args ...string) *CLIResult {
 	}
 }
 
-// RunCLIWithStdin runs the ai-rulez CLI with the given arguments and stdin input
 func RunCLIWithStdin(t *testing.T, workingDir string, stdin string, args ...string) *CLIResult {
 	t.Helper()
 
@@ -86,7 +83,6 @@ func RunCLIWithStdin(t *testing.T, workingDir string, stdin string, args ...stri
 	}
 }
 
-// RunCLIExpectSuccess runs CLI and expects successful execution
 func RunCLIExpectSuccess(t *testing.T, workingDir string, args ...string) *CLIResult {
 	t.Helper()
 
@@ -97,7 +93,6 @@ func RunCLIExpectSuccess(t *testing.T, workingDir string, args ...string) *CLIRe
 	return result
 }
 
-// RunCLIExpectError runs CLI and expects an error
 func RunCLIExpectError(t *testing.T, workingDir string, args ...string) *CLIResult {
 	t.Helper()
 
@@ -107,7 +102,6 @@ func RunCLIExpectError(t *testing.T, workingDir string, args ...string) *CLIResu
 	return result
 }
 
-// RunCLIExpectSuccessWithStdin runs CLI with stdin input and expects successful execution
 func RunCLIExpectSuccessWithStdin(t *testing.T, workingDir string, stdin string, args ...string) *CLIResult {
 	t.Helper()
 
@@ -118,7 +112,6 @@ func RunCLIExpectSuccessWithStdin(t *testing.T, workingDir string, stdin string,
 	return result
 }
 
-// AssertOutputContains checks if output contains expected text
 func (r *CLIResult) AssertOutputContains(t *testing.T, expected string) {
 	t.Helper()
 
@@ -126,14 +119,12 @@ func (r *CLIResult) AssertOutputContains(t *testing.T, expected string) {
 	require.Contains(t, combined, expected, "Output should contain '%s'\nActual output: %s", expected, combined)
 }
 
-// AssertStdoutContains checks if stdout contains expected text
 func (r *CLIResult) AssertStdoutContains(t *testing.T, expected string) {
 	t.Helper()
 
 	require.Contains(t, r.Stdout, expected, "Stdout should contain '%s'\nActual stdout: %s", expected, r.Stdout)
 }
 
-// AssertStderrContains checks if stderr contains expected text
 func (r *CLIResult) AssertStderrContains(t *testing.T, expected string) {
 	t.Helper()
 

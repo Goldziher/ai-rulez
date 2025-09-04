@@ -40,7 +40,6 @@ func TestAgentHandlers(t *testing.T) {
 		require.NoError(t, err)
 		assert.Greater(t, len(reloaded.Agents), 1)
 
-		// Find the new agent
 		var found bool
 		for _, agent := range reloaded.Agents {
 			if agent.Name == "new-agent" {

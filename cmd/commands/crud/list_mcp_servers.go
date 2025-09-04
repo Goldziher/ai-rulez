@@ -5,7 +5,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// ListMCPServersCmd represents the command to list all MCP servers
 var ListMCPServersCmd = &cobra.Command{
 	Use:     "mcp-servers",
 	Short:   "List all configured MCP servers",

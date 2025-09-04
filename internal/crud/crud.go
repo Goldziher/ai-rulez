@@ -16,7 +16,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Constants for element types
 const (
 	ElementTypeRules      = "rules"
 	ElementTypeSections   = "sections"
@@ -29,7 +28,6 @@ const (
 	ElementTypeMetadata   = "metadata"
 )
 
-// Helper function to get singular form of element type
 func getSingular(elementType string) string {
 	switch elementType {
 	case ElementTypeRules:
@@ -55,13 +53,11 @@ func getSingular(elementType string) string {
 	}
 }
 
-// formatConfigError formats configuration errors with detailed validation information
 func formatConfigError(err error) string {
 	if oopsErr, ok := oops.AsOops(err); ok {
 		var details strings.Builder
 		details.WriteString(err.Error())
 
-		// Check if there are validation errors stored in the oops error
 		errContext := oopsErr.Context()
 		if errors, exists := errContext["errors"]; exists {
 			details.WriteString("\n\nValidation errors:")
@@ -73,7 +69,6 @@ func formatConfigError(err error) string {
 			}
 		}
 
-		// Add hint if available
 		if hint := oopsErr.Hint(); hint != "" {
 			details.WriteString("\n\nHint: ")
 			details.WriteString(hint)
@@ -84,7 +79,6 @@ func formatConfigError(err error) string {
 	return err.Error()
 }
 
-// CLI helper functions for direct use from CLI commands
 func AddElement(elementType string, element interface{}) {
 	ctx := context.Background()
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
@@ -165,7 +159,6 @@ func GetElement(elementType, name string) {
 		os.Exit(1)
 	}
 
-	// Print the result content
 	if len(result.Content) > 0 {
 		if textContent, ok := result.Content[0].(mcp.TextContent); ok {
 			fmt.Println(textContent.Text)
@@ -178,7 +171,6 @@ func ListElements(elementType string) {
 	var cfg *config.Config
 	var err error
 
-	// For includes, use raw config loading to avoid processing includes
 	if elementType == ElementTypeIncludes {
 		configPath, findErr := config.FindConfigFile(".")
 		if findErr != nil {
@@ -204,7 +196,6 @@ func ListElements(elementType string) {
 		os.Exit(1)
 	}
 
-	// Print the result content
 	if len(result.Content) > 0 {
 		if textContent, ok := result.Content[0].(mcp.TextContent); ok {
 			fmt.Println(textContent.Text)
@@ -218,7 +209,6 @@ func AddToList(listType, value string) {
 	var configPath string
 	var err error
 
-	// For includes, use raw config loading to avoid processing includes
 	if listType == "includes" {
 		configPath, err = config.FindConfigFile(".")
 		if err != nil {
@@ -258,7 +248,6 @@ func DeleteFromList(listType, value string) {
 	var configPath string
 	var err error
 
-	// For includes, use raw config loading to avoid processing includes
 	if listType == "includes" {
 		configPath, err = config.FindConfigFile(".")
 		if err != nil {
@@ -292,7 +281,6 @@ func DeleteFromList(listType, value string) {
 	fmt.Printf("Deleted %s\n", getSingular(listType))
 }
 
-// MCP handler functions
 func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeRules:
@@ -409,8 +397,6 @@ func handleGetMetadata(cfg *config.Config) (*mcp.CallToolResult, error) {
 }
 
 func handleGetExtends() (*mcp.CallToolResult, error) {
-	// For extends, we need to load the raw config to get the original extends value
-	// because the merged config doesn't preserve the extends field
 	configPath, err := config.FindConfigFile(".")
 	if err != nil {
 		configPath = "ai_rulez.yaml"
@@ -524,7 +510,6 @@ func handleGetAgent(cfg *config.Config, name string) (*mcp.CallToolResult, error
 			output.WriteString(fmt.Sprintf("System Prompt: %s\n", cfg.Agents[i].SystemPrompt))
 		}
 		if cfg.Agents[i].Template != nil {
-			// Handle template display based on type
 			switch t := cfg.Agents[i].Template.(type) {
 			case string:
 				output.WriteString(fmt.Sprintf("Template:     %s\n", t))
@@ -568,12 +553,10 @@ func handleGetOutput(cfg *config.Config, name string) (*mcp.CallToolResult, erro
 			outputStr.WriteString(fmt.Sprintf("Type:         %s\n", cfg.Outputs[i].Type))
 		}
 		if cfg.Outputs[i].Template != nil {
-			// Handle template display based on type
 			switch t := cfg.Outputs[i].Template.(type) {
 			case string:
 				outputStr.WriteString(fmt.Sprintf("Template:     %s\n", t))
 			case map[string]interface{}:
-				// Handle new structured template format
 				if templateType, ok := t["type"].(string); ok {
 					if templateValue, ok := t["value"].(string); ok {
 						outputStr.WriteString(fmt.Sprintf("Template Type: %s\n", templateType))
@@ -583,7 +566,6 @@ func handleGetOutput(cfg *config.Config, name string) (*mcp.CallToolResult, erro
 						outputStr.WriteString("Template Value: (invalid)\n")
 					}
 				} else {
-					// Fallback for legacy formats
 					if inline, ok := t["inline"].(string); ok {
 						outputStr.WriteString("Template Type: inline\n")
 						outputStr.WriteString(fmt.Sprintf("Template Value: %s\n", inline))
@@ -1232,7 +1214,6 @@ func HandleDeleteFromList(ctx context.Context, listType, value string, cfg *conf
 	}
 }
 
-// Helper functions for MCP handlers (used from internal/mcp/handlers package)
 func HandleListMCP(ctx context.Context, elementType string) (*mcp.CallToolResult, error) {
 	cfg, err := loadConfig(ctx, "")
 	if err != nil {
@@ -1257,7 +1238,6 @@ func HandleGetMCP(ctx context.Context, elementType, name string) (*mcp.CallToolR
 	return HandleGetJSON(ctx, elementType, name, cfg)
 }
 
-// HandleListJSON returns structured JSON data for MCP tools
 func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	var responseData map[string]interface{}
 
@@ -1305,7 +1285,6 @@ func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config)
 	}, nil
 }
 
-// HandleListJSONWithFilter returns structured JSON data for MCP tools with name filtering
 func HandleListJSONWithFilter(ctx context.Context, elementType string, cfg *config.Config, nameFilter string) (*mcp.CallToolResult, error) {
 	var responseData map[string]interface{}
 	var err error
@@ -1390,7 +1369,6 @@ func handleListJSONFilteredOutputs(cfg *config.Config, nameFilter string) (map[s
 	}, nil
 }
 
-// HandleGetJSON returns structured JSON data for a single item
 func HandleGetJSON(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
 	var responseData map[string]interface{}
 	var err error
@@ -1507,7 +1485,6 @@ func HandleAddMCP(ctx context.Context, elementType string, element interface{}) 
 		return nil, err
 	}
 
-	// Add element to config
 	var elementName string
 	switch elementType {
 	case ElementTypeRules:
@@ -1542,7 +1519,6 @@ func HandleAddMCP(ctx context.Context, elementType string, element interface{}) 
 		return nil, err
 	}
 
-	// Return JSON success response
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
@@ -1559,7 +1535,6 @@ func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[
 		return nil, err
 	}
 
-	// Update the element
 	found := false
 	switch elementType {
 	case ElementTypeRules:
@@ -1586,7 +1561,6 @@ func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[
 		return nil, err
 	}
 
-	// Return JSON success response
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
@@ -1675,7 +1649,6 @@ func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallTo
 		return nil, err
 	}
 
-	// Delete the element
 	found := false
 	switch elementType {
 	case ElementTypeRules:
@@ -1702,7 +1675,6 @@ func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallTo
 		return nil, err
 	}
 
-	// Return JSON success response
 	return &mcp.CallToolResult{
 		Content: []mcp.Content{
 			mcp.TextContent{
@@ -1809,7 +1781,6 @@ func HandleDeleteFromListMCP(ctx context.Context, listType, value string) (*mcp.
 	return result, nil
 }
 
-// Helper utilities
 func InterfaceSliceToStringSlice(arr []interface{}) []string {
 	result := make([]string, len(arr))
 	for i, v := range arr {
@@ -1840,25 +1811,21 @@ func CreateTemplateConfig(templateType, templateValue string) config.TemplateCon
 
 	switch templateType {
 	case "builtin":
-		// For built-in templates, return the structured format with type and value
 		return map[string]interface{}{
 			"type":  "builtin",
 			"value": templateValue,
 		}
 	case "file":
-		// For file templates, return the structured format with type and value
 		return map[string]interface{}{
 			"type":  "file",
 			"value": templateValue,
 		}
 	case "inline":
-		// For inline templates, return the structured format with type and value
 		return map[string]interface{}{
 			"type":  "inline",
 			"value": templateValue,
 		}
 	default:
-		// Default to builtin template format
 		return map[string]interface{}{
 			"type":  "builtin",
 			"value": templateValue,
@@ -1894,13 +1861,11 @@ func ToolSuccess(result interface{}) (*mcp.CallToolResult, error) {
 }
 
 func CreateContinueDevConfig() error {
-	// Create .continue directory if it doesn't exist
 	continueDir := ".continue"
 	if err := os.MkdirAll(continueDir, 0o755); err != nil {
 		return fmt.Errorf("failed to create .continue directory: %w", err)
 	}
 
-	// Create config.json for continue.dev
 	configContent := `{
   "models": [
     {
@@ -1947,7 +1912,6 @@ func CreateContinueDevConfig() error {
 	return nil
 }
 
-// Helper functions for config loading and saving
 func loadConfig(ctx context.Context, configFile string) (*config.Config, error) {
 	cfg, _, err := loadConfigWithPath(ctx, configFile)
 	return cfg, err
@@ -1980,7 +1944,6 @@ func saveConfig(cfg *config.Config, configPath string) error {
 		return oops.Wrapf(err, "marshal configuration")
 	}
 
-	// Create backup before writing
 	backupPath := configPath + ".bak"
 	if _, err := os.Stat(configPath); err == nil {
 		input, err := os.ReadFile(configPath)
@@ -1992,16 +1955,13 @@ func saveConfig(cfg *config.Config, configPath string) error {
 		}
 	}
 
-	// Write new configuration
 	if err := os.WriteFile(configPath, data, 0o644); err != nil {
-		// Try to restore backup on write failure
 		if _, statErr := os.Stat(backupPath); statErr == nil {
 			errutils.LogIfErr(os.Rename(backupPath, configPath))
 		}
 		return oops.Wrapf(err, "write configuration file")
 	}
 
-	// Remove backup on successful write
 	errutils.LogIfErr(os.Remove(backupPath))
 
 	return nil

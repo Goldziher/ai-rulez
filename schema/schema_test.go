@@ -509,7 +509,6 @@ includes:
 			err := schema.ValidateWithSchema([]byte(tt.yaml))
 			require.Error(t, err, "Expected validation to fail")
 
-			// Extract error messages
 			var errorMessages []string
 			if oopsErr, ok := oops.AsOops(err); ok {
 				if errors, ok := oopsErr.Context()["errors"].([]string); ok {

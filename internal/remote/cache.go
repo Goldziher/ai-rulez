@@ -163,7 +163,6 @@ func (c *Cache) getFromDisk(_ context.Context, key string) *cacheEntry {
 		return nil
 	}
 
-	// Try to decode JSON metadata + content
 	var metadata struct {
 		URL          string    `json:"url"`
 		FetchedAt    time.Time `json:"fetched_at"`
@@ -237,7 +236,6 @@ func (c *Cache) setOnDisk(_ context.Context, key string, entry *cacheEntry) erro
 		return os.WriteFile(filePath, entry.Content, 0o644)
 	}
 
-	// Combine metadata and content with separator
 	var data []byte
 	data = append(data, metadataBytes...)
 	data = append(data, "\n---CONTENT---\n"...)

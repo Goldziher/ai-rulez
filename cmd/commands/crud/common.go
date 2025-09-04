@@ -7,7 +7,6 @@ import (
 	"github.com/samber/oops"
 )
 
-// FmtError formats an error for display
 func FmtError(err error) {
 	if err == nil {
 		return

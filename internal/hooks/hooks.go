@@ -2,7 +2,6 @@ package hooks
 
 import "os"
 
-// DetectGitHooks detects which git hook system is in use
 func DetectGitHooks() string {
 	if detectLefthook() {
 		return "lefthook"

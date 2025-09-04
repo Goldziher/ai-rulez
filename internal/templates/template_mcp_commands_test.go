@@ -47,14 +47,12 @@ func TestNewTemplateDataForOutput_WithMCPServersAndCommandsFiltering(t *testing.
 		},
 	}
 
-	// Test with a matching output path
 	data := templates.NewTemplateDataForOutput(cfg, "output1")
 	assert.Len(t, data.MCPServers, 2, "Should include targeted and non-targeted servers")
 	assert.Equal(t, 2, data.MCPServerCount)
 	assert.Len(t, data.Commands, 2, "Should include targeted and non-targeted commands")
 	assert.Equal(t, 2, data.CommandCount)
 
-	// Test with a non-matching output path
 	data = templates.NewTemplateDataForOutput(cfg, "output2")
 	assert.Len(t, data.MCPServers, 1, "Should only include non-targeted servers")
 	assert.Equal(t, "server2", data.MCPServers[0].Name)

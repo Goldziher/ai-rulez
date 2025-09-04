@@ -18,7 +18,6 @@ const (
 
 var binaryPath string
 
-// SetupTestBinary builds the ai-rulez binary for testing
 func SetupTestBinary(t *testing.T) string {
 	t.Helper()
 
@@ -46,7 +45,6 @@ func SetupTestBinary(t *testing.T) string {
 	return binaryPath
 }
 
-// CleanupTestBinary removes the test binary
 func CleanupTestBinary() {
 	if binaryPath != "" {
 		//nolint:errcheck,gosec
@@ -55,7 +53,6 @@ func CleanupTestBinary() {
 	}
 }
 
-// CreateTempDir creates a temporary directory for testing
 func CreateTempDir(t *testing.T) string {
 	t.Helper()
 
@@ -63,7 +60,6 @@ func CreateTempDir(t *testing.T) string {
 	return tmpDir
 }
 
-// WriteFile writes content to a file in the given directory
 func WriteFile(t *testing.T, dir, filename, content string) {
 	t.Helper()
 
@@ -72,7 +68,6 @@ func WriteFile(t *testing.T, dir, filename, content string) {
 	require.NoError(t, err, "Failed to write file %s", fullPath)
 }
 
-// FileExists checks if a file exists at the given path
 func FileExists(t *testing.T, path string) bool {
 	t.Helper()
 
@@ -80,7 +75,6 @@ func FileExists(t *testing.T, path string) bool {
 	return err == nil
 }
 
-// ReadFile reads and returns file content
 func ReadFile(t *testing.T, path string) string {
 	t.Helper()
 
@@ -89,7 +83,6 @@ func ReadFile(t *testing.T, path string) string {
 	return string(content)
 }
 
-// AssertFileContent checks that a file exists and contains expected content
 func AssertFileContent(t *testing.T, path, expectedContent string) {
 	t.Helper()
 
@@ -98,7 +91,6 @@ func AssertFileContent(t *testing.T, path, expectedContent string) {
 	require.Contains(t, content, expectedContent, "File content mismatch in %s", path)
 }
 
-// AssertFileNotExists checks that a file does not exist
 func AssertFileNotExists(t *testing.T, path string) {
 	t.Helper()
 

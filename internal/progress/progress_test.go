@@ -382,7 +382,6 @@ func TestProgressBarEdgeCases(t *testing.T) {
 	})
 }
 
-// Helper functions for testing
 func captureOutput() *bytes.Buffer {
 	return &bytes.Buffer{}
 }

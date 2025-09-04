@@ -56,14 +56,12 @@ func FindConfigFile(startDir string) (string, error) {
 		Errorf("no configuration file found")
 }
 
-// FindLocalConfigFile finds the corresponding local config file for a given main config
 func FindLocalConfigFile(mainConfigPath string) (string, error) {
 	dir := filepath.Dir(mainConfigPath)
 	base := filepath.Base(mainConfigPath)
 	ext := filepath.Ext(base)
 	nameWithoutExt := strings.TrimSuffix(base, ext)
 
-	// Generate local config name by inserting .local before extension
 	localConfigName := nameWithoutExt + ".local" + ext
 	localConfigPath := filepath.Join(dir, localConfigName)
 
@@ -71,11 +69,9 @@ func FindLocalConfigFile(mainConfigPath string) (string, error) {
 		return localConfigPath, nil
 	}
 
-	// Return empty string if no local config exists (this is not an error)
 	return "", nil
 }
 
-// FindConfigFiles finds both main and local config files
 func FindConfigFiles(startDir string) (mainConfig, localConfig string, err error) {
 	mainConfig, err = FindConfigFile(startDir)
 	if err != nil {

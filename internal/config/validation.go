@@ -6,7 +6,6 @@ import (
 	"github.com/samber/oops"
 )
 
-// Validate validates the configuration
 func (c *Config) Validate() error {
 	if c.Metadata.Name == "" {
 		return oops.
