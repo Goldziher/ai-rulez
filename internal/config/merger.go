@@ -38,14 +38,12 @@ func mergeRules(main, local []Rule) []Rule {
 	// Create lookup map for local rules by ID
 	localByID := make(map[string]Rule)
 	localByName := make(map[string]Rule)
-	var localWithoutID []Rule
 
 	for _, rule := range local {
 		if rule.ID != "" {
 			localByID[rule.ID] = rule
 		} else {
 			localByName[rule.Name] = rule
-			localWithoutID = append(localWithoutID, rule)
 		}
 	}
 
@@ -89,14 +87,12 @@ func mergeSections(main, local []Section) []Section {
 	// Create lookup map for local sections by ID
 	localByID := make(map[string]Section)
 	localByName := make(map[string]Section)
-	var localWithoutID []Section
 
 	for _, section := range local {
 		if section.ID != "" {
 			localByID[section.ID] = section
 		} else {
 			localByName[section.Name] = section
-			localWithoutID = append(localWithoutID, section)
 		}
 	}
 
@@ -140,7 +136,6 @@ func mergeAgents(main, local []Agent) []Agent {
 	// Create lookup map for local agents by ID
 	localByID := make(map[string]Agent)
 	localByName := make(map[string]Agent)
-	var localWithoutID []Agent
 
 	for i := range local {
 		agent := &local[i]
@@ -148,7 +143,6 @@ func mergeAgents(main, local []Agent) []Agent {
 			localByID[agent.ID] = *agent
 		} else {
 			localByName[agent.Name] = *agent
-			localWithoutID = append(localWithoutID, *agent)
 		}
 	}
 
