@@ -73,14 +73,9 @@ jobs:
         with:
           version: 3.x
 
-      - name: Run tests with coverage
-        run: task test:coverage
+      - name: Run tests
+        run: task test
 
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.out
-          fail_ci_if_error: false
 
   e2e-test:
     name: E2E Tests
