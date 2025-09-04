@@ -84,6 +84,7 @@ type Agent struct {
 	Description  string         `yaml:"description"`
 	Priority     Priority       `yaml:"priority,omitempty"`
 	Tools        []string       `yaml:"tools,omitempty"`
+	Model        string         `yaml:"model,omitempty"`
 	Template     TemplateConfig `yaml:"template,omitempty"`
 	SystemPrompt string         `yaml:"system_prompt,omitempty"`
 	Targets      []string       `yaml:"targets,omitempty"`

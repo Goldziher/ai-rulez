@@ -1,4 +1,4 @@
-package utils
+package errutils
 
 // LogIfErr - ignores the error (used to silence linter warnings for intentionally ignored errors)
 func LogIfErr(err error) {

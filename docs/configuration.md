@@ -98,6 +98,7 @@ Defines a file or directory to be generated.
 - `id` (string): An optional unique identifier for overriding.
 - `priority` (string): The agent's priority.
 - `tools` (array of strings): A list of tools available to the agent.
+- `model` (string): An optional model identifier (e.g., `claude-3-opus-20240229`, `gpt-4`).
 - `system_prompt` (string): The system prompt for the agent.
 - `template` (object): A structured template object for the system prompt.
 - `targets` (array of strings): A list of output paths this agent applies to.

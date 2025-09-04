@@ -3,7 +3,7 @@ package crud
 import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/internal/errutils"
 	"github.com/spf13/cobra"
 )
 
@@ -47,7 +47,7 @@ var AddCommandCmd = &cobra.Command{
 func init() {
 	AddCommandCmd.Flags().StringVar(&cmdID, "id", "", "Optional unique identifier for the command")
 	AddCommandCmd.Flags().StringVarP(&cmdDescription, "description", "d", "", "Description of what the command does (required)")
-	utils.LogIfErr(AddCommandCmd.MarkFlagRequired("description"))
+	errutils.LogIfErr(AddCommandCmd.MarkFlagRequired("description"))
 	AddCommandCmd.Flags().StringSliceVarP(&cmdAliases, "alias", "a", []string{}, "Alternative name for the command (can be specified multiple times)")
 	AddCommandCmd.Flags().StringVarP(&cmdUsage, "usage", "u", "", "Usage example or pattern (e.g., '/newtask <description>')")
 	AddCommandCmd.Flags().StringVarP(&cmdSystemPrompt, "system-prompt", "s", "", "System prompt or instructions for the AI when this command is used")
