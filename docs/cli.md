@@ -8,11 +8,33 @@ The essentials for day-to-day use.
 
 ### `init`
 
-Create a new `ai_rulez.yaml` file in the current directory.
+Create a new `ai_rulez.yaml` file in the current directory with an intelligent template.
 
 ```bash
 ai-rulez init "My Project" --popular
 ```
+
+The `init` command generates a comprehensive template where only required fields (metadata and outputs) are uncommented. All optional features are provided as well-documented, commented examples that you can selectively enable.
+
+#### How it works:
+1. **Analyzes your codebase** - Detects tech stack, build tools, and project structure
+2. **Generates smart template** - Creates a rich YAML template with inline documentation
+3. **Optional AI assistance** - If you have Claude, Gemini, or AMP installed, it can intelligently customize the template based on your project
+
+#### Options:
+- `--popular` - Enable popular AI tools (Claude, Cursor, Windsurf, Copilot)
+- `--preset <name>` - Use a specific preset (claude, cursor, gemini, amp, etc.)
+- `--use-agent <agent>` - Use an AI agent to customize the template (claude, continue, gemini, amp)
+- `--yes` - Skip confirmation prompts
+
+#### AI Agent Support:
+Currently supports:
+- **Claude** - Uses `claude --print` command
+- **Continue.dev** - Uses `cn --print` command
+- **Gemini** - Uses `gemini --prompt` command  
+- **AMP** - Uses `amp --execute` command
+
+Note: Codex and Cursor agents are not supported for template generation as they require interactive mode or special authentication that doesn't work well with automated generation.
 
 ### `generate`
 

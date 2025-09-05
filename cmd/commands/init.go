@@ -19,7 +19,6 @@ var (
 	popularProviders bool
 	withAgents       bool
 	withSections     bool
-	noComments       bool
 	preset           string
 	useAgent         string
 	noAgent          bool
@@ -65,7 +64,6 @@ func init() {
 
 	InitCmd.Flags().BoolVar(&withAgents, "with-agents", false, "Include agent configurations (for Claude)")
 	InitCmd.Flags().BoolVar(&withSections, "with-sections", true, "Include documentation sections")
-	InitCmd.Flags().BoolVar(&noComments, "no-comments", false, "Omit explanatory comments from the generated config")
 
 	InitCmd.Flags().StringVar(&useAgent, "use-agent", "", "Use an AI agent to generate configuration (claude, gemini, etc.)")
 	InitCmd.Flags().BoolVar(&noAgent, "no-agent", false, "Skip AI agent detection and usage")
