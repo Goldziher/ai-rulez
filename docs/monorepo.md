@@ -1,6 +1,6 @@
 # Best Practices for Large Projects
 
-As a project grows, a single, monolithic `ai_rulez.yaml` file can become difficult to manage and may provide too much irrelevant context to your AI assistant. `ai-rulez` is designed to solve this problem through a combination of multiple configurations, inheritance, and composition.
+As a project grows, a single, monolithic `ai-rulez.yml` file can become difficult to manage and may provide too much irrelevant context to your AI assistant. `ai-rulez` is designed to solve this problem through a combination of multiple configurations, inheritance, and composition.
 
 This guide outlines best practices for managing AI context at scale.
 
@@ -8,7 +8,7 @@ This guide outlines best practices for managing AI context at scale.
 
 ## The Core Strategy: Scoped Configurations
 
-The most effective strategy for large projects is to create multiple, smaller `ai_rulez.yaml` files, each scoped to a specific part of your project.
+The most effective strategy for large projects is to create multiple, smaller `ai-rulez.yml` files, each scoped to a specific part of your project.
 
 !!! success "The Goal: High-Relevance, Low-Token Context"
 
@@ -18,11 +18,11 @@ A typical layout might look like this:
 
 ```
 my-project/
-├── ai-rulez.yaml           # ⬅️ Root Config: High-level architecture & shared agents
+├── ai-rulez.yml           # ⬅️ Root Config: High-level architecture & shared agents
 ├── backend/
-│   └── ai-rulez.yaml       # ⬅️ Scoped Config: API patterns, database rules
+│   └── ai-rulez.yml       # ⬅️ Scoped Config: API patterns, database rules
 └── frontend/
-    └── ai_rulez.yaml       # ⬅️ Scoped Config: Component patterns, state management
+    └── ai-rulez.yml       # ⬅️ Scoped Config: Component patterns, state management
 ```
 
 When you run `ai-rulez generate` from the root, it automatically discovers and processes all of these files, creating a comprehensive set of instructions for your tools.
@@ -31,7 +31,7 @@ When you run `ai-rulez generate` from the root, it automatically discovers and p
 
 ## Best Practice: The Root Configuration
 
-Your root `ai_rulez.yaml` should not contain low-level implementation details. Its purpose is to define the high-level view of your project.
+Your root `ai-rulez.yml` should not contain low-level implementation details. Its purpose is to define the high-level view of your project.
 
 !!! tip "What to put in the Root Config"
 
@@ -40,7 +40,7 @@ Your root `ai_rulez.yaml` should not contain low-level implementation details. I
     - **Cross-Cutting Concerns:** Rules for things that apply everywhere, like logging, error handling, and security policies.
 
 ```yaml
-# /ai_rulez.yaml
+# /ai-rulez.yml
 metadata:
   name: "My Full-Stack Project"
 
@@ -60,7 +60,7 @@ outputs:
 
 ## Best Practice: Scoped Configurations
 
-Scoped configurations, like `backend/ai_rulez.yaml`, should contain the specific, detailed context for that part of the codebase.
+Scoped configurations, like `backend/ai-rulez.yml`, should contain the specific, detailed context for that part of the codebase.
 
 !!! tip "What to put in a Scoped Config"
 
@@ -69,7 +69,7 @@ Scoped configurations, like `backend/ai_rulez.yaml`, should contain the specific
     - **API Contracts:** Detail the expected request/response shapes for your APIs.
 
 ```yaml
-# /backend/ai_rulez.yaml
+# /backend/ai-rulez.yml
 metadata:
   name: "Backend API"
 
@@ -101,7 +101,7 @@ rules:
     priority: critical
 ```
 
-**`/backend/user-service/ai_rulez.yaml` (Inherits the base and adds its own logic)**
+**`/backend/user-service/ai-rulez.yml` (Inherits the base and adds its own logic)**
 ```yaml
 # Inherit all rules from the company-wide Go base file
 extends: "../../shared/base-go-service.yaml"
