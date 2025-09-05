@@ -71,7 +71,7 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
-	s.Contains(configContent, "- \"continue-dev\"") 
+	s.Contains(configContent, "- \"continue-dev\"")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
