@@ -1,15 +1,19 @@
 # ai-rulez ⚡
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/logo.png" alt="ai-rulez logo" width="200" style="border-radius: 15%; overflow: hidden;">
+</p>
+
 **One config to rule them all.**
 
-Tired of manually copying AI instructions between `.cursorrules`, `CLAUDE.md`, and a dozen other files? `ai-rulez` gives you one `ai_rulez.yaml` file that generates them all. Keep your AI context in sync across every tool you use.
+Tired of manually managing rule files, subagents, MCP servers and custom commands across different AI tools? `ai-rulez` gives you one `ai-rulez.yml` file to generate them all. Keep your AI context in sync with your team, while gitignoring AI clutter. 
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
 [![PyPI Version](https://img.shields.io/pypi/v/ai-rulez)](https://pypi.org/project/ai-rulez/)
 [![Homebrew](https://img.shields.io/badge/Homebrew-tap-orange)](https://github.com/Goldziher/homebrew-tap)
 
-### 📖 **[Read the Full Documentation](./docs/index.md)**
+### 📖 **[Read the Full Documentation](https://goldziher.github.io/ai-rulez/)**
 
 ---
 
@@ -40,7 +44,7 @@ As new AI tools emerge, `ai-rulez` grows with them. The extensible design makes 
 - **Windsurf**
 - **Cline**
 
-## Example: `ai_rulez.yaml`
+## Example: `ai-rulez.yml`
 
 ```yaml
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
@@ -87,35 +91,49 @@ ai-rulez generate
 
 ## Installation
 
-=== "Run without installing"
-    ```bash
-    # Node.js
-    npx ai-rulez@latest init
+### Run without installing
 
-    # Python
-    uvx ai-rulez init
-    ```
+For one-off executions, you can run `ai-rulez` directly without a system-wide installation.
 
-=== "Install globally"
-    ```bash
-    # Homebrew (macOS/Linux)
-    brew install goldziher/tap/ai-rulez
+**Node.js (via npx)**
+```bash
+# Installs and runs the latest version
+npx ai-rulez@latest init
+```
 
-    # npm
-    npm install -g ai-rulez
+**Python (via uvx)**
+```bash
+# Runs ai-rulez in a temporary virtual environment
+uvx ai-rulez init
+```
 
-    # pip
-    pip install ai-rulez
-    ```
+### Install globally
+
+For frequent use, a global installation is recommended.
+
+**Homebrew (macOS/Linux)**
+```bash
+brew install goldziher/tap/ai-rulez
+```
+
+**npm**
+```bash
+npm install -g ai-rulez
+```
+
+**pip**
+```bash
+pip install ai-rulez
+```
 
 ---
 
 ## Documentation
 
-- **[Quick Start Guide](./docs/quick-start.md)**
-- **[Full CLI Reference](./docs/cli.md)**
-- **[Configuration Guide](./docs/configuration.md)**
-- **[Migration Guide](./docs/migration-guide.md)** - Upgrading from v1.x to v2.0
+- **[Quick Start Guide](https://goldziher.github.io/ai-rulez/quick-start/)**
+- **[Full CLI Reference](https://goldziher.github.io/ai-rulez/cli/)**
+- **[Configuration Guide](https://goldziher.github.io/ai-rulez/configuration/)**
+- **[Migration Guide](https://goldziher.github.io/ai-rulez/migration-guide/)** - Upgrading from v1.x to v2.0
 
 ## Contributing
 

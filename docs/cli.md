@@ -8,7 +8,7 @@ The essentials for day-to-day use.
 
 ### `init`
 
-Create a new `ai_rulez.yaml` file in the current directory with an intelligent template.
+Create a new `ai-rulez.yml` file in the current directory with an intelligent template.
 
 ```bash
 ai-rulez init "My Project" --popular
@@ -64,7 +64,7 @@ ai-rulez version
 
 ## Configuration Management (CRUD)
 
-Manage every aspect of your `ai_rulez.yaml` configuration directly from the command line.
+Manage every aspect of your `ai-rulez.yml` configuration directly from the command line.
 
 ### Rules
 
