@@ -64,7 +64,6 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 	return crud.ToolSuccess(result)
 }
 
-// Helper function to convert provider names to presets
 func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {
 	if allProviders {
 		return []string{"claude", "cursor", "windsurf", "copilot", "gemini", "amp", "codex", "cline", "continue-dev"}, true
@@ -76,7 +75,6 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 	var presets []string
 	var hasContinueDev bool
 
-	// Map of provider names to preset names (most are the same)
 	providerMap := map[string]string{
 		"claude":       "claude",
 		"cursor":       "cursor",
