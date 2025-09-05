@@ -6,7 +6,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/kaptinlin/jsonschema v0.4.6
-	github.com/mark3labs/mcp-go v0.38.0
+	github.com/mark3labs/mcp-go v0.39.1
 	github.com/samber/oops v1.19.0
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.9.1
