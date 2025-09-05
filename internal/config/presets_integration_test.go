@@ -340,5 +340,4 @@ func TestPresetsErrorMessages(t *testing.T) {
 
 	errorMsg := err.Error()
 	assert.Contains(t, errorMsg, "invalid-preset")
-
 }
