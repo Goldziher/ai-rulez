@@ -56,7 +56,7 @@ This phase involves modifying the Go source code to handle the new `presets` key
 
 ### 3.1. Update Configuration Struct
 
-1.  **Locate the configuration struct:** Find the Go struct that maps to the `ai-rulez.yml` file. This is likely located in a file such as `internal/config/types.go`.
+1.  **Locate the configuration struct:** Find the Go struct that maps to the `ai-rulez.yml` file (likely in `internal/config/types.go`).
 2.  **Add the `Presets` field:** Add a new field to this struct to capture the `presets` data.
 
     ```go
@@ -65,8 +65,8 @@ This phase involves modifying the Go source code to handle the new `presets` key
 
 ### 3.2. Create a Preset Registry
 
-1.  **Create a new file:** Create a file named `internal/config/presets.go`.
-2.  **Define the registry:** In this new file, define a global map that translates preset names into their corresponding `Output` objects. This registry will be the single source of truth for what each preset means.
+1.  **Create a new file:** `internal/config/presets.go`.
+2.  **Define the registry:** In this new file, define a global map that translates preset names into their corresponding `Output` objects.
 
     ```go
     // internal/config/presets.go
@@ -94,35 +94,66 @@ This phase involves modifying the Go source code to handle the new `presets` key
 
 ### 3.3. Implement Preset Expansion and Merging
 
-1.  **Locate the configuration loading function:** Find the primary function responsible for loading and processing the `ai-rulez.yml` file. This is likely a function like `LoadConfig` or `LoadConfigWithIncludes` in the `internal/config/` package.
-2.  **Modify the function:** After the YAML file has been unmarshalled into the configuration struct, perform the following steps:
-    *   Check if the `Presets` field in the config struct is populated.
-    *   If it is, create a new list of `Output` objects.
-    *   Iterate through each `presetName` in `config.Presets`.
-    *   Look up `presetName` in the `PresetRegistry` and append the resulting `[]Output` to the new list.
-    *   Merge the list of `Output` objects generated from `presets` with the existing `config.Outputs` list.
-    *   **Implement de-duplication:** Ensure that the final list of outputs does not contain duplicates. An explicit `Output` defined in the `outputs` key should always take precedence over an `Output` generated from a preset. A map-based approach using the `Output.Path` as the key is recommended for handling this.
+1.  **Locate the configuration loading function:** Find the primary function responsible for loading and processing the `ai-rulez.yml` file (likely `LoadConfig` or `LoadConfigWithIncludes` in the `internal/config/` package).
+2.  **Modify the function:** After unmarshalling the YAML, perform the following steps:
+    *   If `config.Presets` is populated, iterate through each `presetName`, look it up in the `PresetRegistry`, and append the resulting `[]Output` to a new list.
+    *   Merge this new list with the existing `config.Outputs` list.
+    *   **Implement de-duplication:** Ensure the final list of outputs is unique. An explicit `Output` in the `outputs` key should always take precedence over one from a preset. A map-based approach using `Output.Path` as the key is recommended.
+
+### 3.4. Update `init` Command Logic
+
+1.  **Locate the `init` command file:** Find the source file for the `ai-rulez init` command.
+2.  **Modify the logic:**
+    *   If the `init` command is run with a `--preset` or `--popular` flag, the generated `ai-rulez.yml` file **must** use the `presets` key.
+        *   **Example (`ai-rulez init --preset popular`):**
+            ```yaml
+            metadata:
+              name: "My Project"
+            presets: ["popular"]
+            ```
+    *   If the `init` command is run *without* a preset flag, the generated `ai-rulez.yml` file **must** use the `outputs` key with a default configuration.
+        *   **Example (`ai-rulez init`):**
+            ```yaml
+            metadata:
+              name: "My Project"
+            outputs:
+              - path: "CLAUDE.md"
+            ```
 
 ---
 
 ## 4. Phase 3: Testing
 
-**Location for new tests:** `internal/config/`
+**Location for new tests:** `internal/config/` and the `init` command's test file.
 
-Create a new test file (e.g., `presets_test.go`) to validate the new functionality. The tests should cover the following scenarios:
+Create a new test file (e.g., `presets_test.go`) and update existing tests to cover the following scenarios:
 
--   A configuration with only the `presets` key is loaded correctly.
--   A configuration with only the `outputs` key is loaded correctly.
--   A configuration with both `presets` and `outputs` keys merges the results correctly.
--   When a duplicate output path exists in both `presets` and `outputs`, the one from `outputs` is used (it should overwrite the preset-derived one).
--   Using an invalid preset name in the YAML file results in a validation error (this should be handled by the schema, but a unit test is good practice).
+-   A configuration with only `presets` is loaded correctly.
+-   A configuration with only `outputs` is loaded correctly.
+-   A configuration with both `presets` and `outputs` merges the results correctly, with `outputs` taking precedence on conflicts.
+-   `ai-rulez init --preset popular` generates a config with the `presets` key.
+-   `ai-rulez init` (no flags) generates a config with the `outputs` key.
+-   Using an invalid preset name in the YAML file results in a validation error.
 
 ---
 
 ## 5. Phase 4: Documentation
 
-Once the feature is implemented and tested, update the project documentation.
+Once the feature is implemented and tested, update the project documentation with the following changes:
 
-1.  **`README.md`:** Update the main example to use the `presets` key instead of `outputs` to showcase the new, simpler format.
-2.  **`docs/configuration.md`:** Add a section explaining the `presets` key and how it works alongside `outputs`.
-3.  **`docs/examples.md`:** Add a new example demonstrating a configuration that uses `presets`.
+1.  **`README.md`:**
+    *   Update the main example to use `presets: ["popular"]` to showcase the new, simpler format.
+
+2.  **`docs/quick-start.md`:**
+    *   Ensure the `init` command example uses the `--popular` flag.
+    *   Show the resulting `ai-rulez.yml` file using the `presets` key.
+
+3.  **`docs/configuration.md`:**
+    *   Add a new top-level section for the `presets` key.
+    *   Explain that `presets` is a shorthand for common configurations.
+    *   Explain that `outputs` provides more fine-grained control for custom setups.
+    *   Document the merging behavior: when both keys are present, they are combined, and `outputs` entries will override any duplicates from `presets`.
+
+4.  **`docs/examples.md`:**
+    *   Add a new example showing a `presets`-only configuration.
+    *   Add another example showing a mixed configuration that uses both `presets` and `outputs` to demonstrate the override/merge functionality.
