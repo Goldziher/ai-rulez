@@ -226,6 +226,90 @@ presets:
 	return builder.String()
 }
 
+func GenerateConfigWithPresets(projectName string, presets []string) string {
+	var builder strings.Builder
+	builder.WriteString(`# AI-Rulez Configuration v2.0
+# This file configures AI agent behavior for your project
+# Documentation: https://github.com/Goldziher/ai-rulez
+#
+# Quick Start:
+# 1. Review and adjust the required fields below
+# 2. Uncomment and customize optional sections as needed
+# 3. Run 'ai-rulez generate' to create output files
+# 4. Run 'ai-rulez validate' to check configuration
+
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+
+# ========================================
+# REQUIRED FIELDS (do not comment out)
+# ========================================
+
+# Project metadata (REQUIRED - at minimum, name is required)
+metadata:
+  name: "`)
+	builder.WriteString(projectName)
+	builder.WriteString(`"
+  # version: "1.0.0"                    # Optional: semantic version
+  # description: "Brief description"    # Optional: project description
+
+# Presets to use (REQUIRED - at least one preset)
+presets:
+`)
+	for _, preset := range presets {
+		builder.WriteString(`  - "`)
+		builder.WriteString(preset)
+		builder.WriteString(`"
+`)
+	}
+
+	builder.WriteString(`
+# ========================================
+# Everything below is OPTIONAL
+# Uncomment and customize sections as needed
+# ========================================
+
+# ========================================
+# Rules: Define coding standards and guidelines
+# ========================================
+
+# rules:
+#   - name: "Code Standards"
+#     priority: high
+#     content: |
+#       Follow these coding standards:
+#       - Use descriptive variable names
+#       - Add comments for complex logic
+#       - Write unit tests for new functions
+
+# ========================================
+# Sections: Add documentation sections
+# ========================================
+
+# sections:
+#   - name: "Architecture Overview"
+#     priority: high
+#     content: |
+#       This project follows a modular architecture...
+
+# ========================================
+# Agents: Define specialized AI agents (Claude only)
+# ========================================
+
+# agents:
+#   - name: "Code Reviewer"
+#     description: "Specialized agent for code review"
+#     priority: high
+#     tools: ["read", "write"]
+#     system_prompt: |
+#       You are a senior code reviewer. Focus on:
+#       - Code quality and best practices
+#       - Performance optimizations
+#       - Security considerations
+`)
+
+	return builder.String()
+}
+
 func GenerateConfigTemplate(projectName string, providers ProviderConfig) string {
 	var builder strings.Builder
 

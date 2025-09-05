@@ -16,7 +16,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "valid single preset",
 			presets:     []string{"claude"},
-			expected:    1,
+			expected:    2, 
 			expectError: false,
 		},
 		{
@@ -28,7 +28,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "multiple valid presets",
 			presets:     []string{"claude", "cursor"},
-			expected:    2,
+			expected:    3, 
 			expectError: false,
 		},
 		{
@@ -52,7 +52,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "duplicate presets",
 			presets:     []string{"claude", "claude"},
-			expected:    2,
+			expected:    4, 
 			expectError: false,
 		},
 		{
@@ -88,7 +88,7 @@ func TestPresetRegistry(t *testing.T) {
 		{
 			name:          "claude preset",
 			preset:        "claude",
-			expectedPaths: []string{"CLAUDE.md"},
+			expectedPaths: []string{"CLAUDE.md", ".claude/agents/"},
 			shouldExist:   true,
 		},
 		{
@@ -122,7 +122,7 @@ func TestPresetRegistry(t *testing.T) {
 		},
 		{
 			name:          "continue preset with multiple outputs",
-			preset:        "continue",
+			preset:        "continue-dev",
 			expectedPaths: []string{".continue/rules/", ".continue/prompts/ai_rulez_prompts.yaml"},
 			shouldExist:   true,
 		},
@@ -239,7 +239,7 @@ func TestExpandConfigPresets(t *testing.T) {
 				Outputs: []Output{},
 			},
 			expectError:     false,
-			expectedOutputs: 2,
+			expectedOutputs: 3,
 		},
 		{
 			name: "config with presets and outputs - merge",
@@ -250,7 +250,7 @@ func TestExpandConfigPresets(t *testing.T) {
 				},
 			},
 			expectError:     false,
-			expectedOutputs: 2,
+			expectedOutputs: 3,
 		},
 		{
 			name: "config with presets and outputs - override",
@@ -261,7 +261,7 @@ func TestExpandConfigPresets(t *testing.T) {
 				},
 			},
 			expectError:     false,
-			expectedOutputs: 1,
+			expectedOutputs: 2,
 		},
 		{
 			name: "config with no presets",

@@ -183,6 +183,7 @@ func (l *configLoader) applyExtends(base, child *Config) *Config {
 		Metadata: base.Metadata,
 		Extends:  "",
 		Includes: nil,
+		Presets:  base.Presets,
 		Outputs:  base.Outputs,
 		Rules:    base.Rules,
 		Sections: base.Sections,
@@ -201,6 +202,7 @@ func (l *configLoader) applyExtends(base, child *Config) *Config {
 
 	result.Includes = child.Includes
 
+	result.Presets = append(result.Presets, child.Presets...)
 	result.Outputs = append(result.Outputs, child.Outputs...)
 
 	result.Rules = mergeRules(result.Rules, child.Rules)

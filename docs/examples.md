@@ -104,7 +104,7 @@ includes:
 presets:
   - "claude"
   - "cursor"
-  - "continue"
+  - "continue-dev"
 
 agents:
   - name: "go-expert"

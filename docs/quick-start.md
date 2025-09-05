@@ -49,6 +49,9 @@ ai-rulez generate
 
 This reads your `ai-rulez.yml` file and creates all the necessary configuration files for the tools included in the "popular" preset.
 
+!!! info "Automatic .gitignore Updates"
+    Generated files are automatically added to `.gitignore` to keep your repository clean. These files are regenerated from your config, so they don't need to be committed. To disable this, use `--update-gitignore=false` or set `gitignore: false` in your config.
+
 ### Step 4: Validate (optional)
 
 Check that everything looks good:

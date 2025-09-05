@@ -22,6 +22,8 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 			{Path: "CLAUDE.md"},
 			{Path: ".cursor/rules/", Type: "rule", NamingScheme: "rules.mdc"},
 			{Path: ".windsurfrules"},
+			{Path: ".claude/agents/", Type: "agent", NamingScheme: "{name}.md"},
+			{Path: ".continue/prompts/ai_rulez_prompts.yaml"},
 		},
 	}
 
@@ -37,14 +39,20 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	}
 
 	contentStr := string(content)
-	expectedFiles := []string{"CLAUDE.md", ".cursor/", ".windsurfrules"}
+	expectedFiles := []string{
+		"CLAUDE.md",
+		".cursor/rules/",
+		".windsurfrules",
+		".claude/agents/",
+		".continue/prompts/ai_rulez_prompts.yaml",
+	}
 	for _, file := range expectedFiles {
 		if !strings.Contains(contentStr, file) {
 			t.Errorf("Expected .gitignore to contain %s, but it doesn't", file)
 		}
 	}
 
-	existingContent := "node_modules/\n.cursor/\n"
+	existingContent := "node_modules/\n.cursor/rules/\n"
 	err = os.WriteFile(gitignorePath, []byte(existingContent), 0o644)
 	if err != nil {
 		t.Fatalf("Failed to write existing .gitignore: %v", err)
@@ -67,9 +75,9 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	if !strings.Contains(contentStr, ".windsurfrules") {
 		t.Error("Expected .gitignore to contain .windsurfrules")
 	}
-	count := strings.Count(contentStr, ".cursor/")
+	count := strings.Count(contentStr, ".cursor/rules/")
 	if count != 1 {
-		t.Errorf("Expected .cursor/ to appear once, but found %d occurrences", count)
+		t.Errorf("Expected .cursor/rules/ to appear once, but found %d occurrences", count)
 	}
 }
 
@@ -195,4 +203,223 @@ func TestUpdateGitignoreFilesWithNoOutputs(t *testing.T) {
 	if _, err := os.Stat(gitignorePath); err == nil {
 		t.Error("Expected .gitignore not to be created when there are no outputs")
 	}
+}
+
+func TestConfigGitignoreFlag(t *testing.T) {
+	tests := []struct {
+		name           string
+		gitignoreFlag  *bool
+		expectedResult bool
+	}{
+		{
+			name:           "default value (nil)",
+			gitignoreFlag:  nil,
+			expectedResult: true,
+		},
+		{
+			name:           "explicitly true",
+			gitignoreFlag:  boolPtr(true),
+			expectedResult: true,
+		},
+		{
+			name:           "explicitly false",
+			gitignoreFlag:  boolPtr(false),
+			expectedResult: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &config.Config{
+				Gitignore: tt.gitignoreFlag,
+			}
+
+			result := cfg.ShouldUpdateGitignore()
+			if result != tt.expectedResult {
+				t.Errorf("ShouldUpdateGitignore() = %v, expected %v", result, tt.expectedResult)
+			}
+		})
+	}
+}
+
+func TestGitignoreWithPresets(t *testing.T) {
+	tests := []struct {
+		name             string
+		presetOutputs    []config.Output
+		expectedPatterns []string
+	}{
+		{
+			name: "claude preset",
+			presetOutputs: []config.Output{
+				{Path: "CLAUDE.md"},
+				{Path: ".claude/agents/"},
+			},
+			expectedPatterns: []string{"CLAUDE.md", ".claude/agents/"},
+		},
+		{
+			name: "cursor preset",
+			presetOutputs: []config.Output{
+				{Path: ".cursor/rules/"},
+			},
+			expectedPatterns: []string{".cursor/rules/"},
+		},
+		{
+			name: "continue preset",
+			presetOutputs: []config.Output{
+				{Path: ".continue/rules/"},
+				{Path: ".continue/prompts/ai_rulez_prompts.yaml"},
+			},
+			expectedPatterns: []string{".continue/rules/", ".continue/prompts/ai_rulez_prompts.yaml"},
+		},
+		{
+			name: "popular preset",
+			presetOutputs: []config.Output{
+				{Path: "CLAUDE.md"},
+				{Path: ".cursor/rules/"},
+				{Path: ".windsurf/"},
+				{Path: ".github/copilot-instructions.md"},
+			},
+			expectedPatterns: []string{
+				"CLAUDE.md",
+				".cursor/rules/",
+				".windsurf/",
+				".github/copilot-instructions.md",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir, err := os.MkdirTemp("", "gitignore_preset_test")
+			if err != nil {
+				t.Fatalf("Failed to create temp dir: %v", err)
+			}
+			defer func() { _ = os.RemoveAll(tmpDir) }()
+
+			configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+			cfg := &config.Config{
+				Outputs: tt.presetOutputs,
+			}
+
+			err = UpdateGitignoreFiles(configPath, cfg)
+			if err != nil {
+				t.Fatalf("UpdateGitignoreFiles failed: %v", err)
+			}
+
+			gitignorePath := filepath.Join(tmpDir, ".gitignore")
+			content, err := os.ReadFile(gitignorePath)
+			if err != nil {
+				t.Fatalf("Failed to read .gitignore: %v", err)
+			}
+
+			contentStr := string(content)
+			for _, pattern := range tt.expectedPatterns {
+				if !strings.Contains(contentStr, pattern) {
+					t.Errorf("Expected .gitignore to contain %q, but it doesn't", pattern)
+				}
+			}
+		})
+	}
+}
+
+func TestGitignoreWithMixedOutputs(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "gitignore_mixed_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+	cfg := &config.Config{
+		Outputs: []config.Output{
+			{Path: "CLAUDE.md"},
+			{Path: ".claude/agents/"},
+			{Path: "CUSTOM.md"},
+			{Path: ".my-custom-dir/"},
+			{Path: "docs/AI_RULES.md"},
+		},
+	}
+
+	err = UpdateGitignoreFiles(configPath, cfg)
+	if err != nil {
+		t.Fatalf("UpdateGitignoreFiles failed: %v", err)
+	}
+
+	gitignorePath := filepath.Join(tmpDir, ".gitignore")
+	content, err := os.ReadFile(gitignorePath)
+	if err != nil {
+		t.Fatalf("Failed to read .gitignore: %v", err)
+	}
+
+	contentStr := string(content)
+	expectedPatterns := []string{
+		"CLAUDE.md",
+		".claude/agents/",
+		"CUSTOM.md",
+		".my-custom-dir/",
+		"docs/AI_RULES.md",
+	}
+
+	for _, pattern := range expectedPatterns {
+		if !strings.Contains(contentStr, pattern) {
+			t.Errorf("Expected .gitignore to contain %q, but it doesn't", pattern)
+		}
+	}
+
+	lines := strings.Split(contentStr, "\n")
+	seen := make(map[string]int)
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" && !strings.HasPrefix(line, "#") {
+			seen[line]++
+			if seen[line] > 1 {
+				t.Errorf("Pattern %q appears %d times in .gitignore (should appear only once)", line, seen[line])
+			}
+		}
+	}
+}
+
+func TestGitignoreDeduplication(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "gitignore_dedup_test")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer func() { _ = os.RemoveAll(tmpDir) }()
+
+	configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+	cfg := &config.Config{
+		Outputs: []config.Output{
+			{Path: "CLAUDE.md"},
+			{Path: "CLAUDE.md"}, 
+			{Path: ".claude/agents/"},
+			{Path: ".claude/agents/"}, 
+		},
+	}
+
+	err = UpdateGitignoreFiles(configPath, cfg)
+	if err != nil {
+		t.Fatalf("UpdateGitignoreFiles failed: %v", err)
+	}
+
+	gitignorePath := filepath.Join(tmpDir, ".gitignore")
+	content, err := os.ReadFile(gitignorePath)
+	if err != nil {
+		t.Fatalf("Failed to read .gitignore: %v", err)
+	}
+
+	contentStr := string(content)
+
+	claudeMdCount := strings.Count(contentStr, "CLAUDE.md")
+	agentsCount := strings.Count(contentStr, ".claude/agents/")
+
+	if claudeMdCount != 1 {
+		t.Errorf("Expected CLAUDE.md to appear once, but it appears %d times", claudeMdCount)
+	}
+	if agentsCount != 1 {
+		t.Errorf("Expected .claude/agents/ to appear once, but it appears %d times", agentsCount)
+	}
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }
