@@ -17,7 +17,7 @@ tasks:
   test:
     desc: Run unit tests
     cmds:
-      - go test -timeout=30s -v ./cmd/... ./internal/... ./schema/...
+      - go test -timeout=30s ./cmd/... ./internal/... ./schema/...
 
   test:coverage:
     desc: Run unit tests with coverage
