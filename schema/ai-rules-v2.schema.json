@@ -4,7 +4,11 @@
   "title": "AI Rules Configuration",
   "description": "Schema for ai-rulez YAML configuration files",
   "type": "object",
-  "required": ["metadata", "outputs"],
+  "required": ["metadata"],
+  "anyOf": [
+    { "required": ["outputs"] },
+    { "required": ["presets"] }
+  ],
   "properties": {
     "$schema": {
       "type": "string",
@@ -100,6 +104,17 @@
         },
         "additionalProperties": false
       }
+    },
+    "presets": {
+      "type": "array",
+      "description": "List of predefined output configurations to generate",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": ["popular", "claude", "cursor", "gemini", "copilot", "continue", "windsurf", "cline", "amp", "codex"],
+        "description": "Name of the preset to use"
+      },
+      "uniqueItems": true
     },
     "rules": {
       "type": "array",

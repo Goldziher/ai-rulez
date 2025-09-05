@@ -6,19 +6,28 @@ Let's get you set up with `ai-rulez`. This takes about 5 minutes and will sync a
 
 ### Step 1: Create your config
 
-Navigate to your project root and run the `init` command. This creates an `ai-rulez.yml` file with sensible defaults.
+Navigate to your project root and run the `init` command with a preset. This creates a simple `ai-rulez.yml` file using the recommended `presets` feature.
 
 ```bash
-ai-rulez init "My Project" --popular
+# Use the "popular" preset for Claude, Cursor, Windsurf, and Copilot
+ai-rulez init "My Project" --preset popular
 ```
 
-The `--popular` flag sets up Claude, Cursor, Windsurf, and Copilot. You can also use `--preset cursor` for just Cursor, or see `ai-rulez init --help` for all options.
+This will generate the following `ai-rulez.yml` file:
 
-The init command analyzes your codebase and creates a smart template with only required fields uncommented. If you have Claude, Continue.dev, Gemini, or AMP installed, it can even customize the template intelligently for your specific project.
+```yaml
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+metadata:
+  name: "My Project"
+presets:
+  - "popular"
+```
+
+The `init` command can also analyze your codebase to suggest rules and agents, but for now, we'll stick with the basics.
 
 ### Step 2: Add your project details
 
-Now add some context about your project. This helps your AI understand your tech stack and workflow.
+Now, add some context about your project. This helps your AI understand your tech stack and workflow. You can add rules, sections, and more directly from the command line.
 
 ```bash
 # Add a rule for your tech stack
@@ -26,9 +35,6 @@ ai-rulez add rule "Tech Stack" --priority critical --content "Frontend: React, T
 
 # Add a rule for your development workflow
 ai-rulez add rule "Workflow" --priority high --content "All new features must have 90%+ unit test coverage."
-
-# Add a documentation section for high-level context
-ai-rulez add section "Project Goal" --content "This is a web service for managing customer invoices."
 ```
 
 Using the CLI keeps your config valid and makes it easy to script changes later.
@@ -41,7 +47,7 @@ Run the `generate` command to create all your AI instruction files.
 ai-rulez generate
 ```
 
-This creates files like `CLAUDE.md`, `.cursor/rules/rules.mdc`, and `.github/copilot-instructions.md`—all automatically synced.
+This reads your `ai-rulez.yml` file and creates all the necessary configuration files for the tools included in the "popular" preset.
 
 ### Step 4: Validate (optional)
 
@@ -59,6 +65,6 @@ ai-rulez validate
 
 ## What's Next?
 
+- **[Configuration Guide](configuration.md)**: Learn about advanced features like custom `outputs`, `extends`, and `includes`.
 - **[Best Practices](monorepo.md)**: Learn how to structure your configurations for large projects.
 - **[Full CLI Reference](cli.md)**: Explore every command and flag for advanced management.
-- **[Configuration Guide](configuration.md)**: Dive deeper into advanced topics like `extends` and `includes`.
