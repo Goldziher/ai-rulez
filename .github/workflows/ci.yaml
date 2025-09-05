@@ -34,8 +34,9 @@ jobs:
 
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
@@ -70,8 +71,9 @@ jobs:
 
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
         run: task test
@@ -110,8 +112,9 @@ jobs:
 
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binary for tests
         run: task build
@@ -159,8 +162,9 @@ jobs:
 
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binary for benchmarks
         run: task build
@@ -203,8 +207,9 @@ jobs:
 
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binary
         run: task build

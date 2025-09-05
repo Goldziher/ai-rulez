@@ -1,11 +1,7 @@
-# AI-Rulez Configuration v2.0
-# This file configures AI agent behavior for the AI-Rulez project itself
-# Documentation: https://github.com/Goldziher/ai-rulez
 
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 # ========================================
-# REQUIRED FIELDS
 # ========================================
 
 metadata:
@@ -19,9 +15,6 @@ outputs:
     type: "agent"
     naming_scheme: "{name}.md"
 
-# ========================================
-# AGENTS - Specialized AI personalities
-# ========================================
 
 agents:
   - name: "go-developer"
@@ -84,9 +77,6 @@ agents:
       - Include usage examples in help text
       - Handle errors gracefully with actionable messages
 
-# ========================================
-# RULES - Coding standards and practices
-# ========================================
 
 rules:
   - name: "Development Workflow"
@@ -138,9 +128,6 @@ rules:
       - Keep test files next to implementation files
       - Use testutil package for common test helpers
 
-# ========================================
-# SECTIONS - Project documentation
-# ========================================
 
 sections:
   - name: "Project Structure"
@@ -282,9 +269,6 @@ sections:
       - `MigrateV1ToV2(config)` - Migrate v1 config
       - `PreviewMigration(path)` - Preview changes
 
-# ========================================
-# COMMANDS - Custom commands
-# ========================================
 
 commands:
   - name: "test"
@@ -314,9 +298,6 @@ commands:
       Types: command, test, handler, config
       Include proper error handling and tests.
 
-# ========================================
-# MCP SERVERS 
-# ========================================
 
 mcp_servers:
   - name: "ai-rulez"
