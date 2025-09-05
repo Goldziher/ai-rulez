@@ -4,9 +4,9 @@ Use these examples as a starting point for your own `ai-rulez.yml` configuration
 
 ---
 
-### 1. Minimal Configuration
+### 1. Minimal Configuration (Using a Preset)
 
-The simplest possible setup for a single AI assistant.
+The simplest possible setup for a single AI assistant, using the recommended `presets` key.
 
 ```yaml
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
@@ -14,45 +14,46 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 metadata:
   name: "My Project"
 
+# Use a preset for a single tool
+presets:
+  - "claude"
+
 rules:
   - name: "Tech Stack"
     content: "This project uses Go and PostgreSQL."
     priority: critical
-
-outputs:
-  - path: "CLAUDE.md"
 ```
 
-### 2. Multi-Platform Configuration
+### 2. Multi-Platform Configuration (Using Presets)
 
-Generate synchronized instructions for multiple AI tools from a single source.
+Use the `popular` preset to generate synchronized instructions for multiple AI tools from a single source.
 
 ```yaml
 metadata:
   name: "My Multi-Platform Project"
 
+# The "popular" preset includes Claude, Cursor, Windsurf, and Copilot
+presets:
+  - "popular"
+
 rules:
   - name: "General Workflow"
     content: "All code must be reviewed and tested before merging."
     priority: critical
-
-outputs:
-  - path: "CLAUDE.md"
-  - path: ".cursor/rules/rules.mdc"
-  - path: ".github/copilot-instructions.md"
 ```
 
-### 3. Using Agents and Targeted Rules
+### 3. Advanced Configuration: Custom Outputs
 
-Define specialized agents and use `targets` to direct rules to specific outputs.
+For more advanced use cases, like generating specialized agent files, the `outputs` key gives you fine-grained control.
 
 ```yaml
 metadata:
   name: "Project with Agents"
 
+# Use outputs for custom file generation
 outputs:
-  - path: "CLAUDE.md"
-  - path: ".claude/agents/"
+  - path: "CLAUDE.md" # Main instruction file
+  - path: ".claude/agents/" # Directory for agent files
     type: "agent"
     naming_scheme: "{name}.md"
 
@@ -67,9 +68,26 @@ rules:
     targets: ["CLAUDE.md"] # This rule only appears in the main Claude file
 ```
 
-### 4. Full Configuration with Tools & Commands
+### 4. Combining Presets and Outputs
 
-A complete, real-world example showcasing all major features, including MCP server integration and custom slash commands.
+You can combine `presets` and `outputs` to use standard configurations while overriding or adding custom files.
+
+```yaml
+# Use the popular preset, but override the Claude file with a custom template
+presets:
+  - "popular"
+
+outputs:
+  - path: "CLAUDE.md" # This will override the default Claude output
+    template:
+      type: "file"
+      value: "./my-custom-claude-template.tmpl"
+  - path: "INTERNAL_DOCS.md" # Add a completely custom output
+```
+
+### 5. Full Configuration with Tools & Commands
+
+A complete, real-world example showcasing all major features, including presets, MCP server integration, and custom slash commands.
 
 ```yaml
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
@@ -83,17 +101,15 @@ extends: "./shared/base-go-service.yaml"
 includes:
   - "./shared/security-standards.yaml"
 
-outputs:
-  - path: "CLAUDE.md"
-  - path: ".cursor/rules/rules.mdc"
-  - path: ".continue/rules/"
-    type: "rule"
-    naming_scheme: "{name}.md"
+presets:
+  - "claude"
+  - "cursor"
+  - "continue"
 
 agents:
   - name: "go-expert"
     description: "For Go-specific questions about our backend services."
-    model: "claude-3-opus-20240229"  # Optional: for providers that support it (e.g., Continue.dev)
+    model: "claude-3-opus-20240229"
     system_prompt: "You are an expert in Go, gRPC, and PostgreSQL..."
 
 rules:
@@ -104,7 +120,6 @@ rules:
 # Integrate external tools like a GitHub server
 mcp_servers:
   - name: "github"
-    id: "github-prod"
     description: "Provides context from GitHub issues and pull requests."
     command: "npx"
     args: ["-y", "@mcp/server-github"]
@@ -113,14 +128,12 @@ mcp_servers:
 # Define custom slash commands for your AI assistant
 commands:
   - name: "new-endpoint"
-    id: "cmd-new-endpoint"
     description: "Scaffold a new API endpoint"
     usage: "/new-endpoint <path> <method>"
     system_prompt: "Generate the boilerplate code for a new RESTful endpoint..."
-    aliases: ["endpoint"]
 ```
 
-### 5. Composable Configuration with `extends` and `includes`
+### 6. Composable Configuration with `extends` and `includes`
 
 Build powerful, maintainable configurations by composing multiple files.
 
