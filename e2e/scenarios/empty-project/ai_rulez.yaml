@@ -1,6 +1,0 @@
-metadata:
-  name: "Empty Project"
-  description: "A project with no rules to test edge cases"
-
-outputs:
-  - file: "CLAUDE.md"

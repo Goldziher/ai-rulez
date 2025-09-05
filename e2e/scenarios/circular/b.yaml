@@ -1,9 +1,0 @@
-metadata:
-  name: "Circular B"
-
-includes:
-  - "a.yaml"  # Creates circular dependency
-
-rules:
-  - name: "Rule B"
-    content: "From file B"
