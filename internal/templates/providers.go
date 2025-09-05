@@ -49,6 +49,98 @@ func getDefaultOutputPath(providers ProviderConfig) string {
 	return "ai-rules.md"
 }
 
+func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
+	defaultPath := getDefaultOutputPath(providers)
+
+	if providers.Claude && defaultPath != "CLAUDE.md" {
+		builder.WriteString(`  - path: "CLAUDE.md"
+`)
+	}
+
+	if providers.Cursor {
+		builder.WriteString(`  - path: ".cursor/rules/"
+    type: "rule"
+    naming_scheme: "{name}.mdc"
+`)
+	}
+
+	if providers.Windsurf {
+		builder.WriteString(`  - path: ".windsurf/"
+    type: "rule" 
+    naming_scheme: "{name}.md"
+`)
+	}
+
+	if providers.Copilot {
+		builder.WriteString(`  - path: ".github/copilot-instructions.md"
+`)
+	}
+
+	if providers.Gemini {
+		builder.WriteString(`  - path: "GEMINI.md"
+`)
+	}
+
+	if providers.Amp || providers.Codex {
+		builder.WriteString(`  - path: "AGENTS.md"
+`)
+	}
+
+	if providers.Cline {
+		builder.WriteString(`  - path: ".clinerules/"
+    type: "rule"
+    naming_scheme: "{name}.md"
+`)
+	}
+
+	if providers.ContinueDev {
+		if defaultPath != ".continue/rules/01-main.md" {
+			builder.WriteString(`  - path: ".continue/rules/"
+    type: "rule"
+    naming_scheme: "{priority:02d}-{name}.md"
+  - path: ".continue/prompts/ai_rulez_prompts.yaml"
+    type: "agent"
+    naming_scheme: "ai_rulez_prompts.yaml"
+`)
+		} else {
+			builder.WriteString(`  - path: ".continue/prompts/ai_rulez_prompts.yaml"
+    type: "agent"
+    naming_scheme: "ai_rulez_prompts.yaml"
+`)
+		}
+	}
+
+	if providers.Claude {
+		builder.WriteString(`  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
+`)
+	}
+}
+
+func writeCommentedExamples(builder *strings.Builder, providers ProviderConfig) {
+	builder.WriteString(`  
+  # Additional output examples (uncomment as needed):
+`)
+
+	if !providers.Claude {
+		builder.WriteString(`  # - path: "CLAUDE.md"              # For Claude AI assistant
+`)
+	}
+	if !providers.Cursor {
+		builder.WriteString(`  # - path: ".cursorrules"           # For Cursor editor
+`)
+	}
+	if !providers.Gemini {
+		builder.WriteString(`  # - path: "GEMINI.md"              # For Google Gemini
+`)
+	}
+	if !providers.Amp && !providers.Codex {
+		builder.WriteString(`  # - path: "AGENTS.md"              # For Amp/Codex
+`)
+	}
+}
+
 func GenerateConfigTemplate(projectName string, providers ProviderConfig) string {
 	var builder strings.Builder
 
@@ -83,83 +175,9 @@ outputs:
 	builder.WriteString(`"
 `)
 
-	if providers.Claude && getDefaultOutputPath(providers) != "CLAUDE.md" {
-		builder.WriteString(`  - path: "CLAUDE.md"
-`)
-	}
-	if providers.Cursor {
-		builder.WriteString(`  - path: ".cursor/rules/"
-    type: "rule"
-    naming_scheme: "{name}.mdc"
-`)
-	}
-	if providers.Windsurf {
-		builder.WriteString(`  - path: ".windsurf/"
-    type: "rule" 
-    naming_scheme: "{name}.md"
-`)
-	}
-	if providers.Copilot {
-		builder.WriteString(`  - path: ".github/copilot-instructions.md"
-`)
-	}
-	if providers.Gemini {
-		builder.WriteString(`  - path: "GEMINI.md"
-`)
-	}
-	if providers.Amp || providers.Codex {
-		builder.WriteString(`  - path: "AGENTS.md"
-`)
-	}
-	if providers.Cline {
-		builder.WriteString(`  - path: ".clinerules/"
-    type: "rule"
-    naming_scheme: "{name}.md"
-`)
-	}
-	if providers.ContinueDev {
-		if getDefaultOutputPath(providers) != ".continue/rules/01-main.md" {
-			builder.WriteString(`  - path: ".continue/rules/"
-    type: "rule"
-    naming_scheme: "{priority:02d}-{name}.md"
-  - path: ".continue/prompts/ai_rulez_prompts.yaml"
-    type: "agent"
-    naming_scheme: "ai_rulez_prompts.yaml"
-`)
-		} else {
-			builder.WriteString(`  - path: ".continue/prompts/ai_rulez_prompts.yaml"
-    type: "agent"
-    naming_scheme: "ai_rulez_prompts.yaml"
-`)
-		}
-	}
-	if providers.Claude {
-		builder.WriteString(`  - path: ".claude/agents/"
-    type: "agent"
-    naming_scheme: "{name}.md"
-`)
-	}
+	writeProviderOutputs(&builder, providers)
 
-	builder.WriteString(`  
-  # Additional output examples (uncomment as needed):
-`)
-
-	if !providers.Claude {
-		builder.WriteString(`  # - path: "CLAUDE.md"              # For Claude AI assistant
-`)
-	}
-	if !providers.Cursor {
-		builder.WriteString(`  # - path: ".cursorrules"           # For Cursor editor
-`)
-	}
-	if !providers.Gemini {
-		builder.WriteString(`  # - path: "GEMINI.md"              # For Google Gemini
-`)
-	}
-	if !providers.Amp && !providers.Codex {
-		builder.WriteString(`  # - path: "AGENTS.md"              # For Amp/Codex
-`)
-	}
+	writeCommentedExamples(&builder, providers)
 
 	builder.WriteString(`  
   # Directory outputs for multiple files:

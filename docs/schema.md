@@ -4,7 +4,7 @@ The `ai-rulez` configuration is validated against a formal JSON Schema to provid
 
 ## Enabling Schema Validation
 
-To enable editor support, add the `$schema` key to the top of your `ai_rulez.yaml` file.
+To enable editor support, add the `$schema` key to the top of your `ai-rulez.yml` file.
 
 ```yaml
 $schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json"

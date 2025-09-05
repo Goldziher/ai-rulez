@@ -1,27 +1,327 @@
+# AI-Rulez Configuration v2.0
+# This file configures AI agent behavior for the AI-Rulez project itself
+# Documentation: https://github.com/Goldziher/ai-rulez
 
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
+# ========================================
+# REQUIRED FIELDS
+# ========================================
 
 metadata:
-  name: "TestProject"
+  name: "AI-Rulez"
+  version: "2.0.0"
+  description: "AI assistant configuration management tool for development workflows"
 
 outputs:
   - path: "CLAUDE.md"
   - path: ".claude/agents/"
     type: "agent"
     naming_scheme: "{name}.md"
-  
-  
 
+# ========================================
+# AGENTS - Specialized AI personalities
+# ========================================
 
+agents:
+  - name: "go-developer"
+    description: "Go language expert for core development"
+    priority: high
+    system_prompt: |
+      You are an expert Go developer working on the AI-Rulez project.
+      
+      Key responsibilities:
+      - Write idiomatic Go code following project conventions
+      - Use proper error handling with the oops library
+      - Create comprehensive tests with testify/assert
+      - Follow the existing package structure
+      - Use interfaces for testability and flexibility
+      
+      Code style:
+      - Use meaningful variable names
+      - Keep functions focused and under 50 lines
+      - Group related functionality
+      - Comment exported functions and types
+      - Handle errors explicitly, never ignore them
 
+  - name: "test-engineer"
+    description: "Testing and quality assurance specialist"
+    priority: high
+    system_prompt: |
+      You are a testing specialist for the AI-Rulez project.
+      
+      Focus areas:
+      - Write comprehensive unit tests in *_test.go files
+      - Create integration tests in testing/e2e/
+      - Use table-driven tests where appropriate
+      - Mock external dependencies properly
+      - Ensure high code coverage (aim for >80%)
+      
+      Testing guidelines:
+      - Use testify/assert for assertions
+      - Test both success and error cases
+      - Test edge cases and boundary conditions
+      - Keep tests independent and repeatable
+      - Use meaningful test names that describe the scenario
 
+  - name: "cli-specialist"
+    description: "Command-line interface and user experience expert"
+    priority: medium
+    system_prompt: |
+      You are a CLI specialist focused on the AI-Rulez command-line tool.
+      
+      Responsibilities:
+      - Enhance CLI commands using Cobra framework
+      - Improve user experience with clear messages
+      - Implement proper flag validation
+      - Create helpful error messages with hints
+      - Design intuitive command structures
+      
+      Best practices:
+      - Provide clear help text for all commands
+      - Use consistent flag naming conventions
+      - Support both short and long flag formats
+      - Include usage examples in help text
+      - Handle errors gracefully with actionable messages
 
+# ========================================
+# RULES - Coding standards and practices
+# ========================================
 
+rules:
+  - name: "Development Workflow"
+    priority: critical
+    content: |
+      Follow this workflow for all changes:
+      1. Understand the existing code structure before making changes
+      2. Write or update tests FIRST (TDD approach when possible)
+      3. Implement the feature/fix following project conventions
+      4. Run `task lint` to check code style
+      5. Run `task test` to ensure all tests pass
+      6. Run `task build` to verify compilation
+      7. Update documentation if adding new features
 
+  - name: "Go Code Standards"
+    priority: high
+    content: |
+      Go coding standards:
+      - Follow standard Go project layout (cmd/, internal/, pkg/)
+      - Use meaningful package names (avoid generic names)
+      - Export only what needs to be public
+      - Use contexts for cancellation and timeouts
+      - Prefer composition over inheritance
+      - Return errors as the last return value
+      - Use defer for cleanup operations
+      - Avoid init() functions unless necessary
 
+  - name: "Error Handling"
+    priority: high
+    content: |
+      Error handling requirements:
+      - Use the oops library for rich error context
+      - Always check returned errors
+      - Add context to errors when wrapping
+      - Use specific error types when appropriate
+      - Provide helpful error messages with hints
+      - Log errors at appropriate levels
+      - Never panic in library code
 
-#     # aliases: ["t", "todo"]  # Optional: alternative names
+  - name: "Testing Requirements"
+    priority: high
+    content: |
+      Testing standards:
+      - Write unit tests for all new functions
+      - Create integration tests for CLI commands
+      - Use table-driven tests for multiple scenarios
+      - Mock file system operations in tests
+      - Test error conditions explicitly
+      - Keep test files next to implementation files
+      - Use testutil package for common test helpers
 
+# ========================================
+# SECTIONS - Project documentation
+# ========================================
 
+sections:
+  - name: "Project Structure"
+    priority: critical
+    content: |
+      ## AI-Rulez Project Layout
+      
+      ```
+      ai-rulez/
+      ├── cmd/                    # Main application entry point
+      │   └── main.go            # CLI application main
+      ├── cmd/commands/          # CLI command implementations
+      │   ├── crud/              # CRUD operations for config elements
+      │   ├── generate.go        # Generate output files
+      │   ├── init.go            # Initialize new config
+      │   ├── validate.go        # Validate configuration
+      │   └── mcp.go             # MCP server command
+      ├── internal/              # Private application code
+      │   ├── config/            # Configuration loading and validation
+      │   ├── generator/         # Output file generation
+      │   ├── templates/         # Built-in templates
+      │   ├── migration/         # Config migration v1 to v2
+      │   ├── agents/            # Agent management
+      │   ├── mcp/               # MCP server implementation
+      │   └── logger/            # Logging utilities
+      ├── schema/                # JSON schema for validation
+      ├── testing/               # Test utilities and fixtures
+      │   ├── e2e/               # End-to-end tests
+      │   └── fixtures/          # Test data
+      └── docs/                  # Documentation
+      ```
+      
+      ## Key Components
+      - **Config**: Loads and validates YAML configurations
+      - **Generator**: Creates output files from templates
+      - **MCP Server**: Provides Model Context Protocol integration
+      - **Migration**: Handles v1 to v2 config migration
+      - **Templates**: Built-in and custom template support
 
+  - name: "Development Setup"
+    priority: high
+    content: |
+      ## Prerequisites
+      - Go 1.21 or higher
+      - Task (taskfile.dev) for build automation
+      - golangci-lint for code quality checks
+      
+      ## Setup Steps
+      ```bash
+      # Clone the repository
+      git clone https://github.com/Goldziher/ai-rulez
+      cd ai-rulez
+      
+      # Install dependencies
+      go mod download
+      
+      # Install development tools
+      go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      go install github.com/go-task/task/v3/cmd/task@latest
+      
+      # Build the project
+      task build
+      
+      # Run tests
+      task test
+      
+      # Run linting
+      task lint
+      ```
+      
+      ## Available Tasks
+      - `task build` - Build the binary
+      - `task test` - Run unit tests
+      - `task test:e2e` - Run end-to-end tests
+      - `task lint` - Run linters
+      - `task fmt` - Format code
+      - `task clean` - Clean build artifacts
+
+  - name: "Configuration Schema"
+    priority: high
+    content: |
+      ## Configuration Structure (v2.0)
+      
+      ### Required Fields
+      - `metadata.name` - Project name (string, required)
+      - `outputs` - At least one output definition (array, required)
+      
+      ### Optional Fields
+      - `metadata.version` - Project version (semver format)
+      - `metadata.description` - Project description
+      - `rules` - Coding standards and guidelines
+      - `sections` - Project documentation
+      - `agents` - Specialized AI agents
+      - `commands` - Custom slash commands
+      - `mcp_servers` - MCP server configurations
+      - `extends` - Base configuration to extend
+      - `includes` - Additional configs to include
+      
+      ### Priority Levels
+      - `critical` (highest)
+      - `high`
+      - `medium`
+      - `low`
+      - `minimal` (lowest)
+      
+      ### Output Types
+      - Single file: `path: "CLAUDE.md"`
+      - Directory: `path: ".claude/agents/", type: "agent"`
+      - With naming: `naming_scheme: "{name}.md"`
+      
+      ### Template Types
+      - `inline` - Direct text content
+      - `file` - External template file
+      - `builtin` - Pre-defined templates
+
+  - name: "API Design"
+    priority: medium
+    content: |
+      ## Core APIs
+      
+      ### Config Package
+      - `LoadConfig(path)` - Load configuration from file
+      - `LoadConfigWithIncludes(ctx, path)` - Load with includes/extends
+      - `Validate()` - Validate configuration
+      - `SaveConfig(path, config)` - Save configuration
+      
+      ### Generator Package  
+      - `NewGenerator()` - Create generator instance
+      - `GenerateAll(config)` - Generate all outputs
+      - `PreviewAll(config)` - Preview without writing
+      
+      ### MCP Package
+      - `StartServer()` - Start MCP server
+      - CRUD operations for all config elements
+      - Schema validation support
+      
+      ### Migration Package
+      - `DetectAndMigrate(path)` - Auto-detect and migrate
+      - `MigrateV1ToV2(config)` - Migrate v1 config
+      - `PreviewMigration(path)` - Preview changes
+
+# ========================================
+# COMMANDS - Custom commands
+# ========================================
+
+commands:
+  - name: "test"
+    description: "Run tests for modified code"
+    aliases: ["t"]
+    usage: "/test [package]"
+    system_prompt: |
+      Run appropriate tests for the code you've modified.
+      Use `task test` for unit tests or `task test:e2e` for integration tests.
+      Ensure all tests pass before considering the task complete.
+
+  - name: "lint"
+    description: "Check code quality"
+    aliases: ["l"]
+    usage: "/lint"
+    system_prompt: |
+      Run `task lint` to check code quality.
+      Fix any issues reported by golangci-lint.
+      Common issues: unused variables, error handling, cyclomatic complexity.
+
+  - name: "generate"
+    description: "Generate code or configuration"
+    aliases: ["gen"]
+    usage: "/generate <type> <name>"
+    system_prompt: |
+      Generate boilerplate code following project patterns.
+      Types: command, test, handler, config
+      Include proper error handling and tests.
+
+# ========================================
+# MCP SERVERS 
+# ========================================
+
+mcp_servers:
+  - name: "ai-rulez"
+    description: "AI-Rulez MCP server for config management"
+    command: "bin/ai-rulez"
+    args: ["mcp"]
+    transport: "stdio"
+    enabled: true
