@@ -26,7 +26,7 @@ type TitledItem interface {
 func sortByTitlePriority[T TitledItem](items []T) {
 	slices.SortFunc(items, func(a, b T) int {
 		if a.GetPriority() != b.GetPriority() {
-			return cmp.Compare(b.GetPriority(), a.GetPriority())
+			return cmp.Compare(b.GetPriority().ToInt(), a.GetPriority().ToInt())
 		}
 		return cmp.Compare(a.GetTitle(), b.GetTitle())
 	})
@@ -51,6 +51,7 @@ type contentItem struct {
 
 func (c contentItem) GetTitle() string             { return c.Title }
 func (c contentItem) GetPriority() config.Priority { return config.IntToPriority(c.Priority) }
+func (c contentItem) PriorityString() string       { return string(config.IntToPriority(c.Priority)) }
 
 type TemplateData struct {
 	ProjectName    string

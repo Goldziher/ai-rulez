@@ -6,7 +6,7 @@
 
 **One config to rule them all.**
 
-Tired of manually managing rule files, subagents, MCP servers and custom commands across different AI tools? `ai-rulez` gives you one `ai-rulez.yml` file to generate them all. Keep your AI context in sync with your team, while gitignoring AI clutter. 
+Tired of manually managing rule files, subagents, and custom commands across different AI tools? `ai-rulez` gives you one `ai-rulez.yml` file to generate them all. Keep your AI context in sync, and even launch MCP servers for direct integration.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -49,29 +49,41 @@ As new AI tools emerge, `ai-rulez` grows with them. The extensible design makes 
 ```yaml
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
-# Inherit from a company-wide base configuration
-extends: "https://example.com/base-config.yaml"
-
 metadata:
-  name: "My Project"
+  name: "My SaaS Platform"
+  version: "2.0.0"
 
 outputs:
   - path: "CLAUDE.md"
-  - path: ".cursor/rules/"
-    type: "rule"
-    naming_scheme: "{name}.mdc"
-
-agents:
-  - name: "code-reviewer"
-    description: "Code quality and security analysis specialist."
-    system_prompt: "You are a senior code reviewer..."
+  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
 
 rules:
-  - name: "Tech Stack"
+  - name: "Go Code Standards"
+    priority: high
+    content: "Follow standard Go project layout (cmd/, internal/, pkg/). Use meaningful package names and export only what is necessary."
+
+sections:
+  - name: "Project Structure"
     priority: critical
-    content: "Frontend: React, TypeScript. Backend: Go, PostgreSQL."
-    # Target this rule to specific output files
-    targets: ["CLAUDE.md"]
+    content: |
+      - `cmd/`: Main application entry point
+      - `internal/`: Private application code (business logic, data access)
+      - `pkg/`: Public-facing libraries
+      - `schema/`: JSON schema definitions
+      - `testing/`: E2E tests and fixtures
+
+agents:
+  - name: "go-developer"
+    description: "Go language expert for core development"
+    system_prompt: "You are an expert Go developer. Your key responsibilities include writing idiomatic Go, using proper error handling, and creating comprehensive tests."
+
+commands:
+  - name: "test"
+    description: "Run tests for modified code"
+    aliases: ["t"]
+    system_prompt: "Run appropriate tests for the code you've modified. Use `task test` for unit tests or `task test:e2e` for integration tests."
 ```
 
 Run `ai-rulez generate` → get all your configuration files, perfectly synchronized.

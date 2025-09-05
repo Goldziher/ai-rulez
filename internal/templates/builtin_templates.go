@@ -21,7 +21,7 @@ Total content: {{.RuleCount}} rules, {{.SectionCount}} sections
 
 ## {{.Title}}
 
-**Priority:** {{.Priority}}
+**Priority:** {{.PriorityString}}
 
 {{.Content}}
 {{- else}}
@@ -52,7 +52,7 @@ Generated on {{.Timestamp.Format "2006-01-02 15:04:05"}}
 {{- range .Rules}}
 ## {{.Name}}
 
-**Priority:** {{.Priority}}
+**Priority:** {{.PriorityString}}
 
 {{.Content}}
 
