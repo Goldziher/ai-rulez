@@ -16,7 +16,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "valid single preset",
 			presets:     []string{"claude"},
-			expected:    2, 
+			expected:    2,
 			expectError: false,
 		},
 		{
@@ -28,7 +28,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "multiple valid presets",
 			presets:     []string{"claude", "cursor"},
-			expected:    3, 
+			expected:    3,
 			expectError: false,
 		},
 		{
@@ -52,7 +52,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "duplicate presets",
 			presets:     []string{"claude", "claude"},
-			expected:    4, 
+			expected:    4,
 			expectError: false,
 		},
 		{
