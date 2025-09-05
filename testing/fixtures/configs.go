@@ -81,27 +81,22 @@ const ConfigWithTargets = `metadata:
 outputs:
   - path: "frontend.md"
   - path: "backend.md"
-  
-named_targets:
-  frontend-files: ["src/**/*.jsx", "src/**/*.tsx"]
-  backend-files: ["api/**/*.go", "internal/**/*.go"]
-  doc-files: ["docs/**/*.md", "*.md"]
 
 rules:
   - name: "Frontend Rule"
     content: "Frontend specific rule"
-    targets: ["frontend.md", "@frontend-files"]
+    targets: ["frontend.md", "src/**/*.jsx", "src/**/*.tsx"]
 
   - name: "Backend Rule"
     content: "Backend specific rule"
-    targets: ["backend.md", "@backend-files"]
+    targets: ["backend.md", "api/**/*.go", "internal/**/*.go"]
 
   - name: "Universal Rule"
     content: "Rule for everyone"
     
   - name: "Doc Rule"
     content: "Documentation rule"
-    targets: ["@doc-files"]
+    targets: ["docs/**/*.md", "*.md"]
 `
 
 const ConfigWithTemplate = `metadata:
