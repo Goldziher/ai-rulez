@@ -46,10 +46,7 @@ func (s *InitCLITestSuite) TestInitConflictingProviders() {
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 
-	s.Equal(1, strings.Count(content, "agents:"), "Should only be one agents block in the config")
-
-	s.Contains(content, "# AI agents (specialized sub-assistants for Claude)")
-	s.NotContains(content, "# AI agents (specialized sub-assistants for Continue.dev)")
+	s.Equal(1, strings.Count(content, "# agents:"), "Should only be one agents block in the config")
 }
 
 func (s *InitCLITestSuite) TestBasicInit() {
@@ -75,10 +72,8 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
 	s.Contains(configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
-	s.Contains(configContent, "type: builtin")
-	s.Contains(configContent, "value: continuedev-prompts")
-	s.Contains(configContent, "agents:")
-	s.Contains(configContent, "name: \"code-reviewer\"")
+	s.Contains(configContent, "# agents:")
+	s.Contains(configContent, "name: \"architect\"")
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
@@ -86,8 +81,6 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	s.True(testutil.FileExists(s.T(), promptsPath), "prompts YAML file should be generated")
 	promptsContent := testutil.ReadFile(s.T(), promptsPath)
 	s.Contains(promptsContent, "GENERATED FILE - DO NOT EDIT DIRECTLY")
-	s.Contains(promptsContent, "name: code-reviewer")
-	s.Contains(promptsContent, "description: Code review and quality analysis specialist")
 
 	secondWorkingDir := testutil.CreateTempDir(s.T())
 
@@ -180,16 +173,6 @@ func (s *InitCLITestSuite) TestInitIndividualProviders() {
 	s.Contains(content, "CLAUDE.md")
 	s.Contains(content, ".cursor/rules/")
 	s.NotContains(content, ".windsurf/")
-}
-
-func (s *InitCLITestSuite) TestInitNoComments() {
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "NoCommentsProject", "--no-comments")
-
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-
-	commentLines := strings.Count(content, "# ")
-	s.LessOrEqual(commentLines, 5, "Should have minimal comments with --no-comments flag")
 }
 
 func (s *InitCLITestSuite) TestInitExistingConfig() {

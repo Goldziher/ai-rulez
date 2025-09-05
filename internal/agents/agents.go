@@ -29,12 +29,11 @@ type AgentInfo struct {
 var supportedAgents = []AgentInfo{
 	{ID: "amp", Command: "amp", Display: "AMP (Sourcegraph)"},
 	{ID: claudeAgentID, Command: claudeAgentID, Display: "Claude (Anthropic)"},
-	{ID: "codex", Command: "codex", Display: "Codex (OpenAI)"},
-	{ID: "cursor", Command: "cursor-agent", Display: "Cursor Agent (Cursor)"},
+	{ID: "continue", Command: "cn", Display: "Continue.dev"},
 	{ID: "gemini", Command: "gemini", Display: "Gemini (Google)"},
 }
 
-func detectAvailableAgents() ([]AgentInfo, error) {
+func detectAvailableAgents() []AgentInfo {
 	var available []AgentInfo
 
 	for _, agent := range supportedAgents {
@@ -43,7 +42,7 @@ func detectAvailableAgents() ([]AgentInfo, error) {
 		}
 	}
 
-	return available, nil
+	return available
 }
 
 func isCommandAvailable(command string) bool {
@@ -74,10 +73,7 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	case "amp":
 		cmd = exec.CommandContext(ctx, agent.Command, "--execute", prompt) //nolint:gosec // Intentional subprocess execution
 
-	case "codex":
-		cmd = exec.CommandContext(ctx, agent.Command, "exec", prompt) //nolint:gosec // Intentional subprocess execution
-
-	case "cursor":
+	case "continue":
 		cmd = exec.CommandContext(ctx, agent.Command, "--print", prompt) //nolint:gosec // Intentional subprocess execution
 
 	case "gemini":
@@ -145,7 +141,7 @@ func ListAvailableAgents() {
 	logger.Info("Available AI agents for configuration generation:")
 	logger.Info("")
 
-	available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored for display purposes
+	available := detectAvailableAgents()
 
 	for _, agent := range supportedAgents {
 		status := "❌ Not installed"
@@ -176,7 +172,7 @@ func ShouldPromptForAgent() bool {
 		return false
 	}
 
-	available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored - fail safe to false
+	available := detectAvailableAgents()
 	return len(available) > 0
 }
 
@@ -196,13 +192,9 @@ func getPreferredAgent(config templates.ProviderConfig) string {
 		enabledCount++
 		lastEnabled = "amp"
 	}
-	if config.Codex {
+	if config.ContinueDev {
 		enabledCount++
-		lastEnabled = "codex"
-	}
-	if config.Cursor {
-		enabledCount++
-		lastEnabled = "cursor"
+		lastEnabled = "continue"
 	}
 
 	if enabledCount == 1 {
@@ -212,65 +204,17 @@ func getPreferredAgent(config templates.ProviderConfig) string {
 	return claudeAgentID
 }
 
-func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string, autoYes bool) (string, bool) { //nolint:gocyclo // Agent selection logic has multiple fallback scenarios
-	var selectedAgent *AgentInfo
-
-	if useAgent != "" {
-		agent, err := getAgentByID(useAgent)
-		if err != nil {
-			logger.Error("Unknown agent", "agent", useAgent)
-			return "", false
-		}
-		selectedAgent = agent
-	} else {
-		available, _ := detectAvailableAgents() //nolint:errcheck // Error intentionally ignored
-		if len(available) == 0 {
-			return "", false
-		}
-
-		preferredAgent := getPreferredAgent(config)
-		for _, agent := range available {
-			if agent.ID == preferredAgent {
-				selectedAgent = &agent
-				break
-			}
-		}
-
-		if selectedAgent == nil {
-			for _, agent := range available {
-				if agent.ID == claudeAgentID {
-					selectedAgent = &agent
-					break
-				}
-			}
-		}
-
-		if selectedAgent == nil {
-			selectedAgent = &available[0]
-		}
-	}
-
-	prompt := buildAgentPrompt(projectName, config)
-
-	var response string
-	if autoYes {
-		logger.Info(fmt.Sprintf("🤖 Using %s to generate your configuration (--yes)", selectedAgent.Display))
-		response = "y"
-	} else {
-		logger.Info(fmt.Sprintf("🤖 Would you like to use %s to generate your configuration? (y/N): ", selectedAgent.Display))
-		reader := bufio.NewReader(os.Stdin)
-		userResponse, err := reader.ReadString('\n')
-		if err != nil && !errors.Is(err, io.EOF) {
-			logger.LogError("Failed to read user input", err)
-			return "", false
-		}
-		response = strings.TrimSpace(strings.ToLower(userResponse))
-	}
-
-	if response != "y" && response != "yes" {
+func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string, autoYes bool) (string, bool) {
+	selectedAgent := selectAgent(useAgent, config)
+	if selectedAgent == nil {
 		return "", false
 	}
 
+	if !confirmAgentUse(selectedAgent, autoYes) {
+		return "", false
+	}
+
+	prompt := buildAgentPrompt(projectName, config)
 	logger.Info("🤖 Generating configuration...", "agent", selectedAgent.ID)
 
 	result, err := invokeAgent(*selectedAgent, prompt, 120*time.Second)
@@ -279,28 +223,101 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 		return "", false
 	}
 
+	return processAgentOutput(result, selectedAgent.ID)
+}
+
+func selectAgent(useAgent string, config templates.ProviderConfig) *AgentInfo {
+	if useAgent != "" {
+		agent, err := getAgentByID(useAgent)
+		if err != nil {
+			logger.Error("Unknown agent", "agent", useAgent)
+			return nil
+		}
+		return agent
+	}
+
+	available := detectAvailableAgents()
+	if len(available) == 0 {
+		return nil
+	}
+
+	preferredAgent := getPreferredAgent(config)
+	for i := range available {
+		if available[i].ID == preferredAgent {
+			return &available[i]
+		}
+	}
+
+	for i := range available {
+		if available[i].ID == claudeAgentID {
+			return &available[i]
+		}
+	}
+
+	return &available[0]
+}
+
+func confirmAgentUse(agent *AgentInfo, autoYes bool) bool {
+	if autoYes {
+		logger.Info(fmt.Sprintf("🤖 Using %s to generate your configuration (--yes)", agent.Display))
+		return true
+	}
+
+	logger.Info(fmt.Sprintf("🤖 Would you like to use %s to generate your configuration? (y/N): ", agent.Display))
+	reader := bufio.NewReader(os.Stdin)
+	userResponse, err := reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		logger.LogError("Failed to read user input", err)
+		return false
+	}
+
+	response := strings.TrimSpace(strings.ToLower(userResponse))
+	return response == "y" || response == "yes"
+}
+
+func processAgentOutput(result string, agentID string) (string, bool) {
 	result = cleanAgentOutput(result)
+
+	if strings.Contains(result, "ERROR_MARKER:") {
+		extractAndLogError(result, agentID)
+		return "", false
+	}
+
+	if len(result) < 100 || !strings.Contains(result, "metadata:") {
+		logger.Warn("Agent output appears invalid, using default template", "agent", agentID, "output_size", len(result))
+		return "", false
+	}
 
 	return strings.TrimSpace(result), true
 }
 
+func extractAndLogError(result string, agentID string) {
+	lines := strings.Split(result, "\n")
+	for _, line := range lines {
+		if strings.Contains(line, "ERROR_MARKER:") {
+			errorMsg := strings.TrimPrefix(line, "ERROR_MARKER:")
+			errorMsg = strings.TrimSpace(errorMsg)
+			logger.Warn("Agent reported error, using default template", "agent", agentID, "error", errorMsg)
+			break
+		}
+	}
+}
+
 func cleanAgentOutput(result string) string {
-	// Remove markdown code blocks
 	result = strings.TrimPrefix(result, "```yaml\n")
 	result = strings.TrimPrefix(result, "```yml\n")
 	result = strings.TrimPrefix(result, "```\n")
 	result = strings.TrimSuffix(result, "\n```")
 	result = strings.TrimSuffix(result, "```")
 
-	// Find YAML content between lines that start with version: or $schema:
 	lines := strings.Split(result, "\n")
 	startIdx := -1
 	endIdx := len(lines)
 
-	// Find the start of YAML content
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "version:") ||
+		if strings.HasPrefix(trimmed, "# AI-Rulez") ||
+			strings.HasPrefix(trimmed, "version:") ||
 			strings.HasPrefix(trimmed, "$schema:") ||
 			strings.HasPrefix(trimmed, "metadata:") {
 			startIdx = i
@@ -308,20 +325,19 @@ func cleanAgentOutput(result string) string {
 		}
 	}
 
-	// Find the end of YAML content (look for markdown blocks or other non-YAML content)
 	if startIdx >= 0 {
 		for i := startIdx + 1; i < len(lines); i++ {
 			line := strings.TrimSpace(lines[i])
-			// Stop if we hit markdown blocks or other non-YAML patterns
 			if strings.HasPrefix(line, "```") ||
 				strings.HasPrefix(line, "I am unable to") ||
-				strings.HasPrefix(line, "# ") {
+				strings.HasPrefix(line, "I cannot") ||
+				strings.HasPrefix(line, "Here is") ||
+				strings.HasPrefix(line, "Error:") {
 				endIdx = i
 				break
 			}
 		}
 
-		// Extract just the YAML portion
 		if startIdx < endIdx {
 			result = strings.Join(lines[startIdx:endIdx], "\n")
 		}
@@ -331,51 +347,77 @@ func cleanAgentOutput(result string) string {
 }
 
 func buildAgentPrompt(projectName string, config templates.ProviderConfig) string {
+	info := AnalyzeCodebase(projectName)
+
+	template := templates.GenerateConfigTemplate(projectName, config)
+
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("Generate an ai-rulez configuration file (ai_rulez.yaml) for a project called '%s'. ", projectName))
-	prompt.WriteString("The configuration MUST follow this exact schema format:\n\n")
+	prompt.WriteString(fmt.Sprintf("Customize this ai-rulez.yaml template for project '%s':\n\n", projectName))
 
-	prompt.WriteString("$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json\n\n")
-	prompt.WriteString("metadata:\n  name: \"ProjectName\"\n  version: \"1.0.0\"\n\n")
-	prompt.WriteString("outputs:\n  - path: \"FILENAME.md\"\n\n")
-	prompt.WriteString("rules:\n  - name: \"Rule Name\"\n    priority: critical|high|medium|low\n    content: |\n      Rule description\n\n")
-	prompt.WriteString("sections:\n  - name: \"Section Name\"\n    priority: critical|high|medium|low\n    content: |\n      Section content\n\n")
-	prompt.WriteString("Include output configurations for:\n")
+	prompt.WriteString("INSTRUCTIONS:\n")
+	prompt.WriteString("1. KEEP MINIMAL: Leave metadata and outputs sections mostly as-is\n")
+	prompt.WriteString("2. SELECTIVELY UNCOMMENT based on project analysis:\n")
+	prompt.WriteString("   - Uncomment 2-3 agents if they would benefit this project\n")
+	prompt.WriteString("   - Uncomment 3-4 most relevant rules and customize for this project\n")
+	prompt.WriteString("   - Uncomment 'Codebase Structure' and 'Coding Conventions' sections\n")
 
-	if config.Claude {
-		prompt.WriteString("   - Claude (CLAUDE.md and .claude/agents/)\n")
-	}
-	if config.Cursor {
-		prompt.WriteString("   - Cursor (.cursor/rules/)\n")
-	}
-	if config.Windsurf {
-		prompt.WriteString("   - Windsurf (.windsurf/)\n")
-	}
-	if config.Copilot {
-		prompt.WriteString("   - GitHub Copilot (.github/copilot-instructions.md)\n")
-	}
-	if config.Gemini {
-		prompt.WriteString("   - Gemini (GEMINI.md)\n")
-	}
-	if config.Amp || config.Codex {
-		prompt.WriteString("   - AMP/Codex (AGENTS.md)\n")
-	}
-	if config.Cline {
-		prompt.WriteString("   - Cline (.clinerules/)\n")
-	}
-	if config.ContinueDev {
-		prompt.WriteString("   - Continue.dev (.continue/rules/)\n")
+	if info.BuildCommand != "" || info.TestCommand != "" {
+		prompt.WriteString("   - Uncomment commands section and add detected commands\n")
 	}
 
-	prompt.WriteString("\n3. At least 5 high-quality rules for software development best practices\n")
-	prompt.WriteString("4. At least 3 documentation sections\n")
-
-	if config.Claude {
-		prompt.WriteString("5. At least 2 agent configurations for Claude\n")
+	if info.HasMCP {
+		prompt.WriteString("   - Uncomment ai-rulez MCP server (using " + info.MCPCommand + ")\n")
 	}
 
-	prompt.WriteString("\nGenerate only the YAML content, no explanations or markdown code blocks.")
+	prompt.WriteString("\n3. CUSTOMIZE uncommented content:\n")
+	prompt.WriteString("   - Update with actual project structure and conventions\n")
+	prompt.WriteString("   - Keep descriptions concise and specific\n")
+	prompt.WriteString("   - Remove generic placeholders\n")
+
+	prompt.WriteString("\n4. VALIDATE YOUR YAML:\n")
+	prompt.WriteString("   - Ensure all syntax is correct\n")
+	prompt.WriteString("   - Keep proper indentation\n")
+	prompt.WriteString("   - Test with an online YAML validator if unsure\n")
+
+	prompt.WriteString("\n5. PRESERVE all inline documentation comments\n")
+	prompt.WriteString("6. DELETE unused commented examples that don't apply\n\n")
+
+	prompt.WriteString("PROJECT ANALYSIS:\n")
+	prompt.WriteString("Detected project information:\n")
+	if len(info.TechStack) > 0 {
+		prompt.WriteString(fmt.Sprintf("- Tech Stack: %s\n", strings.Join(info.TechStack, ", ")))
+	}
+	if info.MainLanguage != "" {
+		prompt.WriteString(fmt.Sprintf("- Main Language: %s\n", info.MainLanguage))
+	}
+	prompt.WriteString(fmt.Sprintf("- Project Type: %s\n", info.ProjectType))
+
+	if info.BuildCommand != "" {
+		prompt.WriteString(fmt.Sprintf("- Build Command: %s\n", info.BuildCommand))
+	}
+	if info.TestCommand != "" {
+		prompt.WriteString(fmt.Sprintf("- Test Command: %s\n", info.TestCommand))
+	}
+	if info.LintCommand != "" {
+		prompt.WriteString(fmt.Sprintf("- Lint Command: %s\n", info.LintCommand))
+	}
+
+	prompt.WriteString(fmt.Sprintf("- Has Database: %v\n", info.HasDatabase))
+	prompt.WriteString(fmt.Sprintf("- Has Docker: %v\n", info.HasDocker))
+
+	if len(info.ConfigFiles) > 0 {
+		prompt.WriteString(fmt.Sprintf("- Config Files: %s\n", strings.Join(info.ConfigFiles, ", ")))
+	}
+
+	prompt.WriteString("\nIMPORTANT: Most of the template should remain commented. Only uncomment what adds real value.\n")
+	prompt.WriteString("Return ONLY the customized YAML content, no explanations or markdown blocks.\n\n")
+	prompt.WriteString("ERROR HANDLING:\n")
+	prompt.WriteString("If you encounter an error or cannot complete the task, output: ERROR_MARKER: followed by the error message\n")
+	prompt.WriteString("Example: ERROR_MARKER: Authentication required\n\n")
+	prompt.WriteString("CONFIGURATION TEMPLATE:\n")
+	prompt.WriteString("Template to customize:\n\n")
+	prompt.WriteString(template)
 
 	return prompt.String()
 }
