@@ -2,6 +2,7 @@ package cli
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/testing/e2e/testutil"
@@ -103,7 +104,11 @@ func (s *ValidateCLITestSuite) TestValidateMissingConfig() {
 func (s *ValidateCLITestSuite) TestValidateNonExistentConfig() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate", "--config", "nonexistent.yaml")
 
-	result.AssertStderrContains(s.T(), "no such file")
+	// Windows returns "The system cannot find the file specified" instead of "no such file"
+	stderr := result.Stderr
+	if !strings.Contains(stderr, "no such file") && !strings.Contains(stderr, "cannot find the file") {
+		s.T().Errorf("Expected error message about missing file, got: %s", stderr)
+	}
 }
 
 func (s *ValidateCLITestSuite) TestValidateEmptyConfig() {
