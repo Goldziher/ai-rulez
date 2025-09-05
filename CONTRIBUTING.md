@@ -1,271 +1,100 @@
 # Contributing to ai-rulez
 
-Thank you for your interest in contributing to ai-rulez! This guide will help you get started with development.
+Thank you for your interest in contributing! This guide provides everything you need to get started with development.
 
-## Prerequisites
+## Getting Started
 
-- **Go 1.24+** - Required for building the binary
-- **Node.js 20+** - Required for npm package and commit hooks  
-- **Python 3.8+** - Required for PyPI package
-- **[Task](https://taskfile.dev)** - Required for running build tasks
-- **[golangci-lint](https://golangci-lint.run/)** - Required for linting
-- **[lefthook](https://github.com/evilmartians/lefthook)** - Required for git hooks
-- **pnpm** - Required for Node.js package management
+### Prerequisites
 
-## Development Setup
+- **Go 1.24+**
+- **Node.js 20+** (for commit hooks)
+- **[Task](https://taskfile.dev)** (for running build scripts)
 
-### 1. Clone the Repository
+### Setup
+
+The fastest way to set up your development environment is to use the `setup` task. This command installs all necessary dependencies and configures Git hooks for you.
 
 ```bash
+# 1. Clone the repository
 git clone https://github.com/Goldziher/ai-rulez.git
 cd ai-rulez
-```
 
-### 2. Run Setup Task
-
-The easiest way to set up the development environment:
-
-```bash
+# 2. Run the setup task
 task setup
 ```
 
-This will:
-- Install Go dependencies (`go mod tidy`)
-- Install lefthook for git hooks
-- Install Node.js dependencies with pnpm
-- Set up pre-commit hooks
-- Sync the JSON schema
+---
 
-### 3. Manual Setup (Alternative)
+## Architectural Overview
 
-If you prefer to set up manually:
+`ai-rulez` is designed with a clean, layered architecture that separates data, logic, and presentation. Understanding this structure is key to contributing effectively.
+
+### The Core: `internal/config` and `internal/crud`
+
+- **`internal/config`**: This is the single source of truth for the application's data structures. All YAML parsing and the definitions for `Rule`, `Agent`, `MCPServer`, etc., live here.
+
+- **`internal/crud`**: This package contains the **centralized, shared logic** for all Create, Read, Update, and Delete (CRUD) operations. It takes simple data structures, modifies the configuration in memory, and handles writing back to the `ai_rulez.yaml` file. **Nearly all business logic should be in this package.**
+
+### The Presentation Layers: `cmd` and `mcp`
+
+The CLI and the MCP server are treated as thin "presentation layers." They are responsible for handling user/client input and calling the core `crud` logic. They should contain minimal business logic themselves.
+
+- **`cmd/commands/crud`**: This is where the `cobra` CLI commands are defined. A typical command's only job is to parse flags and call the appropriate function from the `internal/crud` package.
+
+- **`internal/mcp/handlers`**: This is where the MCP server's tool handlers are defined. A handler's only job is to parse incoming MCP parameters and call the appropriate function from the `internal/crud` package.
+
+!!! success "The Golden Rule of Contributing"
+    When adding a new feature or fixing a bug, the logic should almost always be implemented in the `internal/crud` package first. The CLI command and the MCP handler should then be simple wrappers around that core logic. This ensures consistent behavior across both interfaces.
+
+---
+
+## How to Add a New CRUD Command
+
+Here is the step-by-step process for adding CRUD operations for a new entity (e.g., `new_entity`):
+
+1.  **Update the Schema:** Add the `new_entity` definition to `schema/ai-rules-v2.schema.json`.
+2.  **Update the Config Struct:** Add the `NewEntity` struct to `internal/config/types.go` and the `[]NewEntity` slice to the main `Config` struct.
+3.  **Update the CRUD Logic:** Add a new case for `new_entity` in the main switch statement in `internal/crud/crud.go`.
+4.  **Create the CLI Command File:** Create a new file, `cmd/commands/crud/new_entity.go`, and define the `cobra` commands (`Add`, `Get`, `List`, `Update`, `Delete`). These commands should parse flags and call the `crud` helper functions.
+5.  **Register the CLI Commands:** Add the new commands to their parent commands (`AddCmd`, `GetCmd`, etc.) in `cmd/commands/root.go`.
+6.  **Add MCP Tools & Handlers:** Add the tool definitions to `internal/mcp/tools.go` and create the handlers in a new `internal/mcp/handlers/new_entity.go` file. The handlers should simply call the `crud` helper functions.
+7.  **Add Tests:** Add a new `TestNewEntityCRUD_FullCycle` test to `testing/e2e/cli/crud_test.go` and `testing/e2e/mcp_server_test.go`.
+
+## Development Workflow
+
+### Building and Testing
+
+The project uses [Task](https://taskfile.dev) for all build and test operations.
 
 ```bash
-# Install Go dependencies
-go mod tidy
-
-# Install golangci-lint
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-
-# Install lefthook
-go install github.com/evilmartians/lefthook@latest
-lefthook install
-
-# Install Node.js dependencies
-pnpm install
-
-# Sync schema file
-cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
-```
-
-## Available Tasks
-
-We use [Taskfile](https://taskfile.dev) for task automation. Run `task --list` to see all available tasks:
-
-### Core Development Tasks
-
-```bash
-# Build the binary
+# Build the binary to ./bin/ai-rulez
 task build
 
-# Run all tests
+# Run all unit tests
 task test
 
-# Run tests with coverage
-task test:coverage
-
-# Run tests with race detection
-task test:race
-
-# Run integration tests
-task test:integration
-
-# Run end-to-end tests
+# Run all end-to-end tests
 task test:e2e
 
-# Run linting
-task lint
-
-# Format code
-task fmt
-
-# Run all CI checks
+# Run all checks (lint, format, test) before committing
 task ci
 ```
 
-### Development Workflow
-
-```bash
-# Full development cycle
-task dev
-
-# Clean build artifacts
-task clean
-
-# Update dependencies
-task deps
-```
-
-## Project Structure
-
-```
-ai-rulez/
-├── cmd/                    # CLI entry point and commands
-│   ├── main.go            # Main entry point
-│   ├── agent.go           # Agent CRUD commands
-│   ├── agent_test.go      # Agent command tests
-│   ├── mcp.go             # MCP server implementation
-│   └── mcp_handlers.go    # MCP tool handlers
-├── internal/              # Internal packages
-│   ├── config/           # Configuration loading and validation
-│   │   ├── loader.go     # Config file loading
-│   │   ├── crud.go       # CRUD operations
-│   │   ├── remote.go     # Remote includes support
-│   │   └── validate.go   # Schema validation
-│   ├── generator/        # Output generation
-│   │   ├── generator.go  # Main generation logic
-│   │   └── templates.go  # Template handling
-│   ├── mcp/             # Model Context Protocol
-│   │   └── tools.go     # MCP tool definitions
-│   └── templates/       # Built-in templates
-├── schema/               # JSON Schema definitions
-│   └── ai-rules-v1.schema.json
-├── build/                # Package build files
-│   ├── npm/             # npm package files
-│   │   ├── bin/         # Wrapper script
-│   │   ├── package.json
-│   │   └── install.js
-│   └── python/          # Python package files
-│       ├── setup.py
-│       └── ai_rulez/
-├── e2e/                  # End-to-end tests
-│   └── suites/          # Test suites
-├── test/                 # Test data
-│   └── integration/     # Integration test files
-├── testing/             # Test scenarios and fixtures
-├── examples/            # Example configurations
-├── .github/             # GitHub Actions workflows
-│   └── workflows/
-│       ├── ci.yaml     # CI pipeline
-│       └── release.yaml # Release automation
-├── .goreleaser.yaml     # GoReleaser configuration
-├── taskfile.yaml        # Task definitions
-├── lefthook.yml         # Git hooks configuration
-└── .pre-commit-hooks.yaml # Pre-commit hook definitions
-```
-
-## Testing
-
-### Running Tests
-
-```bash
-# Unit tests only
-task test
-
-# Integration tests
-task test:integration
-
-# End-to-end tests
-task test:e2e
-
-# All tests with coverage
-task test:all
-task coverage
-
-# Test with race detection
-task test:race
-```
-
-### Writing Tests
-
-- Place unit tests next to the code they test (e.g., `config_test.go`)
-- Use table-driven tests for multiple test cases
-- Use `testify/assert` for assertions
-- Aim for >80% code coverage
-- Test error conditions and edge cases
-
-## Code Style
-
-### Go Code
-
-- Follow [Effective Go](https://golang.org/doc/effective_go.html) guidelines
-- Use `gofmt` for formatting (automatic via `task fmt`)
-- Use `golangci-lint` for linting (automatic via `task lint`)
-- Keep functions small and focused
-- Handle errors explicitly
-- Use meaningful variable and function names
-
 ### Commit Messages
 
-We use [Conventional Commits](https://www.conventionalcommits.org/):
+We use [Conventional Commits](https://www.conventionalcommits.org/). This is required for our automated release process.
 
 ```bash
-# Features
-git commit -m "feat: add support for remote includes"
-git commit -m "feat(mcp): add new tool for rule validation"
-
-# Bug fixes
-git commit -m "fix: correct priority sorting in rules"
-git commit -m "fix(npm): resolve npx execution issue"
-
-# Documentation
-git commit -m "docs: update README with examples"
-git commit -m "docs(api): add MCP tool documentation"
-
-# Tests
-git commit -m "test: add coverage for agent CRUD operations"
-git commit -m "test(e2e): add remote includes test suite"
-
-# Chores
-git commit -m "chore: update dependencies"
-git commit -m "chore(ci): optimize GitHub Actions workflow"
+# Good commit messages
+feat(cli): add crud commands for 'new-entity'
+fix(mcp): correct parameter handling in update_rule tool
+docs(contributing): clarify project architecture
 ```
 
-## Pull Request Process
+### Pull Request Process
 
-1. **Fork the repository** and create a feature branch
-2. **Make your changes** following the code style guidelines
-3. **Add or update tests** for your changes
-4. **Run the full test suite** with `task ci`
-5. **Commit with conventional commit messages**
-6. **Push your branch** and create a pull request
-7. **Ensure CI passes** and address review feedback
-
-### PR Title Format
-
-Use the same conventional commit format for PR titles:
-- `feat: add new feature`
-- `fix: resolve issue`
-- `docs: update documentation`
-
-## Release Process
-
-Releases are automated via GitHub Actions when a new tag is pushed:
-
-```bash
-# Create a new release
-git tag v1.5.2
-git push origin v1.5.2
-```
-
-The release workflow will:
-1. Run all tests
-2. Build binaries with GoReleaser
-3. Publish to npm registry
-4. Publish to PyPI
-5. Update Homebrew tap
-6. Create GitHub release with changelog
-
-## Examples
-
-For usage examples and configuration samples, see the [examples directory](examples/).
-
-## Getting Help
-
-- **Issues**: [GitHub Issues](https://github.com/Goldziher/ai-rulez/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/Goldziher/ai-rulez/discussions)
-- **Documentation**: [README.md](README.md)
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the MIT License.
+1.  Create a feature branch from `main`.
+2.  Make your changes, following the architectural guidelines.
+3.  Add or update unit and E2E tests for your changes.
+4.  Ensure all checks pass by running `task ci`.
+5.  Push your branch and open a pull request with a title that follows the Conventional Commit format.

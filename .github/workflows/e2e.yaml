@@ -1,12 +1,12 @@
 name: E2E Tests
 
 on:
-  workflow_dispatch:  # Manual trigger
+  workflow_dispatch:  
   schedule:
-    - cron: '0 2 * * *'  # Daily at 2 AM UTC
+    - cron: '0 2 * * *'  
   push:
     paths:
-      - 'e2e/**'
+      - 'testing/e2e/**'
       - 'cmd/**'
       - 'internal/**'
       - 'taskfile.yaml'
@@ -39,13 +39,22 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Cache Task binary
+        uses: actions/cache@v4
+        id: task-cache
+        with:
+          path: |
+            ~/.task
+            ~/bin/task
+          key: ${{ runner.os }}-task-3.x
+          restore-keys: |
+            ${{ runner.os }}-task-
+
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
           version: 3.x
-
-      - name: Sync schema
-        run: task sync-schema
 
       - name: Build binary for tests
         run: task build
@@ -59,8 +68,8 @@ jobs:
         with:
           name: comprehensive-e2e-results
           path: |
-            e2e/*.log
-            e2e/**/*.prof
+            testing/e2e/*.log
+            testing/e2e/**/*.prof
           retention-days: 7
 
   cross-platform-test:
@@ -70,7 +79,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        test-suite: [init, cli]
+        test-suite: [cli, mcp, integration]
       fail-fast: false
     steps:
       - name: Checkout code
@@ -94,13 +103,22 @@ jobs:
       - name: Install dependencies
         run: go mod download
 
+      - name: Cache Task binary
+        uses: actions/cache@v4
+        id: task-cache
+        with:
+          path: |
+            ~/.task
+            ~/bin/task
+          key: ${{ runner.os }}-task-3.x
+          restore-keys: |
+            ${{ runner.os }}-task-
+
       - name: Install Task
         uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
         with:
           version: 3.x
-
-      - name: Sync schema
-        run: task sync-schema
 
       - name: Build binary for tests
         run: task build
@@ -113,5 +131,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
-          path: e2e/*.log
+          path: testing/e2e/*.log
           retention-days: 7
