@@ -54,7 +54,7 @@ jobs:
         uses: arduino/setup-task@v2
         if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binary for tests
         run: task build
@@ -118,7 +118,7 @@ jobs:
         uses: arduino/setup-task@v2
         if: steps.task-cache.outputs.cache-hit != 'true'
         with:
-          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build binary for tests
         run: task build

@@ -286,8 +286,9 @@ func TestMigrateConfig(t *testing.T) {
 				},
 				"agents": []interface{}{
 					map[string]interface{}{
-						"id":   "test-agent",
-						"name": "test-agent",
+						"id":          "test-agent",
+						"name":        "test-agent",
+						"description": "Agent: test-agent",
 						"template": map[string]interface{}{
 							"type":  "builtin",
 							"value": "agent",
