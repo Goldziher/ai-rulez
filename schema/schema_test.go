@@ -361,8 +361,8 @@ outputs:
 metadata:
   name: "Test Project"`,
 			expectedErrors: []string{
-				"'outputs': required field is missing",
-				"outputs: required field is missing (expected array)",
+				"outputs: required field is missing",
+				"presets: required field is missing",
 			},
 			unexpectedText: []string{
 				"Property {property}",

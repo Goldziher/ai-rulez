@@ -14,8 +14,8 @@ bin/
 # --- Go --- #
 # Binaries
 /ai-rulez
-/ai-rulez-test
-testing/e2e/testutil/ai-rulez-test
+/ai-rulez-*
+**/ai-rulez-*
 *.exe
 *.exe~
 *.dll

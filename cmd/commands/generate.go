@@ -18,9 +18,10 @@ import (
 )
 
 var (
-	dryRun          bool
-	updateGitignore bool
-	recursive       bool
+	dryRun             bool
+	updateGitignore    bool
+	updateGitignoreSet bool
+	recursive          bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -42,6 +43,8 @@ func init() {
 
 func runGenerate(cmd *cobra.Command, args []string) {
 	progress.SetQuiet(viper.GetBool("quiet"))
+
+	updateGitignoreSet = cmd.Flags().Changed("update-gitignore")
 
 	if recursive {
 		runRecursiveGenerate()
@@ -240,7 +243,12 @@ func handleGeneration(gen *generator.Generator, cfg *config.Config, configPath s
 }
 
 func handleGitignoreUpdate(configPath string, cfg *config.Config) {
-	if updateGitignore {
+	shouldUpdate := cfg.ShouldUpdateGitignore()
+	if updateGitignoreSet {
+		shouldUpdate = updateGitignore
+	}
+
+	if shouldUpdate {
 		if err := gitignore.UpdateGitignoreFiles(configPath, cfg); err != nil {
 			if !progress.IsQuiet() {
 				fmt.Printf("  ⚠️  Warning: Could not update .gitignore: %v\n", err)

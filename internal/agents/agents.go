@@ -29,7 +29,7 @@ type AgentInfo struct {
 var supportedAgents = []AgentInfo{
 	{ID: "amp", Command: "amp", Display: "AMP (Sourcegraph)"},
 	{ID: claudeAgentID, Command: claudeAgentID, Display: "Claude (Anthropic)"},
-	{ID: "continue", Command: "cn", Display: "Continue.dev"},
+	{ID: "continue-dev", Command: "cn", Display: "Continue.dev"},
 	{ID: "gemini", Command: "gemini", Display: "Gemini (Google)"},
 }
 
@@ -73,7 +73,7 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	case "amp":
 		cmd = exec.CommandContext(ctx, agent.Command, "--execute", prompt) //nolint:gosec // Intentional subprocess execution
 
-	case "continue":
+	case "continue-dev":
 		cmd = exec.CommandContext(ctx, agent.Command, "--print", prompt) //nolint:gosec // Intentional subprocess execution
 
 	case "gemini":
@@ -194,7 +194,7 @@ func getPreferredAgent(config templates.ProviderConfig) string {
 	}
 	if config.ContinueDev {
 		enabledCount++
-		lastEnabled = "continue"
+		lastEnabled = "continue-dev"
 	}
 
 	if enabledCount == 1 {

@@ -393,7 +393,7 @@ func isBuiltinTemplate(name string) bool {
 		"cursor",
 		"windsurf",
 		"aider",
-		"continue",
+		"continue-dev",
 	}
 
 	for _, builtin := range builtinTemplates {

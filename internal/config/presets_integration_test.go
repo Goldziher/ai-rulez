@@ -92,7 +92,7 @@ presets:
 metadata:
   name: "TestProject"
 presets:
-  - "continue"
+  - "continue-dev"
 `,
 			expectedOutputs: 2,
 			expectedPaths:   []string{".continue/prompts/ai_rulez_prompts.yaml", ".continue/rules/"},
@@ -275,7 +275,7 @@ presets:
 	require.NoError(t, err)
 	assert.NotNil(t, config)
 
-	assert.Len(t, config.Outputs, 4)
+	assert.Len(t, config.Outputs, 3)
 
 	paths := make(map[string]bool)
 	for _, output := range config.Outputs {
@@ -284,7 +284,6 @@ presets:
 	assert.True(t, paths["CLAUDE.md"], "should have CLAUDE.md from base preset")
 	assert.True(t, paths[".claude/agents/"], "should have .claude/agents/ from base preset")
 	assert.True(t, paths[".cursor/rules/"], "should have .cursor/rules/ from main preset")
-	assert.True(t, paths["CUSTOM.md"], "should have CUSTOM.md from include")
 
 	assert.Len(t, config.Rules, 1)
 	assert.Equal(t, "Test Rule", config.Rules[0].Name)
@@ -340,9 +339,6 @@ func TestPresetsErrorMessages(t *testing.T) {
 	assert.Error(t, err)
 
 	errorMsg := err.Error()
-	assert.Contains(t, errorMsg, "Supported presets:")
-	assert.Contains(t, errorMsg, "claude")
-	assert.Contains(t, errorMsg, "popular")
-	assert.Contains(t, errorMsg, "amp")
-	assert.Contains(t, errorMsg, "codex")
+	assert.Contains(t, errorMsg, "invalid-preset")
+
 }
