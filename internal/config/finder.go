@@ -3,15 +3,12 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/errors"
+	"github.com/samber/oops"
 )
 
-// FindConfigFile searches for config files starting from the current directory
-// and traversing up to the root. Returns the path to the first config file found.
-// Supports: ai-rulez.yaml, .ai-rulez.yaml, ai_rulez.yaml, .ai_rulez.yaml (and .yml variants)
 func FindConfigFile(startDir string) (string, error) {
-	// Config file names to search for (in priority order)
 	configNames := []string{
 		".ai-rulez.yaml", ".ai-rulez.yml",
 		"ai-rulez.yaml", "ai-rulez.yml",
@@ -19,21 +16,20 @@ func FindConfigFile(startDir string) (string, error) {
 		"ai_rulez.yaml", "ai_rulez.yml",
 	}
 
-	// Start from the given directory
 	dir, err := filepath.Abs(startDir)
 	if err != nil {
-		return "", errors.FileRead(startDir, err).
-			WithContext("operation", "resolve absolute path").
-			WithSuggestion("Check if the directory exists and is accessible")
+		return "", oops.
+			With("path", startDir).
+			With("operation", "resolve absolute path").
+			Hint("Check if the directory exists and is accessible").
+			Wrapf(err, "resolve absolute path")
 	}
 
-	// Keep track of visited directories to avoid infinite loops
 	visited := make(map[string]bool)
 
 	for !visited[dir] {
 		visited[dir] = true
 
-		// Check for each config file name
 		for _, name := range configNames {
 			configPath := filepath.Join(dir, name)
 			if _, err := os.Stat(configPath); err == nil {
@@ -41,60 +37,37 @@ func FindConfigFile(startDir string) (string, error) {
 			}
 		}
 
-		// Move to parent directory
 		parent := filepath.Dir(dir)
 		if parent == dir {
-			// We've reached the root
 			break
 		}
 		dir = parent
 	}
 
-	return "", errors.ConfigNotFound(startDir)
+	return "", oops.
+		With("search_dir", startDir).
+		With("supported_names", []string{
+			"ai-rulez.yaml", "ai-rulez.yml",
+			".ai-rulez.yaml", ".ai-rulez.yml",
+			"ai_rulez.yaml", "ai_rulez.yml",
+			".ai_rulez.yaml", ".ai_rulez.yml",
+		}).
+		Hint("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly").
+		Errorf("no configuration file found")
 }
 
-// FindAllConfigFiles recursively finds all config files
-// starting from the given directory.
-// Supports: ai-rulez.yaml, .ai-rulez.yaml, ai_rulez.yaml, .ai_rulez.yaml (and .yml variants)
-func FindAllConfigFiles(rootDir string) ([]string, error) {
-	var configs []string
-	configNames := map[string]bool{
-		".ai-rulez.yaml": true, ".ai-rulez.yml": true,
-		"ai-rulez.yaml": true, "ai-rulez.yml": true,
-		".ai_rulez.yaml": true, ".ai_rulez.yml": true,
-		"ai_rulez.yaml": true, "ai_rulez.yml": true,
+func FindLocalConfigFile(mainConfigPath string) (string, error) {
+	dir := filepath.Dir(mainConfigPath)
+	base := filepath.Base(mainConfigPath)
+	ext := filepath.Ext(base)
+	nameWithoutExt := strings.TrimSuffix(base, ext)
+
+	localConfigName := nameWithoutExt + ".local" + ext
+	localConfigPath := filepath.Join(dir, localConfigName)
+
+	if _, err := os.Stat(localConfigPath); err == nil {
+		return localConfigPath, nil
 	}
 
-	err := filepath.Walk(rootDir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return errors.FileRead(path, err).
-				WithContext("operation", "walk directory")
-		}
-
-		// Skip hidden directories (except .ai-rulez.yaml itself)
-		if info.IsDir() && filepath.Base(path) != "." && filepath.Base(path)[0] == '.' {
-			return filepath.SkipDir
-		}
-
-		// Check if this is a config file
-		if !info.IsDir() && configNames[filepath.Base(path)] {
-			configs = append(configs, path)
-		}
-
-		return nil
-	})
-
-	if err != nil {
-		return nil, errors.FileRead(rootDir, err).
-			WithContext("operation", "walk directory tree").
-			WithSuggestion("Check if the directory exists and is accessible")
-	}
-
-	if len(configs) == 0 {
-		return nil, errors.ConfigNotFound(rootDir).
-			WithContext("search_type", "recursive").
-			WithSuggestion("Run 'ai-rulez init' in the directory to create a config file")
-	}
-
-	return configs, nil
+	return "", nil
 }
