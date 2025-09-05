@@ -61,6 +61,11 @@
       },
       "uniqueItems": true
     },
+    "gitignore": {
+      "type": "boolean",
+      "description": "Whether to automatically update .gitignore with generated files (defaults to true)",
+      "default": true
+    },
     "outputs": {
       "type": "array",
       "description": "Output files to generate",
