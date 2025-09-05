@@ -27,8 +27,8 @@ metadata:
 presets:
   - "claude"
 `,
-			expectedOutputs: 1,
-			expectedPaths:   []string{"CLAUDE.md"},
+			expectedOutputs: 2,
+			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/"},
 			expectError:     false,
 		},
 		{
@@ -53,8 +53,8 @@ presets:
 outputs:
   - path: "GEMINI.md"
 `,
-			expectedOutputs: 2,
-			expectedPaths:   []string{"CLAUDE.md", "GEMINI.md"},
+			expectedOutputs: 3,
+			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/", "GEMINI.md"},
 			expectError:     false,
 		},
 		{
@@ -68,8 +68,8 @@ outputs:
   - path: "CLAUDE.md"
     naming_scheme: "custom.txt"
 `,
-			expectedOutputs: 1,
-			expectedPaths:   []string{"CLAUDE.md"},
+			expectedOutputs: 2,
+			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/"},
 			expectError:     false,
 		},
 		{
@@ -82,8 +82,8 @@ presets:
   - "cursor"
   - "gemini"
 `,
-			expectedOutputs: 3,
-			expectedPaths:   []string{".cursor/rules/", "CLAUDE.md", "GEMINI.md"},
+			expectedOutputs: 4,
+			expectedPaths:   []string{".cursor/rules/", "CLAUDE.md", ".claude/agents/", "GEMINI.md"},
 			expectError:     false,
 		},
 		{
@@ -275,13 +275,14 @@ presets:
 	require.NoError(t, err)
 	assert.NotNil(t, config)
 
-	assert.Len(t, config.Outputs, 3)
+	assert.Len(t, config.Outputs, 4)
 
 	paths := make(map[string]bool)
 	for _, output := range config.Outputs {
 		paths[output.Path] = true
 	}
 	assert.True(t, paths["CLAUDE.md"], "should have CLAUDE.md from base preset")
+	assert.True(t, paths[".claude/agents/"], "should have .claude/agents/ from base preset")
 	assert.True(t, paths[".cursor/rules/"], "should have .cursor/rules/ from main preset")
 	assert.True(t, paths["CUSTOM.md"], "should have CUSTOM.md from include")
 
