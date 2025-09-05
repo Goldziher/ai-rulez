@@ -98,3 +98,24 @@ docs(contributing): clarify project architecture
 3.  Add or update unit and E2E tests for your changes.
 4.  Ensure all checks pass by running `task ci`.
 5.  Push your branch and open a pull request with a title that follows the Conventional Commit format.
+
+---
+
+## Releasing
+
+Releases are fully automated using GitHub Actions and are triggered when a new tag is pushed to the `main` branch.
+
+### How It Works
+
+1.  **Tag Push**: To create a new release, push a tag to `main` with the format `vX.Y.Z` (e.g., `v2.0.1`).
+    ```bash
+    git tag v2.0.1
+    git push origin v2.0.1
+    ```
+2.  **CI/CD Pipeline**: The push event triggers the `.github/workflows/release.yaml` workflow, which handles the entire release process:
+    - **GoReleaser**: Builds binaries for all supported platforms and creates a GitHub Release.
+    - **PyPI Publishing**: The Python package version in `release/pypi/ai_rulez/__init__.py` is automatically updated with the tag version, and the package is built and published to PyPI.
+    - **npm Publishing**: The `package.json` version is updated, and the package is published to npm.
+
+!!! danger "Do Not Release Manually"
+    Manual releases are strongly discouraged. The CI pipeline is the single source of truth for versioning. Releasing locally will result in version mismatches (as the `__version__` string will not be updated) and should be avoided.
