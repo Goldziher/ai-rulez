@@ -3,6 +3,7 @@ package config
 var PresetRegistry = map[string][]Output{
 	"claude": {
 		{Path: "CLAUDE.md"},
+		{Path: ".claude/agents/", Type: "agent", NamingScheme: "{name}.md"},
 	},
 	"cursor": {
 		{Path: ".cursor/rules/", Type: "rule", NamingScheme: "{name}.mdc"},
