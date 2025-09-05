@@ -19,15 +19,25 @@ Tired of manually managing rule files, subagents, and custom commands across dif
 
 ## Feature Highlights
 
-`ai-rulez` is a simple and  than just a configuration generator. It's a complete system for managing your AI's context.
+`ai-rulez` is a progressive tool-box, designed to offer a centralized way to manage AI tooling for a repository.
 
--   **Single Source of Truth:** Define your project's context—rules, file structures, and key documentation—in one `ai-rulez.yml` file.
--   **Multi-Tool Support:** Use presets to instantly generate configurations for popular AI tools like Claude, Cursor, Copilot, Gemini, and more.
--   **Custom Tool Integration:** Don't see your favorite tool on the list? Use the `outputs` key to generate a configuration file for any tool, in any format.
--   **Specialized AI Agents:** Create specialized "sub-agents" with their own system prompts and tools, perfect for complex tasks like code reviews or database queries.
--   **Composable Configuration:** Use `extends` and `includes` to build powerful, maintainable configurations that can be shared across teams and projects.
--   **Full-Featured CLI:** Manage your entire configuration from the command line. Add rules, update agents, and generate files without ever opening a YAML file.
--   **MCP Server Integration:** Allow your AI assistant to programmatically interact with your configuration through the built-in Model Context Protocol (MCP) server.
+### Centralized Configuration
+- **Centralized Definitions:** Use a single `ai-rulez.yml` as the source of truth to define rules, file structures, and documentation for all your AI tools.
+- **Nested Configs & Monorepo Support:** Scale your configurations with `extends` and `includes`. Manage complex projects and monorepos with ease by using the `--recursive` flag to combine configurations from multiple files.
+  ```bash
+  # Generate rules for all projects in a monorepo
+  ai-rulez generate --recursive
+  ```
+
+### Powerful Tooling
+- **Custom Commands:** Define custom commands that your AI assistant can execute, enabling powerful, interactive workflows.
+- **Specialized AI Agents:** Create specialized "sub-agents" with their own system prompts and tools, perfect for complex tasks like code reviews or database queries.
+- **MCP Servers:** Launch a Model Context Protocol (MCP) server to allow AI assistants to programmatically interact with your configuration.
+- **Full-Featured CLI:** Manage your entire configuration from the command line. Add rules, update agents, and generate files without ever opening a YAML file.
+
+### Flexible Integrations
+- **Multi-Tool Support:** Use presets to instantly generate configurations for popular AI tools like Claude, Cursor, Copilot, Gemini, and more.
+- **Custom Tool Integration:** Don't see your favorite tool on the list? Use the `outputs` key to generate a configuration file for any tool, in any format.
 
 ## How It Works
 
@@ -86,6 +96,11 @@ ai-rulez generate
 
 For one-off executions, you can run `ai-rulez` directly without a system-wide installation.
 
+**Go**
+```bash
+go run github.com/Goldziher/ai-rulez/cmd/ai-rulez@latest --help
+```
+
 **Node.js (via npx)**
 ```bash
 # Installs and runs the latest version
@@ -101,6 +116,11 @@ uvx ai-rulez init
 ### Install globally
 
 For frequent use, a global installation is recommended.
+
+**Go**
+```bash
+go install github.com/Goldziher/ai-rulez/cmd/ai-rulez@latest
+```
 
 **Homebrew (macOS/Linux)**
 ```bash
