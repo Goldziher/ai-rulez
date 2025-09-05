@@ -14,24 +14,22 @@ func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
 	configDir := filepath.Dir(configFile)
 	gitignorePath := filepath.Join(configDir, ".gitignore")
 
-	var outputFiles []string
+	var outputPaths []string
+	seen := make(map[string]bool)
+
 	for _, output := range cfg.Outputs {
 		path := output.Path
-		if output.IsDirectory() {
-			dirs := strings.Split(strings.TrimSuffix(path, "/"), "/")
-			if len(dirs) > 0 {
-				outputFiles = append(outputFiles, dirs[0]+"/")
-			}
-		} else {
-			outputFiles = append(outputFiles, path)
+		if !seen[path] {
+			outputPaths = append(outputPaths, path)
+			seen[path] = true
 		}
 	}
 
-	if len(outputFiles) == 0 {
+	if len(outputPaths) == 0 {
 		return nil
 	}
 
-	return updateGitignoreFile(gitignorePath, outputFiles)
+	return updateGitignoreFile(gitignorePath, outputPaths)
 }
 
 func updateGitignoreFile(gitignorePath string, outputFiles []string) error {
