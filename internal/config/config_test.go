@@ -294,7 +294,7 @@ func TestValidateOutputs(t *testing.T) {
 	t.Run("empty outputs", func(t *testing.T) {
 		var outputs []config.Output
 		err := config.ValidateOutputs(outputs)
-		assert.Error(t, err)
+		assert.NoError(t, err)
 	})
 
 	t.Run("output without path", func(t *testing.T) {

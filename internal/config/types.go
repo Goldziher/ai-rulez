@@ -6,7 +6,8 @@ type Config struct {
 	Metadata   Metadata    `yaml:"metadata"`
 	Extends    string      `yaml:"extends,omitempty"`
 	Includes   []string    `yaml:"includes,omitempty"`
-	Outputs    []Output    `yaml:"outputs"`
+	Outputs    []Output    `yaml:"outputs,omitempty"`
+	Presets    []string    `yaml:"presets,omitempty"`
 	Rules      []Rule      `yaml:"rules,omitempty"`
 	Sections   []Section   `yaml:"sections,omitempty"`
 	Agents     []Agent     `yaml:"agents,omitempty"`

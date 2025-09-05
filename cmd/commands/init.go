@@ -146,8 +146,36 @@ func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig t
 }
 
 func generateAndWriteConfig(projectName string, providerConfig templates.ProviderConfig) {
-	configContent := templates.GenerateConfigTemplate(projectName, providerConfig)
+	var configContent string
+
+	if shouldUsePresets(providerConfig) {
+		presets := getPresetsFromProviderConfig(providerConfig)
+		configContent = templates.GeneratePresetConfigTemplate(projectName, presets)
+	} else {
+		configContent = templates.GenerateConfigTemplate(projectName, providerConfig)
+	}
+
 	writeConfigFile(configContent)
+}
+
+func shouldUsePresets(providerConfig templates.ProviderConfig) bool {
+	return preset != "" || popularProviders || allProviders
+}
+
+func getPresetsFromProviderConfig(providerConfig templates.ProviderConfig) []string {
+	if preset != "" {
+		return []string{preset}
+	}
+
+	if popularProviders {
+		return []string{"popular"}
+	}
+
+	if allProviders {
+		return config.IndividualPresetNames()
+	}
+
+	return []string{}
 }
 
 func writeConfigFile(content string) {
