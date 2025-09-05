@@ -98,7 +98,7 @@ For one-off executions, you can run `ai-rulez` directly without a system-wide in
 
 **Go**
 ```bash
-go run github.com/Goldziher/ai-rulez/cmd/ai-rulez@latest --help
+go run github.com/Goldziher/ai-rulez/cmd@latest --help
 ```
 
 **Node.js (via npx)**
@@ -119,7 +119,7 @@ For frequent use, a global installation is recommended.
 
 **Go**
 ```bash
-go install github.com/Goldziher/ai-rulez/cmd/ai-rulez@latest
+go install github.com/Goldziher/ai-rulez/cmd@latest
 ```
 
 **Homebrew (macOS/Linux)**

@@ -275,7 +275,7 @@ async function extractArchive(archivePath, extractDir, platform) {
 	}
 }
 
-async function install() {
+async function install(isPostInstall = false) {
 	const DEBUG = process.env.AI_RULEZ_DEBUG === "1";
 
 	try {
@@ -418,14 +418,20 @@ async function install() {
 			console.error(`[install.js] Exiting with code 0`);
 		}
 
-		process.exit(0);
+		if (!isPostInstall) {
+			process.exit(0);
+		}
 	} catch (error) {
 		if (DEBUG)
 			console.error(`[install.js] Installation failed: ${error.message}`);
 		console.error("Failed to install ai-rulez binary:", error.message);
 		console.error("You can manually download the binary from:");
 		console.error(`https://github.com/${REPO_NAME}/releases`);
-		process.exit(1);
+		if (!isPostInstall) {
+			process.exit(1);
+		} else {
+			throw error;
+		}
 	}
 }
 
@@ -442,5 +448,5 @@ if (typeof module !== "undefined" && module.exports) {
 }
 
 if (require.main === module) {
-	install();
+	install(false);
 }
