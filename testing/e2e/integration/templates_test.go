@@ -37,10 +37,10 @@ func (s *TemplatesTestSuite) TestDefaultTemplate() {
 	s.Contains(content, "# Test Project")
 	s.Contains(content, "Generated on")
 	s.Contains(content, "## Basic Rule")
-	s.Contains(content, "**Priority:** 5")
+	s.Contains(content, "**Priority:** medium")
 	s.Contains(content, "This is a basic rule for testing")
 	s.Contains(content, "## High Priority Rule")
-	s.Contains(content, "**Priority:** 10")
+	s.Contains(content, "**Priority:** critical")
 
 	basicPos := s.findPosition(content, "Basic Rule")
 	highPos := s.findPosition(content, "High Priority Rule")
