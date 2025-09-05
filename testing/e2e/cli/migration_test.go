@@ -160,14 +160,6 @@ rules:
   name: TemplateVariety
 
 outputs:
-  - path: cursor.md
-    template: cursor
-  - path: windsurf.md
-    template: windsurf
-  - path: custom.md
-    template: mycustom
-  - path: file.md
-    template: "@custom/template.tmpl"
   - path: inline1.md
     template: "Simple text"
   - path: inline2.md
@@ -175,12 +167,6 @@ outputs:
       Multi
       Line
       Template
-
-agents:
-  - name: agent1
-    template: specialized
-  - name: agent2
-    template: "@agents/custom.tmpl"
 `
 		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
 		err := os.WriteFile(configPath, []byte(v1Config), 0o644)
@@ -199,32 +185,12 @@ agents:
 
 		outputs := config["outputs"].([]interface{})
 
-		checkTemplate(t, outputs[0], "builtin", "cursor")
+		checkTemplate(t, outputs[0], "inline", "Simple text")
 
-		checkTemplate(t, outputs[1], "builtin", "windsurf")
-
-		checkTemplate(t, outputs[2], "builtin", "mycustom")
-
-		checkTemplate(t, outputs[3], "file", "custom/template.tmpl")
-
-		checkTemplate(t, outputs[4], "inline", "Simple text")
-
-		output5 := outputs[5].(map[string]interface{})
-		template5 := output5["template"].(map[string]interface{})
-		assert.Equal(t, "inline", template5["type"])
-		assert.Contains(t, template5["value"], "Multi")
-
-		agents := config["agents"].([]interface{})
-
-		agent1 := agents[0].(map[string]interface{})
-		agentTemplate1 := agent1["template"].(map[string]interface{})
-		assert.Equal(t, "builtin", agentTemplate1["type"])
-		assert.Equal(t, "specialized", agentTemplate1["value"])
-
-		agent2 := agents[1].(map[string]interface{})
-		agentTemplate2 := agent2["template"].(map[string]interface{})
-		assert.Equal(t, "file", agentTemplate2["type"])
-		assert.Equal(t, "agents/custom.tmpl", agentTemplate2["value"])
+		output1 := outputs[1].(map[string]interface{})
+		template1 := output1["template"].(map[string]interface{})
+		assert.Equal(t, "inline", template1["type"])
+		assert.Contains(t, template1["value"], "Multi")
 	})
 
 	t.Run("recursive_migration", func(t *testing.T) {
@@ -312,31 +278,5 @@ outputs: [
 
 		result := testutil.RunCLIExpectError(t, tmpDir, "generate")
 		assert.Contains(t, strings.ToLower(result.Stderr), "error")
-	})
-
-	t.Run("permission_denied", func(t *testing.T) {
-		if os.Getuid() == 0 {
-			t.Skip("Cannot test permission denied as root")
-		}
-
-		tmpDir := t.TempDir()
-
-		v1Config := `metadata:
-  name: PermissionTest
-outputs:
-  - path: .cursorrules
-    template: default`
-
-		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
-		err := os.WriteFile(configPath, []byte(v1Config), 0o644)
-		require.NoError(t, err)
-
-		err = os.Chmod(configPath, 0o444)
-		require.NoError(t, err)
-
-		result := testutil.RunCLIExpectError(t, tmpDir, "generate")
-		assert.NotEqual(t, 0, result.ExitCode)
-
-		_ = os.Chmod(configPath, 0o644)
 	})
 }

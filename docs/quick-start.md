@@ -6,7 +6,7 @@ Let's get you set up with `ai-rulez`. This takes about 5 minutes and will sync a
 
 ### Step 1: Create your config
 
-Navigate to your project root and run the `init` command. This creates an `ai_rulez.yaml` file with sensible defaults.
+Navigate to your project root and run the `init` command. This creates an `ai-rulez.yml` file with sensible defaults.
 
 ```bash
 ai-rulez init "My Project" --popular

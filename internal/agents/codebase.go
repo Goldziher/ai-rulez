@@ -9,6 +9,18 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/utils"
 )
 
+const (
+	langTypeScript = "TypeScript"
+	langPython     = "Python"
+	langRust       = "Rust"
+)
+
+const (
+	cmdNpmBuild = "npm run build"
+	cmdNpmTest  = "npm test"
+	cmdNpmLint  = "npm run lint"
+)
+
 type CodebaseInfo struct {
 	ProjectName  string   `json:"project_name"`
 	TechStack    []string `json:"tech_stack"`
@@ -76,9 +88,9 @@ func processJSDependencies(info *CodebaseInfo, pkg map[string]interface{}) {
 	if devDeps, exists := pkg["devDependencies"]; exists {
 		if deps, ok := devDeps.(map[string]interface{}); ok {
 			if _, hasTS := deps["typescript"]; hasTS {
-				info.TechStack = append(info.TechStack, "TypeScript")
+				info.TechStack = append(info.TechStack, langTypeScript)
 				if info.MainLanguage == "" {
-					info.MainLanguage = "TypeScript"
+					info.MainLanguage = langTypeScript
 				}
 			}
 		}
@@ -106,9 +118,9 @@ func processJSDependencies(info *CodebaseInfo, pkg map[string]interface{}) {
 
 func detectPythonStack(info *CodebaseInfo) {
 	if utils.FileExists("pyproject.toml") || utils.FileExists("requirements.txt") || utils.FileExists("setup.py") {
-		info.TechStack = append(info.TechStack, "Python")
+		info.TechStack = append(info.TechStack, langPython)
 		if info.MainLanguage == "" {
-			info.MainLanguage = "Python"
+			info.MainLanguage = langPython
 		}
 		if utils.FileExists("pyproject.toml") {
 			info.ConfigFiles = append(info.ConfigFiles, "pyproject.toml")
@@ -121,10 +133,10 @@ func detectPythonStack(info *CodebaseInfo) {
 
 func detectRustStack(info *CodebaseInfo) {
 	if utils.FileExists("Cargo.toml") {
-		info.TechStack = append(info.TechStack, "Rust")
+		info.TechStack = append(info.TechStack, langRust)
 		info.ConfigFiles = append(info.ConfigFiles, "Cargo.toml")
 		if info.MainLanguage == "" {
-			info.MainLanguage = "Rust"
+			info.MainLanguage = langRust
 		}
 	}
 }
@@ -197,15 +209,15 @@ func detectPackageJSONCommands(info *CodebaseInfo) bool {
 	}
 
 	if _, hasBuild := scripts["build"]; hasBuild {
-		info.BuildCommand = "npm run build"
+		info.BuildCommand = cmdNpmBuild
 	}
 
 	if _, hasTest := scripts["test"]; hasTest {
-		info.TestCommand = "npm test"
+		info.TestCommand = cmdNpmTest
 	}
 
 	if _, hasLint := scripts["lint"]; hasLint {
-		info.LintCommand = "npm run lint"
+		info.LintCommand = cmdNpmLint
 	} else if _, hasESLint := scripts["eslint"]; hasESLint {
 		info.LintCommand = "npm run eslint"
 	}
@@ -230,13 +242,13 @@ func detectLanguageSpecificCommands(info *CodebaseInfo) {
 		info.BuildCommand = "go build"
 		info.TestCommand = "go test ./..."
 		info.LintCommand = "golangci-lint run"
-	case "Python":
+	case langPython:
 		detectPythonCommands(info)
-	case "Rust":
+	case langRust:
 		info.BuildCommand = "cargo build"
 		info.TestCommand = "cargo test"
 		info.LintCommand = "cargo clippy"
-	case "JavaScript", "TypeScript":
+	case "JavaScript", langTypeScript:
 		setDefaultNPMCommands(info)
 	}
 }
@@ -255,13 +267,13 @@ func detectPythonCommands(info *CodebaseInfo) {
 
 func setDefaultNPMCommands(info *CodebaseInfo) {
 	if info.BuildCommand == "" {
-		info.BuildCommand = "npm run build"
+		info.BuildCommand = cmdNpmBuild
 	}
 	if info.TestCommand == "" {
-		info.TestCommand = "npm test"
+		info.TestCommand = cmdNpmTest
 	}
 	if info.LintCommand == "" {
-		info.LintCommand = "npm run lint"
+		info.LintCommand = cmdNpmLint
 	}
 }
 
