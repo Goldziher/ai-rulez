@@ -4,14 +4,35 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (without v prefix)'
+        required: true
 
 permissions:
   contents: write
   packages: write
 
 jobs:
-  goreleaser:
+  prepare:
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+    steps:
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+
+  goreleaser:
+    needs: prepare
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v5
         with:
@@ -31,15 +52,14 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
   publish-npm:
-    needs: goreleaser
+    needs: prepare
     runs-on: ubuntu-latest
-    if: always() && (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'failure')
     steps:
       - uses: actions/checkout@v5
 
       - name: Check if GitHub release exists
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${{ needs.prepare.outputs.version }}
           if ! gh release view v$VERSION > /dev/null 2>&1; then
             echo "GitHub release v$VERSION does not exist, skipping npm publish"
             exit 1
@@ -49,20 +69,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v5
-        with:
-          node-version: '18'
-          registry-url: 'https://registry.npmjs.org'
 
-      - name: Update package version and copy README
+      - name: Copy README
+        run: cp README.md release/npm/README.md
+
+      - name: Set version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${{ needs.prepare.outputs.version }}
           cd release/npm
-          # Copy root README to npm package directory
-          cp ../../README.md ./README.md
-          # Use sed to update version directly to avoid npm version conflicts
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
-          echo "Updated package.json version to $VERSION"
-          echo "Copied README.md to npm package directory"
           cat package.json | grep version
 
       - name: Publish to npm
@@ -73,15 +88,14 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-pypi:
-    needs: goreleaser
+    needs: prepare
     runs-on: ubuntu-latest
-    if: always() && (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'failure')
     steps:
       - uses: actions/checkout@v5
 
       - name: Check if GitHub release exists
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${{ needs.prepare.outputs.version }}
           if ! gh release view v$VERSION > /dev/null 2>&1; then
             echo "GitHub release v$VERSION does not exist, skipping PyPI publish"
             exit 1
@@ -100,7 +114,7 @@ jobs:
 
       - name: Update Python package version
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${{ needs.prepare.outputs.version }}
           echo "Updating Python package version to $VERSION"
           # Update version in __init__.py files
           sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/ai_rulez/__init__.py
@@ -109,7 +123,7 @@ jobs:
           
       - name: Build package
         run: |
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${{ needs.prepare.outputs.version }}
           echo "Building Python package with version $VERSION"
           # Wait a bit for GitHub release to be fully available
           echo "Waiting for GitHub release to be available..."
