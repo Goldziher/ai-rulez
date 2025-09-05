@@ -122,7 +122,7 @@ func createAddCommand(desc *EntityDescriptor) *cobra.Command {
 		case "[]string":
 			var sliceVal []string
 			flagValues[field.FlagName] = &sliceVal
-			defaultVal := []string{}
+			var defaultVal []string
 			if field.Default != nil {
 				defaultVal = field.Default.([]string)
 			}
