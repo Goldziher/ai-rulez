@@ -14,6 +14,8 @@ ai-rulez init "My Project" --popular
 
 The `--popular` flag sets up Claude, Cursor, Windsurf, and Copilot. You can also use `--preset cursor` for just Cursor, or see `ai-rulez init --help` for all options.
 
+The init command analyzes your codebase and creates a smart template with only required fields uncommented. If you have Claude, Continue.dev, Gemini, or AMP installed, it can even customize the template intelligently for your specific project.
+
 ### Step 2: Add your project details
 
 Now add some context about your project. This helps your AI understand your tech stack and workflow.
