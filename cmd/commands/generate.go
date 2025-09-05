@@ -48,47 +48,70 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	var configPath string
-	//nolint:gocritic // Simple if-else chain is more readable than switch
-	if len(args) > 0 {
-		configPath = args[0]
-	} else if cfgFile != "" {
-		configPath = cfgFile
-	} else {
-		var err error
-		configPath, err = config.FindConfigFile(".")
-		if err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
+	configPath := resolveConfigPath(args)
+	handleMigration(configPath)
+	cfg := loadConfig(configPath)
+
+	gen := generator.NewWithConfigFile(configPath)
+
+	if dryRun {
+		showDryRunPreview(gen, cfg)
+		return
 	}
 
-	if err := migration.MigrateIfNeeded(configPath); err != nil {
+	generateFiles(gen, cfg, configPath)
+}
+
+func resolveConfigPath(args []string) string {
+	if len(args) > 0 {
+		return args[0]
+	}
+	if cfgFile != "" {
+		return cfgFile
+	}
+
+	configPath, err := config.FindConfigFile(".")
+	if err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}
+	return configPath
+}
 
-	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
+func handleMigration(configPath string) {
+	version, err := migration.DetectAndMigrate(configPath)
 	if err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}
 
-	gen := generator.NewWithConfigFile(configPath)
-
-	if dryRun {
-		preview, err := gen.PreviewAll(cfg)
-		if err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
-		fmt.Println("Would generate the following files:")
-		for output := range preview {
-			fmt.Printf("  - %s\n", output)
-		}
-		return
+	if version == "v1" && !progress.IsQuiet() {
+		fmt.Println("Successfully migrated configuration from v1 to v2")
 	}
+}
 
+func loadConfig(configPath string) *config.Config {
+	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
+	if err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+	return cfg
+}
+
+func showDryRunPreview(gen *generator.Generator, cfg *config.Config) {
+	preview, err := gen.PreviewAll(cfg)
+	if err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+	fmt.Println("Would generate the following files:")
+	for output := range preview {
+		fmt.Printf("  - %s\n", output)
+	}
+}
+
+func generateFiles(gen *generator.Generator, cfg *config.Config, configPath string) {
 	if err := gen.GenerateAll(cfg); err != nil {
 		fmtError(err)
 		os.Exit(1)
@@ -229,8 +252,16 @@ func handleGitignoreUpdate(configPath string, cfg *config.Config) {
 func fmtError(err error) {
 	if oopsErr, ok := oops.AsOops(err); ok {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+
+		if errors, ok := oopsErr.Context()["errors"].([]string); ok && len(errors) > 0 {
+			fmt.Fprintf(os.Stderr, "\nValidation errors:\n")
+			for _, e := range errors {
+				fmt.Fprintf(os.Stderr, "  - %s\n", e)
+			}
+		}
+
 		if hint := oopsErr.Hint(); hint != "" {
-			fmt.Fprintf(os.Stderr, "Hint: %s\n", hint)
+			fmt.Fprintf(os.Stderr, "\nHint: %s\n", hint)
 		}
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)

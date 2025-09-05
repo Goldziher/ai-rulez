@@ -1,6 +1,6 @@
 # Enabling the MCP Server
 
-The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `ai_rulez.yaml` configuration. Instead of asking the AI to manually edit the YAML file, the assistant can use the server to add rules, update agents, or generate files directly.
+The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `ai-rulez.yml` configuration. Instead of asking the AI to manually edit the YAML file, the assistant can use the server to add rules, update agents, or generate files directly.
 
 **You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
 
@@ -59,7 +59,7 @@ If you have installed `ai-rulez` locally with `go install`.
 
 ## Server Capabilities
 
-When enabled, the MCP server provides your AI assistant with a comprehensive set of tools to safely manage your entire `ai_rulez.yaml` configuration. The assistant can:
+When enabled, the MCP server provides your AI assistant with a comprehensive set of tools to safely manage your entire `ai-rulez.yml` configuration. The assistant can:
 
 - **Manage Rules, Sections, and Agents:** Add, update, delete, and list all core configuration elements.
 - **Manage Outputs:** Add or remove new output targets for generation.

@@ -1,6 +1,6 @@
 # Configuration Examples
 
-Use these examples as a starting point for your own `ai_rulez.yaml` configuration, progressing from a minimal setup to a complete, real-world application.
+Use these examples as a starting point for your own `ai-rulez.yml` configuration, progressing from a minimal setup to a complete, real-world application.
 
 ---
 
