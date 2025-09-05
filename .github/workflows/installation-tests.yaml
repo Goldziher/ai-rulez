@@ -3,13 +3,13 @@ name: Installation Tests
 on:
   push:
     paths:
-      - 'build/**'
+      - 'release/**'
       - 'test/**'
       - '.github/workflows/installation-tests.yml'
       - '.github/actions/**'
   pull_request:
     paths:
-      - 'build/**'
+      - 'release/**'
       - 'test/**'
       - '.github/workflows/installation-tests.yml'
       - '.github/actions/**'

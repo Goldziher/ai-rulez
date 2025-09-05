@@ -1,8 +1,7 @@
-#     rev: v2.0.0  # Use the latest version
 - id: ai-rulez-validate
   name: Validate AI rulez configuration
   description: Validate ai-rulez configuration files and ensure they would generate successfully
-  entry: go run github.com/Goldziher/ai-rulez/cmd@latest generate --dry-run
+  entry: ai-rulez generate --dry-run
   language: golang
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
@@ -12,7 +11,7 @@
 - id: ai-rulez-generate
   name: Generate AI assistant configuration files
   description: Generate AI assistant configuration files from ai-rulez configuration
-  entry: go run github.com/Goldziher/ai-rulez/cmd@latest generate
+  entry: ai-rulez generate
   language: golang
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
@@ -22,7 +21,7 @@
 - id: ai-rulez-recursive
   name: Generate AI assistant files (recursive)
   description: Generate all ai-rulez output files in the repository recursively
-  entry: go run github.com/Goldziher/ai-rulez/cmd@latest generate --recursive
+  entry: ai-rulez generate --recursive
   language: golang
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false

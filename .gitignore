@@ -29,10 +29,14 @@ bin/
 *.coverprofile
 coverage.*
 
-# Build & Release Artifacts
-/build/
+# Release Artifacts
 /dist/
-/release-test/
+# /release/ is tracked for npm/pypi publishing, but ignore generated artifacts
+/release/**/dist/
+/release/**/build/
+/release/**/*.egg-info/
+/release/**/*.tgz
+/release/**/README.md
 
 # Dependencies
 /vendor/
