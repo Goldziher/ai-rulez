@@ -1,0 +1,86 @@
+{
+	"name": "ai-rulez",
+	"version": "2.0.0",
+	"description": "⚡ One config to rule them all. Centralized AI assistant configuration management - generate rules for Claude, Cursor, Copilot, Windsurf and more from a single YAML file.",
+	"keywords": [
+		"ai",
+		"ai-assistant",
+		"ai-rules",
+		"claude",
+		"cursor",
+		"copilot",
+		"windsurf",
+		"gemini",
+		"cline",
+		"continue-dev",
+		"mcp",
+		"model-context-protocol",
+		"cli",
+		"configuration",
+		"config",
+		"rules",
+		"generator",
+		"golang",
+		"go",
+		"development",
+		"developer-tools",
+		"automation",
+		"workflow",
+		"productivity",
+		"pre-commit",
+		"git-hooks",
+		"code-generation",
+		"ai-development",
+		"assistant-configuration",
+		"monorepo",
+		"presets",
+		"agents"
+	],
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/Goldziher/ai-rulez.git"
+	},
+	"homepage": "https://goldziher.github.io/ai-rulez/",
+	"bugs": {
+		"url": "https://github.com/Goldziher/ai-rulez/issues"
+	},
+	"funding": {
+		"type": "github",
+		"url": "https://github.com/sponsors/Goldziher"
+	},
+	"license": "MIT",
+	"author": {
+		"name": "Na'aman Hirschfeld",
+		"email": "nhirschfeld@gmail.com",
+		"url": "https://github.com/Goldziher"
+	},
+	"maintainers": [
+		{
+			"name": "Na'aman Hirschfeld",
+			"email": "nhirschfeld@gmail.com",
+			"url": "https://github.com/Goldziher"
+		}
+	],
+	"bin": {
+		"ai-rulez": "./bin/ai-rulez.js"
+	},
+	"scripts": {},
+	"files": [
+		"bin/",
+		"install.js",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=14.0.0"
+	},
+	"os": [
+		"darwin",
+		"linux",
+		"win32"
+	],
+	"cpu": [
+		"x64",
+		"arm64",
+		"ia32"
+	]
+}

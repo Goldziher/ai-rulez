@@ -53,18 +53,21 @@ jobs:
           node-version: '18'
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Update package version
+      - name: Update package version and copy README
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          cd build/npm
+          cd release/npm
+          # Copy root README to npm package directory
+          cp ../../README.md ./README.md
           # Use sed to update version directly to avoid npm version conflicts
           sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
           echo "Updated package.json version to $VERSION"
+          echo "Copied README.md to npm package directory"
           cat package.json | grep version
 
       - name: Publish to npm
         run: |
-          cd build/npm
+          cd release/npm
           npm publish
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -100,8 +103,8 @@ jobs:
           VERSION=${GITHUB_REF#refs/tags/v}
           echo "Updating Python package version to $VERSION"
           # Update version in __init__.py files
-          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" build/python/ai_rulez/__init__.py
-          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" build/python/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/ai_rulez/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/__init__.py
           echo "Updated __init__.py files to version $VERSION"
           
       - name: Build package
@@ -111,12 +114,15 @@ jobs:
           # Wait a bit for GitHub release to be fully available
           echo "Waiting for GitHub release to be available..."
           sleep 120
-          cd build/python
+          cd release/pypi
+          # Copy root README to PyPI package directory
+          cp ../../README.md ./README.md
+          echo "Copied README.md to PyPI package directory"
           RELEASE_VERSION=$VERSION python -m build
 
       - name: Publish to PyPI
         run: |
-          cd build/python
+          cd release/pypi
           twine upload dist/*
         env:
           TWINE_USERNAME: __token__
