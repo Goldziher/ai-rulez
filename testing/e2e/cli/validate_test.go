@@ -104,7 +104,6 @@ func (s *ValidateCLITestSuite) TestValidateMissingConfig() {
 func (s *ValidateCLITestSuite) TestValidateNonExistentConfig() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate", "--config", "nonexistent.yaml")
 
-	// Windows returns "The system cannot find the file specified" instead of "no such file"
 	stderr := result.Stderr
 	if !strings.Contains(stderr, "no such file") && !strings.Contains(stderr, "cannot find the file") {
 		s.T().Errorf("Expected error message about missing file, got: %s", stderr)
