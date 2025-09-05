@@ -6,15 +6,8 @@ vars:
 tasks:
   build:
     desc: Build the binary
-    deps:
-      - sync-schema
     cmds:
       - go build -o bin/{{.BINARY_NAME}} ./cmd
-
-  sync-schema:
-    desc: Sync schema from main directory to embedded location
-    cmds:
-      - cp schema/ai-rules-v1.schema.json internal/config/ai-rules-v1.schema.json
 
   install:
     desc: Install the binary
@@ -24,78 +17,65 @@ tasks:
   test:
     desc: Run unit tests
     cmds:
-      - go test -timeout=30s -v ./internal/...
+      - go test -timeout=30s -v ./cmd/... ./internal/... ./schema/...
 
   test:coverage:
     desc: Run unit tests with coverage
     cmds:
-      - go test -timeout=30s -v -coverprofile=coverage.out ./internal/...
-      - go tool cover -html=coverage.out -o coverage.html
+      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/...
 
   test:race:
     desc: Run unit tests with race detection
     cmds:
-      - go test -timeout=30s -race -v ./internal/...
-
-  test:integration:
-    desc: Run integration tests
-    cmds:
-      - cd e2e && go test -timeout=5m -v .
+      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/...
 
   test:benchmark:
     desc: Run benchmark tests
     cmds:
-      - cd e2e && go test -timeout=10m -bench=. -benchmem .
+      - cd testing/e2e && go test -timeout=10m -bench=. -benchmem .
 
   test:all:
-    desc: Run all tests (unit + integration)
-    deps: [test, test:integration]
+    desc: Run all tests (unit + e2e)
+    deps: [test, test:e2e]
 
   test:e2e:
     desc: Run all e2e tests
     cmds:
-      - echo "🧪 Running all e2e tests for ai-rulez..."
-      - task: test:e2e:init
+      - echo "🧪 Running comprehensive e2e test suite..."
       - task: test:e2e:cli
-      - task: test:e2e:agents
-      - task: test:e2e:profile
-      - task: test:e2e:benchmark
+      - task: test:e2e:mcp
+      - task: test:e2e:integration
       - echo "✅ All e2e tests completed!"
 
-  test:e2e:init:
-    desc: Run init provider e2e tests
-    cmds:
-      - echo "🧪 Running Init Provider Tests..."
-      - cd e2e && go test -v -timeout=30s -run "TestInit" .
-
   test:e2e:cli:
-    desc: Run CLI integration e2e tests
+    desc: Run CLI e2e tests
     cmds:
-      - echo "🧪 Running CLI Integration Tests..."
-      - cd e2e && go test -v -timeout=30s -run "TestCLIIntegration/Basic_Commands|TestCLIIntegration/Config_Discovery|TestCLIIntegration/Generation|TestCLIIntegration/Validation|TestCLIIntegration/Error_Handling|TestCLIIntegration/CRUD_Operations|TestCLIIntegration/Advanced_Generation|TestCLIIntegration/Shell_Completion|TestCLIIntegration/Version_and_Global_Options" .
+      - echo "🧪 Running CLI Tests..."
+      - cd testing/e2e && go test -v -timeout=60s ./cli/...
 
-  test:e2e:agents:
-    desc: Run agent and directory output e2e tests
+  test:e2e:mcp:
+    desc: Run MCP e2e tests
     cmds:
-      - echo "🧪 Running Agent Tests..."
-      - cd e2e && go test -v -timeout=30s -run "TestCLIIntegration/Agents_and_Directory_Outputs" . || echo "⚠ Some agent tests failed (experimental)"
+      - echo "🧪 Running MCP Tests..."
+      - cd testing/e2e && go test -v -timeout=60s ./mcp/...
 
-  test:e2e:profile:
-    desc: Run profiling e2e tests
+  test:e2e:integration:
+    desc: Run integration workflow tests
     cmds:
-      - echo "🧪 Running Profile Tests..."
-      - cd e2e && go test -v -timeout=30s -run "TestProfile" .
-
-  test:e2e:benchmark:
-    desc: Run benchmark e2e tests
-    cmds:
-      - echo "🧪 Running Benchmarks..."
-      - cd e2e && go test -timeout=10m -bench=. -benchmem -run=^$ .
+      - echo "🧪 Running Integration Tests..."
+      - cd testing/e2e && go test -v -timeout=60s ./integration/...
 
   test:e2e:full:
-    desc: Run all e2e tests including benchmarks
+    desc: Run all e2e tests with verbose output
     cmds:
-      - cd e2e && go test -v -timeout=60s -count=1 ./...
+      - echo "🧪 Running full e2e test suite..."
+      - cd testing/e2e && go test -v -timeout=120s ./...
+
+  test:e2e:quick:
+    desc: Run quick e2e smoke tests
+    cmds:
+      - echo "🧪 Running quick e2e smoke tests..."
+      - cd testing/e2e && go test -timeout=30s -run "TestBasicCLISuite/TestRootHelp|TestMCPServerSuite/TestServerStartup|TestWorkflowsSuite/TestCompleteProjectLifecycle" ./...
 
   lint:
     desc: Lint the code
@@ -143,20 +123,35 @@ tasks:
 
   ci:
     desc: Run all checks (like CI)
-    deps: [tidy, format, lint, test:race, test:integration]
+    deps: [tidy, format, lint, test:race, test:e2e]
 
   ci:unit:
     desc: Run CI unit tests only
     deps: [tidy, format, lint, test:race]
 
-  ci:integration:
-    desc: Run CI integration tests only
-    deps: [test:integration]
+  ci:e2e:
+    desc: Run CI e2e tests only
+    deps: [test:e2e]
 
   build:all:
     desc: Build for multiple platforms
     cmds:
-      - GOOS=linux GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-linux-amd64 .
-      - GOOS=windows GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-windows-amd64.exe .
-      - GOOS=darwin GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-darwin-amd64 .
-      - GOOS=darwin GOARCH=arm64 go build -o bin/{{.BINARY_NAME}}-darwin-arm64 .
+      - GOOS=linux GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-linux-amd64 ./cmd
+      - GOOS=windows GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-windows-amd64.exe ./cmd
+      - GOOS=darwin GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-darwin-amd64 ./cmd
+      - GOOS=darwin GOARCH=arm64 go build -o bin/{{.BINARY_NAME}}-darwin-arm64 ./cmd
+
+  docs:serve:
+    desc: Serve documentation locally
+    cmds:
+      - uv run mkdocs serve --dev-addr 127.0.0.1:8000
+
+  docs:build:
+    desc: Build documentation
+    cmds:
+      - uv run mkdocs build
+
+  docs:deploy:
+    desc: Deploy documentation to GitHub Pages
+    cmds:
+      - uv run mkdocs gh-deploy --force

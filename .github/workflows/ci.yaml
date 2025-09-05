@@ -37,9 +37,6 @@ jobs:
         with:
           version: 3.x
 
-      - name: Sync schema
-        run: task sync-schema
-
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v8
         with:
@@ -76,17 +73,9 @@ jobs:
         with:
           version: 3.x
 
-      - name: Sync schema
-        run: task sync-schema
+      - name: Run tests
+        run: task test
 
-      - name: Run tests with coverage
-        run: task test:coverage
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v5
-        with:
-          files: ./coverage.out
-          fail_ci_if_error: false
 
   e2e-test:
     name: E2E Tests
@@ -95,7 +84,7 @@ jobs:
     timeout-minutes: 15
     strategy:
       matrix:
-        test-suite: [init, cli, agents, profile]
+        test-suite: [cli, mcp, integration]
       fail-fast: false
     steps:
       - name: Checkout code
@@ -124,9 +113,6 @@ jobs:
         with:
           version: 3.x
 
-      - name: Sync schema
-        run: task sync-schema
-
       - name: Build binary for tests
         run: task build
 
@@ -141,7 +127,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: e2e-results-${{ matrix.test-suite }}
-          path: e2e/*.log
+          path: testing/e2e/*.log
           retention-days: 7
 
   benchmarks:
@@ -176,14 +162,11 @@ jobs:
         with:
           version: 3.x
 
-      - name: Sync schema
-        run: task sync-schema
-
       - name: Build binary for benchmarks
         run: task build
 
       - name: Run benchmarks
-        run: task test:e2e:benchmark | tee benchmark-results.txt
+        run: task test:benchmark | tee benchmark-results.txt
 
       - name: Upload benchmark results
         uses: actions/upload-artifact@v4
@@ -222,9 +205,6 @@ jobs:
         uses: arduino/setup-task@v2
         with:
           version: 3.x
-
-      - name: Sync schema
-        run: task sync-schema
 
       - name: Build binary
         run: task build

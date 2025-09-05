@@ -1,0 +1,52 @@
+package templates_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestGenerateConfigTemplate_ContinueDev(t *testing.T) {
+	projectName := "TestProject"
+	providers := templates.ProviderConfig{
+		ContinueDev: true,
+	}
+
+	configContent := templates.GenerateConfigTemplate(projectName, providers)
+
+	assert.Contains(t, configContent, "name: \"TestProject\"")
+	assert.Contains(t, configContent, "path: \".continue/rules/01-main.md\"")
+
+	assert.Contains(t, configContent, "ai-rules-v2.schema.json")
+
+	assert.Contains(t, configContent, "# agents:")
+	assert.Contains(t, configContent, "# rules:")
+	assert.Contains(t, configContent, "# sections:")
+	assert.Contains(t, configContent, "# commands:")
+	assert.Contains(t, configContent, "# mcp_servers:")
+
+	assert.Contains(t, configContent, `#   - name: "architect"`)
+	assert.Contains(t, configContent, `#   - name: "swe"`)
+	assert.Contains(t, configContent, `#   - name: "reviewer"`)
+}
+
+func TestGenerateConfigTemplate_ContinueDevAndClaude(t *testing.T) {
+	projectName := "TestProject"
+	providers := templates.ProviderConfig{
+		ContinueDev: true,
+		Claude:      true,
+	}
+
+	configContent := templates.GenerateConfigTemplate(projectName, providers)
+
+	assert.Contains(t, configContent, "path: \"CLAUDE.md\"")
+
+	assert.Contains(t, configContent, "# - path: \".cursorrules\"")
+	assert.Contains(t, configContent, "# - path: \"GEMINI.md\"")
+
+	assert.Contains(t, configContent, "# agents:")
+
+	assert.Equal(t, 1, strings.Count(configContent, "# agents:"), "There should be only one commented 'agents:' section")
+}
