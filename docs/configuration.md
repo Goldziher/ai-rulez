@@ -77,6 +77,22 @@ A list of MCP server objects for integrating external tools. See the `mcp_server
 
 A list of custom slash command objects for your AI assistant. See the `command` object reference below for details.
 
+### `gitignore`
+
+Controls whether `ai-rulez` automatically updates your `.gitignore` file with generated files.
+
+```yaml
+gitignore: false  # Disable automatic .gitignore updates
+```
+
+By default, `ai-rulez` will add all generated files to your `.gitignore` to prevent them from being committed to version control. This is usually what you want, since these files are regenerated from your configuration.
+
+- **Default**: `true` (automatically update `.gitignore`)
+- **Set to `false`**: If you want to manage `.gitignore` manually or commit generated files
+
+!!! tip "CLI Override"
+    You can override this setting using the `--update-gitignore` flag when running `ai-rulez generate`. The CLI flag takes precedence over the configuration setting.
+
 ---
 
 ## Configuring Outputs: Presets vs. Outputs

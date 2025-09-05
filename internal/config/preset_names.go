@@ -9,7 +9,7 @@ const (
 	PresetWindsurf PresetName = "windsurf"
 	PresetCopilot  PresetName = "copilot"
 	PresetGemini   PresetName = "gemini"
-	PresetContinue PresetName = "continue"
+	PresetContinue PresetName = "continue-dev"
 	PresetCline    PresetName = "cline"
 	PresetAmp      PresetName = "amp"
 	PresetCodex    PresetName = "codex"

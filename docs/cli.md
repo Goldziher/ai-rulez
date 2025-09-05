@@ -42,7 +42,33 @@ Create all your AI instruction files.
 
 ```bash
 ai-rulez generate
+
+# Generate without updating .gitignore
+ai-rulez generate --update-gitignore=false
+
+# Generate files recursively in subdirectories
+ai-rulez generate --recursive
+
+# Preview what would be generated without creating files
+ai-rulez generate --dry-run
 ```
+
+#### Options:
+- `--dry-run` - Preview files that would be generated without creating them
+- `--update-gitignore` - Control whether to update `.gitignore` (overrides config setting)
+- `--recursive` - Process all `ai-rulez.yml` files in subdirectories
+
+#### Gitignore Behavior:
+By default, `generate` will automatically add all generated files to `.gitignore` to keep your repository clean. This includes:
+- Files from presets (like `CLAUDE.md`, `.cursor/rules/`, etc.)
+- Custom output files you've defined
+- Agent directories and files
+
+You can control this behavior:
+1. **In your config**: Set `gitignore: false` to disable by default
+2. **Via CLI**: Use `--update-gitignore=false` to disable for one run (overrides config)
+
+When using `--recursive`, each directory's `.gitignore` is updated with its own generated files.
 
 ### `validate`
 

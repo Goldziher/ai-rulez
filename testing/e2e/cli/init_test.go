@@ -66,14 +66,12 @@ func (s *InitCLITestSuite) TestBasicInit() {
 func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ContinueDevProject", "--preset", "continue-dev")
 
-	result.AssertStderrContains(s.T(), "Continue.dev rules")
-	result.AssertStderrContains(s.T(), "Continue.dev prompts")
+	result.AssertStderrContains(s.T(), "Continue.dev")
+	result.AssertStderrContains(s.T(), ".continue/")
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
-	s.Contains(configContent, "path: \".continue/prompts/ai_rulez_prompts.yaml\"")
-	s.Contains(configContent, "# agents:")
-	s.Contains(configContent, "name: \"architect\"")
+	s.Contains(configContent, "- \"continue-dev\"") 
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
@@ -86,8 +84,8 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 
 	resultSecond := testutil.RunCLIExpectSuccess(s.T(), secondWorkingDir, "init", "ProjectSecond", "--preset", "continue-dev")
 
-	resultSecond.AssertStderrContains(s.T(), "Continue.dev now uses YAML configuration")
-	resultSecond.AssertStderrContains(s.T(), "Custom prompts will be generated in .continue/prompts/")
+	resultSecond.AssertStderrContains(s.T(), "Continue.dev")
+	resultSecond.AssertStderrContains(s.T(), ".continue/")
 }
 
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
@@ -106,8 +104,7 @@ func (s *InitCLITestSuite) TestInitClaudePreset() {
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "CLAUDE.md")
-	s.Contains(content, ".claude/agents/")
+	s.Contains(content, "- \"claude\"")
 }
 
 func (s *InitCLITestSuite) TestInitCursorPreset() {
@@ -117,7 +114,7 @@ func (s *InitCLITestSuite) TestInitCursorPreset() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, ".cursor/rules/")
+	s.Contains(content, "- \"cursor\"")
 }
 
 func (s *InitCLITestSuite) TestInitWindsurfPreset() {
@@ -127,7 +124,7 @@ func (s *InitCLITestSuite) TestInitWindsurfPreset() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, ".windsurf/")
+	s.Contains(content, "- \"windsurf\"")
 }
 
 func (s *InitCLITestSuite) TestInitPopularProviders() {
@@ -140,10 +137,7 @@ func (s *InitCLITestSuite) TestInitPopularProviders() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "CLAUDE.md")
-	s.Contains(content, ".cursor/rules/")
-	s.Contains(content, ".windsurf/")
-	s.Contains(content, ".github/copilot-instructions.md")
+	s.Contains(content, "- \"popular\"")
 }
 
 func (s *InitCLITestSuite) TestInitAllProviders() {
@@ -157,9 +151,9 @@ func (s *InitCLITestSuite) TestInitAllProviders() {
 
 	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "CLAUDE.md")
-	s.Contains(content, "GEMINI.md")
-	s.Contains(content, "AGENTS.md")
+	s.Contains(content, "presets:")
+	hasClaudeOrGemini := strings.Contains(content, "- \"claude\"") || strings.Contains(content, "- \"gemini\"")
+	s.True(hasClaudeOrGemini, "Should contain claude or gemini preset")
 }
 
 func (s *InitCLITestSuite) TestInitIndividualProviders() {

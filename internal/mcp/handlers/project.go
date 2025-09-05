@@ -64,6 +64,45 @@ func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*m
 	return crud.ToolSuccess(result)
 }
 
+// Helper function to convert provider names to presets
+func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {
+	if allProviders {
+		return []string{"claude", "cursor", "windsurf", "copilot", "gemini", "amp", "codex", "cline", "continue-dev"}, true
+	}
+	if popularProviders {
+		return []string{"popular"}, false
+	}
+	
+	var presets []string
+	var hasContinueDev bool
+	
+	// Map of provider names to preset names (most are the same)
+	providerMap := map[string]string{
+		"claude": "claude",
+		"cursor": "cursor",
+		"windsurf": "windsurf",
+		"copilot": "copilot",
+		"gemini": "gemini",
+		"amp": "amp",
+		"codex": "codex",
+		"cline": "cline",
+		"continue-dev": "continue-dev",
+	}
+	
+	for _, p := range providers {
+		if provider, ok := p.(string); ok {
+			if preset, exists := providerMap[provider]; exists {
+				presets = append(presets, preset)
+				if provider == "continue-dev" {
+					hasContinueDev = true
+				}
+			}
+		}
+	}
+	
+	return presets, hasContinueDev
+}
+
 func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	projectName := request.GetString("project_name", "")
 	providersInterface := request.GetArguments()["providers"]
@@ -76,37 +115,20 @@ func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 		providers = providersSlice
 	}
 
-	providerConfig := templates.ProviderConfig{}
-	switch {
-	case allProviders:
-		providerConfig = templates.ProviderConfig{Claude: true, Cursor: true, Windsurf: true, Copilot: true, Gemini: true, Amp: true, Codex: true, Cline: true, ContinueDev: true}
-	case popularProviders:
-		providerConfig = templates.ProviderConfig{Claude: true, Cursor: true, Windsurf: true, Copilot: true}
-	default:
-		for _, p := range providers {
-			if provider, ok := p.(string); ok {
-				switch provider {
-				case "claude":
-					providerConfig.Claude = true
-				case "cursor":
-					providerConfig.Cursor = true
-				case "windsurf":
-					providerConfig.Windsurf = true
-				case "copilot":
-					providerConfig.Copilot = true
-				case "continue-dev":
-					providerConfig.ContinueDev = true
-				}
-			}
-		}
+	presets, hasContinueDev := getPresetsFromProviders(providers, allProviders, popularProviders)
+
+	var configContent string
+	if len(presets) > 0 {
+		configContent = templates.GenerateConfigWithPresets(projectName, presets)
+	} else {
+		configContent = templates.GenerateConfigWithPresets(projectName, []string{"claude"})
 	}
 
-	configContent := templates.GenerateConfigTemplate(projectName, providerConfig)
 	if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0o644); err != nil {
 		return crud.ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 
-	if providerConfig.ContinueDev {
+	if hasContinueDev {
 		if err := crud.CreateContinueDevConfig(); err != nil {
 			return crud.ToolError(fmt.Errorf("failed to create continue.dev config: %w", err))
 		}

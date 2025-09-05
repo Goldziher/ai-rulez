@@ -6,6 +6,7 @@ type Config struct {
 	Metadata   Metadata    `yaml:"metadata"`
 	Extends    string      `yaml:"extends,omitempty"`
 	Includes   []string    `yaml:"includes,omitempty"`
+	Gitignore  *bool       `yaml:"gitignore,omitempty"`
 	Outputs    []Output    `yaml:"outputs,omitempty"`
 	Presets    []string    `yaml:"presets,omitempty"`
 	Rules      []Rule      `yaml:"rules,omitempty"`
@@ -138,4 +139,11 @@ func (c *Command) IsEnabled() bool {
 		return true
 	}
 	return *c.Enabled
+}
+
+func (c *Config) ShouldUpdateGitignore() bool {
+	if c.Gitignore == nil {
+		return true
+	}
+	return *c.Gitignore
 }
