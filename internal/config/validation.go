@@ -7,6 +7,30 @@ import (
 )
 
 func (c *Config) Validate() error {
+	if err := c.validateMetadata(); err != nil {
+		return err
+	}
+
+	if err := c.validateRuleTargets(); err != nil {
+		return err
+	}
+
+	if err := c.validateSectionTargets(); err != nil {
+		return err
+	}
+
+	if err := c.validateAgentTargets(); err != nil {
+		return err
+	}
+
+	if err := c.validateOutputsOrPresets(); err != nil {
+		return err
+	}
+
+	return ValidateOutputs(c.Outputs)
+}
+
+func (c *Config) validateMetadata() error {
 	if c.Metadata.Name == "" {
 		return oops.
 			With("field", "metadata.name").
@@ -14,51 +38,61 @@ func (c *Config) Validate() error {
 			Hint("Add the required field 'metadata.name' to your configuration\nAdd a name field to the metadata section\nExample: metadata: {name: 'My Project'}").
 			Errorf("required field 'metadata.name' is missing")
 	}
+	return nil
+}
 
+func (c *Config) validateRuleTargets() error {
 	for _, rule := range c.Rules {
-		if len(rule.Targets) > 0 {
-			for _, target := range rule.Targets {
-				if strings.HasPrefix(target, "@") {
-					return oops.
-						With("field", "rules").
-						With("rule_name", rule.Name).
-						With("invalid_target", target).
-						Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
-						Errorf("invalid target pattern '%s' in rule '%s'", target, rule.Name)
-				}
-			}
+		if err := validateTargets(rule.Targets, "rules", rule.Name); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
+func (c *Config) validateSectionTargets() error {
 	for _, section := range c.Sections {
-		if len(section.Targets) > 0 {
-			for _, target := range section.Targets {
-				if strings.HasPrefix(target, "@") {
-					return oops.
-						With("field", "sections").
-						With("section_name", section.Name).
-						With("invalid_target", target).
-						Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
-						Errorf("invalid target pattern '%s' in section '%s'", target, section.Name)
-				}
-			}
+		if err := validateTargets(section.Targets, "sections", section.Name); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
+func (c *Config) validateAgentTargets() error {
 	for i := range c.Agents {
-		if len(c.Agents[i].Targets) > 0 {
-			for _, target := range c.Agents[i].Targets {
-				if strings.HasPrefix(target, "@") {
-					return oops.
-						With("field", "agents").
-						With("agent_name", c.Agents[i].Name).
-						With("invalid_target", target).
-						Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
-						Errorf("invalid target pattern '%s' in agent '%s'", target, c.Agents[i].Name)
-				}
-			}
+		if err := validateTargets(c.Agents[i].Targets, "agents", c.Agents[i].Name); err != nil {
+			return err
 		}
 	}
+	return nil
+}
 
-	return ValidateOutputs(c.Outputs)
+func (c *Config) validateOutputsOrPresets() error {
+	if len(c.Outputs) == 0 && len(c.Presets) == 0 {
+		return oops.
+			With("field", "outputs/presets").
+			With("context", "configuration").
+			Hint("Add either 'outputs' or 'presets' to your configuration\nExample with outputs: outputs: [{path: 'CLAUDE.md'}]\nExample with presets: presets: ['popular']").
+			Errorf("either 'outputs' or 'presets' is required")
+	}
+	return nil
+}
+
+func validateTargets(targets []string, fieldType, itemName string) error {
+	if len(targets) == 0 {
+		return nil
+	}
+
+	for _, target := range targets {
+		if strings.HasPrefix(target, "@") {
+			return oops.
+				With("field", fieldType).
+				With(fieldType[:len(fieldType)-1]+"_name", itemName).
+				With("invalid_target", target).
+				Hint("Named target references (@target-name) are no longer supported. Use direct glob patterns instead.").
+				Errorf("invalid target pattern '%s' in %s '%s'", target, fieldType[:len(fieldType)-1], itemName)
+		}
+	}
+	return nil
 }
