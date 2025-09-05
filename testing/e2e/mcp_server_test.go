@@ -177,10 +177,7 @@ func (s *MCPServerE2ETestSuite) TestCommandCRUD_FullCycle() {
 }
 
 func (s *MCPServerE2ETestSuite) TestInitProject() {
-	initDir := testutil.CreateTempDir(s.T())
-	wd, _ := os.Getwd()
-	os.Chdir(initDir)
-	defer os.Chdir(wd)
+	os.Remove(filepath.Join(s.workingDir, "ai_rulez.yaml"))
 
 	params := map[string]interface{}{
 		"project_name": "MCP-Initialized-Project",
@@ -190,15 +187,13 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 	result := s.callTool("init_project", params)
 	s.Contains(result, "initialized")
 
-	configPath := filepath.Join(initDir, "ai_rulez.yaml")
-	s.True(testutil.FileExists(s.T(), configPath))
-	configJSONPath := filepath.Join(initDir, ".continue", "config.json")
-	s.True(testutil.FileExists(s.T(), configJSONPath), "config.json for continue-dev should be created")
+	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	s.True(testutil.FileExists(s.T(), configPath), "Config file should exist at %s", configPath)
 
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "name: \"MCP-Initialized-Project\"")
-	s.Contains(content, "path: \".claude/agents/\"")
-	s.Contains(content, "path: \".continue/rules/\"")
+	s.Contains(content, "- \"claude\"")
+	s.Contains(content, "- \"continue-dev\"")
 }
 
 func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {

@@ -263,7 +263,6 @@ func parsePresetFlag() templates.ProviderConfig {
 		"codex":        func(pc *templates.ProviderConfig) { pc.Codex = true },
 		"cline":        func(pc *templates.ProviderConfig) { pc.Cline = true },
 		"continue-dev": func(pc *templates.ProviderConfig) { pc.ContinueDev = true },
-		"continue":     func(pc *templates.ProviderConfig) { pc.ContinueDev = true },
 	}
 
 	pc := templates.ProviderConfig{}
