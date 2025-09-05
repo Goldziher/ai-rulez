@@ -137,6 +137,21 @@ npm install -g ai-rulez
 pip install ai-rulez
 ```
 
+## Pre-commit Hooks
+
+You can use `ai-rulez` with `pre-commit` to automatically validate and generate your AI configuration files.
+
+Add the following to your `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/Goldziher/ai-rulez
+    rev: v2.0.0
+    hooks:
+      - id: ai-rulez-validate
+      - id: ai-rulez-generate
+```
+
 ---
 
 ## Documentation
