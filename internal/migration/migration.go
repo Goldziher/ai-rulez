@@ -212,6 +212,10 @@ func migrateAgent(agent map[string]interface{}) error {
 		if _, hasID := agent["id"]; !hasID && name != "" {
 			agent["id"] = generateHumanReadableID(name)
 		}
+
+		if _, hasDesc := agent["description"]; !hasDesc {
+			agent["description"] = fmt.Sprintf("Agent: %s", name)
+		}
 	}
 
 	return nil

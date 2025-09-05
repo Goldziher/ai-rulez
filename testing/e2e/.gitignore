@@ -1,0 +1,4 @@
+
+# E2E test binaries
+testing/e2e/cli/ai-rulez-e2e-test
+testing/e2e/testutil/ai-rulez-e2e-test

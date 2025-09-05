@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Everything you can put in your `ai_rulez.yaml` file.
+Everything you can put in your `ai-rulez.yml` file.
 
 ## Main Structure
 
@@ -26,7 +26,7 @@ A string specifying a single base configuration file to inherit from. The path c
 
 ### `includes`
 
-A list of strings specifying other `ai_rulez.yaml` files to merge into your configuration. Paths can be local files or remote URLs.
+A list of strings specifying other `ai-rulez.yml` files to merge into your configuration. Paths can be local files or remote URLs.
 
 !!! info "Why use `includes`?"
     The `includes` property is for **composition**. It allows you to create modular, reusable sets of rules (e.g., for a specific language, framework, or security standard) and mix them into any project as needed.
