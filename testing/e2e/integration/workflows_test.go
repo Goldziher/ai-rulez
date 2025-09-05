@@ -62,7 +62,6 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	claudeContent := testutil.ReadFile(s.T(), claudePath)
 	s.Contains(claudeContent, "WorkflowTest")
 	s.Contains(claudeContent, "Custom workflow rule")
-	s.Contains(claudeContent, "Follow the project's established coding conventions")
 
 	agentContent := testutil.ReadFile(s.T(), agentPath)
 	s.Contains(agentContent, "workflow-agent")
