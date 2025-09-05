@@ -1,0 +1,27 @@
+
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+
+
+metadata:
+  name: "TestProject"
+
+outputs:
+  - path: "CLAUDE.md"
+  - path: ".claude/agents/"
+    type: "agent"
+    naming_scheme: "{name}.md"
+  
+  
+
+
+
+
+
+
+
+
+
+#     # aliases: ["t", "todo"]  # Optional: alternative names
+
+
+
