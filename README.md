@@ -17,32 +17,21 @@ Tired of manually managing rule files, subagents, and custom commands across dif
 
 ---
 
-## Why ai-rulez?
+## Feature Highlights
 
-- **Write once, generate everywhere:** Define your AI context in one place. `ai-rulez` creates the right format for each tool automatically.
+`ai-rulez` is a simple and  than just a configuration generator. It's a complete system for managing your AI's context.
 
-- **CLI for everything:** Add rules, update configs, generate files—all from the command line. No more hand-editing YAML files.
+-   **Single Source of Truth:** Define your project's context—rules, file structures, and key documentation—in one `ai-rulez.yml` file.
+-   **Multi-Tool Support:** Use presets to instantly generate configurations for popular AI tools like Claude, Cursor, Copilot, Gemini, and more.
+-   **Custom Tool Integration:** Don't see your favorite tool on the list? Use the `outputs` key to generate a configuration file for any tool, in any format.
+-   **Specialized AI Agents:** Create specialized "sub-agents" with their own system prompts and tools, perfect for complex tasks like code reviews or database queries.
+-   **Composable Configuration:** Use `extends` and `includes` to build powerful, maintainable configurations that can be shared across teams and projects.
+-   **Full-Featured CLI:** Manage your entire configuration from the command line. Add rules, update agents, and generate files without ever opening a YAML file.
+-   **MCP Server Integration:** Allow your AI assistant to programmatically interact with your configuration through the built-in Model Context Protocol (MCP) server.
 
-- **MCP integration:** Your AI assistant can manage your configuration directly through the built-in MCP server.
+## How It Works
 
-- **Team-friendly:** Share configs with `extends` and `includes`. Perfect for teams and organizations.
-
-## Future-Ready
-
-As new AI tools emerge, `ai-rulez` grows with them. The extensible design makes it easy to add support for new assistants and platforms.
-
-## Supported Tools & Platforms
-
-`ai-rulez` includes presets for a wide range of popular AI development tools:
-
-- **Anthropic Claude** (including Claude Code)
-- **Cursor**
-- **GitHub Copilot**
-- **Google Gemini**
-- **Sourcegraph Cody & AMP**
-- **Continue.dev**
-- **Windsurf**
-- **Cline**
+`ai-rulez` takes your `ai-rulez.yml` file and uses it as a single source of truth to generate native configuration files for all your AI tools. Think of it as a build system for AI context—you write the source once, and it compiles to whatever format each tool needs.
 
 ## Example: `ai-rulez.yml`
 
@@ -53,11 +42,9 @@ metadata:
   name: "My SaaS Platform"
   version: "2.0.0"
 
-outputs:
-  - path: "CLAUDE.md"
-  - path: ".claude/agents/"
-    type: "agent"
-    naming_scheme: "{name}.md"
+# Use presets for common configurations
+presets:
+  - "popular"  # Includes Claude, Cursor, Windsurf, and Copilot
 
 rules:
   - name: "Go Code Standards"
@@ -71,19 +58,11 @@ sections:
       - `cmd/`: Main application entry point
       - `internal/`: Private application code (business logic, data access)
       - `pkg/`: Public-facing libraries
-      - `schema/`: JSON schema definitions
-      - `testing/`: E2E tests and fixtures
 
 agents:
   - name: "go-developer"
     description: "Go language expert for core development"
     system_prompt: "You are an expert Go developer. Your key responsibilities include writing idiomatic Go, using proper error handling, and creating comprehensive tests."
-
-commands:
-  - name: "test"
-    description: "Run tests for modified code"
-    aliases: ["t"]
-    system_prompt: "Run appropriate tests for the code you've modified. Use `task test` for unit tests or `task test:e2e` for integration tests."
 ```
 
 Run `ai-rulez generate` → get all your configuration files, perfectly synchronized.
@@ -91,8 +70,8 @@ Run `ai-rulez generate` → get all your configuration files, perfectly synchron
 ## Quick Start
 
 ```bash
-# 1. Initialize your project with sane defaults
-ai-rulez init "My Project" --popular
+# 1. Initialize your project with a preset (recommended)
+ai-rulez init "My Project" --preset popular
 
 # 2. Add your project-specific context
 ai-rulez add rule "Tech Stack" --priority critical --content "This project uses Go and PostgreSQL."

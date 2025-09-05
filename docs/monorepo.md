@@ -14,6 +14,9 @@ The most effective strategy for large projects is to create multiple, smaller `a
 
     By scoping configurations, you provide your AI assistant with only the context it needs for the task at hand. A developer working on the frontend gets frontend-specific rules, while the backend developer gets API patterns. This results in faster, more accurate, and more relevant AI responses.
 
+!!! info "Presets vs. Outputs in Monorepos"
+    While `presets` are excellent for simplifying common AI tool outputs (like `CLAUDE.md` or `.cursor/rules/`), `outputs` remain essential for generating custom, project-specific documentation or files (e.g., `SYSTEM_OVERVIEW.md`, `BACKEND_RULES.md`). In a monorepo, you will likely use a combination of both.
+
 A typical layout might look like this:
 
 ```
