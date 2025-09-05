@@ -390,9 +390,9 @@ func TestGitignoreDeduplication(t *testing.T) {
 	cfg := &config.Config{
 		Outputs: []config.Output{
 			{Path: "CLAUDE.md"},
-			{Path: "CLAUDE.md"}, 
+			{Path: "CLAUDE.md"},
 			{Path: ".claude/agents/"},
-			{Path: ".claude/agents/"}, 
+			{Path: ".claude/agents/"},
 		},
 	}
 

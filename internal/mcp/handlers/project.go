@@ -72,23 +72,23 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 	if popularProviders {
 		return []string{"popular"}, false
 	}
-	
+
 	var presets []string
 	var hasContinueDev bool
-	
+
 	// Map of provider names to preset names (most are the same)
 	providerMap := map[string]string{
-		"claude": "claude",
-		"cursor": "cursor",
-		"windsurf": "windsurf",
-		"copilot": "copilot",
-		"gemini": "gemini",
-		"amp": "amp",
-		"codex": "codex",
-		"cline": "cline",
+		"claude":       "claude",
+		"cursor":       "cursor",
+		"windsurf":     "windsurf",
+		"copilot":      "copilot",
+		"gemini":       "gemini",
+		"amp":          "amp",
+		"codex":        "codex",
+		"cline":        "cline",
 		"continue-dev": "continue-dev",
 	}
-	
+
 	for _, p := range providers {
 		if provider, ok := p.(string); ok {
 			if preset, exists := providerMap[provider]; exists {
@@ -99,7 +99,7 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 			}
 		}
 	}
-	
+
 	return presets, hasContinueDev
 }
 
