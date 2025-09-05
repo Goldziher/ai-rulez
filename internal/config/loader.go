@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/remote"
@@ -43,6 +44,10 @@ func LoadConfigWithIncludes(ctx context.Context, filename string) (*Config, erro
 		if err := loader.loadLocalOverrides(ctx, config, localConfigPath); err != nil {
 			return nil, err
 		}
+	}
+
+	if err := expandConfigPresets(config); err != nil {
+		return nil, err
 	}
 
 	return config, nil
@@ -331,11 +336,7 @@ func ValidateIncludes(config *Config, baseDir string) error {
 
 func ValidateOutputs(outputs []Output) error {
 	if len(outputs) == 0 {
-		return oops.
-			With("field", "outputs").
-			With("context", "configuration").
-			Hint("Add the required field 'outputs' to your configuration\nAdd at least one output file in the 'outputs' section\nExample: outputs: [{path: 'CLAUDE.md', template: {type: 'builtin', value: 'default'}}]").
-			Errorf("required field 'outputs' is missing")
+		return nil
 	}
 
 	for i, output := range outputs {
@@ -372,4 +373,54 @@ func (l *configLoader) loadLocalOverrides(ctx context.Context, config *Config, f
 	}
 
 	return nil
+}
+
+func expandConfigPresets(config *Config) error {
+	if len(config.Presets) == 0 {
+		return nil
+	}
+
+	presetOutputs, err := ExpandPresets(config.Presets)
+	if err != nil {
+		var supportedPresets []string
+		for preset := range PresetRegistry {
+			supportedPresets = append(supportedPresets, preset)
+		}
+		sort.Strings(supportedPresets)
+
+		return oops.
+			With("presets", config.Presets).
+			Hint(fmt.Sprintf("Check that all preset names are valid. Supported presets: %s", strings.Join(supportedPresets, ", "))).
+			Wrapf(err, "expand presets")
+	}
+
+	config.Outputs = mergeOutputs(presetOutputs, config.Outputs)
+
+	return nil
+}
+
+func mergeOutputs(base, override []Output) []Output {
+	outputMap := make(map[string]Output)
+
+	for _, output := range base {
+		outputMap[output.Path] = output
+	}
+
+	for _, output := range override {
+		outputMap[output.Path] = output
+	}
+
+	var result []Output
+	var paths []string
+	for path := range outputMap {
+		paths = append(paths, path)
+	}
+
+	sort.Strings(paths)
+
+	for _, path := range paths {
+		result = append(result, outputMap[path])
+	}
+
+	return result
 }

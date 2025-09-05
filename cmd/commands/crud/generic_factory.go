@@ -63,7 +63,6 @@ func createAddCommand(desc *EntityDescriptor) *cobra.Command {
 			name := args[0]
 			entity := desc.NewEntity()
 
-			// Special case for Output entities which use "Path" instead of "Name"
 			if desc.Singular == "output" {
 				setFieldValue(entity, "Path", name)
 			} else {
