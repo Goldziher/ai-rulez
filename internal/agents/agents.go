@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/spf13/cobra"
 )
@@ -141,38 +140,6 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	return outputBuilder.String(), nil
 }
 
-// invokeAgentWithSpinner runs an agent with an animated spinner
-func invokeAgentWithSpinner(agent AgentInfo, prompt string, timeout time.Duration, spinner *progress.Bar) (string, error) {
-	// Start spinner animation in a goroutine
-	done := make(chan struct{})
-	var result string
-	var err error
-
-	go func() {
-		defer close(done)
-		result, err = invokeAgent(agent, prompt, timeout)
-	}()
-
-	// Keep the spinner active while agent is running
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-done:
-			// Agent completed
-			return result, err
-		case <-ticker.C:
-			// Update spinner (this keeps it animating)
-			if spinner != nil {
-				if spinnerErr := spinner.Add(1); spinnerErr != nil {
-					logger.Warn("Failed to update spinner", "error", spinnerErr)
-				}
-			}
-		}
-	}
-}
-
 // formatAgentResponse formats the agent output in a visually appealing box
 func formatAgentResponse(content string) string {
 	var result strings.Builder
@@ -202,51 +169,6 @@ func formatAgentResponse(content string) string {
 	result.WriteString("\033[2m╰─────────────────────────────────────────────────────────────────╯\033[0m")
 
 	return result.String()
-}
-
-// executeAgentWithRetries executes an agent call with retry logic and progress indication
-func executeAgentWithRetries(agent AgentInfo, prompt string, timeout time.Duration, spinner *progress.Bar, phaseNum, totalPhases int) (string, error) {
-	const maxRetries = 3
-	var lastErr error
-
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		// Update spinner description to show retry attempt if needed
-		if attempt > 1 {
-			retryDesc := fmt.Sprintf("  [%d/%d] Retry %d/%d - %s...", phaseNum, totalPhases, attempt-1, maxRetries-1,
-				fmt.Sprintf("Phase %d", phaseNum))
-			if spinner != nil {
-				spinner.ChangeDescription(retryDesc)
-			}
-			logger.Info(fmt.Sprintf("  🔄 Retry %d/%d: Agent timed out, retrying with longer timeout...", attempt-1, maxRetries-1))
-
-			// Exponential backoff: wait 2^(attempt-2) seconds before retry
-			waitTime := time.Duration(1<<(attempt-2)) * time.Second
-			time.Sleep(waitTime)
-		}
-
-		// Adjust timeout for retries - increase it each time
-		adjustedTimeout := timeout + time.Duration(attempt-1)*60*time.Second
-
-		result, err := invokeAgentWithSpinner(agent, prompt, adjustedTimeout, spinner)
-		if err == nil {
-			// Success! Return the result
-			return result, nil
-		}
-
-		lastErr = err
-
-		// Don't retry if it's not a timeout error, but do retry for policy violations
-		if !strings.Contains(err.Error(), "timed out") && !strings.Contains(err.Error(), "timeout") && !strings.Contains(err.Error(), "Usage Policy") {
-			break
-		}
-
-		if attempt < maxRetries {
-			logger.Warn(fmt.Sprintf("  ⏰ Phase %d attempt %d failed: %v", phaseNum, attempt, err))
-		}
-	}
-
-	// All attempts failed
-	return "", fmt.Errorf("agent failed after %d attempts: %w", maxRetries, lastErr)
 }
 
 func ListAvailableAgents() {
