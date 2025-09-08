@@ -10,10 +10,10 @@ import (
 func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Analyze the '%s' project and update the description in ai_rulez.yaml\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Analyze the '%s' project and update the description in ai-rulez.yaml\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Read the current ai_rulez.yaml file to understand the existing configuration\n")
+	prompt.WriteString("1. Read the current ai-rulez.yaml file to understand the existing configuration\n")
 	prompt.WriteString("2. Analyze the project structure, technologies, and architecture\n")
 	prompt.WriteString("3. Use the Edit tool to update the metadata.description field with a concise project description (2-3 sentences)\n\n")
 
@@ -28,12 +28,12 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 func buildDocumentationPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add documentation sections to ai_rulez.yaml for the '%s' project\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add documentation sections to ai-rulez.yaml for the '%s' project\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Read the current ai_rulez.yaml file\n")
+	prompt.WriteString("1. Read the current ai-rulez.yaml file\n")
 	prompt.WriteString("2. Add 4-6 key documentation sections to the `sections:` array\n")
-	prompt.WriteString("3. Use the Edit tool to modify ai_rulez.yaml directly\n\n")
+	prompt.WriteString("3. Use the Edit tool to modify ai-rulez.yaml directly\n\n")
 
 	prompt.WriteString("Each section should have:\n")
 	prompt.WriteString("- name: \"Section Title\"\n")
@@ -63,12 +63,12 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 func buildStandardsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add coding standards to ai_rulez.yaml for the '%s' project\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add coding standards to ai-rulez.yaml for the '%s' project\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Read the current ai_rulez.yaml file\n")
+	prompt.WriteString("1. Read the current ai-rulez.yaml file\n")
 	prompt.WriteString("2. Add 5-7 important coding standards to the `rules:` array\n")
-	prompt.WriteString("3. Use the Edit tool to modify ai_rulez.yaml directly\n\n")
+	prompt.WriteString("3. Use the Edit tool to modify ai-rulez.yaml directly\n\n")
 
 	prompt.WriteString("Each rule should be a separate array entry:\n")
 	prompt.WriteString("- name: \"Specific Standard Name\"\n")
@@ -87,12 +87,12 @@ func buildStandardsPrompt(context *ProjectContext) string {
 func buildSpecialistPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add specialized AI agents to ai_rulez.yaml for the '%s' project\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add specialized AI agents to ai-rulez.yaml for the '%s' project\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Read the current ai_rulez.yaml file\n")
+	prompt.WriteString("1. Read the current ai-rulez.yaml file\n")
 	prompt.WriteString("2. Add 3-4 specialized AI agents to the `agents:` array\n")
-	prompt.WriteString("3. Use the Edit tool to modify ai_rulez.yaml directly\n\n")
+	prompt.WriteString("3. Use the Edit tool to modify ai-rulez.yaml directly\n\n")
 
 	prompt.WriteString("Each agent should be a separate array entry:\n")
 	prompt.WriteString("- name: \"agent-role-name\"\n")
@@ -109,6 +109,59 @@ func buildSpecialistPrompt(context *ProjectContext) string {
 
 	prompt.WriteString("\nFocus on agents that address complex, domain-specific tasks for this project.\n")
 	prompt.WriteString("Reference actual project tools, commands, and file paths in agent system prompts.\n")
+
+	return prompt.String()
+}
+
+func buildToolingPrompt(context *ProjectContext) string {
+	var prompt strings.Builder
+
+	prompt.WriteString(fmt.Sprintf("TASK: Add commands and MCP server configuration to ai-rulez.yaml for the '%s' project\n\n", context.ProjectName))
+
+	prompt.WriteString("INSTRUCTIONS:\n")
+	prompt.WriteString("1. Read the current ai-rulez.yaml file\n")
+	prompt.WriteString("2. Add a `commands:` section with 3-5 common project commands\n")
+	prompt.WriteString("3. Add a `mcp_servers:` section with the ai-rulez MCP server\n")
+	prompt.WriteString("4. Use the Edit tool to modify ai-rulez.yaml directly\n\n")
+
+	prompt.WriteString("Commands section format:\n")
+	prompt.WriteString("commands:\n")
+	prompt.WriteString("  - name: \"command-name\"\n")
+	prompt.WriteString("    description: \"What this command does\"\n")
+	prompt.WriteString("    command: \"actual command to run\"\n\n")
+
+	prompt.WriteString("MCP servers section format:\n")
+	prompt.WriteString("mcp_servers:\n")
+	prompt.WriteString("  - name: \"ai-rulez\"\n")
+	prompt.WriteString("    command: \"ai-rulez\"\n")
+	prompt.WriteString("    args: [\"mcp\"]\n")
+	prompt.WriteString("    description: \"AI-Rulez MCP server for configuration management\"\n\n")
+
+	// Add rich project context
+	addProjectContext(&prompt, context)
+
+	prompt.WriteString("\nSuggested commands based on detected project tools:\n")
+	if context.CodebaseInfo != nil {
+		info := context.CodebaseInfo
+		if info.BuildCommand != "" {
+			prompt.WriteString(fmt.Sprintf("- Build: %s\n", info.BuildCommand))
+		}
+		if info.TestCommand != "" {
+			prompt.WriteString(fmt.Sprintf("- Test: %s\n", info.TestCommand))
+		}
+		if info.LintCommand != "" {
+			prompt.WriteString(fmt.Sprintf("- Lint: %s\n", info.LintCommand))
+		}
+		if info.HasDocker {
+			prompt.WriteString("- Docker commands (docker-compose up, etc.)\n")
+		}
+		if context.RepoType == "monorepo" {
+			prompt.WriteString("- Monorepo commands (workspace management, etc.)\n")
+		}
+	}
+
+	prompt.WriteString("\nFocus on commands that developers use daily for this project.\n")
+	prompt.WriteString("Always include the ai-rulez MCP server for Claude integration.\n")
 
 	return prompt.String()
 }
