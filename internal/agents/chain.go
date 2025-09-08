@@ -51,6 +51,12 @@ var initAgentTasks = []AgentTask{
 		MaxRetries:  defaultMaxRetries,
 		Prompt:      buildSpecialistPrompt,
 	},
+	{
+		Name:        "tooling-agent",
+		Description: "Adding commands and MCP server configuration",
+		MaxRetries:  defaultMaxRetries,
+		Prompt:      buildToolingPrompt,
+	},
 }
 
 // TaskStatus represents the status of a running task
@@ -70,7 +76,7 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	if err := initializeBaseConfigFile(context, providerConfig); err != nil {
 		return "", fmt.Errorf("failed to initialize base config: %w", err)
 	}
-	logger.Info("✅ Initialized base ai_rulez.yaml")
+	logger.Info("✅ Initialized base ai-rulez.yaml")
 	fmt.Printf("\n")
 
 	// Initialize task status tracking
@@ -171,81 +177,106 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	}
 
 	// Return final configuration content
-	if data, err := os.ReadFile("ai_rulez.yaml"); err == nil {
+	if data, err := os.ReadFile("ai-rulez.yaml"); err == nil {
 		return string(data), nil
 	}
 
 	return "", fmt.Errorf("failed to read final configuration")
 }
 
-// initializeBaseConfigFile creates the initial ai_rulez.yaml with metadata and outputs
+// initializeBaseConfigFile creates the initial ai-rulez.yaml with metadata and outputs
 func initializeBaseConfigFile(context *ProjectContext, providerConfig templates.ProviderConfig) error {
-	cfg := &config.Config{
-		Metadata: config.Metadata{
-			Name:    context.ProjectName,
-			Version: "1.0.0",
-		},
-		Outputs: buildOutputsConfig(providerConfig),
-	}
-	return config.SaveConfig(cfg, "ai_rulez.yaml")
+	content := buildInitialConfigTemplate(context, providerConfig)
+	return os.WriteFile("ai-rulez.yaml", []byte(content), 0o644)
 }
 
-// buildOutputsConfig creates outputs configuration based on provider config
-func buildOutputsConfig(providerConfig templates.ProviderConfig) []config.Output {
-	var outputs []config.Output
+// buildInitialConfigTemplate creates the initial YAML content with comments and guidance
+func buildInitialConfigTemplate(context *ProjectContext, providerConfig templates.ProviderConfig) string {
+	var sb strings.Builder
 
+	// Schema and metadata
+	sb.WriteString("$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json\n\n")
+	sb.WriteString("metadata:\n")
+	fmt.Fprintf(&sb, "  name: %s\n", context.ProjectName)
+	sb.WriteString("  version: \"1.0.0\"\n")
+	sb.WriteString("  # description: \"Brief description of your project\"\n\n")
+
+	// Outputs section
+	sb.WriteString("outputs:\n")
 	if providerConfig.Claude {
-		outputs = append(outputs,
-			config.Output{Path: "CLAUDE.md"},
-			config.Output{
-				Path:         ".claude/agents/",
-				Type:         "agent",
-				NamingScheme: "{name}.md",
-			})
+		sb.WriteString("  - path: CLAUDE.md\n")
+		sb.WriteString("  - path: .claude/agents/\n")
+		sb.WriteString("    type: agent\n")
+		sb.WriteString("    naming_scheme: '{name}.md'\n")
 	}
 	if providerConfig.Cursor {
-		outputs = append(outputs, config.Output{
-			Path:         ".cursor/rules/",
-			Type:         "section",
-			NamingScheme: "{name}.md",
-		})
+		sb.WriteString("  - path: .cursor/rules/\n")
+		sb.WriteString("    type: section\n")
+		sb.WriteString("    naming_scheme: '{name}.md'\n")
 	}
 	if providerConfig.Windsurf {
-		outputs = append(outputs, config.Output{Path: ".windsurfrules"})
+		sb.WriteString("  - path: .windsurfrules\n")
 	}
 	if providerConfig.Copilot {
-		outputs = append(outputs, config.Output{Path: ".github/copilot-instructions.md"})
+		sb.WriteString("  - path: .github/copilot-instructions.md\n")
 	}
 	if providerConfig.Gemini {
-		outputs = append(outputs, config.Output{Path: "GEMINI.md"})
+		sb.WriteString("  - path: GEMINI.md\n")
 	}
 	if providerConfig.Amp || providerConfig.Codex {
-		outputs = append(outputs, config.Output{Path: "AGENTS.md"})
+		sb.WriteString("  - path: AGENTS.md\n")
 	}
 	if providerConfig.Cline {
-		outputs = append(outputs, config.Output{
-			Path:         ".clinerules/",
-			Type:         "section",
-			NamingScheme: "{name}.md",
-		})
+		sb.WriteString("  - path: .clinerules/\n")
+		sb.WriteString("    type: section\n")
+		sb.WriteString("    naming_scheme: '{name}.md'\n")
 	}
 	if providerConfig.ContinueDev {
-		outputs = append(outputs,
-			config.Output{
-				Path:         ".continue/rules/",
-				Type:         "section",
-				NamingScheme: "{name}.md",
-			},
-			config.Output{
-				Path: ".continue/prompts/ai_rulez_prompts.yaml",
-				Template: &config.Template{
-					Type:  "builtin",
-					Value: "continue-prompts",
-				},
-			})
+		sb.WriteString("  - path: .continue/rules/\n")
+		sb.WriteString("    type: section\n")
+		sb.WriteString("    naming_scheme: '{name}.md'\n")
+		sb.WriteString("  - path: .continue/prompts/ai_rulez_prompts.yaml\n")
+		sb.WriteString("    template:\n")
+		sb.WriteString("      type: builtin\n")
+		sb.WriteString("      value: continue-prompts\n")
 	}
 
-	return outputs
+	// Commented-out template sections for guidance
+	sb.WriteString("\n# Sections will be added by documentation-agent\n")
+	sb.WriteString("# sections:\n")
+	sb.WriteString("#   - name: \"Architecture Overview\"\n")
+	sb.WriteString("#     priority: critical\n")
+	sb.WriteString("#     content: |\n")
+	sb.WriteString("#       Describe your project architecture here\n")
+
+	sb.WriteString("\n# Rules will be added by standards-agent\n")
+	sb.WriteString("# rules:\n")
+	sb.WriteString("#   - name: \"Code Style\"\n")
+	sb.WriteString("#     priority: high\n")
+	sb.WriteString("#     content: \"Your coding standards here\"\n")
+
+	sb.WriteString("\n# Agents will be added by specialist-agent\n")
+	sb.WriteString("# agents:\n")
+	sb.WriteString("#   - name: \"domain-expert\"\n")
+	sb.WriteString("#     description: \"Specialized knowledge for this domain\"\n")
+	sb.WriteString("#     priority: medium\n")
+	sb.WriteString("#     system_prompt: |\n")
+	sb.WriteString("#       Your specialized agent prompt here\n")
+
+	sb.WriteString("\n# Commands will be added by tooling-agent\n")
+	sb.WriteString("# commands:\n")
+	sb.WriteString("#   - name: \"build\"\n")
+	sb.WriteString("#     description: \"Build the project\"\n")
+	sb.WriteString("#     command: \"npm run build\"\n")
+
+	sb.WriteString("\n# MCP servers will be added by tooling-agent\n")
+	sb.WriteString("# mcp_servers:\n")
+	sb.WriteString("#   - name: \"ai-rulez\"\n")
+	sb.WriteString("#     command: \"ai-rulez\"\n")
+	sb.WriteString("#     args: [\"mcp\"]\n")
+	sb.WriteString("#     description: \"AI-Rulez MCP server\"\n")
+
+	return sb.String()
 }
 
 // executeAgentTaskWithStatus executes a single agent task with status updates
@@ -346,10 +377,10 @@ func showRunningTasksStatus(statuses []*TaskStatus) {
 	}
 }
 
-// validateGeneratedConfig validates the generated ai_rulez.yaml file
+// validateGeneratedConfig validates the generated ai-rulez.yaml file
 func validateGeneratedConfig() error {
 	// Try to load and validate the configuration
-	cfg, err := config.LoadConfig("ai_rulez.yaml")
+	cfg, err := config.LoadConfig("ai-rulez.yaml")
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}

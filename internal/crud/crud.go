@@ -351,7 +351,7 @@ func handleGetMetadata(cfg *config.Config) (*mcp.CallToolResult, error) {
 func handleGetExtends() (*mcp.CallToolResult, error) {
 	configPath, err := config.FindConfigFile(".")
 	if err != nil {
-		configPath = "ai_rulez.yaml"
+		configPath = "ai-rulez.yaml"
 	}
 	rawCfg, err := config.LoadConfig(configPath)
 	if err != nil {
