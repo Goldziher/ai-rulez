@@ -52,8 +52,9 @@ type ProjectContext struct {
 	Structure        *DirectoryNode
 	MarkdownFiles    []MarkdownFile
 	CodebaseInfo     *CodebaseInfo
-	PackageLocations []string // For monorepos
-	AppLocations     []string // For monorepos with apps
+	PackageLocations []string          // For monorepos
+	AppLocations     []string          // For monorepos with apps
+	ExistingConfigs  map[string]string // Existing AI config files (README, CLAUDE.md, etc.)
 }
 
 func GatherProjectContext(projectName string) *ProjectContext {
@@ -65,9 +66,10 @@ func GatherProjectContext(projectName string) *ProjectContext {
 	logger.Info("📊 Gathering project context...")
 
 	ctx := &ProjectContext{
-		ProjectName:   projectName,
-		RootPath:      rootPath,
-		MarkdownFiles: []MarkdownFile{},
+		ProjectName:     projectName,
+		RootPath:        rootPath,
+		MarkdownFiles:   []MarkdownFile{},
+		ExistingConfigs: make(map[string]string),
 	}
 
 	// Analyze codebase first
@@ -81,6 +83,12 @@ func GatherProjectContext(projectName string) *ProjectContext {
 	// Scan for markdown files
 	ctx.MarkdownFiles = scanMarkdownFiles(rootPath)
 	logger.Info("  Found markdown files", "count", len(ctx.MarkdownFiles))
+
+	// Read existing AI config files
+	ctx.readExistingAIConfigs(rootPath)
+	if len(ctx.ExistingConfigs) > 0 {
+		logger.Info("  Found existing documentation/configs (will verify against code)", "count", len(ctx.ExistingConfigs))
+	}
 
 	// Map project structure
 	ctx.Structure = mapProjectStructure(rootPath, 3)
@@ -643,4 +651,39 @@ func (ctx *ProjectContext) GetDocumentationSummary() string {
 	}
 
 	return sb.String()
+}
+
+// readExistingAIConfigs reads existing AI configuration files
+func (ctx *ProjectContext) readExistingAIConfigs(rootPath string) {
+	// List of potential AI config files to read
+	configFiles := []struct {
+		name string
+		path string
+	}{
+		{"README", "README.md"},
+		{"CLAUDE", "CLAUDE.md"},
+		{"CLAUDE_CLAUDE", ".claude/CLAUDE.md"},
+		{"GEMINI", "GEMINI.md"},
+		{"GEMINI_GEMINI", ".gemini/GEMINI.md"},
+		{"AMP", "AMP.md"},
+		{"CONTINUE", "CONTINUE.md"},
+		{"CURSOR", ".cursorrules"},
+		{"CURSOR_MDC", ".cursor/rules/.mdc"},
+		{"AI_RULEZ", "ai-rulez.yaml"},
+		{"AI_RULEZ_OLD", "ai_rulez.yaml"},
+	}
+
+	for _, cf := range configFiles {
+		filePath := filepath.Join(rootPath, cf.path)
+		if utils.FileExists(filePath) {
+			content, err := os.ReadFile(filePath)
+			if err == nil && len(content) > 0 {
+				// Only store first 10KB to avoid huge context
+				if len(content) > 10240 {
+					content = content[:10240]
+				}
+				ctx.ExistingConfigs[cf.name] = string(content)
+			}
+		}
+	}
 }
