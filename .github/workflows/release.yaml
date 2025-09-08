@@ -69,6 +69,8 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v5
+        with:
+          node-version: 22
 
       - name: Copy README
         run: cp README.md release/npm/README.md
