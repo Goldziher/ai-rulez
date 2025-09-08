@@ -191,10 +191,10 @@ func getProjectName(args []string) string {
 
 func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig templates.ProviderConfig) bool {
 	if !noAgent && (useAgent != "" || agents.ShouldPromptForAgent()) {
-		generatedConfig, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, useAgent, autoYes)
+		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, useAgent, autoYes)
 		if handled {
-			writeConfigFile(generatedConfig)
-			logger.Info("✅ Configuration generated successfully with AI assistance")
+			// Don't overwrite - agents have already edited the file directly
+			logger.Info("✅ Configuration generated with AI assistance")
 			return true
 		}
 	}
