@@ -42,7 +42,7 @@ var InitCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new AI rules configuration",
 	Long: `Initialize a new AI rules configuration for your project.
-This creates an ai_rulez.yaml file with sensible defaults and 
+This creates an ai-rulez.yaml file with sensible defaults and 
 configures outputs for your selected AI assistants.`,
 	Args: cobra.MaximumNArgs(1),
 	Run:  runInit,
@@ -235,16 +235,16 @@ func getPresetsFromProviderConfig(providerConfig templates.ProviderConfig) []str
 }
 
 func writeConfigFile(content string) {
-	if err := os.WriteFile("ai_rulez.yaml", []byte(content), 0o644); err != nil {
+	if err := os.WriteFile("ai-rulez.yaml", []byte(content), 0o644); err != nil {
 		logger.LogError("Failed to write configuration file", oops.
-			With("path", "ai_rulez.yaml").
+			With("path", "ai-rulez.yaml").
 			Wrapf(err, "write file"))
 		os.Exit(1)
 	}
 }
 
 func displaySuccessMessage(projectName string, providerConfig templates.ProviderConfig) {
-	logger.Info("✅ Created ai_rulez.yaml", "project", projectName)
+	logger.Info("✅ Created ai-rulez.yaml", "project", projectName)
 	logger.Info("Configuration includes:")
 
 	displayProviderIncludes(providerConfig)
@@ -284,7 +284,7 @@ func displayProviderIncludes(providerConfig templates.ProviderConfig) {
 
 func displayNextSteps() {
 	logger.Info("\nNext steps:")
-	logger.Info("  1. Edit ai_rulez.yaml to customize your rules and sections")
+	logger.Info("  1. Edit ai-rulez.yaml to customize your rules and sections")
 	logger.Info("  2. Run 'ai-rulez generate' to create the output files")
 
 	if hooks.DetectGitHooks() != "" {
