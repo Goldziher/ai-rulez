@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/spf13/cobra"
 )
@@ -99,15 +100,13 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 
 	var outputBuilder strings.Builder
 
-	logger.Info("📝 Agent response:")
-
+	// Read output silently, then format it nicely
 	buffer := make([]byte, 1024)
 	for {
 		n, err := stdout.Read(buffer)
 		if n > 0 {
 			chunk := string(buffer[:n])
 			outputBuilder.WriteString(chunk)
-			fmt.Print(chunk)
 		}
 		if err == io.EOF {
 			break
@@ -115,6 +114,12 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 		if err != nil {
 			return "", fmt.Errorf("error reading stdout: %w", err)
 		}
+	}
+
+	// Format the complete output in a nice box
+	output := strings.TrimSpace(outputBuilder.String())
+	if output != "" {
+		fmt.Println(formatAgentResponse(output))
 	}
 
 	stderrOutput, err := io.ReadAll(stderr)
@@ -131,10 +136,141 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 		return "", fmt.Errorf("agent failed: %w", err)
 	}
 
-	fmt.Println()
-	logger.Info("✅ Agent completed successfully")
+	// Agent completed - success will be indicated by the spinner/progress bar
 
 	return outputBuilder.String(), nil
+}
+
+// invokeAgentWithSpinner runs an agent with an animated spinner
+func invokeAgentWithSpinner(agent AgentInfo, prompt string, timeout time.Duration, spinner *progress.Bar) (string, error) {
+	// Start spinner animation in a goroutine
+	done := make(chan struct{})
+	var result string
+	var err error
+
+	go func() {
+		defer close(done)
+		result, err = invokeAgent(agent, prompt, timeout)
+	}()
+
+	// Keep the spinner active while agent is running
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-done:
+			// Agent completed
+			return result, err
+		case <-ticker.C:
+			// Update spinner (this keeps it animating)
+			if spinner != nil {
+				if spinnerErr := spinner.Add(1); spinnerErr != nil {
+					logger.Warn("Failed to update spinner", "error", spinnerErr)
+				}
+			}
+		}
+	}
+}
+
+// formatAgentResponse formats the agent output in a visually appealing box
+func formatAgentResponse(content string) string {
+	var result strings.Builder
+
+	// Top border
+	result.WriteString("\033[2m╭─────────────────────────────────────────────────────────────────╮\033[0m\n")
+
+	// Process each line
+	lines := strings.Split(content, "\n")
+	for _, line := range lines {
+		// Handle long lines by wrapping them
+		if len(line) <= 63 {
+			result.WriteString(fmt.Sprintf("\033[2m│\033[0m \033[37m%-63s\033[0m \033[2m│\033[0m\n", line))
+		} else {
+			// Wrap long lines
+			for len(line) > 63 {
+				result.WriteString(fmt.Sprintf("\033[2m│\033[0m \033[37m%-63s\033[0m \033[2m│\033[0m\n", line[:63]))
+				line = line[63:]
+			}
+			if line != "" {
+				result.WriteString(fmt.Sprintf("\033[2m│\033[0m \033[37m%-63s\033[0m \033[2m│\033[0m\n", line))
+			}
+		}
+	}
+
+	// Bottom border
+	result.WriteString("\033[2m╰─────────────────────────────────────────────────────────────────╯\033[0m")
+
+	return result.String()
+}
+
+// executeAgentWithRetries executes an agent call with retry logic and progress indication
+func executeAgentWithRetries(agent AgentInfo, prompt string, timeout time.Duration, spinner *progress.Bar, phaseNum, totalPhases int) (string, error) {
+	const maxRetries = 3
+	var lastErr error
+
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Update spinner description to show retry attempt if needed
+		if attempt > 1 {
+			retryDesc := fmt.Sprintf("  [%d/%d] Retry %d/%d - %s...", phaseNum, totalPhases, attempt-1, maxRetries-1,
+				fmt.Sprintf("Phase %d", phaseNum))
+			if spinner != nil {
+				spinner.ChangeDescription(retryDesc)
+			}
+			logger.Info(fmt.Sprintf("  🔄 Retry %d/%d: Agent timed out, retrying with longer timeout...", attempt-1, maxRetries-1))
+
+			// Exponential backoff: wait 2^(attempt-2) seconds before retry
+			waitTime := time.Duration(1<<(attempt-2)) * time.Second
+			time.Sleep(waitTime)
+		}
+
+		// Adjust timeout for retries - increase it each time
+		adjustedTimeout := timeout + time.Duration(attempt-1)*60*time.Second
+
+		result, err := invokeAgentWithSpinner(agent, prompt, adjustedTimeout, spinner)
+		if err == nil {
+			// Success! Return the result
+			return result, nil
+		}
+
+		lastErr = err
+
+		// Don't retry if it's not a timeout error, but do retry for policy violations
+		if !strings.Contains(err.Error(), "timed out") && !strings.Contains(err.Error(), "timeout") && !strings.Contains(err.Error(), "Usage Policy") {
+			break
+		}
+
+		if attempt < maxRetries {
+			logger.Warn(fmt.Sprintf("  ⏰ Phase %d attempt %d failed: %v", phaseNum, attempt, err))
+		}
+	}
+
+	// All attempts failed
+	return "", fmt.Errorf("agent failed after %d attempts: %w", maxRetries, lastErr)
+}
+
+// getFallbackAgent returns a fallback agent when the primary agent fails
+func getFallbackAgent(primaryAgent AgentInfo) *AgentInfo {
+	available := detectAvailableAgents()
+
+	// Define fallback priority order
+	fallbackOrder := []string{"gemini", "amp", "continue-dev", claudeAgentID}
+
+	// Remove the primary agent from consideration
+	for _, fallbackID := range fallbackOrder {
+		if fallbackID == primaryAgent.ID {
+			continue
+		}
+
+		// Check if this fallback is available
+		for i := range available {
+			if available[i].ID == fallbackID {
+				return &available[i]
+			}
+		}
+	}
+
+	return nil
 }
 
 func ListAvailableAgents() {
@@ -223,6 +359,40 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 		return "", false
 	}
 
+	return processAgentOutput(result, selectedAgent.ID)
+}
+
+func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string, autoYes bool) (string, bool) {
+	selectedAgent := selectAgent(useAgent, config)
+	if selectedAgent == nil {
+		return "", false
+	}
+
+	if !confirmAgentUse(selectedAgent, autoYes) {
+		return "", false
+	}
+
+	// Gather comprehensive project context
+	logger.Info("🔍 Analyzing project structure...")
+	projectContext := GatherProjectContext(projectName)
+
+	// Execute the multi-phase chain
+	result, err := ExecuteInitChain(*selectedAgent, projectContext, config)
+	if err != nil {
+		logger.LogError("Failed to generate configuration", err, "agent", selectedAgent.ID)
+
+		// Fallback to single-phase generation
+		logger.Info("Falling back to single-phase generation...")
+		prompt := buildAgentPrompt(projectName, config)
+		fallbackResult, fallbackErr := invokeAgent(*selectedAgent, prompt, 120*time.Second)
+		if fallbackErr != nil {
+			logger.LogError("Fallback also failed", fallbackErr, "agent", selectedAgent.ID)
+			return "", false
+		}
+		return processAgentOutput(fallbackResult, selectedAgent.ID)
+	}
+
+	// Process the merged result
 	return processAgentOutput(result, selectedAgent.ID)
 }
 
