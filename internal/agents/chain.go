@@ -3,12 +3,12 @@ package agents
 import (
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -53,6 +53,15 @@ var initAgentTasks = []AgentTask{
 	},
 }
 
+// TaskStatus represents the status of a running task
+type TaskStatus struct {
+	task      AgentTask
+	status    string // "⠋", "↻", "✓", "✗"
+	attempt   int
+	mu        sync.RWMutex
+	completed bool
+}
+
 func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig templates.ProviderConfig) (string, error) {
 	logger.Info("🔗 Starting parallel agent task execution...")
 	logger.Info("")
@@ -62,18 +71,26 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 		return "", fmt.Errorf("failed to initialize base config: %w", err)
 	}
 	logger.Info("✅ Initialized base ai_rulez.yaml")
-
-	// Show all tasks that will run in parallel
-	fmt.Printf("🚀 Running %d agent tasks in parallel...\n", len(initAgentTasks))
-	for _, task := range initAgentTasks {
-		fmt.Printf("  ∥ %s: %s\n", task.Name, task.Description)
-	}
 	fmt.Printf("\n")
+
+	// Initialize task status tracking
+	taskStatuses := make([]*TaskStatus, len(initAgentTasks))
+	for i, task := range initAgentTasks {
+		taskStatuses[i] = &TaskStatus{
+			task:    task,
+			status:  "⠋",
+			attempt: 1,
+		}
+	}
+
+	// Display initial task list
+	fmt.Printf("🚀 Running %d agent tasks:\n", len(initAgentTasks))
+	displayTaskStatuses(taskStatuses)
 
 	// Structure to hold task results
 	type taskResult struct {
-		task AgentTask
-		err  error
+		taskIndex int
+		err       error
 	}
 
 	// Channel to collect results
@@ -83,19 +100,35 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	var wg sync.WaitGroup
 
 	// Launch all agent tasks in parallel
-	for _, task := range initAgentTasks {
+	for i, task := range initAgentTasks {
 		wg.Add(1)
-		go func(t AgentTask) {
+		go func(taskIndex int, t AgentTask) {
 			defer wg.Done()
 
-			logger.Info(fmt.Sprintf("%s: %s", t.Name, t.Description))
-			err := executeAgentTask(t, agent, context)
-			results <- taskResult{task: t, err: err}
-		}(task)
+			err := executeAgentTaskWithStatus(t, agent, context, taskStatuses[taskIndex])
+			results <- taskResult{taskIndex: taskIndex, err: err}
+		}(i, task)
 	}
+
+	// Start a goroutine to show periodic status updates
+	statusDone := make(chan bool)
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				showRunningTasksStatus(taskStatuses)
+			case <-statusDone:
+				return
+			}
+		}
+	}()
 
 	// Wait for all tasks to complete
 	wg.Wait()
+	close(statusDone)
 	close(results)
 
 	// Process results
@@ -103,21 +136,38 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	successCount := 0
 
 	for result := range results {
+		ts := taskStatuses[result.taskIndex]
+		ts.mu.Lock()
 		if result.err != nil {
-			logger.Warn(fmt.Sprintf("Task %s failed: %v", result.task.Name, result.err))
-			failedTasks = append(failedTasks, result.task.Name)
+			ts.status = "✗"
+			ts.completed = true
+			failedTasks = append(failedTasks, ts.task.Name)
 		} else {
-			logger.Success(fmt.Sprintf("✓ %s completed", result.task.Name))
+			ts.status = "✓"
+			ts.completed = true
 			successCount++
 		}
+		ts.mu.Unlock()
 	}
 
-	logger.Info("")
+	// Display final status
+	fmt.Printf("\nFinal Status:\n")
+	displayTaskStatuses(taskStatuses)
+
+	fmt.Printf("\n")
 	if len(failedTasks) > 0 {
 		logger.Warn(fmt.Sprintf("Completed %d/%d tasks successfully. Failed: %v",
 			successCount, len(initAgentTasks), failedTasks))
 	} else {
 		logger.Success("✅ All agent tasks completed successfully")
+	}
+
+	// Validate the generated configuration
+	if err := validateGeneratedConfig(); err != nil {
+		logger.Warn(fmt.Sprintf("⚠️  Generated config has validation issues: %v", err))
+		logger.Info("The file was created but may need manual review")
+	} else {
+		logger.Success("✅ Generated configuration is valid")
 	}
 
 	// Return final configuration content
@@ -198,30 +248,147 @@ func buildOutputsConfig(providerConfig templates.ProviderConfig) []config.Output
 	return outputs
 }
 
-// executeAgentTask executes a single agent task (retry logic is handled by executeAgentWithRetries)
-func executeAgentTask(task AgentTask, agent AgentInfo, context *ProjectContext) error {
-	return runSingleAgentTask(task, agent, context)
-}
-
-// runSingleAgentTask executes a single attempt at an agent task
-func runSingleAgentTask(task AgentTask, agent AgentInfo, context *ProjectContext) error {
+// executeAgentTaskWithStatus executes a single agent task with status updates
+func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *ProjectContext, status *TaskStatus) error {
 	// Build the prompt for this task
 	prompt := task.Prompt(context)
 
-	// Create spinner for visual feedback
-	spinner := progress.NewSpinner(fmt.Sprintf("%s...", task.Description))
+	// Execute with retries, updating status for each attempt
+	var lastErr error
+	startTime := time.Now()
 
-	// Execute the agent with the prompt (executeAgentWithRetries handles its own spinner management)
-	_, err := executeAgentWithRetries(agent, prompt, 120*time.Second, spinner, task.MaxRetries, 1)
+	for attempt := 1; attempt <= task.MaxRetries; attempt++ {
+		// Update status for retry attempts
+		if attempt > 1 {
+			status.mu.Lock()
+			status.status = fmt.Sprintf("↻%d", attempt)
+			status.attempt = attempt
+			status.mu.Unlock()
 
-	// Stop spinner
-	if err := spinner.Finish(); err != nil {
-		logger.Warn("Failed to finish spinner", "error", err)
+			// Log retry reason for better feedback
+			logger.Info(fmt.Sprintf("🔄 %s: Retry %d/%d (previous attempt: %v)",
+				task.Name, attempt-1, task.MaxRetries-1, getErrorSummary(lastErr)))
+
+			// Brief delay between retries with exponential backoff
+			delay := time.Duration(attempt-1) * 2 * time.Second
+			time.Sleep(delay)
+		}
+
+		// Execute the agent call
+		attemptStart := time.Now()
+		_, err := invokeAgent(agent, prompt, 120*time.Second)
+		attemptDuration := time.Since(attemptStart)
+
+		if err == nil {
+			// Success - update status and return
+			status.mu.Lock()
+			status.status = "✓"
+			status.completed = true
+			status.mu.Unlock()
+
+			totalDuration := time.Since(startTime)
+			logger.Success(fmt.Sprintf("✅ %s completed in %v (attempt %d)",
+				task.Name, totalDuration.Round(time.Second), attempt))
+			return nil
+		}
+
+		lastErr = err
+		logger.Warn(fmt.Sprintf("⚠️  %s: Attempt %d failed after %v: %v",
+			task.Name, attempt, attemptDuration.Round(time.Second), getErrorSummary(err)))
 	}
 
+	// All attempts failed - update status
+	status.mu.Lock()
+	status.status = "✗"
+	status.completed = true
+	status.mu.Unlock()
+
+	totalDuration := time.Since(startTime)
+	return fmt.Errorf("task '%s' failed after %d attempts in %v: %w",
+		task.Name, task.MaxRetries, totalDuration.Round(time.Second), lastErr)
+}
+
+// displayTaskStatuses shows all task statuses
+func displayTaskStatuses(statuses []*TaskStatus) {
+	for _, ts := range statuses {
+		ts.mu.RLock()
+		fmt.Printf("%s %s", ts.status, ts.task.Description)
+		if ts.attempt > 1 {
+			fmt.Printf(" (attempt %d)", ts.attempt)
+		}
+		fmt.Printf("\n")
+		ts.mu.RUnlock()
+	}
+}
+
+// showRunningTasksStatus shows which tasks are still running
+func showRunningTasksStatus(statuses []*TaskStatus) {
+	var running []string
+	var completed int
+
+	for _, ts := range statuses {
+		ts.mu.RLock()
+		if ts.completed {
+			completed++
+		} else {
+			status := "working"
+			if ts.attempt > 1 {
+				status = fmt.Sprintf("retry %d", ts.attempt)
+			}
+			running = append(running, fmt.Sprintf("%s (%s)", ts.task.Name, status))
+		}
+		ts.mu.RUnlock()
+	}
+
+	if len(running) > 0 {
+		fmt.Printf("⏳ Progress: %d/%d completed | Still running: %s\n",
+			completed, len(statuses), strings.Join(running, ", "))
+	}
+}
+
+// validateGeneratedConfig validates the generated ai_rulez.yaml file
+func validateGeneratedConfig() error {
+	// Try to load and validate the configuration
+	cfg, err := config.LoadConfig("ai_rulez.yaml")
 	if err != nil {
-		return fmt.Errorf("agent execution failed: %w", err)
+		return fmt.Errorf("failed to load config: %w", err)
+	}
+
+	if err := cfg.Validate(); err != nil {
+		return fmt.Errorf("config validation failed: %w", err)
 	}
 
 	return nil
+}
+
+// getErrorSummary returns a concise error summary for user feedback
+func getErrorSummary(err error) string {
+	if err == nil {
+		return "no error"
+	}
+
+	errStr := err.Error()
+
+	// Common error patterns
+	if strings.Contains(errStr, "timed out") || strings.Contains(errStr, "timeout") {
+		return "timeout"
+	}
+	if strings.Contains(errStr, "Usage Policy") || strings.Contains(errStr, "policy") {
+		return "policy violation"
+	}
+	if strings.Contains(errStr, "rate limit") {
+		return "rate limited"
+	}
+	if strings.Contains(errStr, "network") || strings.Contains(errStr, "connection") {
+		return "network error"
+	}
+	if strings.Contains(errStr, "authentication") || strings.Contains(errStr, "unauthorized") {
+		return "authentication error"
+	}
+
+	// Return first 50 chars for other errors
+	if len(errStr) > 50 {
+		return errStr[:47] + "..."
+	}
+	return errStr
 }
