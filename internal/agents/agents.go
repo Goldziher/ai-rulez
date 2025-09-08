@@ -249,30 +249,6 @@ func executeAgentWithRetries(agent AgentInfo, prompt string, timeout time.Durati
 	return "", fmt.Errorf("agent failed after %d attempts: %w", maxRetries, lastErr)
 }
 
-// getFallbackAgent returns a fallback agent when the primary agent fails
-func getFallbackAgent(primaryAgent AgentInfo) *AgentInfo {
-	available := detectAvailableAgents()
-
-	// Define fallback priority order
-	fallbackOrder := []string{"gemini", "amp", "continue-dev", claudeAgentID}
-
-	// Remove the primary agent from consideration
-	for _, fallbackID := range fallbackOrder {
-		if fallbackID == primaryAgent.ID {
-			continue
-		}
-
-		// Check if this fallback is available
-		for i := range available {
-			if available[i].ID == fallbackID {
-				return &available[i]
-			}
-		}
-	}
-
-	return nil
-}
-
 func ListAvailableAgents() {
 	logger.Info("Available AI agents for configuration generation:")
 	logger.Info("")
