@@ -13,6 +13,10 @@ const (
 	langTypeScript = "TypeScript"
 	langPython     = "Python"
 	langRust       = "Rust"
+	langJavaScript = "JavaScript"
+
+	// Additional repo type not in context.go
+	repoTypeService = "service"
 )
 
 const (
@@ -111,8 +115,8 @@ func processJSDependencies(info *CodebaseInfo, pkg map[string]interface{}) {
 	}
 
 	if info.MainLanguage == "" {
-		info.TechStack = append(info.TechStack, "JavaScript")
-		info.MainLanguage = "JavaScript"
+		info.TechStack = append(info.TechStack, langJavaScript)
+		info.MainLanguage = langJavaScript
 	}
 }
 
@@ -248,7 +252,7 @@ func detectLanguageSpecificCommands(info *CodebaseInfo) {
 		info.BuildCommand = "cargo build"
 		info.TestCommand = "cargo test"
 		info.LintCommand = "cargo clippy"
-	case "JavaScript", langTypeScript:
+	case langJavaScript, langTypeScript:
 		setDefaultNPMCommands(info)
 	}
 }
@@ -279,22 +283,22 @@ func setDefaultNPMCommands(info *CodebaseInfo) {
 
 func detectProjectType(info *CodebaseInfo) {
 	if utils.FileExists("lerna.json") || utils.FileExists("nx.json") || utils.FileExists("pnpm-workspace.yaml") {
-		info.ProjectType = "monorepo"
+		info.ProjectType = repoTypeMonorepo
 		return
 	}
 
 	if utils.FileExists("setup.py") || utils.FileExists("Cargo.toml") ||
 		(utils.FileExists("package.json") && strings.Contains(info.ProjectName, "lib")) {
-		info.ProjectType = "library"
+		info.ProjectType = repoTypeLibrary
 		return
 	}
 
 	if utils.DirExists("api") || utils.DirExists("src/api") || utils.DirExists("routes") {
-		info.ProjectType = "service"
+		info.ProjectType = repoTypeService
 		return
 	}
 
-	info.ProjectType = "application"
+	info.ProjectType = repoTypeApplication
 }
 
 func detectMCPCapability(info *CodebaseInfo) {
