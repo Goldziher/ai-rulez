@@ -96,48 +96,90 @@ func GatherProjectContext(projectName string) *ProjectContext {
 }
 
 func detectRepoType(rootPath string) string {
-	// Check for monorepo indicators
-	if utils.FileExists(filepath.Join(rootPath, "lerna.json")) ||
-		utils.FileExists(filepath.Join(rootPath, "nx.json")) ||
-		utils.FileExists(filepath.Join(rootPath, "pnpm-workspace.yaml")) ||
-		utils.FileExists(filepath.Join(rootPath, "rush.json")) {
+	if isMonorepo(rootPath) {
 		return repoTypeMonorepo
 	}
+	if isLibrary(rootPath) {
+		return repoTypeLibrary
+	}
+	if isApplication(rootPath) {
+		return repoTypeApplication
+	}
+	return repoTypeSingle
+}
 
-	// Check for packages directory with multiple packages
-	packagesDir := filepath.Join(rootPath, "packages")
-	if utils.DirExists(packagesDir) {
-		entries, err := os.ReadDir(packagesDir)
-		if err == nil && len(entries) > 1 {
-			packageCount := 0
-			for _, entry := range entries {
-				if entry.IsDir() && utils.FileExists(filepath.Join(packagesDir, entry.Name(), "package.json")) {
-					packageCount++
-				}
-			}
-			if packageCount > 1 {
-				return repoTypeMonorepo
-			}
+// isMonorepo checks for monorepo indicators
+func isMonorepo(rootPath string) bool {
+	// Check for monorepo config files
+	monorepoFiles := []string{"lerna.json", "nx.json", "pnpm-workspace.yaml", "rush.json"}
+	for _, file := range monorepoFiles {
+		if utils.FileExists(filepath.Join(rootPath, file)) {
+			return true
 		}
 	}
 
-	// Check if it's a library
-	if utils.FileExists(filepath.Join(rootPath, "setup.py")) ||
-		utils.FileExists(filepath.Join(rootPath, "setup.cfg")) ||
-		(utils.FileExists(filepath.Join(rootPath, "package.json")) && checkIfLibrary(rootPath)) ||
-		utils.FileExists(filepath.Join(rootPath, "Cargo.toml")) && checkIfRustLibrary(rootPath) {
-		return repoTypeLibrary
+	// Check for packages directory with multiple packages
+	return hasMultiplePackages(rootPath)
+}
+
+// hasMultiplePackages checks if packages directory contains multiple packages
+func hasMultiplePackages(rootPath string) bool {
+	packagesDir := filepath.Join(rootPath, "packages")
+	if !utils.DirExists(packagesDir) {
+		return false
 	}
 
-	// Check if it's an application
-	if utils.DirExists(filepath.Join(rootPath, "src")) ||
-		utils.DirExists(filepath.Join(rootPath, "app")) ||
-		utils.FileExists(filepath.Join(rootPath, "main.go")) ||
-		utils.FileExists(filepath.Join(rootPath, "main.py")) {
-		return repoTypeApplication
+	entries, err := os.ReadDir(packagesDir)
+	if err != nil || len(entries) <= 1 {
+		return false
 	}
 
-	return repoTypeSingle
+	packageCount := 0
+	for _, entry := range entries {
+		if entry.IsDir() && utils.FileExists(filepath.Join(packagesDir, entry.Name(), "package.json")) {
+			packageCount++
+		}
+	}
+	return packageCount > 1
+}
+
+// isLibrary checks for library indicators
+func isLibrary(rootPath string) bool {
+	// Python library indicators
+	if utils.FileExists(filepath.Join(rootPath, "setup.py")) || utils.FileExists(filepath.Join(rootPath, "setup.cfg")) {
+		return true
+	}
+
+	// JavaScript/TypeScript library
+	if utils.FileExists(filepath.Join(rootPath, "package.json")) && checkIfLibrary(rootPath) {
+		return true
+	}
+
+	// Rust library
+	if utils.FileExists(filepath.Join(rootPath, "Cargo.toml")) && checkIfRustLibrary(rootPath) {
+		return true
+	}
+
+	return false
+}
+
+// isApplication checks for application indicators
+func isApplication(rootPath string) bool {
+	appIndicators := []string{"src", "app"}
+	for _, dir := range appIndicators {
+		if utils.DirExists(filepath.Join(rootPath, dir)) {
+			return true
+		}
+	}
+
+	appFiles := []string{"main.go", "main.py"}
+	for _, file := range appFiles {
+		if utils.FileExists(filepath.Join(rootPath, file)) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func checkIfLibrary(rootPath string) bool {
@@ -160,80 +202,124 @@ func checkIfRustLibrary(rootPath string) bool {
 	return strings.Contains(content, "[lib]")
 }
 
+// markdownScanner handles the complex markdown file scanning logic
+type markdownScanner struct {
+	rootPath string
+	files    *[]MarkdownFile
+}
+
+// walkFunc is the callback function for filepath.WalkDir
+func (s *markdownScanner) walkFunc(path string, d fs.DirEntry, err error) error {
+	if err != nil {
+		return err
+	}
+
+	if d.IsDir() {
+		return s.handleDirectory(path, d)
+	}
+
+	return s.handleFile(path, d)
+}
+
+// handleDirectory processes directory entries and decides whether to skip them
+func (s *markdownScanner) handleDirectory(path string, d fs.DirEntry) error {
+	if s.shouldSkipDirectory(d.Name()) {
+		return filepath.SkipDir
+	}
+
+	// Skip deeply nested directories
+	if s.isTooDeep(path) {
+		return filepath.SkipDir
+	}
+
+	return nil
+}
+
+// shouldSkipDirectory checks if a directory should be skipped
+func (s *markdownScanner) shouldSkipDirectory(name string) bool {
+	skipDirs := []string{"node_modules", "vendor", ".git"}
+	for _, skip := range skipDirs {
+		if name == skip {
+			return true
+		}
+	}
+	// Skip hidden directories except .github
+	return strings.HasPrefix(name, ".") && name != ".github" && name != "."
+}
+
+// isTooDeep checks if directory is nested too deeply
+func (s *markdownScanner) isTooDeep(path string) bool {
+	relPath, err := filepath.Rel(s.rootPath, path)
+	if err != nil {
+		return true
+	}
+	depth := len(strings.Split(relPath, string(filepath.Separator)))
+	return depth > 4
+}
+
+// handleFile processes markdown files
+func (s *markdownScanner) handleFile(path string, d fs.DirEntry) error {
+	if !s.isMarkdownFile(path) {
+		return nil
+	}
+
+	info, err := d.Info()
+	if err != nil {
+		return err
+	}
+
+	// Skip very large files (> 1MB)
+	if info.Size() > 1024*1024 {
+		return nil
+	}
+
+	s.processMarkdownFile(path, d, info)
+	return nil
+}
+
+// isMarkdownFile checks if file has markdown extension
+func (s *markdownScanner) isMarkdownFile(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".md" || ext == ".mdx"
+}
+
+// processMarkdownFile creates a MarkdownFile entry
+func (s *markdownScanner) processMarkdownFile(path string, d fs.DirEntry, info fs.FileInfo) {
+	relPath, err := filepath.Rel(s.rootPath, path)
+	if err != nil {
+		return // Skip files with path errors
+	}
+
+	// Categorize the file
+	category := categorizeMarkdownFile(relPath, strings.ToLower(d.Name()))
+
+	// Read content to extract title
+	content, err := os.ReadFile(path)
+	if err != nil {
+		content = []byte{}
+	}
+	title := extractMarkdownTitle(string(content), filepath.Base(path))
+
+	*s.files = append(*s.files, MarkdownFile{
+		Path:         path,
+		RelativePath: relPath,
+		Title:        title,
+		Category:     category,
+		Size:         info.Size(),
+	})
+}
+
 func scanMarkdownFiles(rootPath string) []MarkdownFile {
 	var files []MarkdownFile
 
+	// Create scanner instance
+	scanner := &markdownScanner{
+		rootPath: rootPath,
+		files:    &files,
+	}
+
 	// Just scan from root - WalkDir will traverse subdirectories
-	err := filepath.WalkDir(rootPath, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			// Skip files/directories that can't be accessed
-			return nil //nolint:nilerr
-		}
-
-		// Skip node_modules, vendor, and hidden directories (except .github)
-		if d.IsDir() {
-			name := d.Name()
-			if name == "node_modules" || name == "vendor" || name == ".git" ||
-				(strings.HasPrefix(name, ".") && name != ".github" && name != ".") {
-				return filepath.SkipDir
-			}
-			// Skip deeply nested directories
-			relPath, relErr := filepath.Rel(rootPath, path)
-			if relErr != nil {
-				return filepath.SkipDir
-			}
-			depth := len(strings.Split(relPath, string(filepath.Separator)))
-			if depth > 4 {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-
-		// Check for markdown files
-		ext := strings.ToLower(filepath.Ext(path))
-		if ext != ".md" && ext != ".mdx" {
-			return nil
-		}
-
-		// Read file info
-		info, err := d.Info()
-		if err != nil {
-			// Skip files that can't be stat'd
-			return nil //nolint:nilerr
-		}
-
-		// Skip very large files (> 1MB)
-		if info.Size() > 1024*1024 {
-			return nil
-		}
-
-		relPath, err := filepath.Rel(rootPath, path)
-		if err != nil {
-			// Skip files with path errors
-			return nil //nolint:nilerr
-		}
-		name := strings.ToLower(d.Name())
-
-		// Categorize the file
-		category := categorizeMarkdownFile(relPath, name)
-
-		// Read first 500 bytes to extract title
-		content, err := os.ReadFile(path)
-		if err != nil {
-			content = []byte{}
-		}
-		title := extractMarkdownTitle(string(content), filepath.Base(path))
-
-		files = append(files, MarkdownFile{
-			Path:         path,
-			RelativePath: relPath,
-			Title:        title,
-			Category:     category,
-			Size:         info.Size(),
-		})
-
-		return nil
-	})
+	err := filepath.WalkDir(rootPath, scanner.walkFunc)
 
 	if err != nil {
 		logger.Warn("Error scanning markdown files", "error", err)
