@@ -194,7 +194,7 @@ func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig t
 		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, useAgent, autoYes)
 		if handled {
 			// Don't overwrite - agents have already edited the file directly
-			logger.Info("✅ Configuration generated with AI assistance")
+			fmt.Println("✅ Configuration generated with AI assistance")
 			return true
 		}
 	}
