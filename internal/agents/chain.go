@@ -268,7 +268,7 @@ func generateTaskID(taskName string, index int) string {
 // selectPromptForTask maps generic task names to specific prompt functions
 func selectPromptForTask(taskName string) func(*ProjectContext) string {
 	fmt.Printf("[DEBUG] Selecting prompt for task: '%s'\n", taskName)
-	
+
 	switch {
 	case strings.Contains(taskName, "project description"):
 		fmt.Printf("[DEBUG] Task '%s' matched project description -> buildProjectAnalysisPrompt\n", taskName)
@@ -327,7 +327,6 @@ type TaskDisplay struct {
 
 // Spinner frames for animation
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-var bulletFrames = []string{"◉", "◎", "◉", "○"}
 
 func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig templates.ProviderConfig) (string, error) {
 	fmt.Printf("🔗 Starting parallel agent task execution...\n")
@@ -497,7 +496,7 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 		if err == nil {
 			fmt.Printf("[DEBUG] Agent output received for %s: %d bytes\n", task.Name, len(output))
 			logger.Debug("Agent output received", "task", task.Name, "outputLength", len(output))
-			if len(output) > 0 {
+			if output != "" {
 				// Log first 500 chars of output for debugging
 				preview := output
 				if len(preview) > 500 {
@@ -547,11 +546,12 @@ func (d *TaskDisplay) renderAllTasks() {
 	// Sort tasks: completed first, then running, then pending
 	var completedTasks, runningTasks, pendingTasks []*TaskStatus
 	for _, ts := range d.tasks {
-		if ts.completed {
+		switch {
+		case ts.completed:
 			completedTasks = append(completedTasks, ts)
-		} else if ts.status == statusPending && ts.attempt == 0 {
+		case ts.status == statusPending && ts.attempt == 0:
 			pendingTasks = append(pendingTasks, ts)
-		} else {
+		default:
 			runningTasks = append(runningTasks, ts)
 		}
 	}
@@ -588,17 +588,20 @@ func (d *TaskDisplay) updateDisplay() {
 	// Sort tasks: completed first, then running, then pending
 	var completedTasks, runningTasks, pendingTasks []*TaskStatus
 	for _, ts := range d.tasks {
-		if ts.completed {
+		switch {
+		case ts.completed:
 			completedTasks = append(completedTasks, ts)
-		} else if ts.status == statusPending && ts.attempt == 0 {
+		case ts.status == statusPending && ts.attempt == 0:
 			pendingTasks = append(pendingTasks, ts)
-		} else {
+		default:
 			runningTasks = append(runningTasks, ts)
 		}
 	}
 
 	// Render all tasks in order
-	allTasks := append(completedTasks, runningTasks...)
+	allTasks := make([]*TaskStatus, 0, len(completedTasks)+len(runningTasks)+len(pendingTasks))
+	allTasks = append(allTasks, completedTasks...)
+	allTasks = append(allTasks, runningTasks...)
 	allTasks = append(allTasks, pendingTasks...)
 
 	for _, ts := range allTasks {
@@ -606,19 +609,17 @@ func (d *TaskDisplay) updateDisplay() {
 		fmt.Printf("\r\033[K") // Clear line
 
 		// Choose symbol based on status
-		if ts.completed {
-			switch ts.status {
-			case statusSuccess:
-				fmt.Printf("✓ %s", ts.task.Name)
-			case statusFailed:
-				fmt.Printf("✗ %s", ts.task.Name)
-				if ts.lastError != nil {
-					fmt.Printf(" (%s)", getErrorSummary(ts.lastError))
-				}
+		switch {
+		case ts.completed && ts.status == statusSuccess:
+			fmt.Printf("✓ %s", ts.task.Name)
+		case ts.completed && ts.status == statusFailed:
+			fmt.Printf("✗ %s", ts.task.Name)
+			if ts.lastError != nil {
+				fmt.Printf(" (%s)", getErrorSummary(ts.lastError))
 			}
-		} else if ts.status == statusPending && ts.attempt == 0 {
+		case ts.status == statusPending && ts.attempt == 0:
 			fmt.Printf("○ %s (pending)", ts.task.Name)
-		} else {
+		default:
 			elapsed := time.Since(ts.startTime).Round(time.Second)
 			if ts.attempt > 1 {
 				fmt.Printf("%s %s [%v] (retry %d)", spinnerFrame, ts.task.Name, elapsed, ts.attempt-1)
@@ -830,10 +831,10 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 	for wave := 0; wave < numWaves; wave++ {
 		startIdx := wave * maxAgents
 		endIdx := min(startIdx+maxAgents, totalTasks)
-		
+
 		// Display wave notice with proper formatting
 		if totalTasks > 1 {
-			fmt.Printf("\n🌊 Wave %d/%d: Running tasks %d-%d (out of %d)\n", 
+			fmt.Printf("\n🌊 Wave %d/%d: Running tasks %d-%d (out of %d)\n",
 				wave+1, numWaves, startIdx+1, endIdx, totalTasks)
 		}
 
@@ -841,18 +842,18 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 		waveDisplay := &TaskDisplay{
 			tasks: taskStatuses[startIdx:endIdx],
 		}
-		
+
 		// Initial display of wave tasks
 		fmt.Println() // Add spacing
 		waveDisplay.renderAllTasks()
 
 		// Execute current wave with its own display
 		waveFailedTasks, waveSuccessCount := executeWave(
-			tasks[startIdx:endIdx], 
-			taskStatuses[startIdx:endIdx], 
-			agent, 
-			context, 
-			waveDisplay,  // Pass wave-specific display
+			tasks[startIdx:endIdx],
+			taskStatuses[startIdx:endIdx],
+			agent,
+			context,
+			waveDisplay, // Pass wave-specific display
 			startIdx,
 		)
 
