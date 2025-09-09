@@ -10,14 +10,14 @@ import (
 func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Update the project description in ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Set the project description for '%s'\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Use Read tool to read ai-rulez.yaml\n")
-	prompt.WriteString("2. Find the description field and update it with a proper description\n")
-	prompt.WriteString("3. Use Edit tool to replace ONLY the description value\n")
-	prompt.WriteString("4. Keep it brief (1-2 sentences) and informative\n")
-	prompt.WriteString("5. Do NOT change any other parts of the YAML\n\n")
+	prompt.WriteString("1. Analyze the project context provided below\n")
+	prompt.WriteString("2. Create a clear, concise description (1-2 sentences)\n")
+	prompt.WriteString("3. Use the Bash tool to run this command:\n")
+	prompt.WriteString("   ai-rulez set description \"Your description here\"\n")
+	prompt.WriteString("4. The description should focus on the project's purpose and technology\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -39,19 +39,15 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 	prompt.WriteString(fmt.Sprintf("TASK: Add documentation sections to ai-rulez.yaml for '%s'\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Use Read tool to read ai-rulez.yaml\n")
-	prompt.WriteString("2. Find 'sections: []' and replace with 2-3 essential documentation sections\n")
-	prompt.WriteString("3. Use Edit tool to replace the entire line with proper YAML\n")
-	prompt.WriteString("4. Use correct YAML formatting with proper indentation\n")
-	prompt.WriteString("5. Each section needs: name, priority, and content fields\n\n")
+	prompt.WriteString("1. Create 2-3 essential documentation sections based on the project\n")
+	prompt.WriteString("2. For each section, use the Bash tool to run:\n")
+	prompt.WriteString("   ai-rulez add section --name \"Section Name\" --priority PRIORITY --content \"Content here\"\n")
+	prompt.WriteString("3. Priority can be: high, medium, or low\n")
+	prompt.WriteString("4. Content should be markdown format\n")
+	prompt.WriteString("5. For multiline content, use proper escaping or quotes\n\n")
 
-	prompt.WriteString("Section format:\n")
-	prompt.WriteString("sections:\n")
-	prompt.WriteString("  - name: \"Section Name\"\n")
-	prompt.WriteString("    priority: high  # or medium, low\n")
-	prompt.WriteString("    content: |\n")
-	prompt.WriteString("      Multi-line markdown content\n")
-	prompt.WriteString("      explaining this aspect\n\n")
+	prompt.WriteString("Example:\n")
+	prompt.WriteString("Bash: ai-rulez add section --name \"Setup Guide\" --priority high --content \"## Prerequisites\\n- Node.js 18+\\n- Docker\"\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -79,18 +75,17 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 func buildStandardsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add coding standards to ai-rulez.yaml for the '%s' project\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add coding standards for the '%s' project\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Read the current ai-rulez.yaml file\n")
-	prompt.WriteString("2. Replace the empty `rules: []` array with 5-7 important coding standards\n")
-	prompt.WriteString("3. Use the Edit tool to modify ai-rulez.yaml directly\n")
-	prompt.WriteString("4. Replace the entire line `rules: []` with a proper YAML array\n\n")
+	prompt.WriteString("1. Create 5-7 important coding standards based on the project\n")
+	prompt.WriteString("2. For each rule, use the Bash tool to run:\n")
+	prompt.WriteString("   ai-rulez add rule --name \"Rule Name\" --priority PRIORITY --content \"Rule description\"\n")
+	prompt.WriteString("3. Priority can be: critical, high, medium, low, or minimal\n")
+	prompt.WriteString("4. Content should be clear and actionable\n\n")
 
-	prompt.WriteString("Each rule should be a separate array entry:\n")
-	prompt.WriteString("- name: \"Specific Standard Name\"\n")
-	prompt.WriteString("- priority: critical|high|medium|low\n")
-	prompt.WriteString("- content: \"Clear, actionable description with examples if helpful\"\n\n")
+	prompt.WriteString("Example:\n")
+	prompt.WriteString("Bash: ai-rulez add rule --name \"Error Handling\" --priority high --content \"Always use proper exception handling with specific error types\"\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -106,60 +101,119 @@ func buildStandardsPrompt(context *ProjectContext) string {
 
 // addProjectContext adds comprehensive project context information to prompts
 func addProjectContext(prompt *strings.Builder, context *ProjectContext) {
+	addBasicProjectInfo(prompt, context)
+	addGitHistoryInfo(prompt, context)
+	addCodebaseInfo(prompt, context)
+	addMonorepoInfo(prompt, context)
+	addProjectStructure(prompt, context)
+}
+
+// addBasicProjectInfo adds basic project information to the prompt
+func addBasicProjectInfo(prompt *strings.Builder, context *ProjectContext) {
 	prompt.WriteString("✓ VERIFIED PROJECT CONTEXT (from actual code analysis):\n")
 	fmt.Fprintf(prompt, "- Repository Type: %s\n", context.RepoType)
 	fmt.Fprintf(prompt, "- Root Path: %s\n", context.RootPath)
+}
 
-	if context.CodebaseInfo != nil {
-		info := context.CodebaseInfo
-		prompt.WriteString("\n📊 DETECTED FROM CODE (Highly Reliable):\n")
-		if info.MainLanguage != "" {
-			fmt.Fprintf(prompt, "- Primary Language: %s (detected from files)\n", info.MainLanguage)
-		}
-		if len(info.TechStack) > 0 {
-			fmt.Fprintf(prompt, "- Technologies: %s (found in dependencies)\n", strings.Join(info.TechStack, ", "))
-		}
-		fmt.Fprintf(prompt, "- Project Type: %s\n", info.ProjectType)
+// addGitHistoryInfo adds git history information if available
+func addGitHistoryInfo(prompt *strings.Builder, context *ProjectContext) {
+	if context.GitHistory == nil || !context.GitHistory.HasGit || context.GitHistory.CommitCount == 0 {
+		return
+	}
 
-		// Development commands
-		if info.BuildCommand != "" {
-			fmt.Fprintf(prompt, "- Build Command: %s (from package files)\n", info.BuildCommand)
-		}
-		if info.TestCommand != "" {
-			fmt.Fprintf(prompt, "- Test Command: %s (from package files)\n", info.TestCommand)
-		}
-		if info.LintCommand != "" {
-			fmt.Fprintf(prompt, "- Lint Command: %s (from package files)\n", info.LintCommand)
-		}
+	prompt.WriteString("\n📚 GIT HISTORY ANALYSIS:\n")
+	fmt.Fprintf(prompt, "- Total Commits: %d\n", context.GitHistory.CommitCount)
 
-		// Capabilities
-		if info.HasDatabase {
-			prompt.WriteString("- Uses Database\n")
-		}
-		if info.HasDocker {
-			prompt.WriteString("- Uses Docker\n")
-		}
-		if info.HasMCP {
-			fmt.Fprintf(prompt, "- MCP Server: %s\n", info.MCPCommand)
+	if len(context.GitHistory.CommonPatterns) > 0 {
+		prompt.WriteString("- Commit Patterns:\n")
+		for _, pattern := range context.GitHistory.CommonPatterns {
+			fmt.Fprintf(prompt, "  • %s\n", pattern)
 		}
 	}
 
-	// Monorepo structure
-	if context.RepoType == "monorepo" {
-		if len(context.PackageLocations) > 0 {
-			fmt.Fprintf(prompt, "- Packages (%d): %s\n", len(context.PackageLocations), strings.Join(context.PackageLocations, ", "))
+	if len(context.GitHistory.CodingConventions) > 0 {
+		prompt.WriteString("- Detected Conventions:\n")
+		for _, convention := range context.GitHistory.CodingConventions {
+			fmt.Fprintf(prompt, "  • %s\n", convention)
 		}
-		if len(context.AppLocations) > 0 {
-			fmt.Fprintf(prompt, "- Applications (%d): %s\n", len(context.AppLocations), strings.Join(context.AppLocations, ", "))
-		}
+	}
+}
+
+// addCodebaseInfo adds codebase analysis information
+func addCodebaseInfo(prompt *strings.Builder, context *ProjectContext) {
+	if context.CodebaseInfo == nil {
+		return
 	}
 
-	// Project structure tree
-	if structure := context.GenerateStructureTree(); structure != "" {
-		prompt.WriteString("\nPROJECT STRUCTURE:\n```\n")
-		prompt.WriteString(structure)
-		prompt.WriteString("```\n")
+	info := context.CodebaseInfo
+	prompt.WriteString("\n📊 DETECTED FROM CODE (Highly Reliable):\n")
+
+	addLanguageInfo(prompt, info)
+	addDevelopmentCommands(prompt, info)
+	addCapabilities(prompt, info)
+}
+
+// addLanguageInfo adds programming language and tech stack information
+func addLanguageInfo(prompt *strings.Builder, info *CodebaseInfo) {
+	if info.MainLanguage != "" {
+		fmt.Fprintf(prompt, "- Primary Language: %s (detected from files)\n", info.MainLanguage)
 	}
+	if len(info.TechStack) > 0 {
+		fmt.Fprintf(prompt, "- Technologies: %s (found in dependencies)\n", strings.Join(info.TechStack, ", "))
+	}
+	fmt.Fprintf(prompt, "- Project Type: %s\n", info.ProjectType)
+}
+
+// addDevelopmentCommands adds development command information
+func addDevelopmentCommands(prompt *strings.Builder, info *CodebaseInfo) {
+	if info.BuildCommand != "" {
+		fmt.Fprintf(prompt, "- Build Command: %s (from package files)\n", info.BuildCommand)
+	}
+	if info.TestCommand != "" {
+		fmt.Fprintf(prompt, "- Test Command: %s (from package files)\n", info.TestCommand)
+	}
+	if info.LintCommand != "" {
+		fmt.Fprintf(prompt, "- Lint Command: %s (from package files)\n", info.LintCommand)
+	}
+}
+
+// addCapabilities adds capability information
+func addCapabilities(prompt *strings.Builder, info *CodebaseInfo) {
+	if info.HasDatabase {
+		prompt.WriteString("- Uses Database\n")
+	}
+	if info.HasDocker {
+		prompt.WriteString("- Uses Docker\n")
+	}
+	if info.HasMCP {
+		fmt.Fprintf(prompt, "- MCP Server: %s\n", info.MCPCommand)
+	}
+}
+
+// addMonorepoInfo adds monorepo structure information
+func addMonorepoInfo(prompt *strings.Builder, context *ProjectContext) {
+	if context.RepoType != "monorepo" {
+		return
+	}
+
+	if len(context.PackageLocations) > 0 {
+		fmt.Fprintf(prompt, "- Packages (%d): %s\n", len(context.PackageLocations), strings.Join(context.PackageLocations, ", "))
+	}
+	if len(context.AppLocations) > 0 {
+		fmt.Fprintf(prompt, "- Applications (%d): %s\n", len(context.AppLocations), strings.Join(context.AppLocations, ", "))
+	}
+}
+
+// addProjectStructure adds project structure tree if available
+func addProjectStructure(prompt *strings.Builder, context *ProjectContext) {
+	structure := context.GenerateStructureTree()
+	if structure == "" {
+		return
+	}
+
+	prompt.WriteString("\nPROJECT STRUCTURE:\n```\n")
+	prompt.WriteString(structure)
+	prompt.WriteString("```\n")
 }
 
 // addExistingConfigContext adds existing AI configuration as context
@@ -202,67 +256,33 @@ func addExistingConfigContext(prompt *strings.Builder, context *ProjectContext) 
 
 func buildProjectAnalysisFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
-	prompt.WriteString(fmt.Sprintf("TASK: Update project description in ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Set project description for '%s'\n\n", context.ProjectName))
 	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Read ai-rulez.yaml file\n")
-	prompt.WriteString("2. Replace 'description: \"\"' with a 1-2 sentence description\n")
-	prompt.WriteString("3. Keep it brief and factual\n\n")
+	prompt.WriteString("1. Create a brief 1-2 sentence description\n")
+	prompt.WriteString("2. Run: ai-rulez set description \"Your description\"\n")
+	prompt.WriteString("3. Keep it factual and concise\n\n")
 	return prompt.String()
 }
 
 func buildStandardsFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
-	prompt.WriteString(fmt.Sprintf("TASK: Add 3 basic coding rules to ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add 3 basic coding rules for '%s'\n\n", context.ProjectName))
 	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Read ai-rulez.yaml\n")
-	prompt.WriteString("2. Replace 'rules: []' with 3 simple rules\n")
-	prompt.WriteString("3. Use: Error Handling, Code Style, Testing\n")
-	prompt.WriteString("4. Keep each rule 1-2 sentences\n\n")
+	prompt.WriteString("1. Add these 3 rules using ai-rulez add rule command:\n")
+	prompt.WriteString("2. Error Handling rule (priority: high)\n")
+	prompt.WriteString("3. Code Style rule (priority: medium)\n")
+	prompt.WriteString("4. Testing rule (priority: high)\n\n")
 	return prompt.String()
 }
 
 func buildDocumentationFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
-	prompt.WriteString(fmt.Sprintf("TASK: Add 2 documentation sections to ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add 2 documentation sections for '%s'\n\n", context.ProjectName))
 	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Read ai-rulez.yaml\n")
-	prompt.WriteString("2. If 'sections: []' exists, add 2 basic sections\n")
-	prompt.WriteString("3. Use: Setup Guide and API Documentation\n")
+	prompt.WriteString("1. Add these 2 sections using ai-rulez add section:\n")
+	prompt.WriteString("2. Setup Guide (priority: high)\n")
+	prompt.WriteString("3. API Documentation (priority: medium)\n")
 	prompt.WriteString("4. Keep content brief\n\n")
-	return prompt.String()
-}
-
-// buildRepairPrompt creates a prompt for fixing validation errors
-func buildRepairPrompt(validationErr error, context *ProjectContext) string {
-	var prompt strings.Builder
-
-	prompt.WriteString(fmt.Sprintf("TASK: Fix validation errors in ai-rulez.yaml for '%s'\n\n", context.ProjectName))
-
-	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Use Read tool to read the current ai-rulez.yaml file\n")
-	prompt.WriteString("2. Analyze the specific validation errors provided below\n")
-	prompt.WriteString("3. Use Edit tool to fix ONLY the problematic parts\n")
-	prompt.WriteString("4. Keep all existing valid content unchanged\n")
-	prompt.WriteString("5. Ensure proper YAML syntax and structure\n")
-	prompt.WriteString("6. Do NOT add any comments to the YAML\n\n")
-
-	prompt.WriteString("VALIDATION ERRORS TO FIX:\n")
-	prompt.WriteString(fmt.Sprintf("%v\n\n", validationErr))
-
-	prompt.WriteString("COMMON FIXES:\n")
-	prompt.WriteString("- Fix YAML syntax errors (indentation, quotes, colons)\n")
-	prompt.WriteString("- Remove invalid fields or values\n")
-	prompt.WriteString("- Add missing required fields\n")
-	prompt.WriteString("- Fix array/object structure mismatches\n")
-	prompt.WriteString("- Ensure priority values are: critical, high, medium, low, minimal\n")
-	prompt.WriteString("- Make sure all strings are properly quoted\n\n")
-
-	prompt.WriteString("IMPORTANT CONSTRAINTS:\n")
-	prompt.WriteString("- Do NOT change the overall structure if it's correct\n")
-	prompt.WriteString("- Do NOT add new sections unless required by validation\n")
-	prompt.WriteString("- Keep content concise and meaningful\n")
-	prompt.WriteString("- Commands are AI slash commands (/task, /generate) - leave empty if unsure\n")
-
 	return prompt.String()
 }
 
@@ -270,20 +290,18 @@ func buildRepairPrompt(validationErr error, context *ProjectContext) string {
 func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add AI agent definitions to ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add AI agent definitions for '%s'\n\n", context.ProjectName))
 
 	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Use Read tool to read the current ai-rulez.yaml file\n")
-	prompt.WriteString("2. Replace 'agents: []' with 2-4 useful AI agent definitions\n")
-	prompt.WriteString("3. Use Edit tool to modify ai-rulez.yaml directly\n")
-	prompt.WriteString("4. Each agent should have name, role, and expertise fields\n")
-	prompt.WriteString("5. Use proper YAML array format\n\n")
+	prompt.WriteString("1. Create 2-4 useful AI agent definitions based on the project\n")
+	prompt.WriteString("2. For each agent, use the Bash tool to run:\n")
+	prompt.WriteString("   ai-rulez add agent --name \"name\" --role \"role\" --expertise \"expertise\"\n")
+	prompt.WriteString("3. Name should be lowercase with hyphens (e.g., backend-dev)\n")
+	prompt.WriteString("4. Role should be a brief description\n")
+	prompt.WriteString("5. Expertise should list specific skills\n\n")
 
-	prompt.WriteString("Agent format:\n")
-	prompt.WriteString("agents:\n")
-	prompt.WriteString("  - name: \"Agent Name\"\n")
-	prompt.WriteString("    role: \"Brief role description\"\n")
-	prompt.WriteString("    expertise: \"Specific expertise areas\"\n\n")
+	prompt.WriteString("Example:\n")
+	prompt.WriteString("Bash: ai-rulez add agent --name \"backend-dev\" --role \"Python backend developer\" --expertise \"FastAPI, PostgreSQL, Docker\"\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -303,13 +321,13 @@ func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 func buildAgentDefinitionsFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add 2 basic AI agents to ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Add 2 basic AI agents for '%s'\n\n", context.ProjectName))
 
 	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Read ai-rulez.yaml\n")
-	prompt.WriteString("2. Replace 'agents: []' with 2 basic agents\n")
-	prompt.WriteString("3. Use: Code Reviewer and Documentation Specialist\n")
-	prompt.WriteString("4. Keep it simple with name, role, expertise fields\n\n")
+	prompt.WriteString("1. Add these 2 agents using ai-rulez add agent:\n")
+	prompt.WriteString("2. code-reviewer (role: \"Code review specialist\")\n")
+	prompt.WriteString("3. doc-writer (role: \"Documentation specialist\")\n")
+	prompt.WriteString("4. Include relevant expertise for each\n\n")
 
 	return prompt.String()
 }
