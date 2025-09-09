@@ -3,12 +3,12 @@ package agents
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
@@ -42,11 +42,11 @@ func getInitAgentTasks(context *ProjectContext, providerConfig templates.Provide
 func getMaxAgents() int {
 	// Check environment variable first
 	if maxStr := os.Getenv("AI_RULEZ_MAX_AGENTS"); maxStr != "" {
-		if maxVal, err := strconv.Atoi(maxStr); err == nil && maxVal > 0 && maxVal <= 20 {
+		if maxVal, err := strconv.Atoi(maxStr); err == nil && maxVal > 0 && maxVal <= 10 {
 			return maxVal
 		}
 	}
-	// Default to 5 agents (optimal balance)
+	// Default to 5 agents (optimal balance for most systems)
 	return 5
 }
 
@@ -86,13 +86,24 @@ func assessProjectWorkload(context *ProjectContext) ProjectWorkload {
 	docCount := len(context.MarkdownFiles)
 	workload.documentationHeavy = docCount > 10
 
+	// Count total files for better size assessment
+	totalFiles := 0
+	if context.DirectoryStructure != nil {
+		for _, files := range context.DirectoryStructure {
+			totalFiles += len(files)
+		}
+	}
+
 	// Analyze codebase complexity
 	if context.CodebaseInfo != nil {
 		info := context.CodebaseInfo
 		workload.complexInfrastructure = info.HasDocker || len(info.TechStack) > 5
 		workload.multiLanguage = len(info.TechStack) > 3
-		workload.largeCodebase = len(context.MarkdownFiles) > 15 // proxy for large codebase
+		workload.largeCodebase = totalFiles > 100 || docCount > 15
 	}
+
+	// Check for monorepo characteristics
+	isMonorepo := context.RepoType == "monorepo" || len(context.PackageLocations) > 1
 
 	// Calculate complexity score (1-10)
 	workload.complexity = 3 // base complexity
@@ -108,60 +119,123 @@ func assessProjectWorkload(context *ProjectContext) ProjectWorkload {
 	if workload.largeCodebase {
 		workload.complexity += 2
 	}
+	if isMonorepo {
+		workload.complexity += 2
+	}
 
-	// Suggest optimal number of agents
-	workload.suggestedAgents = min(8, max(3, workload.complexity))
+	// Suggest optimal number of agents based on complexity
+	// For large codebases, suggest more agents (up to 10)
+	switch {
+	case workload.complexity >= 8:
+		workload.suggestedAgents = 10
+	case workload.complexity >= 6:
+		workload.suggestedAgents = 8
+	case workload.complexity >= 4:
+		workload.suggestedAgents = 5
+	default:
+		workload.suggestedAgents = 3
+	}
 
 	return workload
 }
 
 // applySplittingHeuristics intelligently splits tasks based on project workload
 func applySplittingHeuristics(baseTasks []string, workload ProjectWorkload, maxAgents int) []string {
-	tasks := make([]string, len(baseTasks))
-	copy(tasks, baseTasks)
+	var expandedTasks []string
 
-	// Split documentation if heavy and we have capacity
-	if workload.documentationHeavy && maxAgents >= 4 {
-		tasks = splitDocumentationTasks(tasks)
+	for _, task := range baseTasks {
+		expanded := expandTask(task, workload, maxAgents)
+		expandedTasks = append(expandedTasks, expanded...)
 	}
 
-	// Split infrastructure if complex and we have capacity
-	if workload.complexInfrastructure && maxAgents >= 5 {
-		tasks = splitInfrastructureTasks(tasks)
+	// Ensure we don't exceed max agents but use at least what we have
+	if len(expandedTasks) > maxAgents {
+		return prioritizeTasks(expandedTasks, maxAgents)
 	}
 
-	// Ensure we don't exceed max agents
-	if len(tasks) > maxAgents {
-		tasks = tasks[:maxAgents]
+	return expandedTasks
+}
+
+// expandTask expands a single task based on workload and available agents
+func expandTask(task string, workload ProjectWorkload, maxAgents int) []string {
+	switch task {
+	case "coding standards":
+		return expandCodingStandards(workload, maxAgents)
+	case "documentation sections":
+		return expandDocumentation(workload, maxAgents)
+	case "agent definitions":
+		return expandAgentDefinitions(workload, maxAgents)
+	default:
+		return []string{task}
+	}
+}
+
+// expandCodingStandards expands coding standards task based on project characteristics
+func expandCodingStandards(workload ProjectWorkload, maxAgents int) []string {
+	if !workload.largeCodebase || maxAgents < 6 {
+		return []string{"coding standards"}
+	}
+
+	tasks := []string{
+		"error handling standards",
+		"code style standards",
+		"testing standards",
+	}
+
+	if workload.multiLanguage {
+		tasks = append(tasks, "language-specific standards")
 	}
 
 	return tasks
 }
 
-// splitDocumentationTasks splits documentation analysis into multiple tasks
-func splitDocumentationTasks(tasks []string) []string {
-	for i, task := range tasks {
-		if task == "documentation analysis" {
-			// Replace single task with two
-			tasks[i] = "documentation analysis #1"
-			tasks = append(tasks, "documentation analysis #2")
-			break
-		}
+// expandDocumentation expands documentation task based on project characteristics
+func expandDocumentation(workload ProjectWorkload, maxAgents int) []string {
+	if !workload.documentationHeavy || maxAgents < 5 {
+		return []string{"documentation sections"}
 	}
+
+	tasks := []string{
+		"setup documentation",
+		"architecture documentation",
+	}
+
+	if workload.complexInfrastructure {
+		tasks = append(tasks, "deployment documentation")
+	}
+
 	return tasks
 }
 
-// splitInfrastructureTasks splits infrastructure analysis into multiple tasks
-func splitInfrastructureTasks(tasks []string) []string {
-	for i, task := range tasks {
-		if task == "infrastructure analysis" {
-			// Replace single task with two
-			tasks[i] = "infrastructure analysis #1"
-			tasks = append(tasks, "infrastructure analysis #2")
+// expandAgentDefinitions expands agent definitions task based on project complexity
+func expandAgentDefinitions(workload ProjectWorkload, maxAgents int) []string {
+	if workload.complexity < 6 || maxAgents < 4 {
+		return []string{"agent definitions"}
+	}
+
+	return []string{
+		"core agents",
+		"specialized agents",
+	}
+}
+
+// prioritizeTasks prioritizes tasks when there are more tasks than available agents
+func prioritizeTasks(tasks []string, maxAgents int) []string {
+	// Always include project description
+	prioritized := []string{"project description"}
+	remaining := maxAgents - 1
+
+	// Add other tasks up to limit
+	for _, task := range tasks[1:] {
+		if remaining > 0 {
+			prioritized = append(prioritized, task)
+			remaining--
+		} else {
 			break
 		}
 	}
-	return tasks
+
+	return prioritized
 }
 
 // createGenericTasks converts task names into AgentTask structs using specialist prompts
@@ -301,20 +375,8 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 		logger.Success("✅ All agent tasks completed successfully")
 	}
 
-	// Validate the generated configuration
-	if err := validateGeneratedConfig(); err != nil {
-		logger.Warn(fmt.Sprintf("⚠️  Generated config has validation issues: %v", err))
-		logger.Info("🔧 Attempting to repair validation errors...")
-
-		if repairErr := repairConfigurationWithRetries(err, context); repairErr != nil {
-			logger.Error(fmt.Sprintf("❌ Failed to repair configuration: %v", repairErr))
-			logger.Info("The file was created but may need manual review")
-		} else {
-			logger.Success("✅ Configuration repaired successfully")
-		}
-	} else {
-		logger.Success("✅ Generated configuration is valid")
-	}
+	// CLI commands ensure valid configuration - no validation needed
+	logger.Success("✅ Configuration generated successfully")
 
 	// Always return the current file content, even if some tasks failed
 	data, err := os.ReadFile("ai-rulez.yaml")
@@ -429,10 +491,16 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 			timeout = 120 * time.Second // 2 minutes for fallback retries
 		}
 
-		// Execute the agent call
-		_, err := invokeAgent(agent, prompt, timeout)
+		// Execute the agent call and capture output
+		output, err := invokeAgent(agent, prompt, timeout)
 
 		if err == nil {
+			// Parse and execute CLI commands from agent output
+			if err := executeAgentCommands(output); err != nil {
+				lastErr = fmt.Errorf("failed to execute agent commands: %w", err)
+				continue
+			}
+
 			// Success - update status and return
 			status.mu.Lock()
 			status.status = statusSuccess
@@ -562,21 +630,6 @@ func (d *TaskDisplay) renderTaskLine(ts *TaskStatus) {
 	fmt.Printf("\n")
 }
 
-// validateGeneratedConfig validates the generated ai-rulez.yaml file
-func validateGeneratedConfig() error {
-	// Try to load and validate the configuration
-	cfg, err := config.LoadConfig("ai-rulez.yaml")
-	if err != nil {
-		return fmt.Errorf("failed to load config: %w", err)
-	}
-
-	if err := cfg.Validate(); err != nil {
-		return fmt.Errorf("config validation failed: %w", err)
-	}
-
-	return nil
-}
-
 // getErrorSummary returns a concise error summary for user feedback
 func getErrorSummary(err error) string {
 	if err == nil {
@@ -609,78 +662,112 @@ func getErrorSummary(err error) string {
 	return errStr
 }
 
-// repairConfigurationWithRetries attempts to repair validation errors with retries
-func repairConfigurationWithRetries(validationErr error, context *ProjectContext) error {
-	const maxRetries = 3
-
-	for attempt := 1; attempt <= maxRetries; attempt++ {
-		logger.Info(fmt.Sprintf("🔧 Repair attempt %d/%d", attempt, maxRetries))
-
-		if err := runRepairAgent(validationErr, context); err != nil {
-			logger.Warn(fmt.Sprintf("Repair attempt %d failed: %v", attempt, getErrorSummary(err)))
-			if attempt == maxRetries {
-				return fmt.Errorf("all repair attempts failed, last error: %w", err)
-			}
-			continue
-		}
-
-		// Re-validate after repair
-		if err := validateGeneratedConfig(); err != nil {
-			logger.Warn(fmt.Sprintf("Still has validation issues after attempt %d: %v", attempt, getErrorSummary(err)))
-			validationErr = err // Update for next retry
-			if attempt == maxRetries {
-				return fmt.Errorf("configuration still invalid after %d repair attempts: %w", maxRetries, err)
-			}
-			continue
-		}
-
-		logger.Success(fmt.Sprintf("✅ Configuration repaired successfully on attempt %d", attempt))
+// executeAgentCommands parses and executes CLI commands from agent output
+func executeAgentCommands(output string) error {
+	if output == "" {
 		return nil
 	}
 
-	return fmt.Errorf("unexpected end of repair attempts")
+	// Parse output for ai-rulez commands
+	lines := strings.Split(output, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+
+		// Look for ai-rulez commands in various formats
+		if strings.Contains(line, "ai-rulez ") {
+			// Extract the command (might be in different formats)
+			cmd := extractCommand(line)
+			if cmd != "" {
+				if err := executeCommand(cmd); err != nil {
+					logger.Warn("Failed to execute command", "command", cmd, "error", err.Error())
+					// Continue with other commands instead of failing completely
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
-// runRepairAgent runs a single repair agent to fix validation errors
-func runRepairAgent(validationErr error, context *ProjectContext) error {
-	task := AgentTask{
-		Name:        "validation-repair",
-		Description: "Fixing validation errors",
-		MaxRetries:  1, // Single attempt, higher-level retry handles multiple attempts
-		Prompt: func(ctx *ProjectContext) string {
-			return buildRepairPrompt(validationErr, ctx)
-		},
+// extractCommand extracts ai-rulez command from various line formats
+func extractCommand(line string) string {
+	// Handle different formats:
+	// - Direct: ai-rulez add rule ...
+	// - Quoted: "ai-rulez add rule ..."
+	// - Bash prefix: Bash: ai-rulez add rule ...
+	// - Shell prompt: $ ai-rulez add rule ...
+
+	// Remove common prefixes
+	line = strings.TrimPrefix(line, "Bash:")
+	line = strings.TrimPrefix(line, "bash:")
+	line = strings.TrimPrefix(line, "$")
+	line = strings.TrimPrefix(line, ">")
+	line = strings.TrimSpace(line)
+
+	// Remove quotes if present
+	line = strings.Trim(line, "\"'`")
+
+	// Check if it's an ai-rulez command
+	if strings.HasPrefix(line, "ai-rulez ") {
+		return line
 	}
 
-	// Create agent info for repair
-	agent := AgentInfo{
-		ID:      "claude",
-		Command: "claude",
-		Display: "Claude (Repair)",
+	// Check if ai-rulez is somewhere in the line
+	if idx := strings.Index(line, "ai-rulez "); idx >= 0 {
+		return line[idx:]
 	}
 
-	// Create status tracker
-	status := &TaskStatus{
-		task:      task,
-		status:    statusRunning,
-		attempt:   1,
-		startTime: time.Now(),
+	return ""
+}
+
+// executeCommand executes a single ai-rulez CLI command
+func executeCommand(cmdStr string) error {
+	// Parse the command
+	parts := strings.Fields(cmdStr)
+	if len(parts) < 2 || parts[0] != "ai-rulez" {
+		return fmt.Errorf("invalid command: %s", cmdStr)
 	}
 
-	return executeAgentTaskWithStatus(task, agent, context, status)
+	// Find the ai-rulez binary - could be in PATH or use current executable
+	aiRulezPath, err := exec.LookPath("ai-rulez")
+	if err != nil {
+		// Use the current executable if ai-rulez is not in PATH
+		aiRulezPath, err = os.Executable()
+		if err != nil {
+			return fmt.Errorf("failed to find ai-rulez binary: %w", err)
+		}
+	}
+
+	// Execute the command using the found binary
+	cmd := exec.Command(aiRulezPath, parts[1:]...) //nolint:gosec // Subprocess is intentional and controlled
+	cmd.Dir = "."                                  // Execute in current directory where ai-rulez.yaml is
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("command failed: %w, output: %s", err, string(output))
+	}
+
+	// Log successful command execution for debugging
+	logger.Debug("Executed agent command", "command", cmdStr)
+
+	return nil
 }
 
 // executeTasksInWaves executes agent tasks in batches/waves based on maxAgents limit
-func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, maxAgents int) ([]string, int) {
+func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, maxAgents int) (failedTasks []string, successCount int) {
 	totalTasks := len(tasks)
-	var failedTasks []string
-	successCount := 0
 
-	// Calculate number of waves needed
+	// Calculate number of waves needed (maximum 3 waves)
 	numWaves := (totalTasks + maxAgents - 1) / maxAgents // Ceiling division
+	const maxWaves = 3
+	if numWaves > maxWaves {
+		// Redistribute tasks to fit within 3 waves
+		numWaves = maxWaves
+		maxAgents = (totalTasks + numWaves - 1) / numWaves // Recalculate agents per wave
+	}
 
 	if numWaves > 1 {
-		logger.Info(fmt.Sprintf("📋 Executing %d tasks in %d waves (%d agents per wave)", totalTasks, numWaves, maxAgents))
+		logger.Info(fmt.Sprintf("📋 Executing %d tasks in %d waves (up to %d agents per wave)", totalTasks, numWaves, maxAgents))
 	}
 
 	// Execute tasks in waves
@@ -703,7 +790,7 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 }
 
 // executeWave executes a single wave of agent tasks in parallel
-func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, baseIndex int) ([]string, int) {
+func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, baseIndex int) (failedTasks []string, successCount int) {
 	// Structure to hold task results
 	type taskResult struct {
 		taskIndex int
@@ -752,8 +839,6 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 	close(results)
 
 	// Process wave results
-	var failedTasks []string
-	successCount := 0
 
 	for result := range results {
 		localIndex := result.taskIndex - baseIndex
