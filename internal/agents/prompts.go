@@ -15,9 +15,11 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	prompt.WriteString("INSTRUCTIONS:\n")
 	prompt.WriteString("1. Analyze the project context provided below\n")
 	prompt.WriteString("2. Create a clear, concise description (1-2 sentences)\n")
-	prompt.WriteString("3. Use the Bash tool to run this command:\n")
-	prompt.WriteString("   ai-rulez set description \"Your description here\"\n")
-	prompt.WriteString("4. The description should focus on the project's purpose and technology\n\n")
+	prompt.WriteString("3. Output ONLY the command to run. DO NOT give status messages or explanations.\n")
+	prompt.WriteString("4. Your response must be exactly this format:\n")
+	prompt.WriteString("   ai-rulez set metadata --description \"Your description here\"\n")
+	prompt.WriteString("5. Replace 'Your description here' with the actual description\n")
+	prompt.WriteString("6. Do not add any other text - only the command line\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -40,14 +42,15 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 
 	prompt.WriteString("INSTRUCTIONS:\n")
 	prompt.WriteString("1. Create 2-3 essential documentation sections based on the project\n")
-	prompt.WriteString("2. For each section, use the Bash tool to run:\n")
+	prompt.WriteString("2. Output ONLY the commands to run, one per line. DO NOT give explanations.\n")
+	prompt.WriteString("3. Each command must be exactly this format:\n")
 	prompt.WriteString("   ai-rulez add section --name \"Section Name\" --priority PRIORITY --content \"Content here\"\n")
-	prompt.WriteString("3. Priority can be: high, medium, or low\n")
-	prompt.WriteString("4. Content should be markdown format\n")
-	prompt.WriteString("5. For multiline content, use proper escaping or quotes\n\n")
+	prompt.WriteString("4. Priority can be: high, medium, or low\n")
+	prompt.WriteString("5. Content should be markdown format\n")
+	prompt.WriteString("6. Only output the commands, no other text\n\n")
 
-	prompt.WriteString("Example:\n")
-	prompt.WriteString("Bash: ai-rulez add section --name \"Setup Guide\" --priority high --content \"## Prerequisites\\n- Node.js 18+\\n- Docker\"\n\n")
+	prompt.WriteString("Example output:\n")
+	prompt.WriteString("ai-rulez add section --name \"Setup Guide\" --priority high --content \"## Prerequisites\\n- Node.js 18+\\n- Docker\"\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -79,13 +82,15 @@ func buildStandardsPrompt(context *ProjectContext) string {
 
 	prompt.WriteString("INSTRUCTIONS:\n")
 	prompt.WriteString("1. Create 5-7 important coding standards based on the project\n")
-	prompt.WriteString("2. For each rule, use the Bash tool to run:\n")
+	prompt.WriteString("2. Output ONLY the commands to run, one per line. DO NOT give explanations.\n")
+	prompt.WriteString("3. Each command must be exactly this format:\n")
 	prompt.WriteString("   ai-rulez add rule --name \"Rule Name\" --priority PRIORITY --content \"Rule description\"\n")
-	prompt.WriteString("3. Priority can be: critical, high, medium, low, or minimal\n")
-	prompt.WriteString("4. Content should be clear and actionable\n\n")
+	prompt.WriteString("4. Priority can be: critical, high, medium, low, or minimal\n")
+	prompt.WriteString("5. Content should be clear and actionable\n")
+	prompt.WriteString("6. Only output the commands, no other text\n\n")
 
-	prompt.WriteString("Example:\n")
-	prompt.WriteString("Bash: ai-rulez add rule --name \"Error Handling\" --priority high --content \"Always use proper exception handling with specific error types\"\n\n")
+	prompt.WriteString("Example output:\n")
+	prompt.WriteString("ai-rulez add rule --name \"Error Handling\" --priority high --content \"Always use proper exception handling with specific error types\"\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -259,8 +264,9 @@ func buildProjectAnalysisFallbackPrompt(context *ProjectContext) string {
 	prompt.WriteString(fmt.Sprintf("TASK: Set project description for '%s'\n\n", context.ProjectName))
 	prompt.WriteString("SIMPLE STEPS:\n")
 	prompt.WriteString("1. Create a brief 1-2 sentence description\n")
-	prompt.WriteString("2. Run: ai-rulez set description \"Your description\"\n")
-	prompt.WriteString("3. Keep it factual and concise\n\n")
+	prompt.WriteString("2. Output ONLY this command format:\n")
+	prompt.WriteString("   ai-rulez set metadata --description \"Your description\"\n")
+	prompt.WriteString("3. Replace with actual description, no other text\n\n")
 	return prompt.String()
 }
 
@@ -294,14 +300,16 @@ func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 
 	prompt.WriteString("INSTRUCTIONS:\n")
 	prompt.WriteString("1. Create 2-4 useful AI agent definitions based on the project\n")
-	prompt.WriteString("2. For each agent, use the Bash tool to run:\n")
+	prompt.WriteString("2. Output ONLY the commands to run, one per line. DO NOT give explanations.\n")
+	prompt.WriteString("3. Each command must be exactly this format:\n")
 	prompt.WriteString("   ai-rulez add agent --name \"name\" --role \"role\" --expertise \"expertise\"\n")
-	prompt.WriteString("3. Name should be lowercase with hyphens (e.g., backend-dev)\n")
-	prompt.WriteString("4. Role should be a brief description\n")
-	prompt.WriteString("5. Expertise should list specific skills\n\n")
+	prompt.WriteString("4. Name should be lowercase with hyphens (e.g., backend-dev)\n")
+	prompt.WriteString("5. Role should be a brief description\n")
+	prompt.WriteString("6. Expertise should list specific skills\n")
+	prompt.WriteString("7. Only output the commands, no other text\n\n")
 
-	prompt.WriteString("Example:\n")
-	prompt.WriteString("Bash: ai-rulez add agent --name \"backend-dev\" --role \"Python backend developer\" --expertise \"FastAPI, PostgreSQL, Docker\"\n\n")
+	prompt.WriteString("Example output:\n")
+	prompt.WriteString("ai-rulez add agent --name \"backend-dev\" --role \"Python backend developer\" --expertise \"FastAPI, PostgreSQL, Docker\"\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -324,10 +332,10 @@ func buildAgentDefinitionsFallbackPrompt(context *ProjectContext) string {
 	prompt.WriteString(fmt.Sprintf("TASK: Add 2 basic AI agents for '%s'\n\n", context.ProjectName))
 
 	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Add these 2 agents using ai-rulez add agent:\n")
-	prompt.WriteString("2. code-reviewer (role: \"Code review specialist\")\n")
-	prompt.WriteString("3. doc-writer (role: \"Documentation specialist\")\n")
-	prompt.WriteString("4. Include relevant expertise for each\n\n")
+	prompt.WriteString("1. Output ONLY the commands, no explanations:\n")
+	prompt.WriteString("2. ai-rulez add agent --name \"code-reviewer\" --role \"Code review specialist\" --expertise \"...\"\n")
+	prompt.WriteString("3. ai-rulez add agent --name \"doc-writer\" --role \"Documentation specialist\" --expertise \"...\"\n")
+	prompt.WriteString("4. Replace ... with relevant expertise, output only commands\n\n")
 
 	return prompt.String()
 }

@@ -267,16 +267,23 @@ func generateTaskID(taskName string, index int) string {
 
 // selectPromptForTask maps generic task names to specific prompt functions
 func selectPromptForTask(taskName string) func(*ProjectContext) string {
+	fmt.Printf("[DEBUG] Selecting prompt for task: '%s'\n", taskName)
+	
 	switch {
 	case strings.Contains(taskName, "project description"):
+		fmt.Printf("[DEBUG] Task '%s' matched project description -> buildProjectAnalysisPrompt\n", taskName)
 		return buildProjectAnalysisPrompt
-	case strings.Contains(taskName, "documentation sections"):
+	case strings.Contains(taskName, "documentation"):
+		fmt.Printf("[DEBUG] Task '%s' matched documentation -> buildDocumentationPrompt\n", taskName)
 		return buildDocumentationPrompt
-	case strings.Contains(taskName, "coding standards"):
+	case strings.Contains(taskName, "standards"):
+		fmt.Printf("[DEBUG] Task '%s' matched standards -> buildStandardsPrompt\n", taskName)
 		return buildStandardsPrompt
-	case strings.Contains(taskName, "agent definitions"):
+	case strings.Contains(taskName, "agents"):
+		fmt.Printf("[DEBUG] Task '%s' matched agents -> buildAgentDefinitionsPrompt\n", taskName)
 		return buildAgentDefinitionsPrompt
 	default:
+		fmt.Printf("[DEBUG] Task '%s' didn't match any pattern -> DEFAULT buildProjectAnalysisPrompt\n", taskName)
 		return buildProjectAnalysisPrompt
 	}
 }
@@ -286,11 +293,11 @@ func selectFallbackPromptForTask(taskName string) func(*ProjectContext) string {
 	switch {
 	case strings.Contains(taskName, "project description"):
 		return buildProjectAnalysisFallbackPrompt
-	case strings.Contains(taskName, "documentation sections"):
+	case strings.Contains(taskName, "documentation") || strings.Contains(taskName, "setup documentation") || strings.Contains(taskName, "architecture documentation"):
 		return buildDocumentationFallbackPrompt
-	case strings.Contains(taskName, "coding standards"):
+	case strings.Contains(taskName, "standards") || strings.Contains(taskName, "error handling standards") || strings.Contains(taskName, "code style standards") || strings.Contains(taskName, "testing standards"):
 		return buildStandardsFallbackPrompt
-	case strings.Contains(taskName, "agent definitions"):
+	case strings.Contains(taskName, "agents") || strings.Contains(taskName, "core agents") || strings.Contains(taskName, "specialized agents"):
 		return buildAgentDefinitionsFallbackPrompt
 	default:
 		return buildProjectAnalysisFallbackPrompt
@@ -353,12 +360,6 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 		spinnerIndex: 0,
 		startTime:    startTime,
 	}
-
-	// Display initial task list
-	fmt.Printf("\n")
-
-	// Display all tasks initially
-	display.renderAllTasks()
 
 	// Execute tasks in waves based on maxAgents limit
 	maxAgents := getMaxAgents()
@@ -825,26 +826,35 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 		maxAgents = (totalTasks + numWaves - 1) / numWaves // Recalculate agents per wave
 	}
 
-	if numWaves > 1 {
-		fmt.Printf("\n📋 Executing %d tasks in %d waves (up to %d agents per wave)\n", totalTasks, numWaves, maxAgents)
-	}
-
-	// Always show Wave 1 when starting
-	if totalTasks > 0 {
-		fmt.Printf("🌊 Wave 1/%d: Running tasks 1-%d\n", numWaves, min(maxAgents, totalTasks))
-	}
-
 	// Execute tasks in waves
 	for wave := 0; wave < numWaves; wave++ {
 		startIdx := wave * maxAgents
 		endIdx := min(startIdx+maxAgents, totalTasks)
-
-		if numWaves > 1 && wave > 0 {
-			fmt.Printf("\n🌊 Wave %d/%d: Running tasks %d-%d\n", wave+1, numWaves, startIdx+1, endIdx)
+		
+		// Display wave notice with proper formatting
+		if totalTasks > 1 {
+			fmt.Printf("\n🌊 Wave %d/%d: Running tasks %d-%d (out of %d)\n", 
+				wave+1, numWaves, startIdx+1, endIdx, totalTasks)
 		}
 
-		// Execute current wave
-		waveFailedTasks, waveSuccessCount := executeWave(tasks[startIdx:endIdx], taskStatuses[startIdx:endIdx], agent, context, display, startIdx)
+		// Create a new TaskDisplay for this wave only
+		waveDisplay := &TaskDisplay{
+			tasks: taskStatuses[startIdx:endIdx],
+		}
+		
+		// Initial display of wave tasks
+		fmt.Println() // Add spacing
+		waveDisplay.renderAllTasks()
+
+		// Execute current wave with its own display
+		waveFailedTasks, waveSuccessCount := executeWave(
+			tasks[startIdx:endIdx], 
+			taskStatuses[startIdx:endIdx], 
+			agent, 
+			context, 
+			waveDisplay,  // Pass wave-specific display
+			startIdx,
+		)
 
 		failedTasks = append(failedTasks, waveFailedTasks...)
 		successCount += waveSuccessCount
