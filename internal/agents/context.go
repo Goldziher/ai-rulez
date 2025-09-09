@@ -45,16 +45,26 @@ type DirectoryNode struct {
 	Children []*DirectoryNode
 }
 
+type GitHistory struct {
+	HasGit            bool
+	CommitCount       int
+	RecentCommits     []string // Last 10 commit messages
+	CommonPatterns    []string // Common patterns from commit messages
+	CodingConventions []string // Detected conventions from diffs
+}
+
 type ProjectContext struct {
-	ProjectName      string
-	RootPath         string
-	RepoType         string // "monorepo", "single", "library", "application"
-	Structure        *DirectoryNode
-	MarkdownFiles    []MarkdownFile
-	CodebaseInfo     *CodebaseInfo
-	PackageLocations []string          // For monorepos
-	AppLocations     []string          // For monorepos with apps
-	ExistingConfigs  map[string]string // Existing AI config files (README, CLAUDE.md, etc.)
+	ProjectName        string
+	RootPath           string
+	RepoType           string // "monorepo", "single", "library", "application"
+	Structure          *DirectoryNode
+	MarkdownFiles      []MarkdownFile
+	CodebaseInfo       *CodebaseInfo
+	PackageLocations   []string            // For monorepos
+	AppLocations       []string            // For monorepos with apps
+	ExistingConfigs    map[string]string   // Existing AI config files (README, CLAUDE.md, etc.)
+	GitHistory         *GitHistory         // Git history analysis
+	DirectoryStructure map[string][]string // Directory -> files mapping for size assessment
 }
 
 func GatherProjectContext(projectName string) *ProjectContext {
@@ -99,6 +109,15 @@ func GatherProjectContext(projectName string) *ProjectContext {
 		ctx.AppLocations = detectAppLocations(rootPath)
 		logger.Info("  Monorepo structure", "packages", len(ctx.PackageLocations), "apps", len(ctx.AppLocations))
 	}
+
+	// Analyze git history if available
+	ctx.GitHistory = analyzeGitHistory(rootPath)
+	if ctx.GitHistory != nil && ctx.GitHistory.HasGit {
+		logger.Info("  Git history analyzed", "commits", ctx.GitHistory.CommitCount)
+	}
+
+	// Build directory structure map for size assessment
+	ctx.DirectoryStructure = buildDirectoryStructureMap(rootPath)
 
 	return ctx
 }
