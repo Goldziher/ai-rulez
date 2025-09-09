@@ -15,6 +15,7 @@ import (
 
 const (
 	defaultPriority = "medium"
+	inlineTemplate  = "inline"
 )
 
 var (
@@ -133,7 +134,7 @@ func migrateConfig(config map[string]interface{}) error {
 		migrationFunc func(map[string]interface{}) error
 		needsTemplate bool
 	}{
-		{"outputs", migrateOutput, false},
+		{"outputs", migrateOutput, true},
 		{"agents", migrateAgent, true},
 		{"rules", migrateRule, true},
 		{"sections", migrateSection, false},
@@ -177,12 +178,29 @@ func migrateTemplate(obj map[string]interface{}) error {
 		return nil
 	}
 
-	if _, isMap := template.(map[string]interface{}); isMap {
+	// If already a map, check if it needs content migration
+	if templateMap, isMap := template.(map[string]interface{}); isMap {
+		// Check if it's an inline template that needs content migration
+		if templateType, hasType := templateMap["type"].(string); hasType && templateType == inlineTemplate {
+			if value, hasValue := templateMap["value"].(string); hasValue {
+				// Replace .Title with .Name for sections in template content
+				migratedValue := migrateSectionTitleReferences(value)
+				if migratedValue != value {
+					templateMap["value"] = migratedValue
+				}
+			}
+		}
 		return nil
 	}
 
 	if templateStr, ok := template.(string); ok {
 		newTemplate := convertStringToTemplateObject(templateStr)
+		// If it's an inline template, migrate content references
+		if newTemplate["type"] == inlineTemplate {
+			if value, hasValue := newTemplate["value"].(string); hasValue {
+				newTemplate["value"] = migrateSectionTitleReferences(value)
+			}
+		}
 		obj["template"] = newTemplate
 	}
 
@@ -200,11 +218,29 @@ func convertStringToTemplateObject(templateStr string) map[string]interface{} {
 		template["type"] = "builtin"
 		template["value"] = templateStr
 	default:
-		template["type"] = "inline"
-		template["value"] = templateStr
+		template["type"] = inlineTemplate
+		// Migrate section .Title references to .Name in inline templates
+		template["value"] = migrateSectionTitleReferences(templateStr)
 	}
 
 	return template
+}
+
+// migrateSectionTitleReferences replaces .Title with .Name for section references in templates
+func migrateSectionTitleReferences(content string) string {
+	// Replace {{.Title}} with {{.Name}} when used in section context
+	// This regex matches template expressions that reference .Title
+	titlePattern := regexp.MustCompile(`\{\{(\s*\.Title\s*)\}\}`)
+	content = titlePattern.ReplaceAllString(content, "{{.Name}}")
+
+	// Also handle cases with range over sections
+	// Replace {{range .Sections}}...{{.Title}}... with {{.Name}}
+	rangePattern := regexp.MustCompile(`(\{\{range\s+\.Sections\}\}[\s\S]*?)(\{\{\.Title\}\})`)
+	for rangePattern.MatchString(content) {
+		content = rangePattern.ReplaceAllString(content, "${1}{{.Name}}")
+	}
+
+	return content
 }
 
 func migrateAgent(agent map[string]interface{}) error {

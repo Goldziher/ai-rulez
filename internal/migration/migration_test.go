@@ -1162,6 +1162,186 @@ func TestUserRulezErrorHandling(t *testing.T) {
 	})
 }
 
+func TestMigrateSectionTitleReferences(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "simple title reference",
+			input:    "{{.Title}}",
+			expected: "{{.Name}}",
+		},
+		{
+			name:     "title with spaces",
+			input:    "{{ .Title }}",
+			expected: "{{.Name}}",
+		},
+		{
+			name:     "title in range context",
+			input:    "{{range .Sections}}\n## {{.Title}}\n{{.Content}}\n{{end}}",
+			expected: "{{range .Sections}}\n## {{.Name}}\n{{.Content}}\n{{end}}",
+		},
+		{
+			name:     "multiple title references",
+			input:    "{{.Title}} - {{.Title}}",
+			expected: "{{.Name}} - {{.Name}}",
+		},
+		{
+			name:     "no title references",
+			input:    "{{.Name}} {{.Content}}",
+			expected: "{{.Name}} {{.Content}}",
+		},
+		{
+			name:     "mixed content",
+			input:    "# Document\n{{range .Sections}}\n## {{.Title}}\n{{.Content}}\n{{end}}",
+			expected: "# Document\n{{range .Sections}}\n## {{.Name}}\n{{.Content}}\n{{end}}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := migrateSectionTitleReferences(tt.input)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func TestMigrateTemplateWithTitleReferences(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    map[string]interface{}
+		expected map[string]interface{}
+	}{
+		{
+			name: "string template with title reference",
+			input: map[string]interface{}{
+				"template": "{{range .Sections}}{{.Title}}{{end}}",
+			},
+			expected: map[string]interface{}{
+				"template": map[string]interface{}{
+					"type":  "inline",
+					"value": "{{range .Sections}}{{.Name}}{{end}}",
+				},
+			},
+		},
+		{
+			name: "already migrated template with title",
+			input: map[string]interface{}{
+				"template": map[string]interface{}{
+					"type":  "inline",
+					"value": "{{.Title}}",
+				},
+			},
+			expected: map[string]interface{}{
+				"template": map[string]interface{}{
+					"type":  "inline",
+					"value": "{{.Name}}",
+				},
+			},
+		},
+		{
+			name: "builtin template unchanged",
+			input: map[string]interface{}{
+				"template": "default",
+			},
+			expected: map[string]interface{}{
+				"template": map[string]interface{}{
+					"type":  "builtin",
+					"value": "default",
+				},
+			},
+		},
+		{
+			name: "file template unchanged",
+			input: map[string]interface{}{
+				"template": "@templates/custom.tmpl",
+			},
+			expected: map[string]interface{}{
+				"template": map[string]interface{}{
+					"type":  "file",
+					"value": "templates/custom.tmpl",
+				},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := migrateTemplate(tt.input)
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, tt.input)
+		})
+	}
+}
+
+func TestFullMigrationWithTitleReferences(t *testing.T) {
+	// Create a temporary v1 config with .Title references
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "ai-rulez.yaml")
+	
+	v1Config := `$schema: "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v1.schema.json"
+metadata:
+  name: TestProject
+  version: 1.0.0
+
+sections:
+  - title: "Section One"
+    content: "Content one"
+    priority: 10
+  - title: "Section Two"
+    content: "Content two"
+    priority: 5
+
+outputs:
+  - file: "output.md"
+    template: |
+      # Document
+      {{range .Sections}}
+      ## {{.Title}}
+      {{.Content}}
+      {{end}}`
+
+	err := os.WriteFile(configPath, []byte(v1Config), 0644)
+	require.NoError(t, err)
+
+	// Perform migration
+	version, err := DetectAndMigrate(configPath)
+	require.NoError(t, err)
+	assert.Equal(t, "v1", version)
+
+	// Read migrated content
+	migratedContent, err := os.ReadFile(configPath)
+	require.NoError(t, err)
+
+	// Check that migration was successful
+	migratedStr := string(migratedContent)
+	
+	// Check schema was updated
+	assert.Contains(t, migratedStr, "ai-rules-v2.schema.json")
+	
+	// Check sections have name instead of title
+	assert.Contains(t, migratedStr, "name: Section One")
+	assert.Contains(t, migratedStr, "name: Section Two")
+	assert.NotContains(t, migratedStr, "title:")
+	
+	// Check outputs have path instead of file
+	assert.Contains(t, migratedStr, "path: output.md")
+	assert.NotContains(t, migratedStr, "file:")
+	
+	// Check template was converted to object format
+	assert.Contains(t, migratedStr, "type: inline")
+	
+	// Check .Title was replaced with .Name in template
+	assert.Contains(t, migratedStr, "{{.Name}}")
+	assert.NotContains(t, migratedStr, "{{.Title}}")
+	
+	// Check priorities were converted
+	assert.Contains(t, migratedStr, "priority: medium")
+	assert.Contains(t, migratedStr, "priority: minimal")
+}
+
 func TestComprehensiveMigration(t *testing.T) {
 	tmpDir := t.TempDir()
 	configPath := filepath.Join(tmpDir, "comprehensive-v1.yaml")
