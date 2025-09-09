@@ -27,6 +27,7 @@ const (
 	defaultMaxRetries = 3
 
 	// Task status constants
+	statusPending  = "pending"
 	statusRunning  = "running"
 	statusRetrying = "retrying"
 	statusSuccess  = "success"
@@ -322,14 +323,13 @@ var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "�
 var bulletFrames = []string{"◉", "◎", "◉", "○"}
 
 func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig templates.ProviderConfig) (string, error) {
-	logger.Info("🔗 Starting parallel agent task execution...")
-	logger.Info("")
+	fmt.Printf("🔗 Starting parallel agent task execution...\n")
 
 	// Initialize base configuration
 	if err := initializeBaseConfigFile(context, providerConfig); err != nil {
 		return "", fmt.Errorf("failed to initialize base config: %w", err)
 	}
-	logger.Info("✅ Initialized base ai-rulez.yaml")
+	fmt.Printf("✅ Initialized base ai-rulez.yaml\n")
 
 	// Get dynamic task list based on project and provider
 	initAgentTasks := getInitAgentTasks(context, providerConfig)
@@ -340,8 +340,8 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	for i, task := range initAgentTasks {
 		taskStatuses[i] = &TaskStatus{
 			task:       task,
-			status:     statusRunning,
-			attempt:    1,
+			status:     statusPending,
+			attempt:    0,
 			startTime:  time.Now(),
 			lineNumber: i,
 		}
@@ -367,16 +367,16 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	// Show summary
 	fmt.Printf("\n")
 	if len(failedTasks) > 0 {
-		logger.Warn(fmt.Sprintf("Completed %d/%d tasks successfully. Failed: %v",
-			successCount, len(initAgentTasks), failedTasks))
-		logger.Info("💡 Partial success: The configuration has been created with available content")
-		logger.Info("   You can manually add missing sections or re-run with better connectivity")
+		fmt.Printf("⚠️  Completed %d/%d tasks successfully. Failed: %v\n",
+			successCount, len(initAgentTasks), failedTasks)
+		fmt.Printf("💡 Partial success: The configuration has been created with available content\n")
+		fmt.Printf("   You can manually add missing sections or re-run with better connectivity\n")
 	} else {
-		logger.Success("✅ All agent tasks completed successfully")
+		fmt.Println("✅ All agent tasks completed successfully")
 	}
 
 	// CLI commands ensure valid configuration - no validation needed
-	logger.Success("✅ Configuration generated successfully")
+	fmt.Println("✅ Configuration generated successfully")
 
 	// Always return the current file content, even if some tasks failed
 	data, err := os.ReadFile("ai-rulez.yaml")
@@ -485,19 +485,31 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 			time.Sleep(delay)
 		}
 
-		// Use shorter timeout for first attempt, longer for retries with fallback
-		timeout := 60 * time.Second // 1 minute for first attempt
-		if attempt > 1 {
-			timeout = 120 * time.Second // 2 minutes for fallback retries
-		}
+		// Use reasonable timeout for agent tasks
+		timeout := 90 * time.Second // 90 seconds for all attempts
 
 		// Execute the agent call and capture output
+		fmt.Printf("[DEBUG] Invoking agent for task: %s (attempt %d)\n", task.Name, attempt)
+		logger.Debug("Invoking agent", "task", task.Name, "attempt", attempt)
 		output, err := invokeAgent(agent, prompt, timeout)
 
 		if err == nil {
+			fmt.Printf("[DEBUG] Agent output received for %s: %d bytes\n", task.Name, len(output))
+			logger.Debug("Agent output received", "task", task.Name, "outputLength", len(output))
+			if len(output) > 0 {
+				// Log first 500 chars of output for debugging
+				preview := output
+				if len(preview) > 500 {
+					preview = preview[:500] + "..."
+				}
+				fmt.Printf("[DEBUG] Output preview for %s:\n%s\n", task.Name, preview)
+				logger.Debug("Agent output preview", "task", task.Name, "preview", preview)
+			}
 			// Parse and execute CLI commands from agent output
 			if err := executeAgentCommands(output); err != nil {
 				lastErr = fmt.Errorf("failed to execute agent commands: %w", err)
+				fmt.Printf("[DEBUG] Command execution failed for %s: %v\n", task.Name, err)
+				logger.Debug("Command execution failed", "task", task.Name, "error", err.Error())
 				continue
 			}
 
@@ -531,8 +543,28 @@ func (d *TaskDisplay) renderAllTasks() {
 	d.mu.Lock()
 	defer d.mu.Unlock()
 
-	// Initial render - just print all tasks
+	// Sort tasks: completed first, then running, then pending
+	var completedTasks, runningTasks, pendingTasks []*TaskStatus
 	for _, ts := range d.tasks {
+		if ts.completed {
+			completedTasks = append(completedTasks, ts)
+		} else if ts.status == statusPending && ts.attempt == 0 {
+			pendingTasks = append(pendingTasks, ts)
+		} else {
+			runningTasks = append(runningTasks, ts)
+		}
+	}
+
+	// Render completed tasks first
+	for _, ts := range completedTasks {
+		d.renderTaskLine(ts)
+	}
+	// Then running tasks
+	for _, ts := range runningTasks {
+		d.renderTaskLine(ts)
+	}
+	// Then pending tasks
+	for _, ts := range pendingTasks {
 		d.renderTaskLine(ts)
 	}
 }
@@ -542,8 +574,6 @@ func (d *TaskDisplay) updateDisplay() {
 	d.mu.Lock()
 	d.spinnerIndex = (d.spinnerIndex + 1) % len(spinnerFrames)
 	spinnerFrame := spinnerFrames[d.spinnerIndex]
-	// Slow down bullet animation by using integer division
-	bulletFrame := bulletFrames[(d.spinnerIndex/4)%len(bulletFrames)]
 	d.mu.Unlock()
 
 	// Save cursor position
@@ -554,35 +584,45 @@ func (d *TaskDisplay) updateDisplay() {
 		fmt.Printf("\033[A")
 	}
 
-	// Update each task line
+	// Sort tasks: completed first, then running, then pending
+	var completedTasks, runningTasks, pendingTasks []*TaskStatus
 	for _, ts := range d.tasks {
+		if ts.completed {
+			completedTasks = append(completedTasks, ts)
+		} else if ts.status == statusPending && ts.attempt == 0 {
+			pendingTasks = append(pendingTasks, ts)
+		} else {
+			runningTasks = append(runningTasks, ts)
+		}
+	}
+
+	// Render all tasks in order
+	allTasks := append(completedTasks, runningTasks...)
+	allTasks = append(allTasks, pendingTasks...)
+
+	for _, ts := range allTasks {
 		ts.mu.RLock()
 		fmt.Printf("\r\033[K") // Clear line
 
-		// Choose bullet based on status
-		bullet := bulletFrame
+		// Choose symbol based on status
 		if ts.completed {
 			switch ts.status {
 			case statusSuccess:
-				bullet = "✓"
+				fmt.Printf("✓ %s", ts.task.Name)
 			case statusFailed:
-				bullet = "✗"
+				fmt.Printf("✗ %s", ts.task.Name)
+				if ts.lastError != nil {
+					fmt.Printf(" (%s)", getErrorSummary(ts.lastError))
+				}
 			}
-		} else if ts.status == statusRetrying {
-			bullet = "↻"
-		}
-
-		if !ts.completed {
+		} else if ts.status == statusPending && ts.attempt == 0 {
+			fmt.Printf("○ %s (pending)", ts.task.Name)
+		} else {
 			elapsed := time.Since(ts.startTime).Round(time.Second)
 			if ts.attempt > 1 {
 				fmt.Printf("%s %s [%v] (retry %d)", spinnerFrame, ts.task.Name, elapsed, ts.attempt-1)
 			} else {
 				fmt.Printf("%s %s [%v]", spinnerFrame, ts.task.Name, elapsed)
-			}
-		} else {
-			fmt.Printf("%s %s", bullet, ts.task.Name)
-			if ts.status == statusFailed && ts.lastError != nil {
-				fmt.Printf(" ✗ %s", getErrorSummary(ts.lastError))
 			}
 		}
 
@@ -604,6 +644,8 @@ func (d *TaskDisplay) renderTaskLine(ts *TaskStatus) {
 	// Choose symbol based on status
 	symbol := "◉"
 	switch ts.status {
+	case statusPending:
+		symbol = "○"
 	case statusSuccess:
 		symbol = "✓"
 	case statusFailed:
@@ -613,12 +655,16 @@ func (d *TaskDisplay) renderTaskLine(ts *TaskStatus) {
 	}
 
 	if !ts.completed {
-		elapsed := time.Since(ts.startTime).Round(time.Second)
-		spinner := spinnerFrames[d.spinnerIndex]
-		if ts.attempt > 1 {
-			fmt.Printf("%s %s [%v] (retry %d)", spinner, ts.task.Name, elapsed, ts.attempt-1)
+		if ts.status == statusPending && ts.attempt == 0 {
+			fmt.Printf("%s %s (pending)", symbol, ts.task.Name)
 		} else {
-			fmt.Printf("%s %s [%v]", spinner, ts.task.Name, elapsed)
+			elapsed := time.Since(ts.startTime).Round(time.Second)
+			spinner := spinnerFrames[d.spinnerIndex]
+			if ts.attempt > 1 {
+				fmt.Printf("%s %s [%v] (retry %d)", spinner, ts.task.Name, elapsed, ts.attempt-1)
+			} else {
+				fmt.Printf("%s %s [%v]", spinner, ts.task.Name, elapsed)
+			}
 		}
 	} else {
 		fmt.Printf("%s %s", symbol, ts.task.Name)
@@ -670,6 +716,7 @@ func executeAgentCommands(output string) error {
 
 	// Parse output for ai-rulez commands
 	lines := strings.Split(output, "\n")
+	commandsFound := 0
 	for _, line := range lines {
 		line = strings.TrimSpace(line)
 
@@ -678,12 +725,24 @@ func executeAgentCommands(output string) error {
 			// Extract the command (might be in different formats)
 			cmd := extractCommand(line)
 			if cmd != "" {
+				commandsFound++
+				fmt.Printf("[DEBUG] Found command: %s\n", cmd)
+				logger.Debug("Found command", "command", cmd)
 				if err := executeCommand(cmd); err != nil {
+					fmt.Printf("[DEBUG] Failed to execute command: %s - Error: %v\n", cmd, err)
 					logger.Warn("Failed to execute command", "command", cmd, "error", err.Error())
 					// Continue with other commands instead of failing completely
+				} else {
+					fmt.Printf("[DEBUG] Successfully executed command: %s\n", cmd)
+					logger.Debug("Successfully executed command", "command", cmd)
 				}
 			}
 		}
+	}
+
+	if commandsFound == 0 {
+		fmt.Printf("[DEBUG] No ai-rulez commands found in agent output\n")
+		logger.Debug("No ai-rulez commands found in agent output")
 	}
 
 	return nil
@@ -742,13 +801,13 @@ func executeCommand(cmdStr string) error {
 	cmd := exec.Command(aiRulezPath, parts[1:]...) //nolint:gosec // Subprocess is intentional and controlled
 	cmd.Dir = "."                                  // Execute in current directory where ai-rulez.yaml is
 
+	fmt.Printf("[DEBUG] Executing: %s %s\n", aiRulezPath, strings.Join(parts[1:], " "))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		fmt.Printf("[DEBUG] Command output: %s\n", string(output))
 		return fmt.Errorf("command failed: %w, output: %s", err, string(output))
 	}
-
-	// Log successful command execution for debugging
-	logger.Debug("Executed agent command", "command", cmdStr)
+	fmt.Printf("[DEBUG] Command succeeded, output: %s\n", string(output))
 
 	return nil
 }
@@ -767,7 +826,12 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 	}
 
 	if numWaves > 1 {
-		logger.Info(fmt.Sprintf("📋 Executing %d tasks in %d waves (up to %d agents per wave)", totalTasks, numWaves, maxAgents))
+		fmt.Printf("\n📋 Executing %d tasks in %d waves (up to %d agents per wave)\n", totalTasks, numWaves, maxAgents)
+	}
+
+	// Always show Wave 1 when starting
+	if totalTasks > 0 {
+		fmt.Printf("🌊 Wave 1/%d: Running tasks 1-%d\n", numWaves, min(maxAgents, totalTasks))
 	}
 
 	// Execute tasks in waves
@@ -775,8 +839,8 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 		startIdx := wave * maxAgents
 		endIdx := min(startIdx+maxAgents, totalTasks)
 
-		if numWaves > 1 {
-			logger.Info(fmt.Sprintf("🌊 Wave %d/%d: Running tasks %d-%d", wave+1, numWaves, startIdx+1, endIdx))
+		if numWaves > 1 && wave > 0 {
+			fmt.Printf("\n🌊 Wave %d/%d: Running tasks %d-%d\n", wave+1, numWaves, startIdx+1, endIdx)
 		}
 
 		// Execute current wave
@@ -808,6 +872,13 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 		wg.Add(1)
 		go func(localIndex int, t AgentTask) {
 			defer wg.Done()
+
+			// Mark task as running when it starts
+			waveStatuses[localIndex].mu.Lock()
+			waveStatuses[localIndex].status = statusRunning
+			waveStatuses[localIndex].attempt = 1
+			waveStatuses[localIndex].startTime = time.Now()
+			waveStatuses[localIndex].mu.Unlock()
 
 			globalIndex := baseIndex + localIndex
 			err := executeAgentTaskWithStatus(t, agent, context, waveStatuses[localIndex])
