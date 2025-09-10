@@ -172,7 +172,7 @@ agents:
 
 ### `generate`
 
-Create all your AI instruction files.
+Create all your AI instruction files and configure MCP servers.
 
 ```bash
 ai-rulez generate
@@ -185,12 +185,34 @@ ai-rulez generate --recursive
 
 # Preview what would be generated without creating files
 ai-rulez generate --dry-run
+
+# Skip CLI MCP tool configuration (only generate files)
+ai-rulez generate --no-configure-cli-mcp
 ```
+
+#### MCP Server Integration
+
+By default, `generate` automatically configures MCP servers for available CLI tools:
+
+```bash
+ai-rulez generate
+# ✅ Generated 3 file(s) successfully
+# ✅ Configured claude MCP server: ai-rulez
+# ✅ Configured gemini MCP server: database-tools
+```
+
+**Supported CLI tools:**
+- **Claude CLI**: `claude mcp add` commands with environment variables
+- **Gemini CLI**: `gemini mcp add` commands with automatic configuration
+
+Use `--no-configure-cli-mcp` (or `--skip-cli-mcp` alias) to disable CLI configuration while still generating config files for other tools.
 
 #### Options:
 - `--dry-run` - Preview files that would be generated without creating them
 - `--update-gitignore` - Control whether to update `.gitignore` (overrides config setting)
 - `--recursive` - Process all `ai-rulez.yml` files in subdirectories
+- `--no-configure-cli-mcp` - Skip configuring CLI-based MCP tools (Claude, Gemini, etc.)
+- `--skip-cli-mcp` - Alias for `--no-configure-cli-mcp`
 
 #### Gitignore Behavior:
 By default, `generate` will automatically add all generated files to `.gitignore` to keep your repository clean. This includes:

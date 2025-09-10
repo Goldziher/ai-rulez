@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/mcp/cli"
 	"github.com/Goldziher/ai-rulez/internal/migration"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/samber/oops"
@@ -22,6 +23,7 @@ var (
 	updateGitignore    bool
 	updateGitignoreSet bool
 	recursive          bool
+	skipCLIMCP         bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -39,6 +41,8 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Update .gitignore files to include generated output files")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
+	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "no-configure-cli-mcp", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
+	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
@@ -131,6 +135,13 @@ func generateFiles(gen *generator.Generator, cfg *config.Config, configPath stri
 	progress.PrintIfNotQuiet("✅ Generated %d file(s) successfully\n", len(cfg.Outputs))
 	for _, output := range cfg.Outputs {
 		progress.PrintIfNotQuiet("  - %s\n", output.Path)
+	}
+
+	// Configure CLI-based MCP tools by default (unless explicitly disabled)
+	if !skipCLIMCP && len(cfg.MCPServers) > 0 {
+		if err := cli.ConfigureCLITools(cfg.MCPServers); err != nil {
+			progress.PrintIfNotQuiet("⚠️  Warning: CLI MCP configuration failed: %v\n", err)
+		}
 	}
 }
 
@@ -238,6 +249,15 @@ func handleGeneration(gen *generator.Generator, cfg *config.Config, configPath s
 	}
 
 	handleGitignoreUpdate(configPath, cfg)
+
+	// Configure CLI-based MCP tools by default (unless explicitly disabled)
+	if !skipCLIMCP && len(cfg.MCPServers) > 0 {
+		if err := cli.ConfigureCLITools(cfg.MCPServers); err != nil {
+			// Don't fail the entire process for CLI MCP errors, just log warning
+			logger.Debug("CLI MCP configuration failed", "error", err)
+		}
+	}
+
 	fileCounter.FinishFile()
 	return len(cfg.Outputs)
 }
