@@ -263,7 +263,6 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	
 	// On Windows, ensure cleanup happens properly
 	if runtime.GOOS == "windows" {
 		t.Cleanup(func() {
@@ -283,7 +282,7 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	cmd = exec.Command("git", "config", "user.name", "Test User")
 	cmd.Dir = tempDir
 	cmd.Run()
-	
+
 	cmd = exec.Command("git", "config", "user.email", "test@example.com")
 	cmd.Dir = tempDir
 	cmd.Run()

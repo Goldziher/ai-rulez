@@ -8,33 +8,167 @@ The essentials for day-to-day use.
 
 ### `init`
 
-Create a new `ai-rulez.yml` file in the current directory with an intelligent template.
+Create a new `ai-rulez.yml` file in the current directory with intelligent project analysis and optional AI assistance.
 
 ```bash
+# Quick start with popular AI tools
 ai-rulez init "My Project" --popular
+
+# Use a specific preset for targeted tools
+ai-rulez init "My Project" --preset claude
+
+# Get AI-powered configuration generation
+ai-rulez init "My Project" --preset popular --use-agent claude
 ```
 
-The `init` command generates a comprehensive template where only required fields (metadata and outputs) are uncommented. All optional features are provided as well-documented, commented examples that you can selectively enable.
+The `init` command is your starting point for any project. It creates a comprehensive configuration that's tailored to your specific codebase, with optional AI assistance to generate project-specific rules and documentation.
 
-#### How it works:
-1. **Analyzes your codebase** - Detects tech stack, build tools, and project structure
-2. **Generates smart template** - Creates a rich YAML template with inline documentation
-3. **Optional AI assistance** - If you have Claude, Gemini, or AMP installed, it can intelligently customize the template based on your project
+#### How It Works
 
-#### Options:
-- `--popular` - Enable popular AI tools (Claude, Cursor, Windsurf, Copilot)
-- `--preset <name>` - Use a specific preset (claude, cursor, gemini, amp, etc.)
-- `--use-agent <agent>` - Use an AI agent to customize the template (claude, continue, gemini, amp)
-- `--yes` - Skip confirmation prompts
+The init process happens in phases:
 
-#### AI Agent Support:
-Currently supports:
-- **Claude** - Uses `claude --print` command
-- **Continue.dev** - Uses `cn --print` command
-- **Gemini** - Uses `gemini --prompt` command  
-- **AMP** - Uses `amp --execute` command
+1. **Project Analysis** - Automatically detects:
+   - Programming languages and frameworks (Go, TypeScript, Python, React, etc.)
+   - Build tools and package managers (npm, go.mod, poetry, etc.)  
+   - Project structure patterns (monorepo, microservices, etc.)
+   - Existing documentation and testing setup
 
-Note: Codex and Cursor agents are not supported for template generation as they require interactive mode or special authentication that doesn't work well with automated generation.
+2. **Template Generation** - Creates a base configuration with:
+   - Metadata based on your project structure
+   - Appropriate outputs for selected AI tools
+   - Commented examples of advanced features
+
+3. **AI Enhancement** (optional) - If you specify `--use-agent`, the AI will:
+   - Generate project-specific rules based on your codebase
+   - Create documentation sections describing your architecture
+   - Define coding standards relevant to your tech stack
+   - Set up specialized agents for your workflow
+
+#### Basic Usage
+
+**Simple initialization:**
+```bash
+ai-rulez init "My Awesome Project"
+```
+
+**With popular AI tools:**
+```bash
+ai-rulez init "My Awesome Project" --popular
+```
+
+**Specific AI tool:**
+```bash
+ai-rulez init "My Project" --preset claude --with-agents
+```
+
+#### Advanced Usage
+
+**AI-powered generation:**
+```bash
+# Let Claude analyze your project and generate comprehensive rules
+ai-rulez init "My Project" --preset popular --use-agent claude
+
+# Use Gemini for configuration generation
+ai-rulez init "My Project" --preset gemini --use-agent gemini
+
+# Skip confirmation prompts for automation
+ai-rulez init "My Project" --popular --use-agent claude --yes
+```
+
+**Custom provider combinations:**
+```bash
+# Multiple specific providers
+ai-rulez init "My Project" --claude --cursor --windsurf
+
+# All supported providers
+ai-rulez init "My Project" --all
+
+# Include specialized features
+ai-rulez init "My Project" --claude --with-agents --with-sections
+```
+
+#### Complete Options
+
+| Option | Description |
+|--------|-------------|
+| `--popular` | Enable Claude, Cursor, Windsurf, and Copilot (recommended) |
+| `--preset <name>` | Use a specific preset (claude, cursor, windsurf, copilot, gemini, amp, cline, continue-dev, codex) |
+| `--all` | Enable all supported AI tools |
+| `--claude` | Include Claude configuration (.CLAUDE.md) |
+| `--cursor` | Include Cursor configuration (.cursor/rules/) |
+| `--windsurf` | Include Windsurf configuration (.windsurf/rules.md) |
+| `--copilot` | Include GitHub Copilot configuration (.github/copilot-instructions.md) |
+| `--gemini` | Include Gemini configuration (gemini-instructions.md) |
+| `--amp` | Include AMP configuration (amp-context.md) |
+| `--cline` | Include Cline configuration (.cline/rules.md) |
+| `--continue-dev` | Include Continue.dev configuration (.continue/rules/) |
+| `--codex` | Include Codex configuration (codex-context.md) |
+| `--use-agent <name>` | Use AI agent for intelligent configuration generation |
+| `--no-agent` | Skip AI agent detection completely |
+| `--list-agents` | List available AI agents and exit |
+| `--with-agents` | Include agent configurations (creates specialized sub-agents) |
+| `--with-sections` | Include documentation sections (enabled by default) |
+| `--setup-hooks` | Configure git hooks for automatic validation |
+| `--yes` | Skip all confirmation prompts (useful for scripting) |
+
+#### AI Agent Support
+
+When using `--use-agent`, the command will attempt to use your installed AI CLI tools:
+
+| Agent | Command Used | Capabilities |
+|-------|-------------|--------------|
+| **claude** | `claude --print` | Comprehensive project analysis, generates detailed rules and sections |
+| **gemini** | `gemini --prompt` | Fast configuration generation, good at detecting patterns |
+| **amp** | `amp --execute` | Focused on development workflow optimization |
+| **continue** | `cn --print` | Specialized for code context and development practices |
+
+**Requirements:**
+- The AI CLI tool must be installed and available in your PATH
+- The tool must support non-interactive mode (print/prompt mode)
+- Internet connection required for AI analysis
+
+#### Example Outputs
+
+**Basic init** creates a minimal configuration:
+```yaml
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+metadata:
+  name: "My Project"
+outputs:
+  - path: "CLAUDE.md"
+```
+
+**AI-powered init** with `--use-agent claude --popular` creates:
+```yaml
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+metadata:
+  name: "My Project"  
+  description: "Go-based microservice with REST API and PostgreSQL backend"
+presets:
+  - "popular"
+rules:
+  - name: "Go Code Standards"
+    priority: high
+    content: "Follow standard Go project layout (cmd/, internal/, pkg/)..."
+  - name: "API Design"  
+    priority: critical
+    content: "RESTful APIs should follow OpenAPI 3.0 specification..."
+sections:
+  - name: "Architecture Overview"
+    priority: critical
+    content: "This service implements clean architecture with..."
+agents:
+  - name: "go-expert"
+    description: "Go language specialist for backend development"
+    system_prompt: "You are a Go expert focusing on..."
+```
+
+#### Tips
+
+- **Start simple**: Use `--popular` for most projects
+- **Use AI assistance**: Add `--use-agent claude` for comprehensive, project-specific configuration
+- **For automation**: Use `--yes` to skip prompts in CI/CD or scripts
+- **Monorepos**: Run init in each service directory for focused configurations
 
 ### `generate`
 
