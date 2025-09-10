@@ -45,8 +45,12 @@ jobs:
           args: --timeout=5m
 
   test:
-    name: Test
-    runs-on: ubuntu-latest
+    name: Test - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
@@ -75,17 +79,31 @@ jobs:
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run tests
+      - name: Run all tests (unit + platform)
         run: task test
+
+      - name: Run cross-platform specific tests
+        run: task test:platform
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}
+          path: |
+            coverage.out
+            *.log
+          retention-days: 7
 
 
   e2e-test:
-    name: E2E Tests
-    runs-on: ubuntu-latest
+    name: E2E Tests - ${{ matrix.os }} - ${{ matrix.test-suite }}
+    runs-on: ${{ matrix.os }}
     needs: [lint, test]
     timeout-minutes: 15
     strategy:
       matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
         test-suite: [cli, mcp, integration]
       fail-fast: false
     steps:
@@ -124,12 +142,11 @@ jobs:
           echo "::group::E2E Tests - ${{ matrix.test-suite }}"
           task test:e2e:${{ matrix.test-suite }}
           echo "::endgroup::"
-        
       - name: Upload test results
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: e2e-results-${{ matrix.test-suite }}
+          name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
           path: testing/e2e/*.log
           retention-days: 7
 
@@ -179,10 +196,64 @@ jobs:
           path: benchmark-results.txt
           retention-days: 30
 
+  comprehensive-test:
+    name: Comprehensive Test Suite - ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    needs: [lint]
+    timeout-minutes: 30
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+      fail-fast: false
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v5
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.25'
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Install Task
+        uses: arduino/setup-task@v2
+        if: steps.task-cache.outputs.cache-hit != 'true'
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build binary for tests
+        run: task build
+
+      - name: Run all test suites (unit + platform + e2e)
+        run: task test:all
+
+      - name: Upload comprehensive test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: comprehensive-test-results-${{ matrix.os }}
+          path: |
+            coverage.out
+            testing/e2e/*.log
+            *.log
+          retention-days: 7
+
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, test, e2e-test]
+    needs: [lint, test, e2e-test, comprehensive-test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v5

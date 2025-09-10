@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/agents"
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -41,7 +42,7 @@ var InitCmd = &cobra.Command{
 	Use:   "init [project-name]",
 	Short: "Initialize a new AI rules configuration",
 	Long: `Initialize a new AI rules configuration for your project.
-This creates an ai_rulez.yaml file with sensible defaults and 
+This creates an ai-rulez.yaml file with sensible defaults and 
 configures outputs for your selected AI assistants.`,
 	Args: cobra.MaximumNArgs(1),
 	Run:  runInit,
@@ -114,11 +115,66 @@ func handleListAgents() bool {
 }
 
 func checkExistingConfig() {
-	if _, err := config.FindConfigFile("."); err == nil {
-		logger.Error("Configuration file already exists in this directory")
-		logger.Info("Remove or rename the existing file to initialize a new configuration")
-		os.Exit(1)
+	// Check only in current directory, not parent directories
+	configNames := []string{
+		".ai-rulez.yaml", ".ai-rulez.yml",
+		"ai-rulez.yaml", "ai-rulez.yml",
+		".ai_rulez.yaml", ".ai_rulez.yml",
+		"ai_rulez.yaml", "ai_rulez.yml",
 	}
+
+	for _, name := range configNames {
+		if _, err := os.Stat(name); err != nil {
+			continue
+		}
+		logger.Info("Configuration file already exists", "file", name)
+
+		// Check if we should prompt for overwrite
+		if !shouldOverwriteConfig(name) {
+			logger.Info("Operation canceled. Remove or rename the existing file to initialize a new configuration")
+			os.Exit(1)
+		}
+
+		// User chose to overwrite, remove the existing file
+		if err := os.Remove(name); err != nil {
+			logger.Error("Failed to remove existing configuration file", "file", name, "error", err)
+			os.Exit(1)
+		}
+		logger.Info("Existing configuration file removed", "file", name)
+		break // Only remove one file
+	}
+}
+
+func shouldOverwriteConfig(filename string) bool {
+	// Check if we're in non-interactive mode (CI, --yes flag, etc.)
+	if autoYes || os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
+		logger.Info("Auto-overwriting existing configuration file (--yes or CI environment)")
+		return true
+	}
+
+	// Check if stdin is available for interactive prompts
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		logger.Info("Cannot prompt for input, canceling operation")
+		return false
+	}
+	if (stat.Mode() & os.ModeCharDevice) == 0 {
+		logger.Info("Non-interactive terminal, canceling operation")
+		return false
+	}
+
+	// Prompt user for confirmation
+	fmt.Printf("⚠️  Overwrite existing file '%s'? (y/N): ", filename)
+
+	var response string
+	_, err = fmt.Scanln(&response)
+	if err != nil && err.Error() != "unexpected newline" {
+		logger.Info("Failed to read input, canceling operation")
+		return false
+	}
+
+	response = strings.ToLower(strings.TrimSpace(response))
+	return response == "y" || response == "yes"
 }
 
 func getProjectName(args []string) string {
@@ -135,10 +191,10 @@ func getProjectName(args []string) string {
 
 func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig templates.ProviderConfig) bool {
 	if !noAgent && (useAgent != "" || agents.ShouldPromptForAgent()) {
-		generatedConfig, handled := agents.HandleAgentGeneration(cmd, projectName, providerConfig, useAgent, autoYes)
+		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, useAgent, autoYes)
 		if handled {
-			writeConfigFile(generatedConfig)
-			logger.Info("✅ Configuration generated successfully with AI assistance")
+			// Don't overwrite - agents have already edited the file directly
+			fmt.Println("✅ Configuration generated with AI assistance")
 			return true
 		}
 	}
@@ -179,16 +235,16 @@ func getPresetsFromProviderConfig(providerConfig templates.ProviderConfig) []str
 }
 
 func writeConfigFile(content string) {
-	if err := os.WriteFile("ai_rulez.yaml", []byte(content), 0o644); err != nil {
+	if err := os.WriteFile("ai-rulez.yaml", []byte(content), 0o644); err != nil {
 		logger.LogError("Failed to write configuration file", oops.
-			With("path", "ai_rulez.yaml").
+			With("path", "ai-rulez.yaml").
 			Wrapf(err, "write file"))
 		os.Exit(1)
 	}
 }
 
 func displaySuccessMessage(projectName string, providerConfig templates.ProviderConfig) {
-	logger.Info("✅ Created ai_rulez.yaml", "project", projectName)
+	logger.Info("✅ Created ai-rulez.yaml", "project", projectName)
 	logger.Info("Configuration includes:")
 
 	displayProviderIncludes(providerConfig)
@@ -228,7 +284,7 @@ func displayProviderIncludes(providerConfig templates.ProviderConfig) {
 
 func displayNextSteps() {
 	logger.Info("\nNext steps:")
-	logger.Info("  1. Edit ai_rulez.yaml to customize your rules and sections")
+	logger.Info("  1. Edit ai-rulez.yaml to customize your rules and sections")
 	logger.Info("  2. Run 'ai-rulez generate' to create the output files")
 
 	if hooks.DetectGitHooks() != "" {

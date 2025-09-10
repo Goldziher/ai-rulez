@@ -17,17 +17,22 @@ tasks:
   test:
     desc: Run unit tests
     cmds:
-      - go test -timeout=30s ./cmd/... ./internal/... ./schema/...
+      - go test -timeout=30s ./cmd/... ./internal/... ./schema/... ./testing/platform/...
 
   test:coverage:
     desc: Run unit tests with coverage
     cmds:
-      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/...
+      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/... ./testing/platform/...
 
   test:race:
     desc: Run unit tests with race detection
     cmds:
-      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/...
+      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/... ./testing/platform/...
+
+  test:platform:
+    desc: Run cross-platform compatibility tests
+    cmds:
+      - go test -timeout=60s -v ./testing/platform/...
 
   test:benchmark:
     desc: Run benchmark tests
@@ -35,8 +40,8 @@ tasks:
       - cd testing/e2e && go test -timeout=10m -bench=. -benchmem .
 
   test:all:
-    desc: Run all tests (unit + e2e)
-    deps: [test, test:e2e]
+    desc: Run all tests (unit + platform + e2e)
+    deps: [test, test:platform, test:e2e]
 
   test:e2e:
     desc: Run all e2e tests
@@ -92,9 +97,6 @@ tasks:
     cmds:
       - go fmt ./...
 
-  fmt:
-    desc: Format code (alias for format)
-    deps: [format]
 
   tidy:
     desc: Tidy dependencies
