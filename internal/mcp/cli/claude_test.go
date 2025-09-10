@@ -156,21 +156,16 @@ func TestClaudeIntegrator_ConfigureServer_CommandConstruction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// We can't actually execute the command in tests, but we can validate
-			// the configuration and ensure the validation passes
 			err := ValidateClaudeConfig(&tt.server)
 			require.NoError(t, err, "Server configuration should be valid")
 
-			// Verify transport handling
 			assert.Equal(t, tt.server.GetTransport(), tt.server.Transport,
 				"Transport should be correctly set")
 
-			// Verify stdio-specific requirements
 			if tt.server.GetTransport() == "stdio" {
 				assert.NotEmpty(t, tt.server.Command, "Stdio server should have command")
 			}
 
-			// Verify HTTP/SSE-specific requirements
 			if tt.server.GetTransport() == "http" || tt.server.GetTransport() == "sse" {
 				assert.NotEmpty(t, tt.server.URL, "HTTP/SSE server should have URL")
 			}
@@ -206,7 +201,6 @@ func TestClaudeIntegrator_ConfigureServer_ValidationErrors(t *testing.T) {
 			server: config.MCPServer{
 				Name:      "bad-server",
 				Transport: "stdio",
-				// Missing Command
 			},
 			description: "Should fail for stdio without command",
 		},
@@ -215,7 +209,6 @@ func TestClaudeIntegrator_ConfigureServer_ValidationErrors(t *testing.T) {
 			server: config.MCPServer{
 				Name:      "bad-server",
 				Transport: "http",
-				// Missing URL
 			},
 			description: "Should fail for HTTP without URL",
 		},

@@ -13,7 +13,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// TestConfigPathHandling tests config path handling across different platforms
 func TestConfigPathHandling(t *testing.T) {
 	tests := []struct {
 		name          string
@@ -55,9 +54,7 @@ func TestConfigPathHandling(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test path validity
 			if tt.platform == "any" || tt.platform == runtime.GOOS {
-				// Test filepath operations work correctly
 				dir := filepath.Dir(tt.configPath)
 				base := filepath.Base(tt.configPath)
 
@@ -65,7 +62,6 @@ func TestConfigPathHandling(t *testing.T) {
 				assert.NotEmpty(t, base, "Base filename should not be empty")
 				assert.True(t, strings.HasSuffix(base, ".yaml"), "Should have .yaml extension")
 
-				// Test path cleaning
 				cleaned := filepath.Clean(tt.configPath)
 				assert.NotEmpty(t, cleaned, "Cleaned path should not be empty")
 			}
@@ -73,7 +69,6 @@ func TestConfigPathHandling(t *testing.T) {
 	}
 }
 
-// TestOutputPathGeneration tests output path generation for different platforms
 func TestOutputPathGeneration(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -106,38 +101,30 @@ func TestOutputPathGeneration(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Create full path
 			fullPath := filepath.Join(tempDir, tt.outputPath)
 
-			// Create directory if needed
 			dir := filepath.Dir(fullPath)
 			err := os.MkdirAll(dir, 0o755)
 			require.NoError(t, err, "Should be able to create directory structure")
 
-			// Write file
 			err = os.WriteFile(fullPath, []byte(tt.content), 0o644)
 			require.NoError(t, err, "Should be able to write output file")
 
-			// Verify file exists and is readable
 			content, err := os.ReadFile(fullPath)
 			require.NoError(t, err, "Should be able to read output file")
 			assert.Equal(t, tt.content, string(content), "File content should match")
 
-			// Test platform-specific path properties
 			assert.True(t, filepath.IsAbs(fullPath), "Full path should be absolute")
 
 			rel, err := filepath.Rel(tempDir, fullPath)
 			require.NoError(t, err)
-			// Normalize path separators for comparison (Windows uses backslash)
 			expectedPath := filepath.FromSlash(tt.outputPath)
 			assert.Equal(t, expectedPath, rel, "Relative path should match original")
 		})
 	}
 }
 
-// TestConfigSerializationAcrossPlatforms tests YAML serialization/deserialization
 func TestConfigSerializationAcrossPlatforms(t *testing.T) {
-	// Create a test configuration
 	testConfig := map[string]interface{}{
 		"metadata": map[string]interface{}{
 			"name":        "Cross Platform Test",
@@ -158,16 +145,13 @@ func TestConfigSerializationAcrossPlatforms(t *testing.T) {
 		},
 	}
 
-	// Test serialization
 	yamlData, err := yaml.Marshal(testConfig)
 	require.NoError(t, err, "YAML marshaling should work on all platforms")
 
-	// Test deserialization
 	var parsedConfig map[string]interface{}
 	err = yaml.Unmarshal(yamlData, &parsedConfig)
 	require.NoError(t, err, "YAML unmarshaling should work on all platforms")
 
-	// Verify data integrity
 	metadata := parsedConfig["metadata"].(map[string]interface{})
 	assert.Equal(t, "Cross Platform Test", metadata["name"])
 
@@ -177,37 +161,29 @@ func TestConfigSerializationAcrossPlatforms(t *testing.T) {
 	outputs := parsedConfig["outputs"].([]interface{})
 	assert.Len(t, outputs, 1)
 
-	// Test file I/O with different line endings
 	tempFile := filepath.Join(t.TempDir(), "test_config.yaml")
 
-	// Write config
 	err = os.WriteFile(tempFile, yamlData, 0o644)
 	require.NoError(t, err, "Writing config file should work")
 
-	// Read back
 	readData, err := os.ReadFile(tempFile)
 	require.NoError(t, err, "Reading config file should work")
 
-	// Parse read data
 	var readConfig map[string]interface{}
 	err = yaml.Unmarshal(readData, &readConfig)
 	require.NoError(t, err, "Parsing read config should work")
 
-	// Verify consistency
 	readMetadata := readConfig["metadata"].(map[string]interface{})
 	assert.Equal(t, "Cross Platform Test", readMetadata["name"])
 }
 
-// TestConfigLoadingWithPlatformPaths tests config loading with platform-specific paths
 func TestConfigLoadingWithPlatformPaths(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create nested directory structure
 	configDir := filepath.Join(tempDir, "configs", "test")
 	err := os.MkdirAll(configDir, 0o755)
 	require.NoError(t, err)
 
-	// Create test config
 	configPath := filepath.Join(configDir, "ai_rulez.yaml")
 	configData := `
 metadata:
@@ -226,8 +202,6 @@ outputs:
 	err = os.WriteFile(configPath, []byte(configData), 0o644)
 	require.NoError(t, err)
 
-	// Test loading config (using our actual config loading logic)
-	// Change to the config directory to test relative path handling
 	originalWd, err := os.Getwd()
 	require.NoError(t, err)
 	defer os.Chdir(originalWd)
@@ -235,16 +209,14 @@ outputs:
 	err = os.Chdir(configDir)
 	require.NoError(t, err)
 
-	// Test loading with different path formats
 	pathTests := []string{
-		"ai_rulez.yaml",                     // Current directory
-		"./ai_rulez.yaml",                   // Explicit relative
-		filepath.Join(".", "ai_rulez.yaml"), // Joined relative
+		"ai_rulez.yaml",
+		"./ai_rulez.yaml",
+		filepath.Join(".", "ai_rulez.yaml"),
 	}
 
 	for _, testPath := range pathTests {
 		t.Run("path: "+testPath, func(t *testing.T) {
-			// This tests our actual config loading logic
 			cfg, err := config.LoadConfig(testPath)
 			require.NoError(t, err, "Config loading should work with path: %s", testPath)
 
@@ -256,23 +228,21 @@ outputs:
 	}
 }
 
-// TestHiddenDirectoryHandling tests handling of hidden directories across platforms
 func TestHiddenDirectoryHandling(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create various directory types
 	directories := []struct {
 		name     string
 		isHidden bool
 	}{
 		{".git", true},
-		{".github", true}, // But should be processed for workflows
+		{".github", true},
 		{".cursor", true},
 		{".continue", true},
 		{".claude", true},
 		{"src", false},
 		{"docs", false},
-		{".DS_Store", true}, // macOS specific
+		{".DS_Store", true},
 	}
 
 	for _, dir := range directories {
@@ -280,13 +250,11 @@ func TestHiddenDirectoryHandling(t *testing.T) {
 		err := os.MkdirAll(dirPath, 0o755)
 		require.NoError(t, err)
 
-		// Add a test file
 		testFile := filepath.Join(dirPath, "test.txt")
 		err = os.WriteFile(testFile, []byte("test"), 0o644)
 		require.NoError(t, err)
 	}
 
-	// Test directory scanning logic (mimics our codebase structure scanning)
 	entries, err := os.ReadDir(tempDir)
 	require.NoError(t, err)
 
@@ -296,7 +264,6 @@ func TestHiddenDirectoryHandling(t *testing.T) {
 	for _, entry := range entries {
 		name := entry.Name()
 		if entry.IsDir() {
-			// Test our hidden directory logic
 			if strings.HasPrefix(name, ".") && name != ".github" {
 				hiddenDirs = append(hiddenDirs, name)
 			} else {
@@ -305,28 +272,23 @@ func TestHiddenDirectoryHandling(t *testing.T) {
 		}
 	}
 
-	// Verify our logic works correctly
 	assert.Contains(t, hiddenDirs, ".git", "Should detect .git as hidden")
 	assert.Contains(t, hiddenDirs, ".cursor", "Should detect .cursor as hidden")
 	assert.Contains(t, visibleDirs, ".github", "Should treat .github as visible")
 	assert.Contains(t, visibleDirs, "src", "Should detect src as visible")
 
-	// Platform-specific assertions
 	if runtime.GOOS == "darwin" {
 		assert.Contains(t, hiddenDirs, ".DS_Store", "Should detect macOS .DS_Store as hidden")
 	}
 }
 
-// TestTemplatePathHandling tests template file path handling
 func TestTemplatePathHandling(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create template directory structure
 	templateDir := filepath.Join(tempDir, "templates")
 	err := os.MkdirAll(templateDir, 0o755)
 	require.NoError(t, err)
 
-	// Test template types with platform-appropriate paths
 	templates := []struct {
 		name    string
 		path    string
@@ -351,7 +313,6 @@ func TestTemplatePathHandling(t *testing.T) {
 
 	for _, tmpl := range templates {
 		t.Run(tmpl.name, func(t *testing.T) {
-			// Create template file with proper directory structure
 			tmplPath := filepath.Join(templateDir, tmpl.path)
 			tmplDir := filepath.Dir(tmplPath)
 
@@ -361,16 +322,13 @@ func TestTemplatePathHandling(t *testing.T) {
 			err = os.WriteFile(tmplPath, []byte(tmpl.content), 0o644)
 			require.NoError(t, err, "Should write template file")
 
-			// Verify file can be read back correctly
 			content, err := os.ReadFile(tmplPath)
 			require.NoError(t, err, "Should read template file")
 			assert.Equal(t, tmpl.content, string(content), "Template content should match")
 
-			// Test path manipulation
 			relPath, err := filepath.Rel(templateDir, tmplPath)
 			require.NoError(t, err)
 
-			// The relative path should match our original path (with normalization)
 			expectedRel := filepath.FromSlash(tmpl.path)
 			assert.Equal(t, expectedRel, relPath, "Relative path should be normalized correctly")
 		})
