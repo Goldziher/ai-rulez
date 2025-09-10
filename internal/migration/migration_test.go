@@ -1277,7 +1277,6 @@ func TestMigrateTemplateWithTitleReferences(t *testing.T) {
 }
 
 func TestFullMigrationWithTitleReferences(t *testing.T) {
-	// Create a temporary v1 config with .Title references
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "ai-rulez.yaml")
 
@@ -1306,38 +1305,29 @@ outputs:
 	err := os.WriteFile(configPath, []byte(v1Config), 0o644)
 	require.NoError(t, err)
 
-	// Perform migration
 	version, err := DetectAndMigrate(configPath)
 	require.NoError(t, err)
 	assert.Equal(t, "v1", version)
 
-	// Read migrated content
 	migratedContent, err := os.ReadFile(configPath)
 	require.NoError(t, err)
 
-	// Check that migration was successful
 	migratedStr := string(migratedContent)
 
-	// Check schema was updated
 	assert.Contains(t, migratedStr, "ai-rules-v2.schema.json")
 
-	// Check sections have name instead of title
 	assert.Contains(t, migratedStr, "name: Section One")
 	assert.Contains(t, migratedStr, "name: Section Two")
 	assert.NotContains(t, migratedStr, "title:")
 
-	// Check outputs have path instead of file
 	assert.Contains(t, migratedStr, "path: output.md")
 	assert.NotContains(t, migratedStr, "file:")
 
-	// Check template was converted to object format
 	assert.Contains(t, migratedStr, "type: inline")
 
-	// Check .Title was replaced with .Name in template
 	assert.Contains(t, migratedStr, "{{.Name}}")
 	assert.NotContains(t, migratedStr, "{{.Title}}")
 
-	// Check priorities were converted
 	assert.Contains(t, migratedStr, "priority: medium")
 	assert.Contains(t, migratedStr, "priority: minimal")
 }

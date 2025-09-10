@@ -137,7 +137,6 @@ func generateFiles(gen *generator.Generator, cfg *config.Config, configPath stri
 		progress.PrintIfNotQuiet("  - %s\n", output.Path)
 	}
 
-	// Configure CLI-based MCP tools by default (unless explicitly disabled)
 	if !skipCLIMCP && len(cfg.MCPServers) > 0 {
 		if err := cli.ConfigureCLITools(cfg.MCPServers); err != nil {
 			progress.PrintIfNotQuiet("⚠️  Warning: CLI MCP configuration failed: %v\n", err)
@@ -250,10 +249,8 @@ func handleGeneration(gen *generator.Generator, cfg *config.Config, configPath s
 
 	handleGitignoreUpdate(configPath, cfg)
 
-	// Configure CLI-based MCP tools by default (unless explicitly disabled)
 	if !skipCLIMCP && len(cfg.MCPServers) > 0 {
 		if err := cli.ConfigureCLITools(cfg.MCPServers); err != nil {
-			// Don't fail the entire process for CLI MCP errors, just log warning
 			logger.Debug("CLI MCP configuration failed", "error", err)
 		}
 	}
