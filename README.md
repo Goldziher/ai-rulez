@@ -80,13 +80,26 @@ Run `ai-rulez generate` → get all your configuration files, perfectly synchron
 ## Quick Start
 
 ```bash
-# 1. Initialize your project with a preset (recommended)
+# 1. AI-powered initialization (recommended)
+ai-rulez init "My Project" --preset popular --use-agent claude
+
+# 2. Generate all AI instruction files
+ai-rulez generate
+
+# 3. Your AI tools now have comprehensive, project-specific context!
+```
+
+**That's it!** The AI will analyze your codebase and generate tailored rules, documentation, and specialized agents automatically.
+
+**Prefer manual setup?**
+```bash
+# Basic initialization without AI assistance
 ai-rulez init "My Project" --preset popular
 
-# 2. Add your project-specific context
+# Add your project-specific context  
 ai-rulez add rule "Tech Stack" --priority critical --content "This project uses Go and PostgreSQL."
 
-# 3. Generate all AI instruction files
+# Generate files
 ai-rulez generate
 ```
 

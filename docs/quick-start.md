@@ -6,15 +6,25 @@ Let's get you set up with `ai-rulez`. This takes about 5 minutes and will sync a
 
 ### Step 1: Create your config
 
-Navigate to your project root and run the `init` command with a preset. This creates a simple `ai-rulez.yml` file using the recommended `presets` feature.
+Navigate to your project root and run the `init` command. We recommend using the AI-powered configuration for the best experience:
 
 ```bash
-# Use the "popular" preset for Claude, Cursor, Windsurf, and Copilot
+# AI-powered initialization (recommended)
+ai-rulez init "My Project" --preset popular --use-agent claude
+
+# Or simple initialization without AI assistance
 ai-rulez init "My Project" --preset popular
 ```
 
-This will generate the following `ai-rulez.yml` file:
+The **AI-powered approach** will:
+- Analyze your codebase structure and tech stack
+- Generate project-specific rules and documentation  
+- Create specialized agents for your workflow
+- Set up comprehensive configuration tailored to your project
 
+If you don't have Claude installed or prefer a simpler setup, the basic command still works great and you can always add content later using the CLI.
+
+**Basic initialization** creates:
 ```yaml
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 metadata:
@@ -23,11 +33,34 @@ presets:
   - "popular"
 ```
 
-The `init` command can also analyze your codebase to suggest rules and agents, but for now, we'll stick with the basics.
+**AI-powered initialization** creates a much richer configuration with rules, sections, and agents based on your actual codebase. For example, a Go project might get:
+```yaml
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+metadata:
+  name: "My Project"
+  description: "Go microservice with REST API"
+presets:
+  - "popular"
+rules:
+  - name: "Go Standards"
+    priority: high
+    content: "Follow standard Go layout (cmd/, internal/, pkg/)"
+  - name: "Error Handling"  
+    priority: critical
+    content: "Always handle errors properly, use wrapped errors"
+sections:
+  - name: "Architecture"
+    content: "Clean architecture with dependency injection..."
+agents:
+  - name: "go-expert"
+    description: "Go specialist for backend development"
+```
 
-### Step 2: Add your project details
+### Step 2: Add your project details (if needed)
 
-Now, add some context about your project. This helps your AI understand your tech stack and workflow. You can add rules, sections, and more directly from the command line.
+If you used the AI-powered initialization, your configuration already includes comprehensive project-specific rules and documentation. You can skip to Step 3!
+
+If you used the basic initialization, add some context about your project:
 
 ```bash
 # Add a rule for your tech stack
@@ -35,6 +68,12 @@ ai-rulez add rule "Tech Stack" --priority critical --content "Frontend: React, T
 
 # Add a rule for your development workflow
 ai-rulez add rule "Workflow" --priority high --content "All new features must have 90%+ unit test coverage."
+```
+
+**Pro tip**: You can also re-run the init command with AI assistance to enhance an existing configuration:
+```bash
+# Enhance existing config with AI analysis
+ai-rulez init "My Project" --preset popular --use-agent claude --yes
 ```
 
 Using the CLI keeps your config valid and makes it easy to script changes later.
