@@ -16,6 +16,7 @@ bin/
 /ai-rulez
 /ai-rulez-*
 **/ai-rulez-*
+!docs/assets/ai-rulez-demo.gif
 *.exe
 *.exe~
 *.dll
