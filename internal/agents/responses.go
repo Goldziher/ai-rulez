@@ -9,12 +9,10 @@ import (
 	"unicode"
 )
 
-// AgentResponse is the base interface for all agent responses
 type AgentResponse interface {
 	Validate() error
 }
 
-// MetadataResponse represents the response for project description
 type MetadataResponse struct {
 	Description string `json:"description" validate:"required,min=10,max=500"`
 }
@@ -32,7 +30,6 @@ func (m *MetadataResponse) Validate() error {
 	return nil
 }
 
-// RuleResponse represents a single coding rule
 type RuleResponse struct {
 	Name     string `json:"name" validate:"required,min=3,max=100"`
 	Priority string `json:"priority" validate:"required,oneof=critical high medium low minimal"`
@@ -59,7 +56,6 @@ func (r *RuleResponse) Validate() error {
 	return nil
 }
 
-// RulesResponse represents multiple coding rules
 type RulesResponse struct {
 	Rules []RuleResponse `json:"rules" validate:"required,min=1,max=10,dive"`
 }
@@ -76,7 +72,6 @@ func (r *RulesResponse) Validate() error {
 	return nil
 }
 
-// SectionResponse represents a documentation section
 type SectionResponse struct {
 	Name     string `json:"name" validate:"required,min=3,max=100"`
 	Priority string `json:"priority" validate:"required,oneof=high medium low"`
@@ -101,7 +96,6 @@ func (s *SectionResponse) Validate() error {
 	return nil
 }
 
-// SectionsResponse represents multiple documentation sections
 type SectionsResponse struct {
 	Sections []SectionResponse `json:"sections" validate:"required,min=1,max=10,dive"`
 }
@@ -118,7 +112,6 @@ func (s *SectionsResponse) Validate() error {
 	return nil
 }
 
-// AgentDefinition represents an AI agent definition
 type AgentDefinition struct {
 	Name      string `json:"name" validate:"required,min=3,max=50,lowercase,alphanum"`
 	Role      string `json:"role" validate:"required,min=5,max=200"`
@@ -129,7 +122,6 @@ func (a *AgentDefinition) Validate() error {
 	if a.Name == "" {
 		return fmt.Errorf("agent name is required")
 	}
-	// Check name is lowercase with hyphens
 	matched, err := regexp.MatchString("^[a-z][a-z0-9-]*$", a.Name)
 	if err != nil {
 		return fmt.Errorf("failed to validate agent name: %w", err)
@@ -146,7 +138,6 @@ func (a *AgentDefinition) Validate() error {
 	return nil
 }
 
-// AgentsResponse represents multiple agent definitions
 type AgentsResponse struct {
 	Agents []AgentDefinition `json:"agents" validate:"required,min=1,max=5,dive"`
 }
@@ -163,16 +154,12 @@ func (a *AgentsResponse) Validate() error {
 	return nil
 }
 
-// extractJSON attempts to extract a JSON object from agent output
 func extractJSON(output string) (string, error) {
-	// Try to find JSON object in the output
-	// Look for content between { and }
 	start := strings.Index(output, "{")
 	if start == -1 {
 		return "", fmt.Errorf("no JSON object found in output")
 	}
 
-	// Find the matching closing brace
 	braceCount := 0
 	inString := false
 	escaped := false
@@ -202,7 +189,6 @@ func extractJSON(output string) (string, error) {
 			case '}':
 				braceCount--
 				if braceCount == 0 {
-					// Found matching closing brace
 					return output[start : i+1], nil
 				}
 			}
@@ -212,7 +198,6 @@ func extractJSON(output string) (string, error) {
 	return "", fmt.Errorf("incomplete JSON object in output")
 }
 
-// ParseAgentOutput parses agent output and returns the appropriate response type
 func ParseAgentOutput(output string, responseType string) (interface{}, error) {
 	jsonStr, err := extractJSON(output)
 	if err != nil {
@@ -265,30 +250,24 @@ func ParseAgentOutput(output string, responseType string) (interface{}, error) {
 	}
 }
 
-// ContentSimilarity provides semantic similarity analysis for avoiding duplicates
 type ContentSimilarity struct {
 	threshold float64
 }
 
-// NewContentSimilarity creates a new similarity analyzer
 func NewContentSimilarity(threshold float64) *ContentSimilarity {
 	if threshold <= 0 || threshold > 1 {
-		threshold = 0.7 // Default 70% similarity threshold
+		threshold = 0.7
 	}
 	return &ContentSimilarity{threshold: threshold}
 }
 
-// calculateCosineSimilarity computes cosine similarity between two texts
 func (cs *ContentSimilarity) calculateCosineSimilarity(text1, text2 string) float64 {
-	// Normalize and tokenize
 	tokens1 := cs.tokenize(text1)
 	tokens2 := cs.tokenize(text2)
 
-	// Create term frequency maps
 	tf1 := cs.termFrequency(tokens1)
 	tf2 := cs.termFrequency(tokens2)
 
-	// Get unique terms
 	allTerms := make(map[string]bool)
 	for term := range tf1 {
 		allTerms[term] = true
@@ -297,7 +276,6 @@ func (cs *ContentSimilarity) calculateCosineSimilarity(text1, text2 string) floa
 		allTerms[term] = true
 	}
 
-	// Calculate cosine similarity
 	var dotProduct, norm1, norm2 float64
 	for term := range allTerms {
 		freq1 := tf1[term]
@@ -315,15 +293,12 @@ func (cs *ContentSimilarity) calculateCosineSimilarity(text1, text2 string) floa
 	return dotProduct / (math.Sqrt(norm1) * math.Sqrt(norm2))
 }
 
-// tokenize splits text into meaningful tokens, removing stop words
 func (cs *ContentSimilarity) tokenize(text string) []string {
-	// Convert to lowercase and split on non-alphanumeric chars
 	text = strings.ToLower(text)
 	tokens := strings.FieldsFunc(text, func(c rune) bool {
 		return !unicode.IsLetter(c) && !unicode.IsNumber(c)
 	})
 
-	// Filter out stop words and short tokens
 	stopWords := map[string]bool{
 		"the": true, "a": true, "an": true, "and": true, "or": true, "but": true,
 		"in": true, "on": true, "at": true, "to": true, "for": true, "of": true,
@@ -345,7 +320,6 @@ func (cs *ContentSimilarity) tokenize(text string) []string {
 	return filtered
 }
 
-// termFrequency calculates term frequency for tokens
 func (cs *ContentSimilarity) termFrequency(tokens []string) map[string]float64 {
 	tf := make(map[string]float64)
 	total := float64(len(tokens))
@@ -354,7 +328,6 @@ func (cs *ContentSimilarity) termFrequency(tokens []string) map[string]float64 {
 		tf[token]++
 	}
 
-	// Normalize by total count
 	for term := range tf {
 		tf[term] /= total
 	}
@@ -362,13 +335,11 @@ func (cs *ContentSimilarity) termFrequency(tokens []string) map[string]float64 {
 	return tf
 }
 
-// IsSimilar checks if two content strings are semantically similar
 func (cs *ContentSimilarity) IsSimilar(content1, content2 string) bool {
 	similarity := cs.calculateCosineSimilarity(content1, content2)
 	return similarity >= cs.threshold
 }
 
-// FindSimilarRule finds existing rule that's similar to the new rule
 func (cs *ContentSimilarity) FindSimilarRule(newRule RuleResponse, existingRules []RuleResponse) (similarRule *RuleResponse, similarity float64) {
 	var bestMatch *RuleResponse
 	var bestSimilarity float64
@@ -384,7 +355,6 @@ func (cs *ContentSimilarity) FindSimilarRule(newRule RuleResponse, existingRules
 	return bestMatch, bestSimilarity
 }
 
-// FindSimilarSection finds existing section that's similar to the new section
 func (cs *ContentSimilarity) FindSimilarSection(newSection SectionResponse, existingSections []SectionResponse) (similarSection *SectionResponse, similarity float64) {
 	var bestMatch *SectionResponse
 	var bestSimilarity float64
@@ -400,19 +370,15 @@ func (cs *ContentSimilarity) FindSimilarSection(newSection SectionResponse, exis
 	return bestMatch, bestSimilarity
 }
 
-// MergeRules intelligently merges similar rules, keeping the more specific/detailed one
 func (cs *ContentSimilarity) MergeRules(rule1, rule2 RuleResponse) RuleResponse {
-	// Choose the more specific rule (longer content usually means more specific)
 	if len(rule2.Content) > len(rule1.Content) {
 		rule1, rule2 = rule2, rule1
 	}
 
-	// Use higher priority if different
 	if rule2.Priority == "critical" && rule1.Priority != "critical" {
 		rule1.Priority = rule2.Priority
 	}
 
-	// Combine unique aspects if rule2 has valuable additions
 	if cs.hasUniqueContent(rule1.Content, rule2.Content) {
 		rule1.Content = cs.combineContent(rule1.Content, rule2.Content)
 	}
@@ -420,7 +386,6 @@ func (cs *ContentSimilarity) MergeRules(rule1, rule2 RuleResponse) RuleResponse 
 	return rule1
 }
 
-// hasUniqueContent checks if the second content has unique information
 func (cs *ContentSimilarity) hasUniqueContent(primary, secondary string) bool {
 	primaryTokens := cs.tokenize(primary)
 	secondaryTokens := cs.tokenize(secondary)
@@ -437,13 +402,9 @@ func (cs *ContentSimilarity) hasUniqueContent(primary, secondary string) bool {
 		}
 	}
 
-	// If secondary has at least 20% unique tokens, consider merging
 	return float64(uniqueTokens)/float64(len(secondaryTokens)) >= 0.2
 }
 
-// combineContent intelligently combines two content strings
 func (cs *ContentSimilarity) combineContent(primary, secondary string) string {
-	// For now, just use the primary (more detailed) content
-	// Future enhancement: intelligent content merging
 	return primary
 }

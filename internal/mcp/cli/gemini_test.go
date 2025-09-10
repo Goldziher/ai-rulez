@@ -180,21 +180,16 @@ func TestGeminiIntegrator_ConfigureServer_CommandConstruction(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// We can't actually execute the command in tests, but we can validate
-			// the configuration and ensure the validation passes
 			err := ValidateGeminiConfig(&tt.server)
 			require.NoError(t, err, "Server configuration should be valid")
 
-			// Verify transport handling
 			assert.Equal(t, tt.server.GetTransport(), tt.server.Transport,
 				"Transport should be correctly set")
 
-			// Verify stdio-specific requirements
 			if tt.server.GetTransport() == "stdio" {
 				assert.NotEmpty(t, tt.server.Command, "Stdio server should have command")
 			}
 
-			// Verify HTTP/SSE-specific requirements
 			if tt.server.GetTransport() == "http" || tt.server.GetTransport() == "sse" {
 				assert.NotEmpty(t, tt.server.URL, "HTTP/SSE server should have URL")
 			}
@@ -203,8 +198,6 @@ func TestGeminiIntegrator_ConfigureServer_CommandConstruction(t *testing.T) {
 }
 
 func TestGeminiIntegrator_EnvironmentVariableHandling(t *testing.T) {
-	// Test that servers with environment variables still pass validation
-	// even though Gemini CLI doesn't support -e flags like Claude
 	server := config.MCPServer{
 		Name:      "env-server",
 		Command:   "test-command",
@@ -218,10 +211,6 @@ func TestGeminiIntegrator_EnvironmentVariableHandling(t *testing.T) {
 
 	err := ValidateGeminiConfig(&server)
 	assert.NoError(t, err, "Server with env vars should pass validation")
-
-	// Note: The actual ConfigureServer method will proceed without setting
-	// environment variables via CLI flags (unlike Claude). This is expected
-	// behavior as Gemini CLI expects env vars to be set in the shell environment.
 }
 
 func TestGeminiIntegrator_ConfigureServer_ValidationErrors(t *testing.T) {
@@ -235,7 +224,6 @@ func TestGeminiIntegrator_ConfigureServer_ValidationErrors(t *testing.T) {
 			server: config.MCPServer{
 				Name:      "bad-server",
 				Transport: "stdio",
-				// Missing Command
 			},
 			description: "Should fail for stdio without command",
 		},
@@ -244,7 +232,6 @@ func TestGeminiIntegrator_ConfigureServer_ValidationErrors(t *testing.T) {
 			server: config.MCPServer{
 				Name:      "bad-server",
 				Transport: "http",
-				// Missing URL
 			},
 			description: "Should fail for HTTP without URL",
 		},
@@ -269,8 +256,6 @@ func TestGeminiIntegrator_ConfigureServer_ValidationErrors(t *testing.T) {
 }
 
 func TestGeminiIntegrator_CompareWithClaude(t *testing.T) {
-	// Test that demonstrates the differences between Claude and Gemini integrators
-
 	server := config.MCPServer{
 		Name:      "comparison-server",
 		Command:   "test-command",
@@ -281,21 +266,15 @@ func TestGeminiIntegrator_CompareWithClaude(t *testing.T) {
 		},
 	}
 
-	// Both should validate successfully
 	claudeErr := ValidateClaudeConfig(&server)
 	geminiErr := ValidateGeminiConfig(&server)
 
 	assert.NoError(t, claudeErr, "Claude validation should pass")
 	assert.NoError(t, geminiErr, "Gemini validation should pass")
 
-	// Both integrators should have correct tool names
 	claudeIntegrator := &ClaudeIntegrator{}
 	geminiIntegrator := &GeminiIntegrator{}
 
 	assert.Equal(t, "claude", claudeIntegrator.ToolName())
 	assert.Equal(t, "gemini", geminiIntegrator.ToolName())
-
-	// The main difference is in command construction:
-	// - Claude: claude mcp add -s project -t stdio -e API_KEY=secret123 name command args
-	// - Gemini: gemini mcp add name command args (env vars handled externally)
 }
