@@ -16,7 +16,7 @@ builds:
       - GOSUMDB=off
     ldflags:
       - -s -w
-      - -X github.com/Goldziher/ai-rulez/cmd/commands.Version={{.Version}}
+      - -X main.version={{.Version}}
     goos:
       - linux
       - windows
@@ -50,7 +50,7 @@ release:
   replace_existing_draft: true
 
 
-homebrew_casks:
+brews:
   - name: ai-rulez
     description: "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
     homepage: "https://github.com/Goldziher/ai-rulez"
@@ -60,8 +60,9 @@ homebrew_casks:
       name: homebrew-tap
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
       branch: main
+    directory: Formula
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
     skip_upload: false
