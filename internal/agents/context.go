@@ -726,7 +726,7 @@ func detectAIRulezCommand() string {
 
 	// Check the actual command used (from os.Args[0])
 	executable := os.Args[0]
-	
+
 	// If it's a full path, we should use that path
 	if filepath.IsAbs(executable) {
 		// But first check if ai-rulez is in PATH

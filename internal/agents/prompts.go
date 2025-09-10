@@ -10,16 +10,22 @@ import (
 func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Set the project description for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Generate a project description for '%s'\n\n", context.ProjectName))
 
-	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Analyze the project context provided below\n")
-	prompt.WriteString("2. Create a clear, concise description (1-2 sentences)\n")
-	prompt.WriteString("3. Output ONLY the command to run. DO NOT give status messages or explanations.\n")
-	prompt.WriteString("4. Your response must be exactly this format:\n")
-	prompt.WriteString(fmt.Sprintf("   %s set metadata --description \"Your description here\"\n", context.AIRulezCommand))
-	prompt.WriteString("5. Replace 'Your description here' with the actual description\n")
-	prompt.WriteString("6. Do not add any other text - only the command line\n\n")
+	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
+	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
+	prompt.WriteString("Your response must contain ONLY the JSON object, no explanations.\n\n")
+
+	prompt.WriteString("EXAMPLE INPUT: React web app for managing tasks\n")
+	prompt.WriteString("EXAMPLE OUTPUT:\n")
+	prompt.WriteString(`{
+  "description": "React-based task management web application with real-time updates and team collaboration features"
+}`)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("YOUR TASK:\n")
+	prompt.WriteString(fmt.Sprintf("Generate a JSON response with a description for the '%s' project.\n", context.ProjectName))
+	prompt.WriteString("The description should be 1-2 sentences, clear and concise.\n\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -27,10 +33,13 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	// Add rich project context
 	addProjectContext(&prompt, context)
 
-	prompt.WriteString("\nAnalyze the project and write a clear description focusing on:\n")
-	prompt.WriteString("- Primary purpose and functionality\n")
-	prompt.WriteString("- Key technologies used\n")
-	prompt.WriteString("- Project type (library, application, tool, etc.)\n")
+	prompt.WriteString("\nAnalyze the project and create a description that:\n")
+	prompt.WriteString("- Clearly states the primary purpose and main functionality\n")
+	prompt.WriteString("- Lists the key technologies, frameworks, and libraries used\n")
+	prompt.WriteString("- Identifies the project type (CLI tool, library, web app, etc.)\n")
+	prompt.WriteString("- Is specific to THIS project, not generic\n")
+	prompt.WriteString("- Is concise but informative (50-100 words)\n")
+	prompt.WriteString("\nOutput ONLY the JSON object with the description field.\n")
 
 	return prompt.String()
 }
@@ -38,19 +47,38 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 func buildDocumentationPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add documentation sections to ai-rulez.yaml for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Generate documentation sections for '%s'\n\n", context.ProjectName))
 
-	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Create 2-3 essential documentation sections based on the project\n")
-	prompt.WriteString("2. Output ONLY the commands to run, one per line. DO NOT give explanations.\n")
-	prompt.WriteString("3. Each command must be exactly this format:\n")
-	prompt.WriteString(fmt.Sprintf("   %s add section \"Section Name\" --priority PRIORITY --content \"Content here\"\n", context.AIRulezCommand))
-	prompt.WriteString("4. Priority can be: high, medium, or low\n")
-	prompt.WriteString("5. Content should be markdown format\n")
-	prompt.WriteString("6. Only output the commands, no other text\n\n")
+	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
+	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
+	prompt.WriteString("Your response must contain ONLY the JSON object, no explanations.\n\n")
 
-	prompt.WriteString("Example output:\n")
-	prompt.WriteString(fmt.Sprintf("%s add section \"Setup Guide\" --priority high --content \"## Prerequisites\\n- Node.js 18+\\n- Docker\"\n\n", context.AIRulezCommand))
+	prompt.WriteString("EXAMPLE INPUT: Python web API project\n")
+	prompt.WriteString("EXAMPLE OUTPUT:\n")
+	prompt.WriteString(`{
+  "sections": [
+    {
+      "name": "Setup Guide",
+      "priority": "high",
+      "content": "## Prerequisites\n- Python 3.8+\n- pip\n\n## Installation\n1. Clone repository\n2. Run: pip install -r requirements.txt"
+    },
+    {
+      "name": "API Documentation",
+      "priority": "medium",
+      "content": "## Endpoints\n- GET /api/users - List all users\n- POST /api/users - Create new user"
+    }
+  ]
+}`)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("YOUR TASK:\n")
+	prompt.WriteString(fmt.Sprintf("Generate 2-3 documentation sections for the '%s' project that:\n", context.ProjectName))
+	prompt.WriteString("- Provide PRACTICAL guidance specific to this codebase\n")
+	prompt.WriteString("- Include actual commands, file paths, and package names from the project\n")
+	prompt.WriteString("- Cover setup, development workflow, architecture, or testing\n")
+	prompt.WriteString("- Use clear markdown formatting with code examples where helpful\n")
+	prompt.WriteString("- Priority must be: high (essential), medium (important), or low (nice-to-have)\n")
+	prompt.WriteString("- Avoid generic content that could apply to any project\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -78,19 +106,53 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 func buildStandardsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add coding standards for the '%s' project\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Generate coding standards for the '%s' project\n\n", context.ProjectName))
 
-	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Create 5-7 important coding standards based on the project\n")
-	prompt.WriteString("2. Output ONLY the commands to run, one per line. DO NOT give explanations.\n")
-	prompt.WriteString("3. Each command must be exactly this format:\n")
-	prompt.WriteString(fmt.Sprintf("   %s add rule \"Rule Name\" --priority PRIORITY --content \"Rule description\"\n", context.AIRulezCommand))
-	prompt.WriteString("4. Priority can be: critical, high, medium, low, or minimal\n")
-	prompt.WriteString("5. Content should be clear and actionable\n")
-	prompt.WriteString("6. Only output the commands, no other text\n\n")
+	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
+	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
+	prompt.WriteString("Your response must contain ONLY the JSON object, no explanations.\n\n")
 
-	prompt.WriteString("Example output:\n")
-	prompt.WriteString(fmt.Sprintf("%s add rule \"Error Handling\" --priority high --content \"Always use proper exception handling with specific error types\"\n\n", context.AIRulezCommand))
+	prompt.WriteString("EXAMPLE INPUT: Go CLI tool project\n")
+	prompt.WriteString("EXAMPLE OUTPUT:\n")
+	prompt.WriteString(`{
+  "rules": [
+    {
+      "name": "Error Handling",
+      "priority": "high",
+      "content": "Always handle errors explicitly. Use the oops library for rich error context."
+    },
+    {
+      "name": "Testing",
+      "priority": "critical",
+      "content": "Write unit tests for all new functions. Aim for 80% code coverage minimum."
+    },
+    {
+      "name": "Comments",
+      "priority": "medium",
+      "content": "Document all exported functions with godoc comments."
+    },
+    {
+      "name": "Naming",
+      "priority": "medium",
+      "content": "Use clear, descriptive names. Avoid abbreviations except well-known ones."
+    },
+    {
+      "name": "Dependencies",
+      "priority": "low",
+      "content": "Minimize external dependencies. Justify each new dependency added."
+    }
+  ]
+}`)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("YOUR TASK:\n")
+	prompt.WriteString(fmt.Sprintf("Generate 5-7 coding rules for the '%s' project that:\n", context.ProjectName))
+	prompt.WriteString("- Are SPECIFIC to this codebase's actual patterns and technologies\n")
+	prompt.WriteString("- Reference actual packages, libraries, and tools used in the project\n")
+	prompt.WriteString("- Include concrete, actionable guidance (not generic advice)\n")
+	prompt.WriteString("- Cover error handling, testing, security, performance, and code organization\n")
+	prompt.WriteString("- Use priority levels: critical, high, medium, low, or minimal\n")
+	prompt.WriteString("- Avoid duplicate rules with different names\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -262,33 +324,47 @@ func addExistingConfigContext(prompt *strings.Builder, context *ProjectContext) 
 func buildProjectAnalysisFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 	prompt.WriteString(fmt.Sprintf("TASK: Set project description for '%s'\n\n", context.ProjectName))
-	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Create a brief 1-2 sentence description\n")
-	prompt.WriteString("2. Output ONLY this command format:\n")
-	prompt.WriteString(fmt.Sprintf("   %s set metadata --description \"Your description\"\n", context.AIRulezCommand))
-	prompt.WriteString("3. Replace with actual description, no other text\n\n")
+
+	prompt.WriteString("Output ONLY this JSON format:\n")
+	prompt.WriteString(`{"description": "A brief description of the project"}` + "\n\n")
+
+	prompt.WriteString("Replace the description with one for this project.\n")
+	prompt.WriteString("Output ONLY the JSON, nothing else.\n\n")
 	return prompt.String()
 }
 
 func buildStandardsFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 	prompt.WriteString(fmt.Sprintf("TASK: Add 3 basic coding rules for '%s'\n\n", context.ProjectName))
-	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString(fmt.Sprintf("1. Add these 3 rules using %s add rule command:\n", context.AIRulezCommand))
-	prompt.WriteString("2. Error Handling rule (priority: high)\n")
-	prompt.WriteString("3. Code Style rule (priority: medium)\n")
-	prompt.WriteString("4. Testing rule (priority: high)\n\n")
+
+	prompt.WriteString("Output ONLY this JSON format:\n")
+	prompt.WriteString(`{
+  "rules": [
+    {"name": "Error Handling", "priority": "high", "content": "Handle all errors explicitly"},
+    {"name": "Testing", "priority": "high", "content": "Write tests for new features"},
+    {"name": "Code Style", "priority": "medium", "content": "Follow project conventions"}
+  ]
+}` + "\n\n")
+
+	prompt.WriteString("Update the rules for this specific project.\n")
+	prompt.WriteString("Output ONLY the JSON, nothing else.\n\n")
 	return prompt.String()
 }
 
 func buildDocumentationFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 	prompt.WriteString(fmt.Sprintf("TASK: Add 2 documentation sections for '%s'\n\n", context.ProjectName))
-	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString(fmt.Sprintf("1. Add these 2 sections using %s add section:\n", context.AIRulezCommand))
-	prompt.WriteString("2. Setup Guide (priority: high)\n")
-	prompt.WriteString("3. API Documentation (priority: medium)\n")
-	prompt.WriteString("4. Keep content brief\n\n")
+
+	prompt.WriteString("Output ONLY this JSON format:\n")
+	prompt.WriteString(`{
+  "sections": [
+    {"name": "Setup Guide", "priority": "high", "content": "## Installation\n1. Clone repo\n2. Install deps"},
+    {"name": "API Docs", "priority": "medium", "content": "## Endpoints\n- GET /api/status"}
+  ]
+}` + "\n\n")
+
+	prompt.WriteString("Update the sections for this specific project.\n")
+	prompt.WriteString("Output ONLY the JSON, nothing else.\n\n")
 	return prompt.String()
 }
 
@@ -296,20 +372,42 @@ func buildDocumentationFallbackPrompt(context *ProjectContext) string {
 func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add AI agent definitions for '%s'\n\n", context.ProjectName))
+	prompt.WriteString(fmt.Sprintf("TASK: Generate AI agent definitions for '%s'\n\n", context.ProjectName))
 
-	prompt.WriteString("INSTRUCTIONS:\n")
-	prompt.WriteString("1. Create 2-4 useful AI agent definitions based on the project\n")
-	prompt.WriteString("2. Output ONLY the commands to run, one per line. DO NOT give explanations.\n")
-	prompt.WriteString("3. Each command must be exactly this format:\n")
-	prompt.WriteString(fmt.Sprintf("   %s add agent \"name\" --role \"role\" --expertise \"expertise\"\n", context.AIRulezCommand))
-	prompt.WriteString("4. Name should be lowercase with hyphens (e.g., backend-dev)\n")
-	prompt.WriteString("5. Role should be a brief description\n")
-	prompt.WriteString("6. Expertise should list specific skills\n")
-	prompt.WriteString("7. Only output the commands, no other text\n\n")
+	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
+	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
+	prompt.WriteString("Your response must contain ONLY the JSON object, no explanations.\n\n")
 
-	prompt.WriteString("Example output:\n")
-	prompt.WriteString(fmt.Sprintf("%s add agent \"backend-dev\" --role \"Python backend developer\" --expertise \"FastAPI, PostgreSQL, Docker\"\n\n", context.AIRulezCommand))
+	prompt.WriteString("EXAMPLE INPUT: Node.js REST API project\n")
+	prompt.WriteString("EXAMPLE OUTPUT:\n")
+	prompt.WriteString(`{
+  "agents": [
+    {
+      "name": "backend-dev",
+      "role": "Node.js backend developer",
+      "expertise": "Express, MongoDB, JWT authentication, REST API design"
+    },
+    {
+      "name": "test-engineer",
+      "role": "Testing specialist",
+      "expertise": "Jest, Supertest, integration testing, TDD practices"
+    },
+    {
+      "name": "devops",
+      "role": "DevOps engineer",
+      "expertise": "Docker, Kubernetes, CI/CD pipelines, AWS deployment"
+    }
+  ]
+}`)
+	prompt.WriteString("\n\n")
+
+	prompt.WriteString("YOUR TASK:\n")
+	prompt.WriteString(fmt.Sprintf("Generate 2-4 agent definitions for the '%s' project that:\n", context.ProjectName))
+	prompt.WriteString("- Are specialized for THIS project's specific technologies and patterns\n")
+	prompt.WriteString("- Have expertise that references actual tools, frameworks, and libraries used\n")
+	prompt.WriteString("- Cover different aspects: architecture, testing, documentation, operations\n")
+	prompt.WriteString("- Have unique names (lowercase with hyphens, e.g., backend-dev)\n")
+	prompt.WriteString("- Provide clear, distinct roles that don't overlap\n")
 
 	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
@@ -331,11 +429,16 @@ func buildAgentDefinitionsFallbackPrompt(context *ProjectContext) string {
 
 	prompt.WriteString(fmt.Sprintf("TASK: Add 2 basic AI agents for '%s'\n\n", context.ProjectName))
 
-	prompt.WriteString("SIMPLE STEPS:\n")
-	prompt.WriteString("1. Output ONLY the commands, no explanations:\n")
-	prompt.WriteString(fmt.Sprintf("2. %s add agent \"code-reviewer\" --role \"Code review specialist\" --expertise \"...\"\n", context.AIRulezCommand))
-	prompt.WriteString(fmt.Sprintf("3. %s add agent \"doc-writer\" --role \"Documentation specialist\" --expertise \"...\"\n", context.AIRulezCommand))
-	prompt.WriteString("4. Replace ... with relevant expertise, output only commands\n\n")
+	prompt.WriteString("Output ONLY this JSON format:\n")
+	prompt.WriteString(`{
+  "agents": [
+    {"name": "code-reviewer", "role": "Code review specialist", "expertise": "Code quality, best practices, refactoring"},
+    {"name": "test-engineer", "role": "Testing specialist", "expertise": "Unit tests, integration tests, TDD"}
+  ]
+}` + "\n\n")
+
+	prompt.WriteString("Update the agents for this specific project.\n")
+	prompt.WriteString("Output ONLY the JSON, nothing else.\n\n")
 
 	return prompt.String()
 }
