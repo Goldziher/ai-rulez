@@ -7,6 +7,7 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -262,17 +263,30 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	}
 
 	tempDir := t.TempDir()
-	err := os.Chdir(tempDir)
-	require.NoError(t, err)
+	
+	// On Windows, ensure cleanup happens properly
+	if runtime.GOOS == "windows" {
+		t.Cleanup(func() {
+			// Give time for any file handles to be released
+			time.Sleep(100 * time.Millisecond)
+			runtime.GC() // Force garbage collection to close any lingering handles
+		})
+	}
 
 	// Initialize git repo
 	cmd := exec.Command("git", "init")
+	cmd.Dir = tempDir
 	_, err = cmd.Output()
 	require.NoError(t, err, "Should initialize git repo")
 
 	// Configure git (required for commits)
-	exec.Command("git", "config", "user.name", "Test User").Run()
-	exec.Command("git", "config", "user.email", "test@example.com").Run()
+	cmd = exec.Command("git", "config", "user.name", "Test User")
+	cmd.Dir = tempDir
+	cmd.Run()
+	
+	cmd = exec.Command("git", "config", "user.email", "test@example.com")
+	cmd.Dir = tempDir
+	cmd.Run()
 
 	// Create and commit a file
 	testFile := filepath.Join(tempDir, "README.md")
@@ -280,10 +294,12 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	require.NoError(t, err)
 
 	cmd = exec.Command("git", "add", "README.md")
+	cmd.Dir = tempDir
 	_, err = cmd.Output()
 	require.NoError(t, err, "Should add file to git")
 
 	cmd = exec.Command("git", "commit", "-m", "Initial commit")
+	cmd.Dir = tempDir
 	_, err = cmd.Output()
 	require.NoError(t, err, "Should commit file")
 
@@ -309,6 +325,7 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	for _, gitCmd := range gitCommands {
 		t.Run(gitCmd.name, func(t *testing.T) {
 			cmd := exec.Command("git", gitCmd.args...)
+			cmd.Dir = tempDir // Set working directory explicitly
 			output, err := cmd.Output()
 			require.NoError(t, err, "Git command should work: %s", strings.Join(gitCmd.args, " "))
 			assert.NotEmpty(t, output, "Git command should produce output")
