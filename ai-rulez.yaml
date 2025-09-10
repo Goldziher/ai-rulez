@@ -1,22 +1,165 @@
 $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-
-metadata:
-  name: AI-Rulez-Improved-Test
-  version: "1.0.0"
-  description: "" 
-
-outputs:
-  - path: CLAUDE.md
-  - path: .claude/agents/
-    type: agent
-    naming_scheme: '{name}.md'
-
-sections: []
-rules: []
 agents: []
 commands: []
 mcp_servers:
-  - name: "ai-rulez"
-    command: "ai-rulez"
-    args: ["mcp"]
-    description: "AI-Rulez MCP server for configuration management"
+    - args:
+        - mcp
+      command: ai-rulez
+      description: AI-Rulez MCP server for configuration management
+      name: ai-rulez
+metadata:
+    description: ai-rulez is a Go-based CLI tool that centralizes AI assistant configuration across multiple tools (Claude, Cursor, Windsurf) through a single YAML file. It generates tool-specific rule files, manages MCP servers, supports monorepo configurations with extends/includes, and provides custom commands and specialized sub-agents for AI-powered development workflows.
+    name: My Awesome Project
+    version: 1.0.0
+outputs: null
+rules:
+    - content: Always use the oops error handling pattern found in internal/utils/errors.go. Wrap errors with context using oops.Wrap() for rich error chains. Never use naked error returns.
+      name: Error Handling with oops
+      priority: critical
+    - content: All new code must have corresponding _test.go files. Use task test to verify. Follow existing test patterns in cmd/commands/ and internal/ directories. Mock external dependencies using interfaces.
+      name: Test Coverage Requirements
+      priority: high
+    - content: 'Use taskfile.yaml commands exclusively: task build, task test, task lint. Never bypass these with direct go commands. Run task lint before commits to catch issues early.'
+      name: Task-based Development
+      priority: high
+    - content: All configuration changes must validate against schema/ai-rules-v2.schema.json. Use internal/validator for runtime validation. Test config loading with fixtures from testing/fixtures/.
+      name: Config Validation
+      priority: critical
+    - content: MCP server changes in internal/mcp/ must maintain compatibility with uvx launcher. Test with mcp_server_test.go patterns. Document tools in internal/mcp/tools.go.
+      name: MCP Server Integration
+      priority: medium
+    - content: Test platform-specific code using testing/platform/ patterns. Ensure compatibility across darwin, linux, windows. Use internal/utils/files.go for cross-platform file operations.
+      name: Multi-Platform Testing
+      priority: high
+    - content: Update docs/ markdown files when changing CLI commands. Run mkdocs build locally to verify. Schema changes require updating schema.md with examples.
+      name: Documentation Generation
+      priority: low
+    - content: Write table-driven tests for all command functions in cmd/commands/. Use testutil.CompareYAML for config comparison. Run 'task test' before commits. Maintain 80% coverage minimum.
+      name: Test Coverage Standards
+      priority: high
+    - content: Sanitize all MCP command inputs in internal/mcp/. Never execute shell commands directly from user config. Use internal/mcp/tools.go patterns for tool registration.
+      name: MCP Server Security
+      priority: high
+    - content: Use internal/progress for long-running operations. Implement proper context cancellation. Follow patterns in internal/remote/client.go for HTTP operations with timeouts.
+      name: Concurrent Operations
+      priority: medium
+    - content: Use internal/templates providers for all template operations. Always escape user content in generated files. Follow internal/generator/render.go patterns for output generation.
+      name: Template Rendering
+      priority: medium
+    - content: Use internal/gitignore for .gitignore handling. Follow internal/agents/git_history.go patterns for git operations. Never modify git config without user consent.
+      name: Git Operations
+      priority: low
+    - content: Follow the established cobra command pattern in cmd/commands/. Each command must implement proper error handling, use internal/progress for user feedback, and include comprehensive tests.
+      name: Command Structure
+      priority: high
+    - content: Always validate configurations using internal/validator before processing. Use internal/config/validation.go patterns for consistency. Validate against schema/ai-rules-v2.schema.json.
+      name: Configuration Validation
+      priority: critical
+    - content: Use internal/remote/client.go for all HTTP operations. Implement caching via internal/remote/cache.go. Never make direct HTTP calls outside the remote package.
+      name: Remote Resource Handling
+      priority: high
+sections:
+    - content: |-
+        ## Prerequisites
+        - Go 1.24+ (see badge requirements)
+        - Task (build automation): `brew install go-task/tap/go-task`
+        - Node.js 20+ (for git hooks)
+
+        ## Initial Setup
+        ```bash
+        # Clone and setup development environment
+        git clone https://github.com/Goldziher/ai-rulez.git
+        cd ai-rulez
+        task setup  # Installs dependencies and configures git hooks
+        ```
+
+        ## Build & Test
+        ```bash
+        task build      # Builds binary to ./bin/ai-rulez
+        task test       # Run unit tests
+        task test:e2e   # Run end-to-end tests
+        task ci         # Run all checks before committing
+        ```
+
+        ## Common Development Tasks
+        ```bash
+        task lint       # Run linters
+        task fmt        # Format code
+        task coverage   # Generate test coverage report
+        ```
+      name: Development Setup
+      priority: high
+    - content: |-
+        ## Core Architecture
+
+        The codebase follows a clean, layered architecture:
+
+        ### Data Layer (`internal/config/`)
+        - **types.go**: Core data structures (Rule, Agent, MCPServer)
+        - **loader.go**: YAML parsing and configuration loading
+        - **presets.go**: Built-in preset configurations
+        - **validation.go**: Schema validation logic
+
+        ### Business Logic (`internal/crud/`)
+        - **crud.go**: Centralized CRUD operations for all entities
+        - **generics.go**: Generic helper functions
+        - All business logic lives here - CLI and MCP are thin presentation layers
+
+        ### Presentation Layers
+        - **`cmd/commands/`**: Cobra CLI commands (thin wrappers around crud)
+        - **`internal/mcp/`**: MCP server handlers (delegates to crud)
+
+        ### Key Services
+        - **`internal/generator/`**: File generation and templating engine
+        - **`internal/agents/`**: AI agent integration for init command
+        - **`internal/migration/`**: v1 to v2 config migration
+
+        ## Adding New Features
+        1. Update schema: `schema/ai-rules-v2.schema.json`
+        2. Add types: `internal/config/types.go`
+        3. Implement logic: `internal/crud/crud.go`
+        4. Add CLI command: `cmd/commands/crud/[entity].go`
+        5. Add MCP handler: `internal/mcp/handlers/[entity].go`
+        6. Add tests: `testing/e2e/`
+      name: Architecture Overview
+      priority: high
+    - content: |-
+        ## Test Organization
+
+        ### Unit Tests
+        - Located alongside source files (`*_test.go`)
+        - Run with: `task test` or `go test ./...`
+        - Key test files:
+          - `internal/config/loader_test.go` - Config loading
+          - `internal/crud/crud_test.go` - CRUD operations
+          - `internal/generator/generator_test.go` - File generation
+
+        ### End-to-End Tests
+        - Located in `testing/e2e/`
+        - Run with: `task test:e2e`
+        - Tests full workflows:
+          - `init_test.go` - Init command with AI agents
+          - `mcp_server_test.go` - MCP server integration
+
+        ### Test Fixtures
+        - `testing/fixtures/` - Reusable test data
+        - `testing/testutil/` - Test helper utilities
+
+        ## Writing Tests
+        ```go
+        // Example test pattern from codebase
+        func TestNewEntityCRUD_FullCycle(t *testing.T) {
+            // Setup
+            tmpDir := t.TempDir()
+            // Test CRUD operations
+            // Verify results
+        }
+        ```
+
+        ## Coverage
+        ```bash
+        task coverage  # Generate coverage report
+        # Coverage output in coverage.out
+        ```
+      name: Testing Strategy
+      priority: medium
