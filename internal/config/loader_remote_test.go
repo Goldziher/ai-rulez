@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -81,8 +82,8 @@ rules:
 		resolved = loader.resolvePath("relative-include.yaml", server.URL+"/base/")
 		assert.Equal(t, server.URL+"/base/relative-include.yaml", resolved)
 
-		resolved = loader.resolvePath("local-file.yaml", "/local/base")
-		assert.Equal(t, "/local/base/local-file.yaml", resolved)
+		resolved = loader.resolvePath("local-file.yaml", filepath.Join(string(filepath.Separator), "local", "base"))
+		assert.Equal(t, filepath.Join(string(filepath.Separator), "local", "base", "local-file.yaml"), resolved)
 	})
 
 	t.Run("is_url_detection", func(t *testing.T) {

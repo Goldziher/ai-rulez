@@ -57,7 +57,7 @@ func createAddCommand(desc *EntityDescriptor) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s [name]", desc.Singular),
 		Short: fmt.Sprintf("Add a new %s to the configuration", desc.Singular),
-		Long:  fmt.Sprintf("Adds a new %s to the %s list in your ai_rulez.yaml file.", desc.Singular, desc.Plural),
+		Long:  fmt.Sprintf("Adds a new %s to the %s list in your ai-rulez.yaml file.", desc.Singular, desc.Plural),
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
@@ -169,7 +169,7 @@ func createUpdateCommand(desc *EntityDescriptor) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   fmt.Sprintf("%s [name]", desc.Singular),
 		Short: fmt.Sprintf("Update an existing %s", desc.Singular),
-		Long:  fmt.Sprintf("Updates an existing %s in your ai_rulez.yaml file.", desc.Singular),
+		Long:  fmt.Sprintf("Updates an existing %s in your ai-rulez.yaml file.", desc.Singular),
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
@@ -254,7 +254,7 @@ func createDeleteCommand(desc *EntityDescriptor) *cobra.Command {
 	return &cobra.Command{
 		Use:   fmt.Sprintf("%s [name]", desc.Singular),
 		Short: fmt.Sprintf("Delete a %s from the configuration", desc.Singular),
-		Long:  fmt.Sprintf("Deletes a %s by name from your ai_rulez.yaml file.", desc.Singular),
+		Long:  fmt.Sprintf("Deletes a %s by name from your ai-rulez.yaml file.", desc.Singular),
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
@@ -267,7 +267,7 @@ func createGetCommand(desc *EntityDescriptor) *cobra.Command {
 	return &cobra.Command{
 		Use:   fmt.Sprintf("%s [name]", desc.Singular),
 		Short: fmt.Sprintf("Get a %s from the configuration", desc.Singular),
-		Long:  fmt.Sprintf("Retrieves a %s by name from your ai_rulez.yaml file.", desc.Singular),
+		Long:  fmt.Sprintf("Retrieves a %s by name from your ai-rulez.yaml file.", desc.Singular),
 		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			name := args[0]
