@@ -853,40 +853,93 @@ func applyMetadataResponse(config map[string]interface{}, response interface{}) 
 	return nil
 }
 
+// extractExistingRules extracts existing rules from config into structured form
+func extractExistingRules(config map[string]interface{}) (rules []interface{}, existingRules []RuleResponse, existingNames map[string]bool, err error) {
+	existingRules = []RuleResponse{}
+	existingNames = make(map[string]bool)
+	rules = []interface{}{}
+
+	if config["rules"] == nil {
+		return rules, existingRules, existingNames, nil
+	}
+
+	var ok bool
+	rules, ok = config["rules"].([]interface{})
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("rules is not a slice")
+	}
+
+	for _, r := range rules {
+		ruleMap, ok := r.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, nameOk := ruleMap["name"].(string)
+		if !nameOk {
+			continue
+		}
+
+		existingNames[name] = true
+
+		// Convert to RuleResponse for similarity checking
+		priority, pOk := ruleMap["priority"].(string)
+		content, cOk := ruleMap["content"].(string)
+		if pOk && cOk {
+			existingRules = append(existingRules, RuleResponse{
+				Name:     name,
+				Priority: priority,
+				Content:  content,
+			})
+		}
+	}
+
+	return rules, existingRules, existingNames, nil
+}
+
+// updateExistingRule updates an existing rule in place
+func updateExistingRule(rules []interface{}, existingRules []RuleResponse, similarRule *RuleResponse, merged RuleResponse) {
+	// Update the existing rule in place
+	for i, r := range rules {
+		ruleMap, ok := r.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, ok := ruleMap["name"].(string)
+		if !ok || name != similarRule.Name {
+			continue
+		}
+
+		rules[i] = map[string]interface{}{
+			"name":     merged.Name,
+			"priority": merged.Priority,
+			"content":  merged.Content,
+		}
+
+		// Update tracking arrays
+		for j := range existingRules {
+			if existingRules[j].Name == similarRule.Name {
+				existingRules[j] = merged
+				break
+			}
+		}
+
+		fmt.Printf("[DEBUG] Merged similar rules into '%s'\n", merged.Name)
+		break
+	}
+}
+
 // applyRulesResponse applies rules response to config with semantic deduplication
 func applyRulesResponse(config map[string]interface{}, response interface{}) error {
 	resp, ok := response.(*RulesResponse)
 	if !ok {
 		return fmt.Errorf("invalid rules response type")
 	}
-	rules := []interface{}{}
-	existingRules := []RuleResponse{}
-	existingNames := make(map[string]bool)
 
-	// Keep existing rules and track their names
-	if config["rules"] != nil {
-		var ok bool
-		rules, ok = config["rules"].([]interface{})
-		if !ok {
-			return fmt.Errorf("rules is not a slice")
-		}
-		for _, r := range rules {
-			if ruleMap, ok := r.(map[string]interface{}); ok {
-				if name, nameOk := ruleMap["name"].(string); nameOk {
-					existingNames[name] = true
-					// Convert to RuleResponse for similarity checking
-					if priority, pOk := ruleMap["priority"].(string); pOk {
-						if content, cOk := ruleMap["content"].(string); cOk {
-							existingRules = append(existingRules, RuleResponse{
-								Name:     name,
-								Priority: priority,
-								Content:  content,
-							})
-						}
-					}
-				}
-			}
-		}
+	rules, existingRules, existingNames, err := extractExistingRules(config)
+	if err != nil {
+		return err
 	}
 
 	// Initialize semantic similarity checker
@@ -908,28 +961,7 @@ func applyRulesResponse(config map[string]interface{}, response interface{}) err
 
 			// Merge the rules, keeping the more detailed version
 			merged := similarity.MergeRules(*similarRule, newRule)
-
-			// Update the existing rule in place
-			for i, r := range rules {
-				if ruleMap, ok := r.(map[string]interface{}); ok {
-					if name, ok := ruleMap["name"].(string); ok && name == similarRule.Name {
-						rules[i] = map[string]interface{}{
-							"name":     merged.Name,
-							"priority": merged.Priority,
-							"content":  merged.Content,
-						}
-						// Update tracking arrays
-						for j := range existingRules {
-							if existingRules[j].Name == similarRule.Name {
-								existingRules[j] = merged
-								break
-							}
-						}
-						fmt.Printf("[DEBUG] Merged similar rules into '%s'\n", merged.Name)
-						break
-					}
-				}
-			}
+			updateExistingRule(rules, existingRules, similarRule, merged)
 		} else {
 			// No similar rule found, add as new rule
 			fmt.Printf("[DEBUG] Adding new unique rule: '%s'\n", newRule.Name)
@@ -947,40 +979,100 @@ func applyRulesResponse(config map[string]interface{}, response interface{}) err
 	return nil
 }
 
+// extractExistingSections extracts existing sections from config into structured form
+func extractExistingSections(config map[string]interface{}) (sections []interface{}, existingSections []SectionResponse, existingNames map[string]bool, err error) {
+	existingSections = []SectionResponse{}
+	existingNames = make(map[string]bool)
+	sections = []interface{}{}
+
+	if config["sections"] == nil {
+		return sections, existingSections, existingNames, nil
+	}
+
+	var ok bool
+	sections, ok = config["sections"].([]interface{})
+	if !ok {
+		return nil, nil, nil, fmt.Errorf("sections is not a slice")
+	}
+
+	for _, s := range sections {
+		sectionMap, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, nameOk := sectionMap["name"].(string)
+		if !nameOk {
+			continue
+		}
+
+		existingNames[name] = true
+
+		// Convert to SectionResponse for similarity checking
+		priority, pOk := sectionMap["priority"].(string)
+		content, cOk := sectionMap["content"].(string)
+		if pOk && cOk {
+			existingSections = append(existingSections, SectionResponse{
+				Name:     name,
+				Priority: priority,
+				Content:  content,
+			})
+		}
+	}
+
+	return sections, existingSections, existingNames, nil
+}
+
+// updateExistingSection updates an existing section in place
+func updateExistingSection(sections []interface{}, existingSections []SectionResponse, similarSection *SectionResponse, newSection SectionResponse) {
+	// For sections, prefer to merge content rather than replace
+	for i, s := range sections {
+		sectionMap, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		name, ok := sectionMap["name"].(string)
+		if !ok || name != similarSection.Name {
+			continue
+		}
+
+		// Choose the more comprehensive content
+		mergedContent := similarSection.Content
+		if len(newSection.Content) > len(similarSection.Content) {
+			mergedContent = newSection.Content
+		}
+
+		sections[i] = map[string]interface{}{
+			"name":     similarSection.Name, // Keep original name
+			"priority": newSection.Priority, // Use new priority if different
+			"content":  mergedContent,
+		}
+
+		// Update tracking array
+		for j := range existingSections {
+			if existingSections[j].Name == similarSection.Name {
+				existingSections[j].Content = mergedContent
+				existingSections[j].Priority = newSection.Priority
+				break
+			}
+		}
+
+		fmt.Printf("[DEBUG] Merged similar sections into '%s'\n", similarSection.Name)
+		break
+	}
+}
+
 // applySectionsResponse applies sections response to config with semantic deduplication
 func applySectionsResponse(config map[string]interface{}, response interface{}) error {
 	resp, ok := response.(*SectionsResponse)
 	if !ok {
 		return fmt.Errorf("invalid sections response type")
 	}
-	sections := []interface{}{}
-	existingSections := []SectionResponse{}
-	existingNames := make(map[string]bool)
 
-	// Keep existing sections and track their names
-	if config["sections"] != nil {
-		var ok bool
-		sections, ok = config["sections"].([]interface{})
-		if !ok {
-			return fmt.Errorf("sections is not a slice")
-		}
-		for _, s := range sections {
-			if sectionMap, ok := s.(map[string]interface{}); ok {
-				if name, nameOk := sectionMap["name"].(string); nameOk {
-					existingNames[name] = true
-					// Convert to SectionResponse for similarity checking
-					if priority, pOk := sectionMap["priority"].(string); pOk {
-						if content, cOk := sectionMap["content"].(string); cOk {
-							existingSections = append(existingSections, SectionResponse{
-								Name:     name,
-								Priority: priority,
-								Content:  content,
-							})
-						}
-					}
-				}
-			}
-		}
+	sections, existingSections, existingNames, err := extractExistingSections(config)
+	if err != nil {
+		return err
 	}
 
 	// Initialize semantic similarity checker
@@ -1000,36 +1092,7 @@ func applySectionsResponse(config map[string]interface{}, response interface{}) 
 			fmt.Printf("[DEBUG] Found similar section for '%s' -> '%s' (%.2f similarity)\n",
 				newSection.Name, similarSection.Name, simScore)
 
-			// For sections, prefer to merge content rather than replace
-			// Update the existing section in place with enhanced content
-			for i, s := range sections {
-				if sectionMap, ok := s.(map[string]interface{}); ok {
-					if name, ok := sectionMap["name"].(string); ok && name == similarSection.Name {
-						// Choose the more comprehensive content
-						mergedContent := similarSection.Content
-						if len(newSection.Content) > len(similarSection.Content) {
-							mergedContent = newSection.Content
-						}
-
-						sections[i] = map[string]interface{}{
-							"name":     similarSection.Name, // Keep original name
-							"priority": newSection.Priority, // Use new priority if different
-							"content":  mergedContent,
-						}
-
-						// Update tracking array
-						for j := range existingSections {
-							if existingSections[j].Name == similarSection.Name {
-								existingSections[j].Content = mergedContent
-								existingSections[j].Priority = newSection.Priority
-								break
-							}
-						}
-						fmt.Printf("[DEBUG] Merged similar sections into '%s'\n", similarSection.Name)
-						break
-					}
-				}
-			}
+			updateExistingSection(sections, existingSections, similarSection, newSection)
 		} else {
 			// No similar section found, add as new section
 			fmt.Printf("[DEBUG] Adding new unique section: '%s'\n", newSection.Name)
