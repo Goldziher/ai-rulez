@@ -25,4 +25,4 @@ Type "npx ai-rulez init 'My Awesome Project' --preset popular --yes"
 Enter
 
 # Wait for the command to complete and show output
-Sleep 6s
+Sleep 30s
