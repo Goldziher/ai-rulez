@@ -175,10 +175,10 @@ func (s *InitCLITestSuite) TestInitExistingConfig() {
 	// Create a custom command that doesn't inherit CI env var
 	// This test needs to verify that init fails when config exists
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"CI":            "",
+		"CI":             "",
 		"NO_INTERACTIVE": "",
 	}, "init", "TestProject")
-	
+
 	s.NotEqual(0, result.ExitCode, "init should fail when config exists")
 	result.AssertStderrContains(s.T(), "Configuration file already exists")
 }

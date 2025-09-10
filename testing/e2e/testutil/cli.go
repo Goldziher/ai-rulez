@@ -31,7 +31,7 @@ func RunCLIWithEnv(t *testing.T, workingDir string, env map[string]string, args 
 	//nolint:gosec // G204: Test utility needs to run subprocess with variables
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = workingDir
-	
+
 	// Set custom environment if provided
 	if env != nil {
 		// Start with current environment
