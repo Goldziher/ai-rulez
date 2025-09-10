@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -65,6 +66,7 @@ type ProjectContext struct {
 	ExistingConfigs    map[string]string   // Existing AI config files (README, CLAUDE.md, etc.)
 	GitHistory         *GitHistory         // Git history analysis
 	DirectoryStructure map[string][]string // Directory -> files mapping for size assessment
+	AIRulezCommand     string              // How ai-rulez was invoked (e.g., "ai-rulez", "uvx ai-rulez", etc.)
 }
 
 func GatherProjectContext(projectName string) *ProjectContext {
@@ -80,6 +82,7 @@ func GatherProjectContext(projectName string) *ProjectContext {
 		RootPath:        rootPath,
 		MarkdownFiles:   []MarkdownFile{},
 		ExistingConfigs: make(map[string]string),
+		AIRulezCommand:  detectAIRulezCommand(),
 	}
 
 	// Analyze codebase first
@@ -705,4 +708,45 @@ func (ctx *ProjectContext) readExistingAIConfigs(rootPath string) {
 			}
 		}
 	}
+}
+
+// detectAIRulezCommand detects how ai-rulez was invoked
+// It checks environment variables and command line args to determine the invocation method
+func detectAIRulezCommand() string {
+	// Check if invoked via uvx (Python)
+	if os.Getenv("UV_PROJECT_ENVIRONMENT") != "" || os.Getenv("VIRTUAL_ENV") != "" {
+		// If we detect Python virtual environment, likely invoked via uvx or similar
+		return "uvx ai-rulez"
+	}
+
+	// Check if invoked via npx (Node.js)
+	if os.Getenv("npm_lifecycle_event") != "" || os.Getenv("npm_execpath") != "" {
+		return "npx ai-rulez"
+	}
+
+	// Check the actual command used (from os.Args[0])
+	executable := os.Args[0]
+	
+	// If it's a full path, we should use that path
+	if filepath.IsAbs(executable) {
+		// But first check if ai-rulez is in PATH
+		if _, err := exec.LookPath("ai-rulez"); err == nil {
+			// ai-rulez is in PATH, so we can use it directly
+			return "ai-rulez"
+		}
+		// Not in PATH, use the full path
+		return executable
+	}
+
+	// Check if it contains path separators (relative path like ./bin/ai-rulez)
+	if strings.Contains(executable, string(filepath.Separator)) {
+		// It's a relative path, convert to absolute
+		if absPath, err := filepath.Abs(executable); err == nil {
+			return absPath
+		}
+		return executable
+	}
+
+	// Default to assuming it's in PATH
+	return "ai-rulez"
 }
