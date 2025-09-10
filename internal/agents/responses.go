@@ -3,8 +3,10 @@ package agents
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
+	"unicode"
 )
 
 // AgentResponse is the base interface for all agent responses
@@ -261,4 +263,187 @@ func ParseAgentOutput(output string, responseType string) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("unknown response type: %s", responseType)
 	}
+}
+
+// ContentSimilarity provides semantic similarity analysis for avoiding duplicates
+type ContentSimilarity struct {
+	threshold float64
+}
+
+// NewContentSimilarity creates a new similarity analyzer
+func NewContentSimilarity(threshold float64) *ContentSimilarity {
+	if threshold <= 0 || threshold > 1 {
+		threshold = 0.7 // Default 70% similarity threshold
+	}
+	return &ContentSimilarity{threshold: threshold}
+}
+
+// calculateCosineSimilarity computes cosine similarity between two texts
+func (cs *ContentSimilarity) calculateCosineSimilarity(text1, text2 string) float64 {
+	// Normalize and tokenize
+	tokens1 := cs.tokenize(text1)
+	tokens2 := cs.tokenize(text2)
+
+	// Create term frequency maps
+	tf1 := cs.termFrequency(tokens1)
+	tf2 := cs.termFrequency(tokens2)
+
+	// Get unique terms
+	allTerms := make(map[string]bool)
+	for term := range tf1 {
+		allTerms[term] = true
+	}
+	for term := range tf2 {
+		allTerms[term] = true
+	}
+
+	// Calculate cosine similarity
+	var dotProduct, norm1, norm2 float64
+	for term := range allTerms {
+		freq1 := tf1[term]
+		freq2 := tf2[term]
+
+		dotProduct += freq1 * freq2
+		norm1 += freq1 * freq1
+		norm2 += freq2 * freq2
+	}
+
+	if norm1 == 0 || norm2 == 0 {
+		return 0
+	}
+
+	return dotProduct / (math.Sqrt(norm1) * math.Sqrt(norm2))
+}
+
+// tokenize splits text into meaningful tokens, removing stop words
+func (cs *ContentSimilarity) tokenize(text string) []string {
+	// Convert to lowercase and split on non-alphanumeric chars
+	text = strings.ToLower(text)
+	tokens := strings.FieldsFunc(text, func(c rune) bool {
+		return !unicode.IsLetter(c) && !unicode.IsNumber(c)
+	})
+
+	// Filter out stop words and short tokens
+	stopWords := map[string]bool{
+		"the": true, "a": true, "an": true, "and": true, "or": true, "but": true,
+		"in": true, "on": true, "at": true, "to": true, "for": true, "of": true,
+		"with": true, "by": true, "is": true, "are": true, "was": true, "were": true,
+		"be": true, "been": true, "have": true, "has": true, "had": true, "do": true,
+		"does": true, "did": true, "will": true, "would": true, "could": true, "should": true,
+		"may": true, "might": true, "must": true, "can": true, "use": true, "using": true,
+		"all": true, "any": true, "some": true, "this": true, "that": true, "these": true,
+		"those": true, "when": true, "where": true, "why": true, "how": true,
+	}
+
+	var filtered []string
+	for _, token := range tokens {
+		if len(token) > 2 && !stopWords[token] {
+			filtered = append(filtered, token)
+		}
+	}
+
+	return filtered
+}
+
+// termFrequency calculates term frequency for tokens
+func (cs *ContentSimilarity) termFrequency(tokens []string) map[string]float64 {
+	tf := make(map[string]float64)
+	total := float64(len(tokens))
+
+	for _, token := range tokens {
+		tf[token]++
+	}
+
+	// Normalize by total count
+	for term := range tf {
+		tf[term] /= total
+	}
+
+	return tf
+}
+
+// IsSimilar checks if two content strings are semantically similar
+func (cs *ContentSimilarity) IsSimilar(content1, content2 string) bool {
+	similarity := cs.calculateCosineSimilarity(content1, content2)
+	return similarity >= cs.threshold
+}
+
+// FindSimilarRule finds existing rule that's similar to the new rule
+func (cs *ContentSimilarity) FindSimilarRule(newRule RuleResponse, existingRules []RuleResponse) (similarRule *RuleResponse, similarity float64) {
+	var bestMatch *RuleResponse
+	var bestSimilarity float64
+
+	for i := range existingRules {
+		similarity := cs.calculateCosineSimilarity(newRule.Content, existingRules[i].Content)
+		if similarity > bestSimilarity && similarity >= cs.threshold {
+			bestSimilarity = similarity
+			bestMatch = &existingRules[i]
+		}
+	}
+
+	return bestMatch, bestSimilarity
+}
+
+// FindSimilarSection finds existing section that's similar to the new section
+func (cs *ContentSimilarity) FindSimilarSection(newSection SectionResponse, existingSections []SectionResponse) (similarSection *SectionResponse, similarity float64) {
+	var bestMatch *SectionResponse
+	var bestSimilarity float64
+
+	for i := range existingSections {
+		similarity := cs.calculateCosineSimilarity(newSection.Content, existingSections[i].Content)
+		if similarity > bestSimilarity && similarity >= cs.threshold {
+			bestSimilarity = similarity
+			bestMatch = &existingSections[i]
+		}
+	}
+
+	return bestMatch, bestSimilarity
+}
+
+// MergeRules intelligently merges similar rules, keeping the more specific/detailed one
+func (cs *ContentSimilarity) MergeRules(rule1, rule2 RuleResponse) RuleResponse {
+	// Choose the more specific rule (longer content usually means more specific)
+	if len(rule2.Content) > len(rule1.Content) {
+		rule1, rule2 = rule2, rule1
+	}
+
+	// Use higher priority if different
+	if rule2.Priority == "critical" && rule1.Priority != "critical" {
+		rule1.Priority = rule2.Priority
+	}
+
+	// Combine unique aspects if rule2 has valuable additions
+	if cs.hasUniqueContent(rule1.Content, rule2.Content) {
+		rule1.Content = cs.combineContent(rule1.Content, rule2.Content)
+	}
+
+	return rule1
+}
+
+// hasUniqueContent checks if the second content has unique information
+func (cs *ContentSimilarity) hasUniqueContent(primary, secondary string) bool {
+	primaryTokens := cs.tokenize(primary)
+	secondaryTokens := cs.tokenize(secondary)
+
+	primarySet := make(map[string]bool)
+	for _, token := range primaryTokens {
+		primarySet[token] = true
+	}
+
+	uniqueTokens := 0
+	for _, token := range secondaryTokens {
+		if !primarySet[token] {
+			uniqueTokens++
+		}
+	}
+
+	// If secondary has at least 20% unique tokens, consider merging
+	return float64(uniqueTokens)/float64(len(secondaryTokens)) >= 0.2
+}
+
+// combineContent intelligently combines two content strings
+func (cs *ContentSimilarity) combineContent(primary, secondary string) string {
+	// For now, just use the primary (more detailed) content
+	// Future enhancement: intelligent content merging
+	return primary
 }
