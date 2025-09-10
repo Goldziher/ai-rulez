@@ -57,6 +57,78 @@ If you have installed `ai-rulez` locally with `go install`.
 
 ---
 
+## Automatic CLI Configuration
+
+**New in v2.1+**: `ai-rulez` can automatically configure MCP servers across CLI tools, eliminating manual setup.
+
+### How It Works
+
+When you add MCP servers to your `ai-rulez.yaml`, the `generate` command automatically configures them for available CLI tools:
+
+```yaml
+# ai-rulez.yaml
+mcp_servers:
+  - name: "ai-rulez"
+    command: "ai-rulez"
+    args: ["mcp"]
+    description: "Configuration management server"
+```
+
+```bash
+ai-rulez generate
+# ✅ Generated 2 file(s) successfully
+# ✅ Configured claude MCP server: ai-rulez  
+# ✅ Configured gemini MCP server: ai-rulez
+```
+
+### Supported CLI Tools
+
+**Claude CLI**: Full feature support including environment variables and transport options
+```yaml
+mcp_servers:
+  - name: "database-tools"
+    command: "uvx"
+    args: ["mcp-server-postgres"]
+    env:
+      DATABASE_URL: "postgresql://localhost/mydb"
+    transport: "stdio"
+    targets: ["@claude-cli"]
+```
+
+**Gemini CLI**: Automatic configuration with external environment handling
+```yaml
+mcp_servers:
+  - name: "github-tools"  
+    command: "npx"
+    args: ["-y", "@modelcontextprotocol/server-github"]
+    targets: ["@gemini-cli"]
+```
+
+### Hybrid Configuration
+
+Configure CLI tools **and** generate config files simultaneously:
+
+```yaml
+mcp_servers:
+  - name: "ai-rulez"
+    command: "ai-rulez"
+    args: ["mcp"]
+    targets:
+      - "@claude-cli"        # Executes: claude mcp add ai-rulez ai-rulez mcp
+      - "@gemini-cli"        # Executes: gemini mcp add ai-rulez ai-rulez mcp  
+      - ".cursor/mcp.json"   # Generates: Cursor config file
+```
+
+### Control Options
+
+**Disable CLI configuration** when needed:
+```bash
+ai-rulez generate --no-configure-cli-mcp
+# Only generates files, skips CLI commands
+```
+
+---
+
 ## Server Capabilities
 
 When enabled, the MCP server provides your AI assistant with a comprehensive set of tools to safely manage your entire `ai-rulez.yml` configuration. The assistant can:

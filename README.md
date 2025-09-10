@@ -32,7 +32,7 @@ Tired of manually managing rule files, subagents, and custom commands across dif
 ### Powerful Tooling
 - **Custom Commands:** Define custom commands that your AI assistant can execute, enabling powerful, interactive workflows.
 - **Specialized AI Agents:** Create specialized "sub-agents" with their own system prompts and tools, perfect for complex tasks like code reviews or database queries.
-- **MCP Servers:** Launch a Model Context Protocol (MCP) server to allow AI assistants to programmatically interact with your configuration.
+- **MCP Integration:** Automatically configure MCP servers across CLI tools (Claude, Gemini) and generate config files for others (Cursor, VS Code). One configuration, every tool connected.
 - **Full-Featured CLI:** Manage your entire configuration from the command line. Add rules, update agents, and generate files without ever opening a YAML file.
 
 ### Flexible Integrations
@@ -73,6 +73,13 @@ agents:
   - name: "go-developer"
     description: "Go language expert for core development"
     system_prompt: "You are an expert Go developer. Your key responsibilities include writing idiomatic Go, using proper error handling, and creating comprehensive tests."
+
+# MCP servers for direct AI tool integration
+mcp_servers:
+  - name: "ai-rulez"
+    command: "ai-rulez"
+    args: ["mcp"]
+    description: "AI-Rulez MCP server for configuration management"
 ```
 
 Run `ai-rulez generate` → get all your configuration files, perfectly synchronized.
@@ -101,6 +108,86 @@ ai-rulez add rule "Tech Stack" --priority critical --content "This project uses 
 
 # Generate files
 ai-rulez generate
+```
+
+## MCP Server Integration
+
+`ai-rulez` provides seamless **Model Context Protocol (MCP)** integration, automatically configuring both file-based and CLI-based AI tools with your MCP servers.
+
+### Automatic CLI Configuration
+
+When you run `ai-rulez generate`, MCP servers are **automatically configured** for available CLI tools:
+
+```bash
+ai-rulez generate
+# ✅ Generated 3 file(s) successfully
+# ✅ Configured claude MCP server: ai-rulez
+# ✅ Configured gemini MCP server: database-tools
+```
+
+**Supported CLI tools:**
+- **Claude CLI**: `claude mcp add` with full env/transport support
+- **Gemini CLI**: `gemini mcp add` with automatic configuration
+
+### Hybrid Configuration
+
+`ai-rulez` supports both CLI and file-based configurations simultaneously:
+
+```yaml
+mcp_servers:
+  - name: "database-tools"
+    command: "uvx"
+    args: ["mcp-server-postgres"]
+    env:
+      DATABASE_URL: "postgresql://localhost/mydb"
+    targets: 
+      - "@claude-cli"        # Configure Claude CLI
+      - "@gemini-cli"        # Configure Gemini CLI  
+      - ".cursor/mcp.json"   # Generate Cursor config file
+```
+
+This single configuration:
+- ✅ Executes `claude mcp add` commands
+- ✅ Executes `gemini mcp add` commands  
+- ✅ Generates `.cursor/mcp.json` file
+
+### Control Options
+
+**Default behavior** (recommended):
+```bash
+ai-rulez generate
+# Configures all available CLI tools + generates files
+```
+
+**Disable CLI configuration** when needed:
+```bash
+ai-rulez generate --no-configure-cli-mcp
+# Only generates files, skips CLI tool configuration
+```
+
+**Target specific tools:**
+```yaml
+mcp_servers:
+  - name: "github-integration"
+    command: "npx"
+    args: ["@modelcontextprotocol/server-github"]
+    targets: ["@claude-cli"]  # Only configure Claude CLI
+```
+
+### Built-in MCP Server
+
+`ai-rulez` includes its own MCP server for configuration management:
+
+```bash
+# Start the ai-rulez MCP server
+ai-rulez mcp
+
+# Or configure it automatically via your ai-rulez.yaml
+mcp_servers:
+  - name: "ai-rulez"
+    command: "ai-rulez" 
+    args: ["mcp"]
+    description: "Configuration management server"
 ```
 
 ## Installation
@@ -159,7 +246,7 @@ Add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.0.0
+    rev: v2.1.0
     hooks:
       - id: ai-rulez-validate
       - id: ai-rulez-generate
