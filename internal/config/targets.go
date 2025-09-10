@@ -123,7 +123,7 @@ func matchesBaseName(pattern, baseName string) bool {
 
 func matchesDirectoryPatterns(pattern, dirPath string) bool {
 	pathSep := string(filepath.Separator)
-	
+
 	if strings.Contains(pattern, "**") {
 		parts := strings.Split(pattern, "**")
 		if len(parts) > 0 {
