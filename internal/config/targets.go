@@ -79,6 +79,9 @@ func MatchesTarget(outputPath string, targets []string) bool {
 			continue
 		}
 
+		// Normalize target pattern to use OS-specific separators
+		cleanTarget = filepath.FromSlash(cleanTarget)
+
 		if matchesExact(cleanTarget, normalizedPath) {
 			return true
 		}
@@ -87,8 +90,9 @@ func MatchesTarget(outputPath string, targets []string) bool {
 			return true
 		}
 
-		if !strings.Contains(cleanTarget, "/") && strings.HasPrefix(cleanTarget, "*.") {
-			if !strings.Contains(normalizedPath, "/") && matchesBaseName(cleanTarget, baseName) {
+		pathSep := string(filepath.Separator)
+		if !strings.Contains(cleanTarget, pathSep) && strings.HasPrefix(cleanTarget, "*.") {
+			if !strings.Contains(normalizedPath, pathSep) && matchesBaseName(cleanTarget, baseName) {
 				return true
 			}
 		} else if matchesBaseName(cleanTarget, baseName) {
@@ -118,11 +122,13 @@ func matchesBaseName(pattern, baseName string) bool {
 }
 
 func matchesDirectoryPatterns(pattern, dirPath string) bool {
+	pathSep := string(filepath.Separator)
+	
 	if strings.Contains(pattern, "**") {
 		parts := strings.Split(pattern, "**")
 		if len(parts) > 0 {
-			prefix := strings.TrimSuffix(parts[0], "/")
-			if prefix != "" && (dirPath == prefix || strings.HasPrefix(dirPath, prefix+"/")) {
+			prefix := strings.TrimSuffix(parts[0], pathSep)
+			if prefix != "" && (dirPath == prefix || strings.HasPrefix(dirPath, prefix+pathSep)) {
 				return true
 			}
 		}
@@ -130,12 +136,12 @@ func matchesDirectoryPatterns(pattern, dirPath string) bool {
 
 	if strings.Contains(pattern, "*") && !strings.Contains(pattern, "**") {
 		dir := filepath.Dir(pattern)
-		if dir != "." && (dirPath == dir || strings.HasPrefix(dirPath, dir+"/")) {
+		if dir != "." && (dirPath == dir || strings.HasPrefix(dirPath, dir+pathSep)) {
 			return true
 		}
 	}
 
-	if strings.Contains(pattern, "/") {
+	if strings.Contains(pattern, pathSep) {
 		matched, err := filepath.Match(pattern, dirPath)
 		if err == nil && matched {
 			return true
