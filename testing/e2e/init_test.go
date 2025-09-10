@@ -208,8 +208,8 @@ tasks:
 			output, err := runTestCommand(args...)
 			require.NoError(t, err, "Init command should succeed. Output: %s", output)
 
-			configPath := filepath.Join(dir, "ai_rulez.yaml")
-			assert.FileExists(t, configPath, "ai_rulez.yaml should be created")
+			configPath := filepath.Join(dir, "ai-rulez.yaml")
+			assert.FileExists(t, configPath, "ai-rulez.yaml should be created")
 
 			if tt.validate != nil {
 				tt.validate(t, configPath)

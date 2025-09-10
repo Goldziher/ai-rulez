@@ -1,6 +1,7 @@
 package config_test
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -52,12 +53,12 @@ func TestFilterMCPServers(t *testing.T) {
 		},
 		{
 			name:       "backend path matches postgres and universal",
-			outputPath: "backend/api.md",
+			outputPath: filepath.Join("backend", "api.md"),
 			expected:   []string{"postgres", "universal"},
 		},
 		{
 			name:       "cursor path matches cursor-only and universal",
-			outputPath: ".cursor/mcp.json",
+			outputPath: filepath.Join(".cursor", "mcp.json"),
 			expected:   []string{"universal", "cursor-only"},
 		},
 		{
@@ -278,7 +279,7 @@ func TestFilterCommands_WithNamedTargets(t *testing.T) {
 		},
 		{
 			name:       "docs path matches documentation",
-			outputPath: "docs/api.txt",
+			outputPath: filepath.Join("docs", "api.txt"),
 			expected:   []string{"doc-cmd"},
 		},
 		{
@@ -288,7 +289,7 @@ func TestFilterCommands_WithNamedTargets(t *testing.T) {
 		},
 		{
 			name:       "src path matches source-code",
-			outputPath: "src/utils.txt",
+			outputPath: filepath.Join("src", "utils.txt"),
 			expected:   []string{"code-cmd"},
 		},
 		{
