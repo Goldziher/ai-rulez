@@ -276,7 +276,7 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	// Initialize git repo
 	cmd := exec.Command("git", "init")
 	cmd.Dir = tempDir
-	_, err = cmd.Output()
+	_, err := cmd.Output()
 	require.NoError(t, err, "Should initialize git repo")
 
 	// Configure git (required for commits)
