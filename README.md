@@ -6,11 +6,28 @@
 
 **One config to rule them all.**
 
-Tired of manually managing rule files, subagents, and custom commands across different AI tools? `ai-rulez` gives you one `ai-rulez.yml` file to generate them all. Keep your AI context in sync, and even launch MCP servers for direct integration.
+## The Problem
+
+If you're using multiple AI coding assistants (Claude Code, Cursor, Windsurf, GitHub Copilot), you've probably noticed the configuration fragmentation. Each tool demands its own format - `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`. Keeping coding standards consistent across all these tools is frustrating and error-prone.
+
+## The Solution
+
+AI-Rulez lets you write your project configuration once and automatically generates native files for every AI tool - current and future ones. It's like having a build system for AI context.
 
 <p align="center">
-  <img src="docs/assets/ai-rulez-demo.gif" alt="AI-Rulez Demo" width="100%">
+  <img src="docs/assets/ai-rulez-python-demo.gif" alt="AI-Rulez Demo" width="100%">
 </p>
+
+## Why This Matters
+
+Development teams using AI assistants face common challenges:
+- **Multiple tools, multiple configs**: Your team uses Claude Code for reviews, Cursor for development, Copilot for completions
+- **Configuration drift**: Maintaining separate files leads to inconsistent standards across tools
+- **Monorepo complexity**: Multiple services and packages all need different AI contexts
+- **Team consistency**: Junior devs get different AI guidance than seniors
+- **Future-proofing**: New AI tools require rewriting all configurations
+
+AI-Rulez solves this with a single `ai-rulez.yaml` that understands your project's conventions.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -21,27 +38,36 @@ Tired of manually managing rule files, subagents, and custom commands across dif
 
 ---
 
-## Feature Highlights
+## Key Features
 
-`ai-rulez` is a progressive tool-box, designed to offer a centralized way to manage AI tooling for a repository.
+### AI-Powered Project Analysis
+The `init` command is where AI-Rulez shines. Instead of manually writing configurations, let AI analyze your codebase:
 
-### Centralized Configuration
-- **Centralized Definitions:** Use a single `ai-rulez.yml` as the source of truth to define rules, file structures, and documentation for all your AI tools.
-- **Nested Configs & Monorepo Support:** Scale your configurations with `extends` and `includes`. Manage complex projects and monorepos with ease by using the `--recursive` flag to combine configurations from multiple files.
-  ```bash
-  # Generate rules for all projects in a monorepo
-  ai-rulez generate --recursive
-  ```
+```bash
+# AI analyzes your codebase and generates tailored config
+npx ai-rulez init "My Project" --preset popular --use-agent claude --yes
+```
 
-### Powerful Tooling
-- **Custom Commands:** Define custom commands that your AI assistant can execute, enabling powerful, interactive workflows.
-- **Specialized AI Agents:** Create specialized "sub-agents" with their own system prompts and tools, perfect for complex tasks like code reviews or database queries.
+This automatically:
+- Detects your tech stack (Python/Node/Go, testing frameworks, linters)
+- Identifies project patterns and conventions
+- Generates appropriate coding standards and practices
+- Creates specialized agents for different tasks (code review, testing, docs)
+- **Automatically adds all generated AI files to .gitignore** - no more committing `.cursorrules` or `CLAUDE.md` by accident
+
+### Universal Output Generation
+One YAML config generates files for every tool:
+- `CLAUDE.md` for Claude Code
+- `.cursorrules` for Cursor
+- `.windsurfrules` for Windsurf  
+- `.github/copilot-instructions.md` for GitHub Copilot
+- Custom formats for any future AI tool
+
+### Powerful Enterprise Features
 - **MCP Integration:** Automatically configure MCP servers across CLI tools (Claude, Gemini) and generate config files for others (Cursor, VS Code). One configuration, every tool connected.
+- **Team Collaboration:** Remote config includes, local overrides, and monorepo support with `--recursive`
 - **Full-Featured CLI:** Manage your entire configuration from the command line. Add rules, update agents, and generate files without ever opening a YAML file.
-
-### Flexible Integrations
-- **Multi-Tool Support:** Use presets to instantly generate configurations for popular AI tools like Claude, Cursor, Copilot, Gemini, and more.
-- **Custom Tool Integration:** Don't see your favorite tool on the list? Use the `outputs` key to generate a configuration file for any tool, in any format.
+- **Security & Performance:** SSRF protection, schema validation, Go-based performance with instant startup
 
 ## How It Works
 
