@@ -3,6 +3,7 @@ package agents
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,6 +13,83 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
+
+// ErrorSeverity defines how critical an error is
+type ErrorSeverity int
+
+const (
+	ErrorSeverityMinor    ErrorSeverity = iota // Non-critical, can continue
+	ErrorSeverityMajor                         // Significant but recoverable
+	ErrorSeverityCritical                      // Must fail
+)
+
+// AgentError wraps errors with severity information
+type AgentError struct {
+	Err       error
+	TaskName  string
+	Severity  ErrorSeverity
+	Retryable bool
+}
+
+// Error implements the error interface
+func (ae *AgentError) Error() string {
+	return fmt.Sprintf("task %s failed: %v", ae.TaskName, ae.Err)
+}
+
+// Unwrap allows error unwrapping
+func (ae *AgentError) Unwrap() error {
+	return ae.Err
+}
+
+// classifyError determines the severity of an error
+func classifyError(err error, taskName string) *AgentError {
+	if err == nil {
+		return nil
+	}
+
+	// File I/O errors are critical for config updates
+	if strings.Contains(err.Error(), "failed to write config") ||
+		strings.Contains(err.Error(), "failed to create temporary file") ||
+		strings.Contains(err.Error(), "failed to marshal config") {
+		return &AgentError{
+			Err:       err,
+			TaskName:  taskName,
+			Severity:  ErrorSeverityCritical,
+			Retryable: true,
+		}
+	}
+
+	// Network/agent invocation errors are major but recoverable
+	if strings.Contains(err.Error(), "failed to invoke agent") ||
+		strings.Contains(err.Error(), "context deadline exceeded") ||
+		strings.Contains(err.Error(), "connection refused") {
+		return &AgentError{
+			Err:       err,
+			TaskName:  taskName,
+			Severity:  ErrorSeverityMajor,
+			Retryable: true,
+		}
+	}
+
+	// JSON parsing errors are major but not retryable
+	if strings.Contains(err.Error(), "failed to parse agent output") ||
+		strings.Contains(err.Error(), "invalid JSON") {
+		return &AgentError{
+			Err:       err,
+			TaskName:  taskName,
+			Severity:  ErrorSeverityMajor,
+			Retryable: false,
+		}
+	}
+
+	// Default to minor severity for unknown errors
+	return &AgentError{
+		Err:       err,
+		TaskName:  taskName,
+		Severity:  ErrorSeverityMinor,
+		Retryable: true,
+	}
+}
 
 // AgentTask represents a specific task that an agent will perform
 type AgentTask struct {
@@ -104,7 +182,7 @@ func assessProjectWorkload(context *ProjectContext) ProjectWorkload {
 	}
 
 	// Check for monorepo characteristics
-	isMonorepo := context.RepoType == "monorepo" || len(context.PackageLocations) > 1
+	isMonorepo := context.RepoType == repoTypeMonorepo || len(context.PackageLocations) > 1
 
 	// Calculate complexity score (1-10)
 	workload.complexity = 3 // base complexity
@@ -267,23 +345,16 @@ func generateTaskID(taskName string, index int) string {
 
 // selectPromptForTask maps generic task names to specific prompt functions
 func selectPromptForTask(taskName string) func(*ProjectContext) string {
-	fmt.Printf("[DEBUG] Selecting prompt for task: '%s'\n", taskName)
-
 	switch {
 	case strings.Contains(taskName, "project description"):
-		fmt.Printf("[DEBUG] Task '%s' matched project description -> buildProjectAnalysisPrompt\n", taskName)
 		return buildProjectAnalysisPrompt
 	case strings.Contains(taskName, "documentation"):
-		fmt.Printf("[DEBUG] Task '%s' matched documentation -> buildDocumentationPrompt\n", taskName)
 		return buildDocumentationPrompt
 	case strings.Contains(taskName, "standards"):
-		fmt.Printf("[DEBUG] Task '%s' matched standards -> buildStandardsPrompt\n", taskName)
 		return buildStandardsPrompt
 	case strings.Contains(taskName, "agents"):
-		fmt.Printf("[DEBUG] Task '%s' matched agents -> buildAgentDefinitionsPrompt\n", taskName)
 		return buildAgentDefinitionsPrompt
 	default:
-		fmt.Printf("[DEBUG] Task '%s' didn't match any pattern -> DEFAULT buildProjectAnalysisPrompt\n", taskName)
 		return buildProjectAnalysisPrompt
 	}
 }
@@ -362,7 +433,17 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 
 	// Execute tasks in waves based on maxAgents limit
 	maxAgents := getMaxAgents()
-	failedTasks, successCount := executeTasksInWaves(initAgentTasks, taskStatuses, agent, context, display, maxAgents)
+	failedTasks, successCount, criticalErrors := executeTasksInWaves(initAgentTasks, taskStatuses, agent, context, display, maxAgents)
+
+	// Check for critical errors that should fail the entire operation
+	if len(criticalErrors) > 0 {
+		fmt.Printf("\n")
+		fmt.Printf("❌ Critical failures occurred during agent execution:\n")
+		for _, critErr := range criticalErrors {
+			fmt.Printf("   • %s: %v\n", critErr.TaskName, critErr.Err)
+		}
+		return "", fmt.Errorf("critical failures prevent successful configuration generation: %d critical errors", len(criticalErrors))
+	}
 
 	// Show summary
 	fmt.Printf("\n")
@@ -378,7 +459,7 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	// CLI commands ensure valid configuration - no validation needed
 	fmt.Println("✅ Configuration generated successfully")
 
-	// Always return the current file content, even if some tasks failed
+	// Always return the current file content, even if some tasks failed (but no critical errors)
 	data, err := os.ReadFile("ai-rulez.yaml")
 	if err != nil {
 		return "", fmt.Errorf("failed to read configuration file: %w", err)
@@ -388,10 +469,60 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 	return string(data), nil
 }
 
+// atomicWriteFile writes data to a file atomically using a temporary file and rename
+func atomicWriteFile(filename string, data []byte, perm os.FileMode) error {
+	// Create temporary file in the same directory as target
+	dir := filepath.Dir(filename)
+	tmpFile, err := os.CreateTemp(dir, ".tmp-"+filepath.Base(filename)+"-*")
+	if err != nil {
+		return fmt.Errorf("failed to create temporary file: %w", err)
+	}
+
+	tmpPath := tmpFile.Name()
+
+	// Clean up temp file on any error
+	defer func() {
+		if tmpFile != nil {
+			_ = tmpFile.Close()    //nolint:errcheck // Cleanup operation, error not critical
+			_ = os.Remove(tmpPath) //nolint:errcheck // Cleanup operation, error not critical
+		}
+	}()
+
+	// Write data to temp file
+	if _, err := tmpFile.Write(data); err != nil {
+		return fmt.Errorf("failed to write to temporary file: %w", err)
+	}
+
+	// Sync to disk
+	if err := tmpFile.Sync(); err != nil {
+		return fmt.Errorf("failed to sync temporary file: %w", err)
+	}
+
+	// Close temp file
+	if err := tmpFile.Close(); err != nil {
+		return fmt.Errorf("failed to close temporary file: %w", err)
+	}
+	tmpFile = nil // Prevent cleanup in defer
+
+	// Set correct permissions
+	if err := os.Chmod(tmpPath, perm); err != nil {
+		_ = os.Remove(tmpPath) //nolint:errcheck // Error cleanup, original error more important
+		return fmt.Errorf("failed to set permissions on temporary file: %w", err)
+	}
+
+	// Atomic rename
+	if err := os.Rename(tmpPath, filename); err != nil {
+		_ = os.Remove(tmpPath) //nolint:errcheck // Error cleanup, original error more important
+		return fmt.Errorf("failed to rename temporary file: %w", err)
+	}
+
+	return nil
+}
+
 // initializeBaseConfigFile creates the initial ai-rulez.yaml with metadata and outputs
 func initializeBaseConfigFile(context *ProjectContext, providerConfig templates.ProviderConfig) error {
 	content := buildInitialConfigTemplate(context, providerConfig)
-	return os.WriteFile("ai-rulez.yaml", []byte(content), 0o644)
+	return atomicWriteFile("ai-rulez.yaml", []byte(content), 0o644)
 }
 
 // buildInitialConfigTemplate creates the initial YAML content with comments and guidance
@@ -462,10 +593,7 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 // executeAgentTaskWithStatus executes a single agent task with status updates
 func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *ProjectContext, status *TaskStatus) error {
 	// Update context with existing configuration before each task
-	if err := context.UpdateContextFromConfig(); err != nil {
-		fmt.Printf("[DEBUG] Warning: Failed to update context from config: %v\n", err)
-		// Continue anyway - this is not critical
-	}
+	_ = context.UpdateContextFromConfig() //nolint:errcheck // Continue anyway - this is not critical
 
 	// Execute with retries, updating status for each attempt
 	var lastErr error
@@ -495,12 +623,10 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 		timeout := 90 * time.Second // 90 seconds for all attempts
 
 		// Execute the agent call and capture output
-		fmt.Printf("[DEBUG] Invoking agent for task: %s (attempt %d)\n", task.Name, attempt)
 		logger.Debug("Invoking agent", "task", task.Name, "attempt", attempt)
 		output, err := invokeAgent(agent, prompt, timeout)
 
 		if err == nil {
-			fmt.Printf("[DEBUG] Agent output received for %s: %d bytes\n", task.Name, len(output))
 			logger.Debug("Agent output received", "task", task.Name, "outputLength", len(output))
 			if output != "" {
 				// Log first 500 chars of output for debugging
@@ -508,13 +634,11 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 				if len(preview) > 500 {
 					preview = preview[:500] + "..."
 				}
-				fmt.Printf("[DEBUG] Output preview for %s:\n%s\n", task.Name, preview)
 				logger.Debug("Agent output preview", "task", task.Name, "preview", preview)
 			}
 			// Parse JSON from agent output and apply to config
 			if err := executeAgentCommands(output, task.Name); err != nil {
 				lastErr = fmt.Errorf("failed to process agent response: %w", err)
-				fmt.Printf("[DEBUG] Response processing failed for %s: %v\n", task.Name, err)
 				logger.Debug("Response processing failed", "task", task.Name, "error", err.Error())
 				continue
 			}
@@ -528,7 +652,6 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 
 			// Mark task as completed in context for future agents
 			context.AddCompletedTask(task.Name)
-			fmt.Printf("[DEBUG] Task '%s' completed successfully and added to context\n", task.Name)
 
 			return nil
 		}
@@ -729,26 +852,22 @@ func executeAgentCommands(output string, taskName string) error {
 	// Determine the response type based on task name
 	responseType := getResponseTypeForTask(taskName)
 	if responseType == "" {
-		fmt.Printf("[DEBUG] Unknown task type: %s\n", taskName)
 		return fmt.Errorf("unknown task type: %s", taskName)
 	}
 
 	// Parse the JSON response
 	response, err := ParseAgentOutput(output, responseType)
 	if err != nil {
-		fmt.Printf("[DEBUG] Failed to parse agent output for %s: %v\n", taskName, err)
 		logger.Warn("Failed to parse agent output", "task", taskName, "error", err.Error())
 		return fmt.Errorf("failed to parse agent output: %w", err)
 	}
 
 	// Apply the response to the config
 	if err := applyResponseToConfig(response, responseType); err != nil {
-		fmt.Printf("[DEBUG] Failed to apply response for %s: %v\n", taskName, err)
 		logger.Warn("Failed to apply response", "task", taskName, "error", err.Error())
 		return fmt.Errorf("failed to apply response: %w", err)
 	}
 
-	fmt.Printf("[DEBUG] Successfully processed response for %s\n", taskName)
 	logger.Debug("Successfully processed response", "task", taskName)
 
 	return nil
@@ -784,7 +903,7 @@ func getResponseTypeForTask(taskName string) string {
 // applyResponseToConfig applies the parsed response to the configuration file
 func applyResponseToConfig(response interface{}, responseType string) error {
 	// Load the current configuration
-	configPath := "ai_rulez.yaml"
+	configPath := "ai-rulez.yaml"
 
 	// Read the current config file if it exists
 	var config map[string]interface{}
@@ -829,7 +948,7 @@ func applyResponseToConfig(response interface{}, responseType string) error {
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
-	if err := os.WriteFile(configPath, output, 0o644); err != nil {
+	if err := atomicWriteFile(configPath, output, 0o644); err != nil {
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 
@@ -925,7 +1044,6 @@ func updateExistingRule(rules []interface{}, existingRules []RuleResponse, simil
 			}
 		}
 
-		fmt.Printf("[DEBUG] Merged similar rules into '%s'\n", merged.Name)
 		break
 	}
 }
@@ -949,22 +1067,17 @@ func applyRulesResponse(config map[string]interface{}, response interface{}) err
 	for _, newRule := range resp.Rules {
 		// Skip if exact name match exists
 		if existingNames[newRule.Name] {
-			fmt.Printf("[DEBUG] Skipping rule '%s' - exact name match exists\n", newRule.Name)
 			continue
 		}
 
 		// Check for semantic similarity with existing rules
-		similarRule, simScore := similarity.FindSimilarRule(newRule, existingRules)
+		similarRule, _ := similarity.FindSimilarRule(newRule, existingRules)
 		if similarRule != nil {
-			fmt.Printf("[DEBUG] Found similar rule for '%s' -> '%s' (%.2f similarity)\n",
-				newRule.Name, similarRule.Name, simScore)
-
 			// Merge the rules, keeping the more detailed version
 			merged := similarity.MergeRules(*similarRule, newRule)
 			updateExistingRule(rules, existingRules, similarRule, merged)
 		} else {
 			// No similar rule found, add as new rule
-			fmt.Printf("[DEBUG] Adding new unique rule: '%s'\n", newRule.Name)
 			rules = append(rules, map[string]interface{}{
 				"name":     newRule.Name,
 				"priority": newRule.Priority,
@@ -1058,7 +1171,6 @@ func updateExistingSection(sections []interface{}, existingSections []SectionRes
 			}
 		}
 
-		fmt.Printf("[DEBUG] Merged similar sections into '%s'\n", similarSection.Name)
 		break
 	}
 }
@@ -1082,20 +1194,15 @@ func applySectionsResponse(config map[string]interface{}, response interface{}) 
 	for _, newSection := range resp.Sections {
 		// Skip if exact name match exists
 		if existingNames[newSection.Name] {
-			fmt.Printf("[DEBUG] Skipping section '%s' - exact name match exists\n", newSection.Name)
 			continue
 		}
 
 		// Check for semantic similarity with existing sections
-		similarSection, simScore := similarity.FindSimilarSection(newSection, existingSections)
+		similarSection, _ := similarity.FindSimilarSection(newSection, existingSections)
 		if similarSection != nil {
-			fmt.Printf("[DEBUG] Found similar section for '%s' -> '%s' (%.2f similarity)\n",
-				newSection.Name, similarSection.Name, simScore)
-
 			updateExistingSection(sections, existingSections, similarSection, newSection)
 		} else {
 			// No similar section found, add as new section
-			fmt.Printf("[DEBUG] Adding new unique section: '%s'\n", newSection.Name)
 			sections = append(sections, map[string]interface{}{
 				"name":     newSection.Name,
 				"priority": newSection.Priority,
@@ -1150,7 +1257,7 @@ func applyAgentsResponse(config map[string]interface{}, response interface{}) er
 }
 
 // executeTasksInWaves executes agent tasks in batches/waves based on maxAgents limit
-func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, maxAgents int) (failedTasks []string, successCount int) {
+func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, maxAgents int) (failedTasks []string, successCount int, criticalErrors []*AgentError) {
 	totalTasks := len(tasks)
 
 	// Calculate number of waves needed (maximum 3 waves)
@@ -1183,7 +1290,7 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 		waveDisplay.renderAllTasks()
 
 		// Execute current wave with its own display
-		waveFailedTasks, waveSuccessCount := executeWave(
+		waveFailedTasks, waveSuccessCount, waveCriticalErrors := executeWave(
 			tasks[startIdx:endIdx],
 			taskStatuses[startIdx:endIdx],
 			agent,
@@ -1194,13 +1301,14 @@ func executeTasksInWaves(tasks []AgentTask, taskStatuses []*TaskStatus, agent Ag
 
 		failedTasks = append(failedTasks, waveFailedTasks...)
 		successCount += waveSuccessCount
+		criticalErrors = append(criticalErrors, waveCriticalErrors...)
 	}
 
-	return failedTasks, successCount
+	return failedTasks, successCount, criticalErrors
 }
 
 // executeWave executes a single wave of agent tasks in parallel
-func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, baseIndex int) (failedTasks []string, successCount int) {
+func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentInfo, context *ProjectContext, display *TaskDisplay, baseIndex int) (failedTasks []string, successCount int, criticalErrors []*AgentError) {
 	// Structure to hold task results
 	type taskResult struct {
 		taskIndex int
@@ -1256,16 +1364,23 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 	close(results)
 
 	// Process wave results
-
 	for result := range results {
 		localIndex := result.taskIndex - baseIndex
 		ts := waveStatuses[localIndex]
 		ts.mu.Lock()
 		if result.err != nil {
+			// Classify the error
+			agentErr := classifyError(result.err, ts.task.Name)
+
 			ts.status = statusFailed
 			ts.completed = true
 			ts.lastError = result.err
 			failedTasks = append(failedTasks, ts.task.Name)
+
+			// Track critical errors separately
+			if agentErr.Severity == ErrorSeverityCritical {
+				criticalErrors = append(criticalErrors, agentErr)
+			}
 		} else {
 			ts.status = statusSuccess
 			ts.completed = true
@@ -1275,5 +1390,5 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 		ts.mu.Unlock()
 	}
 
-	return failedTasks, successCount
+	return failedTasks, successCount, criticalErrors
 }
