@@ -1,0 +1,22 @@
+$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
+
+metadata:
+  name: AI-Rulez-Improved-Test
+  version: "1.0.0"
+  description: "" # Will be updated by project-agent
+
+outputs:
+  - path: CLAUDE.md
+  - path: .claude/agents/
+    type: agent
+    naming_scheme: '{name}.md'
+
+sections: []
+rules: []
+agents: []
+commands: []
+mcp_servers:
+  - name: "ai-rulez"
+    command: "ai-rulez"
+    args: ["mcp"]
+    description: "AI-Rulez MCP server for configuration management"

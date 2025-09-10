@@ -41,9 +41,9 @@ func (s *InitCLITestSuite) TestInitSetupHooks() {
 func (s *InitCLITestSuite) TestInitConflictingProviders() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ConflictProject", "--claude", "--continue-dev")
 
-	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 
 	s.Equal(1, strings.Count(content, "# agents:"), "Should only be one agents block in the config")
@@ -52,10 +52,10 @@ func (s *InitCLITestSuite) TestInitConflictingProviders() {
 func (s *InitCLITestSuite) TestBasicInit() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "TestProject")
 
-	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 	result.AssertStderrContains(s.T(), "TestProject")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 
 	content := testutil.ReadFile(s.T(), configPath)
@@ -69,7 +69,7 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	result.AssertStderrContains(s.T(), "Continue.dev")
 	result.AssertStderrContains(s.T(), ".continue/")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	configContent := testutil.ReadFile(s.T(), configPath)
 	s.Contains(configContent, "- \"continue-dev\"")
 
@@ -91,9 +91,9 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init")
 
-	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "name:")
 }
@@ -102,7 +102,7 @@ func (s *InitCLITestSuite) TestInitClaudePreset() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ClaudeProject", "--preset", "claude")
 
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "- \"claude\"")
 }
@@ -112,7 +112,7 @@ func (s *InitCLITestSuite) TestInitCursorPreset() {
 
 	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "- \"cursor\"")
 }
@@ -122,7 +122,7 @@ func (s *InitCLITestSuite) TestInitWindsurfPreset() {
 
 	result.AssertStderrContains(s.T(), "Windsurf (.windsurf/)")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "- \"windsurf\"")
 }
@@ -135,7 +135,7 @@ func (s *InitCLITestSuite) TestInitPopularProviders() {
 	result.AssertStderrContains(s.T(), "Windsurf (.windsurf/)")
 	result.AssertStderrContains(s.T(), "GitHub Copilot")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "- \"popular\"")
 }
@@ -149,7 +149,7 @@ func (s *InitCLITestSuite) TestInitAllProviders() {
 	result.AssertStderrContains(s.T(), "Copilot")
 	result.AssertStderrContains(s.T(), "Gemini")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "presets:")
 	hasClaudeOrGemini := strings.Contains(content, "- \"claude\"") || strings.Contains(content, "- \"gemini\"")
@@ -162,7 +162,7 @@ func (s *InitCLITestSuite) TestInitIndividualProviders() {
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
 	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "CLAUDE.md")
 	s.Contains(content, ".cursor/rules/")
@@ -170,9 +170,16 @@ func (s *InitCLITestSuite) TestInitIndividualProviders() {
 }
 
 func (s *InitCLITestSuite) TestInitExistingConfig() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", "existing: config")
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", "existing: config")
 
-	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "init", "TestProject")
+	// Create a custom command that doesn't inherit CI env var
+	// This test needs to verify that init fails when config exists
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"CI":             "",
+		"NO_INTERACTIVE": "",
+	}, "init", "TestProject")
+
+	s.NotEqual(0, result.ExitCode, "init should fail when config exists")
 	result.AssertStderrContains(s.T(), "Configuration file already exists")
 }
 
@@ -185,12 +192,12 @@ func (s *InitCLITestSuite) TestInitListAgents() {
 func (s *InitCLITestSuite) TestInitNoAgent() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "NoAgentProject", "--no-agent")
 
-	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 }
 
 func (s *InitCLITestSuite) TestInitInvalidPreset() {
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "InvalidPresetProject", "--preset", "nonexistent")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
 }
