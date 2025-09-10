@@ -8,6 +8,10 @@
 
 Tired of manually managing rule files, subagents, and custom commands across different AI tools? `ai-rulez` gives you one `ai-rulez.yml` file to generate them all. Keep your AI context in sync, and even launch MCP servers for direct integration.
 
+<p align="center">
+  <img src="docs/assets/ai-rulez-demo.gif" alt="AI-Rulez Demo" width="100%">
+</p>
+
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
 [![PyPI Version](https://img.shields.io/pypi/v/ai-rulez)](https://pypi.org/project/ai-rulez/)
