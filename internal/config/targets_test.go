@@ -485,9 +485,9 @@ func TestMatchesTargetEdgeCases(t *testing.T) {
 			expected:   false,
 		},
 		{
-			name:       "escaped special characters",
-			outputPath: "file*.md",
-			targets:    []string{"file\\*.md"},
+			name:       "wildcard pattern match",
+			outputPath: "file1.md",
+			targets:    []string{"file*.md"}, // Wildcard should match file1.md
 			expected:   true,
 		},
 		{

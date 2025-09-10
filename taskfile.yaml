@@ -97,9 +97,6 @@ tasks:
     cmds:
       - go fmt ./...
 
-  fmt:
-    desc: Format code (alias for format)
-    deps: [format]
 
   tidy:
     desc: Tidy dependencies
