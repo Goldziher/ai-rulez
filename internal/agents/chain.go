@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/kballard/go-shellquote"
 )
 
 // AgentTask represents a specific task that an agent will perform
@@ -506,7 +507,7 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 				logger.Debug("Agent output preview", "task", task.Name, "preview", preview)
 			}
 			// Parse and execute CLI commands from agent output
-			if err := executeAgentCommands(output); err != nil {
+			if err := executeAgentCommands(output, context); err != nil {
 				lastErr = fmt.Errorf("failed to execute agent commands: %w", err)
 				fmt.Printf("[DEBUG] Command execution failed for %s: %v\n", task.Name, err)
 				logger.Debug("Command execution failed", "task", task.Name, "error", err.Error())
@@ -711,7 +712,7 @@ func getErrorSummary(err error) string {
 }
 
 // executeAgentCommands parses and executes CLI commands from agent output
-func executeAgentCommands(output string) error {
+func executeAgentCommands(output string, context *ProjectContext) error {
 	if output == "" {
 		return nil
 	}
@@ -730,7 +731,7 @@ func executeAgentCommands(output string) error {
 				commandsFound++
 				fmt.Printf("[DEBUG] Found command: %s\n", cmd)
 				logger.Debug("Found command", "command", cmd)
-				if err := executeCommand(cmd); err != nil {
+				if err := executeCommand(cmd, context); err != nil {
 					fmt.Printf("[DEBUG] Failed to execute command: %s - Error: %v\n", cmd, err)
 					logger.Warn("Failed to execute command", "command", cmd, "error", err.Error())
 					// Continue with other commands instead of failing completely
@@ -782,28 +783,59 @@ func extractCommand(line string) string {
 }
 
 // executeCommand executes a single ai-rulez CLI command
-func executeCommand(cmdStr string) error {
-	// Parse the command
-	parts := strings.Fields(cmdStr)
-	if len(parts) < 2 || parts[0] != "ai-rulez" {
+func executeCommand(cmdStr string, context *ProjectContext) error {
+	// Parse the command using shell-style parsing to handle quoted arguments
+	parts, err := shellquote.Split(cmdStr)
+	if err != nil {
+		return fmt.Errorf("failed to parse command: %w", err)
+	}
+	if len(parts) < 2 {
 		return fmt.Errorf("invalid command: %s", cmdStr)
 	}
 
-	// Find the ai-rulez binary - could be in PATH or use current executable
-	aiRulezPath, err := exec.LookPath("ai-rulez")
-	if err != nil {
-		// Use the current executable if ai-rulez is not in PATH
-		aiRulezPath, err = os.Executable()
-		if err != nil {
-			return fmt.Errorf("failed to find ai-rulez binary: %w", err)
+	// Determine how to execute based on the detected invocation method
+	var cmd *exec.Cmd
+	
+	// Check if command starts with uvx, npx, or similar
+	if parts[0] == "uvx" && len(parts) > 2 && parts[1] == "ai-rulez" {
+		// uvx ai-rulez subcommand args...
+		cmd = exec.Command(parts[0], parts[1:]...) //nolint:gosec // Subprocess is intentional
+	} else if parts[0] == "npx" && len(parts) > 2 && parts[1] == "ai-rulez" {
+		// npx ai-rulez subcommand args...
+		cmd = exec.Command(parts[0], parts[1:]...) //nolint:gosec // Subprocess is intentional
+	} else if strings.Contains(parts[0], "ai-rulez") || strings.Contains(parts[0], "/") {
+		// Direct invocation: ai-rulez or /path/to/ai-rulez
+		// Use the same method that was originally used
+		if context != nil && context.AIRulezCommand != "" {
+			// Parse the original invocation command
+			origParts := strings.Fields(context.AIRulezCommand)
+			if origParts[0] == "uvx" || origParts[0] == "npx" {
+				// If originally invoked via uvx/npx, use that
+				cmdParts := append(origParts, parts[1:]...)
+				cmd = exec.Command(cmdParts[0], cmdParts[1:]...) //nolint:gosec
+			} else {
+				// Direct binary invocation
+				cmd = exec.Command(origParts[0], parts[1:]...) //nolint:gosec
+			}
+		} else {
+			// Fallback: try to find ai-rulez in PATH or use current executable
+			aiRulezPath, err := exec.LookPath("ai-rulez")
+			if err != nil {
+				// Use the current executable if ai-rulez is not in PATH
+				aiRulezPath, err = os.Executable()
+				if err != nil {
+					return fmt.Errorf("failed to find ai-rulez binary: %w", err)
+				}
+			}
+			cmd = exec.Command(aiRulezPath, parts[1:]...) //nolint:gosec
 		}
+	} else {
+		return fmt.Errorf("unrecognized command format: %s", cmdStr)
 	}
 
-	// Execute the command using the found binary
-	cmd := exec.Command(aiRulezPath, parts[1:]...) //nolint:gosec // Subprocess is intentional and controlled
-	cmd.Dir = "."                                  // Execute in current directory where ai-rulez.yaml is
+	cmd.Dir = "." // Execute in current directory where ai-rulez.yaml is
 
-	fmt.Printf("[DEBUG] Executing: %s %s\n", aiRulezPath, strings.Join(parts[1:], " "))
+	fmt.Printf("[DEBUG] Executing: %s\n", cmdStr)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		fmt.Printf("[DEBUG] Command output: %s\n", string(output))
