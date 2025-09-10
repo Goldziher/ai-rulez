@@ -27,9 +27,9 @@ func (s *WorkflowsTestSuite) TearDownSuite() {
 
 func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--preset", "claude")
-	result.AssertStderrContains(s.T(), "Created ai_rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
 
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
@@ -101,14 +101,14 @@ func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
 }
 
 func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"CRUD Test Rule",
 		"--content", "CRUD test rule")
 	result.AssertOutputContains(s.T(), "Added rule")
 
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "CRUD test rule")
 
@@ -130,12 +130,12 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 }
 
 func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
 
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.InvalidYAMLConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.InvalidYAMLConfig)
 
 	result = testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 	result.AssertStderrContains(s.T(), "invalid")
@@ -143,7 +143,7 @@ func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
 	result = testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 	result.AssertStderrContains(s.T(), "Error")
 
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
 
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
@@ -153,7 +153,7 @@ func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
 }
 
 func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.MinimalConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.MinimalConfig)
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
@@ -162,7 +162,7 @@ func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "output", "CLAUDE.md")
 
-	configPath3 := filepath.Join(s.workingDir, "ai_rulez.yaml")
+	configPath3 := filepath.Join(s.workingDir, "ai-rulez.yaml")
 	config3 := testutil.ReadFile(s.T(), configPath3)
 	config3 += `
 sections:
@@ -170,7 +170,7 @@ sections:
     content: "Added after initial setup"
     priority: medium
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config3)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config3)
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"Additional Rule",
