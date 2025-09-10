@@ -487,7 +487,7 @@ func TestMatchesTargetEdgeCases(t *testing.T) {
 		{
 			name:       "wildcard pattern match",
 			outputPath: "file1.md",
-			targets:    []string{"file*.md"}, // Wildcard should match file1.md
+			targets:    []string{"file*.md"},
 			expected:   true,
 		},
 		{

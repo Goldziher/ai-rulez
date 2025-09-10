@@ -172,8 +172,6 @@ func (s *InitCLITestSuite) TestInitIndividualProviders() {
 func (s *InitCLITestSuite) TestInitExistingConfig() {
 	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", "existing: config")
 
-	// Create a custom command that doesn't inherit CI env var
-	// This test needs to verify that init fails when config exists
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"CI":             "",
 		"NO_INTERACTIVE": "",

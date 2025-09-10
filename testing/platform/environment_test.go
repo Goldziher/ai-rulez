@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestShellDetection tests shell environment detection across platforms
 func TestShellDetection(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -42,7 +41,6 @@ func TestShellDetection(t *testing.T) {
 				t.Skipf("Skipping %s test on %s platform", tt.platform, runtime.GOOS)
 			}
 
-			// Test shell availability
 			availableShells := []string{}
 			for _, shell := range tt.expectedShells {
 				if _, err := exec.LookPath(shell); err == nil {
@@ -53,7 +51,6 @@ func TestShellDetection(t *testing.T) {
 			assert.NotEmpty(t, availableShells, "At least one shell should be available")
 			t.Logf("Available shells on %s: %v", runtime.GOOS, availableShells)
 
-			// Test basic shell command execution
 			for _, shell := range availableShells {
 				t.Run("shell: "+shell, func(t *testing.T) {
 					testBasicShellCommand(t, shell)
@@ -63,7 +60,6 @@ func TestShellDetection(t *testing.T) {
 	}
 }
 
-// testBasicShellCommand tests basic command execution in different shells
 func testBasicShellCommand(t *testing.T, shell string) {
 	var cmd *exec.Cmd
 
@@ -88,7 +84,6 @@ func testBasicShellCommand(t *testing.T, shell string) {
 	assert.Contains(t, result, "test", "Should contain expected output")
 }
 
-// TestEnvironmentVariablePatterns tests environment variable handling patterns
 func TestEnvironmentVariablePatterns(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -111,26 +106,25 @@ func TestEnvironmentVariablePatterns(t *testing.T) {
 		{
 			name:     "PATH variable",
 			varName:  "PATH",
-			varValue: "", // Will be read from environment
+			varValue: "",
 			platform: "all",
 		},
 		{
 			name:     "HOME variable",
 			varName:  "HOME",
-			varValue: "", // Will be read from environment
+			varValue: "",
 			platform: "unix",
 		},
 		{
 			name:     "USERPROFILE variable",
 			varName:  "USERPROFILE",
-			varValue: "", // Will be read from environment
+			varValue: "",
 			platform: "windows",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Skip platform-specific tests
 			if tt.platform == "unix" && runtime.GOOS == "windows" {
 				t.Skip("Skipping Unix test on Windows")
 			}
@@ -139,7 +133,6 @@ func TestEnvironmentVariablePatterns(t *testing.T) {
 			}
 
 			if tt.varValue != "" {
-				// Test setting and getting custom variables
 				originalValue := os.Getenv(tt.varName)
 				defer func() {
 					if originalValue != "" {
@@ -156,7 +149,6 @@ func TestEnvironmentVariablePatterns(t *testing.T) {
 				assert.Equal(t, tt.varValue, retrievedValue,
 					"Environment variable should be retrievable")
 			} else {
-				// Test reading system variables
 				value := os.Getenv(tt.varName)
 				if tt.varName == "PATH" {
 					assert.NotEmpty(t, value, "PATH should not be empty")
@@ -169,7 +161,6 @@ func TestEnvironmentVariablePatterns(t *testing.T) {
 	}
 }
 
-// TestCommandLineEscaping tests command line argument escaping patterns
 func TestCommandLineEscaping(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -203,7 +194,6 @@ func TestCommandLineEscaping(t *testing.T) {
 				t.Skip("Skipping Unix test on Windows")
 			}
 
-			// Find appropriate echo command
 			var cmd *exec.Cmd
 			if runtime.GOOS == "windows" {
 				cmd = exec.Command("cmd", "/c", strings.Join(tt.args, " "))
@@ -221,7 +211,6 @@ func TestCommandLineEscaping(t *testing.T) {
 	}
 }
 
-// TestProcessExecution tests process execution patterns used in ai-rulez
 func TestProcessExecution(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -245,13 +234,11 @@ func TestProcessExecution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Check if command exists
 			_, err := exec.LookPath(tt.command)
 			if err != nil {
 				t.Skipf("Command not available: %s", tt.command)
 			}
 
-			// Test basic execution
 			cmd := exec.Command(tt.command, tt.args...)
 			output, err := cmd.Output()
 
@@ -265,7 +252,6 @@ func TestProcessExecution(t *testing.T) {
 	}
 }
 
-// getEchoCommand returns the appropriate echo command for the platform
 func getEchoCommand() string {
 	if runtime.GOOS == "windows" {
 		return "cmd"
@@ -273,7 +259,6 @@ func getEchoCommand() string {
 	return "echo"
 }
 
-// getEchoArgs returns appropriate echo arguments for the platform
 func getEchoArgs(message string) []string {
 	if runtime.GOOS == "windows" {
 		return []string{"/c", "echo " + message}
@@ -281,7 +266,6 @@ func getEchoArgs(message string) []string {
 	return []string{message}
 }
 
-// TestFileSystemPermissions tests file system permission handling
 func TestFileSystemPermissions(t *testing.T) {
 	tempDir := t.TempDir()
 
@@ -311,23 +295,18 @@ func TestFileSystemPermissions(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			testFile := filepath.Join(tempDir, "test_"+tt.name+".txt")
 
-			// Create file
 			err := os.WriteFile(testFile, []byte("test content"), tt.mode)
 			require.NoError(t, err, "Should create file with permissions")
 
-			// Verify file exists
 			info, err := os.Stat(testFile)
 			require.NoError(t, err, "File should exist")
 
 			if runtime.GOOS != "windows" {
-				// Unix systems: verify permissions
 				assert.Equal(t, tt.mode, info.Mode().Perm(),
 					"File should have expected permissions")
 			} else {
-				// Windows: just verify file operations work
 				assert.False(t, info.IsDir(), "Should be a file, not directory")
 
-				// Test read access
 				content, err := os.ReadFile(testFile)
 				require.NoError(t, err, "Should be able to read file")
 				assert.Equal(t, "test content", string(content))
@@ -336,7 +315,6 @@ func TestFileSystemPermissions(t *testing.T) {
 	}
 }
 
-// TestPlatformSpecificPaths tests platform-specific path conventions
 func TestPlatformSpecificPaths(t *testing.T) {
 	tests := []struct {
 		name         string
@@ -362,26 +340,20 @@ func TestPlatformSpecificPaths(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test path construction
 			path := filepath.Join(tt.pathElements...)
 
-			// Verify path properties
 			assert.NotEmpty(t, path, "Path should not be empty")
 
-			// Test path components
 			dir := filepath.Dir(path)
 			base := filepath.Base(path)
 
 			assert.NotEmpty(t, dir, "Directory should not be empty")
 			assert.NotEmpty(t, base, "Filename should not be empty")
 
-			// Platform-specific tests
 			if tt.platform == runtime.GOOS {
-				// On current platform, test path operations
 				ext := filepath.Ext(path)
 				assert.Equal(t, ".yaml", ext, "Should have correct extension")
 
-				// Test path cleaning
 				cleaned := filepath.Clean(path)
 				assert.NotEmpty(t, cleaned, "Cleaned path should not be empty")
 			}
