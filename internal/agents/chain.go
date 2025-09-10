@@ -3,7 +3,6 @@ package agents
 import (
 	"fmt"
 	"os"
-	"os/exec"
 	"strconv"
 	"strings"
 	"sync"
@@ -11,7 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
-	"github.com/kballard/go-shellquote"
+	"gopkg.in/yaml.v3"
 )
 
 // AgentTask represents a specific task that an agent will perform
@@ -506,11 +505,11 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 				fmt.Printf("[DEBUG] Output preview for %s:\n%s\n", task.Name, preview)
 				logger.Debug("Agent output preview", "task", task.Name, "preview", preview)
 			}
-			// Parse and execute CLI commands from agent output
-			if err := executeAgentCommands(output, context); err != nil {
-				lastErr = fmt.Errorf("failed to execute agent commands: %w", err)
-				fmt.Printf("[DEBUG] Command execution failed for %s: %v\n", task.Name, err)
-				logger.Debug("Command execution failed", "task", task.Name, "error", err.Error())
+			// Parse JSON from agent output and apply to config
+			if err := executeAgentCommands(output, task.Name); err != nil {
+				lastErr = fmt.Errorf("failed to process agent response: %w", err)
+				fmt.Printf("[DEBUG] Response processing failed for %s: %v\n", task.Name, err)
+				logger.Debug("Response processing failed", "task", task.Name, "error", err.Error())
 				continue
 			}
 
@@ -711,138 +710,253 @@ func getErrorSummary(err error) string {
 	return errStr
 }
 
-// executeAgentCommands parses and executes CLI commands from agent output
-func executeAgentCommands(output string, context *ProjectContext) error {
+// executeAgentCommands parses JSON from agent output and updates the config
+func executeAgentCommands(output string, taskName string) error {
 	if output == "" {
 		return nil
 	}
 
-	// Parse output for ai-rulez commands
-	lines := strings.Split(output, "\n")
-	commandsFound := 0
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
+	// Determine the response type based on task name
+	responseType := getResponseTypeForTask(taskName)
+	if responseType == "" {
+		fmt.Printf("[DEBUG] Unknown task type: %s\n", taskName)
+		return fmt.Errorf("unknown task type: %s", taskName)
+	}
 
-		// Look for ai-rulez commands in various formats
-		if strings.Contains(line, "ai-rulez ") {
-			// Extract the command (might be in different formats)
-			cmd := extractCommand(line)
-			if cmd != "" {
-				commandsFound++
-				fmt.Printf("[DEBUG] Found command: %s\n", cmd)
-				logger.Debug("Found command", "command", cmd)
-				if err := executeCommand(cmd, context); err != nil {
-					fmt.Printf("[DEBUG] Failed to execute command: %s - Error: %v\n", cmd, err)
-					logger.Warn("Failed to execute command", "command", cmd, "error", err.Error())
-					// Continue with other commands instead of failing completely
-				} else {
-					fmt.Printf("[DEBUG] Successfully executed command: %s\n", cmd)
-					logger.Debug("Successfully executed command", "command", cmd)
-				}
-			}
+	// Parse the JSON response
+	response, err := ParseAgentOutput(output, responseType)
+	if err != nil {
+		fmt.Printf("[DEBUG] Failed to parse agent output for %s: %v\n", taskName, err)
+		logger.Warn("Failed to parse agent output", "task", taskName, "error", err.Error())
+		return fmt.Errorf("failed to parse agent output: %w", err)
+	}
+
+	// Apply the response to the config
+	if err := applyResponseToConfig(response, responseType); err != nil {
+		fmt.Printf("[DEBUG] Failed to apply response for %s: %v\n", taskName, err)
+		logger.Warn("Failed to apply response", "task", taskName, "error", err.Error())
+		return fmt.Errorf("failed to apply response: %w", err)
+	}
+
+	fmt.Printf("[DEBUG] Successfully processed response for %s\n", taskName)
+	logger.Debug("Successfully processed response", "task", taskName)
+
+	return nil
+}
+
+// Response type constants
+const (
+	responseTypeMetadata = "metadata"
+	responseTypeSections = "sections"
+	responseTypeRules    = "rules"
+	responseTypeAgents   = "agents"
+)
+
+// getResponseTypeForTask maps task names to response types
+func getResponseTypeForTask(taskName string) string {
+	// Normalize task name by replacing hyphens with spaces
+	normalizedName := strings.ReplaceAll(taskName, "-", " ")
+
+	switch {
+	case strings.Contains(normalizedName, "project description"):
+		return responseTypeMetadata
+	case strings.Contains(normalizedName, "documentation"):
+		return responseTypeSections
+	case strings.Contains(normalizedName, "standards"):
+		return responseTypeRules
+	case strings.Contains(normalizedName, "agent") || strings.Contains(normalizedName, "agents"):
+		return responseTypeAgents
+	default:
+		return ""
+	}
+}
+
+// applyResponseToConfig applies the parsed response to the configuration file
+func applyResponseToConfig(response interface{}, responseType string) error {
+	// Load the current configuration
+	configPath := "ai_rulez.yaml"
+
+	// Read the current config file if it exists
+	var config map[string]interface{}
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return fmt.Errorf("failed to read config file: %w", err)
+		}
+		// File doesn't exist, create a new config
+		config = make(map[string]interface{})
+	} else {
+		// Parse existing YAML
+		if err := yaml.Unmarshal(data, &config); err != nil {
+			return fmt.Errorf("failed to parse config: %w", err)
+		}
+		if config == nil {
+			config = make(map[string]interface{})
 		}
 	}
 
-	if commandsFound == 0 {
-		fmt.Printf("[DEBUG] No ai-rulez commands found in agent output\n")
-		logger.Debug("No ai-rulez commands found in agent output")
+	// Apply the response based on type
+	switch responseType {
+	case responseTypeMetadata:
+		err = applyMetadataResponse(config, response)
+	case responseTypeRules:
+		err = applyRulesResponse(config, response)
+	case responseTypeSections:
+		err = applySectionsResponse(config, response)
+	case responseTypeAgents:
+		err = applyAgentsResponse(config, response)
+	default:
+		return fmt.Errorf("unknown response type: %s", responseType)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	// Write the updated config back
+	output, err := yaml.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
+	if err := os.WriteFile(configPath, output, 0o644); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
 	}
 
 	return nil
 }
 
-// extractCommand extracts ai-rulez command from various line formats
-func extractCommand(line string) string {
-	// Handle different formats:
-	// - Direct: ai-rulez add rule ...
-	// - Quoted: "ai-rulez add rule ..."
-	// - Bash prefix: Bash: ai-rulez add rule ...
-	// - Shell prompt: $ ai-rulez add rule ...
-
-	// Remove common prefixes
-	line = strings.TrimPrefix(line, "Bash:")
-	line = strings.TrimPrefix(line, "bash:")
-	line = strings.TrimPrefix(line, "$")
-	line = strings.TrimPrefix(line, ">")
-	line = strings.TrimSpace(line)
-
-	// Remove quotes if present
-	line = strings.Trim(line, "\"'`")
-
-	// Check if it's an ai-rulez command
-	if strings.HasPrefix(line, "ai-rulez ") {
-		return line
+// applyMetadataResponse applies metadata response to config
+func applyMetadataResponse(config map[string]interface{}, response interface{}) error {
+	resp, ok := response.(*MetadataResponse)
+	if !ok {
+		return fmt.Errorf("invalid metadata response type")
 	}
-
-	// Check if ai-rulez is somewhere in the line
-	if idx := strings.Index(line, "ai-rulez "); idx >= 0 {
-		return line[idx:]
+	if config["metadata"] == nil {
+		config["metadata"] = make(map[string]interface{})
 	}
-
-	return ""
+	metadata, ok := config["metadata"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("metadata is not a map")
+	}
+	metadata["description"] = resp.Description
+	return nil
 }
 
-// executeCommand executes a single ai-rulez CLI command
-func executeCommand(cmdStr string, context *ProjectContext) error {
-	// Parse the command using shell-style parsing to handle quoted arguments
-	parts, err := shellquote.Split(cmdStr)
-	if err != nil {
-		return fmt.Errorf("failed to parse command: %w", err)
+// applyRulesResponse applies rules response to config
+func applyRulesResponse(config map[string]interface{}, response interface{}) error {
+	resp, ok := response.(*RulesResponse)
+	if !ok {
+		return fmt.Errorf("invalid rules response type")
 	}
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid command: %s", cmdStr)
-	}
+	rules := []interface{}{}
+	existingNames := make(map[string]bool)
 
-	// Determine how to execute based on the detected invocation method
-	var cmd *exec.Cmd
-	
-	// Check if command starts with uvx, npx, or similar
-	if parts[0] == "uvx" && len(parts) > 2 && parts[1] == "ai-rulez" {
-		// uvx ai-rulez subcommand args...
-		cmd = exec.Command(parts[0], parts[1:]...) //nolint:gosec // Subprocess is intentional
-	} else if parts[0] == "npx" && len(parts) > 2 && parts[1] == "ai-rulez" {
-		// npx ai-rulez subcommand args...
-		cmd = exec.Command(parts[0], parts[1:]...) //nolint:gosec // Subprocess is intentional
-	} else if strings.Contains(parts[0], "ai-rulez") || strings.Contains(parts[0], "/") {
-		// Direct invocation: ai-rulez or /path/to/ai-rulez
-		// Use the same method that was originally used
-		if context != nil && context.AIRulezCommand != "" {
-			// Parse the original invocation command
-			origParts := strings.Fields(context.AIRulezCommand)
-			if origParts[0] == "uvx" || origParts[0] == "npx" {
-				// If originally invoked via uvx/npx, use that
-				cmdParts := append(origParts, parts[1:]...)
-				cmd = exec.Command(cmdParts[0], cmdParts[1:]...) //nolint:gosec
-			} else {
-				// Direct binary invocation
-				cmd = exec.Command(origParts[0], parts[1:]...) //nolint:gosec
-			}
-		} else {
-			// Fallback: try to find ai-rulez in PATH or use current executable
-			aiRulezPath, err := exec.LookPath("ai-rulez")
-			if err != nil {
-				// Use the current executable if ai-rulez is not in PATH
-				aiRulezPath, err = os.Executable()
-				if err != nil {
-					return fmt.Errorf("failed to find ai-rulez binary: %w", err)
+	// Keep existing rules and track their names
+	if config["rules"] != nil {
+		var ok bool
+		rules, ok = config["rules"].([]interface{})
+		if !ok {
+			return fmt.Errorf("rules is not a slice")
+		}
+		for _, r := range rules {
+			if ruleMap, ok := r.(map[string]interface{}); ok {
+				if name, ok := ruleMap["name"].(string); ok {
+					existingNames[name] = true
 				}
 			}
-			cmd = exec.Command(aiRulezPath, parts[1:]...) //nolint:gosec
 		}
-	} else {
-		return fmt.Errorf("unrecognized command format: %s", cmdStr)
 	}
 
-	cmd.Dir = "." // Execute in current directory where ai-rulez.yaml is
-
-	fmt.Printf("[DEBUG] Executing: %s\n", cmdStr)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		fmt.Printf("[DEBUG] Command output: %s\n", string(output))
-		return fmt.Errorf("command failed: %w, output: %s", err, string(output))
+	// Add new rules only if they don't already exist
+	for _, rule := range resp.Rules {
+		if !existingNames[rule.Name] {
+			rules = append(rules, map[string]interface{}{
+				"name":     rule.Name,
+				"priority": rule.Priority,
+				"content":  rule.Content,
+			})
+		}
 	}
-	fmt.Printf("[DEBUG] Command succeeded, output: %s\n", string(output))
+	config["rules"] = rules
+	return nil
+}
 
+// applySectionsResponse applies sections response to config
+func applySectionsResponse(config map[string]interface{}, response interface{}) error {
+	resp, ok := response.(*SectionsResponse)
+	if !ok {
+		return fmt.Errorf("invalid sections response type")
+	}
+	sections := []interface{}{}
+	existingNames := make(map[string]bool)
+
+	// Keep existing sections and track their names
+	if config["sections"] != nil {
+		var ok bool
+		sections, ok = config["sections"].([]interface{})
+		if !ok {
+			return fmt.Errorf("sections is not a slice")
+		}
+		for _, s := range sections {
+			if sectionMap, ok := s.(map[string]interface{}); ok {
+				if name, ok := sectionMap["name"].(string); ok {
+					existingNames[name] = true
+				}
+			}
+		}
+	}
+
+	// Add new sections only if they don't already exist
+	for _, section := range resp.Sections {
+		if !existingNames[section.Name] {
+			sections = append(sections, map[string]interface{}{
+				"name":     section.Name,
+				"priority": section.Priority,
+				"content":  section.Content,
+			})
+		}
+	}
+	config["sections"] = sections
+	return nil
+}
+
+// applyAgentsResponse applies agents response to config
+func applyAgentsResponse(config map[string]interface{}, response interface{}) error {
+	resp, ok := response.(*AgentsResponse)
+	if !ok {
+		return fmt.Errorf("invalid agents response type")
+	}
+	agents := []interface{}{}
+	existingNames := make(map[string]bool)
+
+	// Keep existing agents and track their names
+	if config["agents"] != nil {
+		var ok bool
+		agents, ok = config["agents"].([]interface{})
+		if !ok {
+			return fmt.Errorf("agents is not a slice")
+		}
+		for _, a := range agents {
+			if agentMap, ok := a.(map[string]interface{}); ok {
+				if name, ok := agentMap["name"].(string); ok {
+					existingNames[name] = true
+				}
+			}
+		}
+	}
+
+	// Add new agents only if they don't already exist
+	for _, agent := range resp.Agents {
+		if !existingNames[agent.Name] {
+			agents = append(agents, map[string]interface{}{
+				"name":      agent.Name,
+				"role":      agent.Role,
+				"expertise": agent.Expertise,
+			})
+		}
+	}
+	config["agents"] = agents
 	return nil
 }
 
