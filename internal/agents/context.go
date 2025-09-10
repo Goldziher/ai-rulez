@@ -135,9 +135,102 @@ func GatherProjectContext(projectName string) *ProjectContext {
 	return ctx
 }
 
+// extractRulesFromConfig extracts rules from configuration data
+func (ctx *ProjectContext) extractRulesFromConfig(config map[string]interface{}) {
+	rulesData, ok := config["rules"].([]interface{})
+	if !ok {
+		return
+	}
+
+	ctx.ExistingRules = make([]RuleResponse, 0, len(rulesData))
+	for _, r := range rulesData {
+		ruleMap, ok := r.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		rule := RuleResponse{}
+		if name, ok := ruleMap["name"].(string); ok {
+			rule.Name = name
+		}
+		if priority, ok := ruleMap["priority"].(string); ok {
+			rule.Priority = priority
+		}
+		if content, ok := ruleMap["content"].(string); ok {
+			rule.Content = content
+		}
+
+		if rule.Name != "" && rule.Content != "" {
+			ctx.ExistingRules = append(ctx.ExistingRules, rule)
+		}
+	}
+}
+
+// extractSectionsFromConfig extracts sections from configuration data
+func (ctx *ProjectContext) extractSectionsFromConfig(config map[string]interface{}) {
+	sectionsData, ok := config["sections"].([]interface{})
+	if !ok {
+		return
+	}
+
+	ctx.ExistingSections = make([]SectionResponse, 0, len(sectionsData))
+	for _, s := range sectionsData {
+		sectionMap, ok := s.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		section := SectionResponse{}
+		if name, ok := sectionMap["name"].(string); ok {
+			section.Name = name
+		}
+		if priority, ok := sectionMap["priority"].(string); ok {
+			section.Priority = priority
+		}
+		if content, ok := sectionMap["content"].(string); ok {
+			section.Content = content
+		}
+
+		if section.Name != "" && section.Content != "" {
+			ctx.ExistingSections = append(ctx.ExistingSections, section)
+		}
+	}
+}
+
+// extractAgentsFromConfig extracts agents from configuration data
+func (ctx *ProjectContext) extractAgentsFromConfig(config map[string]interface{}) {
+	agentsData, ok := config["agents"].([]interface{})
+	if !ok {
+		return
+	}
+
+	ctx.ExistingAgents = make([]AgentDefinition, 0, len(agentsData))
+	for _, a := range agentsData {
+		agentMap, ok := a.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		agent := AgentDefinition{}
+		if name, ok := agentMap["name"].(string); ok {
+			agent.Name = name
+		}
+		if role, ok := agentMap["role"].(string); ok {
+			agent.Role = role
+		}
+		if expertise, ok := agentMap["expertise"].(string); ok {
+			agent.Expertise = expertise
+		}
+
+		if agent.Name != "" && agent.Role != "" {
+			ctx.ExistingAgents = append(ctx.ExistingAgents, agent)
+		}
+	}
+}
+
 // UpdateContextFromConfig reads the current ai_rulez.yaml and populates existing content
 func (ctx *ProjectContext) UpdateContextFromConfig() error {
-	configPath := "ai_rulez.yaml"
+	configPath := "ai-rulez.yaml"
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -152,77 +245,10 @@ func (ctx *ProjectContext) UpdateContextFromConfig() error {
 		return fmt.Errorf("failed to parse config: %w", err)
 	}
 
-	// Extract existing rules
-	if rulesData, ok := config["rules"].([]interface{}); ok {
-		ctx.ExistingRules = make([]RuleResponse, 0, len(rulesData))
-		for _, r := range rulesData {
-			ruleMap, ok := r.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			rule := RuleResponse{}
-			if name, ok := ruleMap["name"].(string); ok {
-				rule.Name = name
-			}
-			if priority, ok := ruleMap["priority"].(string); ok {
-				rule.Priority = priority
-			}
-			if content, ok := ruleMap["content"].(string); ok {
-				rule.Content = content
-			}
-			if rule.Name != "" && rule.Content != "" {
-				ctx.ExistingRules = append(ctx.ExistingRules, rule)
-			}
-		}
-	}
-
-	// Extract existing sections
-	if sectionsData, ok := config["sections"].([]interface{}); ok {
-		ctx.ExistingSections = make([]SectionResponse, 0, len(sectionsData))
-		for _, s := range sectionsData {
-			sectionMap, ok := s.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			section := SectionResponse{}
-			if name, ok := sectionMap["name"].(string); ok {
-				section.Name = name
-			}
-			if priority, ok := sectionMap["priority"].(string); ok {
-				section.Priority = priority
-			}
-			if content, ok := sectionMap["content"].(string); ok {
-				section.Content = content
-			}
-			if section.Name != "" && section.Content != "" {
-				ctx.ExistingSections = append(ctx.ExistingSections, section)
-			}
-		}
-	}
-
-	// Extract existing agents
-	if agentsData, ok := config["agents"].([]interface{}); ok {
-		ctx.ExistingAgents = make([]AgentDefinition, 0, len(agentsData))
-		for _, a := range agentsData {
-			agentMap, ok := a.(map[string]interface{})
-			if !ok {
-				continue
-			}
-			agent := AgentDefinition{}
-			if name, ok := agentMap["name"].(string); ok {
-				agent.Name = name
-			}
-			if role, ok := agentMap["role"].(string); ok {
-				agent.Role = role
-			}
-			if expertise, ok := agentMap["expertise"].(string); ok {
-				agent.Expertise = expertise
-			}
-			if agent.Name != "" && agent.Role != "" {
-				ctx.ExistingAgents = append(ctx.ExistingAgents, agent)
-			}
-		}
-	}
+	// Extract existing content from config
+	ctx.extractRulesFromConfig(config)
+	ctx.extractSectionsFromConfig(config)
+	ctx.extractAgentsFromConfig(config)
 
 	return nil
 }

@@ -263,16 +263,18 @@ func TestCurrentWorkingDirectory(t *testing.T) {
 	originalWd, err := os.Getwd()
 	require.NoError(t, err, "Getting current working directory should work")
 
-	// Ensure we return to original directory
-	defer func() {
-		os.Chdir(originalWd)
-	}()
-
 	// Should be an absolute path
 	assert.True(t, filepath.IsAbs(originalWd), "Current directory should be absolute")
 
 	// Test changing to temp directory
 	tempDir := t.TempDir()
+
+	// Ensure we return to original directory before test cleanup
+	defer func() {
+		// Change back to original directory before temp dir is cleaned up
+		_ = os.Chdir(originalWd)
+	}()
+
 	err = os.Chdir(tempDir)
 	require.NoError(t, err, "Changing directory should work")
 
