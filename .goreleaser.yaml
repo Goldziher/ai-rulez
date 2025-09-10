@@ -14,6 +14,9 @@ builds:
       - CGO_ENABLED=0
       - GOPROXY=direct
       - GOSUMDB=off
+    ldflags:
+      - -s -w
+      - -X github.com/Goldziher/ai-rulez/cmd/commands.Version={{.Version}}
     goos:
       - linux
       - windows
@@ -47,7 +50,7 @@ release:
   replace_existing_draft: true
 
 
-brews:
+homebrew_casks:
   - name: ai-rulez
     description: "⚡ Lightning-fast CLI tool (written in Go) for managing AI assistant rules"
     homepage: "https://github.com/Goldziher/ai-rulez"
@@ -60,7 +63,7 @@ brews:
     commit_author:
       name: goreleaserbot
       email: bot@goreleaser.com
-    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    commit_msg_template: "Brew cask update for {{ .ProjectName }} version {{ .Tag }}"
     skip_upload: false
     install: |
       bin.install "ai-rulez"
