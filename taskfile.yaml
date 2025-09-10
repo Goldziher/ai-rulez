@@ -82,20 +82,16 @@ tasks:
       - echo "🧪 Running quick e2e smoke tests..."
       - cd testing/e2e && go test -timeout=30s -run "TestBasicCLISuite/TestRootHelp|TestMCPServerSuite/TestServerStartup|TestWorkflowsSuite/TestCompleteProjectLifecycle" ./...
 
-  lint:
-    desc: Lint the code
-    cmds:
-      - golangci-lint run
-
-  lint:fix:
-    desc: Fix linting issues
-    cmds:
-      - golangci-lint run --fix
-
   format:
     desc: Format code with go fmt
     cmds:
       - go fmt ./...
+
+  lint:
+    desc: Lint the code
+    deps: [format]
+    cmds:
+      - golangci-lint run --fix
 
 
   tidy:
