@@ -10,7 +10,8 @@ Set Theme "Dracula"
 Set Padding 30
 Set BorderRadius 10
 Set WindowBar Colorful
-Set TypingSpeed 75ms
+Set TypingSpeed 50ms
+Set PlaybackSpeed 1.5
 
 # Start demo
 Type "# AI-Rulez: Lightning-fast AI assistant configuration"
@@ -21,7 +22,7 @@ Type "# Initialize a new project with popular AI presets"
 Enter
 Sleep 500ms
 
-Type "npx ai-rulez init 'My Awesome Project' --preset popular"
+Type "npx ai-rulez init 'My Awesome Project' --preset popular --yes"
 Enter
 Sleep 3s
 
