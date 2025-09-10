@@ -13,31 +13,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAIRulezCrossplatformBuild tests that ai-rulez can be built on current platform
 func TestAIRulezCrossplatformBuild(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping build test in short mode")
 	}
 
-	// Find project root (go up until we find go.mod)
 	projectRoot := findProjectRoot(t)
 
-	// Test go build command
 	cmd := exec.Command("go", "build", "-o", getBinaryName("ai-rulez-test"), "./cmd")
 	cmd.Dir = projectRoot
 
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Building ai-rulez should succeed on %s: %s", runtime.GOOS, string(output))
 
-	// Verify binary was created
 	binaryPath := filepath.Join(projectRoot, getBinaryName("ai-rulez-test"))
 	_, err = os.Stat(binaryPath)
 	require.NoError(t, err, "Binary should exist after build")
 
-	// Clean up
 	defer os.Remove(binaryPath)
 
-	// Test basic execution
 	cmd = exec.Command(binaryPath, "version")
 	output, err = cmd.CombinedOutput()
 	require.NoError(t, err, "Binary should execute successfully, output: %s", string(output))
@@ -46,7 +40,6 @@ func TestAIRulezCrossplatformBuild(t *testing.T) {
 	assert.Contains(t, outputStr, "ai-rulez", "Version output should contain ai-rulez, actual: %q", outputStr)
 }
 
-// TestAIRulezBasicCommands tests basic ai-rulez commands work cross-platform
 func TestAIRulezBasicCommands(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration test in short mode")
@@ -55,7 +48,6 @@ func TestAIRulezBasicCommands(t *testing.T) {
 	projectRoot := findProjectRoot(t)
 	tempDir := t.TempDir()
 
-	// Build ai-rulez for testing
 	binaryName := getBinaryName("ai-rulez-platform-test")
 	binaryPath := filepath.Join(tempDir, binaryName)
 
@@ -65,12 +57,10 @@ func TestAIRulezBasicCommands(t *testing.T) {
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "Should build ai-rulez: %s", string(output))
 
-	// Test in temp directory
 	err = os.Chdir(tempDir)
 	require.NoError(t, err, "Should change to temp directory")
 	defer os.Chdir(projectRoot)
 
-	// Test basic commands
 	testCases := []struct {
 		name        string
 		args        []string
@@ -89,7 +79,7 @@ func TestAIRulezBasicCommands(t *testing.T) {
 		{
 			name:        "Validate without config",
 			args:        []string{"validate"},
-			expectError: true, // No config file exists
+			expectError: true,
 		},
 	}
 
@@ -111,11 +101,9 @@ func TestAIRulezBasicCommands(t *testing.T) {
 	}
 }
 
-// TestConfigFileHandlingCrossPlatform tests config file operations work cross-platform
 func TestConfigFileHandlingCrossPlatform(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Test different config file scenarios
 	configs := []struct {
 		name     string
 		filename string
@@ -172,23 +160,18 @@ outputs:
 		t.Run(config.name, func(t *testing.T) {
 			configPath := filepath.Join(tempDir, config.filename)
 
-			// Write config file
 			err := os.WriteFile(configPath, []byte(config.content), 0o644)
 			require.NoError(t, err, "Should write config file")
 
-			// Read back and verify
 			content, err := os.ReadFile(configPath)
 			require.NoError(t, err, "Should read config file")
 
 			assert.Equal(t, strings.TrimSpace(config.content),
 				strings.TrimSpace(string(content)), "Content should match")
 
-			// Test path handling in config
 			lines := strings.Split(string(content), "\n")
 			for _, line := range lines {
 				if strings.Contains(line, "path:") && !strings.Contains(config.name, "Windows") {
-					// Only check for double backslashes in non-Windows test configs
-					// Windows configs intentionally contain escaped backslashes
 					assert.NotContains(t, line, "\\\\", "Paths should not have double backslashes")
 				}
 			}
@@ -196,11 +179,9 @@ outputs:
 	}
 }
 
-// TestOutputDirectoryCreation tests output directory creation cross-platform
 func TestOutputDirectoryCreation(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Test various output directory structures
 	outputPaths := []struct {
 		name string
 		path string
@@ -228,57 +209,46 @@ func TestOutputDirectoryCreation(t *testing.T) {
 			fullPath := filepath.Join(tempDir, output.path)
 			dir := filepath.Dir(fullPath)
 
-			// Test directory creation
 			err := os.MkdirAll(dir, 0o755)
 			require.NoError(t, err, "Should create directory structure")
 
-			// Test file creation
 			content := "# Test Content\nGenerated on " + runtime.GOOS
 			err = os.WriteFile(fullPath, []byte(content), 0o644)
 			require.NoError(t, err, "Should write output file")
 
-			// Verify file exists and is readable
 			readContent, err := os.ReadFile(fullPath)
 			require.NoError(t, err, "Should read output file")
 			assert.Equal(t, content, string(readContent), "Content should match")
 
-			// Test path properties
 			assert.True(t, filepath.IsAbs(fullPath), "Full path should be absolute")
 
 			rel, err := filepath.Rel(tempDir, fullPath)
 			require.NoError(t, err, "Should compute relative path")
 
-			// Normalize separators for comparison
 			expectedRel := filepath.FromSlash(output.path)
 			assert.Equal(t, expectedRel, rel, "Relative path should match")
 		})
 	}
 }
 
-// TestGitIntegrationCrossPlatform tests git integration works cross-platform
 func TestGitIntegrationCrossPlatform(t *testing.T) {
-	// Skip if git not available
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available")
 	}
 
 	tempDir := t.TempDir()
-	// On Windows, ensure cleanup happens properly
 	if runtime.GOOS == "windows" {
 		t.Cleanup(func() {
-			// Give time for any file handles to be released
 			time.Sleep(100 * time.Millisecond)
-			runtime.GC() // Force garbage collection to close any lingering handles
+			runtime.GC()
 		})
 	}
 
-	// Initialize git repo
 	cmd := exec.Command("git", "init")
 	cmd.Dir = tempDir
 	_, err := cmd.Output()
 	require.NoError(t, err, "Should initialize git repo")
 
-	// Configure git (required for commits)
 	cmd = exec.Command("git", "config", "user.name", "Test User")
 	cmd.Dir = tempDir
 	cmd.Run()
@@ -287,7 +257,6 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	cmd.Dir = tempDir
 	cmd.Run()
 
-	// Create and commit a file
 	testFile := filepath.Join(tempDir, "README.md")
 	err = os.WriteFile(testFile, []byte("# Test Repo"), 0o644)
 	require.NoError(t, err)
@@ -302,7 +271,6 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	_, err = cmd.Output()
 	require.NoError(t, err, "Should commit file")
 
-	// Test git commands used by ai-rulez
 	gitCommands := []struct {
 		name string
 		args []string
@@ -324,7 +292,7 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	for _, gitCmd := range gitCommands {
 		t.Run(gitCmd.name, func(t *testing.T) {
 			cmd := exec.Command("git", gitCmd.args...)
-			cmd.Dir = tempDir // Set working directory explicitly
+			cmd.Dir = tempDir
 			output, err := cmd.Output()
 			require.NoError(t, err, "Git command should work: %s", strings.Join(gitCmd.args, " "))
 			assert.NotEmpty(t, output, "Git command should produce output")
@@ -335,7 +303,6 @@ func TestGitIntegrationCrossPlatform(t *testing.T) {
 	}
 }
 
-// findProjectRoot finds the project root by looking for go.mod
 func findProjectRoot(t *testing.T) string {
 	dir, err := os.Getwd()
 	require.NoError(t, err)
@@ -353,7 +320,6 @@ func findProjectRoot(t *testing.T) string {
 	}
 }
 
-// getBinaryName returns binary name with appropriate extension for platform
 func getBinaryName(baseName string) string {
 	if runtime.GOOS == "windows" {
 		return baseName + ".exe"
