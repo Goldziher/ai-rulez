@@ -32,7 +32,6 @@ jobs:
   goreleaser:
     needs: prepare
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v5
         with:
@@ -52,21 +51,11 @@ jobs:
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
 
   publish-npm:
-    needs: prepare
+    needs: [prepare, goreleaser]
     runs-on: ubuntu-latest
+    if: always() && (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'skipped')
     steps:
       - uses: actions/checkout@v5
-
-      - name: Check if GitHub release exists
-        run: |
-          VERSION=${{ needs.prepare.outputs.version }}
-          if ! gh release view v$VERSION > /dev/null 2>&1; then
-            echo "GitHub release v$VERSION does not exist, skipping npm publish"
-            exit 1
-          fi
-          echo "GitHub release v$VERSION exists, proceeding with npm publish"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v5
         with:
@@ -91,21 +80,11 @@ jobs:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
   publish-pypi:
-    needs: prepare
+    needs: [prepare, goreleaser]
     runs-on: ubuntu-latest
+    if: always() && (needs.goreleaser.result == 'success' || needs.goreleaser.result == 'skipped')
     steps:
       - uses: actions/checkout@v5
-
-      - name: Check if GitHub release exists
-        run: |
-          VERSION=${{ needs.prepare.outputs.version }}
-          if ! gh release view v$VERSION > /dev/null 2>&1; then
-            echo "GitHub release v$VERSION does not exist, skipping PyPI publish"
-            exit 1
-          fi
-          echo "GitHub release v$VERSION exists, proceeding with PyPI publish"
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-python@v6
         with:
