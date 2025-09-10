@@ -170,7 +170,6 @@ func TestExtractMarkdownTitle(t *testing.T) {
 func TestScanMarkdownFiles(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create test structure
 	files := map[string]string{
 		"README.md":                          "# Main README",
 		"CONTRIBUTING.md":                    "# Contributing",
@@ -195,8 +194,7 @@ func TestScanMarkdownFiles(t *testing.T) {
 
 	result := scanMarkdownFiles(tempDir)
 
-	// Check that we found the expected files
-	expectedCount := 6 // All except node_modules and very deep file
+	expectedCount := 6
 	if len(result) != expectedCount {
 		t.Errorf("scanMarkdownFiles() found %d files, want %d", len(result), expectedCount)
 		for i, file := range result {
@@ -204,12 +202,10 @@ func TestScanMarkdownFiles(t *testing.T) {
 		}
 	}
 
-	// Verify root README is first
 	if len(result) > 0 && result[0].RelativePath != "README.md" {
 		t.Errorf("First file should be README.md, got %s", result[0].RelativePath)
 	}
 
-	// Check that node_modules is not included
 	for _, file := range result {
 		if strings.Contains(file.RelativePath, "node_modules") {
 			t.Errorf("node_modules should be excluded, but found: %s", file.RelativePath)
@@ -223,7 +219,6 @@ func TestScanMarkdownFiles(t *testing.T) {
 func TestDetectPackageLocations(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create packages structure
 	packages := []string{
 		"packages/core",
 		"packages/utils",
@@ -236,13 +231,11 @@ func TestDetectPackageLocations(t *testing.T) {
 		if err := os.MkdirAll(pkgDir, 0o755); err != nil {
 			t.Fatalf("Failed to create directory %s: %v", pkgDir, err)
 		}
-		// Add package.json to make it a valid package
 		if err := os.WriteFile(filepath.Join(pkgDir, "package.json"), []byte("{}"), 0o644); err != nil {
 			t.Fatalf("Failed to write package.json: %v", err)
 		}
 	}
 
-	// Add a non-package directory
 	if err := os.MkdirAll(filepath.Join(tempDir, "packages", "not-a-package"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -255,7 +248,6 @@ func TestDetectPackageLocations(t *testing.T) {
 		t.Errorf("Packages found: %v", result)
 	}
 
-	// Check that all valid packages are detected
 	expectedPackages := map[string]bool{
 		filepath.Join("packages", "core"):  false,
 		filepath.Join("packages", "utils"): false,
@@ -279,7 +271,6 @@ func TestDetectPackageLocations(t *testing.T) {
 func TestDetectAppLocations(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create apps structure
 	apps := map[string]string{
 		"apps/web":     "package.json",
 		"apps/mobile":  "main.go",
@@ -293,13 +284,11 @@ func TestDetectAppLocations(t *testing.T) {
 		if err := os.MkdirAll(appDir, 0o755); err != nil {
 			t.Fatalf("Failed to create directory %s: %v", appDir, err)
 		}
-		// Add main file to make it a valid app
 		if err := os.WriteFile(filepath.Join(appDir, mainFile), []byte("content"), 0o644); err != nil {
 			t.Fatalf("Failed to write %s: %v", mainFile, err)
 		}
 	}
 
-	// Add a non-app directory
 	if err := os.MkdirAll(filepath.Join(tempDir, "apps", "not-an-app"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -312,7 +301,6 @@ func TestDetectAppLocations(t *testing.T) {
 }
 
 func TestGatherProjectContext(t *testing.T) {
-	// Save and restore working directory
 	originalWd, err := os.Getwd()
 	if err != nil {
 		t.Fatal(err)
@@ -321,7 +309,6 @@ func TestGatherProjectContext(t *testing.T) {
 
 	tempDir := t.TempDir()
 
-	// Set up a test project structure
 	if err := os.MkdirAll(filepath.Join(tempDir, "packages", "core"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +319,6 @@ func TestGatherProjectContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// Create some files - need at least 2 packages for monorepo detection
 	files := map[string]string{
 		"README.md":                   "# Test Project",
 		"package.json":                `{"name": "test"}`,
@@ -352,7 +338,6 @@ func TestGatherProjectContext(t *testing.T) {
 		}
 	}
 
-	// Change to temp directory
 	if err := os.Chdir(tempDir); err != nil {
 		t.Fatal(err)
 	}

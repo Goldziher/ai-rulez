@@ -10,34 +10,26 @@ import (
 	"github.com/samber/oops"
 )
 
-// CLIIntegrator interface for tool-specific MCP CLI integrations
 type CLIIntegrator interface {
-	// ToolName returns the name of the tool (e.g., "claude", "gemini")
 	ToolName() string
 
-	// IsAvailable checks if the CLI tool is installed and accessible
 	IsAvailable() bool
 
-	// ConfigureServer executes the MCP server configuration command
 	ConfigureServer(server *config.MCPServer) error
 
-	// RemoveServer removes an MCP server configuration (optional)
 	RemoveServer(serverName string) error
 }
 
-// ConfigureCLITools configures MCP servers for available CLI tools
 func ConfigureCLITools(servers []config.MCPServer) error {
 	if len(servers) == 0 {
 		return nil
 	}
 
-	// Initialize all available integrators
 	integrators := []CLIIntegrator{
 		&ClaudeIntegrator{},
 		&GeminiIntegrator{},
 	}
 
-	// Filter to only available tools
 	availableIntegrators := make([]CLIIntegrator, 0, len(integrators))
 	for _, integrator := range integrators {
 		if integrator.IsAvailable() {
@@ -50,7 +42,6 @@ func ConfigureCLITools(servers []config.MCPServer) error {
 		return nil
 	}
 
-	// Configure servers for each available tool
 	var errors []error
 	for i := range servers {
 		server := &servers[i]
@@ -59,7 +50,6 @@ func ConfigureCLITools(servers []config.MCPServer) error {
 		}
 
 		for _, integrator := range availableIntegrators {
-			// Check if this server targets this tool
 			if shouldConfigureForTool(server, integrator.ToolName()) {
 				if err := integrator.ConfigureServer(server); err != nil {
 					errorMsg := fmt.Sprintf("failed to configure %s MCP server '%s': %v",
@@ -84,14 +74,11 @@ func ConfigureCLITools(servers []config.MCPServer) error {
 	return nil
 }
 
-// shouldConfigureForTool checks if a server should be configured for a specific tool
 func shouldConfigureForTool(server *config.MCPServer, toolName string) bool {
-	// If no targets specified, configure for all available tools
 	if len(server.Targets) == 0 {
 		return true
 	}
 
-	// Check for explicit tool targeting: @claude-cli, @gemini-cli
 	targetPattern := fmt.Sprintf("@%s-cli", toolName)
 	for _, target := range server.Targets {
 		if target == targetPattern {
@@ -102,14 +89,12 @@ func shouldConfigureForTool(server *config.MCPServer, toolName string) bool {
 	return false
 }
 
-// isToolAvailable checks if a CLI tool is available in the system PATH
 func isToolAvailable(toolName string) bool {
 	cmd := exec.Command(toolName, "--help")
 	err := cmd.Run()
 	return err == nil
 }
 
-// buildEnvFlags constructs environment variable flags for CLI commands
 func buildEnvFlags(env map[string]string, flagPattern string) []string {
 	if len(env) == 0 {
 		return nil
@@ -122,13 +107,11 @@ func buildEnvFlags(env map[string]string, flagPattern string) []string {
 	return flags
 }
 
-// executeCommand runs a command and returns detailed error information
 func executeCommand(cmdArgs []string) error {
 	if len(cmdArgs) == 0 {
 		return oops.Errorf("empty command arguments")
 	}
 
-	// Validate that the first argument is a known safe command
 	allowedCommands := map[string]bool{
 		"claude": true,
 		"gemini": true,
@@ -140,7 +123,7 @@ func executeCommand(cmdArgs []string) error {
 			Errorf("command not allowed: %s", cmdArgs[0])
 	}
 
-	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...) // #nosec G204 - command is validated above
+	cmd := exec.Command(cmdArgs[0], cmdArgs[1:]...) // #nosec G204 - cmdArgs[0] is validated against allowedCommands
 	output, err := cmd.CombinedOutput()
 
 	if err != nil {

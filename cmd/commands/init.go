@@ -115,7 +115,6 @@ func handleListAgents() bool {
 }
 
 func checkExistingConfig() {
-	// Check only in current directory, not parent directories
 	configNames := []string{
 		".ai-rulez.yaml", ".ai-rulez.yml",
 		"ai-rulez.yaml", "ai-rulez.yml",
@@ -129,30 +128,26 @@ func checkExistingConfig() {
 		}
 		logger.Info("Configuration file already exists", "file", name)
 
-		// Check if we should prompt for overwrite
 		if !shouldOverwriteConfig(name) {
 			logger.Info("Operation canceled. Remove or rename the existing file to initialize a new configuration")
 			os.Exit(1)
 		}
 
-		// User chose to overwrite, remove the existing file
 		if err := os.Remove(name); err != nil {
 			logger.Error("Failed to remove existing configuration file", "file", name, "error", err)
 			os.Exit(1)
 		}
 		logger.Info("Existing configuration file removed", "file", name)
-		break // Only remove one file
+		break
 	}
 }
 
 func shouldOverwriteConfig(filename string) bool {
-	// Check if we're in non-interactive mode (CI, --yes flag, etc.)
 	if autoYes || os.Getenv("CI") != "" || os.Getenv("NO_INTERACTIVE") != "" {
 		logger.Info("Auto-overwriting existing configuration file (--yes or CI environment)")
 		return true
 	}
 
-	// Check if stdin is available for interactive prompts
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		logger.Info("Cannot prompt for input, canceling operation")
@@ -163,7 +158,6 @@ func shouldOverwriteConfig(filename string) bool {
 		return false
 	}
 
-	// Prompt user for confirmation
 	fmt.Printf("⚠️  Overwrite existing file '%s'? (y/N): ", filename)
 
 	var response string
@@ -193,7 +187,6 @@ func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig t
 	if !noAgent && (useAgent != "" || agents.ShouldPromptForAgent()) {
 		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, useAgent, autoYes)
 		if handled {
-			// Don't overwrite - agents have already edited the file directly
 			fmt.Println("✅ Configuration generated with AI assistance")
 			return true
 		}

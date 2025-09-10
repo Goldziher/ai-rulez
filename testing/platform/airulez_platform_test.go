@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TestAIRulezBinaryDetection tests our binary path detection logic
 func TestAIRulezBinaryDetection(t *testing.T) {
 	tests := []struct {
 		name            string
@@ -27,7 +26,6 @@ func TestAIRulezBinaryDetection(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Mock the binary detection logic used in testutil
 			expected := tt.binaryName
 			if tt.platform == "windows" {
 				expected += ".exe"
@@ -36,7 +34,6 @@ func TestAIRulezBinaryDetection(t *testing.T) {
 			actual := addBinaryExtension(tt.binaryName, tt.platform)
 			assert.Equal(t, expected, actual)
 
-			// Test the actual runtime logic
 			if tt.platform == runtime.GOOS {
 				runtimeExpected := tt.binaryName
 				if runtime.GOOS == "windows" {
@@ -48,7 +45,6 @@ func TestAIRulezBinaryDetection(t *testing.T) {
 	}
 }
 
-// TestConfigPathGeneration tests config file path generation across platforms
 func TestConfigPathGeneration(t *testing.T) {
 	testCases := []struct {
 		name       string
@@ -89,7 +85,6 @@ func TestConfigPathGeneration(t *testing.T) {
 
 			assert.Equal(t, expected, result)
 
-			// Verify the path components
 			dir := filepath.Dir(result)
 			file := filepath.Base(result)
 
@@ -99,9 +94,7 @@ func TestConfigPathGeneration(t *testing.T) {
 	}
 }
 
-// TestGitCommandExecution tests git command execution patterns used in the codebase
 func TestGitCommandExecution(t *testing.T) {
-	// Skip if git is not available
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not available in PATH")
 	}
@@ -119,17 +112,17 @@ func TestGitCommandExecution(t *testing.T) {
 		{
 			name:        "git rev-parse --git-dir",
 			args:        []string{"rev-parse", "--git-dir"},
-			expectError: true, // May fail if not in git repo
+			expectError: true,
 		},
 		{
 			name:        "git rev-list --count HEAD",
 			args:        []string{"rev-list", "--count", "HEAD"},
-			expectError: true, // May fail if not in git repo
+			expectError: true,
 		},
 		{
 			name:        "git log format",
 			args:        []string{"log", "--oneline", "-n", "1", "--format=%s"},
-			expectError: true, // May fail if not in git repo
+			expectError: true,
 		},
 	}
 
@@ -142,7 +135,6 @@ func TestGitCommandExecution(t *testing.T) {
 				require.NoError(t, err, "Command should succeed: git %s", strings.Join(tt.args, " "))
 				assert.NotEmpty(t, output, "Command should produce output")
 			} else {
-				// For commands that may fail (not in git repo), just verify they can be constructed
 				assert.NotNil(t, cmd, "Command should be constructible")
 				t.Logf("Command 'git %s' result: error=%v, output_len=%d",
 					strings.Join(tt.args, " "), err != nil, len(output))
@@ -151,26 +143,25 @@ func TestGitCommandExecution(t *testing.T) {
 	}
 }
 
-// TestAgentCommandExecution tests the agent command patterns we use
 func TestAgentCommandExecution(t *testing.T) {
 	tests := []struct {
 		name        string
 		agentID     string
 		command     string
 		args        []string
-		shouldExist bool // whether we expect the command to exist
+		shouldExist bool
 	}{
 		{
 			name:        "Claude command structure",
 			agentID:     "claude",
 			command:     "claude",
 			args:        []string{"--print", "--permission-mode", "bypassPermissions", "test prompt"},
-			shouldExist: false, // May not be installed
+			shouldExist: false,
 		},
 		{
 			name:        "Generic command structure",
 			agentID:     "test",
-			command:     "echo", // Use echo as it exists on all platforms
+			command:     "echo",
 			args:        []string{"test"},
 			shouldExist: true,
 		},
@@ -178,49 +169,41 @@ func TestAgentCommandExecution(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test command construction (should work on all platforms)
 			cmd := exec.Command(tt.command, tt.args...)
 			assert.NotNil(t, cmd, "Command should be constructible")
 			assert.Contains(t, cmd.Path, tt.command, "Command path should contain command name")
 
-			// Test command existence
 			_, err := exec.LookPath(tt.command)
 			if tt.shouldExist {
 				require.NoError(t, err, "Expected command should exist: %s", tt.command)
 
-				// Test actual execution for commands we expect to work
 				if tt.command == "echo" {
 					output, execErr := cmd.Output()
 					require.NoError(t, execErr, "Echo command should execute successfully")
 					assert.Contains(t, string(output), "test", "Echo should return expected output")
 				}
 			} else {
-				// For commands that may not exist, just log the result
 				t.Logf("Command '%s' availability: %v", tt.command, err == nil)
 			}
 		})
 	}
 }
 
-// TestDirectoryTraversalSecurity tests that our directory traversal is secure
 func TestDirectoryTraversalSecurity(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Test potentially dangerous paths
 	dangerousPaths := []string{
-		"../../../etc/passwd",                        // Unix path traversal
-		"..\\..\\..\\Windows\\System32\\config\\sam", // Windows path traversal
-		"../outside",    // Simple traversal
-		"./safe/path",   // Safe relative path
-		"/tmp/absolute", // Absolute path
+		"../../../etc/passwd",
+		"..\\..\\..\\Windows\\System32\\config\\sam",
+		"../outside",
+		"./safe/path",
+		"/tmp/absolute",
 	}
 
 	for _, path := range dangerousPaths {
 		t.Run("path: "+path, func(t *testing.T) {
-			// Test filepath.Join behavior (should be safe)
 			joined := filepath.Join(tempDir, path)
 
-			// Check if the path escapes our temp directory
 			rel, err := filepath.Rel(tempDir, joined)
 			if err == nil && !strings.HasPrefix(rel, "..") {
 				t.Logf("Safe path: %s -> %s (rel: %s)", path, joined, rel)
@@ -228,7 +211,6 @@ func TestDirectoryTraversalSecurity(t *testing.T) {
 				t.Logf("Potentially unsafe path: %s -> %s (rel: %s, err: %v)",
 					path, joined, rel, err)
 
-				// For path traversal attempts, ensure we detect them
 				if strings.Contains(path, "..") {
 					assert.True(t, strings.Contains(rel, "..") || err != nil,
 						"Path traversal should be detectable")
@@ -238,7 +220,6 @@ func TestDirectoryTraversalSecurity(t *testing.T) {
 	}
 }
 
-// TestFileHiddenDetection tests detection of hidden files across platforms
 func TestFileHiddenDetection(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -246,18 +227,17 @@ func TestFileHiddenDetection(t *testing.T) {
 		expected bool
 	}{
 		{"Unix hidden file", ".hidden", true},
-		{"Windows hidden file", ".gitignore", true}, // Starts with dot
+		{"Windows hidden file", ".gitignore", true},
 		{"Normal file", "README.md", false},
 		{"File with dot in middle", "config.yaml", false},
-		{"GitHub directory", ".github", false}, // Special case we allow
+		{"GitHub directory", ".github", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test our hidden file detection logic
 			isHidden := strings.HasPrefix(tt.fileName, ".")
 			if tt.fileName == ".github" {
-				isHidden = false // Special case exception
+				isHidden = false
 			}
 
 			assert.Equal(t, tt.expected, isHidden,
@@ -266,15 +246,13 @@ func TestFileHiddenDetection(t *testing.T) {
 	}
 }
 
-// TestWorkspaceDetection tests workspace/project root detection
 func TestWorkspaceDetection(t *testing.T) {
 	tempDir := t.TempDir()
 
-	// Create test project structures
 	structures := []struct {
 		name     string
 		files    []string
-		expected bool // whether this indicates a project root
+		expected bool
 	}{
 		{
 			name:     "Go project",
@@ -309,23 +287,19 @@ func TestWorkspaceDetection(t *testing.T) {
 			err := os.MkdirAll(structureDir, 0o755)
 			require.NoError(t, err)
 
-			// Create the test files
 			for _, file := range structure.files {
 				filePath := filepath.Join(structureDir, file)
 				dir := filepath.Dir(filePath)
 
-				// Create directory if needed
 				if dir != structureDir {
 					err = os.MkdirAll(dir, 0o755)
 					require.NoError(t, err)
 				}
 
-				// Create file
 				err = os.WriteFile(filePath, []byte("test content"), 0o644)
 				require.NoError(t, err)
 			}
 
-			// Test project detection logic
 			hasProjectFiles := false
 			projectIndicators := []string{"go.mod", "package.json", "setup.py", ".git"}
 
