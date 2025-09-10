@@ -263,7 +263,7 @@ func TestCurrentWorkingDirectory(t *testing.T) {
 	if os.Getenv("CI") == "true" {
 		t.Skip("Skipping working directory test in CI environment")
 	}
-	
+
 	// Get current working directory
 	originalWd, err := os.Getwd()
 	require.NoError(t, err, "Getting current working directory should work")
