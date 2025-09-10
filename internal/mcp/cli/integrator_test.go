@@ -141,14 +141,11 @@ func TestBuildEnvFlags(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := buildEnvFlags(tt.env, tt.flagPattern)
 
-			// Since map iteration order is not guaranteed, we need to check length and content
 			assert.Equal(t, len(tt.expected), len(result), tt.description)
 
 			if len(tt.expected) > 0 {
-				// For non-empty results, verify the structure (flag followed by value)
 				assert.Equal(t, len(result)%2, 0, "Result should have even number of elements (flag-value pairs)")
 
-				// Check that all expected flags are present
 				flagCount := 0
 				for i := 0; i < len(result); i += 2 {
 					assert.Equal(t, tt.flagPattern, result[i], "Flag should match pattern")
@@ -231,38 +228,28 @@ func TestValidateConfigurations(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Test server creation
 			require.NotEmpty(t, tt.server.Name, "Server must have a name")
 
-			// Test transport type
 			transport := tt.server.GetTransport()
 			assert.Contains(t, []string{"stdio", "http", "sse"}, transport,
 				"Transport should be one of the supported types")
 
-			// Test stdio requirements
 			if transport == "stdio" {
 				assert.NotEmpty(t, tt.server.Command, "stdio transport requires command")
 			}
 
-			// Test http/sse requirements
 			if transport == "http" || transport == "sse" {
 				assert.NotEmpty(t, tt.server.URL, "%s transport requires URL", transport)
 			}
 
-			// Test enabled status
 			assert.True(t, tt.server.IsEnabled(), "Server should be enabled by default")
 		})
 	}
 }
 
 func TestIsToolAvailable_MockBehavior(t *testing.T) {
-	// Note: These tests would need to mock exec.Command to test different scenarios
-	// For now, we'll test the basic structure
-
 	t.Run("tool availability check structure", func(t *testing.T) {
-		// This is a structural test - the actual availability depends on system
 		result := isToolAvailable("nonexistent-tool-12345")
-		// We expect this to be false since the tool doesn't exist
 		assert.False(t, result, "Nonexistent tool should not be available")
 	})
 }

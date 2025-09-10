@@ -32,11 +32,8 @@ func RunCLIWithEnv(t *testing.T, workingDir string, env map[string]string, args 
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = workingDir
 
-	// Set custom environment if provided
 	if env != nil {
-		// Start with current environment
 		cmdEnv := os.Environ()
-		// Filter out any keys we want to override
 		filtered := make([]string, 0, len(cmdEnv))
 		for _, e := range cmdEnv {
 			shouldKeep := true
@@ -50,7 +47,6 @@ func RunCLIWithEnv(t *testing.T, workingDir string, env map[string]string, args 
 				filtered = append(filtered, e)
 			}
 		}
-		// Add our custom env vars (empty string means unset)
 		for k, v := range env {
 			if v != "" {
 				filtered = append(filtered, fmt.Sprintf("%s=%s", k, v))

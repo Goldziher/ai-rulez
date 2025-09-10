@@ -15,7 +15,6 @@ const (
 	langRust       = "Rust"
 	langJavaScript = "JavaScript"
 
-	// Additional repo type not in context.go
 	repoTypeService = "service"
 )
 

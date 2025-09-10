@@ -79,7 +79,6 @@ func MatchesTarget(outputPath string, targets []string) bool {
 			continue
 		}
 
-		// Normalize target pattern to use OS-specific separators
 		cleanTarget = filepath.FromSlash(cleanTarget)
 
 		if matchesExact(cleanTarget, normalizedPath) {

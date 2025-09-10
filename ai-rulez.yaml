@@ -3,7 +3,7 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 metadata:
   name: AI-Rulez-Improved-Test
   version: "1.0.0"
-  description: "" # Will be updated by project-agent
+  description: "" 
 
 outputs:
   - path: CLAUDE.md

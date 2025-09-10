@@ -99,7 +99,6 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 
 	var outputBuilder strings.Builder
 
-	// Read output silently, then format it nicely
 	buffer := make([]byte, 1024)
 	for {
 		n, err := stdout.Read(buffer)
@@ -115,9 +114,6 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 		}
 	}
 
-	// Don't print agent output during init - too verbose
-	// The output is still captured and returned for processing
-
 	stderrOutput, err := io.ReadAll(stderr)
 	if err != nil {
 		logger.Warn("Failed to read stderr", "error", err.Error())
@@ -131,8 +127,6 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 		}
 		return "", fmt.Errorf("agent failed: %w", err)
 	}
-
-	// Agent completed - success will be indicated by the spinner/progress bar
 
 	return outputBuilder.String(), nil
 }
@@ -236,18 +230,14 @@ func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, conf
 		return "", false
 	}
 
-	// Gather comprehensive project context
 	logger.Info("🔍 Analyzing project structure...")
 	projectContext := GatherProjectContext(projectName)
 
-	// Execute the multi-phase chain
 	result, err := ExecuteInitChain(*selectedAgent, projectContext, config)
 	if err != nil {
-		// Log the error but don't fail - partial success is still valuable
 		logger.Warn("Some agent tasks encountered issues", "error", err.Error())
 	}
 
-	// Always return success if we got this far - the file has been created and potentially modified
 	return result, true
 }
 

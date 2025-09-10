@@ -5,8 +5,6 @@ import (
 	"strings"
 )
 
-// Task-specific prompt functions for direct YAML editing
-
 func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
@@ -27,10 +25,8 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	prompt.WriteString(fmt.Sprintf("Generate a JSON response with a description for the '%s' project.\n", context.ProjectName))
 	prompt.WriteString("The description should be 1-2 sentences, clear and concise.\n\n")
 
-	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
 
-	// Add rich project context
 	addProjectContext(&prompt, context)
 
 	prompt.WriteString("\nAnalyze the project and create a description that:\n")
@@ -80,13 +76,10 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 	prompt.WriteString("- Priority must be: high (essential), medium (important), or low (nice-to-have)\n")
 	prompt.WriteString("- Avoid generic content that could apply to any project\n")
 
-	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
 
-	// Add rich project context
 	addProjectContext(&prompt, context)
 
-	// Add existing documentation context
 	if len(context.MarkdownFiles) > 0 {
 		prompt.WriteString("\nEXISTING DOCUMENTATION:\n")
 		for _, doc := range context.MarkdownFiles {
@@ -154,10 +147,8 @@ func buildStandardsPrompt(context *ProjectContext) string {
 	prompt.WriteString("- Use priority levels: critical, high, medium, low, or minimal\n")
 	prompt.WriteString("- Avoid duplicate rules with different names\n")
 
-	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
 
-	// Add rich project context
 	addProjectContext(&prompt, context)
 
 	prompt.WriteString("\nFocus on critical practices that prevent bugs and maintain code quality.\n")
@@ -166,7 +157,6 @@ func buildStandardsPrompt(context *ProjectContext) string {
 	return prompt.String()
 }
 
-// addProjectContext adds comprehensive project context information to prompts
 func addProjectContext(prompt *strings.Builder, context *ProjectContext) {
 	addBasicProjectInfo(prompt, context)
 	addGitHistoryInfo(prompt, context)
@@ -175,14 +165,12 @@ func addProjectContext(prompt *strings.Builder, context *ProjectContext) {
 	addProjectStructure(prompt, context)
 }
 
-// addBasicProjectInfo adds basic project information to the prompt
 func addBasicProjectInfo(prompt *strings.Builder, context *ProjectContext) {
 	prompt.WriteString("✓ VERIFIED PROJECT CONTEXT (from actual code analysis):\n")
 	fmt.Fprintf(prompt, "- Repository Type: %s\n", context.RepoType)
 	fmt.Fprintf(prompt, "- Root Path: %s\n", context.RootPath)
 }
 
-// addGitHistoryInfo adds git history information if available
 func addGitHistoryInfo(prompt *strings.Builder, context *ProjectContext) {
 	if context.GitHistory == nil || !context.GitHistory.HasGit || context.GitHistory.CommitCount == 0 {
 		return
@@ -206,7 +194,6 @@ func addGitHistoryInfo(prompt *strings.Builder, context *ProjectContext) {
 	}
 }
 
-// addCodebaseInfo adds codebase analysis information
 func addCodebaseInfo(prompt *strings.Builder, context *ProjectContext) {
 	if context.CodebaseInfo == nil {
 		return
@@ -220,7 +207,6 @@ func addCodebaseInfo(prompt *strings.Builder, context *ProjectContext) {
 	addCapabilities(prompt, info)
 }
 
-// addLanguageInfo adds programming language and tech stack information
 func addLanguageInfo(prompt *strings.Builder, info *CodebaseInfo) {
 	if info.MainLanguage != "" {
 		fmt.Fprintf(prompt, "- Primary Language: %s (detected from files)\n", info.MainLanguage)
@@ -231,7 +217,6 @@ func addLanguageInfo(prompt *strings.Builder, info *CodebaseInfo) {
 	fmt.Fprintf(prompt, "- Project Type: %s\n", info.ProjectType)
 }
 
-// addDevelopmentCommands adds development command information
 func addDevelopmentCommands(prompt *strings.Builder, info *CodebaseInfo) {
 	if info.BuildCommand != "" {
 		fmt.Fprintf(prompt, "- Build Command: %s (from package files)\n", info.BuildCommand)
@@ -244,7 +229,6 @@ func addDevelopmentCommands(prompt *strings.Builder, info *CodebaseInfo) {
 	}
 }
 
-// addCapabilities adds capability information
 func addCapabilities(prompt *strings.Builder, info *CodebaseInfo) {
 	if info.HasDatabase {
 		prompt.WriteString("- Uses Database\n")
@@ -257,7 +241,6 @@ func addCapabilities(prompt *strings.Builder, info *CodebaseInfo) {
 	}
 }
 
-// addMonorepoInfo adds monorepo structure information
 func addMonorepoInfo(prompt *strings.Builder, context *ProjectContext) {
 	if context.RepoType != repoTypeMonorepo {
 		return
@@ -271,7 +254,6 @@ func addMonorepoInfo(prompt *strings.Builder, context *ProjectContext) {
 	}
 }
 
-// addProjectStructure adds project structure tree if available
 func addProjectStructure(prompt *strings.Builder, context *ProjectContext) {
 	structure := context.GenerateStructureTree()
 	if structure == "" {
@@ -283,7 +265,6 @@ func addProjectStructure(prompt *strings.Builder, context *ProjectContext) {
 	prompt.WriteString("```\n")
 }
 
-// addExistingConfigContext adds existing AI configuration as context
 func addExistingConfigContext(prompt *strings.Builder, context *ProjectContext) {
 	if len(context.ExistingConfigs) == 0 {
 		return
@@ -301,13 +282,11 @@ func addExistingConfigContext(prompt *strings.Builder, context *ProjectContext) 
 	prompt.WriteString("✓ Verify that mentioned features actually exist in code\n")
 	prompt.WriteString("✓ Check if build/test commands actually work\n\n")
 
-	// Prioritize certain configs
 	configOrder := []string{"README", "CLAUDE", "GEMINI", "AMP", "CONTINUE", "CURSOR", "AI_RULEZ"}
 
 	for _, key := range configOrder {
 		if content, exists := context.ExistingConfigs[key]; exists {
 			fmt.Fprintf(prompt, "=== %s (UNVERIFIED) ===\n", key)
-			// Only include first 2000 chars to avoid overwhelming context
 			if len(content) > 2000 {
 				content = content[:2000] + "\n... (truncated)"
 			}
@@ -318,8 +297,6 @@ func addExistingConfigContext(prompt *strings.Builder, context *ProjectContext) 
 
 	prompt.WriteString("IMPORTANT: Use these as hints only. Actual code structure takes precedence over documentation.\n\n")
 }
-
-// Fallback prompt functions - simplified versions for retries
 
 func buildProjectAnalysisFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
@@ -368,7 +345,6 @@ func buildDocumentationFallbackPrompt(context *ProjectContext) string {
 	return prompt.String()
 }
 
-// buildAgentDefinitionsPrompt creates a prompt for generating AI agent definitions
 func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
@@ -409,10 +385,8 @@ func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	prompt.WriteString("- Have unique names (lowercase with hyphens, e.g., backend-dev)\n")
 	prompt.WriteString("- Provide clear, distinct roles that don't overlap\n")
 
-	// Add existing AI configs as context
 	addExistingConfigContext(&prompt, context)
 
-	// Add rich project context
 	addProjectContext(&prompt, context)
 
 	prompt.WriteString("\nCreate agents relevant to this project type, such as:\n")
@@ -423,7 +397,6 @@ func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	return prompt.String()
 }
 
-// buildAgentDefinitionsFallbackPrompt creates a simple fallback prompt for agent definitions
 func buildAgentDefinitionsFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
