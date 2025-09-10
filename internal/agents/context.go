@@ -228,7 +228,7 @@ func (ctx *ProjectContext) extractAgentsFromConfig(config map[string]interface{}
 	}
 }
 
-// UpdateContextFromConfig reads the current ai_rulez.yaml and populates existing content
+// UpdateContextFromConfig reads the current ai-rulez.yaml and populates existing content
 func (ctx *ProjectContext) UpdateContextFromConfig() error {
 	configPath := "ai-rulez.yaml"
 	data, err := os.ReadFile(configPath)
@@ -833,7 +833,7 @@ func (ctx *ProjectContext) readExistingAIConfigs(rootPath string) {
 		{"CURSOR", ".cursorrules"},
 		{"CURSOR_MDC", ".cursor/rules/.mdc"},
 		{"AI_RULEZ", "ai-rulez.yaml"},
-		{"AI_RULEZ_OLD", "ai_rulez.yaml"},
+		{"AI_RULEZ_OLD", "ai-rulez.yaml"},
 	}
 
 	for _, cf := range configFiles {
