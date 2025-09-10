@@ -105,12 +105,12 @@ func TestCategorizeMarkdownFile(t *testing.T) {
 	}{
 		{"README.md", "readme.md", categoryRoot},
 		{"CONTRIBUTING.md", "contributing.md", categoryRoot},
-		{"docs/api.md", "api.md", categoryDocs},
-		{"documentation/guide.md", "guide.md", categoryDocs},
-		{"packages/core/README.md", "readme.md", categoryPackage},
-		{"apps/web/README.md", "readme.md", categoryApp},
-		{"src/readme.md", "readme.md", categoryReadme},
-		{"lib/something.md", "something.md", categoryDocs},
+		{filepath.Join("docs", "api.md"), "api.md", categoryDocs},
+		{filepath.Join("documentation", "guide.md"), "guide.md", categoryDocs},
+		{filepath.Join("packages", "core", "README.md"), "readme.md", categoryPackage},
+		{filepath.Join("apps", "web", "README.md"), "readme.md", categoryApp},
+		{filepath.Join("src", "readme.md"), "readme.md", categoryReadme},
+		{filepath.Join("lib", "something.md"), "something.md", categoryDocs},
 	}
 
 	for _, tt := range tests {
@@ -257,10 +257,10 @@ func TestDetectPackageLocations(t *testing.T) {
 
 	// Check that all valid packages are detected
 	expectedPackages := map[string]bool{
-		"packages/core":  false,
-		"packages/utils": false,
-		"libs/shared":    false,
-		"modules/auth":   false,
+		filepath.Join("packages", "core"):  false,
+		filepath.Join("packages", "utils"): false,
+		filepath.Join("libs", "shared"):    false,
+		filepath.Join("modules", "auth"):   false,
 	}
 
 	for _, pkg := range result {
