@@ -259,7 +259,7 @@ func addCapabilities(prompt *strings.Builder, info *CodebaseInfo) {
 
 // addMonorepoInfo adds monorepo structure information
 func addMonorepoInfo(prompt *strings.Builder, context *ProjectContext) {
-	if context.RepoType != "monorepo" {
+	if context.RepoType != repoTypeMonorepo {
 		return
 	}
 
