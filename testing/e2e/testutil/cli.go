@@ -2,6 +2,8 @@ package testutil
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -18,6 +20,10 @@ type CLIResult struct {
 }
 
 func RunCLI(t *testing.T, workingDir string, args ...string) *CLIResult {
+	return RunCLIWithEnv(t, workingDir, nil, args...)
+}
+
+func RunCLIWithEnv(t *testing.T, workingDir string, env map[string]string, args ...string) *CLIResult {
 	t.Helper()
 
 	binaryPath := SetupTestBinary(t)
@@ -25,6 +31,33 @@ func RunCLI(t *testing.T, workingDir string, args ...string) *CLIResult {
 	//nolint:gosec // G204: Test utility needs to run subprocess with variables
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Dir = workingDir
+
+	// Set custom environment if provided
+	if env != nil {
+		// Start with current environment
+		cmdEnv := os.Environ()
+		// Filter out any keys we want to override
+		filtered := make([]string, 0, len(cmdEnv))
+		for _, e := range cmdEnv {
+			shouldKeep := true
+			for k := range env {
+				if strings.HasPrefix(e, k+"=") {
+					shouldKeep = false
+					break
+				}
+			}
+			if shouldKeep {
+				filtered = append(filtered, e)
+			}
+		}
+		// Add our custom env vars (empty string means unset)
+		for k, v := range env {
+			if v != "" {
+				filtered = append(filtered, fmt.Sprintf("%s=%s", k, v))
+			}
+		}
+		cmd.Env = filtered
+	}
 
 	done := make(chan *CLIResult, 1)
 
