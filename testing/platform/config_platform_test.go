@@ -128,7 +128,9 @@ func TestOutputPathGeneration(t *testing.T) {
 
 			rel, err := filepath.Rel(tempDir, fullPath)
 			require.NoError(t, err)
-			assert.Equal(t, tt.outputPath, rel, "Relative path should match original")
+			// Normalize path separators for comparison (Windows uses backslash)
+			expectedPath := filepath.FromSlash(tt.outputPath)
+			assert.Equal(t, expectedPath, rel, "Relative path should match original")
 		})
 	}
 }
