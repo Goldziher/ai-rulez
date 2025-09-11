@@ -3,6 +3,7 @@ package agents
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -353,10 +354,10 @@ type TaskDisplay struct {
 
 var spinnerFrames = []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
 
-func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig templates.ProviderConfig) (string, error) {
+func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig templates.ProviderConfig, presets []string) (string, error) {
 	fmt.Printf("🔗 Starting parallel agent task execution...\n")
 
-	if err := initializeBaseConfigFile(context, providerConfig); err != nil {
+	if err := initializeBaseConfigFile(context, providerConfig, presets); err != nil {
 		return "", fmt.Errorf("failed to initialize base config: %w", err)
 	}
 	fmt.Printf("✅ Initialized base ai-rulez.yaml\n")
@@ -455,12 +456,18 @@ func atomicWriteFile(filename string, data []byte, perm os.FileMode) error {
 	return nil
 }
 
-func initializeBaseConfigFile(context *ProjectContext, providerConfig templates.ProviderConfig) error {
-	content := buildInitialConfigTemplate(context, providerConfig)
-	return atomicWriteFile("ai-rulez.yaml", []byte(content), 0o644)
+func initializeBaseConfigFile(context *ProjectContext, providerConfig templates.ProviderConfig, presets []string) error {
+	content := buildInitialConfigTemplate(context, providerConfig, presets)
+	if err := atomicWriteFile("ai-rulez.yaml", []byte(content), 0o644); err != nil {
+		return err
+	}
+
+	// Format the generated YAML with yamlfmt if available
+	formatConfigFile("ai-rulez.yaml")
+	return nil
 }
 
-func buildInitialConfigTemplate(context *ProjectContext, providerConfig templates.ProviderConfig) string {
+func buildInitialConfigTemplate(context *ProjectContext, providerConfig templates.ProviderConfig, presets []string) string {
 	var sb strings.Builder
 
 	sb.WriteString("$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json\n\n")
@@ -469,60 +476,68 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 	sb.WriteString("  version: \"1.0.0\"\n")
 	sb.WriteString("  description: \"\" # Will be updated by project-agent\n\n")
 
-	sb.WriteString("outputs:\n")
+	// Use presets if available, otherwise use individual provider outputs
+	if len(presets) > 0 {
+		sb.WriteString("presets:\n")
+		for _, preset := range presets {
+			fmt.Fprintf(&sb, "  - \"%s\"\n", preset)
+		}
+	} else {
+		sb.WriteString("outputs:\n")
 
-	// Ensure at least one output exists for schema compliance
-	hasOutputs := false
+		// Ensure at least one output exists for schema compliance
+		hasOutputs := false
 
-	if providerConfig.Claude {
-		sb.WriteString("  - path: CLAUDE.md\n")
-		sb.WriteString("  - path: .claude/agents/\n")
-		sb.WriteString("    type: agent\n")
-		sb.WriteString("    naming_scheme: '{name}.md'\n")
-		hasOutputs = true
-	}
-	if providerConfig.Cursor {
-		sb.WriteString("  - path: .cursor/rules/\n")
-		sb.WriteString("    type: rule\n")
-		sb.WriteString("    naming_scheme: '{name}.md'\n")
-		hasOutputs = true
-	}
-	if providerConfig.Windsurf {
-		sb.WriteString("  - path: .windsurfrules\n")
-		hasOutputs = true
-	}
-	if providerConfig.Copilot {
-		sb.WriteString("  - path: .github/copilot-instructions.md\n")
-		hasOutputs = true
-	}
-	if providerConfig.Gemini {
-		sb.WriteString("  - path: GEMINI.md\n")
-		hasOutputs = true
-	}
-	if providerConfig.Amp || providerConfig.Codex {
-		sb.WriteString("  - path: AGENTS.md\n")
-		hasOutputs = true
-	}
-	if providerConfig.Cline {
-		sb.WriteString("  - path: .clinerules/\n")
-		sb.WriteString("    type: rule\n")
-		sb.WriteString("    naming_scheme: '{name}.md'\n")
-		hasOutputs = true
-	}
-	if providerConfig.ContinueDev {
-		sb.WriteString("  - path: .continue/rules/\n")
-		sb.WriteString("    type: rule\n")
-		sb.WriteString("    naming_scheme: '{name}.md'\n")
-		sb.WriteString("  - path: .continue/prompts/ai_rulez_prompts.yaml\n")
-		sb.WriteString("    template:\n")
-		sb.WriteString("      type: builtin\n")
-		sb.WriteString("      value: continue-prompts\n")
-		hasOutputs = true
-	}
+		if providerConfig.Claude {
+			sb.WriteString("  - path: CLAUDE.md\n")
+			sb.WriteString("  - path: .claude/agents/\n")
+			sb.WriteString("    type: agent\n")
+			sb.WriteString("    naming_scheme: '{name}.md'\n")
+			hasOutputs = true
+		}
+		if providerConfig.Cursor {
+			sb.WriteString("  - path: .cursor/rules/\n")
+			sb.WriteString("    type: rule\n")
+			sb.WriteString("    naming_scheme: '{name}.md'\n")
+			hasOutputs = true
+		}
+		if providerConfig.Windsurf {
+			sb.WriteString("  - path: .windsurfrules\n")
+			hasOutputs = true
+		}
+		if providerConfig.Copilot {
+			sb.WriteString("  - path: .github/copilot-instructions.md\n")
+			hasOutputs = true
+		}
+		if providerConfig.Gemini {
+			sb.WriteString("  - path: GEMINI.md\n")
+			hasOutputs = true
+		}
+		if providerConfig.Amp || providerConfig.Codex {
+			sb.WriteString("  - path: AGENTS.md\n")
+			hasOutputs = true
+		}
+		if providerConfig.Cline {
+			sb.WriteString("  - path: .clinerules/\n")
+			sb.WriteString("    type: rule\n")
+			sb.WriteString("    naming_scheme: '{name}.md'\n")
+			hasOutputs = true
+		}
+		if providerConfig.ContinueDev {
+			sb.WriteString("  - path: .continue/rules/\n")
+			sb.WriteString("    type: rule\n")
+			sb.WriteString("    naming_scheme: '{name}.md'\n")
+			sb.WriteString("  - path: .continue/prompts/ai_rulez_prompts.yaml\n")
+			sb.WriteString("    template:\n")
+			sb.WriteString("      type: builtin\n")
+			sb.WriteString("      value: continue-prompts\n")
+			hasOutputs = true
+		}
 
-	// Fallback to ensure at least one output for schema compliance
-	if !hasOutputs {
-		sb.WriteString("  - path: CLAUDE.md\n")
+		// Fallback to ensure at least one output for schema compliance
+		if !hasOutputs {
+			sb.WriteString("  - path: CLAUDE.md\n")
+		}
 	}
 
 	sb.WriteString("\nsections: []\n")
@@ -1245,4 +1260,22 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 	}
 
 	return failedTasks, successCount, criticalErrors
+}
+
+// formatConfigFile formats the YAML file using yamlfmt if available
+func formatConfigFile(filename string) {
+	// Check if yamlfmt is available
+	if _, err := exec.LookPath("yamlfmt"); err != nil {
+		logger.Debug("yamlfmt not found, skipping YAML formatting", "file", filename)
+		return
+	}
+
+	// Run yamlfmt on the file
+	cmd := exec.Command("yamlfmt", "-w", filename)
+	if err := cmd.Run(); err != nil {
+		logger.Warn("Failed to format YAML with yamlfmt", "file", filename, "error", err)
+		return
+	}
+
+	logger.Debug("Formatted YAML file with yamlfmt", "file", filename)
 }

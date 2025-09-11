@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -34,6 +35,7 @@ var (
 	geminiFlag      bool
 	ampFlag         bool
 	codexFlag       bool
+	opencodeFlag    bool
 	clineFlag       bool
 	continueDevFlag bool
 )
@@ -60,6 +62,7 @@ func init() {
 	InitCmd.Flags().BoolVar(&geminiFlag, "gemini", false, "Include Gemini configuration")
 	InitCmd.Flags().BoolVar(&ampFlag, "amp", false, "Include AMP configuration")
 	InitCmd.Flags().BoolVar(&codexFlag, "codex", false, "Include Codex configuration")
+	InitCmd.Flags().BoolVar(&opencodeFlag, "opencode", false, "Include OpenCode configuration")
 	InitCmd.Flags().BoolVar(&clineFlag, "cline", false, "Include Cline configuration")
 	InitCmd.Flags().BoolVar(&continueDevFlag, "continue-dev", false, "Include Continue.dev configuration")
 
@@ -185,7 +188,12 @@ func getProjectName(args []string) string {
 
 func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig templates.ProviderConfig) bool {
 	if !noAgent && (useAgent != "" || agents.ShouldPromptForAgent()) {
-		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, useAgent, autoYes)
+		// Pass preset information to agent generation
+		var presets []string
+		if shouldUsePresets(providerConfig) {
+			presets = getPresetsFromProviderConfig(providerConfig)
+		}
+		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, presets, useAgent, autoYes)
 		if handled {
 			fmt.Println("✅ Configuration generated with AI assistance")
 			return true
@@ -234,6 +242,9 @@ func writeConfigFile(content string) {
 			Wrapf(err, "write file"))
 		os.Exit(1)
 	}
+
+	// Format the generated YAML with yamlfmt if available
+	formatConfigFile("ai-rulez.yaml")
 }
 
 func displaySuccessMessage(projectName string, providerConfig templates.ProviderConfig) {
@@ -263,8 +274,8 @@ func displayProviderIncludes(providerConfig templates.ProviderConfig) {
 	if providerConfig.Gemini {
 		logger.Info("  - Gemini (GEMINI.md)")
 	}
-	if providerConfig.Amp || providerConfig.Codex {
-		logger.Info("  - AMP/Codex (AGENTS.md)")
+	if providerConfig.Amp || providerConfig.Codex || providerConfig.Opencode {
+		logger.Info("  - AMP/Codex/Opencode (AGENTS.md)")
 	}
 	if providerConfig.Cline {
 		logger.Info("  - Cline (.clinerules/)")
@@ -310,6 +321,7 @@ func parsePresetFlag() templates.ProviderConfig {
 		"gemini":       func(pc *templates.ProviderConfig) { pc.Gemini = true },
 		"amp":          func(pc *templates.ProviderConfig) { pc.Amp = true },
 		"codex":        func(pc *templates.ProviderConfig) { pc.Codex = true },
+		"opencode":     func(pc *templates.ProviderConfig) { pc.Opencode = true },
 		"cline":        func(pc *templates.ProviderConfig) { pc.Cline = true },
 		"continue-dev": func(pc *templates.ProviderConfig) { pc.ContinueDev = true },
 	}
@@ -330,6 +342,7 @@ func parseAllProvidersFlag() templates.ProviderConfig {
 		Gemini:      true,
 		Amp:         true,
 		Codex:       true,
+		Opencode:    true,
 		Cline:       true,
 		ContinueDev: true,
 	}
@@ -353,6 +366,7 @@ func parseIndividualFlags(cmd *cobra.Command) templates.ProviderConfig {
 		Gemini:      geminiFlag,
 		Amp:         ampFlag,
 		Codex:       codexFlag,
+		Opencode:    opencodeFlag,
 		Cline:       clineFlag,
 		ContinueDev: continueDevFlag,
 	}
@@ -386,4 +400,22 @@ func handleHooksSetup() {
 		logger.Info(fmt.Sprintf("  ✅ Successfully configured %s for ai-rulez validation", hooks.GetHookSystemName(hookSystem)))
 		logger.Info("    Your AI rules will be validated automatically on git commit")
 	}
+}
+
+// formatConfigFile formats the YAML file using yamlfmt if available
+func formatConfigFile(filename string) {
+	// Check if yamlfmt is available
+	if _, err := exec.LookPath("yamlfmt"); err != nil {
+		logger.Debug("yamlfmt not found, skipping YAML formatting", "file", filename)
+		return
+	}
+
+	// Run yamlfmt on the file
+	cmd := exec.Command("yamlfmt", "-w", filename)
+	if err := cmd.Run(); err != nil {
+		logger.Warn("Failed to format YAML with yamlfmt", "file", filename, "error", err)
+		return
+	}
+
+	logger.Debug("Formatted YAML file with yamlfmt", "file", filename)
 }
