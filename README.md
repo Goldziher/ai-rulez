@@ -276,7 +276,7 @@ Add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.1.0
+    rev: v2.1.4
     hooks:
       - id: ai-rulez-validate
       - id: ai-rulez-generate
