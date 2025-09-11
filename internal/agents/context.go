@@ -200,14 +200,11 @@ func (ctx *ProjectContext) extractAgentsFromConfig(config map[string]interface{}
 		if name, ok := agentMap["name"].(string); ok {
 			agent.Name = name
 		}
-		if role, ok := agentMap["role"].(string); ok {
-			agent.Role = role
-		}
-		if expertise, ok := agentMap["expertise"].(string); ok {
-			agent.Expertise = expertise
+		if description, ok := agentMap["description"].(string); ok {
+			agent.Description = description
 		}
 
-		if agent.Name != "" && agent.Role != "" {
+		if agent.Name != "" && agent.Description != "" {
 			ctx.ExistingAgents = append(ctx.ExistingAgents, agent)
 		}
 	}
