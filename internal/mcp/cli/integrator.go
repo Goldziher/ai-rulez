@@ -160,7 +160,7 @@ func shouldSkipDueToTemplate(server *config.MCPServer, toolName string, template
 	// Map CLI tool names to their expected MCP files
 	toolMCPFiles := map[string][]string{
 		"claude":   {".mcp.json"},
-		"gemini":   {".mcp.json"}, // Both claude and gemini use the same file format
+		"gemini":   {".gemini/settings.json"},
 		"cursor":   {".cursor/mcp.json"},
 		"windsurf": {"mcp_config.json"},
 		"vscode":   {".vscode/mcp.json"},

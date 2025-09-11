@@ -16,19 +16,19 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "valid single preset",
 			presets:     []string{"claude"},
-			expected:    2,
+			expected:    3,
 			expectError: false,
 		},
 		{
 			name:        "valid popular preset",
 			presets:     []string{"popular"},
-			expected:    4,
+			expected:    7,
 			expectError: false,
 		},
 		{
 			name:        "multiple valid presets",
 			presets:     []string{"claude", "cursor"},
-			expected:    3,
+			expected:    4,
 			expectError: false,
 		},
 		{
@@ -52,7 +52,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "duplicate presets",
 			presets:     []string{"claude", "claude"},
-			expected:    4,
+			expected:    6,
 			expectError: false,
 		},
 		{
@@ -88,7 +88,7 @@ func TestPresetRegistry(t *testing.T) {
 		{
 			name:          "claude preset",
 			preset:        "claude",
-			expectedPaths: []string{"CLAUDE.md", ".claude/agents/"},
+			expectedPaths: []string{"CLAUDE.md", ".claude/agents/", ".mcp.json"},
 			shouldExist:   true,
 		},
 		{
@@ -100,7 +100,7 @@ func TestPresetRegistry(t *testing.T) {
 		{
 			name:          "popular preset",
 			preset:        "popular",
-			expectedPaths: []string{"CLAUDE.md", ".cursor/rules/", ".windsurf/", ".github/copilot-instructions.md"},
+			expectedPaths: []string{"CLAUDE.md", ".mcp.json", ".cursor/rules/", ".windsurf/", ".gemini/settings.json", ".github/copilot-instructions.md", "GEMINI.md"},
 			shouldExist:   true,
 		},
 		{
@@ -245,7 +245,7 @@ func TestExpandConfigPresets(t *testing.T) {
 				Outputs: []Output{},
 			},
 			expectError:     false,
-			expectedOutputs: 3,
+			expectedOutputs: 4,
 		},
 		{
 			name: "config with presets and outputs - merge",
@@ -256,7 +256,7 @@ func TestExpandConfigPresets(t *testing.T) {
 				},
 			},
 			expectError:     false,
-			expectedOutputs: 3,
+			expectedOutputs: 4,
 		},
 		{
 			name: "config with presets and outputs - override",
@@ -267,7 +267,7 @@ func TestExpandConfigPresets(t *testing.T) {
 				},
 			},
 			expectError:     false,
-			expectedOutputs: 2,
+			expectedOutputs: 3,
 		},
 		{
 			name: "config with no presets",
