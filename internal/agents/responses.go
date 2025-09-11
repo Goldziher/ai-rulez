@@ -113,9 +113,8 @@ func (s *SectionsResponse) Validate() error {
 }
 
 type AgentDefinition struct {
-	Name      string `json:"name" validate:"required,min=3,max=50,lowercase,alphanum"`
-	Role      string `json:"role" validate:"required,min=5,max=200"`
-	Expertise string `json:"expertise" validate:"required,min=10,max=500"`
+	Name        string `json:"name" validate:"required,min=3,max=50,lowercase,alphanum"`
+	Description string `json:"description" validate:"required,min=10,max=500"`
 }
 
 func (a *AgentDefinition) Validate() error {
@@ -129,11 +128,8 @@ func (a *AgentDefinition) Validate() error {
 	if !matched {
 		return fmt.Errorf("agent name must be lowercase with hyphens only")
 	}
-	if a.Role == "" {
-		return fmt.Errorf("agent role is required")
-	}
-	if a.Expertise == "" {
-		return fmt.Errorf("agent expertise is required")
+	if a.Description == "" {
+		return fmt.Errorf("agent description is required")
 	}
 	return nil
 }
