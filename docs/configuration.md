@@ -111,7 +111,7 @@ presets:
 
 **Available Presets:**
 
--   `popular`: A convenient bundle that includes `claude`, `cursor`, `windsurf`, and `copilot`.
+-   `popular`: A convenient bundle that includes `claude`, `cursor`, `windsurf`, `copilot`, and `gemini`.
 -   `claude`: Generates `CLAUDE.md` for Anthropic Claude.
 -   `cursor`: Generates rules for Cursor in `.cursor/rules/`.
 -   `copilot`: Generates `.github/copilot-instructions.md` for GitHub Copilot.
@@ -119,7 +119,7 @@ presets:
 -   `windsurf`: Generates rules for Windsurf in `.windsurf/`.
 -   `continue`: Generates rules and prompts for Continue.dev.
 -   `cline`: Generates rules for Cline in `.clinerules/`.
--   `amp` / `codex`: Generates `AGENTS.md` for Sourcegraph tools.
+-   `amp` / `codex` / `opencode`: Generates `AGENTS.md` for Sourcegraph tools and OpenCode.
 
 ### Using Outputs (Advanced)
 

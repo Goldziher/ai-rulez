@@ -23,7 +23,7 @@ metadata:
   version: "1.0.0"
 
 presets:
-  - "popular"  # Claude, Cursor, Windsurf, Copilot
+  - "popular"  # Claude, Cursor, Windsurf, Copilot, Gemini
 
 rules:
   - name: "Go Code Standards"
@@ -115,7 +115,7 @@ Use the `popular` preset to generate synchronized instructions for multiple AI t
 metadata:
   name: "My Multi-Platform Project"
 
-# The "popular" preset includes Claude, Cursor, Windsurf, and Copilot
+# The "popular" preset includes Claude, Cursor, Windsurf, Copilot, and Gemini
 presets:
   - "popular"
 
