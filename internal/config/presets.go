@@ -4,6 +4,7 @@ var PresetRegistry = map[string][]Output{
 	"claude": {
 		{Path: "CLAUDE.md"},
 		{Path: ".claude/agents/", Type: "agent", NamingScheme: "{name}.md"},
+		{Path: ".mcp.json", Template: Template{Type: TemplateBuiltin, Value: "claude-code-mcp"}},
 	},
 	"cursor": {
 		{Path: ".cursor/rules/", Type: "rule", NamingScheme: "{name}.mdc"},
@@ -13,6 +14,7 @@ var PresetRegistry = map[string][]Output{
 	},
 	"gemini": {
 		{Path: "GEMINI.md"},
+		{Path: ".gemini/settings.json", Template: Template{Type: TemplateBuiltin, Value: "gemini-mcp"}},
 	},
 	"windsurf": {
 		{Path: ".windsurf/", Type: "rule", NamingScheme: "{name}.md"},
@@ -35,9 +37,12 @@ var PresetRegistry = map[string][]Output{
 	},
 	"popular": {
 		{Path: "CLAUDE.md"},
+		{Path: ".mcp.json", Template: Template{Type: TemplateBuiltin, Value: "claude-code-mcp"}},
 		{Path: ".cursor/rules/", Type: "rule", NamingScheme: "{name}.mdc"},
 		{Path: ".windsurf/", Type: "rule", NamingScheme: "{name}.md"},
+		{Path: ".gemini/settings.json", Template: Template{Type: TemplateBuiltin, Value: "gemini-mcp"}},
 		{Path: ".github/copilot-instructions.md"},
+		{Path: "GEMINI.md"},
 	},
 }
 

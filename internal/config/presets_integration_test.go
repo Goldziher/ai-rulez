@@ -27,8 +27,8 @@ metadata:
 presets:
   - "claude"
 `,
-			expectedOutputs: 2,
-			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/"},
+			expectedOutputs: 3,
+			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/", ".mcp.json"},
 			expectError:     false,
 		},
 		{
@@ -39,8 +39,8 @@ metadata:
 presets:
   - "popular"
 `,
-			expectedOutputs: 4,
-			expectedPaths:   []string{".cursor/rules/", ".github/copilot-instructions.md", ".windsurf/", "CLAUDE.md"},
+			expectedOutputs: 7,
+			expectedPaths:   []string{".cursor/rules/", ".github/copilot-instructions.md", ".windsurf/", "CLAUDE.md", ".mcp.json", ".gemini/settings.json", "GEMINI.md"},
 			expectError:     false,
 		},
 		{
@@ -53,8 +53,8 @@ presets:
 outputs:
   - path: "GEMINI.md"
 `,
-			expectedOutputs: 3,
-			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/", "GEMINI.md"},
+			expectedOutputs: 4,
+			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/", ".mcp.json", "GEMINI.md"},
 			expectError:     false,
 		},
 		{
@@ -68,8 +68,8 @@ outputs:
   - path: "CLAUDE.md"
     naming_scheme: "custom.txt"
 `,
-			expectedOutputs: 2,
-			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/"},
+			expectedOutputs: 3,
+			expectedPaths:   []string{"CLAUDE.md", ".claude/agents/", ".mcp.json"},
 			expectError:     false,
 		},
 		{
@@ -82,8 +82,8 @@ presets:
   - "cursor"
   - "gemini"
 `,
-			expectedOutputs: 4,
-			expectedPaths:   []string{".cursor/rules/", "CLAUDE.md", ".claude/agents/", "GEMINI.md"},
+			expectedOutputs: 6,
+			expectedPaths:   []string{".cursor/rules/", "CLAUDE.md", ".claude/agents/", ".mcp.json", "GEMINI.md", ".gemini/settings.json"},
 			expectError:     false,
 		},
 		{
@@ -275,7 +275,7 @@ presets:
 	require.NoError(t, err)
 	assert.NotNil(t, config)
 
-	assert.Len(t, config.Outputs, 3)
+	assert.Len(t, config.Outputs, 4)
 
 	paths := make(map[string]bool)
 	for _, output := range config.Outputs {
@@ -283,6 +283,7 @@ presets:
 	}
 	assert.True(t, paths["CLAUDE.md"], "should have CLAUDE.md from base preset")
 	assert.True(t, paths[".claude/agents/"], "should have .claude/agents/ from base preset")
+	assert.True(t, paths[".mcp.json"], "should have .mcp.json from base preset")
 	assert.True(t, paths[".cursor/rules/"], "should have .cursor/rules/ from main preset")
 
 	assert.Len(t, config.Rules, 1)
