@@ -116,7 +116,7 @@
       "minItems": 1,
       "items": {
         "type": "string",
-        "enum": ["popular", "claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "amp", "codex"],
+        "enum": ["popular", "claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "amp", "codex", "opencode"],
         "description": "Name of the preset to use"
       },
       "uniqueItems": true
