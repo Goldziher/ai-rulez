@@ -12,13 +12,14 @@ type ProviderConfig struct {
 	Gemini      bool
 	Amp         bool
 	Codex       bool
+	Opencode    bool
 	Cline       bool
 	ContinueDev bool
 }
 
 func (p ProviderConfig) HasAny() bool {
 	return p.Claude || p.Cursor || p.Windsurf || p.Copilot ||
-		p.Gemini || p.Amp || p.Codex || p.Cline || p.ContinueDev
+		p.Gemini || p.Amp || p.Codex || p.Opencode || p.Cline || p.ContinueDev
 }
 
 func getDefaultOutputPath(providers ProviderConfig) string {
@@ -31,7 +32,7 @@ func getDefaultOutputPath(providers ProviderConfig) string {
 	if providers.Gemini {
 		return "GEMINI.md"
 	}
-	if providers.Amp || providers.Codex {
+	if providers.Amp || providers.Codex || providers.Opencode {
 		return "AGENTS.md"
 	}
 	if providers.Windsurf {
@@ -81,7 +82,7 @@ func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
 `)
 	}
 
-	if providers.Amp || providers.Codex {
+	if providers.Amp || providers.Codex || providers.Opencode {
 		builder.WriteString(`  - path: "AGENTS.md"
 `)
 	}
@@ -135,8 +136,8 @@ func writeCommentedExamples(builder *strings.Builder, providers ProviderConfig) 
 		builder.WriteString(`  # - path: "GEMINI.md"              # For Google Gemini
 `)
 	}
-	if !providers.Amp && !providers.Codex {
-		builder.WriteString(`  # - path: "AGENTS.md"              # For Amp/Codex
+	if !providers.Amp && !providers.Codex && !providers.Opencode {
+		builder.WriteString(`  # - path: "AGENTS.md"              # For Amp/Codex/Opencode
 `)
 	}
 }

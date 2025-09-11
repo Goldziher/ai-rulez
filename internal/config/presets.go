@@ -26,6 +26,9 @@ var PresetRegistry = map[string][]Output{
 	"codex": {
 		{Path: "AGENTS.md"},
 	},
+	"opencode": {
+		{Path: "AGENTS.md"},
+	},
 	"continue-dev": {
 		{Path: ".continue/rules/", Type: "rule", NamingScheme: "{name}.md"},
 		{Path: ".continue/prompts/ai_rulez_prompts.yaml"},
