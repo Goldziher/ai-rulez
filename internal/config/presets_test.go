@@ -121,6 +121,12 @@ func TestPresetRegistry(t *testing.T) {
 			shouldExist:   true,
 		},
 		{
+			name:          "opencode preset",
+			preset:        "opencode",
+			expectedPaths: []string{"AGENTS.md"},
+			shouldExist:   true,
+		},
+		{
 			name:          "continue preset with multiple outputs",
 			preset:        "continue-dev",
 			expectedPaths: []string{".continue/rules/", ".continue/prompts/ai_rulez_prompts.yaml"},

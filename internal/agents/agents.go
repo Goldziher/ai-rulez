@@ -220,7 +220,7 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 	return processAgentOutput(result, selectedAgent.ID)
 }
 
-func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string, autoYes bool) (string, bool) {
+func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, config templates.ProviderConfig, presets []string, useAgent string, autoYes bool) (string, bool) {
 	selectedAgent := selectAgent(useAgent, config)
 	if selectedAgent == nil {
 		return "", false
@@ -233,7 +233,7 @@ func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, conf
 	logger.Info("🔍 Analyzing project structure...")
 	projectContext := GatherProjectContext(projectName)
 
-	result, err := ExecuteInitChain(*selectedAgent, projectContext, config)
+	result, err := ExecuteInitChain(*selectedAgent, projectContext, config, presets)
 	if err != nil {
 		logger.Warn("Some agent tasks encountered issues", "error", err.Error())
 	}
