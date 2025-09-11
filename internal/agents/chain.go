@@ -470,10 +470,10 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 	sb.WriteString("  description: \"\" # Will be updated by project-agent\n\n")
 
 	sb.WriteString("outputs:\n")
-	
+
 	// Ensure at least one output exists for schema compliance
 	hasOutputs := false
-	
+
 	if providerConfig.Claude {
 		sb.WriteString("  - path: CLAUDE.md\n")
 		sb.WriteString("  - path: .claude/agents/\n")
@@ -483,7 +483,7 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 	}
 	if providerConfig.Cursor {
 		sb.WriteString("  - path: .cursor/rules/\n")
-		sb.WriteString("    type: section\n")
+		sb.WriteString("    type: rule\n")
 		sb.WriteString("    naming_scheme: '{name}.md'\n")
 		hasOutputs = true
 	}
@@ -505,13 +505,13 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 	}
 	if providerConfig.Cline {
 		sb.WriteString("  - path: .clinerules/\n")
-		sb.WriteString("    type: section\n")
+		sb.WriteString("    type: rule\n")
 		sb.WriteString("    naming_scheme: '{name}.md'\n")
 		hasOutputs = true
 	}
 	if providerConfig.ContinueDev {
 		sb.WriteString("  - path: .continue/rules/\n")
-		sb.WriteString("    type: section\n")
+		sb.WriteString("    type: rule\n")
 		sb.WriteString("    naming_scheme: '{name}.md'\n")
 		sb.WriteString("  - path: .continue/prompts/ai_rulez_prompts.yaml\n")
 		sb.WriteString("    template:\n")
