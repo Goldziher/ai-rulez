@@ -85,31 +85,10 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 	allCommands := cfg.Commands
 
 	if outputPath != "" {
-		var err error
-		allRules, err = config.FilterRules(allRules, outputPath, nil)
-		if err != nil {
-			allRules = cfg.Rules
-		}
-
-		allSections, err = config.FilterSections(allSections, outputPath, nil)
-		if err != nil {
-			allSections = cfg.Sections
-		}
-
-		allAgents, err = config.FilterAgents(allAgents, outputPath, nil)
-		if err != nil {
-			allAgents = cfg.Agents
-		}
-
-		allMCPServers, err = config.FilterMCPServers(allMCPServers, outputPath, nil)
-		if err != nil {
-			allMCPServers = cfg.MCPServers
-		}
-
-		allCommands, err = config.FilterCommands(allCommands, outputPath, nil)
-		if err != nil {
-			allCommands = cfg.Commands
-		}
+		allRules, allSections, allAgents = filterTargetedContent(cfg, outputPath, allRules, allSections, allAgents)
+		allMCPServers, allCommands = filterMCPAndCommands(cfg, outputPath, allMCPServers, allCommands)
+	} else {
+		allMCPServers, allCommands = filterDisabledItems(allMCPServers, allCommands)
 	}
 
 	sortedRules := make([]config.Rule, len(allRules))
@@ -359,4 +338,131 @@ func GenerateHeader(data *TemplateData) string {
 
 func sortContent(items []contentItem) {
 	sortByTitlePriority(items)
+}
+
+// filterTargetedContent filters rules, sections, and agents for a specific output path
+func filterTargetedContent(cfg *config.Config, outputPath string, allRules []config.Rule, allSections []config.Section, allAgents []config.Agent) ([]config.Rule, []config.Section, []config.Agent) {
+	var err error
+	allRules, err = config.FilterRules(allRules, outputPath, nil)
+	if err != nil {
+		allRules = cfg.Rules
+	}
+
+	allSections, err = config.FilterSections(allSections, outputPath, nil)
+	if err != nil {
+		allSections = cfg.Sections
+	}
+
+	allAgents, err = config.FilterAgents(allAgents, outputPath, nil)
+	if err != nil {
+		allAgents = cfg.Agents
+	}
+
+	return allRules, allSections, allAgents
+}
+
+// filterMCPAndCommands filters MCP servers and commands for a specific output path
+func filterMCPAndCommands(cfg *config.Config, outputPath string, allMCPServers []config.MCPServer, allCommands []config.Command) ([]config.MCPServer, []config.Command) {
+	var err error
+	allMCPServers, err = config.FilterMCPServers(allMCPServers, outputPath, nil)
+	if err != nil {
+		allMCPServers = cfg.MCPServers
+	}
+
+	// For MCP templates, include all servers (disabled ones need to be marked as disabled)
+	// For regular templates, filter out disabled servers
+	if !isMCPTemplate(outputPath, cfg) {
+		allMCPServers = filterDisabledMCPServers(allMCPServers)
+	}
+
+	allCommands, err = config.FilterCommands(allCommands, outputPath, nil)
+	if err != nil {
+		allCommands = cfg.Commands
+	}
+
+	// For command-aware templates, include all commands (disabled ones need to be marked)
+	// For regular templates, filter out disabled commands
+	if !isCommandStatusTemplate(outputPath, cfg) {
+		allCommands = filterDisabledCommands(allCommands)
+	}
+
+	return allMCPServers, allCommands
+}
+
+// filterDisabledItems filters out disabled MCP servers and commands when no specific output path is given
+func filterDisabledItems(allMCPServers []config.MCPServer, allCommands []config.Command) ([]config.MCPServer, []config.Command) {
+	allMCPServers = filterDisabledMCPServers(allMCPServers)
+	allCommands = filterDisabledCommands(allCommands)
+	return allMCPServers, allCommands
+}
+
+// filterDisabledMCPServers removes disabled MCP servers from the slice
+func filterDisabledMCPServers(servers []config.MCPServer) []config.MCPServer {
+	enabledServers := make([]config.MCPServer, 0, len(servers))
+	for i := range servers {
+		if servers[i].IsEnabled() {
+			enabledServers = append(enabledServers, servers[i])
+		}
+	}
+	return enabledServers
+}
+
+// filterDisabledCommands removes disabled commands from the slice
+func filterDisabledCommands(commands []config.Command) []config.Command {
+	enabledCommands := make([]config.Command, 0, len(commands))
+	for i := range commands {
+		if commands[i].IsEnabled() {
+			enabledCommands = append(enabledCommands, commands[i])
+		}
+	}
+	return enabledCommands
+}
+
+// isMCPTemplate checks if the given output path corresponds to an MCP template
+func isMCPTemplate(outputPath string, cfg *config.Config) bool {
+	if outputPath == "" || cfg == nil {
+		return false
+	}
+
+	// Find the output with this path
+	for _, output := range cfg.Outputs {
+		if output.Path == outputPath {
+			tmpl, err := output.GetTemplate()
+			if err != nil || tmpl == nil {
+				return false
+			}
+
+			// Check if this is an MCP template
+			switch tmpl.Value {
+			case "claude-code-mcp", "cursor-mcp", "windsurf-mcp", "vscode-mcp", "continuedev-mcp", "cline-mcp":
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+// isCommandStatusTemplate checks if the template displays command status information
+func isCommandStatusTemplate(outputPath string, cfg *config.Config) bool {
+	if outputPath == "" || cfg == nil {
+		return false
+	}
+
+	// Find the output with this path
+	for _, output := range cfg.Outputs {
+		if output.Path == outputPath {
+			tmpl, err := output.GetTemplate()
+			if err != nil || tmpl == nil {
+				return false
+			}
+
+			// Check if template contains references to command status
+			if strings.Contains(tmpl.Value, ".IsEnabled") || strings.Contains(tmpl.Value, "Enabled:") {
+				return true
+			}
+		}
+	}
+
+	return false
 }
