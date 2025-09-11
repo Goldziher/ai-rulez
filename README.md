@@ -8,7 +8,7 @@
 
 ## The Problem
 
-If you're using multiple AI coding assistants (Claude Code, Cursor, Windsurf, GitHub Copilot), you've probably noticed the configuration fragmentation. Each tool demands its own format - `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`. Keeping coding standards consistent across all these tools is frustrating and error-prone.
+If you're using multiple AI coding assistants (Claude Code, Cursor, Windsurf, GitHub Copilot, OpenCode), you've probably noticed the configuration fragmentation. Each tool demands its own format - `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`, `AGENTS.md`. Keeping coding standards consistent across all these tools is frustrating and error-prone.
 
 ## The Solution
 
@@ -84,7 +84,7 @@ metadata:
 
 # Use presets for common configurations
 presets:
-  - "popular"  # Includes Claude, Cursor, Windsurf, and Copilot
+  - "popular"  # Includes Claude, Cursor, Windsurf, Copilot, and Gemini
 
 rules:
   - name: "Go Code Standards"
@@ -276,7 +276,7 @@ Add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.1.4
+    rev: v2.2.1
     hooks:
       - id: ai-rulez-validate
       - id: ai-rulez-generate

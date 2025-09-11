@@ -91,8 +91,8 @@ ai-rulez init "My Project" --claude --with-agents --with-sections
 
 | Option | Description |
 |--------|-------------|
-| `--popular` | Enable Claude, Cursor, Windsurf, and Copilot (recommended) |
-| `--preset <name>` | Use a specific preset (claude, cursor, windsurf, copilot, gemini, amp, cline, continue-dev, codex) |
+| `--popular` | Enable Claude, Cursor, Windsurf, Copilot, and Gemini |
+| `--preset <name>` | Use a specific preset (claude, cursor, windsurf, copilot, gemini, amp, cline, continue-dev, codex, opencode) |
 | `--all` | Enable all supported AI tools |
 | `--claude` | Include Claude configuration (.CLAUDE.md) |
 | `--cursor` | Include Cursor configuration (.cursor/rules/) |
@@ -103,6 +103,7 @@ ai-rulez init "My Project" --claude --with-agents --with-sections
 | `--cline` | Include Cline configuration (.cline/rules.md) |
 | `--continue-dev` | Include Continue.dev configuration (.continue/rules/) |
 | `--codex` | Include Codex configuration (codex-context.md) |
+| `--opencode` | Include OpenCode configuration (AGENTS.md) |
 | `--use-agent <name>` | Use AI agent for intelligent configuration generation |
 | `--no-agent` | Skip AI agent detection completely |
 | `--list-agents` | List available AI agents and exit |

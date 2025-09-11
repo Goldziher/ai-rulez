@@ -6,7 +6,7 @@ You're not alone. Managing AI context across multiple tools is messy. `ai-rulez`
 
 ### One File, Multiple Outputs
 
-Write your AI context in a single `ai-rulez.yml` file. Generate instruction files for Claude, Cursor, and other formats automatically.
+Write your AI context in a single `ai-rulez.yml` file. Generate instruction files for Claude, Cursor, OpenCode, and other formats automatically.
 
 ### CLI for Everything
 
