@@ -470,33 +470,44 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 	sb.WriteString("  description: \"\" # Will be updated by project-agent\n\n")
 
 	sb.WriteString("outputs:\n")
+	
+	// Ensure at least one output exists for schema compliance
+	hasOutputs := false
+	
 	if providerConfig.Claude {
 		sb.WriteString("  - path: CLAUDE.md\n")
 		sb.WriteString("  - path: .claude/agents/\n")
 		sb.WriteString("    type: agent\n")
 		sb.WriteString("    naming_scheme: '{name}.md'\n")
+		hasOutputs = true
 	}
 	if providerConfig.Cursor {
 		sb.WriteString("  - path: .cursor/rules/\n")
 		sb.WriteString("    type: section\n")
 		sb.WriteString("    naming_scheme: '{name}.md'\n")
+		hasOutputs = true
 	}
 	if providerConfig.Windsurf {
 		sb.WriteString("  - path: .windsurfrules\n")
+		hasOutputs = true
 	}
 	if providerConfig.Copilot {
 		sb.WriteString("  - path: .github/copilot-instructions.md\n")
+		hasOutputs = true
 	}
 	if providerConfig.Gemini {
 		sb.WriteString("  - path: GEMINI.md\n")
+		hasOutputs = true
 	}
 	if providerConfig.Amp || providerConfig.Codex {
 		sb.WriteString("  - path: AGENTS.md\n")
+		hasOutputs = true
 	}
 	if providerConfig.Cline {
 		sb.WriteString("  - path: .clinerules/\n")
 		sb.WriteString("    type: section\n")
 		sb.WriteString("    naming_scheme: '{name}.md'\n")
+		hasOutputs = true
 	}
 	if providerConfig.ContinueDev {
 		sb.WriteString("  - path: .continue/rules/\n")
@@ -506,6 +517,12 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 		sb.WriteString("    template:\n")
 		sb.WriteString("      type: builtin\n")
 		sb.WriteString("      value: continue-prompts\n")
+		hasOutputs = true
+	}
+
+	// Fallback to ensure at least one output for schema compliance
+	if !hasOutputs {
+		sb.WriteString("  - path: CLAUDE.md\n")
 	}
 
 	sb.WriteString("\nsections: []\n")
@@ -1104,9 +1121,8 @@ func applyAgentsResponse(config map[string]interface{}, response interface{}) er
 	for _, agent := range resp.Agents {
 		if !existingNames[agent.Name] {
 			agents = append(agents, map[string]interface{}{
-				"name":      agent.Name,
-				"role":      agent.Role,
-				"expertise": agent.Expertise,
+				"name":        agent.Name,
+				"description": agent.Description,
 			})
 		}
 	}
