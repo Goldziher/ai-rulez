@@ -434,7 +434,7 @@ func isMCPTemplate(outputPath string, cfg *config.Config) bool {
 
 			// Check if this is an MCP template
 			switch tmpl.Value {
-			case "claude-code-mcp", "cursor-mcp", "windsurf-mcp", "vscode-mcp", "continuedev-mcp", "cline-mcp":
+			case "claude-code-mcp", "cursor-mcp", "windsurf-mcp", "vscode-mcp", "continuedev-mcp", "cline-mcp", "gemini-mcp":
 				return true
 			}
 		}
