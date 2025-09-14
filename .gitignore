@@ -91,6 +91,7 @@ package-lock.json
 CLAUDE.md
 claude.md
 .claude/
+.mcp.json
 
 # Cursor AI
 .cursor/
@@ -146,3 +147,4 @@ testing/**/GEMINI.md
 testing/**/AGENTS.md
 testing/**/.github/copilot-instructions.md
 testing/**/.github/agents.md
+testing/**/.mcp.json
