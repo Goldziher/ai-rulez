@@ -29,7 +29,9 @@ type AgentInfo struct {
 var supportedAgents = []AgentInfo{
 	{ID: "amp", Command: "amp", Display: "AMP (Sourcegraph)"},
 	{ID: claudeAgentID, Command: claudeAgentID, Display: "Claude (Anthropic)"},
+	{ID: "codex", Command: "codex", Display: "Codex"},
 	{ID: "continue-dev", Command: "cn", Display: "Continue.dev"},
+	{ID: "cursor", Command: "cursor-agent", Display: "Cursor"},
 	{ID: "gemini", Command: "gemini", Display: "Gemini (Google)"},
 }
 

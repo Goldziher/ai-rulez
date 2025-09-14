@@ -105,6 +105,17 @@ linters:
           - goconst
           - gosec
           - gocyclo
+          - gocritic
+
+      - path: tests/fixtures/violations/
+        linters:
+          - errcheck
+          - govet
+          - staticcheck
+          - unused
+          - bodyclose
+          - gocritic
+          - gosec
           
       - linters:
           - errcheck

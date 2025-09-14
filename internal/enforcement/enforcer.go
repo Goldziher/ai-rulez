@@ -348,8 +348,12 @@ func getAgentByID(id string) (*agents.AgentInfo, error) {
 	supportedAgents := []agents.AgentInfo{
 		{ID: "amp", Command: "amp", Display: "AMP (Sourcegraph)"},
 		{ID: "claude", Command: "claude", Display: "Claude (Anthropic)"},
+		{ID: "codex", Command: "codex", Display: "Codex"},
 		{ID: "continue-dev", Command: "cn", Display: "Continue.dev"},
+		{ID: "cursor", Command: "cursor-agent", Display: "Cursor"},
 		{ID: "gemini", Command: "gemini", Display: "Gemini (Google)"},
+		{ID: "github-copilot", Command: "github-copilot", Display: "GitHub Copilot"},
+		{ID: "windsurf", Command: "windsurf", Display: "Windsurf"},
 	}
 
 	id = strings.ToLower(strings.TrimSpace(id))
