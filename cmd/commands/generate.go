@@ -43,6 +43,9 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "no-configure-cli-mcp", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
+
+	// Add enforce flags to generate command
+	addEnforceToGenerateCmd()
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
@@ -141,6 +144,11 @@ func generateFiles(gen *generator.Generator, cfg *config.Config, configPath stri
 		if err := cli.ConfigureCLIToolsWithOutputs(cfg.MCPServers, cfg.Outputs); err != nil {
 			progress.PrintIfNotQuiet("⚠️  Warning: CLI MCP configuration failed: %v\n", err)
 		}
+	}
+
+	// Run post-generation enforcement if requested
+	if err := runPostGenerateEnforcement(configPath); err != nil {
+		progress.PrintIfNotQuiet("⚠️  Warning: Post-generation enforcement failed: %v\n", err)
 	}
 }
 
