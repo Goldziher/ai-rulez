@@ -224,6 +224,10 @@ mcp_servers:
 
 AI-Rulez provides **real-time rule enforcement** using AI agents to automatically detect violations and apply fixes across your codebase.
 
+<p align="center">
+  <img src="docs/assets/ai-rulez-enforce-demo.gif" alt="AI-Rulez Enforcement Demo" width="100%">
+</p>
+
 ### Basic Enforcement
 
 ```bash
