@@ -37,12 +37,15 @@ var PresetRegistry = map[string][]Output{
 	},
 	"popular": {
 		{Path: "CLAUDE.md"},
+		{Path: "AGENT.md"},
+		{Path: "AGENTS.md"},
 		{Path: ".mcp.json", Template: Template{Type: TemplateBuiltin, Value: "claude-code-mcp"}},
 		{Path: ".cursor/rules/", Type: "rule", NamingScheme: "{name}.mdc"},
 		{Path: ".windsurf/", Type: "rule", NamingScheme: "{name}.md"},
 		{Path: ".gemini/settings.json", Template: Template{Type: TemplateBuiltin, Value: "gemini-mcp"}},
 		{Path: ".github/copilot-instructions.md"},
 		{Path: "GEMINI.md"},
+		{Path: ".claude/agents/", Type: "agent", NamingScheme: "{name}.md"},
 	},
 }
 
