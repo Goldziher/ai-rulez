@@ -51,6 +51,7 @@ func init() {
 	RootCmd.AddCommand(ValidateCmd)
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(InitCmd)
+	RootCmd.AddCommand(EnforceCmd)
 	RootCmd.AddCommand(AddCmd)
 	RootCmd.AddCommand(UpdateCmd)
 	RootCmd.AddCommand(DeleteCmd)
