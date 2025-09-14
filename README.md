@@ -220,6 +220,111 @@ mcp_servers:
     description: "Configuration management server"
 ```
 
+## AI-Powered Rule Enforcement
+
+AI-Rulez provides **real-time rule enforcement** using AI agents to automatically detect violations and apply fixes across your codebase.
+
+### Basic Enforcement
+
+```bash
+# Check for violations (read-only by default)
+ai-rulez enforce
+
+# Automatically apply fixes
+ai-rulez enforce --fix
+
+# Use specific AI agent
+ai-rulez enforce --agent gemini --fix
+```
+
+### Advanced Enforcement Options
+
+```bash
+# Enforce with specific level
+ai-rulez enforce --level strict --agent claude
+
+# Review workflow with iterative improvement
+ai-rulez enforce --review --review-iterations 3 --review-threshold 85
+
+# Multi-agent review (different agents for enforcement vs review)
+ai-rulez enforce --agent gemini --review --review-agent claude
+
+# Target specific files and rules
+ai-rulez enforce --include-files "src/**/*.js" --only-rules "no-console-output"
+
+# Output formats for automation
+ai-rulez enforce --format json --output violations.json
+ai-rulez enforce --format csv --output report.csv
+```
+
+### Supported AI Agents
+
+AI-Rulez integrates with all major AI coding assistants:
+
+- **Claude** (`claude`) - Anthropic's AI assistant
+- **Gemini** (`gemini`) - Google's AI model
+- **Cursor** (`cursor`) - AI-powered code editor
+- **AMP** (`amp`) - Sourcegraph's AI assistant
+- **Codex** (`codex`) - OpenAI's code model
+- **Continue.dev** (`continue-dev`) - Open-source coding assistant
+
+### Enforcement Levels
+
+- **`warn`**: Log violations but don't fail (default)
+- **`error`**: Fail on violations but don't auto-fix
+- **`fix`**: Automatically apply suggested fixes
+- **`strict`**: Fail immediately on any violation
+
+### Integration with Git Hooks
+
+Add enforcement to your Git workflow:
+
+```yaml
+# .lefthook.yml
+pre-commit:
+  commands:
+    ai-rulez-enforce:
+      run: ai-rulez enforce --level error --agent gemini
+      stage_fixed: true
+```
+
+```bash
+# Or with pre-commit hooks
+# .pre-commit-config.yaml
+repos:
+  - repo: local
+    hooks:
+      - id: ai-rulez-enforce
+        name: AI-Rulez Enforcement
+        entry: ai-rulez enforce --level error
+        language: system
+        pass_filenames: false
+```
+
+### Review Workflow
+
+The review system provides iterative code improvement:
+
+```bash
+# Enable review with quality scoring
+ai-rulez enforce --review --review-threshold 80
+
+# Multiple review iterations
+ai-rulez enforce --review --review-iterations 5
+
+# Auto-approve after reaching threshold
+ai-rulez enforce --review --review-auto-approve
+
+# Require improvement between iterations
+ai-rulez enforce --review --require-improvement
+```
+
+The AI reviewer analyzes:
+- ✅ Code quality and adherence to rules
+- ✅ Suggested fixes and their appropriateness
+- ✅ Overall improvement between iterations
+- ✅ Compliance with project standards
+
 ## Installation
 
 ### Run without installing

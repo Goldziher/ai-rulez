@@ -1,0 +1,68 @@
+version: "1.0"
+name: "Test Enforcement Configuration"
+description: "Configuration for testing enforcement with real agents"
+
+rules:
+  - name: "no-console-output"
+    description: "Prohibit console.log, print statements, and fmt.Println in production code"
+    enforcement:
+      level: error
+      message: "Console output statements should be replaced with proper logging"
+
+  - name: "proper-error-handling"
+    description: "All errors must be properly handled, not ignored or suppressed"
+    enforcement:
+      level: error
+      message: "Errors must be explicitly handled with appropriate error handling"
+
+  - name: "no-magic-numbers"
+    description: "Magic numbers should be defined as named constants"
+    enforcement:
+      level: warn
+      message: "Define magic numbers as named constants for better code clarity"
+
+  - name: "documentation-required"
+    description: "All functions and classes must have proper documentation"
+    enforcement:
+      level: warn
+      message: "Add documentation/docstrings to improve code maintainability"
+
+  - name: "no-global-variables"
+    description: "Avoid global variables, use proper encapsulation"
+    enforcement:
+      level: warn
+      message: "Global variables should be avoided or properly encapsulated"
+
+  - name: "max-function-length"
+    description: "Functions should not exceed 50 lines"
+    enforcement:
+      level: warn
+      message: "Break down long functions into smaller, focused functions"
+
+sections:
+  - name: "code-quality"
+    description: "General code quality and maintainability standards"
+    rules:
+      - "Use descriptive and meaningful variable names"
+      - "Avoid deeply nested code (maximum 3 levels of nesting)"
+      - "Functions should have a single, clear responsibility"
+      - "Prefer composition over inheritance"
+      - "Use type hints/annotations where applicable"
+
+  - name: "security"
+    description: "Security best practices"
+    rules:
+      - "Never use eval() or similar dynamic code execution"
+      - "Validate all user inputs before processing"
+      - "Use parameterized queries for database operations"
+      - "Never store sensitive data in plain text"
+      - "Implement proper authentication and authorization"
+
+  - name: "performance"
+    description: "Performance optimization guidelines"
+    rules:
+      - "Avoid unnecessary loops and iterations"
+      - "Use appropriate data structures for the use case"
+      - "Implement caching where beneficial"
+      - "Minimize API calls and network requests"
+      - "Profile code to identify bottlenecks"
