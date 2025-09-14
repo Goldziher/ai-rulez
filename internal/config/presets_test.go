@@ -22,7 +22,7 @@ func TestExpandPresets(t *testing.T) {
 		{
 			name:        "valid popular preset",
 			presets:     []string{"popular"},
-			expected:    7,
+			expected:    9,
 			expectError: false,
 		},
 		{
@@ -100,7 +100,7 @@ func TestPresetRegistry(t *testing.T) {
 		{
 			name:          "popular preset",
 			preset:        "popular",
-			expectedPaths: []string{"CLAUDE.md", ".mcp.json", ".cursor/rules/", ".windsurf/", ".gemini/settings.json", ".github/copilot-instructions.md", "GEMINI.md"},
+			expectedPaths: []string{"CLAUDE.md", "AGENTS.md", ".mcp.json", ".cursor/rules/", ".windsurf/", ".gemini/settings.json", ".github/copilot-instructions.md", "GEMINI.md", ".claude/agents/"},
 			shouldExist:   true,
 		},
 		{
