@@ -4,30 +4,45 @@
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/logo.png" alt="ai-rulez logo" width="200" style="border-radius: 15%; overflow: hidden;">
 </p>
 
-**One config to rule them all.**
+**AI-powered development governance. One config to rule them all.**
 
-## The Problem
+## The Complete AI Development Platform
 
-If you're using multiple AI coding assistants (Claude Code, Cursor, Windsurf, GitHub Copilot, OpenCode), you've probably noticed the configuration fragmentation. Each tool demands its own format - `CLAUDE.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md`, `AGENTS.md`. Keeping coding standards consistent across all these tools is frustrating and error-prone.
+AI-Rulez is the **definitive platform for AI-powered development governance**. Beyond just generating configuration files, it provides real-time rule enforcement, automated code quality assurance, and intelligent governance across your entire development workflow.
 
-## The Solution
+### 🚀 Two Powerful Capabilities
 
-AI-Rulez lets you write your project configuration once and automatically generates native files for every AI tool - current and future ones. It's like having a build system for AI context.
+**1. Universal Configuration Management** - Write once, deploy everywhere
+**2. AI-Powered Rule Enforcement** - Real-time governance with automated fixes
+
+## Why AI-Rulez?
+
+Modern development teams need more than just configuration management:
+
+### ⚠️ **The Problem**
+- **Configuration Hell**: Each AI tool needs its own format (`.cursorrules`, `CLAUDE.md`, `.windsurfrules`, etc.)
+- **Rule Enforcement Gap**: No way to automatically validate that code follows your standards
+- **Team Inconsistency**: Different developers get different AI guidance
+- **Manual Quality Control**: Time-consuming code reviews for basic rule violations
+- **Reactive Governance**: Finding issues after they're already committed
+
+### ✨ **The Solution**
+AI-Rulez provides **proactive development governance** with a single `ai-rulez.yaml` that:
+- **Generates configurations** for every AI tool automatically
+- **Enforces rules in real-time** using AI agents (Claude, Gemini, etc.)
+- **Applies automatic fixes** for code quality issues
+- **Integrates with your workflow** (Git hooks, CI/CD, pre-commit)
+- **Scales across teams** with consistent standards
 
 <p align="center">
-  <img src="docs/assets/ai-rulez-python-demo.gif" alt="AI-Rulez Demo" width="100%">
+  <img src="docs/assets/ai-rulez-python-demo.gif" alt="AI-Rulez Configuration Demo" width="100%">
+  <br><em>📝 Configuration Management (via npx ai-rulez)</em>
 </p>
 
-## Why This Matters
-
-Development teams using AI assistants face common challenges:
-- **Multiple tools, multiple configs**: Your team uses Claude Code for reviews, Cursor for development, Copilot for completions
-- **Configuration drift**: Maintaining separate files leads to inconsistent standards across tools
-- **Monorepo complexity**: Multiple services and packages all need different AI contexts
-- **Team consistency**: Junior devs get different AI guidance than seniors
-- **Future-proofing**: New AI tools require rewriting all configurations
-
-AI-Rulez solves this with a single `ai-rulez.yaml` that understands your project's conventions.
+<p align="center">
+  <img src="docs/assets/ai-rulez-enforce-demo.gif" alt="AI-Rulez Enforcement Demo" width="100%">
+  <br><em>🤖 AI-Powered Rule Enforcement (via uvx ai-rulez@latest)</em>
+</p>
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -38,40 +53,58 @@ AI-Rulez solves this with a single `ai-rulez.yaml` that understands your project
 
 ---
 
-## Key Features
+## 🚀 Core Capabilities
 
-### AI-Powered Project Analysis
-The `init` command is where AI-Rulez shines. Instead of manually writing configurations, let AI analyze your codebase:
+### 1. 📋 Universal Configuration Management
+
+Write once, deploy everywhere with intelligent AI-powered project analysis:
 
 ```bash
 # AI analyzes your codebase and generates tailored config
 npx ai-rulez init "My Project" --preset popular --use-agent claude --yes
 ```
 
-This automatically:
-- Detects your tech stack (Python/Node/Go, testing frameworks, linters)
-- Identifies project patterns and conventions
-- Generates appropriate coding standards and practices
-- Creates specialized agents for different tasks (code review, testing, docs)
-- **Automatically adds all generated AI files to .gitignore** - no more committing `.cursorrules` or `CLAUDE.md` by accident
+**Features:**
+- **AI Project Analysis**: Automatically detects your tech stack, patterns, and conventions
+- **Universal Output Generation**: One YAML → all AI tool formats (`CLAUDE.md`, `.cursorrules`, `.windsurfrules`, etc.)
+- **Smart Gitignore Management**: Automatically excludes generated files from version control
+- **MCP Integration**: Auto-configure MCP servers across CLI tools (Claude, Gemini, etc.)
+- **Team Collaboration**: Remote includes, local overrides, monorepo support
 
-### Universal Output Generation
-One YAML config generates files for every tool:
-- `CLAUDE.md` for Claude Code
-- `.cursorrules` for Cursor
-- `.windsurfrules` for Windsurf  
-- `.github/copilot-instructions.md` for GitHub Copilot
-- Custom formats for any future AI tool
+### 2. 🤖 AI-Powered Rule Enforcement
 
-### Powerful Enterprise Features
-- **MCP Integration:** Automatically configure MCP servers across CLI tools (Claude, Gemini) and generate config files for others (Cursor, VS Code). One configuration, every tool connected.
-- **Team Collaboration:** Remote config includes, local overrides, and monorepo support with `--recursive`
-- **Full-Featured CLI:** Manage your entire configuration from the command line. Add rules, update agents, and generate files without ever opening a YAML file.
-- **Security & Performance:** SSRF protection, schema validation, Go-based performance with instant startup
+Real-time governance with automated fixes using multiple AI agents:
+
+```bash
+# Check for violations with AI analysis
+uvx ai-rulez@latest enforce --agent claude
+
+# Automatically apply fixes
+uvx ai-rulez@latest enforce --agent claude --fix
+
+# Multi-agent review workflow
+uvx ai-rulez@latest enforce --agent gemini --review --review-agent claude
+```
+
+**Features:**
+- **Multi-Agent Support**: Claude, Gemini, AMP, Cursor, Codex, Continue.dev
+- **Automated Fixes**: AI suggests and applies code improvements
+- **Review Workflows**: Iterative improvement with quality thresholds
+- **Multiple Output Formats**: Table, JSON, CSV, summary reports
+- **CI/CD Integration**: Git hooks, pre-commit, workflow automation
+- **Quality Scoring**: 0-100% compliance with configurable thresholds
 
 ## How It Works
 
-`ai-rulez` takes your `ai-rulez.yml` file and uses it as a single source of truth to generate native configuration files for all your AI tools. Think of it as a build system for AI context—you write the source once, and it compiles to whatever format each tool needs.
+AI-Rulez operates as a **comprehensive AI development governance platform**:
+
+1. **📝 Configuration Phase**: Your `ai-rulez.yml` serves as the single source of truth
+2. **🏗️ Generation Phase**: Automatically creates native files for every AI tool
+3. **🔍 Enforcement Phase**: AI agents continuously validate code against your rules
+4. **🛠️ Fix Phase**: Automatic corrections and improvements applied in real-time
+5. **📊 Reporting Phase**: Detailed compliance reports and quality metrics
+
+Think of it as **CI/CD for code quality** - proactive governance instead of reactive fixes.
 
 ## Example: `ai-rulez.yml`
 
@@ -114,19 +147,91 @@ mcp_servers:
 
 Run `ai-rulez generate` → get all your configuration files, perfectly synchronized.
 
-## Quick Start
+## ⚡ Quick Start
 
+### 📋 Configuration Management
 ```bash
-# 1. AI-powered initialization (recommended)
-ai-rulez init "My Project" --preset popular --use-agent claude
+# 1. AI-powered project analysis and setup
+npx ai-rulez@latest init "My Project" --preset popular --use-agent claude
 
-# 2. Generate all AI instruction files
-ai-rulez generate
+# 2. Generate all AI tool configuration files
+npx ai-rulez@latest generate
 
 # 3. Your AI tools now have comprehensive, project-specific context!
 ```
 
-**That's it!** The AI will analyze your codebase and generate tailored rules, documentation, and specialized agents automatically.
+### 🤖 AI-Powered Rule Enforcement
+```bash
+# 1. Check for rule violations
+uvx ai-rulez@latest enforce --agent claude --format table
+
+# 2. Get detailed analysis and suggestions
+uvx ai-rulez@latest enforce --agent claude --format json
+
+# 3. Apply automatic fixes
+uvx ai-rulez@latest enforce --agent claude --fix
+
+# 4. Set up review workflow
+uvx ai-rulez@latest enforce --agent claude --review --review-iterations 2
+```
+
+**That's it!** You now have both intelligent configuration management AND real-time rule enforcement powered by AI.
+
+---
+
+## 🤖 AI-Powered Rule Enforcement
+
+The killer feature that sets AI-Rulez apart: **real-time rule enforcement using AI agents**. No more manual code reviews for basic violations—let AI catch and fix issues automatically.
+
+### ✨ Key Benefits
+
+- **Proactive Quality Control**: Catch issues before they reach production
+- **Multi-Agent Support**: Claude, Gemini, AMP, Cursor, Codex—use the best AI for each task
+- **Automatic Fixes**: AI doesn't just find problems, it solves them
+- **Workflow Integration**: Git hooks, CI/CD, pre-commit—enforcement everywhere
+- **Team Consistency**: Same standards for everyone, from junior to senior devs
+
+### 🎯 Real-World Use Cases
+
+```bash
+# Prevent console.log in production builds
+ai-rulez enforce --agent claude --only-rules "no-console-output" --fix
+
+# Ensure all functions have proper error handling
+ai-rulez enforce --agent gemini --level strict --format json
+
+# Multi-agent review for critical code changes
+ai-rulez enforce --agent claude --review --review-agent gemini --review-threshold 95
+
+# Automated fixes in CI/CD pipeline
+ai-rulez enforce --agent claude --fix --format csv --output violations.csv
+```
+
+### 📊 Output Formats & Integration
+
+| Format | Use Case | Command |
+|--------|----------|---------|
+| **Table** | Human-readable terminal output | `--format table` |
+| **JSON** | API integration, detailed analysis | `--format json --pretty` |
+| **CSV** | Data analysis, reporting | `--format csv --output report.csv` |
+| **Summary** | Quick overview with scores | `--format summary` |
+
+### 🔄 Advanced Workflows
+
+**Review Pipeline**: Multi-agent validation with quality gates
+```bash
+ai-rulez enforce --agent claude --review --review-iterations 3 --review-threshold 85
+```
+
+**Fix & Verify**: Apply fixes and validate improvements
+```bash
+ai-rulez enforce --agent gemini --fix --review --require-improvement
+```
+
+**Team Standards**: Consistent enforcement across the entire codebase
+```bash
+ai-rulez enforce --include-files "src/**/*.{js,ts,py}" --level strict --agent claude
+```
 
 **Prefer manual setup?**
 ```bash
@@ -329,51 +434,55 @@ The AI reviewer analyzes:
 - ✅ Overall improvement between iterations
 - ✅ Compliance with project standards
 
-## Installation
+## 📦 Installation
 
-### Run without installing
+Choose your installation method based on your primary use case:
 
-For one-off executions, you can run `ai-rulez` directly without a system-wide installation.
+### 🚀 Quick Start (No Installation)
 
-**Go**
+**For Configuration Management** (project setup, file generation):
 ```bash
-go run github.com/Goldziher/ai-rulez/cmd@latest --help
+# Node.js - Best for web/JS projects
+npx ai-rulez@latest init "My Project" --preset popular
+npx ai-rulez@latest generate
 ```
 
-**Node.js (via npx)**
+**For Rule Enforcement** (AI-powered validation):
 ```bash
-# Installs and runs the latest version
-npx ai-rulez@latest init
+# Python - Latest features, fastest updates
+uvx ai-rulez@latest enforce --agent claude --fix
+uvx ai-rulez@latest enforce --agent gemini --review
 ```
 
-**Python (via uvx)**
+**For Go Projects**:
 ```bash
-# Runs ai-rulez in a temporary virtual environment
-uvx ai-rulez init
+go run github.com/Goldziher/ai-rulez/cmd@latest init
 ```
 
-### Install globally
+### 🔧 Global Installation
 
-For frequent use, a global installation is recommended.
+For teams and frequent usage:
 
-**Go**
-```bash
-go install github.com/Goldziher/ai-rulez/cmd@latest
-```
-
-**Homebrew (macOS/Linux)**
+**Homebrew (Recommended for macOS/Linux)**
 ```bash
 brew install goldziher/tap/ai-rulez
+ai-rulez init "My Project"
+ai-rulez enforce --agent claude
 ```
 
-**npm**
+**npm (Best for Node.js teams)**
 ```bash
 npm install -g ai-rulez
 ```
 
-**pip**
+**pip (Best for Python teams)**
 ```bash
 pip install ai-rulez
+```
+
+**Go (For Go developers)**
+```bash
+go install github.com/Goldziher/ai-rulez/cmd@latest
 ```
 
 ## Pre-commit Hooks
