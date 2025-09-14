@@ -39,8 +39,8 @@ metadata:
 presets:
   - "popular"
 `,
-			expectedOutputs: 7,
-			expectedPaths:   []string{".cursor/rules/", ".github/copilot-instructions.md", ".windsurf/", "CLAUDE.md", ".mcp.json", ".gemini/settings.json", "GEMINI.md"},
+			expectedOutputs: 9,
+			expectedPaths:   []string{".cursor/rules/", ".github/copilot-instructions.md", ".windsurf/", "CLAUDE.md", ".mcp.json", ".gemini/settings.json", "GEMINI.md", "AGENTS.md", ".claude/agents/"},
 			expectError:     false,
 		},
 		{

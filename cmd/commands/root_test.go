@@ -24,7 +24,7 @@ func TestRootCommand(t *testing.T) {
 		}
 	}
 
-	expectedCommands := []string{"generate", "validate", "init", "mcp", "version", "add", "update", "delete"}
+	expectedCommands := []string{"generate", "validate", "init", "mcp", "version", "add", "update", "delete", "enforce"}
 	for _, expected := range expectedCommands {
 		assert.True(t, cmdNames[expected], "Expected command %s to be registered", expected)
 	}
