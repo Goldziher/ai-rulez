@@ -15,6 +15,7 @@ func (s *Server) registerTools() {
 	s.registerSingletonTools()
 	s.registerProjectTools()
 	s.registerUtilityTools()
+	s.registerEnforcementTools()
 }
 
 func (s *Server) registerRulesTools() {
@@ -442,5 +443,48 @@ func (s *Server) registerUtilityTools() {
 			mcp.WithDescription("Get the ai-rulez version"),
 		),
 		handlers.GetVersionHandler(s.version),
+	)
+}
+
+func (s *Server) registerEnforcementTools() {
+	s.mcpServer.AddTool(
+		mcp.NewTool("enforce_rules",
+			mcp.WithDescription("Enforce rules using AI agents with optional review feedback loops"),
+			mcp.WithString("config_file", mcp.Description("Path to configuration file (optional)")),
+			mcp.WithString("agent", mcp.Description("AI agent to use (claude, gemini, amp, continue-dev)")),
+			mcp.WithString("level", mcp.Description("Enforcement level (warn, error, fix, strict)")),
+			mcp.WithBoolean("auto_fix", mcp.Description("Automatically apply suggested fixes")),
+			mcp.WithNumber("timeout", mcp.Description("Timeout per file analysis in seconds")),
+			mcp.WithArray("only_rules", mcp.Description("Enforce only these rules")),
+			mcp.WithArray("exclude_rules", mcp.Description("Exclude these rules from enforcement")),
+			mcp.WithArray("include_files", mcp.Description("Include only these file patterns")),
+			mcp.WithArray("exclude_files", mcp.Description("Exclude these file patterns")),
+			mcp.WithNumber("max_violations", mcp.Description("Maximum allowed violations (-1 for unlimited)")),
+			mcp.WithString("output_format", mcp.Description("Output format (table, json, summary, csv)")),
+			mcp.WithBoolean("dry_run", mcp.Description("Show what would be done without applying fixes")),
+			// Review options
+			mcp.WithBoolean("enable_review", mcp.Description("Enable iterative review with feedback loops")),
+			mcp.WithString("review_agent", mcp.Description("Agent for code review (defaults to enforcement agent)")),
+			mcp.WithNumber("review_iterations", mcp.Description("Maximum review iterations")),
+			mcp.WithNumber("review_threshold", mcp.Description("Quality threshold for approval (0-100)")),
+			mcp.WithNumber("review_timeout", mcp.Description("Timeout per review iteration in seconds")),
+			mcp.WithBoolean("review_auto_approve", mcp.Description("Auto-approve regardless of score")),
+			mcp.WithBoolean("require_improvement", mcp.Description("Require iterative improvement in review")),
+		),
+		handlers.EnforceRulesHandler,
+	)
+
+	s.mcpServer.AddTool(
+		mcp.NewTool("check_violations",
+			mcp.WithDescription("Check for rule violations without applying fixes (dry-run enforcement)"),
+			mcp.WithString("config_file", mcp.Description("Path to configuration file (optional)")),
+			mcp.WithString("agent", mcp.Description("AI agent to use for analysis")),
+			mcp.WithArray("only_rules", mcp.Description("Check only these rules")),
+			mcp.WithArray("exclude_rules", mcp.Description("Exclude these rules from checking")),
+			mcp.WithArray("include_files", mcp.Description("Include only these file patterns")),
+			mcp.WithArray("exclude_files", mcp.Description("Exclude these file patterns")),
+			mcp.WithString("output_format", mcp.Description("Output format (table, json, summary, csv)")),
+		),
+		handlers.CheckViolationsHandler,
 	)
 }
