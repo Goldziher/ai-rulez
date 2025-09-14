@@ -27,3 +27,23 @@
   pass_filenames: false
   always_run: false
   require_serial: false
+
+- id: ai-rulez-enforce
+  name: AI-Rulez rule enforcement
+  description: Enforce coding standards using AI agents
+  entry: ai-rulez enforce --level error
+  language: golang
+  files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
+  pass_filenames: false
+  always_run: false
+  require_serial: false
+
+- id: ai-rulez-enforce-fix
+  name: AI-Rulez enforcement with auto-fix
+  description: Enforce coding standards and automatically apply fixes using AI agents
+  entry: ai-rulez enforce --fix --level error
+  language: golang
+  files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
+  pass_filenames: false
+  always_run: false
+  require_serial: false

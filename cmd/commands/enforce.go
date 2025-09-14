@@ -22,7 +22,7 @@ The enforce command analyzes your codebase against the rules and sections define
 in your configuration, detecting violations and optionally applying fixes.
 
 Examples:
-  # Check for violations (dry-run)
+  # Check for violations (default behavior)
   ai-rulez enforce
 
   # Apply fixes automatically
@@ -52,7 +52,6 @@ var (
 	enforceMaxViolations int
 	enforceOutputFormat  string
 	enforceOutputFile    string
-	enforceDryRun        bool
 	enforceVerbose       bool
 	// Review options
 	enforceReview             bool
@@ -76,7 +75,6 @@ func init() {
 	EnforceCmd.Flags().IntVar(&enforceMaxViolations, "max-violations", -1, "Maximum allowed violations (-1 for unlimited)")
 	EnforceCmd.Flags().StringVar(&enforceOutputFormat, "format", "table", "Output format (table, json, summary, csv)")
 	EnforceCmd.Flags().StringVarP(&enforceOutputFile, "output", "o", "", "Output file (default: stdout)")
-	EnforceCmd.Flags().BoolVar(&enforceDryRun, "dry-run", false, "Show what would be done without applying fixes")
 	EnforceCmd.Flags().BoolVar(&enforceVerbose, "verbose", false, "Enable verbose output")
 
 	// Review flags
@@ -151,17 +149,18 @@ func enforceRun(cmd *cobra.Command, args []string) error { //nolint:gocyclo
 				RequireImprovement: enforceRequireImprovement,
 			},
 		},
-		DryRun:       enforceDryRun,
+		DryRun:       !enforceAutoFix, // Read-only by default, write only with --fix
 		Verbose:      enforceVerbose,
 		OnlyRules:    enforceOnlyRules,
 		ExcludeRules: enforceExcludeRules,
 		OutputFormat: enforceOutputFormat,
 	}
 
-	// Override auto-fix if dry-run is enabled
-	if enforceDryRun {
-		options.Enforcement.AutoFix = false
-		logger.Info("Dry-run mode enabled, fixes will not be applied")
+	// Log mode based on --fix flag
+	if enforceAutoFix {
+		logger.Info("Fix mode enabled, violations will be automatically corrected")
+	} else {
+		logger.Info("Read-only mode, violations will be reported but not fixed")
 	}
 
 	// Create enforcer
@@ -280,7 +279,7 @@ func runPostGenerateEnforcement(configPath string) error {
 			Timeout:       15 * time.Second, // Shorter timeout for post-generation
 			MaxViolations: -1,
 		},
-		DryRun:       true, // Always dry-run for post-generation
+		DryRun:       true, // Always read-only for post-generation
 		Verbose:      false,
 		OutputFormat: "summary",
 	}

@@ -37,7 +37,6 @@ var PresetRegistry = map[string][]Output{
 	},
 	"popular": {
 		{Path: "CLAUDE.md"},
-		{Path: "AGENT.md"},
 		{Path: "AGENTS.md"},
 		{Path: ".mcp.json", Template: Template{Type: TemplateBuiltin, Value: "claude-code-mcp"}},
 		{Path: ".cursor/rules/", Type: "rule", NamingScheme: "{name}.mdc"},

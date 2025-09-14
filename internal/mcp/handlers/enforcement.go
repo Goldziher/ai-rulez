@@ -90,13 +90,13 @@ func CheckViolationsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 		return mcp.NewToolResultError("Invalid arguments format"), nil
 	}
 
-	// Parse arguments (similar to enforce but force dry-run)
+	// Parse arguments (similar to enforce but force read-only)
 	opts, err := parseEnforcementOptions(argsMap)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Invalid arguments: %v", err)), nil
 	}
 
-	// Force dry-run and disable auto-fix
+	// Force read-only mode (no fixes)
 	opts.DryRun = true
 	opts.Enforcement.AutoFix = false
 	opts.Enforcement.Level = enforcement.EnforcementWarn // Safe level for checking
@@ -115,7 +115,7 @@ func CheckViolationsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 		return mcp.NewToolResultError(fmt.Sprintf("Failed to create enforcer: %v", err)), nil
 	}
 
-	// Run enforcement (dry-run)
+	// Run enforcement (read-only)
 	result, err := enforcer.Enforce(ctx)
 	if err != nil {
 		return mcp.NewToolResultError(fmt.Sprintf("Violation check failed: %v", err)), nil
@@ -175,8 +175,11 @@ func parseEnforcementOptions(arguments map[string]interface{}) (*enforcement.Enf
 	if autoFix, ok := arguments["auto_fix"].(bool); ok {
 		opts.Enforcement.AutoFix = autoFix
 	}
-	if dryRun, ok := arguments["dry_run"].(bool); ok {
-		opts.DryRun = dryRun
+	// Set DryRun based on AutoFix - read-only by default
+	if !opts.Enforcement.AutoFix {
+		opts.DryRun = true // Read-only when no AutoFix
+	} else {
+		opts.DryRun = false // Allow fixes when AutoFix is true
 	}
 
 	// Parse timeout

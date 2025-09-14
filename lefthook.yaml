@@ -10,6 +10,10 @@ pre-commit:
     mod-tidy:
       run: go mod tidy
       fail_text: "go mod tidy failed"
+    ai-rulez-enforce:
+      run: ./ai-rulez enforce --level error --agent gemini --timeout 30s
+      fail_text: "AI-Rulez enforcement failed - fix violations before committing"
+      stage_fixed: true
 
 commit-msg:
   commands:
