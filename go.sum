@@ -65,8 +65,8 @@ github.com/invopop/jsonschema v0.13.0 h1:KvpoAJWEjR3uD9Kbm2HWJmqsEaHt8lBUpd0qHcI
 github.com/invopop/jsonschema v0.13.0/go.mod h1:ffZ5Km5SWWRAIN6wbDXItl95euhFz2uON45H2qjYt+0=
 github.com/kaptinlin/go-i18n v0.1.7 h1:CYt6NGHFrje1dMufhxKGooCmKFJKDfhWVznYSODPjo8=
 github.com/kaptinlin/go-i18n v0.1.7/go.mod h1:Lq3ZGBq/JKUuxbH4bL0aQYeBM3Fk6JRuo637EfvxO6U=
-github.com/kaptinlin/jsonschema v0.4.13 h1:lbo0/GaMwW1TU3BJMoLnDYAP0R/kmBpzHw15ah/wCFo=
-github.com/kaptinlin/jsonschema v0.4.13/go.mod h1:iApIwexRyFi1+eVVPh/68PMgKm7m3M5WxOQS9LZjogU=
+github.com/kaptinlin/jsonschema v0.4.14 h1:56HclkbBr/ZQypxqRzzeFERNFMK7kroloqlZbXLhJNM=
+github.com/kaptinlin/jsonschema v0.4.14/go.mod h1:KVvnDL8OUOhNQ51/PPFjITD7qe8M6nsuBuO0076oVHQ=
 github.com/kaptinlin/messageformat-go v0.4.1 h1:OFzaIUbHIrvd8WKCfUwW5gmIumx2m0+X3X+3YuQGlG4=
 github.com/kaptinlin/messageformat-go v0.4.1/go.mod h1:oyflpIrEpnEwIxLgZU6f38gmwkKV/okilyeXw4D7sFY=
 github.com/knadh/koanf/maps v0.1.2 h1:RBfmAW5CnZT+PJ1CVc1QSJKf4Xu9kxfQgYVQSu8hpbo=
