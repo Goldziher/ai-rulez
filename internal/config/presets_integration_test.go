@@ -122,6 +122,18 @@ presets:
 			expectedPaths:   []string{"AGENTS.md"},
 			expectError:     false,
 		},
+		{
+			name: "config with junie preset",
+			configYAML: `
+metadata:
+  name: "TestProject"
+presets:
+  - "junie"
+`,
+			expectedOutputs: 1,
+			expectedPaths:   []string{".junie/guidelines.md"},
+			expectError:     false,
+		},
 	}
 
 	for _, tt := range tests {
