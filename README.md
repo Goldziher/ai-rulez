@@ -87,7 +87,7 @@ uvx ai-rulez@latest enforce --agent gemini --review --review-agent claude
 ```
 
 **Features:**
-- **Multi-Agent Support**: Claude, Gemini, AMP, Cursor, Codex, Continue.dev
+- **Multi-Agent Support**: Claude, Gemini, AMP, Cursor, Codex, Continue.dev, Junie
 - **Automated Fixes**: AI suggests and applies code improvements
 - **Review Workflows**: Iterative improvement with quality thresholds
 - **Multiple Output Formats**: Table, JSON, CSV, summary reports
@@ -140,8 +140,8 @@ agents:
 # MCP servers for direct AI tool integration
 mcp_servers:
   - name: "ai-rulez"
-    command: "ai-rulez"
-    args: ["mcp"]
+    command: "npx"
+    args: ["-y", "ai-rulez@latest", "mcp"]
     description: "AI-Rulez MCP server for configuration management"
 ```
 
@@ -320,8 +320,8 @@ ai-rulez mcp
 # Or configure it automatically via your ai-rulez.yaml
 mcp_servers:
   - name: "ai-rulez"
-    command: "ai-rulez" 
-    args: ["mcp"]
+    command: "npx"
+    args: ["-y", "ai-rulez@latest", "mcp"]
     description: "Configuration management server"
 ```
 
@@ -376,6 +376,7 @@ AI-Rulez integrates with all major AI coding assistants:
 - **AMP** (`amp`) - Sourcegraph's AI assistant
 - **Codex** (`codex`) - OpenAI's code model
 - **Continue.dev** (`continue-dev`) - Open-source coding assistant
+- **Junie** (`junie`) - JetBrains AI assistant
 
 ### Enforcement Levels
 

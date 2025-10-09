@@ -15,11 +15,12 @@ type ProviderConfig struct {
 	Opencode    bool
 	Cline       bool
 	ContinueDev bool
+	Junie       bool
 }
 
 func (p ProviderConfig) HasAny() bool {
 	return p.Claude || p.Cursor || p.Windsurf || p.Copilot ||
-		p.Gemini || p.Amp || p.Codex || p.Opencode || p.Cline || p.ContinueDev
+		p.Gemini || p.Amp || p.Codex || p.Opencode || p.Cline || p.ContinueDev || p.Junie
 }
 
 func getDefaultOutputPath(providers ProviderConfig) string {
@@ -46,6 +47,9 @@ func getDefaultOutputPath(providers ProviderConfig) string {
 	}
 	if providers.ContinueDev {
 		return ".continue/rules/01-main.md"
+	}
+	if providers.Junie {
+		return ".junie/guidelines.md"
 	}
 	return "ai-rules.md"
 }
@@ -111,6 +115,11 @@ func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
 		}
 	}
 
+	if providers.Junie {
+		builder.WriteString(`  - path: ".junie/guidelines.md"
+`)
+	}
+
 	if providers.Claude {
 		builder.WriteString(`  - path: ".claude/agents/"
     type: "agent"
@@ -138,6 +147,10 @@ func writeCommentedExamples(builder *strings.Builder, providers ProviderConfig) 
 	}
 	if !providers.Amp && !providers.Codex && !providers.Opencode {
 		builder.WriteString(`  # - path: "AGENTS.md"              # For Amp/Codex/Opencode
+`)
+	}
+	if !providers.Junie {
+		builder.WriteString(`  # - path: ".junie/guidelines.md"   # For JetBrains Junie
 `)
 	}
 }
