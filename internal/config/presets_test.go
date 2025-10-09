@@ -132,6 +132,12 @@ func TestPresetRegistry(t *testing.T) {
 			expectedPaths: []string{".continue/rules/", ".continue/prompts/ai_rulez_prompts.yaml"},
 			shouldExist:   true,
 		},
+		{
+			name:          "junie preset",
+			preset:        "junie",
+			expectedPaths: []string{".junie/guidelines.md"},
+			shouldExist:   true,
+		},
 	}
 
 	for _, tt := range tests {

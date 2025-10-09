@@ -35,6 +35,9 @@ var PresetRegistry = map[string][]Output{
 		{Path: ".continue/rules/", Type: "rule", NamingScheme: "{name}.md"},
 		{Path: ".continue/prompts/ai_rulez_prompts.yaml"},
 	},
+	"junie": {
+		{Path: ".junie/guidelines.md"},
+	},
 	"popular": {
 		{Path: "CLAUDE.md"},
 		{Path: "AGENTS.md"},
