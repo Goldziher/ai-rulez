@@ -546,8 +546,8 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 	sb.WriteString("commands: []\n")
 	sb.WriteString("mcp_servers:\n")
 	sb.WriteString("  - name: \"ai-rulez\"\n")
-	sb.WriteString("    command: \"ai-rulez\"\n")
-	sb.WriteString("    args: [\"mcp\"]\n")
+	sb.WriteString("    command: \"npx\"\n")
+	sb.WriteString("    args: [\"-y\", \"ai-rulez@latest\", \"mcp\"]\n")
 	sb.WriteString("    description: \"AI-Rulez MCP server for configuration management\"\n")
 
 	return sb.String()
@@ -576,7 +576,7 @@ func executeAgentTaskWithStatus(task AgentTask, agent AgentInfo, context *Projec
 			time.Sleep(delay)
 		}
 
-		timeout := 90 * time.Second
+		timeout := 120 * time.Second
 
 		logger.Debug("Invoking agent", "task", task.Name, "attempt", attempt)
 		output, err := invokeAgent(agent, prompt, timeout)

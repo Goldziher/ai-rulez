@@ -229,7 +229,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install AI-Rulez
-        run: go install github.com/Goldziher/ai-rulez@latest
+        run: go install github.com/Goldziher/ai-rulez/cmd@latest
       - name: Enforce Rules
         run: ai-rulez enforce --level error --agent gemini --format json --output violations.json
       - name: Upload Results

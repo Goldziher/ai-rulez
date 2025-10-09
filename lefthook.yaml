@@ -2,7 +2,7 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: golangci-lint run --fix
+      run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0 run --fix
       fail_text: "Go linting failed"
     fmt:
       run: go fmt ./...
@@ -11,7 +11,7 @@ pre-commit:
       run: go mod tidy
       fail_text: "go mod tidy failed"
     ai-rulez-enforce:
-      run: ./ai-rulez enforce --level error --agent gemini --timeout 30s
+      run: go run ./cmd enforce --level error --agent claude --timeout 30s
       fail_text: "AI-Rulez enforcement failed - fix violations before committing"
       stage_fixed: true
 

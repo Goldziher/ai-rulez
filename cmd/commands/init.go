@@ -38,6 +38,7 @@ var (
 	opencodeFlag    bool
 	clineFlag       bool
 	continueDevFlag bool
+	junieFlag       bool
 )
 
 var InitCmd = &cobra.Command{
@@ -65,6 +66,7 @@ func init() {
 	InitCmd.Flags().BoolVar(&opencodeFlag, "opencode", false, "Include OpenCode configuration")
 	InitCmd.Flags().BoolVar(&clineFlag, "cline", false, "Include Cline configuration")
 	InitCmd.Flags().BoolVar(&continueDevFlag, "continue-dev", false, "Include Continue.dev configuration")
+	InitCmd.Flags().BoolVar(&junieFlag, "junie", false, "Include Junie configuration")
 
 	InitCmd.Flags().BoolVar(&withAgents, "with-agents", false, "Include agent configurations (for Claude)")
 	InitCmd.Flags().BoolVar(&withSections, "with-sections", true, "Include documentation sections")
@@ -284,6 +286,9 @@ func displayProviderIncludes(providerConfig templates.ProviderConfig) {
 		logger.Info("  - Continue.dev rules (.continue/rules/)")
 		logger.Info("  - Continue.dev prompts (.continue/prompts/ai_rulez_prompts.yaml)")
 	}
+	if providerConfig.Junie {
+		logger.Info("  - Junie (.junie/guidelines.md)")
+	}
 }
 
 func displayNextSteps() {
@@ -324,6 +329,7 @@ func parsePresetFlag() templates.ProviderConfig {
 		"opencode":     func(pc *templates.ProviderConfig) { pc.Opencode = true },
 		"cline":        func(pc *templates.ProviderConfig) { pc.Cline = true },
 		"continue-dev": func(pc *templates.ProviderConfig) { pc.ContinueDev = true },
+		"junie":        func(pc *templates.ProviderConfig) { pc.Junie = true },
 	}
 
 	pc := templates.ProviderConfig{}
@@ -345,6 +351,7 @@ func parseAllProvidersFlag() templates.ProviderConfig {
 		Opencode:    true,
 		Cline:       true,
 		ContinueDev: true,
+		Junie:       true,
 	}
 }
 
@@ -369,6 +376,7 @@ func parseIndividualFlags(cmd *cobra.Command) templates.ProviderConfig {
 		Opencode:    opencodeFlag,
 		Cline:       clineFlag,
 		ContinueDev: continueDevFlag,
+		Junie:       junieFlag,
 	}
 
 	if !pc.HasAny() {
