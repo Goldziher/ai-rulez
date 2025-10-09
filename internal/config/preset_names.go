@@ -13,6 +13,7 @@ const (
 	PresetCline    PresetName = "cline"
 	PresetAmp      PresetName = "amp"
 	PresetCodex    PresetName = "codex"
+	PresetJunie    PresetName = "junie"
 )
 
 func AllPresetNames() []string {
@@ -27,6 +28,7 @@ func AllPresetNames() []string {
 		string(PresetCline),
 		string(PresetAmp),
 		string(PresetCodex),
+		string(PresetJunie),
 	}
 }
 
@@ -41,5 +43,6 @@ func IndividualPresetNames() []string {
 		string(PresetCline),
 		string(PresetAmp),
 		string(PresetCodex),
+		string(PresetJunie),
 	}
 }

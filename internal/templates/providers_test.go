@@ -90,3 +90,30 @@ func TestProviderConfig_HasAny_OpenCodeAndClaude(t *testing.T) {
 
 	assert.True(t, providers.HasAny())
 }
+
+func TestGenerateConfigTemplate_Junie(t *testing.T) {
+	projectName := "TestProject"
+	providers := templates.ProviderConfig{
+		Junie: true,
+	}
+
+	configContent := templates.GenerateConfigTemplate(projectName, providers)
+
+	assert.Contains(t, configContent, "name: \"TestProject\"")
+	assert.Contains(t, configContent, "path: \".junie/guidelines.md\"")
+	assert.Contains(t, configContent, "ai-rules-v2.schema.json")
+
+	assert.Contains(t, configContent, "# agents:")
+	assert.Contains(t, configContent, "# rules:")
+	assert.Contains(t, configContent, "# sections:")
+	assert.Contains(t, configContent, "# commands:")
+	assert.Contains(t, configContent, "# mcp_servers:")
+}
+
+func TestProviderConfig_HasAny_Junie(t *testing.T) {
+	providers := templates.ProviderConfig{
+		Junie: true,
+	}
+
+	assert.True(t, providers.HasAny())
+}

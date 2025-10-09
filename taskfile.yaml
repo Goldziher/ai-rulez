@@ -2,6 +2,7 @@ version: '3'
 
 vars:
   BINARY_NAME: ai-rulez
+  GOLANGCI_VERSION: "v2.4.0"
 
 tasks:
   build:
@@ -91,7 +92,7 @@ tasks:
     desc: Lint the code
     deps: [format]
     cmds:
-      - golangci-lint run --fix
+      - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} run --fix
 
 
   tidy:
@@ -112,7 +113,7 @@ tasks:
       - go install github.com/evilmartians/lefthook@latest
       - lefthook install
       - pnpm install
-      - go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
       - echo "✅ Setup complete!"
 
   dev:
