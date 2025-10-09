@@ -61,7 +61,7 @@ Write once, deploy everywhere with intelligent AI-powered project analysis:
 
 ```bash
 # AI analyzes your codebase and generates tailored config
-npx ai-rulez init "My Project" --preset popular --use-agent claude --yes
+npx ai-rulez init "My Project" --preset popular
 ```
 
 **Features:**
@@ -152,7 +152,7 @@ Run `ai-rulez generate` → get all your configuration files, perfectly synchron
 ### 📋 Configuration Management
 ```bash
 # 1. AI-powered project analysis and setup
-npx ai-rulez@latest init "My Project" --preset popular --use-agent claude
+npx ai-rulez@latest init "My Project" --preset popular
 
 # 2. Generate all AI tool configuration files
 npx ai-rulez@latest generate
@@ -176,6 +176,33 @@ uvx ai-rulez@latest enforce --agent claude --review --review-iterations 2
 ```
 
 **That's it!** You now have both intelligent configuration management AND real-time rule enforcement powered by AI.
+
+---
+
+## 🗂️ .gitignore Management
+
+AI-Rulez manages your `.gitignore` to keep generated files out of version control.
+
+**Automatic updates:**
+```bash
+# During init (enabled by default)
+ai-rulez init --preset claude
+
+# During generate (optional)
+ai-rulez generate --update-gitignore
+
+# Disable if needed
+ai-rulez init --preset popular --no-gitignore
+```
+
+**What gets ignored:**
+- Generated markdown files (`CLAUDE.md`, `GEMINI.md`, `AGENTS.md`)
+- AI tool directories (`.claude/`, `.cursor/`, `.windsurf/`, `.clinerules/`, etc.)
+- Config files (`.mcp.json`, `.gemini/settings.json`)
+
+All entries are added under `# AI Rules generated files` without duplicates.
+
+**Best practice:** Commit `ai-rulez.yaml` and `.gitignore`, but not the generated AI configuration files.
 
 ---
 
@@ -236,9 +263,9 @@ ai-rulez enforce --include-files "src/**/*.{js,ts,py}" --level strict --agent cl
 **Prefer manual setup?**
 ```bash
 # Basic initialization without AI assistance
-ai-rulez init "My Project" --preset popular
+ai-rulez init "My Project" --preset popular --no-agent
 
-# Add your project-specific context  
+# Add your project-specific context
 ai-rulez add rule "Tech Stack" --priority critical --content "This project uses Go and PostgreSQL."
 
 # Generate files

@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/agents"
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/hooks"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
@@ -27,6 +29,7 @@ var (
 	listAgents       bool
 	setupHooks       bool
 	autoYes          bool
+	noGitignore      bool
 
 	claudeFlag      bool
 	cursorFlag      bool
@@ -77,6 +80,7 @@ func init() {
 	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
 
 	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation if lefthook, pre-commit, or husky is detected")
+	InitCmd.Flags().BoolVar(&noGitignore, "no-gitignore", false, "Skip updating .gitignore with generated output files")
 }
 
 func runInit(cmd *cobra.Command, args []string) {
@@ -89,6 +93,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	providerConfig := parseProviderFlags(cmd)
 
 	if tryAgentGeneration(cmd, projectName, providerConfig) {
+		handleGitignoreUpdateForInit()
 		return
 	}
 
@@ -99,6 +104,8 @@ func runInit(cmd *cobra.Command, args []string) {
 	if setupHooks {
 		handleHooksSetup()
 	}
+
+	handleGitignoreUpdateForInit()
 }
 
 func handleContinueDevSetup(providerConfig templates.ProviderConfig) {
@@ -426,4 +433,23 @@ func formatConfigFile(filename string) {
 	}
 
 	logger.Debug("Formatted YAML file with yamlfmt", "file", filename)
+}
+
+func handleGitignoreUpdateForInit() {
+	if noGitignore {
+		return
+	}
+
+	configPath := "ai-rulez.yaml"
+	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
+	if err != nil {
+		logger.Warn("Could not load config for gitignore update", "error", err.Error())
+		return
+	}
+
+	if err := gitignore.UpdateGitignoreFiles(configPath, cfg); err != nil {
+		logger.Warn("Could not update .gitignore", "error", err.Error())
+	} else {
+		logger.Info("Updated .gitignore with generated output files")
+	}
 }
