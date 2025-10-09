@@ -280,7 +280,7 @@ func confirmAgentUse(agent *AgentInfo, autoYes bool) bool {
 		return true
 	}
 
-	logger.Info(fmt.Sprintf("🤖 Would you like to use %s to generate your configuration? (y/N): ", agent.Display))
+	logger.Info(fmt.Sprintf("🤖 Would you like to use %s to generate your configuration? (Y/n): ", agent.Display))
 	reader := bufio.NewReader(os.Stdin)
 	userResponse, err := reader.ReadString('\n')
 	if err != nil && !errors.Is(err, io.EOF) {
@@ -289,6 +289,10 @@ func confirmAgentUse(agent *AgentInfo, autoYes bool) bool {
 	}
 
 	response := strings.TrimSpace(strings.ToLower(userResponse))
+	// Default to yes if user just presses enter (empty response)
+	if response == "" {
+		return true
+	}
 	return response == "y" || response == "yes"
 }
 
