@@ -39,6 +39,8 @@ coverage.*
 /release/**/*.egg-info/
 /release/**/*.tgz
 /release/**/README.md
+!/release/npm/README.md
+!/release/pypi/README.md
 
 # Dependencies
 /vendor/
