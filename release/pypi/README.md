@@ -36,7 +36,7 @@ AI-Rulez provides **proactive development governance** with a single `ai-rulez.y
 
 <p align="center">
   <img src="docs/assets/ai-rulez-python-demo.gif" alt="AI-Rulez Configuration Demo" width="100%">
-  <br><em>📝 Configuration Management (via npx ai-rulez)</em>
+  <br><em>📝 Configuration Management (via uvx ai-rulez@latest)</em>
 </p>
 
 <p align="center">
@@ -61,7 +61,7 @@ Write once, deploy everywhere with intelligent AI-powered project analysis:
 
 ```bash
 # AI analyzes your codebase and generates tailored config
-npx ai-rulez init "My Project" --preset popular
+uvx ai-rulez@latest init "My Project" --preset popular
 ```
 
 **Features:**
@@ -152,10 +152,10 @@ Run `ai-rulez generate` → get all your configuration files, perfectly synchron
 ### 📋 Configuration Management
 ```bash
 # 1. AI-powered project analysis and setup
-npx ai-rulez@latest init "My Project" --preset popular
+uvx ai-rulez@latest init "My Project" --preset popular
 
 # 2. Generate all AI tool configuration files
-npx ai-rulez@latest generate
+uvx ai-rulez@latest generate
 
 # 3. Your AI tools now have comprehensive, project-specific context!
 ```
@@ -470,9 +470,9 @@ Choose your installation method based on your primary use case:
 
 **For Configuration Management** (project setup, file generation):
 ```bash
-# Node.js - Best for web/JS projects
-npx ai-rulez@latest init "My Project" --preset popular
-npx ai-rulez@latest generate
+# Python - Works anywhere with uv
+uvx ai-rulez@latest init "My Project" --preset popular
+uvx ai-rulez@latest generate
 ```
 
 **For Rule Enforcement** (AI-powered validation):
@@ -491,6 +491,11 @@ go run github.com/Goldziher/ai-rulez/cmd@latest init
 
 For teams and frequent usage:
 
+**pip (Best for Python teams)**
+```bash
+pip install ai-rulez
+```
+
 **Homebrew (Recommended for macOS/Linux)**
 ```bash
 brew install goldziher/tap/ai-rulez
@@ -501,11 +506,6 @@ ai-rulez enforce --agent claude
 **npm (Best for Node.js teams)**
 ```bash
 npm install -g ai-rulez
-```
-
-**pip (Best for Python teams)**
-```bash
-pip install ai-rulez
 ```
 
 **Go (For Go developers)**
