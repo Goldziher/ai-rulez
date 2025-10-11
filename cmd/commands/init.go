@@ -90,9 +90,9 @@ func runInit(cmd *cobra.Command, args []string) {
 
 	checkExistingConfig()
 	projectName := getProjectName(args)
-	providerConfig := parseProviderFlags(cmd)
+	providerConfig, providersExplicit := parseProviderFlags(cmd)
 
-	if tryAgentGeneration(cmd, projectName, providerConfig) {
+	if tryAgentGeneration(cmd, projectName, providerConfig, providersExplicit) {
 		handleGitignoreUpdateForInit()
 		return
 	}
@@ -195,14 +195,14 @@ func getProjectName(args []string) string {
 	return projectName
 }
 
-func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig templates.ProviderConfig) bool {
+func tryAgentGeneration(cmd *cobra.Command, projectName string, providerConfig templates.ProviderConfig, providersExplicit bool) bool {
 	if !noAgent && (useAgent != "" || agents.ShouldPromptForAgent()) {
 		// Pass preset information to agent generation
 		var presets []string
 		if shouldUsePresets(providerConfig) {
 			presets = getPresetsFromProviderConfig(providerConfig)
 		}
-		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, presets, useAgent, autoYes)
+		_, handled := agents.HandleAgentGenerationWithChain(cmd, projectName, providerConfig, presets, useAgent, providersExplicit, autoYes)
 		if handled {
 			fmt.Println("✅ Configuration generated with AI assistance")
 			return true
@@ -308,20 +308,22 @@ func displayNextSteps() {
 	}
 }
 
-func parseProviderFlags(cmd *cobra.Command) templates.ProviderConfig {
+func parseProviderFlags(cmd *cobra.Command) (templates.ProviderConfig, bool) {
 	if preset != "" {
-		return parsePresetFlag()
+		return parsePresetFlag(), true
 	}
 
 	if allProviders {
-		return parseAllProvidersFlag()
+		return parseAllProvidersFlag(), true
 	}
 
 	if popularProviders {
-		return parsePopularProvidersFlag()
+		return parsePopularProvidersFlag(), true
 	}
 
-	return parseIndividualFlags(cmd)
+	pc := parseIndividualFlags(cmd)
+	explicit := claudeFlag || !isDefaultProviderConfig(pc)
+	return pc, explicit
 }
 
 func parsePresetFlag() templates.ProviderConfig {
@@ -395,6 +397,20 @@ func parseIndividualFlags(cmd *cobra.Command) templates.ProviderConfig {
 	}
 
 	return pc
+}
+
+func isDefaultProviderConfig(pc templates.ProviderConfig) bool {
+	return pc.Claude &&
+		!pc.Cursor &&
+		!pc.Windsurf &&
+		!pc.Copilot &&
+		!pc.Gemini &&
+		!pc.Amp &&
+		!pc.Codex &&
+		!pc.Opencode &&
+		!pc.Cline &&
+		!pc.ContinueDev &&
+		!pc.Junie
 }
 
 func handleHooksSetup() {
