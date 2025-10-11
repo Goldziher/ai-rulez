@@ -214,3 +214,86 @@ go 1.21`
 		})
 	}
 }
+
+func TestSelectAgentUsesConfiguredAgentWhenSingleMatch(t *testing.T) {
+	dir := t.TempDir()
+	createDummyCommand(t, dir, "codex")
+	t.Setenv("PATH", dir)
+
+	selected := selectAgent("", templates.ProviderConfig{Codex: true}, true, true)
+	require.NotNil(t, selected)
+	assert.Equal(t, "codex", selected.ID)
+}
+
+func TestSelectAgentPromptsWhenMultipleMatches(t *testing.T) {
+	dir := t.TempDir()
+	createDummyCommand(t, dir, "amp")
+	createDummyCommand(t, dir, "gemini")
+	t.Setenv("PATH", dir)
+
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+
+	originalStdin := os.Stdin
+	os.Stdin = r
+	defer func() {
+		os.Stdin = originalStdin
+	}()
+
+	go func() {
+		_, _ = w.Write([]byte("2\n"))
+		_ = w.Close()
+	}()
+
+	selected := selectAgent("", templates.ProviderConfig{Amp: true, Gemini: true}, true, false)
+	require.NotNil(t, selected)
+	assert.Equal(t, "gemini", selected.ID)
+}
+
+func TestSelectAgentAutoYesDefaultsToFirstOption(t *testing.T) {
+	dir := t.TempDir()
+	createDummyCommand(t, dir, "amp")
+	createDummyCommand(t, dir, "gemini")
+	t.Setenv("PATH", dir)
+
+	selected := selectAgent("", templates.ProviderConfig{Amp: true, Gemini: true}, true, true)
+	require.NotNil(t, selected)
+	assert.Equal(t, "amp", selected.ID)
+}
+
+func TestSelectAgentPromptsWhenProvidersInferred(t *testing.T) {
+	dir := t.TempDir()
+	createDummyCommand(t, dir, "claude")
+	createDummyCommand(t, dir, "cursor-agent")
+	t.Setenv("PATH", dir)
+
+	r, w, err := os.Pipe()
+	require.NoError(t, err)
+
+	originalStdin := os.Stdin
+	os.Stdin = r
+	defer func() {
+		os.Stdin = originalStdin
+	}()
+
+	go func() {
+		_, _ = w.Write([]byte("2\n"))
+		_ = w.Close()
+	}()
+
+	config := templates.ProviderConfig{Claude: true}
+
+	selected := selectAgent("", config, false, false)
+	require.NotNil(t, selected)
+	assert.Equal(t, "cursor", selected.ID)
+}
+
+func createDummyCommand(t *testing.T, dir, name string) {
+	t.Helper()
+
+	path := filepath.Join(dir, name)
+	script := []byte("#!/bin/sh\nexit 0\n")
+
+	err := os.WriteFile(path, script, 0o755)
+	require.NoError(t, err)
+}
