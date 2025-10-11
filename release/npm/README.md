@@ -41,7 +41,7 @@ AI-Rulez provides **proactive development governance** with a single `ai-rulez.y
 
 <p align="center">
   <img src="docs/assets/ai-rulez-enforce-demo.gif" alt="AI-Rulez Enforcement Demo" width="100%">
-  <br><em>🤖 AI-Powered Rule Enforcement (via uvx ai-rulez@latest)</em>
+  <br><em>🤖 AI-Powered Rule Enforcement (via npx ai-rulez@latest)</em>
 </p>
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
@@ -77,13 +77,13 @@ Real-time governance with automated fixes using multiple AI agents:
 
 ```bash
 # Check for violations with AI analysis
-uvx ai-rulez@latest enforce --agent claude
+npx ai-rulez@latest enforce --agent claude
 
 # Automatically apply fixes
-uvx ai-rulez@latest enforce --agent claude --fix
+npx ai-rulez@latest enforce --agent claude --fix
 
 # Multi-agent review workflow
-uvx ai-rulez@latest enforce --agent gemini --review --review-agent claude
+npx ai-rulez@latest enforce --agent gemini --review --review-agent claude
 ```
 
 **Features:**
@@ -163,16 +163,16 @@ npx ai-rulez@latest generate
 ### 🤖 AI-Powered Rule Enforcement
 ```bash
 # 1. Check for rule violations
-uvx ai-rulez@latest enforce --agent claude --format table
+npx ai-rulez@latest enforce --agent claude --format table
 
 # 2. Get detailed analysis and suggestions
-uvx ai-rulez@latest enforce --agent claude --format json
+npx ai-rulez@latest enforce --agent claude --format json
 
 # 3. Apply automatic fixes
-uvx ai-rulez@latest enforce --agent claude --fix
+npx ai-rulez@latest enforce --agent claude --fix
 
 # 4. Set up review workflow
-uvx ai-rulez@latest enforce --agent claude --review --review-iterations 2
+npx ai-rulez@latest enforce --agent claude --review --review-iterations 2
 ```
 
 **That's it!** You now have both intelligent configuration management AND real-time rule enforcement powered by AI.
@@ -477,9 +477,9 @@ npx ai-rulez@latest generate
 
 **For Rule Enforcement** (AI-powered validation):
 ```bash
-# Python - Latest features, fastest updates
-uvx ai-rulez@latest enforce --agent claude --fix
-uvx ai-rulez@latest enforce --agent gemini --review
+# Node.js - Works cross-platform
+npx ai-rulez@latest enforce --agent claude --fix
+npx ai-rulez@latest enforce --agent gemini --review
 ```
 
 **For Go Projects**:
@@ -491,16 +491,16 @@ go run github.com/Goldziher/ai-rulez/cmd@latest init
 
 For teams and frequent usage:
 
+**npm (Best for Node.js teams)**
+```bash
+npm install -g ai-rulez
+```
+
 **Homebrew (Recommended for macOS/Linux)**
 ```bash
 brew install goldziher/tap/ai-rulez
 ai-rulez init "My Project"
 ai-rulez enforce --agent claude
-```
-
-**npm (Best for Node.js teams)**
-```bash
-npm install -g ai-rulez
 ```
 
 **pip (Best for Python teams)**

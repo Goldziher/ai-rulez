@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,9 +17,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const (
-	claudeAgentID = "claude"
-)
+const claudeAgentID = "claude"
 
 type AgentInfo struct {
 	ID      string
@@ -120,7 +119,12 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	if err != nil {
 		logger.Warn("Failed to read stderr", "error", err.Error())
 	} else if len(stderrOutput) > 0 {
-		logger.Warn("Agent stderr", "output", string(stderrOutput))
+		filtered := filterAgentStderr(string(stderrOutput))
+		if filtered != "" {
+			logger.Warn("Agent stderr", "output", filtered)
+		} else {
+			logger.Debug("Agent stderr suppressed", "agent", agent.ID)
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -172,36 +176,8 @@ func ShouldPromptForAgent() bool {
 	return len(available) > 0
 }
 
-func getPreferredAgent(config templates.ProviderConfig) string {
-	enabledCount := 0
-	var lastEnabled string
-
-	if config.Claude {
-		enabledCount++
-		lastEnabled = claudeAgentID
-	}
-	if config.Gemini {
-		enabledCount++
-		lastEnabled = "gemini"
-	}
-	if config.Amp {
-		enabledCount++
-		lastEnabled = "amp"
-	}
-	if config.ContinueDev {
-		enabledCount++
-		lastEnabled = "continue-dev"
-	}
-
-	if enabledCount == 1 {
-		return lastEnabled
-	}
-
-	return claudeAgentID
-}
-
-func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string, autoYes bool) (string, bool) {
-	selectedAgent := selectAgent(useAgent, config)
+func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templates.ProviderConfig, useAgent string, providersExplicit bool, autoYes bool) (string, bool) {
+	selectedAgent := selectAgent(useAgent, config, providersExplicit, autoYes)
 	if selectedAgent == nil {
 		return "", false
 	}
@@ -222,8 +198,8 @@ func HandleAgentGeneration(cmd *cobra.Command, projectName string, config templa
 	return processAgentOutput(result, selectedAgent.ID)
 }
 
-func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, config templates.ProviderConfig, presets []string, useAgent string, autoYes bool) (string, bool) {
-	selectedAgent := selectAgent(useAgent, config)
+func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, config templates.ProviderConfig, presets []string, useAgent string, providersExplicit bool, autoYes bool) (string, bool) {
+	selectedAgent := selectAgent(useAgent, config, providersExplicit, autoYes)
 	if selectedAgent == nil {
 		return "", false
 	}
@@ -243,7 +219,7 @@ func HandleAgentGenerationWithChain(cmd *cobra.Command, projectName string, conf
 	return result, true
 }
 
-func selectAgent(useAgent string, config templates.ProviderConfig) *AgentInfo {
+func selectAgent(useAgent string, config templates.ProviderConfig, providersExplicit bool, autoYes bool) *AgentInfo {
 	if useAgent != "" {
 		agent, err := getAgentByID(useAgent)
 		if err != nil {
@@ -258,20 +234,21 @@ func selectAgent(useAgent string, config templates.ProviderConfig) *AgentInfo {
 		return nil
 	}
 
-	preferredAgent := getPreferredAgent(config)
-	for i := range available {
-		if available[i].ID == preferredAgent {
-			return &available[i]
-		}
+	matching := filterAgentsByConfig(available, config)
+
+	candidates := matching
+	if len(candidates) == 0 || (!providersExplicit && len(candidates) == 1 && len(available) > 1) {
+		candidates = available
 	}
 
-	for i := range available {
-		if available[i].ID == claudeAgentID {
-			return &available[i]
-		}
+	switch len(candidates) {
+	case 0:
+		return nil
+	case 1:
+		return &candidates[0]
+	default:
+		return promptForAgentSelection(candidates, autoYes)
 	}
-
-	return &available[0]
 }
 
 func confirmAgentUse(agent *AgentInfo, autoYes bool) bool {
@@ -294,6 +271,108 @@ func confirmAgentUse(agent *AgentInfo, autoYes bool) bool {
 		return true
 	}
 	return response == "y" || response == "yes"
+}
+
+func filterAgentsByConfig(available []AgentInfo, config templates.ProviderConfig) []AgentInfo {
+	desired := configuredAgentIDs(config)
+	if len(desired) == 0 {
+		return nil
+	}
+
+	desiredSet := make(map[string]struct{}, len(desired))
+	for _, id := range desired {
+		desiredSet[id] = struct{}{}
+	}
+
+	var filtered []AgentInfo
+	for _, agent := range available {
+		if _, ok := desiredSet[agent.ID]; ok {
+			filtered = append(filtered, agent)
+		}
+	}
+	return filtered
+}
+
+func configuredAgentIDs(config templates.ProviderConfig) []string { //nolint:cyclop // small mapping helper
+	ids := make([]string, 0, 5)
+	if config.Claude {
+		ids = append(ids, claudeAgentID)
+	}
+	if config.Gemini {
+		ids = append(ids, "gemini")
+	}
+	if config.Amp {
+		ids = append(ids, "amp")
+	}
+	if config.Codex {
+		ids = append(ids, "codex")
+	}
+	if config.Cursor {
+		ids = append(ids, "cursor")
+	}
+	if config.ContinueDev {
+		ids = append(ids, "continue-dev")
+	}
+	return ids
+}
+
+func promptForAgentSelection(options []AgentInfo, autoYes bool) *AgentInfo {
+	if len(options) == 0 {
+		return nil
+	}
+
+	if len(options) == 1 {
+		return &options[0]
+	}
+
+	if autoYes {
+		logger.Info("🤖 Multiple AI agents detected. Automatically selecting first option (--yes)", "agent", options[0].ID)
+		return &options[0]
+	}
+
+	logger.Info("🤖 Multiple AI agents detected. Select one to generate your configuration:")
+	for idx, agent := range options {
+		logger.Info(fmt.Sprintf("  %d) %s", idx+1, agent.Display))
+	}
+	fmt.Print("Enter choice (default 1): ")
+
+	reader := bufio.NewReader(os.Stdin)
+	input, err := reader.ReadString('\n')
+	if err != nil && !errors.Is(err, io.EOF) {
+		logger.Warn("Failed to read agent selection, defaulting to first option", "error", err)
+		return &options[0]
+	}
+
+	choice := strings.TrimSpace(input)
+	if choice == "" {
+		return &options[0]
+	}
+
+	selectedIndex, err := strconv.Atoi(choice)
+	if err != nil || selectedIndex < 1 || selectedIndex > len(options) {
+		logger.Warn("Invalid agent selection, defaulting to first option", "input", choice)
+		return &options[0]
+	}
+
+	return &options[selectedIndex-1]
+}
+
+func filterAgentStderr(output string) string {
+	lines := strings.Split(output, "\n")
+	filtered := make([]string, 0, len(lines))
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" {
+			continue
+		}
+		if trimmed == "Error: stdout is not a terminal" {
+			continue
+		}
+		filtered = append(filtered, line)
+	}
+
+	return strings.Join(filtered, "\n")
 }
 
 func processAgentOutput(result string, agentID string) (string, bool) {
