@@ -149,7 +149,7 @@ func TestGenerator_CustomTemplate(t *testing.T) {
 	require.NoError(t, err)
 
 	contentStr := string(content)
-	assert.Contains(t, contentStr, "🤖 GENERATED FILE - DO NOT EDIT DIRECTLY")
+	assert.Contains(t, contentStr, "🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY")
 	assert.Contains(t, contentStr, "Custom: Custom Template Test has 1 rules")
 }
 
@@ -369,13 +369,13 @@ func TestGenerator_HeaderGeneration(t *testing.T) {
 	contentStr := string(content)
 
 	expectedHeaderContent := []string{
-		"<!-- ",
-		"🤖 GENERATED FILE - DO NOT EDIT DIRECTLY",
-		"test-config.yaml",
-		"test.md",
-		"DO NOT modify this file directly",
-		"TO UPDATE RULES:",
-		"ai-rulez generate",
+		"<!--",
+		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
+		"Source of truth: test-config.yaml",
+		"Target file: test.md",
+		"UPDATE WORKFLOW",
+		"AI ASSISTANT SAFEGUARDS",
+		"Need help? /capability-plan",
 		"https://github.com/Goldziher/ai-rulez",
 		"-->",
 	}
@@ -416,7 +416,7 @@ func TestGenerator_HeaderInPreview(t *testing.T) {
 	content, err := gen.PreviewOutput(cfg, outputFile)
 	require.NoError(t, err)
 
-	assert.Contains(t, content, "🤖 GENERATED FILE - DO NOT EDIT DIRECTLY")
+	assert.Contains(t, content, "🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY")
 	assert.Contains(t, content, "preview-config.yaml")
 	assert.Contains(t, content, "preview.md")
 	assert.Contains(t, content, "# Preview Test")

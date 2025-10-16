@@ -1,11 +1,12 @@
 package commands
 
 import (
+	"context"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/mcp"
-	"github.com/mark3labs/mcp-go/server"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
@@ -25,7 +26,7 @@ with AI assistants that support the Model Context Protocol.`,
 func runMCPServer(cmd *cobra.Command, args []string) {
 	srv := mcp.NewServer(Version)
 
-	if err := server.ServeStdio(srv.GetMCPServer()); err != nil {
+	if err := srv.GetMCPServer().Run(context.Background(), &sdkmcp.StdioTransport{}); err != nil {
 		fmtError(oops.Wrapf(err, "MCP: start MCP server"))
 		os.Exit(1)
 	}

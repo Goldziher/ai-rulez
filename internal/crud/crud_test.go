@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/mark3labs/mcp-go/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -42,7 +42,7 @@ func TestHandleGet(t *testing.T) {
 	result, err := HandleGet(context.Background(), "rules", "Rule 1", testConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Contains(t, result.Content[0].(mcp.TextContent).Text, "Rule 1")
+	assert.Contains(t, result.Content[0].(*sdkmcp.TextContent).Text, "Rule 1")
 }
 
 func TestHandleGet_NotFound(t *testing.T) {
@@ -56,7 +56,7 @@ func TestHandleList(t *testing.T) {
 	result, err := HandleList(context.Background(), "rules", testConfig)
 	assert.NoError(t, err)
 	assert.NotNil(t, result)
-	assert.Contains(t, result.Content[0].(mcp.TextContent).Text, "Rule 1")
+	assert.Contains(t, result.Content[0].(*sdkmcp.TextContent).Text, "Rule 1")
 }
 
 func TestHandleUpdate(t *testing.T) {
@@ -94,7 +94,7 @@ func TestSingletonGetSetDelete(t *testing.T) {
 	setup()
 	getResult, err := HandleGet(context.Background(), "metadata", "", testConfig)
 	assert.NoError(t, err)
-	assert.Contains(t, getResult.Content[0].(mcp.TextContent).Text, "Test Project")
+	assert.Contains(t, getResult.Content[0].(*sdkmcp.TextContent).Text, "Test Project")
 
 	updates := map[string]interface{}{"Name": "New Project Name"}
 	_, err = HandleUpdate(context.Background(), "metadata", "", updates, testConfig)

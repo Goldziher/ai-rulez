@@ -1,9 +1,133 @@
 package mcp
 
 import (
+	"context"
+
 	"github.com/Goldziher/ai-rulez/internal/mcp/handlers"
-	"github.com/mark3labs/mcp-go/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type handlerFunc func(context.Context, *handlers.ToolRequest) (*sdkmcp.CallToolResult, error)
+
+type toolSchemaBuilder struct {
+	properties map[string]any
+	required   []string
+}
+
+func newSchemaBuilder() *toolSchemaBuilder {
+	return &toolSchemaBuilder{
+		properties: map[string]any{},
+	}
+}
+
+func (b *toolSchemaBuilder) String(name, description string, required bool) *toolSchemaBuilder {
+	prop := map[string]any{
+		"type": "string",
+	}
+	if description != "" {
+		prop["description"] = description
+	}
+	b.properties[name] = prop
+	if required {
+		b.required = append(b.required, name)
+	}
+	return b
+}
+
+func (b *toolSchemaBuilder) StringArray(name, description string, required bool) *toolSchemaBuilder {
+	prop := map[string]any{
+		"type":  "array",
+		"items": map[string]any{"type": "string"},
+	}
+	if description != "" {
+		prop["description"] = description
+	}
+	b.properties[name] = prop
+	if required {
+		b.required = append(b.required, name)
+	}
+	return b
+}
+
+func (b *toolSchemaBuilder) Boolean(name, description string, required bool) *toolSchemaBuilder {
+	prop := map[string]any{
+		"type": "boolean",
+	}
+	if description != "" {
+		prop["description"] = description
+	}
+	b.properties[name] = prop
+	if required {
+		b.required = append(b.required, name)
+	}
+	return b
+}
+
+func (b *toolSchemaBuilder) Number(name, description string, required bool) *toolSchemaBuilder {
+	prop := map[string]any{
+		"type": "number",
+	}
+	if description != "" {
+		prop["description"] = description
+	}
+	b.properties[name] = prop
+	if required {
+		b.required = append(b.required, name)
+	}
+	return b
+}
+
+func (b *toolSchemaBuilder) Object(name, description string, required bool) *toolSchemaBuilder {
+	prop := map[string]any{
+		"type":                 "object",
+		"additionalProperties": map[string]any{"type": "string"},
+	}
+	if description != "" {
+		prop["description"] = description
+	}
+	b.properties[name] = prop
+	if required {
+		b.required = append(b.required, name)
+	}
+	return b
+}
+
+func (b *toolSchemaBuilder) Build() map[string]any {
+	schema := map[string]any{
+		"type":       "object",
+		"properties": b.properties,
+	}
+	if len(b.required) > 0 {
+		schema["required"] = b.required
+	}
+	return schema
+}
+
+func newTool(name, description string, builder *toolSchemaBuilder) *sdkmcp.Tool {
+	var schema map[string]any
+	if builder != nil {
+		schema = builder.Build()
+	} else {
+		schema = newSchemaBuilder().Build()
+	}
+	return &sdkmcp.Tool{
+		Name:        name,
+		Description: description,
+		InputSchema: schema,
+	}
+}
+
+func (s *Server) addTool(tool *sdkmcp.Tool, handler handlerFunc) {
+	if tool.InputSchema == nil {
+		tool.InputSchema = newSchemaBuilder().Build()
+	}
+
+	sdkmcp.AddTool(s.mcpServer, tool, func(ctx context.Context, req *sdkmcp.CallToolRequest, input map[string]any) (*sdkmcp.CallToolResult, any, error) {
+		wrapper := handlers.NewToolRequest(req, input)
+		res, err := handler(ctx, wrapper)
+		return res, nil, err
+	})
+}
 
 func (s *Server) registerTools() {
 	s.registerRulesTools()
@@ -19,471 +143,451 @@ func (s *Server) registerTools() {
 }
 
 func (s *Server) registerRulesTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("list_rules",
-			mcp.WithDescription("List all rules from the configuration"),
-		),
+	s.addTool(
+		newTool("list_rules", "List all rules from the configuration", nil),
 		handlers.ListRulesHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_rule",
-			mcp.WithDescription("Get a specific rule by name"),
-			mcp.WithString("name",
-				mcp.Description("The name of the rule to retrieve"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("get_rule", "Get a specific rule by name",
+			newSchemaBuilder().
+				String("name", "The name of the rule to retrieve", true),
 		),
 		handlers.GetRuleHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_rule",
-			mcp.WithDescription("Add a new rule to the configuration"),
-			mcp.WithString("name", mcp.Description("The rule name"), mcp.Required()),
-			mcp.WithString("content", mcp.Description("The rule content"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("Optional unique identifier for the rule")),
-			mcp.WithString("priority", mcp.Description("Rule priority (critical, high, medium, low, minimal)")),
-			mcp.WithArray("targets", mcp.Description("List of output targets for this rule")),
+	s.addTool(
+		newTool("add_rule", "Add a new rule to the configuration",
+			newSchemaBuilder().
+				String("name", "The rule name", true).
+				String("content", "The rule content", true).
+				String("id", "Optional unique identifier for the rule", false).
+				String("priority", "Rule priority (critical, high, medium, low, minimal)", false).
+				StringArray("targets", "List of output targets for this rule", false),
 		),
 		handlers.AddRuleHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("update_rule",
-			mcp.WithDescription("Update an existing rule"),
-			mcp.WithString("name", mcp.Description("The current name of the rule to update"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("New unique identifier for the rule")),
-			mcp.WithString("new_name", mcp.Description("New name for the rule")),
-			mcp.WithString("content", mcp.Description("New content for the rule")),
-			mcp.WithString("priority", mcp.Description("New priority for the rule")),
-			mcp.WithArray("targets", mcp.Description("New list of output targets")),
+	s.addTool(
+		newTool("update_rule", "Update an existing rule",
+			newSchemaBuilder().
+				String("name", "The current name of the rule to update", true).
+				String("id", "New unique identifier for the rule", false).
+				String("new_name", "New name for the rule", false).
+				String("content", "New content for the rule", false).
+				String("priority", "New priority for the rule", false).
+				StringArray("targets", "New list of output targets", false),
 		),
 		handlers.UpdateRuleHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_rule",
-			mcp.WithDescription("Delete a rule from the configuration"),
-			mcp.WithString("name",
-				mcp.Description("The name of the rule to delete"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("delete_rule", "Delete a rule from the configuration",
+			newSchemaBuilder().
+				String("name", "The name of the rule to delete", true),
 		),
 		handlers.DeleteRuleHandler,
 	)
 }
 
 func (s *Server) registerSectionsTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("list_sections",
-			mcp.WithDescription("List all sections from the configuration"),
-		),
+	s.addTool(
+		newTool("list_sections", "List all sections from the configuration", nil),
 		handlers.ListSectionsHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_section",
-			mcp.WithDescription("Get a specific section by name"),
-			mcp.WithString("name",
-				mcp.Description("The name of the section to retrieve"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("get_section", "Get a specific section by name",
+			newSchemaBuilder().
+				String("name", "The name of the section to retrieve", true),
 		),
 		handlers.GetSectionHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_section",
-			mcp.WithDescription("Add a new section to the configuration"),
-			mcp.WithString("name", mcp.Description("The section name"), mcp.Required()),
-			mcp.WithString("content", mcp.Description("The section content"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("Optional unique identifier for the section")),
-			mcp.WithString("priority", mcp.Description("Section priority (critical, high, medium, low, minimal)")),
-			mcp.WithArray("targets", mcp.Description("List of output targets for this section")),
+	s.addTool(
+		newTool("add_section", "Add a new section to the configuration",
+			newSchemaBuilder().
+				String("name", "The section name", true).
+				String("content", "The section content", true).
+				String("id", "Optional unique identifier for the section", false).
+				String("priority", "Section priority (critical, high, medium, low, minimal)", false).
+				StringArray("targets", "List of output targets for this section", false),
 		),
 		handlers.AddSectionHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("update_section",
-			mcp.WithDescription("Update an existing section"),
-			mcp.WithString("name", mcp.Description("The current name of the section to update"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("New unique identifier for the section")),
-			mcp.WithString("new_name", mcp.Description("New name for the section")),
-			mcp.WithString("content", mcp.Description("New content for the section")),
-			mcp.WithString("priority", mcp.Description("New priority for the section")),
-			mcp.WithArray("targets", mcp.Description("New list of output targets")),
+	s.addTool(
+		newTool("update_section", "Update an existing section",
+			newSchemaBuilder().
+				String("name", "The current name of the section to update", true).
+				String("id", "New unique identifier for the section", false).
+				String("new_name", "New name for the section", false).
+				String("content", "New content for the section", false).
+				String("priority", "New priority for the section", false).
+				StringArray("targets", "New list of output targets", false),
 		),
 		handlers.UpdateSectionHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_section",
-			mcp.WithDescription("Delete a section from the configuration"),
-			mcp.WithString("name",
-				mcp.Description("The name of the section to delete"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("delete_section", "Delete a section from the configuration",
+			newSchemaBuilder().
+				String("name", "The name of the section to delete", true),
 		),
 		handlers.DeleteSectionHandler,
 	)
 }
 
 func (s *Server) registerAgentsTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("list_agents",
-			mcp.WithDescription("List all agents from the configuration"),
-		),
+	s.addTool(
+		newTool("list_agents", "List all agents from the configuration", nil),
 		handlers.ListAgentsHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_agent",
-			mcp.WithDescription("Get a specific agent by name"),
-			mcp.WithString("name",
-				mcp.Description("The name of the agent to retrieve"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("get_agent", "Get a specific agent by name",
+			newSchemaBuilder().
+				String("name", "The name of the agent to retrieve", true),
 		),
 		handlers.GetAgentHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_agent",
-			mcp.WithDescription("Add a new agent to the configuration"),
-			mcp.WithString("name", mcp.Description("The agent name"), mcp.Required()),
-			mcp.WithString("description", mcp.Description("Agent description"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("Optional unique identifier for the agent")),
-			mcp.WithString("priority", mcp.Description("Agent priority (critical, high, medium, low, minimal)")),
-			mcp.WithArray("tools", mcp.Description("List of tools available to the agent")),
-			mcp.WithString("system_prompt", mcp.Description("System prompt for the agent")),
-			mcp.WithString("template_type", mcp.Description("Template type: builtin, file, or inline")),
-			mcp.WithString("template_value", mcp.Description("Template value (name, path, or content)")),
-			mcp.WithArray("targets", mcp.Description("List of output targets for this agent")),
+	s.addTool(
+		newTool("add_agent", "Add a new agent to the configuration",
+			newSchemaBuilder().
+				String("name", "The agent name", true).
+				String("description", "Agent description", true).
+				String("id", "Optional unique identifier for the agent", false).
+				String("priority", "Agent priority (critical, high, medium, low, minimal)", false).
+				StringArray("tools", "List of tools available to the agent", false).
+				String("model", "Optional model identifier for this agent", false).
+				String("system_prompt", "System prompt for the agent", false).
+				String("template_type", "Template type: builtin, file, or inline", false).
+				String("template_value", "Template value (name, path, or content)", false).
+				StringArray("targets", "List of output targets for this agent", false),
 		),
 		handlers.AddAgentHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("update_agent",
-			mcp.WithDescription("Update an existing agent"),
-			mcp.WithString("name", mcp.Description("The current name of the agent to update"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("New unique identifier for the agent")),
-			mcp.WithString("new_name", mcp.Description("New name for the agent")),
-			mcp.WithString("description", mcp.Description("New description for the agent")),
-			mcp.WithString("priority", mcp.Description("New priority for the agent")),
-			mcp.WithArray("tools", mcp.Description("New list of tools")),
-			mcp.WithString("system_prompt", mcp.Description("New system prompt for the agent")),
-			mcp.WithString("template_type", mcp.Description("New template type for the agent")),
-			mcp.WithString("template_value", mcp.Description("New template value for the agent")),
-			mcp.WithArray("targets", mcp.Description("New list of output targets")),
+	s.addTool(
+		newTool("update_agent", "Update an existing agent",
+			newSchemaBuilder().
+				String("name", "The current name of the agent to update", true).
+				String("id", "New unique identifier for the agent", false).
+				String("new_name", "New name for the agent", false).
+				String("description", "New description for the agent", false).
+				String("priority", "New priority for the agent", false).
+				StringArray("tools", "New list of tools", false).
+				String("model", "New model identifier for this agent", false).
+				String("system_prompt", "New system prompt for the agent", false).
+				String("template_type", "New template type for the agent", false).
+				String("template_value", "New template value for the agent", false).
+				StringArray("targets", "New list of output targets", false),
 		),
 		handlers.UpdateAgentHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_agent",
-			mcp.WithDescription("Delete an agent from the configuration"),
-			mcp.WithString("name",
-				mcp.Description("The name of the agent to delete"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("delete_agent", "Delete an agent from the configuration",
+			newSchemaBuilder().
+				String("name", "The name of the agent to delete", true),
 		),
 		handlers.DeleteAgentHandler,
 	)
 }
 
 func (s *Server) registerOutputsTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("list_outputs",
-			mcp.WithDescription("List all outputs from the configuration"),
-		),
+	s.addTool(
+		newTool("list_outputs", "List all outputs from the configuration", nil),
 		handlers.ListOutputsHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_output",
-			mcp.WithDescription("Get a specific output by path"),
-			mcp.WithString("path",
-				mcp.Description("The path of the output to retrieve"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("get_output", "Get a specific output by path",
+			newSchemaBuilder().
+				String("path", "The path of the output to retrieve", true),
 		),
 		handlers.GetOutputHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_output",
-			mcp.WithDescription("Add a new output to the configuration"),
-			mcp.WithString("path", mcp.Description("The output path"), mcp.Required()),
-			mcp.WithString("type", mcp.Description("The type of content to output (rule, agent)")),
-			mcp.WithString("naming_scheme", mcp.Description("Naming scheme for directory outputs")),
-			mcp.WithString("template_type", mcp.Description("Template type: builtin, file, or inline")),
-			mcp.WithString("template_value", mcp.Description("Template value (name, path, or content)")),
+	s.addTool(
+		newTool("add_output", "Add a new output to the configuration",
+			newSchemaBuilder().
+				String("path", "The output path", true).
+				String("type", "The type of content to output (rule, agent)", false).
+				String("naming_scheme", "Naming scheme for directory outputs", false).
+				String("template_type", "Template type: builtin, file, or inline", false).
+				String("template_value", "Template value (name, path, or content)", false),
 		),
 		handlers.AddOutputHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("update_output",
-			mcp.WithDescription("Update an existing output"),
-			mcp.WithString("path", mcp.Description("The current path of the output to update"), mcp.Required()),
-			mcp.WithString("new_path", mcp.Description("New path for the output")),
-			mcp.WithString("type", mcp.Description("New type for the output")),
-			mcp.WithString("naming_scheme", mcp.Description("New naming scheme for the output")),
-			mcp.WithString("template_type", mcp.Description("New template type for the output")),
-			mcp.WithString("template_value", mcp.Description("New template value for the output")),
+	s.addTool(
+		newTool("update_output", "Update an existing output",
+			newSchemaBuilder().
+				String("path", "The current path of the output to update", true).
+				String("new_path", "New path for the output", false).
+				String("type", "New type for the output", false).
+				String("naming_scheme", "New naming scheme for the output", false).
+				String("template_type", "New template type for the output", false).
+				String("template_value", "New template value for the output", false),
 		),
 		handlers.UpdateOutputHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_output",
-			mcp.WithDescription("Delete an output from the configuration"),
-			mcp.WithString("path",
-				mcp.Description("The path of the output to delete"),
-				mcp.Required(),
-			),
+	s.addTool(
+		newTool("delete_output", "Delete an output from the configuration",
+			newSchemaBuilder().
+				String("path", "The path of the output to delete", true),
 		),
 		handlers.DeleteOutputHandler,
 	)
 }
 
 func (s *Server) registerMCPServersTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("list_mcp_servers", mcp.WithDescription("List all MCP servers")),
+	s.addTool(
+		newTool("list_mcp_servers", "List all MCP servers", nil),
 		handlers.ListMCPServersHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_mcp_server",
-			mcp.WithDescription("Get a specific MCP server by name"),
-			mcp.WithString("name", mcp.Description("The name of the server to retrieve"), mcp.Required()),
+	s.addTool(
+		newTool("get_mcp_server", "Get a specific MCP server by name",
+			newSchemaBuilder().
+				String("name", "The name of the server to retrieve", true),
 		),
 		handlers.GetMCPServerHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_mcp_server",
-			mcp.WithDescription("Add a new MCP server"),
-			mcp.WithString("id", mcp.Description("Optional unique identifier for the server")),
-			mcp.WithString("name", mcp.Description("The server name"), mcp.Required()),
-			mcp.WithString("description", mcp.Description("Optional description")),
-			mcp.WithString("command", mcp.Description("Command to start the server")),
-			mcp.WithArray("args", mcp.Description("Command line arguments")),
-			mcp.WithObject("env", mcp.Description("Environment variables")),
-			mcp.WithString("transport", mcp.Description("Transport protocol (stdio, sse, http)")),
-			mcp.WithString("url", mcp.Description("URL for remote servers")),
-			mcp.WithBoolean("enabled", mcp.Description("Whether the server is enabled")),
-			mcp.WithArray("targets", mcp.Description("List of output targets")),
+	s.addTool(
+		newTool("add_mcp_server", "Add a new MCP server",
+			newSchemaBuilder().
+				String("id", "Optional unique identifier for the server", false).
+				String("name", "The server name", true).
+				String("description", "Optional description", false).
+				String("command", "Command to start the server", false).
+				StringArray("args", "Command line arguments", false).
+				Object("env", "Environment variables", false).
+				String("transport", "Transport protocol (stdio, sse, http)", false).
+				String("url", "URL for remote servers", false).
+				Boolean("enabled", "Whether the server is enabled", false).
+				StringArray("targets", "List of output targets", false),
 		),
 		handlers.AddMCPServerHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("update_mcp_server",
-			mcp.WithDescription("Update an existing MCP server"),
-			mcp.WithString("name", mcp.Description("The name of the server to update"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("New unique identifier for the server")),
-			mcp.WithString("new_name", mcp.Description("New name for the server")),
-			mcp.WithString("description", mcp.Description("New description")),
-			mcp.WithString("command", mcp.Description("New command")),
-			mcp.WithArray("args", mcp.Description("New list of arguments")),
-			mcp.WithObject("env", mcp.Description("New set of environment variables")),
-			mcp.WithString("transport", mcp.Description("New transport protocol")),
-			mcp.WithString("url", mcp.Description("New URL")),
-			mcp.WithBoolean("enabled", mcp.Description("New enabled state")),
-			mcp.WithArray("targets", mcp.Description("New list of targets")),
+	s.addTool(
+		newTool("update_mcp_server", "Update an existing MCP server",
+			newSchemaBuilder().
+				String("name", "The name of the server to update", true).
+				String("id", "New unique identifier for the server", false).
+				String("new_name", "New name for the server", false).
+				String("description", "New description", false).
+				String("command", "New command", false).
+				StringArray("args", "New list of arguments", false).
+				Object("env", "New set of environment variables", false).
+				String("transport", "New transport protocol", false).
+				String("url", "New URL", false).
+				Boolean("enabled", "New enabled state", false).
+				StringArray("targets", "New list of targets", false),
 		),
 		handlers.UpdateMCPServerHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_mcp_server",
-			mcp.WithDescription("Delete an MCP server"),
-			mcp.WithString("name", mcp.Description("The name of the server to delete"), mcp.Required()),
+	s.addTool(
+		newTool("delete_mcp_server", "Delete an MCP server",
+			newSchemaBuilder().
+				String("name", "The name of the server to delete", true),
 		),
 		handlers.DeleteMCPServerHandler,
 	)
 }
 
 func (s *Server) registerCommandsTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("list_commands", mcp.WithDescription("List all custom commands")),
+	s.addTool(
+		newTool("list_commands", "List all custom commands", nil),
 		handlers.ListCommandsHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_command",
-			mcp.WithDescription("Get a specific command by name"),
-			mcp.WithString("name", mcp.Description("The name of the command to retrieve"), mcp.Required()),
+	s.addTool(
+		newTool("get_command", "Get a specific command by name",
+			newSchemaBuilder().
+				String("name", "The name of the command to retrieve", true),
 		),
 		handlers.GetCommandHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_command",
-			mcp.WithDescription("Add a new custom command"),
-			mcp.WithString("id", mcp.Description("Optional unique identifier for the command")),
-			mcp.WithString("name", mcp.Description("The command name"), mcp.Required()),
-			mcp.WithString("description", mcp.Description("Command description"), mcp.Required()),
-			mcp.WithArray("aliases", mcp.Description("Alternative names for the command")),
-			mcp.WithString("usage", mcp.Description("Usage example or pattern")),
-			mcp.WithString("system_prompt", mcp.Description("System prompt for the command")),
-			mcp.WithString("shortcut", mcp.Description("Keyboard shortcut")),
-			mcp.WithBoolean("enabled", mcp.Description("Whether the command is enabled")),
-			mcp.WithArray("targets", mcp.Description("List of output targets")),
+	s.addTool(
+		newTool("add_command", "Add a new custom command",
+			newSchemaBuilder().
+				String("id", "Optional unique identifier for the command", false).
+				String("name", "The command name", true).
+				String("description", "Command description", true).
+				StringArray("aliases", "Alternative names for the command", false).
+				String("usage", "Usage example or pattern", false).
+				String("system_prompt", "System prompt for the command", false).
+				String("shortcut", "Keyboard shortcut", false).
+				Boolean("enabled", "Whether the command is enabled", false).
+				StringArray("targets", "List of output targets", false),
 		),
 		handlers.AddCommandHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("update_command",
-			mcp.WithDescription("Update an existing custom command"),
-			mcp.WithString("name", mcp.Description("The name of the command to update"), mcp.Required()),
-			mcp.WithString("id", mcp.Description("New unique identifier for the command")),
-			mcp.WithString("new_name", mcp.Description("New name for the command")),
-			mcp.WithString("description", mcp.Description("New description")),
-			mcp.WithArray("aliases", mcp.Description("New list of aliases")),
-			mcp.WithString("usage", mcp.Description("New usage example")),
-			mcp.WithString("system_prompt", mcp.Description("New system prompt")),
-			mcp.WithString("shortcut", mcp.Description("New keyboard shortcut")),
-			mcp.WithBoolean("enabled", mcp.Description("New enabled state")),
-			mcp.WithArray("targets", mcp.Description("New list of targets")),
+	s.addTool(
+		newTool("update_command", "Update an existing custom command",
+			newSchemaBuilder().
+				String("name", "The name of the command to update", true).
+				String("id", "New unique identifier for the command", false).
+				String("new_name", "New name for the command", false).
+				String("description", "New description", false).
+				StringArray("aliases", "New list of aliases", false).
+				String("usage", "New usage example", false).
+				String("system_prompt", "New system prompt", false).
+				String("shortcut", "New keyboard shortcut", false).
+				Boolean("enabled", "New enabled state", false).
+				StringArray("targets", "New list of targets", false),
 		),
 		handlers.UpdateCommandHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_command",
-			mcp.WithDescription("Delete a custom command"),
-			mcp.WithString("name", mcp.Description("The name of the command to delete"), mcp.Required()),
+	s.addTool(
+		newTool("delete_command", "Delete a custom command",
+			newSchemaBuilder().
+				String("name", "The name of the command to delete", true),
 		),
 		handlers.DeleteCommandHandler,
 	)
 }
 
 func (s *Server) registerSingletonTools() {
-	s.mcpServer.AddTool(mcp.NewTool("get_metadata", mcp.WithDescription("Get project metadata")),
-		handlers.GetMetadataHandler)
-	s.mcpServer.AddTool(
-		mcp.NewTool("set_metadata",
-			mcp.WithDescription("Set project metadata"),
-			mcp.WithString("name", mcp.Description("New project name")),
-			mcp.WithString("version", mcp.Description("New project version")),
-			mcp.WithString("description", mcp.Description("New project description")),
+	s.addTool(
+		newTool("get_metadata", "Get project metadata", nil),
+		handlers.GetMetadataHandler,
+	)
+
+	s.addTool(
+		newTool("set_metadata", "Set project metadata",
+			newSchemaBuilder().
+				String("name", "New project name", false).
+				String("version", "New project version", false).
+				String("description", "New project description", false),
 		),
 		handlers.SetMetadataHandler,
 	)
 
-	s.mcpServer.AddTool(mcp.NewTool("get_extends", mcp.WithDescription("Get the extends property")),
-		handlers.GetExtendsHandler)
-	s.mcpServer.AddTool(
-		mcp.NewTool("set_extends",
-			mcp.WithDescription("Set the extends property"),
-			mcp.WithString("path_or_url", mcp.Description("Path or URL to a base configuration"), mcp.Required()),
+	s.addTool(
+		newTool("get_extends", "Get the extends property", nil),
+		handlers.GetExtendsHandler,
+	)
+
+	s.addTool(
+		newTool("set_extends", "Set the extends property",
+			newSchemaBuilder().
+				String("path_or_url", "Path or URL to a base configuration", true),
 		),
 		handlers.SetExtendsHandler,
 	)
-	s.mcpServer.AddTool(mcp.NewTool("delete_extends", mcp.WithDescription("Delete the extends property")),
-		handlers.DeleteExtendsHandler)
 
-	s.mcpServer.AddTool(mcp.NewTool("list_includes", mcp.WithDescription("List all include paths")),
-		handlers.ListIncludesHandler)
-	s.mcpServer.AddTool(
-		mcp.NewTool("add_include",
-			mcp.WithDescription("Add an include path"),
-			mcp.WithString("path_or_url", mcp.Description("Path or URL to an ai_rules file to include"), mcp.Required()),
+	s.addTool(
+		newTool("delete_extends", "Delete the extends property", nil),
+		handlers.DeleteExtendsHandler,
+	)
+
+	s.addTool(
+		newTool("list_includes", "List all include paths", nil),
+		handlers.ListIncludesHandler,
+	)
+
+	s.addTool(
+		newTool("add_include", "Add an include path",
+			newSchemaBuilder().
+				String("path_or_url", "Path or URL to an ai_rules file to include", true),
 		),
 		handlers.AddIncludeHandler,
 	)
-	s.mcpServer.AddTool(
-		mcp.NewTool("delete_include",
-			mcp.WithDescription("Delete an include path"),
-			mcp.WithString("path_or_url", mcp.Description("The path or URL to remove from the includes list"), mcp.Required()),
+
+	s.addTool(
+		newTool("delete_include", "Delete an include path",
+			newSchemaBuilder().
+				String("path_or_url", "The path or URL to remove from the includes list", true),
 		),
 		handlers.DeleteIncludeHandler,
 	)
 }
 
 func (s *Server) registerProjectTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("generate_outputs",
-			mcp.WithDescription("Generate output files from the current configuration, respecting includes and extends"),
-			mcp.WithString("config_file", mcp.Description("Path to the root configuration file (optional)")),
+	s.addTool(
+		newTool("generate_outputs", "Generate output files from the current configuration, respecting includes and extends",
+			newSchemaBuilder().
+				String("config_file", "Path to the root configuration file (optional)", false),
 		),
 		handlers.GenerateOutputsHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("validate_config",
-			mcp.WithDescription("Validate the configuration file, including all includes"),
-			mcp.WithString("config_file", mcp.Description("Path to the root configuration file to validate (optional)")),
+	s.addTool(
+		newTool("validate_config", "Validate the configuration file, including all includes",
+			newSchemaBuilder().
+				String("config_file", "Path to the root configuration file to validate (optional)", false),
 		),
 		handlers.ValidateConfigHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("init_project",
-			mcp.WithDescription("Initialize a new ai-rulez project in the current directory"),
-			mcp.WithString("project_name", mcp.Description("The name for the new project")),
-			mcp.WithArray("providers", mcp.Description("A list of providers to enable (e.g., ['claude', 'cursor'])")),
-			mcp.WithBoolean("with_agents", mcp.Description("Include sample agent configurations")),
-			mcp.WithBoolean("all_providers", mcp.Description("Enable all supported providers")),
-			mcp.WithBoolean("popular_providers", mcp.Description("Enable a curated list of popular providers")),
+	s.addTool(
+		newTool("init_project", "Initialize a new ai-rulez project in the current directory",
+			newSchemaBuilder().
+				String("project_name", "The name for the new project", false).
+				StringArray("providers", "A list of providers to enable (e.g., ['claude', 'cursor'])", false).
+				Boolean("with_agents", "Include sample agent configurations", false).
+				Boolean("all_providers", "Enable all supported providers", false).
+				Boolean("popular_providers", "Enable a curated list of popular providers", false),
 		),
 		handlers.InitProjectHandler,
 	)
 }
 
 func (s *Server) registerUtilityTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("get_version",
-			mcp.WithDescription("Get the ai-rulez version"),
-		),
+	s.addTool(
+		newTool("get_version", "Get the ai-rulez version", nil),
 		handlers.GetVersionHandler(s.version),
 	)
 }
 
 func (s *Server) registerEnforcementTools() {
-	s.mcpServer.AddTool(
-		mcp.NewTool("enforce_rules",
-			mcp.WithDescription("Enforce rules using AI agents with optional review feedback loops"),
-			mcp.WithString("config_file", mcp.Description("Path to configuration file (optional)")),
-			mcp.WithString("agent", mcp.Description("AI agent to use (claude, gemini, amp, continue-dev)")),
-			mcp.WithString("level", mcp.Description("Enforcement level (warn, error, fix, strict)")),
-			mcp.WithBoolean("auto_fix", mcp.Description("Automatically apply suggested fixes")),
-			mcp.WithNumber("timeout", mcp.Description("Timeout per file analysis in seconds")),
-			mcp.WithArray("only_rules", mcp.Description("Enforce only these rules")),
-			mcp.WithArray("exclude_rules", mcp.Description("Exclude these rules from enforcement")),
-			mcp.WithArray("include_files", mcp.Description("Include only these file patterns")),
-			mcp.WithArray("exclude_files", mcp.Description("Exclude these file patterns")),
-			mcp.WithNumber("max_violations", mcp.Description("Maximum allowed violations (-1 for unlimited)")),
-			mcp.WithString("output_format", mcp.Description("Output format (table, json, summary, csv)")),
-			mcp.WithBoolean("dry_run", mcp.Description("Show what would be done without applying fixes")),
-			// Review options
-			mcp.WithBoolean("enable_review", mcp.Description("Enable iterative review with feedback loops")),
-			mcp.WithString("review_agent", mcp.Description("Agent for code review (defaults to enforcement agent)")),
-			mcp.WithNumber("review_iterations", mcp.Description("Maximum review iterations")),
-			mcp.WithNumber("review_threshold", mcp.Description("Quality threshold for approval (0-100)")),
-			mcp.WithNumber("review_timeout", mcp.Description("Timeout per review iteration in seconds")),
-			mcp.WithBoolean("review_auto_approve", mcp.Description("Auto-approve regardless of score")),
-			mcp.WithBoolean("require_improvement", mcp.Description("Require iterative improvement in review")),
+	s.addTool(
+		newTool("enforce_rules", "Enforce rules using AI agents with optional review feedback loops",
+			newSchemaBuilder().
+				String("config_file", "Path to configuration file (optional)", false).
+				String("agent", "AI agent to use (claude, gemini, amp, continue-dev)", false).
+				String("level", "Enforcement level (warn, error, fix, strict)", false).
+				Boolean("auto_fix", "Automatically apply suggested fixes", false).
+				Number("timeout", "Timeout per file analysis in seconds", false).
+				StringArray("only_rules", "Enforce only these rules", false).
+				StringArray("exclude_rules", "Exclude these rules from enforcement", false).
+				StringArray("include_files", "Include only these file patterns", false).
+				StringArray("exclude_files", "Exclude these file patterns", false).
+				Number("max_violations", "Maximum allowed violations (-1 for unlimited)", false).
+				String("output_format", "Output format (table, json, summary, csv)", false).
+				Boolean("dry_run", "Show what would be done without applying fixes", false).
+				Boolean("enable_review", "Enable iterative review with feedback loops", false).
+				String("review_agent", "Agent for code review (defaults to enforcement agent)", false).
+				Number("review_iterations", "Maximum review iterations", false).
+				Number("review_threshold", "Quality threshold for approval (0-100)", false).
+				Number("review_timeout", "Timeout per review iteration in seconds", false).
+				Boolean("review_auto_approve", "Auto-approve regardless of score", false).
+				Boolean("require_improvement", "Require iterative improvement in review", false),
 		),
 		handlers.EnforceRulesHandler,
 	)
 
-	s.mcpServer.AddTool(
-		mcp.NewTool("check_violations",
-			mcp.WithDescription("Check for rule violations without applying fixes (dry-run enforcement)"),
-			mcp.WithString("config_file", mcp.Description("Path to configuration file (optional)")),
-			mcp.WithString("agent", mcp.Description("AI agent to use for analysis")),
-			mcp.WithArray("only_rules", mcp.Description("Check only these rules")),
-			mcp.WithArray("exclude_rules", mcp.Description("Exclude these rules from checking")),
-			mcp.WithArray("include_files", mcp.Description("Include only these file patterns")),
-			mcp.WithArray("exclude_files", mcp.Description("Exclude these file patterns")),
-			mcp.WithString("output_format", mcp.Description("Output format (table, json, summary, csv)")),
+	s.addTool(
+		newTool("check_violations", "Check for rule violations without applying fixes (dry-run enforcement)",
+			newSchemaBuilder().
+				String("config_file", "Path to configuration file (optional)", false).
+				String("agent", "AI agent to use for analysis", false).
+				StringArray("only_rules", "Check only these rules", false).
+				StringArray("exclude_rules", "Exclude these rules from checking", false).
+				StringArray("include_files", "Include only these file patterns", false).
+				StringArray("exclude_files", "Exclude these file patterns", false).
+				String("output_format", "Output format (table, json, summary, csv)", false),
 		),
 		handlers.CheckViolationsHandler,
 	)

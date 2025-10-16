@@ -5,14 +5,14 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var ListRulesHandler = CreateListHandler("rules", true)
 var GetRuleHandler = CreateGetHandler("rules")
 var DeleteRuleHandler = CreateDeleteHandler("rules")
 
-func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func AddRuleHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	fields, errorResult := ExtractCommonFields(request)
 	if errorResult != nil {
 		return errorResult, nil
@@ -29,7 +29,7 @@ func AddRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Call
 	return crud.HandleAddMCP(ctx, "rules", newRule)
 }
 
-func UpdateRuleHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func UpdateRuleHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
 	updates, errorResult := ExtractUpdateFields(request)
