@@ -274,6 +274,8 @@ ai-rulez generate
 
 ## MCP Server Integration
 
+> **New in v2.3.1**: `ai-rulez` now ships with the official `modelcontextprotocol/go-sdk`, ensuring protocol-compliant tooling and first-class support for streamable transports across Claude, Gemini, and other MCP clients.
+
 `ai-rulez` provides seamless **Model Context Protocol (MCP)** integration, automatically configuring both file-based and CLI-based AI tools with your MCP servers.
 
 ### Automatic CLI Configuration
@@ -522,7 +524,7 @@ Add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.3.0
+    rev: v2.3.1
     hooks:
       - id: ai-rulez-validate
       - id: ai-rulez-generate

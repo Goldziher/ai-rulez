@@ -5,14 +5,14 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var ListCommandsHandler = CreateListHandler("commands", false)
 var GetCommandHandler = CreateGetHandler("commands")
 var DeleteCommandHandler = CreateDeleteHandler("commands")
 
-func AddCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func AddCommandHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	id := request.GetString("id", "")
 	name := request.GetString("name", "")
 	description := request.GetString("description", "")
@@ -39,7 +39,7 @@ func AddCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return crud.HandleAddMCP(ctx, "commands", newCmd)
 }
 
-func UpdateCommandHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func UpdateCommandHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
 	updates := make(map[string]interface{})
