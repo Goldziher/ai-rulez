@@ -1,23 +1,23 @@
 package mcp
 
-import (
-	"github.com/mark3labs/mcp-go/server"
-)
+import sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 
 type Server struct {
-	mcpServer *server.MCPServer
+	mcpServer *sdkmcp.Server
 	version   string
 }
 
 func NewServer(version string) *Server {
-	s := server.NewMCPServer(
-		"ai-rulez",
-		version,
-		server.WithToolCapabilities(true),
-	)
+	serverImpl := &sdkmcp.Implementation{
+		Name:    "ai-rulez",
+		Version: version,
+	}
+	mcpServer := sdkmcp.NewServer(serverImpl, &sdkmcp.ServerOptions{
+		HasTools: true,
+	})
 
 	srv := &Server{
-		mcpServer: s,
+		mcpServer: mcpServer,
 		version:   version,
 	}
 
@@ -25,6 +25,6 @@ func NewServer(version string) *Server {
 	return srv
 }
 
-func (s *Server) GetMCPServer() *server.MCPServer {
+func (s *Server) GetMCPServer() *sdkmcp.Server {
 	return s.mcpServer
 }

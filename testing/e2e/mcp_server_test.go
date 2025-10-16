@@ -12,7 +12,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/mcp"
 	"github.com/Goldziher/ai-rulez/testing/e2e/testutil"
-	"github.com/mark3labs/mcp-go/server"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/suite"
 	"github.com/ybbus/jsonrpc/v3"
 )
@@ -48,7 +48,9 @@ func (s *MCPServerE2ETestSuite) SetupTest() {
 	lis, err := net.Listen("tcp", ":0")
 	s.Require().NoError(err)
 
-	mcpHTTPServer := server.NewStreamableHTTPServer(s.server.GetMCPServer(), server.WithStateLess(true))
+	streamHandler := sdkmcp.NewStreamableHTTPHandler(func(*http.Request) *sdkmcp.Server {
+		return s.server.GetMCPServer()
+	}, &sdkmcp.StreamableHTTPOptions{Stateless: true})
 
 	workingDir := s.workingDir
 	wrappedHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -67,7 +69,7 @@ func (s *MCPServerE2ETestSuite) SetupTest() {
 			_ = os.Chdir(originalDir)
 		}()
 
-		mcpHTTPServer.ServeHTTP(w, r)
+		streamHandler.ServeHTTP(w, r)
 	})
 
 	s.serverURL = fmt.Sprintf("http://localhost:%d", lis.Addr().(*net.TCPAddr).Port)

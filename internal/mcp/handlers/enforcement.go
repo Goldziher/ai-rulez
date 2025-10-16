@@ -9,30 +9,24 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/enforcement"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 // EnforceRulesHandler handles rule enforcement requests via MCP
-func EnforceRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func EnforceRulesHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	// Extract arguments from request
-	arguments := request.Params.Arguments
-
-	// Type assert arguments to the expected type
-	argsMap, ok := arguments.(map[string]interface{})
-	if !ok {
-		return mcp.NewToolResultError("Invalid arguments format"), nil
-	}
+	argsMap := request.GetArguments()
 
 	// Parse arguments
 	opts, err := parseEnforcementOptions(argsMap)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid arguments: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Invalid arguments: %v", err)), nil
 	}
 
 	// Load configuration
 	cfg, configPath, err := loadConfigForEnforcement(opts.ConfigFile)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to load config: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Failed to load config: %v", err)), nil
 	}
 
 	opts.ConfigFile = configPath
@@ -40,20 +34,20 @@ func EnforceRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	// Create enforcer
 	enforcer, err := enforcement.NewEnforcer(cfg, opts)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create enforcer: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Failed to create enforcer: %v", err)), nil
 	}
 
 	// Run enforcement
 	result, err := enforcer.Enforce(ctx)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Enforcement failed: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Enforcement failed: %v", err)), nil
 	}
 
 	// Run review if enabled and there are violations
 	if opts.Enforcement.Review.Enabled && len(result.Violations) > 0 {
 		sessions, err := enforcer.ReviewViolations(ctx, result.Violations)
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Review failed: %v", err)), nil
+			return toolResultError(fmt.Sprintf("Review failed: %v", err)), nil
 		}
 
 		// Add review sessions to result metadata
@@ -69,31 +63,25 @@ func EnforceRulesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	case "json":
 		resultJSON, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal result: %v", err)), nil
+			return toolResultError(fmt.Sprintf("Failed to marshal result: %v", err)), nil
 		}
-		return mcp.NewToolResultText(string(resultJSON)), nil
+		return toolResultText(string(resultJSON)), nil
 
 	default:
 		// Return structured result for other formats
-		return mcp.NewToolResultText(formatEnforcementSummary(result)), nil
+		return toolResultText(formatEnforcementSummary(result)), nil
 	}
 }
 
 // CheckViolationsHandler handles violation checking (dry-run) requests via MCP
-func CheckViolationsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func CheckViolationsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	// Extract arguments from request
-	arguments := request.Params.Arguments
-
-	// Type assert arguments to the expected type
-	argsMap, ok := arguments.(map[string]interface{})
-	if !ok {
-		return mcp.NewToolResultError("Invalid arguments format"), nil
-	}
+	argsMap := request.GetArguments()
 
 	// Parse arguments (similar to enforce but force read-only)
 	opts, err := parseEnforcementOptions(argsMap)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Invalid arguments: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Invalid arguments: %v", err)), nil
 	}
 
 	// Force read-only mode (no fixes)
@@ -104,7 +92,7 @@ func CheckViolationsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	// Load configuration
 	cfg, configPath, err := loadConfigForEnforcement(opts.ConfigFile)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to load config: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Failed to load config: %v", err)), nil
 	}
 
 	opts.ConfigFile = configPath
@@ -112,13 +100,13 @@ func CheckViolationsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	// Create enforcer
 	enforcer, err := enforcement.NewEnforcer(cfg, opts)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Failed to create enforcer: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Failed to create enforcer: %v", err)), nil
 	}
 
 	// Run enforcement (read-only)
 	result, err := enforcer.Enforce(ctx)
 	if err != nil {
-		return mcp.NewToolResultError(fmt.Sprintf("Violation check failed: %v", err)), nil
+		return toolResultError(fmt.Sprintf("Violation check failed: %v", err)), nil
 	}
 
 	// Format output
@@ -126,12 +114,12 @@ func CheckViolationsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	case "json":
 		resultJSON, err := json.MarshalIndent(result, "", "  ")
 		if err != nil {
-			return mcp.NewToolResultError(fmt.Sprintf("Failed to marshal result: %v", err)), nil
+			return toolResultError(fmt.Sprintf("Failed to marshal result: %v", err)), nil
 		}
-		return mcp.NewToolResultText(string(resultJSON)), nil
+		return toolResultText(string(resultJSON)), nil
 
 	default:
-		return mcp.NewToolResultText(formatViolationSummary(result)), nil
+		return toolResultText(formatViolationSummary(result)), nil
 	}
 }
 

@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/mark3labs/mcp-go/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 type EntityOps[T any] struct {
@@ -126,33 +126,29 @@ var (
 	}
 )
 
-func genericAdd[T any](ops EntityOps[T], element T, cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericAdd[T any](ops EntityOps[T], element T, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 	items = append(items, element)
 	ops.SetSlice(cfg, items)
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{
 				Text: fmt.Sprintf("Added %s: %s", getSingular(ops.ElementType), ops.GetName(element)),
 			},
 		},
 	}, nil
 }
 
-func genericGet[T any](ops EntityOps[T], name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericGet[T any](ops EntityOps[T], name string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	for _, item := range items {
 		if ops.GetName(item) == name {
 			formattedData := ops.FormatForCLI(item)
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: formattedData,
-					},
+			return &sdkmcp.CallToolResult{
+				Content: []sdkmcp.Content{
+					&sdkmcp.TextContent{Text: formattedData},
 				},
 			}, nil
 		}
@@ -161,16 +157,13 @@ func genericGet[T any](ops EntityOps[T], name string, cfg *config.Config) (*mcp.
 	return nil, fmt.Errorf("%s '%s' not found", getSingular(ops.ElementType), name)
 }
 
-func genericList[T any](ops EntityOps[T], cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericList[T any](ops EntityOps[T], cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	if len(items) == 0 {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("No %s found", ops.ElementType),
-				},
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{
+				&sdkmcp.TextContent{Text: fmt.Sprintf("No %s found", ops.ElementType)},
 			},
 		}, nil
 	}
@@ -180,17 +173,14 @@ func genericList[T any](ops EntityOps[T], cfg *config.Config) (*mcp.CallToolResu
 		names = append(names, ops.GetName(item))
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: strings.Join(names, "\n"),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: strings.Join(names, "\n")},
 		},
 	}, nil
 }
 
-func genericUpdate[T any](ops EntityOps[T], name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericUpdate[T any](ops EntityOps[T], name string, updates map[string]interface{}, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	index := slices.IndexFunc(items, func(item T) bool {
@@ -228,17 +218,14 @@ func genericUpdate[T any](ops EntityOps[T], name string, updates map[string]inte
 	items[index] = updatedItem
 	ops.SetSlice(cfg, items)
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Updated %s: %s", getSingular(ops.ElementType), name),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf("Updated %s: %s", getSingular(ops.ElementType), name)},
 		},
 	}, nil
 }
 
-func genericDelete[T any](ops EntityOps[T], name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericDelete[T any](ops EntityOps[T], name string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	newItems := slices.DeleteFunc(items, func(item T) bool {
@@ -251,17 +238,14 @@ func genericDelete[T any](ops EntityOps[T], name string, cfg *config.Config) (*m
 
 	ops.SetSlice(cfg, newItems)
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Deleted %s: %s", getSingular(ops.ElementType), name),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf("Deleted %s: %s", getSingular(ops.ElementType), name)},
 		},
 	}, nil
 }
 
-func genericListJSON[T any](ops EntityOps[T], cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericListJSON[T any](ops EntityOps[T], cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	jsonData, err := json.MarshalIndent(items, "", "  ")
@@ -269,17 +253,14 @@ func genericListJSON[T any](ops EntityOps[T], cfg *config.Config) (*mcp.CallTool
 		return nil, fmt.Errorf("error marshaling %s: %w", ops.ElementType, err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: string(jsonData)},
 		},
 	}, nil
 }
 
-func genericListJSONWithFilter[T any](ops EntityOps[T], cfg *config.Config, nameFilter string) (*mcp.CallToolResult, error) {
+func genericListJSONWithFilter[T any](ops EntityOps[T], cfg *config.Config, nameFilter string) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	var filtered []T
@@ -294,17 +275,14 @@ func genericListJSONWithFilter[T any](ops EntityOps[T], cfg *config.Config, name
 		return nil, fmt.Errorf("error marshaling %s: %w", ops.ElementType, err)
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: string(jsonData),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: string(jsonData)},
 		},
 	}, nil
 }
 
-func genericGetJSON[T any](ops EntityOps[T], name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func genericGetJSON[T any](ops EntityOps[T], name string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	items := ops.GetSlice(cfg)
 
 	for _, item := range items {
@@ -313,12 +291,9 @@ func genericGetJSON[T any](ops EntityOps[T], name string, cfg *config.Config) (*
 			if err != nil {
 				return nil, fmt.Errorf("error marshaling %s: %w", getSingular(ops.ElementType), err)
 			}
-			return &mcp.CallToolResult{
-				Content: []mcp.Content{
-					mcp.TextContent{
-						Type: "text",
-						Text: string(jsonData),
-					},
+			return &sdkmcp.CallToolResult{
+				Content: []sdkmcp.Content{
+					&sdkmcp.TextContent{Text: string(jsonData)},
 				},
 			}, nil
 		}
