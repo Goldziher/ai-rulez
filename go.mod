@@ -7,7 +7,7 @@ require (
 	github.com/go-resty/resty/v2 v2.16.5
 	github.com/kaptinlin/jsonschema v0.4.13
 	github.com/modelcontextprotocol/go-sdk v1.0.0
-	github.com/samber/oops v1.19.0
+	github.com/samber/oops v1.19.3
 	github.com/schollz/progressbar/v3 v3.18.0
 	github.com/spf13/cobra v1.10.1
 	github.com/spf13/viper v1.21.0

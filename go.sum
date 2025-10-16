@@ -119,8 +119,8 @@ github.com/sagikazarmark/locafero v0.11.0 h1:1iurJgmM9G3PA/I+wWYIOw/5SyBtxapeHDc
 github.com/sagikazarmark/locafero v0.11.0/go.mod h1:nVIGvgyzw595SUSUE6tvCp3YYTeHs15MvlmU87WwIik=
 github.com/samber/lo v1.51.0 h1:kysRYLbHy/MB7kQZf5DSN50JHmMsNEdeY24VzJFu7wI=
 github.com/samber/lo v1.51.0/go.mod h1:4+MXEGsJzbKGaUEQFKBq2xtfuznW9oz/WrgyzMzRoM0=
-github.com/samber/oops v1.19.0 h1:sfZAwC8MmTXBRRyNc4Z1utuTPBx+hFKF5fJ9DEQRZfw=
-github.com/samber/oops v1.19.0/go.mod h1:+f+61dbiMxEMQ8gw/zTxW2pk+YGobaDM4glEHQtPOww=
+github.com/samber/oops v1.19.3 h1:GAfSUOCh/JbnKAj5Ia+r/3KNnBdK+VdVDq1F5I8nDfM=
+github.com/samber/oops v1.19.3/go.mod h1:1lIO/SwpPltzw5cDO8/oiyVuLiQt3/8iid21Vb8QP+8=
 github.com/schollz/progressbar/v3 v3.18.0 h1:uXdoHABRFmNIjUfte/Ex7WtuyVslrw2wVPQmCN62HpA=
 github.com/schollz/progressbar/v3 v3.18.0/go.mod h1:IsO3lpbaGuzh8zIMzgY3+J8l4C8GjO0Y9S69eFvNsec=
 github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 h1:+jumHNA0Wrelhe64i8F6HNlS8pkoyMv5sreGx2Ry5Rw=
