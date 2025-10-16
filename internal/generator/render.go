@@ -92,6 +92,10 @@ func (g *Generator) renderInlineTemplate(templateContent string, data *templates
 }
 
 func (g *Generator) renderBuiltinTemplate(templateName string, data *templates.TemplateData) (string, error) {
+	if content, handled, err := templates.RenderSpecialBuiltin(templateName, data); handled {
+		return content, err
+	}
+
 	content, err := g.renderer.Render(templateName, data)
 	if err != nil {
 		if strings.Contains(err.Error(), "not found") {
