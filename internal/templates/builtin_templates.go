@@ -11,22 +11,100 @@ const (
 Version: {{.Version}}
 {{- end}}
 
-Generated on {{.Timestamp.Format "2006-01-02 15:04:05"}}
-{{- if or .RuleCount .SectionCount}}
+## Governance
 
-Total content: {{.RuleCount}} rules, {{.SectionCount}} sections
+- Source of truth: {{if .ConfigFile}}{{.ConfigFile}}{{else}}ai-rulez.yaml{{end}}
+- Generated output: {{if .OutputFile}}{{.OutputFile}}{{else}}(preview output){{end}}
+- Update workflow:
+  1. Edit the source configuration above.
+  2. Run ai-rulez generate to refresh generated files.
+  3. Commit the regenerated files alongside the configuration change.
+- AI assistants must propose edits to the source configuration, not this file.
+
+{{- if .Rules}}
+
+## Rules
+{{- range .Rules}}
+
+### {{.Name}}
+**Priority:** {{.Priority}}
+
+{{.Content}}
 {{- end}}
-{{- range .AllContent}}
-{{- if .IsRule}}
+{{- end}}
 
-## {{.Title}}
+{{- if .Sections}}
 
-**Priority:** {{.PriorityString}}
+## Sections
+{{- range .Sections}}
+
+### {{.Name}}
+**Priority:** {{.Priority}}
 
 {{.Content}}
-{{- else}}
+{{- end}}
+{{- end}}
 
-{{.Content}}
+{{- if .Agents}}
+
+## Agents
+{{- range .Agents}}
+
+### {{.Name}}
+**Priority:** {{.Priority}}
+
+{{.Description}}
+{{- if .SystemPrompt}}
+
+#### System Prompt
+{{.SystemPrompt}}
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if .Commands}}
+
+## Commands
+{{- range .Commands}}
+
+### {{.Name}}
+**Description:** {{.Description}}
+{{- if .Usage}}
+
+- Usage: {{.Usage}}
+{{- end}}
+{{- if .SystemPrompt}}
+- System prompt:
+{{.SystemPrompt}}
+{{- end}}
+{{- end}}
+{{- end}}
+
+{{- if .MCPServers}}
+
+## MCP Servers
+{{- range .MCPServers}}
+
+### {{.Name}}
+{{- if .Description}}
+{{.Description}}
+{{- end}}
+- Transport: {{.GetTransport}}
+{{- if .Command}}
+- Command: {{.Command}}
+{{- end}}
+{{- if .Args}}
+- Args: {{range $i, $arg := .Args}}{{if $i}}, {{end}}{{$arg}}{{end}}
+{{- end}}
+{{- if .URL}}
+- URL: {{.URL}}
+{{- end}}
+{{- if .Env}}
+- Env:
+{{- range $key, $value := .Env}}
+  - {{$key}}={{$value}}
+{{- end}}
+{{- end}}
 {{- end}}
 {{- end}}
 `

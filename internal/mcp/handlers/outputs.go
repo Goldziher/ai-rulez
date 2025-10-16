@@ -5,13 +5,13 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var ListOutputsHandler = CreateListHandler("outputs", false)
 var GetOutputHandler = CreateGetOutputHandler()
 
-func AddOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func AddOutputHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 	outputType := request.GetString("type", "")
 	namingScheme := request.GetString("naming_scheme", "")
@@ -28,7 +28,7 @@ func AddOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.Ca
 	return crud.HandleAddMCP(ctx, "outputs", newOutput)
 }
 
-func UpdateOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func UpdateOutputHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 
 	updates := make(map[string]interface{})
@@ -50,7 +50,7 @@ func UpdateOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	return crud.HandleUpdateMCP(ctx, "outputs", path, updates)
 }
 
-func DeleteOutputHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func DeleteOutputHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	path := request.GetString("path", "")
 	return crud.HandleDeleteMCP(ctx, "outputs", path)
 }
