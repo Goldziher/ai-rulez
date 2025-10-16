@@ -11,7 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/utils"
-	"github.com/mark3labs/mcp-go/mcp"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
@@ -160,7 +160,7 @@ func GetElement(elementType, name string) {
 	}
 
 	if len(result.Content) > 0 {
-		if textContent, ok := result.Content[0].(mcp.TextContent); ok {
+		if textContent, ok := result.Content[0].(*sdkmcp.TextContent); ok {
 			fmt.Println(textContent.Text)
 		}
 	}
@@ -197,7 +197,7 @@ func ListElements(elementType string) {
 	}
 
 	if len(result.Content) > 0 {
-		if textContent, ok := result.Content[0].(mcp.TextContent); ok {
+		if textContent, ok := result.Content[0].(*sdkmcp.TextContent); ok {
 			fmt.Println(textContent.Text)
 		}
 	}
@@ -281,7 +281,7 @@ func DeleteFromList(listType, value string) {
 	fmt.Printf("Deleted %s\n", getSingular(listType))
 }
 
-func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeRules:
 		rule := element.(*config.Rule)
@@ -306,7 +306,7 @@ func HandleAdd(ctx context.Context, elementType string, element interface{}, cfg
 	}
 }
 
-func HandleGet(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleGet(ctx context.Context, elementType, name string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeMetadata:
 		return handleGetMetadata(cfg)
@@ -329,7 +329,7 @@ func HandleGet(ctx context.Context, elementType, name string, cfg *config.Config
 	}
 }
 
-func handleGetMetadata(cfg *config.Config) (*mcp.CallToolResult, error) {
+func handleGetMetadata(cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	var output strings.Builder
 	output.WriteString(fmt.Sprintf("Name:        %s\n", cfg.Metadata.Name))
 	if cfg.Metadata.Version != "" {
@@ -338,53 +338,41 @@ func handleGetMetadata(cfg *config.Config) (*mcp.CallToolResult, error) {
 	if cfg.Metadata.Description != "" {
 		output.WriteString(fmt.Sprintf("Description: %s", cfg.Metadata.Description))
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: strings.TrimSpace(output.String()),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: strings.TrimSpace(output.String())},
 		},
 	}, nil
 }
 
-func handleGetExtends() (*mcp.CallToolResult, error) {
+func handleGetExtends() (*sdkmcp.CallToolResult, error) {
 	configPath, err := config.FindConfigFile(".")
 	if err != nil {
 		configPath = "ai-rulez.yaml"
 	}
 	rawCfg, err := config.LoadConfig(configPath)
 	if err != nil {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Extends: not set",
-				},
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{
+				&sdkmcp.TextContent{Text: "Extends: not set"},
 			},
 		}, err
 	}
 	if rawCfg.Extends == "" {
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: "Extends: not set",
-				},
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{
+				&sdkmcp.TextContent{Text: "Extends: not set"},
 			},
 		}, nil
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Extends: %s", rawCfg.Extends),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf("Extends: %s", rawCfg.Extends)},
 		},
 	}, nil
 }
 
-func HandleList(ctx context.Context, elementType string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleList(ctx context.Context, elementType string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeRules:
 		return genericList(RuleOps, cfg)
@@ -405,7 +393,7 @@ func HandleList(ctx context.Context, elementType string, cfg *config.Config) (*m
 	}
 }
 
-func handleListIncludes(cfg *config.Config) (*mcp.CallToolResult, error) {
+func handleListIncludes(cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	var items []string
 	if len(cfg.Includes) == 0 {
 		items = append(items, "No includes found")
@@ -414,17 +402,14 @@ func handleListIncludes(cfg *config.Config) (*mcp.CallToolResult, error) {
 			items = append(items, fmt.Sprintf("  %s", include))
 		}
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Includes (%d):\n%s", len(cfg.Includes), strings.Join(items, "\n")),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf("Includes (%d):\n%s", len(cfg.Includes), strings.Join(items, "\n"))},
 		},
 	}, nil
 }
 
-func HandleUpdate(ctx context.Context, elementType, name string, updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleUpdate(ctx context.Context, elementType, name string, updates map[string]interface{}, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeMetadata:
 		return handleUpdateMetadata(updates, cfg)
@@ -447,35 +432,29 @@ func HandleUpdate(ctx context.Context, elementType, name string, updates map[str
 	}
 }
 
-func handleUpdateMetadata(updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+func handleUpdateMetadata(updates map[string]interface{}, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	for key, value := range updates {
 		utils.LogIfErr(setFieldValue(&cfg.Metadata, key, value))
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: "Updated metadata",
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: "Updated metadata"},
 		},
 	}, nil
 }
 
-func handleUpdateExtends(updates map[string]interface{}, cfg *config.Config) (*mcp.CallToolResult, error) {
+func handleUpdateExtends(updates map[string]interface{}, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	if extends, ok := updates["Extends"].(string); ok {
 		cfg.Extends = extends
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Updated extends to: %s", cfg.Extends),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf("Updated extends to: %s", cfg.Extends)},
 		},
 	}, nil
 }
 
-func HandleDelete(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleDelete(ctx context.Context, elementType, name string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeExtends:
 		return handleDeleteExtends(cfg)
@@ -496,28 +475,22 @@ func HandleDelete(ctx context.Context, elementType, name string, cfg *config.Con
 	}
 }
 
-func handleDeleteExtends(cfg *config.Config) (*mcp.CallToolResult, error) {
+func handleDeleteExtends(cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	cfg.Extends = ""
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: "Deleted extends configuration",
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: "Deleted extends configuration"},
 		},
 	}, nil
 }
 
-func HandleAddToList(ctx context.Context, listType, value string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleAddToList(ctx context.Context, listType, value string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch listType {
 	case ElementTypeIncludes:
 		cfg.Includes = append(cfg.Includes, value)
-		return &mcp.CallToolResult{
-			Content: []mcp.Content{
-				mcp.TextContent{
-					Type: "text",
-					Text: fmt.Sprintf("Added to includes: %s", value),
-				},
+		return &sdkmcp.CallToolResult{
+			Content: []sdkmcp.Content{
+				&sdkmcp.TextContent{Text: fmt.Sprintf("Added to includes: %s", value)},
 			},
 		}, nil
 	default:
@@ -525,18 +498,15 @@ func HandleAddToList(ctx context.Context, listType, value string, cfg *config.Co
 	}
 }
 
-func HandleDeleteFromList(ctx context.Context, listType, value string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleDeleteFromList(ctx context.Context, listType, value string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch listType {
 	case ElementTypeIncludes:
 		for i, include := range cfg.Includes {
 			if include == value {
 				cfg.Includes = append(cfg.Includes[:i], cfg.Includes[i+1:]...)
-				return &mcp.CallToolResult{
-					Content: []mcp.Content{
-						mcp.TextContent{
-							Type: "text",
-							Text: fmt.Sprintf("Deleted from includes: %s", value),
-						},
+				return &sdkmcp.CallToolResult{
+					Content: []sdkmcp.Content{
+						&sdkmcp.TextContent{Text: fmt.Sprintf("Deleted from includes: %s", value)},
 					},
 				}, nil
 			}
@@ -547,7 +517,7 @@ func HandleDeleteFromList(ctx context.Context, listType, value string, cfg *conf
 	}
 }
 
-func HandleListMCP(ctx context.Context, elementType string) (*mcp.CallToolResult, error) {
+func HandleListMCP(ctx context.Context, elementType string) (*sdkmcp.CallToolResult, error) {
 	cfg, err := loadConfig(ctx, "")
 	if err != nil {
 		return nil, err
@@ -555,7 +525,7 @@ func HandleListMCP(ctx context.Context, elementType string) (*mcp.CallToolResult
 	return HandleListJSON(ctx, elementType, cfg)
 }
 
-func HandleListMCPWithFilter(ctx context.Context, elementType, nameFilter string) (*mcp.CallToolResult, error) {
+func HandleListMCPWithFilter(ctx context.Context, elementType, nameFilter string) (*sdkmcp.CallToolResult, error) {
 	cfg, err := loadConfig(ctx, "")
 	if err != nil {
 		return nil, err
@@ -563,7 +533,7 @@ func HandleListMCPWithFilter(ctx context.Context, elementType, nameFilter string
 	return HandleListJSONWithFilter(ctx, elementType, cfg, nameFilter)
 }
 
-func HandleGetMCP(ctx context.Context, elementType, name string) (*mcp.CallToolResult, error) {
+func HandleGetMCP(ctx context.Context, elementType, name string) (*sdkmcp.CallToolResult, error) {
 	cfg, err := loadConfig(ctx, "")
 	if err != nil {
 		return nil, err
@@ -571,7 +541,7 @@ func HandleGetMCP(ctx context.Context, elementType, name string) (*mcp.CallToolR
 	return HandleGetJSON(ctx, elementType, name, cfg)
 }
 
-func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeRules:
 		return genericListJSON(RuleOps, cfg)
@@ -590,7 +560,7 @@ func HandleListJSON(ctx context.Context, elementType string, cfg *config.Config)
 	}
 }
 
-func HandleListJSONWithFilter(ctx context.Context, elementType string, cfg *config.Config, nameFilter string) (*mcp.CallToolResult, error) {
+func HandleListJSONWithFilter(ctx context.Context, elementType string, cfg *config.Config, nameFilter string) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeRules:
 		return genericListJSONWithFilter(RuleOps, cfg, nameFilter)
@@ -605,7 +575,7 @@ func HandleListJSONWithFilter(ctx context.Context, elementType string, cfg *conf
 	}
 }
 
-func HandleGetJSON(ctx context.Context, elementType, name string, cfg *config.Config) (*mcp.CallToolResult, error) {
+func HandleGetJSON(ctx context.Context, elementType, name string, cfg *config.Config) (*sdkmcp.CallToolResult, error) {
 	switch elementType {
 	case ElementTypeRules:
 		return genericGetJSON(RuleOps, name, cfg)
@@ -624,7 +594,7 @@ func HandleGetJSON(ctx context.Context, elementType, name string, cfg *config.Co
 	}
 }
 
-func HandleAddMCP(ctx context.Context, elementType string, element interface{}) (*mcp.CallToolResult, error) {
+func HandleAddMCP(ctx context.Context, elementType string, element interface{}) (*sdkmcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
 		return nil, err
@@ -664,17 +634,14 @@ func HandleAddMCP(ctx context.Context, elementType string, element interface{}) 
 		return nil, err
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf(`{"message": "Added %s: %s"}`, elementType, elementName),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf(`{"message": "Added %s: %s"}`, elementType, elementName)},
 		},
 	}, nil
 }
 
-func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[string]interface{}) (*mcp.CallToolResult, error) {
+func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[string]interface{}) (*sdkmcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
 		return nil, err
@@ -689,17 +656,14 @@ func HandleUpdateMCP(ctx context.Context, elementType, name string, updates map[
 		return nil, err
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf(`{"message": "Updated %s: %s"}`, elementType, name),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf(`{"message": "Updated %s: %s"}`, elementType, name)},
 		},
 	}, nil
 }
 
-func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallToolResult, error) {
+func HandleDeleteMCP(ctx context.Context, elementType, name string) (*sdkmcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
 		return nil, err
@@ -714,17 +678,14 @@ func HandleDeleteMCP(ctx context.Context, elementType, name string) (*mcp.CallTo
 		return nil, err
 	}
 
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf(`{"message": "Deleted %s: %s"}`, elementType, name),
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf(`{"message": "Deleted %s: %s"}`, elementType, name)},
 		},
 	}, nil
 }
 
-func HandleAddToListMCP(ctx context.Context, listType, value string) (*mcp.CallToolResult, error) {
+func HandleAddToListMCP(ctx context.Context, listType, value string) (*sdkmcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
 		return nil, err
@@ -742,7 +703,7 @@ func HandleAddToListMCP(ctx context.Context, listType, value string) (*mcp.CallT
 	return result, nil
 }
 
-func HandleDeleteFromListMCP(ctx context.Context, listType, value string) (*mcp.CallToolResult, error) {
+func HandleDeleteFromListMCP(ctx context.Context, listType, value string) (*sdkmcp.CallToolResult, error) {
 	cfg, configPath, err := loadConfigWithPath(ctx, "")
 	if err != nil {
 		return nil, err
@@ -804,29 +765,23 @@ func CreateTemplateConfig(templateType, templateValue string) config.TemplateCon
 	}
 }
 
-func ToolError(err error) (*mcp.CallToolResult, error) {
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: fmt.Sprintf("Error: %v", err),
-			},
+func ToolError(err error) (*sdkmcp.CallToolResult, error) {
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: fmt.Sprintf("Error: %v", err)},
 		},
 		IsError: true,
 	}, nil
 }
 
-func ToolSuccess(result interface{}) (*mcp.CallToolResult, error) {
+func ToolSuccess(result interface{}) (*sdkmcp.CallToolResult, error) {
 	text := fmt.Sprintf("%v", result)
 	if data, err := json.Marshal(result); err == nil {
 		text = string(data)
 	}
-	return &mcp.CallToolResult{
-		Content: []mcp.Content{
-			mcp.TextContent{
-				Type: "text",
-				Text: text,
-			},
+	return &sdkmcp.CallToolResult{
+		Content: []sdkmcp.Content{
+			&sdkmcp.TextContent{Text: text},
 		},
 	}, nil
 }

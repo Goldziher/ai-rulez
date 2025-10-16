@@ -5,7 +5,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 func convertInterfaceMapToStringMap(input interface{}) map[string]string {
@@ -30,7 +30,7 @@ var ListMCPServersHandler = CreateListHandler("mcp_servers", false)
 var GetMCPServerHandler = CreateGetHandler("mcp_servers")
 var DeleteMCPServerHandler = CreateDeleteHandler("mcp_servers")
 
-func AddMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func AddMCPServerHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	id := request.GetString("id", "")
 	name := request.GetString("name", "")
 	description := request.GetString("description", "")
@@ -60,7 +60,7 @@ func AddMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp
 	return crud.HandleAddMCP(ctx, "mcp_servers", newServer)
 }
 
-func UpdateMCPServerHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func UpdateMCPServerHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
 	updates := make(map[string]interface{})

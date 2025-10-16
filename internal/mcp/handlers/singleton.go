@@ -4,14 +4,14 @@ import (
 	"context"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func GetMetadataHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func GetMetadataHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleGetMCP(ctx, "metadata", "")
 }
 
-func SetMetadataHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func SetMetadataHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	updates := make(map[string]interface{})
 	if name := request.GetString("name", ""); name != "" {
 		updates["Name"] = name
@@ -25,30 +25,30 @@ func SetMetadataHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.
 	return crud.HandleUpdateMCP(ctx, "metadata", "", updates)
 }
 
-func GetExtendsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func GetExtendsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleGetMCP(ctx, "extends", "")
 }
 
-func SetExtendsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func SetExtendsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	pathOrURL := request.GetString("path_or_url", "")
 	updates := map[string]interface{}{"Extends": pathOrURL}
 	return crud.HandleUpdateMCP(ctx, "extends", "", updates)
 }
 
-func DeleteExtendsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func DeleteExtendsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleDeleteMCP(ctx, "extends", "")
 }
 
-func ListIncludesHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func ListIncludesHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	return crud.HandleListMCP(ctx, "includes")
 }
 
-func AddIncludeHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	pathOrURL := request.GetString("path_or_url", "")
 	return crud.HandleAddToListMCP(ctx, "includes", pathOrURL)
 }
 
-func DeleteIncludeHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func DeleteIncludeHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	pathOrURL := request.GetString("path_or_url", "")
 	return crud.HandleDeleteFromListMCP(ctx, "includes", pathOrURL)
 }

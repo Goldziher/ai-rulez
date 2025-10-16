@@ -5,14 +5,14 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
 var ListSectionsHandler = CreateListHandler("sections", false)
 var GetSectionHandler = CreateGetHandler("sections")
 var DeleteSectionHandler = CreateDeleteHandler("sections")
 
-func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func AddSectionHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	fields, errorResult := ExtractCommonFields(request)
 	if errorResult != nil {
 		return errorResult, nil
@@ -29,7 +29,7 @@ func AddSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.C
 	return crud.HandleAddMCP(ctx, "sections", newSection)
 }
 
-func UpdateSectionHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func UpdateSectionHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	name := request.GetString("name", "")
 
 	updates, errorResult := ExtractUpdateFields(request)
