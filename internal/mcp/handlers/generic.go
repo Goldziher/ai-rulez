@@ -5,11 +5,11 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/crud"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func CreateListHandler(entityType string, supportsFilter bool) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func CreateListHandler(entityType string, supportsFilter bool) func(context.Context, *ToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 		if supportsFilter {
 			nameFilter := request.GetString("name_filter", "")
 			return crud.HandleListMCPWithFilter(ctx, entityType, nameFilter)
@@ -18,22 +18,22 @@ func CreateListHandler(entityType string, supportsFilter bool) func(context.Cont
 	}
 }
 
-func CreateGetHandler(entityType string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func CreateGetHandler(entityType string) func(context.Context, *ToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		return crud.HandleGetMCP(ctx, entityType, name)
 	}
 }
 
-func CreateGetOutputHandler() func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func CreateGetOutputHandler() func(context.Context, *ToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 		path := request.GetString("path", "")
 		return crud.HandleGetMCP(ctx, "outputs", path)
 	}
 }
 
-func CreateDeleteHandler(entityType string) func(context.Context, mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	return func(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func CreateDeleteHandler(entityType string) func(context.Context, *ToolRequest) (*mcp.CallToolResult, error) {
+	return func(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 		name := request.GetString("name", "")
 		return crud.HandleDeleteMCP(ctx, entityType, name)
 	}
@@ -47,7 +47,7 @@ type CommonFields struct {
 	Targets  []string
 }
 
-func ExtractCommonFields(request mcp.CallToolRequest) (*CommonFields, *mcp.CallToolResult) {
+func ExtractCommonFields(request *ToolRequest) (*CommonFields, *mcp.CallToolResult) {
 	fields := &CommonFields{
 		ID:      request.GetString("id", ""),
 		Name:    request.GetString("name", ""),
@@ -68,7 +68,7 @@ func ExtractCommonFields(request mcp.CallToolRequest) (*CommonFields, *mcp.CallT
 	return fields, nil
 }
 
-func ExtractUpdateFields(request mcp.CallToolRequest) (map[string]interface{}, *mcp.CallToolResult) {
+func ExtractUpdateFields(request *ToolRequest) (map[string]interface{}, *mcp.CallToolResult) {
 	updates := make(map[string]interface{})
 
 	if newName := request.GetString("new_name", ""); newName != "" {
@@ -105,7 +105,7 @@ type AgentFields struct {
 	TemplateValue string
 }
 
-func ExtractAgentFields(request mcp.CallToolRequest) (*AgentFields, *mcp.CallToolResult) {
+func ExtractAgentFields(request *ToolRequest) (*AgentFields, *mcp.CallToolResult) {
 	common, errorResult := ExtractCommonFields(request)
 	if errorResult != nil {
 		return nil, errorResult
@@ -124,7 +124,7 @@ func ExtractAgentFields(request mcp.CallToolRequest) (*AgentFields, *mcp.CallToo
 	return fields, nil
 }
 
-func ExtractAgentUpdateFields(request mcp.CallToolRequest) (map[string]interface{}, *mcp.CallToolResult) {
+func ExtractAgentUpdateFields(request *ToolRequest) (map[string]interface{}, *mcp.CallToolResult) {
 	updates, errorResult := ExtractUpdateFields(request)
 	if errorResult != nil {
 		return nil, errorResult

@@ -138,6 +138,18 @@ func (s *MCPCommandsCLITestSuite) verifyWindsurfMCPFormat() {
 	github, exists := mcpServers["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("npx", github["command"], "Should have command")
+	s.Equal("stdio", github["transport"], "Should declare transport for stdio servers")
+
+	remoteAPI, exists := mcpServers["remote-api"].(map[string]interface{})
+	s.True(exists, "Should include remote servers")
+	s.Equal("http", remoteAPI["transport"])
+	s.Equal("https://api.example.com/mcp", remoteAPI["url"])
+	_, hasRemoteCommand := remoteAPI["command"]
+	s.False(hasRemoteCommand, "HTTP windsuf servers should not emit command field")
+
+	disabledServer, exists := mcpServers["disabled-server"].(map[string]interface{})
+	s.True(exists, "Should include disabled server")
+	s.Equal(true, disabledServer["disabled"])
 
 	s.NotNil(mcpServers, "Should have mcpServers structure")
 }
@@ -226,6 +238,11 @@ func (s *MCPCommandsCLITestSuite) verifyClineMCPFormat() {
 	s.True(exists, "Should have github server")
 	s.Equal("npx", github["command"], "Should have command")
 	s.Equal(false, github["disabled"], "Should have disabled field set to false")
+
+	remoteServer, exists := mcpServers["remote-api"].(map[string]interface{})
+	s.True(exists, "Should include remote server for Cline")
+	s.Equal("https://api.example.com/mcp", remoteServer["url"])
+	s.Equal("http", remoteServer["transport"])
 
 	disabledServer, exists := mcpServers["disabled-server"].(map[string]interface{})
 	s.True(exists, "Should have disabled server")

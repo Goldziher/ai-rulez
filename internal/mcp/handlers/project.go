@@ -10,10 +10,10 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/Goldziher/ai-rulez/internal/validator"
-	"github.com/mark3labs/mcp-go/mcp"
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
-func GenerateOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
 	cfg, err := config.LoadConfig(configFile)
@@ -39,7 +39,7 @@ func GenerateOutputsHandler(ctx context.Context, request mcp.CallToolRequest) (*
 	})
 }
 
-func ValidateConfigHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	configFile := request.GetString("config_file", "ai_rulez.yaml")
 
 	val, err := validator.NewValidator(configFile)
@@ -101,7 +101,7 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 	return presets, hasContinueDev
 }
 
-func InitProjectHandler(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
+func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	projectName := request.GetString("project_name", "")
 	providersInterface := request.GetArguments()["providers"]
 	_ = request.GetBool("with_agents", false)
