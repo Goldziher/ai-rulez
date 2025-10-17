@@ -74,6 +74,9 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	case "amp":
 		cmd = exec.CommandContext(ctx, agent.Command, "--execute", prompt) //nolint:gosec // Intentional subprocess execution
 
+	case "codex":
+		cmd = exec.CommandContext(ctx, agent.Command, "exec", "--color", "never", prompt) //nolint:gosec // Intentional subprocess execution
+
 	case "continue-dev":
 		cmd = exec.CommandContext(ctx, agent.Command, "--print", prompt) //nolint:gosec // Intentional subprocess execution
 
@@ -367,6 +370,9 @@ func filterAgentStderr(output string) string {
 			continue
 		}
 		if trimmed == "Error: stdout is not a terminal" {
+			continue
+		}
+		if trimmed == "Loaded cached credentials." {
 			continue
 		}
 		filtered = append(filtered, line)

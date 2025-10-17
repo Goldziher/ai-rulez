@@ -2,7 +2,7 @@ $schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
 
 metadata:
   name: "AI-Rulez"
-  version: "2.3.1"
+  version: "2.3.2"
   description: "AI-powered development governance CLI and multi-runtime tooling."
 
 presets:

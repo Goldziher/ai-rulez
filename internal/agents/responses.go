@@ -114,7 +114,9 @@ func (s *SectionsResponse) Validate() error {
 
 type AgentDefinition struct {
 	Name        string `json:"name" validate:"required,min=3,max=50,lowercase,alphanum"`
-	Description string `json:"description" validate:"required,min=10,max=500"`
+	Description string `json:"description,omitempty" validate:"required,min=10,max=500"`
+	Role        string `json:"role,omitempty"`
+	Expertise   string `json:"expertise,omitempty"`
 }
 
 func (a *AgentDefinition) Validate() error {
@@ -128,9 +130,17 @@ func (a *AgentDefinition) Validate() error {
 	if !matched {
 		return fmt.Errorf("agent name must be lowercase with hyphens only")
 	}
-	if a.Description == "" {
+	description := a.normalizedDescription()
+	if description == "" {
 		return fmt.Errorf("agent description is required")
 	}
+	if len(description) < 10 {
+		return fmt.Errorf("agent description must be at least 10 characters")
+	}
+	if len(description) > 500 {
+		return fmt.Errorf("agent description must be less than 500 characters")
+	}
+	a.Description = description
 	return nil
 }
 
@@ -148,6 +158,28 @@ func (a *AgentsResponse) Validate() error {
 		}
 	}
 	return nil
+}
+
+func (a *AgentDefinition) normalizedDescription() string {
+	desc := strings.TrimSpace(a.Description)
+	if desc != "" {
+		return desc
+	}
+
+	var parts []string
+
+	if role := strings.TrimSpace(a.Role); role != "" {
+		parts = append(parts, role)
+	}
+	if expertise := strings.TrimSpace(a.Expertise); expertise != "" {
+		parts = append(parts, expertise)
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return strings.Join(parts, " — ")
 }
 
 func extractJSON(output string) (string, error) {
