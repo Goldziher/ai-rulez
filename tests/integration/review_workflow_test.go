@@ -15,6 +15,10 @@ func TestReviewWorkflow(t *testing.T) {
 		t.Skip("Skipping integration tests in short mode")
 	}
 
+	if !agentTestsEnabled() {
+		t.Skipf("Skipping agent integration tests (set %s=1 to enable)", agentTestEnvVar)
+	}
+
 	agent := getFirstAvailableAgent(t)
 	if agent == "" {
 		t.Skip("No agents available for testing")
@@ -45,6 +49,10 @@ func TestReviewWorkflow(t *testing.T) {
 func TestMultiAgentReview(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration tests in short mode")
+	}
+
+	if !agentTestsEnabled() {
+		t.Skipf("Skipping agent integration tests (set %s=1 to enable)", agentTestEnvVar)
 	}
 
 	// Find at least two available agents
