@@ -35,6 +35,8 @@ var (
 
 	// Test fixtures path
 	fixturesPath = "../fixtures"
+
+	agentTestEnvVar = "AI_RULEZ_ENABLE_AGENT_TESTS"
 )
 
 // EnforcementResult represents the JSON output from enforcement
@@ -66,6 +68,10 @@ type Violation struct {
 func TestEnforcementWithRealAgents(t *testing.T) {
 	if testing.Short() {
 		t.Skip("Skipping integration tests in short mode")
+	}
+
+	if !agentTestsEnabled() {
+		t.Skipf("Skipping agent integration tests (set %s=1 to enable)", agentTestEnvVar)
 	}
 
 	// Build ai-rulez binary first
@@ -334,6 +340,10 @@ func isAgentAvailable(agent string) bool {
 	cmd := exec.Command("which", agent)
 	err := cmd.Run()
 	return err == nil
+}
+
+func agentTestsEnabled() bool {
+	return os.Getenv(agentTestEnvVar) == "1"
 }
 
 func getFirstAvailableAgent(t *testing.T) string {
