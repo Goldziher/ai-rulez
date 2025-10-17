@@ -225,11 +225,13 @@ func runTestCommand(args ...string) (string, error) {
 	binaryPath := "/tmp/ai-rulez-test-binary"
 	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
 	buildCmd.Dir = "/Users/naamanhirschfeld/workspace/ai_rulez"
+	buildCmd.Env = append(os.Environ(), "NO_INTERACTIVE=1")
 	if err := buildCmd.Run(); err != nil {
 		return "", err
 	}
 
 	cmd := exec.Command(binaryPath, args...)
+	cmd.Env = append(os.Environ(), "NO_INTERACTIVE=1")
 	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
