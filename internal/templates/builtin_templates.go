@@ -138,24 +138,26 @@ Generated on {{.Timestamp.Format "2006-01-02 15:04:05"}}
 `
 
 	claudeCodeMCPTemplate = `{
+  "mcpServers": {
 {{- range $i, $server := .MCPServers}}
 {{- if ne $i 0}},{{end}}
-  "{{$server.Name}}": {
-    "type": "{{$server.GetTransport}}"
+    "{{$server.Name}}": {
+      "type": "{{$server.GetTransport}}"
 {{- if and (ne $server.GetTransport "http") (ne $server.GetTransport "sse")}}{{if $server.Command}},
-    "command": "{{$server.Command}}"{{end}}
+      "command": "{{$server.Command}}"{{end}}
 {{- if $server.Args}},
-    "args": [{{range $j, $arg := $server.Args}}{{if ne $j 0}}, {{end}}"{{$arg}}"{{end}}]{{end}}
+      "args": [{{range $j, $arg := $server.Args}}{{if ne $j 0}}, {{end}}"{{$arg}}"{{end}}]{{end}}
 {{- if $server.Env}},
-    "env": {
+      "env": {
 {{- range $key, $value := $server.Env}}
-      "{{$key}}": "{{$value}}"{{end}}
-    }{{end}}
+        "{{$key}}": "{{$value}}"{{end}}
+      }{{end}}
 {{- else}}{{if $server.URL}},
-    "url": "{{$server.URL}}"{{end}}
+      "url": "{{$server.URL}}"{{end}}
+{{- end}}
+    }
 {{- end}}
   }
-{{- end}}
 }`
 
 	cursorMCPTemplate = `{

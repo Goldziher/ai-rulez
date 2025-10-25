@@ -78,7 +78,10 @@ func (s *MCPCommandsCLITestSuite) verifyClaudeCodeMCPFormat() {
 	err := json.Unmarshal([]byte(content), &config)
 	s.NoError(err, "Should be valid JSON")
 
-	github, exists := config["github"].(map[string]interface{})
+	mcpServers, exists := config["mcpServers"].(map[string]interface{})
+	s.True(exists, "Should have mcpServers wrapper")
+
+	github, exists := mcpServers["github"].(map[string]interface{})
 	s.True(exists, "Should have github server")
 	s.Equal("stdio", github["type"], "Should have type field")
 	s.Equal("npx", github["command"], "Should have correct command")
@@ -92,7 +95,7 @@ func (s *MCPCommandsCLITestSuite) verifyClaudeCodeMCPFormat() {
 	s.True(ok, "Should have env section")
 	s.Equal("${GITHUB_TOKEN}", env["GITHUB_PERSONAL_ACCESS_TOKEN"])
 
-	remoteAPI, exists := config["remote-api"].(map[string]interface{})
+	remoteAPI, exists := mcpServers["remote-api"].(map[string]interface{})
 	s.True(exists, "Should have remote-api server")
 	s.Equal("http", remoteAPI["type"], "Should have http transport")
 	s.Equal("https://api.example.com/mcp", remoteAPI["url"], "Should have URL for HTTP transport")
@@ -394,9 +397,16 @@ rules:
 	err := json.Unmarshal([]byte(claudeContent), &claudeConfig)
 	s.NoError(err)
 
-	s.Contains(claudeContent, "claude-only-server")
-	s.Contains(claudeContent, "universal-server")
-	s.NotContains(claudeContent, "cursor-only-server")
+	claudeMCPServers, exists := claudeConfig["mcpServers"].(map[string]interface{})
+	s.True(exists, "Should have mcpServers wrapper")
+
+	_, claudeHasClaudeServer := claudeMCPServers["claude-only-server"]
+	_, claudeHasUniversalServer := claudeMCPServers["universal-server"]
+	_, claudeHasCursorServer := claudeMCPServers["cursor-only-server"]
+
+	s.True(claudeHasClaudeServer, "Should have claude-only-server")
+	s.True(claudeHasUniversalServer, "Should have universal-server")
+	s.False(claudeHasCursorServer, "Should not have cursor-only-server")
 
 	cursorPath := filepath.Join(s.workingDir, "cursor-mcp.json")
 	s.True(testutil.FileExists(s.T(), cursorPath))
