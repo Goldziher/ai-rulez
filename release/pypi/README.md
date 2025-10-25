@@ -491,6 +491,17 @@ go run github.com/Goldziher/ai-rulez/cmd@latest init
 
 For teams and frequent usage:
 
+**uv (Recommended for Python users)**
+```bash
+# Install as a tool (installs to ~/.local/bin/ai-rulez)
+uv tool install ai-rulez
+
+# Now use it anywhere
+ai-rulez init "My Project" --preset popular
+ai-rulez generate
+ai-rulez enforce --agent claude --fix
+```
+
 **pip (Best for Python teams)**
 ```bash
 pip install ai-rulez
