@@ -87,7 +87,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-${{ matrix.os }}
           path: |
@@ -144,7 +144,7 @@ jobs:
           echo "::endgroup::"
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
           path: testing/e2e/*.log
@@ -190,7 +190,7 @@ jobs:
         run: task test:benchmark | tee benchmark-results.txt
 
       - name: Upload benchmark results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: benchmark-results
           path: benchmark-results.txt
@@ -241,7 +241,7 @@ jobs:
 
       - name: Upload comprehensive test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: comprehensive-test-results-${{ matrix.os }}
           path: |
@@ -289,7 +289,7 @@ jobs:
         run: task build:all
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: binaries
           path: bin/
