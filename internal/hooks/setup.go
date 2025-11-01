@@ -9,9 +9,11 @@ import (
 )
 
 const (
-	lefthookSystem  = "lefthook"
-	preCommitSystem = "pre-commit"
-	huskySystem     = "husky"
+	lefthookSystem        = "lefthook"
+	preCommitSystem       = "pre-commit"
+	huskySystem           = "husky"
+	officialPreCommitRepo = "https://github.com/Goldziher/ai-rulez"
+	officialPreCommitRev  = "v2.3.3"
 )
 
 func SetupHooks() error {
@@ -95,72 +97,158 @@ func setupLefthook() error {
 }
 
 func setupPreCommit() error {
-	configFile := ".pre-commit-config.yaml"
-
-	data, err := os.ReadFile(configFile)
+	configFile, err := findPreCommitConfig()
 	if err != nil {
-		return fmt.Errorf("failed to read pre-commit config: %w", err)
+		return err
 	}
 
-	var config struct {
-		Repos []map[string]interface{} `yaml:"repos"`
+	config, err := readPreCommitConfig(configFile)
+	if err != nil {
+		return err
+	}
+
+	repos := extractRepoList(config)
+
+	repos, officialRepo := ensureOfficialPreCommitRepo(repos)
+	ensureOfficialHooks(officialRepo)
+	repos = pruneLegacyLocalHooks(repos)
+
+	config["repos"] = repos
+
+	return writePreCommitConfig(configFile, config)
+}
+
+func findPreCommitConfig() (string, error) {
+	candidates := []string{".pre-commit-config.yaml", "pre-commit-config.yaml"}
+	for _, file := range candidates {
+		if _, err := os.Stat(file); err == nil {
+			return file, nil
+		}
+	}
+	return "", fmt.Errorf("pre-commit configuration file not found")
+}
+
+func readPreCommitConfig(path string) (map[string]interface{}, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read pre-commit config: %w", err)
+	}
+
+	config := map[string]interface{}{}
+	if len(data) == 0 {
+		return config, nil
 	}
 
 	if err := yaml.Unmarshal(data, &config); err != nil {
-		return fmt.Errorf("failed to parse pre-commit config: %w", err)
+		return nil, fmt.Errorf("failed to parse pre-commit config: %w", err)
 	}
+	return config, nil
+}
 
-	for _, repo := range config.Repos {
-		if repo["repo"] == "local" {
-			if hooks, ok := repo["hooks"].([]interface{}); ok {
-				for _, hook := range hooks {
-					if h, ok := hook.(map[string]interface{}); ok {
-						if h["id"] == "ai-rulez" {
-							return nil
-						}
-					}
-				}
+func extractRepoList(config map[string]interface{}) []interface{} {
+	repos, ok := config["repos"].([]interface{})
+	if !ok {
+		return []interface{}{}
+	}
+	return repos
+}
+
+func ensureOfficialPreCommitRepo(repos []interface{}) (updated []interface{}, repo map[string]interface{}) {
+	updated = repos
+	for i, candidate := range updated {
+		repoMap, ok := candidate.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if repoMap["repo"] == officialPreCommitRepo {
+			repoMap["rev"] = officialPreCommitRev
+			if _, ok := repoMap["hooks"]; !ok {
+				repoMap["hooks"] = []interface{}{}
 			}
+			updated[i] = repoMap
+			return updated, repoMap
 		}
 	}
 
-	var localRepo map[string]interface{}
-	for _, repo := range config.Repos {
-		if repo["repo"] == "local" {
-			localRepo = repo
-			break
-		}
+	repo = map[string]interface{}{
+		"repo":  officialPreCommitRepo,
+		"rev":   officialPreCommitRev,
+		"hooks": []interface{}{},
 	}
+	updated = append(updated, repo)
+	return updated, repo
+}
 
-	if localRepo == nil {
-		localRepo = map[string]interface{}{
-			"repo":  "local",
-			"hooks": []interface{}{},
-		}
-		config.Repos = append(config.Repos, localRepo)
-	}
-
-	hooks, ok := localRepo["hooks"].([]interface{})
+func ensureOfficialHooks(repo map[string]interface{}) {
+	hooks, ok := repo["hooks"].([]interface{})
 	if !ok {
 		hooks = []interface{}{}
-		localRepo["hooks"] = hooks
 	}
-	aiRulezHook := map[string]interface{}{
-		"id":             "ai-rulez",
-		"name":           "Validate AI rules",
-		"entry":          "ai-rulez validate",
-		"language":       "system",
-		"files":          `\.(ai-rulez|ai_rulez)\.(yaml|yml)$`,
-		"pass_filenames": false,
-	}
-	localRepo["hooks"] = append(hooks, aiRulezHook)
 
-	updatedData, err := yaml.Marshal(config)
+	hookIDs := make(map[string]struct{}, len(hooks))
+	for _, hook := range hooks {
+		hookMap, ok := hook.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if id, ok := hookMap["id"].(string); ok {
+			hookIDs[id] = struct{}{}
+		}
+	}
+
+	for _, id := range []string{"ai-rulez-validate", "ai-rulez-generate"} {
+		if _, exists := hookIDs[id]; exists {
+			continue
+		}
+		hooks = append(hooks, map[string]interface{}{"id": id})
+	}
+
+	repo["hooks"] = hooks
+}
+
+func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
+	for i, repo := range repos {
+		repoMap, ok := repo.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if repoMap["repo"] != "local" {
+			continue
+		}
+		hooks, ok := repoMap["hooks"].([]interface{})
+		if !ok || len(hooks) == 0 {
+			continue
+		}
+		filtered := hooks[:0]
+		for _, hook := range hooks {
+			hookMap, ok := hook.(map[string]interface{})
+			if !ok {
+				filtered = append(filtered, hook)
+				continue
+			}
+			id, ok := hookMap["id"].(string)
+			if !ok {
+				filtered = append(filtered, hook)
+				continue
+			}
+			if id == "ai-rulez" {
+				continue
+			}
+			filtered = append(filtered, hook)
+		}
+		repoMap["hooks"] = filtered
+		repos[i] = repoMap
+	}
+	return repos
+}
+
+func writePreCommitConfig(path string, config map[string]interface{}) error {
+	data, err := yaml.Marshal(config)
 	if err != nil {
 		return fmt.Errorf("failed to marshal pre-commit config: %w", err)
 	}
 
-	if err := os.WriteFile(configFile, updatedData, 0o644); err != nil {
+	if err := os.WriteFile(path, data, 0o644); err != nil {
 		return fmt.Errorf("failed to write pre-commit config: %w", err)
 	}
 
