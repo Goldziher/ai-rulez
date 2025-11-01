@@ -1,8 +1,11 @@
 - id: ai-rulez-validate
   name: Validate AI rulez configuration
   description: Validate ai-rulez configuration files and ensure they would generate successfully
-  entry: ai-rulez generate --dry-run
-  language: golang
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  args:
+    - generate
+    - --dry-run
+  language: script
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
   always_run: false
@@ -11,8 +14,10 @@
 - id: ai-rulez-generate
   name: Generate AI assistant configuration files
   description: Generate AI assistant configuration files from ai-rulez configuration
-  entry: ai-rulez generate
-  language: golang
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  args:
+    - generate
+  language: script
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
   always_run: false
@@ -21,8 +26,11 @@
 - id: ai-rulez-recursive
   name: Generate AI assistant files (recursive)
   description: Generate all ai-rulez output files in the repository recursively
-  entry: ai-rulez generate --recursive
-  language: golang
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  args:
+    - generate
+    - --recursive
+  language: script
   files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
   pass_filenames: false
   always_run: false
@@ -31,8 +39,12 @@
 - id: ai-rulez-enforce
   name: AI-Rulez rule enforcement
   description: Enforce coding standards using AI agents
-  entry: ai-rulez enforce --level error
-  language: golang
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  language: script
+  args:
+    - enforce
+    - --level
+    - error
   files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
   pass_filenames: false
   always_run: false
@@ -41,8 +53,13 @@
 - id: ai-rulez-enforce-fix
   name: AI-Rulez enforcement with auto-fix
   description: Enforce coding standards and automatically apply fixes using AI agents
-  entry: ai-rulez enforce --fix --level error
-  language: golang
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  language: script
+  args:
+    - enforce
+    - --fix
+    - --level
+    - error
   files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
   pass_filenames: false
   always_run: false
