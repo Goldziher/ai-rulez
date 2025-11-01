@@ -200,22 +200,14 @@ Add to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
-  - repo: local
+  - repo: https://github.com/Goldziher/ai-rulez
+    rev: v2.3.3
     hooks:
       - id: ai-rulez-enforce
-        name: AI-Rulez Enforcement
-        entry: ai-rulez enforce --level error
-        language: system
-        files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
-        pass_filenames: false
-
       - id: ai-rulez-enforce-fix
-        name: AI-Rulez Auto-Fix
-        entry: ai-rulez enforce --fix --level error
-        language: system
-        files: '\.(js|ts|jsx|tsx|py|go|java|c|cpp|rs|php)$'
-        pass_filenames: false
 ```
+
+The shared hooks execute `scripts/pre-commit/run-ai-rulez.sh`, which downloads the appropriate prebuilt binary if `ai-rulez` is not already on your `PATH`. You can point to an existing binary with `AI_RULEZ_BINARY` or pin a different release using `AI_RULEZ_VERSION`.
 
 ### GitHub Actions Integration
 
