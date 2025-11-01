@@ -429,14 +429,14 @@ pre-commit:
 # Or with pre-commit hooks
 # .pre-commit-config.yaml
 repos:
-  - repo: local
+  - repo: https://github.com/Goldziher/ai-rulez
+    rev: v2.3.3
     hooks:
       - id: ai-rulez-enforce
-        name: AI-Rulez Enforcement
-        entry: ai-rulez enforce --level error
-        language: system
-        pass_filenames: false
+      - id: ai-rulez-enforce-fix
 ```
+
+These hooks invoke `scripts/pre-commit/run-ai-rulez.sh`, which downloads the correct prebuilt binary if `ai-rulez` is not already installed. Override the binary path with `AI_RULEZ_BINARY` or select a different release via `AI_RULEZ_VERSION`.
 
 ### Review Workflow
 
@@ -533,7 +533,7 @@ Add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.3.2
+    rev: v2.3.3
     hooks:
       - id: ai-rulez-validate
       - id: ai-rulez-generate
