@@ -9,7 +9,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.0.0
 	github.com/samber/oops v1.19.0
 	github.com/schollz/progressbar/v3 v3.18.0
-	github.com/spf13/cobra v1.10.1
+	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/ybbus/jsonrpc/v3 v3.1.6
