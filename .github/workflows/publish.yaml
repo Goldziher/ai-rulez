@@ -229,6 +229,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install build
           cp README.md release/pypi/README.md
+          VERSION="${{ needs.meta.outputs.python_version }}"
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/ai_rulez/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"$VERSION\"/" release/pypi/__init__.py
           cd release/pypi
           python -m build
 
