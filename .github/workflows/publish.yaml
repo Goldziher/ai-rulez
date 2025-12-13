@@ -1,0 +1,239 @@
+name: Publish Packages
+
+on:
+  push:
+    tags:
+      - v[0-9]+.*
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag to publish (e.g., v2.3.1)"
+        required: true
+        type: string
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  meta:
+    name: Resolve versions
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      python_version: ${{ steps.version.outputs.python_version }}
+      tag: ${{ steps.version.outputs.tag }}
+      npm_exists: ${{ steps.published.outputs.npm_exists }}
+      pypi_exists: ${{ steps.published.outputs.pypi_exists }}
+      release_assets_exist: >-
+        ${{ steps.release_assets.outputs.release_assets_exist }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: >-
+            ${{
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.tag ||
+              ''
+            }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ github.event.inputs.tag }}"
+          else
+            tag="${GITHUB_REF#refs/tags/}"
+          fi
+
+          version="${tag#v}"
+          python_version="$(echo "$version" | sed 's/-rc\.//g; s/-rc/rc/')"
+
+          {
+            echo "version=$version"
+            echo "python_version=$python_version"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Git tag: $tag"
+          echo "npm version: $version"
+          echo "Python version: $python_version"
+
+      - name: Detect already-published versions
+        id: published
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          python_version="${{ steps.version.outputs.python_version }}"
+
+          npm_exists=false
+          if npm view "ai-rulez@${version}" version >/dev/null 2>&1; then
+            npm_exists=true
+          fi
+
+          pypi_exists=false
+          pypi_url="https://pypi.org/pypi/ai-rulez/${python_version}/json"
+          if curl -fsS "$pypi_url" >/dev/null; then
+            pypi_exists=true
+          fi
+
+          {
+            echo "npm_exists=$npm_exists"
+            echo "pypi_exists=$pypi_exists"
+          } >> "$GITHUB_OUTPUT"
+
+          echo "Already published?"
+          echo "  npm:  $npm_exists"
+          echo "  PyPI: $pypi_exists"
+
+      - name: Detect existing GitHub release assets
+        id: release_assets
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="${{ steps.version.outputs.tag }}"
+          release_assets_exist=false
+
+          if gh release view "$tag" >/dev/null 2>&1; then
+            count="$(
+              gh release view "$tag" --json assets --jq '.assets | length'
+            )"
+            if [ "${count:-0}" -gt 0 ]; then
+              release_assets_exist=true
+            fi
+          fi
+
+          echo "release_assets_exist=$release_assets_exist" >> "$GITHUB_OUTPUT"
+          echo "GitHub release assets exist? $release_assets_exist"
+
+  release_assets:
+    name: Publish GitHub release assets
+    needs: meta
+    if: needs.meta.outputs.release_assets_exist != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: >-
+            ${{
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.tag ||
+              ''
+            }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25"
+
+      - name: Run GoReleaser
+        uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: release --clean --skip=validate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+
+  publish_npm:
+    name: Publish npm
+    needs: meta
+    if: needs.meta.outputs.npm_exists != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: >-
+            ${{
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.tag ||
+              ''
+            }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Copy README
+        run: cp README.md release/npm/README.md
+
+      - name: Set version
+        run: |
+          VERSION="${{ needs.meta.outputs.version }}"
+          cd release/npm
+          sed -i "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" package.json
+          cat package.json | grep "\"version\""
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ""
+        run: |
+          unset NODE_AUTH_TOKEN
+          cd release/npm
+          version="${{ needs.meta.outputs.version }}"
+          if [[ "$version" == *"-rc."* ]]; then
+            npm_tag="beta"
+          else
+            npm_tag="latest"
+          fi
+
+          npm publish --provenance --access public --tag "$npm_tag"
+
+  publish_pypi:
+    name: Publish PyPI
+    needs: meta
+    if: needs.meta.outputs.pypi_exists != 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          ref: >-
+            ${{
+              github.event_name == 'workflow_dispatch' &&
+              github.event.inputs.tag ||
+              ''
+            }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Build Python package
+        env:
+          RELEASE_VERSION: ${{ needs.meta.outputs.python_version }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build
+          cp README.md release/pypi/README.md
+          cd release/pypi
+          python -m build
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: release/pypi/dist
+          skip-existing: true
