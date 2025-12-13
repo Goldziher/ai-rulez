@@ -201,7 +201,7 @@ Add to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.3.4
+    rev: v2.3.5
     hooks:
       - id: ai-rulez-enforce
       - id: ai-rulez-enforce-fix
