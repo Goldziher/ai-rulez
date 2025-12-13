@@ -6,6 +6,11 @@ Thumbs.db
 # Log files
 *.log
 
+# Backup files
+*.backup
+*.bak
+*~
+
 # Local configuration overrides
 *.local.yaml
 .env

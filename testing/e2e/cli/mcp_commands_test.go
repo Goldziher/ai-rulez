@@ -53,7 +53,7 @@ func (s *MCPCommandsCLITestSuite) TestGenerateMCPServers() {
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
-	result.AssertOutputContains(s.T(), "Generated 6 file(s)")
+	result.AssertOutputContains(s.T(), "Generated 8 file(s)")
 
 	s.verifyClaudeCodeMCPFormat()
 

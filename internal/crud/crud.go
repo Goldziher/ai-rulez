@@ -846,14 +846,33 @@ func loadConfig(ctx context.Context, configFile string) (*config.Config, error) 
 func loadConfigWithPath(ctx context.Context, configFile string) (*config.Config, string, error) {
 	var configPath string
 	var err error
+	var workingDir string
 
+	// Determine working directory
 	if configFile != "" {
 		configPath = configFile
+		workingDir = filepath.Dir(configFile)
 	} else {
-		configPath, err = config.FindConfigFile(".")
+		workingDir = "."
+		configPath, err = config.FindConfigFile(workingDir)
 		if err != nil {
 			return nil, "", oops.Wrapf(err, "find configuration file")
 		}
+	}
+
+	// Detect config version
+	version, err := config.DetectConfigVersion(workingDir)
+	if err != nil {
+		return nil, "", oops.Wrapf(err, "detect configuration version")
+	}
+
+	// Check if V3 config is detected
+	if version == "v3" {
+		return nil, "", oops.
+			With("version", "v3").
+			With("directory", workingDir).
+			Hint("CRUD commands are not supported for V3 configurations.\nEdit files directly in .ai-rulez/rules/, .ai-rulez/context/, and .ai-rulez/skills/ directories instead.\nOr convert to V2 format using: ai-rulez migrate").
+			Errorf("CRUD commands do not support V3 configurations")
 	}
 
 	cfg, err := config.LoadConfigWithIncludes(ctx, configPath)

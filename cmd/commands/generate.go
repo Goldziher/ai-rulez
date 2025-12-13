@@ -8,10 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
-	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/mcp/cli"
-	"github.com/Goldziher/ai-rulez/internal/migration"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -19,11 +16,11 @@ import (
 )
 
 var (
-	dryRun             bool
-	updateGitignore    bool
-	updateGitignoreSet bool
-	recursive          bool
-	skipCLIMCP         bool
+	dryRun          bool
+	updateGitignore bool
+	recursive       bool
+	skipCLIMCP      bool
+	profile         string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -43,112 +40,48 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "no-configure-cli-mcp", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
-
-	// Add enforce flags to generate command
-	addEnforceToGenerateCmd()
+	GenerateCmd.Flags().StringVar(&profile, "profile", "", "Profile to generate (V3 only, default: from config or 'default')")
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
 	progress.SetQuiet(viper.GetBool("quiet"))
 
-	updateGitignoreSet = cmd.Flags().Changed("update-gitignore")
+	workingDir := "."
+	if len(args) > 0 {
+		workingDir = filepath.Dir(args[0])
+	}
 
 	if recursive {
 		runRecursiveGenerate()
 		return
 	}
 
-	configPath := resolveConfigPath(args)
-	handleMigration(configPath)
-	cfg := loadConfig(configPath)
+	// V3 only - load and generate
+	ctx := context.Background()
+	cfg, err := config.LoadConfigV3(ctx, workingDir)
+	if err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
 
-	gen := generator.NewWithConfigFile(configPath)
+	// Validate configuration
+	if err := cfg.ValidateV3(); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+
+	// Create V3 generator
+	gen := generator.NewGeneratorV3(cfg)
 
 	if dryRun {
-		showDryRunPreview(gen, cfg)
+		progress.PrintlnIfNotQuiet("Note: --dry-run not yet supported for V3 configs")
 		return
 	}
 
-	generateFiles(gen, cfg, configPath)
-}
-
-func resolveConfigPath(args []string) string {
-	if len(args) > 0 {
-		return args[0]
-	}
-	if cfgFile != "" {
-		return cfgFile
-	}
-
-	configPath, err := config.FindConfigFile(".")
-	if err != nil {
+	// Generate files
+	if err := gen.Generate(profile); err != nil {
 		fmtError(err)
 		os.Exit(1)
-	}
-	return configPath
-}
-
-func handleMigration(configPath string) {
-	version, err := migration.DetectAndMigrate(configPath)
-	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	if version == "v1" && !progress.IsQuiet() {
-		fmt.Println("Successfully migrated configuration from v1 to v2")
-	}
-}
-
-func loadConfig(configPath string) *config.Config {
-	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
-	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	return cfg
-}
-
-func showDryRunPreview(gen *generator.Generator, cfg *config.Config) {
-	preview, err := gen.PreviewAll(cfg)
-	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	fmt.Println("Would generate the following files:")
-	for output := range preview {
-		fmt.Printf("  - %s\n", output)
-	}
-}
-
-func generateFiles(gen *generator.Generator, cfg *config.Config, configPath string) {
-	if err := gen.GenerateAll(cfg); err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	if updateGitignore {
-		if err := gitignore.UpdateGitignoreFiles(configPath, cfg); err != nil {
-			if !progress.IsQuiet() {
-				fmt.Printf("  ⚠️  Warning: Could not update .gitignore: %v\n", err)
-			}
-		}
-	}
-
-	progress.PrintIfNotQuiet("✅ Generated %d file(s) successfully\n", len(cfg.Outputs))
-	for _, output := range cfg.Outputs {
-		progress.PrintIfNotQuiet("  - %s\n", output.Path)
-	}
-
-	if !skipCLIMCP && len(cfg.MCPServers) > 0 {
-		if err := cli.ConfigureCLIToolsWithOutputs(cfg.MCPServers, cfg.Outputs); err != nil {
-			progress.PrintIfNotQuiet("⚠️  Warning: CLI MCP configuration failed: %v\n", err)
-		}
-	}
-
-	// Run post-generation enforcement if requested
-	if err := runPostGenerateEnforcement(configPath); err != nil {
-		progress.PrintIfNotQuiet("⚠️  Warning: Post-generation enforcement failed: %v\n", err)
 	}
 }
 
@@ -172,7 +105,7 @@ func findConfigFilesRecursively() []string {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && migration.IsConfigFile(filepath.Base(path)) {
+		if !info.IsDir() && isV3ConfigFile(path) {
 			configFiles = append(configFiles, path)
 			if err := spinner.Add(1); err != nil {
 				logger.Debug("Failed to update spinner", "error", err)
@@ -193,6 +126,13 @@ func findConfigFilesRecursively() []string {
 	return configFiles
 }
 
+func isV3ConfigFile(path string) bool {
+	// Check for V3 config structure: .ai-rulez directory with ai-rulez.yaml or ai-rulez.json
+	dir := filepath.Dir(path)
+	base := filepath.Base(path)
+	return filepath.Base(dir) == ".ai-rulez" && (base == "ai-rulez.yaml" || base == "ai-rulez.json")
+}
+
 func processConfigFiles(configFiles []string) int {
 	fileCounter := progress.NewFileCounter(len(configFiles), "Processing configurations")
 	totalGenerated := 0
@@ -207,79 +147,41 @@ func processConfigFiles(configFiles []string) int {
 }
 
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) int {
+	workingDir := filepath.Dir(configPath)
 	fileCounter.StartFile(configPath)
 
-	version, err := migration.DetectAndMigrate(configPath)
+	ctx := context.Background()
+	cfg, err := config.LoadConfigV3(ctx, workingDir)
 	if err != nil {
 		fileCounter.Error(err)
 		return 0
 	}
 
-	if version == "v1" {
-		logger.Debug("Migrated config", "path", configPath, "from", "v1", "to", "v2")
-	}
-
-	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
-	if err != nil {
+	// Validate configuration
+	if err := cfg.ValidateV3(); err != nil {
 		fileCounter.Error(err)
 		return 0
 	}
 
-	gen := generator.NewWithConfigFile(configPath)
+	// Create V3 generator
+	gen := generator.NewGeneratorV3(cfg)
 
 	if dryRun {
-		return handleDryRun(gen, cfg, fileCounter)
+		progress.PrintlnIfNotQuiet("  Note: dry-run not yet supported for V3 configs")
+		fileCounter.FinishFile()
+		return 0
 	}
 
-	return handleGeneration(gen, cfg, configPath, fileCounter)
-}
-
-func handleDryRun(gen *generator.Generator, cfg *config.Config, fileCounter *progress.FileCounter) int {
-	preview, err := gen.PreviewAll(cfg)
-	if err != nil {
+	// Generate files
+	if err := gen.Generate(profile); err != nil {
 		fileCounter.Error(err)
 		return 0
 	}
 
-	progress.PrintlnIfNotQuiet("  Would generate:")
-	for output := range preview {
-		progress.PrintIfNotQuiet("    - %s\n", output)
-	}
 	fileCounter.FinishFile()
-	return 0
-}
 
-func handleGeneration(gen *generator.Generator, cfg *config.Config, configPath string, fileCounter *progress.FileCounter) int {
-	if err := gen.GenerateAll(cfg); err != nil {
-		fileCounter.Error(err)
-		return 0
-	}
-
-	handleGitignoreUpdate(configPath, cfg)
-
-	if !skipCLIMCP && len(cfg.MCPServers) > 0 {
-		if err := cli.ConfigureCLIToolsWithOutputs(cfg.MCPServers, cfg.Outputs); err != nil {
-			logger.Debug("CLI MCP configuration failed", "error", err)
-		}
-	}
-
-	fileCounter.FinishFile()
-	return len(cfg.Outputs)
-}
-
-func handleGitignoreUpdate(configPath string, cfg *config.Config) {
-	shouldUpdate := cfg.ShouldUpdateGitignore()
-	if updateGitignoreSet {
-		shouldUpdate = updateGitignore
-	}
-
-	if shouldUpdate {
-		if err := gitignore.UpdateGitignoreFiles(configPath, cfg); err != nil {
-			if !progress.IsQuiet() {
-				fmt.Printf("  ⚠️  Warning: Could not update .gitignore: %v\n", err)
-			}
-		}
-	}
+	// Count generated files (estimate based on presets)
+	return len(cfg.Presets) * 3 // Rough estimate
 }
 
 func fmtError(err error) {

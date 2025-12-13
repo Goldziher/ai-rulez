@@ -1,0 +1,35 @@
+metadata:
+  name: Project With Agents
+  description: Test project with agents for migration
+  version: 1.0.0
+presets:
+  - claude
+  - cursor
+outputs:
+  - path: CLAUDE.md
+rules:
+  - name: Agent Guidelines
+    content: Follow the agent-specific guidelines when working on this project.
+    priority: high
+agents:
+  - id: golang-developer
+    name: golang-developer
+    description: Assists with Go development tasks
+    system_prompt: |
+      You are a skilled Go developer.
+      - Write idiomatic Go code
+      - Use proper error handling
+      - Follow Go best practices
+    priority: high
+    targets:
+      - .claude/agents/*
+      - AGENTS.md
+  - id: frontend-specialist
+    name: frontend-specialist
+    description: Assists with frontend development
+    system_prompt: |
+      You are a frontend specialist.
+      - Write clean, maintainable code
+      - Follow accessibility best practices
+      - Optimize for performance
+    priority: medium

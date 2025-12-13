@@ -2,22 +2,20 @@ package config
 
 import (
 	"strings"
-	"time"
 )
 
 type Config struct {
-	Metadata    Metadata                 `yaml:"metadata"`
-	Extends     string                   `yaml:"extends,omitempty"`
-	Includes    []string                 `yaml:"includes,omitempty"`
-	Gitignore   *bool                    `yaml:"gitignore,omitempty"`
-	Outputs     []Output                 `yaml:"outputs,omitempty"`
-	Presets     []string                 `yaml:"presets,omitempty"`
-	Rules       []Rule                   `yaml:"rules,omitempty"`
-	Sections    []Section                `yaml:"sections,omitempty"`
-	Agents      []Agent                  `yaml:"agents,omitempty"`
-	MCPServers  []MCPServer              `yaml:"mcp_servers,omitempty"`
-	Commands    []Command                `yaml:"commands,omitempty"`
-	Enforcement *EnforcementGlobalConfig `yaml:"enforcement,omitempty"`
+	Metadata   Metadata    `yaml:"metadata"`
+	Extends    string      `yaml:"extends,omitempty"`
+	Includes   []string    `yaml:"includes,omitempty"`
+	Gitignore  *bool       `yaml:"gitignore,omitempty"`
+	Outputs    []Output    `yaml:"outputs,omitempty"`
+	Presets    []string    `yaml:"presets,omitempty"`
+	Rules      []Rule      `yaml:"rules,omitempty"`
+	Sections   []Section   `yaml:"sections,omitempty"`
+	Agents     []Agent     `yaml:"agents,omitempty"`
+	MCPServers []MCPServer `yaml:"mcp_servers,omitempty"`
+	Commands   []Command   `yaml:"commands,omitempty"`
 }
 
 type Metadata struct {
@@ -59,21 +57,19 @@ func (o *Output) GetNamingScheme() string {
 }
 
 type Rule struct {
-	ID          string                 `yaml:"id,omitempty"`
-	Name        string                 `yaml:"name"`
-	Priority    Priority               `yaml:"priority,omitempty"`
-	Content     string                 `yaml:"content"`
-	Targets     []string               `yaml:"targets,omitempty"`
-	Enforcement *RuleEnforcementConfig `yaml:"enforcement,omitempty"`
+	ID       string   `yaml:"id,omitempty"`
+	Name     string   `yaml:"name"`
+	Priority Priority `yaml:"priority,omitempty"`
+	Content  string   `yaml:"content"`
+	Targets  []string `yaml:"targets,omitempty"`
 }
 
 type Section struct {
-	ID          string                 `yaml:"id,omitempty"`
-	Name        string                 `yaml:"name"`
-	Priority    Priority               `yaml:"priority,omitempty"`
-	Content     string                 `yaml:"content"`
-	Targets     []string               `yaml:"targets,omitempty"`
-	Enforcement *RuleEnforcementConfig `yaml:"enforcement,omitempty"`
+	ID       string   `yaml:"id,omitempty"`
+	Name     string   `yaml:"name"`
+	Priority Priority `yaml:"priority,omitempty"`
+	Content  string   `yaml:"content"`
+	Targets  []string `yaml:"targets,omitempty"`
 }
 
 type Agent struct {
@@ -152,92 +148,4 @@ func (c *Config) ShouldUpdateGitignore() bool {
 		return true
 	}
 	return *c.Gitignore
-}
-
-// EnforcementGlobalConfig defines global enforcement settings in configuration
-type EnforcementGlobalConfig struct {
-	Enabled       *bool                    `yaml:"enabled,omitempty"`
-	Level         string                   `yaml:"level,omitempty"`
-	Agent         string                   `yaml:"agent,omitempty"`
-	AutoFix       *bool                    `yaml:"auto_fix,omitempty"`
-	Timeout       *time.Duration           `yaml:"timeout,omitempty"`
-	IncludeFiles  []string                 `yaml:"include_files,omitempty"`
-	ExcludeFiles  []string                 `yaml:"exclude_files,omitempty"`
-	MaxViolations *int                     `yaml:"max_violations,omitempty"`
-	Review        *EnforcementReviewConfig `yaml:"review,omitempty"`
-}
-
-// EnforcementReviewConfig defines review settings in configuration
-type EnforcementReviewConfig struct {
-	Enabled            *bool          `yaml:"enabled,omitempty"`
-	MaxIterations      *int           `yaml:"max_iterations,omitempty"`
-	Agent              string         `yaml:"agent,omitempty"`
-	FeedbackThreshold  *float64       `yaml:"feedback_threshold,omitempty"`
-	Timeout            *time.Duration `yaml:"timeout,omitempty"`
-	AutoApprove        *bool          `yaml:"auto_approve,omitempty"`
-	RequireImprovement *bool          `yaml:"require_improvement,omitempty"`
-}
-
-// IsEnforcementEnabled returns whether enforcement is enabled in the global config
-func (c *Config) IsEnforcementEnabled() bool {
-	if c.Enforcement == nil || c.Enforcement.Enabled == nil {
-		return false
-	}
-	return *c.Enforcement.Enabled
-}
-
-// GetEnforcementLevel returns the enforcement level from global config
-func (c *Config) GetEnforcementLevel() string {
-	if c.Enforcement == nil || c.Enforcement.Level == "" {
-		return "warn"
-	}
-	return c.Enforcement.Level
-}
-
-// GetEnforcementAgent returns the enforcement agent from global config
-func (c *Config) GetEnforcementAgent() string {
-	if c.Enforcement == nil {
-		return ""
-	}
-	return c.Enforcement.Agent
-}
-
-// RuleEnforcementConfig defines per-rule enforcement settings
-type RuleEnforcementConfig struct {
-	Enabled *bool  `yaml:"enabled,omitempty"`
-	Level   string `yaml:"level,omitempty"`
-	Agent   string `yaml:"agent,omitempty"`
-	AutoFix *bool  `yaml:"auto_fix,omitempty"`
-}
-
-// IsRuleEnforcementEnabled returns whether enforcement is enabled for a specific rule
-func (r *Rule) IsEnforcementEnabled() bool {
-	if r.Enforcement == nil || r.Enforcement.Enabled == nil {
-		return true // Default to enabled
-	}
-	return *r.Enforcement.Enabled
-}
-
-// GetRuleEnforcementLevel returns the enforcement level for a specific rule
-func (r *Rule) GetEnforcementLevel() string {
-	if r.Enforcement == nil || r.Enforcement.Level == "" {
-		return "" // Use global level
-	}
-	return r.Enforcement.Level
-}
-
-// IsRuleEnforcementEnabled returns whether enforcement is enabled for a specific section
-func (s *Section) IsEnforcementEnabled() bool {
-	if s.Enforcement == nil || s.Enforcement.Enabled == nil {
-		return true // Default to enabled
-	}
-	return *s.Enforcement.Enabled
-}
-
-// GetRuleEnforcementLevel returns the enforcement level for a specific section
-func (s *Section) GetEnforcementLevel() string {
-	if s.Enforcement == nil || s.Enforcement.Level == "" {
-		return "" // Use global level
-	}
-	return s.Enforcement.Level
 }
