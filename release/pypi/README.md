@@ -430,7 +430,7 @@ pre-commit:
 # .pre-commit-config.yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: ai-rulez-enforce
       - id: ai-rulez-enforce-fix
@@ -533,7 +533,7 @@ Add the following to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v2.4.2
+    rev: v2.4.3
     hooks:
       - id: ai-rulez-validate
       - id: ai-rulez-generate
