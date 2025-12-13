@@ -1,282 +1,607 @@
 # Configuration Reference
 
-Everything you can put in your `ai-rulez.yml` file.
+Complete reference for V3 configuration in `.ai-rulez/config.yaml`.
 
-## Main Structure
+## Basic Structure
 
-The key sections in your config file.
-
-### `metadata`
-
-Basic info about your project.
+The minimal valid V3 configuration:
 
 ```yaml
-metadata:
-  name: "My Project"
-  version: "1.0.0"
-  description: "A brief description of the project."
+version: "3.0"
+name: my-project
+```
+
+A typical production configuration:
+
+```yaml
+version: "3.0"
+name: my-project
+description: My project description
+
+presets:
+  - claude
+  - cursor
+  - gemini
+
+default: full
+
+profiles:
+  full: [backend, frontend, qa]
+  backend: [backend, qa]
+  frontend: [frontend, qa]
+
+gitignore: true
+```
+
+## Required Fields
+
+### `version`
+
+The V3 schema version. Must be exactly `"3.0"`.
+
+```yaml
+version: "3.0"
+```
+
+### `name`
+
+The project name. Used in generated files and displayed in headers.
+
+```yaml
+name: "My Project"
+name: "acme-platform"
+name: "backend-api"
+```
+
+## Optional Fields
+
+### `description`
+
+Brief description of the project or configuration.
+
+```yaml
+description: "SaaS platform with React frontend and Go backend"
 ```
 
 ### `presets`
 
-The recommended way to configure output files for common AI tools. This is a list of strings, where each string is a supported preset name.
+Specifies which tools to generate configuration for. Can be built-in preset names or custom preset objects.
+
+#### Built-in Presets
 
 ```yaml
-# Use presets for popular tools
 presets:
-  - "popular" # Includes Claude, Cursor, Windsurf, and Copilot
-  - "gemini"
+  - claude          # → CLAUDE.md
+  - cursor          # → .cursorrules
+  - gemini          # → GEMINI.md
+  - copilot         # → .github/copilot-instructions.md
+  - windsurf        # → .windsurf/rules/
+  - continue-dev    # → .continue/config.py
+  - cline           # → .clinerules/
 ```
 
-See the "Configuring Outputs" section below for a full list of available presets.
+#### Custom Presets
 
-### `outputs`
-
-The advanced method for configuring output files. This gives you fine-grained control over file paths, naming schemes, and templates. Use this when a preset doesn't meet your needs or you have a custom tool.
+For tools not in the built-in list:
 
 ```yaml
-# For advanced, custom configurations
-outputs:
-  - path: "CUSTOM_PROMPT.md"
-    template:
-      type: "inline"
-      value: "My custom prompt template..."
+presets:
+  - name: my-tool
+    type: markdown          # or: directory, json
+    path: docs/MY_TOOL.md
+    template: |
+      # {{ .Name }}
+      {{ range .Rules }}
+      - **{{ .Name }}**: {{ .Content }}
+      {{ end }}
 ```
 
-### `extends`
+### `default`
 
-A string specifying a single base configuration file to inherit from. The path can be a local file or a remote URL.
+The default profile name used when `ai-rulez generate` is run without `--profile`.
 
-!!! info "Why use `extends`?"
-    The `extends` property is for **inheritance**. It allows you to create a foundational configuration (e.g., for your entire organization) and have individual projects inherit and build upon it. This is the best way to enforce common standards while allowing for project-specific customization.
+```yaml
+default: full
+```
 
-### `includes`
+If not specified, all domains are included.
 
-A list of strings specifying other `ai-rulez.yml` files to merge into your configuration. Paths can be local files or remote URLs.
+### `profiles`
 
-!!! info "Why use `includes`?"
-    The `includes` property is for **composition**. It allows you to create modular, reusable sets of rules (e.g., for a specific language, framework, or security standard) and mix them into any project as needed.
+Named profiles that specify which domains to include in generation.
 
-### `rules`
+```yaml
+profiles:
+  full:
+    - backend
+    - frontend
+    - qa
+  backend:
+    - backend
+    - qa
+  frontend:
+    - frontend
+    - qa
+  qa:
+    - qa
+```
 
-A list of rule objects that define instructions for your AI assistant. See the `rule` object reference below for details.
-
-### `sections`
-
-A list of section objects that define large blocks of documentation or context. See the `section` object reference below for details.
-
-### `agents`
-
-A list of agent objects that define specialized sub-assistants. See the `agent` object reference below for details.
-
-### `mcp_servers`
-
-A list of MCP server objects for integrating external tools. See the `mcp_server` object reference below for details.
-
-### `commands`
-
-A list of custom slash command objects for your AI assistant. See the `command` object reference below for details.
+Each profile is a list of domain names. When generating with a profile:
+1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`) is included
+2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
 
 ### `gitignore`
 
-Controls whether `ai-rulez` automatically updates your `.gitignore` file with generated files.
+Controls whether `ai-rulez` automatically updates `.gitignore` with generated files.
 
 ```yaml
-gitignore: false  # Disable automatic .gitignore updates
+gitignore: true    # Default: update .gitignore automatically
+gitignore: false   # Manual .gitignore management
 ```
 
-By default, `ai-rulez` will add all generated files to your `.gitignore` to prevent them from being committed to version control. This is usually what you want, since these files are regenerated from your configuration.
+When `true`, generated files are added to `.gitignore` to prevent accidental commits.
 
-- **Default**: `true` (automatically update `.gitignore`)
-- **Set to `false`**: If you want to manage `.gitignore` manually or commit generated files
+## Directory Structure
 
-!!! tip "CLI Override"
-    You can override this setting using the `--update-gitignore` flag when running `ai-rulez generate`. The CLI flag takes precedence over the configuration setting.
+### Root Content (Always Included)
 
+Content in these directories is always included in every generation:
+
+```
+.ai-rulez/
+├── rules/           # Mandatory rules and constraints
+├── context/         # Reference documentation
+└── skills/          # AI skills/prompts
+```
+
+**Rules directory**: `rules/`
+- Files: `*.md` markdown files
+- Purpose: Mandatory constraints, standards, do's and don'ts
+- Included: in all generated outputs
+
+**Context directory**: `context/`
+- Files: `*.md` markdown files
+- Purpose: Reference documentation, architecture, guidelines
+- Included: in all generated outputs
+
+**Skills directory**: `skills/`
+- Structure: `skills/{skill-name}/SKILL.md`
+- Purpose: Specialized AI prompts and expert prompts
+- Included: in all generated outputs
+
+### Domain Content (Profile-Specific)
+
+Content in domain directories is included only when that domain is in the active profile:
+
+```
+.ai-rulez/domains/
+├── backend/
+│   ├── rules/
+│   ├── context/
+│   └── skills/
+├── frontend/
+│   ├── rules/
+│   ├── context/
+│   └── skills/
+└── qa/
+    ├── rules/
+    └── context/
+```
+
+Domain directories mirror the root structure:
+- `domains/{name}/rules/` - Domain-specific rules
+- `domains/{name}/context/` - Domain-specific documentation
+- `domains/{name}/skills/` - Domain-specific AI skills
+
+## File Formats
+
+### Markdown Files
+
+All `.md` files are treated as content. Optional YAML frontmatter is supported:
+
+```markdown
+---
+priority: high
+targets:
+  - "*.py"
+  - "backend/*"
+custom_field: value
 ---
 
-## Configuring Outputs: Presets vs. Outputs
+# Rule or Context Title
 
-`ai-rulez` offers two ways to define the files it generates.
+Your content here. Can include any markdown formatting.
+```
 
-### Using Presets (Recommended)
+### Frontmatter Fields
 
-For most users, `presets` are the simplest and recommended method. They are a shorthand for the most common AI tool configurations.
+**`priority`** (optional, string)
+- Values: `critical`, `high`, `medium`, `low`, `minimal`
+- Default: `medium`
+- Controls sort order in generated files (higher priority first)
+
+```yaml
+---
+priority: critical
+---
+```
+
+**`targets`** (optional, array of strings)
+- File glob patterns specifying which generated outputs include this content
+- If empty, included in all outputs
+
+```yaml
+---
+targets:
+  - "CLAUDE.md"
+  - ".cursor/rules/*"
+---
+```
+
+**Custom fields** (optional)
+- Any other YAML fields are preserved and available in custom templates
+
+```yaml
+---
+priority: high
+author: engineering-team
+review_date: 2025-01-01
+tags: [security, performance]
+---
+```
+
+### SKILL.md Format
+
+Skills should follow this structure:
+
+```markdown
+---
+priority: high
+description: "Code reviewer expert for quality assurance"
+targets: ["CLAUDE.md"]
+---
+
+# Code Reviewer Expert
+
+You are an expert code reviewer with deep knowledge of:
+- Code quality and maintainability
+- Testing best practices
+- Performance optimization
+
+## Your Responsibilities
+
+1. Review pull requests for correctness
+2. Suggest improvements and refactoring
+3. Verify test coverage
+```
+
+## Content Merge Strategy
+
+When generating with a profile, content is merged in this order:
+
+1. **Root rules** (`.ai-rulez/rules/`)
+2. **Root context** (`.ai-rulez/context/`)
+3. **Root skills** (`.ai-rulez/skills/`)
+4. **Domain rules** (for each domain in profile)
+5. **Domain context** (for each domain in profile)
+6. **Domain skills** (for each domain in profile)
+
+Within each category, files are sorted by:
+1. **Priority** (critical → high → medium → low → minimal)
+2. **Filename** (alphabetical)
+
+### Name Collision Handling
+
+If a filename appears in both root and domain:
+
+```
+.ai-rulez/rules/testing.md
+.ai-rulez/domains/backend/rules/testing.md
+```
+
+The domain version takes precedence (backend gets the domain-specific version).
+
+A warning is logged if collisions are detected:
+```
+⚠️  Content collision: rules/testing.md exists in both root and backend domain
+    → Using backend domain version
+```
+
+## Configuration Examples
+
+### Small Project (Single Team)
+
+```yaml
+version: "3.0"
+name: "My Startup"
+description: "Early-stage SaaS with React + Go"
+
+presets:
+  - claude
+  - cursor
+
+gitignore: true
+```
+
+Directory structure:
+```
+.ai-rulez/
+├── config.yaml
+├── rules/
+│   ├── code-style.md
+│   └── testing.md
+├── context/
+│   └── architecture.md
+└── skills/
+    └── code-reviewer/
+        └── SKILL.md
+```
+
+### Medium Project (Multiple Teams)
+
+```yaml
+version: "3.0"
+name: "Enterprise Platform"
+description: "Multi-team SaaS platform"
+
+presets:
+  - claude
+  - cursor
+  - gemini
+
+default: full
+
+profiles:
+  full: [backend, frontend, qa, devops]
+  backend: [backend, qa]
+  frontend: [frontend, qa]
+  qa: [qa]
+  devops: [devops]
+
+gitignore: true
+```
+
+Directory structure:
+```
+.ai-rulez/
+├── config.yaml
+├── rules/
+│   ├── general-standards.md
+│   └── security.md
+└── domains/
+    ├── backend/
+    │   ├── rules/
+    │   │   ├── api-design.md
+    │   │   └── database.md
+    │   └── context/
+    │       └── backend-architecture.md
+    ├── frontend/
+    │   ├── rules/
+    │   │   ├── component-guidelines.md
+    │   │   └── performance.md
+    │   └── context/
+    │       └── design-system.md
+    ├── qa/
+    │   └── rules/
+    │       └── testing-strategy.md
+    └── devops/
+        ├── rules/
+        │   └── deployment.md
+        └── context/
+            └── infrastructure.md
+```
+
+### Complex Project (Multiple Presets)
+
+```yaml
+version: "3.0"
+name: "Advanced ML Platform"
+description: "Research platform with team separation"
+
+presets:
+  - claude
+  - cursor
+  - gemini
+  - windsurf
+  - name: internal-guide
+    type: markdown
+    path: docs/AI_DEVELOPMENT_GUIDE.md
+
+default: full
+
+profiles:
+  full: [research, ml-ops, infrastructure, frontend]
+  research: [research]
+  ml-ops: [ml-ops, infrastructure]
+  frontend: [frontend]
+
+gitignore: true
+```
+
+## Profile Design Patterns
+
+### Single Team (No Domains)
+
+For projects with a single team, skip domains entirely:
+
+```yaml
+version: "3.0"
+name: simple-project
+presets:
+  - claude
+  - cursor
+```
+
+### Multi-Team Monorepo
+
+For monorepos with multiple independent teams:
+
+```yaml
+version: "3.0"
+name: platform
+presets:
+  - claude
+  - cursor
+
+default: full
+
+profiles:
+  full: [backend, frontend, mobile]
+  backend: [backend]
+  frontend: [frontend]
+  mobile: [mobile]
+```
+
+### Environment-Based Profiles
+
+For different behavior in dev, staging, production:
+
+```yaml
+version: "3.0"
+name: saas-app
+presets:
+  - claude
+
+default: production
+
+profiles:
+  development: [dev-guidelines]
+  staging: [staging-guidelines]
+  production: [production-guidelines, security-hardened]
+```
+
+## Validation
+
+V3 configurations are validated against the JSON schema:
+
+```
+schema/ai-rules-v3.schema.json
+```
+
+To validate your configuration:
+
+```bash
+ai-rulez validate
+```
+
+This checks:
+- `version` is exactly `"3.0"`
+- `name` is present and non-empty
+- All preset names are valid
+- File paths are valid
+
+## Tips and Best Practices
+
+### Use Meaningful Domain Names
+
+Good domain names:
+- `backend`, `frontend`, `mobile` (service boundaries)
+- `api`, `database`, `queue` (technical domains)
+- `auth`, `payments`, `search` (feature areas)
+
+Avoid:
+- `team1`, `team2` (not descriptive)
+- Single letters or acronyms without context
+
+### Organize by Responsibility
+
+Put content in the domain that owns it:
+
+```
+Good:
+- domains/backend/rules/database-standards.md
+- domains/frontend/rules/accessibility-guidelines.md
+
+Bad:
+- domains/shared/rules/database-standards.md  (ambiguous ownership)
+- domains/qa/rules/everything.md               (too broad)
+```
+
+### Keep Domains Focused
+
+Domains should represent one area of responsibility:
+
+```
+Preferred:
+profiles:
+  full: [api, frontend, infrastructure]
+
+Less ideal:
+profiles:
+  full: [api-with-database, frontend-with-build-tools, infrastructure-and-monitoring]
+```
+
+### Document Domain Purposes
+
+Add a comment in `config.yaml`:
+
+```yaml
+# Domains:
+# - backend: Go microservices, REST APIs
+# - frontend: React web application
+# - mobile: React Native mobile apps
+# - qa: Testing standards for all platforms
+# - devops: Infrastructure and deployment
+
+profiles:
+  full: [backend, frontend, mobile, qa, devops]
+```
+
+## Troubleshooting
+
+### "Profile not found"
+
+```bash
+# Check which profiles are defined
+ai-rulez validate
+
+# Try generating with an explicit profile
+ai-rulez generate --profile backend
+```
+
+### "No presets specified"
+
+At least one preset is recommended. Add to config:
 
 ```yaml
 presets:
-  - "popular"
-  - "gemini"
+  - claude
 ```
 
-**Available Presets:**
+### "Domain not included"
 
--   `popular`: A convenient bundle that includes `claude`, `cursor`, `windsurf`, `copilot`, and `gemini`.
--   `claude`: Generates `CLAUDE.md` for Anthropic Claude.
--   `cursor`: Generates rules for Cursor in `.cursor/rules/`.
--   `copilot`: Generates `.github/copilot-instructions.md` for GitHub Copilot.
--   `gemini`: Generates `GEMINI.md` for Google Gemini.
--   `windsurf`: Generates rules for Windsurf in `.windsurf/`.
--   `continue`: Generates rules and prompts for Continue.dev.
--   `cline`: Generates rules for Cline in `.clinerules/`.
--   `amp` / `codex` / `opencode`: Generates `AGENTS.md` for Sourcegraph tools and OpenCode.
-
-### Using Outputs (Advanced)
-
-If you need more control than presets offer, use the `outputs` key. This is useful for:
-
--   Generating files for custom or unsupported tools.
--   Using custom file paths or naming schemes.
--   Applying custom templates to the generated files.
-
-See the `output` Object reference below for all available options.
-
-### Combining Presets and Outputs
-
-You can use both `presets` and `outputs` in the same configuration file. This is useful when you want to use a standard preset but need to add or modify one specific output.
-
-When both are used:
-
-1.  The outputs from the `presets` are generated first.
-2.  The `outputs` list is then added.
-3.  If there is a path conflict (e.g., you use the `claude` preset but also define an `output` with the path `CLAUDE.md`), the entry from the **`outputs` list will take precedence**.
+Check your profile configuration:
 
 ```yaml
-# Use the popular preset, but override the Claude file with a custom template
-presets:
-  - "popular"
-
-outputs:
-  - path: "CLAUDE.md" # This will override the default Claude output from the "popular" preset
-    template:
-      type: "file"
-      value: "./my-custom-claude-template.tmpl"
+# If this profile doesn't include "backend", backend content won't appear
+profiles:
+  myprofile:
+    - frontend      # backend is missing!
+    - qa
 ```
 
-### Supporting Custom Tools
+### Content not appearing in output
 
-What if your favorite tool isn't on the preset list? No problem. `ai-rulez` is designed to be extensible to any tool that consumes text-based configuration files.
+1. Verify domain is in profile:
+   ```bash
+   ai-rulez validate  # Check profile definitions
+   ```
 
-The key is the `outputs` list. By defining an `output`, you can tell `ai-rulez` to generate a file at any path with any content you need. This is where the power of templates comes in.
+2. Check file location:
+   - Root: `.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`
+   - Domain: `.ai-rulez/domains/{name}/rules/`, etc.
 
-**Example: Supporting a Custom Linter**
+3. Check for frontmatter errors:
+   - Invalid YAML in `---` blocks will skip the file
+   - Remove frontmatter to test
 
-Imagine you use a custom linter called "CodeSniffer" that reads its configuration from a `.codesniffer.json` file. You want to provide it with a list of important directories to scan, which you've defined in your `rules`.
+4. Regenerate explicitly:
+   ```bash
+   ai-rulez generate --profile your-profile
+   ```
 
-Here’s how you would configure that in `ai-rulez.yml`:
+## Next Steps
 
-```yaml
-rules:
-  - name: "Important Directories"
-    content: "src/"
-  - name: "Other Directories"
-    content: "pkg/"
-
-outputs:
-  - path: ".codesniffer.json"
-    template:
-      type: "inline"
-      value: |
-        {
-          "scan_directories": [
-            {{- range $i, $rule := .Rules -}}
-              {{- if $i -}},{{- end -}}
-              "{{- .Content -}}"
-            {{- end -}}
-          ]
-        }
-```
-
-This configuration would generate a `.codesniffer.json` file with the following content:
-
-```json
-{
-  "scan_directories": [
-    "src/",
-    "pkg/"
-  ]
-}
-```
-
-This demonstrates how you can use the `outputs` key and Go's templating engine to generate configuration for any tool, in any format.
-
----
-
-## Object Reference
-
-This section details the fields for each type of object in the configuration.
-
-### `output` Object
-
-Defines a file or directory to be generated. This is the advanced alternative to using `presets`.
-
-- `path` (string, required): The output path. If it ends with a `/`, it is treated as a directory.
-- `type` (string): For directory outputs, specifies the content type to generate (`rule` or `agent`).
-- `naming_scheme` (string): For directory outputs, a pattern for filenames (e.g., `{name}.md`).
-- `template` (object): A structured object to define the template.
-  - `type` (string, required): `builtin`, `file`, or `inline`.
-  - `value` (string, required): The name, path, or content of the template.
-
-!!! info "Template Format"
-    Templates must always use the structured object format with `type` and `value` fields. String-based templates are no longer supported as of v2.0.
-
-### `rule` Object
-
-- `name` (string, required): The name of the rule.
-- `content` (string, required): The content of the rule.
-- `id` (string): An optional unique identifier.
-- `priority` (string): `critical`, `high`, `medium`, `low`, or `minimal`.
-- `targets` (array of strings): A list of output paths this rule applies to.
-
-!!! tip "When to use an `id`"
-    The `id` field is used to create a stable identifier for a rule that is independent of its `name`. This is useful when you want to override a rule from an included or extended configuration file without relying on the `name`, which might change.
-
-### `section` Object
-
-- `name` (string, required): The name of the section.
-- `content` (string, required): The content of the section.
-- `id` (string): An optional unique identifier for overriding.
-- `priority` (string): `critical`, `high`, `medium`, `low`, or `minimal`.
-- `targets` (array of strings): A list of output paths this section applies to.
-
-### `agent` Object
-
-- `name` (string, required): The name of the agent.
-- `description` (string, required): A description of the agent's purpose.
-- `id` (string): An optional unique identifier for overriding.
-- `priority` (string): The agent's priority.
-- `tools` (array of strings): A list of tools available to the agent.
-- `model` (string): An optional model identifier (e.g., `claude-3-opus-20240229`, `gpt-4`).
-- `system_prompt` (string): The system prompt for the agent.
-- `template` (object): A structured template object for the system prompt.
-  - `type` (string, required): `builtin`, `file`, or `inline`.
-  - `value` (string, required): The template content, file path, or builtin name.
-- `targets` (array of strings): A list of output paths this agent applies to.
-
-!!! info "The Power of Agents"
-    Agents allow you to create specialized "experts" for different tasks. For example, you can create a `database-expert` with a system prompt full of details about your schema and query patterns. This provides the AI with deep, focused context, resulting in much more accurate and helpful responses for domain-specific questions.
-
-### `mcp_server` Object
-
-- `name` (string, required): The name of the server.
-- `id` (string): An optional unique identifier for overriding.
-- `description` (string): A description of the server.
-- `command` (string): The command to start the server.
-- `args` (array of strings): Arguments for the command.
-- `env` (object): Environment variables for the server.
-- `transport` (string): `stdio`, `sse`, or `http`.
-- `url` (string): The URL for remote servers.
-- `enabled` (boolean): Whether the server is enabled.
-- `targets` (array of strings): A list of output paths this server applies to.
-
-### `command` Object
-
-- `name` (string, required): The name of the command (e.g., `new-task`).
-- `description` (string, required): A description of the command.
-- `id` (string): An optional unique identifier for overriding.
-- `aliases` (array of strings): Alternative names for the command.
-- `usage` (string): A usage example (e.g., `/new-task <description>`).
-- `system_prompt` (string): The system prompt to use for this command.
-- `shortcut` (string): A keyboard shortcut.
-- `enabled` (boolean): Whether the command is enabled.
-- `targets` (array of strings): A list of output paths this command applies to.
+- **[Getting Started](quick-start.md)**: Quick start and common patterns
+- **[CLI Reference](cli.md)**: All commands and flags
+- **[Domains & Profiles](domains.md)**: Team organization patterns

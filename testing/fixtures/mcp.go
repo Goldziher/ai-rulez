@@ -4,6 +4,9 @@ const ConfigWithMCPServers = `metadata:
   name: "MCP Server Test Project"
   description: "Testing MCP server generation"
 
+presets:
+  - claude
+
 outputs:
   - path: ".mcp.json"
     template:
@@ -66,6 +69,9 @@ const ConfigWithCommands = `metadata:
   name: "Commands Test Project"
   description: "Testing custom commands"
 
+presets:
+  - claude
+
 outputs:
   - path: "commands-output.md"
     template:
@@ -113,6 +119,9 @@ rules:
 const ConfigWithMCPAndCommands = `metadata:
   name: "Full Feature Test"
   description: "Testing both MCP servers and commands"
+
+presets:
+  - claude
 
 outputs:
   - path: "full-output.md"

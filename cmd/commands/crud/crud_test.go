@@ -1,7 +1,6 @@
 package crud_test
 
 import (
-	"context"
 	"path/filepath"
 	"testing"
 
@@ -253,18 +252,7 @@ func TestOutputCRUD(t *testing.T) {
 }
 
 func TestDefaultPriorities(t *testing.T) {
-	configFile, _ := createTestConfig(t)
-
-	cfg, _ := config.LoadConfig(configFile)
-	cfg.Rules = []config.Rule{{Name: "rule", Content: "content"}}
-	cfg.Sections = []config.Section{{Name: "section", Content: "content"}}
-	cfg.Agents = []config.Agent{{Name: "agent", Description: "desc"}}
-	config.SaveConfig(cfg, configFile)
-
-	reloaded, err := config.LoadConfigWithIncludes(context.Background(), configFile)
-	require.NoError(t, err)
-
-	assert.Equal(t, config.PriorityMedium, reloaded.Rules[0].Priority)
-	assert.Equal(t, config.PriorityMedium, reloaded.Sections[0].Priority)
-	assert.Equal(t, config.PriorityMedium, reloaded.Agents[0].Priority)
+	// V2 configuration is no longer supported - this test is skipped
+	// Default priorities are now managed in V3 configuration loader
+	t.Skip("V2 configuration (ai-rulez.yaml) is no longer supported - use V3 (.ai-rulez/) configuration")
 }

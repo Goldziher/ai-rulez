@@ -124,14 +124,14 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 
 	slices.SortFunc(sortedRules, func(a, b config.Rule) int {
 		if a.GetPriority() != b.GetPriority() {
-			return cmp.Compare(b.GetPriority(), a.GetPriority())
+			return cmp.Compare(b.GetPriority().ToInt(), a.GetPriority().ToInt())
 		}
 		return cmp.Compare(a.GetName(), b.GetName())
 	})
 
 	slices.SortFunc(sortedSections, func(a, b config.Section) int {
 		if a.GetPriority() != b.GetPriority() {
-			return cmp.Compare(b.GetPriority(), a.GetPriority())
+			return cmp.Compare(b.GetPriority().ToInt(), a.GetPriority().ToInt())
 		}
 		return cmp.Compare(a.GetName(), b.GetName())
 	})
@@ -141,7 +141,7 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 
 	slices.SortFunc(sortedAgents, func(a, b config.Agent) int {
 		if a.GetPriority() != b.GetPriority() {
-			return cmp.Compare(b.GetPriority(), a.GetPriority())
+			return cmp.Compare(b.GetPriority().ToInt(), a.GetPriority().ToInt())
 		}
 		return cmp.Compare(a.GetName(), b.GetName())
 	})

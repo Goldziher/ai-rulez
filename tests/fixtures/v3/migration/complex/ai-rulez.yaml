@@ -1,0 +1,65 @@
+metadata:
+  name: Complex Migration Test
+  description: Complex project with all content types
+  version: 2.0.0
+presets:
+  - claude
+  - cursor
+  - gemini
+outputs:
+  - path: CLAUDE.md
+rules:
+  - name: Source-of-Truth Governance
+    content: |
+      - Treat ai-rulez.yaml as the canonical configuration
+      - Modify this file first, then regenerate outputs
+      - Keep templates and tests aligned
+    priority: critical
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+  - name: Go CLI Architecture
+    content: |
+      - Keep Cobra commands under cmd/commands
+      - Move reusable logic into internal/
+      - Wrap errors with oops helpers
+    priority: critical
+  - name: Testing and QA
+    content: |
+      - Prefer table-driven Go tests
+      - Cover failure paths
+      - Use fixtures for testing
+    priority: high
+sections:
+  - id: repository-layout
+    name: Repository Layout
+    content: |
+      ## Core Structure
+      - cmd/: CLI commands
+      - internal/: internal packages
+      - tests/: test fixtures
+
+      ## Documentation
+      - docs/: user-facing docs
+      - README.md: project overview
+    priority: high
+  - id: workflows
+    name: Core Workflows
+    content: |
+      1. Configuration generation loads ai-rulez.yaml
+      2. Enforcement analyzes files
+      3. CRUD subcommands manipulate YAML
+    priority: medium
+agents:
+  - id: golang-maintainer
+    name: Go CLI Maintainer
+    description: Maintains the Go CLI codebase
+    system_prompt: |
+      You maintain the ai-rulez Go CLI.
+      - Work inside cmd/ for commands and internal/ for services
+      - Write idiomatic, concurrency-safe Go
+      - Keep tests fast and deterministic
+    priority: high
+    targets:
+      - .claude/agents/*
+      - AGENTS.md

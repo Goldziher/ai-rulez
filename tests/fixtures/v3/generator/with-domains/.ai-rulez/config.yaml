@@ -1,0 +1,15 @@
+version: "3.0"
+name: domains-test
+description: Test with multiple domains
+presets:
+  - claude
+default: backend
+profiles:
+  backend:
+    - backend
+  frontend:
+    - frontend
+  full:
+    - backend
+    - frontend
+gitignore: false

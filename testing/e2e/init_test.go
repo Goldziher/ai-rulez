@@ -224,7 +224,7 @@ tasks:
 func runTestCommand(args ...string) (string, error) {
 	binaryPath := "/tmp/ai-rulez-test-binary"
 	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
-	buildCmd.Dir = "/Users/naamanhirschfeld/workspace/ai_rulez"
+	buildCmd.Dir = "/Users/naamanhirschfeld/workspace/ai-rulez"
 	buildCmd.Env = append(os.Environ(), "NO_INTERACTIVE=1")
 	if err := buildCmd.Run(); err != nil {
 		return "", err

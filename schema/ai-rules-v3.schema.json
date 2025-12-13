@@ -1,0 +1,157 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v3.schema.json",
+  "title": "AI Rules Configuration V3",
+  "description": "Schema for ai-rulez V3 directory-based configuration files",
+  "type": "object",
+  "required": ["version", "name"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this schema for editor support"
+    },
+    "version": {
+      "type": "string",
+      "const": "3.0",
+      "description": "Configuration version (must be 3.0)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Project name",
+      "minLength": 1
+    },
+    "description": {
+      "type": "string",
+      "description": "Project description"
+    },
+    "presets": {
+      "type": "array",
+      "description": "List of presets to generate (built-in tool names or custom preset objects)",
+      "minItems": 1,
+      "items": {
+        "oneOf": [
+          {
+            "type": "string",
+            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline"],
+            "description": "Built-in preset name"
+          },
+          {
+            "type": "object",
+            "required": ["name", "type", "path"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "description": "Custom preset name",
+                "minLength": 1
+              },
+              "type": {
+                "type": "string",
+                "enum": ["markdown", "directory", "json"],
+                "description": "Output type"
+              },
+              "path": {
+                "type": "string",
+                "description": "Output path",
+                "minLength": 1
+              },
+              "template": {
+                "type": "string",
+                "description": "Template content for custom presets"
+              }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    },
+    "default": {
+      "type": "string",
+      "description": "Default profile name to use when --profile is not specified"
+    },
+    "profiles": {
+      "type": "object",
+      "description": "Named profiles mapping profile names to lists of domain names",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "gitignore": {
+      "type": "boolean",
+      "description": "Whether to automatically update .gitignore with generated files (defaults to true)",
+      "default": true
+    },
+    "includes": {
+      "type": "array",
+      "description": "Content sources (git repositories or local paths) to include and merge",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Local identifier for this include"
+          },
+          "source": {
+            "type": "string",
+            "description": "Git repository URL (https://...) or local file path (absolute or relative)"
+          },
+          "path": {
+            "type": "string",
+            "description": "Path within git repository to .ai-rulez/ or domain folder (git repos only)"
+          },
+          "include": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["rules", "context", "skills", "mcp"]
+            },
+            "description": "What content types to import (defaults to all)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref - branch, tag, or commit hash (git repos only)"
+          },
+          "install_to": {
+            "type": "string",
+            "description": "Where to merge content (defaults to root)"
+          },
+          "merge_strategy": {
+            "type": "string",
+            "enum": ["local-override", "domain-override", "error"],
+            "description": "How to handle conflicting files"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "$schema": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v3.schema.json",
+      "version": "3.0",
+      "name": "my-project",
+      "description": "Example V3 configuration",
+      "presets": [
+        "claude",
+        "cursor",
+        {
+          "name": "custom-guide",
+          "type": "markdown",
+          "path": "docs/AI_GUIDE.md"
+        }
+      ],
+      "default": "full",
+      "profiles": {
+        "full": ["backend", "frontend", "qa"],
+        "backend": ["backend", "qa"],
+        "frontend": ["frontend", "qa"]
+      },
+      "gitignore": true
+    }
+  ]
+}

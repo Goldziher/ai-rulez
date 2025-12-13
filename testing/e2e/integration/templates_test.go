@@ -26,7 +26,7 @@ func (s *TemplatesTestSuite) TearDownSuite() {
 }
 
 func (s *TemplatesTestSuite) TestDefaultTemplate() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -35,7 +35,7 @@ func (s *TemplatesTestSuite) TestDefaultTemplate() {
 	content := testutil.ReadFile(s.T(), outputPath)
 
 	s.Contains(content, "# Test Project")
-	s.Contains(content, "Generated on")
+	s.Contains(content, "Generated:")
 	s.Contains(content, "## Basic Rule")
 	s.Contains(content, "**Priority:** medium")
 	s.Contains(content, "This is a basic rule for testing")
@@ -68,7 +68,7 @@ rules:
   - name: "Second Rule"  
     content: "Second content"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -83,7 +83,7 @@ rules:
 }
 
 func (s *TemplatesTestSuite) TestTemplateWithSections() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -95,7 +95,7 @@ func (s *TemplatesTestSuite) TestTemplateWithSections() {
 }
 
 func (s *TemplatesTestSuite) TestTemplateWithAgents() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.ConfigWithAgents)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.ConfigWithAgents)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -121,6 +121,9 @@ func (s *TemplatesTestSuite) TestTemplateVariables() {
   version: "2.1.0"
   description: "Testing template variables"
 
+presets:
+  - claude
+
 outputs:
   - path: "variables.md"
     template: |
@@ -140,7 +143,7 @@ sections:
   - name: "Test Section"
     content: "Test section content"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -163,6 +166,9 @@ func (s *TemplatesTestSuite) TestTemplateConditionals() {
   name: "Conditionals Test"
   version: "1.0.0"
 
+presets:
+  - claude
+
 outputs:
   - path: "conditionals.md"
     template: |
@@ -174,14 +180,14 @@ outputs:
       Description: {{.Description}}
       {{- end}}
       {{- if .Rules}}
-      
+
       ## Rules
       {{range .Rules}}
       - {{.Name}}
       {{end}}
       {{- end}}
       {{- if not .Sections}}
-      
+
       No sections defined.
       {{- end}}
 
@@ -191,7 +197,7 @@ rules:
   - name: "Rule 2"
     content: "Content 2"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -212,6 +218,9 @@ func (s *TemplatesTestSuite) TestInvalidTemplate() {
 	config := `metadata:
   name: "Invalid Template Test"
 
+presets:
+  - claude
+
 outputs:
   - path: "invalid.md"
     template: |
@@ -224,7 +233,7 @@ rules:
   - name: "Test Rule"
     content: "Test content"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 	result.AssertStderrContains(s.T(), "template")
@@ -233,6 +242,9 @@ rules:
 func (s *TemplatesTestSuite) TestMalformedTemplate() {
 	config := `metadata:
   name: "Malformed Template Test"
+
+presets:
+  - claude
 
 outputs:
   - path: "malformed.md"
@@ -245,7 +257,7 @@ rules:
   - name: "Test Rule"
     content: "Test content"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 	result.AssertStderrContains(s.T(), "template")
@@ -255,14 +267,17 @@ func (s *TemplatesTestSuite) TestDirectoryTemplates() {
 	config := `metadata:
   name: "Directory Templates Test"
 
+presets:
+  - claude
+
 outputs:
   - path: ".test-rules/"
-    type: "rule"  
+    type: "rule"
     naming_scheme: "{priority}-{name}.md"
     template: |
       # Rule: {{.Name}}
       Priority: {{.Priority}}
-      
+
       {{.Content}}
 
 rules:
@@ -273,7 +288,7 @@ rules:
     priority: low
     content: "Low priority content"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
@@ -299,23 +314,26 @@ func (s *TemplatesTestSuite) TestAgentTemplates() {
 	config := `metadata:
   name: "Agent Templates Test"
 
+presets:
+  - claude
+
 outputs:
   - path: ".custom-agents/"
     type: "agent"
     naming_scheme: "{name}-agent.md"
     template: |
       # Agent: {{.Name}}
-      
+
       **Description:** {{.Description}}
       **Priority:** {{.Priority}}
-      
+
       {{if .Tools}}
       ## Available Tools
       {{range .Tools}}
       - {{.}}
       {{end}}
       {{end}}
-      
+
       {{if .SystemPrompt}}
       ## System Prompt
       {{.SystemPrompt}}
@@ -333,7 +351,7 @@ agents:
     tools: ["Read", "Write"]
     system_prompt: "You write documentation"
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")

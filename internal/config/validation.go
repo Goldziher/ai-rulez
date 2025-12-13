@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/samber/oops"
@@ -94,5 +95,24 @@ func validateTargets(targets []string, fieldType, itemName string) error {
 				Errorf("invalid target pattern '%s' in %s '%s'", target, fieldType[:len(fieldType)-1], itemName)
 		}
 	}
+	return nil
+}
+
+func ValidateOutputs(outputs []Output) error {
+	if len(outputs) == 0 {
+		return nil
+	}
+
+	for i, output := range outputs {
+		if output.Path == "" {
+			return oops.
+				With("field", fmt.Sprintf("outputs[%d].path", i)).
+				With("context", "output configuration").
+				With("output_index", i).
+				Hint(fmt.Sprintf("Add the required field 'outputs[%d].path' to your configuration\nSpecify a path for output[%d]\nExample: path: 'CLAUDE.md'", i, i)).
+				Errorf("required field 'outputs[%d].path' is missing", i)
+		}
+	}
+
 	return nil
 }

@@ -1,36 +1,125 @@
-# Welcome to ai-rulez
+# AI-Rulez Documentation
 
-Ever notice how your `CLAUDE.md` says one thing, and your team's Copilot setup is completely different?
+Welcome to AI-Rulez, a CLI tool for managing AI assistant configurations across multiple tools.
 
-You're not alone. Managing AI context across multiple tools is messy. `ai-rulez` fixes this with one simple approach: write your AI instructions once, generate the rest.
+## What is AI-Rulez?
 
-### One File, Multiple Outputs
+AI-Rulez lets you write your AI instructions once and generate synchronized configuration files for Claude, Cursor, Windsurf, Copilot, Gemini, and other AI tools.
 
-Write your AI context in a single `ai-rulez.yml` file. Generate instruction files for Claude, Cursor, OpenCode, and other formats automatically.
+Instead of maintaining separate instructions in each tool, you define rules, context, and specialized skills in a single directory-based configuration (`.ai-rulez/`), and AI-Rulez generates tool-specific outputs automatically.
 
-### CLI for Everything
+## Core Concepts
 
-Add rules, update agents, generate files—all from the command line. No more hunting through YAML files.
+### Directory-Based Configuration
 
-### MCP Integration
+Your configuration lives in `.ai-rulez/` with organized subdirectories:
+- **rules/**: Mandatory constraints and standards
+- **context/**: Reference documentation and architecture
+- **skills/**: Specialized AI prompts for specific roles
+- **domains/**: Team or subsystem-specific content
+- **config.yaml**: Main configuration (presets, profiles)
 
-Let your AI assistant manage the configuration directly through the built-in MCP server. Perfect for automated workflows.
+### Presets
 
-### Team Collaboration
+Presets define how content is formatted and where it's output for different tools. Built-in presets include:
+- `claude` → generates `CLAUDE.md`
+- `cursor` → generates `.cursor/rules/`
+- `gemini` → generates `GEMINI.md`
+- `copilot` → generates `.github/copilot-instructions.md`
+- `windsurf` → generates `.windsurf/rules/`
+- And many others...
 
-Share configurations across your team with `extends` and `includes`. Everyone stays in sync.
+### Profiles
 
----
+Profiles let different teams generate customized outputs. Each profile specifies which domains to include:
 
-## How it works
+```yaml
+profiles:
+  full: [backend, frontend, qa]
+  backend: [backend, qa]
+  frontend: [frontend, qa]
+```
 
-`ai-rulez` is a CLI tool that takes one `ai-rulez.yml` file and generates native configuration files for all your AI tools. 
+## Quick Navigation
 
-Think of it as a build system for AI context—you write the source once, and it compiles to whatever format each tool needs.
+### Getting Started
+- **[Installation Guide](installation.md)**: Install AI-Rulez and get started
+- **[Getting Started Guide](quick-start.md)**: 5-minute quick start
+- **[Configuration Reference](configuration.md)**: Complete guide to all config options
 
-## Next Steps
+### Using AI-Rulez
+- **[CLI Reference](cli.md)**: All commands and flags
+- **[Includes System](includes.md)**: Reusing configurations across projects
+- **[Domains & Profiles](domains.md)**: Organizing by team or subsystem
+- **[Custom Presets](profiles.md)**: Creating custom output formats
 
-- **[Quick Start Guide](quick-start.md)**: Get up and running in minutes.
-- **[Migration Guide](migration-guide.md)**: Upgrading from v1.x to v2.0.
-- **[Best Practices](monorepo.md)**: Learn how to structure your configurations for large projects.
-- **[Full CLI Reference](cli.md)**: Explore every command and flag.
+### Advanced Topics
+- **[MCP Server](mcp-server.md)**: Exposing configuration to AI assistants
+- **[Examples](examples.md)**: Real-world configuration examples
+- **[Schema Reference](schema.md)**: JSON schema details
+- **[Best Practices](monorepo.md)**: Patterns for large projects
+
+## Typical Workflow
+
+1. **Initialize** your project:
+   ```bash
+   ai-rulez init "my-project" --v3
+   ```
+
+2. **Add content** to `.ai-rulez/`:
+   - Write rules in `rules/`
+   - Add context in `context/`
+   - Create skills in `skills/`
+
+3. **Generate outputs**:
+   ```bash
+   ai-rulez generate
+   ```
+
+4. **Commit** the results:
+   ```bash
+   git add .ai-rulez/ CLAUDE.md .cursor/ GEMINI.md
+   git commit -m "docs: update AI assistant guidelines"
+   ```
+
+## Key Features
+
+- **Single source of truth**: One configuration, multiple tools
+- **Domain scoping**: Organize rules by team or subsystem
+- **Profile support**: Generate customized outputs for different contexts
+- **Team collaboration**: Reduces merge conflicts with modular structure
+- **Built-in presets**: Support for all major AI tools
+- **Custom presets**: Create outputs for any tool in any format
+- **MCP integration**: Let AI assistants manage configuration directly
+- **Scalable**: Proven patterns for monorepos and multi-team projects
+
+## Project Structure
+
+After initialization, your project looks like:
+
+```
+project-root/
+├── .ai-rulez/
+│   ├── config.yaml           # Main configuration
+│   ├── rules/                # Base rules (all profiles)
+│   ├── context/              # Reference docs (all profiles)
+│   ├── skills/               # AI skills (all profiles)
+│   └── domains/              # Team-specific content
+│       ├── backend/
+│       └── frontend/
+├── CLAUDE.md                 # Generated for Claude
+├── .cursor/rules/            # Generated for Cursor
+├── GEMINI.md                 # Generated for Gemini
+└── .github/copilot-instructions.md
+```
+
+## Getting Help
+
+- **CLI Help**: `ai-rulez --help`, `ai-rulez init --help`, etc.
+- **Validation**: `ai-rulez validate` to check your configuration
+- **Examples**: Check the [Examples](examples.md) section
+- **Issues**: Report problems on [GitHub](https://github.com/Goldziher/ai-rulez)
+
+## Version
+
+This documentation covers **AI-Rulez V3** (directory-based configuration).

@@ -1,0 +1,8 @@
+$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json
+description: Test project with agents for migration
+gitignore: true
+name: Project With Agents
+presets:
+    - claude
+    - cursor
+version: "3.0"

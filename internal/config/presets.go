@@ -57,7 +57,7 @@ func ExpandPresets(presets []string) ([]Output, error) {
 	for _, preset := range presets {
 		presetOutputs, exists := PresetRegistry[preset]
 		if !exists {
-			return nil, ErrInvalidPreset{Preset: preset}
+			return nil, &ErrInvalidPresetType{Preset: preset}
 		}
 		outputs = append(outputs, presetOutputs...)
 	}
@@ -65,10 +65,10 @@ func ExpandPresets(presets []string) ([]Output, error) {
 	return outputs, nil
 }
 
-type ErrInvalidPreset struct {
+type ErrInvalidPresetType struct {
 	Preset string
 }
 
-func (e ErrInvalidPreset) Error() string {
+func (e *ErrInvalidPresetType) Error() string {
 	return "unknown preset: " + e.Preset
 }

@@ -1,0 +1,17 @@
+metadata:
+  name: Multi-Preset Project
+  description: Project using popular preset
+  version: 1.0.0
+presets:
+  - popular
+outputs:
+  - path: CLAUDE.md
+rules:
+  - name: Universal Guidelines
+    content: These guidelines apply across all tools and platforms.
+    priority: critical
+    targets:
+      - CLAUDE.md
+      - .cursor/rules/*
+      - .windsurf/*
+      - .github/copilot-instructions.md
