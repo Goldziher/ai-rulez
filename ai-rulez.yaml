@@ -49,7 +49,7 @@ mcp_servers:
 metadata:
     description: AI-powered development governance CLI and multi-runtime tooling.
     name: AI-Rulez
-    version: 2.3.4
+    version: 2.3.5
 presets:
     - popular
     - continue-dev
