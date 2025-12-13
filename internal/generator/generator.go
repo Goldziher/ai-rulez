@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -91,8 +92,17 @@ func (g *Generator) generateConcurrent(cfg *config.Config) error {
 	wg.Wait()
 	close(errChan)
 
+	// Collect all errors instead of returning just the first one
+	var allErrs []error
 	for err := range errChan {
-		return err
+		if err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// Return combined error if any occurred
+	if len(allErrs) > 0 {
+		return errors.Join(allErrs...)
 	}
 	return nil
 }

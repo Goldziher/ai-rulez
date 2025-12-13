@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -25,10 +26,26 @@ func SetupTestBinary(t *testing.T) string {
 		return binaryPath
 	}
 
+	// Get the absolute path to the testing/e2e directory
 	testDir, err := os.Getwd()
 	require.NoError(t, err)
 
-	projectRoot := filepath.Join(testDir, "..", "..", "..")
+	// Find the project root by looking for go.mod
+	projectRoot := testDir
+	for {
+		gomodPath := filepath.Join(projectRoot, "go.mod")
+		if _, err := os.Stat(gomodPath); err == nil {
+			break
+		}
+		parent := filepath.Dir(projectRoot)
+		if parent == projectRoot {
+			// Reached filesystem root without finding go.mod
+			require.NoError(t, fmt.Errorf("could not find project root with go.mod"))
+			return ""
+		}
+		projectRoot = parent
+	}
+
 	binaryName := TestBinaryName
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"

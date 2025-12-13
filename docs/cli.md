@@ -1,401 +1,482 @@
 # CLI Reference
 
-All the `ai-rulez` commands you need to know.
+Complete reference for all AI-Rulez V3 CLI commands.
 
-## Core Commands
+## Command Overview
 
-The essentials for day-to-day use.
+| Command | Description |
+|---------|-------------|
+| `ai-rulez init` | Initialize V3 directory-based configuration |
+| `ai-rulez generate` | Generate presets for specific profile |
+| `ai-rulez validate` | Validate configuration |
+| `ai-rulez version` | Show version |
+| `ai-rulez mcp` | Start MCP server |
 
-### `init`
+## Initialization Command
 
-Create a new `ai-rulez.yml` file in the current directory with intelligent project analysis and optional AI assistance.
+### `ai-rulez init [project-name] --v3`
 
+Initialize a new V3 directory-based configuration.
+
+**Syntax:**
 ```bash
-# Quick start with popular AI tools
-ai-rulez init "My Project" --popular
-
-# Use a specific preset for targeted tools
-ai-rulez init "My Project" --preset claude
-
-# Get AI-powered configuration generation
-ai-rulez init "My Project" --preset popular --use-agent claude
+ai-rulez init [project-name] --v3 [flags]
 ```
 
-The `init` command is your starting point for any project. It creates a comprehensive configuration that's tailored to your specific codebase, with optional AI assistance to generate project-specific rules and documentation.
+**Arguments:**
+- `[project-name]` (optional): The project name. If not provided, prompted interactively.
 
-#### How It Works
+**V3-specific Flags:**
 
-The init process happens in phases:
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--v3` | boolean | false | Use V3 directory-based configuration |
+| `--format` | string | `yaml` | Configuration format: `yaml` or `json` |
+| `--domains` | string | (none) | Comma-separated list of domain names to create |
+| `--skip-content` | boolean | false | Skip creating example content files |
 
-1. **Project Analysis** - Automatically detects:
-   - Programming languages and frameworks (Go, TypeScript, Python, React, etc.)
-   - Build tools and package managers (npm, go.mod, poetry, etc.)  
-   - Project structure patterns (monorepo, microservices, etc.)
-   - Existing documentation and testing setup
+**General Flags:**
 
-2. **Template Generation** - Creates a base configuration with:
-   - Metadata based on your project structure
-   - Appropriate outputs for selected AI tools
-   - Commented examples of advanced features
+| Flag | Type | Description |
+|------|------|-------------|
+| `--setup-hooks` | boolean | Configure Git hooks after initialization |
+| `--verbose` | boolean | Enable verbose output |
+| `--debug` | boolean | Enable debug output |
 
-3. **AI Enhancement** (optional) - If you specify `--use-agent`, the AI will:
-   - Generate project-specific rules based on your codebase
-   - Create documentation sections describing your architecture
-   - Define coding standards relevant to your tech stack
-   - Set up specialized agents for your workflow
+**Examples:**
 
-#### Basic Usage
-
-**Simple initialization:**
+Basic V3 initialization:
 ```bash
-ai-rulez init "My Awesome Project"
+ai-rulez init "my-project" --v3
 ```
 
-**With popular AI tools:**
+V3 with JSON format:
 ```bash
-ai-rulez init "My Awesome Project" --popular
+ai-rulez init "my-project" --v3 --format json
 ```
 
-**Specific AI tool:**
+V3 with multiple domains:
 ```bash
-ai-rulez init "My Project" --preset claude --with-agents
+ai-rulez init "my-project" --v3 --domains "backend,frontend,qa"
 ```
 
-#### Advanced Usage
-
-**AI-powered generation:**
+V3 with example content skipped:
 ```bash
-# Let Claude analyze your project and generate comprehensive rules
-ai-rulez init "My Project" --preset popular --use-agent claude
-
-# Use Gemini for configuration generation
-ai-rulez init "My Project" --preset gemini --use-agent gemini
-
-# Skip confirmation prompts for automation
-ai-rulez init "My Project" --popular --use-agent claude --yes
+ai-rulez init "my-project" --v3 --skip-content
 ```
 
-**Custom provider combinations:**
+## Generate Command
+
+### `ai-rulez generate [config-path]`
+
+Generate AI assistant rule files from configuration.
+
+**Syntax:**
 ```bash
-# Multiple specific providers
-ai-rulez init "My Project" --claude --cursor --windsurf
-
-# All supported providers
-ai-rulez init "My Project" --all
-
-# Include specialized features
-ai-rulez init "My Project" --claude --with-agents --with-sections
+ai-rulez generate [config-path] [flags]
 ```
 
-#### Complete Options
+**Arguments:**
+- `[config-path]` (optional): Path to configuration file or directory. If not provided, auto-detected.
 
-| Option | Description |
-|--------|-------------|
-| `--popular` | Enable Claude, Cursor, Windsurf, Copilot, and Gemini |
-| `--preset <name>` | Use a specific preset (claude, cursor, windsurf, copilot, gemini, amp, cline, continue-dev, codex, opencode) |
-| `--all` | Enable all supported AI tools |
-| `--claude` | Include Claude configuration (.CLAUDE.md) |
-| `--cursor` | Include Cursor configuration (.cursor/rules/) |
-| `--windsurf` | Include Windsurf configuration (.windsurf/rules.md) |
-| `--copilot` | Include GitHub Copilot configuration (.github/copilot-instructions.md) |
-| `--gemini` | Include Gemini configuration (gemini-instructions.md) |
-| `--amp` | Include AMP configuration (amp-context.md) |
-| `--cline` | Include Cline configuration (.cline/rules.md) |
-| `--continue-dev` | Include Continue.dev configuration (.continue/rules/) |
-| `--codex` | Include Codex configuration (codex-context.md) |
-| `--opencode` | Include OpenCode configuration (AGENTS.md) |
-| `--use-agent <name>` | Use AI agent for intelligent configuration generation |
-| `--no-agent` | Skip AI agent detection completely |
-| `--list-agents` | List available AI agents and exit |
-| `--with-agents` | Include agent configurations (creates specialized sub-agents) |
-| `--with-sections` | Include documentation sections (enabled by default) |
-| `--setup-hooks` | Configure git hooks for automatic validation |
-| `--yes` | Skip all confirmation prompts (useful for scripting) |
+**V3-specific Flags:**
 
-#### AI Agent Support
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--profile` | string | (from config) | Profile to generate (V3 only) |
 
-When using `--use-agent`, the command will attempt to use your installed AI CLI tools:
+**General Flags:**
 
-| Agent | Command Used | Capabilities |
-|-------|-------------|--------------|
-| **claude** | `claude --print` | Comprehensive project analysis, generates detailed rules and sections |
-| **gemini** | `gemini --prompt` | Fast configuration generation, good at detecting patterns |
-| **amp** | `amp --execute` | Focused on development workflow optimization |
-| **continue** | `cn --print` | Specialized for code context and development practices |
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--dry-run` | boolean | false | Show what would be generated without writing files |
+| `--update-gitignore` | boolean | (from config) | Update `.gitignore` files with generated outputs |
+| `--recursive` / `-r` | boolean | false | Find and process configs recursively |
 
-**Requirements:**
-- The AI CLI tool must be installed and available in your PATH
-- The tool must support non-interactive mode (print/prompt mode)
-- Internet connection required for AI analysis
+**Examples:**
 
-#### Example Outputs
-
-**Basic init** creates a minimal configuration:
-```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-metadata:
-  name: "My Project"
-outputs:
-  - path: "CLAUDE.md"
-```
-
-**AI-powered init** with `--use-agent claude --popular` creates:
-```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-metadata:
-  name: "My Project"  
-  description: "Go-based microservice with REST API and PostgreSQL backend"
-presets:
-  - "popular"
-rules:
-  - name: "Go Code Standards"
-    priority: high
-    content: "Follow standard Go project layout (cmd/, internal/, pkg/)..."
-  - name: "API Design"  
-    priority: critical
-    content: "RESTful APIs should follow OpenAPI 3.0 specification..."
-sections:
-  - name: "Architecture Overview"
-    priority: critical
-    content: "This service implements clean architecture with..."
-agents:
-  - name: "go-expert"
-    description: "Go language specialist for backend development"
-    system_prompt: "You are a Go expert focusing on..."
-```
-
-#### Tips
-
-- **Start simple**: Use `--popular` for most projects
-- **Use AI assistance**: Add `--use-agent claude` for comprehensive, project-specific configuration
-- **For automation**: Use `--yes` to skip prompts in CI/CD or scripts
-- **Monorepos**: Run init in each service directory for focused configurations
-
-### `generate`
-
-Create all your AI instruction files and configure MCP servers.
-
+Generate with default profile:
 ```bash
 ai-rulez generate
+```
 
-# Generate without updating .gitignore
-ai-rulez generate --update-gitignore=false
+Generate specific profile:
+```bash
+ai-rulez generate --profile backend
+```
 
-# Generate files recursively in subdirectories
+Dry-run to preview generation:
+```bash
+ai-rulez generate --dry-run --profile backend
+```
+
+Generate and update .gitignore:
+```bash
+ai-rulez generate --profile full --update-gitignore
+```
+
+Generate recursively in monorepo:
+```bash
 ai-rulez generate --recursive
-
-# Preview what would be generated without creating files
-ai-rulez generate --dry-run
-
-# Skip CLI MCP tool configuration (only generate files)
-ai-rulez generate --no-configure-cli-mcp
 ```
 
-#### MCP Server Integration
+### Profile Selection
 
-By default, `generate` automatically configures MCP servers for available CLI tools:
+When using V3 configuration:
+
+1. **No `--profile` flag**: Uses default profile from config
+2. **`--profile backend`**: Generates content for the `backend` profile
+3. **Invalid profile**: Shows error and lists available profiles
+
+Example with profile hierarchy:
+
+```yaml
+# config.yaml
+default: "full"
+profiles:
+  full:
+    - backend
+    - frontend
+    - qa
+  backend:
+    - backend
+  frontend:
+    - frontend
+```
 
 ```bash
+# Uses "full" profile (default)
 ai-rulez generate
-# ✅ Generated 3 file(s) successfully
-# ✅ Configured claude MCP server: ai-rulez
-# ✅ Configured gemini MCP server: database-tools
+
+# Uses "backend" profile only
+ai-rulez generate --profile backend
+
+# Uses "frontend" profile only
+ai-rulez generate --profile frontend
 ```
 
-**Supported CLI tools:**
-- **Claude CLI**: `claude mcp add` commands with environment variables
-- **Gemini CLI**: `gemini mcp add` commands with automatic configuration
+## Validation Command
 
-Use `--no-configure-cli-mcp` (or `--skip-cli-mcp` alias) to disable CLI configuration while still generating config files for other tools.
+### `ai-rulez validate [config-path]`
 
-#### Options:
-- `--dry-run` - Preview files that would be generated without creating them
-- `--update-gitignore` - Control whether to update `.gitignore` (overrides config setting)
-- `--recursive` - Process all `ai-rulez.yml` files in subdirectories
-- `--no-configure-cli-mcp` - Skip configuring CLI-based MCP tools (Claude, Gemini, etc.)
-- `--skip-cli-mcp` - Alias for `--no-configure-cli-mcp`
+Validate configuration without generating files.
 
-#### Gitignore Behavior:
-By default, `generate` will automatically add all generated files to `.gitignore` to keep your repository clean. This includes:
-- Files from presets (like `CLAUDE.md`, `.cursor/rules/`, etc.)
-- Custom output files you've defined
-- Agent directories and files
+**Syntax:**
+```bash
+ai-rulez validate [config-path] [flags]
+```
 
-You can control this behavior:
-1. **In your config**: Set `gitignore: false` to disable by default
-2. **Via CLI**: Use `--update-gitignore=false` to disable for one run (overrides config)
+**Arguments:**
+- `[config-path]` (optional): Path to configuration file. If not provided, auto-detected.
 
-When using `--recursive`, each directory's `.gitignore` is updated with its own generated files.
+**Flags:**
 
-### `validate`
+| Flag | Type | Description |
+|------|------|-------------|
+| `--verbose` | boolean | Enable verbose output |
+| `--debug` | boolean | Enable debug output |
 
-Check your configuration for errors.
+**Examples:**
 
+Validate current configuration:
 ```bash
 ai-rulez validate
 ```
 
-### `version`
+Validate specific config file:
+```bash
+ai-rulez validate .ai-rulez/config.yaml
+```
 
-Show the current version.
+With verbose output:
+```bash
+ai-rulez validate --verbose
+```
+
+### What Gets Validated
+
+- `version` is exactly `"3.0"`
+- `name` is present and non-empty
+- All preset names are valid
+- Referenced domains exist in filesystem
+- Profile definitions reference valid domains
+- File paths are accessible
+
+## Version Command
+
+### `ai-rulez version`
+
+Show the current version and build information.
 
 ```bash
 ai-rulez version
 ```
 
----
-
-## Configuration Management (CRUD)
-
-Manage every aspect of your `ai-rulez.yml` configuration directly from the command line.
-
-### Rules
-
-Manage the `rules` list.
-
-```bash
-# Add a new rule with an ID and targets
-ai-rulez add rule "Code Style" --id "style-guide" --content "Follow the official Go style guide." --priority high --target "*.go"
-
-# Get a specific rule
-ai-rulez get rule "Code Style"
-
-# List all rules
-ai-rulez list rules
-
-# Update a rule's content
-ai-rulez update rule "Code Style" --content "Follow the official Go style guide, no exceptions."
-
-# Delete a rule
-ai-rulez delete rule "Code Style"
-```
-
-### Sections
-
-Manage the `sections` list.
-
-```bash
-# Add a new section
-ai-rulez add section "Project Overview" --id "proj-overview" --content "This project uses a clean architecture..."
-
-# List all sections
-ai-rulez list sections
-
-# Delete a section
-ai-rulez delete section "Project Overview"
-```
-
-### Agents
-
-Manage the `agents` list.
-
-```bash
-# Add a new agent with a structured template
-ai-rulez add agent "doc-writer" --description "Technical documentation writer" --template-type inline --template-value "Write clear documentation for the following code..."
-
-# List all agents
-ai-rulez list agents
-
-# Delete an agent
-ai-rulez delete agent "doc-writer"
-```
-
-### Outputs
-
-Manage the `outputs` list.
-
-```bash
-# Add a directory output with a naming scheme and type
-ai-rulez add output ".claude/agents/" --type agent --naming-scheme "{name}.md"
-
-# List all outputs
-ai-rulez list outputs
-
-# Delete an output
-ai-rulez delete output ".claude/agents/"
-```
-
-### MCP Servers
-
-Manage the `mcp_servers` list.
-
-```bash
-# Add a new MCP server
-ai-rulez add mcp-server "github" --command "npx" --arg "-y" --arg "@mcp/server-github" --env "TOKEN=123"
-
-# List all MCP servers
-ai-rulez list mcp-servers
-
-# Delete an MCP server
-ai-rulez delete mcp-server "github"
-```
-
-### Custom Commands
-
-Manage the `commands` list.
-
-```bash
-# Add a new custom command with an alias and shortcut
-ai-rulez add command "new-task" --description "Starts a new task" --alias "nt" --shortcut "Ctrl+Shift+N"
-
-# List all custom commands
-ai-rulez list commands
-
-# Delete a custom command
-ai-rulez delete command "new-task"
-```
-
-### Metadata
-
-Manage the top-level `metadata` property.
-
-```bash
-# Get the current metadata
-ai-rulez get metadata
-
-# Set the project name and version
-ai-rulez set metadata --name "My Awesome Project" --version "2.0.0"
-```
-
-### Extends
-
-Manage the top-level `extends` property.
-
-```bash
-# Get the current extends path
-ai-rulez get extends
-
-# Set the extends path to a remote file
-ai-rulez set extends "https://example.com/base-config.yaml"
-
-# Remove the extends property
-ai-rulez delete extends
-```
-
-### Includes
-
-Manage the top-level `includes` list.
-
-```bash
-# List all included files
-ai-rulez list includes
-
-# Add a new file to the includes list
-ai-rulez add include "./shared/common-rules.yaml"
-
-# Remove a file from the includes list
-ai-rulez delete include "./shared/common-rules.yaml"
-```
-
----
-
 ## MCP Server
+
+### `ai-rulez mcp`
 
 Starts the Model Context Protocol (MCP) server to allow AI assistants to programmatically interact with your configuration.
 
 ```bash
-# Start the MCP server on the default port
 ai-rulez mcp
 ```
 
 See the [MCP Server Documentation](mcp-server.md) for more details.
+
+## Global Flags
+
+These flags work with all commands:
+
+| Flag | Type | Description |
+|------|------|-------------|
+| `--config` | string | Config file path (auto-discovered if not specified) |
+| `--verbose` | boolean | Enable verbose output |
+| `--debug` | boolean | Enable debug output |
+| `--quiet` / `-q` | boolean | Suppress progress bars and non-essential output |
+| `--help` / `-h` | boolean | Show help for a command |
+
+**Examples:**
+
+Generate with debug output:
+```bash
+ai-rulez generate --debug
+```
+
+Quiet mode (minimal output):
+```bash
+ai-rulez generate --quiet
+```
+
+Show help for init:
+```bash
+ai-rulez init --help
+```
+
+## Configuration Detection
+
+The CLI auto-detects configuration in the following order:
+
+1. **Explicit path**: Via `--config` flag or command argument
+2. **V3 format**: `.ai-rulez/` directory in current directory
+3. **V2 format**: `ai-rulez.yaml` or `ai-rulez.yml` in current directory
+4. **Error**: No configuration found
+
+Example detection flow:
+
+```bash
+cd /path/to/project
+
+# Detects .ai-rulez/ if it exists (V3)
+ai-rulez generate
+
+# Use explicit path
+ai-rulez generate .ai-rulez/config.yaml
+
+# Specify config via flag
+ai-rulez generate --config ./custom-config.yaml
+```
+
+## Exit Codes
+
+The CLI uses standard exit codes:
+
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | General error (config not found, validation failed, etc.) |
+| 2 | Command syntax error (invalid flags, arguments) |
+
+## Output Examples
+
+### Initialize Output
+
+```
+✅ Created .ai-rulez/ directory structure
+
+Directory structure:
+  .ai-rulez/
+  ├── config.yaml
+  ├── rules/         # Base rules (always included)
+  ├── context/       # Base context (always included)
+  ├── skills/        # Base skills (always included)
+  └── domains/       # Domain-specific content
+
+Example content created:
+  - rules/code-quality.md
+  - context/architecture.md
+  - skills/code-reviewer/SKILL.md
+
+Domain directories created:
+  - domains/backend/
+  - domains/frontend/
+  - domains/qa/
+
+Next steps:
+  1. Edit .ai-rulez/config.yaml to customize presets and profiles
+  2. Add your rules, context, and skills to the appropriate directories
+  3. Run 'ai-rulez generate' to create tool-specific outputs
+```
+
+### Generate Output
+
+```
+✅ Generated 3 file(s) successfully
+  - CLAUDE.md
+  - .cursorrules
+  - docs/AI_GUIDE.md
+```
+
+### Validation Output
+
+```
+✅ Configuration is valid
+  Project: my-project
+  Version: 3.0
+  Presets: 3
+  Domains: 3
+  Profiles: 2
+```
+
+### Validation Error
+
+```
+❌ Configuration validation failed
+
+errors:
+  - Profile "backend" references undefined domain "backend"
+  - Preset "claude" not found
+
+Run 'ai-rulez validate --verbose' for details
+```
+
+## Common Workflows
+
+### Set Up a New V3 Project
+
+```bash
+# Initialize with domains
+ai-rulez init "my-project" --v3 --domains "backend,frontend,qa"
+
+# Review generated structure
+ls -la .ai-rulez/
+
+# Create/edit content files
+# (edit .ai-rulez/rules/, .ai-rulez/context/, etc.)
+
+# Validate configuration
+ai-rulez validate
+
+# Generate outputs
+ai-rulez generate
+```
+
+### Generate Multiple Profiles
+
+```bash
+# Generate full profile
+ai-rulez generate --profile full
+
+# Generate backend-only profile
+ai-rulez generate --profile backend
+
+# Generate frontend-only profile
+ai-rulez generate --profile frontend
+```
+
+### Update AI Configuration After Changes
+
+```bash
+# Edit your content
+vim .ai-rulez/rules/my-rule.md
+
+# Validate it's still correct
+ai-rulez validate
+
+# Regenerate outputs
+ai-rulez generate
+
+# Commit changes
+git add .ai-rulez/ CLAUDE.md .cursor/ GEMINI.md
+git commit -m "docs: update AI assistant guidelines"
+```
+
+### CI/CD Integration
+
+```bash
+#!/bin/bash
+# Simple CI/CD script
+
+# Validate configuration
+ai-rulez validate || exit 1
+
+# Generate all outputs
+ai-rulez generate || exit 1
+
+# Check for uncommitted changes
+if ! git diff --quiet CLAUDE.md .cursor/ GEMINI.md; then
+  echo "Generated files are out of sync"
+  echo "Run: ai-rulez generate"
+  exit 1
+fi
+```
+
+## Troubleshooting
+
+### Command not found
+
+```bash
+# Make sure AI-Rulez is installed
+which ai-rulez
+
+# Or check version
+ai-rulez version
+```
+
+### Configuration not found
+
+```bash
+# Check current directory
+ls -la .ai-rulez/
+ls -la ai-rulez.yaml
+
+# Or specify explicitly
+ai-rulez generate --config /path/to/config.yaml
+```
+
+### Invalid profile name
+
+```bash
+# List available profiles
+ai-rulez validate --verbose
+
+# Use a valid profile name
+ai-rulez generate --profile backend
+```
+
+### Generated files not updated
+
+```bash
+# Check if files were actually generated
+ai-rulez generate --dry-run
+
+# Force regeneration
+rm CLAUDE.md .cursor/rules/*
+ai-rulez generate
+```
+
+## Help and Documentation
+
+Get help for any command:
+
+```bash
+ai-rulez --help
+ai-rulez init --help
+ai-rulez generate --help
+ai-rulez validate --help
+```
+
+For more detailed documentation:
+- **[Configuration Reference](configuration.md)**: Config options
+- **[Quick Start](quick-start.md)**: Getting started
+- **[Domains & Profiles](domains.md)**: Team organization

@@ -152,10 +152,6 @@ func mergeSections(main, local []Section) []Section {
 	return Merge(main, local)
 }
 
-func mergeAgents(main, local []Agent) []Agent {
-	return Merge(main, local)
-}
-
 func MergeRules(main []Rule, local []Rule) []Rule {
 	return mergeRules(main, local)
 }

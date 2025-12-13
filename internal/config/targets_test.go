@@ -555,8 +555,6 @@ func TestMatchesTargetEdgeCases(t *testing.T) {
 	}
 }
 
-// NOTE: TestResolveTargets was removed because ResolveTargets function was removed in v2.0
-
 func TestFilterRulesWithNamedTargets(t *testing.T) {
 	t.Parallel()
 

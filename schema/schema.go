@@ -12,13 +12,26 @@ import (
 )
 
 //go:embed ai-rules-v2.schema.json
-var schemaJSON []byte
+var schemaV2JSON []byte
+
+//go:embed ai-rules-v3.schema.json
+var schemaV3JSON []byte
 
 var compiler = jsonschema.NewCompiler()
 
 const propertiesField = "properties"
 
+// ValidateWithSchema validates configuration data against the V2 schema (default)
 func ValidateWithSchema(configData []byte) error {
+	return validateWithSchemaBytes(configData, schemaV2JSON, "v2")
+}
+
+// ValidateWithSchemaV3 validates configuration data against the V3 schema
+func ValidateWithSchemaV3(configData []byte) error {
+	return validateWithSchemaBytes(configData, schemaV3JSON, "v3")
+}
+
+func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string) error {
 	var yamlData any
 	if err := yaml.Unmarshal(configData, &yamlData); err != nil {
 		return oops.
@@ -33,7 +46,7 @@ func ValidateWithSchema(configData []byte) error {
 			Wrapf(err, "convert YAML to JSON")
 	}
 
-	schema, err := compiler.Compile(schemaJSON)
+	schema, err := compiler.Compile(schemaBytes)
 	if err != nil {
 		return oops.
 			Hint("This is an internal schema compilation error").
@@ -43,10 +56,18 @@ func ValidateWithSchema(configData []byte) error {
 	result := schema.Validate(jsonData)
 	if !result.IsValid() {
 		validationErrors := extractDetailedErrors(result)
+		hint := "Check the YAML syntax using a YAML validator\nEnsure all required fields are present\nRun 'ai-rulez validate' for detailed validation output"
+		switch version {
+		case "v2":
+			hint = "Check the YAML syntax using a YAML validator\nEnsure all required fields are present (metadata.name, outputs)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output"
+		case "v3":
+			hint = "Check the YAML/JSON syntax using a validator\nEnsure required fields are present (version: \"3.0\", name)\nVerify the structure matches the V3 schema\nRun 'ai-rulez validate' for detailed validation output"
+		}
 		return oops.
 			With("errors", validationErrors).
 			With("error_count", len(validationErrors)).
-			Hint("Check the YAML syntax using a YAML validator\nEnsure all required fields are present (metadata.name, outputs)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output").
+			With("version", version).
+			Hint(hint).
 			Errorf("configuration validation failed: %d errors", len(validationErrors))
 	}
 

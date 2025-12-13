@@ -1,0 +1,109 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v3-mcp.schema.json",
+  "title": "AI Rules V3 MCP Server Configuration",
+  "description": "Schema for MCP (Model Context Protocol) server configuration in ai-rulez V3",
+  "type": "object",
+  "required": ["version"],
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "Reference to this schema for editor support"
+    },
+    "version": {
+      "type": "string",
+      "enum": ["3.0"],
+      "description": "Configuration format version (must be 3.0)"
+    },
+    "mcp_servers": {
+      "type": "array",
+      "description": "List of Model Context Protocol (MCP) servers",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "MCP server name/identifier (used as unique key)",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the MCP server capabilities"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to start the MCP server (e.g., 'npx', 'python', 'node')",
+            "minLength": 1
+          },
+          "args": {
+            "type": "array",
+            "description": "Command line arguments for the MCP server",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "description": "Environment variables for the MCP server (supports ${VAR} substitution)",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "http", "sse"],
+            "description": "Transport protocol for MCP server communication (default: stdio)",
+            "default": "stdio"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL for remote MCP servers (required when transport is http or sse)",
+            "pattern": "^https?://[^\\s]+$"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this MCP server is enabled (default: true)",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false,
+  "examples": [
+    {
+      "$schema": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v3-mcp.schema.json",
+      "version": "3.0",
+      "mcp_servers": [
+        {
+          "name": "github",
+          "description": "GitHub integration for repository operations",
+          "command": "npx",
+          "args": ["-y", "@modelcontextprotocol/server-github"],
+          "env": {
+            "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+          },
+          "transport": "stdio",
+          "enabled": true
+        },
+        {
+          "name": "postgres",
+          "description": "PostgreSQL database access",
+          "command": "uvx",
+          "args": ["mcp-server-postgres", "--connection-string", "postgresql://user:pass@localhost:5432/mydb"],
+          "transport": "stdio",
+          "enabled": true
+        },
+        {
+          "name": "remote-api",
+          "description": "Remote API service via HTTP",
+          "transport": "http",
+          "url": "https://api.example.com/mcp",
+          "enabled": false
+        }
+      ]
+    }
+  ]
+}

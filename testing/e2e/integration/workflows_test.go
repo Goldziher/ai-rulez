@@ -26,7 +26,7 @@ func (s *WorkflowsTestSuite) TearDownSuite() {
 }
 
 func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--preset", "claude")
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--preset", "claude", "--no-agent")
 	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 
 	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
@@ -69,7 +69,8 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 }
 
 func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "MultiProvider", "--popular")
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "MultiProvider", "--popular", "--no-agent")
+	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 	result.AssertStderrContains(s.T(), "Claude")
 	result.AssertStderrContains(s.T(), "Cursor")
 	result.AssertStderrContains(s.T(), "Windsurf")

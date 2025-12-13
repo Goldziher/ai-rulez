@@ -1,0 +1,14 @@
+version: "3.0"
+name: project-with-git-include
+description: Example project with git-based includes
+presets:
+  - claude
+includes:
+  - name: external-rules
+    source: https://github.com/example/external-rules
+    ref: main
+    path: .ai-rulez
+    include:
+      - rules
+      - context
+    merge_strategy: local-override
