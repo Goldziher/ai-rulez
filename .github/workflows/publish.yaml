@@ -204,6 +204,7 @@ jobs:
     needs: meta
     if: needs.meta.outputs.pypi_exists != 'true'
     runs-on: ubuntu-latest
+    environment: pypi
     steps:
       - name: Checkout
         uses: actions/checkout@v5
