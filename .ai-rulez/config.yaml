@@ -1,0 +1,11 @@
+$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json
+version: "3.0"
+name: AI-Rulez
+description: AI-powered development governance CLI and multi-runtime tooling
+
+# Presets for various AI coding assistants
+presets:
+    - claude
+
+# Gitignore management
+gitignore: true

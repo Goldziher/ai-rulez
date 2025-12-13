@@ -139,7 +139,6 @@ func (s *Server) registerTools() {
 	s.registerSingletonTools()
 	s.registerProjectTools()
 	s.registerUtilityTools()
-	s.registerEnforcementTools()
 }
 
 func (s *Server) registerRulesTools() {
@@ -548,47 +547,5 @@ func (s *Server) registerUtilityTools() {
 	s.addTool(
 		newTool("get_version", "Get the ai-rulez version", nil),
 		handlers.GetVersionHandler(s.version),
-	)
-}
-
-func (s *Server) registerEnforcementTools() {
-	s.addTool(
-		newTool("enforce_rules", "Enforce rules using AI agents with optional review feedback loops",
-			newSchemaBuilder().
-				String("config_file", "Path to configuration file (optional)", false).
-				String("agent", "AI agent to use (claude, gemini, amp, continue-dev)", false).
-				String("level", "Enforcement level (warn, error, fix, strict)", false).
-				Boolean("auto_fix", "Automatically apply suggested fixes", false).
-				Number("timeout", "Timeout per file analysis in seconds", false).
-				StringArray("only_rules", "Enforce only these rules", false).
-				StringArray("exclude_rules", "Exclude these rules from enforcement", false).
-				StringArray("include_files", "Include only these file patterns", false).
-				StringArray("exclude_files", "Exclude these file patterns", false).
-				Number("max_violations", "Maximum allowed violations (-1 for unlimited)", false).
-				String("output_format", "Output format (table, json, summary, csv)", false).
-				Boolean("dry_run", "Show what would be done without applying fixes", false).
-				Boolean("enable_review", "Enable iterative review with feedback loops", false).
-				String("review_agent", "Agent for code review (defaults to enforcement agent)", false).
-				Number("review_iterations", "Maximum review iterations", false).
-				Number("review_threshold", "Quality threshold for approval (0-100)", false).
-				Number("review_timeout", "Timeout per review iteration in seconds", false).
-				Boolean("review_auto_approve", "Auto-approve regardless of score", false).
-				Boolean("require_improvement", "Require iterative improvement in review", false),
-		),
-		handlers.EnforceRulesHandler,
-	)
-
-	s.addTool(
-		newTool("check_violations", "Check for rule violations without applying fixes (dry-run enforcement)",
-			newSchemaBuilder().
-				String("config_file", "Path to configuration file (optional)", false).
-				String("agent", "AI agent to use for analysis", false).
-				StringArray("only_rules", "Check only these rules", false).
-				StringArray("exclude_rules", "Exclude these rules from checking", false).
-				StringArray("include_files", "Include only these file patterns", false).
-				StringArray("exclude_files", "Exclude these file patterns", false).
-				String("output_format", "Output format (table, json, summary, csv)", false),
-		),
-		handlers.CheckViolationsHandler,
 	)
 }

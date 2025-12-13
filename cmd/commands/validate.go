@@ -2,8 +2,8 @@ package commands
 
 import (
 	"context"
-	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -21,214 +21,67 @@ schema compliance, and structural issues.`,
 }
 
 func runValidate(cmd *cobra.Command, args []string) {
-	configPath := determineConfigPath(args)
-	cfg := loadAndValidateConfig(configPath)
-	warnings := performValidationChecks(cfg)
-	displayValidationResults(configPath, cfg, warnings)
-}
+	ctx := context.Background()
 
-func determineConfigPath(args []string) string {
+	// Determine working directory
+	workingDir := "."
 	if len(args) > 0 {
-		return args[0]
-	}
-	if cfgFile != "" {
-		return cfgFile
+		workingDir = filepath.Dir(args[0])
 	}
 
-	configPath, err := config.FindConfigFile(".")
+	// V3 only validation
+	runValidateV3(ctx, workingDir)
+}
+
+// runValidateV3 validates a V3 configuration
+func runValidateV3(ctx context.Context, workingDir string) {
+	// Load V3 configuration
+	cfg, err := config.LoadConfigV3(ctx, workingDir)
 	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-	return configPath
-}
-
-func loadAndValidateConfig(configPath string) *config.Config {
-	cfg, err := config.LoadConfigWithIncludes(context.Background(), configPath)
-	if err != nil {
-		logger.Error("❌ Configuration file is invalid", "path", configPath)
+		logger.Error("Failed to load V3 config", "path", workingDir)
 		fmtError(err)
 		os.Exit(1)
 	}
 
-	if err := cfg.Validate(); err != nil {
-		logger.Error("❌ Configuration validation failed", "path", configPath)
+	// Validate configuration
+	if err := cfg.ValidateV3(); err != nil {
+		logger.Error("V3 configuration validation failed", "path", workingDir)
 		fmtError(err)
 		os.Exit(1)
 	}
 
-	return cfg
+	configPath := filepath.Join(workingDir, ".ai-rulez")
+	logger.Success("✅ V3 Configuration is valid", "path", configPath)
+	displayV3ConfigurationSummary(cfg)
 }
 
-func performValidationChecks(cfg *config.Config) []string {
-	var warnings []string
+// displayV3ConfigurationSummary displays a summary of the V3 configuration
+func displayV3ConfigurationSummary(cfg *config.ConfigV3) {
+	logger.Info("\nV3 Configuration summary:")
 
-	warnings = append(warnings, checkEmptyConfiguration(cfg)...)
-	warnings = append(warnings, checkOutputs(cfg)...)
-	warnings = append(warnings, checkDuplicateRules(cfg)...)
-	warnings = append(warnings, checkDuplicateSections(cfg)...)
-	warnings = append(warnings, checkDuplicateAgents(cfg)...)
-	warnings = append(warnings, checkDuplicateMCPServers(cfg)...)
-	warnings = append(warnings, checkDuplicateCommands(cfg)...)
-	warnings = append(warnings, checkMCPServerLogic(cfg)...)
-	warnings = append(warnings, checkTargetExistence(cfg)...)
+	if cfg.Content != nil {
+		logger.Info("  - Rules:", "count", len(cfg.Content.Rules))
+		logger.Info("  - Context files:", "count", len(cfg.Content.Context))
+		logger.Info("  - Skills:", "count", len(cfg.Content.Skills))
+		logger.Info("  - Domains:", "count", len(cfg.Content.Domains))
 
-	return warnings
-}
-
-func checkEmptyConfiguration(cfg *config.Config) []string {
-	if len(cfg.Rules) == 0 && len(cfg.Sections) == 0 {
-		return []string{"Configuration has no rules or sections defined"}
-	}
-	return nil
-}
-
-func checkOutputs(cfg *config.Config) []string {
-	if len(cfg.Outputs) == 0 {
-		return []string{"No output files configured - generation will have no effect"}
-	}
-	return nil
-}
-
-func checkDuplicateRules(cfg *config.Config) []string {
-	return checkDuplicateNames(
-		len(cfg.Rules),
-		func(i int) string { return cfg.Rules[i].Name },
-		"rule",
-	)
-}
-
-func checkDuplicateSections(cfg *config.Config) []string {
-	return checkDuplicateNames(
-		len(cfg.Sections),
-		func(i int) string { return cfg.Sections[i].Name },
-		"section name",
-	)
-}
-
-func checkDuplicateAgents(cfg *config.Config) []string {
-	return checkDuplicateNames(
-		len(cfg.Agents),
-		func(i int) string { return cfg.Agents[i].Name },
-		"agent name",
-	)
-}
-
-func checkDuplicateMCPServers(cfg *config.Config) []string {
-	return checkDuplicateNames(
-		len(cfg.MCPServers),
-		func(i int) string { return cfg.MCPServers[i].Name },
-		"mcp_server name",
-	)
-}
-
-func checkDuplicateCommands(cfg *config.Config) []string {
-	return checkDuplicateNames(
-		len(cfg.Commands),
-		func(i int) string { return cfg.Commands[i].Name },
-		"command name",
-	)
-}
-
-func checkMCPServerLogic(cfg *config.Config) []string {
-	var warnings []string
-	for i := range cfg.MCPServers {
-		transport := cfg.MCPServers[i].GetTransport()
-		switch transport {
-		case "http", "sse":
-			if cfg.MCPServers[i].URL == "" {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport '%s' but is missing a 'url'", cfg.MCPServers[i].Name, transport))
-			}
-		case "stdio":
-			if cfg.MCPServers[i].Command == "" {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' has transport 'stdio' but is missing a 'command'", cfg.MCPServers[i].Name))
-			}
+		// Count domain content
+		var totalDomainRules, totalDomainContext, totalDomainSkills int
+		for _, domain := range cfg.Content.Domains {
+			totalDomainRules += len(domain.Rules)
+			totalDomainContext += len(domain.Context)
+			totalDomainSkills += len(domain.Skills)
 		}
-	}
-	return warnings
-}
-
-func checkTargetExistence(cfg *config.Config) []string {
-	var warnings []string
-	outputPaths := make(map[string]bool)
-	for _, output := range cfg.Outputs {
-		outputPaths[output.Path] = true
-	}
-
-	for _, rule := range cfg.Rules {
-		for _, target := range rule.Targets {
-			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Rule '%s' targets non-existent output '%s'", rule.Name, target))
-			}
+		if totalDomainRules > 0 {
+			logger.Info("    - Domain rules:", "count", totalDomainRules)
+		}
+		if totalDomainContext > 0 {
+			logger.Info("    - Domain context:", "count", totalDomainContext)
+		}
+		if totalDomainSkills > 0 {
+			logger.Info("    - Domain skills:", "count", totalDomainSkills)
 		}
 	}
 
-	for i := range cfg.Agents {
-		for _, target := range cfg.Agents[i].Targets {
-			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Agent '%s' targets non-existent output '%s'", cfg.Agents[i].Name, target))
-			}
-		}
-	}
-
-	for i := range cfg.MCPServers {
-		for _, target := range cfg.MCPServers[i].Targets {
-			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("MCP server '%s' targets non-existent output '%s'", cfg.MCPServers[i].Name, target))
-			}
-		}
-	}
-
-	for i := range cfg.Commands {
-		for _, target := range cfg.Commands[i].Targets {
-			if !outputPaths[target] {
-				warnings = append(warnings, fmt.Sprintf("Command '%s' targets non-existent output '%s'", cfg.Commands[i].Name, target))
-			}
-		}
-	}
-
-	return warnings
-}
-
-func checkDuplicateNames(count int, getName func(int) string, itemType string) []string {
-	names := make(map[string]bool)
-	var warnings []string
-
-	for i := 0; i < count; i++ {
-		name := getName(i)
-		if names[name] {
-			warnings = append(warnings, fmt.Sprintf("Duplicate %s: '%s'", itemType, name))
-		}
-		names[name] = true
-	}
-
-	return warnings
-}
-
-func displayValidationResults(configPath string, cfg *config.Config, warnings []string) {
-	logger.Success("✅ Configuration file is valid", "path", configPath)
-	displayConfigurationSummary(cfg)
-	displayWarnings(warnings)
-}
-
-func displayConfigurationSummary(cfg *config.Config) {
-	logger.Info("\nConfiguration summary:")
-	logger.Info("  - Rules:", "count", len(cfg.Rules))
-	logger.Info("  - Sections:", "count", len(cfg.Sections))
-	logger.Info("  - Agents:", "count", len(cfg.Agents))
-	logger.Info("  - MCP Servers:", "count", len(cfg.MCPServers))
-	logger.Info("  - Commands:", "count", len(cfg.Commands))
-	logger.Info("  - Outputs:", "count", len(cfg.Outputs))
-	if len(cfg.Includes) > 0 {
-		logger.Info("  - Includes:", "count", len(cfg.Includes))
-	}
-}
-
-func displayWarnings(warnings []string) {
-	if len(warnings) > 0 {
-		logger.Warn("\n⚠️  Warnings:")
-		for _, warning := range warnings {
-			logger.Warn("  - %s", warning)
-		}
-	}
+	logger.Info("  - Presets:", "count", len(cfg.Presets))
 }

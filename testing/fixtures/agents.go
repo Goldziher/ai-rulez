@@ -3,6 +3,9 @@ package fixtures
 const ConfigWithAgents = `metadata:
   name: "Project with Agents"
 
+presets:
+  - claude
+
 outputs:
   - path: "CLAUDE.md"
   - path: ".claude/agents/"
@@ -38,6 +41,9 @@ agents:
 const ConfigWithAgentTemplates = `metadata:
   name: "Agent Templates Test"
 
+presets:
+  - claude
+
 outputs:
   - path: ".claude/agents/"
     type: "agent"
@@ -66,6 +72,9 @@ agents:
 
 const ConfigWithComplexAgents = `metadata:
   name: "Complex Agents Test"
+
+presets:
+  - claude
 
 outputs:
   - path: ".claude/agents/"

@@ -1,0 +1,6 @@
+version: "3.0"
+name: with-mcp-test
+description: Test with MCP servers (auto-generation without preset)
+presets:
+  - claude
+gitignore: false

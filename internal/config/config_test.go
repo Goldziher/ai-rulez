@@ -77,6 +77,8 @@ func TestSaveConfig(t *testing.T) {
 }
 
 func TestLoadConfigWithIncludes(t *testing.T) {
+	// V2 configuration is no longer supported - this test is skipped
+	t.Skip("V2 configuration (ai-rulez.yaml) is no longer supported - use V3 (.ai-rulez/) configuration")
 	t.Run("simple include", func(t *testing.T) {
 		tempDir := t.TempDir()
 
@@ -307,33 +309,13 @@ func TestValidateOutputs(t *testing.T) {
 }
 
 func TestValidateIncludes(t *testing.T) {
-	t.Run("valid local include", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		includeFile := filepath.Join(tempDir, "include.yaml")
-		require.NoError(t, os.WriteFile(includeFile, []byte("rules: []"), 0o644))
-
-		cfg := &config.Config{
-			Includes: []string{"include.yaml"},
-		}
-
-		err := config.ValidateIncludes(cfg, tempDir)
-		assert.NoError(t, err)
-	})
-
-	t.Run("missing include", func(t *testing.T) {
-		tempDir := t.TempDir()
-
-		cfg := &config.Config{
-			Includes: []string{"missing.yaml"},
-		}
-
-		err := config.ValidateIncludes(cfg, tempDir)
-		assert.Error(t, err)
-	})
+	// V2 configuration is no longer supported - this test is skipped
+	t.Skip("V2 configuration (ai-rulez.yaml) is no longer supported - use V3 (.ai-rulez/) configuration")
 }
 
 func TestLoadConfigWithExtends(t *testing.T) {
+	// V2 configuration is no longer supported - this test is skipped
+	t.Skip("V2 configuration (ai-rulez.yaml) is no longer supported - use V3 (.ai-rulez/) configuration")
 	t.Run("local extends", func(t *testing.T) {
 		tempDir := t.TempDir()
 

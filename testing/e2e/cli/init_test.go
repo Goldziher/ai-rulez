@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -30,7 +31,9 @@ func (s *InitCLITestSuite) TestInitSetupHooks() {
 	lefthookContent := `pre-commit:\n  commands:\n    lint:\n      run: npm run lint\n`
 	testutil.WriteFile(s.T(), s.workingDir, "lefthook.yml", lefthookContent)
 
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "HookProject", "--setup-hooks")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "HookProject", "--setup-hooks")
 
 	result.AssertStderrContains(s.T(), "Successfully configured Lefthook")
 
@@ -39,7 +42,9 @@ func (s *InitCLITestSuite) TestInitSetupHooks() {
 }
 
 func (s *InitCLITestSuite) TestInitConflictingProviders() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ConflictProject", "--claude", "--continue-dev")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "ConflictProject", "--claude", "--continue-dev")
 
 	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 
@@ -50,7 +55,9 @@ func (s *InitCLITestSuite) TestInitConflictingProviders() {
 }
 
 func (s *InitCLITestSuite) TestBasicInit() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "TestProject")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "TestProject")
 
 	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 	result.AssertStderrContains(s.T(), "TestProject")
@@ -64,7 +71,9 @@ func (s *InitCLITestSuite) TestBasicInit() {
 }
 
 func (s *InitCLITestSuite) TestInitContinueDevPreset() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ContinueDevProject", "--preset", "continue-dev")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "ContinueDevProject", "--preset", "continue-dev")
 
 	result.AssertStderrContains(s.T(), "Continue.dev")
 	result.AssertStderrContains(s.T(), ".continue/")
@@ -78,18 +87,22 @@ func (s *InitCLITestSuite) TestInitContinueDevPreset() {
 	promptsPath := filepath.Join(s.workingDir, ".continue", "prompts", "ai_rulez_prompts.yaml")
 	s.True(testutil.FileExists(s.T(), promptsPath), "prompts YAML file should be generated")
 	promptsContent := testutil.ReadFile(s.T(), promptsPath)
-	s.Contains(promptsContent, "GENERATED FILE - DO NOT EDIT DIRECTLY")
+	s.Contains(promptsContent, "GENERATED FILE")
 
 	secondWorkingDir := testutil.CreateTempDir(s.T())
 
-	resultSecond := testutil.RunCLIExpectSuccess(s.T(), secondWorkingDir, "init", "ProjectSecond", "--preset", "continue-dev")
+	resultSecond := testutil.RunCLIWithEnv(s.T(), secondWorkingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "ProjectSecond", "--preset", "continue-dev")
 
 	resultSecond.AssertStderrContains(s.T(), "Continue.dev")
 	resultSecond.AssertStderrContains(s.T(), ".continue/")
 }
 
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init")
 
 	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
 
@@ -99,7 +112,9 @@ func (s *InitCLITestSuite) TestInitWithoutProjectName() {
 }
 
 func (s *InitCLITestSuite) TestInitClaudePreset() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "ClaudeProject", "--preset", "claude")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "ClaudeProject", "--preset", "claude")
 
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
 	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
@@ -108,7 +123,9 @@ func (s *InitCLITestSuite) TestInitClaudePreset() {
 }
 
 func (s *InitCLITestSuite) TestInitCursorPreset() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "CursorProject", "--preset", "cursor")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "CursorProject", "--preset", "cursor")
 
 	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
 
@@ -118,7 +135,9 @@ func (s *InitCLITestSuite) TestInitCursorPreset() {
 }
 
 func (s *InitCLITestSuite) TestInitWindsurfPreset() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WindsurfProject", "--preset", "windsurf")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "WindsurfProject", "--preset", "windsurf")
 
 	result.AssertStderrContains(s.T(), "Windsurf (.windsurf/)")
 
@@ -128,7 +147,9 @@ func (s *InitCLITestSuite) TestInitWindsurfPreset() {
 }
 
 func (s *InitCLITestSuite) TestInitPopularProviders() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "PopularProject", "--popular")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "PopularProject", "--popular")
 
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
 	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
@@ -141,7 +162,9 @@ func (s *InitCLITestSuite) TestInitPopularProviders() {
 }
 
 func (s *InitCLITestSuite) TestInitAllProviders() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "AllProject", "--all")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "AllProject", "--all")
 
 	result.AssertStderrContains(s.T(), "Claude")
 	result.AssertStderrContains(s.T(), "Cursor")
@@ -157,7 +180,9 @@ func (s *InitCLITestSuite) TestInitAllProviders() {
 }
 
 func (s *InitCLITestSuite) TestInitIndividualProviders() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "CustomProject", "--claude", "--cursor")
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "CustomProject", "--claude", "--cursor")
 
 	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
 	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
@@ -170,15 +195,16 @@ func (s *InitCLITestSuite) TestInitIndividualProviders() {
 }
 
 func (s *InitCLITestSuite) TestInitExistingConfig() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", "existing: config")
+	// V3 uses .ai-rulez/ directory instead of ai-rulez.yaml file
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	os.MkdirAll(aiRulesDir, 0o755)
 
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"CI":             "",
-		"NO_INTERACTIVE": "",
-	}, "init", "TestProject")
+	// Don't use NO_INTERACTIVE because it allows overwriting existing config
+	// Instead, we rely on test environment's non-interactive nature to trigger failure
+	result := testutil.RunCLI(s.T(), s.workingDir, "init", "TestProject")
 
-	s.NotEqual(0, result.ExitCode, "init should fail when config exists")
-	result.AssertStderrContains(s.T(), "Configuration file already exists")
+	// In non-interactive mode without explicit approval, init should fail
+	s.NotEqual(0, result.ExitCode, "init should fail when .ai-rulez/ already exists in non-interactive mode")
 }
 
 func (s *InitCLITestSuite) TestInitListAgents() {

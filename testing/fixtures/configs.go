@@ -5,6 +5,9 @@ const BasicConfig = `metadata:
   version: "1.0.0"
   description: "A test project for ai-rulez"
 
+presets:
+  - claude
+
 outputs:
   - path: "CLAUDE.md"
 
@@ -13,7 +16,7 @@ rules:
     priority: medium
     content: "This is a basic rule for testing"
 
-  - name: "High Priority Rule"  
+  - name: "High Priority Rule"
     priority: critical
     content: "This is a high priority rule"
 
@@ -26,6 +29,9 @@ sections:
 const MinimalConfig = `metadata:
   name: "Minimal Project"
 
+presets:
+  - claude
+
 outputs:
   - path: "output.md"
 
@@ -36,13 +42,19 @@ rules:
 
 const EmptyConfig = `metadata:
   name: "Empty Project"
-  
+
+presets:
+  - claude
+
 outputs:
   - path: "output.md"
 `
 
 const ConfigWithAllPriorities = `metadata:
   name: "Priority Test"
+
+presets:
+  - claude
 
 outputs:
   - path: "output.md"
@@ -78,6 +90,9 @@ agents:
 const ConfigWithTargets = `metadata:
   name: "Project with Targets"
 
+presets:
+  - claude
+
 outputs:
   - path: "frontend.md"
   - path: "backend.md"
@@ -101,6 +116,9 @@ rules:
 
 const ConfigWithTemplate = `metadata:
   name: "Template Test"
+
+presets:
+  - claude
 
 outputs:
   - path: "builtin.md"
