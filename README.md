@@ -129,7 +129,7 @@ mcp_servers:
   ```yaml
   repos:
     - repo: https://github.com/Goldziher/ai-rulez
-      rev: v2.3.4
+      rev: v2.3.5
       hooks:
         - id: ai-rulez-validate
         - id: ai-rulez-generate
