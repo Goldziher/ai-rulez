@@ -5,7 +5,7 @@
 
 set -euo pipefail
 
-AI_RULEZ_VERSION="${AI_RULEZ_VERSION:-v2.3.4}"
+AI_RULEZ_VERSION="${AI_RULEZ_VERSION:-v2.3.5}"
 AI_RULEZ_BINARY="${AI_RULEZ_BINARY:-}"
 AI_RULEZ_CACHE_DIR="${AI_RULEZ_CACHE_DIR:-$HOME/.cache/ai-rulez/pre-commit}"
 
