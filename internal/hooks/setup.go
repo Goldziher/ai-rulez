@@ -13,7 +13,7 @@ const (
 	preCommitSystem       = "pre-commit"
 	huskySystem           = "husky"
 	officialPreCommitRepo = "https://github.com/Goldziher/ai-rulez"
-	officialPreCommitRev  = "v2.3.5"
+	officialPreCommitRev  = "v2.4.2"
 )
 
 func SetupHooks() error {
