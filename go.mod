@@ -4,7 +4,7 @@ go 1.25
 
 require (
 	github.com/dgraph-io/ristretto/v2 v2.3.0
-	github.com/go-resty/resty/v2 v2.16.5
+	github.com/go-resty/resty/v2 v2.17.1
 	github.com/kaptinlin/jsonschema v0.4.13
 	github.com/modelcontextprotocol/go-sdk v1.0.0
 	github.com/samber/oops v1.19.0
