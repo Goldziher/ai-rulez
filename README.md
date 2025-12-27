@@ -25,12 +25,8 @@ ai-rulez V3 uses a directory-based configuration (`.ai-rulez/`) to organize rule
 - **Profiles** – Group domains for different use cases, generate targeted configurations
 - **Includes** – Compose rules from local packages or Git repositories with merge strategies
 - **Multi-preset generation** – Generate native configs for Claude, Cursor, Windsurf, Copilot, Gemini, and more
-- **MCP server support** – Configure MCP servers in your rules for IDE integration
-- **AI enforcement** – Run `ai-rulez enforce` to validate code, catch violations, and apply fixes
-
-<p align="center">
-  <img src="docs/assets/ai-rulez-python-demo.gif" alt="ai-rulez configuration generation" width="90%">
-</p>
+- **CRUD operations** – Programmatically manage your configuration with CLI and MCP tools
+- **MCP server support** – Configure MCP servers for IDE integration
 
 ---
 
@@ -120,14 +116,11 @@ ai-rulez profile list
 ai-rulez include list
 ```
 
-### 5. Enforce Rules (Optional)
+### 5. Validate Configuration
 
 ```bash
-# Check for violations
-ai-rulez enforce --agent claude
-
-# Apply fixes
-ai-rulez enforce --agent claude --fix
+# Validate your configuration
+ai-rulez validate
 ```
 
 ---
@@ -293,17 +286,14 @@ ai-rulez generate
 # Generate for a specific profile
 ai-rulez generate --profile frontend
 
-# Check for rule violations
-ai-rulez enforce --agent claude
-
-# Apply auto-fixes
-ai-rulez enforce --agent claude --fix
-
-# Run multi-agent reviews
-ai-rulez enforce --agent claude --review --review-iterations 2
-
 # Validate configuration
 ai-rulez validate
+
+# CRUD operations
+ai-rulez domain add backend
+ai-rulez add rule coding-standards --priority high
+ai-rulez profile add backend-team backend qa
+ai-rulez include add shared-rules https://github.com/org/rules
 ```
 
 ---
@@ -327,19 +317,19 @@ Define profiles to group domains for different use cases. Generate different con
 ### Multi-Preset Generation
 Generate configs for Claude, Cursor, Windsurf, Copilot, Gemini, and more—all from one configuration.
 
-### MCP Server Support
-Optionally configure MCP servers in `mcp.yaml` for integration with supported IDEs and tools.
+### CRUD Operations
+Programmatically manage your configuration using CLI commands or MCP tools. Create domains, add rules, manage includes, and define profiles without manual file editing.
 
-### AI-Powered Enforcement
-Use `ai-rulez enforce` to validate your codebase against your rules using Claude, Gemini, or other AI agents.
+### MCP Server Support
+Configure MCP servers in `mcp.yaml` for integration with supported IDEs and tools. Expose CRUD operations to AI assistants via MCP.
 
 ---
 
 ## Governance & Automation
 
 - **Git hooks** – Use pre-commit, lefthook, or husky to run `ai-rulez validate` and `ai-rulez generate` on commit
-- **CI/CD** – Integrate into GitHub Actions, GitLab CI, or other pipelines to gate merges on rule violations
-- **MCP integration** – Expose rules to Claude CLI, Cursor, and other MCP-aware tools for real-time guidance
+- **CI/CD** – Integrate into GitHub Actions, GitLab CI, or other pipelines to validate configurations
+- **MCP integration** – Expose CRUD operations and rules to Claude, Cursor, and other MCP-aware tools
 
 ---
 
@@ -347,8 +337,8 @@ Use `ai-rulez enforce` to validate your codebase against your rules using Claude
 
 - [Documentation](https://goldziher.github.io/ai-rulez/) – Full guides and reference
 - [Configuration Guide](https://goldziher.github.io/ai-rulez/configuration/) – V3 config details, domains, profiles, includes
-- [Enforcement Guide](https://goldziher.github.io/ai-rulez/enforcement/) – Rule validation and auto-fixing
-- [CLI Reference](https://goldziher.github.io/ai-rulez/cli/) – All commands and flags
+- [CLI Reference](https://goldziher.github.io/ai-rulez/cli/) – All commands and flags including CRUD operations
+- [MCP Integration](https://goldziher.github.io/ai-rulez/mcp-server/) – Model Context Protocol tools for AI assistants
 - [GitHub](https://github.com/Goldziher/ai-rulez) – Issues, discussions, and contributions
 
 ---
