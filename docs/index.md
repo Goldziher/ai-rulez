@@ -1,12 +1,8 @@
 # AI-Rulez Documentation
 
-Welcome to AI-Rulez, a CLI tool for managing AI assistant configurations across multiple tools.
+AI-Rulez is a CLI tool for managing AI assistant configurations across multiple tools.
 
-## What is AI-Rulez?
-
-AI-Rulez lets you write your AI instructions once and generate synchronized configuration files for Claude, Cursor, Windsurf, Copilot, Gemini, and other AI tools.
-
-Instead of maintaining separate instructions in each tool, you define rules, context, and specialized skills in a single directory-based configuration (`.ai-rulez/`), and AI-Rulez generates tool-specific outputs automatically.
+Write your AI instructions once in a single configuration and generate tool-specific outputs for Claude, Cursor, Windsurf, Copilot, Gemini, and others.
 
 ## Core Concepts
 
@@ -84,14 +80,14 @@ profiles:
 
 ## Key Features
 
-- **Single source of truth**: One configuration, multiple tools
-- **Domain scoping**: Organize rules by team or subsystem
-- **Profile support**: Generate customized outputs for different contexts
-- **Team collaboration**: Reduces merge conflicts with modular structure
-- **Built-in presets**: Support for all major AI tools
-- **Custom presets**: Create outputs for any tool in any format
-- **MCP integration**: Let AI assistants manage configuration directly
-- **Scalable**: Proven patterns for monorepos and multi-team projects
+- Single source of truth for all AI tool configurations
+- Domain scoping to organize rules by team or subsystem
+- Profile-based customization for different contexts
+- Modular structure to reduce merge conflicts
+- Built-in presets for major AI tools
+- Custom presets for any tool and format
+- MCP integration for programmatic access
+- Support for monorepos and multi-team projects
 
 ## Project Structure
 
