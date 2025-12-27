@@ -132,8 +132,8 @@ func (s *Server) addTool(tool *sdkmcp.Tool, handler handlerFunc) {
 func (s *Server) registerTools() {
 	s.registerProjectTools()
 	s.registerUtilityTools()
+	s.registerCRUDTools()
 }
-
 
 func (s *Server) registerProjectTools() {
 	s.addTool(
@@ -169,5 +169,215 @@ func (s *Server) registerUtilityTools() {
 	s.addTool(
 		newTool("get_version", "Get the ai-rulez version", nil),
 		handlers.GetVersionHandler(s.version),
+	)
+}
+
+func (s *Server) registerCRUDTools() {
+	// Domain tools
+	s.addTool(
+		newTool("create_domain", "Create a new domain with subdirectories for rules, context, and skills",
+			newSchemaBuilder().
+				String("name", "Domain name (alphanumeric and underscores, 1-50 characters)", true).
+				String("description", "Optional domain description", false),
+		),
+		handlers.CreateDomainHandler,
+	)
+
+	s.addTool(
+		newTool("delete_domain", "Delete a domain and all its contents",
+			newSchemaBuilder().
+				String("name", "Domain name to delete", true),
+		),
+		handlers.DeleteDomainHandler,
+	)
+
+	s.addTool(
+		newTool("list_domains", "List all domains in the .ai-rulez directory", nil),
+		handlers.ListDomainsHandler,
+	)
+
+	// Rule tools
+	s.addTool(
+		newTool("create_rule", "Create a new rule file with optional YAML frontmatter",
+			newSchemaBuilder().
+				String("name", "Rule filename without .md extension", true).
+				String("content", "Markdown content with optional YAML frontmatter", false).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				String("priority", "Priority level: critical, high, medium, or low", false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+		),
+		handlers.CreateRuleHandler,
+	)
+
+	s.addTool(
+		newTool("update_rule", "Update an existing rule file",
+			newSchemaBuilder().
+				String("name", "Rule filename without .md extension", true).
+				String("content", "New markdown content", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				String("priority", "Priority level: critical, high, medium, or low", false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+		),
+		handlers.UpdateRuleHandler,
+	)
+
+	s.addTool(
+		newTool("delete_rule", "Delete a rule file",
+			newSchemaBuilder().
+				String("name", "Rule filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false),
+		),
+		handlers.DeleteRuleHandler,
+	)
+
+	s.addTool(
+		newTool("list_rules", "List all rules in the root or a specific domain",
+			newSchemaBuilder().
+				String("domain", "Domain name (optional, lists root rules if not specified)", false),
+		),
+		handlers.ListRulesHandler,
+	)
+
+	// Context tools
+	s.addTool(
+		newTool("create_context", "Create a new context file with optional YAML frontmatter",
+			newSchemaBuilder().
+				String("name", "Context filename without .md extension", true).
+				String("content", "Markdown content with optional YAML frontmatter", false).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				String("priority", "Priority level: critical, high, medium, or low", false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+		),
+		handlers.CreateContextHandler,
+	)
+
+	s.addTool(
+		newTool("update_context", "Update an existing context file",
+			newSchemaBuilder().
+				String("name", "Context filename without .md extension", true).
+				String("content", "New markdown content", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				String("priority", "Priority level: critical, high, medium, or low", false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+		),
+		handlers.UpdateContextHandler,
+	)
+
+	s.addTool(
+		newTool("delete_context", "Delete a context file",
+			newSchemaBuilder().
+				String("name", "Context filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false),
+		),
+		handlers.DeleteContextHandler,
+	)
+
+	s.addTool(
+		newTool("list_context", "List all context files in the root or a specific domain",
+			newSchemaBuilder().
+				String("domain", "Domain name (optional, lists root context if not specified)", false),
+		),
+		handlers.ListContextHandler,
+	)
+
+	// Skill tools
+	s.addTool(
+		newTool("create_skill", "Create a new skill file with optional YAML frontmatter",
+			newSchemaBuilder().
+				String("name", "Skill filename without .md extension", true).
+				String("content", "Markdown content with optional YAML frontmatter", false).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				String("priority", "Priority level: critical, high, medium, or low", false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+		),
+		handlers.CreateSkillHandler,
+	)
+
+	s.addTool(
+		newTool("update_skill", "Update an existing skill file",
+			newSchemaBuilder().
+				String("name", "Skill filename without .md extension", true).
+				String("content", "New markdown content", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				String("priority", "Priority level: critical, high, medium, or low", false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+		),
+		handlers.UpdateSkillHandler,
+	)
+
+	s.addTool(
+		newTool("delete_skill", "Delete a skill file",
+			newSchemaBuilder().
+				String("name", "Skill filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false),
+		),
+		handlers.DeleteSkillHandler,
+	)
+
+	s.addTool(
+		newTool("list_skills", "List all skill files in the root or a specific domain",
+			newSchemaBuilder().
+				String("domain", "Domain name (optional, lists root skills if not specified)", false),
+		),
+		handlers.ListSkillsHandler,
+	)
+
+	// Include tools
+	s.addTool(
+		newTool("add_include", "Add a new include source (git URL or local path) to the configuration",
+			newSchemaBuilder().
+				String("name", "Include name (unique identifier)", true).
+				String("source", "Git URL or local filesystem path", true).
+				String("path", "Path within git repository (git sources only)", false).
+				String("ref", "Git reference: branch, tag, or commit hash (git sources only)", false).
+				StringArray("include", "Content types to include: rules, context, skills, mcp", false).
+				String("merge_strategy", "Merge strategy: default, override, or append", false).
+				String("install_to", "Installation target path (optional)", false),
+		),
+		handlers.AddIncludeHandler,
+	)
+
+	s.addTool(
+		newTool("remove_include", "Remove an include source from the configuration",
+			newSchemaBuilder().
+				String("name", "Include name to remove", true),
+		),
+		handlers.RemoveIncludeHandler,
+	)
+
+	s.addTool(
+		newTool("list_includes", "List all include sources in the configuration", nil),
+		handlers.ListIncludesHandler,
+	)
+
+	// Profile tools
+	s.addTool(
+		newTool("add_profile", "Create a new profile with a set of domains",
+			newSchemaBuilder().
+				String("name", "Profile name (unique identifier)", true).
+				StringArray("domains", "List of domain names to include in the profile", true),
+		),
+		handlers.AddProfileHandler,
+	)
+
+	s.addTool(
+		newTool("remove_profile", "Remove a profile from the configuration",
+			newSchemaBuilder().
+				String("name", "Profile name to remove", true),
+		),
+		handlers.RemoveProfileHandler,
+	)
+
+	s.addTool(
+		newTool("set_default_profile", "Set a profile as the default",
+			newSchemaBuilder().
+				String("name", "Profile name to set as default", true),
+		),
+		handlers.SetDefaultProfileHandler,
+	)
+
+	s.addTool(
+		newTool("list_profiles", "List all profiles in the configuration", nil),
+		handlers.ListProfilesHandler,
 	)
 }
