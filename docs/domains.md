@@ -1,30 +1,30 @@
 # Domains and Profiles
 
-Learn how to organize your AI configuration by team, subsystem, or project area.
+Organize AI configuration by team, subsystem, or project area.
 
 ## What Are Domains?
 
-Domains are named areas of your project that have their own rules, context, and skills. They're useful for:
+Domains are named areas of your project with their own rules, context, and skills. Use them for:
 
-- **Multi-team projects**: Backend, frontend, mobile teams each get their own rules
-- **Multi-service architectures**: API, database, cache, queue each have their own guidance
-- **Feature areas**: Auth, payments, search get specialized rules
-- **Environments**: Dev, staging, production have different constraints
+- Multi-team projects (backend, frontend, mobile teams)
+- Multi-service architectures (API, database, cache, queue)
+- Feature areas (auth, payments, search)
+- Environments (dev, staging, production)
 
 ## What Are Profiles?
 
-Profiles are named combinations of domains. Each profile specifies which domains are included when generating:
+Profiles specify which domains are included when generating. Example:
 
 ```yaml
 profiles:
-  full: [backend, frontend, qa]        # Everyone
-  backend: [backend, qa]               # Backend team
-  frontend: [frontend, qa]             # Frontend team
-  qa: [qa]                             # QA team
+  full: [backend, frontend, qa]        # All teams
+  backend: [backend, qa]               # Backend team only
+  frontend: [frontend, qa]             # Frontend team only
+  qa: [qa]                             # QA team only
 ```
 
-When you generate with a profile, you get:
-- All root content (rules, context, skills) - always included
+Generation always includes:
+- All root content (rules, context, skills)
 - Content from selected domains only
 
 ## Directory Structure
@@ -61,7 +61,7 @@ When you generate with a profile, you get:
 
 ## Common Organization Patterns
 
-### Pattern 1: Service-Based Domains
+### Service-Based Domains
 
 For microservices or service-oriented architecture:
 
@@ -83,15 +83,15 @@ profiles:
   infrastructure: [database, cache, queue]
 ```
 
-### Pattern 2: Team-Based Domains
+### Team-Based Domains
 
 For organizations with dedicated teams:
 
 ```yaml
 domains:
-  - backend: Go microservices team
-  - frontend: React web app team
-  - mobile: React Native mobile team
+  - backend: Go microservices
+  - frontend: React web app
+  - mobile: React Native mobile
   - qa: Testing and quality assurance
   - devops: Infrastructure and deployment
 ```
@@ -108,9 +108,9 @@ profiles:
   ci-all: [backend, frontend, mobile, qa, devops]
 ```
 
-### Pattern 3: Feature-Based Domains
+### Feature-Based Domains
 
-For large projects organized by feature:
+For projects organized by feature:
 
 ```yaml
 domains:
@@ -129,15 +129,15 @@ profiles:
   frontend: [notifications, search]
 ```
 
-### Pattern 4: Environment-Based Domains
+### Environment-Based Domains
 
 For different rules per environment:
 
 ```yaml
 domains:
-  - dev: Local development guidelines
-  - staging: Staging-specific constraints
-  - prod: Production safety rules
+  - dev: Development guidelines
+  - staging: Staging constraints
+  - prod: Production rules
   - security-hardened: Extra security measures
 ```
 
@@ -149,29 +149,22 @@ profiles:
   production: [prod, security-hardened]
 ```
 
-## Naming Domains
+## Domain Names
 
-### Good Domain Names
+### Good Names
 
-Use names that clearly indicate ownership or responsibility:
-
-```
-backend, frontend, mobile     (service boundaries)
-api, database, cache          (technical components)
-auth, payments, search        (feature areas)
-dev, staging, prod            (environments)
-golang, typescript, python    (technology)
-```
+Use names that indicate ownership or responsibility:
+- `backend`, `frontend`, `mobile` (service boundaries)
+- `api`, `database`, `cache` (technical components)
+- `auth`, `payments`, `search` (feature areas)
+- `dev`, `staging`, `prod` (environments)
+- `golang`, `typescript`, `python` (technology)
 
 ### Avoid
 
-```
-team1, team2                  (not descriptive)
-a, b, c                       (unclear)
-everything                    (too broad)
-shared                        (ambiguous ownership)
-misc                          (unclear purpose)
-```
+- `team1`, `team2` (not descriptive)
+- `a`, `b`, `c` (unclear)
+- `everything`, `shared`, `misc` (too broad or ambiguous)
 
 ## Creating a Domain
 
@@ -377,9 +370,9 @@ profiles:
 
 ## Best Practices
 
-### 1. Keep Domains Focused
+### Keep Domains Focused
 
-Each domain should represent one area of responsibility:
+Each domain represents one area of responsibility:
 
 ```yaml
 Good:
@@ -393,7 +386,7 @@ domains:
   - frontend-with-all-build-tools
 ```
 
-### 2. Avoid Overlapping Domains
+### Avoid Overlapping Domains
 
 If multiple domains need the same rule, put it in root:
 
@@ -411,42 +404,31 @@ Domain-specific:
 │   └── component-guidelines.md
 ```
 
-### 3. Document Domain Purpose
+### Document Domain Purpose
 
 Add comments in config.yaml:
 
 ```yaml
 # Domains:
-# - backend: Go microservices, REST APIs, PostgreSQL
-# - frontend: React web application, TypeScript
-# - mobile: React Native iOS/Android apps
-# - qa: Testing standards for all platforms
+# - backend: Go services, REST APIs, PostgreSQL
+# - frontend: React web app, TypeScript
+# - mobile: React Native iOS/Android
+# - qa: Testing standards
 # - devops: Infrastructure, CI/CD, deployment
 
 profiles:
   full: [backend, frontend, mobile, qa, devops]
 ```
 
-### 4. Use Consistent Domain Names
+### Use Consistent Names
 
-Across your organization, use the same domain names:
+Use the same domain names across projects for clarity.
 
-```
-Good:
-- All projects use: backend, frontend, mobile
-- Clear meaning across projects
-
-Bad:
-- One project uses: be, fe, mob
-- Another uses: server, client, app
-- Confusing and inconsistent
-```
-
-### 5. Name Profiles Clearly
+### Name Profiles Clearly
 
 Profile names should indicate their purpose:
 
-```
+```yaml
 Good:
 profiles:
   full: [all domains]
