@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.1.0] - 2025-12-27
+
+### Added
+- Migrate command for V2 to V3 configuration migration
+- Comprehensive test suite for migrate command (27 tests covering command structure, flags, and utility functions)
+- Integration test placeholder to prevent test runner errors
+
+### Fixed
+- Windows path separator issues in tests (content_test.go, validation_test.go, local_test.go)
+- Windows absolute path generation for cross-platform test compatibility
+- Test coverage for migrate command utilities (CopyDir, CreateBackup, detectV2Config)
+
 ## [3.0.0] - 2025-12-27
 
 ### Added
