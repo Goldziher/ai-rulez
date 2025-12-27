@@ -116,7 +116,6 @@ func SaveConfig(config *Config, filename string) error {
 	return writeFileBuffered(filename, data)
 }
 
-
 func writeFileBuffered(filename string, data []byte) error {
 	file, err := os.Create(filename)
 	if err != nil {
