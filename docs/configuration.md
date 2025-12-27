@@ -4,15 +4,15 @@ V3 configuration reference for `.ai-rulez/config.yaml`.
 
 ## File-Based Configuration
 
-V3 uses a file-based approach where you edit files directly with your editor:
+V3 uses a file-based approach where you edit files directly with your editor or use CRUD commands:
 
 - **Configuration**: Edit `.ai-rulez/config.yaml` with any text editor
-- **Rules**: Add/edit `.ai-rulez/rules/*.md` files
-- **Context**: Add/edit `.ai-rulez/context/*.md` files
-- **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files
-- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills}/*.md` files
+- **Rules**: Add/edit `.ai-rulez/rules/*.md` files or use `ai-rulez add rule`
+- **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
+- **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
+- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills}/*.md` files or use `ai-rulez domain add`
 
-No special commands are needed to add or modify content. Simply edit files and run `ai-rulez generate` to create tool-specific outputs.
+You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
 
 ## Basic Structure
 
@@ -501,6 +501,139 @@ This checks:
 - `name` is present and non-empty
 - All preset names are valid
 - File paths are valid
+
+## Programmatic Modification with CRUD Operations
+
+V3 provides CRUD (Create, Read, Update, Delete) commands to programmatically modify your configuration. This is useful for:
+
+- Automation and scripting
+- Integration with CI/CD pipelines
+- Programmatic domain and rule management
+- Integration with AI assistants via MCP tools
+
+### Manual File Editing vs CRUD Commands
+
+**Manual file editing:**
+- Direct control over content
+- Use any text editor
+- Better for complex content
+- Version control friendly
+
+**CRUD commands:**
+- Automated directory structure creation
+- Frontmatter generation
+- Validation built-in
+- Easier for scripting and automation
+- Better for programmatic access
+
+### Domain Structure with CRUD
+
+When you create a domain with `ai-rulez domain add`, the following structure is automatically created:
+
+```
+.ai-rulez/domains/my-domain/
+├── rules/           # Domain-specific rules
+├── context/         # Domain-specific documentation
+└── skills/          # Domain-specific AI skills
+```
+
+This mirrors the root structure and allows you to organize content by ownership.
+
+### CRUD Command Categories
+
+**Domain Management:**
+```bash
+ai-rulez domain add <name>           # Create a domain
+ai-rulez domain remove <name>        # Delete a domain
+ai-rulez domain list                 # List all domains
+```
+
+**Content Management:**
+```bash
+# Add content to root or domain
+ai-rulez add rule <name>             # Create a rule
+ai-rulez add context <name>          # Create context
+ai-rulez add skill <name>            # Create a skill
+
+# Remove content
+ai-rulez remove rule <name>          # Delete a rule
+ai-rulez remove context <name>       # Delete context
+ai-rulez remove skill <name>         # Delete a skill
+
+# List content
+ai-rulez list rules                  # List all rules
+ai-rulez list context                # List all context
+ai-rulez list skills                 # List all skills
+```
+
+**Include Management:**
+```bash
+ai-rulez include add <name> <source> # Add an include source
+ai-rulez include remove <name>       # Remove an include
+ai-rulez include list                # List all includes
+```
+
+**Profile Management:**
+```bash
+ai-rulez profile add <name> <domains>      # Create a profile
+ai-rulez profile remove <name>             # Delete a profile
+ai-rulez profile set-default <name>        # Set default profile
+ai-rulez profile list                      # List all profiles
+```
+
+### Frontmatter Generation
+
+When adding content via CRUD commands, frontmatter is automatically generated:
+
+```markdown
+---
+priority: medium
+targets: []
+---
+
+Your content here...
+```
+
+You can override defaults:
+
+```bash
+ai-rulez add rule my-rule --priority high --targets claude,cursor
+```
+
+### Best Practices for Configuration Management
+
+1. **Use CRUD for automation**: Scripts, CI/CD pipelines, and programmatic changes
+2. **Use file editing for complex content**: When you need fine control over formatting
+3. **Organize by domain**: Put domain-specific rules in `domains/name/` directories
+4. **Validate after changes**: Run `ai-rulez validate` to check configuration
+5. **Regenerate after changes**: Run `ai-rulez generate` to create tool-specific outputs
+6. **Commit both sources and outputs**: Version control both `.ai-rulez/` and generated files
+
+### Programmatic Workflow Example
+
+```bash
+#!/bin/bash
+# Example: Create a new domain with rules
+
+# Create the domain
+ai-rulez domain add backend --description "Backend services"
+
+# Add a rule
+ai-rulez add rule database-standards --domain backend --priority high
+
+# Add context
+ai-rulez add context architecture --domain backend
+
+# Validate
+ai-rulez validate
+
+# Generate
+ai-rulez generate
+
+# Commit
+git add .ai-rulez/ CLAUDE.md .cursor/
+git commit -m "chore: add backend domain with database standards"
+```
 
 ## Best Practices
 
