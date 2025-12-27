@@ -4,6 +4,7 @@ All AI-Rulez CLI commands and flags.
 
 ## Command Overview
 
+### Core Commands
 | Command | Description |
 |---------|-------------|
 | `ai-rulez init` | Initialize V3 directory-based configuration |
@@ -11,6 +12,525 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez validate` | Validate configuration |
 | `ai-rulez version` | Show version |
 | `ai-rulez mcp` | Start MCP server |
+
+### CRUD Commands (Configuration Management)
+| Command | Description |
+|---------|-------------|
+| `ai-rulez domain add/remove/list` | Manage domains |
+| `ai-rulez add rule/context/skill` | Create content files |
+| `ai-rulez remove rule/context/skill` | Delete content files |
+| `ai-rulez list rules/context/skills` | List content files |
+| `ai-rulez include add/remove/list` | Manage external includes |
+| `ai-rulez profile add/remove/list` | Manage profiles |
+| `ai-rulez profile set-default` | Set default profile |
+
+## CRUD Commands
+
+V3 provides CRUD commands to programmatically modify your `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills, manage includes, and organize profiles.
+
+### Domain Management
+
+#### `ai-rulez domain add <name> [flags]`
+
+Create a new domain with subdirectories for rules, context, and skills.
+
+**Syntax:**
+```bash
+ai-rulez domain add <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Domain name. Alphanumeric and underscores, 1-50 characters.
+
+**Flags:**
+- `--description <text>` (optional): Description of the domain
+- `--verbose` (optional): Show detailed output
+
+**Examples:**
+
+Create a backend domain:
+```bash
+ai-rulez domain add backend
+```
+
+Create a domain with description:
+```bash
+ai-rulez domain add frontend --description "React web application"
+```
+
+#### `ai-rulez domain remove <name> [flags]`
+
+Delete a domain and all its contents.
+
+**Syntax:**
+```bash
+ai-rulez domain remove <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Domain name to delete
+
+**Flags:**
+- `--force` (optional): Skip confirmation prompt
+
+**Examples:**
+
+Remove a domain (with confirmation):
+```bash
+ai-rulez domain remove backend
+```
+
+Remove without confirmation:
+```bash
+ai-rulez domain remove backend --force
+```
+
+#### `ai-rulez domain list [flags]`
+
+List all domains in the `.ai-rulez/` directory.
+
+**Syntax:**
+```bash
+ai-rulez domain list [flags]
+```
+
+**Flags:**
+- `--json` (optional): Output as JSON
+- `--verbose` (optional): Show file counts per domain
+
+**Examples:**
+
+List domains:
+```bash
+ai-rulez domain list
+```
+
+List as JSON:
+```bash
+ai-rulez domain list --json
+```
+
+### Content Management
+
+Rules, context, and skills can be added to the root (always included) or to specific domains (profile-dependent).
+
+#### `ai-rulez add rule <name> [flags]`
+
+Create a new rule file with optional YAML frontmatter.
+
+**Syntax:**
+```bash
+ai-rulez add rule <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Rule filename without `.md` extension
+
+**Flags:**
+- `--domain <name>` (optional): Domain name. If not specified, creates in root rules directory
+- `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
+- `--targets <list>` (optional): Comma-separated list of target providers (claude, cursor, etc.)
+- `--file <path>` (optional): Read content from a file instead of stdin
+- `--verbose` (optional): Show detailed output
+
+**Examples:**
+
+Create a root rule:
+```bash
+ai-rulez add rule code-quality
+```
+
+Create a domain-specific rule:
+```bash
+ai-rulez add rule database-standards --domain backend --priority high
+```
+
+Create with specific targets:
+```bash
+ai-rulez add rule performance --targets claude,cursor --priority high
+```
+
+#### `ai-rulez add context <name> [flags]`
+
+Create a new context file (documentation/reference material).
+
+**Syntax:**
+```bash
+ai-rulez add context <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Context filename without `.md` extension
+
+**Flags:**
+- `--domain <name>` (optional): Domain name. If not specified, creates in root context directory
+- `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
+- `--targets <list>` (optional): Comma-separated list of target providers
+- `--file <path>` (optional): Read content from a file
+- `--verbose` (optional): Show detailed output
+
+**Examples:**
+
+Create root context:
+```bash
+ai-rulez add context architecture
+```
+
+Create domain context:
+```bash
+ai-rulez add context database-design --domain backend
+```
+
+#### `ai-rulez add skill <name> [flags]`
+
+Create a new skill file (AI prompt/expert definition).
+
+**Syntax:**
+```bash
+ai-rulez add skill <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Skill filename without `.md` extension
+
+**Flags:**
+- `--domain <name>` (optional): Domain name. If not specified, creates in root skills directory
+- `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
+- `--targets <list>` (optional): Comma-separated list of target providers
+- `--file <path>` (optional): Read content from a file
+- `--verbose` (optional): Show detailed output
+
+**Examples:**
+
+Create a root skill:
+```bash
+ai-rulez add skill code-reviewer
+```
+
+Create a domain-specific skill:
+```bash
+ai-rulez add skill performance-optimizer --domain backend --priority high
+```
+
+#### `ai-rulez remove rule <name> [flags]`
+
+Delete a rule file.
+
+**Syntax:**
+```bash
+ai-rulez remove rule <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Rule filename without `.md` extension
+
+**Flags:**
+- `--domain <name>` (optional): Domain name
+- `--force` (optional): Skip confirmation
+
+**Examples:**
+
+Remove a root rule:
+```bash
+ai-rulez remove rule code-quality
+```
+
+Remove a domain rule:
+```bash
+ai-rulez remove rule database-standards --domain backend --force
+```
+
+#### `ai-rulez remove context <name> [flags]`
+
+Delete a context file.
+
+**Syntax:**
+```bash
+ai-rulez remove context <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Context filename without `.md` extension
+
+**Flags:**
+- `--domain <name>` (optional): Domain name
+- `--force` (optional): Skip confirmation
+
+**Examples:**
+
+```bash
+ai-rulez remove context architecture
+ai-rulez remove context backend-design --domain backend --force
+```
+
+#### `ai-rulez remove skill <name> [flags]`
+
+Delete a skill file.
+
+**Syntax:**
+```bash
+ai-rulez remove skill <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Skill filename without `.md` extension
+
+**Flags:**
+- `--domain <name>` (optional): Domain name
+- `--force` (optional): Skip confirmation
+
+**Examples:**
+
+```bash
+ai-rulez remove skill code-reviewer
+ai-rulez remove skill performance-optimizer --domain backend --force
+```
+
+#### `ai-rulez list rules [flags]`
+
+List all rule files.
+
+**Syntax:**
+```bash
+ai-rulez list rules [flags]
+```
+
+**Flags:**
+- `--domain <name>` (optional): List rules in specific domain only
+- `--json` (optional): Output as JSON
+- `--verbose` (optional): Show file details
+
+**Examples:**
+
+List all rules:
+```bash
+ai-rulez list rules
+```
+
+List domain rules:
+```bash
+ai-rulez list rules --domain backend
+```
+
+#### `ai-rulez list context [flags]`
+
+List all context files.
+
+**Syntax:**
+```bash
+ai-rulez list context [flags]
+```
+
+**Flags:**
+- `--domain <name>` (optional): List context in specific domain only
+- `--json` (optional): Output as JSON
+- `--verbose` (optional): Show file details
+
+**Examples:**
+
+```bash
+ai-rulez list context
+ai-rulez list context --domain backend
+```
+
+#### `ai-rulez list skills [flags]`
+
+List all skill files.
+
+**Syntax:**
+```bash
+ai-rulez list skills [flags]
+```
+
+**Flags:**
+- `--domain <name>` (optional): List skills in specific domain only
+- `--json` (optional): Output as JSON
+- `--verbose` (optional): Show file details
+
+**Examples:**
+
+```bash
+ai-rulez list skills
+ai-rulez list skills --domain backend
+```
+
+### Include Management
+
+Manage external rule sources (git repositories or local packages).
+
+#### `ai-rulez include add <name> <source> [flags]`
+
+Add a new include source to the configuration.
+
+**Syntax:**
+```bash
+ai-rulez include add <name> <source> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Unique identifier for this include
+- `<source>` (required): Git URL (e.g., `https://github.com/org/repo`) or local path (e.g., `./packages/shared`)
+
+**Flags:**
+- `--path <dir>` (optional): Path within git repository where `.ai-rulez/` content is located
+- `--ref <branch>` (optional): Git reference (branch, tag, commit). Default: main
+- `--include <types>` (optional): Comma-separated content types: rules,context,skills,mcp
+- `--merge-strategy <strategy>` (optional): Merge strategy: default, override, append
+- `--install-to <path>` (optional): Installation target path in `.ai-rulez/`
+
+**Examples:**
+
+Add a git-based include:
+```bash
+ai-rulez include add corporate-rules https://github.com/myorg/shared-rules
+```
+
+Add with custom path and ref:
+```bash
+ai-rulez include add shared-patterns https://github.com/myorg/repo --path .ai-rulez --ref develop
+```
+
+Add local include:
+```bash
+ai-rulez include add backend-package ./packages/backend
+```
+
+#### `ai-rulez include remove <name> [flags]`
+
+Remove an include source.
+
+**Syntax:**
+```bash
+ai-rulez include remove <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Include name to remove
+
+**Flags:**
+- `--force` (optional): Skip confirmation
+
+**Examples:**
+
+```bash
+ai-rulez include remove corporate-rules
+ai-rulez include remove shared-patterns --force
+```
+
+#### `ai-rulez include list [flags]`
+
+List all include sources.
+
+**Syntax:**
+```bash
+ai-rulez include list [flags]
+```
+
+**Flags:**
+- `--json` (optional): Output as JSON
+- `--verbose` (optional): Show detailed configuration
+
+**Examples:**
+
+```bash
+ai-rulez include list
+ai-rulez include list --json
+```
+
+### Profile Management
+
+Organize domains into named profiles for targeted generation.
+
+#### `ai-rulez profile add <name> <domains...> [flags]`
+
+Create a new profile.
+
+**Syntax:**
+```bash
+ai-rulez profile add <name> <domains...> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Profile name
+- `<domains...>` (required): Space-separated list of domain names to include
+
+**Flags:**
+- `--set-default` (optional): Set this as the default profile
+- `--verbose` (optional): Show detailed output
+
+**Examples:**
+
+Create a backend profile:
+```bash
+ai-rulez profile add backend backend qa
+```
+
+Create and set as default:
+```bash
+ai-rulez profile add full backend frontend qa --set-default
+```
+
+#### `ai-rulez profile remove <name> [flags]`
+
+Delete a profile.
+
+**Syntax:**
+```bash
+ai-rulez profile remove <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Profile name to remove
+
+**Flags:**
+- `--force` (optional): Skip confirmation
+
+**Examples:**
+
+```bash
+ai-rulez profile remove staging
+ai-rulez profile remove development --force
+```
+
+#### `ai-rulez profile set-default <name> [flags]`
+
+Set a profile as the default for generation.
+
+**Syntax:**
+```bash
+ai-rulez profile set-default <name> [flags]
+```
+
+**Arguments:**
+- `<name>` (required): Profile name to set as default
+
+**Examples:**
+
+```bash
+ai-rulez profile set-default full
+```
+
+#### `ai-rulez profile list [flags]`
+
+List all profiles.
+
+**Syntax:**
+```bash
+ai-rulez profile list [flags]
+```
+
+**Flags:**
+- `--json` (optional): Output as JSON
+- `--verbose` (optional): Show domain contents
+
+**Examples:**
+
+```bash
+ai-rulez profile list
+ai-rulez profile list --json
+```
+
+---
 
 ## Initialization Command
 
@@ -349,6 +869,82 @@ errors:
 
 Run 'ai-rulez validate --verbose' for details
 ```
+
+## Common CRUD Workflows
+
+### Creating a Domain with Rules
+
+```bash
+# Create a domain
+ai-rulez domain add backend --description "Backend services"
+
+# Add rules to the domain
+ai-rulez add rule database-standards --domain backend --priority high
+ai-rulez add rule api-design --domain backend --priority high
+
+# Add context
+ai-rulez add context architecture --domain backend
+
+# Validate and generate
+ai-rulez validate
+ai-rulez generate
+```
+
+### Setting Up Team-Based Profiles
+
+```bash
+# Create domains for each team
+ai-rulez domain add backend
+ai-rulez domain add frontend
+ai-rulez domain add qa
+
+# Create team-specific profiles
+ai-rulez profile add full backend frontend qa --set-default
+ai-rulez profile add backend backend qa
+ai-rulez profile add frontend frontend qa
+
+# Generate for a specific profile
+ai-rulez generate --profile backend
+```
+
+### Adding External Rules from Git
+
+```bash
+# Add corporate rules include
+ai-rulez include add corporate-rules https://github.com/myorg/shared-rules --ref main
+
+# Verify include was added
+ai-rulez include list
+
+# Validate with included content
+ai-rulez validate
+
+# Regenerate with included content
+ai-rulez generate
+```
+
+### Managing Content Across Domains
+
+```bash
+# Add shared rule to root (always included)
+ai-rulez add rule code-style --priority high
+
+# Add domain-specific rule
+ai-rulez add rule database-standards --domain backend --priority high
+ai-rulez add rule accessibility --domain frontend --priority high
+
+# List all rules
+ai-rulez list rules
+
+# List domain-specific rules
+ai-rulez list rules --domain backend
+ai-rulez list rules --domain frontend
+
+# Remove a rule
+ai-rulez remove rule old-guideline --force
+```
+
+---
 
 ## Common Workflows
 

@@ -901,6 +901,91 @@ func sanitizeNameToID(name string) string {
 	return id
 }
 
+// SaveConfigV3 saves a V3 configuration back to YAML or JSON format
+// It determines the format based on which config file currently exists
+func SaveConfigV3(cfg *ConfigV3, configDir string) error {
+	if cfg == nil {
+		return oops.
+			With("config_dir", configDir).
+			Hint("Provide a valid ConfigV3 struct").
+			Errorf("config is nil")
+	}
+
+	// Check which format exists (prefer YAML if both exist)
+	yamlPath := filepath.Join(configDir, configYAMLFilename)
+	jsonPath := filepath.Join(configDir, configJSONFilename)
+
+	yamlExists := fileExists(yamlPath)
+	jsonExists := fileExists(jsonPath)
+
+	// Determine target format
+	var targetPath string
+	var isYAML bool
+
+	switch {
+	case yamlExists:
+		targetPath = yamlPath
+		isYAML = true
+	case jsonExists:
+		targetPath = jsonPath
+		isYAML = false
+	default:
+		// Default to YAML if neither exists
+		targetPath = yamlPath
+		isYAML = true
+	}
+
+	// Marshal to bytes
+	var data []byte
+	var err error
+
+	if isYAML {
+		data, err = yaml.Marshal(cfg)
+		if err != nil {
+			return oops.
+				With("path", targetPath).
+				Wrapf(err, "marshal config to YAML")
+		}
+	} else {
+		data, err = json.Marshal(cfg)
+		if err != nil {
+			return oops.
+				With("path", targetPath).
+				Wrapf(err, "marshal config to JSON")
+		}
+	}
+
+	// Write to temporary file first (atomic write)
+	tmpPath := targetPath + ".tmp"
+	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
+		return oops.
+			With("path", tmpPath).
+			Wrapf(err, "write temporary config file")
+	}
+
+	// Rename temporary file to actual config file (atomic)
+	if err := os.Rename(tmpPath, targetPath); err != nil {
+		// Clean up temp file if rename fails (best effort)
+		//nolint:gosec,errcheck // temp file cleanup is best-effort
+		_ = os.Remove(tmpPath)
+		return oops.
+			With("src", tmpPath).
+			With("dst", targetPath).
+			Wrapf(err, "rename config file")
+	}
+
+	return nil
+}
+
+// fileExists checks if a file exists (utility function for SaveConfigV3)
+func fileExists(path string) bool {
+	info, err := os.Stat(path)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
+}
+
 // encodeProfileMetadata encodes profile information into a version string
 // Format: "profiles:<profile1>:<domain1>,<domain2>;profile2:<domain3>"
 func encodeProfileMetadata(profiles map[string][]string, defaultProfile string) string {

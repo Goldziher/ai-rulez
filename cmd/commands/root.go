@@ -48,6 +48,12 @@ func init() {
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(InitCmd)
 	RootCmd.AddCommand(MCPCmd)
+	RootCmd.AddCommand(DomainCmd)
+	RootCmd.AddCommand(AddCmd)
+	RootCmd.AddCommand(RemoveCmd)
+	RootCmd.AddCommand(ListCmd)
+	RootCmd.AddCommand(IncludeCmd)
+	RootCmd.AddCommand(ProfileCmd)
 }
 
 func initConfig() {
