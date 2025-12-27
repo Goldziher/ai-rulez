@@ -40,14 +40,27 @@ ai-rulez V3 uses a directory-based configuration (`.ai-rulez/`) to organize rule
 
 ```bash
 # Create a new .ai-rulez/ directory with scaffold
-npx ai-rulez@latest init "My Project" --preset claude
+ai-rulez init "My Project" --preset claude
+```
 
-# This creates:
-# .ai-rulez/
-#   config.yaml          (configuration)
-#   rules/               (shared rules)
-#   context/             (shared context)
-#   domains/             (optional domain-specific rules)
+Or without installation:
+
+**npm:**
+```bash
+npx ai-rulez@latest init "My Project" --preset claude
+```
+
+**uv:**
+```bash
+uvx ai-rulez init "My Project" --preset claude
+```
+
+```
+.ai-rulez/
+  config.yaml          (configuration)
+  rules/               (shared rules)
+  context/             (shared context)
+  domains/             (optional domain-specific rules)
 ```
 
 ### 2. Add Your Rules
@@ -86,7 +99,7 @@ This is our SaaS platform..." > .ai-rulez/context/project-info.md
 
 ```bash
 # Generate configs for all preset tools
-npx ai-rulez@latest generate
+ai-rulez generate
 # Creates: CLAUDE.md, .cursorrules, .windsurfrules, etc.
 ```
 
@@ -111,10 +124,10 @@ ai-rulez include list
 
 ```bash
 # Check for violations
-npx ai-rulez@latest enforce --agent claude
+ai-rulez enforce --agent claude
 
 # Apply fixes
-npx ai-rulez@latest enforce --agent claude --fix
+ai-rulez enforce --agent claude --fix
 ```
 
 ---
@@ -227,32 +240,43 @@ includes:
 
 ### Quick Start (No Installation)
 
+**npm:**
 ```bash
 npx ai-rulez@latest init "My Project"
 npx ai-rulez@latest generate
-npx ai-rulez@latest enforce --agent claude
+```
+
+**uv:**
+```bash
+uvx ai-rulez init "My Project"
+uvx ai-rulez generate
 ```
 
 ### Global Installation
 
-**Homebrew:**
+**Homebrew (macOS/Linux):**
 ```bash
 brew install goldziher/tap/ai-rulez
-```
-
-**npm:**
-```bash
-npm install -g ai-rulez
-```
-
-**Python/pip:**
-```bash
-pip install ai-rulez
 ```
 
 **Go:**
 ```bash
 go install github.com/Goldziher/ai-rulez/cmd@latest
+```
+
+**npm (Node.js):**
+```bash
+npm install -g ai-rulez
+```
+
+**uv (Python):**
+```bash
+uv tool install ai-rulez
+```
+
+**pip (Python):**
+```bash
+pip install ai-rulez
 ```
 
 ---
