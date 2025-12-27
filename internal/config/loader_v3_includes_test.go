@@ -18,13 +18,13 @@ func TestLoadConfigV3WithIncludes_LocalIncludes(t *testing.T) {
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		// Create rules directory in base
-		rulesDir := filepath.Join(configDir, rulesDir)
-		require.NoError(t, os.MkdirAll(rulesDir, 0o755))
+		baseRulesPath := filepath.Join(configDir, rulesDir)
+		require.NoError(t, os.MkdirAll(baseRulesPath, 0o755))
 
 		// Create base rule
 		baseRuleContent := "# Base Rule\nBase content"
 		require.NoError(t, os.WriteFile(
-			filepath.Join(rulesDir, "base-rule.md"),
+			filepath.Join(baseRulesPath, "base-rule.md"),
 			[]byte(baseRuleContent),
 			0o644,
 		))
@@ -34,12 +34,12 @@ func TestLoadConfigV3WithIncludes_LocalIncludes(t *testing.T) {
 		require.NoError(t, os.MkdirAll(includeDir, 0o755))
 
 		// Create rules in the include directory
-		includeRulesDir := filepath.Join(includeDir, rulesDir)
-		require.NoError(t, os.MkdirAll(includeRulesDir, 0o755))
+		includeRulesPath := filepath.Join(includeDir, rulesDir)
+		require.NoError(t, os.MkdirAll(includeRulesPath, 0o755))
 
 		includedRuleContent := "# Included Rule\nIncluded content"
 		require.NoError(t, os.WriteFile(
-			filepath.Join(includeRulesDir, "shared-rule.md"),
+			filepath.Join(includeRulesPath, "shared-rule.md"),
 			[]byte(includedRuleContent),
 			0o644,
 		))
@@ -88,20 +88,20 @@ func TestLoadConfigV3WithIncludes_MixedIncludes(t *testing.T) {
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		// Create base content directories
-		rulesDir := filepath.Join(configDir, rulesDir)
-		contextDir := filepath.Join(configDir, contextDir)
-		require.NoError(t, os.MkdirAll(rulesDir, 0o755))
-		require.NoError(t, os.MkdirAll(contextDir, 0o755))
+		baseRulesPath := filepath.Join(configDir, rulesDir)
+		baseContextPath := filepath.Join(configDir, contextDir)
+		require.NoError(t, os.MkdirAll(baseRulesPath, 0o755))
+		require.NoError(t, os.MkdirAll(baseContextPath, 0o755))
 
 		// Create base files
 		require.NoError(t, os.WriteFile(
-			filepath.Join(rulesDir, "base-rule.md"),
+			filepath.Join(baseRulesPath, "base-rule.md"),
 			[]byte("# Base Rule"),
 			0o644,
 		))
 
 		require.NoError(t, os.WriteFile(
-			filepath.Join(contextDir, "base-context.md"),
+			filepath.Join(baseContextPath, "base-context.md"),
 			[]byte("# Base Context"),
 			0o644,
 		))
@@ -109,11 +109,11 @@ func TestLoadConfigV3WithIncludes_MixedIncludes(t *testing.T) {
 		// Create first include
 		include1Dir := filepath.Join(baseDir, "include1")
 		include1ConfigDir := filepath.Join(include1Dir, aiRulezDirName)
-		include1RulesDir := filepath.Join(include1ConfigDir, rulesDir)
-		require.NoError(t, os.MkdirAll(include1RulesDir, 0o755))
+		include1RulesPath := filepath.Join(include1ConfigDir, rulesDir)
+		require.NoError(t, os.MkdirAll(include1RulesPath, 0o755))
 
 		require.NoError(t, os.WriteFile(
-			filepath.Join(include1RulesDir, "include1-rule.md"),
+			filepath.Join(include1RulesPath, "include1-rule.md"),
 			[]byte("# Include 1 Rule"),
 			0o644,
 		))
@@ -121,11 +121,11 @@ func TestLoadConfigV3WithIncludes_MixedIncludes(t *testing.T) {
 		// Create second include
 		include2Dir := filepath.Join(baseDir, "include2")
 		include2ConfigDir := filepath.Join(include2Dir, aiRulezDirName)
-		include2ContextDir := filepath.Join(include2ConfigDir, contextDir)
-		require.NoError(t, os.MkdirAll(include2ContextDir, 0o755))
+		include2ContextPath := filepath.Join(include2ConfigDir, contextDir)
+		require.NoError(t, os.MkdirAll(include2ContextPath, 0o755))
 
 		require.NoError(t, os.WriteFile(
-			filepath.Join(include2ContextDir, "include2-context.md"),
+			filepath.Join(include2ContextPath, "include2-context.md"),
 			[]byte("# Include 2 Context"),
 			0o644,
 		))
@@ -168,12 +168,12 @@ func TestLoadConfigV3WithIncludes_MergeStrategies(t *testing.T) {
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		// Create base rule with same name as include
-		rulesDir := filepath.Join(configDir, rulesDir)
-		require.NoError(t, os.MkdirAll(rulesDir, 0o755))
+		baseRulesPath := filepath.Join(configDir, rulesDir)
+		require.NoError(t, os.MkdirAll(baseRulesPath, 0o755))
 
 		baseRuleContent := "# Base Rule - Original"
 		require.NoError(t, os.WriteFile(
-			filepath.Join(rulesDir, "shared-name.md"),
+			filepath.Join(baseRulesPath, "shared-name.md"),
 			[]byte(baseRuleContent),
 			0o644,
 		))
@@ -181,12 +181,12 @@ func TestLoadConfigV3WithIncludes_MergeStrategies(t *testing.T) {
 		// Create include with same rule name
 		includeDir := filepath.Join(baseDir, "shared-include")
 		includeConfigDir := filepath.Join(includeDir, aiRulezDirName)
-		includeRulesDir := filepath.Join(includeConfigDir, rulesDir)
-		require.NoError(t, os.MkdirAll(includeRulesDir, 0o755))
+		includeRulesPath := filepath.Join(includeConfigDir, rulesDir)
+		require.NoError(t, os.MkdirAll(includeRulesPath, 0o755))
 
 		includeRuleContent := "# Shared Name - From Include"
 		require.NoError(t, os.WriteFile(
-			filepath.Join(includeRulesDir, "shared-name.md"),
+			filepath.Join(includeRulesPath, "shared-name.md"),
 			[]byte(includeRuleContent),
 			0o644,
 		))
@@ -233,12 +233,12 @@ includes:
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		// Create base rule with same name as include
-		rulesDir := filepath.Join(configDir, rulesDir)
-		require.NoError(t, os.MkdirAll(rulesDir, 0o755))
+		baseRulesPath := filepath.Join(configDir, rulesDir)
+		require.NoError(t, os.MkdirAll(baseRulesPath, 0o755))
 
 		baseRuleContent := "# Base Rule - Original"
 		require.NoError(t, os.WriteFile(
-			filepath.Join(rulesDir, "shared-name.md"),
+			filepath.Join(baseRulesPath, "shared-name.md"),
 			[]byte(baseRuleContent),
 			0o644,
 		))
@@ -246,12 +246,12 @@ includes:
 		// Create include with same rule name
 		includeDir := filepath.Join(baseDir, "shared-include")
 		includeConfigDir := filepath.Join(includeDir, aiRulezDirName)
-		includeRulesDir := filepath.Join(includeConfigDir, rulesDir)
-		require.NoError(t, os.MkdirAll(includeRulesDir, 0o755))
+		includeRulesPath := filepath.Join(includeConfigDir, rulesDir)
+		require.NoError(t, os.MkdirAll(includeRulesPath, 0o755))
 
 		includeRuleContent := "# Shared Name - From Include"
 		require.NoError(t, os.WriteFile(
-			filepath.Join(includeRulesDir, "shared-name.md"),
+			filepath.Join(includeRulesPath, "shared-name.md"),
 			[]byte(includeRuleContent),
 			0o644,
 		))
@@ -365,10 +365,10 @@ func TestLoadConfigV3WithIncludes_NoIncludesSpecified(t *testing.T) {
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		// Create rules
-		rulesDir := filepath.Join(configDir, rulesDir)
-		require.NoError(t, os.MkdirAll(rulesDir, 0o755))
+		baseRulesPath := filepath.Join(configDir, rulesDir)
+		require.NoError(t, os.MkdirAll(baseRulesPath, 0o755))
 		require.NoError(t, os.WriteFile(
-			filepath.Join(rulesDir, "rule.md"),
+			filepath.Join(baseRulesPath, "rule.md"),
 			[]byte("# Rule"),
 			0o644,
 		))
@@ -403,10 +403,10 @@ func TestLoadConfigV3WithIncludes_NonexistentInclude(t *testing.T) {
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		// Create base rule
-		rulesDir := filepath.Join(configDir, rulesDir)
-		require.NoError(t, os.MkdirAll(rulesDir, 0o755))
+		baseRulesPath := filepath.Join(configDir, rulesDir)
+		require.NoError(t, os.MkdirAll(baseRulesPath, 0o755))
 		require.NoError(t, os.WriteFile(
-			filepath.Join(rulesDir, "base-rule.md"),
+			filepath.Join(baseRulesPath, "base-rule.md"),
 			[]byte("# Base Rule"),
 			0o644,
 		))
