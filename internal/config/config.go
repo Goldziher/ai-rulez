@@ -2,7 +2,6 @@ package config
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -117,16 +116,6 @@ func SaveConfig(config *Config, filename string) error {
 	return writeFileBuffered(filename, data)
 }
 
-// LoadConfigWithIncludes is deprecated - V2 configuration system
-// This function is kept for backward compatibility but will error out
-// Use LoadConfigV3 instead for V3 directory-based configuration
-func LoadConfigWithIncludes(ctx context.Context, filename string) (*Config, error) {
-	return nil, oops.
-		With("operation", "load V2 config").
-		With("filename", filename).
-		Hint("V2 configuration (ai-rulez.yaml) is no longer supported in this version.\nUpgrade to V3 directory-based configuration (.ai-rulez/)\nUse 'ai-rulez init --v3' to initialize a new V3 configuration").
-		Errorf("V2 configuration (ai-rulez.yaml) is not supported - please upgrade to V3")
-}
 
 func writeFileBuffered(filename string, data []byte) error {
 	file, err := os.Create(filename)
