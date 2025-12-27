@@ -1,249 +1,401 @@
 # Configuration Examples
 
-Use these examples as a starting point for your own `ai-rulez.yml` configuration, progressing from a minimal setup to a complete, real-world application.
+V3 uses a file-based directory structure (`.ai-rulez/`) instead of a single YAML file. These examples show how to organize your configuration across multiple markdown and YAML files.
 
 ---
 
-### 1. AI-Generated Configuration (Recommended)
+## 1. Minimal Configuration (Single Team)
 
-The best way to get started is with AI-powered configuration generation. Run this command and the AI will analyze your project:
+The simplest V3 setup for a single team with basic rules.
 
+**`.ai-rulez/config.yaml`:**
+```yaml
+version: "3.0"
+name: "My Project"
+
+presets:
+  - claude
+  - cursor
+
+gitignore: true
+```
+
+**`.ai-rulez/rules/code-quality.md`:**
+```markdown
+---
+priority: high
+---
+
+# Code Quality
+
+- Use meaningful variable names
+- Comment complex logic
+- All tests must pass before merge
+```
+
+**`.ai-rulez/context/architecture.md`:**
+```markdown
+# Architecture
+
+This is a monolithic application with:
+- PostgreSQL database
+- REST API backend
+- React frontend
+```
+
+### Generated Output
 ```bash
-ai-rulez init "My Project" --preset popular --use-agent claude
+ai-rulez generate
+# Creates:
+# - CLAUDE.md
+# - .cursor/rules/
 ```
 
-This automatically generates a comprehensive configuration tailored to your specific codebase. Here's what it might create for a Go microservice:
+---
 
+## 2. Multi-Team Configuration with Domains
+
+For projects with multiple teams, use domains to organize team-specific content.
+
+**`.ai-rulez/config.yaml`:**
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-
-metadata:
-  name: "User Management Service"
-  description: "Go-based microservice handling user authentication and profiles with PostgreSQL backend"
-  version: "1.0.0"
+version: "3.0"
+name: "Platform"
 
 presets:
-  - "popular"  # Claude, Cursor, Windsurf, Copilot, Gemini
+  - claude
+  - cursor
+  - gemini
 
-rules:
-  - name: "Go Code Standards"
-    priority: high
-    content: |
-      Follow standard Go project layout (cmd/, internal/, pkg/). 
-      Use meaningful package names and export only what needs to be public.
-      Prefer composition over inheritance.
-      
-  - name: "Error Handling"
-    priority: critical  
-    content: |
-      Always handle errors properly. Use wrapped errors with fmt.Errorf("context: %w", err).
-      Never ignore errors - at minimum log them.
-      Return errors as the last return value.
+default: full
 
-  - name: "Database Patterns"
-    priority: high
-    content: |
-      Use repository pattern for data access. 
-      Always use transactions for multi-table operations.
-      Use prepared statements to prevent SQL injection.
+profiles:
+  full: [backend, frontend, qa]
+  backend: [backend, qa]
+  frontend: [frontend, qa]
+  qa: [qa]
 
-sections:
-  - name: "Service Architecture" 
-    priority: critical
-    content: |
-      This service implements clean architecture with:
-      - cmd/: Application entry points
-      - internal/handlers/: HTTP handlers and routing
-      - internal/service/: Business logic layer
-      - internal/repository/: Data access layer
-      - internal/models/: Domain models and DTOs
-
-  - name: "API Standards"
-    priority: high  
-    content: |
-      RESTful API design following OpenAPI 3.0 specification.
-      All endpoints return JSON with consistent error format.
-      Use HTTP status codes appropriately (200, 201, 400, 401, 404, 500).
-
-agents:
-  - name: "go-expert"
-    description: "Go language specialist for backend development"
-    system_prompt: |
-      You are an expert Go developer specializing in microservices. 
-      Focus on clean architecture, proper error handling, and performance.
-      Always suggest testable patterns and consider concurrency safety.
-      
-  - name: "api-designer"
-    description: "REST API design specialist"  
-    system_prompt: |
-      You specialize in designing clean, consistent REST APIs.
-      Focus on proper HTTP semantics, clear request/response formats,
-      and comprehensive error handling. Always consider API versioning.
+gitignore: true
 ```
 
-**Key benefits of AI generation:**
-- ✅ Automatically detects your tech stack (Go, PostgreSQL, REST APIs)  
-- ✅ Creates project-specific rules and documentation
-- ✅ Sets up specialized agents for your workflow
-- ✅ Saves hours of manual configuration writing
+**`.ai-rulez/rules/security.md`:**
+```markdown
+---
+priority: critical
+---
 
-### 2. Minimal Configuration (Using a Preset)
+# Security
 
-The simplest possible setup for a single AI assistant, using the recommended `presets` key.
-
-```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-
-metadata:
-  name: "My Project"
-
-# Use a preset for a single tool
-presets:
-  - "claude"
-
-rules:
-  - name: "Tech Stack"
-    content: "This project uses Go and PostgreSQL."
-    priority: critical
+- All secrets must use environment variables
+- Validate all user input
+- Use HTTPS for all external API calls
 ```
 
-### 3. Multi-Platform Configuration (Using Presets)
+**`.ai-rulez/domains/backend/rules/database.md`:**
+```markdown
+---
+priority: critical
+---
 
-Use the `popular` preset to generate synchronized instructions for multiple AI tools from a single source.
+# Database Standards
 
-```yaml
-metadata:
-  name: "My Multi-Platform Project"
-
-# The "popular" preset includes Claude, Cursor, Windsurf, Copilot, and Gemini
-presets:
-  - "popular"
-
-rules:
-  - name: "General Workflow"
-    content: "All code must be reviewed and tested before merging."
-    priority: critical
+- Use prepared statements to prevent SQL injection
+- Always add database migrations
+- Index foreign keys for performance
 ```
 
-### 4. Advanced Configuration: Custom Outputs
+**`.ai-rulez/domains/frontend/rules/components.md`:**
+```markdown
+---
+priority: high
+---
 
-For more advanced use cases, like generating specialized agent files, the `outputs` key gives you fine-grained control.
+# Component Guidelines
 
-```yaml
-metadata:
-  name: "Project with Agents"
-
-# Use outputs for custom file generation
-outputs:
-  - path: "CLAUDE.md" # Main instruction file
-  - path: ".claude/agents/" # Directory for agent files
-    type: "agent"
-    naming_scheme: "{name}.md"
-
-agents:
-  - name: "database-expert"
-    description: "For questions about schema design and query optimization."
-    system_prompt: "You are an expert in PostgreSQL..."
-
-rules:
-  - name: "Agent Usage Instructions"
-    content: "For database questions, please use the @database-expert agent."
-    targets: ["CLAUDE.md"] # This rule only appears in the main Claude file
+- One component per file
+- Use TypeScript for type safety
+- Write unit tests for all components
 ```
 
-### 5. Combining Presets and Outputs
+### Generated Output
+```bash
+# Generate for backend team
+ai-rulez generate --profile backend
+# Includes: root rules + backend-specific rules
 
-You can combine `presets` and `outputs` to use standard configurations while overriding or adding custom files.
+# Generate for frontend team
+ai-rulez generate --profile frontend
+# Includes: root rules + frontend-specific rules
 
-```yaml
-# Use the popular preset, but override the Claude file with a custom template
-presets:
-  - "popular"
-
-outputs:
-  - path: "CLAUDE.md" # This will override the default Claude output
-    template:
-      type: "file"
-      value: "./my-custom-claude-template.tmpl"
-  - path: "INTERNAL_DOCS.md" # Add a completely custom output
+# Generate for QA
+ai-rulez generate --profile qa
+# Includes: root rules + QA-specific rules
 ```
 
-### 6. Full Configuration with Tools & Commands
+---
 
-A complete, real-world example showcasing all major features, including presets, MCP server integration, and custom slash commands.
+## 3. Using Skills for Specialized Roles
 
+Create AI skill definitions for specialized tasks.
+
+**`.ai-rulez/skills/code-reviewer/SKILL.md`:**
+```markdown
+---
+priority: high
+description: "Code reviewer for quality assurance"
+---
+
+# Code Reviewer
+
+You are an expert code reviewer with deep knowledge of:
+- Code quality and maintainability
+- Testing best practices
+- Performance optimization
+
+## Your Responsibilities
+
+1. Review pull requests for correctness
+2. Suggest improvements and refactoring
+3. Verify test coverage
+```
+
+**`.ai-rulez/skills/architecture-expert/SKILL.md`:**
+```markdown
+---
+priority: high
+description: "System architecture specialist"
+---
+
+# Architecture Expert
+
+You are a system architect specializing in:
+- Microservices design
+- Scalability patterns
+- System reliability
+
+## Your Responsibilities
+
+1. Review architectural decisions
+2. Suggest performance improvements
+3. Identify technical debt
+```
+
+### Usage in Generated Files
+
+The generated CLAUDE.md will include instructions like:
+
+```
+Use the @code-reviewer skill for pull request reviews.
+Use the @architecture-expert skill for design questions.
+```
+
+---
+
+## 4. Complex Project with Multiple Presets
+
+For projects that need different output formats for different tools.
+
+**`.ai-rulez/config.yaml`:**
 ```yaml
-$schema: https://github.com/Goldziher/ai-rulez/schema/ai-rules-v2.schema.json
-
-metadata:
-  name: "SaaS Platform API"
-  version: "3.0.0"
-
-extends: "./shared/base-go-service.yaml"
-
-includes:
-  - "./shared/security-standards.yaml"
+version: "3.0"
+name: "ML Research Platform"
+description: "Machine learning platform with team separation"
 
 presets:
-  - "claude"
-  - "cursor"
-  - "continue-dev"
+  - claude         # → CLAUDE.md
+  - cursor         # → .cursor/rules/
+  - gemini         # → GEMINI.md
+  - windsurf       # → .windsurf/rules/
+  - name: internal-guide
+    type: markdown
+    path: docs/AI_DEVELOPMENT_GUIDE.md
 
-agents:
-  - name: "go-expert"
-    description: "For Go-specific questions about our backend services."
-    model: "claude-3-opus-20240229"
-    system_prompt: "You are an expert in Go, gRPC, and PostgreSQL..."
+default: full
 
-rules:
-  - name: "API Design"
-    content: "All new endpoints must follow RESTful principles and be documented in the OpenAPI spec."
-    priority: critical
+profiles:
+  full: [research, infrastructure]
+  research: [research]
+  infrastructure: [infrastructure]
 
-# Integrate external tools like a GitHub server
-mcp_servers:
-  - name: "github"
-    description: "Provides context from GitHub issues and pull requests."
-    command: "npx"
-    args: ["-y", "@mcp/server-github"]
-    env: {"GITHUB_TOKEN": "${GITHUB_TOKEN}"}
-
-# Define custom slash commands for your AI assistant
-commands:
-  - name: "new-endpoint"
-    description: "Scaffold a new API endpoint"
-    usage: "/new-endpoint <path> <method>"
-    system_prompt: "Generate the boilerplate code for a new RESTful endpoint..."
+gitignore: true
 ```
 
-### 7. Composable Configuration with `extends` and `includes`
+**`.ai-rulez/domains/research/rules/ml-standards.md`:**
+```markdown
+---
+priority: critical
+targets: ["CLAUDE.md", "GEMINI.md"]
+---
 
-Build powerful, maintainable configurations by composing multiple files.
+# ML Development Standards
 
-**`base.yaml` (Company-wide standards)**
-```yaml
-metadata:
-  description: "Base configuration for all projects at our company."
-
-rules:
-  - name: "Security Policy"
-    content: "All services must pass a security audit before deployment."
-    priority: critical
+- Use type hints for all functions
+- Document mathematical assumptions
+- Include reproducibility seeds
 ```
 
-**`backend-service.yaml` (Your project's configuration)**
+**`.ai-rulez/domains/infrastructure/rules/deployment.md`:**
+```markdown
+---
+priority: high
+targets: ["CLAUDE.md", ".cursor/rules/"]
+---
+
+# Deployment Standards
+
+- All changes require review
+- Run tests before deployment
+- Keep infrastructure as code
+```
+
+---
+
+## 5. Project with Frontmatter and Custom Fields
+
+Markdown files can include YAML frontmatter with custom fields.
+
+**`.ai-rulez/rules/testing.md`:**
+```markdown
+---
+priority: critical
+author: qa-team
+tags: [testing, quality, ci-cd]
+review_date: 2025-01-15
+targets:
+  - "CLAUDE.md"
+  - ".cursor/rules/"
+---
+
+# Testing Standards
+
+## Unit Tests
+
+All code changes must include corresponding unit tests.
+
+- Aim for 80%+ code coverage
+- Use table-driven tests for Go
+- Test both happy path and error cases
+
+## Integration Tests
+
+Test service interactions:
+- Database operations
+- API endpoints
+- External service calls
+```
+
+---
+
+## 6. Monorepo with Shared Rules
+
+For larger projects, reuse configurations across subdirectories.
+
+**`/.ai-rulez/config.yaml`** (Root config):
 ```yaml
-# Inherit all rules from the company-wide base file
-extends: "./base.yaml"
+version: "3.0"
+name: "Platform"
 
-# Also merge in the shared Go language standards
-includes:
-  - "./shared/go-rules.yaml"
+presets:
+  - claude
+  - cursor
 
-metadata:
-  name: "User Service"
+default: full
 
-rules:
-  - name: "Service-Specific Logic"
-    content: "This service handles user authentication and profile data."
+profiles:
+  full: [shared]
+```
+
+**`/backend/.ai-rulez/config.yaml`** (Backend-specific):
+```yaml
+version: "3.0"
+name: "Backend Service"
+
+presets:
+  - claude
+  - cursor
+
+default: backend
+
+profiles:
+  backend: [api, database]
+```
+
+**`/backend/.ai-rulez/domains/api/rules/endpoints.md`:**
+```markdown
+---
+priority: high
+---
+
+# API Endpoint Guidelines
+
+- Use consistent path structure
+- Version APIs from the start
+- Return consistent error responses
+```
+
+### Generation
+```bash
+# From root, processes all .ai-rulez/ directories recursively
+ai-rulez generate --recursive
+```
+
+---
+
+## 7. Environment-Specific Profiles
+
+Use profiles for different deployment environments.
+
+**`.ai-rulez/config.yaml`:**
+```yaml
+version: "3.0"
+name: "Web Application"
+
+presets:
+  - claude
+
+profiles:
+  development:
+    - dev-guidelines
+  staging:
+    - staging-checks
+    - security-checks
+  production:
+    - production-critical
+    - security-hardened
+    - compliance
+```
+
+**`.ai-rulez/domains/dev-guidelines/rules/debugging.md`:**
+```markdown
+---
+priority: medium
+---
+
+# Development Guidelines
+
+- Enable verbose logging in dev
+- Use debug endpoints for testing
+- Performance is less critical than clarity
+```
+
+**`.ai-rulez/domains/production-critical/rules/reliability.md`:**
+```markdown
+---
+priority: critical
+---
+
+# Production Standards
+
+- All deployments require approval
+- Monitor error rates in production
+- Implement circuit breakers for external services
+```
+
+### Usage
+```bash
+# Generate for development
+ai-rulez generate --profile development
+
+# Generate for production
+ai-rulez generate --profile production
 ```
