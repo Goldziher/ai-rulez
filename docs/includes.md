@@ -1,24 +1,24 @@
 # Includes System
 
-The includes system lets you reuse configurations across multiple projects.
+Reuse configurations across multiple projects through inheritance and composition.
 
 ## Overview
 
-The includes system works through configuration inheritance and composition:
+Includes work through configuration inheritance:
 
-1. **Single source of truth**: Define common rules once
-2. **Reusable modules**: Share rules, context, and skills across projects
-3. **Composable**: Mix and match includes to create project-specific configurations
-4. **Version-controlled**: Track changes to shared configurations
+1. Define common rules once in a shared configuration
+2. Share rules, context, and skills across projects
+3. Mix and match includes to create project-specific configurations
+4. Track changes through version control
 
 ## How Includes Work
 
-Includes allow one `.ai-rulez/` configuration to inherit content from other configurations. This is useful for:
+Includes allow one `.ai-rulez/` configuration to inherit content from other configurations. Use for:
 
-- **Organization-wide standards**: Share coding standards across all projects
-- **Framework-specific rules**: Reuse React, Go, or Python framework guidelines
-- **Security policies**: Enforce consistent security practices
-- **Team conventions**: Share team-specific workflows
+- Organization-wide coding standards
+- Framework-specific guidelines (React, Go, Python)
+- Consistent security policies
+- Team-specific workflows
 
 ## Basic Example
 
@@ -78,9 +78,9 @@ Now your project includes all content from the shared configuration.
 
 Includes can be:
 
-1. **Relative paths**: `../shared-rules/.ai-rulez`, `./team-guidelines/.ai-rulez`
-2. **Absolute paths**: `/etc/ai-rulez-standards/.ai-rulez`
-3. **Git URLs** (planned): `https://github.com/org/shared-rules/.ai-rulez`
+1. Relative paths: `../shared-rules/.ai-rulez`, `./team-guidelines/.ai-rulez`
+2. Absolute paths: `/etc/ai-rulez-standards/.ai-rulez`
+3. Git URLs (planned): `https://github.com/org/shared-rules/.ai-rulez`
 
 ### Examples
 
@@ -108,9 +108,9 @@ includes:
 
 When the same file exists in multiple includes and your configuration:
 
-1. **Your configuration** takes precedence (highest priority)
-2. **Includes** are merged in order
-3. **Later includes** override earlier ones
+1. Your configuration takes precedence (highest priority)
+2. Includes are merged in order
+3. Later includes override earlier ones
 
 Example:
 
@@ -276,31 +276,29 @@ A warning is logged:
 
 ## Best Practices
 
-### 1. Organize by Level of Specificity
+### Organize by Specificity
 
 ```
-org-wide-rules/           # Applies to everything
-team-rules/               # Team-specific
-framework-rules/          # Technology-specific
-project-rules/            # Project-specific
+org-wide-rules/           Applies to everything
+team-rules/               Team-specific
+framework-rules/          Technology-specific
+project-rules/            Project-specific
 ```
 
-### 2. Use Clear Naming
+### Use Clear Naming
 
-```
 Good:
-- org-standards/.ai-rulez
-- react-best-practices/.ai-rulez
-- backend-security/.ai-rulez
+- `org-standards/.ai-rulez`
+- `react-best-practices/.ai-rulez`
+- `backend-security/.ai-rulez`
 
 Bad:
-- rules/.ai-rulez        (ambiguous)
-- base/.ai-rulez          (unclear scope)
-```
+- `rules/.ai-rulez` (ambiguous)
+- `base/.ai-rulez` (unclear scope)
 
-### 3. Document Includes
+### Document Includes
 
-Add comments to your config explaining why you're including something:
+Add comments to your config explaining why includes are needed:
 
 ```yaml
 version: "3.0"
@@ -309,10 +307,8 @@ name: "my-backend"
 includes:
   # Organization-wide coding standards
   - ../org-standards/.ai-rulez
-
   # Go-specific conventions
   - ../go-guidelines/.ai-rulez
-
   # Backend team standards
   - ../backend-team/.ai-rulez
 
@@ -321,35 +317,27 @@ presets:
   - cursor
 ```
 
-### 4. Keep Includes Focused
+### Keep Includes Focused
 
 Each include should have a single purpose:
 
 ```
-Good structure:
-security-policies/
-  - rules for security
+Good:
+security-policies/       Rules for security
+error-handling/          Rules for error handling
+code-style/              Rules for code style
 
-error-handling/
-  - rules for error handling
-
-Code-style/
-  - rules for code style
-
-Bad structure:
-everything/
-  - security, errors, style, testing, etc.
+Bad:
+everything/              Security, errors, style, testing, etc.
 ```
 
-### 5. Version Your Includes
+### Version Your Includes
 
-If includes are in separate repositories, use version control:
+Tag releases and reference specific versions:
 
 ```bash
-# Tag releases
 git tag v1.0.0 org-standards/
 
-# Reference specific versions
 includes:
   - https://github.com/org/standards/.ai-rulez@v1.0.0
 ```
@@ -359,7 +347,6 @@ includes:
 ### Include Path Not Found
 
 ```bash
-# Check the path exists
 ls -la ../shared-rules/.ai-rulez/config.yaml
 
 # Try absolute path
@@ -381,28 +368,21 @@ If `a` includes `b`, and `b` includes `a`:
 
 ### Conflicting Rules
 
-If two includes define conflicting rules:
+Use project-level rules to override, or change include order:
 
-```bash
-# Use project-level rules to override
-# Your .ai-rulez/rules/security.md overrides both includes
-
-# Or change include order to control priority
+```yaml
 includes:
   - ../stricter-rules/.ai-rulez    # Load strict rules first
   - ../lenient-rules/.ai-rulez     # Load lenient rules last (wins)
 ```
 
+Your `.ai-rulez/rules/security.md` overrides both includes.
+
 ### Content Not Merging
 
 ```bash
-# Verify includes are in correct format
 cat .ai-rulez/config.yaml | grep includes
-
-# Check include directory exists
 ls -la ../shared-rules/.ai-rulez/
-
-# Validate configuration
 ai-rulez validate --verbose
 ```
 

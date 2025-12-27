@@ -1,6 +1,6 @@
-# Quick Start Guide
+# Quick Start
 
-Get AI-Rulez set up in 5 minutes. This guide assumes you have AI-Rulez installed.
+Get AI-Rulez running in 5 minutes.
 
 ## Step 1: Initialize Your Project
 
@@ -57,12 +57,11 @@ Create rule files in `.ai-rulez/rules/`:
 priority: high
 ---
 
-# Code Quality Standards
+# Code Quality
 
-All code must:
-- Have meaningful variable names
-- Include comments for complex logic
-- Pass all unit tests before merging
+- Use meaningful variable names
+- Comment complex logic
+- All tests must pass before merge
 ```
 
 **`.ai-rulez/rules/git-workflow.md`:**
@@ -73,8 +72,8 @@ priority: medium
 
 # Git Workflow
 
-1. Create feature branches from main
-2. Squash commits before merging
+1. Feature branches from main
+2. Squash commits before merge
 3. Require code review before merge
 ```
 
@@ -84,16 +83,16 @@ Create context files in `.ai-rulez/context/`:
 
 **`.ai-rulez/context/architecture.md`:**
 ```markdown
-# Architecture Overview
+# Architecture
 
 ## System Design
-- Microservices architecture with 3 main services
-- API Gateway routes requests to services
-- PostgreSQL for data persistence
+- 3 microservices behind an API Gateway
+- PostgreSQL for persistence
+- Kubernetes for orchestration
 
-## Technology Stack
-- Backend: Go 1.21+
-- Frontend: React 18+
+## Stack
+- Backend: Go
+- Frontend: React
 - Infrastructure: Kubernetes
 ```
 
@@ -105,21 +104,20 @@ Create specialized AI prompts in `.ai-rulez/skills/`:
 ```markdown
 ---
 priority: high
-description: "Expert code reviewer for quality assurance"
+description: "Code reviewer for quality assurance"
 ---
 
-# Code Reviewer Expert
+# Code Reviewer
 
-You are an expert code reviewer with deep knowledge of:
-- Code quality and maintainability
-- Testing best practices
-- Performance optimization
+Review code for:
+- Quality and maintainability
+- Test coverage
+- Performance issues
 
-## Your Responsibilities
-
+Responsibilities:
 1. Review pull requests for correctness
-2. Suggest improvements with examples
-3. Verify test coverage is adequate
+2. Suggest improvements
+3. Verify test coverage
 ```
 
 ## Step 6: Generate Outputs
@@ -170,9 +168,9 @@ priority: critical
 
 # Database Standards
 
-- Use prepared statements to prevent SQL injection
-- Always add database migrations
-- Index foreign keys for performance
+- Use prepared statements
+- Add migrations for schema changes
+- Index foreign keys
 ```
 
 **3. Update `config.yaml`:**
