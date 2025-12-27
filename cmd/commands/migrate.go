@@ -120,7 +120,7 @@ func runMigrateToV3(cmd *cobra.Command, args []string) {
 			}
 			// Create timestamped backup before force delete
 			if info.IsDir() {
-				backupPath := createBackup(aiRulezPath)
+				backupPath := CreateBackup(aiRulezPath)
 				if backupPath != "" {
 					logger.Info("Created backup of existing .ai-rulez directory", "backup", backupPath)
 				}
@@ -230,7 +230,8 @@ func showMigrationPlan(migrator *migration.V2ToV3Migrator) {
 	}
 }
 
-func createBackup(sourcePath string) string {
+// CreateBackup creates a timestamped backup of the given directory
+func CreateBackup(sourcePath string) string {
 	parentDir := filepath.Dir(sourcePath)
 	filename := filepath.Base(sourcePath)
 
@@ -240,7 +241,7 @@ func createBackup(sourcePath string) string {
 	backupPath := filepath.Join(parentDir, backupName)
 
 	// Copy directory recursively
-	if err := copyDir(sourcePath, backupPath); err != nil {
+	if err := CopyDir(sourcePath, backupPath); err != nil {
 		logger.Warn("Failed to create backup", "source", sourcePath, "backup", backupPath, "error", err)
 		return ""
 	}
@@ -248,7 +249,8 @@ func createBackup(sourcePath string) string {
 	return backupPath
 }
 
-func copyDir(src, dst string) error {
+// CopyDir recursively copies a directory from src to dst
+func CopyDir(src, dst string) error {
 	// Create destination directory
 	if err := os.MkdirAll(dst, 0o755); err != nil {
 		return err
@@ -266,7 +268,7 @@ func copyDir(src, dst string) error {
 		dstPath := filepath.Join(dst, entry.Name())
 
 		if entry.IsDir() {
-			if err := copyDir(srcPath, dstPath); err != nil {
+			if err := CopyDir(srcPath, dstPath); err != nil {
 				return err
 			}
 		} else {
