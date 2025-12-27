@@ -1,13 +1,13 @@
 # Custom Presets
 
-Create custom output formats and templates for tools not in the built-in preset list.
+Create custom output formats and templates for tools not in the built-in list.
 
 ## What Are Presets?
 
 Presets define how content is formatted and where it's output for different tools:
 
-- **Built-in presets**: Pre-configured for Claude, Cursor, Gemini, Copilot, Windsurf, and others
-- **Custom presets**: You define the format, path, and template
+- Built-in presets: Pre-configured for Claude, Cursor, Gemini, Copilot, Windsurf, and others
+- Custom presets: You define the format, path, and template
 
 ## Built-in Presets
 
@@ -422,20 +422,20 @@ When you run `ai-rulez generate`, it creates:
 
 ## Best Practices
 
-### 1. Start Simple
+### Start Simple
 
 Begin with built-in presets, add custom ones only if needed:
 
 ```yaml
 presets:
-  - claude           # Start with this
+  - claude
   - cursor
   - gemini
 ```
 
-### 2. Use Clear Preset Names
+### Use Clear Names
 
-Names should indicate their purpose:
+Names should indicate purpose:
 
 ```yaml
 Good:
@@ -448,7 +448,7 @@ Bad:
   - name: thing
 ```
 
-### 3. Document Your Template
+### Document Your Template
 
 Add comments explaining what it does:
 
@@ -459,60 +459,49 @@ presets:
     path: docs/API_SPEC.md
     template: |
       # API Specification
-      # Generated from AI-Rulez configuration
-      # Updates automatically when config changes
+      # Generated from AI-Rulez config
+      # Updates automatically on config changes
 
       {{ range .Rules }}
-      ...
+      {{ .Name }}: {{ .Content }}
       {{ end }}
 ```
 
-### 4. Keep Paths Consistent
+### Keep Paths Consistent
 
 Use standard locations:
 
 ```
-docs/       - Documentation
-config/     - Configuration files
-.editor/    - Editor-specific configs
-.tools/     - Tool-specific configs
+docs/       Documentation
+config/     Configuration files
+.editor/    Editor-specific configs
+.tools/     Tool-specific configs
 ```
 
-### 5. Test Your Templates
+### Test Your Templates
 
 Preview before committing:
 
 ```bash
-# Test with dry-run
 ai-rulez generate --dry-run
-
-# Check the output
 cat docs/MY_TOOL.md
 ```
 
-## Common Issues
+## Troubleshooting
 
 ### Template Syntax Error
 
-```
-Error: template parsing failed
-
-Solution: Check template for syntax errors
-- Missing closing {{ end }}
+Check for:
+- Missing closing `{{ end }}`
 - Unmatched braces
 - Invalid function names
-```
 
 ### Path Issues
 
-```
-Error: invalid output path
-
-Solution: Ensure paths:
-- Don't start with /
-- Use forward slashes (/)
+Ensure paths:
+- Don't start with `/`
+- Use forward slashes `/`
 - Are relative to project root
-```
 
 ### Content Not Appearing
 

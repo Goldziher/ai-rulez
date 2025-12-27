@@ -1,6 +1,6 @@
 # Configuration Reference
 
-Complete reference for V3 configuration in `.ai-rulez/config.yaml`.
+V3 configuration reference for `.ai-rulez/config.yaml`.
 
 ## Basic Structure
 
@@ -490,61 +490,50 @@ This checks:
 - All preset names are valid
 - File paths are valid
 
-## Tips and Best Practices
+## Best Practices
 
-### Use Meaningful Domain Names
+### Domain Names
 
-Good domain names:
+Use names that indicate ownership or responsibility:
 - `backend`, `frontend`, `mobile` (service boundaries)
-- `api`, `database`, `queue` (technical domains)
+- `api`, `database`, `queue` (technical components)
 - `auth`, `payments`, `search` (feature areas)
 
-Avoid:
-- `team1`, `team2` (not descriptive)
-- Single letters or acronyms without context
+Avoid: `team1`, `team2`, single letters, overly broad names
 
-### Organize by Responsibility
+### Organizing Content
 
-Put content in the domain that owns it:
+Put content in the domain that owns it. Example:
+- `domains/backend/rules/database-standards.md`
+- `domains/frontend/rules/accessibility.md`
 
-```
+### Single Responsibility
+
+Each domain should represent one area:
+
+```yaml
 Good:
-- domains/backend/rules/database-standards.md
-- domains/frontend/rules/accessibility-guidelines.md
-
-Bad:
-- domains/shared/rules/database-standards.md  (ambiguous ownership)
-- domains/qa/rules/everything.md               (too broad)
-```
-
-### Keep Domains Focused
-
-Domains should represent one area of responsibility:
-
-```
-Preferred:
 profiles:
   full: [api, frontend, infrastructure]
 
-Less ideal:
+Bad:
 profiles:
-  full: [api-with-database, frontend-with-build-tools, infrastructure-and-monitoring]
+  full: [api-with-db, frontend-with-build, infrastructure-and-monitoring]
 ```
 
 ### Document Domain Purposes
 
-Add a comment in `config.yaml`:
+Add comments to `config.yaml`:
 
 ```yaml
 # Domains:
-# - backend: Go microservices, REST APIs
-# - frontend: React web application
-# - mobile: React Native mobile apps
-# - qa: Testing standards for all platforms
-# - devops: Infrastructure and deployment
+# - backend: Go services, REST APIs
+# - frontend: React web app
+# - mobile: React Native apps
+# - devops: Infrastructure, deployment
 
 profiles:
-  full: [backend, frontend, mobile, qa, devops]
+  full: [backend, frontend, mobile, devops]
 ```
 
 ## Troubleshooting

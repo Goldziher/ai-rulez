@@ -1,6 +1,6 @@
 # CLI Reference
 
-Complete reference for all AI-Rulez V3 CLI commands.
+All AI-Rulez CLI commands and flags.
 
 ## Command Overview
 
