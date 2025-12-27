@@ -2,6 +2,18 @@
 
 V3 configuration reference for `.ai-rulez/config.yaml`.
 
+## File-Based Configuration
+
+V3 uses a file-based approach where you edit files directly with your editor:
+
+- **Configuration**: Edit `.ai-rulez/config.yaml` with any text editor
+- **Rules**: Add/edit `.ai-rulez/rules/*.md` files
+- **Context**: Add/edit `.ai-rulez/context/*.md` files
+- **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files
+- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills}/*.md` files
+
+No special commands are needed to add or modify content. Simply edit files and run `ai-rulez generate` to create tool-specific outputs.
+
 ## Basic Structure
 
 The minimal valid V3 configuration:

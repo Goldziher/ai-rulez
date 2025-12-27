@@ -1,121 +1,276 @@
 # Best Practices for Large Projects
 
-As a project grows, a single, monolithic `ai-rulez.yml` file can become difficult to manage and may provide too much irrelevant context to your AI assistant. `ai-rulez` is designed to solve this problem through a combination of multiple configurations, inheritance, and composition.
+For large projects with multiple teams, organize your `.ai-rulez/` configuration using domains and profiles to provide relevant context while avoiding overwhelming AI assistants with irrelevant information.
 
-This guide outlines best practices for managing AI context at scale.
+This guide outlines best practices for managing AI context at scale in V3.
 
 ---
 
-## The Core Strategy: Scoped Configurations
+## The Core Strategy: Domain-Based Organization
 
-The most effective strategy for large projects is to create multiple, smaller `ai-rulez.yml` files, each scoped to a specific part of your project.
+The most effective strategy for large projects is to organize related rules, context, and skills into domains. Each domain represents a team, service, or feature area.
 
 !!! success "The Goal: High-Relevance, Low-Token Context"
 
-    By scoping configurations, you provide your AI assistant with only the context it needs for the task at hand. A developer working on the frontend gets frontend-specific rules, while the backend developer gets API patterns. This results in faster, more accurate, and more relevant AI responses.
+    By organizing into domains and using profiles, you provide your AI assistant with only the context it needs for the task at hand. A developer working on the frontend gets frontend-specific rules and context, while the backend developer gets API patterns and database standards. This results in faster, more accurate, and more relevant AI responses.
 
-!!! info "Presets vs. Outputs in Monorepos"
-    While `presets` are excellent for simplifying common AI tool outputs (like `CLAUDE.md` or `.cursor/rules/`), `outputs` remain essential for generating custom, project-specific documentation or files (e.g., `SYSTEM_OVERVIEW.md`, `BACKEND_RULES.md`). In a monorepo, you will likely use a combination of both.
+!!! info "Domains and Profiles"
+    - **Domains** organize content by team, service, or feature (`backend`, `frontend`, `mobile`)
+    - **Profiles** select which domains are included in generation (`full`, `backend-team`, etc.)
 
 A typical layout might look like this:
 
 ```
 my-project/
-├── ai-rulez.yml           # ⬅️ Root Config: High-level architecture & shared agents
-├── backend/
-│   └── ai-rulez.yml       # ⬅️ Scoped Config: API patterns, database rules
-└── frontend/
-    └── ai-rulez.yml       # ⬅️ Scoped Config: Component patterns, state management
+└── .ai-rulez/
+    ├── config.yaml              # ⬅️ Main config: presets, profiles, domains
+    ├── rules/                   # ⬅️ Shared rules (all teams)
+    ├── context/                 # ⬅️ Shared context (all teams)
+    ├── skills/                  # ⬅️ Shared skills (all teams)
+    └── domains/
+        ├── backend/             # ⬅️ Backend team content
+        │   ├── rules/
+        │   ├── context/
+        │   └── skills/
+        ├── frontend/            # ⬅️ Frontend team content
+        │   ├── rules/
+        │   ├── context/
+        │   └── skills/
+        └── qa/                  # ⬅️ QA team content
+            └── rules/
 ```
 
-When you run `ai-rulez generate` from the root, it automatically discovers and processes all of these files, creating a comprehensive set of instructions for your tools.
+When you run `ai-rulez generate --profile backend`, it includes root content plus backend-specific content.
 
 ---
 
-## Best Practice: The Root Configuration
+## Best Practice: Root Configuration
 
-Your root `ai-rulez.yml` should not contain low-level implementation details. Its purpose is to define the high-level view of your project.
+Your root `.ai-rulez/` should contain high-level, cross-cutting concerns that apply to all teams.
 
-!!! tip "What to put in the Root Config"
+!!! tip "What to put in Root Content"
 
-    - **System Architecture:** A high-level overview of the tech stack and how the pieces fit together.
-    - **Agent Definitions:** Define your specialized agents and, crucially, how they should delegate to one another.
-    - **Cross-Cutting Concerns:** Rules for things that apply everywhere, like logging, error handling, and security policies.
+    - **System Architecture:** High-level overview of the tech stack and service interactions
+    - **Cross-Cutting Concerns:** Rules that apply everywhere (security, logging, error handling)
+    - **General Standards:** Code quality, testing, git workflow, deployment processes
+    - **Base Skills:** Shared AI skills used by all teams
 
+**`.ai-rulez/config.yaml`:**
 ```yaml
-# /ai-rulez.yml
-metadata:
-  name: "My Full-Stack Project"
+version: "3.0"
+name: "My Full-Stack Project"
+description: "Microservices project with React frontend and Go backend"
 
-rules:
-  - name: "System Architecture"
-    priority: critical
-    content: "This is a microservices project with a React frontend and a Go backend using gRPC."
+presets:
+  - claude
+  - cursor
+  - gemini
 
-agents:
-  - name: "solution-architect"
-    description: "For high-level system design questions."
-    system_prompt: "You are a solution architect. For implementation details, delegate to the `frontend-expert` or `backend-expert` agents."
+default: full
 
-outputs:
-  - path: "SYSTEM_OVERVIEW.md"
+profiles:
+  full: [backend, frontend, qa]
+  backend: [backend, qa]
+  frontend: [frontend, qa]
+  qa: [qa]
+
+gitignore: true
 ```
 
-## Best Practice: Scoped Configurations
+**`.ai-rulez/context/architecture.md`:**
+```markdown
+# System Architecture
 
-Scoped configurations, like `backend/ai-rulez.yml`, should contain the specific, detailed context for that part of the codebase.
-
-!!! tip "What to put in a Scoped Config"
-
-    - **Technology-Specific Patterns:** Provide concrete code examples for your frameworks and libraries.
-    - **Domain Logic:** Explain the business rules and logic for that specific service or feature.
-    - **API Contracts:** Detail the expected request/response shapes for your APIs.
-
-```yaml
-# /backend/ai-rulez.yml
-metadata:
-  name: "Backend API"
-
-rules:
-  - name: "Go API Patterns"
-    priority: high
-    content: "All new endpoints must include structured logging via the `slog` package and OpenTelemetry tracing."
-
-outputs:
-  - path: "BACKEND_RULES.md"
+This is a microservices project with:
+- Go backend services
+- React web frontend
+- PostgreSQL databases
+- Kubernetes orchestration
 ```
 
-## Best Practice: Composable Configurations
+**`.ai-rulez/rules/security.md`:**
+```markdown
+---
+priority: critical
+---
 
-For maximum maintainability, avoid duplicating rules. Use `extends` and `includes` to create a single source of truth for your standards.
+# Security Standards
 
-!!! info "`extends` vs. `includes`"
-
-    - Use `extends` for **inheritance**. A project `extends` a single base configuration (e.g., your company's default setup).
-    - Use `includes` for **composition**. A project `includes` multiple, modular sets of rules (e.g., security standards, framework-specific patterns).
-
-**`/shared/base-go-service.yaml` (A reusable base config)**
-```yaml
-metadata:
-  description: "Base configuration for all Go microservices."
-rules:
-  - name: "Go Best Practices"
-    content: "Use structured logging (slog), handle all errors, and write unit tests."
-    priority: critical
+- All secrets use environment variables
+- Validate all user input
+- Use HTTPS for external APIs
 ```
 
-**`/backend/user-service/ai-rulez.yml` (Inherits the base and adds its own logic)**
-```yaml
-# Inherit all rules from the company-wide Go base file
-extends: "../../shared/base-go-service.yaml"
+**`.ai-rulez/rules/git-workflow.md`:**
+```markdown
+---
+priority: high
+---
 
-metadata:
-  name: "User Service API"
+# Git Workflow
 
-rules:
-  - name: "Service-Specific Logic"
-    content: "This service is responsible for JWT authentication."
-    priority: high
+- Feature branches from main
+- Squash commits before merge
+- All PRs require code review
 ```
 
-By combining these patterns, you can create a highly maintainable, scalable, and effective set of configurations that will grow with your project.
+## Best Practice: Domain-Specific Content
+
+Domain directories contain specific, detailed context for that team or service.
+
+!!! tip "What to put in Domain Content"
+
+    - **Technology Patterns:** Concrete examples for frameworks and libraries
+    - **Domain Logic:** Business rules specific to that service or feature
+    - **Domain Skills:** Specialized AI prompts for that team's expertise
+
+**`.ai-rulez/domains/backend/rules/database.md`:**
+```markdown
+---
+priority: critical
+---
+
+# Database Standards
+
+- Use prepared statements to prevent SQL injection
+- Always add migrations for schema changes
+- Index foreign keys
+```
+
+**`.ai-rulez/domains/backend/rules/api-design.md`:**
+```markdown
+---
+priority: high
+---
+
+# API Design
+
+- Follow RESTful principles
+- Use consistent error responses
+- Version APIs from the start
+```
+
+**`.ai-rulez/domains/backend/context/architecture.md`:**
+```markdown
+# Backend Architecture
+
+## Services
+
+- API Gateway (Go, port 8000)
+- User Service (Go, port 8001)
+- Product Service (Go, port 8002)
+- Order Service (Go, port 8003)
+
+## Database
+
+- PostgreSQL 14+
+- Replication enabled
+- Automated daily backups
+```
+
+**`.ai-rulez/domains/backend/skills/database-expert/SKILL.md`:**
+```markdown
+---
+priority: high
+description: "Database design and optimization specialist"
+---
+
+# Database Expert
+
+You are an expert in PostgreSQL with knowledge of:
+- Schema design and normalization
+- Query optimization
+- Performance tuning
+```
+
+**`.ai-rulez/domains/frontend/rules/components.md`:**
+```markdown
+---
+priority: high
+---
+
+# Component Guidelines
+
+- One component per file
+- Use TypeScript for type safety
+- Write unit tests for all components
+- Use composition over inheritance
+```
+
+**`.ai-rulez/domains/frontend/context/design-system.md`:**
+```markdown
+# Design System
+
+## Color Palette
+
+- Primary: #3B82F6
+- Secondary: #8B5CF6
+- Neutral: #6B7280
+
+## Typography
+
+- Headings: Inter Bold
+- Body: Inter Regular
+```
+
+## Best Practice: Profile Selection
+
+Design profiles to match your team structure and workflows.
+
+```yaml
+profiles:
+  # Full platform: all content
+  full: [backend, frontend, qa, devops]
+
+  # Team-specific
+  backend-team: [backend, qa]
+  frontend-team: [frontend, qa]
+  qa-team: [qa]
+  devops-team: [devops]
+
+  # Full-stack developers
+  full-stack: [backend, frontend, qa]
+
+  # CI/QA environment
+  ci-cd: [backend, frontend, qa, devops]
+```
+
+## Best Practice: For Monorepos
+
+If using multiple `.ai-rulez/` directories in a monorepo, use the `--recursive` flag:
+
+```bash
+# Process all .ai-rulez/ directories recursively
+ai-rulez generate --recursive
+```
+
+**Root configuration** (`/.ai-rulez/config.yaml`):
+```yaml
+version: "3.0"
+name: "Monorepo Platform"
+
+presets:
+  - claude
+  - cursor
+
+default: full
+
+profiles:
+  full: [shared]
+```
+
+**Service-specific** (`/backend/.ai-rulez/config.yaml`):
+```yaml
+version: "3.0"
+name: "Backend Service"
+
+presets:
+  - claude
+
+default: backend
+
+profiles:
+  backend: [api, database]
+```
+
+By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.

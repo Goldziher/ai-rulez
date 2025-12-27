@@ -10,6 +10,9 @@ import (
 
 func FindConfigFile(startDir string) (string, error) {
 	configNames := []string{
+		// V3 directory-based config
+		".ai-rulez/config.yaml", ".ai-rulez/config.yml",
+		// V2 flat file configs
 		".ai-rulez.yaml", ".ai-rulez.yml",
 		"ai-rulez.yaml", "ai-rulez.yml",
 		".ai_rulez.yaml", ".ai_rulez.yml",
@@ -47,12 +50,13 @@ func FindConfigFile(startDir string) (string, error) {
 	return "", oops.
 		With("search_dir", startDir).
 		With("supported_names", []string{
+			".ai-rulez/config.yaml", ".ai-rulez/config.yml",
 			"ai-rulez.yaml", "ai-rulez.yml",
 			".ai-rulez.yaml", ".ai-rulez.yml",
 			"ai_rulez.yaml", "ai_rulez.yml",
 			".ai_rulez.yaml", ".ai_rulez.yml",
 		}).
-		Hint("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly").
+		Hint("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml, or .ai-rulez/config.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly").
 		Errorf("no configuration file found")
 }
 

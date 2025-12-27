@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/Goldziher/ai-rulez/main/docs/assets/logo.png" alt="ai-rulez logo" width="200" style="border-radius: 15%; overflow: hidden;">
 </p>
 
-**Modern, directory-based AI governance. Structure your rules. Control your assistants.**
+Directory-based AI governance for development teams.
 
 [![Go Version](https://img.shields.io/badge/Go-1.24%2B-00ADD8)](https://go.dev)
 [![NPM Version](https://img.shields.io/npm/v/ai-rulez)](https://www.npmjs.com/package/ai-rulez)
@@ -17,18 +17,19 @@
 
 ## Overview
 
-ai-rulez V3 uses a directory-based configuration structure (`.ai-rulez/`) to organize your AI governance rules, context, and domain-specific guidance. Configure once, generate for all your tools.
+ai-rulez V3 uses a directory-based configuration (`.ai-rulez/`) to organize rules, context, and domain-specific guidance. Write once, generate for all your AI tools.
 
-- **Directory-based config** – Store rules and context in organized, versionable `.ai-rulez/` directories
-- **Domain organization** – Separate rules by domain (backend, frontend, etc.) with profile-based generation
-- **Profile system** – Use profiles to generate different configs for different domains or use cases
-- **Include/Import system** – Compose rules from local packages or git repositories with merge strategies
-- **Multi-preset support** – Generate configs for Claude, Cursor, Windsurf, Copilot, Gemini, and more in one command
-- **MCP server integration** – Native support for MCP servers in generated configs
-- **AI-powered enforcement** – Run `ai-rulez enforce` to validate rules with AI agents, apply fixes, and gate merges
+**Core capabilities:**
+- **Directory-based configuration** – Organize rules, context, and domain content in a single `.ai-rulez/` directory
+- **Domain separation** – Create domain-specific rules (backend, frontend, etc.) with profile-based generation
+- **Profiles** – Group domains for different use cases, generate targeted configurations
+- **Includes** – Compose rules from local packages or Git repositories with merge strategies
+- **Multi-preset generation** – Generate native configs for Claude, Cursor, Windsurf, Copilot, Gemini, and more
+- **MCP server support** – Configure MCP servers in your rules for IDE integration
+- **AI enforcement** – Run `ai-rulez enforce` to validate code, catch violations, and apply fixes
 
 <p align="center">
-  <img src="docs/assets/ai-rulez-python-demo.gif" alt="AI-Rulez Configuration Demo" width="90%">
+  <img src="docs/assets/ai-rulez-python-demo.gif" alt="ai-rulez configuration generation" width="90%">
 </p>
 
 ---
@@ -105,7 +106,7 @@ npx ai-rulez@latest enforce --agent claude --fix
 
 ---
 
-## Example V3 Configuration
+## Configuration Examples
 
 ### Basic Setup
 
@@ -187,36 +188,9 @@ includes:
 
 ---
 
-## Key Features
-
-### Directory-Based Organization
-Store all configuration in a single, versionable `.ai-rulez/` directory alongside your code.
-
-### Domain Separation
-Create domain-specific rules (`domains/backend/`, `domains/frontend/`, etc.) for specialized guidance without mixing concerns.
-
-### Profile System
-Define profiles to group domains for different use cases. Generate different configs based on the selected profile.
-
-### Include & Import
-- **Local includes** – Compose rules from sibling packages with `source: ./path`
-- **Git imports** – Pull rules from remote repositories with `source: https://github.com/org/repo` and `ref: branch`
-- **Merge strategies** – Control how included content combines with your local rules
-
-### Multi-Preset Generation
-Generate configs for Claude, Cursor, Windsurf, Copilot, Gemini, and more—all from one configuration.
-
-### MCP Server Support
-Optionally configure MCP servers in `mcp.yaml` for integration with supported IDEs and tools.
-
-### AI-Powered Enforcement
-Use `ai-rulez enforce` to validate your codebase against your rules using Claude, Gemini, or other AI agents.
-
----
-
 ## Installation
 
-### Quick Start (No Installation Required)
+### Quick Start (No Installation)
 
 ```bash
 npx ai-rulez@latest init "My Project"
@@ -236,7 +210,7 @@ brew install goldziher/tap/ai-rulez
 npm install -g ai-rulez
 ```
 
-**Python:**
+**Python/pip:**
 ```bash
 pip install ai-rulez
 ```
@@ -275,11 +249,38 @@ ai-rulez validate
 
 ---
 
+## Features
+
+### Directory-Based Organization
+Store all configuration in a single, versionable `.ai-rulez/` directory alongside your code.
+
+### Domain Separation
+Create domain-specific rules (`domains/backend/`, `domains/frontend/`, etc.) for specialized guidance.
+
+### Profile System
+Define profiles to group domains for different use cases. Generate different configs based on the selected profile.
+
+### Includes & Imports
+- **Local includes** – Compose rules from sibling packages with `source: ./path`
+- **Git imports** – Pull rules from remote repositories with `source: https://github.com/org/repo` and `ref: branch`
+- **Merge strategies** – Control how included content combines with your local rules
+
+### Multi-Preset Generation
+Generate configs for Claude, Cursor, Windsurf, Copilot, Gemini, and more—all from one configuration.
+
+### MCP Server Support
+Optionally configure MCP servers in `mcp.yaml` for integration with supported IDEs and tools.
+
+### AI-Powered Enforcement
+Use `ai-rulez enforce` to validate your codebase against your rules using Claude, Gemini, or other AI agents.
+
+---
+
 ## Governance & Automation
 
-- **Git hooks** – Use pre-commit, lefthook, or husky to run `ai-rulez validate` and `ai-rulez generate` on commit.
-- **CI/CD** – Integrate into GitHub Actions, GitLab CI, or other pipelines to gate merges on rule violations.
-- **MCP integration** – Expose rules to Claude CLI, Cursor, and other MCP-aware tools for real-time guidance.
+- **Git hooks** – Use pre-commit, lefthook, or husky to run `ai-rulez validate` and `ai-rulez generate` on commit
+- **CI/CD** – Integrate into GitHub Actions, GitLab CI, or other pipelines to gate merges on rule violations
+- **MCP integration** – Expose rules to Claude CLI, Cursor, and other MCP-aware tools for real-time guidance
 
 ---
 
