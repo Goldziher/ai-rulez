@@ -1,3 +1,0 @@
-[submodule "homebrew-tap"]
-	path = homebrew-tap
-	url = https://github.com/Goldziher/homebrew-tap.git
