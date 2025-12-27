@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/testing/e2e/testutil"
+	"github.com/Goldziher/ai-rulez/tests/e2e/testutil"
 	"github.com/stretchr/testify/suite"
 	"gopkg.in/yaml.v3"
 )

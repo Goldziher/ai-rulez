@@ -18,27 +18,27 @@ tasks:
   test:
     desc: Run unit tests
     cmds:
-      - go test -timeout=30s ./cmd/... ./internal/... ./schema/... ./testing/platform/...
+      - go test -timeout=30s ./cmd/... ./internal/... ./schema/... ./tests/platform/...
 
   test:coverage:
     desc: Run unit tests with coverage
     cmds:
-      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/... ./testing/platform/...
+      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/... ./tests/platform/...
 
   test:race:
     desc: Run unit tests with race detection
     cmds:
-      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/... ./testing/platform/...
+      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/... ./tests/platform/...
 
   test:platform:
     desc: Run cross-platform compatibility tests
     cmds:
-      - go test -timeout=60s -v ./testing/platform/...
+      - go test -timeout=60s -v ./tests/platform/...
 
   test:benchmark:
     desc: Run benchmark tests
     cmds:
-      - cd testing/e2e && go test -timeout=10m -bench=. -benchmem .
+      - cd tests/benchmarks && go test -timeout=10m -bench=. -benchmem .
 
   test:all:
     desc: Run all tests (unit + platform + e2e)
@@ -57,31 +57,31 @@ tasks:
     desc: Run CLI e2e tests
     cmds:
       - echo "🧪 Running CLI Tests..."
-      - cd testing/e2e && go test -v -timeout=60s ./cli/...
+      - go test -v -timeout=60s ./tests/integration/...
 
   test:e2e:mcp:
     desc: Run MCP e2e tests
     cmds:
       - echo "🧪 Running MCP Tests..."
-      - cd testing/e2e && go test -v -timeout=60s ./mcp/...
+      - go test -v -timeout=60s ./tests/integration/...
 
   test:e2e:integration:
     desc: Run integration workflow tests
     cmds:
       - echo "🧪 Running Integration Tests..."
-      - cd testing/e2e && go test -v -timeout=60s ./integration/...
+      - go test -v -timeout=60s ./tests/integration/...
 
   test:e2e:full:
     desc: Run all e2e tests with verbose output
     cmds:
       - echo "🧪 Running full e2e test suite..."
-      - cd testing/e2e && go test -v -timeout=120s ./...
+      - go test -v -timeout=120s ./tests/integration/...
 
   test:e2e:quick:
     desc: Run quick e2e smoke tests
     cmds:
       - echo "🧪 Running quick e2e smoke tests..."
-      - cd testing/e2e && go test -timeout=30s -run "TestBasicCLISuite/TestRootHelp|TestMCPServerSuite/TestServerStartup|TestWorkflowsSuite/TestCompleteProjectLifecycle" ./...
+      - go test -timeout=30s -run "TestBasicCLISuite/TestRootHelp|TestMCPServerSuite/TestServerStartup|TestWorkflowsSuite/TestCompleteProjectLifecycle" ./tests/integration/...
 
   format:
     desc: Format code with go fmt
