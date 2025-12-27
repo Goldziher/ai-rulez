@@ -18,27 +18,41 @@ func TestNewServer(t *testing.T) {
 
 func TestServerToolRegistration(t *testing.T) {
 	expectedTools := []string{
-		"get_rules",
-		"get_sections",
-		"get_agents",
-		"get_outputs",
-		"add_rule",
-		"add_section",
-		"add_output",
-		"add_agent",
-		"update_rule",
-		"update_section",
-		"update_output",
-		"update_agent",
-		"delete_rule",
-		"delete_section",
-		"delete_output",
-		"delete_agent",
-		"generate_output",
+		// Project tools
+		"generate_outputs",
 		"validate_config",
 		"init_project",
+		// Utility tools
 		"get_version",
+		// Domain tools
+		"create_domain",
+		"delete_domain",
+		"list_domains",
+		// Rule tools
+		"create_rule",
+		"update_rule",
+		"delete_rule",
+		"list_rules",
+		// Context tools
+		"create_context",
+		"update_context",
+		"delete_context",
+		"list_context",
+		// Skill tools
+		"create_skill",
+		"update_skill",
+		"delete_skill",
+		"list_skills",
+		// Include tools
+		"add_include",
+		"remove_include",
+		"list_includes",
+		// Profile tools
+		"add_profile",
+		"remove_profile",
+		"set_default_profile",
+		"list_profiles",
 	}
 
-	assert.Equal(t, 20, len(expectedTools), "Should have 20 MCP tools")
+	assert.Equal(t, 26, len(expectedTools), "Should have 26 MCP tools")
 }
