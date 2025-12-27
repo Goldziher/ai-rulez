@@ -25,12 +25,12 @@ ai-rulez V3 uses a directory-based configuration (`.ai-rulez/`) to organize rule
 
 ## Installation
 
+**npm:**
 ```bash
 npm install -g ai-rulez
 ```
 
-Or use without installation:
-
+**Or use without installation:**
 ```bash
 npx ai-rulez@latest init "My Project"
 ```
@@ -151,7 +151,8 @@ ai-rulez enforce --agent claude --review --review-iterations 2
 ## Installing Other Platforms
 
 ai-rulez is available for:
-- **npm** (Node.js) – `npm install -g ai-rulez`
-- **Homebrew** – `brew install goldziher/tap/ai-rulez`
-- **Python/pip** – `pip install ai-rulez`
+- **Homebrew** (macOS/Linux) – `brew install goldziher/tap/ai-rulez`
 - **Go** – `go install github.com/Goldziher/ai-rulez/cmd@latest`
+- **npm** (Node.js) – `npm install -g ai-rulez`
+- **uv** (Python) – `uv tool install ai-rulez`
+- **pip** (Python) – `pip install ai-rulez`
