@@ -184,9 +184,9 @@ func TestValidateIncludeSource(t *testing.T) {
 	// Create a non-existent absolute path that works on both Unix and Windows
 	var nonexistentAbsPath string
 	if runtime.GOOS == "windows" {
-		nonexistentAbsPath = filepath.Join(filepath.VolumeName(os.TempDir()), "nonexistent", "absolute", "path")
+		nonexistentAbsPath = filepath.VolumeName(os.TempDir()) + `\nonexistent\absolute\path`
 	} else {
-		nonexistentAbsPath = filepath.Join("/", "nonexistent", "absolute", "path")
+		nonexistentAbsPath = "/nonexistent/absolute/path"
 	}
 
 	tests := []struct {
