@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/crud"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/Goldziher/ai-rulez/internal/validator"
@@ -18,13 +17,13 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 
 	cfg, err := config.LoadConfig(configFile)
 	if err != nil {
-		return crud.ToolError(err)
+		return ToolError(err)
 	}
 
 	gen := generator.NewWithConfigFile(configFile)
 
 	if err := gen.GenerateAll(cfg); err != nil {
-		return crud.ToolError(err)
+		return ToolError(err)
 	}
 
 	results := make([]string, len(cfg.Outputs))
@@ -32,7 +31,7 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 		results[i] = output.Path
 	}
 
-	return crud.ToolSuccess(map[string]interface{}{
+	return ToolSuccess(map[string]interface{}{
 		"message": "Outputs generated successfully",
 		"config":  configFile,
 		"results": results,
@@ -44,7 +43,7 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 
 	val, err := validator.NewValidator(configFile)
 	if err != nil {
-		return crud.ToolError(err)
+		return ToolError(err)
 	}
 
 	warnings, err := val.Validate(ctx)
@@ -53,7 +52,7 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 			"valid": false,
 			"error": err.Error(),
 		}
-		return crud.ToolSuccess(result)
+		return ToolSuccess(result)
 	}
 
 	result := map[string]interface{}{
@@ -61,7 +60,7 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		"warnings": warnings,
 	}
 
-	return crud.ToolSuccess(result)
+	return ToolSuccess(result)
 }
 
 func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {
@@ -123,16 +122,16 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	}
 
 	if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0o644); err != nil {
-		return crud.ToolError(fmt.Errorf("failed to write config file: %w", err))
+		return ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 
 	if hasContinueDev {
-		if err := crud.CreateContinueDevConfig(); err != nil {
-			return crud.ToolError(fmt.Errorf("failed to create continue.dev config: %w", err))
+		if err := CreateContinueDevConfig(); err != nil {
+			return ToolError(fmt.Errorf("failed to create continue.dev config: %w", err))
 		}
 	}
 
-	return crud.ToolSuccess(map[string]interface{}{
+	return ToolSuccess(map[string]interface{}{
 		"message": "Project initialized successfully",
 		"path":    "ai_rulez.yaml",
 	})
