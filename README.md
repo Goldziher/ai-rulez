@@ -52,6 +52,24 @@ npx ai-rulez@latest init "My Project" --preset claude
 
 ### 2. Add Your Rules
 
+**Option A: Using CRUD Commands (Programmatic)**
+
+```bash
+# Create a domain for backend rules
+ai-rulez domain add backend
+
+# Add a rule to the domain
+ai-rulez add rule database-standards --domain backend --priority high
+
+# Add context
+ai-rulez add context architecture --domain backend
+
+# Add a rule to root (always included)
+ai-rulez add rule coding-standards --priority high
+```
+
+**Option B: Direct File Editing (Manual)**
+
 ```bash
 # Edit .ai-rulez/rules/coding-standards.md
 echo "# Coding Standards
@@ -72,7 +90,24 @@ npx ai-rulez@latest generate
 # Creates: CLAUDE.md, .cursorrules, .windsurfrules, etc.
 ```
 
-### 4. Enforce Rules (Optional)
+### 4. Manage Configuration (CRUD Operations)
+
+```bash
+# Create profiles for different teams
+ai-rulez profile add backend backend qa
+ai-rulez profile add frontend frontend qa
+ai-rulez profile set-default backend
+
+# Add external rules from a git repository
+ai-rulez include add corporate-rules https://github.com/myorg/shared-rules
+
+# List your configuration
+ai-rulez domain list
+ai-rulez profile list
+ai-rulez include list
+```
+
+### 5. Enforce Rules (Optional)
 
 ```bash
 # Check for violations
