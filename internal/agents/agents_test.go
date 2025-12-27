@@ -291,8 +291,17 @@ func TestSelectAgentPromptsWhenProvidersInferred(t *testing.T) {
 func createDummyCommand(t *testing.T, dir, name string) {
 	t.Helper()
 
-	path := filepath.Join(dir, name)
-	script := []byte("#!/bin/sh\nexit 0\n")
+	var path string
+	var script []byte
+
+	// On Windows, we need to create a batch file or executable
+	if strings.Contains(strings.ToLower(os.Getenv("OS")), "windows") || filepath.Ext(os.Args[0]) == ".exe" {
+		path = filepath.Join(dir, name+".bat")
+		script = []byte("@echo off\r\nexit /b 0\r\n")
+	} else {
+		path = filepath.Join(dir, name)
+		script = []byte("#!/bin/sh\nexit 0\n")
+	}
 
 	err := os.WriteFile(path, script, 0o755)
 	require.NoError(t, err)
