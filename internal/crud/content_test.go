@@ -83,7 +83,7 @@ func TestAddRule(t *testing.T) {
 			shouldErr: false,
 			checkFn: func(t *testing.T, result *crud.FileResult, baseDir string) {
 				assert.Equal(t, "backend", result.Domain)
-				assert.Contains(t, result.FullPath, "domains/backend")
+				assert.Contains(t, filepath.ToSlash(result.FullPath), "domains/backend")
 				assert.FileExists(t, result.FullPath)
 			},
 		},
@@ -190,7 +190,7 @@ func TestAddContext(t *testing.T) {
 			shouldErr: false,
 			checkFn: func(t *testing.T, result *crud.FileResult) {
 				assert.Equal(t, "frontend", result.Domain)
-				assert.Contains(t, result.FullPath, "domains/frontend")
+				assert.Contains(t, filepath.ToSlash(result.FullPath), "domains/frontend")
 			},
 		},
 		{
@@ -268,7 +268,7 @@ func TestAddSkill(t *testing.T) {
 			shouldErr: false,
 			checkFn: func(t *testing.T, result *crud.FileResult) {
 				assert.Equal(t, "qa", result.Domain)
-				assert.Contains(t, result.FullPath, "domains/qa")
+				assert.Contains(t, filepath.ToSlash(result.FullPath), "domains/qa")
 				assert.Contains(t, result.FullPath, "SKILL.md")
 			},
 		},

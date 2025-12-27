@@ -1,6 +1,9 @@
 package crud_test
 
 import (
+	"os"
+	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
@@ -178,6 +181,14 @@ func TestValidatePriority(t *testing.T) {
 
 // TestValidateIncludeSource tests include source validation
 func TestValidateIncludeSource(t *testing.T) {
+	// Create a non-existent absolute path that works on both Unix and Windows
+	var nonexistentAbsPath string
+	if runtime.GOOS == "windows" {
+		nonexistentAbsPath = filepath.Join(filepath.VolumeName(os.TempDir()), "nonexistent", "absolute", "path")
+	} else {
+		nonexistentAbsPath = filepath.Join("/", "nonexistent", "absolute", "path")
+	}
+
 	tests := []struct {
 		name      string
 		input     string
@@ -193,7 +204,7 @@ func TestValidateIncludeSource(t *testing.T) {
 		{"empty string", "", true},
 		// Note: relative paths that don't exist are allowed (they can be created later)
 		{"relative path allowed", "./relative/path", false},
-		{"absolute path not found", "/nonexistent/absolute/path", true},
+		{"absolute path not found", nonexistentAbsPath, true},
 	}
 
 	for _, tt := range tests {

@@ -103,8 +103,9 @@ func TestLocalSourceGetName(t *testing.T) {
 
 func TestResolvePathAbsolute(t *testing.T) {
 	// Arrange
-	absPath := "/absolute/path"
-	source := NewLocalSource("test", absPath, "/base", nil)
+	// Use a real temporary directory for an actual absolute path
+	tmpDir := t.TempDir()
+	source := NewLocalSource("test", tmpDir, "/base", nil)
 
 	// Act
 	resolved, err := source.resolvePath()
@@ -113,8 +114,8 @@ func TestResolvePathAbsolute(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if resolved != absPath {
-		t.Errorf("expected %q, got %q", absPath, resolved)
+	if resolved != tmpDir {
+		t.Errorf("expected %q, got %q", tmpDir, resolved)
 	}
 }
 
