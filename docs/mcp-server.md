@@ -1,6 +1,6 @@
 # Enabling the MCP Server
 
-The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `ai-rulez.yml` configuration. Instead of asking the AI to manually edit the YAML file, the assistant can use the server to add rules, update agents, or generate files directly.
+The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `.ai-rulez/` configuration. Since V3 uses a file-based approach, you edit configuration files directly with your editor, and the MCP server provides read-only access for AI assistants to generate outputs and validate your configuration.
 
 **You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
 
@@ -57,86 +57,49 @@ If you have installed `ai-rulez` locally with `go install`.
 
 ---
 
-## Automatic CLI Configuration
-
-**New in v2.1+**: `ai-rulez` can automatically configure MCP servers across CLI tools, eliminating manual setup.
-
-### How It Works
-
-When you add MCP servers to your `ai-rulez.yaml`, the `generate` command automatically configures them for available CLI tools:
-
-```yaml
-# ai-rulez.yaml
-mcp_servers:
-  - name: "ai-rulez"
-    command: "ai-rulez"
-    args: ["mcp"]
-    description: "Configuration management server"
-```
-
-```bash
-ai-rulez generate
-# ✅ Generated 2 file(s) successfully
-# ✅ Configured claude MCP server: ai-rulez  
-# ✅ Configured gemini MCP server: ai-rulez
-```
-
-### Supported CLI Tools
-
-**Claude CLI**: Full feature support including environment variables and transport options
-```yaml
-mcp_servers:
-  - name: "database-tools"
-    command: "uvx"
-    args: ["mcp-server-postgres"]
-    env:
-      DATABASE_URL: "postgresql://localhost/mydb"
-    transport: "stdio"
-    targets: ["@claude-cli"]
-```
-
-**Gemini CLI**: Automatic configuration with external environment handling
-```yaml
-mcp_servers:
-  - name: "github-tools"  
-    command: "npx"
-    args: ["-y", "@modelcontextprotocol/server-github"]
-    targets: ["@gemini-cli"]
-```
-
-### Hybrid Configuration
-
-Configure CLI tools **and** generate config files simultaneously:
-
-```yaml
-mcp_servers:
-  - name: "ai-rulez"
-    command: "ai-rulez"
-    args: ["mcp"]
-    targets:
-      - "@claude-cli"        # Executes: claude mcp add ai-rulez ai-rulez mcp
-      - "@gemini-cli"        # Executes: gemini mcp add ai-rulez ai-rulez mcp  
-      - ".cursor/mcp.json"   # Generates: Cursor config file
-```
-
-### Control Options
-
-**Disable CLI configuration** when needed:
-```bash
-ai-rulez generate --no-configure-cli-mcp
-# Only generates files, skips CLI commands
-```
-
----
-
 ## Server Capabilities
 
-When enabled, the MCP server provides your AI assistant with a comprehensive set of tools to safely manage your entire `ai-rulez.yml` configuration. The assistant can:
+When enabled, the MCP server provides your AI assistant with read-only access to your configuration. The server supports:
 
-- **Manage Rules, Sections, and Agents:** Add, update, delete, and list all core configuration elements.
-- **Manage Outputs:** Add or remove new output targets for generation.
-- **Manage Tools:** Configure MCP servers and custom slash commands.
-- **Manage Metadata:** Get or set top-level properties like the project name, `extends`, and `includes`.
-- **Trigger Core Actions:** Programmatically run the `generate` and `validate` commands.
+- **Read Configuration**: Inspect rules, context, skills, profiles, and presets
+- **Generate Outputs**: Programmatically trigger generation of tool-specific files
+- **Validate Configuration**: Check configuration validity and report errors
 
-This allows for powerful, automated workflows, such as asking your AI assistant to "add a new rule for our Python standards and then regenerate the output files."
+Since V3 uses a file-based approach (`.ai-rulez/` directory), configuration changes are made by directly editing files. The MCP server enables AI assistants to:
+
+1. **Understand your setup** by reading configuration and content files
+2. **Generate outputs** after you've made changes
+3. **Validate changes** before committing
+
+This approach ensures your configuration remains auditable and version-controlled, while still allowing AI assistants to help you manage it efficiently.
+
+## Typical Workflow
+
+### With Your Editor
+
+1. **Edit files** directly in `.ai-rulez/`:
+   ```bash
+   # Edit rules, context, skills, or config.yaml
+   vim .ai-rulez/rules/code-quality.md
+   ```
+
+2. **Use MCP server** (via AI assistant) to generate:
+   ```bash
+   ai-rulez generate
+   ```
+
+3. **Commit changes**:
+   ```bash
+   git add .ai-rulez/ CLAUDE.md .cursor/
+   git commit -m "docs: update AI guidelines"
+   ```
+
+### With Claude CLI
+
+If using the Claude CLI with the ai-rulez MCP server, you can ask Claude to help:
+
+- "Review my `.ai-rulez/` configuration and suggest improvements"
+- "Generate outputs for my new rules"
+- "Validate that my profiles are correct"
+
+The server provides Claude with read access to understand your setup, while you maintain full control over edits.

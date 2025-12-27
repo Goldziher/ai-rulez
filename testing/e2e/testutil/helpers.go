@@ -99,3 +99,88 @@ func ReadFile(t *testing.T, path string) string {
 	require.NoError(t, err, "Failed to read file %s", path)
 	return string(content)
 }
+
+// SetupV3BasicConfig creates a V3 configuration directory structure with rules
+func SetupV3BasicConfig(t *testing.T, workingDir string) {
+	t.Helper()
+
+	// Create .ai-rulez directory
+	aiRulesDir := filepath.Join(workingDir, ".ai-rulez")
+	err := os.MkdirAll(aiRulesDir, 0o755)
+	require.NoError(t, err, "Failed to create .ai-rulez directory")
+
+	// Create config.yaml
+	WriteFile(t, aiRulesDir, "config.yaml", V3BasicConfigYAML)
+
+	// Create rules directory
+	rulesDir := filepath.Join(aiRulesDir, "rules")
+	err = os.MkdirAll(rulesDir, 0o755)
+	require.NoError(t, err, "Failed to create rules directory")
+
+	// Create rule files
+	WriteFile(t, rulesDir, "basic-rule.md", V3BasicRuleMarkdown)
+	WriteFile(t, rulesDir, "high-priority-rule.md", V3HighPriorityRuleMarkdown)
+
+	// Create context directory
+	contextDir := filepath.Join(aiRulesDir, "context")
+	err = os.MkdirAll(contextDir, 0o755)
+	require.NoError(t, err, "Failed to create context directory")
+
+	// Create context file
+	WriteFile(t, contextDir, "project-info.md", V3ProjectContextMarkdown)
+}
+
+// SetupV3ConfigWithMCPServers creates a V3 configuration with MCP server config
+func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
+	t.Helper()
+
+	// Create .ai-rulez directory
+	aiRulesDir := filepath.Join(workingDir, ".ai-rulez")
+	err := os.MkdirAll(aiRulesDir, 0o755)
+	require.NoError(t, err, "Failed to create .ai-rulez directory")
+
+	// Create config.yaml
+	WriteFile(t, aiRulesDir, "config.yaml", V3ConfigWithMCPServersYAML)
+
+	// Create mcp.yaml
+	WriteFile(t, aiRulesDir, "mcp.yaml", V3MCPServerConfigYAML)
+
+	// Create empty rules directory
+	rulesDir := filepath.Join(aiRulesDir, "rules")
+	err = os.MkdirAll(rulesDir, 0o755)
+	require.NoError(t, err, "Failed to create rules directory")
+}
+
+// SetupV3MultiPresetConfig creates a V3 configuration with multiple presets
+func SetupV3MultiPresetConfig(t *testing.T, workingDir string) {
+	t.Helper()
+
+	// Create .ai-rulez directory
+	aiRulesDir := filepath.Join(workingDir, ".ai-rulez")
+	err := os.MkdirAll(aiRulesDir, 0o755)
+	require.NoError(t, err, "Failed to create .ai-rulez directory")
+
+	// Create config.yaml
+	WriteFile(t, aiRulesDir, "config.yaml", V3ConfigWithMultiplePresetsYAML)
+
+	// Create rules directory
+	rulesDir := filepath.Join(aiRulesDir, "rules")
+	err = os.MkdirAll(rulesDir, 0o755)
+	require.NoError(t, err, "Failed to create rules directory")
+
+	// Create a sample rule
+	WriteFile(t, rulesDir, "sample-rule.md", V3BasicRuleMarkdown)
+}
+
+// SetupV3InvalidConfig creates a V3 configuration with invalid YAML
+func SetupV3InvalidConfig(t *testing.T, workingDir string) {
+	t.Helper()
+
+	// Create .ai-rulez directory
+	aiRulesDir := filepath.Join(workingDir, ".ai-rulez")
+	err := os.MkdirAll(aiRulesDir, 0o755)
+	require.NoError(t, err, "Failed to create .ai-rulez directory")
+
+	// Create invalid config.yaml
+	WriteFile(t, aiRulesDir, "config.yaml", V3InvalidConfigYAML)
+}

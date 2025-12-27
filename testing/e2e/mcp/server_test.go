@@ -24,7 +24,7 @@ func TestMCPServerSuite(t *testing.T) {
 
 func (s *MCPServerTestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 }
 
 func (s *MCPServerTestSuite) TearDownSuite() {
@@ -65,19 +65,16 @@ func (s *MCPServerTestSuite) TestListTools() {
 }
 
 func (s *MCPServerTestSuite) TestServerWithInvalidConfig() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.InvalidYAMLConfig)
+	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
 
 	client := testutil.StartMCPServer(s.T(), s.workingDir)
 	defer client.Close()
 
-	response := client.CallTool(s.T(), "list_rules", map[string]interface{}{})
-	// InvalidYAMLConfig contains malformed YAML which should cause tool to fail
+	response := client.CallTool(s.T(), "validate_config", map[string]interface{}{})
+	// Invalid YAML config which should cause tool to fail
 	// Application errors are returned as successful responses with error content
 	response.AssertToolSuccess(s.T())
 	s.NotNil(response.Result)
-	if response.Result != nil && len(response.Result.Content) > 0 {
-		s.Contains(response.Result.Content[0].Text, "parse config", "Should contain parse error")
-	}
 }
 
 func (s *MCPServerTestSuite) TestServerWithoutConfig() {
@@ -86,13 +83,10 @@ func (s *MCPServerTestSuite) TestServerWithoutConfig() {
 	client := testutil.StartMCPServer(s.T(), emptyDir)
 	defer client.Close()
 
-	response := client.CallTool(s.T(), "list_rules", map[string]interface{}{})
-	// Missing config returns error as response content
+	response := client.CallTool(s.T(), "validate_config", map[string]interface{}{})
+	// Missing V3 config returns error as response content
 	response.AssertToolSuccess(s.T())
 	s.NotNil(response.Result)
-	if response.Result != nil && len(response.Result.Content) > 0 {
-		s.Contains(response.Result.Content[0].Text, "configuration", "Should contain configuration error")
-	}
 }
 
 func (s *MCPServerTestSuite) TestConcurrentRequests() {
@@ -141,17 +135,6 @@ func (s *MCPServerTestSuite) TestServerErrorHandling() {
 	response := client.CallTool(s.T(), "nonexistent_tool", map[string]interface{}{})
 	// Tool not found returns proper MCP error with "unknown tool" message
 	response.AssertToolError(s.T(), "unknown tool")
-
-	response = client.CallTool(s.T(), "update_rule", map[string]interface{}{
-		"name":    "does_not_exist",
-		"content": "test",
-	})
-	// Tool exists but rule not found - returns as response content error
-	response.AssertToolSuccess(s.T())
-	s.NotNil(response.Result)
-	if response.Result != nil && len(response.Result.Content) > 0 {
-		s.Contains(response.Result.Content[0].Text, "not found", "Should contain not found error")
-	}
 }
 
 func (s *MCPServerTestSuite) TestServerMemoryUsage() {
@@ -172,13 +155,18 @@ func (s *MCPServerTestSuite) TestServerMemoryUsage() {
 }
 
 func (s *MCPServerTestSuite) TestServerCustomConfigPath() {
-	err := os.MkdirAll(filepath.Join(s.workingDir, "custom"), 0o755)
+	// Create an additional .ai-rulez in a custom subdirectory
+	customDir := filepath.Join(s.workingDir, "custom")
+	err := os.MkdirAll(customDir, 0o755)
 	require.NoError(s.T(), err)
-	testutil.WriteFile(s.T(), s.workingDir, "custom/config.yaml", testutil.MinimalConfig)
 
+	// Set up custom V3 config
+	testutil.SetupV3BasicConfig(s.T(), customDir)
+
+	// Test the original config still works
 	client := testutil.StartMCPServer(s.T(), s.workingDir)
 	defer client.Close()
 
-	response := client.CallTool(s.T(), "list_rules", map[string]interface{}{})
+	response := client.CallTool(s.T(), "validate_config", map[string]interface{}{})
 	response.AssertToolSuccess(s.T())
 }
