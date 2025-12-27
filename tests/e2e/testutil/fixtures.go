@@ -1,18 +1,18 @@
 package testutil
 
 import (
-	"github.com/Goldziher/ai-rulez/testing/fixtures"
+	helpers "github.com/Goldziher/ai-rulez/tests/fixtures/helpers"
 )
 
-const BasicConfig = fixtures.BasicConfig
-const MinimalConfig = fixtures.MinimalConfig
-const ConfigWithAgents = fixtures.ConfigWithAgents
-const ConfigWithTargets = fixtures.ConfigWithTargets
-const InvalidYAMLConfig = fixtures.InvalidYAMLConfig
-const InvalidSchemaConfig = fixtures.InvalidSchemaConfig
-const ConfigWithMCPServers = fixtures.ConfigWithMCPServers
-const ConfigWithCommands = fixtures.ConfigWithCommands
-const ConfigWithMCPAndCommands = fixtures.ConfigWithMCPAndCommands
+const BasicConfig = helpers.BasicConfig
+const MinimalConfig = helpers.MinimalConfig
+const ConfigWithAgents = helpers.ConfigWithAgents
+const ConfigWithTargets = helpers.ConfigWithTargets
+const InvalidYAMLConfig = helpers.InvalidYAMLConfig
+const InvalidSchemaConfig = helpers.InvalidSchemaConfig
+const ConfigWithMCPServers = helpers.ConfigWithMCPServers
+const ConfigWithCommands = helpers.ConfigWithCommands
+const ConfigWithMCPAndCommands = helpers.ConfigWithMCPAndCommands
 
 // V3 Configuration Fixtures
 const V3BasicConfigYAML = `version: "3.0"

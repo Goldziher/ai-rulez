@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/schema"
-	"github.com/Goldziher/ai-rulez/testing/testutil"
+	"github.com/Goldziher/ai-rulez/tests/testutil"
 )
 
 func TestSchemaValidation(t *testing.T) {
