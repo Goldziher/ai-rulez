@@ -375,6 +375,88 @@ func TestGeneratorV3_MCPAutoGeneration_NoServers(t *testing.T) {
 	assert.NoFileExists(t, mcpPath, ".mcp.json should not be generated when no MCP servers exist")
 }
 
+func TestGeneratorV3_Gitignore_NoAbsolutePaths(t *testing.T) {
+	// Setup
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	tempDir := t.TempDir()
+
+	// Copy fixture to temp dir
+	copyFixture(t, fixtureDir, tempDir)
+
+	// Load config
+	ctx := context.Background()
+	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	require.NoError(t, err)
+
+	// Override gitignore setting to enable it
+	enabled := true
+	cfg.Gitignore = &enabled
+
+	// Create generator
+	gen := NewGeneratorV3(cfg)
+
+	// Generate
+	err = gen.Generate("default")
+	require.NoError(t, err)
+
+	// Verify .gitignore was created
+	gitignorePath := filepath.Join(tempDir, ".gitignore")
+	assert.FileExists(t, gitignorePath)
+
+	content, err := os.ReadFile(gitignorePath)
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	// Check that no absolute paths were added
+	// Absolute paths would start with / on Unix or C:\ on Windows
+	lines := strings.Split(contentStr, "\n")
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		// Check for absolute paths
+		assert.False(t, filepath.IsAbs(line), "Found absolute path in .gitignore: %s", line)
+	}
+}
+
+func TestGeneratorV3_Gitignore_SkipsAiRulezFolder(t *testing.T) {
+	// Setup
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	tempDir := t.TempDir()
+
+	// Copy fixture to temp dir
+	copyFixture(t, fixtureDir, tempDir)
+
+	// Load config
+	ctx := context.Background()
+	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	require.NoError(t, err)
+
+	// Override gitignore setting to enable it
+	enabled := true
+	cfg.Gitignore = &enabled
+
+	// Create generator
+	gen := NewGeneratorV3(cfg)
+
+	// Generate
+	err = gen.Generate("default")
+	require.NoError(t, err)
+
+	// Verify .gitignore was created
+	gitignorePath := filepath.Join(tempDir, ".gitignore")
+	assert.FileExists(t, gitignorePath)
+
+	content, err := os.ReadFile(gitignorePath)
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	// Check that .ai-rulez is NOT in the gitignore
+	assert.NotContains(t, contentStr, ".ai-rulez", ".ai-rulez folder should not be added to .gitignore")
+	assert.NotContains(t, contentStr, ".ai-rulez/", ".ai-rulez/ folder should not be added to .gitignore")
+}
+
 // Helper function to copy fixture directory to temp directory
 func copyFixture(t *testing.T, src, dst string) {
 	t.Helper()
