@@ -11,7 +11,7 @@ import (
 
 var (
 	cfgFile string
-	Version = "3.1.0"
+	Version = "3.2.0"
 )
 
 var RootCmd = &cobra.Command{
@@ -48,6 +48,7 @@ func init() {
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(InitCmd)
 	RootCmd.AddCommand(MCPCmd)
+	RootCmd.AddCommand(MigrateCmd)
 	RootCmd.AddCommand(DomainCmd)
 	RootCmd.AddCommand(AddCmd)
 	RootCmd.AddCommand(RemoveCmd)

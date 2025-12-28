@@ -269,6 +269,7 @@ func TestScanContentTree(t *testing.T) {
 		assert.Empty(t, tree.Rules)
 		assert.Empty(t, tree.Context)
 		assert.Empty(t, tree.Skills)
+		assert.Empty(t, tree.Agents)
 		assert.Empty(t, tree.Domains)
 	})
 
@@ -746,5 +747,117 @@ func TestPresetV3Marshaling(t *testing.T) {
 		assert.Len(t, config.Presets, 1)
 		assert.False(t, config.Presets[0].IsBuiltIn())
 		assert.Equal(t, "custom", config.Presets[0].Name)
+	})
+}
+
+func TestScanAgents(t *testing.T) {
+	t.Run("scans agents directory", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		agentsPath := filepath.Join(configDir, agentsDir)
+		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
+
+		// Create test agent files
+		agent1 := filepath.Join(agentsPath, "agent1.md")
+		require.NoError(t, os.WriteFile(agent1, []byte("# Agent 1\nYou are an agent."), 0o644))
+		agent2 := filepath.Join(agentsPath, "agent2.md")
+		require.NoError(t, os.WriteFile(agent2, []byte("# Agent 2\nYou are another agent."), 0o644))
+
+		agents, err := scanAgents(agentsPath)
+		require.NoError(t, err)
+		assert.Len(t, agents, 2)
+		assert.Equal(t, "agent1", agents[0].Name)
+		assert.Equal(t, "# Agent 1\nYou are an agent.", agents[0].Content)
+		assert.Equal(t, "agent2", agents[1].Name)
+	})
+
+	t.Run("scans agents with metadata", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		agentsPath := filepath.Join(configDir, agentsDir)
+		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
+
+		// Create agent with metadata
+		agentContent := `---
+name: test-agent
+description: A test agent
+model: claude-3-sonnet
+tools: code_execution,file_search
+permission_mode: safe
+---
+
+You are a helpful assistant.`
+
+		agentPath := filepath.Join(agentsPath, "test.md")
+		require.NoError(t, os.WriteFile(agentPath, []byte(agentContent), 0o644))
+
+		agents, err := scanAgents(agentsPath)
+		require.NoError(t, err)
+		assert.Len(t, agents, 1)
+		assert.Equal(t, "test", agents[0].Name)
+		assert.NotNil(t, agents[0].Metadata)
+		assert.Equal(t, "A test agent", agents[0].Metadata.Extra["description"])
+		assert.Equal(t, "claude-3-sonnet", agents[0].Metadata.Extra["model"])
+	})
+
+	t.Run("ignores non-markdown files in agents", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		agentsPath := filepath.Join(configDir, agentsDir)
+		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
+
+		// Create markdown file
+		require.NoError(t, os.WriteFile(filepath.Join(agentsPath, "agent.md"), []byte("content"), 0o644))
+		// Create non-markdown file
+		require.NoError(t, os.WriteFile(filepath.Join(agentsPath, "readme.txt"), []byte("text"), 0o644))
+		// Create subdirectory (should be ignored)
+		require.NoError(t, os.MkdirAll(filepath.Join(agentsPath, "subdir"), 0o755))
+
+		agents, err := scanAgents(agentsPath)
+		require.NoError(t, err)
+		assert.Len(t, agents, 1)
+		assert.Equal(t, "agent", agents[0].Name)
+	})
+
+	t.Run("returns empty slice for non-existent directory", func(t *testing.T) {
+		nonExistentPath := "/non/existent/path"
+		agents, err := scanAgents(nonExistentPath)
+		require.NoError(t, err)
+		assert.Empty(t, agents)
+	})
+
+	t.Run("scans agents in content tree", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+		// Create agents directory with content
+		agentsPath := filepath.Join(configDir, agentsDir)
+		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(agentsPath, "agent1.md"), []byte("content1"), 0o644))
+
+		tree, err := scanContentTree(configDir)
+		require.NoError(t, err)
+		assert.Len(t, tree.Agents, 1)
+		assert.Equal(t, "agent1", tree.Agents[0].Name)
+	})
+
+	t.Run("scans domain agents", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+		// Create backend domain with agents
+		backendPath := filepath.Join(configDir, domainsDir, "backend")
+		backendAgentsPath := filepath.Join(backendPath, agentsDir)
+		require.NoError(t, os.MkdirAll(backendAgentsPath, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(backendAgentsPath, "api-agent.md"), []byte("API agent"), 0o644))
+
+		tree, err := scanContentTree(configDir)
+		require.NoError(t, err)
+		assert.Len(t, tree.Domains, 1)
+		assert.Contains(t, tree.Domains, "backend")
+		assert.Len(t, tree.Domains["backend"].Agents, 1)
+		assert.Equal(t, "api-agent", tree.Domains["backend"].Agents[0].Name)
 	})
 }

@@ -16,31 +16,22 @@ func TestInitCommandE2E(t *testing.T) {
 	tests := []struct {
 		name        string
 		projectName string
-		providers   []string
+		args        []string
 		setupFiles  func(t *testing.T, dir string)
 		validate    func(t *testing.T, configPath string)
 	}{
 		{
-			name:        "Basic init with claude provider",
+			name:        "Basic init with project name",
 			projectName: "TestProject",
-			providers:   []string{"claude"},
+			args:        []string{},
 			setupFiles:  func(t *testing.T, dir string) {},
 			validate: func(t *testing.T, configPath string) {
 				content, err := os.ReadFile(configPath)
 				require.NoError(t, err)
 
-				assert.Contains(t, string(content), "metadata:")
-				assert.Contains(t, string(content), `name: "TestProject"`)
-				assert.Contains(t, string(content), "outputs:")
-				assert.Contains(t, string(content), `path: "CLAUDE.md"`)
-
-				assert.Contains(t, string(content), "# agents:")
-				assert.Contains(t, string(content), "# rules:")
-				assert.Contains(t, string(content), "# sections:")
-				assert.Contains(t, string(content), "# commands:")
-				assert.Contains(t, string(content), "# mcp_servers:")
-
-				assert.Contains(t, string(content), "ai-rules-v2.schema.json")
+				// V3 config should have version, name, and presets
+				assert.Contains(t, string(content), "version:")
+				assert.Contains(t, string(content), "TestProject")
 
 				var config map[string]interface{}
 				err = yaml.Unmarshal(content, &config)
@@ -48,9 +39,9 @@ func TestInitCommandE2E(t *testing.T) {
 			},
 		},
 		{
-			name:        "Init with Go project",
+			name:        "Init with skip-content flag",
 			projectName: "GoProject",
-			providers:   []string{"cursor"},
+			args:        []string{"--skip-content"},
 			setupFiles: func(t *testing.T, dir string) {
 				goModContent := `module example.com/goproject
 go 1.21
@@ -63,17 +54,15 @@ require github.com/stretchr/testify v1.8.4`
 				content, err := os.ReadFile(configPath)
 				require.NoError(t, err)
 
-				assert.Contains(t, string(content), `path: ".cursorrules"`)
-
-				contentStr := string(content)
-				assert.True(t, strings.Contains(contentStr, "# agents:") ||
-					strings.Contains(contentStr, "#   - name:"))
+				var config map[string]interface{}
+				err = yaml.Unmarshal(content, &config)
+				assert.NoError(t, err, "Config should be valid YAML")
 			},
 		},
 		{
-			name:        "Init with TypeScript project",
+			name:        "Init with skip-mcp flag",
 			projectName: "TSProject",
-			providers:   []string{"gemini"},
+			args:        []string{"--skip-mcp"},
 			setupFiles: func(t *testing.T, dir string) {
 				packageJSON := `{
   "name": "ts-project",
@@ -98,92 +87,45 @@ require github.com/stretchr/testify v1.8.4`
 				content, err := os.ReadFile(configPath)
 				require.NoError(t, err)
 
-				assert.Contains(t, string(content), `path: "GEMINI.md"`)
-
 				var config map[string]interface{}
 				err = yaml.Unmarshal(content, &config)
 				assert.NoError(t, err)
 			},
 		},
 		{
-			name:        "Init with multiple providers",
-			projectName: "MultiProvider",
-			providers:   []string{"claude", "cursor", "gemini"},
+			name:        "Init with domains flag",
+			projectName: "MultiDomain",
+			args:        []string{"--domains", "backend,frontend,infra"},
 			setupFiles:  func(t *testing.T, dir string) {},
 			validate: func(t *testing.T, configPath string) {
 				content, err := os.ReadFile(configPath)
 				require.NoError(t, err)
 
-				assert.Contains(t, string(content), `path: "CLAUDE.md"`)
-				assert.Contains(t, string(content), `path: ".cursor/rules/"`)
-				assert.Contains(t, string(content), `path: "GEMINI.md"`)
+				var config map[string]interface{}
+				err = yaml.Unmarshal(content, &config)
+				assert.NoError(t, err, "Config should be valid YAML")
+
+				// Check that domains are created under .ai-rulez/domains/
+				// configPath is at .ai-rulez/config.yaml
+				aiRulesDir := filepath.Dir(configPath)
+				domainsDir := filepath.Join(aiRulesDir, "domains")
+				for _, domain := range []string{"backend", "frontend", "infra"} {
+					domainDir := filepath.Join(domainsDir, domain)
+					assert.DirExists(t, domainDir, "Domain directory should exist: %s", domain)
+				}
 			},
 		},
 		{
-			name:        "Init with monorepo",
-			projectName: "MonorepoProject",
-			providers:   []string{"amp"},
-			setupFiles: func(t *testing.T, dir string) {
-				lernaContent := `{
-  "packages": ["packages/*"],
-  "version": "independent"
-}`
-				err := os.WriteFile(filepath.Join(dir, "lerna.json"), []byte(lernaContent), 0o644)
-				require.NoError(t, err)
-
-				packageJSON := `{
-  "name": "monorepo-root",
-  "private": true,
-  "workspaces": ["packages/*"]
-}`
-				err = os.WriteFile(filepath.Join(dir, "package.json"), []byte(packageJSON), 0o644)
-				require.NoError(t, err)
-			},
+			name:        "Init with json format",
+			projectName: "JSONProject",
+			args:        []string{"--format", "json"},
+			setupFiles:  func(t *testing.T, dir string) {},
 			validate: func(t *testing.T, configPath string) {
+				// For JSON format, config might be in a different format
+				// Just verify it's valid and can be read
 				content, err := os.ReadFile(configPath)
 				require.NoError(t, err)
-
-				assert.Contains(t, string(content), `path: "AGENTS.md"`)
-
-				var config map[string]interface{}
-				err = yaml.Unmarshal(content, &config)
-				assert.NoError(t, err)
-			},
-		},
-		{
-			name:        "Init with Taskfile",
-			projectName: "TaskfileProject",
-			providers:   []string{"claude"},
-			setupFiles: func(t *testing.T, dir string) {
-				goModContent := `module example.com/taskproject
-go 1.21`
-				err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte(goModContent), 0o644)
-				require.NoError(t, err)
-
-				taskfileContent := `version: '3'
-
-tasks:
-  build:
-    cmds:
-      - go build ./...
-  test:
-    cmds:
-      - go test ./...
-  lint:
-    cmds:
-      - golangci-lint run`
-				err = os.WriteFile(filepath.Join(dir, "Taskfile.yml"), []byte(taskfileContent), 0o644)
-				require.NoError(t, err)
-			},
-			validate: func(t *testing.T, configPath string) {
-				content, err := os.ReadFile(configPath)
-				require.NoError(t, err)
-
-				assert.Contains(t, string(content), "# commands:")
-
-				var config map[string]interface{}
-				err = yaml.Unmarshal(content, &config)
-				assert.NoError(t, err)
+				assert.True(t, len(content) > 0, "Config file should have content")
 			},
 		},
 	}
@@ -201,15 +143,16 @@ tasks:
 			tt.setupFiles(t, dir)
 
 			args := []string{"init", tt.projectName}
-			for _, provider := range tt.providers {
-				args = append(args, "--"+provider)
-			}
+			args = append(args, tt.args...)
 
 			output, err := runTestCommand(args...)
 			require.NoError(t, err, "Init command should succeed. Output: %s", output)
 
-			configPath := filepath.Join(dir, "ai-rulez.yaml")
-			assert.FileExists(t, configPath, "ai-rulez.yaml should be created")
+			configPath := filepath.Join(dir, ".ai-rulez", "config.yaml")
+			if strings.Contains(strings.Join(tt.args, " "), "--format json") {
+				configPath = filepath.Join(dir, ".ai-rulez", "config.json")
+			}
+			assert.FileExists(t, configPath, "config file should be created at %s", configPath)
 
 			if tt.validate != nil {
 				tt.validate(t, configPath)

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
@@ -13,24 +14,56 @@ import (
 )
 
 func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
-	configFile := request.GetString("config_file", "ai_rulez.yaml")
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		var err error
+		configFile, err = config.FindConfigFile(".")
+		if err != nil {
+			return ToolError(err)
+		}
+	}
 
-	cfg, err := config.LoadConfig(configFile)
+	// Detect config version and load appropriately
+	dir, err := filepath.Abs(".")
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to get current directory: %w", err))
+	}
+	version, err := config.DetectConfigVersion(dir)
 	if err != nil {
 		return ToolError(err)
 	}
 
+	if version == "v3" {
+		// Load and generate V3 config
+		v3cfg, err := config.LoadConfigV3(ctx, dir)
+		if err != nil {
+			return ToolError(err)
+		}
+		if err := v3cfg.ValidateV3(); err != nil {
+			return ToolError(err)
+		}
+		gen := generator.NewGeneratorV3(v3cfg)
+		if err := gen.Generate(""); err != nil {
+			return ToolError(err)
+		}
+		return ToolSuccess(map[string]interface{}{
+			"message": "Outputs generated successfully",
+			"config":  configFile,
+		})
+	}
+	// Load and generate V2 config
+	cfg, err := config.LoadConfig(configFile)
+	if err != nil {
+		return ToolError(err)
+	}
 	gen := generator.NewWithConfigFile(configFile)
-
 	if err := gen.GenerateAll(cfg); err != nil {
 		return ToolError(err)
 	}
-
 	results := make([]string, len(cfg.Outputs))
 	for i, output := range cfg.Outputs {
 		results[i] = output.Path
 	}
-
 	return ToolSuccess(map[string]interface{}{
 		"message": "Outputs generated successfully",
 		"config":  configFile,
@@ -39,8 +72,49 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 }
 
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
-	configFile := request.GetString("config_file", "ai_rulez.yaml")
+	configFile := request.GetString("config_file", "")
+	if configFile == "" {
+		var err error
+		configFile, err = config.FindConfigFile(".")
+		if err != nil {
+			return ToolError(err)
+		}
+	}
 
+	// Detect config version and validate appropriately
+	dir, err := filepath.Abs(".")
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to get current directory: %w", err))
+	}
+	version, err := config.DetectConfigVersion(dir)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	if version == "v3" {
+		// Validate V3 config
+		v3cfg, err := config.LoadConfigV3(ctx, dir)
+		if err != nil {
+			result := map[string]interface{}{
+				"valid": false,
+				"error": err.Error(),
+			}
+			return ToolSuccess(result)
+		}
+		if err := v3cfg.ValidateV3(); err != nil {
+			result := map[string]interface{}{
+				"valid": false,
+				"error": err.Error(),
+			}
+			return ToolSuccess(result)
+		}
+		result := map[string]interface{}{
+			"valid":    true,
+			"warnings": []string{},
+		}
+		return ToolSuccess(result)
+	}
+	// Validate V2 config
 	val, err := validator.NewValidator(configFile)
 	if err != nil {
 		return ToolError(err)
@@ -121,7 +195,14 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		configContent = templates.GenerateConfigWithPresets(projectName, []string{"claude"})
 	}
 
-	if err := os.WriteFile("ai_rulez.yaml", []byte(configContent), 0o644); err != nil {
+	// V3 structure: create .ai-rulez/config.yaml
+	aiRulesDir := ".ai-rulez"
+	if err := os.MkdirAll(aiRulesDir, 0o755); err != nil {
+		return ToolError(fmt.Errorf("failed to create .ai-rulez directory: %w", err))
+	}
+
+	configPath := fmt.Sprintf("%s/config.yaml", aiRulesDir)
+	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return ToolError(fmt.Errorf("failed to write config file: %w", err))
 	}
 
@@ -133,6 +214,6 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 
 	return ToolSuccess(map[string]interface{}{
 		"message": "Project initialized successfully",
-		"path":    "ai_rulez.yaml",
+		"path":    configPath,
 	})
 }

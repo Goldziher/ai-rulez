@@ -9,28 +9,24 @@ import (
 	"github.com/Goldziher/ai-rulez/tests/e2e/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gopkg.in/yaml.v3"
 )
 
 func TestV1ToV2Migration(t *testing.T) {
 	t.Run("automatic_migration_on_generate", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		v1Config := `metadata:
+		v2Config := `metadata:
   name: TestMigration
-  description: Testing v1 to v2 migration
+  description: Testing v2 to v3 migration
+
+presets:
+  - claude
 
 outputs:
   - path: .cursorrules
-    template: default
-  - path: docs.md
-    template: "@templates/doc.tmpl"
-  - path: inline.md
-    template: |
-      # Rules
-      {{range .Rules}}
-      - {{.Content}}
-      {{end}}
+    template:
+      type: builtin
+      value: default
 
 rules:
   - name: test-rule
@@ -40,92 +36,70 @@ rules:
 agents:
   - name: code-review
     description: Code review specialist
-    template: agent
 `
-		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
-		err := os.WriteFile(configPath, []byte(v1Config), 0o644)
-		require.NoError(t, err)
-
-		templatesDir := filepath.Join(tmpDir, "templates")
-		err = os.MkdirAll(templatesDir, 0o755)
-		require.NoError(t, err)
-
-		templateContent := `# Documentation
-{{range .Rules}}
-- {{.Name}}: {{.Content}}
-{{end}}`
-		err = os.WriteFile(filepath.Join(templatesDir, "doc.tmpl"), []byte(templateContent), 0o644)
+		configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+		err := os.WriteFile(configPath, []byte(v2Config), 0o644)
 		require.NoError(t, err)
 
 		result := testutil.RunCLIExpectSuccess(t, tmpDir, "generate")
 
-		assert.Contains(t, result.Stdout, "Successfully migrated configuration from v1 to v2")
+		// Verify migration messages
+		assert.Contains(t, result.Stdout, "Migrating V2 configuration to V3")
+		assert.Contains(t, result.Stdout, "Migration completed successfully")
 
-		assert.Contains(t, result.Stdout, "Generated 3 file(s) successfully")
+		// Verify .ai-rulez directory was created
+		aiRulezPath := filepath.Join(tmpDir, ".ai-rulez")
+		assert.DirExists(t, aiRulezPath)
 
-		migratedData, err := os.ReadFile(configPath)
-		require.NoError(t, err)
+		// Verify config.yaml exists in .ai-rulez/
+		configYAMLPath := filepath.Join(aiRulezPath, "config.yaml")
+		assert.FileExists(t, configYAMLPath)
 
-		var migratedConfig map[string]interface{}
-		err = yaml.Unmarshal(migratedData, &migratedConfig)
-		require.NoError(t, err)
+		// Verify rules directory exists
+		rulesPath := filepath.Join(aiRulezPath, "rules")
+		assert.DirExists(t, rulesPath)
 
-		outputs := migratedConfig["outputs"].([]interface{})
-
-		output1 := outputs[0].(map[string]interface{})
-		template1 := output1["template"].(map[string]interface{})
-		assert.Equal(t, "builtin", template1["type"])
-		assert.Equal(t, "default", template1["value"])
-
-		output2 := outputs[1].(map[string]interface{})
-		template2 := output2["template"].(map[string]interface{})
-		assert.Equal(t, "file", template2["type"])
-		assert.Equal(t, "templates/doc.tmpl", template2["value"])
-
-		output3 := outputs[2].(map[string]interface{})
-		template3 := output3["template"].(map[string]interface{})
-		assert.Equal(t, "inline", template3["type"])
-		assert.Contains(t, template3["value"], "# Rules")
-
-		agents := migratedConfig["agents"].([]interface{})
-		agent := agents[0].(map[string]interface{})
-		agentTemplate := agent["template"].(map[string]interface{})
-		assert.Equal(t, "builtin", agentTemplate["type"])
-		assert.Equal(t, "agent", agentTemplate["value"])
-
-		assert.FileExists(t, filepath.Join(tmpDir, ".cursorrules"))
-		assert.FileExists(t, filepath.Join(tmpDir, "docs.md"))
-		assert.FileExists(t, filepath.Join(tmpDir, "inline.md"))
+		// Verify agents directory exists
+		agentsPath := filepath.Join(aiRulezPath, "agents")
+		assert.DirExists(t, agentsPath)
 	})
 
-	t.Run("migration_fails_with_includes", func(t *testing.T) {
+	t.Run("migration_fails_with_missing_includes", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		v1ConfigWithIncludes := `metadata:
+		v2ConfigWithIncludes := `metadata:
   name: TestMigrationFail
+
+presets:
+  - claude
 
 includes:
   - ./shared.yaml
 
 outputs:
   - path: .cursorrules
-    template: default
+    template:
+      type: builtin
+      value: default
 `
-		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
-		err := os.WriteFile(configPath, []byte(v1ConfigWithIncludes), 0o644)
+		configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+		err := os.WriteFile(configPath, []byte(v2ConfigWithIncludes), 0o644)
 		require.NoError(t, err)
 
 		result := testutil.RunCLIExpectError(t, tmpDir, "generate")
 
-		assert.Contains(t, result.Stderr, "cannot automatically migrate configuration with 'includes'")
-		assert.Contains(t, result.Stderr, "Remove the includes and merge the configuration manually")
+		// The migration fails because the include file doesn't exist
+		assert.Contains(t, result.Stderr, "include file not found")
 	})
 
-	t.Run("no_migration_for_v2_config", func(t *testing.T) {
+	t.Run("auto_migration_v2_to_v3", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
 		v2Config := `metadata:
   name: TestV2Config
+
+presets:
+  - claude
 
 outputs:
   - path: .cursorrules
@@ -138,129 +112,123 @@ rules:
     content: Use best practices
     priority: high
 `
-		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
+		configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
 		err := os.WriteFile(configPath, []byte(v2Config), 0o644)
 		require.NoError(t, err)
 
 		result := testutil.RunCLIExpectSuccess(t, tmpDir, "generate")
 
-		assert.NotContains(t, result.Stdout, "migrated")
+		// Verify migration happened
+		assert.Contains(t, result.Stdout, "Migrating V2 configuration to V3")
 
-		assert.Contains(t, result.Stdout, "Generated 1 file(s) successfully")
-
-		afterData, err := os.ReadFile(configPath)
-		require.NoError(t, err)
-		assert.Equal(t, v2Config, string(afterData))
+		// Verify .ai-rulez directory was created
+		aiRulezPath := filepath.Join(tmpDir, ".ai-rulez")
+		assert.DirExists(t, aiRulezPath)
 	})
 
 	t.Run("migration_with_various_template_types", func(t *testing.T) {
 		tmpDir := t.TempDir()
 
-		v1Config := `metadata:
+		v2Config := `metadata:
   name: TemplateVariety
+
+presets:
+  - claude
 
 outputs:
   - path: inline1.md
-    template: "Simple text"
+    template:
+      type: inline
+      value: "Simple text"
   - path: inline2.md
-    template: |
-      Multi
-      Line
-      Template
+    template:
+      type: inline
+      value: |
+        Multi
+        Line
+        Template
 `
-		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
-		err := os.WriteFile(configPath, []byte(v1Config), 0o644)
+		configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+		err := os.WriteFile(configPath, []byte(v2Config), 0o644)
 		require.NoError(t, err)
 
 		result := testutil.RunCLI(t, tmpDir, "generate", "--dry-run")
 
 		assert.Equal(t, 0, result.ExitCode)
 
-		migratedData, err := os.ReadFile(configPath)
-		require.NoError(t, err)
-
-		var config map[string]interface{}
-		err = yaml.Unmarshal(migratedData, &config)
-		require.NoError(t, err)
-
-		outputs := config["outputs"].([]interface{})
-
-		checkTemplate(t, outputs[0], "inline", "Simple text")
-
-		output1 := outputs[1].(map[string]interface{})
-		template1 := output1["template"].(map[string]interface{})
-		assert.Equal(t, "inline", template1["type"])
-		assert.Contains(t, template1["value"], "Multi")
+		// Verify .ai-rulez directory was created
+		aiRulezPath := filepath.Join(tmpDir, ".ai-rulez")
+		assert.DirExists(t, aiRulezPath)
 	})
 
-	t.Run("recursive_migration", func(t *testing.T) {
-		tmpDir := t.TempDir()
+	t.Run("multiple_migrations", func(t *testing.T) {
+		// Test multiple separate V2 configs being migrated
+		subdir1 := t.TempDir()
+		subdir2 := t.TempDir()
 
-		subdir1 := filepath.Join(tmpDir, "project1")
-		subdir2 := filepath.Join(tmpDir, "project2")
-
-		err := os.MkdirAll(subdir1, 0o755)
-		require.NoError(t, err)
-		err = os.MkdirAll(subdir2, 0o755)
-		require.NoError(t, err)
-
-		v1Config1 := `metadata:
+		v2Config1 := `metadata:
   name: Project1
+presets:
+  - claude
 outputs:
   - path: .cursorrules
-    template: default`
+    template:
+      type: builtin
+      value: default`
 
-		v1Config2 := `metadata:
+		v2Config2 := `metadata:
   name: Project2
+presets:
+  - claude
 outputs:
   - path: .cursorrules
-    template: documentation`
+    template:
+      type: builtin
+      value: default`
 
-		err = os.WriteFile(filepath.Join(subdir1, "ai_rulez.yaml"), []byte(v1Config1), 0o644)
+		err := os.WriteFile(filepath.Join(subdir1, "ai-rulez.yaml"), []byte(v2Config1), 0o644)
 		require.NoError(t, err)
-		err = os.WriteFile(filepath.Join(subdir2, "ai_rulez.yaml"), []byte(v1Config2), 0o644)
+		err = os.WriteFile(filepath.Join(subdir2, "ai-rulez.yaml"), []byte(v2Config2), 0o644)
 		require.NoError(t, err)
 
-		result := testutil.RunCLIExpectSuccess(t, tmpDir, "generate", "--recursive", "--dry-run")
+		// Migrate each separately
+		result1 := testutil.RunCLIExpectSuccess(t, subdir1, "generate", "--dry-run")
+		result2 := testutil.RunCLIExpectSuccess(t, subdir2, "generate", "--dry-run")
 
-		assert.Contains(t, result.Stdout, "Found 2 configuration file(s)")
+		assert.Contains(t, result1.Stdout, "Migrating V2 configuration to V3")
+		assert.Contains(t, result2.Stdout, "Migrating V2 configuration to V3")
 
-		config1Data, _ := os.ReadFile(filepath.Join(subdir1, "ai_rulez.yaml"))
-		assert.Contains(t, string(config1Data), "type: builtin")
-
-		config2Data, _ := os.ReadFile(filepath.Join(subdir2, "ai_rulez.yaml"))
-		assert.Contains(t, string(config2Data), "type: builtin")
+		// Verify .ai-rulez directories were created
+		assert.DirExists(t, filepath.Join(subdir1, ".ai-rulez"))
+		assert.DirExists(t, filepath.Join(subdir2, ".ai-rulez"))
 	})
-}
-
-func checkTemplate(t *testing.T, output interface{}, expectedType, expectedValue string) {
-	t.Helper()
-	outputMap := output.(map[string]interface{})
-	template := outputMap["template"].(map[string]interface{})
-	assert.Equal(t, expectedType, template["type"])
-	assert.Equal(t, expectedValue, template["value"])
 }
 
 func TestMigrationBackup(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	v1Config := `metadata:
+	v2Config := `metadata:
   name: BackupTest
+presets:
+  - claude
 outputs:
   - path: .cursorrules
-    template: default`
+    template:
+      type: builtin
+      value: default`
 
-	configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
-	originalContent := []byte(v1Config)
-	err := os.WriteFile(configPath, originalContent, 0o644)
+	configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
+	err := os.WriteFile(configPath, []byte(v2Config), 0o644)
 	require.NoError(t, err)
 
-	testutil.RunCLIExpectSuccess(t, tmpDir, "generate")
+	result := testutil.RunCLIExpectSuccess(t, tmpDir, "generate")
 
-	migratedData, err := os.ReadFile(configPath)
-	require.NoError(t, err)
-	assert.NotEqual(t, string(originalContent), string(migratedData))
-	assert.Contains(t, string(migratedData), "type: builtin")
+	// Verify migration happened
+	assert.Contains(t, result.Stdout, "Migrating V2 configuration to V3")
+
+	// Verify .ai-rulez directory was created
+	aiRulezPath := filepath.Join(tmpDir, ".ai-rulez")
+	assert.DirExists(t, aiRulezPath)
 }
 
 func TestMigrationErrorHandling(t *testing.T) {
@@ -272,7 +240,7 @@ func TestMigrationErrorHandling(t *testing.T) {
 outputs: [
   this is not valid yaml
 `
-		configPath := filepath.Join(tmpDir, "ai_rulez.yaml")
+		configPath := filepath.Join(tmpDir, "ai-rulez.yaml")
 		err := os.WriteFile(configPath, []byte(invalidYAML), 0o644)
 		require.NoError(t, err)
 

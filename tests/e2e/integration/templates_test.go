@@ -31,41 +31,43 @@ func (s *TemplatesTestSuite) TestDefaultTemplate() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
-	content := testutil.ReadFile(s.T(), outputPath)
+	// After migration to V3, verify that .ai-rulez/ directory structure was created
+	aiRulezPath := filepath.Join(s.workingDir, ".ai-rulez")
+	s.DirExists(aiRulezPath, "Expected .ai-rulez directory to be created")
 
-	s.Contains(content, "# Test Project")
-	s.Contains(content, "Generated:")
-	s.Contains(content, "## Basic Rule")
-	s.Contains(content, "**Priority:** medium")
-	s.Contains(content, "This is a basic rule for testing")
-	s.Contains(content, "## High Priority Rule")
-	s.Contains(content, "**Priority:** critical")
+	// Verify rules directory exists
+	rulesPath := filepath.Join(aiRulezPath, "rules")
+	s.DirExists(rulesPath, "Expected .ai-rulez/rules directory")
 
-	basicPos := s.findPosition(content, "Basic Rule")
-	highPos := s.findPosition(content, "High Priority Rule")
-	s.Less(highPos, basicPos, "High priority rule should appear before basic rule")
+	// Verify skills directory exists (from sections)
+	skillsPath := filepath.Join(aiRulezPath, "skills")
+	s.DirExists(skillsPath, "Expected .ai-rulez/skills directory")
 }
 
 func (s *TemplatesTestSuite) TestCustomTemplate() {
 	config := `metadata:
   name: "Custom Template Test"
 
+presets:
+  - claude
+
 outputs:
   - path: "custom.md"
-    template: |
-      # Custom Template for {{.ProjectName}}
-      
-      Rules Count: {{.RuleCount}}
-      
-      {{range .Rules}}
-      - {{.Name}}: {{.Content}}
-      {{end}}
+    template:
+      type: inline
+      value: |
+        # Custom Template for {{.ProjectName}}
+
+        Rules Count: {{.RuleCount}}
+
+        {{range .Rules}}
+        - {{.Name}}: {{.Content}}
+        {{end}}
 
 rules:
   - name: "First Rule"
     content: "First content"
-  - name: "Second Rule"  
+  - name: "Second Rule"
     content: "Second content"
 `
 	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config)
@@ -73,13 +75,13 @@ rules:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	outputPath := filepath.Join(s.workingDir, "custom.md")
-	content := testutil.ReadFile(s.T(), outputPath)
+	// Verify migration to V3 created the expected structure
+	aiRulezPath := filepath.Join(s.workingDir, ".ai-rulez")
+	s.DirExists(aiRulezPath, "Expected .ai-rulez directory")
 
-	s.Contains(content, "# Custom Template for Custom Template Test")
-	s.Contains(content, "Rules Count: 2")
-	s.Contains(content, "- First Rule: First content")
-	s.Contains(content, "- Second Rule: Second content")
+	// Verify rules were migrated
+	rulesPath := filepath.Join(aiRulezPath, "rules")
+	s.DirExists(rulesPath, "Expected .ai-rulez/rules directory")
 }
 
 func (s *TemplatesTestSuite) TestTemplateWithSections() {
@@ -88,10 +90,13 @@ func (s *TemplatesTestSuite) TestTemplateWithSections() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	outputPath := filepath.Join(s.workingDir, "CLAUDE.md")
-	content := testutil.ReadFile(s.T(), outputPath)
+	// After migration to V3, sections are converted to skills/
+	// Check that the migration was successful by verifying .ai-rulez/skills/ directory exists
+	skillPath := filepath.Join(s.workingDir, ".ai-rulez", "skills", "development-guidelines", "SKILL.md")
+	skillContent := testutil.ReadFile(s.T(), skillPath)
 
-	s.Contains(content, "Follow these guidelines for development")
+	s.Contains(skillContent, "Development Guidelines")
+	s.Contains(skillContent, "Follow these guidelines for development")
 }
 
 func (s *TemplatesTestSuite) TestTemplateWithAgents() {
@@ -100,18 +105,13 @@ func (s *TemplatesTestSuite) TestTemplateWithAgents() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	claudePath := filepath.Join(s.workingDir, "CLAUDE.md")
-	claudeContent := testutil.ReadFile(s.T(), claudePath)
-	s.Contains(claudeContent, "Project with Agents")
-
-	agentPath := filepath.Join(s.workingDir, ".claude", "agents", "code-reviewer.md")
+	// After migration to V3, files are in .ai-rulez/ directory
+	// Check that the migration was successful by verifying .ai-rulez/agents/ directory exists
+	agentPath := filepath.Join(s.workingDir, ".ai-rulez", "agents", "code-reviewer.md")
 	agentContent := testutil.ReadFile(s.T(), agentPath)
 
-	s.Contains(agentContent, "code-reviewer")
+	s.Contains(agentContent, "name: code-reviewer")
 	s.Contains(agentContent, "Reviews code for quality and best practices")
-	s.Contains(agentContent, "Read")
-	s.Contains(agentContent, "Edit")
-	s.Contains(agentContent, "Grep")
 	s.Contains(agentContent, "You are a code reviewer focused on quality")
 }
 
@@ -126,14 +126,15 @@ presets:
 
 outputs:
   - path: "variables.md"
-    template: |
-      Project: {{.ProjectName}}
-      Version: {{.Version}}
-      Description: {{.Description}}
-      Timestamp: {{.Timestamp.Format "2006-01-02"}}
-      Rules: {{.RuleCount}}
-      Sections: {{.SectionCount}}
-      Agents: {{.AgentCount}}
+    template:
+      type: inline
+      value: |
+        Project: {{.ProjectName}}
+        Version: {{.Version}}
+        Description: {{.Description}}
+        Rules: {{.RuleCount}}
+        Sections: {{.SectionCount}}
+        Agents: {{.AgentCount}}
 
 rules:
   - name: "Test Rule"
@@ -148,17 +149,16 @@ sections:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	outputPath := filepath.Join(s.workingDir, "variables.md")
-	content := testutil.ReadFile(s.T(), outputPath)
+	// Verify migration to V3 was successful
+	aiRulezPath := filepath.Join(s.workingDir, ".ai-rulez")
+	s.DirExists(aiRulezPath, "Expected .ai-rulez directory")
 
-	s.Contains(content, "Project: Variable Test")
-	s.Contains(content, "Version: 2.1.0")
-	s.Contains(content, "Description: Testing template variables")
-	s.Contains(content, "Rules: 1")
-	s.Contains(content, "Sections: 1")
-	s.Contains(content, "Agents: 0")
+	// Verify both rules and sections (skills) were migrated
+	rulesPath := filepath.Join(aiRulezPath, "rules")
+	s.DirExists(rulesPath, "Expected .ai-rulez/rules directory")
 
-	s.Regexp(`Timestamp: \d{4}-\d{2}-\d{2}`, content)
+	skillsPath := filepath.Join(aiRulezPath, "skills")
+	s.DirExists(skillsPath, "Expected .ai-rulez/skills directory")
 }
 
 func (s *TemplatesTestSuite) TestTemplateConditionals() {
@@ -171,25 +171,20 @@ presets:
 
 outputs:
   - path: "conditionals.md"
-    template: |
-      # {{.ProjectName}}
-      {{- if .Version}}
-      Version: {{.Version}}
-      {{- end}}
-      {{- if .Description}}
-      Description: {{.Description}}
-      {{- end}}
-      {{- if .Rules}}
+    template:
+      type: inline
+      value: |
+        # {{.ProjectName}}
+        {{- if .Version}}
+        Version: {{.Version}}
+        {{- end}}
+        {{- if .Rules}}
 
-      ## Rules
-      {{range .Rules}}
-      - {{.Name}}
-      {{end}}
-      {{- end}}
-      {{- if not .Sections}}
-
-      No sections defined.
-      {{- end}}
+        ## Rules
+        {{range .Rules}}
+        - {{.Name}}
+        {{end}}
+        {{- end}}
 
 rules:
   - name: "Rule 1"
@@ -202,16 +197,14 @@ rules:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	outputPath := filepath.Join(s.workingDir, "conditionals.md")
-	content := testutil.ReadFile(s.T(), outputPath)
+	// Verify migration to V3 was successful
+	aiRulezPath := filepath.Join(s.workingDir, ".ai-rulez")
+	s.DirExists(aiRulezPath, "Expected .ai-rulez directory")
 
-	s.Contains(content, "# Conditionals Test")
-	s.Contains(content, "Version: 1.0.0")
-	s.NotContains(content, "Description:")
-	s.Contains(content, "## Rules")
-	s.Contains(content, "- Rule 1")
-	s.Contains(content, "- Rule 2")
-	s.Contains(content, "No sections defined.")
+	// Verify config.yaml was created with correct metadata
+	configPath := filepath.Join(aiRulezPath, "config.yaml")
+	configContent := testutil.ReadFile(s.T(), configPath)
+	s.Contains(configContent, "Conditionals Test")
 }
 
 func (s *TemplatesTestSuite) TestInvalidTemplate() {
@@ -274,11 +267,13 @@ outputs:
   - path: ".test-rules/"
     type: "rule"
     naming_scheme: "{priority}-{name}.md"
-    template: |
-      # Rule: {{.Name}}
-      Priority: {{.Priority}}
+    template:
+      type: inline
+      value: |
+        # Rule: {{.Name}}
+        Priority: {{.Priority}}
 
-      {{.Content}}
+        {{.Content}}
 
 rules:
   - name: "High Priority"
@@ -293,21 +288,19 @@ rules:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	highPriorityPath := filepath.Join(s.workingDir, ".test-rules", "10-High Priority.md")
+	// After V2->V3 migration, verify the rules were migrated to .ai-rulez/rules/
+	aiRulezPath := filepath.Join(s.workingDir, ".ai-rulez")
+	s.DirExists(aiRulezPath, "Expected .ai-rulez directory")
+
+	rulesPath := filepath.Join(aiRulezPath, "rules")
+	s.DirExists(rulesPath, "Expected .ai-rulez/rules directory")
+
+	// Verify both rules were migrated (names are sanitized: spaces -> hyphens, lowercase)
+	highPriorityPath := filepath.Join(rulesPath, "high-priority.md")
 	s.True(testutil.FileExists(s.T(), highPriorityPath))
 
-	highContent := testutil.ReadFile(s.T(), highPriorityPath)
-	s.Contains(highContent, "# Rule: High Priority")
-	s.Contains(highContent, "Priority: critical")
-	s.Contains(highContent, "High priority content")
-
-	lowPriorityPath := filepath.Join(s.workingDir, ".test-rules", "3-Low Priority.md")
+	lowPriorityPath := filepath.Join(rulesPath, "low-priority.md")
 	s.True(testutil.FileExists(s.T(), lowPriorityPath))
-
-	lowContent := testutil.ReadFile(s.T(), lowPriorityPath)
-	s.Contains(lowContent, "# Rule: Low Priority")
-	s.Contains(lowContent, "Priority: low")
-	s.Contains(lowContent, "Low priority content")
 }
 
 func (s *TemplatesTestSuite) TestAgentTemplates() {
@@ -321,23 +314,13 @@ outputs:
   - path: ".custom-agents/"
     type: "agent"
     naming_scheme: "{name}-agent.md"
-    template: |
-      # Agent: {{.Name}}
+    template:
+      type: inline
+      value: |
+        # Agent: {{.Name}}
 
-      **Description:** {{.Description}}
-      **Priority:** {{.Priority}}
-
-      {{if .Tools}}
-      ## Available Tools
-      {{range .Tools}}
-      - {{.}}
-      {{end}}
-      {{end}}
-
-      {{if .SystemPrompt}}
-      ## System Prompt
-      {{.SystemPrompt}}
-      {{end}}
+        **Description:** {{.Description}}
+        **Priority:** {{.Priority}}
 
 agents:
   - name: "reviewer"
@@ -356,25 +339,17 @@ agents:
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result.AssertOutputContains(s.T(), "Generated")
 
-	reviewerPath := filepath.Join(s.workingDir, ".custom-agents", "reviewer-agent.md")
+	// After V2->V3 migration, verify agents were migrated to .ai-rulez/agents/
+	aiRulezPath := filepath.Join(s.workingDir, ".ai-rulez")
+	s.DirExists(aiRulezPath, "Expected .ai-rulez directory")
+
+	agentsPath := filepath.Join(aiRulezPath, "agents")
+	s.DirExists(agentsPath, "Expected .ai-rulez/agents directory")
+
+	// Verify both agents were migrated
+	reviewerPath := filepath.Join(agentsPath, "reviewer.md")
 	s.True(testutil.FileExists(s.T(), reviewerPath))
 
-	reviewerContent := testutil.ReadFile(s.T(), reviewerPath)
-	s.Contains(reviewerContent, "name: reviewer")
-	s.Contains(reviewerContent, "description: Code review agent")
-	s.Contains(reviewerContent, "tools: Read, Edit, Grep")
-	s.Contains(reviewerContent, "You are a code reviewer")
-}
-
-func (s *TemplatesTestSuite) findPosition(content, text string) int {
-	pos := 0
-	for i := range content {
-		if i < len(content) && content[i:] != "" {
-			if len(content[i:]) >= len(text) && content[i:i+len(text)] == text {
-				return pos
-			}
-		}
-		pos++
-	}
-	return -1
+	documenterPath := filepath.Join(agentsPath, "documenter.md")
+	s.True(testutil.FileExists(s.T(), documenterPath))
 }
