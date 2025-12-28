@@ -73,6 +73,7 @@ This creates a `.ai-rulez/` directory:
 ├── skills/               # Specialized AI agent configurations
 │   └── code-reviewer/
 │       └── SKILL.md
+├── agents/               # Agent prompt files
 ├── domains/              # Optional domain-specific organization
 └── mcp.yaml              # Model Context Protocol servers
 ```
@@ -130,7 +131,7 @@ presets:
 
 ### 3. Add Your Rules and Context
 
-Create markdown files in `.ai-rulez/rules/`, `.ai-rulez/context/`, and `.ai-rulez/skills/`:
+Create markdown files in `.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, and `.ai-rulez/agents/`:
 
 ```markdown
 ---
@@ -194,6 +195,20 @@ priority: high
 
 You are an expert in PostgreSQL optimization and query design.
 Focus on performance, indexing strategies, and query optimization.
+```
+
+**Agents** (`.ai-rulez/agents/`)
+
+Agent prompt files used by tools that support agent-specific instructions.
+
+```markdown
+---
+priority: high
+---
+
+# Code Reviewer Agent
+
+Review pull requests with a focus on correctness and maintainability.
 ```
 
 </details>

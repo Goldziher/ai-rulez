@@ -100,6 +100,7 @@ project-root/
 │   ├── rules/                # Base rules (all profiles)
 │   ├── context/              # Reference docs (all profiles)
 │   ├── skills/               # AI skills (all profiles)
+│   ├── agents/               # Agent prompt files (all profiles)
 │   └── domains/              # Team-specific content
 │       ├── backend/
 │       └── frontend/

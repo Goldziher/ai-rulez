@@ -171,8 +171,8 @@ Use names that indicate ownership or responsibility:
 ### Step 1: Create the directory structure
 
 ```bash
-mkdir -p .ai-rulez/domains/backend/{rules,context,skills}
-mkdir -p .ai-rulez/domains/frontend/{rules,context,skills}
+mkdir -p .ai-rulez/domains/backend/{rules,context,skills,agents}
+mkdir -p .ai-rulez/domains/frontend/{rules,context,skills,agents}
 ```
 
 ### Step 2: Add content to the domain

@@ -48,6 +48,7 @@ func TestInit_BasicStructure(t *testing.T) {
 	assert.DirExists(t, ".ai-rulez/rules")
 	assert.DirExists(t, ".ai-rulez/context")
 	assert.DirExists(t, ".ai-rulez/skills")
+	assert.DirExists(t, ".ai-rulez/agents")
 	assert.DirExists(t, ".ai-rulez/domains")
 
 	// Assert config.yaml exists
@@ -84,16 +85,19 @@ func TestInit_WithDomains(t *testing.T) {
 	assert.DirExists(t, ".ai-rulez/domains/backend/rules")
 	assert.DirExists(t, ".ai-rulez/domains/backend/context")
 	assert.DirExists(t, ".ai-rulez/domains/backend/skills")
+	assert.DirExists(t, ".ai-rulez/domains/backend/agents")
 
 	assert.DirExists(t, ".ai-rulez/domains/frontend")
 	assert.DirExists(t, ".ai-rulez/domains/frontend/rules")
 	assert.DirExists(t, ".ai-rulez/domains/frontend/context")
 	assert.DirExists(t, ".ai-rulez/domains/frontend/skills")
+	assert.DirExists(t, ".ai-rulez/domains/frontend/agents")
 
 	assert.DirExists(t, ".ai-rulez/domains/qa")
 	assert.DirExists(t, ".ai-rulez/domains/qa/rules")
 	assert.DirExists(t, ".ai-rulez/domains/qa/context")
 	assert.DirExists(t, ".ai-rulez/domains/qa/skills")
+	assert.DirExists(t, ".ai-rulez/domains/qa/agents")
 }
 
 func TestInit_WithExampleContent(t *testing.T) {
@@ -178,11 +182,38 @@ func TestInit_SkipContent(t *testing.T) {
 	assert.DirExists(t, ".ai-rulez/rules")
 	assert.DirExists(t, ".ai-rulez/context")
 	assert.DirExists(t, ".ai-rulez/skills")
+	assert.DirExists(t, ".ai-rulez/agents")
 
 	// Verify no example content
 	assert.NoFileExists(t, ".ai-rulez/rules/code-quality.md")
 	assert.NoFileExists(t, ".ai-rulez/context/architecture.md")
 	assert.NoDirExists(t, ".ai-rulez/skills/code-reviewer")
+}
+
+func TestInit_ExampleMCPServers(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer os.Chdir(originalDir)
+
+	err = os.Chdir(tmpDir)
+	require.NoError(t, err)
+
+	// Set flags
+	commands.InitCmd.Flags().Set("skip-content", "true")
+	defer commands.InitCmd.Flags().Set("skip-content", "false")
+
+	// Run init command
+	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+
+	// Assert MCP file exists
+	assert.FileExists(t, ".ai-rulez/mcp.yaml")
+
+	content, err := os.ReadFile(".ai-rulez/mcp.yaml")
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "name: ai-rulez")
+	assert.Contains(t, string(content), "name: github")
+	assert.Contains(t, string(content), "ai-rulez@latest")
 }
 
 func TestInit_ProjectNameFromDirectory(t *testing.T) {

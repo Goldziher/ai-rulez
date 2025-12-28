@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.2] - 2025-12-28
+
+### Added
+- Init now creates root and domain agent directories by default
+- Generated MCP config now includes the ai-rulez MCP server
+
+### Fixed
+- MCP tool configs now render with structured MCP output for supported tools
+
+### Changed
+- Bumped golangci-lint to v2.7.2 in Taskfile and CI
+
 ## [3.2.1] - 2025-12-28
 
 ### Fixed
