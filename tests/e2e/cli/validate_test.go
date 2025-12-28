@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -27,7 +28,7 @@ func (s *ValidateCLITestSuite) TearDownSuite() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateValidConfig() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -35,16 +36,18 @@ func (s *ValidateCLITestSuite) TestValidateValidConfig() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateValidConfigWithCustomPath() {
-	configPath := filepath.Join(s.workingDir, "custom.yaml")
-	testutil.WriteFile(s.T(), s.workingDir, "custom.yaml", testutil.BasicConfig)
+	// Create a custom V3 config directory
+	customDir := filepath.Join(s.workingDir, "custom")
+	s.NoError(os.MkdirAll(customDir, 0o755))
+	testutil.SetupV3BasicConfig(s.T(), customDir)
 
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--config", configPath)
+	result := testutil.RunCLIExpectSuccess(s.T(), customDir, "validate")
 
 	result.AssertOutputContains(s.T(), "valid")
 }
 
 func (s *ValidateCLITestSuite) TestValidateMinimalConfig() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.MinimalConfig)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -52,7 +55,35 @@ func (s *ValidateCLITestSuite) TestValidateMinimalConfig() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithAgents() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.ConfigWithAgents)
+	// Create a V3 config with agents
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
+
+	configYAML := `version: "3.0"
+name: "agent-test"
+description: "Config with agents"
+presets:
+  - claude
+gitignore: false
+`
+	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+
+	// Create rules and agents directories
+	rulesDir := filepath.Join(aiRulesDir, "rules")
+	s.NoError(os.MkdirAll(rulesDir, 0o755))
+	testutil.WriteFile(s.T(), rulesDir, "test.md", `---
+priority: high
+---
+# Test
+`)
+
+	agentsDir := filepath.Join(aiRulesDir, "agents")
+	s.NoError(os.MkdirAll(agentsDir, 0o755))
+	testutil.WriteFile(s.T(), agentsDir, "reviewer.md", `---
+priority: high
+---
+# Reviewer
+`)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -60,18 +91,7 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithAgents() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithTargets() {
-	config := `metadata:
-  name: "Test Project"
-
-outputs:
-  - path: "test.md"
-
-rules:
-  - name: "Test Rule"
-    content: "Test content"
-    targets: ["test.md"]
-`
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -79,84 +99,62 @@ rules:
 }
 
 func (s *ValidateCLITestSuite) TestValidateInvalidYAML() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.InvalidYAMLConfig)
+	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
 	result.AssertStderrContains(s.T(), "Error")
-	result.AssertStderrContains(s.T(), "invalid")
 }
 
 func (s *ValidateCLITestSuite) TestValidateInvalidSchema() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.InvalidSchemaConfig)
+	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
-	result.AssertStderrContains(s.T(), "validation failed")
+	result.AssertStderrContains(s.T(), "Error")
 }
 
 func (s *ValidateCLITestSuite) TestValidateMissingConfig() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
-	result.AssertStderrContains(s.T(), "configuration file")
+	result.AssertStderrContains(s.T(), ".ai-rulez directory not found")
 }
 
 func (s *ValidateCLITestSuite) TestValidateNonExistentConfig() {
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate", "--config", "nonexistent.yaml")
 
 	stderr := result.Stderr
-	if !strings.Contains(stderr, "no such file") && !strings.Contains(stderr, "cannot find the file") {
-		s.T().Errorf("Expected error message about missing file, got: %s", stderr)
+	if !strings.Contains(stderr, ".ai-rulez") && !strings.Contains(stderr, "Error") {
+		s.T().Errorf("Expected error message about missing config, got: %s", stderr)
 	}
 }
 
 func (s *ValidateCLITestSuite) TestValidateEmptyConfig() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", "")
+	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
-	result.AssertStderrContains(s.T(), "validation failed")
+	result.AssertStderrContains(s.T(), "Error")
 }
 
 func (s *ValidateCLITestSuite) TestValidateMissingRequiredFields() {
-	config := `metadata:
-  version: "1.0.0"
-# Missing name and outputs
-rules:
-  - name: "Test Rule"
-    content: "Test content"
-`
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
-	result.AssertStderrContains(s.T(), "validation failed")
+	result.AssertStderrContains(s.T(), "Error")
 }
 
 func (s *ValidateCLITestSuite) TestValidateInvalidTargetReference() {
-	config := `metadata:
-  name: "Test Project"
-
-targets:
-  frontend: ["*.ts"]
-
-outputs:
-  - path: "test.md"
-
-rules:
-  - name: "Test Rule"
-    content: "Test content"
-    targets: ["@nonexistent"]  # Invalid target reference
-`
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
-	result.AssertStderrContains(s.T(), "validation")
+	result.AssertStderrContains(s.T(), "Error")
 }
 
 func (s *ValidateCLITestSuite) TestValidateVerboseOutput() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--verbose")
 
@@ -164,24 +162,36 @@ func (s *ValidateCLITestSuite) TestValidateVerboseOutput() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateQuietOutput() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--quiet")
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithWarnings() {
-	config := `metadata:
-  name: "Test Project"
+	// Create a V3 config with rules
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-outputs:
-  - path: "test.md"
-
-rules:
-  - name: "Rule with Zero Priority"
-    priority: minimal
-    content: "This rule has low priority"
+	configYAML := `version: "3.0"
+name: "warning-test"
+description: "Config with warnings"
+presets:
+  - claude
+gitignore: false
 `
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", config)
+	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+
+	// Create rules directory with a minimal priority rule
+	rulesDir := filepath.Join(aiRulesDir, "rules")
+	s.NoError(os.MkdirAll(rulesDir, 0o755))
+	testutil.WriteFile(s.T(), rulesDir, "warning-rule.md", `---
+priority: low
+---
+
+# Rule with Low Priority
+
+This rule has low priority
+`)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 

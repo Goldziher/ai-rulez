@@ -3,7 +3,6 @@ package cli
 import (
 	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/tests/e2e/testutil"
@@ -28,12 +27,16 @@ func (s *InitCLITestSuite) TearDownSuite() {
 }
 
 func (s *InitCLITestSuite) TestInitSetupHooks() {
-	lefthookContent := `pre-commit:\n  commands:\n    lint:\n      run: npm run lint\n`
+	lefthookContent := `pre-commit:
+  commands:
+    lint:
+      run: npm run lint
+`
 	testutil.WriteFile(s.T(), s.workingDir, "lefthook.yml", lefthookContent)
 
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init", "HookProject", "--setup-hooks")
+	}, "init", "HookProject", "--setup-hooks", "--yes")
 
 	result.AssertStderrContains(s.T(), "Successfully configured Lefthook")
 
@@ -41,157 +44,86 @@ func (s *InitCLITestSuite) TestInitSetupHooks() {
 	s.Contains(modifiedContent, "ai-rulez validate", "The validate command should be added to lefthook.yml")
 }
 
-func (s *InitCLITestSuite) TestInitConflictingProviders() {
+func (s *InitCLITestSuite) TestInitWithFormat() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init", "ConflictProject", "--claude", "--continue-dev")
+	}, "init", "FormatProject", "--format", "yaml", "--yes")
 
-	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
+
 	content := testutil.ReadFile(s.T(), configPath)
-
-	s.Equal(1, strings.Count(content, "# agents:"), "Should only be one agents block in the config")
+	s.Contains(content, "FormatProject")
 }
 
 func (s *InitCLITestSuite) TestBasicInit() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init", "TestProject")
+	}, "init", "TestProject", "--yes")
 
-	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 	result.AssertStderrContains(s.T(), "TestProject")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "name: \"TestProject\"")
-	s.Contains(content, "CLAUDE.md")
-}
-
-func (s *InitCLITestSuite) TestInitContinueDevPreset() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "ContinueDevProject", "--preset", "continue-dev")
-
-	result.AssertStderrContains(s.T(), "Continue.dev")
-	result.AssertStderrContains(s.T(), ".continue/")
-
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	configContent := testutil.ReadFile(s.T(), configPath)
-	s.Contains(configContent, "- \"continue-dev\"")
-
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
-
-	promptsPath := filepath.Join(s.workingDir, ".continue", "prompts", "ai_rulez_prompts.yaml")
-	s.True(testutil.FileExists(s.T(), promptsPath), "prompts YAML file should be generated")
-	promptsContent := testutil.ReadFile(s.T(), promptsPath)
-	s.Contains(promptsContent, "GENERATED FILE")
-
-	secondWorkingDir := testutil.CreateTempDir(s.T())
-
-	resultSecond := testutil.RunCLIWithEnv(s.T(), secondWorkingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "ProjectSecond", "--preset", "continue-dev")
-
-	resultSecond.AssertStderrContains(s.T(), "Continue.dev")
-	resultSecond.AssertStderrContains(s.T(), ".continue/")
+	s.Contains(content, "TestProject")
+	s.Contains(content, "version: \"3.0\"")
 }
 
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init")
+	}, "init", "--yes")
 
-	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "name:")
+	s.Contains(content, "version: \"3.0\"")
 }
 
-func (s *InitCLITestSuite) TestInitClaudePreset() {
+func (s *InitCLITestSuite) TestInitWithDomains() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init", "ClaudeProject", "--preset", "claude")
+	}, "init", "DomainProject", "--domains", "frontend,backend", "--yes")
 
-	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "- \"claude\"")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
+
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
+
+	// Check that domains directories were created
+	frontendPath := filepath.Join(s.workingDir, ".ai-rulez", "domains", "frontend")
+	backendPath := filepath.Join(s.workingDir, ".ai-rulez", "domains", "backend")
+	s.True(testutil.FileExists(s.T(), frontendPath), "Frontend domain directory should exist")
+	s.True(testutil.FileExists(s.T(), backendPath), "Backend domain directory should exist")
 }
 
-func (s *InitCLITestSuite) TestInitCursorPreset() {
+func (s *InitCLITestSuite) TestInitSkipContent() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init", "CursorProject", "--preset", "cursor")
+	}, "init", "SkipContentProject", "--skip-content", "--yes")
 
-	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "- \"cursor\"")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 }
 
-func (s *InitCLITestSuite) TestInitWindsurfPreset() {
+func (s *InitCLITestSuite) TestInitSkipMCP() {
 	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
 		"NO_INTERACTIVE": "1",
-	}, "init", "WindsurfProject", "--preset", "windsurf")
+	}, "init", "SkipMCPProject", "--skip-mcp", "--yes")
 
-	result.AssertStderrContains(s.T(), "Windsurf (.windsurf/)")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "- \"windsurf\"")
-}
-
-func (s *InitCLITestSuite) TestInitPopularProviders() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "PopularProject", "--popular")
-
-	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
-	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
-	result.AssertStderrContains(s.T(), "Windsurf (.windsurf/)")
-	result.AssertStderrContains(s.T(), "GitHub Copilot")
-
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "- \"popular\"")
-}
-
-func (s *InitCLITestSuite) TestInitAllProviders() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "AllProject", "--all")
-
-	result.AssertStderrContains(s.T(), "Claude")
-	result.AssertStderrContains(s.T(), "Cursor")
-	result.AssertStderrContains(s.T(), "Windsurf")
-	result.AssertStderrContains(s.T(), "Copilot")
-	result.AssertStderrContains(s.T(), "Gemini")
-
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "presets:")
-	hasClaudeOrGemini := strings.Contains(content, "- \"claude\"") || strings.Contains(content, "- \"gemini\"")
-	s.True(hasClaudeOrGemini, "Should contain claude or gemini preset")
-}
-
-func (s *InitCLITestSuite) TestInitIndividualProviders() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "CustomProject", "--claude", "--cursor")
-
-	result.AssertStderrContains(s.T(), "Claude (CLAUDE.md)")
-	result.AssertStderrContains(s.T(), "Cursor (.cursor/rules/)")
-
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "CLAUDE.md")
-	s.Contains(content, ".cursor/rules/")
-	s.NotContains(content, ".windsurf/")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 }
 
 func (s *InitCLITestSuite) TestInitExistingConfig() {
@@ -207,21 +139,32 @@ func (s *InitCLITestSuite) TestInitExistingConfig() {
 	s.NotEqual(0, result.ExitCode, "init should fail when .ai-rulez/ already exists in non-interactive mode")
 }
 
-func (s *InitCLITestSuite) TestInitListAgents() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "--list-agents")
+func (s *InitCLITestSuite) TestInitWithJsonFormat() {
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "JSONProject", "--format", "json", "--yes")
 
-	result.AssertOutputContains(s.T(), "Available")
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
+
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.json")
+	s.True(testutil.FileExists(s.T(), configPath), "JSON config file should be created")
 }
 
-func (s *InitCLITestSuite) TestInitNoAgent() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "NoAgentProject", "--no-agent")
+func (s *InitCLITestSuite) TestInitMultipleDomains() {
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"NO_INTERACTIVE": "1",
+	}, "init", "MultiDomainProject", "--domains", "api,web,mobile", "--yes")
 
-	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
-}
+	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-func (s *InitCLITestSuite) TestInitInvalidPreset() {
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "InvalidPresetProject", "--preset", "nonexistent")
-
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
+
+	// Check that all domain directories were created
+	apiPath := filepath.Join(s.workingDir, ".ai-rulez", "domains", "api")
+	webPath := filepath.Join(s.workingDir, ".ai-rulez", "domains", "web")
+	mobilePath := filepath.Join(s.workingDir, ".ai-rulez", "domains", "mobile")
+	s.True(testutil.FileExists(s.T(), apiPath), "API domain directory should exist")
+	s.True(testutil.FileExists(s.T(), webPath), "Web domain directory should exist")
+	s.True(testutil.FileExists(s.T(), mobilePath), "Mobile domain directory should exist")
 }

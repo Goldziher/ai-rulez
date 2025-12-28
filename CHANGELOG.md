@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.0] - 2025-12-28
+
+### Added
+- Full agent/subagent support in V3 configuration with `.ai-rulez/agents/` directory
+- Auto-migration feature in generate command (detects V2 configs and migrates automatically)
+- Interactive prompting for migration in terminal environments
+- Silent auto-migration in CI environments
+- `--auto-migrate` flag for explicit migration control
+- Agent metadata support (name, description, model, tools, permission_mode, skills)
+- Claude Code subagent format generation to `.claude/agents/`
+
+### Fixed
+- Migration mapping corrected: V2 sections → V3 skills, V2 agents → V3 agents
+- Agent model field now preserved in YAML frontmatter during migration
+- Backup directories automatically deleted on successful migration
+- V3→V2 conversion now uses correct agent source
+- Default profile now includes agents in generated content
+- Code quality improvements (removed unused functions, reduced cyclomatic complexity)
+
+### Changed
+- Dependencies updated to latest minor versions (19 packages upgraded)
+- Migration now creates proper directory structure for skills (skills/{id}/SKILL.md)
+
 ## [3.1.0] - 2025-12-27
 
 ### Added
@@ -91,7 +114,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-[Unreleased]: https://github.com/Goldziher/ai-rulez/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/Goldziher/ai-rulez/compare/v3.2.0...HEAD
+[3.2.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v3.2.0
+[3.1.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v3.1.0
 [3.0.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v3.0.0
 [2.4.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.4.0
 [2.3.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.3.0
