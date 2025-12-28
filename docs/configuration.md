@@ -10,7 +10,8 @@ V3 uses a file-based approach where you edit files directly with your editor or 
 - **Rules**: Add/edit `.ai-rulez/rules/*.md` files or use `ai-rulez add rule`
 - **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
-- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills}/*.md` files or use `ai-rulez domain add`
+- **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent`
+- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents}/*.md` files or use `ai-rulez domain add`
 
 You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
 
@@ -139,7 +140,7 @@ profiles:
 ```
 
 Each profile is a list of domain names. When generating with a profile:
-1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`) is included
+1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`) is included
 2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
 
 ### `gitignore`
@@ -163,7 +164,8 @@ Content in these directories is always included in every generation:
 .ai-rulez/
 ├── rules/           # Mandatory rules and constraints
 ├── context/         # Reference documentation
-└── skills/          # AI skills/prompts
+├── skills/          # AI skills/prompts
+└── agents/          # Agent prompts
 ```
 
 **Rules directory**: `rules/`
@@ -181,6 +183,11 @@ Content in these directories is always included in every generation:
 - Purpose: Specialized AI prompts and expert prompts
 - Included: in all generated outputs
 
+**Agents directory**: `agents/`
+- Files: `*.md` markdown files
+- Purpose: Agent prompt files for supported tools
+- Included: in all generated outputs
+
 ### Domain Content (Profile-Specific)
 
 Content in domain directories is included only when that domain is in the active profile:
@@ -190,20 +197,24 @@ Content in domain directories is included only when that domain is in the active
 ├── backend/
 │   ├── rules/
 │   ├── context/
-│   └── skills/
+│   ├── skills/
+│   └── agents/
 ├── frontend/
 │   ├── rules/
 │   ├── context/
-│   └── skills/
+│   ├── skills/
+│   └── agents/
 └── qa/
     ├── rules/
-    └── context/
+    ├── context/
+    └── agents/
 ```
 
 Domain directories mirror the root structure:
 - `domains/{name}/rules/` - Domain-specific rules
 - `domains/{name}/context/` - Domain-specific documentation
 - `domains/{name}/skills/` - Domain-specific AI skills
+- `domains/{name}/agents/` - Domain-specific agent prompts
 
 ## File Formats
 

@@ -159,3 +159,4 @@ testing/**/.mcp.json
 
 # V3 Configuration Directory (source of truth - NOT ignored)
 # .ai-rulez/
+.gemini/

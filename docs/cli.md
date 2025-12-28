@@ -820,12 +820,16 @@ Directory structure:
   ├── rules/         # Base rules (always included)
   ├── context/       # Base context (always included)
   ├── skills/        # Base skills (always included)
+  ├── agents/        # Base agents (always included)
   └── domains/       # Domain-specific content
 
 Example content created:
   - rules/code-quality.md
   - context/architecture.md
   - skills/code-reviewer/SKILL.md
+
+Example MCP servers created:
+  - mcp.yaml         # Root MCP servers (ai-rulez + GitHub examples)
 
 Domain directories created:
   - domains/backend/
