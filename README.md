@@ -416,6 +416,16 @@ Configure MCP servers in `.ai-rulez/mcp.yaml`:
 version: "3.0"
 
 mcp_servers:
+  - name: ai-rulez
+    description: AI-Rulez MCP server for configuration management
+    command: npx
+    args:
+      - "-y"
+      - "ai-rulez@latest"
+      - "mcp"
+    transport: stdio
+    enabled: true
+
   - name: github
     description: GitHub integration
     command: npx
