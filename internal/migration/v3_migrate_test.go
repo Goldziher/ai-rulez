@@ -361,11 +361,28 @@ func TestBuildAgentContent(t *testing.T) {
 			},
 			validate: func(t *testing.T, content string) {
 				assert.Contains(t, content, "---")
-				assert.Contains(t, content, "name: test-agent")
+				assert.Contains(t, content, "name: Test Agent")
 				assert.Contains(t, content, "description: A test agent")
-				assert.Contains(t, content, "priority: high")
 				assert.Contains(t, content, "# Test Agent")
 				assert.Contains(t, content, "You are a test agent.")
+			},
+		},
+		{
+			name: "agent with model",
+			agent: config.Agent{
+				ID:           "agent-with-model",
+				Name:         "Agent With Model",
+				Description:  "Test agent with model",
+				Model:        "claude-opus-4.5",
+				SystemPrompt: "You are an AI assistant.",
+			},
+			validate: func(t *testing.T, content string) {
+				assert.Contains(t, content, "---")
+				assert.Contains(t, content, "name: Agent With Model")
+				assert.Contains(t, content, "description: Test agent with model")
+				assert.Contains(t, content, "model: claude-opus-4.5")
+				assert.Contains(t, content, "# Agent With Model")
+				assert.Contains(t, content, "You are an AI assistant.")
 			},
 		},
 		{
@@ -378,9 +395,10 @@ func TestBuildAgentContent(t *testing.T) {
 				Targets:      []string{".claude/agents/*", "AGENTS.md"},
 			},
 			validate: func(t *testing.T, content string) {
-				assert.Contains(t, content, "targets:")
-				assert.Contains(t, content, "  - .claude/agents/*")
-				assert.Contains(t, content, "  - AGENTS.md")
+				assert.Contains(t, content, "name: Agent")
+				assert.Contains(t, content, "description: Description")
+				assert.Contains(t, content, "# Agent")
+				assert.Contains(t, content, "Prompt")
 			},
 		},
 	}
@@ -431,8 +449,8 @@ sections:
 	aiRulezDir := filepath.Join(outputDir, ".ai-rulez")
 	assert.DirExists(t, aiRulezDir)
 	assert.DirExists(t, filepath.Join(aiRulezDir, "rules"))
-	assert.DirExists(t, filepath.Join(aiRulezDir, "context"))
 	assert.DirExists(t, filepath.Join(aiRulezDir, "skills"))
+	assert.DirExists(t, filepath.Join(aiRulezDir, "agents"))
 
 	// Verify config.yaml
 	configPath := filepath.Join(aiRulezDir, "config.yaml")
@@ -460,10 +478,10 @@ sections:
 	assert.Contains(t, string(ruleContent), "priority: high")
 	assert.Contains(t, string(ruleContent), "This is a test rule.")
 
-	// Verify section file
-	sectionPath := filepath.Join(aiRulezDir, "context", "test-section.md")
-	assert.FileExists(t, sectionPath)
-	sectionContent, err := os.ReadFile(sectionPath)
+	// Verify section skill file (sections migrate to skills/{id}/SKILL.md)
+	skillPath := filepath.Join(aiRulezDir, "skills", "test-section", "SKILL.md")
+	assert.FileExists(t, skillPath)
+	sectionContent, err := os.ReadFile(skillPath)
 	require.NoError(t, err)
 	assert.Contains(t, string(sectionContent), "# Test Section")
 	assert.Contains(t, string(sectionContent), "priority: medium")
@@ -486,6 +504,7 @@ agents:
   - id: test-agent
     name: test-agent
     description: A test agent
+    model: claude-opus-4.5
     system_prompt: You are a helpful assistant.
     priority: high
 `
@@ -498,17 +517,17 @@ agents:
 	err := migrator.Migrate(context.Background())
 	require.NoError(t, err)
 
-	// Verify agent/skill file
-	skillPath := filepath.Join(outputDir, ".ai-rulez", "skills", "test-agent", "SKILL.md")
-	assert.FileExists(t, skillPath)
+	// Verify agent file in agents directory
+	agentPath := filepath.Join(outputDir, ".ai-rulez", "agents", "test-agent.md")
+	assert.FileExists(t, agentPath)
 
-	skillContent, err := os.ReadFile(skillPath)
+	agentContent, err := os.ReadFile(agentPath)
 	require.NoError(t, err)
-	content := string(skillContent)
+	content := string(agentContent)
 
 	assert.Contains(t, content, "name: test-agent")
 	assert.Contains(t, content, "description: A test agent")
-	assert.Contains(t, content, "priority: high")
+	assert.Contains(t, content, "model: claude-opus-4.5")
 	assert.Contains(t, content, "# test-agent")
 	assert.Contains(t, content, "You are a helpful assistant.")
 }
@@ -641,17 +660,18 @@ sections:
 	assert.Contains(t, filenames, "rule-with-special-characters.md")
 	assert.Contains(t, filenames, "rule-with-spaces.md")
 
-	// Verify section filename uses ID
-	contextDir := filepath.Join(outputDir, ".ai-rulez", "context")
-	entries, err = os.ReadDir(contextDir)
+	// Verify section skill directory uses ID and contains SKILL.md
+	skillsDir := filepath.Join(outputDir, ".ai-rulez", "skills")
+	entries, err = os.ReadDir(skillsDir)
 	require.NoError(t, err)
 
-	filenames = make([]string, 0, len(entries))
-	for _, entry := range entries {
-		filenames = append(filenames, entry.Name())
-	}
+	// Should have one directory for the section
+	assert.Len(t, entries, 1)
+	assert.Equal(t, "section-with-id", entries[0].Name())
 
-	assert.Contains(t, filenames, "section-with-id.md")
+	// Verify SKILL.md exists in that directory
+	skillPath := filepath.Join(skillsDir, "section-with-id", "SKILL.md")
+	assert.FileExists(t, skillPath)
 }
 
 func TestMigrateEmptyConfig(t *testing.T) {

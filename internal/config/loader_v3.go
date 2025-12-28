@@ -21,6 +21,7 @@ const (
 	rulesDir           = "rules"
 	contextDir         = "context"
 	skillsDir          = "skills"
+	agentsDir          = "agents"
 	domainsDir         = "domains"
 	skillMarkerFile    = "SKILL.md"
 	mcpYAMLFilename    = "mcp.yaml"
@@ -256,6 +257,17 @@ func scanContentTree(configDir string) (*ContentTreeV3, error) {
 	}
 	tree.Skills = skills
 
+	// Scan root agents/
+	agentsPath := filepath.Join(configDir, agentsDir)
+	var agents []ContentFile
+	if agents, err = scanAgents(agentsPath); err != nil {
+		return nil, oops.
+			With("path", agentsPath).
+			Wrapf(err, "scan agents directory")
+	}
+	tree.Agents = agents
+	logger.Debug("Scanned agents directory", "path", agentsPath, "count", len(agents))
+
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
 	var domains map[string]*DomainV3
@@ -351,6 +363,45 @@ func scanSkills(skillsDir string) ([]ContentFile, error) {
 	return skills, nil
 }
 
+// scanAgents scans the agents/ directory for .md files
+func scanAgents(agentsPath string) ([]ContentFile, error) {
+	// Check if directory exists
+	if _, err := os.Stat(agentsPath); os.IsNotExist(err) {
+		// Directory doesn't exist, return empty slice (not an error)
+		return []ContentFile{}, nil
+	}
+
+	var agents []ContentFile
+
+	entries, err := os.ReadDir(agentsPath)
+	if err != nil {
+		return nil, oops.
+			With("path", agentsPath).
+			Wrapf(err, "read agents directory")
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		if !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		filePath := filepath.Join(agentsPath, entry.Name())
+		contentFile, err := loadContentFile(filePath)
+		if err != nil {
+			// Log warning but continue (non-fatal)
+			continue
+		}
+
+		agents = append(agents, contentFile)
+	}
+
+	return agents, nil
+}
+
 // scanDomains scans the domains/ directory and returns a map of domain name to DomainV3
 func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
 	// Check if directory exists
@@ -413,6 +464,17 @@ func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
 				Wrapf(err, "scan domain skills")
 		}
 		domain.Skills = skills
+
+		// Scan domain/agents/
+		agentsPath := filepath.Join(domainPath, agentsDir)
+		var agentsContent []ContentFile
+		if agentsContent, err = scanAgents(agentsPath); err != nil {
+			return nil, oops.
+				With("domain", domainName).
+				With("path", agentsPath).
+				Wrapf(err, "scan domain agents")
+		}
+		domain.Agents = agentsContent
 
 		domains[domainName] = domain
 	}
@@ -633,7 +695,7 @@ func convertV3ToV2(v3 *ConfigV3) *Config {
 	if v3.Content != nil {
 		v2.Rules = convertContentToRules(v3.Content.Rules)
 		v2.Sections = convertContentToSections(v3.Content.Context)
-		v2.Agents = convertContentToAgents(v3.Content.Skills)
+		v2.Agents = convertContentToAgents(v3.Content.Agents)
 
 		// Collect all names for collision detection
 		seenRuleNames := make(map[string]bool)

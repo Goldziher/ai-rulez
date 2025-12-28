@@ -84,21 +84,16 @@ func runMigrateToV3(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// The migrator creates .ai-rulez/ subdirectory within the output dir
-	// So if user specifies --output .ai-rulez, the actual output will be at .ai-rulez/.ai-rulez
-	// Let's use the parent directory as the output
-	var outputDir string
-	if migrateOutput == ".ai-rulez" {
-		// Default case: use current directory as base, migrator will create .ai-rulez/
-		outputDir = "."
-	} else {
-		// Custom output: use it as-is
-		outputDir = migrateOutput
+	// Determine the base output directory
+	// If --output is ".ai-rulez", use current directory; otherwise use specified path
+	outputBaseDir := "."
+	if migrateOutput != ".ai-rulez" {
+		outputBaseDir = migrateOutput
 	}
 
-	absOutputPath, err := filepath.Abs(outputDir)
+	absOutputPath, err := filepath.Abs(outputBaseDir)
 	if err != nil {
-		logger.Error("Failed to resolve output path", "path", outputDir, "error", err)
+		logger.Error("Failed to resolve output path", "path", outputBaseDir, "error", err)
 		os.Exit(1)
 	}
 
@@ -142,7 +137,13 @@ func runMigrateToV3(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// 5. Perform migration
+	// 5. Validation-only mode
+	if migrateValidate {
+		showMigrationValidation(migrator)
+		return
+	}
+
+	// 6. Perform migration
 	ctx := context.Background()
 	if err := migrator.Migrate(ctx); err != nil {
 		logger.Error("Migration failed", "error", err)
@@ -154,12 +155,10 @@ func runMigrateToV3(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// 6. Validate if requested (note: migrator already validates during migration)
-	if migrateValidate {
-		logger.Info("Migration validation performed during migration")
-	}
+	// 7. Delete backup directory if it exists (migration was successful)
+	DeleteBackupDirectory(absOutputPath)
 
-	// 7. Display success message
+	// 8. Display success message
 	displayMigrationSuccess(absConfigPath, aiRulezPath)
 }
 
@@ -230,6 +229,46 @@ func showMigrationPlan(migrator *migration.V2ToV3Migrator) {
 	}
 }
 
+func showMigrationValidation(migrator *migration.V2ToV3Migrator) {
+	fmt.Println("Validating V2 configuration...")
+	fmt.Println()
+
+	// Load V2 config to show what would be migrated
+	plan, err := migrator.GetPlan()
+	if err != nil {
+		logger.Error("Validation failed", "error", err)
+		if oopsErr, ok := oops.AsOops(err); ok {
+			if hint := oopsErr.Hint(); hint != "" {
+				fmt.Fprintf(os.Stderr, "Hint: %s\n", hint)
+			}
+		}
+		os.Exit(1)
+	}
+
+	fmt.Printf("Project: %s\n", plan.ProjectName)
+	fmt.Printf("Source: %s\n", plan.SourcePath)
+	fmt.Println()
+
+	if len(plan.Rules) > 0 {
+		fmt.Printf("Rules to migrate: %d\n", len(plan.Rules))
+	}
+
+	if len(plan.Context) > 0 {
+		fmt.Printf("Context to migrate: %d\n", len(plan.Context))
+	}
+
+	if len(plan.Skills) > 0 {
+		fmt.Printf("Skills to migrate: %d\n", len(plan.Skills))
+	}
+
+	if len(plan.Presets) > 0 {
+		fmt.Printf("Presets detected: %v\n", strings.Join(plan.Presets, ", "))
+	}
+
+	fmt.Println()
+	fmt.Println("V2 configuration is valid and ready for migration.")
+}
+
 // CreateBackup creates a timestamped backup of the given directory
 func CreateBackup(sourcePath string) string {
 	parentDir := filepath.Dir(sourcePath)
@@ -287,7 +326,7 @@ func CopyDir(src, dst string) error {
 
 func displayMigrationSuccess(source, output string) {
 	fmt.Println()
-	fmt.Println("✅ Migration completed successfully!")
+	fmt.Println("Migration completed successfully!")
 	fmt.Println()
 	fmt.Printf("Source:  %s\n", source)
 	fmt.Printf("Output:  %s\n", output)
@@ -298,5 +337,29 @@ func displayMigrationSuccess(source, output string) {
 	fmt.Println("  3. Compare generated files with your previous outputs")
 	fmt.Println()
 	fmt.Println("Note: Your original V2 config file is unchanged.")
-	fmt.Println("      If you used --force, a timestamped backup was created.")
+}
+
+// DeleteBackupDirectory removes any timestamped backup directories created during migration
+// If deletion fails, it logs a warning but does not fail the migration
+// This is exported for testing purposes
+func DeleteBackupDirectory(outputDir string) {
+	// Find all .ai-rulez.backup.* directories in the parent directory
+	parentDir := outputDir
+	entries, err := os.ReadDir(parentDir)
+	if err != nil {
+		logger.Warn("Failed to check for backup directories", "path", parentDir, "error", err)
+		return
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() && strings.Contains(entry.Name(), ".ai-rulez.backup.") {
+			backupPath := filepath.Join(parentDir, entry.Name())
+			if err := os.RemoveAll(backupPath); err != nil {
+				logger.Warn("Failed to delete backup directory", "path", backupPath, "error", err)
+				// Don't fail the migration, just warn
+			} else {
+				logger.Info("Deleted backup directory", "path", backupPath)
+			}
+		}
+	}
 }

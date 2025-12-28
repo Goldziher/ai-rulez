@@ -21,7 +21,7 @@ func TestMCPServerE2ESuite(t *testing.T) {
 
 func (s *MCPServerE2ETestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
-	testutil.WriteFile(s.T(), s.workingDir, "ai_rulez.yaml", testutil.BasicConfig)
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 	s.client = testutil.StartMCPServer(s.T(), s.workingDir)
 }
 
@@ -42,104 +42,165 @@ func (s *MCPServerE2ETestSuite) TestGetVersion() {
 }
 
 func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
-	// Add rule
-	addParams := map[string]interface{}{
-		"name":    "Test Rule",
-		"content": "Test Content",
-		"id":      "rule-1",
+	// Create rule
+	createParams := map[string]interface{}{
+		"name":    "test-rule",
+		"content": "# Test Rule\n\nThis is a test rule.",
 	}
-	addResponse := s.client.CallTool(s.T(), "add_rule", addParams)
-	addResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(addResponse.Result.Content)
-	s.Contains(addResponse.Result.Content[0].Text, "Added rule")
+	createResponse := s.client.CallTool(s.T(), "create_rule", createParams)
+	createResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(createResponse.Result.Content)
+	s.Contains(createResponse.Result.Content[0].Text, "created")
 
-	// Get rule
-	getResponse := s.client.CallTool(s.T(), "get_rule", map[string]interface{}{"name": "Test Rule"})
-	getResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(getResponse.Result.Content)
-	s.Contains(getResponse.Result.Content[0].Text, "rule-1")
+	// List rules
+	listResponse := s.client.CallTool(s.T(), "list_rules", map[string]interface{}{})
+	listResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(listResponse.Result.Content)
+	s.Contains(listResponse.Result.Content[0].Text, "test-rule")
+
+	// Update rule
+	updateParams := map[string]interface{}{
+		"name":    "test-rule",
+		"content": "# Test Rule Updated\n\nThis is an updated test rule.",
+	}
+	updateResponse := s.client.CallTool(s.T(), "update_rule", updateParams)
+	updateResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(updateResponse.Result.Content)
+
+	// Delete rule
+	deleteResponse := s.client.CallTool(s.T(), "delete_rule", map[string]interface{}{"name": "test-rule"})
+	deleteResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(deleteResponse.Result.Content)
 }
 
-func (s *MCPServerE2ETestSuite) TestOutputCRUD_FullCycle() {
-	// Add output
-	addParams := map[string]interface{}{
-		"path": "test.md",
-		"type": "agent",
+func (s *MCPServerE2ETestSuite) TestContextCRUD_FullCycle() {
+	// Create context
+	createParams := map[string]interface{}{
+		"name":    "test-context",
+		"content": "# Test Context\n\nThis is a test context file.",
 	}
-	addResponse := s.client.CallTool(s.T(), "add_output", addParams)
-	addResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(addResponse.Result.Content)
-	s.Contains(addResponse.Result.Content[0].Text, "Added output")
+	createResponse := s.client.CallTool(s.T(), "create_context", createParams)
+	createResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(createResponse.Result.Content)
+	s.Contains(createResponse.Result.Content[0].Text, "created")
 
-	// Get output
-	getResponse := s.client.CallTool(s.T(), "get_output", map[string]interface{}{"path": "test.md"})
-	getResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(getResponse.Result.Content)
-	s.Contains(getResponse.Result.Content[0].Text, "agent")
+	// List context
+	listResponse := s.client.CallTool(s.T(), "list_context", map[string]interface{}{})
+	listResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(listResponse.Result.Content)
+	s.Contains(listResponse.Result.Content[0].Text, "test-context")
+
+	// Update context
+	updateParams := map[string]interface{}{
+		"name":    "test-context",
+		"content": "# Test Context Updated\n\nThis is an updated test context file.",
+	}
+	updateResponse := s.client.CallTool(s.T(), "update_context", updateParams)
+	updateResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(updateResponse.Result.Content)
+
+	// Delete context
+	deleteResponse := s.client.CallTool(s.T(), "delete_context", map[string]interface{}{"name": "test-context"})
+	deleteResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(deleteResponse.Result.Content)
 }
 
-func (s *MCPServerE2ETestSuite) TestMCPServerCRUD_FullCycle() {
-	// Add MCP server
-	addParams := map[string]interface{}{
-		"name":    "test-server",
-		"command": "test",
-		"id":      "server-1",
+func (s *MCPServerE2ETestSuite) TestProfileCRUD_FullCycle() {
+	// Create a domain first
+	createDomainParams := map[string]interface{}{
+		"name": "test-domain",
 	}
-	addResponse := s.client.CallTool(s.T(), "add_mcp_server", addParams)
-	addResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(addResponse.Result.Content)
-	s.Contains(addResponse.Result.Content[0].Text, "Added mcp_servers: test-server")
+	createDomainResponse := s.client.CallTool(s.T(), "create_domain", createDomainParams)
+	createDomainResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(createDomainResponse.Result.Content)
 
-	// Get MCP server
-	getResponse := s.client.CallTool(s.T(), "get_mcp_server", map[string]interface{}{"name": "test-server"})
-	getResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(getResponse.Result.Content)
-	s.Contains(getResponse.Result.Content[0].Text, "server-1")
+	// Create profile
+	createProfileParams := map[string]interface{}{
+		"name":    "test-profile",
+		"domains": []string{"test-domain"},
+	}
+	createProfileResponse := s.client.CallTool(s.T(), "add_profile", createProfileParams)
+	createProfileResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(createProfileResponse.Result.Content)
+
+	// List profiles
+	listProfilesResponse := s.client.CallTool(s.T(), "list_profiles", map[string]interface{}{})
+	listProfilesResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(listProfilesResponse.Result.Content)
+	s.Contains(listProfilesResponse.Result.Content[0].Text, "test-profile")
+
+	// Set default profile
+	setDefaultParams := map[string]interface{}{
+		"name": "test-profile",
+	}
+	setDefaultResponse := s.client.CallTool(s.T(), "set_default_profile", setDefaultParams)
+	setDefaultResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(setDefaultResponse.Result.Content)
+
+	// Remove profile
+	removeProfileParams := map[string]interface{}{
+		"name": "test-profile",
+	}
+	removeProfileResponse := s.client.CallTool(s.T(), "remove_profile", removeProfileParams)
+	removeProfileResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(removeProfileResponse.Result.Content)
 }
 
-func (s *MCPServerE2ETestSuite) TestCommandCRUD_FullCycle() {
-	// Add command
-	addParams := map[string]interface{}{
-		"name":        "test-cmd",
-		"description": "Test Desc",
-		"id":          "cmd-1",
+func (s *MCPServerE2ETestSuite) TestSkillCRUD_FullCycle() {
+	// Create skill
+	createParams := map[string]interface{}{
+		"name":    "test-skill",
+		"content": "# Test Skill\n\nThis is a test skill.",
 	}
-	addResponse := s.client.CallTool(s.T(), "add_command", addParams)
-	addResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(addResponse.Result.Content)
-	s.Contains(addResponse.Result.Content[0].Text, "Added command")
+	createResponse := s.client.CallTool(s.T(), "create_skill", createParams)
+	createResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(createResponse.Result.Content)
+	s.Contains(createResponse.Result.Content[0].Text, "created")
 
-	// Get command
-	getResponse := s.client.CallTool(s.T(), "get_command", map[string]interface{}{"name": "test-cmd"})
-	getResponse.AssertToolSuccess(s.T())
-	s.NotEmpty(getResponse.Result.Content)
-	s.Contains(getResponse.Result.Content[0].Text, "cmd-1")
+	// List skills
+	listResponse := s.client.CallTool(s.T(), "list_skills", map[string]interface{}{})
+	listResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(listResponse.Result.Content)
+	s.Contains(listResponse.Result.Content[0].Text, "test-skill")
+
+	// Update skill
+	updateParams := map[string]interface{}{
+		"name":    "test-skill",
+		"content": "# Test Skill Updated\n\nThis is an updated test skill.",
+	}
+	updateResponse := s.client.CallTool(s.T(), "update_skill", updateParams)
+	updateResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(updateResponse.Result.Content)
+
+	// Delete skill
+	deleteResponse := s.client.CallTool(s.T(), "delete_skill", map[string]interface{}{"name": "test-skill"})
+	deleteResponse.AssertToolSuccess(s.T())
+	s.NotEmpty(deleteResponse.Result.Content)
 }
 
 func (s *MCPServerE2ETestSuite) TestInitProject() {
-	// Remove existing config
-	configPath := filepath.Join(s.workingDir, "ai_rulez.yaml")
-	os.Remove(configPath)
+	// Remove existing V3 config
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	os.RemoveAll(filepath.Join(s.workingDir, ".ai-rulez"))
 
-	// Initialize project
+	// Initialize project with V3 configuration
 	params := map[string]interface{}{
 		"project_name": "MCP-Initialized-Project",
-		"providers":    []string{"claude", "continue-dev"},
-		"with_agents":  true,
+		"providers":    []string{"claude"},
 	}
 	response := s.client.CallTool(s.T(), "init_project", params)
 	response.AssertToolSuccess(s.T())
 	s.NotEmpty(response.Result.Content)
 	s.Contains(response.Result.Content[0].Text, "initialized")
 
-	// Verify config file exists
+	// Verify V3 config file exists at the correct location
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should exist at %s", configPath)
 
 	// Verify config content
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "MCP-Initialized-Project")
-	s.Contains(content, "claude")
-	s.Contains(content, "continue-dev")
+	s.Contains(content, "version:")
+	s.Contains(content, "presets:")
 }
 
 func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {

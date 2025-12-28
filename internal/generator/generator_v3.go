@@ -43,6 +43,7 @@ func (g *GeneratorV3) Generate(profile string) error {
 		"rules", len(contentTree.Rules),
 		"context", len(contentTree.Context),
 		"skills", len(contentTree.Skills),
+		"agents", len(contentTree.Agents),
 		"domains", len(contentTree.Domains))
 
 	// Collect MCP servers for this profile
@@ -120,6 +121,7 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 			Rules:   g.config.Content.Rules,
 			Context: g.config.Content.Context,
 			Skills:  g.config.Content.Skills,
+			Agents:  g.config.Content.Agents,
 			Domains: make(map[string]*config.DomainV3), // Empty - no domains for default profile
 		}, nil
 	}

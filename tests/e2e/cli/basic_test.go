@@ -70,17 +70,17 @@ func (s *BasicCLITestSuite) TestMCPHelp() {
 
 func (s *BasicCLITestSuite) TestAddHelp() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "--help")
-	result.AssertStdoutContains(s.T(), "Add new configuration elements")
+	result.AssertStdoutContains(s.T(), "Add rules, context, or skills")
 }
 
-func (s *BasicCLITestSuite) TestUpdateHelp() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "--help")
-	result.AssertStdoutContains(s.T(), "Update")
+func (s *BasicCLITestSuite) TestRemoveHelp() {
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "--help")
+	result.AssertStdoutContains(s.T(), "Remove rules, context, or skills")
 }
 
-func (s *BasicCLITestSuite) TestDeleteHelp() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "delete", "--help")
-	result.AssertStdoutContains(s.T(), "Delete")
+func (s *BasicCLITestSuite) TestListHelp() {
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "list", "--help")
+	result.AssertStdoutContains(s.T(), "List rules, context, or skills")
 }
 
 func (s *BasicCLITestSuite) TestInvalidCommand() {

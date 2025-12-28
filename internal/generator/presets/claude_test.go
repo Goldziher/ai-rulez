@@ -49,7 +49,27 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 6, // .claude dir, skills dir, agents dir, skill-id dir, skill/SKILL.md, agents/test-skill.md
+			wantOutputs: 5, // .claude dir, skills dir, agents dir, skill-id dir, skill/SKILL.md
+			wantErr:     false,
+		},
+		{
+			name: "generates agents",
+			content: &config.ContentTreeV3{
+				Agents: []config.ContentFile{
+					{
+						Name:    "test-agent",
+						Content: "Agent system prompt",
+						Metadata: &config.MetadataV3{
+							Extra: map[string]string{
+								"description": "Test agent description",
+								"model":       "haiku",
+							},
+						},
+					},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 4, // .claude dir, skills dir, agents dir, agents/test-agent.md
 			wantErr:     false,
 		},
 		{

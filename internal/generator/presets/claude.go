@@ -56,6 +56,17 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		outputs = append(outputs, skillOutputs...)
 	}
 
+	// Generate agent files
+	if len(content.Agents) > 0 {
+		for _, agent := range content.Agents {
+			agentOutputs, err := g.generateAgentFiles(agent, content, baseDir)
+			if err != nil {
+				return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+			}
+			outputs = append(outputs, agentOutputs...)
+		}
+	}
+
 	return outputs, nil
 }
 
@@ -81,17 +92,6 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 	outputs = append(outputs, config.OutputFileV3{
 		Path:    filepath.Join(skillDir, "SKILL.md"),
 		Content: skillContent,
-	})
-
-	// Generate agent file for backward compatibility
-	agentContent, err := g.renderAgentFile(skill, content)
-	if err != nil {
-		return nil, err
-	}
-
-	outputs = append(outputs, config.OutputFileV3{
-		Path:    filepath.Join(baseDir, ".claude", "agents", skillID+".md"),
-		Content: agentContent,
 	})
 
 	return outputs, nil
@@ -163,35 +163,81 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	return builder.String(), nil
 }
 
-func (g *ClaudePresetGenerator) renderAgentFile(skill config.ContentFile, content *config.ContentTreeV3) (string, error) {
-	var builder strings.Builder
+func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, content *config.ContentTreeV3, baseDir string) ([]config.OutputFileV3, error) {
+	var outputs []config.OutputFileV3
 
-	// Generate frontmatter
+	// Extract agent ID from name
+	agentID := sanitizeAgentID(agent.Name)
+
+	// Generate agent file with Claude's agent format
+	agentContent, err := g.renderAgentContent(agent, content)
+	if err != nil {
+		return nil, err
+	}
+
+	outputs = append(outputs, config.OutputFileV3{
+		Path:    filepath.Join(baseDir, ".claude", "agents", agentID+".md"),
+		Content: agentContent,
+	})
+
+	return outputs, nil
+}
+
+func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := make(map[string]interface{})
-	frontmatter["name"] = skill.Name
+	frontmatter["name"] = agent.Name
 
-	if skill.Metadata != nil {
-		if desc, ok := skill.Metadata.Extra["description"]; ok {
-			frontmatter["description"] = desc
-		}
-		if tools, ok := skill.Metadata.Extra["tools"]; ok {
-			frontmatter["tools"] = tools
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	// Add standard Claude agent fields
+	const (
+		description    = "description"
+		model          = "model"
+		tools          = "tools"
+		permissionMode = "permission_mode"
+		skills         = "skills"
+	)
+
+	fields := []struct {
+		key   string
+		field string
+	}{
+		{description, description},
+		{model, model},
+		{tools, tools},
+		{permissionMode, permissionMode},
+		{skills, skills},
+	}
+
+	for _, f := range fields {
+		if val, ok := agent.Metadata.Extra[f.field]; ok && val != "" {
+			frontmatter[f.key] = val
 		}
 	}
 
+	return frontmatter
+}
+
+func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTreeV3) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildAgentFrontmatter(agent)
+
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
-		return "", fmt.Errorf("marshal frontmatter: %w", err)
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
 	}
 
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
 
-	// Add skill content
-	builder.WriteString(skill.Content)
+	// Add agent content
+	builder.WriteString(agent.Content)
 
-	// Add rules
+	// Add rules section if available
 	if len(content.Rules) > 0 {
 		builder.WriteString("\n\n## Rules\n\n")
 		for _, rule := range content.Rules {
@@ -203,7 +249,7 @@ func (g *ClaudePresetGenerator) renderAgentFile(skill config.ContentFile, conten
 		}
 	}
 
-	// Add context
+	// Add context section if available
 	if len(content.Context) > 0 {
 		builder.WriteString("\n## Context\n\n")
 		for _, ctx := range content.Context {
@@ -216,6 +262,15 @@ func (g *ClaudePresetGenerator) renderAgentFile(skill config.ContentFile, conten
 	}
 
 	return builder.String(), nil
+}
+
+// sanitizeAgentID converts an agent name to a valid file ID
+func sanitizeAgentID(name string) string {
+	// Convert to lowercase and replace spaces with hyphens
+	id := strings.ToLower(name)
+	id = strings.ReplaceAll(id, " ", "-")
+	id = strings.ReplaceAll(id, "_", "-")
+	return id
 }
 
 // extractSkillID extracts the skill ID from a skill's path
