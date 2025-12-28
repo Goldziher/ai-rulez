@@ -107,7 +107,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["rules", "context", "skills", "mcp"]
+              "enum": ["rules", "context", "skills", "agents", "mcp"]
             },
             "description": "What content types to import (defaults to all)"
           },

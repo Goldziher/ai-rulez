@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -149,6 +150,7 @@ func (m *V2ToV3Migrator) createDirectoryStructure(aiRulezDir string) error {
 		filepath.Join(aiRulezDir, "rules"),
 		filepath.Join(aiRulezDir, "context"),
 		filepath.Join(aiRulezDir, "skills"),
+		filepath.Join(aiRulezDir, "agents"),
 	}
 
 	for _, dir := range dirs {
@@ -222,14 +224,14 @@ func (m *V2ToV3Migrator) buildRuleContent(rule *config.Rule) string {
 	return sb.String()
 }
 
-// convertSections converts V2 sections to V3 context/*.md files
+// convertSections converts V2 sections to V3 skills/{id}/SKILL.md files
 func (m *V2ToV3Migrator) convertSections(sections []config.Section, aiRulezDir string) error {
 	if len(sections) == 0 {
 		m.logger.Debug("No sections to convert")
 		return nil
 	}
 
-	contextDir := filepath.Join(aiRulezDir, "context")
+	skillsDir := filepath.Join(aiRulezDir, "skills")
 
 	for i := range sections {
 		// Use ID if available, otherwise use name
@@ -238,22 +240,31 @@ func (m *V2ToV3Migrator) convertSections(sections []config.Section, aiRulezDir s
 			baseName = sections[i].Name
 		}
 
-		filename := utils.SanitizeName(baseName) + ".md"
-		filePath := filepath.Join(contextDir, filename)
+		skillID := utils.SanitizeName(baseName)
+		skillDirPath := filepath.Join(skillsDir, skillID)
 
+		// Create skill directory
+		if err := os.MkdirAll(skillDirPath, 0o755); err != nil {
+			return oops.
+				With("path", skillDirPath).
+				With("section_name", sections[i].Name).
+				Wrapf(err, "create skill directory")
+		}
+
+		filePath := filepath.Join(skillDirPath, "SKILL.md")
 		content := m.buildSectionContent(&sections[i])
 
 		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			return oops.
 				With("path", filePath).
 				With("section_name", sections[i].Name).
-				Wrapf(err, "write section file")
+				Wrapf(err, "write skill file")
 		}
 
-		m.logger.Debug("Converted section", "name", sections[i].Name, "path", filePath)
+		m.logger.Debug("Converted section to skill", "name", sections[i].Name, "path", filePath)
 	}
 
-	m.logger.Info("Converted sections", "count", len(sections))
+	m.logger.Info("Converted sections to skills", "count", len(sections))
 	return nil
 }
 
@@ -288,66 +299,61 @@ func (m *V2ToV3Migrator) buildSectionContent(section *config.Section) string {
 	return sb.String()
 }
 
-// convertAgents converts V2 agents to V3 skills/{id}/SKILL.md files
+// convertAgents converts V2 agents to V3 agents/{name}.md files
 func (m *V2ToV3Migrator) convertAgents(agents []config.Agent, aiRulezDir string) error {
 	if len(agents) == 0 {
 		m.logger.Debug("No agents to convert")
 		return nil
 	}
 
-	skillsDir := filepath.Join(aiRulezDir, "skills")
+	agentsDir := filepath.Join(aiRulezDir, "agents")
 
 	for i := range agents {
-		// Use ID for directory name
-		agentID := agents[i].ID
+		// Use name for file name
+		agentID := utils.SanitizeName(agents[i].Name)
 		if agentID == "" {
-			agentID = utils.SanitizeName(agents[i].Name)
+			agentID = utils.SanitizeName(agents[i].ID)
 		}
 
-		skillDir := filepath.Join(skillsDir, agentID)
-		if err := os.MkdirAll(skillDir, 0o755); err != nil {
-			return oops.
-				With("path", skillDir).
-				With("agent_id", agentID).
-				Wrapf(err, "create skill directory")
-		}
-
-		filePath := filepath.Join(skillDir, "SKILL.md")
+		filename := agentID + ".md"
+		filePath := filepath.Join(agentsDir, filename)
 		content := m.buildAgentContent(&agents[i])
 
 		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			return oops.
 				With("path", filePath).
-				With("agent_id", agentID).
+				With("agent_name", agents[i].Name).
 				Wrapf(err, "write agent file")
 		}
 
-		m.logger.Debug("Converted agent", "id", agentID, "path", filePath)
+		m.logger.Debug("Converted agent", "name", agents[i].Name, "path", filePath)
 	}
 
 	m.logger.Info("Converted agents", "count", len(agents))
 	return nil
 }
 
-// buildAgentContent builds the markdown content for an agent/skill with frontmatter
+// buildAgentContent builds the markdown content for an agent with Claude's agent format
 func (m *V2ToV3Migrator) buildAgentContent(agent *config.Agent) string {
 	var sb strings.Builder
 
-	// Write frontmatter
+	// Write frontmatter in Claude's agent format
 	sb.WriteString("---\n")
-	sb.WriteString(fmt.Sprintf("name: %s\n", agent.ID))
+	// Use Name if available, otherwise use ID
+	agentName := agent.Name
+	if agentName == "" {
+		agentName = agent.ID
+	}
+	sb.WriteString(fmt.Sprintf("name: %s\n", agentName))
+
 	if agent.Description != "" {
 		sb.WriteString(fmt.Sprintf("description: %s\n", agent.Description))
 	}
-	if agent.Priority != "" {
-		sb.WriteString(fmt.Sprintf("priority: %s\n", agent.Priority))
+
+	if agent.Model != "" {
+		sb.WriteString(fmt.Sprintf("model: %s\n", agent.Model))
 	}
-	if len(agent.Targets) > 0 {
-		sb.WriteString("targets:\n")
-		for _, target := range agent.Targets {
-			sb.WriteString(fmt.Sprintf("  - %s\n", target))
-		}
-	}
+
 	sb.WriteString("---\n\n")
 
 	// Write title
@@ -462,7 +468,7 @@ func sortPresets(presets []string) {
 	}
 
 	// Sort by predefined order, then alphabetically
-	var sortFunc = func(i, j int) bool {
+	sort.SliceStable(presets, func(i, j int) bool {
 		orderI, okI := order[presets[i]]
 		orderJ, okJ := order[presets[j]]
 
@@ -476,16 +482,7 @@ func sortPresets(presets []string) {
 			return false
 		}
 		return presets[i] < presets[j]
-	}
-
-	// Use a stable sort
-	for i := 0; i < len(presets); i++ {
-		for j := i + 1; j < len(presets); j++ {
-			if !sortFunc(i, j) {
-				presets[i], presets[j] = presets[j], presets[i]
-			}
-		}
-	}
+	})
 }
 
 // generateV3Config generates the .ai-rulez/config.yaml file

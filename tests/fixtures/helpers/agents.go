@@ -8,6 +8,9 @@ presets:
 
 outputs:
   - path: "CLAUDE.md"
+    template:
+      type: builtin
+      value: default
   - path: ".claude/agents/"
     type: "agent"
 

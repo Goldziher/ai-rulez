@@ -581,3 +581,106 @@ func TestCreateBackup_PreservesAllContent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "# Rule 1\npriority: high", string(ruleContent))
 }
+
+func TestDeleteBackupDirectory_RemovesBackupDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a source directory and its backup
+	srcDir := filepath.Join(tmpDir, ".ai-rulez")
+	err := os.MkdirAll(srcDir, 0o755)
+	require.NoError(t, err)
+
+	// Create a backup directory with the expected naming pattern
+	backupDir := filepath.Join(tmpDir, ".ai-rulez.backup.20231215_120000")
+	err = os.MkdirAll(backupDir, 0o755)
+	require.NoError(t, err)
+
+	// Create a test file in the backup
+	err = os.WriteFile(filepath.Join(backupDir, "test.txt"), []byte("backup content"), 0o644)
+	require.NoError(t, err)
+
+	// Verify backup exists
+	assert.DirExists(t, backupDir)
+
+	// Call deleteBackupDirectory
+	commands.DeleteBackupDirectory(tmpDir)
+
+	// Verify backup was deleted
+	assert.NoDirExists(t, backupDir)
+}
+
+func TestDeleteBackupDirectory_IgnoresNonBackupDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create some directories that should not be deleted
+	otherDir := filepath.Join(tmpDir, ".ai-rulez")
+	err := os.MkdirAll(otherDir, 0o755)
+	require.NoError(t, err)
+
+	anotherDir := filepath.Join(tmpDir, "some-other-backup")
+	err = os.MkdirAll(anotherDir, 0o755)
+	require.NoError(t, err)
+
+	// Create a backup directory
+	backupDir := filepath.Join(tmpDir, ".ai-rulez.backup.20231215_120000")
+	err = os.MkdirAll(backupDir, 0o755)
+	require.NoError(t, err)
+
+	// Call deleteBackupDirectory
+	commands.DeleteBackupDirectory(tmpDir)
+
+	// Verify backup was deleted but others remain
+	assert.DirExists(t, otherDir)
+	assert.DirExists(t, anotherDir)
+	assert.NoDirExists(t, backupDir)
+}
+
+func TestDeleteBackupDirectory_HandlesMultipleBackups(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create multiple backup directories
+	backup1 := filepath.Join(tmpDir, ".ai-rulez.backup.20231215_100000")
+	backup2 := filepath.Join(tmpDir, ".ai-rulez.backup.20231215_110000")
+	backup3 := filepath.Join(tmpDir, ".ai-rulez.backup.20231215_120000")
+
+	for _, backup := range []string{backup1, backup2, backup3} {
+		err := os.MkdirAll(backup, 0o755)
+		require.NoError(t, err)
+	}
+
+	// Verify all backups exist
+	assert.DirExists(t, backup1)
+	assert.DirExists(t, backup2)
+	assert.DirExists(t, backup3)
+
+	// Call deleteBackupDirectory
+	commands.DeleteBackupDirectory(tmpDir)
+
+	// Verify all backups were deleted
+	assert.NoDirExists(t, backup1)
+	assert.NoDirExists(t, backup2)
+	assert.NoDirExists(t, backup3)
+}
+
+func TestDeleteBackupDirectory_NoBackupDirs(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	// Create a source directory
+	srcDir := filepath.Join(tmpDir, ".ai-rulez")
+	err := os.MkdirAll(srcDir, 0o755)
+	require.NoError(t, err)
+
+	// Call deleteBackupDirectory - should not error
+	// This is a no-op since there are no backups to delete
+	commands.DeleteBackupDirectory(tmpDir)
+
+	// Verify source directory still exists
+	assert.DirExists(t, srcDir)
+}
+
+func TestDeleteBackupDirectory_InvalidDirectory(t *testing.T) {
+	// Test with a directory that doesn't exist
+	// deleteBackupDirectory should handle this gracefully and not panic
+	commands.DeleteBackupDirectory("/nonexistent/path")
+	// If this doesn't panic, the test passes
+}

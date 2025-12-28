@@ -26,56 +26,60 @@ func (s *WorkflowsTestSuite) TearDownSuite() {
 }
 
 func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--preset", "claude", "--no-agent")
-	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
+	// Initialize V3 project
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--yes")
+	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
 	s.True(testutil.FileExists(s.T(), configPath))
 
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
-	result.AssertOutputContains(s.T(), "valid")
-
+	// Add a custom rule
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"Custom Workflow Rule",
 		"--content", "Custom workflow rule",
 		"--priority", "high")
 
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "agent", "workflow-agent",
-		"--description", "Agent for workflow testing",
-		"--tools", "Read,Edit")
+	// Verify rule was added
+	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "Custom Workflow Rule.md")
+	s.True(testutil.FileExists(s.T(), ruleFile))
 
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
-	result.AssertOutputContains(s.T(), "valid")
+	// Add a skill
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "skill",
+		"workflow-agent",
+		"--description", "Agent for workflow testing")
 
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
-	result.AssertOutputContains(s.T(), "Generated")
+	skillDir := filepath.Join(s.workingDir, ".ai-rulez", "skills", "workflow-agent")
+	s.True(testutil.FileExists(s.T(), skillDir))
 
-	claudePath := filepath.Join(s.workingDir, "CLAUDE.md")
-	s.True(testutil.FileExists(s.T(), claudePath))
+	skillFile := filepath.Join(skillDir, "SKILL.md")
+	s.True(testutil.FileExists(s.T(), skillFile))
 
-	agentsDir := filepath.Join(s.workingDir, ".claude", "agents")
-	s.True(testutil.FileExists(s.T(), agentsDir))
+	skillContent := testutil.ReadFile(s.T(), skillFile)
+	s.Contains(skillContent, "Workflow Agent")
 
-	agentPath := filepath.Join(agentsDir, "workflow-agent.md")
-	s.True(testutil.FileExists(s.T(), agentPath))
-
-	claudeContent := testutil.ReadFile(s.T(), claudePath)
-	s.Contains(claudeContent, "WorkflowTest")
-	s.Contains(claudeContent, "Custom workflow rule")
-
-	agentContent := testutil.ReadFile(s.T(), agentPath)
-	s.Contains(agentContent, "workflow-agent")
-	s.Contains(agentContent, "Agent for workflow testing")
+	ruleContent := testutil.ReadFile(s.T(), ruleFile)
+	s.Contains(ruleContent, "Custom workflow rule")
 }
 
 func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "MultiProvider", "--popular", "--no-agent")
-	result.AssertStderrContains(s.T(), "Created ai-rulez.yaml")
-	result.AssertStderrContains(s.T(), "Claude")
-	result.AssertStderrContains(s.T(), "Cursor")
-	result.AssertStderrContains(s.T(), "Windsurf")
-	result.AssertStderrContains(s.T(), "Copilot")
+	// Initialize V3 project with multiple presets
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "MultiProvider", "--yes")
+	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	s.True(testutil.FileExists(s.T(), configPath))
+
+	// Update config to include multiple presets
+	currentConfig := testutil.ReadFile(s.T(), configPath)
+	updatedConfig := currentConfig + `
+# Add multiple presets
+presets:
+  - claude
+  - cursor
+`
+	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.yaml", updatedConfig)
+
+	// Add rules for different providers
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"Claude Rule",
 		"--content", "Claude-specific rule")
@@ -88,109 +92,107 @@ func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
 		"Universal Rule",
 		"--content", "Universal rule for all providers")
 
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
-	result.AssertOutputContains(s.T(), "Generated")
-
-	claudePath := filepath.Join(s.workingDir, "CLAUDE.md")
-	claudeContent := testutil.ReadFile(s.T(), claudePath)
-	s.Contains(claudeContent, "Claude-specific rule")
-	s.Contains(claudeContent, "Universal rule")
-	s.Contains(claudeContent, "Cursor-specific rule")
-
-	cursorPath := filepath.Join(s.workingDir, ".cursor", "rules")
-	s.True(testutil.FileExists(s.T(), cursorPath))
+	// Verify rules were added
+	ruleDir := filepath.Join(s.workingDir, ".ai-rulez", "rules")
+	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "Claude Rule.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "Cursor Rule.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(ruleDir, "Universal Rule.md")))
 }
 
 func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
+	// Setup V3 basic config
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
+	// Add a new rule
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"CRUD Test Rule",
 		"--content", "CRUD test rule")
-	result.AssertOutputContains(s.T(), "Added rule")
+	result.AssertOutputContains(s.T(), "Rule added successfully")
 
-	configPath := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	content := testutil.ReadFile(s.T(), configPath)
+	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "CRUD Test Rule.md")
+	s.True(testutil.FileExists(s.T(), ruleFile))
+
+	content := testutil.ReadFile(s.T(), ruleFile)
 	s.Contains(content, "CRUD test rule")
 
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "update", "rule",
+	// Update the rule by removing and re-adding with new content
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--force")
+
+	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"CRUD Test Rule",
 		"--content", "Updated CRUD rule",
 		"--priority", "critical")
-	result.AssertOutputContains(s.T(), "Updated rule")
+	result.AssertOutputContains(s.T(), "Rule added successfully")
 
-	content = testutil.ReadFile(s.T(), configPath)
+	content = testutil.ReadFile(s.T(), ruleFile)
 	s.Contains(content, "Updated CRUD rule")
-	s.NotContains(content, "CRUD test rule")
+	s.Contains(content, "critical")
 
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "delete", "rule", "CRUD Test Rule")
-	result.AssertOutputContains(s.T(), "Deleted rule")
+	// Delete the rule
+	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "remove", "rule", "CRUD Test Rule", "--force")
+	result.AssertOutputContains(s.T(), "Rule removed successfully")
 
-	content = testutil.ReadFile(s.T(), configPath)
-	s.NotContains(content, "Updated CRUD rule")
+	s.False(testutil.FileExists(s.T(), ruleFile))
 }
 
 func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
+	// Setup valid V3 config
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
+	// Validate should succeed
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
 
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.InvalidYAMLConfig)
+	// Make config invalid by corrupting it
+	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.yaml", `version: "3.0"
+name: "broken"
+presets: not-a-list`)
 
+	// Validate should fail
 	result = testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
-	result.AssertStderrContains(s.T(), "invalid")
+	result.AssertOutputContains(s.T(), "Error")
 
-	result = testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
-	result.AssertStderrContains(s.T(), "Error")
+	// Restore valid config
+	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
 
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.BasicConfig)
-
+	// Validate should succeed again
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
-
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
-	result.AssertOutputContains(s.T(), "Generated")
 }
 
 func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", testutil.MinimalConfig)
+	// Initialize with V3 minimal setup
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "EvolutionTest", "--yes", "--skip-content")
+	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
+	// Validate and verify initial setup
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
-	initialOutput := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, "output.md"))
+	// Add context to the project
+	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "context",
+		"Project Guidelines",
+		"--content", "Added after initial setup")
 
-	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "output", "CLAUDE.md")
+	// Verify context was added
+	contextFile := filepath.Join(s.workingDir, ".ai-rulez", "context", "Project Guidelines.md")
+	s.True(testutil.FileExists(s.T(), contextFile))
 
-	configPath3 := filepath.Join(s.workingDir, "ai-rulez.yaml")
-	config3 := testutil.ReadFile(s.T(), configPath3)
-	config3 += `
-sections:
-  - name: "New Guidelines"
-    content: "Added after initial setup"
-    priority: medium
-`
-	testutil.WriteFile(s.T(), s.workingDir, "ai-rulez.yaml", config3)
+	contextContent := testutil.ReadFile(s.T(), contextFile)
+	s.Contains(contextContent, "Added after initial setup")
 
+	// Add additional rule
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
 		"Additional Rule",
 		"--content", "Additional rule for evolved config")
 
-	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
+	// Verify rule was added
+	ruleFile := filepath.Join(s.workingDir, ".ai-rulez", "rules", "Additional Rule.md")
+	s.True(testutil.FileExists(s.T(), ruleFile))
+
+	ruleContent := testutil.ReadFile(s.T(), ruleFile)
+	s.Contains(ruleContent, "Additional rule for evolved config")
+
+	// Validate config after evolution
+	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
-
-	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
-	result.AssertOutputContains(s.T(), "Generated")
-
-	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "CLAUDE.md")))
-
-	claudeContent := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, "CLAUDE.md"))
-	s.Contains(claudeContent, "Added after initial setup")
-	s.Contains(claudeContent, "Additional rule")
-
-	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "output.md")))
-
-	updatedOutput := testutil.ReadFile(s.T(), filepath.Join(s.workingDir, "output.md"))
-	s.NotEqual(initialOutput, updatedOutput, "Output should be updated with new content")
 }

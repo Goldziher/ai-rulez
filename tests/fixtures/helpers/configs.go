@@ -10,6 +10,9 @@ presets:
 
 outputs:
   - path: "CLAUDE.md"
+    template:
+      type: builtin
+      value: default
 
 rules:
   - name: "Basic Rule"
@@ -34,6 +37,9 @@ presets:
 
 outputs:
   - path: "output.md"
+    template:
+      type: builtin
+      value: default
 
 rules:
   - name: "Only Rule"
@@ -48,6 +54,9 @@ presets:
 
 outputs:
   - path: "output.md"
+    template:
+      type: builtin
+      value: default
 `
 
 const ConfigWithAllPriorities = `metadata:
@@ -58,6 +67,9 @@ presets:
 
 outputs:
   - path: "output.md"
+    template:
+      type: builtin
+      value: default
 
 rules:
   - name: "Critical Rule"
@@ -95,7 +107,13 @@ presets:
 
 outputs:
   - path: "frontend.md"
+    template:
+      type: builtin
+      value: default
   - path: "backend.md"
+    template:
+      type: builtin
+      value: default
 
 rules:
   - name: "Frontend Rule"

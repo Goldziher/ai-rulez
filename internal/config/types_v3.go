@@ -192,6 +192,7 @@ type ContentTreeV3 struct {
 	Rules   []ContentFile        `yaml:"rules,omitempty" json:"rules,omitempty"`
 	Context []ContentFile        `yaml:"context,omitempty" json:"context,omitempty"`
 	Skills  []ContentFile        `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents  []ContentFile        `yaml:"agents,omitempty" json:"agents,omitempty"`
 	Domains map[string]*DomainV3 `yaml:"domains,omitempty" json:"domains,omitempty"`
 }
 
@@ -201,6 +202,7 @@ type DomainV3 struct {
 	Rules      []ContentFile           `yaml:"rules,omitempty" json:"rules,omitempty"`
 	Context    []ContentFile           `yaml:"context,omitempty" json:"context,omitempty"`
 	Skills     []ContentFile           `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents     []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
 	MCPServers map[string]*MCPServerV3 `yaml:"-" json:"-"`
 }
 
@@ -290,6 +292,7 @@ func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) 
 		Rules:   c.Content.GetRulesForDomains(domains),
 		Context: c.Content.GetContextForDomains(domains),
 		Skills:  c.Content.GetSkillsForDomains(domains),
+		Agents:  c.Content.GetAgentsForDomains(domains),
 		Domains: c.Content.Domains, // Include all domains for reference
 	}, nil
 }
@@ -302,10 +305,12 @@ func (t *ContentTreeV3) GetAllContentFiles() []ContentFile {
 	files = append(files, t.Rules...)
 	files = append(files, t.Context...)
 	files = append(files, t.Skills...)
+	files = append(files, t.Agents...)
 	for _, domain := range t.Domains {
 		files = append(files, domain.Rules...)
 		files = append(files, domain.Context...)
 		files = append(files, domain.Skills...)
+		files = append(files, domain.Agents...)
 	}
 	return files
 }
@@ -344,6 +349,19 @@ func (t *ContentTreeV3) GetSkillsForDomains(domains []string) []ContentFile {
 	for _, domainName := range domains {
 		if domain, ok := t.Domains[domainName]; ok {
 			files = append(files, domain.Skills...)
+		}
+	}
+	return files
+}
+
+// GetAgentsForDomains returns agents for specified domains (including root)
+func (t *ContentTreeV3) GetAgentsForDomains(domains []string) []ContentFile {
+	files := make([]ContentFile, len(t.Agents))
+	copy(files, t.Agents)
+
+	for _, domainName := range domains {
+		if domain, ok := t.Domains[domainName]; ok {
+			files = append(files, domain.Agents...)
 		}
 	}
 	return files

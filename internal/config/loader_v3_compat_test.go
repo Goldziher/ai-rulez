@@ -291,7 +291,7 @@ Uses Go and React`), 0o644))
 		assert.Contains(t, section.Content, "Tech Stack")
 	})
 
-	t.Run("converts skills to agents", func(t *testing.T) {
+	t.Run("converts agents to agents", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
@@ -305,17 +305,17 @@ presets:
 		configFile := filepath.Join(configDir, configYAMLFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
 
-		// Create skill
-		skillsPath := filepath.Join(configDir, skillsDir)
-		skillDirPath := filepath.Join(skillsPath, "code-reviewer")
-		require.NoError(t, os.MkdirAll(skillDirPath, 0o755))
-		skillFile := filepath.Join(skillDirPath, skillMarkerFile)
-		require.NoError(t, os.WriteFile(skillFile, []byte(`---
+		// Create agent
+		agentsPath := filepath.Join(configDir, agentsDir)
+		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
+		agentFile := filepath.Join(agentsPath, "code-reviewer.md")
+		require.NoError(t, os.WriteFile(agentFile, []byte(`---
+name: code-reviewer
 description: Reviews code for quality
-priority: high
+model: haiku
 ---
 
-# Code Reviewer Skill
+# Code Reviewer Agent
 
 Performs comprehensive code reviews`), 0o644))
 
@@ -328,8 +328,7 @@ Performs comprehensive code reviews`), 0o644))
 		agent := v2Config.Agents[0]
 		assert.Equal(t, "code-reviewer", agent.Name)
 		assert.Equal(t, "Reviews code for quality", agent.Description)
-		assert.Equal(t, PriorityHigh, agent.Priority)
-		assert.Contains(t, agent.SystemPrompt, "Code Reviewer Skill")
+		assert.Contains(t, agent.SystemPrompt, "Code Reviewer Agent")
 	})
 }
 
@@ -539,15 +538,15 @@ priority: high
 
 Project overview`), 0o644))
 
-		// Create root skill
-		skillsPath := filepath.Join(configDir, skillsDir)
-		skillDir := filepath.Join(skillsPath, "reviewer")
-		require.NoError(t, os.MkdirAll(skillDir, 0o755))
+		// Create root agent
+		agentsPath := filepath.Join(configDir, agentsDir)
+		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
 		require.NoError(t, os.WriteFile(
-			filepath.Join(skillDir, skillMarkerFile),
+			filepath.Join(agentsPath, "reviewer.md"),
 			[]byte(`---
-priority: medium
-description: Code review skill
+name: reviewer
+description: Code review agent
+model: haiku
 ---
 
 Performs reviews`), 0o644))
