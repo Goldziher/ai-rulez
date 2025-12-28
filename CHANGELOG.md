@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [3.2.1] - 2025-12-28
+
+### Fixed
+- Gitignore updates now use relative paths instead of absolute machine-specific paths
+- .ai-rulez directory is no longer added to .gitignore (source of truth should be tracked)
+- Added tests to verify gitignore path handling
+
 ## [3.2.0] - 2025-12-28
 
 ### Added
