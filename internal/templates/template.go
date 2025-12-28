@@ -187,6 +187,12 @@ func NewRenderer() *Renderer {
 }
 
 func (r *Renderer) Render(format string, data *TemplateData) (string, error) {
+	if content, handled, err := RenderSpecialBuiltin(format, data); err != nil {
+		return "", fmt.Errorf("failed to render %s template: %w", format, err)
+	} else if handled {
+		return content, nil
+	}
+
 	tmpl, exists := r.templates[format]
 	if !exists {
 		return "", fmt.Errorf("unknown template format: %s", format)

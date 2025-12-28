@@ -18,9 +18,11 @@ This creates a `.ai-rulez/` directory with:
 │   └── example-rule.md
 ├── context/
 │   └── example-context.md
-└── skills/
-    └── code-reviewer/
-        └── SKILL.md
+├── skills/
+│   └── code-reviewer/
+│       └── SKILL.md
+├── agents/
+└── mcp.yaml
 ```
 
 ## Step 2: Configure Your Presets

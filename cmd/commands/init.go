@@ -123,6 +123,7 @@ func createV3Structure(projectName string) error {
 		".ai-rulez/rules",
 		".ai-rulez/context",
 		".ai-rulez/skills",
+		".ai-rulez/agents",
 		".ai-rulez/domains",
 	}
 
@@ -219,6 +220,7 @@ func createDomainDirectories(domains []string) error {
 			filepath.Join(".ai-rulez", "domains", domain, "rules"),
 			filepath.Join(".ai-rulez", "domains", domain, "context"),
 			filepath.Join(".ai-rulez", "domains", domain, "skills"),
+			filepath.Join(".ai-rulez", "domains", domain, "agents"),
 		}
 
 		for _, dir := range dirs {
@@ -344,6 +346,7 @@ func displayV3SuccessMessage(projectName string) {
 	logger.Info("  ├── rules/         # Base rules (always included)")
 	logger.Info("  ├── context/       # Base context (always included)")
 	logger.Info("  ├── skills/        # Base skills (always included)")
+	logger.Info("  ├── agents/        # Base agents (always included)")
 	logger.Info("  └── domains/       # Domain-specific content")
 
 	if !skipContentFlag {
@@ -355,7 +358,7 @@ func displayV3SuccessMessage(projectName string) {
 
 	if !skipMCPFlag {
 		logger.Info("\nExample MCP servers created:")
-		logger.Info("  - mcp.yaml         # Root MCP servers (GitHub example)")
+		logger.Info("  - mcp.yaml         # Root MCP servers (ai-rulez + GitHub examples)")
 		if domainsFlag != "" {
 			logger.Info("  - domains/*/mcp.yaml  # Domain-specific MCP servers")
 		}
@@ -371,7 +374,7 @@ func displayV3SuccessMessage(projectName string) {
 
 	logger.Info("\nNext steps:")
 	logger.Info("  1. Edit .ai-rulez/config.yaml to customize presets and profiles")
-	logger.Info("  2. Add your rules, context, and skills to the appropriate directories")
+	logger.Info("  2. Add your rules, context, skills, and agents to the appropriate directories")
 	logger.Info("  3. Edit .ai-rulez/mcp.yaml to configure MCP servers")
 	logger.Info("  4. Run 'ai-rulez generate' to create tool-specific outputs")
 
@@ -414,6 +417,17 @@ version: "3.0"
 
 # MCP Servers
 mcp_servers:
+  # ai-rulez MCP server for managing your .ai-rulez/ configuration
+  - name: ai-rulez
+    description: AI-Rulez MCP server for configuration management
+    command: npx
+    args:
+      - "-y"
+      - "ai-rulez@latest"
+      - "mcp"
+    transport: stdio
+    enabled: true
+
   # Example: GitHub integration for repository operations
   - name: github
     description: GitHub integration for repository operations and automation
