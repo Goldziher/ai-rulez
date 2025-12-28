@@ -156,3 +156,6 @@ testing/**/AGENTS.md
 testing/**/.github/copilot-instructions.md
 testing/**/.github/agents.md
 testing/**/.mcp.json
+
+# V3 Configuration Directory (source of truth - NOT ignored)
+# .ai-rulez/
