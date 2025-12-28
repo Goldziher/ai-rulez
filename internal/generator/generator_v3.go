@@ -228,43 +228,75 @@ func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
 	return nil
 }
 
-// updateGitignore updates .gitignore with generated file paths
-func (g *GeneratorV3) updateGitignore(outputs []config.OutputFileV3) error {
-	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
-
-	// Collect unique output paths (include both files and top-level directories)
+// collectGitignorePaths collects unique paths to add to .gitignore
+func (g *GeneratorV3) collectGitignorePaths(outputs []config.OutputFileV3) map[string]bool {
 	paths := make(map[string]bool)
 	seen := make(map[string]bool)
 
 	for _, output := range outputs {
+		// Convert to relative path if absolute
+		relPath := g.convertToRelativePath(output.Path)
+
+		// Skip .ai-rulez directory and anything inside it
+		if g.shouldSkipPath(relPath) {
+			continue
+		}
+
 		// For files, add them directly
 		if !output.IsDir {
-			paths[output.Path] = true
-		} else {
-			// For directories, only add top-level ones (relative to baseDir)
-			relPath := output.Path
-			if filepath.IsAbs(relPath) {
-				var err error
-				relPath, err = filepath.Rel(g.config.BaseDir, output.Path)
-				if err != nil {
-					relPath = filepath.Base(output.Path)
-				}
-			}
+			paths[relPath] = true
+			continue
+		}
 
-			// Get the top-level directory by splitting on path separator
-			parts := strings.Split(filepath.Clean(relPath), string(filepath.Separator))
-			if len(parts) == 0 {
-				parts = []string{relPath}
-			}
-			topLevel := parts[0]
+		// For directories, add top-level directory
+		topLevel := g.extractTopLevelDir(relPath)
+		if topLevel == ".ai-rulez" {
+			continue
+		}
 
-			// Only add if we haven't seen this top-level directory
-			if !seen[topLevel] {
-				seen[topLevel] = true
-				paths[topLevel+"/"] = true
-			}
+		if !seen[topLevel] {
+			seen[topLevel] = true
+			paths[topLevel+"/"] = true
 		}
 	}
+
+	return paths
+}
+
+// convertToRelativePath converts an absolute path to relative, or returns the original path
+func (g *GeneratorV3) convertToRelativePath(path string) string {
+	if !filepath.IsAbs(path) {
+		return path
+	}
+	relPath, err := filepath.Rel(g.config.BaseDir, path)
+	if err != nil {
+		return filepath.Base(path)
+	}
+	return relPath
+}
+
+// shouldSkipPath checks if a path should be skipped for .gitignore
+func (g *GeneratorV3) shouldSkipPath(relPath string) bool {
+	return relPath == ".ai-rulez" ||
+		hasPrefix(relPath, ".ai-rulez/") ||
+		hasPrefix(relPath, ".ai-rulez\\")
+}
+
+// extractTopLevelDir extracts the top-level directory from a path
+func (g *GeneratorV3) extractTopLevelDir(relPath string) string {
+	parts := strings.Split(filepath.Clean(relPath), string(filepath.Separator))
+	if len(parts) == 0 {
+		return relPath
+	}
+	return parts[0]
+}
+
+// updateGitignore updates .gitignore with generated file paths
+func (g *GeneratorV3) updateGitignore(outputs []config.OutputFileV3) error {
+	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
+
+	// Collect unique output paths
+	paths := g.collectGitignorePaths(outputs)
 
 	// Read existing gitignore entries
 	existingEntries, err := readGitignoreEntries(gitignorePath)
