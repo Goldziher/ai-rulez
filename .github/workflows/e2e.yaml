@@ -64,7 +64,7 @@ jobs:
 
       - name: Upload comprehensive test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: comprehensive-e2e-results
           path: |
@@ -128,7 +128,7 @@ jobs:
 
       - name: Upload cross-platform test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
           path: testing/e2e/*.log
