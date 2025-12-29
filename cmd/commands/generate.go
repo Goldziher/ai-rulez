@@ -153,10 +153,10 @@ func findConfigFilesRecursively() []string {
 }
 
 func isV3ConfigFile(path string) bool {
-	// Check for V3 config structure: .ai-rulez directory with ai-rulez.yaml or ai-rulez.json
+	// Check for V3 config structure: .ai-rulez directory with config.yaml, ai-rulez.yaml, or ai-rulez.json
 	dir := filepath.Dir(path)
 	base := filepath.Base(path)
-	return filepath.Base(dir) == ".ai-rulez" && (base == "ai-rulez.yaml" || base == "ai-rulez.json")
+	return filepath.Base(dir) == ".ai-rulez" && (base == "config.yaml" || base == "ai-rulez.yaml" || base == "ai-rulez.json")
 }
 
 func processConfigFiles(configFiles []string) int {
