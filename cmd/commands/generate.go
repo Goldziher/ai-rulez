@@ -173,7 +173,8 @@ func processConfigFiles(configFiles []string) int {
 }
 
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) int {
-	workingDir := filepath.Dir(configPath)
+	// configPath is .ai-rulez/config.yaml, we need the parent directory
+	workingDir := filepath.Dir(filepath.Dir(configPath))
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
