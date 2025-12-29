@@ -2,7 +2,7 @@ package config
 
 var PresetRegistry = map[string][]Output{
 	"claude": {
-		{Path: "CLAUDE.md"},
+		{Path: "CLAUDE.md", Template: Template{Type: TemplateBuiltin, Value: "claude-lightweight"}},
 		{Path: ".claude/agents/", Type: "agent", NamingScheme: "{name}.md"},
 		{Path: ".mcp.json", Template: Template{Type: TemplateBuiltin, Value: "claude-code-mcp"}},
 	},
