@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/cmd/commands"
+	_ "github.com/Goldziher/ai-rulez/internal/includes" // Register includes resolver callback
 )
 
 var version = "dev"

@@ -137,7 +137,11 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 		} else {
 			// Replace content with merged version
 			config.Content = mergedContent
-			logger.Debug("Successfully resolved includes")
+			logger.Debug("Successfully resolved includes",
+				"rules", len(mergedContent.Rules),
+				"context", len(mergedContent.Context),
+				"skills", len(mergedContent.Skills),
+				"agents", len(mergedContent.Agents))
 		}
 	}
 

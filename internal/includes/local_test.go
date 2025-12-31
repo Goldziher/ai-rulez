@@ -385,19 +385,23 @@ func TestFetchInvalidPath(t *testing.T) {
 }
 
 func TestFetchNoAIRulezDir(t *testing.T) {
-	// Arrange
+	// Arrange - bare structure support means empty dir is now valid
 	tmpDir := t.TempDir()
-	// Don't create .ai-rulez directory
+	// Don't create .ai-rulez directory or any content - empty bare structure
 	source := NewLocalSource("test", tmpDir, "/base", nil)
 	ctx := context.Background()
 
 	// Act
-	_, err := source.Fetch(ctx)
+	contentTree, err := source.Fetch(ctx)
 
-	// Assert
-	if err == nil {
-		t.Error("expected error when .ai-rulez directory is not found")
+	// Assert - should succeed with empty content (bare structure with no content)
+	if err != nil {
+		t.Errorf("unexpected error with bare structure: %v", err)
 	}
+	if contentTree == nil {
+		t.Error("expected non-nil ContentTreeV3 for bare structure")
+	}
+	// Empty bare structure is valid, just has no content
 }
 
 func TestFetchSuccess(t *testing.T) {
