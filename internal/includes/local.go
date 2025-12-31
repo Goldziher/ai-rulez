@@ -163,6 +163,9 @@ func (s *LocalSource) filterContent(tree *config.ContentTreeV3) *config.ContentT
 	if shouldInclude("skills") {
 		filtered.Skills = tree.Skills
 	}
+	if shouldInclude("agents") {
+		filtered.Agents = tree.Agents
+	}
 
 	// Copy domains (domains always included if they exist)
 	filtered.Domains = tree.Domains
