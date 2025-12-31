@@ -28,6 +28,16 @@ func DetectSourceType(source string) SourceType {
 	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
 		return SourceTypeGit
 	}
+	// SSH Git URLs (e.g., git@github.com:user/repo.git or user@host:path/repo.git)
+	// Pattern: contains @ followed by : (but not :// which would be http/https)
+	if strings.Contains(source, "@") && strings.Contains(source, ":") {
+		atIndex := strings.Index(source, "@")
+		colonIndex := strings.Index(source, ":")
+		// Check that @ comes before : and : is not part of ://
+		if atIndex < colonIndex && !strings.HasPrefix(source[colonIndex:], "://") {
+			return SourceTypeGit
+		}
+	}
 	// Everything else is treated as a local path
 	return SourceTypeLocal
 }
