@@ -56,22 +56,60 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) 
 
 	// Check if this is an .ai-rulez directory or contains one
 	aiRulezPath := s.findAIRulezDir(resolvedPath)
-	if aiRulezPath == "" {
-		return nil, oops.Errorf("no .ai-rulez directory found in %s", resolvedPath)
+
+	var baseDir string
+	var needsCleanup bool
+	var tempDir string
+
+	if aiRulezPath != "" {
+		// Found .ai-rulez directory - use its parent as base
+		baseDir = filepath.Dir(aiRulezPath)
+	} else {
+		// No .ai-rulez directory - assume bare structure (agents/, rules/, etc. directly in resolvedPath)
+		// This supports shared repositories and git includes that don't use .ai-rulez/ wrapping
+		// Create a temporary directory with .ai-rulez symlink to work with the scanner
+		logger.Debug("No .ai-rulez directory found, using bare structure", "path", resolvedPath)
+
+		var err error
+		tempDir, err = os.MkdirTemp("", "ai-rulez-include-*")
+		if err != nil {
+			return nil, oops.Wrapf(err, "create temp directory for bare structure")
+		}
+		needsCleanup = true
+
+		// Create symlink .ai-rulez -> resolvedPath
+		symlinkPath := filepath.Join(tempDir, ".ai-rulez")
+		if err := os.Symlink(resolvedPath, symlinkPath); err != nil {
+			if cleanupErr := os.RemoveAll(tempDir); cleanupErr != nil {
+				logger.Warn("Failed to cleanup temp directory", "error", cleanupErr)
+			}
+			return nil, oops.Wrapf(err, "create symlink for bare structure")
+		}
+
+		baseDir = tempDir
+	}
+
+	// Cleanup temp directory if needed
+	if needsCleanup {
+		defer func() {
+			if err := os.RemoveAll(tempDir); err != nil {
+				logger.Warn("Failed to cleanup temp directory", "error", err)
+			}
+		}()
 	}
 
 	// Create a minimal config for the scanner
 	minimalConfig := &config.ConfigV3{
 		Version: "3.0",
 		Name:    s.name,
-		BaseDir: filepath.Dir(aiRulezPath),
+		BaseDir: baseDir,
 		Profiles: map[string][]string{
 			"default": {}, // Empty default profile
 		},
 	}
 
-	// Scan the .ai-rulez directory structure
-	scnr := scanner.NewScanner(filepath.Dir(aiRulezPath), minimalConfig)
+	// Scan the directory structure
+	scnr := scanner.NewScanner(baseDir, minimalConfig)
 	contentTree, err := scnr.ScanProfile("") // Scan all content, no profile filter
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to scan content tree")

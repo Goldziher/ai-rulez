@@ -300,25 +300,45 @@ func (s *Scanner) scanSkills(skillsDir, domainName string) ([]config.ContentFile
 
 	var skills []config.ContentFile
 	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
-		}
+		var skillPath string
+		var contentFile config.ContentFile
+		var err error
 
-		skillPath := filepath.Join(skillsDir, entry.Name(), "SKILL.md")
-		if _, err := os.Stat(skillPath); os.IsNotExist(err) {
-			// No SKILL.md file, skip this directory
-			continue
-		}
+		if entry.IsDir() {
+			// Directory structure: skills/name/SKILL.md
+			skillPath = filepath.Join(skillsDir, entry.Name(), "SKILL.md")
+			if _, err := os.Stat(skillPath); os.IsNotExist(err) {
+				// No SKILL.md file, skip this directory
+				continue
+			}
 
-		contentFile, err := s.loadContentFile(skillPath)
-		if err != nil {
-			// Log warning but continue
-			logger.Warn("failed to load skill file", "path", skillPath, "error", err)
-			continue
-		}
+			contentFile, err = s.loadContentFile(skillPath)
+			if err != nil {
+				// Log warning but continue
+				logger.Warn("failed to load skill file", "path", skillPath, "error", err)
+				continue
+			}
 
-		// For skills, use the skill directory name as the base name
-		contentFile.Name = entry.Name()
+			// For skills in directories, use the directory name as the skill name
+			contentFile.Name = entry.Name()
+		} else {
+			// Flat file structure: skills/name.md (for bare structure includes)
+			if !strings.HasSuffix(entry.Name(), ".md") {
+				continue
+			}
+
+			skillPath = filepath.Join(skillsDir, entry.Name())
+			contentFile, err = s.loadContentFile(skillPath)
+			if err != nil {
+				logger.Warn("failed to load skill file", "path", skillPath, "error", err)
+				continue
+			}
+
+			// For flat skill files, use filename without extension as skill name (if not set in frontmatter)
+			if contentFile.Name == "" {
+				contentFile.Name = strings.TrimSuffix(entry.Name(), ".md")
+			}
+		}
 
 		skills = append(skills, contentFile)
 	}
