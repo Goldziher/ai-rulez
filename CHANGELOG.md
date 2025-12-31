@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## 3.3.1 - 2025-12-31
+
+### Fixed
+- SSH git URL detection in includes system - now properly detects `git@host:path` format URLs
+- Previously only HTTP/HTTPS URLs were recognized, causing SSH git URLs to be treated as local paths
+
 ## 3.3.0 - 2025-12-31
 
 ### Fixed
