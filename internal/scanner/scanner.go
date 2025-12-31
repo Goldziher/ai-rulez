@@ -73,11 +73,19 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 			Wrapf(err, "scan root skills directory")
 	}
 
+	rootAgents, err := s.scanMarkdownFiles(filepath.Join(aiRulezDir, "agents"))
+	if err != nil {
+		return nil, oops.
+			With("path", filepath.Join(aiRulezDir, "agents")).
+			Wrapf(err, "scan root agents directory")
+	}
+
 	// Build collision tracking maps (basename -> [root, domain1, domain2, ...])
 	// For skills, use the skill name (directory name) instead of file basename
 	rulesMap := make(map[string][]string)
 	contextMap := make(map[string][]string)
 	skillsMap := make(map[string][]string)
+	agentsMap := make(map[string][]string)
 
 	// Track root files
 	for _, file := range rootRules {
@@ -92,12 +100,17 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 		// For skills, use the skill name (not the file basename)
 		skillsMap[file.Name] = append(skillsMap[file.Name], "root")
 	}
+	for _, file := range rootAgents {
+		basename := filepath.Base(file.Path)
+		agentsMap[basename] = append(agentsMap[basename], "root")
+	}
 
 	// Scan domains and apply namespacing
 	domainMap := make(map[string]*config.DomainV3)
 	allRules := make([]config.ContentFile, 0)
 	allContext := make([]config.ContentFile, 0)
 	allSkills := make([]config.ContentFile, 0)
+	allAgents := make([]config.ContentFile, 0)
 
 	for _, domainName := range domains {
 		domainPath := filepath.Join(aiRulezDir, "domains", domainName)
@@ -127,6 +140,14 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 				Wrapf(err, "scan domain skills directory")
 		}
 
+		domainAgents, err := s.scanMarkdownFiles(filepath.Join(domainPath, "agents"))
+		if err != nil {
+			return nil, oops.
+				With("domain", domainName).
+				With("path", filepath.Join(domainPath, "agents")).
+				Wrapf(err, "scan domain agents directory")
+		}
+
 		// Track domain files for collision detection
 		for _, file := range domainRules {
 			basename := filepath.Base(file.Path)
@@ -140,11 +161,16 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 			// For skills, use the skill name (not the file basename)
 			skillsMap[file.Name] = append(skillsMap[file.Name], domainName)
 		}
+		for _, file := range domainAgents {
+			basename := filepath.Base(file.Path)
+			agentsMap[basename] = append(agentsMap[basename], domainName)
+		}
 
 		// Apply namespacing to domain content
 		s.applyNamespacing(domainRules, domainName)
 		s.applyNamespacing(domainContext, domainName)
 		s.applySkillNamespacing(domainSkills, domainName)
+		s.applyNamespacing(domainAgents, domainName)
 
 		// Store domain
 		domainMap[domainName] = &config.DomainV3{
@@ -152,33 +178,39 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 			Rules:   domainRules,
 			Context: domainContext,
 			Skills:  domainSkills,
+			Agents:  domainAgents,
 		}
 
 		// Collect all domain content
 		allRules = append(allRules, domainRules...)
 		allContext = append(allContext, domainContext...)
 		allSkills = append(allSkills, domainSkills...)
+		allAgents = append(allAgents, domainAgents...)
 	}
 
 	// Log collision warnings
 	s.logCollisions(rulesMap, "rules")
 	s.logCollisions(contextMap, "context")
 	s.logCollisions(skillsMap, "skills")
+	s.logCollisions(agentsMap, "agents")
 
 	// Handle collisions: domain content overrides root content
 	finalRules := s.resolveCollisions(rootRules, allRules, rulesMap)
 	finalContext := s.resolveCollisions(rootContext, allContext, contextMap)
 	finalSkills := s.resolveCollisions(rootSkills, allSkills, skillsMap)
+	finalAgents := s.resolveCollisions(rootAgents, allAgents, agentsMap)
 
 	// Sort by priority (highest first)
 	s.sortByPriority(finalRules)
 	s.sortByPriority(finalContext)
 	s.sortByPriority(finalSkills)
+	s.sortByPriority(finalAgents)
 
 	return &config.ContentTreeV3{
 		Rules:   finalRules,
 		Context: finalContext,
 		Skills:  finalSkills,
+		Agents:  finalAgents,
 		Domains: domainMap,
 	}, nil
 }
