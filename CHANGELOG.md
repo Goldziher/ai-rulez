@@ -2,12 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## Unreleased
 
-## [3.2.2] - 2025-12-28
+## 3.3.0 - 2025-12-31
+
+### Fixed
+- Complete agents support in includes system
+- Add agents scanning support to includes and scanner
+
+### Changed
+- Bump actions/cache from 4 to 5
+- Bump actions/upload-artifact from 4 to 6
+
+## 3.2.2 - 2025-12-28
 
 ### Added
 - Init now creates root and domain agent directories by default
@@ -19,14 +28,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Bumped golangci-lint to v2.7.2 in Taskfile and CI
 
-## [3.2.1] - 2025-12-28
+## 3.2.1 - 2025-12-28
 
 ### Fixed
 - Gitignore updates now use relative paths instead of absolute machine-specific paths
 - .ai-rulez directory is no longer added to .gitignore (source of truth should be tracked)
 - Added tests to verify gitignore path handling
 
-## [3.2.0] - 2025-12-28
+## 3.2.0 - 2025-12-28
 
 ### Added
 - Full agent/subagent support in V3 configuration with `.ai-rulez/agents/` directory
@@ -49,7 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Dependencies updated to latest minor versions (19 packages upgraded)
 - Migration now creates proper directory structure for skills (skills/{id}/SKILL.md)
 
-## [3.1.0] - 2025-12-27
+## 3.1.0 - 2025-12-27
 
 ### Added
 - Migrate command for V2 to V3 configuration migration
@@ -61,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Windows absolute path generation for cross-platform test compatibility
 - Test coverage for migrate command utilities (CopyDir, CreateBackup, detectV2Config)
 
-## [3.0.0] - 2025-12-27
+## 3.0.0 - 2025-12-27
 
 ### Added
 - Directory-based configuration system (`.ai-rulez/` directory structure)
@@ -81,25 +90,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: V2 dynamic init with AI agents removed
 - V2 single-file YAML configuration support
 
-## [2.4.0] - 2025-10-22
+## 2.4.0 - 2025-10-22
 
 ### Fixed
 - CLI MCP interference with template-generated files
 - Output type values in AI-generated configurations
 
-## [2.3.0] - 2025-10-05
+## 2.3.0 - 2025-10-05
 
 ### Added
 - AI-powered rule enforcement system
 - Automatic gitignore management
 - Junie preset with lefthook configuration
 
-## [2.2.0] - 2025-09-20
+## 2.2.0 - 2025-09-20
 
 ### Added
 - MCP file-based configuration system for Claude and other tools
 
-## [2.1.0] - 2025-08-20
+## 2.1.0 - 2025-08-20
 
 ### Added
 - CLI MCP integration for Claude
@@ -109,7 +118,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform binary extensions for Windows support
 - Homebrew formula structure
 
-## [2.0.0] - 2025-07-30
+## 2.0.0 - 2025-07-30
 
 ### Added
 - Schema v2 with priority enum system
@@ -119,28 +128,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **BREAKING**: Updated schema to v2 with priority enum system
 - Unified section field naming to use 'name' instead of 'title'
 
-## [1.6.0] - 2025-07-10
+## 1.6.0 - 2025-07-10
 
 ### Added
 - Target filtering and named targets support
 
-## [1.5.0] - 2025-06-25
+## 1.5.0 - 2025-06-25
 
 ### Added
 - Initial release with core configuration generation
 - Rule definition system
 - Template-based generator
-
----
-
-[Unreleased]: https://github.com/Goldziher/ai-rulez/compare/v3.2.0...HEAD
-[3.2.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v3.2.0
-[3.1.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v3.1.0
-[3.0.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v3.0.0
-[2.4.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.4.0
-[2.3.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.3.0
-[2.2.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.2.0
-[2.1.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.1.0
-[2.0.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v2.0.0
-[1.6.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v1.6.0
-[1.5.0]: https://github.com/Goldziher/ai-rulez/releases/tag/v1.5.0
