@@ -34,17 +34,18 @@ const (
 
 // GitSource represents a git repository source
 type GitSource struct {
-	name       string
-	repoURL    string
-	path       string // Path within repo to .ai-rulez/ (optional, defaults to root)
-	ref        string // branch, tag, or commit (optional, defaults to main/master)
-	cacheDir   string // .ai-rulez/.remote-cache/{name}/
-	include    []string
-	httpClient *remote.Client
+	name        string
+	repoURL     string
+	path        string // Path within repo to .ai-rulez/ (optional, defaults to root)
+	ref         string // branch, tag, or commit (optional, defaults to main/master)
+	cacheDir    string // .ai-rulez/.remote-cache/{name}/
+	include     []string
+	accessToken string
+	httpClient  *remote.Client
 }
 
 // NewGitSource creates a new git source
-func NewGitSource(name, repoURL, path, ref, baseDir string, include []string) (*GitSource, error) {
+func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
 	// Validate URL format
 	if err := validateGitURL(repoURL); err != nil {
 		return nil, err
@@ -54,13 +55,14 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string) (*
 	cacheDir := filepath.Join(baseDir, ".remote-cache", name)
 
 	source := &GitSource{
-		name:       name,
-		repoURL:    normalizeGitURL(repoURL),
-		path:       path,
-		ref:        ref,
-		cacheDir:   cacheDir,
-		include:    include,
-		httpClient: remote.NewClient(nil),
+		name:        name,
+		repoURL:     normalizeGitURL(repoURL),
+		path:        path,
+		ref:         ref,
+		cacheDir:    cacheDir,
+		include:     include,
+		accessToken: accessToken,
+		httpClient:  remote.NewClientWithToken(nil, accessToken),
 	}
 
 	return source, nil
@@ -78,7 +80,7 @@ func (s *GitSource) GetName() string {
 
 // Fetch downloads content from git repository and returns the content tree
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
-	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path)
+	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(s.cacheDir, 0o755); err != nil {
