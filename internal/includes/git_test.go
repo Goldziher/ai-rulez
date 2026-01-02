@@ -33,6 +33,16 @@ func TestNewGitSourceValidation(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid SSH URL with git@",
+			url:     "git@github.com:owner/repo.git",
+			wantErr: false,
+		},
+		{
+			name:    "valid SSH URL with ssh://",
+			url:     "ssh://git@github.com/owner/repo.git",
+			wantErr: false,
+		},
+		{
 			name:    "empty URL",
 			url:     "",
 			wantErr: true,
@@ -605,6 +615,21 @@ func TestValidateGitURL(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name:    "valid SSH URL with git@ prefix",
+			url:     "git@github.com:owner/repo.git",
+			wantErr: false,
+		},
+		{
+			name:    "valid SSH URL with ssh:// protocol",
+			url:     "ssh://git@github.com/owner/repo.git",
+			wantErr: false,
+		},
+		{
+			name:    "valid SSH URL for GitLab",
+			url:     "git@gitlab.com:owner/repo.git",
+			wantErr: false,
+		},
+		{
 			name:    "empty URL",
 			url:     "",
 			wantErr: true,
@@ -655,6 +680,26 @@ func TestNormalizeGitURL(t *testing.T) {
 			name:  "removes multiple trailing slashes",
 			input: "https://github.com/owner/repo///",
 			want:  "https://github.com/owner/repo",
+		},
+		{
+			name:  "converts SSH URL with git@ to HTTPS",
+			input: "git@github.com:owner/repo.git",
+			want:  "https://github.com/owner/repo.git",
+		},
+		{
+			name:  "converts SSH URL without .git suffix",
+			input: "git@github.com:owner/repo",
+			want:  "https://github.com/owner/repo",
+		},
+		{
+			name:  "converts ssh:// URL to HTTPS",
+			input: "ssh://git@github.com/owner/repo.git",
+			want:  "https://github.com/owner/repo.git",
+		},
+		{
+			name:  "converts GitLab SSH URL",
+			input: "git@gitlab.com:owner/repo.git",
+			want:  "https://gitlab.com/owner/repo.git",
 		},
 	}
 

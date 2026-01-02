@@ -80,29 +80,102 @@ Includes can be:
 
 1. Relative paths: `../shared-rules/.ai-rulez`, `./team-guidelines/.ai-rulez`
 2. Absolute paths: `/etc/ai-rulez-standards/.ai-rulez`
-3. Git URLs (planned): `https://github.com/org/shared-rules/.ai-rulez`
+3. Git URLs: `https://github.com/org/shared-rules.git`, `git@github.com:org/shared-rules.git`
 
 ### Examples
 
 **Sibling directory:**
 ```yaml
 includes:
-  - ../shared-rules/.ai-rulez
+  - name: shared-rules
+    source: ../shared-rules
+    include:
+      - rules
+      - context
+    merge_strategy: local-override
 ```
 
 **Subdirectory:**
 ```yaml
 includes:
-  - ./config/shared/.ai-rulez
+  - name: team-config
+    source: ./config/shared
+    include:
+      - rules
+      - skills
+    merge_strategy: local-override
+```
+
+**Git repository (HTTPS):**
+```yaml
+includes:
+  - name: org-standards
+    source: https://github.com/myorg/shared-rules.git
+    ref: main
+    include:
+      - rules
+      - context
+      - skills
+      - agents
+    merge_strategy: local-override
+```
+
+**Git repository (SSH):**
+```yaml
+includes:
+  - name: company-policies
+    source: git@github.com:company/ai-rulez.git
+    ref: v1.2.3
+    include:
+      - rules
+      - context
+    merge_strategy: local-override
 ```
 
 **Multiple includes:**
 ```yaml
 includes:
-  - ../shared-rules/.ai-rulez
-  - ../team-guidelines/.ai-rulez
-  - ./security-policies/.ai-rulez
+  # Local relative path
+  - name: team-guidelines
+    source: ../team-guidelines
+    include:
+      - rules
+      - context
+    merge_strategy: local-override
+
+  # Git repository
+  - name: org-standards
+    source: git@gitlab.com:org/standards.git
+    ref: main
+    include:
+      - rules
+      - skills
+    merge_strategy: local-override
+
+  # Another local path
+  - name: security-policies
+    source: ./security-policies
+    include:
+      - rules
+    merge_strategy: local-override
 ```
+
+### Supported Git URL Formats
+
+- **HTTPS:** `https://github.com/owner/repo.git`
+- **SSH:** `git@github.com:owner/repo.git`
+- **SSH protocol:** `ssh://git@github.com/owner/repo.git`
+- **GitLab:** `https://gitlab.com/owner/repo.git`, `git@gitlab.com:owner/repo.git`
+
+### Include Options
+
+- **`name`**: Unique identifier for the include
+- **`source`**: Path or Git URL to the configuration
+- **`ref`**: (Git only) Branch, tag, or commit SHA (default: `main`)
+- **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`
+- **`merge_strategy`**: How to handle conflicts:
+  - `local-override`: Local content takes precedence (default)
+  - `remote-override`: Remote content takes precedence
 
 ## Include Priority
 
