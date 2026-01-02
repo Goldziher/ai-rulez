@@ -57,7 +57,7 @@ func TestNewGitSourceValidation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange & Act
-			_, err := NewGitSource("test", tt.url, "", "", t.TempDir(), nil)
+			_, err := NewGitSource("test", tt.url, "", "", t.TempDir(), nil, "")
 
 			// Assert
 			if (err != nil) != tt.wantErr {
@@ -77,7 +77,7 @@ func TestNewGitSourceCreation(t *testing.T) {
 	include := []string{"rules", "context"}
 
 	// Act
-	source, err := NewGitSource(name, url, path, ref, baseDir, include)
+	source, err := NewGitSource(name, url, path, ref, baseDir, include, "")
 
 	// Assert
 	if err != nil {
@@ -106,7 +106,7 @@ func TestNewGitSourceCreation(t *testing.T) {
 func TestGitSourceGetType(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
-	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, nil)
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -124,7 +124,7 @@ func TestGitSourceGetName(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
 	name := "my-source"
-	source, err := NewGitSource(name, "https://github.com/owner/repo", "", "", baseDir, nil)
+	source, err := NewGitSource(name, "https://github.com/owner/repo", "", "", baseDir, nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -194,7 +194,7 @@ func TestBuildRawURLGitHub(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, tt.path, tt.ref, baseDir, nil)
+			source, err := NewGitSource("test", tt.repo, tt.path, tt.ref, baseDir, nil, "")
 			if err != nil {
 				t.Fatalf("unexpected error creating source: %v", err)
 			}
@@ -261,7 +261,7 @@ func TestBuildRawURLGitLab(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, tt.path, tt.ref, baseDir, nil)
+			source, err := NewGitSource("test", tt.repo, tt.path, tt.ref, baseDir, nil, "")
 			if err != nil {
 				t.Fatalf("unexpected error creating source: %v", err)
 			}
@@ -316,7 +316,7 @@ func TestBuildArchiveURLGitHub(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, "", tt.ref, baseDir, nil)
+			source, err := NewGitSource("test", tt.repo, "", tt.ref, baseDir, nil, "")
 			if err != nil {
 				t.Fatalf("unexpected error creating source: %v", err)
 			}
@@ -371,7 +371,7 @@ func TestBuildArchiveURLGitLab(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, "", tt.ref, baseDir, nil)
+			source, err := NewGitSource("test", tt.repo, "", tt.ref, baseDir, nil, "")
 			if err != nil {
 				t.Fatalf("unexpected error creating source: %v", err)
 			}
@@ -441,7 +441,7 @@ func TestFindAIRulezDir(t *testing.T) {
 				}
 			}
 
-			source, err := NewGitSource("test", "https://github.com/owner/repo", tt.searchPath, "", baseDir, nil)
+			source, err := NewGitSource("test", "https://github.com/owner/repo", tt.searchPath, "", baseDir, nil, "")
 			if err != nil {
 				t.Fatalf("unexpected error creating source: %v", err)
 			}
@@ -476,7 +476,7 @@ func TestGitSourceFilterContentIncludesRules(t *testing.T) {
 		},
 		Domains: make(map[string]*config.DomainV3),
 	}
-	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules"})
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules"}, "")
 	if err != nil {
 		t.Fatalf("unexpected error creating source: %v", err)
 	}
@@ -511,7 +511,7 @@ func TestGitSourceFilterContentIncludesMultiple(t *testing.T) {
 		},
 		Domains: make(map[string]*config.DomainV3),
 	}
-	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "context"})
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "context"}, "")
 	if err != nil {
 		t.Fatalf("unexpected error creating source: %v", err)
 	}
@@ -546,7 +546,7 @@ func TestGitSourceFilterContentEmptyInclude(t *testing.T) {
 		},
 		Domains: make(map[string]*config.DomainV3),
 	}
-	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{})
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{}, "")
 	if err != nil {
 		t.Fatalf("unexpected error creating source: %v", err)
 	}
@@ -580,7 +580,7 @@ func TestGitSourceFilterContentPreserveDomains(t *testing.T) {
 			"backend": domain,
 		},
 	}
-	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules"})
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules"}, "")
 	if err != nil {
 		t.Fatalf("unexpected error creating source: %v", err)
 	}
@@ -723,7 +723,7 @@ func TestCacheDirCreation(t *testing.T) {
 	sourceName := "my-source"
 
 	// Act
-	source, err := NewGitSource(sourceName, "https://github.com/owner/repo", "", "", baseDir, nil)
+	source, err := NewGitSource(sourceName, "https://github.com/owner/repo", "", "", baseDir, nil, "")
 
 	// Assert
 	if err != nil {
@@ -740,7 +740,7 @@ func TestCacheDirCreation(t *testing.T) {
 func TestFetchErrorHandlingInvalidURL(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
-	source, err := NewGitSource("test", "https://invalid-host-xyz.example.com/owner/repo", "", "", baseDir, nil)
+	source, err := NewGitSource("test", "https://invalid-host-xyz.example.com/owner/repo", "", "", baseDir, nil, "")
 	if err != nil {
 		t.Fatalf("unexpected error creating source: %v", err)
 	}

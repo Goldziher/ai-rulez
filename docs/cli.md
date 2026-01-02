@@ -612,6 +612,7 @@ ai-rulez generate [config-path] [flags]
 | `--dry-run` | boolean | false | Show what would be generated without writing files |
 | `--update-gitignore` | boolean | (from config) | Update `.gitignore` files with generated outputs |
 | `--recursive` / `-r` | boolean | false | Find and process configs recursively |
+| `--token` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 
 **Examples:**
 
@@ -638,6 +639,16 @@ ai-rulez generate --profile full --update-gitignore
 Generate recursively in monorepo:
 ```bash
 ai-rulez generate --recursive
+```
+
+Generate with private repository authentication:
+```bash
+# Using environment variable (recommended)
+export AI_RULEZ_GIT_TOKEN="ghp_your_github_token_here"
+ai-rulez generate
+
+# Using CLI flag
+ai-rulez generate --token "ghp_your_github_token_here"
 ```
 
 ### Profile Selection
@@ -751,6 +762,7 @@ These flags work with all commands:
 | Flag | Type | Description |
 |------|------|-------------|
 | `--config` | string | Config file path (auto-discovered if not specified) |
+| `--token` | string | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 | `--verbose` | boolean | Enable verbose output |
 | `--debug` | boolean | Enable debug output |
 | `--quiet` / `-q` | boolean | Suppress progress bars and non-essential output |

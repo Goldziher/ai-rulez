@@ -16,6 +16,7 @@ type HTTPConfig struct {
 	UserAgent    string
 	Headers      map[string]string
 	MaxBodySize  int64
+	AccessToken  string
 }
 
 func defaultHTTPConfig() *HTTPConfig {
@@ -53,6 +54,20 @@ func NewTestClient(config *HTTPConfig) *Client {
 	return newClientWithValidator(config, &testURLValidator{})
 }
 
+// NewClientWithToken creates a new HTTP client with optional access token
+func NewClientWithToken(config *HTTPConfig, accessToken string) *Client {
+	if config == nil {
+		config = defaultHTTPConfig()
+	}
+
+	// Set access token if provided
+	if accessToken != "" {
+		config.AccessToken = accessToken
+	}
+
+	return newClientWithValidator(config, newURLValidator())
+}
+
 func newClientWithValidator(config *HTTPConfig, validator URLValidatorInterface) *Client {
 	if config == nil {
 		config = defaultHTTPConfig()
@@ -78,6 +93,11 @@ func newClientWithValidator(config *HTTPConfig, validator URLValidatorInterface)
 func setupHTTPClient(client *resty.Client, config *HTTPConfig) {
 	client.SetTimeout(config.Timeout)
 	client.SetHeader("User-Agent", config.UserAgent)
+
+	// Add Bearer token if provided
+	if config.AccessToken != "" {
+		client.SetHeader("Authorization", "Bearer "+config.AccessToken)
+	}
 
 	for key, value := range config.Headers {
 		client.SetHeader(key, value)
@@ -162,7 +182,7 @@ func createHTTPError(url string, statusCode int, status string) error {
 	case 400:
 		hint = "Bad Request (400) - check the URL format"
 	case 401:
-		hint = "Unauthorized (401) - authentication may be required\nCheck if you need to provide API keys or credentials"
+		hint = "Unauthorized (401) - authentication required\nProvide a Git access token using --token flag or AI_RULEZ_GIT_TOKEN environment variable"
 	case 403:
 		hint = "Forbidden (403) - you don't have permission to access this resource\nCheck if the resource requires special permissions"
 	case 404:
