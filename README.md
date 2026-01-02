@@ -431,6 +431,33 @@ includes:
 - `merge_strategy`: How to handle conflicts (`local-override`, `remote-override`)
 - `ref`: Branch, tag, or commit SHA
 
+**Authenticating to Private Repositories:**
+
+When including rules from private Git repositories, you can provide an access token for authentication:
+
+```bash
+# Using environment variable (recommended for CI/CD)
+export AI_RULEZ_GIT_TOKEN="ghp_your_github_token_here"
+ai-rulez generate
+
+# Using CLI flag
+ai-rulez generate --token "ghp_your_github_token_here"
+```
+
+How to create access tokens:
+
+- **GitHub**: Settings → Developer settings → Personal access tokens → Generate new token (classic)
+  - Required scope: `repo` (for private repositories)
+- **GitLab**: Settings → Access Tokens → Add new token
+  - Required scope: `read_repository`
+
+**Security best practices:**
+- Never commit tokens to your repository
+- Use environment variables in CI/CD pipelines
+- Store tokens in secure secret management systems
+- Rotate tokens regularly
+- Use tokens with minimal required permissions
+
 See the [Includes documentation](https://goldziher.github.io/ai-rulez/includes/) for more details.
 
 </details>

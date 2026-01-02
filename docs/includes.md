@@ -167,6 +167,83 @@ includes:
 - **SSH protocol:** `ssh://git@github.com/owner/repo.git`
 - **GitLab:** `https://gitlab.com/owner/repo.git`, `git@gitlab.com:owner/repo.git`
 
+### Private Repository Authentication
+
+When working with private Git repositories in includes, you can authenticate using an access token.
+
+#### Using Environment Variable (Recommended)
+
+Set the `AI_RULEZ_GIT_TOKEN` environment variable with your access token:
+
+```bash
+export AI_RULEZ_GIT_TOKEN="ghp_your_github_token_here"
+ai-rulez generate
+```
+
+This is the recommended approach for CI/CD environments and automation scripts.
+
+#### Using CLI Flag
+
+Pass the token directly via the `--token` flag:
+
+```bash
+ai-rulez generate --token "ghp_your_github_token_here"
+```
+
+#### Creating Access Tokens
+
+**GitHub:**
+1. Go to Settings → Developer settings → Personal access tokens
+2. Click "Generate new token (classic)"
+3. Select scopes:
+   - `repo` - Required for accessing private repositories
+4. Generate and copy the token
+
+**GitLab:**
+1. Go to User Settings → Access Tokens
+2. Click "Add new token"
+3. Select scopes:
+   - `read_repository` - Required for reading private repositories
+4. Create token and copy it
+
+**Other Git Hosts:**
+
+Most Git hosting platforms that support Bearer token authentication will work with ai-rulez. The token is sent as a Bearer token in the Authorization header when fetching repository archives.
+
+#### Security Best Practices
+
+- **Never commit tokens** to your repository or configuration files
+- **Use environment variables** in CI/CD pipelines (GitHub Actions secrets, GitLab CI/CD variables, etc.)
+- **Store tokens securely** using secret management systems (AWS Secrets Manager, HashiCorp Vault, etc.)
+- **Rotate tokens regularly** to limit exposure from potential leaks
+- **Use minimal permissions** - only grant the token access to what's needed (read-only repository access)
+- **Use organization-level tokens** when possible to manage access centrally
+
+#### Example: CI/CD Integration
+
+**GitHub Actions:**
+```yaml
+name: Generate AI Rules
+on: [push]
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate
+        env:
+          AI_RULEZ_GIT_TOKEN: ${{ secrets.GIT_TOKEN }}
+        run: npx ai-rulez@latest generate
+```
+
+**GitLab CI:**
+```yaml
+generate:
+  script:
+    - export AI_RULEZ_GIT_TOKEN="$CI_JOB_TOKEN"
+    - ai-rulez generate
+```
+
 ### Include Options
 
 - **`name`**: Unique identifier for the include

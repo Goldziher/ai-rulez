@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/spf13/cobra"
@@ -10,8 +11,9 @@ import (
 )
 
 var (
-	cfgFile string
-	Version = "3.3.0"
+	cfgFile  string
+	gitToken string
+	Version  = "3.3.0"
 )
 
 var RootCmd = &cobra.Command{
@@ -32,6 +34,7 @@ func init() {
 	RootCmd.PersistentFlags().Bool("verbose", false, "enable verbose output")
 	RootCmd.PersistentFlags().Bool("debug", false, "enable debug output")
 	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress progress bars and non-essential output")
+	RootCmd.PersistentFlags().StringVar(&gitToken, "token", "", "Git access token for private repositories (or use AI_RULEZ_GIT_TOKEN env var)")
 
 	if err := viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose")); err != nil {
 		logger.Debug("Failed to bind verbose flag", "error", err)
@@ -72,7 +75,28 @@ func initConfig() {
 
 	viper.AutomaticEnv()
 
+	// Bind git token from environment variable
+	if err := viper.BindEnv("git_token", "AI_RULEZ_GIT_TOKEN"); err != nil {
+		logger.Debug("Failed to bind git token env var", "error", err)
+	}
+	if err := viper.BindPFlag("git_token", RootCmd.PersistentFlags().Lookup("token")); err != nil {
+		logger.Debug("Failed to bind git token flag", "error", err)
+	}
+
 	if err := viper.ReadInConfig(); err == nil && viper.GetBool("verbose") {
 		fmt.Fprintln(os.Stderr, "Using config file:", viper.ConfigFileUsed())
 	}
+}
+
+// GetGitToken returns the git token from flag or environment variable
+// Priority: CLI flag > Environment variable
+func GetGitToken() string {
+	// CLI flag takes precedence
+	if gitToken != "" {
+		return strings.TrimSpace(gitToken)
+	}
+
+	// Fall back to viper (environment variable)
+	token := viper.GetString("git_token")
+	return strings.TrimSpace(token)
 }
