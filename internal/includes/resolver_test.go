@@ -13,7 +13,7 @@ import (
 func TestResolverCircularDependencyDetection(t *testing.T) {
 	// This test verifies that circular dependencies are caught
 	// Note: ResolveIncludes logs warnings but continues processing
-	resolver := NewResolver("/tmp")
+	resolver := NewResolver("/tmp", "")
 
 	// Create two includes with the same name (represents circular reference)
 	cfg := &config.ConfigV3{
@@ -42,7 +42,7 @@ func TestResolverCircularDependencyDetection(t *testing.T) {
 
 	// Verify that the visited map was reset between includes (not persistent across calls)
 	// Create a new resolver and test that includes with same name can be processed separately
-	resolver2 := NewResolver("/tmp")
+	resolver2 := NewResolver("/tmp", "")
 	cfg2 := &config.ConfigV3{
 		Includes: []config.IncludeConfig{
 			{
@@ -92,7 +92,7 @@ func TestResolverCreateSource(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resolver := NewResolver("/tmp")
+			resolver := NewResolver("/tmp", "")
 			includeConf := config.IncludeConfig{
 				Name:   "test",
 				Source: tt.source,
@@ -168,7 +168,7 @@ func TestResolverMergeStrategies(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resolver := NewResolver("/tmp")
+			resolver := NewResolver("/tmp", "")
 			merged, err := resolver.mergeRoot(baseContent, includeContent, tt.strategy)
 
 			if err != nil {
@@ -220,7 +220,7 @@ func TestResolverMergeErrorStrategy(t *testing.T) {
 		Domains: make(map[string]*config.DomainV3),
 	}
 
-	resolver := NewResolver("/tmp")
+	resolver := NewResolver("/tmp", "")
 	_, err := resolver.mergeRoot(baseContent, includeContent, "error")
 
 	if err == nil {
@@ -281,7 +281,7 @@ func TestResolverDomainInstall(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			resolver := NewResolver("/tmp")
+			resolver := NewResolver("/tmp", "")
 			merged, err := resolver.mergeDomainInstall(baseContent, includeContent, tt.installTo, "local-override")
 
 			if tt.expectError {
@@ -505,7 +505,7 @@ func TestResolverLocalInclude(t *testing.T) {
 	createTestAIRulezDir(t, sourceDir)
 
 	// Create config with include
-	resolver := NewResolver(tmpDir)
+	resolver := NewResolver(tmpDir, "")
 	cfg := &config.ConfigV3{
 		Version: "3.0",
 		Name:    "test",
@@ -568,7 +568,7 @@ func TestResolverMergeDomains(t *testing.T) {
 		},
 	}
 
-	resolver := NewResolver("/tmp")
+	resolver := NewResolver("/tmp", "")
 	merged, err := resolver.mergeRoot(baseContent, includeContent, "local-override")
 
 	if err != nil {

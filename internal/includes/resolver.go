@@ -18,15 +18,17 @@ const (
 
 // Resolver resolves include sources and merges content
 type Resolver struct {
-	baseDir string
-	visited map[string]bool // Circular dependency detection
+	baseDir     string
+	accessToken string
+	visited     map[string]bool // Circular dependency detection
 }
 
 // NewResolver creates a new include resolver
-func NewResolver(baseDir string) *Resolver {
+func NewResolver(baseDir string, accessToken string) *Resolver {
 	return &Resolver{
-		baseDir: baseDir,
-		visited: make(map[string]bool),
+		baseDir:     baseDir,
+		accessToken: accessToken,
+		visited:     make(map[string]bool),
 	}
 }
 
@@ -107,6 +109,7 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 			includeConf.Ref,
 			r.baseDir,
 			includeConf.Include,
+			r.accessToken,
 		)
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for include '%s'", includeConf.Name)
