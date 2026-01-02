@@ -392,13 +392,44 @@ Reference external rule sources:
 
 ```yaml
 includes:
+  # Git repository via HTTPS
   - name: company-standards
     source: https://github.com/company/ai-rules.git
     ref: main
+    include:
+      - rules
+      - context
+      - skills
+      - agents
+    merge_strategy: local-override
 
+  # Git repository via SSH
+  - name: shared-configs
+    source: git@github.com:organization/shared-ai-rulez.git
+    ref: main
+    include:
+      - rules
+      - context
+    merge_strategy: local-override
+
+  # Local relative path
   - name: local-standards
     source: ../shared-rules
+    include:
+      - rules
+      - skills
+    merge_strategy: local-override
 ```
+
+**Supported Git URL formats:**
+- HTTPS: `https://github.com/owner/repo.git`
+- SSH: `git@github.com:owner/repo.git`
+- SSH protocol: `ssh://git@github.com/owner/repo.git`
+
+**Include options:**
+- `include`: List of content types to fetch (`rules`, `context`, `skills`, `agents`)
+- `merge_strategy`: How to handle conflicts (`local-override`, `remote-override`)
+- `ref`: Branch, tag, or commit SHA
 
 See the [Includes documentation](https://goldziher.github.io/ai-rulez/includes/) for more details.
 

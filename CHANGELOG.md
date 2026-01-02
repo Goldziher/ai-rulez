@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## 3.3.2 - 2026-01-02
+
+### Fixed
+- SSH git URL conversion in includes system - now properly converts SSH URLs to HTTPS for archive downloads
+- Added support for multiple SSH URL formats: `git@host:owner/repo.git`, `ssh://git@host/owner/repo.git`
+- Updated validation to accept SSH URLs alongside HTTP/HTTPS URLs
+
+### Documentation
+- Added comprehensive examples for Git includes with SSH and HTTPS URLs in README
+- Updated includes documentation with supported Git URL formats and include options
+
 ## 3.3.1 - 2025-12-31
 
 ### Fixed

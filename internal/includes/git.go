@@ -531,10 +531,17 @@ func validateGitURL(urlStr string) error {
 		return oops.Errorf("repository URL cannot be empty")
 	}
 
+	// Check for SSH URL format (git@host:owner/repo.git or ssh://git@host/owner/repo.git)
+	if strings.HasPrefix(urlStr, "git@") || strings.HasPrefix(urlStr, "ssh://") {
+		// SSH URLs are valid, they'll be normalized to HTTPS
+		return nil
+	}
+
+	// Check for HTTP/HTTPS URLs
 	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
 		return oops.
 			With("url", urlStr).
-			Hint("Git repository URLs must use http:// or https:// protocol").
+			Hint("Git repository URLs must use http://, https://, git@, or ssh:// protocol").
 			Errorf("invalid git repository URL format")
 	}
 
@@ -550,6 +557,27 @@ func validateGitURL(urlStr string) error {
 
 // normalizeGitURL normalizes a git repository URL
 func normalizeGitURL(urlStr string) string {
+	// Convert SSH URLs to HTTPS format
+	// Format: git@github.com:owner/repo.git -> https://github.com/owner/repo
+	if strings.HasPrefix(urlStr, "git@") {
+		// Remove git@ prefix
+		urlStr = strings.TrimPrefix(urlStr, "git@")
+
+		// Replace first colon with slash (git@host:owner/repo -> host/owner/repo)
+		urlStr = strings.Replace(urlStr, ":", "/", 1)
+
+		// Add https:// prefix
+		urlStr = "https://" + urlStr
+	}
+
+	// Convert ssh:// URLs to https://
+	// Format: ssh://git@github.com/owner/repo.git -> https://github.com/owner/repo
+	if strings.HasPrefix(urlStr, "ssh://") {
+		urlStr = strings.TrimPrefix(urlStr, "ssh://")
+		urlStr = strings.TrimPrefix(urlStr, "git@")
+		urlStr = "https://" + urlStr
+	}
+
 	// Trim all trailing slashes
 	urlStr = strings.TrimRight(urlStr, "/")
 	return urlStr
