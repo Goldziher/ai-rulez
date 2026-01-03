@@ -17,6 +17,8 @@ Key concepts:
 - V3 config lives in `.ai-rulez/config.yaml` plus `rules/`, `context/`, `skills/`, and `agents/`.
 - Profiles select which domains under `.ai-rulez/domains/` are included in a generation.
 - Presets define output formats and paths; `ai-rulez generate` renders all configured presets.
+- Includes let you merge shared rule sets into local content before generation.
+- MCP server settings live in `.ai-rulez/mcp.yaml` and can be generated alongside presets.
 
 Typical workflow:
 1. Update `.ai-rulez/` sources (config, rules, context, skills, agents, domains).
