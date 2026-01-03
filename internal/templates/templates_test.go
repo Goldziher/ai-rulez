@@ -23,7 +23,7 @@ func TestRenderer_Render(t *testing.T) {
 			},
 		}
 
-		data := templates.NewTemplateData(cfg)
+		data := templates.NewTemplateData(cfg, nil)
 
 		output, err := renderer.Render("default", data)
 		require.NoError(t, err)
@@ -85,7 +85,7 @@ func TestNewTemplateData(t *testing.T) {
 		},
 	}
 
-	data := templates.NewTemplateData(cfg)
+	data := templates.NewTemplateData(cfg, nil)
 
 	assert.Equal(t, "Test Project", data.ProjectName)
 	assert.Equal(t, "Test Description", data.Description)
@@ -109,7 +109,7 @@ func TestNewTemplateDataForOutput(t *testing.T) {
 
 	outputPath := "claude.md"
 
-	data := templates.NewTemplateDataForOutput(cfg, outputPath)
+	data := templates.NewTemplateDataForOutput(cfg, outputPath, nil)
 
 	assert.Len(t, data.Rules, 2)
 	assert.Equal(t, "claude.md", data.OutputFile)

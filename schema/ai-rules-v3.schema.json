@@ -127,6 +127,19 @@
         },
         "additionalProperties": false
       }
+    },
+    "header": {
+      "type": "object",
+      "description": "Header style configuration for generated files",
+      "properties": {
+        "style": {
+          "type": "string",
+          "enum": ["detailed", "compact", "minimal"],
+          "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",
+          "default": "detailed"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,
@@ -151,7 +164,10 @@
         "backend": ["backend", "qa"],
         "frontend": ["frontend", "qa"]
       },
-      "gitignore": true
+      "gitignore": true,
+      "header": {
+        "style": "detailed"
+      }
     }
   ]
 }

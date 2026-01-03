@@ -108,7 +108,7 @@ func (g *Generator) generateConcurrent(cfg *config.Config) error {
 }
 
 func (g *Generator) generateOutput(cfg *config.Config, output *config.Output, index int) error {
-	templateData := templates.NewTemplateDataForOutput(cfg, output.Path)
+	templateData := templates.NewTemplateDataForOutput(cfg, output.Path, nil)
 	if err := g.writeOutputFile(output, templateData); err != nil {
 		return oops.
 			With("path", output.Path).
@@ -130,7 +130,7 @@ func (g *Generator) GenerateOutput(cfg *config.Config, outputFile string) error 
 			Errorf("output file not found in configuration")
 	}
 
-	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.Path)
+	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.Path, nil)
 	return g.writeOutputFile(targetOutput, templateData)
 }
 
@@ -170,7 +170,7 @@ func (g *Generator) PreviewOutput(cfg *config.Config, outputFile string) (string
 			Errorf("output file not found in configuration")
 	}
 
-	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.Path)
+	templateData := templates.NewTemplateDataForOutput(cfg, targetOutput.Path, nil)
 	templateData.ConfigFile = g.configFile
 	templateData.OutputFile = targetOutput.Path
 
@@ -196,7 +196,7 @@ func (g *Generator) PreviewAll(cfg *config.Config) (map[string]string, error) {
 
 	for i := range cfg.Outputs {
 		output := &cfg.Outputs[i]
-		templateData := templates.NewTemplateDataForOutput(cfg, output.Path)
+		templateData := templates.NewTemplateDataForOutput(cfg, output.Path, nil)
 		templateData.ConfigFile = g.configFile
 		templateData.OutputFile = output.Path
 

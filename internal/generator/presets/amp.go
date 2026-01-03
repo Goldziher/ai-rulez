@@ -3,8 +3,10 @@ package presets
 import (
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 func init() {
@@ -13,6 +15,23 @@ func init() {
 
 // AmpPresetGenerator generates AMP preset files (AGENTS.md)
 type AmpPresetGenerator struct{}
+
+// generateAmpPresetHeader creates a header for AMP preset files
+func generateAmpPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+	// Create TemplateData for header generation
+	data := &templates.TemplateData{
+		ProjectName:  cfg.Name,
+		Timestamp:    time.Now(),
+		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		OutputFile:   outputPath,
+		Config:       cfg,
+		RuleCount:    ruleCount,
+		SectionCount: sectionCount,
+		AgentCount:   agentCount,
+	}
+
+	return templates.GenerateHeader(data)
+}
 
 func (g *AmpPresetGenerator) GetName() string {
 	return "amp"
@@ -42,7 +61,15 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir str
 func (g *AmpPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
 	var builder strings.Builder
 
-	// Add header
+	// Calculate content counts
+	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+
+	// Add header before title
+	header := generateAmpPresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))
+	builder.WriteString(header)
+
+	// Add title
 	builder.WriteString("# ")
 	builder.WriteString(cfg.Name)
 	builder.WriteString("\n\n")
@@ -53,7 +80,6 @@ func (g *AmpPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3,
 	}
 
 	// Add rules section
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
 		for _, rule := range allRules {

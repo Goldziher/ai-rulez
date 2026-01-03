@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,12 +18,30 @@ func init() {
 // ClaudePresetGenerator generates Claude preset files
 type ClaudePresetGenerator struct{}
 
+// generatePresetHeader creates a header for Claude preset files
+func generatePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+	// Create TemplateData for header generation
+	data := &templates.TemplateData{
+		ProjectName:  cfg.Name,
+		Timestamp:    time.Now(),
+		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		OutputFile:   outputPath,
+		Config:       cfg,
+		RuleCount:    ruleCount,
+		SectionCount: sectionCount,
+		AgentCount:   agentCount,
+	}
+
+	return templates.GenerateHeader(data)
+}
+
 func (g *ClaudePresetGenerator) GetName() string {
 	return "claude"
 }
 
 func (g *ClaudePresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
+		filepath.Join(baseDir, "CLAUDE.md"),
 		filepath.Join(baseDir, ".claude"),
 		filepath.Join(baseDir, ".claude", "skills"),
 		filepath.Join(baseDir, ".claude", "agents"),
@@ -47,9 +67,16 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		},
 	)
 
+	// Generate CLAUDE.md with all rules and context
+	claudeMD := g.renderClaudeMarkdown(content, cfg)
+	outputs = append(outputs, config.OutputFileV3{
+		Path:    filepath.Join(baseDir, "CLAUDE.md"),
+		Content: claudeMD,
+	})
+
 	// Generate skill files
 	for _, skill := range content.Skills {
-		skillOutputs, err := g.generateSkillFiles(skill, content, baseDir)
+		skillOutputs, err := g.generateSkillFiles(skill, content, baseDir, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate skill %s: %w", skill.Name, err)
 		}
@@ -59,7 +86,7 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 	// Generate agent files
 	if len(content.Agents) > 0 {
 		for _, agent := range content.Agents {
-			agentOutputs, err := g.generateAgentFiles(agent, content, baseDir)
+			agentOutputs, err := g.generateAgentFiles(agent, content, baseDir, cfg)
 			if err != nil {
 				return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 			}
@@ -70,7 +97,7 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 	return outputs, nil
 }
 
-func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, content *config.ContentTreeV3, baseDir string) ([]config.OutputFileV3, error) {
+func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
 	// Extract skill ID from path
@@ -84,20 +111,21 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 	})
 
 	// Generate SKILL.md with frontmatter
-	skillContent, err := g.renderSkillFile(skill, content)
+	skillOutputPath := filepath.Join(skillDir, "SKILL.md")
+	skillContent, err := g.renderSkillFile(skill, content, cfg, skillOutputPath)
 	if err != nil {
 		return nil, err
 	}
 
 	outputs = append(outputs, config.OutputFileV3{
-		Path:    filepath.Join(skillDir, "SKILL.md"),
+		Path:    skillOutputPath,
 		Content: skillContent,
 	})
 
 	return outputs, nil
 }
 
-func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, content *config.ContentTreeV3) (string, error) {
+func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
 	var builder strings.Builder
 
 	// Generate frontmatter
@@ -123,6 +151,10 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	if err != nil {
 		return "", fmt.Errorf("marshal frontmatter: %w", err)
 	}
+
+	// Add header before frontmatter
+	header := generatePresetHeader(cfg, outputPath, len(content.Rules), 0, len(content.Agents))
+	builder.WriteString(header)
 
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
@@ -163,20 +195,21 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	return builder.String(), nil
 }
 
-func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, content *config.ContentTreeV3, baseDir string) ([]config.OutputFileV3, error) {
+func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
 	// Extract agent ID from name
 	agentID := sanitizeAgentID(agent.Name)
 
 	// Generate agent file with Claude's agent format
-	agentContent, err := g.renderAgentContent(agent, content)
+	agentOutputPath := filepath.Join(baseDir, ".claude", "agents", agentID+".md")
+	agentContent, err := g.renderAgentContent(agent, content, cfg, agentOutputPath)
 	if err != nil {
 		return nil, err
 	}
 
 	outputs = append(outputs, config.OutputFileV3{
-		Path:    filepath.Join(baseDir, ".claude", "agents", agentID+".md"),
+		Path:    agentOutputPath,
 		Content: agentContent,
 	})
 
@@ -220,7 +253,82 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile) 
 	return frontmatter
 }
 
-func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTreeV3) (string, error) {
+func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+	var builder strings.Builder
+
+	// Calculate content counts
+	ruleCount := len(content.Rules)
+	agentCount := len(content.Agents)
+	for _, domain := range content.Domains {
+		ruleCount += len(domain.Rules)
+		agentCount += len(domain.Agents)
+	}
+
+	// Generate and prepend header
+	outputPath := "CLAUDE.md"
+	header := generatePresetHeader(cfg, outputPath, ruleCount, 0, agentCount)
+	builder.WriteString(header)
+
+	// Add project title
+	builder.WriteString("# ")
+	builder.WriteString(cfg.Name)
+	builder.WriteString("\n\n")
+
+	if cfg.Description != "" {
+		builder.WriteString(cfg.Description)
+		builder.WriteString("\n\n")
+	}
+
+	// Add rules section
+	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	if len(allRules) > 0 {
+		builder.WriteString("## Rules\n\n")
+		for _, rule := range allRules {
+			builder.WriteString("### ")
+			builder.WriteString(rule.Name)
+			builder.WriteString("\n")
+
+			if rule.Metadata != nil && rule.Metadata.Priority != "" {
+				builder.WriteString("**Priority:** ")
+				builder.WriteString(rule.Metadata.Priority)
+				builder.WriteString("\n\n")
+			}
+
+			builder.WriteString(rule.Content)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	// Add context section
+	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	if len(allContext) > 0 {
+		builder.WriteString("## Context\n\n")
+		for _, ctx := range allContext {
+			builder.WriteString("### ")
+			builder.WriteString(ctx.Name)
+			builder.WriteString("\n\n")
+			builder.WriteString(ctx.Content)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	// Add skills section
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	if len(allSkills) > 0 {
+		builder.WriteString("## Skills\n\n")
+		for _, skill := range allSkills {
+			builder.WriteString("### ")
+			builder.WriteString(skill.Name)
+			builder.WriteString("\n\n")
+			builder.WriteString(skill.Content)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	return builder.String()
+}
+
+func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
 	var builder strings.Builder
 
 	frontmatter := g.buildAgentFrontmatter(agent)
@@ -229,6 +337,10 @@ func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, con
 	if err != nil {
 		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
 	}
+
+	// Add header before frontmatter
+	header := generatePresetHeader(cfg, outputPath, len(content.Rules), 0, len(content.Agents))
+	builder.WriteString(header)
 
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
