@@ -57,7 +57,7 @@ More content.`,
 			},
 		},
 		{
-			name: "code blocks",
+			name:  "code blocks",
 			input: "# Code Example\n\n```go\nfunc main() {\n\tprintln(\"hello\")\n}\n```",
 			validate: func(t *testing.T, output string) {
 				assert.Contains(t, output, "```go")
