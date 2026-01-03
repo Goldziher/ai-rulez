@@ -6,6 +6,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## 3.4.1 - 2026-01-03
+
+### Added
+- SSH git clone support for private repositories - automatically uses `git clone` for SSH URLs (`git@...`, `ssh://...`)
+- Support for self-hosted GitLab instances and other GitLab-compatible git servers
+- Support for repositories where root IS the ai-rulez structure (no nested `.ai-rulez/` directory)
+- Automatic detection of repository structure (standard vs root-level)
+
+### Changed
+- Git includes now use native SSH cloning when SSH URLs are detected, leveraging existing SSH key configuration
+- Improved git include fetching to skip `.git` directory when copying repository content
+
+### Documentation
+- Added comprehensive SSH cloning documentation in docs/includes.md
+- Added repository structure support documentation
+- Added self-hosted GitLab examples and requirements
+
 ## 3.4.0 - 2026-01-03
 
 ### Added
