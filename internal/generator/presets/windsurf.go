@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -90,7 +91,8 @@ func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *c
 	}
 
 	// Add content
-	builder.WriteString(rule.Content)
+	processedContent := markdown.ProcessEmbeddedContent(rule.Content)
+	builder.WriteString(processedContent)
 
 	return builder.String()
 }

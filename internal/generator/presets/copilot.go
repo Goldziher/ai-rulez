@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -94,7 +95,7 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 		for _, rule := range allRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
-			builder.WriteString("\n")
+			builder.WriteString("\n\n")
 
 			if rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
@@ -102,7 +103,8 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 				builder.WriteString("\n\n")
 			}
 
-			builder.WriteString(rule.Content)
+			processedContent := markdown.ProcessEmbeddedContent(rule.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -115,7 +117,8 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 			builder.WriteString("### ")
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
-			builder.WriteString(ctx.Content)
+			processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -128,7 +131,8 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 			builder.WriteString("### ")
 			builder.WriteString(skill.Name)
 			builder.WriteString("\n\n")
-			builder.WriteString(skill.Content)
+			processedContent := markdown.ProcessEmbeddedContent(skill.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
