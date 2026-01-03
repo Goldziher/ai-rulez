@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 
@@ -35,13 +36,15 @@ const (
 // GitSource represents a git repository source
 type GitSource struct {
 	name        string
-	repoURL     string
+	repoURL     string // Normalized HTTPS URL
+	originalURL string // Original URL (may be SSH format)
 	path        string // Path within repo to .ai-rulez/ (optional, defaults to root)
 	ref         string // branch, tag, or commit (optional, defaults to main/master)
 	cacheDir    string // .ai-rulez/.remote-cache/{name}/
 	include     []string
 	accessToken string
 	httpClient  *remote.Client
+	isSSH       bool // True if original URL was SSH format
 }
 
 // NewGitSource creates a new git source
@@ -54,15 +57,20 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 	// Create cache directory if not exists
 	cacheDir := filepath.Join(baseDir, ".remote-cache", name)
 
+	// Detect if this is an SSH URL
+	isSSH := isSSHURL(repoURL)
+
 	source := &GitSource{
 		name:        name,
 		repoURL:     normalizeGitURL(repoURL),
+		originalURL: repoURL,
 		path:        path,
 		ref:         ref,
 		cacheDir:    cacheDir,
 		include:     include,
 		accessToken: accessToken,
 		httpClient:  remote.NewClientWithToken(nil, accessToken),
+		isSSH:       isSSH,
 	}
 
 	return source, nil
@@ -80,7 +88,7 @@ func (s *GitSource) GetName() string {
 
 // Fetch downloads content from git repository and returns the content tree
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
-	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
+	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "", "is_ssh", s.isSSH)
 
 	// Ensure cache directory exists
 	if err := os.MkdirAll(s.cacheDir, 0o755); err != nil {
@@ -89,17 +97,25 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 			Wrapf(err, "failed to create cache directory")
 	}
 
-	// Build raw URL for the repository content
-	rawURL, err := s.buildRawURL()
-	if err != nil {
-		return nil, err
-	}
+	// Use git clone for SSH URLs, HTTP archive download for HTTPS URLs
+	if s.isSSH {
+		logger.Debug("Using git clone for SSH URL", "url", s.originalURL)
+		if err := s.cloneViaGit(ctx); err != nil {
+			return nil, err
+		}
+	} else {
+		// Build raw URL for the repository content
+		rawURL, err := s.buildRawURL()
+		if err != nil {
+			return nil, err
+		}
 
-	logger.Debug("Built raw URL", "url", rawURL)
+		logger.Debug("Built raw URL", "url", rawURL)
 
-	// Download and extract archive
-	if err := s.downloadAndExtract(ctx, rawURL); err != nil {
-		return nil, err
+		// Download and extract archive
+		if err := s.downloadAndExtract(ctx, rawURL); err != nil {
+			return nil, err
+		}
 	}
 
 	// Find the .ai-rulez directory in the extracted content
@@ -278,7 +294,7 @@ func (s *GitSource) buildArchiveURL() (string, error) {
 		return fmt.Sprintf(archGitHubURL, owner, repo, ref), nil
 	}
 
-	// GitLab archive format
+	// GitLab archive format (public gitlab.com)
 	if strings.Contains(repoURL, gitLabHost) {
 		parts := strings.Split(strings.TrimSuffix(repoURL, rootPath), rootPath)
 		if len(parts) < 2 {
@@ -292,9 +308,25 @@ func (s *GitSource) buildArchiveURL() (string, error) {
 		return fmt.Sprintf(archGitLabURL, owner, repo, ref), nil
 	}
 
-	return "", oops.
-		With("url", s.repoURL).
-		Errorf("unsupported git host")
+	// Self-hosted GitLab or other GitLab-compatible hosts
+	// Use standard GitLab archive format: https://host/owner/repo/-/archive/ref/archive.tar.gz
+	parts := strings.Split(strings.TrimSuffix(repoURL, rootPath), rootPath)
+	if len(parts) < 2 {
+		return "", oops.
+			With("url", s.repoURL).
+			Errorf("invalid git URL format: could not extract owner/repo from URL")
+	}
+	owner := parts[len(parts)-2]
+	repo := parts[len(parts)-1]
+
+	// Extract base URL (everything before owner/repo)
+	baseURL := strings.TrimSuffix(repoURL, fmt.Sprintf("/%s/%s", owner, repo))
+
+	// Construct GitLab-style archive URL
+	archiveURL := fmt.Sprintf("%s/%s/%s/-/archive/%s/archive.tar.gz", baseURL, owner, repo, ref)
+	logger.Debug("Using GitLab-style archive URL for self-hosted instance", "url", archiveURL)
+
+	return archiveURL, nil
 }
 
 // extractTarGz extracts a tar.gz archive to the cache directory
@@ -583,4 +615,198 @@ func normalizeGitURL(urlStr string) string {
 	// Trim all trailing slashes
 	urlStr = strings.TrimRight(urlStr, "/")
 	return urlStr
+}
+
+// isSSHURL detects if a URL is in SSH format
+func isSSHURL(urlStr string) bool {
+	return strings.HasPrefix(urlStr, "git@") || strings.HasPrefix(urlStr, "ssh://")
+}
+
+// cloneViaGit clones a repository using the git command
+func (s *GitSource) cloneViaGit(ctx context.Context) error {
+	// Create a temporary directory for the clone
+	tmpDir := filepath.Join(s.cacheDir, ".tmp-clone")
+
+	// Remove any existing tmp directory
+	if err := os.RemoveAll(tmpDir); err != nil {
+		return oops.
+			With("tmp_dir", tmpDir).
+			Wrapf(err, "failed to remove existing temp directory")
+	}
+
+	// Determine ref (default to main if not specified)
+	ref := s.ref
+	if ref == "" {
+		ref = defaultRef
+	}
+
+	logger.Debug("Cloning git repository", "url", s.originalURL, "ref", ref, "tmp_dir", tmpDir)
+
+	// Clone with specific branch/ref
+	// nolint: gosec // G204: Command arguments are from validated config, not user input
+	cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--branch", ref, s.originalURL, tmpDir)
+	cmd.Env = os.Environ() // Inherit environment including SSH keys
+
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return oops.
+			With("url", s.originalURL).
+			With("ref", ref).
+			With("output", string(output)).
+			Wrapf(err, "failed to clone repository via git")
+	}
+
+	logger.Debug("Successfully cloned repository", "tmp_dir", tmpDir)
+
+	// Find the .ai-rulez directory or ai-rulez structure in the clone
+	sourceDir, err := s.findSourceDir(tmpDir)
+	if err != nil {
+		if cleanupErr := os.RemoveAll(tmpDir); cleanupErr != nil {
+			logger.Warn("failed to cleanup temp directory", "tmp_dir", tmpDir, "error", cleanupErr)
+		}
+		return err
+	}
+
+	// Copy ai-rulez structure to cache
+	destDir := filepath.Join(s.cacheDir, aiRulezDir)
+	if err := copyDir(sourceDir, destDir); err != nil {
+		if err := os.RemoveAll(tmpDir); err != nil {
+			logger.Warn("failed to cleanup temp directory", "tmp_dir", tmpDir, "error", err)
+		}
+		return oops.
+			With("source", sourceDir).
+			With("dest", destDir).
+			Wrapf(err, "failed to copy ai-rulez structure")
+	}
+
+	// Clean up the temporary clone
+	if err := os.RemoveAll(tmpDir); err != nil {
+		logger.Warn("failed to cleanup temp directory", "tmp_dir", tmpDir, "error", err)
+	}
+
+	logger.Debug("Successfully copied .ai-rulez directory to cache", "cache_dir", s.cacheDir)
+
+	return nil
+}
+
+// findSourceDir finds the source directory containing ai-rulez structure in the cloned repo
+func (s *GitSource) findSourceDir(tmpDir string) (string, error) {
+	// First, try to find .ai-rulez subdirectory
+	sourceAIRulezDir := filepath.Join(tmpDir, aiRulezDir)
+	if s.path != "" && s.path != rootPath {
+		cleanPath := strings.Trim(s.path, rootPath)
+		sourceAIRulezDir = filepath.Join(tmpDir, cleanPath, aiRulezDir)
+	}
+
+	// Check if .ai-rulez directory exists
+	if _, err := os.Stat(sourceAIRulezDir); err == nil {
+		logger.Debug("Found .ai-rulez subdirectory in clone", "path", sourceAIRulezDir)
+		return sourceAIRulezDir, nil
+	}
+
+	// Try at root level
+	sourceAIRulezDir = filepath.Join(tmpDir, aiRulezDir)
+	if _, err := os.Stat(sourceAIRulezDir); err == nil {
+		logger.Debug("Found .ai-rulez subdirectory at root", "path", sourceAIRulezDir)
+		return sourceAIRulezDir, nil
+	}
+
+	// Check if root has ai-rulez structure
+	if s.hasAIRulezStructure(tmpDir) {
+		logger.Debug("Repository root contains ai-rulez structure", "path", tmpDir)
+		return tmpDir, nil
+	}
+
+	return "", oops.
+		With("repo", s.originalURL).
+		With("ref", s.ref).
+		With("path", s.path).
+		Errorf("no .ai-rulez directory or ai-rulez structure found in repository")
+}
+
+// hasAIRulezStructure checks if a directory contains ai-rulez structure
+func (s *GitSource) hasAIRulezStructure(dir string) bool {
+	checkDirs := []string{"rules", "context", "skills", "agents"}
+	for _, subdir := range checkDirs {
+		checkPath := filepath.Join(dir, subdir)
+		if info, err := os.Stat(checkPath); err == nil && info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+// copyDir recursively copies a directory
+func copyDir(src, dst string) error {
+	// Get source directory info
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return oops.Wrapf(err, "failed to stat source directory")
+	}
+
+	// Create destination directory
+	if err := os.MkdirAll(dst, srcInfo.Mode()); err != nil {
+		return oops.Wrapf(err, "failed to create destination directory")
+	}
+
+	// Read source directory
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return oops.Wrapf(err, "failed to read source directory")
+	}
+
+	// Copy each entry
+	for _, entry := range entries {
+		// Skip .git directory
+		if entry.Name() == ".git" {
+			continue
+		}
+
+		srcPath := filepath.Join(src, entry.Name())
+		dstPath := filepath.Join(dst, entry.Name())
+
+		if entry.IsDir() {
+			// Recursively copy subdirectory
+			if err := copyDir(srcPath, dstPath); err != nil {
+				return err
+			}
+		} else {
+			// Copy file
+			if err := copyFile(srcPath, dstPath); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+// copyFile copies a single file
+func copyFile(src, dst string) error {
+	// Read source file
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return oops.Wrapf(err, "failed to open source file")
+	}
+	defer srcFile.Close()
+
+	// Get source file info
+	srcInfo, err := srcFile.Stat()
+	if err != nil {
+		return oops.Wrapf(err, "failed to stat source file")
+	}
+
+	// Create destination file
+	dstFile, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, srcInfo.Mode())
+	if err != nil {
+		return oops.Wrapf(err, "failed to create destination file")
+	}
+	defer dstFile.Close()
+
+	// Copy content
+	if _, err := io.Copy(dstFile, srcFile); err != nil {
+		return oops.Wrapf(err, "failed to copy file content")
+	}
+
+	return nil
 }
