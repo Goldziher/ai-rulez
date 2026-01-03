@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -286,7 +287,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		for _, rule := range allRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
-			builder.WriteString("\n")
+			builder.WriteString("\n\n") // Add blank line after heading
 
 			if rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
@@ -294,7 +295,9 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 				builder.WriteString("\n\n")
 			}
 
-			builder.WriteString(rule.Content)
+			// Process the content to remove the H1 and normalize formatting
+			processedContent := markdown.ProcessEmbeddedContent(rule.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -307,7 +310,10 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 			builder.WriteString("### ")
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
-			builder.WriteString(ctx.Content)
+
+			// Process the content to remove the H1 and normalize formatting
+			processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -320,7 +326,10 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 			builder.WriteString("### ")
 			builder.WriteString(skill.Name)
 			builder.WriteString("\n\n")
-			builder.WriteString(skill.Content)
+
+			// Process the content to remove the H1 and normalize formatting
+			processedContent := markdown.ProcessEmbeddedContent(skill.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}

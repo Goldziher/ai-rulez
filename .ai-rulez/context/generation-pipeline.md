@@ -19,4 +19,6 @@ Rendering flow:
 3. Generate preset outputs (plus MCP output when servers exist).
 4. Write files and update gitignore.
 
-Use `ai-rulez generate --profile <name>` to build a domain-specific view.
+Profile notes:
+- `default` profile means root content only (no domains).
+- `ai-rulez generate --profile <name>` builds the root content plus the profile's domains.
