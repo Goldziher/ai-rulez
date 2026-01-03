@@ -72,13 +72,14 @@ type TemplateData struct {
 	CommandCount   int
 	ConfigFile     string
 	OutputFile     string
+	Config         *config.ConfigV3 // V3 config for accessing header style
 }
 
-func NewTemplateData(cfg *config.Config) *TemplateData {
-	return NewTemplateDataForOutput(cfg, "")
+func NewTemplateData(cfg *config.Config, cfgV3 *config.ConfigV3) *TemplateData {
+	return NewTemplateDataForOutput(cfg, "", cfgV3)
 }
 
-func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateData {
+func NewTemplateDataForOutput(cfg *config.Config, outputPath string, cfgV3 *config.ConfigV3) *TemplateData {
 	allRules := cfg.Rules
 	allSections := cfg.Sections
 	allAgents := cfg.Agents
@@ -169,6 +170,7 @@ func NewTemplateDataForOutput(cfg *config.Config, outputPath string) *TemplateDa
 		MCPServerCount: len(allMCPServers),
 		CommandCount:   len(allCommands),
 		OutputFile:     outputPath,
+		Config:         cfgV3,
 	}
 }
 
@@ -473,6 +475,106 @@ func isCommandStatusTemplate(outputPath string, cfg *config.Config) bool {
 	return false
 }
 
+func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
+	return []string{
+		// SECTION A: Banner
+		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
+		"Project: " + data.ProjectName,
+		"Generated: " + timestamp,
+		"Source: .ai-rulez/" + configPath,
+		"Target: " + outputPath,
+		"Content: rules=" + fmt.Sprint(data.RuleCount) + ", sections=" + fmt.Sprint(data.SectionCount) + ", agents=" + fmt.Sprint(data.AgentCount),
+		"",
+
+		// SECTION B: What is ai-rulez
+		"WHAT IS AI-RULEZ",
+		"AI-Rulez is a directory-based AI governance tool. All configuration lives in",
+		"the .ai-rulez/ directory. This file is auto-generated from source files.",
+		"",
+
+		// SECTION C: Folder organization
+		".AI-RULEZ FOLDER ORGANIZATION",
+		"Root content (always included):",
+		"  .ai-rulez/config.yaml    Main configuration (presets, profiles)",
+		"  .ai-rulez/rules/         Mandatory rules for AI assistants",
+		"  .ai-rulez/context/       Reference documentation",
+		"  .ai-rulez/skills/        Specialized AI prompts",
+		"  .ai-rulez/agents/        Agent definitions",
+		"",
+		"Domain content (profile-specific):",
+		"  .ai-rulez/domains/{name}/rules/    Domain-specific rules",
+		"  .ai-rulez/domains/{name}/context/  Domain-specific documentation",
+		"  .ai-rulez/domains/{name}/skills/   Domain-specific AI prompts",
+		"",
+		"Profiles in config.yaml control which domains are included.",
+		"",
+
+		// SECTION D: AI Agent Instructions
+		"INSTRUCTIONS FOR AI AGENTS",
+		"1. NEVER edit this file (" + outputPath + ") - it is auto-generated",
+		"",
+		"2. ALWAYS edit files in .ai-rulez/ instead:",
+		"   - Add/modify rules: .ai-rulez/rules/*.md",
+		"   - Add/modify context: .ai-rulez/context/*.md",
+		"   - Update config: .ai-rulez/config.yaml",
+		"   - Domain-specific: .ai-rulez/domains/{name}/rules/*.md",
+		"",
+		"3. PREFER using the MCP Server (if available):",
+		"   Command: npx -y ai-rulez@latest mcp",
+		"   Provides safe CRUD tools for reading and modifying .ai-rulez/ content",
+		"",
+		"4. After making changes: ai-rulez generate",
+		"",
+		"5. Complete workflow:",
+		"   a. Edit source files in .ai-rulez/",
+		"   b. Run: ai-rulez generate",
+		"   c. Commit both .ai-rulez/ and generated files",
+		"",
+
+		// SECTION E: Help
+		"Documentation: https://github.com/Goldziher/ai-rulez",
+	}
+}
+
+func buildCompactHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
+	return []string{
+		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
+		"Project: " + data.ProjectName + " | Generated: " + timestamp,
+		"Source: .ai-rulez/" + configPath + " | Target: " + outputPath,
+		"Content: " + fmt.Sprintf("rules=%d, sections=%d, agents=%d", data.RuleCount, data.SectionCount, data.AgentCount),
+		"",
+		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/",
+		"",
+		"STRUCTURE:",
+		"  .ai-rulez/config.yaml, rules/, context/, skills/, agents/ (root)",
+		"  .ai-rulez/domains/{name}/ (profile-specific)",
+		"",
+		"AI AGENT INSTRUCTIONS:",
+		"✗ NEVER edit " + outputPath + " (auto-generated)",
+		"✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.yaml",
+		"✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)",
+		"✓ REGENERATE: ai-rulez generate",
+		"✓ COMMIT: both .ai-rulez/ and generated files",
+		"",
+		"Docs: https://github.com/Goldziher/ai-rulez",
+	}
+}
+
+func buildMinimalHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
+	return []string{
+		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
+		"Project: " + data.ProjectName,
+		"Generated: " + timestamp,
+		"Source: .ai-rulez/" + configPath,
+		"",
+		"NEVER edit this file - modify .ai-rulez/ content instead",
+		"Use MCP server: npx -y ai-rulez@latest mcp",
+		"Regenerate: ai-rulez generate",
+		"",
+		"Docs: https://github.com/Goldziher/ai-rulez",
+	}
+}
+
 func buildHeaderLines(data *TemplateData) []string {
 	configPath := strings.TrimSpace(data.ConfigFile)
 	if configPath == "" {
@@ -486,28 +588,21 @@ func buildHeaderLines(data *TemplateData) []string {
 
 	timestamp := data.Timestamp.Format("2006-01-02 15:04:05")
 
-	lines := []string{
-		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
-		"Project: " + data.ProjectName,
-		"Generated: " + timestamp,
-		"Source of truth: " + configPath,
-		"Target file: " + outputPath,
-		"Content summary: rules=" + fmt.Sprint(data.RuleCount) + ", sections=" + fmt.Sprint(data.SectionCount) + ", agents=" + fmt.Sprint(data.AgentCount),
-		"",
-		"UPDATE WORKFLOW",
-		"1. Modify " + configPath,
-		"2. Run `ai-rulez generate` to refresh generated files",
-		"3. Commit regenerated outputs together with the config changes",
-		"",
-		"AI ASSISTANT SAFEGUARDS",
-		"- Treat " + configPath + " as the canonical configuration",
-		"- Never overwrite " + outputPath + " manually; regenerate instead",
-		"- Surface changes as patches to " + configPath + " (include doc/test updates)",
-		"",
-		"Need help? /capability-plan or https://github.com/Goldziher/ai-rulez",
+	// Determine header style from V3 config
+	headerStyle := "detailed" // default
+	if data.Config != nil {
+		headerStyle = data.Config.GetHeaderStyle()
 	}
 
-	return lines
+	// Delegate to appropriate header builder
+	switch headerStyle {
+	case "compact":
+		return buildCompactHeader(configPath, outputPath, timestamp, data)
+	case "minimal":
+		return buildMinimalHeader(configPath, outputPath, timestamp, data)
+	default:
+		return buildDetailedHeader(configPath, outputPath, timestamp, data)
+	}
 }
 
 func wrapWithHTMLComment(lines []string) string {

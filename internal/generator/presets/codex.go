@@ -3,8 +3,10 @@ package presets
 import (
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 func init() {
@@ -13,6 +15,23 @@ func init() {
 
 // CodexPresetGenerator generates Codex preset files (AGENTS.md)
 type CodexPresetGenerator struct{}
+
+// generateCodexPresetHeader creates a header for Codex preset files
+func generateCodexPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+	// Create TemplateData for header generation
+	data := &templates.TemplateData{
+		ProjectName:  cfg.Name,
+		Timestamp:    time.Now(),
+		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		OutputFile:   outputPath,
+		Config:       cfg,
+		RuleCount:    ruleCount,
+		SectionCount: sectionCount,
+		AgentCount:   agentCount,
+	}
+
+	return templates.GenerateHeader(data)
+}
 
 func (g *CodexPresetGenerator) GetName() string {
 	return "codex"
@@ -42,7 +61,15 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
 	var builder strings.Builder
 
-	// Add header
+	// Calculate content counts
+	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+
+	// Add header before title
+	header := generateCodexPresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))
+	builder.WriteString(header)
+
+	// Add title
 	builder.WriteString("# ")
 	builder.WriteString(cfg.Name)
 	builder.WriteString("\n\n")
@@ -53,7 +80,6 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 	}
 
 	// Add rules section
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
 		for _, rule := range allRules {

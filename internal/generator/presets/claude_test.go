@@ -49,7 +49,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 5, // .claude dir, skills dir, agents dir, skill-id dir, skill/SKILL.md
+			wantOutputs: 6, // CLAUDE.md, .claude dir, skills dir, agents dir, skill-id dir, skill/SKILL.md
 			wantErr:     false,
 		},
 		{
@@ -69,7 +69,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 4, // .claude dir, skills dir, agents dir, agents/test-agent.md
+			wantOutputs: 5, // CLAUDE.md, .claude dir, skills dir, agents dir, agents/test-agent.md
 			wantErr:     false,
 		},
 		{
@@ -80,7 +80,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 				Skills:  []config.ContentFile{},
 			},
 			baseDir:     "/test",
-			wantOutputs: 3, // .claude dir, skills dir, agents dir
+			wantOutputs: 4, // CLAUDE.md, .claude dir, skills dir, agents dir
 			wantErr:     false,
 		},
 	}
@@ -108,6 +108,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 			hasClaudeDir := false
 			hasSkillsDir := false
 			hasAgentsDir := false
+			hasClaudeMD := false
 
 			for _, output := range outputs {
 				if output.IsDir {
@@ -119,9 +120,18 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 					case strings.HasSuffix(output.Path, filepath.Join(".claude", "agents")):
 						hasAgentsDir = true
 					}
+				} else if strings.HasSuffix(output.Path, "CLAUDE.md") {
+					hasClaudeMD = true
+					// Verify CLAUDE.md has header
+					if !strings.Contains(output.Content, "AI-RULEZ :: GENERATED FILE") {
+						t.Error("Expected header in CLAUDE.md")
+					}
 				}
 			}
 
+			if !hasClaudeMD {
+				t.Error("Expected CLAUDE.md file output")
+			}
 			if !hasClaudeDir {
 				t.Error("Expected .claude directory output")
 			}
@@ -169,14 +179,24 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 		},
 	}
 
-	result, err := g.renderSkillFile(skill, content)
+	cfg := &config.ConfigV3{
+		Name:        "test-project",
+		Description: "Test project description",
+	}
+
+	result, err := g.renderSkillFile(skill, content, cfg, ".claude/skills/test-skill/SKILL.md")
 	if err != nil {
 		t.Fatalf("renderSkillFile() error = %v", err)
 	}
 
+	// Check header comment (HTML comment for .md files)
+	if !strings.Contains(result, "<!--") {
+		t.Error("Expected HTML comment header for .md file")
+	}
+
 	// Check frontmatter
-	if !strings.HasPrefix(result, "---\n") {
-		t.Error("Expected frontmatter at start of file")
+	if !strings.Contains(result, "---\n") {
+		t.Error("Expected frontmatter in file")
 	}
 
 	// Check skill content
@@ -214,6 +234,7 @@ func TestClaudePresetGenerator_GetOutputPaths(t *testing.T) {
 	paths := g.GetOutputPaths(baseDir)
 
 	expectedPaths := []string{
+		filepath.Join(baseDir, "CLAUDE.md"),
 		filepath.Join(baseDir, ".claude"),
 		filepath.Join(baseDir, ".claude", "skills"),
 		filepath.Join(baseDir, ".claude", "agents"),

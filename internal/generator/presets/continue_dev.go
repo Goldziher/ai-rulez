@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
 
@@ -15,6 +17,23 @@ func init() {
 
 // ContinueDevPresetGenerator generates Continue.dev preset files
 type ContinueDevPresetGenerator struct{}
+
+// generateContinueDevPresetHeader creates a header for Continue.dev preset files
+func generateContinueDevPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+	// Create TemplateData for header generation
+	data := &templates.TemplateData{
+		ProjectName:  cfg.Name,
+		Timestamp:    time.Now(),
+		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		OutputFile:   outputPath,
+		Config:       cfg,
+		RuleCount:    ruleCount,
+		SectionCount: sectionCount,
+		AgentCount:   agentCount,
+	}
+
+	return templates.GenerateHeader(data)
+}
 
 func (g *ContinueDevPresetGenerator) GetName() string {
 	return "continue-dev"
@@ -52,7 +71,8 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 
 	// Generate rule files
 	for _, rule := range allRules {
-		ruleContent := g.renderRuleFile(rule)
+		outputPath := filepath.Join(".continue", "rules", sanitizeName(rule.Name)+".md")
+		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
 		sanitized := sanitizeName(rule.Name)
 
 		outputs = append(outputs, config.OutputFileV3{
@@ -62,7 +82,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	}
 
 	// Generate prompts YAML file
-	promptsContent, err := g.renderPromptsYAML(content)
+	promptsContent, err := g.renderPromptsYAML(content, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("render prompts YAML: %w", err)
 	}
@@ -75,8 +95,12 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	return outputs, nil
 }
 
-func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile) string {
+func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.ConfigV3, outputPath string, ruleCount int) string {
 	var builder strings.Builder
+
+	// Generate and prepend header
+	header := generateContinueDevPresetHeader(cfg, outputPath, ruleCount, 0, 0)
+	builder.WriteString(header)
 
 	// Add title
 	builder.WriteString("# ")
@@ -96,7 +120,20 @@ func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile) str
 	return builder.String()
 }
 
-func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTreeV3) (string, error) {
+func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTreeV3, cfg *config.ConfigV3) (string, error) {
+	var builder strings.Builder
+
+	// Calculate content counts
+	ruleCount := len(content.Rules)
+	for _, domain := range content.Domains {
+		ruleCount += len(domain.Rules)
+	}
+
+	// Generate and prepend header
+	outputPath := ".continue/prompts/ai_rulez_prompts.yaml"
+	header := generateContinueDevPresetHeader(cfg, outputPath, ruleCount, 0, 0)
+	builder.WriteString(header)
+
 	prompts := make([]map[string]interface{}, 0)
 
 	// Add context as prompts
@@ -131,5 +168,7 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 		return "", fmt.Errorf("marshal YAML: %w", err)
 	}
 
-	return string(yamlData), nil
+	// Prepend the header to YAML content
+	builder.WriteString(string(yamlData))
+	return builder.String(), nil
 }
