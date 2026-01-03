@@ -166,8 +166,62 @@ includes:
 - **SSH:** `git@github.com:owner/repo.git`
 - **SSH protocol:** `ssh://git@github.com/owner/repo.git`
 - **GitLab:** `https://gitlab.com/owner/repo.git`, `git@gitlab.com:owner/repo.git`
+- **Self-hosted GitLab:** `git@git.example.com:owner/repo.git`, `https://git.example.com/owner/repo.git`
 
-### Private Repository Authentication
+### SSH Cloning for Private Repositories
+
+For private repositories that require SSH authentication, ai-rulez automatically uses `git clone` when it detects SSH URLs (`git@...` or `ssh://...`). This leverages your existing SSH key configuration.
+
+**Benefits of SSH cloning:**
+- Works with private repositories without needing access tokens
+- Uses your configured SSH keys and agent
+- Supports self-hosted Git servers (GitLab, Gitea, Gogs, etc.)
+- Ideal for local development and multi-repo setups
+
+**Example with SSH:**
+```yaml
+includes:
+  - name: private-rules
+    source: git@git.example.com:company/ai-rulez.git
+    ref: main
+    include:
+      - rules
+      - context
+    merge_strategy: local-override
+```
+
+**Requirements:**
+- Git must be installed and available in your PATH
+- SSH keys must be configured for the git host
+- SSH agent should be running (for passphrase-protected keys)
+
+### Repository Structure Support
+
+ai-rulez supports two repository structures for includes:
+
+1. **Standard structure** (recommended): Repository contains a `.ai-rulez/` subdirectory with the configuration
+   ```
+   my-repo/
+   ├── .ai-rulez/
+   │   ├── config.yaml
+   │   ├── rules/
+   │   ├── context/
+   │   └── skills/
+   └── other files...
+   ```
+
+2. **Root-level structure**: Repository root IS the ai-rulez structure (no nested `.ai-rulez/` directory)
+   ```
+   my-repo/
+   ├── config.yaml
+   ├── rules/
+   ├── context/
+   └── skills/
+   ```
+
+ai-rulez automatically detects which structure your repository uses and handles it accordingly.
+
+### Private Repository Authentication (HTTPS)
 
 When working with private Git repositories in includes, you can authenticate using an access token.
 
