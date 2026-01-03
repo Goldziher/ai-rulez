@@ -16,11 +16,25 @@ type ConfigV3 struct {
 	Profiles    map[string][]string `yaml:"profiles,omitempty" json:"profiles,omitempty"`
 	Gitignore   *bool               `yaml:"gitignore,omitempty" json:"gitignore,omitempty"`
 	Includes    []IncludeConfig     `yaml:"includes,omitempty" json:"includes,omitempty"`
+	Header      *HeaderConfig       `yaml:"header,omitempty" json:"header,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir    string                  `yaml:"-" json:"-"`
 	Content    *ContentTreeV3          `yaml:"-" json:"-"`
 	MCPServers map[string]*MCPServerV3 `yaml:"-" json:"-"`
+}
+
+// HeaderConfig represents header style configuration for generated files
+type HeaderConfig struct {
+	Style string `yaml:"style,omitempty" json:"style,omitempty"` // "detailed", "compact", or "minimal"
+}
+
+// GetHeaderStyle returns the header style, defaulting to "detailed"
+func (h *HeaderConfig) GetHeaderStyle() string {
+	if h == nil || h.Style == "" {
+		return "detailed"
+	}
+	return h.Style
 }
 
 // PresetV3 represents either a built-in preset name or a custom preset configuration
@@ -278,6 +292,14 @@ func (c *ConfigV3) GetVersion() string {
 // IsV3 returns true if this is a V3 config (version == "3.0")
 func (c *ConfigV3) IsV3() bool {
 	return c.Version == "3.0"
+}
+
+// GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal")
+func (c *ConfigV3) GetHeaderStyle() string {
+	if c.Header == nil {
+		return "detailed"
+	}
+	return c.Header.GetHeaderStyle()
 }
 
 // GetContentForProfile returns all content for a given profile

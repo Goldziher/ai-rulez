@@ -3,8 +3,10 @@ package presets
 import (
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 func init() {
@@ -13,6 +15,23 @@ func init() {
 
 // ClinePresetGenerator generates Cline preset files
 type ClinePresetGenerator struct{}
+
+// generateClinePresetHeader creates a header for Cline preset files
+func generateClinePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+	// Create TemplateData for header generation
+	data := &templates.TemplateData{
+		ProjectName:  cfg.Name,
+		Timestamp:    time.Now(),
+		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		OutputFile:   outputPath,
+		Config:       cfg,
+		RuleCount:    ruleCount,
+		SectionCount: sectionCount,
+		AgentCount:   agentCount,
+	}
+
+	return templates.GenerateHeader(data)
+}
 
 func (g *ClinePresetGenerator) GetName() string {
 	return "cline"
@@ -38,7 +57,8 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 
 	// Generate rule files
 	for _, rule := range allRules {
-		ruleContent := g.renderRuleFile(rule)
+		outputPath := filepath.Join(".clinerules", sanitizeName(rule.Name)+".md")
+		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
 		sanitized := sanitizeName(rule.Name)
 
 		outputs = append(outputs, config.OutputFileV3{
@@ -50,8 +70,12 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 	return outputs, nil
 }
 
-func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile) string {
+func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.ConfigV3, outputPath string, ruleCount int) string {
 	var builder strings.Builder
+
+	// Generate and prepend header
+	header := generateClinePresetHeader(cfg, outputPath, ruleCount, 0, 0)
+	builder.WriteString(header)
 
 	// Add title
 	builder.WriteString("# ")
