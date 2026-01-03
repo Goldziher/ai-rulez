@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -85,7 +86,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 		for _, rule := range allRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
-			builder.WriteString("\n")
+			builder.WriteString("\n\n") // Add blank line after heading
 
 			if rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
@@ -93,7 +94,8 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 				builder.WriteString("\n\n")
 			}
 
-			builder.WriteString(rule.Content)
+			processedContent := markdown.ProcessEmbeddedContent(rule.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -106,7 +108,9 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 			builder.WriteString("### ")
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
-			builder.WriteString(ctx.Content)
+
+			processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -119,7 +123,9 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 			builder.WriteString("### ")
 			builder.WriteString(skill.Name)
 			builder.WriteString("\n\n")
-			builder.WriteString(skill.Content)
+
+			processedContent := markdown.ProcessEmbeddedContent(skill.Content)
+			builder.WriteString(processedContent)
 			builder.WriteString("\n\n")
 		}
 	}

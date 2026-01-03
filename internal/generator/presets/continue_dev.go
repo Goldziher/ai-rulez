@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -115,7 +116,8 @@ func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg
 	}
 
 	// Add content
-	builder.WriteString(rule.Content)
+	processedContent := markdown.ProcessEmbeddedContent(rule.Content)
+	builder.WriteString(processedContent)
 
 	return builder.String()
 }
@@ -139,10 +141,11 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	// Add context as prompts
 	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
 	for _, ctx := range allContext {
+		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		prompt := map[string]interface{}{
 			"name":        ctx.Name,
 			"description": fmt.Sprintf("Context: %s", ctx.Name),
-			"prompt":      ctx.Content,
+			"prompt":      processedContent,
 		}
 		prompts = append(prompts, prompt)
 	}
@@ -150,10 +153,11 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	// Add skills as prompts
 	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
 	for _, skill := range allSkills {
+		processedContent := markdown.ProcessEmbeddedContent(skill.Content)
 		prompt := map[string]interface{}{
 			"name":        skill.Name,
 			"description": fmt.Sprintf("Skill: %s", skill.Name),
-			"prompt":      skill.Content,
+			"prompt":      processedContent,
 		}
 		if skill.Metadata != nil {
 			if desc, ok := skill.Metadata.Extra["description"]; ok {
