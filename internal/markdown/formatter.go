@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	"github.com/teekennedy/goldmark-markdown"
+	markdown "github.com/teekennedy/goldmark-markdown"
 	"github.com/yuin/goldmark"
 	"github.com/yuin/goldmark/extension"
 	"github.com/yuin/goldmark/parser"
@@ -20,7 +20,7 @@ func NewFormatter() *Formatter {
 	// Configure goldmark with markdown renderer
 	md := goldmark.New(
 		goldmark.WithExtensions(
-			extension.GFM,        // GitHub Flavored Markdown
+			extension.GFM,         // GitHub Flavored Markdown
 			extension.Typographer, // Smart quotes, dashes, etc.
 		),
 		goldmark.WithParserOptions(

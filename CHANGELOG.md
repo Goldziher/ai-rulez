@@ -6,6 +6,27 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## 3.4.0 - 2026-01-03
+
+### Added
+- Configurable header styles for generated files (detailed, compact, minimal)
+- CLAUDE.md generation to claude preset
+- Enhanced headers with AI-RULEZ explanation, folder structure, and MCP server usage instructions
+- Markdown formatting support using goldmark and goldmark-markdown
+- Markdown processor utilities to normalize embedded content (strip duplicate H1 headings, normalize blank lines)
+- Markdownlint configuration for generated files
+- Comprehensive documentation for header configuration in docs/configuration.md
+
+### Changed
+- All 11 presets now include enhanced headers with AI agent instructions
+- Generated markdown files now pass markdownlint validation
+- Headers now explain what ai-rulez is, the .ai-rulez folder structure, and how to use the MCP server
+- Embedded content processing removes duplicate headings and normalizes formatting
+
+### Dependencies
+- Added github.com/yuin/goldmark v1.7.13
+- Added github.com/teekennedy/goldmark-markdown v0.5.1
+
 ## 3.3.2 - 2026-01-02
 
 ### Fixed
