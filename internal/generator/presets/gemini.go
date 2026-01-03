@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 func init() {
@@ -15,6 +17,23 @@ func init() {
 
 // GeminiPresetGenerator generates Gemini preset files
 type GeminiPresetGenerator struct{}
+
+// generatePresetHeader creates a header for Gemini preset files
+func generateGeminiPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+	// Create TemplateData for header generation
+	data := &templates.TemplateData{
+		ProjectName:  cfg.Name,
+		Timestamp:    time.Now(),
+		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		OutputFile:   outputPath,
+		Config:       cfg,
+		RuleCount:    ruleCount,
+		SectionCount: sectionCount,
+		AgentCount:   agentCount,
+	}
+
+	return templates.GenerateHeader(data)
+}
 
 func (g *GeminiPresetGenerator) GetName() string {
 	return "gemini"
@@ -83,7 +102,15 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string
 func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
 	var builder strings.Builder
 
-	// Add header
+	// Calculate content counts
+	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+
+	// Add header before title
+	header := generateGeminiPresetHeader(cfg, "GEMINI.md", len(allRules), 0, len(allAgents))
+	builder.WriteString(header)
+
+	// Add title
 	builder.WriteString("# ")
 	builder.WriteString(cfg.Name)
 	builder.WriteString("\n\n")
@@ -94,7 +121,6 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	}
 
 	// Add rules section
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
 		for _, rule := range allRules {

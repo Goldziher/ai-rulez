@@ -10,4 +10,8 @@ presets:
     - copilot
     - continue-dev
     - amp
+    - cline
+    - codex
+    - opencode
+    - junie
 version: "3.0"

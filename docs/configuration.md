@@ -154,6 +154,137 @@ gitignore: false   # Manual .gitignore management
 
 When `true`, generated files are added to `.gitignore` to prevent accidental commits.
 
+### `header`
+
+Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
+
+```yaml
+header:
+  style: detailed    # Default: comprehensive header with full documentation
+  style: compact     # Shorter header with key information
+  style: minimal     # Bare minimum header
+```
+
+#### Header Styles
+
+**`detailed`** (default)
+- Comprehensive explanation of ai-rulez
+- Complete folder organization documentation
+- Full AI agent instructions with MCP server promotion
+- Best for: projects where AI agents need thorough context
+- Size: ~50 lines
+
+**`compact`**
+- Condensed version with essential information
+- Uses symbols (✗/✓) for clarity
+- Brief structure overview
+- Best for: projects where file size matters
+- Size: ~20 lines
+
+**`minimal`**
+- Only critical information
+- Brief "DO NOT EDIT" warning
+- MCP server reference
+- Best for: projects with strict file size requirements
+- Size: ~10 lines
+
+#### Header Example (detailed)
+
+```html
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY
+Project: My Project
+Generated: 2026-01-03 09:27:19
+Source: .ai-rulez/config.yaml
+Target: CLAUDE.md
+Content: rules=5, sections=0, agents=2
+
+WHAT IS AI-RULEZ
+AI-Rulez is a directory-based AI governance tool. All configuration lives in
+the .ai-rulez/ directory. This file is auto-generated from source files.
+
+.AI-RULEZ FOLDER ORGANIZATION
+Root content (always included):
+  .ai-rulez/config.yaml    Main configuration (presets, profiles)
+  .ai-rulez/rules/         Mandatory rules for AI assistants
+  .ai-rulez/context/       Reference documentation
+  .ai-rulez/skills/        Specialized AI prompts
+  .ai-rulez/agents/        Agent definitions
+
+Domain content (profile-specific):
+  .ai-rulez/domains/{name}/rules/    Domain-specific rules
+  .ai-rulez/domains/{name}/context/  Domain-specific documentation
+  .ai-rulez/domains/{name}/skills/   Domain-specific AI prompts
+
+Profiles in config.yaml control which domains are included.
+
+INSTRUCTIONS FOR AI AGENTS
+1. NEVER edit this file (CLAUDE.md) - it is auto-generated
+
+2. ALWAYS edit files in .ai-rulez/ instead:
+   - Add/modify rules: .ai-rulez/rules/*.md
+   - Add/modify context: .ai-rulez/context/*.md
+   - Update config: .ai-rulez/config.yaml
+   - Domain-specific: .ai-rulez/domains/{name}/rules/*.md
+
+3. PREFER using the MCP Server (if available):
+   Command: npx -y ai-rulez@latest mcp
+   Provides safe CRUD tools for reading and modifying .ai-rulez/ content
+
+4. After making changes: ai-rulez generate
+
+5. Complete workflow:
+   a. Edit source files in .ai-rulez/
+   b. Run: ai-rulez generate
+   c. Commit both .ai-rulez/ and generated files
+
+Documentation: https://github.com/Goldziher/ai-rulez
+-->
+```
+
+#### Header Example (compact)
+
+```html
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: My Project | Generated: 2026-01-03 09:28:08
+Source: .ai-rulez/config.yaml | Target: CLAUDE.md
+Content: rules=5, sections=0, agents=2
+
+WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/
+
+STRUCTURE:
+  .ai-rulez/config.yaml, rules/, context/, skills/, agents/ (root)
+  .ai-rulez/domains/{name}/ (profile-specific)
+
+AI AGENT INSTRUCTIONS:
+✗ NEVER edit CLAUDE.md (auto-generated)
+✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.yaml
+✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)
+✓ REGENERATE: ai-rulez generate
+✓ COMMIT: both .ai-rulez/ and generated files
+
+Docs: https://github.com/Goldziher/ai-rulez
+-->
+```
+
+#### Header Example (minimal)
+
+```html
+<!--
+🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
+Project: My Project
+Generated: 2026-01-03 09:28:27
+Source: .ai-rulez/config.yaml
+
+NEVER edit this file - modify .ai-rulez/ content instead
+Use MCP server: npx -y ai-rulez@latest mcp
+Regenerate: ai-rulez generate
+
+Docs: https://github.com/Goldziher/ai-rulez
+-->
+```
+
 ## Directory Structure
 
 ### Root Content (Always Included)

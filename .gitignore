@@ -160,3 +160,10 @@ testing/**/.mcp.json
 # V3 Configuration Directory (source of truth - NOT ignored)
 # .ai-rulez/
 .gemini/
+
+# AI Rules generated files
+.github/
+
+# AI Rules generated files
+.junie/guidelines.md
+.junie/

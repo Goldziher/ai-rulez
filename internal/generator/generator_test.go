@@ -371,11 +371,11 @@ func TestGenerator_HeaderGeneration(t *testing.T) {
 	expectedHeaderContent := []string{
 		"<!--",
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
-		"Source of truth: test-config.yaml",
-		"Target file: test.md",
-		"UPDATE WORKFLOW",
-		"AI ASSISTANT SAFEGUARDS",
-		"Need help? /capability-plan",
+		"Project: Header Test",
+		"Source: .ai-rulez/test-config.yaml",
+		"Target: test.md",
+		"WHAT IS AI-RULEZ",
+		"INSTRUCTIONS FOR AI AGENTS",
 		"https://github.com/Goldziher/ai-rulez",
 		"-->",
 	}

@@ -47,6 +47,15 @@ func getAllDomainSkills(content *config.ContentTreeV3) []config.ContentFile {
 	return skills
 }
 
+// getAllDomainAgents extracts all agents from all domains
+func getAllDomainAgents(content *config.ContentTreeV3) []config.ContentFile {
+	var agents []config.ContentFile
+	for _, domain := range content.Domains {
+		agents = append(agents, domain.Agents...)
+	}
+	return agents
+}
+
 // sanitizeName removes special characters from names for use in filenames
 func sanitizeName(name string) string {
 	// Replace spaces and special chars with dashes

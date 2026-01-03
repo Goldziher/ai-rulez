@@ -23,7 +23,7 @@ func TestNewTemplateData_WithMCPServersAndCommands(t *testing.T) {
 		},
 	}
 
-	data := templates.NewTemplateData(cfg)
+	data := templates.NewTemplateData(cfg, nil)
 
 	assert.Equal(t, "Test Project", data.ProjectName)
 	assert.Len(t, data.MCPServers, 2)
@@ -47,13 +47,13 @@ func TestNewTemplateDataForOutput_WithMCPServersAndCommandsFiltering(t *testing.
 		},
 	}
 
-	data := templates.NewTemplateDataForOutput(cfg, "output1")
+	data := templates.NewTemplateDataForOutput(cfg, "output1", nil)
 	assert.Len(t, data.MCPServers, 2, "Should include targeted and non-targeted servers")
 	assert.Equal(t, 2, data.MCPServerCount)
 	assert.Len(t, data.Commands, 2, "Should include targeted and non-targeted commands")
 	assert.Equal(t, 2, data.CommandCount)
 
-	data = templates.NewTemplateDataForOutput(cfg, "output2")
+	data = templates.NewTemplateDataForOutput(cfg, "output2", nil)
 	assert.Len(t, data.MCPServers, 1, "Should only include non-targeted servers")
 	assert.Equal(t, "server2", data.MCPServers[0].Name)
 	assert.Equal(t, 1, data.MCPServerCount)
