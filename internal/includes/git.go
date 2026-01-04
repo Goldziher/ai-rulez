@@ -33,6 +33,20 @@ const (
 	aiRulezDir    = ".ai-rulez"
 )
 
+// getIncludeCacheDir returns the system cache directory for a given include source
+func getIncludeCacheDir(sourceName string) (string, error) {
+	// Get user cache directory (follows OS conventions)
+	userCacheDir, err := os.UserCacheDir()
+	if err != nil {
+		// Fallback to temp directory if UserCacheDir fails
+		userCacheDir = os.TempDir()
+	}
+
+	// Create ai-rulez includes cache path
+	cacheDir := filepath.Join(userCacheDir, "ai-rulez", "includes", sourceName)
+	return cacheDir, nil
+}
+
 // GitSource represents a git repository source
 type GitSource struct {
 	name        string
@@ -54,8 +68,13 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 		return nil, err
 	}
 
-	// Create cache directory if not exists
-	cacheDir := filepath.Join(baseDir, ".remote-cache", name)
+	// Create cache directory in system cache location
+	cacheDir, err := getIncludeCacheDir(name)
+	if err != nil {
+		return nil, oops.
+			With("source_name", name).
+			Wrapf(err, "failed to determine cache directory")
+	}
 
 	// Detect if this is an SSH URL
 	isSSH := isSSHURL(repoURL)
@@ -551,6 +570,9 @@ func (s *GitSource) filterContent(tree *config.ContentTreeV3) *config.ContentTre
 	}
 	if shouldInclude("skills") {
 		filtered.Skills = tree.Skills
+	}
+	if shouldInclude("commands") {
+		filtered.Commands = tree.Commands
 	}
 
 	// Copy domains (domains always included if they exist)

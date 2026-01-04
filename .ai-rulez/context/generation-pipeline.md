@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: Config loading, profile resolution, preset generation, and output rendering workflow.
 targets:
   - CLAUDE.md
   - .cursor/rules/*

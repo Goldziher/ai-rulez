@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: Repository structure covering CLI, wrappers, documentation, schemas, and test organization.
 targets:
   - CLAUDE.md
   - .cursor/rules/*

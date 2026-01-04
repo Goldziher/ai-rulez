@@ -1,5 +1,6 @@
 ---
 priority: medium
+summary: Specialized skills for focused task guidance and tool-specific agent definitions.
 targets:
   - CLAUDE.md
   - .cursor/rules/*
