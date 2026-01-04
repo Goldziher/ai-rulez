@@ -17,6 +17,7 @@ type ConfigV3 struct {
 	Gitignore   *bool               `yaml:"gitignore,omitempty" json:"gitignore,omitempty"`
 	Includes    []IncludeConfig     `yaml:"includes,omitempty" json:"includes,omitempty"`
 	Header      *HeaderConfig       `yaml:"header,omitempty" json:"header,omitempty"`
+	Compression *CompressionConfig  `yaml:"compression,omitempty" json:"compression,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir    string                  `yaml:"-" json:"-"`
@@ -35,6 +36,47 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 		return "detailed"
 	}
 	return h.Style
+}
+
+// CompressionConfig represents compression settings for generated files
+type CompressionConfig struct {
+	Level              string `yaml:"level,omitempty" json:"level,omitempty"`                             // "none", "minimal", "standard", "aggressive"
+	RemoveDuplicates   *bool  `yaml:"remove_duplicates,omitempty" json:"remove_duplicates,omitempty"`     // Extract common patterns
+	UseAbbreviations   *bool  `yaml:"use_abbreviations,omitempty" json:"use_abbreviations,omitempty"`     // Use shorter markdown syntax
+	PreserveFormatting *bool  `yaml:"preserve_formatting,omitempty" json:"preserve_formatting,omitempty"` // Disable whitespace optimization
+}
+
+// GetCompressionLevel returns the compression level, defaulting to "none"
+func (c *CompressionConfig) GetCompressionLevel() string {
+	if c == nil || c.Level == "" {
+		return "none"
+	}
+	return c.Level
+}
+
+// ShouldRemoveDuplicates returns true if deduplication is enabled
+func (c *CompressionConfig) ShouldRemoveDuplicates() bool {
+	if c == nil || c.RemoveDuplicates == nil {
+		level := c.GetCompressionLevel()
+		return level == "standard" || level == "aggressive"
+	}
+	return *c.RemoveDuplicates
+}
+
+// ShouldUseAbbreviations returns true if abbreviations are enabled
+func (c *CompressionConfig) ShouldUseAbbreviations() bool {
+	if c == nil || c.UseAbbreviations == nil {
+		return c.GetCompressionLevel() == "aggressive"
+	}
+	return *c.UseAbbreviations
+}
+
+// ShouldPreserveFormatting returns false by default (allow optimization)
+func (c *CompressionConfig) ShouldPreserveFormatting() bool {
+	if c == nil || c.PreserveFormatting == nil {
+		return false
+	}
+	return *c.PreserveFormatting
 }
 
 // PresetV3 represents either a built-in preset name or a custom preset configuration
@@ -203,11 +245,12 @@ func (m *MCPServerV3) GetTransport() string {
 
 // ContentTreeV3 represents the scanned content from .ai-rulez/ directory
 type ContentTreeV3 struct {
-	Rules   []ContentFile        `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Context []ContentFile        `yaml:"context,omitempty" json:"context,omitempty"`
-	Skills  []ContentFile        `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Agents  []ContentFile        `yaml:"agents,omitempty" json:"agents,omitempty"`
-	Domains map[string]*DomainV3 `yaml:"domains,omitempty" json:"domains,omitempty"`
+	Rules    []ContentFile        `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Context  []ContentFile        `yaml:"context,omitempty" json:"context,omitempty"`
+	Skills   []ContentFile        `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents   []ContentFile        `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands []ContentFile        `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Domains  map[string]*DomainV3 `yaml:"domains,omitempty" json:"domains,omitempty"`
 }
 
 // DomainV3 represents content from a specific domain directory
@@ -217,6 +260,7 @@ type DomainV3 struct {
 	Context    []ContentFile           `yaml:"context,omitempty" json:"context,omitempty"`
 	Skills     []ContentFile           `yaml:"skills,omitempty" json:"skills,omitempty"`
 	Agents     []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands   []ContentFile           `yaml:"commands,omitempty" json:"commands,omitempty"`
 	MCPServers map[string]*MCPServerV3 `yaml:"-" json:"-"`
 }
 
@@ -232,6 +276,10 @@ type ContentFile struct {
 type MetadataV3 struct {
 	Priority string            `yaml:"priority,omitempty" json:"priority,omitempty"`
 	Targets  []string          `yaml:"targets,omitempty" json:"targets,omitempty"`
+	Aliases  []string          `yaml:"aliases,omitempty" json:"aliases,omitempty"`
+	Usage    string            `yaml:"usage,omitempty" json:"usage,omitempty"`
+	Shortcut string            `yaml:"shortcut,omitempty" json:"shortcut,omitempty"`
+	Category string            `yaml:"category,omitempty" json:"category,omitempty"`
 	Extra    map[string]string `yaml:",inline" json:",inline"`
 }
 
@@ -311,11 +359,12 @@ func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) 
 	domains := c.GetProfileDomains(profile)
 
 	return &ContentTreeV3{
-		Rules:   c.Content.GetRulesForDomains(domains),
-		Context: c.Content.GetContextForDomains(domains),
-		Skills:  c.Content.GetSkillsForDomains(domains),
-		Agents:  c.Content.GetAgentsForDomains(domains),
-		Domains: c.Content.Domains, // Include all domains for reference
+		Rules:    c.Content.GetRulesForDomains(domains),
+		Context:  c.Content.GetContextForDomains(domains),
+		Skills:   c.Content.GetSkillsForDomains(domains),
+		Agents:   c.Content.GetAgentsForDomains(domains),
+		Commands: c.Content.GetCommandsForDomains(domains),
+		Domains:  c.Content.Domains, // Include all domains for reference
 	}, nil
 }
 
@@ -328,11 +377,13 @@ func (t *ContentTreeV3) GetAllContentFiles() []ContentFile {
 	files = append(files, t.Context...)
 	files = append(files, t.Skills...)
 	files = append(files, t.Agents...)
+	files = append(files, t.Commands...)
 	for _, domain := range t.Domains {
 		files = append(files, domain.Rules...)
 		files = append(files, domain.Context...)
 		files = append(files, domain.Skills...)
 		files = append(files, domain.Agents...)
+		files = append(files, domain.Commands...)
 	}
 	return files
 }
@@ -384,6 +435,19 @@ func (t *ContentTreeV3) GetAgentsForDomains(domains []string) []ContentFile {
 	for _, domainName := range domains {
 		if domain, ok := t.Domains[domainName]; ok {
 			files = append(files, domain.Agents...)
+		}
+	}
+	return files
+}
+
+// GetCommandsForDomains returns commands for specified domains (including root)
+func (t *ContentTreeV3) GetCommandsForDomains(domains []string) []ContentFile {
+	files := make([]ContentFile, len(t.Commands))
+	copy(files, t.Commands)
+
+	for _, domainName := range domains {
+		if domain, ok := t.Domains[domainName]; ok {
+			files = append(files, domain.Commands...)
 		}
 	}
 	return files

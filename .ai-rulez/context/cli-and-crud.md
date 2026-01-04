@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: Core commands (init, generate, validate, migrate, mcp) and CRUD helpers for managing configuration.
 targets:
   - CLAUDE.md
   - GEMINI.md

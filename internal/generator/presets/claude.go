@@ -6,7 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/compression"
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
@@ -92,6 +94,26 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 				return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 			}
 			outputs = append(outputs, agentOutputs...)
+		}
+	}
+
+	// Generate command files as skills
+	logger.Info("Processing commands for Claude preset", "count", len(content.Commands))
+	if len(content.Commands) > 0 {
+		for _, command := range content.Commands {
+			logger.Info("Checking command", "name", command.Name, "has_metadata", command.Metadata != nil)
+
+			// Check if command is enabled and targets Claude
+			if g.shouldIncludeCommand(command) {
+				logger.Info("Including command in Claude preset", "name", command.Name)
+				commandOutputs, err := g.generateCommandAsSkill(command, content, baseDir, cfg)
+				if err != nil {
+					return nil, fmt.Errorf("generate command %s: %w", command.Name, err)
+				}
+				outputs = append(outputs, commandOutputs...)
+			} else {
+				logger.Info("Skipping command (filtered by targets)", "name", command.Name)
+			}
 		}
 	}
 
@@ -254,6 +276,7 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile) 
 	return frontmatter
 }
 
+//nolint:gocyclo // Acceptable complexity for comprehensive markdown generation
 func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
 	var builder strings.Builder
 
@@ -302,7 +325,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		}
 	}
 
-	// Add context section
+	// Add context section - render as summaries with @ links
 	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
@@ -311,9 +334,16 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
 
-			// Process the content to remove the H1 and normalize formatting
-			processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
-			builder.WriteString(processedContent)
+			// Add summary if available
+			if ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
+				builder.WriteString(ctx.Metadata.Extra["summary"])
+				builder.WriteString("\n\n")
+			}
+
+			// Add @ link to full file
+			contextPath := strings.TrimPrefix(ctx.Path, cfg.BaseDir+"/")
+			builder.WriteString("@")
+			builder.WriteString(contextPath)
 			builder.WriteString("\n\n")
 		}
 	}
@@ -334,7 +364,52 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		}
 	}
 
-	return builder.String()
+	// Add commands section
+	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	if len(allCommands) > 0 {
+		builder.WriteString("## Commands\n\n")
+		for _, command := range allCommands {
+			builder.WriteString("### ")
+			builder.WriteString(command.Name)
+			builder.WriteString("\n\n")
+
+			// Add usage if available
+			if command.Metadata != nil && command.Metadata.Usage != "" {
+				builder.WriteString("**Usage:** `")
+				builder.WriteString(command.Metadata.Usage)
+				builder.WriteString("`\n\n")
+			}
+
+			// Add priority if specified
+			if command.Metadata != nil && command.Metadata.Priority != "" {
+				builder.WriteString("**Priority:** ")
+				builder.WriteString(command.Metadata.Priority)
+				builder.WriteString("\n\n")
+			}
+
+			// Process the content to remove the H1 and normalize formatting
+			processedContent := markdown.ProcessEmbeddedContent(command.Content)
+			builder.WriteString(processedContent)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	result := builder.String()
+
+	// Apply compression if configured
+	if cfg.Compression != nil {
+		compressor := compression.NewCompressor(cfg.Compression)
+		result = compressor.Compress(result)
+
+		stats := compressor.GetStats()
+		logger.Info("CLAUDE.md compression",
+			"level", cfg.Compression.GetCompressionLevel(),
+			"original", stats.OriginalSize,
+			"compressed", stats.CompressedSize,
+			"saved_percent", fmt.Sprintf("%.1f%%", stats.Ratio))
+	}
+
+	return result
 }
 
 func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
@@ -399,4 +474,133 @@ func extractSkillID(skillPath string) string {
 	// Path format: .../skills/{skill-id}/SKILL.md
 	dir := filepath.Dir(skillPath)
 	return filepath.Base(dir)
+}
+
+// shouldIncludeCommand checks if a command should be included in the Claude preset
+func (g *ClaudePresetGenerator) shouldIncludeCommand(command config.ContentFile) bool {
+	// Include if no metadata (no restrictions)
+	if command.Metadata == nil {
+		return true
+	}
+
+	// If targets are specified, only include if Claude is in targets
+	if len(command.Metadata.Targets) > 0 {
+		for _, target := range command.Metadata.Targets {
+			if target == "claude" {
+				return true
+			}
+		}
+		return false
+	}
+
+	// No targets specified, include by default
+	return true
+}
+
+// generateCommandAsSkill generates a command file as a Claude skill
+func (g *ClaudePresetGenerator) generateCommandAsSkill(command config.ContentFile, content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
+	var outputs []config.OutputFileV3
+
+	// Extract command ID from name (sanitize for use as directory name)
+	commandID := sanitizeAgentID(command.Name)
+
+	// Create skill directory for command
+	skillDir := filepath.Join(baseDir, ".claude", "skills", commandID)
+	outputs = append(outputs, config.OutputFileV3{
+		Path:  skillDir,
+		IsDir: true,
+	})
+
+	// Generate SKILL.md with frontmatter
+	skillOutputPath := filepath.Join(skillDir, "SKILL.md")
+	skillContent, err := g.renderCommandAsSkill(command, content, cfg, skillOutputPath)
+	if err != nil {
+		return nil, err
+	}
+
+	outputs = append(outputs, config.OutputFileV3{
+		Path:    skillOutputPath,
+		Content: skillContent,
+	})
+
+	return outputs, nil
+}
+
+// renderCommandAsSkill renders a command as a Claude skill
+//
+//nolint:gocyclo // Acceptable complexity for comprehensive skill generation
+func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
+	var builder strings.Builder
+
+	// Generate frontmatter
+	frontmatter := make(map[string]interface{})
+	frontmatter["name"] = command.Name
+
+	if command.Metadata != nil {
+		if command.Metadata.Priority != "" {
+			frontmatter["priority"] = command.Metadata.Priority
+		}
+		if command.Metadata.Shortcut != "" {
+			frontmatter["shortcut"] = command.Metadata.Shortcut
+		}
+		if command.Metadata.Category != "" {
+			frontmatter["category"] = command.Metadata.Category
+		}
+		if len(command.Metadata.Targets) > 0 {
+			frontmatter["targets"] = command.Metadata.Targets
+		}
+		// Include extra metadata
+		for k, v := range command.Metadata.Extra {
+			if k != "priority" && k != "targets" && k != "name" && k != "shortcut" && k != "category" {
+				frontmatter[k] = v
+			}
+		}
+	}
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal command frontmatter: %w", err)
+	}
+
+	// Add header before frontmatter
+	header := generatePresetHeader(cfg, outputPath, len(content.Rules), 0, len(content.Agents))
+	builder.WriteString(header)
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+
+	// Add command content
+	builder.WriteString(command.Content)
+
+	// Add rules section
+	if len(content.Rules) > 0 {
+		builder.WriteString("\n\n## Rules\n\n")
+		for _, rule := range content.Rules {
+			builder.WriteString("### ")
+			builder.WriteString(rule.Name)
+			builder.WriteString("\n")
+			if rule.Metadata != nil && rule.Metadata.Priority != "" {
+				builder.WriteString("**Priority:** ")
+				builder.WriteString(rule.Metadata.Priority)
+				builder.WriteString("\n\n")
+			}
+			builder.WriteString(rule.Content)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	// Add context section
+	if len(content.Context) > 0 {
+		builder.WriteString("\n## Context\n\n")
+		for _, ctx := range content.Context {
+			builder.WriteString("### ")
+			builder.WriteString(ctx.Name)
+			builder.WriteString("\n\n")
+			builder.WriteString(ctx.Content)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	return builder.String(), nil
 }

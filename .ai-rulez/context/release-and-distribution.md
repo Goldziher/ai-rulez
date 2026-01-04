@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: Multi-channel distribution (Go, npm, PyPI, Homebrew) with aligned versioning.
 targets:
   - CLAUDE.md
   - .cursor/rules/*

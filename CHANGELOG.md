@@ -6,6 +6,49 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.5.0] - 2026-01-04
+
+### Added
+
+#### V3-Native Command System
+- File-based slash commands in `.ai-rulez/commands/` directory with YAML frontmatter
+- Profile-aware commands (root + domain-specific commands)
+- Commands generate to preset-specific formats:
+  - Claude: `.claude/skills/{command-name}/SKILL.md`
+  - Cursor: `.cursor/rules/cmd-{name}.mdc`
+  - Continue.dev: Entries in `.continue/prompts/ai_rulez_prompts.yaml`
+  - Support for all 18 presets
+- Command metadata: name, aliases, description, usage, shortcut, priority, category, targets
+- V2 command migration support via `ai-rulez migrate v3`
+
+#### Prompt Compression
+- Configurable compression levels: none, minimal, standard, aggressive
+- Simple optimizations without external dependencies:
+  - Whitespace removal (trailing spaces, excessive blank lines)
+  - Priority label compaction
+  - Abbreviations (aggressive mode)
+- Context optimization: summaries with @ links instead of full content (34% size reduction)
+- Compression stats logging during generation
+
+#### Context File Optimization
+- Required `summary` field in context frontmatter for concise descriptions
+- Context rendered as summaries with @ links to full files
+- MCP `list_contexts` tool added to list context files with names and summaries
+- Enables agents to fetch full context only when needed
+
+### Changed
+- Remote includes cache moved from `.remote-cache/` to system cache directory
+  - macOS: `~/Library/Caches/ai-rulez/includes/`
+  - Linux: `~/.cache/ai-rulez/includes/`
+  - Windows: `%LocalAppData%/ai-rulez/includes/`
+- Context files now require `summary` field in frontmatter
+- CLAUDE.md and other presets significantly smaller (9.5K vs 14K, 34% reduction)
+
+### Fixed
+- Include system now properly merges commands from remote sources
+- Scanner properly scans commands in root and domain directories
+- Default profile now includes commands in content tree
+
 ## 3.4.1 - 2026-01-03
 
 ### Added

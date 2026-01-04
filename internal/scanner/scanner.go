@@ -80,12 +80,21 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 			Wrapf(err, "scan root agents directory")
 	}
 
+	rootCommands, err := s.scanMarkdownFiles(filepath.Join(aiRulezDir, "commands"))
+	if err != nil {
+		return nil, oops.
+			With("path", filepath.Join(aiRulezDir, "commands")).
+			Wrapf(err, "scan root commands directory")
+	}
+	logger.Info("Scanned root commands", "count", len(rootCommands))
+
 	// Build collision tracking maps (basename -> [root, domain1, domain2, ...])
 	// For skills, use the skill name (directory name) instead of file basename
 	rulesMap := make(map[string][]string)
 	contextMap := make(map[string][]string)
 	skillsMap := make(map[string][]string)
 	agentsMap := make(map[string][]string)
+	commandsMap := make(map[string][]string)
 
 	// Track root files
 	for _, file := range rootRules {
@@ -104,6 +113,10 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 		basename := filepath.Base(file.Path)
 		agentsMap[basename] = append(agentsMap[basename], "root")
 	}
+	for _, file := range rootCommands {
+		basename := filepath.Base(file.Path)
+		commandsMap[basename] = append(commandsMap[basename], "root")
+	}
 
 	// Scan domains and apply namespacing
 	domainMap := make(map[string]*config.DomainV3)
@@ -111,6 +124,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 	allContext := make([]config.ContentFile, 0)
 	allSkills := make([]config.ContentFile, 0)
 	allAgents := make([]config.ContentFile, 0)
+	allCommands := make([]config.ContentFile, 0)
 
 	for _, domainName := range domains {
 		domainPath := filepath.Join(aiRulezDir, "domains", domainName)
@@ -148,6 +162,15 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 				Wrapf(err, "scan domain agents directory")
 		}
 
+		domainCommands, err := s.scanMarkdownFiles(filepath.Join(domainPath, "commands"))
+		if err != nil {
+			return nil, oops.
+				With("domain", domainName).
+				With("path", filepath.Join(domainPath, "commands")).
+				Wrapf(err, "scan domain commands directory")
+		}
+		logger.Info("Scanned domain commands", "domain", domainName, "count", len(domainCommands))
+
 		// Track domain files for collision detection
 		for _, file := range domainRules {
 			basename := filepath.Base(file.Path)
@@ -165,20 +188,26 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 			basename := filepath.Base(file.Path)
 			agentsMap[basename] = append(agentsMap[basename], domainName)
 		}
+		for _, file := range domainCommands {
+			basename := filepath.Base(file.Path)
+			commandsMap[basename] = append(commandsMap[basename], domainName)
+		}
 
 		// Apply namespacing to domain content
 		s.applyNamespacing(domainRules, domainName)
 		s.applyNamespacing(domainContext, domainName)
 		s.applySkillNamespacing(domainSkills, domainName)
 		s.applyNamespacing(domainAgents, domainName)
+		s.applyNamespacing(domainCommands, domainName)
 
 		// Store domain
 		domainMap[domainName] = &config.DomainV3{
-			Name:    domainName,
-			Rules:   domainRules,
-			Context: domainContext,
-			Skills:  domainSkills,
-			Agents:  domainAgents,
+			Name:     domainName,
+			Rules:    domainRules,
+			Context:  domainContext,
+			Skills:   domainSkills,
+			Agents:   domainAgents,
+			Commands: domainCommands,
 		}
 
 		// Collect all domain content
@@ -186,6 +215,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 		allContext = append(allContext, domainContext...)
 		allSkills = append(allSkills, domainSkills...)
 		allAgents = append(allAgents, domainAgents...)
+		allCommands = append(allCommands, domainCommands...)
 	}
 
 	// Log collision warnings
@@ -193,25 +223,31 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 	s.logCollisions(contextMap, "context")
 	s.logCollisions(skillsMap, "skills")
 	s.logCollisions(agentsMap, "agents")
+	s.logCollisions(commandsMap, "commands")
 
 	// Handle collisions: domain content overrides root content
 	finalRules := s.resolveCollisions(rootRules, allRules, rulesMap)
 	finalContext := s.resolveCollisions(rootContext, allContext, contextMap)
 	finalSkills := s.resolveCollisions(rootSkills, allSkills, skillsMap)
 	finalAgents := s.resolveCollisions(rootAgents, allAgents, agentsMap)
+	finalCommands := s.resolveCollisions(rootCommands, allCommands, commandsMap)
 
 	// Sort by priority (highest first)
 	s.sortByPriority(finalRules)
 	s.sortByPriority(finalContext)
 	s.sortByPriority(finalSkills)
 	s.sortByPriority(finalAgents)
+	s.sortByPriority(finalCommands)
+
+	logger.Info("Final commands after collision resolution", "count", len(finalCommands))
 
 	return &config.ContentTreeV3{
-		Rules:   finalRules,
-		Context: finalContext,
-		Skills:  finalSkills,
-		Agents:  finalAgents,
-		Domains: domainMap,
+		Rules:    finalRules,
+		Context:  finalContext,
+		Skills:   finalSkills,
+		Agents:   finalAgents,
+		Commands: finalCommands,
+		Domains:  domainMap,
 	}, nil
 }
 

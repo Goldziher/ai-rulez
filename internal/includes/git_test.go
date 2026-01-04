@@ -98,8 +98,9 @@ func TestNewGitSourceCreation(t *testing.T) {
 	if len(source.include) != 2 {
 		t.Errorf("expected 2 include items, got %d", len(source.include))
 	}
-	if !strings.Contains(source.cacheDir, ".remote-cache") {
-		t.Errorf("expected cache dir to contain .remote-cache, got %q", source.cacheDir)
+	expectedCacheDir, _ := getIncludeCacheDir(name)
+	if source.cacheDir != expectedCacheDir {
+		t.Errorf("expected cache dir %q, got %q", expectedCacheDir, source.cacheDir)
 	}
 }
 
@@ -430,7 +431,19 @@ func TestFindAIRulezDir(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			baseDir := t.TempDir()
-			cacheDir := filepath.Join(baseDir, ".remote-cache", "test")
+
+			// Use a unique test name to avoid cache collision between tests
+			testName := "test-" + strings.ReplaceAll(tt.name, " ", "-")
+			source, err := NewGitSource(testName, "https://github.com/owner/repo", tt.searchPath, "", baseDir, nil, "")
+			if err != nil {
+				t.Fatalf("unexpected error creating source: %v", err)
+			}
+			cacheDir := source.cacheDir
+
+			// Clean up any existing cache directory from previous test runs
+			os.RemoveAll(cacheDir)
+			defer os.RemoveAll(cacheDir)
+
 			os.MkdirAll(cacheDir, 0o755)
 
 			if tt.createDir {
@@ -439,11 +452,6 @@ func TestFindAIRulezDir(t *testing.T) {
 				} else {
 					os.MkdirAll(filepath.Join(cacheDir, ".ai-rulez"), 0o755)
 				}
-			}
-
-			source, err := NewGitSource("test", "https://github.com/owner/repo", tt.searchPath, "", baseDir, nil, "")
-			if err != nil {
-				t.Fatalf("unexpected error creating source: %v", err)
 			}
 
 			// Act
@@ -730,7 +738,7 @@ func TestCacheDirCreation(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	expectedCacheDir := filepath.Join(baseDir, ".remote-cache", sourceName)
+	expectedCacheDir, _ := getIncludeCacheDir(sourceName)
 	if source.cacheDir != expectedCacheDir {
 		t.Errorf("expected cache dir %q, got %q", expectedCacheDir, source.cacheDir)
 	}

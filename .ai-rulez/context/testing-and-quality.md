@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: Table-driven tests, fixtures, integration coverage, and deterministic testing practices.
 targets:
   - CLAUDE.md
   - .cursor/rules/*
