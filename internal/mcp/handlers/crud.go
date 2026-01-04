@@ -2,9 +2,12 @@ package handlers
 
 import (
 	"context"
+	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+	"gopkg.in/yaml.v3"
 )
 
 // Domain Handlers
@@ -323,6 +326,93 @@ func ListContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 		"context":   files,
 		"count":     len(files),
 	})
+}
+
+// contextItem represents a context file with its summary
+type contextItem struct {
+	Name    string `json:"name"`
+	Summary string `json:"summary"`
+	Path    string `json:"path"`
+}
+
+// extractSummary extracts the summary field from YAML frontmatter
+func extractSummary(filePath string) string {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+
+	// Parse frontmatter
+	contentStr := string(content)
+	if !strings.HasPrefix(contentStr, "---") {
+		return ""
+	}
+
+	// Find the closing --- delimiter
+	endIdx := strings.Index(contentStr[3:], "---")
+	if endIdx == -1 {
+		return ""
+	}
+
+	frontmatterStr := contentStr[3 : endIdx+3]
+
+	// Parse YAML
+	var metadata map[string]interface{}
+	err = yaml.Unmarshal([]byte(frontmatterStr), &metadata)
+	if err != nil {
+		return ""
+	}
+
+	// Extract summary
+	if summary, ok := metadata["summary"]; ok {
+		if summaryStr, ok := summary.(string); ok {
+			return summaryStr
+		}
+	}
+
+	return ""
+}
+
+// ListContextsHandler lists all context files with their names and summaries
+func ListContextsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(".")
+	if err != nil {
+		return ToolError(err)
+	}
+
+	domain := request.GetString("domain", "")
+
+	files, err := op.ListFiles(ctx, domain, "context")
+	if err != nil {
+		return ToolError(err)
+	}
+
+	// Build context items with summaries
+	var items []contextItem
+	for _, file := range files {
+		// Normalize path to use forward slashes
+		normalizedPath := normalizePath(file.Path)
+
+		summary := extractSummary(file.Path)
+		items = append(items, contextItem{
+			Name:    file.Name,
+			Summary: summary,
+			Path:    normalizedPath,
+		})
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "list_contexts",
+		"domain":    domain,
+		"contexts":  items,
+		"count":     len(items),
+	})
+}
+
+// normalizePath converts file paths to use forward slashes
+func normalizePath(path string) string {
+	return strings.ReplaceAll(path, "\\", "/")
 }
 
 // Skill Handlers

@@ -61,6 +61,50 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 			wantOutputs: 4, // .cursor dir, .cursor/rules dir, 2 rule files
 			wantErr:     false,
 		},
+		{
+			name: "generates command files as rules",
+			content: &config.ContentTreeV3{
+				Commands: []config.ContentFile{
+					{
+						Name:    "test command",
+						Content: "Command content",
+						Metadata: &config.MetadataV3{
+							Usage:   "test-cmd",
+							Aliases: []string{"tc"},
+						},
+					},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 3, // .cursor dir, .cursor/rules dir, 1 command file
+			wantErr:     false,
+		},
+		{
+			name: "filters commands by target",
+			content: &config.ContentTreeV3{
+				Commands: []config.ContentFile{
+					{
+						Name:    "cursor-command",
+						Content: "Cursor only",
+						Metadata: &config.MetadataV3{
+							Usage:   "cmd1",
+							Targets: []string{"cursor"},
+						},
+					},
+					{
+						Name:    "claude-command",
+						Content: "Claude only",
+						Metadata: &config.MetadataV3{
+							Usage:   "cmd2",
+							Targets: []string{"claude"},
+						},
+					},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 3, // .cursor dir, .cursor/rules dir, 1 command file (only cursor-command)
+			wantErr:     false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -175,5 +219,110 @@ func TestCombineContentFiles(t *testing.T) {
 		if name != expected[i] {
 			t.Errorf("combineContentFiles()[%d].Name = %q, want %q", i, name, expected[i])
 		}
+	}
+}
+
+func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
+	tests := []struct {
+		name    string
+		command config.ContentFile
+		want    bool
+	}{
+		{
+			name: "includes command with no metadata",
+			command: config.ContentFile{
+				Name:    "cmd1",
+				Content: "Content",
+			},
+			want: true,
+		},
+		{
+			name: "includes command with empty targets",
+			command: config.ContentFile{
+				Name:    "cmd2",
+				Content: "Content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "includes command with cursor target",
+			command: config.ContentFile{
+				Name:    "cmd3",
+				Content: "Content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"cursor"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "includes command with multiple targets including cursor",
+			command: config.ContentFile{
+				Name:    "cmd4",
+				Content: "Content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"claude", "cursor"},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "excludes command with non-cursor target",
+			command: config.ContentFile{
+				Name:    "cmd5",
+				Content: "Content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"claude"},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &CursorPresetGenerator{}
+			result := g.shouldIncludeCommand(tt.command)
+			if result != tt.want {
+				t.Errorf("shouldIncludeCommand() = %v, want %v", result, tt.want)
+			}
+		})
+	}
+}
+
+func TestCursorPresetGenerator_renderCommandFile(t *testing.T) {
+	g := &CursorPresetGenerator{}
+
+	command := config.ContentFile{
+		Name:    "test-command",
+		Content: "Command implementation details",
+		Metadata: &config.MetadataV3{
+			Usage:   "test-cmd [options]",
+			Aliases: []string{"tc", "test"},
+			Extra: map[string]string{
+				"description": "A test command",
+			},
+		},
+	}
+
+	result := g.renderCommandFile(command)
+
+	if !strings.Contains(result, "# Command: test-command") {
+		t.Error("Expected command name as heading with prefix")
+	}
+	if !strings.Contains(result, "**Description:** A test command") {
+		t.Error("Expected description in output")
+	}
+	if !strings.Contains(result, "**Usage:** `test-cmd [options]`") {
+		t.Error("Expected usage in output")
+	}
+	if !strings.Contains(result, "**Aliases:** tc, test") {
+		t.Error("Expected aliases in output")
+	}
+	if !strings.Contains(result, "Command implementation details") {
+		t.Error("Expected command content in output")
 	}
 }

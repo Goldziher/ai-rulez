@@ -167,6 +167,34 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 		prompts = append(prompts, prompt)
 	}
 
+	// Add commands as prompts
+	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	for _, command := range allCommands {
+		// Check if command is enabled and targets continue-dev
+		if !g.shouldIncludeCommand(command) {
+			continue
+		}
+
+		processedContent := markdown.ProcessEmbeddedContent(command.Content)
+		prompt := map[string]interface{}{
+			"name":        command.Name,
+			"description": fmt.Sprintf("Command: %s", command.Name),
+			"prompt":      processedContent,
+		}
+
+		// Add metadata if available
+		if command.Metadata != nil {
+			if desc, ok := command.Metadata.Extra["description"]; ok {
+				prompt["description"] = desc
+			}
+			if usage := command.Metadata.Usage; usage != "" {
+				prompt["usage"] = usage
+			}
+		}
+
+		prompts = append(prompts, prompt)
+	}
+
 	yamlData, err := yaml.Marshal(prompts)
 	if err != nil {
 		return "", fmt.Errorf("marshal YAML: %w", err)
@@ -175,4 +203,25 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	// Prepend the header to YAML content
 	builder.WriteString(string(yamlData))
 	return builder.String(), nil
+}
+
+// shouldIncludeCommand checks if a command should be included in the continue-dev preset
+func (g *ContinueDevPresetGenerator) shouldIncludeCommand(command config.ContentFile) bool {
+	// Include if no metadata (no restrictions)
+	if command.Metadata == nil {
+		return true
+	}
+
+	// If targets are specified, only include if continue-dev is in targets
+	if len(command.Metadata.Targets) > 0 {
+		for _, target := range command.Metadata.Targets {
+			if target == "continue-dev" {
+				return true
+			}
+		}
+		return false
+	}
+
+	// No targets specified, include by default
+	return true
 }

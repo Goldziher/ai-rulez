@@ -22,6 +22,7 @@ const (
 	contextDir         = "context"
 	skillsDir          = "skills"
 	agentsDir          = "agents"
+	commandsDir        = "commands"
 	domainsDir         = "domains"
 	skillMarkerFile    = "SKILL.md"
 	mcpYAMLFilename    = "mcp.yaml"
@@ -272,6 +273,17 @@ func scanContentTree(configDir string) (*ContentTreeV3, error) {
 	tree.Agents = agents
 	logger.Debug("Scanned agents directory", "path", agentsPath, "count", len(agents))
 
+	// Scan root commands/
+	commandsPath := filepath.Join(configDir, commandsDir)
+	var commands []ContentFile
+	if commands, err = scanMarkdownFiles(commandsPath); err != nil {
+		return nil, oops.
+			With("path", commandsPath).
+			Wrapf(err, "scan commands directory")
+	}
+	tree.Commands = commands
+	logger.Info("Scanned commands directory", "path", commandsPath, "count", len(commands))
+
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
 	var domains map[string]*DomainV3
@@ -479,6 +491,18 @@ func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
 				Wrapf(err, "scan domain agents")
 		}
 		domain.Agents = agentsContent
+
+		// Scan domain/commands/
+		domainCommandsPath := filepath.Join(domainPath, commandsDir)
+		var domainCommands []ContentFile
+		if domainCommands, err = scanMarkdownFiles(domainCommandsPath); err != nil {
+			return nil, oops.
+				With("domain", domainName).
+				With("path", domainCommandsPath).
+				Wrapf(err, "scan domain commands")
+		}
+		domain.Commands = domainCommands
+		logger.Info("Scanned domain commands directory", "domain", domainName, "path", domainCommandsPath, "count", len(domainCommands))
 
 		domains[domainName] = domain
 	}
@@ -700,11 +724,13 @@ func convertV3ToV2(v3 *ConfigV3) *Config {
 		v2.Rules = convertContentToRules(v3.Content.Rules)
 		v2.Sections = convertContentToSections(v3.Content.Context)
 		v2.Agents = convertContentToAgents(v3.Content.Agents)
+		v2.Commands = convertContentToCommands(v3.Content.Commands)
 
 		// Collect all names for collision detection
 		seenRuleNames := make(map[string]bool)
 		seenSectionNames := make(map[string]bool)
 		seenAgentNames := make(map[string]bool)
+		seenCommandNames := make(map[string]bool)
 
 		// Track root names
 		for i := range v2.Rules {
@@ -716,16 +742,21 @@ func convertV3ToV2(v3 *ConfigV3) *Config {
 		for i := range v2.Agents {
 			seenAgentNames[v2.Agents[i].Name] = true
 		}
+		for i := range v2.Commands {
+			seenCommandNames[v2.Commands[i].Name] = true
+		}
 
-		// Add domain content to rules/sections/agents with domain prefixing
+		// Add domain content to rules/sections/agents/commands with domain prefixing
 		for domainName, domain := range v3.Content.Domains {
 			domainRules := convertContentToRulesWithDomain(domain.Rules, domainName, seenRuleNames)
 			domainSections := convertContentToSectionsWithDomain(domain.Context, domainName, seenSectionNames)
 			domainAgents := convertContentToAgentsWithDomain(domain.Skills, domainName, seenAgentNames)
+			domainCommands := convertContentToCommandsWithDomain(domain.Commands, domainName, seenCommandNames)
 
 			v2.Rules = append(v2.Rules, domainRules...)
 			v2.Sections = append(v2.Sections, domainSections...)
 			v2.Agents = append(v2.Agents, domainAgents...)
+			v2.Commands = append(v2.Commands, domainCommands...)
 
 			// Update seen names
 			for i := range domainRules {
@@ -736,6 +767,9 @@ func convertV3ToV2(v3 *ConfigV3) *Config {
 			}
 			for i := range domainAgents {
 				seenAgentNames[domainAgents[i].Name] = true
+			}
+			for i := range domainCommands {
+				seenCommandNames[domainCommands[i].Name] = true
 			}
 		}
 	}
@@ -886,6 +920,57 @@ func convertContentToAgentsWithDomain(files []ContentFile, domainName string, se
 	return agents
 }
 
+// convertContentToCommands converts ContentFile entries to Command entries
+func convertContentToCommands(files []ContentFile) []Command {
+	var commands []Command
+	for _, file := range files {
+		command := Command{
+			ID:           sanitizeNameToID(file.Name),
+			Name:         file.Name,
+			Description:  getCommandDescription(file.Metadata),
+			SystemPrompt: file.Content,
+			Aliases:      getCommandAliases(file.Metadata),
+			Usage:        getCommandUsage(file.Metadata),
+			Shortcut:     getCommandShortcut(file.Metadata),
+			Targets:      getTargetsFromMetadata(file.Metadata),
+		}
+		commands = append(commands, command)
+	}
+	return commands
+}
+
+// convertContentToCommandsWithDomain converts ContentFile entries to Command entries with domain context
+// It prefixes names with domain to preserve domain membership and prevent collisions
+func convertContentToCommandsWithDomain(files []ContentFile, domainName string, seenNames map[string]bool) []Command {
+	var commands []Command
+	for _, file := range files {
+		// Prefix name with domain to preserve domain membership
+		prefixedName := domainName + ": " + file.Name
+		uniqueName := prefixedName
+
+		// Handle collisions with numeric suffix
+		counter := 1
+		for seenNames[uniqueName] {
+			uniqueName = fmt.Sprintf("%s (%d)", prefixedName, counter)
+			counter++
+		}
+
+		command := Command{
+			ID:           sanitizeNameToID(uniqueName),
+			Name:         uniqueName,
+			Description:  getCommandDescription(file.Metadata),
+			SystemPrompt: file.Content,
+			Aliases:      getCommandAliases(file.Metadata),
+			Usage:        getCommandUsage(file.Metadata),
+			Shortcut:     getCommandShortcut(file.Metadata),
+			Targets:      getTargetsFromMetadata(file.Metadata),
+		}
+		commands = append(commands, command)
+		seenNames[uniqueName] = true
+	}
+	return commands
+}
+
 // convertPresetsToOutputs converts V3 presets to V2 Output entries
 func convertPresetsToOutputs(presets []PresetV3) []Output {
 	var outputs []Output
@@ -933,6 +1018,38 @@ func getAgentDescription(meta *MetadataV3) string {
 		return ""
 	}
 	return meta.Extra["description"]
+}
+
+// getCommandDescription extracts command description from metadata
+func getCommandDescription(meta *MetadataV3) string {
+	if meta == nil || meta.Extra == nil {
+		return ""
+	}
+	return meta.Extra["description"]
+}
+
+// getCommandAliases extracts command aliases from metadata
+func getCommandAliases(meta *MetadataV3) []string {
+	if meta == nil {
+		return nil
+	}
+	return meta.Aliases
+}
+
+// getCommandUsage extracts command usage from metadata
+func getCommandUsage(meta *MetadataV3) string {
+	if meta == nil {
+		return ""
+	}
+	return meta.Usage
+}
+
+// getCommandShortcut extracts command shortcut from metadata
+func getCommandShortcut(meta *MetadataV3) string {
+	if meta == nil {
+		return ""
+	}
+	return meta.Shortcut
 }
 
 // sanitizeNameToID converts a human-readable name to a valid ID
