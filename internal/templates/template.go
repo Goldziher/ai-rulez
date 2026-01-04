@@ -11,7 +11,9 @@ import (
 	"text/template"
 	"time"
 
+	"github.com/Goldziher/ai-rulez/internal/compression"
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
 type PrioritizedNamed interface {
@@ -192,6 +194,7 @@ func (r *Renderer) Render(format string, data *TemplateData) (string, error) {
 	if content, handled, err := RenderSpecialBuiltin(format, data); err != nil {
 		return "", fmt.Errorf("failed to render %s template: %w", format, err)
 	} else if handled {
+		content = applyCompression(content, data)
 		return content, nil
 	}
 
@@ -205,7 +208,31 @@ func (r *Renderer) Render(format string, data *TemplateData) (string, error) {
 		return "", fmt.Errorf("failed to execute template %s: %w", format, err)
 	}
 
-	return buf.String(), nil
+	content := buf.String()
+
+	// Apply compression if configured
+	content = applyCompression(content, data)
+
+	return content, nil
+}
+
+func applyCompression(content string, data *TemplateData) string {
+	if data.Config == nil || data.Config.Compression == nil {
+		return content
+	}
+
+	compressor := compression.NewCompressor(data.Config.Compression)
+	compressedContent := compressor.Compress(content)
+
+	// Log compression stats
+	stats := compressor.GetStats()
+	logger.Info("Compression applied",
+		"level", data.Config.Compression.GetCompressionLevel(),
+		"original", stats.OriginalSize,
+		"compressed", stats.CompressedSize,
+		"saved_percent", fmt.Sprintf("%.1f%%", stats.Ratio))
+
+	return compressedContent
 }
 
 func (r *Renderer) RegisterTemplate(format, templateStr string) error {

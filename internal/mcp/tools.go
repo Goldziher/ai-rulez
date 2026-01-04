@@ -280,6 +280,14 @@ func (s *Server) registerCRUDTools() {
 		handlers.ListContextHandler,
 	)
 
+	s.addTool(
+		newTool("list_contexts", "List all context files with their names and summaries",
+			newSchemaBuilder().
+				String("domain", "Domain name (optional)", false),
+		),
+		handlers.ListContextsHandler,
+	)
+
 	// Skill tools
 	s.addTool(
 		newTool("create_skill", "Create a new skill file with optional YAML frontmatter",

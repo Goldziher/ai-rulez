@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: Domain organization, profile configuration, and team-based output tailoring.
 targets:
   - CLAUDE.md
   - .cursor/rules/*

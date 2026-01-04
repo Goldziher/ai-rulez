@@ -1,5 +1,6 @@
 ---
 priority: medium
+summary: External includes from git or local paths with configurable merge strategies.
 targets:
   - CLAUDE.md
   - .cursor/rules/*

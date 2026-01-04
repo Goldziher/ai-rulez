@@ -1,5 +1,6 @@
 ---
 priority: medium
+summary: MCP server configuration and integrations exposing read, CRUD, generate, and validate operations.
 targets:
   - CLAUDE.md
   - GEMINI.md

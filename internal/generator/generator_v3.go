@@ -118,11 +118,12 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 	// Special case: "default" profile means root content only (no domains)
 	if profile == defaultProfileName {
 		return &config.ContentTreeV3{
-			Rules:   g.config.Content.Rules,
-			Context: g.config.Content.Context,
-			Skills:  g.config.Content.Skills,
-			Agents:  g.config.Content.Agents,
-			Domains: make(map[string]*config.DomainV3), // Empty - no domains for default profile
+			Rules:    g.config.Content.Rules,
+			Context:  g.config.Content.Context,
+			Skills:   g.config.Content.Skills,
+			Agents:   g.config.Content.Agents,
+			Commands: g.config.Content.Commands,
+			Domains:  make(map[string]*config.DomainV3), // Empty - no domains for default profile
 		}, nil
 	}
 

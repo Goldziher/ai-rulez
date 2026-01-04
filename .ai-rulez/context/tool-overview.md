@@ -1,5 +1,6 @@
 ---
 priority: high
+summary: High-level overview of V3 config, profiles, presets, includes, and typical AI-Rulez workflows.
 targets:
   - CLAUDE.md
   - GEMINI.md

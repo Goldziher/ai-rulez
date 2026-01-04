@@ -142,7 +142,7 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 		Domains: make(map[string]*config.DomainV3),
 	}
 
-	// Merge rules, context, skills, agents based on strategy
+	// Merge rules, context, skills, agents, commands based on strategy
 	switch strategy {
 	case mergeStrategyLocalOverride:
 		// Base wins for root content, add non-conflicting from include
@@ -150,6 +150,7 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 		merged.Context = mergeContentFiles(base.Context, include.Context, true)
 		merged.Skills = mergeContentFiles(base.Skills, include.Skills, true)
 		merged.Agents = mergeContentFiles(base.Agents, include.Agents, true)
+		merged.Commands = mergeContentFiles(base.Commands, include.Commands, true)
 
 	case mergeStrategyIncludeOverride:
 		// Include wins for root content
@@ -157,6 +158,7 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 		merged.Context = mergeContentFiles(base.Context, include.Context, false)
 		merged.Skills = mergeContentFiles(base.Skills, include.Skills, false)
 		merged.Agents = mergeContentFiles(base.Agents, include.Agents, false)
+		merged.Commands = mergeContentFiles(base.Commands, include.Commands, false)
 
 	case mergeStrategyError:
 		// Fail on any conflict
@@ -172,6 +174,9 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 		if detectConflicts(base.Agents, include.Agents) {
 			return nil, oops.Errorf("conflict detected in agents between base and include")
 		}
+		if detectConflicts(base.Commands, include.Commands) {
+			return nil, oops.Errorf("conflict detected in commands between base and include")
+		}
 		merged.Rules = make([]config.ContentFile, 0, len(base.Rules)+len(include.Rules))
 		merged.Rules = append(merged.Rules, base.Rules...)
 		merged.Rules = append(merged.Rules, include.Rules...)
@@ -184,6 +189,9 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 		merged.Agents = make([]config.ContentFile, 0, len(base.Agents)+len(include.Agents))
 		merged.Agents = append(merged.Agents, base.Agents...)
 		merged.Agents = append(merged.Agents, include.Agents...)
+		merged.Commands = make([]config.ContentFile, 0, len(base.Commands)+len(include.Commands))
+		merged.Commands = append(merged.Commands, base.Commands...)
+		merged.Commands = append(merged.Commands, include.Commands...)
 
 	default:
 		return nil, oops.Errorf("unknown merge strategy: %s", strategy)
@@ -206,11 +214,12 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 // mergeDomainInstall installs included content as a domain
 func (r *Resolver) mergeDomainInstall(base, include *config.ContentTreeV3, installTo, strategy string) (*config.ContentTreeV3, error) {
 	merged := &config.ContentTreeV3{
-		Rules:   base.Rules,
-		Context: base.Context,
-		Skills:  base.Skills,
-		Agents:  base.Agents,
-		Domains: make(map[string]*config.DomainV3),
+		Rules:    base.Rules,
+		Context:  base.Context,
+		Skills:   base.Skills,
+		Agents:   base.Agents,
+		Commands: base.Commands,
+		Domains:  make(map[string]*config.DomainV3),
 	}
 
 	// Copy existing domains
@@ -233,11 +242,12 @@ func (r *Resolver) mergeDomainInstall(base, include *config.ContentTreeV3, insta
 	} else {
 		// Create new domain from included content
 		targetDomain = &config.DomainV3{
-			Name:    domainName,
-			Rules:   include.Rules,
-			Context: include.Context,
-			Skills:  include.Skills,
-			Agents:  include.Agents,
+			Name:     domainName,
+			Rules:    include.Rules,
+			Context:  include.Context,
+			Skills:   include.Skills,
+			Agents:   include.Agents,
+			Commands: include.Commands,
 		}
 	}
 
@@ -259,6 +269,7 @@ func (r *Resolver) mergeDomainContent(target *config.DomainV3, include *config.C
 		merged.Context = mergeContentFiles(target.Context, include.Context, true)
 		merged.Skills = mergeContentFiles(target.Skills, include.Skills, true)
 		merged.Agents = mergeContentFiles(target.Agents, include.Agents, true)
+		merged.Commands = mergeContentFiles(target.Commands, include.Commands, true)
 
 	case mergeStrategyIncludeOverride:
 		// Include content wins
@@ -266,6 +277,7 @@ func (r *Resolver) mergeDomainContent(target *config.DomainV3, include *config.C
 		merged.Context = mergeContentFiles(target.Context, include.Context, false)
 		merged.Skills = mergeContentFiles(target.Skills, include.Skills, false)
 		merged.Agents = mergeContentFiles(target.Agents, include.Agents, false)
+		merged.Commands = mergeContentFiles(target.Commands, include.Commands, false)
 
 	default:
 		// Default to local-override
@@ -273,6 +285,7 @@ func (r *Resolver) mergeDomainContent(target *config.DomainV3, include *config.C
 		merged.Context = mergeContentFiles(target.Context, include.Context, true)
 		merged.Skills = mergeContentFiles(target.Skills, include.Skills, true)
 		merged.Agents = mergeContentFiles(target.Agents, include.Agents, true)
+		merged.Commands = mergeContentFiles(target.Commands, include.Commands, true)
 	}
 
 	// Copy MCPServers
