@@ -41,13 +41,27 @@ func (g *CodexPresetGenerator) GetName() string {
 func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, ".codex"),
+		filepath.Join(baseDir, ".codex", "skills"),
 	}
 }
 
 func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
-	// Generate AGENTS.md file
+	// Create .codex directory structure
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".codex"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".codex", "skills"),
+			IsDir: true,
+		},
+	)
+
+	// Generate AGENTS.md file (rules and context only, no skills)
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
 	outputs = append(outputs, config.OutputFileV3{
@@ -55,6 +69,28 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		Content: agentsContent,
 		IsDir:   false,
 	})
+
+	// Combine all skills from root and domains
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+
+	// Generate skill files to .codex/skills/
+	for _, skill := range allSkills {
+		skillID := extractSkillID(skill.Path)
+
+		// Create skill directory
+		skillDir := filepath.Join(baseDir, ".codex", "skills", skillID)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:  skillDir,
+			IsDir: true,
+		})
+
+		// Generate SKILL.md file
+		skillContent := g.renderSkillFile(skill)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(skillDir, "SKILL.md"),
+			Content: skillContent,
+		})
+	}
 
 	return outputs, nil
 }
@@ -115,20 +151,42 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 		}
 	}
 
-	// Add skills section
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
-	if len(allSkills) > 0 {
-		builder.WriteString("## Skills\n\n")
-		for _, skill := range allSkills {
-			builder.WriteString("### ")
-			builder.WriteString(skill.Name)
-			builder.WriteString("\n\n")
+	// Skills are generated to .codex/skills/ directory, not inlined in AGENTS.md
 
-			processedContent := markdown.ProcessEmbeddedContent(skill.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
+	return builder.String()
+}
+
+// renderSkillFile renders a skill file in SKILL.md format for Codex
+func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+
+	// Add YAML frontmatter
+	builder.WriteString("---\n")
+	builder.WriteString("name: ")
+	builder.WriteString(skill.Name)
+	builder.WriteString("\n")
+
+	// Description is critical for Codex skill matching
+	if skill.Metadata != nil {
+		if desc, ok := skill.Metadata.Extra["description"]; ok && desc != "" {
+			builder.WriteString("description: ")
+			builder.WriteString(desc)
+			builder.WriteString("\n")
+		}
+
+		// Add short-description for user-facing display
+		if shortDesc, ok := skill.Metadata.Extra["short-description"]; ok && shortDesc != "" {
+			builder.WriteString("metadata:\n")
+			builder.WriteString("  short-description: ")
+			builder.WriteString(shortDesc)
+			builder.WriteString("\n")
 		}
 	}
+
+	builder.WriteString("---\n\n")
+
+	// Add skill content
+	builder.WriteString(skill.Content)
 
 	return builder.String()
 }
