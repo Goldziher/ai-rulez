@@ -167,3 +167,14 @@ testing/**/.mcp.json
 # AI Rules generated files
 .junie/guidelines.md
 .junie/
+
+# AI Rules generated files
+.codex/skills/capability-delivery-checklist/SKILL.md
+.codex/
+.codex/skills/config-schema-maintainer/SKILL.md
+.codex/skills/docs-and-site/SKILL.md
+.codex/skills/release-and-distribution/SKILL.md
+.codex/skills/repository-layout/SKILL.md
+.codex/skills/mcp-integrations/SKILL.md
+.codex/skills/core-workflows/SKILL.md
+.codex/skills/test-fixture-maintainer/SKILL.md
