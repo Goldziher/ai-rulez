@@ -348,51 +348,8 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		}
 	}
 
-	// Add skills section
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
-	if len(allSkills) > 0 {
-		builder.WriteString("## Skills\n\n")
-		for _, skill := range allSkills {
-			builder.WriteString("### ")
-			builder.WriteString(skill.Name)
-			builder.WriteString("\n\n")
-
-			// Process the content to remove the H1 and normalize formatting
-			processedContent := markdown.ProcessEmbeddedContent(skill.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
-		}
-	}
-
-	// Add commands section
-	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
-	if len(allCommands) > 0 {
-		builder.WriteString("## Commands\n\n")
-		for _, command := range allCommands {
-			builder.WriteString("### ")
-			builder.WriteString(command.Name)
-			builder.WriteString("\n\n")
-
-			// Add usage if available
-			if command.Metadata != nil && command.Metadata.Usage != "" {
-				builder.WriteString("**Usage:** `")
-				builder.WriteString(command.Metadata.Usage)
-				builder.WriteString("`\n\n")
-			}
-
-			// Add priority if specified
-			if command.Metadata != nil && command.Metadata.Priority != "" {
-				builder.WriteString("**Priority:** ")
-				builder.WriteString(command.Metadata.Priority)
-				builder.WriteString("\n\n")
-			}
-
-			// Process the content to remove the H1 and normalize formatting
-			processedContent := markdown.ProcessEmbeddedContent(command.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
-		}
-	}
+	// Skills are generated to .claude/skills/ directory, not inlined in CLAUDE.md
+	// Commands are generated to .claude/skills/ directory as skills, not inlined in CLAUDE.md
 
 	result := builder.String()
 

@@ -115,20 +115,7 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 		}
 	}
 
-	// Add skills section
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
-	if len(allSkills) > 0 {
-		builder.WriteString("## Skills\n\n")
-		for _, skill := range allSkills {
-			builder.WriteString("### ")
-			builder.WriteString(skill.Name)
-			builder.WriteString("\n\n")
-
-			processedContent := markdown.ProcessEmbeddedContent(skill.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
-		}
-	}
+	// Skills should not be inlined in AGENTS.md
 
 	return builder.String()
 }
