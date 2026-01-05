@@ -6,6 +6,31 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.6.0] - 2026-01-05
+
+### Fixed
+
+#### Preset Generator Skills/Commands Inlining Bug
+- **Claude**: Removed skills and commands from CLAUDE.md (77% size reduction - 14K lines to 3.2K lines)
+  - Skills now only generate to `.claude/skills/{skill-id}/SKILL.md`
+  - Commands now only generate to `.claude/skills/{command-id}/SKILL.md`
+- **Cursor**: Added missing skills and commands directory support
+  - Skills now generate to `.cursor/skills/{skill-id}/SKILL.md`
+  - Commands now generate to `.cursor/commands/{command}.md` (was `.cursor/rules/cmd-*.mdc`)
+- **Codex**: Removed skills inlining from AGENTS.md
+  - Skills now generate to `.codex/skills/{skill-id}/SKILL.md`
+  - AGENTS.md only contains Rules and Context
+- **Gemini**: Removed skills inlining from GEMINI.md
+- **Copilot**: Removed skills inlining from `.github/copilot-instructions.md`
+- **AMP**: Removed skills inlining from AGENTS.md
+- **OpenCode**: Removed skills inlining from AGENTS.md
+- **Junie**: Removed skills inlining from `.junie/guidelines.md`
+
+### Changed
+- All preset generators now correctly separate skills into dedicated directories
+- Main preset files (CLAUDE.md, GEMINI.md, etc.) only contain Rules and Context
+- Skills are lazily loaded from separate files, reducing prompt token usage
+
 ## [3.5.0] - 2026-01-04
 
 ### Added
