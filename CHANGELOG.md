@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.6.1] - 2026-01-07
+
+### Fixed
+- Windows binary packaging - now uses `.zip` format instead of `.tar.gz` for Windows releases
+
 ## [3.6.0] - 2026-01-05
 
 ### Fixed
