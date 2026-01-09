@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "3.6.1",
+  "version": "3.7.1",
   "description": "⚡ One config to rule them all. Centralized AI assistant configuration management - generate rules for Claude, Cursor, Copilot, Windsurf and more from a single YAML file.",
   "keywords": [
     "ai",
@@ -68,7 +68,8 @@
   "files": [
     "ai-rulez.js",
     "install.js",
-    "README.md"
+    "README.md",
+    "bin/ai-rulez-*"
   ],
   "engines": {
     "node": ">=14.0.0"
