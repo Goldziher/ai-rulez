@@ -2,6 +2,8 @@ package includes
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -50,4 +52,32 @@ func IsGitURL(source string) bool {
 // IsLocalPath checks if a source string is a local file path
 func IsLocalPath(source string) bool {
 	return DetectSourceType(source) == SourceTypeLocal
+}
+
+// discoverDomains scans the domains/ directory within an .ai-rulez directory
+// and returns a list of domain names. This is used when scanning includes
+// to ensure all domains from the included source are discovered and scanned.
+func discoverDomains(aiRulezDir string) []string {
+	domainsDir := filepath.Join(aiRulezDir, "domains")
+
+	// Check if domains directory exists
+	info, err := os.Stat(domainsDir)
+	if err != nil || !info.IsDir() {
+		return nil
+	}
+
+	// Read domain subdirectories
+	entries, err := os.ReadDir(domainsDir)
+	if err != nil {
+		return nil
+	}
+
+	var domains []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			domains = append(domains, entry.Name())
+		}
+	}
+
+	return domains
 }

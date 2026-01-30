@@ -98,13 +98,23 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) 
 		}()
 	}
 
-	// Create a minimal config for the scanner
+	// Discover domains in the include so they get scanned
+	// For local includes, the .ai-rulez dir is at baseDir/.ai-rulez
+	localAIRulezDir := filepath.Join(baseDir, ".ai-rulez")
+	domains := discoverDomains(localAIRulezDir)
+	if len(domains) > 0 {
+		logger.Debug("Discovered domains in local include", "name", s.name, "domains", domains)
+	}
+
+	// Create a minimal config for the scanner with discovered domains
+	// Set Default to "default" so ScanProfile("") uses the default profile with domains
 	minimalConfig := &config.ConfigV3{
 		Version: "3.0",
 		Name:    s.name,
 		BaseDir: baseDir,
+		Default: "default",
 		Profiles: map[string][]string{
-			"default": {}, // Empty default profile
+			"default": domains, // Include discovered domains so they get scanned
 		},
 	}
 

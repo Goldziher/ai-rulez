@@ -484,3 +484,164 @@ func TestFetchWithFiltering(t *testing.T) {
 		t.Error("expected skills to be filtered out")
 	}
 }
+
+// Test that domains are discovered and scanned from includes
+func TestLocalSourceFetchWithDomains(t *testing.T) {
+	// Arrange - create a temp directory with .ai-rulez structure including domains
+	tmpDir := t.TempDir()
+	aiRulezDir := createTestAIRulezDir(t, tmpDir)
+
+	// Create domains in the .ai-rulez directory
+	backendDomainDir := filepath.Join(aiRulezDir, "domains", "backend", "rules")
+	if err := os.MkdirAll(backendDomainDir, 0755); err != nil {
+		t.Fatalf("failed to create backend domain: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(backendDomainDir, "api.md"), []byte("# API Rules"), 0644); err != nil {
+		t.Fatalf("failed to write backend rule: %v", err)
+	}
+
+	frontendDomainDir := filepath.Join(aiRulezDir, "domains", "frontend", "rules")
+	if err := os.MkdirAll(frontendDomainDir, 0755); err != nil {
+		t.Fatalf("failed to create frontend domain: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(frontendDomainDir, "components.md"), []byte("# Component Rules"), 0644); err != nil {
+		t.Fatalf("failed to write frontend rule: %v", err)
+	}
+
+	source := NewLocalSource("test", tmpDir, tmpDir, nil)
+	ctx := context.Background()
+
+	// Act
+	contentTree, err := source.Fetch(ctx)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if contentTree == nil {
+		t.Fatalf("expected non-nil ContentTreeV3")
+	}
+
+	// Verify domains were discovered and scanned
+	if contentTree.Domains == nil {
+		t.Fatal("expected Domains map to be non-nil")
+	}
+	if len(contentTree.Domains) != 2 {
+		t.Errorf("expected 2 domains, got %d", len(contentTree.Domains))
+	}
+
+	backend, hasBackend := contentTree.Domains["backend"]
+	if !hasBackend {
+		t.Error("expected backend domain to be discovered")
+	} else if len(backend.Rules) == 0 {
+		t.Error("expected backend domain to have rules")
+	}
+
+	frontend, hasFrontend := contentTree.Domains["frontend"]
+	if !hasFrontend {
+		t.Error("expected frontend domain to be discovered")
+	} else if len(frontend.Rules) == 0 {
+		t.Error("expected frontend domain to have rules")
+	}
+}
+
+// Test discoverDomains helper function
+func TestDiscoverDomains(t *testing.T) {
+	tests := []struct {
+		name            string
+		setupFunc       func(t *testing.T, dir string)
+		expectedDomains []string
+	}{
+		{
+			name: "no domains directory",
+			setupFunc: func(t *testing.T, dir string) {
+				// Don't create domains directory
+			},
+			expectedDomains: nil,
+		},
+		{
+			name: "empty domains directory",
+			setupFunc: func(t *testing.T, dir string) {
+				if err := os.MkdirAll(filepath.Join(dir, "domains"), 0755); err != nil {
+					t.Fatalf("failed to create domains dir: %v", err)
+				}
+			},
+			expectedDomains: nil,
+		},
+		{
+			name: "single domain",
+			setupFunc: func(t *testing.T, dir string) {
+				if err := os.MkdirAll(filepath.Join(dir, "domains", "backend"), 0755); err != nil {
+					t.Fatalf("failed to create domain: %v", err)
+				}
+			},
+			expectedDomains: []string{"backend"},
+		},
+		{
+			name: "multiple domains",
+			setupFunc: func(t *testing.T, dir string) {
+				for _, domain := range []string{"backend", "frontend", "qa"} {
+					if err := os.MkdirAll(filepath.Join(dir, "domains", domain), 0755); err != nil {
+						t.Fatalf("failed to create domain %s: %v", domain, err)
+					}
+				}
+			},
+			expectedDomains: []string{"backend", "frontend", "qa"},
+		},
+		{
+			name: "ignores files in domains directory",
+			setupFunc: func(t *testing.T, dir string) {
+				domainsDir := filepath.Join(dir, "domains")
+				if err := os.MkdirAll(domainsDir, 0755); err != nil {
+					t.Fatalf("failed to create domains dir: %v", err)
+				}
+				// Create a directory (domain)
+				if err := os.MkdirAll(filepath.Join(domainsDir, "backend"), 0755); err != nil {
+					t.Fatalf("failed to create domain: %v", err)
+				}
+				// Create a file (should be ignored)
+				if err := os.WriteFile(filepath.Join(domainsDir, "README.md"), []byte("readme"), 0644); err != nil {
+					t.Fatalf("failed to create file: %v", err)
+				}
+			},
+			expectedDomains: []string{"backend"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tmpDir := t.TempDir()
+			aiRulezDir := filepath.Join(tmpDir, ".ai-rulez")
+			if err := os.MkdirAll(aiRulezDir, 0755); err != nil {
+				t.Fatalf("failed to create .ai-rulez: %v", err)
+			}
+
+			tt.setupFunc(t, aiRulezDir)
+
+			domains := discoverDomains(aiRulezDir)
+
+			if tt.expectedDomains == nil {
+				if len(domains) != 0 {
+					t.Errorf("expected no domains, got %v", domains)
+				}
+				return
+			}
+
+			if len(domains) != len(tt.expectedDomains) {
+				t.Errorf("expected %d domains, got %d: %v", len(tt.expectedDomains), len(domains), domains)
+				return
+			}
+
+			// Check all expected domains are present (order may vary)
+			domainSet := make(map[string]bool)
+			for _, d := range domains {
+				domainSet[d] = true
+			}
+			for _, expected := range tt.expectedDomains {
+				if !domainSet[expected] {
+					t.Errorf("expected domain %q not found in %v", expected, domains)
+				}
+			}
+		})
+	}
+}
