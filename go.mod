@@ -5,7 +5,7 @@ go 1.25
 require (
 	github.com/dgraph-io/ristretto/v2 v2.3.0
 	github.com/go-resty/resty/v2 v2.17.1
-	github.com/kaptinlin/jsonschema v0.6.5
+	github.com/kaptinlin/jsonschema v0.6.9
 	github.com/modelcontextprotocol/go-sdk v1.2.0
 	github.com/samber/oops v1.19.4
 	github.com/schollz/progressbar/v3 v3.19.0
@@ -14,7 +14,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/teekennedy/goldmark-markdown v0.5.1
 	github.com/yuin/goldmark v1.7.13
-	golang.org/x/text v0.32.0
+	golang.org/x/text v0.33.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -38,12 +38,12 @@ require (
 	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e // indirect
 	github.com/go-viper/mapstructure/v2 v2.4.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
-	github.com/goccy/go-yaml v1.19.1 // indirect
+	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kaptinlin/go-i18n v0.2.2 // indirect
-	github.com/kaptinlin/jsonpointer v0.4.8 // indirect
-	github.com/kaptinlin/messageformat-go v0.4.7 // indirect
+	github.com/kaptinlin/go-i18n v0.2.3 // indirect
+	github.com/kaptinlin/jsonpointer v0.4.9 // indirect
+	github.com/kaptinlin/messageformat-go v0.4.9 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/json v1.0.0 // indirect
 	github.com/knadh/koanf/parsers/toml/v2 v2.2.0 // indirect
