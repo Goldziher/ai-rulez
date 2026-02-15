@@ -33,7 +33,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 4, // .cursor dir, .cursor/rules dir, 2 rule files
+			wantOutputs: 6, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 2 rule files
 			wantErr:     false,
 		},
 		{
@@ -58,7 +58,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 4, // .cursor dir, .cursor/rules dir, 2 rule files
+			wantOutputs: 6, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 2 rule files
 			wantErr:     false,
 		},
 		{
@@ -76,7 +76,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 3, // .cursor dir, .cursor/rules dir, 1 command file
+			wantOutputs: 5, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 1 command file
 			wantErr:     false,
 		},
 		{
@@ -102,7 +102,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 3, // .cursor dir, .cursor/rules dir, 1 command file (only cursor-command)
+			wantOutputs: 5, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 1 command file (only cursor-command)
 			wantErr:     false,
 		},
 	}
@@ -125,10 +125,16 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				t.Errorf("Generate() got %d outputs, want %d", len(outputs), tt.wantOutputs)
 			}
 
-			// Verify rule files have .mdc extension
+			// Verify rule files have .mdc extension; command files use .md
 			for _, output := range outputs {
-				if !output.IsDir && !strings.HasSuffix(output.Path, ".mdc") {
-					t.Errorf("Expected .mdc extension, got %s", output.Path)
+				if output.IsDir {
+					continue
+				}
+				if strings.Contains(output.Path, "/rules/") && !strings.HasSuffix(output.Path, ".mdc") {
+					t.Errorf("Rule file expected .mdc extension, got %s", output.Path)
+				}
+				if strings.Contains(output.Path, "/commands/") && !strings.HasSuffix(output.Path, ".md") {
+					t.Errorf("Command file expected .md extension, got %s", output.Path)
 				}
 			}
 		})
@@ -310,8 +316,9 @@ func TestCursorPresetGenerator_renderCommandFile(t *testing.T) {
 
 	result := g.renderCommandFile(command)
 
-	if !strings.Contains(result, "# Command: test-command") {
-		t.Error("Expected command name as heading with prefix")
+	// Heading format is # /command-name
+	if !strings.Contains(result, "# /test-command") {
+		t.Error("Expected command name as heading with slash prefix")
 	}
 	if !strings.Contains(result, "**Description:** A test command") {
 		t.Error("Expected description in output")
@@ -319,8 +326,12 @@ func TestCursorPresetGenerator_renderCommandFile(t *testing.T) {
 	if !strings.Contains(result, "**Usage:** `test-cmd [options]`") {
 		t.Error("Expected usage in output")
 	}
-	if !strings.Contains(result, "**Aliases:** tc, test") {
-		t.Error("Expected aliases in output")
+	// Aliases are rendered as `/<alias>`
+	if !strings.Contains(result, "**Aliases:**") {
+		t.Error("Expected aliases section in output")
+	}
+	if !strings.Contains(result, "`/tc`") || !strings.Contains(result, "`/test`") {
+		t.Error("Expected aliases tc and test in output")
 	}
 	if !strings.Contains(result, "Command implementation details") {
 		t.Error("Expected command content in output")
