@@ -1,9 +1,5 @@
 version: '3'
 
-# Apply to all tasks so every `go` command uses the same toolchain as go.mod
-env:
-  GOTOOLCHAIN: "go1.25.0"
-
 vars:
   BINARY_NAME: ai-rulez
   GOLANGCI_VERSION: "v2.7.2"
