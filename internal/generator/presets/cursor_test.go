@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -130,10 +131,11 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				if output.IsDir {
 					continue
 				}
-				if strings.Contains(output.Path, "/rules/") && !strings.HasSuffix(output.Path, ".mdc") {
+				pathSlash := filepath.ToSlash(output.Path)
+				if strings.Contains(pathSlash, "/rules/") && !strings.HasSuffix(output.Path, ".mdc") {
 					t.Errorf("Rule file expected .mdc extension, got %s", output.Path)
 				}
-				if strings.Contains(output.Path, "/commands/") && !strings.HasSuffix(output.Path, ".md") {
+				if strings.Contains(pathSlash, "/commands/") && !strings.HasSuffix(output.Path, ".md") {
 					t.Errorf("Command file expected .md extension, got %s", output.Path)
 				}
 			}
