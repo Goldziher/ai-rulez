@@ -427,7 +427,7 @@ func TestDetectPresetFromSource(t *testing.T) {
 		{"GEMINI.md", "gemini"},
 		{".github/copilot-instructions.md", "copilot"},
 		{".continue/rules", "continue-dev"},
-		{".windsurf", "windsurf"},
+		{".windsurf/rules", "windsurf"},
 		{".clinerules", "cline"},
 		{"unknown.md", ""},
 	}
