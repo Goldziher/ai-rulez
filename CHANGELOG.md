@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.7.1] - 2026-02-16
+
+### Fixed
+- Windsurf trigger frontmatter now safely YAML-quotes `description` and `glob` values, preventing malformed output when values include special characters
+- Windsurf invalid trigger warning now reflects the original unsupported trigger value before fallback
+
 ## [3.7.0] - 2026-02-16
 
 ### Added
