@@ -1,7 +1,6 @@
 package presets
 
 import (
-	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -84,13 +83,14 @@ func (g *WindsurfPresetGenerator) renderTriggerFrontmatter(builder *strings.Buil
 		return
 	}
 
+	rawMode := strings.TrimSpace(rule.Metadata.Extra["trigger"])
 	mode := rule.Metadata.GetTriggerMode()
 
-	// Validate mode and warn if invalid
-	if !config.IsValidTriggerMode(mode) {
+	// Warn when user provided an unknown trigger mode and we fallback to manual.
+	if rawMode != "" && !config.IsValidTriggerMode(rawMode) {
 		logger.Warn(
 			"Unknown trigger mode in Windsurf rule, using default",
-			"mode", mode,
+			"mode", rawMode,
 			"rule", rule.Name,
 			"default", config.TriggerManual,
 		)
@@ -109,17 +109,30 @@ func (g *WindsurfPresetGenerator) renderTriggerFrontmatter(builder *strings.Buil
 	}
 
 	builder.WriteString("---\n")
-	fmt.Fprintf(builder, "trigger: %s\n", mode)
+	builder.WriteString("trigger: ")
+	builder.WriteString(mode)
+	builder.WriteString("\n")
 
 	if desc := rule.Metadata.GetTriggerDescription(); desc != "" {
-		fmt.Fprintf(builder, "description: %s\n", desc)
+		builder.WriteString("description: ")
+		builder.WriteString(quoteWindsurfYAMLString(desc))
+		builder.WriteString("\n")
 	}
 
 	if glob := rule.Metadata.GetTriggerGlob(); glob != "" {
-		fmt.Fprintf(builder, "glob: %s\n", glob)
+		builder.WriteString("glob: ")
+		builder.WriteString(quoteWindsurfYAMLString(glob))
+		builder.WriteString("\n")
 	}
 
 	builder.WriteString("---\n\n")
+}
+
+func quoteWindsurfYAMLString(value string) string {
+	escaped := strings.ReplaceAll(value, "\\", "\\\\")
+	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+	return "\"" + escaped + "\""
 }
 
 func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.ConfigV3, outputPath string, ruleCount int) string {

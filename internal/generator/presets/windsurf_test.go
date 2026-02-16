@@ -123,7 +123,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 					},
 				},
 			},
-			shouldContain:    "description: Apply when working with APIs",
+			shouldContain:    "description: \"Apply when working with APIs\"",
 			shouldNotContain: "",
 		},
 		{
@@ -138,7 +138,22 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 					},
 				},
 			},
-			shouldContain:    "glob: **/*.ts",
+			shouldContain:    "glob: \"**/*.ts\"",
+			shouldNotContain: "",
+		},
+		{
+			name: "description with special characters is quoted",
+			rule: config.ContentFile{
+				Name:    "Special Rule",
+				Content: "Content",
+				Metadata: &config.MetadataV3{
+					Extra: map[string]string{
+						"trigger":     "model_decision",
+						"description": "Apply for JSON: API #critical\nand docs",
+					},
+				},
+			},
+			shouldContain:    "description: \"Apply for JSON: API #critical\\nand docs\"",
 			shouldNotContain: "",
 		},
 		{
