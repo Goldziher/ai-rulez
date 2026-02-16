@@ -35,6 +35,21 @@ npm install -g ai-rulez
 npx ai-rulez@latest init "My Project"
 ```
 
+### Offline / private registry packaging
+
+When publishing this package to a private registry, you can bundle platform
+binaries in `bin/` so installs do not need GitHub release downloads.
+
+Supported packaged binary names:
+- `bin/ai-rulez-linux-amd64`
+- `bin/ai-rulez-linux-arm64`
+- `bin/ai-rulez-darwin-amd64`
+- `bin/ai-rulez-darwin-arm64`
+- `bin/ai-rulez-windows-amd64.exe` (or `bin/ai-rulez-windows-amd64`)
+
+If a packaged binary is present, the installer uses it first and skips network
+download.
+
 ---
 
 ## Quick Example

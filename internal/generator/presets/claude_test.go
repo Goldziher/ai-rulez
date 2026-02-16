@@ -221,6 +221,122 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 	}
 }
 
+func TestClaudePresetGenerator_renderSkillFile_FiltersEmbeddedContentByTargets(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+
+	skill := config.ContentFile{
+		Name:    "targeted-skill",
+		Path:    "/test/skills/targeted-skill/SKILL.md",
+		Content: "# Targeted Skill",
+	}
+
+	content := &config.ContentTreeV3{
+		Rules: []config.ContentFile{
+			{
+				Name:    "included-rule",
+				Content: "This rule should be included",
+				Metadata: &config.MetadataV3{
+					Targets: []string{".claude/skills/*/SKILL.md"},
+				},
+			},
+			{
+				Name:    "excluded-rule",
+				Content: "This rule should be excluded",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"CLAUDE.md", ".cursor/rules/*"},
+				},
+			},
+		},
+		Context: []config.ContentFile{
+			{
+				Name:    "included-context",
+				Content: "This context should be included",
+				Metadata: &config.MetadataV3{
+					Targets: []string{".claude/skills/*/SKILL.md"},
+				},
+			},
+			{
+				Name:    "excluded-context",
+				Content: "This context should be excluded",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"CLAUDE.md"},
+				},
+			},
+		},
+	}
+
+	cfg := &config.ConfigV3{
+		Name:    "test-project",
+		BaseDir: "/test",
+	}
+
+	result, err := g.renderSkillFile(skill, content, cfg, "/test/.claude/skills/targeted-skill/SKILL.md")
+	if err != nil {
+		t.Fatalf("renderSkillFile() error = %v", err)
+	}
+
+	if !strings.Contains(result, "### included-rule") {
+		t.Error("Expected included rule in output")
+	}
+	if strings.Contains(result, "### excluded-rule") {
+		t.Error("Expected excluded rule to be filtered out")
+	}
+	if !strings.Contains(result, "### included-context") {
+		t.Error("Expected included context in output")
+	}
+	if strings.Contains(result, "### excluded-context") {
+		t.Error("Expected excluded context to be filtered out")
+	}
+}
+
+func TestClaudePresetGenerator_renderSkillFile_OmitsSectionsWhenNoEmbeddedContentMatchesTargets(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+
+	skill := config.ContentFile{
+		Name:    "no-target-match-skill",
+		Path:    "/test/skills/no-target-match-skill/SKILL.md",
+		Content: "# No Target Match Skill",
+	}
+
+	content := &config.ContentTreeV3{
+		Rules: []config.ContentFile{
+			{
+				Name:    "claude-md-only-rule",
+				Content: "Rule content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"CLAUDE.md"},
+				},
+			},
+		},
+		Context: []config.ContentFile{
+			{
+				Name:    "claude-md-only-context",
+				Content: "Context content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"CLAUDE.md"},
+				},
+			},
+		},
+	}
+
+	cfg := &config.ConfigV3{
+		Name:    "test-project",
+		BaseDir: "/test",
+	}
+
+	result, err := g.renderSkillFile(skill, content, cfg, "/test/.claude/skills/no-target-match-skill/SKILL.md")
+	if err != nil {
+		t.Fatalf("renderSkillFile() error = %v", err)
+	}
+
+	if strings.Contains(result, "\n## Rules\n") {
+		t.Error("Expected Rules section to be omitted when no rules match targets")
+	}
+	if strings.Contains(result, "\n## Context\n") {
+		t.Error("Expected Context section to be omitted when no context matches targets")
+	}
+}
+
 func TestClaudePresetGenerator_GetName(t *testing.T) {
 	g := &ClaudePresetGenerator{}
 	if g.GetName() != "claude" {
