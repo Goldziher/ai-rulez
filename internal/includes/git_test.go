@@ -605,6 +605,71 @@ func TestGitSourceFilterContentPreserveDomains(t *testing.T) {
 	}
 }
 
+func TestGitSourceFilterContentIncludesAgents(t *testing.T) {
+	// Arrange: tree has agents; include list contains "agents"
+	baseDir := t.TempDir()
+	tree := &config.ContentTreeV3{
+		Rules:   []config.ContentFile{{Name: "rule1", Content: "rule content"}},
+		Context: []config.ContentFile{{Name: "context1", Content: "context content"}},
+		Skills:  []config.ContentFile{{Name: "skill1", Content: "skill content"}},
+		Agents:  []config.ContentFile{{Name: "golang-maintainer", Content: "agent content"}},
+		Domains: make(map[string]*config.DomainV3),
+	}
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "agents"}, "")
+	if err != nil {
+		t.Fatalf("unexpected error creating source: %v", err)
+	}
+
+	// Act
+	filtered := source.filterContent(tree)
+
+	// Assert: agents are included when "agents" is in include list
+	if len(filtered.Agents) != 1 {
+		t.Errorf("expected 1 agent, got %d", len(filtered.Agents))
+	}
+	if len(filtered.Agents) > 0 && filtered.Agents[0].Name != "golang-maintainer" {
+		t.Errorf("expected agent name golang-maintainer, got %q", filtered.Agents[0].Name)
+	}
+	if len(filtered.Rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(filtered.Rules))
+	}
+	if len(filtered.Context) != 0 {
+		t.Errorf("expected 0 context (not in include), got %d", len(filtered.Context))
+	}
+	if len(filtered.Skills) != 0 {
+		t.Errorf("expected 0 skills (not in include), got %d", len(filtered.Skills))
+	}
+}
+
+func TestGitSourceFilterContentExcludesAgentsWhenNotInInclude(t *testing.T) {
+	// Arrange: tree has agents; include list does not contain "agents"
+	baseDir := t.TempDir()
+	tree := &config.ContentTreeV3{
+		Rules:   []config.ContentFile{{Name: "rule1", Content: "rule content"}},
+		Context: []config.ContentFile{{Name: "context1", Content: "context content"}},
+		Agents:  []config.ContentFile{{Name: "governance-architect", Content: "agent content"}},
+		Domains: make(map[string]*config.DomainV3),
+	}
+	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "context"}, "")
+	if err != nil {
+		t.Fatalf("unexpected error creating source: %v", err)
+	}
+
+	// Act
+	filtered := source.filterContent(tree)
+
+	// Assert: agents are not copied when "agents" is not in include list
+	if len(filtered.Agents) != 0 {
+		t.Errorf("expected 0 agents when agents not in include, got %d", len(filtered.Agents))
+	}
+	if len(filtered.Rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(filtered.Rules))
+	}
+	if len(filtered.Context) != 1 {
+		t.Errorf("expected 1 context, got %d", len(filtered.Context))
+	}
+}
+
 // TestValidateGitURL tests URL validation
 func TestValidateGitURL(t *testing.T) {
 	tests := []struct {
