@@ -204,7 +204,7 @@ go 1.21`
 			case tool.config.Cursor:
 				assert.Contains(t, prompt, ".cursorrules")
 			case tool.config.Windsurf:
-				assert.Contains(t, prompt, ".windsurf/rules.md")
+				assert.Contains(t, prompt, ".windsurf/rules/")
 			}
 
 			assert.Contains(t, prompt, "# agents:")

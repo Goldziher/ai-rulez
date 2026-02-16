@@ -66,7 +66,7 @@ func (i *Importer) Import(sources string) error {
 
 		if len(sourcesToImport) == 0 {
 			return oops.
-				Hint("No existing AI tool files found to import\nSupported: CLAUDE.md, .claude/, .cursor/, .windsurf/, .gemini/, .github/copilot-instructions.md, .continue/, .clinerules/").
+				Hint("No existing AI tool files found to import\nSupported: CLAUDE.md, .claude/, .cursor/, .windsurf/, .windsurf/rules/, .gemini/, .github/copilot-instructions.md, .continue/, .clinerules/").
 				Errorf("no sources detected for import")
 		}
 
@@ -151,6 +151,7 @@ func (i *Importer) detectSources() ([]string, error) {
 		".claude/agents",
 		".cursor/rules",
 		".windsurf",
+		".windsurf/rules",
 		".continue/rules",
 		".continue/prompts",
 		".clinerules",
@@ -338,7 +339,7 @@ func (i *Importer) importCursorRules(source, path string) ([]ImportedContent, st
 	return i.importGenericMarkdownDirectory(source, path)
 }
 
-// importWindsurfRules imports from .windsurf/ directory
+// importWindsurfRules imports from .windsurf/ or .windsurf/rules/ directory
 func (i *Importer) importWindsurfRules(source, path string) ([]ImportedContent, string, error) {
 	return i.importGenericMarkdownDirectory(source, path)
 }
