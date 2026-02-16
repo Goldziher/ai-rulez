@@ -37,7 +37,7 @@ func getDefaultOutputPath(providers ProviderConfig) string {
 		return "AGENTS.md"
 	}
 	if providers.Windsurf {
-		return ".windsurf/rules.md"
+		return ".windsurf/rules/01-main.md"
 	}
 	if providers.Copilot {
 		return ".github/copilot-instructions.md"
@@ -70,8 +70,8 @@ func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
 	}
 
 	if providers.Windsurf {
-		builder.WriteString(`  - path: ".windsurf/"
-    type: "rule" 
+		builder.WriteString(`  - path: ".windsurf/rules/"
+    type: "rule"
     naming_scheme: "{name}.md"
 `)
 	}
