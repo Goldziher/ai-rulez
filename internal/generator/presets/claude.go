@@ -2,6 +2,7 @@ package presets
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -148,8 +149,33 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 	return outputs, nil
 }
 
+//nolint:gocyclo // Acceptable complexity for comprehensive skill generation with target filtering
 func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
 	var builder strings.Builder
+	var includedRules []config.ContentFile
+	var includedContext []config.ContentFile
+
+	for _, rule := range content.Rules {
+		var targets []string
+		if rule.Metadata != nil {
+			targets = rule.Metadata.Targets
+		}
+
+		if shouldIncludeInOutput(targets, outputPath, cfg.BaseDir) {
+			includedRules = append(includedRules, rule)
+		}
+	}
+
+	for _, ctx := range content.Context {
+		var targets []string
+		if ctx.Metadata != nil {
+			targets = ctx.Metadata.Targets
+		}
+
+		if shouldIncludeInOutput(targets, outputPath, cfg.BaseDir) {
+			includedContext = append(includedContext, ctx)
+		}
+	}
 
 	// Generate frontmatter
 	frontmatter := make(map[string]interface{})
@@ -176,7 +202,7 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	}
 
 	// Add header before frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(content.Rules), 0, len(content.Agents))
+	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents))
 	builder.WriteString(header)
 
 	builder.WriteString("---\n")
@@ -187,9 +213,9 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	builder.WriteString(skill.Content)
 
 	// Add rules section
-	if len(content.Rules) > 0 {
+	if len(includedRules) > 0 {
 		builder.WriteString("\n\n## Rules\n\n")
-		for _, rule := range content.Rules {
+		for _, rule := range includedRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
 			builder.WriteString("\n")
@@ -204,9 +230,9 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	}
 
 	// Add context section
-	if len(content.Context) > 0 {
+	if len(includedContext) > 0 {
 		builder.WriteString("\n## Context\n\n")
-		for _, ctx := range content.Context {
+		for _, ctx := range includedContext {
 			builder.WriteString("### ")
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
@@ -431,6 +457,111 @@ func extractSkillID(skillPath string) string {
 	// Path format: .../skills/{skill-id}/SKILL.md
 	dir := filepath.Dir(skillPath)
 	return filepath.Base(dir)
+}
+
+func shouldIncludeInOutput(targets []string, outputPath, baseDir string) bool {
+	if len(targets) == 0 {
+		return true
+	}
+
+	candidates := buildOutputPathCandidates(outputPath, baseDir)
+	for _, target := range targets {
+		if targetMatchesOutput(target, candidates) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func buildOutputPathCandidates(outputPath, baseDir string) []string {
+	candidateSet := make(map[string]struct{})
+	addCandidate := func(value string) {
+		normalized := normalizeTargetPath(value)
+		if normalized == "" {
+			return
+		}
+		candidateSet[normalized] = struct{}{}
+	}
+
+	addCandidate(outputPath)
+	addCandidate(filepath.Base(outputPath))
+
+	baseDir = normalizeTargetPath(baseDir)
+	outputPath = normalizeTargetPath(outputPath)
+	if baseDir != "" {
+		prefix := baseDir + "/"
+		if strings.HasPrefix(outputPath, prefix) {
+			addCandidate(strings.TrimPrefix(outputPath, prefix))
+		}
+	}
+
+	candidates := make([]string, 0, len(candidateSet))
+	for candidate := range candidateSet {
+		candidates = append(candidates, candidate)
+	}
+	return candidates
+}
+
+func normalizeTargetPath(raw string) string {
+	if raw == "" {
+		return ""
+	}
+
+	hasTrailingSlash := strings.HasSuffix(raw, "/") || strings.HasSuffix(raw, "\\")
+	normalized := filepath.ToSlash(filepath.Clean(raw))
+	normalized = strings.TrimPrefix(normalized, "./")
+
+	if normalized == "." {
+		return ""
+	}
+
+	if hasTrailingSlash && normalized != "/" {
+		normalized += "/"
+	}
+
+	return normalized
+}
+
+func targetMatchesOutput(target string, outputCandidates []string) bool {
+	target = normalizeTargetPath(target)
+	if target == "" {
+		return false
+	}
+
+	if target == "claude" {
+		for _, candidate := range outputCandidates {
+			if candidate == "CLAUDE.md" || strings.HasPrefix(candidate, ".claude/") {
+				return true
+			}
+		}
+		return false
+	}
+
+	if strings.HasSuffix(target, "/") {
+		prefix := strings.TrimSuffix(target, "/")
+		for _, candidate := range outputCandidates {
+			if candidate == prefix || strings.HasPrefix(candidate, prefix+"/") {
+				return true
+			}
+		}
+		return false
+	}
+
+	for _, candidate := range outputCandidates {
+		if candidate == target {
+			return true
+		}
+
+		if strings.ContainsAny(target, "*?[") {
+			matched, err := path.Match(target, candidate)
+			if err == nil && matched {
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // shouldIncludeCommand checks if a command should be included in the Claude preset
