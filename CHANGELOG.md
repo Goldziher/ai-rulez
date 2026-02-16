@@ -6,6 +6,20 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.7.0] - 2026-02-16
+
+### Added
+- Contributor credit: merged PR [#83](https://github.com/Goldziher/ai-rulez/pull/83) by [@mnsami](https://github.com/mnsami)
+
+### Fixed
+- Includes system now correctly includes agents in merged include content (PR #83)
+- Codex skill generation now always writes `description` in `.codex/skills/*/SKILL.md` frontmatter
+
+### Changed
+- Bumped Go toolchain target to `1.26` and aligned CI workflows
+- Bumped `golangci-lint` to `v2.9.0` across Taskfile, hooks, and CI
+- Updated Go, Node, and Python/docs dependencies to latest available versions
+
 ## [3.6.1] - 2026-01-07
 
 ### Fixed

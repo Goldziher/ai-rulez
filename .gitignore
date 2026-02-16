@@ -52,6 +52,7 @@ coverage.*
 /vendor/
 go.work
 go.work.sum
+.cache/
 
 
 # --- Python --- #

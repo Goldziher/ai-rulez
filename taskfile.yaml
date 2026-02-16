@@ -2,7 +2,7 @@ version: '3'
 
 vars:
   BINARY_NAME: ai-rulez
-  GOLANGCI_VERSION: "v2.7.2"
+  GOLANGCI_VERSION: "v2.9.0"
 
 tasks:
   build:
