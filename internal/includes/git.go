@@ -571,6 +571,9 @@ func (s *GitSource) filterContent(tree *config.ContentTreeV3) *config.ContentTre
 	if shouldInclude("skills") {
 		filtered.Skills = tree.Skills
 	}
+	if shouldInclude("agents") {
+		filtered.Agents = tree.Agents
+	}
 	if shouldInclude("commands") {
 		filtered.Commands = tree.Commands
 	}
