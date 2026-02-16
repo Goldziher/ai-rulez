@@ -17,7 +17,7 @@ var PresetRegistry = map[string][]Output{
 		{Path: ".gemini/settings.json", Template: Template{Type: TemplateBuiltin, Value: "gemini-mcp"}},
 	},
 	"windsurf": {
-		{Path: ".windsurf/", Type: "rule", NamingScheme: "{name}.md"},
+		{Path: ".windsurf/rules/", Type: "rule", NamingScheme: "{name}.md"},
 	},
 	"cline": {
 		{Path: ".clinerules/", Type: "rule", NamingScheme: "{name}.md"},
@@ -43,7 +43,7 @@ var PresetRegistry = map[string][]Output{
 		{Path: "AGENTS.md"},
 		{Path: ".mcp.json", Template: Template{Type: TemplateBuiltin, Value: "claude-code-mcp"}},
 		{Path: ".cursor/rules/", Type: "rule", NamingScheme: "{name}.mdc"},
-		{Path: ".windsurf/", Type: "rule", NamingScheme: "{name}.md"},
+		{Path: ".windsurf/rules/", Type: "rule", NamingScheme: "{name}.md"},
 		{Path: ".gemini/settings.json", Template: Template{Type: TemplateBuiltin, Value: "gemini-mcp"}},
 		{Path: ".github/copilot-instructions.md"},
 		{Path: "GEMINI.md"},
