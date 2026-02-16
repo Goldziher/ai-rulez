@@ -68,7 +68,8 @@
   "files": [
     "ai-rulez.js",
     "install.js",
-    "README.md"
+    "README.md",
+    "bin/ai-rulez-*"
   ],
   "engines": {
     "node": ">=14.0.0"
