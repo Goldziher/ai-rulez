@@ -166,19 +166,17 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString(skill.Name)
 	builder.WriteString("\n")
 
-	// Description is critical for Codex skill matching
-	if skill.Metadata != nil {
-		if desc, ok := skill.Metadata.Extra["description"]; ok && desc != "" {
-			builder.WriteString("description: ")
-			builder.WriteString(desc)
-			builder.WriteString("\n")
-		}
+	// Description is required by Codex for skill loading.
+	builder.WriteString("description: ")
+	builder.WriteString(quoteYAMLString(resolveCodexSkillDescription(skill)))
+	builder.WriteString("\n")
 
-		// Add short-description for user-facing display
-		if shortDesc, ok := skill.Metadata.Extra["short-description"]; ok && shortDesc != "" {
+	if skill.Metadata != nil {
+		// Add short-description for user-facing display.
+		if shortDesc, ok := skill.Metadata.Extra["short-description"]; ok && strings.TrimSpace(shortDesc) != "" {
 			builder.WriteString("metadata:\n")
 			builder.WriteString("  short-description: ")
-			builder.WriteString(shortDesc)
+			builder.WriteString(quoteYAMLString(strings.TrimSpace(shortDesc)))
 			builder.WriteString("\n")
 		}
 	}
@@ -189,4 +187,28 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString(skill.Content)
 
 	return builder.String()
+}
+
+func resolveCodexSkillDescription(skill config.ContentFile) string {
+	if skill.Metadata != nil {
+		if desc, ok := skill.Metadata.Extra["description"]; ok && strings.TrimSpace(desc) != "" {
+			return strings.TrimSpace(desc)
+		}
+		if shortDesc, ok := skill.Metadata.Extra["short-description"]; ok && strings.TrimSpace(shortDesc) != "" {
+			return strings.TrimSpace(shortDesc)
+		}
+	}
+
+	if strings.TrimSpace(skill.Name) != "" {
+		return "Instructions for " + strings.ReplaceAll(strings.TrimSpace(skill.Name), "-", " ") + "."
+	}
+
+	return "Instructions for this skill."
+}
+
+func quoteYAMLString(value string) string {
+	escaped := strings.ReplaceAll(value, "\\", "\\\\")
+	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+	return "\"" + escaped + "\""
 }

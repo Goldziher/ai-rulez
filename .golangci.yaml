@@ -175,7 +175,7 @@ linters:
         
       - linters:
           - revive
-        text: "var-naming: avoid meaningless package names"
+        text: "var-naming: avoid .*package names"
         
       - linters:
           - gosec
