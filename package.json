@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "3.6.1",
+  "version": "3.7.0",
   "description": "Lightning-fast CLI tool (written in Go) for managing AI assistant rules",
   "bin": {
     "ai-rulez": "./bin/ai-rulez"
@@ -10,8 +10,8 @@
     "commitlint": "commitlint --edit"
   },
   "devDependencies": {
-    "@commitlint/cli": "^19.8.1",
-    "@commitlint/config-conventional": "^19.8.1"
+    "@commitlint/cli": "^20.4.1",
+    "@commitlint/config-conventional": "^20.4.1"
   },
   "commitlint": {
     "extends": [

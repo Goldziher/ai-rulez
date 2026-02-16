@@ -2,7 +2,7 @@ pre-commit:
   parallel: true
   commands:
     lint:
-      run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.4.0 run --fix
+      run: go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.9.0 run --fix
       fail_text: "Go linting failed"
     fmt:
       run: go fmt ./...
