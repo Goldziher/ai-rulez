@@ -90,6 +90,39 @@ function getBinaryName(platform) {
 	return platform === "windows" ? "ai-rulez-bin.exe" : "ai-rulez-bin";
 }
 
+function getPackagedBinaryCandidates(os, arch) {
+	const baseName = `ai-rulez-${os}-${arch}`;
+	if (os === "windows") {
+		return [`${baseName}.exe`, baseName];
+	}
+	return [baseName];
+}
+
+function usePackagedBinaryIfAvailable(os, arch, binaryName, binDir) {
+	const packagedBinaryCandidates = getPackagedBinaryCandidates(os, arch);
+	const binaryPath = path.join(binDir, binaryName);
+
+	for (const candidateName of packagedBinaryCandidates) {
+		const packagedBinaryPath = path.join(binDir, candidateName);
+		if (!fs.existsSync(packagedBinaryPath)) {
+			continue;
+		}
+
+		if (path.resolve(packagedBinaryPath) !== path.resolve(binaryPath)) {
+			fs.copyFileSync(packagedBinaryPath, binaryPath);
+		}
+
+		if (os !== "windows") {
+			fs.chmodSync(binaryPath, 0o755);
+		}
+
+		console.log(`Using packaged binary for ${os}/${arch} (${candidateName})`);
+		return true;
+	}
+
+	return false;
+}
+
 async function downloadBinary(url, dest, retryCount = 0) {
 	return new Promise((resolve, reject) => {
 		const file = fs.createWriteStream(dest);
@@ -292,39 +325,25 @@ async function install(isPostInstall = false) {
 
 		const { os, arch } = getPlatform();
 		const binaryName = getBinaryName(os);
+		const binDir = path.join(__dirname, "bin");
 
 		if (DEBUG)
 			console.error(
 				`[install.js] Platform: ${os}/${arch}, Binary name: ${binaryName}`,
 			);
+		if (!fs.existsSync(binDir)) {
+			fs.mkdirSync(binDir, { recursive: true });
+		}
 
-		// Check for packaged binary first (offline/private registry mode)
-		const binDir = path.join(__dirname, "bin");
-		const packagedBinaryExt = os === "windows" ? ".exe" : "";
-		const packagedBinary = path.join(binDir, `ai-rulez-${os}-${arch}${packagedBinaryExt}`);
-
-		if (fs.existsSync(packagedBinary)) {
-			const binaryPath = path.join(binDir, binaryName);
-
-			if (!fs.existsSync(binaryPath)) {
-				if (!fs.existsSync(binDir)) {
-					fs.mkdirSync(binDir, { recursive: true });
-				}
-				fs.copyFileSync(packagedBinary, binaryPath);
-				if (os !== "windows") {
-					fs.chmodSync(binaryPath, 0o755);
-				}
+		if (usePackagedBinaryIfAvailable(os, arch, binaryName, binDir)) {
+			if (DEBUG) {
+				console.error("[install.js] Packaged binary detected, skipping download");
 			}
-
-			console.log(`✅ Using packaged binary for ${os}/${arch}`);
-			if (DEBUG) console.error(`[install.js] Installation complete (offline mode)`);
 			if (!isPostInstall) {
 				process.exit(0);
 			}
 			return;
 		}
-
-		// Fallback: download from GitHub Releases
 		const packageJson = JSON.parse(
 			fs.readFileSync(path.join(__dirname, "package.json"), "utf8"),
 		);
@@ -337,11 +356,6 @@ async function install(isPostInstall = false) {
 
 		console.log(`Downloading ai-rulez ${version} for ${os}/${arch}...`);
 		console.log(`URL: ${downloadUrl}`);
-
-		if (!fs.existsSync(binDir)) {
-			fs.mkdirSync(binDir, { recursive: true });
-		}
-
 		const archivePath = path.join(__dirname, archiveName);
 
 		console.log("Downloading checksums...");
@@ -465,6 +479,8 @@ if (typeof module !== "undefined" && module.exports) {
 	module.exports = {
 		getPlatform,
 		getBinaryName,
+		getPackagedBinaryCandidates,
+		usePackagedBinaryIfAvailable,
 		downloadBinary,
 		extractArchive,
 		calculateSHA256,
