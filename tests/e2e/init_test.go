@@ -167,7 +167,8 @@ require github.com/stretchr/testify v1.8.4`
 func runTestCommand(args ...string) (string, error) {
 	binaryPath := "/tmp/ai-rulez-test-binary"
 	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
-	buildCmd.Dir = "/Users/naamanhirschfeld/workspace/ai-rulez"
+	// Use current working directory instead of hardcoded path
+	// This allows tests to run on any developer's machine
 	buildCmd.Env = append(os.Environ(), "NO_INTERACTIVE=1")
 	if err := buildCmd.Run(); err != nil {
 		return "", err

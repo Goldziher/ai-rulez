@@ -119,3 +119,47 @@ Releases are fully automated using GitHub Actions and are triggered when a new t
 
 !!! danger "Do Not Release Manually"
     Manual releases are strongly discouraged. The CI pipeline is the single source of truth for versioning. Releasing locally will result in version mismatches (as the `__version__` string will not be updated) and should be avoided.
+
+---
+
+## Private Registry Distribution
+
+Community contributors can build and publish their own npm packages to private registries for internal distribution or testing before PR merge.
+
+### How It Works
+
+The npm package supports an **offline mode**: if platform-specific binaries are present in the `bin/` directory, they will be used directly instead of downloading from GitHub.
+
+| Scenario | `bin/` directory | Behavior |
+|----------|------------------|----------|
+| Public npm | Empty | Downloads from GitHub Releases |
+| Private registry | Contains binaries | Uses local binaries, no network call |
+
+### Build and Publish
+
+```bash
+# 1. Build binaries for target platforms (refer to .goreleaser.yaml for all platforms)
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o release/npm/bin/ai-rulez-linux-amd64 ./cmd
+CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -o release/npm/bin/ai-rulez-darwin-arm64 ./cmd
+CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -o release/npm/bin/ai-rulez-windows-amd64.exe ./cmd
+# ... add more platforms as needed
+
+# 2. (Optional) Modify package.json for your scope/version
+cd release/npm
+# Edit name to "@yourscope/ai-rulez", adjust version if needed
+
+# 3. Publish to your private registry
+npm publish --registry=https://your-private-registry/
+
+# 4. Install and use
+npm install @yourscope/ai-rulez --registry=https://your-private-registry/
+ai-rulez generate  # Uses local binary, no GitHub access needed
+```
+
+### Binary Naming Convention
+
+Binaries must follow this naming pattern: `ai-rulez-{os}-{arch}[.exe]`
+
+- **os**: `linux`, `darwin`, `windows`
+- **arch**: `amd64`, `arm64`, `386`
+- **.exe**: Required for Windows only
