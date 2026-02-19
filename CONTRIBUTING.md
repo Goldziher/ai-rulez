@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This guide provides everything you 
 
 ### Prerequisites
 
-- **Go 1.24+**
+- **Go 1.26+**
 - **Node.js 20+** (for commit hooks)
 - **[Task](https://taskfile.dev)** (for running build scripts)
 
@@ -112,7 +112,7 @@ Releases are fully automated using GitHub Actions and are triggered when a new t
     git tag v2.0.1
     git push origin v2.0.1
     ```
-2.  **CI/CD Pipeline**: The push event triggers the `.github/workflows/release.yaml` workflow, which handles the entire release process:
+2.  **CI/CD Pipeline**: The push event triggers the `.github/workflows/publish.yaml` workflow, which handles the entire release process:
     - **GoReleaser**: Builds binaries for all supported platforms and creates a GitHub Release.
     - **PyPI Publishing**: The Python package version in `release/pypi/ai_rulez/__init__.py` is automatically updated with the tag version, and the package is built and published to PyPI.
     - **npm Publishing**: The `package.json` version is updated, and the package is published to npm.
