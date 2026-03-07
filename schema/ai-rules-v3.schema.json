@@ -156,6 +156,34 @@
         }
       },
       "additionalProperties": false
+    },
+    "compression": {
+      "type": "object",
+      "description": "Token reduction settings for generated files",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["off", "light", "moderate", "aggressive", "maximum"],
+          "description": "Token reduction level: off (none), light (punctuation/whitespace cleanup), moderate (+ stopword removal), aggressive (+ sentence selection), maximum (+ semantic scoring/hypernym compression)",
+          "default": "off"
+        },
+        "preserve_markdown": {
+          "type": "boolean",
+          "description": "Whether to preserve markdown structure (headers, lists, tables) during reduction",
+          "default": true
+        },
+        "preserve_code": {
+          "type": "boolean",
+          "description": "Whether to preserve code blocks and inline code during reduction",
+          "default": true
+        },
+        "language": {
+          "type": "string",
+          "description": "ISO 639 language code for stopword lists",
+          "default": "en"
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

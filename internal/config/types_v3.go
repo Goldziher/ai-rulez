@@ -39,45 +39,53 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 	return h.Style
 }
 
-// CompressionConfig represents compression settings for generated files
+// CompressionConfig represents token reduction settings for generated files
 type CompressionConfig struct {
-	Level              string `yaml:"level,omitempty" json:"level,omitempty"`                             // "none", "minimal", "standard", "aggressive"
-	RemoveDuplicates   *bool  `yaml:"remove_duplicates,omitempty" json:"remove_duplicates,omitempty"`     // Extract common patterns
-	UseAbbreviations   *bool  `yaml:"use_abbreviations,omitempty" json:"use_abbreviations,omitempty"`     // Use shorter markdown syntax
-	PreserveFormatting *bool  `yaml:"preserve_formatting,omitempty" json:"preserve_formatting,omitempty"` // Disable whitespace optimization
+	Level            string `yaml:"level,omitempty" json:"level,omitempty"`                         // "off", "light", "moderate", "aggressive", "maximum"
+	PreserveMarkdown *bool  `yaml:"preserve_markdown,omitempty" json:"preserve_markdown,omitempty"` // default: true
+	PreserveCode     *bool  `yaml:"preserve_code,omitempty" json:"preserve_code,omitempty"`         // default: true
+	Language         string `yaml:"language,omitempty" json:"language,omitempty"`                   // ISO 639 code, default: "en"
 }
 
-// GetCompressionLevel returns the compression level, defaulting to "none"
+// GetCompressionLevel returns the compression level, defaulting to "off"
 func (c *CompressionConfig) GetCompressionLevel() string {
 	if c == nil || c.Level == "" {
-		return "none"
+		return "off"
+	}
+	// Backward compatibility mapping
+	switch c.Level {
+	case "none":
+		return "off"
+	case "minimal":
+		return "light"
+	case "standard":
+		return "moderate"
 	}
 	return c.Level
 }
 
-// ShouldRemoveDuplicates returns true if deduplication is enabled
-func (c *CompressionConfig) ShouldRemoveDuplicates() bool {
-	if c == nil || c.RemoveDuplicates == nil {
-		level := c.GetCompressionLevel()
-		return level == "standard" || level == "aggressive"
+// ShouldPreserveMarkdown returns true by default
+func (c *CompressionConfig) ShouldPreserveMarkdown() bool {
+	if c == nil || c.PreserveMarkdown == nil {
+		return true
 	}
-	return *c.RemoveDuplicates
+	return *c.PreserveMarkdown
 }
 
-// ShouldUseAbbreviations returns true if abbreviations are enabled
-func (c *CompressionConfig) ShouldUseAbbreviations() bool {
-	if c == nil || c.UseAbbreviations == nil {
-		return c.GetCompressionLevel() == "aggressive"
+// ShouldPreserveCode returns true by default
+func (c *CompressionConfig) ShouldPreserveCode() bool {
+	if c == nil || c.PreserveCode == nil {
+		return true
 	}
-	return *c.UseAbbreviations
+	return *c.PreserveCode
 }
 
-// ShouldPreserveFormatting returns false by default (allow optimization)
-func (c *CompressionConfig) ShouldPreserveFormatting() bool {
-	if c == nil || c.PreserveFormatting == nil {
-		return false
+// GetLanguage returns the language, defaulting to "en"
+func (c *CompressionConfig) GetLanguage() string {
+	if c == nil || c.Language == "" {
+		return "en"
 	}
-	return *c.PreserveFormatting
+	return c.Language
 }
 
 // BuiltinsConfig represents the builtins field which can be:

@@ -6,6 +6,22 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.8.1] - 2026-03-07
+
+### Changed
+- **Token reduction**: Replaced simple compression system with kreuzberg-ported token reduction engine
+  - 5 reduction levels: `off`, `light`, `moderate`, `aggressive`, `maximum`
+  - Markdown-aware processing preserves headers, lists, tables, and code blocks
+  - Stopword removal with language support (English)
+  - Sentence scoring and selection for aggressive/maximum levels
+  - Semantic token scoring and hypernym compression for maximum level
+  - Backward-compatible: old level names (`none`/`minimal`/`standard`) auto-mapped
+- **Compression config**: New fields `preserve_markdown`, `preserve_code`, `language`; removed `remove_duplicates`, `use_abbreviations`, `preserve_formatting`
+
+### Fixed
+- **Includes**: Flat ai-rulez structure (rules/, context/ directly) now detected at sub-paths, not just at repository root
+- **Includes**: `findAIRulezDir()` and `findSourceDir()` both support flat structure at sub-paths for git sources
+
 ## [3.8.0] - 2026-03-07
 
 ### Added
