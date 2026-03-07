@@ -13,7 +13,7 @@ import (
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "3.7.3"
+	Version  = "3.8.0"
 )
 
 var RootCmd = &cobra.Command{
@@ -58,6 +58,7 @@ func init() {
 	RootCmd.AddCommand(ListCmd)
 	RootCmd.AddCommand(IncludeCmd)
 	RootCmd.AddCommand(ProfileCmd)
+	RootCmd.AddCommand(BuiltinsCmd)
 }
 
 func initConfig() {

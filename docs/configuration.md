@@ -154,6 +154,79 @@ gitignore: false   # Manual .gitignore management
 
 When `true`, generated files are added to `.gitignore` to prevent accidental commits.
 
+### `builtins`
+
+Enables built-in domains that ship embedded in the `ai-rulez` binary. These provide opinionated rules, context, and commands without needing external includes.
+
+#### Enable all builtins
+
+```yaml
+builtins: true
+```
+
+#### Disable all builtins (including auto-includes)
+
+```yaml
+builtins: false
+```
+
+#### Enable specific builtins
+
+```yaml
+builtins:
+  - rust
+  - python
+  - pyo3
+  - security
+  - git-workflow
+  - default-commands
+```
+
+#### Exclude auto-included builtins
+
+`ai-governance` is auto-included whenever builtins are configured. Exclude it with `!`:
+
+```yaml
+builtins:
+  - rust
+  - "!ai-governance"
+```
+
+#### Available Built-in Domains
+
+Run `ai-rulez builtins list` to see all available domains.
+
+**Universal** (language-agnostic):
+
+| Domain | Description |
+|--------|-------------|
+| `ai-governance` | AI agent behavior governance (auto-included) |
+| `security` | Security best practices and OWASP reference |
+| `git-workflow` | Git workflow and commit conventions |
+| `code-quality` | Code readability, error handling, and complexity |
+| `testing` | Testing conventions and best practices |
+| `token-efficiency` | RTK awareness and output efficiency |
+| `documentation` | Documentation standards and maintenance |
+| `default-commands` | Built-in slash commands (`/iterate`, `/parallelize`) |
+
+**Languages** (per-language conventions):
+
+`rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`
+
+**Bindings** (FFI binding conventions):
+
+`pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
+
+#### Merge Priority
+
+Builtins have the **lowest** priority. Content is merged in this order:
+
+1. **Builtins** (lowest) — embedded in binary
+2. **Includes** — from git repos or local paths
+3. **Local content** (highest) — in your `.ai-rulez/` directory
+
+If a local domain has the same name as a builtin, the local domain is used and the builtin is skipped entirely.
+
 ### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
