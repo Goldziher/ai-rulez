@@ -468,6 +468,87 @@ func TestFindAIRulezDir(t *testing.T) {
 	}
 }
 
+// TestFindAIRulezDirFlatStructureAtSubPath tests finding flat ai-rulez structure at a sub-path
+func TestFindAIRulezDirFlatStructureAtSubPath(t *testing.T) {
+	// Arrange
+	baseDir := t.TempDir()
+	source, err := NewGitSource("test-flat-subpath", "https://github.com/owner/repo", "/domains/polyglot", "", baseDir, nil, "")
+	if err != nil {
+		t.Fatalf("unexpected error creating source: %v", err)
+	}
+	cacheDir := source.cacheDir
+	os.RemoveAll(cacheDir)
+	defer os.RemoveAll(cacheDir)
+
+	// Create flat structure at sub-path (rules/ directly, no .ai-rulez wrapper)
+	os.MkdirAll(filepath.Join(cacheDir, "domains", "polyglot", "rules"), 0o755)
+	os.MkdirAll(filepath.Join(cacheDir, "domains", "polyglot", "context"), 0o755)
+
+	// Act
+	found := source.findAIRulezDir()
+
+	// Assert
+	if found == "" {
+		t.Error("findAIRulezDir() should find flat structure at sub-path, got empty")
+	}
+	if !strings.Contains(found, filepath.Join("domains", "polyglot")) {
+		t.Errorf("findAIRulezDir() = %q, want to contain domains/polyglot", found)
+	}
+}
+
+// TestFindSourceDirFlatStructureAtSubPath tests findSourceDir with flat structure at sub-path
+func TestFindSourceDirFlatStructureAtSubPath(t *testing.T) {
+	// Arrange
+	tmpDir := t.TempDir()
+
+	source := &GitSource{
+		path: "/domains/polyglot",
+	}
+
+	// Create flat structure at sub-path
+	os.MkdirAll(filepath.Join(tmpDir, "domains", "polyglot", "rules"), 0o755)
+	os.MkdirAll(filepath.Join(tmpDir, "domains", "polyglot", "skills"), 0o755)
+
+	// Act
+	found, err := source.findSourceDir(tmpDir)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("findSourceDir() unexpected error: %v", err)
+	}
+	if !strings.Contains(found, filepath.Join("domains", "polyglot")) {
+		t.Errorf("findSourceDir() = %q, want to contain domains/polyglot", found)
+	}
+}
+
+// TestFindAIRulezDirFlatStructureAtRoot tests flat structure at cache root
+func TestFindAIRulezDirFlatStructureAtRoot(t *testing.T) {
+	// Arrange
+	baseDir := t.TempDir()
+	source, err := NewGitSource("test-flat-root", "https://github.com/owner/repo", "", "", baseDir, nil, "")
+	if err != nil {
+		t.Fatalf("unexpected error creating source: %v", err)
+	}
+	cacheDir := source.cacheDir
+	os.RemoveAll(cacheDir)
+	defer os.RemoveAll(cacheDir)
+
+	// Create flat structure at root (rules/ directly, no .ai-rulez wrapper)
+	os.MkdirAll(filepath.Join(cacheDir, "rules"), 0o755)
+	os.MkdirAll(filepath.Join(cacheDir, "context"), 0o755)
+
+	// Act
+	found := source.findAIRulezDir()
+
+	// Assert
+	if found == "" {
+		t.Error("findAIRulezDir() should find flat structure at root, got empty")
+	}
+	if found != cacheDir {
+		t.Errorf("findAIRulezDir() = %q, want %q", found, cacheDir)
+	}
+}
+
 // TestGitSourceFilterContent tests content filtering
 func TestGitSourceFilterContentIncludesRules(t *testing.T) {
 	// Arrange

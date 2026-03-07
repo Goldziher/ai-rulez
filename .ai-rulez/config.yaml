@@ -14,4 +14,6 @@ presets:
     - codex
     - opencode
     - junie
+compression:
+  level: moderate
 version: "3.0"
