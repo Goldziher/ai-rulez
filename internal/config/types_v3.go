@@ -18,6 +18,7 @@ type ConfigV3 struct {
 	Includes    []IncludeConfig     `yaml:"includes,omitempty" json:"includes,omitempty"`
 	Header      *HeaderConfig       `yaml:"header,omitempty" json:"header,omitempty"`
 	Compression *CompressionConfig  `yaml:"compression,omitempty" json:"compression,omitempty"`
+	Builtins    *BuiltinsConfig     `yaml:"builtins,omitempty" json:"builtins,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir    string                  `yaml:"-" json:"-"`
@@ -77,6 +78,90 @@ func (c *CompressionConfig) ShouldPreserveFormatting() bool {
 		return false
 	}
 	return *c.PreserveFormatting
+}
+
+// BuiltinsConfig represents the builtins field which can be:
+//   - boolean true: enable all builtins
+//   - boolean false: disable all builtins (including auto-includes)
+//   - array of strings: enable specific builtins (supports "!name" exclusion)
+type BuiltinsConfig struct {
+	All   *bool    // true = all, false = none
+	Names []string // specific builtin names (when All is nil)
+}
+
+// IsEnabled returns true if builtins are configured (not nil)
+func (b *BuiltinsConfig) IsEnabled() bool {
+	return b != nil
+}
+
+// IsAll returns true if all builtins should be loaded
+func (b *BuiltinsConfig) IsAll() bool {
+	return b != nil && b.All != nil && *b.All
+}
+
+// IsNone returns true if all builtins should be disabled
+func (b *BuiltinsConfig) IsNone() bool {
+	return b != nil && b.All != nil && !*b.All
+}
+
+// GetNames returns the list of builtin names (empty if All is set)
+func (b *BuiltinsConfig) GetNames() []string {
+	if b == nil {
+		return nil
+	}
+	return b.Names
+}
+
+// UnmarshalYAML implements custom YAML unmarshaling for BuiltinsConfig
+func (b *BuiltinsConfig) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	// Try boolean first
+	var boolVal bool
+	if err := unmarshal(&boolVal); err == nil {
+		b.All = &boolVal
+		return nil
+	}
+
+	// Try array of strings
+	var names []string
+	if err := unmarshal(&names); err != nil {
+		return err
+	}
+	b.Names = names
+	return nil
+}
+
+// MarshalYAML implements custom YAML marshaling for BuiltinsConfig
+func (b BuiltinsConfig) MarshalYAML() (interface{}, error) { //nolint:gocritic // Value receiver required for marshaling
+	if b.All != nil {
+		return *b.All, nil
+	}
+	return b.Names, nil
+}
+
+// UnmarshalJSON implements custom JSON unmarshaling for BuiltinsConfig
+func (b *BuiltinsConfig) UnmarshalJSON(data []byte) error {
+	// Try boolean first
+	var boolVal bool
+	if err := json.Unmarshal(data, &boolVal); err == nil {
+		b.All = &boolVal
+		return nil
+	}
+
+	// Try array of strings
+	var names []string
+	if err := json.Unmarshal(data, &names); err != nil {
+		return err
+	}
+	b.Names = names
+	return nil
+}
+
+// MarshalJSON implements custom JSON marshaling for BuiltinsConfig
+func (b BuiltinsConfig) MarshalJSON() ([]byte, error) { //nolint:gocritic // Value receiver required for marshaling
+	if b.All != nil {
+		return json.Marshal(*b.All)
+	}
+	return json.Marshal(b.Names)
 }
 
 // PresetV3 represents either a built-in preset name or a custom preset configuration
