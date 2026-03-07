@@ -6,6 +6,27 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.8.0] - 2026-03-07
+
+### Added
+- **Built-in domains system**: 23 embedded content domains shipped with the binary via `//go:embed`
+  - 8 universal domains: `ai-governance` (auto-included), `security`, `git-workflow`, `code-quality`, `testing`, `token-efficiency`, `documentation`, `default-commands`
+  - 9 language domains: `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`
+  - 6 binding domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
+- **`builtins` config field** with flexible syntax:
+  - `builtins: true` — enable all built-in domains
+  - `builtins: false` — disable all (including auto-includes)
+  - `builtins: [rust, python, security]` — enable specific domains
+  - `builtins: ["!ai-governance"]` — exclude auto-included domains
+- **`ai-rulez builtins list`** CLI command to show available built-in domains (supports `--json`)
+- **`/iterate` slash command** (via `default-commands` builtin): instructs LLM to work in implementation/review/adjustment cycles
+- **`/parallelize` slash command** (via `default-commands` builtin): instructs LLM to split tasks among subagents
+- `BuiltinsConfig` type with custom YAML/JSON marshaling supporting boolean and array formats
+- Builtins merge at lowest priority — local content and includes always override builtin content
+
+### Changed
+- Schema updated: `builtins` field added, preset enum updated with `codex`, `amp`, `junie`, `opencode`
+
 ## [3.7.3] - 2026-02-19
 
 ### Fixed

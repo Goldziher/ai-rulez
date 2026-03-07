@@ -32,7 +32,7 @@
         "oneOf": [
           {
             "type": "string",
-            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline"],
+            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode"],
             "description": "Built-in preset name"
           },
           {
@@ -83,6 +83,22 @@
       "type": "boolean",
       "description": "Whether to automatically update .gitignore with generated files (defaults to true)",
       "default": true
+    },
+    "builtins": {
+      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude auto-includes (e.g., '!ai-governance'). Available: ai-governance (auto), security, git-workflow, code-quality, testing, token-efficiency, documentation, default-commands, rust, python, typescript, go, java, ruby, php, elixir, csharp, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm",
+      "oneOf": [
+        {
+          "type": "boolean",
+          "description": "true = enable all builtins, false = disable all (including auto-includes)"
+        },
+        {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^!?(ai-governance|security|git-workflow|code-quality|testing|token-efficiency|documentation|default-commands|rust|python|typescript|go|java|ruby|php|elixir|csharp|pyo3|napi-rs|magnus|ext-php-rs|rustler|wasm)$"
+          }
+        }
+      ]
     },
     "includes": {
       "type": "array",
@@ -158,6 +174,7 @@
           "path": "docs/AI_GUIDE.md"
         }
       ],
+      "builtins": ["rust", "python", "pyo3", "security", "git-workflow", "code-quality", "testing"],
       "default": "full",
       "profiles": {
         "full": ["backend", "frontend", "qa"],
