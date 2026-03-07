@@ -12,6 +12,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez validate` | Validate configuration |
 | `ai-rulez version` | Show version |
 | `ai-rulez mcp` | Start MCP server |
+| `ai-rulez builtins list` | List available built-in domains |
 
 ### CRUD Commands (Configuration Management)
 | Command | Description |

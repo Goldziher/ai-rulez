@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/builtins"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -126,6 +127,12 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 		return nil, err
 	}
 	config.Content = contentTree
+
+	// Load builtins (lowest priority — loaded first so includes and local override them)
+	// Only load when the builtins field is explicitly configured in the config file
+	if config.Builtins.IsEnabled() && !config.Builtins.IsNone() {
+		loadBuiltins(config)
+	}
 
 	// Resolve includes if defined and callback is available
 	if len(config.Includes) > 0 && resolveIncludesFunc != nil {
@@ -1192,6 +1199,84 @@ func encodeProfileMetadata(profiles map[string][]string, defaultProfile string) 
 	}
 
 	return encoded
+}
+
+// loadBuiltins resolves and loads builtin domains into the config content tree.
+// Builtins have the lowest priority: they are injected into domains that don't already exist.
+// If a domain already exists (from local content or includes), the builtin is skipped.
+func loadBuiltins(config *ConfigV3) {
+	var resolved []string
+	if config.Builtins.IsAll() {
+		resolved = builtins.ResolveAll()
+	} else {
+		resolved = builtins.ResolveBuiltins(config.Builtins.GetNames())
+	}
+	if len(resolved) == 0 {
+		return
+	}
+
+	logger.Debug("Loading builtins", "count", len(resolved), "names", resolved)
+
+	if config.Content == nil {
+		config.Content = &ContentTreeV3{
+			Domains: make(map[string]*DomainV3),
+		}
+	}
+
+	for _, name := range resolved {
+		// Skip if domain already exists (local content has higher priority)
+		if _, exists := config.Content.Domains[name]; exists {
+			logger.Debug("Skipping builtin (local domain exists)", "name", name)
+			continue
+		}
+
+		entries, err := builtins.LoadDomainContent(name)
+		if err != nil {
+			logger.Warn("Failed to load builtin", "name", name, "error", err)
+			continue
+		}
+		if len(entries) == 0 {
+			continue
+		}
+
+		domain := &DomainV3{
+			Name: name,
+		}
+
+		for _, entry := range entries {
+			// Parse frontmatter from embedded content
+			metadata, body := parseFrontmatter(entry.Content)
+			cf := ContentFile{
+				Name:     entry.Name,
+				Path:     "builtin://" + entry.Path,
+				Content:  body,
+				Metadata: metadata,
+			}
+
+			switch entry.Type {
+			case "rules":
+				domain.Rules = append(domain.Rules, cf)
+			case "context":
+				domain.Context = append(domain.Context, cf)
+			case "skills":
+				domain.Skills = append(domain.Skills, cf)
+			case "agents":
+				domain.Agents = append(domain.Agents, cf)
+			case "commands":
+				domain.Commands = append(domain.Commands, cf)
+			}
+		}
+
+		config.Content.Domains[name] = domain
+		logger.Debug("Loaded builtin domain",
+			"name", name,
+			"rules", len(domain.Rules),
+			"context", len(domain.Context),
+			"skills", len(domain.Skills),
+			"agents", len(domain.Agents),
+			"commands", len(domain.Commands),
+		)
+	}
 }
 
 // decodeProfileMetadata is unused and kept for potential future use
