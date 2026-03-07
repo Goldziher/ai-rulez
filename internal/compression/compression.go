@@ -1,23 +1,23 @@
 package compression
 
 import (
-	"regexp"
-	"strings"
-
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
+// Compressor implements multi-level token reduction.
 type Compressor struct {
 	config *config.CompressionConfig
 	stats  *CompressionStats
 }
 
+// CompressionStats tracks the reduction metrics.
 type CompressionStats struct {
 	OriginalSize   int
 	CompressedSize int
 	Ratio          float64
 }
 
+// NewCompressor creates a new Compressor with the given configuration.
 func NewCompressor(cfg *config.CompressionConfig) *Compressor {
 	return &Compressor{
 		config: cfg,
@@ -25,24 +25,39 @@ func NewCompressor(cfg *config.CompressionConfig) *Compressor {
 	}
 }
 
+// Compress applies token reduction to the content based on the configured level.
 func (c *Compressor) Compress(content string) string {
 	c.stats.OriginalSize = len(content)
 
-	if c.config.ShouldPreserveFormatting() {
+	level := c.config.GetCompressionLevel()
+	if level == LevelOff {
+		c.stats.CompressedSize = len(content)
 		return content
 	}
 
-	level := c.config.GetCompressionLevel()
+	preserveCode := c.config.ShouldPreserveCode()
+	preserveMarkdown := c.config.ShouldPreserveMarkdown()
+
+	// Extract code blocks if preservation is enabled
+	var codeBlocks map[string]string
+	if preserveCode {
+		content, codeBlocks = extractCodeBlocks(content)
+	}
 
 	switch level {
-	case "none":
-		return content
-	case "minimal":
-		content = c.applyMinimalCompression(content)
-	case "standard":
-		content = c.applyStandardCompression(content)
-	case "aggressive":
-		content = c.applyAggressiveCompression(content)
+	case LevelLight:
+		content = c.applyLight(content)
+	case LevelModerate:
+		content = c.applyModerate(content, preserveMarkdown)
+	case LevelAggressive:
+		content = c.applyAggressive(content, preserveMarkdown)
+	case LevelMaximum:
+		content = c.applyMaximum(content, preserveMarkdown)
+	}
+
+	// Restore code blocks
+	if preserveCode && codeBlocks != nil {
+		content = restoreCodeBlocks(content, codeBlocks)
 	}
 
 	c.stats.CompressedSize = len(content)
@@ -51,6 +66,7 @@ func (c *Compressor) Compress(content string) string {
 	return content
 }
 
+// GetStats returns the compression statistics.
 func (c *Compressor) GetStats() *CompressionStats {
 	return c.stats
 }
@@ -62,55 +78,34 @@ func (c *Compressor) calculateRatio() {
 	}
 }
 
-// Compression methods
-func (c *Compressor) applyMinimalCompression(content string) string {
-	content = c.trimTrailingWhitespace(content)
-	content = c.removeExcessiveBlankLines(content)
+// applyLight: punctuation cleanup, whitespace normalization, HTML comment removal.
+func (c *Compressor) applyLight(content string) string {
+	content = cleanPunctuation(content)
+	content = normalizeSpaces(content)
+	content = normalizeNewlines(content)
+	content = removeHTMLComments(content)
 	return content
 }
 
-func (c *Compressor) applyStandardCompression(content string) string {
-	content = c.applyMinimalCompression(content)
-	content = c.compactPriorityLabels(content)
-
-	// Future: implement content deduplication
-	// if c.config.ShouldRemoveDuplicates() {
-	//     content = c.deduplicateContent(content)
-	// }
-
+// applyModerate: light + stopword removal with markdown-aware processing.
+func (c *Compressor) applyModerate(content string, preserveMarkdown bool) string {
+	content = c.applyLight(content)
+	content = removeStopwords(content, englishStopwords, preserveMarkdown)
 	return content
 }
 
-func (c *Compressor) applyAggressiveCompression(content string) string {
-	content = c.applyStandardCompression(content)
-
-	if c.config.ShouldUseAbbreviations() {
-		content = c.applyAbbreviations(content)
-	}
-
+// applyAggressive: moderate + word filtering by frequency/importance, sentence selection (keep top 40%).
+func (c *Compressor) applyAggressive(content string, preserveMarkdown bool) string {
+	content = c.applyModerate(content, preserveMarkdown)
+	content = filterWordsByImportance(content)
+	content = selectSentences(content, SentenceKeepRatio)
 	return content
 }
 
-func (c *Compressor) trimTrailingWhitespace(content string) string {
-	lines := strings.Split(content, "\n")
-	for i, line := range lines {
-		lines[i] = strings.TrimRight(line, " \t\r")
-	}
-	return strings.Join(lines, "\n")
-}
-
-func (c *Compressor) removeExcessiveBlankLines(content string) string {
-	re := regexp.MustCompile(`\n{3,}`)
-	return re.ReplaceAllString(content, "\n\n")
-}
-
-func (c *Compressor) compactPriorityLabels(content string) string {
-	content = strings.ReplaceAll(content, "**Priority:**", "Priority:")
-	return content
-}
-
-func (c *Compressor) applyAbbreviations(content string) string {
-	content = strings.ReplaceAll(content, "Priority:", "P:")
-	content = strings.ReplaceAll(content, "Description:", "Desc:")
+// applyMaximum: aggressive + semantic token scoring, hypernym compression.
+func (c *Compressor) applyMaximum(content string, preserveMarkdown bool) string {
+	content = c.applyAggressive(content, preserveMarkdown)
+	content = applySemanticTokenScoring(content, SemanticFilterThreshold)
+	content = applyHypernymCompression(content)
 	return content
 }

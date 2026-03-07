@@ -540,6 +540,17 @@ func (s *GitSource) findAIRulezDir() string {
 		if info, err := os.Stat(aiRulezPath); err == nil && info.IsDir() {
 			return aiRulezPath
 		}
+
+		// Check if sub-path has flat ai-rulez structure (rules/, context/, etc. directly)
+		subPathDir := filepath.Join(s.cacheDir, cleanPath)
+		if s.hasAIRulezStructure(subPathDir) {
+			return subPathDir
+		}
+	}
+
+	// Check if cache root has flat ai-rulez structure
+	if s.hasAIRulezStructure(s.cacheDir) {
+		return s.cacheDir
 	}
 
 	return ""
@@ -716,27 +727,37 @@ func (s *GitSource) cloneViaGit(ctx context.Context) error {
 
 // findSourceDir finds the source directory containing ai-rulez structure in the cloned repo
 func (s *GitSource) findSourceDir(tmpDir string) (string, error) {
-	// First, try to find .ai-rulez subdirectory
+	// First, try to find .ai-rulez subdirectory at the specified path
 	sourceAIRulezDir := filepath.Join(tmpDir, aiRulezDir)
 	if s.path != "" && s.path != rootPath {
 		cleanPath := strings.Trim(s.path, rootPath)
 		sourceAIRulezDir = filepath.Join(tmpDir, cleanPath, aiRulezDir)
 	}
 
-	// Check if .ai-rulez directory exists
+	// Check if .ai-rulez directory exists at specified path
 	if _, err := os.Stat(sourceAIRulezDir); err == nil {
 		logger.Debug("Found .ai-rulez subdirectory in clone", "path", sourceAIRulezDir)
 		return sourceAIRulezDir, nil
 	}
 
-	// Try at root level
+	// If path was specified, check for flat structure at that sub-path
+	if s.path != "" && s.path != rootPath {
+		cleanPath := strings.Trim(s.path, rootPath)
+		subPathDir := filepath.Join(tmpDir, cleanPath)
+		if s.hasAIRulezStructure(subPathDir) {
+			logger.Debug("Found flat ai-rulez structure at sub-path", "path", subPathDir)
+			return subPathDir, nil
+		}
+	}
+
+	// Try .ai-rulez at root level
 	sourceAIRulezDir = filepath.Join(tmpDir, aiRulezDir)
 	if _, err := os.Stat(sourceAIRulezDir); err == nil {
 		logger.Debug("Found .ai-rulez subdirectory at root", "path", sourceAIRulezDir)
 		return sourceAIRulezDir, nil
 	}
 
-	// Check if root has ai-rulez structure
+	// Check if root has flat ai-rulez structure
 	if s.hasAIRulezStructure(tmpDir) {
 		logger.Debug("Repository root contains ai-rulez structure", "path", tmpDir)
 		return tmpDir, nil
