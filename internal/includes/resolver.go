@@ -203,6 +203,7 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 	}
 	for name, domain := range include.Domains {
 		if _, exists := merged.Domains[name]; !exists {
+			domain.FromInclude = true
 			merged.Domains[name] = domain
 		}
 		// If domain exists in both, we keep base version for now (can be enhanced)
