@@ -337,6 +337,285 @@ func TestClaudePresetGenerator_renderSkillFile_OmitsSectionsWhenNoEmbeddedConten
 	}
 }
 
+func TestClaudePresetGenerator_Generate_CollectsDomainSkills(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+	cfg := &config.ConfigV3{
+		Name:        "test",
+		Description: "test config",
+	}
+
+	content := &config.ContentTreeV3{
+		Domains: map[string]*config.DomainV3{
+			"backend": {
+				Name: "backend",
+				Skills: []config.ContentFile{
+					{
+						Name:    "domain-skill",
+						Path:    "/test/skills/domain-skill/SKILL.md",
+						Content: "Domain skill content",
+					},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Expect: 4 base (CLAUDE.md, .claude, skills, agents) + 2 for domain skill (dir + SKILL.md) = 6
+	if len(outputs) != 6 {
+		t.Errorf("Generate() got %d outputs, want 6", len(outputs))
+	}
+
+	// Verify the domain skill file was generated
+	hasSkillFile := false
+	for _, output := range outputs {
+		if strings.HasSuffix(output.Path, filepath.Join("domain-skill", "SKILL.md")) {
+			hasSkillFile = true
+			break
+		}
+	}
+	if !hasSkillFile {
+		t.Error("Expected domain skill SKILL.md to be generated")
+	}
+}
+
+func TestClaudePresetGenerator_Generate_CollectsDomainAgents(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+	cfg := &config.ConfigV3{
+		Name:        "test",
+		Description: "test config",
+	}
+
+	content := &config.ContentTreeV3{
+		Domains: map[string]*config.DomainV3{
+			"backend": {
+				Name: "backend",
+				Agents: []config.ContentFile{
+					{
+						Name:    "domain-agent",
+						Content: "Domain agent prompt",
+						Metadata: &config.MetadataV3{
+							Extra: map[string]string{
+								"description": "A domain agent",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Expect: 4 base + 1 agent file = 5
+	if len(outputs) != 5 {
+		t.Errorf("Generate() got %d outputs, want 5", len(outputs))
+	}
+
+	hasAgentFile := false
+	for _, output := range outputs {
+		if strings.HasSuffix(output.Path, filepath.Join("agents", "domain-agent.md")) {
+			hasAgentFile = true
+			break
+		}
+	}
+	if !hasAgentFile {
+		t.Error("Expected domain agent file to be generated")
+	}
+}
+
+func TestClaudePresetGenerator_Generate_CollectsDomainCommands(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+	cfg := &config.ConfigV3{
+		Name:        "test",
+		Description: "test config",
+	}
+
+	content := &config.ContentTreeV3{
+		Domains: map[string]*config.DomainV3{
+			"backend": {
+				Name: "backend",
+				Commands: []config.ContentFile{
+					{
+						Name:    "domain-command",
+						Content: "Domain command content",
+						Metadata: &config.MetadataV3{
+							Targets: []string{"claude"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// Expect: 4 base + 2 for command-as-skill (dir + SKILL.md) = 6
+	if len(outputs) != 6 {
+		t.Errorf("Generate() got %d outputs, want 6", len(outputs))
+	}
+
+	hasCommandSkillFile := false
+	for _, output := range outputs {
+		if strings.HasSuffix(output.Path, filepath.Join("domain-command", "SKILL.md")) {
+			hasCommandSkillFile = true
+			break
+		}
+	}
+	if !hasCommandSkillFile {
+		t.Error("Expected domain command to be generated as skill file")
+	}
+}
+
+func TestClaudePresetGenerator_Generate_CollectsDomainAndRootContent(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+	cfg := &config.ConfigV3{
+		Name:        "test",
+		Description: "test config",
+	}
+
+	content := &config.ContentTreeV3{
+		Skills: []config.ContentFile{
+			{
+				Name:    "root-skill",
+				Path:    "/test/skills/root-skill/SKILL.md",
+				Content: "Root skill content",
+			},
+		},
+		Agents: []config.ContentFile{
+			{
+				Name:    "root-agent",
+				Content: "Root agent prompt",
+			},
+		},
+		Commands: []config.ContentFile{
+			{
+				Name:    "root-command",
+				Content: "Root command content",
+				Metadata: &config.MetadataV3{
+					Targets: []string{"claude"},
+				},
+			},
+		},
+		Domains: map[string]*config.DomainV3{
+			"backend": {
+				Name: "backend",
+				Skills: []config.ContentFile{
+					{
+						Name:    "domain-skill",
+						Path:    "/test/skills/domain-skill/SKILL.md",
+						Content: "Domain skill content",
+					},
+				},
+				Agents: []config.ContentFile{
+					{
+						Name:    "domain-agent",
+						Content: "Domain agent prompt",
+					},
+				},
+				Commands: []config.ContentFile{
+					{
+						Name:    "domain-command",
+						Content: "Domain command content",
+						Metadata: &config.MetadataV3{
+							Targets: []string{"claude"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error = %v", err)
+	}
+
+	// 4 base + 2 skills * 2 (dir+file) + 2 agents * 1 + 2 commands * 2 (dir+file) = 4 + 4 + 2 + 4 = 14
+	if len(outputs) != 14 {
+		t.Errorf("Generate() got %d outputs, want 14", len(outputs))
+	}
+
+	// Verify both root and domain content is present
+	foundPaths := make(map[string]bool)
+	for _, output := range outputs {
+		if strings.Contains(output.Path, "root-skill") {
+			foundPaths["root-skill"] = true
+		}
+		if strings.Contains(output.Path, "domain-skill") {
+			foundPaths["domain-skill"] = true
+		}
+		if strings.Contains(output.Path, "root-agent") {
+			foundPaths["root-agent"] = true
+		}
+		if strings.Contains(output.Path, "domain-agent") {
+			foundPaths["domain-agent"] = true
+		}
+		if strings.Contains(output.Path, "root-command") {
+			foundPaths["root-command"] = true
+		}
+		if strings.Contains(output.Path, "domain-command") {
+			foundPaths["domain-command"] = true
+		}
+	}
+
+	for _, name := range []string{"root-skill", "domain-skill", "root-agent", "domain-agent", "root-command", "domain-command"} {
+		if !foundPaths[name] {
+			t.Errorf("Expected %s to be present in outputs", name)
+		}
+	}
+}
+
+func TestClaudePresetGenerator_renderClaudeMarkdown_InlinesBuiltinContext(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+	cfg := &config.ConfigV3{
+		Name:        "test",
+		Description: "test config",
+		BaseDir:     "/test",
+	}
+
+	content := &config.ContentTreeV3{
+		Context: []config.ContentFile{
+			{
+				Name:    "builtin-context",
+				Path:    "builtin://some-builtin/context.md",
+				Content: "Inlined builtin content here",
+			},
+			{
+				Name:    "local-context",
+				Path:    "/test/context/local-context.md",
+				Content: "Local context content",
+			},
+		},
+	}
+
+	result := g.renderClaudeMarkdown(content, cfg)
+
+	// Builtin context should be inlined (content appears directly)
+	if !strings.Contains(result, "Inlined builtin content here") {
+		t.Error("Expected builtin context content to be inlined in output")
+	}
+
+	// Local context should use @ reference
+	if !strings.Contains(result, "@context/local-context.md") {
+		t.Error("Expected local context to use @ path reference")
+	}
+
+	// Local context content should NOT be inlined
+	if strings.Contains(result, "Local context content") {
+		t.Error("Expected local context content to NOT be inlined")
+	}
+}
+
 func TestClaudePresetGenerator_GetName(t *testing.T) {
 	g := &ClaudePresetGenerator{}
 	if g.GetName() != "claude" {

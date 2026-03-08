@@ -1,9 +1,16 @@
 ---
 priority: high
 ---
-# C# Conventions
-- Target .NET 8+. Use nullable reference types. Use records for immutable data.
-- Follow .NET coding conventions. Use `dotnet format` for formatting.
-- Use xUnit or NUnit for testing. Use dependency injection via built-in DI container.
-- Prefer `async`/`await` for async operations. Use `IAsyncEnumerable` for streaming.
-- Use pattern matching and switch expressions. Prefer LINQ for collection operations.
+- Target .NET 8+ with C# 12. Use file-scoped namespaces, primary constructors, collection expressions.
+- Formatting: `dotnet format` or `.editorconfig` rules. Enforce in CI with `dotnet format --verify-no-changes`.
+- Linting: enable `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`. Use Roslyn analyzers, `StyleCop.Analyzers`, or `Roslynator`.
+- Security: `dotnet list package --vulnerable` for CVE scanning. Use `Microsoft.CodeAnalysis.NetAnalyzers` for security rules.
+- Enable nullable reference types (`<Nullable>enable</Nullable>`). Zero nullable warnings policy.
+- Testing: xUnit with `[Theory]`/`[InlineData]` for parameterized tests. FluentAssertions for readable assertions. `coverlet` for coverage (80%+).
+- Use `record` types for immutable data. Use `required` keyword for mandatory properties.
+- Error handling: use specific exceptions. Use `ArgumentException` and `InvalidOperationException` appropriately.
+- Async: use `async`/`await` throughout. Never use `.Result` or `.Wait()` (causes deadlocks). Use `ValueTask` for hot paths.
+- Use pattern matching in switch expressions. Use `is` patterns for type checking.
+- Dependencies: NuGet with `PackageReference`. Commit `packages.lock.json` via `RestorePackagesWithLockFile`. Use `Directory.Build.props` for shared config.
+- Benchmarking: `BenchmarkDotNet` for performance testing. Never use `Stopwatch` for benchmarks.
+- Anti-patterns: no `dynamic`, no `object` parameters, no `catch (Exception)` without re-throw, no `#pragma warning disable` without justification.

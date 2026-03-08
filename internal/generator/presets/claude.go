@@ -78,8 +78,9 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		Content: claudeMD,
 	})
 
-	// Generate skill files
-	for _, skill := range content.Skills {
+	// Generate skill files (root + domain skills)
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	for _, skill := range allSkills {
 		skillOutputs, err := g.generateSkillFiles(skill, content, baseDir, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate skill %s: %w", skill.Name, err)
@@ -87,9 +88,10 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		outputs = append(outputs, skillOutputs...)
 	}
 
-	// Generate agent files
-	if len(content.Agents) > 0 {
-		for _, agent := range content.Agents {
+	// Generate agent files (root + domain agents)
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	if len(allAgents) > 0 {
+		for _, agent := range allAgents {
 			agentOutputs, err := g.generateAgentFiles(agent, content, baseDir, cfg)
 			if err != nil {
 				return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
@@ -98,10 +100,11 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		}
 	}
 
-	// Generate command files as skills
-	logger.Info("Processing commands for Claude preset", "count", len(content.Commands))
-	if len(content.Commands) > 0 {
-		for _, command := range content.Commands {
+	// Generate command files as skills (root + domain commands)
+	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	logger.Info("Processing commands for Claude preset", "count", len(allCommands))
+	if len(allCommands) > 0 {
+		for _, command := range allCommands {
 			logger.Info("Checking command", "name", command.Name, "has_metadata", command.Metadata != nil)
 
 			// Check if command is enabled and targets Claude
@@ -366,11 +369,18 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 				builder.WriteString("\n\n")
 			}
 
-			// Add @ link to full file
-			contextPath := strings.TrimPrefix(ctx.Path, cfg.BaseDir+"/")
-			builder.WriteString("@")
-			builder.WriteString(contextPath)
-			builder.WriteString("\n\n")
+			// For builtin context (virtual paths), inline the content directly
+			// For local files, use @ link so Claude loads them lazily
+			if strings.HasPrefix(ctx.Path, "builtin://") {
+				processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+				builder.WriteString(processedContent)
+				builder.WriteString("\n\n")
+			} else {
+				contextPath := strings.TrimPrefix(ctx.Path, cfg.BaseDir+"/")
+				builder.WriteString("@")
+				builder.WriteString(contextPath)
+				builder.WriteString("\n\n")
+			}
 		}
 	}
 

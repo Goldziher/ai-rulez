@@ -1,9 +1,13 @@
 ---
 priority: high
 ---
-# NAPI-RS Binding Conventions
-- Use `#[napi]` macro for Node.js-visible functions and classes.
-- Map Rust errors to JavaScript `Error` objects using `napi::Error`.
-- Use `napi::bindgen_prelude::*` for common type conversions.
-- Support both CommonJS and ESM output. Generate `.d.ts` type definitions.
-- Test bindings from JavaScript/TypeScript using `vitest` or `jest`.
+- Use `#[napi]` macro for Node.js-visible functions and classes. Use `#[napi(constructor)]` for constructors.
+- Map Rust errors to JavaScript `Error` objects via `napi::Error`. Return `Result<T>` from all fallible functions.
+- Use `napi::bindgen_prelude::*` for common type conversions. Use `Buffer` for binary data.
+- Support both CommonJS and ESM output. Generate `.d.ts` type definitions automatically.
+- Use `#[napi(ts_return_type = "...")]` for complex TypeScript types the macro can't infer.
+- Build with `napi build --release`. Test from TypeScript/JavaScript using `vitest`.
+- Async: use `#[napi]` on `async fn` for Promise-returning functions. Use `AsyncTask` for CPU-bound work.
+- Keep Node.js wrappers thin — business logic in Rust, JS provides idiomatic API.
+- Handle `BigInt`, `Date`, and other JS-specific types explicitly.
+- Anti-patterns: no panics in napi functions, no blocking the event loop, no manual `JsValue` manipulation.

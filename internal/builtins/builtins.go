@@ -41,7 +41,7 @@ var registry = map[string]BuiltinDomain{
 	"git-workflow":     {Name: "git-workflow", Category: CategoryUniversal, Description: "Git workflow and commit conventions"},
 	"code-quality":     {Name: "code-quality", Category: CategoryUniversal, Description: "Code readability, error handling, and complexity"},
 	"testing":          {Name: "testing", Category: CategoryUniversal, Description: "Testing conventions and best practices"},
-	"token-efficiency": {Name: "token-efficiency", Category: CategoryUniversal, Description: "RTK awareness and output efficiency"},
+	"token-efficiency": {Name: "token-efficiency", Category: CategoryUniversal, Description: "Output efficiency and task automation"},
 	"documentation":    {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
 	"default-commands": {Name: "default-commands", Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
 

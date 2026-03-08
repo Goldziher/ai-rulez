@@ -205,7 +205,7 @@ Run `ai-rulez builtins list` to see all available domains.
 | `git-workflow` | Git workflow and commit conventions |
 | `code-quality` | Code readability, error handling, and complexity |
 | `testing` | Testing conventions and best practices |
-| `token-efficiency` | RTK awareness and output efficiency |
+| `token-efficiency` | Output efficiency and task automation |
 | `documentation` | Documentation standards and maintenance |
 | `default-commands` | Built-in slash commands (`/iterate`, `/parallelize`) |
 
@@ -216,6 +216,38 @@ Run `ai-rulez builtins list` to see all available domains.
 **Bindings** (FFI binding conventions):
 
 `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
+
+#### What Builtins Provide
+
+**Universal builtins** include opinionated rules for their domain:
+
+- `ai-governance`: Read-before-write, verify-before-acting, minimal changes, explain reasoning
+- `security`: Input validation, secrets handling, least privilege, dependency awareness (with per-language audit tool recommendations)
+- `git-workflow`: Conventional commits, atomic commits, branch hygiene, safe operations
+- `code-quality`: Complexity limits, error handling, readability, dead code removal, duplication
+- `testing`: TDD workflow, test independence, meaningful assertions, descriptive test naming
+- `token-efficiency`: Task runner preference, output awareness
+- `documentation`: Inline docs, README standards, docs-with-code updates
+- `default-commands`: `/iterate` (implementation + review cycles) and `/parallelize` (subagent task splitting) slash commands
+
+**Language builtins** each provide a comprehensive conventions rule covering:
+
+- Target language version and edition
+- Linting and formatting tools (e.g., `ruff` for Python, `biome`/`oxlint` for TypeScript, `clippy` for Rust)
+- Static analysis and type checking (e.g., `mypy --strict`, `PHPStan level 9`, `Dialyzer`)
+- Security/SAST tools (e.g., `bandit`, `gosec`, `cargo audit`, `bundler-audit`)
+- Testing framework and coverage tools with 80%+ threshold
+- Package manager and lockfile conventions
+- Benchmarking and profiling tools
+- Anti-patterns specific to the language
+
+**Binding builtins** provide FFI-specific conventions for Rust binding crates:
+
+- Macro usage patterns (e.g., `#[pyclass]`, `#[napi]`, `#[rustler::nif]`)
+- Error mapping between Rust and target language
+- Build and distribution workflow
+- Performance considerations (GIL release, scheduler safety, bundle size)
+- Anti-patterns (no panics, no blocking, thin wrapper principle)
 
 #### Merge Priority
 

@@ -1,9 +1,17 @@
 ---
 priority: high
 ---
-# Python Conventions
-- Target Python 3.10+. Use type hints for all public APIs.
-- Follow PEP 8. Use `ruff` for linting and formatting.
-- Use `pytest` for testing. Prefer fixtures over setup/teardown methods.
-- Use `async`/`await` for IO-bound operations. Prefer `pathlib` over `os.path`.
-- Use virtual environments. Pin dependencies with lock files.
+- Target Python 3.10+. Use type hints on all public functions and class attributes. No `Any` type.
+- Linting and formatting: `ruff` (replaces black, isort, flake8). Zero warnings. Configure in `pyproject.toml` under `[tool.ruff]`.
+- Type checking: `mypy --strict`. Use `T | None` over `Optional[T]`. Use `ParamSpec` for decorator typing.
+- Security: `bandit` for SAST, `pip-audit` for dependency CVEs. Run both in CI.
+- Testing: `pytest` with fixtures and function-based tests. `pytest-cov` for coverage (80%+). Use `hypothesis` for property-based testing.
+- Error handling: use specific exceptions, never bare `except:`. Use `contextlib.suppress` for intentional ignoring.
+- Async: use `async`/`await` for I/O-bound. Never mix blocking and async code. Use `asyncio.gather()` for concurrency.
+- Package management: `uv` for deps (fast, lockfile support). Commit `uv.lock`. Use workspace support for monorepos. Build with `hatchling` or `maturin`.
+- Use `pathlib.Path` over `os.path`. Use `dataclasses` or `pydantic` for data containers.
+- Prefer `match` statements (3.10+) over if/elif chains for pattern matching.
+- Docstrings: Google-style on public functions. Include `Args`, `Returns`, `Raises` sections.
+- Logging: `structlog` or stdlib `logging`. Never f-strings in log calls — use `logger.info("msg", key=value)`.
+- Benchmarking: `pytest-benchmark` for micro-benchmarks. Profile with `py-spy` or `scalene`.
+- Anti-patterns: no mutable default arguments, no `import *`, no global state, no `time.sleep` in async code.
