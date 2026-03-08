@@ -1,5 +1,4 @@
 ---
 priority: medium
 ---
-# Inline Documentation
-Document public APIs with doc comments. Explain "why" in comments, not "what". Don't comment obvious code. Keep comments updated when code changes.
+Write doc comments for all public APIs — types, functions, constants. Explain *why* the code exists, not *what* it does. Add `SAFETY:` comments before unsafe blocks explaining invariants. Never document the obvious (`// increment counter` above `counter++`).

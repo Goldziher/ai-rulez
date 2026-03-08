@@ -1,9 +1,13 @@
 ---
 priority: high
 ---
-# ext-php-rs Binding Conventions
-- Use `#[php_class]` and `#[php_function]` macros for PHP-visible APIs.
-- Map Rust types to PHP using `ext-php-rs` type system. Handle `Zval` conversions.
-- Build PHP extensions with `cargo-php`. Support PHP 8.2+.
-- Use `PhpException` for error handling across the FFI boundary.
-- Test bindings from PHP using PHPUnit.
+- Use `ext-php-rs` for PHP 8.2+ native extensions. Use `#[php_class]` and `#[php_function]` macros.
+- Map Rust types to PHP via `FromZval`/`IntoZval` traits. Return `PhpResult<T>` for fallible operations.
+- Use `#[php_method]` for class methods. Implement `__construct` for PHP constructors.
+- Build with `cargo build --release`. Output `.so`/`.dll` extension loaded via `php.ini`.
+- Test from PHP using PHPUnit. Verify extension loading with `php -m | grep extension_name`.
+- Use `ZendClassObject<T>` for wrapping Rust structs as PHP objects.
+- Keep PHP extension thin — business logic in Rust, PHP provides typed interface.
+- Handle PHP's reference counting and garbage collection properly.
+- Use PIE packaging metadata for distribution.
+- Anti-patterns: no panics in PHP functions, no blocking operations, no raw pointer manipulation.
