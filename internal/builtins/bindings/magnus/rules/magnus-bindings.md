@@ -1,9 +1,13 @@
 ---
 priority: high
 ---
-# Magnus Binding Conventions
-- Use `magnus` crate for Ruby native extensions.
-- Map Rust types to Ruby using `magnus::Value` and type conversion traits.
-- Use `magnus::Error` for Ruby exception handling.
-- Build with `rb_sys` and `rake-compiler`. Support multiple Ruby versions.
-- Test bindings from Ruby using RSpec or Minitest.
+- Use `magnus` crate for Ruby native extensions. Define classes with `magnus::define_class`.
+- Map Rust types to Ruby using `TryConvert` and `IntoValue` traits. Return `Result<T, magnus::Error>`.
+- Use `magnus::function!` macro for defining Ruby methods. Use `magnus::method!` for instance methods.
+- Build with `rb_sys` and `rake-compiler`. Support Ruby 3.2+ with multiple ABI versions.
+- Test bindings from Ruby using RSpec or Minitest. Test error handling and edge cases.
+- Use `magnus::Error::new()` for Ruby exceptions. Map Rust error types to specific Ruby exception classes.
+- Keep Ruby wrapper gem thin — business logic in Rust, Ruby provides idiomatic API.
+- Handle Ruby's GVL (Global VM Lock) — release for CPU-intensive Rust code.
+- Use `TypedData` for wrapping Rust structs as Ruby objects with proper GC integration.
+- Anti-patterns: no panics in Ruby methods, no `unsafe` without `SAFETY` comments, no manual memory management.

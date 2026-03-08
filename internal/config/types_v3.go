@@ -355,6 +355,7 @@ type DomainV3 struct {
 	Agents     []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
 	Commands   []ContentFile           `yaml:"commands,omitempty" json:"commands,omitempty"`
 	MCPServers map[string]*MCPServerV3 `yaml:"-" json:"-"`
+	Builtin    bool                    `yaml:"-" json:"-"` // true if loaded from builtins
 }
 
 // ContentFile represents a single content file with optional frontmatter

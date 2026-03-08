@@ -246,16 +246,36 @@ mcp_servers:
 
 The MCP server exposes CRUD operations, validation, and generation to AI assistants.
 
+## Builtins
+
+23 built-in domains ship embedded in the binary — opinionated conventions ready to use without external includes:
+
+```yaml
+builtins:
+  - rust
+  - python
+  - typescript
+  - security
+  - testing
+  - default-commands
+```
+
+- **Universal** (8): `ai-governance`, `security`, `git-workflow`, `code-quality`, `testing`, `token-efficiency`, `documentation`, `default-commands`
+- **Languages** (9): `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`
+- **Bindings** (6): `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
+
+Use `builtins: true` for all, or pick specific ones. `ai-governance` is auto-included (exclude with `!ai-governance`).
+
 ## Compression
 
 Reduce context size for token-constrained tools:
 
 ```yaml
 compression:
-  level: standard  # none, minimal, standard, aggressive
+  level: moderate  # off, light, moderate, aggressive, maximum
 ```
 
-At `standard` level, output is ~34% smaller through whitespace optimization and duplicate removal.
+At `moderate` level, output is ~34% smaller through whitespace optimization and token reduction.
 
 ## Documentation
 

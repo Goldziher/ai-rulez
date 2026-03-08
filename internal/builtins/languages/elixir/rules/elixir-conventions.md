@@ -1,9 +1,16 @@
 ---
 priority: high
 ---
-# Elixir Conventions
-- Target Elixir 1.14+. Use pattern matching extensively.
-- Follow Elixir Style Guide. Use `mix format` for formatting.
-- Use ExUnit for testing. Use ExDoc for documentation.
-- Leverage OTP patterns (GenServer, Supervisor). Use `with` for complex control flow.
-- Use Credo for static analysis. Keep functions small and composable.
+- Target Elixir 1.14+ with OTP 25+. Use pattern matching extensively.
+- Formatting: `mix format` (built-in, non-negotiable). Configure in `.formatter.exs`.
+- Linting: `Credo` for static analysis (`mix credo --strict`). `Dialyzer` via `dialyxir` for type checking.
+- Security: `mix_audit` for dependency CVEs, `sobelow` for SAST (Phoenix). Run both in CI.
+- Testing: ExUnit with `describe` blocks. `doctest` for documented examples. `excoveralls` for coverage (80%+).
+- Return `{:ok, value}` / `{:error, reason}` tuples for fallible operations. Never raise for expected errors.
+- Use `with` for complex multi-step operations. Use guard clauses for function overloading.
+- Typespecs: `@spec` and `@type` on all public functions. Use `Dialyzer` for static analysis.
+- Leverage OTP patterns: GenServer for state, Supervisor for fault tolerance.
+- Use pipe operator `|>` for data transformation chains. Keep pipes left-to-right readable.
+- Dependencies: `mix deps.get`, commit `mix.lock`. Use `hex` for package management. Use `~>` version constraints.
+- Documentation: `@moduledoc` on every module, `@doc` on all public functions with examples. Generate with `ExDoc`.
+- Anti-patterns: no mutable state outside processes, no long-running NIFs blocking scheduler, no `String.to_atom` with user input.

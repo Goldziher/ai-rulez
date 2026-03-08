@@ -1,5 +1,4 @@
 ---
 priority: high
 ---
-# Error Handling
-Handle errors explicitly. Don't swallow errors silently. Provide meaningful error messages with context. Use the language's idiomatic error handling patterns.
+Always wrap errors with context describing what operation failed. Never swallow errors silently — either handle, propagate, or log them. Use language-idiomatic patterns: `Result<T, E>` in Rust, `if err != nil` with `fmt.Errorf("doing X: %w", err)` in Go, typed exceptions in Python/Java. Fail fast on unrecoverable errors.

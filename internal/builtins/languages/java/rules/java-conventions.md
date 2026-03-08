@@ -1,9 +1,17 @@
 ---
 priority: high
 ---
-# Java Conventions
-- Target Java 17+ (LTS). Use records for data classes. Use sealed classes where appropriate.
-- Follow Google Java Style Guide. Use pattern matching for instanceof.
-- Use JUnit 5 for testing. Prefer constructor injection for dependency injection.
-- Handle exceptions specifically — avoid catching `Exception` or `Throwable` broadly.
-- Use `var` for local variables when the type is obvious from context.
+- Target Java 17+ (LTS). Use records for immutable data. Use sealed classes for restricted hierarchies.
+- Follow Google Java Style Guide. Use 4-space indentation, 100 char line limit.
+- Build: Maven or Gradle. Prefer Gradle with Kotlin DSL for new projects. Pin plugin versions. Commit wrapper scripts.
+- Linting: `google-java-format` for formatting. `Error Prone` for compile-time bug detection. `Checkstyle` for style enforcement.
+- Security: `OWASP dependency-check` plugin for CVEs. `SpotBugs` for static bug detection. Run in CI.
+- Use `var` for local variables when type is obvious from context. Never use raw types.
+- Testing: JUnit 5 with `@ParameterizedTest` for data-driven tests. AssertJ for fluent assertions. `JaCoCo` for coverage (80%+).
+- Error handling: catch specific exceptions, never `Exception` or `Throwable` broadly. Use try-with-resources.
+- Prefer constructor injection over field injection. Use `final` fields by default.
+- Use `Optional<T>` for nullable returns, never for parameters or fields.
+- Pattern matching: use `instanceof` pattern matching and switch expressions.
+- Streams: prefer streams for collection transformations. Avoid side effects in stream operations.
+- Benchmarking: `JMH` (Java Microbenchmark Harness) for performance testing. Never use `System.currentTimeMillis()` for benchmarks.
+- Anti-patterns: no public fields (use records or getters), no mutable static state, no checked exceptions in lambdas.

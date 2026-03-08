@@ -1,9 +1,15 @@
 ---
 priority: high
 ---
-# Ruby Conventions
-- Target Ruby 3.2+. Use RBS type signatures for public APIs.
-- Follow Ruby Style Guide. Use RuboCop for linting.
-- Use RSpec or Minitest for testing. Prefer composition over inheritance.
-- Use frozen string literals. Leverage pattern matching (case/in).
-- Use Bundler for dependency management. Keep Gemfile.lock committed.
+- Target Ruby 3.2+. Set `.ruby-version` file. Use `frozen_string_literal: true` in all files.
+- Linting: `rubocop` with auto-fix. Max 120 char lines. Use `rubocop-rspec`, `rubocop-performance`, `rubocop-rails` plugins as relevant.
+- Type checking: RBS type signatures for all public APIs. Run `steep check` in CI. Use `rbs prototype` to scaffold types.
+- Security: `bundler-audit` for CVE checks, `brakeman` for SAST (Rails). Run in CI.
+- Testing: RSpec with `describe`/`context`/`it` blocks. Use factories (`factory_bot`) over fixtures. `simplecov` for coverage (80%+).
+- Pattern matching: use `case/in` for complex matching. Use `=>` for single-pattern destructuring.
+- Prefer composition and modules over deep inheritance. Use `Comparable`, `Enumerable` mixins.
+- Dependencies: `bundler` for management. Commit `Gemfile.lock`. Use pessimistic version constraints (`~>`).
+- Error handling: use specific exception classes. Define custom errors inheriting `StandardError`.
+- Prefer `&:method_name` blocks for simple transforms. Use `then`/`yield_self` for chaining.
+- Build/distribute: `rake` for tasks, `gem build` for packaging. Use `gemspec` for gem metadata.
+- Anti-patterns: no monkey patching in production, no `method_missing` without `respond_to_missing?`, no `eval` with user input.

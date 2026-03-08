@@ -1,9 +1,15 @@
 ---
 priority: high
 ---
-# PHP Conventions
-- Target PHP 8.2+. Use typed properties, union types, and enums.
-- Follow PSR-12 coding standard. Use PHP-CS-Fixer or PHP_CodeSniffer.
-- Use PHPUnit for testing. Use Composer for dependency management.
-- Use strict types declaration (`declare(strict_types=1)`).
-- Prefer named arguments for functions with many parameters.
+- Target PHP 8.2+. Use `declare(strict_types=1)` in every file.
+- Use typed properties, union types, enums, readonly classes, intersection types.
+- Formatting: PSR-12 via `phpcs`/`phpcbf` or `PHP-CS-Fixer`. Max 120 char lines. Pick one formatter, configure in CI.
+- Static analysis: `PHPStan` level 9 (or `Psalm`). Never suppress warnings without justification. Run in CI.
+- Security: `composer audit` for CVEs. Use `roave/security-advisories` as dev constraint to block vulnerable deps.
+- Testing: PHPUnit with `@dataProvider` for parameterized tests. 80%+ coverage via `phpunit --coverage-text`.
+- Use constructor promotion for value objects. Use named arguments for readability.
+- Error handling: use specific exceptions. Define custom exceptions extending `RuntimeException`.
+- Dependencies: Composer with `composer.lock` committed. Use `^` version constraints for flexibility.
+- Prefer first-class callable syntax (`strlen(...)`) and arrow functions for short closures.
+- Autoloading: PSR-4 exclusively. Never use `require`/`include` for class loading.
+- Anti-patterns: no `@` error suppression, no `eval()`, no dynamic property access, no `extract()`.

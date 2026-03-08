@@ -1240,7 +1240,8 @@ func loadBuiltins(config *ConfigV3) {
 		}
 
 		domain := &DomainV3{
-			Name: name,
+			Name:    name,
+			Builtin: true,
 		}
 
 		for _, entry := range entries {
