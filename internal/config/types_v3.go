@@ -354,8 +354,9 @@ type DomainV3 struct {
 	Skills     []ContentFile           `yaml:"skills,omitempty" json:"skills,omitempty"`
 	Agents     []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
 	Commands   []ContentFile           `yaml:"commands,omitempty" json:"commands,omitempty"`
-	MCPServers map[string]*MCPServerV3 `yaml:"-" json:"-"`
-	Builtin    bool                    `yaml:"-" json:"-"` // true if loaded from builtins
+	MCPServers  map[string]*MCPServerV3 `yaml:"-" json:"-"`
+	Builtin     bool                   `yaml:"-" json:"-"` // true if loaded from builtins
+	FromInclude bool                   `yaml:"-" json:"-"` // true if loaded from an external include
 }
 
 // ContentFile represents a single content file with optional frontmatter
@@ -444,21 +445,45 @@ func (c *ConfigV3) GetHeaderStyle() string {
 	return c.Header.GetHeaderStyle()
 }
 
-// GetContentForProfile returns all content for a given profile
+// GetContentForProfile returns all content for a given profile.
+// Root-level slices contain only root content. Domains are placed in the
+// Domains map so that preset generators can combine them via
+// combineContentFiles / getAllDomain* helpers without duplication.
 func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) {
 	if c.Content == nil {
 		return nil, ErrNoContent
 	}
 
-	domains := c.GetProfileDomains(profile)
+	profileDomains := c.GetProfileDomains(profile)
+
+	// Build filtered domains map: active profile domains + builtin domains
+	activeDomains := make(map[string]*DomainV3)
+	for _, name := range profileDomains {
+		if domain, ok := c.Content.Domains[name]; ok {
+			activeDomains[name] = domain
+		}
+	}
+	// Always include builtin domains (e.g., from builtins system)
+	for name, domain := range c.Content.Domains {
+		if domain.Builtin {
+			activeDomains[name] = domain
+		}
+	}
+	// Include domains from external includes (not part of any profile, not builtin)
+	// These were explicitly added by the user via the includes system
+	for name, domain := range c.Content.Domains {
+		if domain.FromInclude {
+			activeDomains[name] = domain
+		}
+	}
 
 	return &ContentTreeV3{
-		Rules:    c.Content.GetRulesForDomains(domains),
-		Context:  c.Content.GetContextForDomains(domains),
-		Skills:   c.Content.GetSkillsForDomains(domains),
-		Agents:   c.Content.GetAgentsForDomains(domains),
-		Commands: c.Content.GetCommandsForDomains(domains),
-		Domains:  c.Content.Domains, // Include all domains for reference
+		Rules:    c.Content.Rules,
+		Context:  c.Content.Context,
+		Skills:   c.Content.Skills,
+		Agents:   c.Content.Agents,
+		Commands: c.Content.Commands,
+		Domains:  activeDomains,
 	}, nil
 }
 
