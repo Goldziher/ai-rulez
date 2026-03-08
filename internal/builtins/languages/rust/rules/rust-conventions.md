@@ -1,9 +1,18 @@
 ---
 priority: high
 ---
-# Rust Conventions
-- Use Rust 2021+ edition idioms. Prefer `impl Trait` over `dyn Trait` where possible.
-- Handle errors with `Result<T, E>` and the `?` operator. Avoid `.unwrap()` in library code.
-- Use `clippy` with pedantic lints. Format with `rustfmt`.
-- Prefer zero-cost abstractions. Minimize `unsafe` blocks and document safety invariants.
-- Use `cargo test`, `cargo clippy`, and `cargo fmt --check` in CI.
+- Target latest stable Rust edition (2024). Use `cargo fmt` and `clippy -D warnings`.
+- Handle errors with `Result<T, E>` and `?` operator. Use `thiserror` for library errors, `anyhow` for applications. Never `.unwrap()` in library code.
+- Prefer `impl Trait` over `dyn Trait`. Use generics for zero-cost abstractions.
+- Minimize `unsafe` — document every `unsafe` block with `// SAFETY:` comment explaining invariants.
+- Test with `cargo test`. Use `#[cfg(test)]` modules for unit tests, `tests/` for integration tests. Use `cargo-llvm-cov` for coverage.
+- Linting: `clippy::pedantic` lints enabled. Use `cargo clippy --all-targets --all-features -- -D warnings`. Fix all warnings before committing.
+- Security: `cargo audit` for CVE checks, `cargo deny` for license/advisory/ban policies. Zero advisories policy.
+- Prefer `&str` over `String` in function parameters. Use `Cow<'_, str>` when ownership is conditional. Use `Arc` for shared ownership across threads.
+- Use `memchr` for fast byte searching over manual iteration. Prefer zero-copy parsing where possible.
+- Performance: leverage SIMD-friendly crates (`memchr`, `aho-corasick`, `regex`) over hand-rolled loops. Prefer data-oriented layouts for cache efficiency.
+- Use `derive` macros: `Debug`, `Clone`, `PartialEq` on public types.
+- Structure: one public type per module, re-export from `lib.rs`. Use `pub(crate)` aggressively for internals.
+- Dependencies: use workspace inheritance for shared deps. Pin versions. Use `cargo-machete` to detect unused deps.
+- Benchmarking: use `criterion` for benchmarks. Profile with `cargo-flamegraph` before optimizing.
+- Async: use `tokio` exclusively. Prefer `async fn` with `'static` bounds. Use `tokio::spawn` for concurrency.

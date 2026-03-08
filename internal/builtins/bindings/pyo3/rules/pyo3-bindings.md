@@ -1,9 +1,13 @@
 ---
 priority: high
 ---
-# PyO3 Binding Conventions
-- Use `#[pyclass]` and `#[pymethods]` for Python-visible types.
-- Map Rust `Result<T, E>` to Python exceptions using `PyErr`.
-- Use `pyo3::types` for Python type conversions. Prefer `&str` over `String` in function signatures.
-- Release the GIL with `py.allow_threads()` for CPU-intensive Rust code.
-- Test bindings from Python using `pytest` and `maturin develop`.
+- Use `#[pyclass]` and `#[pymethods]` for Python-visible types. Use `#[new]` for constructors.
+- Map Rust `Result<T, E>` to Python exceptions via `PyErr`. Use `PyResult<T>` as return type.
+- Use `pyo3::types` for conversions. Prefer `&str` over `String` in parameters, return `String`.
+- Release the GIL with `py.allow_threads()` for CPU-intensive Rust code. Never hold GIL during I/O.
+- Use `#[getter]` and `#[setter]` for properties. Implement `__repr__` and `__str__` for debugging.
+- Build with `maturin develop` for local testing, `maturin build --release` for distribution.
+- Test bindings from Python using `pytest`. Test both success and error paths.
+- Use `Bound<'py, T>` API (not deprecated `Py<T>` patterns). Follow PyO3 0.22+ conventions.
+- Keep Python wrappers thin — business logic lives in Rust, Python provides ergonomic API.
+- Anti-patterns: no `.unwrap()` in pyclass methods, no blocking GIL for long operations.

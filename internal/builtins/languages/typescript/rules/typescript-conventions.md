@@ -1,9 +1,17 @@
 ---
 priority: high
 ---
-# TypeScript Conventions
-- Use strict TypeScript configuration (`strict: true`). Avoid `any` — use `unknown` with type guards.
-- Prefer `const` over `let`. Never use `var`. Use template literals over string concatenation.
-- Use ESM imports. Prefer named exports over default exports.
-- Use `vitest` or `jest` for testing. Enable strict null checks.
-- Format with Prettier, lint with ESLint.
+- Enable `strict: true` in tsconfig. Also enable `noUncheckedIndexedAccess` and `exactOptionalPropertyTypes`.
+- Never use `any`. Use `unknown` with type guards for truly unknown types. Use `Record<string, unknown>` over `object`.
+- Prefer `const` over `let`. Never use `var`. Use `as const` for literal types.
+- Use ESM imports exclusively. Prefer named exports over default exports.
+- Linting and formatting: `biome` for formatting and linting. `oxlint` for additional lint rules (fast, Rust-based). Configure biome in `biome.json`.
+- Testing: `vitest` for unit/integration tests. Use `@testing-library` for UI tests. Coverage via `vitest --coverage` (80%+).
+- Error handling: use discriminated unions for expected errors. Throw only for unexpected errors.
+- Prefer `interface` over `type` for object shapes (better error messages, declaration merging).
+- Use `import type` for type-only imports. Use template literals over string concatenation.
+- Package manager: `pnpm` preferred (strict, fast, disk-efficient). Commit `pnpm-lock.yaml`. Use workspace protocol for monorepos.
+- Build: `tsup` or `esbuild` for library bundling. `tsc --noEmit` for type checking only.
+- Node.js: use built-in `node:` prefix for core modules. Use `fetch` over `axios`.
+- Security: `npm audit` for CVEs. Use `socket.dev` or `snyk` for supply chain monitoring.
+- Anti-patterns: no non-null assertions (`!`), no type assertions (`as`), no `enum` (use union types), no `@ts-ignore`.
