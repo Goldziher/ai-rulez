@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.8.3] - 2026-03-08
+
+### Fixed
+- **GetContentForProfile**: Domain content from includes no longer duplicated into root-level slices; domains are now placed only in the Domains map for proper preset generation
+- **Includes resolver**: Added `FromInclude` field to `DomainV3` to track domains originating from external includes
+
 ## [3.8.2] - 2026-03-08
 
 ### Fixed
