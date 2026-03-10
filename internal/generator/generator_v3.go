@@ -46,8 +46,8 @@ func (g *GeneratorV3) Generate(profile string) error {
 		"agents", len(contentTree.Agents),
 		"domains", len(contentTree.Domains))
 
-	// Collect MCP servers for this profile
-	mcpServers := g.collectMCPServersForProfile(activeProfile)
+	// Collect MCP servers based on the resolved content tree
+	mcpServers := g.collectMCPServersForContent(contentTree)
 
 	// Create a temporary config with the filtered content and MCP servers
 	tempCfg := *g.config
@@ -168,11 +168,11 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 	return g.config.GetContentForProfile(profile)
 }
 
-// collectMCPServersForProfile collects MCP servers for the active profile
-// Logic: collect root servers + domain servers from active profile
+// collectMCPServersForContent collects MCP servers for the resolved content tree.
+// Logic: collect root servers + domain servers from domains present in the tree
 // Domain servers override root by name
 // Only include enabled servers
-func (g *GeneratorV3) collectMCPServersForProfile(profile string) map[string]*config.MCPServerV3 {
+func (g *GeneratorV3) collectMCPServersForContent(content *config.ContentTreeV3) map[string]*config.MCPServerV3 {
 	collected := make(map[string]*config.MCPServerV3)
 
 	// Always include root servers (if enabled)
@@ -182,15 +182,12 @@ func (g *GeneratorV3) collectMCPServersForProfile(profile string) map[string]*co
 		}
 	}
 
-	// Include servers from domains in the active profile
-	domains := g.config.GetProfileDomains(profile)
-	for _, domainName := range domains {
-		if domain, ok := g.config.Content.Domains[domainName]; ok {
-			for name, server := range domain.MCPServers {
-				if server.IsEnabled() {
-					// Domain servers override root servers by name
-					collected[name] = server
-				}
+	// Include servers from domains that are part of the resolved content tree
+	for _, domain := range content.Domains {
+		for name, server := range domain.MCPServers {
+			if server.IsEnabled() {
+				// Domain servers override root servers by name
+				collected[name] = server
 			}
 		}
 	}
