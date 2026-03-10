@@ -127,13 +127,19 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 		// (root + all domains). This is important for consumers that rely on
 		// includes and don't define their own profiles.
 		if len(g.config.Profiles) == 0 {
+			// Shallow-copy domains to avoid exposing internal map for mutation.
+			domainsCopy := make(map[string]*config.DomainV3, len(g.config.Content.Domains))
+			for name, domain := range g.config.Content.Domains {
+				domainsCopy[name] = domain
+			}
+
 			return &config.ContentTreeV3{
 				Rules:    g.config.Content.Rules,
 				Context:  g.config.Content.Context,
 				Skills:   g.config.Content.Skills,
 				Agents:   g.config.Content.Agents,
 				Commands: g.config.Content.Commands,
-				Domains:  g.config.Content.Domains,
+				Domains:  domainsCopy,
 			}, nil
 		}
 
