@@ -115,6 +115,12 @@ func (g *GeneratorV3) resolveProfile(profile string) string {
 
 // getContentForProfile returns the content tree for a specific profile
 func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV3, error) {
+	// Guard against nil content to avoid panics when GeneratorV3 is created
+	// with a ConfigV3 that hasn't been fully loaded.
+	if g.config.Content == nil {
+		return nil, config.ErrNoContent
+	}
+
 	// Special case: "default" profile
 	if profile == defaultProfileName {
 		// When no profiles are defined, "default" should include all content
