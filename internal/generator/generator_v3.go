@@ -132,7 +132,7 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 		}
 
 		// When profiles are defined in the config, keep the previous
-		// behaviour where the built-in "default" profile only sees
+		// behavior where the built-in "default" profile only sees
 		// root content and (optionally) built-in domains.
 		builtinDomains := make(map[string]*config.DomainV3)
 		for name, domain := range g.config.Content.Domains {
