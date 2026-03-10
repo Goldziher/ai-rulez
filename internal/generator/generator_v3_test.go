@@ -641,32 +641,6 @@ func TestGitignorePathExtraction(t *testing.T) {
 	}
 }
 
-// Test for Issue #13: Verify default profile creates empty domains map
-func TestGeneratorV3_DefaultProfileDomainsLogic(t *testing.T) {
-	// This test verifies the code logic without needing to fully load config
-	// It ensures that when profile == "default", an empty domains map is created
-
-	tests := []struct {
-		name          string
-		profile       string
-		shouldBeEmpty bool
-	}{
-		{"default profile should have empty domains", "default", true},
-		{"non-default profile would include domains", "backend", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Simulate the fixed logic
-			if tt.profile == "default" {
-				domains := make(map[string]*config.DomainV3) // Empty - correct behavior
-				assert.Equal(t, 0, len(domains), "default profile domains should be empty")
-				assert.Equal(t, tt.shouldBeEmpty, len(domains) == 0)
-			}
-		})
-	}
-}
-
 func TestIsIgnored(t *testing.T) {
 	patterns := []string{"*.log", "tmp/", ".claude"}
 
