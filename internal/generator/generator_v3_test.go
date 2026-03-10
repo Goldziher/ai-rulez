@@ -738,3 +738,105 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
 	})
 }
+
+// Test MCP server aggregation for default profile with and without profiles.
+func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T) {
+	t.Run("default profile includes domain MCP servers when no profiles defined", func(t *testing.T) {
+		rootEnabled := true
+		domainEnabled := true
+
+		cfg := &config.ConfigV3{
+			MCPServers: map[string]*config.MCPServerV3{
+				"root-server": {
+					Name:    "root-server",
+					Enabled: &rootEnabled,
+				},
+			},
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {
+						Name: "php",
+						MCPServers: map[string]*config.MCPServerV3{
+							"php-server": {
+								Name:    "php-server",
+								Enabled: &domainEnabled,
+							},
+						},
+					},
+				},
+			},
+			Profiles: map[string][]string{},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+
+		servers := gen.collectMCPServersForContent(content)
+		require.NotNil(t, servers)
+
+		// Should contain both root and domain MCP servers
+		_, hasRoot := servers["root-server"]
+		_, hasPHP := servers["php-server"]
+		assert.True(t, hasRoot, "expected root MCP server to be included")
+		assert.True(t, hasPHP, "expected domain MCP server to be included when no profiles are defined")
+	})
+
+	t.Run("default profile only includes root and builtin domain MCP servers when profiles are defined", func(t *testing.T) {
+		rootEnabled := true
+		domainEnabled := true
+
+		cfg := &config.ConfigV3{
+			MCPServers: map[string]*config.MCPServerV3{
+				"root-server": {
+					Name:    "root-server",
+					Enabled: &rootEnabled,
+				},
+			},
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {
+						Name: "php",
+						MCPServers: map[string]*config.MCPServerV3{
+							"php-server": {
+								Name:    "php-server",
+								Enabled: &domainEnabled,
+							},
+						},
+					},
+					// Builtin domain should always be visible on default, even when profiles exist.
+					"go": {
+						Name:    "go",
+						Builtin: true,
+						MCPServers: map[string]*config.MCPServerV3{
+							"go-server": {
+								Name:    "go-server",
+								Enabled: &domainEnabled,
+							},
+						},
+					},
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+
+		servers := gen.collectMCPServersForContent(content)
+		require.NotNil(t, servers)
+
+		// Should contain root and builtin domain MCP servers, but not non-builtin profile-only domain servers.
+		_, hasRoot := servers["root-server"]
+		_, hasGo := servers["go-server"]
+		_, hasPHP := servers["php-server"]
+		assert.True(t, hasRoot, "expected root MCP server to be included")
+		assert.True(t, hasGo, "expected builtin domain MCP server to be included for default when profiles are defined")
+		assert.False(t, hasPHP, "expected non-builtin profile domain MCP server to be excluded for default when profiles are defined")
+	})
+}
