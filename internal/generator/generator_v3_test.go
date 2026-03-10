@@ -687,3 +687,54 @@ func TestIsIgnored(t *testing.T) {
 		})
 	}
 }
+
+// Test for Issue #13 (updated): default profile domains behaviour with/without profiles
+func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.T) {
+	t.Run("default profile includes all domains when no profiles defined", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {Name: "php"},
+				},
+			},
+			Profiles: map[string][]string{},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		assert.Len(t, content.Domains, 1)
+		_, ok := content.Domains["php"]
+		assert.True(t, ok, "expected php domain to be present for default profile when no profiles are defined")
+	})
+
+	t.Run("default profile only includes builtin domains when profiles are defined", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {Name: "php"},
+					"go":  {Name: "go", Builtin: true},
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		// Should only see builtin domains on default when profiles exist
+		assert.Len(t, content.Domains, 1)
+		_, hasGo := content.Domains["go"]
+		_, hasPHP := content.Domains["php"]
+		assert.True(t, hasGo, "expected builtin go domain to be present for default profile when profiles are defined")
+		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
+	})
+}
