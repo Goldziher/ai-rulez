@@ -688,7 +688,7 @@ func TestIsIgnored(t *testing.T) {
 	}
 }
 
-// Test for Issue #13 (updated): default profile domains behaviour with/without profiles
+// Test for Issue #13 (updated): default profile domains behavior with/without profiles
 func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.T) {
 	t.Run("default profile includes all domains when no profiles defined", func(t *testing.T) {
 		cfg := &config.ConfigV3{
