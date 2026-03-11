@@ -75,24 +75,24 @@ rules:
   - name: "Critical Rule"
     priority: critical
     content: "Critical priority"
-    
-  - name: "High Rule"  
+
+  - name: "High Rule"
     priority: high
     content: "High priority"
-    
+
   - name: "Medium Rule"
     priority: medium
     content: "Medium priority"
-    
+
   - name: "Low Rule"
     priority: low
     content: "Low priority"
-    
+
 sections:
   - name: "Critical Section"
     priority: critical
     content: "Critical section"
-    
+
 agents:
   - name: "critical-agent"
     description: "Critical agent"
@@ -126,7 +126,7 @@ rules:
 
   - name: "Universal Rule"
     content: "Rule for everyone"
-    
+
   - name: "Doc Rule"
     content: "Documentation rule"
     targets: ["docs/**/*.md", "*.md"]
@@ -143,7 +143,7 @@ outputs:
     template:
       type: builtin
       value: minimal
-      
+
   - path: "inline.md"
     template:
       type: inline
@@ -152,12 +152,12 @@ outputs:
         {{range .Rules}}
         - {{.Name}}: {{.Content}}
         {{end}}
-        
+
   - path: "file.md"
     template:
       type: file
       value: ./template.txt
-      
+
 rules:
   - name: "Template Rule"
     content: "Test template content"

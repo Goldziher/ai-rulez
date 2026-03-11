@@ -8,7 +8,7 @@ import (
 func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Generate a project description for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Generate a project description for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
 	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
@@ -22,7 +22,7 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 	prompt.WriteString("\n\n")
 
 	prompt.WriteString("YOUR TASK:\n")
-	prompt.WriteString(fmt.Sprintf("Generate a JSON response with a description for the '%s' project.\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "Generate a JSON response with a description for the '%s' project.\n", context.ProjectName)
 	prompt.WriteString("The description should be 1-2 sentences, clear and concise.\n\n")
 
 	addExistingConfigContext(&prompt, context)
@@ -43,7 +43,7 @@ func buildProjectAnalysisPrompt(context *ProjectContext) string {
 func buildDocumentationPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Generate documentation sections for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Generate documentation sections for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
 	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
@@ -68,7 +68,7 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 	prompt.WriteString("\n\n")
 
 	prompt.WriteString("YOUR TASK:\n")
-	prompt.WriteString(fmt.Sprintf("Generate 2-3 documentation sections for the '%s' project that:\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "Generate 2-3 documentation sections for the '%s' project that:\n", context.ProjectName)
 	prompt.WriteString("- Provide PRACTICAL guidance specific to this codebase\n")
 	prompt.WriteString("- Include actual commands, file paths, and package names from the project\n")
 	prompt.WriteString("- Cover setup, development workflow, architecture, or testing\n")
@@ -99,7 +99,7 @@ func buildDocumentationPrompt(context *ProjectContext) string {
 func buildStandardsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Generate coding standards for the '%s' project\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Generate coding standards for the '%s' project\n\n", context.ProjectName)
 
 	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
 	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
@@ -139,7 +139,7 @@ func buildStandardsPrompt(context *ProjectContext) string {
 	prompt.WriteString("\n\n")
 
 	prompt.WriteString("YOUR TASK:\n")
-	prompt.WriteString(fmt.Sprintf("Generate 5-7 coding rules for the '%s' project that:\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "Generate 5-7 coding rules for the '%s' project that:\n", context.ProjectName)
 	prompt.WriteString("- Are SPECIFIC to this codebase's actual patterns and technologies\n")
 	prompt.WriteString("- Reference actual packages, libraries, and tools used in the project\n")
 	prompt.WriteString("- Include concrete, actionable guidance (not generic advice)\n")
@@ -300,7 +300,7 @@ func addExistingConfigContext(prompt *strings.Builder, context *ProjectContext) 
 
 func buildProjectAnalysisFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
-	prompt.WriteString(fmt.Sprintf("TASK: Set project description for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Set project description for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("Output ONLY this JSON format:\n")
 	prompt.WriteString(`{"description": "A brief description of the project"}` + "\n\n")
@@ -312,7 +312,7 @@ func buildProjectAnalysisFallbackPrompt(context *ProjectContext) string {
 
 func buildStandardsFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
-	prompt.WriteString(fmt.Sprintf("TASK: Add 3 basic coding rules for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Add 3 basic coding rules for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("Output ONLY this JSON format:\n")
 	prompt.WriteString(`{
@@ -330,7 +330,7 @@ func buildStandardsFallbackPrompt(context *ProjectContext) string {
 
 func buildDocumentationFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
-	prompt.WriteString(fmt.Sprintf("TASK: Add 2 documentation sections for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Add 2 documentation sections for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("Output ONLY this JSON format:\n")
 	prompt.WriteString(`{
@@ -348,7 +348,7 @@ func buildDocumentationFallbackPrompt(context *ProjectContext) string {
 func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Generate AI agent definitions for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Generate AI agent definitions for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("CRITICAL INSTRUCTIONS - JSON OUTPUT ONLY:\n")
 	prompt.WriteString("You must output a valid JSON object. Do NOT execute any commands.\n")
@@ -378,7 +378,7 @@ func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 	prompt.WriteString("\n\n")
 
 	prompt.WriteString("YOUR TASK:\n")
-	prompt.WriteString(fmt.Sprintf("Generate 2-4 agent definitions for the '%s' project that:\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "Generate 2-4 agent definitions for the '%s' project that:\n", context.ProjectName)
 	prompt.WriteString("- Are specialized for THIS project's specific technologies and patterns\n")
 	prompt.WriteString("- Have expertise that references actual tools, frameworks, and libraries used\n")
 	prompt.WriteString("- Cover different aspects: architecture, testing, documentation, operations\n")
@@ -400,7 +400,7 @@ func buildAgentDefinitionsPrompt(context *ProjectContext) string {
 func buildAgentDefinitionsFallbackPrompt(context *ProjectContext) string {
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("TASK: Add 2 basic AI agents for '%s'\n\n", context.ProjectName))
+	fmt.Fprintf(&prompt, "TASK: Add 2 basic AI agents for '%s'\n\n", context.ProjectName)
 
 	prompt.WriteString("Output ONLY this JSON format:\n")
 	prompt.WriteString(`{

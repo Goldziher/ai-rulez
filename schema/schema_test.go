@@ -453,7 +453,7 @@ metadata:
 outputs:
   - path: "output.md"
 sections:
-  - name: "Intro" 
+  - name: "Intro"
     priority: 999
     content: "Welcome"`,
 			expectedErrors: []string{

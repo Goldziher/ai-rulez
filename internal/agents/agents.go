@@ -459,7 +459,7 @@ func buildAgentPrompt(projectName string, config templates.ProviderConfig) strin
 
 	var prompt strings.Builder
 
-	prompt.WriteString(fmt.Sprintf("Customize this ai-rulez.yaml template for project '%s':\n\n", projectName))
+	fmt.Fprintf(&prompt, "Customize this ai-rulez.yaml template for project '%s':\n\n", projectName)
 
 	prompt.WriteString("INSTRUCTIONS:\n")
 	prompt.WriteString("1. KEEP MINIMAL: Leave metadata and outputs sections mostly as-is\n")
@@ -492,28 +492,28 @@ func buildAgentPrompt(projectName string, config templates.ProviderConfig) strin
 	prompt.WriteString("PROJECT ANALYSIS:\n")
 	prompt.WriteString("Detected project information:\n")
 	if len(info.TechStack) > 0 {
-		prompt.WriteString(fmt.Sprintf("- Tech Stack: %s\n", strings.Join(info.TechStack, ", ")))
+		fmt.Fprintf(&prompt, "- Tech Stack: %s\n", strings.Join(info.TechStack, ", "))
 	}
 	if info.MainLanguage != "" {
-		prompt.WriteString(fmt.Sprintf("- Main Language: %s\n", info.MainLanguage))
+		fmt.Fprintf(&prompt, "- Main Language: %s\n", info.MainLanguage)
 	}
-	prompt.WriteString(fmt.Sprintf("- Project Type: %s\n", info.ProjectType))
+	fmt.Fprintf(&prompt, "- Project Type: %s\n", info.ProjectType)
 
 	if info.BuildCommand != "" {
-		prompt.WriteString(fmt.Sprintf("- Build Command: %s\n", info.BuildCommand))
+		fmt.Fprintf(&prompt, "- Build Command: %s\n", info.BuildCommand)
 	}
 	if info.TestCommand != "" {
-		prompt.WriteString(fmt.Sprintf("- Test Command: %s\n", info.TestCommand))
+		fmt.Fprintf(&prompt, "- Test Command: %s\n", info.TestCommand)
 	}
 	if info.LintCommand != "" {
-		prompt.WriteString(fmt.Sprintf("- Lint Command: %s\n", info.LintCommand))
+		fmt.Fprintf(&prompt, "- Lint Command: %s\n", info.LintCommand)
 	}
 
-	prompt.WriteString(fmt.Sprintf("- Has Database: %v\n", info.HasDatabase))
-	prompt.WriteString(fmt.Sprintf("- Has Docker: %v\n", info.HasDocker))
+	fmt.Fprintf(&prompt, "- Has Database: %v\n", info.HasDatabase)
+	fmt.Fprintf(&prompt, "- Has Docker: %v\n", info.HasDocker)
 
 	if len(info.ConfigFiles) > 0 {
-		prompt.WriteString(fmt.Sprintf("- Config Files: %s\n", strings.Join(info.ConfigFiles, ", ")))
+		fmt.Fprintf(&prompt, "- Config Files: %s\n", strings.Join(info.ConfigFiles, ", "))
 	}
 
 	prompt.WriteString("\nIMPORTANT: Most of the template should remain commented. Only uncomment what adds real value.\n")

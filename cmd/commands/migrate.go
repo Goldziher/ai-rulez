@@ -295,6 +295,12 @@ func CopyDir(src, dst string) error {
 		return err
 	}
 
+	dstRoot, err := os.OpenRoot(dst)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = dstRoot.Close() }()
+
 	// List entries in source
 	entries, err := os.ReadDir(src)
 	if err != nil {
@@ -303,8 +309,13 @@ func CopyDir(src, dst string) error {
 
 	// Copy each entry
 	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
+		name := entry.Name()
+		if !filepath.IsLocal(name) {
+			return fmt.Errorf("invalid path component %q", name)
+		}
+
+		srcPath := filepath.Join(src, name)
+		dstPath := filepath.Join(dst, name)
 
 		if entry.IsDir() {
 			if err := CopyDir(srcPath, dstPath); err != nil {
@@ -315,7 +326,7 @@ func CopyDir(src, dst string) error {
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(dstPath, data, 0o644); err != nil {
+			if err := dstRoot.WriteFile(name, data, 0o644); err != nil {
 				return err
 			}
 		}

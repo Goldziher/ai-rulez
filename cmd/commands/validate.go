@@ -13,7 +13,7 @@ import (
 var ValidateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
 	Short: "Validate AI rules configuration file",
-	Long: `Validate an AI rules configuration file for syntax errors, 
+	Long: `Validate an AI rules configuration file for syntax errors,
 schema compliance, and structural issues.`,
 	Aliases: []string{"val", "v", "check"},
 	Args:    cobra.MaximumNArgs(1),
