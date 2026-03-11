@@ -131,6 +131,7 @@ func TestInit_WithExampleContent(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(skillContent), "Code Reviewer")
 	assert.Contains(t, string(skillContent), "name: code-reviewer")
+	assert.Contains(t, string(skillContent), "description: Specialized agent for code review and quality assurance")
 }
 
 func TestInit_JSONFormat(t *testing.T) {

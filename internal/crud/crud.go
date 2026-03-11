@@ -83,12 +83,13 @@ type DomainInfo struct {
 
 // AddFileRequest represents a request to add a rule, context, or skill file
 type AddFileRequest struct {
-	Domain   string   // Domain name (optional, uses root if empty)
-	Type     string   // File type: rules, context, or skills
-	Name     string   // File name (without .md extension)
-	Content  string   // File content (optional, uses template if empty)
-	Priority string   // Priority level: critical, high, medium, low
-	Targets  []string // Target providers: claude, cursor, etc.
+	Domain      string   // Domain name (optional, uses root if empty)
+	Type        string   // File type: rules, context, or skills
+	Name        string   // File name (without .md extension)
+	Description string   // Skill description (used for skills)
+	Content     string   // File content (optional, uses template if empty)
+	Priority    string   // Priority level: critical, high, medium, low
+	Targets     []string // Target providers: claude, cursor, etc.
 }
 
 // FileResult represents the result of a file operation

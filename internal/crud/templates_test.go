@@ -248,6 +248,7 @@ func TestGenerateSkillTemplate(t *testing.T) {
 			content:     "",
 			checkFn: func(t *testing.T, result string) {
 				assert.Contains(t, result, "priority: medium")
+				assert.Contains(t, result, `description: "testing-skill"`)
 				// Should have auto-generated content
 				assert.Contains(t, result, "Testing Skill")
 			},
