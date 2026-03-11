@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/samber/oops"
 )
 
@@ -201,11 +202,12 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 
 	// Generate content if not provided
 	content := req.Content
+	description := config.SkillDescriptionOrFallback(req.Description, req.Name)
 	if content == "" {
-		content = GenerateSkillTemplate(req.Name, "", req.DefaultPriority(), req.Targets, "")
+		content = GenerateSkillTemplate(req.Name, description, req.DefaultPriority(), req.Targets, "")
 	} else if !strings.HasPrefix(content, "---") {
 		// Add frontmatter if content provided without it
-		content = GenerateFrontmatter(req.DefaultPriority(), req.Targets) + content
+		content = GenerateSkillTemplate(req.Name, description, req.DefaultPriority(), req.Targets, content)
 	}
 
 	// Ensure trailing newline

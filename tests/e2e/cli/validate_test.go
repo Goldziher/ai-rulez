@@ -197,3 +197,28 @@ This rule has low priority
 
 	result.AssertOutputContains(s.T(), "valid")
 }
+
+func (s *ValidateCLITestSuite) TestValidateFailsWhenSkillDescriptionMissing() {
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
+
+	configYAML := `version: "3.0"
+name: "codex-skill-test"
+presets:
+  - codex
+`
+	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", configYAML)
+
+	skillsDir := filepath.Join(aiRulesDir, "skills", "core-principles")
+	s.NoError(os.MkdirAll(skillsDir, 0o755))
+	testutil.WriteFile(s.T(), skillsDir, "SKILL.md", `---
+priority: high
+---
+
+# Core Principles
+`)
+
+	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
+	result.AssertStderrContains(s.T(), "missing required field 'description'")
+	result.AssertStderrContains(s.T(), "core-principles")
+}

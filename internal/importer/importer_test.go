@@ -521,6 +521,7 @@ func TestWriteContent(t *testing.T) {
 
 		content, err := os.ReadFile(skillPath)
 		require.NoError(t, err)
+		assert.Contains(t, string(content), `description: "code-reviewer"`)
 		assert.Contains(t, string(content), "code reviewer")
 	})
 

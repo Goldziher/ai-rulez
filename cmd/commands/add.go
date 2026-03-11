@@ -179,10 +179,11 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	// For skills, we need to handle the skill-specific format
 	// Skills use a different structure (directory with SKILL.md)
 	req := &crud.AddFileRequest{
-		Domain:  addDomain,
-		Type:    "skills",
-		Name:    name,
-		Content: addContent,
+		Domain:      addDomain,
+		Type:        "skills",
+		Name:        name,
+		Description: addDesc,
+		Content:     addContent,
 	}
 
 	result, err := op.AddSkill(ctx, req)

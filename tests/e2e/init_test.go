@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/tests/e2e/testutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -145,7 +146,7 @@ require github.com/stretchr/testify v1.8.4`
 			args := []string{"init", tt.projectName}
 			args = append(args, tt.args...)
 
-			output, err := runTestCommand(args...)
+			output, err := runTestCommand(t, args...)
 			require.NoError(t, err, "Init command should succeed. Output: %s", output)
 
 			configPath := filepath.Join(dir, ".ai-rulez", "config.yaml")
@@ -158,22 +159,16 @@ require github.com/stretchr/testify v1.8.4`
 				tt.validate(t, configPath)
 			}
 
-			output, err = runTestCommand("validate")
+			output, err = runTestCommand(t, "validate")
 			assert.NoError(t, err, "Generated config should be valid. Output: %s", output)
 		})
 	}
 }
 
-func runTestCommand(args ...string) (string, error) {
-	binaryPath := "/tmp/ai-rulez-test-binary"
-	buildCmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")
-	// Use current working directory instead of hardcoded path
-	// This allows tests to run on any developer's machine
-	buildCmd.Env = append(os.Environ(), "NO_INTERACTIVE=1")
-	if err := buildCmd.Run(); err != nil {
-		return "", err
-	}
+func runTestCommand(t *testing.T, args ...string) (string, error) {
+	t.Helper()
 
+	binaryPath := testutil.SetupTestBinary(t)
 	cmd := exec.Command(binaryPath, args...)
 	cmd.Env = append(os.Environ(), "NO_INTERACTIVE=1")
 	output, err := cmd.CombinedOutput()
