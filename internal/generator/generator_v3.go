@@ -180,7 +180,7 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 			With("profile", profile).
 			With("available_profiles", availableProfiles).
 			Hint(fmt.Sprintf(
-				"Available profiles: %v\nUse 'default' for the built-in profile (all content when no profiles are defined; root content plus builtin domains when profiles are defined).",
+				"Available profiles: %v\nUse 'default' for the built-in profile (all content when no profiles are defined; root content plus builtin and FromInclude domains when profiles are defined).",
 				availableProfiles,
 			)).
 			Errorf("profile not found: %s", profile)
