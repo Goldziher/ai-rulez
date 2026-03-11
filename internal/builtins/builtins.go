@@ -3,7 +3,7 @@ package builtins
 import (
 	"embed"
 	"io/fs"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 )
@@ -141,16 +141,18 @@ func ResolveBuiltins(builtins []string) []string {
 	return names
 }
 
-// embeddedPath returns the embedded FS path for a builtin domain
+// embeddedPath returns the embedded FS path for a builtin domain.
+// NOTE: embed.FS always uses forward slashes for paths, even on Windows,
+// so we must use the path package (not filepath) here.
 func embeddedPath(name string) string {
 	if d, ok := registry[name]; ok {
 		switch d.Category {
 		case CategoryUniversal:
-			return filepath.Join("universal", name)
+			return path.Join("universal", name)
 		case CategoryLanguage:
-			return filepath.Join("languages", name)
+			return path.Join("languages", name)
 		case CategoryBinding:
-			return filepath.Join("bindings", name)
+			return path.Join("bindings", name)
 		}
 	}
 	return ""
@@ -177,7 +179,8 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 
 	contentTypes := []string{"rules", "context", "skills", "agents", "commands"}
 	for _, contentType := range contentTypes {
-		dirPath := filepath.Join(basePath, contentType)
+		// Use path.Join (forward slashes) so embed.FS can find files on all platforms.
+		dirPath := path.Join(basePath, contentType)
 		dirEntries, err := fs.ReadDir(content, dirPath)
 		if err != nil {
 			// Directory doesn't exist — skip
@@ -189,13 +192,14 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 				continue
 			}
 
-			filePath := filepath.Join(dirPath, entry.Name())
+			filePath := path.Join(dirPath, entry.Name())
 			data, err := content.ReadFile(filePath)
 			if err != nil {
 				continue
 			}
 
-			entryName := strings.TrimSuffix(entry.Name(), filepath.Ext(entry.Name()))
+			// All builtin content files use .md extension; trim it directly.
+			entryName := strings.TrimSuffix(entry.Name(), ".md")
 			entries = append(entries, ContentEntry{
 				Name:    entryName,
 				Path:    filePath,

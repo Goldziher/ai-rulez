@@ -21,5 +21,9 @@ Rendering flow:
 4. Write files and update gitignore.
 
 Profile notes:
-- `default` profile means root content only (no domains).
-- `ai-rulez generate --profile <name>` builds the root content plus the profile's domains.
+
+- `default` profile resolution order:
+  1. If `profiles["default"]` is explicitly defined in config → use it like any named profile.
+  2. If no profiles are defined at all → include root content and all domains (including included domains).
+  3. If other profiles exist but `"default"` is not defined → include root content, builtin domains, and `FromInclude` domains.
+- `ai-rulez generate --profile <name>` builds root content plus the named profile's domains, along with builtin and `FromInclude` domains.

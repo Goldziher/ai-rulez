@@ -10,7 +10,7 @@ targets:
 # MCP Server and Integrations
 
 - MCP configuration lives in `.ai-rulez/mcp.yaml` (or `mcp.json`).
-- MCP servers are merged from root and active domain entries; domain entries override by name.
+- MCP servers are merged from root and active domain entries; domain entries override by name in alphabetical domain order (last writer wins).
 - The MCP server exposes read, CRUD, generate, and validate operations for assistants.
 
 Typical setup:
