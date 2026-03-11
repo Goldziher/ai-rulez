@@ -348,15 +348,15 @@ type ContentTreeV3 struct {
 
 // DomainV3 represents content from a specific domain directory
 type DomainV3 struct {
-	Name       string                  `yaml:"name" json:"name"`
-	Rules      []ContentFile           `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Context    []ContentFile           `yaml:"context,omitempty" json:"context,omitempty"`
-	Skills     []ContentFile           `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Agents     []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
-	Commands   []ContentFile           `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Name        string                  `yaml:"name" json:"name"`
+	Rules       []ContentFile           `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Context     []ContentFile           `yaml:"context,omitempty" json:"context,omitempty"`
+	Skills      []ContentFile           `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents      []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands    []ContentFile           `yaml:"commands,omitempty" json:"commands,omitempty"`
 	MCPServers  map[string]*MCPServerV3 `yaml:"-" json:"-"`
-	Builtin     bool                   `yaml:"-" json:"-"` // true if loaded from builtins
-	FromInclude bool                   `yaml:"-" json:"-"` // true if loaded from an external include
+	Builtin     bool                    `yaml:"-" json:"-"` // true if loaded from builtins
+	FromInclude bool                    `yaml:"-" json:"-"` // true if loaded from an external include
 }
 
 // ContentFile represents a single content file with optional frontmatter
