@@ -714,7 +714,7 @@ func (ctx *ProjectContext) GetDocumentationSummary() string {
 		return "No documentation files found"
 	}
 
-	sb.WriteString(fmt.Sprintf("Found %d documentation files:\n", len(ctx.MarkdownFiles)))
+	fmt.Fprintf(&sb, "Found %d documentation files:\n", len(ctx.MarkdownFiles))
 
 	byCategory := make(map[string][]MarkdownFile)
 	for _, file := range ctx.MarkdownFiles {
@@ -729,9 +729,9 @@ func (ctx *ProjectContext) GetDocumentationSummary() string {
 		}
 
 		catTitle := strings.ToUpper(string(cat[0])) + cat[1:]
-		sb.WriteString(fmt.Sprintf("\n%s:\n", catTitle))
+		fmt.Fprintf(&sb, "\n%s:\n", catTitle)
 		for _, file := range files {
-			sb.WriteString(fmt.Sprintf("  - %s: %s\n", file.RelativePath, file.Title))
+			fmt.Fprintf(&sb, "  - %s: %s\n", file.RelativePath, file.Title)
 		}
 	}
 

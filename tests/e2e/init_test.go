@@ -208,7 +208,7 @@ agents:
     priority: high
     system_prompt: |
       You are a system architect.
-      
+
 rules:
   - name: "Code Quality"
     priority: high

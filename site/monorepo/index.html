@@ -197,7 +197,7 @@
 <a id=__codelineno-9-20 name=__codelineno-9-20 href=#__codelineno-9-20></a><span class=w>    </span><span class=nt>naming_scheme</span><span class=p>:</span><span class=w> </span><span class=s>&quot;frontend.mdc&quot;</span>
 </code></pre></div> <p>This creates: <div class=highlight><pre><span></span><code><a id=__codelineno-10-1 name=__codelineno-10-1 href=#__codelineno-10-1></a>.cursor/rules/
 <a id=__codelineno-10-2 name=__codelineno-10-2 href=#__codelineno-10-2></a>├── system.mdc      # Root rules
-<a id=__codelineno-10-3 name=__codelineno-10-3 href=#__codelineno-10-3></a>├── backend.mdc     # Backend rules  
+<a id=__codelineno-10-3 name=__codelineno-10-3 href=#__codelineno-10-3></a>├── backend.mdc     # Backend rules
 <a id=__codelineno-10-4 name=__codelineno-10-4 href=#__codelineno-10-4></a>└── frontend.mdc    # Frontend rules
 </code></pre></div></p> <h3 id=5-rule-priority-management>5. Rule Priority Management</h3> <p>Use priority levels to create rule hierarchy:</p> <ul> <li><strong>100-90</strong>: System architecture and cross-cutting concerns (root)</li> <li><strong>89-80</strong>: Technology stack patterns (scoped configs)</li> <li><strong>79-70</strong>: Specific implementation details (scoped configs)</li> <li><strong>69-50</strong>: Code style and conventions (scoped configs)</li> </ul> <h3 id=6-shared-configurations-with-remote-includes>6. Shared Configurations with Remote Includes</h3> <p>Share common patterns across projects:</p> <div class=highlight><pre><span></span><code><a id=__codelineno-11-1 name=__codelineno-11-1 href=#__codelineno-11-1></a><span class=c1># Root configuration</span>
 <a id=__codelineno-11-2 name=__codelineno-11-2 href=#__codelineno-11-2></a><span class=nt>includes</span><span class=p>:</span>

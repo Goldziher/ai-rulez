@@ -1,0 +1,55 @@
+default_install_hook_types: [pre-commit, commit-msg]
+exclude: ^vendor/|node_modules/|release/
+
+repos:
+  - repo: https://github.com/Goldziher/gitfluff
+    rev: v0.8.0
+    hooks:
+      - id: gitfluff-lint
+        stages: [commit-msg]
+        args: ["--write"]
+
+  - repo: https://github.com/Goldziher/ai-rulez
+    rev: v3.8.3
+    hooks:
+      - id: ai-rulez-generate
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+      - id: detect-private-key
+      - id: check-json
+      - id: check-yaml
+        args: ["--allow-multiple-documents", "--unsafe"]
+      - id: check-toml
+      - id: check-case-conflict
+
+  - repo: https://github.com/ComPWA/taplo-pre-commit
+    rev: v0.9.3
+    hooks:
+      - id: taplo-format
+
+  - repo: https://github.com/scop/pre-commit-shfmt
+    rev: v3.12.0-2
+    hooks:
+      - id: shfmt
+        args: ["-w", "-i", "2"]
+
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.11
+    hooks:
+      - id: actionlint
+
+  - repo: https://github.com/golangci/golangci-lint
+    rev: "v2.11.3"
+    hooks:
+      - id: golangci-lint-full

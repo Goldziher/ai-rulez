@@ -129,7 +129,7 @@ func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
 }
 
 func writeCommentedExamples(builder *strings.Builder, providers ProviderConfig) {
-	builder.WriteString(`  
+	builder.WriteString(`
   # Additional output examples (uncomment as needed):
 `)
 
@@ -362,7 +362,7 @@ outputs:
 
 	writeCommentedExamples(&builder, providers)
 
-	builder.WriteString(`  
+	builder.WriteString(`
   # Directory outputs for multiple files:
   # - path: ".claude/agents/"          # Generate agent files
   #   type: "agent"                    # Type: agent or rule
@@ -389,7 +389,7 @@ outputs:
 #       Focus on: design patterns, tech stack decisions, system boundaries.
 #       Always consider trade-offs, future scalability, and maintainability.
 #       Provide high-level guidance before implementation details.
-#     
+#
 #   # Example 2: Software implementation specialist
 #   - name: "swe"
 #     description: "Software engineering implementation specialist"
@@ -427,7 +427,7 @@ outputs:
 #       3. Add comprehensive tests for new functionality
 #       4. Run linter and fix any issues
 #       5. Ensure all tests pass before completing task
-#   
+#
 #   # Example 2: Code quality standards
 #   - name: "Code Quality Standards"
 #     priority: high
@@ -438,7 +438,7 @@ outputs:
 #       - Handle errors explicitly, never silently
 #       - Comment complex logic and business rules
 #       - Follow DRY principle but prioritize readability
-#   
+#
 #   # Example 3: Testing requirements
 #   - name: "Testing Standards"
 #     priority: high
@@ -463,7 +463,7 @@ outputs:
 #     priority: critical
 #     content: |
 #       ## Project Layout
-#       
+#
 #       src/
 #         api/        # REST API endpoints and routing
 #         services/   # Business logic and core functionality
@@ -473,17 +473,17 @@ outputs:
 #       tests/        # Test files (unit, integration, e2e)
 #       docs/         # Project documentation
 #       scripts/      # Build and deployment scripts
-#       
+#
 #       ## Key Entry Points
 #       - src/index.ts - Application main entry point
 #       - src/app.ts - Express app configuration
 #       - src/config.ts - Environment configuration
-#       
+#
 #       ## Configuration Files
 #       - .env.example - Environment variables template
 #       - tsconfig.json - TypeScript configuration
 #       - package.json - Dependencies and scripts
-#   
+#
 #   # Example 2: Development conventions and standards
 #   - name: "Coding Conventions"
 #     priority: high
@@ -495,19 +495,19 @@ outputs:
 #       - Functions/methods: camelCase (e.g., getUserById)
 #       - Constants: UPPER_SNAKE_CASE (e.g., MAX_RETRY_COUNT)
 #       - Private members: underscore prefix (e.g., _privateMethod)
-#       
+#
 #       ## Git Workflow
 #       - Branch naming: feature/*, bugfix/*, hotfix/*
 #       - Commit format: "type(scope): description"
 #         Types: feat, fix, docs, style, refactor, test, chore
 #       - PR requires: passing tests, code review, updated docs
-#       
+#
 #       ## Code Style
 #       - Use TypeScript strict mode
 #       - Prefer const over let, avoid var
 #       - Use async/await over promises
 #       - Prefer functional programming where appropriate
-#   
+#
 #   # Example 3: Architecture decisions and rationale
 #   - name: "Architecture Decisions"
 #     priority: medium
@@ -518,13 +518,13 @@ outputs:
 #       - **PostgreSQL**: ACID compliance for critical data
 #       - **Redis**: Session management and caching layer
 #       - **Docker**: Containerization for consistency
-#       
+#
 #       ## Design Patterns
 #       - Repository pattern for data access layer
 #       - Dependency injection for better testability
 #       - Event-driven architecture for async operations
 #       - Factory pattern for object creation
-#       
+#
 #       ## Security Considerations
 #       - JWT for stateless authentication
 #       - Rate limiting on all endpoints
@@ -547,7 +547,7 @@ outputs:
 #       You are starting a new task. Focus only on the described objective.
 #       Break down the task, implement systematically, test thoroughly.
 #       Ignore previous context unless specifically relevant.
-#   
+#
 #   # Example 2: Generate boilerplate code
 #   - name: "generate"
 #     aliases: ["gen", "create"]
@@ -557,7 +557,7 @@ outputs:
 #       Generate clean, well-structured boilerplate code.
 #       Follow project conventions, include appropriate tests.
 #       Types: component, service, model, controller, test
-#   
+#
 #   # Example 3: Refactor existing code
 #   - name: "refactor"
 #     description: "Refactor code for better quality"
@@ -582,7 +582,7 @@ outputs:
 #     args: ["ai-rulez", "mcp"]
 #     transport: "stdio"  # Communication method (stdio, http, sse)
 #     enabled: true
-#   
+#
 #   # Example 2: PostgreSQL database server
 #   - name: "postgres"
 #     description: "PostgreSQL database access"
@@ -591,7 +591,7 @@ outputs:
 #     env:
 #       DATABASE_URL: "postgresql://localhost:5432/mydb"
 #     enabled: true
-#   
+#
 #   # Example 3: GitHub API integration
 #   - name: "github"
 #     description: "GitHub API for PR and issue management"

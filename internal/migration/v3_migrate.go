@@ -202,20 +202,20 @@ func (m *V2ToV3Migrator) buildRuleContent(rule *config.Rule) string {
 	// Write frontmatter
 	sb.WriteString("---\n")
 	if rule.Priority != "" {
-		sb.WriteString(fmt.Sprintf("priority: %s\n", rule.Priority))
+		fmt.Fprintf(&sb, "priority: %s\n", rule.Priority)
 	} else {
 		sb.WriteString("priority: medium\n")
 	}
 	if len(rule.Targets) > 0 {
 		sb.WriteString("targets:\n")
 		for _, target := range rule.Targets {
-			sb.WriteString(fmt.Sprintf("  - %s\n", target))
+			fmt.Fprintf(&sb, "  - %s\n", target)
 		}
 	}
 	sb.WriteString("---\n\n")
 
 	// Write title
-	sb.WriteString(fmt.Sprintf("# %s\n\n", rule.Name))
+	fmt.Fprintf(&sb, "# %s\n\n", rule.Name)
 
 	// Write content
 	sb.WriteString(strings.TrimSpace(rule.Content))
@@ -275,21 +275,21 @@ func (m *V2ToV3Migrator) buildSectionContent(section *config.Section) string {
 	// Write frontmatter
 	sb.WriteString("---\n")
 	if section.Priority != "" {
-		sb.WriteString(fmt.Sprintf("priority: %s\n", section.Priority))
+		fmt.Fprintf(&sb, "priority: %s\n", section.Priority)
 	} else {
 		sb.WriteString("priority: medium\n")
 	}
 	if len(section.Targets) > 0 {
 		sb.WriteString("targets:\n")
 		for _, target := range section.Targets {
-			sb.WriteString(fmt.Sprintf("  - %s\n", target))
+			fmt.Fprintf(&sb, "  - %s\n", target)
 		}
 	}
 	sb.WriteString("---\n\n")
 
 	// Write title (use name if available)
 	if section.Name != "" {
-		sb.WriteString(fmt.Sprintf("# %s\n\n", section.Name))
+		fmt.Fprintf(&sb, "# %s\n\n", section.Name)
 	}
 
 	// Write content
@@ -344,23 +344,23 @@ func (m *V2ToV3Migrator) buildAgentContent(agent *config.Agent) string {
 	if agentName == "" {
 		agentName = agent.ID
 	}
-	sb.WriteString(fmt.Sprintf("name: %s\n", agentName))
+	fmt.Fprintf(&sb, "name: %s\n", agentName)
 
 	if agent.Description != "" {
-		sb.WriteString(fmt.Sprintf("description: %s\n", agent.Description))
+		fmt.Fprintf(&sb, "description: %s\n", agent.Description)
 	}
 
 	if agent.Model != "" {
-		sb.WriteString(fmt.Sprintf("model: %s\n", agent.Model))
+		fmt.Fprintf(&sb, "model: %s\n", agent.Model)
 	}
 
 	sb.WriteString("---\n\n")
 
 	// Write title
 	if agent.Name != "" {
-		sb.WriteString(fmt.Sprintf("# %s\n\n", agent.Name))
+		fmt.Fprintf(&sb, "# %s\n\n", agent.Name)
 	} else {
-		sb.WriteString(fmt.Sprintf("# %s\n\n", agent.ID))
+		fmt.Fprintf(&sb, "# %s\n\n", agent.ID)
 	}
 
 	// Write system prompt if available
