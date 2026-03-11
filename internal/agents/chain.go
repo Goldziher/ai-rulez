@@ -463,7 +463,7 @@ func initializeBaseConfigFile(context *ProjectContext, providerConfig templates.
 	}
 
 	// Format the generated YAML with yamlfmt if available
-	formatConfigFile("ai-rulez.yaml")
+	formatConfigFile()
 	return nil
 }
 
@@ -1262,20 +1262,22 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 	return failedTasks, successCount, criticalErrors
 }
 
-// formatConfigFile formats the YAML file using yamlfmt if available
-func formatConfigFile(filename string) {
+// formatConfigFile formats the generated root config file using yamlfmt if available.
+func formatConfigFile() {
+	const configFilename = "ai-rulez.yaml"
+
 	// Check if yamlfmt is available
 	if _, err := exec.LookPath("yamlfmt"); err != nil {
-		logger.Debug("yamlfmt not found, skipping YAML formatting", "file", filename)
+		logger.Debug("yamlfmt not found, skipping YAML formatting", "file", configFilename)
 		return
 	}
 
 	// Run yamlfmt on the file
-	cmd := exec.Command("yamlfmt", "-w", filename)
+	cmd := exec.Command("yamlfmt", "-w", configFilename)
 	if err := cmd.Run(); err != nil {
-		logger.Warn("Failed to format YAML with yamlfmt", "file", filename, "error", err)
+		logger.Warn("Failed to format YAML with yamlfmt", "file", configFilename, "error", err)
 		return
 	}
 
-	logger.Debug("Formatted YAML file with yamlfmt", "file", filename)
+	logger.Debug("Formatted YAML file with yamlfmt", "file", configFilename)
 }

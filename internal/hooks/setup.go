@@ -260,10 +260,9 @@ func setupHusky() error {
 		return fmt.Errorf(".husky directory not found")
 	}
 
-	preCommitPath := ".husky/pre-commit"
 	var hookContent string
 
-	if data, err := os.ReadFile(preCommitPath); err == nil {
+	if data, err := os.ReadFile(".husky/pre-commit"); err == nil {
 		hookContent = string(data)
 
 		if strings.Contains(hookContent, "ai-rulez") {
@@ -286,7 +285,13 @@ npx ai-rulez validate || exit 1
 `
 	}
 
-	if err := os.WriteFile(preCommitPath, []byte(hookContent), 0o755); err != nil {
+	huskyRoot, err := os.OpenRoot(".husky")
+	if err != nil {
+		return fmt.Errorf("failed to open .husky directory: %w", err)
+	}
+	defer func() { _ = huskyRoot.Close() }()
+
+	if err := huskyRoot.WriteFile("pre-commit", []byte(hookContent), 0o755); err != nil {
 		return fmt.Errorf("failed to write husky pre-commit hook: %w", err)
 	}
 

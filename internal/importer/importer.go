@@ -794,13 +794,13 @@ func (i *Importer) writeContentFile(item *ImportedContent) error {
 		output.WriteString("---\n")
 
 		if item.Metadata.Priority != "" {
-			output.WriteString(fmt.Sprintf("priority: %s\n", item.Metadata.Priority))
+			fmt.Fprintf(&output, "priority: %s\n", item.Metadata.Priority)
 		}
 
 		if len(item.Metadata.Targets) > 0 {
 			output.WriteString("targets:\n")
 			for _, target := range item.Metadata.Targets {
-				output.WriteString(fmt.Sprintf("  - %s\n", target))
+				fmt.Fprintf(&output, "  - %s\n", target)
 			}
 		}
 

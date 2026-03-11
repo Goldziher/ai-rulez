@@ -1,156 +1,75 @@
-version: '3'
-
-vars:
-  BINARY_NAME: ai-rulez
-  GOLANGCI_VERSION: "v2.9.0"
+version: "3"
 
 tasks:
-  build:
-    desc: Build the binary
+  default:
+    desc: Show available tasks
     cmds:
-      - go build -o bin/{{.BINARY_NAME}} ./cmd
+      - task --list
 
-  install:
-    desc: Install the binary
+  setup:
+    desc: "Install all dependencies and initialize project. Idempotent."
     cmds:
-      - go install ./cmd
+      - go mod download
+      - prek install
+      - prek install --hook-type commit-msg
+      - echo "Setup complete"
+
+  build:
+    desc: Build the ai-rulez CLI binary
+    cmds:
+      - go build -o bin/ai-rulez ./cmd/main.go
 
   test:
-    desc: Run unit tests
+    desc: Run all tests
     cmds:
-      - go test -timeout=30s ./cmd/... ./internal/... ./schema/... ./tests/platform/...
+      - go test ./...
 
-  test:coverage:
-    desc: Run unit tests with coverage
+  test:verbose:
+    desc: Run all tests with verbose output
     cmds:
-      - go test -timeout=30s -v -coverprofile=coverage.out ./cmd/... ./internal/... ./schema/... ./tests/platform/...
+      - go test -v ./...
 
   test:race:
-    desc: Run unit tests with race detection
+    desc: Run tests with race detector
     cmds:
-      - go test -timeout=30s -race -v ./cmd/... ./internal/... ./schema/... ./tests/platform/...
-
-  test:platform:
-    desc: Run cross-platform compatibility tests
-    cmds:
-      - go test -timeout=60s -v ./tests/platform/...
-
-  test:benchmark:
-    desc: Run benchmark tests
-    cmds:
-      - cd tests/benchmarks && go test -timeout=10m -bench=. -benchmem .
-
-  test:all:
-    desc: Run all tests (unit + platform + e2e)
-    deps: [test, test:platform, test:e2e]
-
-  test:e2e:
-    desc: Run all e2e tests
-    cmds:
-      - echo "🧪 Running comprehensive e2e test suite..."
-      - task: test:e2e:cli
-      - task: test:e2e:mcp
-      - task: test:e2e:integration
-      - echo "✅ All e2e tests completed!"
-
-  test:e2e:cli:
-    desc: Run CLI e2e tests
-    cmds:
-      - echo "🧪 Running CLI Tests..."
-      - go test -v -timeout=60s ./tests/integration/...
-
-  test:e2e:mcp:
-    desc: Run MCP e2e tests
-    cmds:
-      - echo "🧪 Running MCP Tests..."
-      - go test -v -timeout=60s ./tests/integration/...
-
-  test:e2e:integration:
-    desc: Run integration workflow tests
-    cmds:
-      - echo "🧪 Running Integration Tests..."
-      - go test -v -timeout=60s ./tests/integration/...
-
-  test:e2e:full:
-    desc: Run all e2e tests with verbose output
-    cmds:
-      - echo "🧪 Running full e2e test suite..."
-      - go test -v -timeout=120s ./tests/integration/...
-
-  test:e2e:quick:
-    desc: Run quick e2e smoke tests
-    cmds:
-      - echo "🧪 Running quick e2e smoke tests..."
-      - go test -timeout=30s -run "TestBasicCLISuite/TestRootHelp|TestMCPServerSuite/TestServerStartup|TestWorkflowsSuite/TestCompleteProjectLifecycle" ./tests/integration/...
-
-  format:
-    desc: Format code with go fmt
-    cmds:
-      - go fmt ./...
+      - go test -race ./...
 
   lint:
-    desc: Lint the code
-    deps: [format]
+    desc: Run all linters and formatters via prek
     cmds:
-      - go run github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}} run --fix
+      - prek run --all-files
 
-
-  tidy:
-    desc: Tidy dependencies
+  format:
+    desc: Format Go code
     cmds:
-      - go mod tidy
+      - gofmt -w .
+      - goimports -w .
+
+  check:
+    desc: Run all checks (lint + test)
+    cmds:
+      - task: lint
+      - task: test
 
   clean:
     desc: Clean build artifacts
     cmds:
       - rm -rf bin/
-      - rm -f coverage.out coverage.html
+      - go clean -cache
 
-  setup:
-    desc: Initial development environment setup
+  update:
+    desc: Update all dependencies
     cmds:
+      - go get -u ./...
       - go mod tidy
-      - go install github.com/evilmartians/lefthook@latest
-      - lefthook install
-      - pnpm install
-      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@{{.GOLANGCI_VERSION}}
-      - echo "✅ Setup complete!"
+      - prek autoupdate
 
-  dev:
-    desc: Development setup
-    deps: [tidy, format, lint, test]
-
-  ci:
-    desc: Run all checks (like CI)
-    deps: [tidy, format, lint, test:race, test:e2e]
-
-  ci:unit:
-    desc: Run CI unit tests only
-    deps: [tidy, format, lint, test:race]
-
-  ci:e2e:
-    desc: Run CI e2e tests only
-    deps: [test:e2e]
-
-  build:all:
-    desc: Build for multiple platforms
+  generate:
+    desc: Generate ai-rulez configuration files
     cmds:
-      - GOOS=linux GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-linux-amd64 ./cmd
-      - GOOS=windows GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-windows-amd64.exe ./cmd
-      - GOOS=darwin GOARCH=amd64 go build -o bin/{{.BINARY_NAME}}-darwin-amd64 ./cmd
-      - GOOS=darwin GOARCH=arm64 go build -o bin/{{.BINARY_NAME}}-darwin-arm64 ./cmd
+      - go run ./cmd/main.go generate
 
-  docs:serve:
-    desc: Serve documentation locally
+  validate:
+    desc: Validate ai-rulez configuration
     cmds:
-      - uv run mkdocs serve --dev-addr 127.0.0.1:8000
-
-  docs:build:
-    desc: Build documentation
-    cmds:
-      - uv run mkdocs build
-
-  docs:deploy:
-    desc: Deploy documentation to GitHub Pages
-    cmds:
-      - uv run mkdocs gh-deploy --force
+      - go run ./cmd/main.go validate

@@ -12,7 +12,7 @@ outputs:
     template:
       type: builtin
       value: claude-code-mcp
-  - path: ".cursor/mcp.json" 
+  - path: ".cursor/mcp.json"
     template:
       type: builtin
       value: cursor-mcp
@@ -42,18 +42,18 @@ mcp_servers:
       GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
     transport: "stdio"
     enabled: true
-    
-  - name: "postgres"  
+
+  - name: "postgres"
     description: "PostgreSQL database"
     command: "uvx"
     args: ["mcp-server-postgres", "--connection-string", "postgresql://user:pass@localhost/db"]
-    
+
   - name: "remote-api"
     description: "Remote API server"
     url: "https://api.example.com/mcp"
     transport: "http"
     enabled: true
-    
+
   - name: "disabled-server"
     description: "Disabled server"
     command: "python"
@@ -78,7 +78,7 @@ outputs:
       type: "inline"
       value: |
         # {{.ProjectName}} Commands
-        
+
         {{if .Commands}}
         ## Available Commands
         {{range .Commands}}
@@ -97,14 +97,14 @@ commands:
     usage: "/newtask <description>"
     system_prompt: "You are starting a new focused task"
     enabled: true
-    
+
   - name: "smol"
     aliases: ["compact", "summarize"]
     description: "Condense chat history"
     usage: "/smol"
     system_prompt: "Summarize conversation concisely"
     shortcut: "Ctrl+Shift+S"
-    
+
   - name: "review"
     description: "Request code review"
     usage: "/review [file]"
@@ -129,24 +129,24 @@ outputs:
     template:
       type: builtin
       value: claude-code-mcp
-    
+
 mcp_servers:
   - name: "test-server"
     description: "Test MCP server"
     command: "test"
     args: ["--mode", "test"]
     transport: "stdio"
-    
+
   - name: "http-server"
     description: "HTTP MCP server"
     url: "http://localhost:3000/mcp"
     transport: "http"
-    
+
 commands:
   - name: "test"
     description: "Test command"
     usage: "/test"
-    
+
   - name: "debug"
     aliases: ["dbg"]
     description: "Debug mode"
