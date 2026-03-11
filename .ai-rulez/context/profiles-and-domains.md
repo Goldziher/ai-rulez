@@ -13,8 +13,9 @@ targets:
 - Domain content lives under `.ai-rulez/domains/{name}/` and is included only when the domain is in the active profile.
 - Profiles are defined in `.ai-rulez/config.yaml`.
 - The built-in `default` profile behaves as follows:
-  - If **no profiles** are defined, `default` includes **root content and all domains**.
-  - If profiles **are** defined but no explicit `default` is set, `default` includes **root content and builtin domains only**.
+  - If the user explicitly defines `profiles: { "default": [...] }` in config, that definition is honoured like any named profile.
+  - If **no profiles** are defined, `default` includes **root content and all domains** (including domains from includes).
+  - If profiles **are** defined but `"default"` is not among them, `default` includes **root content, builtin domains, and domains sourced from external includes (`FromInclude`)**.
 - Domain MCP servers can override root MCP entries by name.
 
 Use profiles to tailor outputs for different teams (e.g., `backend`, `frontend`, `qa`).

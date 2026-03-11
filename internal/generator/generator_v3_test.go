@@ -712,6 +712,32 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
 	})
 
+	t.Run("explicitly defined profiles[default] is honored like a named profile", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {Name: "php"},
+					"go":  {Name: "go", Builtin: true},
+				},
+			},
+			// User explicitly wrote profiles: { "default": ["php"] }
+			Profiles: map[string][]string{
+				"default": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		// Explicit profiles["default"] wins: php should be present, go (builtin) also
+		// present because GetContentForProfile always includes root + profile domains.
+		_, hasPHP := content.Domains["php"]
+		assert.True(t, hasPHP, "expected explicitly listed php domain to be present when profiles[default] is defined")
+	})
+
 	t.Run("default profile includes FromInclude domains even when profiles are defined", func(t *testing.T) {
 		cfg := &config.ConfigV3{
 			Content: &config.ContentTreeV3{

@@ -123,6 +123,12 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 
 	// Special case: "default" profile
 	if profile == defaultProfileName {
+		// If the user explicitly defined profiles["default"], honor it like any
+		// other named profile rather than applying the built-in fallback logic.
+		if g.config.HasProfile(defaultProfileName) {
+			return g.config.GetContentForProfile(defaultProfileName)
+		}
+
 		// When no profiles are defined, "default" should include all content
 		// (root + all domains). This is important for consumers that rely on
 		// includes and don't define their own profiles.
