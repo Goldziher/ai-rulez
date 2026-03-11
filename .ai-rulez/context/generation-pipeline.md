@@ -26,4 +26,4 @@ Profile notes:
   1. If `profiles["default"]` is explicitly defined in config → use it like any named profile.
   2. If no profiles are defined at all → include root content and all domains (including included domains).
   3. If other profiles exist but `"default"` is not defined → include root content, builtin domains, and `FromInclude` domains.
-- `ai-rulez generate --profile <name>` builds root content plus the named profile's domains.
+- `ai-rulez generate --profile <name>` builds root content plus the named profile's domains, along with builtin and `FromInclude` domains.
