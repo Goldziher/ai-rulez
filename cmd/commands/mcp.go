@@ -14,8 +14,8 @@ import (
 var MCPCmd = &cobra.Command{
 	Use:   "mcp",
 	Short: "Start Model Context Protocol (MCP) server",
-	Long: `Start an MCP server that allows AI assistants to interact with 
-ai-rulez configuration dynamically. The server provides tools for reading, 
+	Long: `Start an MCP server that allows AI assistants to interact with
+ai-rulez configuration dynamically. The server provides tools for reading,
 creating, updating, and deleting configuration elements.
 
 The MCP server communicates via stdin/stdout and is designed to be integrated

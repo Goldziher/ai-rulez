@@ -20,10 +20,10 @@ rules:
 
 const InvalidPriorityConfig = `metadata:
   name: "Invalid Priority"
-  
+
 outputs:
   - path: "output.md"
-  
+
 rules:
   - name: "Bad Priority Rule"
     content: "Rule with invalid priority"
@@ -32,7 +32,7 @@ rules:
 
 const InvalidTemplateTypeConfig = `metadata:
   name: "Invalid Template"
-  
+
 outputs:
   - path: "output.md"
     template:
@@ -42,13 +42,13 @@ outputs:
 
 const InvalidTargetsConfig = `metadata:
   name: "Invalid Targets"
-  
+
 outputs:
   - path: "output.md"
-  
+
 named_targets:
     123invalid: ["*.go"]  # Invalid named target (starts with number)
-    
+
 rules:
   - name: "Bad Target Rule"
     content: "Rule with bad target"
@@ -57,7 +57,7 @@ rules:
 
 const CircularExtendsConfig = `metadata:
   name: "Circular Reference"
-  
+
 extends: "./circular.yaml"  # Points to itself
 
 outputs:
@@ -66,32 +66,32 @@ outputs:
 
 const MissingIncludesConfig = `metadata:
   name: "Missing Includes"
-  
+
 includes:
   - "./does-not-exist.yaml"
   - "https://example.com/404.yaml"
-  
+
 outputs:
   - path: "output.md"
 `
 
 const InvalidMCPServerConfig = `metadata:
   name: "Invalid MCP Server"
-  
+
 outputs:
   - path: ".mcp.json"
-  
+
 mcp_servers:
   - name: "no-transport"
     description: "Missing transport"
     command: "test"
     # Missing required transport field
-    
+
   - name: "http-no-url"
     description: "HTTP without URL"
     transport: "http"
     # Missing required URL for HTTP transport
-    
+
   - name: "stdio-with-url"
     description: "STDIO with URL"
     command: "test"
@@ -101,39 +101,39 @@ mcp_servers:
 
 const InvalidCommandConfig = `metadata:
   name: "Invalid Commands"
-  
+
 outputs:
   - path: "output.md"
-  
+
 commands:
   - # Missing required name field
     description: "No name command"
-    
+
   - name: ""  # Empty name
     description: "Empty name command"
-    
+
   - name: "duplicate"
     description: "First duplicate"
-    
+
   - name: "duplicate"  # Duplicate command name
     description: "Second duplicate"
 `
 
 const InvalidAgentConfig = `metadata:
   name: "Invalid Agents"
-  
+
 outputs:
   - path: ".claude/agents/"
     type: "agent"
-  
+
 agents:
   - # Missing required name field
     description: "No name agent"
-    
+
   - name: "invalid-tools"
     description: "Agent with invalid tools"
     tools: ["InvalidTool", "AnotherBadTool"]  # Non-existent tools
-    
+
   - name: "bad-priority"
     description: "Agent with bad priority"
     priority: 999  # Invalid priority value

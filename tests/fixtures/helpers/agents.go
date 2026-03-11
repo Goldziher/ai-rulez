@@ -25,14 +25,14 @@ agents:
     priority: critical
     tools: ["Read", "Edit", "Grep"]
     system_prompt: "You are a code reviewer focused on quality"
-    
+
   - name: "test-writer"
     description: "Writes comprehensive tests"
     priority: high
     tools: ["Read", "Write", "Edit", "Bash"]
     system_prompt: "You write comprehensive test cases"
     targets: ["**/*_test.go", "**/*.test.ts"]
-    
+
   - name: "doc-writer"
     description: "Documentation specialist"
     priority: medium
@@ -59,13 +59,13 @@ agents:
       value: |
         You are a specialized agent.
         Focus on: {{.Description}}
-        
+
   - name: "file-agent"
     description: "Agent with file template"
     template:
       type: file
       value: ./agent-template.txt
-      
+
   - name: "builtin-agent"
     description: "Agent with builtin template"
     template:
@@ -89,7 +89,7 @@ agents:
     id: "multi-tool-001"
     description: "Agent with many tools"
     priority: critical
-    tools: 
+    tools:
       - "Read"
       - "Write"
       - "Edit"
@@ -104,7 +104,7 @@ agents:
       - "src/**"
       - "tests/**"
       - "docs/**"
-      
+
   - name: "disabled-agent"
     description: "This agent is disabled"
     enabled: false

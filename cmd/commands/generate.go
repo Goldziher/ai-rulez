@@ -29,7 +29,7 @@ var GenerateCmd = &cobra.Command{
 	Use:   "generate [config-file]",
 	Short: "Generate AI assistant rule files from configuration",
 	Long: `Generate AI assistant rule files based on the configuration.
-This will create markdown files for various AI assistants like Claude, 
+This will create markdown files for various AI assistants like Claude,
 Cursor, Windsurf, etc. based on your configuration.`,
 	Aliases: []string{"gen", "g"},
 	Args:    cobra.MaximumNArgs(1),
