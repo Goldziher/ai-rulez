@@ -716,9 +716,9 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 		cfg := &config.ConfigV3{
 			Content: &config.ContentTreeV3{
 				Domains: map[string]*config.DomainV3{
-					"php":     {Name: "php"},                              // non-builtin, referenced by a profile
-					"go":      {Name: "go", Builtin: true},               // builtin domain
-					"python":  {Name: "python", FromInclude: true},       // from external include
+					"php":    {Name: "php"},                       // non-builtin, referenced by a profile
+					"go":     {Name: "go", Builtin: true},         // builtin domain
+					"python": {Name: "python", FromInclude: true}, // from external include
 				},
 			},
 			Profiles: map[string][]string{
