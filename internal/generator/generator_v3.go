@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -46,8 +47,8 @@ func (g *GeneratorV3) Generate(profile string) error {
 		"agents", len(contentTree.Agents),
 		"domains", len(contentTree.Domains))
 
-	// Collect MCP servers for this profile
-	mcpServers := g.collectMCPServersForProfile(activeProfile)
+	// Collect MCP servers based on the resolved content tree
+	mcpServers := g.collectMCPServersForContent(contentTree)
 
 	// Create a temporary config with the filtered content and MCP servers
 	tempCfg := *g.config
@@ -115,12 +116,48 @@ func (g *GeneratorV3) resolveProfile(profile string) string {
 
 // getContentForProfile returns the content tree for a specific profile
 func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV3, error) {
-	// Special case: "default" profile means root content + builtins only (no user domains)
+	// Guard against nil content to avoid panics when GeneratorV3 is created
+	// with a ConfigV3 that hasn't been fully loaded.
+	if g.config.Content == nil {
+		return nil, config.ErrNoContent
+	}
+
+	// Special case: "default" profile
 	if profile == defaultProfileName {
-		builtinDomains := make(map[string]*config.DomainV3)
+		// If the user explicitly defined profiles["default"], honor it like any
+		// other named profile rather than applying the built-in fallback logic.
+		if g.config.HasProfile(defaultProfileName) {
+			return g.config.GetContentForProfile(defaultProfileName)
+		}
+
+		// When no profiles are defined, "default" should include all content
+		// (root + all domains). This is important for consumers that rely on
+		// includes and don't define their own profiles.
+		if len(g.config.Profiles) == 0 {
+			// Shallow-copy domains to avoid exposing internal map for mutation.
+			domainsCopy := make(map[string]*config.DomainV3, len(g.config.Content.Domains))
+			for name, domain := range g.config.Content.Domains {
+				domainsCopy[name] = domain
+			}
+
+			return &config.ContentTreeV3{
+				Rules:    g.config.Content.Rules,
+				Context:  g.config.Content.Context,
+				Skills:   g.config.Content.Skills,
+				Agents:   g.config.Content.Agents,
+				Commands: g.config.Content.Commands,
+				Domains:  domainsCopy,
+			}, nil
+		}
+
+		// When profiles are defined in the config, keep the previous
+		// behavior where the built-in "default" profile only sees
+		// root content and (optionally) built-in domains. FromInclude
+		// domains are always included regardless of profile definitions.
+		defaultDomains := make(map[string]*config.DomainV3)
 		for name, domain := range g.config.Content.Domains {
-			if domain.Builtin {
-				builtinDomains[name] = domain
+			if domain.Builtin || domain.FromInclude {
+				defaultDomains[name] = domain
 			}
 		}
 		return &config.ContentTreeV3{
@@ -129,7 +166,7 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 			Skills:   g.config.Content.Skills,
 			Agents:   g.config.Content.Agents,
 			Commands: g.config.Content.Commands,
-			Domains:  builtinDomains,
+			Domains:  defaultDomains,
 		}, nil
 	}
 
@@ -139,11 +176,15 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 		for name := range g.config.Profiles {
 			availableProfiles = append(availableProfiles, name)
 		}
+		sort.Strings(availableProfiles)
 
 		return nil, oops.
 			With("profile", profile).
 			With("available_profiles", availableProfiles).
-			Hint(fmt.Sprintf("Available profiles: %v\nOr use 'default' for root content only", availableProfiles)).
+			Hint(fmt.Sprintf(
+				"Available profiles: %v\nUse 'default' for the built-in profile (all content when no profiles are defined; root content plus builtin and FromInclude domains when profiles are defined).",
+				availableProfiles,
+			)).
 			Errorf("profile not found: %s", profile)
 	}
 
@@ -151,11 +192,11 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 	return g.config.GetContentForProfile(profile)
 }
 
-// collectMCPServersForProfile collects MCP servers for the active profile
-// Logic: collect root servers + domain servers from active profile
+// collectMCPServersForContent collects MCP servers for the resolved content tree.
+// Logic: collect root servers + domain servers from domains present in the tree
 // Domain servers override root by name
 // Only include enabled servers
-func (g *GeneratorV3) collectMCPServersForProfile(profile string) map[string]*config.MCPServerV3 {
+func (g *GeneratorV3) collectMCPServersForContent(content *config.ContentTreeV3) map[string]*config.MCPServerV3 {
 	collected := make(map[string]*config.MCPServerV3)
 
 	// Always include root servers (if enabled)
@@ -165,15 +206,19 @@ func (g *GeneratorV3) collectMCPServersForProfile(profile string) map[string]*co
 		}
 	}
 
-	// Include servers from domains in the active profile
-	domains := g.config.GetProfileDomains(profile)
-	for _, domainName := range domains {
-		if domain, ok := g.config.Content.Domains[domainName]; ok {
-			for name, server := range domain.MCPServers {
-				if server.IsEnabled() {
-					// Domain servers override root servers by name
-					collected[name] = server
-				}
+	// Include servers from domains that are part of the resolved content tree.
+	// Sort domain names to ensure deterministic override order when multiple domains
+	// define the same MCP server name.
+	domainNames := make([]string, 0, len(content.Domains))
+	for name := range content.Domains {
+		domainNames = append(domainNames, name)
+	}
+	sort.Strings(domainNames)
+	for _, domainName := range domainNames {
+		for name, server := range content.Domains[domainName].MCPServers {
+			if server.IsEnabled() {
+				// Domain servers override root servers by name
+				collected[name] = server
 			}
 		}
 	}

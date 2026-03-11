@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -215,12 +216,15 @@ func TestWindsurfPresetGenerator_GetName(t *testing.T) {
 
 func TestWindsurfPresetGenerator_GetOutputPaths(t *testing.T) {
 	g := &WindsurfPresetGenerator{}
-	paths := g.GetOutputPaths("/test/base")
+	baseDir := "/test/base"
+	paths := g.GetOutputPaths(baseDir)
 	if len(paths) != 1 {
 		t.Errorf("GetOutputPaths() returned %d paths, want 1", len(paths))
 	}
-	if paths[0] != "/test/base/.windsurf/rules" {
-		t.Errorf("GetOutputPaths()[0] = %v, want %v", paths[0], "/test/base/.windsurf/rules")
+	// Use filepath.Join so expected path matches OS (e.g. backslash on Windows).
+	expected := filepath.Join(baseDir, ".windsurf", "rules")
+	if paths[0] != expected {
+		t.Errorf("GetOutputPaths()[0] = %v, want %v", paths[0], expected)
 	}
 }
 
