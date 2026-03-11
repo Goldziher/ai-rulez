@@ -598,6 +598,57 @@ func TestValidateV3(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid type")
 	})
 
+	t.Run("fails when skill description is missing", func(t *testing.T) {
+		config := &ConfigV3{
+			Version: "3.0",
+			Name:    "test",
+			Presets: []PresetV3{
+				{BuiltIn: "codex"},
+			},
+			Content: &ContentTreeV3{
+				Skills: []ContentFile{
+					{
+						Name:    "core-principles",
+						Path:    "/tmp/.ai-rulez/skills/core-principles/SKILL.md",
+						Content: "# Core Principles",
+					},
+				},
+			},
+		}
+
+		err := config.ValidateV3()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required field 'description'")
+		assert.Contains(t, err.Error(), "core-principles")
+	})
+
+	t.Run("accepts skill description when present", func(t *testing.T) {
+		config := &ConfigV3{
+			Version: "3.0",
+			Name:    "test",
+			Presets: []PresetV3{
+				{BuiltIn: "codex"},
+			},
+			Content: &ContentTreeV3{
+				Skills: []ContentFile{
+					{
+						Name:    "core-principles",
+						Path:    "/tmp/.ai-rulez/skills/core-principles/SKILL.md",
+						Content: "# Core Principles",
+						Metadata: &MetadataV3{
+							Extra: map[string]string{
+								"description": "Project-wide engineering standards.",
+							},
+						},
+					},
+				},
+			},
+		}
+
+		err := config.ValidateV3()
+		assert.NoError(t, err)
+	})
+
 	t.Run("fails when default specified without profiles", func(t *testing.T) {
 		config := &ConfigV3{
 			Version: "3.0",

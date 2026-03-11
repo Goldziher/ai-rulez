@@ -252,7 +252,7 @@ func (m *V2ToV3Migrator) convertSections(sections []config.Section, aiRulezDir s
 		}
 
 		filePath := filepath.Join(skillDirPath, "SKILL.md")
-		content := m.buildSectionContent(&sections[i])
+		content := m.buildSectionContent(&sections[i], skillID)
 
 		if err := os.WriteFile(filePath, []byte(content), 0o644); err != nil {
 			return oops.
@@ -269,7 +269,7 @@ func (m *V2ToV3Migrator) convertSections(sections []config.Section, aiRulezDir s
 }
 
 // buildSectionContent builds the markdown content for a section with frontmatter
-func (m *V2ToV3Migrator) buildSectionContent(section *config.Section) string {
+func (m *V2ToV3Migrator) buildSectionContent(section *config.Section, skillID string) string {
 	var sb strings.Builder
 
 	// Write frontmatter
@@ -285,6 +285,7 @@ func (m *V2ToV3Migrator) buildSectionContent(section *config.Section) string {
 			fmt.Fprintf(&sb, "  - %s\n", target)
 		}
 	}
+	fmt.Fprintf(&sb, "description: %q\n", config.SkillDescriptionOrFallback("", skillID))
 	sb.WriteString("---\n\n")
 
 	// Write title (use name if available)

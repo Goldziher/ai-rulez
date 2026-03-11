@@ -23,14 +23,19 @@ func SetupTestBinary(t *testing.T) string {
 	t.Helper()
 
 	if binaryPath != "" {
-		return binaryPath
+		if _, err := os.Stat(binaryPath); err == nil {
+			return binaryPath
+		}
+
+		binaryPath = ""
 	}
 
-	// Get the absolute path to the testing/e2e directory
-	testDir, err := os.Getwd()
-	require.NoError(t, err)
+	_, helperFile, _, ok := runtime.Caller(0)
+	require.True(t, ok, "Failed to resolve helper source path")
 
-	// Find the project root by looking for go.mod
+	testDir := filepath.Dir(helperFile)
+
+	// Find the project root from the helper file location so tests remain stable after chdir.
 	projectRoot := testDir
 	for {
 		gomodPath := filepath.Join(projectRoot, "go.mod")
@@ -50,7 +55,7 @@ func SetupTestBinary(t *testing.T) string {
 	if runtime.GOOS == "windows" {
 		binaryName += ".exe"
 	}
-	binaryPath = filepath.Join(testDir, binaryName)
+	binaryPath = filepath.Join(os.TempDir(), fmt.Sprintf("%s-%d", binaryName, os.Getpid()))
 
 	//nolint:gosec // G204: Test utility needs to build binary with variables
 	cmd := exec.Command("go", "build", "-o", binaryPath, "./cmd")

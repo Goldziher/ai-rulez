@@ -316,6 +316,7 @@ func TestBuildSectionContent(t *testing.T) {
 			validate: func(t *testing.T, content string) {
 				assert.Contains(t, content, "---")
 				assert.Contains(t, content, "priority: high")
+				assert.Contains(t, content, `description: "test-section"`)
 				assert.Contains(t, content, "# Test Section")
 				assert.Contains(t, content, "This is section content.")
 			},
@@ -331,6 +332,7 @@ func TestBuildSectionContent(t *testing.T) {
 			validate: func(t *testing.T, content string) {
 				assert.Contains(t, content, "# Section Name")
 				assert.Contains(t, content, "priority: medium")
+				assert.Contains(t, content, `description: "section-id"`)
 			},
 		},
 	}
@@ -338,7 +340,11 @@ func TestBuildSectionContent(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			migrator := NewV2ToV3Migrator("", "")
-			content := migrator.buildSectionContent(&tt.section)
+			skillID := tt.section.ID
+			if skillID == "" {
+				skillID = "test-section"
+			}
+			content := migrator.buildSectionContent(&tt.section, skillID)
 			tt.validate(t, content)
 		})
 	}

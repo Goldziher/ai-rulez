@@ -168,15 +168,15 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 
 	// Description is required by Codex for skill loading.
 	builder.WriteString("description: ")
-	builder.WriteString(quoteYAMLString(resolveCodexSkillDescription(skill)))
+	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
 
 	if skill.Metadata != nil {
 		// Add short-description for user-facing display.
-		if shortDesc, ok := skill.Metadata.Extra["short-description"]; ok && strings.TrimSpace(shortDesc) != "" {
+		if shortDesc := config.SkillShortDescription(skill.Metadata); shortDesc != "" {
 			builder.WriteString("metadata:\n")
 			builder.WriteString("  short-description: ")
-			builder.WriteString(quoteYAMLString(strings.TrimSpace(shortDesc)))
+			builder.WriteString(quoteYAMLString(shortDesc))
 			builder.WriteString("\n")
 		}
 	}
@@ -187,23 +187,6 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString(skill.Content)
 
 	return builder.String()
-}
-
-func resolveCodexSkillDescription(skill config.ContentFile) string {
-	if skill.Metadata != nil {
-		if desc, ok := skill.Metadata.Extra["description"]; ok && strings.TrimSpace(desc) != "" {
-			return strings.TrimSpace(desc)
-		}
-		if shortDesc, ok := skill.Metadata.Extra["short-description"]; ok && strings.TrimSpace(shortDesc) != "" {
-			return strings.TrimSpace(shortDesc)
-		}
-	}
-
-	if strings.TrimSpace(skill.Name) != "" {
-		return "Instructions for " + strings.ReplaceAll(strings.TrimSpace(skill.Name), "-", " ") + "."
-	}
-
-	return "Instructions for this skill."
 }
 
 func quoteYAMLString(value string) string {

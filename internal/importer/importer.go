@@ -763,54 +763,15 @@ func (i *Importer) writeContent(items []ImportedContent) error {
 
 // writeContentFile writes a single content file
 func (i *Importer) writeContentFile(item *ImportedContent) error {
-	var dir string
-
-	switch item.Type {
-	case ContentTypeRule:
-		dir = filepath.Join(i.outputDir, "rules")
-	case ContentTypeContext:
-		dir = filepath.Join(i.outputDir, "context")
-	case ContentTypeSkill:
-		dir = filepath.Join(i.outputDir, "skills", item.Name)
-		if err := os.MkdirAll(dir, 0o755); err != nil {
-			return oops.
-				With("path", dir).
-				Wrapf(err, "create skill directory")
-		}
+	filename, err := i.contentFilename(item)
+	if err != nil {
+		return err
 	}
 
-	// Generate filename
-	var filename string
-	if item.Type == ContentTypeSkill {
-		filename = filepath.Join(dir, "SKILL.md")
-	} else {
-		filename = filepath.Join(dir, item.Name+".md")
-	}
-
-	// Build content with optional frontmatter
-	var output strings.Builder
-
-	if item.Metadata != nil {
-		output.WriteString("---\n")
-
-		if item.Metadata.Priority != "" {
-			fmt.Fprintf(&output, "priority: %s\n", item.Metadata.Priority)
-		}
-
-		if len(item.Metadata.Targets) > 0 {
-			output.WriteString("targets:\n")
-			for _, target := range item.Metadata.Targets {
-				fmt.Fprintf(&output, "  - %s\n", target)
-			}
-		}
-
-		output.WriteString("---\n\n")
-	}
-
-	output.WriteString(item.Content)
+	output := i.renderContentFile(item)
 
 	// Write file
-	if err := os.WriteFile(filename, []byte(output.String()), 0o644); err != nil {
+	if err := os.WriteFile(filename, []byte(output), 0o644); err != nil {
 		return oops.
 			With("path", filename).
 			Wrapf(err, "write file")
@@ -818,6 +779,69 @@ func (i *Importer) writeContentFile(item *ImportedContent) error {
 
 	logger.Debug("Wrote content file", "path", filename, "type", item.Type)
 	return nil
+}
+
+func (i *Importer) contentFilename(item *ImportedContent) (string, error) {
+	switch item.Type {
+	case ContentTypeRule:
+		return filepath.Join(i.outputDir, "rules", item.Name+".md"), nil
+	case ContentTypeContext:
+		return filepath.Join(i.outputDir, "context", item.Name+".md"), nil
+	case ContentTypeSkill:
+		dir := filepath.Join(i.outputDir, "skills", item.Name)
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			return "", oops.
+				With("path", dir).
+				Wrapf(err, "create skill directory")
+		}
+		return filepath.Join(dir, "SKILL.md"), nil
+	default:
+		return "", oops.With("type", item.Type).Errorf("unsupported content type")
+	}
+}
+
+func (i *Importer) renderContentFile(item *ImportedContent) string {
+	var output strings.Builder
+
+	writeFrontmatter(&output, item)
+	output.WriteString(item.Content)
+
+	return output.String()
+}
+
+func writeFrontmatter(output *strings.Builder, item *ImportedContent) {
+	if item.Type == ContentTypeSkill {
+		output.WriteString("---\n")
+		writeCommonFrontmatter(output, item.Metadata)
+		fmt.Fprintf(output, "description: %q\n", config.SkillDescriptionOrFallback(config.SkillDescription(item.Metadata), item.Name))
+		output.WriteString("---\n\n")
+		return
+	}
+
+	if item.Metadata == nil {
+		return
+	}
+
+	output.WriteString("---\n")
+	writeCommonFrontmatter(output, item.Metadata)
+	output.WriteString("---\n\n")
+}
+
+func writeCommonFrontmatter(output *strings.Builder, metadata *config.MetadataV3) {
+	if metadata == nil {
+		return
+	}
+
+	if metadata.Priority != "" {
+		fmt.Fprintf(output, "priority: %s\n", metadata.Priority)
+	}
+
+	if len(metadata.Targets) > 0 {
+		output.WriteString("targets:\n")
+		for _, target := range metadata.Targets {
+			fmt.Fprintf(output, "  - %s\n", target)
+		}
+	}
 }
 
 // writeConfig writes the config.yaml file with detected presets
