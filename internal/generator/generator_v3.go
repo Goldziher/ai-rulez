@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -175,6 +176,7 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 		for name := range g.config.Profiles {
 			availableProfiles = append(availableProfiles, name)
 		}
+		sort.Strings(availableProfiles)
 
 		return nil, oops.
 			With("profile", profile).

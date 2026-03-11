@@ -9,8 +9,8 @@ targets:
 
 # Profiles and Domains
 
-- Root content under `.ai-rulez/rules`, `context`, `skills`, and `agents` is always included.
-- Domain content lives under `.ai-rulez/domains/{name}/` and is included when the domain is in the active profile, except for the special `default` profile behavior described below.
+- Root content under `.ai-rulez/rules`, `context`, `skills`, `agents`, and `commands` is always included.
+- Domain content lives under `.ai-rulez/domains/{name}/` and is included when the domain is in the active profile. Builtin domains and domains sourced from external includes (`FromInclude`) are always included regardless of the active profile.
 - Profiles are defined in `.ai-rulez/config.yaml`.
 - The built-in `default` profile behaves as follows:
   - If the user explicitly defines `profiles: { "default": [...] }` in config, that definition is honoured like any named profile.
