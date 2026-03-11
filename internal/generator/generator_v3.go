@@ -206,9 +206,16 @@ func (g *GeneratorV3) collectMCPServersForContent(content *config.ContentTreeV3)
 		}
 	}
 
-	// Include servers from domains that are part of the resolved content tree
-	for _, domain := range content.Domains {
-		for name, server := range domain.MCPServers {
+	// Include servers from domains that are part of the resolved content tree.
+	// Sort domain names to ensure deterministic override order when multiple domains
+	// define the same MCP server name.
+	domainNames := make([]string, 0, len(content.Domains))
+	for name := range content.Domains {
+		domainNames = append(domainNames, name)
+	}
+	sort.Strings(domainNames)
+	for _, domainName := range domainNames {
+		for name, server := range content.Domains[domainName].MCPServers {
 			if server.IsEnabled() {
 				// Domain servers override root servers by name
 				collected[name] = server

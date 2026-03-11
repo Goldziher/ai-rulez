@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -869,4 +870,81 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 		assert.True(t, hasGo, "expected builtin domain MCP server to be included for default when profiles are defined")
 		assert.False(t, hasPHP, "expected non-builtin profile domain MCP server to be excluded for default when profiles are defined")
 	})
+
+	t.Run("domain MCP server override order is deterministic when multiple domains share a server name", func(t *testing.T) {
+		enabled := true
+
+		cfg := &config.ConfigV3{
+			MCPServers: map[string]*config.MCPServerV3{},
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"aaa": {
+						Name: "aaa",
+						MCPServers: map[string]*config.MCPServerV3{
+							"shared-server": {
+								Name:    "aaa-value",
+								Enabled: &enabled,
+							},
+						},
+					},
+					"zzz": {
+						Name: "zzz",
+						MCPServers: map[string]*config.MCPServerV3{
+							"shared-server": {
+								Name:    "zzz-value",
+								Enabled: &enabled,
+							},
+						},
+					},
+				},
+			},
+			Profiles: map[string][]string{},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+
+		// Run multiple times to catch any non-determinism
+		var firstName string
+		for i := 0; i < 20; i++ {
+			servers := gen.collectMCPServersForContent(content)
+			name := servers["shared-server"].Name
+			if i == 0 {
+				firstName = name
+			} else {
+				assert.Equal(t, firstName, name, "MCP server override order should be deterministic across runs")
+			}
+		}
+		// Alphabetically last domain ("zzz") should win
+		assert.Equal(t, "zzz-value", firstName, "expected alphabetically last domain to win override")
+	})
+}
+
+func TestGeneratorV3_InvalidProfile_SortedHint(t *testing.T) {
+	cfg := &config.ConfigV3{
+		Profiles: map[string][]string{
+			"zebra":  {},
+			"alpha":  {},
+			"middle": {},
+		},
+		Content: &config.ContentTreeV3{
+			Rules: []config.ContentFile{
+				{Path: "rule.md", Content: "content"},
+			},
+		},
+	}
+
+	gen := NewGeneratorV3(cfg)
+	err := gen.Generate("nonexistent")
+	require.Error(t, err)
+
+	var oopsErr oops.OopsError
+	require.ErrorAs(t, err, &oopsErr)
+	hint := oopsErr.Hint()
+	// Profiles should appear in sorted order in the hint
+	alphaIdx := strings.Index(hint, "alpha")
+	middleIdx := strings.Index(hint, "middle")
+	zebraIdx := strings.Index(hint, "zebra")
+	assert.True(t, alphaIdx < middleIdx && middleIdx < zebraIdx, "available profiles in hint should be sorted alphabetically, got: %s", hint)
 }
