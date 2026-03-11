@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -641,32 +642,6 @@ func TestGitignorePathExtraction(t *testing.T) {
 	}
 }
 
-// Test for Issue #13: Verify default profile creates empty domains map
-func TestGeneratorV3_DefaultProfileDomainsLogic(t *testing.T) {
-	// This test verifies the code logic without needing to fully load config
-	// It ensures that when profile == "default", an empty domains map is created
-
-	tests := []struct {
-		name          string
-		profile       string
-		shouldBeEmpty bool
-	}{
-		{"default profile should have empty domains", "default", true},
-		{"non-default profile would include domains", "backend", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Simulate the fixed logic
-			if tt.profile == "default" {
-				domains := make(map[string]*config.DomainV3) // Empty - correct behavior
-				assert.Equal(t, 0, len(domains), "default profile domains should be empty")
-				assert.Equal(t, tt.shouldBeEmpty, len(domains) == 0)
-			}
-		})
-	}
-}
-
 func TestIsIgnored(t *testing.T) {
 	patterns := []string{"*.log", "tmp/", ".claude"}
 
@@ -686,4 +661,290 @@ func TestIsIgnored(t *testing.T) {
 			assert.Equal(t, tt.want, got, "filename: %s", tt.filename)
 		})
 	}
+}
+
+// Test for Issue #13 (updated): default profile domains behavior with/without profiles
+func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.T) {
+	t.Run("default profile includes all domains when no profiles defined", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {Name: "php"},
+				},
+			},
+			Profiles: map[string][]string{},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		assert.Len(t, content.Domains, 1)
+		_, ok := content.Domains["php"]
+		assert.True(t, ok, "expected php domain to be present for default profile when no profiles are defined")
+	})
+
+	t.Run("default profile only includes builtin domains when profiles are defined", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {Name: "php"},
+					"go":  {Name: "go", Builtin: true},
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		// Should only see builtin domains on default when profiles exist
+		assert.Len(t, content.Domains, 1)
+		_, hasGo := content.Domains["go"]
+		_, hasPHP := content.Domains["php"]
+		assert.True(t, hasGo, "expected builtin go domain to be present for default profile when profiles are defined")
+		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
+	})
+
+	t.Run("explicitly defined profiles[default] is honored like a named profile", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {Name: "php"},
+					"go":  {Name: "go", Builtin: true},
+				},
+			},
+			// User explicitly wrote profiles: { "default": ["php"] }
+			Profiles: map[string][]string{
+				"default": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		// Explicit profiles["default"] wins: php should be present, go (builtin) also
+		// present because GetContentForProfile always includes root + profile domains.
+		_, hasPHP := content.Domains["php"]
+		assert.True(t, hasPHP, "expected explicitly listed php domain to be present when profiles[default] is defined")
+	})
+
+	t.Run("default profile includes FromInclude domains even when profiles are defined", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php":    {Name: "php"},                       // non-builtin, referenced by a profile
+					"go":     {Name: "go", Builtin: true},         // builtin domain
+					"python": {Name: "python", FromInclude: true}, // from external include
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		// Should see builtin and FromInclude domains on default when profiles exist
+		assert.Len(t, content.Domains, 2)
+		_, hasGo := content.Domains["go"]
+		_, hasPHP := content.Domains["php"]
+		_, hasPython := content.Domains["python"]
+		assert.True(t, hasGo, "expected builtin go domain to be present for default profile when profiles are defined")
+		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
+		assert.True(t, hasPython, "expected FromInclude python domain to be present for default profile when profiles are defined")
+	})
+}
+
+// Test MCP server aggregation for default profile with and without profiles.
+func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T) {
+	t.Run("default profile includes domain MCP servers when no profiles defined", func(t *testing.T) {
+		rootEnabled := true
+		domainEnabled := true
+
+		cfg := &config.ConfigV3{
+			MCPServers: map[string]*config.MCPServerV3{
+				"root-server": {
+					Name:    "root-server",
+					Enabled: &rootEnabled,
+				},
+			},
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {
+						Name: "php",
+						MCPServers: map[string]*config.MCPServerV3{
+							"php-server": {
+								Name:    "php-server",
+								Enabled: &domainEnabled,
+							},
+						},
+					},
+				},
+			},
+			Profiles: map[string][]string{},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+
+		servers := gen.collectMCPServersForContent(content)
+		require.NotNil(t, servers)
+
+		// Should contain both root and domain MCP servers
+		_, hasRoot := servers["root-server"]
+		_, hasPHP := servers["php-server"]
+		assert.True(t, hasRoot, "expected root MCP server to be included")
+		assert.True(t, hasPHP, "expected domain MCP server to be included when no profiles are defined")
+	})
+
+	t.Run("default profile only includes root and builtin domain MCP servers when profiles are defined", func(t *testing.T) {
+		rootEnabled := true
+		domainEnabled := true
+
+		cfg := &config.ConfigV3{
+			MCPServers: map[string]*config.MCPServerV3{
+				"root-server": {
+					Name:    "root-server",
+					Enabled: &rootEnabled,
+				},
+			},
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php": {
+						Name: "php",
+						MCPServers: map[string]*config.MCPServerV3{
+							"php-server": {
+								Name:    "php-server",
+								Enabled: &domainEnabled,
+							},
+						},
+					},
+					// Builtin domain should always be visible on default, even when profiles exist.
+					"go": {
+						Name:    "go",
+						Builtin: true,
+						MCPServers: map[string]*config.MCPServerV3{
+							"go-server": {
+								Name:    "go-server",
+								Enabled: &domainEnabled,
+							},
+						},
+					},
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+
+		servers := gen.collectMCPServersForContent(content)
+		require.NotNil(t, servers)
+
+		// Should contain root and builtin domain MCP servers, but not non-builtin profile-only domain servers.
+		_, hasRoot := servers["root-server"]
+		_, hasGo := servers["go-server"]
+		_, hasPHP := servers["php-server"]
+		assert.True(t, hasRoot, "expected root MCP server to be included")
+		assert.True(t, hasGo, "expected builtin domain MCP server to be included for default when profiles are defined")
+		assert.False(t, hasPHP, "expected non-builtin profile domain MCP server to be excluded for default when profiles are defined")
+	})
+
+	t.Run("domain MCP server override order is deterministic when multiple domains share a server name", func(t *testing.T) {
+		enabled := true
+
+		cfg := &config.ConfigV3{
+			MCPServers: map[string]*config.MCPServerV3{},
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"aaa": {
+						Name: "aaa",
+						MCPServers: map[string]*config.MCPServerV3{
+							"shared-server": {
+								Name:    "aaa-value",
+								Enabled: &enabled,
+							},
+						},
+					},
+					"zzz": {
+						Name: "zzz",
+						MCPServers: map[string]*config.MCPServerV3{
+							"shared-server": {
+								Name:    "zzz-value",
+								Enabled: &enabled,
+							},
+						},
+					},
+				},
+			},
+			Profiles: map[string][]string{},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+
+		// Run multiple times to catch any non-determinism
+		var firstName string
+		for i := 0; i < 20; i++ {
+			servers := gen.collectMCPServersForContent(content)
+			name := servers["shared-server"].Name
+			if i == 0 {
+				firstName = name
+			} else {
+				assert.Equal(t, firstName, name, "MCP server override order should be deterministic across runs")
+			}
+		}
+		// Alphabetically last domain ("zzz") should win
+		assert.Equal(t, "zzz-value", firstName, "expected alphabetically last domain to win override")
+	})
+}
+
+func TestGeneratorV3_InvalidProfile_SortedHint(t *testing.T) {
+	cfg := &config.ConfigV3{
+		Profiles: map[string][]string{
+			"zebra":  {},
+			"alpha":  {},
+			"middle": {},
+		},
+		Content: &config.ContentTreeV3{
+			Rules: []config.ContentFile{
+				{Path: "rule.md", Content: "content"},
+			},
+		},
+	}
+
+	gen := NewGeneratorV3(cfg)
+	err := gen.Generate("nonexistent")
+	require.Error(t, err)
+
+	var oopsErr oops.OopsError
+	require.ErrorAs(t, err, &oopsErr)
+	hint := oopsErr.Hint()
+	// Profiles should appear in sorted order in the hint
+	alphaIdx := strings.Index(hint, "alpha")
+	middleIdx := strings.Index(hint, "middle")
+	zebraIdx := strings.Index(hint, "zebra")
+	assert.True(t, alphaIdx < middleIdx && middleIdx < zebraIdx, "available profiles in hint should be sorted alphabetically, got: %s", hint)
 }

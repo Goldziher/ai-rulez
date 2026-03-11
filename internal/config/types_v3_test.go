@@ -694,7 +694,7 @@ func TestConfigV3_GetContentForProfile(t *testing.T) {
 		content, err := cfg.GetContentForProfile("backend")
 		require.NoError(t, err)
 		require.NotNil(t, content)
-		assert.Len(t, content.Rules, 1)           // root only (not flattened)
+		assert.Len(t, content.Rules, 1)                // root only (not flattened)
 		assert.Contains(t, content.Domains, "backend") // active domain present
 		assert.Len(t, content.Domains["backend"].Rules, 1)
 	})
