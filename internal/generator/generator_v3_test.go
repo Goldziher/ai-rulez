@@ -711,6 +711,36 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 		assert.True(t, hasGo, "expected builtin go domain to be present for default profile when profiles are defined")
 		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
 	})
+
+	t.Run("default profile includes FromInclude domains even when profiles are defined", func(t *testing.T) {
+		cfg := &config.ConfigV3{
+			Content: &config.ContentTreeV3{
+				Domains: map[string]*config.DomainV3{
+					"php":     {Name: "php"},                              // non-builtin, referenced by a profile
+					"go":      {Name: "go", Builtin: true},               // builtin domain
+					"python":  {Name: "python", FromInclude: true},       // from external include
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"php"},
+			},
+		}
+
+		gen := &GeneratorV3{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		// Should see builtin and FromInclude domains on default when profiles exist
+		assert.Len(t, content.Domains, 2)
+		_, hasGo := content.Domains["go"]
+		_, hasPHP := content.Domains["php"]
+		_, hasPython := content.Domains["python"]
+		assert.True(t, hasGo, "expected builtin go domain to be present for default profile when profiles are defined")
+		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
+		assert.True(t, hasPython, "expected FromInclude python domain to be present for default profile when profiles are defined")
+	})
 }
 
 // Test MCP server aggregation for default profile with and without profiles.
