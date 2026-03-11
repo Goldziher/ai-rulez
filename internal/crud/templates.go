@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -71,16 +72,13 @@ func GenerateContextTemplate(name, priority string, targets []string, content st
 // GenerateSkillTemplate generates a template for a skill file
 func GenerateSkillTemplate(name, description, priority string, targets []string, content string) string {
 	frontmatter := GenerateFrontmatter(priority, targets)
+	description = config.SkillDescriptionOrFallback(description, name)
 
-	// Add description to frontmatter if provided
-	if description != "" {
-		// Insert description before ---
-		lines := strings.Split(frontmatter, "\n")
-		// Remove the closing ---
-		lines = lines[:len(lines)-2] // Remove empty line and closing ---
-		lines = append(lines, fmt.Sprintf("description: %q", description), "---", "")
-		frontmatter = strings.Join(lines, "\n")
-	}
+	// Insert description before the closing frontmatter delimiter.
+	lines := strings.Split(frontmatter, "\n")
+	lines = lines[:len(lines)-2] // Remove empty line and closing ---
+	lines = append(lines, fmt.Sprintf("description: %q", description), "---", "")
+	frontmatter = strings.Join(lines, "\n")
 
 	body := EnsureTrailingNewline(content)
 
@@ -106,5 +104,5 @@ func GenerateEmptyContextTemplate() string {
 
 // GenerateEmptySkillTemplate generates an empty skill template with just frontmatter
 func GenerateEmptySkillTemplate() string {
-	return GenerateFrontmatter("medium", []string{})
+	return GenerateSkillTemplate("skill", "", "medium", []string{}, "")
 }

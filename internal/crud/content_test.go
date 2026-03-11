@@ -257,6 +257,10 @@ func TestAddSkill(t *testing.T) {
 				// Verify skill directory structure
 				skillDir := filepath.Dir(result.FullPath)
 				assert.DirExists(t, skillDir)
+
+				content, err := os.ReadFile(result.FullPath)
+				require.NoError(t, err)
+				assert.Contains(t, string(content), `description: "code-review"`)
 			},
 		},
 		{
@@ -273,6 +277,19 @@ func TestAddSkill(t *testing.T) {
 			},
 		},
 		{
+			name: "skill with explicit description",
+			req: &crud.AddFileRequest{
+				Name:        "workflow-agent",
+				Description: "Guides workflow-related changes.",
+			},
+			shouldErr: false,
+			checkFn: func(t *testing.T, result *crud.FileResult) {
+				content, err := os.ReadFile(result.FullPath)
+				require.NoError(t, err)
+				assert.Contains(t, string(content), `description: "Guides workflow-related changes."`)
+			},
+		},
+		{
 			name: "skill with custom content",
 			req: &crud.AddFileRequest{
 				Name:    "analysis-skill",
@@ -282,6 +299,7 @@ func TestAddSkill(t *testing.T) {
 			checkFn: func(t *testing.T, result *crud.FileResult) {
 				content, err := os.ReadFile(result.FullPath)
 				require.NoError(t, err)
+				assert.Contains(t, string(content), `description: "analysis-skill"`)
 				assert.Contains(t, string(content), "# Analysis Skill")
 			},
 		},

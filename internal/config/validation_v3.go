@@ -25,8 +25,51 @@ func (c *ConfigV3) ValidateV3() error {
 		return err
 	}
 
+	if err := c.validateSkillDescriptions(); err != nil {
+		return err
+	}
+
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
+
+	return nil
+}
+
+func (c *ConfigV3) validateSkillDescriptions() error {
+	if c.Content == nil {
+		return nil
+	}
+
+	if err := validateSkillSlice(c.Content.Skills, "root"); err != nil {
+		return err
+	}
+
+	for domainName, domain := range c.Content.Domains {
+		if domain == nil {
+			continue
+		}
+		if err := validateSkillSlice(domain.Skills, "domain "+domainName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateSkillSlice(skills []ContentFile, scope string) error {
+	for _, skill := range skills {
+		if SkillDescription(skill.Metadata) != "" {
+			continue
+		}
+
+		skillID := SkillID(skill)
+		return oops.
+			With("scope", scope).
+			With("skill", skillID).
+			With("path", skill.Path).
+			Hint("Add YAML frontmatter with a non-empty 'description' field to the skill.\nExample:\n---\ndescription: \"What this skill is for\"\n---").
+			Errorf("skill %q missing required field 'description'", skillID)
+	}
 
 	return nil
 }

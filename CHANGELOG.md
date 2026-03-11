@@ -6,6 +6,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.9.0] - 2026-03-11
+
+### Added
+- Root `.ai-rulez/commands/` documentation files for `build`, `fix`, `lint`, `review`, and `test`
+- Repository-managed `.pre-commit-config.yaml` with commit-message linting and `prek`-driven checks
+
+### Changed
+- Replaced `lefthook.yaml` with the `prek`/pre-commit toolchain across local workflows, CI wiring, and helper scripts
+- Refreshed command-generation, docs-site output, and test fixtures to match the new command docs and hook setup
+- Aligned Go/tooling dependencies and CI lint configuration with the current Go `1.26` toolchain
+
+### Fixed
+- Codex skill generation now always emits `description` in `.codex/skills/*/SKILL.md`, falling back to the skill ID when needed
+- V3 validation now rejects source `SKILL.md` files that omit a non-empty `description`
+- Skill import, CRUD creation, and V2 section migration now synthesize valid skill descriptions so generated Codex skills always load
+- E2E test binary setup now uses a stable temp path, preventing later suites from inheriting deleted binaries
+
 ## [3.8.3] - 2026-03-08
 
 ### Fixed

@@ -47,7 +47,7 @@ func TestCodexPresetGenerator_renderSkillFile_AlwaysIncludesDescription(t *testi
 				Name:    "docs-and-site",
 				Content: "# Docs and Site",
 			},
-			wantDescription: "Instructions for docs and site.",
+			wantDescription: "docs-and-site",
 		},
 	}
 
