@@ -149,13 +149,17 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 
 	logger.Debug("Found .ai-rulez directory", "path", aiRulezDir)
 
+	// Discover domain directories so the scanner picks them up
+	domainNames := discoverDomainDirs(aiRulezDir)
+
 	// Create a minimal config for the scanner
 	minimalConfig := &config.ConfigV3{
 		Version: "3.0",
 		Name:    s.name,
 		BaseDir: filepath.Dir(aiRulezDir),
+		Default: "default",
 		Profiles: map[string][]string{
-			"default": {}, // Empty default profile
+			"default": domainNames,
 		},
 	}
 

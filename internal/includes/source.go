@@ -2,6 +2,9 @@ package includes
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -50,4 +53,22 @@ func IsGitURL(source string) bool {
 // IsLocalPath checks if a source string is a local file path
 func IsLocalPath(source string) bool {
 	return DetectSourceType(source) == SourceTypeLocal
+}
+
+// discoverDomainDirs reads the domains/ subdirectory of an .ai-rulez path
+// and returns the names of all subdirectories (domain names).
+func discoverDomainDirs(aiRulezDir string) []string {
+	domainsPath := filepath.Join(aiRulezDir, "domains")
+	entries, err := os.ReadDir(domainsPath)
+	if err != nil {
+		return nil
+	}
+	var names []string
+	for _, e := range entries {
+		if e.IsDir() && !strings.HasPrefix(e.Name(), ".") {
+			names = append(names, e.Name())
+		}
+	}
+	sort.Strings(names)
+	return names
 }

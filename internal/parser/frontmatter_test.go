@@ -211,8 +211,8 @@ targets:
   - go
   - typescript
   - python
-extra:
-  some_key: some_value
+description: "A complex rule"
+author: someone
 ---
 
 # Header
@@ -228,6 +228,30 @@ and paragraphs`
 	assert.Equal(t, []string{"go", "typescript", "python"}, metadata.Targets)
 	assert.Contains(t, actualContent, "# Header")
 	assert.Contains(t, actualContent, "Content with multiple lines")
+	assert.Equal(t, "A complex rule", metadata.Extra["description"])
+	assert.Equal(t, "someone", metadata.Extra["author"])
+}
+
+// TestParseFrontmatter_InlineExtraFields tests that unknown YAML fields are captured via inline tag
+func TestParseFrontmatter_InlineExtraFields(t *testing.T) {
+	content := `---
+priority: high
+description: "Review code for security vulnerabilities"
+category: security
+---
+
+# Skill Content`
+
+	metadata, actualContent, err := ParseFrontmatter(content)
+
+	require.NoError(t, err)
+	require.NotNil(t, metadata)
+	assert.Equal(t, "high", metadata.Priority)
+	assert.Equal(t, "Review code for security vulnerabilities", metadata.Extra["description"])
+	assert.Equal(t, "security", metadata.Extra["category"])
+	// Named fields should NOT appear in Extra
+	assert.NotContains(t, metadata.Extra, "priority")
+	assert.Contains(t, actualContent, "# Skill Content")
 }
 
 // TestParseFrontmatter_FrontmatterWithBlankLines tests frontmatter with blank lines
