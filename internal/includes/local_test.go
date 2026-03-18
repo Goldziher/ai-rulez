@@ -484,3 +484,81 @@ func TestFetchWithFiltering(t *testing.T) {
 		t.Error("expected skills to be filtered out")
 	}
 }
+
+func TestDiscoverDomainDirs(t *testing.T) {
+	// Arrange
+	tmpDir := t.TempDir()
+	domainsDir := filepath.Join(tmpDir, "domains")
+	os.MkdirAll(filepath.Join(domainsDir, "alpha", "rules"), 0755)
+	os.MkdirAll(filepath.Join(domainsDir, "beta", "rules"), 0755)
+	// Create a file (should be ignored)
+	os.WriteFile(filepath.Join(domainsDir, "not-a-dir.txt"), []byte("file"), 0644)
+
+	// Act
+	names := discoverDomainDirs(tmpDir)
+
+	// Assert
+	if len(names) != 2 {
+		t.Fatalf("expected 2 domains, got %d: %v", len(names), names)
+	}
+	if names[0] != "alpha" || names[1] != "beta" {
+		t.Errorf("expected [alpha, beta], got %v", names)
+	}
+}
+
+func TestDiscoverDomainDirsNoDomains(t *testing.T) {
+	// Arrange
+	tmpDir := t.TempDir()
+
+	// Act — no domains/ directory exists
+	names := discoverDomainDirs(tmpDir)
+
+	// Assert
+	if names != nil {
+		t.Errorf("expected nil, got %v", names)
+	}
+}
+
+func TestFetchWithDomains(t *testing.T) {
+	// Arrange
+	tmpDir := t.TempDir()
+	createTestAIRulezDir(t, tmpDir)
+
+	// Add domains with content
+	aiRulezDir := filepath.Join(tmpDir, ".ai-rulez")
+	backendRulesDir := filepath.Join(aiRulezDir, "domains", "backend", "rules")
+	frontendRulesDir := filepath.Join(aiRulezDir, "domains", "frontend", "rules")
+	os.MkdirAll(backendRulesDir, 0755)
+	os.MkdirAll(frontendRulesDir, 0755)
+	os.WriteFile(filepath.Join(backendRulesDir, "backend-rule.md"), []byte("# Backend Rule\n\nBackend content"), 0644)
+	os.WriteFile(filepath.Join(frontendRulesDir, "frontend-rule.md"), []byte("# Frontend Rule\n\nFrontend content"), 0644)
+
+	source := NewLocalSource("test", tmpDir, tmpDir, nil)
+	ctx := context.Background()
+
+	// Act
+	contentTree, err := source.Fetch(ctx)
+
+	// Assert
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if contentTree == nil {
+		t.Fatalf("expected non-nil ContentTreeV3")
+	}
+	if len(contentTree.Domains) != 2 {
+		t.Fatalf("expected 2 domains, got %d", len(contentTree.Domains))
+	}
+	if contentTree.Domains["backend"] == nil {
+		t.Error("expected backend domain to be present")
+	}
+	if contentTree.Domains["frontend"] == nil {
+		t.Error("expected frontend domain to be present")
+	}
+	if len(contentTree.Domains["backend"].Rules) == 0 {
+		t.Error("expected backend domain to have rules")
+	}
+	if len(contentTree.Domains["frontend"].Rules) == 0 {
+		t.Error("expected frontend domain to have rules")
+	}
+}
