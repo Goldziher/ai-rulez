@@ -98,13 +98,18 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) 
 		}()
 	}
 
+	// Discover domain directories so the scanner picks them up
+	aiRulezScanDir := filepath.Join(baseDir, ".ai-rulez")
+	domainNames := discoverDomainDirs(aiRulezScanDir)
+
 	// Create a minimal config for the scanner
 	minimalConfig := &config.ConfigV3{
 		Version: "3.0",
 		Name:    s.name,
 		BaseDir: baseDir,
+		Default: "default",
 		Profiles: map[string][]string{
-			"default": {}, // Empty default profile
+			"default": domainNames,
 		},
 	}
 

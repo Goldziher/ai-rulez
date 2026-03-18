@@ -6,6 +6,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.10.0] - 2026-03-18
+
+### Fixed
+- **Included skills validation**: Frontmatter parser now captures `description` and other extra fields from included skill files via YAML inline tag (issue #96)
+- **Included domains in profiles**: Include sources (git and local) now discover and scan domain directories, so consuming projects can reference included domains in profiles (issue #97)
+
+### Changed
+- Include domain discovery skips hidden directories (e.g. `.git`) in the `domains/` tree
+
 ## [3.9.0] - 2026-03-11
 
 ### Added

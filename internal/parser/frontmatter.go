@@ -13,7 +13,7 @@ import (
 type MetadataV3 struct {
 	Priority string
 	Targets  []string
-	Extra    map[string]string
+	Extra    map[string]string `yaml:",inline"`
 }
 
 // ParseFrontmatter parses optional YAML frontmatter from content
