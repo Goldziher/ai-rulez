@@ -1,4 +1,5 @@
 ---
+description: "MCP Integrations"
 priority: medium
 targets:
   - CLAUDE.md

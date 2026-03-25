@@ -1,4 +1,5 @@
 ---
+description: "Repository Layout"
 priority: high
 targets:
   - CLAUDE.md

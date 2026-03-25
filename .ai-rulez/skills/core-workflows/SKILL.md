@@ -1,4 +1,5 @@
 ---
+description: "Core Workflows"
 priority: high
 targets:
   - CLAUDE.md

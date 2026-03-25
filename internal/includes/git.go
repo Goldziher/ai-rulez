@@ -16,7 +16,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/remote"
-	"github.com/Goldziher/ai-rulez/internal/scanner"
 	"github.com/samber/oops"
 )
 
@@ -149,23 +148,9 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 
 	logger.Debug("Found .ai-rulez directory", "path", aiRulezDir)
 
-	// Discover domain directories so the scanner picks them up
-	domainNames := discoverDomainDirs(aiRulezDir)
-
-	// Create a minimal config for the scanner
-	minimalConfig := &config.ConfigV3{
-		Version: "3.0",
-		Name:    s.name,
-		BaseDir: filepath.Dir(aiRulezDir),
-		Default: "default",
-		Profiles: map[string][]string{
-			"default": domainNames,
-		},
-	}
-
-	// Scan the .ai-rulez directory structure
-	scnr := scanner.NewScanner(filepath.Dir(aiRulezDir), minimalConfig)
-	contentTree, err := scnr.ScanProfile("") // Scan all content, no profile filter
+	// Scan the .ai-rulez directory structure using the config loader's scanner which keeps
+	// root content and domain content separate (avoids duplication in generated output)
+	contentTree, err := config.ScanContentTree(aiRulezDir)
 	if err != nil {
 		return nil, oops.
 			With("repo", s.repoURL).
