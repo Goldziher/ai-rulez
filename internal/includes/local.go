@@ -7,7 +7,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/scanner"
 	"github.com/samber/oops"
 )
 
@@ -98,24 +97,10 @@ func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) 
 		}()
 	}
 
-	// Discover domain directories so the scanner picks them up
+	// Scan the directory structure using the config loader's scanner which keeps
+	// root content and domain content separate (avoids duplication in generated output)
 	aiRulezScanDir := filepath.Join(baseDir, ".ai-rulez")
-	domainNames := discoverDomainDirs(aiRulezScanDir)
-
-	// Create a minimal config for the scanner
-	minimalConfig := &config.ConfigV3{
-		Version: "3.0",
-		Name:    s.name,
-		BaseDir: baseDir,
-		Default: "default",
-		Profiles: map[string][]string{
-			"default": domainNames,
-		},
-	}
-
-	// Scan the directory structure
-	scnr := scanner.NewScanner(baseDir, minimalConfig)
-	contentTree, err := scnr.ScanProfile("") // Scan all content, no profile filter
+	contentTree, err := config.ScanContentTree(aiRulezScanDir)
 	if err != nil {
 		return nil, oops.Wrapf(err, "failed to scan content tree")
 	}

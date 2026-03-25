@@ -81,6 +81,10 @@ func (g *GeneratorV3) Generate(profile string) error {
 		flatOutputs = append(flatOutputs, outputs...)
 	}
 
+	// Clean up stale files from managed directories before writing new output.
+	// This ensures that renamed or removed skills/agents don't leave behind orphaned files.
+	g.cleanManagedDirs(flatOutputs)
+
 	// Write all output files
 	if err := g.writeOutputs(flatOutputs); err != nil {
 		return err
@@ -278,6 +282,75 @@ func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
 
 	logger.Debug("Wrote file", "path", output.Path, "size", len(output.Content))
 	return nil
+}
+
+// cleanManagedDirs removes stale files from directories that are fully managed by the generator.
+// It collects all directory outputs from the new generation, then removes any existing files
+// in those directories that are not part of the new output set.
+func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
+	// Build set of new output file paths (absolute)
+	newFiles := make(map[string]bool)
+	for _, o := range outputs {
+		if o.IsDir {
+			continue
+		}
+		absPath := o.Path
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(g.config.BaseDir, o.Path)
+		}
+		newFiles[absPath] = true
+	}
+
+	// Collect managed directories (directory outputs that are NOT the project root)
+	managedDirs := make(map[string]bool)
+	for _, o := range outputs {
+		if !o.IsDir {
+			continue
+		}
+		absPath := o.Path
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(g.config.BaseDir, o.Path)
+		}
+		managedDirs[absPath] = true
+	}
+
+	// Walk each managed directory and remove files not in the new output set
+	for dir := range managedDirs {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue // Directory may not exist yet
+		}
+		for _, entry := range entries {
+			entryPath := filepath.Join(dir, entry.Name())
+
+			if entry.IsDir() {
+				// For subdirectories (e.g., skill dirs), check if any new output targets them
+				hasNewContent := false
+				for newFile := range newFiles {
+					if strings.HasPrefix(newFile, entryPath+string(filepath.Separator)) {
+						hasNewContent = true
+						break
+					}
+				}
+				if !hasNewContent {
+					if err := os.RemoveAll(entryPath); err != nil {
+						logger.Warn("Failed to remove stale directory", "path", entryPath, "error", err)
+					} else {
+						logger.Debug("Removed stale directory", "path", entryPath)
+					}
+				}
+			} else {
+				// For files, check if they're in the new output set
+				if !newFiles[entryPath] {
+					if err := os.Remove(entryPath); err != nil {
+						logger.Warn("Failed to remove stale file", "path", entryPath, "error", err)
+					} else {
+						logger.Debug("Removed stale file", "path", entryPath)
+					}
+				}
+			}
+		}
+	}
 }
 
 // collectGitignorePaths collects unique paths to add to .gitignore

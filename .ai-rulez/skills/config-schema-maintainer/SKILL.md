@@ -1,4 +1,5 @@
 ---
+description: "Config and Schema Maintainer"
 priority: high
 targets:
   - CLAUDE.md

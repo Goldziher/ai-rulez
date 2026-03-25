@@ -263,7 +263,7 @@ func TestScanContentTree(t *testing.T) {
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.NotNil(t, tree)
 		assert.Empty(t, tree.Rules)
@@ -285,7 +285,7 @@ func TestScanContentTree(t *testing.T) {
 		rule2 := filepath.Join(rulesPath, "rule2.md")
 		require.NoError(t, os.WriteFile(rule2, []byte("# Rule 2\nContent"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Rules, 2)
 		assert.Equal(t, "rule1", tree.Rules[0].Name)
@@ -302,7 +302,7 @@ func TestScanContentTree(t *testing.T) {
 		context1 := filepath.Join(contextPath, "architecture.md")
 		require.NoError(t, os.WriteFile(context1, []byte("# Architecture\nDetails"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Context, 1)
 		assert.Equal(t, "architecture", tree.Context[0].Name)
@@ -327,7 +327,7 @@ func TestScanContentTree(t *testing.T) {
 		skill2File := filepath.Join(skill2Path, skillMarkerFile)
 		require.NoError(t, os.WriteFile(skill2File, []byte("# Debugging Skill"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Skills, 2)
 	})
@@ -352,7 +352,7 @@ func TestScanContentTree(t *testing.T) {
 		frontendContext := filepath.Join(frontendContextPath, "ui.md")
 		require.NoError(t, os.WriteFile(frontendContext, []byte("# UI Context"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Domains, 2)
 		assert.Contains(t, tree.Domains, "backend")
@@ -374,7 +374,7 @@ func TestScanContentTree(t *testing.T) {
 		// Create non-markdown file
 		require.NoError(t, os.WriteFile(filepath.Join(rulesPath, "readme.txt"), []byte("text"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Rules, 1)
 		assert.Equal(t, "rule", tree.Rules[0].Name)
@@ -887,7 +887,7 @@ You are a helpful assistant.`
 		require.NoError(t, os.MkdirAll(agentsPath, 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(agentsPath, "agent1.md"), []byte("content1"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Agents, 1)
 		assert.Equal(t, "agent1", tree.Agents[0].Name)
@@ -904,7 +904,7 @@ You are a helpful assistant.`
 		require.NoError(t, os.MkdirAll(backendAgentsPath, 0o755))
 		require.NoError(t, os.WriteFile(filepath.Join(backendAgentsPath, "api-agent.md"), []byte("API agent"), 0o644))
 
-		tree, err := scanContentTree(configDir)
+		tree, err := ScanContentTree(configDir)
 		require.NoError(t, err)
 		assert.Len(t, tree.Domains, 1)
 		assert.Contains(t, tree.Domains, "backend")

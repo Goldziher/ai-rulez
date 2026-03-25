@@ -1,4 +1,5 @@
 ---
+description: "End-to-end checklist for delivering new capabilities across CLI, presets, and tests"
 priority: medium
 targets:
   - CLAUDE.md

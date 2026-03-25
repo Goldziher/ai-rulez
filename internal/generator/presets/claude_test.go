@@ -204,20 +204,20 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 		t.Error("Expected skill content in output")
 	}
 
-	// Check rules section
-	if !strings.Contains(result, "## Rules") {
-		t.Error("Expected Rules section in output")
+	// Untargeted rules and context should NOT be embedded in skill files
+	// (they are already in CLAUDE.md)
+	if strings.Contains(result, "## Rules") {
+		t.Error("Expected untargeted Rules section to be omitted from skill file")
 	}
-	if !strings.Contains(result, "### coding-standards") {
-		t.Error("Expected rule name in output")
+	if strings.Contains(result, "### coding-standards") {
+		t.Error("Expected untargeted rule to be omitted from skill file")
 	}
 
-	// Check context section
-	if !strings.Contains(result, "## Context") {
-		t.Error("Expected Context section in output")
+	if strings.Contains(result, "## Context") {
+		t.Error("Expected untargeted Context section to be omitted from skill file")
 	}
-	if !strings.Contains(result, "### project-info") {
-		t.Error("Expected context name in output")
+	if strings.Contains(result, "### project-info") {
+		t.Error("Expected untargeted context to be omitted from skill file")
 	}
 }
 
