@@ -1,0 +1,15 @@
+---
+priority: high
+---
+- Follow the tidyverse style guide. Use `styler` for formatting and `lintr` for linting.
+- Use R 4.1+ pipe operator `|>` over magrittr `%>%` in new code. Prefer base R when tidyverse is not needed.
+- Package development: use `devtools`, `usethis`, `roxygen2` for documentation, `testthat` for testing.
+- NAMESPACE management: use `roxygen2` `@export`/`@import` tags. Never edit NAMESPACE manually.
+- Error handling: use `tryCatch()`/`withCallingHandlers()` for recoverable errors. Use `cli::cli_abort()` for user-facing errors with informative messages.
+- Type safety: validate inputs with `checkmate` or `rlang::arg_match()`. Document expected types with roxygen2 `@param` tags.
+- Testing: use `testthat` with `test_that()` blocks. Cover edge cases, error paths, and NULL inputs. Target 80%+ coverage with `covr`.
+- Security: `oysteR` for dependency vulnerability scanning. Never use `eval(parse(text=))` with user input.
+- C/C++ integration: use `Rcpp` or `.Call()` interface. Protect all R objects with `PROTECT`/`UNPROTECT`. Never mix `Rcpp` and raw C API in the same file.
+- Rust integration: use `extendr` or `rextendr` for Rust FFI bindings to R. Follow `extendr` conventions for type conversion.
+- CRAN compliance: pass `R CMD check --as-cran` with zero warnings/notes. Keep DESCRIPTION fields accurate.
+- Documentation: roxygen2 on all exported functions with `@examples`. Build vignettes with `knitr`/`rmarkdown`.
