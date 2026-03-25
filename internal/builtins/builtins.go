@@ -55,6 +55,7 @@ var registry = map[string]BuiltinDomain{
 	"php":        {Name: "php", Category: CategoryLanguage, Description: "PHP language conventions"},
 	"elixir":     {Name: "elixir", Category: CategoryLanguage, Description: "Elixir language conventions"},
 	"csharp":     {Name: "csharp", Category: CategoryLanguage, Description: "C# language conventions"},
+	"r":          {Name: "r", Category: CategoryLanguage, Description: "R language conventions"},
 
 	// Bindings
 	"pyo3":       {Name: "pyo3", Category: CategoryBinding, Description: "PyO3 Rust-Python bindings"},
