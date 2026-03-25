@@ -6,6 +6,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.11.2] - 2026-03-25
+
+### Fixed
+- **Gitignore: `.github/` directory no longer ignored**: The gitignore updater was adding `.github/` as a directory-level pattern because the copilot preset creates `.github/copilot-instructions.md`. This caused CI workflows and other `.github/` content to be ignored. Shared directories like `.github` are now excluded from directory-level patterns — only individual generated files inside them are gitignored.
+- **Gitignore: no more individual file paths**: Files inside fully-managed directories (e.g. `.claude/skills/foo/SKILL.md`) are no longer added individually to `.gitignore` — the parent directory pattern covers them.
+
 ## [3.11.1] - 2026-03-25
 
 ### Added
@@ -14,14 +20,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ## [3.11.0] - 2026-03-25
 
 ### Fixed
-- **Include domain duplication**: Include sources now use `ScanContentTree` instead of `scanner.ScanProfile`, preventing domain content from appearing twice in generated output
+- **Include domain duplication** (issue #97): Include sources now use `ScanContentTree` instead of `scanner.ScanProfile`, preventing domain content from appearing twice in generated output
 - **Claude preset output bloat**: Skill, agent, and command-as-skill files no longer embed all rules and context; only explicitly targeted content is included (reduces `.claude/` from ~13MB to ~440KB on large projects)
 - **Stale file cleanup**: Generator now removes orphaned files from managed output directories (`.claude/skills/`, `.claude/agents/`) before writing new output
 
 ### Changed
 - **Rules rendered as `@` references**: Local project rules in CLAUDE.md now use `@path` lazy-loading references instead of full inlining, matching the existing context rendering pattern. Builtin and included rules remain inlined.
 - **Exported `ScanContentTree`**: `config.ScanContentTree()` is now public for use by include sources and external consumers
-- Context rendering consolidated into shared `renderContentRef` helper
+- Context and rules rendering consolidated into shared `renderContentRef` helper
 
 ## [3.10.0] - 2026-03-18
 
