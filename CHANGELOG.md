@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.11.1] - 2026-03-25
+
+### Added
+- **R language builtin**: R conventions covering tidyverse style, testthat, roxygen2, CRAN compliance, and extendr/rextendr Rust FFI bindings
+
 ## [3.11.0] - 2026-03-25
 
 ### Fixed
