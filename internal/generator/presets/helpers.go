@@ -65,6 +65,21 @@ func getAllDomainCommands(content *config.ContentTreeV3) []config.ContentFile {
 	return commands
 }
 
+// filterContentByExplicitTargets returns only content files that have explicit
+// targets matching the given output path. Content with no targets is excluded,
+// since untargeted content is already present in the main output file (e.g. CLAUDE.md).
+func filterContentByExplicitTargets(files []config.ContentFile, outputPath, baseDir string) []config.ContentFile {
+	var result []config.ContentFile
+	for _, f := range files {
+		if f.Metadata != nil && len(f.Metadata.Targets) > 0 {
+			if shouldIncludeInOutput(f.Metadata.Targets, outputPath, baseDir) {
+				result = append(result, f)
+			}
+		}
+	}
+	return result
+}
+
 // sanitizeName removes special characters from names for use in filenames
 func sanitizeName(name string) string {
 	// Replace spaces and special chars with dashes

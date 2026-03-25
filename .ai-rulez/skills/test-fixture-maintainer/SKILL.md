@@ -1,4 +1,5 @@
 ---
+description: "Test and Fixture Maintainer"
 priority: high
 targets:
   - CLAUDE.md

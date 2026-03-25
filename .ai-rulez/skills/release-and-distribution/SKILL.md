@@ -1,4 +1,5 @@
 ---
+description: "Release and Distribution Steward"
 priority: high
 targets:
   - CLAUDE.md

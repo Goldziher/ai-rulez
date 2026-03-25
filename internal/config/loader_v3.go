@@ -122,7 +122,7 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 	config.MCPServers = rootMCPServers
 
 	// Scan content directories
-	contentTree, err := scanContentTree(configDir)
+	contentTree, err := ScanContentTree(configDir)
 	if err != nil {
 		return nil, err
 	}
@@ -232,8 +232,10 @@ func loadConfigJSON(path string) (*ConfigV3, error) {
 	return &config, nil
 }
 
-// scanContentTree scans all content directories and returns a populated ContentTreeV3
-func scanContentTree(configDir string) (*ContentTreeV3, error) {
+// ScanContentTree scans all content directories and returns a populated ContentTreeV3.
+// Root content goes into the top-level slices; domain content goes only into the Domains map.
+// This keeps the two layers separate so callers (e.g. include sources) can merge without duplication.
+func ScanContentTree(configDir string) (*ContentTreeV3, error) {
 	tree := &ContentTreeV3{
 		Domains: make(map[string]*DomainV3),
 	}
