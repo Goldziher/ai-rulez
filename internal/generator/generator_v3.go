@@ -353,36 +353,56 @@ func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
 	}
 }
 
-// collectGitignorePaths collects unique paths to add to .gitignore
+// sharedDirs are directories that contain both generated and non-generated content.
+// These must not be added as directory-level gitignore patterns — only individual
+// generated files inside them should be gitignored.
+var sharedDirs = map[string]bool{
+	".github": true,
+}
+
+// collectGitignorePaths collects unique paths to add to .gitignore.
+// Top-level directories that are fully managed are added as directory patterns.
+// Files inside shared directories (e.g. .github) are added individually.
 func (g *GeneratorV3) collectGitignorePaths(outputs []config.OutputFileV3) map[string]bool {
 	paths := make(map[string]bool)
-	seen := make(map[string]bool)
+	topDirs := make(map[string]bool)
 
+	// First pass: collect all top-level directories from directory outputs,
+	// excluding shared dirs that contain non-generated content
 	for _, output := range outputs {
-		// Convert to relative path if absolute
+		if !output.IsDir {
+			continue
+		}
 		relPath := g.convertToRelativePath(output.Path)
-
-		// Skip .ai-rulez directory and anything inside it
 		if g.shouldSkipPath(relPath) {
 			continue
 		}
-
-		// For files, add them directly
-		if !output.IsDir {
-			paths[relPath] = true
-			continue
-		}
-
-		// For directories, add top-level directory
 		topLevel := g.extractTopLevelDir(relPath)
-		if topLevel == ".ai-rulez" {
+		if topLevel == ".ai-rulez" || sharedDirs[topLevel] {
 			continue
 		}
+		topDirs[topLevel] = true
+	}
 
-		if !seen[topLevel] {
-			seen[topLevel] = true
-			paths[topLevel+"/"] = true
+	// Add top-level directories
+	for dir := range topDirs {
+		paths[dir+"/"] = true
+	}
+
+	// Second pass: add files only if they're NOT inside a tracked directory
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
 		}
+		relPath := g.convertToRelativePath(output.Path)
+		if g.shouldSkipPath(relPath) {
+			continue
+		}
+		topLevel := g.extractTopLevelDir(relPath)
+		if topDirs[topLevel] {
+			continue // File is inside a fully-managed directory, skip it
+		}
+		paths[relPath] = true
 	}
 
 	return paths
