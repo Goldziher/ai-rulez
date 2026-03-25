@@ -6,6 +6,18 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.11.0] - 2026-03-25
+
+### Fixed
+- **Include domain duplication**: Include sources now use `ScanContentTree` instead of `scanner.ScanProfile`, preventing domain content from appearing twice in generated output
+- **Claude preset output bloat**: Skill, agent, and command-as-skill files no longer embed all rules and context; only explicitly targeted content is included (reduces `.claude/` from ~13MB to ~440KB on large projects)
+- **Stale file cleanup**: Generator now removes orphaned files from managed output directories (`.claude/skills/`, `.claude/agents/`) before writing new output
+
+### Changed
+- **Rules rendered as `@` references**: Local project rules in CLAUDE.md now use `@path` lazy-loading references instead of full inlining, matching the existing context rendering pattern. Builtin and included rules remain inlined.
+- **Exported `ScanContentTree`**: `config.ScanContentTree()` is now public for use by include sources and external consumers
+- Context rendering consolidated into shared `renderContentRef` helper
+
 ## [3.10.0] - 2026-03-18
 
 ### Fixed

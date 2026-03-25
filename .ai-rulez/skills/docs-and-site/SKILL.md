@@ -1,4 +1,5 @@
 ---
+description: "Docs and Site Steward"
 priority: medium
 targets:
   - CLAUDE.md

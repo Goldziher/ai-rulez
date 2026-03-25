@@ -155,30 +155,10 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 //nolint:gocyclo // Acceptable complexity for comprehensive skill generation with target filtering
 func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
 	var builder strings.Builder
-	var includedRules []config.ContentFile
-	var includedContext []config.ContentFile
-
-	for _, rule := range content.Rules {
-		var targets []string
-		if rule.Metadata != nil {
-			targets = rule.Metadata.Targets
-		}
-
-		if shouldIncludeInOutput(targets, outputPath, cfg.BaseDir) {
-			includedRules = append(includedRules, rule)
-		}
-	}
-
-	for _, ctx := range content.Context {
-		var targets []string
-		if ctx.Metadata != nil {
-			targets = ctx.Metadata.Targets
-		}
-
-		if shouldIncludeInOutput(targets, outputPath, cfg.BaseDir) {
-			includedContext = append(includedContext, ctx)
-		}
-	}
+	// Only embed rules/context that explicitly target this skill output path.
+	// Untargeted rules are already in CLAUDE.md, so embedding them here would be duplication.
+	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
+	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
 
 	// Generate frontmatter
 	frontmatter := make(map[string]interface{})
@@ -332,7 +312,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		builder.WriteString("\n\n")
 	}
 
-	// Add rules section
+	// Add rules section - use @ links for local project files, inline everything else
 	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
@@ -347,14 +327,11 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 				builder.WriteString("\n\n")
 			}
 
-			// Process the content to remove the H1 and normalize formatting
-			processedContent := markdown.ProcessEmbeddedContent(rule.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
+			g.renderContentRef(&builder, rule, cfg)
 		}
 	}
 
-	// Add context section - render as summaries with @ links
+	// Add context section - use @ links for local project files, inline everything else
 	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
@@ -369,18 +346,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 				builder.WriteString("\n\n")
 			}
 
-			// For builtin context (virtual paths), inline the content directly
-			// For local files, use @ link so Claude loads them lazily
-			if strings.HasPrefix(ctx.Path, "builtin://") {
-				processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
-				builder.WriteString(processedContent)
-				builder.WriteString("\n\n")
-			} else {
-				contextPath := strings.TrimPrefix(ctx.Path, cfg.BaseDir+"/")
-				builder.WriteString("@")
-				builder.WriteString(contextPath)
-				builder.WriteString("\n\n")
-			}
+			g.renderContentRef(&builder, ctx, cfg)
 		}
 	}
 
@@ -415,8 +381,13 @@ func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, con
 		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
 	}
 
+	// Only embed rules/context that explicitly target this agent output path.
+	// Untargeted rules are already in CLAUDE.md, so embedding them here would be duplication.
+	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
+	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
+
 	// Add header before frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(content.Rules), 0, len(content.Agents))
+	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents))
 	builder.WriteString(header)
 
 	builder.WriteString("---\n")
@@ -426,10 +397,10 @@ func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, con
 	// Add agent content
 	builder.WriteString(agent.Content)
 
-	// Add rules section if available
-	if len(content.Rules) > 0 {
+	// Add rules section if explicitly targeted rules exist
+	if len(includedRules) > 0 {
 		builder.WriteString("\n\n## Rules\n\n")
-		for _, rule := range content.Rules {
+		for _, rule := range includedRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
 			builder.WriteString("\n\n")
@@ -438,10 +409,10 @@ func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, con
 		}
 	}
 
-	// Add context section if available
-	if len(content.Context) > 0 {
+	// Add context section if explicitly targeted context exists
+	if len(includedContext) > 0 {
 		builder.WriteString("\n## Context\n\n")
-		for _, ctx := range content.Context {
+		for _, ctx := range includedContext {
 			builder.WriteString("### ")
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
@@ -482,6 +453,23 @@ func shouldIncludeInOutput(targets []string, outputPath, baseDir string) bool {
 	}
 
 	return false
+}
+
+// renderContentRef writes a content file as either an @ reference (for local project files)
+// or inlined content (for builtins, includes from temp/cache dirs, or any path outside the project).
+func (g *ClaudePresetGenerator) renderContentRef(builder *strings.Builder, file config.ContentFile, cfg *config.ConfigV3) {
+	// Use @ reference only for files inside the project directory
+	if cfg.BaseDir != "" && !strings.HasPrefix(file.Path, "builtin://") && strings.HasPrefix(file.Path, cfg.BaseDir+"/") {
+		relPath := strings.TrimPrefix(file.Path, cfg.BaseDir+"/")
+		builder.WriteString("@")
+		builder.WriteString(relPath)
+		builder.WriteString("\n\n")
+	} else {
+		// Inline content for builtins, includes, or any external path
+		processedContent := markdown.ProcessEmbeddedContent(file.Content)
+		builder.WriteString(processedContent)
+		builder.WriteString("\n\n")
+	}
 }
 
 func buildOutputPathCandidates(outputPath, baseDir string) []string {
@@ -660,8 +648,13 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 		return "", fmt.Errorf("marshal command frontmatter: %w", err)
 	}
 
+	// Only embed rules/context that explicitly target this command output path.
+	// Untargeted rules are already in CLAUDE.md, so embedding them here would be duplication.
+	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
+	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
+
 	// Add header before frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(content.Rules), 0, len(content.Agents))
+	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents))
 	builder.WriteString(header)
 
 	builder.WriteString("---\n")
@@ -671,10 +664,10 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 	// Add command content
 	builder.WriteString(command.Content)
 
-	// Add rules section
-	if len(content.Rules) > 0 {
+	// Add rules section if explicitly targeted rules exist
+	if len(includedRules) > 0 {
 		builder.WriteString("\n\n## Rules\n\n")
-		for _, rule := range content.Rules {
+		for _, rule := range includedRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
 			builder.WriteString("\n")
@@ -688,10 +681,10 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 		}
 	}
 
-	// Add context section
-	if len(content.Context) > 0 {
+	// Add context section if explicitly targeted context exists
+	if len(includedContext) > 0 {
 		builder.WriteString("\n## Context\n\n")
-		for _, ctx := range content.Context {
+		for _, ctx := range includedContext {
 			builder.WriteString("### ")
 			builder.WriteString(ctx.Name)
 			builder.WriteString("\n\n")
