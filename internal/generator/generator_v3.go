@@ -288,33 +288,9 @@ func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
 // It collects all directory outputs from the new generation, then removes any existing files
 // in those directories that are not part of the new output set.
 func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
-	// Build set of new output file paths (absolute)
-	newFiles := make(map[string]bool)
-	for _, o := range outputs {
-		if o.IsDir {
-			continue
-		}
-		absPath := o.Path
-		if !filepath.IsAbs(absPath) {
-			absPath = filepath.Join(g.config.BaseDir, o.Path)
-		}
-		newFiles[absPath] = true
-	}
+	newFiles := g.collectOutputPaths(outputs, false)
+	managedDirs := g.collectOutputPaths(outputs, true)
 
-	// Collect managed directories (directory outputs that are NOT the project root)
-	managedDirs := make(map[string]bool)
-	for _, o := range outputs {
-		if !o.IsDir {
-			continue
-		}
-		absPath := o.Path
-		if !filepath.IsAbs(absPath) {
-			absPath = filepath.Join(g.config.BaseDir, o.Path)
-		}
-		managedDirs[absPath] = true
-	}
-
-	// Walk each managed directory and remove files not in the new output set
 	for dir := range managedDirs {
 		entries, err := os.ReadDir(dir)
 		if err != nil {
@@ -322,34 +298,52 @@ func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
 		}
 		for _, entry := range entries {
 			entryPath := filepath.Join(dir, entry.Name())
-
 			if entry.IsDir() {
-				// For subdirectories (e.g., skill dirs), check if any new output targets them
-				hasNewContent := false
-				for newFile := range newFiles {
-					if strings.HasPrefix(newFile, entryPath+string(filepath.Separator)) {
-						hasNewContent = true
-						break
-					}
-				}
-				if !hasNewContent {
-					if err := os.RemoveAll(entryPath); err != nil {
-						logger.Warn("Failed to remove stale directory", "path", entryPath, "error", err)
-					} else {
-						logger.Debug("Removed stale directory", "path", entryPath)
-					}
-				}
-			} else {
-				// For files, check if they're in the new output set
-				if !newFiles[entryPath] {
-					if err := os.Remove(entryPath); err != nil {
-						logger.Warn("Failed to remove stale file", "path", entryPath, "error", err)
-					} else {
-						logger.Debug("Removed stale file", "path", entryPath)
-					}
-				}
+				g.removeStaleDir(entryPath, newFiles)
+			} else if !newFiles[entryPath] {
+				g.removeStaleFile(entryPath)
 			}
 		}
+	}
+}
+
+// collectOutputPaths collects absolute paths from outputs, filtered by IsDir.
+func (g *GeneratorV3) collectOutputPaths(outputs []config.OutputFileV3, dirsOnly bool) map[string]bool {
+	result := make(map[string]bool)
+	for _, o := range outputs {
+		if o.IsDir != dirsOnly {
+			continue
+		}
+		absPath := o.Path
+		if !filepath.IsAbs(absPath) {
+			absPath = filepath.Join(g.config.BaseDir, o.Path)
+		}
+		result[absPath] = true
+	}
+	return result
+}
+
+// removeStaleDir removes a directory if no new output file targets it.
+func (g *GeneratorV3) removeStaleDir(dirPath string, newFiles map[string]bool) {
+	prefix := dirPath + string(filepath.Separator)
+	for newFile := range newFiles {
+		if strings.HasPrefix(newFile, prefix) {
+			return
+		}
+	}
+	if err := os.RemoveAll(dirPath); err != nil {
+		logger.Warn("Failed to remove stale directory", "path", dirPath, "error", err)
+	} else {
+		logger.Debug("Removed stale directory", "path", dirPath)
+	}
+}
+
+// removeStaleFile removes a single stale file.
+func (g *GeneratorV3) removeStaleFile(filePath string) {
+	if err := os.Remove(filePath); err != nil {
+		logger.Warn("Failed to remove stale file", "path", filePath, "error", err)
+	} else {
+		logger.Debug("Removed stale file", "path", filePath)
 	}
 }
 
