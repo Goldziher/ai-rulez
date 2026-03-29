@@ -840,6 +840,7 @@ Example content created:
   - rules/code-quality.md
   - context/architecture.md
   - skills/code-reviewer/SKILL.md
+  - skills/ai-rulez/SKILL.md
 
 Example MCP servers created:
   - mcp.yaml         # Root MCP servers (ai-rulez + GitHub examples)

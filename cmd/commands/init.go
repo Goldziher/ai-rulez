@@ -237,6 +237,19 @@ func createDomainDirectories(domains []string) error {
 
 // createExampleContent creates example rule, context, and skill files
 func createExampleContent() error {
+	createSkill := func(skillID, content string) error {
+		skillDir := filepath.Join(".ai-rulez", "skills", skillID)
+		if err := os.MkdirAll(skillDir, 0o755); err != nil {
+			return fmt.Errorf("failed to create skill directory %s: %w", skillID, err)
+		}
+
+		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(content), 0o644); err != nil {
+			return fmt.Errorf("failed to write example skill %s: %w", skillID, err)
+		}
+
+		return nil
+	}
+
 	// Create example rule
 	ruleContent := `---
 priority: high
@@ -283,13 +296,7 @@ This project follows a modular architecture with clear separation of concerns.
 		return fmt.Errorf("failed to write example context: %w", err)
 	}
 
-	// Create example skill directory and SKILL.md
-	skillDir := ".ai-rulez/skills/code-reviewer"
-	if err := os.MkdirAll(skillDir, 0o755); err != nil {
-		return fmt.Errorf("failed to create skill directory: %w", err)
-	}
-
-	skillContent := `---
+	codeReviewerSkill := `---
 name: code-reviewer
 description: Specialized agent for code review and quality assurance
 priority: high
@@ -314,8 +321,57 @@ You are a senior code reviewer focused on ensuring quality and maintainability.
 - Be constructive and helpful in tone
 `
 
-	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(skillContent), 0o644); err != nil {
-		return fmt.Errorf("failed to write example skill: %w", err)
+	if err := createSkill("code-reviewer", codeReviewerSkill); err != nil {
+		return err
+	}
+
+	aiRulezSkill := `---
+name: ai-rulez
+description: Use AI-Rulez correctly in user projects, including CLI, MCP, configuration, and generation workflows
+priority: high
+---
+
+# AI-Rulez
+
+Use this skill when working in a project that is managed by AI-Rulez.
+
+## Responsibilities
+
+- Detect whether the project uses AI-Rulez V3 (.ai-rulez/) or a legacy V2 config.
+- Edit source files in .ai-rulez/ instead of patching generated assistant files directly
+- Prefer the AI-Rulez MCP server for safe reads and CRUD operations when it is available
+- Use the CLI to validate, generate, and inspect configuration changes
+- Keep generated outputs in sync with configuration changes
+
+## Workflow
+
+1. Check for .ai-rulez/config.yaml, .ai-rulez/skills/, domain folders, and .ai-rulez/mcp.yaml.
+2. If MCP is configured, prefer it for reading and modifying AI-Rulez content.
+3. Update the relevant source files under .ai-rulez/: rules, context, skills, agents, domains, config, or MCP config.
+4. Run ai-rulez validate when changing configuration structure.
+5. Run ai-rulez generate after source changes so assistant-specific outputs stay current.
+6. If MCP is available, start it with npx -y ai-rulez@latest mcp (or the repo’s helper) and use it for CRUD instead of manual edits when possible.
+
+## Core Commands
+
+- ai-rulez init — scaffold .ai-rulez/ (V3) for a project.
+- ai-rulez add|remove|list rule|context|skill|agent — manage content files.
+- ai-rulez validate — ensure config and tree structure are sound.
+- ai-rulez generate [--profile <name>] — render tool presets after edits.
+- ai-rulez migrate v3 — convert legacy ai-rulez.yaml to .ai-rulez/.
+
+## Guidelines
+
+- Treat .ai-rulez/ as the source of truth.
+- Generated files such as AGENTS.md, CLAUDE.md, or .cursor/ outputs should only change via generation.
+- Use ai-rulez init to bootstrap, generate to render outputs, validate to check structure, and migrate for V2 to V3 conversion.
+- Remember that root content is always included, while domains are controlled by profiles.
+- MCP can expose read, CRUD, generate, and validate operations for assistants.
+- When changing presets, profiles, or domains in config.yaml, rerun validate then generate so downstream files stay in sync.
+`
+
+	if err := createSkill("ai-rulez", aiRulezSkill); err != nil {
+		return err
 	}
 
 	logger.Debug("Created example content files")
@@ -354,6 +410,7 @@ func displayV3SuccessMessage(projectName string) {
 		logger.Info("  - rules/code-quality.md")
 		logger.Info("  - context/architecture.md")
 		logger.Info("  - skills/code-reviewer/SKILL.md")
+		logger.Info("  - skills/ai-rulez/SKILL.md")
 	}
 
 	if !skipMCPFlag {
