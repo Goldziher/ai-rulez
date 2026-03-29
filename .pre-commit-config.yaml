@@ -49,7 +49,11 @@ repos:
     hooks:
       - id: actionlint
 
-  - repo: https://github.com/golangci/golangci-lint
-    rev: "v2.11.4"
+  - repo: local
     hooks:
       - id: golangci-lint-full
+        name: golangci-lint (uses installed binary)
+        entry: golangci-lint run --timeout=5m
+        language: system
+        types: [go]
+        pass_filenames: false

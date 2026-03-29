@@ -6,6 +6,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+### Fixed
+- Includes: fail fast when includes are configured but the includes resolver isn't registered, preventing silent drops of included domains referenced by profiles.
+
+### Added
+- Integration coverage for profiles resolving domains delivered via includes, ensuring included domains stay visible to profile selection.
+
+### Changed
+- GolangCI-Lint now tracks the `latest` release in CI and pre-commit instead of a pinned version.
+
 ## [3.11.2] - 2026-03-25
 
 ### Fixed

@@ -134,23 +134,8 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 		loadBuiltins(config)
 	}
 
-	// Resolve includes if defined and callback is available
-	if len(config.Includes) > 0 && resolveIncludesFunc != nil {
-		logger.Debug("Resolving includes", "count", len(config.Includes))
-
-		mergedContent, err := resolveIncludesFunc(ctx, config)
-		if err != nil {
-			logger.Warn("Failed to resolve includes", "error", err)
-			// Continue with local content only (non-fatal)
-		} else {
-			// Replace content with merged version
-			config.Content = mergedContent
-			logger.Debug("Successfully resolved includes",
-				"rules", len(mergedContent.Rules),
-				"context", len(mergedContent.Context),
-				"skills", len(mergedContent.Skills),
-				"agents", len(mergedContent.Agents))
-		}
+	if err := resolveIncludesIfNeeded(ctx, configDir, config); err != nil {
+		return nil, err
 	}
 
 	// Load domain-specific MCP servers
@@ -166,6 +151,38 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 	}
 
 	return config, nil
+}
+
+func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *ConfigV3) error {
+	if len(config.Includes) == 0 {
+		return nil
+	}
+
+	if resolveIncludesFunc == nil {
+		return oops.
+			With("config_dir", configDir).
+			Hint("Includes are configured but the includes resolver is not registered.\nImport github.com/Goldziher/ai-rulez/internal/includes (blank import) before loading configs, or ensure the CLI/mcp entrypoint is used.").
+			Errorf("includes configured but includes resolver is unavailable")
+	}
+
+	logger.Debug("Resolving includes", "count", len(config.Includes))
+
+	mergedContent, err := resolveIncludesFunc(ctx, config)
+	if err != nil {
+		logger.Warn("Failed to resolve includes", "error", err)
+		// Continue with local content only (non-fatal)
+		return nil
+	}
+
+	// Replace content with merged version
+	config.Content = mergedContent
+	logger.Debug("Successfully resolved includes",
+		"rules", len(mergedContent.Rules),
+		"context", len(mergedContent.Context),
+		"skills", len(mergedContent.Skills),
+		"agents", len(mergedContent.Agents))
+
+	return nil
 }
 
 // loadConfigFile loads config.yaml or config.json from the .ai-rulez/ directory
