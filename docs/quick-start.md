@@ -19,7 +19,9 @@ This creates a `.ai-rulez/` directory with:
 ├── context/
 │   └── example-context.md
 ├── skills/
-│   └── code-reviewer/
+│   ├── code-reviewer/
+│   │   └── SKILL.md
+│   └── ai-rulez/
 │       └── SKILL.md
 ├── agents/
 └── mcp.yaml
