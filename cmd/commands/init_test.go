@@ -116,6 +116,7 @@ func TestInit_WithExampleContent(t *testing.T) {
 	assert.FileExists(t, ".ai-rulez/rules/code-quality.md")
 	assert.FileExists(t, ".ai-rulez/context/architecture.md")
 	assert.FileExists(t, ".ai-rulez/skills/code-reviewer/SKILL.md")
+	assert.FileExists(t, ".ai-rulez/skills/ai-rulez/SKILL.md")
 
 	// Verify content
 	ruleContent, err := os.ReadFile(".ai-rulez/rules/code-quality.md")
@@ -132,6 +133,14 @@ func TestInit_WithExampleContent(t *testing.T) {
 	assert.Contains(t, string(skillContent), "Code Reviewer")
 	assert.Contains(t, string(skillContent), "name: code-reviewer")
 	assert.Contains(t, string(skillContent), "description: Specialized agent for code review and quality assurance")
+
+	aiRulezContent, err := os.ReadFile(".ai-rulez/skills/ai-rulez/SKILL.md")
+	require.NoError(t, err)
+	assert.Contains(t, string(aiRulezContent), "# AI-Rulez")
+	assert.Contains(t, string(aiRulezContent), "name: ai-rulez")
+	assert.Contains(t, string(aiRulezContent), "Use AI-Rulez correctly in user projects")
+	assert.Contains(t, string(aiRulezContent), "Prefer the AI-Rulez MCP server")
+	assert.Contains(t, string(aiRulezContent), "Run ai-rulez generate after source changes")
 }
 
 func TestInit_JSONFormat(t *testing.T) {
@@ -189,6 +198,7 @@ func TestInit_SkipContent(t *testing.T) {
 	assert.NoFileExists(t, ".ai-rulez/rules/code-quality.md")
 	assert.NoFileExists(t, ".ai-rulez/context/architecture.md")
 	assert.NoDirExists(t, ".ai-rulez/skills/code-reviewer")
+	assert.NoDirExists(t, ".ai-rulez/skills/ai-rulez")
 }
 
 func TestInit_ExampleMCPServers(t *testing.T) {
