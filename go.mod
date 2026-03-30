@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-resty/resty/v2 v2.17.2
-	github.com/kaptinlin/jsonschema v0.7.6
+	github.com/kaptinlin/jsonschema v0.7.7
 	github.com/modelcontextprotocol/go-sdk v1.4.1
 	github.com/samber/oops v1.21.0
 	github.com/schollz/progressbar/v3 v3.19.0
@@ -41,9 +41,9 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kaptinlin/go-i18n v0.2.12 // indirect
+	github.com/kaptinlin/go-i18n v0.3.0 // indirect
 	github.com/kaptinlin/jsonpointer v0.4.17 // indirect
-	github.com/kaptinlin/messageformat-go v0.4.18 // indirect
+	github.com/kaptinlin/messageformat-go v0.4.19 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/json v1.0.0 // indirect
 	github.com/knadh/koanf/parsers/toml/v2 v2.2.0 // indirect
