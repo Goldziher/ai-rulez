@@ -189,9 +189,9 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 		t.Fatalf("renderSkillFile() error = %v", err)
 	}
 
-	// Check header comment (HTML comment for .md files)
-	if !strings.Contains(result, "<!--") {
-		t.Error("Expected HTML comment header for .md file")
+	// Skills/agents/commands should NOT have header comments — the body is a prompt
+	if strings.Contains(result, "<!--") {
+		t.Error("Skill files should not contain HTML comment headers (body is a prompt)")
 	}
 
 	// Check frontmatter
