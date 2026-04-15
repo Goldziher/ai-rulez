@@ -30,7 +30,8 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	}
 
 	// Check if include already exists
-	for _, inc := range cfg.Includes {
+	for i := range cfg.Includes {
+		inc := &cfg.Includes[i]
 		if inc.Name == req.Name {
 			return oops.
 				With("name", req.Name).
@@ -97,7 +98,8 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 
 	// Find the include
 	foundIdx := -1
-	for i, inc := range cfg.Includes {
+	for i := range cfg.Includes {
+		inc := &cfg.Includes[i]
 		if inc.Name == name {
 			foundIdx = i
 			break
@@ -141,7 +143,8 @@ func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error)
 
 	var infos []IncludeInfo
 
-	for _, inc := range cfg.Includes {
+	for i := range cfg.Includes {
+		inc := &cfg.Includes[i]
 		sourceType := "local"
 		if isGitURL(inc.Source) {
 			sourceType = "git"

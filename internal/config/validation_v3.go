@@ -207,11 +207,16 @@ func (c *ConfigV3) validateProfiles() error {
 	return nil
 }
 
-// warnMissingDomainReferences logs warnings for domains referenced in profiles but not found in content
+// warnMissingDomainReferences logs warnings for domains referenced in profiles but not found in content.
+// Domains from includes (FromInclude=true) are checked in the merged content tree.
+// If includes are configured but a domain is missing, we emit a debug hint instead
+// of a warning since the domain may exist in the include source but failed to resolve.
 func (c *ConfigV3) warnMissingDomainReferences() {
 	if c.Content == nil || len(c.Profiles) == 0 {
 		return
 	}
+
+	hasIncludes := len(c.Includes) > 0
 
 	// Collect all domain names referenced in profiles
 	referencedDomains := make(map[string]bool)
@@ -224,7 +229,12 @@ func (c *ConfigV3) warnMissingDomainReferences() {
 	// Check which domains are missing
 	for domain := range referencedDomains {
 		if _, exists := c.Content.Domains[domain]; !exists {
-			logger.Warn("profile references non-existent domain", "domain", domain)
+			if hasIncludes {
+				logger.Debug("profile references domain not found in merged content (may be missing from include source)",
+					"domain", domain)
+			} else {
+				logger.Warn("profile references non-existent domain", "domain", domain)
+			}
 		}
 	}
 }
