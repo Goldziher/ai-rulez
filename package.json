@@ -1,7 +1,7 @@
 {
   "name": "ai-rulez",
   "version": "3.11.4",
-  "description": "Lightning-fast CLI tool (written in Go) for managing AI assistant rules",
+  "description": "Directory-based AI governance for Claude, Cursor, Copilot, Windsurf and 14+ tools",
   "bin": {
     "ai-rulez": "./bin/ai-rulez"
   },
