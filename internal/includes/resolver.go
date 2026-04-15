@@ -2,6 +2,8 @@ package includes
 
 import (
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -73,6 +75,11 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 		return oops.Wrapf(err, "failed to create source for include '%s'", includeConf.Name)
 	}
 
+	// nil source means local_override path not found — skip silently
+	if source == nil {
+		return nil
+	}
+
 	// Fetch content
 	includedContent, err := source.Fetch(ctx)
 	if err != nil {
@@ -89,8 +96,32 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 	return nil
 }
 
-// createSource creates the appropriate source type (Git or Local)
+// createSource creates the appropriate source type (Git or Local).
+// When local_override is set and the path exists, it is used instead of the
+// configured source. If the local_override path does not exist, it returns
+// (nil, nil) so the caller can skip this include silently.
 func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, error) {
+	// Check for local override: use a local path instead of git
+	if includeConf.LocalOverride != "" {
+		localPath := r.resolveLocalOverride(includeConf)
+		if localPath == "" {
+			// Local override path does not exist — skip silently
+			logger.Info("Skipping include (local_override path not found)",
+				"name", includeConf.Name,
+				"local_override", includeConf.LocalOverride)
+			return nil, nil
+		}
+		logger.Info("Using local override for include",
+			"name", includeConf.Name,
+			"path", localPath)
+		return NewLocalSource(
+			includeConf.Name,
+			localPath,
+			r.baseDir,
+			includeConf.Include,
+		), nil
+	}
+
 	sourceType := DetectSourceType(includeConf.Source)
 
 	switch sourceType {
@@ -118,6 +149,33 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 	default:
 		return nil, oops.Errorf("unknown source type: %s", sourceType)
 	}
+}
+
+// resolveLocalOverride resolves the local_override path, combining it with
+// the include's Path field (e.g., local_override: "../ai-rulez" + path: "modules/core"
+// resolves to "../ai-rulez/modules/core"). Returns the resolved absolute path
+// if it exists, or empty string if it does not.
+func (r *Resolver) resolveLocalOverride(includeConf *config.IncludeConfig) string {
+	overridePath := includeConf.LocalOverride
+
+	// Resolve relative to baseDir
+	if !filepath.IsAbs(overridePath) {
+		overridePath = filepath.Join(r.baseDir, overridePath)
+	}
+	overridePath = filepath.Clean(overridePath)
+
+	// Append the Path sub-path (same as git source's path within repo)
+	if includeConf.Path != "" {
+		overridePath = filepath.Join(overridePath, includeConf.Path)
+	}
+
+	// Check existence
+	info, err := os.Stat(overridePath)
+	if err != nil || !info.IsDir() {
+		return ""
+	}
+
+	return overridePath
 }
 
 // mergeContent merges two content trees based on strategy
@@ -243,12 +301,13 @@ func (r *Resolver) mergeDomainInstall(base, include *config.ContentTreeV3, insta
 	} else {
 		// Create new domain from included content
 		targetDomain = &config.DomainV3{
-			Name:     domainName,
-			Rules:    include.Rules,
-			Context:  include.Context,
-			Skills:   include.Skills,
-			Agents:   include.Agents,
-			Commands: include.Commands,
+			Name:        domainName,
+			Rules:       include.Rules,
+			Context:     include.Context,
+			Skills:      include.Skills,
+			Agents:      include.Agents,
+			Commands:    include.Commands,
+			FromInclude: true,
 		}
 	}
 
@@ -324,14 +383,12 @@ func mergeContentFiles(base, include []config.ContentFile, baseWins bool) []conf
 			}
 		}
 	} else {
-		// Add all include files first
-		includeMap := make(map[string]config.ContentFile)
+		// Add all include files first (preserve slice order for deterministic output)
 		for _, file := range include {
-			includeMap[file.Name] = file
-			seen[file.Name] = true
-		}
-		for _, file := range includeMap {
-			result = append(result, file)
+			if !seen[file.Name] {
+				result = append(result, file)
+				seen[file.Name] = true
+			}
 		}
 		// Add base files that don't conflict
 		for _, file := range base {
