@@ -6,6 +6,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.11.5] - 2026-04-15
+
+### Fixed
+- **Claude preset: no headers in skills/agents/commands**: Generated header comments (`<!-- AI-RULEZ ... -->`) are no longer emitted in skill, agent, or command files. These files serve as prompts for Claude Code — header comments wasted tokens and injected confusing "DO NOT EDIT" instructions into the agent's system prompt. Headers are now only emitted in CLAUDE.md and equivalent top-level files.
+
 ## [3.11.4] - 2026-04-15
 
 ### Fixed
