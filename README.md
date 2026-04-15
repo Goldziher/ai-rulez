@@ -1,10 +1,10 @@
 # ai-rulez
 
-Write AI assistant rules once. Generate configs for 18 different tools.
+Directory-based AI governance for 18+ tools. Define rules, context, skills, agents and commands once — generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex, and more.
 
-Every AI coding tool wants its own config format. Claude needs `CLAUDE.md`, Cursor wants `.cursor/rules/`, Copilot expects `.github/copilot-instructions.md`. Keeping them in sync is tedious and error-prone.
+Every AI coding tool wants its own config format. Claude needs `CLAUDE.md` + `.claude/skills/` + `.claude/agents/`, Cursor wants `.cursor/rules/`, Copilot expects `.github/copilot-instructions.md`. Keeping them in sync is tedious and error-prone.
 
-ai-rulez solves this: define rules and context in `.ai-rulez/`, run `generate`, and get native configs for all your tools.
+ai-rulez solves this: organize your AI governance in `.ai-rulez/`, run `generate`, and get native configs for all your tools — with proper frontmatter, tool-specific formatting, and full feature support (skills, agents, MCP servers).
 
 ```bash
 npx ai-rulez@latest init && npx ai-rulez@latest generate

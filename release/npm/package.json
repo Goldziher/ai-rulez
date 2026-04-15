@@ -1,7 +1,7 @@
 {
   "name": "ai-rulez",
   "version": "3.11.4",
-  "description": "⚡ One config to rule them all. Centralized AI assistant configuration management - generate rules for Claude, Cursor, Copilot, Windsurf and more from a single YAML file.",
+  "description": "Directory-based AI governance for Claude, Cursor, Copilot, Windsurf and 14+ tools. Define rules, context, skills and agents in .ai-rulez/ — generate synchronized configs for all your AI assistants.",
   "keywords": [
     "ai",
     "ai-assistant",
