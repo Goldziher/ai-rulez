@@ -456,23 +456,21 @@ func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) 
 
 	profileDomains := c.GetProfileDomains(profile)
 
-	// Build filtered domains map: active profile domains + builtin domains
+	// Build filtered domains map: profile-listed domains + builtin + FromInclude
 	activeDomains := make(map[string]*DomainV3)
+
+	// First pass: include all builtin and FromInclude domains unconditionally.
+	// This ensures that domains from external includes are always available,
+	// regardless of whether they are explicitly listed in the profile.
+	for name, domain := range c.Content.Domains {
+		if domain.Builtin || domain.FromInclude {
+			activeDomains[name] = domain
+		}
+	}
+
+	// Second pass: add profile-specified domains (may overlap with FromInclude).
 	for _, name := range profileDomains {
 		if domain, ok := c.Content.Domains[name]; ok {
-			activeDomains[name] = domain
-		}
-	}
-	// Always include builtin domains (e.g., from builtins system)
-	for name, domain := range c.Content.Domains {
-		if domain.Builtin {
-			activeDomains[name] = domain
-		}
-	}
-	// Include domains from external includes (not part of any profile, not builtin)
-	// These were explicitly added by the user via the includes system
-	for name, domain := range c.Content.Domains {
-		if domain.FromInclude {
 			activeDomains[name] = domain
 		}
 	}
@@ -601,12 +599,13 @@ func (f *ContentFile) IsMarkdown() bool {
 // IncludeConfig represents a content source (git repo or local path)
 type IncludeConfig struct {
 	Name          string   `yaml:"name" json:"name"`
-	Source        string   `yaml:"source" json:"source"`                       // Git repo URL OR local path
-	Path          string   `yaml:"path,omitempty" json:"path,omitempty"`       // Path within git repo (git only)
-	Include       []string `yaml:"include,omitempty" json:"include,omitempty"` // [rules, context, skills, mcp]
-	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty"`         // branch/tag/commit (git only)
-	InstallTo     string   `yaml:"install_to,omitempty" json:"install_to,omitempty"`
-	MergeStrategy string   `yaml:"merge_strategy,omitempty" json:"merge_strategy,omitempty"`
+	Source        string   `yaml:"source" json:"source"`
+	Path          string   `yaml:"path,omitempty" json:"path,omitempty"`
+	Include       []string `yaml:"include,omitempty" json:"include,omitempty"`
+	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty"`
+	InstallTo     string   `yaml:"install_to,omitempty" json:"install_to,omitempty"`         //nolint:tagliatelle
+	MergeStrategy string   `yaml:"merge_strategy,omitempty" json:"merge_strategy,omitempty"` //nolint:tagliatelle
+	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty"` //nolint:tagliatelle
 }
 
 // IncludeLock tracks resolved include sources

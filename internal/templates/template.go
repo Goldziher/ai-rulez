@@ -75,6 +75,7 @@ type TemplateData struct {
 	ConfigFile     string
 	OutputFile     string
 	Config         *config.ConfigV3 // V3 config for accessing header style
+	StyleOverride  string           // If set, overrides Config.GetHeaderStyle()
 }
 
 func NewTemplateData(cfg *config.Config, cfgV3 *config.ConfigV3) *TemplateData {
@@ -615,9 +616,11 @@ func buildHeaderLines(data *TemplateData) []string {
 
 	timestamp := data.Timestamp.Format("2006-01-02 15:04:05")
 
-	// Determine header style from V3 config
+	// Determine header style: explicit override > config > default
 	headerStyle := "detailed" // default
-	if data.Config != nil {
+	if data.StyleOverride != "" {
+		headerStyle = data.StyleOverride
+	} else if data.Config != nil {
 		headerStyle = data.Config.GetHeaderStyle()
 	}
 
