@@ -189,14 +189,11 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 		return "", fmt.Errorf("marshal frontmatter: %w", err)
 	}
 
-	// Frontmatter MUST be first in the file for Claude Code to parse it
+	// Frontmatter MUST be first in the file for Claude Code to parse it.
+	// No header comment — skill body is the prompt Claude sees when invoked.
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
-
-	// Add header after frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents), "minimal")
-	builder.WriteString(header)
 
 	// Add skill content
 	builder.WriteString(skill.Content)
@@ -392,16 +389,15 @@ func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, con
 	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
 	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
 
-	// Frontmatter MUST be first in the file for Claude Code to parse it
+	// Frontmatter MUST be first in the file for Claude Code to parse it.
+	// No header comment is emitted — everything after frontmatter becomes the
+	// agent's system prompt, and generated-file warnings would waste tokens and
+	// confuse the agent.
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
 
-	// Add header after frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents), "minimal")
-	builder.WriteString(header)
-
-	// Add agent content
+	// Add agent content directly (no header — this is a system prompt)
 	builder.WriteString(agent.Content)
 
 	// Add rules section if explicitly targeted rules exist
@@ -659,14 +655,11 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
 	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
 
-	// Frontmatter MUST be first in the file for Claude Code to parse it
+	// Frontmatter MUST be first in the file for Claude Code to parse it.
+	// No header comment — command body is the prompt Claude sees when invoked.
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
-
-	// Add header after frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents), "minimal")
-	builder.WriteString(header)
 
 	// Add command content
 	builder.WriteString(command.Content)
