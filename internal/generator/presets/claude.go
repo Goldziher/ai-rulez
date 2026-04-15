@@ -22,8 +22,10 @@ func init() {
 // ClaudePresetGenerator generates Claude preset files
 type ClaudePresetGenerator struct{}
 
-// generatePresetHeader creates a header for Claude preset files
-func generatePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+// generatePresetHeader creates a header for Claude preset files.
+// An optional styleOverride can be passed to force a specific header style
+// (e.g., "minimal" for skills/agents where frontmatter must come first).
+func generatePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int, styleOverride ...string) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -34,6 +36,10 @@ func generatePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, se
 		RuleCount:    ruleCount,
 		SectionCount: sectionCount,
 		AgentCount:   agentCount,
+	}
+
+	if len(styleOverride) > 0 && styleOverride[0] != "" {
+		data.StyleOverride = styleOverride[0]
 	}
 
 	return templates.GenerateHeader(data)
@@ -160,20 +166,19 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
 	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
 
-	// Generate frontmatter
+	// Generate frontmatter — only Claude Code fields, no ai-rulez internals
 	frontmatter := make(map[string]interface{})
 	frontmatter["name"] = skill.Name
+	frontmatter["user_invocable"] = false
 
 	if skill.Metadata != nil {
-		if skill.Metadata.Priority != "" {
-			frontmatter["priority"] = skill.Metadata.Priority
+		// Explicitly set description for Claude Code
+		if desc, ok := skill.Metadata.Extra["description"]; ok && desc != "" {
+			frontmatter["description"] = desc
 		}
-		if len(skill.Metadata.Targets) > 0 {
-			frontmatter["targets"] = skill.Metadata.Targets
-		}
-		// Include extra metadata
+		// Include extra metadata, excluding ai-rulez internal fields
 		for k, v := range skill.Metadata.Extra {
-			if k != "priority" && k != "targets" && k != "name" {
+			if k != "priority" && k != "targets" && k != "name" && k != "description" {
 				frontmatter[k] = v
 			}
 		}
@@ -184,13 +189,14 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 		return "", fmt.Errorf("marshal frontmatter: %w", err)
 	}
 
-	// Add header before frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents))
-	builder.WriteString(header)
-
+	// Frontmatter MUST be first in the file for Claude Code to parse it
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
+
+	// Add header after frontmatter
+	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents), "minimal")
+	builder.WriteString(header)
 
 	// Add skill content
 	builder.WriteString(skill.Content)
@@ -386,13 +392,14 @@ func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, con
 	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
 	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
 
-	// Add header before frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents))
-	builder.WriteString(header)
-
+	// Frontmatter MUST be first in the file for Claude Code to parse it
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
+
+	// Add header after frontmatter
+	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents), "minimal")
+	builder.WriteString(header)
 
 	// Add agent content
 	builder.WriteString(agent.Content)
@@ -618,13 +625,15 @@ func (g *ClaudePresetGenerator) generateCommandAsSkill(command config.ContentFil
 func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
 	var builder strings.Builder
 
-	// Generate frontmatter
+	// Generate frontmatter — commands are user-invocable slash commands
 	frontmatter := make(map[string]interface{})
 	frontmatter["name"] = command.Name
+	frontmatter["user_invocable"] = true
 
 	if command.Metadata != nil {
-		if command.Metadata.Priority != "" {
-			frontmatter["priority"] = command.Metadata.Priority
+		// Explicitly set description for Claude Code
+		if desc, ok := command.Metadata.Extra["description"]; ok && desc != "" {
+			frontmatter["description"] = desc
 		}
 		if command.Metadata.Shortcut != "" {
 			frontmatter["shortcut"] = command.Metadata.Shortcut
@@ -632,12 +641,9 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 		if command.Metadata.Category != "" {
 			frontmatter["category"] = command.Metadata.Category
 		}
-		if len(command.Metadata.Targets) > 0 {
-			frontmatter["targets"] = command.Metadata.Targets
-		}
-		// Include extra metadata
+		// Include extra metadata, excluding ai-rulez internal fields
 		for k, v := range command.Metadata.Extra {
-			if k != "priority" && k != "targets" && k != "name" && k != "shortcut" && k != "category" {
+			if k != "priority" && k != "targets" && k != "name" && k != "shortcut" && k != "category" && k != "description" {
 				frontmatter[k] = v
 			}
 		}
@@ -653,13 +659,14 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 	includedRules := filterContentByExplicitTargets(content.Rules, outputPath, cfg.BaseDir)
 	includedContext := filterContentByExplicitTargets(content.Context, outputPath, cfg.BaseDir)
 
-	// Add header before frontmatter
-	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents))
-	builder.WriteString(header)
-
+	// Frontmatter MUST be first in the file for Claude Code to parse it
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
+
+	// Add header after frontmatter
+	header := generatePresetHeader(cfg, outputPath, len(includedRules), 0, len(content.Agents), "minimal")
+	builder.WriteString(header)
 
 	// Add command content
 	builder.WriteString(command.Content)

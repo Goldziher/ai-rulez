@@ -10,7 +10,7 @@ repos:
         args: ["--write"]
 
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v3.10.0
+    rev: v3.11.4
     hooks:
       - id: ai-rulez-generate
 
@@ -34,7 +34,7 @@ repos:
       - id: taplo-format
 
   - repo: https://github.com/scop/pre-commit-shfmt
-    rev: v3.13.0-1
+    rev: v3.13.1-1
     hooks:
       - id: shfmt
         args: ["-w", "-i", "2"]
@@ -45,7 +45,7 @@ repos:
       - id: shellcheck
 
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.7.11
+    rev: v1.7.12
     hooks:
       - id: actionlint
 
