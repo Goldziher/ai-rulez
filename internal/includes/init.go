@@ -15,4 +15,10 @@ func init() {
 		resolver := NewResolver(cfg.BaseDir, gitToken)
 		return resolver.ResolveIncludes(ctx, cfg)
 	})
+
+	// Register the ResolveInstalledSkills callback
+	config.SetResolveInstalledSkillsCallback(func(ctx context.Context, cfg *config.ConfigV3) ([]config.ContentFile, error) {
+		gitToken := viper.GetString("git_token")
+		return ResolveInstalledSkills(ctx, cfg, gitToken)
+	})
 }

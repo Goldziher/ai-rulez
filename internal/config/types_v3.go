@@ -7,18 +7,19 @@ import (
 
 // ConfigV3 represents the V3 configuration format
 type ConfigV3 struct {
-	Schema      string              `yaml:"$schema,omitempty" json:"$schema,omitempty"`
-	Version     string              `yaml:"version" json:"version"`
-	Name        string              `yaml:"name" json:"name"`
-	Description string              `yaml:"description,omitempty" json:"description,omitempty"`
-	Presets     []PresetV3          `yaml:"presets,omitempty" json:"presets,omitempty"`
-	Default     string              `yaml:"default,omitempty" json:"default,omitempty"`
-	Profiles    map[string][]string `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	Gitignore   *bool               `yaml:"gitignore,omitempty" json:"gitignore,omitempty"`
-	Includes    []IncludeConfig     `yaml:"includes,omitempty" json:"includes,omitempty"`
-	Header      *HeaderConfig       `yaml:"header,omitempty" json:"header,omitempty"`
-	Compression *CompressionConfig  `yaml:"compression,omitempty" json:"compression,omitempty"`
-	Builtins    *BuiltinsConfig     `yaml:"builtins,omitempty" json:"builtins,omitempty"`
+	Schema          string                 `yaml:"$schema,omitempty" json:"$schema,omitempty"`
+	Version         string                 `yaml:"version" json:"version"`
+	Name            string                 `yaml:"name" json:"name"`
+	Description     string                 `yaml:"description,omitempty" json:"description,omitempty"`
+	Presets         []PresetV3             `yaml:"presets,omitempty" json:"presets,omitempty"`
+	Default         string                 `yaml:"default,omitempty" json:"default,omitempty"`
+	Profiles        map[string][]string    `yaml:"profiles,omitempty" json:"profiles,omitempty"`
+	Gitignore       *bool                  `yaml:"gitignore,omitempty" json:"gitignore,omitempty"`
+	Includes        []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty"`
+	InstalledSkills []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty"` //nolint:tagliatelle
+	Header          *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty"`
+	Compression     *CompressionConfig     `yaml:"compression,omitempty" json:"compression,omitempty"`
+	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir    string                  `yaml:"-" json:"-"`
@@ -606,6 +607,23 @@ type IncludeConfig struct {
 	InstallTo     string   `yaml:"install_to,omitempty" json:"install_to,omitempty"`         //nolint:tagliatelle
 	MergeStrategy string   `yaml:"merge_strategy,omitempty" json:"merge_strategy,omitempty"` //nolint:tagliatelle
 	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty"` //nolint:tagliatelle
+}
+
+// InstalledSkillConfig represents a named skill to install from an external source
+type InstalledSkillConfig struct {
+	Name          string `yaml:"name" json:"name"`
+	Source        string `yaml:"source" json:"source"`
+	Path          string `yaml:"path,omitempty" json:"path,omitempty"`
+	Ref           string `yaml:"ref,omitempty" json:"ref,omitempty"`
+	LocalOverride string `yaml:"local_override,omitempty" json:"local_override,omitempty"` //nolint:tagliatelle
+}
+
+// GetPath returns the path within the repo, defaulting to "skills/<name>"
+func (s *InstalledSkillConfig) GetPath() string {
+	if s.Path != "" {
+		return s.Path
+	}
+	return "skills/" + s.Name
 }
 
 // IncludeLock tracks resolved include sources

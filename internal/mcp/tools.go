@@ -358,6 +358,31 @@ func (s *Server) registerCRUDTools() {
 		handlers.ListIncludesHandler,
 	)
 
+	// Installed skill tools
+	s.addTool(
+		newTool("install_skill", "Install a named skill from a git repository or local path",
+			newSchemaBuilder().
+				String("name", "Skill name (unique identifier)", true).
+				String("source", "Git URL or local filesystem path", true).
+				String("path", "Path within repo to skill directory (defaults to skills/<name>)", false).
+				String("ref", "Git reference: branch, tag, or commit hash", false),
+		),
+		handlers.InstallSkillHandler,
+	)
+
+	s.addTool(
+		newTool("uninstall_skill", "Remove an installed skill from the configuration",
+			newSchemaBuilder().
+				String("name", "Skill name to remove", true),
+		),
+		handlers.UninstallSkillHandler,
+	)
+
+	s.addTool(
+		newTool("list_installed_skills", "List all installed skills", nil),
+		handlers.ListInstalledSkillsHandler,
+	)
+
 	// Profile tools
 	s.addTool(
 		newTool("add_profile", "Create a new profile with a set of domains",

@@ -390,6 +390,35 @@ Docs: https://github.com/Goldziher/ai-rulez
 -->
 ```
 
+### `installed_skills`
+
+Named skills installed from external repositories. Skills are fetched dynamically during `ai-rulez generate` and included in outputs. See [Installed Skills](installed-skills.md) for full details.
+
+```yaml
+installed_skills:
+  - name: kreuzberg
+    source: https://github.com/kreuzberg-dev/kreuzberg
+  - name: ai-rulez
+    source: https://github.com/Goldziher/ai-rulez
+    ref: main
+  - name: custom-lib
+    source: https://github.com/org/repo
+    path: libs/custom        # defaults to skills/<name>
+    local_override: ../local  # use local path for development
+```
+
+Each entry supports:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Unique skill identifier |
+| `source` | Yes | Git URL or local path |
+| `path` | No | Path within repo to skill directory (defaults to `skills/<name>`) |
+| `ref` | No | Git ref (branch, tag, commit) |
+| `local_override` | No | Local path override for development |
+
+Manage via CLI: `ai-rulez skill install/remove/list`.
+
 ## Directory Structure
 
 ### Root Content (Always Included)
