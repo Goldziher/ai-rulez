@@ -145,9 +145,9 @@ func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error)
 
 	for i := range cfg.Includes {
 		inc := &cfg.Includes[i]
-		sourceType := "local"
+		sourceType := sourceTypeLocal
 		if isGitURL(inc.Source) {
-			sourceType = "git"
+			sourceType = sourceTypeGit
 		}
 
 		info := IncludeInfo{
@@ -220,11 +220,11 @@ func validateAddIncludeRequest(req *AddIncludeRequest) error {
 // Returns the source type ("git" or "local") and any errors
 func validateIncludeSource(source string) (string, error) {
 	if isGitURL(source) {
-		return "git", validateGitURL(source)
+		return sourceTypeGit, validateGitURL(source)
 	}
 
 	// It's a local path
-	return "local", validateLocalPath(source)
+	return sourceTypeLocal, validateLocalPath(source)
 }
 
 // isGitURL checks if a source is a git URL

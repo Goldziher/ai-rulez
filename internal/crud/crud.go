@@ -8,6 +8,11 @@ import (
 	"github.com/samber/oops"
 )
 
+const (
+	sourceTypeGit   = "git"
+	sourceTypeLocal = "local"
+)
+
 // Operator defines the interface for CRUD operations
 type Operator interface {
 	// Domain operations
@@ -32,6 +37,11 @@ type Operator interface {
 	RemoveProfile(ctx context.Context, name string) error
 	SetDefaultProfile(ctx context.Context, name string) error
 	ListProfiles(ctx context.Context) ([]ProfileInfo, error)
+
+	// Installed skill operations
+	InstallSkill(ctx context.Context, req *InstallSkillRequest) error
+	UninstallSkill(ctx context.Context, name string) error
+	ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error)
 }
 
 // OperatorImpl implements the Operator interface
@@ -156,4 +166,21 @@ type ProfileInfo struct {
 	Name      string
 	Domains   []string
 	IsDefault bool
+}
+
+// InstallSkillRequest represents a request to install a named skill
+type InstallSkillRequest struct {
+	Name   string // Skill name (required)
+	Source string // Git URL or local path (required)
+	Path   string // Path within repo to skill directory (optional, defaults to skills/<name>)
+	Ref    string // Git ref (optional)
+}
+
+// InstalledSkillInfo represents information about an installed skill
+type InstalledSkillInfo struct {
+	Name   string
+	Source string
+	Path   string
+	Ref    string
+	Type   string // "git" or "local"
 }

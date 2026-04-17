@@ -704,6 +704,172 @@ func TestValidateV3(t *testing.T) {
 		err := config.ValidateV3()
 		assert.NoError(t, err)
 	})
+
+	t.Run("fails on installed skill with empty name", func(t *testing.T) {
+		config := &ConfigV3{
+			Version: "3.0",
+			Name:    "test",
+			Presets: []PresetV3{{BuiltIn: "claude"}},
+			InstalledSkills: []InstalledSkillConfig{
+				{Name: "", Source: "https://github.com/example/repo"},
+			},
+		}
+
+		err := config.ValidateV3()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required field 'name'")
+	})
+
+	t.Run("fails on installed skill with empty source", func(t *testing.T) {
+		config := &ConfigV3{
+			Version: "3.0",
+			Name:    "test",
+			Presets: []PresetV3{{BuiltIn: "claude"}},
+			InstalledSkills: []InstalledSkillConfig{
+				{Name: "test-skill", Source: ""},
+			},
+		}
+
+		err := config.ValidateV3()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required field 'source'")
+	})
+
+	t.Run("fails on duplicate installed skill names", func(t *testing.T) {
+		config := &ConfigV3{
+			Version: "3.0",
+			Name:    "test",
+			Presets: []PresetV3{{BuiltIn: "claude"}},
+			InstalledSkills: []InstalledSkillConfig{
+				{Name: "dup", Source: "https://github.com/example/a"},
+				{Name: "dup", Source: "https://github.com/example/b"},
+			},
+		}
+
+		err := config.ValidateV3()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "duplicate installed skill name")
+	})
+
+	t.Run("accepts valid installed skills", func(t *testing.T) {
+		config := &ConfigV3{
+			Version: "3.0",
+			Name:    "test",
+			Presets: []PresetV3{{BuiltIn: "claude"}},
+			InstalledSkills: []InstalledSkillConfig{
+				{Name: "skill-a", Source: "https://github.com/example/a"},
+				{Name: "skill-b", Source: "/local/path"},
+			},
+		}
+
+		err := config.ValidateV3()
+		assert.NoError(t, err)
+	})
+}
+
+func TestSaveConfigV3_PreservesOrdering(t *testing.T) {
+	t.Parallel()
+
+	t.Run("preserves field ordering and comments for YAML", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		aiRulezDir := filepath.Join(dir, ".ai-rulez")
+		require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
+
+		original := `# Project config
+$schema: https://example.com/schema.json
+version: "3.0"
+name: my-project
+description: A test project
+presets:
+  - claude
+  - cursor
+# end of file
+`
+		yamlPath := filepath.Join(aiRulezDir, "config.yaml")
+		require.NoError(t, os.WriteFile(yamlPath, []byte(original), 0o644))
+
+		// Load, modify, and save
+		cfg, err := loadConfigYAML(yamlPath)
+		require.NoError(t, err)
+
+		cfg.InstalledSkills = []InstalledSkillConfig{
+			{Name: "test-skill", Source: "https://github.com/example/repo"},
+		}
+
+		err = SaveConfigV3(cfg, aiRulezDir)
+		require.NoError(t, err)
+
+		// Read back
+		saved, err := os.ReadFile(yamlPath)
+		require.NoError(t, err)
+		content := string(saved)
+
+		// Field ordering: $schema before version before name before description before presets
+		schemaIdx := indexOfSubstring(content, "$schema:")
+		versionIdx := indexOfSubstring(content, "version:")
+		nameIdx := indexOfSubstring(content, "name:")
+		descIdx := indexOfSubstring(content, "description:")
+		presetsIdx := indexOfSubstring(content, "presets:")
+		skillsIdx := indexOfSubstring(content, "installed_skills:")
+
+		assert.Greater(t, versionIdx, schemaIdx, "$schema should come before version")
+		assert.Greater(t, nameIdx, versionIdx, "version should come before name")
+		assert.Greater(t, descIdx, nameIdx, "name should come before description")
+		assert.Greater(t, presetsIdx, descIdx, "description should come before presets")
+		assert.Greater(t, skillsIdx, presetsIdx, "installed_skills should come after presets")
+
+		// Comments preserved
+		assert.Contains(t, content, "# Project config")
+
+		// New section present
+		assert.Contains(t, content, "installed_skills:")
+		assert.Contains(t, content, "test-skill")
+	})
+
+	t.Run("removes dropped fields", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		aiRulezDir := filepath.Join(dir, ".ai-rulez")
+		require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
+
+		original := `version: "3.0"
+name: my-project
+presets:
+  - claude
+installed_skills:
+  - name: old-skill
+    source: https://github.com/example/old
+`
+		yamlPath := filepath.Join(aiRulezDir, "config.yaml")
+		require.NoError(t, os.WriteFile(yamlPath, []byte(original), 0o644))
+
+		cfg, err := loadConfigYAML(yamlPath)
+		require.NoError(t, err)
+
+		// Remove installed skills
+		cfg.InstalledSkills = nil
+
+		err = SaveConfigV3(cfg, aiRulezDir)
+		require.NoError(t, err)
+
+		saved, err := os.ReadFile(yamlPath)
+		require.NoError(t, err)
+		content := string(saved)
+
+		assert.NotContains(t, content, "installed_skills")
+		assert.NotContains(t, content, "old-skill")
+		assert.Contains(t, content, "presets:")
+	})
+}
+
+func indexOfSubstring(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }
 
 func TestPresetV3Marshaling(t *testing.T) {

@@ -153,6 +153,11 @@ ai-rulez add command review-pr
 ai-rulez list rules
 ai-rulez remove rule outdated-rule
 
+# Installed skills
+ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
+ai-rulez skill list
+ai-rulez skill remove kreuzberg
+
 # Validation
 ai-rulez validate
 
@@ -190,6 +195,26 @@ includes:
 
 Private repos use `AI_RULEZ_GIT_TOKEN` environment variable or `--token` flag.
 
+## Installed Skills
+
+Install named skills from external repositories — fetched dynamically at generate time:
+
+```yaml
+installed_skills:
+  - name: kreuzberg
+    source: https://github.com/kreuzberg-dev/kreuzberg
+  - name: ai-rulez
+    source: https://github.com/Goldziher/ai-rulez
+```
+
+```bash
+ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
+ai-rulez skill list
+ai-rulez skill remove kreuzberg
+```
+
+Skills live at `skills/<name>/SKILL.md` in the source repo. See [Installed Skills docs](https://goldziher.github.io/ai-rulez/installed-skills/) for details.
+
 ## Generated Output
 
 Running `ai-rulez generate` creates:
@@ -200,9 +225,13 @@ Running `ai-rulez generate` creates:
 | Cursor | `.cursor/rules/*.mdc` |
 | Windsurf | `.windsurf/*.md` |
 | Copilot | `.github/copilot-instructions.md` |
-| Gemini | `.gemini/config.yaml` |
+| Gemini | `GEMINI.md` |
 | Continue.dev | `.continue/prompts/ai_rulez_prompts.yaml` |
 | Cline | `.cline/rules/*.md` |
+| Codex | `AGENTS.md` |
+| Amp | `AMP.md` |
+| Junie | `.junie/guidelines.md` |
+| OpenCode | `OPENCODE.md` |
 | Custom | Any path with markdown, JSON, or directory output |
 
 ## Use Cases
