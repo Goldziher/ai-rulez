@@ -100,6 +100,39 @@
         }
       ]
     },
+    "installed_skills": {
+      "type": "array",
+      "description": "Named skills to install from external repositories. Skills are fetched dynamically during generation.",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Skill name (unique identifier)",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "description": "Git repository URL (https://...) or local file path",
+            "minLength": 1
+          },
+          "path": {
+            "type": "string",
+            "description": "Path within repository to skill directory (defaults to skills/<name>)"
+          },
+          "ref": {
+            "type": "string",
+            "description": "Git ref - branch, tag, or commit hash (git repos only)"
+          },
+          "local_override": {
+            "type": "string",
+            "description": "Local path override for development (used instead of source when present)"
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "includes": {
       "type": "array",
       "description": "Content sources (git repositories or local paths) to include and merge",

@@ -72,6 +72,17 @@ func SetResolveIncludesCallback(fn ResolveIncludesCallback) {
 	resolveIncludesFunc = fn
 }
 
+// ResolveInstalledSkillsCallback is a callback function type that resolves installed skills
+type ResolveInstalledSkillsCallback func(ctx context.Context, cfg *ConfigV3) ([]ContentFile, error)
+
+// resolveInstalledSkillsFunc is set by the includes package during init
+var resolveInstalledSkillsFunc ResolveInstalledSkillsCallback
+
+// SetResolveInstalledSkillsCallback sets the callback for resolving installed skills
+func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
+	resolveInstalledSkillsFunc = fn
+}
+
 // LoadConfigV3 loads a V3 configuration from the specified base directory
 // The baseDir should contain a .ai-rulez/ subdirectory with config.yaml or config.json
 func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
@@ -138,6 +149,10 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 		return nil, err
 	}
 
+	if err := resolveInstalledSkillsIfNeeded(ctx, config); err != nil {
+		return nil, err
+	}
+
 	// Load domain-specific MCP servers
 	for domainName, domain := range config.Content.Domains {
 		domainMCPServers, err := loadDomainMCPServers(
@@ -182,6 +197,51 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 		"skills", len(mergedContent.Skills),
 		"agents", len(mergedContent.Agents))
 
+	return nil
+}
+
+func resolveInstalledSkillsIfNeeded(ctx context.Context, config *ConfigV3) error {
+	if len(config.InstalledSkills) == 0 {
+		return nil
+	}
+
+	if resolveInstalledSkillsFunc == nil {
+		return oops.
+			Hint("Installed skills are configured but the resolver is not registered.\nImport github.com/Goldziher/ai-rulez/internal/includes (blank import) before loading configs.").
+			Errorf("installed skills configured but resolver is unavailable")
+	}
+
+	logger.Debug("Resolving installed skills", "count", len(config.InstalledSkills))
+
+	skills, err := resolveInstalledSkillsFunc(ctx, config)
+	if err != nil {
+		logger.Warn("Failed to resolve installed skills", "error", err)
+		return nil
+	}
+
+	if config.Content == nil {
+		config.Content = &ContentTreeV3{
+			Domains: make(map[string]*DomainV3),
+		}
+	}
+
+	// Build set of existing local skill names
+	existingNames := make(map[string]bool)
+	for _, s := range config.Content.Skills {
+		existingNames[s.Name] = true
+	}
+
+	// Merge: local skills win over installed skills
+	for _, s := range skills {
+		if existingNames[s.Name] {
+			logger.Warn("Installed skill name conflicts with local skill, skipping", "name", s.Name)
+			continue
+		}
+		config.Content.Skills = append(config.Content.Skills, s)
+		existingNames[s.Name] = true
+	}
+
+	logger.Debug("Successfully resolved installed skills", "count", len(skills))
 	return nil
 }
 
@@ -534,6 +594,11 @@ func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
 	}
 
 	return domains, nil
+}
+
+// ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages
+func ParseFrontmatterPublic(content string) (metadata *MetadataV3, body string) {
+	return parseFrontmatter(content)
 }
 
 // parseFrontmatter parses optional YAML frontmatter from content
@@ -1110,8 +1175,9 @@ func sanitizeNameToID(name string) string {
 	return id
 }
 
-// SaveConfigV3 saves a V3 configuration back to YAML or JSON format
-// It determines the format based on which config file currently exists
+// SaveConfigV3 saves a V3 configuration back to YAML or JSON format.
+// For YAML files, it uses yaml.Node round-tripping to preserve comments,
+// field ordering, and formatting from the original file.
 func SaveConfigV3(cfg *ConfigV3, configDir string) error {
 	if cfg == nil {
 		return oops.
@@ -1144,46 +1210,140 @@ func SaveConfigV3(cfg *ConfigV3, configDir string) error {
 		isYAML = true
 	}
 
-	// Marshal to bytes
 	var data []byte
 	var err error
 
 	if isYAML {
-		data, err = yaml.Marshal(cfg)
+		data, err = marshalYAMLPreserving(cfg, targetPath)
 		if err != nil {
-			return oops.
-				With("path", targetPath).
-				Wrapf(err, "marshal config to YAML")
+			return oops.With("path", targetPath).Wrapf(err, "marshal config to YAML")
 		}
 	} else {
 		data, err = json.Marshal(cfg)
 		if err != nil {
-			return oops.
-				With("path", targetPath).
-				Wrapf(err, "marshal config to JSON")
+			return oops.With("path", targetPath).Wrapf(err, "marshal config to JSON")
 		}
 	}
 
 	// Write to temporary file first (atomic write)
 	tmpPath := targetPath + ".tmp"
 	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
-		return oops.
-			With("path", tmpPath).
-			Wrapf(err, "write temporary config file")
+		return oops.With("path", tmpPath).Wrapf(err, "write temporary config file")
 	}
 
 	// Rename temporary file to actual config file (atomic)
 	if err := os.Rename(tmpPath, targetPath); err != nil {
-		// Clean up temp file if rename fails (best effort)
 		//nolint:gosec,errcheck // temp file cleanup is best-effort
 		_ = os.Remove(tmpPath)
-		return oops.
-			With("src", tmpPath).
-			With("dst", targetPath).
-			Wrapf(err, "rename config file")
+		return oops.With("src", tmpPath).With("dst", targetPath).Wrapf(err, "rename config file")
 	}
 
 	return nil
+}
+
+// marshalYAMLPreserving marshals a ConfigV3 to YAML while preserving
+// the original file's field ordering, comments, and formatting.
+// If the original file doesn't exist, falls back to plain marshal.
+func marshalYAMLPreserving(cfg *ConfigV3, existingPath string) ([]byte, error) {
+	// Read existing file
+	existingData, readErr := os.ReadFile(existingPath)
+	if readErr != nil {
+		// File doesn't exist yet — plain marshal
+		return yaml.Marshal(cfg)
+	}
+
+	// Parse existing file into a yaml.Node document tree
+	var origDoc yaml.Node
+	if err := yaml.Unmarshal(existingData, &origDoc); err != nil {
+		// Can't parse original — fall back to plain marshal
+		return yaml.Marshal(cfg)
+	}
+
+	// Marshal the new config into a fresh yaml.Node document tree
+	newData, err := yaml.Marshal(cfg)
+	if err != nil {
+		return nil, err
+	}
+	var newDoc yaml.Node
+	if err := yaml.Unmarshal(newData, &newDoc); err != nil {
+		return nil, err
+	}
+
+	// Both documents should have Kind==DocumentNode with one MappingNode child
+	origMapping := getDocumentMapping(&origDoc)
+	newMapping := getDocumentMapping(&newDoc)
+	if origMapping == nil || newMapping == nil {
+		// Unexpected structure — fall back to plain marshal
+		return yaml.Marshal(cfg)
+	}
+
+	// Merge new values into original tree (preserving order/comments)
+	mergeYAMLMappings(origMapping, newMapping)
+
+	// Encode the preserved document back to YAML
+	var buf strings.Builder
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(&origDoc); err != nil {
+		return nil, err
+	}
+	if err := enc.Close(); err != nil {
+		return nil, err
+	}
+
+	return []byte(buf.String()), nil
+}
+
+// getDocumentMapping returns the top-level MappingNode from a DocumentNode.
+func getDocumentMapping(doc *yaml.Node) *yaml.Node {
+	if doc.Kind == yaml.DocumentNode && len(doc.Content) > 0 && doc.Content[0].Kind == yaml.MappingNode {
+		return doc.Content[0]
+	}
+	if doc.Kind == yaml.MappingNode {
+		return doc
+	}
+	return nil
+}
+
+// mergeYAMLMappings merges new mapping values into orig, preserving orig's
+// key order and comments. Keys present in new but not orig are appended.
+// Keys present in orig but not new are removed.
+func mergeYAMLMappings(orig, updated *yaml.Node) {
+	// Build index of updated keys → value nodes
+	updatedKeys := make(map[string]*yaml.Node)
+	for i := 0; i+1 < len(updated.Content); i += 2 {
+		updatedKeys[updated.Content[i].Value] = updated.Content[i+1]
+	}
+
+	// Update existing keys in orig (preserve key node with its comments)
+	// and track which orig keys still exist in updated
+	kept := make([]*yaml.Node, 0, len(orig.Content))
+	for i := 0; i+1 < len(orig.Content); i += 2 {
+		keyNode := orig.Content[i]
+		origValNode := orig.Content[i+1]
+
+		if updatedValNode, exists := updatedKeys[keyNode.Value]; exists {
+			// Key exists in both: update value, keep original key node (comments preserved)
+			kept = append(kept, keyNode, updatedValNode)
+			// If both values are mappings, recurse to preserve nested comments
+			if origValNode.Kind == yaml.MappingNode && updatedValNode.Kind == yaml.MappingNode {
+				mergeYAMLMappings(origValNode, updatedValNode)
+				kept[len(kept)-1] = origValNode // use the recursively-merged original
+			}
+			delete(updatedKeys, keyNode.Value)
+		}
+		// else: key removed from updated config — drop it
+	}
+
+	// Append keys that are new (not in orig)
+	for i := 0; i+1 < len(updated.Content); i += 2 {
+		keyNode := updated.Content[i]
+		if valNode, stillNew := updatedKeys[keyNode.Value]; stillNew {
+			kept = append(kept, keyNode, valNode)
+		}
+	}
+
+	orig.Content = kept
 }
 
 // fileExists checks if a file exists (utility function for SaveConfigV3)

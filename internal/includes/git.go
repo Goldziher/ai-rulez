@@ -108,6 +108,11 @@ func (s *GitSource) GetName() string {
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "", "is_ssh", s.isSSH)
 
+	// Clear stale cache before downloading fresh content
+	if err := os.RemoveAll(s.cacheDir); err != nil {
+		logger.Warn("Failed to clear include cache", "cache_dir", s.cacheDir, "error", err)
+	}
+
 	// Ensure cache directory exists
 	if err := os.MkdirAll(s.cacheDir, 0o755); err != nil {
 		return nil, oops.

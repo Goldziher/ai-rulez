@@ -22,6 +22,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez remove rule/context/skill` | Delete content files |
 | `ai-rulez list rules/context/skills` | List content files |
 | `ai-rulez include add/remove/list` | Manage external includes |
+| `ai-rulez skill install/remove/list` | Manage installed skills |
 | `ai-rulez profile add/remove/list` | Manage profiles |
 | `ai-rulez profile set-default` | Set default profile |
 
@@ -353,6 +354,61 @@ ai-rulez list skills [flags]
 ```bash
 ai-rulez list skills
 ai-rulez list skills --domain backend
+```
+
+### Installed Skill Management
+
+Install named skills from external repositories. See [Installed Skills](installed-skills.md) for full details.
+
+#### `ai-rulez skill install <name> --source <url> [flags]`
+
+Install a named skill from a git repository or local path.
+
+**Arguments:**
+- `<name>` (required): Skill name (unique identifier)
+
+**Flags:**
+- `--source <url>` (required): Git URL or local path
+- `--path <dir>` (optional): Path within repo to skill directory (defaults to `skills/<name>`)
+- `--ref <ref>` (optional): Git reference (branch, tag, commit)
+
+**Examples:**
+
+```bash
+ai-rulez skill install kreuzberg --source https://github.com/kreuzberg-dev/kreuzberg
+ai-rulez skill install my-lib --source https://github.com/org/repo --path custom/path --ref v2.0
+ai-rulez skill install local-skill --source ../my-other-repo
+```
+
+#### `ai-rulez skill remove <name> [flags]`
+
+Remove an installed skill from the configuration.
+
+**Arguments:**
+- `<name>` (required): Skill name to remove
+
+**Flags:**
+- `--force` (optional): Skip confirmation prompt
+
+**Examples:**
+
+```bash
+ai-rulez skill remove kreuzberg
+ai-rulez skill remove my-lib --force
+```
+
+#### `ai-rulez skill list [flags]`
+
+List all installed skills.
+
+**Flags:**
+- `--json` (optional): Output as JSON
+
+**Examples:**
+
+```bash
+ai-rulez skill list
+ai-rulez skill list --json
 ```
 
 ### Include Management

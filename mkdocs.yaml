@@ -92,6 +92,7 @@ nav:
   - Configuration: configuration.md
   - Monorepo Guide: monorepo.md
   - CLI Commands: cli.md
+  - Installed Skills: installed-skills.md
   - MCP Server: mcp-server.md
   - Schema: schema.md
   - Examples: examples.md

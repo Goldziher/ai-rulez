@@ -619,6 +619,80 @@ func ListIncludesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	})
 }
 
+// Installed Skill Handlers
+
+func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(".")
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	source := request.GetString("source", "")
+	path := request.GetString("path", "")
+	ref := request.GetString("ref", "")
+
+	req := &crud.InstallSkillRequest{
+		Name:   name,
+		Source: source,
+		Path:   path,
+		Ref:    ref,
+	}
+
+	err = op.InstallSkill(ctx, req)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "install_skill",
+		"name":      name,
+		"source":    source,
+		"message":   "Skill installed successfully",
+	})
+}
+
+func UninstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(".")
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+
+	err = op.UninstallSkill(ctx, name)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "uninstall_skill",
+		"name":      name,
+		"message":   "Skill uninstalled successfully",
+	})
+}
+
+func ListInstalledSkillsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(".")
+	if err != nil {
+		return ToolError(err)
+	}
+
+	skills, err := op.ListInstalledSkills(ctx)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":          true,
+		"operation":        "list_installed_skills",
+		"installed_skills": skills,
+		"count":            len(skills),
+	})
+}
+
 // Profile Handlers
 
 func AddProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
