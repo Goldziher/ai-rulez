@@ -414,6 +414,70 @@ List all include sources in the configuration.
 }
 ```
 
+### Installed Skill Tools
+
+#### `install_skill`
+
+Install a named skill from a git repository or local path.
+
+**Parameters:**
+- `name` (required, string): Skill name (unique identifier)
+- `source` (required, string): Git URL or local filesystem path
+- `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
+- `ref` (optional, string): Git reference (branch, tag, commit)
+
+**Response:**
+```json
+{
+  "success": true,
+  "operation": "install_skill",
+  "name": "kreuzberg",
+  "source": "https://github.com/kreuzberg-dev/kreuzberg",
+  "message": "Skill installed successfully"
+}
+```
+
+#### `uninstall_skill`
+
+Remove an installed skill from the configuration.
+
+**Parameters:**
+- `name` (required, string): Skill name to remove
+
+**Response:**
+```json
+{
+  "success": true,
+  "operation": "uninstall_skill",
+  "name": "kreuzberg",
+  "message": "Skill uninstalled successfully"
+}
+```
+
+#### `list_installed_skills`
+
+List all installed skills.
+
+**Parameters:** None
+
+**Response:**
+```json
+{
+  "success": true,
+  "operation": "list_installed_skills",
+  "installed_skills": [
+    {
+      "Name": "kreuzberg",
+      "Source": "https://github.com/kreuzberg-dev/kreuzberg",
+      "Path": "skills/kreuzberg",
+      "Ref": "",
+      "Type": "git"
+    }
+  ],
+  "count": 1
+}
+```
+
 ### Profile Tools
 
 #### `add_profile`

@@ -46,6 +46,7 @@ profiles:
 ### Using AI-Rulez
 - **[CLI Reference](cli.md)**: All commands and flags
 - **[Includes System](includes.md)**: Reusing configurations across projects
+- **[Installed Skills](installed-skills.md)**: Installing skills from external repositories
 - **[Domains & Profiles](domains.md)**: Organizing by team or subsystem
 - **[Custom Presets](profiles.md)**: Creating custom output formats
 
@@ -84,8 +85,10 @@ profiles:
 - Domain scoping to organize rules by team or subsystem
 - Profile-based customization for different contexts
 - Modular structure to reduce merge conflicts
-- Built-in presets for major AI tools
+- Built-in presets for 18+ AI tools
 - Custom presets for any tool and format
+- Installed skills from external repositories
+- Remote includes for sharing rules across projects
 - MCP integration for programmatic access
 - Support for monorepos and multi-team projects
 

@@ -39,6 +39,11 @@ tasks:
     cmds:
       - prek run --all-files
 
+  lint:go:
+    desc: Run golangci-lint directly
+    cmds:
+      - golangci-lint run --timeout=5m
+
   format:
     desc: Format Go code
     cmds:

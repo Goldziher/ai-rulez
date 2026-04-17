@@ -6,6 +6,23 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.12.0] - 2026-04-17
+
+### Added
+- **Installed skills**: New `ai-rulez skill install/remove/list` commands for installing named skills from external git repos or local paths. Skills are fetched dynamically at generate time and included in outputs. Config field: `installed_skills` in config.yaml.
+- **MCP tools for installed skills**: `install_skill`, `uninstall_skill`, `list_installed_skills` MCP operations.
+- **Distributable ai-rulez skill**: `skills/ai-rulez/` folder at repo root with comprehensive SKILL.md and reference docs, installable by other projects.
+- **`installed_skills` JSON schema**: Schema validation for the new config section.
+- **llms.txt**: Added LLM-friendly documentation index at `docs/llms.txt`.
+
+### Fixed
+- **YAML config preservation**: `SaveConfigV3` now uses `yaml.Node` round-tripping to preserve field ordering, comments, and formatting when modifying config (e.g., `skill install`, `include add`). Previously, saving re-marshaled the entire config, losing comments and reordering fields.
+- **Stale cache invalidation**: Include and skill caches are now cleared before each fetch, preventing stale data from previous downloads from contaminating results.
+- **golangci-lint clean**: Extracted `sourceTypeGit`/`sourceTypeLocal` constants, fixed `gocritic` shadow and named result warnings.
+
+### Changed
+- **golangci-lint pinned in CI**: `golangci-lint-action@latest` with `version: v2.11.4` in CI workflow.
+
 ## [3.11.5] - 2026-04-15
 
 ### Fixed
