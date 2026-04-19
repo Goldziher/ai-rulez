@@ -151,6 +151,9 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV
 		}
 	}
 
+	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
+	renderAgentsSection(&builder, content, allAgents)
+
 	// Skills are generated to .codex/skills/ directory, not inlined in AGENTS.md
 
 	return builder.String()

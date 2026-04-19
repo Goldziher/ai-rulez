@@ -87,12 +87,6 @@ Control generated file headers:
 - **compact**: Brief header with tool name and generation notice
 - **minimal**: Bare minimum header
 
-## Compression
+## Compression (Deprecated)
 
-Reduce token usage in generated outputs:
-
-- **off**: No compression (default)
-- **light**: Punctuation and whitespace cleanup
-- **moderate**: + stopword removal
-- **aggressive**: + sentence selection
-- **maximum**: + semantic scoring and hypernym compression
+The `compression` config option is deprecated and now a no-op. It will be removed in a future version. To reduce token usage, condense content at the source level instead.

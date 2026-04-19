@@ -30,7 +30,8 @@ type BuiltinDomain struct {
 
 // autoIncludeDomains are included by default unless explicitly excluded with "!" prefix
 var autoIncludeDomains = map[string]bool{
-	"ai-governance": true,
+	"ai-governance":    true,
+	"agent-delegation": true,
 }
 
 // registry maps builtin names to their metadata
@@ -44,6 +45,7 @@ var registry = map[string]BuiltinDomain{
 	"token-efficiency": {Name: "token-efficiency", Category: CategoryUniversal, Description: "Output efficiency and task automation"},
 	"documentation":    {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
 	"default-commands": {Name: "default-commands", Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
+	"agent-delegation": {Name: "agent-delegation", Category: CategoryUniversal, AutoInclude: true, Description: "Agent delegation instructions and listing in generated outputs"},
 
 	// Languages
 	"rust":       {Name: "rust", Category: CategoryLanguage, Description: "Rust language conventions"},
@@ -64,6 +66,9 @@ var registry = map[string]BuiltinDomain{
 	"ext-php-rs": {Name: "ext-php-rs", Category: CategoryBinding, Description: "ext-php-rs Rust-PHP bindings"},
 	"rustler":    {Name: "rustler", Category: CategoryBinding, Description: "Rustler Rust-Elixir NIF bindings"},
 	"wasm":       {Name: "wasm", Category: CategoryBinding, Description: "WebAssembly/wasm-bindgen bindings"},
+	"jni-rs":     {Name: "jni-rs", Category: CategoryBinding, Description: "JNI Rust-Java/JVM bindings"},
+	"extendr":    {Name: "extendr", Category: CategoryBinding, Description: "extendr Rust-R bindings"},
+	"cgo":        {Name: "cgo", Category: CategoryBinding, Description: "cgo Go-C/Rust FFI bindings"},
 }
 
 // IsValid returns true if the given name is a valid builtin (ignoring "!" prefix)

@@ -124,6 +124,8 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 	// Set runtime fields
 	config.BaseDir = absDir
 
+	warnDeprecatedCompression(config)
+
 	// Load root MCP servers (optional - don't fail if missing)
 	rootMCPServers, err := loadMCPServers(configDir)
 	if err != nil {
@@ -243,6 +245,12 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *ConfigV3) error
 
 	logger.Debug("Successfully resolved installed skills", "count", len(skills))
 	return nil
+}
+
+func warnDeprecatedCompression(config *ConfigV3) {
+	if config.Compression != nil && config.Compression.IsDeprecatedUsage() {
+		logger.Warn("\"compression\" config is deprecated and will be removed in a future version. It is now a no-op. Condense content at the source level instead.")
+	}
 }
 
 // loadConfigFile loads config.yaml or config.json from the .ai-rulez/ directory

@@ -1,5 +1,4 @@
 ---
 priority: critical
 ---
-# Verify Before Acting
-Always verify assumptions before taking action. Read existing code before modifying. Check current state before making changes. Never assume — confirm.
+Verify assumptions before taking action. Check current state (branch, working directory, running processes) before making changes. Confirm file existence before editing. Test that build passes before committing. Never assume — confirm.
