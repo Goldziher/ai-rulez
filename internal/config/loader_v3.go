@@ -642,11 +642,16 @@ func parseFrontmatter(content string) (metadata *MetadataV3, body string) {
 	frontmatterLines := lines[1:endIdx]
 	frontmatterYAML := strings.Join(frontmatterLines, "\n")
 
-	// Parse frontmatter (non-fatal if it fails)
+	// First try direct unmarshal into MetadataV3 (works for simple key-value frontmatter)
 	var parsedMetadata MetadataV3
 	if err := yaml.Unmarshal([]byte(frontmatterYAML), &parsedMetadata); err != nil {
-		// Failed to parse frontmatter, return content as-is
-		return nil, content
+		// Direct unmarshal failed (e.g., nested YAML objects in Extra fields).
+		// Fall back to raw map parsing: extract known fields and stringify the rest.
+		result, ok := parseFrontmatterFromRawMap(frontmatterYAML)
+		if !ok {
+			return nil, content
+		}
+		parsedMetadata = result
 	}
 
 	// Extract actual content (after frontmatter)
@@ -655,6 +660,45 @@ func parseFrontmatter(content string) (metadata *MetadataV3, body string) {
 
 	metadata = &parsedMetadata
 	return metadata, body
+}
+
+// parseFrontmatterFromRawMap parses frontmatter YAML into MetadataV3 via a raw map.
+// Used as fallback when direct unmarshal fails (e.g., nested YAML objects).
+func parseFrontmatterFromRawMap(frontmatterYAML string) (MetadataV3, bool) {
+	var rawMap map[string]interface{}
+	if err := yaml.Unmarshal([]byte(frontmatterYAML), &rawMap); err != nil {
+		return MetadataV3{}, false
+	}
+
+	m := MetadataV3{Extra: make(map[string]string)}
+	for k, v := range rawMap {
+		switch k {
+		case "priority":
+			m.Priority = fmt.Sprintf("%v", v)
+		case "targets":
+			if targets, ok := v.([]interface{}); ok {
+				for _, t := range targets {
+					m.Targets = append(m.Targets, fmt.Sprintf("%v", t))
+				}
+			}
+		case "aliases":
+			if aliases, ok := v.([]interface{}); ok {
+				for _, a := range aliases {
+					m.Aliases = append(m.Aliases, fmt.Sprintf("%v", a))
+				}
+			}
+		case "usage":
+			m.Usage = fmt.Sprintf("%v", v)
+		case "shortcut":
+			m.Shortcut = fmt.Sprintf("%v", v)
+		case "category":
+			m.Category = fmt.Sprintf("%v", v)
+		default:
+			m.Extra[k] = fmt.Sprintf("%v", v)
+		}
+	}
+
+	return m, true
 }
 
 // loadContentFile loads a content file and parses optional frontmatter

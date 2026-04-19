@@ -19,13 +19,14 @@ const (
 	referencesDir    = "references"
 )
 
-// getSkillCacheDir returns the system cache directory for a given installed skill
+// getSkillCacheDir returns the cache directory for a given installed skill.
+// Uses ~/.cache/ai-rulez/ (XDG convention) for consistent cross-platform behavior.
 func getSkillCacheDir(skillName string) (string, error) {
-	userCacheDir, err := os.UserCacheDir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		userCacheDir = os.TempDir()
+		homeDir = os.TempDir()
 	}
-	cacheDir := filepath.Join(userCacheDir, "ai-rulez", skillCachePrefix, skillName)
+	cacheDir := filepath.Join(homeDir, ".cache", "ai-rulez", skillCachePrefix, skillName)
 	return cacheDir, nil
 }
 
