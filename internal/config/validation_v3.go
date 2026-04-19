@@ -67,12 +67,8 @@ func validateSkillSlice(skills []ContentFile, scope string) error {
 		}
 
 		skillID := SkillID(skill)
-		return oops.
-			With("scope", scope).
-			With("skill", skillID).
-			With("path", skill.Path).
-			Hint("Add YAML frontmatter with a non-empty 'description' field to the skill.\nExample:\n---\ndescription: \"What this skill is for\"\n---").
-			Errorf("skill %q missing required field 'description'", skillID)
+		logger.Warn("skill missing 'description' field in frontmatter — using skill name as fallback",
+			"scope", scope, "skill", skillID, "path", skill.Path)
 	}
 
 	return nil
