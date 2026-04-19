@@ -1,15 +1,13 @@
 ---
 priority: high
 ---
-- Target PHP 8.2+. Use `declare(strict_types=1)` in every file.
-- Use typed properties, union types, enums, readonly classes, intersection types.
-- Formatting: PSR-12 via `phpcs`/`phpcbf` or `PHP-CS-Fixer`. Max 120 char lines. Pick one formatter, configure in CI.
-- Static analysis: `PHPStan` level 9 (or `Psalm`). Never suppress warnings without justification. Run in CI.
-- Security: `composer audit` for CVEs. Use `roave/security-advisories` as dev constraint to block vulnerable deps.
-- Testing: PHPUnit with `@dataProvider` for parameterized tests. 80%+ coverage via `phpunit --coverage-text`.
-- Use constructor promotion for value objects. Use named arguments for readability.
-- Error handling: use specific exceptions. Define custom exceptions extending `RuntimeException`.
-- Dependencies: Composer with `composer.lock` committed. Use `^` version constraints for flexibility.
-- Prefer first-class callable syntax (`strlen(...)`) and arrow functions for short closures.
-- Autoloading: PSR-4 exclusively. Never use `require`/`include` for class loading.
-- Anti-patterns: no `@` error suppression, no `eval()`, no dynamic property access, no `extract()`.
+- PHP 8.2+, `declare(strict_types=1)`, typed properties, union types, enums, readonly classes.
+- Formatting: PSR-12 via `phpcs`/`phpcbf` or `php-cs-fixer`. Static analysis: `PHPStan` level 9 or `Psalm`.
+- Testing: PHPUnit with `@dataProvider`, 80%+ coverage.
+- Error handling: specific exceptions extending `RuntimeException`, constructor promotion for value objects.
+- First-class callable syntax (`$fn = strlen(...)`) for callbacks. Arrow functions (`fn() =>`) for simple closures.
+- Dependencies: Composer with `composer.lock` committed, `^` version constraints. `composer audit` in CI.
+- Security: require `roave/security-advisories` as dev dependency to block vulnerable packages.
+- PSR-4 autoloading exclusively — no `require`/`include` for classes.
+- Intersection types for strict parameter contracts. Named arguments for readability.
+- Anti-patterns: `@` suppression, `eval()`, dynamic property access, `extract()`.
