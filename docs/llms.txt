@@ -11,7 +11,7 @@ ai-rulez centralizes AI assistant instructions in a `.ai-rulez/` directory with 
 
 ## Configuration
 
-- [Configuration Reference](https://goldziher.github.io/ai-rulez/configuration/): Complete config.yaml reference — presets, profiles, builtins, includes, installed skills, headers, compression.
+- [Configuration Reference](https://goldziher.github.io/ai-rulez/configuration/): Complete config.yaml reference — presets, profiles, builtins, includes, installed skills, headers.
 - [Domains & Profiles](https://goldziher.github.io/ai-rulez/domains/): Organize content by team or service with domains, select subsets with profiles.
 - [Includes](https://goldziher.github.io/ai-rulez/includes/): Share rules across projects via git repos or local paths with configurable merge strategies.
 - [Installed Skills](https://goldziher.github.io/ai-rulez/installed-skills/): Install named skills from external repos, fetched dynamically at generate time.

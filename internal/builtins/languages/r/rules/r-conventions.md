@@ -1,15 +1,14 @@
 ---
 priority: high
 ---
-- Follow the tidyverse style guide. Use `styler` for formatting and `lintr` for linting.
-- Use R 4.1+ pipe operator `|>` over magrittr `%>%` in new code. Prefer base R when tidyverse is not needed.
-- Package development: use `devtools`, `usethis`, `roxygen2` for documentation, `testthat` for testing.
-- NAMESPACE management: use `roxygen2` `@export`/`@import` tags. Never edit NAMESPACE manually.
-- Error handling: use `tryCatch()`/`withCallingHandlers()` for recoverable errors. Use `cli::cli_abort()` for user-facing errors with informative messages.
-- Type safety: validate inputs with `checkmate` or `rlang::arg_match()`. Document expected types with roxygen2 `@param` tags.
-- Testing: use `testthat` with `test_that()` blocks. Cover edge cases, error paths, and NULL inputs. Target 80%+ coverage with `covr`.
-- Security: `oysteR` for dependency vulnerability scanning. Never use `eval(parse(text=))` with user input.
-- C/C++ integration: use `Rcpp` or `.Call()` interface. Protect all R objects with `PROTECT`/`UNPROTECT`. Never mix `Rcpp` and raw C API in the same file.
-- Rust integration: use `extendr` or `rextendr` for Rust FFI bindings to R. Follow `extendr` conventions for type conversion.
-- CRAN compliance: pass `R CMD check --as-cran` with zero warnings/notes. Keep DESCRIPTION fields accurate.
-- Documentation: roxygen2 on all exported functions with `@examples`. Build vignettes with `knitr`/`rmarkdown`.
+- R 4.1+, tidyverse style guide, `styler` formatting, `lintr` linting.
+- Base R pipe `|>` over magrittr `%>%`, prefer base R when tidyverse not needed.
+- Package dev: `devtools`/`usethis`/`roxygen2`, `testthat` (80%+ via `covr`).
+- Documentation: roxygen2 for inline docs and NAMESPACE management. `@examples` on all exports.
+- Vignettes with `knitr`/`rmarkdown` for long-form documentation and tutorials.
+- Error handling: `tryCatch()`/`withCallingHandlers()`, `cli::cli_abort()` for user-facing errors.
+- Input validation: `checkmate` or `rlang::arg_match()` for function parameter validation.
+- Security: `oysteR` for vulnerability scanning of dependencies.
+- C/C++: `Rcpp` or `.Call()`, PROTECT/UNPROTECT all R objects. Rust: `extendr`/`rextendr`.
+- CRAN: `R CMD check --as-cran` zero warnings/notes, maintain DESCRIPTION with proper versioning.
+- Anti-patterns: `eval(parse(text=))` with user input, mixing Rcpp and raw C API, `T`/`F` instead of `TRUE`/`FALSE`.

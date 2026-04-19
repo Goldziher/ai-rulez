@@ -85,7 +85,7 @@
       "default": true
     },
     "builtins": {
-      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude auto-includes (e.g., '!ai-governance'). Available: ai-governance (auto), security, git-workflow, code-quality, testing, token-efficiency, documentation, default-commands, rust, python, typescript, go, java, ruby, php, elixir, csharp, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm",
+      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude auto-includes (e.g., '!ai-governance'). Available: ai-governance (auto), agent-delegation (auto), security, git-workflow, code-quality, testing, token-efficiency, documentation, default-commands, rust, python, typescript, go, java, ruby, php, elixir, csharp, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm",
       "oneOf": [
         {
           "type": "boolean",
@@ -95,7 +95,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^!?(ai-governance|security|git-workflow|code-quality|testing|token-efficiency|documentation|default-commands|rust|python|typescript|go|java|ruby|php|elixir|csharp|pyo3|napi-rs|magnus|ext-php-rs|rustler|wasm)$"
+            "pattern": "^!?(ai-governance|agent-delegation|security|git-workflow|code-quality|testing|token-efficiency|documentation|default-commands|rust|python|typescript|go|java|ruby|php|elixir|csharp|r|pyo3|napi-rs|magnus|ext-php-rs|rustler|wasm|jni-rs|extendr|cgo)$"
           }
         }
       ]
@@ -192,28 +192,20 @@
     },
     "compression": {
       "type": "object",
-      "description": "Token reduction settings for generated files",
+      "description": "DEPRECATED: Compression is now a no-op and will be removed in a future version. Condense content at the source level instead.",
+      "deprecated": true,
       "properties": {
         "level": {
-          "type": "string",
-          "enum": ["off", "light", "moderate", "aggressive", "maximum"],
-          "description": "Token reduction level: off (none), light (punctuation/whitespace cleanup), moderate (+ stopword removal), aggressive (+ sentence selection), maximum (+ semantic scoring/hypernym compression)",
-          "default": "off"
+          "type": "string"
         },
         "preserve_markdown": {
-          "type": "boolean",
-          "description": "Whether to preserve markdown structure (headers, lists, tables) during reduction",
-          "default": true
+          "type": "boolean"
         },
         "preserve_code": {
-          "type": "boolean",
-          "description": "Whether to preserve code blocks and inline code during reduction",
-          "default": true
+          "type": "boolean"
         },
         "language": {
-          "type": "string",
-          "description": "ISO 639 language code for stopword lists",
-          "default": "en"
+          "type": "string"
         }
       },
       "additionalProperties": false

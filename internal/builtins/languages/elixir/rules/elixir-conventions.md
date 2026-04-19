@@ -1,16 +1,14 @@
 ---
 priority: high
 ---
-- Target Elixir 1.14+ with OTP 25+. Use pattern matching extensively.
-- Formatting: `mix format` (built-in, non-negotiable). Configure in `.formatter.exs`.
-- Linting: `Credo` for static analysis (`mix credo --strict`). `Dialyzer` via `dialyxir` for type checking.
-- Security: `mix_audit` for dependency CVEs, `sobelow` for SAST (Phoenix). Run both in CI.
-- Testing: ExUnit with `describe` blocks. `doctest` for documented examples. `excoveralls` for coverage (80%+).
-- Return `{:ok, value}` / `{:error, reason}` tuples for fallible operations. Never raise for expected errors.
-- Use `with` for complex multi-step operations. Use guard clauses for function overloading.
-- Typespecs: `@spec` and `@type` on all public functions. Use `Dialyzer` for static analysis.
-- Leverage OTP patterns: GenServer for state, Supervisor for fault tolerance.
-- Use pipe operator `|>` for data transformation chains. Keep pipes left-to-right readable.
-- Dependencies: `mix deps.get`, commit `mix.lock`. Use `hex` for package management. Use `~>` version constraints.
-- Documentation: `@moduledoc` on every module, `@doc` on all public functions with examples. Generate with `ExDoc`.
-- Anti-patterns: no mutable state outside processes, no long-running NIFs blocking scheduler, no `String.to_atom` with user input.
+- Elixir 1.14+ OTP 25+, pattern matching extensively, `mix format` non-negotiable.
+- Configure `.formatter.exs` with `:inputs` and `:import_deps` for consistent formatting across team.
+- Linting: `Credo --strict`, type checking: `Dialyzer` via `dialyxir`.
+- Security: `mix_audit` for dependency CVE scanning, `sobelow` for SAST. Run both in CI.
+- Testing: ExUnit with `describe` blocks, `doctest` for examples, `excoveralls` (80%+).
+- Documentation: ExDoc for generation, `@moduledoc` on all modules, `@doc` + `@spec` on public functions.
+- `{:ok, value}` / `{:error, reason}` tuples — never raise for expected errors.
+- `with` for multi-step ops, guard clauses for function overloading.
+- OTP: GenServer for state, Supervisor for fault tolerance, `|>` pipe for transforms.
+- Dependencies: commit `mix.lock`, `hex` with `~>` constraints.
+- Anti-patterns: mutable state outside processes, long-running NIFs, `String.to_atom` with user input.

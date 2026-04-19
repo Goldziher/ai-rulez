@@ -1,17 +1,15 @@
 ---
 priority: high
 ---
-- Target Java 17+ (LTS). Use records for immutable data. Use sealed classes for restricted hierarchies.
-- Follow Google Java Style Guide. Use 4-space indentation, 100 char line limit.
-- Build: Maven or Gradle. Prefer Gradle with Kotlin DSL for new projects. Pin plugin versions. Commit wrapper scripts.
-- Linting: `google-java-format` for formatting. `Error Prone` for compile-time bug detection. `Checkstyle` for style enforcement.
-- Security: `OWASP dependency-check` plugin for CVEs. `SpotBugs` for static bug detection. Run in CI.
-- Use `var` for local variables when type is obvious from context. Never use raw types.
-- Testing: JUnit 5 with `@ParameterizedTest` for data-driven tests. AssertJ for fluent assertions. `JaCoCo` for coverage (80%+).
-- Error handling: catch specific exceptions, never `Exception` or `Throwable` broadly. Use try-with-resources.
-- Prefer constructor injection over field injection. Use `final` fields by default.
-- Use `Optional<T>` for nullable returns, never for parameters or fields.
-- Pattern matching: use `instanceof` pattern matching and switch expressions.
-- Streams: prefer streams for collection transformations. Avoid side effects in stream operations.
-- Benchmarking: `JMH` (Java Microbenchmark Harness) for performance testing. Never use `System.currentTimeMillis()` for benchmarks.
-- Anti-patterns: no public fields (use records or getters), no mutable static state, no checked exceptions in lambdas.
+- Java 17+ LTS, records for immutable data, sealed classes for restricted hierarchies, pattern matching.
+- Google Java Style (4-space, 100 char), `google-java-format`. Static analysis: `Error Prone` + `SpotBugs`.
+- Build: Maven or Gradle with wrapper scripts (`mvnw`/`gradlew`). Commit wrapper files.
+- Testing: JUnit 5 with `@ParameterizedTest`, AssertJ assertions, `JaCoCo` (80%+ coverage).
+- Benchmarking: JMH for microbenchmarks — never use `System.nanoTime()` loops.
+- Error handling: specific exceptions only, never `catch (Exception)`, use try-with-resources for `AutoCloseable`.
+- `var` for obvious types, `Optional<T>` for returns (never params/fields), `final` fields by default.
+- Prefer constructor injection over field injection for DI. Immutable collections: `List.of()`, `Map.of()`.
+- Streams for collection transforms, `instanceof` pattern matching, switch expressions.
+- Security: OWASP `dependency-check` Maven/Gradle plugin for CVE scanning.
+- Dependencies: commit lock files, use BOM for version alignment, avoid `SNAPSHOT` in releases.
+- Anti-patterns: public fields, mutable static state, raw types, checked exceptions in lambdas.

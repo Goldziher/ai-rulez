@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/compression"
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
@@ -353,25 +352,14 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		}
 	}
 
+	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	renderAgentsSection(&builder, content, allAgents)
+
 	// Skills are generated to .claude/skills/ directory, not inlined in CLAUDE.md
 	// Commands are generated to .claude/skills/ directory as skills, not inlined in CLAUDE.md
 
-	result := builder.String()
-
-	// Apply compression if configured
-	if cfg.Compression != nil {
-		compressor := compression.NewCompressor(cfg.Compression)
-		result = compressor.Compress(result)
-
-		stats := compressor.GetStats()
-		logger.Info("CLAUDE.md compression",
-			"level", cfg.Compression.GetCompressionLevel(),
-			"original", stats.OriginalSize,
-			"compressed", stats.CompressedSize,
-			"saved_percent", fmt.Sprintf("%.1f%%", stats.Ratio))
-	}
-
-	return result
+	return builder.String()
 }
 
 func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
