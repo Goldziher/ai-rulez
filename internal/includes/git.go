@@ -32,17 +32,15 @@ const (
 	aiRulezDir    = ".ai-rulez"
 )
 
-// getIncludeCacheDir returns the system cache directory for a given include source
+// getIncludeCacheDir returns the cache directory for a given include source.
+// Uses ~/.cache/ai-rulez/ (XDG convention) for consistent cross-platform behavior.
 func getIncludeCacheDir(sourceName string) (string, error) {
-	// Get user cache directory (follows OS conventions)
-	userCacheDir, err := os.UserCacheDir()
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		// Fallback to temp directory if UserCacheDir fails
-		userCacheDir = os.TempDir()
+		homeDir = os.TempDir()
 	}
 
-	// Create ai-rulez includes cache path
-	cacheDir := filepath.Join(userCacheDir, "ai-rulez", "includes", sourceName)
+	cacheDir := filepath.Join(homeDir, ".cache", "ai-rulez", "includes", sourceName)
 	return cacheDir, nil
 }
 
