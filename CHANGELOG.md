@@ -6,6 +6,18 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+## [3.13.1] - 2026-04-19
+
+### Fixed
+- **Frontmatter parsing**: Fall back to raw map parsing when direct YAML unmarshal fails (e.g., SKILL.md files with nested `metadata:` objects). Nested values are stringified for the Extra map.
+- **Skill description validation**: Downgraded missing description from a fatal error to a warning. Uses skill name as fallback description instead of failing generation.
+- **Cache directory consistency**: Unified all cache locations to `~/.cache/ai-rulez/` (XDG convention) instead of mixing `os.UserCacheDir()` (`~/Library/Caches` on macOS) with `~/.cache/`.
+
+### Changed
+- **Module structure**: Restructured shared modules to use `.ai-rulez/` subdirectories, enabling remote includes via GitHub URLs without `local_override`.
+- **mdformat exclusion**: Excluded `.ai-rulez/` directories from mdformat pre-commit hook to prevent YAML frontmatter destruction.
+- **Enriched agents**: Improved devops-engineer, docs-writer, polyglot-architect, and code-reviewer agents with more detailed guidance.
+
 ## [3.13.0] - 2026-04-19
 
 ### Added
