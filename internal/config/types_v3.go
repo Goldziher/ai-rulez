@@ -40,53 +40,19 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 	return h.Style
 }
 
-// CompressionConfig represents token reduction settings for generated files
+// CompressionConfig is deprecated and exists only for backward compatibility.
+// Compression is now a no-op. Condense content at the source level instead.
 type CompressionConfig struct {
-	Level            string `yaml:"level,omitempty" json:"level,omitempty"`                         // "off", "light", "moderate", "aggressive", "maximum"
-	PreserveMarkdown *bool  `yaml:"preserve_markdown,omitempty" json:"preserve_markdown,omitempty"` // default: true
-	PreserveCode     *bool  `yaml:"preserve_code,omitempty" json:"preserve_code,omitempty"`         // default: true
-	Language         string `yaml:"language,omitempty" json:"language,omitempty"`                   // ISO 639 code, default: "en"
+	Level            string `yaml:"level,omitempty" json:"level,omitempty"`
+	PreserveMarkdown *bool  `yaml:"preserve_markdown,omitempty" json:"preserve_markdown,omitempty"`
+	PreserveCode     *bool  `yaml:"preserve_code,omitempty" json:"preserve_code,omitempty"`
+	Language         string `yaml:"language,omitempty" json:"language,omitempty"`
 }
 
-// GetCompressionLevel returns the compression level, defaulting to "off"
-func (c *CompressionConfig) GetCompressionLevel() string {
-	if c == nil || c.Level == "" {
-		return "off"
-	}
-	// Backward compatibility mapping
-	switch c.Level {
-	case "none":
-		return "off"
-	case "minimal":
-		return "light"
-	case "standard":
-		return "moderate"
-	}
-	return c.Level
-}
-
-// ShouldPreserveMarkdown returns true by default
-func (c *CompressionConfig) ShouldPreserveMarkdown() bool {
-	if c == nil || c.PreserveMarkdown == nil {
-		return true
-	}
-	return *c.PreserveMarkdown
-}
-
-// ShouldPreserveCode returns true by default
-func (c *CompressionConfig) ShouldPreserveCode() bool {
-	if c == nil || c.PreserveCode == nil {
-		return true
-	}
-	return *c.PreserveCode
-}
-
-// GetLanguage returns the language, defaulting to "en"
-func (c *CompressionConfig) GetLanguage() string {
-	if c == nil || c.Language == "" {
-		return "en"
-	}
-	return c.Language
+// IsDeprecatedUsage returns true when the compression config is actively set
+// (i.e., level is not empty or "off"), indicating the user should be warned.
+func (c *CompressionConfig) IsDeprecatedUsage() bool {
+	return c != nil && c.Level != "" && c.Level != "off"
 }
 
 // BuiltinsConfig represents the builtins field which can be:

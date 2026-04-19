@@ -1,16 +1,14 @@
 ---
 priority: high
 ---
-- Target .NET 8+ with C# 12. Use file-scoped namespaces, primary constructors, collection expressions.
-- Formatting: `dotnet format` or `.editorconfig` rules. Enforce in CI with `dotnet format --verify-no-changes`.
-- Linting: enable `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`. Use Roslyn analyzers, `StyleCop.Analyzers`, or `Roslynator`.
-- Security: `dotnet list package --vulnerable` for CVE scanning. Use `Microsoft.CodeAnalysis.NetAnalyzers` for security rules.
-- Enable nullable reference types (`<Nullable>enable</Nullable>`). Zero nullable warnings policy.
-- Testing: xUnit with `[Theory]`/`[InlineData]` for parameterized tests. FluentAssertions for readable assertions. `coverlet` for coverage (80%+).
-- Use `record` types for immutable data. Use `required` keyword for mandatory properties.
-- Error handling: use specific exceptions. Use `ArgumentException` and `InvalidOperationException` appropriately.
-- Async: use `async`/`await` throughout. Never use `.Result` or `.Wait()` (causes deadlocks). Use `ValueTask` for hot paths.
-- Use pattern matching in switch expressions. Use `is` patterns for type checking.
-- Dependencies: NuGet with `PackageReference`. Commit `packages.lock.json` via `RestorePackagesWithLockFile`. Use `Directory.Build.props` for shared config.
-- Benchmarking: `BenchmarkDotNet` for performance testing. Never use `Stopwatch` for benchmarks.
-- Anti-patterns: no `dynamic`, no `object` parameters, no `catch (Exception)` without re-throw, no `#pragma warning disable` without justification.
+- .NET 8+ C# 12, file-scoped namespaces, primary constructors, `<Nullable>enable</Nullable>`.
+- Formatting: `dotnet format` + Roslyn analyzers, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
+- Style enforcement: `.editorconfig` for consistent rules across team. Use StyleCop.Analyzers or Roslynator.
+- Testing: xUnit with `[Theory]`/`[InlineData]`, FluentAssertions, `coverlet` (80%+).
+- Benchmarking: BenchmarkDotNet for performance testing — never `Stopwatch` loops.
+- `record` types for immutable data, `required` properties, pattern matching in switch expressions.
+- Async: `async`/`await` throughout — never `.Result` or `.Wait()`, `ValueTask` for hot paths, avoid deadlocks.
+- Security: `dotnet list package --vulnerable` for CVE scanning. Zero tolerance for critical/high.
+- Dependencies: NuGet `PackageReference`, commit `packages.lock.json`, `Directory.Build.props` for shared config.
+- Collection expressions (`[1, 2, 3]`), `required` modifier, raw string literals for multi-line.
+- Anti-patterns: `dynamic`, `object` params, unguarded `catch (Exception)`, `#pragma warning disable`.

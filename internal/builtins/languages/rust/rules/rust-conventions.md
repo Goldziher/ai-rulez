@@ -1,18 +1,16 @@
 ---
 priority: high
 ---
-- Target latest stable Rust edition (2024). Use `cargo fmt` and `clippy -D warnings`.
-- Handle errors with `Result<T, E>` and `?` operator. Use `thiserror` for library errors, `anyhow` for applications. Never `.unwrap()` in library code.
-- Prefer `impl Trait` over `dyn Trait`. Use generics for zero-cost abstractions.
-- Minimize `unsafe` — document every `unsafe` block with `// SAFETY:` comment explaining invariants.
-- Test with `cargo test`. Use `#[cfg(test)]` modules for unit tests, `tests/` for integration tests. Use `cargo-llvm-cov` for coverage.
-- Linting: `clippy::pedantic` lints enabled. Use `cargo clippy --all-targets --all-features -- -D warnings`. Fix all warnings before committing.
-- Security: `cargo audit` for CVE checks, `cargo deny` for license/advisory/ban policies. Zero advisories policy.
-- Prefer `&str` over `String` in function parameters. Use `Cow<'_, str>` when ownership is conditional. Use `Arc` for shared ownership across threads.
-- Use `memchr` for fast byte searching over manual iteration. Prefer zero-copy parsing where possible.
-- Performance: leverage SIMD-friendly crates (`memchr`, `aho-corasick`, `regex`) over hand-rolled loops. Prefer data-oriented layouts for cache efficiency.
-- Use `derive` macros: `Debug`, `Clone`, `PartialEq` on public types.
-- Structure: one public type per module, re-export from `lib.rs`. Use `pub(crate)` aggressively for internals.
-- Dependencies: use workspace inheritance for shared deps. Pin versions. Use `cargo-machete` to detect unused deps.
-- Benchmarking: use `criterion` for benchmarks. Profile with `cargo-flamegraph` before optimizing.
-- Async: use `tokio` exclusively. Prefer `async fn` with `'static` bounds. Use `tokio::spawn` for concurrency.
+- Rust 2024 edition, `cargo fmt` + `clippy -D warnings`, zero warnings policy.
+- `Result<T, E>` with `thiserror` for library errors, `anyhow` for applications. `?` for propagation — never `.unwrap()` in library code.
+- Minimize `unsafe` — every block needs `// SAFETY:` comment explaining invariants.
+- Prefer `&str` over `String` in params, `Cow<'_, str>` for conditional ownership, `Arc` for shared ownership.
+- `impl Trait` in argument position for static dispatch, `dyn Trait` for dynamic dispatch when heterogeneous collections needed.
+- Small, focused modules. Use `pub(crate)` for internal visibility. Workspace inheritance for multi-crate repos.
+- `#[cfg(test)]` for unit tests, `tests/` for integration, `cargo-llvm-cov` for coverage.
+- Benchmarking: `criterion` for microbenchmarks, profile with `cargo flamegraph`.
+- Async: `tokio` runtime, `'static + Send + Sync` bounds, `tokio::spawn` for concurrency.
+- Security: `cargo audit` for CVE scanning, `cargo deny` for license and advisory policies.
+- Dependencies: pin versions, commit `Cargo.lock`, prefer well-maintained crates.
+- Structured logging with `tracing` crate — use spans and events, not `println!`.
+- Anti-patterns: `unwrap()`, unguarded `unsafe`, panics in libraries, `Vec`/`HashMap` across FFI.

@@ -4,7 +4,10 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 )
+
+const agentDelegationBuiltin = "agent-delegation"
 
 // combineContentFiles combines multiple ContentFile slices
 func combineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
@@ -29,10 +32,14 @@ func getAllDomainRules(content *config.ContentTreeV3) []config.ContentFile {
 	return rules
 }
 
-// getAllDomainContext extracts all context from all domains
+// getAllDomainContext extracts all context from all domains,
+// excluding the agent-delegation builtin (rendered separately in the Agents section).
 func getAllDomainContext(content *config.ContentTreeV3) []config.ContentFile {
 	var context []config.ContentFile
-	for _, domain := range content.Domains {
+	for name, domain := range content.Domains {
+		if name == agentDelegationBuiltin {
+			continue
+		}
 		context = append(context, domain.Context...)
 	}
 	return context
@@ -63,6 +70,42 @@ func getAllDomainCommands(content *config.ContentTreeV3) []config.ContentFile {
 		commands = append(commands, domain.Commands...)
 	}
 	return commands
+}
+
+// renderAgentsSection writes an "## Agents" section listing all available
+// subagents with delegation and parallelization instructions.
+// The section is only rendered when the agent-delegation builtin is enabled
+// and at least one agent exists.
+func renderAgentsSection(builder *strings.Builder, content *config.ContentTreeV3, agents []config.ContentFile) {
+	delegationDomain, ok := content.Domains[agentDelegationBuiltin]
+	if !ok || len(agents) == 0 {
+		return
+	}
+
+	builder.WriteString("## Agents\n\n")
+
+	// Render instruction text from the builtin's context files
+	for _, ctx := range delegationDomain.Context {
+		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+		builder.WriteString(processedContent)
+		builder.WriteString("\n\n")
+	}
+
+	for _, agent := range agents {
+		description := ""
+		if agent.Metadata != nil {
+			description = agent.Metadata.Extra["description"]
+		}
+		builder.WriteString("- **")
+		builder.WriteString(agent.Name)
+		builder.WriteString("**")
+		if description != "" {
+			builder.WriteString(": ")
+			builder.WriteString(description)
+		}
+		builder.WriteString("\n")
+	}
+	builder.WriteString("\n")
 }
 
 // filterContentByExplicitTargets returns only content files that have explicit

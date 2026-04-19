@@ -47,6 +47,7 @@ func TestResolveBuiltins(t *testing.T) {
 		t.Parallel()
 		result := ResolveBuiltins([]string{})
 		assert.Contains(t, result, "ai-governance")
+		assert.Contains(t, result, "agent-delegation")
 	})
 
 	t.Run("explicit exclusion removes auto-include", func(t *testing.T) {
@@ -75,8 +76,8 @@ func TestResolveBuiltins(t *testing.T) {
 	t.Run("result is sorted", func(t *testing.T) {
 		t.Parallel()
 		result := ResolveBuiltins([]string{"python", "rust", "go"})
-		// Should be sorted: ai-governance, go, python, rust
-		assert.Equal(t, []string{"ai-governance", "go", "python", "rust"}, result)
+		// Should be sorted: agent-delegation, ai-governance, go, python, rust
+		assert.Equal(t, []string{"agent-delegation", "ai-governance", "go", "python", "rust"}, result)
 	})
 
 	t.Run("default-commands included when requested", func(t *testing.T) {
@@ -91,7 +92,7 @@ func TestList(t *testing.T) {
 	t.Parallel()
 
 	domains := List()
-	assert.GreaterOrEqual(t, len(domains), 23) // 7 universal + default-commands + 9 language + 6 binding
+	assert.GreaterOrEqual(t, len(domains), 24) // 8 universal + default-commands + agent-delegation + 9 language + 6 binding
 
 	// Check categories are grouped
 	var lastCategory Category

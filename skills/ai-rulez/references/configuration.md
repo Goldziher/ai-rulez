@@ -50,11 +50,7 @@ includes:                    # External content sources
 header:
   style: detailed            # detailed | compact | minimal
 
-compression:
-  level: off                 # off | light | moderate | aggressive | maximum
-  preserve_markdown: true
-  preserve_code: true
-  language: en               # ISO 639 language code
+## compression is deprecated and now a no-op — condense content at source level instead
 ```
 
 ## Built-in Presets

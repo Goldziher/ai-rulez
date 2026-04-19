@@ -1,17 +1,15 @@
 ---
 priority: high
 ---
-- Target Python 3.10+. Use type hints on all public functions and class attributes. No `Any` type.
-- Linting and formatting: `ruff` (replaces black, isort, flake8). Zero warnings. Configure in `pyproject.toml` under `[tool.ruff]`.
-- Type checking: `mypy --strict`. Use `T | None` over `Optional[T]`. Use `ParamSpec` for decorator typing.
-- Security: `bandit` for SAST, `pip-audit` for dependency CVEs. Run both in CI.
-- Testing: `pytest` with fixtures and function-based tests. `pytest-cov` for coverage (80%+). Use `hypothesis` for property-based testing.
-- Error handling: use specific exceptions, never bare `except:`. Use `contextlib.suppress` for intentional ignoring.
-- Async: use `async`/`await` for I/O-bound. Never mix blocking and async code. Use `asyncio.gather()` for concurrency.
-- Package management: `uv` for deps (fast, lockfile support). Commit `uv.lock`. Use workspace support for monorepos. Build with `hatchling` or `maturin`.
-- Use `pathlib.Path` over `os.path`. Use `dataclasses` or `pydantic` for data containers.
-- Prefer `match` statements (3.10+) over if/elif chains for pattern matching.
-- Docstrings: Google-style on public functions. Include `Args`, `Returns`, `Raises` sections.
-- Logging: `structlog` or stdlib `logging`. Never f-strings in log calls — use `logger.info("msg", key=value)`.
-- Benchmarking: `pytest-benchmark` for micro-benchmarks. Profile with `py-spy` or `scalene`.
-- Anti-patterns: no mutable default arguments, no `import *`, no global state, no `time.sleep` in async code.
+- Python 3.10+, type hints on all public APIs, no `Any` — use `Unknown`/generics.
+- Formatting/linting: `ruff` (zero warnings), type checking: `mypy --strict`. Security: `bandit` for SAST.
+- Testing: `pytest` with function-based tests, `pytest-cov` (80%+), `hypothesis` for property-based.
+- Error handling: specific exceptions only, never bare `except:`, `contextlib.suppress` for intentional ignoring.
+- Dataclasses or Pydantic for structured data — avoid raw dicts for known schemas.
+- `pathlib.Path` over `os.path` for filesystem operations. Google-style docstrings on public APIs.
+- Async: `async`/`await` for I/O, never mix blocking and async, `asyncio.gather()` for concurrency.
+- Package management: `uv` with `uv.lock` committed, build with `maturin` or `hatchling`.
+- Security: `pip-audit` for dependency CVE scanning. Zero tolerance for critical/high vulnerabilities.
+- Logging: `structlog` with key=value pairs — never f-strings in log calls.
+- Pattern matching (`match`/`case`) for multi-branch type dispatch (3.10+).
+- Anti-patterns: mutable default args, `import *`, global state, `time.sleep` in async.
