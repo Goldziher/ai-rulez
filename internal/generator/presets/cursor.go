@@ -1,10 +1,12 @@
 package presets
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -24,15 +26,17 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, ".cursor"),
 		filepath.Join(baseDir, ".cursor", "rules"),
-		filepath.Join(baseDir, ".cursor", "skills"),
 		filepath.Join(baseDir, ".cursor", "commands"),
+		filepath.Join(baseDir, ".agents"),
+		filepath.Join(baseDir, ".agents", "skills"),
+		filepath.Join(baseDir, ".agents", "agents"),
 	}
 }
 
 func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
-	// Create .cursor directory structure
+	// Create directory structure
 	outputs = append(outputs,
 		config.OutputFileV3{
 			Path:  filepath.Join(baseDir, ".cursor"),
@@ -43,11 +47,19 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 			IsDir: true,
 		},
 		config.OutputFileV3{
-			Path:  filepath.Join(baseDir, ".cursor", "skills"),
+			Path:  filepath.Join(baseDir, ".cursor", "commands"),
 			IsDir: true,
 		},
 		config.OutputFileV3{
-			Path:  filepath.Join(baseDir, ".cursor", "commands"),
+			Path:  filepath.Join(baseDir, ".agents"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents", "skills"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents", "agents"),
 			IsDir: true,
 		},
 	)
@@ -86,7 +98,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 	// Combine all skills from root and domains
 	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
 
-	// Generate skill files to .cursor/skills/
+	// Generate skill files to .agents/skills/
 	for _, skill := range allSkills {
 		// Check if skill should be included (enabled and targets Cursor if specified)
 		if !g.shouldIncludeSkill(skill) {
@@ -96,7 +108,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		skillID := extractSkillID(skill.Path)
 
 		// Create skill directory
-		skillDir := filepath.Join(baseDir, ".cursor", "skills", skillID)
+		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
 		outputs = append(outputs, config.OutputFileV3{
 			Path:  skillDir,
 			IsDir: true,
@@ -107,6 +119,21 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		outputs = append(outputs, config.OutputFileV3{
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
+		})
+	}
+
+	// Generate agent files to .agents/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderCursorAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
+			Content: agentContent,
 		})
 	}
 
@@ -251,4 +278,44 @@ func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *c
 	builder.WriteString(skill.Content)
 
 	return builder.String()
+}
+
+// renderCursorAgentFile renders an agent file with YAML frontmatter for Cursor
+func (g *CursorPresetGenerator) renderCursorAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildCursorAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildCursorAgentFrontmatter builds frontmatter for a Cursor agent file
+func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	cursorFields := []string{"description", "model", "readonly", "is_background"}
+	for _, field := range cursorFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }

@@ -43,6 +43,7 @@ func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, "AGENTS.md"),
 		filepath.Join(baseDir, ".codex"),
 		filepath.Join(baseDir, ".codex", "skills"),
+		filepath.Join(baseDir, ".codex", "agents"),
 	}
 }
 
@@ -57,6 +58,10 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		},
 		config.OutputFileV3{
 			Path:  filepath.Join(baseDir, ".codex", "skills"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".codex", "agents"),
 			IsDir: true,
 		},
 	)
@@ -89,6 +94,18 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		outputs = append(outputs, config.OutputFileV3{
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
+		})
+	}
+
+	// Generate agent files to .codex/agents/ (TOML format)
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent := g.renderAgentTOML(agent)
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".codex", "agents", agentID+".toml"),
+			Content: agentContent,
 		})
 	}
 
@@ -190,6 +207,52 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString(skill.Content)
 
 	return builder.String()
+}
+
+// renderAgentTOML renders an agent file in TOML format for Codex
+func (g *CodexPresetGenerator) renderAgentTOML(agent config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("name = ")
+	builder.WriteString(quoteTOMLString(agent.Name))
+	builder.WriteString("\n")
+
+	description := ""
+	if agent.Metadata != nil {
+		if desc, ok := agent.Metadata.Extra["description"]; ok {
+			description = desc
+		}
+	}
+	builder.WriteString("description = ")
+	builder.WriteString(quoteTOMLString(description))
+	builder.WriteString("\n")
+
+	builder.WriteString("developer_instructions = ")
+	builder.WriteString(quoteTOMLMultiline(agent.Content))
+	builder.WriteString("\n")
+
+	return builder.String()
+}
+
+// quoteTOMLString quotes a string for TOML single-line values
+func quoteTOMLString(value string) string {
+	escaped := strings.ReplaceAll(value, "\\", "\\\\")
+	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
+	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
+	return "\"" + escaped + "\""
+}
+
+// quoteTOMLMultiline quotes a string as a TOML multi-line basic string.
+// Per the TOML spec, inside """-delimited strings we must escape any sequence
+// of three or more consecutive double-quotes. We do this by inserting a
+// backslash-escape before the third quote in every run of 3+ quotes.
+func quoteTOMLMultiline(value string) string {
+	escaped := strings.ReplaceAll(value, "\\", "\\\\")
+	// Break runs of 3+ quotes: `"""` → `""\"`  (the `\"` restarts counting)
+	for strings.Contains(escaped, "\"\"\"") {
+		escaped = strings.Replace(escaped, "\"\"\"", "\"\"\\\"", 1)
+	}
+	return "\"\"\"\n" + escaped + "\n\"\"\""
 }
 
 func quoteYAMLString(value string) string {

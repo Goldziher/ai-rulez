@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -44,17 +45,34 @@ func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, ".gemini"),
 		filepath.Join(baseDir, "GEMINI.md"),
+		filepath.Join(baseDir, ".agents"),
+		filepath.Join(baseDir, ".agents", "skills"),
+		filepath.Join(baseDir, ".agents", "agents"),
 	}
 }
 
 func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
-	// Create .gemini directory
-	outputs = append(outputs, config.OutputFileV3{
-		Path:  filepath.Join(baseDir, ".gemini"),
-		IsDir: true,
-	})
+	// Create directory structure
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".gemini"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents", "skills"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents", "agents"),
+			IsDir: true,
+		},
+	)
 
 	// Generate settings.json with MCP configuration
 	settingsContent, err := g.renderSettingsJSON(cfg)
@@ -73,6 +91,39 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		Path:    filepath.Join(baseDir, "GEMINI.md"),
 		Content: geminiMD,
 	})
+
+	// Generate skill files to .agents/skills/
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	for _, skill := range allSkills {
+		skillID := extractSkillID(skill.Path)
+
+		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:  skillDir,
+			IsDir: true,
+		})
+
+		skillContent := g.renderGeminiSkillFile(skill)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(skillDir, "SKILL.md"),
+			Content: skillContent,
+		})
+	}
+
+	// Generate agent files to .agents/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderGeminiAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
+			Content: agentContent,
+		})
+	}
 
 	return outputs, nil
 }
@@ -159,7 +210,67 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
 
-	// Skills should not be inlined in GEMINI.md
+	// Skills are generated to .agents/skills/ directory, not inlined in GEMINI.md
 
 	return builder.String()
+}
+
+// renderGeminiSkillFile renders a skill file in SKILL.md format for Gemini
+func (g *GeminiPresetGenerator) renderGeminiSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("---\n")
+	builder.WriteString("name: ")
+	builder.WriteString(skill.Name)
+	builder.WriteString("\n")
+
+	builder.WriteString("description: ")
+	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
+	builder.WriteString("\n")
+
+	builder.WriteString("---\n\n")
+
+	builder.WriteString(skill.Content)
+
+	return builder.String()
+}
+
+// renderGeminiAgentFile renders an agent file with YAML frontmatter for Gemini
+func (g *GeminiPresetGenerator) renderGeminiAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildGeminiAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file
+func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	geminiFields := []string{"description", "kind", "tools", "model", "temperature", "max_turns", "timeout_mins"}
+	for _, field := range geminiFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }

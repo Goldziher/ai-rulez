@@ -41,18 +41,30 @@ func (g *WindsurfPresetGenerator) GetName() string {
 
 func (g *WindsurfPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
+		filepath.Join(baseDir, ".windsurf"),
 		filepath.Join(baseDir, ".windsurf", "rules"),
+		filepath.Join(baseDir, ".windsurf", "skills"),
 	}
 }
 
 func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
-	// Create .windsurf/rules directory
-	outputs = append(outputs, config.OutputFileV3{
-		Path:  filepath.Join(baseDir, ".windsurf", "rules"),
-		IsDir: true,
-	})
+	// Create .windsurf directory structure
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".windsurf"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".windsurf", "rules"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".windsurf", "skills"),
+			IsDir: true,
+		},
+	)
 
 	// Combine all rules from root and domains
 	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
@@ -69,7 +81,42 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 		})
 	}
 
+	// Generate skill files to .windsurf/skills/
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	for _, skill := range allSkills {
+		skillID := extractSkillID(skill.Path)
+
+		skillDir := filepath.Join(baseDir, ".windsurf", "skills", skillID)
+		outputs = append(outputs,
+			config.OutputFileV3{
+				Path:  skillDir,
+				IsDir: true,
+			},
+			config.OutputFileV3{
+				Path:    filepath.Join(skillDir, "SKILL.md"),
+				Content: g.renderSkillFile(skill),
+			},
+		)
+	}
+
 	return outputs, nil
+}
+
+// renderSkillFile renders a skill file in SKILL.md format for Windsurf
+func (g *WindsurfPresetGenerator) renderSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("---\n")
+	builder.WriteString("name: ")
+	builder.WriteString(skill.Name)
+	builder.WriteString("\n")
+	builder.WriteString("description: ")
+	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
+	builder.WriteString("\n")
+	builder.WriteString("---\n\n")
+	builder.WriteString(skill.Content)
+
+	return builder.String()
 }
 
 // renderTriggerFrontmatter renders Windsurf trigger frontmatter if needed

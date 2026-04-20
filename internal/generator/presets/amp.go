@@ -41,6 +41,8 @@ func (g *AmpPresetGenerator) GetName() string {
 func (g *AmpPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, ".agents"),
+		filepath.Join(baseDir, ".agents", "skills"),
 	}
 }
 
@@ -50,11 +52,39 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir str
 	// Generate AGENTS.md file
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
-	outputs = append(outputs, config.OutputFileV3{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
-		Content: agentsContent,
-		IsDir:   false,
-	})
+	// Create .agents directory structure and AGENTS.md
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".agents", "skills"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:    filepath.Join(baseDir, "AGENTS.md"),
+			Content: agentsContent,
+			IsDir:   false,
+		})
+
+	// Generate skill files to .agents/skills/
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	for _, skill := range allSkills {
+		skillID := extractSkillID(skill.Path)
+
+		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
+		outputs = append(outputs,
+			config.OutputFileV3{
+				Path:  skillDir,
+				IsDir: true,
+			},
+			config.OutputFileV3{
+				Path:    filepath.Join(skillDir, "SKILL.md"),
+				Content: g.renderSkillFile(skill),
+			},
+		)
+	}
 
 	return outputs, nil
 }
@@ -118,7 +148,24 @@ func (g *AmpPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3,
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
 
-	// Skills should not be inlined in AGENTS.md
+	// Skills are generated to .agents/skills/ directory, not inlined in AGENTS.md
+
+	return builder.String()
+}
+
+// renderSkillFile renders a skill file in SKILL.md format for AMP
+func (g *AmpPresetGenerator) renderSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("---\n")
+	builder.WriteString("name: ")
+	builder.WriteString(skill.Name)
+	builder.WriteString("\n")
+	builder.WriteString("description: ")
+	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
+	builder.WriteString("\n")
+	builder.WriteString("---\n\n")
+	builder.WriteString(skill.Content)
 
 	return builder.String()
 }

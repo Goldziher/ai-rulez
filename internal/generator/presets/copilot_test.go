@@ -1,0 +1,108 @@
+package presets
+
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+)
+
+func TestCopilotPresetGenerator_GetName(t *testing.T) {
+	g := &CopilotPresetGenerator{}
+	if got := g.GetName(); got != "copilot" {
+		t.Errorf("GetName() = %q, want %q", got, "copilot")
+	}
+}
+
+func TestCopilotPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
+	g := &CopilotPresetGenerator{}
+	cfg := &config.ConfigV3{Name: "test"}
+
+	content := &config.ContentTreeV3{
+		Skills: []config.ContentFile{
+			{
+				Name:    "deploy",
+				Content: "Deploy instructions",
+				Path:    "/test/.ai-rulez/skills/deploy/SKILL.md",
+			},
+		},
+		Agents: []config.ContentFile{
+			{
+				Name:    "reviewer",
+				Content: "You review code.",
+				Metadata: &config.MetadataV3{
+					Extra: map[string]string{
+						"description": "Reviews code changes",
+						"model":       "gpt-5",
+					},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+
+	// Base: .github, .github/skills, .github/agents, copilot-instructions.md = 4
+	// Skill: dir + SKILL.md = 2
+	// Agent: .agent.md = 1
+	if len(outputs) != 7 {
+		t.Errorf("Generate() got %d outputs, want 7", len(outputs))
+	}
+
+	// Verify agent uses .agent.md extension
+	var foundAgent bool
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, ".agent.md") {
+			foundAgent = true
+			if !strings.Contains(o.Content, "name: reviewer") {
+				t.Error("Agent file should contain name")
+			}
+			if !strings.Contains(o.Content, "description: Reviews code changes") {
+				t.Error("Agent file should contain description")
+			}
+			if !strings.Contains(o.Content, "model: gpt-5") {
+				t.Error("Agent file should contain model")
+			}
+		}
+	}
+	if !foundAgent {
+		t.Error("Expected .agent.md file in outputs")
+	}
+
+	// Verify skill in .github/skills/
+	var foundSkill bool
+	for _, o := range outputs {
+		if strings.Contains(filepath.ToSlash(o.Path), ".github/skills/deploy/SKILL.md") {
+			foundSkill = true
+		}
+	}
+	if !foundSkill {
+		t.Error("Expected .github/skills/deploy/SKILL.md in outputs")
+	}
+}
+
+func TestCopilotPresetGenerator_GetOutputPaths(t *testing.T) {
+	g := &CopilotPresetGenerator{}
+	paths := g.GetOutputPaths("/base")
+
+	wantPaths := []string{
+		filepath.Join("/base", ".github"),
+		filepath.Join("/base", ".github", "copilot-instructions.md"),
+		filepath.Join("/base", ".github", "skills"),
+		filepath.Join("/base", ".github", "agents"),
+	}
+
+	if len(paths) != len(wantPaths) {
+		t.Fatalf("GetOutputPaths() returned %d paths, want %d", len(paths), len(wantPaths))
+	}
+
+	for i, want := range wantPaths {
+		if paths[i] != want {
+			t.Errorf("GetOutputPaths()[%d] = %q, want %q", i, paths[i], want)
+		}
+	}
+}
