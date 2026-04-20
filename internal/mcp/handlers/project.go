@@ -13,8 +13,206 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	baseDir := workingDir(request)
+
+	dir, err := filepath.Abs(baseDir)
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to get directory: %w", err))
+	}
+
+	cfg, err := config.LoadConfigV3(ctx, dir)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	// Build presets list
+	presets := make([]string, 0, len(cfg.Presets))
+	for _, p := range cfg.Presets {
+		presets = append(presets, p.GetName())
+	}
+
+	// Build includes list
+	includes := make([]map[string]interface{}, 0, len(cfg.Includes))
+	for i := range cfg.Includes {
+		inc := &cfg.Includes[i]
+		entry := map[string]interface{}{
+			"name":   inc.Name,
+			"source": inc.Source,
+		}
+		if inc.Path != "" {
+			entry["path"] = inc.Path
+		}
+		if inc.Ref != "" {
+			entry["ref"] = inc.Ref
+		}
+		if inc.MergeStrategy != "" {
+			entry["merge_strategy"] = inc.MergeStrategy
+		}
+		if inc.InstallTo != "" {
+			entry["install_to"] = inc.InstallTo
+		}
+		if len(inc.Include) > 0 {
+			entry["include"] = inc.Include
+		}
+		includes = append(includes, entry)
+	}
+
+	// Build builtins representation
+	var builtins interface{}
+	if cfg.Builtins != nil {
+		if cfg.Builtins.All != nil {
+			builtins = *cfg.Builtins.All
+		} else {
+			builtins = cfg.Builtins.Names
+		}
+	}
+
+	result := map[string]interface{}{
+		"success":     true,
+		"operation":   "read_config",
+		"name":        cfg.Name,
+		"description": cfg.Description,
+		"presets":     presets,
+		"profiles":    cfg.Profiles,
+		"builtins":    builtins,
+		"includes":    includes,
+		"gitignore":   cfg.ShouldUpdateGitignore(),
+	}
+
+	return ToolSuccess(result)
+}
+
+func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	baseDir := workingDir(request)
+
+	dir, err := filepath.Abs(baseDir)
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to get directory: %w", err))
+	}
+
+	cfg, err := config.LoadConfigV3(ctx, dir)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	args := request.GetArguments()
+	updated := []string{}
+
+	if _, ok := args["name"]; ok {
+		cfg.Name = request.GetString("name", cfg.Name)
+		updated = append(updated, "name")
+	}
+
+	if _, ok := args["description"]; ok {
+		cfg.Description = request.GetString("description", cfg.Description)
+		updated = append(updated, "description")
+	}
+
+	if _, ok := args["builtins"]; ok {
+		builtinNames := request.GetStringSlice("builtins", nil)
+		if builtinNames != nil {
+			cfg.Builtins = &config.BuiltinsConfig{Names: builtinNames}
+		} else {
+			cfg.Builtins = nil
+		}
+		updated = append(updated, "builtins")
+	}
+
+	if _, ok := args["gitignore"]; ok {
+		val := request.GetBool("gitignore", true)
+		cfg.Gitignore = &val
+		updated = append(updated, "gitignore")
+	}
+
+	if len(updated) == 0 {
+		return ToolSuccess(map[string]interface{}{
+			"success":   true,
+			"operation": "update_config",
+			"message":   "No fields to update",
+			"updated":   updated,
+		})
+	}
+
+	configDir := filepath.Join(dir, ".ai-rulez")
+	if err := config.SaveConfigV3(cfg, configDir); err != nil {
+		return ToolError(fmt.Errorf("failed to save config: %w", err))
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "update_config",
+		"message":   "Config updated successfully",
+		"updated":   updated,
+	})
+}
+
 func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	baseDir := workingDir(request)
+	dryRun := request.GetBool("dry_run", false)
+	recursive := request.GetBool("recursive", false)
+
+	if recursive {
+		return generateRecursive(ctx, request, baseDir, dryRun)
+	}
+
+	return generateForDirectory(ctx, request, baseDir, dryRun)
+}
+
+func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to resolve base directory: %w", err))
+	}
+
+	var dirs []string
+	err = filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr // propagate walk errors
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		configPath := filepath.Join(path, ".ai-rulez", "config.yaml")
+		if _, statErr := os.Stat(configPath); statErr == nil {
+			dirs = append(dirs, path)
+		}
+		return nil
+	})
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to walk directories: %w", err))
+	}
+
+	if len(dirs) == 0 {
+		return ToolSuccess(map[string]interface{}{
+			"message": "No directories with .ai-rulez/config.yaml found",
+		})
+	}
+
+	var results []map[string]interface{}
+	for _, dir := range dirs {
+		result, genErr := generateForDirectory(ctx, request, dir, dryRun)
+		entry := map[string]interface{}{
+			"directory": dir,
+		}
+		switch {
+		case genErr != nil:
+			entry["error"] = genErr.Error()
+		case result != nil && result.IsError:
+			entry["error"] = result.Content[0]
+		default:
+			entry["success"] = true
+		}
+		results = append(results, entry)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"message": fmt.Sprintf("Recursive generation completed for %d directories", len(dirs)),
+		"results": results,
+	})
+}
+
+func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		var err error
@@ -35,6 +233,12 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 	}
 
 	if version == "v3" {
+		if dryRun {
+			return ToolSuccess(map[string]interface{}{
+				"message": "dry_run: not yet implemented for V3 configs",
+				"config":  configFile,
+			})
+		}
 		// Load and generate V3 config
 		v3cfg, err := config.LoadConfigV3(ctx, dir)
 		if err != nil {
@@ -49,6 +253,13 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 		}
 		return ToolSuccess(map[string]interface{}{
 			"message": "Outputs generated successfully",
+			"config":  configFile,
+		})
+	}
+
+	if dryRun {
+		return ToolSuccess(map[string]interface{}{
+			"message": "dry_run: not yet implemented for V2 configs",
 			"config":  configFile,
 		})
 	}
