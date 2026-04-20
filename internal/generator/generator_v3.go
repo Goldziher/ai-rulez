@@ -464,6 +464,14 @@ func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
 	managedDirs := g.collectOutputPaths(outputs, true)
 
 	for dir := range managedDirs {
+		// Skip shared directories — they contain non-generated user content
+		// (e.g., .github/ has workflows, CODEOWNERS, issue templates)
+		relDir := g.convertToRelativePath(dir)
+		topLevel := g.extractTopLevelDir(relDir)
+		if sharedDirs[topLevel] {
+			continue
+		}
+
 		entries, err := os.ReadDir(dir)
 		if err != nil {
 			continue // Directory may not exist yet
