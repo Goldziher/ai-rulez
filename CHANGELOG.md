@@ -23,12 +23,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **MCP read tools**: New `read_rule`, `read_context`, `read_skill` MCP tools for reading file content without filesystem fallback.
 - **MCP `working_directory` parameter**: All MCP CRUD and project tools now accept an optional `working_directory` parameter for polyrepo support.
 - **MCP enum constraints**: `priority` and `merge_strategy` fields now use JSON Schema `enum` constraints for better LLM tool use.
+- **MCP `read_config` / `update_config`**: New tools for reading and updating `config.yaml` fields (name, description, builtins, gitignore) via MCP.
+- **MCP `dry_run` / `recursive`**: `generate_outputs` now accepts `dry_run` (preview mode) and `recursive` (walk subdirectories) parameters.
+- **MCP annotations**: All tools now have `readOnlyHint`/`destructiveHint` annotations so clients can implement appropriate confirmation UX.
 
 ### Changed
 - **Rust builtin**: Added Rust API Guidelines (naming conventions, trait implementations, type safety, builder pattern, sealed traits, rustdoc standards) and Rust Design Patterns reference.
 - **MCP atomic updates**: `update_rule`, `update_context`, `update_skill` now use atomic overwrite (temp+rename) instead of delete-then-create, preventing data loss on write failure.
 - **MCP `with_agents` parameter**: `init_project` now creates `.ai-rulez/agents/` directory when `with_agents` is true (previously silently ignored).
 - **MCP `list_context` unified**: Merged `list_context` and `list_contexts` into a single enriched endpoint returning summaries.
+- **MCP list metadata**: `list_rules`, `list_context`, and `list_skills` now populate `priority` and `targets` fields from YAML frontmatter.
 
 ## [3.13.1] - 2026-04-19
 
