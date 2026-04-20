@@ -11,6 +11,9 @@ import (
 const (
 	sourceTypeGit   = "git"
 	sourceTypeLocal = "local"
+
+	// PriorityDefault is the default priority when none is specified
+	PriorityDefault = "medium"
 )
 
 // Operator defines the interface for CRUD operations
@@ -42,6 +45,12 @@ type Operator interface {
 	InstallSkill(ctx context.Context, req *InstallSkillRequest) error
 	UninstallSkill(ctx context.Context, name string) error
 	ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error)
+
+	// Read operations
+	ReadFileContent(path string) (string, error)
+
+	// Update operations (atomic overwrite)
+	UpdateFile(ctx context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error)
 }
 
 // OperatorImpl implements the Operator interface
@@ -123,7 +132,7 @@ type FileInfo struct {
 // DefaultPriority returns the default priority if not specified
 func (req *AddFileRequest) DefaultPriority() string {
 	if req.Priority == "" {
-		return "medium"
+		return PriorityDefault
 	}
 	return req.Priority
 }

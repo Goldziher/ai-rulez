@@ -69,6 +69,7 @@ var registry = map[string]BuiltinDomain{
 	"jni-rs":     {Name: "jni-rs", Category: CategoryBinding, Description: "JNI Rust-Java/JVM bindings"},
 	"extendr":    {Name: "extendr", Category: CategoryBinding, Description: "extendr Rust-R bindings"},
 	"cgo":        {Name: "cgo", Category: CategoryBinding, Description: "cgo Go-C/Rust FFI bindings"},
+	"vite-plus":  {Name: "vite-plus", Category: CategoryBinding, Description: "Vite+ unified TypeScript toolchain"},
 }
 
 // IsValid returns true if the given name is a valid builtin (ignoring "!" prefix)
