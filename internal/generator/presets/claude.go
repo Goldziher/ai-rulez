@@ -314,7 +314,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		builder.WriteString("\n\n")
 	}
 
-	// Add rules section - use @ links for local project files, inline everything else
+	// Add rules section - inline all content
 	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
@@ -333,7 +333,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 		}
 	}
 
-	// Add context section - use @ links for local project files, inline everything else
+	// Add context section - inline all content
 	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
@@ -446,21 +446,11 @@ func shouldIncludeInOutput(targets []string, outputPath, baseDir string) bool {
 	return false
 }
 
-// renderContentRef writes a content file as either an @ reference (for local project files)
-// or inlined content (for builtins, includes from temp/cache dirs, or any path outside the project).
+// renderContentRef writes a content file's content inline.
 func (g *ClaudePresetGenerator) renderContentRef(builder *strings.Builder, file config.ContentFile, cfg *config.ConfigV3) {
-	// Use @ reference only for files inside the project directory
-	if cfg.BaseDir != "" && !strings.HasPrefix(file.Path, "builtin://") && strings.HasPrefix(file.Path, cfg.BaseDir+"/") {
-		relPath := strings.TrimPrefix(file.Path, cfg.BaseDir+"/")
-		builder.WriteString("@")
-		builder.WriteString(relPath)
-		builder.WriteString("\n\n")
-	} else {
-		// Inline content for builtins, includes, or any external path
-		processedContent := markdown.ProcessEmbeddedContent(file.Content)
-		builder.WriteString(processedContent)
-		builder.WriteString("\n\n")
-	}
+	processedContent := markdown.ProcessEmbeddedContent(file.Content)
+	builder.WriteString(processedContent)
+	builder.WriteString("\n\n")
 }
 
 func buildOutputPathCandidates(outputPath, baseDir string) []string {

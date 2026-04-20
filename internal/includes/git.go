@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -30,7 +31,13 @@ const (
 	archGitHubURL = "https://github.com/%s/%s/archive/refs/heads/%s.tar.gz"
 	archGitLabURL = "https://gitlab.com/%s/%s/-/archive/%s/archive.tar.gz"
 	aiRulezDir    = ".ai-rulez"
+	fetchTimeFile = ".fetch_time"
+	cacheTTL      = 1 * time.Hour
 )
+
+// SkipFetch when true causes git sources to use cached content without fetching.
+// Set from the --no-fetch CLI flag.
+var SkipFetch bool
 
 // getIncludeCacheDir returns the cache directory for a given include source.
 // Uses ~/.cache/ai-rulez/ (XDG convention) for consistent cross-platform behavior.
@@ -102,9 +109,45 @@ func (s *GitSource) GetName() string {
 	return s.name
 }
 
+// isCacheFresh checks whether the cached content is still within the TTL.
+func (s *GitSource) isCacheFresh() bool {
+	markerPath := filepath.Join(s.cacheDir, fetchTimeFile)
+	info, err := os.Stat(markerPath)
+	if err != nil {
+		return false
+	}
+	return time.Since(info.ModTime()) < cacheTTL
+}
+
+// writeFetchMarker creates or updates the fetch-time marker after a successful fetch.
+func (s *GitSource) writeFetchMarker() {
+	markerPath := filepath.Join(s.cacheDir, fetchTimeFile)
+	if err := os.WriteFile(markerPath, []byte(time.Now().Format(time.RFC3339)), 0o644); err != nil {
+		logger.Warn("Failed to write fetch-time marker", "path", markerPath, "error", err)
+	}
+}
+
 // Fetch downloads content from git repository and returns the content tree
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "", "is_ssh", s.isSSH)
+
+	// When --no-fetch is set, only use existing cache
+	if SkipFetch {
+		if s.findAIRulezDir() == "" {
+			return nil, oops.
+				With("repo", s.repoURL).
+				With("cache_dir", s.cacheDir).
+				Errorf("--no-fetch specified but no cached content found for include '%s'", s.name)
+		}
+		logger.Debug("Skipping fetch (--no-fetch), using cached content", "name", s.name)
+		return s.scanCachedContent()
+	}
+
+	// Check cache freshness — skip fetch if cache is still within TTL
+	if s.isCacheFresh() {
+		logger.Debug("Cache is fresh, skipping fetch", "name", s.name, "cache_dir", s.cacheDir)
+		return s.scanCachedContent()
+	}
 
 	// Clear stale cache before downloading fresh content
 	if err := os.RemoveAll(s.cacheDir); err != nil {
@@ -139,6 +182,14 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 		}
 	}
 
+	// Write fetch-time marker after successful download
+	s.writeFetchMarker()
+
+	return s.scanCachedContent()
+}
+
+// scanCachedContent locates the .ai-rulez directory in the cache and returns its content tree.
+func (s *GitSource) scanCachedContent() (*config.ContentTreeV3, error) {
 	// Find the .ai-rulez directory in the extracted content
 	aiRulezDir := s.findAIRulezDir()
 	if aiRulezDir == "" {

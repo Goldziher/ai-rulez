@@ -1,13 +1,20 @@
 package gitignore
 
 import (
-	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+)
+
+// Fenced block markers for managed gitignore sections
+const (
+	BeginMarker = "# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)"
+	EndMarker   = "# END ai-rulez"
+	OldHeader   = "# AI Rules generated files"
 )
 
 func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
@@ -33,42 +40,114 @@ func UpdateGitignoreFiles(configFile string, cfg *config.Config) error {
 }
 
 func updateGitignoreFile(gitignorePath string, outputFiles []string) error {
-	existingEntries, err := readGitignoreEntries(gitignorePath)
+	// Sort for deterministic output
+	sort.Strings(outputFiles)
+
+	// Build the fenced block
+	var fencedBlock strings.Builder
+	fencedBlock.WriteString(BeginMarker + "\n")
+	for _, entry := range outputFiles {
+		fencedBlock.WriteString(entry + "\n")
+	}
+	fencedBlock.WriteString(EndMarker + "\n")
+
+	// Read existing .gitignore content
+	existingData, err := os.ReadFile(gitignorePath)
 	if err != nil && !os.IsNotExist(err) {
 		return fmt.Errorf("failed to read .gitignore: %w", err)
 	}
 
-	var toAdd []string
-	for _, outputFile := range outputFiles {
-		if !isIgnored(outputFile, existingEntries) {
-			toAdd = append(toAdd, outputFile)
+	var newContent string
+	existingContent := string(existingData)
+
+	switch {
+	case strings.Contains(existingContent, BeginMarker):
+		newContent = ReplaceFencedBlock(existingContent, fencedBlock.String())
+	case strings.Contains(existingContent, OldHeader):
+		newContent = ReplaceOldHeaderBlock(existingContent, fencedBlock.String())
+	case len(existingData) == 0:
+		newContent = fencedBlock.String()
+	default:
+		newContent = existingContent
+		if !strings.HasSuffix(newContent, "\n") {
+			newContent += "\n"
+		}
+		newContent += "\n" + fencedBlock.String()
+	}
+
+	if err := os.WriteFile(gitignorePath, []byte(newContent), 0o644); err != nil {
+		return fmt.Errorf("failed to write .gitignore: %w", err)
+	}
+
+	return nil
+}
+
+// ReplaceFencedBlock replaces the content between BEGIN and END markers
+func ReplaceFencedBlock(content, newBlock string) string {
+	lines := strings.Split(content, "\n")
+	var result strings.Builder
+	inBlock := false
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == BeginMarker {
+			inBlock = true
+			continue
+		}
+		if trimmed == EndMarker {
+			inBlock = false
+			continue
+		}
+		if !inBlock {
+			result.WriteString(line + "\n")
 		}
 	}
 
-	if len(toAdd) == 0 {
-		return nil
+	// Remove trailing newlines to avoid accumulating blank lines
+	out := strings.TrimRight(result.String(), "\n")
+	if out != "" {
+		out += "\n\n"
+	}
+	out += newBlock
+	return out
+}
+
+// ReplaceOldHeaderBlock replaces from the old-style header to end of file
+func ReplaceOldHeaderBlock(content, newBlock string) string {
+	lines := strings.Split(content, "\n")
+	var result strings.Builder
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == OldHeader {
+			break
+		}
+		result.WriteString(line + "\n")
 	}
 
-	return appendToGitignore(gitignorePath, toAdd, len(existingEntries) == 0)
+	out := strings.TrimRight(result.String(), "\n")
+	if out != "" {
+		out += "\n\n"
+	}
+	out += newBlock
+	return out
 }
 
 func readGitignoreEntries(gitignorePath string) ([]string, error) {
-	file, err := os.Open(gitignorePath)
+	data, err := os.ReadFile(gitignorePath)
 	if err != nil {
 		return nil, err
 	}
-	defer func() { _ = file.Close() }()
 
 	var entries []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := strings.TrimSpace(scanner.Text())
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
 		if line != "" && !strings.HasPrefix(line, "#") {
 			entries = append(entries, line)
 		}
 	}
 
-	return entries, scanner.Err()
+	return entries, nil
 }
 
 func isIgnored(filename string, patterns []string) bool {
@@ -117,33 +196,4 @@ func matchesDirectory(filename, pattern string) bool {
 	}
 
 	return strings.HasPrefix(filename, dirPrefix+"/") || filename == dirPrefix
-}
-
-func appendToGitignore(gitignorePath string, entries []string, isNewFile bool) error {
-	file, err := os.OpenFile(gitignorePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return fmt.Errorf("failed to open .gitignore for writing: %w", err)
-	}
-	defer func() { _ = file.Close() }()
-
-	writer := bufio.NewWriter(file)
-	defer func() { _ = writer.Flush() }()
-
-	if isNewFile {
-		if _, err := writer.WriteString("# AI Rules generated files\n"); err != nil {
-			return err
-		}
-	} else {
-		if _, err := writer.WriteString("\n# AI Rules generated files\n"); err != nil {
-			return err
-		}
-	}
-
-	for _, entry := range entries {
-		if _, err := writer.WriteString(entry + "\n"); err != nil {
-			return err
-		}
-	}
-
-	return writer.Flush()
 }

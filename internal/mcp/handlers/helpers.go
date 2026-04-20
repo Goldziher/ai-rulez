@@ -3,7 +3,9 @@ package handlers
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
+	"github.com/Goldziher/ai-rulez/internal/builtins"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -21,4 +23,36 @@ func GetVersionHandler(version string) func(ctx context.Context, request *ToolRe
 			},
 		}, nil
 	}
+}
+
+// ShowBuiltinHandler returns the full content of a builtin domain
+func ShowBuiltinHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	name := request.GetString("name", "")
+	if !builtins.IsValid(name) {
+		return ToolError(fmt.Errorf("unknown builtin: %s", name))
+	}
+
+	entries, err := builtins.LoadDomainContent(name)
+	if err != nil {
+		return ToolError(fmt.Errorf("failed to load builtin domain content: %w", err))
+	}
+
+	grouped := map[string][]map[string]string{}
+	for _, e := range entries {
+		entry := map[string]string{
+			"name":    e.Name,
+			"content": e.Content,
+		}
+		if e.Priority != "" {
+			entry["priority"] = e.Priority
+		}
+		grouped[e.Type] = append(grouped[e.Type], entry)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "show_builtin",
+		"name":      name,
+		"content":   grouped,
+	})
 }
