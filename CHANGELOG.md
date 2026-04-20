@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [3.14.2] - 2026-04-20
+
+### Fixed
+- **Critical: generator deleting non-generated files in `.github/`**: `cleanManagedDirs` was treating `.github/` as a fully managed directory, deleting workflows, CODEOWNERS, issue templates and other user content during `generate`. Now skips shared directories that contain both generated and non-generated content.
+
 ## [3.14.1] - 2026-04-20
 
 ### Fixed
