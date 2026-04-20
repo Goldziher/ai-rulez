@@ -92,6 +92,30 @@ func (b *toolSchemaBuilder) Object(name, description string, required bool) *too
 	return b
 }
 
+func (b *toolSchemaBuilder) Enum(name, description string, values []string, required bool) *toolSchemaBuilder {
+	enumValues := make([]any, len(values))
+	for i, v := range values {
+		enumValues[i] = v
+	}
+	prop := map[string]any{
+		"type": "string",
+		"enum": enumValues,
+	}
+	if description != "" {
+		prop["description"] = description
+	}
+	b.properties[name] = prop
+	if required {
+		b.required = append(b.required, name)
+	}
+	return b
+}
+
+// WorkingDirectory adds the standard working_directory parameter to all CRUD tools
+func (b *toolSchemaBuilder) WorkingDirectory() *toolSchemaBuilder {
+	return b.String("working_directory", "Working directory path (defaults to current directory, useful for polyrepo setups)", false)
+}
+
 func (b *toolSchemaBuilder) Build() map[string]any {
 	schema := map[string]any{
 		"type":       "object",
@@ -139,7 +163,10 @@ func (s *Server) registerProjectTools() {
 	s.addTool(
 		newTool("generate_outputs", "Generate output files from the current configuration, respecting includes and extends",
 			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file (optional)", false),
+				String("config_file", "Path to the root configuration file (optional)", false).
+				Boolean("dry_run", "Preview changes without writing files", false).
+				Boolean("recursive", "Generate for all subdirectories containing .ai-rulez/", false).
+				WorkingDirectory(),
 		),
 		handlers.GenerateOutputsHandler,
 	)
@@ -147,7 +174,8 @@ func (s *Server) registerProjectTools() {
 	s.addTool(
 		newTool("validate_config", "Validate the configuration file, including all includes",
 			newSchemaBuilder().
-				String("config_file", "Path to the root configuration file to validate (optional)", false),
+				String("config_file", "Path to the root configuration file to validate (optional)", false).
+				WorkingDirectory(),
 		),
 		handlers.ValidateConfigHandler,
 	)
@@ -159,7 +187,8 @@ func (s *Server) registerProjectTools() {
 				StringArray("providers", "A list of providers to enable (e.g., ['claude', 'cursor'])", false).
 				Boolean("with_agents", "Include sample agent configurations", false).
 				Boolean("all_providers", "Enable all supported providers", false).
-				Boolean("popular_providers", "Enable a curated list of popular providers", false),
+				Boolean("popular_providers", "Enable a curated list of popular providers", false).
+				WorkingDirectory(),
 		),
 		handlers.InitProjectHandler,
 	)
@@ -172,13 +201,16 @@ func (s *Server) registerUtilityTools() {
 	)
 }
 
+var priorityValues = []string{"critical", "high", "medium", "low"}
+
 func (s *Server) registerCRUDTools() {
 	// Domain tools
 	s.addTool(
 		newTool("create_domain", "Create a new domain with subdirectories for rules, context, and skills",
 			newSchemaBuilder().
 				String("name", "Domain name (alphanumeric and underscores, 1-50 characters)", true).
-				String("description", "Optional domain description", false),
+				String("description", "Optional domain description", false).
+				WorkingDirectory(),
 		),
 		handlers.CreateDomainHandler,
 	)
@@ -186,13 +218,16 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("delete_domain", "Delete a domain and all its contents",
 			newSchemaBuilder().
-				String("name", "Domain name to delete", true),
+				String("name", "Domain name to delete", true).
+				WorkingDirectory(),
 		),
 		handlers.DeleteDomainHandler,
 	)
 
 	s.addTool(
-		newTool("list_domains", "List all domains in the .ai-rulez directory", nil),
+		newTool("list_domains", "List all domains in the .ai-rulez directory",
+			newSchemaBuilder().WorkingDirectory(),
+		),
 		handlers.ListDomainsHandler,
 	)
 
@@ -203,20 +238,32 @@ func (s *Server) registerCRUDTools() {
 				String("name", "Rule filename without .md extension", true).
 				String("content", "Markdown content with optional YAML frontmatter", false).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
-				String("priority", "Priority level: critical, high, medium, or low", false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+				Enum("priority", "Priority level", priorityValues, false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				WorkingDirectory(),
 		),
 		handlers.CreateRuleHandler,
 	)
 
 	s.addTool(
-		newTool("update_rule", "Update an existing rule file",
+		newTool("read_rule", "Read the content of a rule file",
+			newSchemaBuilder().
+				String("name", "Rule filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
+		),
+		handlers.ReadRuleHandler,
+	)
+
+	s.addTool(
+		newTool("update_rule", "Update an existing rule file atomically",
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("content", "New markdown content", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
-				String("priority", "Priority level: critical, high, medium, or low", false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+				Enum("priority", "Priority level", priorityValues, false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				WorkingDirectory(),
 		),
 		handlers.UpdateRuleHandler,
 	)
@@ -225,7 +272,8 @@ func (s *Server) registerCRUDTools() {
 		newTool("delete_rule", "Delete a rule file",
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false),
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
 		),
 		handlers.DeleteRuleHandler,
 	)
@@ -233,7 +281,8 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("list_rules", "List all rules in the root or a specific domain",
 			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root rules if not specified)", false),
+				String("domain", "Domain name (optional, lists root rules if not specified)", false).
+				WorkingDirectory(),
 		),
 		handlers.ListRulesHandler,
 	)
@@ -245,20 +294,32 @@ func (s *Server) registerCRUDTools() {
 				String("name", "Context filename without .md extension", true).
 				String("content", "Markdown content with optional YAML frontmatter", false).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
-				String("priority", "Priority level: critical, high, medium, or low", false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+				Enum("priority", "Priority level", priorityValues, false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				WorkingDirectory(),
 		),
 		handlers.CreateContextHandler,
 	)
 
 	s.addTool(
-		newTool("update_context", "Update an existing context file",
+		newTool("read_context", "Read the content of a context file",
+			newSchemaBuilder().
+				String("name", "Context filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
+		),
+		handlers.ReadContextHandler,
+	)
+
+	s.addTool(
+		newTool("update_context", "Update an existing context file atomically",
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("content", "New markdown content", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
-				String("priority", "Priority level: critical, high, medium, or low", false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+				Enum("priority", "Priority level", priorityValues, false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				WorkingDirectory(),
 		),
 		handlers.UpdateContextHandler,
 	)
@@ -267,23 +328,17 @@ func (s *Server) registerCRUDTools() {
 		newTool("delete_context", "Delete a context file",
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false),
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
 		),
 		handlers.DeleteContextHandler,
 	)
 
 	s.addTool(
-		newTool("list_context", "List all context files in the root or a specific domain",
+		newTool("list_context", "List all context files in the root or a specific domain with summaries",
 			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root context if not specified)", false),
-		),
-		handlers.ListContextHandler,
-	)
-
-	s.addTool(
-		newTool("list_contexts", "List all context files with their names and summaries",
-			newSchemaBuilder().
-				String("domain", "Domain name (optional)", false),
+				String("domain", "Domain name (optional, lists root context if not specified)", false).
+				WorkingDirectory(),
 		),
 		handlers.ListContextsHandler,
 	)
@@ -295,20 +350,32 @@ func (s *Server) registerCRUDTools() {
 				String("name", "Skill filename without .md extension", true).
 				String("content", "Markdown content with optional YAML frontmatter", false).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
-				String("priority", "Priority level: critical, high, medium, or low", false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+				Enum("priority", "Priority level", priorityValues, false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				WorkingDirectory(),
 		),
 		handlers.CreateSkillHandler,
 	)
 
 	s.addTool(
-		newTool("update_skill", "Update an existing skill file",
+		newTool("read_skill", "Read the content of a skill file",
+			newSchemaBuilder().
+				String("name", "Skill filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
+		),
+		handlers.ReadSkillHandler,
+	)
+
+	s.addTool(
+		newTool("update_skill", "Update an existing skill file atomically",
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("content", "New markdown content", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
-				String("priority", "Priority level: critical, high, medium, or low", false).
-				StringArray("targets", "Target providers (e.g., claude, cursor)", false),
+				Enum("priority", "Priority level", priorityValues, false).
+				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				WorkingDirectory(),
 		),
 		handlers.UpdateSkillHandler,
 	)
@@ -317,7 +384,8 @@ func (s *Server) registerCRUDTools() {
 		newTool("delete_skill", "Delete a skill file",
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
-				String("domain", "Domain name (optional, uses root if not specified)", false),
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
 		),
 		handlers.DeleteSkillHandler,
 	)
@@ -325,7 +393,8 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("list_skills", "List all skill files in the root or a specific domain",
 			newSchemaBuilder().
-				String("domain", "Domain name (optional, lists root skills if not specified)", false),
+				String("domain", "Domain name (optional, lists root skills if not specified)", false).
+				WorkingDirectory(),
 		),
 		handlers.ListSkillsHandler,
 	)
@@ -339,8 +408,9 @@ func (s *Server) registerCRUDTools() {
 				String("path", "Path within git repository (git sources only)", false).
 				String("ref", "Git reference: branch, tag, or commit hash (git sources only)", false).
 				StringArray("include", "Content types to include: rules, context, skills, mcp", false).
-				String("merge_strategy", "Merge strategy: default, override, or append", false).
-				String("install_to", "Installation target path (optional)", false),
+				Enum("merge_strategy", "Merge strategy", []string{"default", "override", "append"}, false).
+				String("install_to", "Installation target path (optional)", false).
+				WorkingDirectory(),
 		),
 		handlers.AddIncludeHandler,
 	)
@@ -348,13 +418,16 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("remove_include", "Remove an include source from the configuration",
 			newSchemaBuilder().
-				String("name", "Include name to remove", true),
+				String("name", "Include name to remove", true).
+				WorkingDirectory(),
 		),
 		handlers.RemoveIncludeHandler,
 	)
 
 	s.addTool(
-		newTool("list_includes", "List all include sources in the configuration", nil),
+		newTool("list_includes", "List all include sources in the configuration",
+			newSchemaBuilder().WorkingDirectory(),
+		),
 		handlers.ListIncludesHandler,
 	)
 
@@ -365,7 +438,8 @@ func (s *Server) registerCRUDTools() {
 				String("name", "Skill name (unique identifier)", true).
 				String("source", "Git URL or local filesystem path", true).
 				String("path", "Path within repo to skill directory (defaults to skills/<name>)", false).
-				String("ref", "Git reference: branch, tag, or commit hash", false),
+				String("ref", "Git reference: branch, tag, or commit hash", false).
+				WorkingDirectory(),
 		),
 		handlers.InstallSkillHandler,
 	)
@@ -373,13 +447,16 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("uninstall_skill", "Remove an installed skill from the configuration",
 			newSchemaBuilder().
-				String("name", "Skill name to remove", true),
+				String("name", "Skill name to remove", true).
+				WorkingDirectory(),
 		),
 		handlers.UninstallSkillHandler,
 	)
 
 	s.addTool(
-		newTool("list_installed_skills", "List all installed skills", nil),
+		newTool("list_installed_skills", "List all installed skills",
+			newSchemaBuilder().WorkingDirectory(),
+		),
 		handlers.ListInstalledSkillsHandler,
 	)
 
@@ -388,7 +465,8 @@ func (s *Server) registerCRUDTools() {
 		newTool("add_profile", "Create a new profile with a set of domains",
 			newSchemaBuilder().
 				String("name", "Profile name (unique identifier)", true).
-				StringArray("domains", "List of domain names to include in the profile", true),
+				StringArray("domains", "List of domain names to include in the profile", true).
+				WorkingDirectory(),
 		),
 		handlers.AddProfileHandler,
 	)
@@ -396,7 +474,8 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("remove_profile", "Remove a profile from the configuration",
 			newSchemaBuilder().
-				String("name", "Profile name to remove", true),
+				String("name", "Profile name to remove", true).
+				WorkingDirectory(),
 		),
 		handlers.RemoveProfileHandler,
 	)
@@ -404,13 +483,16 @@ func (s *Server) registerCRUDTools() {
 	s.addTool(
 		newTool("set_default_profile", "Set a profile as the default",
 			newSchemaBuilder().
-				String("name", "Profile name to set as default", true),
+				String("name", "Profile name to set as default", true).
+				WorkingDirectory(),
 		),
 		handlers.SetDefaultProfileHandler,
 	)
 
 	s.addTool(
-		newTool("list_profiles", "List all profiles in the configuration", nil),
+		newTool("list_profiles", "List all profiles in the configuration",
+			newSchemaBuilder().WorkingDirectory(),
+		),
 		handlers.ListProfilesHandler,
 	)
 }

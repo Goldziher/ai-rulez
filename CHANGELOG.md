@@ -19,6 +19,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Junie skills and agents**: Junie preset now generates skill files to `.junie/skills/{id}/SKILL.md` and agent files to `.junie/agents/{name}.md` with YAML frontmatter.
 - **OpenCode skills and agents**: OpenCode preset now generates skill files to `.opencode/skills/{id}/SKILL.md` and agent files to `.opencode/agents/{name}.md` with YAML frontmatter.
 - **Output conflict detection**: Generator now warns when multiple presets write to the same file path, deduplicates directory entries, and uses last-write-wins for file conflicts.
+- **Vite+ builtin**: New `vite-plus` builtin for the unified TypeScript toolchain (oxlint, oxfmt, vitest, rolldown/tsdown, task caching).
+- **MCP read tools**: New `read_rule`, `read_context`, `read_skill` MCP tools for reading file content without filesystem fallback.
+- **MCP `working_directory` parameter**: All MCP CRUD and project tools now accept an optional `working_directory` parameter for polyrepo support.
+- **MCP enum constraints**: `priority` and `merge_strategy` fields now use JSON Schema `enum` constraints for better LLM tool use.
+
+### Changed
+- **Rust builtin**: Added Rust API Guidelines (naming conventions, trait implementations, type safety, builder pattern, sealed traits, rustdoc standards) and Rust Design Patterns reference.
+- **MCP atomic updates**: `update_rule`, `update_context`, `update_skill` now use atomic overwrite (temp+rename) instead of delete-then-create, preventing data loss on write failure.
+- **MCP `with_agents` parameter**: `init_project` now creates `.ai-rulez/agents/` directory when `with_agents` is true (previously silently ignored).
+- **MCP `list_context` unified**: Merged `list_context` and `list_contexts` into a single enriched endpoint returning summaries.
 
 ## [3.13.1] - 2026-04-19
 

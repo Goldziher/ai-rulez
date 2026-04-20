@@ -10,10 +10,35 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// workingDir extracts the working_directory parameter from a request, defaulting to "."
+func workingDir(request *ToolRequest) string {
+	return request.GetString("working_directory", ".")
+}
+
+// readFileContent reads and returns the content of a rule/context/skill file
+func readFileContent(ctx context.Context, op *crud.OperatorImpl, domain, fileType, name string) (content string, filePath string, err error) {
+	files, err := op.ListFiles(ctx, domain, fileType)
+	if err != nil {
+		return "", "", err
+	}
+
+	for _, f := range files {
+		if f.Name == name {
+			content, err := op.ReadFileContent(f.Path)
+			if err != nil {
+				return "", "", err
+			}
+			return content, normalizePath(f.Path), nil
+		}
+	}
+
+	return "", "", crud.ErrFileNotFound
+}
+
 // Domain Handlers
 
 func CreateDomainHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -41,7 +66,7 @@ func CreateDomainHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 }
 
 func DeleteDomainHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -62,7 +87,7 @@ func DeleteDomainHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 }
 
 func ListDomainsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -80,10 +105,84 @@ func ListDomainsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	})
 }
 
+// Read Handlers
+
+func ReadRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	domain := request.GetString("domain", "")
+
+	content, path, err := readFileContent(ctx, op, domain, "rules", name)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "read_rule",
+		"name":      name,
+		"domain":    domain,
+		"path":      path,
+		"content":   content,
+	})
+}
+
+func ReadContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	domain := request.GetString("domain", "")
+
+	content, path, err := readFileContent(ctx, op, domain, "context", name)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "read_context",
+		"name":      name,
+		"domain":    domain,
+		"path":      path,
+		"content":   content,
+	})
+}
+
+func ReadSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	domain := request.GetString("domain", "")
+
+	content, path, err := readFileContent(ctx, op, domain, "skills", name)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		"success":   true,
+		"operation": "read_skill",
+		"name":      name,
+		"domain":    domain,
+		"path":      path,
+		"content":   content,
+	})
+}
+
 // Rule Handlers
 
 func CreateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -119,7 +218,7 @@ func CreateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 }
 
 func UpdateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -127,24 +226,10 @@ func UpdateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
 	domain := request.GetString("domain", "")
+	priority := request.GetString("priority", "medium")
+	targets := request.GetStringSlice("targets", nil)
 
-	// First remove the existing rule
-	err = op.RemoveFile(ctx, domain, "rules", name)
-	if err != nil {
-		return ToolError(err)
-	}
-
-	// Then create it with new content
-	req := &crud.AddFileRequest{
-		Domain:   domain,
-		Type:     "rules",
-		Name:     name,
-		Content:  content,
-		Priority: request.GetString("priority", "medium"),
-		Targets:  request.GetStringSlice("targets", nil),
-	}
-
-	result, err := op.AddRule(ctx, req)
+	result, err := op.UpdateFile(ctx, domain, "rules", name, content, priority, targets)
 	if err != nil {
 		return ToolError(err)
 	}
@@ -160,7 +245,7 @@ func UpdateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 }
 
 func DeleteRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -183,7 +268,7 @@ func DeleteRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 }
 
 func ListRulesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -207,7 +292,7 @@ func ListRulesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallTo
 // Context Handlers
 
 func CreateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -243,7 +328,7 @@ func CreateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 }
 
 func UpdateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -251,24 +336,10 @@ func UpdateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
 	domain := request.GetString("domain", "")
+	priority := request.GetString("priority", "medium")
+	targets := request.GetStringSlice("targets", nil)
 
-	// First remove the existing context
-	err = op.RemoveFile(ctx, domain, "context", name)
-	if err != nil {
-		return ToolError(err)
-	}
-
-	// Then create it with new content
-	req := &crud.AddFileRequest{
-		Domain:   domain,
-		Type:     "context",
-		Name:     name,
-		Content:  content,
-		Priority: request.GetString("priority", "medium"),
-		Targets:  request.GetStringSlice("targets", nil),
-	}
-
-	result, err := op.AddContext(ctx, req)
+	result, err := op.UpdateFile(ctx, domain, "context", name, content, priority, targets)
 	if err != nil {
 		return ToolError(err)
 	}
@@ -284,7 +355,7 @@ func UpdateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 }
 
 func DeleteContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -307,7 +378,7 @@ func DeleteContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 }
 
 func ListContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -375,7 +446,7 @@ func extractSummary(filePath string) string {
 
 // ListContextsHandler lists all context files with their names and summaries
 func ListContextsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -418,7 +489,7 @@ func normalizePath(path string) string {
 // Skill Handlers
 
 func CreateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -454,7 +525,7 @@ func CreateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 }
 
 func UpdateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -462,24 +533,10 @@ func UpdateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	name := request.GetString("name", "")
 	content := request.GetString("content", "")
 	domain := request.GetString("domain", "")
+	priority := request.GetString("priority", "medium")
+	targets := request.GetStringSlice("targets", nil)
 
-	// First remove the existing skill
-	err = op.RemoveFile(ctx, domain, "skills", name)
-	if err != nil {
-		return ToolError(err)
-	}
-
-	// Then create it with new content
-	req := &crud.AddFileRequest{
-		Domain:   domain,
-		Type:     "skills",
-		Name:     name,
-		Content:  content,
-		Priority: request.GetString("priority", "medium"),
-		Targets:  request.GetStringSlice("targets", nil),
-	}
-
-	result, err := op.AddSkill(ctx, req)
+	result, err := op.UpdateFile(ctx, domain, "skills", name, content, priority, targets)
 	if err != nil {
 		return ToolError(err)
 	}
@@ -495,7 +552,7 @@ func UpdateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 }
 
 func DeleteSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -518,7 +575,7 @@ func DeleteSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 }
 
 func ListSkillsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -542,7 +599,7 @@ func ListSkillsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 // Include Handlers
 
 func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -580,7 +637,7 @@ func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 }
 
 func RemoveIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -601,7 +658,7 @@ func RemoveIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 }
 
 func ListIncludesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -622,7 +679,7 @@ func ListIncludesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 // Installed Skill Handlers
 
 func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -654,7 +711,7 @@ func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 }
 
 func UninstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -675,7 +732,7 @@ func UninstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.C
 }
 
 func ListInstalledSkillsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -696,7 +753,7 @@ func ListInstalledSkillsHandler(ctx context.Context, request *ToolRequest) (*sdk
 // Profile Handlers
 
 func AddProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -719,7 +776,7 @@ func AddProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 }
 
 func RemoveProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -740,7 +797,7 @@ func RemoveProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 }
 
 func SetDefaultProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
@@ -761,7 +818,7 @@ func SetDefaultProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmc
 }
 
 func ListProfilesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(".")
+	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
 	}
