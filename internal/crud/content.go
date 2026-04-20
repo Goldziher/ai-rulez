@@ -382,3 +382,66 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 
 	return fileInfos, nil
 }
+
+// ReadFileContent reads and returns the content of a file by its path
+func (op *OperatorImpl) ReadFileContent(path string) (string, error) {
+	return op.filesMgr.ReadFile(path)
+}
+
+// UpdateFile atomically updates an existing file's content.
+// Unlike the delete-then-create pattern, this uses WriteFile (temp+rename)
+// so the old content is never lost if the write fails.
+func (op *OperatorImpl) UpdateFile(_ context.Context, domain, ftype, name, content, priority string, targets []string) (*FileResult, error) {
+	if err := ValidateFileName(name); err != nil {
+		return nil, err
+	}
+
+	if priority == "" {
+		priority = PriorityDefault
+	}
+	if err := ValidatePriority(priority); err != nil {
+		return nil, err
+	}
+
+	if domain != "" {
+		if err := ValidateDomainName(domain); err != nil {
+			return nil, err
+		}
+		if !op.filesMgr.DomainExists(domain) {
+			return nil, &DomainNotFoundError{
+				Name: domain,
+				Path: op.filesMgr.GetDomainPath(domain),
+			}
+		}
+	}
+
+	// Verify file exists
+	if !op.filesMgr.FileOrSkillExists(domain, ftype, name) {
+		return nil, ErrFileNotFound
+	}
+
+	// Build content with frontmatter
+	if content != "" && !strings.HasPrefix(content, "---") {
+		content = GenerateFrontmatter(priority, targets) + content
+	}
+	content = EnsureTrailingNewline(content)
+
+	// Get path and write atomically (temp+rename)
+	var filePath string
+	if ftype == ContentTypeSkills {
+		filePath = filepath.Join(op.filesMgr.GetSkillsPath(domain), name, "SKILL.md")
+	} else {
+		filePath = op.filesMgr.GetFilePath(domain, ftype, name)
+	}
+
+	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+		return nil, err
+	}
+
+	return &FileResult{
+		Name:     name,
+		FullPath: filePath,
+		Type:     ftype,
+		Domain:   domain,
+	}, nil
+}

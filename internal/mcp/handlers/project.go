@@ -14,19 +14,20 @@ import (
 )
 
 func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	baseDir := workingDir(request)
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		var err error
-		configFile, err = config.FindConfigFile(".")
+		configFile, err = config.FindConfigFile(baseDir)
 		if err != nil {
 			return ToolError(err)
 		}
 	}
 
 	// Detect config version and load appropriately
-	dir, err := filepath.Abs(".")
+	dir, err := filepath.Abs(baseDir)
 	if err != nil {
-		return ToolError(fmt.Errorf("failed to get current directory: %w", err))
+		return ToolError(fmt.Errorf("failed to get directory: %w", err))
 	}
 	version, err := config.DetectConfigVersion(dir)
 	if err != nil {
@@ -72,19 +73,20 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 }
 
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	baseDir := workingDir(request)
 	configFile := request.GetString("config_file", "")
 	if configFile == "" {
 		var err error
-		configFile, err = config.FindConfigFile(".")
+		configFile, err = config.FindConfigFile(baseDir)
 		if err != nil {
 			return ToolError(err)
 		}
 	}
 
 	// Detect config version and validate appropriately
-	dir, err := filepath.Abs(".")
+	dir, err := filepath.Abs(baseDir)
 	if err != nil {
-		return ToolError(fmt.Errorf("failed to get current directory: %w", err))
+		return ToolError(fmt.Errorf("failed to get directory: %w", err))
 	}
 	version, err := config.DetectConfigVersion(dir)
 	if err != nil {
@@ -175,9 +177,10 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 }
 
 func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	baseDir := workingDir(request)
 	projectName := request.GetString("project_name", "")
 	providersInterface := request.GetArguments()["providers"]
-	_ = request.GetBool("with_agents", false)
+	withAgents := request.GetBool("with_agents", false)
 	allProviders := request.GetBool("all_providers", false)
 	popularProviders := request.GetBool("popular_providers", false)
 
@@ -196,14 +199,22 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	}
 
 	// V3 structure: create .ai-rulez/config.yaml
-	aiRulesDir := ".ai-rulez"
+	aiRulesDir := filepath.Join(baseDir, ".ai-rulez")
 	if err := os.MkdirAll(aiRulesDir, 0o755); err != nil {
 		return ToolError(fmt.Errorf("failed to create .ai-rulez directory: %w", err))
 	}
 
-	configPath := fmt.Sprintf("%s/config.yaml", aiRulesDir)
+	configPath := filepath.Join(aiRulesDir, "config.yaml")
 	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
 		return ToolError(fmt.Errorf("failed to write config file: %w", err))
+	}
+
+	// Create agents directory if requested
+	if withAgents {
+		agentsDir := filepath.Join(aiRulesDir, "agents")
+		if err := os.MkdirAll(agentsDir, 0o755); err != nil {
+			return ToolError(fmt.Errorf("failed to create agents directory: %w", err))
+		}
 	}
 
 	if hasContinueDev {
