@@ -127,6 +127,26 @@ func (b *toolSchemaBuilder) Build() map[string]any {
 	return schema
 }
 
+// boolPtr returns a pointer to a bool value, used for optional annotation hints.
+func boolPtr(b bool) *bool {
+	return &b
+}
+
+// readOnlyAnnotations returns tool annotations marking a tool as read-only and non-destructive.
+func readOnlyAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		ReadOnlyHint:    true,
+		DestructiveHint: boolPtr(false),
+	}
+}
+
+// destructiveAnnotations returns tool annotations marking a tool as destructive.
+func destructiveAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		DestructiveHint: boolPtr(true),
+	}
+}
+
 func newTool(name, description string, builder *toolSchemaBuilder) *sdkmcp.Tool {
 	var schema map[string]any
 	if builder != nil {
@@ -139,6 +159,12 @@ func newTool(name, description string, builder *toolSchemaBuilder) *sdkmcp.Tool 
 		Description: description,
 		InputSchema: schema,
 	}
+}
+
+func newAnnotatedTool(name, description string, builder *toolSchemaBuilder, annotations *sdkmcp.ToolAnnotations) *sdkmcp.Tool {
+	tool := newTool(name, description, builder)
+	tool.Annotations = annotations
+	return tool
 }
 
 func (s *Server) addTool(tool *sdkmcp.Tool, handler handlerFunc) {
@@ -172,10 +198,11 @@ func (s *Server) registerProjectTools() {
 	)
 
 	s.addTool(
-		newTool("validate_config", "Validate the configuration file, including all includes",
+		newAnnotatedTool("validate_config", "Validate the configuration file, including all includes",
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file to validate (optional)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ValidateConfigHandler,
 	)
@@ -196,7 +223,7 @@ func (s *Server) registerProjectTools() {
 
 func (s *Server) registerUtilityTools() {
 	s.addTool(
-		newTool("get_version", "Get the ai-rulez version", nil),
+		newAnnotatedTool("get_version", "Get the ai-rulez version", nil, readOnlyAnnotations()),
 		handlers.GetVersionHandler(s.version),
 	)
 }
@@ -216,17 +243,19 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("delete_domain", "Delete a domain and all its contents",
+		newAnnotatedTool("delete_domain", "Delete a domain and all its contents",
 			newSchemaBuilder().
 				String("name", "Domain name to delete", true).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.DeleteDomainHandler,
 	)
 
 	s.addTool(
-		newTool("list_domains", "List all domains in the .ai-rulez directory",
+		newAnnotatedTool("list_domains", "List all domains in the .ai-rulez directory",
 			newSchemaBuilder().WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListDomainsHandler,
 	)
@@ -246,11 +275,12 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("read_rule", "Read the content of a rule file",
+		newAnnotatedTool("read_rule", "Read the content of a rule file",
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ReadRuleHandler,
 	)
@@ -269,20 +299,22 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("delete_rule", "Delete a rule file",
+		newAnnotatedTool("delete_rule", "Delete a rule file",
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.DeleteRuleHandler,
 	)
 
 	s.addTool(
-		newTool("list_rules", "List all rules in the root or a specific domain",
+		newAnnotatedTool("list_rules", "List all rules in the root or a specific domain",
 			newSchemaBuilder().
 				String("domain", "Domain name (optional, lists root rules if not specified)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListRulesHandler,
 	)
@@ -302,11 +334,12 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("read_context", "Read the content of a context file",
+		newAnnotatedTool("read_context", "Read the content of a context file",
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ReadContextHandler,
 	)
@@ -325,20 +358,22 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("delete_context", "Delete a context file",
+		newAnnotatedTool("delete_context", "Delete a context file",
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.DeleteContextHandler,
 	)
 
 	s.addTool(
-		newTool("list_context", "List all context files in the root or a specific domain with summaries",
+		newAnnotatedTool("list_context", "List all context files in the root or a specific domain with summaries",
 			newSchemaBuilder().
 				String("domain", "Domain name (optional, lists root context if not specified)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListContextsHandler,
 	)
@@ -358,11 +393,12 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("read_skill", "Read the content of a skill file",
+		newAnnotatedTool("read_skill", "Read the content of a skill file",
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ReadSkillHandler,
 	)
@@ -381,20 +417,22 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("delete_skill", "Delete a skill file",
+		newAnnotatedTool("delete_skill", "Delete a skill file",
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.DeleteSkillHandler,
 	)
 
 	s.addTool(
-		newTool("list_skills", "List all skill files in the root or a specific domain",
+		newAnnotatedTool("list_skills", "List all skill files in the root or a specific domain",
 			newSchemaBuilder().
 				String("domain", "Domain name (optional, lists root skills if not specified)", false).
 				WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListSkillsHandler,
 	)
@@ -416,17 +454,19 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("remove_include", "Remove an include source from the configuration",
+		newAnnotatedTool("remove_include", "Remove an include source from the configuration",
 			newSchemaBuilder().
 				String("name", "Include name to remove", true).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.RemoveIncludeHandler,
 	)
 
 	s.addTool(
-		newTool("list_includes", "List all include sources in the configuration",
+		newAnnotatedTool("list_includes", "List all include sources in the configuration",
 			newSchemaBuilder().WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListIncludesHandler,
 	)
@@ -445,19 +485,43 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("uninstall_skill", "Remove an installed skill from the configuration",
+		newAnnotatedTool("uninstall_skill", "Remove an installed skill from the configuration",
 			newSchemaBuilder().
 				String("name", "Skill name to remove", true).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.UninstallSkillHandler,
 	)
 
 	s.addTool(
-		newTool("list_installed_skills", "List all installed skills",
+		newAnnotatedTool("list_installed_skills", "List all installed skills",
 			newSchemaBuilder().WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListInstalledSkillsHandler,
+	)
+
+	// Config tools
+	s.addTool(
+		newAnnotatedTool("read_config", "Read the current project configuration and return its fields as structured JSON",
+			newSchemaBuilder().
+				WorkingDirectory(),
+			readOnlyAnnotations(),
+		),
+		handlers.ReadConfigHandler,
+	)
+
+	s.addTool(
+		newTool("update_config", "Update specific fields in the project configuration",
+			newSchemaBuilder().
+				String("name", "Project name", false).
+				String("description", "Project description", false).
+				StringArray("builtins", "List of builtin names to enable (replaces current builtins setting)", false).
+				Boolean("gitignore", "Whether to update .gitignore when generating outputs", false).
+				WorkingDirectory(),
+		),
+		handlers.UpdateConfigHandler,
 	)
 
 	// Profile tools
@@ -472,10 +536,11 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("remove_profile", "Remove a profile from the configuration",
+		newAnnotatedTool("remove_profile", "Remove a profile from the configuration",
 			newSchemaBuilder().
 				String("name", "Profile name to remove", true).
 				WorkingDirectory(),
+			destructiveAnnotations(),
 		),
 		handlers.RemoveProfileHandler,
 	)
@@ -490,8 +555,9 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("list_profiles", "List all profiles in the configuration",
+		newAnnotatedTool("list_profiles", "List all profiles in the configuration",
 			newSchemaBuilder().WorkingDirectory(),
+			readOnlyAnnotations(),
 		),
 		handlers.ListProfilesHandler,
 	)

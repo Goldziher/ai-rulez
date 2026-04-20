@@ -2,12 +2,14 @@ package crud
 
 import (
 	"context"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/samber/oops"
+	"gopkg.in/yaml.v3"
 )
 
 // AddRule creates a new rule file in the root or domain rules directory
@@ -311,6 +313,38 @@ func (op *OperatorImpl) ListFiles(ctx context.Context, domain, ftype string) ([]
 	return op.listFilesInDirectory(domain, ftype)
 }
 
+// extractMetadata reads a file and extracts priority and targets from YAML frontmatter.
+// Returns empty defaults if the file cannot be read or has no valid frontmatter.
+func extractMetadata(filePath string) (priority string, targets []string) {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return "", nil
+	}
+
+	contentStr := string(content)
+	if !strings.HasPrefix(contentStr, "---") {
+		return "", nil
+	}
+
+	endIdx := strings.Index(contentStr[3:], "---")
+	if endIdx == -1 {
+		return "", nil
+	}
+
+	frontmatterStr := contentStr[3 : endIdx+3]
+
+	var metadata struct {
+		Priority string   `yaml:"priority"`
+		Targets  []string `yaml:"targets"`
+	}
+
+	if err := yaml.Unmarshal([]byte(frontmatterStr), &metadata); err != nil {
+		return "", nil
+	}
+
+	return metadata.Priority, metadata.Targets
+}
+
 // listFilesInDirectory is a helper that lists files in a specific directory
 func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]FileInfo, error) {
 	var dirPath string
@@ -350,11 +384,14 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 
 			// Only include if SKILL.md exists
 			if op.filesMgr.PathExists(skillPath) {
+				priority, targets := extractMetadata(skillPath)
 				fileInfos = append(fileInfos, FileInfo{
-					Name:   skillName,
-					Path:   skillPath,
-					Type:   fileType,
-					Domain: domainName,
+					Name:     skillName,
+					Path:     skillPath,
+					Type:     fileType,
+					Domain:   domainName,
+					Priority: priority,
+					Targets:  targets,
 				})
 			}
 		}
@@ -371,11 +408,14 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 			filePath := filepath.Join(dirPath, fileName)
 			name := strings.TrimSuffix(fileName, ".md")
 
+			priority, targets := extractMetadata(filePath)
 			fileInfos = append(fileInfos, FileInfo{
-				Name:   name,
-				Path:   filePath,
-				Type:   fileType,
-				Domain: domainName,
+				Name:     name,
+				Path:     filePath,
+				Type:     fileType,
+				Domain:   domainName,
+				Priority: priority,
+				Targets:  targets,
 			})
 		}
 	}
