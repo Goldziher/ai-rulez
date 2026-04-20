@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -9,7 +10,9 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets" // Import to register presets and access MCPPresetGenerator
+	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/samber/oops"
 )
 
@@ -274,7 +277,11 @@ func (g *GeneratorV3) writeOutputs(outputs []config.OutputFileV3) error {
 	return nil
 }
 
-// writeOutput writes a single output file or creates a directory
+// writeOutput writes a single output file or creates a directory.
+// It computes a content hash of the body (everything after the header),
+// injects the hash into the header, and skips writing if the existing
+// file already contains the same hash — avoiding noisy git diffs when
+// content has not changed.
 func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
 	// Resolve absolute path
 	absPath := output.Path
@@ -294,6 +301,20 @@ func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
 		return nil
 	}
 
+	// Compute content hash from the body (content after header).
+	body := stripHeader(output.Content, output.Path)
+	contentHash := templates.HashContent(body)
+
+	// Check if existing file already has the same content hash.
+	existingHash := extractContentHash(absPath)
+	if existingHash != "" && existingHash == contentHash {
+		logger.Debug("Skipped unchanged file", "path", output.Path, "hash", contentHash)
+		return nil
+	}
+
+	// Inject the content hash into the header of the generated content.
+	finalContent := injectContentHash(output.Content, output.Path, contentHash)
+
 	// Create parent directories for files
 	dir := filepath.Dir(absPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -305,15 +326,134 @@ func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
 	}
 
 	// Write file
-	if err := os.WriteFile(absPath, []byte(output.Content), 0o644); err != nil {
+	if err := os.WriteFile(absPath, []byte(finalContent), 0o644); err != nil {
 		return oops.
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
 			Wrapf(err, "write file")
 	}
 
-	logger.Debug("Wrote file", "path", output.Path, "size", len(output.Content))
+	logger.Debug("Wrote file", "path", output.Path, "size", len(finalContent))
 	return nil
+}
+
+// extractContentHash scans the header of an existing file and returns
+// the Content-Hash value if found, or an empty string otherwise.
+// It reads up to 60 lines to accommodate detailed headers.
+func extractContentHash(filePath string) string {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return ""
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for i := 0; i < 60 && scanner.Scan(); i++ {
+		line := strings.TrimSpace(scanner.Text())
+		// Strip common comment prefixes so we can find the hash line
+		// regardless of comment style (HTML, hash, slash, semicolon).
+		stripped := line
+		for _, prefix := range []string{"<!--", "-->", "//", "#", ";", "/*", "*/"} {
+			stripped = strings.TrimPrefix(stripped, prefix)
+		}
+		stripped = strings.TrimSpace(stripped)
+
+		if strings.HasPrefix(stripped, "Content-Hash: ") {
+			return strings.TrimPrefix(stripped, "Content-Hash: ")
+		}
+	}
+	return ""
+}
+
+// stripHeader removes the header comment from generated content, returning
+// only the body. The header format depends on the output file extension.
+func stripHeader(content, outputPath string) string {
+	ext := strings.ToLower(filepath.Ext(outputPath))
+
+	switch ext {
+	case ".md", ".markdown", ".mdx", ".html":
+		// HTML comment: everything before and including "-->\n\n"
+		if idx := strings.Index(content, "-->\n\n"); idx >= 0 {
+			return content[idx+len("-->\n\n"):]
+		}
+		if idx := strings.Index(content, "-->\n"); idx >= 0 {
+			return content[idx+len("-->\n"):]
+		}
+		return content
+	default:
+		// Line-prefix comments (# , // , ; ): skip leading comment lines
+		// and the blank line that follows them.
+		lines := strings.Split(content, "\n")
+		i := 0
+		for i < len(lines) {
+			trimmed := strings.TrimSpace(lines[i])
+			if trimmed == "" {
+				// A blank line after comment lines marks end of header
+				i++
+				break
+			}
+			isComment := strings.HasPrefix(trimmed, "#") ||
+				strings.HasPrefix(trimmed, "//") ||
+				strings.HasPrefix(trimmed, ";")
+			if !isComment {
+				break
+			}
+			i++
+		}
+		if i >= len(lines) {
+			return ""
+		}
+		return strings.Join(lines[i:], "\n")
+	}
+}
+
+// injectContentHash inserts a Content-Hash line into the header of the
+// generated content. It modifies the content in place by finding the
+// header closing marker and inserting the hash line before it.
+func injectContentHash(content, outputPath, hash string) string {
+	ext := strings.ToLower(filepath.Ext(outputPath))
+
+	switch ext {
+	case ".md", ".markdown", ".mdx", ".html":
+		// HTML comment: insert before "-->"
+		marker := "\n-->\n"
+		if idx := strings.Index(content, marker); idx >= 0 {
+			return content[:idx] + "\nContent-Hash: " + hash + marker + content[idx+len(marker):]
+		}
+		return content
+	default:
+		// Line-prefix comments: find the first blank line after comments
+		// and insert the hash line before it.
+		prefix := "# "
+		switch ext {
+		case ".json", ".jsonc", ".go", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".cs":
+			prefix = "// "
+		case ".ini":
+			prefix = "; "
+		}
+
+		lines := strings.Split(content, "\n")
+		// Find the blank line that ends the header block
+		for i, line := range lines {
+			if strings.TrimSpace(line) == "" && i > 0 {
+				// Check that the previous line was a comment
+				prevTrimmed := strings.TrimSpace(lines[i-1])
+				isComment := strings.HasPrefix(prevTrimmed, "#") ||
+					strings.HasPrefix(prevTrimmed, "//") ||
+					strings.HasPrefix(prevTrimmed, ";")
+				if isComment {
+					// Insert hash line before this blank line
+					hashLine := prefix + "Content-Hash: " + hash
+					result := make([]string, 0, len(lines)+1)
+					result = append(result, lines[:i]...)
+					result = append(result, hashLine)
+					result = append(result, lines[i:]...)
+					return strings.Join(result, "\n")
+				}
+			}
+		}
+		return content
+	}
 }
 
 // cleanManagedDirs removes stale files from directories that are fully managed by the generator.
@@ -462,64 +602,67 @@ func (g *GeneratorV3) extractTopLevelDir(relPath string) string {
 	return parts[0]
 }
 
-// updateGitignore updates .gitignore with generated file paths
+// updateGitignore updates .gitignore with generated file paths using a fenced block
 func (g *GeneratorV3) updateGitignore(outputs []config.OutputFileV3) error {
 	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
 
 	// Collect unique output paths
 	paths := g.collectGitignorePaths(outputs)
 
-	// Read existing gitignore entries
-	existingEntries, err := readGitignoreEntries(gitignorePath)
+	// Sort paths for deterministic output
+	var sortedPaths []string
+	for p := range paths {
+		sortedPaths = append(sortedPaths, p)
+	}
+	sort.Strings(sortedPaths)
+
+	if len(sortedPaths) == 0 {
+		logger.Debug("No paths to add to .gitignore")
+		return nil
+	}
+
+	// Build the fenced block
+	var fencedBlock strings.Builder
+	fencedBlock.WriteString(gitignore.BeginMarker + "\n")
+	for _, p := range sortedPaths {
+		fencedBlock.WriteString(p + "\n")
+	}
+	fencedBlock.WriteString(gitignore.EndMarker + "\n")
+
+	// Read existing .gitignore content
+	existingData, err := os.ReadFile(gitignorePath)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.
 			With("path", gitignorePath).
 			Wrapf(err, "read .gitignore")
 	}
 
-	// Determine which paths need to be added
-	var toAdd []string
-	for path := range paths {
-		if !isIgnored(path, existingEntries) {
-			toAdd = append(toAdd, path)
+	var newContent string
+	existingContent := string(existingData)
+
+	switch {
+	case contains(existingContent, gitignore.BeginMarker):
+		newContent = gitignore.ReplaceFencedBlock(existingContent, fencedBlock.String())
+	case contains(existingContent, gitignore.OldHeader):
+		newContent = gitignore.ReplaceOldHeaderBlock(existingContent, fencedBlock.String())
+	case len(existingData) == 0:
+		newContent = fencedBlock.String()
+	default:
+		newContent = existingContent
+		if !hasSuffix(newContent, "\n") {
+			newContent += "\n"
 		}
+		newContent += "\n" + fencedBlock.String()
 	}
 
-	if len(toAdd) == 0 {
-		logger.Debug("All generated files already in .gitignore")
-		return nil
-	}
-
-	// Append to gitignore
-	if err := appendToGitignore(gitignorePath, toAdd, len(existingEntries) == 0); err != nil {
+	if err := os.WriteFile(gitignorePath, []byte(newContent), 0o644); err != nil { //nolint:gosec // path from config, not user input
 		return oops.
 			With("path", gitignorePath).
-			With("entries", toAdd).
-			Wrapf(err, "update .gitignore")
+			Wrapf(err, "write .gitignore")
 	}
 
-	logger.Debug("Updated .gitignore", "added", len(toAdd))
+	logger.Debug("Updated .gitignore", "entries", len(sortedPaths))
 	return nil
-}
-
-// readGitignoreEntries reads non-comment, non-empty lines from .gitignore
-func readGitignoreEntries(path string) ([]string, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-
-	var entries []string
-	lines := splitLines(string(data))
-
-	for _, line := range lines {
-		line = trimSpace(line)
-		if line != "" && !hasPrefix(line, "#") {
-			entries = append(entries, line)
-		}
-	}
-
-	return entries, nil
 }
 
 // isIgnored checks if a filename matches any gitignore pattern
@@ -576,29 +719,6 @@ func matchesDirectory(filename, pattern string) bool {
 	}
 
 	return hasPrefix(filename, dirPrefix+"/") || filename == dirPrefix
-}
-
-// appendToGitignore appends entries to .gitignore
-func appendToGitignore(path string, entries []string, isNewFile bool) error {
-	file, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	var content string
-	if isNewFile {
-		content = "# AI Rules generated files\n"
-	} else {
-		content = "\n# AI Rules generated files\n"
-	}
-
-	for _, entry := range entries {
-		content += entry + "\n"
-	}
-
-	_, err = file.WriteString(content)
-	return err
 }
 
 // String helper functions to avoid importing strings package

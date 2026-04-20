@@ -605,14 +605,14 @@ func TestClaudePresetGenerator_renderClaudeMarkdown_InlinesBuiltinContext(t *tes
 		t.Error("Expected builtin context content to be inlined in output")
 	}
 
-	// Local context should use @ reference
-	if !strings.Contains(result, "@context/local-context.md") {
-		t.Error("Expected local context to use @ path reference")
+	// Local context should also be inlined (not use @ reference)
+	if !strings.Contains(result, "Local context content") {
+		t.Error("Expected local context content to be inlined in output")
 	}
 
-	// Local context content should NOT be inlined
-	if strings.Contains(result, "Local context content") {
-		t.Error("Expected local context content to NOT be inlined")
+	// Local context should NOT use @ reference
+	if strings.Contains(result, "@context/local-context.md") {
+		t.Error("Expected local context to NOT use @ path reference")
 	}
 }
 

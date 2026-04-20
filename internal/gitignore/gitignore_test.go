@@ -75,9 +75,82 @@ func TestUpdateGitignoreFiles(t *testing.T) {
 	if !strings.Contains(contentStr, ".windsurfrules") {
 		t.Error("Expected .gitignore to contain .windsurfrules")
 	}
-	count := strings.Count(contentStr, ".cursor/rules/")
-	if count != 1 {
-		t.Errorf("Expected .cursor/rules/ to appear once, but found %d occurrences", count)
+	// With fenced block approach, .cursor/rules/ appears in both the user's
+	// manual section and the managed block - that's expected behavior.
+	// Verify the fenced block markers are present and well-formed.
+	if !strings.Contains(contentStr, "# BEGIN ai-rulez") {
+		t.Error("Expected .gitignore to contain BEGIN ai-rulez marker")
+	}
+	if !strings.Contains(contentStr, "# END ai-rulez") {
+		t.Error("Expected .gitignore to contain END ai-rulez marker")
+	}
+}
+
+func TestReplaceFencedBlock(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		newBlock string
+		want     string
+	}{
+		{
+			name:     "replaces existing block",
+			content:  "manual\n\n" + BeginMarker + "\nold1\nold2\n" + EndMarker + "\n",
+			newBlock: BeginMarker + "\nnew1\n" + EndMarker + "\n",
+			want:     "manual\n\n" + BeginMarker + "\nnew1\n" + EndMarker + "\n",
+		},
+		{
+			name:     "preserves content before and after",
+			content:  "before\n\n" + BeginMarker + "\nold\n" + EndMarker + "\nafter\n",
+			newBlock: BeginMarker + "\nnew\n" + EndMarker + "\n",
+			want:     "before\n\nafter\n\n" + BeginMarker + "\nnew\n" + EndMarker + "\n",
+		},
+		{
+			name:     "empty content",
+			content:  "",
+			newBlock: BeginMarker + "\nnew\n" + EndMarker + "\n",
+			want:     BeginMarker + "\nnew\n" + EndMarker + "\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ReplaceFencedBlock(tt.content, tt.newBlock)
+			if got != tt.want {
+				t.Errorf("ReplaceFencedBlock():\ngot:  %q\nwant: %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReplaceOldHeaderBlock(t *testing.T) {
+	tests := []struct {
+		name     string
+		content  string
+		newBlock string
+		want     string
+	}{
+		{
+			name:     "replaces from old header to EOF",
+			content:  "manual\n\n" + OldHeader + "\nold1\nold2\n",
+			newBlock: BeginMarker + "\nnew\n" + EndMarker + "\n",
+			want:     "manual\n\n" + BeginMarker + "\nnew\n" + EndMarker + "\n",
+		},
+		{
+			name:     "old header at start",
+			content:  OldHeader + "\nold\n",
+			newBlock: BeginMarker + "\nnew\n" + EndMarker + "\n",
+			want:     BeginMarker + "\nnew\n" + EndMarker + "\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ReplaceOldHeaderBlock(tt.content, tt.newBlock)
+			if got != tt.want {
+				t.Errorf("ReplaceOldHeaderBlock():\ngot:  %q\nwant: %q", got, tt.want)
+			}
+		})
 	}
 }
 
