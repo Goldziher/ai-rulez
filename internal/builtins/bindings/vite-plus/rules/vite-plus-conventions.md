@@ -1,0 +1,14 @@
+---
+priority: high
+---
+- Use [vite+](https://viteplus.dev) as the unified TypeScript toolchain. It wraps best-in-class tools behind a single CLI.
+- Package manager: vite+ auto-detects from `package.json` engine field or lockfile (`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`, `bun.lockb`). Fallback is `pnpm`.
+- Node manager: vite+ manages Node.js versions — replaces `nvm`/`fnm`. Pin version in `package.json` `engines.node` or `.node-version`.
+- Linter: `oxlint` via vite+ — replaces `eslint`. Run `vite+ lint` for fast Rust-powered linting with TypeScript-aware rules.
+- Formatter: `oxfmt` via vite+ — replaces `prettier`/`biome format`. Run `vite+ format` for consistent code formatting.
+- Type checker: `oxlint` with type-aware linting via vite+ — replaces `tsc --noEmit` for lint-time type checks.
+- Testing: `vitest` via vite+ — run `vite+ test` for fast Vite-native testing with HMR, coverage, and snapshot support.
+- Bundler: `rolldown` (Rust-powered Rollup replacement) for Vite apps, `tsdown` for library builds. Run `vite+ build`.
+- Task runner: vite+ supports task caching for build pipelines. Define tasks in config and benefit from incremental builds.
+- CI integration: use `vite+ lint`, `vite+ format --check`, `vite+ test --coverage`, `vite+ build` in CI pipelines.
+- Migrate from existing tools: vite+ is a drop-in replacement — existing `vitest`, `oxlint`, and Vite configs are respected.
