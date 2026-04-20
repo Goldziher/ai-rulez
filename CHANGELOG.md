@@ -6,6 +6,20 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## Unreleased
 
+### Added
+- **Antigravity preset**: New `antigravity` built-in preset generating `GEMINI.md`, `.agents/settings.json`, and skills/agents to `.agents/skills/` and `.agents/agents/`.
+- **Gemini skills and agents**: Gemini preset now generates skill files to `.agents/skills/{id}/SKILL.md` and agent files to `.agents/agents/{name}.md` with YAML frontmatter.
+- **Cursor agents**: Cursor preset now generates agent files to `.agents/agents/{name}.md` with YAML frontmatter (name, description, model, readonly, is_background).
+- **Cursor skills moved to `.agents/`**: Cursor skills output moved from `.cursor/skills/` to `.agents/skills/` following the cross-agent standard.
+- **Codex subagents**: Codex preset now generates agent files to `.codex/agents/{name}.toml` in TOML format (name, description, developer_instructions).
+- **AMP skills**: AMP preset now generates skill files to `.agents/skills/{id}/SKILL.md`.
+- **Windsurf skills**: Windsurf preset now generates skill files to `.windsurf/skills/{id}/SKILL.md`.
+- **Copilot skills and agents**: Copilot preset now generates skill files to `.github/skills/{id}/SKILL.md` and agent files to `.github/agents/{name}.agent.md` with YAML frontmatter.
+- **Cline skills**: Cline preset now generates skill files to `.cline/skills/{id}/SKILL.md`.
+- **Junie skills and agents**: Junie preset now generates skill files to `.junie/skills/{id}/SKILL.md` and agent files to `.junie/agents/{name}.md` with YAML frontmatter.
+- **OpenCode skills and agents**: OpenCode preset now generates skill files to `.opencode/skills/{id}/SKILL.md` and agent files to `.opencode/agents/{name}.md` with YAML frontmatter.
+- **Output conflict detection**: Generator now warns when multiple presets write to the same file path, deduplicates directory entries, and uses last-write-wins for file conflicts.
+
 ## [3.13.1] - 2026-04-19
 
 ### Fixed

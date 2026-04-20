@@ -262,6 +262,7 @@ var builtInPresetsV3 = map[string]bool{
 	"amp":          true,
 	"junie":        true,
 	"opencode":     true,
+	"antigravity":  true,
 }
 
 func isValidBuiltInPreset(name string) bool {

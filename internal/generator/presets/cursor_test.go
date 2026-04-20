@@ -34,7 +34,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 6, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 2 rule files
+			wantOutputs: 8, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 2 rule files
 			wantErr:     false,
 		},
 		{
@@ -59,7 +59,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 6, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 2 rule files
+			wantOutputs: 8, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 2 rule files
 			wantErr:     false,
 		},
 		{
@@ -77,7 +77,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 5, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 1 command file
+			wantOutputs: 7, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 1 command file
 			wantErr:     false,
 		},
 		{
@@ -103,7 +103,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 5, // .cursor, .cursor/rules, .cursor/skills, .cursor/commands, 1 command file (only cursor-command)
+			wantOutputs: 7, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 1 command file (only cursor-command)
 			wantErr:     false,
 		},
 	}
@@ -298,6 +298,97 @@ func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
 				t.Errorf("shouldIncludeCommand() = %v, want %v", result, tt.want)
 			}
 		})
+	}
+}
+
+func TestCursorPresetGenerator_Generate_WithAgents(t *testing.T) {
+	g := &CursorPresetGenerator{}
+	cfg := &config.ConfigV3{Name: "test"}
+
+	content := &config.ContentTreeV3{
+		Agents: []config.ContentFile{
+			{
+				Name:    "verifier",
+				Content: "You verify completed work.",
+				Metadata: &config.MetadataV3{
+					Extra: map[string]string{
+						"description":   "Validates completed work",
+						"model":         "fast",
+						"is_background": "false",
+					},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+
+	// Find the agent file
+	var agentContent string
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, "verifier.md") {
+			agentContent = o.Content
+		}
+	}
+
+	if agentContent == "" {
+		t.Fatal("Expected verifier.md agent file in outputs")
+	}
+
+	if !strings.HasPrefix(agentContent, "---\n") {
+		t.Error("Expected YAML frontmatter start")
+	}
+	if !strings.Contains(agentContent, "name: verifier") {
+		t.Error("Expected name in frontmatter")
+	}
+	if !strings.Contains(agentContent, "description: Validates completed work") {
+		t.Error("Expected description in frontmatter")
+	}
+	if !strings.Contains(agentContent, "model: fast") {
+		t.Error("Expected model in frontmatter")
+	}
+	if !strings.Contains(agentContent, "You verify completed work.") {
+		t.Error("Expected agent content")
+	}
+}
+
+func TestCursorPresetGenerator_Generate_SkillsInAgentsDir(t *testing.T) {
+	g := &CursorPresetGenerator{}
+	cfg := &config.ConfigV3{Name: "test"}
+
+	content := &config.ContentTreeV3{
+		Skills: []config.ContentFile{
+			{
+				Name:    "deploy",
+				Content: "Deploy skill",
+				Path:    "/test/.ai-rulez/skills/deploy/SKILL.md",
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+
+	// Verify skills are in .agents/skills/ not .cursor/skills/
+	for _, o := range outputs {
+		if strings.Contains(filepath.ToSlash(o.Path), ".cursor/skills/") {
+			t.Error("Skills should NOT be in .cursor/skills/, should be in .agents/skills/")
+		}
+	}
+
+	var foundSkill bool
+	for _, o := range outputs {
+		if strings.Contains(filepath.ToSlash(o.Path), ".agents/skills/deploy/SKILL.md") {
+			foundSkill = true
+		}
+	}
+	if !foundSkill {
+		t.Error("Expected skill file at .agents/skills/deploy/SKILL.md")
 	}
 }
 

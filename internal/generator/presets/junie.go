@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -42,17 +44,29 @@ func (g *JuniePresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, ".junie"),
 		filepath.Join(baseDir, ".junie", "guidelines.md"),
+		filepath.Join(baseDir, ".junie", "skills"),
+		filepath.Join(baseDir, ".junie", "agents"),
 	}
 }
 
 func (g *JuniePresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
-	// Create .junie directory
-	outputs = append(outputs, config.OutputFileV3{
-		Path:  filepath.Join(baseDir, ".junie"),
-		IsDir: true,
-	})
+	// Create .junie directory structure
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".junie"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".junie", "skills"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".junie", "agents"),
+			IsDir: true,
+		},
+	)
 
 	// Generate guidelines.md file
 	guidelinesContent := g.renderGuidelinesMarkdown(content, cfg)
@@ -62,6 +76,39 @@ func (g *JuniePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		Content: guidelinesContent,
 		IsDir:   false,
 	})
+
+	// Generate skill files to .junie/skills/
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	for _, skill := range allSkills {
+		skillID := extractSkillID(skill.Path)
+
+		skillDir := filepath.Join(baseDir, ".junie", "skills", skillID)
+		outputs = append(outputs,
+			config.OutputFileV3{
+				Path:  skillDir,
+				IsDir: true,
+			},
+			config.OutputFileV3{
+				Path:    filepath.Join(skillDir, "SKILL.md"),
+				Content: g.renderSkillFile(skill),
+			},
+		)
+	}
+
+	// Generate agent files to .junie/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderJunieAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".junie", "agents", agentID+".md"),
+			Content: agentContent,
+		})
+	}
 
 	return outputs, nil
 }
@@ -125,7 +172,66 @@ func (g *JuniePresetGenerator) renderGuidelinesMarkdown(content *config.ContentT
 		}
 	}
 
-	// Skills should not be inlined in guidelines.md
+	// Skills are generated to .junie/skills/ directory, not inlined
 
 	return builder.String()
+}
+
+// renderSkillFile renders a skill file in SKILL.md format for Junie
+func (g *JuniePresetGenerator) renderSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("---\n")
+	builder.WriteString("name: ")
+	builder.WriteString(skill.Name)
+	builder.WriteString("\n")
+	builder.WriteString("description: ")
+	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
+	builder.WriteString("\n")
+	builder.WriteString("---\n\n")
+	builder.WriteString(skill.Content)
+
+	return builder.String()
+}
+
+// renderJunieAgentFile renders an agent file with YAML frontmatter for Junie
+func (g *JuniePresetGenerator) renderJunieAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildJunieAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildJunieAgentFrontmatter builds frontmatter for a Junie agent file
+func (g *JuniePresetGenerator) buildJunieAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	junieFields := []string{
+		"description", "tools", "disallowedTools",
+		"model", "skills", "allowPromptArgument",
+	}
+	for _, field := range junieFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }
