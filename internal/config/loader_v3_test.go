@@ -598,7 +598,7 @@ func TestValidateV3(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid type")
 	})
 
-	t.Run("fails when skill description is missing", func(t *testing.T) {
+	t.Run("warns but does not fail when skill description is missing", func(t *testing.T) {
 		config := &ConfigV3{
 			Version: "3.0",
 			Name:    "test",
@@ -616,10 +616,10 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
+		// Since 3.13.1, missing skill description is a warning, not an error.
+		// The skill name is used as a fallback description.
 		err := config.ValidateV3()
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "missing required field 'description'")
-		assert.Contains(t, err.Error(), "core-principles")
+		require.NoError(t, err)
 	})
 
 	t.Run("accepts skill description when present", func(t *testing.T) {

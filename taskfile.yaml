@@ -34,6 +34,26 @@ tasks:
     cmds:
       - go test -race ./...
 
+  test:e2e:
+    desc: Run all e2e tests
+    cmds:
+      - go test ./tests/e2e/...
+
+  test:e2e:cli:
+    desc: Run e2e CLI tests
+    cmds:
+      - go test ./tests/e2e/cli/...
+
+  test:e2e:mcp:
+    desc: Run e2e MCP tests
+    cmds:
+      - go test ./tests/e2e/mcp/...
+
+  test:e2e:integration:
+    desc: Run e2e integration tests
+    cmds:
+      - go test ./tests/e2e/integration/...
+
   lint:
     desc: Run all linters and formatters via prek
     cmds:
