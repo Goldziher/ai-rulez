@@ -131,9 +131,12 @@ func (s *InitCLITestSuite) TestInitExistingConfig() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	os.MkdirAll(aiRulesDir, 0o755)
 
-	// Don't use NO_INTERACTIVE because it allows overwriting existing config
-	// Instead, we rely on test environment's non-interactive nature to trigger failure
-	result := testutil.RunCLI(s.T(), s.workingDir, "init", "TestProject")
+	// Unset CI and NO_INTERACTIVE so shouldOverwriteConfig doesn't auto-approve.
+	// Without these env vars, the non-interactive stdin causes init to cancel.
+	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
+		"CI":             "",
+		"NO_INTERACTIVE": "",
+	}, "init", "TestProject")
 
 	// In non-interactive mode without explicit approval, init should fail
 	s.NotEqual(0, result.ExitCode, "init should fail when .ai-rulez/ already exists in non-interactive mode")

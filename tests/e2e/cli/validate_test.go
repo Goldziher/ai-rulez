@@ -198,7 +198,7 @@ This rule has low priority
 	result.AssertOutputContains(s.T(), "valid")
 }
 
-func (s *ValidateCLITestSuite) TestValidateFailsWhenSkillDescriptionMissing() {
+func (s *ValidateCLITestSuite) TestValidateWarnsWhenSkillDescriptionMissing() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
@@ -218,7 +218,8 @@ priority: high
 # Core Principles
 `)
 
-	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
-	result.AssertStderrContains(s.T(), "missing required field 'description'")
-	result.AssertStderrContains(s.T(), "core-principles")
+	// Since 3.13.1, missing skill description is a warning, not an error.
+	// Validate should succeed — the skill name is used as a fallback description.
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
+	result.AssertOutputContains(s.T(), "valid")
 }
