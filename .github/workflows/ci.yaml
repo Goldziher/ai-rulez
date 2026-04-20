@@ -42,9 +42,9 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@latest
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.11.4
+          version: latest
           args: --timeout=5m
 
   test:

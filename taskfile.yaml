@@ -54,6 +54,11 @@ tasks:
     cmds:
       - go test ./tests/e2e/integration/...
 
+  test:platform:
+    desc: Run cross-platform specific tests
+    cmds:
+      - go test ./tests/platform/...
+
   lint:
     desc: Run all linters and formatters via prek
     cmds:
