@@ -58,7 +58,7 @@ type GitSource struct {
 	originalURL string // Original URL (may be SSH format)
 	path        string // Path within repo to .ai-rulez/ (optional, defaults to root)
 	ref         string // branch, tag, or commit (optional, defaults to main/master)
-	cacheDir    string // .ai-rulez/.remote-cache/{name}/
+	cacheDir    string // ~/.cache/ai-rulez/includes/{name}/
 	include     []string
 	accessToken string
 	httpClient  *remote.Client

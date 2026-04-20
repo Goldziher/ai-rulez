@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -45,7 +46,7 @@ func TestClinePresetGenerator_Generate_WithSkills(t *testing.T) {
 
 	var foundSkill bool
 	for _, o := range outputs {
-		if strings.Contains(o.Path, ".cline/skills/deploy/SKILL.md") {
+		if strings.Contains(filepath.ToSlash(o.Path), ".cline/skills/deploy/SKILL.md") {
 			foundSkill = true
 			if !strings.Contains(o.Content, "name: deploy") {
 				t.Error("SKILL.md should contain skill name")
