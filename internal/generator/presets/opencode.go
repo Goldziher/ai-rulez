@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -41,11 +43,30 @@ func (g *OpencodePresetGenerator) GetName() string {
 func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "AGENTS.md"),
+		filepath.Join(baseDir, ".opencode"),
+		filepath.Join(baseDir, ".opencode", "skills"),
+		filepath.Join(baseDir, ".opencode", "agents"),
 	}
 }
 
 func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
+
+	// Create .opencode directory structure
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".opencode"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".opencode", "skills"),
+			IsDir: true,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".opencode", "agents"),
+			IsDir: true,
+		},
+	)
 
 	// Generate AGENTS.md file
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
@@ -55,6 +76,39 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 		Content: agentsContent,
 		IsDir:   false,
 	})
+
+	// Generate skill files to .opencode/skills/
+	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	for _, skill := range allSkills {
+		skillID := extractSkillID(skill.Path)
+
+		skillDir := filepath.Join(baseDir, ".opencode", "skills", skillID)
+		outputs = append(outputs,
+			config.OutputFileV3{
+				Path:  skillDir,
+				IsDir: true,
+			},
+			config.OutputFileV3{
+				Path:    filepath.Join(skillDir, "SKILL.md"),
+				Content: g.renderSkillFile(skill),
+			},
+		)
+	}
+
+	// Generate agent files to .opencode/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderOpencodeAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".opencode", "agents", agentID+".md"),
+			Content: agentContent,
+		})
+	}
 
 	return outputs, nil
 }
@@ -118,7 +172,66 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
 
-	// Skills should not be inlined in AGENTS.md
+	// Skills are generated to .opencode/skills/ directory, not inlined
 
 	return builder.String()
+}
+
+// renderSkillFile renders a skill file in SKILL.md format for OpenCode
+func (g *OpencodePresetGenerator) renderSkillFile(skill config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("---\n")
+	builder.WriteString("name: ")
+	builder.WriteString(skill.Name)
+	builder.WriteString("\n")
+	builder.WriteString("description: ")
+	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
+	builder.WriteString("\n")
+	builder.WriteString("---\n\n")
+	builder.WriteString(skill.Content)
+
+	return builder.String()
+}
+
+// renderOpencodeAgentFile renders an agent file with YAML frontmatter for OpenCode
+func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildOpencodeAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildOpencodeAgentFrontmatter builds frontmatter for an OpenCode agent file
+func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	opencodeFields := []string{
+		"description", "mode", "model",
+		"temperature", "top_p", "hidden",
+	}
+	for _, field := range opencodeFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }

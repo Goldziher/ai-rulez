@@ -1,0 +1,230 @@
+package presets
+
+import (
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+)
+
+func TestAntigravityPresetGenerator_GetName(t *testing.T) {
+	g := &AntigravityPresetGenerator{}
+	if got := g.GetName(); got != "antigravity" {
+		t.Errorf("GetName() = %q, want %q", got, "antigravity")
+	}
+}
+
+func TestAntigravityPresetGenerator_Generate(t *testing.T) {
+	tests := []struct {
+		name        string
+		content     *config.ContentTreeV3
+		baseDir     string
+		wantOutputs int
+		wantErr     bool
+	}{
+		{
+			name: "generates basic structure",
+			content: &config.ContentTreeV3{
+				Rules: []config.ContentFile{
+					{Name: "rule1", Content: "Rule content"},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 5, // .agents, .agents/skills, .agents/agents, .agents/settings.json, GEMINI.md
+			wantErr:     false,
+		},
+		{
+			name: "generates with skills",
+			content: &config.ContentTreeV3{
+				Skills: []config.ContentFile{
+					{
+						Name:    "my-skill",
+						Content: "Skill instructions",
+						Path:    "/test/.ai-rulez/skills/my-skill/SKILL.md",
+					},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 7, // 5 base + skill dir + SKILL.md
+			wantErr:     false,
+		},
+		{
+			name: "generates with agents",
+			content: &config.ContentTreeV3{
+				Agents: []config.ContentFile{
+					{
+						Name:    "security-auditor",
+						Content: "You are a security auditor.",
+						Metadata: &config.MetadataV3{
+							Extra: map[string]string{
+								"description": "Audits code for security issues",
+							},
+						},
+					},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 6, // 5 base + agent .md
+			wantErr:     false,
+		},
+		{
+			name: "generates with skills and agents",
+			content: &config.ContentTreeV3{
+				Skills: []config.ContentFile{
+					{
+						Name:    "deploy",
+						Content: "Deploy instructions",
+						Path:    "/test/.ai-rulez/skills/deploy/SKILL.md",
+					},
+				},
+				Agents: []config.ContentFile{
+					{
+						Name:    "reviewer",
+						Content: "You review code.",
+						Metadata: &config.MetadataV3{
+							Extra: map[string]string{"description": "Reviews code"},
+						},
+					},
+				},
+			},
+			baseDir:     "/test",
+			wantOutputs: 8, // 5 base + skill dir + SKILL.md + agent .md
+			wantErr:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &AntigravityPresetGenerator{}
+			cfg := &config.ConfigV3{Name: "test-project"}
+
+			outputs, err := g.Generate(tt.content, tt.baseDir, cfg)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Generate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if len(outputs) != tt.wantOutputs {
+				t.Errorf("Generate() got %d outputs, want %d", len(outputs), tt.wantOutputs)
+			}
+		})
+	}
+}
+
+func TestAntigravityPresetGenerator_GetOutputPaths(t *testing.T) {
+	g := &AntigravityPresetGenerator{}
+	paths := g.GetOutputPaths("/base")
+
+	wantPaths := []string{
+		filepath.Join("/base", "GEMINI.md"),
+		filepath.Join("/base", ".agents"),
+		filepath.Join("/base", ".agents", "skills"),
+		filepath.Join("/base", ".agents", "agents"),
+	}
+
+	if len(paths) != len(wantPaths) {
+		t.Fatalf("GetOutputPaths() returned %d paths, want %d", len(paths), len(wantPaths))
+	}
+
+	for i, want := range wantPaths {
+		if paths[i] != want {
+			t.Errorf("GetOutputPaths()[%d] = %q, want %q", i, paths[i], want)
+		}
+	}
+}
+
+func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
+	g := &AntigravityPresetGenerator{}
+	cfg := &config.ConfigV3{Name: "test"}
+
+	content := &config.ContentTreeV3{
+		Rules: []config.ContentFile{
+			{Name: "rule1", Content: "Rule content"},
+		},
+		Skills: []config.ContentFile{
+			{
+				Name:    "deploy",
+				Content: "Deploy skill",
+				Path:    "/test/.ai-rulez/skills/deploy/SKILL.md",
+			},
+		},
+		Agents: []config.ContentFile{
+			{
+				Name:    "reviewer",
+				Content: "Review agent",
+				Metadata: &config.MetadataV3{
+					Extra: map[string]string{"description": "Reviews code"},
+				},
+			},
+		},
+	}
+
+	outputs, err := g.Generate(content, "/test", cfg)
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+
+	// Verify key output paths exist
+	pathSet := make(map[string]bool)
+	for _, o := range outputs {
+		pathSet[filepath.ToSlash(o.Path)] = true
+	}
+
+	expectedPaths := []string{
+		"/test/GEMINI.md",
+		"/test/.agents/settings.json",
+		"/test/.agents/skills/deploy/SKILL.md",
+		"/test/.agents/agents/reviewer.md",
+	}
+
+	for _, p := range expectedPaths {
+		if !pathSet[p] {
+			t.Errorf("Expected output path %q not found", p)
+		}
+	}
+
+	// Verify GEMINI.md contains rules
+	for _, o := range outputs {
+		if filepath.Base(o.Path) == "GEMINI.md" {
+			if !strings.Contains(o.Content, "## Rules") {
+				t.Error("GEMINI.md should contain Rules section")
+			}
+			if !strings.Contains(o.Content, "rule1") {
+				t.Error("GEMINI.md should contain rule1")
+			}
+		}
+	}
+
+	// Verify skill file has frontmatter
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, "deploy/SKILL.md") {
+			if !strings.HasPrefix(o.Content, "---\n") {
+				t.Error("SKILL.md should start with YAML frontmatter")
+			}
+			if !strings.Contains(o.Content, "name: deploy") {
+				t.Error("SKILL.md should contain skill name")
+			}
+			if !strings.Contains(o.Content, "Deploy skill") {
+				t.Error("SKILL.md should contain skill content")
+			}
+		}
+	}
+
+	// Verify agent file has frontmatter
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, "reviewer.md") {
+			if !strings.HasPrefix(o.Content, "---\n") {
+				t.Error("Agent file should start with YAML frontmatter")
+			}
+			if !strings.Contains(o.Content, "name: reviewer") {
+				t.Error("Agent file should contain agent name")
+			}
+			if !strings.Contains(o.Content, "description: Reviews code") {
+				t.Error("Agent file should contain description")
+			}
+			if !strings.Contains(o.Content, "Review agent") {
+				t.Error("Agent file should contain agent content")
+			}
+		}
+	}
+}

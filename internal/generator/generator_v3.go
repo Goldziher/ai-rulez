@@ -74,12 +74,8 @@ func (g *GeneratorV3) Generate(profile string) error {
 		}
 	}
 
-	// Flatten outputs for writing
-	var flatOutputs []config.OutputFileV3
-	for presetName, outputs := range allOutputs {
-		logger.Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
-		flatOutputs = append(flatOutputs, outputs...)
-	}
+	// Flatten outputs for writing, detecting conflicts and deduplicating
+	flatOutputs := flattenPresetOutputs(allOutputs)
 
 	// Clean up stale files from managed directories before writing new output.
 	// This ensures that renamed or removed skills/agents don't leave behind orphaned files.
@@ -231,6 +227,42 @@ func (g *GeneratorV3) collectMCPServersForContent(content *config.ContentTreeV3)
 }
 
 // writeOutputs writes all output files to disk
+// flattenPresetOutputs merges outputs from all presets, deduplicating directories
+// and detecting file conflicts (last write wins with a warning).
+func flattenPresetOutputs(allOutputs map[string][]config.OutputFileV3) []config.OutputFileV3 {
+	var flatOutputs []config.OutputFileV3
+	seenPaths := make(map[string]string) // path -> first preset that claimed it
+	seenDirs := make(map[string]bool)
+	for presetName, outputs := range allOutputs {
+		logger.Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
+		for _, output := range outputs {
+			if output.IsDir {
+				if !seenDirs[output.Path] {
+					seenDirs[output.Path] = true
+					flatOutputs = append(flatOutputs, output)
+				}
+				continue
+			}
+			if prev, ok := seenPaths[output.Path]; ok {
+				logger.Warn("Output path conflict: multiple presets write to the same file, last write wins",
+					"path", output.Path, "presets", prev+" and "+presetName)
+				// Replace the existing entry with the latest version
+				for i, existing := range flatOutputs {
+					if existing.Path == output.Path {
+						flatOutputs[i] = output
+						break
+					}
+				}
+				seenPaths[output.Path] = presetName
+			} else {
+				seenPaths[output.Path] = presetName
+				flatOutputs = append(flatOutputs, output)
+			}
+		}
+	}
+	return flatOutputs
+}
+
 func (g *GeneratorV3) writeOutputs(outputs []config.OutputFileV3) error {
 	for _, output := range outputs {
 		if err := g.writeOutput(output); err != nil {
