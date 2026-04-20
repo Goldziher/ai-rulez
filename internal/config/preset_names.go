@@ -3,17 +3,18 @@ package config
 type PresetName string
 
 const (
-	PresetPopular  PresetName = "popular"
-	PresetClaude   PresetName = "claude"
-	PresetCursor   PresetName = "cursor"
-	PresetWindsurf PresetName = "windsurf"
-	PresetCopilot  PresetName = "copilot"
-	PresetGemini   PresetName = "gemini"
-	PresetContinue PresetName = "continue-dev"
-	PresetCline    PresetName = "cline"
-	PresetAmp      PresetName = "amp"
-	PresetCodex    PresetName = "codex"
-	PresetJunie    PresetName = "junie"
+	PresetPopular     PresetName = "popular"
+	PresetClaude      PresetName = "claude"
+	PresetCursor      PresetName = "cursor"
+	PresetWindsurf    PresetName = "windsurf"
+	PresetCopilot     PresetName = "copilot"
+	PresetGemini      PresetName = "gemini"
+	PresetContinue    PresetName = "continue-dev"
+	PresetCline       PresetName = "cline"
+	PresetAmp         PresetName = "amp"
+	PresetCodex       PresetName = "codex"
+	PresetJunie       PresetName = "junie"
+	PresetAntigravity PresetName = "antigravity"
 )
 
 func AllPresetNames() []string {
@@ -29,6 +30,7 @@ func AllPresetNames() []string {
 		string(PresetAmp),
 		string(PresetCodex),
 		string(PresetJunie),
+		string(PresetAntigravity),
 	}
 }
 
@@ -44,5 +46,6 @@ func IndividualPresetNames() []string {
 		string(PresetAmp),
 		string(PresetCodex),
 		string(PresetJunie),
+		string(PresetAntigravity),
 	}
 }

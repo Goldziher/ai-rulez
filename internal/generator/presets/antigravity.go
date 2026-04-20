@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -13,19 +14,17 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("opencode", &OpencodePresetGenerator{})
+	config.RegisterPresetV3("antigravity", &AntigravityPresetGenerator{})
 }
 
-// OpencodePresetGenerator generates Opencode preset files (AGENTS.md)
-type OpencodePresetGenerator struct{}
+// AntigravityPresetGenerator generates Antigravity preset files
+type AntigravityPresetGenerator struct{}
 
-// generateOpenCodePresetHeader creates a header for Opencode preset files
-func generateOpenCodePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
-	// Create TemplateData for header generation
+func generateAntigravityPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
 		Timestamp:    time.Now(),
-		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		ConfigFile:   "config.yaml",
 		OutputFile:   outputPath,
 		Config:       cfg,
 		RuleCount:    ruleCount,
@@ -36,76 +35,85 @@ func generateOpenCodePresetHeader(cfg *config.ConfigV3, outputPath string, ruleC
 	return templates.GenerateHeader(data)
 }
 
-func (g *OpencodePresetGenerator) GetName() string {
-	return "opencode"
+func (g *AntigravityPresetGenerator) GetName() string {
+	return "antigravity"
 }
 
-func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
+func (g *AntigravityPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, "AGENTS.md"),
-		filepath.Join(baseDir, ".opencode"),
-		filepath.Join(baseDir, ".opencode", "skills"),
-		filepath.Join(baseDir, ".opencode", "agents"),
+		filepath.Join(baseDir, "GEMINI.md"),
+		filepath.Join(baseDir, ".agents"),
+		filepath.Join(baseDir, ".agents", "skills"),
+		filepath.Join(baseDir, ".agents", "agents"),
 	}
 }
 
-func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
+func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
 	var outputs []config.OutputFileV3
 
-	// Create .opencode directory structure
+	// Create .agents directory structure
 	outputs = append(outputs,
 		config.OutputFileV3{
-			Path:  filepath.Join(baseDir, ".opencode"),
+			Path:  filepath.Join(baseDir, ".agents"),
 			IsDir: true,
 		},
 		config.OutputFileV3{
-			Path:  filepath.Join(baseDir, ".opencode", "skills"),
+			Path:  filepath.Join(baseDir, ".agents", "skills"),
 			IsDir: true,
 		},
 		config.OutputFileV3{
-			Path:  filepath.Join(baseDir, ".opencode", "agents"),
+			Path:  filepath.Join(baseDir, ".agents", "agents"),
 			IsDir: true,
 		},
 	)
 
-	// Generate AGENTS.md file
-	agentsContent := g.renderAgentsMarkdown(content, cfg)
+	// Generate .agents/settings.json with MCP configuration
+	settingsContent, err := g.renderSettingsJSON()
+	if err != nil {
+		return nil, fmt.Errorf("render settings.json: %w", err)
+	}
 
 	outputs = append(outputs, config.OutputFileV3{
-		Path:    filepath.Join(baseDir, "AGENTS.md"),
-		Content: agentsContent,
-		IsDir:   false,
+		Path:    filepath.Join(baseDir, ".agents", "settings.json"),
+		Content: settingsContent,
 	})
 
-	// Generate skill files to .opencode/skills/
+	// Generate GEMINI.md with all rules and context
+	geminiMD := g.renderMarkdown(content, cfg)
+	outputs = append(outputs, config.OutputFileV3{
+		Path:    filepath.Join(baseDir, "GEMINI.md"),
+		Content: geminiMD,
+	})
+
+	// Generate skill files to .agents/skills/
 	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 
-		skillDir := filepath.Join(baseDir, ".opencode", "skills", skillID)
-		outputs = append(outputs,
-			config.OutputFileV3{
-				Path:  skillDir,
-				IsDir: true,
-			},
-			config.OutputFileV3{
-				Path:    filepath.Join(skillDir, "SKILL.md"),
-				Content: g.renderSkillFile(skill),
-			},
-		)
+		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:  skillDir,
+			IsDir: true,
+		})
+
+		skillContent := g.renderSkillFile(skill)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(skillDir, "SKILL.md"),
+			Content: skillContent,
+		})
 	}
 
-	// Generate agent files to .opencode/agents/
+	// Generate agent files to .agents/agents/
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderOpencodeAgentFile(agent)
+		agentContent, err := g.renderAgentFile(agent)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
 		outputs = append(outputs, config.OutputFileV3{
-			Path:    filepath.Join(baseDir, ".opencode", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
 		})
 	}
@@ -113,18 +121,37 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 	return outputs, nil
 }
 
-func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *AntigravityPresetGenerator) renderSettingsJSON() (string, error) {
+	settings := map[string]interface{}{
+		"mcpServers": map[string]interface{}{
+			"ai-rulez": map[string]interface{}{
+				"command": "npx",
+				"args": []string{
+					"-y",
+					"ai-rulez@latest",
+					"mcp",
+				},
+			},
+		},
+	}
+
+	jsonData, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal JSON: %w", err)
+	}
+
+	return string(jsonData), nil
+}
+
+func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
 	var builder strings.Builder
 
-	// Calculate content counts
 	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 
-	// Add header before title
-	header := generateOpenCodePresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))
+	header := generateAntigravityPresetHeader(cfg, "GEMINI.md", len(allRules), 0, len(allAgents))
 	builder.WriteString(header)
 
-	// Add title
 	builder.WriteString("# ")
 	builder.WriteString(cfg.Name)
 	builder.WriteString("\n\n")
@@ -134,13 +161,12 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 		builder.WriteString("\n\n")
 	}
 
-	// Add rules section
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
 		for _, rule := range allRules {
 			builder.WriteString("### ")
 			builder.WriteString(rule.Name)
-			builder.WriteString("\n\n") // Add blank line after heading
+			builder.WriteString("\n\n")
 
 			if rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
@@ -154,7 +180,6 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 		}
 	}
 
-	// Add context section
 	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
@@ -169,36 +194,34 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 		}
 	}
 
-	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
-
-	// Skills are generated to .opencode/skills/ directory, not inlined
 
 	return builder.String()
 }
 
-// renderSkillFile renders a skill file in SKILL.md format for OpenCode
-func (g *OpencodePresetGenerator) renderSkillFile(skill config.ContentFile) string {
+func (g *AntigravityPresetGenerator) renderSkillFile(skill config.ContentFile) string {
 	var builder strings.Builder
 
 	builder.WriteString("---\n")
 	builder.WriteString("name: ")
 	builder.WriteString(skill.Name)
 	builder.WriteString("\n")
+
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
+
 	builder.WriteString("---\n\n")
+
 	builder.WriteString(skill.Content)
 
 	return builder.String()
 }
 
-// renderOpencodeAgentFile renders an agent file with YAML frontmatter for OpenCode
-func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFile) (string, error) {
+func (g *AntigravityPresetGenerator) renderAgentFile(agent config.ContentFile) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildOpencodeAgentFrontmatter(agent)
+	frontmatter := g.buildAgentFrontmatter(agent)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -208,13 +231,13 @@ func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFi
 	builder.WriteString("---\n")
 	builder.Write(yamlData)
 	builder.WriteString("---\n\n")
+
 	builder.WriteString(agent.Content)
 
 	return builder.String(), nil
 }
 
-// buildOpencodeAgentFrontmatter builds frontmatter for an OpenCode agent file
-func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		"name": agent.Name,
 	}
@@ -223,11 +246,8 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 		return frontmatter
 	}
 
-	opencodeFields := []string{
-		"description", "mode", "model",
-		"temperature", "top_p", "hidden",
-	}
-	for _, field := range opencodeFields {
+	agentFields := []string{"description", "kind", "tools", "model", "temperature", "max_turns", "timeout_mins"}
+	for _, field := range agentFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
