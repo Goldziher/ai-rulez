@@ -59,6 +59,11 @@ tasks:
     cmds:
       - go test ./tests/platform/...
 
+  test:all:
+    desc: Run all test suites (unit + platform + e2e)
+    cmds:
+      - go test ./...
+
   lint:
     desc: Run all linters and formatters via prek
     cmds:

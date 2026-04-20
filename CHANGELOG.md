@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [3.14.1] - 2026-04-20
+
+### Fixed
+- **CI: missing Taskfile tasks**: Added `test:e2e`, `test:e2e:cli`, `test:e2e:mcp`, `test:e2e:integration`, `test:platform`, and `test:all` tasks that the CI/E2E workflows referenced but didn't exist.
+- **CI: golangci-lint-action**: Pinned to `@v7` (resolves `@latest` lookup failure), use `version: latest` for the binary.
+- **CI: stale test expectations**: Fixed `TestInitExistingConfig` (unset CI env to test non-interactive mode) and `TestValidateFailsWhenSkillDescriptionMissing` (updated to match 3.13.1 behavior change where missing description is a warning, not error).
+- **Windows test failures**: Fixed path separator issues in `TestAmpPresetGenerator_Generate_WithSkills` and `TestClinePresetGenerator_Generate_WithSkills` using `filepath.ToSlash`.
+- **Stale comment**: Fixed `git.go` cache directory comment (was `.ai-rulez/.remote-cache/`, actual is `~/.cache/ai-rulez/includes/`).
+
 ## [3.14.0] - 2026-04-20
 
 ### Added

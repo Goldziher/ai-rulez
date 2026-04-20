@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -41,7 +42,7 @@ func TestAmpPresetGenerator_Generate_WithSkills(t *testing.T) {
 
 	var foundSkill bool
 	for _, o := range outputs {
-		if strings.HasSuffix(o.Path, "deploy/SKILL.md") {
+		if strings.HasSuffix(filepath.ToSlash(o.Path), "deploy/SKILL.md") {
 			foundSkill = true
 			if !strings.Contains(o.Content, "name: deploy") {
 				t.Error("SKILL.md should contain skill name")
