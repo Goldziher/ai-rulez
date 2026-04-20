@@ -21,6 +21,14 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		return ToolError(fmt.Errorf("failed to get directory: %w", err))
 	}
 
+	version, err := config.DetectConfigVersion(dir)
+	if err != nil {
+		return ToolError(err)
+	}
+	if version != "v3" {
+		return ToolError(fmt.Errorf("read_config requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
+	}
+
 	cfg, err := config.LoadConfigV3(ctx, dir)
 	if err != nil {
 		return ToolError(err)
@@ -89,6 +97,14 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	dir, err := filepath.Abs(baseDir)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to get directory: %w", err))
+	}
+
+	version, err := config.DetectConfigVersion(dir)
+	if err != nil {
+		return ToolError(err)
+	}
+	if version != "v3" {
+		return ToolError(fmt.Errorf("update_config requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
 	}
 
 	cfg, err := config.LoadConfigV3(ctx, dir)
@@ -166,12 +182,16 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 	}
 
 	var dirs []string
+	skipDirs := map[string]bool{".git": true, "node_modules": true, "vendor": true, ".cache": true}
 	err = filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
-			return walkErr // propagate walk errors
+			return filepath.SkipDir
 		}
 		if !d.IsDir() {
 			return nil
+		}
+		if skipDirs[d.Name()] {
+			return filepath.SkipDir
 		}
 		configPath := filepath.Join(path, ".ai-rulez", "config.yaml")
 		if _, statErr := os.Stat(configPath); statErr == nil {
