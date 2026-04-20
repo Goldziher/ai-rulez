@@ -8,6 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/migration"
 	"github.com/Goldziher/ai-rulez/internal/progress"
@@ -21,6 +22,7 @@ var (
 	updateGitignore bool
 	recursive       bool
 	skipCLIMCP      bool
+	noFetch         bool
 	profile         string
 	autoMigrate     string // "true", "false", or "ask" (default)
 )
@@ -44,6 +46,7 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
 	GenerateCmd.Flags().StringVar(&profile, "profile", "", "Profile to generate (V3 only, default: from config or 'default')")
 	GenerateCmd.Flags().StringVar(&autoMigrate, "auto-migrate", "ask", "Auto-migrate V2 config: true (auto-migrate), false (skip), ask (prompt)")
+	GenerateCmd.Flags().BoolVar(&noFetch, "no-fetch", false, "Skip fetching remote includes, use cached content only")
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
@@ -53,6 +56,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	if len(args) > 0 {
 		workingDir = filepath.Dir(args[0])
 	}
+
+	// Set no-fetch flag for include resolution (before any config loading)
+	includes.SkipFetch = noFetch
 
 	if recursive {
 		runRecursiveGenerate()

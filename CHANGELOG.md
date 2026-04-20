@@ -26,6 +26,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **MCP `read_config` / `update_config`**: New tools for reading and updating `config.yaml` fields (name, description, builtins, gitignore) via MCP.
 - **MCP `dry_run` / `recursive`**: `generate_outputs` now accepts `dry_run` (preview mode) and `recursive` (walk subdirectories) parameters.
 - **MCP annotations**: All tools now have `readOnlyHint`/`destructiveHint` annotations so clients can implement appropriate confirmation UX.
+- **`builtins show` command**: New `ai-rulez builtins show <name>` CLI command and `show_builtin` MCP tool to inspect builtin domain contents (rules, context, skills with priorities).
+- **Content hash**: Generated files include a `Content-Hash: blake3:<hex>` in the header. Files are skipped when the hash matches, eliminating timestamp-only diffs.
+- **Include cache TTL**: Git-based includes are cached for 1 hour instead of re-fetched every run. New `--no-fetch` flag for offline generation.
 
 ### Changed
 - **Rust builtin**: Added Rust API Guidelines (naming conventions, trait implementations, type safety, builder pattern, sealed traits, rustdoc standards) and Rust Design Patterns reference.
@@ -33,6 +36,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **MCP `with_agents` parameter**: `init_project` now creates `.ai-rulez/agents/` directory when `with_agents` is true (previously silently ignored).
 - **MCP `list_context` unified**: Merged `list_context` and `list_contexts` into a single enriched endpoint returning summaries.
 - **MCP list metadata**: `list_rules`, `list_context`, and `list_skills` now populate `priority` and `targets` fields from YAML frontmatter.
+- **CLAUDE.md inlines all content**: Local project rules and contexts are now inlined in CLAUDE.md instead of using `@path` references, matching all other presets.
+- **Gitignore idempotent updates**: `.gitignore` now uses fenced `# BEGIN ai-rulez` / `# END ai-rulez` markers. Repeated `generate` runs replace the block instead of appending duplicates. Old-style `# AI Rules generated files` headers are auto-migrated.
 
 ## [3.13.1] - 2026-04-19
 

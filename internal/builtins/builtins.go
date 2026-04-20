@@ -6,6 +6,8 @@ import (
 	"path"
 	"sort"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/parser"
 )
 
 //go:embed universal languages bindings
@@ -70,6 +72,12 @@ var registry = map[string]BuiltinDomain{
 	"extendr":    {Name: "extendr", Category: CategoryBinding, Description: "extendr Rust-R bindings"},
 	"cgo":        {Name: "cgo", Category: CategoryBinding, Description: "cgo Go-C/Rust FFI bindings"},
 	"vite-plus":  {Name: "vite-plus", Category: CategoryBinding, Description: "Vite+ unified TypeScript toolchain"},
+}
+
+// Get returns the BuiltinDomain for the given name, or false if not found.
+func Get(name string) (BuiltinDomain, bool) {
+	d, ok := registry[name]
+	return d, ok
 }
 
 // IsValid returns true if the given name is a valid builtin (ignoring "!" prefix)
@@ -207,11 +215,21 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 
 			// All builtin content files use .md extension; trim it directly.
 			entryName := strings.TrimSuffix(entry.Name(), ".md")
+			rawContent := string(data)
+
+			// Parse frontmatter for priority
+			var priority string
+			meta, _ := parser.ParseFrontmatterNonFatal(rawContent)
+			if meta != nil && meta.Priority != "" {
+				priority = meta.Priority
+			}
+
 			entries = append(entries, ContentEntry{
-				Name:    entryName,
-				Path:    filePath,
-				Content: string(data),
-				Type:    contentType,
+				Name:     entryName,
+				Path:     filePath,
+				Content:  rawContent,
+				Type:     contentType,
+				Priority: priority,
 			})
 		}
 	}
