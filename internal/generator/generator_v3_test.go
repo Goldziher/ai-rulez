@@ -948,3 +948,166 @@ func TestGeneratorV3_InvalidProfile_SortedHint(t *testing.T) {
 	zebraIdx := strings.Index(hint, "zebra")
 	assert.True(t, alphaIdx < middleIdx && middleIdx < zebraIdx, "available profiles in hint should be sorted alphabetically, got: %s", hint)
 }
+
+func TestExtractContentHash(t *testing.T) {
+	t.Run("should_return_hash_from_html_comment_header", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "test.md")
+		content := "<!--\nProject: test\nContent-Hash: sha256:abc123\n-->\n\n# Body"
+		require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0o644))
+
+		hash := extractContentHash(tmpFile)
+		assert.Equal(t, "sha256:abc123", hash)
+	})
+
+	t.Run("should_return_hash_from_hash_comment_header", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "test.yaml")
+		content := "# Project: test\n# Content-Hash: sha256:def456\n\nbody"
+		require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0o644))
+
+		hash := extractContentHash(tmpFile)
+		assert.Equal(t, "sha256:def456", hash)
+	})
+
+	t.Run("should_return_hash_from_slash_comment_header", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "test.json")
+		content := "// Project: test\n// Content-Hash: sha256:ghi789\n\n{}"
+		require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0o644))
+
+		hash := extractContentHash(tmpFile)
+		assert.Equal(t, "sha256:ghi789", hash)
+	})
+
+	t.Run("should_return_empty_when_no_hash_present", func(t *testing.T) {
+		tmpFile := filepath.Join(t.TempDir(), "test.md")
+		content := "<!--\nProject: test\n-->\n\n# Body"
+		require.NoError(t, os.WriteFile(tmpFile, []byte(content), 0o644))
+
+		hash := extractContentHash(tmpFile)
+		assert.Equal(t, "", hash)
+	})
+
+	t.Run("should_return_empty_when_file_does_not_exist", func(t *testing.T) {
+		hash := extractContentHash(filepath.Join(t.TempDir(), "nonexistent.md"))
+		assert.Equal(t, "", hash)
+	})
+}
+
+func TestStripHeader(t *testing.T) {
+	t.Run("should_strip_html_comment_header_from_markdown", func(t *testing.T) {
+		content := "<!--\nHeader line\n-->\n\n# Body content"
+		body := stripHeader(content, "output.md")
+		assert.Equal(t, "# Body content", body)
+	})
+
+	t.Run("should_strip_hash_comment_header_from_yaml", func(t *testing.T) {
+		content := "# Comment 1\n# Comment 2\n\nbody: value"
+		body := stripHeader(content, "output.yaml")
+		assert.Equal(t, "body: value", body)
+	})
+
+	t.Run("should_strip_slash_comment_header_from_json", func(t *testing.T) {
+		content := "// Comment 1\n// Comment 2\n\n{\"key\": \"value\"}"
+		body := stripHeader(content, "output.json")
+		assert.Equal(t, "{\"key\": \"value\"}", body)
+	})
+
+	t.Run("should_return_full_content_when_no_header", func(t *testing.T) {
+		content := "# Body content"
+		body := stripHeader(content, "output.md")
+		assert.Equal(t, "# Body content", body)
+	})
+}
+
+func TestInjectContentHash(t *testing.T) {
+	t.Run("should_inject_hash_into_html_comment_header", func(t *testing.T) {
+		content := "<!--\nProject: test\n-->\n\n# Body"
+		result := injectContentHash(content, "output.md", "sha256:abc123")
+		assert.Contains(t, result, "Content-Hash: sha256:abc123")
+		assert.Contains(t, result, "# Body")
+	})
+
+	t.Run("should_inject_hash_into_hash_comment_header", func(t *testing.T) {
+		content := "# Project: test\n\nbody"
+		result := injectContentHash(content, "output.yaml", "sha256:def456")
+		assert.Contains(t, result, "# Content-Hash: sha256:def456")
+		assert.Contains(t, result, "body")
+	})
+
+	t.Run("should_inject_hash_into_slash_comment_header", func(t *testing.T) {
+		content := "// Project: test\n\n{}"
+		result := injectContentHash(content, "output.json", "sha256:ghi789")
+		assert.Contains(t, result, "// Content-Hash: sha256:ghi789")
+		assert.Contains(t, result, "{}")
+	})
+
+	t.Run("should_roundtrip_inject_then_extract_for_html", func(t *testing.T) {
+		content := "<!--\nProject: test\nGenerated: 2025\n-->\n\n# Body"
+		hash := "sha256:roundtrip123"
+		injected := injectContentHash(content, "output.md", hash)
+
+		tmpFile := filepath.Join(t.TempDir(), "output.md")
+		require.NoError(t, os.WriteFile(tmpFile, []byte(injected), 0o644))
+
+		extracted := extractContentHash(tmpFile)
+		assert.Equal(t, hash, extracted, "round-trip: inject then extract should return the same hash")
+	})
+
+	t.Run("should_roundtrip_inject_then_extract_for_yaml", func(t *testing.T) {
+		content := "# Project: test\n# Generated: 2025\n\nbody: value"
+		hash := "sha256:roundtrip456"
+		injected := injectContentHash(content, "output.yaml", hash)
+
+		tmpFile := filepath.Join(t.TempDir(), "output.yaml")
+		require.NoError(t, os.WriteFile(tmpFile, []byte(injected), 0o644))
+
+		extracted := extractContentHash(tmpFile)
+		assert.Equal(t, hash, extracted, "round-trip: inject then extract should return the same hash")
+	})
+}
+
+func TestGeneratorV3_SkipUnchangedFiles(t *testing.T) {
+	// Setup
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	tempDir := t.TempDir()
+
+	// Copy fixture to temp dir
+	copyFixture(t, fixtureDir, tempDir)
+
+	// Load config
+	ctx := context.Background()
+	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	require.NoError(t, err)
+
+	// Create generator and generate first time
+	gen := NewGeneratorV3(cfg)
+	err = gen.Generate("default")
+	require.NoError(t, err)
+
+	// Find a generated file and record its mod time
+	mainFilePath := filepath.Join(tempDir, ".claude", "main.md")
+	if _, statErr := os.Stat(mainFilePath); statErr != nil {
+		// If main.md doesn't exist, look for CLAUDE.md
+		mainFilePath = filepath.Join(tempDir, "CLAUDE.md")
+	}
+
+	firstContent, err := os.ReadFile(mainFilePath)
+	require.NoError(t, err)
+	assert.Contains(t, string(firstContent), "Content-Hash: blake3:")
+
+	// Extract the hash from the first generation
+	firstHash := extractContentHash(mainFilePath)
+	require.NotEmpty(t, firstHash, "first generation should contain a content hash")
+
+	// Re-load config and generate again (content unchanged)
+	cfg2, err := config.LoadConfigV3(ctx, tempDir)
+	require.NoError(t, err)
+	gen2 := NewGeneratorV3(cfg2)
+	err = gen2.Generate("default")
+	require.NoError(t, err)
+
+	// The file content should be identical (hash matches, so skip)
+	secondContent, err := os.ReadFile(mainFilePath)
+	require.NoError(t, err)
+	assert.Equal(t, string(firstContent), string(secondContent),
+		"file should not be rewritten when content hash matches")
+}

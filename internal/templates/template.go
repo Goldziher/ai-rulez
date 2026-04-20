@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/zeebo/blake3"
 )
 
 type PrioritizedNamed interface {
@@ -303,6 +304,13 @@ func ExecuteTemplate(templateStr string, data interface{}) (string, error) {
 	return buf.String(), nil
 }
 
+// HashContent computes a BLAKE3 hash of the given content and returns it
+// in the format "blake3:<hex>".
+func HashContent(content string) string {
+	h := blake3.Sum256([]byte(content))
+	return fmt.Sprintf("blake3:%x", h)
+}
+
 type commentStyle int
 
 const (
@@ -477,7 +485,7 @@ func isCommandStatusTemplate(outputPath string, cfg *config.Config) bool {
 }
 
 func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	return []string{
+	banner := []string{
 		// SECTION A: Banner
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
 		"Project: " + data.ProjectName,
@@ -485,7 +493,9 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"Source: .ai-rulez/" + configPath,
 		"Target: " + outputPath,
 		"Content: rules=" + fmt.Sprint(data.RuleCount) + ", sections=" + fmt.Sprint(data.SectionCount) + ", agents=" + fmt.Sprint(data.AgentCount),
-		"",
+	}
+
+	banner = append(banner, "",
 
 		// SECTION B: What is ai-rulez
 		"WHAT IS AI-RULEZ",
@@ -512,7 +522,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 
 		// SECTION D: AI Agent Instructions
 		"INSTRUCTIONS FOR AI AGENTS",
-		"1. NEVER edit this file (" + outputPath + ") - it is auto-generated",
+		"1. NEVER edit this file ("+outputPath+") - it is auto-generated",
 		"",
 		"2. ALWAYS edit files in .ai-rulez/ instead:",
 		"   - Add/modify rules: .ai-rulez/rules/*.md",
@@ -534,15 +544,19 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 
 		// SECTION E: Help
 		"Documentation: https://github.com/Goldziher/ai-rulez",
-	}
+	)
+	return banner
 }
 
 func buildCompactHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	return []string{
+	banner := []string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName + " | Generated: " + timestamp,
 		"Source: .ai-rulez/" + configPath + " | Target: " + outputPath,
 		"Content: " + fmt.Sprintf("rules=%d, sections=%d, agents=%d", data.RuleCount, data.SectionCount, data.AgentCount),
+	}
+
+	banner = append(banner,
 		"",
 		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/",
 		"",
@@ -551,29 +565,34 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 		"  .ai-rulez/domains/{name}/ (profile-specific)",
 		"",
 		"AI AGENT INSTRUCTIONS:",
-		"✗ NEVER edit " + outputPath + " (auto-generated)",
+		"✗ NEVER edit "+outputPath+" (auto-generated)",
 		"✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.yaml",
 		"✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)",
 		"✓ REGENERATE: ai-rulez generate",
 		"✓ COMMIT: both .ai-rulez/ and generated files",
 		"",
 		"Docs: https://github.com/Goldziher/ai-rulez",
-	}
+	)
+	return banner
 }
 
 func buildMinimalHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	return []string{
+	banner := []string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName,
 		"Generated: " + timestamp,
 		"Source: .ai-rulez/" + configPath,
+	}
+
+	banner = append(banner,
 		"",
 		"NEVER edit this file - modify .ai-rulez/ content instead",
 		"Use MCP server: npx -y ai-rulez@latest mcp",
 		"Regenerate: ai-rulez generate",
 		"",
 		"Docs: https://github.com/Goldziher/ai-rulez",
-	}
+	)
+	return banner
 }
 
 func buildHeaderLines(data *TemplateData) []string {

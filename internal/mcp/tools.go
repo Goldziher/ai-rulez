@@ -226,6 +226,15 @@ func (s *Server) registerUtilityTools() {
 		newAnnotatedTool("get_version", "Get the ai-rulez version", nil, readOnlyAnnotations()),
 		handlers.GetVersionHandler(s.version),
 	)
+
+	s.addTool(
+		newAnnotatedTool("show_builtin", "Show the full content of a builtin domain (rules, context, skills)",
+			newSchemaBuilder().
+				String("name", "Builtin domain name (e.g., security, rust, typescript)", true),
+			readOnlyAnnotations(),
+		),
+		handlers.ShowBuiltinHandler,
+	)
 }
 
 var priorityValues = []string{"critical", "high", "medium", "low"}
