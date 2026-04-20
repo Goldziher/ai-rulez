@@ -377,28 +377,6 @@ func DeleteContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	})
 }
 
-func ListContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
-	op, err := crud.NewOperator(workingDir(request))
-	if err != nil {
-		return ToolError(err)
-	}
-
-	domain := request.GetString("domain", "")
-
-	files, err := op.ListFiles(ctx, domain, "context")
-	if err != nil {
-		return ToolError(err)
-	}
-
-	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_context",
-		"domain":    domain,
-		"context":   files,
-		"count":     len(files),
-	})
-}
-
 // contextItem represents a context file with its summary
 type contextItem struct {
 	Name    string `json:"name"`
