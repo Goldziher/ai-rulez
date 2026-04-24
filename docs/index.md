@@ -60,7 +60,7 @@ profiles:
 
 1. **Initialize** your project:
    ```bash
-   ai-rulez init "my-project" --v3
+   ai-rulez init "my-project"
    ```
 
 2. **Add content** to `.ai-rulez/`:

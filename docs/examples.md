@@ -6,7 +6,7 @@ V4 uses a file-based directory structure (`.ai-rulez/`) with TOML configuration.
 
 ## 1. Minimal Configuration (Single Team)
 
-The simplest V3 setup for a single team with basic rules.
+The simplest setup for a single team with basic rules.
 
 **`.ai-rulez/config.toml`:**
 ```toml
