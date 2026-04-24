@@ -1,12 +1,13 @@
 module github.com/Goldziher/ai-rulez
 
-go 1.26.1
+go 1.26.2
 
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-resty/resty/v2 v2.17.2
-	github.com/kaptinlin/jsonschema v0.7.7
+	github.com/kaptinlin/jsonschema v0.7.10
 	github.com/modelcontextprotocol/go-sdk v1.5.0
+	github.com/pelletier/go-toml/v2 v2.3.0
 	github.com/samber/oops v1.21.0
 	github.com/schollz/progressbar/v3 v3.19.0
 	github.com/spf13/cobra v1.10.2
@@ -14,6 +15,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/teekennedy/goldmark-markdown v0.5.1
 	github.com/yuin/goldmark v1.8.2
+	github.com/zeebo/blake3 v0.2.4
 	golang.org/x/text v0.36.0
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -41,9 +43,9 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/jsonschema-go v0.4.2 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kaptinlin/go-i18n v0.4.0 // indirect
-	github.com/kaptinlin/jsonpointer v0.4.17 // indirect
-	github.com/kaptinlin/messageformat-go v0.4.20 // indirect
+	github.com/kaptinlin/go-i18n v0.4.4 // indirect
+	github.com/kaptinlin/jsonpointer v0.4.19 // indirect
+	github.com/kaptinlin/messageformat-go v0.6.0 // indirect
 	github.com/klauspost/cpuid/v2 v2.0.12 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/json v1.0.0 // indirect
@@ -62,7 +64,6 @@ require (
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
 	github.com/muesli/termenv v0.16.0 // indirect
 	github.com/oklog/ulid/v2 v2.1.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.3.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/sagikazarmark/locafero v0.12.0 // indirect
@@ -75,7 +76,6 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
-	github.com/zeebo/blake3 v0.2.4 // indirect
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
