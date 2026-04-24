@@ -372,7 +372,7 @@ Add a new include source (git URL or local path) to the configuration.
 
 **Parameters:**
 - `name` (required, string): Include name (unique identifier)
-- `source` (required, string): Git URL (https://github.com/org/repo) or local path (./packages/shared)
+- `source` (required, string): Git URL (`https://github.com/org/repo`) or local path (`./packages/shared`)
 - `path` (optional, string): Path within git repository where .ai-rulez/ content is located
 - `ref` (optional, string): Git reference - branch, tag, or commit hash (git sources only). Default: main
 - `include` (optional, array): Content types to include - rules, context, skills, mcp
