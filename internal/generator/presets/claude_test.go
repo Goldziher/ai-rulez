@@ -14,19 +14,19 @@ import (
 func TestClaudePresetGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name        string
-		content     *config.ContentTreeV3
+		content     *config.ContentTree
 		baseDir     string
 		wantOutputs int
 		wantErr     bool
 	}{
 		{
 			name: "generates skill and agent files",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{
 						Name:    "rule1",
 						Content: "Rule content",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Priority: "high",
 						},
 					},
@@ -42,7 +42,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 						Name:    "test-skill",
 						Path:    "/test/skills/test-skill/SKILL.md",
 						Content: "Skill content",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Priority: "medium",
 							Extra: map[string]string{
 								"description": "Test skill",
@@ -57,12 +57,12 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates agents",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Agents: []config.ContentFile{
 					{
 						Name:    "test-agent",
 						Content: "Agent system prompt",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Extra: map[string]string{
 								"description": "Test agent description",
 								"model":       "haiku",
@@ -77,7 +77,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "handles no skills",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules:   []config.ContentFile{},
 				Context: []config.ContentFile{},
 				Skills:  []config.ContentFile{},
@@ -91,7 +91,7 @@ func TestClaudePresetGenerator_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &ClaudePresetGenerator{}
-			cfg := &config.ConfigV3{
+			cfg := &config.Config{
 				Name:        "test",
 				Description: "test config",
 			}
@@ -155,7 +155,7 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 		Name:    "test-skill",
 		Path:    "/test/skills/test-skill/SKILL.md",
 		Content: "# Test Skill\n\nThis is a test skill.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Priority: "high",
 			Targets:  []string{"claude", "cursor"},
 			Extra: map[string]string{
@@ -164,12 +164,12 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 		},
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "coding-standards",
 				Content: "Follow best practices",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Priority: "critical",
 				},
 			},
@@ -182,7 +182,7 @@ func TestClaudePresetGenerator_renderSkillFile(t *testing.T) {
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test-project",
 		Description: "Test project description",
 	}
@@ -233,19 +233,19 @@ func TestClaudePresetGenerator_renderSkillFile_FiltersEmbeddedContentByTargets(t
 		Content: "# Targeted Skill",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "included-rule",
 				Content: "This rule should be included",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{".claude/skills/*/SKILL.md"},
 				},
 			},
 			{
 				Name:    "excluded-rule",
 				Content: "This rule should be excluded",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"CLAUDE.md", ".cursor/rules/*"},
 				},
 			},
@@ -254,21 +254,21 @@ func TestClaudePresetGenerator_renderSkillFile_FiltersEmbeddedContentByTargets(t
 			{
 				Name:    "included-context",
 				Content: "This context should be included",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{".claude/skills/*/SKILL.md"},
 				},
 			},
 			{
 				Name:    "excluded-context",
 				Content: "This context should be excluded",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"CLAUDE.md"},
 				},
 			},
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:    "test-project",
 		BaseDir: "/test",
 	}
@@ -301,12 +301,12 @@ func TestClaudePresetGenerator_renderSkillFile_OmitsSectionsWhenNoEmbeddedConten
 		Content: "# No Target Match Skill",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "claude-md-only-rule",
 				Content: "Rule content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"CLAUDE.md"},
 				},
 			},
@@ -315,14 +315,14 @@ func TestClaudePresetGenerator_renderSkillFile_OmitsSectionsWhenNoEmbeddedConten
 			{
 				Name:    "claude-md-only-context",
 				Content: "Context content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"CLAUDE.md"},
 				},
 			},
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:    "test-project",
 		BaseDir: "/test",
 	}
@@ -342,13 +342,13 @@ func TestClaudePresetGenerator_renderSkillFile_OmitsSectionsWhenNoEmbeddedConten
 
 func TestClaudePresetGenerator_Generate_CollectsDomainSkills(t *testing.T) {
 	g := &ClaudePresetGenerator{}
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "test config",
 	}
 
-	content := &config.ContentTreeV3{
-		Domains: map[string]*config.DomainV3{
+	content := &config.ContentTree{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Skills: []config.ContentFile{
@@ -387,20 +387,20 @@ func TestClaudePresetGenerator_Generate_CollectsDomainSkills(t *testing.T) {
 
 func TestClaudePresetGenerator_Generate_CollectsDomainAgents(t *testing.T) {
 	g := &ClaudePresetGenerator{}
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "test config",
 	}
 
-	content := &config.ContentTreeV3{
-		Domains: map[string]*config.DomainV3{
+	content := &config.ContentTree{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Agents: []config.ContentFile{
 					{
 						Name:    "domain-agent",
 						Content: "Domain agent prompt",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Extra: map[string]string{
 								"description": "A domain agent",
 							},
@@ -435,20 +435,20 @@ func TestClaudePresetGenerator_Generate_CollectsDomainAgents(t *testing.T) {
 
 func TestClaudePresetGenerator_Generate_CollectsDomainCommands(t *testing.T) {
 	g := &ClaudePresetGenerator{}
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "test config",
 	}
 
-	content := &config.ContentTreeV3{
-		Domains: map[string]*config.DomainV3{
+	content := &config.ContentTree{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Commands: []config.ContentFile{
 					{
 						Name:    "domain-command",
 						Content: "Domain command content",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Targets: []string{"claude"},
 						},
 					},
@@ -481,12 +481,12 @@ func TestClaudePresetGenerator_Generate_CollectsDomainCommands(t *testing.T) {
 
 func TestClaudePresetGenerator_Generate_CollectsDomainAndRootContent(t *testing.T) {
 	g := &ClaudePresetGenerator{}
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "test config",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Skills: []config.ContentFile{
 			{
 				Name:    "root-skill",
@@ -504,12 +504,12 @@ func TestClaudePresetGenerator_Generate_CollectsDomainAndRootContent(t *testing.
 			{
 				Name:    "root-command",
 				Content: "Root command content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"claude"},
 				},
 			},
 		},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Skills: []config.ContentFile{
@@ -529,7 +529,7 @@ func TestClaudePresetGenerator_Generate_CollectsDomainAndRootContent(t *testing.
 					{
 						Name:    "domain-command",
 						Content: "Domain command content",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Targets: []string{"claude"},
 						},
 					},
@@ -580,13 +580,13 @@ func TestClaudePresetGenerator_Generate_CollectsDomainAndRootContent(t *testing.
 
 func TestClaudePresetGenerator_renderClaudeMarkdown_InlinesBuiltinContext(t *testing.T) {
 	g := &ClaudePresetGenerator{}
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "test config",
 		BaseDir:     "/test",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Context: []config.ContentFile{
 			{
 				Name:    "builtin-context",
@@ -655,8 +655,8 @@ func TestClaudePresetGenerator_GetOutputPaths(t *testing.T) {
 func TestClaudePresetGenerator_renderSettingsJSON(t *testing.T) {
 	g := &ClaudePresetGenerator{}
 
-	cfg := &config.ConfigV3{
-		MCPServers: map[string]*config.MCPServerV3{
+	cfg := &config.Config{
+		MCPServers: map[string]*config.MCPServer{
 			"test-server": {
 				Command: "npx",
 				Args:    []string{"-y", "test-server"},
@@ -690,7 +690,7 @@ func TestClaudePresetGenerator_renderPluginsJSON(t *testing.T) {
 	g := &ClaudePresetGenerator{}
 
 	enabled := true
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Plugins: []config.PluginConfig{
 			{Marketplace: "official", Name: "github", Scope: "project", Enabled: &enabled},
 			{Marketplace: "custom", Name: "tool", Scope: "user"},

@@ -5,81 +5,81 @@ import (
 	"testing"
 )
 
-func TestRegisterPresetV3(t *testing.T) {
+func TestRegisterPreset(t *testing.T) {
 	// Create a mock generator
 	mockGen := &mockPresetGenerator{name: "test-preset"}
 
 	// Register it
-	RegisterPresetV3("test-preset", mockGen)
+	RegisterPreset("test-preset", mockGen)
 
 	// Verify it was registered
-	gen, err := GetPresetGeneratorV3("test-preset")
+	gen, err := GetPresetGenerator("test-preset")
 	if err != nil {
-		t.Fatalf("GetPresetGeneratorV3() error = %v", err)
+		t.Fatalf("GetPresetGenerator() error = %v", err)
 	}
 
 	if gen.GetName() != "test-preset" {
-		t.Errorf("GetPresetGeneratorV3() got name %v, want %v", gen.GetName(), "test-preset")
+		t.Errorf("GetPresetGenerator() got name %v, want %v", gen.GetName(), "test-preset")
 	}
 
 	// Clean up
-	delete(PresetRegistryV3, "test-preset")
+	delete(PresetRegistry, "test-preset")
 }
 
-func TestGetPresetGeneratorV3_NotFound(t *testing.T) {
-	_, err := GetPresetGeneratorV3("nonexistent-preset")
+func TestGetPresetGenerator_NotFound(t *testing.T) {
+	_, err := GetPresetGenerator("nonexistent-preset")
 	if err == nil {
-		t.Error("GetPresetGeneratorV3() expected error for nonexistent preset")
+		t.Error("GetPresetGenerator() expected error for nonexistent preset")
 	}
 
-	if !errors.Is(err, ErrInvalidPresetV3) {
-		t.Errorf("GetPresetGeneratorV3() error = %v, want %v", err, ErrInvalidPresetV3)
+	if !errors.Is(err, ErrInvalidPreset) {
+		t.Errorf("GetPresetGenerator() error = %v, want %v", err, ErrInvalidPreset)
 	}
 }
 
-func TestGeneratePresetsV3_NoContent(t *testing.T) {
-	cfg := &ConfigV3{
+func TestGeneratePresets_NoContent(t *testing.T) {
+	cfg := &Config{
 		Name:    "test",
 		Version: "3.0",
-		Presets: []PresetV3{
+		Presets: []Preset{
 			{BuiltIn: "claude"},
 		},
 		Content: nil,
 	}
 
-	_, err := GeneratePresetsV3(cfg)
+	_, err := GeneratePresets(cfg)
 	if !errors.Is(err, ErrNoContent) {
-		t.Errorf("GeneratePresetsV3() error = %v, want %v", err, ErrNoContent)
+		t.Errorf("GeneratePresets() error = %v, want %v", err, ErrNoContent)
 	}
 }
 
-func TestGeneratePresetsV3_BuiltIn(t *testing.T) {
+func TestGeneratePresets_BuiltIn(t *testing.T) {
 	// Register a mock generator
 	mockGen := &mockPresetGenerator{name: "mock"}
-	RegisterPresetV3("mock", mockGen)
-	defer delete(PresetRegistryV3, "mock")
+	RegisterPreset("mock", mockGen)
+	defer delete(PresetRegistry, "mock")
 
-	cfg := &ConfigV3{
+	cfg := &Config{
 		Name:    "test",
 		Version: "3.0",
 		BaseDir: "/test",
-		Presets: []PresetV3{
+		Presets: []Preset{
 			{BuiltIn: "mock"},
 		},
-		Content: &ContentTreeV3{
+		Content: &ContentTree{
 			Rules: []ContentFile{
 				{Name: "rule1", Content: "content"},
 			},
 		},
 	}
 
-	results, err := GeneratePresetsV3(cfg)
+	results, err := GeneratePresets(cfg)
 	if err != nil {
-		t.Fatalf("GeneratePresetsV3() error = %v", err)
+		t.Fatalf("GeneratePresets() error = %v", err)
 	}
 
 	if len(results) != 1 {
-		t.Errorf("GeneratePresetsV3() got %d results, want 1", len(results))
+		t.Errorf("GeneratePresets() got %d results, want 1", len(results))
 	}
 
 	outputs, ok := results["mock"]
@@ -92,39 +92,39 @@ func TestGeneratePresetsV3_BuiltIn(t *testing.T) {
 	}
 }
 
-func TestGeneratePresetsV3_CustomPreset(t *testing.T) {
+func TestGeneratePresets_CustomPreset(t *testing.T) {
 	// Set up custom preset factory
 	originalFactory := CustomPresetGeneratorFactory
-	CustomPresetGeneratorFactory = func(preset PresetV3) PresetGeneratorV3 {
+	CustomPresetGeneratorFactory = func(preset Preset) PresetGenerator {
 		return &mockPresetGenerator{name: preset.Name}
 	}
 	defer func() { CustomPresetGeneratorFactory = originalFactory }()
 
-	cfg := &ConfigV3{
+	cfg := &Config{
 		Name:    "test",
 		Version: "3.0",
 		BaseDir: "/test",
-		Presets: []PresetV3{
+		Presets: []Preset{
 			{
 				Name: "custom-preset",
 				Type: PresetTypeMarkdown,
 				Path: "CUSTOM.md",
 			},
 		},
-		Content: &ContentTreeV3{
+		Content: &ContentTree{
 			Rules: []ContentFile{
 				{Name: "rule1", Content: "content"},
 			},
 		},
 	}
 
-	results, err := GeneratePresetsV3(cfg)
+	results, err := GeneratePresets(cfg)
 	if err != nil {
-		t.Fatalf("GeneratePresetsV3() error = %v", err)
+		t.Fatalf("GeneratePresets() error = %v", err)
 	}
 
 	if len(results) != 1 {
-		t.Errorf("GeneratePresetsV3() got %d results, want 1", len(results))
+		t.Errorf("GeneratePresets() got %d results, want 1", len(results))
 	}
 
 	outputs, ok := results["custom-preset"]
@@ -137,33 +137,33 @@ func TestGeneratePresetsV3_CustomPreset(t *testing.T) {
 	}
 }
 
-func TestGeneratePresetsV3_CustomPresetFactoryNotSet(t *testing.T) {
+func TestGeneratePresets_CustomPresetFactoryNotSet(t *testing.T) {
 	// Save and clear factory
 	originalFactory := CustomPresetGeneratorFactory
 	CustomPresetGeneratorFactory = nil
 	defer func() { CustomPresetGeneratorFactory = originalFactory }()
 
-	cfg := &ConfigV3{
+	cfg := &Config{
 		Name:    "test",
 		Version: "3.0",
 		BaseDir: "/test",
-		Presets: []PresetV3{
+		Presets: []Preset{
 			{
 				Name: "custom-preset",
 				Type: PresetTypeMarkdown,
 				Path: "CUSTOM.md",
 			},
 		},
-		Content: &ContentTreeV3{},
+		Content: &ContentTree{},
 	}
 
-	_, err := GeneratePresetsV3(cfg)
+	_, err := GeneratePresets(cfg)
 	if err == nil {
-		t.Error("GeneratePresetsV3() expected error when factory not set")
+		t.Error("GeneratePresets() expected error when factory not set")
 	}
 
 	if err != nil && err.Error() != "custom preset generator factory not initialized" {
-		t.Errorf("GeneratePresetsV3() error = %v, want factory not initialized error", err)
+		t.Errorf("GeneratePresets() error = %v, want factory not initialized error", err)
 	}
 }
 
@@ -259,8 +259,8 @@ func (m *mockPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{baseDir + "/output.md"}
 }
 
-func (m *mockPresetGenerator) Generate(content *ContentTreeV3, baseDir string, config *ConfigV3) ([]OutputFileV3, error) {
-	return []OutputFileV3{
+func (m *mockPresetGenerator) Generate(content *ContentTree, baseDir string, config *Config) ([]OutputFile, error) {
+	return []OutputFile{
 		{
 			Path:    baseDir + "/output.md",
 			Content: "test output",

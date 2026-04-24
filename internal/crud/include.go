@@ -22,7 +22,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -61,7 +61,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 	cfg.Includes = append(cfg.Includes, includeConfig)
 
 	// Save updated config
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.
 			With("config_dir", op.aiRulezDir).
 			Wrapf(err, "save config")
@@ -89,7 +89,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -117,7 +117,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 	cfg.Includes = append(cfg.Includes[:foundIdx], cfg.Includes[foundIdx+1:]...)
 
 	// Save updated config
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.
 			With("config_dir", op.aiRulezDir).
 			Wrapf(err, "save config")
@@ -134,7 +134,7 @@ func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error)
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return nil, oops.
 			With("base_dir", baseDir).

@@ -20,7 +20,7 @@ const (
 
 // Source represents a content source that can be fetched
 type Source interface {
-	Fetch(ctx context.Context) (*config.ContentTreeV3, error)
+	Fetch(ctx context.Context) (*config.ContentTree, error)
 	GetType() SourceType
 	GetName() string
 }

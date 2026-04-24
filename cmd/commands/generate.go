@@ -65,7 +65,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
 	// Load configuration
-	cfg, err := config.LoadConfigV3(ctx, workingDir)
+	cfg, err := config.LoadConfig(ctx, workingDir)
 	if err != nil {
 		fmtError(err)
 		os.Exit(1)
@@ -78,7 +78,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	// Create generator
-	gen := generator.NewGeneratorV3(cfg)
+	gen := generator.NewGenerator(cfg)
 
 	if dryRun {
 		progress.PrintlnIfNotQuiet("Note: --dry-run not yet supported")
@@ -159,7 +159,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, workingDir)
+	cfg, err := config.LoadConfig(ctx, workingDir)
 	if err != nil {
 		fileCounter.Error(err)
 		return 0
@@ -172,7 +172,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	}
 
 	// Create generator
-	gen := generator.NewGeneratorV3(cfg)
+	gen := generator.NewGenerator(cfg)
 
 	if dryRun {
 		progress.PrintlnIfNotQuiet("  Note: dry-run not yet supported")

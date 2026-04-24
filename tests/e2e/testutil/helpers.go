@@ -105,7 +105,7 @@ func ReadFile(t *testing.T, path string) string {
 	return string(content)
 }
 
-// SetupV3BasicConfig creates a V3 configuration directory structure with rules
+// SetupV3BasicConfig creates a configuration directory structure with rules
 func SetupV3BasicConfig(t *testing.T, workingDir string) {
 	t.Helper()
 
@@ -135,7 +135,7 @@ func SetupV3BasicConfig(t *testing.T, workingDir string) {
 	WriteFile(t, contextDir, "project-info.md", V3ProjectContextMarkdown)
 }
 
-// SetupV3ConfigWithMCPServers creates a V3 configuration with MCP server config
+// SetupV3ConfigWithMCPServers creates a configuration with MCP server config
 func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
 	t.Helper()
 
@@ -156,7 +156,7 @@ func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create rules directory")
 }
 
-// SetupV3MultiPresetConfig creates a V3 configuration with multiple presets
+// SetupV3MultiPresetConfig creates a configuration with multiple presets
 func SetupV3MultiPresetConfig(t *testing.T, workingDir string) {
 	t.Helper()
 
@@ -177,7 +177,7 @@ func SetupV3MultiPresetConfig(t *testing.T, workingDir string) {
 	WriteFile(t, rulesDir, "sample-rule.md", V3BasicRuleMarkdown)
 }
 
-// SetupV3InvalidConfig creates a V3 configuration with invalid YAML
+// SetupV3InvalidConfig creates a configuration with invalid YAML
 func SetupV3InvalidConfig(t *testing.T, workingDir string) {
 	t.Helper()
 

@@ -39,7 +39,7 @@ func (s *LocalSource) GetName() string {
 }
 
 // Fetch loads content from the local file system
-func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
+func (s *LocalSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	// Resolve path (handle relative paths)
 	resolvedPath, err := s.resolvePath()
 	if err != nil {
@@ -166,9 +166,9 @@ func (s *LocalSource) findAIRulezDir(path string) string {
 }
 
 // filterContent filters content based on include list
-func (s *LocalSource) filterContent(tree *config.ContentTreeV3) *config.ContentTreeV3 {
-	filtered := &config.ContentTreeV3{
-		Domains: make(map[string]*config.DomainV3),
+func (s *LocalSource) filterContent(tree *config.ContentTree) *config.ContentTree {
+	filtered := &config.ContentTree{
+		Domains: make(map[string]*config.Domain),
 	}
 
 	// Helper to check if a content type should be included

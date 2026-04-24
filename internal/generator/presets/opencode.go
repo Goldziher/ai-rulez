@@ -13,14 +13,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("opencode", &OpencodePresetGenerator{})
+	config.RegisterPreset("opencode", &OpencodePresetGenerator{})
 }
 
 // OpencodePresetGenerator generates Opencode preset files (AGENTS.md)
 type OpencodePresetGenerator struct{}
 
 // generateOpenCodePresetHeader creates a header for Opencode preset files
-func generateOpenCodePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateOpenCodePresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -49,20 +49,20 @@ func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .opencode directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".opencode"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".opencode", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".opencode", "agents"),
 			IsDir: true,
 		},
@@ -71,7 +71,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 	// Generate AGENTS.md file
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, "AGENTS.md"),
 		Content: agentsContent,
 		IsDir:   false,
@@ -84,11 +84,11 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 
 		skillDir := filepath.Join(baseDir, ".opencode", "skills", skillID)
 		outputs = append(outputs,
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:  skillDir,
 				IsDir: true,
 			},
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:    filepath.Join(skillDir, "SKILL.md"),
 				Content: g.renderSkillFile(skill),
 			},
@@ -104,7 +104,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".opencode", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -113,7 +113,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 	return outputs, nil
 }
 
-func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Calculate content counts

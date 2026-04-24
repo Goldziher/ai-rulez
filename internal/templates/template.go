@@ -18,8 +18,8 @@ type TemplateData struct {
 	AgentCount    int
 	ConfigFile    string
 	OutputFile    string
-	Config        *config.ConfigV3 // Config for accessing header style
-	StyleOverride string           // If set, overrides Config.GetHeaderStyle()
+	Config        *config.Config // Config for accessing header style
+	StyleOverride string         // If set, overrides Config.GetHeaderStyle()
 }
 
 // HashContent computes a BLAKE3 hash of the given content and returns it

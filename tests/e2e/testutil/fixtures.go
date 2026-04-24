@@ -29,7 +29,7 @@ priority: high
 
 # Basic Rule
 
-This is a basic rule for testing V3 configuration.
+This is a basic rule for testing configuration.
 `
 
 const V3HighPriorityRuleMarkdown = `---
@@ -48,7 +48,7 @@ This is a test project for validating V3 MCP operations.
 
 const V3ConfigWithMCPServersYAML = `version: "3.0"
 name: "v3-mcp-test-project"
-description: "V3 configuration with MCP servers"
+description: "configuration with MCP servers"
 presets:
   - claude
 gitignore: false

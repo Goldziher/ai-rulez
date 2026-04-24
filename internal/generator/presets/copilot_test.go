@@ -20,9 +20,9 @@ func TestCopilotPresetGenerator_GetName(t *testing.T) {
 
 func TestCopilotPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	g := &CopilotPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Skills: []config.ContentFile{
 			{
 				Name:    "deploy",
@@ -34,7 +34,7 @@ func TestCopilotPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 			{
 				Name:    "reviewer",
 				Content: "You review code.",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description": "Reviews code changes",
 						"model":       "gpt-5",
@@ -129,7 +129,7 @@ func TestCopilotPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "no targets includes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{},
+				Metadata: &config.Metadata{},
 			},
 			expected: true,
 		},
@@ -137,7 +137,7 @@ func TestCopilotPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "matching target includes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{Targets: []string{"copilot"}},
+				Metadata: &config.Metadata{Targets: []string{"copilot"}},
 			},
 			expected: true,
 		},
@@ -145,7 +145,7 @@ func TestCopilotPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "non-matching target excludes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{Targets: []string{"claude", "cursor"}},
+				Metadata: &config.Metadata{Targets: []string{"claude", "cursor"}},
 			},
 			expected: false,
 		},
@@ -161,8 +161,8 @@ func TestCopilotPresetGenerator_shouldIncludeCommand(t *testing.T) {
 func TestCopilotPresetGenerator_renderMCPJSON(t *testing.T) {
 	g := &CopilotPresetGenerator{}
 
-	cfg := &config.ConfigV3{
-		MCPServers: map[string]*config.MCPServerV3{
+	cfg := &config.Config{
+		MCPServers: map[string]*config.MCPServer{
 			"test-server": {
 				Command: "npx",
 				Args:    []string{"-y", "test-mcp"},

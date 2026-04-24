@@ -553,7 +553,7 @@ func TestFindAIRulezDirFlatStructureAtRoot(t *testing.T) {
 func TestGitSourceFilterContentIncludesRules(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "rule content"},
 		},
@@ -563,7 +563,7 @@ func TestGitSourceFilterContentIncludesRules(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1", Content: "skill content"},
 		},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules"}, "")
 	if err != nil {
@@ -588,7 +588,7 @@ func TestGitSourceFilterContentIncludesRules(t *testing.T) {
 func TestGitSourceFilterContentIncludesMultiple(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "rule content"},
 		},
@@ -598,7 +598,7 @@ func TestGitSourceFilterContentIncludesMultiple(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1", Content: "skill content"},
 		},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "context"}, "")
 	if err != nil {
@@ -623,7 +623,7 @@ func TestGitSourceFilterContentIncludesMultiple(t *testing.T) {
 func TestGitSourceFilterContentEmptyInclude(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "rule content"},
 		},
@@ -633,7 +633,7 @@ func TestGitSourceFilterContentEmptyInclude(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1", Content: "skill content"},
 		},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{}, "")
 	if err != nil {
@@ -658,14 +658,14 @@ func TestGitSourceFilterContentEmptyInclude(t *testing.T) {
 func TestGitSourceFilterContentPreserveDomains(t *testing.T) {
 	// Arrange
 	baseDir := t.TempDir()
-	domain := &config.DomainV3{
+	domain := &config.Domain{
 		Name:  "backend",
 		Rules: []config.ContentFile{{Name: "domain-rule"}},
 	}
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules:   []config.ContentFile{{Name: "rule1"}},
 		Context: []config.ContentFile{{Name: "context1"}},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": domain,
 		},
 	}
@@ -689,12 +689,12 @@ func TestGitSourceFilterContentPreserveDomains(t *testing.T) {
 func TestGitSourceFilterContentIncludesAgents(t *testing.T) {
 	// Arrange: tree has agents; include list contains "agents"
 	baseDir := t.TempDir()
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules:   []config.ContentFile{{Name: "rule1", Content: "rule content"}},
 		Context: []config.ContentFile{{Name: "context1", Content: "context content"}},
 		Skills:  []config.ContentFile{{Name: "skill1", Content: "skill content"}},
 		Agents:  []config.ContentFile{{Name: "golang-maintainer", Content: "agent content"}},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "agents"}, "")
 	if err != nil {
@@ -725,11 +725,11 @@ func TestGitSourceFilterContentIncludesAgents(t *testing.T) {
 func TestGitSourceFilterContentExcludesAgentsWhenNotInInclude(t *testing.T) {
 	// Arrange: tree has agents; include list does not contain "agents"
 	baseDir := t.TempDir()
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules:   []config.ContentFile{{Name: "rule1", Content: "rule content"}},
 		Context: []config.ContentFile{{Name: "context1", Content: "context content"}},
 		Agents:  []config.ContentFile{{Name: "governance-architect", Content: "agent content"}},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source, err := NewGitSource("test", "https://github.com/owner/repo", "", "", baseDir, []string{"rules", "context"}, "")
 	if err != nil {

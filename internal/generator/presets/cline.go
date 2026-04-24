@@ -13,14 +13,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("cline", &ClinePresetGenerator{})
+	config.RegisterPreset("cline", &ClinePresetGenerator{})
 }
 
 // ClinePresetGenerator generates Cline preset files
 type ClinePresetGenerator struct{}
 
 // generateClinePresetHeader creates a header for Cline preset files
-func generateClinePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateClinePresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -49,20 +49,20 @@ func (g *ClinePresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".clinerules"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cline"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cline", "skills"),
 			IsDir: true,
 		},
@@ -77,7 +77,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
 		sanitized := sanitizeName(rule.Name)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".clinerules", sanitized+".md"),
 			Content: ruleContent,
 		})
@@ -90,11 +90,11 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 
 		skillDir := filepath.Join(baseDir, ".cline", "skills", skillID)
 		outputs = append(outputs,
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:  skillDir,
 				IsDir: true,
 			},
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:    filepath.Join(skillDir, "SKILL.md"),
 				Content: g.renderSkillFile(skill),
 			},
@@ -112,14 +112,14 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		ctxBuilder.WriteString(processedContent)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".clinerules", "context-"+sanitized+".md"),
 			Content: ctxBuilder.String(),
 		})
 	}
 
 	// Add .cline/agents directory
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  filepath.Join(baseDir, ".cline", "agents"),
 		IsDir: true,
 	})
@@ -133,7 +133,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".cline", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -159,7 +159,7 @@ func (g *ClinePresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	return builder.String()
 }
 
-func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.ConfigV3, outputPath string, ruleCount int) string {
+func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.Config, outputPath string, ruleCount int) string {
 	var builder strings.Builder
 
 	// Generate and prepend header

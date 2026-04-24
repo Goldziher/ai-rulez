@@ -20,9 +20,9 @@ func TestAmpPresetGenerator_GetName(t *testing.T) {
 
 func TestAmpPresetGenerator_Generate_WithSkills(t *testing.T) {
 	g := &AmpPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Skills: []config.ContentFile{
 			{
 				Name:    "deploy",
@@ -64,7 +64,7 @@ func TestAmpPresetGenerator_renderSkillFile(t *testing.T) {
 	skill := config.ContentFile{
 		Name:    "test-skill",
 		Content: "Skill content here",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{"description": "A test skill"},
 		},
 	}
@@ -88,7 +88,7 @@ func TestAmpPresetGenerator_renderAmpAgentFile(t *testing.T) {
 	agent := config.ContentFile{
 		Name:    "test-agent",
 		Content: "You are a test agent.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"description": "A test agent",
 				"model":       "sonnet",
@@ -112,7 +112,7 @@ func TestAmpPresetGenerator_buildAmpAgentFrontmatter(t *testing.T) {
 	t.Run("with metadata", func(t *testing.T) {
 		agent := config.ContentFile{
 			Name: "agent",
-			Metadata: &config.MetadataV3{
+			Metadata: &config.Metadata{
 				Extra: map[string]string{"description": "desc", "model": "opus"},
 			},
 		}

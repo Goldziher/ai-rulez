@@ -14,14 +14,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("gemini", &GeminiPresetGenerator{})
+	config.RegisterPreset("gemini", &GeminiPresetGenerator{})
 }
 
 // GeminiPresetGenerator generates Gemini preset files
 type GeminiPresetGenerator struct{}
 
 // generatePresetHeader creates a header for Gemini preset files
-func generateGeminiPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateGeminiPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -51,24 +51,24 @@ func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".gemini"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "agents"),
 			IsDir: true,
 		},
@@ -80,14 +80,14 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		return nil, fmt.Errorf("render settings.json: %w", err)
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, ".gemini", "settings.json"),
 		Content: settingsContent,
 	})
 
 	// Generate GEMINI.md with all rules and context
 	geminiMD := g.renderGeminiMarkdown(content, cfg)
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, "GEMINI.md"),
 		Content: geminiMD,
 	})
@@ -98,13 +98,13 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		skillID := extractSkillID(skill.Path)
 
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:  skillDir,
 			IsDir: true,
 		})
 
 		skillContent := g.renderGeminiSkillFile(skill)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
@@ -119,7 +119,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -128,7 +128,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 	return outputs, nil
 }
 
-func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string, error) {
+func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]interface{})
 
 	// Always include the hardcoded ai-rulez MCP server
@@ -178,7 +178,7 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string
 	return string(jsonData) + "\n", nil
 }
 
-func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Calculate content counts

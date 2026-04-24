@@ -17,9 +17,9 @@ func TestOpencodePresetGenerator_GetName(t *testing.T) {
 
 func TestOpencodePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	g := &OpencodePresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Skills: []config.ContentFile{
 			{
 				Name:    "deploy",
@@ -31,7 +31,7 @@ func TestOpencodePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 			{
 				Name:    "reviewer",
 				Content: "Review code changes.",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description": "Reviews code",
 						"mode":        "subagent",
