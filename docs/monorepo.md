@@ -55,26 +55,21 @@ Your root `.ai-rulez/` should contain high-level, cross-cutting concerns that ap
     - **General Standards:** Code quality, testing, git workflow, deployment processes
     - **Base Skills:** Shared AI skills used by all teams
 
-**`.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "My Full-Stack Project"
-description: "Microservices project with React frontend and Go backend"
+**`.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "My Full-Stack Project"
+description = "Microservices project with React frontend and Go backend"
 
-presets:
-  - claude
-  - cursor
-  - gemini
+presets = ["claude", "cursor", "gemini"]
+default = "full"
+gitignore = true
 
-default: full
-
-profiles:
-  full: [backend, frontend, qa]
-  backend: [backend, qa]
-  frontend: [frontend, qa]
-  qa: [qa]
-
-gitignore: true
+[profiles]
+full = ["backend", "frontend", "qa"]
+backend = ["backend", "qa"]
+frontend = ["frontend", "qa"]
+qa = ["qa"]
 ```
 
 **`.ai-rulez/context/architecture.md`:**
@@ -259,18 +254,16 @@ profiles:
   full: [shared]
 ```
 
-**Service-specific** (`/backend/.ai-rulez/config.yaml`):
-```yaml
-version: "3.0"
-name: "Backend Service"
+**Service-specific** (`/backend/.ai-rulez/config.toml`):
+```toml
+version = "4.0"
+name = "Backend Service"
 
-presets:
-  - claude
+presets = ["claude"]
+default = "backend"
 
-default: backend
-
-profiles:
-  backend: [api, database]
+[profiles]
+backend = ["api", "database"]
 ```
 
 By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.

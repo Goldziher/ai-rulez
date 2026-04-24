@@ -30,9 +30,9 @@ Flags:
 
 Check configuration and content structure for errors.
 
-### `ai-rulez migrate v3`
+### `ai-rulez migrate v4`
 
-Convert V2 `ai-rulez.yaml` to V3 `.ai-rulez/` directory structure.
+Convert V3 `.ai-rulez/` YAML configuration to V4 `.ai-rulez/` TOML configuration.
 
 ### `ai-rulez mcp`
 

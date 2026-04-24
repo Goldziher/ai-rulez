@@ -26,16 +26,16 @@ Includes allow one `.ai-rulez/` configuration to inherit content from other conf
 
 Create a `.ai-rulez/` directory that others can include:
 
-**`shared-rules/.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "shared-rules"
-description: "Organization-wide AI rules"
+**`shared-rules/.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "shared-rules"
+description = "Organization-wide AI rules"
 
-presets: []
+presets = []
 
-profiles:
-  default: []
+[profiles]
+default = []
 ```
 
 **`shared-rules/.ai-rulez/rules/security.md`:**
@@ -54,22 +54,21 @@ priority: critical
 
 ### Including in Your Project
 
-In your project's `.ai-rulez/config.yaml`, reference the shared rules:
+In your project's `.ai-rulez/config.toml`, reference the shared rules:
 
-```yaml
-version: "3.0"
-name: "my-project"
+```toml
+version = "4.0"
+name = "my-project"
 
 # Include rules from another directory
-includes:
-  - ../shared-rules/.ai-rulez
+includes = [
+  { name = "shared-rules", source = "../shared-rules/.ai-rulez" }
+]
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
 
-profiles:
-  default: []
+[profiles]
+default = []
 ```
 
 Now your project includes all content from the shared configuration.
@@ -85,79 +84,63 @@ Includes can be:
 ### Examples
 
 **Sibling directory:**
-```yaml
-includes:
-  - name: shared-rules
-    source: ../shared-rules
-    include:
-      - rules
-      - context
-    merge_strategy: local-override
+```toml
+[[includes]]
+name = "shared-rules"
+source = "../shared-rules"
+include = ["rules", "context"]
+merge_strategy = "local-override"
 ```
 
 **Subdirectory:**
-```yaml
-includes:
-  - name: team-config
-    source: ./config/shared
-    include:
-      - rules
-      - skills
-    merge_strategy: local-override
+```toml
+[[includes]]
+name = "team-config"
+source = "./config/shared"
+include = ["rules", "skills"]
+merge_strategy = "local-override"
 ```
 
 **Git repository (HTTPS):**
-```yaml
-includes:
-  - name: org-standards
-    source: https://github.com/myorg/shared-rules.git
-    ref: main
-    include:
-      - rules
-      - context
-      - skills
-      - agents
-    merge_strategy: local-override
+```toml
+[[includes]]
+name = "org-standards"
+source = "https://github.com/myorg/shared-rules.git"
+ref = "main"
+include = ["rules", "context", "skills", "agents"]
+merge_strategy = "local-override"
 ```
 
 **Git repository (SSH):**
-```yaml
-includes:
-  - name: company-policies
-    source: git@github.com:company/ai-rulez.git
-    ref: v1.2.3
-    include:
-      - rules
-      - context
-    merge_strategy: local-override
+```toml
+[[includes]]
+name = "company-policies"
+source = "git@github.com:company/ai-rulez.git"
+ref = "v1.2.3"
+include = ["rules", "context"]
+merge_strategy = "local-override"
 ```
 
 **Multiple includes:**
-```yaml
-includes:
-  # Local relative path
-  - name: team-guidelines
-    source: ../team-guidelines
-    include:
-      - rules
-      - context
-    merge_strategy: local-override
+```toml
+[[includes]]
+name = "team-guidelines"
+source = "../team-guidelines"
+include = ["rules", "context"]
+merge_strategy = "local-override"
 
-  # Git repository
-  - name: org-standards
-    source: git@gitlab.com:org/standards.git
-    ref: main
-    include:
-      - rules
-      - skills
-    merge_strategy: local-override
+[[includes]]
+name = "org-standards"
+source = "git@gitlab.com:org/standards.git"
+ref = "main"
+include = ["rules", "skills"]
+merge_strategy = "local-override"
 
-  # Another local path
-  - name: security-policies
-    source: ./security-policies
-    include:
-      - rules
-    merge_strategy: local-override
+[[includes]]
+name = "security-policies"
+source = "./security-policies"
+include = ["rules"]
+merge_strategy = "local-override"
 ```
 
 ### Supported Git URL Formats
@@ -412,20 +395,19 @@ monorepo/
     └── .ai-rulez/              # Includes shared + mobile-specific
 ```
 
-**`backend-team/.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "backend-api"
+**`backend-team/.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "backend-api"
 
-includes:
-  - ../shared-rules/.ai-rulez
+includes = [
+  { name = "shared-rules", source = "../shared-rules/.ai-rulez" }
+]
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
 
-profiles:
-  default: []
+[profiles]
+default = []
 ```
 
 ## Multi-Level Hierarchy
@@ -504,21 +486,20 @@ Bad:
 
 Add comments to your config explaining why includes are needed:
 
-```yaml
-version: "3.0"
-name: "my-backend"
+```toml
+version = "4.0"
+name = "my-backend"
 
-includes:
-  # Organization-wide coding standards
-  - ../org-standards/.ai-rulez
-  # Go-specific conventions
-  - ../go-guidelines/.ai-rulez
-  # Backend team standards
-  - ../backend-team/.ai-rulez
+# Organization-wide coding standards
+# Go-specific conventions
+# Backend team standards
+includes = [
+  { name = "org-standards", source = "../org-standards/.ai-rulez" },
+  { name = "go-guidelines", source = "../go-guidelines/.ai-rulez" },
+  { name = "backend-team", source = "../backend-team/.ai-rulez" }
+]
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
 ```
 
 ### Keep Includes Focused

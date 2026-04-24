@@ -1,16 +1,40 @@
-# ai-rulez
+<p align="center">
+  <img src="docs/assets/logo.png" alt="AI-Rulez" width="200" />
+</p>
 
-Directory-based AI governance for 19+ tools. Define rules, context, skills, agents and commands once — generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex, and more.
+<h1 align="center">ai-rulez</h1>
+
+<p align="center">
+  <strong>Directory-based AI governance for 19+ tools</strong>
+</p>
+
+<p align="center">
+  <a href="https://goreportcard.com/report/github.com/Goldziher/ai-rulez"><img src="https://goreportcard.com/badge/github.com/Goldziher/ai-rulez" alt="Go Report Card"></a>
+  <a href="https://www.npmjs.com/package/ai-rulez"><img src="https://img.shields.io/npm/v/ai-rulez" alt="npm version"></a>
+  <a href="https://pypi.org/project/ai-rulez/"><img src="https://img.shields.io/pypi/v/ai-rulez" alt="PyPI version"></a>
+  <a href="https://github.com/Goldziher/ai-rulez/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Goldziher/ai-rulez" alt="License"></a>
+  <a href="https://goldziher.github.io/ai-rulez/"><img src="https://img.shields.io/badge/docs-ai--rulez-blue" alt="Documentation"></a>
+</p>
+
+<p align="center">
+  Define rules, context, skills, agents and commands once — generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex, and more.
+</p>
+
+---
 
 Every AI coding tool wants its own config format. Claude needs `CLAUDE.md` + `.claude/skills/` + `.claude/agents/`, Cursor wants `.cursor/rules/`, Copilot expects `.github/copilot-instructions.md`. Keeping them in sync is tedious and error-prone.
 
-ai-rulez solves this: organize your AI governance in `.ai-rulez/`, run `generate`, and get native configs for all your tools — with proper frontmatter, tool-specific formatting, and full feature support (skills, agents, MCP servers).
+**ai-rulez** solves this: organize your AI governance in `.ai-rulez/`, run `generate`, and get native configs for all your tools — with proper frontmatter, tool-specific formatting, and full feature support (skills, agents, MCP servers, plugins).
 
 ```bash
 npx ai-rulez@latest init && npx ai-rulez@latest generate
 ```
 
-**[Documentation](https://goldziher.github.io/ai-rulez/)**
+<p align="center">
+  <a href="https://goldziher.github.io/ai-rulez/"><strong>Documentation</strong></a> &middot;
+  <a href="https://goldziher.github.io/ai-rulez/quick-start/"><strong>Quick Start</strong></a> &middot;
+  <a href="https://goldziher.github.io/ai-rulez/examples/"><strong>Examples</strong></a>
+</p>
 
 ## What You Get
 
@@ -20,6 +44,7 @@ npx ai-rulez@latest init && npx ai-rulez@latest generate
 - **Remote includes**: Pull shared rules from git repos (company standards, team configs)
 - **Profile system**: Generate different configs for backend/frontend/QA teams
 - **MCP server**: Let AI assistants manage their own rules via Model Context Protocol
+- **Plugins & Marketplaces**: Extend ai-rulez with custom generators and install pre-built rulesets from marketplaces
 - **Type-safe schemas**: JSON Schema validation for all config files
 
 ## Quick Start
@@ -34,7 +59,7 @@ This creates:
 
 ```
 .ai-rulez/
-├── config.yaml       # Which tools to generate for
+├── config.toml       # Which tools to generate for
 ├── rules/            # Guidelines AI must follow
 ├── context/          # Project background info
 ├── skills/           # Specialized AI roles
@@ -46,27 +71,32 @@ And generates native configs for each tool you specify.
 
 ## Configuration
 
-```yaml
-# .ai-rulez/config.yaml
-version: "3.0"
-name: "My Project"
+```toml
+# .ai-rulez/config.toml
+version = "4.0"
+name = "My Project"
 
-presets:
-  - claude
-  - cursor
-  - copilot
-  - windsurf
+presets = ["claude", "cursor", "copilot", "windsurf"]
+
+builtins = ["security", "testing"]
 
 # Optional: team-specific profiles
-profiles:
-  backend: [backend, database]
-  frontend: [frontend, ui]
+[profiles]
+backend = ["backend", "database"]
+frontend = ["frontend", "ui"]
 
 # Optional: share rules across repos
-includes:
-  - name: company-standards
-    source: https://github.com/company/ai-rules.git
-    ref: main
+[[includes]]
+name = "company-standards"
+source = "https://github.com/company/ai-rules.git"
+ref = "main"
+
+# Optional: inline MCP servers
+[[mcp_servers]]
+name = "ai-rulez"
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]
+transport = "stdio"
 ```
 
 ## Content Structure
@@ -164,33 +194,33 @@ ai-rulez validate
 # MCP server (for AI assistants)
 npx ai-rulez@latest mcp
 
-# Migrate from V2
-ai-rulez migrate v3
 ```
 
 ## Remote Includes
 
 Share rules across repositories:
 
-```yaml
-includes:
-  # HTTPS
-  - name: company-standards
-    source: https://github.com/company/ai-rules.git
-    ref: main
-    include: [rules, context]
-    merge_strategy: local-override
+```toml
+# HTTPS
+[[includes]]
+name = "company-standards"
+source = "https://github.com/company/ai-rules.git"
+ref = "main"
+include = ["rules", "context"]
+merge_strategy = "local-override"
 
-  # SSH
-  - name: shared-configs
-    source: git@github.com:org/shared-ai-rulez.git
-    ref: v2.0.0
-    include: [rules, skills]
+# SSH
+[[includes]]
+name = "shared-configs"
+source = "git@github.com:org/shared-ai-rulez.git"
+ref = "v2.0.0"
+include = ["rules", "skills"]
 
-  # Local path
-  - name: local-standards
-    source: ../shared-rules
-    include: [rules]
+# Local path
+[[includes]]
+name = "local-standards"
+source = "../shared-rules"
+include = ["rules"]
 ```
 
 Private repos use `AI_RULEZ_GIT_TOKEN` environment variable or `--token` flag.
@@ -199,12 +229,14 @@ Private repos use `AI_RULEZ_GIT_TOKEN` environment variable or `--token` flag.
 
 Install named skills from external repositories — fetched dynamically at generate time:
 
-```yaml
-installed_skills:
-  - name: kreuzberg
-    source: https://github.com/kreuzberg-dev/kreuzberg
-  - name: ai-rulez
-    source: https://github.com/Goldziher/ai-rulez
+```toml
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+
+[[installed_skills]]
+name = "ai-rulez"
+source = "https://github.com/Goldziher/ai-rulez"
 ```
 
 ```bash
@@ -260,17 +292,21 @@ ai-rulez init --from .cursorrules,CLAUDE.md
 
 ## MCP Server
 
-Let AI assistants manage rules directly:
+Let AI assistants manage rules directly. MCP servers are configured inline in `config.toml`:
 
-```yaml
-# .ai-rulez/mcp.yaml
-version: "3.0"
-mcp_servers:
-  - name: ai-rulez
-    command: npx
-    args: ["-y", "ai-rulez@latest", "mcp"]
-    transport: stdio
-    enabled: true
+```toml
+[[mcp_servers]]
+name = "ai-rulez"
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]
+transport = "stdio"
+enabled = true
+
+[[mcp_servers]]
+name = "custom-server"
+command = "python"
+args = ["-m", "my_mcp_server"]
+transport = "stdio"
 ```
 
 The MCP server exposes CRUD operations, validation, and generation to AI assistants.
@@ -279,14 +315,8 @@ The MCP server exposes CRUD operations, validation, and generation to AI assista
 
 27 built-in domains ship embedded in the binary — opinionated conventions ready to use without external includes:
 
-```yaml
-builtins:
-  - rust
-  - python
-  - typescript
-  - security
-  - testing
-  - default-commands
+```toml
+builtins = ["rust", "python", "typescript", "security", "testing", "default-commands"]
 ```
 
 - **Universal** (9): `ai-governance`\*, `agent-delegation`\*, `security`, `git-workflow`, `code-quality`, `testing`, `token-efficiency`, `documentation`, `default-commands`
