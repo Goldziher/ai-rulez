@@ -34,17 +34,22 @@ type BuiltinDomain struct {
 var autoIncludeDomains = map[string]bool{
 	"ai-governance":    true,
 	"agent-delegation": true,
+	"code-quality":     true,
+	"testing":          true,
+	"git-workflow":     true,
+	"security":         true,
+	"token-efficiency": true,
 }
 
 // registry maps builtin names to their metadata
 var registry = map[string]BuiltinDomain{
 	// Universal
 	"ai-governance":    {Name: "ai-governance", Category: CategoryUniversal, AutoInclude: true, Description: "AI agent behavior governance"},
-	"security":         {Name: "security", Category: CategoryUniversal, Description: "Security best practices and OWASP reference"},
-	"git-workflow":     {Name: "git-workflow", Category: CategoryUniversal, Description: "Git workflow and commit conventions"},
-	"code-quality":     {Name: "code-quality", Category: CategoryUniversal, Description: "Code readability, error handling, and complexity"},
-	"testing":          {Name: "testing", Category: CategoryUniversal, Description: "Testing conventions and best practices"},
-	"token-efficiency": {Name: "token-efficiency", Category: CategoryUniversal, Description: "Output efficiency and task automation"},
+	"security":         {Name: "security", Category: CategoryUniversal, AutoInclude: true, Description: "Security best practices and OWASP reference"},
+	"git-workflow":     {Name: "git-workflow", Category: CategoryUniversal, AutoInclude: true, Description: "Git workflow and commit conventions"},
+	"code-quality":     {Name: "code-quality", Category: CategoryUniversal, AutoInclude: true, Description: "Code readability, error handling, and complexity"},
+	"testing":          {Name: "testing", Category: CategoryUniversal, AutoInclude: true, Description: "Testing conventions and best practices"},
+	"token-efficiency": {Name: "token-efficiency", Category: CategoryUniversal, AutoInclude: true, Description: "Output efficiency and task automation"},
 	"documentation":    {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
 	"default-commands": {Name: "default-commands", Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
 	"agent-delegation": {Name: "agent-delegation", Category: CategoryUniversal, AutoInclude: true, Description: "Agent delegation instructions and listing in generated outputs"},

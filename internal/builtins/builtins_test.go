@@ -36,8 +36,14 @@ func TestIsAutoInclude(t *testing.T) {
 	t.Parallel()
 
 	assert.True(t, IsAutoInclude("ai-governance"))
+	assert.True(t, IsAutoInclude("security"))
+	assert.True(t, IsAutoInclude("code-quality"))
+	assert.True(t, IsAutoInclude("testing"))
+	assert.True(t, IsAutoInclude("git-workflow"))
+	assert.True(t, IsAutoInclude("token-efficiency"))
 	assert.False(t, IsAutoInclude("rust"))
-	assert.False(t, IsAutoInclude("security"))
+	assert.False(t, IsAutoInclude("docker"))
+	assert.False(t, IsAutoInclude("cicd"))
 }
 
 func TestResolveBuiltins(t *testing.T) {
@@ -48,6 +54,11 @@ func TestResolveBuiltins(t *testing.T) {
 		result := ResolveBuiltins([]string{})
 		assert.Contains(t, result, "ai-governance")
 		assert.Contains(t, result, "agent-delegation")
+		assert.Contains(t, result, "code-quality")
+		assert.Contains(t, result, "testing")
+		assert.Contains(t, result, "git-workflow")
+		assert.Contains(t, result, "security")
+		assert.Contains(t, result, "token-efficiency")
 	})
 
 	t.Run("explicit exclusion removes auto-include", func(t *testing.T) {
@@ -76,8 +87,12 @@ func TestResolveBuiltins(t *testing.T) {
 	t.Run("result is sorted", func(t *testing.T) {
 		t.Parallel()
 		result := ResolveBuiltins([]string{"python", "rust", "go"})
-		// Should be sorted: agent-delegation, ai-governance, go, python, rust
-		assert.Equal(t, []string{"agent-delegation", "ai-governance", "go", "python", "rust"}, result)
+		// Should be sorted and include all auto-includes + explicit
+		assert.Equal(t, []string{
+			"agent-delegation", "ai-governance", "code-quality",
+			"git-workflow", "go", "python", "rust",
+			"security", "testing", "token-efficiency",
+		}, result)
 	})
 
 	t.Run("default-commands included when requested", func(t *testing.T) {
