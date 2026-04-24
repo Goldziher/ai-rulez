@@ -30,7 +30,7 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--yes")
 	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath))
 
 	// Add a custom rule
@@ -66,18 +66,16 @@ func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "MultiProvider", "--yes")
 	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath))
 
 	// Update config to include multiple presets
 	currentConfig := testutil.ReadFile(s.T(), configPath)
 	updatedConfig := currentConfig + `
 # Add multiple presets
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
 `
-	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.yaml", updatedConfig)
+	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.toml", updatedConfig)
 
 	// Add rules for different providers
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",

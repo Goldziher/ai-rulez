@@ -74,15 +74,14 @@ func validateSkillSlice(skills []ContentFile, scope string) error {
 	return nil
 }
 
-// validateVersion checks that version is "3.0"
+// validateVersion checks that version is "3.0" or "4.0"
 func (c *Config) validateVersion() error {
-	if c.Version != "3.0" {
+	if c.Version != "3.0" && c.Version != "4.0" {
 		return oops.
 			With("field", "version").
 			With("actual_version", c.Version).
-			With("expected_version", "3.0").
-			Hint("Set version to \"3.0\" in your config file\nconfigurations must use version \"3.0\"").
-			Errorf("invalid version: expected \"3.0\", got %q", c.Version)
+			Hint("Set version to \"3.0\" or \"4.0\" in your config file").
+			Errorf("invalid version: expected \"3.0\" or \"4.0\", got %q", c.Version)
 	}
 	return nil
 }
