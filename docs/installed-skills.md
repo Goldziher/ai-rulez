@@ -30,18 +30,22 @@ ai-rulez skill remove kreuzberg
 
 ## Configuration
 
-Installed skills are defined in `.ai-rulez/config.yaml`:
+Installed skills are defined in `.ai-rulez/config.toml`:
 
-```yaml
-installed_skills:
-  - name: kreuzberg
-    source: https://github.com/kreuzberg-dev/kreuzberg
-  - name: ai-rulez
-    source: https://github.com/Goldziher/ai-rulez
-    ref: main
-  - name: custom-skill
-    source: https://github.com/org/repo
-    path: custom/skill/path    # defaults to skills/<name>
+```toml
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+
+[[installed_skills]]
+name = "ai-rulez"
+source = "https://github.com/Goldziher/ai-rulez"
+ref = "main"
+
+[[installed_skills]]
+name = "custom-skill"
+source = "https://github.com/org/repo"
+path = "custom/skill/path"    # defaults to skills/<name>
 ```
 
 ### Fields

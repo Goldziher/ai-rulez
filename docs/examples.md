@@ -1,6 +1,6 @@
 # Configuration Examples
 
-V3 uses a file-based directory structure (`.ai-rulez/`) instead of a single YAML file. These examples show how to organize your configuration across multiple markdown and YAML files.
+V4 uses a file-based directory structure (`.ai-rulez/`) with TOML configuration. These examples show how to organize your configuration across multiple markdown files and a `config.toml` file.
 
 ---
 
@@ -8,16 +8,13 @@ V3 uses a file-based directory structure (`.ai-rulez/`) instead of a single YAML
 
 The simplest V3 setup for a single team with basic rules.
 
-**`.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "My Project"
+**`.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "My Project"
 
-presets:
-  - claude
-  - cursor
-
-gitignore: true
+presets = ["claude", "cursor"]
+gitignore = true
 ```
 
 **`.ai-rulez/rules/code-quality.md`:**
@@ -57,25 +54,20 @@ ai-rulez generate
 
 For projects with multiple teams, use domains to organize team-specific content.
 
-**`.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "Platform"
+**`.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "Platform"
 
-presets:
-  - claude
-  - cursor
-  - gemini
+presets = ["claude", "cursor", "gemini"]
+default = "full"
+gitignore = true
 
-default: full
-
-profiles:
-  full: [backend, frontend, qa]
-  backend: [backend, qa]
-  frontend: [frontend, qa]
-  qa: [qa]
-
-gitignore: true
+[profiles]
+full = ["backend", "frontend", "qa"]
+backend = ["backend", "qa"]
+frontend = ["frontend", "qa"]
+qa = ["qa"]
 ```
 
 **`.ai-rulez/rules/security.md`:**
@@ -195,29 +187,25 @@ Use the @architecture-expert skill for design questions.
 
 For projects that need different output formats for different tools.
 
-**`.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "ML Research Platform"
-description: "Machine learning platform with team separation"
+**`.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "ML Research Platform"
+description = "Machine learning platform with team separation"
 
-presets:
-  - claude         # → CLAUDE.md
-  - cursor         # → .cursor/rules/
-  - gemini         # → GEMINI.md
-  - windsurf       # → .windsurf/rules/
-  - name: internal-guide
-    type: markdown
-    path: docs/AI_DEVELOPMENT_GUIDE.md
+presets = ["claude", "cursor", "gemini", "windsurf"]
+default = "full"
+gitignore = true
 
-default: full
+[[presets]]
+name = "internal-guide"
+type = "markdown"
+path = "docs/AI_DEVELOPMENT_GUIDE.md"
 
-profiles:
-  full: [research, infrastructure]
-  research: [research]
-  infrastructure: [infrastructure]
-
-gitignore: true
+[profiles]
+full = ["research", "infrastructure"]
+research = ["research"]
+infrastructure = ["infrastructure"]
 ```
 
 **`.ai-rulez/domains/research/rules/ml-standards.md`:**
@@ -305,19 +293,16 @@ profiles:
   full: [shared]
 ```
 
-**`/backend/.ai-rulez/config.yaml`** (Backend-specific):
-```yaml
-version: "3.0"
-name: "Backend Service"
+**`/backend/.ai-rulez/config.toml`** (Backend-specific):
+```toml
+version = "4.0"
+name = "Backend Service"
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
+default = "backend"
 
-default: backend
-
-profiles:
-  backend: [api, database]
+[profiles]
+backend = ["api", "database"]
 ```
 
 **`/backend/.ai-rulez/domains/api/rules/endpoints.md`:**
@@ -345,24 +330,17 @@ ai-rulez generate --recursive
 
 Use profiles for different deployment environments.
 
-**`.ai-rulez/config.yaml`:**
-```yaml
-version: "3.0"
-name: "Web Application"
+**`.ai-rulez/config.toml`:**
+```toml
+version = "4.0"
+name = "Web Application"
 
-presets:
-  - claude
+presets = ["claude"]
 
-profiles:
-  development:
-    - dev-guidelines
-  staging:
-    - staging-checks
-    - security-checks
-  production:
-    - production-critical
-    - security-hardened
-    - compliance
+[profiles]
+development = ["dev-guidelines"]
+staging = ["staging-checks", "security-checks"]
+production = ["production-critical", "security-hardened", "compliance"]
 ```
 
 **`.ai-rulez/domains/dev-guidelines/rules/debugging.md`:**

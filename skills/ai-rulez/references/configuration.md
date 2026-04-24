@@ -1,56 +1,56 @@
 # Configuration Reference
 
-## config.yaml Schema
+## config.toml Schema
 
-```yaml
-version: "3.0"              # Required, must be "3.0"
-name: my-project             # Required, project name
+```toml
+version = "4.0"              # Required, must be "4.0"
+name = "my-project"           # Required, project name
 
-description: ""              # Optional project description
+description = ""              # Optional project description
 
-presets:                     # Output presets to generate
-  - claude                   # Built-in preset (string)
-  - cursor
-  - name: custom             # Custom preset (object)
-    type: markdown           # markdown | directory | json
-    path: docs/AI_GUIDE.md
+presets = ["claude", "cursor"]  # Array of built-in presets (strings)
 
-default: ""                  # Default profile name
+default = ""                  # Default profile name
 
-profiles:                    # Profile → domain mappings
-  backend: [backend, shared]
-  frontend: [frontend, shared]
+gitignore = true              # Auto-update .gitignore (default: true)
 
-gitignore: true              # Auto-update .gitignore (default: true)
+builtins = true               # Enable all built-in domains
+# builtins = false            # Disable all built-in domains
+# builtins = ["go", "security", "!ai-governance"]  # Enable specific builtins
 
-builtins: true               # Enable all built-in domains
-# builtins: false            # Disable all built-in domains
-# builtins:                  # Enable specific builtins
-#   - go
-#   - security
-#   - "!ai-governance"       # Exclude auto-include
+[profiles]                    # Profile → domain mappings
+backend = ["backend", "shared"]
+frontend = ["frontend", "shared"]
 
-installed_skills:            # External skills to pull at generate time
-  - name: kreuzberg
-    source: https://github.com/kreuzberg-dev/kreuzberg
-    path: skills/kreuzberg   # Optional (defaults to skills/<name>)
-    ref: main                # Optional git ref
-    local_override: ../local  # Optional local dev path
+[[presets]]
+name = "custom"               # Custom preset (object)
+type = "markdown"             # markdown | directory | json
+path = "docs/AI_GUIDE.md"
 
-includes:                    # External content sources
-  - name: shared-rules
-    source: https://github.com/org/shared-rules
-    path: ""                 # Subdirectory within repo
-    ref: main                # Git ref
-    include: [rules, context, skills]  # Content types to import
-    merge_strategy: local-override     # local-override | include-override | error
-    install_to: ""           # Install as domain (e.g., "domains/backend")
-    local_override: ""       # Local dev path override
+[[installed_skills]]          # External skills to pull at generate time
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+path = "skills/kreuzberg"     # Optional (defaults to skills/<name>)
+ref = "main"                  # Optional git ref
+local_override = "../local"   # Optional local dev path
 
-header:
-  style: detailed            # detailed | compact | minimal
+[[includes]]                  # External content sources
+name = "shared-rules"
+source = "https://github.com/org/shared-rules"
+path = ""                     # Subdirectory within repo
+ref = "main"                  # Git ref
+include = ["rules", "context", "skills"]  # Content types to import
+merge_strategy = "local-override"  # local-override | include-override | error
+install_to = ""               # Install as domain (e.g., "domains/backend")
+local_override = ""           # Local dev path override
 
-## compression is deprecated and now a no-op — condense content at source level instead
+[header]
+style = "detailed"            # detailed | compact | minimal
+
+[mcp]
+[mcp.servers.default]
+command = "npx"
+args = ["ai-rulez@latest", "mcp"]
 ```
 
 ## Built-in Presets
@@ -102,6 +102,6 @@ description: "Desc"      # Description (skills, agents)
 
 ## Profile Resolution
 
-1. If `profiles["default"]` is explicitly defined → use it
+1. If `profiles.default` is explicitly defined → use it
 2. If no profiles are defined → include root + all domains
-3. If profiles exist but "default" is not among them → include root + builtin + FromInclude domains
+3. If profiles exist but `default` is not among them → include root + builtin + FromInclude domains

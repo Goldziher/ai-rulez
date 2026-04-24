@@ -207,26 +207,19 @@ priority: critical
 - Automated backups
 ```
 
-### Step 3: Update config.yaml
+### Step 3: Update config.toml
 
-```yaml
-version: "3.0"
-name: "my-platform"
+```toml
+version = "4.0"
+name = "my-platform"
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
+default = "full"
 
-default: full
-
-profiles:
-  full:
-    - backend
-    - frontend
-  backend:
-    - backend
-  frontend:
-    - frontend
+[profiles]
+full = ["backend", "frontend"]
+backend = ["backend"]
+frontend = ["frontend"]
 ```
 
 ### Step 4: Generate and test
@@ -523,12 +516,12 @@ To migrate to domains:
    mv backend-database.md database.md
    ```
 
-4. Update config.yaml:
-   ```yaml
-   profiles:
-     full: [backend, frontend]
-     backend: [backend]
-     frontend: [frontend]
+4. Update config.toml:
+   ```toml
+   [profiles]
+   full = ["backend", "frontend"]
+   backend = ["backend"]
+   frontend = ["frontend"]
    ```
 
 5. Test:

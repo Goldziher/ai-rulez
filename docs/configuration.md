@@ -1,69 +1,76 @@
 # Configuration Reference
 
-V3 configuration reference for `.ai-rulez/config.yaml`.
+V4 configuration reference for `.ai-rulez/config.toml` (defaults to TOML format).
 
 ## File-Based Configuration
 
-V3 uses a file-based approach where you edit files directly with your editor or use CRUD commands:
+V4 uses a file-based approach where you edit files directly with your editor or use CRUD commands:
 
-- **Configuration**: Edit `.ai-rulez/config.yaml` with any text editor
+- **Configuration**: Edit `.ai-rulez/config.toml` (TOML format) with any text editor
 - **Rules**: Add/edit `.ai-rulez/rules/*.md` files or use `ai-rulez add rule`
 - **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
 - **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent`
 - **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents}/*.md` files or use `ai-rulez domain add`
+- **MCP Servers**: Inline in `.ai-rulez/config.toml` (no separate mcp.yaml file)
 
 You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
 
 ## Basic Structure
 
-The minimal valid V3 configuration:
+The minimal valid V4 configuration:
 
-```yaml
-version: "3.0"
-name: my-project
+```toml
+version = "4.0"
+name = "my-project"
 ```
 
 A typical production configuration:
 
-```yaml
-version: "3.0"
-name: my-project
-description: My project description
+```toml
+version = "4.0"
+name = "my-project"
+description = "My project description"
 
-presets:
-  - claude
-  - cursor
-  - gemini
+presets = ["claude", "cursor", "gemini"]
 
-default: full
+default = "full"
 
-profiles:
-  full: [backend, frontend, qa]
-  backend: [backend, qa]
-  frontend: [frontend, qa]
+[profiles.full]
+domains = ["backend", "frontend", "qa"]
 
-gitignore: true
+[profiles.backend]
+domains = ["backend", "qa"]
+
+[profiles.frontend]
+domains = ["frontend", "qa"]
+
+gitignore = true
+
+[[mcp_servers]]
+name = "ai-rulez"
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]
 ```
 
 ## Required Fields
 
 ### `version`
 
-The V3 schema version. Must be exactly `"3.0"`.
+The V4 schema version. Must be `"4.0"` (V3 `"3.0"` is still accepted for backward compatibility).
 
-```yaml
-version: "3.0"
+```toml
+version = "4.0"
 ```
 
 ### `name`
 
 The project name. Used in generated files and displayed in headers.
 
-```yaml
-name: "My Project"
-name: "acme-platform"
-name: "backend-api"
+```toml
+name = "My Project"
+name = "acme-platform"
+name = "backend-api"
 ```
 
 ## Optional Fields
@@ -72,8 +79,8 @@ name: "backend-api"
 
 Brief description of the project or configuration.
 
-```yaml
-description: "SaaS platform with React frontend and Go backend"
+```toml
+description = "SaaS platform with React frontend and Go backend"
 ```
 
 ### `presets`
@@ -82,39 +89,41 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 
 #### Built-in Presets
 
-```yaml
-presets:
-  - claude          # → CLAUDE.md
-  - cursor          # → .cursorrules
-  - gemini          # → GEMINI.md
-  - copilot         # → .github/copilot-instructions.md
-  - windsurf        # → .windsurf/rules/
-  - continue-dev    # → .continue/config.py
-  - cline           # → .clinerules/
+```toml
+presets = [
+  "claude",       # → CLAUDE.md
+  "cursor",       # → .cursorrules
+  "gemini",       # → GEMINI.md
+  "copilot",      # → .github/copilot-instructions.md
+  "windsurf",     # → .windsurf/rules/
+  "continue-dev", # → .continue/config.py
+  "cline"         # → .clinerules/
+]
 ```
 
 #### Custom Presets
 
 For tools not in the built-in list:
 
-```yaml
-presets:
-  - name: my-tool
-    type: markdown          # or: directory, json
-    path: docs/MY_TOOL.md
-    template: |
-      # {{ .Name }}
-      {{ range .Rules }}
-      - **{{ .Name }}**: {{ .Content }}
-      {{ end }}
+```toml
+[[presets]]
+name = "my-tool"
+type = "markdown"  # or: directory, json
+path = "docs/MY_TOOL.md"
+template = """
+# {{ .Name }}
+{{ range .Rules }}
+- **{{ .Name }}**: {{ .Content }}
+{{ end }}
+"""
 ```
 
 ### `default`
 
 The default profile name used when `ai-rulez generate` is run without `--profile`.
 
-```yaml
-default: full
+```toml
+default = "full"
 ```
 
 If not specified, all domains are included.
@@ -123,23 +132,21 @@ If not specified, all domains are included.
 
 Named profiles that specify which domains to include in generation.
 
-```yaml
-profiles:
-  full:
-    - backend
-    - frontend
-    - qa
-  backend:
-    - backend
-    - qa
-  frontend:
-    - frontend
-    - qa
-  qa:
-    - qa
+```toml
+[profiles.full]
+domains = ["backend", "frontend", "qa"]
+
+[profiles.backend]
+domains = ["backend", "qa"]
+
+[profiles.frontend]
+domains = ["frontend", "qa"]
+
+[profiles.qa]
+domains = ["qa"]
 ```
 
-Each profile is a list of domain names. When generating with a profile:
+Each profile specifies a list of domain names. When generating with a profile:
 1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`) is included
 2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
 
@@ -147,12 +154,60 @@ Each profile is a list of domain names. When generating with a profile:
 
 Controls whether `ai-rulez` automatically updates `.gitignore` with generated files.
 
-```yaml
-gitignore: true    # Default: update .gitignore automatically
-gitignore: false   # Manual .gitignore management
+```toml
+gitignore = true   # Default: update .gitignore automatically
+gitignore = false  # Manual .gitignore management
 ```
 
 When `true`, generated files are added to `.gitignore` to prevent accidental commits.
+
+### `mcp_servers`
+
+Inline MCP (Model Context Protocol) server definitions. No separate `mcp.yaml` file needed.
+
+```toml
+[[mcp_servers]]
+name = "ai-rulez"
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]
+
+[[mcp_servers]]
+name = "github"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env = { GITHUB_TOKEN = "your-token" }
+```
+
+Each entry supports:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Unique server identifier |
+| `command` | Yes | Command to run (npx, uvx, ai-rulez, etc.) |
+| `args` | No | Array of command arguments |
+| `env` | No | Environment variables as key-value pairs |
+
+### `plugins`
+
+Plugin configuration for extending AI-Rulez functionality.
+
+```toml
+[[plugins]]
+name = "my-plugin"
+source = "https://github.com/org/plugin"
+version = "1.0.0"
+```
+
+### `marketplaces`
+
+Marketplace integrations for discovering and installing extensions.
+
+```toml
+[[marketplaces]]
+name = "official"
+url = "https://marketplace.ai-rulez.io"
+enabled = true
+```
 
 ### `builtins`
 
@@ -160,36 +215,28 @@ Enables built-in domains that ship embedded in the `ai-rulez` binary. These prov
 
 #### Enable all builtins
 
-```yaml
-builtins: true
+```toml
+builtins = true
 ```
 
 #### Disable all builtins (including auto-includes)
 
-```yaml
-builtins: false
+```toml
+builtins = false
 ```
 
 #### Enable specific builtins
 
-```yaml
-builtins:
-  - rust
-  - python
-  - pyo3
-  - security
-  - git-workflow
-  - default-commands
+```toml
+builtins = ["rust", "python", "pyo3", "security", "git-workflow", "default-commands"]
 ```
 
 #### Exclude auto-included builtins
 
 `ai-governance` is auto-included whenever builtins are configured. Exclude it with `!`:
 
-```yaml
-builtins:
-  - rust
-  - "!ai-governance"
+```toml
+builtins = ["rust", "!ai-governance"]
 ```
 
 #### Available Built-in Domains
@@ -263,11 +310,11 @@ If a local domain has the same name as a builtin, the local domain is used and t
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
 
-```yaml
-header:
-  style: detailed    # Default: comprehensive header with full documentation
-  style: compact     # Shorter header with key information
-  style: minimal     # Bare minimum header
+```toml
+[header]
+style = "detailed"  # Default: comprehensive header with full documentation
+# style = "compact"  # Shorter header with key information
+# style = "minimal"  # Bare minimum header
 ```
 
 #### Header Styles
@@ -394,17 +441,21 @@ Docs: https://github.com/Goldziher/ai-rulez
 
 Named skills installed from external repositories. Skills are fetched dynamically during `ai-rulez generate` and included in outputs. See [Installed Skills](installed-skills.md) for full details.
 
-```yaml
-installed_skills:
-  - name: kreuzberg
-    source: https://github.com/kreuzberg-dev/kreuzberg
-  - name: ai-rulez
-    source: https://github.com/Goldziher/ai-rulez
-    ref: main
-  - name: custom-lib
-    source: https://github.com/org/repo
-    path: libs/custom        # defaults to skills/<name>
-    local_override: ../local  # use local path for development
+```toml
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+
+[[installed_skills]]
+name = "ai-rulez"
+source = "https://github.com/Goldziher/ai-rulez"
+ref = "main"
+
+[[installed_skills]]
+name = "custom-lib"
+source = "https://github.com/org/repo"
+path = "libs/custom"       # defaults to skills/<name>
+local_override = "../local" # use local path for development
 ```
 
 Each entry supports:
@@ -599,16 +650,14 @@ A warning is logged if collisions are detected:
 
 ### Small Project (Single Team)
 
-```yaml
-version: "3.0"
-name: "My Startup"
-description: "Early-stage SaaS with React + Go"
+```toml
+version = "4.0"
+name = "My Startup"
+description = "Early-stage SaaS with React + Go"
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
 
-gitignore: true
+gitignore = true
 ```
 
 Directory structure:
@@ -627,26 +676,31 @@ Directory structure:
 
 ### Medium Project (Multiple Teams)
 
-```yaml
-version: "3.0"
-name: "Enterprise Platform"
-description: "Multi-team SaaS platform"
+```toml
+version = "4.0"
+name = "Enterprise Platform"
+description = "Multi-team SaaS platform"
 
-presets:
-  - claude
-  - cursor
-  - gemini
+presets = ["claude", "cursor", "gemini"]
 
-default: full
+default = "full"
 
-profiles:
-  full: [backend, frontend, qa, devops]
-  backend: [backend, qa]
-  frontend: [frontend, qa]
-  qa: [qa]
-  devops: [devops]
+[profiles.full]
+domains = ["backend", "frontend", "qa", "devops"]
 
-gitignore: true
+[profiles.backend]
+domains = ["backend", "qa"]
+
+[profiles.frontend]
+domains = ["frontend", "qa"]
+
+[profiles.qa]
+domains = ["qa"]
+
+[profiles.devops]
+domains = ["devops"]
+
+gitignore = true
 ```
 
 Directory structure:
@@ -681,29 +735,33 @@ Directory structure:
 
 ### Complex Project (Multiple Presets)
 
-```yaml
-version: "3.0"
-name: "Advanced ML Platform"
-description: "Research platform with team separation"
+```toml
+version = "4.0"
+name = "Advanced ML Platform"
+description = "Research platform with team separation"
 
-presets:
-  - claude
-  - cursor
-  - gemini
-  - windsurf
-  - name: internal-guide
-    type: markdown
-    path: docs/AI_DEVELOPMENT_GUIDE.md
+presets = ["claude", "cursor", "gemini", "windsurf"]
 
-default: full
+[[presets]]
+name = "internal-guide"
+type = "markdown"
+path = "docs/AI_DEVELOPMENT_GUIDE.md"
 
-profiles:
-  full: [research, ml-ops, infrastructure, frontend]
-  research: [research]
-  ml-ops: [ml-ops, infrastructure]
-  frontend: [frontend]
+default = "full"
 
-gitignore: true
+[profiles.full]
+domains = ["research", "ml-ops", "infrastructure", "frontend"]
+
+[profiles.research]
+domains = ["research"]
+
+[profiles.ml-ops]
+domains = ["ml-ops", "infrastructure"]
+
+[profiles.frontend]
+domains = ["frontend"]
+
+gitignore = true
 ```
 
 ## Profile Design Patterns
@@ -712,58 +770,63 @@ gitignore: true
 
 For projects with a single team, skip domains entirely:
 
-```yaml
-version: "3.0"
-name: simple-project
-presets:
-  - claude
-  - cursor
+```toml
+version = "4.0"
+name = "simple-project"
+presets = ["claude", "cursor"]
 ```
 
 ### Multi-Team Monorepo
 
 For monorepos with multiple independent teams:
 
-```yaml
-version: "3.0"
-name: platform
-presets:
-  - claude
-  - cursor
+```toml
+version = "4.0"
+name = "platform"
+presets = ["claude", "cursor"]
 
-default: full
+default = "full"
 
-profiles:
-  full: [backend, frontend, mobile]
-  backend: [backend]
-  frontend: [frontend]
-  mobile: [mobile]
+[profiles.full]
+domains = ["backend", "frontend", "mobile"]
+
+[profiles.backend]
+domains = ["backend"]
+
+[profiles.frontend]
+domains = ["frontend"]
+
+[profiles.mobile]
+domains = ["mobile"]
 ```
 
 ### Environment-Based Profiles
 
 For different behavior in dev, staging, production:
 
-```yaml
-version: "3.0"
-name: saas-app
-presets:
-  - claude
+```toml
+version = "4.0"
+name = "saas-app"
+presets = ["claude"]
 
-default: production
+default = "production"
 
-profiles:
-  development: [dev-guidelines]
-  staging: [staging-guidelines]
-  production: [production-guidelines, security-hardened]
+[profiles.development]
+domains = ["dev-guidelines"]
+
+[profiles.staging]
+domains = ["staging-guidelines"]
+
+[profiles.production]
+domains = ["production-guidelines", "security-hardened"]
 ```
 
 ## Validation
 
-V3 configurations are validated against the JSON schema:
+V4 configurations are validated against the JSON schema:
 
 ```
-schema/ai-rules-v3.schema.json
+schema/ai-rules.schema.json
 ```
 
 To validate your configuration:
@@ -773,10 +836,11 @@ ai-rulez validate
 ```
 
 This checks:
-- `version` is exactly `"3.0"`
+- `version` is `"4.0"` or `"3.0"` (for backward compatibility)
 - `name` is present and non-empty
 - All preset names are valid
 - File paths are valid
+- MCP server definitions are well-formed
 
 ## Programmatic Modification with CRUD Operations
 

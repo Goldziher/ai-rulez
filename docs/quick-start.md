@@ -4,16 +4,16 @@ Get AI-Rulez running in 5 minutes.
 
 ## Step 1: Initialize Your Project
 
-Create a new V3 configuration:
+Create a new V4 configuration:
 
 ```bash
-ai-rulez init "my-project" --v3
+ai-rulez init "my-project"
 ```
 
 This creates a `.ai-rulez/` directory with:
 ```
 .ai-rulez/
-├── config.yaml
+├── config.toml
 ├── rules/
 │   └── example-rule.md
 ├── context/
@@ -23,32 +23,27 @@ This creates a `.ai-rulez/` directory with:
 │   │   └── SKILL.md
 │   └── ai-rulez/
 │       └── SKILL.md
-├── agents/
-└── mcp.yaml
+└── agents/
 ```
 
 ## Step 2: Configure Your Presets
 
-Edit `.ai-rulez/config.yaml` to specify which tools to generate for:
+Edit `.ai-rulez/config.toml` to specify which tools to generate for:
 
-```yaml
-version: "3.0"
-name: "my-project"
-description: "My awesome project"
+```toml
+version = "4.0"
+name = "my-project"
+description = "My awesome project"
 
 # Tools to generate configuration for
-presets:
-  - claude           # Generates CLAUDE.md
-  - cursor           # Generates .cursor/rules/
-  - gemini           # Generates GEMINI.md
+presets = ["claude", "cursor", "gemini"]
 
 # Default profile when none specified
-default: full
+default = "full"
 
 # Named profiles for different team needs
-profiles:
-  full:
-    - []             # Empty = root content only
+[profiles.full]
+domains = []  # Empty = root content only
 ```
 
 ## Step 3: Add Your Rules
@@ -177,25 +172,23 @@ priority: critical
 - Index foreign keys
 ```
 
-**3. Update `config.yaml`:**
-```yaml
-version: "3.0"
-name: "my-platform"
+**3. Update `config.toml`:**
+```toml
+version = "4.0"
+name = "my-platform"
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
 
-default: full
+default = "full"
 
-profiles:
-  full:
-    - backend
-    - frontend
-  backend:
-    - backend
-  frontend:
-    - frontend
+[profiles.full]
+domains = ["backend", "frontend"]
+
+[profiles.backend]
+domains = ["backend"]
+
+[profiles.frontend]
+domains = ["frontend"]
 ```
 
 **4. Generate for specific teams:**
@@ -237,26 +230,21 @@ mkdir -p .ai-rulez/domains/newdomain/context
 
 ### Change Tool Configuration
 
-Edit presets in `config.yaml`:
+Edit presets in `config.toml`:
 
-```yaml
-presets:
-  - claude
-  - cursor
-  - windsurf        # Add Windsurf
-  - copilot         # Add Copilot
+```toml
+presets = ["claude", "cursor", "windsurf", "copilot"]
 ```
 
 ### Create Custom Output
 
 For tools not in the built-in list:
 
-```yaml
-presets:
-  - claude
-  - name: my-tool
-    type: markdown
-    path: docs/MY_TOOL.md
+```toml
+[[presets]]
+name = "my-tool"
+type = "markdown"
+path = "docs/MY_TOOL.md"
 ```
 
 ## Troubleshooting
