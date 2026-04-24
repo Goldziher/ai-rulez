@@ -114,7 +114,7 @@ func TestLoadDomainContent(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("ai-governance")
 		require.NoError(t, err)
-		assert.Len(t, entries, 6) // 6 rules
+		assert.Len(t, entries, 7) // 7 rules
 		for _, e := range entries {
 			assert.Equal(t, "rules", e.Type)
 			assert.NotEmpty(t, e.Content)
