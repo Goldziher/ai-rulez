@@ -88,7 +88,7 @@ jobs:
       - name: Check links
         uses: lycheeverse/lychee-action@v2
         with:
-          args: "--config .lychee.toml site/"
+          args: "--config .lychee.toml --base site/ site/"
           fail: true
 
   deploy:
