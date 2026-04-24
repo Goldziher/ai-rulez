@@ -2,20 +2,11 @@
 
 [project]
 name = "ai-rulez-docs"
-version = "3.14.2"
+version = "4.0.0"
 description = "Documentation environment for ai-rulez"
 authors = [{ name = "Na'aman Hirschfeld" }]
 requires-python = ">=3.13"
 dependencies = []
 
 [tool.uv]
-dev-dependencies = [
-  "mkdocs>=1.6.1",
-  "mkdocs-material[imaging]>=9.6.18",
-  "mkdocs-git-revision-date-localized-plugin>=1.4.5",
-  "mkdocs-minify-plugin>=0.8.0",
-  "mkdocstrings[python]>=0.29.0",
-  "pillow>=10.2.0",
-  "cairosvg>=2.8.0",
-  "pre-commit>=4.3.0",
-]
+dev-dependencies = ["zensical"]
