@@ -1,7 +1,7 @@
 {
   "name": "ai-rulez",
   "version": "4.0.1",
-  "description": "Directory-based AI governance for Claude, Cursor, Copilot, Windsurf and 19+ tools",
+  "description": "Complete AI development workflow for 19+ tools with builtin rules, agents, and conventions",
   "bin": {
     "ai-rulez": "./bin/ai-rulez"
   },
