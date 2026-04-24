@@ -26,7 +26,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 4, // 3 directories (.windsurf, .windsurf/rules, .windsurf/skills) + 1 file
+			wantOutputs: 5, // 4 directories (.windsurf, .windsurf/rules, .windsurf/skills, .windsurf/agents) + 1 file
 			wantErr:     false,
 		},
 		{
@@ -44,7 +44,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 5, // 3 directories + 2 files
+			wantOutputs: 6, // 4 directories + 2 files
 			wantErr:     false,
 		},
 	}
@@ -218,13 +218,14 @@ func TestWindsurfPresetGenerator_GetOutputPaths(t *testing.T) {
 	g := &WindsurfPresetGenerator{}
 	baseDir := "/test/base"
 	paths := g.GetOutputPaths(baseDir)
-	if len(paths) != 3 {
-		t.Errorf("GetOutputPaths() returned %d paths, want 3", len(paths))
+	if len(paths) != 4 {
+		t.Errorf("GetOutputPaths() returned %d paths, want 4", len(paths))
 	}
 	expectedPaths := []string{
 		filepath.Join(baseDir, ".windsurf"),
 		filepath.Join(baseDir, ".windsurf", "rules"),
 		filepath.Join(baseDir, ".windsurf", "skills"),
+		filepath.Join(baseDir, ".windsurf", "agents"),
 	}
 	for i, want := range expectedPaths {
 		if i < len(paths) && paths[i] != want {

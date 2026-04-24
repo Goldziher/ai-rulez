@@ -10,7 +10,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/migration"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
@@ -24,7 +23,6 @@ var (
 	skipCLIMCP      bool
 	noFetch         bool
 	profile         string
-	autoMigrate     string // "true", "false", or "ask" (default)
 )
 
 var GenerateCmd = &cobra.Command{
@@ -44,8 +42,7 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "no-configure-cli-mcp", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
-	GenerateCmd.Flags().StringVar(&profile, "profile", "", "Profile to generate (V3 only, default: from config or 'default')")
-	GenerateCmd.Flags().StringVar(&autoMigrate, "auto-migrate", "ask", "Auto-migrate V2 config: true (auto-migrate), false (skip), ask (prompt)")
+	GenerateCmd.Flags().StringVar(&profile, "profile", "", "Profile to generate (default: from config or 'default')")
 	GenerateCmd.Flags().BoolVar(&noFetch, "no-fetch", false, "Skip fetching remote includes, use cached content only")
 }
 
@@ -67,29 +64,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	ctx := context.Background()
 
-	// Check for V2 config and handle auto-migration
-	configVersion, err := config.DetectConfigVersion(workingDir)
-	if err != nil {
-		fmtError(err)
-		os.Exit(1)
-	}
-
-	// Handle V2 config migration
-	if configVersion == "v2" {
-		if shouldAutoMigrateV2(workingDir) {
-			progress.PrintlnIfNotQuiet("Migrating V2 configuration to V3...")
-			if err := performAutoMigration(ctx, workingDir); err != nil {
-				fmtError(err)
-				os.Exit(1)
-			}
-			progress.PrintlnIfNotQuiet("Migration completed successfully!")
-		} else {
-			logger.Error("V2 configuration detected", "hint", "Run 'ai-rulez migrate v3' to migrate to V3 first")
-			os.Exit(1)
-		}
-	}
-
-	// V3 - load and generate
+	// Load configuration
 	cfg, err := config.LoadConfigV3(ctx, workingDir)
 	if err != nil {
 		fmtError(err)
@@ -102,11 +77,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Create V3 generator
+	// Create generator
 	gen := generator.NewGeneratorV3(cfg)
 
 	if dryRun {
-		progress.PrintlnIfNotQuiet("Note: --dry-run not yet supported for V3 configs")
+		progress.PrintlnIfNotQuiet("Note: --dry-run not yet supported")
 		return
 	}
 
@@ -159,7 +134,7 @@ func findConfigFilesRecursively() []string {
 }
 
 func isV3ConfigFile(path string) bool {
-	// Check for V3 config structure: .ai-rulez directory with config.yaml, ai-rulez.yaml, or ai-rulez.json
+	// Check for config file structure: .ai-rulez directory with config.yaml, ai-rulez.yaml, or ai-rulez.json
 	dir := filepath.Dir(path)
 	base := filepath.Base(path)
 	return filepath.Base(dir) == ".ai-rulez" && (base == "config.yaml" || base == "ai-rulez.yaml" || base == "ai-rulez.json")
@@ -196,11 +171,11 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 		return 0
 	}
 
-	// Create V3 generator
+	// Create generator
 	gen := generator.NewGeneratorV3(cfg)
 
 	if dryRun {
-		progress.PrintlnIfNotQuiet("  Note: dry-run not yet supported for V3 configs")
+		progress.PrintlnIfNotQuiet("  Note: dry-run not yet supported")
 		fileCounter.FinishFile()
 		return 0
 	}
@@ -215,67 +190,6 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 
 	// Count generated files (estimate based on presets)
 	return len(cfg.Presets) * 3 // Rough estimate
-}
-
-// shouldAutoMigrateV2 determines whether to auto-migrate a V2 config based on --auto-migrate flag
-func shouldAutoMigrateV2(workingDir string) bool {
-	const (
-		valYes = "yes"
-	)
-	switch autoMigrate {
-	case "true", valYes, "1":
-		return true
-	case "false", "no", "0":
-		return false
-	case "ask", "":
-		// In interactive mode, prompt the user
-		return progress.PromptYesNo("V2 config detected. Migrate to V3?", true)
-	default:
-		// Invalid value, default to prompting
-		logger.Warn("Invalid auto-migrate value, treating as 'ask'", "value", autoMigrate)
-		return progress.PromptYesNo("V2 config detected. Migrate to V3?", true)
-	}
-}
-
-// performAutoMigration performs the V2 to V3 migration during generate
-func performAutoMigration(ctx context.Context, workingDir string) error {
-	absWorkingDir, err := filepath.Abs(workingDir)
-	if err != nil {
-		return oops.
-			With("path", workingDir).
-			Wrapf(err, "resolve working directory path")
-	}
-
-	// Find V2 config file
-	v2ConfigPath := detectV2Config()
-	if v2ConfigPath == "" {
-		return oops.
-			Errorf("no V2 config file found (expected ai-rulez.yaml or ai-rulez.yml)")
-	}
-
-	absV2ConfigPath, err := filepath.Abs(v2ConfigPath)
-	if err != nil {
-		return oops.
-			With("path", v2ConfigPath).
-			Wrapf(err, "resolve V2 config path")
-	}
-
-	// Create migrator
-	migrator := &migration.V2ToV3Migrator{}
-	// Initialize migrator with correct package path
-	*migrator = *migration.NewV2ToV3Migrator(absV2ConfigPath, absWorkingDir)
-
-	// Perform migration
-	if err := migrator.Migrate(ctx); err != nil {
-		return oops.
-			With("v2_config", absV2ConfigPath).
-			Wrapf(err, "migrate V2 to V3")
-	}
-
-	// Delete backup directory if it exists (migration was successful)
-	DeleteBackupDirectory(absWorkingDir)
-
-	return nil
 }
 
 func fmtError(err error) {

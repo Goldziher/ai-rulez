@@ -6,12 +6,14 @@ import (
 
 	"github.com/Goldziher/ai-rulez/cmd/commands"
 	_ "github.com/Goldziher/ai-rulez/internal/includes" // Register includes resolver callback
+	"github.com/Goldziher/ai-rulez/schema"
 )
 
 var version = "dev"
 
 func main() {
 	commands.Version = version
+	schema.Version = version
 
 	if err := commands.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)

@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -8,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"gopkg.in/yaml.v3"
 )
 
 func init() {
@@ -43,6 +45,7 @@ func (g *ClinePresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".clinerules"),
 		filepath.Join(baseDir, ".cline"),
 		filepath.Join(baseDir, ".cline", "skills"),
+		filepath.Join(baseDir, ".cline", "agents"),
 	}
 }
 
@@ -98,6 +101,44 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		)
 	}
 
+	// Generate context files as rule-like files in .clinerules/
+	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	for _, ctx := range allContext {
+		sanitized := sanitizeName(ctx.Name)
+		var ctxBuilder strings.Builder
+		ctxBuilder.WriteString("# ")
+		ctxBuilder.WriteString(ctx.Name)
+		ctxBuilder.WriteString("\n\n")
+		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+		ctxBuilder.WriteString(processedContent)
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".clinerules", "context-"+sanitized+".md"),
+			Content: ctxBuilder.String(),
+		})
+	}
+
+	// Add .cline/agents directory
+	outputs = append(outputs, config.OutputFileV3{
+		Path:  filepath.Join(baseDir, ".cline", "agents"),
+		IsDir: true,
+	})
+
+	// Generate agent files to .cline/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderClineAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".cline", "agents", agentID+".md"),
+			Content: agentContent,
+		})
+	}
+
 	return outputs, nil
 }
 
@@ -142,4 +183,43 @@ func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *conf
 	builder.WriteString(processedContent)
 
 	return builder.String()
+}
+
+// renderClineAgentFile renders an agent file with YAML frontmatter for Cline
+func (g *ClinePresetGenerator) renderClineAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildClineAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildClineAgentFrontmatter builds frontmatter for a Cline agent file
+func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	clineFields := []string{"description", "model", "tools"}
+	for _, field := range clineFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }

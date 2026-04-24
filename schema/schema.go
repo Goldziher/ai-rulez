@@ -11,19 +11,38 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed ai-rules-v2.schema.json
-var schemaV2JSON []byte
-
 //go:embed ai-rules-v3.schema.json
 var schemaV3JSON []byte
+
+// Version is the CLI version, set at startup. Defaults to "dev".
+var Version = "dev"
+
+const (
+	schemaBaseURL    = "https://raw.githubusercontent.com/Goldziher/ai-rulez"
+	ConfigSchemaFile = "ai-rules-v3.schema.json"
+	MCPSchemaFile    = "ai-rules-v3-mcp.schema.json"
+)
+
+// SchemaURL returns the full URL for a schema file, versioned to match the CLI.
+// When Version is "dev", it falls back to the "main" branch.
+func SchemaURL(filename string) string {
+	ref := "main"
+	if Version != "dev" {
+		ref = "v" + Version
+	}
+	return fmt.Sprintf("%s/%s/schema/%s", schemaBaseURL, ref, filename)
+}
 
 var compiler = jsonschema.NewCompiler()
 
 const propertiesField = "properties"
 
-// ValidateWithSchema validates configuration data against the V2 schema (default)
+// ValidateWithSchema is deprecated - V2 schemas are no longer supported.
+// This function is kept for backward compatibility but no longer validates V2 configurations.
+// Use ValidateWithSchemaV3 instead.
 func ValidateWithSchema(configData []byte) error {
-	return validateWithSchemaBytes(configData, schemaV2JSON, "v2")
+	// V2 support has been removed. Treat as V3 validation.
+	return ValidateWithSchemaV3(configData)
 }
 
 // ValidateWithSchemaV3 validates configuration data against the V3 schema
@@ -56,13 +75,7 @@ func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version stri
 	result := schema.Validate(jsonData)
 	if !result.IsValid() {
 		validationErrors := extractDetailedErrors(result)
-		hint := "Check the YAML syntax using a YAML validator\nEnsure all required fields are present\nRun 'ai-rulez validate' for detailed validation output"
-		switch version {
-		case "v2":
-			hint = "Check the YAML syntax using a YAML validator\nEnsure all required fields are present (metadata.name, outputs)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output"
-		case "v3":
-			hint = "Check the YAML/JSON syntax using a validator\nEnsure required fields are present (version: \"3.0\", name)\nVerify the structure matches the V3 schema\nRun 'ai-rulez validate' for detailed validation output"
-		}
+		hint := "Check the YAML/JSON syntax using a validator\nEnsure required fields are present (version: \"3.0\", name)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output"
 		return oops.
 			With("errors", validationErrors).
 			With("error_count", len(validationErrors)).
