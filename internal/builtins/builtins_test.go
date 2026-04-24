@@ -129,18 +129,28 @@ func TestLoadDomainContent(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("ai-governance")
 		require.NoError(t, err)
-		assert.Len(t, entries, 7) // 7 rules
+		assert.Len(t, entries, 11) // 9 rules + 2 agents
+
+		ruleCount := 0
+		agentCount := 0
 		for _, e := range entries {
-			assert.Equal(t, "rules", e.Type)
 			assert.NotEmpty(t, e.Content)
+			switch e.Type {
+			case "rules":
+				ruleCount++
+			case "agents":
+				agentCount++
+			}
 		}
+		assert.Equal(t, 9, ruleCount)
+		assert.Equal(t, 2, agentCount)
 	})
 
 	t.Run("loads security domain with rules and context", func(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("security")
 		require.NoError(t, err)
-		assert.Len(t, entries, 5) // 4 rules + 1 context
+		assert.Len(t, entries, 6) // 4 rules + 1 context + 1 agent
 
 		ruleCount := 0
 		contextCount := 0
