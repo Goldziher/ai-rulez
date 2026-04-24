@@ -16,7 +16,7 @@ except FileNotFoundError:
 setup(
     name="ai-rulez",
     version=VERSION,
-    description="⚡ One config to rule them all. Centralized AI assistant configuration management - generate rules for Claude, Cursor, Copilot, Windsurf and more from a single YAML file.",
+    description="Complete AI development workflow for 19+ tools. Ships with builtin rules, agents, and conventions. Generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex and more from a single source.",
     long_description=long_description,
     long_description_content_type="text/markdown",
     author="Na'aman Hirschfeld",

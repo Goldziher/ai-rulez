@@ -1,7 +1,7 @@
 {
   "name": "ai-rulez",
   "version": "4.0.1",
-  "description": "Directory-based AI governance for Claude, Cursor, Copilot, Windsurf and 19+ tools. Define rules, context, skills and agents in .ai-rulez/ — generate synchronized configs for all your AI assistants.",
+  "description": "Complete AI development workflow for 19+ tools. Ships with builtin rules, agents, and conventions. Generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex and more from a single source.",
   "keywords": [
     "ai",
     "ai-assistant",

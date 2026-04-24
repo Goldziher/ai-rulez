@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.2] - 2026-04-24
+
+### Added
+- **Builtin agents**: code-reviewer, test-writer, security-auditor, docs-writer, devops-engineer, release-engineer — specialized agents shipped with the tool, ready to use as subagents.
+- **New rules** (adapted from superpowers patterns): verification-before-completion, systematic-debugging, testing-anti-patterns.
+- **Strengthened TDD rule**: iron law enforcement — wrote code before the test? Delete it, start over, no exceptions.
+
+### Changed
+- **README redesigned**: value-first structure showing builtin capabilities, agents, and full development workflow.
+- **Package descriptions updated** across npm, PyPI, and GitHub to reflect complete workflow capabilities.
+
 ## [4.0.1] - 2026-04-24
 
 ### Added
