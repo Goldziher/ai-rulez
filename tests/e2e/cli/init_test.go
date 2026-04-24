@@ -115,17 +115,6 @@ func (s *InitCLITestSuite) TestInitSkipContent() {
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 }
 
-func (s *InitCLITestSuite) TestInitSkipMCP() {
-	result := testutil.RunCLIWithEnv(s.T(), s.workingDir, map[string]string{
-		"NO_INTERACTIVE": "1",
-	}, "init", "SkipMCPProject", "--skip-mcp", "--yes")
-
-	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
-
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
-	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
-}
-
 func (s *InitCLITestSuite) TestInitExistingConfig() {
 	// V3 uses .ai-rulez/ directory instead of ai-rulez.yaml file
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")

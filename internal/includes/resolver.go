@@ -348,11 +348,6 @@ func (r *Resolver) mergeDomainContent(target *config.Domain, include *config.Con
 		merged.Commands = mergeContentFiles(target.Commands, include.Commands, true)
 	}
 
-	// Copy MCPServers
-	if target.MCPServers != nil {
-		merged.MCPServers = target.MCPServers
-	}
-
 	return merged
 }
 

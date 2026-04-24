@@ -27,9 +27,6 @@ const (
 	commandsDir        = "commands"
 	domainsDir         = "domains"
 	skillMarkerFile    = "SKILL.md"
-	mcpTOMLFilename    = "mcp.toml"
-	mcpYAMLFilename    = "mcp.yaml"
-	mcpJSONFilename    = "mcp.json"
 )
 
 // DetectConfigVersion detects whether a directory contains V2 or configuration
@@ -126,13 +123,8 @@ func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
 	// Set runtime fields
 	config.BaseDir = absDir
 
-	// Load root MCP servers (optional - don't fail if missing)
-	rootMCPServers, err := loadMCPServers(configDir)
-	if err != nil {
-		logger.Warn("Failed to load root MCP servers", "error", err)
-		rootMCPServers = make(map[string]*MCPServer)
-	}
-	config.MCPServers = rootMCPServers
+	// Convert inline MCP servers to map
+	config.MCPServers = serversToMap(config.MCPServersRaw)
 
 	// Scan content directories
 	contentTree, err := ScanContentTree(configDir)
@@ -153,18 +145,6 @@ func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
 
 	if err := resolveInstalledSkillsIfNeeded(ctx, config); err != nil {
 		return nil, err
-	}
-
-	// Load domain-specific MCP servers
-	for domainName, domain := range config.Content.Domains {
-		domainMCPServers, err := loadDomainMCPServers(
-			filepath.Join(configDir, domainsDir, domainName),
-		)
-		if err != nil {
-			logger.Warn("Failed to load MCP servers", "domain", domainName, "error", err)
-			domainMCPServers = make(map[string]*MCPServer)
-		}
-		domain.MCPServers = domainMCPServers
 	}
 
 	return config, nil
@@ -343,6 +323,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Gitignore       *bool                  `toml:"gitignore"`
 		Includes        []IncludeConfig        `toml:"includes"`
 		InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
+		MCPServers      []MCPServer            `toml:"mcp_servers"`
 		Header          *HeaderConfig          `toml:"header"`
 		Builtins        interface{}            `toml:"builtins"`
 		Plugins         []PluginConfig         `toml:"plugins"`
@@ -391,6 +372,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Gitignore:       raw.Gitignore,
 		Includes:        raw.Includes,
 		InstalledSkills: raw.InstalledSkills,
+		MCPServersRaw:   raw.MCPServers,
 		Header:          raw.Header,
 		Builtins:        builtinsCfg,
 		Plugins:         raw.Plugins,
@@ -808,143 +790,12 @@ func loadContentFile(path string) (ContentFile, error) {
 	}, nil
 }
 
-// loadMCPConfig loads MCP configuration from a YAML, JSON, or TOML file
-func loadMCPConfig(path string) (*MCPConfig, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, oops.
-			With("path", path).
-			Wrapf(err, "read MCP config file")
-	}
-
-	var config MCPConfig
-
-	// Determine format based on file extension
-	switch {
-	case strings.HasSuffix(path, ".json"):
-		if err := json.Unmarshal(data, &config); err != nil {
-			return nil, oops.
-				With("path", path).
-				Hint("Check the JSON syntax - ensure proper formatting").
-				Wrapf(err, "parse JSON MCP config")
-		}
-	case strings.HasSuffix(path, ".toml"):
-		if err := toml.Unmarshal(data, &config); err != nil {
-			return nil, oops.
-				With("path", path).
-				Hint("Check the TOML syntax - ensure proper formatting").
-				Wrapf(err, "parse TOML MCP config")
-		}
-	default:
-		if err := yaml.Unmarshal(data, &config); err != nil {
-			return nil, oops.
-				With("path", path).
-				Hint("Check the YAML syntax - ensure proper indentation").
-				Wrapf(err, "parse YAML MCP config")
-		}
-	}
-
-	return &config, nil
-}
-
-// loadMCPServers loads root MCP servers from .ai-rulez/mcp.toml, mcp.yaml, or mcp.json
-func loadMCPServers(configDir string) (map[string]*MCPServer, error) {
-	tomlPath := filepath.Join(configDir, mcpTOMLFilename)
-	yamlPath := filepath.Join(configDir, mcpYAMLFilename)
-	jsonPath := filepath.Join(configDir, mcpJSONFilename)
-
-	// Try TOML first (V4 preferred)
-	if _, err := os.Stat(tomlPath); err == nil {
-		cfg, err := loadMCPConfig(tomlPath)
-		if err != nil {
-			return nil, err
-		}
-		return serversToMap(cfg.Servers), nil
-	}
-
-	// Try YAML
-	if _, err := os.Stat(yamlPath); err == nil {
-		cfg, err := loadMCPConfig(yamlPath)
-		if err != nil {
-			return nil, err
-		}
-		return serversToMap(cfg.Servers), nil
-	}
-
-	// Try JSON
-	if _, err := os.Stat(jsonPath); err == nil {
-		cfg, err := loadMCPConfig(jsonPath)
-		if err != nil {
-			return nil, err
-		}
-		return serversToMap(cfg.Servers), nil
-	}
-
-	// No MCP file found - return empty map (not an error)
-	return make(map[string]*MCPServer), nil
-}
-
-// loadDomainMCPServers loads domain-specific MCP servers from domain mcp.toml, mcp.yaml, or mcp.json
-func loadDomainMCPServers(domainDir string) (map[string]*MCPServer, error) {
-	tomlPath := filepath.Join(domainDir, mcpTOMLFilename)
-	yamlPath := filepath.Join(domainDir, mcpYAMLFilename)
-	jsonPath := filepath.Join(domainDir, mcpJSONFilename)
-
-	// Try TOML first (V4 preferred)
-	if _, err := os.Stat(tomlPath); err == nil {
-		cfg, err := loadMCPConfig(tomlPath)
-		if err != nil {
-			return nil, err
-		}
-		return serversToMap(cfg.Servers), nil
-	}
-
-	// Try YAML
-	if _, err := os.Stat(yamlPath); err == nil {
-		cfg, err := loadMCPConfig(yamlPath)
-		if err != nil {
-			return nil, err
-		}
-		return serversToMap(cfg.Servers), nil
-	}
-
-	// Try JSON
-	if _, err := os.Stat(jsonPath); err == nil {
-		cfg, err := loadMCPConfig(jsonPath)
-		if err != nil {
-			return nil, err
-		}
-		return serversToMap(cfg.Servers), nil
-	}
-
-	// No MCP file found - return empty map (not an error)
-	return make(map[string]*MCPServer), nil
-}
-
 // serversToMap converts a slice of MCPServer to a map keyed by server name
 func serversToMap(servers []MCPServer) map[string]*MCPServer {
 	result := make(map[string]*MCPServer)
 	for i := range servers {
 		result[servers[i].Name] = &servers[i]
 	}
-	return result
-}
-
-// mergeMCPServers merges domain MCP servers into root servers
-// Domain servers with the same name override root servers
-func mergeMCPServers(root, domain map[string]*MCPServer) map[string]*MCPServer {
-	result := make(map[string]*MCPServer)
-
-	// Copy root servers
-	for name, server := range root {
-		result[name] = server
-	}
-
-	// Override/add domain servers
-	for name, server := range domain {
-		result[name] = server
-	}
-
 	return result
 }
 

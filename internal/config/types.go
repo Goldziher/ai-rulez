@@ -23,9 +23,10 @@ type Config struct {
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 
 	// Runtime fields (populated during load)
-	BaseDir    string                `yaml:"-" json:"-"`
-	Content    *ContentTree          `yaml:"-" json:"-"`
-	MCPServers map[string]*MCPServer `yaml:"-" json:"-"`
+	BaseDir       string                `yaml:"-" json:"-"`
+	Content       *ContentTree          `yaml:"-" json:"-"`
+	MCPServers    map[string]*MCPServer `yaml:"-" json:"-"`
+	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 }
 
 // HeaderConfig represents header style configuration for generated files
@@ -267,13 +268,6 @@ type MCPServer struct {
 	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 }
 
-// MCPConfig represents loaded MCP configuration from mcp.yaml, mcp.json, or mcp.toml
-type MCPConfig struct {
-	Schema  string      `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
-	Version string      `yaml:"version" json:"version" toml:"version"`
-	Servers []MCPServer `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
-}
-
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)
 func (m *MCPServer) IsEnabled() bool {
 	if m == nil || m.Enabled == nil {
@@ -302,15 +296,14 @@ type ContentTree struct {
 
 // Domain represents content from a specific domain directory
 type Domain struct {
-	Name        string                `yaml:"name" json:"name"`
-	Rules       []ContentFile         `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Context     []ContentFile         `yaml:"context,omitempty" json:"context,omitempty"`
-	Skills      []ContentFile         `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Agents      []ContentFile         `yaml:"agents,omitempty" json:"agents,omitempty"`
-	Commands    []ContentFile         `yaml:"commands,omitempty" json:"commands,omitempty"`
-	MCPServers  map[string]*MCPServer `yaml:"-" json:"-"`
-	Builtin     bool                  `yaml:"-" json:"-"` // true if loaded from builtins
-	FromInclude bool                  `yaml:"-" json:"-"` // true if loaded from an external include
+	Name        string        `yaml:"name" json:"name"`
+	Rules       []ContentFile `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Context     []ContentFile `yaml:"context,omitempty" json:"context,omitempty"`
+	Skills      []ContentFile `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents      []ContentFile `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands    []ContentFile `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Builtin     bool          `yaml:"-" json:"-"` // true if loaded from builtins
+	FromInclude bool          `yaml:"-" json:"-"` // true if loaded from an external include
 }
 
 // ContentFile represents a single content file with optional frontmatter

@@ -21,7 +21,6 @@ func TestInitCommand(t *testing.T) {
 	assert.NotNil(t, flags.Lookup("format"))
 	assert.NotNil(t, flags.Lookup("domains"))
 	assert.NotNil(t, flags.Lookup("skip-content"))
-	assert.NotNil(t, flags.Lookup("skip-mcp"))
 	assert.NotNil(t, flags.Lookup("from"))
 	assert.NotNil(t, flags.Lookup("setup-hooks"))
 	assert.NotNil(t, flags.Lookup("yes"))
@@ -201,7 +200,7 @@ func TestInit_SkipContent(t *testing.T) {
 	assert.NoDirExists(t, ".ai-rulez/skills/ai-rulez")
 }
 
-func TestInit_ExampleMCPServers(t *testing.T) {
+func TestInit_ExampleMCPServersInlined(t *testing.T) {
 	tmpDir := t.TempDir()
 	originalDir, err := os.Getwd()
 	require.NoError(t, err)
@@ -217,14 +216,18 @@ func TestInit_ExampleMCPServers(t *testing.T) {
 	// Run init command
 	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
 
-	// Assert MCP file exists (mcp.toml by default)
-	assert.FileExists(t, ".ai-rulez/mcp.toml")
+	// Assert config.toml exists and contains commented MCP server example
+	assert.FileExists(t, ".ai-rulez/config.toml")
 
-	content, err := os.ReadFile(".ai-rulez/mcp.toml")
+	content, err := os.ReadFile(".ai-rulez/config.toml")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), `name = "ai-rulez"`)
-	assert.Contains(t, string(content), `name = "github"`)
+	assert.Contains(t, string(content), "# MCP Servers (optional)")
+	assert.Contains(t, string(content), "# [[mcp_servers]]")
+	assert.Contains(t, string(content), `# name = "ai-rulez"`)
 	assert.Contains(t, string(content), "ai-rulez@latest")
+
+	// Verify no separate mcp.toml file was created
+	assert.NoFileExists(t, ".ai-rulez/mcp.toml")
 }
 
 func TestInit_ProjectNameFromDirectory(t *testing.T) {
