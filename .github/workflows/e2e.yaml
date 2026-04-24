@@ -12,6 +12,10 @@ on:
       - 'taskfile.yaml'
       - '.github/workflows/e2e.yaml'
 
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   comprehensive-e2e:
     name: Comprehensive E2E Tests
