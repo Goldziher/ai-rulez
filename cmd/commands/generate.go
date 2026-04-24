@@ -77,6 +77,12 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
+	// Suggest migration for YAML configs
+	yamlPath := filepath.Join(cfg.BaseDir, ".ai-rulez", "config.yaml")
+	if _, err := os.Stat(yamlPath); err == nil {
+		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
+	}
+
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 
