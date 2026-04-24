@@ -48,6 +48,9 @@ var registry = map[string]BuiltinDomain{
 	"documentation":    {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
 	"default-commands": {Name: "default-commands", Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
 	"agent-delegation": {Name: "agent-delegation", Category: CategoryUniversal, AutoInclude: true, Description: "Agent delegation instructions and listing in generated outputs"},
+	"cicd":             {Name: "cicd", Category: CategoryUniversal, Description: "CI/CD pipeline standards and GitHub workflow conventions"},
+	"observability":    {Name: "observability", Category: CategoryUniversal, Description: "Logging, metrics, health checks, and observability standards"},
+	"docker":           {Name: "docker", Category: CategoryUniversal, Description: "Container build, security, and deployment best practices"},
 
 	// Languages
 	"rust":       {Name: "rust", Category: CategoryLanguage, Description: "Rust language conventions"},
