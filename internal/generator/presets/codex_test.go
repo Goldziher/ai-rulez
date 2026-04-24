@@ -1,10 +1,13 @@
 package presets
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCodexPresetGenerator_renderSkillFile_AlwaysIncludesDescription(t *testing.T) {
@@ -159,5 +162,64 @@ func TestCodexPresetGenerator_renderSkillFile_PreservesShortDescriptionMetadata(
 	}
 	if !strings.Contains(result, `short-description: "Maintains config schema contracts."`) {
 		t.Fatalf("expected quoted short-description in output, got:\n%s", result)
+	}
+}
+
+func TestCodexPresetGenerator_renderPluginsJSON(t *testing.T) {
+	g := &CodexPresetGenerator{}
+
+	enabled := true
+	cfg := &config.ConfigV3{
+		Plugins: []config.PluginConfig{
+			{Marketplace: "openai-curated", Name: "gmail", Scope: "user", Enabled: &enabled},
+		},
+	}
+
+	content, err := g.renderPluginsJSON(cfg)
+	require.NoError(t, err)
+	assert.Contains(t, content, "openai-curated")
+	assert.Contains(t, content, "gmail")
+
+	var parsed []interface{}
+	err = json.Unmarshal([]byte(content), &parsed)
+	require.NoError(t, err)
+	assert.Len(t, parsed, 1)
+}
+
+func TestCodexPresetGenerator_shouldIncludeCommand(t *testing.T) {
+	g := &CodexPresetGenerator{}
+
+	tests := []struct {
+		name     string
+		command  config.ContentFile
+		expected bool
+	}{
+		{
+			name:     "no metadata includes",
+			command:  config.ContentFile{Name: "cmd"},
+			expected: true,
+		},
+		{
+			name: "matching target includes",
+			command: config.ContentFile{
+				Name:     "cmd",
+				Metadata: &config.MetadataV3{Targets: []string{"codex"}},
+			},
+			expected: true,
+		},
+		{
+			name: "non-matching target excludes",
+			command: config.ContentFile{
+				Name:     "cmd",
+				Metadata: &config.MetadataV3{Targets: []string{"claude"}},
+			},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.expected, g.shouldIncludeCommand(tt.command))
+		})
 	}
 }

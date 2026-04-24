@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
@@ -36,8 +39,9 @@ func TestAmpPresetGenerator_Generate_WithSkills(t *testing.T) {
 
 	// Base: .agents, .agents/skills, AGENTS.md = 3
 	// Skill: dir + SKILL.md = 2
-	if len(outputs) != 5 {
-		t.Errorf("Generate() got %d outputs, want 5", len(outputs))
+	// Agents dir = 1
+	if len(outputs) != 6 {
+		t.Errorf("Generate() got %d outputs, want 6", len(outputs))
 	}
 
 	var foundSkill bool
@@ -76,4 +80,52 @@ func TestAmpPresetGenerator_renderSkillFile(t *testing.T) {
 	if !strings.Contains(result, "Skill content here") {
 		t.Error("Expected skill content")
 	}
+}
+
+func TestAmpPresetGenerator_renderAmpAgentFile(t *testing.T) {
+	g := &AmpPresetGenerator{}
+
+	agent := config.ContentFile{
+		Name:    "test-agent",
+		Content: "You are a test agent.",
+		Metadata: &config.MetadataV3{
+			Extra: map[string]string{
+				"description": "A test agent",
+				"model":       "sonnet",
+				"tools":       "Read,Grep",
+			},
+		},
+	}
+
+	content, err := g.renderAmpAgentFile(agent)
+	require.NoError(t, err)
+	assert.Contains(t, content, "---")
+	assert.Contains(t, content, "name: test-agent")
+	assert.Contains(t, content, "description: A test agent")
+	assert.Contains(t, content, "model: sonnet")
+	assert.Contains(t, content, "You are a test agent.")
+}
+
+func TestAmpPresetGenerator_buildAmpAgentFrontmatter(t *testing.T) {
+	g := &AmpPresetGenerator{}
+
+	t.Run("with metadata", func(t *testing.T) {
+		agent := config.ContentFile{
+			Name: "agent",
+			Metadata: &config.MetadataV3{
+				Extra: map[string]string{"description": "desc", "model": "opus"},
+			},
+		}
+		fm := g.buildAmpAgentFrontmatter(agent)
+		assert.Equal(t, "agent", fm["name"])
+		assert.Equal(t, "desc", fm["description"])
+		assert.Equal(t, "opus", fm["model"])
+	})
+
+	t.Run("without metadata", func(t *testing.T) {
+		agent := config.ContentFile{Name: "agent"}
+		fm := g.buildAmpAgentFrontmatter(agent)
+		assert.Equal(t, "agent", fm["name"])
+		assert.Len(t, fm, 1)
+	})
 }

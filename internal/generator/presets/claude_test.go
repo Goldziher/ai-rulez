@@ -1,11 +1,14 @@
 package presets
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClaudePresetGenerator_Generate(t *testing.T) {
@@ -647,4 +650,62 @@ func TestClaudePresetGenerator_GetOutputPaths(t *testing.T) {
 			t.Errorf("GetOutputPaths()[%d] = %v, want %v", i, paths[i], expected)
 		}
 	}
+}
+
+func TestClaudePresetGenerator_renderSettingsJSON(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+
+	cfg := &config.ConfigV3{
+		MCPServers: map[string]*config.MCPServerV3{
+			"test-server": {
+				Command: "npx",
+				Args:    []string{"-y", "test-server"},
+				Env:     map[string]string{"KEY": "val"},
+			},
+			"http-server": {
+				Command:   "python",
+				Transport: "http",
+				URL:       "http://localhost:8080",
+			},
+		},
+	}
+
+	content, err := g.renderSettingsJSON(cfg)
+	require.NoError(t, err)
+	assert.Contains(t, content, "test-server")
+	assert.Contains(t, content, "http-server")
+	assert.Contains(t, content, "mcpServers")
+	assert.Contains(t, content, "npx")
+	assert.Contains(t, content, "http://localhost:8080")
+
+	// Verify it's valid JSON
+	var parsed map[string]interface{}
+	err = json.Unmarshal([]byte(content), &parsed)
+	require.NoError(t, err)
+	servers := parsed["mcpServers"].(map[string]interface{})
+	assert.Len(t, servers, 2)
+}
+
+func TestClaudePresetGenerator_renderPluginsJSON(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+
+	enabled := true
+	cfg := &config.ConfigV3{
+		Plugins: []config.PluginConfig{
+			{Marketplace: "official", Name: "github", Scope: "project", Enabled: &enabled},
+			{Marketplace: "custom", Name: "tool", Scope: "user"},
+		},
+	}
+
+	content, err := g.renderPluginsJSON(cfg)
+	require.NoError(t, err)
+	assert.Contains(t, content, "official")
+	assert.Contains(t, content, "github")
+	assert.Contains(t, content, "custom")
+
+	// Verify valid JSON array
+	var parsed []interface{}
+	err = json.Unmarshal([]byte(content), &parsed)
+	require.NoError(t, err)
+	assert.Len(t, parsed, 2)
 }

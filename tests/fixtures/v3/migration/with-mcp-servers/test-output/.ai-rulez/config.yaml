@@ -1,7 +1,0 @@
-$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json
-description: Test project with MCP servers to migrate
-gitignore: true
-name: MCP Servers Migration Test
-presets:
-    - claude
-version: "3.0"

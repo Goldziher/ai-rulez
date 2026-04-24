@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/hooks"
 	"github.com/Goldziher/ai-rulez/internal/importer"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/spf13/cobra"
 )
 
@@ -162,7 +163,9 @@ func generateV3Config(projectName string) string {
 # Documentation: https://github.com/Goldziher/ai-rulez
 
 # Schema reference for IDE validation
-$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json
+$schema: `)
+	builder.WriteString(schema.SchemaURL(schema.ConfigSchemaFile))
+	builder.WriteString(`
 
 # Version (required)
 version: "3.0"
@@ -201,7 +204,7 @@ presets:
 // generateV3ConfigJSON generates a V3 JSON configuration template
 func generateV3ConfigJSON(projectName string) string {
 	return fmt.Sprintf(`{
-  "$schema": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json",
+  "$schema": "%s",
   "$comment": "AI-Rulez V3 Configuration - Directory-based configuration with domain scoping",
   "version": "3.0",
   "name": "%s",
@@ -209,7 +212,7 @@ func generateV3ConfigJSON(projectName string) string {
   "presets": ["claude"],
   "gitignore": true
 }
-`, projectName, projectName)
+`, schema.SchemaURL(schema.ConfigSchemaFile), projectName, projectName)
 }
 
 // createDomainDirectories creates domain subdirectories
@@ -467,7 +470,9 @@ func generateExampleMCPYAML() string {
 # Documentation: https://github.com/Goldziher/ai-rulez
 
 # Schema reference for IDE validation
-$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3-mcp.schema.json
+$schema: `)
+	builder.WriteString(schema.SchemaURL(schema.MCPSchemaFile))
+	builder.WriteString(`
 
 # Version (required)
 version: "3.0"
@@ -513,7 +518,9 @@ func generateExampleDomainMCPYAML(domainName string) string {
 # Documentation: https://github.com/Goldziher/ai-rulez
 
 # Schema reference for IDE validation
-$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3-mcp.schema.json
+$schema: `)
+	builder.WriteString(schema.SchemaURL(schema.MCPSchemaFile))
+	builder.WriteString(`
 
 # Version (required)
 version: "3.0"

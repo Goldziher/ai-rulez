@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"fmt"
 	"path"
 	"path/filepath"
@@ -124,6 +125,30 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 				logger.Info("Skipping command (filtered by targets)", "name", command.Name)
 			}
 		}
+	}
+
+	// Generate .claude/settings.json with MCP servers (if configured)
+	if len(cfg.MCPServers) > 0 {
+		settingsContent, err := g.renderSettingsJSON(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render settings.json: %w", err)
+		}
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".claude", "settings.json"),
+			Content: settingsContent,
+		})
+	}
+
+	// Generate .claude/plugins.json with plugin declarations (if configured)
+	if len(cfg.Plugins) > 0 {
+		pluginsContent, err := g.renderPluginsJSON(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render plugins.json: %w", err)
+		}
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".claude", "plugins.json"),
+			Content: pluginsContent,
+		})
 	}
 
 	return outputs, nil
@@ -672,4 +697,71 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 	}
 
 	return builder.String(), nil
+}
+
+// renderSettingsJSON generates .claude/settings.json with MCP server configuration
+func (g *ClaudePresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string, error) {
+	mcpServers := make(map[string]interface{})
+
+	for name, server := range cfg.MCPServers {
+		entry := map[string]interface{}{
+			"command": server.Command,
+		}
+
+		if len(server.Args) > 0 {
+			entry["args"] = server.Args
+		}
+		if len(server.Env) > 0 {
+			entry["env"] = server.Env
+		}
+		if server.Transport != "" {
+			entry["transport"] = server.GetTransport()
+		}
+		if server.URL != "" {
+			entry["url"] = server.URL
+		}
+		if !server.IsEnabled() {
+			entry["disabled"] = true
+		}
+
+		mcpServers[name] = entry
+	}
+
+	settings := map[string]interface{}{
+		"mcpServers": mcpServers,
+	}
+
+	jsonBytes, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal settings JSON: %w", err)
+	}
+
+	return string(jsonBytes) + "\n", nil
+}
+
+// renderPluginsJSON generates .claude/plugins.json with plugin declarations
+func (g *ClaudePresetGenerator) renderPluginsJSON(cfg *config.ConfigV3) (string, error) {
+	type pluginEntry struct {
+		Marketplace string `json:"marketplace"`
+		Name        string `json:"name"`
+		Scope       string `json:"scope"`
+		Enabled     bool   `json:"enabled"`
+	}
+
+	var plugins []pluginEntry
+	for _, p := range cfg.Plugins {
+		plugins = append(plugins, pluginEntry{
+			Marketplace: p.Marketplace,
+			Name:        p.Name,
+			Scope:       p.GetScope(),
+			Enabled:     p.IsEnabled(),
+		})
+	}
+
+	jsonBytes, err := json.MarshalIndent(plugins, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal plugins JSON: %w", err)
+	}
+
+	return string(jsonBytes) + "\n", nil
 }

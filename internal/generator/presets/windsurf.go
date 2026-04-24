@@ -1,9 +1,12 @@
 package presets
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -44,6 +47,7 @@ func (g *WindsurfPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".windsurf"),
 		filepath.Join(baseDir, ".windsurf", "rules"),
 		filepath.Join(baseDir, ".windsurf", "skills"),
+		filepath.Join(baseDir, ".windsurf", "agents"),
 	}
 }
 
@@ -97,6 +101,44 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 				Content: g.renderSkillFile(skill),
 			},
 		)
+	}
+
+	// Generate context files as rule-like files in .windsurf/rules/
+	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	for _, ctx := range allContext {
+		sanitized := sanitizeName(ctx.Name)
+		var ctxBuilder strings.Builder
+		ctxBuilder.WriteString("# ")
+		ctxBuilder.WriteString(ctx.Name)
+		ctxBuilder.WriteString("\n\n")
+		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+		ctxBuilder.WriteString(processedContent)
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".windsurf", "rules", "context-"+sanitized+".md"),
+			Content: ctxBuilder.String(),
+		})
+	}
+
+	// Add .windsurf/agents directory
+	outputs = append(outputs, config.OutputFileV3{
+		Path:  filepath.Join(baseDir, ".windsurf", "agents"),
+		IsDir: true,
+	})
+
+	// Generate agent files to .windsurf/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderWindsurfAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".windsurf", "agents", agentID+".md"),
+			Content: agentContent,
+		})
 	}
 
 	return outputs, nil
@@ -209,4 +251,43 @@ func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *c
 	builder.WriteString(processedContent)
 
 	return builder.String()
+}
+
+// renderWindsurfAgentFile renders an agent file with YAML frontmatter for Windsurf
+func (g *WindsurfPresetGenerator) renderWindsurfAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildWindsurfAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildWindsurfAgentFrontmatter builds frontmatter for a Windsurf agent file
+func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	windsurfFields := []string{"description", "model", "tools"}
+	for _, field := range windsurfFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }

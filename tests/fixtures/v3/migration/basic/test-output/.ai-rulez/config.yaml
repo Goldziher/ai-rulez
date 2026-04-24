@@ -1,7 +1,0 @@
-$schema: https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json
-description: A basic test project for migration
-gitignore: true
-name: Basic Test Project
-presets:
-    - claude
-version: "3.0"

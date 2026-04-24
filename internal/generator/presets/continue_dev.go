@@ -45,6 +45,7 @@ func (g *ContinueDevPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".continue"),
 		filepath.Join(baseDir, ".continue", "rules"),
 		filepath.Join(baseDir, ".continue", "prompts"),
+		filepath.Join(baseDir, ".continue", "agents"),
 	}
 }
 
@@ -88,10 +89,31 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 		return nil, fmt.Errorf("render prompts YAML: %w", err)
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
-		Path:    filepath.Join(baseDir, ".continue", "prompts", "ai_rulez_prompts.yaml"),
-		Content: promptsContent,
-	})
+	outputs = append(outputs,
+		config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".continue", "prompts", "ai_rulez_prompts.yaml"),
+			Content: promptsContent,
+		},
+		config.OutputFileV3{
+			Path:  filepath.Join(baseDir, ".continue", "agents"),
+			IsDir: true,
+		},
+	)
+
+	// Generate agent files to .continue/agents/
+	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	for _, agent := range allAgents {
+		agentID := sanitizeAgentID(agent.Name)
+		agentContent, err := g.renderContinueDevAgentFile(agent)
+		if err != nil {
+			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
+		}
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".continue", "agents", agentID+".md"),
+			Content: agentContent,
+		})
+	}
 
 	return outputs, nil
 }
@@ -203,6 +225,45 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	// Prepend the header to YAML content
 	builder.WriteString(string(yamlData))
 	return builder.String(), nil
+}
+
+// renderContinueDevAgentFile renders an agent file with YAML frontmatter for Continue.dev
+func (g *ContinueDevPresetGenerator) renderContinueDevAgentFile(agent config.ContentFile) (string, error) {
+	var builder strings.Builder
+
+	frontmatter := g.buildContinueDevAgentFrontmatter(agent)
+
+	yamlData, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return "", fmt.Errorf("marshal agent frontmatter: %w", err)
+	}
+
+	builder.WriteString("---\n")
+	builder.Write(yamlData)
+	builder.WriteString("---\n\n")
+	builder.WriteString(agent.Content)
+
+	return builder.String(), nil
+}
+
+// buildContinueDevAgentFrontmatter builds frontmatter for a Continue.dev agent file
+func (g *ContinueDevPresetGenerator) buildContinueDevAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+	frontmatter := map[string]interface{}{
+		"name": agent.Name,
+	}
+
+	if agent.Metadata == nil {
+		return frontmatter
+	}
+
+	continueDevFields := []string{"description", "model"}
+	for _, field := range continueDevFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
+		}
+	}
+
+	return frontmatter
 }
 
 // shouldIncludeCommand checks if a command should be included in the continue-dev preset

@@ -756,3 +756,46 @@ func TestConvertYAMLToJSON(t *testing.T) {
 		})
 	}
 }
+
+func TestSchemaURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		version  string
+		filename string
+		expected string
+	}{
+		{
+			name:     "dev_version_uses_main_branch",
+			version:  "dev",
+			filename: schema.ConfigSchemaFile,
+			expected: "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-v3.schema.json",
+		},
+		{
+			name:     "release_version_uses_tag",
+			version:  "3.14.2",
+			filename: schema.ConfigSchemaFile,
+			expected: "https://raw.githubusercontent.com/Goldziher/ai-rulez/v3.14.2/schema/ai-rules-v3.schema.json",
+		},
+		{
+			name:     "mcp_schema_file",
+			version:  "3.14.2",
+			filename: schema.MCPSchemaFile,
+			expected: "https://raw.githubusercontent.com/Goldziher/ai-rulez/v3.14.2/schema/ai-rules-v3-mcp.schema.json",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			original := schema.Version
+			schema.Version = tt.version
+			t.Cleanup(func() { schema.Version = original })
+
+			result := schema.SchemaURL(tt.filename)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
