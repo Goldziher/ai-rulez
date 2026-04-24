@@ -44,7 +44,7 @@ func TestSkillDescriptionForContent(t *testing.T) {
 		skill := ContentFile{
 			Name: "core-principles",
 			Path: "/tmp/.ai-rulez/skills/core-principles/SKILL.md",
-			Metadata: &MetadataV3{
+			Metadata: &Metadata{
 				Extra: map[string]string{
 					"description": "Project-wide standards.",
 				},

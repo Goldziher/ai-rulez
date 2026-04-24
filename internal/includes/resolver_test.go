@@ -16,7 +16,7 @@ func TestResolverCircularDependencyDetection(t *testing.T) {
 	resolver := NewResolver("/tmp", "")
 
 	// Create two includes with the same name (represents circular reference)
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Includes: []config.IncludeConfig{
 			{
 				Name:   "include1",
@@ -27,8 +27,8 @@ func TestResolverCircularDependencyDetection(t *testing.T) {
 				Source: "./path2",
 			},
 		},
-		Content: &config.ContentTreeV3{
-			Domains: make(map[string]*config.DomainV3),
+		Content: &config.ContentTree{
+			Domains: make(map[string]*config.Domain),
 		},
 	}
 
@@ -43,15 +43,15 @@ func TestResolverCircularDependencyDetection(t *testing.T) {
 	// Verify that the visited map was reset between includes (not persistent across calls)
 	// Create a new resolver and test that includes with same name can be processed separately
 	resolver2 := NewResolver("/tmp", "")
-	cfg2 := &config.ConfigV3{
+	cfg2 := &config.Config{
 		Includes: []config.IncludeConfig{
 			{
 				Name:   "include1",
 				Source: "./path1",
 			},
 		},
-		Content: &config.ContentTreeV3{
-			Domains: make(map[string]*config.DomainV3),
+		Content: &config.ContentTree{
+			Domains: make(map[string]*config.Domain),
 		},
 	}
 
@@ -121,23 +121,23 @@ func TestResolverCreateSource(t *testing.T) {
 
 // Test merge strategies
 func TestResolverMergeStrategies(t *testing.T) {
-	baseContent := &config.ContentTreeV3{
+	baseContent := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "base-rule", Path: "rules/base.md", Content: "base"},
 		},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 
-	includeContent := &config.ContentTreeV3{
+	includeContent := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "include-rule", Path: "rules/include.md", Content: "include"},
 			{Name: "base-rule", Path: "rules/base.md", Content: "overridden"},
 		},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 
 	tests := []struct {
@@ -202,22 +202,22 @@ func TestResolverMergeStrategies(t *testing.T) {
 
 // Test error strategy
 func TestResolverMergeErrorStrategy(t *testing.T) {
-	baseContent := &config.ContentTreeV3{
+	baseContent := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "conflict", Path: "rules/conflict.md", Content: "base"},
 		},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 
-	includeContent := &config.ContentTreeV3{
+	includeContent := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "conflict", Path: "rules/conflict.md", Content: "include"},
 		},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 
 	resolver := NewResolver("/tmp", "")
@@ -230,11 +230,11 @@ func TestResolverMergeErrorStrategy(t *testing.T) {
 
 // Test domain installation
 func TestResolverDomainInstall(t *testing.T) {
-	baseContent := &config.ContentTreeV3{
+	baseContent := &config.ContentTree{
 		Rules:   []config.ContentFile{},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"frontend": {
 				Name: "frontend",
 				Rules: []config.ContentFile{
@@ -244,13 +244,13 @@ func TestResolverDomainInstall(t *testing.T) {
 		},
 	}
 
-	includeContent := &config.ContentTreeV3{
+	includeContent := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "backend-rule", Path: "rules/backend.md", Content: "backend"},
 		},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 
 	tests := []struct {
@@ -506,7 +506,7 @@ func TestResolverLocalInclude(t *testing.T) {
 
 	// Create config with include
 	resolver := NewResolver(tmpDir, "")
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test",
 		BaseDir: tmpDir,
@@ -516,8 +516,8 @@ func TestResolverLocalInclude(t *testing.T) {
 				Source: sourceDir,
 			},
 		},
-		Content: &config.ContentTreeV3{
-			Domains: make(map[string]*config.DomainV3),
+		Content: &config.ContentTree{
+			Domains: make(map[string]*config.Domain),
 		},
 	}
 
@@ -540,11 +540,11 @@ func TestResolverLocalInclude(t *testing.T) {
 
 // Test merging domains from includes
 func TestResolverMergeDomains(t *testing.T) {
-	baseContent := &config.ContentTreeV3{
+	baseContent := &config.ContentTree{
 		Rules:   []config.ContentFile{},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"existing": {
 				Name: "existing",
 				Rules: []config.ContentFile{
@@ -554,11 +554,11 @@ func TestResolverMergeDomains(t *testing.T) {
 		},
 	}
 
-	includeContent := &config.ContentTreeV3{
+	includeContent := &config.ContentTree{
 		Rules:   []config.ContentFile{},
 		Context: []config.ContentFile{},
 		Skills:  []config.ContentFile{},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"new": {
 				Name: "new",
 				Rules: []config.ContentFile{

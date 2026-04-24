@@ -536,7 +536,7 @@ func TestWriteContent(t *testing.T) {
 				Name:    "important-rule",
 				Type:    ContentTypeRule,
 				Content: "This is important.",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Priority: "critical",
 					Targets:  []string{"claude", "cursor"},
 				},
@@ -881,7 +881,7 @@ func TestDeduplicateContentWithMetadata(t *testing.T) {
 				Type:    ContentTypeRule,
 				Content: content,
 				Hash:    hashContent(content),
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Priority: "high",
 					Targets:  []string{"target1"},
 				},
@@ -891,7 +891,7 @@ func TestDeduplicateContentWithMetadata(t *testing.T) {
 				Type:    ContentTypeRule,
 				Content: content, // Same content
 				Hash:    hashContent(content),
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Priority: "critical",
 					Targets:  []string{"target2"},
 				},

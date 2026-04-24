@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadConfigV3_BuiltinsArray(t *testing.T) {
+func TestLoadConfig_BuiltinsArray(t *testing.T) {
 	t.Run("loads specific builtins from array", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -29,7 +29,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		// Should have rust, security, and auto-included ai-governance
@@ -57,7 +57,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		assert.Contains(t, domainNames(config), "rust")
@@ -65,7 +65,7 @@ builtins:
 	})
 }
 
-func TestLoadConfigV3_BuiltinsBoolean(t *testing.T) {
+func TestLoadConfig_BuiltinsBoolean(t *testing.T) {
 	t.Run("builtins true loads all domains", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -82,7 +82,7 @@ builtins: true
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		names := domainNames(config)
@@ -112,14 +112,14 @@ builtins: false
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		assert.Empty(t, domainNames(config))
 	})
 }
 
-func TestLoadConfigV3_BuiltinsNotSet(t *testing.T) {
+func TestLoadConfig_BuiltinsNotSet(t *testing.T) {
 	t.Run("no builtins field means no builtin domains loaded", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -135,7 +135,7 @@ presets:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		// No builtins field = no builtin domains
@@ -143,7 +143,7 @@ presets:
 	})
 }
 
-func TestLoadConfigV3_BuiltinsLocalOverride(t *testing.T) {
+func TestLoadConfig_BuiltinsLocalOverride(t *testing.T) {
 	t.Run("local domain takes priority over builtin", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -175,7 +175,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		// Local "rust" domain should exist with custom content
@@ -187,7 +187,7 @@ builtins:
 	})
 }
 
-func TestLoadConfigV3_BuiltinsContent(t *testing.T) {
+func TestLoadConfig_BuiltinsContent(t *testing.T) {
 	t.Run("ai-governance builtin has 4 rules", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -206,7 +206,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		// ai-governance not loaded because it's also excluded
@@ -231,7 +231,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		secDomain, exists := config.Content.Domains["security"]
@@ -258,7 +258,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		cmdDomain, exists := config.Content.Domains["default-commands"]
@@ -293,7 +293,7 @@ builtins:
 			[]byte(configContent), 0o644,
 		))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 
 		secDomain := config.Content.Domains["security"]
@@ -391,7 +391,7 @@ func TestBuiltinsConfig_Methods(t *testing.T) {
 }
 
 // domainNames extracts domain names from a loaded config
-func domainNames(config *ConfigV3) []string {
+func domainNames(config *Config) []string {
 	if config.Content == nil {
 		return nil
 	}

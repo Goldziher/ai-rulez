@@ -18,14 +18,14 @@ func TestGeminiPresetGenerator_GetName(t *testing.T) {
 func TestGeminiPresetGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name        string
-		content     *config.ContentTreeV3
+		content     *config.ContentTree
 		baseDir     string
 		wantOutputs int
 		wantErr     bool
 	}{
 		{
 			name: "generates basic structure",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{Name: "rule1", Content: "Rule content"},
 				},
@@ -36,7 +36,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates with skills",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Skills: []config.ContentFile{
 					{
 						Name:    "deploy",
@@ -51,12 +51,12 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates with agents",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Agents: []config.ContentFile{
 					{
 						Name:    "security-auditor",
 						Content: "You are a security auditor.",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Extra: map[string]string{
 								"description": "Audits code for security issues",
 							},
@@ -70,8 +70,8 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates with skills and agents from domains",
-			content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+			content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"backend": {
 						Name: "backend",
 						Skills: []config.ContentFile{
@@ -85,7 +85,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 							{
 								Name:    "db-expert",
 								Content: "Database expert agent",
-								Metadata: &config.MetadataV3{
+								Metadata: &config.Metadata{
 									Extra: map[string]string{"description": "Database expertise"},
 								},
 							},
@@ -102,7 +102,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &GeminiPresetGenerator{}
-			cfg := &config.ConfigV3{Name: "test-project"}
+			cfg := &config.Config{Name: "test-project"}
 
 			outputs, err := g.Generate(tt.content, tt.baseDir, cfg)
 			if (err != nil) != tt.wantErr {
@@ -122,7 +122,7 @@ func TestGeminiPresetGenerator_renderGeminiSkillFile(t *testing.T) {
 	skill := config.ContentFile{
 		Name:    "deploy",
 		Content: "Deploy to production.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"description": "Deploys the app",
 			},
@@ -151,7 +151,7 @@ func TestGeminiPresetGenerator_renderGeminiAgentFile(t *testing.T) {
 	agent := config.ContentFile{
 		Name:    "security-auditor",
 		Content: "You are a security auditor.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"description": "Audits code for vulnerabilities",
 				"model":       "gemini-3-flash",

@@ -53,7 +53,7 @@ func TestIsValidTriggerMode(t *testing.T) {
 func TestGetTriggerMode(t *testing.T) {
 	tests := []struct {
 		name     string
-		metadata *MetadataV3
+		metadata *Metadata
 		expected string
 	}{
 		{
@@ -63,19 +63,19 @@ func TestGetTriggerMode(t *testing.T) {
 		},
 		{
 			name:     "nil Extra returns manual",
-			metadata: &MetadataV3{},
+			metadata: &Metadata{},
 			expected: TriggerManual,
 		},
 		{
 			name: "empty Extra returns manual",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{},
 			},
 			expected: TriggerManual,
 		},
 		{
 			name: "valid manual mode",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "manual",
 				},
@@ -84,7 +84,7 @@ func TestGetTriggerMode(t *testing.T) {
 		},
 		{
 			name: "valid always_on mode",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "always_on",
 				},
@@ -93,7 +93,7 @@ func TestGetTriggerMode(t *testing.T) {
 		},
 		{
 			name: "valid model_decision mode",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "model_decision",
 				},
@@ -102,7 +102,7 @@ func TestGetTriggerMode(t *testing.T) {
 		},
 		{
 			name: "invalid mode returns manual (graceful degradation)",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "invalid_mode",
 				},
@@ -124,7 +124,7 @@ func TestGetTriggerMode(t *testing.T) {
 func TestGetTriggerDescription(t *testing.T) {
 	tests := []struct {
 		name     string
-		metadata *MetadataV3
+		metadata *Metadata
 		expected string
 	}{
 		{
@@ -134,7 +134,7 @@ func TestGetTriggerDescription(t *testing.T) {
 		},
 		{
 			name: "with description",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"description": "Apply when working with APIs",
 				},
@@ -143,7 +143,7 @@ func TestGetTriggerDescription(t *testing.T) {
 		},
 		{
 			name: "without description",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "manual",
 				},
@@ -165,7 +165,7 @@ func TestGetTriggerDescription(t *testing.T) {
 func TestGetTriggerGlob(t *testing.T) {
 	tests := []struct {
 		name     string
-		metadata *MetadataV3
+		metadata *Metadata
 		expected string
 	}{
 		{
@@ -175,7 +175,7 @@ func TestGetTriggerGlob(t *testing.T) {
 		},
 		{
 			name: "with glob pattern",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"glob": "**/*.ts",
 				},
@@ -184,7 +184,7 @@ func TestGetTriggerGlob(t *testing.T) {
 		},
 		{
 			name: "without glob",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "manual",
 				},
@@ -206,7 +206,7 @@ func TestGetTriggerGlob(t *testing.T) {
 func TestShouldRenderTriggerFrontmatter(t *testing.T) {
 	tests := []struct {
 		name     string
-		metadata *MetadataV3
+		metadata *Metadata
 		expected bool
 	}{
 		{
@@ -216,12 +216,12 @@ func TestShouldRenderTriggerFrontmatter(t *testing.T) {
 		},
 		{
 			name:     "default manual mode with no extra returns false",
-			metadata: &MetadataV3{},
+			metadata: &Metadata{},
 			expected: false,
 		},
 		{
 			name: "explicit manual mode with no extra returns false",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "manual",
 				},
@@ -230,7 +230,7 @@ func TestShouldRenderTriggerFrontmatter(t *testing.T) {
 		},
 		{
 			name: "model_decision mode returns true",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "model_decision",
 				},
@@ -239,7 +239,7 @@ func TestShouldRenderTriggerFrontmatter(t *testing.T) {
 		},
 		{
 			name: "always_on mode returns true",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "always_on",
 				},
@@ -248,7 +248,7 @@ func TestShouldRenderTriggerFrontmatter(t *testing.T) {
 		},
 		{
 			name: "manual mode with description returns true",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger":     "manual",
 					"description": "Apply for API files",
@@ -258,7 +258,7 @@ func TestShouldRenderTriggerFrontmatter(t *testing.T) {
 		},
 		{
 			name: "manual mode with glob returns true",
-			metadata: &MetadataV3{
+			metadata: &Metadata{
 				Extra: map[string]string{
 					"trigger": "manual",
 					"glob":    "**/*.ts",

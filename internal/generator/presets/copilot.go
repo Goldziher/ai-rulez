@@ -13,15 +13,17 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const presetNameCopilot = "copilot"
+
 func init() {
-	config.RegisterPresetV3("copilot", &CopilotPresetGenerator{})
+	config.RegisterPreset(presetNameCopilot, &CopilotPresetGenerator{})
 }
 
 // CopilotPresetGenerator generates GitHub Copilot preset files
 type CopilotPresetGenerator struct{}
 
 // generateCopilotPresetHeader creates a header for Copilot preset files
-func generateCopilotPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateCopilotPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -38,7 +40,7 @@ func generateCopilotPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCo
 }
 
 func (g *CopilotPresetGenerator) GetName() string {
-	return "copilot"
+	return presetNameCopilot
 }
 
 func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -51,20 +53,20 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .github directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".github"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".github", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".github", "agents"),
 			IsDir: true,
 		},
@@ -72,7 +74,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 
 	// Generate copilot-instructions.md
 	instructionsContent := g.renderInstructionsFile(content, cfg)
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, ".github", "copilot-instructions.md"),
 		Content: instructionsContent,
 	})
@@ -84,11 +86,11 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 
 		skillDir := filepath.Join(baseDir, ".github", "skills", skillID)
 		outputs = append(outputs,
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:  skillDir,
 				IsDir: true,
 			},
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:    filepath.Join(skillDir, "SKILL.md"),
 				Content: g.renderSkillFile(skill),
 			},
@@ -104,14 +106,14 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".github", "agents", agentID+".agent.md"),
 			Content: agentContent,
 		})
 	}
 
 	// Generate .github/commands directory
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  filepath.Join(baseDir, ".github", "commands"),
 		IsDir: true,
 	})
@@ -124,7 +126,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 		}
 		sanitized := sanitizeName(command.Name)
 		commandContent := g.renderCommandFile(command)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".github", "commands", sanitized+".md"),
 			Content: commandContent,
 		})
@@ -136,7 +138,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 		if err != nil {
 			return nil, fmt.Errorf("render .mcp.json: %w", err)
 		}
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".mcp.json"),
 			Content: mcpContent,
 		})
@@ -145,7 +147,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 	return outputs, nil
 }
 
-func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Calculate content counts
@@ -276,7 +278,7 @@ func (g *CopilotPresetGenerator) shouldIncludeCommand(command config.ContentFile
 	}
 	if len(command.Metadata.Targets) > 0 {
 		for _, target := range command.Metadata.Targets {
-			if target == "copilot" {
+			if target == presetNameCopilot {
 				return true
 			}
 		}
@@ -314,7 +316,7 @@ func (g *CopilotPresetGenerator) renderCommandFile(command config.ContentFile) s
 }
 
 // renderMCPJSON renders .mcp.json with MCP server configuration
-func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.ConfigV3) (string, error) {
+func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {

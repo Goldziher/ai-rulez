@@ -47,7 +47,7 @@ func TestSchemaURL(t *testing.T) {
 	}
 }
 
-func TestValidateWithSchemaV3(t *testing.T) {
+func TestValidateWithSchema(t *testing.T) {
 	t.Run("valid minimal config", func(t *testing.T) {
 		cfg := `
 version: "3.0"
@@ -55,7 +55,7 @@ name: "test-project"
 presets:
   - claude
 `
-		err := schema.ValidateWithSchemaV3([]byte(cfg))
+		err := schema.ValidateWithSchema([]byte(cfg))
 		require.NoError(t, err)
 	})
 
@@ -65,7 +65,7 @@ version: "3.0"
 presets:
   - claude
 `
-		err := schema.ValidateWithSchemaV3([]byte(cfg))
+		err := schema.ValidateWithSchema([]byte(cfg))
 		assert.Error(t, err)
 	})
 
@@ -75,7 +75,7 @@ name: "test-project"
 presets:
   - claude
 `
-		err := schema.ValidateWithSchemaV3([]byte(cfg))
+		err := schema.ValidateWithSchema([]byte(cfg))
 		assert.Error(t, err)
 	})
 }

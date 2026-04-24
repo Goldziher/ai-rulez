@@ -8,7 +8,7 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("mcp", &MCPPresetGenerator{})
+	config.RegisterPreset("mcp", &MCPPresetGenerator{})
 }
 
 // MCPPresetGenerator generates MCP server configuration
@@ -23,13 +23,13 @@ func (g *MCPPresetGenerator) GetOutputPaths(baseDir string) []string {
 }
 
 func (g *MCPPresetGenerator) Generate(
-	content *config.ContentTreeV3,
+	content *config.ContentTree,
 	baseDir string,
-	cfg *config.ConfigV3,
-) ([]config.OutputFileV3, error) {
+	cfg *config.Config,
+) ([]config.OutputFile, error) {
 	// Return empty if no MCP servers
 	if len(cfg.MCPServers) == 0 {
-		return []config.OutputFileV3{}, nil
+		return []config.OutputFile{}, nil
 	}
 
 	// Build .mcp.json structure
@@ -66,7 +66,7 @@ func (g *MCPPresetGenerator) Generate(
 		return nil, err
 	}
 
-	return []config.OutputFileV3{{
+	return []config.OutputFile{{
 		Path:    filepath.Join(baseDir, ".mcp.json"),
 		Content: string(jsonBytes) + "\n",
 	}}, nil

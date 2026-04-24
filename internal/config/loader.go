@@ -32,7 +32,7 @@ const (
 	mcpJSONFilename    = "mcp.json"
 )
 
-// DetectConfigVersion detects whether a directory contains V2 or V3 configuration
+// DetectConfigVersion detects whether a directory contains V2 or configuration
 // Returns "v2" if ai-rulez.yaml/yml exists, "v3" if .ai-rulez/ exists, "" otherwise
 func DetectConfigVersion(dir string) (string, error) {
 	absDir, err := filepath.Abs(dir)
@@ -63,7 +63,7 @@ func DetectConfigVersion(dir string) (string, error) {
 
 // ResolveIncludesCallback is a callback function type that resolves includes
 // This avoids circular import issues between config and includes packages
-type ResolveIncludesCallback func(ctx context.Context, cfg *ConfigV3) (*ContentTreeV3, error)
+type ResolveIncludesCallback func(ctx context.Context, cfg *Config) (*ContentTree, error)
 
 // resolveIncludesFunc is set by the includes package during init
 var resolveIncludesFunc ResolveIncludesCallback
@@ -75,7 +75,7 @@ func SetResolveIncludesCallback(fn ResolveIncludesCallback) {
 }
 
 // ResolveInstalledSkillsCallback is a callback function type that resolves installed skills
-type ResolveInstalledSkillsCallback func(ctx context.Context, cfg *ConfigV3) ([]ContentFile, error)
+type ResolveInstalledSkillsCallback func(ctx context.Context, cfg *Config) ([]ContentFile, error)
 
 // resolveInstalledSkillsFunc is set by the includes package during init
 var resolveInstalledSkillsFunc ResolveInstalledSkillsCallback
@@ -85,9 +85,9 @@ func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
 	resolveInstalledSkillsFunc = fn
 }
 
-// LoadConfigV3 loads a V3 configuration from the specified base directory
+// LoadConfig loads a configuration from the specified base directory
 // The baseDir should contain a .ai-rulez/ subdirectory with config.yaml or config.json
-func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
+func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
 	absDir, err := filepath.Abs(baseDir)
 	if err != nil {
 		return nil, oops.
@@ -104,7 +104,7 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 			return nil, oops.
 				With("path", configDir).
 				With("base_dir", baseDir).
-				Hint(fmt.Sprintf("Create .ai-rulez/ directory in %s\nRun 'ai-rulez init' to initialize V3 configuration", baseDir)).
+				Hint(fmt.Sprintf("Create .ai-rulez/ directory in %s\nRun 'ai-rulez init' to initialize configuration", baseDir)).
 				Errorf(".ai-rulez directory not found")
 		}
 		return nil, oops.
@@ -130,7 +130,7 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 	rootMCPServers, err := loadMCPServers(configDir)
 	if err != nil {
 		logger.Warn("Failed to load root MCP servers", "error", err)
-		rootMCPServers = make(map[string]*MCPServerV3)
+		rootMCPServers = make(map[string]*MCPServer)
 	}
 	config.MCPServers = rootMCPServers
 
@@ -162,7 +162,7 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 		)
 		if err != nil {
 			logger.Warn("Failed to load MCP servers", "domain", domainName, "error", err)
-			domainMCPServers = make(map[string]*MCPServerV3)
+			domainMCPServers = make(map[string]*MCPServer)
 		}
 		domain.MCPServers = domainMCPServers
 	}
@@ -170,7 +170,7 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 	return config, nil
 }
 
-func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *ConfigV3) error {
+func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Config) error {
 	if len(config.Includes) == 0 {
 		return nil
 	}
@@ -202,7 +202,7 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 	return nil
 }
 
-func resolveInstalledSkillsIfNeeded(ctx context.Context, config *ConfigV3) error {
+func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 	if len(config.InstalledSkills) == 0 {
 		return nil
 	}
@@ -222,8 +222,8 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *ConfigV3) error
 	}
 
 	if config.Content == nil {
-		config.Content = &ContentTreeV3{
-			Domains: make(map[string]*DomainV3),
+		config.Content = &ContentTree{
+			Domains: make(map[string]*Domain),
 		}
 	}
 
@@ -248,7 +248,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *ConfigV3) error
 }
 
 // loadConfigFile loads config.yaml or config.json from the .ai-rulez/ directory
-func loadConfigFile(configDir string) (*ConfigV3, error) {
+func loadConfigFile(configDir string) (*Config, error) {
 	// Try TOML first (V4 preferred format)
 	tomlPath := filepath.Join(configDir, configTOMLFilename)
 	if _, err := os.Stat(tomlPath); err == nil {
@@ -277,8 +277,8 @@ func loadConfigFile(configDir string) (*ConfigV3, error) {
 		Errorf("no config file found (tried %s, %s, and %s)", configTOMLFilename, configYAMLFilename, configJSONFilename)
 }
 
-// loadConfigYAML loads a V3 config from YAML
-func loadConfigYAML(path string) (*ConfigV3, error) {
+// loadConfigYAML loads a config from YAML
+func loadConfigYAML(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, oops.
@@ -287,7 +287,7 @@ func loadConfigYAML(path string) (*ConfigV3, error) {
 			Wrapf(err, "read config file")
 	}
 
-	var config ConfigV3
+	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, oops.
 			With("path", path).
@@ -298,8 +298,8 @@ func loadConfigYAML(path string) (*ConfigV3, error) {
 	return &config, nil
 }
 
-// loadConfigJSON loads a V3 config from JSON
-func loadConfigJSON(path string) (*ConfigV3, error) {
+// loadConfigJSON loads a config from JSON
+func loadConfigJSON(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, oops.
@@ -308,7 +308,7 @@ func loadConfigJSON(path string) (*ConfigV3, error) {
 			Wrapf(err, "read config file")
 	}
 
-	var config ConfigV3
+	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, oops.
 			With("path", path).
@@ -320,7 +320,7 @@ func loadConfigJSON(path string) (*ConfigV3, error) {
 }
 
 // loadConfigTOML loads a V3/V4 config from TOML
-func loadConfigTOML(path string) (*ConfigV3, error) {
+func loadConfigTOML(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, oops.
@@ -330,7 +330,7 @@ func loadConfigTOML(path string) (*ConfigV3, error) {
 	}
 
 	// TOML presets are plain strings; we unmarshal into an intermediate
-	// struct then convert to []PresetV3. This avoids custom unmarshaler
+	// struct then convert to []Preset. This avoids custom unmarshaler
 	// issues with the TOML library.
 	type tomlConfig struct {
 		Schema          string                 `toml:"schema"`
@@ -357,9 +357,9 @@ func loadConfigTOML(path string) (*ConfigV3, error) {
 			Wrapf(err, "parse TOML config")
 	}
 
-	presets := make([]PresetV3, 0, len(raw.Presets))
+	presets := make([]Preset, 0, len(raw.Presets))
 	for _, name := range raw.Presets {
-		presets = append(presets, PresetV3{BuiltIn: name})
+		presets = append(presets, Preset{BuiltIn: name})
 	}
 
 	// Convert builtins from interface{} to BuiltinsConfig
@@ -380,7 +380,7 @@ func loadConfigTOML(path string) (*ConfigV3, error) {
 		}
 	}
 
-	cfg := &ConfigV3{
+	cfg := &Config{
 		Schema:          raw.Schema,
 		Version:         raw.Version,
 		Name:            raw.Name,
@@ -400,12 +400,12 @@ func loadConfigTOML(path string) (*ConfigV3, error) {
 	return cfg, nil
 }
 
-// ScanContentTree scans all content directories and returns a populated ContentTreeV3.
+// ScanContentTree scans all content directories and returns a populated ContentTree.
 // Root content goes into the top-level slices; domain content goes only into the Domains map.
 // This keeps the two layers separate so callers (e.g. include sources) can merge without duplication.
-func ScanContentTree(configDir string) (*ContentTreeV3, error) {
-	tree := &ContentTreeV3{
-		Domains: make(map[string]*DomainV3),
+func ScanContentTree(configDir string) (*ContentTree, error) {
+	tree := &ContentTree{
+		Domains: make(map[string]*Domain),
 	}
 
 	// Scan root rules/
@@ -463,7 +463,7 @@ func ScanContentTree(configDir string) (*ContentTreeV3, error) {
 
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
-	var domains map[string]*DomainV3
+	var domains map[string]*Domain
 	if domains, err = scanDomains(domainsPath); err != nil {
 		return nil, oops.
 			With("path", domainsPath).
@@ -595,15 +595,15 @@ func scanAgents(agentsPath string) ([]ContentFile, error) {
 	return agents, nil
 }
 
-// scanDomains scans the domains/ directory and returns a map of domain name to DomainV3
-func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
+// scanDomains scans the domains/ directory and returns a map of domain name to Domain
+func scanDomains(domainsDir string) (map[string]*Domain, error) {
 	// Check if directory exists
 	if _, err := os.Stat(domainsDir); os.IsNotExist(err) {
 		// Directory doesn't exist, return empty map (not an error)
-		return make(map[string]*DomainV3), nil
+		return make(map[string]*Domain), nil
 	}
 
-	domains := make(map[string]*DomainV3)
+	domains := make(map[string]*Domain)
 
 	entries, err := os.ReadDir(domainsDir)
 	if err != nil {
@@ -620,7 +620,7 @@ func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
 		domainName := entry.Name()
 		domainPath := filepath.Join(domainsDir, domainName)
 
-		domain := &DomainV3{
+		domain := &Domain{
 			Name: domainName,
 		}
 
@@ -688,14 +688,14 @@ func scanDomains(domainsDir string) (map[string]*DomainV3, error) {
 }
 
 // ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages
-func ParseFrontmatterPublic(content string) (metadata *MetadataV3, body string) {
+func ParseFrontmatterPublic(content string) (metadata *Metadata, body string) {
 	return parseFrontmatter(content)
 }
 
 // parseFrontmatter parses optional YAML frontmatter from content
 // Returns metadata (nil if none) and the actual content (without frontmatter)
 // Inlined here to avoid import cycle with parser package
-func parseFrontmatter(content string) (metadata *MetadataV3, body string) {
+func parseFrontmatter(content string) (metadata *Metadata, body string) {
 	// Check if content starts with ---
 	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
 		return nil, content
@@ -725,8 +725,8 @@ func parseFrontmatter(content string) (metadata *MetadataV3, body string) {
 	frontmatterLines := lines[1:endIdx]
 	frontmatterYAML := strings.Join(frontmatterLines, "\n")
 
-	// First try direct unmarshal into MetadataV3 (works for simple key-value frontmatter)
-	var parsedMetadata MetadataV3
+	// First try direct unmarshal into Metadata (works for simple key-value frontmatter)
+	var parsedMetadata Metadata
 	if err := yaml.Unmarshal([]byte(frontmatterYAML), &parsedMetadata); err != nil {
 		// Direct unmarshal failed (e.g., nested YAML objects in Extra fields).
 		// Fall back to raw map parsing: extract known fields and stringify the rest.
@@ -745,15 +745,15 @@ func parseFrontmatter(content string) (metadata *MetadataV3, body string) {
 	return metadata, body
 }
 
-// parseFrontmatterFromRawMap parses frontmatter YAML into MetadataV3 via a raw map.
+// parseFrontmatterFromRawMap parses frontmatter YAML into Metadata via a raw map.
 // Used as fallback when direct unmarshal fails (e.g., nested YAML objects).
-func parseFrontmatterFromRawMap(frontmatterYAML string) (MetadataV3, bool) {
+func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 	var rawMap map[string]interface{}
 	if err := yaml.Unmarshal([]byte(frontmatterYAML), &rawMap); err != nil {
-		return MetadataV3{}, false
+		return Metadata{}, false
 	}
 
-	m := MetadataV3{Extra: make(map[string]string)}
+	m := Metadata{Extra: make(map[string]string)}
 	for k, v := range rawMap {
 		switch k {
 		case "priority":
@@ -809,7 +809,7 @@ func loadContentFile(path string) (ContentFile, error) {
 }
 
 // loadMCPConfig loads MCP configuration from a YAML, JSON, or TOML file
-func loadMCPConfig(path string) (*MCPConfigV3, error) {
+func loadMCPConfig(path string) (*MCPConfig, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, oops.
@@ -817,7 +817,7 @@ func loadMCPConfig(path string) (*MCPConfigV3, error) {
 			Wrapf(err, "read MCP config file")
 	}
 
-	var config MCPConfigV3
+	var config MCPConfig
 
 	// Determine format based on file extension
 	switch {
@@ -848,7 +848,7 @@ func loadMCPConfig(path string) (*MCPConfigV3, error) {
 }
 
 // loadMCPServers loads root MCP servers from .ai-rulez/mcp.toml, mcp.yaml, or mcp.json
-func loadMCPServers(configDir string) (map[string]*MCPServerV3, error) {
+func loadMCPServers(configDir string) (map[string]*MCPServer, error) {
 	tomlPath := filepath.Join(configDir, mcpTOMLFilename)
 	yamlPath := filepath.Join(configDir, mcpYAMLFilename)
 	jsonPath := filepath.Join(configDir, mcpJSONFilename)
@@ -881,11 +881,11 @@ func loadMCPServers(configDir string) (map[string]*MCPServerV3, error) {
 	}
 
 	// No MCP file found - return empty map (not an error)
-	return make(map[string]*MCPServerV3), nil
+	return make(map[string]*MCPServer), nil
 }
 
 // loadDomainMCPServers loads domain-specific MCP servers from domain mcp.toml, mcp.yaml, or mcp.json
-func loadDomainMCPServers(domainDir string) (map[string]*MCPServerV3, error) {
+func loadDomainMCPServers(domainDir string) (map[string]*MCPServer, error) {
 	tomlPath := filepath.Join(domainDir, mcpTOMLFilename)
 	yamlPath := filepath.Join(domainDir, mcpYAMLFilename)
 	jsonPath := filepath.Join(domainDir, mcpJSONFilename)
@@ -918,22 +918,22 @@ func loadDomainMCPServers(domainDir string) (map[string]*MCPServerV3, error) {
 	}
 
 	// No MCP file found - return empty map (not an error)
-	return make(map[string]*MCPServerV3), nil
+	return make(map[string]*MCPServer), nil
 }
 
-// serversToMap converts a slice of MCPServerV3 to a map keyed by server name
-func serversToMap(servers []MCPServerV3) map[string]*MCPServerV3 {
-	result := make(map[string]*MCPServerV3)
+// serversToMap converts a slice of MCPServer to a map keyed by server name
+func serversToMap(servers []MCPServer) map[string]*MCPServer {
+	result := make(map[string]*MCPServer)
 	for i := range servers {
 		result[servers[i].Name] = &servers[i]
 	}
 	return result
 }
 
-// mergeMCPServersV3 merges domain MCP servers into root servers
+// mergeMCPServers merges domain MCP servers into root servers
 // Domain servers with the same name override root servers
-func mergeMCPServersV3(root, domain map[string]*MCPServerV3) map[string]*MCPServerV3 {
-	result := make(map[string]*MCPServerV3)
+func mergeMCPServers(root, domain map[string]*MCPServer) map[string]*MCPServer {
+	result := make(map[string]*MCPServer)
 
 	// Copy root servers
 	for name, server := range root {
@@ -948,14 +948,14 @@ func mergeMCPServersV3(root, domain map[string]*MCPServerV3) map[string]*MCPServ
 	return result
 }
 
-// SaveConfigV3 saves a V3 configuration back to YAML or JSON format.
+// SaveConfig saves a configuration back to YAML or JSON format.
 // For YAML files, it uses yaml.Node round-tripping to preserve comments,
 // field ordering, and formatting from the original file.
-func SaveConfigV3(cfg *ConfigV3, configDir string) error {
+func SaveConfig(cfg *Config, configDir string) error {
 	if cfg == nil {
 		return oops.
 			With("config_dir", configDir).
-			Hint("Provide a valid ConfigV3 struct").
+			Hint("Provide a valid Config struct").
 			Errorf("config is nil")
 	}
 
@@ -1014,10 +1014,10 @@ func SaveConfigV3(cfg *ConfigV3, configDir string) error {
 	return nil
 }
 
-// marshalYAMLPreserving marshals a ConfigV3 to YAML while preserving
+// marshalYAMLPreserving marshals a Config to YAML while preserving
 // the original file's field ordering, comments, and formatting.
 // If the original file doesn't exist, falls back to plain marshal.
-func marshalYAMLPreserving(cfg *ConfigV3, existingPath string) ([]byte, error) {
+func marshalYAMLPreserving(cfg *Config, existingPath string) ([]byte, error) {
 	// Read existing file
 	existingData, readErr := os.ReadFile(existingPath)
 	if readErr != nil {
@@ -1119,7 +1119,7 @@ func mergeYAMLMappings(orig, updated *yaml.Node) {
 	orig.Content = kept
 }
 
-// fileExists checks if a file exists (utility function for SaveConfigV3)
+// fileExists checks if a file exists (utility function for SaveConfig)
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	if os.IsNotExist(err) {
@@ -1131,7 +1131,7 @@ func fileExists(path string) bool {
 // loadBuiltins resolves and loads builtin domains into the config content tree.
 // Builtins have the lowest priority: they are injected into domains that don't already exist.
 // If a domain already exists (from local content or includes), the builtin is skipped.
-func loadBuiltins(config *ConfigV3) {
+func loadBuiltins(config *Config) {
 	var resolved []string
 	if config.Builtins.IsAll() {
 		resolved = builtins.ResolveAll()
@@ -1145,8 +1145,8 @@ func loadBuiltins(config *ConfigV3) {
 	logger.Debug("Loading builtins", "count", len(resolved), "names", resolved)
 
 	if config.Content == nil {
-		config.Content = &ContentTreeV3{
-			Domains: make(map[string]*DomainV3),
+		config.Content = &ContentTree{
+			Domains: make(map[string]*Domain),
 		}
 	}
 
@@ -1166,7 +1166,7 @@ func loadBuiltins(config *ConfigV3) {
 			continue
 		}
 
-		domain := &DomainV3{
+		domain := &Domain{
 			Name:    name,
 			Builtin: true,
 		}

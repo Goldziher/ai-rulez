@@ -16,11 +16,11 @@ import (
 // Scanner scans content from .ai-rulez/ directories and builds an in-memory content tree
 type Scanner struct {
 	baseDir string
-	config  *config.ConfigV3
+	config  *config.Config
 }
 
 // NewScanner creates a new Scanner for the given base directory and config
-func NewScanner(baseDir string, cfg *config.ConfigV3) *Scanner {
+func NewScanner(baseDir string, cfg *config.Config) *Scanner {
 	return &Scanner{
 		baseDir: baseDir,
 		config:  cfg,
@@ -31,7 +31,7 @@ func NewScanner(baseDir string, cfg *config.ConfigV3) *Scanner {
 // This follows the V3 design: root content + domain content with namespacing and collision handling
 //
 //nolint:gocyclo // Complex logic, acceptable for this use case
-func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error) {
+func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 	// Validate profile exists
 	if profileName != "" && !s.config.HasProfile(profileName) {
 		return nil, oops.
@@ -119,7 +119,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 	}
 
 	// Scan domains and apply namespacing
-	domainMap := make(map[string]*config.DomainV3)
+	domainMap := make(map[string]*config.Domain)
 	allRules := make([]config.ContentFile, 0)
 	allContext := make([]config.ContentFile, 0)
 	allSkills := make([]config.ContentFile, 0)
@@ -201,7 +201,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 		s.applyNamespacing(domainCommands, domainName)
 
 		// Store domain
-		domainMap[domainName] = &config.DomainV3{
+		domainMap[domainName] = &config.Domain{
 			Name:     domainName,
 			Rules:    domainRules,
 			Context:  domainContext,
@@ -241,7 +241,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTreeV3, error)
 
 	logger.Info("Final commands after collision resolution", "count", len(finalCommands))
 
-	return &config.ContentTreeV3{
+	return &config.ContentTree{
 		Rules:    finalRules,
 		Context:  finalContext,
 		Skills:   finalSkills,
@@ -399,10 +399,10 @@ func (s *Scanner) loadContentFile(path string) (config.ContentFile, error) {
 	// Use non-fatal version to avoid blocking on parse errors
 	parserMetadata, actualContent := parser.ParseFrontmatterNonFatal(content)
 
-	// Convert parser.MetadataV3 to config.MetadataV3
-	var metadata *config.MetadataV3
+	// Convert parser.Metadata to config.Metadata
+	var metadata *config.Metadata
 	if parserMetadata != nil {
-		metadata = &config.MetadataV3{
+		metadata = &config.Metadata{
 			Priority: parserMetadata.Priority,
 			Targets:  parserMetadata.Targets,
 			Extra:    parserMetadata.Extra,

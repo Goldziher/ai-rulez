@@ -28,7 +28,7 @@ func TestValidateCommandV3Support(t *testing.T) {
 		// Verify validate command has V3-specific validation logic
 		cmd := commands.ValidateCmd
 		assert.NotNil(t, cmd)
-		// The validate command's Run function checks for version and calls runValidateV3()
+		// The validate command's Run function checks for version and calls runValidate()
 		// This is verified by code inspection in validate.go lines 33-44
 	})
 }

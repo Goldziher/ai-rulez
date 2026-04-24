@@ -252,7 +252,7 @@ func TestFindAIRulesDirNotFound(t *testing.T) {
 
 func TestLocalSourceFilterContentIncludesRules(t *testing.T) {
 	// Arrange
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "rule content"},
 		},
@@ -262,7 +262,7 @@ func TestLocalSourceFilterContentIncludesRules(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1", Content: "skill content"},
 		},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source := NewLocalSource("test", "/path", "/base", []string{"rules"})
 
@@ -283,7 +283,7 @@ func TestLocalSourceFilterContentIncludesRules(t *testing.T) {
 
 func TestLocalSourceFilterContentIncludesMultiple(t *testing.T) {
 	// Arrange
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "rule content"},
 		},
@@ -293,7 +293,7 @@ func TestLocalSourceFilterContentIncludesMultiple(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1", Content: "skill content"},
 		},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source := NewLocalSource("test", "/path", "/base", []string{"rules", "context"})
 
@@ -314,7 +314,7 @@ func TestLocalSourceFilterContentIncludesMultiple(t *testing.T) {
 
 func TestLocalSourceFilterContentEmptyInclude(t *testing.T) {
 	// Arrange
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "rule content"},
 		},
@@ -324,7 +324,7 @@ func TestLocalSourceFilterContentEmptyInclude(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1", Content: "skill content"},
 		},
-		Domains: make(map[string]*config.DomainV3),
+		Domains: make(map[string]*config.Domain),
 	}
 	source := NewLocalSource("test", "/path", "/base", []string{})
 
@@ -345,14 +345,14 @@ func TestLocalSourceFilterContentEmptyInclude(t *testing.T) {
 
 func TestLocalSourceFilterContentPreserveDomains(t *testing.T) {
 	// Arrange
-	domain := &config.DomainV3{
+	domain := &config.Domain{
 		Name:  "backend",
 		Rules: []config.ContentFile{{Name: "domain-rule"}},
 	}
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules:   []config.ContentFile{{Name: "rule1"}},
 		Context: []config.ContentFile{{Name: "context1"}},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": domain,
 		},
 	}
@@ -399,7 +399,7 @@ func TestFetchNoAIRulezDir(t *testing.T) {
 		t.Errorf("unexpected error with bare structure: %v", err)
 	}
 	if contentTree == nil {
-		t.Error("expected non-nil ContentTreeV3 for bare structure")
+		t.Error("expected non-nil ContentTree for bare structure")
 	}
 	// Empty bare structure is valid, just has no content
 }
@@ -419,7 +419,7 @@ func TestFetchSuccess(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if contentTree == nil {
-		t.Fatalf("expected non-nil ContentTreeV3")
+		t.Fatalf("expected non-nil ContentTree")
 	}
 	if len(contentTree.Rules) == 0 {
 		t.Error("expected rules to be loaded")
@@ -453,7 +453,7 @@ func TestFetchWithRelativePath(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if contentTree == nil {
-		t.Error("expected non-nil ContentTreeV3")
+		t.Error("expected non-nil ContentTree")
 	}
 }
 
@@ -472,7 +472,7 @@ func TestFetchWithFiltering(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if contentTree == nil {
-		t.Fatalf("expected non-nil ContentTreeV3")
+		t.Fatalf("expected non-nil ContentTree")
 	}
 	if len(contentTree.Rules) == 0 {
 		t.Error("expected rules to be loaded")
@@ -544,7 +544,7 @@ func TestFetchWithDomains(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if contentTree == nil {
-		t.Fatalf("expected non-nil ContentTreeV3")
+		t.Fatalf("expected non-nil ContentTree")
 	}
 	if len(contentTree.Domains) != 2 {
 		t.Fatalf("expected 2 domains, got %d", len(contentTree.Domains))

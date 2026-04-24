@@ -17,7 +17,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 
 	baseDir := filepath.Dir(op.aiRulezDir)
 
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -48,7 +48,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 
 	cfg.InstalledSkills = append(cfg.InstalledSkills, skillConfig)
 
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
 	}
 
@@ -71,7 +71,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 
 	baseDir := filepath.Dir(op.aiRulezDir)
 
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -93,7 +93,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 
 	cfg.InstalledSkills = append(cfg.InstalledSkills[:foundIdx], cfg.InstalledSkills[foundIdx+1:]...)
 
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.With("config_dir", op.aiRulezDir).Wrapf(err, "save config")
 	}
 
@@ -105,7 +105,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error) {
 	baseDir := filepath.Dir(op.aiRulezDir)
 
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return nil, oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}

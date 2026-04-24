@@ -17,7 +17,7 @@ func TestScanner_BasicScanning(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupBasicStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -52,7 +52,7 @@ func TestScanner_ProfileBasedScanning(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupMultiDomainStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -102,7 +102,7 @@ func TestScanner_Namespacing(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupMultiDomainStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -149,7 +149,7 @@ func TestScanner_CollisionHandling(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupCollisionStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -193,7 +193,7 @@ func TestScanner_PrioritySorting(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupPriorityStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -226,7 +226,7 @@ func TestScanner_MissingDirectories(t *testing.T) {
 	aiRulezDir := filepath.Join(tmpDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(aiRulezDir, 0o755))
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -253,7 +253,7 @@ func TestScanner_InvalidProfile(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupBasicStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -278,7 +278,7 @@ func TestScanner_DomainNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupBasicStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -303,7 +303,7 @@ func TestScanner_SkillNaming(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupSkillsStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -353,7 +353,7 @@ func TestScanner_EmptyProfile(t *testing.T) {
 	tmpDir := t.TempDir()
 	setupBasicStructure(t, tmpDir)
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    "test-project",
 		Profiles: map[string][]string{
@@ -552,7 +552,7 @@ func TestParseFrontmatter(t *testing.T) {
 	tests := []struct {
 		name            string
 		content         string
-		expectedMeta    *config.MetadataV3
+		expectedMeta    *config.Metadata
 		expectedContent string
 	}{
 		{
@@ -569,7 +569,7 @@ priority: high
 # Title
 
 Content here.`,
-			expectedMeta: &config.MetadataV3{
+			expectedMeta: &config.Metadata{
 				Priority: "high",
 				Extra:    map[string]string{},
 			},
@@ -584,7 +584,7 @@ targets: [claude, cursor]
 # Title
 
 Content here.`,
-			expectedMeta: &config.MetadataV3{
+			expectedMeta: &config.Metadata{
 				Priority: "critical",
 				Targets:  []string{"claude", "cursor"},
 				Extra:    map[string]string{},
@@ -599,7 +599,7 @@ author: John Doe
 version: 1.0
 ---
 # Title`,
-			expectedMeta: &config.MetadataV3{
+			expectedMeta: &config.Metadata{
 				Priority: "medium",
 				Extra: map[string]string{
 					"author":  "John Doe",
@@ -623,10 +623,10 @@ priority: high
 			// Use the canonical parser from parser package
 			parserMeta, content, _ := parser.ParseFrontmatter(tt.content)
 
-			// Convert parser.MetadataV3 to config.MetadataV3 for comparison
-			var meta *config.MetadataV3
+			// Convert parser.Metadata to config.Metadata for comparison
+			var meta *config.Metadata
 			if parserMeta != nil {
-				meta = &config.MetadataV3{
+				meta = &config.Metadata{
 					Priority: parserMeta.Priority,
 					Targets:  parserMeta.Targets,
 					Extra:    parserMeta.Extra,

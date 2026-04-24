@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("cursor", &CursorPresetGenerator{})
+	config.RegisterPreset("cursor", &CursorPresetGenerator{})
 }
 
 const presetNameCursor = "cursor"
@@ -35,32 +35,32 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cursor"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cursor", "rules"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cursor", "commands"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "agents"),
 			IsDir: true,
 		},
@@ -74,7 +74,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		ruleContent := g.renderRuleFile(rule)
 		sanitized := sanitizeName(rule.Name)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".cursor", "rules", sanitized+".mdc"),
 			Content: ruleContent,
 		})
@@ -90,7 +90,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 			commandContent := g.renderCommandFile(command)
 			sanitized := sanitizeName(command.Name)
 
-			outputs = append(outputs, config.OutputFileV3{
+			outputs = append(outputs, config.OutputFile{
 				Path:    filepath.Join(baseDir, ".cursor", "commands", sanitized+".md"),
 				Content: commandContent,
 			})
@@ -111,14 +111,14 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 
 		// Create skill directory
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:  skillDir,
 			IsDir: true,
 		})
 
 		// Generate SKILL.md file
 		skillContent := g.renderSkillFile(skill, cfg)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
@@ -133,7 +133,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -150,7 +150,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		ctxBuilder.WriteString(processedContent)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".cursor", "rules", "context-"+sanitized+".mdc"),
 			Content: ctxBuilder.String(),
 		})
@@ -162,7 +162,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		if err != nil {
 			return nil, fmt.Errorf("render .mcp.json: %w", err)
 		}
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".mcp.json"),
 			Content: mcpContent,
 		})
@@ -280,7 +280,7 @@ func (g *CursorPresetGenerator) shouldIncludeSkill(skill config.ContentFile) boo
 }
 
 // renderSkillFile renders a skill file in SKILL.md format for Cursor
-func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *config.ConfigV3) string {
+func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Add YAML frontmatter
@@ -352,7 +352,7 @@ func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.Content
 }
 
 // renderMCPJSON renders .mcp.json with MCP server configuration
-func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.ConfigV3) (string, error) {
+func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {

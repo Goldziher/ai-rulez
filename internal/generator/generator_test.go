@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestGeneratorV3_Basic(t *testing.T) {
+func TestGenerator_Basic(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -23,12 +23,12 @@ func TestGeneratorV3_Basic(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -47,7 +47,7 @@ func TestGeneratorV3_Basic(t *testing.T) {
 	}
 }
 
-func TestGeneratorV3_MultiPreset(t *testing.T) {
+func TestGenerator_MultiPreset(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "multi-preset")
 	tempDir := t.TempDir()
@@ -57,11 +57,11 @@ func TestGeneratorV3_MultiPreset(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -78,7 +78,7 @@ func TestGeneratorV3_MultiPreset(t *testing.T) {
 	assert.DirExists(t, filepath.Join(tempDir, ".windsurf"))
 }
 
-func TestGeneratorV3_WithDomains_DefaultProfile(t *testing.T) {
+func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
 	tempDir := t.TempDir()
@@ -88,11 +88,11 @@ func TestGeneratorV3_WithDomains_DefaultProfile(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate with default profile (should be "backend" according to config)
 	err = gen.Generate("")
@@ -102,7 +102,7 @@ func TestGeneratorV3_WithDomains_DefaultProfile(t *testing.T) {
 	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
 }
 
-func TestGeneratorV3_WithDomains_FrontendProfile(t *testing.T) {
+func TestGenerator_WithDomains_FrontendProfile(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
 	tempDir := t.TempDir()
@@ -112,11 +112,11 @@ func TestGeneratorV3_WithDomains_FrontendProfile(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate with frontend profile
 	err = gen.Generate("frontend")
@@ -126,7 +126,7 @@ func TestGeneratorV3_WithDomains_FrontendProfile(t *testing.T) {
 	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
 }
 
-func TestGeneratorV3_WithDomains_FullProfile(t *testing.T) {
+func TestGenerator_WithDomains_FullProfile(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
 	tempDir := t.TempDir()
@@ -136,11 +136,11 @@ func TestGeneratorV3_WithDomains_FullProfile(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate with full profile
 	err = gen.Generate("full")
@@ -150,7 +150,7 @@ func TestGeneratorV3_WithDomains_FullProfile(t *testing.T) {
 	assert.DirExists(t, filepath.Join(tempDir, ".claude"))
 }
 
-func TestGeneratorV3_InvalidProfile(t *testing.T) {
+func TestGenerator_InvalidProfile(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
 	tempDir := t.TempDir()
@@ -160,11 +160,11 @@ func TestGeneratorV3_InvalidProfile(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate with invalid profile
 	err = gen.Generate("nonexistent")
@@ -172,7 +172,7 @@ func TestGeneratorV3_InvalidProfile(t *testing.T) {
 	assert.Contains(t, err.Error(), "profile not found")
 }
 
-func TestGeneratorV3_Gitignore_Disabled(t *testing.T) {
+func TestGenerator_Gitignore_Disabled(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -182,11 +182,11 @@ func TestGeneratorV3_Gitignore_Disabled(t *testing.T) {
 
 	// Load config (gitignore is disabled in this fixture)
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -197,7 +197,7 @@ func TestGeneratorV3_Gitignore_Disabled(t *testing.T) {
 	assert.NoFileExists(t, gitignorePath)
 }
 
-func TestGeneratorV3_Gitignore_Enabled(t *testing.T) {
+func TestGenerator_Gitignore_Enabled(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -207,7 +207,7 @@ func TestGeneratorV3_Gitignore_Enabled(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Override gitignore setting to enable it
@@ -215,7 +215,7 @@ func TestGeneratorV3_Gitignore_Enabled(t *testing.T) {
 	cfg.Gitignore = &enabled
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -233,7 +233,7 @@ func TestGeneratorV3_Gitignore_Enabled(t *testing.T) {
 	assert.Contains(t, contentStr, ".claude")
 }
 
-func TestGeneratorV3_CustomPreset_Markdown(t *testing.T) {
+func TestGenerator_CustomPreset_Markdown(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 
@@ -258,11 +258,11 @@ gitignore: false
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -277,7 +277,7 @@ gitignore: false
 	assert.Contains(t, string(content), "Custom Rule")
 }
 
-func TestGeneratorV3_CustomPreset_Directory(t *testing.T) {
+func TestGenerator_CustomPreset_Directory(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 
@@ -302,11 +302,11 @@ gitignore: false
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -317,7 +317,7 @@ gitignore: false
 	assert.DirExists(t, outputDir)
 }
 
-func TestGeneratorV3_MCPAutoGeneration(t *testing.T) {
+func TestGenerator_MCPAutoGeneration(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-mcp")
 	tempDir := t.TempDir()
@@ -327,11 +327,11 @@ func TestGeneratorV3_MCPAutoGeneration(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -351,7 +351,7 @@ func TestGeneratorV3_MCPAutoGeneration(t *testing.T) {
 	assert.Contains(t, contentStr, "mcpServers")
 }
 
-func TestGeneratorV3_MCPAutoGeneration_NoServers(t *testing.T) {
+func TestGenerator_MCPAutoGeneration_NoServers(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -361,11 +361,11 @@ func TestGeneratorV3_MCPAutoGeneration_NoServers(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -376,7 +376,7 @@ func TestGeneratorV3_MCPAutoGeneration_NoServers(t *testing.T) {
 	assert.NoFileExists(t, mcpPath, ".mcp.json should not be generated when no MCP servers exist")
 }
 
-func TestGeneratorV3_Gitignore_NoAbsolutePaths(t *testing.T) {
+func TestGenerator_Gitignore_NoAbsolutePaths(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -386,7 +386,7 @@ func TestGeneratorV3_Gitignore_NoAbsolutePaths(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Override gitignore setting to enable it
@@ -394,7 +394,7 @@ func TestGeneratorV3_Gitignore_NoAbsolutePaths(t *testing.T) {
 	cfg.Gitignore = &enabled
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -421,7 +421,7 @@ func TestGeneratorV3_Gitignore_NoAbsolutePaths(t *testing.T) {
 	}
 }
 
-func TestGeneratorV3_Gitignore_SkipsAiRulezFolder(t *testing.T) {
+func TestGenerator_Gitignore_SkipsAiRulezFolder(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -431,7 +431,7 @@ func TestGeneratorV3_Gitignore_SkipsAiRulezFolder(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Override gitignore setting to enable it
@@ -439,7 +439,7 @@ func TestGeneratorV3_Gitignore_SkipsAiRulezFolder(t *testing.T) {
 	cfg.Gitignore = &enabled
 
 	// Create generator
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	// Generate
 	err = gen.Generate("default")
@@ -496,17 +496,17 @@ func copyFixture(t *testing.T, src, dst string) {
 }
 
 // Benchmark tests
-func BenchmarkGeneratorV3_Basic(b *testing.B) {
+func BenchmarkGenerator_Basic(b *testing.B) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := b.TempDir()
 	copyFixtureBench(b, fixtureDir, tempDir)
 
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(b, err)
 
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
@@ -664,18 +664,18 @@ func TestIsIgnored(t *testing.T) {
 }
 
 // Test for Issue #13 (updated): default profile domains behavior with/without profiles
-func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.T) {
+func TestGenerator_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.T) {
 	t.Run("default profile includes all domains when no profiles defined", func(t *testing.T) {
-		cfg := &config.ConfigV3{
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+		cfg := &config.Config{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"php": {Name: "php"},
 				},
 			},
 			Profiles: map[string][]string{},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
@@ -687,9 +687,9 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 	})
 
 	t.Run("default profile only includes builtin domains when profiles are defined", func(t *testing.T) {
-		cfg := &config.ConfigV3{
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+		cfg := &config.Config{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"php": {Name: "php"},
 					"go":  {Name: "go", Builtin: true},
 				},
@@ -699,7 +699,7 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 			},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
@@ -714,9 +714,9 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 	})
 
 	t.Run("explicitly defined profiles[default] is honored like a named profile", func(t *testing.T) {
-		cfg := &config.ConfigV3{
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+		cfg := &config.Config{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"php": {Name: "php"},
 					"go":  {Name: "go", Builtin: true},
 				},
@@ -727,7 +727,7 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 			},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
@@ -740,9 +740,9 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 	})
 
 	t.Run("default profile includes FromInclude domains even when profiles are defined", func(t *testing.T) {
-		cfg := &config.ConfigV3{
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+		cfg := &config.Config{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"php":    {Name: "php"},                       // non-builtin, referenced by a profile
 					"go":     {Name: "go", Builtin: true},         // builtin domain
 					"python": {Name: "python", FromInclude: true}, // from external include
@@ -753,7 +753,7 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 			},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
@@ -771,23 +771,23 @@ func TestGeneratorV3_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testin
 }
 
 // Test MCP server aggregation for default profile with and without profiles.
-func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T) {
+func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T) {
 	t.Run("default profile includes domain MCP servers when no profiles defined", func(t *testing.T) {
 		rootEnabled := true
 		domainEnabled := true
 
-		cfg := &config.ConfigV3{
-			MCPServers: map[string]*config.MCPServerV3{
+		cfg := &config.Config{
+			MCPServers: map[string]*config.MCPServer{
 				"root-server": {
 					Name:    "root-server",
 					Enabled: &rootEnabled,
 				},
 			},
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"php": {
 						Name: "php",
-						MCPServers: map[string]*config.MCPServerV3{
+						MCPServers: map[string]*config.MCPServer{
 							"php-server": {
 								Name:    "php-server",
 								Enabled: &domainEnabled,
@@ -799,7 +799,7 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 			Profiles: map[string][]string{},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
@@ -818,18 +818,18 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 		rootEnabled := true
 		domainEnabled := true
 
-		cfg := &config.ConfigV3{
-			MCPServers: map[string]*config.MCPServerV3{
+		cfg := &config.Config{
+			MCPServers: map[string]*config.MCPServer{
 				"root-server": {
 					Name:    "root-server",
 					Enabled: &rootEnabled,
 				},
 			},
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"php": {
 						Name: "php",
-						MCPServers: map[string]*config.MCPServerV3{
+						MCPServers: map[string]*config.MCPServer{
 							"php-server": {
 								Name:    "php-server",
 								Enabled: &domainEnabled,
@@ -840,7 +840,7 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 					"go": {
 						Name:    "go",
 						Builtin: true,
-						MCPServers: map[string]*config.MCPServerV3{
+						MCPServers: map[string]*config.MCPServer{
 							"go-server": {
 								Name:    "go-server",
 								Enabled: &domainEnabled,
@@ -854,7 +854,7 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 			},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
@@ -874,13 +874,13 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 	t.Run("domain MCP server override order is deterministic when multiple domains share a server name", func(t *testing.T) {
 		enabled := true
 
-		cfg := &config.ConfigV3{
-			MCPServers: map[string]*config.MCPServerV3{},
-			Content: &config.ContentTreeV3{
-				Domains: map[string]*config.DomainV3{
+		cfg := &config.Config{
+			MCPServers: map[string]*config.MCPServer{},
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
 					"aaa": {
 						Name: "aaa",
-						MCPServers: map[string]*config.MCPServerV3{
+						MCPServers: map[string]*config.MCPServer{
 							"shared-server": {
 								Name:    "aaa-value",
 								Enabled: &enabled,
@@ -889,7 +889,7 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 					},
 					"zzz": {
 						Name: "zzz",
-						MCPServers: map[string]*config.MCPServerV3{
+						MCPServers: map[string]*config.MCPServer{
 							"shared-server": {
 								Name:    "zzz-value",
 								Enabled: &enabled,
@@ -901,7 +901,7 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 			Profiles: map[string][]string{},
 		}
 
-		gen := &GeneratorV3{config: cfg}
+		gen := &Generator{config: cfg}
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
 
@@ -921,21 +921,21 @@ func TestGeneratorV3_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing
 	})
 }
 
-func TestGeneratorV3_InvalidProfile_SortedHint(t *testing.T) {
-	cfg := &config.ConfigV3{
+func TestGenerator_InvalidProfile_SortedHint(t *testing.T) {
+	cfg := &config.Config{
 		Profiles: map[string][]string{
 			"zebra":  {},
 			"alpha":  {},
 			"middle": {},
 		},
-		Content: &config.ContentTreeV3{
+		Content: &config.ContentTree{
 			Rules: []config.ContentFile{
 				{Path: "rule.md", Content: "content"},
 			},
 		},
 	}
 
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 	err := gen.Generate("nonexistent")
 	require.Error(t, err)
 
@@ -1065,7 +1065,7 @@ func TestInjectContentHash(t *testing.T) {
 	})
 }
 
-func TestGeneratorV3_SkipUnchangedFiles(t *testing.T) {
+func TestGenerator_SkipUnchangedFiles(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
 	tempDir := t.TempDir()
@@ -1075,11 +1075,11 @@ func TestGeneratorV3_SkipUnchangedFiles(t *testing.T) {
 
 	// Load config
 	ctx := context.Background()
-	cfg, err := config.LoadConfigV3(ctx, tempDir)
+	cfg, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
 
 	// Create generator and generate first time
-	gen := NewGeneratorV3(cfg)
+	gen := NewGenerator(cfg)
 	err = gen.Generate("default")
 	require.NoError(t, err)
 
@@ -1099,9 +1099,9 @@ func TestGeneratorV3_SkipUnchangedFiles(t *testing.T) {
 	require.NotEmpty(t, firstHash, "first generation should contain a content hash")
 
 	// Re-load config and generate again (content unchanged)
-	cfg2, err := config.LoadConfigV3(ctx, tempDir)
+	cfg2, err := config.LoadConfig(ctx, tempDir)
 	require.NoError(t, err)
-	gen2 := NewGeneratorV3(cfg2)
+	gen2 := NewGenerator(cfg2)
 	err = gen2.Generate("default")
 	require.NoError(t, err)
 
