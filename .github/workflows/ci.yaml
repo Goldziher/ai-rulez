@@ -287,9 +287,6 @@ jobs:
       - name: Build binary
         run: task build
 
-      - name: Build for multiple platforms
-        run: task build:all
-
       - name: Upload build artifacts
         uses: actions/upload-artifact@v7
         with:
