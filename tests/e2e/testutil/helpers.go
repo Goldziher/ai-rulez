@@ -144,11 +144,8 @@ func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
 	err := os.MkdirAll(aiRulesDir, 0o755)
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
-	// Create config.yaml
+	// Create config.yaml (MCP servers are inlined)
 	WriteFile(t, aiRulesDir, "config.yaml", V3ConfigWithMCPServersYAML)
-
-	// Create mcp.yaml
-	WriteFile(t, aiRulesDir, "mcp.yaml", V3MCPServerConfigYAML)
 
 	// Create empty rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")

@@ -53,36 +53,6 @@ require github.com/stretchr/testify v1.8.4`
 			},
 		},
 		{
-			name:        "Init with skip-mcp flag",
-			projectName: "TSProject",
-			args:        []string{"--skip-mcp"},
-			setupFiles: func(t *testing.T, dir string) {
-				packageJSON := `{
-  "name": "ts-project",
-  "version": "1.0.0",
-  "scripts": {
-    "build": "tsc",
-    "test": "jest",
-    "lint": "eslint ."
-  },
-  "devDependencies": {
-    "typescript": "^5.0.0",
-    "@types/node": "^20.0.0"
-  },
-  "dependencies": {
-    "express": "^4.18.0"
-  }
-}`
-				err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(packageJSON), 0o644)
-				require.NoError(t, err)
-			},
-			validate: func(t *testing.T, configPath string) {
-				content, err := os.ReadFile(configPath)
-				require.NoError(t, err)
-				assert.True(t, len(content) > 0, "Config should have content")
-			},
-		},
-		{
 			name:        "Init with domains flag",
 			projectName: "MultiDomain",
 			args:        []string{"--domains", "backend,frontend,infra"},

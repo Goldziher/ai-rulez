@@ -770,11 +770,10 @@ func TestGenerator_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.
 	})
 }
 
-// Test MCP server aggregation for default profile with and without profiles.
+// Test MCP server collection from root config.
 func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T) {
-	t.Run("default profile includes domain MCP servers when no profiles defined", func(t *testing.T) {
+	t.Run("collectMCPServersForContent includes enabled root servers", func(t *testing.T) {
 		rootEnabled := true
-		domainEnabled := true
 
 		cfg := &config.Config{
 			MCPServers: map[string]*config.MCPServer{
@@ -787,12 +786,6 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 				Domains: map[string]*config.Domain{
 					"php": {
 						Name: "php",
-						MCPServers: map[string]*config.MCPServer{
-							"php-server": {
-								Name:    "php-server",
-								Enabled: &domainEnabled,
-							},
-						},
 					},
 				},
 			},
@@ -807,16 +800,13 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 		servers := gen.collectMCPServersForContent(content)
 		require.NotNil(t, servers)
 
-		// Should contain both root and domain MCP servers
+		// Should contain root MCP servers
 		_, hasRoot := servers["root-server"]
-		_, hasPHP := servers["php-server"]
 		assert.True(t, hasRoot, "expected root MCP server to be included")
-		assert.True(t, hasPHP, "expected domain MCP server to be included when no profiles are defined")
 	})
 
-	t.Run("default profile only includes root and builtin domain MCP servers when profiles are defined", func(t *testing.T) {
-		rootEnabled := true
-		domainEnabled := true
+	t.Run("collectMCPServersForContent excludes disabled root servers", func(t *testing.T) {
+		rootEnabled := false
 
 		cfg := &config.Config{
 			MCPServers: map[string]*config.MCPServer{
@@ -829,29 +819,10 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 				Domains: map[string]*config.Domain{
 					"php": {
 						Name: "php",
-						MCPServers: map[string]*config.MCPServer{
-							"php-server": {
-								Name:    "php-server",
-								Enabled: &domainEnabled,
-							},
-						},
-					},
-					// Builtin domain should always be visible on default, even when profiles exist.
-					"go": {
-						Name:    "go",
-						Builtin: true,
-						MCPServers: map[string]*config.MCPServer{
-							"go-server": {
-								Name:    "go-server",
-								Enabled: &domainEnabled,
-							},
-						},
 					},
 				},
 			},
-			Profiles: map[string][]string{
-				"backend": {"php"},
-			},
+			Profiles: map[string][]string{},
 		}
 
 		gen := &Generator{config: cfg}
@@ -862,41 +833,27 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 		servers := gen.collectMCPServersForContent(content)
 		require.NotNil(t, servers)
 
-		// Should contain root and builtin domain MCP servers, but not non-builtin profile-only domain servers.
+		// Should not contain disabled server
 		_, hasRoot := servers["root-server"]
-		_, hasGo := servers["go-server"]
-		_, hasPHP := servers["php-server"]
-		assert.True(t, hasRoot, "expected root MCP server to be included")
-		assert.True(t, hasGo, "expected builtin domain MCP server to be included for default when profiles are defined")
-		assert.False(t, hasPHP, "expected non-builtin profile domain MCP server to be excluded for default when profiles are defined")
+		assert.False(t, hasRoot, "expected disabled MCP server to be excluded")
 	})
 
-	t.Run("domain MCP server override order is deterministic when multiple domains share a server name", func(t *testing.T) {
+	t.Run("collectMCPServersForContent collects multiple enabled servers", func(t *testing.T) {
 		enabled := true
 
 		cfg := &config.Config{
-			MCPServers: map[string]*config.MCPServer{},
-			Content: &config.ContentTree{
-				Domains: map[string]*config.Domain{
-					"aaa": {
-						Name: "aaa",
-						MCPServers: map[string]*config.MCPServer{
-							"shared-server": {
-								Name:    "aaa-value",
-								Enabled: &enabled,
-							},
-						},
-					},
-					"zzz": {
-						Name: "zzz",
-						MCPServers: map[string]*config.MCPServer{
-							"shared-server": {
-								Name:    "zzz-value",
-								Enabled: &enabled,
-							},
-						},
-					},
+			MCPServers: map[string]*config.MCPServer{
+				"github": {
+					Name:    "github",
+					Enabled: &enabled,
 				},
+				"postgres": {
+					Name:    "postgres",
+					Enabled: &enabled,
+				},
+			},
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{},
 			},
 			Profiles: map[string][]string{},
 		}
@@ -905,19 +862,15 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
 
-		// Run multiple times to catch any non-determinism
-		var firstName string
-		for i := 0; i < 20; i++ {
-			servers := gen.collectMCPServersForContent(content)
-			name := servers["shared-server"].Name
-			if i == 0 {
-				firstName = name
-			} else {
-				assert.Equal(t, firstName, name, "MCP server override order should be deterministic across runs")
-			}
-		}
-		// Alphabetically last domain ("zzz") should win
-		assert.Equal(t, "zzz-value", firstName, "expected alphabetically last domain to win override")
+		servers := gen.collectMCPServersForContent(content)
+		require.NotNil(t, servers)
+
+		// Should contain all enabled servers
+		assert.Len(t, servers, 2, "expected both enabled servers to be collected")
+		_, hasGitHub := servers["github"]
+		_, hasPostgres := servers["postgres"]
+		assert.True(t, hasGitHub, "expected github server to be included")
+		assert.True(t, hasPostgres, "expected postgres server to be included")
 	})
 }
 
