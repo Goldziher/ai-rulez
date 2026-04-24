@@ -21,8 +21,9 @@ exclude = [
   # GitHub raw links for new/renamed files (404 until pushed)
   "github\\.com/.*/raw/",
 
-  # Docs site self-references (404 until deployed)
+  # Docs site self-references and base path links (resolve correctly when deployed)
   "goldziher\\.github\\.io/ai-rulez",
+  "file:///.*site/ai-rulez",
 
   # PyPI project pages (rate-limited)
   "pypi\\.org/project/",
