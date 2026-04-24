@@ -11,16 +11,16 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-//go:embed ai-rules-v3.schema.json
-var schemaV3JSON []byte
+//go:embed ai-rules.schema.json
+var schemaJSON []byte
 
 // Version is the CLI version, set at startup. Defaults to "dev".
 var Version = "dev"
 
 const (
 	schemaBaseURL    = "https://raw.githubusercontent.com/Goldziher/ai-rulez"
-	ConfigSchemaFile = "ai-rules-v3.schema.json"
-	MCPSchemaFile    = "ai-rules-v3-mcp.schema.json"
+	ConfigSchemaFile = "ai-rules.schema.json"
+	MCPSchemaFile    = "ai-rules-mcp.schema.json"
 )
 
 // SchemaURL returns the full URL for a schema file, versioned to match the CLI.
@@ -47,7 +47,7 @@ func ValidateWithSchema(configData []byte) error {
 
 // ValidateWithSchemaV3 validates configuration data against the V3 schema
 func ValidateWithSchemaV3(configData []byte) error {
-	return validateWithSchemaBytes(configData, schemaV3JSON, "v3")
+	return validateWithSchemaBytes(configData, schemaJSON, "v3")
 }
 
 func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string) error {
