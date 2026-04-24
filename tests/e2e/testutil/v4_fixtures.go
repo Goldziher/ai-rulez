@@ -56,10 +56,8 @@ type = "github"
 name = "local-dev"
 source = "./plugins"
 type = "local"
-`
 
-const V4MCPConfigTOML = `version = "1.0"
-
+# MCP Servers
 [[mcp_servers]]
 name = "test-mcp-server"
 description = "Test MCP server for integration tests"
@@ -254,7 +252,6 @@ func SetupV4FullConfig(t *testing.T, workingDir string) {
 
 	// Write config files
 	WriteFile(t, aiRulesDir, "config.toml", V4FullConfigTOML)
-	WriteFile(t, aiRulesDir, "mcp.toml", V4MCPConfigTOML)
 
 	// Write root content
 	WriteFile(t, filepath.Join(aiRulesDir, "rules"), "code-review-standards.md", V4RuleHighPriority)

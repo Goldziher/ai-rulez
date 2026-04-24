@@ -196,33 +196,14 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 }
 
 // collectMCPServersForContent collects MCP servers for the resolved content tree.
-// Logic: collect root servers + domain servers from domains present in the tree
-// Domain servers override root by name
-// Only include enabled servers
+// Only include enabled servers from root config.
 func (g *Generator) collectMCPServersForContent(content *config.ContentTree) map[string]*config.MCPServer {
 	collected := make(map[string]*config.MCPServer)
 
-	// Always include root servers (if enabled)
+	// Include root servers (if enabled)
 	for name, server := range g.config.MCPServers {
 		if server.IsEnabled() {
 			collected[name] = server
-		}
-	}
-
-	// Include servers from domains that are part of the resolved content tree.
-	// Sort domain names to ensure deterministic override order when multiple domains
-	// define the same MCP server name.
-	domainNames := make([]string, 0, len(content.Domains))
-	for name := range content.Domains {
-		domainNames = append(domainNames, name)
-	}
-	sort.Strings(domainNames)
-	for _, domainName := range domainNames {
-		for name, server := range content.Domains[domainName].MCPServers {
-			if server.IsEnabled() {
-				// Domain servers override root servers by name
-				collected[name] = server
-			}
 		}
 	}
 

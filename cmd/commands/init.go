@@ -17,7 +17,6 @@ var (
 	formatFlag      string
 	domainsFlag     string
 	skipContentFlag bool
-	skipMCPFlag     bool
 	fromFlag        string
 	setupHooks      bool
 	autoYes         bool
@@ -43,7 +42,6 @@ func init() {
 	InitCmd.Flags().StringVar(&formatFlag, "format", formatTOML, "Config format: toml, yaml, or json")
 	InitCmd.Flags().StringVar(&domainsFlag, "domains", "", "Comma-separated list of domain directories to create")
 	InitCmd.Flags().BoolVar(&skipContentFlag, "skip-content", false, "Skip creating example content files")
-	InitCmd.Flags().BoolVar(&skipMCPFlag, "skip-mcp", false, "Skip creating example MCP servers")
 	InitCmd.Flags().StringVar(&fromFlag, "from", "", "Import from existing tool files (e.g., 'auto', '.claude,.cursor')")
 	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation")
 	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
@@ -107,14 +105,6 @@ func runInit(cmd *cobra.Command, args []string) {
 	if !skipContentFlag {
 		if err := createExampleContent(); err != nil {
 			logger.Error("Failed to create example content", "error", err)
-			os.Exit(1)
-		}
-	}
-
-	// Create example MCP servers unless --skip-mcp is specified
-	if !skipMCPFlag {
-		if err := createExampleMCPFiles(); err != nil {
-			logger.Error("Failed to create example MCP files", "error", err)
 			os.Exit(1)
 		}
 	}
@@ -206,6 +196,12 @@ presets:
 
 # Gitignore management
 # gitignore: true
+
+# MCP Servers (optional)
+# mcp_servers:
+#   - name: ai-rulez
+#     command: npx
+#     args: ["-y", "ai-rulez@latest", "mcp"]
 `)
 
 	return builder.String()
@@ -260,6 +256,12 @@ presets = ["claude"]
 
 # Gitignore management
 # gitignore = true
+
+# MCP Servers (optional)
+# [[mcp_servers]]
+# name = "ai-rulez"
+# command = "npx"
+# args = ["-y", "ai-rulez@latest", "mcp"]
 `)
 	return builder.String()
 }
@@ -397,9 +399,9 @@ Use this skill when working in a project that is managed by AI-Rulez.
 
 ## Workflow
 
-1. Check for .ai-rulez/config.yaml, .ai-rulez/skills/, domain folders, and .ai-rulez/mcp.yaml.
-2. If MCP is configured, prefer it for reading and modifying AI-Rulez content.
-3. Update the relevant source files under .ai-rulez/: rules, context, skills, agents, domains, config, or MCP config.
+1. Check for .ai-rulez/config.yaml (or config.toml), .ai-rulez/skills/, domain folders.
+2. If MCP is configured in the config, prefer the MCP server for reading and modifying AI-Rulez content.
+3. Update the relevant source files under .ai-rulez/: rules, context, skills, agents, domains, or config.
 4. Run ai-rulez validate when changing configuration structure.
 5. Run ai-rulez generate after source changes so assistant-specific outputs stay current.
 6. If MCP is available, start it with npx -y ai-rulez@latest mcp (or the repo’s helper) and use it for CRUD instead of manual edits when possible.
@@ -451,18 +453,15 @@ func displaySuccessMessage(projectName string) {
 	logger.Info("\nDirectory structure:")
 	logger.Info("  .ai-rulez/")
 
-	// Determine config and MCP filenames based on format flag
-	var configFilename, mcpFilename string
+	// Determine config filename based on format flag
+	var configFilename string
 	switch formatFlag {
 	case formatYAML:
 		configFilename = "config.yaml"
-		mcpFilename = "mcp.yaml"
 	case formatJSON:
 		configFilename = "config.json"
-		mcpFilename = "mcp.yaml"
 	default:
 		configFilename = "config.toml"
-		mcpFilename = "mcp.toml"
 	}
 
 	logger.Info(fmt.Sprintf("  ├── %s", configFilename))
@@ -480,14 +479,6 @@ func displaySuccessMessage(projectName string) {
 		logger.Info("  - skills/ai-rulez/SKILL.md")
 	}
 
-	if !skipMCPFlag {
-		logger.Info("\nExample MCP servers created:")
-		logger.Info(fmt.Sprintf("  - %s         # Root MCP servers (ai-rulez + GitHub examples)", mcpFilename))
-		if domainsFlag != "" {
-			logger.Info(fmt.Sprintf("  - domains/*/%s  # Domain-specific MCP servers", mcpFilename))
-		}
-	}
-
 	if domainsFlag != "" {
 		domains := parseDomains(domainsFlag)
 		logger.Info("\nDomain directories created:")
@@ -497,10 +488,9 @@ func displaySuccessMessage(projectName string) {
 	}
 
 	logger.Info("\nNext steps:")
-	logger.Info(fmt.Sprintf("  1. Edit .ai-rulez/%s to customize presets and profiles", configFilename))
+	logger.Info(fmt.Sprintf("  1. Edit .ai-rulez/%s to customize presets, profiles, and MCP servers", configFilename))
 	logger.Info("  2. Add your rules, context, skills, and agents to the appropriate directories")
-	logger.Info(fmt.Sprintf("  3. Edit .ai-rulez/%s to configure MCP servers", mcpFilename))
-	logger.Info("  4. Run 'ai-rulez generate' to create tool-specific outputs")
+	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
 
 	if setupHooks {
 		handleHooksSetup()
@@ -523,211 +513,6 @@ func displayImportSuccessMessage(sources string) {
 	logger.Info("  1. Review imported content in .ai-rulez/")
 	logger.Info("  2. Edit .ai-rulez/config.yaml to customize presets")
 	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
-}
-
-// generateExampleMCPYAML generates a template mcp.yaml with GitHub example
-func generateExampleMCPYAML() string {
-	var builder strings.Builder
-
-	builder.WriteString(`# AI-Rulez MCP (Model Context Protocol) Servers
-# Configuration for MCP server integrations
-# Documentation: https://github.com/Goldziher/ai-rulez
-
-# Schema reference for IDE validation
-$schema: `)
-	builder.WriteString(schema.SchemaURL(schema.MCPSchemaFile))
-	builder.WriteString(`
-
-# Version (required)
-version: "3.0"
-
-# MCP Servers
-mcp_servers:
-  # ai-rulez MCP server for managing your .ai-rulez/ configuration
-  - name: ai-rulez
-    description: AI-Rulez MCP server for configuration management
-    command: npx
-    args:
-      - "-y"
-      - "ai-rulez@latest"
-      - "mcp"
-    transport: stdio
-    enabled: true
-
-  # Example: GitHub integration for repository operations
-  - name: github
-    description: GitHub integration for repository operations and automation
-    command: npx
-    args:
-      - "-y"
-      - "@modelcontextprotocol/server-github"
-    env:
-      # Set GITHUB_PERSONAL_ACCESS_TOKEN environment variable or use ${GITHUB_TOKEN}
-      GITHUB_PERSONAL_ACCESS_TOKEN: "${GITHUB_TOKEN}"
-    transport: stdio
-    enabled: true
-`)
-
-	return builder.String()
-}
-
-// generateExampleMCPTOML generates a template mcp.toml with GitHub example
-func generateExampleMCPTOML() string {
-	var builder strings.Builder
-
-	builder.WriteString(`# AI-Rulez MCP (Model Context Protocol) Servers
-# Configuration for MCP server integrations
-# Documentation: https://github.com/Goldziher/ai-rulez
-
-# Version (required)
-version = "4.0"
-
-# AI-Rulez MCP server for managing your .ai-rulez/ configuration
-[[mcp_servers]]
-name = "ai-rulez"
-description = "AI-Rulez MCP server for configuration management"
-command = "npx"
-args = ["-y", "ai-rulez@latest", "mcp"]
-transport = "stdio"
-enabled = true
-
-# Example: GitHub integration for repository operations
-[[mcp_servers]]
-name = "github"
-description = "GitHub integration for repository operations and automation"
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-github"]
-transport = "stdio"
-enabled = true
-
-[mcp_servers.env]
-# Set GITHUB_PERSONAL_ACCESS_TOKEN environment variable or use ${GITHUB_TOKEN}
-GITHUB_PERSONAL_ACCESS_TOKEN = "${GITHUB_TOKEN}"
-`)
-
-	return builder.String()
-}
-
-// generateExampleDomainMCPYAML generates a domain-specific MCP template
-func generateExampleDomainMCPYAML(domainName string) string {
-	var builder strings.Builder
-
-	builder.WriteString(`# AI-Rulez MCP Servers - `)
-	builder.WriteString(domainName)
-	builder.WriteString(` Domain
-# Domain-specific MCP server configurations
-# Documentation: https://github.com/Goldziher/ai-rulez
-
-# Schema reference for IDE validation
-$schema: `)
-	builder.WriteString(schema.SchemaURL(schema.MCPSchemaFile))
-	builder.WriteString(`
-
-# Version (required)
-version: "3.0"
-
-# Domain-specific MCP Servers
-mcp_servers:
-  # Example: Database server for `)
-	builder.WriteString(domainName)
-	builder.WriteString(` domain
-  - name: `)
-	builder.WriteString(domainName)
-	builder.WriteString(`-db
-    description: Database access for `)
-	builder.WriteString(domainName)
-	builder.WriteString(` services
-    command: uvx
-    args:
-      - "mcp-server-postgres"
-      - "--connection-string"
-      - "postgresql://user:pass@localhost:5432/`)
-	builder.WriteString(strings.ToLower(domainName))
-	builder.WriteString(`"
-    transport: stdio
-    enabled: false  # Enable this when database is available
-`)
-
-	return builder.String()
-}
-
-// generateExampleDomainMCPTOML generates a domain-specific TOML MCP template
-func generateExampleDomainMCPTOML(domainName string) string {
-	var builder strings.Builder
-
-	builder.WriteString(`# AI-Rulez MCP Servers - `)
-	builder.WriteString(domainName)
-	builder.WriteString(` Domain
-# Domain-specific MCP server configurations
-# Documentation: https://github.com/Goldziher/ai-rulez
-
-# Version (required)
-version = "4.0"
-
-# Example: Database server for `)
-	builder.WriteString(domainName)
-	builder.WriteString(` domain
-[[mcp_servers]]
-name = "`)
-	builder.WriteString(domainName)
-	builder.WriteString(`-db"
-description = "Database access for `)
-	builder.WriteString(domainName)
-	builder.WriteString(` services"
-command = "uvx"
-args = ["mcp-server-postgres", "--connection-string", "postgresql://user:pass@localhost:5432/`)
-	builder.WriteString(strings.ToLower(domainName))
-	builder.WriteString(`"]
-transport = "stdio"
-enabled = false  # Enable this when database is available
-`)
-
-	return builder.String()
-}
-
-// createExampleMCPFiles creates example MCP files
-func createExampleMCPFiles() error {
-	// Determine MCP file extension and content generator based on format flag
-	var mcpExtension string
-	var rootMCPContent string
-	var genDomainMCP func(string) string
-
-	switch formatFlag {
-	case formatJSON:
-		// For now, skip JSON MCP support - YAML is still used
-		mcpExtension = ".yaml"
-		rootMCPContent = generateExampleMCPYAML()
-		genDomainMCP = generateExampleDomainMCPYAML
-	case formatTOML:
-		mcpExtension = ".toml"
-		rootMCPContent = generateExampleMCPTOML()
-		genDomainMCP = generateExampleDomainMCPTOML
-	default: // yaml
-		mcpExtension = ".yaml"
-		rootMCPContent = generateExampleMCPYAML()
-		genDomainMCP = generateExampleDomainMCPYAML
-	}
-
-	// Create root MCP file
-	rootMCPPath := ".ai-rulez/mcp" + mcpExtension
-	if err := os.WriteFile(rootMCPPath, []byte(rootMCPContent), 0o644); err != nil {
-		return fmt.Errorf("failed to write root MCP file: %w", err)
-	}
-
-	// Create domain-specific MCP files if domains were created
-	if domainsFlag != "" {
-		domains := parseDomains(domainsFlag)
-		for _, domain := range domains {
-			domainMCPContent := genDomainMCP(domain)
-			domainMCPPath := filepath.Join(".ai-rulez", "domains", domain, "mcp"+mcpExtension)
-			if err := os.WriteFile(domainMCPPath, []byte(domainMCPContent), 0o644); err != nil {
-				return fmt.Errorf("failed to write domain MCP file for %s: %w", domain, err)
-			}
-		}
-	}
-
-	logger.Debug("Created example MCP files")
-	return nil
 }
 
 func getProjectName(args []string) string {

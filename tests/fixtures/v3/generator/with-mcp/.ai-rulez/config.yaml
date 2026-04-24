@@ -4,3 +4,13 @@ description: Test with MCP servers (auto-generation without preset)
 presets:
   - claude
 gitignore: false
+mcp_servers:
+  - name: test-server
+    command: python
+    args:
+      - "-m"
+      - test_server
+    transport: stdio
+    enabled: true
+    env:
+      DEBUG: "true"
