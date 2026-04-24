@@ -52,9 +52,6 @@ description: "configuration with MCP servers"
 presets:
   - claude
 gitignore: false
-`
-
-const V3MCPServerConfigYAML = `version: "1.0"
 mcp_servers:
   - name: test-server
     command: python
