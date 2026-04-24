@@ -2,7 +2,7 @@
 
 For large projects with multiple teams, organize your `.ai-rulez/` configuration using domains and profiles to provide relevant context while avoiding overwhelming AI assistants with irrelevant information.
 
-This guide outlines best practices for managing AI context at scale in V3.
+This guide outlines best practices for managing AI context at scale.
 
 ---
 

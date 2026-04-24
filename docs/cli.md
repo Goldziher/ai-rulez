@@ -1078,11 +1078,11 @@ ai-rulez remove rule old-guideline --force
 
 ## Common Workflows
 
-### Set Up a New V3 Project
+### Set Up a New Project
 
 ```bash
 # Initialize with domains
-ai-rulez init "my-project" --v3 --domains "backend,frontend,qa"
+ai-rulez init "my-project" --domains "backend,frontend,qa"
 
 # Review generated structure
 ls -la .ai-rulez/

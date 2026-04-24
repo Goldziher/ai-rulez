@@ -4,6 +4,43 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.0] - 2026-04-23
+
+### Breaking Changes
+- **TOML is the default config format**: `ai-rulez init` now generates `config.toml` instead of `config.yaml`. Existing YAML configs continue to work.
+- **MCP servers are inline**: MCP servers are now configured in your main config file under `[[mcp_servers]]` instead of a separate `mcp.yaml`. Legacy `mcp.yaml` files are still loaded with a deprecation warning.
+- **V2 compatibility removed**: All V2 config types, migration code, validator, and generators have been removed. V3 YAML configs remain fully supported.
+- **Deprecated features removed**: `CompressionConfig`, `--skip-mcp` flag, `--auto-migrate` flag, `migrate v3` command.
+
+### Added
+- **Agent generation for all presets**: Amp, Windsurf, Cline, and Continue.dev now generate agent files with YAML frontmatter.
+- **Context rendering for per-file presets**: Cursor, Windsurf, and Cline now render context as rule-like files.
+- **Claude MCP & plugins output**: `.claude/settings.json` (MCP servers) and `.claude/plugins.json` (plugin declarations).
+- **Cursor/Copilot MCP output**: `.mcp.json` generated when MCP servers are configured.
+- **Codex plugins & commands**: `.codex/plugins.json` and `.codex/commands/` output.
+- **Copilot command generation**: `.github/commands/` output for Copilot.
+- **Gemini/Antigravity user MCP servers**: Settings.json now includes user-configured servers alongside the hardcoded ai-rulez server.
+- **TOML config support**: Config loader tries TOML first, then YAML, then JSON.
+- **Plugins and marketplaces**: New `[[plugins]]` and `[[marketplaces]]` config sections for declaring tool extensions.
+- **`migrate v4` command**: Converts `config.yaml` to `config.toml`, inlines MCP servers, removes old files.
+- **Backward-compatible `mcp.yaml` loading**: Legacy separate MCP files are loaded with a deprecation warning.
+
+### Changed
+- **All V3 types renamed**: `ConfigV3` → `Config`, `ContentTreeV3` → `ContentTree`, `OutputFileV3` → `OutputFile`, etc.
+- **Schema files renamed**: `ai-rules-v3.schema.json` → `ai-rules.schema.json`, `ai-rules-v3-mcp.schema.json` → `ai-rules-mcp.schema.json`.
+- **Schema updated**: Accepts version `"3.0"` or `"4.0"`, adds `plugins` and `marketplaces` fields, removes deprecated `compression`.
+- **Documentation migrated to Zensical**: Replaces MkDocs with Zensical for documentation site generation.
+- **All documentation updated for V4**: TOML examples, inline MCP, plugins/marketplaces, updated CLI reference.
+
+### Removed
+- V2 config types, loader, migration tool, validator, and generators (~3000 lines).
+- V1 and V2 JSON schemas.
+- V2 template rendering engine and builtin templates.
+- `CompressionConfig` (deprecated no-op).
+- Separate MCP file loading functions (replaced by inline config).
+- MkDocs configuration (`mkdocs.yaml`).
+- Generated documentation site (`site/`).
+
 ## [3.14.2] - 2026-04-20
 
 ### Fixed
