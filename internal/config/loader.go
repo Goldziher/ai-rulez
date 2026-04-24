@@ -126,6 +126,16 @@ func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
 	// Convert inline MCP servers to map
 	config.MCPServers = serversToMap(config.MCPServersRaw)
 
+	// Backward compat: load legacy separate mcp.yaml/mcp.toml if present
+	if legacyServers := loadLegacyMCPFile(configDir); len(legacyServers) > 0 {
+		logger.Warn("Separate mcp.yaml/mcp.toml is deprecated — add mcp_servers to your config file instead")
+		for name, server := range legacyServers {
+			if _, exists := config.MCPServers[name]; !exists {
+				config.MCPServers[name] = server
+			}
+		}
+	}
+
 	// Scan content directories
 	contentTree, err := ScanContentTree(configDir)
 	if err != nil {
@@ -797,6 +807,51 @@ func serversToMap(servers []MCPServer) map[string]*MCPServer {
 		result[servers[i].Name] = &servers[i]
 	}
 	return result
+}
+
+// loadLegacyMCPFile loads MCP servers from a deprecated separate mcp.toml/mcp.yaml/mcp.json file.
+// Returns nil if no legacy file exists.
+func loadLegacyMCPFile(configDir string) map[string]*MCPServer {
+	for _, filename := range []string{"mcp.toml", "mcp.yaml", "mcp.json"} {
+		path := filepath.Join(configDir, filename)
+		if _, err := os.Stat(path); err != nil {
+			continue
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			logger.Warn("Failed to read legacy MCP file", "path", path, "error", err)
+			return nil
+		}
+
+		// Parse the legacy MCP config structure
+		type legacyMCPConfig struct {
+			Servers []MCPServer `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
+		}
+
+		var cfg legacyMCPConfig
+		ext := filepath.Ext(filename)
+		switch ext {
+		case ".toml":
+			if err := toml.Unmarshal(data, &cfg); err != nil {
+				logger.Warn("Failed to parse legacy MCP TOML", "path", path, "error", err)
+				return nil
+			}
+		case ".yaml", ".yml":
+			if err := yaml.Unmarshal(data, &cfg); err != nil {
+				logger.Warn("Failed to parse legacy MCP YAML", "path", path, "error", err)
+				return nil
+			}
+		case ".json":
+			if err := json.Unmarshal(data, &cfg); err != nil {
+				logger.Warn("Failed to parse legacy MCP JSON", "path", path, "error", err)
+				return nil
+			}
+		}
+
+		return serversToMap(cfg.Servers)
+	}
+	return nil
 }
 
 // SaveConfig saves a configuration back to YAML or JSON format.
