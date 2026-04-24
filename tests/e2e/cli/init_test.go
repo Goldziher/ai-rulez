@@ -66,12 +66,12 @@ func (s *InitCLITestSuite) TestBasicInit() {
 	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 	result.AssertStderrContains(s.T(), "TestProject")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 
 	content := testutil.ReadFile(s.T(), configPath)
 	s.Contains(content, "TestProject")
-	s.Contains(content, "version: \"3.0\"")
+	s.Contains(content, `version = "4.0"`)
 }
 
 func (s *InitCLITestSuite) TestInitWithoutProjectName() {
@@ -81,10 +81,10 @@ func (s *InitCLITestSuite) TestInitWithoutProjectName() {
 
 	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	content := testutil.ReadFile(s.T(), configPath)
-	s.Contains(content, "name:")
-	s.Contains(content, "version: \"3.0\"")
+	s.Contains(content, "name = ")
+	s.Contains(content, `version = "4.0"`)
 }
 
 func (s *InitCLITestSuite) TestInitWithDomains() {
@@ -94,7 +94,7 @@ func (s *InitCLITestSuite) TestInitWithDomains() {
 
 	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 
 	// Check that domains directories were created
@@ -111,7 +111,7 @@ func (s *InitCLITestSuite) TestInitSkipContent() {
 
 	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 }
 
@@ -122,7 +122,7 @@ func (s *InitCLITestSuite) TestInitSkipMCP() {
 
 	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should be created")
 }
 
@@ -160,7 +160,7 @@ func (s *InitCLITestSuite) TestInitMultipleDomains() {
 
 	result.AssertStderrContains(s.T(), "Created .ai-rulez/")
 
-	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
+	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.toml")
 	s.True(testutil.FileExists(s.T(), configPath))
 
 	// Check that all domain directories were created

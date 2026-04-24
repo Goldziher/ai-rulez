@@ -13,7 +13,7 @@ import (
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "3.14.2"
+	Version  = "4.0.0"
 )
 
 var RootCmd = &cobra.Command{
