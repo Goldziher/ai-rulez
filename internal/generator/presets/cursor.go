@@ -1,11 +1,13 @@
 package presets
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"gopkg.in/yaml.v3"
 )
 
@@ -134,6 +136,35 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		outputs = append(outputs, config.OutputFileV3{
 			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
+		})
+	}
+
+	// Generate context files as rule-like files in .cursor/rules/
+	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	for _, ctx := range allContext {
+		sanitized := sanitizeName(ctx.Name)
+		var ctxBuilder strings.Builder
+		ctxBuilder.WriteString("# ")
+		ctxBuilder.WriteString(ctx.Name)
+		ctxBuilder.WriteString("\n\n")
+		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
+		ctxBuilder.WriteString(processedContent)
+
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".cursor", "rules", "context-"+sanitized+".mdc"),
+			Content: ctxBuilder.String(),
+		})
+	}
+
+	// Generate .mcp.json if MCP servers are configured
+	if len(cfg.MCPServers) > 0 {
+		mcpContent, err := g.renderMCPJSON(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render .mcp.json: %w", err)
+		}
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".mcp.json"),
+			Content: mcpContent,
 		})
 	}
 
@@ -318,4 +349,42 @@ func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.Content
 	}
 
 	return frontmatter
+}
+
+// renderMCPJSON renders .mcp.json with MCP server configuration
+func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.ConfigV3) (string, error) {
+	mcpServers := make(map[string]interface{})
+
+	for name, server := range cfg.MCPServers {
+		entry := map[string]interface{}{
+			"command":  server.Command,
+			"disabled": !server.IsEnabled(),
+		}
+
+		if len(server.Args) > 0 {
+			entry["args"] = server.Args
+		}
+		if len(server.Env) > 0 {
+			entry["env"] = server.Env
+		}
+		if server.Transport != "" {
+			entry["transport"] = server.GetTransport()
+		}
+		if server.URL != "" {
+			entry["url"] = server.URL
+		}
+
+		mcpServers[name] = entry
+	}
+
+	payload := map[string]interface{}{
+		"mcpServers": mcpServers,
+	}
+
+	jsonBytes, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal MCP JSON: %w", err)
+	}
+
+	return string(jsonBytes) + "\n", nil
 }

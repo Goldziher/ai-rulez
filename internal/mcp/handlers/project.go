@@ -9,7 +9,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/templates"
-	"github.com/Goldziher/ai-rulez/internal/validator"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -252,69 +251,38 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		return ToolError(err)
 	}
 
-	if version == "v3" {
-		if dryRun {
-			return ToolSuccess(map[string]interface{}{
-				"message": "dry_run: not yet implemented for V3 configs",
-				"config":  configFile,
-			})
-		}
-		// Load and generate V3 config
-		v3cfg, err := config.LoadConfigV3(ctx, dir)
-		if err != nil {
-			return ToolError(err)
-		}
-		if err := v3cfg.ValidateV3(); err != nil {
-			return ToolError(err)
-		}
-		gen := generator.NewGeneratorV3(v3cfg)
-		if err := gen.Generate(""); err != nil {
-			return ToolError(err)
-		}
-		return ToolSuccess(map[string]interface{}{
-			"message": "Outputs generated successfully",
-			"config":  configFile,
-		})
+	if version != "v3" {
+		return ToolError(fmt.Errorf("generate_outputs requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
 	}
 
 	if dryRun {
 		return ToolSuccess(map[string]interface{}{
-			"message": "dry_run: not yet implemented for V2 configs",
+			"message": "dry_run: not yet implemented for V3 configs",
 			"config":  configFile,
 		})
 	}
-	// Load and generate V2 config
-	cfg, err := config.LoadConfig(configFile)
+	// Load and generate V3 config
+	v3cfg, err := config.LoadConfigV3(ctx, dir)
 	if err != nil {
 		return ToolError(err)
 	}
-	gen := generator.NewWithConfigFile(configFile)
-	if err := gen.GenerateAll(cfg); err != nil {
+	if err := v3cfg.ValidateV3(); err != nil {
 		return ToolError(err)
 	}
-	results := make([]string, len(cfg.Outputs))
-	for i, output := range cfg.Outputs {
-		results[i] = output.Path
+	gen := generator.NewGeneratorV3(v3cfg)
+	if err := gen.Generate(""); err != nil {
+		return ToolError(err)
 	}
 	return ToolSuccess(map[string]interface{}{
 		"message": "Outputs generated successfully",
 		"config":  configFile,
-		"results": results,
 	})
 }
 
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	baseDir := workingDir(request)
-	configFile := request.GetString("config_file", "")
-	if configFile == "" {
-		var err error
-		configFile, err = config.FindConfigFile(baseDir)
-		if err != nil {
-			return ToolError(err)
-		}
-	}
 
-	// Detect config version and validate appropriately
+	// Detect config version
 	dir, err := filepath.Abs(baseDir)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to get directory: %w", err))
@@ -324,36 +292,12 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		return ToolError(err)
 	}
 
-	if version == "v3" {
-		// Validate V3 config
-		v3cfg, err := config.LoadConfigV3(ctx, dir)
-		if err != nil {
-			result := map[string]interface{}{
-				"valid": false,
-				"error": err.Error(),
-			}
-			return ToolSuccess(result)
-		}
-		if err := v3cfg.ValidateV3(); err != nil {
-			result := map[string]interface{}{
-				"valid": false,
-				"error": err.Error(),
-			}
-			return ToolSuccess(result)
-		}
-		result := map[string]interface{}{
-			"valid":    true,
-			"warnings": []string{},
-		}
-		return ToolSuccess(result)
-	}
-	// Validate V2 config
-	val, err := validator.NewValidator(configFile)
-	if err != nil {
-		return ToolError(err)
+	if version != "v3" {
+		return ToolError(fmt.Errorf("validate_config requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
 	}
 
-	warnings, err := val.Validate(ctx)
+	// Validate V3 config
+	v3cfg, err := config.LoadConfigV3(ctx, dir)
 	if err != nil {
 		result := map[string]interface{}{
 			"valid": false,
@@ -361,12 +305,17 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		}
 		return ToolSuccess(result)
 	}
-
+	if err := v3cfg.ValidateV3(); err != nil {
+		result := map[string]interface{}{
+			"valid": false,
+			"error": err.Error(),
+		}
+		return ToolSuccess(result)
+	}
 	result := map[string]interface{}{
 		"valid":    true,
-		"warnings": warnings,
+		"warnings": []string{},
 	}
-
 	return ToolSuccess(result)
 }
 

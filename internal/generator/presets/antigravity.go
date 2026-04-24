@@ -68,7 +68,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	)
 
 	// Generate .agents/settings.json with MCP configuration
-	settingsContent, err := g.renderSettingsJSON()
+	settingsContent, err := g.renderSettingsJSON(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("render settings.json: %w", err)
 	}
@@ -121,18 +121,46 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	return outputs, nil
 }
 
-func (g *AntigravityPresetGenerator) renderSettingsJSON() (string, error) {
-	settings := map[string]interface{}{
-		"mcpServers": map[string]interface{}{
-			"ai-rulez": map[string]interface{}{
-				"command": "npx",
-				"args": []string{
-					"-y",
-					"ai-rulez@latest",
-					"mcp",
-				},
-			},
+func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string, error) {
+	mcpServers := make(map[string]interface{})
+
+	// Always include the hardcoded ai-rulez MCP server
+	mcpServers["ai-rulez"] = map[string]interface{}{
+		"command": "npx",
+		"args": []string{
+			"-y",
+			"ai-rulez@latest",
+			"mcp",
 		},
+	}
+
+	// Merge user-configured MCP servers
+	for name, server := range cfg.MCPServers {
+		entry := map[string]interface{}{
+			"command": server.Command,
+		}
+
+		if len(server.Args) > 0 {
+			entry["args"] = server.Args
+		}
+		if len(server.Env) > 0 {
+			entry["env"] = server.Env
+		}
+		if server.Transport != "" {
+			entry["transport"] = server.GetTransport()
+		}
+		if server.URL != "" {
+			entry["url"] = server.URL
+		}
+		if !server.IsEnabled() {
+			entry["disabled"] = true
+		}
+
+		mcpServers[name] = entry
+	}
+
+	settings := map[string]interface{}{
+		"mcpServers": mcpServers,
 	}
 
 	jsonData, err := json.MarshalIndent(settings, "", "  ")
@@ -140,7 +168,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON() (string, error) {
 		return "", fmt.Errorf("marshal JSON: %w", err)
 	}
 
-	return string(jsonData), nil
+	return string(jsonData) + "\n", nil
 }
 
 func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {

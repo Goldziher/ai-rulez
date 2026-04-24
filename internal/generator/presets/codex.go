@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
@@ -44,6 +46,7 @@ func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".codex"),
 		filepath.Join(baseDir, ".codex", "skills"),
 		filepath.Join(baseDir, ".codex", "agents"),
+		filepath.Join(baseDir, ".codex", "commands"),
 	}
 }
 
@@ -106,6 +109,38 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		outputs = append(outputs, config.OutputFileV3{
 			Path:    filepath.Join(baseDir, ".codex", "agents", agentID+".toml"),
 			Content: agentContent,
+		})
+	}
+
+	// Generate .codex/commands directory
+	outputs = append(outputs, config.OutputFileV3{
+		Path:  filepath.Join(baseDir, ".codex", "commands"),
+		IsDir: true,
+	})
+
+	// Generate command files to .codex/commands/
+	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	for _, command := range allCommands {
+		if !g.shouldIncludeCommand(command) {
+			continue
+		}
+		sanitized := sanitizeName(command.Name)
+		commandContent := g.renderCommandFile(command)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".codex", "commands", sanitized+".md"),
+			Content: commandContent,
+		})
+	}
+
+	// Generate .codex/plugins.json with plugin declarations (if configured)
+	if len(cfg.Plugins) > 0 {
+		pluginsContent, err := g.renderPluginsJSON(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render plugins.json: %w", err)
+		}
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".codex", "plugins.json"),
+			Content: pluginsContent,
 		})
 	}
 
@@ -260,4 +295,75 @@ func quoteYAMLString(value string) string {
 	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
 	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
 	return "\"" + escaped + "\""
+}
+
+// shouldIncludeCommand checks if a command should be included in the Codex preset
+func (g *CodexPresetGenerator) shouldIncludeCommand(command config.ContentFile) bool {
+	if command.Metadata == nil {
+		return true
+	}
+	if len(command.Metadata.Targets) > 0 {
+		for _, target := range command.Metadata.Targets {
+			if target == "codex" {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
+// renderCommandFile renders a command file in Markdown format for Codex
+func (g *CodexPresetGenerator) renderCommandFile(command config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("# /")
+	builder.WriteString(command.Name)
+	builder.WriteString("\n\n")
+
+	if command.Metadata != nil && command.Metadata.Extra != nil {
+		if desc, ok := command.Metadata.Extra["description"]; ok && desc != "" {
+			builder.WriteString("**Description:** ")
+			builder.WriteString(desc)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	if command.Metadata != nil && command.Metadata.Usage != "" {
+		builder.WriteString("**Usage:** `")
+		builder.WriteString(command.Metadata.Usage)
+		builder.WriteString("`\n\n")
+	}
+
+	processedContent := markdown.ProcessEmbeddedContent(command.Content)
+	builder.WriteString(processedContent)
+
+	return builder.String()
+}
+
+// renderPluginsJSON generates .codex/plugins.json with plugin declarations
+func (g *CodexPresetGenerator) renderPluginsJSON(cfg *config.ConfigV3) (string, error) {
+	type pluginEntry struct {
+		Marketplace string `json:"marketplace"`
+		Name        string `json:"name"`
+		Scope       string `json:"scope"`
+		Enabled     bool   `json:"enabled"`
+	}
+
+	var plugins []pluginEntry
+	for _, p := range cfg.Plugins {
+		plugins = append(plugins, pluginEntry{
+			Marketplace: p.Marketplace,
+			Name:        p.Name,
+			Scope:       p.GetScope(),
+			Enabled:     p.IsEnabled(),
+		})
+	}
+
+	jsonBytes, err := json.MarshalIndent(plugins, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal plugins JSON: %w", err)
+	}
+
+	return string(jsonBytes) + "\n", nil
 }

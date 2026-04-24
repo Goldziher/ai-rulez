@@ -14,16 +14,14 @@ import (
 // Helper function to create TemplateData with required fields
 func createTemplateData(projectName string, cfgV3 *config.ConfigV3) *templates.TemplateData {
 	return &templates.TemplateData{
-		ProjectName:    projectName,
-		RuleCount:      3,
-		SectionCount:   2,
-		AgentCount:     1,
-		MCPServerCount: 1,
-		CommandCount:   0,
-		ConfigFile:     "config.yaml",
-		OutputFile:     "CLAUDE.md",
-		Timestamp:      time.Date(2025, 11, 1, 15, 7, 23, 0, time.UTC),
-		Config:         cfgV3,
+		ProjectName:  projectName,
+		RuleCount:    3,
+		SectionCount: 2,
+		AgentCount:   1,
+		ConfigFile:   "config.yaml",
+		OutputFile:   "CLAUDE.md",
+		Timestamp:    time.Date(2025, 11, 1, 15, 7, 23, 0, time.UTC),
+		Config:       cfgV3,
 	}
 }
 
@@ -340,8 +338,8 @@ func TestHeaderContent_WithEmptyConfigPath(t *testing.T) {
 
 	header := templates.GenerateHeader(data)
 
-	// Should default to "ai-rulez.yaml"
-	assert.Contains(t, header, "Source: .ai-rulez/ai-rulez.yaml")
+	// Should default to "config.yaml"
+	assert.Contains(t, header, "Source: .ai-rulez/config.yaml")
 }
 
 // TestHeaderContent_WithEmptyOutputPath verifies default output path handling
@@ -440,8 +438,6 @@ func TestHeaderContent_WithLargeContentCounts(t *testing.T) {
 	data.RuleCount = 150
 	data.SectionCount = 50
 	data.AgentCount = 25
-	data.MCPServerCount = 10
-	data.CommandCount = 30
 
 	header := templates.GenerateHeader(data)
 
