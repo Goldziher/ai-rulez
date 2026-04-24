@@ -53,23 +53,43 @@ func runMigrateV4() {
 
 	cfg.Version = "4.0"
 
-	type tomlOutput struct {
-		Version         string                        `toml:"version"`
-		Name            string                        `toml:"name"`
-		Description     string                        `toml:"description,omitempty"`
-		Gitignore       *bool                         `toml:"gitignore,omitempty"`
-		Default         string                        `toml:"default,omitempty"`
-		Presets         []string                      `toml:"presets,omitempty"`
-		Header          *config.HeaderConfig          `toml:"header,omitempty"`
-		Profiles        map[string][]string           `toml:"profiles,omitempty"`
-		Builtins        interface{}                   `toml:"builtins,omitempty"`
-		Includes        []config.IncludeConfig        `toml:"includes,omitempty"`
-		InstalledSkills []config.InstalledSkillConfig `toml:"installed_skills,omitempty"`
-		Plugins         []config.PluginConfig         `toml:"plugins,omitempty"`
-		Marketplaces    []config.MarketplaceConfig    `toml:"marketplaces,omitempty"`
-		MCPServers      []config.MCPServer            `toml:"mcp_servers,omitempty"`
+	data, err := marshalConfigTOML(cfg)
+	if err != nil {
+		logger.Error("Failed to marshal TOML", "error", err)
+		os.Exit(1)
 	}
 
+	if err := os.WriteFile(tomlPath, data, 0o644); err != nil {
+		logger.Error("Failed to write config.toml", "error", err)
+		os.Exit(1)
+	}
+
+	logger.Success("Created config.toml")
+	removeOldConfigFiles(configDir)
+
+	fmt.Println("\n✅ Migration complete!")
+	fmt.Println("   Config: .ai-rulez/config.toml")
+	fmt.Println("   Version: 4.0")
+}
+
+type tomlOutput struct {
+	Version         string                        `toml:"version"`
+	Name            string                        `toml:"name"`
+	Description     string                        `toml:"description,omitempty"`
+	Gitignore       *bool                         `toml:"gitignore,omitempty"`
+	Default         string                        `toml:"default,omitempty"`
+	Presets         []string                      `toml:"presets,omitempty"`
+	Header          *config.HeaderConfig          `toml:"header,omitempty"`
+	Profiles        map[string][]string           `toml:"profiles,omitempty"`
+	Builtins        interface{}                   `toml:"builtins,omitempty"`
+	Includes        []config.IncludeConfig        `toml:"includes,omitempty"`
+	InstalledSkills []config.InstalledSkillConfig `toml:"installed_skills,omitempty"`
+	Plugins         []config.PluginConfig         `toml:"plugins,omitempty"`
+	Marketplaces    []config.MarketplaceConfig    `toml:"marketplaces,omitempty"`
+	MCPServers      []config.MCPServer            `toml:"mcp_servers,omitempty"`
+}
+
+func marshalConfigTOML(cfg *config.Config) ([]byte, error) {
 	presetNames := make([]string, len(cfg.Presets))
 	for i, p := range cfg.Presets {
 		presetNames[i] = p.GetName()
@@ -81,6 +101,15 @@ func runMigrateV4() {
 			builtinsVal = *cfg.Builtins.All
 		} else if len(cfg.Builtins.Names) > 0 {
 			builtinsVal = cfg.Builtins.Names
+		}
+	}
+
+	// Use inline MCP servers if available, otherwise convert from the map
+	// (which includes servers merged from legacy mcp.yaml)
+	mcpServers := cfg.MCPServersRaw
+	if len(mcpServers) == 0 && len(cfg.MCPServers) > 0 {
+		for _, server := range cfg.MCPServers {
+			mcpServers = append(mcpServers, *server)
 		}
 	}
 
@@ -98,25 +127,19 @@ func runMigrateV4() {
 		InstalledSkills: cfg.InstalledSkills,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,
-		MCPServers:      cfg.MCPServersRaw,
+		MCPServers:      mcpServers,
 	}
 
 	data, err := toml.Marshal(output)
 	if err != nil {
-		logger.Error("Failed to marshal TOML", "error", err)
-		os.Exit(1)
+		return nil, err
 	}
 
 	header := "# AI-Rulez Configuration (migrated to V4 TOML format)\n# Documentation: https://github.com/Goldziher/ai-rulez\n\n"
+	return []byte(header + string(data)), nil
+}
 
-	if err := os.WriteFile(tomlPath, []byte(header+string(data)), 0o644); err != nil {
-		logger.Error("Failed to write config.toml", "error", err)
-		os.Exit(1)
-	}
-
-	logger.Success("Created config.toml")
-
-	// Remove migrated files
+func removeOldConfigFiles(configDir string) {
 	for _, old := range []string{"config.yaml", "config.json", "mcp.yaml", "mcp.toml", "mcp.json"} {
 		oldPath := filepath.Join(configDir, old)
 		if _, err := os.Stat(oldPath); err == nil {
@@ -127,8 +150,4 @@ func runMigrateV4() {
 			}
 		}
 	}
-
-	fmt.Println("\n✅ Migration complete!")
-	fmt.Println("   Config: .ai-rulez/config.toml")
-	fmt.Println("   Version: 4.0")
 }
