@@ -28,7 +28,7 @@ func TestContinueDevPresetGenerator_GetOutputPaths(t *testing.T) {
 
 func TestContinueDevPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	g := &ContinueDevPresetGenerator{}
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "test-rule", Content: "Rule content"},
 		},
@@ -42,7 +42,7 @@ func TestContinueDevPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 			{
 				Name:    "test-agent",
 				Content: "Agent content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{"description": "Test agent description", "model": "sonnet"},
 				},
 			},
@@ -51,14 +51,14 @@ func TestContinueDevPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 			{
 				Name:    "test-cmd",
 				Content: "Command content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{"description": "Test command"},
 				},
 			},
 		},
-		Domains: map[string]*config.DomainV3{},
+		Domains: map[string]*config.Domain{},
 	}
-	cfg := &config.ConfigV3{Name: "test-project"}
+	cfg := &config.Config{Name: "test-project"}
 
 	outputs, err := g.Generate(content, "/tmp/test", cfg)
 	require.NoError(t, err)
@@ -76,7 +76,7 @@ func TestContinueDevPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	assert.GreaterOrEqual(t, files, 2, "Should have at least rule + prompts files")
 
 	// Verify agent file exists with frontmatter
-	var agentFile *config.OutputFileV3
+	var agentFile *config.OutputFile
 	for i := range outputs {
 		if strings.HasSuffix(outputs[i].Path, "test-agent.md") && !outputs[i].IsDir {
 			agentFile = &outputs[i]
@@ -92,13 +92,13 @@ func TestContinueDevPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 
 func TestContinueDevPresetGenerator_Generate_WithDomains(t *testing.T) {
 	g := &ContinueDevPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "root-rule", Content: "Root rule"},
 		},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Rules: []config.ContentFile{
@@ -138,7 +138,7 @@ func TestContinueDevPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "no targets includes by default",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{},
+				Metadata: &config.Metadata{},
 			},
 			expected: true,
 		},
@@ -146,7 +146,7 @@ func TestContinueDevPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "matching target includes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{Targets: []string{"continue-dev"}},
+				Metadata: &config.Metadata{Targets: []string{"continue-dev"}},
 			},
 			expected: true,
 		},
@@ -154,7 +154,7 @@ func TestContinueDevPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "non-matching target excludes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{Targets: []string{"claude", "cursor"}},
+				Metadata: &config.Metadata{Targets: []string{"claude", "cursor"}},
 			},
 			expected: false,
 		},
@@ -173,7 +173,7 @@ func TestContinueDevPresetGenerator_renderContinueDevAgentFile(t *testing.T) {
 	agent := config.ContentFile{
 		Name:    "my-agent",
 		Content: "You are a helpful agent.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"description": "Helpful agent",
 				"model":       "opus",
@@ -208,7 +208,7 @@ func TestContinueDevPresetGenerator_renderContinueDevAgentFile_WithoutMetadata(t
 func TestContinueDevPresetGenerator_renderPromptsYAML_IncludesCommands(t *testing.T) {
 	g := &ContinueDevPresetGenerator{}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Context: []config.ContentFile{
 			{Name: "ctx", Content: "Context here"},
 		},
@@ -219,14 +219,14 @@ func TestContinueDevPresetGenerator_renderPromptsYAML_IncludesCommands(t *testin
 			{
 				Name:    "run-tests",
 				Content: "Run tests",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{"description": "Run all tests"},
 				},
 			},
 		},
-		Domains: map[string]*config.DomainV3{},
+		Domains: map[string]*config.Domain{},
 	}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
 	result, err := g.renderPromptsYAML(content, cfg)
 	require.NoError(t, err)
@@ -239,12 +239,12 @@ func TestContinueDevPresetGenerator_renderPromptsYAML_IncludesCommands(t *testin
 func TestContinueDevPresetGenerator_renderPromptsYAML_ExcludesNonTargetedCommands(t *testing.T) {
 	g := &ContinueDevPresetGenerator{}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Commands: []config.ContentFile{
 			{
 				Name:    "continue-cmd",
 				Content: "Continue command",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"continue-dev"},
 					Extra: map[string]string{
 						"description": "Continue only",
@@ -254,7 +254,7 @@ func TestContinueDevPresetGenerator_renderPromptsYAML_ExcludesNonTargetedCommand
 			{
 				Name:    "claude-cmd",
 				Content: "Claude command",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"claude"},
 					Extra: map[string]string{
 						"description": "Claude only",
@@ -262,9 +262,9 @@ func TestContinueDevPresetGenerator_renderPromptsYAML_ExcludesNonTargetedCommand
 				},
 			},
 		},
-		Domains: map[string]*config.DomainV3{},
+		Domains: map[string]*config.Domain{},
 	}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
 	result, err := g.renderPromptsYAML(content, cfg)
 	require.NoError(t, err)
@@ -278,12 +278,12 @@ func TestContinueDevPresetGenerator_renderRuleFile(t *testing.T) {
 	rule := config.ContentFile{
 		Name:    "test rule",
 		Content: "Test content",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Priority: "high",
 		},
 	}
 
-	result := g.renderRuleFile(rule, &config.ConfigV3{Name: "test"}, ".continue/rules/test-rule.md", 1)
+	result := g.renderRuleFile(rule, &config.Config{Name: "test"}, ".continue/rules/test-rule.md", 1)
 
 	assert.Contains(t, result, "# test rule")
 	assert.Contains(t, result, "**Priority:** high")
@@ -303,7 +303,7 @@ func TestContinueDevPresetGenerator_buildContinueDevAgentFrontmatter(t *testing.
 			name: "with description and model",
 			agent: config.ContentFile{
 				Name: "agent1",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description": "Test desc",
 						"model":       "sonnet",
@@ -323,7 +323,7 @@ func TestContinueDevPresetGenerator_buildContinueDevAgentFrontmatter(t *testing.
 			name: "with only description",
 			agent: config.ContentFile{
 				Name: "agent3",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{"description": "Only desc"},
 				},
 			},

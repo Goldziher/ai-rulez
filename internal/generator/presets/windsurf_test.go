@@ -10,14 +10,14 @@ import (
 func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name        string
-		content     *config.ContentTreeV3
+		content     *config.ContentTree
 		baseDir     string
 		wantOutputs int
 		wantErr     bool
 	}{
 		{
 			name: "generates rule files",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{
 						Name:    "Test Rule",
@@ -31,7 +31,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates multiple rule files",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{
 						Name:    "Rule One",
@@ -52,7 +52,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &WindsurfPresetGenerator{}
-			cfg := &config.ConfigV3{
+			cfg := &config.Config{
 				Name: "Test Project",
 			}
 
@@ -89,7 +89,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Manual Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger": "manual",
 					},
@@ -103,7 +103,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Always Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger": "always_on",
 					},
@@ -117,7 +117,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Smart Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger":     "model_decision",
 						"description": "Apply when working with APIs",
@@ -132,7 +132,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Glob Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger": "glob",
 						"glob":    "**/*.ts",
@@ -147,7 +147,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Special Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger":     "model_decision",
 						"description": "Apply for JSON: API #critical\nand docs",
@@ -162,7 +162,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Auto Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger": "model_decision",
 					},
@@ -176,7 +176,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			rule: config.ContentFile{
 				Name:    "Invalid Rule",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"trigger": "invalid_mode",
 					},
@@ -190,7 +190,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &WindsurfPresetGenerator{}
-			cfg := &config.ConfigV3{
+			cfg := &config.Config{
 				Name: "Test Project",
 			}
 

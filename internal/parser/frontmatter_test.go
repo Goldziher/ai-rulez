@@ -311,7 +311,7 @@ func TestTruncateString(t *testing.T) {
 	})
 }
 
-// TestParseFrontmatter_IntegrationWithMetadata tests integration with MetadataV3
+// TestParseFrontmatter_IntegrationWithMetadata tests integration with Metadata
 func TestParseFrontmatter_IntegrationWithMetadata(t *testing.T) {
 	content := `---
 priority: high
@@ -328,7 +328,7 @@ This is a rule about Go practices.`
 	require.NoError(t, err)
 	require.NotNil(t, metadata)
 
-	// Verify metadata is properly typed as MetadataV3
+	// Verify metadata is properly typed as Metadata
 	var _ = metadata
 	assert.Equal(t, "high", metadata.Priority)
 	assert.Contains(t, actualContent, "# Rule Content")

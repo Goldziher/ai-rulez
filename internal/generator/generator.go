@@ -18,24 +18,24 @@ import (
 
 const defaultProfileName = "default"
 
-// GeneratorV3 handles V3 configuration generation
-type GeneratorV3 struct {
-	config *config.ConfigV3
+// Generator handles configuration generation
+type Generator struct {
+	config *config.Config
 }
 
-// NewGeneratorV3 creates a new V3 generator
-func NewGeneratorV3(cfg *config.ConfigV3) *GeneratorV3 {
-	return &GeneratorV3{
+// NewGenerator creates a new V3 generator
+func NewGenerator(cfg *config.Config) *Generator {
+	return &Generator{
 		config: cfg,
 	}
 }
 
 // Generate generates all outputs for the specified profile
-func (g *GeneratorV3) Generate(profile string) error {
+func (g *Generator) Generate(profile string) error {
 	// Determine the active profile
 	activeProfile := g.resolveProfile(profile)
 
-	logger.Info("Generating with V3 configuration", "profile", activeProfile)
+	logger.Info("Generating with configuration", "profile", activeProfile)
 
 	// Get content for the profile
 	contentTree, err := g.getContentForProfile(activeProfile)
@@ -59,7 +59,7 @@ func (g *GeneratorV3) Generate(profile string) error {
 	tempCfg.MCPServers = mcpServers
 
 	// Generate outputs for all presets using the existing infrastructure
-	allOutputs, err := config.GeneratePresetsV3(&tempCfg)
+	allOutputs, err := config.GeneratePresets(&tempCfg)
 	if err != nil {
 		return oops.
 			Wrapf(err, "generate presets")
@@ -102,7 +102,7 @@ func (g *GeneratorV3) Generate(profile string) error {
 }
 
 // resolveProfile determines which profile to use
-func (g *GeneratorV3) resolveProfile(profile string) string {
+func (g *Generator) resolveProfile(profile string) string {
 	// 1. Use provided profile if specified
 	if profile != "" {
 		return profile
@@ -118,9 +118,9 @@ func (g *GeneratorV3) resolveProfile(profile string) string {
 }
 
 // getContentForProfile returns the content tree for a specific profile
-func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV3, error) {
-	// Guard against nil content to avoid panics when GeneratorV3 is created
-	// with a ConfigV3 that hasn't been fully loaded.
+func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, error) {
+	// Guard against nil content to avoid panics when Generator is created
+	// with a Config that hasn't been fully loaded.
 	if g.config.Content == nil {
 		return nil, config.ErrNoContent
 	}
@@ -138,12 +138,12 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 		// includes and don't define their own profiles.
 		if len(g.config.Profiles) == 0 {
 			// Shallow-copy domains to avoid exposing internal map for mutation.
-			domainsCopy := make(map[string]*config.DomainV3, len(g.config.Content.Domains))
+			domainsCopy := make(map[string]*config.Domain, len(g.config.Content.Domains))
 			for name, domain := range g.config.Content.Domains {
 				domainsCopy[name] = domain
 			}
 
-			return &config.ContentTreeV3{
+			return &config.ContentTree{
 				Rules:    g.config.Content.Rules,
 				Context:  g.config.Content.Context,
 				Skills:   g.config.Content.Skills,
@@ -157,13 +157,13 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 		// behavior where the built-in "default" profile only sees
 		// root content and (optionally) built-in domains. FromInclude
 		// domains are always included regardless of profile definitions.
-		defaultDomains := make(map[string]*config.DomainV3)
+		defaultDomains := make(map[string]*config.Domain)
 		for name, domain := range g.config.Content.Domains {
 			if domain.Builtin || domain.FromInclude {
 				defaultDomains[name] = domain
 			}
 		}
-		return &config.ContentTreeV3{
+		return &config.ContentTree{
 			Rules:    g.config.Content.Rules,
 			Context:  g.config.Content.Context,
 			Skills:   g.config.Content.Skills,
@@ -199,8 +199,8 @@ func (g *GeneratorV3) getContentForProfile(profile string) (*config.ContentTreeV
 // Logic: collect root servers + domain servers from domains present in the tree
 // Domain servers override root by name
 // Only include enabled servers
-func (g *GeneratorV3) collectMCPServersForContent(content *config.ContentTreeV3) map[string]*config.MCPServerV3 {
-	collected := make(map[string]*config.MCPServerV3)
+func (g *Generator) collectMCPServersForContent(content *config.ContentTree) map[string]*config.MCPServer {
+	collected := make(map[string]*config.MCPServer)
 
 	// Always include root servers (if enabled)
 	for name, server := range g.config.MCPServers {
@@ -232,8 +232,8 @@ func (g *GeneratorV3) collectMCPServersForContent(content *config.ContentTreeV3)
 // writeOutputs writes all output files to disk
 // flattenPresetOutputs merges outputs from all presets, deduplicating directories
 // and detecting file conflicts (last write wins with a warning).
-func flattenPresetOutputs(allOutputs map[string][]config.OutputFileV3) []config.OutputFileV3 {
-	var flatOutputs []config.OutputFileV3
+func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) []config.OutputFile {
+	var flatOutputs []config.OutputFile
 	seenPaths := make(map[string]string) // path -> first preset that claimed it
 	seenDirs := make(map[string]bool)
 	for presetName, outputs := range allOutputs {
@@ -266,7 +266,7 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFileV3) []config.
 	return flatOutputs
 }
 
-func (g *GeneratorV3) writeOutputs(outputs []config.OutputFileV3) error {
+func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
 	for _, output := range outputs {
 		if err := g.writeOutput(output); err != nil {
 			return oops.
@@ -282,7 +282,7 @@ func (g *GeneratorV3) writeOutputs(outputs []config.OutputFileV3) error {
 // injects the hash into the header, and skips writing if the existing
 // file already contains the same hash — avoiding noisy git diffs when
 // content has not changed.
-func (g *GeneratorV3) writeOutput(output config.OutputFileV3) error {
+func (g *Generator) writeOutput(output config.OutputFile) error {
 	// Resolve absolute path
 	absPath := output.Path
 	if !filepath.IsAbs(absPath) {
@@ -459,7 +459,7 @@ func injectContentHash(content, outputPath, hash string) string {
 // cleanManagedDirs removes stale files from directories that are fully managed by the generator.
 // It collects all directory outputs from the new generation, then removes any existing files
 // in those directories that are not part of the new output set.
-func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
+func (g *Generator) cleanManagedDirs(outputs []config.OutputFile) {
 	newFiles := g.collectOutputPaths(outputs, false)
 	managedDirs := g.collectOutputPaths(outputs, true)
 
@@ -488,7 +488,7 @@ func (g *GeneratorV3) cleanManagedDirs(outputs []config.OutputFileV3) {
 }
 
 // collectOutputPaths collects absolute paths from outputs, filtered by IsDir.
-func (g *GeneratorV3) collectOutputPaths(outputs []config.OutputFileV3, dirsOnly bool) map[string]bool {
+func (g *Generator) collectOutputPaths(outputs []config.OutputFile, dirsOnly bool) map[string]bool {
 	result := make(map[string]bool)
 	for _, o := range outputs {
 		if o.IsDir != dirsOnly {
@@ -504,7 +504,7 @@ func (g *GeneratorV3) collectOutputPaths(outputs []config.OutputFileV3, dirsOnly
 }
 
 // removeStaleDir removes a directory if no new output file targets it.
-func (g *GeneratorV3) removeStaleDir(dirPath string, newFiles map[string]bool) {
+func (g *Generator) removeStaleDir(dirPath string, newFiles map[string]bool) {
 	prefix := dirPath + string(filepath.Separator)
 	for newFile := range newFiles {
 		if strings.HasPrefix(newFile, prefix) {
@@ -519,7 +519,7 @@ func (g *GeneratorV3) removeStaleDir(dirPath string, newFiles map[string]bool) {
 }
 
 // removeStaleFile removes a single stale file.
-func (g *GeneratorV3) removeStaleFile(filePath string) {
+func (g *Generator) removeStaleFile(filePath string) {
 	if err := os.Remove(filePath); err != nil {
 		logger.Warn("Failed to remove stale file", "path", filePath, "error", err)
 	} else {
@@ -537,7 +537,7 @@ var sharedDirs = map[string]bool{
 // collectGitignorePaths collects unique paths to add to .gitignore.
 // Top-level directories that are fully managed are added as directory patterns.
 // Files inside shared directories (e.g. .github) are added individually.
-func (g *GeneratorV3) collectGitignorePaths(outputs []config.OutputFileV3) map[string]bool {
+func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[string]bool {
 	paths := make(map[string]bool)
 	topDirs := make(map[string]bool)
 
@@ -583,7 +583,7 @@ func (g *GeneratorV3) collectGitignorePaths(outputs []config.OutputFileV3) map[s
 }
 
 // convertToRelativePath converts an absolute path to relative, or returns the original path
-func (g *GeneratorV3) convertToRelativePath(path string) string {
+func (g *Generator) convertToRelativePath(path string) string {
 	if !filepath.IsAbs(path) {
 		return path
 	}
@@ -595,14 +595,14 @@ func (g *GeneratorV3) convertToRelativePath(path string) string {
 }
 
 // shouldSkipPath checks if a path should be skipped for .gitignore
-func (g *GeneratorV3) shouldSkipPath(relPath string) bool {
+func (g *Generator) shouldSkipPath(relPath string) bool {
 	return relPath == ".ai-rulez" ||
 		hasPrefix(relPath, ".ai-rulez/") ||
 		hasPrefix(relPath, ".ai-rulez\\")
 }
 
 // extractTopLevelDir extracts the top-level directory from a path
-func (g *GeneratorV3) extractTopLevelDir(relPath string) string {
+func (g *Generator) extractTopLevelDir(relPath string) string {
 	parts := strings.Split(filepath.Clean(relPath), string(filepath.Separator))
 	if len(parts) == 0 {
 		return relPath
@@ -611,7 +611,7 @@ func (g *GeneratorV3) extractTopLevelDir(relPath string) string {
 }
 
 // updateGitignore updates .gitignore with generated file paths using a fenced block
-func (g *GeneratorV3) updateGitignore(outputs []config.OutputFileV3) error {
+func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
 
 	// Collect unique output paths

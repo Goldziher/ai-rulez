@@ -9,22 +9,22 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-func TestPresetV3_IsBuiltIn(t *testing.T) {
+func TestPreset_IsBuiltIn(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		preset   config.PresetV3
+		preset   config.Preset
 		expected bool
 	}{
 		{
 			name:     "built-in preset",
-			preset:   config.PresetV3{BuiltIn: "claude"},
+			preset:   config.Preset{BuiltIn: "claude"},
 			expected: true,
 		},
 		{
 			name: "custom preset",
-			preset: config.PresetV3{
+			preset: config.Preset{
 				Name: "custom",
 				Type: config.PresetTypeMarkdown,
 				Path: "CUSTOM.md",
@@ -33,7 +33,7 @@ func TestPresetV3_IsBuiltIn(t *testing.T) {
 		},
 		{
 			name:     "empty preset",
-			preset:   config.PresetV3{},
+			preset:   config.Preset{},
 			expected: false,
 		},
 	}
@@ -46,22 +46,22 @@ func TestPresetV3_IsBuiltIn(t *testing.T) {
 	}
 }
 
-func TestPresetV3_GetName(t *testing.T) {
+func TestPreset_GetName(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		preset   config.PresetV3
+		preset   config.Preset
 		expected string
 	}{
 		{
 			name:     "built-in preset name",
-			preset:   config.PresetV3{BuiltIn: "claude"},
+			preset:   config.Preset{BuiltIn: "claude"},
 			expected: "claude",
 		},
 		{
 			name: "custom preset name",
-			preset: config.PresetV3{
+			preset: config.Preset{
 				Name: "my-custom-preset",
 				Type: config.PresetTypeMarkdown,
 				Path: "CUSTOM.md",
@@ -70,7 +70,7 @@ func TestPresetV3_GetName(t *testing.T) {
 		},
 		{
 			name:     "empty preset",
-			preset:   config.PresetV3{},
+			preset:   config.Preset{},
 			expected: "",
 		},
 	}
@@ -83,27 +83,27 @@ func TestPresetV3_GetName(t *testing.T) {
 	}
 }
 
-func TestPresetV3_IsValid(t *testing.T) {
+func TestPreset_IsValid(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		preset   config.PresetV3
+		preset   config.Preset
 		expected bool
 	}{
 		{
 			name:     "valid built-in preset",
-			preset:   config.PresetV3{BuiltIn: "claude"},
+			preset:   config.Preset{BuiltIn: "claude"},
 			expected: true,
 		},
 		{
 			name:     "invalid built-in preset",
-			preset:   config.PresetV3{BuiltIn: "invalid"},
+			preset:   config.Preset{BuiltIn: "invalid"},
 			expected: false,
 		},
 		{
 			name: "valid custom preset",
-			preset: config.PresetV3{
+			preset: config.Preset{
 				Name: "custom",
 				Type: config.PresetTypeMarkdown,
 				Path: "CUSTOM.md",
@@ -112,7 +112,7 @@ func TestPresetV3_IsValid(t *testing.T) {
 		},
 		{
 			name: "invalid custom preset - missing name",
-			preset: config.PresetV3{
+			preset: config.Preset{
 				Type: config.PresetTypeMarkdown,
 				Path: "CUSTOM.md",
 			},
@@ -120,7 +120,7 @@ func TestPresetV3_IsValid(t *testing.T) {
 		},
 		{
 			name: "invalid custom preset - missing type",
-			preset: config.PresetV3{
+			preset: config.Preset{
 				Name: "custom",
 				Path: "CUSTOM.md",
 			},
@@ -128,7 +128,7 @@ func TestPresetV3_IsValid(t *testing.T) {
 		},
 		{
 			name: "invalid custom preset - missing path",
-			preset: config.PresetV3{
+			preset: config.Preset{
 				Name: "custom",
 				Type: config.PresetTypeMarkdown,
 			},
@@ -144,12 +144,12 @@ func TestPresetV3_IsValid(t *testing.T) {
 	}
 }
 
-func TestMetadataV3_GetPriority(t *testing.T) {
+func TestMetadata_GetPriority(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		metadata *config.MetadataV3
+		metadata *config.Metadata
 		expected config.Priority
 	}{
 		{
@@ -159,27 +159,27 @@ func TestMetadataV3_GetPriority(t *testing.T) {
 		},
 		{
 			name:     "empty priority defaults to medium",
-			metadata: &config.MetadataV3{},
+			metadata: &config.Metadata{},
 			expected: config.PriorityMedium,
 		},
 		{
 			name:     "critical priority",
-			metadata: &config.MetadataV3{Priority: "critical"},
+			metadata: &config.Metadata{Priority: "critical"},
 			expected: config.PriorityCritical,
 		},
 		{
 			name:     "high priority",
-			metadata: &config.MetadataV3{Priority: "high"},
+			metadata: &config.Metadata{Priority: "high"},
 			expected: config.PriorityHigh,
 		},
 		{
 			name:     "low priority",
-			metadata: &config.MetadataV3{Priority: "low"},
+			metadata: &config.Metadata{Priority: "low"},
 			expected: config.PriorityLow,
 		},
 		{
 			name:     "invalid priority defaults to medium",
-			metadata: &config.MetadataV3{Priority: "invalid"},
+			metadata: &config.Metadata{Priority: "invalid"},
 			expected: config.PriorityMedium,
 		},
 	}
@@ -192,12 +192,12 @@ func TestMetadataV3_GetPriority(t *testing.T) {
 	}
 }
 
-func TestMetadataV3_HasTargets(t *testing.T) {
+func TestMetadata_HasTargets(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		metadata *config.MetadataV3
+		metadata *config.Metadata
 		expected bool
 	}{
 		{
@@ -207,12 +207,12 @@ func TestMetadataV3_HasTargets(t *testing.T) {
 		},
 		{
 			name:     "empty targets",
-			metadata: &config.MetadataV3{},
+			metadata: &config.Metadata{},
 			expected: false,
 		},
 		{
 			name:     "has targets",
-			metadata: &config.MetadataV3{Targets: []string{"*.md"}},
+			metadata: &config.Metadata{Targets: []string{"*.md"}},
 			expected: true,
 		},
 	}
@@ -225,29 +225,29 @@ func TestMetadataV3_HasTargets(t *testing.T) {
 	}
 }
 
-func TestConfigV3_ShouldUpdateGitignore(t *testing.T) {
+func TestConfig_ShouldUpdateGitignore(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		config   config.ConfigV3
+		config   config.Config
 		expected bool
 	}{
 		{
 			name:     "nil gitignore defaults to true",
-			config:   config.ConfigV3{},
+			config:   config.Config{},
 			expected: true,
 		},
 		{
 			name: "explicitly enabled",
-			config: config.ConfigV3{
+			config: config.Config{
 				Gitignore: &[]bool{true}[0],
 			},
 			expected: true,
 		},
 		{
 			name: "explicitly disabled",
-			config: config.ConfigV3{
+			config: config.Config{
 				Gitignore: &[]bool{false}[0],
 			},
 			expected: false,
@@ -262,22 +262,22 @@ func TestConfigV3_ShouldUpdateGitignore(t *testing.T) {
 	}
 }
 
-func TestConfigV3_GetDefaultProfile(t *testing.T) {
+func TestConfig_GetDefaultProfile(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		config   config.ConfigV3
+		config   config.Config
 		expected string
 	}{
 		{
 			name:     "no default profile",
-			config:   config.ConfigV3{},
+			config:   config.Config{},
 			expected: "",
 		},
 		{
 			name: "has default profile",
-			config: config.ConfigV3{
+			config: config.Config{
 				Default: "full",
 			},
 			expected: "full",
@@ -292,10 +292,10 @@ func TestConfigV3_GetDefaultProfile(t *testing.T) {
 	}
 }
 
-func TestConfigV3_GetProfileDomains(t *testing.T) {
+func TestConfig_GetProfileDomains(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ConfigV3{
+	cfg := config.Config{
 		Default: "full",
 		Profiles: map[string][]string{
 			"full":     {"backend", "frontend", "qa"},
@@ -334,10 +334,10 @@ func TestConfigV3_GetProfileDomains(t *testing.T) {
 	}
 }
 
-func TestConfigV3_HasProfile(t *testing.T) {
+func TestConfig_HasProfile(t *testing.T) {
 	t.Parallel()
 
-	cfg := config.ConfigV3{
+	cfg := config.Config{
 		Profiles: map[string][]string{
 			"full":    {"backend", "frontend"},
 			"backend": {"backend"},
@@ -369,31 +369,31 @@ func TestConfigV3_HasProfile(t *testing.T) {
 	}
 }
 
-func TestConfigV3_IsV3(t *testing.T) {
+func TestConfig_IsV3(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name     string
-		config   config.ConfigV3
+		config   config.Config
 		expected bool
 	}{
 		{
 			name: "valid v3 config",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "3.0",
 			},
 			expected: true,
 		},
 		{
 			name: "invalid version",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "2.0",
 			},
 			expected: false,
 		},
 		{
 			name:     "empty version",
-			config:   config.ConfigV3{},
+			config:   config.Config{},
 			expected: false,
 		},
 	}
@@ -406,21 +406,21 @@ func TestConfigV3_IsV3(t *testing.T) {
 	}
 }
 
-func TestConfigV3_Validate(t *testing.T) {
+func TestConfig_Validate(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
 		name      string
-		config    config.ConfigV3
+		config    config.Config
 		expectErr bool
 		errMsg    string
 	}{
 		{
 			name: "valid config",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "3.0",
 				Name:    "test-project",
-				Presets: []config.PresetV3{
+				Presets: []config.Preset{
 					{BuiltIn: "claude"},
 				},
 			},
@@ -428,7 +428,7 @@ func TestConfigV3_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid version",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "2.0",
 				Name:    "test-project",
 			},
@@ -437,9 +437,9 @@ func TestConfigV3_Validate(t *testing.T) {
 		},
 		{
 			name: "missing name",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "3.0",
-				Presets: []config.PresetV3{
+				Presets: []config.Preset{
 					{BuiltIn: "claude"},
 				},
 			},
@@ -448,11 +448,11 @@ func TestConfigV3_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid default profile",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "3.0",
 				Name:    "test-project",
 				Default: "nonexistent",
-				Presets: []config.PresetV3{
+				Presets: []config.Preset{
 					{BuiltIn: "claude"},
 				},
 				Profiles: map[string][]string{
@@ -464,10 +464,10 @@ func TestConfigV3_Validate(t *testing.T) {
 		},
 		{
 			name: "invalid preset",
-			config: config.ConfigV3{
+			config: config.Config{
 				Version: "3.0",
 				Name:    "test-project",
-				Presets: []config.PresetV3{
+				Presets: []config.Preset{
 					{BuiltIn: "invalid-preset"},
 				},
 			},
@@ -489,15 +489,15 @@ func TestConfigV3_Validate(t *testing.T) {
 	}
 }
 
-func TestContentTreeV3_GetRulesForDomains(t *testing.T) {
+func TestContentTree_GetRulesForDomains(t *testing.T) {
 	t.Parallel()
 
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "root-rule-1", Path: "/rules/rule1.md"},
 			{Name: "root-rule-2", Path: "/rules/rule2.md"},
 		},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Rules: []config.ContentFile{
@@ -548,10 +548,10 @@ func TestContentTreeV3_GetRulesForDomains(t *testing.T) {
 	}
 }
 
-func TestContentTreeV3_GetAllContentFiles(t *testing.T) {
+func TestContentTree_GetAllContentFiles(t *testing.T) {
 	t.Parallel()
 
-	tree := &config.ContentTreeV3{
+	tree := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1"},
 		},
@@ -561,7 +561,7 @@ func TestContentTreeV3_GetAllContentFiles(t *testing.T) {
 		Skills: []config.ContentFile{
 			{Name: "skill1"},
 		},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Rules: []config.ContentFile{
@@ -654,11 +654,11 @@ func TestContentFile_IsMarkdown(t *testing.T) {
 	}
 }
 
-func TestConfigV3_GetContentForProfile(t *testing.T) {
+func TestConfig_GetContentForProfile(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no content loaded", func(t *testing.T) {
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			Version: "3.0",
 			Name:    "test",
 		}
@@ -669,18 +669,18 @@ func TestConfigV3_GetContentForProfile(t *testing.T) {
 	})
 
 	t.Run("with content", func(t *testing.T) {
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			Version: "3.0",
 			Name:    "test",
 			Default: "backend",
 			Profiles: map[string][]string{
 				"backend": {"backend"},
 			},
-			Content: &config.ContentTreeV3{
+			Content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{Name: "root-rule"},
 				},
-				Domains: map[string]*config.DomainV3{
+				Domains: map[string]*config.Domain{
 					"backend": {
 						Name: "backend",
 						Rules: []config.ContentFile{

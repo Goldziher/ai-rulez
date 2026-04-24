@@ -14,14 +14,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("amp", &AmpPresetGenerator{})
+	config.RegisterPreset("amp", &AmpPresetGenerator{})
 }
 
 // AmpPresetGenerator generates AMP preset files (AGENTS.md)
 type AmpPresetGenerator struct{}
 
 // generateAmpPresetHeader creates a header for AMP preset files
-func generateAmpPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateAmpPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -50,23 +50,23 @@ func (g *AmpPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *AmpPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Generate AGENTS.md file
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
 	// Create .agents directory structure and AGENTS.md
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:    filepath.Join(baseDir, "AGENTS.md"),
 			Content: agentsContent,
 			IsDir:   false,
@@ -79,11 +79,11 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir str
 
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
 		outputs = append(outputs,
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:  skillDir,
 				IsDir: true,
 			},
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:    filepath.Join(skillDir, "SKILL.md"),
 				Content: g.renderSkillFile(skill),
 			},
@@ -91,7 +91,7 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir str
 	}
 
 	// Add .agents/agents directory
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  filepath.Join(baseDir, ".agents", "agents"),
 		IsDir: true,
 	})
@@ -105,7 +105,7 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir str
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -114,7 +114,7 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTreeV3, baseDir str
 	return outputs, nil
 }
 
-func (g *AmpPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *AmpPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Calculate content counts

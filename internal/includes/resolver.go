@@ -35,14 +35,14 @@ func NewResolver(baseDir string, accessToken string) *Resolver {
 }
 
 // ResolveIncludes loads all includes and merges with local content
-func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.ConfigV3) (*config.ContentTreeV3, error) {
+func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
 	logger.Debug("Resolving includes", "count", len(cfg.Includes))
 
 	// Start with local content
 	mergedContent := cfg.Content
 	if mergedContent == nil {
-		mergedContent = &config.ContentTreeV3{
-			Domains: make(map[string]*config.DomainV3),
+		mergedContent = &config.ContentTree{
+			Domains: make(map[string]*config.Domain),
 		}
 	}
 
@@ -61,7 +61,7 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.ConfigV3) (*
 }
 
 // processInclude handles a single include configuration
-func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.ContentTreeV3, includeConf *config.IncludeConfig) error {
+func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.ContentTree, includeConf *config.IncludeConfig) error {
 	// Check circular dependency
 	if r.visited[includeConf.Name] {
 		return oops.Errorf("circular dependency detected: %s", includeConf.Name)
@@ -179,7 +179,7 @@ func (r *Resolver) resolveLocalOverride(includeConf *config.IncludeConfig) strin
 }
 
 // mergeContent merges two content trees based on strategy
-func (r *Resolver) mergeContent(base, include *config.ContentTreeV3, strategy, installTo string) (*config.ContentTreeV3, error) {
+func (r *Resolver) mergeContent(base, include *config.ContentTree, strategy, installTo string) (*config.ContentTree, error) {
 	// Default strategy
 	if strategy == "" {
 		strategy = mergeStrategyLocalOverride
@@ -195,9 +195,9 @@ func (r *Resolver) mergeContent(base, include *config.ContentTreeV3, strategy, i
 }
 
 // mergeRoot merges content at root level
-func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy string) (*config.ContentTreeV3, error) {
-	merged := &config.ContentTreeV3{
-		Domains: make(map[string]*config.DomainV3),
+func (r *Resolver) mergeRoot(base, include *config.ContentTree, strategy string) (*config.ContentTree, error) {
+	merged := &config.ContentTree{
+		Domains: make(map[string]*config.Domain),
 	}
 
 	// Merge rules, context, skills, agents, commands based on strategy
@@ -271,14 +271,14 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTreeV3, strategy strin
 }
 
 // mergeDomainInstall installs included content as a domain
-func (r *Resolver) mergeDomainInstall(base, include *config.ContentTreeV3, installTo, strategy string) (*config.ContentTreeV3, error) {
-	merged := &config.ContentTreeV3{
+func (r *Resolver) mergeDomainInstall(base, include *config.ContentTree, installTo, strategy string) (*config.ContentTree, error) {
+	merged := &config.ContentTree{
 		Rules:    base.Rules,
 		Context:  base.Context,
 		Skills:   base.Skills,
 		Agents:   base.Agents,
 		Commands: base.Commands,
-		Domains:  make(map[string]*config.DomainV3),
+		Domains:  make(map[string]*config.Domain),
 	}
 
 	// Copy existing domains
@@ -294,13 +294,13 @@ func (r *Resolver) mergeDomainInstall(base, include *config.ContentTreeV3, insta
 	}
 
 	// Create/merge domain
-	var targetDomain *config.DomainV3
+	var targetDomain *config.Domain
 	if existing, ok := merged.Domains[domainName]; ok {
 		// Domain exists, merge content based on strategy
 		targetDomain = r.mergeDomainContent(existing, include, strategy)
 	} else {
 		// Create new domain from included content
-		targetDomain = &config.DomainV3{
+		targetDomain = &config.Domain{
 			Name:        domainName,
 			Rules:       include.Rules,
 			Context:     include.Context,
@@ -317,8 +317,8 @@ func (r *Resolver) mergeDomainInstall(base, include *config.ContentTreeV3, insta
 }
 
 // mergeDomainContent merges content into an existing domain
-func (r *Resolver) mergeDomainContent(target *config.DomainV3, include *config.ContentTreeV3, strategy string) *config.DomainV3 {
-	merged := &config.DomainV3{
+func (r *Resolver) mergeDomainContent(target *config.Domain, include *config.ContentTree, strategy string) *config.Domain {
+	merged := &config.Domain{
 		Name: target.Name,
 	}
 

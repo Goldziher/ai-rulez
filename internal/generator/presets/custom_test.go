@@ -9,13 +9,13 @@ import (
 )
 
 func TestCustomPresetGenerator_GenerateMarkdown(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name: "custom-md",
 		Type: config.PresetTypeMarkdown,
 		Path: "CUSTOM.md",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "rule1",
@@ -30,7 +30,7 @@ func TestCustomPresetGenerator_GenerateMarkdown(t *testing.T) {
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "Test config",
 	}
@@ -56,14 +56,14 @@ func TestCustomPresetGenerator_GenerateMarkdown(t *testing.T) {
 }
 
 func TestCustomPresetGenerator_GenerateMarkdownWithTemplate(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name:     "custom-md",
 		Type:     config.PresetTypeMarkdown,
 		Path:     "CUSTOM.md",
 		Template: "# {{.Name}}\n\n{{range .Rules}}## {{.Name}}\n{{.Content}}\n{{end}}",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "rule1",
@@ -72,7 +72,7 @@ func TestCustomPresetGenerator_GenerateMarkdownWithTemplate(t *testing.T) {
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name: "test-project",
 	}
 
@@ -101,13 +101,13 @@ func TestCustomPresetGenerator_GenerateMarkdownWithTemplate(t *testing.T) {
 }
 
 func TestCustomPresetGenerator_GenerateDirectory(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name: "custom-dir",
 		Type: config.PresetTypeDirectory,
 		Path: ".custom-rules",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "rule1",
@@ -120,7 +120,7 @@ func TestCustomPresetGenerator_GenerateDirectory(t *testing.T) {
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name: "test",
 	}
 
@@ -158,25 +158,25 @@ func TestCustomPresetGenerator_GenerateDirectory(t *testing.T) {
 }
 
 func TestCustomPresetGenerator_GenerateJSON(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name: "custom-json",
 		Type: config.PresetTypeJSON,
 		Path: "custom.json",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "rule1",
 				Content: "Rule content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Priority: "high",
 				},
 			},
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "Test config",
 		Version:     "3.0",
@@ -217,21 +217,21 @@ func TestCustomPresetGenerator_GenerateJSON(t *testing.T) {
 }
 
 func TestCustomPresetGenerator_GenerateJSONWithTemplate(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name:     "custom-json",
 		Type:     config.PresetTypeJSON,
 		Path:     "custom.json",
 		Template: `{"project": "{{.Name}}", "ruleCount": {{len .Rules}}}`,
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1"},
 			{Name: "rule2"},
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name: "test-project",
 	}
 
@@ -259,18 +259,18 @@ func TestCustomPresetGenerator_GenerateJSONWithTemplate(t *testing.T) {
 }
 
 func TestCustomPresetGenerator_PrepareTemplateData(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name: "test",
 		Type: config.PresetTypeMarkdown,
 		Path: "test.md",
 	}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{
 				Name:    "rule1",
 				Content: "Rule content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Priority: "high",
 					Targets:  []string{"claude"},
 				},
@@ -288,7 +288,7 @@ func TestCustomPresetGenerator_PrepareTemplateData(t *testing.T) {
 				Content: "Skill content",
 			},
 		},
-		Domains: map[string]*config.DomainV3{
+		Domains: map[string]*config.Domain{
 			"backend": {
 				Name: "backend",
 				Rules: []config.ContentFile{
@@ -298,7 +298,7 @@ func TestCustomPresetGenerator_PrepareTemplateData(t *testing.T) {
 		},
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Name:        "test",
 		Description: "Test config",
 		Version:     "3.0",
@@ -337,7 +337,7 @@ func TestCustomPresetGenerator_PrepareTemplateData(t *testing.T) {
 }
 
 func TestCustomPresetGenerator_GetName(t *testing.T) {
-	preset := config.PresetV3{
+	preset := config.Preset{
 		Name: "my-custom-preset",
 		Type: config.PresetTypeMarkdown,
 		Path: "test.md",

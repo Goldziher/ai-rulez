@@ -26,7 +26,7 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -65,7 +65,7 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 	cfg.Profiles[name] = domains
 
 	// Save updated config
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.
 			With("config_dir", op.aiRulezDir).
 			Wrapf(err, "save config")
@@ -92,7 +92,7 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -119,7 +119,7 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 	delete(cfg.Profiles, name)
 
 	// Save updated config
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.
 			With("config_dir", op.aiRulezDir).
 			Wrapf(err, "save config")
@@ -142,7 +142,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -161,7 +161,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 	cfg.Default = name
 
 	// Save updated config
-	if err := config.SaveConfigV3(cfg, op.aiRulezDir); err != nil {
+	if err := config.SaveConfig(cfg, op.aiRulezDir); err != nil {
 		return oops.
 			With("config_dir", op.aiRulezDir).
 			Wrapf(err, "save config")
@@ -178,7 +178,7 @@ func (op *OperatorImpl) ListProfiles(ctx context.Context) ([]ProfileInfo, error)
 	baseDir := filepath.Dir(op.aiRulezDir)
 
 	// Load current config
-	cfg, err := config.LoadConfigV3(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
 		return nil, oops.
 			With("base_dir", baseDir).

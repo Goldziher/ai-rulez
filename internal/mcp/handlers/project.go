@@ -25,10 +25,10 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		return ToolError(err)
 	}
 	if version != "v3" {
-		return ToolError(fmt.Errorf("read_config requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
+		return ToolError(fmt.Errorf("read_config requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
-	cfg, err := config.LoadConfigV3(ctx, dir)
+	cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		return ToolError(err)
 	}
@@ -103,10 +103,10 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return ToolError(err)
 	}
 	if version != "v3" {
-		return ToolError(fmt.Errorf("update_config requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
+		return ToolError(fmt.Errorf("update_config requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
-	cfg, err := config.LoadConfigV3(ctx, dir)
+	cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		return ToolError(err)
 	}
@@ -150,7 +150,7 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	}
 
 	configDir := filepath.Join(dir, ".ai-rulez")
-	if err := config.SaveConfigV3(cfg, configDir); err != nil {
+	if err := config.SaveConfig(cfg, configDir); err != nil {
 		return ToolError(fmt.Errorf("failed to save config: %w", err))
 	}
 
@@ -252,24 +252,24 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 	}
 
 	if version != "v3" {
-		return ToolError(fmt.Errorf("generate_outputs requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
+		return ToolError(fmt.Errorf("generate_outputs requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
 	if dryRun {
 		return ToolSuccess(map[string]interface{}{
-			"message": "dry_run: not yet implemented for V3 configs",
+			"message": "dry_run: not yet implemented for configs",
 			"config":  configFile,
 		})
 	}
-	// Load and generate V3 config
-	v3cfg, err := config.LoadConfigV3(ctx, dir)
+	// Load and generate config
+	v3cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		return ToolError(err)
 	}
 	if err := v3cfg.ValidateV3(); err != nil {
 		return ToolError(err)
 	}
-	gen := generator.NewGeneratorV3(v3cfg)
+	gen := generator.NewGenerator(v3cfg)
 	if err := gen.Generate(""); err != nil {
 		return ToolError(err)
 	}
@@ -293,11 +293,11 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 	}
 
 	if version != "v3" {
-		return ToolError(fmt.Errorf("validate_config requires V3 config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate v3'", version))
+		return ToolError(fmt.Errorf("validate_config requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
-	// Validate V3 config
-	v3cfg, err := config.LoadConfigV3(ctx, dir)
+	// Validate config
+	v3cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		result := map[string]interface{}{
 			"valid": false,

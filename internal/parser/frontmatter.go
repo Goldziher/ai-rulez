@@ -8,9 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// MetadataV3 represents frontmatter metadata parsed from markdown files
+// Metadata represents frontmatter metadata parsed from markdown files
 // This is a local type to avoid circular imports with the config package
-type MetadataV3 struct {
+type Metadata struct {
 	Priority string
 	Targets  []string
 	Extra    map[string]string `yaml:",inline"`
@@ -20,7 +20,7 @@ type MetadataV3 struct {
 // Returns metadata (nil if none) and the actual content (without frontmatter)
 // Properly handles Windows CRLF line endings by normalizing to LF first
 // Returns error if frontmatter is present but malformed (non-silent failure)
-func ParseFrontmatter(content string) (*MetadataV3, string, error) {
+func ParseFrontmatter(content string) (*Metadata, string, error) {
 	// Normalize line endings: CRLF -> LF (fixes Windows CRLF issue #8)
 	normalizedContent := normalizeLFLineEndings(content)
 
@@ -54,7 +54,7 @@ func ParseFrontmatter(content string) (*MetadataV3, string, error) {
 	frontmatterYAML := strings.Join(frontmatterLines, "\n")
 
 	// Parse frontmatter - return error instead of silently ignoring (fixes issue #4)
-	var metadata MetadataV3
+	var metadata Metadata
 	if err := yaml.Unmarshal([]byte(frontmatterYAML), &metadata); err != nil {
 		return nil, normalizedContent, oops.
 			With("content_preview", truncateString(frontmatterYAML, 100)).
@@ -72,7 +72,7 @@ func ParseFrontmatter(content string) (*MetadataV3, string, error) {
 // ParseFrontmatterNonFatal parses frontmatter but returns only metadata and content
 // This version logs warnings for parse errors instead of returning them
 // Useful for cases where frontmatter errors should not block processing
-func ParseFrontmatterNonFatal(content string) (metadata *MetadataV3, body string) {
+func ParseFrontmatterNonFatal(content string) (metadata *Metadata, body string) {
 	metadata, actualContent, err := ParseFrontmatter(content)
 	if err != nil {
 		// Log warning but continue (non-fatal)

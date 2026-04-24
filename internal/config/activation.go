@@ -20,7 +20,7 @@ func IsValidTriggerMode(mode string) bool {
 
 // GetTriggerMode retrieves the trigger mode from metadata
 // Returns "manual" as default if not specified or invalid
-func (m *MetadataV3) GetTriggerMode() string {
+func (m *Metadata) GetTriggerMode() string {
 	if m == nil {
 		return TriggerManual
 	}
@@ -40,7 +40,7 @@ func (m *MetadataV3) GetTriggerMode() string {
 }
 
 // GetTriggerDescription retrieves the description for model_decision mode
-func (m *MetadataV3) GetTriggerDescription() string {
+func (m *Metadata) GetTriggerDescription() string {
 	if m == nil {
 		return ""
 	}
@@ -48,7 +48,7 @@ func (m *MetadataV3) GetTriggerDescription() string {
 }
 
 // GetTriggerGlob retrieves the glob pattern for glob mode
-func (m *MetadataV3) GetTriggerGlob() string {
+func (m *Metadata) GetTriggerGlob() string {
 	if m == nil {
 		return ""
 	}
@@ -56,7 +56,7 @@ func (m *MetadataV3) GetTriggerGlob() string {
 }
 
 // GetTriggerKeywords retrieves the trigger keywords for manual mode
-func (m *MetadataV3) GetTriggerKeywords() []string {
+func (m *Metadata) GetTriggerKeywords() []string {
 	if m == nil {
 		return nil
 	}
@@ -78,7 +78,7 @@ func (m *MetadataV3) GetTriggerKeywords() []string {
 
 // ShouldRenderTriggerFrontmatter checks if trigger frontmatter should be rendered
 // Returns true if trigger mode is non-default or has additional config
-func (m *MetadataV3) ShouldRenderTriggerFrontmatter() bool {
+func (m *Metadata) ShouldRenderTriggerFrontmatter() bool {
 	if m == nil {
 		return false
 	}

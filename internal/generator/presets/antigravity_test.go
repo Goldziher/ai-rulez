@@ -18,14 +18,14 @@ func TestAntigravityPresetGenerator_GetName(t *testing.T) {
 func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name        string
-		content     *config.ContentTreeV3
+		content     *config.ContentTree
 		baseDir     string
 		wantOutputs int
 		wantErr     bool
 	}{
 		{
 			name: "generates basic structure",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{Name: "rule1", Content: "Rule content"},
 				},
@@ -36,7 +36,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates with skills",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Skills: []config.ContentFile{
 					{
 						Name:    "my-skill",
@@ -51,12 +51,12 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates with agents",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Agents: []config.ContentFile{
 					{
 						Name:    "security-auditor",
 						Content: "You are a security auditor.",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Extra: map[string]string{
 								"description": "Audits code for security issues",
 							},
@@ -70,7 +70,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates with skills and agents",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Skills: []config.ContentFile{
 					{
 						Name:    "deploy",
@@ -82,7 +82,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 					{
 						Name:    "reviewer",
 						Content: "You review code.",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Extra: map[string]string{"description": "Reviews code"},
 						},
 					},
@@ -97,7 +97,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &AntigravityPresetGenerator{}
-			cfg := &config.ConfigV3{Name: "test-project"}
+			cfg := &config.Config{Name: "test-project"}
 
 			outputs, err := g.Generate(tt.content, tt.baseDir, cfg)
 			if (err != nil) != tt.wantErr {
@@ -135,9 +135,9 @@ func TestAntigravityPresetGenerator_GetOutputPaths(t *testing.T) {
 
 func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 	g := &AntigravityPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "Rule content"},
 		},
@@ -152,7 +152,7 @@ func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 			{
 				Name:    "reviewer",
 				Content: "Review agent",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{"description": "Reviews code"},
 				},
 			},

@@ -17,9 +17,9 @@ func TestJuniePresetGenerator_GetName(t *testing.T) {
 
 func TestJuniePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	g := &JuniePresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Skills: []config.ContentFile{
 			{
 				Name:    "kotlin-review",
@@ -31,7 +31,7 @@ func TestJuniePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 			{
 				Name:    "code-review-helper",
 				Content: "You are a careful code reviewer.",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description": "Reviews code changes",
 						"model":       "sonnet",

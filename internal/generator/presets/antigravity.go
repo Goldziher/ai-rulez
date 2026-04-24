@@ -14,13 +14,13 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("antigravity", &AntigravityPresetGenerator{})
+	config.RegisterPreset("antigravity", &AntigravityPresetGenerator{})
 }
 
 // AntigravityPresetGenerator generates Antigravity preset files
 type AntigravityPresetGenerator struct{}
 
-func generateAntigravityPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateAntigravityPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
 		Timestamp:    time.Now(),
@@ -48,20 +48,20 @@ func (g *AntigravityPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .agents directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".agents", "agents"),
 			IsDir: true,
 		},
@@ -73,14 +73,14 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, bas
 		return nil, fmt.Errorf("render settings.json: %w", err)
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, ".agents", "settings.json"),
 		Content: settingsContent,
 	})
 
 	// Generate GEMINI.md with all rules and context
 	geminiMD := g.renderMarkdown(content, cfg)
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, "GEMINI.md"),
 		Content: geminiMD,
 	})
@@ -91,13 +91,13 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, bas
 		skillID := extractSkillID(skill.Path)
 
 		skillDir := filepath.Join(baseDir, ".agents", "skills", skillID)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:  skillDir,
 			IsDir: true,
 		})
 
 		skillContent := g.renderSkillFile(skill)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
@@ -112,7 +112,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, bas
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -121,7 +121,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	return outputs, nil
 }
 
-func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string, error) {
+func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]interface{})
 
 	// Always include the hardcoded ai-rulez MCP server
@@ -171,7 +171,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (s
 	return string(jsonData) + "\n", nil
 }
 
-func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))

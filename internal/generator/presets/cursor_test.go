@@ -11,19 +11,19 @@ import (
 func TestCursorPresetGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name        string
-		content     *config.ContentTreeV3
+		content     *config.ContentTree
 		baseDir     string
 		wantOutputs int
 		wantErr     bool
 	}{
 		{
 			name: "generates rule files",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{
 						Name:    "rule1",
 						Content: "Rule 1 content",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Priority: "high",
 						},
 					},
@@ -39,14 +39,14 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "handles domains",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Rules: []config.ContentFile{
 					{
 						Name:    "root-rule",
 						Content: "Root rule",
 					},
 				},
-				Domains: map[string]*config.DomainV3{
+				Domains: map[string]*config.Domain{
 					"backend": {
 						Name: "backend",
 						Rules: []config.ContentFile{
@@ -64,12 +64,12 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "generates command files as rules",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Commands: []config.ContentFile{
 					{
 						Name:    "test command",
 						Content: "Command content",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Usage:   "test-cmd",
 							Aliases: []string{"tc"},
 						},
@@ -82,12 +82,12 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 		},
 		{
 			name: "filters commands by target",
-			content: &config.ContentTreeV3{
+			content: &config.ContentTree{
 				Commands: []config.ContentFile{
 					{
 						Name:    "cursor-command",
 						Content: "Cursor only",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Usage:   "cmd1",
 							Targets: []string{"cursor"},
 						},
@@ -95,7 +95,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 					{
 						Name:    "claude-command",
 						Content: "Claude only",
-						Metadata: &config.MetadataV3{
+						Metadata: &config.Metadata{
 							Usage:   "cmd2",
 							Targets: []string{"claude"},
 						},
@@ -111,7 +111,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &CursorPresetGenerator{}
-			cfg := &config.ConfigV3{
+			cfg := &config.Config{
 				Name: "test",
 			}
 
@@ -149,7 +149,7 @@ func TestCursorPresetGenerator_renderRuleFile(t *testing.T) {
 	rule := config.ContentFile{
 		Name:    "test rule",
 		Content: "Test content",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Priority: "high",
 		},
 	}
@@ -249,7 +249,7 @@ func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			command: config.ContentFile{
 				Name:    "cmd2",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{},
 				},
 			},
@@ -260,7 +260,7 @@ func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			command: config.ContentFile{
 				Name:    "cmd3",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"cursor"},
 				},
 			},
@@ -271,7 +271,7 @@ func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			command: config.ContentFile{
 				Name:    "cmd4",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"claude", "cursor"},
 				},
 			},
@@ -282,7 +282,7 @@ func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			command: config.ContentFile{
 				Name:    "cmd5",
 				Content: "Content",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Targets: []string{"claude"},
 				},
 			},
@@ -303,14 +303,14 @@ func TestCursorPresetGenerator_shouldIncludeCommand(t *testing.T) {
 
 func TestCursorPresetGenerator_Generate_WithAgents(t *testing.T) {
 	g := &CursorPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Agents: []config.ContentFile{
 			{
 				Name:    "verifier",
 				Content: "You verify completed work.",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description":   "Validates completed work",
 						"model":         "fast",
@@ -357,9 +357,9 @@ func TestCursorPresetGenerator_Generate_WithAgents(t *testing.T) {
 
 func TestCursorPresetGenerator_Generate_SkillsInAgentsDir(t *testing.T) {
 	g := &CursorPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Skills: []config.ContentFile{
 			{
 				Name:    "deploy",
@@ -398,7 +398,7 @@ func TestCursorPresetGenerator_renderCommandFile(t *testing.T) {
 	command := config.ContentFile{
 		Name:    "test-command",
 		Content: "Command implementation details",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Usage:   "test-cmd [options]",
 			Aliases: []string{"tc", "test"},
 			Extra: map[string]string{

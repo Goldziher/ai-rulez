@@ -15,14 +15,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("windsurf", &WindsurfPresetGenerator{})
+	config.RegisterPreset("windsurf", &WindsurfPresetGenerator{})
 }
 
 // WindsurfPresetGenerator generates Windsurf preset files
 type WindsurfPresetGenerator struct{}
 
 // generateWindsurfPresetHeader creates a header for Windsurf preset files
-func generateWindsurfPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateWindsurfPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -51,20 +51,20 @@ func (g *WindsurfPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .windsurf directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".windsurf"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".windsurf", "rules"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".windsurf", "skills"),
 			IsDir: true,
 		},
@@ -79,7 +79,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
 		sanitized := sanitizeName(rule.Name)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".windsurf", "rules", sanitized+".md"),
 			Content: ruleContent,
 		})
@@ -92,11 +92,11 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 
 		skillDir := filepath.Join(baseDir, ".windsurf", "skills", skillID)
 		outputs = append(outputs,
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:  skillDir,
 				IsDir: true,
 			},
-			config.OutputFileV3{
+			config.OutputFile{
 				Path:    filepath.Join(skillDir, "SKILL.md"),
 				Content: g.renderSkillFile(skill),
 			},
@@ -114,14 +114,14 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		ctxBuilder.WriteString(processedContent)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".windsurf", "rules", "context-"+sanitized+".md"),
 			Content: ctxBuilder.String(),
 		})
 	}
 
 	// Add .windsurf/agents directory
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  filepath.Join(baseDir, ".windsurf", "agents"),
 		IsDir: true,
 	})
@@ -135,7 +135,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTreeV3, baseDi
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".windsurf", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -224,7 +224,7 @@ func quoteWindsurfYAMLString(value string) string {
 	return "\"" + escaped + "\""
 }
 
-func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.ConfigV3, outputPath string, ruleCount int) string {
+func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.Config, outputPath string, ruleCount int) string {
 	var builder strings.Builder
 
 	// Render trigger frontmatter FIRST (must be at line 1 for Windsurf)

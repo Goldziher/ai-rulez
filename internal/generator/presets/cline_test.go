@@ -20,9 +20,9 @@ func TestClinePresetGenerator_GetName(t *testing.T) {
 
 func TestClinePresetGenerator_Generate_WithSkills(t *testing.T) {
 	g := &ClinePresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "Rule content"},
 		},
@@ -68,7 +68,7 @@ func TestClinePresetGenerator_renderClineAgentFile(t *testing.T) {
 	agent := config.ContentFile{
 		Name:    "test-agent",
 		Content: "You are a test agent.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"description": "A test agent",
 				"model":       "sonnet",
@@ -88,7 +88,7 @@ func TestClinePresetGenerator_renderClineAgentFile(t *testing.T) {
 func TestClinePresetGenerator_Generate_WithContext(t *testing.T) {
 	g := &ClinePresetGenerator{}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Rules: []config.ContentFile{
 			{Name: "rule1", Content: "Rule content"},
 		},
@@ -98,9 +98,9 @@ func TestClinePresetGenerator_Generate_WithContext(t *testing.T) {
 		Skills:   []config.ContentFile{},
 		Agents:   []config.ContentFile{},
 		Commands: []config.ContentFile{},
-		Domains:  map[string]*config.DomainV3{},
+		Domains:  map[string]*config.Domain{},
 	}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
 	outputs, err := g.Generate(content, "/tmp/test", cfg)
 	require.NoError(t, err)
