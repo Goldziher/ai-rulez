@@ -1,6 +1,5 @@
 version: 2
 updates:
-  # Enable version updates for Go modules
   - package-ecosystem: "gomod"
     directory: "/"
     schedule:
@@ -40,7 +39,7 @@ updates:
       separator: "/"
 
   - package-ecosystem: "npm"
-    directory: "/build/npm"
+    directory: "/release/npm"
     schedule:
       interval: "weekly"
       day: "monday"
@@ -51,6 +50,25 @@ updates:
     labels:
       - "dependencies"
       - "npm"
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore"
+      include: "scope"
+    pull-request-branch-name:
+      separator: "/"
+
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Goldziher"
+    labels:
+      - "dependencies"
+      - "python"
     commit-message:
       prefix: "chore"
       prefix-development: "chore"
