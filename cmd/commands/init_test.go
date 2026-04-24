@@ -51,15 +51,15 @@ func TestInit_BasicStructure(t *testing.T) {
 	assert.DirExists(t, ".ai-rulez/agents")
 	assert.DirExists(t, ".ai-rulez/domains")
 
-	// Assert config.yaml exists
-	assert.FileExists(t, ".ai-rulez/config.yaml")
+	// Assert config.toml exists (default format)
+	assert.FileExists(t, ".ai-rulez/config.toml")
 
 	// Read config content
-	content, err := os.ReadFile(".ai-rulez/config.yaml")
+	content, err := os.ReadFile(".ai-rulez/config.toml")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), "version: \"3.0\"")
-	assert.Contains(t, string(content), "name: \"test-project\"")
-	assert.Contains(t, string(content), "presets:")
+	assert.Contains(t, string(content), `version = "4.0"`)
+	assert.Contains(t, string(content), `name = "test-project"`)
+	assert.Contains(t, string(content), "presets = ")
 }
 
 func TestInit_WithDomains(t *testing.T) {
@@ -155,15 +155,15 @@ func TestInit_JSONFormat(t *testing.T) {
 	// Set flags
 	commands.InitCmd.Flags().Set("format", "json")
 	commands.InitCmd.Flags().Set("skip-content", "true")
-	defer commands.InitCmd.Flags().Set("format", "yaml")
+	defer commands.InitCmd.Flags().Set("format", "toml")
 	defer commands.InitCmd.Flags().Set("skip-content", "false")
 
 	// Run init command
 	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
 
-	// Assert config.json exists (not config.yaml)
+	// Assert config.json exists (not config.toml)
 	assert.FileExists(t, ".ai-rulez/config.json")
-	assert.NoFileExists(t, ".ai-rulez/config.yaml")
+	assert.NoFileExists(t, ".ai-rulez/config.toml")
 
 	// Verify JSON content
 	content, err := os.ReadFile(".ai-rulez/config.json")
@@ -217,13 +217,13 @@ func TestInit_ExampleMCPServers(t *testing.T) {
 	// Run init command
 	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
 
-	// Assert MCP file exists
-	assert.FileExists(t, ".ai-rulez/mcp.yaml")
+	// Assert MCP file exists (mcp.toml by default)
+	assert.FileExists(t, ".ai-rulez/mcp.toml")
 
-	content, err := os.ReadFile(".ai-rulez/mcp.yaml")
+	content, err := os.ReadFile(".ai-rulez/mcp.toml")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), "name: ai-rulez")
-	assert.Contains(t, string(content), "name: github")
+	assert.Contains(t, string(content), `name = "ai-rulez"`)
+	assert.Contains(t, string(content), `name = "github"`)
 	assert.Contains(t, string(content), "ai-rulez@latest")
 }
 
@@ -249,9 +249,9 @@ func TestInit_ProjectNameFromDirectory(t *testing.T) {
 	commands.InitCmd.Run(commands.InitCmd, []string{})
 
 	// Read config and verify project name is directory name
-	content, err := os.ReadFile(".ai-rulez/config.yaml")
+	content, err := os.ReadFile(".ai-rulez/config.toml")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), `name: "my-awesome-project"`)
+	assert.Contains(t, string(content), `name = "my-awesome-project"`)
 }
 
 func TestInit_DomainsWithSpaces(t *testing.T) {
