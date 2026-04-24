@@ -5,21 +5,22 @@ import (
 	"time"
 )
 
-// ConfigV3 represents the V3 configuration format
+// ConfigV3 represents the V3/V4 configuration format
 type ConfigV3 struct {
-	Schema          string                 `yaml:"$schema,omitempty" json:"$schema,omitempty"`
-	Version         string                 `yaml:"version" json:"version"`
-	Name            string                 `yaml:"name" json:"name"`
-	Description     string                 `yaml:"description,omitempty" json:"description,omitempty"`
-	Presets         []PresetV3             `yaml:"presets,omitempty" json:"presets,omitempty"`
-	Default         string                 `yaml:"default,omitempty" json:"default,omitempty"`
-	Profiles        map[string][]string    `yaml:"profiles,omitempty" json:"profiles,omitempty"`
-	Gitignore       *bool                  `yaml:"gitignore,omitempty" json:"gitignore,omitempty"`
-	Includes        []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty"`
-	InstalledSkills []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty"` //nolint:tagliatelle
-	Header          *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty"`
-	Compression     *CompressionConfig     `yaml:"compression,omitempty" json:"compression,omitempty"`
-	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty"`
+	Schema          string                 `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
+	Version         string                 `yaml:"version" json:"version" toml:"version"`
+	Name            string                 `yaml:"name" json:"name" toml:"name"`
+	Description     string                 `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	Presets         []PresetV3             `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
+	Default         string                 `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
+	Profiles        map[string][]string    `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
+	Gitignore       *bool                  `yaml:"gitignore,omitempty" json:"gitignore,omitempty" toml:"gitignore,omitempty"`
+	Includes        []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty" toml:"includes,omitempty"`
+	InstalledSkills []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
+	Header          *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
+	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
+	Plugins         []PluginConfig         `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
+	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir    string                  `yaml:"-" json:"-"`
@@ -29,7 +30,7 @@ type ConfigV3 struct {
 
 // HeaderConfig represents header style configuration for generated files
 type HeaderConfig struct {
-	Style string `yaml:"style,omitempty" json:"style,omitempty"` // "detailed", "compact", or "minimal"
+	Style string `yaml:"style,omitempty" json:"style,omitempty" toml:"style,omitempty"` // "detailed", "compact", or "minimal"
 }
 
 // GetHeaderStyle returns the header style, defaulting to "detailed"
@@ -38,21 +39,6 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 		return "detailed"
 	}
 	return h.Style
-}
-
-// CompressionConfig is deprecated and exists only for backward compatibility.
-// Compression is now a no-op. Condense content at the source level instead.
-type CompressionConfig struct {
-	Level            string `yaml:"level,omitempty" json:"level,omitempty"`
-	PreserveMarkdown *bool  `yaml:"preserve_markdown,omitempty" json:"preserve_markdown,omitempty"`
-	PreserveCode     *bool  `yaml:"preserve_code,omitempty" json:"preserve_code,omitempty"`
-	Language         string `yaml:"language,omitempty" json:"language,omitempty"`
-}
-
-// IsDeprecatedUsage returns true when the compression config is actively set
-// (i.e., level is not empty or "off"), indicating the user should be warned.
-func (c *CompressionConfig) IsDeprecatedUsage() bool {
-	return c != nil && c.Level != "" && c.Level != "off"
 }
 
 // BuiltinsConfig represents the builtins field which can be:
@@ -142,13 +128,13 @@ func (b BuiltinsConfig) MarshalJSON() ([]byte, error) { //nolint:gocritic // Val
 // PresetV3 represents either a built-in preset name or a custom preset configuration
 type PresetV3 struct {
 	// Built-in preset (e.g., "claude", "cursor")
-	BuiltIn string `yaml:"-" json:"-"`
+	BuiltIn string `yaml:"-" json:"-" toml:"-"`
 
 	// Custom preset fields
-	Name     string     `yaml:"name,omitempty" json:"name,omitempty"`
-	Type     PresetType `yaml:"type,omitempty" json:"type,omitempty"`
-	Path     string     `yaml:"path,omitempty" json:"path,omitempty"`
-	Template string     `yaml:"template,omitempty" json:"template,omitempty"`
+	Name     string     `yaml:"name,omitempty" json:"name,omitempty" toml:"name,omitempty"`
+	Type     PresetType `yaml:"type,omitempty" json:"type,omitempty" toml:"type,omitempty"`
+	Path     string     `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
+	Template string     `yaml:"template,omitempty" json:"template,omitempty" toml:"template,omitempty"`
 }
 
 // PresetType defines the type of custom preset output
@@ -271,21 +257,21 @@ func isValidBuiltInPreset(name string) bool {
 
 // MCPServerV3 represents an MCP (Model Context Protocol) server configuration
 type MCPServerV3 struct {
-	Name        string            `yaml:"name" json:"name"`
-	Description string            `yaml:"description,omitempty" json:"description,omitempty"`
-	Command     string            `yaml:"command,omitempty" json:"command,omitempty"`
-	Args        []string          `yaml:"args,omitempty" json:"args,omitempty"`
-	Env         map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
-	Transport   string            `yaml:"transport,omitempty" json:"transport,omitempty"`
-	URL         string            `yaml:"url,omitempty" json:"url,omitempty"`
-	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Name        string            `yaml:"name" json:"name" toml:"name"`
+	Description string            `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	Command     string            `yaml:"command,omitempty" json:"command,omitempty" toml:"command,omitempty"`
+	Args        []string          `yaml:"args,omitempty" json:"args,omitempty" toml:"args,omitempty"`
+	Env         map[string]string `yaml:"env,omitempty" json:"env,omitempty" toml:"env,omitempty"`
+	Transport   string            `yaml:"transport,omitempty" json:"transport,omitempty" toml:"transport,omitempty"`
+	URL         string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
+	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 }
 
-// MCPConfigV3 represents loaded MCP configuration from mcp.yaml or mcp.json
+// MCPConfigV3 represents loaded MCP configuration from mcp.yaml, mcp.json, or mcp.toml
 type MCPConfigV3 struct {
-	Schema  string        `yaml:"$schema,omitempty" json:"$schema,omitempty"`
-	Version string        `yaml:"version" json:"version"`
-	Servers []MCPServerV3 `yaml:"mcp_servers" json:"mcp_servers"`
+	Schema  string        `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
+	Version string        `yaml:"version" json:"version" toml:"version"`
+	Servers []MCPServerV3 `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
 }
 
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)
@@ -566,23 +552,23 @@ func (f *ContentFile) IsMarkdown() bool {
 
 // IncludeConfig represents a content source (git repo or local path)
 type IncludeConfig struct {
-	Name          string   `yaml:"name" json:"name"`
-	Source        string   `yaml:"source" json:"source"`
-	Path          string   `yaml:"path,omitempty" json:"path,omitempty"`
-	Include       []string `yaml:"include,omitempty" json:"include,omitempty"`
-	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty"`
-	InstallTo     string   `yaml:"install_to,omitempty" json:"install_to,omitempty"`         //nolint:tagliatelle
-	MergeStrategy string   `yaml:"merge_strategy,omitempty" json:"merge_strategy,omitempty"` //nolint:tagliatelle
-	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty"` //nolint:tagliatelle
+	Name          string   `yaml:"name" json:"name" toml:"name"`
+	Source        string   `yaml:"source" json:"source" toml:"source"`
+	Path          string   `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
+	Include       []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
+	InstallTo     string   `yaml:"install_to,omitempty" json:"install_to,omitempty" toml:"install_to,omitempty"`             //nolint:tagliatelle
+	MergeStrategy string   `yaml:"merge_strategy,omitempty" json:"merge_strategy,omitempty" toml:"merge_strategy,omitempty"` //nolint:tagliatelle
+	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
 }
 
 // InstalledSkillConfig represents a named skill to install from an external source
 type InstalledSkillConfig struct {
-	Name          string `yaml:"name" json:"name"`
-	Source        string `yaml:"source" json:"source"`
-	Path          string `yaml:"path,omitempty" json:"path,omitempty"`
-	Ref           string `yaml:"ref,omitempty" json:"ref,omitempty"`
-	LocalOverride string `yaml:"local_override,omitempty" json:"local_override,omitempty"` //nolint:tagliatelle
+	Name          string `yaml:"name" json:"name" toml:"name"`
+	Source        string `yaml:"source" json:"source" toml:"source"`
+	Path          string `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
+	Ref           string `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
+	LocalOverride string `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
 }
 
 // GetPath returns the path within the repo, defaulting to "skills/<name>"

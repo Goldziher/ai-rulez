@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -46,6 +47,7 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".github", "copilot-instructions.md"),
 		filepath.Join(baseDir, ".github", "skills"),
 		filepath.Join(baseDir, ".github", "agents"),
+		filepath.Join(baseDir, ".github", "commands"),
 	}
 }
 
@@ -105,6 +107,38 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTreeV3, baseDir
 		outputs = append(outputs, config.OutputFileV3{
 			Path:    filepath.Join(baseDir, ".github", "agents", agentID+".agent.md"),
 			Content: agentContent,
+		})
+	}
+
+	// Generate .github/commands directory
+	outputs = append(outputs, config.OutputFileV3{
+		Path:  filepath.Join(baseDir, ".github", "commands"),
+		IsDir: true,
+	})
+
+	// Generate command files to .github/commands/
+	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	for _, command := range allCommands {
+		if !g.shouldIncludeCommand(command) {
+			continue
+		}
+		sanitized := sanitizeName(command.Name)
+		commandContent := g.renderCommandFile(command)
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".github", "commands", sanitized+".md"),
+			Content: commandContent,
+		})
+	}
+
+	// Generate .mcp.json if MCP servers are configured
+	if len(cfg.MCPServers) > 0 {
+		mcpContent, err := g.renderMCPJSON(cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render .mcp.json: %w", err)
+		}
+		outputs = append(outputs, config.OutputFileV3{
+			Path:    filepath.Join(baseDir, ".mcp.json"),
+			Content: mcpContent,
 		})
 	}
 
@@ -233,4 +267,86 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 	}
 
 	return frontmatter
+}
+
+// shouldIncludeCommand checks if a command should be included in the Copilot preset
+func (g *CopilotPresetGenerator) shouldIncludeCommand(command config.ContentFile) bool {
+	if command.Metadata == nil {
+		return true
+	}
+	if len(command.Metadata.Targets) > 0 {
+		for _, target := range command.Metadata.Targets {
+			if target == "copilot" {
+				return true
+			}
+		}
+		return false
+	}
+	return true
+}
+
+// renderCommandFile renders a command file in Markdown format for Copilot
+func (g *CopilotPresetGenerator) renderCommandFile(command config.ContentFile) string {
+	var builder strings.Builder
+
+	builder.WriteString("# /")
+	builder.WriteString(command.Name)
+	builder.WriteString("\n\n")
+
+	if command.Metadata != nil && command.Metadata.Extra != nil {
+		if desc, ok := command.Metadata.Extra["description"]; ok && desc != "" {
+			builder.WriteString("**Description:** ")
+			builder.WriteString(desc)
+			builder.WriteString("\n\n")
+		}
+	}
+
+	if command.Metadata != nil && command.Metadata.Usage != "" {
+		builder.WriteString("**Usage:** `")
+		builder.WriteString(command.Metadata.Usage)
+		builder.WriteString("`\n\n")
+	}
+
+	processedContent := markdown.ProcessEmbeddedContent(command.Content)
+	builder.WriteString(processedContent)
+
+	return builder.String()
+}
+
+// renderMCPJSON renders .mcp.json with MCP server configuration
+func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.ConfigV3) (string, error) {
+	mcpServers := make(map[string]interface{})
+
+	for name, server := range cfg.MCPServers {
+		entry := map[string]interface{}{
+			"command":  server.Command,
+			"disabled": !server.IsEnabled(),
+		}
+
+		if len(server.Args) > 0 {
+			entry["args"] = server.Args
+		}
+		if len(server.Env) > 0 {
+			entry["env"] = server.Env
+		}
+		if server.Transport != "" {
+			entry["transport"] = server.GetTransport()
+		}
+		if server.URL != "" {
+			entry["url"] = server.URL
+		}
+
+		mcpServers[name] = entry
+	}
+
+	payload := map[string]interface{}{
+		"mcpServers": mcpServers,
+	}
+
+	jsonBytes, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal MCP JSON: %w", err)
+	}
+
+	return string(jsonBytes) + "\n", nil
 }

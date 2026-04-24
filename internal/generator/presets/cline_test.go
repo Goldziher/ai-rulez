@@ -5,6 +5,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
@@ -40,8 +43,9 @@ func TestClinePresetGenerator_Generate_WithSkills(t *testing.T) {
 	// Base: .clinerules, .cline, .cline/skills = 3 dirs
 	// Rule: 1 file
 	// Skill: dir + SKILL.md = 2
-	if len(outputs) != 6 {
-		t.Errorf("Generate() got %d outputs, want 6", len(outputs))
+	// Agents dir = 1
+	if len(outputs) != 7 {
+		t.Errorf("Generate() got %d outputs, want 7", len(outputs))
 	}
 
 	var foundSkill bool
@@ -56,4 +60,58 @@ func TestClinePresetGenerator_Generate_WithSkills(t *testing.T) {
 	if !foundSkill {
 		t.Error("Expected .cline/skills/deploy/SKILL.md in outputs")
 	}
+}
+
+func TestClinePresetGenerator_renderClineAgentFile(t *testing.T) {
+	g := &ClinePresetGenerator{}
+
+	agent := config.ContentFile{
+		Name:    "test-agent",
+		Content: "You are a test agent.",
+		Metadata: &config.MetadataV3{
+			Extra: map[string]string{
+				"description": "A test agent",
+				"model":       "sonnet",
+			},
+		},
+	}
+
+	content, err := g.renderClineAgentFile(agent)
+	require.NoError(t, err)
+	assert.Contains(t, content, "---")
+	assert.Contains(t, content, "name: test-agent")
+	assert.Contains(t, content, "description: A test agent")
+	assert.Contains(t, content, "model: sonnet")
+	assert.Contains(t, content, "You are a test agent.")
+}
+
+func TestClinePresetGenerator_Generate_WithContext(t *testing.T) {
+	g := &ClinePresetGenerator{}
+
+	content := &config.ContentTreeV3{
+		Rules: []config.ContentFile{
+			{Name: "rule1", Content: "Rule content"},
+		},
+		Context: []config.ContentFile{
+			{Name: "project-arch", Content: "Uses hexagonal architecture"},
+		},
+		Skills:   []config.ContentFile{},
+		Agents:   []config.ContentFile{},
+		Commands: []config.ContentFile{},
+		Domains:  map[string]*config.DomainV3{},
+	}
+	cfg := &config.ConfigV3{Name: "test"}
+
+	outputs, err := g.Generate(content, "/tmp/test", cfg)
+	require.NoError(t, err)
+
+	// Check that context is rendered as a file in .clinerules
+	found := false
+	for _, o := range outputs {
+		if strings.Contains(o.Content, "hexagonal architecture") {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Context should be rendered in output")
 }

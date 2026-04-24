@@ -6,17 +6,18 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
 const (
 	aiRulezDirName     = ".ai-rulez"
+	configTOMLFilename = "config.toml"
 	configYAMLFilename = "config.yaml"
 	configJSONFilename = "config.json"
 	rulesDir           = "rules"
@@ -26,6 +27,7 @@ const (
 	commandsDir        = "commands"
 	domainsDir         = "domains"
 	skillMarkerFile    = "SKILL.md"
+	mcpTOMLFilename    = "mcp.toml"
 	mcpYAMLFilename    = "mcp.yaml"
 	mcpJSONFilename    = "mcp.json"
 )
@@ -123,8 +125,6 @@ func LoadConfigV3(ctx context.Context, baseDir string) (*ConfigV3, error) {
 
 	// Set runtime fields
 	config.BaseDir = absDir
-
-	warnDeprecatedCompression(config)
 
 	// Load root MCP servers (optional - don't fail if missing)
 	rootMCPServers, err := loadMCPServers(configDir)
@@ -247,17 +247,18 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *ConfigV3) error
 	return nil
 }
 
-func warnDeprecatedCompression(config *ConfigV3) {
-	if config.Compression != nil && config.Compression.IsDeprecatedUsage() {
-		logger.Warn("\"compression\" config is deprecated and will be removed in a future version. It is now a no-op. Condense content at the source level instead.")
-	}
-}
-
 // loadConfigFile loads config.yaml or config.json from the .ai-rulez/ directory
 func loadConfigFile(configDir string) (*ConfigV3, error) {
-	// Try YAML first
+	// Try TOML first (V4 preferred format)
+	tomlPath := filepath.Join(configDir, configTOMLFilename)
+	if _, err := os.Stat(tomlPath); err == nil {
+		return loadConfigTOML(tomlPath)
+	}
+
+	// Try YAML (deprecated in V4)
 	yamlPath := filepath.Join(configDir, configYAMLFilename)
 	if _, err := os.Stat(yamlPath); err == nil {
+		logger.Warn("YAML config is deprecated; run 'ai-rulez migrate v4' to convert to TOML")
 		return loadConfigYAML(yamlPath)
 	}
 
@@ -269,10 +270,11 @@ func loadConfigFile(configDir string) (*ConfigV3, error) {
 
 	return nil, oops.
 		With("config_dir", configDir).
+		With("toml_path", tomlPath).
 		With("yaml_path", yamlPath).
 		With("json_path", jsonPath).
-		Hint(fmt.Sprintf("Create %s or %s in %s\nRun 'ai-rulez init' to initialize configuration", configYAMLFilename, configJSONFilename, configDir)).
-		Errorf("no config file found (tried %s and %s)", configYAMLFilename, configJSONFilename)
+		Hint(fmt.Sprintf("Create %s, %s, or %s in %s\nRun 'ai-rulez init' to initialize configuration", configTOMLFilename, configYAMLFilename, configJSONFilename, configDir)).
+		Errorf("no config file found (tried %s, %s, and %s)", configTOMLFilename, configYAMLFilename, configJSONFilename)
 }
 
 // loadConfigYAML loads a V3 config from YAML
@@ -315,6 +317,87 @@ func loadConfigJSON(path string) (*ConfigV3, error) {
 	}
 
 	return &config, nil
+}
+
+// loadConfigTOML loads a V3/V4 config from TOML
+func loadConfigTOML(path string) (*ConfigV3, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, oops.
+			With("path", path).
+			Hint(fmt.Sprintf("Check if the file exists: %s\nVerify you have read permissions", path)).
+			Wrapf(err, "read config file")
+	}
+
+	// TOML presets are plain strings; we unmarshal into an intermediate
+	// struct then convert to []PresetV3. This avoids custom unmarshaler
+	// issues with the TOML library.
+	type tomlConfig struct {
+		Schema          string                 `toml:"schema"`
+		Version         string                 `toml:"version"`
+		Name            string                 `toml:"name"`
+		Description     string                 `toml:"description"`
+		Presets         []string               `toml:"presets"`
+		Default         string                 `toml:"default"`
+		Profiles        map[string][]string    `toml:"profiles"`
+		Gitignore       *bool                  `toml:"gitignore"`
+		Includes        []IncludeConfig        `toml:"includes"`
+		InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
+		Header          *HeaderConfig          `toml:"header"`
+		Builtins        interface{}            `toml:"builtins"`
+		Plugins         []PluginConfig         `toml:"plugins"`
+		Marketplaces    []MarketplaceConfig    `toml:"marketplaces"`
+	}
+
+	var raw tomlConfig
+	if err := toml.Unmarshal(data, &raw); err != nil {
+		return nil, oops.
+			With("path", path).
+			Hint("Check the TOML syntax - ensure proper formatting\nCommon issues: missing quotes around strings, incorrect table syntax").
+			Wrapf(err, "parse TOML config")
+	}
+
+	presets := make([]PresetV3, 0, len(raw.Presets))
+	for _, name := range raw.Presets {
+		presets = append(presets, PresetV3{BuiltIn: name})
+	}
+
+	// Convert builtins from interface{} to BuiltinsConfig
+	var builtinsCfg *BuiltinsConfig
+	if raw.Builtins != nil {
+		builtinsCfg = &BuiltinsConfig{}
+		switch v := raw.Builtins.(type) {
+		case bool:
+			builtinsCfg.All = &v
+		case []interface{}:
+			names := make([]string, 0, len(v))
+			for _, item := range v {
+				if s, ok := item.(string); ok {
+					names = append(names, s)
+				}
+			}
+			builtinsCfg.Names = names
+		}
+	}
+
+	cfg := &ConfigV3{
+		Schema:          raw.Schema,
+		Version:         raw.Version,
+		Name:            raw.Name,
+		Description:     raw.Description,
+		Presets:         presets,
+		Default:         raw.Default,
+		Profiles:        raw.Profiles,
+		Gitignore:       raw.Gitignore,
+		Includes:        raw.Includes,
+		InstalledSkills: raw.InstalledSkills,
+		Header:          raw.Header,
+		Builtins:        builtinsCfg,
+		Plugins:         raw.Plugins,
+		Marketplaces:    raw.Marketplaces,
+	}
+
+	return cfg, nil
 }
 
 // ScanContentTree scans all content directories and returns a populated ContentTreeV3.
@@ -725,7 +808,7 @@ func loadContentFile(path string) (ContentFile, error) {
 	}, nil
 }
 
-// loadMCPConfig loads MCP configuration from a YAML or JSON file
+// loadMCPConfig loads MCP configuration from a YAML, JSON, or TOML file
 func loadMCPConfig(path string) (*MCPConfigV3, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -736,15 +819,23 @@ func loadMCPConfig(path string) (*MCPConfigV3, error) {
 
 	var config MCPConfigV3
 
-	// Determine if it's JSON or YAML based on file extension
-	if strings.HasSuffix(path, ".json") {
+	// Determine format based on file extension
+	switch {
+	case strings.HasSuffix(path, ".json"):
 		if err := json.Unmarshal(data, &config); err != nil {
 			return nil, oops.
 				With("path", path).
 				Hint("Check the JSON syntax - ensure proper formatting").
 				Wrapf(err, "parse JSON MCP config")
 		}
-	} else {
+	case strings.HasSuffix(path, ".toml"):
+		if err := toml.Unmarshal(data, &config); err != nil {
+			return nil, oops.
+				With("path", path).
+				Hint("Check the TOML syntax - ensure proper formatting").
+				Wrapf(err, "parse TOML MCP config")
+		}
+	default:
 		if err := yaml.Unmarshal(data, &config); err != nil {
 			return nil, oops.
 				With("path", path).
@@ -756,12 +847,22 @@ func loadMCPConfig(path string) (*MCPConfigV3, error) {
 	return &config, nil
 }
 
-// loadMCPServers loads root MCP servers from .ai-rulez/mcp.yaml or mcp.json
+// loadMCPServers loads root MCP servers from .ai-rulez/mcp.toml, mcp.yaml, or mcp.json
 func loadMCPServers(configDir string) (map[string]*MCPServerV3, error) {
+	tomlPath := filepath.Join(configDir, mcpTOMLFilename)
 	yamlPath := filepath.Join(configDir, mcpYAMLFilename)
 	jsonPath := filepath.Join(configDir, mcpJSONFilename)
 
-	// Try YAML first
+	// Try TOML first (V4 preferred)
+	if _, err := os.Stat(tomlPath); err == nil {
+		cfg, err := loadMCPConfig(tomlPath)
+		if err != nil {
+			return nil, err
+		}
+		return serversToMap(cfg.Servers), nil
+	}
+
+	// Try YAML
 	if _, err := os.Stat(yamlPath); err == nil {
 		cfg, err := loadMCPConfig(yamlPath)
 		if err != nil {
@@ -783,12 +884,22 @@ func loadMCPServers(configDir string) (map[string]*MCPServerV3, error) {
 	return make(map[string]*MCPServerV3), nil
 }
 
-// loadDomainMCPServers loads domain-specific MCP servers from domain mcp.yaml or mcp.json
+// loadDomainMCPServers loads domain-specific MCP servers from domain mcp.toml, mcp.yaml, or mcp.json
 func loadDomainMCPServers(domainDir string) (map[string]*MCPServerV3, error) {
+	tomlPath := filepath.Join(domainDir, mcpTOMLFilename)
 	yamlPath := filepath.Join(domainDir, mcpYAMLFilename)
 	jsonPath := filepath.Join(domainDir, mcpJSONFilename)
 
-	// Try YAML first
+	// Try TOML first (V4 preferred)
+	if _, err := os.Stat(tomlPath); err == nil {
+		cfg, err := loadMCPConfig(tomlPath)
+		if err != nil {
+			return nil, err
+		}
+		return serversToMap(cfg.Servers), nil
+	}
+
+	// Try YAML
 	if _, err := os.Stat(yamlPath); err == nil {
 		cfg, err := loadMCPConfig(yamlPath)
 		if err != nil {
@@ -835,396 +946,6 @@ func mergeMCPServersV3(root, domain map[string]*MCPServerV3) map[string]*MCPServ
 	}
 
 	return result
-}
-
-// LoadV3AsV2 loads a V3 config and converts it to V2 Config struct
-// This enables backward compatibility with existing V2 generator code
-func LoadV3AsV2(ctx context.Context, baseDir string) (*Config, error) {
-	// 1. Load V3 config
-	v3Config, err := LoadConfigV3(ctx, baseDir)
-	if err != nil {
-		return nil, err
-	}
-
-	// 2. Convert to V2 Config struct
-	v2Config := convertV3ToV2(v3Config)
-
-	return v2Config, nil
-}
-
-// convertV3ToV2 converts a V3 ConfigV3 to a V2 Config struct
-func convertV3ToV2(v3 *ConfigV3) *Config {
-	v2 := &Config{
-		Metadata: Metadata{
-			Name:        v3.Name,
-			Description: v3.Description,
-		},
-		Gitignore: v3.Gitignore,
-	}
-
-	// Convert root content
-	if v3.Content != nil {
-		v2.Rules = convertContentToRules(v3.Content.Rules)
-		v2.Sections = convertContentToSections(v3.Content.Context)
-		v2.Agents = convertContentToAgents(v3.Content.Agents)
-		v2.Commands = convertContentToCommands(v3.Content.Commands)
-
-		// Collect all names for collision detection
-		seenRuleNames := make(map[string]bool)
-		seenSectionNames := make(map[string]bool)
-		seenAgentNames := make(map[string]bool)
-		seenCommandNames := make(map[string]bool)
-
-		// Track root names
-		for i := range v2.Rules {
-			seenRuleNames[v2.Rules[i].Name] = true
-		}
-		for i := range v2.Sections {
-			seenSectionNames[v2.Sections[i].Name] = true
-		}
-		for i := range v2.Agents {
-			seenAgentNames[v2.Agents[i].Name] = true
-		}
-		for i := range v2.Commands {
-			seenCommandNames[v2.Commands[i].Name] = true
-		}
-
-		// Add domain content to rules/sections/agents/commands with domain prefixing
-		for domainName, domain := range v3.Content.Domains {
-			domainRules := convertContentToRulesWithDomain(domain.Rules, domainName, seenRuleNames)
-			domainSections := convertContentToSectionsWithDomain(domain.Context, domainName, seenSectionNames)
-			domainAgents := convertContentToAgentsWithDomain(domain.Skills, domainName, seenAgentNames)
-			domainCommands := convertContentToCommandsWithDomain(domain.Commands, domainName, seenCommandNames)
-
-			v2.Rules = append(v2.Rules, domainRules...)
-			v2.Sections = append(v2.Sections, domainSections...)
-			v2.Agents = append(v2.Agents, domainAgents...)
-			v2.Commands = append(v2.Commands, domainCommands...)
-
-			// Update seen names
-			for i := range domainRules {
-				seenRuleNames[domainRules[i].Name] = true
-			}
-			for i := range domainSections {
-				seenSectionNames[domainSections[i].Name] = true
-			}
-			for i := range domainAgents {
-				seenAgentNames[domainAgents[i].Name] = true
-			}
-			for i := range domainCommands {
-				seenCommandNames[domainCommands[i].Name] = true
-			}
-		}
-	}
-
-	// Convert presets to outputs
-	v2.Outputs = convertPresetsToOutputs(v3.Presets)
-
-	// Store profile information in metadata version field if profiles exist
-	if len(v3.Profiles) > 0 || v3.Default != "" {
-		v2.Metadata.Version = encodeProfileMetadata(v3.Profiles, v3.Default)
-	}
-
-	return v2
-}
-
-// convertContentToRules converts ContentFile entries to Rule entries
-func convertContentToRules(files []ContentFile) []Rule {
-	var rules []Rule
-	for _, file := range files {
-		rule := Rule{
-			ID:       sanitizeNameToID(file.Name),
-			Name:     file.Name,
-			Content:  file.Content,
-			Priority: getPriorityFromMetadata(file.Metadata),
-			Targets:  getTargetsFromMetadata(file.Metadata),
-		}
-		rules = append(rules, rule)
-	}
-	return rules
-}
-
-// convertContentToRulesWithDomain converts ContentFile entries to Rule entries with domain context
-// It prefixes names with domain to preserve domain membership and prevent collisions
-func convertContentToRulesWithDomain(files []ContentFile, domainName string, seenNames map[string]bool) []Rule {
-	var rules []Rule
-	for _, file := range files {
-		// Prefix name with domain to preserve domain membership
-		prefixedName := domainName + ": " + file.Name
-		uniqueName := prefixedName
-
-		// Handle collisions with numeric suffix
-		counter := 1
-		for seenNames[uniqueName] {
-			uniqueName = fmt.Sprintf("%s (%d)", prefixedName, counter)
-			counter++
-		}
-
-		rule := Rule{
-			ID:       sanitizeNameToID(uniqueName),
-			Name:     uniqueName,
-			Content:  file.Content,
-			Priority: getPriorityFromMetadata(file.Metadata),
-			Targets:  getTargetsFromMetadata(file.Metadata),
-		}
-		rules = append(rules, rule)
-		seenNames[uniqueName] = true
-	}
-	return rules
-}
-
-// convertContentToSections converts ContentFile entries to Section entries
-func convertContentToSections(files []ContentFile) []Section {
-	var sections []Section
-	for _, file := range files {
-		section := Section{
-			ID:       sanitizeNameToID(file.Name),
-			Name:     file.Name,
-			Content:  file.Content,
-			Priority: getPriorityFromMetadata(file.Metadata),
-			Targets:  getTargetsFromMetadata(file.Metadata),
-		}
-		sections = append(sections, section)
-	}
-	return sections
-}
-
-// convertContentToSectionsWithDomain converts ContentFile entries to Section entries with domain context
-// It prefixes names with domain to preserve domain membership and prevent collisions
-func convertContentToSectionsWithDomain(files []ContentFile, domainName string, seenNames map[string]bool) []Section {
-	var sections []Section
-	for _, file := range files {
-		// Prefix name with domain to preserve domain membership
-		prefixedName := domainName + ": " + file.Name
-		uniqueName := prefixedName
-
-		// Handle collisions with numeric suffix
-		counter := 1
-		for seenNames[uniqueName] {
-			uniqueName = fmt.Sprintf("%s (%d)", prefixedName, counter)
-			counter++
-		}
-
-		section := Section{
-			ID:       sanitizeNameToID(uniqueName),
-			Name:     uniqueName,
-			Content:  file.Content,
-			Priority: getPriorityFromMetadata(file.Metadata),
-			Targets:  getTargetsFromMetadata(file.Metadata),
-		}
-		sections = append(sections, section)
-		seenNames[uniqueName] = true
-	}
-	return sections
-}
-
-// convertContentToAgents converts ContentFile entries to Agent entries
-func convertContentToAgents(files []ContentFile) []Agent {
-	var agents []Agent
-	for _, file := range files {
-		agent := Agent{
-			ID:           sanitizeNameToID(file.Name),
-			Name:         file.Name,
-			Description:  getAgentDescription(file.Metadata),
-			SystemPrompt: file.Content,
-			Priority:     getPriorityFromMetadata(file.Metadata),
-		}
-		agents = append(agents, agent)
-	}
-	return agents
-}
-
-// convertContentToAgentsWithDomain converts ContentFile entries to Agent entries with domain context
-// It prefixes names with domain to preserve domain membership and prevent collisions
-func convertContentToAgentsWithDomain(files []ContentFile, domainName string, seenNames map[string]bool) []Agent {
-	var agents []Agent
-	for _, file := range files {
-		// Prefix name with domain to preserve domain membership
-		prefixedName := domainName + ": " + file.Name
-		uniqueName := prefixedName
-
-		// Handle collisions with numeric suffix
-		counter := 1
-		for seenNames[uniqueName] {
-			uniqueName = fmt.Sprintf("%s (%d)", prefixedName, counter)
-			counter++
-		}
-
-		agent := Agent{
-			ID:           sanitizeNameToID(uniqueName),
-			Name:         uniqueName,
-			Description:  getAgentDescription(file.Metadata),
-			SystemPrompt: file.Content,
-			Priority:     getPriorityFromMetadata(file.Metadata),
-		}
-		agents = append(agents, agent)
-		seenNames[uniqueName] = true
-	}
-	return agents
-}
-
-// convertContentToCommands converts ContentFile entries to Command entries
-func convertContentToCommands(files []ContentFile) []Command {
-	var commands []Command
-	for _, file := range files {
-		command := Command{
-			ID:           sanitizeNameToID(file.Name),
-			Name:         file.Name,
-			Description:  getCommandDescription(file.Metadata),
-			SystemPrompt: file.Content,
-			Aliases:      getCommandAliases(file.Metadata),
-			Usage:        getCommandUsage(file.Metadata),
-			Shortcut:     getCommandShortcut(file.Metadata),
-			Targets:      getTargetsFromMetadata(file.Metadata),
-		}
-		commands = append(commands, command)
-	}
-	return commands
-}
-
-// convertContentToCommandsWithDomain converts ContentFile entries to Command entries with domain context
-// It prefixes names with domain to preserve domain membership and prevent collisions
-func convertContentToCommandsWithDomain(files []ContentFile, domainName string, seenNames map[string]bool) []Command {
-	var commands []Command
-	for _, file := range files {
-		// Prefix name with domain to preserve domain membership
-		prefixedName := domainName + ": " + file.Name
-		uniqueName := prefixedName
-
-		// Handle collisions with numeric suffix
-		counter := 1
-		for seenNames[uniqueName] {
-			uniqueName = fmt.Sprintf("%s (%d)", prefixedName, counter)
-			counter++
-		}
-
-		command := Command{
-			ID:           sanitizeNameToID(uniqueName),
-			Name:         uniqueName,
-			Description:  getCommandDescription(file.Metadata),
-			SystemPrompt: file.Content,
-			Aliases:      getCommandAliases(file.Metadata),
-			Usage:        getCommandUsage(file.Metadata),
-			Shortcut:     getCommandShortcut(file.Metadata),
-			Targets:      getTargetsFromMetadata(file.Metadata),
-		}
-		commands = append(commands, command)
-		seenNames[uniqueName] = true
-	}
-	return commands
-}
-
-// convertPresetsToOutputs converts V3 presets to V2 Output entries
-func convertPresetsToOutputs(presets []PresetV3) []Output {
-	var outputs []Output
-
-	for _, preset := range presets {
-		if preset.BuiltIn != "" {
-			// Use preset registry to get outputs
-			presetOutputs, exists := PresetRegistry[preset.BuiltIn]
-			if exists {
-				outputs = append(outputs, presetOutputs...)
-			}
-		} else {
-			// Custom preset
-			output := Output{
-				Path:     preset.Path,
-				Type:     string(preset.Type),
-				Template: Template{Type: TemplateBuiltin, Value: preset.Template},
-			}
-			outputs = append(outputs, output)
-		}
-	}
-
-	return outputs
-}
-
-// getPriorityFromMetadata extracts priority from metadata, defaulting to medium
-func getPriorityFromMetadata(meta *MetadataV3) Priority {
-	if meta == nil {
-		return PriorityMedium
-	}
-	return meta.GetPriority()
-}
-
-// getTargetsFromMetadata extracts targets from metadata
-func getTargetsFromMetadata(meta *MetadataV3) []string {
-	if meta == nil || !meta.HasTargets() {
-		return nil
-	}
-	return meta.Targets
-}
-
-// getAgentDescription extracts agent description from metadata
-func getAgentDescription(meta *MetadataV3) string {
-	if meta == nil || meta.Extra == nil {
-		return ""
-	}
-	return meta.Extra["description"]
-}
-
-// getCommandDescription extracts command description from metadata
-func getCommandDescription(meta *MetadataV3) string {
-	if meta == nil || meta.Extra == nil {
-		return ""
-	}
-	return meta.Extra["description"]
-}
-
-// getCommandAliases extracts command aliases from metadata
-func getCommandAliases(meta *MetadataV3) []string {
-	if meta == nil {
-		return nil
-	}
-	return meta.Aliases
-}
-
-// getCommandUsage extracts command usage from metadata
-func getCommandUsage(meta *MetadataV3) string {
-	if meta == nil {
-		return ""
-	}
-	return meta.Usage
-}
-
-// getCommandShortcut extracts command shortcut from metadata
-func getCommandShortcut(meta *MetadataV3) string {
-	if meta == nil {
-		return ""
-	}
-	return meta.Shortcut
-}
-
-// sanitizeNameToID converts a human-readable name to a valid ID
-// It replaces spaces and special characters with hyphens, and converts to lowercase
-func sanitizeNameToID(name string) string {
-	// Convert to lowercase
-	id := strings.ToLower(name)
-
-	// Replace spaces with hyphens
-	id = strings.ReplaceAll(id, " ", "-")
-
-	// Replace colons with hyphens (for domain prefixed names)
-	id = strings.ReplaceAll(id, ":", "-")
-
-	// Remove or replace other special characters
-	re := regexp.MustCompile(`[^a-z0-9\-_]`)
-	id = re.ReplaceAllString(id, "-")
-
-	// Remove leading/trailing hyphens
-	id = strings.Trim(id, "-")
-
-	// Replace multiple consecutive hyphens with single hyphen
-	for strings.Contains(id, "--") {
-		id = strings.ReplaceAll(id, "--", "-")
-	}
-
-	// Ensure ID is not empty and doesn't start with digit or hyphen
-	if id == "" || id[0] == '-' || (id[0] >= '0' && id[0] <= '9') {
-		id = "id-" + id
-	}
-
-	return id
 }
 
 // SaveConfigV3 saves a V3 configuration back to YAML or JSON format.
@@ -1407,31 +1128,6 @@ func fileExists(path string) bool {
 	return !info.IsDir()
 }
 
-// encodeProfileMetadata encodes profile information into a version string
-// Format: "profiles:<profile1>:<domain1>,<domain2>;profile2:<domain3>"
-func encodeProfileMetadata(profiles map[string][]string, defaultProfile string) string {
-	if len(profiles) == 0 && defaultProfile == "" {
-		return ""
-	}
-
-	var parts []string
-	for profileName, domains := range profiles {
-		profileEntry := profileName
-		if len(domains) > 0 {
-			profileEntry += ":" + strings.Join(domains, ",")
-		}
-		parts = append(parts, profileEntry)
-	}
-
-	encoded := "profiles:" + strings.Join(parts, ";")
-
-	if defaultProfile != "" {
-		encoded += ";default:" + defaultProfile
-	}
-
-	return encoded
-}
-
 // loadBuiltins resolves and loads builtin domains into the config content tree.
 // Builtins have the lowest priority: they are injected into domains that don't already exist.
 // If a domain already exists (from local content or includes), the builtin is skipped.
@@ -1510,39 +1206,3 @@ func loadBuiltins(config *ConfigV3) {
 		)
 	}
 }
-
-// decodeProfileMetadata is unused and kept for potential future use
-// nolint:unused // Keeping for potential future use
-// func decodeProfileMetadata(versionStr string) (map[string][]string, string) {
-// 	if !strings.HasPrefix(versionStr, "profiles:") {
-// 		return nil, ""
-// 	}
-//
-// 	profiles := make(map[string][]string)
-// 	var defaultProfile string
-//
-// 	// Remove "profiles:" prefix
-// 	content := strings.TrimPrefix(versionStr, "profiles:")
-//
-// 	// Split by semicolon to get profile entries and default
-// 	parts := strings.Split(content, ";")
-//
-// 	for _, part := range parts {
-// 		if strings.HasPrefix(part, "default:") {
-// 			defaultProfile = strings.TrimPrefix(part, "default:")
-// 		} else if part != "" {
-// 			// Split profile name and domains
-// 			profileParts := strings.SplitN(part, ":", 2)
-// 			profileName := profileParts[0]
-//
-// 			var domains []string
-// 			if len(profileParts) > 1 && profileParts[1] != "" {
-// 				domains = strings.Split(profileParts[1], ",")
-// 			}
-//
-// 			profiles[profileName] = domains
-// 		}
-// 	}
-//
-// 	return profiles, defaultProfile
-// }
