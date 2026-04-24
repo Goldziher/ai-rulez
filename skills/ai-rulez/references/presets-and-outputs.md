@@ -12,40 +12,43 @@
 
 ## Built-in Presets
 
-Configure in `config.yaml`:
+Configure in `config.toml`:
 
-```yaml
-presets:
-  - claude       # → CLAUDE.md
-  - cursor       # → .cursor/rules/*.mdc
-  - gemini       # → GEMINI.md
-  - copilot      # → .github/copilot-instructions.md
-  - continue-dev # → .continue/rules/
-  - windsurf     # → .windsurfrules
-  - cline        # → .clinerules
-  - codex        # → AGENTS.md
-  - amp          # → AMP.md
-  - junie        # → .junie/guidelines.md
-  - opencode     # → OPENCODE.md
+```toml
+presets = [
+  "claude",       # → CLAUDE.md
+  "cursor",       # → .cursor/rules/*.mdc
+  "gemini",       # → GEMINI.md
+  "copilot",      # → .github/copilot-instructions.md
+  "continue-dev", # → .continue/rules/
+  "windsurf",     # → .windsurfrules
+  "cline",        # → .clinerules
+  "codex",        # → AGENTS.md
+  "amp",          # → AMP.md
+  "junie",        # → .junie/guidelines.md
+  "opencode"      # → OPENCODE.md
+]
 ```
 
 ## Custom Presets
 
 Define custom output formats:
 
-```yaml
-presets:
-  - name: team-guide
-    type: markdown        # Single markdown file
-    path: docs/AI_GUIDE.md
+```toml
+[[presets]]
+name = "team-guide"
+type = "markdown"        # Single markdown file
+path = "docs/AI_GUIDE.md"
 
-  - name: rules-dir
-    type: directory       # Directory of files
-    path: .ai-rules/
+[[presets]]
+name = "rules-dir"
+type = "directory"       # Directory of files
+path = ".ai-rules/"
 
-  - name: config-json
-    type: json            # JSON output
-    path: .ai-config.json
+[[presets]]
+name = "config-json"
+type = "json"            # JSON output
+path = ".ai-config.json"
 ```
 
 ## Profile-based Generation
@@ -87,6 +90,6 @@ Control generated file headers:
 - **compact**: Brief header with tool name and generation notice
 - **minimal**: Bare minimum header
 
-## Compression (Deprecated)
+## MCP Server Integration
 
-The `compression` config option is deprecated and now a no-op. It will be removed in a future version. To reduce token usage, condense content at the source level instead.
+MCP servers are now configured inline in `config.toml` under `[mcp]` sections, allowing assistants to access ai-rulez functionality without a separate service.

@@ -1,0 +1,35 @@
+version = "4.0"
+name = "AI-Rulez"
+description = "AI-powered development governance CLI and multi-runtime tooling."
+gitignore = true
+
+presets = [
+  "claude",
+  "cursor",
+  "gemini",
+  "windsurf",
+  "copilot",
+  "continue-dev",
+  "amp",
+  "cline",
+  "codex",
+  "opencode",
+  "junie",
+  "antigravity",
+  "mcp",
+]
+
+builtins = [
+  "go",
+  "security",
+  "git-workflow",
+  "code-quality",
+  "testing",
+  "default-commands",
+]
+
+[[mcp_servers]]
+name = "ai-rulez"
+description = "Expose generation and enforcement to MCP-aware tools such as Claude and Gemini."
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]

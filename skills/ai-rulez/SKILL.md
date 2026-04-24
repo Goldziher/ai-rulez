@@ -3,12 +3,12 @@ name: ai-rulez
 description: >-
   Manage AI assistant governance rules across Claude, Cursor, Windsurf,
   Copilot, Gemini, and other tools using ai-rulez. Use when configuring
-  rules, context, skills, domains, profiles, includes, or generating
+  rules, context, skills, domains, profiles, includes, plugins, or generating
   tool-specific outputs.
 license: MIT
 metadata:
   author: Goldziher
-  version: "3.11"
+  version: "4.0.0"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
@@ -58,8 +58,7 @@ ai-rulez validate
 
 ```
 .ai-rulez/
-  config.yaml          # Main configuration
-  mcp.yaml             # MCP server definitions (optional)
+  config.toml          # Main configuration
   rules/               # Governance rules (.md files with frontmatter)
   context/             # Contextual information (.md files)
   skills/              # Specialized capabilities (name/SKILL.md)
@@ -72,27 +71,33 @@ ai-rulez validate
       skills/
 ```
 
-## config.yaml
+## config.toml
 
-```yaml
-version: "3.0"
-name: my-project
-description: Project description
-presets:
-  - claude
-  - cursor
-  - gemini
-profiles:
-  backend: [backend, shared]
-  frontend: [frontend, shared]
-default: backend
-builtins: [go, security, testing]
-installed_skills:
-  - name: kreuzberg
-    source: https://github.com/kreuzberg-dev/kreuzberg
-includes:
-  - name: shared-rules
-    source: https://github.com/org/shared-rules
+```toml
+version = "4.0"
+name = "my-project"
+description = "Project description"
+
+presets = ["claude", "cursor", "gemini"]
+default = "backend"
+builtins = ["go", "security", "testing"]
+
+[profiles]
+backend = ["backend", "shared"]
+frontend = ["frontend", "shared"]
+
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+
+[[includes]]
+name = "shared-rules"
+source = "https://github.com/org/shared-rules"
+
+[mcp]
+[mcp.servers.default]
+command = "npx"
+args = ["ai-rulez@latest", "mcp"]
 ```
 
 ## Content Frontmatter
@@ -146,12 +151,16 @@ Skills are fetched dynamically at generation time and included in outputs.
 
 Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`.
 
-## MCP Server
+## MCP Integration
 
-ai-rulez exposes an MCP server for AI assistants to read, create, update, and generate configuration:
+MCP servers are now configured inline in `config.toml` under `[mcp]` sections. ai-rulez exposes an MCP server for AI assistants to read, create, update, and generate configuration:
 
 ```bash
 ai-rulez mcp
 ```
 
 Configure in your AI tool's MCP settings to enable CRUD operations from within the assistant.
+
+## Plugins and Marketplaces
+
+V4 introduces support for plugins and marketplace integrations to extend ai-rulez functionality with custom generators, presets, and validators.

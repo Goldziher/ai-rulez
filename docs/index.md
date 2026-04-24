@@ -85,7 +85,7 @@ profiles:
 - Domain scoping to organize rules by team or subsystem
 - Profile-based customization for different contexts
 - Modular structure to reduce merge conflicts
-- Built-in presets for 18+ AI tools
+- Built-in presets for 19+ AI tools
 - Custom presets for any tool and format
 - Installed skills from external repositories
 - Remote includes for sharing rules across projects
@@ -122,4 +122,4 @@ project-root/
 
 ## Version
 
-This documentation covers **AI-Rulez V3** (directory-based configuration).
+This documentation covers **AI-Rulez V4** (TOML-based configuration with inline MCP servers and plugins).

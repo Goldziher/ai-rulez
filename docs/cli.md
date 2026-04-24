@@ -7,9 +7,10 @@ All AI-Rulez CLI commands and flags.
 ### Core Commands
 | Command | Description |
 |---------|-------------|
-| `ai-rulez init` | Initialize V3 directory-based configuration |
+| `ai-rulez init` | Initialize V4 directory-based configuration |
 | `ai-rulez generate` | Generate presets for specific profile |
 | `ai-rulez validate` | Validate configuration |
+| `ai-rulez migrate` | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez version` | Show version |
 | `ai-rulez mcp` | Start MCP server |
 | `ai-rulez builtins list` | List available built-in domains |
@@ -591,24 +592,23 @@ ai-rulez profile list --json
 
 ## Initialization Command
 
-### `ai-rulez init [project-name] --v3`
+### `ai-rulez init [project-name]`
 
-Initialize a new V3 directory-based configuration.
+Initialize a new V4 directory-based configuration.
 
 **Syntax:**
 ```bash
-ai-rulez init [project-name] --v3 [flags]
+ai-rulez init [project-name] [flags]
 ```
 
 **Arguments:**
 - `[project-name]` (optional): The project name. If not provided, prompted interactively.
 
-**V3-specific Flags:**
+**V4-specific Flags:**
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--v3` | boolean | false | Use V3 directory-based configuration |
-| `--format` | string | `yaml` | Configuration format: `yaml` or `json` |
+| `--format` | string | `toml` | Configuration format: `toml`, `yaml`, or `json` |
 | `--domains` | string | (none) | Comma-separated list of domain names to create |
 | `--skip-content` | boolean | false | Skip creating example content files |
 
@@ -622,24 +622,24 @@ ai-rulez init [project-name] --v3 [flags]
 
 **Examples:**
 
-Basic V3 initialization:
+Basic V4 initialization (TOML format):
 ```bash
-ai-rulez init "my-project" --v3
+ai-rulez init "my-project"
 ```
 
-V3 with JSON format:
+V4 with YAML format:
 ```bash
-ai-rulez init "my-project" --v3 --format json
+ai-rulez init "my-project" --format yaml
 ```
 
-V3 with multiple domains:
+V4 with multiple domains:
 ```bash
-ai-rulez init "my-project" --v3 --domains "backend,frontend,qa"
+ai-rulez init "my-project" --domains "backend,frontend,qa"
 ```
 
-V3 with example content skipped:
+V4 with example content skipped:
 ```bash
-ai-rulez init "my-project" --v3 --skip-content
+ai-rulez init "my-project" --skip-content
 ```
 
 ## Generate Command
@@ -790,6 +790,65 @@ ai-rulez validate --verbose
 - Profile definitions reference valid domains
 - File paths are accessible
 
+## Migrate Command
+
+### `ai-rulez migrate v4 [config-path]`
+
+Migrate configuration from V3 (YAML) to V4 (TOML format).
+
+**Syntax:**
+```bash
+ai-rulez migrate v4 [config-path] [flags]
+```
+
+**Arguments:**
+- `[config-path]` (optional): Path to V3 config.yaml file. If not provided, auto-detected.
+
+**Flags:**
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--dry-run` | boolean | false | Preview migration without writing files |
+| `--backup` | boolean | true | Create backup of original config.yaml |
+| `--verbose` | boolean | false | Enable verbose output |
+
+**Examples:**
+
+Migrate current directory:
+```bash
+ai-rulez migrate v4
+```
+
+Migrate with dry-run (preview changes):
+```bash
+ai-rulez migrate v4 --dry-run
+```
+
+Migrate specific config without backup:
+```bash
+ai-rulez migrate v4 .ai-rulez/config.yaml --backup false
+```
+
+**What It Does:**
+
+1. Reads V3 `config.yaml` (YAML format)
+2. Converts all configuration to TOML format
+3. Moves MCP servers from separate `mcp.yaml` into `config.toml` inline
+4. Updates `version` field to `"4.0"`
+5. Creates new `config.toml` alongside original
+6. Optionally creates backup of original `config.yaml`
+
+**After Migration:**
+
+- `.ai-rulez/config.toml` — new V4 configuration (TOML)
+- `.ai-rulez/config.yaml.bak` — backup of original (if `--backup` enabled)
+- All other files remain unchanged
+
+Then regenerate outputs:
+```bash
+ai-rulez generate
+```
+
 ## Version Command
 
 ### `ai-rulez version`
@@ -885,7 +944,7 @@ The CLI uses standard exit codes:
 
 Directory structure:
   .ai-rulez/
-  ├── config.yaml
+  ├── config.toml
   ├── rules/         # Base rules (always included)
   ├── context/       # Base context (always included)
   ├── skills/        # Base skills (always included)
@@ -898,16 +957,13 @@ Example content created:
   - skills/code-reviewer/SKILL.md
   - skills/ai-rulez/SKILL.md
 
-Example MCP servers created:
-  - mcp.yaml         # Root MCP servers (ai-rulez + GitHub examples)
-
 Domain directories created:
   - domains/backend/
   - domains/frontend/
   - domains/qa/
 
 Next steps:
-  1. Edit .ai-rulez/config.yaml to customize presets and profiles
+  1. Edit .ai-rulez/config.toml to customize presets and profiles
   2. Add your rules, context, and skills to the appropriate directories
   3. Run 'ai-rulez generate' to create tool-specific outputs
 ```

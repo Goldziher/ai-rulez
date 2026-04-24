@@ -1,6 +1,6 @@
 # Enabling the MCP Server
 
-The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `.ai-rulez/` configuration. Since V3 uses a file-based approach, you edit configuration files directly with your editor, and the MCP server provides read-only access for AI assistants to generate outputs and validate your configuration.
+The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `.ai-rulez/` configuration. Since V4 uses a file-based approach with inline MCP configuration, you define servers directly in `config.toml`, and the MCP server provides read-only access for AI assistants to generate outputs and validate your configuration.
 
 **You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
 
@@ -8,7 +8,7 @@ The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to p
 
 ## Configuration Examples
 
-To enable the server, add one of the following snippets to your AI assistant's configuration file (e.g., Cursor's `settings.json`).
+To enable the server, add one of the following snippets to your AI assistant's configuration file (e.g., Cursor's `settings.json`), or define it inline in `.ai-rulez/config.toml`.
 
 ### Using `npx` (Recommended for Node.js users)
 
@@ -53,6 +53,23 @@ If you have installed `ai-rulez` locally with `go install`.
     }
   }
 }
+```
+
+### Inline in `config.toml` (V4 Recommended)
+
+V4 supports defining MCP servers directly in your `.ai-rulez/config.toml`:
+
+```toml
+[[mcp_servers]]
+name = "ai-rulez"
+command = "npx"
+args = ["-y", "ai-rulez@latest", "mcp"]
+
+[[mcp_servers]]
+name = "github"
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-github"]
+env = { GITHUB_TOKEN = "your-github-token" }
 ```
 
 ---
