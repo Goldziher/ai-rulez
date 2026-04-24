@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.1] - 2026-04-24
+
+### Added
+- **New builtins**: `cicd` (pipeline standards, GitHub workflow), `docker` (container best practices), `observability` (logging, metrics, health checks).
+- **New ai-governance rules**: `no-ai-signatures` (no AI attribution in commits/PRs/code), `agent-workflow` (subagent delegation with mandatory critical review), `communication-style` (concise, no fluff/emojis/checklists).
+- **New testing rule**: `tdd-workflow` (TDD red-green-refactor, test type taxonomy).
+- **New code-quality rule**: `anti-patterns` (magic numbers, global state, composition over inheritance).
+- **Auto-include expanded**: `code-quality`, `testing`, `git-workflow`, `security`, `token-efficiency` are now auto-included by default alongside `ai-governance` and `agent-delegation`.
+
+### Fixed
+- **`migrate v4` preserves MCP servers** from legacy `mcp.yaml` files — previously lost during migration.
+
+### Changed
+- **`token-efficiency/task-runner`** enriched with standard task naming conventions and lock file requirements.
+
 ## [4.0.0] - 2026-04-23
 
 ### Breaking Changes
