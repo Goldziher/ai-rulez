@@ -45,7 +45,7 @@ default: full
 `
 	must(os.WriteFile(filepath.Join(localAIRulez, "config.yaml"), []byte(configYAML), 0o644))
 
-	cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+	cfg, err := config.LoadConfig(context.Background(), baseDir)
 	must(err)
 
 	if err := cfg.ValidateV3(); err != nil {

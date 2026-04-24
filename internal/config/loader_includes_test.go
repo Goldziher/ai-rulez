@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestLoadConfigV3WithIncludes_LocalIncludes(t *testing.T) {
+func TestLoadConfigWithIncludes_LocalIncludes(t *testing.T) {
 	t.Run("loads config with local includes", func(t *testing.T) {
 		// Create base project structure
 		baseDir := t.TempDir()
@@ -69,7 +69,7 @@ includes:
 		))
 
 		// Load config
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-with-includes", cfg.Name)
@@ -82,7 +82,7 @@ includes:
 	})
 }
 
-func TestLoadConfigV3WithIncludes_MixedIncludes(t *testing.T) {
+func TestLoadConfigWithIncludes_MixedIncludes(t *testing.T) {
 	t.Run("loads config with mixed local includes", func(t *testing.T) {
 		// Create base project structure
 		baseDir := t.TempDir()
@@ -154,7 +154,7 @@ includes:
 		))
 
 		// Load config
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-mixed-includes", cfg.Name)
@@ -163,7 +163,7 @@ includes:
 	})
 }
 
-func TestLoadConfigV3WithIncludes_MergeStrategies(t *testing.T) {
+func TestLoadConfigWithIncludes_MergeStrategies(t *testing.T) {
 	t.Run("respects local-override merge strategy", func(t *testing.T) {
 		baseDir := t.TempDir()
 		configDir := filepath.Join(baseDir, ".ai-rulez")
@@ -212,7 +212,7 @@ includes:
 		))
 
 		// Load config
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.Content)
@@ -277,7 +277,7 @@ includes:
 		))
 
 		// Load config
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.Content)
@@ -289,7 +289,7 @@ includes:
 	})
 }
 
-func TestLoadConfigV3WithIncludes_DomainInstall(t *testing.T) {
+func TestLoadConfigWithIncludes_DomainInstall(t *testing.T) {
 	t.Run("installs included content as domain", func(t *testing.T) {
 		baseDir := t.TempDir()
 		configDir := filepath.Join(baseDir, ".ai-rulez")
@@ -337,7 +337,7 @@ includes:
 		))
 
 		// Load config
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.NotNil(t, cfg.Content)
@@ -360,7 +360,7 @@ includes:
 	})
 }
 
-func TestLoadConfigV3WithIncludes_NoIncludesSpecified(t *testing.T) {
+func TestLoadConfigWithIncludes_NoIncludesSpecified(t *testing.T) {
 	t.Run("loads config without includes normally", func(t *testing.T) {
 		baseDir := t.TempDir()
 		configDir := filepath.Join(baseDir, ".ai-rulez")
@@ -388,7 +388,7 @@ presets:
 		))
 
 		// Load config - should succeed without issues
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-no-includes", cfg.Name)
@@ -398,7 +398,7 @@ presets:
 	})
 }
 
-func TestLoadConfigV3WithIncludes_NonexistentInclude(t *testing.T) {
+func TestLoadConfigWithIncludes_NonexistentInclude(t *testing.T) {
 	t.Run("handles nonexistent include gracefully", func(t *testing.T) {
 		baseDir := t.TempDir()
 		configDir := filepath.Join(baseDir, ".ai-rulez")
@@ -431,7 +431,7 @@ includes:
 		))
 
 		// Load config - should not fail but log warning
-		cfg, err := config.LoadConfigV3(context.Background(), baseDir)
+		cfg, err := config.LoadConfig(context.Background(), baseDir)
 		require.NoError(t, err)
 		assert.NotNil(t, cfg)
 		assert.Equal(t, "test-nonexistent-include", cfg.Name)

@@ -34,7 +34,7 @@ Instructions here.
 		err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(skillContent), 0o644)
 		require.NoError(t, err)
 
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			BaseDir: repoDir, // Use repoDir as baseDir so source resolves correctly
 			InstalledSkills: []config.InstalledSkillConfig{
 				{
@@ -66,7 +66,7 @@ Instructions here.
 		err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# My Lib\n"), 0o644)
 		require.NoError(t, err)
 
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			BaseDir: repoDir,
 			InstalledSkills: []config.InstalledSkillConfig{
 				{
@@ -88,7 +88,7 @@ Instructions here.
 
 		repoDir := t.TempDir()
 
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			BaseDir: repoDir,
 			InstalledSkills: []config.InstalledSkillConfig{
 				{
@@ -116,7 +116,7 @@ Instructions here.
 		err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# Override\n"), 0o644)
 		require.NoError(t, err)
 
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			BaseDir: baseDir,
 			InstalledSkills: []config.InstalledSkillConfig{
 				{
@@ -139,7 +139,7 @@ Instructions here.
 
 		baseDir := t.TempDir()
 
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			BaseDir: baseDir,
 			InstalledSkills: []config.InstalledSkillConfig{
 				{
@@ -168,7 +168,7 @@ Instructions here.
 		err = os.WriteFile(filepath.Join(refsDir, "api.md"), []byte("API docs.\n"), 0o644)
 		require.NoError(t, err)
 
-		cfg := &config.ConfigV3{
+		cfg := &config.Config{
 			BaseDir: repoDir,
 			InstalledSkills: []config.InstalledSkillConfig{
 				{
@@ -189,7 +189,7 @@ Instructions here.
 func TestResolveInstalledSkills_Empty(t *testing.T) {
 	t.Parallel()
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		BaseDir:         t.TempDir(),
 		InstalledSkills: nil,
 	}

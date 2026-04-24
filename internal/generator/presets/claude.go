@@ -15,8 +15,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const presetNameClaude = "claude"
+
 func init() {
-	config.RegisterPresetV3("claude", &ClaudePresetGenerator{})
+	config.RegisterPreset(presetNameClaude, &ClaudePresetGenerator{})
 }
 
 // ClaudePresetGenerator generates Claude preset files
@@ -25,7 +27,7 @@ type ClaudePresetGenerator struct{}
 // generatePresetHeader creates a header for Claude preset files.
 // An optional styleOverride can be passed to force a specific header style
 // (e.g., "minimal" for skills/agents where frontmatter must come first).
-func generatePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int, styleOverride ...string) string {
+func generatePresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int, styleOverride ...string) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -46,7 +48,7 @@ func generatePresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, se
 }
 
 func (g *ClaudePresetGenerator) GetName() string {
-	return "claude"
+	return presetNameClaude
 }
 
 func (g *ClaudePresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -58,20 +60,20 @@ func (g *ClaudePresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *ClaudePresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .claude directory
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".claude"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".claude", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".claude", "agents"),
 			IsDir: true,
 		},
@@ -79,7 +81,7 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 
 	// Generate CLAUDE.md with all rules and context
 	claudeMD := g.renderClaudeMarkdown(content, cfg)
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, "CLAUDE.md"),
 		Content: claudeMD,
 	})
@@ -133,7 +135,7 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		if err != nil {
 			return nil, fmt.Errorf("render settings.json: %w", err)
 		}
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".claude", "settings.json"),
 			Content: settingsContent,
 		})
@@ -145,7 +147,7 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 		if err != nil {
 			return nil, fmt.Errorf("render plugins.json: %w", err)
 		}
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".claude", "plugins.json"),
 			Content: pluginsContent,
 		})
@@ -154,15 +156,15 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 	return outputs, nil
 }
 
-func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Extract skill ID from path
 	skillID := extractSkillID(skill.Path)
 
 	// Create skill directory
 	skillDir := filepath.Join(baseDir, ".claude", "skills", skillID)
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  skillDir,
 		IsDir: true,
 	})
@@ -174,7 +176,7 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 		return nil, err
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    skillOutputPath,
 		Content: skillContent,
 	})
@@ -183,7 +185,7 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 }
 
 //nolint:gocyclo // Acceptable complexity for comprehensive skill generation with target filtering
-func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
+func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
 	var builder strings.Builder
 	// Only embed rules/context that explicitly target this skill output path.
 	// Untargeted rules are already in CLAUDE.md, so embedding them here would be duplication.
@@ -254,8 +256,8 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 	return builder.String(), nil
 }
 
-func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Extract agent ID from name
 	agentID := sanitizeAgentID(agent.Name)
@@ -267,7 +269,7 @@ func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, con
 		return nil, err
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    agentOutputPath,
 		Content: agentContent,
 	})
@@ -313,7 +315,7 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile) 
 }
 
 //nolint:gocyclo // Acceptable complexity for comprehensive markdown generation
-func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Calculate content counts
@@ -387,7 +389,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 	return builder.String()
 }
 
-func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
+func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
 	var builder strings.Builder
 
 	frontmatter := g.buildAgentFrontmatter(agent)
@@ -472,7 +474,7 @@ func shouldIncludeInOutput(targets []string, outputPath, baseDir string) bool {
 }
 
 // renderContentRef writes a content file's content inline.
-func (g *ClaudePresetGenerator) renderContentRef(builder *strings.Builder, file config.ContentFile, cfg *config.ConfigV3) {
+func (g *ClaudePresetGenerator) renderContentRef(builder *strings.Builder, file config.ContentFile, cfg *config.Config) {
 	processedContent := markdown.ProcessEmbeddedContent(file.Content)
 	builder.WriteString(processedContent)
 	builder.WriteString("\n\n")
@@ -533,7 +535,7 @@ func targetMatchesOutput(target string, outputCandidates []string) bool {
 		return false
 	}
 
-	if target == "claude" {
+	if target == presetNameClaude {
 		for _, candidate := range outputCandidates {
 			if candidate == "CLAUDE.md" || strings.HasPrefix(candidate, ".claude/") {
 				return true
@@ -578,7 +580,7 @@ func (g *ClaudePresetGenerator) shouldIncludeCommand(command config.ContentFile)
 	// If targets are specified, only include if Claude is in targets
 	if len(command.Metadata.Targets) > 0 {
 		for _, target := range command.Metadata.Targets {
-			if target == "claude" {
+			if target == presetNameClaude {
 				return true
 			}
 		}
@@ -590,15 +592,15 @@ func (g *ClaudePresetGenerator) shouldIncludeCommand(command config.ContentFile)
 }
 
 // generateCommandAsSkill generates a command file as a Claude skill
-func (g *ClaudePresetGenerator) generateCommandAsSkill(command config.ContentFile, content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *ClaudePresetGenerator) generateCommandAsSkill(command config.ContentFile, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Extract command ID from name (sanitize for use as directory name)
 	commandID := sanitizeAgentID(command.Name)
 
 	// Create skill directory for command
 	skillDir := filepath.Join(baseDir, ".claude", "skills", commandID)
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  skillDir,
 		IsDir: true,
 	})
@@ -610,7 +612,7 @@ func (g *ClaudePresetGenerator) generateCommandAsSkill(command config.ContentFil
 		return nil, err
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    skillOutputPath,
 		Content: skillContent,
 	})
@@ -621,7 +623,7 @@ func (g *ClaudePresetGenerator) generateCommandAsSkill(command config.ContentFil
 // renderCommandAsSkill renders a command as a Claude skill
 //
 //nolint:gocyclo // Acceptable complexity for comprehensive skill generation
-func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile, content *config.ContentTreeV3, cfg *config.ConfigV3, outputPath string) (string, error) {
+func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
 	var builder strings.Builder
 
 	// Generate frontmatter — commands are user-invocable slash commands
@@ -700,7 +702,7 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 }
 
 // renderSettingsJSON generates .claude/settings.json with MCP server configuration
-func (g *ClaudePresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string, error) {
+func (g *ClaudePresetGenerator) renderSettingsJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {
@@ -740,7 +742,7 @@ func (g *ClaudePresetGenerator) renderSettingsJSON(cfg *config.ConfigV3) (string
 }
 
 // renderPluginsJSON generates .claude/plugins.json with plugin declarations
-func (g *ClaudePresetGenerator) renderPluginsJSON(cfg *config.ConfigV3) (string, error) {
+func (g *ClaudePresetGenerator) renderPluginsJSON(cfg *config.Config) (string, error) {
 	type pluginEntry struct {
 		Marketplace string `json:"marketplace"`
 		Name        string `json:"name"`

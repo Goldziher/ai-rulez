@@ -128,7 +128,7 @@ func (s *GitSource) writeFetchMarker() {
 }
 
 // Fetch downloads content from git repository and returns the content tree
-func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
+func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "", "is_ssh", s.isSSH)
 
 	// When --no-fetch is set, only use existing cache
@@ -189,7 +189,7 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTreeV3, error) {
 }
 
 // scanCachedContent locates the .ai-rulez directory in the cache and returns its content tree.
-func (s *GitSource) scanCachedContent() (*config.ContentTreeV3, error) {
+func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 	// Find the .ai-rulez directory in the extracted content
 	aiRulezDir := s.findAIRulezDir()
 	if aiRulezDir == "" {
@@ -600,9 +600,9 @@ func (s *GitSource) findAIRulezDir() string {
 }
 
 // filterContent filters content based on include list
-func (s *GitSource) filterContent(tree *config.ContentTreeV3) *config.ContentTreeV3 {
-	filtered := &config.ContentTreeV3{
-		Domains: make(map[string]*config.DomainV3),
+func (s *GitSource) filterContent(tree *config.ContentTree) *config.ContentTree {
+	filtered := &config.ContentTree{
+		Domains: make(map[string]*config.Domain),
 	}
 
 	// Helper to check if a content type should be included

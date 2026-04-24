@@ -31,7 +31,7 @@ type ImportedContent struct {
 	Type        ContentType
 	Content     string
 	Source      string
-	Metadata    *config.MetadataV3
+	Metadata    *config.Metadata
 	Hash        string
 	OriginalExt string // .md, .mdc, etc.
 }
@@ -827,7 +827,7 @@ func writeFrontmatter(output *strings.Builder, item *ImportedContent) {
 	output.WriteString("---\n\n")
 }
 
-func writeCommonFrontmatter(output *strings.Builder, metadata *config.MetadataV3) {
+func writeCommonFrontmatter(output *strings.Builder, metadata *config.Metadata) {
 	if metadata == nil {
 		return
 	}
@@ -847,17 +847,17 @@ func writeCommonFrontmatter(output *strings.Builder, metadata *config.MetadataV3
 // writeConfig writes the config.yaml file with detected presets
 func (i *Importer) writeConfig(projectName string, detectedPresets map[string]bool) error {
 	// Convert presets map to slice
-	var presets []config.PresetV3
+	var presets []config.Preset
 	for preset := range detectedPresets {
-		presets = append(presets, config.PresetV3{BuiltIn: preset})
+		presets = append(presets, config.Preset{BuiltIn: preset})
 	}
 
 	// If no presets detected, default to claude
 	if len(presets) == 0 {
-		presets = []config.PresetV3{{BuiltIn: "claude"}}
+		presets = []config.Preset{{BuiltIn: "claude"}}
 	}
 
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Version: "3.0",
 		Name:    projectName,
 		Presets: presets,
@@ -871,7 +871,7 @@ func (i *Importer) writeConfig(projectName string, detectedPresets map[string]bo
 
 	// Add header comment
 	var output strings.Builder
-	output.WriteString("# AI-Rulez V3 Configuration\n")
+	output.WriteString("# AI-Rulez Configuration\n")
 	output.WriteString("# Imported from existing tool files\n")
 	output.WriteString("# Documentation: https://github.com/Goldziher/ai-rulez\n\n")
 	output.WriteString(string(data))
@@ -914,13 +914,13 @@ func detectPresetFromSource(source string) string {
 // parseFrontmatterToMetadata parses frontmatter and returns metadata + content
 // Uses the canonical parser from internal/parser package
 // This function maintains backward compatibility with existing importer code
-func parseFrontmatterToMetadata(content string) (metadata *config.MetadataV3, body string) {
+func parseFrontmatterToMetadata(content string) (metadata *config.Metadata, body string) {
 	// Use canonical parser, non-fatal version for importer compatibility
 	parserMetadata, actualContent := parser.ParseFrontmatterNonFatal(content)
 
-	// Convert parser.MetadataV3 to config.MetadataV3
+	// Convert parser.Metadata to config.Metadata
 	if parserMetadata != nil {
-		metadata = &config.MetadataV3{
+		metadata = &config.Metadata{
 			Priority: parserMetadata.Priority,
 			Targets:  parserMetadata.Targets,
 			Extra:    parserMetadata.Extra,

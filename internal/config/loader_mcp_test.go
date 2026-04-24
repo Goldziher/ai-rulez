@@ -126,7 +126,7 @@ mcp_servers:
 }
 
 func TestServersToMap(t *testing.T) {
-	servers := []MCPServerV3{
+	servers := []MCPServer{
 		{Name: "server1", Description: "First"},
 		{Name: "server2", Description: "Second"},
 	}
@@ -147,17 +147,17 @@ func TestServersToMap(t *testing.T) {
 }
 
 func TestMergeMCPServersV3(t *testing.T) {
-	root := map[string]*MCPServerV3{
+	root := map[string]*MCPServer{
 		"github":   {Name: "github", Description: "GitHub root"},
 		"postgres": {Name: "postgres", Description: "PostgreSQL root"},
 	}
 
-	domain := map[string]*MCPServerV3{
+	domain := map[string]*MCPServer{
 		"postgres": {Name: "postgres", Description: "PostgreSQL domain override"},
 		"backend":  {Name: "backend", Description: "Backend specific"},
 	}
 
-	result := mergeMCPServersV3(root, domain)
+	result := mergeMCPServers(root, domain)
 
 	if len(result) != 3 {
 		t.Errorf("Expected 3 servers after merge, got %d", len(result))
@@ -191,7 +191,7 @@ func TestMergeMCPServersV3(t *testing.T) {
 	}
 }
 
-func TestLoadConfigV3WithMCP(t *testing.T) {
+func TestLoadConfigWithMCP(t *testing.T) {
 	// Create a complete test fixture
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, ".ai-rulez")
@@ -240,7 +240,7 @@ mcp_servers:
 	}
 
 	// Load config
-	cfg, err := LoadConfigV3(context.Background(), tmpDir)
+	cfg, err := LoadConfig(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}
@@ -276,7 +276,7 @@ mcp_servers:
 	}
 }
 
-func TestLoadConfigV3WithoutMCP(t *testing.T) {
+func TestLoadConfigWithoutMCP(t *testing.T) {
 	// Test that config loads successfully even without MCP files
 	tmpDir := t.TempDir()
 	configDir := filepath.Join(tmpDir, ".ai-rulez")
@@ -297,7 +297,7 @@ name: "Test Project"
 	}
 
 	// Load config - should succeed with empty MCP servers
-	cfg, err := LoadConfigV3(context.Background(), tmpDir)
+	cfg, err := LoadConfig(context.Background(), tmpDir)
 	if err != nil {
 		t.Fatalf("Failed to load config: %v", err)
 	}

@@ -64,7 +64,7 @@ func TestDetectConfigVersion(t *testing.T) {
 	})
 }
 
-func TestLoadConfigV3_YAML(t *testing.T) {
+func TestLoadConfig_YAML(t *testing.T) {
 	t.Run("loads minimal YAML config", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -78,7 +78,7 @@ presets:
 		configFile := filepath.Join(configDir, configYAMLFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 		assert.NotNil(t, config)
 		assert.Equal(t, "3.0", config.Version)
@@ -114,7 +114,7 @@ gitignore: true
 		configFile := filepath.Join(configDir, configYAMLFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte(configContent), 0o644))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 		assert.NotNil(t, config)
 		assert.Equal(t, "3.0", config.Version)
@@ -139,7 +139,7 @@ gitignore: true
 	t.Run("returns error when .ai-rulez not found", func(t *testing.T) {
 		tempDir := t.TempDir()
 
-		_, err := LoadConfigV3(context.Background(), tempDir)
+		_, err := LoadConfig(context.Background(), tempDir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), ".ai-rulez directory not found")
 	})
@@ -149,7 +149,7 @@ gitignore: true
 		notADir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.WriteFile(notADir, []byte("not a directory"), 0o644))
 
-		_, err := LoadConfigV3(context.Background(), tempDir)
+		_, err := LoadConfig(context.Background(), tempDir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "not a directory")
 	})
@@ -159,7 +159,7 @@ gitignore: true
 		configDir := filepath.Join(tempDir, aiRulezDirName)
 		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
-		_, err := LoadConfigV3(context.Background(), tempDir)
+		_, err := LoadConfig(context.Background(), tempDir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no config file found")
 	})
@@ -172,13 +172,13 @@ gitignore: true
 		configFile := filepath.Join(configDir, configYAMLFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte("invalid: yaml: syntax:"), 0o644))
 
-		_, err := LoadConfigV3(context.Background(), tempDir)
+		_, err := LoadConfig(context.Background(), tempDir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parse YAML config")
 	})
 }
 
-func TestLoadConfigV3_JSON(t *testing.T) {
+func TestLoadConfig_JSON(t *testing.T) {
 	t.Run("loads minimal JSON config", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)
@@ -195,7 +195,7 @@ func TestLoadConfigV3_JSON(t *testing.T) {
 		configFile := filepath.Join(configDir, configJSONFilename)
 		require.NoError(t, os.WriteFile(configFile, configBytes, 0o644))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 		assert.NotNil(t, config)
 		assert.Equal(t, "3.0", config.Version)
@@ -233,7 +233,7 @@ func TestLoadConfigV3_JSON(t *testing.T) {
 		configFile := filepath.Join(configDir, configJSONFilename)
 		require.NoError(t, os.WriteFile(configFile, configBytes, 0o644))
 
-		config, err := LoadConfigV3(context.Background(), tempDir)
+		config, err := LoadConfig(context.Background(), tempDir)
 		require.NoError(t, err)
 		assert.NotNil(t, config)
 		assert.Equal(t, "3.0", config.Version)
@@ -251,7 +251,7 @@ func TestLoadConfigV3_JSON(t *testing.T) {
 		configFile := filepath.Join(configDir, configJSONFilename)
 		require.NoError(t, os.WriteFile(configFile, []byte("{invalid json}"), 0o644))
 
-		_, err := LoadConfigV3(context.Background(), tempDir)
+		_, err := LoadConfig(context.Background(), tempDir)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "parse JSON config")
 	})
@@ -463,10 +463,10 @@ Content`
 
 func TestValidateV3(t *testing.T) {
 	t.Run("validates minimal config", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "claude"},
 			},
 		}
@@ -476,10 +476,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on invalid version", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "2.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "claude"},
 			},
 		}
@@ -490,10 +490,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on missing name", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "claude"},
 			},
 		}
@@ -504,10 +504,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on missing presets", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{},
+			Presets: []Preset{},
 		}
 
 		err := config.ValidateV3()
@@ -516,10 +516,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on invalid built-in preset", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "invalid-preset"},
 			},
 		}
@@ -530,10 +530,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on custom preset without name", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{
 					Type: PresetTypeMarkdown,
 					Path: "custom.md",
@@ -547,10 +547,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on custom preset without type", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{
 					Name: "custom",
 					Path: "custom.md",
@@ -564,10 +564,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on custom preset without path", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{
 					Name: "custom",
 					Type: PresetTypeMarkdown,
@@ -581,10 +581,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on custom preset with invalid type", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{
 					Name: "custom",
 					Type: "invalid",
@@ -599,13 +599,13 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("warns but does not fail when skill description is missing", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "codex"},
 			},
-			Content: &ContentTreeV3{
+			Content: &ContentTree{
 				Skills: []ContentFile{
 					{
 						Name:    "core-principles",
@@ -623,19 +623,19 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("accepts skill description when present", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "codex"},
 			},
-			Content: &ContentTreeV3{
+			Content: &ContentTree{
 				Skills: []ContentFile{
 					{
 						Name:    "core-principles",
 						Path:    "/tmp/.ai-rulez/skills/core-principles/SKILL.md",
 						Content: "# Core Principles",
-						Metadata: &MetadataV3{
+						Metadata: &Metadata{
 							Extra: map[string]string{
 								"description": "Project-wide engineering standards.",
 							},
@@ -650,10 +650,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails when default specified without profiles", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "claude"},
 			},
 			Default: "full",
@@ -665,10 +665,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails when default profile doesn't exist", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "claude"},
 			},
 			Default: "missing",
@@ -683,10 +683,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("validates full config", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{
+			Presets: []Preset{
 				{BuiltIn: "claude"},
 				{
 					Name: "custom",
@@ -706,10 +706,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on installed skill with empty name", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{{BuiltIn: "claude"}},
+			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
 				{Name: "", Source: "https://github.com/example/repo"},
 			},
@@ -721,10 +721,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on installed skill with empty source", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{{BuiltIn: "claude"}},
+			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
 				{Name: "test-skill", Source: ""},
 			},
@@ -736,10 +736,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("fails on duplicate installed skill names", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{{BuiltIn: "claude"}},
+			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
 				{Name: "dup", Source: "https://github.com/example/a"},
 				{Name: "dup", Source: "https://github.com/example/b"},
@@ -752,10 +752,10 @@ func TestValidateV3(t *testing.T) {
 	})
 
 	t.Run("accepts valid installed skills", func(t *testing.T) {
-		config := &ConfigV3{
+		config := &Config{
 			Version: "3.0",
 			Name:    "test",
-			Presets: []PresetV3{{BuiltIn: "claude"}},
+			Presets: []Preset{{BuiltIn: "claude"}},
 			InstalledSkills: []InstalledSkillConfig{
 				{Name: "skill-a", Source: "https://github.com/example/a"},
 				{Name: "skill-b", Source: "/local/path"},
@@ -767,7 +767,7 @@ func TestValidateV3(t *testing.T) {
 	})
 }
 
-func TestSaveConfigV3_PreservesOrdering(t *testing.T) {
+func TestSaveConfig_PreservesOrdering(t *testing.T) {
 	t.Parallel()
 
 	t.Run("preserves field ordering and comments for YAML", func(t *testing.T) {
@@ -797,7 +797,7 @@ presets:
 			{Name: "test-skill", Source: "https://github.com/example/repo"},
 		}
 
-		err = SaveConfigV3(cfg, aiRulezDir)
+		err = SaveConfig(cfg, aiRulezDir)
 		require.NoError(t, err)
 
 		// Read back
@@ -850,7 +850,7 @@ installed_skills:
 		// Remove installed skills
 		cfg.InstalledSkills = nil
 
-		err = SaveConfigV3(cfg, aiRulezDir)
+		err = SaveConfig(cfg, aiRulezDir)
 		require.NoError(t, err)
 
 		saved, err := os.ReadFile(yamlPath)
@@ -872,14 +872,14 @@ func indexOfSubstring(s, substr string) int {
 	return -1
 }
 
-func TestPresetV3Marshaling(t *testing.T) {
+func TestPresetMarshaling(t *testing.T) {
 	t.Run("unmarshals built-in preset from YAML", func(t *testing.T) {
 		yamlContent := `presets:
   - claude
   - cursor
 `
 		var config struct {
-			Presets []PresetV3 `yaml:"presets"`
+			Presets []Preset `yaml:"presets"`
 		}
 		err := yaml.Unmarshal([]byte(yamlContent), &config)
 		require.NoError(t, err)
@@ -898,7 +898,7 @@ func TestPresetV3Marshaling(t *testing.T) {
     template: "Custom template"
 `
 		var config struct {
-			Presets []PresetV3 `yaml:"presets"`
+			Presets []Preset `yaml:"presets"`
 		}
 		err := yaml.Unmarshal([]byte(yamlContent), &config)
 		require.NoError(t, err)
@@ -919,7 +919,7 @@ func TestPresetV3Marshaling(t *testing.T) {
   - cursor
 `
 		var config struct {
-			Presets []PresetV3 `yaml:"presets"`
+			Presets []Preset `yaml:"presets"`
 		}
 		err := yaml.Unmarshal([]byte(yamlContent), &config)
 		require.NoError(t, err)
@@ -937,7 +937,7 @@ func TestPresetV3Marshaling(t *testing.T) {
   "presets": ["claude", "cursor"]
 }`
 		var config struct {
-			Presets []PresetV3 `json:"presets"`
+			Presets []Preset `json:"presets"`
 		}
 		err := json.Unmarshal([]byte(jsonContent), &config)
 		require.NoError(t, err)
@@ -957,7 +957,7 @@ func TestPresetV3Marshaling(t *testing.T) {
   ]
 }`
 		var config struct {
-			Presets []PresetV3 `json:"presets"`
+			Presets []Preset `json:"presets"`
 		}
 		err := json.Unmarshal([]byte(jsonContent), &config)
 		require.NoError(t, err)

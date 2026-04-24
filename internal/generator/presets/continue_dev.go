@@ -13,14 +13,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("continue-dev", &ContinueDevPresetGenerator{})
+	config.RegisterPreset("continue-dev", &ContinueDevPresetGenerator{})
 }
 
 // ContinueDevPresetGenerator generates Continue.dev preset files
 type ContinueDevPresetGenerator struct{}
 
 // generateContinueDevPresetHeader creates a header for Continue.dev preset files
-func generateContinueDevPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateContinueDevPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -49,20 +49,20 @@ func (g *ContinueDevPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .continue directory
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".continue"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".continue", "rules"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".continue", "prompts"),
 			IsDir: true,
 		},
@@ -77,7 +77,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
 		sanitized := sanitizeName(rule.Name)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".continue", "rules", sanitized+".md"),
 			Content: ruleContent,
 		})
@@ -90,11 +90,11 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	}
 
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:    filepath.Join(baseDir, ".continue", "prompts", "ai_rulez_prompts.yaml"),
 			Content: promptsContent,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".continue", "agents"),
 			IsDir: true,
 		},
@@ -109,7 +109,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".continue", "agents", agentID+".md"),
 			Content: agentContent,
 		})
@@ -118,7 +118,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTreeV3, bas
 	return outputs, nil
 }
 
-func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.ConfigV3, outputPath string, ruleCount int) string {
+func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.Config, outputPath string, ruleCount int) string {
 	var builder strings.Builder
 
 	// Generate and prepend header
@@ -144,7 +144,7 @@ func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg
 	return builder.String()
 }
 
-func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTreeV3, cfg *config.ConfigV3) (string, error) {
+func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTree, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
 	// Calculate content counts

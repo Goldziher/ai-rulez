@@ -3,7 +3,7 @@ package config
 import "strings"
 
 // SkillDescription extracts the explicit description from skill frontmatter.
-func SkillDescription(metadata *MetadataV3) string {
+func SkillDescription(metadata *Metadata) string {
 	if metadata == nil || metadata.Extra == nil {
 		return ""
 	}
@@ -12,7 +12,7 @@ func SkillDescription(metadata *MetadataV3) string {
 }
 
 // SkillShortDescription extracts an optional short-description from skill frontmatter.
-func SkillShortDescription(metadata *MetadataV3) string {
+func SkillShortDescription(metadata *Metadata) string {
 	if metadata == nil || metadata.Extra == nil {
 		return ""
 	}

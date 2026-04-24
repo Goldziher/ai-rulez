@@ -37,16 +37,8 @@ var compiler = jsonschema.NewCompiler()
 
 const propertiesField = "properties"
 
-// ValidateWithSchema is deprecated - V2 schemas are no longer supported.
-// This function is kept for backward compatibility but no longer validates V2 configurations.
-// Use ValidateWithSchemaV3 instead.
+// ValidateWithSchema validates configuration data against the schema
 func ValidateWithSchema(configData []byte) error {
-	// V2 support has been removed. Treat as V3 validation.
-	return ValidateWithSchemaV3(configData)
-}
-
-// ValidateWithSchemaV3 validates configuration data against the V3 schema
-func ValidateWithSchemaV3(configData []byte) error {
 	return validateWithSchemaBytes(configData, schemaJSON, "v3")
 }
 

@@ -12,18 +12,18 @@ import (
 
 func init() {
 	// Register the custom preset generator factory
-	config.CustomPresetGeneratorFactory = func(preset config.PresetV3) config.PresetGeneratorV3 {
+	config.CustomPresetGeneratorFactory = func(preset config.Preset) config.PresetGenerator {
 		return NewCustomPresetGenerator(&preset)
 	}
 }
 
 // CustomPresetGenerator handles custom preset generation
 type CustomPresetGenerator struct {
-	Preset config.PresetV3
+	Preset config.Preset
 }
 
 // NewCustomPresetGenerator creates a new custom preset generator
-func NewCustomPresetGenerator(preset *config.PresetV3) *CustomPresetGenerator {
+func NewCustomPresetGenerator(preset *config.Preset) *CustomPresetGenerator {
 	return &CustomPresetGenerator{
 		Preset: *preset,
 	}
@@ -39,7 +39,7 @@ func (g *CustomPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *CustomPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
+func (g *CustomPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	switch g.Preset.Type {
 	case config.PresetTypeMarkdown:
 		return g.generateMarkdown(content, baseDir, cfg)
@@ -52,8 +52,8 @@ func (g *CustomPresetGenerator) Generate(content *config.ContentTreeV3, baseDir 
 	}
 }
 
-func (g *CustomPresetGenerator) generateMarkdown(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *CustomPresetGenerator) generateMarkdown(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Prepare template data
 	data := g.prepareTemplateData(content, cfg)
@@ -64,7 +64,7 @@ func (g *CustomPresetGenerator) generateMarkdown(content *config.ContentTreeV3, 
 		return nil, err
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, g.Preset.Path),
 		Content: renderedContent,
 	})
@@ -72,13 +72,13 @@ func (g *CustomPresetGenerator) generateMarkdown(content *config.ContentTreeV3, 
 	return outputs, nil
 }
 
-func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	dirPath := filepath.Join(baseDir, g.Preset.Path)
 
 	// Create directory
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  dirPath,
 		IsDir: true,
 	})
@@ -89,7 +89,7 @@ func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTreeV3,
 		sanitized := sanitizeName(rule.Name)
 		ruleContent := g.renderContentFile(rule)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(dirPath, sanitized+".md"),
 			Content: ruleContent,
 		})
@@ -98,8 +98,8 @@ func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTreeV3,
 	return outputs, nil
 }
 
-func (g *CustomPresetGenerator) generateJSON(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *CustomPresetGenerator) generateJSON(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Prepare template data
 	data := g.prepareTemplateData(content, cfg)
@@ -122,7 +122,7 @@ func (g *CustomPresetGenerator) generateJSON(content *config.ContentTreeV3, base
 		jsonContent = string(jsonData)
 	}
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, g.Preset.Path),
 		Content: jsonContent,
 	})
@@ -130,7 +130,7 @@ func (g *CustomPresetGenerator) generateJSON(content *config.ContentTreeV3, base
 	return outputs, nil
 }
 
-func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTreeV3, cfg *config.ConfigV3) map[string]interface{} {
+func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree, cfg *config.Config) map[string]interface{} {
 	// Combine all content
 	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
 	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
@@ -190,7 +190,7 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTreeV
 	}
 }
 
-func (g *CustomPresetGenerator) prepareDomainData(content *config.ContentTreeV3) map[string]interface{} {
+func (g *CustomPresetGenerator) prepareDomainData(content *config.ContentTree) map[string]interface{} {
 	domains := make(map[string]interface{})
 
 	for name, domain := range content.Domains {

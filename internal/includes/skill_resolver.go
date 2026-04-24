@@ -10,7 +10,7 @@ import (
 )
 
 // ResolveInstalledSkills resolves all configured installed skills and returns their content
-func ResolveInstalledSkills(ctx context.Context, cfg *config.ConfigV3, accessToken string) ([]config.ContentFile, error) {
+func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken string) ([]config.ContentFile, error) {
 	logger.Debug("Resolving installed skills", "count", len(cfg.InstalledSkills))
 
 	var skills []config.ContentFile

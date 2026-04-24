@@ -13,14 +13,14 @@ import (
 )
 
 func init() {
-	config.RegisterPresetV3("codex", &CodexPresetGenerator{})
+	config.RegisterPreset("codex", &CodexPresetGenerator{})
 }
 
 // CodexPresetGenerator generates Codex preset files (AGENTS.md)
 type CodexPresetGenerator struct{}
 
 // generateCodexPresetHeader creates a header for Codex preset files
-func generateCodexPresetHeader(cfg *config.ConfigV3, outputPath string, ruleCount, sectionCount, agentCount int) string {
+func generateCodexPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	// Create TemplateData for header generation
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
@@ -50,20 +50,20 @@ func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
-func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir string, cfg *config.ConfigV3) ([]config.OutputFileV3, error) {
-	var outputs []config.OutputFileV3
+func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
 
 	// Create .codex directory structure
 	outputs = append(outputs,
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".codex"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".codex", "skills"),
 			IsDir: true,
 		},
-		config.OutputFileV3{
+		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".codex", "agents"),
 			IsDir: true,
 		},
@@ -72,7 +72,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 	// Generate AGENTS.md file (rules and context only, no skills)
 	agentsContent := g.renderAgentsMarkdown(content, cfg)
 
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, "AGENTS.md"),
 		Content: agentsContent,
 		IsDir:   false,
@@ -87,14 +87,14 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 
 		// Create skill directory
 		skillDir := filepath.Join(baseDir, ".codex", "skills", skillID)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:  skillDir,
 			IsDir: true,
 		})
 
 		// Generate SKILL.md file
 		skillContent := g.renderSkillFile(skill)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
@@ -106,14 +106,14 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent := g.renderAgentTOML(agent)
 
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "agents", agentID+".toml"),
 			Content: agentContent,
 		})
 	}
 
 	// Generate .codex/commands directory
-	outputs = append(outputs, config.OutputFileV3{
+	outputs = append(outputs, config.OutputFile{
 		Path:  filepath.Join(baseDir, ".codex", "commands"),
 		IsDir: true,
 	})
@@ -126,7 +126,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		}
 		sanitized := sanitizeName(command.Name)
 		commandContent := g.renderCommandFile(command)
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "commands", sanitized+".md"),
 			Content: commandContent,
 		})
@@ -138,7 +138,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 		if err != nil {
 			return nil, fmt.Errorf("render plugins.json: %w", err)
 		}
-		outputs = append(outputs, config.OutputFileV3{
+		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "plugins.json"),
 			Content: pluginsContent,
 		})
@@ -147,7 +147,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTreeV3, baseDir s
 	return outputs, nil
 }
 
-func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTreeV3, cfg *config.ConfigV3) string {
+func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
 	// Calculate content counts
@@ -342,7 +342,7 @@ func (g *CodexPresetGenerator) renderCommandFile(command config.ContentFile) str
 }
 
 // renderPluginsJSON generates .codex/plugins.json with plugin declarations
-func (g *CodexPresetGenerator) renderPluginsJSON(cfg *config.ConfigV3) (string, error) {
+func (g *CodexPresetGenerator) renderPluginsJSON(cfg *config.Config) (string, error) {
 	type pluginEntry struct {
 		Marketplace string `json:"marketplace"`
 		Name        string `json:"name"`

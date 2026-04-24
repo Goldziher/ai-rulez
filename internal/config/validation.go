@@ -7,8 +7,8 @@ import (
 	"github.com/samber/oops"
 )
 
-// ValidateV3 validates a V3 configuration
-func (c *ConfigV3) ValidateV3() error {
+// ValidateV3 validates a configuration
+func (c *Config) ValidateV3() error {
 	if err := c.validateVersion(); err != nil {
 		return err
 	}
@@ -39,7 +39,7 @@ func (c *ConfigV3) ValidateV3() error {
 	return nil
 }
 
-func (c *ConfigV3) validateSkillDescriptions() error {
+func (c *Config) validateSkillDescriptions() error {
 	if c.Content == nil {
 		return nil
 	}
@@ -75,20 +75,20 @@ func validateSkillSlice(skills []ContentFile, scope string) error {
 }
 
 // validateVersion checks that version is "3.0"
-func (c *ConfigV3) validateVersion() error {
+func (c *Config) validateVersion() error {
 	if c.Version != "3.0" {
 		return oops.
 			With("field", "version").
 			With("actual_version", c.Version).
 			With("expected_version", "3.0").
-			Hint("Set version to \"3.0\" in your config file\nV3 configurations must use version \"3.0\"").
+			Hint("Set version to \"3.0\" in your config file\nconfigurations must use version \"3.0\"").
 			Errorf("invalid version: expected \"3.0\", got %q", c.Version)
 	}
 	return nil
 }
 
 // validateName checks that name is non-empty
-func (c *ConfigV3) validateName() error {
+func (c *Config) validateName() error {
 	if c.Name == "" {
 		return oops.
 			With("field", "name").
@@ -99,7 +99,7 @@ func (c *ConfigV3) validateName() error {
 }
 
 // validatePresets validates that at least one preset exists and all are valid
-func (c *ConfigV3) validatePresets() error {
+func (c *Config) validatePresets() error {
 	if len(c.Presets) == 0 {
 		return oops.
 			With("field", "presets").
@@ -117,7 +117,7 @@ func (c *ConfigV3) validatePresets() error {
 }
 
 // validatePreset validates a single preset
-func (c *ConfigV3) validatePreset(preset *PresetV3, index int) error {
+func (c *Config) validatePreset(preset *Preset, index int) error {
 	// Check if it's a built-in preset
 	if preset.IsBuiltIn() {
 		if !isValidBuiltInPreset(preset.BuiltIn) {
@@ -178,7 +178,7 @@ func (c *ConfigV3) validatePreset(preset *PresetV3, index int) error {
 }
 
 // validateProfiles validates the profiles section
-func (c *ConfigV3) validateProfiles() error {
+func (c *Config) validateProfiles() error {
 	// If default is specified, profiles must be defined
 	if c.Default != "" && len(c.Profiles) == 0 {
 		return oops.
@@ -208,7 +208,7 @@ func (c *ConfigV3) validateProfiles() error {
 }
 
 // validateInstalledSkills validates the installed_skills section
-func (c *ConfigV3) validateInstalledSkills() error {
+func (c *Config) validateInstalledSkills() error {
 	seen := make(map[string]bool)
 	for i, skill := range c.InstalledSkills {
 		if skill.Name == "" {
@@ -240,7 +240,7 @@ func (c *ConfigV3) validateInstalledSkills() error {
 // Domains from includes (FromInclude=true) are checked in the merged content tree.
 // If includes are configured but a domain is missing, we emit a debug hint instead
 // of a warning since the domain may exist in the include source but failed to resolve.
-func (c *ConfigV3) warnMissingDomainReferences() {
+func (c *Config) warnMissingDomainReferences() {
 	if c.Content == nil || len(c.Profiles) == 0 {
 		return
 	}
@@ -270,8 +270,8 @@ func (c *ConfigV3) warnMissingDomainReferences() {
 
 // getBuiltInPresetNames returns a list of built-in preset names
 func getBuiltInPresetNames() []string {
-	names := make([]string, 0, len(builtInPresetsV3))
-	for name := range builtInPresetsV3 {
+	names := make([]string, 0, len(builtInPresets))
+	for name := range builtInPresets {
 		names = append(names, name)
 	}
 	return names

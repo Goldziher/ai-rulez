@@ -23,7 +23,7 @@ func TestCodexPresetGenerator_renderSkillFile_AlwaysIncludesDescription(t *testi
 			skill: config.ContentFile{
 				Name:    "core-workflows",
 				Content: "# Core Workflows",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description": "Handles core generation and validation workflows.",
 					},
@@ -36,7 +36,7 @@ func TestCodexPresetGenerator_renderSkillFile_AlwaysIncludesDescription(t *testi
 			skill: config.ContentFile{
 				Name:    "release-and-distribution",
 				Content: "# Release and Distribution",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"short-description": "Keeps release channels and versions aligned.",
 					},
@@ -67,14 +67,14 @@ func TestCodexPresetGenerator_renderSkillFile_AlwaysIncludesDescription(t *testi
 
 func TestCodexPresetGenerator_Generate_WithAgents(t *testing.T) {
 	g := &CodexPresetGenerator{}
-	cfg := &config.ConfigV3{Name: "test"}
+	cfg := &config.Config{Name: "test"}
 
-	content := &config.ContentTreeV3{
+	content := &config.ContentTree{
 		Agents: []config.ContentFile{
 			{
 				Name:    "explorer",
 				Content: "You explore codebases.",
-				Metadata: &config.MetadataV3{
+				Metadata: &config.Metadata{
 					Extra: map[string]string{
 						"description": "Read-only codebase explorer",
 					},
@@ -120,7 +120,7 @@ func TestCodexPresetGenerator_renderAgentTOML(t *testing.T) {
 	agent := config.ContentFile{
 		Name:    "pr-reviewer",
 		Content: "Review pull requests.\nCheck for bugs.",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"description": "Reviews PRs for issues",
 			},
@@ -149,7 +149,7 @@ func TestCodexPresetGenerator_renderSkillFile_PreservesShortDescriptionMetadata(
 	skill := config.ContentFile{
 		Name:    "config-schema-maintainer",
 		Content: "# Config Schema Maintainer",
-		Metadata: &config.MetadataV3{
+		Metadata: &config.Metadata{
 			Extra: map[string]string{
 				"short-description": "Maintains config schema contracts.",
 			},
@@ -169,7 +169,7 @@ func TestCodexPresetGenerator_renderPluginsJSON(t *testing.T) {
 	g := &CodexPresetGenerator{}
 
 	enabled := true
-	cfg := &config.ConfigV3{
+	cfg := &config.Config{
 		Plugins: []config.PluginConfig{
 			{Marketplace: "openai-curated", Name: "gmail", Scope: "user", Enabled: &enabled},
 		},
@@ -203,7 +203,7 @@ func TestCodexPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "matching target includes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{Targets: []string{"codex"}},
+				Metadata: &config.Metadata{Targets: []string{"codex"}},
 			},
 			expected: true,
 		},
@@ -211,7 +211,7 @@ func TestCodexPresetGenerator_shouldIncludeCommand(t *testing.T) {
 			name: "non-matching target excludes",
 			command: config.ContentFile{
 				Name:     "cmd",
-				Metadata: &config.MetadataV3{Targets: []string{"claude"}},
+				Metadata: &config.Metadata{Targets: []string{"claude"}},
 			},
 			expected: false,
 		},

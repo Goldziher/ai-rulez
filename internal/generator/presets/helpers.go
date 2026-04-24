@@ -24,7 +24,7 @@ func combineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
 }
 
 // getAllDomainRules extracts all rules from all domains
-func getAllDomainRules(content *config.ContentTreeV3) []config.ContentFile {
+func getAllDomainRules(content *config.ContentTree) []config.ContentFile {
 	var rules []config.ContentFile
 	for _, domain := range content.Domains {
 		rules = append(rules, domain.Rules...)
@@ -34,7 +34,7 @@ func getAllDomainRules(content *config.ContentTreeV3) []config.ContentFile {
 
 // getAllDomainContext extracts all context from all domains,
 // excluding the agent-delegation builtin (rendered separately in the Agents section).
-func getAllDomainContext(content *config.ContentTreeV3) []config.ContentFile {
+func getAllDomainContext(content *config.ContentTree) []config.ContentFile {
 	var context []config.ContentFile
 	for name, domain := range content.Domains {
 		if name == agentDelegationBuiltin {
@@ -46,7 +46,7 @@ func getAllDomainContext(content *config.ContentTreeV3) []config.ContentFile {
 }
 
 // getAllDomainSkills extracts all skills from all domains
-func getAllDomainSkills(content *config.ContentTreeV3) []config.ContentFile {
+func getAllDomainSkills(content *config.ContentTree) []config.ContentFile {
 	var skills []config.ContentFile
 	for _, domain := range content.Domains {
 		skills = append(skills, domain.Skills...)
@@ -55,7 +55,7 @@ func getAllDomainSkills(content *config.ContentTreeV3) []config.ContentFile {
 }
 
 // getAllDomainAgents extracts all agents from all domains
-func getAllDomainAgents(content *config.ContentTreeV3) []config.ContentFile {
+func getAllDomainAgents(content *config.ContentTree) []config.ContentFile {
 	var agents []config.ContentFile
 	for _, domain := range content.Domains {
 		agents = append(agents, domain.Agents...)
@@ -64,7 +64,7 @@ func getAllDomainAgents(content *config.ContentTreeV3) []config.ContentFile {
 }
 
 // getAllDomainCommands extracts all commands from all domains
-func getAllDomainCommands(content *config.ContentTreeV3) []config.ContentFile {
+func getAllDomainCommands(content *config.ContentTree) []config.ContentFile {
 	var commands []config.ContentFile
 	for _, domain := range content.Domains {
 		commands = append(commands, domain.Commands...)
@@ -76,7 +76,7 @@ func getAllDomainCommands(content *config.ContentTreeV3) []config.ContentFile {
 // subagents with delegation and parallelization instructions.
 // The section is only rendered when the agent-delegation builtin is enabled
 // and at least one agent exists.
-func renderAgentsSection(builder *strings.Builder, content *config.ContentTreeV3, agents []config.ContentFile) {
+func renderAgentsSection(builder *strings.Builder, content *config.ContentTree, agents []config.ContentFile) {
 	delegationDomain, ok := content.Domains[agentDelegationBuiltin]
 	if !ok || len(agents) == 0 {
 		return

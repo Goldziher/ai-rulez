@@ -5,13 +5,13 @@ import (
 	"time"
 )
 
-// ConfigV3 represents the V3/V4 configuration format
-type ConfigV3 struct {
+// Config represents the V3/V4 configuration format
+type Config struct {
 	Schema          string                 `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
 	Version         string                 `yaml:"version" json:"version" toml:"version"`
 	Name            string                 `yaml:"name" json:"name" toml:"name"`
 	Description     string                 `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
-	Presets         []PresetV3             `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
+	Presets         []Preset               `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
 	Default         string                 `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
 	Profiles        map[string][]string    `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
 	Gitignore       *bool                  `yaml:"gitignore,omitempty" json:"gitignore,omitempty" toml:"gitignore,omitempty"`
@@ -23,9 +23,9 @@ type ConfigV3 struct {
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 
 	// Runtime fields (populated during load)
-	BaseDir    string                  `yaml:"-" json:"-"`
-	Content    *ContentTreeV3          `yaml:"-" json:"-"`
-	MCPServers map[string]*MCPServerV3 `yaml:"-" json:"-"`
+	BaseDir    string                `yaml:"-" json:"-"`
+	Content    *ContentTree          `yaml:"-" json:"-"`
+	MCPServers map[string]*MCPServer `yaml:"-" json:"-"`
 }
 
 // HeaderConfig represents header style configuration for generated files
@@ -125,8 +125,8 @@ func (b BuiltinsConfig) MarshalJSON() ([]byte, error) { //nolint:gocritic // Val
 	return json.Marshal(b.Names)
 }
 
-// PresetV3 represents either a built-in preset name or a custom preset configuration
-type PresetV3 struct {
+// Preset represents either a built-in preset name or a custom preset configuration
+type Preset struct {
 	// Built-in preset (e.g., "claude", "cursor")
 	BuiltIn string `yaml:"-" json:"-" toml:"-"`
 
@@ -146,8 +146,8 @@ const (
 	PresetTypeJSON      PresetType = "json"
 )
 
-// UnmarshalYAML implements custom YAML unmarshaling for PresetV3
-func (p *PresetV3) UnmarshalYAML(unmarshal func(interface{}) error) error {
+// UnmarshalYAML implements custom YAML unmarshaling for Preset
+func (p *Preset) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// Try to unmarshal as a string (built-in preset)
 	var builtIn string
 	if err := unmarshal(&builtIn); err == nil {
@@ -156,7 +156,7 @@ func (p *PresetV3) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	}
 
 	// Try to unmarshal as a custom preset object
-	type presetAlias PresetV3
+	type presetAlias Preset
 	var custom presetAlias
 	if err := unmarshal(&custom); err != nil {
 		return err
@@ -169,19 +169,19 @@ func (p *PresetV3) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	return nil
 }
 
-// MarshalYAML implements custom YAML marshaling for PresetV3
-func (p PresetV3) MarshalYAML() (interface{}, error) { //nolint:gocritic // Value receiver required for marshaling
+// MarshalYAML implements custom YAML marshaling for Preset
+func (p Preset) MarshalYAML() (interface{}, error) { //nolint:gocritic // Value receiver required for marshaling
 	if p.IsBuiltIn() {
 		return p.BuiltIn, nil
 	}
 
 	// Marshal as custom preset object
-	type presetAlias PresetV3
+	type presetAlias Preset
 	return presetAlias(p), nil
 }
 
-// UnmarshalJSON implements custom JSON unmarshaling for PresetV3
-func (p *PresetV3) UnmarshalJSON(data []byte) error {
+// UnmarshalJSON implements custom JSON unmarshaling for Preset
+func (p *Preset) UnmarshalJSON(data []byte) error {
 	// Try to unmarshal as a string (built-in preset)
 	var builtIn string
 	if err := json.Unmarshal(data, &builtIn); err == nil {
@@ -190,7 +190,7 @@ func (p *PresetV3) UnmarshalJSON(data []byte) error {
 	}
 
 	// Try to unmarshal as a custom preset object
-	type presetAlias PresetV3
+	type presetAlias Preset
 	var custom presetAlias
 	if err := json.Unmarshal(data, &custom); err != nil {
 		return err
@@ -203,24 +203,24 @@ func (p *PresetV3) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-// MarshalJSON implements custom JSON marshaling for PresetV3
-func (p PresetV3) MarshalJSON() ([]byte, error) { //nolint:gocritic // Value receiver required for marshaling
+// MarshalJSON implements custom JSON marshaling for Preset
+func (p Preset) MarshalJSON() ([]byte, error) { //nolint:gocritic // Value receiver required for marshaling
 	if p.IsBuiltIn() {
 		return json.Marshal(p.BuiltIn)
 	}
 
 	// Marshal as custom preset object
-	type presetAlias PresetV3
+	type presetAlias Preset
 	return json.Marshal(presetAlias(p))
 }
 
 // IsBuiltIn returns true if this is a built-in preset
-func (p *PresetV3) IsBuiltIn() bool {
+func (p *Preset) IsBuiltIn() bool {
 	return p.BuiltIn != ""
 }
 
 // GetName returns the preset name (built-in or custom)
-func (p *PresetV3) GetName() string {
+func (p *Preset) GetName() string {
 	if p.IsBuiltIn() {
 		return p.BuiltIn
 	}
@@ -228,7 +228,7 @@ func (p *PresetV3) GetName() string {
 }
 
 // IsValid returns true if the preset is valid
-func (p *PresetV3) IsValid() bool {
+func (p *Preset) IsValid() bool {
 	if p.IsBuiltIn() {
 		return isValidBuiltInPreset(p.BuiltIn)
 	}
@@ -236,7 +236,7 @@ func (p *PresetV3) IsValid() bool {
 }
 
 // Built-in preset names
-var builtInPresetsV3 = map[string]bool{
+var builtInPresets = map[string]bool{
 	"claude":       true,
 	"cursor":       true,
 	"gemini":       true,
@@ -252,11 +252,11 @@ var builtInPresetsV3 = map[string]bool{
 }
 
 func isValidBuiltInPreset(name string) bool {
-	return builtInPresetsV3[name]
+	return builtInPresets[name]
 }
 
-// MCPServerV3 represents an MCP (Model Context Protocol) server configuration
-type MCPServerV3 struct {
+// MCPServer represents an MCP (Model Context Protocol) server configuration
+type MCPServer struct {
 	Name        string            `yaml:"name" json:"name" toml:"name"`
 	Description string            `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
 	Command     string            `yaml:"command,omitempty" json:"command,omitempty" toml:"command,omitempty"`
@@ -267,15 +267,15 @@ type MCPServerV3 struct {
 	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 }
 
-// MCPConfigV3 represents loaded MCP configuration from mcp.yaml, mcp.json, or mcp.toml
-type MCPConfigV3 struct {
-	Schema  string        `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
-	Version string        `yaml:"version" json:"version" toml:"version"`
-	Servers []MCPServerV3 `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
+// MCPConfig represents loaded MCP configuration from mcp.yaml, mcp.json, or mcp.toml
+type MCPConfig struct {
+	Schema  string      `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
+	Version string      `yaml:"version" json:"version" toml:"version"`
+	Servers []MCPServer `yaml:"mcp_servers" json:"mcp_servers" toml:"mcp_servers"`
 }
 
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)
-func (m *MCPServerV3) IsEnabled() bool {
+func (m *MCPServer) IsEnabled() bool {
 	if m == nil || m.Enabled == nil {
 		return true
 	}
@@ -283,46 +283,46 @@ func (m *MCPServerV3) IsEnabled() bool {
 }
 
 // GetTransport returns the transport protocol, defaulting to "stdio"
-func (m *MCPServerV3) GetTransport() string {
+func (m *MCPServer) GetTransport() string {
 	if m == nil || m.Transport == "" {
 		return "stdio"
 	}
 	return m.Transport
 }
 
-// ContentTreeV3 represents the scanned content from .ai-rulez/ directory
-type ContentTreeV3 struct {
-	Rules    []ContentFile        `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Context  []ContentFile        `yaml:"context,omitempty" json:"context,omitempty"`
-	Skills   []ContentFile        `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Agents   []ContentFile        `yaml:"agents,omitempty" json:"agents,omitempty"`
-	Commands []ContentFile        `yaml:"commands,omitempty" json:"commands,omitempty"`
-	Domains  map[string]*DomainV3 `yaml:"domains,omitempty" json:"domains,omitempty"`
+// ContentTree represents the scanned content from .ai-rulez/ directory
+type ContentTree struct {
+	Rules    []ContentFile      `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Context  []ContentFile      `yaml:"context,omitempty" json:"context,omitempty"`
+	Skills   []ContentFile      `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents   []ContentFile      `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands []ContentFile      `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Domains  map[string]*Domain `yaml:"domains,omitempty" json:"domains,omitempty"`
 }
 
-// DomainV3 represents content from a specific domain directory
-type DomainV3 struct {
-	Name        string                  `yaml:"name" json:"name"`
-	Rules       []ContentFile           `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Context     []ContentFile           `yaml:"context,omitempty" json:"context,omitempty"`
-	Skills      []ContentFile           `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Agents      []ContentFile           `yaml:"agents,omitempty" json:"agents,omitempty"`
-	Commands    []ContentFile           `yaml:"commands,omitempty" json:"commands,omitempty"`
-	MCPServers  map[string]*MCPServerV3 `yaml:"-" json:"-"`
-	Builtin     bool                    `yaml:"-" json:"-"` // true if loaded from builtins
-	FromInclude bool                    `yaml:"-" json:"-"` // true if loaded from an external include
+// Domain represents content from a specific domain directory
+type Domain struct {
+	Name        string                `yaml:"name" json:"name"`
+	Rules       []ContentFile         `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Context     []ContentFile         `yaml:"context,omitempty" json:"context,omitempty"`
+	Skills      []ContentFile         `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents      []ContentFile         `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands    []ContentFile         `yaml:"commands,omitempty" json:"commands,omitempty"`
+	MCPServers  map[string]*MCPServer `yaml:"-" json:"-"`
+	Builtin     bool                  `yaml:"-" json:"-"` // true if loaded from builtins
+	FromInclude bool                  `yaml:"-" json:"-"` // true if loaded from an external include
 }
 
 // ContentFile represents a single content file with optional frontmatter
 type ContentFile struct {
-	Name     string      `yaml:"name" json:"name"`
-	Path     string      `yaml:"path" json:"path"`
-	Content  string      `yaml:"content" json:"content"`
-	Metadata *MetadataV3 `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	Name     string    `yaml:"name" json:"name"`
+	Path     string    `yaml:"path" json:"path"`
+	Content  string    `yaml:"content" json:"content"`
+	Metadata *Metadata `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 }
 
-// MetadataV3 represents parsed frontmatter metadata
-type MetadataV3 struct {
+// Metadata represents parsed frontmatter metadata
+type Metadata struct {
 	Priority string            `yaml:"priority,omitempty" json:"priority,omitempty"`
 	Targets  []string          `yaml:"targets,omitempty" json:"targets,omitempty"`
 	Aliases  []string          `yaml:"aliases,omitempty" json:"aliases,omitempty"`
@@ -333,7 +333,7 @@ type MetadataV3 struct {
 }
 
 // GetPriority returns the priority as a Priority type, defaulting to medium
-func (m *MetadataV3) GetPriority() Priority {
+func (m *Metadata) GetPriority() Priority {
 	if m == nil || m.Priority == "" {
 		return PriorityMedium
 	}
@@ -345,14 +345,14 @@ func (m *MetadataV3) GetPriority() Priority {
 }
 
 // HasTargets returns true if targets are specified
-func (m *MetadataV3) HasTargets() bool {
+func (m *Metadata) HasTargets() bool {
 	return m != nil && len(m.Targets) > 0
 }
 
-// Helper methods for ConfigV3
+// Helper methods for Config
 
 // ShouldUpdateGitignore returns whether .gitignore should be updated
-func (c *ConfigV3) ShouldUpdateGitignore() bool {
+func (c *Config) ShouldUpdateGitignore() bool {
 	if c.Gitignore == nil {
 		return true
 	}
@@ -360,12 +360,12 @@ func (c *ConfigV3) ShouldUpdateGitignore() bool {
 }
 
 // GetDefaultProfile returns the default profile name
-func (c *ConfigV3) GetDefaultProfile() string {
+func (c *Config) GetDefaultProfile() string {
 	return c.Default
 }
 
 // GetProfileDomains returns the list of domains for a profile
-func (c *ConfigV3) GetProfileDomains(profile string) []string {
+func (c *Config) GetProfileDomains(profile string) []string {
 	if profile == "" {
 		profile = c.Default
 	}
@@ -376,23 +376,23 @@ func (c *ConfigV3) GetProfileDomains(profile string) []string {
 }
 
 // HasProfile returns true if the profile exists
-func (c *ConfigV3) HasProfile(profile string) bool {
+func (c *Config) HasProfile(profile string) bool {
 	_, ok := c.Profiles[profile]
 	return ok
 }
 
 // GetVersion returns the config version
-func (c *ConfigV3) GetVersion() string {
+func (c *Config) GetVersion() string {
 	return c.Version
 }
 
-// IsV3 returns true if this is a V3 config (version == "3.0")
-func (c *ConfigV3) IsV3() bool {
+// IsV3 returns true if this is a config (version == "3.0")
+func (c *Config) IsV3() bool {
 	return c.Version == "3.0"
 }
 
 // GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal")
-func (c *ConfigV3) GetHeaderStyle() string {
+func (c *Config) GetHeaderStyle() string {
 	if c.Header == nil {
 		return "detailed"
 	}
@@ -403,7 +403,7 @@ func (c *ConfigV3) GetHeaderStyle() string {
 // Root-level slices contain only root content. Domains are placed in the
 // Domains map so that preset generators can combine them via
 // combineContentFiles / getAllDomain* helpers without duplication.
-func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) {
+func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 	if c.Content == nil {
 		return nil, ErrNoContent
 	}
@@ -411,7 +411,7 @@ func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) 
 	profileDomains := c.GetProfileDomains(profile)
 
 	// Build filtered domains map: profile-listed domains + builtin + FromInclude
-	activeDomains := make(map[string]*DomainV3)
+	activeDomains := make(map[string]*Domain)
 
 	// First pass: include all builtin and FromInclude domains unconditionally.
 	// This ensures that domains from external includes are always available,
@@ -429,7 +429,7 @@ func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) 
 		}
 	}
 
-	return &ContentTreeV3{
+	return &ContentTree{
 		Rules:    c.Content.Rules,
 		Context:  c.Content.Context,
 		Skills:   c.Content.Skills,
@@ -439,10 +439,10 @@ func (c *ConfigV3) GetContentForProfile(profile string) (*ContentTreeV3, error) 
 	}, nil
 }
 
-// Helper methods for ContentTreeV3
+// Helper methods for ContentTree
 
 // GetAllContentFiles returns all content files from the tree
-func (t *ContentTreeV3) GetAllContentFiles() []ContentFile {
+func (t *ContentTree) GetAllContentFiles() []ContentFile {
 	var files []ContentFile
 	files = append(files, t.Rules...)
 	files = append(files, t.Context...)
@@ -460,7 +460,7 @@ func (t *ContentTreeV3) GetAllContentFiles() []ContentFile {
 }
 
 // GetRulesForDomains returns rules for specified domains (including root)
-func (t *ContentTreeV3) GetRulesForDomains(domains []string) []ContentFile {
+func (t *ContentTree) GetRulesForDomains(domains []string) []ContentFile {
 	files := make([]ContentFile, len(t.Rules))
 	copy(files, t.Rules)
 
@@ -473,7 +473,7 @@ func (t *ContentTreeV3) GetRulesForDomains(domains []string) []ContentFile {
 }
 
 // GetContextForDomains returns context files for specified domains (including root)
-func (t *ContentTreeV3) GetContextForDomains(domains []string) []ContentFile {
+func (t *ContentTree) GetContextForDomains(domains []string) []ContentFile {
 	files := make([]ContentFile, len(t.Context))
 	copy(files, t.Context)
 
@@ -486,7 +486,7 @@ func (t *ContentTreeV3) GetContextForDomains(domains []string) []ContentFile {
 }
 
 // GetSkillsForDomains returns skills for specified domains (including root)
-func (t *ContentTreeV3) GetSkillsForDomains(domains []string) []ContentFile {
+func (t *ContentTree) GetSkillsForDomains(domains []string) []ContentFile {
 	files := make([]ContentFile, len(t.Skills))
 	copy(files, t.Skills)
 
@@ -499,7 +499,7 @@ func (t *ContentTreeV3) GetSkillsForDomains(domains []string) []ContentFile {
 }
 
 // GetAgentsForDomains returns agents for specified domains (including root)
-func (t *ContentTreeV3) GetAgentsForDomains(domains []string) []ContentFile {
+func (t *ContentTree) GetAgentsForDomains(domains []string) []ContentFile {
 	files := make([]ContentFile, len(t.Agents))
 	copy(files, t.Agents)
 
@@ -512,7 +512,7 @@ func (t *ContentTreeV3) GetAgentsForDomains(domains []string) []ContentFile {
 }
 
 // GetCommandsForDomains returns commands for specified domains (including root)
-func (t *ContentTreeV3) GetCommandsForDomains(domains []string) []ContentFile {
+func (t *ContentTree) GetCommandsForDomains(domains []string) []ContentFile {
 	files := make([]ContentFile, len(t.Commands))
 	copy(files, t.Commands)
 

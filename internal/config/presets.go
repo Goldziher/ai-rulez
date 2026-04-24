@@ -6,56 +6,56 @@ import (
 	"strings"
 )
 
-// PresetGeneratorV3 defines the interface for V3 preset generators
-type PresetGeneratorV3 interface {
-	Generate(content *ContentTreeV3, baseDir string, config *ConfigV3) ([]OutputFileV3, error)
+// PresetGenerator defines the interface for V3 preset generators
+type PresetGenerator interface {
+	Generate(content *ContentTree, baseDir string, config *Config) ([]OutputFile, error)
 	GetOutputPaths(baseDir string) []string
 	GetName() string
 }
 
-// OutputFileV3 represents a generated output file or directory
-type OutputFileV3 struct {
+// OutputFile represents a generated output file or directory
+type OutputFile struct {
 	Path    string
 	Content string
 	IsDir   bool
 }
 
-// PresetRegistryV3 maps preset names to their generators
+// PresetRegistry maps preset names to their generators
 // Populated by init() functions in generator/presets/ package
-var PresetRegistryV3 = make(map[string]PresetGeneratorV3)
+var PresetRegistry = make(map[string]PresetGenerator)
 
-// RegisterPresetV3 registers a preset generator
-func RegisterPresetV3(name string, generator PresetGeneratorV3) {
-	PresetRegistryV3[name] = generator
+// RegisterPreset registers a preset generator
+func RegisterPreset(name string, generator PresetGenerator) {
+	PresetRegistry[name] = generator
 }
 
-// GetPresetGeneratorV3 retrieves a preset generator by name
-func GetPresetGeneratorV3(name string) (PresetGeneratorV3, error) {
-	generator, exists := PresetRegistryV3[name]
+// GetPresetGenerator retrieves a preset generator by name
+func GetPresetGenerator(name string) (PresetGenerator, error) {
+	generator, exists := PresetRegistry[name]
 	if !exists {
-		return nil, ErrInvalidPresetV3
+		return nil, ErrInvalidPreset
 	}
 	return generator, nil
 }
 
 // CustomPresetGeneratorFactory is a function type that creates custom preset generators
 // This is set by the presets package to avoid circular dependencies
-var CustomPresetGeneratorFactory func(PresetV3) PresetGeneratorV3
+var CustomPresetGeneratorFactory func(Preset) PresetGenerator
 
-// GeneratePresetsV3 generates all configured presets for a V3 config
-func GeneratePresetsV3(cfg *ConfigV3) (map[string][]OutputFileV3, error) {
+// GeneratePresets generates all configured presets for a config
+func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 	if cfg.Content == nil {
 		return nil, ErrNoContent
 	}
 
-	results := make(map[string][]OutputFileV3)
+	results := make(map[string][]OutputFile)
 
 	for _, preset := range cfg.Presets {
-		var outputs []OutputFileV3
+		var outputs []OutputFile
 		var err error
 
 		if preset.IsBuiltIn() {
-			generator, genErr := GetPresetGeneratorV3(preset.BuiltIn)
+			generator, genErr := GetPresetGenerator(preset.BuiltIn)
 			if genErr != nil {
 				return nil, genErr
 			}

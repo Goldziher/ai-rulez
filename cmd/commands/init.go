@@ -25,8 +25,8 @@ var (
 
 var InitCmd = &cobra.Command{
 	Use:   "init [project-name]",
-	Short: "Initialize a new V3 AI rules configuration",
-	Long: `Initialize a new V3 AI rules configuration for your project.
+	Short: "Initialize a new AI rules configuration",
+	Long: `Initialize a new AI rules configuration for your project.
 This creates a .ai-rulez/ directory structure with configuration files,
 rules, context, and skills for your selected AI assistants.`,
 	Args: cobra.MaximumNArgs(1),
@@ -83,8 +83,8 @@ func runInit(cmd *cobra.Command, args []string) {
 	}
 
 	// Create V3 structure
-	if err := createV3Structure(projectName); err != nil {
-		logger.Error("Failed to create V3 structure", "error", err)
+	if err := createStructure(projectName); err != nil {
+		logger.Error("Failed to create structure", "error", err)
 		os.Exit(1)
 	}
 
@@ -113,11 +113,11 @@ func runInit(cmd *cobra.Command, args []string) {
 		}
 	}
 
-	displayV3SuccessMessage(projectName)
+	displaySuccessMessage(projectName)
 }
 
-// createV3Structure creates the basic .ai-rulez/ directory structure
-func createV3Structure(projectName string) error {
+// createStructure creates the basic .ai-rulez/ directory structure
+func createStructure(projectName string) error {
 	// Create base directories
 	dirs := []string{
 		".ai-rulez",
@@ -139,10 +139,10 @@ func createV3Structure(projectName string) error {
 	var configPath string
 
 	if formatFlag == "json" {
-		configContent = generateV3ConfigJSON(projectName)
+		configContent = generateConfigJSON(projectName)
 		configPath = ".ai-rulez/config.json"
 	} else {
-		configContent = generateV3Config(projectName)
+		configContent = generateConfig(projectName)
 		configPath = ".ai-rulez/config.yaml"
 	}
 
@@ -150,15 +150,15 @@ func createV3Structure(projectName string) error {
 		return fmt.Errorf("failed to write config file: %w", err)
 	}
 
-	logger.Debug("Created V3 structure", "config", configPath)
+	logger.Debug("Created structure", "config", configPath)
 	return nil
 }
 
-// generateV3Config generates a V3 YAML configuration template
-func generateV3Config(projectName string) string {
+// generateConfig generates a V3 YAML configuration template
+func generateConfig(projectName string) string {
 	var builder strings.Builder
 
-	builder.WriteString(`# AI-Rulez V3 Configuration
+	builder.WriteString(`# AI-Rulez Configuration
 # Directory-based configuration with domain scoping
 # Documentation: https://github.com/Goldziher/ai-rulez
 
@@ -201,11 +201,11 @@ presets:
 	return builder.String()
 }
 
-// generateV3ConfigJSON generates a V3 JSON configuration template
-func generateV3ConfigJSON(projectName string) string {
+// generateConfigJSON generates a V3 JSON configuration template
+func generateConfigJSON(projectName string) string {
 	return fmt.Sprintf(`{
   "$schema": "%s",
-  "$comment": "AI-Rulez V3 Configuration - Directory-based configuration with domain scoping",
+  "$comment": "AI-Rulez Configuration - Directory-based configuration with domain scoping",
   "version": "3.0",
   "name": "%s",
   "description": "AI-powered development governance for %s",
@@ -340,7 +340,7 @@ Use this skill when working in a project that is managed by AI-Rulez.
 
 ## Responsibilities
 
-- Detect whether the project uses AI-Rulez V3 (.ai-rulez/) or a legacy V2 config.
+- Detect whether the project uses AI-Rulez (.ai-rulez/) or a legacy V2 config.
 - Edit source files in .ai-rulez/ instead of patching generated assistant files directly
 - Prefer the AI-Rulez MCP server for safe reads and CRUD operations when it is available
 - Use the CLI to validate, generate, and inspect configuration changes
@@ -361,13 +361,13 @@ Use this skill when working in a project that is managed by AI-Rulez.
 - ai-rulez add|remove|list rule|context|skill|agent — manage content files.
 - ai-rulez validate — ensure config and tree structure are sound.
 - ai-rulez generate [--profile <name>] — render tool presets after edits.
-- ai-rulez migrate v3 — convert legacy ai-rulez.yaml to .ai-rulez/.
+- ai-rulez migrate — convert legacy ai-rulez.yaml to .ai-rulez/.
 
 ## Guidelines
 
 - Treat .ai-rulez/ as the source of truth.
 - Generated files such as AGENTS.md, CLAUDE.md, or .cursor/ outputs should only change via generation.
-- Use ai-rulez init to bootstrap, generate to render outputs, validate to check structure, and migrate for V2 to V3 conversion.
+- Use ai-rulez init to bootstrap, generate to render outputs, validate to check structure, and migrate for format migration.
 - Remember that root content is always included, while domains are controlled by profiles.
 - MCP can expose read, CRUD, generate, and validate operations for assistants.
 - When changing presets, profiles, or domains in config.yaml, rerun validate then generate so downstream files stay in sync.
@@ -396,8 +396,8 @@ func parseDomains(domainsStr string) []string {
 	return domains
 }
 
-// displayV3SuccessMessage displays a success message after V3 initialization
-func displayV3SuccessMessage(projectName string) {
+// displaySuccessMessage displays a success message after V3 initialization
+func displaySuccessMessage(projectName string) {
 	logger.Info("✅ Created .ai-rulez/ directory structure", "project", projectName)
 	logger.Info("\nDirectory structure:")
 	logger.Info("  .ai-rulez/")
@@ -465,7 +465,7 @@ func displayImportSuccessMessage(sources string) {
 func generateExampleMCPYAML() string {
 	var builder strings.Builder
 
-	builder.WriteString(`# AI-Rulez V3 MCP (Model Context Protocol) Servers
+	builder.WriteString(`# AI-Rulez MCP (Model Context Protocol) Servers
 # Configuration for MCP server integrations
 # Documentation: https://github.com/Goldziher/ai-rulez
 
@@ -511,7 +511,7 @@ mcp_servers:
 func generateExampleDomainMCPYAML(domainName string) string {
 	var builder strings.Builder
 
-	builder.WriteString(`# AI-Rulez V3 MCP Servers - `)
+	builder.WriteString(`# AI-Rulez MCP Servers - `)
 	builder.WriteString(domainName)
 	builder.WriteString(` Domain
 # Domain-specific MCP server configurations

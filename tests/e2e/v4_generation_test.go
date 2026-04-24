@@ -20,9 +20,9 @@ import (
 type V4GenerationSuite struct {
 	suite.Suite
 	workingDir string
-	cfg        *config.ConfigV3
-	content    *config.ContentTreeV3
-	outputs    map[string][]config.OutputFileV3
+	cfg        *config.Config
+	content    *config.ContentTree
+	outputs    map[string][]config.OutputFile
 }
 
 func TestV4GenerationSuite(t *testing.T) {
@@ -35,8 +35,8 @@ func (s *V4GenerationSuite) SetupSuite() {
 	testutil.SetupV4FullConfig(t, s.workingDir)
 
 	// Load V4 config (TOML support is the first thing that needs implementing)
-	cfg, err := config.LoadConfigV3(context.Background(), s.workingDir)
-	require.NoError(t, err, "LoadConfigV3 should support TOML config in V4")
+	cfg, err := config.LoadConfig(context.Background(), s.workingDir)
+	require.NoError(t, err, "LoadConfig should support TOML config in V4")
 
 	s.cfg = cfg
 
@@ -66,20 +66,20 @@ func (s *V4GenerationSuite) SetupSuite() {
 	require.Contains(t, cfg.MCPServers, "http-mcp-server")
 
 	// Generate all presets
-	results, err := config.GeneratePresetsV3(cfg)
+	results, err := config.GeneratePresets(cfg)
 	require.NoError(t, err, "Should generate all presets without error")
 	s.outputs = results
 }
 
 // --- Helper methods ---
 
-func (s *V4GenerationSuite) getOutputs(preset string) []config.OutputFileV3 {
+func (s *V4GenerationSuite) getOutputs(preset string) []config.OutputFile {
 	outputs, ok := s.outputs[preset]
 	s.Require().True(ok, "Expected outputs for preset %q", preset)
 	return outputs
 }
 
-func (s *V4GenerationSuite) findFile(outputs []config.OutputFileV3, pathSuffix string) *config.OutputFileV3 {
+func (s *V4GenerationSuite) findFile(outputs []config.OutputFile, pathSuffix string) *config.OutputFile {
 	for i := range outputs {
 		if strings.HasSuffix(outputs[i].Path, pathSuffix) && !outputs[i].IsDir {
 			return &outputs[i]
@@ -88,7 +88,7 @@ func (s *V4GenerationSuite) findFile(outputs []config.OutputFileV3, pathSuffix s
 	return nil
 }
 
-func (s *V4GenerationSuite) findDir(outputs []config.OutputFileV3, pathSuffix string) *config.OutputFileV3 {
+func (s *V4GenerationSuite) findDir(outputs []config.OutputFile, pathSuffix string) *config.OutputFile {
 	for i := range outputs {
 		if strings.HasSuffix(outputs[i].Path, pathSuffix) && outputs[i].IsDir {
 			return &outputs[i]
@@ -97,18 +97,18 @@ func (s *V4GenerationSuite) findDir(outputs []config.OutputFileV3, pathSuffix st
 	return nil
 }
 
-func (s *V4GenerationSuite) requireFile(outputs []config.OutputFileV3, pathSuffix string) config.OutputFileV3 {
+func (s *V4GenerationSuite) requireFile(outputs []config.OutputFile, pathSuffix string) config.OutputFile {
 	f := s.findFile(outputs, pathSuffix)
 	s.Require().NotNilf(f, "Expected file with suffix %q in outputs", pathSuffix)
 	return *f
 }
 
-func (s *V4GenerationSuite) requireDir(outputs []config.OutputFileV3, pathSuffix string) {
+func (s *V4GenerationSuite) requireDir(outputs []config.OutputFile, pathSuffix string) {
 	d := s.findDir(outputs, pathSuffix)
 	s.Require().NotNilf(d, "Expected directory with suffix %q in outputs", pathSuffix)
 }
 
-func (s *V4GenerationSuite) assertContentContains(output config.OutputFileV3, expected string) {
+func (s *V4GenerationSuite) assertContentContains(output config.OutputFile, expected string) {
 	s.Assert().Contains(output.Content, expected, "File %s should contain %q", output.Path, expected)
 }
 
