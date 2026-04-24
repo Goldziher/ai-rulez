@@ -8,8 +8,6 @@ repo_url = "https://github.com/Goldziher/ai-rulez"
 edit_uri = "edit/main/docs/"
 copyright = "Copyright &copy; 2025-2026 Na'aman Hirschfeld"
 
-extra_css = ["css/extra.css"]
-
 nav = [
   { "Home" = "index.md" },
   { "Installation" = "installation.md" },
@@ -29,54 +27,8 @@ nav = [
 ]
 
 [project.theme]
-name = "material"
 logo = "assets/logo.png"
 favicon = "assets/logo.png"
-language = "en"
-features = [
-  "content.code.copy",
-  "content.code.annotate",
-  "content.tabs.link",
-  "navigation.instant",
-  "navigation.instant.progress",
-  "navigation.tracking",
-  "navigation.tabs",
-  "navigation.sections",
-  "navigation.top",
-  "navigation.footer",
-  "search.highlight",
-  "search.suggest",
-  "toc.follow",
-  "content.action.edit",
-  "content.action.view",
-]
-
-[project.theme.font]
-text = "Inter"
-code = "JetBrains Mono"
-
-[project.theme.icon]
-repo = "github"
-
-[[project.theme.palette]]
-media = "(prefers-color-scheme: light)"
-scheme = "default"
-primary = "deep purple"
-accent = "amber"
-
-[project.theme.palette.toggle]
-icon = "material/brightness-7"
-name = "Switch to dark mode"
-
-[[project.theme.palette]]
-media = "(prefers-color-scheme: dark)"
-scheme = "slate"
-primary = "deep purple"
-accent = "amber"
-
-[project.theme.palette.toggle]
-icon = "material/brightness-4"
-name = "Switch to light mode"
 
 # --- Markdown Extensions ---
 
@@ -90,13 +42,8 @@ name = "Switch to light mode"
 
 [project.markdown_extensions.toc]
 permalink = true
-toc_depth = 3
 
 [project.markdown_extensions.pymdownx.details]
-
-[project.markdown_extensions.pymdownx.emoji]
-emoji_index = "zensical.extensions.emoji.twemoji"
-emoji_generator = "zensical.extensions.emoji.to_svg"
 
 [project.markdown_extensions.pymdownx.highlight]
 anchor_linenums = true
@@ -120,8 +67,6 @@ custom_checkbox = true
 [project.plugins.search]
 
 # --- Extra ---
-
-[project.extra]
 
 [[project.extra.social]]
 icon = "fontawesome/brands/github"
