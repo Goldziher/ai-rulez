@@ -1,0 +1,47 @@
+# Configuration for the lychee link checker.
+# https://github.com/lycheeverse/lychee
+
+root_dir = "site"
+
+exclude = [
+  # Localhost / loopback addresses
+  "localhost",
+  "127\\.0\\.0\\.1",
+  "0\\.0\\.0\\.0",
+
+  # Placeholder / example domains
+  "example\\.com",
+  "example\\.org",
+
+  # Template variables
+  "\\$\\{",
+  "\\{\\{",
+
+  # GitHub edit links (require auth)
+  "github\\.com/.*/edit/",
+
+  # GitHub raw links for new/renamed files (404 until pushed)
+  "github\\.com/.*/raw/",
+
+  # Docs site self-references (404 until deployed)
+  "goldziher\\.github\\.io/ai-rulez",
+
+  # PyPI project pages (rate-limited)
+  "pypi\\.org/project/",
+
+  # npm (rate-limited)
+  "npmjs\\.com/package/",
+
+  # Go report card (rate-limited)
+  "goreportcard\\.com",
+]
+
+# Accept these HTTP status codes as valid
+accept = [200, 204, 301, 302, 429]
+
+timeout = 30
+max_retries = 3
+max_concurrency = 10
+include_mail = false
+require_https = false
+cache = true
