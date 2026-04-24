@@ -517,34 +517,21 @@ var sharedDirs = map[string]bool{
 
 // collectGitignorePaths collects unique paths to add to .gitignore.
 // Top-level directories that are fully managed are added as directory patterns.
-// Files inside shared directories (e.g. .github) are added individually.
+// For shared directories (e.g. .github), subdirectories are added as patterns
+// and only top-level files are listed individually.
 func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[string]bool {
+	topDirs, sharedSubDirs := g.classifyDirectories(outputs)
+	deduped := deduplicateSubDirs(sharedSubDirs)
+
 	paths := make(map[string]bool)
-	topDirs := make(map[string]bool)
-
-	// First pass: collect all top-level directories from directory outputs,
-	// excluding shared dirs that contain non-generated content
-	for _, output := range outputs {
-		if !output.IsDir {
-			continue
-		}
-		relPath := g.convertToRelativePath(output.Path)
-		if g.shouldSkipPath(relPath) {
-			continue
-		}
-		topLevel := g.extractTopLevelDir(relPath)
-		if topLevel == ".ai-rulez" || sharedDirs[topLevel] {
-			continue
-		}
-		topDirs[topLevel] = true
-	}
-
-	// Add top-level directories
 	for dir := range topDirs {
 		paths[dir+"/"] = true
 	}
+	for _, dir := range deduped {
+		paths[dir+"/"] = true
+	}
 
-	// Second pass: add files only if they're NOT inside a tracked directory
+	// Add files only if not covered by a tracked directory
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -554,13 +541,69 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 			continue
 		}
 		topLevel := g.extractTopLevelDir(relPath)
-		if topDirs[topLevel] {
-			continue // File is inside a fully-managed directory, skip it
+		if topDirs[topLevel] || isPathCovered(relPath, deduped) {
+			continue
 		}
 		paths[relPath] = true
 	}
 
 	return paths
+}
+
+// classifyDirectories separates output directories into fully-managed top-level dirs
+// and subdirectories within shared dirs (e.g. .github/agents/).
+func (g *Generator) classifyDirectories(outputs []config.OutputFile) (topDirs, sharedSubDirs map[string]bool) {
+	topDirs = make(map[string]bool)
+	sharedSubDirs = make(map[string]bool)
+	for _, output := range outputs {
+		if !output.IsDir {
+			continue
+		}
+		relPath := g.convertToRelativePath(output.Path)
+		if g.shouldSkipPath(relPath) {
+			continue
+		}
+		topLevel := g.extractTopLevelDir(relPath)
+		if topLevel == ".ai-rulez" {
+			continue
+		}
+		if sharedDirs[topLevel] {
+			if relPath != topLevel {
+				sharedSubDirs[relPath] = true
+			}
+		} else {
+			topDirs[topLevel] = true
+		}
+	}
+	return
+}
+
+// deduplicateSubDirs returns only dirs that aren't children of another dir in the set.
+func deduplicateSubDirs(dirs map[string]bool) []string {
+	var result []string
+	for dir := range dirs {
+		covered := false
+		for parent := range dirs {
+			if parent != dir && strings.HasPrefix(dir, parent+"/") {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			result = append(result, dir)
+		}
+	}
+	return result
+}
+
+// isPathCovered checks if a file path is inside any of the given directories.
+func isPathCovered(path string, dirs []string) bool {
+	for _, dir := range dirs {
+		if strings.HasPrefix(path, dir+"/") {
+			return true
+		}
+	}
+	return false
 }
 
 // convertToRelativePath converts an absolute path to relative, or returns the original path
