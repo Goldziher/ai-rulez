@@ -1,8 +1,6 @@
 # Configuration for the lychee link checker.
 # https://github.com/lycheeverse/lychee
 
-root_dir = "site"
-
 exclude = [
   # Localhost / loopback addresses
   "localhost",
