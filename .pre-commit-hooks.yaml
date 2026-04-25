@@ -6,7 +6,7 @@
     - generate
     - --dry-run
   language: script
-  files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
+  files: '^\.ai-rulez/'
   pass_filenames: false
   always_run: false
   require_serial: false
@@ -18,7 +18,7 @@
   args:
     - generate
   language: script
-  files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
+  files: '^\.ai-rulez/'
   pass_filenames: false
   always_run: false
   require_serial: false
@@ -31,7 +31,7 @@
     - generate
     - --recursive
   language: script
-  files: '\.(ai-rulez|ai_rulez)\.(yaml|yml)$|^\.ai-rulez\.(yaml|yml)$|^ai-rulez\.(yaml|yml)$'
+  files: '^\.ai-rulez/'
   pass_filenames: false
   always_run: false
   require_serial: false

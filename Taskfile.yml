@@ -1,0 +1,95 @@
+version: "3"
+
+tasks:
+  setup:
+    desc: "Set up the development environment"
+    cmds:
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest || true
+      - go install github.com/goreleaser/goreleaser/v2@latest || true
+      - cargo install prek || true
+      - prek install
+      - prek install --hook-type commit-msg
+      - go mod download
+
+  update:
+    desc: "Update dependencies and pre-commit hooks"
+    cmds:
+      - prek autoupdate
+      - go get -u ./...
+      - go mod tidy
+
+  upgrade:
+    desc: "Upgrade all dependencies to latest then update"
+    cmds:
+      - task: update
+
+  set-version:
+    desc: "Set version across all packages (usage: task set-version -- 1.2.3)"
+    requires:
+      vars: [CLI_ARGS]
+    vars:
+      VERSION: "{{.CLI_ARGS}}"
+    cmds:
+      - |
+        set -euo pipefail
+
+        echo "Setting version to {{.VERSION}} across all packages..."
+
+        # Go CLI version (cmd/commands/root.go)
+        sed -i '' 's/Version  = ".*"/Version  = "{{.VERSION}}"/' cmd/commands/root.go
+
+        # npm root package.json
+        sed -i '' 's/"version": ".*"/"version": "{{.VERSION}}"/' package.json
+
+        # npm release wrapper
+        sed -i '' 's/"version": ".*"/"version": "{{.VERSION}}"/' release/npm/package.json
+
+        # pyproject.toml
+        sed -i '' 's/^version = ".*"/version = "{{.VERSION}}"/' pyproject.toml
+
+        # PyPI wrapper __version__
+        sed -i '' 's/__version__ = ".*"/__version__ = "{{.VERSION}}"/' release/pypi/__init__.py
+        sed -i '' 's/__version__ = ".*"/__version__ = "{{.VERSION}}"/' release/pypi/ai_rulez/__init__.py
+
+        # Pre-commit hook rev (internal/hooks/setup.go)
+        sed -i '' 's/officialPreCommitRev  = "v[^"]*"/officialPreCommitRev  = "v{{.VERSION}}"/' internal/hooks/setup.go
+
+        # Pre-commit bootstrap script default version (scripts/pre-commit/run-ai-rulez.sh)
+        sed -i '' 's/AI_RULEZ_VERSION="\${AI_RULEZ_VERSION:-v[^"]*}"/AI_RULEZ_VERSION="\${AI_RULEZ_VERSION:-v{{.VERSION}}}"/' scripts/pre-commit/run-ai-rulez.sh
+
+        echo "Done. Updated version to {{.VERSION}} in:"
+        echo "  - cmd/commands/root.go"
+        echo "  - package.json"
+        echo "  - release/npm/package.json"
+        echo "  - pyproject.toml"
+        echo "  - release/pypi/__init__.py"
+        echo "  - release/pypi/ai_rulez/__init__.py"
+        echo "  - internal/hooks/setup.go"
+        echo "  - scripts/pre-commit/run-ai-rulez.sh"
+
+  build:
+    desc: "Build the CLI binary"
+    cmds:
+      - go build -o bin/ai-rulez ./cmd/main.go
+
+  test:
+    desc: "Run all tests"
+    cmds:
+      - go test ./...
+
+  lint:
+    desc: "Run all pre-commit hooks"
+    cmds:
+      - prek run --all-files
+
+  check:
+    desc: "Run go vet and golangci-lint"
+    cmds:
+      - go vet ./...
+      - golangci-lint run --timeout=5m
+
+  clean:
+    desc: "Clean build artifacts"
+    cmds:
+      - rm -rf bin/
+      - go clean -cache -testcache

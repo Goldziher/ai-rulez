@@ -167,7 +167,7 @@ func TestInit_JSONFormat(t *testing.T) {
 	// Verify JSON content
 	content, err := os.ReadFile(".ai-rulez/config.json")
 	require.NoError(t, err)
-	assert.Contains(t, string(content), `"version": "3.0"`)
+	assert.Contains(t, string(content), `"version": "4.0"`)
 	assert.Contains(t, string(content), `"name": "test-project"`)
 }
 
