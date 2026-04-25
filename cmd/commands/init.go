@@ -168,7 +168,7 @@ $schema: `)
 	builder.WriteString(`
 
 # Version (required)
-version: "3.0"
+version: "4.0"
 
 # Project name (required)
 name: "`)
@@ -207,12 +207,12 @@ presets:
 	return builder.String()
 }
 
-// generateConfigJSON generates a V3 JSON configuration template
+// generateConfigJSON generates a JSON configuration template
 func generateConfigJSON(projectName string) string {
 	return fmt.Sprintf(`{
   "$schema": "%s",
   "$comment": "AI-Rulez Configuration - Directory-based configuration with domain scoping",
-  "version": "3.0",
+  "version": "4.0",
   "name": "%s",
   "description": "AI-powered development governance for %s",
   "presets": ["claude"],

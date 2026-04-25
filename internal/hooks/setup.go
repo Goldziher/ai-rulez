@@ -13,7 +13,7 @@ const (
 	preCommitSystem       = "pre-commit"
 	huskySystem           = "husky"
 	officialPreCommitRepo = "https://github.com/Goldziher/ai-rulez"
-	officialPreCommitRev  = "v2.4.3"
+	officialPreCommitRev  = "v4.0.4"
 )
 
 func SetupHooks() error {
@@ -79,7 +79,7 @@ func setupLefthook() error {
 	}
 
 	commands["ai-rulez"] = map[string]interface{}{
-		"glob":      "**/*.{ai-rulez,ai_rulez}.{yaml,yml}",
+		"glob":      ".ai-rulez/**",
 		"run":       "ai-rulez validate",
 		"fail_text": "AI rules validation failed",
 	}
@@ -219,7 +219,7 @@ func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
 		if !ok || len(hooks) == 0 {
 			continue
 		}
-		filtered := hooks[:0]
+		filtered := make([]interface{}, 0, len(hooks))
 		for _, hook := range hooks {
 			hookMap, ok := hook.(map[string]interface{})
 			if !ok {
@@ -237,7 +237,7 @@ func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
 			filtered = append(filtered, hook)
 		}
 		repoMap["hooks"] = filtered
-		repos[i] = repoMap
+		repos[i] = repoMap //nolint:gosec // i is bounded by range over repos
 	}
 	return repos
 }
