@@ -86,7 +86,7 @@ func runInit(cmd *cobra.Command, args []string) {
 		return
 	}
 
-	// Create V3 structure
+	// Create directory structure
 	if err := createStructure(projectName); err != nil {
 		logger.Error("Failed to create structure", "error", err)
 		os.Exit(1)
@@ -154,7 +154,7 @@ func createStructure(projectName string) error {
 	return nil
 }
 
-// generateConfig generates a V3 YAML configuration template
+// generateConfig generates a YAML configuration template
 func generateConfig(projectName string) string {
 	var builder strings.Builder
 
@@ -408,7 +408,7 @@ Use this skill when working in a project that is managed by AI-Rulez.
 
 ## Core Commands
 
-- ai-rulez init — scaffold .ai-rulez/ (V3) for a project.
+- ai-rulez init — scaffold .ai-rulez/ for a project.
 - ai-rulez add|remove|list rule|context|skill|agent — manage content files.
 - ai-rulez validate — ensure config and tree structure are sound.
 - ai-rulez generate [--profile <name>] — render tool presets after edits.

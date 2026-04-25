@@ -23,7 +23,7 @@ type Generator struct {
 	config *config.Config
 }
 
-// NewGenerator creates a new V3 generator
+// NewGenerator creates a new generator
 func NewGenerator(cfg *config.Config) *Generator {
 	return &Generator{
 		config: cfg,

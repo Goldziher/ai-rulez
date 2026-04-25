@@ -21,7 +21,7 @@ func TestMCPServerE2ESuite(t *testing.T) {
 
 func (s *MCPServerE2ETestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 	s.client = testutil.StartMCPServer(s.T(), s.workingDir)
 }
 
@@ -185,11 +185,11 @@ func (s *MCPServerE2ETestSuite) TestSkillCRUD_FullCycle() {
 
 func (s *MCPServerE2ETestSuite) TestInitProject() {
 	s.T().Skip("Skipping until MCP test infrastructure updated for v3.5.0")
-	// Remove existing V3 config
+	// Remove existing config
 	configPath := filepath.Join(s.workingDir, ".ai-rulez", "config.yaml")
 	os.RemoveAll(filepath.Join(s.workingDir, ".ai-rulez"))
 
-	// Initialize project with V3 configuration
+	// Initialize project with configuration
 	params := map[string]interface{}{
 		"project_name": "MCP-Initialized-Project",
 		"providers":    []string{"claude"},
@@ -199,7 +199,7 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 	s.NotEmpty(response.Result.Content)
 	s.Contains(response.Result.Content[0].Text, "initialized")
 
-	// Verify V3 config file exists at the correct location
+	// Verify config file exists at the correct location
 	s.True(testutil.FileExists(s.T(), configPath), "Config file should exist at %s", configPath)
 
 	// Verify config content

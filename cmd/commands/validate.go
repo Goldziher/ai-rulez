@@ -32,7 +32,7 @@ schema compliance, and structural issues.`,
 			os.Exit(1)
 		}
 
-		if err := cfg.ValidateV3(); err != nil {
+		if err := cfg.Validate(); err != nil {
 			logger.Error("Configuration validation failed", "path", workingDir)
 			fmtError(err)
 			os.Exit(1)

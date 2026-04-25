@@ -24,7 +24,7 @@ func generateAntigravityPresetHeader(cfg *config.Config, outputPath string, rule
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
 		Timestamp:    time.Now(),
-		ConfigFile:   "config.yaml",
+		ConfigFile:   configFileName(cfg),
 		OutputFile:   outputPath,
 		Config:       cfg,
 		RuleCount:    ruleCount,

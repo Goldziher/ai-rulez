@@ -17,7 +17,7 @@ func TestInitCommand(t *testing.T) {
 
 	flags := commands.InitCmd.Flags()
 
-	// V3 flags
+	// Flags
 	assert.NotNil(t, flags.Lookup("format"))
 	assert.NotNil(t, flags.Lookup("domains"))
 	assert.NotNil(t, flags.Lookup("skip-content"))
