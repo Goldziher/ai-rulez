@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.4] - 2026-04-25
+
+### Fixed
+- **Pre-commit hooks broken for V3/V4 users**: file trigger patterns in `.pre-commit-hooks.yaml` only matched V2-style filenames — hooks never fired when `.ai-rulez/` directory content changed. Updated to `^\.ai-rulez/`.
+- **Stale versions across packages**: default download version in `run-ai-rulez.sh` was `v3.0.0`, `officialPreCommitRev` in `setup.go` was `v2.4.3`, lefthook glob was V2-only. All updated.
+- **Init templates generated old config version**: YAML and JSON templates used `version: "3.0"` while TOML correctly used `"4.0"`. All formats now default to `"4.0"`.
+- **PyPI wrapper version drift**: `release/pypi` `__version__` was stuck at `3.14.2`, causing binary download mismatches.
+- **Stale `ErrInvalidVersion` sentinel**: error message only mentioned `3.0`, now includes `4.0`.
+
+### Added
+- **Taskfile**: added `Taskfile.yml` with `setup`, `update`, `upgrade`, `set-version`, `build`, `test`, `lint`, `check`, and `clean` tasks. `set-version` updates all 8 version locations in one command.
+- **Hook unit tests**: added `internal/hooks/hooks_test.go` and `setup_test.go` covering detection, all three hook systems (lefthook, pre-commit, husky), idempotency, legacy pruning, and error paths.
+
 ## [4.0.3] - 2026-04-24
 
 ### Fixed
