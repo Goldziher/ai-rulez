@@ -116,7 +116,7 @@ func (s *InitCLITestSuite) TestInitSkipContent() {
 }
 
 func (s *InitCLITestSuite) TestInitExistingConfig() {
-	// V3 uses .ai-rulez/ directory instead of ai-rulez.yaml file
+	// Uses .ai-rulez/ directory instead of ai-rulez.yaml file
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	os.MkdirAll(aiRulesDir, 0o755)
 

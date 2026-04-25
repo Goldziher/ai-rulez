@@ -48,7 +48,7 @@ default: full
 	cfg, err := config.LoadConfig(context.Background(), baseDir)
 	must(err)
 
-	if err := cfg.ValidateV3(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		t.Fatalf("validate failed: %v", err)
 	}
 

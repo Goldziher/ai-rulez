@@ -2,7 +2,7 @@ package config
 
 import "errors"
 
-// V3 Configuration errors
+// Configuration errors
 var (
 	ErrInvalidVersion        = errors.New("invalid version: must be '3.0' or '4.0'")
 	ErrMissingName           = errors.New("missing required field: name")

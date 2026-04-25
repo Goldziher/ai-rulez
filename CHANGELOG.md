@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.6] - 2026-04-25
+
+### Fixed
+- **MCP schema rejected V4 configs**: `ai-rules-mcp.schema.json` only allowed version `"3.0"` — V4 configs failed validation. Now accepts both `"3.0"` and `"4.0"`.
+- **Generated file headers hardcoded `config.yaml`**: preset generators always wrote `Source: .ai-rulez/config.yaml` in output headers, even for TOML or JSON configs. Headers now reflect the actual config filename.
+
+### Changed
+- **Removed stale V3 naming across codebase**: `ValidateV3()` renamed to `Validate()`, `isV3ConfigFile()` to `isConfigFile()`, `DetectConfigVersion` returns `"dir"` instead of `"v3"`, test fixtures and helpers renamed to version-neutral names.
+- **Added `IsV4()` method** to `Config` for symmetry with `IsV3()`.
+
 ## [4.0.5] - 2026-04-25
 
 ### Fixed

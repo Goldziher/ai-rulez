@@ -28,7 +28,7 @@ func NewScanner(baseDir string, cfg *config.Config) *Scanner {
 }
 
 // ScanProfile scans content for a specific profile and returns a merged ContentTree
-// This follows the V3 design: root content + domain content with namespacing and collision handling
+// This follows the design: root content + domain content with namespacing and collision handling
 //
 //nolint:gocyclo // Complex logic, acceptable for this use case
 func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {

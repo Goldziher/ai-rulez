@@ -105,8 +105,8 @@ func ReadFile(t *testing.T, path string) string {
 	return string(content)
 }
 
-// SetupV3BasicConfig creates a configuration directory structure with rules
-func SetupV3BasicConfig(t *testing.T, workingDir string) {
+// SetupBasicConfig creates a basic configuration directory structure with rules
+func SetupBasicConfig(t *testing.T, workingDir string) {
 	t.Helper()
 
 	// Create .ai-rulez directory
@@ -115,7 +115,7 @@ func SetupV3BasicConfig(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
 	// Create config.yaml
-	WriteFile(t, aiRulesDir, "config.yaml", V3BasicConfigYAML)
+	WriteFile(t, aiRulesDir, "config.yaml", BasicConfigYAML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -123,8 +123,8 @@ func SetupV3BasicConfig(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create rules directory")
 
 	// Create rule files
-	WriteFile(t, rulesDir, "basic-rule.md", V3BasicRuleMarkdown)
-	WriteFile(t, rulesDir, "high-priority-rule.md", V3HighPriorityRuleMarkdown)
+	WriteFile(t, rulesDir, "basic-rule.md", BasicRuleMarkdown)
+	WriteFile(t, rulesDir, "high-priority-rule.md", HighPriorityRuleMarkdown)
 
 	// Create context directory
 	contextDir := filepath.Join(aiRulesDir, "context")
@@ -132,11 +132,11 @@ func SetupV3BasicConfig(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create context directory")
 
 	// Create context file
-	WriteFile(t, contextDir, "project-info.md", V3ProjectContextMarkdown)
+	WriteFile(t, contextDir, "project-info.md", ProjectContextMarkdown)
 }
 
-// SetupV3ConfigWithMCPServers creates a configuration with MCP server config
-func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
+// SetupConfigWithMCPServers creates a configuration with MCP server settings
+func SetupConfigWithMCPServers(t *testing.T, workingDir string) {
 	t.Helper()
 
 	// Create .ai-rulez directory
@@ -145,7 +145,7 @@ func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
 	// Create config.yaml (MCP servers are inlined)
-	WriteFile(t, aiRulesDir, "config.yaml", V3ConfigWithMCPServersYAML)
+	WriteFile(t, aiRulesDir, "config.yaml", ConfigWithMCPServersYAML)
 
 	// Create empty rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -153,8 +153,8 @@ func SetupV3ConfigWithMCPServers(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create rules directory")
 }
 
-// SetupV3MultiPresetConfig creates a configuration with multiple presets
-func SetupV3MultiPresetConfig(t *testing.T, workingDir string) {
+// SetupMultiPresetConfig creates a configuration with multiple output presets
+func SetupMultiPresetConfig(t *testing.T, workingDir string) {
 	t.Helper()
 
 	// Create .ai-rulez directory
@@ -163,7 +163,7 @@ func SetupV3MultiPresetConfig(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
 	// Create config.yaml
-	WriteFile(t, aiRulesDir, "config.yaml", V3ConfigWithMultiplePresetsYAML)
+	WriteFile(t, aiRulesDir, "config.yaml", ConfigWithMultiplePresetsYAML)
 
 	// Create rules directory
 	rulesDir := filepath.Join(aiRulesDir, "rules")
@@ -171,11 +171,11 @@ func SetupV3MultiPresetConfig(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create rules directory")
 
 	// Create a sample rule
-	WriteFile(t, rulesDir, "sample-rule.md", V3BasicRuleMarkdown)
+	WriteFile(t, rulesDir, "sample-rule.md", BasicRuleMarkdown)
 }
 
-// SetupV3InvalidConfig creates a configuration with invalid YAML
-func SetupV3InvalidConfig(t *testing.T, workingDir string) {
+// SetupInvalidConfig creates a configuration with invalid content
+func SetupInvalidConfig(t *testing.T, workingDir string) {
 	t.Helper()
 
 	// Create .ai-rulez directory
@@ -184,5 +184,5 @@ func SetupV3InvalidConfig(t *testing.T, workingDir string) {
 	require.NoError(t, err, "Failed to create .ai-rulez directory")
 
 	// Create invalid config.yaml
-	WriteFile(t, aiRulesDir, "config.yaml", V3InvalidConfigYAML)
+	WriteFile(t, aiRulesDir, "config.yaml", InvalidConfigYAML)
 }

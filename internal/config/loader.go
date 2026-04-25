@@ -16,6 +16,9 @@ import (
 )
 
 const (
+	// VersionDir is the config version returned when an .ai-rulez/ directory is detected.
+	VersionDir = "dir"
+
 	aiRulezDirName     = ".ai-rulez"
 	configTOMLFilename = "config.toml"
 	configYAMLFilename = "config.yaml"
@@ -29,8 +32,8 @@ const (
 	skillMarkerFile    = "SKILL.md"
 )
 
-// DetectConfigVersion detects whether a directory contains V2 or configuration
-// Returns "v2" if ai-rulez.yaml/yml exists, "v3" if .ai-rulez/ exists, "" otherwise
+// DetectConfigVersion detects whether a directory contains V2 or directory-based configuration
+// Returns "v2" if ai-rulez.yaml/yml exists, "dir" if .ai-rulez/ exists, "" otherwise
 func DetectConfigVersion(dir string) (string, error) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
@@ -40,10 +43,10 @@ func DetectConfigVersion(dir string) (string, error) {
 			Wrapf(err, "resolve absolute path")
 	}
 
-	// Check for V3 (.ai-rulez/ directory)
-	v3Dir := filepath.Join(absDir, aiRulezDirName)
-	if info, err := os.Stat(v3Dir); err == nil && info.IsDir() {
-		return "v3", nil
+	// Check for directory-based config (.ai-rulez/ directory)
+	configDir := filepath.Join(absDir, aiRulezDirName)
+	if info, err := os.Stat(configDir); err == nil && info.IsDir() {
+		return VersionDir, nil
 	}
 
 	// Check for V2 (ai-rulez.yaml or ai-rulez.yml)
@@ -114,7 +117,7 @@ func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
 			Errorf(".ai-rulez exists but is not a directory")
 	}
 
-	// Load config file (try YAML first, then JSON)
+	// Load config file (tries TOML, then YAML, then JSON)
 	config, err := loadConfigFile(configDir)
 	if err != nil {
 		return nil, err
@@ -242,20 +245,35 @@ func loadConfigFile(configDir string) (*Config, error) {
 	// Try TOML first (V4 preferred format)
 	tomlPath := filepath.Join(configDir, configTOMLFilename)
 	if _, err := os.Stat(tomlPath); err == nil {
-		return loadConfigTOML(tomlPath)
+		cfg, err := loadConfigTOML(tomlPath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConfigFile = configTOMLFilename
+		return cfg, nil
 	}
 
 	// Try YAML (deprecated in V4)
 	yamlPath := filepath.Join(configDir, configYAMLFilename)
 	if _, err := os.Stat(yamlPath); err == nil {
 		logger.Warn("YAML config is deprecated; run 'ai-rulez migrate v4' to convert to TOML")
-		return loadConfigYAML(yamlPath)
+		cfg, err := loadConfigYAML(yamlPath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConfigFile = configYAMLFilename
+		return cfg, nil
 	}
 
 	// Try JSON
 	jsonPath := filepath.Join(configDir, configJSONFilename)
 	if _, err := os.Stat(jsonPath); err == nil {
-		return loadConfigJSON(jsonPath)
+		cfg, err := loadConfigJSON(jsonPath)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConfigFile = configJSONFilename
+		return cfg, nil
 	}
 
 	return nil, oops.
@@ -309,7 +327,7 @@ func loadConfigJSON(path string) (*Config, error) {
 	return &config, nil
 }
 
-// loadConfigTOML loads a V3/V4 config from TOML
+// loadConfigTOML loads a config from TOML
 func loadConfigTOML(path string) (*Config, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {

@@ -24,8 +24,8 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	if err != nil {
 		return ToolError(err)
 	}
-	if version != "v3" {
-		return ToolError(fmt.Errorf("read_config requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
+	if version != config.VersionDir {
+		return ToolError(fmt.Errorf("read_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
 	cfg, err := config.LoadConfig(ctx, dir)
@@ -102,8 +102,8 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	if err != nil {
 		return ToolError(err)
 	}
-	if version != "v3" {
-		return ToolError(fmt.Errorf("update_config requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
+	if version != config.VersionDir {
+		return ToolError(fmt.Errorf("update_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
 	cfg, err := config.LoadConfig(ctx, dir)
@@ -251,8 +251,8 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		return ToolError(err)
 	}
 
-	if version != "v3" {
-		return ToolError(fmt.Errorf("generate_outputs requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
+	if version != config.VersionDir {
+		return ToolError(fmt.Errorf("generate_outputs requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
 	if dryRun {
@@ -262,14 +262,14 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		})
 	}
 	// Load and generate config
-	v3cfg, err := config.LoadConfig(ctx, dir)
+	cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		return ToolError(err)
 	}
-	if err := v3cfg.ValidateV3(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		return ToolError(err)
 	}
-	gen := generator.NewGenerator(v3cfg)
+	gen := generator.NewGenerator(cfg)
 	if err := gen.Generate(""); err != nil {
 		return ToolError(err)
 	}
@@ -292,12 +292,12 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		return ToolError(err)
 	}
 
-	if version != "v3" {
-		return ToolError(fmt.Errorf("validate_config requires config (.ai-rulez/config.yaml); found %s config — migrate with 'ai-rulez migrate'", version))
+	if version != config.VersionDir {
+		return ToolError(fmt.Errorf("validate_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
 	// Validate config
-	v3cfg, err := config.LoadConfig(ctx, dir)
+	cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		result := map[string]interface{}{
 			"valid": false,
@@ -305,7 +305,7 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		}
 		return ToolSuccess(result)
 	}
-	if err := v3cfg.ValidateV3(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		result := map[string]interface{}{
 			"valid": false,
 			"error": err.Error(),
@@ -378,7 +378,7 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 		configContent = templates.GenerateConfigWithPresets(projectName, []string{"claude"})
 	}
 
-	// V3 structure: create .ai-rulez/config.yaml
+	// Create .ai-rulez/ directory structure
 	aiRulesDir := filepath.Join(baseDir, ".ai-rulez")
 	if err := os.MkdirAll(aiRulesDir, 0o755); err != nil {
 		return ToolError(fmt.Errorf("failed to create .ai-rulez directory: %w", err))

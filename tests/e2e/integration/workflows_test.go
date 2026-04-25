@@ -26,7 +26,7 @@ func (s *WorkflowsTestSuite) TearDownSuite() {
 }
 
 func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
-	// Initialize V3 project
+	// Initialize project
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "WorkflowTest", "--yes")
 	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
@@ -62,7 +62,7 @@ func (s *WorkflowsTestSuite) TestCompleteProjectLifecycle() {
 }
 
 func (s *WorkflowsTestSuite) TestMultiProviderWorkflow() {
-	// Initialize V3 project with multiple presets
+	// Initialize project with multiple presets
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "MultiProvider", "--yes")
 	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 
@@ -98,8 +98,8 @@ presets = ["claude", "cursor"]
 }
 
 func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
-	// Setup V3 basic config
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	// Setup basic config
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	// Add a new rule
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "add", "rule",
@@ -134,15 +134,15 @@ func (s *WorkflowsTestSuite) TestCRUDWorkflow() {
 }
 
 func (s *WorkflowsTestSuite) TestErrorRecoveryWorkflow() {
-	// Setup valid V3 config
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	// Setup valid config
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	// Validate should succeed
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
 
 	// Make config invalid by corrupting it
-	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.yaml", `version: "3.0"
+	testutil.WriteFile(s.T(), filepath.Join(s.workingDir, ".ai-rulez"), "config.yaml", `version: "4.0"
 name: "broken"
 presets: not-a-list`)
 
@@ -151,7 +151,7 @@ presets: not-a-list`)
 	result.AssertOutputContains(s.T(), "Error")
 
 	// Restore valid config
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	// Validate should succeed again
 	result = testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
@@ -159,7 +159,7 @@ presets: not-a-list`)
 }
 
 func (s *WorkflowsTestSuite) TestConfigEvolutionWorkflow() {
-	// Initialize with V3 minimal setup
+	// Initialize with minimal setup
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "init", "EvolutionTest", "--yes", "--skip-content")
 	result.AssertOutputContains(s.T(), "Created .ai-rulez/")
 

@@ -24,7 +24,7 @@ func TestMCPServerSuite(t *testing.T) {
 
 func (s *MCPServerTestSuite) SetupTest() {
 	s.workingDir = testutil.CreateTempDir(s.T())
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 }
 
 func (s *MCPServerTestSuite) TearDownSuite() {
@@ -69,7 +69,7 @@ func (s *MCPServerTestSuite) TestListTools() {
 
 func (s *MCPServerTestSuite) TestServerWithInvalidConfig() {
 	s.T().Skip("Skipping until MCP test infrastructure updated for v3.5.0")
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	client := testutil.StartMCPServer(s.T(), s.workingDir)
 	defer client.Close()
@@ -89,7 +89,7 @@ func (s *MCPServerTestSuite) TestServerWithoutConfig() {
 	defer client.Close()
 
 	response := client.CallTool(s.T(), "validate_config", map[string]interface{}{})
-	// Missing V3 config returns error as response content
+	// Missing config returns error as response content
 	response.AssertToolSuccess(s.T())
 	s.NotNil(response.Result)
 }
@@ -168,8 +168,8 @@ func (s *MCPServerTestSuite) TestServerCustomConfigPath() {
 	err := os.MkdirAll(customDir, 0o755)
 	require.NoError(s.T(), err)
 
-	// Set up custom V3 config
-	testutil.SetupV3BasicConfig(s.T(), customDir)
+	// Set up custom config
+	testutil.SetupBasicConfig(s.T(), customDir)
 
 	// Test the original config still works
 	client := testutil.StartMCPServer(s.T(), s.workingDir)

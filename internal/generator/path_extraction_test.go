@@ -34,7 +34,7 @@ func TestPathExtractionFix(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// This is the FIXED logic from generator_v3.go line 205
+			// This is the FIXED logic from generator.go line 205
 			// OLD (WRONG): parts := filepath.SplitList(relPath)
 			// NEW (CORRECT): parts := strings.Split(filepath.Clean(relPath), string(filepath.Separator))
 

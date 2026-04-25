@@ -27,7 +27,7 @@ func (s *GenerateCLITestSuite) TearDownSuite() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateBasicConfig() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
@@ -35,11 +35,11 @@ func (s *GenerateCLITestSuite) TestGenerateBasicConfig() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithCustomConfig() {
-	// Create a custom V3 config directory structure
+	// Create a custom config directory structure
 	aiRulesDir := filepath.Join(s.workingDir, "custom", ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "custom-project"
 description: "Custom configuration"
 presets:
@@ -66,11 +66,11 @@ Test content for custom config
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithAgents() {
-	// Create a V3 config with agents
+	// Create a config with agents
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "agent-test-project"
 description: "Project with agents"
 presets:
@@ -110,11 +110,11 @@ This agent reviews code for quality and best practices.
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithTargets() {
-	// Create a V3 config with multiple presets
+	// Create a config with multiple presets
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "multi-preset-project"
 description: "Project with multiple presets"
 presets:
@@ -148,7 +148,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithoutConfig() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithInvalidConfig() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 
@@ -156,7 +156,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithInvalidConfig() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateWithSchemaInvalidConfig() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "generate")
 
@@ -164,7 +164,7 @@ func (s *GenerateCLITestSuite) TestGenerateWithSchemaInvalidConfig() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateVerboseOutput() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--verbose")
 
@@ -172,7 +172,7 @@ func (s *GenerateCLITestSuite) TestGenerateVerboseOutput() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateQuietOutput() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--quiet")
 
@@ -180,7 +180,7 @@ func (s *GenerateCLITestSuite) TestGenerateQuietOutput() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateIdempotent() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result1 := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 	result1.AssertOutputContains(s.T(), "Generation complete")
@@ -191,11 +191,11 @@ func (s *GenerateCLITestSuite) TestGenerateIdempotent() {
 }
 
 func (s *GenerateCLITestSuite) TestGenerateDirectoryOutputs() {
-	// Create a V3 config with cursor preset
+	// Create a config with cursor preset
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "directory-test-project"
 description: "Test directory outputs"
 presets:

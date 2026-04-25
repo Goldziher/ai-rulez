@@ -13,14 +13,14 @@ import (
 )
 
 func TestDetectConfigVersion(t *testing.T) {
-	t.Run("detects v3 config", func(t *testing.T) {
+	t.Run("detects directory-based config", func(t *testing.T) {
 		tempDir := t.TempDir()
-		v3Dir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(v3Dir, 0o755))
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
 
 		version, err := DetectConfigVersion(tempDir)
 		require.NoError(t, err)
-		assert.Equal(t, "v3", version)
+		assert.Equal(t, VersionDir, version)
 	})
 
 	t.Run("detects v2 config with yaml", func(t *testing.T) {
@@ -51,16 +51,16 @@ func TestDetectConfigVersion(t *testing.T) {
 		assert.Equal(t, "", version)
 	})
 
-	t.Run("prefers v3 when both exist", func(t *testing.T) {
+	t.Run("prefers directory-based when both exist", func(t *testing.T) {
 		tempDir := t.TempDir()
-		v3Dir := filepath.Join(tempDir, aiRulezDirName)
-		require.NoError(t, os.MkdirAll(v3Dir, 0o755))
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
 		v2File := filepath.Join(tempDir, "ai-rulez.yaml")
 		require.NoError(t, os.WriteFile(v2File, []byte("metadata:\n  name: test\n"), 0o644))
 
 		version, err := DetectConfigVersion(tempDir)
 		require.NoError(t, err)
-		assert.Equal(t, "v3", version)
+		assert.Equal(t, VersionDir, version)
 	})
 }
 
@@ -461,7 +461,7 @@ Content`
 	})
 }
 
-func TestValidateV3(t *testing.T) {
+func TestValidate(t *testing.T) {
 	t.Run("validates minimal config", func(t *testing.T) {
 		config := &Config{
 			Version: "3.0",
@@ -471,7 +471,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		assert.NoError(t, err)
 	})
 
@@ -484,7 +484,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid version")
 	})
@@ -498,7 +498,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "required field 'name'")
 	})
@@ -510,7 +510,7 @@ func TestValidateV3(t *testing.T) {
 			Presets: []Preset{},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "at least one preset is required")
 	})
@@ -524,7 +524,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unknown built-in preset")
 	})
@@ -541,7 +541,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing required field 'name'")
 	})
@@ -558,7 +558,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing required field 'type'")
 	})
@@ -575,7 +575,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing required field 'path'")
 	})
@@ -593,7 +593,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid type")
 	})
@@ -618,7 +618,7 @@ func TestValidateV3(t *testing.T) {
 
 		// Since 3.13.1, missing skill description is a warning, not an error.
 		// The skill name is used as a fallback description.
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.NoError(t, err)
 	})
 
@@ -645,7 +645,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		assert.NoError(t, err)
 	})
 
@@ -659,7 +659,7 @@ func TestValidateV3(t *testing.T) {
 			Default: "full",
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "no profiles defined")
 	})
@@ -677,7 +677,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "does not exist in profiles")
 	})
@@ -701,7 +701,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		assert.NoError(t, err)
 	})
 
@@ -715,7 +715,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing required field 'name'")
 	})
@@ -730,7 +730,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing required field 'source'")
 	})
@@ -746,7 +746,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "duplicate installed skill name")
 	})
@@ -762,7 +762,7 @@ func TestValidateV3(t *testing.T) {
 			},
 		}
 
-		err := config.ValidateV3()
+		err := config.Validate()
 		assert.NoError(t, err)
 	})
 }
