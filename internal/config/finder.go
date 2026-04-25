@@ -10,8 +10,12 @@ import (
 
 func FindConfigFile(startDir string) (string, error) {
 	configNames := []string{
+		// V4 directory-based config (TOML preferred)
+		".ai-rulez/config.toml",
 		// V3 directory-based config
 		".ai-rulez/config.yaml", ".ai-rulez/config.yml",
+		// V3 directory-based config (JSON)
+		".ai-rulez/config.json",
 		// V2 flat file configs
 		".ai-rulez.yaml", ".ai-rulez.yml",
 		"ai-rulez.yaml", "ai-rulez.yml",
@@ -50,7 +54,9 @@ func FindConfigFile(startDir string) (string, error) {
 	return "", oops.
 		With("search_dir", startDir).
 		With("supported_names", []string{
+			".ai-rulez/config.toml",
 			".ai-rulez/config.yaml", ".ai-rulez/config.yml",
+			".ai-rulez/config.json",
 			"ai-rulez.yaml", "ai-rulez.yml",
 			".ai-rulez.yaml", ".ai-rulez.yml",
 			"ai_rulez.yaml", "ai_rulez.yml",
