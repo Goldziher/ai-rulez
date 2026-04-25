@@ -12,9 +12,9 @@ func FindConfigFile(startDir string) (string, error) {
 	configNames := []string{
 		// V4 directory-based config (TOML preferred)
 		".ai-rulez/config.toml",
-		// V3 directory-based config
+		// Directory-based config
 		".ai-rulez/config.yaml", ".ai-rulez/config.yml",
-		// V3 directory-based config (JSON)
+		// Directory-based config (JSON)
 		".ai-rulez/config.json",
 		// V2 flat file configs
 		".ai-rulez.yaml", ".ai-rulez.yml",

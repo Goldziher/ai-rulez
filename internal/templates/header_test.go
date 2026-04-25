@@ -12,7 +12,7 @@ import (
 )
 
 // Helper function to create TemplateData with required fields
-func createTemplateData(projectName string, cfgV3 *config.Config) *templates.TemplateData {
+func createTemplateData(projectName string, cfg *config.Config) *templates.TemplateData {
 	return &templates.TemplateData{
 		ProjectName:  projectName,
 		RuleCount:    3,
@@ -21,7 +21,7 @@ func createTemplateData(projectName string, cfgV3 *config.Config) *templates.Tem
 		ConfigFile:   "config.yaml",
 		OutputFile:   "CLAUDE.md",
 		Timestamp:    time.Date(2025, 11, 1, 15, 7, 23, 0, time.UTC),
-		Config:       cfgV3,
+		Config:       cfg,
 	}
 }
 
@@ -79,11 +79,11 @@ func TestBuildCompactHeader(t *testing.T) {
 	data := createTemplateData("MyProject", nil)
 
 	// For compact header, we need to set the style in the config
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "MyProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data.Config = cfgV3
+	data.Config = cfg
 
 	header := templates.GenerateHeader(data)
 
@@ -126,11 +126,11 @@ func TestBuildCompactHeader(t *testing.T) {
 
 // TestBuildMinimalHeader verifies the minimal header structure and content
 func TestBuildMinimalHeader(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "SimpleProject",
 		Header: &config.HeaderConfig{Style: "minimal"},
 	}
-	data := createTemplateData("SimpleProject", cfgV3)
+	data := createTemplateData("SimpleProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -181,11 +181,11 @@ func TestBuildHeaderLines_DefaultsToDetailed(t *testing.T) {
 
 // TestBuildHeaderLines_WithCompactStyle verifies compact style selection
 func TestBuildHeaderLines_WithCompactStyle(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "CompactProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data := createTemplateData("CompactProject", cfgV3)
+	data := createTemplateData("CompactProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -205,11 +205,11 @@ func TestBuildHeaderLines_WithCompactStyle(t *testing.T) {
 
 // TestBuildHeaderLines_WithMinimalStyle verifies minimal style selection
 func TestBuildHeaderLines_WithMinimalStyle(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "MinimalProject",
 		Header: &config.HeaderConfig{Style: "minimal"},
 	}
-	data := createTemplateData("MinimalProject", cfgV3)
+	data := createTemplateData("MinimalProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -229,11 +229,11 @@ func TestBuildHeaderLines_WithMinimalStyle(t *testing.T) {
 
 // TestBuildHeaderLines_WithDetailedStyle verifies explicit detailed style selection
 func TestBuildHeaderLines_WithDetailedStyle(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "DetailedProject",
 		Header: &config.HeaderConfig{Style: "detailed"},
 	}
-	data := createTemplateData("DetailedProject", cfgV3)
+	data := createTemplateData("DetailedProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -256,11 +256,11 @@ func TestGenerateHeader_AllStyles(t *testing.T) {
 
 	for _, style := range styles {
 		t.Run("style_"+style, func(t *testing.T) {
-			cfgV3 := &config.Config{
+			cfg := &config.Config{
 				Name:   "TestProject",
 				Header: &config.HeaderConfig{Style: style},
 			}
-			data := createTemplateData("TestProject", cfgV3)
+			data := createTemplateData("TestProject", cfg)
 
 			header := templates.GenerateHeader(data)
 
@@ -306,11 +306,11 @@ func TestGenerateHeader_WithDifferentFileTypes(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.outputFile, func(t *testing.T) {
-			cfgV3 := &config.Config{
+			cfg := &config.Config{
 				Name:   "TestProject",
 				Header: &config.HeaderConfig{Style: "minimal"},
 			}
-			data := createTemplateData("TestProject", cfgV3)
+			data := createTemplateData("TestProject", cfg)
 			data.OutputFile = tc.outputFile
 
 			header := templates.GenerateHeader(data)
@@ -329,11 +329,11 @@ func TestGenerateHeader_WithDifferentFileTypes(t *testing.T) {
 
 // TestHeaderContent_WithEmptyConfigPath verifies default config path handling
 func TestHeaderContent_WithEmptyConfigPath(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "minimal"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 	data.ConfigFile = "" // Empty config file
 
 	header := templates.GenerateHeader(data)
@@ -344,11 +344,11 @@ func TestHeaderContent_WithEmptyConfigPath(t *testing.T) {
 
 // TestHeaderContent_WithEmptyOutputPath verifies default output path handling
 func TestHeaderContent_WithEmptyOutputPath(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 	data.OutputFile = "" // Empty output file
 
 	header := templates.GenerateHeader(data)
@@ -359,11 +359,11 @@ func TestHeaderContent_WithEmptyOutputPath(t *testing.T) {
 
 // TestHeaderContent_TimestampFormatting verifies correct timestamp format
 func TestHeaderContent_TimestampFormatting(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "minimal"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 	data.Timestamp = time.Date(2024, 12, 25, 10, 30, 45, 0, time.UTC)
 
 	header := templates.GenerateHeader(data)
@@ -374,11 +374,11 @@ func TestHeaderContent_TimestampFormatting(t *testing.T) {
 
 // TestHeaderContent_CountsDisplay verifies content counts are displayed correctly
 func TestHeaderContent_CountsDisplay(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 	data.RuleCount = 5
 	data.SectionCount = 3
 	data.AgentCount = 2
@@ -396,11 +396,11 @@ func TestHeaderContent_MCPServerCommand(t *testing.T) {
 
 	for _, style := range styles {
 		t.Run("style_"+style, func(t *testing.T) {
-			cfgV3 := &config.Config{
+			cfg := &config.Config{
 				Name:   "TestProject",
 				Header: &config.HeaderConfig{Style: style},
 			}
-			data := createTemplateData("TestProject", cfgV3)
+			data := createTemplateData("TestProject", cfg)
 
 			header := templates.GenerateHeader(data)
 
@@ -413,11 +413,11 @@ func TestHeaderContent_MCPServerCommand(t *testing.T) {
 
 // TestHeaderContent_WorkflowInstructions verifies workflow steps are present
 func TestHeaderContent_WorkflowInstructions(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "detailed"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -430,11 +430,11 @@ func TestHeaderContent_WorkflowInstructions(t *testing.T) {
 
 // TestHeaderContent_WithLargeContentCounts verifies large numbers display correctly
 func TestHeaderContent_WithLargeContentCounts(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 	data.RuleCount = 150
 	data.SectionCount = 50
 	data.AgentCount = 25
@@ -473,11 +473,11 @@ func TestGenerateHeader_AllStylesWithMarkdownFile(t *testing.T) {
 
 	for _, style := range styles {
 		t.Run("style_"+style, func(t *testing.T) {
-			cfgV3 := &config.Config{
+			cfg := &config.Config{
 				Name:   "TestProject",
 				Header: &config.HeaderConfig{Style: style},
 			}
-			data := createTemplateData("TestProject", cfgV3)
+			data := createTemplateData("TestProject", cfg)
 			data.OutputFile = "output.md"
 
 			header := templates.GenerateHeader(data)
@@ -491,11 +491,11 @@ func TestGenerateHeader_AllStylesWithMarkdownFile(t *testing.T) {
 
 // TestGenerateHeader_CompactHeaderLineCount verifies line count is appropriate
 func TestGenerateHeader_CompactHeaderLineCount(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -517,11 +517,11 @@ func TestGenerateHeader_CompactHeaderLineCount(t *testing.T) {
 
 // TestGenerateHeader_MinimalHeaderLineCount verifies line count is minimal
 func TestGenerateHeader_MinimalHeaderLineCount(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "minimal"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -542,11 +542,11 @@ func TestGenerateHeader_MinimalHeaderLineCount(t *testing.T) {
 
 // TestGenerateHeader_DetailedHeaderLineCount verifies detailed header is comprehensive
 func TestGenerateHeader_DetailedHeaderLineCount(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "detailed"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 
 	header := templates.GenerateHeader(data)
 
@@ -571,11 +571,11 @@ func TestHeaderContent_ProjectNameDisplay(t *testing.T) {
 
 	for _, projName := range projectNames {
 		t.Run(projName, func(t *testing.T) {
-			cfgV3 := &config.Config{
+			cfg := &config.Config{
 				Name:   projName,
 				Header: &config.HeaderConfig{Style: "minimal"},
 			}
-			data := createTemplateData(projName, cfgV3)
+			data := createTemplateData(projName, cfg)
 
 			header := templates.GenerateHeader(data)
 
@@ -586,11 +586,11 @@ func TestHeaderContent_ProjectNameDisplay(t *testing.T) {
 
 // TestHeaderContent_ConfigPathAndOutputPath verifies paths are correctly shown
 func TestHeaderContent_ConfigPathAndOutputPath(t *testing.T) {
-	cfgV3 := &config.Config{
+	cfg := &config.Config{
 		Name:   "TestProject",
 		Header: &config.HeaderConfig{Style: "compact"},
 	}
-	data := createTemplateData("TestProject", cfgV3)
+	data := createTemplateData("TestProject", cfg)
 	data.ConfigFile = "config/custom-config.yaml"
 	data.OutputFile = "docs/output/CURSOR.md"
 

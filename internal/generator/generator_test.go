@@ -15,7 +15,7 @@ import (
 
 func TestGenerator_Basic(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -49,7 +49,7 @@ func TestGenerator_Basic(t *testing.T) {
 
 func TestGenerator_MultiPreset(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "multi-preset")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "multi-preset")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -80,7 +80,7 @@ func TestGenerator_MultiPreset(t *testing.T) {
 
 func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-domains")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -104,7 +104,7 @@ func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {
 
 func TestGenerator_WithDomains_FrontendProfile(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-domains")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -128,7 +128,7 @@ func TestGenerator_WithDomains_FrontendProfile(t *testing.T) {
 
 func TestGenerator_WithDomains_FullProfile(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-domains")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -152,7 +152,7 @@ func TestGenerator_WithDomains_FullProfile(t *testing.T) {
 
 func TestGenerator_InvalidProfile(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-domains")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-domains")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -174,7 +174,7 @@ func TestGenerator_InvalidProfile(t *testing.T) {
 
 func TestGenerator_Gitignore_Disabled(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -199,7 +199,7 @@ func TestGenerator_Gitignore_Disabled(t *testing.T) {
 
 func TestGenerator_Gitignore_Enabled(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -319,7 +319,7 @@ gitignore: false
 
 func TestGenerator_MCPAutoGeneration(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "with-mcp")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-mcp")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -353,7 +353,7 @@ func TestGenerator_MCPAutoGeneration(t *testing.T) {
 
 func TestGenerator_MCPAutoGeneration_NoServers(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -378,7 +378,7 @@ func TestGenerator_MCPAutoGeneration_NoServers(t *testing.T) {
 
 func TestGenerator_Gitignore_NoAbsolutePaths(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -423,7 +423,7 @@ func TestGenerator_Gitignore_NoAbsolutePaths(t *testing.T) {
 
 func TestGenerator_Gitignore_SkipsAiRulezFolder(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir
@@ -498,7 +498,7 @@ func copyFixture(t *testing.T, src, dst string) {
 // Benchmark tests
 func BenchmarkGenerator_Basic(b *testing.B) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := b.TempDir()
 	copyFixtureBench(b, fixtureDir, tempDir)
 
@@ -1020,7 +1020,7 @@ func TestInjectContentHash(t *testing.T) {
 
 func TestGenerator_SkipUnchangedFiles(t *testing.T) {
 	// Setup
-	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "v3", "generator", "basic")
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
 	tempDir := t.TempDir()
 
 	// Copy fixture to temp dir

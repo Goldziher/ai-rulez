@@ -9,6 +9,15 @@ import (
 
 const agentDelegationBuiltin = "agent-delegation"
 
+// configFileName returns the actual config filename from the Config,
+// falling back to "config.toml" (V4 default) if not set.
+func configFileName(cfg *config.Config) string {
+	if cfg.ConfigFile != "" {
+		return cfg.ConfigFile
+	}
+	return "config.toml"
+}
+
 // combineContentFiles combines multiple ContentFile slices
 func combineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
 	var total int

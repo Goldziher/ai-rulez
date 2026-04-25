@@ -7,8 +7,8 @@ import (
 	"github.com/samber/oops"
 )
 
-// ValidateV3 validates a configuration
-func (c *Config) ValidateV3() error {
+// Validate validates a configuration
+func (c *Config) Validate() error {
 	if err := c.validateVersion(); err != nil {
 		return err
 	}

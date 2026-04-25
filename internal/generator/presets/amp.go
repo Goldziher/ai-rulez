@@ -26,7 +26,7 @@ func generateAmpPresetHeader(cfg *config.Config, outputPath string, ruleCount, s
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
 		Timestamp:    time.Now(),
-		ConfigFile:   "config.yaml", // V3 uses config.yaml
+		ConfigFile:   configFileName(cfg),
 		OutputFile:   outputPath,
 		Config:       cfg,
 		RuleCount:    ruleCount,

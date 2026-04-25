@@ -28,7 +28,7 @@ func (s *ValidateCLITestSuite) TearDownSuite() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateValidConfig() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -36,10 +36,10 @@ func (s *ValidateCLITestSuite) TestValidateValidConfig() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateValidConfigWithCustomPath() {
-	// Create a custom V3 config directory
+	// Create a custom config directory
 	customDir := filepath.Join(s.workingDir, "custom")
 	s.NoError(os.MkdirAll(customDir, 0o755))
-	testutil.SetupV3BasicConfig(s.T(), customDir)
+	testutil.SetupBasicConfig(s.T(), customDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), customDir, "validate")
 
@@ -47,7 +47,7 @@ func (s *ValidateCLITestSuite) TestValidateValidConfigWithCustomPath() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateMinimalConfig() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -55,11 +55,11 @@ func (s *ValidateCLITestSuite) TestValidateMinimalConfig() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithAgents() {
-	// Create a V3 config with agents
+	// Create a config with agents
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "agent-test"
 description: "Config with agents"
 presets:
@@ -91,7 +91,7 @@ priority: high
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithTargets() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -99,7 +99,7 @@ func (s *ValidateCLITestSuite) TestValidateConfigWithTargets() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateInvalidYAML() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
@@ -107,7 +107,7 @@ func (s *ValidateCLITestSuite) TestValidateInvalidYAML() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateInvalidSchema() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
@@ -130,7 +130,7 @@ func (s *ValidateCLITestSuite) TestValidateNonExistentConfig() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateEmptyConfig() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
@@ -138,7 +138,7 @@ func (s *ValidateCLITestSuite) TestValidateEmptyConfig() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateMissingRequiredFields() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
@@ -146,7 +146,7 @@ func (s *ValidateCLITestSuite) TestValidateMissingRequiredFields() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateInvalidTargetReference() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
@@ -154,7 +154,7 @@ func (s *ValidateCLITestSuite) TestValidateInvalidTargetReference() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateVerboseOutput() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--verbose")
 
@@ -162,17 +162,17 @@ func (s *ValidateCLITestSuite) TestValidateVerboseOutput() {
 }
 
 func (s *ValidateCLITestSuite) TestValidateQuietOutput() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--quiet")
 }
 
 func (s *ValidateCLITestSuite) TestValidateConfigWithWarnings() {
-	// Create a V3 config with rules
+	// Create a config with rules
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "warning-test"
 description: "Config with warnings"
 presets:
@@ -202,7 +202,7 @@ func (s *ValidateCLITestSuite) TestValidateWarnsWhenSkillDescriptionMissing() {
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "codex-skill-test"
 presets:
   - codex

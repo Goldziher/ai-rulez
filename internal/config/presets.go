@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// PresetGenerator defines the interface for V3 preset generators
+// PresetGenerator defines the interface for preset generators
 type PresetGenerator interface {
 	Generate(content *ContentTree, baseDir string, config *Config) ([]OutputFile, error)
 	GetOutputPaths(baseDir string) []string

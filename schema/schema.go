@@ -39,7 +39,7 @@ const propertiesField = "properties"
 
 // ValidateWithSchema validates configuration data against the schema
 func ValidateWithSchema(configData []byte) error {
-	return validateWithSchemaBytes(configData, schemaJSON, "v3")
+	return validateWithSchemaBytes(configData, schemaJSON, "config")
 }
 
 func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string) error {

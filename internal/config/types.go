@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// Config represents the V3/V4 configuration format
+// Config represents the configuration format
 type Config struct {
 	Schema          string                 `yaml:"$schema,omitempty" json:"$schema,omitempty" toml:"schema,omitempty"`
 	Version         string                 `yaml:"version" json:"version" toml:"version"`
@@ -24,6 +24,7 @@ type Config struct {
 
 	// Runtime fields (populated during load)
 	BaseDir       string                `yaml:"-" json:"-"`
+	ConfigFile    string                `yaml:"-" json:"-"` // Actual config filename (e.g. "config.toml")
 	Content       *ContentTree          `yaml:"-" json:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
@@ -379,9 +380,14 @@ func (c *Config) GetVersion() string {
 	return c.Version
 }
 
-// IsV3 returns true if this is a config (version == "3.0")
+// IsV3 returns true if this is a V3 config (version == "3.0")
 func (c *Config) IsV3() bool {
 	return c.Version == "3.0"
+}
+
+// IsV4 returns true if this is a V4 config (version == "4.0")
+func (c *Config) IsV4() bool {
+	return c.Version == "4.0"
 }
 
 // GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal")

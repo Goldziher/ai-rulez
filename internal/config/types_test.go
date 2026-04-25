@@ -406,6 +406,43 @@ func TestConfig_IsV3(t *testing.T) {
 	}
 }
 
+func TestConfig_IsV4(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		config   config.Config
+		expected bool
+	}{
+		{
+			name: "valid v4 config",
+			config: config.Config{
+				Version: "4.0",
+			},
+			expected: true,
+		},
+		{
+			name: "v3 config returns false",
+			config: config.Config{
+				Version: "3.0",
+			},
+			expected: false,
+		},
+		{
+			name:     "empty version",
+			config:   config.Config{},
+			expected: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := tt.config.IsV4()
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
 func TestConfig_Validate(t *testing.T) {
 	t.Parallel()
 
@@ -478,7 +515,7 @@ func TestConfig_Validate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := tt.config.ValidateV3()
+			err := tt.config.Validate()
 			if tt.expectErr {
 				require.Error(t, err)
 				assert.Contains(t, err.Error(), tt.errMsg)
