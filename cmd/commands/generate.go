@@ -72,7 +72,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	// Validate configuration
-	if err := cfg.ValidateV3(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}
@@ -118,7 +118,7 @@ func findConfigFilesRecursively() []string {
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && isV3ConfigFile(path) {
+		if !info.IsDir() && isConfigFile(path) {
 			configFiles = append(configFiles, path)
 			if err := spinner.Add(1); err != nil {
 				logger.Debug("Failed to update spinner", "error", err)
@@ -139,7 +139,7 @@ func findConfigFilesRecursively() []string {
 	return configFiles
 }
 
-func isV3ConfigFile(path string) bool {
+func isConfigFile(path string) bool {
 	dir := filepath.Dir(path)
 	base := filepath.Base(path)
 	return filepath.Base(dir) == ".ai-rulez" && (base == "config.toml" || base == "config.yaml" || base == "config.json" || base == "ai-rulez.yaml" || base == "ai-rulez.json")
@@ -171,7 +171,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	}
 
 	// Validate configuration
-	if err := cfg.ValidateV3(); err != nil {
+	if err := cfg.Validate(); err != nil {
 		fileCounter.Error(err)
 		return 0
 	}

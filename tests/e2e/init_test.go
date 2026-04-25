@@ -29,7 +29,7 @@ func TestInitCommandE2E(t *testing.T) {
 				content, err := os.ReadFile(configPath)
 				require.NoError(t, err)
 
-				// V3 config should have version and name
+				// Config should have version and name
 				assert.Contains(t, string(content), "version")
 				assert.Contains(t, string(content), "TestProject")
 			},

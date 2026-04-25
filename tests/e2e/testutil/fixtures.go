@@ -14,16 +14,16 @@ const ConfigWithMCPServers = helpers.ConfigWithMCPServers
 const ConfigWithCommands = helpers.ConfigWithCommands
 const ConfigWithMCPAndCommands = helpers.ConfigWithMCPAndCommands
 
-// V3 Configuration Fixtures
-const V3BasicConfigYAML = `version: "3.0"
-name: "v3-test-project"
-description: "Basic V3 test configuration"
+// Configuration Fixtures
+const BasicConfigYAML = `version: "4.0"
+name: "test-project"
+description: "Basic test configuration"
 presets:
   - claude
 gitignore: false
 `
 
-const V3BasicRuleMarkdown = `---
+const BasicRuleMarkdown = `---
 priority: high
 ---
 
@@ -32,7 +32,7 @@ priority: high
 This is a basic rule for testing configuration.
 `
 
-const V3HighPriorityRuleMarkdown = `---
+const HighPriorityRuleMarkdown = `---
 priority: critical
 ---
 
@@ -41,13 +41,13 @@ priority: critical
 This is a high priority rule for testing.
 `
 
-const V3ProjectContextMarkdown = `# Project Information
+const ProjectContextMarkdown = `# Project Information
 
-This is a test project for validating V3 MCP operations.
+This is a test project for validating MCP operations.
 `
 
-const V3ConfigWithMCPServersYAML = `version: "3.0"
-name: "v3-mcp-test-project"
+const ConfigWithMCPServersYAML = `version: "4.0"
+name: "mcp-test-project"
 description: "configuration with MCP servers"
 presets:
   - claude
@@ -73,17 +73,17 @@ mcp_servers:
       GITHUB_TOKEN: "${GITHUB_TOKEN}"
 `
 
-const V3ConfigWithMultiplePresetsYAML = `version: "3.0"
-name: "v3-multi-preset-project"
-description: "V3 with multiple presets"
+const ConfigWithMultiplePresetsYAML = `version: "4.0"
+name: "multi-preset-project"
+description: "Multiple preset configuration"
 presets:
   - claude
   - cursor
 gitignore: false
 `
 
-const V3InvalidConfigYAML = `version: "3.0"
-name: "v3-invalid-project"
+const InvalidConfigYAML = `version: "4.0"
+name: "invalid-project"
 description: "This is invalid"
 presets: not-a-list
 `

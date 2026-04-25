@@ -35,7 +35,7 @@ func (s *MCPCommandsCLITestSuite) TestGenerateWithInvalidTemplate() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestGenerateMCPServers() {
-	testutil.SetupV3ConfigWithMCPServers(s.T(), s.workingDir)
+	testutil.SetupConfigWithMCPServers(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
@@ -43,8 +43,8 @@ func (s *MCPCommandsCLITestSuite) TestGenerateMCPServers() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestGenerateCommands() {
-	// Create a V3 config for testing commands
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	// Create a config for testing commands
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
@@ -52,7 +52,7 @@ func (s *MCPCommandsCLITestSuite) TestGenerateCommands() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestValidateMCPAndCommands() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -60,7 +60,7 @@ func (s *MCPCommandsCLITestSuite) TestValidateMCPAndCommands() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestInvalidMCPConfiguration() {
-	testutil.SetupV3BasicConfig(s.T(), s.workingDir)
+	testutil.SetupBasicConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 
@@ -68,7 +68,7 @@ func (s *MCPCommandsCLITestSuite) TestInvalidMCPConfiguration() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestInvalidCommandConfiguration() {
-	testutil.SetupV3InvalidConfig(s.T(), s.workingDir)
+	testutil.SetupInvalidConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectError(s.T(), s.workingDir, "validate")
 
@@ -76,8 +76,8 @@ func (s *MCPCommandsCLITestSuite) TestInvalidCommandConfiguration() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestMCPAndCommandsWithTargets() {
-	// Create a V3 config with multiple presets
-	testutil.SetupV3MultiPresetConfig(s.T(), s.workingDir)
+	// Create a config with multiple presets
+	testutil.SetupMultiPresetConfig(s.T(), s.workingDir)
 
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
 
@@ -85,11 +85,11 @@ func (s *MCPCommandsCLITestSuite) TestMCPAndCommandsWithTargets() {
 }
 
 func (s *MCPCommandsCLITestSuite) TestTemplateCounts() {
-	// Create a V3 config with multiple rules
+	// Create a config with multiple rules
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
 	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
 
-	configYAML := `version: "3.0"
+	configYAML := `version: "4.0"
 name: "count-test-project"
 description: "Test counting"
 presets:
