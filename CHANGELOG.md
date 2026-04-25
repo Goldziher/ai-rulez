@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.5] - 2026-04-25
+
+### Fixed
+- **Config discovery missing TOML**: `FindConfigFile` (used by MCP handlers) only searched for YAML/YML configs, ignoring `config.toml` (the V4 default) and `config.json`. TOML is now checked first.
+- **Recursive generate missed TOML configs**: `isV3ConfigFile` (used by `generate --recursive` and pre-commit hooks) did not match `config.toml` or `config.json`, so projects using the V4 default were silently skipped.
+
 ## [4.0.4] - 2026-04-25
 
 ### Fixed
