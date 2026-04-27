@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.7] - 2026-04-27
+
+### Fixed
+- **`.mcp.json` not asserted in managed gitignore fence**: `cursor`, `copilot`, and the auto-`mcp` preset all emit `.mcp.json` when MCP servers are configured, but no regression test confirmed the path actually landed in the `# BEGIN ai-rulez` block. Coverage added; behavior verified end-to-end across all preset combinations.
+- **Cross-fence gitignore duplication**: when a user already had a pattern (e.g. `.cursor/`, `CLAUDE.md`) listed manually outside the managed block, regenerate added the same line *inside* the fence too. The writer now skips any pattern already present outside the fence.
+- **`--debug` flag did nothing**: registered on `RootCmd` but never propagated to the logger singleton. Added `logger.SetLevel` and a `PersistentPreRun` that lowers the level to `DEBUG` when `--debug` is set (and to `ERROR` for `--quiet`).
+- **`--update-gitignore` flag did nothing**: declared on `generate` but never read. Now forces `cfg.Gitignore = true` regardless of the config file value, matching the help text.
+
+### Changed
+- **Demoted intentional-behavior warnings to debug**: scanner's `domain X file overrides root file` and `multiple domains have same file` were `WARN`-level on every legitimate domain override (documented design, not user error). Generator's `Output path conflict` likewise fired any time `cursor`+`copilot`+auto-`mcp` shared `.mcp.json` (also expected). All three are now `DEBUG`.
+- **Quieter generation output**: `Processing commands for Claude preset`, per-command `Checking command` / `Including command`, and `Scanned commands directory` are now `DEBUG`. Run with `--debug` to see them again.
+
 ## [4.0.6] - 2026-04-25
 
 ### Fixed
