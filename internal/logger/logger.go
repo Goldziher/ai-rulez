@@ -37,6 +37,19 @@ func Get() *slog.Logger {
 	return instance
 }
 
+// SetLevel adjusts the singleton logger's verbosity at runtime.
+// Safe to call after Get() has initialized the singleton.
+func SetLevel(level slog.Level) {
+	once.Do(func() {
+		instance = New(os.Stderr, level)
+	})
+	if h, ok := instance.Handler().(*prettyHandler); ok {
+		h.mu.Lock()
+		h.level = level
+		h.mu.Unlock()
+	}
+}
+
 func New(w io.Writer, level slog.Level) *slog.Logger {
 	handler := &prettyHandler{
 		w:     w,

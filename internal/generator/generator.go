@@ -228,7 +228,9 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) []config.Ou
 				continue
 			}
 			if prev, ok := seenPaths[output.Path]; ok {
-				logger.Warn("Output path conflict: multiple presets write to the same file, last write wins",
+				// Multiple presets emitting the same path (e.g. cursor + copilot + auto-mcp
+				// all writing .mcp.json) is the expected case, not a configuration error.
+				logger.Debug("Multiple presets write to the same file, last write wins",
 					"path", output.Path, "presets", prev+" and "+presetName)
 				// Replace the existing entry with the latest version
 				for i, existing := range flatOutputs {
@@ -641,16 +643,37 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	// Collect unique output paths
 	paths := g.collectGitignorePaths(outputs)
 
-	// Sort paths for deterministic output
+	// Read existing .gitignore content
+	existingData, err := os.ReadFile(gitignorePath)
+	if err != nil && !os.IsNotExist(err) {
+		return oops.
+			With("path", gitignorePath).
+			Wrapf(err, "read .gitignore")
+	}
+	existingContent := string(existingData)
+
+	// Drop entries the user already has outside the managed fence — avoids
+	// duplicating lines like ".cursor/" that pre-existed in the file.
+	outsideFence := gitignore.PatternsOutsideFence(existingContent)
+
+	// Sort remaining paths for deterministic output
 	var sortedPaths []string
 	for p := range paths {
+		if outsideFence[p] {
+			continue
+		}
 		sortedPaths = append(sortedPaths, p)
 	}
 	sort.Strings(sortedPaths)
 
 	if len(sortedPaths) == 0 {
 		logger.Debug("No paths to add to .gitignore")
-		return nil
+		// If a managed block already exists but every entry is now covered
+		// outside the fence, replace the block with an empty one to keep the
+		// file tidy.
+		if !contains(existingContent, gitignore.BeginMarker) {
+			return nil
+		}
 	}
 
 	// Build the fenced block
@@ -661,16 +684,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 	fencedBlock.WriteString(gitignore.EndMarker + "\n")
 
-	// Read existing .gitignore content
-	existingData, err := os.ReadFile(gitignorePath)
-	if err != nil && !os.IsNotExist(err) {
-		return oops.
-			With("path", gitignorePath).
-			Wrapf(err, "read .gitignore")
-	}
-
 	var newContent string
-	existingContent := string(existingData)
 
 	switch {
 	case contains(existingContent, gitignore.BeginMarker):

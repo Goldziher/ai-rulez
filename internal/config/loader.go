@@ -469,7 +469,7 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 			Wrapf(err, "scan commands directory")
 	}
 	tree.Commands = commands
-	logger.Info("Scanned commands directory", "path", commandsPath, "count", len(commands))
+	logger.Debug("Scanned commands directory", "path", commandsPath, "count", len(commands))
 
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
@@ -689,7 +689,7 @@ func scanDomains(domainsDir string) (map[string]*Domain, error) {
 				Wrapf(err, "scan domain commands")
 		}
 		domain.Commands = domainCommands
-		logger.Info("Scanned domain commands directory", "domain", domainName, "path", domainCommandsPath, "count", len(domainCommands))
+		logger.Debug("Scanned domain commands directory", "domain", domainName, "path", domainCommandsPath, "count", len(domainCommands))
 
 		domains[domainName] = domain
 	}
