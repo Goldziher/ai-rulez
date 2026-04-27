@@ -292,11 +292,14 @@ func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.Content
 		return frontmatter
 	}
 
-	geminiFields := []string{"description", "kind", "tools", "model", "temperature", "max_turns", "timeout_mins"}
-	for _, field := range geminiFields {
+	geminiScalarFields := []string{"description", "kind", "model", "temperature", "max_turns", "timeout_mins"}
+	for _, field := range geminiScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
 	}
 
 	return frontmatter

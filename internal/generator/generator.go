@@ -2,6 +2,7 @@ package generator
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -57,6 +58,15 @@ func (g *Generator) Generate(profile string) error {
 	tempCfg := *g.config
 	tempCfg.Content = contentTree
 	tempCfg.MCPServers = mcpServers
+
+	// Compute a single source hash covering all profile-relevant inputs.
+	// Embedded in every output's header so subsequent runs can detect "no source
+	// change" cheaply, and combined with Content-Hash for skip decisions.
+	// We set it on both tempCfg (used by preset rendering) and g.config (used
+	// by writeOutput's skip decision and hash injection).
+	sourceHash := computeSourceHash(&tempCfg, contentTree)
+	tempCfg.SourceHash = sourceHash
+	g.config.SourceHash = sourceHash
 
 	// Generate outputs for all presets using the existing infrastructure
 	allOutputs, err := config.GeneratePresets(&tempCfg)
@@ -261,18 +271,25 @@ func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
 }
 
 // writeOutput writes a single output file or creates a directory.
-// It computes a content hash of the body (everything after the header),
-// injects the hash into the header, and skips writing if the existing
-// file already contains the same hash — avoiding noisy git diffs when
-// content has not changed.
+//
+// Skip decision: we hash the freshly-rendered body and compare two values
+// embedded in the existing file's header — the Source-Hash (changes when any
+// source input changes) and the Content-Hash (changes when this output's body
+// changes). The comparison is against the in-header hashes, never against the
+// on-disk body, so skipping is robust to formatters or other tools that touch
+// the body after we wrote it. We only skip when BOTH match: a Source-Hash
+// mismatch alone forces a rewrite to refresh stale provenance metadata even
+// when the body would round-trip identically.
+//
+// On write, output is normalized to end with exactly one trailing newline so
+// formatters that enforce that convention (end-of-file-fixer, etc.) don't
+// spuriously modify the file after generation.
 func (g *Generator) writeOutput(output config.OutputFile) error {
-	// Resolve absolute path
 	absPath := output.Path
 	if !filepath.IsAbs(absPath) {
 		absPath = filepath.Join(g.config.BaseDir, output.Path)
 	}
 
-	// If this is a directory, just create it
 	if output.IsDir {
 		if err := os.MkdirAll(absPath, 0o755); err != nil {
 			return oops.
@@ -284,21 +301,22 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		return nil
 	}
 
-	// Compute content hash from the body (content after header).
 	body := stripHeader(output.Content, output.Path)
 	contentHash := templates.HashContent(body)
 
-	// Check if existing file already has the same content hash.
-	existingHash := extractContentHash(absPath)
-	if existingHash != "" && existingHash == contentHash {
-		logger.Debug("Skipped unchanged file", "path", output.Path, "hash", contentHash)
+	existingContentHash, existingSourceHash := extractStoredHashes(absPath)
+	if existingContentHash != "" && existingContentHash == contentHash &&
+		existingSourceHash == g.config.SourceHash {
+		logger.Debug("Skipped unchanged file",
+			"path", output.Path,
+			"content_hash", contentHash,
+			"source_hash", g.config.SourceHash)
 		return nil
 	}
 
-	// Inject the content hash into the header of the generated content.
-	finalContent := injectContentHash(output.Content, output.Path, contentHash)
+	finalContent := injectHashes(output.Content, output.Path, contentHash, g.config.SourceHash)
+	finalContent = normalizeTrailingNewline(finalContent)
 
-	// Create parent directories for files
 	dir := filepath.Dir(absPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return oops.
@@ -308,7 +326,6 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 			Wrapf(err, "create parent directory")
 	}
 
-	// Write file
 	if err := os.WriteFile(absPath, []byte(finalContent), 0o644); err != nil {
 		return oops.
 			With("path", absPath).
@@ -320,20 +337,37 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	return nil
 }
 
-// extractContentHash scans the header of an existing file and returns
-// the Content-Hash value if found, or an empty string otherwise.
-// It reads up to 60 lines to accommodate detailed headers.
+// normalizeTrailingNewline ensures the file ends with exactly one '\n'.
+// Empty content stays empty.
+func normalizeTrailingNewline(content string) string {
+	if content == "" {
+		return content
+	}
+	trimmed := strings.TrimRight(content, "\n")
+	return trimmed + "\n"
+}
+
+// extractContentHash returns just the Content-Hash header value (or empty if absent).
+// Kept for tests and consumers that don't care about Source-Hash.
 func extractContentHash(filePath string) string {
+	contentHash, _ := extractStoredHashes(filePath)
+	return contentHash
+}
+
+// extractStoredHashes scans the header of an existing file and returns the
+// Content-Hash and Source-Hash values found there (empty strings if missing).
+// It reads up to 60 lines to accommodate detailed headers.
+func extractStoredHashes(filePath string) (contentHash, sourceHash string) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	defer file.Close()
 
 	scanner := bufio.NewScanner(file)
 	for i := 0; i < 60 && scanner.Scan(); i++ {
 		line := strings.TrimSpace(scanner.Text())
-		// Strip common comment prefixes so we can find the hash line
+		// Strip common comment prefixes so we can find hash lines
 		// regardless of comment style (HTML, hash, slash, semicolon).
 		stripped := line
 		for _, prefix := range []string{"<!--", "-->", "//", "#", ";", "/*", "*/"} {
@@ -341,21 +375,48 @@ func extractContentHash(filePath string) string {
 		}
 		stripped = strings.TrimSpace(stripped)
 
-		if strings.HasPrefix(stripped, "Content-Hash: ") {
-			return strings.TrimPrefix(stripped, "Content-Hash: ")
+		switch {
+		case strings.HasPrefix(stripped, "Content-Hash: "):
+			contentHash = strings.TrimPrefix(stripped, "Content-Hash: ")
+		case strings.HasPrefix(stripped, "Source-Hash: "):
+			sourceHash = strings.TrimPrefix(stripped, "Source-Hash: ")
+		}
+		if contentHash != "" && sourceHash != "" {
+			return contentHash, sourceHash
 		}
 	}
-	return ""
+	return contentHash, sourceHash
 }
 
 // stripHeader removes the header comment from generated content, returning
 // only the body. The header format depends on the output file extension.
+//
+// Detection runs in the same priority order as injectHashes so that the body
+// passed to the body hash is symmetric with the body the injection sees.
+// Files may have multiple header layers (e.g. windsurf rule files have
+// trigger frontmatter THEN a generated-file banner) — we strip them all,
+// otherwise the banner's per-run timestamp would leak into the body hash.
 func stripHeader(content, outputPath string) string {
 	ext := strings.ToLower(filepath.Ext(outputPath))
 
+	// 1. YAML frontmatter (skill/agent files, plus rule files that prepend
+	// trigger frontmatter). Strip and continue — there may be a banner after.
+	if strings.HasPrefix(content, "---\n") {
+		rest := content[len("---\n"):]
+		if idx := strings.Index(rest, "\n---\n"); idx >= 0 {
+			content = rest[idx+len("\n---\n"):]
+			// Trim a single leading blank line so banner detection works
+			// against either "---\n\n<!--" or "---\n<!--" forms.
+			content = strings.TrimPrefix(content, "\n")
+		}
+	}
+
 	switch ext {
 	case ".md", ".markdown", ".mdx", ".html":
-		// HTML comment: everything before and including "-->\n\n"
+		// HTML comment banner: strip everything up to and including "-->\n\n".
+		// We do NOT strip line-prefix comments here because "# Heading" in
+		// markdown is a heading, not a comment, and stripping it would
+		// truncate the body.
 		if idx := strings.Index(content, "-->\n\n"); idx >= 0 {
 			return content[idx+len("-->\n\n"):]
 		}
@@ -364,14 +425,13 @@ func stripHeader(content, outputPath string) string {
 		}
 		return content
 	default:
-		// Line-prefix comments (# , // , ; ): skip leading comment lines
-		// and the blank line that follows them.
+		// Line-prefix comments (#, //, ;) — also covers .mdc which uses
+		// "# title\n\nbody" with the title acting as a heading-shaped header.
 		lines := strings.Split(content, "\n")
 		i := 0
 		for i < len(lines) {
 			trimmed := strings.TrimSpace(lines[i])
 			if trimmed == "" {
-				// A blank line after comment lines marks end of header
 				i++
 				break
 			}
@@ -391,51 +451,165 @@ func stripHeader(content, outputPath string) string {
 }
 
 // injectContentHash inserts a Content-Hash line into the header of the
-// generated content. It modifies the content in place by finding the
-// header closing marker and inserting the hash line before it.
+// generated content. Backward-compatible thin wrapper around injectHashes.
 func injectContentHash(content, outputPath, hash string) string {
+	return injectHashes(content, outputPath, hash, "")
+}
+
+// injectHashes inserts Content-Hash and (optionally) Source-Hash lines into
+// the header of the generated content. It locates the header closing marker
+// and inserts the hash lines before it. If sourceHash is empty, only
+// Content-Hash is injected (e.g., from older callers).
+func injectHashes(content, outputPath, contentHash, sourceHash string) string {
 	ext := strings.ToLower(filepath.Ext(outputPath))
 
+	hashBlock := func(linePrefix string) string {
+		var b strings.Builder
+		b.WriteString(linePrefix)
+		b.WriteString("Content-Hash: ")
+		b.WriteString(contentHash)
+		if sourceHash != "" {
+			b.WriteByte('\n')
+			b.WriteString(linePrefix)
+			b.WriteString("Source-Hash: ")
+			b.WriteString(sourceHash)
+		}
+		return b.String()
+	}
+
+	// 1. YAML frontmatter (skill/agent files): inject as YAML comment lines
+	// inside the frontmatter, before the closing "---". YAML parsers ignore
+	// comments, so consumers see the same parsed fields.
+	if strings.HasPrefix(content, "---\n") {
+		rest := content[len("---\n"):]
+		if idx := strings.Index(rest, "\n---\n"); idx >= 0 {
+			closeIdx := len("---\n") + idx
+			return content[:closeIdx] + "\n" + hashBlock("# ") + content[closeIdx:]
+		}
+	}
+
+	// 2. HTML comment banner — only for true markdown/HTML extensions.
 	switch ext {
 	case ".md", ".markdown", ".mdx", ".html":
-		// HTML comment: insert before "-->"
 		marker := "\n-->\n"
 		if idx := strings.Index(content, marker); idx >= 0 {
-			return content[:idx] + "\nContent-Hash: " + hash + marker + content[idx+len(marker):]
+			return content[:idx] + "\n" + hashBlock("") + marker + content[idx+len(marker):]
 		}
 		return content
-	default:
-		// Line-prefix comments: find the first blank line after comments
-		// and insert the hash line before it.
-		prefix := "# "
-		switch ext {
-		case ".json", ".jsonc", ".go", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".cs":
-			prefix = "// "
-		case ".ini":
-			prefix = "; "
-		}
+	}
 
-		lines := strings.Split(content, "\n")
-		// Find the blank line that ends the header block
-		for i, line := range lines {
-			if strings.TrimSpace(line) == "" && i > 0 {
-				// Check that the previous line was a comment
-				prevTrimmed := strings.TrimSpace(lines[i-1])
-				isComment := strings.HasPrefix(prevTrimmed, "#") ||
-					strings.HasPrefix(prevTrimmed, "//") ||
-					strings.HasPrefix(prevTrimmed, ";")
-				if isComment {
-					// Insert hash line before this blank line
-					hashLine := prefix + "Content-Hash: " + hash
-					result := make([]string, 0, len(lines)+1)
-					result = append(result, lines[:i]...)
-					result = append(result, hashLine)
-					result = append(result, lines[i:]...)
-					return strings.Join(result, "\n")
-				}
+	// 3. Line-prefix comments (yaml, ini, .mdc title-as-header, etc).
+	prefix := "# "
+	switch ext {
+	case ".json", ".jsonc", ".go", ".js", ".ts", ".tsx", ".jsx", ".java", ".c", ".cc", ".cpp", ".cs":
+		prefix = "// "
+	case ".ini":
+		prefix = "; "
+	}
+
+	lines := strings.Split(content, "\n")
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "" && i > 0 {
+			prevTrimmed := strings.TrimSpace(lines[i-1])
+			isComment := strings.HasPrefix(prevTrimmed, "#") ||
+				strings.HasPrefix(prevTrimmed, "//") ||
+				strings.HasPrefix(prevTrimmed, ";")
+			if isComment {
+				hashLines := strings.Split(hashBlock(prefix), "\n")
+				result := make([]string, 0, len(lines)+len(hashLines))
+				result = append(result, lines[:i]...)
+				result = append(result, hashLines...)
+				result = append(result, lines[i:]...)
+				return strings.Join(result, "\n")
 			}
 		}
-		return content
+	}
+	return content
+}
+
+// computeSourceHash returns a stable blake3 hash over the inputs that determine
+// generated output for the active profile. It includes:
+//   - GeneratorSchemaVersion (so renderer changes invalidate)
+//   - Resolved config metadata that affects rendering
+//   - Resolved MCP servers
+//   - Every ContentFile in root + domains, sorted, with name/path/content/metadata
+//
+// Determinism requires sorted iteration everywhere — Go maps must be visited
+// in lexical key order, ContentFile slices must already be sorted by Name
+// (the scanner does this), and metadata serialization uses encoding/json which
+// sorts map keys.
+func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
+	var b strings.Builder
+	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
+	b.WriteString("name=" + cfg.Name + "\n")
+	b.WriteString("description=" + cfg.Description + "\n")
+	b.WriteString("version=" + cfg.Version + "\n")
+	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
+
+	// MCP servers — sorted by name
+	mcpNames := make([]string, 0, len(cfg.MCPServers))
+	for name := range cfg.MCPServers {
+		mcpNames = append(mcpNames, name)
+	}
+	sort.Strings(mcpNames)
+	for _, name := range mcpNames {
+		serverJSON, err := json.Marshal(cfg.MCPServers[name])
+		if err != nil {
+			serverJSON = []byte("<marshal-error>")
+		}
+		b.WriteString("mcp:" + name + "=" + string(serverJSON) + "\n")
+	}
+
+	// Plugins — sorted by name to match output rendering order
+	plugins := append([]config.PluginConfig(nil), cfg.Plugins...)
+	sort.SliceStable(plugins, func(i, j int) bool { return plugins[i].Name < plugins[j].Name })
+	for _, p := range plugins {
+		pluginJSON, err := json.Marshal(p)
+		if err != nil {
+			pluginJSON = []byte("<marshal-error>")
+		}
+		b.WriteString("plugin=" + string(pluginJSON) + "\n")
+	}
+
+	// Root content categories — slices already sorted by Name in the scanner
+	writeContentFiles(&b, "root.rules", content.Rules)
+	writeContentFiles(&b, "root.context", content.Context)
+	writeContentFiles(&b, "root.skills", content.Skills)
+	writeContentFiles(&b, "root.agents", content.Agents)
+	writeContentFiles(&b, "root.commands", content.Commands)
+
+	// Domain content — domains visited in sorted name order
+	domainNames := make([]string, 0, len(content.Domains))
+	for name := range content.Domains {
+		domainNames = append(domainNames, name)
+	}
+	sort.Strings(domainNames)
+	for _, name := range domainNames {
+		domain := content.Domains[name]
+		_, _ = fmt.Fprintf(&b, "domain:%s,builtin=%t,from_include=%t\n", name, domain.Builtin, domain.FromInclude)
+		writeContentFiles(&b, "domain."+name+".rules", domain.Rules)
+		writeContentFiles(&b, "domain."+name+".context", domain.Context)
+		writeContentFiles(&b, "domain."+name+".skills", domain.Skills)
+		writeContentFiles(&b, "domain."+name+".agents", domain.Agents)
+		writeContentFiles(&b, "domain."+name+".commands", domain.Commands)
+	}
+
+	return templates.HashContent(b.String())
+}
+
+// writeContentFiles serializes a ContentFile slice into the hash builder.
+// Slices reach this function pre-sorted by Name (scanner guarantee).
+func writeContentFiles(b *strings.Builder, label string, files []config.ContentFile) {
+	for _, f := range files {
+		b.WriteString(label + ":" + f.Name + "|path=" + f.Path + "|content=" + f.Content)
+		if f.Metadata != nil {
+			metaJSON, err := json.Marshal(f.Metadata)
+			if err != nil {
+				metaJSON = []byte("<marshal-error>")
+			}
+			b.WriteString("|meta=" + string(metaJSON))
+		}
+		b.WriteByte('\n')
 	}
 }
 

@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.0.8] - 2026-04-27
+
+### Fixed
+- **Generation was non-deterministic across runs**: `content.Domains` is a Go map, and every preset that flattened domain rules/context/skills/agents/commands iterated it in randomized order. Two consecutive `generate` runs with identical sources produced different rule orderings in `CLAUDE.md`, `.github/copilot-instructions.md`, and every other multi-rule output, breaking pre-commit hook idempotency. Domain iteration is now sorted by name (`internal/generator/presets/helpers.go`).
+- **`tools` field corrupted into a Go slice string**: `Metadata.Extra map[string]string` could not hold YAML sequences — `tools: [Read, Grep, Glob]` was stringified via `fmt %v` to `"[Read Grep Glob]"` and emitted as `tools: '[Read Grep Glob]'`. Added typed `Tools`, `Skills`, `Keywords` fields on `Metadata`; YAML now round-trips as proper sequences in agent frontmatter across all presets (claude, amp, antigravity, cline, copilot, gemini, junie, windsurf).
+- **`mcp` preset rejected by validation**: `internal/generator/presets/mcp.go` registered an `mcp` preset generator, but `internal/config/types.go` `builtInPresets` didn't list it — configs that included `mcp` in their preset array failed with `unknown built-in preset: "mcp"`. Added to the map.
+- **Skip-on-content-hash never fired for files with both frontmatter and a banner**: windsurf rule files have YAML trigger frontmatter prepended to the standard generated-file banner. `stripHeader` only stripped one layer, so the banner's per-run timestamp leaked into the body hash and caused unnecessary rewrites every run. Now strips both layers.
+
+### Added
+- **`Source-Hash` header line**: alongside the existing `Content-Hash`, every generated file now embeds a blake3 hash covering all profile-relevant inputs (config metadata, content tree, MCP servers, plus a generator schema version constant). The skip decision in `writeOutput` requires both hashes to match the values stored in the existing file — never re-hashes the on-disk body, so it's robust to formatters that may modify generated files post-write.
+- **Hash injection for YAML-frontmatter files**: skill and agent files (`.claude/skills/*/SKILL.md`, `.opencode/agents/*.md`, etc.) had no header to inject hashes into and were rewritten every run. Hashes now go in as YAML comment lines (`# Content-Hash:` / `# Source-Hash:`) inside the frontmatter, where YAML parsers ignore them.
+
+### Changed
+- **Sort everything alphabetically by name**: scanner's `sortByPriority` replaced with `sortByName`; merged content slices re-sorted in `combineContentFiles`; typed list metadata (`Tools`/`Skills`/`Keywords`) sorted on load. Priority is preserved as metadata in the rule body and rendered next to the rule name. This is a behavior change — projects with mixed-priority rules will see one round of reordered output.
+- **Output normalized to a single trailing newline** at write time, so `end-of-file-fixer` and similar formatters don't modify files post-generation.
+
 ## [4.0.7] - 2026-04-27
 
 ### Fixed

@@ -162,20 +162,24 @@ testing/**/.mcp.json
 # .ai-rulez/
 .gemini/
 
-# AI Rules generated files
-.github/
-
-# AI Rules generated files
-.junie/guidelines.md
-.junie/
-
-# AI Rules generated files
-.codex/skills/capability-delivery-checklist/SKILL.md
+# BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
+.agents/
+.claude/
+.cline/
+.clinerules/
 .codex/
-.codex/skills/config-schema-maintainer/SKILL.md
-.codex/skills/docs-and-site/SKILL.md
-.codex/skills/release-and-distribution/SKILL.md
-.codex/skills/repository-layout/SKILL.md
-.codex/skills/mcp-integrations/SKILL.md
-.codex/skills/core-workflows/SKILL.md
-.codex/skills/test-fixture-maintainer/SKILL.md
+.continue/
+.cursor/
+.gemini/
+.github/agents/
+.github/commands/
+.github/copilot-instructions.md
+.github/skills/
+.junie/
+.mcp.json
+.opencode/
+.windsurf/
+AGENTS.md
+CLAUDE.md
+GEMINI.md
+# END ai-rulez

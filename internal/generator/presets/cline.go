@@ -214,11 +214,14 @@ func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFi
 		return frontmatter
 	}
 
-	clineFields := []string{"description", "model", "tools"}
-	for _, field := range clineFields {
+	clineScalarFields := []string{"description", "model"}
+	for _, field := range clineScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
 	}
 
 	return frontmatter
