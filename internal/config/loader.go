@@ -769,17 +769,15 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 		case "priority":
 			m.Priority = fmt.Sprintf("%v", v)
 		case "targets":
-			if targets, ok := v.([]interface{}); ok {
-				for _, t := range targets {
-					m.Targets = append(m.Targets, fmt.Sprintf("%v", t))
-				}
-			}
+			m.Targets = stringSliceFromAny(v)
 		case "aliases":
-			if aliases, ok := v.([]interface{}); ok {
-				for _, a := range aliases {
-					m.Aliases = append(m.Aliases, fmt.Sprintf("%v", a))
-				}
-			}
+			m.Aliases = stringSliceFromAny(v)
+		case "tools":
+			m.Tools = stringSliceFromAny(v)
+		case "skills":
+			m.Skills = stringSliceFromAny(v)
+		case "keywords":
+			m.Keywords = stringSliceFromAny(v)
 		case "usage":
 			m.Usage = fmt.Sprintf("%v", v)
 		case "shortcut":
@@ -792,6 +790,29 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 	}
 
 	return m, true
+}
+
+// stringSliceFromAny coerces a YAML value into a []string. Accepts a sequence
+// (most common case for tools/targets/etc) or a scalar (treated as a single-element
+// list). Returns nil for unsupported types so callers can detect the absence.
+func stringSliceFromAny(v interface{}) []string {
+	switch t := v.(type) {
+	case []interface{}:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			out = append(out, fmt.Sprintf("%v", item))
+		}
+		return out
+	case []string:
+		return append([]string(nil), t...)
+	case string:
+		if t == "" {
+			return nil
+		}
+		return []string{t}
+	default:
+		return nil
+	}
 }
 
 // loadContentFile loads a content file and parses optional frontmatter

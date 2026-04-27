@@ -29,6 +29,13 @@ func HashContent(content string) string {
 	return fmt.Sprintf("blake3:%x", h)
 }
 
+// GeneratorSchemaVersion bumps when the rendering logic changes in a way that
+// would alter output for the same source inputs (e.g., template restructuring,
+// header layout changes, fixed bugs in serialization). Bumping invalidates all
+// stored Source-Hash values, forcing one round of regeneration before the skip
+// mechanism can re-engage.
+const GeneratorSchemaVersion = "v1"
+
 type commentStyle int
 
 const (

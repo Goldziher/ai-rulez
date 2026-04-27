@@ -16,7 +16,6 @@ presets = [
   "opencode",
   "junie",
   "antigravity",
-  "mcp",
 ]
 
 builtins = [

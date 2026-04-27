@@ -223,14 +223,20 @@ func (g *JuniePresetGenerator) buildJunieAgentFrontmatter(agent config.ContentFi
 		return frontmatter
 	}
 
-	junieFields := []string{
-		"description", "tools", "disallowedTools",
-		"model", "skills", "allowPromptArgument",
+	junieScalarFields := []string{
+		"description", "disallowedTools",
+		"model", "allowPromptArgument",
 	}
-	for _, field := range junieFields {
+	for _, field := range junieScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
+	}
+	if len(agent.Metadata.Skills) > 0 {
+		frontmatter["skills"] = agent.Metadata.Skills
 	}
 
 	return frontmatter

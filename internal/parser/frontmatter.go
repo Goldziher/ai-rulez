@@ -9,10 +9,17 @@ import (
 )
 
 // Metadata represents frontmatter metadata parsed from markdown files
-// This is a local type to avoid circular imports with the config package
+// This is a local type to avoid circular imports with the config package.
+//
+// Tools, Skills, and Keywords are list-valued fields that need typed handling
+// because YAML sequences cannot round-trip through map[string]string —
+// they would be stringified via fmt %v ("[a b c]") instead of preserved as lists.
 type Metadata struct {
 	Priority string
 	Targets  []string
+	Tools    []string
+	Skills   []string
+	Keywords []string
 	Extra    map[string]string `yaml:",inline"`
 }
 
