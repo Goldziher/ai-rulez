@@ -224,11 +224,14 @@ func (g *AmpPresetGenerator) buildAmpAgentFrontmatter(agent config.ContentFile) 
 		return frontmatter
 	}
 
-	ampFields := []string{"description", "model", "tools"}
-	for _, field := range ampFields {
+	ampScalarFields := []string{"description", "model"}
+	for _, field := range ampScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
 	}
 
 	return frontmatter

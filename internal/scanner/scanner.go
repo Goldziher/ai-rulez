@@ -232,12 +232,13 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 	finalAgents := s.resolveCollisions(rootAgents, allAgents, agentsMap)
 	finalCommands := s.resolveCollisions(rootCommands, allCommands, commandsMap)
 
-	// Sort by priority (highest first)
-	s.sortByPriority(finalRules)
-	s.sortByPriority(finalContext)
-	s.sortByPriority(finalSkills)
-	s.sortByPriority(finalAgents)
-	s.sortByPriority(finalCommands)
+	// Sort alphabetically by name for stable, idempotent output.
+	// Priority is preserved in each item's metadata and rendered alongside the name.
+	sortByName(finalRules)
+	sortByName(finalContext)
+	sortByName(finalSkills)
+	sortByName(finalAgents)
+	sortByName(finalCommands)
 
 	logger.Info("Final commands after collision resolution", "count", len(finalCommands))
 
@@ -399,12 +400,17 @@ func (s *Scanner) loadContentFile(path string) (config.ContentFile, error) {
 	// Use non-fatal version to avoid blocking on parse errors
 	parserMetadata, actualContent := parser.ParseFrontmatterNonFatal(content)
 
-	// Convert parser.Metadata to config.Metadata
+	// Convert parser.Metadata to config.Metadata.
+	// Sort list-valued fields alphabetically so output ordering is stable
+	// regardless of how the user wrote them in source frontmatter.
 	var metadata *config.Metadata
 	if parserMetadata != nil {
 		metadata = &config.Metadata{
 			Priority: parserMetadata.Priority,
-			Targets:  parserMetadata.Targets,
+			Targets:  sortedCopy(parserMetadata.Targets),
+			Tools:    sortedCopy(parserMetadata.Tools),
+			Skills:   sortedCopy(parserMetadata.Skills),
+			Keywords: sortedCopy(parserMetadata.Keywords),
 			Extra:    parserMetadata.Extra,
 		}
 	}
@@ -498,23 +504,24 @@ func (s *Scanner) resolveCollisions(rootFiles, domainFiles []config.ContentFile,
 	return result
 }
 
-// sortByPriority sorts content files by priority (highest first)
-func (s *Scanner) sortByPriority(files []config.ContentFile) {
+// sortByName sorts content files alphabetically by Name.
+// We sort by name (not priority) so generated output is deterministic and idempotent —
+// the skip-on-content-hash mechanism in the generator only triggers when output is byte-stable.
+func sortByName(files []config.ContentFile) {
 	sort.SliceStable(files, func(i, j int) bool {
-		// Get priority from metadata, defaulting to medium
-		priI := config.PriorityMedium
-		if files[i].Metadata != nil {
-			priI = files[i].Metadata.GetPriority()
-		}
-
-		priJ := config.PriorityMedium
-		if files[j].Metadata != nil {
-			priJ = files[j].Metadata.GetPriority()
-		}
-
-		// Sort by priority value (higher first)
-		return priI.ToInt() > priJ.ToInt()
+		return files[i].Name < files[j].Name
 	})
+}
+
+// sortedCopy returns a sorted copy of the input slice without mutating it.
+// Returns nil for empty input so omitempty yaml/json tags drop the field.
+func sortedCopy(in []string) []string {
+	if len(in) == 0 {
+		return nil
+	}
+	out := append([]string(nil), in...)
+	sort.Strings(out)
+	return out
 }
 
 // Helper functions

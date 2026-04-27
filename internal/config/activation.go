@@ -55,25 +55,13 @@ func (m *Metadata) GetTriggerGlob() string {
 	return m.Extra["glob"]
 }
 
-// GetTriggerKeywords retrieves the trigger keywords for manual mode
+// GetTriggerKeywords retrieves the trigger keywords for manual mode.
+// Returns a copy of the typed Keywords slice (already sorted by the scanner).
 func (m *Metadata) GetTriggerKeywords() []string {
-	if m == nil {
+	if m == nil || len(m.Keywords) == 0 {
 		return nil
 	}
-
-	// Keywords can be stored as "keywords" in Extra
-	keywordsStr, ok := m.Extra["keywords"]
-	if !ok {
-		return nil
-	}
-
-	// For now, return as single-element slice
-	// In the future, we might want to parse comma-separated values
-	if keywordsStr != "" {
-		return []string{keywordsStr}
-	}
-
-	return nil
+	return append([]string(nil), m.Keywords...)
 }
 
 // ShouldRenderTriggerFrontmatter checks if trigger frontmatter should be rendered

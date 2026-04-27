@@ -274,11 +274,14 @@ func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentF
 		return frontmatter
 	}
 
-	agentFields := []string{"description", "kind", "tools", "model", "temperature", "max_turns", "timeout_mins"}
-	for _, field := range agentFields {
+	agentScalarFields := []string{"description", "kind", "model", "temperature", "max_turns", "timeout_mins"}
+	for _, field := range agentScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
 	}
 
 	return frontmatter

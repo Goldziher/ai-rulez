@@ -918,11 +918,14 @@ func parseFrontmatterToMetadata(content string) (metadata *config.Metadata, body
 	// Use canonical parser, non-fatal version for importer compatibility
 	parserMetadata, actualContent := parser.ParseFrontmatterNonFatal(content)
 
-	// Convert parser.Metadata to config.Metadata
+	// Convert parser.Metadata to config.Metadata.
 	if parserMetadata != nil {
 		metadata = &config.Metadata{
 			Priority: parserMetadata.Priority,
 			Targets:  parserMetadata.Targets,
+			Tools:    parserMetadata.Tools,
+			Skills:   parserMetadata.Skills,
+			Keywords: parserMetadata.Keywords,
 			Extra:    parserMetadata.Extra,
 		}
 	}

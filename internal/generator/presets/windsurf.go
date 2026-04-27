@@ -282,11 +282,14 @@ func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.Con
 		return frontmatter
 	}
 
-	windsurfFields := []string{"description", "model", "tools"}
-	for _, field := range windsurfFields {
+	windsurfScalarFields := []string{"description", "model"}
+	for _, field := range windsurfScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
 	}
 
 	return frontmatter
