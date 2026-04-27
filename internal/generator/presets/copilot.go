@@ -258,7 +258,7 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 	}
 
 	copilotFields := []string{
-		"description", "tools", "model", "target",
+		"description", "model", "target",
 		"user-invocable", "disable-model-invocation",
 		"agents", "handoffs", "mcp-servers",
 	}
@@ -266,6 +266,9 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
 	}
 
 	return frontmatter

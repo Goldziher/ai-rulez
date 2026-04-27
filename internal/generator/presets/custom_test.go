@@ -321,9 +321,16 @@ func TestCustomPresetGenerator_PrepareTemplateData(t *testing.T) {
 		t.Errorf("Expected 2 rules, got %d", len(rules))
 	}
 
-	// Check that metadata is included
-	if rules[0]["Priority"] != "high" {
-		t.Errorf("Expected Priority=high, got %v", rules[0]["Priority"])
+	// Rules are sorted alphabetically by name: backend-rule, rule1.
+	// Check that priority metadata is preserved on the rule that has it.
+	var rule1Priority interface{}
+	for _, r := range rules {
+		if r["Name"] == "rule1" {
+			rule1Priority = r["Priority"]
+		}
+	}
+	if rule1Priority != "high" {
+		t.Errorf("Expected rule1 Priority=high, got %v", rule1Priority)
 	}
 
 	domains, ok := data["Domains"].(map[string]interface{})

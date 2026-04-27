@@ -285,30 +285,19 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile) 
 		return frontmatter
 	}
 
-	// Add standard Claude agent fields
-	const (
-		description    = "description"
-		model          = "model"
-		tools          = "tools"
-		permissionMode = "permission_mode"
-		skills         = "skills"
-	)
-
-	fields := []struct {
-		key   string
-		field string
-	}{
-		{description, description},
-		{model, model},
-		{tools, tools},
-		{permissionMode, permissionMode},
-		{skills, skills},
-	}
-
-	for _, f := range fields {
-		if val, ok := agent.Metadata.Extra[f.field]; ok && val != "" {
-			frontmatter[f.key] = val
+	// Add standard Claude agent fields. tools and skills are list-typed and
+	// pulled from the typed Metadata fields so YAML marshaling emits proper sequences.
+	scalarFields := []string{"description", "model", "permission_mode"}
+	for _, field := range scalarFields {
+		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
+			frontmatter[field] = val
 		}
+	}
+	if len(agent.Metadata.Tools) > 0 {
+		frontmatter["tools"] = agent.Metadata.Tools
+	}
+	if len(agent.Metadata.Skills) > 0 {
+		frontmatter["skills"] = agent.Metadata.Skills
 	}
 
 	return frontmatter

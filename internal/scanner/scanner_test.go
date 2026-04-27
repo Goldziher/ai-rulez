@@ -187,8 +187,10 @@ func TestScanner_CollisionHandling(t *testing.T) {
 	assert.False(t, foundRootPython, "Should not have root version of python.md")
 }
 
-// TestScanner_PrioritySorting tests that files are sorted by priority
-func TestScanner_PrioritySorting(t *testing.T) {
+// TestScanner_AlphabeticalSorting tests that files are sorted alphabetically by Name.
+// Priority is preserved in metadata but does not affect sort order — output stability
+// matters more for the skip-on-content-hash mechanism than priority-first ordering.
+func TestScanner_AlphabeticalSorting(t *testing.T) {
 	// Arrange
 	tmpDir := t.TempDir()
 	setupPriorityStructure(t, tmpDir)
@@ -211,11 +213,11 @@ func TestScanner_PrioritySorting(t *testing.T) {
 	require.NotNil(t, tree)
 	assert.Len(t, tree.Rules, 4)
 
-	// Check order (critical > high > medium > low)
+	// Check alphabetical order by Name: critical, high, low, medium
 	assert.Equal(t, "critical", tree.Rules[0].Name)
 	assert.Equal(t, "high", tree.Rules[1].Name)
-	assert.Equal(t, "medium", tree.Rules[2].Name)
-	assert.Equal(t, "low", tree.Rules[3].Name)
+	assert.Equal(t, "low", tree.Rules[2].Name)
+	assert.Equal(t, "medium", tree.Rules[3].Name)
 }
 
 // TestScanner_MissingDirectories tests graceful handling of missing directories

@@ -28,6 +28,13 @@ type Config struct {
 	Content       *ContentTree          `yaml:"-" json:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
+
+	// SourceHash is a blake3 hash over all sources that contribute to generated
+	// output for the active profile (config metadata, content tree, MCP servers,
+	// and the generator schema version). Computed once per generation and embedded
+	// in every output file's header so that subsequent runs can detect "nothing
+	// changed in sources" without re-rendering. Format: "blake3:<hex>".
+	SourceHash string `yaml:"-" json:"-"`
 }
 
 // HeaderConfig represents header style configuration for generated files
@@ -251,6 +258,7 @@ var builtInPresets = map[string]bool{
 	"junie":        true,
 	"opencode":     true,
 	"antigravity":  true,
+	"mcp":          true,
 }
 
 func isValidBuiltInPreset(name string) bool {
@@ -315,11 +323,18 @@ type ContentFile struct {
 	Metadata *Metadata `yaml:"metadata,omitempty" json:"metadata,omitempty"`
 }
 
-// Metadata represents parsed frontmatter metadata
+// Metadata represents parsed frontmatter metadata.
+//
+// Tools, Skills, and Keywords are list-valued and need typed handling because
+// YAML sequences cannot round-trip through map[string]string — they would be
+// stringified via fmt %v ("[a b c]") instead of preserved as proper lists.
 type Metadata struct {
 	Priority string            `yaml:"priority,omitempty" json:"priority,omitempty"`
 	Targets  []string          `yaml:"targets,omitempty" json:"targets,omitempty"`
 	Aliases  []string          `yaml:"aliases,omitempty" json:"aliases,omitempty"`
+	Tools    []string          `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Skills   []string          `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Keywords []string          `yaml:"keywords,omitempty" json:"keywords,omitempty"`
 	Usage    string            `yaml:"usage,omitempty" json:"usage,omitempty"`
 	Shortcut string            `yaml:"shortcut,omitempty" json:"shortcut,omitempty"`
 	Category string            `yaml:"category,omitempty" json:"category,omitempty"`
