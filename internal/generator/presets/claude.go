@@ -110,21 +110,21 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTree, baseDir st
 
 	// Generate command files as skills (root + domain commands)
 	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
-	logger.Info("Processing commands for Claude preset", "count", len(allCommands))
+	logger.Debug("Processing commands for Claude preset", "count", len(allCommands))
 	if len(allCommands) > 0 {
 		for _, command := range allCommands {
-			logger.Info("Checking command", "name", command.Name, "has_metadata", command.Metadata != nil)
+			logger.Debug("Checking command", "name", command.Name, "has_metadata", command.Metadata != nil)
 
 			// Check if command is enabled and targets Claude
 			if g.shouldIncludeCommand(command) {
-				logger.Info("Including command in Claude preset", "name", command.Name)
+				logger.Debug("Including command in Claude preset", "name", command.Name)
 				commandOutputs, err := g.generateCommandAsSkill(command, content, baseDir, cfg)
 				if err != nil {
 					return nil, fmt.Errorf("generate command %s: %w", command.Name, err)
 				}
 				outputs = append(outputs, commandOutputs...)
 			} else {
-				logger.Info("Skipping command (filtered by targets)", "name", command.Name)
+				logger.Debug("Skipping command (filtered by targets)", "name", command.Name)
 			}
 		}
 	}

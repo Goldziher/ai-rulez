@@ -83,6 +83,12 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
 	}
 
+	// Honor --update-gitignore: force-enable gitignore update regardless of config
+	if updateGitignore {
+		enabled := true
+		cfg.Gitignore = &enabled
+	}
+
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 
@@ -174,6 +180,12 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	if err := cfg.Validate(); err != nil {
 		fileCounter.Error(err)
 		return 0
+	}
+
+	// Honor --update-gitignore: force-enable gitignore update regardless of config
+	if updateGitignore {
+		enabled := true
+		cfg.Gitignore = &enabled
 	}
 
 	// Create generator
