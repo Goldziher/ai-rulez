@@ -458,6 +458,75 @@ func TestGenerator_Gitignore_SkipsAiRulezFolder(t *testing.T) {
 	assert.NotContains(t, contentStr, ".ai-rulez/", ".ai-rulez/ folder should not be added to .gitignore")
 }
 
+func TestGenerator_Gitignore_IncludesMCPJSON(t *testing.T) {
+	// Setup: with-mcp fixture has MCP servers configured
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "with-mcp")
+	tempDir := t.TempDir()
+	copyFixture(t, fixtureDir, tempDir)
+
+	// Load config and add cursor preset (which emits .mcp.json when MCP servers exist)
+	ctx := context.Background()
+	cfg, err := config.LoadConfig(ctx, tempDir)
+	require.NoError(t, err)
+
+	cfg.Presets = append(cfg.Presets, config.Preset{BuiltIn: "cursor"})
+	enabled := true
+	cfg.Gitignore = &enabled
+
+	// Generate
+	gen := NewGenerator(cfg)
+	require.NoError(t, gen.Generate("default"))
+
+	// Verify .mcp.json was generated and gitignored
+	gitignorePath := filepath.Join(tempDir, ".gitignore")
+	assert.FileExists(t, filepath.Join(tempDir, ".mcp.json"))
+	assert.FileExists(t, gitignorePath)
+
+	content, err := os.ReadFile(gitignorePath)
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	// .mcp.json must appear inside the managed fence
+	assert.Contains(t, contentStr, ".mcp.json", ".gitignore should list .mcp.json")
+	assert.Contains(t, contentStr, "# BEGIN ai-rulez", "managed fence missing")
+	assert.Contains(t, contentStr, "# END ai-rulez", "managed fence missing")
+}
+
+func TestGenerator_Gitignore_NoCrossDuplication(t *testing.T) {
+	// Setup
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
+	tempDir := t.TempDir()
+	copyFixture(t, fixtureDir, tempDir)
+
+	// Pre-populate .gitignore with patterns the generator would otherwise add
+	gitignorePath := filepath.Join(tempDir, ".gitignore")
+	preExisting := "node_modules/\n.claude/\nCLAUDE.md\n"
+	require.NoError(t, os.WriteFile(gitignorePath, []byte(preExisting), 0o644))
+
+	// Load config and enable gitignore
+	ctx := context.Background()
+	cfg, err := config.LoadConfig(ctx, tempDir)
+	require.NoError(t, err)
+	enabled := true
+	cfg.Gitignore = &enabled
+
+	// Generate
+	gen := NewGenerator(cfg)
+	require.NoError(t, gen.Generate("default"))
+
+	// Verify no cross-fence duplication
+	content, err := os.ReadFile(gitignorePath)
+	require.NoError(t, err)
+	contentStr := string(content)
+
+	// Each pre-existing pattern should appear exactly once total
+	assert.Equal(t, 1, strings.Count(contentStr, ".claude/"),
+		".claude/ should not be duplicated across pre-existing entries and managed fence")
+
+	// User's pre-existing entries should still be present
+	assert.Contains(t, contentStr, "node_modules/", "pre-existing entries must be preserved")
+}
+
 // Helper function to copy fixture directory to temp directory
 func copyFixture(t *testing.T, src, dst string) {
 	t.Helper()

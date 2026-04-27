@@ -2,6 +2,7 @@ package commands
 
 import (
 	"fmt"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "4.0.6"
+	Version  = "4.0.7"
 )
 
 var RootCmd = &cobra.Command{
@@ -21,6 +22,14 @@ var RootCmd = &cobra.Command{
 	Short:        "Lightning-fast CLI tool for managing AI assistant rules",
 	Long:         `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules \nacross multiple platforms including Claude, Cursor, Windsurf, GitHub Copilot, \nand more. It provides a unified configuration format with support for remote \nincludes, dynamic generation, and MCP server integration.`,
 	SilenceUsage: true,
+	PersistentPreRun: func(_ *cobra.Command, _ []string) {
+		switch {
+		case viper.GetBool("debug"):
+			logger.SetLevel(slog.LevelDebug)
+		case viper.GetBool("quiet"):
+			logger.SetLevel(slog.LevelError)
+		}
+	},
 }
 
 func Execute() error {

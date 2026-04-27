@@ -169,7 +169,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 				With("path", filepath.Join(domainPath, "commands")).
 				Wrapf(err, "scan domain commands directory")
 		}
-		logger.Info("Scanned domain commands", "domain", domainName, "count", len(domainCommands))
+		logger.Debug("Scanned domain commands", "domain", domainName, "count", len(domainCommands))
 
 		// Track domain files for collision detection
 		for _, file := range domainRules {
@@ -449,14 +449,16 @@ func (s *Scanner) logCollisions(collisionMap map[string][]string, contentType st
 			}
 
 			if hasRoot && len(domains) > 0 {
-				logger.Warn(
+				// Domain-overrides-root is intentional design (see docs/profiles-and-domains).
+				// Surface only when the user opts into debug.
+				logger.Debug(
 					fmt.Sprintf("domain %s file overrides root file", contentType),
 					"filename", filename,
 					"domains", strings.Join(domains, ", "),
 				)
 			} else if len(domains) > 1 {
-				// Multiple domains have the same filename (last one wins)
-				logger.Warn(
+				// Multiple domains sharing a filename (last one wins) is also by design.
+				logger.Debug(
 					fmt.Sprintf("multiple domains have same %s file", contentType),
 					"filename", filename,
 					"domains", strings.Join(domains, ", "),

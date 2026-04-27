@@ -61,8 +61,8 @@ github.com/kaptinlin/go-i18n v0.4.4 h1:3XrUYyLOykcd1K3gm4j7ndrF8YLIYrJjtbKGr/nF2
 github.com/kaptinlin/go-i18n v0.4.4/go.mod h1:mU/7BH4molY5lGZYBwBRKAaiJ70dWRHuqmQ0/pFLGno=
 github.com/kaptinlin/jsonpointer v0.4.19 h1:dEkwEnvn9jJCofrwKGxfKaPNbDOQEf3UEbEumn4xZBg=
 github.com/kaptinlin/jsonpointer v0.4.19/go.mod h1:Mo7+DX8RlQTFqS4dnYJl0izSP4ob+Rl5xO/mGDETgaU=
-github.com/kaptinlin/jsonschema v0.7.10 h1:PisKuKJZyZe1XvEPRmqJOqPa8sjCtosQO1QX2zCAxBk=
-github.com/kaptinlin/jsonschema v0.7.10/go.mod h1:cJ8QIhwq3V/Yyh3sXRNt8w3sM943bNIbwnPTpBTXn3s=
+github.com/kaptinlin/jsonschema v0.7.11 h1:h63Lb3Q4FBSWeWiAGefNPEVPNsOvgn91ATmf25X0yRs=
+github.com/kaptinlin/jsonschema v0.7.11/go.mod h1:cJ8QIhwq3V/Yyh3sXRNt8w3sM943bNIbwnPTpBTXn3s=
 github.com/kaptinlin/messageformat-go v0.6.0 h1:D6jiXFsKW4/JG2CMddv/F6Rev9KVbCRKEzzV5QOAcpc=
 github.com/kaptinlin/messageformat-go v0.6.0/go.mod h1:NKjwS6e9u7DRhAK+vydjDDwJ7UbdHhYjk/yk2WPuZPs=
 github.com/klauspost/cpuid/v2 v2.3.0 h1:S4CRMLnYUhGeDFDqkGriYKdfoFlDnMtqTiI/sFzhA9Y=
