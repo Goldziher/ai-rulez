@@ -306,6 +306,17 @@ Builtins have the **lowest** priority. Content is merged in this order:
 
 If a local domain has the same name as a builtin, the local domain is used and the builtin is skipped entirely.
 
+### `defaults`
+
+Top-level defaults that propagate into generated outputs when individual content files do not override them. Currently exposes a single field:
+
+```toml
+[defaults]
+effort = "medium"  # low | medium | high | xhigh | max | inherit
+```
+
+**`defaults.effort`** sets the reasoning effort emitted into every generated Claude Code subagent file (`.claude/agents/*.md`) that does not declare its own `effort` in frontmatter. Per-agent overrides win; if neither the agent nor `defaults.effort` is set, the field is omitted (Claude Code falls back to the session-level default). Other presets (Cursor, Windsurf, Copilot, Gemini, etc.) do not currently support this field — it is silently skipped for them.
+
 ### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
@@ -574,6 +585,21 @@ priority: critical
 targets:
   - "CLAUDE.md"
   - ".cursor/rules/*"
+---
+```
+
+**`effort`** (optional, string — agents only)
+- Values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`
+- Sets the reasoning effort for a Claude Code subagent in its generated `.claude/agents/<name>.md` frontmatter
+- Available levels depend on the model
+- Falls back to `defaults.effort` in `config.yaml` when not set, then to the session-level default
+- Other presets (Cursor, Windsurf, Copilot, Gemini, etc.) do not currently support this field — it is omitted from their outputs
+
+```yaml
+---
+name: security-reviewer
+description: Reviews code for security regressions
+effort: high
 ---
 ```
 

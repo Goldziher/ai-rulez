@@ -430,3 +430,26 @@ func TestCursorPresetGenerator_renderCommandFile(t *testing.T) {
 		t.Error("Expected command content in output")
 	}
 }
+
+func TestCursorPresetGenerator_buildCursorAgentFrontmatter_DoesNotEmitEffort(t *testing.T) {
+	g := &CursorPresetGenerator{}
+
+	agent := config.ContentFile{
+		Name: "reviewer",
+		Metadata: &config.Metadata{
+			Effort: "high",
+			Extra: map[string]string{
+				"description": "Reviews code",
+			},
+		},
+	}
+
+	fm := g.buildCursorAgentFrontmatter(agent)
+
+	if _, ok := fm["effort"]; ok {
+		t.Errorf("effort field leaked into Cursor agent frontmatter; cursor does not natively support reasoning effort yet")
+	}
+	if fm["description"] != "Reviews code" {
+		t.Errorf("expected description to be passed through; got %v", fm["description"])
+	}
+}

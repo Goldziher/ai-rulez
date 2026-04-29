@@ -190,6 +190,18 @@
       },
       "additionalProperties": false
     },
+    "defaults": {
+      "type": "object",
+      "description": "Top-level defaults that propagate into generated outputs when individual content files do not override them",
+      "properties": {
+        "effort": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+          "description": "Default reasoning effort for Claude Code subagents that do not declare their own effort in frontmatter. Available levels depend on the model."
+        }
+      },
+      "additionalProperties": false
+    },
     "compression": {
       "type": "object",
       "description": "DEPRECATED: Compression is now a no-op and will be removed in a future version. Condense content at the source level instead.",
