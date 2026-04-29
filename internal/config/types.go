@@ -18,6 +18,7 @@ type Config struct {
 	Includes        []IncludeConfig        `yaml:"includes,omitempty" json:"includes,omitempty" toml:"includes,omitempty"`
 	InstalledSkills []InstalledSkillConfig `yaml:"installed_skills,omitempty" json:"installed_skills,omitempty" toml:"installed_skills,omitempty"` //nolint:tagliatelle
 	Header          *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
+	Defaults        *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
 	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	Plugins         []PluginConfig         `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
@@ -48,6 +49,15 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 		return "detailed"
 	}
 	return h.Style
+}
+
+// DefaultsConfig represents top-level defaults that propagate into generated outputs
+// when individual content files do not override them.
+type DefaultsConfig struct {
+	// Effort is the default reasoning effort for Claude Code subagents that do not
+	// declare their own effort in frontmatter. Accepted values: low, medium, high,
+	// xhigh, max, inherit. Empty string means "not set".
+	Effort string `yaml:"effort,omitempty" json:"effort,omitempty" toml:"effort,omitempty"`
 }
 
 // BuiltinsConfig represents the builtins field which can be:
@@ -338,6 +348,7 @@ type Metadata struct {
 	Usage    string            `yaml:"usage,omitempty" json:"usage,omitempty"`
 	Shortcut string            `yaml:"shortcut,omitempty" json:"shortcut,omitempty"`
 	Category string            `yaml:"category,omitempty" json:"category,omitempty"`
+	Effort   string            `yaml:"effort,omitempty" json:"effort,omitempty"`
 	Extra    map[string]string `yaml:",inline" json:",inline"`
 }
 

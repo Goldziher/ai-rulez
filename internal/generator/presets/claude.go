@@ -277,9 +277,22 @@ func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, con
 	return outputs, nil
 }
 
-func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := make(map[string]interface{})
 	frontmatter["name"] = agent.Name
+
+	// Resolve effort with per-agent override → defaults fallback → omit.
+	// Done before the metadata-nil short-circuit so a defaults-only effort still
+	// applies to agents that have no frontmatter at all.
+	effort := ""
+	if agent.Metadata != nil && agent.Metadata.Effort != "" {
+		effort = agent.Metadata.Effort
+	} else if cfg != nil && cfg.Defaults != nil && cfg.Defaults.Effort != "" {
+		effort = cfg.Defaults.Effort
+	}
+	if effort != "" {
+		frontmatter["effort"] = effort
+	}
 
 	if agent.Metadata == nil {
 		return frontmatter
@@ -381,7 +394,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 func (g *ClaudePresetGenerator) renderAgentContent(agent config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildAgentFrontmatter(agent)
+	frontmatter := g.buildAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {

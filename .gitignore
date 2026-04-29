@@ -164,22 +164,11 @@ testing/**/.mcp.json
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/
-.claude/
 .cline/
-.clinerules/
 .codex/
-.continue/
-.cursor/
-.gemini/
 .github/agents/
 .github/commands/
-.github/copilot-instructions.md
 .github/skills/
 .junie/
-.mcp.json
 .opencode/
-.windsurf/
-AGENTS.md
-CLAUDE.md
-GEMINI.md
 # END ai-rulez

@@ -228,3 +228,26 @@ func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 		}
 	}
 }
+
+func TestAntigravityPresetGenerator_buildAgentFrontmatter_DoesNotEmitEffort(t *testing.T) {
+	g := &AntigravityPresetGenerator{}
+
+	agent := config.ContentFile{
+		Name: "reviewer",
+		Metadata: &config.Metadata{
+			Effort: "high",
+			Extra: map[string]string{
+				"description": "Reviews code",
+			},
+		},
+	}
+
+	fm := g.buildAgentFrontmatter(agent)
+
+	if _, ok := fm["effort"]; ok {
+		t.Errorf("effort field leaked into Antigravity agent frontmatter; Antigravity does not natively support reasoning effort")
+	}
+	if fm["description"] != "Reviews code" {
+		t.Errorf("expected description to be passed through; got %v", fm["description"])
+	}
+}

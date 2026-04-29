@@ -459,6 +459,42 @@ Content`
 		assert.Equal(t, "low", metadata.Priority)
 		assert.Equal(t, "Content", actualContent)
 	})
+
+	t.Run("parses effort via direct unmarshal", func(t *testing.T) {
+		content := `---
+name: security-reviewer
+description: Reviews security concerns
+effort: high
+---
+
+Body`
+
+		metadata, body := parseFrontmatter(content)
+		require.NotNil(t, metadata)
+		assert.Equal(t, "high", metadata.Effort)
+		assert.NotContains(t, metadata.Extra, "effort", "effort should not also leak into Extra")
+		assert.Equal(t, "Body", body)
+	})
+
+	t.Run("parses effort via raw-map fallback when nested YAML present", func(t *testing.T) {
+		// hooks: nested mapping forces the raw-map fallback path
+		content := `---
+name: docs-writer
+description: Writes documentation
+effort: low
+hooks:
+  PostToolUse:
+    - command: echo done
+---
+
+Body`
+
+		metadata, body := parseFrontmatter(content)
+		require.NotNil(t, metadata)
+		assert.Equal(t, "low", metadata.Effort)
+		assert.NotContains(t, metadata.Extra, "effort", "effort should not also leak into Extra in fallback")
+		assert.Equal(t, "Body", body)
+	})
 }
 
 func TestValidate(t *testing.T) {
