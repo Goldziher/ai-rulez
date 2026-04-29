@@ -114,6 +114,38 @@ description: Brief description
 ---
 ```
 
+### Agent-only fields
+
+Agent files under `.ai-rulez/agents/` accept additional frontmatter that maps to
+Claude Code's subagent spec. Each is optional and only emitted into
+`.claude/agents/*.md` (other presets skip fields they do not support):
+
+```yaml
+---
+name: security-reviewer
+description: Reviews code for security regressions
+model: opus              # haiku | sonnet | opus | inherit
+effort: high             # low | medium | high | xhigh | max | inherit
+permission_mode: default
+tools:                   # Restrict tool access
+  - Read
+  - Grep
+  - Glob
+---
+```
+
+`effort` controls reasoning depth for the subagent (Claude 4.6+ models). Available
+levels depend on the model. Set a project-wide default in `config.toml` so
+agents that omit the field still inherit it:
+
+```toml
+[defaults]
+effort = "medium"
+```
+
+Resolution order: per-agent `effort` → `defaults.effort` → omit (Claude Code
+falls back to the session-level default).
+
 ## Domains and Profiles
 
 Domains group content for different teams or concerns. Profiles select which domains are active.

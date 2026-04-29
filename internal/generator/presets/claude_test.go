@@ -686,6 +686,78 @@ func TestClaudePresetGenerator_renderSettingsJSON(t *testing.T) {
 	assert.Len(t, servers, 2)
 }
 
+func TestClaudePresetGenerator_buildAgentFrontmatter_Effort(t *testing.T) {
+	g := &ClaudePresetGenerator{}
+
+	tests := []struct {
+		name          string
+		agent         config.ContentFile
+		cfg           *config.Config
+		wantEffort    interface{}
+		wantHasEffort bool
+	}{
+		{
+			name: "agent effort wins over default",
+			agent: config.ContentFile{
+				Name:     "reviewer",
+				Metadata: &config.Metadata{Effort: "high"},
+			},
+			cfg:           &config.Config{Defaults: &config.DefaultsConfig{Effort: "medium"}},
+			wantEffort:    "high",
+			wantHasEffort: true,
+		},
+		{
+			name: "default fills in when agent has no effort",
+			agent: config.ContentFile{
+				Name:     "noop",
+				Metadata: &config.Metadata{},
+			},
+			cfg:           &config.Config{Defaults: &config.DefaultsConfig{Effort: "medium"}},
+			wantEffort:    "medium",
+			wantHasEffort: true,
+		},
+		{
+			name: "default applies when metadata is nil",
+			agent: config.ContentFile{
+				Name: "bare",
+			},
+			cfg:           &config.Config{Defaults: &config.DefaultsConfig{Effort: "low"}},
+			wantEffort:    "low",
+			wantHasEffort: true,
+		},
+		{
+			name: "no effort emitted when neither set",
+			agent: config.ContentFile{
+				Name:     "plain",
+				Metadata: &config.Metadata{},
+			},
+			cfg:           &config.Config{},
+			wantHasEffort: false,
+		},
+		{
+			name: "agent effort respected when no defaults block at all",
+			agent: config.ContentFile{
+				Name:     "solo",
+				Metadata: &config.Metadata{Effort: "max"},
+			},
+			cfg:           &config.Config{},
+			wantEffort:    "max",
+			wantHasEffort: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm := g.buildAgentFrontmatter(tt.agent, tt.cfg)
+			got, ok := fm["effort"]
+			assert.Equal(t, tt.wantHasEffort, ok, "effort presence mismatch")
+			if tt.wantHasEffort {
+				assert.Equal(t, tt.wantEffort, got)
+			}
+		})
+	}
+}
+
 func TestClaudePresetGenerator_renderPluginsJSON(t *testing.T) {
 	g := &ClaudePresetGenerator{}
 

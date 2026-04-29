@@ -119,6 +119,22 @@ source = "https://github.com/company/ai-rules.git"
 merge_strategy = "local-override"
 ```
 
+**Per-agent reasoning effort** — Tune how hard Claude Code subagents think:
+```yaml
+# .ai-rulez/agents/security-reviewer.md
+---
+name: security-reviewer
+description: Reviews code for security regressions
+effort: high
+---
+```
+```toml
+# .ai-rulez/config.yaml or config.toml — sets the default for agents that don't override
+[defaults]
+effort = "medium"
+```
+Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. Available levels depend on the model. Other presets ignore the field until they ship native support.
+
 **Installed Skills** — Pull reusable skills from external repos:
 ```toml
 [[installed_skills]]
