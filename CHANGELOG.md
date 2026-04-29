@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.0] - 2026-04-29
+
+### Added
+- **Reasoning effort on Claude Code subagents**: agent frontmatter now accepts an `effort` field (`low` | `medium` | `high` | `xhigh` | `max` | `inherit`) that ai-rulez emits into `.claude/agents/<name>.md`. Maps directly to Claude Code's adaptive thinking spec — available levels depend on the model.
+- **`defaults.effort` in `config.yaml` / `config.toml`**: top-level project default that propagates to every generated subagent which doesn't declare its own `effort`. Resolution order: per-agent → `defaults.effort` → omit.
+- **MCP `update_config` `default_effort` parameter**: lets MCP clients set or clear the project-wide default. `read_config` now always returns `default_effort` (possibly empty) so read-modify-write loops have a stable contract.
+- **Validation** for the new value set across config load, MCP `update_config`, and `ai-rulez validate` — invalid values fail with an actionable message naming the field and the offending value.
+
+### Notes
+- Other presets (Cursor, Windsurf, Copilot, Gemini, Antigravity, etc.) silently skip the `effort` field — they have no native equivalent yet. No-leak tests lock that in.
+- Claude Code's session-level effort remains a runtime setting (`/effort` slash command) — there is no static surface to render it into, so this release covers subagents only.
+
 ## [4.0.8] - 2026-04-27
 
 ### Fixed
