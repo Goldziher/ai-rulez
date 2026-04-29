@@ -784,6 +784,8 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 			m.Shortcut = fmt.Sprintf("%v", v)
 		case "category":
 			m.Category = fmt.Sprintf("%v", v)
+		case "effort":
+			m.Effort = fmt.Sprintf("%v", v)
 		default:
 			m.Extra[k] = fmt.Sprintf("%v", v)
 		}

@@ -33,9 +33,83 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateDefaults(); err != nil {
+		return err
+	}
+
+	if err := c.validateAgentEffort(); err != nil {
+		return err
+	}
+
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
 
+	return nil
+}
+
+// validEffortValues lists the reasoning-effort values accepted by Claude Code
+// subagent frontmatter. Lowercase only. Empty string means "not set" and is
+// always valid; this list governs explicit values only.
+var validEffortValues = []string{"low", "medium", "high", "xhigh", "max", "inherit"}
+
+// validateEffort returns nil for the empty string or any value in validEffortValues.
+// Returns an oops-wrapped error otherwise. The fieldPath is embedded in the error
+// for actionable messages (e.g., "defaults.effort", "agent[my-agent].effort").
+func validateEffort(value, fieldPath string) error {
+	if value == "" {
+		return nil
+	}
+	for _, v := range validEffortValues {
+		if value == v {
+			return nil
+		}
+	}
+	return oops.
+		With("field", fieldPath).
+		With("actual_value", value).
+		With("valid_values", validEffortValues).
+		Hint("Use one of: low, medium, high, xhigh, max, inherit (lowercase). Available levels depend on the model.").
+		Errorf("invalid effort value %q at %s", value, fieldPath)
+}
+
+func (c *Config) validateDefaults() error {
+	if c.Defaults == nil {
+		return nil
+	}
+	return validateEffort(c.Defaults.Effort, "defaults.effort")
+}
+
+func (c *Config) validateAgentEffort() error {
+	if c.Content == nil {
+		return nil
+	}
+
+	if err := validateAgentEffortSlice(c.Content.Agents, "root"); err != nil {
+		return err
+	}
+
+	for domainName, domain := range c.Content.Domains {
+		if domain == nil {
+			continue
+		}
+		if err := validateAgentEffortSlice(domain.Agents, "domain "+domainName); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateAgentEffortSlice(agents []ContentFile, scope string) error {
+	for _, agent := range agents {
+		if agent.Metadata == nil {
+			continue
+		}
+		fieldPath := fmt.Sprintf("%s agent[%s].effort", scope, agent.Name)
+		if err := validateEffort(agent.Metadata.Effort, fieldPath); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

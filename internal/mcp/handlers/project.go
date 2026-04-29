@@ -87,7 +87,39 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		"gitignore":   cfg.ShouldUpdateGitignore(),
 	}
 
+	// Always emit default_effort (possibly "") so MCP clients running read-modify-write
+	// loops have a stable contract — absent key vs empty value is otherwise ambiguous.
+	result["default_effort"] = configDefaultEffort(cfg)
+
 	return ToolSuccess(result)
+}
+
+// configDefaultEffort returns the resolved defaults.effort value, or "" when unset.
+func configDefaultEffort(cfg *config.Config) string {
+	if cfg == nil || cfg.Defaults == nil {
+		return ""
+	}
+	return cfg.Defaults.Effort
+}
+
+// applyDefaultEffortUpdate writes the requested effort onto cfg.Defaults. Passing
+// an empty string clears Effort only; the surrounding Defaults block is dropped
+// only when every field on it is zero, so future fields aren't silently wiped.
+func applyDefaultEffortUpdate(cfg *config.Config, effort string) {
+	if effort == "" {
+		if cfg.Defaults == nil {
+			return
+		}
+		cfg.Defaults.Effort = ""
+		if *cfg.Defaults == (config.DefaultsConfig{}) {
+			cfg.Defaults = nil
+		}
+		return
+	}
+	if cfg.Defaults == nil {
+		cfg.Defaults = &config.DefaultsConfig{}
+	}
+	cfg.Defaults.Effort = effort
 }
 
 func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
@@ -138,6 +170,16 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		val := request.GetBool("gitignore", true)
 		cfg.Gitignore = &val
 		updated = append(updated, "gitignore")
+	}
+
+	if _, ok := args["default_effort"]; ok {
+		applyDefaultEffortUpdate(cfg, request.GetString("default_effort", ""))
+		updated = append(updated, "default_effort")
+	}
+
+	// Validate after applying changes so invalid input is rejected before write.
+	if validateErr := cfg.Validate(); validateErr != nil {
+		return ToolError(fmt.Errorf("validation failed after update: %w", validateErr))
 	}
 
 	if len(updated) == 0 {

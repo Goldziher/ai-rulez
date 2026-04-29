@@ -528,6 +528,7 @@ func (s *Server) registerCRUDTools() {
 				String("description", "Project description", false).
 				StringArray("builtins", "List of builtin names to enable (replaces current builtins setting)", false).
 				Boolean("gitignore", "Whether to update .gitignore when generating outputs", false).
+				String("default_effort", "Default reasoning effort for Claude Code subagents (low, medium, high, xhigh, max, inherit). Empty string clears the default.", false).
 				WorkingDirectory(),
 		),
 		handlers.UpdateConfigHandler,
