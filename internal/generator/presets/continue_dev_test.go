@@ -351,3 +351,24 @@ func TestContinueDevPresetGenerator_buildContinueDevAgentFrontmatter(t *testing.
 		})
 	}
 }
+
+func TestContinueDevPresetGenerator_AgentFrontmatter_DoesNotEmitEffort(t *testing.T) {
+	// Continue.dev reads reasoning settings from .continue/config.yaml model
+	// blocks (reasoning, reasoningBudgetTokens), not from agent frontmatter.
+	// We deliberately don't emit them: the file is user-managed and partial
+	// generation would clobber unrelated settings.
+	g := &ContinueDevPresetGenerator{}
+	fm := g.buildContinueDevAgentFrontmatter(config.ContentFile{
+		Name:     "reviewer",
+		Metadata: &config.Metadata{Effort: "high"},
+	})
+	if _, ok := fm["effort"]; ok {
+		t.Errorf("effort should not appear in continue.dev agent frontmatter")
+	}
+	if _, ok := fm["reasoning"]; ok {
+		t.Errorf("reasoning should not appear in continue.dev agent frontmatter")
+	}
+	if _, ok := fm["reasoning_effort"]; ok {
+		t.Errorf("reasoning_effort should not appear in continue.dev agent frontmatter")
+	}
+}

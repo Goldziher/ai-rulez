@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -108,6 +109,21 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
 			Content: agentContent,
+		})
+	}
+
+	// Emit .amp/settings.json with amp.anthropic.effort when a global effort is
+	// resolved. Amp reads this from workspace settings; subagent frontmatter does
+	// not currently accept an effort field.
+	if effort := MapEffort("amp", ResolveGlobalEffort("amp", cfg)); effort != "" {
+		settings := map[string]string{"amp.anthropic.effort": effort}
+		jsonBytes, err := json.MarshalIndent(settings, "", "  ")
+		if err != nil {
+			return nil, fmt.Errorf("marshal amp settings: %w", err)
+		}
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, ".amp", "settings.json"),
+			Content: string(jsonBytes) + "\n",
 		})
 	}
 

@@ -12,8 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const continueDevPresetName = "continue-dev"
+
 func init() {
-	config.RegisterPreset("continue-dev", &ContinueDevPresetGenerator{})
+	config.RegisterPreset(continueDevPresetName, &ContinueDevPresetGenerator{})
 }
 
 // ContinueDevPresetGenerator generates Continue.dev preset files
@@ -37,7 +39,7 @@ func generateContinueDevPresetHeader(cfg *config.Config, outputPath string, rule
 }
 
 func (g *ContinueDevPresetGenerator) GetName() string {
-	return "continue-dev"
+	return continueDevPresetName
 }
 
 func (g *ContinueDevPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -276,7 +278,7 @@ func (g *ContinueDevPresetGenerator) shouldIncludeCommand(command config.Content
 	// If targets are specified, only include if continue-dev is in targets
 	if len(command.Metadata.Targets) > 0 {
 		for _, target := range command.Metadata.Targets {
-			if target == "continue-dev" {
+			if target == continueDevPresetName {
 				return true
 			}
 		}
