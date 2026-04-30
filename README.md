@@ -165,16 +165,90 @@ args = ["-y", "ai-rulez@latest", "mcp"]
 
 ## Installation
 
-```bash
-# No install required
-npx ai-rulez@latest <command>
+No install needed — `npx ai-rulez@latest <command>` works out of the box. Pick a permanent option below:
 
-# Or install globally
-brew install goldziher/tap/ai-rulez  # macOS
-npm install -g ai-rulez              # npm
-pip install ai-rulez                 # pip
-go install github.com/Goldziher/ai-rulez/cmd@latest  # Go
+<details>
+<summary><strong>Homebrew (macOS / Linux)</strong></summary>
+
+```bash
+brew install goldziher/tap/ai-rulez
 ```
+</details>
+
+<details>
+<summary><strong>npx (no install)</strong></summary>
+
+```bash
+npx ai-rulez@latest <command>
+```
+</details>
+
+<details>
+<summary><strong>npm (global)</strong></summary>
+
+```bash
+npm install -g ai-rulez
+```
+</details>
+
+<details>
+<summary><strong>uvx (no install)</strong></summary>
+
+```bash
+uvx ai-rulez <command>
+```
+</details>
+
+<details>
+<summary><strong>uv tool</strong></summary>
+
+```bash
+uv tool install ai-rulez
+```
+</details>
+
+<details>
+<summary><strong>pip / pipx</strong></summary>
+
+```bash
+pip install ai-rulez
+# or, isolated:
+pipx install ai-rulez
+```
+</details>
+
+<details>
+<summary><strong>pre-commit hook</strong></summary>
+
+Add to `.pre-commit-config.yaml`:
+
+```yaml
+repos:
+  - repo: https://github.com/Goldziher/ai-rulez
+    rev: v4.1.3
+    hooks:
+      - id: ai-rulez-recursive   # generate outputs across the repo
+      - id: ai-rulez-validate    # dry-run validation
+```
+
+Available hook ids: `ai-rulez-validate`, `ai-rulez-generate`, `ai-rulez-recursive`, `ai-rulez-enforce`, `ai-rulez-enforce-fix`. Triggers on changes under `.ai-rulez/`.
+</details>
+
+<details>
+<summary><strong>lefthook</strong></summary>
+
+Add to `lefthook.yml`:
+
+```yaml
+pre-commit:
+  commands:
+    ai-rulez:
+      glob: ".ai-rulez/**"
+      run: ai-rulez generate --recursive
+```
+
+Or run `ai-rulez setup-hooks` in a repo with an existing `lefthook.yml` to wire it in automatically.
+</details>
 
 ## Documentation
 

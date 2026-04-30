@@ -12,6 +12,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -38,6 +39,63 @@ const (
 // SkipFetch when true causes git sources to use cached content without fetching.
 // Set from the --no-fetch CLI flag.
 var SkipFetch bool
+
+// fetchLocks serializes Fetch calls per cache directory. Multiple configs
+// processed in parallel often reference the same shared include — without
+// this, concurrent goroutines would race on RemoveAll/MkdirAll/extract into
+// the same cache directory and corrupt it. Keyed by absolute cacheDir.
+var (
+	fetchLocksMu sync.Mutex
+	fetchLocks   = map[string]*sync.Mutex{}
+)
+
+// lockForFetch returns a mutex unique to the given cache directory.
+func lockForFetch(cacheDir string) *sync.Mutex {
+	fetchLocksMu.Lock()
+	defer fetchLocksMu.Unlock()
+	if m, ok := fetchLocks[cacheDir]; ok {
+		return m
+	}
+	m := &sync.Mutex{}
+	fetchLocks[cacheDir] = m
+	return m
+}
+
+// scannedTrees memoizes successful ContentTree scans for the lifetime of
+// the process, keyed by absolute aiRulezDir path. Recursive multi-config
+// generation often references the same shared include from many configs;
+// without this, ScanContentTree would walk the same cached `.ai-rulez/`
+// tree once per consumer (e.g. 18 configs × 5 includes = 90 scans).
+//
+// The cached tree is the unfiltered scan; per-consumer include filters are
+// applied on each call via [GitSource.filterContent], which returns a new
+// tree without mutating the input.
+//
+// Entries are invalidated when [GitSource.Fetch] refreshes the cache
+// directory (the slow path deletes the entry before re-scanning).
+var (
+	scannedTreesMu sync.RWMutex
+	scannedTrees   = map[string]*config.ContentTree{}
+)
+
+func cachedScan(aiRulezDir string) *config.ContentTree {
+	scannedTreesMu.RLock()
+	tree := scannedTrees[aiRulezDir]
+	scannedTreesMu.RUnlock()
+	return tree
+}
+
+func storeScan(aiRulezDir string, tree *config.ContentTree) {
+	scannedTreesMu.Lock()
+	scannedTrees[aiRulezDir] = tree
+	scannedTreesMu.Unlock()
+}
+
+func invalidateScan(aiRulezDir string) {
+	scannedTreesMu.Lock()
+	delete(scannedTrees, aiRulezDir)
+	scannedTreesMu.Unlock()
+}
 
 // getIncludeCacheDir returns the cache directory for a given include source.
 // Uses ~/.cache/ai-rulez/ (XDG convention) for consistent cross-platform behavior.
@@ -127,11 +185,16 @@ func (s *GitSource) writeFetchMarker() {
 	}
 }
 
-// Fetch downloads content from git repository and returns the content tree
+// Fetch downloads content from git repository and returns the content tree.
+//
+// Safe for concurrent invocation. The fast path (cache fresh, or
+// --no-fetch) is lock-free; only refresh of a stale cache is serialized
+// by a per-cacheDir mutex with double-checked locking, so parallel callers
+// targeting the same shared include never race on RemoveAll/extract.
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "", "is_ssh", s.isSSH)
 
-	// When --no-fetch is set, only use existing cache
+	// When --no-fetch is set, only use existing cache. Lock-free.
 	if SkipFetch {
 		if s.findAIRulezDir() == "" {
 			return nil, oops.
@@ -143,13 +206,30 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 		return s.scanCachedContent()
 	}
 
-	// Check cache freshness — skip fetch if cache is still within TTL
+	// Fast path: cache is fresh, no lock needed.
 	if s.isCacheFresh() {
 		logger.Debug("Cache is fresh, skipping fetch", "name", s.name, "cache_dir", s.cacheDir)
 		return s.scanCachedContent()
 	}
 
-	// Clear stale cache before downloading fresh content
+	// Slow path: cache is stale or missing. Serialize the refresh per
+	// cache directory so concurrent callers share one download.
+	mu := lockForFetch(s.cacheDir)
+	mu.Lock()
+	defer mu.Unlock()
+
+	// Re-check after acquiring the lock — another goroutine may have
+	// refreshed the cache while we were waiting.
+	if s.isCacheFresh() {
+		logger.Debug("Cache became fresh while waiting for lock", "name", s.name)
+		return s.scanCachedContent()
+	}
+
+	// Clear stale cache before downloading fresh content. Also drop any
+	// memoized scan since the on-disk tree is about to change.
+	if dir := s.findAIRulezDir(); dir != "" {
+		invalidateScan(dir)
+	}
 	if err := os.RemoveAll(s.cacheDir); err != nil {
 		logger.Warn("Failed to clear include cache", "cache_dir", s.cacheDir, "error", err)
 	}
@@ -202,16 +282,28 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 
 	logger.Debug("Found .ai-rulez directory", "path", aiRulezDir)
 
-	// Scan the .ai-rulez directory structure using the config loader's scanner which keeps
-	// root content and domain content separate (avoids duplication in generated output)
-	contentTree, err := config.ScanContentTree(aiRulezDir)
-	if err != nil {
-		return nil, oops.
-			With("repo", s.repoURL).
-			Wrapf(err, "failed to scan content tree")
+	// Process-level memoization: scanning the same cached tree from many
+	// consumer configs is wasted work — return the previously scanned
+	// tree if we have one. Filtering still runs per consumer below.
+	contentTree := cachedScan(aiRulezDir)
+	if contentTree == nil {
+		// Scan the .ai-rulez directory structure using the config loader's scanner which keeps
+		// root content and domain content separate (avoids duplication in generated output)
+		scanned, err := config.ScanContentTree(aiRulezDir)
+		if err != nil {
+			return nil, oops.
+				With("repo", s.repoURL).
+				Wrapf(err, "failed to scan content tree")
+		}
+		storeScan(aiRulezDir, scanned)
+		contentTree = scanned
+	} else {
+		logger.Debug("Reusing cached content tree scan", "path", aiRulezDir)
 	}
 
-	// Filter content based on include list if specified
+	// Filter content based on include list if specified.
+	// filterContent returns a new tree, so the cached unfiltered tree is
+	// never mutated by per-consumer filtering.
 	if len(s.include) > 0 {
 		contentTree = s.filterContent(contentTree)
 	}
