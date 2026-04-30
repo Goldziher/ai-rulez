@@ -106,7 +106,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent := g.renderAgentTOML(agent)
+		agentContent := g.renderAgentTOML(agent, cfg)
 
 		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "agents", agentID+".toml"),
@@ -134,8 +134,9 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		})
 	}
 
-	// Emit .codex/config.toml with model_reasoning_effort when a global effort
-	// is resolved. Codex applies this at the model level, not per-agent.
+	// Emit .codex/config.toml with the global model_reasoning_effort as a
+	// session-level default. Per-agent overrides live in each agent's TOML
+	// file (see renderAgentTOML) and take precedence when an agent runs.
 	if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {
 		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "config.toml"),
@@ -256,7 +257,7 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 }
 
 // renderAgentTOML renders an agent file in TOML format for Codex
-func (g *CodexPresetGenerator) renderAgentTOML(agent config.ContentFile) string {
+func (g *CodexPresetGenerator) renderAgentTOML(agent config.ContentFile, cfg *config.Config) string {
 	var builder strings.Builder
 
 	builder.WriteString("name = ")
@@ -272,6 +273,12 @@ func (g *CodexPresetGenerator) renderAgentTOML(agent config.ContentFile) string 
 	builder.WriteString("description = ")
 	builder.WriteString(quoteTOMLString(description))
 	builder.WriteString("\n")
+
+	if effort := MapEffort(codexPresetName, ResolveAgentEffort(codexPresetName, agent, cfg)); effort != "" {
+		builder.WriteString("model_reasoning_effort = ")
+		builder.WriteString(quoteTOMLString(effort))
+		builder.WriteString("\n")
+	}
 
 	builder.WriteString("developer_instructions = ")
 	builder.WriteString(quoteTOMLMultiline(agent.Content))

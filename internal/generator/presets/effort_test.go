@@ -110,6 +110,14 @@ func TestMapEffort(t *testing.T) {
 		{"antigravity", "max", "high"},
 		{"antigravity", "low", "low"},
 
+		// opencode: caps at high
+		{"opencode", "low", "low"},
+		{"opencode", "medium", "medium"},
+		{"opencode", "high", "high"},
+		{"opencode", "xhigh", "high"},
+		{"opencode", "max", "high"},
+		{"opencode", "inherit", ""},
+
 		// continue-dev: caps at high
 		{"continue-dev", "xhigh", "high"},
 		{"continue-dev", "max", "high"},

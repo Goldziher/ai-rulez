@@ -12,8 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const opencodePresetName = "opencode"
+
 func init() {
-	config.RegisterPreset("opencode", &OpencodePresetGenerator{})
+	config.RegisterPreset(opencodePresetName, &OpencodePresetGenerator{})
 }
 
 // OpencodePresetGenerator generates Opencode preset files (AGENTS.md)
@@ -37,7 +39,7 @@ func generateOpenCodePresetHeader(cfg *config.Config, outputPath string, ruleCou
 }
 
 func (g *OpencodePresetGenerator) GetName() string {
-	return "opencode"
+	return opencodePresetName
 }
 
 func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -99,7 +101,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderOpencodeAgentFile(agent)
+		agentContent, err := g.renderOpencodeAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -195,10 +197,10 @@ func (g *OpencodePresetGenerator) renderSkillFile(skill config.ContentFile) stri
 }
 
 // renderOpencodeAgentFile renders an agent file with YAML frontmatter for OpenCode
-func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFile) (string, error) {
+func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildOpencodeAgentFrontmatter(agent)
+	frontmatter := g.buildOpencodeAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -214,9 +216,15 @@ func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFi
 }
 
 // buildOpencodeAgentFrontmatter builds frontmatter for an OpenCode agent file
-func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		"name": agent.Name,
+	}
+
+	// Resolve effort before the metadata-nil short-circuit so a defaults-only
+	// effort still applies to agents with no frontmatter.
+	if effort := MapEffort(opencodePresetName, ResolveAgentEffort(opencodePresetName, agent, cfg)); effort != "" {
+		frontmatter["reasoningEffort"] = effort
 	}
 
 	if agent.Metadata == nil {
