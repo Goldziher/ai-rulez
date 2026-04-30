@@ -107,3 +107,74 @@ func TestOpencodePresetGenerator_GetOutputPaths(t *testing.T) {
 		}
 	}
 }
+
+func TestOpencodePresetGenerator_AgentEmitsPerAgentReasoningEffort(t *testing.T) {
+	g := &OpencodePresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Defaults: &config.DefaultsConfig{Effort: "medium"},
+	}
+
+	agent := config.ContentFile{
+		Name:    "deep-thinker",
+		Content: "Think hard.",
+		Metadata: &config.Metadata{
+			Effort: "high",
+			Extra:  map[string]string{"description": "Long-horizon reasoning"},
+		},
+	}
+
+	result, err := g.renderOpencodeAgentFile(agent, cfg)
+	if err != nil {
+		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
+	}
+	if !strings.Contains(result, "reasoningEffort: high") {
+		t.Errorf("expected reasoningEffort: high in frontmatter, got:\n%s", result)
+	}
+}
+
+func TestOpencodePresetGenerator_AgentInheritsGlobalReasoningEffort(t *testing.T) {
+	g := &OpencodePresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Defaults: &config.DefaultsConfig{Effort: "medium"},
+	}
+
+	agent := config.ContentFile{Name: "default-agent", Content: "default"}
+	result, err := g.renderOpencodeAgentFile(agent, cfg)
+	if err != nil {
+		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
+	}
+	if !strings.Contains(result, "reasoningEffort: medium") {
+		t.Errorf("expected reasoningEffort: medium in frontmatter, got:\n%s", result)
+	}
+}
+
+func TestOpencodePresetGenerator_AgentOmitsReasoningEffortWhenNoneResolved(t *testing.T) {
+	g := &OpencodePresetGenerator{}
+	agent := config.ContentFile{Name: "plain", Content: "no effort"}
+	result, err := g.renderOpencodeAgentFile(agent, &config.Config{})
+	if err != nil {
+		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
+	}
+	if strings.Contains(result, "reasoningEffort") {
+		t.Errorf("did not expect reasoningEffort in frontmatter, got:\n%s", result)
+	}
+}
+
+func TestOpencodePresetGenerator_AgentEffortMaxMapsToHigh(t *testing.T) {
+	g := &OpencodePresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Defaults: &config.DefaultsConfig{Effort: "max"},
+	}
+
+	agent := config.ContentFile{Name: "tier-test", Content: "x"}
+	result, err := g.renderOpencodeAgentFile(agent, cfg)
+	if err != nil {
+		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
+	}
+	if !strings.Contains(result, "reasoningEffort: high") {
+		t.Errorf("expected max → high, got:\n%s", result)
+	}
+}

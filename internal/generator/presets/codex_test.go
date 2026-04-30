@@ -127,7 +127,7 @@ func TestCodexPresetGenerator_renderAgentTOML(t *testing.T) {
 		},
 	}
 
-	result := g.renderAgentTOML(agent)
+	result := g.renderAgentTOML(agent, &config.Config{})
 
 	if !strings.Contains(result, `name = "pr-reviewer"`) {
 		t.Error("Expected name field")
@@ -296,6 +296,50 @@ func TestCodexPresetGenerator_OmitsConfigTOMLWhenNoEffort(t *testing.T) {
 			t.Fatalf("config.toml should not be emitted when no effort is set; got %q", o.Content)
 		}
 	}
+}
+
+func TestCodexPresetGenerator_AgentTOMLEmitsPerAgentEffort(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Defaults: &config.DefaultsConfig{Effort: "medium"},
+	}
+
+	agent := config.ContentFile{
+		Name:    "deep-thinker",
+		Content: "Think hard.",
+		Metadata: &config.Metadata{
+			Effort: "high",
+			Extra:  map[string]string{"description": "Long-horizon reasoning"},
+		},
+	}
+
+	result := g.renderAgentTOML(agent, cfg)
+	assert.Contains(t, result, `model_reasoning_effort = "high"`)
+}
+
+func TestCodexPresetGenerator_AgentTOMLInheritsGlobalEffort(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Defaults: &config.DefaultsConfig{Effort: "medium"},
+	}
+
+	agent := config.ContentFile{
+		Name:    "default-thinker",
+		Content: "Default reasoning.",
+	}
+
+	result := g.renderAgentTOML(agent, cfg)
+	assert.Contains(t, result, `model_reasoning_effort = "medium"`)
+}
+
+func TestCodexPresetGenerator_AgentTOMLOmitsEffortWhenNoneResolved(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	agent := config.ContentFile{Name: "plain", Content: "no effort"}
+
+	result := g.renderAgentTOML(agent, &config.Config{})
+	assert.NotContains(t, result, "model_reasoning_effort")
 }
 
 func TestCodexPresetGenerator_InheritTierIsDropped(t *testing.T) {
