@@ -2,7 +2,7 @@
 
 [project]
 name = "ai-rulez-docs"
-version = "4.1.1"
+version = "4.1.2"
 description = "Documentation environment for ai-rulez"
 authors = [{ name = "Na'aman Hirschfeld" }]
 requires-python = ">=3.13"

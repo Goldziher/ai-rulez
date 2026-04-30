@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.2] - 2026-04-30
+
+### Added
+- **Per-subagent reasoning effort for Codex**: Codex subagent TOML files (`.codex/agents/<id>.toml`) now emit `model_reasoning_effort` when an effort is resolved for that agent. Per-agent metadata wins over `.codex/config.toml`, which still carries the global default. Tracks the schema documented at https://developers.openai.com/codex/subagents.
+- **Per-subagent reasoning effort for Opencode**: Opencode agent files (`.opencode/agents/<id>.md`) now emit a `reasoningEffort` frontmatter field. Resolution: per-agent metadata → `defaults.effort_by_preset["opencode"]` → `defaults.effort`. `xhigh` and `max` map to `high` (Opencode tops at `high`); `inherit` is dropped.
+
+### Changed
+- Updated the per-preset effort support matrix in `docs/configuration.md` to reflect Codex per-agent support and Opencode per-agent support.
+
 ## [4.1.1] - 2026-04-30
 
 ### Added
