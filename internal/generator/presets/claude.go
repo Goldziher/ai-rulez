@@ -281,17 +281,10 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile, 
 	frontmatter := make(map[string]interface{})
 	frontmatter["name"] = agent.Name
 
-	// Resolve effort with per-agent override → defaults fallback → omit.
-	// Done before the metadata-nil short-circuit so a defaults-only effort still
-	// applies to agents that have no frontmatter at all.
-	effort := ""
-	if agent.Metadata != nil && agent.Metadata.Effort != "" {
-		effort = agent.Metadata.Effort
-	} else if cfg != nil && cfg.Defaults != nil && cfg.Defaults.Effort != "" {
-		effort = cfg.Defaults.Effort
-	}
-	if effort != "" {
-		frontmatter["effort"] = effort
+	// Resolve effort via the shared resolver. Done before the metadata-nil short-circuit
+	// so a defaults-only effort still applies to agents with no frontmatter at all.
+	if mapped := MapEffort("claude", ResolveAgentEffort("claude", agent, cfg)); mapped != "" {
+		frontmatter["effort"] = mapped
 	}
 
 	if agent.Metadata == nil {

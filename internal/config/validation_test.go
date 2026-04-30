@@ -66,6 +66,60 @@ func TestConfigValidateDefaults(t *testing.T) {
 		cfg.Defaults = &DefaultsConfig{Effort: ""}
 		assert.NoError(t, cfg.Validate())
 	})
+
+	t.Run("valid defaults.effort_by_preset passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Defaults = &DefaultsConfig{
+			EffortByPreset: map[string]string{"claude": "xhigh", "codex": "high"},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("invalid effort value in effort_by_preset fails with preset path", func(t *testing.T) {
+		cfg := base()
+		cfg.Defaults = &DefaultsConfig{
+			EffortByPreset: map[string]string{"codex": "extreme"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "defaults.effort_by_preset.codex")
+	})
+
+	t.Run("unknown preset key in effort_by_preset fails", func(t *testing.T) {
+		cfg := base()
+		cfg.Defaults = &DefaultsConfig{
+			EffortByPreset: map[string]string{"not-a-preset": "high"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "not-a-preset")
+	})
+
+	// Normalization contract: users always write the canonical vocabulary, never
+	// preset-native values. Provider-specific values like Codex's "minimal" must
+	// be rejected — they only exist in generated output, never in user config.
+	t.Run("provider-native values are rejected at every input site", func(t *testing.T) {
+		providerNative := []string{"minimal", "MAX", "extreme", "xxhigh"}
+		for _, v := range providerNative {
+			t.Run("defaults.effort/"+v, func(t *testing.T) {
+				cfg := base()
+				cfg.Defaults = &DefaultsConfig{Effort: v}
+				assert.Error(t, cfg.Validate(), "value %q must be rejected from defaults.effort", v)
+			})
+			t.Run("defaults.effort_by_preset/"+v, func(t *testing.T) {
+				cfg := base()
+				cfg.Defaults = &DefaultsConfig{EffortByPreset: map[string]string{"codex": v}}
+				assert.Error(t, cfg.Validate(), "value %q must be rejected from defaults.effort_by_preset", v)
+			})
+			t.Run("agent.metadata.effort/"+v, func(t *testing.T) {
+				cfg := base()
+				cfg.Content = &ContentTree{Agents: []ContentFile{
+					{Name: "x", Metadata: &Metadata{Effort: v}},
+				}}
+				assert.Error(t, cfg.Validate(), "value %q must be rejected from agent metadata", v)
+			})
+		}
+	})
 }
 
 func TestConfigValidateAgentEffort(t *testing.T) {

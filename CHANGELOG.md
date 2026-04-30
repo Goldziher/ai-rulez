@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.1] - 2026-04-30
+
+### Added
+- **Reasoning effort across multiple providers**: extends the v4.1.0 Claude-only effort support to Codex, Amp, and Windsurf.
+  - **Codex**: emits `.codex/config.toml` with `model_reasoning_effort` when an effort resolves. Global setting (Codex doesn't accept per-agent effort).
+  - **Amp**: emits `.amp/settings.json` with `amp.anthropic.effort`. Global setting; `xhigh` maps to `high` (Amp tops at `high`/`max`).
+  - **Windsurf**: emits `reasoning_effort` per-agent in `.windsurf/agents/<id>.md` frontmatter. `max` maps to `high`.
+  - **Claude**: refactored to share the same resolver path; behavior unchanged.
+- **`defaults.effort_by_preset`**: per-preset overrides that beat `defaults.effort`. Per-agent metadata still wins where the preset supports it. YAML/TOML key validated against the registered preset list.
+- **MCP `update_config` `default_effort_by_preset` parameter**: object-typed argument that lets MCP clients set or clear per-preset overrides. `read_config` always returns the field (possibly empty) for stable read-modify-write loops.
+
+### Notes
+- Cursor, Copilot, Gemini, Junie, Opencode, Antigravity, Cline, and Continue.dev expose effort behind UI toggles or in user-managed config files we don't generate. ai-rulez deliberately skips emission for them — guard tests lock that in. Configure effort in those tools' own settings instead.
+- See `docs/configuration.md` for the full per-preset mapping table.
+
 ## [4.1.0] - 2026-04-29
 
 ### Added

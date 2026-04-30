@@ -134,17 +134,28 @@ tools:                   # Restrict tool access
 ---
 ```
 
-`effort` controls reasoning depth for the subagent (Claude 4.6+ models). Available
-levels depend on the model. Set a project-wide default in `config.toml` so
-agents that omit the field still inherit it:
+`effort` controls reasoning depth. Set a project-wide default and per-preset
+overrides in `config.toml`:
 
 ```toml
 [defaults]
 effort = "medium"
+
+[defaults.effort_by_preset]
+codex = "high"      # Codex applies it as model_reasoning_effort in .codex/config.toml
+claude = "xhigh"    # Claude applies it as `effort` per agent
+amp = "max"         # Amp writes amp.anthropic.effort to .amp/settings.json
 ```
 
-Resolution order: per-agent `effort` → `defaults.effort` → omit (Claude Code
-falls back to the session-level default).
+Resolution order (per preset, per agent): per-agent `effort` →
+`defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit.
+
+Per-preset support:
+- **Claude**: per-agent in `.claude/agents/*.md` (full vocabulary, including `max` and `inherit`)
+- **Codex**: global in `.codex/config.toml` (`max` → `high`; `inherit` dropped)
+- **Amp**: global in `.amp/settings.json` (`xhigh` → `high`)
+- **Windsurf**: per-agent in `.windsurf/agents/*.md` frontmatter (`max` → `high`)
+- Cursor, Copilot, Gemini, Junie, Opencode, Antigravity, Cline, Continue.dev: silently skipped (those tools expose effort via UI toggles or user-managed config files we don't generate).
 
 ## Domains and Profiles
 

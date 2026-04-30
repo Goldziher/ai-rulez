@@ -119,7 +119,7 @@ source = "https://github.com/company/ai-rules.git"
 merge_strategy = "local-override"
 ```
 
-**Per-agent reasoning effort** — Tune how hard Claude Code subagents think:
+**Reasoning effort across providers** — Tune how hard each AI tool thinks:
 ```yaml
 # .ai-rulez/agents/security-reviewer.md
 ---
@@ -129,11 +129,21 @@ effort: high
 ---
 ```
 ```toml
-# .ai-rulez/config.yaml or config.toml — sets the default for agents that don't override
+# .ai-rulez/config.yaml or config.toml
 [defaults]
-effort = "medium"
+effort = "medium"  # global default for every supported preset
+
+[defaults.effort_by_preset]
+codex = "high"     # overrides the global default for Codex
+claude = "xhigh"   # …and for Claude
 ```
-Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. Available levels depend on the model. Other presets ignore the field until they ship native support.
+Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez emits the right field per preset:
+- **Claude** — `effort` in `.claude/agents/*.md` frontmatter (per-agent)
+- **Codex** — `model_reasoning_effort` in `.codex/config.toml` (global)
+- **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
+- **Windsurf** — `reasoning_effort` in `.windsurf/agents/*.md` frontmatter (per-agent)
+
+Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
 
 **Installed Skills** — Pull reusable skills from external repos:
 ```toml

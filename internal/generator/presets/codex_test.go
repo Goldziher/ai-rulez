@@ -223,3 +223,93 @@ func TestCodexPresetGenerator_shouldIncludeCommand(t *testing.T) {
 		})
 	}
 }
+
+func TestCodexPresetGenerator_EmitsConfigTOMLWhenEffortSet(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:    "test",
+		Presets: []config.Preset{{BuiltIn: "codex"}},
+		Defaults: &config.DefaultsConfig{
+			EffortByPreset: map[string]string{"codex": "high"},
+		},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	require.NoError(t, err)
+
+	var found *config.OutputFile
+	for i := range outputs {
+		if strings.HasSuffix(outputs[i].Path, ".codex/config.toml") {
+			found = &outputs[i]
+			break
+		}
+	}
+	require.NotNil(t, found, "expected .codex/config.toml to be emitted")
+	assert.Equal(t, `model_reasoning_effort = "high"`+"\n", found.Content)
+}
+
+func TestCodexPresetGenerator_GlobalDefaultUsedWhenNoPerPresetOverride(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Presets:  []config.Preset{{BuiltIn: "codex"}},
+		Defaults: &config.DefaultsConfig{Effort: "medium"},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	require.NoError(t, err)
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, ".codex/config.toml") {
+			assert.Contains(t, o.Content, `"medium"`)
+			return
+		}
+	}
+	t.Fatal("expected .codex/config.toml to be emitted")
+}
+
+func TestCodexPresetGenerator_MaxTierMapsToHigh(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Presets:  []config.Preset{{BuiltIn: "codex"}},
+		Defaults: &config.DefaultsConfig{Effort: "max"},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	require.NoError(t, err)
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, ".codex/config.toml") {
+			assert.Contains(t, o.Content, `"high"`)
+			return
+		}
+	}
+	t.Fatal("expected .codex/config.toml to be emitted")
+}
+
+func TestCodexPresetGenerator_OmitsConfigTOMLWhenNoEffort(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:    "test",
+		Presets: []config.Preset{{BuiltIn: "codex"}},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	require.NoError(t, err)
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, ".codex/config.toml") {
+			t.Fatalf("config.toml should not be emitted when no effort is set; got %q", o.Content)
+		}
+	}
+}
+
+func TestCodexPresetGenerator_InheritTierIsDropped(t *testing.T) {
+	g := &CodexPresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Presets:  []config.Preset{{BuiltIn: "codex"}},
+		Defaults: &config.DefaultsConfig{Effort: "inherit"},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	require.NoError(t, err)
+	for _, o := range outputs {
+		if strings.HasSuffix(o.Path, ".codex/config.toml") {
+			t.Fatalf("inherit should not produce .codex/config.toml; got %q", o.Content)
+		}
+	}
+}
