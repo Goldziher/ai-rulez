@@ -325,7 +325,7 @@ amp = "max"
 **`defaults.effort_by_preset`** lets you override `defaults.effort` for specific presets. Per-agent metadata still wins. Useful when, for example, you want Codex to reason harder than Claude on the same project.
 
 **Resolution order** (per preset, per agent):
-1. Per-agent `effort` in agent frontmatter (Claude, Windsurf — presets that support per-agent effort)
+1. Per-agent `effort` in agent frontmatter (Claude, Codex, Windsurf, Opencode — presets that support per-agent effort)
 2. `defaults.effort_by_preset[<preset>]`
 3. `defaults.effort`
 4. Omit
@@ -335,10 +335,11 @@ amp = "max"
 | Preset | Where it's emitted | Field | Notes |
 |--------|-------------------|-------|-------|
 | `claude` | `.claude/agents/<id>.md` frontmatter | `effort` | Per-agent. Full vocabulary including `max` and `inherit`. |
-| `codex` | `.codex/config.toml` | `model_reasoning_effort` | Global only. `max` → `high`; `inherit` dropped. |
+| `codex` | `.codex/agents/<id>.toml` (per-agent) and `.codex/config.toml` (global default) | `model_reasoning_effort` | Per-agent override beats global `.codex/config.toml`. `max` → `high`; `inherit` dropped. |
 | `amp` | `.amp/settings.json` | `amp.anthropic.effort` | Global only. `xhigh` → `high`. |
 | `windsurf` | `.windsurf/agents/<id>.md` frontmatter | `reasoning_effort` | Per-agent. `max` → `high`; `inherit` dropped. |
-| `cursor`, `copilot`, `gemini`, `junie`, `opencode`, `antigravity`, `cline`, `continue-dev` | — | — | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
+| `opencode` | `.opencode/agents/<id>.md` frontmatter | `reasoningEffort` | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped. |
+| `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | — | — | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 
 ### `header`
 
