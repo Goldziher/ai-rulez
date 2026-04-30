@@ -11,6 +11,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/internal/walkutil"
 	"gopkg.in/yaml.v3"
 )
 
@@ -344,7 +345,11 @@ type markdownScanner struct {
 
 func (s *markdownScanner) walkFunc(path string, d fs.DirEntry, err error) error {
 	if err != nil {
-		return err
+		logger.Debug("markdown scan: skipping entry", "path", path, "error", err)
+		if d != nil && d.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
 	}
 
 	if d.IsDir() {
@@ -367,13 +372,7 @@ func (s *markdownScanner) handleDirectory(path string, d fs.DirEntry) error {
 }
 
 func (s *markdownScanner) shouldSkipDirectory(name string) bool {
-	skipDirs := []string{"node_modules", "vendor", ".git"}
-	for _, skip := range skipDirs {
-		if name == skip {
-			return true
-		}
-	}
-	return strings.HasPrefix(name, ".") && name != ".github" && name != "."
+	return walkutil.ShouldSkipDir(name)
 }
 
 func (s *markdownScanner) isTooDeep(path string) bool {

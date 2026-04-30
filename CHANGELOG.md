@@ -4,6 +4,33 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.3] - 2026-04-30
+
+### Fixed
+- **`generate --recursive` performance and robustness**: a recursive run on a polyglot monorepo could take ~2 minutes and abort on a single broken symlink (e.g. a stale Rust `target/debug/deps/lib*.rlib`). Two underlying defects in `cmd/commands/generate.go`:
+  - The walker had no skip list — it descended into `target/`, `node_modules/`, `.venv/`, `vendor/`, `dist/`, `.git/`, etc.
+  - The walk callback re-returned every `lstat` error fatally, so one bad symlink killed the entire run.
+- **Recursive discovery now ignores v2 flat configs**: only `.ai-rulez/config.{toml,yaml,yml,json}` is discovered by `--recursive`. The legacy v2 `ai-rulez.yaml` discovery path is removed (single-config `generate <file>` is unaffected).
+
+### Added
+- **Shared skip helper** at `internal/walkutil` covering VCS metadata, build outputs (`target`, `node_modules`, `vendor`, `dist`, `build`, `out`, `obj`, `bin`), language toolchain caches (`.venv`, `__pycache__`, `.tox`, `.gradle`, `.mvn`, …), editor caches, and any hidden directory other than `.ai-rulez`/`.github`. Reused from `cmd/commands/generate.go`, `internal/mcp/handlers/project.go`, and `internal/agents/context.go` so the same pruning applies to every recursive walk.
+- **Shared rule library detection**: a directory named `ai-rulez/` (no leading dot) that itself contains `config.{toml,yaml,yml,json}` at its root is treated as a shared library. Its entire subtree is pruned during recursive discovery, so nested `.ai-rulez/` module configs that exist only for inclusion by consumers are no longer (re-)generated for.
+- **Parallel multi-config processing**: `generate --recursive` now processes discovered configs concurrently with a `runtime.NumCPU()`-bounded worker pool. Each config has its own working directory and produces independent output.
+- **Concurrency-safe include cache**: `internal/includes` now serializes refresh of any one cache directory with a per-cacheDir mutex (double-checked, lock-free fast path) so parallel callers targeting the same shared include never race on `RemoveAll`/extract. Applies to both `GitSource.Fetch` and `SkillGitSource.Fetch`.
+- **Process-level scanned-tree memoization**: `ScanContentTree` results for a given cached `.ai-rulez/` directory are reused across consumers within the same process. In a monorepo where 18 configs each include the same 5 shared libraries, this cuts 90 redundant tree scans down to 5. Per-consumer include filters still apply via `filterContent`, which returns a new tree without mutating the cached one.
+
+### Performance
+- **`kreuzberg-dev` (24 `.ai-rulez/` dirs, 18 actual consumer configs, 5 shared library modules):** `generate --recursive --update-gitignore` went from ~2 minutes (failing on a stale `.rlib` symlink) to ~1 second steady-state. Cold full-tree generation completes in ~12 s.
+
+### Tests
+- `internal/walkutil/skip_test.go` — covers the shared skip predicate.
+- `cmd/commands/generate_recursive_test.go` — fixture-driven test covering pruned dirs, broken-symlink resilience, library-skip, and config-format priority (TOML over YAML over JSON).
+- `internal/includes/fetch_concurrency_test.go` — fetch-lock identity, concurrent access, scanned-tree cache round-trip / invalidation, race-detector stress.
+- `tests/e2e/cli/recursive_test.go` — end-to-end suite asserting (a) walker pruning of `node_modules`/`target`/`.venv`/`vendor`/`.cache`/`build`, (b) shared rule library subtree is skipped, (c) parallel and `GOMAXPROCS=1` runs produce byte-identical outputs.
+
+### README
+- New collapsible Installation section covering Homebrew, npx, npm -g, uvx, uv tool, pip/pipx, pre-commit hook, and lefthook setup.
+
 ## [4.1.2] - 2026-04-30
 
 ### Added

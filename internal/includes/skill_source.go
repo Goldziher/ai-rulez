@@ -67,8 +67,15 @@ func NewSkillGitSource(name, repoURL, path, ref, accessToken string) (*SkillGitS
 	}, nil
 }
 
-// Fetch downloads the repo and extracts the skill content
+// Fetch downloads the repo and extracts the skill content.
+//
+// Safe for concurrent invocation: serialized per cache directory so
+// parallel callers targeting the same skill share a single download.
 func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) {
+	mu := lockForFetch(s.cacheDir)
+	mu.Lock()
+	defer mu.Unlock()
+
 	logger.Debug("Fetching installed skill", "name", s.name, "repo", s.repoURL, "path", s.path, "ref", s.ref)
 
 	// Clear stale cache before downloading fresh content
