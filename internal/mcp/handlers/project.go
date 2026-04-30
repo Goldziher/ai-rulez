@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/internal/walkutil"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -306,61 +307,94 @@ func GenerateOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.Cal
 	return generateForDirectory(ctx, request, baseDir, dryRun)
 }
 
+var recursiveConfigFiles = []string{"config.toml", "config.yaml", "config.yml", "config.json"}
+
+func dirHasRecursiveConfig(dir string) bool {
+	for _, f := range recursiveConfigFiles {
+		if info, statErr := os.Stat(filepath.Join(dir, f)); statErr == nil && !info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+// findRecursiveConfigDirs walks absBase and returns the parent directories
+// of every `.ai-rulez/` that contains a config file. Build outputs, hidden
+// directories, and shared rule libraries (`ai-rulez/` with a root config)
+// are pruned. Errors on individual entries are skipped, not propagated.
+func findRecursiveConfigDirs(absBase string) ([]string, error) {
+	var dirs []string
+	err := filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			if d != nil && d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !d.IsDir() {
+			return nil
+		}
+		name := d.Name()
+		if name == ".ai-rulez" {
+			if dirHasRecursiveConfig(path) {
+				dirs = append(dirs, filepath.Dir(path))
+			}
+			return filepath.SkipDir
+		}
+		if path == absBase {
+			return nil
+		}
+		if name == "ai-rulez" && dirHasRecursiveConfig(path) {
+			return filepath.SkipDir
+		}
+		if walkutil.ShouldSkipDir(name) {
+			return filepath.SkipDir
+		}
+		return nil
+	})
+	return dirs, err
+}
+
 func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
 	absBase, err := filepath.Abs(baseDir)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to resolve base directory: %w", err))
 	}
 
-	var dirs []string
-	skipDirs := map[string]bool{".git": true, "node_modules": true, "vendor": true, ".cache": true}
-	err = filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return filepath.SkipDir
-		}
-		if !d.IsDir() {
-			return nil
-		}
-		if skipDirs[d.Name()] {
-			return filepath.SkipDir
-		}
-		configPath := filepath.Join(path, ".ai-rulez", "config.yaml")
-		if _, statErr := os.Stat(configPath); statErr == nil {
-			dirs = append(dirs, path)
-		}
-		return nil
-	})
+	dirs, err := findRecursiveConfigDirs(absBase)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to walk directories: %w", err))
 	}
 
 	if len(dirs) == 0 {
 		return ToolSuccess(map[string]interface{}{
-			"message": "No directories with .ai-rulez/config.yaml found",
+			"message": "No directories with .ai-rulez/config.* found",
 		})
 	}
 
-	var results []map[string]interface{}
+	results := make([]map[string]interface{}, 0, len(dirs))
 	for _, dir := range dirs {
-		result, genErr := generateForDirectory(ctx, request, dir, dryRun)
-		entry := map[string]interface{}{
-			"directory": dir,
-		}
-		switch {
-		case genErr != nil:
-			entry["error"] = genErr.Error()
-		case result != nil && result.IsError:
-			entry["error"] = result.Content[0]
-		default:
-			entry["success"] = true
-		}
-		results = append(results, entry)
+		results = append(results, runGenerateForDir(ctx, request, dir, dryRun))
 	}
 
 	return ToolSuccess(map[string]interface{}{
 		"message": fmt.Sprintf("Recursive generation completed for %d directories", len(dirs)),
 		"results": results,
 	})
+}
+
+func runGenerateForDir(ctx context.Context, request *ToolRequest, dir string, dryRun bool) map[string]interface{} {
+	entry := map[string]interface{}{"directory": dir}
+	result, genErr := generateForDirectory(ctx, request, dir, dryRun)
+	switch {
+	case genErr != nil:
+		entry["error"] = genErr.Error()
+	case result != nil && result.IsError:
+		entry["error"] = result.Content[0]
+	default:
+		entry["success"] = true
+	}
+	return entry
 }
 
 func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
