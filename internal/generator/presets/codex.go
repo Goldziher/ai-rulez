@@ -12,8 +12,10 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
+const codexPresetName = "codex"
+
 func init() {
-	config.RegisterPreset("codex", &CodexPresetGenerator{})
+	config.RegisterPreset(codexPresetName, &CodexPresetGenerator{})
 }
 
 // CodexPresetGenerator generates Codex preset files (AGENTS.md)
@@ -37,7 +39,7 @@ func generateCodexPresetHeader(cfg *config.Config, outputPath string, ruleCount,
 }
 
 func (g *CodexPresetGenerator) GetName() string {
-	return "codex"
+	return codexPresetName
 }
 
 func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -129,6 +131,15 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "commands", sanitized+".md"),
 			Content: commandContent,
+		})
+	}
+
+	// Emit .codex/config.toml with model_reasoning_effort when a global effort
+	// is resolved. Codex applies this at the model level, not per-agent.
+	if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, ".codex", "config.toml"),
+			Content: fmt.Sprintf("model_reasoning_effort = %q\n", effort),
 		})
 	}
 
@@ -304,7 +315,7 @@ func (g *CodexPresetGenerator) shouldIncludeCommand(command config.ContentFile) 
 	}
 	if len(command.Metadata.Targets) > 0 {
 		for _, target := range command.Metadata.Targets {
-			if target == "codex" {
+			if target == codexPresetName {
 				return true
 			}
 		}

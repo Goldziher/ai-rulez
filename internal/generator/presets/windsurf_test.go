@@ -248,3 +248,60 @@ func findSubstring(s, substr string) bool {
 	}
 	return false
 }
+
+func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing.T) {
+	g := &WindsurfPresetGenerator{}
+
+	t.Run("agent effort emitted", func(t *testing.T) {
+		fm := g.buildWindsurfAgentFrontmatter(
+			config.ContentFile{Name: "x", Metadata: &config.Metadata{Effort: "high"}},
+			&config.Config{},
+		)
+		if fm["reasoning_effort"] != "high" {
+			t.Errorf("want reasoning_effort=high, got %v", fm["reasoning_effort"])
+		}
+	})
+
+	t.Run("max maps to high", func(t *testing.T) {
+		fm := g.buildWindsurfAgentFrontmatter(
+			config.ContentFile{Name: "x", Metadata: &config.Metadata{Effort: "max"}},
+			&config.Config{},
+		)
+		if fm["reasoning_effort"] != "high" {
+			t.Errorf("want reasoning_effort=high, got %v", fm["reasoning_effort"])
+		}
+	})
+
+	t.Run("inherit dropped", func(t *testing.T) {
+		fm := g.buildWindsurfAgentFrontmatter(
+			config.ContentFile{Name: "x", Metadata: &config.Metadata{Effort: "inherit"}},
+			&config.Config{},
+		)
+		if _, ok := fm["reasoning_effort"]; ok {
+			t.Errorf("inherit should not emit reasoning_effort, got %v", fm["reasoning_effort"])
+		}
+	})
+
+	t.Run("per-preset override applied when no agent metadata", func(t *testing.T) {
+		fm := g.buildWindsurfAgentFrontmatter(
+			config.ContentFile{Name: "x"},
+			&config.Config{Defaults: &config.DefaultsConfig{
+				Effort:         "low",
+				EffortByPreset: map[string]string{"windsurf": "xhigh"},
+			}},
+		)
+		if fm["reasoning_effort"] != "xhigh" {
+			t.Errorf("want xhigh from per-preset override, got %v", fm["reasoning_effort"])
+		}
+	})
+
+	t.Run("no effort when nothing set", func(t *testing.T) {
+		fm := g.buildWindsurfAgentFrontmatter(
+			config.ContentFile{Name: "x"},
+			&config.Config{},
+		)
+		if _, ok := fm["reasoning_effort"]; ok {
+			t.Errorf("expected no reasoning_effort, got %v", fm["reasoning_effort"])
+		}
+	})
+}

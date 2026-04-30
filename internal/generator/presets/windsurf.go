@@ -14,8 +14,10 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
+const windsurfPresetName = "windsurf"
+
 func init() {
-	config.RegisterPreset("windsurf", &WindsurfPresetGenerator{})
+	config.RegisterPreset(windsurfPresetName, &WindsurfPresetGenerator{})
 }
 
 // WindsurfPresetGenerator generates Windsurf preset files
@@ -39,7 +41,7 @@ func generateWindsurfPresetHeader(cfg *config.Config, outputPath string, ruleCou
 }
 
 func (g *WindsurfPresetGenerator) GetName() string {
-	return "windsurf"
+	return windsurfPresetName
 }
 
 func (g *WindsurfPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -130,7 +132,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderWindsurfAgentFile(agent)
+		agentContent, err := g.renderWindsurfAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -254,10 +256,10 @@ func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *c
 }
 
 // renderWindsurfAgentFile renders an agent file with YAML frontmatter for Windsurf
-func (g *WindsurfPresetGenerator) renderWindsurfAgentFile(agent config.ContentFile) (string, error) {
+func (g *WindsurfPresetGenerator) renderWindsurfAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildWindsurfAgentFrontmatter(agent)
+	frontmatter := g.buildWindsurfAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -273,9 +275,15 @@ func (g *WindsurfPresetGenerator) renderWindsurfAgentFile(agent config.ContentFi
 }
 
 // buildWindsurfAgentFrontmatter builds frontmatter for a Windsurf agent file
-func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		"name": agent.Name,
+	}
+
+	// Resolve effort before the metadata-nil short-circuit so a defaults-only effort
+	// still applies to agents with no frontmatter.
+	if effort := MapEffort(windsurfPresetName, ResolveAgentEffort(windsurfPresetName, agent, cfg)); effort != "" {
+		frontmatter["reasoning_effort"] = effort
 	}
 
 	if agent.Metadata == nil {

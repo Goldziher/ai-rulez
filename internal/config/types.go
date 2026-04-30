@@ -54,10 +54,15 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 // DefaultsConfig represents top-level defaults that propagate into generated outputs
 // when individual content files do not override them.
 type DefaultsConfig struct {
-	// Effort is the default reasoning effort for Claude Code subagents that do not
-	// declare their own effort in frontmatter. Accepted values: low, medium, high,
-	// xhigh, max, inherit. Empty string means "not set".
+	// Effort is the default reasoning effort applied across providers that support it.
+	// Accepted values: low, medium, high, xhigh, max, inherit. Empty string means "not set".
+	// Each preset maps the value to its own vocabulary (see internal/generator/presets/effort.go).
 	Effort string `yaml:"effort,omitempty" json:"effort,omitempty" toml:"effort,omitempty"`
+
+	// EffortByPreset overrides Effort for specific presets. Keys are preset names (e.g. "codex",
+	// "claude", "windsurf"). Per-agent frontmatter still wins over this map where the preset
+	// supports per-agent effort.
+	EffortByPreset map[string]string `yaml:"effort_by_preset,omitempty" json:"effort_by_preset,omitempty" toml:"effort_by_preset,omitempty"`
 }
 
 // BuiltinsConfig represents the builtins field which can be:

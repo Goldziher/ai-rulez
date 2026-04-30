@@ -197,7 +197,18 @@
         "effort": {
           "type": "string",
           "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
-          "description": "Default reasoning effort for Claude Code subagents that do not declare their own effort in frontmatter. Available levels depend on the model."
+          "description": "Default reasoning effort applied across providers that support it. Each preset maps the value to its own vocabulary."
+        },
+        "effort_by_preset": {
+          "type": "object",
+          "description": "Per-preset reasoning effort overrides. Beats `effort` for the matching preset; per-agent metadata still wins where the preset supports it.",
+          "propertyNames": {
+            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode", "antigravity", "mcp"]
+          },
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["low", "medium", "high", "xhigh", "max", "inherit"]
+          }
         }
       },
       "additionalProperties": false
