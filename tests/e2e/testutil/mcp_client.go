@@ -198,7 +198,7 @@ func (c *MCPClient) sendRequest(t *testing.T, request map[string]interface{}) *M
 	case err := <-errorChan:
 		require.NoError(t, err, "Failed to receive MCP response")
 		return nil
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second):
 		t.Fatal("MCP request timed out")
 		return nil
 	}

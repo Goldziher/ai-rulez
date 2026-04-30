@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sync"
+	"sync/atomic"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/progress"
+	"github.com/Goldziher/ai-rulez/internal/walkutil"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -116,52 +120,155 @@ func runRecursiveGenerate() {
 	progress.PrintIfNotQuiet("\n✅ Total: Generated %d file(s) from %d config(s)\n", totalGenerated, len(configFiles))
 }
 
+// configBaseNames lists, in priority order, the file names that mark a
+// `.ai-rulez/` directory as containing a config we should generate from.
+// TOML is preferred; YAML (.yaml/.yml) and JSON are also supported.
+var configBaseNames = [...]string{
+	"config.toml",
+	"config.yaml", "config.yml",
+	"config.json",
+}
+
+// configDirName is the directory base name that may contain a config file.
+// Only this directory is inspected; everything else is pruned.
+const configDirName = ".ai-rulez"
+
+// libraryDirName marks a shared rule library (a directory containing a
+// root-level config plus included `.ai-rulez/` module configs that are
+// meant to be consumed via `includes`, not generated from). When the walk
+// encounters a directory by this name with a root config file, the entire
+// subtree is pruned.
+const libraryDirName = "ai-rulez"
+
+// dirHasRootConfig reports whether dir contains at its root a config file
+// matching one of [configBaseNames]. Used to detect shared rule libraries.
+func dirHasRootConfig(dir string) bool {
+	for _, base := range configBaseNames {
+		if info, err := os.Stat(filepath.Join(dir, base)); err == nil && !info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+// findConfigFilesRecursively walks the working tree starting at "." and
+// returns paths to all `.ai-rulez/config.*` files it finds.
+//
+// It aggressively prunes directories that cannot contain user content
+// (build outputs, dependency caches, VCS metadata, hidden directories) via
+// [walkutil.ShouldSkipDir], and is robust against transient lstat failures
+// on stale symlinks (common in Rust `target/` and similar) — such errors
+// cause the offending entry to be skipped, never to abort the whole walk.
+//
+// Once a config directory is encountered, its subtree is not descended into:
+// the config files are looked up directly with os.Stat.
 func findConfigFilesRecursively() []string {
 	var configFiles []string
 	spinner := progress.NewSpinner("Searching for configuration files...")
 
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-		if !info.IsDir() && isConfigFile(path) {
-			configFiles = append(configFiles, path)
-			if err := spinner.Add(1); err != nil {
-				logger.Debug("Failed to update spinner", "error", err)
-			}
-		}
-		return nil
+	walkErr := filepath.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+		return walkConfigDir(path, d, err, &configFiles, spinner)
 	})
 
 	if err := spinner.Finish(); err != nil {
 		logger.Debug("Failed to finish spinner", "error", err)
 	}
 
-	if err != nil {
-		fmtError(err)
+	if walkErr != nil {
+		fmtError(walkErr)
 		os.Exit(1)
 	}
 
 	return configFiles
 }
 
-func isConfigFile(path string) bool {
-	dir := filepath.Dir(path)
-	base := filepath.Base(path)
-	return filepath.Base(dir) == ".ai-rulez" && (base == "config.toml" || base == "config.yaml" || base == "config.json" || base == "ai-rulez.yaml" || base == "ai-rulez.json")
+// walkConfigDir is the per-entry callback for findConfigFilesRecursively.
+// It records any `.ai-rulez/config.*` it finds and returns SkipDir for
+// directories that cannot contain user content.
+func walkConfigDir(path string, d os.DirEntry, err error, out *[]string, spinner *progress.Bar) error {
+	if err != nil {
+		logger.Debug("walk: skipping entry", "path", path, "error", err)
+		if d != nil && d.IsDir() {
+			return filepath.SkipDir
+		}
+		return nil
+	}
+	if !d.IsDir() {
+		return nil
+	}
+
+	name := d.Name()
+
+	if name == configDirName {
+		if cfg := findConfigInDir(path); cfg != "" {
+			*out = append(*out, cfg)
+			if addErr := spinner.Add(1); addErr != nil {
+				logger.Debug("Failed to update spinner", "error", addErr)
+			}
+		}
+		return filepath.SkipDir
+	}
+
+	if path == "." {
+		return nil
+	}
+
+	// Shared rule library subtree (`ai-rulez/` with a root config) — its
+	// nested `.ai-rulez/` modules are for inclusion, not generation.
+	if name == libraryDirName && dirHasRootConfig(path) {
+		logger.Debug("walk: skipping shared rule library subtree", "path", path)
+		return filepath.SkipDir
+	}
+
+	if walkutil.ShouldSkipDir(name) {
+		return filepath.SkipDir
+	}
+	return nil
+}
+
+// findConfigInDir returns the path to the first config file in dir matching
+// configBaseNames (in priority order), or "" if none exists.
+func findConfigInDir(dir string) string {
+	for _, base := range configBaseNames {
+		candidate := filepath.Join(dir, base)
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate
+		}
+	}
+	return ""
 }
 
 func processConfigFiles(configFiles []string) int {
 	fileCounter := progress.NewFileCounter(len(configFiles), "Processing configurations")
-	totalGenerated := 0
 
-	for _, configPath := range configFiles {
-		generated := processConfigFile(configPath, fileCounter)
-		totalGenerated += generated
+	// Each config has its own working directory and produces independent
+	// output, so we can process them concurrently. Cap parallelism at
+	// NumCPU — past that we just contend on disk I/O without speedup.
+	workers := runtime.NumCPU()
+	if workers > len(configFiles) {
+		workers = len(configFiles)
+	}
+	if workers < 1 {
+		workers = 1
 	}
 
+	var totalGenerated int64
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, workers)
+
+	for _, configPath := range configFiles {
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			atomic.AddInt64(&totalGenerated, int64(processConfigFile(configPath, fileCounter)))
+		}()
+	}
+	wg.Wait()
+
 	fileCounter.Finish()
-	return totalGenerated
+	return int(totalGenerated)
 }
 
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) int {
