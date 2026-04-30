@@ -90,6 +90,7 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	// Always emit default_effort (possibly "") so MCP clients running read-modify-write
 	// loops have a stable contract — absent key vs empty value is otherwise ambiguous.
 	result["default_effort"] = configDefaultEffort(cfg)
+	result["default_effort_by_preset"] = configDefaultEffortByPreset(cfg)
 
 	return ToolSuccess(result)
 }
@@ -102,6 +103,80 @@ func configDefaultEffort(cfg *config.Config) string {
 	return cfg.Defaults.Effort
 }
 
+// configDefaultEffortByPreset returns a map of per-preset overrides. Always returns a
+// non-nil map so MCP clients can distinguish "no overrides" from "key absent".
+func configDefaultEffortByPreset(cfg *config.Config) map[string]string {
+	out := map[string]string{}
+	if cfg == nil || cfg.Defaults == nil {
+		return out
+	}
+	for k, v := range cfg.Defaults.EffortByPreset {
+		out[k] = v
+	}
+	return out
+}
+
+// defaultsIsEmpty reports whether a DefaultsConfig has nothing worth persisting.
+// Equivalence to the zero value can't be done with == because the struct contains
+// a map; we check each field explicitly.
+func defaultsIsEmpty(d *config.DefaultsConfig) bool {
+	return d.Effort == "" && len(d.EffortByPreset) == 0
+}
+
+// parseEffortByPresetArg coerces an MCP argument into map[string]string. Accepts the
+// JSON-decoded shape (map[string]interface{}) and the already-typed shape. Returns an
+// empty (non-nil) map for nil input so callers can clear the field by passing {}.
+func parseEffortByPresetArg(raw interface{}) (map[string]string, error) {
+	out := map[string]string{}
+	if raw == nil {
+		return out, nil
+	}
+	switch m := raw.(type) {
+	case map[string]string:
+		for k, v := range m {
+			out[k] = v
+		}
+	case map[string]interface{}:
+		for k, v := range m {
+			s, ok := v.(string)
+			if !ok {
+				return nil, fmt.Errorf("default_effort_by_preset.%s must be a string, got %T", k, v)
+			}
+			out[k] = s
+		}
+	default:
+		return nil, fmt.Errorf("default_effort_by_preset must be an object mapping preset name to effort value, got %T", raw)
+	}
+	return out, nil
+}
+
+// applyDefaultEffortByPresetUpdate writes the per-preset overrides onto cfg.Defaults.
+// Empty values inside the map clear that preset's entry. An empty map clears the whole
+// field. The Defaults block is dropped only when every field on it is zero so future
+// fields aren't silently wiped.
+func applyDefaultEffortByPresetUpdate(cfg *config.Config, m map[string]string) {
+	cleaned := map[string]string{}
+	for k, v := range m {
+		if v != "" {
+			cleaned[k] = v
+		}
+	}
+	if len(cleaned) == 0 {
+		if cfg.Defaults == nil {
+			return
+		}
+		cfg.Defaults.EffortByPreset = nil
+		if defaultsIsEmpty(cfg.Defaults) {
+			cfg.Defaults = nil
+		}
+		return
+	}
+	if cfg.Defaults == nil {
+		cfg.Defaults = &config.DefaultsConfig{}
+	}
+	cfg.Defaults.EffortByPreset = cleaned
+}
+
 // applyDefaultEffortUpdate writes the requested effort onto cfg.Defaults. Passing
 // an empty string clears Effort only; the surrounding Defaults block is dropped
 // only when every field on it is zero, so future fields aren't silently wiped.
@@ -111,7 +186,7 @@ func applyDefaultEffortUpdate(cfg *config.Config, effort string) {
 			return
 		}
 		cfg.Defaults.Effort = ""
-		if *cfg.Defaults == (config.DefaultsConfig{}) {
+		if defaultsIsEmpty(cfg.Defaults) {
 			cfg.Defaults = nil
 		}
 		return
@@ -120,6 +195,50 @@ func applyDefaultEffortUpdate(cfg *config.Config, effort string) {
 		cfg.Defaults = &config.DefaultsConfig{}
 	}
 	cfg.Defaults.Effort = effort
+}
+
+// applyConfigUpdates dispatches each top-level field on the request into cfg.
+// Returns the list of fields that were actually present in args, plus any parse
+// error from a structured argument. Validation runs in the caller.
+func applyConfigUpdates(cfg *config.Config, request *ToolRequest) ([]string, error) {
+	args := request.GetArguments()
+	updated := []string{}
+
+	if _, ok := args["name"]; ok {
+		cfg.Name = request.GetString("name", cfg.Name)
+		updated = append(updated, "name")
+	}
+	if _, ok := args["description"]; ok {
+		cfg.Description = request.GetString("description", cfg.Description)
+		updated = append(updated, "description")
+	}
+	if _, ok := args["builtins"]; ok {
+		builtinNames := request.GetStringSlice("builtins", nil)
+		if builtinNames != nil {
+			cfg.Builtins = &config.BuiltinsConfig{Names: builtinNames}
+		} else {
+			cfg.Builtins = nil
+		}
+		updated = append(updated, "builtins")
+	}
+	if _, ok := args["gitignore"]; ok {
+		val := request.GetBool("gitignore", true)
+		cfg.Gitignore = &val
+		updated = append(updated, "gitignore")
+	}
+	if _, ok := args["default_effort"]; ok {
+		applyDefaultEffortUpdate(cfg, request.GetString("default_effort", ""))
+		updated = append(updated, "default_effort")
+	}
+	if raw, ok := args["default_effort_by_preset"]; ok {
+		m, parseErr := parseEffortByPresetArg(raw)
+		if parseErr != nil {
+			return nil, parseErr
+		}
+		applyDefaultEffortByPresetUpdate(cfg, m)
+		updated = append(updated, "default_effort_by_preset")
+	}
+	return updated, nil
 }
 
 func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
@@ -143,38 +262,9 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return ToolError(err)
 	}
 
-	args := request.GetArguments()
-	updated := []string{}
-
-	if _, ok := args["name"]; ok {
-		cfg.Name = request.GetString("name", cfg.Name)
-		updated = append(updated, "name")
-	}
-
-	if _, ok := args["description"]; ok {
-		cfg.Description = request.GetString("description", cfg.Description)
-		updated = append(updated, "description")
-	}
-
-	if _, ok := args["builtins"]; ok {
-		builtinNames := request.GetStringSlice("builtins", nil)
-		if builtinNames != nil {
-			cfg.Builtins = &config.BuiltinsConfig{Names: builtinNames}
-		} else {
-			cfg.Builtins = nil
-		}
-		updated = append(updated, "builtins")
-	}
-
-	if _, ok := args["gitignore"]; ok {
-		val := request.GetBool("gitignore", true)
-		cfg.Gitignore = &val
-		updated = append(updated, "gitignore")
-	}
-
-	if _, ok := args["default_effort"]; ok {
-		applyDefaultEffortUpdate(cfg, request.GetString("default_effort", ""))
-		updated = append(updated, "default_effort")
+	updated, applyErr := applyConfigUpdates(cfg, request)
+	if applyErr != nil {
+		return ToolError(applyErr)
 	}
 
 	// Validate after applying changes so invalid input is rejected before write.

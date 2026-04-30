@@ -76,7 +76,24 @@ func (c *Config) validateDefaults() error {
 	if c.Defaults == nil {
 		return nil
 	}
-	return validateEffort(c.Defaults.Effort, "defaults.effort")
+	if err := validateEffort(c.Defaults.Effort, "defaults.effort"); err != nil {
+		return err
+	}
+	for preset, value := range c.Defaults.EffortByPreset {
+		if !isValidBuiltInPreset(preset) {
+			return oops.
+				With("field", "defaults.effort_by_preset").
+				With("preset", preset).
+				With("available_presets", getBuiltInPresetNames()).
+				Hint("Use a built-in preset name as the key (e.g. claude, codex, windsurf).").
+				Errorf("unknown preset %q in defaults.effort_by_preset", preset)
+		}
+		fieldPath := fmt.Sprintf("defaults.effort_by_preset.%s", preset)
+		if err := validateEffort(value, fieldPath); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *Config) validateAgentEffort() error {

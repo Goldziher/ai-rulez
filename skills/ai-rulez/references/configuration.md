@@ -44,6 +44,14 @@ merge_strategy = "local-override"  # local-override | include-override | error
 install_to = ""               # Install as domain (e.g., "domains/backend")
 local_override = ""           # Local dev path override
 
+[defaults]
+effort = "medium"             # low | medium | high | xhigh | max | inherit
+
+[defaults.effort_by_preset]   # Per-preset overrides (beat defaults.effort)
+codex = "high"
+claude = "xhigh"
+amp = "max"
+
 [header]
 style = "detailed"            # detailed | compact | minimal
 

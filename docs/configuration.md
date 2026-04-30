@@ -308,14 +308,37 @@ If a local domain has the same name as a builtin, the local domain is used and t
 
 ### `defaults`
 
-Top-level defaults that propagate into generated outputs when individual content files do not override them. Currently exposes a single field:
+Top-level defaults that propagate into generated outputs when individual content files do not override them.
 
 ```toml
 [defaults]
 effort = "medium"  # low | medium | high | xhigh | max | inherit
+
+[defaults.effort_by_preset]
+codex = "high"
+claude = "xhigh"
+amp = "max"
 ```
 
-**`defaults.effort`** sets the reasoning effort emitted into every generated Claude Code subagent file (`.claude/agents/*.md`) that does not declare its own `effort` in frontmatter. Per-agent overrides win; if neither the agent nor `defaults.effort` is set, the field is omitted (Claude Code falls back to the session-level default). Other presets (Cursor, Windsurf, Copilot, Gemini, etc.) do not currently support this field — it is silently skipped for them.
+**`defaults.effort`** sets the reasoning effort applied to every preset that supports it. Per-agent overrides (via agent frontmatter) win where the preset accepts per-agent effort; if neither is set, the field is omitted entirely.
+
+**`defaults.effort_by_preset`** lets you override `defaults.effort` for specific presets. Per-agent metadata still wins. Useful when, for example, you want Codex to reason harder than Claude on the same project.
+
+**Resolution order** (per preset, per agent):
+1. Per-agent `effort` in agent frontmatter (Claude, Windsurf — presets that support per-agent effort)
+2. `defaults.effort_by_preset[<preset>]`
+3. `defaults.effort`
+4. Omit
+
+**Per-preset support matrix** — each preset accepts a different vocabulary, and ai-rulez maps your value to the closest tier the preset supports:
+
+| Preset | Where it's emitted | Field | Notes |
+|--------|-------------------|-------|-------|
+| `claude` | `.claude/agents/<id>.md` frontmatter | `effort` | Per-agent. Full vocabulary including `max` and `inherit`. |
+| `codex` | `.codex/config.toml` | `model_reasoning_effort` | Global only. `max` → `high`; `inherit` dropped. |
+| `amp` | `.amp/settings.json` | `amp.anthropic.effort` | Global only. `xhigh` → `high`. |
+| `windsurf` | `.windsurf/agents/<id>.md` frontmatter | `reasoning_effort` | Per-agent. `max` → `high`; `inherit` dropped. |
+| `cursor`, `copilot`, `gemini`, `junie`, `opencode`, `antigravity`, `cline`, `continue-dev` | — | — | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 
 ### `header`
 

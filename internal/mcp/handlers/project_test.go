@@ -145,3 +145,125 @@ func TestReadConfigHandler_AlwaysEmitsDefaultEffortKey(t *testing.T) {
 	assert.True(t, present, "default_effort key must always be in the response so clients can detect 'not set' vs 'absent'")
 	assert.Equal(t, "", val, "default_effort should be empty string when nothing is configured")
 }
+
+func TestUpdateConfigHandler_SetsDefaultEffortByPreset(t *testing.T) {
+	dir := t.TempDir()
+	writeMinimalConfig(t, dir)
+
+	req := newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"default_effort_by_preset": map[string]any{
+			"codex":  "high",
+			"claude": "xhigh",
+		},
+	})
+	res, err := UpdateConfigHandler(context.Background(), req)
+	require.NoError(t, err)
+	require.False(t, res.IsError, "expected success, got error: %+v", res.Content)
+
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "effort_by_preset:")
+	assert.Contains(t, string(body), "codex: high")
+	assert.Contains(t, string(body), "claude: xhigh")
+}
+
+func TestUpdateConfigHandler_RejectsInvalidEffortByPresetValue(t *testing.T) {
+	dir := t.TempDir()
+	writeMinimalConfig(t, dir)
+
+	req := newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"default_effort_by_preset": map[string]any{
+			"codex": "extreme",
+		},
+	})
+	res, err := UpdateConfigHandler(context.Background(), req)
+	require.NoError(t, err)
+	require.True(t, res.IsError, "expected error result for invalid effort tier")
+}
+
+func TestUpdateConfigHandler_RejectsUnknownPresetKey(t *testing.T) {
+	dir := t.TempDir()
+	writeMinimalConfig(t, dir)
+
+	req := newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"default_effort_by_preset": map[string]any{
+			"not-a-preset": "high",
+		},
+	})
+	res, err := UpdateConfigHandler(context.Background(), req)
+	require.NoError(t, err)
+	require.True(t, res.IsError, "expected error result for unknown preset key")
+}
+
+func TestUpdateConfigHandler_ClearsEffortByPresetOnEmptyMap(t *testing.T) {
+	dir := t.TempDir()
+	writeMinimalConfig(t, dir)
+
+	// Seed a value first.
+	req1 := newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"default_effort_by_preset": map[string]any{
+			"codex": "high",
+		},
+	})
+	_, err := UpdateConfigHandler(context.Background(), req1)
+	require.NoError(t, err)
+
+	// Clear with empty map.
+	req2 := newRequestWithArgs(map[string]any{
+		"working_directory":        dir,
+		"default_effort_by_preset": map[string]any{},
+	})
+	res, err := UpdateConfigHandler(context.Background(), req2)
+	require.NoError(t, err)
+	require.False(t, res.IsError)
+
+	body, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", "config.yaml"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(body), "effort_by_preset",
+		"empty map should clear the field; got config:\n%s", string(body))
+}
+
+func TestReadConfigHandler_SurfacesEffortByPreset(t *testing.T) {
+	dir := t.TempDir()
+	writeMinimalConfig(t, dir)
+
+	upd := newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"default_effort_by_preset": map[string]any{
+			"codex": "high",
+		},
+	})
+	_, err := UpdateConfigHandler(context.Background(), upd)
+	require.NoError(t, err)
+
+	read := newRequestWithArgs(map[string]any{"working_directory": dir})
+	res, err := ReadConfigHandler(context.Background(), read)
+	require.NoError(t, err)
+
+	payload := resultPayload(t, res)
+	raw, present := payload["default_effort_by_preset"]
+	require.True(t, present, "default_effort_by_preset must always be in the response")
+	m, ok := raw.(map[string]interface{})
+	require.True(t, ok, "expected map for default_effort_by_preset, got %T", raw)
+	assert.Equal(t, "high", m["codex"])
+}
+
+func TestReadConfigHandler_AlwaysEmitsEffortByPresetKey(t *testing.T) {
+	dir := t.TempDir()
+	writeMinimalConfig(t, dir)
+
+	read := newRequestWithArgs(map[string]any{"working_directory": dir})
+	res, err := ReadConfigHandler(context.Background(), read)
+	require.NoError(t, err)
+
+	payload := resultPayload(t, res)
+	raw, present := payload["default_effort_by_preset"]
+	require.True(t, present, "default_effort_by_preset key must always be in the response")
+	m, ok := raw.(map[string]interface{})
+	require.True(t, ok)
+	assert.Empty(t, m, "should be an empty map when nothing is configured")
+}

@@ -129,3 +129,66 @@ func TestAmpPresetGenerator_buildAmpAgentFrontmatter(t *testing.T) {
 		assert.Len(t, fm, 1)
 	})
 }
+
+func TestAmpPresetGenerator_EmitsSettingsJSONWhenEffortSet(t *testing.T) {
+	g := &AmpPresetGenerator{}
+	cfg := &config.Config{
+		Name:    "test",
+		Presets: []config.Preset{{BuiltIn: "amp"}},
+		Defaults: &config.DefaultsConfig{
+			EffortByPreset: map[string]string{"amp": "max"},
+		},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outputs {
+		if filepath.Base(o.Path) == "settings.json" {
+			if !contains(o.Content, `"amp.anthropic.effort"`) || !contains(o.Content, `"max"`) {
+				t.Errorf("expected settings.json to contain amp.anthropic.effort=max, got %q", o.Content)
+			}
+			return
+		}
+	}
+	t.Fatal("expected .amp/settings.json to be emitted")
+}
+
+func TestAmpPresetGenerator_XHighMapsToHigh(t *testing.T) {
+	g := &AmpPresetGenerator{}
+	cfg := &config.Config{
+		Name:     "test",
+		Presets:  []config.Preset{{BuiltIn: "amp"}},
+		Defaults: &config.DefaultsConfig{Effort: "xhigh"},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outputs {
+		if filepath.Base(o.Path) == "settings.json" {
+			if !contains(o.Content, `"high"`) {
+				t.Errorf("xhigh should map to high for amp; got %q", o.Content)
+			}
+			return
+		}
+	}
+	t.Fatal("expected .amp/settings.json to be emitted")
+}
+
+func TestAmpPresetGenerator_OmitsSettingsWhenNoEffort(t *testing.T) {
+	g := &AmpPresetGenerator{}
+	cfg := &config.Config{
+		Name:    "test",
+		Presets: []config.Preset{{BuiltIn: "amp"}},
+	}
+	outputs, err := g.Generate(&config.ContentTree{}, "/tmp/x", cfg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, o := range outputs {
+		if filepath.Base(o.Path) == "settings.json" {
+			t.Fatalf("settings.json should not be emitted when no effort set; got %q", o.Content)
+		}
+	}
+}

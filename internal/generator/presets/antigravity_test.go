@@ -244,8 +244,15 @@ func TestAntigravityPresetGenerator_buildAgentFrontmatter_DoesNotEmitEffort(t *t
 
 	fm := g.buildAgentFrontmatter(agent)
 
+	// Antigravity's thinking control (thinkingLevel) is a model-variant selection
+	// at the API level, not a frontmatter field the IDE reads from agent files.
+	// We deliberately do not emit it here; revisit if Google publishes a frontmatter
+	// schema that includes a thinking/reasoning field.
 	if _, ok := fm["effort"]; ok {
-		t.Errorf("effort field leaked into Antigravity agent frontmatter; Antigravity does not natively support reasoning effort")
+		t.Errorf("effort field leaked into Antigravity agent frontmatter")
+	}
+	if _, ok := fm["thinking_level"]; ok {
+		t.Errorf("thinking_level should not be emitted until Antigravity documents it as a frontmatter field")
 	}
 	if fm["description"] != "Reviews code" {
 		t.Errorf("expected description to be passed through; got %v", fm["description"])
