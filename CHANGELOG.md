@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.4] - 2026-05-01
+
+### Fixed
+- **Flaky MCP e2e test client**: the per-test `MCPClient` was a single-line-per-request stdio reader with no JSON-RPC id matching, no notification handling, a fresh reader goroutine per call, and the default 64 KiB `bufio.Scanner` buffer. The `tools/list` response is already ~18 KiB on a single line and grows with the tool surface; any server-emitted notification interleaved with a response would be misparsed as the response and orphan the real one. After bumping `modelcontextprotocol/go-sdk v1.5.0 → v1.6.0` in v4.1.3, this manifested as `MCP request timed out` flakes on cold runs (`tests/e2e/testutil/mcp_client.go`).
+
+### Changed
+- **MCP e2e test client rewritten** for correctness:
+  - One persistent reader goroutine demuxes stdout into per-request response channels keyed by JSON-RPC id, so notifications cannot be misparsed as responses.
+  - Notifications (frames without an `id`) are silently discarded.
+  - JSON-RPC id key normalized via re-marshal so request and response sides format the same way (encoding/json's float64 round-trip for large nanosecond ids was the latent gotcha).
+  - `bufio.Scanner` buffer raised to 1 MiB.
+  - Per-RPC timeout standardized at 30 s with explicit `t.Fatalf` showing the method name and reader error on server-side exit.
+  - `Close()` now waits for the reader to drain so its goroutine doesn't outlive the test.
+- **Reverted v4.1.3's blind 5 s → 30 s timeout bump** as the cure: that bump only masked the underlying client fragility. With the rewrite the timeout is no longer the load-bearing fix.
+
 ## [4.1.3] - 2026-04-30
 
 ### Fixed
