@@ -253,7 +253,7 @@ func (fm *FileManager) CreateDomainStructure(domainName string) error {
 	}
 
 	// Create subdirectories
-	subdirs := []string{"rules", "context", "skills"}
+	subdirs := []string{ContentTypeRules, ContentTypeContext, ContentTypeSkills}
 	for _, subdir := range subdirs {
 		path := filepath.Join(domainPath, subdir)
 		if err := fm.CreateDirectory(path); err != nil {

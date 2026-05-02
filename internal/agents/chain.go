@@ -99,6 +99,13 @@ const (
 	statusRetrying = "retrying"
 	statusSuccess  = "success"
 	statusFailed   = "failed"
+
+	taskCodingStandards = "coding standards"
+	taskDocumentation   = "documentation sections"
+
+	keyName     = "name"
+	keyPriority = "priority"
+	keyContent  = "content"
 )
 
 func getInitAgentTasks(context *ProjectContext, providerConfig templates.ProviderConfig) []AgentTask {
@@ -117,7 +124,7 @@ func getMaxAgents() int {
 func distributeSpecialistTasks(context *ProjectContext, providerConfig templates.ProviderConfig) []AgentTask {
 	workload := assessProjectWorkload(context)
 
-	baseTasks := []string{"project description", "coding standards", "documentation sections"}
+	baseTasks := []string{"project description", taskCodingStandards, taskDocumentation}
 
 	if providerConfig.Claude || providerConfig.ContinueDev {
 		baseTasks = append(baseTasks, "agent definitions")
@@ -207,9 +214,9 @@ func applySplittingHeuristics(baseTasks []string, workload ProjectWorkload, maxA
 
 func expandTask(task string, workload ProjectWorkload, maxAgents int) []string {
 	switch task {
-	case "coding standards":
+	case taskCodingStandards:
 		return expandCodingStandards(workload, maxAgents)
-	case "documentation sections":
+	case taskDocumentation:
 		return expandDocumentation(workload, maxAgents)
 	case "agent definitions":
 		return expandAgentDefinitions(workload, maxAgents)
@@ -220,7 +227,7 @@ func expandTask(task string, workload ProjectWorkload, maxAgents int) []string {
 
 func expandCodingStandards(workload ProjectWorkload, maxAgents int) []string {
 	if !workload.largeCodebase || maxAgents < 6 {
-		return []string{"coding standards"}
+		return []string{taskCodingStandards}
 	}
 
 	tasks := []string{
@@ -238,7 +245,7 @@ func expandCodingStandards(workload ProjectWorkload, maxAgents int) []string {
 
 func expandDocumentation(workload ProjectWorkload, maxAgents int) []string {
 	if !workload.documentationHeavy || maxAgents < 5 {
-		return []string{"documentation sections"}
+		return []string{taskDocumentation}
 	}
 
 	tasks := []string{
@@ -406,7 +413,7 @@ func ExecuteInitChain(agent AgentInfo, context *ProjectContext, providerConfig t
 
 	fmt.Println("✅ Configuration generated successfully")
 
-	data, err := os.ReadFile("ai-rulez.yaml")
+	data, err := os.ReadFile(configFilename)
 	if err != nil {
 		return "", fmt.Errorf("failed to read configuration file: %w", err)
 	}
@@ -458,7 +465,7 @@ func atomicWriteFile(filename string, data []byte, perm os.FileMode) error {
 
 func initializeBaseConfigFile(context *ProjectContext, providerConfig templates.ProviderConfig, presets []string) error {
 	content := buildInitialConfigTemplate(context, providerConfig, presets)
-	if err := atomicWriteFile("ai-rulez.yaml", []byte(content), 0o644); err != nil {
+	if err := atomicWriteFile(configFilename, []byte(content), 0o644); err != nil {
 		return err
 	}
 
@@ -826,7 +833,7 @@ func getResponseTypeForTask(taskName string) string {
 }
 
 func applyResponseToConfig(response interface{}, responseType string) error {
-	configPath := "ai-rulez.yaml"
+	configPath := configFilename
 
 	var config map[string]interface{}
 	data, err := os.ReadFile(configPath)
@@ -910,15 +917,15 @@ func extractExistingRules(config map[string]interface{}) (rules []interface{}, e
 			continue
 		}
 
-		name, nameOk := ruleMap["name"].(string)
+		name, nameOk := ruleMap[keyName].(string)
 		if !nameOk {
 			continue
 		}
 
 		existingNames[name] = true
 
-		priority, pOk := ruleMap["priority"].(string)
-		content, cOk := ruleMap["content"].(string)
+		priority, pOk := ruleMap[keyPriority].(string)
+		content, cOk := ruleMap[keyContent].(string)
 		if pOk && cOk {
 			existingRules = append(existingRules, RuleResponse{
 				Name:     name,
@@ -938,15 +945,15 @@ func updateExistingRule(rules []interface{}, existingRules []RuleResponse, simil
 			continue
 		}
 
-		name, ok := ruleMap["name"].(string)
+		name, ok := ruleMap[keyName].(string)
 		if !ok || name != similarRule.Name {
 			continue
 		}
 
 		rules[i] = map[string]interface{}{
-			"name":     merged.Name,
-			"priority": merged.Priority,
-			"content":  merged.Content,
+			keyName:     merged.Name,
+			keyPriority: merged.Priority,
+			keyContent:  merged.Content,
 		}
 
 		for j := range existingRules {
@@ -984,9 +991,9 @@ func applyRulesResponse(config map[string]interface{}, response interface{}) err
 			updateExistingRule(rules, existingRules, similarRule, merged)
 		} else {
 			rules = append(rules, map[string]interface{}{
-				"name":     newRule.Name,
-				"priority": newRule.Priority,
-				"content":  newRule.Content,
+				keyName:     newRule.Name,
+				keyPriority: newRule.Priority,
+				keyContent:  newRule.Content,
 			})
 			existingNames[newRule.Name] = true
 			existingRules = append(existingRules, newRule)
@@ -1018,15 +1025,15 @@ func extractExistingSections(config map[string]interface{}) (sections []interfac
 			continue
 		}
 
-		name, nameOk := sectionMap["name"].(string)
+		name, nameOk := sectionMap[keyName].(string)
 		if !nameOk {
 			continue
 		}
 
 		existingNames[name] = true
 
-		priority, pOk := sectionMap["priority"].(string)
-		content, cOk := sectionMap["content"].(string)
+		priority, pOk := sectionMap[keyPriority].(string)
+		content, cOk := sectionMap[keyContent].(string)
 		if pOk && cOk {
 			existingSections = append(existingSections, SectionResponse{
 				Name:     name,
@@ -1046,7 +1053,7 @@ func updateExistingSection(sections []interface{}, existingSections []SectionRes
 			continue
 		}
 
-		name, ok := sectionMap["name"].(string)
+		name, ok := sectionMap[keyName].(string)
 		if !ok || name != similarSection.Name {
 			continue
 		}
@@ -1057,9 +1064,9 @@ func updateExistingSection(sections []interface{}, existingSections []SectionRes
 		}
 
 		sections[i] = map[string]interface{}{
-			"name":     similarSection.Name,
-			"priority": newSection.Priority,
-			"content":  mergedContent,
+			keyName:     similarSection.Name,
+			keyPriority: newSection.Priority,
+			keyContent:  mergedContent,
 		}
 
 		for j := range existingSections {
@@ -1097,9 +1104,9 @@ func applySectionsResponse(config map[string]interface{}, response interface{}) 
 			updateExistingSection(sections, existingSections, similarSection, newSection)
 		} else {
 			sections = append(sections, map[string]interface{}{
-				"name":     newSection.Name,
-				"priority": newSection.Priority,
-				"content":  newSection.Content,
+				keyName:     newSection.Name,
+				keyPriority: newSection.Priority,
+				keyContent:  newSection.Content,
 			})
 			existingNames[newSection.Name] = true
 			existingSections = append(existingSections, newSection)
@@ -1126,7 +1133,7 @@ func applyAgentsResponse(config map[string]interface{}, response interface{}) er
 		}
 		for _, a := range agents {
 			if agentMap, ok := a.(map[string]interface{}); ok {
-				if name, ok := agentMap["name"].(string); ok {
+				if name, ok := agentMap[keyName].(string); ok {
 					existingNames[name] = true
 				}
 			}
@@ -1136,7 +1143,7 @@ func applyAgentsResponse(config map[string]interface{}, response interface{}) er
 	for _, agent := range resp.Agents {
 		if !existingNames[agent.Name] {
 			agents = append(agents, map[string]interface{}{
-				"name":        agent.Name,
+				keyName:       agent.Name,
 				"description": agent.Description,
 			})
 		}
@@ -1264,8 +1271,6 @@ func executeWave(waveTasks []AgentTask, waveStatuses []*TaskStatus, agent AgentI
 
 // formatConfigFile formats the generated root config file using yamlfmt if available.
 func formatConfigFile() {
-	const configFilename = "ai-rulez.yaml"
-
 	// Check if yamlfmt is available
 	if _, err := exec.LookPath("yamlfmt"); err != nil {
 		logger.Debug("yamlfmt not found, skipping YAML formatting", "file", configFilename)

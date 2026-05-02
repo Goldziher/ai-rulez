@@ -183,10 +183,10 @@ func validateAddIncludeRequest(req *AddIncludeRequest) error {
 
 	// Validate include types if provided
 	validTypes := map[string]bool{
-		"rules":   true,
-		"context": true,
-		"skills":  true,
-		"mcp":     true,
+		ContentTypeRules:   true,
+		ContentTypeContext: true,
+		ContentTypeSkills:  true,
+		"mcp":              true,
 	}
 
 	for _, t := range req.Include {

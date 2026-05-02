@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/internal/crud"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -21,7 +22,7 @@ var BuiltinsCmd = &cobra.Command{
 }
 
 var builtinsListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   cmdUseList,
 	Short: "List all available built-in domains",
 	Long: `List all available built-in domains that can be enabled via the 'builtins' config field.
 
@@ -64,7 +65,7 @@ func outputBuiltinsJSON(domains []builtins.BuiltinDomain) {
 	output := make([]map[string]interface{}, len(domains))
 	for i, d := range domains {
 		output[i] = map[string]interface{}{
-			"name":         d.Name,
+			keyName:        d.Name,
 			"category":     string(d.Category),
 			"auto_include": d.AutoInclude,
 			"description":  d.Description,
@@ -121,7 +122,7 @@ func outputShowJSON(name string, entries []builtins.ContentEntry) {
 	grouped := map[string][]map[string]string{}
 	for _, e := range entries {
 		entry := map[string]string{
-			"name":    e.Name,
+			keyName:   e.Name,
 			"content": e.Content,
 		}
 		if e.Priority != "" {
@@ -132,7 +133,7 @@ func outputShowJSON(name string, entries []builtins.ContentEntry) {
 
 	domain, _ := builtins.Get(name)
 	output := map[string]interface{}{
-		"name":     name,
+		keyName:    name,
 		"category": string(domain.Category),
 		"content":  grouped,
 	}
@@ -157,7 +158,7 @@ func outputShowFormatted(name string, entries []builtins.ContentEntry) {
 		grouped[e.Type] = append(grouped[e.Type], e)
 	}
 
-	contentTypes := []string{"rules", "context", "skills", "agents", "commands"}
+	contentTypes := []string{crud.ContentTypeRules, crud.ContentTypeContext, crud.ContentTypeSkills, "agents", "commands"}
 	for _, ct := range contentTypes {
 		items, ok := grouped[ct]
 		if !ok {

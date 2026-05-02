@@ -50,7 +50,7 @@ Examples:
 }
 
 var skillRemoveCmd = &cobra.Command{
-	Use:   "remove <name>",
+	Use:   cmdUseRemoveName,
 	Short: "Remove an installed skill",
 	Long: `Remove an installed skill from the configuration.
 
@@ -60,7 +60,7 @@ Use --force to skip confirmation prompts.`,
 }
 
 var skillListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   cmdUseList,
 	Short: "List all installed skills",
 	Long:  `List all skills installed from external sources.`,
 	Args:  cobra.NoArgs,
@@ -163,11 +163,11 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		output := make([]map[string]interface{}, len(skills))
 		for i, s := range skills {
 			output[i] = map[string]interface{}{
-				"name":   s.Name,
+				keyName:  s.Name,
 				"source": s.Source,
-				"path":   s.Path,
+				keyPath:  s.Path,
 				"ref":    s.Ref,
-				"type":   s.Type,
+				keyType:  s.Type,
 			}
 		}
 		data, err := json.MarshalIndent(output, "", "  ")

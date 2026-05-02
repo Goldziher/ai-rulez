@@ -167,25 +167,27 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	for _, ctx := range allContext {
 		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		prompt := map[string]interface{}{
-			"name":        ctx.Name,
-			"description": fmt.Sprintf("Context: %s", ctx.Name),
-			"prompt":      processedContent,
+			keyName:        ctx.Name,
+			keyDescription: fmt.Sprintf("Context: %s", ctx.Name),
+			keyPrompt:      processedContent,
 		}
 		prompts = append(prompts, prompt)
 	}
 
-	// Add skills as prompts
+	// Add skills as prompts. continue.dev has no skill directory to read from,
+	// so bundled references are inlined into the prompt body.
 	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
 	for _, skill := range allSkills {
-		processedContent := markdown.ProcessEmbeddedContent(skill.Content)
+		body := skill.Content + InlineSkillResources(&skill)
+		processedContent := markdown.ProcessEmbeddedContent(body)
 		prompt := map[string]interface{}{
-			"name":        skill.Name,
-			"description": fmt.Sprintf("Skill: %s", skill.Name),
-			"prompt":      processedContent,
+			keyName:        skill.Name,
+			keyDescription: fmt.Sprintf("Skill: %s", skill.Name),
+			keyPrompt:      processedContent,
 		}
 		if skill.Metadata != nil {
-			if desc, ok := skill.Metadata.Extra["description"]; ok {
-				prompt["description"] = desc
+			if desc, ok := skill.Metadata.Extra[keyDescription]; ok {
+				prompt[keyDescription] = desc
 			}
 		}
 		prompts = append(prompts, prompt)
@@ -201,15 +203,15 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 
 		processedContent := markdown.ProcessEmbeddedContent(command.Content)
 		prompt := map[string]interface{}{
-			"name":        command.Name,
-			"description": fmt.Sprintf("Command: %s", command.Name),
-			"prompt":      processedContent,
+			keyName:        command.Name,
+			keyDescription: fmt.Sprintf("Command: %s", command.Name),
+			keyPrompt:      processedContent,
 		}
 
 		// Add metadata if available
 		if command.Metadata != nil {
-			if desc, ok := command.Metadata.Extra["description"]; ok {
-				prompt["description"] = desc
+			if desc, ok := command.Metadata.Extra[keyDescription]; ok {
+				prompt[keyDescription] = desc
 			}
 			if usage := command.Metadata.Usage; usage != "" {
 				prompt["usage"] = usage
@@ -251,14 +253,14 @@ func (g *ContinueDevPresetGenerator) renderContinueDevAgentFile(agent config.Con
 // buildContinueDevAgentFrontmatter builds frontmatter for a Continue.dev agent file
 func (g *ContinueDevPresetGenerator) buildContinueDevAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	continueDevFields := []string{"description", "model"}
+	continueDevFields := []string{keyDescription, keyModel}
 	for _, field := range continueDevFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

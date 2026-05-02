@@ -103,6 +103,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 				Content: g.renderSkillFile(skill),
 			},
 		)
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate context files as rule-like files in .windsurf/rules/
@@ -159,6 +160,7 @@ func (g *WindsurfPresetGenerator) renderSkillFile(skill config.ContentFile) stri
 	builder.WriteString("\n")
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -277,7 +279,7 @@ func (g *WindsurfPresetGenerator) renderWindsurfAgentFile(agent config.ContentFi
 // buildWindsurfAgentFrontmatter builds frontmatter for a Windsurf agent file
 func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	// Resolve effort before the metadata-nil short-circuit so a defaults-only effort
@@ -290,7 +292,7 @@ func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.Con
 		return frontmatter
 	}
 
-	windsurfScalarFields := []string{"description", "model"}
+	windsurfScalarFields := []string{keyDescription, keyModel}
 	for _, field := range windsurfScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

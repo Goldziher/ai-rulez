@@ -99,6 +99,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 				Content: g.renderSkillFile(skill),
 			},
 		)
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate context files as rule-like files in .clinerules/
@@ -155,6 +156,7 @@ func (g *ClinePresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString("\n")
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -207,14 +209,14 @@ func (g *ClinePresetGenerator) renderClineAgentFile(agent config.ContentFile) (s
 // buildClineAgentFrontmatter builds frontmatter for a Cline agent file
 func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	clineScalarFields := []string{"description", "model"}
+	clineScalarFields := []string{keyDescription, keyModel}
 	for _, field := range clineScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

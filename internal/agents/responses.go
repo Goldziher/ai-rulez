@@ -9,6 +9,8 @@ import (
 	"unicode"
 )
 
+const priorityCritical = "critical"
+
 type AgentResponse interface {
 	Validate() error
 }
@@ -44,11 +46,11 @@ func (r *RuleResponse) Validate() error {
 		return fmt.Errorf("rule content is required")
 	}
 	validPriorities := map[string]bool{
-		"critical": true,
-		"high":     true,
-		"medium":   true,
-		"low":      true,
-		"minimal":  true,
+		priorityCritical: true,
+		"high":           true,
+		"medium":         true,
+		"low":            true,
+		"minimal":        true,
 	}
 	if !validPriorities[r.Priority] {
 		return fmt.Errorf("priority must be one of: critical, high, medium, low, minimal")
@@ -403,7 +405,7 @@ func (cs *ContentSimilarity) MergeRules(rule1, rule2 RuleResponse) RuleResponse 
 		rule1, rule2 = rule2, rule1
 	}
 
-	if rule2.Priority == "critical" && rule1.Priority != "critical" {
+	if rule2.Priority == priorityCritical && rule1.Priority != priorityCritical {
 		rule1.Priority = rule2.Priority
 	}
 
