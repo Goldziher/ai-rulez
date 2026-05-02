@@ -17,13 +17,13 @@ var (
 )
 
 var ListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   cmdUseList,
 	Short: "List rules, context, and skills",
 	Long:  `List rules, context, or skills in your .ai-rulez/ configuration.`,
 }
 
 var listRulesCmd = &cobra.Command{
-	Use:   "rules",
+	Use:   crud.ContentTypeRules,
 	Short: "List all rules",
 	Long: `List all rules in your .ai-rulez/ configuration.
 
@@ -33,7 +33,7 @@ You can filter by domain using --domain flag.`,
 }
 
 var listContextCmd = &cobra.Command{
-	Use:   "context",
+	Use:   crud.ContentTypeContext,
 	Short: "List all context files",
 	Long: `List all context files in your .ai-rulez/ configuration.
 
@@ -43,7 +43,7 @@ You can filter by domain using --domain flag.`,
 }
 
 var listSkillsCmd = &cobra.Command{
-	Use:   "skills",
+	Use:   crud.ContentTypeSkills,
 	Short: "List all skills",
 	Long: `List all skills in your .ai-rulez/ configuration.
 
@@ -76,7 +76,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	files, err := op.ListFiles(ctx, listDomain, "rules")
+	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeRules)
 	if err != nil {
 		logger.Error("Failed to list rules", "error", err)
 		os.Exit(1)
@@ -88,7 +88,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 	}
 
 	if listJSON {
-		outputListJSON("rules", files)
+		outputListJSON(crud.ContentTypeRules, files)
 	} else {
 		outputListTable("Rules", files)
 	}
@@ -102,7 +102,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	files, err := op.ListFiles(ctx, listDomain, "context")
+	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeContext)
 	if err != nil {
 		logger.Error("Failed to list context", "error", err)
 		os.Exit(1)
@@ -114,7 +114,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 	}
 
 	if listJSON {
-		outputListJSON("context", files)
+		outputListJSON(crud.ContentTypeContext, files)
 	} else {
 		outputListTable("Context", files)
 	}
@@ -128,7 +128,7 @@ func runListSkills(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	files, err := op.ListFiles(ctx, listDomain, "skills")
+	files, err := op.ListFiles(ctx, listDomain, crud.ContentTypeSkills)
 	if err != nil {
 		logger.Error("Failed to list skills", "error", err)
 		os.Exit(1)
@@ -140,7 +140,7 @@ func runListSkills(cmd *cobra.Command, args []string) {
 	}
 
 	if listJSON {
-		outputListJSON("skills", files)
+		outputListJSON(crud.ContentTypeSkills, files)
 	} else {
 		outputListTable("Skills", files)
 	}
@@ -151,10 +151,10 @@ func outputListJSON(fileType string, files []crud.FileInfo) {
 	output := make([]map[string]interface{}, len(files))
 	for i, file := range files {
 		output[i] = map[string]interface{}{
-			"name":     file.Name,
-			"type":     file.Type,
+			keyName:    file.Name,
+			keyType:    file.Type,
 			"domain":   file.Domain,
-			"path":     file.Path,
+			keyPath:    file.Path,
 			"priority": file.Priority,
 			"targets":  file.Targets,
 		}

@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	config.RegisterPreset("junie", &JuniePresetGenerator{})
+	config.RegisterPreset(presetNameJunie, &JuniePresetGenerator{})
 }
 
 // JuniePresetGenerator generates Junie preset files (.junie/guidelines.md)
@@ -37,7 +37,7 @@ func generateJuniePresetHeader(cfg *config.Config, outputPath string, ruleCount,
 }
 
 func (g *JuniePresetGenerator) GetName() string {
-	return "junie"
+	return presetNameJunie
 }
 
 func (g *JuniePresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -93,6 +93,7 @@ func (g *JuniePresetGenerator) Generate(content *config.ContentTree, baseDir str
 				Content: g.renderSkillFile(skill),
 			},
 		)
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .junie/agents/
@@ -190,6 +191,7 @@ func (g *JuniePresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString("\n")
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -216,7 +218,7 @@ func (g *JuniePresetGenerator) renderJunieAgentFile(agent config.ContentFile) (s
 // buildJunieAgentFrontmatter builds frontmatter for a Junie agent file
 func (g *JuniePresetGenerator) buildJunieAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
@@ -224,8 +226,8 @@ func (g *JuniePresetGenerator) buildJunieAgentFrontmatter(agent config.ContentFi
 	}
 
 	junieScalarFields := []string{
-		"description", "disallowedTools",
-		"model", "allowPromptArgument",
+		keyDescription, "disallowedTools",
+		keyModel, "allowPromptArgument",
 	}
 	for _, field := range junieScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {

@@ -50,7 +50,10 @@ func (c *Config) Validate() error {
 // validEffortValues lists the reasoning-effort values accepted by Claude Code
 // subagent frontmatter. Lowercase only. Empty string means "not set" and is
 // always valid; this list governs explicit values only.
-var validEffortValues = []string{"low", "medium", "high", "xhigh", "max", "inherit"}
+// effortXHigh is the "xhigh" reasoning-effort level (between high and max).
+const effortXHigh = "xhigh"
+
+var validEffortValues = []string{"low", "medium", string(PriorityHigh), effortXHigh, "max", "inherit"}
 
 // validateEffort returns nil for the empty string or any value in validEffortValues.
 // Returns an oops-wrapped error otherwise. The fieldPath is embedded in the error
@@ -167,7 +170,7 @@ func validateSkillSlice(skills []ContentFile, scope string) error {
 
 // validateVersion checks that version is "3.0" or "4.0"
 func (c *Config) validateVersion() error {
-	if c.Version != "3.0" && c.Version != "4.0" {
+	if c.Version != ConfigVersionV3 && c.Version != ConfigVersionV4 {
 		return oops.
 			With("field", "version").
 			With("actual_version", c.Version).

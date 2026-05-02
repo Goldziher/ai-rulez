@@ -40,8 +40,8 @@ func ShowBuiltinHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	grouped := map[string][]map[string]string{}
 	for _, e := range entries {
 		entry := map[string]string{
-			"name":    e.Name,
-			"content": e.Content,
+			keyName:    e.Name,
+			keyContent: e.Content,
 		}
 		if e.Priority != "" {
 			entry["priority"] = e.Priority
@@ -50,9 +50,9 @@ func ShowBuiltinHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "show_builtin",
-		"name":      name,
-		"content":   grouped,
+		keySuccess:   true,
+		keyOperation: "show_builtin",
+		keyName:      name,
+		keyContent:   grouped,
 	})
 }

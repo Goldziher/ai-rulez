@@ -27,7 +27,10 @@ const (
 	repoTypeLibrary     = "library"
 	repoTypeApplication = "application"
 
-	fileReadmeMD = "README.md"
+	fileReadmeMD      = "README.md"
+	fileReadmeMDLower = "readme.md"
+	fileMainGo        = "main.go"
+	configFilename    = "ai-rulez.yaml"
 )
 
 type MarkdownFile struct {
@@ -212,7 +215,7 @@ func (ctx *ProjectContext) extractAgentsFromConfig(config map[string]interface{}
 }
 
 func (ctx *ProjectContext) UpdateContextFromConfig() error {
-	configPath := "ai-rulez.yaml"
+	configPath := configFilename
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -308,7 +311,7 @@ func isApplication(rootPath string) bool {
 		}
 	}
 
-	appFiles := []string{"main.go", "main.py"}
+	appFiles := []string{fileMainGo, "main.py"}
 	for _, file := range appFiles {
 		if utils.FileExists(filepath.Join(rootPath, file)) {
 			return true
@@ -492,7 +495,7 @@ func categorizeMarkdownFile(relPath, name string) string {
 		return categoryApp
 	}
 
-	if name == "readme.md" {
+	if name == fileReadmeMDLower {
 		return categoryReadme
 	}
 
@@ -653,7 +656,7 @@ func detectAppLocations(rootPath string) []string {
 
 func isAppDirectory(path string) bool {
 	return utils.FileExists(filepath.Join(path, "package.json")) ||
-		utils.FileExists(filepath.Join(path, "main.go")) ||
+		utils.FileExists(filepath.Join(path, fileMainGo)) ||
 		utils.FileExists(filepath.Join(path, "main.py")) ||
 		utils.FileExists(filepath.Join(path, "app.py")) ||
 		utils.FileExists(filepath.Join(path, "server.js")) ||
@@ -742,7 +745,7 @@ func (ctx *ProjectContext) readExistingAIConfigs(rootPath string) {
 		name string
 		path string
 	}{
-		{"README", "README.md"},
+		{"README", fileReadmeMD},
 		{"CLAUDE", "CLAUDE.md"},
 		{"CLAUDE_CLAUDE", ".claude/CLAUDE.md"},
 		{"GEMINI", "GEMINI.md"},
@@ -751,8 +754,8 @@ func (ctx *ProjectContext) readExistingAIConfigs(rootPath string) {
 		{"CONTINUE", "CONTINUE.md"},
 		{"CURSOR", ".cursorrules"},
 		{"CURSOR_MDC", ".cursor/rules/.mdc"},
-		{"AI_RULEZ", "ai-rulez.yaml"},
-		{"AI_RULEZ_OLD", "ai-rulez.yaml"},
+		{"AI_RULEZ", configFilename},
+		{"AI_RULEZ_OLD", configFilename},
 	}
 
 	for _, cf := range configFiles {

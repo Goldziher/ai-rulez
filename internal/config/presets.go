@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -13,11 +14,26 @@ type PresetGenerator interface {
 	GetName() string
 }
 
-// OutputFile represents a generated output file or directory
+// OutputFile represents a generated output file or directory.
+//
+// When RawContent is non-nil, the file is written verbatim — no header
+// injection, no hash bookkeeping, no trailing-newline normalization. Use this
+// for skill supporting files (references, scripts, assets) where any
+// ai-rulez-generated marker would corrupt the payload (e.g. Python scripts,
+// binary assets).
+//
+// When RawContent is nil, Content is rendered through the standard
+// generation pipeline (header banner + content/source hashes).
+//
+// Mode is the file permission bits to apply on write (0o644 if zero). Used
+// to preserve the executable bit on bundled skill scripts so the agent can
+// invoke them directly. Only honored on the raw-content write path.
 type OutputFile struct {
-	Path    string
-	Content string
-	IsDir   bool
+	Path       string
+	Content    string
+	RawContent []byte
+	Mode       os.FileMode
+	IsDir      bool
 }
 
 // PresetRegistry maps preset names to their generators

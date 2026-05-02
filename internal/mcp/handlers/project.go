@@ -45,11 +45,11 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	for i := range cfg.Includes {
 		inc := &cfg.Includes[i]
 		entry := map[string]interface{}{
-			"name":   inc.Name,
-			"source": inc.Source,
+			keyName:   inc.Name,
+			keySource: inc.Source,
 		}
 		if inc.Path != "" {
-			entry["path"] = inc.Path
+			entry[keyPath] = inc.Path
 		}
 		if inc.Ref != "" {
 			entry["ref"] = inc.Ref
@@ -77,9 +77,9 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	}
 
 	result := map[string]interface{}{
-		"success":     true,
-		"operation":   "read_config",
-		"name":        cfg.Name,
+		keySuccess:    true,
+		keyOperation:  "read_config",
+		keyName:       cfg.Name,
 		"description": cfg.Description,
 		"presets":     presets,
 		"profiles":    cfg.Profiles,
@@ -205,7 +205,7 @@ func applyConfigUpdates(cfg *config.Config, request *ToolRequest) ([]string, err
 	args := request.GetArguments()
 	updated := []string{}
 
-	if _, ok := args["name"]; ok {
+	if _, ok := args[keyName]; ok {
 		cfg.Name = request.GetString("name", cfg.Name)
 		updated = append(updated, "name")
 	}
@@ -275,10 +275,10 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 
 	if len(updated) == 0 {
 		return ToolSuccess(map[string]interface{}{
-			"success":   true,
-			"operation": "update_config",
-			"message":   "No fields to update",
-			"updated":   updated,
+			keySuccess:   true,
+			keyOperation: "update_config",
+			keyMessage:   "No fields to update",
+			"updated":    updated,
 		})
 	}
 
@@ -288,10 +288,10 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "update_config",
-		"message":   "Config updated successfully",
-		"updated":   updated,
+		keySuccess:   true,
+		keyOperation: "update_config",
+		keyMessage:   "Config updated successfully",
+		"updated":    updated,
 	})
 }
 
@@ -368,7 +368,7 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 
 	if len(dirs) == 0 {
 		return ToolSuccess(map[string]interface{}{
-			"message": "No directories with .ai-rulez/config.* found",
+			keyMessage: "No directories with .ai-rulez/config.* found",
 		})
 	}
 
@@ -378,8 +378,8 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"message": fmt.Sprintf("Recursive generation completed for %d directories", len(dirs)),
-		"results": results,
+		keyMessage: fmt.Sprintf("Recursive generation completed for %d directories", len(dirs)),
+		"results":  results,
 	})
 }
 
@@ -392,7 +392,7 @@ func runGenerateForDir(ctx context.Context, request *ToolRequest, dir string, dr
 	case result != nil && result.IsError:
 		entry["error"] = result.Content[0]
 	default:
-		entry["success"] = true
+		entry[keySuccess] = true
 	}
 	return entry
 }
@@ -423,8 +423,8 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 
 	if dryRun {
 		return ToolSuccess(map[string]interface{}{
-			"message": "dry_run: not yet implemented for configs",
-			"config":  configFile,
+			keyMessage: "dry_run: not yet implemented for configs",
+			"config":   configFile,
 		})
 	}
 	// Load and generate config
@@ -440,8 +440,8 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		return ToolError(err)
 	}
 	return ToolSuccess(map[string]interface{}{
-		"message": "Outputs generated successfully",
-		"config":  configFile,
+		keyMessage: "Outputs generated successfully",
+		"config":   configFile,
 	})
 }
 
@@ -466,20 +466,20 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 	cfg, err := config.LoadConfig(ctx, dir)
 	if err != nil {
 		result := map[string]interface{}{
-			"valid": false,
-			"error": err.Error(),
+			keyValid: false,
+			"error":  err.Error(),
 		}
 		return ToolSuccess(result)
 	}
 	if err := cfg.Validate(); err != nil {
 		result := map[string]interface{}{
-			"valid": false,
-			"error": err.Error(),
+			keyValid: false,
+			"error":  err.Error(),
 		}
 		return ToolSuccess(result)
 	}
 	result := map[string]interface{}{
-		"valid":    true,
+		keyValid:   true,
 		"warnings": []string{},
 	}
 	return ToolSuccess(result)
@@ -487,7 +487,7 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 
 func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {
 	if allProviders {
-		return []string{"claude", "cursor", "windsurf", "copilot", "gemini", "amp", "codex", "cline", "continue-dev"}, true
+		return []string{presetClaude, presetCursor, presetWindsurf, presetCopilot, presetGemini, presetAmp, presetCodex, presetCline, presetContinueDev}, true
 	}
 	if popularProviders {
 		return []string{"popular"}, false
@@ -497,22 +497,22 @@ func getPresetsFromProviders(providers []interface{}, allProviders, popularProvi
 	var hasContinueDev bool
 
 	providerMap := map[string]string{
-		"claude":       "claude",
-		"cursor":       "cursor",
-		"windsurf":     "windsurf",
-		"copilot":      "copilot",
-		"gemini":       "gemini",
-		"amp":          "amp",
-		"codex":        "codex",
-		"cline":        "cline",
-		"continue-dev": "continue-dev",
+		presetClaude:      presetClaude,
+		presetCursor:      presetCursor,
+		presetWindsurf:    presetWindsurf,
+		presetCopilot:     presetCopilot,
+		presetGemini:      presetGemini,
+		presetAmp:         presetAmp,
+		presetCodex:       presetCodex,
+		presetCline:       presetCline,
+		presetContinueDev: presetContinueDev,
 	}
 
 	for _, p := range providers {
 		if provider, ok := p.(string); ok {
 			if preset, exists := providerMap[provider]; exists {
 				presets = append(presets, preset)
-				if provider == "continue-dev" {
+				if provider == presetContinueDev {
 					hasContinueDev = true
 				}
 			}
@@ -541,7 +541,7 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	if len(presets) > 0 {
 		configContent = templates.GenerateConfigWithPresets(projectName, presets)
 	} else {
-		configContent = templates.GenerateConfigWithPresets(projectName, []string{"claude"})
+		configContent = templates.GenerateConfigWithPresets(projectName, []string{presetClaude})
 	}
 
 	// Create .ai-rulez/ directory structure
@@ -570,7 +570,7 @@ func InitProjectHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToo
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"message": "Project initialized successfully",
-		"path":    configPath,
+		keyMessage: "Project initialized successfully",
+		keyPath:    configPath,
 	})
 }

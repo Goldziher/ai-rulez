@@ -35,7 +35,7 @@ Domains allow you to organize rules, context, and skills by functional areas or 
 }
 
 var domainRemoveCmd = &cobra.Command{
-	Use:   "remove <name>",
+	Use:   cmdUseRemoveName,
 	Short: "Remove a domain",
 	Long: `Remove a domain and all its contents.
 
@@ -45,7 +45,7 @@ Use --force to skip confirmation prompts.`,
 }
 
 var domainListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   cmdUseList,
 	Short: "List all domains",
 	Long:  `List all domains in your .ai-rulez/ configuration.`,
 	Args:  cobra.NoArgs,
@@ -147,8 +147,8 @@ func runDomainList(cmd *cobra.Command, args []string) {
 		output := make([]map[string]interface{}, len(domains))
 		for i, domain := range domains {
 			output[i] = map[string]interface{}{
-				"name":        domain.Name,
-				"path":        domain.Path,
+				keyName:       domain.Name,
+				keyPath:       domain.Path,
 				"description": domain.Description,
 			}
 		}

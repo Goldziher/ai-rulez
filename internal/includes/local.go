@@ -150,14 +150,14 @@ func (s *LocalSource) validatePath(path string) error {
 // Returns the path to the .ai-rulez directory, or empty string if not found
 func (s *LocalSource) findAIRulezDir(path string) string {
 	// Check if path itself is a .ai-rulez directory
-	if filepath.Base(path) == ".ai-rulez" {
+	if filepath.Base(path) == aiRulezDir {
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}
 
 	// Check if path contains a .ai-rulez subdirectory
-	aiRulezPath := filepath.Join(path, ".ai-rulez")
+	aiRulezPath := filepath.Join(path, aiRulezDir)
 	if info, err := os.Stat(aiRulezPath); err == nil && info.IsDir() {
 		return aiRulezPath
 	}

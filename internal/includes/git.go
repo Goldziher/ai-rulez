@@ -34,6 +34,10 @@ const (
 	aiRulezDir    = ".ai-rulez"
 	fetchTimeFile = ".fetch_time"
 	cacheTTL      = 1 * time.Hour
+	// contextSubdir is the name of the context content subdirectory.
+	contextSubdir = "context"
+	// rulesSubdir is the name of the rules content subdirectory.
+	rulesSubdir = "rules"
 )
 
 // SkipFetch when true causes git sources to use cached content without fetching.
@@ -708,10 +712,10 @@ func (s *GitSource) filterContent(tree *config.ContentTree) *config.ContentTree 
 	}
 
 	// Filter root content
-	if shouldInclude("rules") {
+	if shouldInclude(rulesSubdir) {
 		filtered.Rules = tree.Rules
 	}
-	if shouldInclude("context") {
+	if shouldInclude(contextSubdir) {
 		filtered.Context = tree.Context
 	}
 	if shouldInclude("skills") {
@@ -907,7 +911,7 @@ func (s *GitSource) findSourceDir(tmpDir string) (string, error) {
 
 // hasAIRulezStructure checks if a directory contains ai-rulez structure
 func (s *GitSource) hasAIRulezStructure(dir string) bool {
-	checkDirs := []string{"rules", "context", "skills", "agents"}
+	checkDirs := []string{rulesSubdir, contextSubdir, "skills", "agents"}
 	for _, subdir := range checkDirs {
 		checkPath := filepath.Join(dir, subdir)
 		if info, err := os.Stat(checkPath); err == nil && info.IsDir() {

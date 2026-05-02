@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"os"
 	"time"
 )
 
@@ -170,6 +171,12 @@ const (
 	PresetTypeJSON      PresetType = "json"
 )
 
+// Config schema versions accepted by the loader and validator.
+const (
+	ConfigVersionV3 = "3.0"
+	ConfigVersionV4 = "4.0"
+)
+
 // UnmarshalYAML implements custom YAML unmarshaling for Preset
 func (p *Preset) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	// Try to unmarshal as a string (built-in preset)
@@ -261,19 +268,19 @@ func (p *Preset) IsValid() bool {
 
 // Built-in preset names
 var builtInPresets = map[string]bool{
-	"claude":       true,
-	"cursor":       true,
-	"gemini":       true,
-	"copilot":      true,
-	"continue-dev": true,
-	"windsurf":     true,
-	"cline":        true,
-	"codex":        true,
-	"amp":          true,
-	"junie":        true,
-	"opencode":     true,
-	"antigravity":  true,
-	"mcp":          true,
+	string(PresetClaude):      true,
+	string(PresetCursor):      true,
+	string(PresetGemini):      true,
+	string(PresetCopilot):     true,
+	string(PresetContinue):    true,
+	string(PresetWindsurf):    true,
+	string(PresetCline):       true,
+	string(PresetCodex):       true,
+	string(PresetAmp):         true,
+	string(PresetJunie):       true,
+	"opencode":                true,
+	string(PresetAntigravity): true,
+	"mcp":                     true,
 }
 
 func isValidBuiltInPreset(name string) bool {
@@ -336,6 +343,39 @@ type ContentFile struct {
 	Path     string    `yaml:"path" json:"path"`
 	Content  string    `yaml:"content" json:"content"`
 	Metadata *Metadata `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+
+	// Resources holds skill supporting files (references/, scripts/, assets/)
+	// loaded alongside SKILL.md. Always empty for non-skill content.
+	Resources []SkillResource `yaml:"-" json:"-"`
+}
+
+// SkillResource is one supporting file bundled with a skill.
+//
+// The canonical Agent Skills layout (followed by Claude Code, OpenAI Codex,
+// and the agentskills.io standard) places these under three subdirectories:
+//
+//	references/  — markdown docs the agent reads on demand
+//	scripts/     — executable scripts the agent invokes
+//	assets/      — files used in output (templates, images, etc.)
+//
+// Resources are emitted as individual files under the rendered skill
+// directory and indexed from SKILL.md so the agent can discover them.
+type SkillResource struct {
+	// Kind is one of "references", "scripts", "assets".
+	Kind string
+	// RelPath is the resource path relative to the skill root, including the
+	// kind subdirectory (e.g. "references/api.md").
+	RelPath string
+	// Content holds the raw bytes of the file. Bytes (not string) so binary
+	// assets round-trip without UTF-8 corruption.
+	Content []byte
+	// Mode is the file permission bits read from disk. Preserved through
+	// generation so bundled scripts keep their executable bit.
+	Mode os.FileMode
+	// Description is parsed from a reference file's frontmatter `description`
+	// field, or falls back to the first non-empty markdown line. Empty for
+	// scripts and assets, or when no description is available.
+	Description string
 }
 
 // Metadata represents parsed frontmatter metadata.
@@ -413,12 +453,12 @@ func (c *Config) GetVersion() string {
 
 // IsV3 returns true if this is a V3 config (version == "3.0")
 func (c *Config) IsV3() bool {
-	return c.Version == "3.0"
+	return c.Version == ConfigVersionV3
 }
 
 // IsV4 returns true if this is a V4 config (version == "4.0")
 func (c *Config) IsV4() bool {
-	return c.Version == "4.0"
+	return c.Version == ConfigVersionV4
 }
 
 // GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal")

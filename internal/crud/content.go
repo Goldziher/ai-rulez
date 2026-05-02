@@ -48,8 +48,8 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	}
 
 	// Check if file already exists
-	if op.filesMgr.FileOrSkillExists(req.Domain, "rules", req.Name) {
-		filePath := op.filesMgr.GetFilePath(req.Domain, "rules", req.Name)
+	if op.filesMgr.FileOrSkillExists(req.Domain, ContentTypeRules, req.Name) {
+		filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeRules, req.Name)
 		return nil, &FileExistsError{
 			Path: filePath,
 			Type: "rule",
@@ -69,7 +69,7 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	content = EnsureTrailingNewline(content)
 
 	// Get file path and write
-	filePath := op.filesMgr.GetFilePath(req.Domain, "rules", req.Name)
+	filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeRules, req.Name)
 
 	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
 		return nil, err
@@ -78,7 +78,7 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 	return &FileResult{
 		Name:     req.Name,
 		FullPath: filePath,
-		Type:     "rules",
+		Type:     ContentTypeRules,
 		Domain:   req.Domain,
 	}, nil
 }
@@ -119,11 +119,11 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	}
 
 	// Check if file already exists
-	if op.filesMgr.FileOrSkillExists(req.Domain, "context", req.Name) {
-		filePath := op.filesMgr.GetFilePath(req.Domain, "context", req.Name)
+	if op.filesMgr.FileOrSkillExists(req.Domain, ContentTypeContext, req.Name) {
+		filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeContext, req.Name)
 		return nil, &FileExistsError{
 			Path: filePath,
-			Type: "context",
+			Type: ContentTypeContext,
 		}
 	}
 
@@ -140,7 +140,7 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	content = EnsureTrailingNewline(content)
 
 	// Get file path and write
-	filePath := op.filesMgr.GetFilePath(req.Domain, "context", req.Name)
+	filePath := op.filesMgr.GetFilePath(req.Domain, ContentTypeContext, req.Name)
 
 	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
 		return nil, err
@@ -149,7 +149,7 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 	return &FileResult{
 		Name:     req.Name,
 		FullPath: filePath,
-		Type:     "context",
+		Type:     ContentTypeContext,
 		Domain:   req.Domain,
 	}, nil
 }
@@ -194,8 +194,8 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 	}
 
 	// Check if skill already exists
-	if op.filesMgr.FileOrSkillExists(req.Domain, "skills", req.Name) {
-		skillPath := op.filesMgr.GetFilePath(req.Domain, "skills", req.Name)
+	if op.filesMgr.FileOrSkillExists(req.Domain, ContentTypeSkills, req.Name) {
+		skillPath := op.filesMgr.GetFilePath(req.Domain, ContentTypeSkills, req.Name)
 		return nil, &FileExistsError{
 			Path: skillPath,
 			Type: "skill",
@@ -230,7 +230,7 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 	return &FileResult{
 		Name:     req.Name,
 		FullPath: skillFile,
-		Type:     "skills",
+		Type:     ContentTypeSkills,
 		Domain:   req.Domain,
 	}, nil
 }

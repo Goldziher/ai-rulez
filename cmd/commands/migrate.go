@@ -140,7 +140,7 @@ func marshalConfigTOML(cfg *config.Config) ([]byte, error) {
 }
 
 func removeOldConfigFiles(configDir string) {
-	for _, old := range []string{"config.yaml", "config.json", "mcp.yaml", "mcp.toml", "mcp.json"} {
+	for _, old := range []string{configFileYAML, configFileJSON, "mcp.yaml", "mcp.toml", "mcp.json"} {
 		oldPath := filepath.Join(configDir, old)
 		if _, err := os.Stat(oldPath); err == nil {
 			if err := os.Remove(oldPath); err != nil {

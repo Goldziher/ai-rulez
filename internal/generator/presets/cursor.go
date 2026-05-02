@@ -122,6 +122,9 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
+
+		// Emit bundled resources alongside SKILL.md.
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .agents/agents/
@@ -308,6 +311,9 @@ func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *c
 	// Add skill content
 	builder.WriteString(skill.Content)
 
+	// Index bundled resources so the agent knows what to read on demand.
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
+
 	return builder.String()
 }
 
@@ -334,14 +340,14 @@ func (g *CursorPresetGenerator) renderCursorAgentFile(agent config.ContentFile) 
 // buildCursorAgentFrontmatter builds frontmatter for a Cursor agent file
 func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	cursorFields := []string{"description", "model", "readonly", "is_background"}
+	cursorFields := []string{keyDescription, keyModel, "readonly", "is_background"}
 	for _, field := range cursorFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
@@ -357,8 +363,8 @@ func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			"command":  server.Command,
-			"disabled": !server.IsEnabled(),
+			keyCommand:  server.Command,
+			keyDisabled: !server.IsEnabled(),
 		}
 
 		if len(server.Args) > 0 {
@@ -378,7 +384,7 @@ func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error
 	}
 
 	payload := map[string]interface{}{
-		"mcpServers": mcpServers,
+		keyMCPServers: mcpServers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(payload, "", "  ")

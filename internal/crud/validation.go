@@ -12,12 +12,12 @@ import (
 
 // Reserved domain names that should not be used
 var reservedDomainNames = map[string]bool{
-	"rules":   true,
-	"context": true,
-	"skills":  true,
-	"mcp":     true,
-	".":       true,
-	"..":      true,
+	ContentTypeRules:   true,
+	ContentTypeContext: true,
+	ContentTypeSkills:  true,
+	"mcp":              true,
+	".":                true,
+	"..":               true,
 }
 
 // ValidateDomainName validates a domain name
@@ -114,9 +114,9 @@ func ValidateFileName(name string) error {
 // ValidateFileType validates a file type
 func ValidateFileType(ftype string) error {
 	validTypes := map[string]bool{
-		"rules":   true,
-		"context": true,
-		"skills":  true,
+		ContentTypeRules:   true,
+		ContentTypeContext: true,
+		ContentTypeSkills:  true,
 	}
 
 	if !validTypes[ftype] {

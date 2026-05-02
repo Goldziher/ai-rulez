@@ -7,9 +7,9 @@ func DetectGitHooks() string {
 		name  string
 		files []string
 	}{
-		{"lefthook", []string{"lefthook.yml", ".lefthook.yml", "lefthook.yaml", ".lefthook.yaml"}},
-		{"pre-commit", []string{".pre-commit-config.yaml", "pre-commit-config.yaml"}},
-		{"husky", []string{".husky"}},
+		{lefthookSystem, []string{"lefthook.yml", ".lefthook.yml", "lefthook.yaml", ".lefthook.yaml"}},
+		{preCommitSystem, []string{".pre-commit-config.yaml", "pre-commit-config.yaml"}},
+		{huskySystem, []string{".husky"}},
 	}
 
 	for _, hook := range hooks {
