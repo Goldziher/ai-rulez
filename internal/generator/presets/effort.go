@@ -55,17 +55,17 @@ func MapEffort(preset, tier string) string {
 		return ""
 	}
 	switch preset {
-	case "claude":
+	case presetNameClaude:
 		return tier // pass-through; validation already restricted the set.
-	case "codex":
+	case codexPresetName:
 		return mapCodex(tier)
-	case "amp":
+	case presetNameAmp:
 		return mapAmp(tier)
-	case "windsurf", "antigravity":
+	case windsurfPresetName, presetNameAntigravity:
 		return mapWindsurfAntigravity(tier)
-	case "opencode":
+	case opencodePresetName:
 		return mapOpenCode(tier)
-	case "continue-dev":
+	case continueDevPresetName:
 		return mapContinueDev(tier)
 	default:
 		return ""

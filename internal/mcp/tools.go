@@ -7,6 +7,12 @@ import (
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
+// JSON-schema literals used by tool schema builders.
+const (
+	jsonTypeString = "string"
+	jsonKeyType    = "type"
+)
+
 type handlerFunc func(context.Context, *handlers.ToolRequest) (*sdkmcp.CallToolResult, error)
 
 type toolSchemaBuilder struct {
@@ -22,7 +28,7 @@ func newSchemaBuilder() *toolSchemaBuilder {
 
 func (b *toolSchemaBuilder) String(name, description string, required bool) *toolSchemaBuilder {
 	prop := map[string]any{
-		"type": "string",
+		jsonKeyType: jsonTypeString,
 	}
 	if description != "" {
 		prop["description"] = description
@@ -36,8 +42,8 @@ func (b *toolSchemaBuilder) String(name, description string, required bool) *too
 
 func (b *toolSchemaBuilder) StringArray(name, description string, required bool) *toolSchemaBuilder {
 	prop := map[string]any{
-		"type":  "array",
-		"items": map[string]any{"type": "string"},
+		jsonKeyType: "array",
+		"items":     map[string]any{jsonKeyType: jsonTypeString},
 	}
 	if description != "" {
 		prop["description"] = description
@@ -51,7 +57,7 @@ func (b *toolSchemaBuilder) StringArray(name, description string, required bool)
 
 func (b *toolSchemaBuilder) Boolean(name, description string, required bool) *toolSchemaBuilder {
 	prop := map[string]any{
-		"type": "boolean",
+		jsonKeyType: "boolean",
 	}
 	if description != "" {
 		prop["description"] = description
@@ -65,7 +71,7 @@ func (b *toolSchemaBuilder) Boolean(name, description string, required bool) *to
 
 func (b *toolSchemaBuilder) Number(name, description string, required bool) *toolSchemaBuilder {
 	prop := map[string]any{
-		"type": "number",
+		jsonKeyType: "number",
 	}
 	if description != "" {
 		prop["description"] = description
@@ -79,8 +85,8 @@ func (b *toolSchemaBuilder) Number(name, description string, required bool) *too
 
 func (b *toolSchemaBuilder) Object(name, description string, required bool) *toolSchemaBuilder {
 	prop := map[string]any{
-		"type":                 "object",
-		"additionalProperties": map[string]any{"type": "string"},
+		jsonKeyType:            "object",
+		"additionalProperties": map[string]any{jsonKeyType: jsonTypeString},
 	}
 	if description != "" {
 		prop["description"] = description
@@ -98,8 +104,8 @@ func (b *toolSchemaBuilder) Enum(name, description string, values []string, requ
 		enumValues[i] = v
 	}
 	prop := map[string]any{
-		"type": "string",
-		"enum": enumValues,
+		jsonKeyType: jsonTypeString,
+		"enum":      enumValues,
 	}
 	if description != "" {
 		prop["description"] = description
@@ -118,7 +124,7 @@ func (b *toolSchemaBuilder) WorkingDirectory() *toolSchemaBuilder {
 
 func (b *toolSchemaBuilder) Build() map[string]any {
 	schema := map[string]any{
-		"type":       "object",
+		jsonKeyType:  "object",
 		"properties": b.properties,
 	}
 	if len(b.required) > 0 {

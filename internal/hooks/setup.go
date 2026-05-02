@@ -13,7 +13,11 @@ const (
 	preCommitSystem       = "pre-commit"
 	huskySystem           = "husky"
 	officialPreCommitRepo = "https://github.com/Goldziher/ai-rulez"
-	officialPreCommitRev  = "v4.1.4"
+	officialPreCommitRev  = "v4.1.5"
+	keyRepo               = "repo"
+	keyHooks              = "hooks"
+	binaryAIRulez         = "ai-rulez"
+	unknownLabel          = "Unknown"
 )
 
 func SetupHooks() error {
@@ -74,11 +78,11 @@ func setupLefthook() error {
 		return fmt.Errorf("invalid lefthook commands structure")
 	}
 
-	if _, exists := commands["ai-rulez"]; exists {
+	if _, exists := commands[binaryAIRulez]; exists {
 		return nil
 	}
 
-	commands["ai-rulez"] = map[string]interface{}{
+	commands[binaryAIRulez] = map[string]interface{}{
 		"glob":      ".ai-rulez/**",
 		"run":       "ai-rulez validate",
 		"fail_text": "AI rules validation failed",
@@ -160,10 +164,10 @@ func ensureOfficialPreCommitRepo(repos []interface{}) (updated []interface{}, re
 		if !ok {
 			continue
 		}
-		if repoMap["repo"] == officialPreCommitRepo {
+		if repoMap[keyRepo] == officialPreCommitRepo {
 			repoMap["rev"] = officialPreCommitRev
-			if _, ok := repoMap["hooks"]; !ok {
-				repoMap["hooks"] = []interface{}{}
+			if _, ok := repoMap[keyHooks]; !ok {
+				repoMap[keyHooks] = []interface{}{}
 			}
 			updated[i] = repoMap
 			return updated, repoMap
@@ -171,16 +175,16 @@ func ensureOfficialPreCommitRepo(repos []interface{}) (updated []interface{}, re
 	}
 
 	repo = map[string]interface{}{
-		"repo":  officialPreCommitRepo,
-		"rev":   officialPreCommitRev,
-		"hooks": []interface{}{},
+		keyRepo:  officialPreCommitRepo,
+		"rev":    officialPreCommitRev,
+		keyHooks: []interface{}{},
 	}
 	updated = append(updated, repo)
 	return updated, repo
 }
 
 func ensureOfficialHooks(repo map[string]interface{}) {
-	hooks, ok := repo["hooks"].([]interface{})
+	hooks, ok := repo[keyHooks].([]interface{})
 	if !ok {
 		hooks = []interface{}{}
 	}
@@ -203,7 +207,7 @@ func ensureOfficialHooks(repo map[string]interface{}) {
 		hooks = append(hooks, map[string]interface{}{"id": id})
 	}
 
-	repo["hooks"] = hooks
+	repo[keyHooks] = hooks
 }
 
 func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
@@ -212,10 +216,10 @@ func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
 		if !ok {
 			continue
 		}
-		if repoMap["repo"] != "local" {
+		if repoMap[keyRepo] != "local" {
 			continue
 		}
-		hooks, ok := repoMap["hooks"].([]interface{})
+		hooks, ok := repoMap[keyHooks].([]interface{})
 		if !ok || len(hooks) == 0 {
 			continue
 		}
@@ -231,12 +235,12 @@ func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
 				filtered = append(filtered, hook)
 				continue
 			}
-			if id == "ai-rulez" {
+			if id == binaryAIRulez {
 				continue
 			}
 			filtered = append(filtered, hook)
 		}
-		repoMap["hooks"] = filtered
+		repoMap[keyHooks] = filtered
 		repos[i] = repoMap //nolint:gosec // i is bounded by range over repos
 	}
 	return repos
@@ -265,7 +269,7 @@ func setupHusky() error {
 	if data, err := os.ReadFile(".husky/pre-commit"); err == nil {
 		hookContent = string(data)
 
-		if strings.Contains(hookContent, "ai-rulez") {
+		if strings.Contains(hookContent, binaryAIRulez) {
 			return nil
 		}
 
@@ -300,13 +304,13 @@ npx ai-rulez validate || exit 1
 
 func GetHookSystemName(system string) string {
 	switch system {
-	case "lefthook":
+	case lefthookSystem:
 		return "Lefthook"
-	case "pre-commit":
+	case preCommitSystem:
 		return "Pre-commit"
-	case "husky":
+	case huskySystem:
 		return "Husky"
 	default:
-		return "Unknown"
+		return unknownLabel
 	}
 }

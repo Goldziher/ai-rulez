@@ -99,7 +99,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 
 	req := &crud.AddFileRequest{
 		Domain:   addDomain,
-		Type:     "rules",
+		Type:     crud.ContentTypeRules,
 		Name:     name,
 		Content:  addContent,
 		Priority: addPriority,
@@ -113,10 +113,10 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	}
 
 	output := map[string]interface{}{
-		"success": true,
-		"type":    "rule",
-		"name":    result.Name,
-		"path":    result.FullPath,
+		keySuccess: true,
+		keyType:    "rule",
+		keyName:    result.Name,
+		keyPath:    result.FullPath,
 	}
 	if result.Domain != "" {
 		output["domain"] = result.Domain
@@ -139,7 +139,7 @@ func runAddContext(cmd *cobra.Command, args []string) {
 
 	req := &crud.AddFileRequest{
 		Domain:   addDomain,
-		Type:     "context",
+		Type:     crud.ContentTypeContext,
 		Name:     name,
 		Content:  addContent,
 		Priority: addPriority,
@@ -152,10 +152,10 @@ func runAddContext(cmd *cobra.Command, args []string) {
 	}
 
 	output := map[string]interface{}{
-		"success": true,
-		"type":    "context",
-		"name":    result.Name,
-		"path":    result.FullPath,
+		keySuccess: true,
+		keyType:    crud.ContentTypeContext,
+		keyName:    result.Name,
+		keyPath:    result.FullPath,
 	}
 	if result.Domain != "" {
 		output["domain"] = result.Domain
@@ -180,7 +180,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	// Skills use a different structure (directory with SKILL.md)
 	req := &crud.AddFileRequest{
 		Domain:      addDomain,
-		Type:        "skills",
+		Type:        crud.ContentTypeSkills,
 		Name:        name,
 		Description: addDesc,
 		Content:     addContent,
@@ -193,10 +193,10 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	}
 
 	output := map[string]interface{}{
-		"success": true,
-		"type":    "skill",
-		"name":    result.Name,
-		"path":    result.FullPath,
+		keySuccess: true,
+		keyType:    "skill",
+		keyName:    result.Name,
+		keyPath:    result.FullPath,
 	}
 	if result.Domain != "" {
 		output["domain"] = result.Domain

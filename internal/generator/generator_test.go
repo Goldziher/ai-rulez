@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/samber/oops"
@@ -1132,4 +1133,246 @@ func TestGenerator_SkipUnchangedFiles(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, string(firstContent), string(secondContent),
 		"file should not be rewritten when content hash matches")
+}
+
+// TestComputeSourceHash_IncludesSkillResources verifies that changing a
+// skill's bundled reference busts the source hash. Without this, the
+// generator's "skip unchanged" optimisation would leave the SKILL.md
+// resource index stale after a reference is added or modified.
+func TestComputeSourceHash_IncludesSkillResources(t *testing.T) {
+	t.Parallel()
+
+	cfg := &config.Config{Name: "x"}
+	skill := config.ContentFile{Name: "demo", Path: "skills/demo/SKILL.md", Content: "body"}
+
+	withRef := skill
+	withRef.Resources = []config.SkillResource{{
+		Kind: config.SkillKindReferences, RelPath: "references/api.md",
+		Content: []byte("v1\n"),
+	}}
+
+	updatedRef := skill
+	updatedRef.Resources = []config.SkillResource{{
+		Kind: config.SkillKindReferences, RelPath: "references/api.md",
+		Content: []byte("v2\n"),
+	}}
+
+	bare := computeSourceHash(cfg, &config.ContentTree{Skills: []config.ContentFile{skill}})
+	withV1 := computeSourceHash(cfg, &config.ContentTree{Skills: []config.ContentFile{withRef}})
+	withV2 := computeSourceHash(cfg, &config.ContentTree{Skills: []config.ContentFile{updatedRef}})
+
+	assert.NotEqual(t, bare, withV1, "adding a resource must change the hash")
+	assert.NotEqual(t, withV1, withV2, "changing resource content must change the hash")
+}
+
+// TestComputeSourceHash_ResistsResourceDelimiterCollision guards against a
+// class of collision where one resource's body could spoof a second
+// resource record by happening to contain the inter-record delimiter.
+// Resolution is to length-prefix each resource's content during hashing.
+func TestComputeSourceHash_ResistsResourceDelimiterCollision(t *testing.T) {
+	t.Parallel()
+
+	cfg := &config.Config{Name: "x"}
+
+	// Single resource whose content spells out a fake second resource
+	// using the on-disk hash format.
+	one := config.ContentFile{
+		Name: "demo", Path: "skills/demo/SKILL.md", Content: "body",
+		Resources: []config.SkillResource{{
+			Kind: config.SkillKindReferences, RelPath: "a",
+			Content: []byte("b|res=references:c:d"),
+		}},
+	}
+	// Two resources whose serialization, without length prefixing, would
+	// look identical to `one` above.
+	two := config.ContentFile{
+		Name: "demo", Path: "skills/demo/SKILL.md", Content: "body",
+		Resources: []config.SkillResource{
+			{Kind: config.SkillKindReferences, RelPath: "a", Content: []byte("b")},
+			{Kind: config.SkillKindReferences, RelPath: "c", Content: []byte("d")},
+		},
+	}
+
+	hashOne := computeSourceHash(cfg, &config.ContentTree{Skills: []config.ContentFile{one}})
+	hashTwo := computeSourceHash(cfg, &config.ContentTree{Skills: []config.ContentFile{two}})
+	assert.NotEqual(t, hashOne, hashTwo,
+		"adjacent resource records must not be spoofable from another resource's content")
+}
+
+// TestGenerator_CleansStaleSkillResource verifies that when a skill drops a
+// reference file between two generations, the stale file is removed from the
+// rendered skill directory. The fix relies on emitting parent kind dirs as
+// IsDir outputs so cleanManagedDirs sweeps inside them.
+func TestGenerator_CleansStaleSkillResource(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	skillRoot := filepath.Join(tempDir, ".ai-rulez", "skills", "demo")
+	refsDir := filepath.Join(skillRoot, "references")
+	require.NoError(t, os.MkdirAll(refsDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(skillRoot, "SKILL.md"),
+		[]byte("---\ndescription: demo\n---\nbody\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(refsDir, "keep.md"), []byte("keep\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(refsDir, "drop.md"), []byte("drop\n"), 0o644))
+
+	require.NoError(t, os.WriteFile(
+		filepath.Join(tempDir, ".ai-rulez", "config.yaml"),
+		[]byte("version: \"3.0\"\nname: x\npresets:\n  - claude\ngitignore: false\n"), 0o644))
+
+	ctx := context.Background()
+	cfg, err := config.LoadConfig(ctx, tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	// First generation: both reference files present.
+	keepOut := filepath.Join(tempDir, ".claude", "skills", "demo", "references", "keep.md")
+	dropOut := filepath.Join(tempDir, ".claude", "skills", "demo", "references", "drop.md")
+	require.FileExists(t, keepOut)
+	require.FileExists(t, dropOut)
+
+	// Drop one reference at the source.
+	require.NoError(t, os.Remove(filepath.Join(refsDir, "drop.md")))
+
+	// Re-load and regenerate.
+	cfg2, err := config.LoadConfig(ctx, tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg2).Generate("default"))
+
+	// Stale reference must be cleaned up; the surviving one must remain.
+	require.FileExists(t, keepOut)
+	_, statErr := os.Stat(dropOut)
+	assert.True(t, os.IsNotExist(statErr),
+		"expected stale reference to be removed, but it still exists at %s", dropOut)
+}
+
+// TestGenerator_writeOutput_RawContent_SkipsHeaderInjection verifies that
+// OutputFile.RawContent bypasses the standard header banner and
+// trailing-newline normalization. Skill resources (Python scripts,
+// binary assets) must be written verbatim — anything else corrupts them.
+func TestGenerator_writeOutput_RawContent_SkipsHeaderInjection(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	gen := &Generator{config: &config.Config{BaseDir: tempDir, SourceHash: "blake3:test"}}
+
+	t.Run("text payload bytes round-trip exactly", func(t *testing.T) {
+		t.Parallel()
+		// No trailing newline — writer must not add one in raw mode.
+		payload := []byte("#!/bin/sh\necho hi")
+		path := filepath.Join(tempDir, "scripts", "run.sh")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path:       path,
+			RawContent: payload,
+		}))
+
+		got, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, payload, got)
+		assert.NotContains(t, string(got), "AI-RULEZ",
+			"raw outputs must not have the generated-file banner")
+	})
+
+	t.Run("binary payload round-trips byte-for-byte", func(t *testing.T) {
+		t.Parallel()
+		payload := []byte{0x00, 0xff, 0x10, 0x20, 0x00, 0xfe}
+		path := filepath.Join(tempDir, "assets", "blob.bin")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path:       path,
+			RawContent: payload,
+		}))
+
+		got, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, payload, got)
+	})
+
+	t.Run("creates parent directories on demand", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(tempDir, "deep", "nested", "x.txt")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path:       path,
+			RawContent: []byte("ok"),
+		}))
+		_, err := os.Stat(path)
+		assert.NoError(t, err)
+	})
+
+	t.Run("preserves explicit file mode", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(tempDir, "exec", "run.sh")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path:       path,
+			RawContent: []byte("#!/bin/sh\n"),
+			Mode:       0o755,
+		}))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	})
+
+	t.Run("zero mode falls back to 0o644", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(tempDir, "default-mode", "x.md")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path:       path,
+			RawContent: []byte("ok"),
+		}))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
+	})
+
+	t.Run("skips write when raw content and mode are unchanged", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(tempDir, "idempotent", "x.bin")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path: path, RawContent: []byte("payload"), Mode: 0o644,
+		}))
+
+		// Pin the file's mtime to a sentinel value far in the past. If the
+		// writer rewrites, the mtime jumps to "now". Comparing equality of
+		// the sentinel to the mtime after the second call is robust on
+		// filesystems with second-level mtime resolution (where two
+		// back-to-back writes would otherwise produce identical mtimes).
+		sentinel := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
+		require.NoError(t, os.Chtimes(path, sentinel, sentinel))
+
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path: path, RawContent: []byte("payload"), Mode: 0o644,
+		}))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		assert.True(t, info.ModTime().Equal(sentinel),
+			"unchanged raw output should not be rewritten; mtime moved from %s to %s",
+			sentinel, info.ModTime())
+	})
+
+	t.Run("rewrites when raw content changes", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(tempDir, "changed-content", "x.bin")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path: path, RawContent: []byte("first"), Mode: 0o644,
+		}))
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path: path, RawContent: []byte("second"), Mode: 0o644,
+		}))
+		got, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, []byte("second"), got)
+	})
+
+	t.Run("rewrites when only mode changes", func(t *testing.T) {
+		t.Parallel()
+		path := filepath.Join(tempDir, "changed-mode", "x.sh")
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path: path, RawContent: []byte("ok"), Mode: 0o644,
+		}))
+		require.NoError(t, gen.writeOutput(config.OutputFile{
+			Path: path, RawContent: []byte("ok"), Mode: 0o755,
+		}))
+		info, err := os.Stat(path)
+		require.NoError(t, err)
+		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
+	})
 }

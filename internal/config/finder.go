@@ -18,7 +18,7 @@ func FindConfigFile(startDir string) (string, error) {
 		".ai-rulez/config.json",
 		// V2 flat file configs
 		".ai-rulez.yaml", ".ai-rulez.yml",
-		"ai-rulez.yaml", "ai-rulez.yml",
+		configFilenameYAMLV2, configFilenameYMLV2,
 		".ai_rulez.yaml", ".ai_rulez.yml",
 		"ai_rulez.yaml", "ai_rulez.yml",
 	}
@@ -57,7 +57,7 @@ func FindConfigFile(startDir string) (string, error) {
 			".ai-rulez/config.toml",
 			".ai-rulez/config.yaml", ".ai-rulez/config.yml",
 			".ai-rulez/config.json",
-			"ai-rulez.yaml", "ai-rulez.yml",
+			configFilenameYAMLV2, configFilenameYMLV2,
 			".ai-rulez.yaml", ".ai-rulez.yml",
 			"ai_rulez.yaml", "ai_rulez.yml",
 			".ai_rulez.yaml", ".ai_rulez.yml",

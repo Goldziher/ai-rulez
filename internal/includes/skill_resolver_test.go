@@ -181,8 +181,14 @@ Instructions here.
 		skills, err := ResolveInstalledSkills(context.Background(), cfg, "")
 		require.NoError(t, err)
 		require.Len(t, skills, 1)
-		assert.Contains(t, skills[0].Content, "## Reference: api")
-		assert.Contains(t, skills[0].Content, "API docs.")
+		// References are now carried separately so the rendering pipeline can
+		// preserve the canonical Agent Skills layout — they must NOT be inlined
+		// into the SKILL.md body.
+		assert.NotContains(t, skills[0].Content, "## Reference:")
+		assert.NotContains(t, skills[0].Content, "API docs.")
+		require.Len(t, skills[0].Resources, 1)
+		assert.Equal(t, "references/api.md", skills[0].Resources[0].RelPath)
+		assert.Equal(t, []byte("API docs.\n"), skills[0].Resources[0].Content)
 	})
 }
 

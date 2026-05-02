@@ -332,6 +332,33 @@ func TestScanContentTree(t *testing.T) {
 		assert.Len(t, tree.Skills, 2)
 	})
 
+	t.Run("loads skill resources alongside SKILL.md", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		skillRoot := filepath.Join(configDir, skillsDir, "with-refs")
+		require.NoError(t, os.MkdirAll(skillRoot, 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(skillRoot, skillMarkerFile),
+			[]byte("# Body\n"), 0o644))
+
+		require.NoError(t, os.MkdirAll(filepath.Join(skillRoot, "references"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(skillRoot, "references", "api.md"),
+			[]byte("---\ndescription: API\n---\n\nbody\n"), 0o644))
+
+		require.NoError(t, os.MkdirAll(filepath.Join(skillRoot, "scripts"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(skillRoot, "scripts", "x.sh"),
+			[]byte("#!/bin/sh\n"), 0o755))
+
+		tree, err := ScanContentTree(configDir)
+		require.NoError(t, err)
+		require.Len(t, tree.Skills, 1)
+		// Body must NOT contain inlined reference text — references stay separate.
+		assert.NotContains(t, tree.Skills[0].Content, "body")
+		require.Len(t, tree.Skills[0].Resources, 2)
+		assert.Equal(t, "references/api.md", tree.Skills[0].Resources[0].RelPath)
+		assert.Equal(t, "API", tree.Skills[0].Resources[0].Description)
+		assert.Equal(t, "scripts/x.sh", tree.Skills[0].Resources[1].RelPath)
+	})
+
 	t.Run("scans domains directory", func(t *testing.T) {
 		tempDir := t.TempDir()
 		configDir := filepath.Join(tempDir, aiRulezDirName)

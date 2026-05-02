@@ -23,13 +23,17 @@ const (
 	configTOMLFilename = "config.toml"
 	configYAMLFilename = "config.yaml"
 	configJSONFilename = "config.json"
-	rulesDir           = "rules"
-	contextDir         = "context"
-	skillsDir          = "skills"
-	agentsDir          = "agents"
-	commandsDir        = "commands"
-	domainsDir         = "domains"
-	skillMarkerFile    = "SKILL.md"
+	// configFilenameYAMLV2 is the legacy V2 flat-file YAML config name.
+	configFilenameYAMLV2 = "ai-rulez.yaml"
+	// configFilenameYMLV2 is the legacy V2 flat-file YAML config name with .yml extension.
+	configFilenameYMLV2 = "ai-rulez.yml"
+	rulesDir            = "rules"
+	contextDir          = "context"
+	skillsDir           = "skills"
+	agentsDir           = "agents"
+	commandsDir         = "commands"
+	domainsDir          = "domains"
+	skillMarkerFile     = "SKILL.md"
 )
 
 // DetectConfigVersion detects whether a directory contains V2 or directory-based configuration
@@ -50,7 +54,7 @@ func DetectConfigVersion(dir string) (string, error) {
 	}
 
 	// Check for V2 (ai-rulez.yaml or ai-rulez.yml)
-	v2Files := []string{"ai-rulez.yaml", "ai-rulez.yml"}
+	v2Files := []string{configFilenameYAMLV2, configFilenameYMLV2}
 	for _, filename := range v2Files {
 		v2Path := filepath.Join(absDir, filename)
 		if _, err := os.Stat(v2Path); err == nil {
@@ -545,7 +549,8 @@ func scanSkills(skillsDir string) ([]ContentFile, error) {
 			continue
 		}
 
-		skillPath := filepath.Join(skillsDir, entry.Name(), skillMarkerFile)
+		skillRoot := filepath.Join(skillsDir, entry.Name())
+		skillPath := filepath.Join(skillRoot, skillMarkerFile)
 		if _, err := os.Stat(skillPath); os.IsNotExist(err) {
 			// No SKILL.md file, skip this directory
 			continue
@@ -559,6 +564,15 @@ func scanSkills(skillsDir string) ([]ContentFile, error) {
 
 		// Override the name with the directory name instead of filename
 		contentFile.Name = entry.Name()
+
+		// Load skill supporting files (references/, scripts/, assets/) so
+		// presets can preserve the canonical Agent Skills layout instead of
+		// concatenating everything into SKILL.md.
+		resources, resErr := LoadSkillResources(skillRoot)
+		if resErr != nil {
+			logger.Warn("Failed to load skill resources", "skill", entry.Name(), "error", resErr)
+		}
+		contentFile.Resources = resources
 
 		skills = append(skills, contentFile)
 	}

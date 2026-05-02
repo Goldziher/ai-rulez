@@ -22,6 +22,24 @@ const (
 	CategoryBinding   Category = "binding"
 )
 
+// Builtin domain names
+const (
+	builtinAIGovernance    = "ai-governance"
+	builtinAgentDelegation = "agent-delegation"
+	builtinCodeQuality     = "code-quality"
+	builtinTesting         = "testing"
+	builtinGitWorkflow     = "git-workflow"
+	builtinSecurity        = "security"
+	builtinTokenEfficiency = "token-efficiency"
+	builtinDefaultCommands = "default-commands"
+
+	langRust    = "rust"
+	langPython  = "python"
+	bindingPyO3 = "pyo3"
+
+	contentTypeRules = "rules"
+)
+
 // BuiltinDomain describes an available builtin domain
 type BuiltinDomain struct {
 	Name        string
@@ -32,34 +50,34 @@ type BuiltinDomain struct {
 
 // autoIncludeDomains are included by default unless explicitly excluded with "!" prefix
 var autoIncludeDomains = map[string]bool{
-	"ai-governance":    true,
-	"agent-delegation": true,
-	"code-quality":     true,
-	"testing":          true,
-	"git-workflow":     true,
-	"security":         true,
-	"token-efficiency": true,
+	builtinAIGovernance:    true,
+	builtinAgentDelegation: true,
+	builtinCodeQuality:     true,
+	builtinTesting:         true,
+	builtinGitWorkflow:     true,
+	builtinSecurity:        true,
+	builtinTokenEfficiency: true,
 }
 
 // registry maps builtin names to their metadata
 var registry = map[string]BuiltinDomain{
 	// Universal
-	"ai-governance":    {Name: "ai-governance", Category: CategoryUniversal, AutoInclude: true, Description: "AI agent behavior governance"},
-	"security":         {Name: "security", Category: CategoryUniversal, AutoInclude: true, Description: "Security best practices and OWASP reference"},
-	"git-workflow":     {Name: "git-workflow", Category: CategoryUniversal, AutoInclude: true, Description: "Git workflow and commit conventions"},
-	"code-quality":     {Name: "code-quality", Category: CategoryUniversal, AutoInclude: true, Description: "Code readability, error handling, and complexity"},
-	"testing":          {Name: "testing", Category: CategoryUniversal, AutoInclude: true, Description: "Testing conventions and best practices"},
-	"token-efficiency": {Name: "token-efficiency", Category: CategoryUniversal, AutoInclude: true, Description: "Output efficiency and task automation"},
-	"documentation":    {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
-	"default-commands": {Name: "default-commands", Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
-	"agent-delegation": {Name: "agent-delegation", Category: CategoryUniversal, AutoInclude: true, Description: "Agent delegation instructions and listing in generated outputs"},
-	"cicd":             {Name: "cicd", Category: CategoryUniversal, Description: "CI/CD pipeline standards and GitHub workflow conventions"},
-	"observability":    {Name: "observability", Category: CategoryUniversal, Description: "Logging, metrics, health checks, and observability standards"},
-	"docker":           {Name: "docker", Category: CategoryUniversal, Description: "Container build, security, and deployment best practices"},
+	builtinAIGovernance:    {Name: builtinAIGovernance, Category: CategoryUniversal, AutoInclude: true, Description: "AI agent behavior governance"},
+	builtinSecurity:        {Name: builtinSecurity, Category: CategoryUniversal, AutoInclude: true, Description: "Security best practices and OWASP reference"},
+	builtinGitWorkflow:     {Name: builtinGitWorkflow, Category: CategoryUniversal, AutoInclude: true, Description: "Git workflow and commit conventions"},
+	builtinCodeQuality:     {Name: builtinCodeQuality, Category: CategoryUniversal, AutoInclude: true, Description: "Code readability, error handling, and complexity"},
+	builtinTesting:         {Name: builtinTesting, Category: CategoryUniversal, AutoInclude: true, Description: "Testing conventions and best practices"},
+	builtinTokenEfficiency: {Name: builtinTokenEfficiency, Category: CategoryUniversal, AutoInclude: true, Description: "Output efficiency and task automation"},
+	"documentation":        {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
+	builtinDefaultCommands: {Name: builtinDefaultCommands, Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
+	builtinAgentDelegation: {Name: builtinAgentDelegation, Category: CategoryUniversal, AutoInclude: true, Description: "Agent delegation instructions and listing in generated outputs"},
+	"cicd":                 {Name: "cicd", Category: CategoryUniversal, Description: "CI/CD pipeline standards and GitHub workflow conventions"},
+	"observability":        {Name: "observability", Category: CategoryUniversal, Description: "Logging, metrics, health checks, and observability standards"},
+	"docker":               {Name: "docker", Category: CategoryUniversal, Description: "Container build, security, and deployment best practices"},
 
 	// Languages
-	"rust":       {Name: "rust", Category: CategoryLanguage, Description: "Rust language conventions"},
-	"python":     {Name: "python", Category: CategoryLanguage, Description: "Python language conventions"},
+	langRust:     {Name: langRust, Category: CategoryLanguage, Description: "Rust language conventions"},
+	langPython:   {Name: langPython, Category: CategoryLanguage, Description: "Python language conventions"},
 	"typescript": {Name: "typescript", Category: CategoryLanguage, Description: "TypeScript language conventions"},
 	"go":         {Name: "go", Category: CategoryLanguage, Description: "Go language conventions"},
 	"java":       {Name: "java", Category: CategoryLanguage, Description: "Java language conventions"},
@@ -70,7 +88,7 @@ var registry = map[string]BuiltinDomain{
 	"r":          {Name: "r", Category: CategoryLanguage, Description: "R language conventions"},
 
 	// Bindings
-	"pyo3":       {Name: "pyo3", Category: CategoryBinding, Description: "PyO3 Rust-Python bindings"},
+	bindingPyO3:  {Name: bindingPyO3, Category: CategoryBinding, Description: "PyO3 Rust-Python bindings"},
 	"napi-rs":    {Name: "napi-rs", Category: CategoryBinding, Description: "NAPI-RS Rust-Node.js bindings"},
 	"magnus":     {Name: "magnus", Category: CategoryBinding, Description: "Magnus Rust-Ruby bindings"},
 	"ext-php-rs": {Name: "ext-php-rs", Category: CategoryBinding, Description: "ext-php-rs Rust-PHP bindings"},
@@ -200,7 +218,7 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 
 	var entries []ContentEntry
 
-	contentTypes := []string{"rules", "context", "skills", "agents", "commands"}
+	contentTypes := []string{contentTypeRules, "context", "skills", "agents", "commands"}
 	for _, contentType := range contentTypes {
 		// Use path.Join (forward slashes) so embed.FS can find files on all platforms.
 		dirPath := path.Join(basePath, contentType)

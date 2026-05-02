@@ -12,6 +12,9 @@ var (
 	multiHyphenRE = regexp.MustCompile(`-+`)
 )
 
+// defaultUnnamedLabel is the fallback name returned when SanitizeName produces an empty string.
+const defaultUnnamedLabel = "unnamed"
+
 // SanitizeName converts a name to a valid filename/identifier
 // It removes special characters, converts to lowercase, and normalizes hyphens
 func SanitizeName(name string) string {
@@ -32,7 +35,7 @@ func SanitizeName(name string) string {
 
 	// Ensure not empty
 	if name == "" {
-		name = "unnamed"
+		name = defaultUnnamedLabel
 	}
 
 	return name
