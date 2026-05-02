@@ -39,7 +39,7 @@ Use --set-default to make this profile the default for generation.`,
 }
 
 var profileRemoveCmd = &cobra.Command{
-	Use:   "remove <name>",
+	Use:   cmdUseRemoveName,
 	Short: "Remove a profile",
 	Long: `Remove a profile from the configuration.
 
@@ -58,7 +58,7 @@ var profileSetDefaultCmd = &cobra.Command{
 }
 
 var profileListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   cmdUseList,
 	Short: "List all profiles",
 	Long:  `List all configured profiles and show which is default.`,
 	Args:  cobra.NoArgs,
@@ -180,7 +180,7 @@ func runProfileList(cmd *cobra.Command, args []string) {
 		output := make([]map[string]interface{}, len(profiles))
 		for i, profile := range profiles {
 			output[i] = map[string]interface{}{
-				"name":       profile.Name,
+				keyName:      profile.Name,
 				"domains":    profile.Domains,
 				"is_default": profile.IsDefault,
 			}

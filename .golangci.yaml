@@ -94,6 +94,12 @@ linters:
       disabled-checks:
         - whyNoLint
         - paramTypeCombine
+        # hugeParam fires on every ContentFile-by-value signature in the
+        # generator and CRUD layers (struct is now 80 bytes with the
+        # Resources slice header). The codebase's consistent convention
+        # is pass-by-value for content models — switching to pointer
+        # would ripple through dozens of helpers without behavior change.
+        - hugeParam
 
   exclusions:
     generated: lax

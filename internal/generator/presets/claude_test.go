@@ -781,3 +781,86 @@ func TestClaudePresetGenerator_renderPluginsJSON(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, parsed, 2)
 }
+
+// TestClaudePresetGenerator_PreservesSkillResourcesLayout verifies that a
+// skill's references/, scripts/, and assets/ are emitted as separate files
+// under the rendered skill directory rather than concatenated into SKILL.md.
+// This is the core behavior change: progressive disclosure — SKILL.md links
+// to references, the agent reads them on demand.
+func TestClaudePresetGenerator_PreservesSkillResourcesLayout(t *testing.T) {
+	t.Parallel()
+
+	g := &ClaudePresetGenerator{}
+	binaryAsset := []byte{0x00, 0xff, 0x10, 0x20}
+
+	skill := config.ContentFile{
+		Name:    "demo",
+		Path:    "/source/skills/demo/SKILL.md",
+		Content: "Body of skill.",
+		Metadata: &config.Metadata{
+			Extra: map[string]string{"description": "demo skill"},
+		},
+		Resources: []config.SkillResource{
+			{
+				Kind:        config.SkillKindReferences,
+				RelPath:     "references/api.md",
+				Content:     []byte("---\ndescription: API reference\n---\n\nAPI body.\n"),
+				Description: "API reference",
+			},
+			{
+				Kind:    config.SkillKindScripts,
+				RelPath: "scripts/run.sh",
+				Content: []byte("#!/bin/sh\necho hi\n"),
+			},
+			{
+				Kind:    config.SkillKindAssets,
+				RelPath: "assets/blob.bin",
+				Content: binaryAsset,
+			},
+		},
+	}
+
+	cfg := &config.Config{Name: "demo-cfg"}
+	outputs, err := g.Generate(&config.ContentTree{Skills: []config.ContentFile{skill}}, "/test", cfg)
+	require.NoError(t, err)
+
+	skillDir := filepath.Join("/test", ".claude", "skills", "demo")
+	skillMD := filepath.Join(skillDir, "SKILL.md")
+	apiRef := filepath.Join(skillDir, "references", "api.md")
+	runSh := filepath.Join(skillDir, "scripts", "run.sh")
+	blob := filepath.Join(skillDir, "assets", "blob.bin")
+
+	files := make(map[string]config.OutputFile)
+	for _, o := range outputs {
+		if !o.IsDir {
+			files[o.Path] = o
+		}
+	}
+
+	// SKILL.md exists and contains the resources index but NOT the inlined references body.
+	skillFile, ok := files[skillMD]
+	require.True(t, ok, "expected SKILL.md output at %s", skillMD)
+	assert.Contains(t, skillFile.Content, "Body of skill.")
+	assert.Contains(t, skillFile.Content, "## Resources")
+	assert.Contains(t, skillFile.Content, "[`references/api.md`](references/api.md)")
+	assert.Contains(t, skillFile.Content, "API reference")
+	assert.NotContains(t, skillFile.Content, "API body.",
+		"reference content must not be inlined into SKILL.md")
+
+	// Reference is emitted as a separate file, with original frontmatter intact
+	// (RawContent path skips ai-rulez header injection).
+	apiFile, ok := files[apiRef]
+	require.True(t, ok, "expected reference file at %s", apiRef)
+	assert.Equal(t, []byte("---\ndescription: API reference\n---\n\nAPI body.\n"), apiFile.RawContent)
+	assert.Empty(t, apiFile.Content, "reference must use RawContent, not Content")
+
+	// Script preserved verbatim — no markdown header would have been valid here.
+	scriptFile, ok := files[runSh]
+	require.True(t, ok, "expected script file at %s", runSh)
+	assert.Equal(t, []byte("#!/bin/sh\necho hi\n"), scriptFile.RawContent)
+
+	// Binary asset round-trips byte-for-byte.
+	blobFile, ok := files[blob]
+	require.True(t, ok, "expected asset file at %s", blob)
+	assert.Equal(t, binaryAsset, blobFile.RawContent)
+}

@@ -140,8 +140,8 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 	rules := make([]map[string]interface{}, 0, len(allRules))
 	for _, rule := range allRules {
 		ruleData := map[string]interface{}{
-			"Name":    rule.Name,
-			"Content": rule.Content,
+			keyNameField:    rule.Name,
+			keyContentField: rule.Content,
 		}
 		if rule.Metadata != nil {
 			if rule.Metadata.Priority != "" {
@@ -157,16 +157,23 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 	contextData := make([]map[string]interface{}, 0, len(allContext))
 	for _, ctx := range allContext {
 		contextData = append(contextData, map[string]interface{}{
-			"Name":    ctx.Name,
-			"Content": ctx.Content,
+			keyNameField:    ctx.Name,
+			keyContentField: ctx.Content,
 		})
 	}
 
 	skills := make([]map[string]interface{}, 0, len(allSkills))
 	for _, skill := range allSkills {
+		// Backward-compat default for legacy templates that interpolate
+		// `.Content` directly: include inlined references so users who never
+		// updated their template still see reference material.
+		legacyContent := skill.Content + InlineSkillResources(&skill)
+
 		skillData := map[string]interface{}{
-			"Name":    skill.Name,
-			"Content": skill.Content,
+			keyNameField:    skill.Name,
+			keyContentField: legacyContent,
+			"Body":          skill.Content,
+			"Resources":     skillResourcesToMaps(skill.Resources),
 		}
 		if skill.Metadata != nil {
 			if skill.Metadata.Priority != "" {
@@ -180,7 +187,7 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 	}
 
 	return map[string]interface{}{
-		"Name":        cfg.Name,
+		keyNameField:  cfg.Name,
 		"Description": cfg.Description,
 		"Version":     cfg.Version,
 		"Rules":       rules,
@@ -195,10 +202,10 @@ func (g *CustomPresetGenerator) prepareDomainData(content *config.ContentTree) m
 
 	for name, domain := range content.Domains {
 		domainData := map[string]interface{}{
-			"Name":    domain.Name,
-			"Rules":   g.contentFilesToMaps(domain.Rules),
-			"Context": g.contentFilesToMaps(domain.Context),
-			"Skills":  g.contentFilesToMaps(domain.Skills),
+			keyNameField: domain.Name,
+			"Rules":      g.contentFilesToMaps(domain.Rules),
+			"Context":    g.contentFilesToMaps(domain.Context),
+			"Skills":     g.contentFilesToMaps(domain.Skills),
 		}
 		domains[name] = domainData
 	}
@@ -206,12 +213,31 @@ func (g *CustomPresetGenerator) prepareDomainData(content *config.ContentTree) m
 	return domains
 }
 
+// skillResourcesToMaps converts skill resources into template-friendly maps.
+// Bytes are exposed as strings — custom templates targeting binary assets
+// must handle that themselves.
+func skillResourcesToMaps(resources []config.SkillResource) []map[string]interface{} {
+	if len(resources) == 0 {
+		return nil
+	}
+	out := make([]map[string]interface{}, 0, len(resources))
+	for _, r := range resources {
+		out = append(out, map[string]interface{}{
+			"Kind":          r.Kind,
+			"RelPath":       r.RelPath,
+			keyContentField: string(r.Content),
+			"Description":   r.Description,
+		})
+	}
+	return out
+}
+
 func (g *CustomPresetGenerator) contentFilesToMaps(files []config.ContentFile) []map[string]interface{} {
 	result := make([]map[string]interface{}, 0, len(files))
 	for _, file := range files {
 		fileData := map[string]interface{}{
-			"Name":    file.Name,
-			"Content": file.Content,
+			keyNameField:    file.Name,
+			keyContentField: file.Content,
 		}
 		if file.Metadata != nil {
 			if file.Metadata.Priority != "" {
@@ -249,7 +275,7 @@ func (g *CustomPresetGenerator) renderDefault(data map[string]interface{}) strin
 	var builder strings.Builder
 
 	// Default markdown format
-	if name, ok := data["Name"].(string); ok {
+	if name, ok := data[keyNameField].(string); ok {
 		builder.WriteString("# ")
 		builder.WriteString(name)
 		builder.WriteString("\n\n")
@@ -264,7 +290,7 @@ func (g *CustomPresetGenerator) renderDefault(data map[string]interface{}) strin
 	if rules, ok := data["Rules"].([]map[string]interface{}); ok && len(rules) > 0 {
 		builder.WriteString("## Rules\n\n")
 		for _, rule := range rules {
-			if name, ok := rule["Name"].(string); ok {
+			if name, ok := rule[keyNameField].(string); ok {
 				builder.WriteString("### ")
 				builder.WriteString(name)
 				builder.WriteString("\n")
@@ -274,7 +300,7 @@ func (g *CustomPresetGenerator) renderDefault(data map[string]interface{}) strin
 				builder.WriteString(priority)
 				builder.WriteString("\n\n")
 			}
-			if content, ok := rule["Content"].(string); ok {
+			if content, ok := rule[keyContentField].(string); ok {
 				builder.WriteString(content)
 				builder.WriteString("\n\n")
 			}
@@ -285,12 +311,12 @@ func (g *CustomPresetGenerator) renderDefault(data map[string]interface{}) strin
 	if context, ok := data["Context"].([]map[string]interface{}); ok && len(context) > 0 {
 		builder.WriteString("## Context\n\n")
 		for _, ctx := range context {
-			if name, ok := ctx["Name"].(string); ok {
+			if name, ok := ctx[keyNameField].(string); ok {
 				builder.WriteString("### ")
 				builder.WriteString(name)
 				builder.WriteString("\n\n")
 			}
-			if content, ok := ctx["Content"].(string); ok {
+			if content, ok := ctx[keyContentField].(string); ok {
 				builder.WriteString(content)
 				builder.WriteString("\n\n")
 			}
@@ -301,12 +327,12 @@ func (g *CustomPresetGenerator) renderDefault(data map[string]interface{}) strin
 	if skills, ok := data["Skills"].([]map[string]interface{}); ok && len(skills) > 0 {
 		builder.WriteString("## Skills\n\n")
 		for _, skill := range skills {
-			if name, ok := skill["Name"].(string); ok {
+			if name, ok := skill[keyNameField].(string); ok {
 				builder.WriteString("### ")
 				builder.WriteString(name)
 				builder.WriteString("\n\n")
 			}
-			if content, ok := skill["Content"].(string); ok {
+			if content, ok := skill[keyContentField].(string); ok {
 				builder.WriteString(content)
 				builder.WriteString("\n\n")
 			}

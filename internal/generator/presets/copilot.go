@@ -95,6 +95,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 				Content: g.renderSkillFile(skill),
 			},
 		)
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .github/agents/ (uses .agent.md extension)
@@ -224,6 +225,7 @@ func (g *CopilotPresetGenerator) renderSkillFile(skill config.ContentFile) strin
 	builder.WriteString("\n")
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -250,7 +252,7 @@ func (g *CopilotPresetGenerator) renderCopilotAgentFile(agent config.ContentFile
 // buildCopilotAgentFrontmatter builds frontmatter for a Copilot agent file
 func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
@@ -258,7 +260,7 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 	}
 
 	copilotFields := []string{
-		"description", "model", "target",
+		keyDescription, keyModel, "target",
 		"user-invocable", "disable-model-invocation",
 		"agents", "handoffs", "mcp-servers",
 	}
@@ -299,7 +301,7 @@ func (g *CopilotPresetGenerator) renderCommandFile(command config.ContentFile) s
 	builder.WriteString("\n\n")
 
 	if command.Metadata != nil && command.Metadata.Extra != nil {
-		if desc, ok := command.Metadata.Extra["description"]; ok && desc != "" {
+		if desc, ok := command.Metadata.Extra[keyDescription]; ok && desc != "" {
 			builder.WriteString("**Description:** ")
 			builder.WriteString(desc)
 			builder.WriteString("\n\n")
@@ -324,8 +326,8 @@ func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, erro
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			"command":  server.Command,
-			"disabled": !server.IsEnabled(),
+			keyCommand:  server.Command,
+			keyDisabled: !server.IsEnabled(),
 		}
 
 		if len(server.Args) > 0 {
@@ -345,7 +347,7 @@ func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, erro
 	}
 
 	payload := map[string]interface{}{
-		"mcpServers": mcpServers,
+		keyMCPServers: mcpServers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(payload, "", "  ")

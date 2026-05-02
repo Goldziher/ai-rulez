@@ -53,7 +53,7 @@ func (g *ClaudePresetGenerator) GetName() string {
 
 func (g *ClaudePresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
-		filepath.Join(baseDir, "CLAUDE.md"),
+		filepath.Join(baseDir, fileClaudeMD),
 		filepath.Join(baseDir, ".claude"),
 		filepath.Join(baseDir, ".claude", "skills"),
 		filepath.Join(baseDir, ".claude", "agents"),
@@ -82,7 +82,7 @@ func (g *ClaudePresetGenerator) Generate(content *config.ContentTree, baseDir st
 	// Generate CLAUDE.md with all rules and context
 	claudeMD := g.renderClaudeMarkdown(content, cfg)
 	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, "CLAUDE.md"),
+		Path:    filepath.Join(baseDir, fileClaudeMD),
 		Content: claudeMD,
 	})
 
@@ -181,6 +181,11 @@ func (g *ClaudePresetGenerator) generateSkillFiles(skill config.ContentFile, con
 		Content: skillContent,
 	})
 
+	// Emit each bundled resource (references/, scripts/, assets/) as a
+	// separate file under the skill directory, preserving the canonical
+	// Agent Skills layout.
+	outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
+
 	return outputs, nil
 }
 
@@ -194,17 +199,17 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 
 	// Generate frontmatter — only Claude Code fields, no ai-rulez internals
 	frontmatter := make(map[string]interface{})
-	frontmatter["name"] = skill.Name
+	frontmatter[keyName] = skill.Name
 	frontmatter["user_invocable"] = false
 
 	if skill.Metadata != nil {
 		// Explicitly set description for Claude Code
-		if desc, ok := skill.Metadata.Extra["description"]; ok && desc != "" {
-			frontmatter["description"] = desc
+		if desc, ok := skill.Metadata.Extra[keyDescription]; ok && desc != "" {
+			frontmatter[keyDescription] = desc
 		}
 		// Include extra metadata, excluding ai-rulez internal fields
 		for k, v := range skill.Metadata.Extra {
-			if k != "priority" && k != "targets" && k != "name" && k != "description" {
+			if k != "priority" && k != "targets" && k != keyName && k != keyDescription {
 				frontmatter[k] = v
 			}
 		}
@@ -223,6 +228,9 @@ func (g *ClaudePresetGenerator) renderSkillFile(skill config.ContentFile, conten
 
 	// Add skill content
 	builder.WriteString(skill.Content)
+
+	// Index bundled resources so the agent knows what to read on demand.
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	// Add rules section
 	if len(includedRules) > 0 {
@@ -279,11 +287,11 @@ func (g *ClaudePresetGenerator) generateAgentFiles(agent config.ContentFile, con
 
 func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := make(map[string]interface{})
-	frontmatter["name"] = agent.Name
+	frontmatter[keyName] = agent.Name
 
 	// Resolve effort via the shared resolver. Done before the metadata-nil short-circuit
 	// so a defaults-only effort still applies to agents with no frontmatter at all.
-	if mapped := MapEffort("claude", ResolveAgentEffort("claude", agent, cfg)); mapped != "" {
+	if mapped := MapEffort(presetNameClaude, ResolveAgentEffort(presetNameClaude, agent, cfg)); mapped != "" {
 		frontmatter["effort"] = mapped
 	}
 
@@ -293,7 +301,7 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile, 
 
 	// Add standard Claude agent fields. tools and skills are list-typed and
 	// pulled from the typed Metadata fields so YAML marshaling emits proper sequences.
-	scalarFields := []string{"description", "model", "permission_mode"}
+	scalarFields := []string{keyDescription, keyModel, "permission_mode"}
 	for _, field := range scalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
@@ -322,7 +330,7 @@ func (g *ClaudePresetGenerator) renderClaudeMarkdown(content *config.ContentTree
 	}
 
 	// Generate and prepend header
-	outputPath := "CLAUDE.md"
+	outputPath := fileClaudeMD
 	header := generatePresetHeader(cfg, outputPath, ruleCount, 0, agentCount)
 	builder.WriteString(header)
 
@@ -532,7 +540,7 @@ func targetMatchesOutput(target string, outputCandidates []string) bool {
 
 	if target == presetNameClaude {
 		for _, candidate := range outputCandidates {
-			if candidate == "CLAUDE.md" || strings.HasPrefix(candidate, ".claude/") {
+			if candidate == fileClaudeMD || strings.HasPrefix(candidate, ".claude/") {
 				return true
 			}
 		}
@@ -623,13 +631,13 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 
 	// Generate frontmatter — commands are user-invocable slash commands
 	frontmatter := make(map[string]interface{})
-	frontmatter["name"] = command.Name
+	frontmatter[keyName] = command.Name
 	frontmatter["user_invocable"] = true
 
 	if command.Metadata != nil {
 		// Explicitly set description for Claude Code
-		if desc, ok := command.Metadata.Extra["description"]; ok && desc != "" {
-			frontmatter["description"] = desc
+		if desc, ok := command.Metadata.Extra[keyDescription]; ok && desc != "" {
+			frontmatter[keyDescription] = desc
 		}
 		if command.Metadata.Shortcut != "" {
 			frontmatter["shortcut"] = command.Metadata.Shortcut
@@ -639,7 +647,7 @@ func (g *ClaudePresetGenerator) renderCommandAsSkill(command config.ContentFile,
 		}
 		// Include extra metadata, excluding ai-rulez internal fields
 		for k, v := range command.Metadata.Extra {
-			if k != "priority" && k != "targets" && k != "name" && k != "shortcut" && k != "category" && k != "description" {
+			if k != "priority" && k != "targets" && k != keyName && k != "shortcut" && k != "category" && k != keyDescription {
 				frontmatter[k] = v
 			}
 		}
@@ -702,7 +710,7 @@ func (g *ClaudePresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			"command": server.Command,
+			keyCommand: server.Command,
 		}
 
 		if len(server.Args) > 0 {
@@ -718,14 +726,14 @@ func (g *ClaudePresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 			entry["url"] = server.URL
 		}
 		if !server.IsEnabled() {
-			entry["disabled"] = true
+			entry[keyDisabled] = true
 		}
 
 		mcpServers[name] = entry
 	}
 
 	settings := map[string]interface{}{
-		"mcpServers": mcpServers,
+		keyMCPServers: mcpServers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(settings, "", "  ")

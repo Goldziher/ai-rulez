@@ -404,7 +404,7 @@ func (i *Importer) importContinuePrompts(source, path string) ([]ImportedContent
 		})
 	}
 
-	return items, "continue-dev", nil
+	return items, string(config.PresetContinue), nil
 }
 
 // importClineRules imports from .clinerules/ directory
@@ -688,11 +688,11 @@ func mergeMetadata(existing, duplicate *ImportedContent) {
 
 	// Merge priorities (keep highest)
 	priorityOrder := map[string]int{
-		"critical": 5,
-		"high":     4,
-		"medium":   3,
-		"low":      2,
-		"info":     1,
+		string(config.PriorityCritical): 5,
+		string(config.PriorityHigh):     4,
+		string(config.PriorityMedium):   3,
+		string(config.PriorityLow):      2,
+		"info":                          1,
 	}
 
 	existingPrio := priorityOrder[existing.Metadata.Priority]
@@ -854,11 +854,11 @@ func (i *Importer) writeConfig(projectName string, detectedPresets map[string]bo
 
 	// If no presets detected, default to claude
 	if len(presets) == 0 {
-		presets = []config.Preset{{BuiltIn: "claude"}}
+		presets = []config.Preset{{BuiltIn: claudePresetName}}
 	}
 
 	cfg := &config.Config{
-		Version: "3.0",
+		Version: config.ConfigVersionV3,
 		Name:    projectName,
 		Presets: presets,
 	}
@@ -892,16 +892,16 @@ func detectPresetFromSource(source string) string {
 	sourceLower := strings.ToLower(source)
 
 	switch {
-	case strings.Contains(sourceLower, "claude"):
-		return "claude"
-	case strings.Contains(sourceLower, "cursor"):
-		return "cursor"
+	case strings.Contains(sourceLower, claudePresetName):
+		return claudePresetName
+	case strings.Contains(sourceLower, string(config.PresetCursor)):
+		return string(config.PresetCursor)
 	case strings.Contains(sourceLower, "gemini"):
 		return "gemini"
 	case strings.Contains(sourceLower, "copilot"):
 		return "copilot"
 	case strings.Contains(sourceLower, "continue"):
-		return "continue-dev"
+		return string(config.PresetContinue)
 	case strings.Contains(sourceLower, "windsurf"):
 		return "windsurf"
 	case strings.Contains(sourceLower, "cline"):

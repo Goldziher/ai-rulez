@@ -48,7 +48,7 @@ Use --include to specify which types: rules,context,skills`,
 }
 
 var includeRemoveCmd = &cobra.Command{
-	Use:   "remove <name>",
+	Use:   cmdUseRemoveName,
 	Short: "Remove an include source",
 	Long: `Remove an include source from the configuration.
 
@@ -58,7 +58,7 @@ Use --force to skip confirmation prompts.`,
 }
 
 var includeListCmd = &cobra.Command{
-	Use:   "list",
+	Use:   cmdUseList,
 	Short: "List all includes",
 	Long:  `List all configured include sources.`,
 	Args:  cobra.NoArgs,
@@ -96,7 +96,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 		}
 	}
 	if len(includeList) == 0 {
-		includeList = []string{"rules", "context", "skills"}
+		includeList = []string{crud.ContentTypeRules, crud.ContentTypeContext, crud.ContentTypeSkills}
 	}
 
 	ctx := context.Background()
@@ -177,9 +177,9 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		output := make([]map[string]interface{}, len(includes))
 		for i, inc := range includes {
 			output[i] = map[string]interface{}{
-				"name":   inc.Name,
+				keyName:  inc.Name,
 				"source": inc.Source,
-				"type":   inc.Type,
+				keyType:  inc.Type,
 			}
 		}
 		data, err := json.MarshalIndent(output, "", "  ")

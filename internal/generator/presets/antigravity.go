@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	config.RegisterPreset("antigravity", &AntigravityPresetGenerator{})
+	config.RegisterPreset(presetNameAntigravity, &AntigravityPresetGenerator{})
 }
 
 // AntigravityPresetGenerator generates Antigravity preset files
@@ -36,7 +36,7 @@ func generateAntigravityPresetHeader(cfg *config.Config, outputPath string, rule
 }
 
 func (g *AntigravityPresetGenerator) GetName() string {
-	return "antigravity"
+	return presetNameAntigravity
 }
 
 func (g *AntigravityPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -101,6 +101,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .agents/agents/
@@ -126,18 +127,18 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (str
 
 	// Always include the hardcoded ai-rulez MCP server
 	mcpServers["ai-rulez"] = map[string]interface{}{
-		"command": "npx",
+		keyCommand: cmdNPX,
 		"args": []string{
 			"-y",
 			"ai-rulez@latest",
-			"mcp",
+			keyMCP,
 		},
 	}
 
 	// Merge user-configured MCP servers
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			"command": server.Command,
+			keyCommand: server.Command,
 		}
 
 		if len(server.Args) > 0 {
@@ -153,14 +154,14 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (str
 			entry["url"] = server.URL
 		}
 		if !server.IsEnabled() {
-			entry["disabled"] = true
+			entry[keyDisabled] = true
 		}
 
 		mcpServers[name] = entry
 	}
 
 	settings := map[string]interface{}{
-		"mcpServers": mcpServers,
+		keyMCPServers: mcpServers,
 	}
 
 	jsonData, err := json.MarshalIndent(settings, "", "  ")
@@ -242,6 +243,7 @@ func (g *AntigravityPresetGenerator) renderSkillFile(skill config.ContentFile) s
 	builder.WriteString("---\n\n")
 
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -267,14 +269,14 @@ func (g *AntigravityPresetGenerator) renderAgentFile(agent config.ContentFile) (
 
 func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	agentScalarFields := []string{"description", "kind", "model", "temperature", "max_turns", "timeout_mins"}
+	agentScalarFields := []string{keyDescription, keyKind, keyModel, keyTemperature, "max_turns", "timeout_mins"}
 	for _, field := range agentScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

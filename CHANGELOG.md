@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.5] - 2026-05-02
+
+### Changed
+- **Skill resources are no longer concatenated into `SKILL.md`.** A skill's `references/`, `scripts/`, and `assets/` subdirectories are now emitted as separate files under the rendered skill directory, matching the canonical Agent Skills layout used by Claude Code and OpenAI Codex. `SKILL.md` carries a `## Resources` index with relative-path links so the agent can read references on demand (progressive disclosure) instead of paying the full reference cost on every invocation. Reference descriptions are pulled from each file's `description` frontmatter or the first heading.
+  - Loader: `internal/includes/skill_source.go::ScanInstalledSkillDir` no longer inlines `references/*.md` (the deleted `readReferences` helper). Local skills under `.ai-rulez/skills/<name>/` now also pick up bundled resources via `internal/config/loader.go::scanSkills` — previously these subdirectories were ignored.
+  - Renderer: shared helpers `RenderSkillResourcesIndex`, `SkillResourceOutputs`, `InlineSkillResources` in `internal/generator/presets/skill_resources.go`. Applied across every preset that emits a skill directory (Claude, Codex, Cursor, Cline, Amp, Antigravity, Copilot, Gemini, Junie, Opencode, Windsurf). The single-file `continue.dev` preset keeps the inline-concat behaviour since it has no skill directory to read from.
+  - File mode (executable bit on `scripts/*.sh`) is preserved through generation.
+
+### Added
+- **`OutputFile.RawContent []byte` and `OutputFile.Mode os.FileMode`** in `internal/config/presets.go` — non-nil `RawContent` routes the file through a verbatim-write path that skips the AI-RULEZ banner, content/source-hash injection, and trailing-newline normalisation. Used for skill resource files where any added marker would corrupt the payload (Python scripts, binary assets) or break tooling that hashes the file.
+- **Idempotency on the raw-write path**: `internal/generator/generator.go::writeOutput` now compares existing bytes plus mode and skips the write/chmod when both match, so unchanged bundled assets don't dirty the working tree on every regeneration.
+- **`SkillResource` type and `ContentFile.Resources`** in `internal/config/types.go` carry `Kind` (`references`/`scripts`/`assets`), forward-slash-normalised `RelPath`, raw `Content` bytes, file `Mode`, and an optional `Description`.
+- **Stale-file cleanup for resource subdirectories**: `SkillResourceOutputs` emits each parent directory (including nested ones) as an `IsDir` output so `cleanManagedDirs` walks them on regeneration. Without this, a deleted `references/old-api.md` would persist forever in the rendered skill tree.
+- **Resource content is included in the source hash** (`writeContentFiles`), length-prefixed (`|res=<kind>:<relpath>:len=<n>:<bytes>`) so a reference body cannot spoof the inter-record delimiter to fake a second resource.
+
+### Security
+- **Symlink guard in `internal/config/skill_resources.go`**: the resource loader uses `os.Lstat` on each kind directory and checks `d.Type()&os.ModeSymlink` on every walked entry. A malicious installed skill cannot exfiltrate host files (e.g. `references/evil.md → /etc/passwd`) or replace a kind directory with a symlink to an attacker-controlled tree. Symlinks are skipped with a `WARN` log.
+- **Defensive walk-up guard in `SkillResourceOutputs`**: an absolute `RelPath` (which `LoadSkillResources` cannot produce, but a future caller might) used to put the parent-directory walk into an infinite loop on `filepath.Dir`. Now `filepath.IsAbs` is checked before the walk.
+
+### Tests
+- `internal/config/skill_resources_test.go` — `LoadSkillResources` covering canonical layout, nested paths, frontmatter description extraction, scripts/assets handling, symlink-to-file rejection, symlinked-kind-directory rejection, symlinked subdirectory rejection, dangling symlinks, executable-bit preservation.
+- `internal/generator/presets/skill_resources_test.go` — `RenderSkillResourcesIndex`, `SkillResourceOutputs`, `InlineSkillResources`, `referenceDisplayName`, plus the absolute-path infinite-loop guard with a 2 s timeout sentinel.
+- `internal/generator/presets/claude_test.go::TestClaudePresetGenerator_PreservesSkillResourcesLayout` — end-to-end assertion that references stay separate from `SKILL.md`, scripts/assets round-trip via raw bytes, and the resource index is rendered.
+- `internal/generator/generator_test.go` — raw-write happy path (text, binary, parent-dir creation, mode preservation, mode fallback), raw-write idempotency using `os.Chtimes` sentinel mtime, mode-only changes still rewrite, content-only changes still rewrite. `TestGenerator_CleansStaleSkillResource` verifies a deleted reference is swept on regeneration. `TestComputeSourceHash_IncludesSkillResources` and `TestComputeSourceHash_ResistsResourceDelimiterCollision` lock down the source-hash format.
+- Updated `internal/includes/skill_source_test.go` and `internal/includes/skill_resolver_test.go` to assert on `Resources` rather than the deprecated inline-concat behaviour.
+
+### Migration
+No config or schema change. Existing skills regenerate on next `ai-rulez generate`. Generated `SKILL.md` files become smaller (reference bodies move out); new sibling files appear under each skill directory.
+
 ## [4.1.4] - 2026-05-01
 
 ### Fixed

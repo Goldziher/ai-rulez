@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
-	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -16,7 +14,6 @@ import (
 const (
 	skillCachePrefix = "skills"
 	skillMarkerFile  = "SKILL.md"
-	referencesDir    = "references"
 )
 
 // getSkillCacheDir returns the cache directory for a given installed skill.
@@ -219,8 +216,11 @@ func hasSkillMarker(dir string) bool {
 	return err == nil
 }
 
-// ScanInstalledSkillDir reads a skill directory (SKILL.md + optional references/)
-// and returns a single ContentFile with combined content.
+// ScanInstalledSkillDir reads a skill directory (SKILL.md plus optional
+// references/, scripts/, and assets/ subdirectories) and returns a single
+// ContentFile. SKILL.md becomes the body; the supporting subdirectories are
+// loaded into Resources so generators can preserve the canonical Agent Skills
+// layout in their output rather than concatenating everything inline.
 func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, error) {
 	skillPath := filepath.Join(skillDir, skillMarkerFile)
 	data, err := os.ReadFile(skillPath)
@@ -228,70 +228,19 @@ func ScanInstalledSkillDir(skillDir, skillName string) (config.ContentFile, erro
 		return config.ContentFile{}, oops.With("path", skillPath).Wrapf(err, "read SKILL.md")
 	}
 
-	content := string(data)
+	metadata, body := config.ParseFrontmatterPublic(string(data))
 
-	// Parse frontmatter
-	metadata, body := config.ParseFrontmatterPublic(content)
-
-	// Read references directory if it exists
-	refsDir := filepath.Join(skillDir, referencesDir)
-	if info, err := os.Stat(refsDir); err == nil && info.IsDir() {
-		refContent, err := readReferences(refsDir)
-		if err != nil {
-			logger.Warn("Failed to read skill references", "skill", skillName, "error", err)
-		} else if refContent != "" {
-			body = body + "\n" + refContent
-		}
+	resources, err := config.LoadSkillResources(skillDir)
+	if err != nil {
+		// Resources are optional — log but don't fail the skill load.
+		logger.Warn("Failed to read skill resources", "skill", skillName, "error", err)
 	}
 
 	return config.ContentFile{
-		Name:     skillName,
-		Path:     skillPath,
-		Content:  body,
-		Metadata: metadata,
+		Name:      skillName,
+		Path:      skillPath,
+		Content:   body,
+		Metadata:  metadata,
+		Resources: resources,
 	}, nil
-}
-
-// readReferences reads all .md files from a references/ directory,
-// sorted alphabetically, and concatenates them with headings.
-func readReferences(refsDir string) (string, error) {
-	entries, err := os.ReadDir(refsDir)
-	if err != nil {
-		return "", oops.With("path", refsDir).Wrapf(err, "read references directory")
-	}
-
-	// Collect .md files sorted by name
-	var mdFiles []string
-	for _, entry := range entries {
-		if !entry.IsDir() && strings.HasSuffix(entry.Name(), ".md") {
-			mdFiles = append(mdFiles, entry.Name())
-		}
-	}
-	sort.Strings(mdFiles)
-
-	var sb strings.Builder
-	for _, filename := range mdFiles {
-		data, err := os.ReadFile(filepath.Join(refsDir, filename))
-		if err != nil {
-			logger.Warn("Failed to read reference file", "file", filename, "error", err)
-			continue
-		}
-
-		refContent := strings.TrimSpace(string(data))
-		if refContent == "" {
-			continue
-		}
-
-		// Strip frontmatter from reference files
-		_, refBody := config.ParseFrontmatterPublic(refContent)
-
-		refName := strings.TrimSuffix(filename, ".md")
-		sb.WriteString("\n## Reference: ")
-		sb.WriteString(refName)
-		sb.WriteString("\n\n")
-		sb.WriteString(refBody)
-		sb.WriteString("\n")
-	}
-
-	return sb.String(), nil
 }

@@ -100,6 +100,10 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
+
+		// Emit bundled resources alongside SKILL.md so the agent can read
+		// references on demand rather than receiving them all inlined.
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .codex/agents/ (TOML format)
@@ -253,6 +257,9 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	// Add skill content
 	builder.WriteString(skill.Content)
 
+	// Index bundled resources so the agent knows what to read on demand.
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
+
 	return builder.String()
 }
 
@@ -266,7 +273,7 @@ func (g *CodexPresetGenerator) renderAgentTOML(agent config.ContentFile, cfg *co
 
 	description := ""
 	if agent.Metadata != nil {
-		if desc, ok := agent.Metadata.Extra["description"]; ok {
+		if desc, ok := agent.Metadata.Extra[keyDescription]; ok {
 			description = desc
 		}
 	}
@@ -340,7 +347,7 @@ func (g *CodexPresetGenerator) renderCommandFile(command config.ContentFile) str
 	builder.WriteString("\n\n")
 
 	if command.Metadata != nil && command.Metadata.Extra != nil {
-		if desc, ok := command.Metadata.Extra["description"]; ok && desc != "" {
+		if desc, ok := command.Metadata.Extra[keyDescription]; ok && desc != "" {
 			builder.WriteString("**Description:** ")
 			builder.WriteString(desc)
 			builder.WriteString("\n\n")

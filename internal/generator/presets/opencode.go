@@ -95,6 +95,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 				Content: g.renderSkillFile(skill),
 			},
 		)
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .opencode/agents/
@@ -192,6 +193,7 @@ func (g *OpencodePresetGenerator) renderSkillFile(skill config.ContentFile) stri
 	builder.WriteString("\n")
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -218,7 +220,7 @@ func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFi
 // buildOpencodeAgentFrontmatter builds frontmatter for an OpenCode agent file
 func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	// Resolve effort before the metadata-nil short-circuit so a defaults-only
@@ -232,8 +234,8 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 	}
 
 	opencodeFields := []string{
-		"description", "mode", "model",
-		"temperature", "top_p", "hidden",
+		keyDescription, "mode", keyModel,
+		keyTemperature, "top_p", "hidden",
 	}
 	for _, field := range opencodeFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {

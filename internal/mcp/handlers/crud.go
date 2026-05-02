@@ -57,11 +57,11 @@ func CreateDomainHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "create_domain",
-		"name":      result.Name,
-		"path":      result.Path,
-		"message":   "Domain created successfully",
+		keySuccess:   true,
+		keyOperation: "create_domain",
+		keyName:      result.Name,
+		keyPath:      result.Path,
+		keyMessage:   "Domain created successfully",
 	})
 }
 
@@ -79,10 +79,10 @@ func DeleteDomainHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "delete_domain",
-		"name":      name,
-		"message":   "Domain deleted successfully",
+		keySuccess:   true,
+		keyOperation: "delete_domain",
+		keyName:      name,
+		keyMessage:   "Domain deleted successfully",
 	})
 }
 
@@ -98,10 +98,10 @@ func ListDomainsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_domains",
-		"domains":   domains,
-		"count":     len(domains),
+		keySuccess:   true,
+		keyOperation: "list_domains",
+		"domains":    domains,
+		keyCount:     len(domains),
 	})
 }
 
@@ -122,12 +122,12 @@ func ReadRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToo
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "read_rule",
-		"name":      name,
-		"domain":    domain,
-		"path":      path,
-		"content":   content,
+		keySuccess:   true,
+		keyOperation: "read_rule",
+		keyName:      name,
+		keyDomain:    domain,
+		keyPath:      path,
+		keyContent:   content,
 	})
 }
 
@@ -146,12 +146,12 @@ func ReadContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "read_context",
-		"name":      name,
-		"domain":    domain,
-		"path":      path,
-		"content":   content,
+		keySuccess:   true,
+		keyOperation: "read_context",
+		keyName:      name,
+		keyDomain:    domain,
+		keyPath:      path,
+		keyContent:   content,
 	})
 }
 
@@ -170,12 +170,12 @@ func ReadSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallTo
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "read_skill",
-		"name":      name,
-		"domain":    domain,
-		"path":      path,
-		"content":   content,
+		keySuccess:   true,
+		keyOperation: "read_skill",
+		keyName:      name,
+		keyDomain:    domain,
+		keyPath:      path,
+		keyContent:   content,
 	})
 }
 
@@ -208,12 +208,12 @@ func CreateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "create_rule",
-		"path":      result.FullPath,
-		"name":      result.Name,
-		"domain":    result.Domain,
-		"message":   "Rule created successfully",
+		keySuccess:   true,
+		keyOperation: "create_rule",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Rule created successfully",
 	})
 }
 
@@ -235,12 +235,12 @@ func UpdateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "update_rule",
-		"path":      result.FullPath,
-		"name":      result.Name,
-		"domain":    result.Domain,
-		"message":   "Rule updated successfully",
+		keySuccess:   true,
+		keyOperation: "update_rule",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Rule updated successfully",
 	})
 }
 
@@ -259,11 +259,11 @@ func DeleteRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "delete_rule",
-		"name":      name,
-		"domain":    domain,
-		"message":   "Rule deleted successfully",
+		keySuccess:   true,
+		keyOperation: "delete_rule",
+		keyName:      name,
+		keyDomain:    domain,
+		keyMessage:   "Rule deleted successfully",
 	})
 }
 
@@ -281,11 +281,11 @@ func ListRulesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallTo
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_rules",
-		"domain":    domain,
-		"rules":     files,
-		"count":     len(files),
+		keySuccess:   true,
+		keyOperation: "list_rules",
+		keyDomain:    domain,
+		"rules":      files,
+		keyCount:     len(files),
 	})
 }
 
@@ -318,12 +318,12 @@ func CreateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "create_context",
-		"path":      result.FullPath,
-		"name":      result.Name,
-		"domain":    result.Domain,
-		"message":   "Context created successfully",
+		keySuccess:   true,
+		keyOperation: "create_context",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Context created successfully",
 	})
 }
 
@@ -345,12 +345,12 @@ func UpdateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "update_context",
-		"path":      result.FullPath,
-		"name":      result.Name,
-		"domain":    result.Domain,
-		"message":   "Context updated successfully",
+		keySuccess:   true,
+		keyOperation: "update_context",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Context updated successfully",
 	})
 }
 
@@ -369,11 +369,11 @@ func DeleteContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "delete_context",
-		"name":      name,
-		"domain":    domain,
-		"message":   "Context deleted successfully",
+		keySuccess:   true,
+		keyOperation: "delete_context",
+		keyName:      name,
+		keyDomain:    domain,
+		keyMessage:   "Context deleted successfully",
 	})
 }
 
@@ -451,11 +451,11 @@ func ListContextsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_contexts",
-		"domain":    domain,
-		"contexts":  items,
-		"count":     len(items),
+		keySuccess:   true,
+		keyOperation: "list_contexts",
+		keyDomain:    domain,
+		"contexts":   items,
+		keyCount:     len(items),
 	})
 }
 
@@ -493,12 +493,12 @@ func CreateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "create_skill",
-		"path":      result.FullPath,
-		"name":      result.Name,
-		"domain":    result.Domain,
-		"message":   "Skill created successfully",
+		keySuccess:   true,
+		keyOperation: "create_skill",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Skill created successfully",
 	})
 }
 
@@ -520,12 +520,12 @@ func UpdateSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "update_skill",
-		"path":      result.FullPath,
-		"name":      result.Name,
-		"domain":    result.Domain,
-		"message":   "Skill updated successfully",
+		keySuccess:   true,
+		keyOperation: "update_skill",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Skill updated successfully",
 	})
 }
 
@@ -544,11 +544,11 @@ func DeleteSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Call
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "delete_skill",
-		"name":      name,
-		"domain":    domain,
-		"message":   "Skill deleted successfully",
+		keySuccess:   true,
+		keyOperation: "delete_skill",
+		keyName:      name,
+		keyDomain:    domain,
+		keyMessage:   "Skill deleted successfully",
 	})
 }
 
@@ -566,11 +566,11 @@ func ListSkillsHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_skills",
-		"domain":    domain,
-		"skills":    files,
-		"count":     len(files),
+		keySuccess:   true,
+		keyOperation: "list_skills",
+		keyDomain:    domain,
+		"skills":     files,
+		keyCount:     len(files),
 	})
 }
 
@@ -606,11 +606,11 @@ func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "add_include",
-		"name":      name,
-		"source":    source,
-		"message":   "Include added successfully",
+		keySuccess:   true,
+		keyOperation: "add_include",
+		keyName:      name,
+		keySource:    source,
+		keyMessage:   "Include added successfully",
 	})
 }
 
@@ -628,10 +628,10 @@ func RemoveIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "remove_include",
-		"name":      name,
-		"message":   "Include removed successfully",
+		keySuccess:   true,
+		keyOperation: "remove_include",
+		keyName:      name,
+		keyMessage:   "Include removed successfully",
 	})
 }
 
@@ -647,10 +647,10 @@ func ListIncludesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_includes",
-		"includes":  includes,
-		"count":     len(includes),
+		keySuccess:   true,
+		keyOperation: "list_includes",
+		"includes":   includes,
+		keyCount:     len(includes),
 	})
 }
 
@@ -680,11 +680,11 @@ func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "install_skill",
-		"name":      name,
-		"source":    source,
-		"message":   "Skill installed successfully",
+		keySuccess:   true,
+		keyOperation: "install_skill",
+		keyName:      name,
+		keySource:    source,
+		keyMessage:   "Skill installed successfully",
 	})
 }
 
@@ -702,10 +702,10 @@ func UninstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.C
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "uninstall_skill",
-		"name":      name,
-		"message":   "Skill uninstalled successfully",
+		keySuccess:   true,
+		keyOperation: "uninstall_skill",
+		keyName:      name,
+		keyMessage:   "Skill uninstalled successfully",
 	})
 }
 
@@ -721,10 +721,10 @@ func ListInstalledSkillsHandler(ctx context.Context, request *ToolRequest) (*sdk
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":          true,
-		"operation":        "list_installed_skills",
+		keySuccess:         true,
+		keyOperation:       "list_installed_skills",
 		"installed_skills": skills,
-		"count":            len(skills),
+		keyCount:           len(skills),
 	})
 }
 
@@ -745,11 +745,11 @@ func AddProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "add_profile",
-		"name":      name,
-		"domains":   domains,
-		"message":   "Profile added successfully",
+		keySuccess:   true,
+		keyOperation: "add_profile",
+		keyName:      name,
+		"domains":    domains,
+		keyMessage:   "Profile added successfully",
 	})
 }
 
@@ -767,10 +767,10 @@ func RemoveProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "remove_profile",
-		"name":      name,
-		"message":   "Profile removed successfully",
+		keySuccess:   true,
+		keyOperation: "remove_profile",
+		keyName:      name,
+		keyMessage:   "Profile removed successfully",
 	})
 }
 
@@ -788,10 +788,10 @@ func SetDefaultProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmc
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "set_default_profile",
-		"name":      name,
-		"message":   "Default profile set successfully",
+		keySuccess:   true,
+		keyOperation: "set_default_profile",
+		keyName:      name,
+		keyMessage:   "Default profile set successfully",
 	})
 }
 
@@ -807,9 +807,9 @@ func ListProfilesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	}
 
 	return ToolSuccess(map[string]interface{}{
-		"success":   true,
-		"operation": "list_profiles",
-		"profiles":  profiles,
-		"count":     len(profiles),
+		keySuccess:   true,
+		keyOperation: "list_profiles",
+		"profiles":   profiles,
+		keyCount:     len(profiles),
 	})
 }

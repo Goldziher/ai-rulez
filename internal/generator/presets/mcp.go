@@ -8,14 +8,14 @@ import (
 )
 
 func init() {
-	config.RegisterPreset("mcp", &MCPPresetGenerator{})
+	config.RegisterPreset(keyMCP, &MCPPresetGenerator{})
 }
 
 // MCPPresetGenerator generates MCP server configuration
 type MCPPresetGenerator struct{}
 
 func (g *MCPPresetGenerator) GetName() string {
-	return "mcp"
+	return keyMCP
 }
 
 func (g *MCPPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -37,8 +37,8 @@ func (g *MCPPresetGenerator) Generate(
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			"command":  server.Command,
-			"disabled": !server.IsEnabled(),
+			keyCommand:  server.Command,
+			keyDisabled: !server.IsEnabled(),
 		}
 
 		if len(server.Args) > 0 {
@@ -58,7 +58,7 @@ func (g *MCPPresetGenerator) Generate(
 	}
 
 	payload := map[string]interface{}{
-		"mcpServers": mcpServers,
+		keyMCPServers: mcpServers,
 	}
 
 	jsonBytes, err := json.MarshalIndent(payload, "", "  ")

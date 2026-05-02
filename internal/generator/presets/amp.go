@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	config.RegisterPreset("amp", &AmpPresetGenerator{})
+	config.RegisterPreset(presetNameAmp, &AmpPresetGenerator{})
 }
 
 // AmpPresetGenerator generates AMP preset files (AGENTS.md)
@@ -39,7 +39,7 @@ func generateAmpPresetHeader(cfg *config.Config, outputPath string, ruleCount, s
 }
 
 func (g *AmpPresetGenerator) GetName() string {
-	return "amp"
+	return presetNameAmp
 }
 
 func (g *AmpPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -89,6 +89,7 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 				Content: g.renderSkillFile(skill),
 			},
 		)
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Add .agents/agents directory
@@ -115,7 +116,7 @@ func (g *AmpPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 	// Emit .amp/settings.json with amp.anthropic.effort when a global effort is
 	// resolved. Amp reads this from workspace settings; subagent frontmatter does
 	// not currently accept an effort field.
-	if effort := MapEffort("amp", ResolveGlobalEffort("amp", cfg)); effort != "" {
+	if effort := MapEffort(presetNameAmp, ResolveGlobalEffort(presetNameAmp, cfg)); effort != "" {
 		settings := map[string]string{"amp.anthropic.effort": effort}
 		jsonBytes, err := json.MarshalIndent(settings, "", "  ")
 		if err != nil {
@@ -207,6 +208,7 @@ func (g *AmpPresetGenerator) renderSkillFile(skill config.ContentFile) string {
 	builder.WriteString("\n")
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -233,14 +235,14 @@ func (g *AmpPresetGenerator) renderAmpAgentFile(agent config.ContentFile) (strin
 // buildAmpAgentFrontmatter builds frontmatter for an Amp agent file
 func (g *AmpPresetGenerator) buildAmpAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	ampScalarFields := []string{"description", "model"}
+	ampScalarFields := []string{keyDescription, keyModel}
 	for _, field := range ampScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

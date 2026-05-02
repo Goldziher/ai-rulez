@@ -108,6 +108,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			Path:    filepath.Join(skillDir, "SKILL.md"),
 			Content: skillContent,
 		})
+		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
 	// Generate agent files to .agents/agents/
@@ -133,18 +134,18 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 
 	// Always include the hardcoded ai-rulez MCP server
 	mcpServers["ai-rulez"] = map[string]interface{}{
-		"command": "npx",
+		keyCommand: cmdNPX,
 		"args": []string{
 			"-y",
 			"ai-rulez@latest",
-			"mcp",
+			keyMCP,
 		},
 	}
 
 	// Merge user-configured MCP servers
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			"command": server.Command,
+			keyCommand: server.Command,
 		}
 
 		if len(server.Args) > 0 {
@@ -160,14 +161,14 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 			entry["url"] = server.URL
 		}
 		if !server.IsEnabled() {
-			entry["disabled"] = true
+			entry[keyDisabled] = true
 		}
 
 		mcpServers[name] = entry
 	}
 
 	settings := map[string]interface{}{
-		"mcpServers": mcpServers,
+		keyMCPServers: mcpServers,
 	}
 
 	jsonData, err := json.MarshalIndent(settings, "", "  ")
@@ -258,6 +259,7 @@ func (g *GeminiPresetGenerator) renderGeminiSkillFile(skill config.ContentFile) 
 	builder.WriteString("---\n\n")
 
 	builder.WriteString(skill.Content)
+	builder.WriteString(RenderSkillResourcesIndex(&skill))
 
 	return builder.String()
 }
@@ -285,14 +287,14 @@ func (g *GeminiPresetGenerator) renderGeminiAgentFile(agent config.ContentFile) 
 // buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file
 func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		"name": agent.Name,
+		keyName: agent.Name,
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	geminiScalarFields := []string{"description", "kind", "model", "temperature", "max_turns", "timeout_mins"}
+	geminiScalarFields := []string{keyDescription, keyKind, keyModel, keyTemperature, "max_turns", "timeout_mins"}
 	for _, field := range geminiScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

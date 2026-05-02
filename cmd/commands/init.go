@@ -457,11 +457,11 @@ func displaySuccessMessage(projectName string) {
 	var configFilename string
 	switch formatFlag {
 	case formatYAML:
-		configFilename = "config.yaml"
+		configFilename = configFileYAML
 	case formatJSON:
-		configFilename = "config.json"
+		configFilename = configFileJSON
 	default:
-		configFilename = "config.toml"
+		configFilename = configFileTOML
 	}
 
 	logger.Info(fmt.Sprintf("  ├── %s", configFilename))

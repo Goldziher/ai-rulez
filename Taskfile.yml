@@ -38,9 +38,6 @@ tasks:
         # Go CLI version (cmd/commands/root.go)
         sed -i '' 's/Version  = ".*"/Version  = "{{.VERSION}}"/' cmd/commands/root.go
 
-        # npm root package.json
-        sed -i '' 's/"version": ".*"/"version": "{{.VERSION}}"/' package.json
-
         # npm release wrapper
         sed -i '' 's/"version": ".*"/"version": "{{.VERSION}}"/' release/npm/package.json
 
@@ -59,7 +56,6 @@ tasks:
 
         echo "Done. Updated version to {{.VERSION}} in:"
         echo "  - cmd/commands/root.go"
-        echo "  - package.json"
         echo "  - release/npm/package.json"
         echo "  - pyproject.toml"
         echo "  - release/pypi/__init__.py"

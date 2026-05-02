@@ -17,7 +17,12 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const claudeAgentID = "claude"
+const (
+	claudeAgentID = "claude"
+	ampAgentID    = "amp"
+	codexAgentID  = "codex"
+	geminiAgentID = "gemini"
+)
 
 type AgentInfo struct {
 	ID      string
@@ -26,12 +31,12 @@ type AgentInfo struct {
 }
 
 var supportedAgents = []AgentInfo{
-	{ID: "amp", Command: "amp", Display: "AMP (Sourcegraph)"},
+	{ID: ampAgentID, Command: ampAgentID, Display: "AMP (Sourcegraph)"},
 	{ID: claudeAgentID, Command: claudeAgentID, Display: "Claude (Anthropic)"},
-	{ID: "codex", Command: "codex", Display: "Codex"},
+	{ID: codexAgentID, Command: codexAgentID, Display: "Codex"},
 	{ID: "continue-dev", Command: "cn", Display: "Continue.dev"},
 	{ID: "cursor", Command: "cursor-agent", Display: "Cursor"},
-	{ID: "gemini", Command: "gemini", Display: "Gemini (Google)"},
+	{ID: geminiAgentID, Command: geminiAgentID, Display: "Gemini (Google)"},
 }
 
 func detectAvailableAgents() []AgentInfo {
@@ -71,16 +76,16 @@ func invokeAgent(agent AgentInfo, prompt string, timeout time.Duration) (string,
 	case claudeAgentID:
 		cmd = exec.CommandContext(ctx, agent.Command, "--print", "--permission-mode", "bypassPermissions", prompt) //nolint:gosec // Intentional subprocess execution
 
-	case "amp":
+	case ampAgentID:
 		cmd = exec.CommandContext(ctx, agent.Command, "--execute", prompt) //nolint:gosec // Intentional subprocess execution
 
-	case "codex":
+	case codexAgentID:
 		cmd = exec.CommandContext(ctx, agent.Command, "exec", "--color", "never", prompt) //nolint:gosec // Intentional subprocess execution
 
 	case "continue-dev":
 		cmd = exec.CommandContext(ctx, agent.Command, "--print", prompt) //nolint:gosec // Intentional subprocess execution
 
-	case "gemini":
+	case geminiAgentID:
 		cmd = exec.CommandContext(ctx, agent.Command, "--prompt", prompt) //nolint:gosec // Intentional subprocess execution
 
 	default:
@@ -302,13 +307,13 @@ func configuredAgentIDs(config templates.ProviderConfig) []string { //nolint:cyc
 		ids = append(ids, claudeAgentID)
 	}
 	if config.Gemini {
-		ids = append(ids, "gemini")
+		ids = append(ids, geminiAgentID)
 	}
 	if config.Amp {
-		ids = append(ids, "amp")
+		ids = append(ids, ampAgentID)
 	}
 	if config.Codex {
-		ids = append(ids, "codex")
+		ids = append(ids, codexAgentID)
 	}
 	if config.Cursor {
 		ids = append(ids, "cursor")

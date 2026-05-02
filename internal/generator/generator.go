@@ -2,6 +2,7 @@ package generator
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -301,6 +302,13 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		return nil
 	}
 
+	// Raw mode: write bytes verbatim. Used for skill resources (references,
+	// scripts, assets) where the standard header banner would corrupt the
+	// payload (e.g. Python scripts) or break binary files.
+	if output.RawContent != nil {
+		return writeRawOutput(absPath, output)
+	}
+
 	body := stripHeader(output.Content, output.Path)
 	contentHash := templates.HashContent(body)
 
@@ -335,6 +343,59 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 
 	logger.Debug("Wrote file", "path", output.Path, "size", len(finalContent))
 	return nil
+}
+
+// writeRawOutput writes an OutputFile with non-nil RawContent verbatim,
+// preserving Mode (defaulting to 0o644). Skips the write when both the
+// existing bytes and mode already match on disk so unchanged bundled
+// assets don't dirty the working tree on every regeneration.
+func writeRawOutput(absPath string, output config.OutputFile) error {
+	mode := output.Mode.Perm()
+	if mode == 0 {
+		mode = 0o644
+	}
+
+	if rawWriteCanSkip(absPath, output.RawContent, mode) {
+		logger.Debug("Skipped unchanged raw file", "path", output.Path)
+		return nil
+	}
+
+	dir := filepath.Dir(absPath)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return oops.
+			With("dir", dir).
+			With("path", absPath).
+			Hint(fmt.Sprintf("Check directory permissions for: %s", dir)).
+			Wrapf(err, "create parent directory")
+	}
+	if err := os.WriteFile(absPath, output.RawContent, mode); err != nil {
+		return oops.
+			With("path", absPath).
+			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
+			Wrapf(err, "write file")
+	}
+	// os.WriteFile only applies the mode on file creation. To handle mode
+	// changes on subsequent regenerations, chmod explicitly.
+	if err := os.Chmod(absPath, mode); err != nil {
+		return oops.
+			With("path", absPath).
+			With("mode", mode).
+			Wrapf(err, "set file mode")
+	}
+	logger.Debug("Wrote raw file", "path", output.Path, "size", len(output.RawContent), "mode", mode)
+	return nil
+}
+
+func rawWriteCanSkip(absPath string, payload []byte, mode os.FileMode) bool {
+	existing, err := os.ReadFile(absPath)
+	if err != nil || !bytes.Equal(existing, payload) {
+		return false
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return false
+	}
+	return info.Mode().Perm() == mode
 }
 
 // normalizeTrailingNewline ensures the file ends with exactly one '\n'.
@@ -608,6 +669,19 @@ func writeContentFiles(b *strings.Builder, label string, files []config.ContentF
 				metaJSON = []byte("<marshal-error>")
 			}
 			b.WriteString("|meta=" + string(metaJSON))
+		}
+		// Include skill resources in the source hash so changes to
+		// references/, scripts/, or assets/ bust the SKILL.md skip-cache
+		// (the resource index is derived from these and would otherwise
+		// stay stale).
+		//
+		// Length-prefix the content so resource bytes can never spoof
+		// another resource record's delimiter — without this, a reference
+		// whose body happened to contain `|res=ref:other:...` could be
+		// indistinguishable from two separate resources.
+		for _, r := range f.Resources {
+			fmt.Fprintf(b, "|res=%s:%s:len=%d:", r.Kind, r.RelPath, len(r.Content))
+			b.Write(r.Content)
 		}
 		b.WriteByte('\n')
 	}
