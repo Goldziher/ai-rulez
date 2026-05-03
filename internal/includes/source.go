@@ -27,8 +27,8 @@ type Source interface {
 
 // DetectSourceType determines if source is a git URL or local path
 func DetectSourceType(source string) SourceType {
-	// Git URLs start with http:// or https://
-	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") {
+	// Git URLs start with http://, https://, or file://
+	if strings.HasPrefix(source, "http://") || strings.HasPrefix(source, "https://") || strings.HasPrefix(source, "file://") {
 		return SourceTypeGit
 	}
 	// SSH Git URLs (e.g., git@github.com:user/repo.git or user@host:path/repo.git)
