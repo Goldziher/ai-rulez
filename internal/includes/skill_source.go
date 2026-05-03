@@ -3,8 +3,9 @@ package includes
 import (
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strings"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -38,7 +39,6 @@ type SkillGitSource struct {
 	ref         string
 	cacheDir    string
 	accessToken string
-	isSSH       bool
 }
 
 // NewSkillGitSource creates a new SkillGitSource for fetching a skill from a git repo
@@ -60,14 +60,28 @@ func NewSkillGitSource(name, repoURL, path, ref, accessToken string) (*SkillGitS
 		ref:         ref,
 		cacheDir:    cacheDir,
 		accessToken: accessToken,
-		isSSH:       isSSHURL(repoURL),
 	}, nil
+}
+
+// resolvedRef returns s.ref or "HEAD" when empty.
+func (s *SkillGitSource) resolvedRef() string {
+	if s.ref != "" {
+		return s.ref
+	}
+	return refHead
+}
+
+// sparsePathSpec returns the path spec to pass to sparseClone.
+func (s *SkillGitSource) sparsePathSpec() string {
+	return strings.TrimPrefix(s.path, "/") + "/"
 }
 
 // Fetch downloads the repo and extracts the skill content.
 //
 // Safe for concurrent invocation: serialized per cache directory so
 // parallel callers targeting the same skill share a single download.
+// Unlike GitSource.Fetch, the lock is acquired first (before ls-remote)
+// since skills always check freshness under the lock.
 func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) {
 	mu := lockForFetch(s.cacheDir)
 	mu.Lock()
@@ -75,48 +89,57 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 
 	logger.Debug("Fetching installed skill", "name", s.name, "repo", s.repoURL, "path", s.path, "ref", s.ref)
 
-	// Clear stale cache before downloading fresh content
+	if SkipFetch {
+		skillDir := s.findSkillDir()
+		if skillDir == "" {
+			return config.ContentFile{}, oops.
+				With("repo", s.repoURL).
+				With("cache_dir", s.cacheDir).
+				Errorf("--no-fetch specified but no cached skill found for '%s'", s.name)
+		}
+		return ScanInstalledSkillDir(skillDir, s.name)
+	}
+
+	currentSHA, err := remoteHEADSHA(ctx, s.originalURL, s.resolvedRef(), s.accessToken)
+	if err != nil {
+		if skillDir := s.findSkillDir(); skillDir != "" {
+			logger.Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
+			return ScanInstalledSkillDir(skillDir, s.name)
+		}
+		return config.ContentFile{}, oops.With("repo", s.repoURL).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
+	}
+
+	if isCacheHit(s.cacheDir, currentSHA) {
+		if skillDir := s.findSkillDir(); skillDir != "" {
+			return ScanInstalledSkillDir(skillDir, s.name)
+		}
+		// Meta is valid but files are gone — fall through to re-fetch.
+	}
+
 	if err := os.RemoveAll(s.cacheDir); err != nil {
 		logger.Warn("Failed to clear skill cache", "cache_dir", s.cacheDir, "error", err)
 	}
-
-	// Ensure cache directory exists
 	if err := os.MkdirAll(s.cacheDir, 0o755); err != nil {
 		return config.ContentFile{}, oops.With("cache_dir", s.cacheDir).Wrapf(err, "failed to create cache directory")
 	}
 
-	// Create a temporary GitSource to reuse the download/clone logic
-	gitSource, err := NewGitSource(
-		"skill-"+s.name,
-		s.originalURL,
-		"", // no path filter for git source - we handle path ourselves
-		s.ref,
-		s.cacheDir, // baseDir (not used for cache location since GitSource creates its own)
-		nil,        // no include filter
-		s.accessToken,
-	)
-	if err != nil {
-		return config.ContentFile{}, oops.Wrapf(err, "failed to create git source for skill '%s'", s.name)
+	if err := requireGit(ctx); err != nil {
+		return config.ContentFile{}, err
+	}
+	if err := sparseClone(ctx, s.originalURL, s.resolvedRef(), s.sparsePathSpec(), s.cacheDir, s.accessToken); err != nil {
+		return config.ContentFile{}, oops.
+			With("repo", s.repoURL).
+			With("path", s.path).
+			Wrapf(err, "failed to clone skill %q", s.name)
 	}
 
-	// Override the cache dir to use our skill-specific one
-	gitSource.cacheDir = s.cacheDir
+	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
+	_ = writeCacheMeta(s.cacheDir, &CacheMeta{ //nolint:errcheck // best-effort; failing to persist meta causes a refetch next run
+		RemoteHEADSHA: currentSHA,
+		FetchedAt:     time.Now(),
+		FileHashes:    hashes,
+	})
 
-	if s.isSSH {
-		if err := s.cloneViaGitForSkill(ctx); err != nil {
-			return config.ContentFile{}, err
-		}
-	} else {
-		archiveURL, err := gitSource.buildArchiveURL()
-		if err != nil {
-			return config.ContentFile{}, err
-		}
-		if err := gitSource.downloadAndExtract(ctx, archiveURL); err != nil {
-			return config.ContentFile{}, err
-		}
-	}
-
-	// Find the skill directory at the configured path
 	skillDir := s.findSkillDir()
 	if skillDir == "" {
 		return config.ContentFile{}, oops.
@@ -124,65 +147,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 			With("path", s.path).
 			Errorf("skill directory not found (expected SKILL.md at %s)", s.path)
 	}
-
 	return ScanInstalledSkillDir(skillDir, s.name)
-}
-
-// cloneViaGitForSkill clones a repository via SSH and copies the skill directory
-// to the cache. Unlike GitSource.cloneViaGit (which copies .ai-rulez/), this
-// copies the skill path (e.g., skills/<name>/) so SKILL.md can be found.
-func (s *SkillGitSource) cloneViaGitForSkill(ctx context.Context) error {
-	tmpDir := filepath.Join(s.cacheDir, ".tmp-clone")
-
-	if err := os.RemoveAll(tmpDir); err != nil {
-		return oops.With("tmp_dir", tmpDir).Wrapf(err, "failed to remove existing temp directory")
-	}
-
-	ref := s.ref
-	if ref == "" {
-		ref = defaultRef
-	}
-
-	logger.Debug("Cloning git repository for skill", "url", s.originalURL, "ref", ref, "path", s.path)
-
-	// nolint: gosec // G204: Command arguments are from validated config
-	cmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--branch", ref, s.originalURL, tmpDir)
-	cmd.Env = os.Environ()
-
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return oops.
-			With("url", s.originalURL).
-			With("ref", ref).
-			With("output", string(output)).
-			Wrapf(err, "failed to clone repository via git")
-	}
-
-	// Copy the skill path from the clone to the cache
-	sourceDir := filepath.Join(tmpDir, s.path)
-	if _, err := os.Stat(sourceDir); err != nil {
-		if cleanupErr := os.RemoveAll(tmpDir); cleanupErr != nil {
-			logger.Warn("failed to cleanup temp directory", "tmp_dir", tmpDir, "error", cleanupErr)
-		}
-		return oops.
-			With("repo", s.originalURL).
-			With("path", s.path).
-			Errorf("skill directory not found in cloned repository at %s", s.path)
-	}
-
-	destDir := filepath.Join(s.cacheDir, s.path)
-	if err := copyDir(sourceDir, destDir); err != nil {
-		if cleanupErr := os.RemoveAll(tmpDir); cleanupErr != nil {
-			logger.Warn("failed to cleanup temp directory", "tmp_dir", tmpDir, "error", cleanupErr)
-		}
-		return oops.With("source", sourceDir).With("dest", destDir).Wrapf(err, "failed to copy skill directory")
-	}
-
-	if err := os.RemoveAll(tmpDir); err != nil {
-		logger.Warn("failed to cleanup temp directory", "tmp_dir", tmpDir, "error", err)
-	}
-
-	return nil
 }
 
 // findSkillDir locates the skill directory in the cached repo content
