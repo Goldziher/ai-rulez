@@ -3,11 +3,14 @@ package includes
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestNewGitSourceValidation tests URL validation in NewGitSource
@@ -139,258 +142,6 @@ func TestGitSourceGetName(t *testing.T) {
 	}
 }
 
-// TestBuildRawURLGitHub tests GitHub raw URL construction
-func TestBuildRawURLGitHub(t *testing.T) {
-	tests := []struct {
-		name    string
-		repo    string
-		path    string
-		ref     string
-		wantURL string
-		wantErr bool
-	}{
-		{
-			name:    "basic GitHub URL with default ref",
-			repo:    "https://github.com/owner/repo",
-			path:    "/",
-			ref:     "",
-			wantURL: "https://raw.githubusercontent.com/owner/repo/main/",
-			wantErr: false,
-		},
-		{
-			name:    "GitHub URL with custom ref",
-			repo:    "https://github.com/owner/repo",
-			path:    "/",
-			ref:     "develop",
-			wantURL: "https://raw.githubusercontent.com/owner/repo/develop/",
-			wantErr: false,
-		},
-		{
-			name:    "GitHub URL with custom path",
-			repo:    "https://github.com/owner/repo",
-			path:    "/some/path",
-			ref:     "main",
-			wantURL: "https://raw.githubusercontent.com/owner/repo/main/some/path",
-			wantErr: false,
-		},
-		{
-			name:    "GitHub URL with .git suffix",
-			repo:    "https://github.com/owner/repo.git",
-			path:    "/",
-			ref:     "main",
-			wantURL: "https://raw.githubusercontent.com/owner/repo/main/",
-			wantErr: false,
-		},
-		{
-			name:    "GitHub URL with trailing slash",
-			repo:    "https://github.com/owner/repo/",
-			path:    "/",
-			ref:     "main",
-			wantURL: "https://raw.githubusercontent.com/owner/repo/main/",
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, tt.path, tt.ref, baseDir, nil, "")
-			if err != nil {
-				t.Fatalf("unexpected error creating source: %v", err)
-			}
-
-			// Act
-			rawURL, err := source.buildRawURL()
-
-			// Assert
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildRawURL() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if rawURL != tt.wantURL {
-				t.Errorf("buildRawURL() = %q, want %q", rawURL, tt.wantURL)
-			}
-		})
-	}
-}
-
-// TestBuildRawURLGitLab tests GitLab raw URL construction
-func TestBuildRawURLGitLab(t *testing.T) {
-	tests := []struct {
-		name    string
-		repo    string
-		path    string
-		ref     string
-		wantURL string
-		wantErr bool
-	}{
-		{
-			name:    "basic GitLab URL with default ref",
-			repo:    "https://gitlab.com/owner/repo",
-			path:    "/",
-			ref:     "",
-			wantURL: "https://gitlab.com/owner/repo/-/raw/main/",
-			wantErr: false,
-		},
-		{
-			name:    "GitLab URL with custom ref",
-			repo:    "https://gitlab.com/owner/repo",
-			path:    "/",
-			ref:     "develop",
-			wantURL: "https://gitlab.com/owner/repo/-/raw/develop/",
-			wantErr: false,
-		},
-		{
-			name:    "GitLab URL with custom path",
-			repo:    "https://gitlab.com/owner/repo",
-			path:    "/some/path",
-			ref:     "main",
-			wantURL: "https://gitlab.com/owner/repo/-/raw/main/some/path",
-			wantErr: false,
-		},
-		{
-			name:    "GitLab URL with .git suffix",
-			repo:    "https://gitlab.com/owner/repo.git",
-			path:    "/",
-			ref:     "main",
-			wantURL: "https://gitlab.com/owner/repo/-/raw/main/",
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, tt.path, tt.ref, baseDir, nil, "")
-			if err != nil {
-				t.Fatalf("unexpected error creating source: %v", err)
-			}
-
-			// Act
-			rawURL, err := source.buildRawURL()
-
-			// Assert
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildRawURL() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if rawURL != tt.wantURL {
-				t.Errorf("buildRawURL() = %q, want %q", rawURL, tt.wantURL)
-			}
-		})
-	}
-}
-
-// TestBuildArchiveURLGitHub tests GitHub archive URL construction
-func TestBuildArchiveURLGitHub(t *testing.T) {
-	tests := []struct {
-		name    string
-		repo    string
-		ref     string
-		wantURL string
-		wantErr bool
-	}{
-		{
-			name:    "basic GitHub archive URL",
-			repo:    "https://github.com/owner/repo",
-			ref:     "main",
-			wantURL: "https://github.com/owner/repo/archive/refs/heads/main.tar.gz",
-			wantErr: false,
-		},
-		{
-			name:    "GitHub archive URL with custom ref",
-			repo:    "https://github.com/owner/repo",
-			ref:     "v1.0.0",
-			wantURL: "https://github.com/owner/repo/archive/refs/heads/v1.0.0.tar.gz",
-			wantErr: false,
-		},
-		{
-			name:    "GitHub archive URL with default ref",
-			repo:    "https://github.com/owner/repo",
-			ref:     "",
-			wantURL: "https://github.com/owner/repo/archive/refs/heads/main.tar.gz",
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, "", tt.ref, baseDir, nil, "")
-			if err != nil {
-				t.Fatalf("unexpected error creating source: %v", err)
-			}
-
-			// Act
-			archiveURL, err := source.buildArchiveURL()
-
-			// Assert
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildArchiveURL() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if archiveURL != tt.wantURL {
-				t.Errorf("buildArchiveURL() = %q, want %q", archiveURL, tt.wantURL)
-			}
-		})
-	}
-}
-
-// TestBuildArchiveURLGitLab tests GitLab archive URL construction
-func TestBuildArchiveURLGitLab(t *testing.T) {
-	tests := []struct {
-		name    string
-		repo    string
-		ref     string
-		wantURL string
-		wantErr bool
-	}{
-		{
-			name:    "basic GitLab archive URL",
-			repo:    "https://gitlab.com/owner/repo",
-			ref:     "main",
-			wantURL: "https://gitlab.com/owner/repo/-/archive/main/archive.tar.gz",
-			wantErr: false,
-		},
-		{
-			name:    "GitLab archive URL with custom ref",
-			repo:    "https://gitlab.com/owner/repo",
-			ref:     "v1.0.0",
-			wantURL: "https://gitlab.com/owner/repo/-/archive/v1.0.0/archive.tar.gz",
-			wantErr: false,
-		},
-		{
-			name:    "GitLab archive URL with default ref",
-			repo:    "https://gitlab.com/owner/repo",
-			ref:     "",
-			wantURL: "https://gitlab.com/owner/repo/-/archive/main/archive.tar.gz",
-			wantErr: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			baseDir := t.TempDir()
-			source, err := NewGitSource("test", tt.repo, "", tt.ref, baseDir, nil, "")
-			if err != nil {
-				t.Fatalf("unexpected error creating source: %v", err)
-			}
-
-			// Act
-			archiveURL, err := source.buildArchiveURL()
-
-			// Assert
-			if (err != nil) != tt.wantErr {
-				t.Errorf("buildArchiveURL() error = %v, wantErr %v", err, tt.wantErr)
-			}
-			if archiveURL != tt.wantURL {
-				t.Errorf("buildArchiveURL() = %q, want %q", archiveURL, tt.wantURL)
-			}
-		})
-	}
-}
-
 // TestFindAIRulezDir tests finding the .ai-rulez directory in cache
 func TestFindAIRulezDir(t *testing.T) {
 	tests := []struct {
@@ -493,31 +244,6 @@ func TestFindAIRulezDirFlatStructureAtSubPath(t *testing.T) {
 	}
 	if !strings.Contains(found, filepath.Join("domains", "polyglot")) {
 		t.Errorf("findAIRulezDir() = %q, want to contain domains/polyglot", found)
-	}
-}
-
-// TestFindSourceDirFlatStructureAtSubPath tests findSourceDir with flat structure at sub-path
-func TestFindSourceDirFlatStructureAtSubPath(t *testing.T) {
-	// Arrange
-	tmpDir := t.TempDir()
-
-	source := &GitSource{
-		path: "/domains/polyglot",
-	}
-
-	// Create flat structure at sub-path
-	os.MkdirAll(filepath.Join(tmpDir, "domains", "polyglot", "rules"), 0o755)
-	os.MkdirAll(filepath.Join(tmpDir, "domains", "polyglot", "skills"), 0o755)
-
-	// Act
-	found, err := source.findSourceDir(tmpDir)
-
-	// Assert
-	if err != nil {
-		t.Fatalf("findSourceDir() unexpected error: %v", err)
-	}
-	if !strings.Contains(found, filepath.Join("domains", "polyglot")) {
-		t.Errorf("findSourceDir() = %q, want to contain domains/polyglot", found)
 	}
 }
 
@@ -890,23 +616,153 @@ func TestCacheDirCreation(t *testing.T) {
 	}
 }
 
-// TestFetchErrorHandlingInvalidURL tests error handling for invalid URLs
-func TestFetchErrorHandlingInvalidURL(t *testing.T) {
-	// Arrange
-	baseDir := t.TempDir()
-	source, err := NewGitSource("test", "https://invalid-host-xyz.example.com/owner/repo", "", "", baseDir, nil, "")
-	if err != nil {
-		t.Fatalf("unexpected error creating source: %v", err)
+// initLocalRepo initializes a bare git repo and returns its path.
+func initLocalRepo(t *testing.T) string {
+	t.Helper()
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available in PATH")
 	}
+	dir := t.TempDir()
+	cmds := [][]string{
+		{"init", "-b", "main"},
+		{"config", "user.email", "test@test.com"},
+		{"config", "user.name", "Test"},
+	}
+	for _, args := range cmds {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+	return dir
+}
+
+// commitFile writes relPath into repoDir and creates a commit.
+func commitFile(t *testing.T, repoDir, relPath, content string) {
+	t.Helper()
+	path := filepath.Join(repoDir, relPath)
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+	for _, args := range [][]string{{"add", relPath}, {"commit", "-m", "update"}} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repoDir
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=test",
+			"GIT_AUTHOR_EMAIL=test@test.com",
+			"GIT_COMMITTER_NAME=test",
+			"GIT_COMMITTER_EMAIL=test@test.com",
+		)
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+}
+
+func TestGitSourceFetch_CacheHit(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "---\nname: rule1\npriority: high\n---\n# Rule")
+
+	cacheDir := t.TempDir()
+	source := &GitSource{
+		name:        "test-include",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
 	ctx := context.Background()
 
-	// Act
-	_, err = source.Fetch(ctx)
+	// First fetch populates the cache.
+	tree, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+	assert.NotEmpty(t, tree.Rules, "expected at least one rule after first fetch")
 
-	// Assert
-	// This should fail because we're trying to fetch from a non-existent server
-	// The actual error depends on the HTTP client, but it should not be nil
-	if err == nil {
-		t.Error("expected error for invalid URL")
+	// Second fetch should hit the SHA cache and return same content.
+	tree2, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, tree2)
+	assert.Len(t, tree2.Rules, len(tree.Rules))
+}
+
+func TestGitSourceFetch_CacheMiss_AfterCommit(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "---\nname: rule1\npriority: high\n---\n# Rule Old")
+
+	cacheDir := t.TempDir()
+	source := &GitSource{
+		name:        "test-include-miss",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		cacheDir:    cacheDir,
+		accessToken: "",
 	}
+
+	ctx := context.Background()
+
+	_, err := source.Fetch(ctx)
+	require.NoError(t, err)
+
+	// Push a new commit so the remote SHA changes.
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "---\nname: rule1\npriority: high\n---\n# Rule New")
+
+	// Invalidate in-process scan cache so the test sees the new on-disk files.
+	if dir := source.findAIRulezDir(); dir != "" {
+		invalidateScan(dir)
+	}
+
+	tree2, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, tree2)
+	require.NotEmpty(t, tree2.Rules)
+	assert.Contains(t, tree2.Rules[0].Content, "Rule New")
+}
+
+func TestGitSourceFetch_SkipFetch_MissingCache(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available in PATH")
+	}
+
+	cacheDir := t.TempDir()
+	source := &GitSource{
+		name:        "test-skip-missing",
+		repoURL:     "https://github.com/owner/repo",
+		originalURL: "https://github.com/owner/repo",
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	t.Cleanup(func() { SkipFetch = false })
+	SkipFetch = true
+
+	_, err := source.Fetch(context.Background())
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no cached")
+}
+
+func TestGitSourceFetch_SkipFetch_WithCache(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "---\nname: rule1\npriority: high\n---\n# Rule")
+
+	cacheDir := t.TempDir()
+	source := &GitSource{
+		name:        "test-skip-cached",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	ctx := context.Background()
+
+	// Populate cache with a live fetch.
+	_, err := source.Fetch(ctx)
+	require.NoError(t, err)
+
+	t.Cleanup(func() { SkipFetch = false })
+	SkipFetch = true
+
+	tree, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	assert.NotEmpty(t, tree.Rules)
 }

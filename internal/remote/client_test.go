@@ -23,6 +23,23 @@ func TestDefaultHTTPConfig(t *testing.T) {
 	assert.Contains(t, config.Headers["Accept"], "yaml")
 }
 
+func TestNewArchiveClient(t *testing.T) {
+	t.Run("non_nil", func(t *testing.T) {
+		client := NewArchiveClient("")
+		assert.NotNil(t, client)
+	})
+
+	t.Run("max_body_size", func(t *testing.T) {
+		client := NewArchiveClient("")
+		assert.Equal(t, int64(500*1024*1024), client.config.MaxBodySize)
+	})
+
+	t.Run("timeout", func(t *testing.T) {
+		client := NewArchiveClient("")
+		assert.Equal(t, 120*time.Second, client.config.Timeout)
+	})
+}
+
 func TestClient_Fetch(t *testing.T) {
 	t.Run("successful fetch", func(t *testing.T) {
 		expectedContent := "test: yaml content\nrules:\n  - name: test"
@@ -113,6 +130,39 @@ func TestClient_Fetch(t *testing.T) {
 
 		_, err := client.Fetch(ctx, server.URL)
 		assert.Error(t, err)
+	})
+}
+
+func TestArchiveClient_AcceptsLargeBody(t *testing.T) {
+	payload := make([]byte, 11*1024*1024) // 11 MB — just over the 10 MB default limit
+	for i := range payload {
+		payload[i] = 'x'
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.Write(payload) //nolint:errcheck
+	}))
+	defer server.Close()
+
+	ctx := context.Background()
+
+	t.Run("default_client_rejects", func(t *testing.T) {
+		client := NewTestClient(nil)
+		_, err := client.Fetch(ctx, server.URL)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "response body too large")
+	})
+
+	t.Run("archive_client_accepts", func(t *testing.T) {
+		cfg := defaultHTTPConfig()
+		cfg.MaxBodySize = ArchiveBodySize
+		cfg.Timeout = 120 * time.Second
+		cfg.Headers = map[string]string{}
+		client := NewTestClient(cfg)
+		body, err := client.Fetch(ctx, server.URL)
+		require.NoError(t, err)
+		assert.Len(t, body, len(payload))
 	})
 }
 

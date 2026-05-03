@@ -19,6 +19,8 @@ type HTTPConfig struct {
 	AccessToken  string
 }
 
+const ArchiveBodySize = 500 * 1024 * 1024
+
 func defaultHTTPConfig() *HTTPConfig {
 	return &HTTPConfig{
 		Timeout:      30 * time.Second,
@@ -65,6 +67,17 @@ func NewClientWithToken(config *HTTPConfig, accessToken string) *Client {
 		config.AccessToken = accessToken
 	}
 
+	return newClientWithValidator(config, newURLValidator())
+}
+
+func NewArchiveClient(accessToken string) *Client {
+	config := defaultHTTPConfig()
+	config.MaxBodySize = ArchiveBodySize
+	config.Timeout = 120 * time.Second
+	config.Headers = map[string]string{}
+	if accessToken != "" {
+		config.AccessToken = accessToken
+	}
 	return newClientWithValidator(config, newURLValidator())
 }
 

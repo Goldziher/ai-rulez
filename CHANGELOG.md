@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.1.6] - 2026-05-03
+
+### Changed
+- **Git fetches now use sparse checkout** — `ai-rulez` no longer downloads entire repository archives to resolve installed skills or remote includes. All git operations now run `git clone --depth 1 --filter=blob:none --sparse` and materialise only the required subtree (e.g. `skills/<name>/` or `.ai-rulez/`). This fixes the `"response body too large"` error that occurred when installing skills from large repositories, and dramatically reduces network and disk usage for all remote sources. **Requires git ≥ 2.25** (released January 2020).
+- **BLAKE3-based cache invalidation** — the time-based TTL (`.fetch_time` marker, 1-hour for includes) is replaced with a content-driven approach. On every `ai-rulez generate`, a fast `git ls-remote` call checks whether the remote HEAD SHA has changed; cached content is reused when the SHA matches and re-fetched only when it differs. Cached file content is hashed with BLAKE3 and stored in `.cache_meta.json` alongside each cached source. Skills always check the remote (no grace period); `--no-fetch` bypasses all network calls as before.
+
+### Removed
+- HTTP archive download path (`downloadAndExtract`, `buildArchiveURL`, `extractTarGz`, `extractZip`): replaced by sparse git clone.
+- Duplicate SSH clone helpers (`cloneViaGit`, `cloneViaGitForSkill`): replaced by the shared `sparseClone` primitive in the new `internal/includes/gitops.go`.
+
 ## [4.1.5] - 2026-05-02
 
 ### Changed

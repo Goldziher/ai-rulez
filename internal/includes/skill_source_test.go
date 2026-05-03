@@ -1,6 +1,7 @@
 package includes
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -197,4 +198,78 @@ func TestHasSkillMarker(t *testing.T) {
 
 		assert.False(t, hasSkillMarker(dir))
 	})
+}
+
+func TestSkillGitSourceFetch_SparseFromLocalRepo(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nThis is a test skill.")
+
+	cacheDir := t.TempDir()
+	source := &SkillGitSource{
+		name:        "myskill",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		path:        "skills/myskill",
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	ctx := context.Background()
+	cf, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, "myskill", cf.Name)
+	assert.Contains(t, cf.Content, "test skill")
+}
+
+func TestSkillGitSourceFetch_CacheHit_SameSHA(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nThis is a test skill.")
+
+	cacheDir := t.TempDir()
+	source := &SkillGitSource{
+		name:        "myskill-hit",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		path:        "skills/myskill",
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	ctx := context.Background()
+
+	cf1, err := source.Fetch(ctx)
+	require.NoError(t, err)
+
+	// Second fetch: SHA unchanged — should return cached content.
+	cf2, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, cf1.Name, cf2.Name)
+	assert.Equal(t, cf1.Content, cf2.Content)
+}
+
+func TestSkillGitSourceFetch_CacheMiss_NewCommit(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nOld content.")
+
+	cacheDir := t.TempDir()
+	source := &SkillGitSource{
+		name:        "myskill-miss",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		path:        "skills/myskill",
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	ctx := context.Background()
+
+	_, err := source.Fetch(ctx)
+	require.NoError(t, err)
+
+	// New commit changes the remote SHA → cache miss on next fetch.
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nNew content.")
+
+	cf2, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, cf2.Content, "New content.")
 }
