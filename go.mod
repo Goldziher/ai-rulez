@@ -5,7 +5,7 @@ go 1.26.2
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-resty/resty/v2 v2.17.2
-	github.com/kaptinlin/jsonschema v0.7.11
+	github.com/kaptinlin/jsonschema v0.7.13
 	github.com/modelcontextprotocol/go-sdk v1.6.0
 	github.com/pelletier/go-toml/v2 v2.3.0
 	github.com/samber/oops v1.21.0
