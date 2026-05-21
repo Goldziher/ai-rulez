@@ -36,14 +36,10 @@ presets = ["claude", "cursor", "gemini"]
 
 default = "full"
 
-[profiles.full]
-domains = ["backend", "frontend", "qa"]
-
-[profiles.backend]
-domains = ["backend", "qa"]
-
-[profiles.frontend]
-domains = ["frontend", "qa"]
+[profiles]
+full = ["backend", "frontend", "qa"]
+backend = ["backend", "qa"]
+frontend = ["frontend", "qa"]
 
 gitignore = true
 
@@ -133,17 +129,11 @@ If not specified, all domains are included.
 Named profiles that specify which domains to include in generation.
 
 ```toml
-[profiles.full]
-domains = ["backend", "frontend", "qa"]
-
-[profiles.backend]
-domains = ["backend", "qa"]
-
-[profiles.frontend]
-domains = ["frontend", "qa"]
-
-[profiles.qa]
-domains = ["qa"]
+[profiles]
+full = ["backend", "frontend", "qa"]
+backend = ["backend", "qa"]
+frontend = ["frontend", "qa"]
+qa = ["qa"]
 ```
 
 Each profile specifies a list of domain names. When generating with a profile:
@@ -155,8 +145,8 @@ Each profile specifies a list of domain names. When generating with a profile:
 Generate additional assistant files in subfolders with their own profile.
 
 ```toml
-[profiles.frontend]
-domains = ["frontend"]
+[profiles]
+frontend = ["frontend"]
 
 [[scopes]]
 path = "packages/web"
@@ -398,7 +388,7 @@ style = "detailed"  # Default: comprehensive header with full documentation
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY
 Project: My Project
 Generated: 2026-01-03 09:27:19
-Source: .ai-rulez/config.yaml
+Source: .ai-rulez/config.toml
 Target: CLAUDE.md
 Content: rules=5, sections=0, agents=2
 
@@ -408,7 +398,7 @@ the .ai-rulez/ directory. This file is auto-generated from source files.
 
 .AI-RULEZ FOLDER ORGANIZATION
 Root content (always included):
-  .ai-rulez/config.yaml    Main configuration (presets, profiles)
+  .ai-rulez/config.toml    Main configuration (presets, profiles)
   .ai-rulez/rules/         Mandatory rules for AI assistants
   .ai-rulez/context/       Reference documentation
   .ai-rulez/skills/        Specialized AI prompts
@@ -419,7 +409,7 @@ Domain content (profile-specific):
   .ai-rulez/domains/{name}/context/  Domain-specific documentation
   .ai-rulez/domains/{name}/skills/   Domain-specific AI prompts
 
-Profiles in config.yaml control which domains are included.
+Profiles in config.toml control which domains are included.
 
 INSTRUCTIONS FOR AI AGENTS
 1. NEVER edit this file (CLAUDE.md) - it is auto-generated
@@ -427,7 +417,7 @@ INSTRUCTIONS FOR AI AGENTS
 2. ALWAYS edit files in .ai-rulez/ instead:
    - Add/modify rules: .ai-rulez/rules/*.md
    - Add/modify context: .ai-rulez/context/*.md
-   - Update config: .ai-rulez/config.yaml
+   - Update config: .ai-rulez/config.toml
    - Domain-specific: .ai-rulez/domains/{name}/rules/*.md
 
 3. PREFER using the MCP Server (if available):
@@ -451,18 +441,18 @@ Documentation: https://github.com/Goldziher/ai-rulez
 <!--
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
 Project: My Project | Generated: 2026-01-03 09:28:08
-Source: .ai-rulez/config.yaml | Target: CLAUDE.md
+Source: .ai-rulez/config.toml | Target: CLAUDE.md
 Content: rules=5, sections=0, agents=2
 
 WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/
 
 STRUCTURE:
-  .ai-rulez/config.yaml, rules/, context/, skills/, agents/ (root)
+  .ai-rulez/config.toml, rules/, context/, skills/, agents/ (root)
   .ai-rulez/domains/{name}/ (profile-specific)
 
 AI AGENT INSTRUCTIONS:
 ✗ NEVER edit CLAUDE.md (auto-generated)
-✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.yaml
+✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.toml
 ✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)
 ✓ REGENERATE: ai-rulez generate
 ✓ COMMIT: both .ai-rulez/ and generated files
@@ -478,7 +468,7 @@ Docs: https://github.com/Goldziher/ai-rulez
 🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT
 Project: My Project
 Generated: 2026-01-03 09:28:27
-Source: .ai-rulez/config.yaml
+Source: .ai-rulez/config.toml
 
 NEVER edit this file - modify .ai-rulez/ content instead
 Use MCP server: npx -y ai-rulez@latest mcp
@@ -632,7 +622,7 @@ targets:
 - Values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`
 - Sets the reasoning effort for a Claude Code subagent in its generated `.claude/agents/<name>.md` frontmatter
 - Available levels depend on the model
-- Falls back to `defaults.effort` in `config.yaml` when not set, then to the session-level default
+- Falls back to `defaults.effort` in `config.toml` when not set, then to the session-level default
 - Other presets (Cursor, Windsurf, Copilot, Gemini, etc.) do not currently support this field — it is omitted from their outputs
 
 ```yaml
@@ -729,7 +719,7 @@ gitignore = true
 Directory structure:
 ```
 .ai-rulez/
-├── config.yaml
+├── config.toml
 ├── rules/
 │   ├── code-style.md
 │   └── testing.md
@@ -751,20 +741,12 @@ presets = ["claude", "cursor", "gemini"]
 
 default = "full"
 
-[profiles.full]
-domains = ["backend", "frontend", "qa", "devops"]
-
-[profiles.backend]
-domains = ["backend", "qa"]
-
-[profiles.frontend]
-domains = ["frontend", "qa"]
-
-[profiles.qa]
-domains = ["qa"]
-
-[profiles.devops]
-domains = ["devops"]
+[profiles]
+full = ["backend", "frontend", "qa", "devops"]
+backend = ["backend", "qa"]
+frontend = ["frontend", "qa"]
+qa = ["qa"]
+devops = ["devops"]
 
 gitignore = true
 ```
@@ -772,7 +754,7 @@ gitignore = true
 Directory structure:
 ```
 .ai-rulez/
-├── config.yaml
+├── config.toml
 ├── rules/
 │   ├── general-standards.md
 │   └── security.md
@@ -815,17 +797,11 @@ path = "docs/AI_DEVELOPMENT_GUIDE.md"
 
 default = "full"
 
-[profiles.full]
-domains = ["research", "ml-ops", "infrastructure", "frontend"]
-
-[profiles.research]
-domains = ["research"]
-
-[profiles.ml-ops]
-domains = ["ml-ops", "infrastructure"]
-
-[profiles.frontend]
-domains = ["frontend"]
+[profiles]
+full = ["research", "ml-ops", "infrastructure", "frontend"]
+research = ["research"]
+ml-ops = ["ml-ops", "infrastructure"]
+frontend = ["frontend"]
 
 gitignore = true
 ```
@@ -853,17 +829,11 @@ presets = ["claude", "cursor"]
 
 default = "full"
 
-[profiles.full]
-domains = ["backend", "frontend", "mobile"]
-
-[profiles.backend]
-domains = ["backend"]
-
-[profiles.frontend]
-domains = ["frontend"]
-
-[profiles.mobile]
-domains = ["mobile"]
+[profiles]
+full = ["backend", "frontend", "mobile"]
+backend = ["backend"]
+frontend = ["frontend"]
+mobile = ["mobile"]
 ```
 
 ### Environment-Based Profiles
@@ -877,14 +847,10 @@ presets = ["claude"]
 
 default = "production"
 
-[profiles.development]
-domains = ["dev-guidelines"]
-
-[profiles.staging]
-domains = ["staging-guidelines"]
-
-[profiles.production]
-domains = ["production-guidelines", "security-hardened"]
+[profiles]
+development = ["dev-guidelines"]
+staging = ["staging-guidelines"]
+production = ["production-guidelines", "security-hardened"]
 ```
 
 ## Validation
@@ -910,7 +876,7 @@ This checks:
 
 ## Programmatic Modification with CRUD Operations
 
-V3 provides CRUD (Create, Read, Update, Delete) commands to programmatically modify your configuration. This is useful for:
+V4 provides CRUD (Create, Read, Update, Delete) commands to programmatically modify your configuration. This is useful for:
 
 - Automation and scripting
 - Integration with CI/CD pipelines
@@ -1062,29 +1028,29 @@ Put content in the domain that owns it. Example:
 
 Each domain should represent one area:
 
-```yaml
+```toml
 Good:
-profiles:
-  full: [api, frontend, infrastructure]
+[profiles]
+full = ["api", "frontend", "infrastructure"]
 
 Bad:
-profiles:
-  full: [api-with-db, frontend-with-build, infrastructure-and-monitoring]
+[profiles]
+full = ["api-with-db", "frontend-with-build", "infrastructure-and-monitoring"]
 ```
 
 ### Document Domain Purposes
 
-Add comments to `config.yaml`:
+Add comments to `config.toml`:
 
-```yaml
+```toml
 # Domains:
 # - backend: Go services, REST APIs
 # - frontend: React web app
 # - mobile: React Native apps
 # - devops: Infrastructure, deployment
 
-profiles:
-  full: [backend, frontend, mobile, devops]
+[profiles]
+full = ["backend", "frontend", "mobile", "devops"]
 ```
 
 ## Troubleshooting
@@ -1103,21 +1069,18 @@ ai-rulez generate --profile backend
 
 At least one preset is recommended. Add to config:
 
-```yaml
-presets:
-  - claude
+```toml
+presets = ["claude"]
 ```
 
 ### "Domain not included"
 
 Check your profile configuration:
 
-```yaml
+```toml
 # If this profile doesn't include "backend", backend content won't appear
-profiles:
-  myprofile:
-    - frontend      # backend is missing!
-    - qa
+[profiles]
+myprofile = ["frontend", "qa"] # backend is missing!
 ```
 
 ### Content not appearing in output

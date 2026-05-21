@@ -42,8 +42,8 @@ presets = ["claude", "cursor", "gemini"]
 default = "full"
 
 # Named profiles for different team needs
-[profiles.full]
-domains = []  # Empty = root content only
+[profiles]
+full = []  # Empty = root content only
 ```
 
 ## Step 3: Add Your Rules
@@ -181,14 +181,10 @@ presets = ["claude", "cursor"]
 
 default = "full"
 
-[profiles.full]
-domains = ["backend", "frontend"]
-
-[profiles.backend]
-domains = ["backend"]
-
-[profiles.frontend]
-domains = ["frontend"]
+[profiles]
+full = ["backend", "frontend"]
+backend = ["backend"]
+frontend = ["frontend"]
 ```
 
 **4. Generate for specific teams:**
@@ -225,7 +221,7 @@ mkdir -p .ai-rulez/domains/newdomain/context
 
 # Add rules and context files...
 
-# Update config.yaml to reference the domain
+# Update config.toml to reference the domain
 ```
 
 ### Change Tool Configuration

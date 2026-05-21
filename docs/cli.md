@@ -656,11 +656,11 @@ ai-rulez generate [config-path] [flags]
 **Arguments:**
 - `[config-path]` (optional): Path to configuration file or directory. If not provided, auto-detected.
 
-**V3-specific Flags:**
+**Generation Flags:**
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--profile` | string | (from config) | Profile to generate (V3 only) |
+| `--profile` | string | (from config) | Profile to generate |
 
 **General Flags:**
 
@@ -716,7 +716,7 @@ ai-rulez generate --token "ghp_your_github_token_here"
 
 ### Profile Selection
 
-When using V3 configuration:
+When using profile-based configuration:
 
 1. **No `--profile` flag**: Uses default profile from config
 2. **`--profile backend`**: Generates content for the `backend` profile
@@ -724,18 +724,14 @@ When using V3 configuration:
 
 Example with profile hierarchy:
 
-```yaml
-# config.yaml
-default: "full"
-profiles:
-  full:
-    - backend
-    - frontend
-    - qa
-  backend:
-    - backend
-  frontend:
-    - frontend
+```toml
+# .ai-rulez/config.toml
+default = "full"
+
+[profiles]
+full = ["backend", "frontend", "qa"]
+backend = ["backend"]
+frontend = ["frontend"]
 ```
 
 ```bash
@@ -780,7 +776,7 @@ ai-rulez validate
 
 Validate specific config file:
 ```bash
-ai-rulez validate .ai-rulez/config.yaml
+ai-rulez validate .ai-rulez/config.toml
 ```
 
 With verbose output:
@@ -922,14 +918,14 @@ Example detection flow:
 ```bash
 cd /path/to/project
 
-# Detects .ai-rulez/ if it exists (V3)
+# Detects .ai-rulez/ if it exists
 ai-rulez generate
 
 # Use explicit path
-ai-rulez generate .ai-rulez/config.yaml
+ai-rulez generate .ai-rulez/config.toml
 
 # Specify config via flag
-ai-rulez generate --config ./custom-config.yaml
+ai-rulez generate --config ./ai-policy/config.toml
 ```
 
 ## Exit Codes
@@ -1171,10 +1167,10 @@ ai-rulez version
 ```bash
 # Check current directory
 ls -la .ai-rulez/
-ls -la ai-rulez.yaml
+ls -la .ai-rulez/config.toml
 
 # Or specify explicitly
-ai-rulez generate --config /path/to/config.yaml
+ai-rulez generate --config /path/to/.ai-rulez/config.toml
 ```
 
 ### Invalid profile name
