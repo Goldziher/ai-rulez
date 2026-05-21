@@ -22,6 +22,11 @@ builtins = true               # Enable all built-in domains
 backend = ["backend", "shared"]
 frontend = ["frontend", "shared"]
 
+[[scopes]]                    # Optional scoped outputs in subfolders
+path = "packages/web"
+profile = "frontend"
+presets = ["codex", "claude"] # Defaults to codex + claude when omitted
+
 [[presets]]
 name = "custom"               # Custom preset (object)
 type = "markdown"             # markdown | directory | json
@@ -55,10 +60,10 @@ amp = "max"
 [header]
 style = "detailed"            # detailed | compact | minimal
 
-[mcp]
-[mcp.servers.default]
+[[mcp_servers]]
+name = "ai-rulez"
 command = "npx"
-args = ["ai-rulez@latest", "mcp"]
+args = ["-y", "ai-rulez@latest", "mcp"]
 ```
 
 ## Built-in Presets
@@ -113,3 +118,27 @@ description: "Desc"      # Description (skills, agents)
 1. If `profiles.default` is explicitly defined → use it
 2. If no profiles are defined → include root + all domains
 3. If profiles exist but `default` is not among them → include root + builtin + FromInclude domains
+
+## Config Directory and Generated Manifest
+
+- `.ai-rulez/` remains the default config root.
+- `ai-rulez generate --config-dir <name>` and `validate --config-dir <name>` use another config directory.
+- `ai-rulez generate <path/to/config.toml>` and `--config <path/to/config.toml>` load that exact file.
+- Generation writes `.generated-manifest.json` under the active config directory and removes only stale files listed in that manifest.
+- Assistant directories such as `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.windsurf/`, and `.agents/` are not considered fully owned; user settings, hooks, personal skills, and other local files are preserved.
+
+## Scoped Outputs
+
+Use `[[scopes]]` to generate subfolder-specific `AGENTS.md` and `CLAUDE.md` files with separate profile content:
+
+```toml
+[profiles]
+frontend = ["frontend"]
+
+[[scopes]]
+path = "packages/web"
+profile = "frontend"
+presets = ["codex", "claude"]
+```
+
+Root output and scoped output are generated independently. `--dry-run` shows the target paths for both.

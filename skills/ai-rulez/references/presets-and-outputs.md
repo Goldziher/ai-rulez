@@ -2,13 +2,13 @@
 
 ## Generation Flow
 
-1. Load `.ai-rulez/config.yaml` and scan content directories
+1. Load the selected config root (default `.ai-rulez/config.toml`) and scan content directories
 2. Load builtins (lowest priority)
 3. Resolve includes (merge external content)
 4. Resolve installed skills (fetch and add to content tree)
 5. Select profile → determine active domains
-6. Generate preset outputs from combined content
-7. Write files and update `.gitignore`
+6. Generate preset outputs from combined content, including configured scoped subfolder outputs
+7. Remove stale files from `.generated-manifest.json`, write outputs, update the manifest, and update `.gitignore`
 
 ## Built-in Presets
 
@@ -75,6 +75,9 @@ ai-rulez generate --profile backend
 
 # Preview without writing
 ai-rulez generate --dry-run
+
+# Use a non-default config directory
+ai-rulez generate --config-dir ai-policy
 ```
 
 ## Content Priority
@@ -105,4 +108,13 @@ Control generated file headers:
 
 ## MCP Server Integration
 
-MCP servers are now configured inline in `config.toml` under `[mcp]` sections, allowing assistants to access ai-rulez functionality without a separate service.
+MCP servers are configured inline in `config.toml` under `[[mcp_servers]]`, allowing assistants to access ai-rulez functionality without a separate service.
+
+## Cleanup Safety
+
+Generation no longer treats assistant directories as fully owned. Stale cleanup is manifest-based:
+
+- The manifest lives at `<config-dir>/.generated-manifest.json`.
+- Only files listed in the previous manifest can be deleted as stale.
+- User-owned files in `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.windsurf/`, `.cline/`, `.agents/`, `.continue/`, `.opencode/`, `.junie/`, and custom output directories are preserved.
+- `ai-rulez generate --dry-run` prints `write-file`, `create-dir`, and `delete-stale` entries without changing the filesystem.
