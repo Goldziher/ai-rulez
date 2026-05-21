@@ -11,6 +11,11 @@ tasks:
       - prek install --hook-type commit-msg
       - go mod download
 
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
   update:
     desc: "Update dependencies and pre-commit hooks"
     cmds:
@@ -73,6 +78,51 @@ tasks:
     cmds:
       - go test ./...
 
+  test:verbose:
+    desc: "Run all tests with verbose output"
+    cmds:
+      - go test -v ./...
+
+  test:race:
+    desc: "Run tests with race detector"
+    cmds:
+      - go test -race ./...
+
+  test:e2e:
+    desc: "Run all e2e tests"
+    cmds:
+      - go test ./tests/e2e/...
+
+  test:e2e:cli:
+    desc: "Run e2e CLI tests"
+    cmds:
+      - go test ./tests/e2e/cli/...
+
+  test:e2e:mcp:
+    desc: "Run e2e MCP tests"
+    cmds:
+      - go test ./tests/e2e/mcp/...
+
+  test:e2e:integration:
+    desc: "Run e2e integration tests"
+    cmds:
+      - go test ./tests/e2e/integration/...
+
+  test:platform:
+    desc: "Run cross-platform specific tests"
+    cmds:
+      - go test ./tests/platform/...
+
+  test:benchmark:
+    desc: "Run Go benchmarks"
+    cmds:
+      - go test -bench=. -run='^$' ./...
+
+  test:all:
+    desc: "Run all test suites"
+    cmds:
+      - go test ./...
+
   lint:
     desc: "Run all pre-commit hooks"
     cmds:
@@ -83,6 +133,21 @@ tasks:
     cmds:
       - go vet ./...
       - golangci-lint run --timeout=5m
+
+  format:
+    desc: "Format Go code"
+    cmds:
+      - gofmt -w .
+
+  generate:
+    desc: "Generate ai-rulez configuration files"
+    cmds:
+      - go run ./cmd/main.go generate
+
+  validate:
+    desc: "Validate ai-rulez configuration"
+    cmds:
+      - go run ./cmd/main.go validate
 
   clean:
     desc: "Clean build artifacts"

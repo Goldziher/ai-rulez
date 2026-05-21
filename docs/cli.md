@@ -669,6 +669,7 @@ ai-rulez generate [config-path] [flags]
 | `--dry-run` | boolean | false | Show what would be generated without writing files |
 | `--update-gitignore` | boolean | (from config) | Update `.gitignore` files with generated outputs |
 | `--recursive` / `-r` | boolean | false | Find and process configs recursively |
+| `--config-dir` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
 | `--token` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 
 **Examples:**
@@ -696,6 +697,11 @@ ai-rulez generate --profile full --update-gitignore
 Generate recursively in monorepo:
 ```bash
 ai-rulez generate --recursive
+```
+
+Generate from a non-default configuration directory:
+```bash
+ai-rulez generate --config-dir ai-policy
 ```
 
 Generate with private repository authentication:
@@ -761,6 +767,7 @@ ai-rulez validate [config-path] [flags]
 
 | Flag | Type | Description |
 |------|------|-------------|
+| `--config-dir` | string | Configuration directory name for non-default layouts |
 | `--verbose` | boolean | Enable verbose output |
 | `--debug` | boolean | Enable debug output |
 

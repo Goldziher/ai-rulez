@@ -150,6 +150,22 @@ Each profile specifies a list of domain names. When generating with a profile:
 1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`) is included
 2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
 
+### `scopes`
+
+Generate additional assistant files in subfolders with their own profile.
+
+```toml
+[profiles.frontend]
+domains = ["frontend"]
+
+[[scopes]]
+path = "packages/web"
+profile = "frontend"
+presets = ["codex", "claude"]
+```
+
+Scoped outputs keep root context separate from subfolder context. The default scoped presets are `codex` and `claude`, producing subfolder `AGENTS.md` and `CLAUDE.md` files.
+
 ### `gitignore`
 
 Controls whether `ai-rulez` automatically updates `.gitignore` with generated files.

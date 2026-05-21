@@ -46,6 +46,56 @@ func (s *ValidateCLITestSuite) TestValidateValidConfigWithCustomPath() {
 	result.AssertOutputContains(s.T(), "valid")
 }
 
+func (s *ValidateCLITestSuite) TestValidateWithPositionalConfigFile() {
+	configDir := filepath.Join(s.workingDir, ".rules")
+	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+name = "positional-validate"
+presets = ["codex"]
+`)
+	testutil.WriteFile(s.T(), filepath.Join(configDir, "rules"), "test-rule.md", `---
+priority: high
+---
+# Test Rule
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", filepath.Join(".rules", "config.toml"))
+
+	result.AssertOutputContains(s.T(), "valid")
+}
+
+func (s *ValidateCLITestSuite) TestValidateWithConfigFlag() {
+	configDir := filepath.Join(s.workingDir, "ai-policy")
+	s.NoError(os.MkdirAll(configDir, 0o755))
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+name = "config-flag"
+presets = ["codex"]
+`)
+
+	result := testutil.RunCLIExpectSuccess(
+		s.T(),
+		s.workingDir,
+		"validate",
+		"--config",
+		filepath.Join("ai-policy", "config.toml"),
+	)
+
+	result.AssertOutputContains(s.T(), "valid")
+}
+
+func (s *ValidateCLITestSuite) TestValidateWithConfigDirFlag() {
+	configDir := filepath.Join(s.workingDir, "ai-policy")
+	s.NoError(os.MkdirAll(configDir, 0o755))
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+name = "config-dir-flag"
+presets = ["codex"]
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate", "--config-dir", "ai-policy")
+
+	result.AssertOutputContains(s.T(), "valid")
+}
+
 func (s *ValidateCLITestSuite) TestValidateMinimalConfig() {
 	testutil.SetupBasicConfig(s.T(), s.workingDir)
 

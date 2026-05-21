@@ -178,6 +178,50 @@ gitignore: true
 	})
 }
 
+func TestLoadConfigFromFile_ExactPathAndCustomConfigDir(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, ".rules")
+	require.NoError(t, os.MkdirAll(filepath.Join(configDir, rulesDir), 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, configTOMLFilename),
+		[]byte("version = \"4.0\"\nname = \"custom-dir\"\npresets = [\"codex\"]\n"),
+		0o644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, rulesDir, "custom.md"),
+		[]byte("---\npriority: high\n---\n# Custom\n\nExact config path\n"),
+		0o644,
+	))
+
+	cfg, err := LoadConfigFromFile(context.Background(), filepath.Join(configDir, configTOMLFilename))
+	require.NoError(t, err)
+
+	assert.Equal(t, tempDir, cfg.BaseDir)
+	assert.Equal(t, configDir, cfg.ConfigDir)
+	assert.Equal(t, ".rules", cfg.ConfigDirName)
+	require.Len(t, cfg.Content.Rules, 1)
+	assert.Equal(t, "custom", cfg.Content.Rules[0].Name)
+}
+
+func TestLoadConfigFromFile_RootConfigRequiresDirectoryLayout(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(tempDir, ".git"), 0o755))
+	configFile := filepath.Join(tempDir, configTOMLFilename)
+	require.NoError(t, os.WriteFile(
+		configFile,
+		[]byte("version = \"4.0\"\nname = \"root-config\"\npresets = [\"codex\"]\n"),
+		0o644,
+	))
+
+	_, err := LoadConfigFromFile(context.Background(), configFile)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "directory layout required")
+}
+
 func TestLoadConfig_JSON(t *testing.T) {
 	t.Run("loads minimal JSON config", func(t *testing.T) {
 		tempDir := t.TempDir()

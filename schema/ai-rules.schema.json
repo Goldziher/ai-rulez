@@ -79,6 +79,38 @@
         }
       }
     },
+    "scopes": {
+      "type": "array",
+      "description": "Additional scoped output roots, such as subfolder AGENTS.md and CLAUDE.md files with profile-specific content.",
+      "items": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Optional display name for the scope"
+          },
+          "path": {
+            "type": "string",
+            "description": "Subdirectory where scoped assistant files should be generated",
+            "minLength": 1
+          },
+          "profile": {
+            "type": "string",
+            "description": "Profile used for this scope. Defaults to the active generation profile."
+          },
+          "presets": {
+            "type": "array",
+            "description": "Assistant presets to generate in this scope. Defaults to codex and claude.",
+            "items": {
+              "type": "string",
+              "enum": ["claude", "codex"]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "gitignore": {
       "type": "boolean",
       "description": "Whether to automatically update .gitignore with generated files (defaults to true)",

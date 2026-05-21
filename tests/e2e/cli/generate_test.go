@@ -65,6 +65,96 @@ Test content for custom config
 	result.AssertOutputContains(s.T(), "Generation complete")
 }
 
+func (s *GenerateCLITestSuite) TestGenerateWithPositionalConfigFileAndDryRun() {
+	configDir := filepath.Join(s.workingDir, ".rules")
+	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+name = "positional-config"
+presets = ["codex"]
+gitignore = false
+`)
+	testutil.WriteFile(s.T(), filepath.Join(configDir, "rules"), "test-rule.md", `---
+priority: high
+---
+# Test Rule
+
+Generated from exact config path
+`)
+
+	result := testutil.RunCLIExpectSuccess(
+		s.T(),
+		s.workingDir,
+		"generate",
+		filepath.Join(".rules", "config.toml"),
+		"--dry-run",
+	)
+
+	result.AssertOutputContains(s.T(), "write-file: AGENTS.md")
+	s.False(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "AGENTS.md")))
+}
+
+func (s *GenerateCLITestSuite) TestGenerateWithConfigDirFlag() {
+	configDir := filepath.Join(s.workingDir, "ai-policy")
+	s.NoError(os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+	testutil.WriteFile(s.T(), configDir, "config.toml", `version = "4.0"
+name = "config-dir-flag"
+presets = ["codex"]
+gitignore = false
+`)
+	testutil.WriteFile(s.T(), filepath.Join(configDir, "rules"), "test-rule.md", `---
+priority: high
+---
+# Test Rule
+
+Generated from --config-dir
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--config-dir", "ai-policy")
+
+	result.AssertOutputContains(s.T(), "Generation complete")
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "AGENTS.md")))
+}
+
+func (s *GenerateCLITestSuite) TestGenerateWithScopedOutputs() {
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "rules"), 0o755))
+	s.NoError(os.MkdirAll(filepath.Join(aiRulesDir, "domains", "frontend", "rules"), 0o755))
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+name = "scoped-cli"
+presets = ["codex"]
+gitignore = false
+
+[profiles]
+frontend = ["frontend"]
+
+[[scopes]]
+path = "packages/web"
+profile = "frontend"
+presets = ["codex", "claude"]
+`)
+	testutil.WriteFile(s.T(), filepath.Join(aiRulesDir, "rules"), "root.md", `---
+priority: high
+---
+# Root Rule
+
+Root output
+`)
+	testutil.WriteFile(s.T(), filepath.Join(aiRulesDir, "domains", "frontend", "rules"), "frontend.md", `---
+priority: high
+---
+# Frontend Rule
+
+Scoped output
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
+
+	result.AssertOutputContains(s.T(), "Generation complete")
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "AGENTS.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "packages", "web", "AGENTS.md")))
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "packages", "web", "CLAUDE.md")))
+}
+
 func (s *GenerateCLITestSuite) TestGenerateWithAgents() {
 	// Create a config with agents
 	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")

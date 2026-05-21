@@ -9,7 +9,7 @@ on:
       - 'testing/e2e/**'
       - 'cmd/**'
       - 'internal/**'
-      - 'taskfile.yaml'
+      - 'Taskfile.yml'
       - '.github/workflows/e2e.yaml'
 
 concurrency:
