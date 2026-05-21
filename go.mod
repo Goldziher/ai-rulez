@@ -1,11 +1,11 @@
 module github.com/Goldziher/ai-rulez
 
-go 1.26.2
+go 1.26.3
 
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-resty/resty/v2 v2.17.2
-	github.com/kaptinlin/jsonschema v0.7.11
+	github.com/kaptinlin/jsonschema v0.7.14
 	github.com/modelcontextprotocol/go-sdk v1.6.0
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/samber/oops v1.21.0
@@ -37,15 +37,15 @@ require (
 	github.com/evilmartians/lefthook v1.11.14 // indirect
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/fsnotify/fsnotify v1.10.0 // indirect
-	github.com/go-json-experiment/json v0.0.0-20260430182902-b6187a392ed4 // indirect
+	github.com/go-json-experiment/json v0.0.0-20260505212615-e40f80bf6836 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/kaptinlin/go-i18n v0.4.5 // indirect
-	github.com/kaptinlin/jsonpointer v0.4.20 // indirect
-	github.com/kaptinlin/messageformat-go v0.6.0 // indirect
+	github.com/kaptinlin/go-i18n v0.4.8 // indirect
+	github.com/kaptinlin/jsonpointer v0.4.23 // indirect
+	github.com/kaptinlin/messageformat-go v0.6.4 // indirect
 	github.com/klauspost/cpuid/v2 v2.3.0 // indirect
 	github.com/knadh/koanf/maps v0.1.2 // indirect
 	github.com/knadh/koanf/parsers/json v1.0.0 // indirect
