@@ -23,9 +23,12 @@ type Config struct {
 	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	Plugins         []PluginConfig         `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
+	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir       string                `yaml:"-" json:"-"`
+	ConfigDir     string                `yaml:"-" json:"-"`
+	ConfigDirName string                `yaml:"-" json:"-"`
 	ConfigFile    string                `yaml:"-" json:"-"` // Actual config filename (e.g. "config.toml")
 	Content       *ContentTree          `yaml:"-" json:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-"`
@@ -37,6 +40,15 @@ type Config struct {
 	// in every output file's header so that subsequent runs can detect "nothing
 	// changed in sources" without re-rendering. Format: "blake3:<hex>".
 	SourceHash string `yaml:"-" json:"-"`
+}
+
+// ScopeConfig configures an additional scoped output root for directory-aware
+// assistants such as Codex and Claude Code.
+type ScopeConfig struct {
+	Name    string   `yaml:"name,omitempty" json:"name,omitempty" toml:"name,omitempty"`
+	Path    string   `yaml:"path" json:"path" toml:"path"`
+	Profile string   `yaml:"profile,omitempty" json:"profile,omitempty" toml:"profile,omitempty"`
+	Presets []string `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
 }
 
 // HeaderConfig represents header style configuration for generated files
