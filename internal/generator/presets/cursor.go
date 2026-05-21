@@ -301,7 +301,7 @@ func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *c
 
 		if desc, ok := skill.Metadata.Extra["description"]; ok && desc != "" {
 			builder.WriteString("description: ")
-			builder.WriteString(desc)
+			builder.WriteString(quoteYAMLString(desc))
 			builder.WriteString("\n")
 		}
 	}
