@@ -129,7 +129,7 @@ effort: high
 ---
 ```
 ```toml
-# .ai-rulez/config.yaml or config.toml
+# .ai-rulez/config.toml
 [defaults]
 effort = "medium"  # global default for every supported preset
 

@@ -137,7 +137,7 @@ tasks:
   format:
     desc: "Format Go code"
     cmds:
-      - gofmt -w .
+      - go fmt ./...
 
   generate:
     desc: "Generate ai-rulez configuration files"

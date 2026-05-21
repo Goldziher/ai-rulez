@@ -24,11 +24,17 @@ Render outputs for all configured presets.
 
 Flags:
 - `--profile <name>` — Select a specific profile
-- `--dry-run` — Preview without writing files
+- `--dry-run` — Print planned directories, writes, and stale generated-file deletions without mutating files
+- `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
+- `--recursive, -r` — Generate for every discovered config directory
+- `--update-gitignore` — Force `.gitignore` updates for generated files
 
 ### `ai-rulez validate`
 
 Check configuration and content structure for errors.
+
+Flags:
+- `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
 
 ### `ai-rulez migrate v4`
 

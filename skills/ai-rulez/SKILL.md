@@ -8,20 +8,22 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "4.0.0"
+  version: "4.2.0"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
 # AI-Rulez Governance
 
-AI-Rulez centralizes AI assistant governance in a `.ai-rulez/` directory and generates tool-specific outputs for Claude, Cursor, Windsurf, Copilot, Gemini, and other presets.
+AI-Rulez centralizes AI assistant governance in a config directory (default `.ai-rulez/`) and generates tool-specific outputs for Claude, Cursor, Windsurf, Copilot, Gemini, Codex, and other presets.
 
 Use this skill when:
 
 - Setting up or modifying `.ai-rulez/` configuration
 - Writing rules, context, skills, or agents for AI assistants
 - Configuring domains, profiles, or includes
+- Using custom config directory names via `--config-dir`
 - Generating outputs for specific AI tools
+- Auditing planned writes/deletes with `--dry-run`
 - Installing or managing external skills
 
 ## Installation
@@ -61,7 +63,7 @@ ai-rulez validate
   config.toml          # Main configuration
   rules/               # Governance rules (.md files with frontmatter)
   context/             # Contextual information (.md files)
-  skills/              # Specialized capabilities (name/SKILL.md)
+  skills/              # Specialized capabilities (name/SKILL.md plus resources)
   agents/              # Agent definitions (.md files)
   commands/            # Custom commands (.md files)
   domains/             # Domain-scoped content
@@ -86,18 +88,23 @@ builtins = ["go", "security", "testing"]
 backend = ["backend", "shared"]
 frontend = ["frontend", "shared"]
 
-[[installed_skills]]
-name = "kreuzberg"
-source = "https://github.com/kreuzberg-dev/kreuzberg"
-
 [[includes]]
 name = "shared-rules"
 source = "https://github.com/org/shared-rules"
 
-[mcp]
-[mcp.servers.default]
+[[installed_skills]]
+name = "kreuzberg"
+source = "https://github.com/kreuzberg-dev/kreuzberg"
+
+[[mcp_servers]]
+name = "ai-rulez"
 command = "npx"
-args = ["ai-rulez@latest", "mcp"]
+args = ["-y", "ai-rulez@latest", "mcp"]
+
+[[scopes]]
+path = "packages/web"
+profile = "frontend"
+presets = ["codex", "claude"]
 ```
 
 ## Content Frontmatter
@@ -189,6 +196,7 @@ ai-rulez skill remove kreuzberg
 ```
 
 Skills are fetched dynamically at generation time and included in outputs.
+Skill `references/`, `scripts/`, and `assets/` directories are preserved as separate generated resource files when the target preset supports skill directories.
 
 ## Built-in Presets
 
@@ -196,7 +204,7 @@ Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `win
 
 ## MCP Integration
 
-MCP servers are now configured inline in `config.toml` under `[mcp]` sections. ai-rulez exposes an MCP server for AI assistants to read, create, update, and generate configuration:
+MCP servers are configured inline in `config.toml` with `[[mcp_servers]]`. ai-rulez exposes an MCP server for AI assistants to read, create, update, validate, dry-run, and generate configuration:
 
 ```bash
 ai-rulez mcp

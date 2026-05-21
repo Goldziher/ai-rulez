@@ -4,6 +4,31 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.2.0] - 2026-05-21
+
+### Added
+- **Manifest-scoped generation cleanup**: `ai-rulez generate` now writes `.generated-manifest.json` under the active config directory and deletes only stale files previously recorded in that manifest. Assistant directories such as `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.windsurf/`, `.cline/`, `.agents/`, `.continue/`, `.opencode/`, and `.junie/` are no longer treated as fully owned.
+- **Real dry-run output**: `generate --dry-run` and MCP `generate_outputs` dry runs now report planned `create-dir`, `write-file`, and `delete-stale` entries without mutating the filesystem.
+- **Custom config directory support**: `generate --config-dir <name>`, `validate --config-dir <name>`, recursive generation, and MCP generation/validation can use configuration roots other than `.ai-rulez/`.
+- **Exact config path loading**: positional config paths and `--config <path>` now load that exact file or config directory. Root-level config files fail with a precise directory-layout error when they would otherwise make the parent directory the output root.
+- **Scoped subfolder outputs**: new `[[scopes]]` config entries generate subfolder-specific `AGENTS.md` and `CLAUDE.md` files with their own profile and preset selection, keeping root context separate from scoped context.
+
+### Fixed
+- **User-owned files no longer get deleted**: hand-written settings, hooks, personal skills, and other files in assistant output directories are preserved during regeneration.
+- **CI Taskfile drift**: consolidated on `Taskfile.yml`, removed the lowercase duplicate, and added the workflow-referenced tasks: `test`, `test:platform`, `test:e2e`, `test:e2e:cli`, `test:e2e:mcp`, `test:e2e:integration`, `test:all`, and `test:benchmark`.
+- **`task format` no longer walks local caches**: the task now uses `go fmt ./...` instead of formatting every file below the repository root.
+
+### Changed
+- `.gitignore` generation now lists generated files individually instead of ignoring whole assistant directories.
+- MCP generation and validation now share the same config-loading semantics as the CLI.
+- Documentation, schema, and the bundled `ai-rulez` skill now describe custom config directories, scoped outputs, manifest cleanup, and current `[[mcp_servers]]` configuration.
+
+### Dependencies
+- Merged Dependabot updates for `github.com/pelletier/go-toml/v2`, `golang.org/x/text`, `github.com/kaptinlin/jsonschema`, and `pymdown-extensions`.
+
+### Tests
+- Added regression coverage for preserving user-owned assistant files, manifest-owned stale cleanup, exact config file loading, `--config`, `--config-dir`, dry-run behavior, and scoped subfolder outputs.
+
 ## [4.1.6] - 2026-05-03
 
 ### Changed

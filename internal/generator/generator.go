@@ -312,7 +312,13 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) []config.Ou
 	var flatOutputs []config.OutputFile
 	seenPaths := make(map[string]string) // path -> first preset that claimed it
 	seenDirs := make(map[string]bool)
-	for presetName, outputs := range allOutputs {
+	presetNames := make([]string, 0, len(allOutputs))
+	for presetName := range allOutputs {
+		presetNames = append(presetNames, presetName)
+	}
+	sort.Strings(presetNames)
+	for _, presetName := range presetNames {
+		outputs := allOutputs[presetName]
 		logger.Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
 		for _, output := range outputs {
 			if output.IsDir {
