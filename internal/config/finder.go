@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,13 +10,20 @@ import (
 )
 
 func FindConfigFile(startDir string) (string, error) {
+	return FindConfigFileInDirName(startDir, aiRulezDirName)
+}
+
+func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
+	if configDirName == "" {
+		configDirName = aiRulezDirName
+	}
 	configNames := []string{
 		// V4 directory-based config (TOML preferred)
-		".ai-rulez/config.toml",
+		filepath.Join(configDirName, "config.toml"),
 		// Directory-based config
-		".ai-rulez/config.yaml", ".ai-rulez/config.yml",
+		filepath.Join(configDirName, "config.yaml"), filepath.Join(configDirName, "config.yml"),
 		// Directory-based config (JSON)
-		".ai-rulez/config.json",
+		filepath.Join(configDirName, "config.json"),
 		// V2 flat file configs
 		".ai-rulez.yaml", ".ai-rulez.yml",
 		configFilenameYAMLV2, configFilenameYMLV2,
@@ -54,15 +62,15 @@ func FindConfigFile(startDir string) (string, error) {
 	return "", oops.
 		With("search_dir", startDir).
 		With("supported_names", []string{
-			".ai-rulez/config.toml",
-			".ai-rulez/config.yaml", ".ai-rulez/config.yml",
-			".ai-rulez/config.json",
+			filepath.Join(configDirName, "config.toml"),
+			filepath.Join(configDirName, "config.yaml"), filepath.Join(configDirName, "config.yml"),
+			filepath.Join(configDirName, "config.json"),
 			configFilenameYAMLV2, configFilenameYMLV2,
 			".ai-rulez.yaml", ".ai-rulez.yml",
 			"ai_rulez.yaml", "ai_rulez.yml",
 			".ai_rulez.yaml", ".ai_rulez.yml",
 		}).
-		Hint("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml, or .ai-rulez/config.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly").
+		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml, or %s/config.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", configDirName)).
 		Errorf("no configuration file found")
 }
 

@@ -19,10 +19,16 @@ import (
 )
 
 const defaultProfileName = "default"
+const generatedManifestName = ".generated-manifest.json"
 
 // Generator handles configuration generation
 type Generator struct {
 	config *config.Config
+}
+
+type generatedManifest struct {
+	Version string   `json:"version"`
+	Files   []string `json:"files"`
 }
 
 // NewGenerator creates a new generator
@@ -34,15 +40,65 @@ func NewGenerator(cfg *config.Config) *Generator {
 
 // Generate generates all outputs for the specified profile
 func (g *Generator) Generate(profile string) error {
-	// Determine the active profile
-	activeProfile := g.resolveProfile(profile)
+	flatOutputs, activeProfile, err := g.collectOutputs(profile)
+	if err != nil {
+		return err
+	}
 
 	logger.Info("Generating with configuration", "profile", activeProfile)
 
-	// Get content for the profile
+	staleFiles := g.staleManifestFiles(flatOutputs)
+	g.removeStaleManifestFiles(staleFiles)
+
+	// Write all output files
+	if err := g.writeOutputs(flatOutputs); err != nil {
+		return err
+	}
+
+	if err := g.writeGeneratedManifest(flatOutputs); err != nil {
+		logger.Warn("Failed to write generated manifest", "error", err)
+	}
+
+	// Update gitignore if enabled
+	if g.config.ShouldUpdateGitignore() {
+		if err := g.updateGitignore(flatOutputs); err != nil {
+			logger.Warn("Failed to update .gitignore", "error", err)
+		}
+	}
+
+	logger.Info("Generation complete", "files", len(flatOutputs))
+
+	return nil
+}
+
+// DryRun returns an inspectable generation plan without writing or deleting files.
+func (g *Generator) DryRun(profile string) ([]string, error) {
+	flatOutputs, activeProfile, err := g.collectOutputs(profile)
+	if err != nil {
+		return nil, err
+	}
+
+	lines := []string{fmt.Sprintf("profile: %s", activeProfile)}
+	for _, output := range flatOutputs {
+		relPath := g.convertToRelativePath(g.absOutputPath(output.Path))
+		if output.IsDir {
+			lines = append(lines, "create-dir: "+relPath)
+		} else {
+			lines = append(lines, "write-file: "+relPath)
+		}
+	}
+	for _, stale := range g.staleManifestFiles(flatOutputs) {
+		lines = append(lines, "delete-stale: "+g.convertToRelativePath(stale))
+	}
+	return lines, nil
+}
+
+func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string, error) {
+	activeProfile := g.resolveProfile(profile)
+
 	contentTree, err := g.getContentForProfile(activeProfile)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 
 	logger.Debug("Content scanned",
@@ -72,8 +128,7 @@ func (g *Generator) Generate(profile string) error {
 	// Generate outputs for all presets using the existing infrastructure
 	allOutputs, err := config.GeneratePresets(&tempCfg)
 	if err != nil {
-		return oops.
-			Wrapf(err, "generate presets")
+		return nil, "", oops.Wrapf(err, "generate presets")
 	}
 
 	// Auto-generate MCP output if servers exist
@@ -91,25 +146,13 @@ func (g *Generator) Generate(profile string) error {
 	// Flatten outputs for writing, detecting conflicts and deduplicating
 	flatOutputs := flattenPresetOutputs(allOutputs)
 
-	// Clean up stale files from managed directories before writing new output.
-	// This ensures that renamed or removed skills/agents don't leave behind orphaned files.
-	g.cleanManagedDirs(flatOutputs)
-
-	// Write all output files
-	if err := g.writeOutputs(flatOutputs); err != nil {
-		return err
+	scopedOutputs, err := g.generateScopedOutputs(activeProfile)
+	if err != nil {
+		return nil, "", err
 	}
+	flatOutputs = append(flatOutputs, scopedOutputs...)
 
-	// Update gitignore if enabled
-	if g.config.ShouldUpdateGitignore() {
-		if err := g.updateGitignore(flatOutputs); err != nil {
-			logger.Warn("Failed to update .gitignore", "error", err)
-		}
-	}
-
-	logger.Info("Generation complete", "files", len(flatOutputs))
-
-	return nil
+	return flatOutputs, activeProfile, nil
 }
 
 // resolveProfile determines which profile to use
@@ -221,6 +264,47 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree) map
 	return collected
 }
 
+func (g *Generator) generateScopedOutputs(activeProfile string) ([]config.OutputFile, error) {
+	var result []config.OutputFile
+	for _, scope := range g.config.Scopes {
+		if scope.Path == "" {
+			return nil, oops.Errorf("scope path is required")
+		}
+		scopeProfile := scope.Profile
+		if scopeProfile == "" {
+			scopeProfile = activeProfile
+		}
+		scopeContent, err := g.getContentForProfile(scopeProfile)
+		if err != nil {
+			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "resolve scope profile")
+		}
+		scopeCfg := *g.config
+		scopeCfg.BaseDir = filepath.Join(g.config.BaseDir, scope.Path)
+		scopeCfg.Content = scopeContent
+		scopeCfg.MCPServers = g.collectMCPServersForContent(scopeContent)
+		scopeCfg.Presets = scopedPresets(scope.Presets)
+		scopeCfg.SourceHash = computeSourceHash(&scopeCfg, scopeContent)
+
+		outputsByPreset, err := config.GeneratePresets(&scopeCfg)
+		if err != nil {
+			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "generate scoped presets")
+		}
+		result = append(result, flattenPresetOutputs(outputsByPreset)...)
+	}
+	return result, nil
+}
+
+func scopedPresets(names []string) []config.Preset {
+	if len(names) == 0 {
+		names = []string{"claude", "codex"}
+	}
+	result := make([]config.Preset, 0, len(names))
+	for _, name := range names {
+		result = append(result, config.Preset{BuiltIn: name})
+	}
+	return result
+}
+
 // writeOutputs writes all output files to disk
 // flattenPresetOutputs merges outputs from all presets, deduplicating directories
 // and detecting file conflicts (last write wins with a warning).
@@ -271,6 +355,13 @@ func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
 	return nil
 }
 
+func (g *Generator) absOutputPath(path string) string {
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(g.config.BaseDir, path)
+}
+
 // writeOutput writes a single output file or creates a directory.
 //
 // Skip decision: we hash the freshly-rendered body and compare two values
@@ -286,10 +377,7 @@ func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
 // formatters that enforce that convention (end-of-file-fixer, etc.) don't
 // spuriously modify the file after generation.
 func (g *Generator) writeOutput(output config.OutputFile) error {
-	absPath := output.Path
-	if !filepath.IsAbs(absPath) {
-		absPath = filepath.Join(g.config.BaseDir, output.Path)
-	}
+	absPath := g.absOutputPath(output.Path)
 
 	if output.IsDir {
 		if err := os.MkdirAll(absPath, 0o755); err != nil {
@@ -687,65 +775,102 @@ func writeContentFiles(b *strings.Builder, label string, files []config.ContentF
 	}
 }
 
-// cleanManagedDirs removes stale files from directories that are fully managed by the generator.
-// It collects all directory outputs from the new generation, then removes any existing files
-// in those directories that are not part of the new output set.
-func (g *Generator) cleanManagedDirs(outputs []config.OutputFile) {
-	newFiles := g.collectOutputPaths(outputs, false)
-	managedDirs := g.collectOutputPaths(outputs, true)
-
-	for dir := range managedDirs {
-		// Skip shared directories — they contain non-generated user content
-		// (e.g., .github/ has workflows, CODEOWNERS, issue templates)
-		relDir := g.convertToRelativePath(dir)
-		topLevel := g.extractTopLevelDir(relDir)
-		if sharedDirs[topLevel] {
-			continue
-		}
-
-		entries, err := os.ReadDir(dir)
-		if err != nil {
-			continue // Directory may not exist yet
-		}
-		for _, entry := range entries {
-			entryPath := filepath.Join(dir, entry.Name())
-			if entry.IsDir() {
-				g.removeStaleDir(entryPath, newFiles)
-			} else if !newFiles[entryPath] {
-				g.removeStaleFile(entryPath)
-			}
-		}
+func (g *Generator) manifestPath() string {
+	configDir := g.config.ConfigDir
+	if configDir == "" {
+		configDir = filepath.Join(g.config.BaseDir, ".ai-rulez")
 	}
+	return filepath.Join(configDir, generatedManifestName)
 }
 
-// collectOutputPaths collects absolute paths from outputs, filtered by IsDir.
-func (g *Generator) collectOutputPaths(outputs []config.OutputFile, dirsOnly bool) map[string]bool {
-	result := make(map[string]bool)
-	for _, o := range outputs {
-		if o.IsDir != dirsOnly {
-			continue
-		}
-		absPath := o.Path
-		if !filepath.IsAbs(absPath) {
-			absPath = filepath.Join(g.config.BaseDir, o.Path)
-		}
-		result[absPath] = true
+func (g *Generator) readGeneratedManifest() generatedManifest {
+	data, err := os.ReadFile(g.manifestPath())
+	if err != nil {
+		return generatedManifest{}
 	}
-	return result
+	var manifest generatedManifest
+	if err := json.Unmarshal(data, &manifest); err != nil {
+		logger.Warn("Ignoring invalid generated manifest", "path", g.manifestPath(), "error", err)
+		return generatedManifest{}
+	}
+	return manifest
 }
 
-// removeStaleDir removes a directory if no new output file targets it.
-func (g *Generator) removeStaleDir(dirPath string, newFiles map[string]bool) {
-	prefix := dirPath + string(filepath.Separator)
-	for newFile := range newFiles {
-		if strings.HasPrefix(newFile, prefix) {
-			return
+func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
+	files := make([]string, 0, len(outputs))
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
+		}
+		files = append(files, filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path))))
+	}
+	sort.Strings(files)
+
+	manifest := generatedManifest{Version: "1", Files: files}
+	data, err := json.MarshalIndent(manifest, "", "  ")
+	if err != nil {
+		return oops.Wrapf(err, "marshal generated manifest")
+	}
+	data = append(data, '\n')
+
+	path := g.manifestPath()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return oops.With("dir", filepath.Dir(path)).Wrapf(err, "create manifest directory")
+	}
+	return os.WriteFile(path, data, 0o644)
+}
+
+func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
+	previous := g.readGeneratedManifest()
+	if len(previous.Files) == 0 {
+		return nil
+	}
+
+	next := make(map[string]bool)
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
+		}
+		next[filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))] = true
+	}
+
+	var stale []string
+	for _, relPath := range previous.Files {
+		if next[relPath] {
+			continue
+		}
+		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
+		if !isUnderBaseDir(g.config.BaseDir, absPath) {
+			logger.Warn("Skipping generated manifest path outside project", "path", relPath)
+			continue
+		}
+		if _, err := os.Stat(absPath); err == nil {
+			stale = append(stale, absPath)
 		}
 	}
-	if err := os.RemoveAll(dirPath); err != nil {
-		logger.Warn("Failed to remove stale directory", "path", dirPath, "error", err)
-	} else {
-		logger.Debug("Removed stale directory", "path", dirPath)
+	sort.Strings(stale)
+	return stale
+}
+
+func isUnderBaseDir(baseDir, path string) bool {
+	absBase, err := filepath.Abs(baseDir)
+	if err != nil {
+		return false
+	}
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(absBase, absPath)
+	if err != nil {
+		return false
+	}
+	return rel == "." || (!strings.HasPrefix(rel, ".."+string(filepath.Separator)) && rel != "..")
+}
+
+func (g *Generator) removeStaleManifestFiles(files []string) {
+	for _, file := range files {
+		g.removeStaleFile(file)
 	}
 }
 
@@ -758,30 +883,11 @@ func (g *Generator) removeStaleFile(filePath string) {
 	}
 }
 
-// sharedDirs are directories that contain both generated and non-generated content.
-// These must not be added as directory-level gitignore patterns — only individual
-// generated files inside them should be gitignored.
-var sharedDirs = map[string]bool{
-	".github": true,
-}
-
 // collectGitignorePaths collects unique paths to add to .gitignore.
-// Top-level directories that are fully managed are added as directory patterns.
-// For shared directories (e.g. .github), subdirectories are added as patterns
-// and only top-level files are listed individually.
+// Generated files are listed individually because assistant directories can
+// contain user-owned settings, hooks, skills, rules, and other local files.
 func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[string]bool {
-	topDirs, sharedSubDirs := g.classifyDirectories(outputs)
-	deduped := deduplicateSubDirs(sharedSubDirs)
-
 	paths := make(map[string]bool)
-	for dir := range topDirs {
-		paths[dir+"/"] = true
-	}
-	for _, dir := range deduped {
-		paths[dir+"/"] = true
-	}
-
-	// Add files only if not covered by a tracked directory
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -790,70 +896,10 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		if g.shouldSkipPath(relPath) {
 			continue
 		}
-		topLevel := g.extractTopLevelDir(relPath)
-		if topDirs[topLevel] || isPathCovered(relPath, deduped) {
-			continue
-		}
 		paths[relPath] = true
 	}
 
 	return paths
-}
-
-// classifyDirectories separates output directories into fully-managed top-level dirs
-// and subdirectories within shared dirs (e.g. .github/agents/).
-func (g *Generator) classifyDirectories(outputs []config.OutputFile) (topDirs, sharedSubDirs map[string]bool) {
-	topDirs = make(map[string]bool)
-	sharedSubDirs = make(map[string]bool)
-	for _, output := range outputs {
-		if !output.IsDir {
-			continue
-		}
-		relPath := g.convertToRelativePath(output.Path)
-		if g.shouldSkipPath(relPath) {
-			continue
-		}
-		topLevel := g.extractTopLevelDir(relPath)
-		if topLevel == ".ai-rulez" {
-			continue
-		}
-		if sharedDirs[topLevel] {
-			if relPath != topLevel {
-				sharedSubDirs[relPath] = true
-			}
-		} else {
-			topDirs[topLevel] = true
-		}
-	}
-	return
-}
-
-// deduplicateSubDirs returns only dirs that aren't children of another dir in the set.
-func deduplicateSubDirs(dirs map[string]bool) []string {
-	var result []string
-	for dir := range dirs {
-		covered := false
-		for parent := range dirs {
-			if parent != dir && strings.HasPrefix(dir, parent+"/") {
-				covered = true
-				break
-			}
-		}
-		if !covered {
-			result = append(result, dir)
-		}
-	}
-	return result
-}
-
-// isPathCovered checks if a file path is inside any of the given directories.
-func isPathCovered(path string, dirs []string) bool {
-	for _, dir := range dirs {
-		if strings.HasPrefix(path, dir+"/") {
-			return true
-		}
-	}
-	return false
 }
 
 // convertToRelativePath converts an absolute path to relative, or returns the original path
@@ -870,18 +916,17 @@ func (g *Generator) convertToRelativePath(path string) string {
 
 // shouldSkipPath checks if a path should be skipped for .gitignore
 func (g *Generator) shouldSkipPath(relPath string) bool {
-	return relPath == ".ai-rulez" ||
-		hasPrefix(relPath, ".ai-rulez/") ||
-		hasPrefix(relPath, ".ai-rulez\\")
+	configDir := g.configDirName()
+	return relPath == configDir ||
+		hasPrefix(relPath, configDir+"/") ||
+		hasPrefix(relPath, configDir+"\\")
 }
 
-// extractTopLevelDir extracts the top-level directory from a path
-func (g *Generator) extractTopLevelDir(relPath string) string {
-	parts := strings.Split(filepath.Clean(relPath), string(filepath.Separator))
-	if len(parts) == 0 {
-		return relPath
+func (g *Generator) configDirName() string {
+	if g.config.ConfigDirName != "" {
+		return g.config.ConfigDirName
 	}
-	return parts[0]
+	return ".ai-rulez"
 }
 
 // updateGitignore updates .gitignore with generated file paths using a fenced block

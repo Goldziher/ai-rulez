@@ -89,9 +89,15 @@ func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
 	resolveInstalledSkillsFunc = fn
 }
 
-// LoadConfig loads a configuration from the specified base directory
-// The baseDir should contain a .ai-rulez/ subdirectory with config.yaml or config.json
+// LoadConfig loads a configuration from the specified base directory.
+// The baseDir should contain a .ai-rulez/ subdirectory with config.toml,
+// config.yaml, or config.json.
 func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
+	return LoadConfigFromDir(ctx, baseDir, aiRulezDirName)
+}
+
+// LoadConfigFromDir loads configuration from configDirName below baseDir.
+func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string) (*Config, error) {
 	absDir, err := filepath.Abs(baseDir)
 	if err != nil {
 		return nil, oops.
@@ -100,35 +106,103 @@ func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
 			Wrapf(err, "resolve absolute path")
 	}
 
-	configDir := filepath.Join(absDir, aiRulezDirName)
+	if configDirName == "" {
+		configDirName = aiRulezDirName
+	}
+	configDir := filepath.Join(absDir, configDirName)
 
-	// Check if .ai-rulez/ directory exists
 	if info, err := os.Stat(configDir); err != nil {
 		if os.IsNotExist(err) {
 			return nil, oops.
 				With("path", configDir).
 				With("base_dir", baseDir).
-				Hint(fmt.Sprintf("Create .ai-rulez/ directory in %s\nRun 'ai-rulez init' to initialize configuration", baseDir)).
-				Errorf(".ai-rulez directory not found")
+				Hint(fmt.Sprintf("Create %s/ directory in %s\nRun 'ai-rulez init' to initialize configuration", configDirName, baseDir)).
+				Errorf("%s directory not found", configDirName)
 		}
 		return nil, oops.
 			With("path", configDir).
-			Wrapf(err, "stat .ai-rulez directory")
+			Wrapf(err, "stat config directory")
 	} else if !info.IsDir() {
 		return nil, oops.
 			With("path", configDir).
-			Hint("Remove the .ai-rulez file and create a directory instead").
-			Errorf(".ai-rulez exists but is not a directory")
+			Hint("Remove the file and create a directory instead").
+			Errorf("%s exists but is not a directory", configDirName)
 	}
 
-	// Load config file (tries TOML, then YAML, then JSON)
 	config, err := loadConfigFile(configDir)
 	if err != nil {
 		return nil, err
 	}
 
-	// Set runtime fields
-	config.BaseDir = absDir
+	return finishLoadConfig(ctx, config, absDir, configDir)
+}
+
+// LoadConfigFromFile loads a configuration from an exact config file path or
+// from a config directory path. For a file path, the project base directory is
+// the parent of the config directory.
+func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
+	absPath, err := filepath.Abs(path)
+	if err != nil {
+		return nil, oops.
+			With("path", path).
+			Hint("Check if the config path is valid and accessible").
+			Wrapf(err, "resolve absolute config path")
+	}
+
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return nil, oops.
+			With("path", absPath).
+			Wrapf(err, "stat config path")
+	}
+
+	if info.IsDir() {
+		if hasConfigFile(absPath) {
+			cfg, loadErr := loadConfigFile(absPath)
+			if loadErr != nil {
+				return nil, loadErr
+			}
+			return finishLoadConfig(ctx, cfg, filepath.Dir(absPath), absPath)
+		}
+		return LoadConfig(ctx, absPath)
+	}
+
+	cfg, err := loadConfigFilePath(absPath)
+	if err != nil {
+		return nil, err
+	}
+	configDir := filepath.Dir(absPath)
+	if looksLikeProjectRoot(configDir) {
+		return nil, oops.
+			With("path", absPath).
+			Hint("Place config files inside a configuration directory such as .ai-rulez/config.toml, or pass a config directory path. This keeps generated outputs rooted in the project instead of the parent directory.").
+			Errorf("directory layout required for root-level config file")
+	}
+	return finishLoadConfig(ctx, cfg, filepath.Dir(configDir), configDir)
+}
+
+func looksLikeProjectRoot(dir string) bool {
+	for _, marker := range []string{".git", "go.mod", "package.json", "Cargo.toml", "pyproject.toml", "Taskfile.yml", "Taskfile.yaml"} {
+		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func hasConfigFile(dir string) bool {
+	for _, name := range []string{configTOMLFilename, configYAMLFilename, "config.yml", configJSONFilename} {
+		if info, err := os.Stat(filepath.Join(dir, name)); err == nil && !info.IsDir() {
+			return true
+		}
+	}
+	return false
+}
+
+func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string) (*Config, error) {
+	config.BaseDir = baseDir
+	config.ConfigDir = configDir
+	config.ConfigDirName = filepath.Base(configDir)
 
 	// Convert inline MCP servers to map
 	config.MCPServers = serversToMap(config.MCPServersRaw)
@@ -244,7 +318,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 	return nil
 }
 
-// loadConfigFile loads config.yaml or config.json from the .ai-rulez/ directory
+// loadConfigFile loads config.toml, config.yaml, or config.json from a config directory.
 func loadConfigFile(configDir string) (*Config, error) {
 	// Try TOML first (V4 preferred format)
 	tomlPath := filepath.Join(configDir, configTOMLFilename)
@@ -287,6 +361,40 @@ func loadConfigFile(configDir string) (*Config, error) {
 		With("json_path", jsonPath).
 		Hint(fmt.Sprintf("Create %s, %s, or %s in %s\nRun 'ai-rulez init' to initialize configuration", configTOMLFilename, configYAMLFilename, configJSONFilename, configDir)).
 		Errorf("no config file found (tried %s, %s, and %s)", configTOMLFilename, configYAMLFilename, configJSONFilename)
+}
+
+func loadConfigFilePath(path string) (*Config, error) {
+	switch filepath.Base(path) {
+	case configTOMLFilename:
+		cfg, err := loadConfigTOML(path)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConfigFile = filepath.Base(path)
+		return cfg, nil
+	case configYAMLFilename, "config.yml":
+		if filepath.Base(path) == configYAMLFilename {
+			logger.Warn("YAML config is deprecated; run 'ai-rulez migrate v4' to convert to TOML")
+		}
+		cfg, err := loadConfigYAML(path)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConfigFile = filepath.Base(path)
+		return cfg, nil
+	case configJSONFilename:
+		cfg, err := loadConfigJSON(path)
+		if err != nil {
+			return nil, err
+		}
+		cfg.ConfigFile = filepath.Base(path)
+		return cfg, nil
+	default:
+		return nil, oops.
+			With("path", path).
+			Hint("Use config.toml, config.yaml, config.yml, or config.json inside a config directory").
+			Errorf("unsupported config filename: %s", filepath.Base(path))
+	}
 }
 
 // loadConfigYAML loads a config from YAML
@@ -360,6 +468,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Builtins        interface{}            `toml:"builtins"`
 		Plugins         []PluginConfig         `toml:"plugins"`
 		Marketplaces    []MarketplaceConfig    `toml:"marketplaces"`
+		Scopes          []ScopeConfig          `toml:"scopes"`
 	}
 
 	var raw tomlConfig
@@ -409,6 +518,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Builtins:        builtinsCfg,
 		Plugins:         raw.Plugins,
 		Marketplaces:    raw.Marketplaces,
+		Scopes:          raw.Scopes,
 	}
 
 	return cfg, nil

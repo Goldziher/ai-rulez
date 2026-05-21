@@ -3,7 +3,6 @@ package commands
 import (
 	"context"
 	"os"
-	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -20,28 +19,26 @@ schema compliance, and structural issues.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 
-		workingDir := "."
-		if len(args) > 0 {
-			workingDir = filepath.Dir(args[0])
-		}
-
-		cfg, err := config.LoadConfig(ctx, workingDir)
+		cfg, err := loadConfigForCommand(ctx, args)
 		if err != nil {
-			logger.Error("Failed to load config", "path", workingDir)
+			logger.Error("Failed to load config")
 			fmtError(err)
 			os.Exit(1)
 		}
 
 		if err := cfg.Validate(); err != nil {
-			logger.Error("Configuration validation failed", "path", workingDir)
+			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
 			fmtError(err)
 			os.Exit(1)
 		}
 
-		configPath := filepath.Join(workingDir, ".ai-rulez")
-		logger.Success("Configuration is valid", "path", configPath)
+		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
 		displayConfigurationSummary(cfg)
 	},
+}
+
+func init() {
+	ValidateCmd.Flags().StringVar(&configDir, "config-dir", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 func displayConfigurationSummary(cfg *config.Config) {
