@@ -13,7 +13,7 @@ Your configuration lives in `.ai-rulez/` with organized subdirectories:
 - **context/**: Reference documentation and architecture
 - **skills/**: Specialized AI prompts for specific roles
 - **domains/**: Team or subsystem-specific content
-- **config.yaml**: Main configuration (presets, profiles)
+- **config.toml**: Main configuration (presets, profiles)
 
 ### Presets
 
@@ -29,11 +29,11 @@ Presets define how content is formatted and where it's output for different tool
 
 Profiles let different teams generate customized outputs. Each profile specifies which domains to include:
 
-```yaml
-profiles:
-  full: [backend, frontend, qa]
-  backend: [backend, qa]
-  frontend: [frontend, qa]
+```toml
+[profiles]
+full = ["backend", "frontend", "qa"]
+backend = ["backend", "qa"]
+frontend = ["frontend", "qa"]
 ```
 
 ## Quick Navigation
@@ -99,7 +99,7 @@ After initialization, your project looks like:
 ```
 project-root/
 ├── .ai-rulez/
-│   ├── config.yaml           # Main configuration
+│   ├── config.toml           # Main configuration
 │   ├── rules/                # Base rules (all profiles)
 │   ├── context/              # Reference docs (all profiles)
 │   ├── skills/               # AI skills (all profiles)
