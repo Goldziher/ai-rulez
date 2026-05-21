@@ -10,7 +10,7 @@ repos:
         args: ["--write"]
 
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.1.4
+    rev: v4.2.0
     hooks:
       - id: ai-rulez-generate
 

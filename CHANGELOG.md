@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.2.1] - 2026-05-21
+
+### Fixed
+- **Cursor skill frontmatter is now valid YAML**: generated `.agents/skills/*/SKILL.md`
+  files quote skill descriptions, so descriptions containing colons no longer
+  fail Codex skill loading.
+
+### Dependencies
+- Refreshed pre-commit hook revisions with `prek autoupdate`.
+- Updated Go module dependencies with `go get -u ./...` and `go mod tidy`.
+
 ## [4.2.0] - 2026-05-21
 
 ### Added

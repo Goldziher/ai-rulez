@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"gopkg.in/yaml.v3"
 )
 
 func TestCursorPresetGenerator_Generate(t *testing.T) {
@@ -389,6 +390,35 @@ func TestCursorPresetGenerator_Generate_SkillsInAgentsDir(t *testing.T) {
 	}
 	if !foundSkill {
 		t.Error("Expected skill file at .agents/skills/deploy/SKILL.md")
+	}
+}
+
+func TestCursorPresetGenerator_renderSkillFile_QuotesDescriptionFrontmatter(t *testing.T) {
+	g := &CursorPresetGenerator{}
+	cfg := &config.Config{Name: "test"}
+
+	content := g.renderSkillFile(config.ContentFile{
+		Name:    "binding-audit",
+		Content: "# Binding Audit",
+		Metadata: &config.Metadata{
+			Extra: map[string]string{
+				"description": "Audit bindings for coverage gaps. Covers the full audit flow: config review, attribute scan, and triage.",
+			},
+		},
+	}, cfg)
+
+	parts := strings.SplitN(content, "---", 3)
+	if len(parts) != 3 {
+		t.Fatalf("expected YAML frontmatter, got:\n%s", content)
+	}
+
+	var frontmatter map[string]string
+	if err := yaml.Unmarshal([]byte(parts[1]), &frontmatter); err != nil {
+		t.Fatalf("frontmatter should parse as YAML: %v\n%s", err, parts[1])
+	}
+
+	if got := frontmatter["description"]; got != "Audit bindings for coverage gaps. Covers the full audit flow: config review, attribute scan, and triage." {
+		t.Fatalf("description = %q", got)
 	}
 }
 
