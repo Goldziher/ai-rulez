@@ -27,6 +27,7 @@ var (
 	skipCLIMCP      bool
 	noFetch         bool
 	profile         string
+	configDir       string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -48,15 +49,11 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
 	GenerateCmd.Flags().StringVar(&profile, "profile", "", "Profile to generate (default: from config or 'default')")
 	GenerateCmd.Flags().BoolVar(&noFetch, "no-fetch", false, "Skip fetching remote includes, use cached content only")
+	GenerateCmd.Flags().StringVar(&configDir, "config-dir", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
 	progress.SetQuiet(viper.GetBool("quiet"))
-
-	workingDir := "."
-	if len(args) > 0 {
-		workingDir = filepath.Dir(args[0])
-	}
 
 	// Set no-fetch flag for include resolution (before any config loading)
 	includes.SkipFetch = noFetch
@@ -69,7 +66,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
 	// Load configuration
-	cfg, err := config.LoadConfig(ctx, workingDir)
+	cfg, err := loadConfigForCommand(ctx, args)
 	if err != nil {
 		fmtError(err)
 		os.Exit(1)
@@ -82,7 +79,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	// Suggest migration for YAML configs
-	yamlPath := filepath.Join(cfg.BaseDir, ".ai-rulez", "config.yaml")
+	yamlPath := filepath.Join(cfg.ConfigDir, "config.yaml")
 	if _, err := os.Stat(yamlPath); err == nil {
 		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
 	}
@@ -97,7 +94,14 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	gen := generator.NewGenerator(cfg)
 
 	if dryRun {
-		progress.PrintlnIfNotQuiet("Note: --dry-run not yet supported")
+		plan, err := gen.DryRun(profile)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		for _, line := range plan {
+			progress.PrintlnIfNotQuiet(line)
+		}
 		return
 	}
 
@@ -106,6 +110,19 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmtError(err)
 		os.Exit(1)
 	}
+}
+
+func loadConfigForCommand(ctx context.Context, args []string) (*config.Config, error) {
+	if len(args) > 0 {
+		return config.LoadConfigFromFile(ctx, args[0])
+	}
+	if cfgFile != "" {
+		return config.LoadConfigFromFile(ctx, cfgFile)
+	}
+	if configDir != "" {
+		return config.LoadConfigFromDir(ctx, ".", configDir)
+	}
+	return config.LoadConfig(ctx, ".")
 }
 
 func runRecursiveGenerate() {
@@ -129,9 +146,9 @@ var configBaseNames = [...]string{
 	configFileJSON,
 }
 
-// configDirName is the directory base name that may contain a config file.
+// defaultConfigDirName is the directory base name that may contain a config file.
 // Only this directory is inspected; everything else is pruned.
-const configDirName = ".ai-rulez"
+const defaultConfigDirName = ".ai-rulez"
 
 // libraryDirName marks a shared rule library (a directory containing a
 // root-level config plus included `.ai-rulez/` module configs that are
@@ -199,7 +216,7 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *[]string, spinner
 
 	name := d.Name()
 
-	if name == configDirName {
+	if name == targetConfigDirName() {
 		if cfg := findConfigInDir(path); cfg != "" {
 			*out = append(*out, cfg)
 			if addErr := spinner.Add(1); addErr != nil {
@@ -224,6 +241,13 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *[]string, spinner
 		return filepath.SkipDir
 	}
 	return nil
+}
+
+func targetConfigDirName() string {
+	if configDir != "" {
+		return configDir
+	}
+	return defaultConfigDirName
 }
 
 // findConfigInDir returns the path to the first config file in dir matching
@@ -272,12 +296,10 @@ func processConfigFiles(configFiles []string) int {
 }
 
 func processConfigFile(configPath string, fileCounter *progress.FileCounter) int {
-	// configPath is .ai-rulez/config.yaml, we need the parent directory
-	workingDir := filepath.Dir(filepath.Dir(configPath))
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
-	cfg, err := config.LoadConfig(ctx, workingDir)
+	cfg, err := config.LoadConfigFromFile(ctx, configPath)
 	if err != nil {
 		fileCounter.Error(err)
 		return 0
@@ -299,7 +321,14 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	gen := generator.NewGenerator(cfg)
 
 	if dryRun {
-		progress.PrintlnIfNotQuiet("  Note: dry-run not yet supported")
+		plan, err := gen.DryRun(profile)
+		if err != nil {
+			fileCounter.Error(err)
+			return 0
+		}
+		for _, line := range plan {
+			progress.PrintlnIfNotQuiet("  " + line)
+		}
 		fileCounter.FinishFile()
 		return 0
 	}

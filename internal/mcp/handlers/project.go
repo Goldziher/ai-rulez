@@ -322,7 +322,10 @@ func dirHasRecursiveConfig(dir string) bool {
 // of every `.ai-rulez/` that contains a config file. Build outputs, hidden
 // directories, and shared rule libraries (`ai-rulez/` with a root config)
 // are pruned. Errors on individual entries are skipped, not propagated.
-func findRecursiveConfigDirs(absBase string) ([]string, error) {
+func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
+	if configDirName == "" {
+		configDirName = ".ai-rulez"
+	}
 	var dirs []string
 	err := filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -335,7 +338,7 @@ func findRecursiveConfigDirs(absBase string) ([]string, error) {
 			return nil
 		}
 		name := d.Name()
-		if name == ".ai-rulez" {
+		if name == configDirName {
 			if dirHasRecursiveConfig(path) {
 				dirs = append(dirs, filepath.Dir(path))
 			}
@@ -361,14 +364,18 @@ func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string
 		return ToolError(fmt.Errorf("failed to resolve base directory: %w", err))
 	}
 
-	dirs, err := findRecursiveConfigDirs(absBase)
+	configDirName := request.GetString("config_dir", "")
+	dirs, err := findRecursiveConfigDirs(absBase, configDirName)
 	if err != nil {
 		return ToolError(fmt.Errorf("failed to walk directories: %w", err))
 	}
 
 	if len(dirs) == 0 {
+		if configDirName == "" {
+			configDirName = ".ai-rulez"
+		}
 		return ToolSuccess(map[string]interface{}{
-			keyMessage: "No directories with .ai-rulez/config.* found",
+			keyMessage: fmt.Sprintf("No directories with %s/config.* found", configDirName),
 		})
 	}
 
@@ -398,37 +405,7 @@ func runGenerateForDir(ctx context.Context, request *ToolRequest, dir string, dr
 }
 
 func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
-	configFile := request.GetString("config_file", "")
-	if configFile == "" {
-		var err error
-		configFile, err = config.FindConfigFile(baseDir)
-		if err != nil {
-			return ToolError(err)
-		}
-	}
-
-	// Detect config version and load appropriately
-	dir, err := filepath.Abs(baseDir)
-	if err != nil {
-		return ToolError(fmt.Errorf("failed to get directory: %w", err))
-	}
-	version, err := config.DetectConfigVersion(dir)
-	if err != nil {
-		return ToolError(err)
-	}
-
-	if version != config.VersionDir {
-		return ToolError(fmt.Errorf("generate_outputs requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
-	}
-
-	if dryRun {
-		return ToolSuccess(map[string]interface{}{
-			keyMessage: "dry_run: not yet implemented for configs",
-			"config":   configFile,
-		})
-	}
-	// Load and generate config
-	cfg, err := config.LoadConfig(ctx, dir)
+	cfg, err := loadProjectConfig(ctx, request, baseDir)
 	if err != nil {
 		return ToolError(err)
 	}
@@ -436,34 +413,31 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		return ToolError(err)
 	}
 	gen := generator.NewGenerator(cfg)
+	if dryRun {
+		plan, err := gen.DryRun("")
+		if err != nil {
+			return ToolError(err)
+		}
+		return ToolSuccess(map[string]interface{}{
+			keyMessage: "Dry run complete",
+			"config":   cfg.ConfigDir,
+			"plan":     plan,
+		})
+	}
 	if err := gen.Generate(""); err != nil {
 		return ToolError(err)
 	}
 	return ToolSuccess(map[string]interface{}{
 		keyMessage: "Outputs generated successfully",
-		"config":   configFile,
+		"config":   cfg.ConfigDir,
 	})
 }
 
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	baseDir := workingDir(request)
 
-	// Detect config version
-	dir, err := filepath.Abs(baseDir)
-	if err != nil {
-		return ToolError(fmt.Errorf("failed to get directory: %w", err))
-	}
-	version, err := config.DetectConfigVersion(dir)
-	if err != nil {
-		return ToolError(err)
-	}
-
-	if version != config.VersionDir {
-		return ToolError(fmt.Errorf("validate_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
-	}
-
 	// Validate config
-	cfg, err := config.LoadConfig(ctx, dir)
+	cfg, err := loadProjectConfig(ctx, request, baseDir)
 	if err != nil {
 		result := map[string]interface{}{
 			keyValid: false,
@@ -483,6 +457,21 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		"warnings": []string{},
 	}
 	return ToolSuccess(result)
+}
+
+func loadProjectConfig(ctx context.Context, request *ToolRequest, baseDir string) (*config.Config, error) {
+	configFile := request.GetString("config_file", "")
+	if configFile != "" {
+		if !filepath.IsAbs(configFile) {
+			configFile = filepath.Join(baseDir, configFile)
+		}
+		return config.LoadConfigFromFile(ctx, configFile)
+	}
+	configDirName := request.GetString("config_dir", "")
+	if configDirName != "" {
+		return config.LoadConfigFromDir(ctx, baseDir, configDirName)
+	}
+	return config.LoadConfig(ctx, baseDir)
 }
 
 func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {

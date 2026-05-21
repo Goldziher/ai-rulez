@@ -196,6 +196,7 @@ func (s *Server) registerProjectTools() {
 		newTool("generate_outputs", "Generate output files from the current configuration, respecting includes and extends",
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file (optional)", false).
+				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
 				Boolean("dry_run", "Preview changes without writing files", false).
 				Boolean("recursive", "Generate for all subdirectories containing .ai-rulez/", false).
 				WorkingDirectory(),
@@ -207,6 +208,7 @@ func (s *Server) registerProjectTools() {
 		newAnnotatedTool("validate_config", "Validate the configuration file, including all includes",
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file to validate (optional)", false).
+				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),

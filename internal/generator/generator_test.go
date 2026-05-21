@@ -2,6 +2,7 @@ package generator
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -230,8 +231,9 @@ func TestGenerator_Gitignore_Enabled(t *testing.T) {
 	require.NoError(t, err)
 	contentStr := string(content)
 
-	// Should contain the .claude directory
-	assert.Contains(t, contentStr, ".claude")
+	// Generated files are listed individually; assistant directories can
+	// contain user-owned files and must not be treated as fully managed.
+	assert.Contains(t, contentStr, "CLAUDE.md")
 }
 
 func TestGenerator_CustomPreset_Markdown(t *testing.T) {
@@ -1201,8 +1203,8 @@ func TestComputeSourceHash_ResistsResourceDelimiterCollision(t *testing.T) {
 
 // TestGenerator_CleansStaleSkillResource verifies that when a skill drops a
 // reference file between two generations, the stale file is removed from the
-// rendered skill directory. The fix relies on emitting parent kind dirs as
-// IsDir outputs so cleanManagedDirs sweeps inside them.
+// rendered skill directory. Manifest ownership keeps this cleanup scoped to
+// files ai-rulez previously generated.
 func TestGenerator_CleansStaleSkillResource(t *testing.T) {
 	t.Parallel()
 
@@ -1244,6 +1246,140 @@ func TestGenerator_CleansStaleSkillResource(t *testing.T) {
 	_, statErr := os.Stat(dropOut)
 	assert.True(t, os.IsNotExist(statErr),
 		"expected stale reference to be removed, but it still exists at %s", dropOut)
+}
+
+func TestGenerator_PreservesUserOwnedAssistantFiles(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "config.yaml"),
+		[]byte("version: \"4.0\"\nname: x\npresets:\n  - claude\n  - codex\ngitignore: false\n"),
+		0o644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "rules", "keep.md"),
+		[]byte("---\npriority: high\n---\n# Keep\n\nGenerated rule\n"),
+		0o644,
+	))
+
+	userFiles := []string{
+		filepath.Join(tempDir, ".claude", "settings.local.json"),
+		filepath.Join(tempDir, ".claude", "hooks", "pre-tool-use.sh"),
+		filepath.Join(tempDir, ".claude", "skills", "manual", "SKILL.md"),
+		filepath.Join(tempDir, ".codex", "hooks", "local-tool", "script.sh"),
+	}
+	for _, path := range userFiles {
+		require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+		require.NoError(t, os.WriteFile(path, []byte("user-owned\n"), 0o644))
+	}
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	for _, path := range userFiles {
+		require.FileExists(t, path)
+		content, err := os.ReadFile(path)
+		require.NoError(t, err)
+		assert.Equal(t, "user-owned\n", string(content))
+	}
+	require.FileExists(t, filepath.Join(configDir, generatedManifestName))
+}
+
+func TestGenerator_DryRunPlansWritesAndDeletesWithoutMutation(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "config.yaml"),
+		[]byte("version: \"4.0\"\nname: x\npresets:\n  - codex\ngitignore: false\n"),
+		0o644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "rules", "current.md"),
+		[]byte("---\npriority: high\n---\n# Current\n\nCurrent rule\n"),
+		0o644,
+	))
+
+	stalePath := filepath.Join(tempDir, "STALE.md")
+	require.NoError(t, os.WriteFile(stalePath, []byte("stale\n"), 0o644))
+	manifest := generatedManifest{Version: "1", Files: []string{"STALE.md"}}
+	data, err := json.Marshal(manifest)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, generatedManifestName), data, 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	plan, err := NewGenerator(cfg).DryRun("default")
+	require.NoError(t, err)
+
+	joined := strings.Join(plan, "\n")
+	assert.Contains(t, joined, "write-file: AGENTS.md")
+	assert.Contains(t, joined, "delete-stale: STALE.md")
+	require.FileExists(t, stalePath)
+	assert.NoFileExists(t, filepath.Join(tempDir, "AGENTS.md"))
+}
+
+func TestGenerator_ScopedOutputsUseScopedProfiles(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "domains", "frontend", "rules"), 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "config.toml"),
+		[]byte(`version = "4.0"
+name = "scoped"
+presets = ["codex"]
+gitignore = false
+
+[profiles]
+frontend = ["frontend"]
+
+[[scopes]]
+path = "apps/web"
+profile = "frontend"
+presets = ["codex", "claude"]
+`),
+		0o644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "rules", "root.md"),
+		[]byte("---\npriority: high\n---\n# Root Rule\n\nROOT_ONLY_RULE\n"),
+		0o644,
+	))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(configDir, "domains", "frontend", "rules", "component.md"),
+		[]byte("---\npriority: high\n---\n# Component Rule\n\nFRONTEND_SCOPED_RULE\n"),
+		0o644,
+	))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	rootAgents := filepath.Join(tempDir, "AGENTS.md")
+	scopedAgents := filepath.Join(tempDir, "apps", "web", "AGENTS.md")
+	scopedClaude := filepath.Join(tempDir, "apps", "web", "CLAUDE.md")
+	require.FileExists(t, rootAgents)
+	require.FileExists(t, scopedAgents)
+	require.FileExists(t, scopedClaude)
+
+	rootContent, err := os.ReadFile(rootAgents)
+	require.NoError(t, err)
+	assert.Contains(t, string(rootContent), "ROOT_ONLY_RULE")
+	assert.NotContains(t, string(rootContent), "FRONTEND_SCOPED_RULE")
+
+	scopedContent, err := os.ReadFile(scopedAgents)
+	require.NoError(t, err)
+	assert.Contains(t, string(scopedContent), "ROOT_ONLY_RULE")
+	assert.Contains(t, string(scopedContent), "FRONTEND_SCOPED_RULE")
 }
 
 // TestGenerator_writeOutput_RawContent_SkipsHeaderInjection verifies that
