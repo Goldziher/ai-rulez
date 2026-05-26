@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - R 4.1+, tidyverse style guide, `styler` formatting, `lintr` linting.
 - Base R pipe `|>` over magrittr `%>%`, prefer base R when tidyverse not needed.
 - Package dev: `devtools`/`usethis`/`roxygen2`, `testthat` (80%+ via `covr`).

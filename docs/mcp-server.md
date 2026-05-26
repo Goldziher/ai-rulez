@@ -97,17 +97,20 @@ This approach ensures your configuration remains auditable and version-controlle
 ### With Your Editor
 
 1. **Edit files** directly in `.ai-rulez/`:
+
    ```bash
    # Edit rules, context, skills, or config.yaml
    vim .ai-rulez/rules/code-quality.md
    ```
 
 2. **Use MCP server** (via AI assistant) to generate:
+
    ```bash
    ai-rulez generate
    ```
 
 3. **Commit changes**:
+
    ```bash
    git add .ai-rulez/ CLAUDE.md .cursor/
    git commit -m "docs: update AI guidelines"
@@ -138,10 +141,12 @@ The ai-rulez MCP server exposes 22 CRUD tools for programmatic configuration man
 Create a new domain with subdirectories for rules, context, and skills.
 
 **Parameters:**
+
 - `name` (required, string): Domain name (alphanumeric and underscores, 1-50 characters)
 - `description` (optional, string): Description of the domain
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -153,7 +158,8 @@ Create a new domain with subdirectories for rules, context, and skills.
 ```
 
 **Example:**
-```
+
+```text
 Create a domain called "backend" for backend services
 ```
 
@@ -162,9 +168,11 @@ Create a domain called "backend" for backend services
 Delete a domain and all its contents.
 
 **Parameters:**
+
 - `name` (required, string): Domain name to delete
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -181,6 +189,7 @@ List all domains in the `.ai-rulez/` directory.
 **Parameters:** (none)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -205,6 +214,7 @@ List all domains in the `.ai-rulez/` directory.
 Create a new rule file with optional YAML frontmatter.
 
 **Parameters:**
+
 - `name` (required, string): Rule filename without .md extension
 - `content` (optional, string): Markdown content with optional YAML frontmatter
 - `domain` (optional, string): Domain name (if not specified, creates in root)
@@ -212,6 +222,7 @@ Create a new rule file with optional YAML frontmatter.
 - `targets` (optional, array): Target providers (e.g., ["claude", "cursor"])
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -228,6 +239,7 @@ Create a new rule file with optional YAML frontmatter.
 Update an existing rule file.
 
 **Parameters:**
+
 - `name` (required, string): Rule filename without .md extension
 - `content` (required, string): New markdown content
 - `domain` (optional, string): Domain name
@@ -241,10 +253,12 @@ Update an existing rule file.
 Delete a rule file.
 
 **Parameters:**
+
 - `name` (required, string): Rule filename without .md extension
 - `domain` (optional, string): Domain name
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -260,9 +274,11 @@ Delete a rule file.
 List all rules in the root or a specific domain.
 
 **Parameters:**
+
 - `domain` (optional, string): Domain name (lists root rules if not specified)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -287,6 +303,7 @@ List all rules in the root or a specific domain.
 Create a new context file (documentation/reference material).
 
 **Parameters:**
+
 - `name` (required, string): Context filename without .md extension
 - `content` (optional, string): Markdown content with optional YAML frontmatter
 - `domain` (optional, string): Domain name
@@ -308,6 +325,7 @@ Update an existing context file.
 Delete a context file.
 
 **Parameters:**
+
 - `name` (required, string): Context filename without .md extension
 - `domain` (optional, string): Domain name
 
@@ -318,6 +336,7 @@ Delete a context file.
 List all context files in the root or a specific domain.
 
 **Parameters:**
+
 - `domain` (optional, string): Domain name
 
 **Response:** Similar to list_rules, with "context" key instead of "rules"
@@ -329,6 +348,7 @@ List all context files in the root or a specific domain.
 Create a new skill file (AI prompt/expert definition).
 
 **Parameters:**
+
 - `name` (required, string): Skill filename without .md extension
 - `content` (optional, string): Markdown content with optional YAML frontmatter
 - `domain` (optional, string): Domain name
@@ -350,6 +370,7 @@ Update an existing skill file.
 Delete a skill file.
 
 **Parameters:**
+
 - `name` (required, string): Skill filename without .md extension
 - `domain` (optional, string): Domain name
 
@@ -360,6 +381,7 @@ Delete a skill file.
 List all skill files in the root or a specific domain.
 
 **Parameters:**
+
 - `domain` (optional, string): Domain name
 
 **Response:** Similar to list_rules, with "skills" key instead of "rules"
@@ -371,6 +393,7 @@ List all skill files in the root or a specific domain.
 Add a new include source (git URL or local path) to the configuration.
 
 **Parameters:**
+
 - `name` (required, string): Include name (unique identifier)
 - `source` (required, string): Git URL (`https://github.com/org/repo`) or local path (`./packages/shared`)
 - `path` (optional, string): Path within git repository where .ai-rulez/ content is located
@@ -380,6 +403,7 @@ Add a new include source (git URL or local path) to the configuration.
 - `install_to` (optional, string): Installation target path in .ai-rulez/
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -395,9 +419,11 @@ Add a new include source (git URL or local path) to the configuration.
 Remove an include source from the configuration.
 
 **Parameters:**
+
 - `name` (required, string): Include name to remove
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -414,6 +440,7 @@ List all include sources in the configuration.
 **Parameters:** (none)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -438,12 +465,14 @@ List all include sources in the configuration.
 Install a named skill from a git repository or local path.
 
 **Parameters:**
+
 - `name` (required, string): Skill name (unique identifier)
 - `source` (required, string): Git URL or local filesystem path
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -459,9 +488,11 @@ Install a named skill from a git repository or local path.
 Remove an installed skill from the configuration.
 
 **Parameters:**
+
 - `name` (required, string): Skill name to remove
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -478,6 +509,7 @@ List all installed skills.
 **Parameters:** None
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -502,10 +534,12 @@ List all installed skills.
 Create a new profile with a set of domains.
 
 **Parameters:**
+
 - `name` (required, string): Profile name (unique identifier)
 - `domains` (required, array): List of domain names to include in the profile
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -521,9 +555,11 @@ Create a new profile with a set of domains.
 Remove a profile from the configuration.
 
 **Parameters:**
+
 - `name` (required, string): Profile name to remove
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -538,9 +574,11 @@ Remove a profile from the configuration.
 Set a profile as the default for generation.
 
 **Parameters:**
+
 - `name` (required, string): Profile name to set as default
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -557,6 +595,7 @@ List all profiles in the configuration.
 **Parameters:** (none)
 
 **Response:**
+
 ```json
 {
   "success": true,
@@ -583,7 +622,7 @@ List all profiles in the configuration.
 
 ### Creating a Domain with Rules
 
-```
+```text
 User: "Create a backend domain and add a database standards rule"
 
 MCP Tool Sequence:
@@ -594,7 +633,7 @@ MCP Tool Sequence:
 
 ### Adding an External Include
 
-```
+```text
 User: "Add our corporate rules from GitHub"
 
 MCP Tool Sequence:
@@ -605,7 +644,7 @@ MCP Tool Sequence:
 
 ### Setting Up Team Profiles
 
-```
+```text
 User: "Create backend and frontend profiles for our team separation"
 
 MCP Tool Sequence:
@@ -619,7 +658,7 @@ MCP Tool Sequence:
 
 ### Bulk Content Creation
 
-```
+```text
 User: "Add security rules to the backend domain"
 
 MCP Tool Sequence:

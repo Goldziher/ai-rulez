@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Rust 2024 edition, `cargo fmt` + `clippy -D warnings`, zero warnings policy.
 - `Result<T, E>` with `thiserror` for library errors, `anyhow` for applications. `?` for propagation — never `.unwrap()` in library code.
 - Minimize `unsafe` — every block needs `// SAFETY:` comment explaining invariants.

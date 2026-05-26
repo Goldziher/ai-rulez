@@ -15,6 +15,7 @@ targets:
 - Output writing updates `.gitignore` when `gitignore: true` is set in config.
 
 Rendering flow:
+
 1. Load config and content tree.
 2. Resolve profile (default or specified).
 3. Generate preset outputs (plus MCP output when servers exist).

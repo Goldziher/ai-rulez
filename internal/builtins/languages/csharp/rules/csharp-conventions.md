@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - .NET 8+ C# 12, file-scoped namespaces, primary constructors, `<Nullable>enable</Nullable>`.
 - Formatting: `dotnet format` + Roslyn analyzers, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
 - Style enforcement: `.editorconfig` for consistent rules across team. Use StyleCop.Analyzers or Roslynator.

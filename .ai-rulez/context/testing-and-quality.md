@@ -15,5 +15,6 @@ targets:
 - Prefer deterministic tests and avoid network or timing dependencies when possible.
 
 Suggested commands:
+
 - `go test ./...`
 - `./bin/ai-rulez validate` (or `ai-rulez validate` if installed)

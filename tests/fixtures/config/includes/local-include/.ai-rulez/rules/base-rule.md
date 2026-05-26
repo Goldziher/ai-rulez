@@ -3,9 +3,12 @@
 This is a rule defined in the base project.
 
 ---
+
 priority: high
 targets:
-  - claude
+
+- claude
+
 ---
 
 Base project coding standards.

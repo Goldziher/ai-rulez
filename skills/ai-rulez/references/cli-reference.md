@@ -15,6 +15,7 @@
 Initialize `.ai-rulez/` directory with configuration.
 
 Flags:
+
 - `--preset <name>` — Use a preset template
 - `--domain <name>` — Create initial domains
 
@@ -23,6 +24,7 @@ Flags:
 Render outputs for all configured presets.
 
 Flags:
+
 - `--profile <name>` — Select a specific profile
 - `--dry-run` — Print planned directories, writes, and stale generated-file deletions without mutating files
 - `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
@@ -34,6 +36,7 @@ Flags:
 Check configuration and content structure for errors.
 
 Flags:
+
 - `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
 
 ### `ai-rulez migrate v4`

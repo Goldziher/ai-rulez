@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `extendr` crate for Rust-R interop. `#[extendr]` macro on functions, `extendr_module!` for registration.
 - Type mapping: `Robj` for generic R objects, `Doubles`, `Integers`, `Strings`, `List` for typed access.
 - Return `Result<T, extendr_api::Error>` for R error propagation. Use `.into()` for Rust-to-R conversion.

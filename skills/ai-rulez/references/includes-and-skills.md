@@ -78,7 +78,7 @@ local_override = "../kreuzberg" # Optional local dev path
 
 ### Skill Directory Structure
 
-```
+```text
 repo-root/
   skills/
     my-skill/
