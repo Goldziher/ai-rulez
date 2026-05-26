@@ -27,6 +27,7 @@ Includes allow one `.ai-rulez/` configuration to inherit content from other conf
 Create a `.ai-rulez/` directory that others can include:
 
 **`shared-rules/.ai-rulez/config.toml`:**
+
 ```toml
 version = "4.0"
 name = "shared-rules"
@@ -39,6 +40,7 @@ default = []
 ```
 
 **`shared-rules/.ai-rulez/rules/security.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -84,6 +86,7 @@ Includes can be:
 ### Examples
 
 **Sibling directory:**
+
 ```toml
 [[includes]]
 name = "shared-rules"
@@ -93,6 +96,7 @@ merge_strategy = "local-override"
 ```
 
 **Subdirectory:**
+
 ```toml
 [[includes]]
 name = "team-config"
@@ -102,6 +106,7 @@ merge_strategy = "local-override"
 ```
 
 **Git repository (HTTPS):**
+
 ```toml
 [[includes]]
 name = "org-standards"
@@ -112,6 +117,7 @@ merge_strategy = "local-override"
 ```
 
 **Git repository (SSH):**
+
 ```toml
 [[includes]]
 name = "company-policies"
@@ -122,6 +128,7 @@ merge_strategy = "local-override"
 ```
 
 **Multiple includes:**
+
 ```toml
 [[includes]]
 name = "team-guidelines"
@@ -156,12 +163,14 @@ merge_strategy = "local-override"
 For private repositories that require SSH authentication, ai-rulez automatically uses `git clone` when it detects SSH URLs (`git@...` or `ssh://...`). This leverages your existing SSH key configuration.
 
 **Benefits of SSH cloning:**
+
 - Works with private repositories without needing access tokens
 - Uses your configured SSH keys and agent
 - Supports self-hosted Git servers (GitLab, Gitea, Gogs, etc.)
 - Ideal for local development and multi-repo setups
 
 **Example with SSH:**
+
 ```yaml
 includes:
   - name: private-rules
@@ -174,6 +183,7 @@ includes:
 ```
 
 **Requirements:**
+
 - Git must be installed and available in your PATH
 - SSH keys must be configured for the git host
 - SSH agent should be running (for passphrase-protected keys)
@@ -183,7 +193,8 @@ includes:
 ai-rulez supports two repository structures for includes:
 
 1. **Standard structure** (recommended): Repository contains a `.ai-rulez/` subdirectory with the configuration
-   ```
+
+   ```text
    my-repo/
    ├── .ai-rulez/
    │   ├── config.yaml
@@ -194,7 +205,8 @@ ai-rulez supports two repository structures for includes:
    ```
 
 2. **Root-level structure**: Repository root IS the ai-rulez structure (no nested `.ai-rulez/` directory)
-   ```
+
+   ```text
    my-repo/
    ├── config.yaml
    ├── rules/
@@ -230,6 +242,7 @@ ai-rulez generate --token "ghp_your_github_token_here"
 #### Creating Access Tokens
 
 **GitHub:**
+
 1. Go to Settings → Developer settings → Personal access tokens
 2. Click "Generate new token (classic)"
 3. Select scopes:
@@ -237,6 +250,7 @@ ai-rulez generate --token "ghp_your_github_token_here"
 4. Generate and copy the token
 
 **GitLab:**
+
 1. Go to User Settings → Access Tokens
 2. Click "Add new token"
 3. Select scopes:
@@ -259,6 +273,7 @@ Most Git hosting platforms that support Bearer token authentication will work wi
 #### Example: CI/CD Integration
 
 **GitHub Actions:**
+
 ```yaml
 name: Generate AI Rules
 on: [push]
@@ -274,6 +289,7 @@ jobs:
 ```
 
 **GitLab CI:**
+
 ```yaml
 generate:
   script:
@@ -317,7 +333,8 @@ If multiple includes define `.ai-rulez/rules/security.md`, the last one wins.
 Create a central repository with baseline rules:
 
 **Repository structure:**
-```
+
+```text
 org-standards/
 └── .ai-rulez/
     ├── config.yaml
@@ -330,6 +347,7 @@ org-standards/
 ```
 
 **Each project includes it:**
+
 ```yaml
 includes:
   - https://github.com/myorg/standards/.ai-rulez
@@ -339,7 +357,7 @@ includes:
 
 Create separate includes for each framework:
 
-```
+```text
 frameworks/
 ├── go-backend/
 │   └── .ai-rulez/
@@ -362,6 +380,7 @@ frameworks/
 ```
 
 **Your project uses them:**
+
 ```yaml
 includes:
   - ../../frameworks/go-backend/.ai-rulez
@@ -384,7 +403,8 @@ profiles:
 ### Monorepo with Shared and Team-Specific Rules
 
 **Repository structure:**
-```
+
+```text
 monorepo/
 ├── shared-rules/.ai-rulez/     # Used by all teams
 ├── backend-team/
@@ -396,6 +416,7 @@ monorepo/
 ```
 
 **`backend-team/.ai-rulez/config.toml`:**
+
 ```toml
 version = "4.0"
 name = "backend-api"
@@ -415,7 +436,8 @@ default = []
 Includes can themselves include other includes:
 
 **hierarchy:**
-```
+
+```text
 org-base/
 ├── rules/
 │   └── security.md
@@ -434,6 +456,7 @@ my-project/
 ```
 
 When you generate from `my-project`, it loads:
+
 1. `org-base` rules (base layer)
 2. `go-framework` rules (framework-specific)
 3. `team-standards` rules (team-specific)
@@ -443,19 +466,21 @@ When you generate from `my-project`, it loads:
 
 When includes define the same file:
 
-```
+```text
 shared-rules/.ai-rulez/rules/testing.md
 go-framework/.ai-rulez/rules/testing.md
 my-project/.ai-rulez/rules/testing.md
 ```
 
 Resolution order (last one wins):
+
 1. `shared-rules/rules/testing.md` (loaded first)
 2. `go-framework/rules/testing.md` (overrides shared)
 3. `my-project/rules/testing.md` (overrides both)
 
 A warning is logged:
-```
+
+```text
 ⚠️  Content collision: rules/testing.md found in multiple includes
     → Using: my-project/.ai-rulez/rules/testing.md
 ```
@@ -464,7 +489,7 @@ A warning is logged:
 
 ### Organize by Specificity
 
-```
+```text
 org-wide-rules/           Applies to everything
 team-rules/               Team-specific
 framework-rules/          Technology-specific
@@ -474,11 +499,13 @@ project-rules/            Project-specific
 ### Use Clear Naming
 
 Good:
+
 - `org-standards/.ai-rulez`
 - `react-best-practices/.ai-rulez`
 - `backend-security/.ai-rulez`
 
 Bad:
+
 - `rules/.ai-rulez` (ambiguous)
 - `base/.ai-rulez` (unclear scope)
 
@@ -506,7 +533,7 @@ presets = ["claude", "cursor"]
 
 Each include should have a single purpose:
 
-```
+```text
 Good:
 security-policies/       Rules for security
 error-handling/          Rules for error handling
@@ -576,24 +603,28 @@ ai-rulez validate --verbose
 If you're currently using separate configurations:
 
 1. **Extract common rules** into a shared include:
+
    ```bash
    mkdir -p ../shared-rules/.ai-rulez/rules
    # Move common rules there
    ```
 
 2. **Add include** to your config:
+
    ```yaml
    includes:
      - ../shared-rules/.ai-rulez
    ```
 
 3. **Regenerate** and test:
+
    ```bash
    ai-rulez validate
    ai-rulez generate
    ```
 
 4. **Commit** the include:
+
    ```bash
    git add ../shared-rules/
    git commit -m "chore: extract shared rules"

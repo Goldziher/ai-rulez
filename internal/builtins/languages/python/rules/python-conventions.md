@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Python 3.10+, type hints on all public APIs, no `Any` — use `Unknown`/generics.
 - Formatting/linting: `ruff` (zero warnings), type checking: `mypy --strict`. Security: `bandit` for SAST.
 - Testing: `pytest` with function-based tests, `pytest-cov` (80%+), `hypothesis` for property-based.

@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Ruby 3.2+, `frozen_string_literal: true`, `.ruby-version` file.
 - Linting: `rubocop` with auto-fix (120 char max). Plugins: `rubocop-rspec`, `rubocop-performance`.
 - Type checking: RBS + `steep check`. Use `rbs prototype` for scaffolding type signatures.

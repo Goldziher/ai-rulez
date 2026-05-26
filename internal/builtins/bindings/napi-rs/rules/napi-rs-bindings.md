@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `#[napi]` macro for Node.js-visible functions and classes. Use `#[napi(constructor)]` for constructors.
 - Map Rust errors to JavaScript `Error` objects via `napi::Error`. Return `Result<T>` from all fallible functions.
 - Use `napi::bindgen_prelude::*` for common type conversions. Use `Buffer` for binary data.

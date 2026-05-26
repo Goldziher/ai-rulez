@@ -24,12 +24,13 @@ profiles:
 ```
 
 Generation always includes:
+
 - All root content (rules, context, skills)
 - Content from selected domains only
 
 ## Directory Structure
 
-```
+```text
 .ai-rulez/
 ├── config.yaml              # Main config with presets and profiles
 ├── rules/                   # Base rules (all teams get these)
@@ -75,6 +76,7 @@ domains:
 ```
 
 **Profiles:**
+
 ```yaml
 profiles:
   full: [api, database, cache, queue, frontend]
@@ -97,6 +99,7 @@ domains:
 ```
 
 **Profiles:**
+
 ```yaml
 profiles:
   full: [backend, frontend, mobile, qa, devops]
@@ -122,6 +125,7 @@ domains:
 ```
 
 **Profiles:**
+
 ```yaml
 profiles:
   full: [auth, payments, notifications, search, analytics]
@@ -142,6 +146,7 @@ domains:
 ```
 
 **Profiles:**
+
 ```yaml
 profiles:
   development: [dev]
@@ -154,6 +159,7 @@ profiles:
 ### Good Names
 
 Use names that indicate ownership or responsibility:
+
 - `backend`, `frontend`, `mobile` (service boundaries)
 - `api`, `database`, `cache` (technical components)
 - `auth`, `payments`, `search` (feature areas)
@@ -178,6 +184,7 @@ mkdir -p .ai-rulez/domains/frontend/{rules,context,skills,agents}
 ### Step 2: Add content to the domain
 
 **`domains/backend/rules/database.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -192,16 +199,19 @@ priority: critical
 ```
 
 **`domains/backend/context/architecture.md`:**
+
 ```markdown
 # Backend Architecture
 
 ## Services
+
 - API Gateway (Go)
 - User Service (Go)
 - Product Service (Go)
 - Order Service (Go)
 
 ## Database
+
 - PostgreSQL 14+
 - Replication enabled
 - Automated backups
@@ -275,14 +285,14 @@ ai-rulez generate --profile full-stack
 
 When a file exists in both root and domain:
 
-```
+```text
 .ai-rulez/rules/testing.md              (root)
 .ai-rulez/domains/backend/rules/testing.md   (domain)
 ```
 
 The **domain version takes precedence** for that domain.
 
-```
+```text
 backend profile gets:
   - everything from .ai-rulez/rules/* EXCEPT testing.md
   - testing.md from .ai-rulez/domains/backend/rules/
@@ -383,7 +393,7 @@ domains:
 
 If multiple domains need the same rule, put it in root:
 
-```
+```text
 Root (shared by all):
 ├── rules/
 │   ├── code-quality.md
@@ -498,18 +508,21 @@ If you're starting with a flat structure:
 To migrate to domains:
 
 1. Create domain structure:
+
    ```bash
    mkdir -p .ai-rulez/domains/backend/rules
    mkdir -p .ai-rulez/domains/frontend/rules
    ```
 
 2. Move files:
+
    ```bash
    mv .ai-rulez/rules/backend-* .ai-rulez/domains/backend/rules/
    mv .ai-rulez/rules/frontend-* .ai-rulez/domains/frontend/rules/
    ```
 
 3. Rename files (remove prefix):
+
    ```bash
    cd .ai-rulez/domains/backend/rules
    mv backend-api-design.md api-design.md
@@ -517,6 +530,7 @@ To migrate to domains:
    ```
 
 4. Update config.toml:
+
    ```toml
    [profiles]
    full = ["backend", "frontend"]
@@ -525,6 +539,7 @@ To migrate to domains:
    ```
 
 5. Test:
+
    ```bash
    ai-rulez validate
    ai-rulez generate --profile full

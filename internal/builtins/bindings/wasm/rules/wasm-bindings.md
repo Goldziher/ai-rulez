@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `wasm-bindgen` for JavaScript interop. Use `wasm-pack` for building and packaging.
 - Map Rust types to JS with `#[wasm_bindgen]`. Use `JsValue` for dynamic types, typed wrappers for known types.
 - Handle errors with `Result<T, JsValue>`. Convert Rust errors to descriptive JS error messages.

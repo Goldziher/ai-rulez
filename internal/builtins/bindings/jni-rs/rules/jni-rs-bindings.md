@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `jni` crate for Rust-Java/JVM interop. Functions must be `#[no_mangle] pub extern "system"`.
 - Follow JNI naming: `Java_com_example_ClassName_methodName`. Match Java native method signatures exactly.
 - Use `JNIEnv` for all JNI operations. Access Java types via `JObject`, `JString`, `JClass` wrappers.

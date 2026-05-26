@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `magnus` crate for Ruby native extensions. Define classes with `magnus::define_class`.
 - Map Rust types to Ruby using `TryConvert` and `IntoValue` traits. Return `Result<T, magnus::Error>`.
 - Use `magnus::function!` macro for defining Ruby methods. Use `magnus::method!` for instance methods.

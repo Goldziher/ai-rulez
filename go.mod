@@ -6,7 +6,7 @@ require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/kaptinlin/jsonschema v0.7.14
-	github.com/modelcontextprotocol/go-sdk v1.6.0
+	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/samber/oops v1.21.0
 	github.com/schollz/progressbar/v3 v3.19.0
@@ -79,9 +79,9 @@ require (
 	go.opentelemetry.io/otel v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
-	golang.org/x/net v0.54.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 	golang.org/x/term v0.43.0 // indirect
 )
 

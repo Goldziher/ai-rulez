@@ -11,6 +11,7 @@ targets:
 # CLI and CRUD Commands
 
 Core commands:
+
 - `ai-rulez init` initializes `.ai-rulez/` with optional presets or domains.
 - `ai-rulez generate` renders outputs; `--profile` selects domains; `--dry-run` previews.
 - `ai-rulez validate` checks config and content structure.
@@ -18,6 +19,7 @@ Core commands:
 - `ai-rulez mcp` starts the MCP server (usually launched by the assistant).
 
 CRUD helpers manage file-based content:
+
 - `ai-rulez add rule|context|skill|agent` creates content files.
 - `ai-rulez remove rule|context|skill|agent` removes content files.
 - `ai-rulez list rules|context|skills|agents` lists items.
@@ -25,6 +27,7 @@ CRUD helpers manage file-based content:
 - `ai-rulez include add|remove|list` manages remote includes.
 
 Global flags:
+
 - `--config` overrides config discovery.
 - `--debug`, `--verbose`, and `--quiet` control logging and progress.
 

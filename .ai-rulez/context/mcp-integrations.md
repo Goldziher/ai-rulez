@@ -14,9 +14,11 @@ targets:
 - The MCP server exposes read, CRUD, generate, and validate operations for assistants.
 
 Typical setup:
+
 - Use `npx -y ai-rulez@latest mcp` (Node) or `uvx ai-rulez mcp` (Python).
 - This repo includes a default server entry in `.ai-rulez/mcp.yaml`.
 
 When updating MCP functionality:
+
 - Update `internal/mcp` handlers and schemas under `schema/`.
 - Keep docs and generated outputs in sync.
