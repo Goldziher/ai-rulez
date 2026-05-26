@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - PHP 8.2+, `declare(strict_types=1)`, typed properties, union types, enums, readonly classes.
 - Formatting: PSR-12 via `phpcs`/`phpcbf` or `php-cs-fixer`. Static analysis: `PHPStan` level 9 or `Psalm`.
 - Testing: PHPUnit with `@dataProvider`, 80%+ coverage.

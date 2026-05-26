@@ -16,6 +16,7 @@ This is a test command to verify the command generation system works correctly.
 ## Instructions
 
 When this command is invoked:
+
 1. Verify the command metadata is properly loaded
 2. Check that the command appears in the appropriate preset outputs
 3. Validate that target filtering works correctly
@@ -23,6 +24,7 @@ When this command is invoked:
 ## Expected Behavior
 
 The command should be generated as:
+
 - Claude: `.claude/skills/test/SKILL.md`
 - Cursor: `.cursor/rules/cmd-test.mdc`
 - Continue.dev: Entry in `.continue/prompts/ai_rulez_prompts.yaml`

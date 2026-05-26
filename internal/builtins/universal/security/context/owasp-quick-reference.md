@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 1. **Broken Access Control** — enforce authorization checks on every request, deny by default.
 2. **Cryptographic Failures** — use strong standard algorithms, never roll your own crypto.
 3. **Injection** — parameterize all queries, sanitize and validate all inputs.

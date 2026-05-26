@@ -108,10 +108,12 @@ Releases are fully automated using GitHub Actions and are triggered when a new t
 ### How It Works
 
 1.  **Tag Push**: To create a new release, push a tag to `main` with the format `vX.Y.Z` (e.g., `v2.0.1`).
+
     ```bash
     git tag v2.0.1
     git push origin v2.0.1
     ```
+
 2.  **CI/CD Pipeline**: The push event triggers the `.github/workflows/publish.yaml` workflow, which handles the entire release process:
     - **GoReleaser**: Builds binaries for all supported platforms and creates a GitHub Release.
     - **PyPI Publishing**: The Python package version in `release/pypi/ai_rulez/__init__.py` is automatically updated with the tag version, and the package is built and published to PyPI.

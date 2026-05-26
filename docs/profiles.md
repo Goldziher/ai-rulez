@@ -130,7 +130,7 @@ Templates use Go's template syntax with access to your configuration:
 
 ### Available Data
 
-```
+```text
 .Name              Project name from config.yaml
 .Description       Project description
 .Rules             All rules (filtered by targets)
@@ -144,7 +144,7 @@ Templates use Go's template syntax with access to your configuration:
 
 Each item has:
 
-```
+```text
 .Name              Name of the rule/context/skill
 .Content           Full markdown content
 .Priority          Priority level (critical, high, etc.)
@@ -155,7 +155,8 @@ Each item has:
 ### Common Template Functions
 
 **Looping:**
-```
+
+```text
 {{ range .Rules }}
   Name: {{ .Name }}
   Content: {{ .Content }}
@@ -163,21 +164,24 @@ Each item has:
 ```
 
 **Conditionals:**
-```
+
+```text
 {{ if eq .Priority "critical" }}
   CRITICAL: {{ .Name }}
 {{ end }}
 ```
 
 **Filters:**
-```
+
+```text
 {{ range .Rules | where "Priority" "high" }}
   {{ .Name }}
 {{ end }}
 ```
 
 **String operations:**
-```
+
+```text
 {{ .Name | lower }}              Convert to lowercase
 {{ .Name | upper }}              Convert to uppercase
 {{ .Content | truncate 100 }}    Truncate to 100 chars
@@ -293,7 +297,7 @@ presets:
 
 ### Date/Time
 
-```
+```text
 {{ now }}                         Current time
 {{ now.Format "2006-01-02" }}     Formatted date
 {{ now.Unix }}                    Unix timestamp
@@ -301,7 +305,7 @@ presets:
 
 ### String Functions
 
-```
+```text
 {{ .Name | lower }}               Lowercase
 {{ .Name | upper }}               Uppercase
 {{ .Name | title }}               Title case
@@ -312,7 +316,7 @@ presets:
 
 ### Collection Functions
 
-```
+```text
 {{ range .Rules }}                Loop through items
 {{ .Name }}
 {{ end }}
@@ -327,14 +331,14 @@ presets:
 
 ### JSON Functions
 
-```
+```text
 {{ .Targets | toJson }}           Convert to JSON array
 {{ .Content | jsonEscape }}       Escape for JSON string
 ```
 
 ### Advanced Conditions
 
-```
+```text
 {{ if eq .Priority "critical" }}  Equal check
 {{ if gt .Priority "high" }}      Greater than (string comparison)
 {{ if contains .Name "test" }}    Contains substring
@@ -376,7 +380,7 @@ rules:
 
 Content is ordered by priority level (highest to lowest):
 
-```
+```text
 critical
 high
 medium (default)
@@ -386,7 +390,7 @@ minimal
 
 Templates automatically sort by priority. To customize:
 
-```
+```text
 {{ range (sortByPriority .Rules) }}
   {{ .Name }}
 {{ end }}
@@ -414,6 +418,7 @@ presets:
 ```
 
 When you run `ai-rulez generate`, it creates:
+
 - `CLAUDE.md` (built-in)
 - `.cursorrules` (built-in)
 - `GEMINI.md` (built-in)
@@ -471,7 +476,7 @@ presets:
 
 Use standard locations:
 
-```
+```text
 docs/       Documentation
 config/     Configuration files
 .editor/    Editor-specific configs
@@ -492,6 +497,7 @@ cat docs/MY_TOOL.md
 ### Template Syntax Error
 
 Check for:
+
 - Missing closing `{{ end }}`
 - Unmatched braces
 - Invalid function names
@@ -499,6 +505,7 @@ Check for:
 ### Path Issues
 
 Ensure paths:
+
 - Don't start with `/`
 - Use forward slashes `/`
 - Are relative to project root

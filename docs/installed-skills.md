@@ -111,7 +111,7 @@ List all installed skills.
 
 Installed skills expect this layout in the source repository:
 
-```
+```text
 repo-root/
   skills/
     my-skill/

@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `ext-php-rs` for PHP 8.2+ native extensions. Use `#[php_class]` and `#[php_function]` macros.
 - Map Rust types to PHP via `FromZval`/`IntoZval` traits. Return `PhpResult<T>` for fallible operations.
 - Map Rust errors to PHP exceptions: `PhpException::from(...)` with specific classes (`InvalidArgumentException`, `RuntimeException`).

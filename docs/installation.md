@@ -6,23 +6,19 @@ Install `ai-rulez` using your preferred package manager.
 
 === "Homebrew (macOS/Linux)"
     ```bash
-    brew install goldziher/tap/ai-rulez
-    ```
+    brew install goldziher/tap/ai-rulez```
 
 === "Go"
     ```bash
-    go install github.com/Goldziher/ai-rulez/cmd@latest
-    ```
+    go install github.com/Goldziher/ai-rulez/cmd@latest```
 
 === "npm"
     ```bash
-    npm install -g ai-rulez
-    ```
+    npm install -g ai-rulez```
 
 === "pip"
     ```bash
-    pip install ai-rulez
-    ```
+    pip install ai-rulez```
 
 ## Run Without Installing
 
@@ -30,18 +26,15 @@ You can also run `ai-rulez` directly without a permanent installation.
 
 === "Go"
     ```bash
-    go run github.com/Goldziher/ai-rulez/cmd@latest --help
-    ```
+    go run github.com/Goldziher/ai-rulez/cmd@latest --help```
 
 === "Python"
     ```bash
-    uvx ai-rulez --help
-    ```
+    uvx ai-rulez --help```
 
 === "Node.js"
     ```bash
-    npx ai-rulez@latest --help
-    ```
+    npx ai-rulez@latest --help```
 
 ## Shell Completion (Recommended)
 
@@ -52,25 +45,33 @@ Enable tab completion for your shell to see all available commands and flags int
 
 === "Bash"
     ```bash
+
     # Add to ~/.bashrc or ~/.bash_profile
+
     source <(ai-rulez completion bash)
     ```
 
 === "Zsh"
     ```bash
+
     # Add to ~/.zshrc
+
     source <(ai-rulez completion zsh)
     ```
 
 === "Fish"
     ```bash
+
     # Add to ~/.config/fish/config.fish
+
     ai-rulez completion fish | source
     ```
 
 === "PowerShell"
     ```powershell
+
     # Add to your PowerShell profile
+
     ai-rulez completion powershell | Out-String | Invoke-Expression
     ```
 

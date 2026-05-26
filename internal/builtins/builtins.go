@@ -32,12 +32,14 @@ const (
 	builtinSecurity        = "security"
 	builtinTokenEfficiency = "token-efficiency"
 	builtinDefaultCommands = "default-commands"
+	builtinPolyglot        = "polyglot-bindings"
 
 	langRust    = "rust"
 	langPython  = "python"
 	bindingPyO3 = "pyo3"
 
-	contentTypeRules = "rules"
+	contentTypeRules  = "rules"
+	contentTypeAgents = "agents"
 )
 
 // BuiltinDomain describes an available builtin domain
@@ -69,6 +71,7 @@ var registry = map[string]BuiltinDomain{
 	builtinTesting:         {Name: builtinTesting, Category: CategoryUniversal, AutoInclude: true, Description: "Testing conventions and best practices"},
 	builtinTokenEfficiency: {Name: builtinTokenEfficiency, Category: CategoryUniversal, AutoInclude: true, Description: "Output efficiency and task automation"},
 	"documentation":        {Name: "documentation", Category: CategoryUniversal, Description: "Documentation standards and maintenance"},
+	builtinPolyglot:        {Name: builtinPolyglot, Category: CategoryUniversal, Description: "Cross-language binding and native FFI conventions"},
 	builtinDefaultCommands: {Name: builtinDefaultCommands, Category: CategoryUniversal, Description: "Built-in slash commands (/iterate, /parallelize)"},
 	builtinAgentDelegation: {Name: builtinAgentDelegation, Category: CategoryUniversal, AutoInclude: true, Description: "Agent delegation instructions and listing in generated outputs"},
 	"cicd":                 {Name: "cicd", Category: CategoryUniversal, Description: "CI/CD pipeline standards and GitHub workflow conventions"},
@@ -218,7 +221,7 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 
 	var entries []ContentEntry
 
-	contentTypes := []string{contentTypeRules, "context", "skills", "agents", "commands"}
+	contentTypes := []string{contentTypeRules, "context", "skills", contentTypeAgents, "commands"}
 	for _, contentType := range contentTypes {
 		// Use path.Join (forward slashes) so embed.FS can find files on all platforms.
 		dirPath := path.Join(basePath, contentType)

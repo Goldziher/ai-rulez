@@ -1,11 +1,12 @@
 ---
 priority: high
 ---
+
 - Use [vite+](https://viteplus.dev) as the unified TypeScript toolchain. It wraps best-in-class tools behind a single CLI. Configure all toolchain in `vite.config.ts` by importing `defineConfig` from `vite-plus`;
 - Package manager: vite+ auto-detects from `package.json` engine field or lockfile (`pnpm-lock.yaml`, `yarn.lock`, `package-lock.json`, `bun.lock`). Fallback is `pnpm`. Run `vp install`, `vp add <pkg-name>` or `vp remove <pkg-name>` for managing package dependencies.
 - Node manager: vite+ manages Node.js versions — replaces `nvm`/`fnm`. Run `vp env on` then `vp env install <node-version>` to install Node.js runtime. Run `vp env pin` to pin version.
-- Linter: `oxlint` via vite+ — replaces `eslint`/`biome`. Run `vp lint` for fast Rust-powered linting with TypeScript-aware rules.
-- Formatter: `oxfmt` via vite+ — replaces `prettier`/`biome format`. Run `vp fmt` for consistent code formatting.
+- Linter: `oxlint` via vite+ — replaces legacy JavaScript linters. Run `vp lint` for fast Rust-powered linting with TypeScript-aware rules.
+- Formatter: `oxfmt` via vite+ — replaces legacy JavaScript formatters. Run `vp fmt` for consistent code formatting.
 - Type checker: `oxlint` with type-aware linting via vite+ — replaces `tsc --noEmit` for lint-time type checks. Configure it by enabling both `lint.options.typeAware` and `lint.options.typeCheck` in `vite.config.ts`. Run `vp lint` for type-aware linting.
 - Testing: `vitest` via vite+ — run `vp test` for fast Vite-native testing with HMR, coverage, and snapshot support. Import from `vite-plus/test` instead of `vitest` when writing tests.
 - Bundler: `rolldown` (Rust-powered Rollup replacement) for Vite apps, `tsdown` for library builds. Run `vp build` for Vite apps or `vp pack` for libraries.

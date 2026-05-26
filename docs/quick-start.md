@@ -11,7 +11,8 @@ ai-rulez init "my-project"
 ```
 
 This creates a `.ai-rulez/` directory with:
-```
+
+```text
 .ai-rulez/
 ├── config.toml
 ├── rules/
@@ -51,6 +52,7 @@ full = []  # Empty = root content only
 Create rule files in `.ai-rulez/rules/`:
 
 **`.ai-rulez/rules/code-quality.md`:**
+
 ```markdown
 ---
 priority: high
@@ -64,6 +66,7 @@ priority: high
 ```
 
 **`.ai-rulez/rules/git-workflow.md`:**
+
 ```markdown
 ---
 priority: medium
@@ -81,15 +84,18 @@ priority: medium
 Create context files in `.ai-rulez/context/`:
 
 **`.ai-rulez/context/architecture.md`:**
+
 ```markdown
 # Architecture
 
 ## System Design
+
 - 3 microservices behind an API Gateway
 - PostgreSQL for persistence
 - Kubernetes for orchestration
 
 ## Stack
+
 - Backend: Go
 - Frontend: React
 - Infrastructure: Kubernetes
@@ -100,6 +106,7 @@ Create context files in `.ai-rulez/context/`:
 Create specialized AI prompts in `.ai-rulez/skills/`:
 
 **`.ai-rulez/skills/code-reviewer/SKILL.md`:**
+
 ```markdown
 ---
 priority: high
@@ -109,11 +116,13 @@ description: "Code reviewer for quality assurance"
 # Code Reviewer
 
 Review code for:
+
 - Quality and maintainability
 - Test coverage
 - Performance issues
 
 Responsibilities:
+
 1. Review pull requests for correctness
 2. Suggest improvements
 3. Verify test coverage
@@ -128,6 +137,7 @@ ai-rulez generate
 ```
 
 This creates:
+
 - `CLAUDE.md` (from claude preset)
 - `.cursor/rules/` (from cursor preset)
 - `GEMINI.md` (from gemini preset)
@@ -152,6 +162,7 @@ git commit -m "docs: initialize AI assistant configuration"
 For projects with multiple teams, add domains:
 
 **1. Create domain structure:**
+
 ```bash
 mkdir -p .ai-rulez/domains/backend/rules
 mkdir -p .ai-rulez/domains/frontend/rules
@@ -160,6 +171,7 @@ mkdir -p .ai-rulez/domains/frontend/rules
 **2. Add domain-specific rules:**
 
 **`.ai-rulez/domains/backend/rules/database.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -173,6 +185,7 @@ priority: critical
 ```
 
 **3. Update `config.toml`:**
+
 ```toml
 version = "4.0"
 name = "my-platform"
@@ -188,6 +201,7 @@ frontend = ["frontend"]
 ```
 
 **4. Generate for specific teams:**
+
 ```bash
 # Backend team gets root + backend content
 ai-rulez generate --profile backend
@@ -248,6 +262,7 @@ path = "docs/MY_TOOL.md"
 ### Generated files aren't updating
 
 Make sure you ran `ai-rulez generate`:
+
 ```bash
 ai-rulez generate
 ```
@@ -255,12 +270,14 @@ ai-rulez generate
 ### Content not appearing in output
 
 Check that your file is in the correct location:
+
 - Root content: `.ai-rulez/rules/`, `.ai-rulez/context/`
 - Domain content: `.ai-rulez/domains/{name}/rules/`, etc.
 
 ### Validation fails
 
 Check your configuration:
+
 ```bash
 ai-rulez validate
 ```

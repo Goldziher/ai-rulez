@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Java 17+ LTS, records for immutable data, sealed classes for restricted hierarchies, pattern matching.
 - Google Java Style (4-space, 100 char), `google-java-format`. Static analysis: `Error Prone` + `SpotBugs`.
 - Build: Maven or Gradle with wrapper scripts (`mvnw`/`gradlew`). Commit wrapper files.
