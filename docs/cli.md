@@ -5,6 +5,7 @@ All AI-Rulez CLI commands and flags.
 ## Command Overview
 
 ### Core Commands
+
 | Command | Description |
 |---------|-------------|
 | `ai-rulez init` | Initialize V4 directory-based configuration |
@@ -16,6 +17,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez builtins list` | List available built-in domains |
 
 ### CRUD Commands (Configuration Management)
+
 | Command | Description |
 |---------|-------------|
 | `ai-rulez domain add/remove/list` | Manage domains |
@@ -38,25 +40,30 @@ V3 provides CRUD commands to programmatically modify your `.ai-rulez/` configura
 Create a new domain with subdirectories for rules, context, and skills.
 
 **Syntax:**
+
 ```bash
 ai-rulez domain add <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Domain name. Alphanumeric and underscores, 1-50 characters.
 
 **Flags:**
+
 - `--description <text>` (optional): Description of the domain
 - `--verbose` (optional): Show detailed output
 
 **Examples:**
 
 Create a backend domain:
+
 ```bash
 ai-rulez domain add backend
 ```
 
 Create a domain with description:
+
 ```bash
 ai-rulez domain add frontend --description "React web application"
 ```
@@ -66,24 +73,29 @@ ai-rulez domain add frontend --description "React web application"
 Delete a domain and all its contents.
 
 **Syntax:**
+
 ```bash
 ai-rulez domain remove <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Domain name to delete
 
 **Flags:**
+
 - `--force` (optional): Skip confirmation prompt
 
 **Examples:**
 
 Remove a domain (with confirmation):
+
 ```bash
 ai-rulez domain remove backend
 ```
 
 Remove without confirmation:
+
 ```bash
 ai-rulez domain remove backend --force
 ```
@@ -93,22 +105,26 @@ ai-rulez domain remove backend --force
 List all domains in the `.ai-rulez/` directory.
 
 **Syntax:**
+
 ```bash
 ai-rulez domain list [flags]
 ```
 
 **Flags:**
+
 - `--json` (optional): Output as JSON
 - `--verbose` (optional): Show file counts per domain
 
 **Examples:**
 
 List domains:
+
 ```bash
 ai-rulez domain list
 ```
 
 List as JSON:
+
 ```bash
 ai-rulez domain list --json
 ```
@@ -122,14 +138,17 @@ Rules, context, and skills can be added to the root (always included) or to spec
 Create a new rule file with optional YAML frontmatter.
 
 **Syntax:**
+
 ```bash
 ai-rulez add rule <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Rule filename without `.md` extension
 
 **Flags:**
+
 - `--domain <name>` (optional): Domain name. If not specified, creates in root rules directory
 - `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
 - `--targets <list>` (optional): Comma-separated list of target providers (claude, cursor, etc.)
@@ -139,16 +158,19 @@ ai-rulez add rule <name> [flags]
 **Examples:**
 
 Create a root rule:
+
 ```bash
 ai-rulez add rule code-quality
 ```
 
 Create a domain-specific rule:
+
 ```bash
 ai-rulez add rule database-standards --domain backend --priority high
 ```
 
 Create with specific targets:
+
 ```bash
 ai-rulez add rule performance --targets claude,cursor --priority high
 ```
@@ -158,14 +180,17 @@ ai-rulez add rule performance --targets claude,cursor --priority high
 Create a new context file (documentation/reference material).
 
 **Syntax:**
+
 ```bash
 ai-rulez add context <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Context filename without `.md` extension
 
 **Flags:**
+
 - `--domain <name>` (optional): Domain name. If not specified, creates in root context directory
 - `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
 - `--targets <list>` (optional): Comma-separated list of target providers
@@ -175,11 +200,13 @@ ai-rulez add context <name> [flags]
 **Examples:**
 
 Create root context:
+
 ```bash
 ai-rulez add context architecture
 ```
 
 Create domain context:
+
 ```bash
 ai-rulez add context database-design --domain backend
 ```
@@ -189,14 +216,17 @@ ai-rulez add context database-design --domain backend
 Create a new skill file (AI prompt/expert definition).
 
 **Syntax:**
+
 ```bash
 ai-rulez add skill <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Skill filename without `.md` extension
 
 **Flags:**
+
 - `--domain <name>` (optional): Domain name. If not specified, creates in root skills directory
 - `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
 - `--targets <list>` (optional): Comma-separated list of target providers
@@ -206,11 +236,13 @@ ai-rulez add skill <name> [flags]
 **Examples:**
 
 Create a root skill:
+
 ```bash
 ai-rulez add skill code-reviewer
 ```
 
 Create a domain-specific skill:
+
 ```bash
 ai-rulez add skill performance-optimizer --domain backend --priority high
 ```
@@ -220,25 +252,30 @@ ai-rulez add skill performance-optimizer --domain backend --priority high
 Delete a rule file.
 
 **Syntax:**
+
 ```bash
 ai-rulez remove rule <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Rule filename without `.md` extension
 
 **Flags:**
+
 - `--domain <name>` (optional): Domain name
 - `--force` (optional): Skip confirmation
 
 **Examples:**
 
 Remove a root rule:
+
 ```bash
 ai-rulez remove rule code-quality
 ```
 
 Remove a domain rule:
+
 ```bash
 ai-rulez remove rule database-standards --domain backend --force
 ```
@@ -248,14 +285,17 @@ ai-rulez remove rule database-standards --domain backend --force
 Delete a context file.
 
 **Syntax:**
+
 ```bash
 ai-rulez remove context <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Context filename without `.md` extension
 
 **Flags:**
+
 - `--domain <name>` (optional): Domain name
 - `--force` (optional): Skip confirmation
 
@@ -271,14 +311,17 @@ ai-rulez remove context backend-design --domain backend --force
 Delete a skill file.
 
 **Syntax:**
+
 ```bash
 ai-rulez remove skill <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Skill filename without `.md` extension
 
 **Flags:**
+
 - `--domain <name>` (optional): Domain name
 - `--force` (optional): Skip confirmation
 
@@ -294,11 +337,13 @@ ai-rulez remove skill performance-optimizer --domain backend --force
 List all rule files.
 
 **Syntax:**
+
 ```bash
 ai-rulez list rules [flags]
 ```
 
 **Flags:**
+
 - `--domain <name>` (optional): List rules in specific domain only
 - `--json` (optional): Output as JSON
 - `--verbose` (optional): Show file details
@@ -306,11 +351,13 @@ ai-rulez list rules [flags]
 **Examples:**
 
 List all rules:
+
 ```bash
 ai-rulez list rules
 ```
 
 List domain rules:
+
 ```bash
 ai-rulez list rules --domain backend
 ```
@@ -320,11 +367,13 @@ ai-rulez list rules --domain backend
 List all context files.
 
 **Syntax:**
+
 ```bash
 ai-rulez list context [flags]
 ```
 
 **Flags:**
+
 - `--domain <name>` (optional): List context in specific domain only
 - `--json` (optional): Output as JSON
 - `--verbose` (optional): Show file details
@@ -341,11 +390,13 @@ ai-rulez list context --domain backend
 List all skill files.
 
 **Syntax:**
+
 ```bash
 ai-rulez list skills [flags]
 ```
 
 **Flags:**
+
 - `--domain <name>` (optional): List skills in specific domain only
 - `--json` (optional): Output as JSON
 - `--verbose` (optional): Show file details
@@ -366,9 +417,11 @@ Install named skills from external repositories. See [Installed Skills](installe
 Install a named skill from a git repository or local path.
 
 **Arguments:**
+
 - `<name>` (required): Skill name (unique identifier)
 
 **Flags:**
+
 - `--source <url>` (required): Git URL or local path
 - `--path <dir>` (optional): Path within repo to skill directory (defaults to `skills/<name>`)
 - `--ref <ref>` (optional): Git reference (branch, tag, commit)
@@ -386,9 +439,11 @@ ai-rulez skill install local-skill --source ../my-other-repo
 Remove an installed skill from the configuration.
 
 **Arguments:**
+
 - `<name>` (required): Skill name to remove
 
 **Flags:**
+
 - `--force` (optional): Skip confirmation prompt
 
 **Examples:**
@@ -403,6 +458,7 @@ ai-rulez skill remove my-lib --force
 List all installed skills.
 
 **Flags:**
+
 - `--json` (optional): Output as JSON
 
 **Examples:**
@@ -421,15 +477,18 @@ Manage external rule sources (git repositories or local packages).
 Add a new include source to the configuration.
 
 **Syntax:**
+
 ```bash
 ai-rulez include add <name> <source> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Unique identifier for this include
 - `<source>` (required): Git URL (e.g., `https://github.com/org/repo`) or local path (e.g., `./packages/shared`)
 
 **Flags:**
+
 - `--path <dir>` (optional): Path within git repository where `.ai-rulez/` content is located
 - `--ref <branch>` (optional): Git reference (branch, tag, commit). Default: main
 - `--include <types>` (optional): Comma-separated content types: rules,context,skills,mcp
@@ -439,16 +498,19 @@ ai-rulez include add <name> <source> [flags]
 **Examples:**
 
 Add a git-based include:
+
 ```bash
 ai-rulez include add corporate-rules https://github.com/myorg/shared-rules
 ```
 
 Add with custom path and ref:
+
 ```bash
 ai-rulez include add shared-patterns https://github.com/myorg/repo --path .ai-rulez --ref develop
 ```
 
 Add local include:
+
 ```bash
 ai-rulez include add backend-package ./packages/backend
 ```
@@ -458,14 +520,17 @@ ai-rulez include add backend-package ./packages/backend
 Remove an include source.
 
 **Syntax:**
+
 ```bash
 ai-rulez include remove <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Include name to remove
 
 **Flags:**
+
 - `--force` (optional): Skip confirmation
 
 **Examples:**
@@ -480,11 +545,13 @@ ai-rulez include remove shared-patterns --force
 List all include sources.
 
 **Syntax:**
+
 ```bash
 ai-rulez include list [flags]
 ```
 
 **Flags:**
+
 - `--json` (optional): Output as JSON
 - `--verbose` (optional): Show detailed configuration
 
@@ -504,26 +571,31 @@ Organize domains into named profiles for targeted generation.
 Create a new profile.
 
 **Syntax:**
+
 ```bash
 ai-rulez profile add <name> <domains...> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Profile name
 - `<domains...>` (required): Space-separated list of domain names to include
 
 **Flags:**
+
 - `--set-default` (optional): Set this as the default profile
 - `--verbose` (optional): Show detailed output
 
 **Examples:**
 
 Create a backend profile:
+
 ```bash
 ai-rulez profile add backend backend qa
 ```
 
 Create and set as default:
+
 ```bash
 ai-rulez profile add full backend frontend qa --set-default
 ```
@@ -533,14 +605,17 @@ ai-rulez profile add full backend frontend qa --set-default
 Delete a profile.
 
 **Syntax:**
+
 ```bash
 ai-rulez profile remove <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Profile name to remove
 
 **Flags:**
+
 - `--force` (optional): Skip confirmation
 
 **Examples:**
@@ -555,11 +630,13 @@ ai-rulez profile remove development --force
 Set a profile as the default for generation.
 
 **Syntax:**
+
 ```bash
 ai-rulez profile set-default <name> [flags]
 ```
 
 **Arguments:**
+
 - `<name>` (required): Profile name to set as default
 
 **Examples:**
@@ -573,11 +650,13 @@ ai-rulez profile set-default full
 List all profiles.
 
 **Syntax:**
+
 ```bash
 ai-rulez profile list [flags]
 ```
 
 **Flags:**
+
 - `--json` (optional): Output as JSON
 - `--verbose` (optional): Show domain contents
 
@@ -597,11 +676,13 @@ ai-rulez profile list --json
 Initialize a new V4 directory-based configuration.
 
 **Syntax:**
+
 ```bash
 ai-rulez init [project-name] [flags]
 ```
 
 **Arguments:**
+
 - `[project-name]` (optional): The project name. If not provided, prompted interactively.
 
 **V4-specific Flags:**
@@ -623,21 +704,25 @@ ai-rulez init [project-name] [flags]
 **Examples:**
 
 Basic V4 initialization (TOML format):
+
 ```bash
 ai-rulez init "my-project"
 ```
 
 V4 with YAML format:
+
 ```bash
 ai-rulez init "my-project" --format yaml
 ```
 
 V4 with multiple domains:
+
 ```bash
 ai-rulez init "my-project" --domains "backend,frontend,qa"
 ```
 
 V4 with example content skipped:
+
 ```bash
 ai-rulez init "my-project" --skip-content
 ```
@@ -649,11 +734,13 @@ ai-rulez init "my-project" --skip-content
 Generate AI assistant rule files from configuration.
 
 **Syntax:**
+
 ```bash
 ai-rulez generate [config-path] [flags]
 ```
 
 **Arguments:**
+
 - `[config-path]` (optional): Path to configuration file or directory. If not provided, auto-detected.
 
 **Generation Flags:**
@@ -675,36 +762,43 @@ ai-rulez generate [config-path] [flags]
 **Examples:**
 
 Generate with default profile:
+
 ```bash
 ai-rulez generate
 ```
 
 Generate specific profile:
+
 ```bash
 ai-rulez generate --profile backend
 ```
 
 Dry-run to preview generation:
+
 ```bash
 ai-rulez generate --dry-run --profile backend
 ```
 
 Generate and update .gitignore:
+
 ```bash
 ai-rulez generate --profile full --update-gitignore
 ```
 
 Generate recursively in monorepo:
+
 ```bash
 ai-rulez generate --recursive
 ```
 
 Generate from a non-default configuration directory:
+
 ```bash
 ai-rulez generate --config-dir ai-policy
 ```
 
 Generate with private repository authentication:
+
 ```bash
 # Using environment variable (recommended)
 export AI_RULEZ_GIT_TOKEN="ghp_your_github_token_here"
@@ -752,11 +846,13 @@ ai-rulez generate --profile frontend
 Validate configuration without generating files.
 
 **Syntax:**
+
 ```bash
 ai-rulez validate [config-path] [flags]
 ```
 
 **Arguments:**
+
 - `[config-path]` (optional): Path to configuration file. If not provided, auto-detected.
 
 **Flags:**
@@ -770,16 +866,19 @@ ai-rulez validate [config-path] [flags]
 **Examples:**
 
 Validate current configuration:
+
 ```bash
 ai-rulez validate
 ```
 
 Validate specific config file:
+
 ```bash
 ai-rulez validate .ai-rulez/config.toml
 ```
 
 With verbose output:
+
 ```bash
 ai-rulez validate --verbose
 ```
@@ -800,11 +899,13 @@ ai-rulez validate --verbose
 Migrate configuration from V3 (YAML) to V4 (TOML format).
 
 **Syntax:**
+
 ```bash
 ai-rulez migrate v4 [config-path] [flags]
 ```
 
 **Arguments:**
+
 - `[config-path]` (optional): Path to V3 config.yaml file. If not provided, auto-detected.
 
 **Flags:**
@@ -818,16 +919,19 @@ ai-rulez migrate v4 [config-path] [flags]
 **Examples:**
 
 Migrate current directory:
+
 ```bash
 ai-rulez migrate v4
 ```
 
 Migrate with dry-run (preview changes):
+
 ```bash
 ai-rulez migrate v4 --dry-run
 ```
 
 Migrate specific config without backup:
+
 ```bash
 ai-rulez migrate v4 .ai-rulez/config.yaml --backup false
 ```
@@ -848,6 +952,7 @@ ai-rulez migrate v4 .ai-rulez/config.yaml --backup false
 - All other files remain unchanged
 
 Then regenerate outputs:
+
 ```bash
 ai-rulez generate
 ```
@@ -890,16 +995,19 @@ These flags work with all commands:
 **Examples:**
 
 Generate with debug output:
+
 ```bash
 ai-rulez generate --debug
 ```
 
 Quiet mode (minimal output):
+
 ```bash
 ai-rulez generate --quiet
 ```
 
 Show help for init:
+
 ```bash
 ai-rulez init --help
 ```
@@ -942,7 +1050,7 @@ The CLI uses standard exit codes:
 
 ### Initialize Output
 
-```
+```text
 ✅ Created .ai-rulez/ directory structure
 
 Directory structure:
@@ -973,7 +1081,7 @@ Next steps:
 
 ### Generate Output
 
-```
+```text
 ✅ Generated 3 file(s) successfully
   - CLAUDE.md
   - .cursorrules
@@ -982,7 +1090,7 @@ Next steps:
 
 ### Validation Output
 
-```
+```text
 ✅ Configuration is valid
   Project: my-project
   Version: 3.0
@@ -993,7 +1101,7 @@ Next steps:
 
 ### Validation Error
 
-```
+```text
 ❌ Configuration validation failed
 
 errors:
@@ -1206,6 +1314,7 @@ ai-rulez validate --help
 ```
 
 For more detailed documentation:
+
 - **[Configuration Reference](configuration.md)**: Config options
 - **[Quick Start](quick-start.md)**: Getting started
 - **[Domains & Profiles](domains.md)**: Team organization

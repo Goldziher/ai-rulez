@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Elixir 1.14+ OTP 25+, pattern matching extensively, `mix format` non-negotiable.
 - Configure `.formatter.exs` with `:inputs` and `:import_deps` for consistent formatting across team.
 - Linting: `Credo --strict`, type checking: `Dialyzer` via `dialyxir`.

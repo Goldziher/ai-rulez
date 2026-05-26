@@ -10,6 +10,7 @@ targets:
 # Workspace Layout
 
 Key directories:
+
 - `cmd/main.go` boots the CLI; `cmd/commands/` holds Cobra commands.
 - `internal/` contains service packages for config loading, generation, templates, includes, CRUD, MCP, validation, logging, and migration.
 - `schema/` holds JSON schemas for config and MCP files.
@@ -18,4 +19,5 @@ Key directories:
 - `tests/` contains fixtures, integration, e2e CLI coverage, and platform tests.
 
 Convenience:
+
 - `bin/ai-rulez` is a local build used for running `generate`, `validate`, and other commands in development.

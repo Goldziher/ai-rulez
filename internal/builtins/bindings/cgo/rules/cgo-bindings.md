@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `import "C"` with `// #cgo LDFLAGS:` and `// #cgo CFLAGS:` directives for linking.
 - Declare C header functions in comment block immediately above `import "C"` — no blank line between.
 - Type mapping: `C.int`, `C.long`, `C.char`. Use `C.CString()` and `C.GoString()` for string conversion.

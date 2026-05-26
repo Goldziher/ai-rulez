@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `#[pyclass]` and `#[pymethods]` for Python-visible types. Use `#[new]` for constructors.
 - Map Rust `Result<T, E>` to Python exceptions via `PyErr`. Use `PyResult<T>` as return type.
 - Use `pyo3::types` for conversions. Prefer `&str` over `String` in parameters, return `String`.

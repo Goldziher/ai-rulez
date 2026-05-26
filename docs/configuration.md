@@ -137,6 +137,7 @@ qa = ["qa"]
 ```
 
 Each profile specifies a list of domain names. When generating with a profile:
+
 1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`) is included
 2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
 
@@ -260,6 +261,7 @@ Run `ai-rulez builtins list` to see all available domains.
 | `testing` | Testing conventions and best practices |
 | `token-efficiency` | Output efficiency and task automation |
 | `documentation` | Documentation standards and maintenance |
+| `polyglot-bindings` | Cross-language binding and native FFI conventions |
 | `default-commands` | Built-in slash commands (`/iterate`, `/parallelize`) |
 
 **Languages** (per-language conventions):
@@ -281,12 +283,13 @@ Run `ai-rulez builtins list` to see all available domains.
 - `testing`: TDD workflow, test independence, meaningful assertions, descriptive test naming
 - `token-efficiency`: Task runner preference, output awareness
 - `documentation`: Inline docs, README standards, docs-with-code updates
+- `polyglot-bindings`: Rust-core/native ABI boundaries, FFI ownership, cross-language error conversion, binding parity
 - `default-commands`: `/iterate` (implementation + review cycles) and `/parallelize` (subagent task splitting) slash commands
 
 **Language builtins** each provide a comprehensive conventions rule covering:
 
 - Target language version and edition
-- Linting and formatting tools (e.g., `ruff` for Python, `biome`/`oxlint` for TypeScript, `clippy` for Rust)
+- Linting and formatting tools (e.g., `ruff` for Python, `oxfmt`/`oxlint` for TypeScript, `clippy` for Rust)
 - Static analysis and type checking (e.g., `mypy --strict`, `PHPStan level 9`, `Dialyzer`)
 - Security/SAST tools (e.g., `bandit`, `gosec`, `cargo audit`, `bundler-audit`)
 - Testing framework and coverage tools with 80%+ threshold
@@ -331,6 +334,7 @@ amp = "max"
 **`defaults.effort_by_preset`** lets you override `defaults.effort` for specific presets. Per-agent metadata still wins. Useful when, for example, you want Codex to reason harder than Claude on the same project.
 
 **Resolution order** (per preset, per agent):
+
 1. Per-agent `effort` in agent frontmatter (Claude, Codex, Windsurf, Opencode — presets that support per-agent effort)
 2. `defaults.effort_by_preset[<preset>]`
 3. `defaults.effort`
@@ -361,6 +365,7 @@ style = "detailed"  # Default: comprehensive header with full documentation
 #### Header Styles
 
 **`detailed`** (default)
+
 - Comprehensive explanation of ai-rulez
 - Complete folder organization documentation
 - Full AI agent instructions with MCP server promotion
@@ -368,6 +373,7 @@ style = "detailed"  # Default: comprehensive header with full documentation
 - Size: ~50 lines
 
 **`compact`**
+
 - Condensed version with essential information
 - Uses symbols (✗/✓) for clarity
 - Brief structure overview
@@ -375,6 +381,7 @@ style = "detailed"  # Default: comprehensive header with full documentation
 - Size: ~20 lines
 
 **`minimal`**
+
 - Only critical information
 - Brief "DO NOT EDIT" warning
 - MCP server reference
@@ -517,7 +524,7 @@ Manage via CLI: `ai-rulez skill install/remove/list`.
 
 Content in these directories is always included in every generation:
 
-```
+```text
 .ai-rulez/
 ├── rules/           # Mandatory rules and constraints
 ├── context/         # Reference documentation
@@ -526,21 +533,25 @@ Content in these directories is always included in every generation:
 ```
 
 **Rules directory**: `rules/`
+
 - Files: `*.md` markdown files
 - Purpose: Mandatory constraints, standards, do's and don'ts
 - Included: in all generated outputs
 
 **Context directory**: `context/`
+
 - Files: `*.md` markdown files
 - Purpose: Reference documentation, architecture, guidelines
 - Included: in all generated outputs
 
 **Skills directory**: `skills/`
+
 - Structure: `skills/{skill-name}/SKILL.md`
 - Purpose: Specialized AI prompts and expert prompts
 - Included: in all generated outputs
 
 **Agents directory**: `agents/`
+
 - Files: `*.md` markdown files
 - Purpose: Agent prompt files for supported tools
 - Included: in all generated outputs
@@ -549,7 +560,7 @@ Content in these directories is always included in every generation:
 
 Content in domain directories is included only when that domain is in the active profile:
 
-```
+```text
 .ai-rulez/domains/
 ├── backend/
 │   ├── rules/
@@ -568,6 +579,7 @@ Content in domain directories is included only when that domain is in the active
 ```
 
 Domain directories mirror the root structure:
+
 - `domains/{name}/rules/` - Domain-specific rules
 - `domains/{name}/context/` - Domain-specific documentation
 - `domains/{name}/skills/` - Domain-specific AI skills
@@ -596,6 +608,7 @@ Your content here. Can include any markdown formatting.
 ### Frontmatter Fields
 
 **`priority`** (optional, string)
+
 - Values: `critical`, `high`, `medium`, `low`, `minimal`
 - Default: `medium`
 - Controls sort order in generated files (higher priority first)
@@ -607,6 +620,7 @@ priority: critical
 ```
 
 **`targets`** (optional, array of strings)
+
 - File glob patterns specifying which generated outputs include this content
 - If empty, included in all outputs
 
@@ -619,6 +633,7 @@ targets:
 ```
 
 **`effort`** (optional, string — agents only)
+
 - Values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`
 - Sets the reasoning effort for a Claude Code subagent in its generated `.claude/agents/<name>.md` frontmatter
 - Available levels depend on the model
@@ -634,6 +649,7 @@ effort: high
 ```
 
 **Custom fields** (optional)
+
 - Any other YAML fields are preserved and available in custom templates
 
 ```yaml
@@ -659,6 +675,7 @@ targets: ["CLAUDE.md"]
 # Code Reviewer Expert
 
 You are an expert code reviewer with deep knowledge of:
+
 - Code quality and maintainability
 - Testing best practices
 - Performance optimization
@@ -682,6 +699,7 @@ When generating with a profile, content is merged in this order:
 6. **Domain skills** (for each domain in profile)
 
 Within each category, files are sorted by:
+
 1. **Priority** (critical → high → medium → low → minimal)
 2. **Filename** (alphabetical)
 
@@ -689,7 +707,7 @@ Within each category, files are sorted by:
 
 If a filename appears in both root and domain:
 
-```
+```text
 .ai-rulez/rules/testing.md
 .ai-rulez/domains/backend/rules/testing.md
 ```
@@ -697,7 +715,8 @@ If a filename appears in both root and domain:
 The domain version takes precedence (backend gets the domain-specific version).
 
 A warning is logged if collisions are detected:
-```
+
+```text
 ⚠️  Content collision: rules/testing.md exists in both root and backend domain
     → Using backend domain version
 ```
@@ -717,7 +736,8 @@ gitignore = true
 ```
 
 Directory structure:
-```
+
+```text
 .ai-rulez/
 ├── config.toml
 ├── rules/
@@ -752,7 +772,8 @@ gitignore = true
 ```
 
 Directory structure:
-```
+
+```text
 .ai-rulez/
 ├── config.toml
 ├── rules/
@@ -857,7 +878,7 @@ production = ["production-guidelines", "security-hardened"]
 
 V4 configurations are validated against the JSON schema:
 
-```
+```text
 schema/ai-rules.schema.json
 ```
 
@@ -868,6 +889,7 @@ ai-rulez validate
 ```
 
 This checks:
+
 - `version` is `"4.0"` or `"3.0"` (for backward compatibility)
 - `name` is present and non-empty
 - All preset names are valid
@@ -886,12 +908,14 @@ V4 provides CRUD (Create, Read, Update, Delete) commands to programmatically mod
 ### Manual File Editing vs CRUD Commands
 
 **Manual file editing:**
+
 - Direct control over content
 - Use any text editor
 - Better for complex content
 - Version control friendly
 
 **CRUD commands:**
+
 - Automated directory structure creation
 - Frontmatter generation
 - Validation built-in
@@ -902,7 +926,7 @@ V4 provides CRUD (Create, Read, Update, Delete) commands to programmatically mod
 
 When you create a domain with `ai-rulez domain add`, the following structure is automatically created:
 
-```
+```text
 .ai-rulez/domains/my-domain/
 ├── rules/           # Domain-specific rules
 ├── context/         # Domain-specific documentation
@@ -914,6 +938,7 @@ This mirrors the root structure and allows you to organize content by ownership.
 ### CRUD Command Categories
 
 **Domain Management:**
+
 ```bash
 ai-rulez domain add <name>           # Create a domain
 ai-rulez domain remove <name>        # Delete a domain
@@ -921,6 +946,7 @@ ai-rulez domain list                 # List all domains
 ```
 
 **Content Management:**
+
 ```bash
 # Add content to root or domain
 ai-rulez add rule <name>             # Create a rule
@@ -939,6 +965,7 @@ ai-rulez list skills                 # List all skills
 ```
 
 **Include Management:**
+
 ```bash
 ai-rulez include add <name> <source> # Add an include source
 ai-rulez include remove <name>       # Remove an include
@@ -946,6 +973,7 @@ ai-rulez include list                # List all includes
 ```
 
 **Profile Management:**
+
 ```bash
 ai-rulez profile add <name> <domains>      # Create a profile
 ai-rulez profile remove <name>             # Delete a profile
@@ -1012,6 +1040,7 @@ git commit -m "chore: add backend domain with database standards"
 ### Domain Names
 
 Use names that indicate ownership or responsibility:
+
 - `backend`, `frontend`, `mobile` (service boundaries)
 - `api`, `database`, `queue` (technical components)
 - `auth`, `payments`, `search` (feature areas)
@@ -1021,6 +1050,7 @@ Avoid: `team1`, `team2`, single letters, overly broad names
 ### Organizing Content
 
 Put content in the domain that owns it. Example:
+
 - `domains/backend/rules/database-standards.md`
 - `domains/frontend/rules/accessibility.md`
 
@@ -1086,6 +1116,7 @@ myprofile = ["frontend", "qa"] # backend is missing!
 ### Content not appearing in output
 
 1. Verify domain is in profile:
+
    ```bash
    ai-rulez validate  # Check profile definitions
    ```
@@ -1099,6 +1130,7 @@ myprofile = ["frontend", "qa"] # backend is missing!
    - Remove frontmatter to test
 
 4. Regenerate explicitly:
+
    ```bash
    ai-rulez generate --profile your-profile
    ```

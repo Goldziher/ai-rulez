@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Use `#[rustler::nif]` for Elixir NIF functions. Use `#[module = "Elixir.ModuleName"]` for module naming.
 - Return tagged tuples: `{:ok, value}` / `{:error, reason}`. Use Rustler encoders/decoders for type mapping.
 - Use `rustler::Error` for NIF error handling. Map Rust errors to descriptive Elixir error tuples.

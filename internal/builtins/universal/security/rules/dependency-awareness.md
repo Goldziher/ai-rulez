@@ -1,7 +1,9 @@
 ---
 priority: high
 ---
+
 Audit dependencies before adding them. Prefer well-maintained, widely-used packages with active maintenance. Pin versions and commit lock files. Use language-specific audit tools in CI:
+
 - Rust: `cargo audit`, `cargo deny` (license + advisory policies)
 - Python: `pip-audit`, `bandit` (SAST)
 - JavaScript/TypeScript: `npm audit`, `pnpm audit`

@@ -106,6 +106,7 @@ The schema files are available in the repository:
 | `schema/ai-rules-mcp.schema.json` | JSON Schema | V4 | Schema for MCP server configurations |
 
 Access them at:
+
 - Main schema: `https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json`
 - MCP schema: `https://github.com/Goldziher/ai-rulez/schema/ai-rules-mcp.schema.json`
 

@@ -19,6 +19,7 @@ func TestIsValid(t *testing.T) {
 		{"valid language", "rust", true},
 		{"valid binding", "pyo3", true},
 		{"valid with exclusion prefix", "!ai-governance", true},
+		{"valid polyglot bindings", "polyglot-bindings", true},
 		{"invalid name", "nonexistent", false},
 		{"empty string", "", false},
 		{"valid default-commands", "default-commands", true},
@@ -200,5 +201,25 @@ func TestLoadDomainContent(t *testing.T) {
 			}
 		}
 		assert.Equal(t, 2, commandCount)
+	})
+
+	t.Run("loads polyglot-bindings domain", func(t *testing.T) {
+		t.Parallel()
+		entries, err := LoadDomainContent("polyglot-bindings")
+		require.NoError(t, err)
+		assert.Len(t, entries, 5) // 3 rules + 2 agents
+
+		ruleCount := 0
+		agentCount := 0
+		for _, e := range entries {
+			switch e.Type {
+			case "rules":
+				ruleCount++
+			case "agents":
+				agentCount++
+			}
+		}
+		assert.Equal(t, 3, ruleCount)
+		assert.Equal(t, 2, agentCount)
 	})
 }

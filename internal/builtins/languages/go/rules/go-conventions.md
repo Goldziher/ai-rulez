@@ -1,6 +1,7 @@
 ---
 priority: high
 ---
+
 - Follow Effective Go and Go Code Review Comments guidelines.
 - Handle every error return. Wrap errors with context: `fmt.Errorf("operation failed: %w", err)`.
 - Linting: `golangci-lint` with strict config (enable `govet`, `staticcheck`, `errcheck`, `gosec`, `gocritic`). Format with `gofmt`/`goimports`.

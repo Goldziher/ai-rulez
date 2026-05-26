@@ -9,6 +9,7 @@ V4 uses a file-based directory structure (`.ai-rulez/`) with TOML configuration.
 The simplest setup for a single team with basic rules.
 
 **`.ai-rulez/config.toml`:**
+
 ```toml
 version = "4.0"
 name = "My Project"
@@ -18,6 +19,7 @@ gitignore = true
 ```
 
 **`.ai-rulez/rules/code-quality.md`:**
+
 ```markdown
 ---
 priority: high
@@ -31,16 +33,19 @@ priority: high
 ```
 
 **`.ai-rulez/context/architecture.md`:**
+
 ```markdown
 # Architecture
 
 This is a monolithic application with:
+
 - PostgreSQL database
 - REST API backend
 - React frontend
 ```
 
 ### Generated Output
+
 ```bash
 ai-rulez generate
 # Creates:
@@ -55,6 +60,7 @@ ai-rulez generate
 For projects with multiple teams, use domains to organize team-specific content.
 
 **`.ai-rulez/config.toml`:**
+
 ```toml
 version = "4.0"
 name = "Platform"
@@ -71,6 +77,7 @@ qa = ["qa"]
 ```
 
 **`.ai-rulez/rules/security.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -84,6 +91,7 @@ priority: critical
 ```
 
 **`.ai-rulez/domains/backend/rules/database.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -97,6 +105,7 @@ priority: critical
 ```
 
 **`.ai-rulez/domains/frontend/rules/components.md`:**
+
 ```markdown
 ---
 priority: high
@@ -110,6 +119,7 @@ priority: high
 ```
 
 ### Generated Output
+
 ```bash
 # Generate for backend team
 ai-rulez generate --profile backend
@@ -131,6 +141,7 @@ ai-rulez generate --profile qa
 Create AI skill definitions for specialized tasks.
 
 **`.ai-rulez/skills/code-reviewer/SKILL.md`:**
+
 ```markdown
 ---
 priority: high
@@ -140,6 +151,7 @@ description: "Code reviewer for quality assurance"
 # Code Reviewer
 
 You are an expert code reviewer with deep knowledge of:
+
 - Code quality and maintainability
 - Testing best practices
 - Performance optimization
@@ -152,6 +164,7 @@ You are an expert code reviewer with deep knowledge of:
 ```
 
 **`.ai-rulez/skills/architecture-expert/SKILL.md`:**
+
 ```markdown
 ---
 priority: high
@@ -161,6 +174,7 @@ description: "System architecture specialist"
 # Architecture Expert
 
 You are a system architect specializing in:
+
 - Microservices design
 - Scalability patterns
 - System reliability
@@ -176,7 +190,7 @@ You are a system architect specializing in:
 
 The generated CLAUDE.md will include instructions like:
 
-```
+```text
 Use the @code-reviewer skill for pull request reviews.
 Use the @architecture-expert skill for design questions.
 ```
@@ -188,6 +202,7 @@ Use the @architecture-expert skill for design questions.
 For projects that need different output formats for different tools.
 
 **`.ai-rulez/config.toml`:**
+
 ```toml
 version = "4.0"
 name = "ML Research Platform"
@@ -209,6 +224,7 @@ infrastructure = ["infrastructure"]
 ```
 
 **`.ai-rulez/domains/research/rules/ml-standards.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -223,6 +239,7 @@ targets: ["CLAUDE.md", "GEMINI.md"]
 ```
 
 **`.ai-rulez/domains/infrastructure/rules/deployment.md`:**
+
 ```markdown
 ---
 priority: high
@@ -243,6 +260,7 @@ targets: ["CLAUDE.md", ".cursor/rules/"]
 Markdown files can include YAML frontmatter with custom fields.
 
 **`.ai-rulez/rules/testing.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -267,6 +285,7 @@ All code changes must include corresponding unit tests.
 ## Integration Tests
 
 Test service interactions:
+
 - Database operations
 - API endpoints
 - External service calls
@@ -279,6 +298,7 @@ Test service interactions:
 For larger projects, reuse configurations across subdirectories.
 
 **`/.ai-rulez/config.yaml`** (Root config):
+
 ```yaml
 version: "3.0"
 name: "Platform"
@@ -294,6 +314,7 @@ profiles:
 ```
 
 **`/backend/.ai-rulez/config.toml`** (Backend-specific):
+
 ```toml
 version = "4.0"
 name = "Backend Service"
@@ -306,6 +327,7 @@ backend = ["api", "database"]
 ```
 
 **`/backend/.ai-rulez/domains/api/rules/endpoints.md`:**
+
 ```markdown
 ---
 priority: high
@@ -319,6 +341,7 @@ priority: high
 ```
 
 ### Generation
+
 ```bash
 # From root, processes all .ai-rulez/ directories recursively
 ai-rulez generate --recursive
@@ -331,6 +354,7 @@ ai-rulez generate --recursive
 Use profiles for different deployment environments.
 
 **`.ai-rulez/config.toml`:**
+
 ```toml
 version = "4.0"
 name = "Web Application"
@@ -344,6 +368,7 @@ production = ["production-critical", "security-hardened", "compliance"]
 ```
 
 **`.ai-rulez/domains/dev-guidelines/rules/debugging.md`:**
+
 ```markdown
 ---
 priority: medium
@@ -357,6 +382,7 @@ priority: medium
 ```
 
 **`.ai-rulez/domains/production-critical/rules/reliability.md`:**
+
 ```markdown
 ---
 priority: critical
@@ -370,6 +396,7 @@ priority: critical
 ```
 
 ### Usage
+
 ```bash
 # Generate for development
 ai-rulez generate --profile development

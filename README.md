@@ -40,7 +40,7 @@ ai-rulez generates correct, tool-native output for **19 platforms**: Claude, Cur
 
 ## What Ships Out of the Box
 
-ai-rulez isn't just a config generator. It ships with **32 builtin domains** containing opinionated rules, agents, and workflows that establish a professional development baseline immediately.
+ai-rulez isn't just a config generator. It ships with **33 builtin domains** containing opinionated rules, agents, and workflows that establish a professional development baseline immediately.
 
 ### Builtin Rules (auto-included)
 
@@ -77,7 +77,7 @@ Enable these based on your stack:
 
 **Bindings** (10): `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
 
-**Operational**: `cicd`, `docker`, `observability`, `documentation`, `default-commands`
+**Operational**: `cicd`, `docker`, `observability`, `documentation`, `polyglot-bindings`, `default-commands`
 
 ```toml
 # .ai-rulez/config.toml
@@ -99,12 +99,14 @@ builtins = ["rust", "python", "pyo3", "cicd", "docker", "default-commands"]
 ai-rulez scales from solo projects to large organizations:
 
 **Domains** — Group content by feature, language, or team:
-```
+
+```text
 .ai-rulez/domains/backend/rules/
 .ai-rulez/domains/frontend/rules/
 ```
 
 **Profiles** — Generate different configs for different audiences:
+
 ```toml
 [profiles]
 backend = ["backend", "database"]
@@ -112,6 +114,7 @@ frontend = ["frontend", "ui"]
 ```
 
 **Remote Includes** — Share rules across repositories:
+
 ```toml
 [[includes]]
 name = "company-standards"
@@ -120,6 +123,7 @@ merge_strategy = "local-override"
 ```
 
 **Reasoning effort across providers** — Tune how hard each AI tool thinks:
+
 ```yaml
 # .ai-rulez/agents/security-reviewer.md
 ---
@@ -128,6 +132,7 @@ description: Reviews code for security regressions
 effort: high
 ---
 ```
+
 ```toml
 # .ai-rulez/config.toml
 [defaults]
@@ -137,7 +142,9 @@ effort = "medium"  # global default for every supported preset
 codex = "high"     # overrides the global default for Codex
 claude = "xhigh"   # …and for Claude
 ```
+
 Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez emits the right field per preset:
+
 - **Claude** — `effort` in `.claude/agents/*.md` frontmatter (per-agent)
 - **Codex** — `model_reasoning_effort` in `.codex/config.toml` (global)
 - **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
@@ -146,6 +153,7 @@ Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez em
 Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
 
 **Installed Skills** — Pull reusable skills from external repos:
+
 ```toml
 [[installed_skills]]
 name = "kreuzberg"
@@ -173,6 +181,7 @@ No install needed — `npx ai-rulez@latest <command>` works out of the box. Pick
 ```bash
 brew install goldziher/tap/ai-rulez
 ```
+
 </details>
 
 <details>
@@ -181,6 +190,7 @@ brew install goldziher/tap/ai-rulez
 ```bash
 npx ai-rulez@latest <command>
 ```
+
 </details>
 
 <details>
@@ -189,6 +199,7 @@ npx ai-rulez@latest <command>
 ```bash
 npm install -g ai-rulez
 ```
+
 </details>
 
 <details>
@@ -197,6 +208,7 @@ npm install -g ai-rulez
 ```bash
 uvx ai-rulez <command>
 ```
+
 </details>
 
 <details>
@@ -205,6 +217,7 @@ uvx ai-rulez <command>
 ```bash
 uv tool install ai-rulez
 ```
+
 </details>
 
 <details>
@@ -215,6 +228,7 @@ pip install ai-rulez
 # or, isolated:
 pipx install ai-rulez
 ```
+
 </details>
 
 <details>

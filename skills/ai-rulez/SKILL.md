@@ -58,7 +58,7 @@ ai-rulez validate
 
 ## Configuration Structure
 
-```
+```text
 .ai-rulez/
   config.toml          # Main configuration
   rules/               # Governance rules (.md files with frontmatter)
@@ -158,6 +158,7 @@ Resolution order (per preset, per agent): per-agent `effort` →
 `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit.
 
 Per-preset support:
+
 - **Claude**: per-agent in `.claude/agents/*.md` (full vocabulary, including `max` and `inherit`)
 - **Codex**: global in `.codex/config.toml` (`max` → `high`; `inherit` dropped)
 - **Amp**: global in `.amp/settings.json` (`xhigh` → `high`)

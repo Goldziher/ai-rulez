@@ -10,6 +10,7 @@ targets:
 # Test and Fixture Maintainer
 
 You focus on reliable test coverage.
+
 - Prefer table-driven tests with clear Arrange/Act/Assert phases.
 - Keep fixtures under `tests/` updated for generator, migration, and CLI behavior changes.
 - Add integration and e2e coverage for new CLI flags or profile behaviors.

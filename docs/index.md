@@ -9,6 +9,7 @@ Write your AI instructions once in a single configuration and generate tool-spec
 ### Directory-Based Configuration
 
 Your configuration lives in `.ai-rulez/` with organized subdirectories:
+
 - **rules/**: Mandatory constraints and standards
 - **context/**: Reference documentation and architecture
 - **skills/**: Specialized AI prompts for specific roles
@@ -18,6 +19,7 @@ Your configuration lives in `.ai-rulez/` with organized subdirectories:
 ### Presets
 
 Presets define how content is formatted and where it's output for different tools. Built-in presets include:
+
 - `claude` → generates `CLAUDE.md`
 - `cursor` → generates `.cursor/rules/`
 - `gemini` → generates `GEMINI.md`
@@ -39,11 +41,13 @@ frontend = ["frontend", "qa"]
 ## Quick Navigation
 
 ### Getting Started
+
 - **[Installation Guide](installation.md)**: Install AI-Rulez and get started
 - **[Getting Started Guide](quick-start.md)**: 5-minute quick start
 - **[Configuration Reference](configuration.md)**: Complete guide to all config options
 
 ### Using AI-Rulez
+
 - **[CLI Reference](cli.md)**: All commands and flags
 - **[Includes System](includes.md)**: Reusing configurations across projects
 - **[Installed Skills](installed-skills.md)**: Installing skills from external repositories
@@ -51,6 +55,7 @@ frontend = ["frontend", "qa"]
 - **[Custom Presets](profiles.md)**: Creating custom output formats
 
 ### Advanced Topics
+
 - **[MCP Server](mcp-server.md)**: Exposing configuration to AI assistants
 - **[Examples](examples.md)**: Real-world configuration examples
 - **[Schema Reference](schema.md)**: JSON schema details
@@ -59,6 +64,7 @@ frontend = ["frontend", "qa"]
 ## Typical Workflow
 
 1. **Initialize** your project:
+
    ```bash
    ai-rulez init "my-project"
    ```
@@ -69,11 +75,13 @@ frontend = ["frontend", "qa"]
    - Create skills in `skills/`
 
 3. **Generate outputs**:
+
    ```bash
    ai-rulez generate
    ```
 
 4. **Commit** the results:
+
    ```bash
    git add .ai-rulez/ CLAUDE.md .cursor/ GEMINI.md
    git commit -m "docs: update AI assistant guidelines"
@@ -96,7 +104,7 @@ frontend = ["frontend", "qa"]
 
 After initialization, your project looks like:
 
-```
+```text
 project-root/
 ├── .ai-rulez/
 │   ├── config.toml           # Main configuration
