@@ -66,11 +66,16 @@ command = "npx"
 args = ["-y", "ai-rulez@latest", "mcp"]
 
 [[mcp_servers]]
-name = "github"
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-github"]
-env = { GITHUB_TOKEN = "your-github-token" }
+name = "grafana"
+command = "uvx"
+args = ["mcp-grafana"]
+env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }
 ```
+
+MCP env values may contain `${VAR}` placeholders. `ai-rulez generate` resolves them from repeated
+`--env KEY=VALUE` flags, process environment variables, then `.env` in the project root. Use
+`--env-file PATH` to load explicit dotenv files. Generation fails if a placeholder cannot be
+resolved or if a generated MCP config containing secret values is not gitignored.
 
 ---
 

@@ -58,14 +58,14 @@ func init() {
 	ListCmd.AddCommand(listSkillsCmd)
 
 	// Common flags
-	listRulesCmd.Flags().StringVar(&listDomain, "domain", "", "Filter by domain (shows all if not specified)")
-	listRulesCmd.Flags().BoolVar(&listJSON, "json", false, "Output as JSON")
+	listRulesCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+	listRulesCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 
-	listContextCmd.Flags().StringVar(&listDomain, "domain", "", "Filter by domain (shows all if not specified)")
-	listContextCmd.Flags().BoolVar(&listJSON, "json", false, "Output as JSON")
+	listContextCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+	listContextCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 
-	listSkillsCmd.Flags().StringVar(&listDomain, "domain", "", "Filter by domain (shows all if not specified)")
-	listSkillsCmd.Flags().BoolVar(&listJSON, "json", false, "Output as JSON")
+	listSkillsCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+	listSkillsCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 }
 
 func runListRules(cmd *cobra.Command, args []string) {

@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -28,6 +29,8 @@ var (
 	noFetch         bool
 	profile         string
 	configDir       string
+	mcpEnv          []string
+	mcpEnvFiles     []string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -42,14 +45,23 @@ Cursor, Windsurf, etc. based on your configuration.`,
 }
 
 func init() {
-	GenerateCmd.Flags().BoolVar(&dryRun, "dry-run", false, "Show what would be generated without writing files")
-	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Update .gitignore files to include generated output files")
+	GenerateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be generated without writing files")
+	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
+	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Deprecated alias for --gitignore")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
-	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "no-configure-cli-mcp", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
-	GenerateCmd.Flags().BoolVar(&skipCLIMCP, "skip-cli-mcp", false, "Skip configuring CLI-based MCP tools (alias)")
-	GenerateCmd.Flags().StringVar(&profile, "profile", "", "Profile to generate (default: from config or 'default')")
-	GenerateCmd.Flags().BoolVar(&noFetch, "no-fetch", false, "Skip fetching remote includes, use cached content only")
-	GenerateCmd.Flags().StringVar(&configDir, "config-dir", "", "Configuration directory name (default: .ai-rulez)")
+	GenerateCmd.Flags().BoolVarP(&skipCLIMCP, "no-configure-cli-mcp", "M", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
+	GenerateCmd.Flags().BoolVarP(&skipCLIMCP, "skip-cli-mcp", "S", false, "Skip configuring CLI-based MCP tools (alias)")
+	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate (default: from config or 'default')")
+	GenerateCmd.Flags().BoolVarP(&noFetch, "no-fetch", "f", false, "Skip fetching remote includes, use cached content only")
+	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
+	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
+	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
+		logger.Debug("Failed to mark update-gitignore as deprecated", "error", err)
+	}
+	if err := GenerateCmd.Flags().MarkHidden("update-gitignore"); err != nil {
+		logger.Debug("Failed to hide update-gitignore flag", "error", err)
+	}
 }
 
 func runGenerate(cmd *cobra.Command, args []string) {
@@ -84,11 +96,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
 	}
 
-	// Honor --update-gitignore: force-enable gitignore update regardless of config
-	if updateGitignore {
-		enabled := true
-		cfg.Gitignore = &enabled
-	}
+	applyGenerateOverrides(cfg)
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
@@ -311,11 +319,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 		return 0
 	}
 
-	// Honor --update-gitignore: force-enable gitignore update regardless of config
-	if updateGitignore {
-		enabled := true
-		cfg.Gitignore = &enabled
-	}
+	applyGenerateOverrides(cfg)
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
@@ -343,6 +347,33 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 
 	// Count generated files (estimate based on presets)
 	return len(cfg.Presets) * 3 // Rough estimate
+}
+
+func applyGenerateOverrides(cfg *config.Config) {
+	if updateGitignore {
+		enabled := true
+		cfg.Gitignore = &enabled
+	}
+	if len(mcpEnv) > 0 {
+		cfg.MCPEnvOverrides = parseMCPEnvOverrides(mcpEnv)
+	}
+	if len(mcpEnvFiles) > 0 {
+		cfg.MCPEnvFiles = append([]string(nil), mcpEnvFiles...)
+	}
+}
+
+func parseMCPEnvOverrides(values []string) map[string]string {
+	out := make(map[string]string, len(values))
+	for _, value := range values {
+		key, val, ok := strings.Cut(value, "=")
+		key = strings.TrimSpace(key)
+		if !ok || key == "" {
+			logger.Error("Invalid --env value; expected KEY=VALUE", "value", value)
+			os.Exit(1)
+		}
+		out[key] = val
+	}
+	return out
 }
 
 func fmtError(err error) {

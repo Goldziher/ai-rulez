@@ -26,12 +26,12 @@ type Config struct {
 	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
 
 	// Runtime fields (populated during load)
-	BaseDir       string                `yaml:"-" json:"-"`
-	ConfigDir     string                `yaml:"-" json:"-"`
-	ConfigDirName string                `yaml:"-" json:"-"`
-	ConfigFile    string                `yaml:"-" json:"-"` // Actual config filename (e.g. "config.toml")
-	Content       *ContentTree          `yaml:"-" json:"-"`
-	MCPServers    map[string]*MCPServer `yaml:"-" json:"-"`
+	BaseDir       string                `yaml:"-" json:"-" toml:"-"`
+	ConfigDir     string                `yaml:"-" json:"-" toml:"-"`
+	ConfigDirName string                `yaml:"-" json:"-" toml:"-"`
+	ConfigFile    string                `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
+	Content       *ContentTree          `yaml:"-" json:"-" toml:"-"`
+	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 
 	// SourceHash is a blake3 hash over all sources that contribute to generated
@@ -39,7 +39,15 @@ type Config struct {
 	// and the generator schema version). Computed once per generation and embedded
 	// in every output file's header so that subsequent runs can detect "nothing
 	// changed in sources" without re-rendering. Format: "blake3:<hex>".
-	SourceHash string `yaml:"-" json:"-"`
+	SourceHash string `yaml:"-" json:"-" toml:"-"`
+
+	// MCPEnvOverrides are generation-time KEY=VALUE overrides used to resolve
+	// MCP env placeholders. They are intentionally not serialized.
+	MCPEnvOverrides map[string]string `yaml:"-" json:"-" toml:"-"`
+
+	// MCPEnvFiles are generation-time dotenv files used to resolve MCP env
+	// placeholders. Empty means "load .env from BaseDir when present".
+	MCPEnvFiles []string `yaml:"-" json:"-" toml:"-"`
 }
 
 // ScopeConfig configures an additional scoped output root for directory-aware
@@ -309,6 +317,10 @@ type MCPServer struct {
 	Transport   string            `yaml:"transport,omitempty" json:"transport,omitempty" toml:"transport,omitempty"`
 	URL         string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
 	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+
+	// SecretEnvKeys records env keys whose generated values should be treated as
+	// sensitive. It is populated during generation and never serialized.
+	SecretEnvKeys []string `yaml:"-" json:"-" toml:"-"`
 }
 
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)

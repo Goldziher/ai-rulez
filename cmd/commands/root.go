@@ -14,7 +14,7 @@ import (
 var (
 	cfgFile  string
 	gitToken string
-	Version  = "4.2.2"
+	Version  = "4.3.0"
 )
 
 var RootCmd = &cobra.Command{
@@ -39,11 +39,11 @@ func Execute() error {
 func init() {
 	cobra.OnInitialize(initConfig)
 
-	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is to auto-discover)")
-	RootCmd.PersistentFlags().Bool("verbose", false, "enable verbose output")
-	RootCmd.PersistentFlags().Bool("debug", false, "enable debug output")
+	RootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "C", "", "config file (default is to auto-discover)")
+	RootCmd.PersistentFlags().BoolP("verbose", "V", false, "enable verbose output")
+	RootCmd.PersistentFlags().BoolP("debug", "D", false, "enable debug output")
 	RootCmd.PersistentFlags().BoolP("quiet", "q", false, "suppress progress bars and non-essential output")
-	RootCmd.PersistentFlags().StringVar(&gitToken, "token", "", "Git access token for private repositories (or use AI_RULEZ_GIT_TOKEN env var)")
+	RootCmd.PersistentFlags().StringVarP(&gitToken, "token", "T", "", "Git access token for private repositories (or use AI_RULEZ_GIT_TOKEN env var)")
 
 	if err := viper.BindPFlag("verbose", RootCmd.PersistentFlags().Lookup("verbose")); err != nil {
 		logger.Debug("Failed to bind verbose flag", "error", err)
