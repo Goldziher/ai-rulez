@@ -34,7 +34,7 @@ func HashContent(content string) string {
 // header layout changes, fixed bugs in serialization). Bumping invalidates all
 // stored Source-Hash values, forcing one round of regeneration before the skip
 // mechanism can re-engage.
-const GeneratorSchemaVersion = "v1"
+const GeneratorSchemaVersion = "v2"
 
 type commentStyle int
 
@@ -95,7 +95,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"",
 		".AI-RULEZ FOLDER ORGANIZATION",
 		"Root content (always included):",
-		"  .ai-rulez/config.yaml    Main configuration (presets, profiles)",
+		"  .ai-rulez/config.toml    Main configuration (presets, profiles)",
 		"  .ai-rulez/rules/         Mandatory rules for AI assistants",
 		"  .ai-rulez/context/       Reference documentation",
 		"  .ai-rulez/skills/        Specialized AI prompts",
@@ -106,7 +106,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"  .ai-rulez/domains/{name}/context/  Domain-specific documentation",
 		"  .ai-rulez/domains/{name}/skills/   Domain-specific AI prompts",
 		"",
-		"Profiles in config.yaml control which domains are included.",
+		"Profiles in config.toml control which domains are included.",
 		"",
 		"INSTRUCTIONS FOR AI AGENTS",
 		"1. NEVER edit this file ("+outputPath+") - it is auto-generated",
@@ -114,7 +114,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 		"2. ALWAYS edit files in .ai-rulez/ instead:",
 		"   - Add/modify rules: .ai-rulez/rules/*.md",
 		"   - Add/modify context: .ai-rulez/context/*.md",
-		"   - Update config: .ai-rulez/config.yaml",
+		"   - Update config: .ai-rulez/config.toml",
 		"   - Domain-specific: .ai-rulez/domains/{name}/rules/*.md",
 		"",
 		"3. PREFER using the MCP Server (if available):",
@@ -146,12 +146,12 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/",
 		"",
 		"STRUCTURE:",
-		"  .ai-rulez/config.yaml, rules/, context/, skills/, agents/ (root)",
+		"  .ai-rulez/config.toml, rules/, context/, skills/, agents/ (root)",
 		"  .ai-rulez/domains/{name}/ (profile-specific)",
 		"",
 		"AI AGENT INSTRUCTIONS:",
 		"✗ NEVER edit "+outputPath+" (auto-generated)",
-		"✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.yaml",
+		"✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.toml",
 		"✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)",
 		"✓ REGENERATE: ai-rulez generate",
 		"✓ COMMIT: both .ai-rulez/ and generated files",
@@ -183,7 +183,7 @@ func buildMinimalHeader(configPath, outputPath, timestamp string, data *Template
 func buildHeaderLines(data *TemplateData) []string {
 	configPath := strings.TrimSpace(data.ConfigFile)
 	if configPath == "" {
-		configPath = "config.yaml"
+		configPath = "config.toml"
 	}
 
 	outputPath := strings.TrimSpace(data.OutputFile)

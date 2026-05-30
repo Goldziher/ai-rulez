@@ -1,6 +1,6 @@
 # Enabling the MCP Server
 
-The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `.ai-rulez/` configuration. Since V4 uses a file-based approach with inline MCP configuration, you define servers directly in `config.toml`, and the MCP server provides read-only access for AI assistants to generate outputs and validate your configuration.
+The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to programmatically and safely interact with your `.ai-rulez/` configuration. Since V4 uses a file-based approach with inline MCP configuration, you define servers directly in `config.toml`, and the MCP server provides read, CRUD, validation, and generation tools for AI assistants.
 
 **You do not need to start the server manually.** Your AI assistant will start it automatically based on the configuration you provide.
 
@@ -73,9 +73,18 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 ```
 
 MCP env values may contain `${VAR}` placeholders. `ai-rulez generate` resolves them from repeated
-`--env KEY=VALUE` flags, process environment variables, then `.env` in the project root. Use
-`--env-file PATH` to load explicit dotenv files. Generation fails if a placeholder cannot be
-resolved or if a generated MCP config containing secret values is not gitignored.
+`--env KEY=VALUE` flags, process environment variables, then dotenv files. Placeholder names must
+match `[A-Za-z_][A-Za-z0-9_]*`. By default, `.env` is loaded from the generation base directory. If
+any `--env-file PATH` flags are supplied, the default `.env` is not loaded; multiple files are merged
+in flag order, with later files winning. Generation fails if a placeholder cannot be resolved.
+
+Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
+key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation fails before writing
+unless `.mcp.json`, `.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`, or a
+scoped variant is gitignored or covered by planned `--gitignore` patterns. Secret-bearing values are
+redacted before source-hash calculation, not from generated MCP config files.
+
+Set `enabled = false` on an inline `[[mcp_servers]]` entry to skip it in generated MCP outputs.
 
 ---
 
@@ -104,7 +113,7 @@ This approach ensures your configuration remains auditable and version-controlle
 1. **Edit files** directly in `.ai-rulez/`:
 
    ```bash
-   # Edit rules, context, skills, or config.yaml
+   # Edit rules, context, skills, or config.toml
    vim .ai-rulez/rules/code-quality.md
    ```
 
@@ -135,9 +144,60 @@ The server provides Claude with access to read and modify your configuration, wh
 
 ---
 
-## MCP CRUD Tools Reference
+## MCP Tools Reference
 
-The ai-rulez MCP server exposes 22 CRUD tools for programmatic configuration management. These tools allow AI assistants to create, read, update, and delete configuration elements.
+The ai-rulez MCP server exposes 35 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
+
+### Project and Utility Tools
+
+#### `generate_outputs`
+
+Generate output files from the current configuration.
+
+**Parameters:**
+
+- `config_file` (optional, string): Path to the root configuration file
+- `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
+- `dry_run` (optional, boolean): Preview changes without writing files
+- `recursive` (optional, boolean): Generate for all subdirectories containing `.ai-rulez/`
+- `working_directory` (optional, string): Directory to operate in
+
+#### `validate_config`
+
+Validate the configuration file, including all includes.
+
+**Parameters:**
+
+- `config_file` (optional, string): Path to the root configuration file
+- `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
+- `working_directory` (optional, string): Directory to operate in
+
+#### `init_project`
+
+Initialize a new ai-rulez project in the current directory.
+
+**Parameters:**
+
+- `project_name` (optional, string): Project name
+- `providers` (optional, array): Providers to enable, such as `claude` or `cursor`
+- `with_agents` (optional, boolean): Include sample agent configurations
+- `all_providers` (optional, boolean): Enable all supported providers
+- `popular_providers` (optional, boolean): Enable the curated popular provider set
+- `working_directory` (optional, string): Directory to operate in
+
+#### `get_version`
+
+Return the ai-rulez version.
+
+**Parameters:** (none)
+
+#### `show_builtin`
+
+Show the full content of a builtin domain.
+
+**Parameters:**
+
+- `name` (required, string): Builtin domain name, such as `security`, `rust`, or `typescript`
 
 ### Domain Tools
 
@@ -253,6 +313,16 @@ Update an existing rule file.
 
 **Response:** Same as create_rule
 
+#### `read_rule`
+
+Read a rule file.
+
+**Parameters:**
+
+- `name` (required, string): Rule filename without .md extension
+- `domain` (optional, string): Domain name
+- `working_directory` (optional, string): Directory to operate in
+
 #### `delete_rule`
 
 Delete a rule file.
@@ -325,6 +395,16 @@ Update an existing context file.
 
 **Response:** Similar to create_rule
 
+#### `read_context`
+
+Read a context file.
+
+**Parameters:**
+
+- `name` (required, string): Context filename without .md extension
+- `domain` (optional, string): Domain name
+- `working_directory` (optional, string): Directory to operate in
+
 #### `delete_context`
 
 Delete a context file.
@@ -369,6 +449,16 @@ Update an existing skill file.
 **Parameters:** Same as create_skill, with content as required
 
 **Response:** Similar to create_rule
+
+#### `read_skill`
+
+Read a skill file.
+
+**Parameters:**
+
+- `name` (required, string): Skill filename without .md extension
+- `domain` (optional, string): Domain name
+- `working_directory` (optional, string): Directory to operate in
 
 #### `delete_skill`
 
@@ -531,6 +621,30 @@ List all installed skills.
   "count": 1
 }
 ```
+
+### Config Tools
+
+#### `read_config`
+
+Read the current project configuration as structured JSON.
+
+**Parameters:**
+
+- `working_directory` (optional, string): Directory to operate in
+
+#### `update_config`
+
+Update supported project configuration fields.
+
+**Parameters:**
+
+- `name` (optional, string): Project name
+- `description` (optional, string): Project description
+- `builtins` (optional, array): Builtin names to enable
+- `gitignore` (optional, boolean): Whether generation updates `.gitignore`
+- `default_effort` (optional, string): Default reasoning effort
+- `default_effort_by_preset` (optional, object): Per-preset reasoning effort overrides
+- `working_directory` (optional, string): Directory to operate in
 
 ### Profile Tools
 

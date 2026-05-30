@@ -1,6 +1,6 @@
 ---
 priority: high
-summary: High-level overview of V3 config, profiles, presets, includes, and typical AI-Rulez workflows.
+summary: High-level overview of V4 config, profiles, presets, includes, and typical AI-Rulez workflows.
 targets:
   - CLAUDE.md
   - GEMINI.md
@@ -16,11 +16,11 @@ for Claude, Cursor, Windsurf, Copilot, Gemini, and other presets.
 
 Key concepts:
 
-- V3 config lives in `.ai-rulez/config.yaml` plus `rules/`, `context/`, `skills/`, and `agents/`.
+- V4 config lives in `.ai-rulez/config.toml` plus `rules/`, `context/`, `skills/`, and `agents/`.
 - Profiles select which domains under `.ai-rulez/domains/` are included in a generation.
 - Presets define output formats and paths; `ai-rulez generate` renders all configured presets.
 - Includes let you merge shared rule sets into local content before generation.
-- MCP server settings live in `.ai-rulez/mcp.yaml` and can be generated alongside presets.
+- MCP server settings live inline in `.ai-rulez/config.toml` as `[[mcp_servers]]` entries and can be generated alongside presets.
 
 Typical workflow:
 
@@ -30,4 +30,4 @@ Typical workflow:
 
 Migration:
 
-- V2 used a single `ai-rulez.yaml`; use `ai-rulez migrate v3` to convert to V3 directories when needed.
+- V2 used a single `ai-rulez.yaml`; use `ai-rulez migrate v4` to convert to V4 directory-based configuration when needed.

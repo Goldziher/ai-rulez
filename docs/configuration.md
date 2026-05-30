@@ -87,13 +87,18 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 
 ```toml
 presets = [
-  "claude",       # → CLAUDE.md
-  "cursor",       # → .cursorrules
-  "gemini",       # → GEMINI.md
+  "claude",       # → CLAUDE.md and .claude/
+  "cursor",       # → .cursor/rules/
+  "gemini",       # → GEMINI.md and .gemini/
   "copilot",      # → .github/copilot-instructions.md
-  "windsurf",     # → .windsurf/rules/
-  "continue-dev", # → .continue/config.py
-  "cline"         # → .clinerules/
+  "windsurf",     # → .windsurf/
+  "continue-dev", # → .continue/
+  "cline",        # → .clinerules/
+  "codex",        # → AGENTS.md and .codex/
+  "amp",          # → AMP.md and .amp/
+  "junie",        # → .junie/
+  "opencode",     # → OPENCODE.md and .opencode/
+  "antigravity"   # → .agents/
 ]
 ```
 
@@ -193,18 +198,29 @@ Each entry supports:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | Yes | Unique server identifier |
-| `command` | Yes | Command to run (npx, uvx, ai-rulez, etc.) |
-| `args` | No | Array of command arguments |
+| `description` | No | Human-readable description of the server |
+| `command` | No | Command to run for local `stdio` servers (npx, uvx, ai-rulez, etc.) |
+| `args` | No | Array of command arguments for local servers |
 | `env` | No | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
+| `transport` | No | `stdio`, `http`, or `sse`. Defaults to `stdio`. |
+| `url` | No | Remote MCP server URL for `http` or `sse` transports. |
+| `enabled` | No | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`. |
 
-MCP env placeholders are resolved during `ai-rulez generate` from `--env KEY=VALUE`, process
-environment variables, then `.env` in the project root. Use `--env-file PATH` to load one or more
-explicit dotenv files. Generation fails if a placeholder cannot be resolved.
+Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`.
+
+MCP env placeholders use `${VAR}` syntax, where `VAR` must match `[A-Za-z_][A-Za-z0-9_]*`. They are
+resolved during `ai-rulez generate` from repeated `--env KEY=VALUE` flags, process environment
+variables, then dotenv files. By default, `ai-rulez` loads `.env` from the generation base directory.
+If any `--env-file PATH` flags are supplied, the default `.env` is not loaded; files are merged in
+flag order, with later files winning. Generation fails if a placeholder cannot be resolved.
 
 Generated MCP config files contain resolved values. If any resolved MCP env value comes from a
 placeholder, or if an env key looks sensitive (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `CREDENTIAL`),
-generation fails unless the generated MCP config path is covered by `.gitignore` or by the patterns
-`ai-rulez` is about to add.
+generation fails before writing unless the generated MCP config path is covered by `.gitignore` or
+by the patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp.json`,
+`.claude/settings.json`, `.gemini/settings.json`, and `.agents/settings.json`, including scoped
+variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
+source-hash calculation, but generated MCP config files contain the actual resolved values.
 
 ### `plugins`
 

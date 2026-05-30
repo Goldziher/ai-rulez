@@ -7,9 +7,9 @@ targets:
   - GEMINI.md
 ---
 
-# Generation Pipeline (V3)
+# Generation Pipeline
 
-- `internal/config` loads `.ai-rulez/config.yaml`, scans content trees, and resolves includes.
+- `internal/config` loads `.ai-rulez/config.toml`, scans content trees, and resolves includes.
 - `internal/generator` selects profiles, collects MCP servers, and renders presets.
 - Preset generators live under `internal/generator/presets` and use templates from `internal/templates`.
 - Output writing updates `.gitignore` when `gitignore: true` is set in config.
