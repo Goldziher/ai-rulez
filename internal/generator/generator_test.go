@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1637,6 +1638,9 @@ func TestGenerator_writeOutput_RawContent_SkipsHeaderInjection(t *testing.T) {
 
 	t.Run("preserves explicit file mode", func(t *testing.T) {
 		t.Parallel()
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows does not preserve Unix file permission bits")
+		}
 		path := filepath.Join(tempDir, "exec", "run.sh")
 		require.NoError(t, gen.writeOutput(config.OutputFile{
 			Path:       path,
@@ -1650,6 +1654,9 @@ func TestGenerator_writeOutput_RawContent_SkipsHeaderInjection(t *testing.T) {
 
 	t.Run("zero mode falls back to 0o644", func(t *testing.T) {
 		t.Parallel()
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows does not preserve Unix file permission bits")
+		}
 		path := filepath.Join(tempDir, "default-mode", "x.md")
 		require.NoError(t, gen.writeOutput(config.OutputFile{
 			Path:       path,
@@ -1662,6 +1669,9 @@ func TestGenerator_writeOutput_RawContent_SkipsHeaderInjection(t *testing.T) {
 
 	t.Run("skips write when raw content and mode are unchanged", func(t *testing.T) {
 		t.Parallel()
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows reports synthetic permission bits that make mode-only comparisons unstable")
+		}
 		path := filepath.Join(tempDir, "idempotent", "x.bin")
 		require.NoError(t, gen.writeOutput(config.OutputFile{
 			Path: path, RawContent: []byte("payload"), Mode: 0o644,
@@ -1701,6 +1711,9 @@ func TestGenerator_writeOutput_RawContent_SkipsHeaderInjection(t *testing.T) {
 
 	t.Run("rewrites when only mode changes", func(t *testing.T) {
 		t.Parallel()
+		if runtime.GOOS == "windows" {
+			t.Skip("Windows does not preserve Unix file permission bits")
+		}
 		path := filepath.Join(tempDir, "changed-mode", "x.sh")
 		require.NoError(t, gen.writeOutput(config.OutputFile{
 			Path: path, RawContent: []byte("ok"), Mode: 0o644,
