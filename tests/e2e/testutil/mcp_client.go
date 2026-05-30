@@ -1,45 +1,26 @@
 package testutil
 
 import (
-	"bufio"
 	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os/exec"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/stretchr/testify/require"
 )
 
-// MCPClient is a minimal JSON-RPC 2.0 client for the MCP stdio transport,
-// used by the e2e tests. It is correctness-focused, not performance-focused:
-//
-//   - One persistent reader goroutine demuxes stdout into per-request
-//     channels keyed by JSON-RPC id, so notifications interleaved with
-//     responses (logging, server-initiated requests) cannot be misparsed
-//     as the response to an outstanding request.
-//   - Notifications (frames without an id) are silently discarded.
-//   - The reader's bufio.Scanner buffer is enlarged because the MCP
-//     `tools/list` response is a single line that can exceed 64 KiB.
+// MCPClient wraps the official Go MCP SDK client for process-based e2e tests.
+// This keeps the tests exercising the built CLI over stdio without duplicating
+// the SDK's JSON-RPC transport implementation in test code.
 type MCPClient struct {
-	cmd    *exec.Cmd
-	stdin  *bufio.Writer
-	ctx    context.Context
-	cancel context.CancelFunc
-	stderr *bytes.Buffer
-
-	writeMu sync.Mutex // serializes writes to stdin
-
-	pendingMu sync.Mutex
-	pending   map[string]chan *MCPResponse // id (as JSON string) -> response channel
-
-	readerDone chan struct{}
-	readerErr  error
+	session *sdkmcp.ClientSession
+	cancel  context.CancelFunc
+	stderr  *bytes.Buffer
 }
 
 type MCPResponse struct {
@@ -64,254 +45,150 @@ type MCPError struct {
 }
 
 const (
-	// mcpRequestTimeout is the per-RPC deadline. Generous because cold
-	// runs after a binary rebuild can take several seconds before the
-	// MCP server is ready to respond.
-	mcpRequestTimeout = 90 * time.Second
-
-	// mcpReaderBufferBytes is the maximum length of a single stdout line
-	// the reader will accept. The MCP `tools/list` response is one big
-	// JSON object on a single line; with the current 35+ tools it is
-	// already ~18 KiB, so we leave plenty of headroom.
-	mcpReaderBufferBytes = 1 << 20 // 1 MiB
+	mcpRequestTimeout  = 90 * time.Second
+	mcpTextContentType = "text"
 )
 
 func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 	t.Helper()
 
 	binaryPath := SetupTestBinary(t)
+	ctx, cancel := context.WithTimeout(context.Background(), mcpRequestTimeout)
 
-	ctx, cancel := context.WithCancel(context.Background())
-
-	//nolint:gosec // G204: Test utility needs to run MCP server with variable path
+	//nolint:gosec // G204: Test utility needs to run MCP server with variable path.
 	cmd := exec.CommandContext(ctx, binaryPath, "mcp")
 	cmd.Dir = workingDir
-
-	stdin, err := cmd.StdinPipe()
-	require.NoError(t, err, "Failed to create stdin pipe")
-
-	stdout, err := cmd.StdoutPipe()
-	require.NoError(t, err, "Failed to create stdout pipe")
-
 	stderr := &bytes.Buffer{}
 	cmd.Stderr = stderr
 
-	err = cmd.Start()
-	require.NoError(t, err, "Failed to start MCP server")
+	client := sdkmcp.NewClient(&sdkmcp.Implementation{
+		Name:    "ai-rulez-test-client",
+		Version: "1.0.0",
+	}, nil)
+	session, err := client.Connect(ctx, &sdkmcp.CommandTransport{
+		Command:           cmd,
+		TerminateDuration: 2 * time.Second,
+	}, nil)
+	require.NoError(t, err, "Failed to connect to MCP server; stderr=%q", stderr.String())
 
-	client := &MCPClient{
-		cmd:        cmd,
-		stdin:      bufio.NewWriter(stdin),
-		ctx:        ctx,
-		cancel:     cancel,
-		stderr:     stderr,
-		pending:    map[string]chan *MCPResponse{},
-		readerDone: make(chan struct{}),
+	return &MCPClient{
+		session: session,
+		cancel:  cancel,
+		stderr:  stderr,
 	}
-
-	go client.readLoop(stdout)
-
-	client.initialize(t)
-
-	return client
-}
-
-// readLoop is the single owner of stdout. It runs until stdout closes
-// (server exit) and routes responses to whichever sendRequest is
-// waiting on that id. Notifications (no id) are dropped.
-func (c *MCPClient) readLoop(stdout io.Reader) {
-	defer close(c.readerDone)
-	scanner := bufio.NewScanner(stdout)
-	scanner.Buffer(make([]byte, 64*1024), mcpReaderBufferBytes)
-
-	for scanner.Scan() {
-		line := scanner.Bytes()
-		var msg MCPResponse
-		if err := json.Unmarshal(line, &msg); err != nil {
-			// Malformed frame — record but keep reading; a subsequent
-			// well-formed response should still arrive for any caller.
-			c.readerErr = fmt.Errorf("decode mcp frame: %w (raw=%q)", err, string(line))
-			continue
-		}
-		if msg.ID == nil {
-			// Notification (e.g. notifications/message). Discard.
-			continue
-		}
-		key := jsonRPCIDKey(msg.ID)
-
-		c.pendingMu.Lock()
-		ch, ok := c.pending[key]
-		if ok {
-			delete(c.pending, key)
-		}
-		c.pendingMu.Unlock()
-
-		if !ok {
-			// Response for an unknown id (likely a request that already
-			// timed out). Drop it — no one is listening.
-			continue
-		}
-		ch <- &msg
-	}
-
-	if err := scanner.Err(); err != nil {
-		c.readerErr = err
-	}
-
-	// Stdout closed: fail any still-waiting requests so callers don't
-	// block forever on a dead server.
-	c.pendingMu.Lock()
-	for key, ch := range c.pending {
-		close(ch)
-		delete(c.pending, key)
-	}
-	c.pendingMu.Unlock()
-}
-
-// jsonRPCIDKey normalizes a decoded JSON-RPC id back to its on-the-wire
-// form so requests and responses key on the same string.
-//
-// JSON numbers come out of encoding/json as float64; rendering them with
-// %v would produce e.g. "1e+09" for large nanoseconds. Re-marshaling
-// guarantees identical formatting on both sides.
-func jsonRPCIDKey(id interface{}) string {
-	b, err := json.Marshal(id)
-	if err != nil {
-		return fmt.Sprintf("%v", id)
-	}
-	return string(b)
 }
 
 func (c *MCPClient) Close() {
+	if c.session != nil {
+		if err := c.session.Close(); err != nil && c.stderr != nil {
+			fmt.Fprintf(c.stderr, "\nclose: %v", err)
+		}
+	}
 	if c.cancel != nil {
 		c.cancel()
-	}
-	if c.cmd != nil && c.cmd.Process != nil {
-		//nolint:errcheck,gosec
-		c.cmd.Process.Kill()
-		//nolint:errcheck,gosec
-		c.cmd.Wait()
-	}
-	// Wait for reader to drain so its goroutine doesn't leak past test end.
-	select {
-	case <-c.readerDone:
-	case <-time.After(2 * time.Second):
 	}
 }
 
 func (c *MCPClient) CallTool(t *testing.T, toolName string, params map[string]interface{}) *MCPResponse {
 	t.Helper()
-	return c.sendRequest(t, "tools/call", map[string]interface{}{
-		"name":      toolName,
-		"arguments": params,
+
+	ctx, cancel := context.WithTimeout(context.Background(), mcpRequestTimeout)
+	defer cancel()
+
+	result, err := c.session.CallTool(ctx, &sdkmcp.CallToolParams{
+		Name:      toolName,
+		Arguments: params,
 	})
+	if err != nil {
+		return &MCPResponse{
+			Error: &MCPError{
+				Message: fmt.Sprintf("%v; stderr=%q", err, c.stderr.String()),
+			},
+		}
+	}
+
+	response := convertToolResult(result)
+	if result.IsError && response.Error == nil {
+		response.Error = &MCPError{Message: responseText(response)}
+	}
+	return response
 }
 
 func (c *MCPClient) ListTools(t *testing.T) *MCPResponse {
 	t.Helper()
-	return c.sendRequest(t, "tools/list", nil)
+
+	ctx, cancel := context.WithTimeout(context.Background(), mcpRequestTimeout)
+	defer cancel()
+
+	result, err := c.session.ListTools(ctx, nil)
+	if err != nil {
+		return &MCPResponse{Error: &MCPError{Message: fmt.Sprintf("%v; stderr=%q", err, c.stderr.String())}}
+	}
+
+	content, marshalErr := json.Marshal(result)
+	require.NoError(t, marshalErr, "Failed to marshal list tools result")
+	return &MCPResponse{
+		Result: &MCPResult{
+			Content: []MCPContent{{Type: mcpTextContentType, Text: string(content)}},
+		},
+	}
 }
 
 func (c *MCPClient) GetInfo(t *testing.T) *MCPResponse {
 	t.Helper()
-	return c.sendRequest(t, "initialize", map[string]interface{}{
-		"protocolVersion": "2024-11-05",
-		"capabilities":    map[string]interface{}{},
-		"clientInfo": map[string]interface{}{
-			"name":    "ai-rulez-test-client",
-			"version": "1.0.0",
+
+	result := c.session.InitializeResult()
+	content, err := json.Marshal(result)
+	require.NoError(t, err, "Failed to marshal initialize result")
+
+	return &MCPResponse{
+		Result: &MCPResult{
+			Content: []MCPContent{{Type: mcpTextContentType, Text: string(content)}},
 		},
-	})
+	}
 }
 
-func (c *MCPClient) initialize(t *testing.T) {
-	t.Helper()
-
-	response := c.GetInfo(t)
-	require.Nil(t, response.Error, "MCP initialization should succeed")
-
-	c.sendNotification(t, "notifications/initialized", nil)
-}
-
-// sendNotification fires-and-forgets a JSON-RPC notification (no id, no
-// response expected).
-func (c *MCPClient) sendNotification(t *testing.T, method string, params interface{}) {
-	t.Helper()
-	frame := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"method":  method,
-	}
-	if params != nil {
-		frame["params"] = params
-	}
-	data, err := json.Marshal(frame)
-	require.NoError(t, err)
-
-	c.writeMu.Lock()
-	defer c.writeMu.Unlock()
-	_, err = c.stdin.WriteString(string(data) + "\n")
-	require.NoError(t, err)
-	require.NoError(t, c.stdin.Flush())
-}
-
-// sendRequest registers a response channel for a fresh id, writes the
-// request, and waits for the matching response (or timeout / server exit).
-func (c *MCPClient) sendRequest(t *testing.T, method string, params interface{}) *MCPResponse {
-	t.Helper()
-
-	id := time.Now().UnixNano()
-	key := jsonRPCIDKey(id)
-	ch := make(chan *MCPResponse, 1)
-
-	c.pendingMu.Lock()
-	c.pending[key] = ch
-	c.pendingMu.Unlock()
-
-	frame := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      id,
-		"method":  method,
-	}
-	if params != nil {
-		frame["params"] = params
-	}
-	data, err := json.Marshal(frame)
-	require.NoError(t, err, "Failed to marshal request")
-
-	c.writeMu.Lock()
-	_, err = c.stdin.WriteString(string(data) + "\n")
-	if err == nil {
-		err = c.stdin.Flush()
-	}
-	c.writeMu.Unlock()
-	require.NoError(t, err, "Failed to write request")
-
-	select {
-	case response, ok := <-ch:
-		if !ok {
-			// Reader closed the channel without a response (server exited).
-			c.cleanupPending(key)
-			t.Fatalf("MCP server exited before responding to %s (reader err: %v)", method, c.readerErr)
-			return nil
-		}
+func convertToolResult(result *sdkmcp.CallToolResult) *MCPResponse {
+	response := &MCPResponse{Result: &MCPResult{}}
+	if result == nil {
 		return response
-	case <-time.After(mcpRequestTimeout):
-		c.cleanupPending(key)
-		stderr := ""
-		if c.stderr != nil {
-			stderr = c.stderr.String()
-		}
-		c.Close()
-		t.Fatalf("MCP request timed out after %s: method=%s stderr=%q readerErr=%v",
-			mcpRequestTimeout, method, stderr, c.readerErr)
-		return nil
 	}
+
+	response.Result.Content = make([]MCPContent, 0, len(result.Content))
+	for _, content := range result.Content {
+		switch typed := content.(type) {
+		case *sdkmcp.TextContent:
+			response.Result.Content = append(response.Result.Content, MCPContent{
+				Type: mcpTextContentType,
+				Text: typed.Text,
+			})
+		default:
+			data, err := content.MarshalJSON()
+			if err != nil {
+				response.Result.Content = append(response.Result.Content, MCPContent{
+					Type: mcpTextContentType,
+					Text: fmt.Sprintf("%v", content),
+				})
+				continue
+			}
+			response.Result.Content = append(response.Result.Content, MCPContent{
+				Type: mcpTextContentType,
+				Text: string(data),
+			})
+		}
+	}
+	return response
 }
 
-func (c *MCPClient) cleanupPending(key string) {
-	c.pendingMu.Lock()
-	delete(c.pending, key)
-	c.pendingMu.Unlock()
+func responseText(response *MCPResponse) string {
+	if response == nil || response.Result == nil {
+		return ""
+	}
+	parts := make([]string, 0, len(response.Result.Content))
+	for _, content := range response.Result.Content {
+		parts = append(parts, content.Text)
+	}
+	return strings.Join(parts, "\n")
 }
 
 func (r *MCPResponse) GetParsedResult(t *testing.T) map[string]interface{} {
@@ -377,30 +254,4 @@ func (r *MCPResponse) AssertToolError(t *testing.T, expectedMessage string) {
 		require.Contains(t, strings.ToLower(r.Error.Message), strings.ToLower(expectedMessage),
 			"Error message should contain expected text")
 	}
-}
-
-func (r *MCPResponse) GetResultString(t *testing.T, key string) string {
-	t.Helper()
-
-	r.AssertToolSuccess(t)
-
-	parsed, err := r.GetParsedContent()
-	require.NoError(t, err, "Failed to parse response content")
-
-	value, exists := parsed[key]
-	require.True(t, exists, "Result should contain key: %s", key)
-
-	str, ok := value.(string)
-	require.True(t, ok, "Value should be string: %+v", value)
-
-	return str
-}
-
-func (r *MCPResponse) GetTextContent(t *testing.T) string {
-	t.Helper()
-
-	require.NotNil(t, r.Result, "Response should have a result")
-	require.NotEmpty(t, r.Result.Content, "Result should have content")
-
-	return strings.TrimSpace(r.Result.Content[0].Text)
 }
