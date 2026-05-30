@@ -63,18 +63,18 @@ func init() {
 	AddCmd.AddCommand(addSkillCmd)
 
 	// Common flags for all add commands
-	addRuleCmd.Flags().StringVar(&addDomain, "domain", "", "Domain name (optional, uses root if not specified)")
-	addRuleCmd.Flags().StringVar(&addPriority, "priority", "medium", "Priority level: critical|high|medium|low")
-	addRuleCmd.Flags().StringVar(&addTargets, "targets", "", "Comma-separated list of target providers (e.g., claude,cursor)")
-	addRuleCmd.Flags().StringVar(&addContent, "content", "", "File content (uses template if not specified)")
+	addRuleCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
+	addRuleCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low")
+	addRuleCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated list of target providers (e.g., claude,cursor)")
+	addRuleCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 
-	addContextCmd.Flags().StringVar(&addDomain, "domain", "", "Domain name (optional, uses root if not specified)")
-	addContextCmd.Flags().StringVar(&addPriority, "priority", "medium", "Priority level: critical|high|medium|low")
-	addContextCmd.Flags().StringVar(&addContent, "content", "", "File content (uses template if not specified)")
+	addContextCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
+	addContextCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low")
+	addContextCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 
-	addSkillCmd.Flags().StringVar(&addDomain, "domain", "", "Domain name (optional, uses root if not specified)")
-	addSkillCmd.Flags().StringVar(&addDesc, "description", "", "Skill description")
-	addSkillCmd.Flags().StringVar(&addContent, "content", "", "File content (uses template if not specified)")
+	addSkillCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
+	addSkillCmd.Flags().StringVarP(&addDesc, "description", "s", "", "Skill description")
+	addSkillCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 }
 
 func runAddRule(cmd *cobra.Command, args []string) {

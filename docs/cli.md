@@ -747,17 +747,21 @@ ai-rulez generate [config-path] [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--profile` | string | (from config) | Profile to generate |
+| `--profile` / `-p` | string | (from config) | Profile to generate |
 
 **General Flags:**
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--dry-run` | boolean | false | Show what would be generated without writing files |
-| `--update-gitignore` | boolean | (from config) | Update `.gitignore` files with generated outputs |
+| `--dry-run` / `-d` | boolean | false | Show what would be generated without writing files |
+| `--gitignore` / `-i` | boolean | (from config) | Update `.gitignore` with generated output patterns |
+| `--update-gitignore` | boolean | (from config) | Deprecated alias for `--gitignore` |
 | `--recursive` / `-r` | boolean | false | Find and process configs recursively |
-| `--config-dir` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
-| `--token` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
+| `--no-fetch` / `-f` | boolean | false | Skip fetching remote includes and use cached content |
+| `--config-dir` / `-n` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
+| `--env` / `-e` | string | | MCP env override in `KEY=VALUE` form; repeatable |
+| `--env-file` / `-E` | string | `.env` | Dotenv file for MCP env placeholders; repeatable |
+| `--token` / `-T` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 
 **Examples:**
 
@@ -782,7 +786,13 @@ ai-rulez generate --dry-run --profile backend
 Generate and update .gitignore:
 
 ```bash
-ai-rulez generate --profile full --update-gitignore
+ai-rulez generate --profile full --gitignore
+```
+
+Generate MCP configs with secret env values:
+
+```bash
+ai-rulez generate --env GRAFANA_SERVICE_ACCOUNT_TOKEN="$GRAFANA_SERVICE_ACCOUNT_TOKEN"
 ```
 
 Generate recursively in monorepo:
@@ -985,12 +995,16 @@ These flags work with all commands:
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--config` | string | Config file path (auto-discovered if not specified) |
-| `--token` | string | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
-| `--verbose` | boolean | Enable verbose output |
-| `--debug` | boolean | Enable debug output |
+| `--config` / `-C` | string | Config file path (auto-discovered if not specified) |
+| `--token` / `-T` | string | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
+| `--verbose` / `-V` | boolean | Enable verbose output |
+| `--debug` / `-D` | boolean | Enable debug output |
 | `--quiet` / `-q` | boolean | Suppress progress bars and non-essential output |
 | `--help` / `-h` | boolean | Show help for a command |
+
+Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
+`--json -j`, `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
+and `--ref -r`.
 
 **Examples:**
 

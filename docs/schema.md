@@ -51,7 +51,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`presets`**: List of tool presets (e.g., `claude`, `cursor`, `gemini`)
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
-- **`gitignore`**: Whether to update .gitignore (default: true)
+- **`gitignore`**: Whether to update .gitignore with generated output patterns (default: true)
 - **`mcp_servers`**: Array of MCP server configurations
 - **`plugins`**: Array of plugin configurations
 - **`marketplaces`**: Array of marketplace integrations
@@ -64,6 +64,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`targets`** (in markdown frontmatter): File glob patterns (e.g., `CLAUDE.md`, `.cursor/rules/*`)
 - **`mcp_servers[].name`**: Unique identifier for each server
 - **`mcp_servers[].command`**: Command to execute (npx, uvx, ai-rulez, etc.)
+- **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
 
 ### File Structure
 

@@ -72,13 +72,13 @@ func init() {
 	ProfileCmd.AddCommand(profileListCmd)
 
 	// Add flags for profile add
-	profileAddCmd.Flags().BoolVar(&profileSetDefault, "set-default", false, "Set this profile as the default")
+	profileAddCmd.Flags().BoolVarP(&profileSetDefault, "set-default", "s", false, "Set this profile as the default")
 
 	// Add flags for profile remove
-	profileRemoveCmd.Flags().BoolVar(&profileForce, "force", false, "Skip confirmation prompts")
+	profileRemoveCmd.Flags().BoolVarP(&profileForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Add flags for profile list
-	profileListCmd.Flags().BoolVar(&profileJSON, "json", false, "Output as JSON")
+	profileListCmd.Flags().BoolVarP(&profileJSON, "json", "j", false, "Output as JSON")
 }
 
 func runProfileAdd(cmd *cobra.Command, args []string) {

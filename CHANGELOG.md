@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.3.0] - 2026-05-30
+
+### Added
+
+- Added `generate --gitignore` with `-i` shorthand; the old `--update-gitignore` flag remains as a deprecated compatibility alias.
+- Added collision-safe short flags across global, generate, CRUD, list, domain, profile, include, init, validate, and skill commands.
+- Added MCP environment placeholder resolution from repeated `--env KEY=VALUE`, process environment, `.env`, and explicit `--env-file` sources.
+
+### Changed
+
+- `.gitignore` generation now writes generated roots and directory patterns instead of per-file assistant output entries, while keeping generated `.github/` paths scoped to Copilot-owned files and directories.
+
+### Fixed
+
+- Secret-bearing MCP outputs now fail generation when their generated path is not ignored, including scoped MCP config outputs.
+- Resolved MCP secret values are redacted before source hash calculation so generated metadata does not encode secret material.
+- Existing outside-fence `.gitignore` patterns are now interpreted semantically when deciding whether managed entries are already covered.
+
+### Tests
+
+- Added generator and CLI coverage for MCP env substitution, `.env` and `--env-file` loading, unresolved placeholders, secret safety errors, scoped MCP outputs, deprecated gitignore aliases, and shorthand flags.
+
 ## [4.2.2] - 2026-05-26
 
 ### Added
