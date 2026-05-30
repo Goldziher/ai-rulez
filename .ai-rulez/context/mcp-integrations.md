@@ -9,14 +9,15 @@ targets:
 
 # MCP Server and Integrations
 
-- MCP configuration lives in `.ai-rulez/mcp.yaml` (or `mcp.json`).
-- MCP servers are merged from root and active domain entries; domain entries override by name in alphabetical domain order (last writer wins).
+- MCP server configuration lives inline in `.ai-rulez/config.toml` as `[[mcp_servers]]` entries.
+- Legacy `.ai-rulez/mcp.yaml`, `.ai-rulez/mcp.toml`, and `.ai-rulez/mcp.json` files are loaded for backward compatibility during migration and config loading.
+- MCP server definitions are project-level config entries. Domain content does not currently define or override MCP servers.
 - The MCP server exposes read, CRUD, generate, and validate operations for assistants.
 
 Typical setup:
 
 - Use `npx -y ai-rulez@latest mcp` (Node) or `uvx ai-rulez mcp` (Python).
-- This repo includes a default server entry in `.ai-rulez/mcp.yaml`.
+- This repo includes a default server entry in `.ai-rulez/config.toml`.
 
 When updating MCP functionality:
 

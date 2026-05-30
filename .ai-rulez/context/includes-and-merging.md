@@ -9,7 +9,7 @@ targets:
 
 # Includes and Merging
 
-`.ai-rulez/config.yaml` can reference external includes to share rules and context.
+`.ai-rulez/config.toml` can reference external includes to share rules and context.
 
 - `includes` entries point to local paths or git sources (see docs for details).
 - Default merge strategy is `local-override`: local content wins on name conflicts.

@@ -8,7 +8,7 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "4.2.0"
+  version: "4.3.0"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
@@ -149,7 +149,7 @@ overrides in `config.toml`:
 effort = "medium"
 
 [defaults.effort_by_preset]
-codex = "high"      # Codex applies it as model_reasoning_effort in .codex/config.toml
+codex = "high"      # Codex applies it globally and per agent
 claude = "xhigh"    # Claude applies it as `effort` per agent
 amp = "max"         # Amp writes amp.anthropic.effort to .amp/settings.json
 ```
@@ -160,10 +160,11 @@ Resolution order (per preset, per agent): per-agent `effort` →
 Per-preset support:
 
 - **Claude**: per-agent in `.claude/agents/*.md` (full vocabulary, including `max` and `inherit`)
-- **Codex**: global in `.codex/config.toml` (`max` → `high`; `inherit` dropped)
+- **Codex**: global in `.codex/config.toml` and per-agent in `.codex/agents/*.toml` (`max` → `high`; `inherit` dropped)
 - **Amp**: global in `.amp/settings.json` (`xhigh` → `high`)
 - **Windsurf**: per-agent in `.windsurf/agents/*.md` frontmatter (`max` → `high`)
-- Cursor, Copilot, Gemini, Junie, Opencode, Antigravity, Cline, Continue.dev: silently skipped (those tools expose effort via UI toggles or user-managed config files we don't generate).
+- **Opencode**: per-agent `reasoningEffort` in `.opencode/agents/*.md`
+- Cursor, Copilot, Gemini, Junie, Antigravity, Cline, Continue.dev: silently skipped (those tools expose effort via UI toggles or user-managed config files we don't generate).
 
 ## Domains and Profiles
 
@@ -201,7 +202,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`.
+Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`, `antigravity`.
 
 ## MCP Integration
 
@@ -212,6 +213,10 @@ ai-rulez mcp
 ```
 
 Configure in your AI tool's MCP settings to enable CRUD operations from within the assistant.
+
+MCP server env values can use `${VAR}` placeholders. `ai-rulez generate` resolves them from `--env`,
+process env, and dotenv files, then refuses to write secret-bearing generated MCP configs unless the
+target paths are gitignored.
 
 ## Plugins and Marketplaces
 

@@ -3,10 +3,10 @@
 ## Global Flags
 
 - `--config <path>` — Override config discovery
-- `--verbose` — Enable verbose output
-- `--debug` — Enable debug output
+- `--verbose, -V` — Enable verbose output
+- `--debug, -D` — Enable debug output
 - `--quiet, -q` — Suppress progress bars and non-essential output
-- `--token <token>` — Git access token for private repos (or `AI_RULEZ_GIT_TOKEN` env var)
+- `--token, -T <token>` — Git access token for private repos (or `AI_RULEZ_GIT_TOKEN` env var)
 
 ## Core Commands
 
@@ -16,8 +16,12 @@ Initialize `.ai-rulez/` directory with configuration.
 
 Flags:
 
-- `--preset <name>` — Use a preset template
-- `--domain <name>` — Create initial domains
+- `--format, -f <toml|yaml|json>` — Config format (default `toml`)
+- `--domains, -d <names>` — Comma-separated initial domains
+- `--skip-content, -s` — Skip example content files
+- `--from, -F <source>` — Import from existing tool files, such as `auto`
+- `--setup-hooks, -H` — Configure git hooks
+- `--yes, -y` — Automatically answer yes to prompts
 
 ### `ai-rulez generate`
 
@@ -26,10 +30,16 @@ Render outputs for all configured presets.
 Flags:
 
 - `--profile <name>` — Select a specific profile
-- `--dry-run` — Print planned directories, writes, and stale generated-file deletions without mutating files
-- `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
+- `--dry-run, -d` — Print planned directories, writes, and stale generated-file deletions without mutating files
+- `--gitignore, -i` — Update `.gitignore` with generated output patterns
+- `--config-dir, -n <name>` — Use a non-default config directory name instead of `.ai-rulez`
 - `--recursive, -r` — Generate for every discovered config directory
-- `--update-gitignore` — Force `.gitignore` updates for generated files
+- `--no-fetch, -f` — Use cached includes and skills without fetching
+- `--env, -e KEY=VALUE` — MCP env override; repeatable
+- `--env-file, -E <path>` — Dotenv file for MCP placeholders; repeatable
+- `--no-configure-cli-mcp, -M` / `--skip-cli-mcp, -S` — Skip configuring CLI-based MCP tools
+
+`--update-gitignore` remains as a hidden deprecated alias for `--gitignore`.
 
 ### `ai-rulez validate`
 
@@ -76,8 +86,10 @@ Start the MCP server for AI assistant integrations.
 ### Profiles
 
 - `ai-rulez profile add <name> <domains...>`
+- `ai-rulez profile add <name> <domains...> [--set-default, -s]`
 - `ai-rulez profile remove <name>`
 - `ai-rulez profile list [--json]`
+- `ai-rulez profile set-default <name>`
 
 ### Includes
 

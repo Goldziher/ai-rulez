@@ -197,7 +197,7 @@ ai-rulez supports two repository structures for includes:
    ```text
    my-repo/
    ├── .ai-rulez/
-   │   ├── config.yaml
+   │   ├── config.toml
    │   ├── rules/
    │   ├── context/
    │   └── skills/
@@ -208,7 +208,7 @@ ai-rulez supports two repository structures for includes:
 
    ```text
    my-repo/
-   ├── config.yaml
+   ├── config.toml
    ├── rules/
    ├── context/
    └── skills/
@@ -337,7 +337,7 @@ Create a central repository with baseline rules:
 ```text
 org-standards/
 └── .ai-rulez/
-    ├── config.yaml
+    ├── config.toml
     ├── rules/
     │   ├── security.md
     │   ├── code-quality.md
@@ -361,7 +361,7 @@ Create separate includes for each framework:
 frameworks/
 ├── go-backend/
 │   └── .ai-rulez/
-│       ├── config.yaml
+│       ├── config.toml
 │       └── rules/
 │           ├── project-layout.md
 │           ├── error-handling.md
@@ -441,15 +441,15 @@ Includes can themselves include other includes:
 org-base/
 ├── rules/
 │   └── security.md
-└── .ai-rulez/config.yaml
+└── .ai-rulez/config.toml
 
 go-framework/
-└── .ai-rulez/config.yaml
+└── .ai-rulez/config.toml
     includes:
       - ../org-base/.ai-rulez
 
 my-project/
-└── .ai-rulez/config.yaml
+└── .ai-rulez/config.toml
     includes:
       - ../go-framework/.ai-rulez
       - ../team-standards/.ai-rulez
@@ -559,7 +559,7 @@ includes:
 ### Include Path Not Found
 
 ```bash
-ls -la ../shared-rules/.ai-rulez/config.yaml
+ls -la ../shared-rules/.ai-rulez/config.toml
 
 # Try absolute path
 includes:
@@ -593,7 +593,7 @@ Your `.ai-rulez/rules/security.md` overrides both includes.
 ### Content Not Merging
 
 ```bash
-cat .ai-rulez/config.yaml | grep includes
+cat .ai-rulez/config.toml | grep includes
 ls -la ../shared-rules/.ai-rulez/
 ai-rulez validate --verbose
 ```

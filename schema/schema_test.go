@@ -78,4 +78,30 @@ presets:
 		err := schema.ValidateWithSchema([]byte(cfg))
 		assert.Error(t, err)
 	})
+
+	t.Run("valid config with inline mcp servers", func(t *testing.T) {
+		cfg := `
+version: "4.0"
+name: "test-project"
+presets:
+  - claude
+mcp_servers:
+  - name: grafana
+    description: Grafana observability MCP
+    command: uvx
+    args:
+      - mcp-grafana
+    env:
+      GRAFANA_URL: http://localhost:3000
+      GRAFANA_SERVICE_ACCOUNT_TOKEN: ${GRAFANA_SERVICE_ACCOUNT_TOKEN}
+    transport: stdio
+    enabled: true
+  - name: remote-docs
+    transport: http
+    url: https://mcp.example.com
+    enabled: false
+`
+		err := schema.ValidateWithSchema([]byte(cfg))
+		require.NoError(t, err)
+	})
 }

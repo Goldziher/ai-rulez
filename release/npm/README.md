@@ -56,7 +56,7 @@ download.
 
 ```bash
 # Initialize a new project
-npx ai-rulez@latest init "My Project" --preset claude
+npx ai-rulez@latest init "My Project"
 
 # Add a rule
 npx ai-rulez@latest add rule coding-standards --priority high

@@ -297,7 +297,7 @@ Test service interactions:
 
 For larger projects, reuse configurations across subdirectories.
 
-**`/.ai-rulez/config.yaml`** (Root config):
+**`/.ai-rulez/config.toml`** (Root config):
 
 ```yaml
 version: "3.0"
