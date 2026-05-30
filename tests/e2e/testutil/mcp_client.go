@@ -2,6 +2,7 @@ package testutil
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -30,6 +31,7 @@ type MCPClient struct {
 	stdin  *bufio.Writer
 	ctx    context.Context
 	cancel context.CancelFunc
+	stderr *bytes.Buffer
 
 	writeMu sync.Mutex // serializes writes to stdin
 
@@ -65,7 +67,7 @@ const (
 	// mcpRequestTimeout is the per-RPC deadline. Generous because cold
 	// runs after a binary rebuild can take several seconds before the
 	// MCP server is ready to respond.
-	mcpRequestTimeout = 30 * time.Second
+	mcpRequestTimeout = 90 * time.Second
 
 	// mcpReaderBufferBytes is the maximum length of a single stdout line
 	// the reader will accept. The MCP `tools/list` response is one big
@@ -91,6 +93,9 @@ func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 	stdout, err := cmd.StdoutPipe()
 	require.NoError(t, err, "Failed to create stdout pipe")
 
+	stderr := &bytes.Buffer{}
+	cmd.Stderr = stderr
+
 	err = cmd.Start()
 	require.NoError(t, err, "Failed to start MCP server")
 
@@ -99,6 +104,7 @@ func StartMCPServer(t *testing.T, workingDir string) *MCPClient {
 		stdin:      bufio.NewWriter(stdin),
 		ctx:        ctx,
 		cancel:     cancel,
+		stderr:     stderr,
 		pending:    map[string]chan *MCPResponse{},
 		readerDone: make(chan struct{}),
 	}
@@ -291,7 +297,13 @@ func (c *MCPClient) sendRequest(t *testing.T, method string, params interface{})
 		return response
 	case <-time.After(mcpRequestTimeout):
 		c.cleanupPending(key)
-		t.Fatalf("MCP request timed out after %s: method=%s", mcpRequestTimeout, method)
+		stderr := ""
+		if c.stderr != nil {
+			stderr = c.stderr.String()
+		}
+		c.Close()
+		t.Fatalf("MCP request timed out after %s: method=%s stderr=%q readerErr=%v",
+			mcpRequestTimeout, method, stderr, c.readerErr)
 		return nil
 	}
 }

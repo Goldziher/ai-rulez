@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -94,8 +95,10 @@ func TestLoadSkillResources(t *testing.T) {
 		assert.Empty(t, resources[0].Description)
 		// Executable bit on scripts must be preserved through to OutputFile
 		// so the agent can invoke them directly.
-		assert.NotZero(t, resources[0].Mode&0o100,
-			"script must keep its executable bit, got mode=%o", resources[0].Mode)
+		if runtime.GOOS != "windows" {
+			assert.NotZero(t, resources[0].Mode&0o100,
+				"script must keep its executable bit, got mode=%o", resources[0].Mode)
+		}
 		assert.Equal(t, SkillKindAssets, resources[1].Kind)
 		assert.Equal(t, assetBytes, resources[1].Content, "binary asset must round-trip via raw bytes")
 	})

@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -133,7 +134,7 @@ func SkillResourceOutputs(skill *config.ContentFile, skillDir string) []config.O
 		// converge on "/" (or volume root) and never reach ".", spinning
 		// the loop forever. LoadSkillResources only produces relative
 		// paths, but skip rather than hang if a caller violates that.
-		if filepath.IsAbs(curr) {
+		if path.IsAbs(r.RelPath) || filepath.IsAbs(curr) {
 			continue
 		}
 		for {
@@ -152,6 +153,9 @@ func SkillResourceOutputs(skill *config.ContentFile, skillDir string) []config.O
 	}
 
 	for _, r := range skill.Resources {
+		if path.IsAbs(r.RelPath) || filepath.IsAbs(filepath.FromSlash(r.RelPath)) {
+			continue
+		}
 		// r.RelPath uses forward slashes. filepath.Join handles platform
 		// separators correctly via filepath.FromSlash.
 		outputs = append(outputs, config.OutputFile{

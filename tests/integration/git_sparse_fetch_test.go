@@ -2,6 +2,7 @@ package integration
 
 import (
 	"context"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +38,10 @@ func initGitRepo(t *testing.T) string {
 		require.NoError(t, err, "git %v: %s", args, out)
 	}
 	return dir
+}
+
+func fileURL(path string) string {
+	return (&url.URL{Scheme: "file", Path: filepath.ToSlash(path)}).String()
 }
 
 // addAndCommit writes relPath in repoDir and commits.
@@ -75,7 +80,7 @@ name: consumer
 presets: [claude]
 includes:
   - name: shared-rules
-    source: "file://` + repoDir + `"
+    source: "` + fileURL(repoDir) + `"
     include: [rules]
 `
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
@@ -112,7 +117,7 @@ name: consumer
 presets: [claude]
 installed_skills:
   - name: mything
-    source: "file://` + repoDir + `"
+    source: "` + fileURL(repoDir) + `"
     path: skills/mything
 `
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
@@ -146,7 +151,7 @@ name: consumer
 presets: [claude]
 includes:
   - name: shared-invalidation
-    source: "file://` + repoDir + `"
+    source: "` + fileURL(repoDir) + `"
     include: [rules]
 `
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
@@ -204,7 +209,7 @@ name: consumer
 presets: [claude]
 includes:
   - name: shared-skipfetch
-    source: "file://` + repoDir + `"
+    source: "` + fileURL(repoDir) + `"
     include: [rules]
 `
 	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.yaml"), []byte(configYAML), 0o644))
