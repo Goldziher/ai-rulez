@@ -32,7 +32,7 @@
         "oneOf": [
           {
             "type": "string",
-            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode"],
+            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode", "antigravity"],
             "description": "Built-in preset name"
           },
           {
@@ -115,6 +115,61 @@
       "type": "boolean",
       "description": "Whether to automatically update .gitignore with generated output patterns (defaults to true)",
       "default": true
+    },
+    "mcp_servers": {
+      "type": "array",
+      "description": "Inline Model Context Protocol (MCP) server definitions generated into assistant MCP configuration files.",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "MCP server name/identifier (used as unique key)",
+            "minLength": 1
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional description of the MCP server capabilities"
+          },
+          "command": {
+            "type": "string",
+            "description": "Command to start a local stdio MCP server (e.g., 'npx', 'uvx', 'node')",
+            "minLength": 1
+          },
+          "args": {
+            "type": "array",
+            "description": "Command line arguments for a local MCP server",
+            "items": {
+              "type": "string"
+            }
+          },
+          "env": {
+            "type": "object",
+            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders; placeholder names must match [A-Za-z_][A-Za-z0-9_]* and are resolved by ai-rulez generate from repeated --env KEY=VALUE, process env, then dotenv files.",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "transport": {
+            "type": "string",
+            "enum": ["stdio", "http", "sse"],
+            "description": "Transport protocol for MCP server communication (default: stdio)",
+            "default": "stdio"
+          },
+          "url": {
+            "type": "string",
+            "description": "URL for remote MCP servers using http or sse transport",
+            "pattern": "^https?://[^\\s]+$"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether this MCP server is emitted into generated MCP outputs (default: true)",
+            "default": true
+          }
+        },
+        "additionalProperties": false
+      }
     },
     "builtins": {
       "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude auto-includes (e.g., '!ai-governance'). Available: ai-governance (auto), agent-delegation (auto), security, git-workflow, code-quality, testing, token-efficiency, documentation, default-commands, rust, python, typescript, go, java, ruby, php, elixir, csharp, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm",

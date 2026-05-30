@@ -146,9 +146,10 @@ claude = "xhigh"   # …and for Claude
 Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez emits the right field per preset:
 
 - **Claude** — `effort` in `.claude/agents/*.md` frontmatter (per-agent)
-- **Codex** — `model_reasoning_effort` in `.codex/config.toml` (global)
+- **Codex** — `model_reasoning_effort` in `.codex/config.toml` and `.codex/agents/*.toml`
 - **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
 - **Windsurf** — `reasoning_effort` in `.windsurf/agents/*.md` frontmatter (per-agent)
+- **Opencode** — `reasoningEffort` in `.opencode/agents/*.md` frontmatter (per-agent)
 
 Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
 
@@ -239,7 +240,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.1.3
+    rev: v4.3.0
     hooks:
       - id: ai-rulez-recursive   # generate outputs across the repo
       - id: ai-rulez-validate    # dry-run validation
@@ -261,7 +262,7 @@ pre-commit:
       run: ai-rulez generate --recursive
 ```
 
-Or run `ai-rulez setup-hooks` in a repo with an existing `lefthook.yml` to wire it in automatically.
+Or run `ai-rulez init --setup-hooks` while initializing a repo to wire hooks in automatically.
 </details>
 
 ## Documentation

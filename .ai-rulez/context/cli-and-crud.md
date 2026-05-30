@@ -15,7 +15,7 @@ Core commands:
 - `ai-rulez init` initializes `.ai-rulez/` with optional presets or domains.
 - `ai-rulez generate` renders outputs; `--profile` selects domains; `--dry-run` previews.
 - `ai-rulez validate` checks config and content structure.
-- `ai-rulez migrate` converts V2 `ai-rulez.yaml` to V3 `.ai-rulez/`.
+- `ai-rulez migrate v4` converts V3 YAML config to V4 TOML config.
 - `ai-rulez mcp` starts the MCP server (usually launched by the assistant).
 
 CRUD helpers manage file-based content:

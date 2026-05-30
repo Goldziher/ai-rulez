@@ -18,7 +18,7 @@ func createTemplateData(projectName string, cfg *config.Config) *templates.Templ
 		RuleCount:    3,
 		SectionCount: 2,
 		AgentCount:   1,
-		ConfigFile:   "config.yaml",
+		ConfigFile:   "config.toml",
 		OutputFile:   "CLAUDE.md",
 		Timestamp:    time.Date(2025, 11, 1, 15, 7, 23, 0, time.UTC),
 		Config:       cfg,
@@ -40,7 +40,7 @@ func TestBuildDetailedHeader(t *testing.T) {
 	assert.Contains(t, header, "🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY")
 	assert.Contains(t, header, "Project: TestProject")
 	assert.Contains(t, header, "Generated: 2025-11-01 15:07:23")
-	assert.Contains(t, header, "Source: .ai-rulez/config.yaml")
+	assert.Contains(t, header, "Source: .ai-rulez/config.toml")
 	assert.Contains(t, header, "Target: CLAUDE.md")
 	assert.Contains(t, header, "Content: rules=3, sections=2, agents=1")
 
@@ -51,7 +51,7 @@ func TestBuildDetailedHeader(t *testing.T) {
 
 	// Verify folder organization section
 	assert.Contains(t, header, ".AI-RULEZ FOLDER ORGANIZATION")
-	assert.Contains(t, header, ".ai-rulez/config.yaml")
+	assert.Contains(t, header, ".ai-rulez/config.toml")
 	assert.Contains(t, header, ".ai-rulez/rules/")
 	assert.Contains(t, header, ".ai-rulez/context/")
 	assert.Contains(t, header, ".ai-rulez/skills/")
@@ -103,7 +103,7 @@ func TestBuildCompactHeader(t *testing.T) {
 
 	// Verify structure section
 	assert.Contains(t, header, "STRUCTURE:")
-	assert.Contains(t, header, ".ai-rulez/config.yaml")
+	assert.Contains(t, header, ".ai-rulez/config.toml")
 	assert.Contains(t, header, ".ai-rulez/domains/{name}/")
 
 	// Verify AI AGENT INSTRUCTIONS with symbols
@@ -142,7 +142,7 @@ func TestBuildMinimalHeader(t *testing.T) {
 	assert.Contains(t, header, "🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT")
 	assert.Contains(t, header, "Project: SimpleProject")
 	assert.Contains(t, header, "Generated: 2025-11-01 15:07:23")
-	assert.Contains(t, header, "Source: .ai-rulez/config.yaml")
+	assert.Contains(t, header, "Source: .ai-rulez/config.toml")
 
 	// Verify core instructions
 	assert.Contains(t, header, "NEVER edit this file")
@@ -338,8 +338,8 @@ func TestHeaderContent_WithEmptyConfigPath(t *testing.T) {
 
 	header := templates.GenerateHeader(data)
 
-	// Should default to "config.yaml"
-	assert.Contains(t, header, "Source: .ai-rulez/config.yaml")
+	// Should default to "config.toml"
+	assert.Contains(t, header, "Source: .ai-rulez/config.toml")
 }
 
 // TestHeaderContent_WithEmptyOutputPath verifies default output path handling

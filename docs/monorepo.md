@@ -23,7 +23,7 @@ A typical layout might look like this:
 ```text
 my-project/
 └── .ai-rulez/
-    ├── config.yaml              # ⬅️ Main config: presets, profiles, domains
+    ├── config.toml              # ⬅️ Main config: presets, profiles, domains
     ├── rules/                   # ⬅️ Shared rules (all teams)
     ├── context/                 # ⬅️ Shared context (all teams)
     ├── skills/                  # ⬅️ Shared skills (all teams)
@@ -251,7 +251,7 @@ If using multiple `.ai-rulez/` directories in a monorepo, use the `--recursive` 
 ai-rulez generate --recursive
 ```
 
-**Root configuration** (`/.ai-rulez/config.yaml`):
+**Root configuration** (`/.ai-rulez/config.toml`):
 
 ```yaml
 version: "3.0"

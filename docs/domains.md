@@ -32,7 +32,7 @@ Generation always includes:
 
 ```text
 .ai-rulez/
-├── config.yaml              # Main config with presets and profiles
+├── config.toml              # Main config with presets and profiles
 ├── rules/                   # Base rules (all teams get these)
 ├── context/                 # Base context (all teams get these)
 ├── skills/                  # Base skills (all teams get these)
@@ -409,7 +409,7 @@ Domain-specific:
 
 ### Document Domain Purpose
 
-Add comments in config.yaml:
+Add comments in config.toml:
 
 ```yaml
 # Domains:
@@ -454,8 +454,8 @@ Check that your domain is in the profile:
 # List available profiles
 ai-rulez validate --verbose
 
-# Check config.yaml
-cat .ai-rulez/config.yaml | grep -A 5 "profiles:"
+# Check config.toml
+cat .ai-rulez/config.toml | grep -A 5 "profiles:"
 ```
 
 ### Profile Not Found

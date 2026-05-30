@@ -16,12 +16,17 @@ AI-Rulez includes presets for popular tools:
 | Preset | Output | Format |
 |--------|--------|--------|
 | `claude` | `CLAUDE.md` | Markdown |
-| `cursor` | `.cursorrules` | Markdown |
+| `cursor` | `.cursor/rules/` | Directory |
 | `gemini` | `GEMINI.md` | Markdown |
 | `copilot` | `.github/copilot-instructions.md` | Markdown |
-| `windsurf` | `.windsurf/rules/` | Directory |
-| `continue-dev` | `.continue/config.py` | Python |
+| `windsurf` | `.windsurf/` | Directory |
+| `continue-dev` | `.continue/` | Directory |
 | `cline` | `.clinerules/` | Directory |
+| `codex` | `AGENTS.md` and `.codex/` | Markdown and directory |
+| `amp` | `AMP.md` and `.amp/` | Markdown and JSON |
+| `junie` | `.junie/` | Directory |
+| `opencode` | `OPENCODE.md` and `.opencode/` | Markdown and directory |
+| `antigravity` | `.agents/` | Directory |
 
 ## Creating Custom Presets
 
@@ -131,7 +136,7 @@ Templates use Go's template syntax with access to your configuration:
 ### Available Data
 
 ```text
-.Name              Project name from config.yaml
+.Name              Project name from config.toml
 .Description       Project description
 .Rules             All rules (filtered by targets)
 .Context           All context (filtered by targets)

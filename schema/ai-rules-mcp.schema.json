@@ -45,7 +45,7 @@
           },
           "env": {
             "type": "object",
-            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders resolved by ai-rulez generate from --env, process env, then .env.",
+            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders; placeholder names must match [A-Za-z_][A-Za-z0-9_]* and are resolved by ai-rulez generate from repeated --env KEY=VALUE, process env, then dotenv files.",
             "additionalProperties": {
               "type": "string"
             }
@@ -63,7 +63,7 @@
           },
           "enabled": {
             "type": "boolean",
-            "description": "Whether this MCP server is enabled (default: true)",
+            "description": "Whether this MCP server is emitted into generated MCP outputs (default: true)",
             "default": true
           }
         },

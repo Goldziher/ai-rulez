@@ -26,7 +26,8 @@ presets = [
   "codex",        # → AGENTS.md
   "amp",          # → AMP.md
   "junie",        # → .junie/guidelines.md
-  "opencode"      # → OPENCODE.md
+  "opencode",     # → OPENCODE.md
+  "antigravity"   # → .agents/
 ]
 ```
 
@@ -37,11 +38,12 @@ When `defaults.effort` or `defaults.effort_by_preset` is set, presets with nativ
 | Preset | File | Field | Scope |
 |--------|------|-------|-------|
 | `claude` | `.claude/agents/<id>.md` | `effort` | per-agent |
-| `codex` | `.codex/config.toml` | `model_reasoning_effort` | global |
+| `codex` | `.codex/config.toml`, `.codex/agents/<id>.toml` | `model_reasoning_effort` | global and per-agent |
 | `amp` | `.amp/settings.json` | `amp.anthropic.effort` | global |
 | `windsurf` | `.windsurf/agents/<id>.md` | `reasoning_effort` | per-agent |
+| `opencode` | `.opencode/agents/<id>.md` | `reasoningEffort` | per-agent |
 
-Resolution order: per-agent metadata → `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit. Each preset maps the canonical tier to its own vocabulary (e.g. Codex caps at `xhigh`/drops `inherit`; Amp uses `max` instead of `xhigh`). Other presets (cursor, copilot, gemini, junie, opencode, antigravity, cline, continue-dev) silently skip — those tools expose effort via UI toggles or user-managed config files we don't generate.
+Resolution order: per-agent metadata → `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit. Each preset maps the canonical tier to its own vocabulary (e.g. Codex caps at `xhigh`/drops `inherit`; Amp uses `max` instead of `xhigh`). Other presets (cursor, copilot, gemini, junie, antigravity, cline, continue-dev) silently skip — those tools expose effort via UI toggles or user-managed config files we don't generate.
 
 ## Custom Presets
 
@@ -109,6 +111,8 @@ Control generated file headers:
 ## MCP Server Integration
 
 MCP servers are configured inline in `config.toml` under `[[mcp_servers]]`, allowing assistants to access ai-rulez functionality without a separate service.
+
+Env values may use `${VAR}` placeholders resolved by `generate` from `--env`, process env, and dotenv files. Generated MCP configs contain resolved values, so secret-bearing MCP outputs must be gitignored before they are written.
 
 ## Cleanup Safety
 
