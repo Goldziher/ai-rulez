@@ -38,7 +38,7 @@ schema compliance, and structural issues.`,
 }
 
 func init() {
-	ValidateCmd.Flags().StringVar(&configDir, "config-dir", "", "Configuration directory name (default: .ai-rulez)")
+	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
 func displayConfigurationSummary(cfg *config.Config) {

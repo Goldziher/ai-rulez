@@ -73,18 +73,18 @@ func init() {
 	SkillCmd.AddCommand(skillListCmd)
 
 	// Flags for skill install
-	skillInstallCmd.Flags().StringVar(&skillSource, "source", "", "Git URL or local path (required)")
-	skillInstallCmd.Flags().StringVar(&skillPath, "path", "", "Path within repo to skill directory (defaults to skills/<name>)")
-	skillInstallCmd.Flags().StringVar(&skillRef, "ref", "", "Git reference: branch, tag, or commit hash")
+	skillInstallCmd.Flags().StringVarP(&skillSource, "source", "s", "", "Git URL or local path (required)")
+	skillInstallCmd.Flags().StringVarP(&skillPath, "path", "p", "", "Path within repo to skill directory (defaults to skills/<name>)")
+	skillInstallCmd.Flags().StringVarP(&skillRef, "ref", "r", "", "Git reference: branch, tag, or commit hash")
 	if err := skillInstallCmd.MarkFlagRequired("source"); err != nil {
 		logger.Debug("Failed to mark source flag as required", "error", err)
 	}
 
 	// Flags for skill remove
-	skillRemoveCmd.Flags().BoolVar(&skillForce, "force", false, "Skip confirmation prompts")
+	skillRemoveCmd.Flags().BoolVarP(&skillForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Flags for skill list
-	skillListCmd.Flags().BoolVar(&skillJSON, "json", false, "Output as JSON")
+	skillListCmd.Flags().BoolVarP(&skillJSON, "json", "j", false, "Output as JSON")
 }
 
 func runSkillInstall(cmd *cobra.Command, args []string) {

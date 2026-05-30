@@ -45,7 +45,7 @@
           },
           "env": {
             "type": "object",
-            "description": "Environment variables for the MCP server (supports ${VAR} substitution)",
+            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders resolved by ai-rulez generate from --env, process env, then .env.",
             "additionalProperties": {
               "type": "string"
             }

@@ -159,14 +159,17 @@ Scoped outputs keep root context separate from subfolder context. The default sc
 
 ### `gitignore`
 
-Controls whether `ai-rulez` automatically updates `.gitignore` with generated files.
+Controls whether `ai-rulez` automatically updates `.gitignore` with generated output patterns.
 
 ```toml
 gitignore = true   # Default: update .gitignore automatically
 gitignore = false  # Manual .gitignore management
 ```
 
-When `true`, generated files are added to `.gitignore` to prevent accidental commits.
+When `true`, generated roots such as `AGENTS.md`, `.mcp.json`, `.claude/`, `.codex/`, `.cursor/`,
+and `.agents/` are added to `.gitignore` to prevent accidental commits. GitHub output is narrower:
+`ai-rulez` ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
+and `.github/skills/` without ignoring all of `.github/`.
 
 ### `mcp_servers`
 
@@ -179,10 +182,10 @@ command = "npx"
 args = ["-y", "ai-rulez@latest", "mcp"]
 
 [[mcp_servers]]
-name = "github"
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-github"]
-env = { GITHUB_TOKEN = "your-token" }
+name = "grafana"
+command = "uvx"
+args = ["mcp-grafana"]
+env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }
 ```
 
 Each entry supports:
@@ -192,7 +195,16 @@ Each entry supports:
 | `name` | Yes | Unique server identifier |
 | `command` | Yes | Command to run (npx, uvx, ai-rulez, etc.) |
 | `args` | No | Array of command arguments |
-| `env` | No | Environment variables as key-value pairs |
+| `env` | No | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
+
+MCP env placeholders are resolved during `ai-rulez generate` from `--env KEY=VALUE`, process
+environment variables, then `.env` in the project root. Use `--env-file PATH` to load one or more
+explicit dotenv files. Generation fails if a placeholder cannot be resolved.
+
+Generated MCP config files contain resolved values. If any resolved MCP env value comes from a
+placeholder, or if an env key looks sensitive (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `CREDENTIAL`),
+generation fails unless the generated MCP config path is covered by `.gitignore` or by the patterns
+`ai-rulez` is about to add.
 
 ### `plugins`
 
