@@ -76,9 +76,9 @@ tasks:
       - go build -o bin/ai-rulez ./cmd/main.go
 
   test:
-    desc: "Run all tests"
+    desc: "Run unit and integration tests"
     cmds:
-      - go test ./...
+      - go test ./cmd/... ./internal/... ./schema/... ./tests/fixtures/... ./tests/integration/... ./tests/testutil/...
 
   test:verbose:
     desc: "Run all tests with verbose output"
@@ -123,7 +123,9 @@ tasks:
   test:all:
     desc: "Run all test suites"
     cmds:
-      - go test ./...
+      - task: test
+      - task: test:platform
+      - task: test:e2e
 
   lint:
     desc: "Run all pre-commit hooks"
