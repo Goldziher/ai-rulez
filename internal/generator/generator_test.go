@@ -231,9 +231,35 @@ func TestGenerator_Gitignore_Enabled(t *testing.T) {
 	require.NoError(t, err)
 	contentStr := string(content)
 
-	// Generated files are listed individually; assistant directories can
-	// contain user-owned files and must not be treated as fully managed.
 	assert.Contains(t, contentStr, "CLAUDE.md")
+	assert.Contains(t, contentStr, ".claude/")
+}
+
+func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
+	tempDir := t.TempDir()
+	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+
+	outputs := []config.OutputFile{
+		{Path: filepath.Join(tempDir, "AGENTS.md")},
+		{Path: filepath.Join(tempDir, ".codex", "agents", "reviewer.toml")},
+		{Path: filepath.Join(tempDir, ".github"), IsDir: true},
+		{Path: filepath.Join(tempDir, ".github", "agents", "reviewer.agent.md")},
+		{Path: filepath.Join(tempDir, ".github", "workflows", "ci.yml")},
+		{Path: filepath.Join(tempDir, "packages", "web", ".codex", "skills", "demo", "SKILL.md")},
+		{Path: filepath.Join(tempDir, "custom-output"), IsDir: true},
+		{Path: filepath.Join(tempDir, ".ai-rulez", ".generated-manifest.json")},
+	}
+
+	patterns := gen.collectGitignorePaths(outputs)
+
+	assert.True(t, patterns["AGENTS.md"])
+	assert.True(t, patterns[".codex/"])
+	assert.False(t, patterns[".github/"])
+	assert.True(t, patterns[".github/agents/"])
+	assert.True(t, patterns[".github/workflows/ci.yml"])
+	assert.True(t, patterns["packages/web/.codex/"])
+	assert.True(t, patterns["custom-output/"])
+	assert.False(t, patterns[".ai-rulez/.generated-manifest.json"])
 }
 
 func TestGenerator_CustomPreset_Markdown(t *testing.T) {
@@ -495,6 +521,180 @@ func TestGenerator_Gitignore_IncludesMCPJSON(t *testing.T) {
 	assert.Contains(t, contentStr, "# END ai-rulez", "managed fence missing")
 }
 
+func TestGenerator_MCPEnv_ResolvesFromEnvFile(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".env"), []byte("GRAFANA_TOKEN=from-dotenv\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "mcp-env"
+presets = ["claude"]
+gitignore = true
+
+[[mcp_servers]]
+name = "grafana"
+command = "uvx"
+args = ["mcp-grafana"]
+env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_TOKEN}" }
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	content, err := os.ReadFile(filepath.Join(tempDir, ".mcp.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "from-dotenv")
+	assert.NotContains(t, string(content), "${GRAFANA_TOKEN}")
+}
+
+func TestGenerator_MCPEnv_CLIOverrideBeatsEnvFile(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(tempDir, ".env"), []byte("GRAFANA_TOKEN=from-dotenv\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "mcp-env"
+presets = ["claude"]
+gitignore = true
+
+[[mcp_servers]]
+name = "grafana"
+command = "uvx"
+env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_TOKEN}" }
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	cfg.MCPEnvOverrides = map[string]string{"GRAFANA_TOKEN": "from-cli"}
+
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	content, err := os.ReadFile(filepath.Join(tempDir, ".mcp.json"))
+	require.NoError(t, err)
+	assert.Contains(t, string(content), "from-cli")
+	assert.NotContains(t, string(content), "from-dotenv")
+}
+
+func TestGenerator_MCPEnv_FailsUnresolvedPlaceholder(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "mcp-env"
+presets = ["claude"]
+gitignore = true
+
+[[mcp_servers]]
+name = "grafana"
+command = "uvx"
+env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${MISSING_TOKEN}" }
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+
+	err = NewGenerator(cfg).Generate("default")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unresolved MCP env placeholders")
+	assert.NoFileExists(t, filepath.Join(tempDir, ".mcp.json"))
+}
+
+func TestGenerator_MCPEnv_ErrorsWhenSecretOutputNotGitignored(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "mcp-env"
+presets = ["claude"]
+gitignore = false
+
+[[mcp_servers]]
+name = "grafana"
+command = "uvx"
+env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_TOKEN}" }
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	cfg.MCPEnvOverrides = map[string]string{"GRAFANA_TOKEN": "secret-token"}
+
+	err = NewGenerator(cfg).Generate("default")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "generated MCP config contains secrets")
+	assert.NoFileExists(t, filepath.Join(tempDir, ".mcp.json"))
+}
+
+func TestGenerator_MCPEnv_ErrorsWhenScopedSecretOutputNotGitignored(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "scoped-mcp-env"
+presets = ["codex"]
+gitignore = false
+
+[[mcp_servers]]
+name = "grafana"
+command = "uvx"
+env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_TOKEN}" }
+
+[[scopes]]
+path = "apps/web"
+presets = ["claude"]
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	cfg.MCPEnvOverrides = map[string]string{"GRAFANA_TOKEN": "secret-token"}
+
+	err = NewGenerator(cfg).Generate("default")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "generated MCP config contains secrets")
+	assert.NoFileExists(t, filepath.Join(tempDir, "apps", "web", ".claude", "settings.json"))
+}
+
+func TestComputeSourceHash_RedactsMCPEnvSecrets(t *testing.T) {
+	content := &config.ContentTree{}
+	cfgA := &config.Config{
+		Name:    "hash-test",
+		Version: "4.0",
+		MCPServers: map[string]*config.MCPServer{
+			"grafana": {
+				Command:       "uvx",
+				Env:           map[string]string{"GRAFANA_SERVICE_ACCOUNT_TOKEN": "secret-a", "GRAFANA_URL": "http://localhost:3000"},
+				SecretEnvKeys: []string{"GRAFANA_SERVICE_ACCOUNT_TOKEN"},
+			},
+		},
+	}
+	cfgB := &config.Config{
+		Name:    "hash-test",
+		Version: "4.0",
+		MCPServers: map[string]*config.MCPServer{
+			"grafana": {
+				Command:       "uvx",
+				Env:           map[string]string{"GRAFANA_SERVICE_ACCOUNT_TOKEN": "secret-b", "GRAFANA_URL": "http://localhost:3000"},
+				SecretEnvKeys: []string{"GRAFANA_SERVICE_ACCOUNT_TOKEN"},
+			},
+		},
+	}
+	cfgC := &config.Config{
+		Name:    "hash-test",
+		Version: "4.0",
+		MCPServers: map[string]*config.MCPServer{
+			"grafana": {
+				Command:       "uvx",
+				Env:           map[string]string{"GRAFANA_SERVICE_ACCOUNT_TOKEN": "secret-b", "GRAFANA_URL": "http://localhost:4000"},
+				SecretEnvKeys: []string{"GRAFANA_SERVICE_ACCOUNT_TOKEN"},
+			},
+		},
+	}
+
+	assert.Equal(t, computeSourceHash(cfgA, content), computeSourceHash(cfgB, content))
+	assert.NotEqual(t, computeSourceHash(cfgA, content), computeSourceHash(cfgC, content))
+}
+
 func TestGenerator_Gitignore_NoCrossDuplication(t *testing.T) {
 	// Setup
 	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
@@ -503,7 +703,7 @@ func TestGenerator_Gitignore_NoCrossDuplication(t *testing.T) {
 
 	// Pre-populate .gitignore with patterns the generator would otherwise add
 	gitignorePath := filepath.Join(tempDir, ".gitignore")
-	preExisting := "node_modules/\n.claude/\nCLAUDE.md\n"
+	preExisting := "node_modules/\n/.claude/\nCLAUDE.md\n"
 	require.NoError(t, os.WriteFile(gitignorePath, []byte(preExisting), 0o644))
 
 	// Load config and enable gitignore
@@ -672,6 +872,7 @@ func TestMatchesPattern(t *testing.T) {
 		{"exact match", "file.txt", "file.txt", true},
 		{"no match", "file.txt", "other.txt", false},
 		{"directory pattern", "dir/file.txt", "dir/", true},
+		{"anchored directory pattern", ".claude/settings.json", "/.claude/", true},
 		{"glob pattern", "file.txt", "*.txt", true},
 		{"glob no match", "file.txt", "*.md", false},
 		{"substring", "path/to/file.txt", "file.txt", true},

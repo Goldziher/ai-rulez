@@ -57,14 +57,14 @@ func init() {
 	RemoveCmd.AddCommand(removeSkillCmd)
 
 	// Common flags
-	removeRuleCmd.Flags().StringVar(&removeDomain, "domain", "", "Domain name (optional, searches root if not specified)")
-	removeRuleCmd.Flags().BoolVar(&removeForce, "force", false, "Skip confirmation prompts")
+	removeRuleCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
+	removeRuleCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
 
-	removeContextCmd.Flags().StringVar(&removeDomain, "domain", "", "Domain name (optional, searches root if not specified)")
-	removeContextCmd.Flags().BoolVar(&removeForce, "force", false, "Skip confirmation prompts")
+	removeContextCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
+	removeContextCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
 
-	removeSkillCmd.Flags().StringVar(&removeDomain, "domain", "", "Domain name (optional, searches root if not specified)")
-	removeSkillCmd.Flags().BoolVar(&removeForce, "force", false, "Skip confirmation prompts")
+	removeSkillCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
+	removeSkillCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
 }
 
 func runRemoveRule(cmd *cobra.Command, args []string) {

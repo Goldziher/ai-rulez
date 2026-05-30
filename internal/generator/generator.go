@@ -47,6 +47,10 @@ func (g *Generator) Generate(profile string) error {
 
 	logger.Info("Generating with configuration", "profile", activeProfile)
 
+	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
+		return err
+	}
+
 	staleFiles := g.staleManifestFiles(flatOutputs)
 	g.removeStaleManifestFiles(staleFiles)
 
@@ -94,6 +98,10 @@ func (g *Generator) DryRun(profile string) ([]string, error) {
 }
 
 func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string, error) {
+	if err := g.resolveMCPEnv(); err != nil {
+		return nil, "", err
+	}
+
 	activeProfile := g.resolveProfile(profile)
 
 	contentTree, err := g.getContentForProfile(activeProfile)
@@ -708,7 +716,7 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	}
 	sort.Strings(mcpNames)
 	for _, name := range mcpNames {
-		serverJSON, err := json.Marshal(cfg.MCPServers[name])
+		serverJSON, err := json.Marshal(mcpServerForSourceHash(cfg.MCPServers[name]))
 		if err != nil {
 			serverJSON = []byte("<marshal-error>")
 		}
@@ -889,23 +897,82 @@ func (g *Generator) removeStaleFile(filePath string) {
 	}
 }
 
-// collectGitignorePaths collects unique paths to add to .gitignore.
-// Generated files are listed individually because assistant directories can
-// contain user-owned settings, hooks, skills, rules, and other local files.
+// collectGitignorePaths collects unique patterns to add to .gitignore.
 func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[string]bool {
 	paths := make(map[string]bool)
 	for _, output := range outputs {
-		if output.IsDir {
-			continue
-		}
-		relPath := g.convertToRelativePath(output.Path)
+		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if g.shouldSkipPath(relPath) {
 			continue
 		}
-		paths[relPath] = true
+		if pattern := gitignorePatternForOutput(relPath, output.IsDir); pattern != "" {
+			paths[pattern] = true
+		}
 	}
 
 	return paths
+}
+
+func gitignorePatternForOutput(relPath string, isDir bool) string {
+	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
+	if relPath == ".github" || strings.HasSuffix(relPath, "/.github") {
+		return ""
+	}
+	for _, dir := range generatedAssistantDirs {
+		trimmedDir := strings.TrimSuffix(dir, "/")
+		if relPath == trimmedDir || strings.HasPrefix(relPath, dir) {
+			return dir
+		}
+		if idx := strings.Index(relPath, "/"+dir); idx >= 0 {
+			return relPath[:idx+1] + dir
+		}
+	}
+	for _, file := range generatedRootFiles {
+		if relPath == file {
+			return file
+		}
+	}
+	for _, pattern := range generatedGithubPatterns {
+		if relPath == strings.TrimSuffix(pattern, "/") || strings.HasPrefix(relPath, pattern) || relPath == pattern {
+			return pattern
+		}
+		if idx := strings.Index(relPath, "/"+pattern); idx >= 0 {
+			return relPath[:idx+1] + pattern
+		}
+	}
+	if isDir {
+		return strings.TrimSuffix(relPath, "/") + "/"
+	}
+	return relPath
+}
+
+var generatedRootFiles = [...]string{
+	"AGENTS.md",
+	"CLAUDE.md",
+	"GEMINI.md",
+	".mcp.json",
+}
+
+var generatedAssistantDirs = [...]string{
+	".agents/",
+	".claude/",
+	".codex/",
+	".cursor/",
+	".gemini/",
+	".continue/",
+	".cline/",
+	".clinerules/",
+	".windsurf/",
+	".junie/",
+	".opencode/",
+	".amp/",
+}
+
+var generatedGithubPatterns = [...]string{
+	".github/copilot-instructions.md",
+	".github/agents/",
+	".github/commands/",
+	".github/skills/",
 }
 
 // convertToRelativePath converts an absolute path to relative, or returns the original path
@@ -956,9 +1023,13 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	outsideFence := gitignore.PatternsOutsideFence(existingContent)
 
 	// Sort remaining paths for deterministic output
+	outsidePatterns := make([]string, 0, len(outsideFence))
+	for pattern := range outsideFence {
+		outsidePatterns = append(outsidePatterns, pattern)
+	}
 	var sortedPaths []string
 	for p := range paths {
-		if outsideFence[p] {
+		if isIgnored(p, outsidePatterns) {
 			continue
 		}
 		sortedPaths = append(sortedPaths, p)
@@ -1010,6 +1081,82 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	return nil
 }
 
+func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) error {
+	secretKeys := g.secretMCPEnvKeys()
+	if len(secretKeys) == 0 {
+		return nil
+	}
+
+	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
+	existingData, err := os.ReadFile(gitignorePath)
+	if err != nil && !os.IsNotExist(err) {
+		return oops.With("path", gitignorePath).Wrapf(err, "read .gitignore")
+	}
+
+	patterns := gitignorePatterns(string(existingData))
+	if g.config.ShouldUpdateGitignore() {
+		for pattern := range g.collectGitignorePaths(outputs) {
+			patterns = append(patterns, pattern)
+		}
+	}
+
+	var unsafe []string
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
+		}
+		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if !isMCPConfigOutput(relPath) {
+			continue
+		}
+		if !isIgnored(relPath, patterns) {
+			unsafe = append(unsafe, relPath)
+		}
+	}
+	if len(unsafe) == 0 {
+		return nil
+	}
+	sort.Strings(unsafe)
+	return oops.
+		With("paths", unsafe).
+		With("env_keys", secretKeys).
+		Hint("Enable gitignore generation with --gitignore or add these generated MCP config paths to .gitignore").
+		Errorf("generated MCP config contains secrets but is not gitignored")
+}
+
+func (g *Generator) secretMCPEnvKeys() []string {
+	keys := make(map[string]bool)
+	for _, server := range g.config.MCPServers {
+		for _, key := range server.SecretEnvKeys {
+			keys[key] = true
+		}
+	}
+	return sortedMapKeys(keys)
+}
+
+func isMCPConfigOutput(relPath string) bool {
+	return relPath == ".mcp.json" ||
+		relPath == ".claude/settings.json" ||
+		relPath == ".gemini/settings.json" ||
+		relPath == ".agents/settings.json" ||
+		strings.HasSuffix(relPath, "/.mcp.json") ||
+		strings.HasSuffix(relPath, "/.claude/settings.json") ||
+		strings.HasSuffix(relPath, "/.gemini/settings.json") ||
+		strings.HasSuffix(relPath, "/.agents/settings.json")
+}
+
+func gitignorePatterns(content string) []string {
+	var patterns []string
+	for _, line := range splitLines(content) {
+		trimmed := trimSpace(line)
+		if trimmed == "" || hasPrefix(trimmed, "#") {
+			continue
+		}
+		patterns = append(patterns, trimmed)
+	}
+	return patterns
+}
+
 // isIgnored checks if a filename matches any gitignore pattern
 func isIgnored(filename string, patterns []string) bool {
 	for _, pattern := range patterns {
@@ -1057,7 +1204,7 @@ func matchesPattern(filename, pattern string) bool {
 
 // matchesDirectory checks if filename matches a directory pattern
 func matchesDirectory(filename, pattern string) bool {
-	dirPrefix := trimSuffix(pattern, "/")
+	dirPrefix := trimPrefix(trimSuffix(pattern, "/"), "/")
 
 	if hasSuffix(filename, "/") {
 		return pattern == filename || trimSuffix(filename, "/") == dirPrefix

@@ -71,17 +71,17 @@ func init() {
 	IncludeCmd.AddCommand(includeListCmd)
 
 	// Add flags for include add
-	includeAddCmd.Flags().StringVar(&includePath, "path", "", "Subdirectory within git repository (git only)")
-	includeAddCmd.Flags().StringVar(&includeRef, "ref", "", "Branch, tag, or commit to use (git only)")
-	includeAddCmd.Flags().StringVar(&includeTypes, "include", "rules,context,skills", "Content types to include (comma-separated)")
-	includeAddCmd.Flags().StringVar(&includeMergeStrat, "merge-strategy", "default", "Merge strategy: default|override|append")
-	includeAddCmd.Flags().StringVar(&includeInstallTo, "install-to", "", "Installation path (optional)")
+	includeAddCmd.Flags().StringVarP(&includePath, "path", "p", "", "Subdirectory within git repository (git only)")
+	includeAddCmd.Flags().StringVarP(&includeRef, "ref", "r", "", "Branch, tag, or commit to use (git only)")
+	includeAddCmd.Flags().StringVarP(&includeTypes, "include", "i", "rules,context,skills", "Content types to include (comma-separated)")
+	includeAddCmd.Flags().StringVarP(&includeMergeStrat, "merge-strategy", "m", "default", "Merge strategy: default|override|append")
+	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
 
 	// Add flags for include remove
-	includeRemoveCmd.Flags().BoolVar(&includeForce, "force", false, "Skip confirmation prompts")
+	includeRemoveCmd.Flags().BoolVarP(&includeForce, "force", "f", false, "Skip confirmation prompts")
 
 	// Add flags for include list
-	includeListCmd.Flags().BoolVar(&includeJSON, "json", false, "Output as JSON")
+	includeListCmd.Flags().BoolVarP(&includeJSON, "json", "j", false, "Output as JSON")
 }
 
 func runIncludeAdd(cmd *cobra.Command, args []string) {

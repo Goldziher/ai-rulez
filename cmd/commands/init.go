@@ -39,11 +39,11 @@ const (
 )
 
 func init() {
-	InitCmd.Flags().StringVar(&formatFlag, "format", formatTOML, "Config format: toml, yaml, or json")
-	InitCmd.Flags().StringVar(&domainsFlag, "domains", "", "Comma-separated list of domain directories to create")
-	InitCmd.Flags().BoolVar(&skipContentFlag, "skip-content", false, "Skip creating example content files")
-	InitCmd.Flags().StringVar(&fromFlag, "from", "", "Import from existing tool files (e.g., 'auto', '.claude,.cursor')")
-	InitCmd.Flags().BoolVar(&setupHooks, "setup-hooks", false, "Automatically configure git hooks for ai-rulez validation")
+	InitCmd.Flags().StringVarP(&formatFlag, "format", "f", formatTOML, "Config format: toml, yaml, or json")
+	InitCmd.Flags().StringVarP(&domainsFlag, "domains", "d", "", "Comma-separated list of domain directories to create")
+	InitCmd.Flags().BoolVarP(&skipContentFlag, "skip-content", "s", false, "Skip creating example content files")
+	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files (e.g., 'auto', '.claude,.cursor')")
+	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
 	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
 }
 
