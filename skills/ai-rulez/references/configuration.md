@@ -64,6 +64,12 @@ style = "detailed"            # detailed | compact | minimal
 name = "ai-rulez"
 command = "npx"
 args = ["-y", "ai-rulez@latest", "mcp"]
+
+[[mcp_servers]]
+name = "grafana"
+command = "uvx"
+args = ["mcp-grafana"]
+env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }
 ```
 
 ## Built-in Presets
@@ -81,6 +87,7 @@ args = ["-y", "ai-rulez@latest", "mcp"]
 | amp | AMP.md |
 | junie | .junie/guidelines.md |
 | opencode | OPENCODE.md |
+| antigravity | .agents/ |
 
 ## Available Builtins
 
@@ -112,6 +119,20 @@ description: "Desc"      # Description (skills, agents)
 - **local-override** (default): Local content wins on name conflicts
 - **include-override**: Included content wins on conflicts
 - **error**: Fail immediately on any name conflict
+
+## MCP Environment Placeholders
+
+MCP server env values may use `${VAR}` placeholders. Placeholder names must match
+`[A-Za-z_][A-Za-z0-9_]*` and are resolved during `ai-rulez generate` from repeated
+`--env KEY=VALUE` flags, process environment variables, then dotenv files. By default,
+`.env` is loaded from the generation base directory. If `--env-file` is supplied, the
+default `.env` is skipped; multiple env files are merged in flag order, with later files
+winning.
+
+Generated MCP configs contain resolved values. If an env value came from a placeholder, or
+if an env key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation
+fails before writing unless the generated MCP config path is gitignored or covered by
+planned `--gitignore` patterns. Secret values are redacted before source-hash calculation.
 
 ## Profile Resolution
 

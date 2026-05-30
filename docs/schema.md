@@ -63,8 +63,15 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`priority`** (in markdown frontmatter): One of `critical`, `high`, `medium`, `low`, `minimal`
 - **`targets`** (in markdown frontmatter): File glob patterns (e.g., `CLAUDE.md`, `.cursor/rules/*`)
 - **`mcp_servers[].name`**: Unique identifier for each server
-- **`mcp_servers[].command`**: Command to execute (npx, uvx, ai-rulez, etc.)
+- **`mcp_servers[].command`**: Command to execute for local `stdio` servers (npx, uvx, ai-rulez, etc.)
+- **`mcp_servers[].transport`**: `stdio`, `http`, or `sse` (default: `stdio`)
+- **`mcp_servers[].url`**: Remote MCP URL for `http` or `sse` transports
+- **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
+
+MCP placeholder names must match `[A-Za-z_][A-Za-z0-9_]*`. Generation resolves them from
+`--env KEY=VALUE`, process env, then dotenv files. Secret-bearing MCP outputs must be gitignored
+before generated configs are written.
 
 ### File Structure
 

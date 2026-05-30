@@ -15,6 +15,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez version` | Show version |
 | `ai-rulez mcp` | Start MCP server |
 | `ai-rulez builtins list` | List available built-in domains |
+| `ai-rulez builtins show <name>` | Show bundled content for a built-in domain |
 
 ### CRUD Commands (Configuration Management)
 
@@ -31,7 +32,7 @@ All AI-Rulez CLI commands and flags.
 
 ## CRUD Commands
 
-V3 provides CRUD commands to programmatically modify your `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills, manage includes, and organize profiles.
+AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills, manage includes, and organize profiles.
 
 ### Domain Management
 
@@ -51,8 +52,7 @@ ai-rulez domain add <name> [flags]
 
 **Flags:**
 
-- `--description <text>` (optional): Description of the domain
-- `--verbose` (optional): Show detailed output
+- `--description <text>` / `-s` (optional): Description of the domain
 
 **Examples:**
 
@@ -84,7 +84,7 @@ ai-rulez domain remove <name> [flags]
 
 **Flags:**
 
-- `--force` (optional): Skip confirmation prompt
+- `--force` / `-f` (optional): Skip confirmation prompt
 
 **Examples:**
 
@@ -112,8 +112,7 @@ ai-rulez domain list [flags]
 
 **Flags:**
 
-- `--json` (optional): Output as JSON
-- `--verbose` (optional): Show file counts per domain
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -149,11 +148,10 @@ ai-rulez add rule <name> [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): Domain name. If not specified, creates in root rules directory
-- `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
-- `--targets <list>` (optional): Comma-separated list of target providers (claude, cursor, etc.)
-- `--file <path>` (optional): Read content from a file instead of stdin
-- `--verbose` (optional): Show detailed output
+- `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root rules directory
+- `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low. Default: medium
+- `--targets <list>` / `-t` (optional): Comma-separated list of target providers (claude, cursor, etc.)
+- `--content <text>` / `-c` (optional): Rule content. Uses a template if omitted.
 
 **Examples:**
 
@@ -191,11 +189,9 @@ ai-rulez add context <name> [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): Domain name. If not specified, creates in root context directory
-- `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
-- `--targets <list>` (optional): Comma-separated list of target providers
-- `--file <path>` (optional): Read content from a file
-- `--verbose` (optional): Show detailed output
+- `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root context directory
+- `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low. Default: medium
+- `--content <text>` / `-c` (optional): Context content. Uses a template if omitted.
 
 **Examples:**
 
@@ -227,11 +223,9 @@ ai-rulez add skill <name> [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): Domain name. If not specified, creates in root skills directory
-- `--priority <level>` (optional): Priority: critical, high, medium, low. Default: medium
-- `--targets <list>` (optional): Comma-separated list of target providers
-- `--file <path>` (optional): Read content from a file
-- `--verbose` (optional): Show detailed output
+- `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root skills directory
+- `--description <text>` / `-s` (optional): Skill description
+- `--content <text>` / `-c` (optional): Skill content. Uses a template if omitted.
 
 **Examples:**
 
@@ -263,8 +257,8 @@ ai-rulez remove rule <name> [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): Domain name
-- `--force` (optional): Skip confirmation
+- `--domain <name>` / `-d` (optional): Domain name
+- `--force` / `-f` (optional): Skip confirmation
 
 **Examples:**
 
@@ -296,8 +290,8 @@ ai-rulez remove context <name> [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): Domain name
-- `--force` (optional): Skip confirmation
+- `--domain <name>` / `-d` (optional): Domain name
+- `--force` / `-f` (optional): Skip confirmation
 
 **Examples:**
 
@@ -322,8 +316,8 @@ ai-rulez remove skill <name> [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): Domain name
-- `--force` (optional): Skip confirmation
+- `--domain <name>` / `-d` (optional): Domain name
+- `--force` / `-f` (optional): Skip confirmation
 
 **Examples:**
 
@@ -344,9 +338,8 @@ ai-rulez list rules [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): List rules in specific domain only
-- `--json` (optional): Output as JSON
-- `--verbose` (optional): Show file details
+- `--domain <name>` / `-d` (optional): List rules in specific domain only
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -374,9 +367,8 @@ ai-rulez list context [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): List context in specific domain only
-- `--json` (optional): Output as JSON
-- `--verbose` (optional): Show file details
+- `--domain <name>` / `-d` (optional): List context in specific domain only
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -397,9 +389,8 @@ ai-rulez list skills [flags]
 
 **Flags:**
 
-- `--domain <name>` (optional): List skills in specific domain only
-- `--json` (optional): Output as JSON
-- `--verbose` (optional): Show file details
+- `--domain <name>` / `-d` (optional): List skills in specific domain only
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -422,9 +413,9 @@ Install a named skill from a git repository or local path.
 
 **Flags:**
 
-- `--source <url>` (required): Git URL or local path
-- `--path <dir>` (optional): Path within repo to skill directory (defaults to `skills/<name>`)
-- `--ref <ref>` (optional): Git reference (branch, tag, commit)
+- `--source <url>` / `-s` (required): Git URL or local path
+- `--path <dir>` / `-p` (optional): Path within repo to skill directory (defaults to `skills/<name>`)
+- `--ref <ref>` / `-r` (optional): Git reference (branch, tag, commit)
 
 **Examples:**
 
@@ -444,7 +435,7 @@ Remove an installed skill from the configuration.
 
 **Flags:**
 
-- `--force` (optional): Skip confirmation prompt
+- `--force` / `-f` (optional): Skip confirmation prompt
 
 **Examples:**
 
@@ -459,7 +450,7 @@ List all installed skills.
 
 **Flags:**
 
-- `--json` (optional): Output as JSON
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -489,11 +480,11 @@ ai-rulez include add <name> <source> [flags]
 
 **Flags:**
 
-- `--path <dir>` (optional): Path within git repository where `.ai-rulez/` content is located
-- `--ref <branch>` (optional): Git reference (branch, tag, commit). Default: main
-- `--include <types>` (optional): Comma-separated content types: rules,context,skills,mcp
-- `--merge-strategy <strategy>` (optional): Merge strategy: default, override, append
-- `--install-to <path>` (optional): Installation target path in `.ai-rulez/`
+- `--path <dir>` / `-p` (optional): Path within git repository where `.ai-rulez/` content is located
+- `--ref <branch>` / `-r` (optional): Git reference (branch, tag, commit). Default: main
+- `--include <types>` / `-i` (optional): Comma-separated content types: rules,context,skills,mcp
+- `--merge-strategy <strategy>` / `-m` (optional): Merge strategy: default, override, append
+- `--install-to <path>` / `-t` (optional): Installation target path in `.ai-rulez/`
 
 **Examples:**
 
@@ -531,7 +522,7 @@ ai-rulez include remove <name> [flags]
 
 **Flags:**
 
-- `--force` (optional): Skip confirmation
+- `--force` / `-f` (optional): Skip confirmation
 
 **Examples:**
 
@@ -552,8 +543,7 @@ ai-rulez include list [flags]
 
 **Flags:**
 
-- `--json` (optional): Output as JSON
-- `--verbose` (optional): Show detailed configuration
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -583,8 +573,7 @@ ai-rulez profile add <name> <domains...> [flags]
 
 **Flags:**
 
-- `--set-default` (optional): Set this as the default profile
-- `--verbose` (optional): Show detailed output
+- `--set-default` / `-s` (optional): Set this as the default profile
 
 **Examples:**
 
@@ -616,7 +605,7 @@ ai-rulez profile remove <name> [flags]
 
 **Flags:**
 
-- `--force` (optional): Skip confirmation
+- `--force` / `-f` (optional): Skip confirmation
 
 **Examples:**
 
@@ -657,8 +646,7 @@ ai-rulez profile list [flags]
 
 **Flags:**
 
-- `--json` (optional): Output as JSON
-- `--verbose` (optional): Show domain contents
+- `--json` / `-j` (optional): Output as JSON
 
 **Examples:**
 
@@ -666,6 +654,30 @@ ai-rulez profile list [flags]
 ai-rulez profile list
 ai-rulez profile list --json
 ```
+
+---
+
+## Builtins Command
+
+### `ai-rulez builtins list [flags]`
+
+List all built-in domains embedded in the `ai-rulez` binary.
+
+**Flags:**
+
+- `--json` / `-j` (optional): Output as JSON
+
+### `ai-rulez builtins show <name> [flags]`
+
+Show the full rules, context, skills, agents, and commands for a built-in domain.
+
+**Arguments:**
+
+- `<name>` (required): Built-in domain name, such as `security`, `go`, or `typescript`
+
+**Flags:**
+
+- `--json` / `-j` (optional): Output as JSON
 
 ---
 
@@ -689,15 +701,17 @@ ai-rulez init [project-name] [flags]
 
 | Flag | Type | Default | Description |
 |------|------|---------|-------------|
-| `--format` | string | `toml` | Configuration format: `toml`, `yaml`, or `json` |
-| `--domains` | string | (none) | Comma-separated list of domain names to create |
-| `--skip-content` | boolean | false | Skip creating example content files |
+| `--format` / `-f` | string | `toml` | Configuration format: `toml`, `yaml`, or `json` |
+| `--domains` / `-d` | string | (none) | Comma-separated list of domain names to create |
+| `--skip-content` / `-s` | boolean | false | Skip creating example content files |
+| `--from` / `-F` | string | (none) | Import from existing tool files, such as `auto` or `.claude,.cursor` |
+| `--setup-hooks` / `-H` | boolean | false | Configure Git hooks after initialization |
+| `--yes` / `-y` | boolean | false | Automatically answer yes to prompts |
 
 **General Flags:**
 
 | Flag | Type | Description |
 |------|------|-------------|
-| `--setup-hooks` | boolean | Configure Git hooks after initialization |
 | `--verbose` | boolean | Enable verbose output |
 | `--debug` | boolean | Enable debug output |
 
@@ -755,13 +769,16 @@ ai-rulez generate [config-path] [flags]
 |------|------|---------|-------------|
 | `--dry-run` / `-d` | boolean | false | Show what would be generated without writing files |
 | `--gitignore` / `-i` | boolean | (from config) | Update `.gitignore` with generated output patterns |
-| `--update-gitignore` | boolean | (from config) | Deprecated alias for `--gitignore` |
 | `--recursive` / `-r` | boolean | false | Find and process configs recursively |
 | `--no-fetch` / `-f` | boolean | false | Skip fetching remote includes and use cached content |
 | `--config-dir` / `-n` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
 | `--env` / `-e` | string | | MCP env override in `KEY=VALUE` form; repeatable |
 | `--env-file` / `-E` | string | `.env` | Dotenv file for MCP env placeholders; repeatable |
+| `--no-configure-cli-mcp` / `-M` | boolean | false | Skip configuring CLI-based MCP tools such as Claude and Gemini |
+| `--skip-cli-mcp` / `-S` | boolean | false | Alias for `--no-configure-cli-mcp` |
 | `--token` / `-T` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
+
+`--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
 
 **Examples:**
 
@@ -895,7 +912,7 @@ ai-rulez validate --verbose
 
 ### What Gets Validated
 
-- `version` is exactly `"3.0"`
+- `version` is `"3.0"` or `"4.0"`
 - `name` is present and non-empty
 - All preset names are valid
 - Referenced domains exist in filesystem
@@ -904,27 +921,21 @@ ai-rulez validate --verbose
 
 ## Migrate Command
 
-### `ai-rulez migrate v4 [config-path]`
+### `ai-rulez migrate v4`
 
 Migrate configuration from V3 (YAML) to V4 (TOML format).
 
 **Syntax:**
 
 ```bash
-ai-rulez migrate v4 [config-path] [flags]
+ai-rulez migrate v4
 ```
 
 **Arguments:**
 
-- `[config-path]` (optional): Path to V3 config.yaml file. If not provided, auto-detected.
+- `v4`, `4`, or `4.0` (required): Target configuration version.
 
-**Flags:**
-
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--dry-run` | boolean | false | Preview migration without writing files |
-| `--backup` | boolean | true | Create backup of original config.yaml |
-| `--verbose` | boolean | false | Enable verbose output |
+The migrate command has no command-local flags.
 
 **Examples:**
 
@@ -934,31 +945,17 @@ Migrate current directory:
 ai-rulez migrate v4
 ```
 
-Migrate with dry-run (preview changes):
-
-```bash
-ai-rulez migrate v4 --dry-run
-```
-
-Migrate specific config without backup:
-
-```bash
-ai-rulez migrate v4 .ai-rulez/config.yaml --backup false
-```
-
 **What It Does:**
 
-1. Reads V3 `config.yaml` (YAML format)
-2. Converts all configuration to TOML format
-3. Moves MCP servers from separate `mcp.yaml` into `config.toml` inline
-4. Updates `version` field to `"4.0"`
-5. Creates new `config.toml` alongside original
-6. Optionally creates backup of original `config.yaml`
+1. Finds `.ai-rulez/` in the current directory
+2. Returns without changes if `.ai-rulez/config.toml` already exists
+3. Loads the existing configuration, including legacy MCP files if present
+4. Writes `.ai-rulez/config.toml` with `version = "4.0"`
+5. Removes old `.ai-rulez/config.yaml`, `.ai-rulez/config.json`, `.ai-rulez/mcp.yaml`, `.ai-rulez/mcp.toml`, and `.ai-rulez/mcp.json` files
 
 **After Migration:**
 
 - `.ai-rulez/config.toml` — new V4 configuration (TOML)
-- `.ai-rulez/config.yaml.bak` — backup of original (if `--backup` enabled)
 - All other files remain unchanged
 
 Then regenerate outputs:
@@ -1028,12 +1025,14 @@ ai-rulez init --help
 
 ## Configuration Detection
 
-The CLI auto-detects configuration in the following order:
+Commands that load a project directory use the following config order:
 
 1. **Explicit path**: Via `--config` flag or command argument
-2. **V3 format**: `.ai-rulez/` directory in current directory
-3. **V2 format**: `ai-rulez.yaml` or `ai-rulez.yml` in current directory
-4. **Error**: No configuration found
+2. **Directory config**: `.ai-rulez/config.toml`, `.ai-rulez/config.yaml`, or `.ai-rulez/config.json`
+3. **Error**: No configuration found
+
+Legacy flat V2 config files such as `ai-rulez.yaml` are migration inputs. Use `ai-rulez migrate v4`
+before running V4 generation workflows.
 
 Example detection flow:
 
@@ -1105,12 +1104,16 @@ Next steps:
 ### Validation Output
 
 ```text
-✅ Configuration is valid
-  Project: my-project
-  Version: 3.0
-  Presets: 3
-  Domains: 3
-  Profiles: 2
+INFO  Configuration is valid path=/path/to/project/.ai-rulez
+INFO
+Configuration summary:
+INFO   - Rules: count=5
+INFO   - Context files: count=10
+INFO   - Skills: count=8
+INFO   - Domains: count=9
+INFO     - Domain rules: count=35
+INFO     - Domain context: count=2
+INFO   - Presets: count=12
 ```
 
 ### Validation Error
