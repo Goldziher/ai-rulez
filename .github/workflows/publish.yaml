@@ -137,13 +137,14 @@ jobs:
         uses: actions/setup-go@v6
         with:
           go-version-file: "go.mod"
+          cache: false
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean --skip=validate
+          args: release --clean --skip=validate --parallelism 1 --timeout 60m
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
