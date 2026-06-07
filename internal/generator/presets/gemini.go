@@ -13,8 +13,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const presetNameGemini = "gemini"
+
 func init() {
-	config.RegisterPreset("gemini", &GeminiPresetGenerator{})
+	config.RegisterPreset(presetNameGemini, &GeminiPresetGenerator{})
 }
 
 // GeminiPresetGenerator generates Gemini preset files
@@ -38,7 +40,7 @@ func generateGeminiPresetHeader(cfg *config.Config, outputPath string, ruleCount
 }
 
 func (g *GeminiPresetGenerator) GetName() string {
-	return "gemini"
+	return presetNameGemini
 }
 
 func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -115,7 +117,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderGeminiAgentFile(agent)
+		agentContent, err := g.renderGeminiAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -265,10 +267,10 @@ func (g *GeminiPresetGenerator) renderGeminiSkillFile(skill config.ContentFile) 
 }
 
 // renderGeminiAgentFile renders an agent file with YAML frontmatter for Gemini
-func (g *GeminiPresetGenerator) renderGeminiAgentFile(agent config.ContentFile) (string, error) {
+func (g *GeminiPresetGenerator) renderGeminiAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildGeminiAgentFrontmatter(agent)
+	frontmatter := g.buildGeminiAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -285,16 +287,22 @@ func (g *GeminiPresetGenerator) renderGeminiAgentFile(agent config.ContentFile) 
 }
 
 // buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file
-func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
+	}
+
+	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
+	// defaults-only model still applies to agents with no frontmatter.
+	if model := ResolveAgentModel(presetNameGemini, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	geminiScalarFields := []string{keyDescription, keyKind, keyModel, keyTemperature, "max_turns", "timeout_mins"}
+	geminiScalarFields := []string{keyDescription, keyKind, keyTemperature, "max_turns", "timeout_mins"}
 	for _, field := range geminiScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

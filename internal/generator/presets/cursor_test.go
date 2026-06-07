@@ -474,7 +474,7 @@ func TestCursorPresetGenerator_buildCursorAgentFrontmatter_DoesNotEmitEffort(t *
 		},
 	}
 
-	fm := g.buildCursorAgentFrontmatter(agent)
+	fm := g.buildCursorAgentFrontmatter(agent, nil)
 
 	if _, ok := fm["effort"]; ok {
 		t.Errorf("effort field leaked into Cursor agent frontmatter; cursor does not natively support reasoning effort yet")

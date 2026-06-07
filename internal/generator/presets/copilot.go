@@ -102,7 +102,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderCopilotAgentFile(agent)
+		agentContent, err := g.renderCopilotAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -231,10 +231,10 @@ func (g *CopilotPresetGenerator) renderSkillFile(skill config.ContentFile) strin
 }
 
 // renderCopilotAgentFile renders an agent file with YAML frontmatter for Copilot
-func (g *CopilotPresetGenerator) renderCopilotAgentFile(agent config.ContentFile) (string, error) {
+func (g *CopilotPresetGenerator) renderCopilotAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildCopilotAgentFrontmatter(agent)
+	frontmatter := g.buildCopilotAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -250,9 +250,15 @@ func (g *CopilotPresetGenerator) renderCopilotAgentFile(agent config.ContentFile
 }
 
 // buildCopilotAgentFrontmatter builds frontmatter for a Copilot agent file
-func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
+	}
+
+	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
+	// defaults-only model still applies to agents with no frontmatter.
+	if model := ResolveAgentModel(presetNameCopilot, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
 	}
 
 	if agent.Metadata == nil {
@@ -260,7 +266,7 @@ func (g *CopilotPresetGenerator) buildCopilotAgentFrontmatter(agent config.Conte
 	}
 
 	copilotFields := []string{
-		keyDescription, keyModel, "target",
+		keyDescription, "target",
 		"user-invocable", "disable-model-invocation",
 		"agents", "handoffs", "mcp-servers",
 	}

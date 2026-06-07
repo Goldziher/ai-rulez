@@ -160,7 +160,7 @@ func TestGeminiPresetGenerator_renderGeminiAgentFile(t *testing.T) {
 		},
 	}
 
-	result, err := g.renderGeminiAgentFile(agent)
+	result, err := g.renderGeminiAgentFile(agent, nil)
 	if err != nil {
 		t.Fatalf("renderGeminiAgentFile() error: %v", err)
 	}

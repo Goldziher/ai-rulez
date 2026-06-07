@@ -76,7 +76,7 @@ func TestClinePresetGenerator_renderClineAgentFile(t *testing.T) {
 		},
 	}
 
-	content, err := g.renderClineAgentFile(agent)
+	content, err := g.renderClineAgentFile(agent, nil)
 	require.NoError(t, err)
 	assert.Contains(t, content, "---")
 	assert.Contains(t, content, "name: test-agent")

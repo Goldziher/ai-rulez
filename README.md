@@ -153,6 +153,28 @@ Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez em
 
 Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
 
+**Per-preset model selection for subagents** — Model strings differ per provider, so the same agent can declare a different model for each preset it targets:
+
+```yaml
+# .ai-rulez/agents/research-helper.md
+---
+name: research-helper
+description: Multi-provider research subagent
+claude_model: opus
+copilot_model: gpt-5
+cursor_model: claude-3.7-sonnet
+---
+```
+
+```toml
+# .ai-rulez/config.toml — project-wide defaults
+[defaults.model_by_preset]
+claude = "sonnet"   # used when an agent doesn't set its own claude_model
+copilot = "gpt-5"
+```
+
+Per-agent `<preset>_model` wins over `defaults.model_by_preset`; the legacy single `model:` field on an agent is the lowest-priority fallback for backward compatibility.
+
 **Installed Skills** — Pull reusable skills from external repos:
 
 ```toml

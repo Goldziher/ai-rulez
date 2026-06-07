@@ -181,7 +181,7 @@ func TestContinueDevPresetGenerator_renderContinueDevAgentFile(t *testing.T) {
 		},
 	}
 
-	content, err := g.renderContinueDevAgentFile(agent)
+	content, err := g.renderContinueDevAgentFile(agent, nil)
 	require.NoError(t, err)
 	assert.Contains(t, content, "---")
 	assert.Contains(t, content, "name: my-agent")
@@ -198,7 +198,7 @@ func TestContinueDevPresetGenerator_renderContinueDevAgentFile_WithoutMetadata(t
 		Content: "Simple agent instructions.",
 	}
 
-	content, err := g.renderContinueDevAgentFile(agent)
+	content, err := g.renderContinueDevAgentFile(agent, nil)
 	require.NoError(t, err)
 	assert.Contains(t, content, "---")
 	assert.Contains(t, content, "name: simple-agent")
@@ -334,7 +334,7 @@ func TestContinueDevPresetGenerator_buildContinueDevAgentFrontmatter(t *testing.
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			fm := g.buildContinueDevAgentFrontmatter(tt.agent)
+			fm := g.buildContinueDevAgentFrontmatter(tt.agent, nil)
 			assert.Equal(t, tt.agent.Name, fm["name"])
 
 			if tt.hasDesc {
@@ -361,7 +361,7 @@ func TestContinueDevPresetGenerator_AgentFrontmatter_DoesNotEmitEffort(t *testin
 	fm := g.buildContinueDevAgentFrontmatter(config.ContentFile{
 		Name:     "reviewer",
 		Metadata: &config.Metadata{Effort: "high"},
-	})
+	}, nil)
 	if _, ok := fm["effort"]; ok {
 		t.Errorf("effort should not appear in continue.dev agent frontmatter")
 	}
