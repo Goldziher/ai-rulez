@@ -150,6 +150,54 @@ func filterContentByExplicitTargets(files []config.ContentFile, outputPath, base
 	return result
 }
 
+// CombineContentFiles is the exported variant of combineContentFiles, called
+// from the providers package (internal/generator/providers) which composes
+// content from the same root+domain sources during DSL-backed rendering.
+func CombineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
+	return combineContentFiles(slices...)
+}
+
+// GetAllDomainRules / GetAllDomainContext / GetAllDomainSkills /
+// GetAllDomainAgents / GetAllDomainCommands expose the per-type domain
+// collectors for the DSL renderer in internal/generator/providers.
+func GetAllDomainRules(content *config.ContentTree) []config.ContentFile {
+	return getAllDomainRules(content)
+}
+
+func GetAllDomainContext(content *config.ContentTree) []config.ContentFile {
+	return getAllDomainContext(content)
+}
+
+func GetAllDomainSkills(content *config.ContentTree) []config.ContentFile {
+	return getAllDomainSkills(content)
+}
+
+func GetAllDomainAgents(content *config.ContentTree) []config.ContentFile {
+	return getAllDomainAgents(content)
+}
+
+func GetAllDomainCommands(content *config.ContentTree) []config.ContentFile {
+	return getAllDomainCommands(content)
+}
+
+// RenderAgentsSectionExported exposes renderAgentsSection for the DSL
+// renderer's `agents_delegation` root section.
+func RenderAgentsSectionExported(builder *strings.Builder, content *config.ContentTree, agents []config.ContentFile) {
+	renderAgentsSection(builder, content, agents)
+}
+
+// FilterContentByExplicitTargetsExported exposes filterContentByExplicitTargets
+// for the DSL renderer's `targeted_rules` / `targeted_context` body sections.
+func FilterContentByExplicitTargetsExported(files []config.ContentFile, outputPath, baseDir string) []config.ContentFile {
+	return filterContentByExplicitTargets(files, outputPath, baseDir)
+}
+
+// ConfigFileName exposes configFileName for the DSL renderer's `header`
+// root section, which needs to embed the source config filename.
+func ConfigFileName(cfg *config.Config) string {
+	return configFileName(cfg)
+}
+
 // sanitizeName removes special characters from names for use in filenames
 func sanitizeName(name string) string {
 	// Replace spaces and special chars with dashes
