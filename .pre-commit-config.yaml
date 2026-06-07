@@ -14,7 +14,7 @@ repos:
         stages: [commit-msg]
 
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.3.1
+    rev: v4.3.2
     hooks:
       - id: ai-rulez-generate
 
@@ -38,7 +38,7 @@ repos:
       - id: pyproject-fmt
 
   - repo: https://github.com/kreuzberg-dev/pre-commit-hooks
-    rev: v1.2.3
+    rev: v2.1.8
     hooks:
       - id: go-fmt
       - id: golangci-lint
@@ -54,6 +54,6 @@ repos:
       - id: actionlint
 
   - repo: https://github.com/Goldziher/gh-actions-updater
-    rev: v0.1.5
+    rev: v0.1.6
     hooks:
       - id: gh-actions-updater
