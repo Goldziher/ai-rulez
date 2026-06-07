@@ -228,13 +228,16 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 	if effort := MapEffort(opencodePresetName, ResolveAgentEffort(opencodePresetName, agent, cfg)); effort != "" {
 		frontmatter["reasoningEffort"] = effort
 	}
+	if model := ResolveAgentModel(opencodePresetName, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
+	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
 	opencodeFields := []string{
-		keyDescription, "mode", keyModel,
+		keyDescription, "mode",
 		keyTemperature, "top_p", "hidden",
 	}
 	for _, field := range opencodeFields {

@@ -295,13 +295,19 @@ func (g *ClaudePresetGenerator) buildAgentFrontmatter(agent config.ContentFile, 
 		frontmatter["effort"] = mapped
 	}
 
+	// Resolve model via the shared resolver. Done before the metadata-nil short-circuit
+	// so a defaults-only model still applies to agents with no frontmatter at all.
+	if model := ResolveAgentModel(presetNameClaude, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
+	}
+
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
 	// Add standard Claude agent fields. tools and skills are list-typed and
 	// pulled from the typed Metadata fields so YAML marshaling emits proper sequences.
-	scalarFields := []string{keyDescription, keyModel, "permission_mode"}
+	scalarFields := []string{keyDescription, "permission_mode"}
 	for _, field := range scalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

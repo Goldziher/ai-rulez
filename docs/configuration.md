@@ -355,17 +355,31 @@ effort = "medium"  # low | medium | high | xhigh | max | inherit
 codex = "high"
 claude = "xhigh"
 amp = "max"
+
+[defaults.model_by_preset]
+claude = "opus"
+copilot = "gpt-5"
+cursor = "claude-3.7-sonnet"
 ```
 
 **`defaults.effort`** sets the reasoning effort applied to every preset that supports it. Per-agent overrides (via agent frontmatter) win where the preset accepts per-agent effort; if neither is set, the field is omitted entirely.
 
 **`defaults.effort_by_preset`** lets you override `defaults.effort` for specific presets. Per-agent metadata still wins. Useful when, for example, you want Codex to reason harder than Claude on the same project.
 
+**`defaults.model_by_preset`** sets the agent `model` value per preset. Model strings are provider-specific (`opus` makes sense for Claude, `gpt-5` for Copilot) so there is no provider-neutral `defaults.model` scalar — every entry is preset-scoped. Per-agent `<preset>_model` frontmatter still wins; the legacy single-value `model` field on an agent acts as the lowest-priority fallback. Presets that do not emit a per-agent model frontmatter (`codex`, `amp`, `antigravity`, `junie`) ignore entries for their preset.
+
 **Resolution order** (per preset, per agent):
 
 1. Per-agent `effort` in agent frontmatter (Claude, Codex, Windsurf, Opencode — presets that support per-agent effort)
 2. `defaults.effort_by_preset[<preset>]`
 3. `defaults.effort`
+4. Omit
+
+For models the order is:
+
+1. Per-agent `<preset>_model` in agent frontmatter (e.g. `claude_model`, `copilot_model`)
+2. `defaults.model_by_preset[<preset>]`
+3. Per-agent legacy `model` field
 4. Omit
 
 **Per-preset support matrix** — each preset accepts a different vocabulary, and ai-rulez maps your value to the closest tier the preset supports:
@@ -378,6 +392,19 @@ amp = "max"
 | `windsurf` | `.windsurf/agents/<id>.md` frontmatter | `reasoning_effort` | Per-agent. `max` → `high`; `inherit` dropped. |
 | `opencode` | `.opencode/agents/<id>.md` frontmatter | `reasoningEffort` | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped. |
 | `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | — | — | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
+
+**Per-preset model matrix** — presets that emit a `model` value in their agent frontmatter:
+
+| Preset | Per-agent frontmatter key | Emitted field |
+|--------|--------------------------|---------------|
+| `claude` | `claude_model` | `model` in `.claude/agents/<id>.md` |
+| `copilot` | `copilot_model` | `model` in `.github/agents/<id>.agent.md` |
+| `cursor` | `cursor_model` | `model` in `.agents/agents/<id>.md` |
+| `cline` | `cline_model` | `model` in `.cline/agents/<id>.md` |
+| `opencode` | `opencode_model` | `model` in `.opencode/agents/<id>.md` |
+| `windsurf` | `windsurf_model` | `model` in `.windsurf/agents/<id>.md` |
+| `continue-dev` | `continue-dev_model` | `model` in `.continue/agents/<id>.md` |
+| `gemini` | `gemini_model` | `model` in `.agents/agents/<id>.md` (Gemini) |
 
 ### `header`
 
