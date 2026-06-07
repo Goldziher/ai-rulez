@@ -222,6 +222,38 @@ func TestLoadConfigFromFile_RootConfigRequiresDirectoryLayout(t *testing.T) {
 	assert.Contains(t, err.Error(), "directory layout required")
 }
 
+func TestLoadConfigTOML_LoadsDefaults(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	configDir := filepath.Join(tempDir, aiRulezDirName)
+	require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+	configContent := `version = "4.0"
+name = "with-defaults"
+presets = ["claude", "copilot"]
+
+[defaults]
+effort = "high"
+
+[defaults.effort_by_preset]
+claude = "xhigh"
+
+[defaults.model_by_preset]
+claude = "opus"
+copilot = "gpt-5"
+`
+	require.NoError(t, os.WriteFile(filepath.Join(configDir, configTOMLFilename), []byte(configContent), 0o644))
+
+	cfg, err := LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Defaults, "defaults table must be loaded from TOML")
+	assert.Equal(t, "high", cfg.Defaults.Effort)
+	assert.Equal(t, "xhigh", cfg.Defaults.EffortByPreset["claude"])
+	assert.Equal(t, "opus", cfg.Defaults.ModelByPreset["claude"])
+	assert.Equal(t, "gpt-5", cfg.Defaults.ModelByPreset["copilot"])
+}
+
 func TestLoadConfig_JSON(t *testing.T) {
 	t.Run("loads minimal JSON config", func(t *testing.T) {
 		tempDir := t.TempDir()

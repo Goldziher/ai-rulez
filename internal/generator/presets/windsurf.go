@@ -287,12 +287,15 @@ func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.Con
 	if effort := MapEffort(windsurfPresetName, ResolveAgentEffort(windsurfPresetName, agent, cfg)); effort != "" {
 		frontmatter["reasoning_effort"] = effort
 	}
+	if model := ResolveAgentModel(windsurfPresetName, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
+	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	windsurfScalarFields := []string{keyDescription, keyModel}
+	windsurfScalarFields := []string{keyDescription}
 	for _, field := range windsurfScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

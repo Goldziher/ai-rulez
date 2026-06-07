@@ -106,7 +106,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderContinueDevAgentFile(agent)
+		agentContent, err := g.renderContinueDevAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -232,10 +232,10 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 }
 
 // renderContinueDevAgentFile renders an agent file with YAML frontmatter for Continue.dev
-func (g *ContinueDevPresetGenerator) renderContinueDevAgentFile(agent config.ContentFile) (string, error) {
+func (g *ContinueDevPresetGenerator) renderContinueDevAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildContinueDevAgentFrontmatter(agent)
+	frontmatter := g.buildContinueDevAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -251,16 +251,22 @@ func (g *ContinueDevPresetGenerator) renderContinueDevAgentFile(agent config.Con
 }
 
 // buildContinueDevAgentFrontmatter builds frontmatter for a Continue.dev agent file
-func (g *ContinueDevPresetGenerator) buildContinueDevAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *ContinueDevPresetGenerator) buildContinueDevAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
+	}
+
+	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
+	// defaults-only model still applies to agents with no frontmatter.
+	if model := ResolveAgentModel(continueDevPresetName, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	continueDevFields := []string{keyDescription, keyModel}
+	continueDevFields := []string{keyDescription}
 	for _, field := range continueDevFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val

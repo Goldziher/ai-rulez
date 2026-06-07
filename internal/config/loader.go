@@ -469,6 +469,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Plugins         []PluginConfig         `toml:"plugins"`
 		Marketplaces    []MarketplaceConfig    `toml:"marketplaces"`
 		Scopes          []ScopeConfig          `toml:"scopes"`
+		Defaults        *DefaultsConfig        `toml:"defaults"`
 	}
 
 	var raw tomlConfig
@@ -519,6 +520,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Plugins:         raw.Plugins,
 		Marketplaces:    raw.Marketplaces,
 		Scopes:          raw.Scopes,
+		Defaults:        raw.Defaults,
 	}
 
 	return cfg, nil

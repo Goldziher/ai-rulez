@@ -131,7 +131,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderCursorAgentFile(agent)
+		agentContent, err := g.renderCursorAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -318,10 +318,10 @@ func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *c
 }
 
 // renderCursorAgentFile renders an agent file with YAML frontmatter for Cursor
-func (g *CursorPresetGenerator) renderCursorAgentFile(agent config.ContentFile) (string, error) {
+func (g *CursorPresetGenerator) renderCursorAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildCursorAgentFrontmatter(agent)
+	frontmatter := g.buildCursorAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -338,16 +338,22 @@ func (g *CursorPresetGenerator) renderCursorAgentFile(agent config.ContentFile) 
 }
 
 // buildCursorAgentFrontmatter builds frontmatter for a Cursor agent file
-func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
+	}
+
+	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
+	// defaults-only model still applies to agents with no frontmatter.
+	if model := ResolveAgentModel(presetNameCursor, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	cursorFields := []string{keyDescription, keyModel, "readonly", "is_background"}
+	cursorFields := []string{keyDescription, "readonly", "is_background"}
 	for _, field := range cursorFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
