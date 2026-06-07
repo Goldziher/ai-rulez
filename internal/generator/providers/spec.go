@@ -111,13 +111,16 @@ const (
 	EffortMapStyleString = "string"
 
 	// sidecars[].emit_when
-	PredicateAlways        = "always"
-	PredicateHasMCPServers = "has_mcp_servers"
-	PredicateHasPlugins    = "has_plugins"
+	PredicateAlways            = "always"
+	PredicateHasMCPServers     = "has_mcp_servers"
+	PredicateHasPlugins        = "has_plugins"
+	PredicateHasResolvedEffort = "has_resolved_effort"
 
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"
 	SidecarClaudePluginsJSON  = "claude_plugins_json"
+	SidecarMCPJSON            = "mcp_json"
+	SidecarAmpSettingsJSON    = "amp_settings_json"
 
 	// Content type keys in ProviderSpec.Outputs
 	OutputTypeSkills   = "skills"
