@@ -11,7 +11,8 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets" // Import to register presets and access MCPPresetGenerator
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"     // Register legacy preset generators and access MCPPresetGenerator
+	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"

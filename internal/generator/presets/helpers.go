@@ -1,6 +1,8 @@
 package presets
 
 import (
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -148,6 +150,122 @@ func filterContentByExplicitTargets(files []config.ContentFile, outputPath, base
 		}
 	}
 	return result
+}
+
+// sanitizeAgentID lowercases the name and replaces spaces/underscores with
+// hyphens — produces filesystem-safe stems for agent and command-as-skill
+// output paths. Distinct from sanitizeName, which also strips
+// non-alphanumeric runes.
+func sanitizeAgentID(name string) string {
+	id := strings.ToLower(name)
+	id = strings.ReplaceAll(id, " ", "-")
+	id = strings.ReplaceAll(id, "_", "-")
+	return id
+}
+
+// extractSkillID extracts the canonical skill ID from a skill's source path.
+// Source paths take the form `.../skills/{skill-id}/SKILL.md`; the parent
+// directory name is the ID. Used by every preset that emits per-skill files.
+func extractSkillID(skillPath string) string {
+	dir := filepath.Dir(skillPath)
+	return filepath.Base(dir)
+}
+
+// shouldIncludeInOutput decides whether a content file should land in a given
+// output path. Returns true when targets is empty (no restriction) or any
+// target matches the output via targetMatchesOutput.
+func shouldIncludeInOutput(targets []string, outputPath, baseDir string) bool {
+	if len(targets) == 0 {
+		return true
+	}
+	candidates := buildOutputPathCandidates(outputPath, baseDir)
+	for _, target := range targets {
+		if targetMatchesOutput(target, candidates) {
+			return true
+		}
+	}
+	return false
+}
+
+func buildOutputPathCandidates(outputPath, baseDir string) []string {
+	candidateSet := make(map[string]struct{})
+	addCandidate := func(value string) {
+		normalized := normalizeTargetPath(value)
+		if normalized == "" {
+			return
+		}
+		candidateSet[normalized] = struct{}{}
+	}
+
+	addCandidate(outputPath)
+	addCandidate(filepath.Base(outputPath))
+
+	baseDir = normalizeTargetPath(baseDir)
+	outputPath = normalizeTargetPath(outputPath)
+	if baseDir != "" {
+		prefix := baseDir + "/"
+		if strings.HasPrefix(outputPath, prefix) {
+			addCandidate(strings.TrimPrefix(outputPath, prefix))
+		}
+	}
+
+	candidates := make([]string, 0, len(candidateSet))
+	for candidate := range candidateSet {
+		candidates = append(candidates, candidate)
+	}
+	return candidates
+}
+
+func normalizeTargetPath(raw string) string {
+	if raw == "" {
+		return ""
+	}
+	hasTrailingSlash := strings.HasSuffix(raw, "/") || strings.HasSuffix(raw, "\\")
+	normalized := filepath.ToSlash(filepath.Clean(raw))
+	normalized = strings.TrimPrefix(normalized, "./")
+	if normalized == "." {
+		return ""
+	}
+	if hasTrailingSlash && normalized != "/" {
+		normalized += "/"
+	}
+	return normalized
+}
+
+func targetMatchesOutput(target string, outputCandidates []string) bool {
+	target = normalizeTargetPath(target)
+	if target == "" {
+		return false
+	}
+	if target == presetNameClaude {
+		for _, candidate := range outputCandidates {
+			if candidate == fileClaudeMD || strings.HasPrefix(candidate, ".claude/") {
+				return true
+			}
+		}
+		return false
+	}
+	if strings.HasSuffix(target, "/") {
+		prefix := strings.TrimSuffix(target, "/")
+		for _, candidate := range outputCandidates {
+			if candidate == prefix || strings.HasPrefix(candidate, prefix+"/") {
+				return true
+			}
+		}
+		return false
+	}
+	for _, candidate := range outputCandidates {
+		if candidate == target {
+			return true
+		}
+		if strings.ContainsAny(target, "*?[") {
+			matched, err := path.Match(target, candidate)
+			if err == nil && matched {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // CombineContentFiles is the exported variant of combineContentFiles, called
