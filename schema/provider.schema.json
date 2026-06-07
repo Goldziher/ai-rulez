@@ -1,0 +1,218 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://goldziher.github.io/ai-rulez/provider.schema.json",
+  "title": "ai-rulez Provider Spec",
+  "description": "Declarative provider definition consumed by the generic DSL renderer. Each builtin provider (claude, copilot, codex, ...) and any user-defined provider is expressed as one of these documents. The renderer dispatches purely on the closed-set enums declared here; new behaviors require extending the enums + adding a Go handler.",
+  "type": "object",
+  "required": ["name"],
+  "additionalProperties": false,
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Identifier used to register the provider (e.g. \"claude\"). Matches the preset name in .ai-rulez/config.toml `presets`.",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "display_name": {
+      "type": "string",
+      "description": "Human-readable name shown in logs and docs."
+    },
+    "root": {
+      "$ref": "#/$defs/root"
+    },
+    "directories": {
+      "type": "array",
+      "description": "Directory paths (relative to baseDir) the renderer must emit as IsDir outputs so they participate in stale-file cleanup.",
+      "items": { "type": "string" }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Per-content-type emit rules. Keys are the content types defined in the content tree.",
+      "additionalProperties": false,
+      "propertyNames": {
+        "enum": ["rules", "context", "skills", "agents", "commands"]
+      },
+      "patternProperties": {
+        "^(rules|context|skills|agents|commands)$": {
+          "$ref": "#/$defs/output"
+        }
+      }
+    },
+    "effort_map": {
+      "$ref": "#/$defs/effort_map"
+    },
+    "model": {
+      "$ref": "#/$defs/model"
+    },
+    "sidecars": {
+      "type": "array",
+      "description": "Conditionally-emitted single files (settings.json, .mcp.json, etc.) dispatched on the closed-set `kind` enum.",
+      "items": { "$ref": "#/$defs/sidecar" }
+    }
+  },
+  "$defs": {
+    "root": {
+      "type": "object",
+      "description": "Top-level instructions file (CLAUDE.md, AGENTS.md, GEMINI.md, ...).",
+      "required": ["file", "sections"],
+      "additionalProperties": false,
+      "properties": {
+        "file": {
+          "type": "string",
+          "description": "Relative path of the root file."
+        },
+        "sections": {
+          "type": "array",
+          "description": "Ordered list of section renderers to compose into the root file body.",
+          "items": {
+            "enum": [
+              "header",
+              "title",
+              "description",
+              "rules_inline",
+              "context_inline",
+              "agents_delegation"
+            ]
+          }
+        }
+      }
+    },
+    "output": {
+      "type": "object",
+      "required": ["mode"],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": ["per_item_file"],
+          "description": "Currently only `per_item_file` is supported. Inlined-only content types are expressed via the root.sections list instead."
+        },
+        "dir": {
+          "type": "string",
+          "description": "Directory (relative to baseDir) where per-item files are emitted."
+        },
+        "filename": {
+          "type": "string",
+          "description": "Filename template inside `dir`. Tokens: `{id}` (sanitized name)."
+        },
+        "resources": {
+          "type": "boolean",
+          "description": "When true, also emit bundled skill resources (references/, scripts/, assets/) under the item directory."
+        },
+        "filter": {
+          "enum": ["include_if_targeting_provider"],
+          "description": "Closed-set filter predicate. Currently only one predicate exists: a command/agent is included if its Metadata.Targets is empty or contains the provider name."
+        },
+        "body": {
+          "$ref": "#/$defs/body"
+        },
+        "frontmatter": {
+          "$ref": "#/$defs/frontmatter"
+        }
+      }
+    },
+    "body": {
+      "type": "object",
+      "required": ["sections"],
+      "additionalProperties": false,
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "frontmatter",
+              "content",
+              "resource_index",
+              "targeted_rules",
+              "targeted_context"
+            ]
+          }
+        }
+      }
+    },
+    "frontmatter": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fields": {
+          "type": "array",
+          "description": "Whitelisted Metadata.Extra keys to copy into the frontmatter, in this order. Empty/missing keys are skipped.",
+          "items": { "type": "string" }
+        },
+        "constants": {
+          "type": "object",
+          "description": "Fixed key/value pairs unconditionally written to the frontmatter (e.g. {\"user_invocable\": false})."
+        },
+        "tools": {
+          "type": "boolean",
+          "description": "When true, emit Metadata.Tools as a YAML list under the `tools` key."
+        },
+        "skills": {
+          "type": "boolean",
+          "description": "When true, emit Metadata.Skills as a YAML list under the `skills` key."
+        },
+        "include_extras": {
+          "type": "boolean",
+          "description": "When true, copy every remaining Metadata.Extra key into the frontmatter except those in `extras_blacklist`."
+        },
+        "extras_blacklist": {
+          "type": "array",
+          "description": "Keys to exclude when `include_extras` is true. Used to drop ai-rulez internals (priority, targets) and keys handled elsewhere.",
+          "items": { "type": "string" }
+        },
+        "emit_effort": {
+          "type": "boolean",
+          "description": "When true, call the shared effort resolver and emit under the `effort` key using the provider's effort_map."
+        },
+        "emit_model": {
+          "type": "boolean",
+          "description": "When true, call the shared per-preset model resolver and emit under model.field."
+        }
+      }
+    },
+    "effort_map": {
+      "type": "object",
+      "required": ["style", "values"],
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "enum": ["string"],
+          "description": "Currently only `string`-valued effort maps are supported. `budget` (numeric tokens, for continue-dev) will be added when that preset migrates."
+        },
+        "values": {
+          "type": "object",
+          "propertyNames": { "enum": ["low", "medium", "high", "xhigh", "max"] },
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "model": {
+      "type": "object",
+      "required": ["field"],
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "type": "string",
+          "description": "Frontmatter key the resolved model string is written under (e.g. `model`)."
+        }
+      }
+    },
+    "sidecar": {
+      "type": "object",
+      "required": ["kind", "path"],
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": ["claude_settings_json", "claude_plugins_json"],
+          "description": "Closed-set sidecar renderer. New kinds extend this enum and add a Go handler in providers/sidecars.go."
+        },
+        "path": {
+          "type": "string",
+          "description": "Relative output path."
+        },
+        "emit_when": {
+          "enum": ["always", "has_mcp_servers", "has_plugins"],
+          "description": "Closed-set predicate evaluated against the Config to decide whether to emit."
+        }
+      }
+    }
+  }
+}
