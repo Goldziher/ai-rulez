@@ -184,11 +184,9 @@ func TestAgentModelOverride_PerPreset(t *testing.T) {
 		got    func() map[string]interface{}
 		want   string
 	}{
-		{
-			preset: "claude",
-			got:    func() map[string]interface{} { return (&ClaudePresetGenerator{}).buildAgentFrontmatter(agent, nil) },
-			want:   "opus",
-		},
+		// Claude is tested in providers package (TestClaude_PerPresetModel) — the
+		// hand-written ClaudePresetGenerator was removed when claude.go migrated
+		// to the declarative providers DSL.
 		{
 			preset: "copilot",
 			got: func() map[string]interface{} {
@@ -260,9 +258,9 @@ func TestAgentModelOverride_DefaultsAppliesWithoutFrontmatter(t *testing.T) {
 		},
 	}}
 
-	claudeFM := (&ClaudePresetGenerator{}).buildAgentFrontmatter(agent, cfg)
-	assert.Equal(t, "haiku", claudeFM["model"], "claude default should apply even without agent frontmatter")
-
+	// Claude is covered separately in the providers package once it owns the
+	// "claude" registration; here we only assert the remaining hand-written
+	// preset frontmatter builders still honor defaults.model_by_preset.
 	copilotFM := (&CopilotPresetGenerator{}).buildCopilotAgentFrontmatter(agent, cfg)
 	assert.Equal(t, "gpt-4-turbo", copilotFM["model"], "copilot default should apply even without agent frontmatter")
 }
