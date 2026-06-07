@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Tests
+
+- Added end-to-end coverage for per-preset model overrides so the resolver chain (agent `<preset>_model` → `defaults.model_by_preset` → legacy `model:`) is exercised against real generated agent files for both Claude and Copilot.
+
 ## [4.4.0] - 2026-06-07
 
 ### Added
