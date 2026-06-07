@@ -910,6 +910,12 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		}
 	}
 
+	// The generated manifest sits inside the config dir and is rewritten on
+	// every `generate`; include it explicitly so the managed fence covers it.
+	if manifestRel := filepath.ToSlash(g.convertToRelativePath(g.manifestPath())); manifestRel != "" {
+		paths[manifestRel] = true
+	}
+
 	return paths
 }
 

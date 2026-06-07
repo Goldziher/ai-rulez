@@ -260,7 +260,21 @@ func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 	assert.True(t, patterns[".github/workflows/ci.yml"])
 	assert.True(t, patterns["packages/web/.codex/"])
 	assert.True(t, patterns["custom-output/"])
-	assert.False(t, patterns[".ai-rulez/.generated-manifest.json"])
+	assert.True(t, patterns[".ai-rulez/.generated-manifest.json"],
+		"the generated manifest is rewritten every run; it must land in the managed gitignore fence")
+}
+
+func TestGenerator_Gitignore_IncludesManifest_CustomConfigDir(t *testing.T) {
+	tempDir := t.TempDir()
+	gen := NewGenerator(&config.Config{
+		BaseDir:   tempDir,
+		ConfigDir: filepath.Join(tempDir, ".cfg"),
+	})
+
+	patterns := gen.collectGitignorePaths(nil)
+
+	assert.True(t, patterns[".cfg/.generated-manifest.json"],
+		"manifest gitignore entry must track the configured ConfigDir, not assume `.ai-rulez/`")
 }
 
 func TestGenerator_CustomPreset_Markdown(t *testing.T) {
@@ -483,9 +497,16 @@ func TestGenerator_Gitignore_SkipsAiRulezFolder(t *testing.T) {
 	require.NoError(t, err)
 	contentStr := string(content)
 
-	// Check that .ai-rulez is NOT in the gitignore
-	assert.NotContains(t, contentStr, ".ai-rulez", ".ai-rulez folder should not be added to .gitignore")
-	assert.NotContains(t, contentStr, ".ai-rulez/", ".ai-rulez/ folder should not be added to .gitignore")
+	// The bare config directory must never be ignored — it is the source of
+	// truth. The generated manifest file inside it, however, IS expected to
+	// be ignored (it churns on every `generate`).
+	for _, line := range strings.Split(contentStr, "\n") {
+		line = strings.TrimSpace(line)
+		assert.NotEqualf(t, ".ai-rulez", line, ".ai-rulez folder must not be ignored")
+		assert.NotEqualf(t, ".ai-rulez/", line, ".ai-rulez/ folder must not be ignored")
+	}
+	assert.Contains(t, contentStr, ".ai-rulez/.generated-manifest.json",
+		"generated manifest must be in the managed gitignore fence")
 }
 
 func TestGenerator_Gitignore_IncludesMCPJSON(t *testing.T) {
