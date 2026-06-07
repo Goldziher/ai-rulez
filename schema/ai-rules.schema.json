@@ -296,6 +296,16 @@
             "type": "string",
             "enum": ["low", "medium", "high", "xhigh", "max", "inherit"]
           }
+        },
+        "model_by_preset": {
+          "type": "object",
+          "description": "Per-preset model overrides for agents. Beats the legacy agent-level `model` field for the matching preset; per-agent `<preset>_model` frontmatter still wins. Presets that do not emit a per-agent model frontmatter ignore entries here.",
+          "propertyNames": {
+            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode", "antigravity", "mcp"]
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false

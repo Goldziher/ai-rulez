@@ -84,6 +84,12 @@ type DefaultsConfig struct {
 	// "claude", "windsurf"). Per-agent frontmatter still wins over this map where the preset
 	// supports per-agent effort.
 	EffortByPreset map[string]string `yaml:"effort_by_preset,omitempty" json:"effort_by_preset,omitempty" toml:"effort_by_preset,omitempty"`
+
+	// ModelByPreset overrides the agent `model` per preset. Keys are preset names (e.g.
+	// "claude", "copilot", "cursor"). Per-agent `<preset>_model` frontmatter still wins
+	// over this map; the legacy `model` field is the lowest-priority fallback. Presets
+	// that do not emit a per-agent model frontmatter ignore entries for their preset.
+	ModelByPreset map[string]string `yaml:"model_by_preset,omitempty" json:"model_by_preset,omitempty" toml:"model_by_preset,omitempty"`
 }
 
 // BuiltinsConfig represents the builtins field which can be:

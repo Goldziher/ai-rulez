@@ -12,8 +12,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+const presetNameCline = "cline"
+
 func init() {
-	config.RegisterPreset("cline", &ClinePresetGenerator{})
+	config.RegisterPreset(presetNameCline, &ClinePresetGenerator{})
 }
 
 // ClinePresetGenerator generates Cline preset files
@@ -37,7 +39,7 @@ func generateClinePresetHeader(cfg *config.Config, outputPath string, ruleCount,
 }
 
 func (g *ClinePresetGenerator) GetName() string {
-	return "cline"
+	return presetNameCline
 }
 
 func (g *ClinePresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -129,7 +131,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderClineAgentFile(agent)
+		agentContent, err := g.renderClineAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -188,10 +190,10 @@ func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *conf
 }
 
 // renderClineAgentFile renders an agent file with YAML frontmatter for Cline
-func (g *ClinePresetGenerator) renderClineAgentFile(agent config.ContentFile) (string, error) {
+func (g *ClinePresetGenerator) renderClineAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildClineAgentFrontmatter(agent)
+	frontmatter := g.buildClineAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -207,16 +209,22 @@ func (g *ClinePresetGenerator) renderClineAgentFile(agent config.ContentFile) (s
 }
 
 // buildClineAgentFrontmatter builds frontmatter for a Cline agent file
-func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
+	}
+
+	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
+	// defaults-only model still applies to agents with no frontmatter.
+	if model := ResolveAgentModel(presetNameCline, agent, cfg); model != "" {
+		frontmatter[keyModel] = model
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	clineScalarFields := []string{keyDescription, keyModel}
+	clineScalarFields := []string{keyDescription}
 	for _, field := range clineScalarFields {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
 			frontmatter[field] = val
