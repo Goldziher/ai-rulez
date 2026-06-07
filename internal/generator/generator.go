@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"     // Register legacy preset generators and access MCPPresetGenerator
+	_ "github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
 	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -140,15 +140,21 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 		return nil, "", oops.Wrapf(err, "generate presets")
 	}
 
-	// Auto-generate MCP output if servers exist
+	// Auto-generate MCP output if servers exist. The MCP preset is now
+	// DSL-driven (internal/generator/providers/builtin/mcp.toml); fetch it
+	// from the registry rather than instantiating a hand-written generator.
 	if len(mcpServers) > 0 {
-		mcpGen := &presets.MCPPresetGenerator{}
-		mcpOutputs, err := mcpGen.Generate(contentTree, g.config.BaseDir, &tempCfg)
+		mcpGen, err := config.GetPresetGenerator("mcp")
 		if err != nil {
-			logger.Warn("Failed to generate MCP output", "error", err)
-		} else if len(mcpOutputs) > 0 {
-			allOutputs["mcp"] = mcpOutputs
-			logger.Debug("Auto-generated MCP output", "count", len(mcpOutputs))
+			logger.Warn("Failed to resolve MCP preset generator", "error", err)
+		} else {
+			mcpOutputs, err := mcpGen.Generate(contentTree, g.config.BaseDir, &tempCfg)
+			if err != nil {
+				logger.Warn("Failed to generate MCP output", "error", err)
+			} else if len(mcpOutputs) > 0 {
+				allOutputs["mcp"] = mcpOutputs
+				logger.Debug("Auto-generated MCP output", "count", len(mcpOutputs))
+			}
 		}
 	}
 

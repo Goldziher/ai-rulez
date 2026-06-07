@@ -1,0 +1,13 @@
+# MCP provider spec.
+#
+# The only output is .mcp.json — a single sidecar emitted when at least one
+# MCP server is configured. No root file, no per-item content. Replaces the
+# legacy MCPPresetGenerator in internal/generator/presets/mcp.go.
+
+name         = "mcp"
+display_name = "MCP servers"
+
+[[sidecars]]
+kind      = "mcp_json"
+path      = ".mcp.json"
+emit_when = "has_mcp_servers"
