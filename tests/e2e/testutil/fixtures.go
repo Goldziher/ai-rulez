@@ -13,6 +13,9 @@ const InvalidSchemaConfig = helpers.InvalidSchemaConfig
 const ConfigWithMCPServers = helpers.ConfigWithMCPServers
 const ConfigWithCommands = helpers.ConfigWithCommands
 const ConfigWithMCPAndCommands = helpers.ConfigWithMCPAndCommands
+const V4ModelByPresetConfigTOML = helpers.V4ModelByPresetConfigTOML
+const V4AgentWithPerPresetModels = helpers.V4AgentWithPerPresetModels
+const V4AgentWithDefaultedModel = helpers.V4AgentWithDefaultedModel
 
 // Configuration Fixtures
 const BasicConfigYAML = `version: "4.0"

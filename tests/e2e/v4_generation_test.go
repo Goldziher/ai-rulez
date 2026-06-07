@@ -3,6 +3,7 @@ package e2e_test
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -775,3 +776,62 @@ var (
 	_ = assert.Equal
 	_ = filepath.Join
 )
+
+// TestV4Generation_ModelByPreset is a focused, standalone e2e covering the
+// per-preset model resolver chain end-to-end: agent `<preset>_model` wins,
+// otherwise `defaults.model_by_preset` for that preset, otherwise the legacy
+// agent-level `model:` field. Lives outside V4GenerationSuite so its config
+// stays minimal (just Claude + Copilot, two agents) and independent of the
+// shared SetupSuite fixture.
+func TestV4Generation_ModelByPreset(t *testing.T) {
+	workingDir := testutil.CreateTempDir(t)
+	aiRulesDir := filepath.Join(workingDir, ".ai-rulez")
+	agentsDir := filepath.Join(aiRulesDir, "agents")
+	require.NoError(t, os.MkdirAll(agentsDir, 0o755))
+	testutil.WriteFile(t, aiRulesDir, "config.toml", testutil.V4ModelByPresetConfigTOML)
+	testutil.WriteFile(t, agentsDir, "agent-overrides.md", testutil.V4AgentWithPerPresetModels)
+	testutil.WriteFile(t, agentsDir, "agent-defaulted.md", testutil.V4AgentWithDefaultedModel)
+
+	cfg, err := config.LoadConfig(context.Background(), workingDir)
+	require.NoError(t, err, "LoadConfig should succeed for model_by_preset config")
+	require.NotNil(t, cfg.Defaults, "defaults block should load from TOML")
+	require.Equal(t, "haiku", cfg.Defaults.ModelByPreset["claude"])
+	require.Equal(t, "gpt-5", cfg.Defaults.ModelByPreset["copilot"])
+
+	results, err := config.GeneratePresets(cfg)
+	require.NoError(t, err, "GeneratePresets should succeed")
+
+	findFile := func(preset, suffix string) *config.OutputFile {
+		outputs, ok := results[preset]
+		require.Truef(t, ok, "expected outputs for preset %q", preset)
+		for i := range outputs {
+			if !outputs[i].IsDir && strings.HasSuffix(outputs[i].Path, suffix) {
+				return &outputs[i]
+			}
+		}
+		t.Fatalf("preset %q: no generated file with suffix %q", preset, suffix)
+		return nil
+	}
+
+	// Per-preset overrides win for both presets.
+	claudeOverrides := findFile("claude", filepath.Join("agents", "agent-overrides.md"))
+	assert.Contains(t, claudeOverrides.Content, "model: opus",
+		"claude_model should win for Claude (legacy `model: sonnet` is overridden)")
+	assert.NotContains(t, claudeOverrides.Content, "model: sonnet",
+		"legacy `model:` must not leak into Claude output when claude_model is set")
+
+	copilotOverrides := findFile("copilot", filepath.Join("agents", "agent-overrides.agent.md"))
+	assert.Contains(t, copilotOverrides.Content, "model: gpt-4",
+		"copilot_model should win for Copilot")
+	assert.NotContains(t, copilotOverrides.Content, "model: sonnet",
+		"legacy `model:` must not leak into Copilot output when copilot_model is set")
+
+	// No per-agent override → fall through to defaults.model_by_preset.
+	claudeDefaulted := findFile("claude", filepath.Join("agents", "agent-defaulted.md"))
+	assert.Contains(t, claudeDefaulted.Content, "model: haiku",
+		"defaults.model_by_preset[claude] should resolve for Claude")
+
+	copilotDefaulted := findFile("copilot", filepath.Join("agents", "agent-defaulted.agent.md"))
+	assert.Contains(t, copilotDefaulted.Content, "model: gpt-5",
+		"defaults.model_by_preset[copilot] should resolve for Copilot")
+}
