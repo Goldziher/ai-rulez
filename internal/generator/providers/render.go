@@ -84,10 +84,10 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	}
 
 	for _, sidecar := range g.Spec.Sidecars {
-		if !evalPredicate(sidecar.EmitWhen, cfg) {
+		if !g.evalPredicate(sidecar.EmitWhen, cfg) {
 			continue
 		}
-		body, err := renderSidecar(sidecar.Kind, cfg)
+		body, err := g.renderSidecar(sidecar.Kind, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
 		}
