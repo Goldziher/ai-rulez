@@ -5,12 +5,14 @@ package presets
 // These are kept in one place so that goconst stays quiet and so the
 // underlying values can be updated in lockstep across presets.
 
-// Preset names that don't already have a dedicated constant in their preset
-// file. The remaining preset names live next to the generator that owns them
-// (e.g. presetNameClaude in claude.go, codexPresetName in codex.go).
+// Preset names. Some (codex, copilot, cursor, etc.) still have an additional
+// dedicated constant next to their generator file; those are gradually
+// consolidating here as preset generators migrate to the DSL renderer in
+// internal/generator/providers.
 const (
 	presetNameAmp         = "amp"
 	presetNameAntigravity = "antigravity"
+	presetNameClaude      = "claude"
 	presetNameJunie       = "junie"
 )
 
