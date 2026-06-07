@@ -4,11 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## [4.4.0] - 2026-06-07
 
 ### Added
 
 - Per-preset model overrides for agents. Each preset now resolves its agent `model` value via `<preset>_model` frontmatter (e.g. `claude_model`, `copilot_model`, `cursor_model`) with `defaults.model_by_preset` as a project-wide fallback. The legacy single `model:` field remains supported as the lowest-priority fallback for backward compatibility.
+
+### Fixed
+
+- The TOML config loader silently dropped the entire `[defaults]` table, so `effort_by_preset` from TOML configs never reached the generator. The new `model_by_preset` feature exposed the gap; both tables now load correctly.
+
+### Changed
+
+- Updated Go dependencies (`agentable/go-intl`, `go-json-experiment/json`, `kaptinlin/go-i18n`, `kaptinlin/jsonpointer`, `kaptinlin/jsonschema`, `kaptinlin/messageformat-go`) and pre-commit hooks (`kreuzberg-dev/pre-commit-hooks` 1.2.3 → 2.1.8, `gh-actions-updater` 0.1.5 → 0.1.6, `Goldziher/ai-rulez` self-reference 4.3.1 → 4.3.2). Go toolchain bumped from 1.26.3 to 1.26.4.
 
 ## [4.3.0] - 2026-05-30
 
