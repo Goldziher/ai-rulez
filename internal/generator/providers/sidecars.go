@@ -5,12 +5,18 @@ import (
 	"fmt"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 )
 
-// evalPredicate dispatches the closed-set emit_when value against Config.
-// Empty predicate or "always" → always emit; "has_mcp_servers" / "has_plugins"
-// → emit only when the corresponding config block is non-empty.
-func evalPredicate(predicate string, cfg *config.Config) bool {
+// presetsResolveGlobalEffort is aliased so sidecar code can stay readable
+// when calling the shared resolver from the presets package.
+var presetsResolveGlobalEffort = presets.ResolveGlobalEffort
+
+// evalPredicate dispatches the closed-set emit_when value. Most predicates
+// only consult Config, but has_resolved_effort also needs the spec's
+// effort_map to know whether the global tier translates to a non-empty
+// emitted value — so the predicate is a method on Generator.
+func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 	switch predicate {
 	case "", PredicateAlways:
 		return true
@@ -18,21 +24,87 @@ func evalPredicate(predicate string, cfg *config.Config) bool {
 		return cfg != nil && len(cfg.MCPServers) > 0
 	case PredicateHasPlugins:
 		return cfg != nil && len(cfg.Plugins) > 0
+	case PredicateHasResolvedEffort:
+		return g.resolveGlobalEffort(cfg) != ""
 	}
 	return false
 }
 
-// renderSidecar dispatches the closed-set sidecar kind to its Go handler.
-// Adding a new kind is a deliberate three-step change: extend the enum in
-// spec.go, accept it in loader.isValidSidecarKind, and add a case here.
-func renderSidecar(kind string, cfg *config.Config) (string, error) {
+// renderSidecar dispatches the closed-set sidecar kind. Method on Generator
+// so kind-specific renderers (e.g. amp_settings_json) can read the spec's
+// effort_map.
+func (g *Generator) renderSidecar(kind string, cfg *config.Config) (string, error) {
 	switch kind {
 	case SidecarClaudeSettingsJSON:
 		return renderClaudeSettingsJSON(cfg)
 	case SidecarClaudePluginsJSON:
 		return renderClaudePluginsJSON(cfg)
+	case SidecarMCPJSON:
+		return renderMCPJSON(cfg)
+	case SidecarAmpSettingsJSON:
+		return g.renderAmpSettingsJSON(cfg)
 	}
 	return "", fmt.Errorf("unknown sidecar kind %q", kind)
+}
+
+// resolveGlobalEffort runs the shared global effort resolver and translates
+// through the provider's effort_map. Empty string when no global effort
+// applies for this provider.
+func (g *Generator) resolveGlobalEffort(cfg *config.Config) string {
+	raw := presetsResolveGlobalEffort(g.Spec.Name, cfg)
+	if raw == "" || g.Spec.EffortMap == nil {
+		return ""
+	}
+	if mapped, ok := g.Spec.EffortMap.Values[raw]; ok {
+		return mapped
+	}
+	return ""
+}
+
+// renderMCPJSON produces .mcp.json. Lifted verbatim from the legacy
+// MCPPresetGenerator.Generate body so the output is byte-identical.
+// Difference from claude_settings_json: `disabled` is emitted
+// unconditionally (true or false), not only when the server is disabled.
+func renderMCPJSON(cfg *config.Config) (string, error) {
+	mcpServers := make(map[string]any)
+	for name, server := range cfg.MCPServers {
+		entry := map[string]any{
+			"command":  server.Command,
+			"disabled": !server.IsEnabled(),
+		}
+		if len(server.Args) > 0 {
+			entry["args"] = server.Args
+		}
+		if len(server.Env) > 0 {
+			entry["env"] = server.Env
+		}
+		if server.Transport != "" {
+			entry["transport"] = server.GetTransport()
+		}
+		if server.URL != "" {
+			entry["url"] = server.URL
+		}
+		mcpServers[name] = entry
+	}
+	payload := map[string]any{"mcpServers": mcpServers}
+	jsonBytes, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal mcp JSON: %w", err)
+	}
+	return string(jsonBytes) + "\n", nil
+}
+
+// renderAmpSettingsJSON produces .amp/settings.json with `amp.anthropic.effort`
+// set to the spec's effort_map translation of the resolved global tier.
+// Bypasses re-resolving — evalPredicate already confirmed a value exists.
+func (g *Generator) renderAmpSettingsJSON(cfg *config.Config) (string, error) {
+	effort := g.resolveGlobalEffort(cfg)
+	settings := map[string]string{"amp.anthropic.effort": effort}
+	jsonBytes, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("marshal amp settings: %w", err)
+	}
+	return string(jsonBytes) + "\n", nil
 }
 
 // renderClaudeSettingsJSON produces .claude/settings.json. Lifted verbatim

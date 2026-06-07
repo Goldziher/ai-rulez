@@ -162,7 +162,7 @@ func isValidBodySection(section string) bool {
 
 func isValidPredicate(p string) bool {
 	switch p {
-	case PredicateAlways, PredicateHasMCPServers, PredicateHasPlugins:
+	case PredicateAlways, PredicateHasMCPServers, PredicateHasPlugins, PredicateHasResolvedEffort:
 		return true
 	}
 	return false
@@ -170,7 +170,8 @@ func isValidPredicate(p string) bool {
 
 func isValidSidecarKind(k string) bool {
 	switch k {
-	case SidecarClaudeSettingsJSON, SidecarClaudePluginsJSON:
+	case SidecarClaudeSettingsJSON, SidecarClaudePluginsJSON,
+		SidecarMCPJSON, SidecarAmpSettingsJSON:
 		return true
 	}
 	return false

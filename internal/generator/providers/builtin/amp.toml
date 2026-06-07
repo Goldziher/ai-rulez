@@ -1,0 +1,59 @@
+# Sourcegraph Amp provider spec.
+#
+# Replaces the hand-written internal/generator/presets/amp.go. Amp reads
+# project guidance from AGENTS.md and supports per-agent and per-skill
+# files. Global effort is emitted via .amp/settings.json with the
+# `amp.anthropic.effort` key. Amp caps xhigh→high (it does not accept
+# xhigh at the moment); max passes through.
+
+name         = "amp"
+display_name = "Sourcegraph Amp"
+
+directories = [".agents", ".agents/skills", ".agents/agents"]
+
+[root]
+file     = "AGENTS.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode      = "per_item_file"
+dir       = ".agents/skills"
+filename  = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode     = "per_item_file"
+dir      = ".agents/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields     = ["description"]
+tools      = true
+emit_model = true
+
+[model]
+field = "model"
+
+[effort_map]
+style = "string"
+
+[effort_map.values]
+low    = "low"
+medium = "medium"
+high   = "high"
+xhigh  = "high"   # Amp does not currently accept xhigh — cap to high.
+max    = "max"
+
+[[sidecars]]
+kind      = "amp_settings_json"
+path      = ".amp/settings.json"
+emit_when = "has_resolved_effort"
