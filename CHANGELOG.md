@@ -4,7 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## [4.4.1] - 2026-06-07
+
+### Fixed
+
+- `.ai-rulez/.generated-manifest.json` is now included in the managed `.gitignore` fence when `--gitignore` (or `gitignore: true` in config) is enabled. The manifest is rewritten on every `generate`; tracking it produced endless diff noise. Honours custom `config_dir` values.
 
 ### Tests
 
