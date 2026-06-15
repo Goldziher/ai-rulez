@@ -363,6 +363,20 @@ func TestClaude_SettingsJSON(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(settings.Content), &parsed))
 	servers := parsed["mcpServers"].(map[string]any)
 	assert.Len(t, servers, 2)
+
+	// Remote (http/sse) servers must use Claude Code's `type` key, carry no
+	// command, and must not emit the `transport` key. See
+	// https://code.claude.com/docs/en/mcp.
+	httpEntry := servers["http-server"].(map[string]any)
+	assert.Equal(t, "http", httpEntry["type"], "remote server must use the `type` key")
+	assert.Equal(t, "http://localhost:8080", httpEntry["url"])
+	assert.NotContains(t, httpEntry, "transport", "must not emit `transport`; Claude Code keys on `type`")
+	assert.NotContains(t, httpEntry, "command", "remote server must not carry a command")
+
+	// stdio servers are unchanged: command-based, no `type` key.
+	stdioEntry := servers["test-server"].(map[string]any)
+	assert.Equal(t, "npx", stdioEntry["command"], "stdio server keeps its command")
+	assert.NotContains(t, stdioEntry, "type", "stdio server must not emit a `type` key")
 }
 
 // TestClaude_PluginsJSON covers the plugins-aware plugins.json sidecar
