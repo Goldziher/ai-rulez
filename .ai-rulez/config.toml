@@ -32,3 +32,14 @@ name = "ai-rulez"
 description = "Expose generation and enforcement to MCP-aware tools such as Claude and Gemini."
 command = "npx"
 args = ["-y", "ai-rulez@latest", "mcp"]
+
+[[marketplaces]]
+name = "basemind"
+source = "Goldziher/basemind"
+type = "github"
+
+[[plugins]]
+marketplace = "basemind"
+name = "basemind"
+scope = "project"
+enabled = true
