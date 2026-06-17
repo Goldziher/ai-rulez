@@ -164,6 +164,7 @@ testing/**/.mcp.json
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/
+.ai-rulez/.generated-manifest.json
 .cline/
 .codex/
 .github/agents/
