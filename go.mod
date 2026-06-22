@@ -5,7 +5,7 @@ go 1.26.4
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.0
 	github.com/go-resty/resty/v2 v2.17.2
-	github.com/kaptinlin/jsonschema v0.8.0
+	github.com/kaptinlin/jsonschema v0.9.2
 	github.com/modelcontextprotocol/go-sdk v1.6.1
 	github.com/pelletier/go-toml/v2 v2.3.1
 	github.com/samber/oops v1.22.0
@@ -16,7 +16,7 @@ require (
 	github.com/teekennedy/goldmark-markdown v0.5.1
 	github.com/yuin/goldmark v1.8.2
 	github.com/zeebo/blake3 v0.2.4
-	golang.org/x/text v0.37.0
+	golang.org/x/text v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
