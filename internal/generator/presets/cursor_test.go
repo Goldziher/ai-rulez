@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -481,5 +482,65 @@ func TestCursorPresetGenerator_buildCursorAgentFrontmatter_DoesNotEmitEffort(t *
 	}
 	if fm["description"] != "Reviews code" {
 		t.Errorf("expected description to be passed through; got %v", fm["description"])
+	}
+}
+
+func TestCursorPresetGenerator_renderMCPJSON_Transports(t *testing.T) {
+	g := &CursorPresetGenerator{}
+
+	cfg := &config.Config{
+		MCPServers: map[string]*config.MCPServer{
+			"stdio-server": {
+				Command: "npx",
+				Args:    []string{"-y", "test-mcp"},
+			},
+			"http-server": {
+				Transport: "http",
+				URL:       "https://example.com/mcp",
+			},
+			"sse-server": {
+				Transport: "sse",
+				URL:       "https://example.com/sse",
+			},
+		},
+	}
+
+	content, err := g.renderMCPJSON(cfg)
+	if err != nil {
+		t.Fatalf("renderMCPJSON: %v", err)
+	}
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	servers := parsed["mcpServers"].(map[string]interface{})
+
+	stdio := servers["stdio-server"].(map[string]interface{})
+	if stdio["command"] != "npx" {
+		t.Errorf("stdio command = %v, want npx", stdio["command"])
+	}
+
+	for _, name := range []string{"http-server", "sse-server"} {
+		entry := servers[name].(map[string]interface{})
+		wantURL := "https://example.com/mcp"
+		if name == "sse-server" {
+			wantURL = "https://example.com/sse"
+		}
+		if entry["url"] != wantURL {
+			t.Errorf("%s url = %v, want %v", name, entry["url"], wantURL)
+		}
+		if _, ok := entry["command"]; ok {
+			t.Errorf("%s must not contain command", name)
+		}
+		if _, ok := entry["args"]; ok {
+			t.Errorf("%s must not contain args", name)
+		}
+		if _, ok := entry["transport"]; ok {
+			t.Errorf("%s must not contain transport", name)
+		}
+		if _, ok := entry["type"]; ok {
+			t.Errorf("%s must not contain type", name)
+		}
 	}
 }

@@ -146,21 +146,29 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 
 	// Merge user-configured MCP servers
 	for name, server := range cfg.MCPServers {
-		entry := map[string]interface{}{
-			keyCommand: server.Command,
+		entry := map[string]interface{}{}
+
+		// Gemini has no transport/type key. Remote servers key on the URL field:
+		// `httpUrl` for streamable HTTP, `url` for SSE. A stdio entry with an empty
+		// command is invalid, so omit command/args for remote transports.
+		switch server.GetTransport() {
+		case "http":
+			if server.URL != "" {
+				entry["httpUrl"] = server.URL
+			}
+		case "sse":
+			if server.URL != "" {
+				entry["url"] = server.URL
+			}
+		default:
+			entry[keyCommand] = server.Command
+			if len(server.Args) > 0 {
+				entry["args"] = server.Args
+			}
 		}
 
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
-		}
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
-		}
-		if server.Transport != "" {
-			entry["transport"] = server.GetTransport()
-		}
-		if server.URL != "" {
-			entry["url"] = server.URL
 		}
 		if !server.IsEnabled() {
 			entry[keyDisabled] = true
