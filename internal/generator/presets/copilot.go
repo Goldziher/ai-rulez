@@ -337,7 +337,7 @@ func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, erro
 		// with an empty command is invalid, so omit command/args for remote
 		// (http/sse) transports and emit `type` plus the URL instead.
 		switch t := server.GetTransport(); t {
-		case "http", "sse":
+		case config.TransportHTTP, config.TransportSSE:
 			entry["type"] = t
 		default:
 			entry[keyCommand] = server.Command
