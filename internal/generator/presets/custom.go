@@ -84,7 +84,7 @@ func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTree, b
 	})
 
 	// Generate files for each rule, context, and skill
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 	for _, rule := range allRules {
 		sanitized := sanitizeName(rule.Name)
 		ruleContent := g.renderContentFile(rule)
@@ -132,8 +132,8 @@ func (g *CustomPresetGenerator) generateJSON(content *config.ContentTree, baseDi
 
 func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree, cfg *config.Config) map[string]interface{} {
 	// Combine all content
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allRules := allInlineRules(content)
+	allContext := allInlineContext(content)
 	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
 
 	// Convert to template-friendly structures
@@ -144,7 +144,7 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 			keyContentField: rule.Content,
 		}
 		if rule.Metadata != nil {
-			if rule.Metadata.Priority != "" {
+			if !cfg.IsCompact() && rule.Metadata.Priority != "" {
 				ruleData["Priority"] = rule.Metadata.Priority
 			}
 			if len(rule.Metadata.Targets) > 0 {

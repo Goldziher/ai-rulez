@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 )
 
@@ -33,6 +34,32 @@ func configFileName(cfg *config.Config) string {
 	return "config.toml"
 }
 
+// domainRank ranks a domain by content-source precedence for deduplication:
+// on-disk domains (0) beat include-sourced domains (1) beat builtins (2).
+// A lower rank wins when two domains define a rule/context of the same name.
+func domainRank(domain *config.Domain) int {
+	switch {
+	case domain.Builtin:
+		return 2
+	case domain.FromInclude:
+		return 1
+	default:
+		return 0
+	}
+}
+
+// domainNamesByPrecedence returns domain names ordered by source precedence
+// (on-disk, then include, then builtin), alphabetical within each rank. Callers
+// that dedupe combined rules/context rely on this order so the highest-priority
+// source is encountered first and wins keep-first deduplication.
+func domainNamesByPrecedence(content *config.ContentTree) []string {
+	names := sortedDomainNames(content)
+	sort.SliceStable(names, func(i, j int) bool {
+		return domainRank(content.Domains[names[i]]) < domainRank(content.Domains[names[j]])
+	})
+	return names
+}
+
 // combineContentFiles combines multiple ContentFile slices into a single
 // alphabetically-sorted slice. Sorting the merged result keeps generated
 // output stable when content comes from multiple sources (root + domains).
@@ -52,20 +79,70 @@ func combineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
 	return result
 }
 
-// getAllDomainRules extracts all rules from all domains in sorted domain order.
+// dedupeByName keeps the first ContentFile for each Name, preserving input
+// order. Callers pass content in precedence order (highest first) so the
+// surviving copy is the highest-priority source. The dropped names (later
+// duplicates) are returned for diagnostics.
+func dedupeByName(files []config.ContentFile) (kept []config.ContentFile, dropped []string) {
+	seen := make(map[string]struct{}, len(files))
+	kept = make([]config.ContentFile, 0, len(files))
+	for _, file := range files {
+		if _, ok := seen[file.Name]; ok {
+			dropped = append(dropped, file.Name)
+			continue
+		}
+		seen[file.Name] = struct{}{}
+		kept = append(kept, file)
+	}
+	return kept, dropped
+}
+
+// combineDedupedContentFiles concatenates the given slices in caller-supplied
+// precedence order (highest first), removes duplicate Names keeping the
+// highest-precedence occurrence, then sorts alphabetically for stable output.
+// Deduplication happens before the sort so input order — not name order —
+// decides the winner. Used for inline rules/context where the same name from a
+// builtin and an include/root must collapse to a single entry.
+func combineDedupedContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
+	var combined []config.ContentFile
+	for _, slice := range slices {
+		combined = append(combined, slice...)
+	}
+	kept, _ := dedupeByName(combined)
+	sort.SliceStable(kept, func(i, j int) bool {
+		return kept[i].Name < kept[j].Name
+	})
+	return kept
+}
+
+// allInlineRules returns the deduplicated, precedence-ordered rules for inline
+// rendering — root rules plus every domain's rules, collapsing duplicate names
+// (e.g. a builtin and an include both defining "commit-messages") to a single
+// highest-precedence entry. Every preset that renders a "## Rules" section
+// funnels through this so deduplication is applied uniformly.
+func allInlineRules(content *config.ContentTree) []config.ContentFile {
+	return combineDedupedContentFiles(content.Rules, getAllDomainRules(content))
+}
+
+// allInlineContext is the context counterpart to allInlineRules.
+func allInlineContext(content *config.ContentTree) []config.ContentFile {
+	return combineDedupedContentFiles(content.Context, getAllDomainContext(content))
+}
+
+// getAllDomainRules extracts all rules from all domains in precedence order.
 func getAllDomainRules(content *config.ContentTree) []config.ContentFile {
 	var rules []config.ContentFile
-	for _, name := range sortedDomainNames(content) {
+	for _, name := range domainNamesByPrecedence(content) {
 		rules = append(rules, content.Domains[name].Rules...)
 	}
 	return rules
 }
 
-// getAllDomainContext extracts all context from all domains in sorted domain order,
+// getAllDomainContext extracts all context from all domains in precedence order,
 // excluding the agent-delegation builtin (rendered separately in the Agents section).
 func getAllDomainContext(content *config.ContentTree) []config.ContentFile {
 	var context []config.ContentFile
-	for _, name := range sortedDomainNames(content) {
+	for _, name := range domainNamesByPrecedence(content) {
 		if name == agentDelegationBuiltin {
 			continue
 		}
@@ -273,6 +350,90 @@ func targetMatchesOutput(target string, outputCandidates []string) bool {
 // content from the same root+domain sources during DSL-backed rendering.
 func CombineContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
 	return combineContentFiles(slices...)
+}
+
+// CombineDedupedContentFiles is the exported variant of
+// combineDedupedContentFiles, used by the DSL renderer for inline rules and
+// context sections where duplicate names (e.g. a builtin and an include both
+// defining "commit-messages") must collapse to a single entry.
+func CombineDedupedContentFiles(slices ...[]config.ContentFile) []config.ContentFile {
+	return combineDedupedContentFiles(slices...)
+}
+
+// AllInlineRules / AllInlineContext expose the deduplicated inline collectors
+// for the DSL renderer in internal/generator/providers.
+func AllInlineRules(content *config.ContentTree) []config.ContentFile {
+	return allInlineRules(content)
+}
+
+func AllInlineContext(content *config.ContentTree) []config.ContentFile {
+	return allInlineContext(content)
+}
+
+// WarnDuplicateContent logs a warning for each rule or context name defined by
+// more than one source. The lower-precedence copies are dropped from generated
+// output by allInlineRules/allInlineContext; surfacing the collapse during both
+// `generate` and `validate` lets authors notice overlap and bloat. Shared by the
+// generator and the validate command so the message and precedence stay aligned.
+func WarnDuplicateContent(content *config.ContentTree) {
+	if content == nil {
+		return
+	}
+	warn := func(kind string, dups []DuplicateContent) {
+		for _, dup := range dups {
+			logger.Warn("Duplicate "+kind+" collapsed",
+				"name", dup.Name,
+				"kept", dup.Winner,
+				"dropped", strings.Join(dup.Losers, ", "))
+		}
+	}
+	warn("rule", FindDuplicateContent(content.Rules, getAllDomainRules(content)))
+	warn("context", FindDuplicateContent(content.Context, getAllDomainContext(content)))
+}
+
+// DuplicateContent describes a content name defined by more than one source,
+// naming the surviving (highest-precedence) source path and the dropped ones.
+type DuplicateContent struct {
+	Name   string
+	Winner string
+	Losers []string
+}
+
+// FindDuplicateContent reports names that appear in more than one of the given
+// precedence-ordered slices. The first occurrence of a name is the winner; the
+// rest are losers. Used to warn authors that lower-priority copies (typically
+// builtins) were overridden and dropped from the generated output.
+func FindDuplicateContent(slices ...[]config.ContentFile) []DuplicateContent {
+	type entry struct {
+		winner string
+		losers []string
+	}
+	order := make([]string, 0)
+	entries := make(map[string]*entry)
+	for _, slice := range slices {
+		for _, file := range slice {
+			if existing, ok := entries[file.Name]; ok {
+				existing.losers = append(existing.losers, file.Path)
+				continue
+			}
+			order = append(order, file.Name)
+			entries[file.Name] = &entry{winner: file.Path}
+		}
+	}
+
+	var duplicates []DuplicateContent
+	for _, name := range order {
+		e := entries[name]
+		if len(e.losers) == 0 {
+			continue
+		}
+		duplicates = append(duplicates, DuplicateContent{
+			Name:   name,
+			Winner: e.winner,
+			Losers: e.losers,
+		})
+	}
+	return duplicates
 }
 
 // GetAllDomainRules / GetAllDomainContext / GetAllDomainSkills /

@@ -71,7 +71,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	)
 
 	// Combine all rules from root and domains
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 
 	// Generate rule files
 	for _, rule := range allRules {
@@ -105,7 +105,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 
 	// Generate context files as rule-like files in .clinerules/
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allContext := allInlineContext(content)
 	for _, ctx := range allContext {
 		sanitized := sanitizeName(ctx.Name)
 		var ctxBuilder strings.Builder
@@ -176,7 +176,7 @@ func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *conf
 	builder.WriteString("\n\n")
 
 	// Add priority if present
-	if rule.Metadata != nil && rule.Metadata.Priority != "" {
+	if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
 		builder.WriteString("**Priority:** ")
 		builder.WriteString(rule.Metadata.Priority)
 		builder.WriteString("\n\n")

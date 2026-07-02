@@ -71,7 +71,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 	)
 
 	// Combine all rules from root and domains
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 
 	// Generate rule files
 	for _, rule := range allRules {
@@ -133,7 +133,7 @@ func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg
 	builder.WriteString("\n\n")
 
 	// Add priority if present
-	if rule.Metadata != nil && rule.Metadata.Priority != "" {
+	if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
 		builder.WriteString("**Priority:** ")
 		builder.WriteString(rule.Metadata.Priority)
 		builder.WriteString("\n\n")
@@ -149,11 +149,9 @@ func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg
 func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTree, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	// Calculate content counts
-	ruleCount := len(content.Rules)
-	for _, domain := range content.Domains {
-		ruleCount += len(domain.Rules)
-	}
+	// Calculate content counts from the deduplicated rule set so the header
+	// count matches what is actually rendered.
+	ruleCount := len(allInlineRules(content))
 
 	// Generate and prepend header
 	outputPath := ".continue/prompts/ai_rulez_prompts.yaml"
@@ -163,7 +161,7 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	prompts := make([]map[string]interface{}, 0)
 
 	// Add context as prompts
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allContext := allInlineContext(content)
 	for _, ctx := range allContext {
 		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
 		prompt := map[string]interface{}{

@@ -67,11 +67,11 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	)
 
 	// Combine all rules from root and domains
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 
 	// Generate rule files
 	for _, rule := range allRules {
-		ruleContent := g.renderRuleFile(rule)
+		ruleContent := g.renderRuleFile(rule, cfg.IsCompact())
 		sanitized := sanitizeName(rule.Name)
 
 		outputs = append(outputs, config.OutputFile{
@@ -143,7 +143,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	}
 
 	// Generate context files as rule-like files in .cursor/rules/
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allContext := allInlineContext(content)
 	for _, ctx := range allContext {
 		sanitized := sanitizeName(ctx.Name)
 		var ctxBuilder strings.Builder
@@ -174,7 +174,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	return outputs, nil
 }
 
-func (g *CursorPresetGenerator) renderRuleFile(rule config.ContentFile) string {
+func (g *CursorPresetGenerator) renderRuleFile(rule config.ContentFile, compact bool) string {
 	var builder strings.Builder
 
 	// Add title
@@ -183,7 +183,7 @@ func (g *CursorPresetGenerator) renderRuleFile(rule config.ContentFile) string {
 	builder.WriteString("\n\n")
 
 	// Add priority if present
-	if rule.Metadata != nil && rule.Metadata.Priority != "" {
+	if !compact && rule.Metadata != nil && rule.Metadata.Priority != "" {
 		builder.WriteString("**Priority:** ")
 		builder.WriteString(rule.Metadata.Priority)
 		builder.WriteString("\n\n")

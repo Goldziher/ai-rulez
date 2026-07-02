@@ -176,6 +176,18 @@ and `.agents/` are added to `.gitignore` to prevent accidental commits. GitHub o
 `ai-rulez` ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
 and `.github/skills/` without ignoring all of `.github/`.
 
+### `compact`
+
+Controls whether generated inline rule sections omit per-rule `**Priority:**` annotations.
+
+```toml
+compact = false  # Default: include Priority lines
+compact = true   # Omit Priority annotations, reduce output size
+```
+
+When `true`, generated presets (CLAUDE.md, GEMINI.md, copilot-instructions.md, etc.) omit the per-rule
+`**Priority:**` lines, reducing file size for large rule sets. Applies to all configured presets.
+
 ### `mcp_servers`
 
 Inline MCP (Model Context Protocol) server definitions. No separate `mcp.yaml` file needed.
@@ -273,6 +285,17 @@ builtins = ["rust", "python", "pyo3", "security", "git-workflow", "default-comma
 ```toml
 builtins = ["rust", "!ai-governance"]
 ```
+
+#### Exclude specific rules from a builtin domain
+
+When using the array form of `builtins`, you can exclude a single rule from a domain while keeping the rest:
+
+```toml
+builtins = ["git-workflow", "!git-workflow/commit-messages"]
+```
+
+This loads all rules from `git-workflow` except the `commit-messages` rule. The syntax is `!domain/rule`.
+Per-rule exclusion only works with array form; `builtins = true` does not support per-rule exclusion.
 
 #### Available Built-in Domains
 
@@ -757,6 +780,23 @@ Within each category, files are sorted by:
 
 1. **Priority** (critical → high → medium → low → minimal)
 2. **Filename** (alphabetical)
+
+### Deduplication by Name
+
+When the same rule or context **name** appears in multiple sources, the generated output includes it only **once**. Precedence (highest to lowest):
+
+1. **Root content** (`.ai-rulez/rules/`, `.ai-rulez/context/`, etc.)
+2. **Domain content** (`.ai-rulez/domains/{name}/rules/`, etc.)
+3. **Include-sourced content** (`FromInclude` domains from external includes)
+4. **Builtin content** (auto-included domains)
+
+Example: If both a builtin `git-workflow` domain and a local rule define `commit-messages`, the local version is used and the builtin version is dropped.
+
+During `ai-rulez generate` and `ai-rulez validate`, a warning is logged for each deduplicated item:
+
+```text
+Duplicate rule collapsed name=commit-messages kept=.ai-rulez/rules/commit-messages.md dropped=<builtin>/git-workflow/commit-messages.md
+```
 
 ### Name Collision Handling
 

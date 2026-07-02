@@ -175,7 +175,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (str
 func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 
 	header := generateAntigravityPresetHeader(cfg, "GEMINI.md", len(allRules), 0, len(allAgents))
@@ -197,7 +197,7 @@ func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree,
 			builder.WriteString(rule.Name)
 			builder.WriteString("\n\n")
 
-			if rule.Metadata != nil && rule.Metadata.Priority != "" {
+			if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
 				builder.WriteString(rule.Metadata.Priority)
 				builder.WriteString("\n\n")
@@ -209,7 +209,7 @@ func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree,
 		}
 	}
 
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allContext := allInlineContext(content)
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
 		for _, ctx := range allContext {
