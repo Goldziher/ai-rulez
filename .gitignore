@@ -65,6 +65,7 @@ env/
 .hypothesis/
 .pytest_cache/
 .ruff_cache/
+.polylint/
 
 # Package artifacts
 *.py[cod]
@@ -164,6 +165,7 @@ testing/**/.mcp.json
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .agents/
+.ai-rulez/.generated-manifest.json
 .cline/
 .codex/
 .github/agents/
