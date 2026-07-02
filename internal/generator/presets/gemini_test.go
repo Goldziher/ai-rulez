@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -205,5 +206,70 @@ func TestGeminiPresetGenerator_GetOutputPaths(t *testing.T) {
 		if paths[i] != want {
 			t.Errorf("GetOutputPaths()[%d] = %q, want %q", i, paths[i], want)
 		}
+	}
+}
+
+func TestGeminiPresetGenerator_renderSettingsJSON_Transports(t *testing.T) {
+	g := &GeminiPresetGenerator{}
+
+	cfg := &config.Config{
+		MCPServers: map[string]*config.MCPServer{
+			"stdio-server": {
+				Command: "npx",
+				Args:    []string{"-y", "test-mcp"},
+			},
+			"http-server": {
+				Transport: "http",
+				URL:       "https://example.com/mcp",
+			},
+			"sse-server": {
+				Transport: "sse",
+				URL:       "https://example.com/sse",
+			},
+		},
+	}
+
+	content, err := g.renderSettingsJSON(cfg)
+	if err != nil {
+		t.Fatalf("renderSettingsJSON: %v", err)
+	}
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	servers := parsed["mcpServers"].(map[string]interface{})
+
+	stdio := servers["stdio-server"].(map[string]interface{})
+	if stdio["command"] != "npx" {
+		t.Errorf("stdio command = %v, want npx", stdio["command"])
+	}
+	if _, ok := stdio["transport"]; ok {
+		t.Error("stdio entry must not contain transport")
+	}
+
+	httpServer := servers["http-server"].(map[string]interface{})
+	if httpServer["httpUrl"] != "https://example.com/mcp" {
+		t.Errorf("http httpUrl = %v", httpServer["httpUrl"])
+	}
+	if _, ok := httpServer["command"]; ok {
+		t.Error("http entry must not contain command")
+	}
+	if _, ok := httpServer["transport"]; ok {
+		t.Error("http entry must not contain transport")
+	}
+	if _, ok := httpServer["url"]; ok {
+		t.Error("http entry must use httpUrl, not url")
+	}
+
+	sseServer := servers["sse-server"].(map[string]interface{})
+	if sseServer["url"] != "https://example.com/sse" {
+		t.Errorf("sse url = %v", sseServer["url"])
+	}
+	if _, ok := sseServer["command"]; ok {
+		t.Error("sse entry must not contain command")
+	}
+	if _, ok := sseServer["transport"]; ok {
+		t.Error("sse entry must not contain transport")
 	}
 }

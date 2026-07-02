@@ -1,6 +1,7 @@
 package presets
 
 import (
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -256,5 +257,65 @@ func TestAntigravityPresetGenerator_buildAgentFrontmatter_DoesNotEmitEffort(t *t
 	}
 	if fm["description"] != "Reviews code" {
 		t.Errorf("expected description to be passed through; got %v", fm["description"])
+	}
+}
+
+func TestAntigravityPresetGenerator_renderSettingsJSON_Transports(t *testing.T) {
+	g := &AntigravityPresetGenerator{}
+
+	cfg := &config.Config{
+		MCPServers: map[string]*config.MCPServer{
+			"stdio-server": {
+				Command: "npx",
+				Args:    []string{"-y", "test-mcp"},
+			},
+			"http-server": {
+				Transport: "http",
+				URL:       "https://example.com/mcp",
+			},
+			"sse-server": {
+				Transport: "sse",
+				URL:       "https://example.com/sse",
+			},
+		},
+	}
+
+	content, err := g.renderSettingsJSON(cfg)
+	if err != nil {
+		t.Fatalf("renderSettingsJSON: %v", err)
+	}
+
+	var parsed map[string]interface{}
+	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+		t.Fatalf("invalid JSON: %v", err)
+	}
+	servers := parsed["mcpServers"].(map[string]interface{})
+
+	stdio := servers["stdio-server"].(map[string]interface{})
+	if stdio["command"] != "npx" {
+		t.Errorf("stdio command = %v, want npx", stdio["command"])
+	}
+
+	for _, name := range []string{"http-server", "sse-server"} {
+		entry := servers[name].(map[string]interface{})
+		wantURL := "https://example.com/mcp"
+		if name == "sse-server" {
+			wantURL = "https://example.com/sse"
+		}
+		if entry["serverUrl"] != wantURL {
+			t.Errorf("%s serverUrl = %v, want %v", name, entry["serverUrl"], wantURL)
+		}
+		if _, ok := entry["command"]; ok {
+			t.Errorf("%s must not contain command", name)
+		}
+		if _, ok := entry["args"]; ok {
+			t.Errorf("%s must not contain args", name)
+		}
+		if _, ok := entry["transport"]; ok {
+			t.Errorf("%s must not contain transport", name)
+		}
+		if _, ok := entry["url"]; ok {
+			t.Errorf("%s must use serverUrl, not url", name)
+		}
 	}
 }
