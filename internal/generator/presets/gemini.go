@@ -152,11 +152,11 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 		// `httpUrl` for streamable HTTP, `url` for SSE. A stdio entry with an empty
 		// command is invalid, so omit command/args for remote transports.
 		switch server.GetTransport() {
-		case "http":
+		case config.TransportHTTP:
 			if server.URL != "" {
 				entry["httpUrl"] = server.URL
 			}
-		case "sse":
+		case config.TransportSSE:
 			if server.URL != "" {
 				entry["url"] = server.URL
 			}
