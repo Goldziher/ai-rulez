@@ -680,11 +680,12 @@ func (s *V4GenerationSuite) TestMCP_Content() {
 	s.Assert().Contains(args, "-y")
 	s.Assert().Contains(args, "@test/mcp-server")
 
-	// http-mcp-server with transport and url
+	// http-mcp-server uses Claude Code's `type` key (not `transport`) and carries no command
 	httpServer, ok := mcpServers["http-mcp-server"].(map[string]interface{})
 	s.Require().True(ok, "Should have http-mcp-server entry")
-	s.Assert().Equal("http", httpServer["transport"])
+	s.Assert().Equal("http", httpServer["type"])
 	s.Assert().Equal("http://localhost:8080", httpServer["url"])
+	s.Assert().NotContains(httpServer, "transport", "Claude Code keys remote transport on `type`, not `transport`")
 }
 
 // ==========================================
