@@ -5,20 +5,20 @@ on:
     branches:
       - main
     paths:
-      - 'docs/**'
-      - 'zensical.toml'
-      - '.github/workflows/docs.yml'
-      - 'pyproject.toml'
-      - '.lychee.toml'
+      - "docs/**"
+      - "zensical.toml"
+      - ".github/workflows/docs.yml"
+      - "pyproject.toml"
+      - ".lychee.toml"
   pull_request:
     branches:
       - main
     paths:
-      - 'docs/**'
-      - 'zensical.toml'
-      - '.github/workflows/docs.yml'
-      - 'pyproject.toml'
-      - '.lychee.toml'
+      - "docs/**"
+      - "zensical.toml"
+      - ".github/workflows/docs.yml"
+      - "pyproject.toml"
+      - ".lychee.toml"
   workflow_dispatch:
 
 permissions:
@@ -43,7 +43,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.13'
+          python-version: "3.13"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6

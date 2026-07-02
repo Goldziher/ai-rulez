@@ -64,14 +64,7 @@
           "type": "array",
           "description": "Ordered list of section renderers to compose into the root file body.",
           "items": {
-            "enum": [
-              "header",
-              "title",
-              "description",
-              "rules_inline",
-              "context_inline",
-              "agents_delegation"
-            ]
+            "enum": ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
           }
         }
       }
@@ -117,13 +110,7 @@
         "sections": {
           "type": "array",
           "items": {
-            "enum": [
-              "frontmatter",
-              "content",
-              "resource_index",
-              "targeted_rules",
-              "targeted_context"
-            ]
+            "enum": ["frontmatter", "content", "resource_index", "targeted_rules", "targeted_context"]
           }
         }
       }

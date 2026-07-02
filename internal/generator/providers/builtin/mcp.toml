@@ -4,10 +4,10 @@
 # MCP server is configured. No root file, no per-item content. Replaces the
 # legacy MCPPresetGenerator in internal/generator/presets/mcp.go.
 
-name         = "mcp"
+name = "mcp"
 display_name = "MCP servers"
 
 [[sidecars]]
-kind      = "mcp_json"
-path      = ".mcp.json"
+kind = "mcp_json"
+path = ".mcp.json"
 emit_when = "has_mcp_servers"
