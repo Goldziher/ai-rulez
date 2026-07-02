@@ -376,7 +376,7 @@ func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error
 		// `url`. A stdio entry with an empty command is invalid, so omit command/args
 		// for remote (http/sse) transports and emit only the URL.
 		switch server.GetTransport() {
-		case "http", "sse":
+		case config.TransportHTTP, config.TransportSSE:
 			if server.URL != "" {
 				entry["url"] = server.URL
 			}
