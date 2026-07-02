@@ -155,7 +155,13 @@ func ResolveBuiltins(builtins []string) []string {
 
 	for _, name := range builtins {
 		if strings.HasPrefix(name, "!") {
-			excluded[strings.TrimPrefix(name, "!")] = true
+			spec := strings.TrimPrefix(name, "!")
+			// "!domain/rule" is a per-rule exclusion (see ExcludedRules); it must
+			// not disable the whole domain, so skip it for domain resolution.
+			if strings.Contains(spec, "/") {
+				continue
+			}
+			excluded[spec] = true
 		} else {
 			explicit[name] = true
 		}
@@ -183,6 +189,24 @@ func ResolveBuiltins(builtins []string) []string {
 	}
 	sort.Strings(names)
 	return names
+}
+
+// ExcludedRules parses per-rule builtin exclusions of the form "!domain/name"
+// from the user's builtins list, returning a set keyed by "domain/name". These
+// suppress an individual builtin content file (rule, context, etc.) without
+// disabling the whole builtin domain — unlike a bare "!domain" exclusion.
+func ExcludedRules(builtins []string) map[string]bool {
+	excluded := make(map[string]bool)
+	for _, name := range builtins {
+		if !strings.HasPrefix(name, "!") {
+			continue
+		}
+		spec := strings.TrimPrefix(name, "!")
+		if strings.Contains(spec, "/") {
+			excluded[spec] = true
+		}
+	}
+	return excluded
 }
 
 // embeddedPath returns the embedded FS path for a builtin domain.

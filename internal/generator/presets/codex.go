@@ -167,7 +167,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree,
 	var builder strings.Builder
 
 	// Calculate content counts
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
 
 	// Add header before title
@@ -192,7 +192,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree,
 			builder.WriteString(rule.Name)
 			builder.WriteString("\n\n") // Add blank line after heading
 
-			if rule.Metadata != nil && rule.Metadata.Priority != "" {
+			if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
 				builder.WriteString(rule.Metadata.Priority)
 				builder.WriteString("\n\n")
@@ -205,7 +205,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree,
 	}
 
 	// Add context section
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allContext := allInlineContext(content)
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
 		for _, ctx := range allContext {

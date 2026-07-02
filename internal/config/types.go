@@ -21,6 +21,7 @@ type Config struct {
 	Header          *HeaderConfig          `yaml:"header,omitempty" json:"header,omitempty" toml:"header,omitempty"`
 	Defaults        *DefaultsConfig        `yaml:"defaults,omitempty" json:"defaults,omitempty" toml:"defaults,omitempty"`
 	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
+	Compact         *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
 	Plugins         []PluginConfig         `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
@@ -489,6 +490,13 @@ func (c *Config) IsV3() bool {
 // IsV4 returns true if this is a V4 config (version == "4.0")
 func (c *Config) IsV4() bool {
 	return c.Version == ConfigVersionV4
+}
+
+// IsCompact reports whether compact rendering is enabled. When true, presets
+// omit per-rule "**Priority:**" annotations from inline rule sections to reduce
+// output size. Defaults to false (full output).
+func (c *Config) IsCompact() bool {
+	return c != nil && c.Compact != nil && *c.Compact
 }
 
 // GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal")

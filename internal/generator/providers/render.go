@@ -408,7 +408,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 				b.WriteString("\n\n")
 			}
 		case SectionRootRulesInline:
-			writeInlineRules(&b, content)
+			writeInlineRules(&b, content, cfg.IsCompact())
 		case SectionRootContextInline:
 			writeInlineContext(&b, content)
 		case SectionRootAgentsDelegation:
@@ -424,10 +424,12 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 }
 
 func countContent(content *config.ContentTree) (rules, agents int) {
-	rules = len(content.Rules)
+	// Count rules after deduplication so the header reflects what is actually
+	// rendered — a builtin and an include defining the same rule name collapse
+	// to one entry (see writeInlineRules).
+	rules = len(presets.AllInlineRules(content))
 	agents = len(content.Agents)
 	for _, domain := range content.Domains {
-		rules += len(domain.Rules)
 		agents += len(domain.Agents)
 	}
 	return
@@ -436,8 +438,8 @@ func countContent(content *config.ContentTree) (rules, agents int) {
 // writeInlineRules mirrors the "## Rules" block produced by the legacy
 // renderClaudeMarkdown — heading + entries with **Priority:** when set and
 // markdown-processed content.
-func writeInlineRules(b *strings.Builder, content *config.ContentTree) {
-	allRules := presets.CombineContentFiles(content.Rules, presets.GetAllDomainRules(content))
+func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact bool) {
+	allRules := presets.AllInlineRules(content)
 	if len(allRules) == 0 {
 		return
 	}
@@ -446,7 +448,7 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree) {
 		b.WriteString("### ")
 		b.WriteString(rule.Name)
 		b.WriteString("\n\n")
-		if rule.Metadata != nil && rule.Metadata.Priority != "" {
+		if !compact && rule.Metadata != nil && rule.Metadata.Priority != "" {
 			b.WriteString("**Priority:** ")
 			b.WriteString(rule.Metadata.Priority)
 			b.WriteString("\n\n")
@@ -459,7 +461,7 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree) {
 // writeInlineContext mirrors the "## Context" block produced by the legacy
 // renderClaudeMarkdown, including the per-entry "summary" extras handling.
 func writeInlineContext(b *strings.Builder, content *config.ContentTree) {
-	allContext := presets.CombineContentFiles(content.Context, presets.GetAllDomainContext(content))
+	allContext := presets.AllInlineContext(content)
 	if len(allContext) == 0 {
 		return
 	}
