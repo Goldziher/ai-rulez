@@ -69,17 +69,22 @@ func renderMCPJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]any)
 	for name, server := range cfg.MCPServers {
 		entry := map[string]any{
-			"command":  server.Command,
 			"disabled": !server.IsEnabled(),
 		}
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
+		// Claude Code keys remote transport on `type` (accepting "http", "sse",
+		// or "streamable-http"); a stdio entry with an empty command is invalid.
+		// See https://code.claude.com/docs/en/mcp.
+		switch t := server.GetTransport(); t {
+		case "http", "sse":
+			entry["type"] = t
+		default:
+			entry["command"] = server.Command
+			if len(server.Args) > 0 {
+				entry["args"] = server.Args
+			}
 		}
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
-		}
-		if server.Transport != "" {
-			entry["transport"] = server.GetTransport()
 		}
 		if server.URL != "" {
 			entry["url"] = server.URL
@@ -113,17 +118,21 @@ func (g *Generator) renderAmpSettingsJSON(cfg *config.Config) (string, error) {
 func renderClaudeSettingsJSON(cfg *config.Config) (string, error) {
 	mcpServers := make(map[string]any)
 	for name, server := range cfg.MCPServers {
-		entry := map[string]any{
-			"command": server.Command,
-		}
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
+		entry := map[string]any{}
+		// Claude Code keys remote transport on `type` (accepting "http", "sse",
+		// or "streamable-http"); a stdio entry with an empty command is invalid.
+		// See https://code.claude.com/docs/en/mcp.
+		switch t := server.GetTransport(); t {
+		case "http", "sse":
+			entry["type"] = t
+		default:
+			entry["command"] = server.Command
+			if len(server.Args) > 0 {
+				entry["args"] = server.Args
+			}
 		}
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
-		}
-		if server.Transport != "" {
-			entry["transport"] = server.GetTransport()
 		}
 		if server.URL != "" {
 			entry["url"] = server.URL
