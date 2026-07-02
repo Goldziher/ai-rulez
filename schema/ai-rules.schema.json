@@ -32,7 +32,20 @@
         "oneOf": [
           {
             "type": "string",
-            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode", "antigravity"],
+            "enum": [
+              "claude",
+              "cursor",
+              "gemini",
+              "copilot",
+              "continue-dev",
+              "windsurf",
+              "cline",
+              "codex",
+              "amp",
+              "junie",
+              "opencode",
+              "antigravity"
+            ],
             "description": "Built-in preset name"
           },
           {
@@ -294,7 +307,21 @@
           "type": "object",
           "description": "Per-preset reasoning effort overrides. Beats `effort` for the matching preset; per-agent metadata still wins where the preset supports it.",
           "propertyNames": {
-            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode", "antigravity", "mcp"]
+            "enum": [
+              "claude",
+              "cursor",
+              "gemini",
+              "copilot",
+              "continue-dev",
+              "windsurf",
+              "cline",
+              "codex",
+              "amp",
+              "junie",
+              "opencode",
+              "antigravity",
+              "mcp"
+            ]
           },
           "additionalProperties": {
             "type": "string",
@@ -305,7 +332,21 @@
           "type": "object",
           "description": "Per-preset model overrides for agents. Beats the legacy agent-level `model` field for the matching preset; per-agent `<preset>_model` frontmatter still wins. Presets that do not emit a per-agent model frontmatter ignore entries here.",
           "propertyNames": {
-            "enum": ["claude", "cursor", "gemini", "copilot", "continue-dev", "windsurf", "cline", "codex", "amp", "junie", "opencode", "antigravity", "mcp"]
+            "enum": [
+              "claude",
+              "cursor",
+              "gemini",
+              "copilot",
+              "continue-dev",
+              "windsurf",
+              "cline",
+              "codex",
+              "amp",
+              "junie",
+              "opencode",
+              "antigravity",
+              "mcp"
+            ]
           },
           "additionalProperties": {
             "type": "string"

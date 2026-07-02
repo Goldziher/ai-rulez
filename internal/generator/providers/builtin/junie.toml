@@ -4,7 +4,7 @@
 # project guidance from .junie/guidelines.md and supports per-agent and
 # per-skill files alongside. No effort field; no sidecars.
 
-name         = "junie"
+name = "junie"
 display_name = "JetBrains Junie"
 
 directories = [".junie", ".junie/skills", ".junie/agents"]
@@ -12,13 +12,13 @@ directories = [".junie", ".junie/skills", ".junie/agents"]
 # guidelines.md inlines rules and context but NOT the agents-delegation
 # section — Junie surfaces subagents through its own UI, not the root file.
 [root]
-file     = ".junie/guidelines.md"
+file = ".junie/guidelines.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline"]
 
 [outputs.skills]
-mode      = "per_item_file"
-dir       = ".junie/skills"
-filename  = "{id}/SKILL.md"
+mode = "per_item_file"
+dir = ".junie/skills"
+filename = "{id}/SKILL.md"
 resources = true
 
 [outputs.skills.body]
@@ -28,17 +28,17 @@ sections = ["frontmatter", "content", "resource_index"]
 fields = ["description"]
 
 [outputs.agents]
-mode     = "per_item_file"
-dir      = ".junie/agents"
+mode = "per_item_file"
+dir = ".junie/agents"
 filename = "{id}.md"
 
 [outputs.agents.body]
 sections = ["frontmatter", "content"]
 
 [outputs.agents.frontmatter]
-fields     = ["description", "disallowedTools", "allowPromptArgument"]
-tools      = true
-skills     = true
+fields = ["description", "disallowedTools", "allowPromptArgument"]
+tools = true
+skills = true
 emit_model = true
 
 [model]

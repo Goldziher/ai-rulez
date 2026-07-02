@@ -42,7 +42,7 @@ archives:
       - LICENSE
 
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
 
 release:
   github:
@@ -50,7 +50,6 @@ release:
     name: ai-rulez
   skip_upload: false
   replace_existing_draft: true
-
 
 brews:
   - name: ai-rulez
