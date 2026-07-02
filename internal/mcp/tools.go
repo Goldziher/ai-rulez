@@ -153,6 +153,24 @@ func destructiveAnnotations() *sdkmcp.ToolAnnotations {
 	}
 }
 
+// additiveAnnotations marks a writing tool that performs only additive,
+// non-destructive updates (create/add operations). Without this, clients
+// assume the MCP default DestructiveHint=true and may warn on a harmless create.
+func additiveAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		DestructiveHint: boolPtr(false),
+	}
+}
+
+// idempotentAnnotations marks a non-destructive writing tool whose repeated
+// calls with the same arguments have no additional effect (update/set/generate).
+func idempotentAnnotations() *sdkmcp.ToolAnnotations {
+	return &sdkmcp.ToolAnnotations{
+		DestructiveHint: boolPtr(false),
+		IdempotentHint:  true,
+	}
+}
+
 func newTool(name, description string, builder *toolSchemaBuilder) *sdkmcp.Tool {
 	var schema map[string]any
 	if builder != nil {
@@ -193,13 +211,14 @@ func (s *Server) registerTools() {
 
 func (s *Server) registerProjectTools() {
 	s.addTool(
-		newTool("generate_outputs", "Generate output files from the current configuration, respecting includes and extends",
+		newAnnotatedTool("generate_outputs", "Generate output files from the current configuration, respecting includes and extends",
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file (optional)", false).
 				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
 				Boolean("dry_run", "Preview changes without writing files", false).
 				Boolean("recursive", "Generate for all subdirectories containing .ai-rulez/", false).
 				WorkingDirectory(),
+			idempotentAnnotations(),
 		),
 		handlers.GenerateOutputsHandler,
 	)
@@ -216,7 +235,7 @@ func (s *Server) registerProjectTools() {
 	)
 
 	s.addTool(
-		newTool("init_project", "Initialize a new ai-rulez project in the current directory",
+		newAnnotatedTool("init_project", "Initialize a new ai-rulez project in the current directory",
 			newSchemaBuilder().
 				String("project_name", "The name for the new project", false).
 				StringArray("providers", "A list of providers to enable (e.g., ['claude', 'cursor'])", false).
@@ -224,6 +243,7 @@ func (s *Server) registerProjectTools() {
 				Boolean("all_providers", "Enable all supported providers", false).
 				Boolean("popular_providers", "Enable a curated list of popular providers", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.InitProjectHandler,
 	)
@@ -250,11 +270,12 @@ var priorityValues = []string{"critical", "high", "medium", "low"}
 func (s *Server) registerCRUDTools() {
 	// Domain tools
 	s.addTool(
-		newTool("create_domain", "Create a new domain with subdirectories for rules, context, and skills",
+		newAnnotatedTool("create_domain", "Create a new domain with subdirectories for rules, context, and skills",
 			newSchemaBuilder().
 				String("name", "Domain name (alphanumeric and underscores, 1-50 characters)", true).
 				String("description", "Optional domain description", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.CreateDomainHandler,
 	)
@@ -279,7 +300,7 @@ func (s *Server) registerCRUDTools() {
 
 	// Rule tools
 	s.addTool(
-		newTool("create_rule", "Create a new rule file with optional YAML frontmatter",
+		newAnnotatedTool("create_rule", "Create a new rule file with optional YAML frontmatter",
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("content", "Markdown content with optional YAML frontmatter", false).
@@ -287,6 +308,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.CreateRuleHandler,
 	)
@@ -303,7 +325,7 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("update_rule", "Update an existing rule file atomically",
+		newAnnotatedTool("update_rule", "Update an existing rule file atomically",
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("content", "New markdown content", true).
@@ -311,6 +333,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
 				WorkingDirectory(),
+			idempotentAnnotations(),
 		),
 		handlers.UpdateRuleHandler,
 	)
@@ -338,7 +361,7 @@ func (s *Server) registerCRUDTools() {
 
 	// Context tools
 	s.addTool(
-		newTool("create_context", "Create a new context file with optional YAML frontmatter",
+		newAnnotatedTool("create_context", "Create a new context file with optional YAML frontmatter",
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("content", "Markdown content with optional YAML frontmatter", false).
@@ -346,6 +369,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.CreateContextHandler,
 	)
@@ -362,7 +386,7 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("update_context", "Update an existing context file atomically",
+		newAnnotatedTool("update_context", "Update an existing context file atomically",
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("content", "New markdown content", true).
@@ -370,6 +394,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
 				WorkingDirectory(),
+			idempotentAnnotations(),
 		),
 		handlers.UpdateContextHandler,
 	)
@@ -397,7 +422,7 @@ func (s *Server) registerCRUDTools() {
 
 	// Skill tools
 	s.addTool(
-		newTool("create_skill", "Create a new skill file with optional YAML frontmatter",
+		newAnnotatedTool("create_skill", "Create a new skill file with optional YAML frontmatter",
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("content", "Markdown content with optional YAML frontmatter", false).
@@ -405,6 +430,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.CreateSkillHandler,
 	)
@@ -421,7 +447,7 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("update_skill", "Update an existing skill file atomically",
+		newAnnotatedTool("update_skill", "Update an existing skill file atomically",
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("content", "New markdown content", true).
@@ -429,6 +455,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
 				WorkingDirectory(),
+			idempotentAnnotations(),
 		),
 		handlers.UpdateSkillHandler,
 	)
@@ -456,7 +483,7 @@ func (s *Server) registerCRUDTools() {
 
 	// Include tools
 	s.addTool(
-		newTool("add_include", "Add a new include source (git URL or local path) to the configuration",
+		newAnnotatedTool("add_include", "Add a new include source (git URL or local path) to the configuration",
 			newSchemaBuilder().
 				String("name", "Include name (unique identifier)", true).
 				String("source", "Git URL or local filesystem path", true).
@@ -466,6 +493,7 @@ func (s *Server) registerCRUDTools() {
 				Enum("merge_strategy", "Merge strategy", []string{"default", "override", "append"}, false).
 				String("install_to", "Installation target path (optional)", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.AddIncludeHandler,
 	)
@@ -490,13 +518,14 @@ func (s *Server) registerCRUDTools() {
 
 	// Installed skill tools
 	s.addTool(
-		newTool("install_skill", "Install a named skill from a git repository or local path",
+		newAnnotatedTool("install_skill", "Install a named skill from a git repository or local path",
 			newSchemaBuilder().
 				String("name", "Skill name (unique identifier)", true).
 				String("source", "Git URL or local filesystem path", true).
 				String("path", "Path within repo to skill directory (defaults to skills/<name>)", false).
 				String("ref", "Git reference: branch, tag, or commit hash", false).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.InstallSkillHandler,
 	)
@@ -530,7 +559,7 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("update_config", "Update specific fields in the project configuration",
+		newAnnotatedTool("update_config", "Update specific fields in the project configuration",
 			newSchemaBuilder().
 				String("name", "Project name", false).
 				String("description", "Project description", false).
@@ -539,17 +568,19 @@ func (s *Server) registerCRUDTools() {
 				String("default_effort", "Default reasoning effort for Claude Code subagents (low, medium, high, xhigh, max, inherit). Empty string clears the default.", false).
 				Object("default_effort_by_preset", "Per-preset reasoning effort override (e.g. {\"codex\": \"high\", \"claude\": \"xhigh\"}). Each value must be one of low, medium, high, xhigh, max, inherit. Pass {} to clear.", false).
 				WorkingDirectory(),
+			idempotentAnnotations(),
 		),
 		handlers.UpdateConfigHandler,
 	)
 
 	// Profile tools
 	s.addTool(
-		newTool("add_profile", "Create a new profile with a set of domains",
+		newAnnotatedTool("add_profile", "Create a new profile with a set of domains",
 			newSchemaBuilder().
 				String("name", "Profile name (unique identifier)", true).
 				StringArray("domains", "List of domain names to include in the profile", true).
 				WorkingDirectory(),
+			additiveAnnotations(),
 		),
 		handlers.AddProfileHandler,
 	)
@@ -565,10 +596,11 @@ func (s *Server) registerCRUDTools() {
 	)
 
 	s.addTool(
-		newTool("set_default_profile", "Set a profile as the default",
+		newAnnotatedTool("set_default_profile", "Set a profile as the default",
 			newSchemaBuilder().
 				String("name", "Profile name to set as default", true).
 				WorkingDirectory(),
+			idempotentAnnotations(),
 		),
 		handlers.SetDefaultProfileHandler,
 	)
