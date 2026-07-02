@@ -155,7 +155,7 @@ func TestCursorPresetGenerator_renderRuleFile(t *testing.T) {
 		},
 	}
 
-	result := g.renderRuleFile(rule)
+	result := g.renderRuleFile(rule, false)
 
 	if !strings.Contains(result, "# test rule") {
 		t.Error("Expected rule name as heading")

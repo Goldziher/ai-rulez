@@ -461,6 +461,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Default         string                 `toml:"default"`
 		Profiles        map[string][]string    `toml:"profiles"`
 		Gitignore       *bool                  `toml:"gitignore"`
+		Compact         *bool                  `toml:"compact"`
 		Includes        []IncludeConfig        `toml:"includes"`
 		InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
 		MCPServers      []MCPServer            `toml:"mcp_servers"`
@@ -512,6 +513,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Default:         raw.Default,
 		Profiles:        raw.Profiles,
 		Gitignore:       raw.Gitignore,
+		Compact:         raw.Compact,
 		Includes:        raw.Includes,
 		InstalledSkills: raw.InstalledSkills,
 		MCPServersRaw:   raw.MCPServers,
@@ -1215,6 +1217,8 @@ func loadBuiltins(config *Config) {
 		return
 	}
 
+	ruleExclusions := builtins.ExcludedRules(config.Builtins.GetNames())
+
 	logger.Debug("Loading builtins", "count", len(resolved), "names", resolved)
 
 	if config.Content == nil {
@@ -1245,6 +1249,12 @@ func loadBuiltins(config *Config) {
 		}
 
 		for _, entry := range entries {
+			// Skip individual builtin content files excluded via "!domain/name".
+			if ruleExclusions[name+"/"+entry.Name] {
+				logger.Debug("Excluding builtin content", "domain", name, "name", entry.Name)
+				continue
+			}
+
 			// Parse frontmatter from embedded content
 			metadata, body := parseFrontmatter(entry.Content)
 			cf := ContentFile{

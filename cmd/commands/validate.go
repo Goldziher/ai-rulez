@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -33,6 +34,7 @@ schema compliance, and structural issues.`,
 		}
 
 		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		presets.WarnDuplicateContent(cfg.Content)
 		displayConfigurationSummary(cfg)
 	},
 }

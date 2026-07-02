@@ -151,11 +151,9 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
-	// Calculate content counts
-	ruleCount := len(content.Rules)
-	for _, domain := range content.Domains {
-		ruleCount += len(domain.Rules)
-	}
+	// Calculate content counts from the deduplicated rule set so the header
+	// count matches what is actually rendered.
+	ruleCount := len(allInlineRules(content))
 
 	// Generate and prepend header
 	outputPath := ".github/copilot-instructions.md"
@@ -173,7 +171,7 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 	}
 
 	// Add rules section
-	allRules := combineContentFiles(content.Rules, getAllDomainRules(content))
+	allRules := allInlineRules(content)
 	if len(allRules) > 0 {
 		builder.WriteString("## Rules\n\n")
 		for _, rule := range allRules {
@@ -181,7 +179,7 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 			builder.WriteString(rule.Name)
 			builder.WriteString("\n\n")
 
-			if rule.Metadata != nil && rule.Metadata.Priority != "" {
+			if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
 				builder.WriteString("**Priority:** ")
 				builder.WriteString(rule.Metadata.Priority)
 				builder.WriteString("\n\n")
@@ -194,7 +192,7 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 	}
 
 	// Add context section
-	allContext := combineContentFiles(content.Context, getAllDomainContext(content))
+	allContext := allInlineContext(content)
 	if len(allContext) > 0 {
 		builder.WriteString("## Context\n\n")
 		for _, ctx := range allContext {

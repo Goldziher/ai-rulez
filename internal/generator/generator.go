@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	_ "github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"     // Register remaining legacy preset generators
 	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -116,6 +116,8 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 		"skills", len(contentTree.Skills),
 		"agents", len(contentTree.Agents),
 		"domains", len(contentTree.Domains))
+
+	presets.WarnDuplicateContent(contentTree)
 
 	// Collect MCP servers based on the resolved content tree
 	mcpServers := g.collectMCPServersForContent(contentTree)
