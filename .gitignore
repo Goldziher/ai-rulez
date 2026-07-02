@@ -23,6 +23,8 @@ bin/
 **/ai-rulez-*
 /main
 !docs/assets/ai-rulez-demo.gif
+!docs/assets/ai-rulez-banner.png
+!docs/assets/ai-rulez-banner.svg
 !docs/assets/ai-rulez-python-demo.gif
 *.exe
 *.exe~
