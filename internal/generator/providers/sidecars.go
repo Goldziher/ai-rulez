@@ -75,7 +75,7 @@ func renderMCPJSON(cfg *config.Config) (string, error) {
 		// or "streamable-http"); a stdio entry with an empty command is invalid.
 		// See https://code.claude.com/docs/en/mcp.
 		switch t := server.GetTransport(); t {
-		case "http", "sse":
+		case config.TransportHTTP, config.TransportSSE:
 			entry["type"] = t
 		default:
 			entry["command"] = server.Command
@@ -123,7 +123,7 @@ func renderClaudeSettingsJSON(cfg *config.Config) (string, error) {
 		// or "streamable-http"); a stdio entry with an empty command is invalid.
 		// See https://code.claude.com/docs/en/mcp.
 		switch t := server.GetTransport(); t {
-		case "http", "sse":
+		case config.TransportHTTP, config.TransportSSE:
 			entry["type"] = t
 		default:
 			entry["command"] = server.Command

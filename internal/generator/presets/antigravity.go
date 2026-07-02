@@ -143,7 +143,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (str
 		// remote servers on `serverUrl`. A stdio entry with an empty command is
 		// invalid, so omit command/args for remote (http/sse) transports.
 		switch server.GetTransport() {
-		case "http", "sse":
+		case config.TransportHTTP, config.TransportSSE:
 			if server.URL != "" {
 				entry["serverUrl"] = server.URL
 			}

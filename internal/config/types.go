@@ -315,6 +315,14 @@ func isValidBuiltInPreset(name string) bool {
 }
 
 // MCPServer represents an MCP (Model Context Protocol) server configuration
+// MCP transport protocol identifiers, used by preset renderers to decide the
+// per-tool config shape (stdio command vs remote URL keys).
+const (
+	TransportStdio = "stdio"
+	TransportHTTP  = "http"
+	TransportSSE   = "sse"
+)
+
 type MCPServer struct {
 	Name        string            `yaml:"name" json:"name" toml:"name"`
 	Description string            `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
@@ -341,7 +349,7 @@ func (m *MCPServer) IsEnabled() bool {
 // GetTransport returns the transport protocol, defaulting to "stdio"
 func (m *MCPServer) GetTransport() string {
 	if m == nil || m.Transport == "" {
-		return "stdio"
+		return TransportStdio
 	}
 	return m.Transport
 }
