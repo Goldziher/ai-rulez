@@ -137,21 +137,25 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (str
 
 	// Merge user-configured MCP servers
 	for name, server := range cfg.MCPServers {
-		entry := map[string]interface{}{
-			keyCommand: server.Command,
+		entry := map[string]interface{}{}
+
+		// Antigravity (Windsurf/Codeium lineage) has no transport/type key and keys
+		// remote servers on `serverUrl`. A stdio entry with an empty command is
+		// invalid, so omit command/args for remote (http/sse) transports.
+		switch server.GetTransport() {
+		case "http", "sse":
+			if server.URL != "" {
+				entry["serverUrl"] = server.URL
+			}
+		default:
+			entry[keyCommand] = server.Command
+			if len(server.Args) > 0 {
+				entry["args"] = server.Args
+			}
 		}
 
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
-		}
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
-		}
-		if server.Transport != "" {
-			entry["transport"] = server.GetTransport()
-		}
-		if server.URL != "" {
-			entry["url"] = server.URL
 		}
 		if !server.IsEnabled() {
 			entry[keyDisabled] = true
