@@ -183,4 +183,46 @@ func TestCopilotPresetGenerator_renderMCPJSON(t *testing.T) {
 	require.NoError(t, err)
 	servers := parsed["mcpServers"].(map[string]interface{})
 	assert.Len(t, servers, 1)
+
+	stdio := servers["test-server"].(map[string]interface{})
+	assert.Equal(t, "npx", stdio["command"])
+	assert.NotContains(t, stdio, "type")
+	assert.NotContains(t, stdio, "transport")
+}
+
+func TestCopilotPresetGenerator_renderMCPJSON_RemoteTransports(t *testing.T) {
+	g := &CopilotPresetGenerator{}
+
+	cfg := &config.Config{
+		MCPServers: map[string]*config.MCPServer{
+			"http-server": {
+				Transport: "http",
+				URL:       "https://example.com/mcp",
+			},
+			"sse-server": {
+				Transport: "sse",
+				URL:       "https://example.com/sse",
+			},
+		},
+	}
+
+	content, err := g.renderMCPJSON(cfg)
+	require.NoError(t, err)
+
+	var parsed map[string]interface{}
+	require.NoError(t, json.Unmarshal([]byte(content), &parsed))
+	servers := parsed["mcpServers"].(map[string]interface{})
+
+	httpServer := servers["http-server"].(map[string]interface{})
+	assert.Equal(t, "http", httpServer["type"])
+	assert.Equal(t, "https://example.com/mcp", httpServer["url"])
+	assert.NotContains(t, httpServer, "command")
+	assert.NotContains(t, httpServer, "args")
+	assert.NotContains(t, httpServer, "transport")
+
+	sseServer := servers["sse-server"].(map[string]interface{})
+	assert.Equal(t, "sse", sseServer["type"])
+	assert.Equal(t, "https://example.com/sse", sseServer["url"])
+	assert.NotContains(t, sseServer, "command")
+	assert.NotContains(t, sseServer, "transport")
 }
