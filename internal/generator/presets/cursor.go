@@ -369,21 +369,26 @@ func (g *CursorPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			keyCommand:  server.Command,
 			keyDisabled: !server.IsEnabled(),
 		}
 
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
+		// Cursor has no transport/type key; it infers transport from the presence of
+		// `url`. A stdio entry with an empty command is invalid, so omit command/args
+		// for remote (http/sse) transports and emit only the URL.
+		switch server.GetTransport() {
+		case "http", "sse":
+			if server.URL != "" {
+				entry["url"] = server.URL
+			}
+		default:
+			entry[keyCommand] = server.Command
+			if len(server.Args) > 0 {
+				entry["args"] = server.Args
+			}
 		}
+
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
-		}
-		if server.Transport != "" {
-			entry["transport"] = server.GetTransport()
-		}
-		if server.URL != "" {
-			entry["url"] = server.URL
 		}
 
 		mcpServers[name] = entry

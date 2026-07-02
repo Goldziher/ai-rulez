@@ -330,18 +330,24 @@ func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, erro
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			keyCommand:  server.Command,
 			keyDisabled: !server.IsEnabled(),
 		}
 
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
+		// Copilot keys remote transport on `type` (not `transport`). A stdio entry
+		// with an empty command is invalid, so omit command/args for remote
+		// (http/sse) transports and emit `type` plus the URL instead.
+		switch t := server.GetTransport(); t {
+		case "http", "sse":
+			entry["type"] = t
+		default:
+			entry[keyCommand] = server.Command
+			if len(server.Args) > 0 {
+				entry["args"] = server.Args
+			}
 		}
+
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
-		}
-		if server.Transport != "" {
-			entry["transport"] = server.GetTransport()
 		}
 		if server.URL != "" {
 			entry["url"] = server.URL
