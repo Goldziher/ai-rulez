@@ -1,5 +1,9 @@
 # AI-Rulez Documentation
 
+<p align="center">
+  <img src="assets/ai-rulez-banner.svg" alt="AI-Rulez" width="820" />
+</p>
+
 AI-Rulez is a CLI tool for managing AI assistant configurations across multiple tools.
 
 Write your AI instructions once in a single configuration and generate tool-specific outputs for Claude, Cursor, Windsurf, Copilot, Gemini, and others.
