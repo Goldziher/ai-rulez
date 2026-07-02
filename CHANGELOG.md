@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.5.0] - 2026-07-02
+
+### Added
+
+- Rule and context **deduplication by name** with source precedence (root > on-disk domain > include > builtin). When the same name is defined by more than one source (for example a builtin `git-workflow` rule and an include redefining `commit-messages`), the generated output now includes it only once, and a warning is logged during `generate` and `validate` naming the kept and dropped sources.
+- `compact` config option: when `true`, generated inline rule sections omit the per-rule `**Priority:**` annotations to reduce output size.
+- Per-rule builtin exclusion via the `!domain/rule` syntax in the `builtins` array (e.g. `!git-workflow/commit-messages`), which drops a single builtin rule while keeping the rest of the domain.
+- MCP tool annotations for all write tools (create/add/update/set marked additive or idempotent rather than defaulting to destructive), plus server `Title` and initialization `Instructions` metadata.
+
+### Fixed
+
+- MCP server configuration for remote (`http`/`sse`) transports no longer emits an empty `command` or a `transport` key. Each preset now emits its tool-specific remote format: Claude `type` (#136, #137), Gemini `httpUrl`/`url`, Copilot `type`, Cursor `url`, and Antigravity `serverUrl`. Stdio servers are unchanged.
+
+### Changed
+
+- Migrated preset rendering to a declarative DSL provider system (Claude, Amp, Junie, and MCP specs), replacing the hand-written generators for those presets.
+- Migrated lint and format tooling from prek to poly.
+- Updated Go dependencies (`pelletier/go-toml/v2` 2.4.2, `kaptinlin/jsonschema` 0.9.2, `golang.org/x/text` 0.38, `golang.org/x/net` 0.56) and CI actions (`actions/checkout` v7, `actions/cache` v6).
+
 ## [4.4.1] - 2026-06-07
 
 ### Fixed
