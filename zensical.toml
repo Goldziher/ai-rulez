@@ -9,21 +9,21 @@ edit_uri = "edit/main/docs/"
 copyright = "Copyright &copy; 2025-2026 Na'aman Hirschfeld"
 
 nav = [
-  { "Home" = "index.md" },
-  { "Installation" = "installation.md" },
-  { "Quick Start" = "quick-start.md" },
-  { "Configuration" = "configuration.md" },
-  { "Guides" = [
-    { "Domains & Profiles" = "domains.md" },
-    { "Includes" = "includes.md" },
-    { "Installed Skills" = "installed-skills.md" },
-    { "Monorepo" = "monorepo.md" },
-    { "Examples" = "examples.md" },
-  ] },
-  { "CLI Commands" = "cli.md" },
-  { "MCP Server" = "mcp-server.md" },
-  { "Schema" = "schema.md" },
-  { "Changelog" = "CHANGELOG.md" },
+    { "Home" = "index.md" },
+    { "Installation" = "installation.md" },
+    { "Quick Start" = "quick-start.md" },
+    { "Configuration" = "configuration.md" },
+    { "Guides" = [
+        { "Domains & Profiles" = "domains.md" },
+        { "Includes" = "includes.md" },
+        { "Installed Skills" = "installed-skills.md" },
+        { "Monorepo" = "monorepo.md" },
+        { "Examples" = "examples.md" },
+    ] },
+    { "CLI Commands" = "cli.md" },
+    { "MCP Server" = "mcp-server.md" },
+    { "Schema" = "schema.md" },
+    { "Changelog" = "CHANGELOG.md" },
 ]
 
 [project.theme]
@@ -52,9 +52,7 @@ use_pygments = true
 [project.markdown_extensions.pymdownx.inlinehilite]
 
 [project.markdown_extensions.pymdownx.superfences]
-custom_fences = [
-  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
-]
+custom_fences = [{ name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" }]
 
 [project.markdown_extensions.pymdownx.tabbed]
 alternate_style = true
