@@ -3,14 +3,14 @@ name: E2E Tests
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
   push:
     paths:
-      - 'testing/e2e/**'
-      - 'cmd/**'
-      - 'internal/**'
-      - 'Taskfile.yml'
-      - '.github/workflows/e2e.yaml'
+      - "testing/e2e/**"
+      - "cmd/**"
+      - "internal/**"
+      - "Taskfile.yml"
+      - ".github/workflows/e2e.yaml"
 
 concurrency:
   group: e2e-${{ github.ref }}
@@ -28,7 +28,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26'
+          go-version: "1.26"
           cache: false
 
       - name: Cache Go modules
@@ -93,7 +93,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
-          go-version: '1.26'
+          go-version: "1.26"
           cache: false
 
       - name: Cache Go modules

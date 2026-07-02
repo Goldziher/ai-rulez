@@ -4,28 +4,21 @@ description = "AI-powered development governance CLI and multi-runtime tooling."
 gitignore = true
 
 presets = [
-  "claude",
-  "cursor",
-  "gemini",
-  "windsurf",
-  "copilot",
-  "continue-dev",
-  "amp",
-  "cline",
-  "codex",
-  "opencode",
-  "junie",
-  "antigravity",
+    "claude",
+    "cursor",
+    "gemini",
+    "windsurf",
+    "copilot",
+    "continue-dev",
+    "amp",
+    "cline",
+    "codex",
+    "opencode",
+    "junie",
+    "antigravity",
 ]
 
-builtins = [
-  "go",
-  "security",
-  "git-workflow",
-  "code-quality",
-  "testing",
-  "default-commands",
-]
+builtins = ["go", "security", "git-workflow", "code-quality", "testing", "default-commands"]
 
 [[mcp_servers]]
 name = "ai-rulez"

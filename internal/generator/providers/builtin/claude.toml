@@ -6,7 +6,7 @@
 #
 # Spec schema: schema/provider.schema.json
 
-name         = "claude"
+name = "claude"
 display_name = "Claude Code"
 
 # Always-emitted IsDir markers — keep stale-file cleanup scoped correctly.
@@ -14,7 +14,7 @@ directories = [".claude", ".claude/skills", ".claude/agents"]
 
 # CLAUDE.md is composed by walking these sections in order.
 [root]
-file     = "CLAUDE.md"
+file = "CLAUDE.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
 
 # Skills: .claude/skills/{id}/SKILL.md with frontmatter, the skill body, a
@@ -22,16 +22,16 @@ sections = ["header", "title", "description", "rules_inline", "context_inline", 
 # `resources = true` also emits the bundled references/ scripts/ assets/ files
 # under the skill directory.
 [outputs.skills]
-mode      = "per_item_file"
-dir       = ".claude/skills"
-filename  = "{id}/SKILL.md"
+mode = "per_item_file"
+dir = ".claude/skills"
+filename = "{id}/SKILL.md"
 resources = true
 
 [outputs.skills.body]
 sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targeted_context"]
 
 [outputs.skills.frontmatter]
-include_extras   = true
+include_extras = true
 extras_blacklist = ["priority", "targets"]
 
 [outputs.skills.frontmatter.constants]
@@ -40,35 +40,35 @@ user_invocable = false
 # Agents: .claude/agents/{id}.md with effort + model resolved from the shared
 # resolvers, plus tools/skills lists and the standard scalar fields.
 [outputs.agents]
-mode     = "per_item_file"
-dir      = ".claude/agents"
+mode = "per_item_file"
+dir = ".claude/agents"
 filename = "{id}.md"
 
 [outputs.agents.body]
 sections = ["frontmatter", "content", "targeted_rules", "targeted_context"]
 
 [outputs.agents.frontmatter]
-fields       = ["description", "permission_mode"]
-tools        = true
-skills       = true
-emit_effort  = true
-emit_model   = true
+fields = ["description", "permission_mode"]
+tools = true
+skills = true
+emit_effort = true
+emit_model = true
 
 # Commands are rendered as user-invokable skills (Claude exposes slash
 # commands through the skills directory). Filter drops commands whose
 # Metadata.Targets explicitly excludes claude.
 [outputs.commands]
-mode     = "per_item_file"
-dir      = ".claude/skills"
+mode = "per_item_file"
+dir = ".claude/skills"
 filename = "{id}/SKILL.md"
-filter   = "include_if_targeting_provider"
+filter = "include_if_targeting_provider"
 
 [outputs.commands.body]
 sections = ["frontmatter", "content", "targeted_rules", "targeted_context"]
 
 [outputs.commands.frontmatter]
-fields           = ["description", "shortcut", "category"]
-include_extras   = true
+fields = ["description", "shortcut", "category"]
+include_extras = true
 extras_blacklist = ["priority", "targets", "shortcut", "category"]
 
 [outputs.commands.frontmatter.constants]
@@ -84,19 +84,19 @@ field = "model"
 style = "string"
 
 [effort_map.values]
-low    = "low"
+low = "low"
 medium = "medium"
-high   = "high"
-xhigh  = "xhigh"
-max    = "max"
+high = "high"
+xhigh = "xhigh"
+max = "max"
 
 # Conditional sidecars driven by config presence.
 [[sidecars]]
-kind      = "claude_settings_json"
-path      = ".claude/settings.json"
+kind = "claude_settings_json"
+path = ".claude/settings.json"
 emit_when = "has_mcp_servers"
 
 [[sidecars]]
-kind      = "claude_plugins_json"
-path      = ".claude/plugins.json"
+kind = "claude_plugins_json"
+path = ".claude/plugins.json"
 emit_when = "has_plugins"

@@ -2,37 +2,37 @@
 # https://github.com/lycheeverse/lychee
 
 exclude = [
-  # Localhost / loopback addresses
-  "localhost",
-  "127\\.0\\.0\\.1",
-  "0\\.0\\.0\\.0",
+    # Localhost / loopback addresses
+    "localhost",
+    "127\\.0\\.0\\.1",
+    "0\\.0\\.0\\.0",
 
-  # Placeholder / example domains
-  "example\\.com",
-  "example\\.org",
+    # Placeholder / example domains
+    "example\\.com",
+    "example\\.org",
 
-  # Template variables
-  "\\$\\{",
-  "\\{\\{",
+    # Template variables
+    "\\$\\{",
+    "\\{\\{",
 
-  # GitHub edit links (require auth)
-  "github\\.com/.*/edit/",
+    # GitHub edit links (require auth)
+    "github\\.com/.*/edit/",
 
-  # GitHub raw links for new/renamed files (404 until pushed)
-  "github\\.com/.*/raw/",
+    # GitHub raw links for new/renamed files (404 until pushed)
+    "github\\.com/.*/raw/",
 
-  # Docs site self-references and base path links (resolve correctly when deployed)
-  "goldziher\\.github\\.io/ai-rulez",
-  "file:///.*site/ai-rulez",
+    # Docs site self-references and base path links (resolve correctly when deployed)
+    "goldziher\\.github\\.io/ai-rulez",
+    "file:///.*site/ai-rulez",
 
-  # PyPI project pages (rate-limited)
-  "pypi\\.org/project/",
+    # PyPI project pages (rate-limited)
+    "pypi\\.org/project/",
 
-  # npm (rate-limited)
-  "npmjs\\.com/package/",
+    # npm (rate-limited)
+    "npmjs\\.com/package/",
 
-  # Go report card (rate-limited)
-  "goreportcard\\.com",
+    # Go report card (rate-limited)
+    "goreportcard\\.com",
 ]
 
 # Accept these HTTP status codes as valid
