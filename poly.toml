@@ -94,14 +94,5 @@ enabled = true
 [tools.actionlint]
 enabled = true
 
-# --- lightweight inline script hooks (no toolchain) ---
-[hooks.pre-commit.scripts.ai_rulez_generate]
-# TODO: wire to vendored script / task target (was a shared pre-commit-hooks hook).
-run = "TODO-ai-rulez-generate"
-
-[hooks.pre-commit.scripts.gh_actions_updater]
-# TODO: wire to vendored script / task target (was a shared pre-commit-hooks hook).
-run = "TODO-gh-actions-updater"
-
 # --- dropped / unmapped hooks (for the record) ---
 # dropped (toolchain) — stays as standalone CI job: govulncheck
