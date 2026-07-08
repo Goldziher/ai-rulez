@@ -9,6 +9,15 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **Plugin & marketplace authoring** via `ai-rulez generate --plugin`: packages the project's skills, commands, agents, and MCP servers into distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, and Factory. A new `[plugin]` config block carries the packaging metadata (kept distinct from the consumer `[[plugins]]`/`[[marketplaces]]` install arrays), with hooks, a Claude status-line passthrough, a canonical `${PLUGIN_ROOT}` launch variable rewritten per runtime, and both single-plugin and monorepo (`[marketplace].members`) marketplaces.
+- **Agent `extends` directive**: `extends: <name>` in agent frontmatter inherits a lower-layer (builtin or include) agent's body and frontmatter and appends the extending body, with set frontmatter fields overriding the base and omitted fields inherited. Lets a repo or module customize a built-in agent with a short message instead of copy-redefining it. A missing base degrades to a plain agent and the directive is stripped from generated output.
+
+### Fixed
+
+- **Agent precedence is now deterministic.** Agents are deduplicated by name with the same source precedence as rules and context (root local > include > builtin). Previously agents skipped deduplication, so a same-named builtin agent could non-deterministically override an include/module agent depending on domain-name ordering — module `code-reviewer`/`docs-writer`/`security-auditor` overrides were silently dropped in some repos. The higher-precedence definition now always wins.
+
+### Changed
+
+- Built-in agent default models: `docs-writer`, `devops-engineer`, and `release-engineer` now use `sonnet` (was `haiku`); `polyglot-architect` now uses `opus`.
 
 ## [4.5.0] - 2026-07-02
 
