@@ -776,6 +776,7 @@ ai-rulez generate [config-path] [flags]
 | `--env-file` / `-E` | string | `.env` | Dotenv file for MCP env placeholders; repeatable |
 | `--no-configure-cli-mcp` / `-M` | boolean | false | Skip configuring CLI-based MCP tools such as Claude and Gemini |
 | `--skip-cli-mcp` / `-S` | boolean | false | Alias for `--no-configure-cli-mcp` |
+| `--plugin` | boolean | false | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
 | `--token` / `-T` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
@@ -810,6 +811,12 @@ Generate MCP configs with secret env values:
 
 ```bash
 ai-rulez generate --env GRAFANA_SERVICE_ACCOUNT_TOKEN="$GRAFANA_SERVICE_ACCOUNT_TOKEN"
+```
+
+Package the project as distributable plugin bundles:
+
+```bash
+ai-rulez generate --plugin
 ```
 
 Generate recursively in monorepo:

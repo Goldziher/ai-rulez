@@ -1,0 +1,136 @@
+# Authoring Plugins
+
+`ai-rulez generate --plugin` packages your `.ai-rulez/` project into distributable
+**plugin bundles** and a **marketplace index** for the Claude, Cursor, Codex, Gemini,
+Kimi, OpenCode, and Factory runtimes. Where the normal `generate` writes in-repo
+assistant config, `--plugin` produces installable artifacts other people can add to
+their own tools — reaching users who never run ai-rulez.
+
+Your skills, commands, and agents are the payload; the `[plugin]` block adds the
+packaging metadata.
+
+!!! note "Authoring vs. installing"
+    The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
+    (authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
+    arrays, which are the **consumer** side (declaring plugins to *install* from a
+    marketplace, rendered into `.claude/plugins.json`).
+
+## Quick start
+
+```toml
+# .ai-rulez/config.toml
+version = "4.0"
+name = "my-tool"
+description = "My project."
+
+[plugin]
+name = "my-tool"
+description = "What my tool does."
+version = "1.0.0"
+license = "MIT"
+homepage = "https://github.com/me/my-tool"
+keywords = ["mcp", "tooling"]
+
+[plugin.author]
+name = "Jane Doe"
+email = "jane@example.com"
+
+[[plugin.mcp]]
+name = "my-tool"
+command = "${PLUGIN_ROOT}/scripts/mcp-launch.sh"
+args = ["serve"]
+```
+
+```bash
+ai-rulez generate --plugin          # write the bundles
+ai-rulez generate --plugin --dry-run  # preview what would be written
+```
+
+## What gets generated
+
+| Runtime  | Manifest | Notes |
+|----------|----------|-------|
+| Claude   | `.claude-plugin/plugin.json` | skills/commands/agents auto-discovered from top-level dirs |
+| Cursor   | `.cursor-plugin/plugin.json` (+ `hooks/hooks.json`) | bundles its own `skills/`, `commands/` |
+| Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`) | MCP referenced via external file; rich `interface` block |
+| Gemini   | `gemini-extension.json` | inline MCP + hooks, context file reference |
+| Kimi     | `kimi.plugin.json` | `sessionStart`, `skillInstructions`, `interface` |
+| OpenCode | registered runtime | JS/package glue is hand-authored and passed through |
+| Factory  | `.factory-plugin/plugin.json` | metadata-only |
+
+The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside.
+
+Content files (SKILL.md, commands, agents) are copied **verbatim** from your source
+into each runtime's directories — never re-rendered — so a bundled skill is identical
+to the authored one.
+
+### MCP launch variable
+
+Write MCP launch commands once with the canonical `${PLUGIN_ROOT}`; each runtime
+rewrites it to the form it expects — `${CLAUDE_PLUGIN_ROOT}` (Claude),
+`${extensionPath}` (Gemini), plugin-relative `./` (Cursor, Kimi), or unchanged
+(Codex, which resolves `${PLUGIN_ROOT}` natively).
+
+### Hooks
+
+Declare lifecycle hooks once; they render into each runtime's hook format with the
+correct root variable (`${CURSOR_PLUGIN_ROOT:-.}` for Cursor hooks, and so on).
+
+```toml
+[[plugin.hooks]]
+event = "SessionStart"
+matcher = "startup|resume"
+
+[[plugin.hooks.hooks]]
+type = "command"
+command = '"${PLUGIN_ROOT}/hooks/run-hook.cmd" session-start'
+async = false
+```
+
+Executable glue referenced by hooks (`run-hook.cmd`, launch scripts, a Claude
+`statusline.sh`) stays hand-authored and is passed through, not synthesized.
+
+### Restricting runtimes
+
+```toml
+[plugin]
+# ...
+runtimes = ["claude", "cursor"]   # omit to emit all supported runtimes
+```
+
+## Single plugin vs. monorepo
+
+A repo with one `[plugin]` block publishes a **single-plugin** marketplace whose sole
+entry has `source: "./"`.
+
+For a **monorepo** hosting several plugins, the root config declares only a
+`[marketplace]` with `members`; each member is its own ai-rulez project:
+
+```toml
+# root .ai-rulez/config.toml
+[marketplace]
+name = "acme"
+description = "Curated Acme plugins."
+members = ["plugins/alpha", "plugins/beta"]
+
+[marketplace.owner]
+name = "Acme Inc"
+email = "dev@acme.example"
+```
+
+Each member (`plugins/alpha/.ai-rulez/config.toml`, …) defines its own `[plugin]`
+block. `generate --plugin` renders every member's bundle under its directory and
+emits a single root `marketplace.json` listing each with `source: "./plugins/<name>"`.
+Members do not emit their own marketplace index.
+
+## Field reference
+
+`[plugin]`: `name`, `version` (required); `display_name`, `description`, `homepage`,
+`repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
+`tags`, `runtimes`. Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
+`[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
+`[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
+(Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
+(`skill_instructions`/`session_start_skill`).
+
+`[marketplace]`: `name` (required); `description`, `members`, and `[marketplace.owner]`.

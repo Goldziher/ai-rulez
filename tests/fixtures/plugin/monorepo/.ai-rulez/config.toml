@@ -1,0 +1,12 @@
+version = "4.0"
+name = "acme-plugins"
+description = "Acme plugin collection."
+
+[marketplace]
+name = "acme"
+description = "Curated Acme plugins."
+members = ["plugins/alpha", "plugins/beta"]
+
+[marketplace.owner]
+name = "Acme Inc"
+email = "dev@acme.example"
