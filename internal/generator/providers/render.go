@@ -428,10 +428,9 @@ func countContent(content *config.ContentTree) (rules, agents int) {
 	// rendered — a builtin and an include defining the same rule name collapse
 	// to one entry (see writeInlineRules).
 	rules = len(presets.AllInlineRules(content))
-	agents = len(content.Agents)
-	for _, domain := range content.Domains {
-		agents += len(domain.Agents)
-	}
+	// Count agents after dedup + extends resolution so the header matches what
+	// AllAgents actually renders (mirrors the rules count above).
+	agents = len(presets.AllAgents(content))
 	return
 }
 
