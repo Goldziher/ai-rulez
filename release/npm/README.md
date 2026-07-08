@@ -20,6 +20,7 @@ ai-rulez organizes your AI assistant rules, context, and domain-specific guidanc
 **Key features:**
 - **Directory-based** – One `.ai-rulez/` directory for all your AI tooling
 - **Multi-tool generation** – Generate configs for all major AI assistants from one source
+- **Plugin publishing** – `generate --plugin` packages the same source into distributable plugin bundles and a marketplace index (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory)
 - **Domain separation** – Organize rules by backend, frontend, QA, or any domain
 - **Profiles** – Define profiles for different teams or use cases
 - **Includes** – Compose from local packages or Git repositories
