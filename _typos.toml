@@ -1,0 +1,9 @@
+# Allowlist for false-positive spellings flagged by poly's bundled typos engine.
+# These are deliberate abbreviations, technical terms, or test fixtures.
+[default.extend-words]
+Strat = "Strat"         # includeMergeStrat (MergeStrategy)
+Hashi = "Hashi"         # HashiCorp
+hel = "hel"             # test fixture token
+invokable = "invokable"
+caf = "caf"             # café test data
+propert = "propert"     # split/truncated schema token
