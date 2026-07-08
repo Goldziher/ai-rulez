@@ -33,7 +33,7 @@ disable = ["MD012", "MD013", "MD024", "MD030", "MD033", "MD035", "MD036", "MD041
 stages = ["pre-commit"]
 
 [hooks.builtin]
-polylint = { exclude = [
+lint = { exclude = [
     "**/*.lock",
     "**/*.svg",
     "**/Cargo.lock",
@@ -48,7 +48,7 @@ polylint = { exclude = [
     "target/**",
     "vendor/**",
 ] }
-polyfmt = { exclude = [
+fmt = { exclude = [
     "**/*.lock",
     "**/*.svg",
     "**/Cargo.lock",
