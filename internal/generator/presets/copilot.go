@@ -99,7 +99,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	}
 
 	// Generate agent files to .github/agents/ (uses .agent.md extension)
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderCopilotAgentFile(agent, cfg)

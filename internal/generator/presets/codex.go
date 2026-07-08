@@ -107,7 +107,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 
 	// Generate agent files to .codex/agents/ (TOML format)
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent := g.renderAgentTOML(agent, cfg)
@@ -168,7 +168,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree,
 
 	// Calculate content counts
 	allRules := allInlineRules(content)
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 
 	// Add header before title
 	header := generateCodexPresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))
