@@ -114,7 +114,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	}
 
 	// Generate agent files to .agents/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderGeminiAgentFile(agent, cfg)
@@ -194,7 +194,7 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 
 	// Calculate content counts
 	allRules := allInlineRules(content)
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 
 	// Add header before title
 	header := generateGeminiPresetHeader(cfg, "GEMINI.md", len(allRules), 0, len(allAgents))

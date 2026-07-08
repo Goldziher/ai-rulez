@@ -128,7 +128,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	})
 
 	// Generate agent files to .cline/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderClineAgentFile(agent, cfg)

@@ -17,6 +17,7 @@ nav = [
         { "Domains & Profiles" = "domains.md" },
         { "Includes" = "includes.md" },
         { "Installed Skills" = "installed-skills.md" },
+        { "Authoring Plugins" = "plugins.md" },
         { "Monorepo" = "monorepo.md" },
         { "Examples" = "examples.md" },
     ] },

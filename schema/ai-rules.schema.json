@@ -374,6 +374,144 @@
         }
       },
       "additionalProperties": false
+    },
+    "plugin": {
+      "type": "object",
+      "description": "Authoring metadata for a distributable plugin bundle (producer side). Skills, commands, and agents come from the content tree; this block only carries packaging metadata.",
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string" },
+        "display_name": { "type": "string" },
+        "description": { "type": "string" },
+        "version": { "type": "string", "description": "Semantic version, e.g. 1.0.0" },
+        "author": { "$ref": "#/$defs/authorEntity" },
+        "homepage": { "type": "string" },
+        "repository": { "type": "string" },
+        "license": { "type": "string" },
+        "category": { "type": "string" },
+        "brand_color": { "type": "string" },
+        "icon": { "type": "string" },
+        "logo": { "type": "string" },
+        "keywords": { "type": "array", "items": { "type": "string" } },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "runtimes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory"]
+          }
+        },
+        "mcp": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "command": { "type": "string" },
+              "args": { "type": "array", "items": { "type": "string" } },
+              "env": { "type": "object", "additionalProperties": { "type": "string" } },
+              "transport": { "type": "string", "enum": ["stdio", "http", "sse"] },
+              "url": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "hooks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["event"],
+            "properties": {
+              "event": { "type": "string" },
+              "matcher": { "type": "string" },
+              "hooks": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["command"],
+                  "properties": {
+                    "type": { "type": "string" },
+                    "command": { "type": "string" },
+                    "async": { "type": "boolean" }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "statusline": {
+          "type": "object",
+          "description": "Claude-only status-line script passthrough.",
+          "required": ["script"],
+          "properties": {
+            "script": { "type": "string" },
+            "command": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "interface": {
+          "type": "object",
+          "description": "Rich UI block shared by Codex and Kimi manifests.",
+          "properties": {
+            "display_name": { "type": "string" },
+            "short_description": { "type": "string" },
+            "long_description": { "type": "string" },
+            "developer_name": { "type": "string" },
+            "category": { "type": "string" },
+            "capabilities": { "type": "array", "items": { "type": "string" } },
+            "default_prompt": { "type": "array", "items": { "type": "string" } },
+            "website_url": { "type": "string" },
+            "brand_color": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "gemini": {
+          "type": "object",
+          "properties": {
+            "context_file_name": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "kimi": {
+          "type": "object",
+          "properties": {
+            "skill_instructions": { "type": "string" },
+            "session_start_skill": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "marketplace": {
+      "type": "object",
+      "description": "Authoring metadata for the marketplace index emitted for the plugin(s).",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "owner": { "$ref": "#/$defs/authorEntity" },
+        "members": {
+          "type": "array",
+          "description": "Sub-project directories for a multi-plugin monorepo. Empty means single-plugin.",
+          "items": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "$defs": {
+    "authorEntity": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "url": { "type": "string" }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false,

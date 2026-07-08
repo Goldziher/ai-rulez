@@ -1,6 +1,6 @@
 {
   "name": "ai-rulez",
-  "version": "4.5.0",
+  "version": "4.6.0",
   "description": "Complete AI development workflow for 19+ tools. Ships with builtin rules, agents, and conventions. Generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex and more from a single source.",
   "keywords": [
     "ai",

@@ -128,7 +128,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	}
 
 	// Generate agent files to .agents/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderCursorAgentFile(agent, cfg)
