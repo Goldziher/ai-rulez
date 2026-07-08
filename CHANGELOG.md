@@ -9,6 +9,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **Plugin & marketplace authoring** via `ai-rulez generate --plugin`: packages the project's skills, commands, agents, and MCP servers into distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, and Factory. A new `[plugin]` config block carries the packaging metadata (kept distinct from the consumer `[[plugins]]`/`[[marketplaces]]` install arrays), with hooks, a Claude status-line passthrough, a canonical `${PLUGIN_ROOT}` launch variable rewritten per runtime, and both single-plugin and monorepo (`[marketplace].members`) marketplaces.
+- Agent **`extends` directive**: an agent whose frontmatter sets `extends: <name>` inherits the body and frontmatter of a lower-precedence agent (the same name in a lower layer, or the named target) and appends its own body, with set frontmatter fields overriding the base and omitted fields inherited. Chains resolve across multiple layers (local extends include extends builtin); a missing base or an `extends` cycle degrades to a plain agent with the directive stripped.
+
+### Fixed
+
+- Agent precedence is now deterministic and matches rules/context: same-named agents collapse to the single highest-precedence definition (local > include > builtin) instead of a non-deterministic last-write-wins that depended on domain name ordering. The generated header agent count also reflects the deduplicated set.
 
 ## [4.5.0] - 2026-07-02
 
