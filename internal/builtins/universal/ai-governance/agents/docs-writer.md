@@ -1,7 +1,7 @@
 ---
 name: docs-writer
 description: Use when writing or updating documentation, READMEs, or changelogs
-model: haiku
+model: sonnet
 tools:
   - Read
   - Grep
