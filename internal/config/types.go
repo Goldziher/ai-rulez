@@ -26,6 +26,12 @@ type Config struct {
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
 
+	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
+	// distributable plugin bundle and its marketplace index. Distinct from the
+	// consumer Plugins/Marketplaces fields above.
+	Plugin      *PluginAuthoring      `yaml:"plugin,omitempty" json:"plugin,omitempty" toml:"plugin,omitempty"`
+	Marketplace *MarketplaceAuthoring `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
+
 	// Runtime fields (populated during load)
 	BaseDir       string                `yaml:"-" json:"-" toml:"-"`
 	ConfigDir     string                `yaml:"-" json:"-" toml:"-"`
