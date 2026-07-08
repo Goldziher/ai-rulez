@@ -99,7 +99,7 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	}
 
 	// Generate agent files to .opencode/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderOpencodeAgentFile(agent, cfg)
@@ -121,7 +121,7 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 
 	// Calculate content counts
 	allRules := allInlineRules(content)
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 
 	// Add header before title
 	header := generateOpenCodePresetHeader(cfg, "AGENTS.md", len(allRules), 0, len(allAgents))

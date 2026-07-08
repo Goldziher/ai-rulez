@@ -129,6 +129,191 @@ func allInlineContext(content *config.ContentTree) []config.ContentFile {
 	return combineDedupedContentFiles(content.Context, getAllDomainContext(content))
 }
 
+// allAgents returns the deduplicated, precedence-ordered agents — root (local)
+// agents, then include-domain agents, then builtin-domain agents — collapsing
+// duplicate names to the single highest-precedence definition, then resolving
+// any `extends` agent by appending its message to the inherited base body.
+// Mirrors allInlineRules so agent precedence matches rule/context precedence.
+func allAgents(content *config.ContentTree) []config.ContentFile {
+	combined := make([]config.ContentFile, 0, len(content.Agents))
+	combined = append(combined, content.Agents...)
+	combined = append(combined, getAllDomainAgents(content)...)
+	return resolveAgentExtends(combined)
+}
+
+// resolveAgentExtends deduplicates agents by name keeping the highest-precedence
+// occurrence (input is in precedence order, highest first), and resolves the
+// `extends` frontmatter directive: an agent with `extends: <name>` inherits the
+// body and frontmatter of the same-named (or the named) agent from a lower layer
+// and appends its own body as an additional message. A missing base degrades to
+// a plain agent (the extends key is dropped). Output is sorted by name.
+func resolveAgentExtends(combined []config.ContentFile) []config.ContentFile {
+	byName := make(map[string][]config.ContentFile, len(combined))
+	order := make([]string, 0, len(combined))
+	for _, f := range combined {
+		if _, ok := byName[f.Name]; !ok {
+			order = append(order, f.Name)
+		}
+		byName[f.Name] = append(byName[f.Name], f)
+	}
+	result := make([]config.ContentFile, 0, len(order))
+	for _, name := range order {
+		winner := byName[name][0]
+		if target := agentExtendsTarget(winner); target != "" {
+			if base, ok := findExtendsBase(byName, byName[name], target, name); ok {
+				winner = mergeExtendsAgent(base, winner)
+			} else {
+				winner = stripExtends(winner)
+			}
+		}
+		result = append(result, winner)
+	}
+	sort.SliceStable(result, func(i, j int) bool {
+		return result[i].Name < result[j].Name
+	})
+	return result
+}
+
+// agentExtendsTarget returns the `extends` frontmatter value, or "" if absent.
+func agentExtendsTarget(f config.ContentFile) string {
+	if f.Metadata == nil {
+		return ""
+	}
+	return strings.TrimSpace(f.Metadata.Extra["extends"])
+}
+
+// findExtendsBase returns the base agent an extends directive inherits from.
+// When extends targets the agent's own name, the base is the next lower
+// same-named variant; for a different target name it is that name's
+// highest-precedence variant.
+func findExtendsBase(byName map[string][]config.ContentFile, variants []config.ContentFile, target, selfName string) (config.ContentFile, bool) {
+	if target == selfName {
+		if len(variants) > 1 {
+			return variants[1], true
+		}
+		return config.ContentFile{}, false
+	}
+	if others, ok := byName[target]; ok && len(others) > 0 {
+		return others[0], true
+	}
+	return config.ContentFile{}, false
+}
+
+// mergeExtendsAgent yields the base body followed by the extending body, with
+// the extending frontmatter overriding the base where set. Keeps the extending
+// file's Name/Path identity.
+func mergeExtendsAgent(base, ext config.ContentFile) config.ContentFile {
+	merged := ext
+	baseBody := strings.TrimRight(base.Content, "\n")
+	extBody := strings.TrimLeft(ext.Content, "\n")
+	switch {
+	case baseBody == "":
+		merged.Content = extBody
+	case extBody == "":
+		merged.Content = baseBody
+	default:
+		merged.Content = baseBody + "\n\n" + extBody
+	}
+	merged.Metadata = mergeAgentMetadata(base.Metadata, ext.Metadata)
+	return merged
+}
+
+// stripExtends removes the `extends` directive from an agent's frontmatter so it
+// is not emitted into generated output.
+func stripExtends(f config.ContentFile) config.ContentFile {
+	if f.Metadata == nil || f.Metadata.Extra == nil {
+		return f
+	}
+	if _, ok := f.Metadata.Extra["extends"]; !ok {
+		return f
+	}
+	md := *f.Metadata
+	md.Extra = copyExtraWithout(f.Metadata.Extra, "extends")
+	f.Metadata = &md
+	return f
+}
+
+// mergeAgentMetadata overlays base metadata with ext's set fields; fields set on
+// ext win, omitted fields inherit from base. The `extends` directive is dropped.
+func mergeAgentMetadata(base, ext *config.Metadata) *config.Metadata {
+	if base == nil && ext == nil {
+		return nil
+	}
+	merged := &config.Metadata{}
+	if base != nil {
+		*merged = *base
+	}
+	if ext != nil {
+		if ext.Priority != "" {
+			merged.Priority = ext.Priority
+		}
+		if len(ext.Targets) > 0 {
+			merged.Targets = ext.Targets
+		}
+		if len(ext.Aliases) > 0 {
+			merged.Aliases = ext.Aliases
+		}
+		if len(ext.Tools) > 0 {
+			merged.Tools = ext.Tools
+		}
+		if len(ext.Skills) > 0 {
+			merged.Skills = ext.Skills
+		}
+		if len(ext.Keywords) > 0 {
+			merged.Keywords = ext.Keywords
+		}
+		if ext.Usage != "" {
+			merged.Usage = ext.Usage
+		}
+		if ext.Shortcut != "" {
+			merged.Shortcut = ext.Shortcut
+		}
+		if ext.Category != "" {
+			merged.Category = ext.Category
+		}
+		if ext.Effort != "" {
+			merged.Effort = ext.Effort
+		}
+		merged.Extra = mergeExtra(merged.Extra, ext.Extra)
+	}
+	merged.Extra = copyExtraWithout(merged.Extra, "extends")
+	return merged
+}
+
+// mergeExtra returns base overlaid with ext (ext wins per key).
+func mergeExtra(base, ext map[string]string) map[string]string {
+	if len(base) == 0 && len(ext) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(base)+len(ext))
+	for k, v := range base {
+		out[k] = v
+	}
+	for k, v := range ext {
+		out[k] = v
+	}
+	return out
+}
+
+// copyExtraWithout returns a copy of extra with the given key removed, or nil
+// when the result is empty.
+func copyExtraWithout(extra map[string]string, drop string) map[string]string {
+	if len(extra) == 0 {
+		return nil
+	}
+	out := make(map[string]string, len(extra))
+	for k, v := range extra {
+		if k == drop {
+			continue
+		}
+		out[k] = v
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 // getAllDomainRules extracts all rules from all domains in precedence order.
 func getAllDomainRules(content *config.ContentTree) []config.ContentFile {
 	var rules []config.ContentFile
@@ -160,10 +345,11 @@ func getAllDomainSkills(content *config.ContentTree) []config.ContentFile {
 	return skills
 }
 
-// getAllDomainAgents extracts all agents from all domains in sorted domain order.
+// getAllDomainAgents extracts all agents from all domains in precedence order
+// (on-disk, then include, then builtin) so higher-priority sources win dedup.
 func getAllDomainAgents(content *config.ContentTree) []config.ContentFile {
 	var agents []config.ContentFile
-	for _, name := range sortedDomainNames(content) {
+	for _, name := range domainNamesByPrecedence(content) {
 		agents = append(agents, content.Domains[name].Agents...)
 	}
 	return agents
@@ -364,6 +550,12 @@ func CombineDedupedContentFiles(slices ...[]config.ContentFile) []config.Content
 // for the DSL renderer in internal/generator/providers.
 func AllInlineRules(content *config.ContentTree) []config.ContentFile {
 	return allInlineRules(content)
+}
+
+// AllAgents exposes allAgents (precedence-ordered, deduplicated, extends-resolved
+// agents) for the DSL renderer in internal/generator/providers.
+func AllAgents(content *config.ContentTree) []config.ContentFile {
+	return allAgents(content)
 }
 
 func AllInlineContext(content *config.ContentTree) []config.ContentFile {

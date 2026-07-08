@@ -130,7 +130,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 	})
 
 	// Generate agent files to .windsurf/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderWindsurfAgentFile(agent, cfg)
