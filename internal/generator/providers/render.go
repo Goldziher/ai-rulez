@@ -108,7 +108,7 @@ func collectItemsByType(content *config.ContentTree, typ string) []config.Conten
 	case OutputTypeSkills:
 		return presets.CombineContentFiles(content.Skills, presets.GetAllDomainSkills(content))
 	case OutputTypeAgents:
-		return presets.CombineContentFiles(content.Agents, presets.GetAllDomainAgents(content))
+		return presets.AllAgents(content)
 	case OutputTypeCommands:
 		return presets.CombineContentFiles(content.Commands, presets.GetAllDomainCommands(content))
 	}
@@ -412,7 +412,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		case SectionRootContextInline:
 			writeInlineContext(&b, content)
 		case SectionRootAgentsDelegation:
-			allAgents := presets.CombineContentFiles(content.Agents, presets.GetAllDomainAgents(content))
+			allAgents := presets.AllAgents(content)
 			presets.RenderAgentsSectionExported(&b, content, allAgents)
 		}
 	}

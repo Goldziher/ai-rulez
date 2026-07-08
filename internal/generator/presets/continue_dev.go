@@ -103,7 +103,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 	)
 
 	// Generate agent files to .continue/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderContinueDevAgentFile(agent, cfg)

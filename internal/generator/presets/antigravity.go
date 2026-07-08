@@ -105,7 +105,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	}
 
 	// Generate agent files to .agents/agents/
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
 		agentContent, err := g.renderAgentFile(agent)
@@ -180,7 +180,7 @@ func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree,
 	var builder strings.Builder
 
 	allRules := allInlineRules(content)
-	allAgents := combineContentFiles(content.Agents, getAllDomainAgents(content))
+	allAgents := allAgents(content)
 
 	header := generateAntigravityPresetHeader(cfg, "GEMINI.md", len(allRules), 0, len(allAgents))
 	builder.WriteString(header)
