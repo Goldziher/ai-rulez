@@ -31,6 +31,7 @@ var (
 	configDir       string
 	mcpEnv          []string
 	mcpEnvFiles     []string
+	pluginMode      bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -56,6 +57,7 @@ func init() {
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
+	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
 	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
 		logger.Debug("Failed to mark update-gitignore as deprecated", "error", err)
 	}
@@ -101,6 +103,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 
+	if pluginMode {
+		runPluginGenerate(gen)
+		return
+	}
+
 	if dryRun {
 		plan, err := gen.DryRun(profile)
 		if err != nil {
@@ -115,6 +122,26 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	// Generate files
 	if err := gen.Generate(profile); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+}
+
+// runPluginGenerate handles `generate --plugin`: it renders (or, with --dry-run,
+// previews) the distributable plugin bundles and marketplace index.
+func runPluginGenerate(gen *generator.Generator) {
+	if dryRun {
+		plan, err := gen.DryRunPlugin(profile)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		for _, line := range plan {
+			progress.PrintlnIfNotQuiet(line)
+		}
+		return
+	}
+	if err := gen.GeneratePlugin(profile); err != nil {
 		fmtError(err)
 		os.Exit(1)
 	}

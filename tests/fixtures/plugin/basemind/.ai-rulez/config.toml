@@ -1,0 +1,56 @@
+version = "4.0"
+name = "basemind"
+description = "Code-map MCP server."
+
+[plugin]
+name = "basemind"
+display_name = "basemind"
+description = "Full AI context layer over MCP."
+version = "0.19.2"
+homepage = "https://github.com/Goldziher/basemind"
+repository = "https://github.com/Goldziher/basemind"
+license = "MIT"
+category = "developer-tools"
+keywords = ["mcp", "agent-context", "rag", "code-map", "tree-sitter"]
+tags = ["mcp", "code-intelligence", "rag"]
+
+[plugin.author]
+name = "Na'aman Hirschfeld"
+email = "nhirschfeld@gmail.com"
+url = "https://github.com/Goldziher"
+
+[[plugin.mcp]]
+name = "basemind"
+command = "${PLUGIN_ROOT}/scripts/mcp-launch.sh"
+args = ["serve"]
+
+[[plugin.hooks]]
+event = "SessionStart"
+matcher = "startup|resume|clear|compact"
+[[plugin.hooks.hooks]]
+type = "command"
+command = '"${PLUGIN_ROOT}/hooks/run-hook.cmd" session-start'
+async = false
+
+[plugin.statusline]
+script = "statusline.sh"
+command = "bm-statusline"
+
+[plugin.interface]
+display_name = "basemind"
+short_description = "Code-map MCP server for navigating large codebases"
+category = "Developer Tools"
+capabilities = ["Interactive", "Read"]
+website_url = "https://github.com/Goldziher/basemind"
+
+[plugin.kimi]
+skill_instructions = "Prefer basemind tools over grep for structural questions."
+session_start_skill = "basemind"
+
+[marketplace]
+name = "basemind"
+
+[marketplace.owner]
+name = "Na'aman Hirschfeld"
+email = "nhirschfeld@gmail.com"
+url = "https://github.com/Goldziher"

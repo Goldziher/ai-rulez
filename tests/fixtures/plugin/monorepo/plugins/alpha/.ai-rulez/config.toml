@@ -1,0 +1,10 @@
+version = "4.0"
+name = "alpha"
+description = "Alpha plugin."
+
+[plugin]
+name = "alpha"
+description = "Alpha does A."
+version = "1.0.0"
+license = "MIT"
+runtimes = ["claude", "factory"]

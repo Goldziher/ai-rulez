@@ -38,6 +38,8 @@ npx ai-rulez@latest init && npx ai-rulez@latest generate
 
 ai-rulez generates correct, tool-native output for **19 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Amp, Junie, Antigravity, and more. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
 
+Beyond in-repo config, `ai-rulez generate --plugin` packages the same source into distributable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, and Factory — publish your governance so others can `plugin install` it. See [Authoring Plugins](docs/plugins.md).
+
 ## What Ships Out of the Box
 
 ai-rulez isn't just a config generator. It ships with **33 builtin domains** containing opinionated rules, agents, and workflows that establish a professional development baseline immediately.
