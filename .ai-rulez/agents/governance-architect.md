@@ -1,6 +1,7 @@
 ---
 name: governance-architect
 description: Designs configuration, documentation, and MCP integrations for new capabilities.
+model: opus
 ---
 
 # governance-architect

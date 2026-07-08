@@ -1,7 +1,7 @@
 ---
 name: release-engineer
 description: Use when preparing releases, version bumps, changelog updates, or publishing packages
-model: haiku
+model: sonnet
 tools:
   - Read
   - Edit
