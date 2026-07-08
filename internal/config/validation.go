@@ -41,6 +41,14 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validatePluginAuthoring(); err != nil {
+		return err
+	}
+
+	if err := c.validateMarketplaceAuthoring(); err != nil {
+		return err
+	}
+
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
 
@@ -193,7 +201,14 @@ func (c *Config) validateName() error {
 
 // validatePresets validates that at least one preset exists and all are valid
 func (c *Config) validatePresets() error {
+	// A config that only authors a plugin bundle ([plugin] block) or a monorepo
+	// marketplace ([marketplace] with members) need not declare any presets: the
+	// plugin generator renders runtime manifests directly rather than through the
+	// preset pipeline.
 	if len(c.Presets) == 0 {
+		if c.Plugin != nil || (c.Marketplace != nil && len(c.Marketplace.Members) > 0) {
+			return nil
+		}
 		return oops.
 			With("field", "presets").
 			Hint("Add at least one preset to your config file\nExample: presets: [claude]\nAvailable built-in presets: claude, cursor, gemini, windsurf, copilot, continue-dev, cline").
