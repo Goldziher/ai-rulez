@@ -1,7 +1,7 @@
 ---
 name: polyglot-architect
 description: Cross-language API design and binding parity
-model: sonnet
+model: opus
 effort: high
 ---
 

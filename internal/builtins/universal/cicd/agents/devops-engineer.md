@@ -1,7 +1,7 @@
 ---
 name: devops-engineer
 description: Use when working on CI/CD pipelines, GitHub Actions, Docker, or deployment automation
-model: haiku
+model: sonnet
 tools:
   - Read
   - Grep
