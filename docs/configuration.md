@@ -726,6 +726,18 @@ effort: high
 ---
 ```
 
+**`extends`** (optional, string — agents only)
+
+- Inherits a lower-precedence agent of the given name and appends this agent's body to it
+- See [Extending Agents](#extending-agents) for resolution rules
+
+```yaml
+---
+name: code-reviewer
+extends: code-reviewer
+---
+```
+
 **Custom fields** (optional)
 
 - Any other YAML fields are preserved and available in custom templates
@@ -815,6 +827,74 @@ A warning is logged if collisions are detected:
 ⚠️  Content collision: rules/testing.md exists in both root and backend domain
     → Using backend domain version
 ```
+
+## Extending Agents
+
+Built-in and shared-module agents (`code-reviewer`, `docs-writer`, `security-auditor`, language
+specialists, ...) give you a solid base. When you only need to *add* project-specific guidance, don't
+copy the whole agent — **extend** it.
+
+### Agent precedence
+
+Same-named agents resolve deterministically by layer, highest precedence first:
+
+1. **Local** — agents under your `.ai-rulez/agents/`
+2. **Include** — agents pulled in from external includes
+3. **Builtin** — agents shipped with ai-rulez builtin domains
+
+A higher-precedence agent replaces a lower-precedence one of the same name unless it uses `extends`.
+
+### Append a message with `extends`
+
+Create `.ai-rulez/agents/<name>.md` with the same `name`, set `extends` to that name, and put your
+additional instructions in the body:
+
+```markdown
+---
+name: code-reviewer
+extends: code-reviewer
+---
+Also enforce, for this repo:
+
+- No `.unwrap()`/`.expect()` in library code.
+- Every `unsafe` block carries a SAFETY comment.
+```
+
+The generated `code-reviewer` is the base agent's full instructions **plus** your message appended. You
+did not restate the base checklist — you added to it.
+
+Frontmatter fields you set win over the base; fields you omit are inherited:
+
+```markdown
+---
+name: docs-writer
+extends: docs-writer
+model: opus          # upgrade just this agent's model
+effort: high
+# tools omitted → inherited from the base docs-writer
+---
+When documenting the public API, include a runnable example in every supported language.
+```
+
+### How resolution works
+
+`extends: <name>` binds to the same-named (or explicitly named) agent resolved from the layers **below**
+the current one:
+
+- A **local** agent extends an **include** or **builtin** agent.
+- An **include** agent extends a **builtin** agent.
+- Chains compose in resolution order (builtin → include → local), across as many layers as extend one
+  another.
+
+If no lower-layer agent of that name exists, the agent degrades to a plain agent (your body only) with
+the `extends` directive stripped, and `generate` logs a warning naming the missing target so a typo does
+not pass unnoticed. An `extends` cycle degrades the same way.
+
+### Extend vs. redefine
+
+- **Extend** (`extends:`) — you want the base plus a few additions. Preferred; no duplication.
+- **Redefine** — omit `extends` and write a complete agent to fully replace the base of that name. A
+  higher-precedence agent without `extends` always wins over the base regardless of frontmatter.
 
 ## Configuration Examples
 

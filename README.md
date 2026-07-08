@@ -38,7 +38,16 @@ npx ai-rulez@latest init && npx ai-rulez@latest generate
 
 ai-rulez generates correct, tool-native output for **19 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Amp, Junie, Antigravity, and more. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
 
-Beyond in-repo config, `ai-rulez generate --plugin` packages the same source into distributable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, and Factory — publish your governance so others can `plugin install` it. See [Authoring Plugins](docs/plugins.md).
+## Generate Plugins, Not Just Config
+
+ai-rulez doesn't only write config into *your* repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, and Factory.
+
+```bash
+ai-rulez generate --plugin           # write plugin bundles + marketplace.json
+ai-rulez generate --plugin --dry-run # preview
+```
+
+Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` variable; each runtime gets its own manifest with the variable and hook format rewritten to fit. Supports single-plugin repos and monorepos (`[marketplace].members`), plus a Claude statusline passthrough. Publish your governance so others can `plugin install` it — reaching people who never run ai-rulez. See [Authoring Plugins](docs/plugins.md).
 
 ## What Ships Out of the Box
 
