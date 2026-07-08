@@ -1,6 +1,7 @@
 ---
 name: golang-maintainer
 description: Implements and maintains the Go CLI command tree and internal packages.
+model: sonnet
 ---
 
 # golang-maintainer
