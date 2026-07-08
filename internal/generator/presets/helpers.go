@@ -4,6 +4,7 @@ import (
 	"path"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -158,20 +159,61 @@ func resolveAgentExtends(combined []config.ContentFile) []config.ContentFile {
 	}
 	result := make([]config.ContentFile, 0, len(order))
 	for _, name := range order {
-		winner := byName[name][0]
-		if target := agentExtendsTarget(winner); target != "" {
-			if base, ok := findExtendsBase(byName, byName[name], target, name); ok {
-				winner = mergeExtendsAgent(base, winner)
-			} else {
-				winner = stripExtends(winner)
-			}
-		}
-		result = append(result, winner)
+		result = append(result, resolveAgentChain(byName, name, 0, map[string]bool{}))
 	}
 	sort.SliceStable(result, func(i, j int) bool {
 		return result[i].Name < result[j].Name
 	})
 	return result
+}
+
+// resolveAgentChain resolves the agent variant byName[name][idx], following any
+// `extends` directive recursively so multi-layer chains (e.g. a local agent
+// extending an include agent that itself extends a builtin) merge fully rather
+// than stopping after a single hop. The base is resolved before the merge so the
+// extending body always sits atop a fully-inherited base. The visiting set guards
+// against extends cycles; a revisited node degrades to a plain (extends-stripped)
+// agent instead of recursing forever.
+func resolveAgentChain(byName map[string][]config.ContentFile, name string, idx int, visiting map[string]bool) config.ContentFile {
+	variants := byName[name]
+	winner := variants[idx]
+	target := agentExtendsTarget(winner)
+	if target == "" {
+		return winner
+	}
+	key := name + ":" + strconv.Itoa(idx)
+	if visiting[key] {
+		return stripExtends(winner)
+	}
+	visiting[key] = true
+	defer delete(visiting, key)
+
+	base, ok := resolveExtendsBase(byName, name, idx, target, visiting)
+	if !ok {
+		logger.Warn("Agent extends target not found; emitting agent without inheritance",
+			"agent", name,
+			"extends", target)
+		return stripExtends(winner)
+	}
+	return mergeExtendsAgent(base, winner)
+}
+
+// resolveExtendsBase returns the fully-resolved base an extends directive
+// inherits from. When extends targets the agent's own name, the base is the next
+// lower same-named variant (resolved through its own extends chain); for a
+// different target name it is that name's highest-precedence variant (likewise
+// resolved). Returns ok=false when no base exists.
+func resolveExtendsBase(byName map[string][]config.ContentFile, name string, idx int, target string, visiting map[string]bool) (config.ContentFile, bool) {
+	if target == name {
+		if idx+1 < len(byName[name]) {
+			return resolveAgentChain(byName, name, idx+1, visiting), true
+		}
+		return config.ContentFile{}, false
+	}
+	if others, ok := byName[target]; ok && len(others) > 0 {
+		return resolveAgentChain(byName, target, 0, visiting), true
+	}
+	return config.ContentFile{}, false
 }
 
 // agentExtendsTarget returns the `extends` frontmatter value, or "" if absent.
@@ -180,23 +222,6 @@ func agentExtendsTarget(f config.ContentFile) string {
 		return ""
 	}
 	return strings.TrimSpace(f.Metadata.Extra["extends"])
-}
-
-// findExtendsBase returns the base agent an extends directive inherits from.
-// When extends targets the agent's own name, the base is the next lower
-// same-named variant; for a different target name it is that name's
-// highest-precedence variant.
-func findExtendsBase(byName map[string][]config.ContentFile, variants []config.ContentFile, target, selfName string) (config.ContentFile, bool) {
-	if target == selfName {
-		if len(variants) > 1 {
-			return variants[1], true
-		}
-		return config.ContentFile{}, false
-	}
-	if others, ok := byName[target]; ok && len(others) > 0 {
-		return others[0], true
-	}
-	return config.ContentFile{}, false
 }
 
 // mergeExtendsAgent yields the base body followed by the extending body, with
