@@ -148,3 +148,143 @@ func TestAllAgents_Extends_MissingBase(t *testing.T) {
 		}
 	}
 }
+
+// findAgent returns the single agent with the given name, failing if the count
+// is not exactly one.
+func findAgent(t *testing.T, agents []config.ContentFile, name string) config.ContentFile {
+	t.Helper()
+	var found config.ContentFile
+	var count int
+	for _, a := range agents {
+		if a.Name == name {
+			count++
+			found = a
+		}
+	}
+	if count != 1 {
+		t.Fatalf("expected exactly 1 %q, got %d", name, count)
+	}
+	return found
+}
+
+// TestAllAgents_Extends_ChainedSameName verifies that a 3-layer same-name chain
+// (local extends include extends builtin, all named `code-reviewer`) merges every
+// layer, not just the top hop — the lowest-precedence builtin body must survive
+// at the base of the merged output.
+func TestAllAgents_Extends_ChainedSameName(t *testing.T) {
+	extends := func(target string) *config.Metadata {
+		return &config.Metadata{Extra: map[string]string{"extends": target}}
+	}
+	ct := &config.ContentTree{
+		// highest precedence: local root agent extends its own name.
+		Agents: []config.ContentFile{{Name: "code-reviewer", Content: "LOCAL", Metadata: extends("code-reviewer")}},
+		Domains: map[string]*config.Domain{
+			"core": {
+				Name: "core", FromInclude: true,
+				Agents: []config.ContentFile{{Name: "code-reviewer", Content: "INCLUDE", Metadata: extends("code-reviewer")}},
+			},
+			"ai-governance": {
+				Name: "ai-governance", Builtin: true,
+				Agents: []config.ContentFile{{Name: "code-reviewer", Content: "BUILTIN"}},
+			},
+		},
+	}
+	got := findAgent(t, allAgents(ct), "code-reviewer")
+	want := "BUILTIN\n\nINCLUDE\n\nLOCAL"
+	if got.Content != want {
+		t.Errorf("chained body = %q, want %q", got.Content, want)
+	}
+	if got.Metadata != nil {
+		if _, ok := got.Metadata.Extra["extends"]; ok {
+			t.Error("extends directive should be stripped after chain resolution")
+		}
+	}
+}
+
+// TestAllAgents_Extends_CrossNameResolvesTargetChain verifies that when an agent
+// extends a differently-named target, and that target itself extends another
+// agent, the base is the target's *fully resolved* body (target's own inheritance
+// included), not the target's raw pre-merge body.
+func TestAllAgents_Extends_CrossNameResolvesTargetChain(t *testing.T) {
+	ct := &config.ContentTree{
+		Agents: []config.ContentFile{
+			{Name: "reviewer", Content: "REVIEWER", Metadata: &config.Metadata{Extra: map[string]string{"extends": "auditor"}}},
+			{Name: "auditor", Content: "AUDITOR", Metadata: &config.Metadata{Extra: map[string]string{"extends": "base"}}},
+			{Name: "base", Content: "BASE"},
+		},
+	}
+	got := findAgent(t, allAgents(ct), "reviewer")
+	// reviewer inherits auditor, which inherits base: BASE -> AUDITOR -> REVIEWER.
+	want := "BASE\n\nAUDITOR\n\nREVIEWER"
+	if got.Content != want {
+		t.Errorf("cross-name chained body = %q, want %q", got.Content, want)
+	}
+}
+
+// TestAllAgents_Extends_CycleDegradesGracefully verifies that a mutual extends
+// cycle (a extends b, b extends a) terminates instead of recursing forever, with
+// both agents degrading to their own bodies rather than hanging.
+func TestAllAgents_Extends_CycleDegradesGracefully(t *testing.T) {
+	ct := &config.ContentTree{
+		Agents: []config.ContentFile{
+			{Name: "a", Content: "A", Metadata: &config.Metadata{Extra: map[string]string{"extends": "b"}}},
+			{Name: "b", Content: "B", Metadata: &config.Metadata{Extra: map[string]string{"extends": "a"}}},
+		},
+	}
+	got := allAgents(ct)
+	if len(got) != 2 {
+		t.Fatalf("expected 2 agents, got %d", len(got))
+	}
+	for _, a := range got {
+		if a.Metadata != nil {
+			if _, ok := a.Metadata.Extra["extends"]; ok {
+				t.Errorf("%q: extends should be stripped when the chain cycles", a.Name)
+			}
+		}
+	}
+}
+
+// TestAllAgents_Extends_PreservesExtenderPath asserts the merged agent keeps the
+// extending file's Path identity, which downstream output-path generation relies
+// on.
+func TestAllAgents_Extends_PreservesExtenderPath(t *testing.T) {
+	ct := &config.ContentTree{
+		Agents: []config.ContentFile{{
+			Name: "code-reviewer", Path: "agents/code-reviewer.md", Content: "LOCAL",
+			Metadata: &config.Metadata{Extra: map[string]string{"extends": "code-reviewer"}},
+		}},
+		Domains: map[string]*config.Domain{
+			"ai-governance": {
+				Name: "ai-governance", Builtin: true,
+				Agents: []config.ContentFile{{Name: "code-reviewer", Path: "builtin/code-reviewer.md", Content: "BUILTIN"}},
+			},
+		},
+	}
+	got := findAgent(t, allAgents(ct), "code-reviewer")
+	if got.Path != "agents/code-reviewer.md" {
+		t.Errorf("path = %q, want extender path agents/code-reviewer.md", got.Path)
+	}
+}
+
+// TestAllAgents_ThreeWayPrecedence locks the full precedence ladder in a single
+// tree: local > include > builtin, all three defining the same name, collapse to
+// the single local definition.
+func TestAllAgents_ThreeWayPrecedence(t *testing.T) {
+	ct := &config.ContentTree{
+		Agents: []config.ContentFile{{Name: "code-reviewer", Content: "LOCAL"}},
+		Domains: map[string]*config.Domain{
+			"core": {
+				Name: "core", FromInclude: true,
+				Agents: []config.ContentFile{{Name: "code-reviewer", Content: "INCLUDE"}},
+			},
+			"ai-governance": {
+				Name: "ai-governance", Builtin: true,
+				Agents: []config.ContentFile{{Name: "code-reviewer", Content: "BUILTIN"}},
+			},
+		},
+	}
+	got := findAgent(t, allAgents(ct), "code-reviewer")
+	if got.Content != "LOCAL" {
+		t.Errorf("body = %q, want LOCAL (local beats include beats builtin)", got.Content)
+	}
+}
