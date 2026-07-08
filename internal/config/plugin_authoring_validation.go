@@ -1,0 +1,172 @@
+package config
+
+import (
+	"path/filepath"
+	"regexp"
+	"strings"
+
+	"github.com/samber/oops"
+)
+
+// semverLike matches a lenient semantic-version shape (major.minor[.patch][-pre]).
+// Plugin manifests across runtimes expect a version string; we only enforce a
+// sane shape, not strict SemVer 2.0.
+var semverLike = regexp.MustCompile(`^\d+\.\d+(\.\d+)?([-+][0-9A-Za-z.-]+)?$`)
+
+// validPluginRuntimes is the set membership test for authored runtime names.
+func isValidPluginRuntime(name string) bool {
+	for _, r := range AllPluginRuntimes {
+		if r == name {
+			return true
+		}
+	}
+	return false
+}
+
+// validatePluginAuthoring checks the [plugin] authoring block when present.
+func (c *Config) validatePluginAuthoring() error {
+	p := c.Plugin
+	if p == nil {
+		return nil
+	}
+
+	if p.Name == "" {
+		return oops.
+			With("field", "plugin.name").
+			Hint("Add a 'name' to the [plugin] block").
+			Errorf("plugin authoring requires field 'name'")
+	}
+	if p.Version == "" {
+		return oops.
+			With("field", "plugin.version").
+			With("plugin_name", p.Name).
+			Hint("Add a 'version' to the [plugin] block, e.g. version = \"1.0.0\"").
+			Errorf("plugin %q requires field 'version'", p.Name)
+	}
+	if !semverLike.MatchString(p.Version) {
+		return oops.
+			With("field", "plugin.version").
+			With("value", p.Version).
+			Hint("Use a semantic version like 1.0.0 or 0.2.1-beta").
+			Errorf("plugin %q has an invalid version %q", p.Name, p.Version)
+	}
+	if p.Description == "" {
+		return oops.
+			With("field", "plugin.description").
+			With("plugin_name", p.Name).
+			Hint("Add a 'description' to the [plugin] block").
+			Errorf("plugin %q requires field 'description'", p.Name)
+	}
+
+	seen := make(map[string]bool, len(p.Runtimes))
+	for _, r := range p.Runtimes {
+		if !isValidPluginRuntime(r) {
+			return oops.
+				With("field", "plugin.runtimes").
+				With("value", r).
+				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory").
+				Errorf("plugin %q lists unknown runtime %q", p.Name, r)
+		}
+		if seen[r] {
+			return oops.
+				With("field", "plugin.runtimes").
+				With("value", r).
+				Errorf("plugin %q lists duplicate runtime %q", p.Name, r)
+		}
+		seen[r] = true
+	}
+
+	for i, m := range p.MCP {
+		if m.Name == "" {
+			return oops.
+				With("field", "plugin.mcp").
+				Hint("Each [[plugin.mcp]] entry needs a 'name'").
+				Errorf("plugin %q MCP entry at index %d missing 'name'", p.Name, i)
+		}
+		remote := m.Transport == TransportHTTP || m.Transport == TransportSSE
+		switch {
+		case remote && m.URL == "":
+			return oops.
+				With("field", "plugin.mcp").
+				With("mcp_name", m.Name).
+				Hint("http/sse MCP servers require a 'url'").
+				Errorf("plugin %q MCP server %q has transport %q but no url", p.Name, m.Name, m.Transport)
+		case !remote && m.Command == "":
+			return oops.
+				With("field", "plugin.mcp").
+				With("mcp_name", m.Name).
+				Hint("stdio MCP servers require a 'command' (or set transport = \"http\"/\"sse\" with a url)").
+				Errorf("plugin %q MCP server %q has no command", p.Name, m.Name)
+		}
+	}
+
+	if p.Statusline != nil && p.Statusline.Script == "" {
+		return oops.
+			With("field", "plugin.statusline.script").
+			Hint("Point 'script' at the status-line script to bundle").
+			Errorf("plugin %q statusline requires 'script'", p.Name)
+	}
+
+	return c.validateHookGroups(p.Name, p.Hooks)
+}
+
+// validateHookGroups checks hook declarations for a plugin.
+func (c *Config) validateHookGroups(pluginName string, groups []HookGroup) error {
+	for i, g := range groups {
+		if g.Event == "" {
+			return oops.
+				With("field", "plugin.hooks").
+				Hint("Each [[plugin.hooks]] group needs an 'event' (e.g. SessionStart)").
+				Errorf("plugin %q hook group at index %d missing 'event'", pluginName, i)
+		}
+		for j, action := range g.Hooks {
+			if action.Command == "" {
+				return oops.
+					With("field", "plugin.hooks.hooks").
+					With("event", g.Event).
+					Hint("Each hook action needs a 'command'").
+					Errorf("plugin %q hook %s[%d] missing 'command'", pluginName, g.Event, j)
+			}
+		}
+	}
+	return nil
+}
+
+// validateMarketplaceAuthoring checks the [marketplace] authoring block.
+func (c *Config) validateMarketplaceAuthoring() error {
+	m := c.Marketplace
+	if m == nil {
+		return nil
+	}
+	if m.Name == "" {
+		return oops.
+			With("field", "marketplace.name").
+			Hint("Add a 'name' to the [marketplace] block").
+			Errorf("marketplace authoring requires field 'name'")
+	}
+	// Member existence is checked at generation time; here we reject duplicates
+	// and paths that escape the project root (absolute or containing "..").
+	seen := make(map[string]bool, len(m.Members))
+	for _, member := range m.Members {
+		if member == "" {
+			return oops.
+				With("field", "marketplace.members").
+				Errorf("marketplace %q has an empty member path", m.Name)
+		}
+		if filepath.IsAbs(member) || strings.Contains(filepath.ToSlash(member), "../") {
+			return oops.
+				With("field", "marketplace.members").
+				With("value", member).
+				Hint("Member paths must be relative to the project root and cannot use '..'").
+				Errorf("marketplace %q has an invalid member path %q", m.Name, member)
+		}
+		if seen[member] {
+			return oops.
+				With("field", "marketplace.members").
+				With("value", member).
+				Errorf("marketplace %q lists duplicate member %q", m.Name, member)
+		}
+		seen[member] = true
+	}
+	return nil
+}
