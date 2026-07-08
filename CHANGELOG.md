@@ -15,6 +15,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - Agent precedence is now deterministic and matches rules/context: same-named agents collapse to the single highest-precedence definition (local > include > builtin) instead of a non-deterministic last-write-wins that depended on domain name ordering. The generated header agent count also reflects the deduplicated set.
 
+### Changed
+
+- Built-in agent default models: `docs-writer`, `devops-engineer`, and `release-engineer` now use `sonnet` (was `haiku`); `polyglot-architect` now uses `opus`.
+
 ## [4.5.0] - 2026-07-02
 
 ### Added
