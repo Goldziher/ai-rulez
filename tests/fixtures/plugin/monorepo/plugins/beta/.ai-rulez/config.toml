@@ -1,0 +1,10 @@
+version = "4.0"
+name = "beta"
+description = "Beta plugin."
+
+[plugin]
+name = "beta"
+description = "Beta does B."
+version = "2.1.0"
+license = "Apache-2.0"
+runtimes = ["claude"]

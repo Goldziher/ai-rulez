@@ -3,6 +3,7 @@ package generator
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"     // Register remaining legacy preset generators
 	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
@@ -74,6 +76,127 @@ func (g *Generator) Generate(profile string) error {
 	logger.Info("Generation complete", "files", len(flatOutputs))
 
 	return nil
+}
+
+// GeneratePlugin packages the project into distributable plugin bundles plus a
+// marketplace index for the runtimes named in the [plugin] block. Unlike the
+// normal generate path, plugin outputs are written verbatim (RawContent) and do
+// not participate in the generated-manifest / stale-file bookkeeping.
+func (g *Generator) GeneratePlugin(profile string) error {
+	outputs, err := g.collectPluginOutputs(profile)
+	if err != nil {
+		return err
+	}
+	if err := g.writeOutputs(outputs); err != nil {
+		return err
+	}
+	logger.Info("Plugin generation complete", "files", len(outputs))
+	return nil
+}
+
+// DryRunPlugin returns the plugin generation plan without writing files.
+func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
+	outputs, err := g.collectPluginOutputs(profile)
+	if err != nil {
+		return nil, err
+	}
+	lines := make([]string, 0, len(outputs)+1)
+	lines = append(lines, "plugin bundle:")
+	for _, output := range outputs {
+		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
+	}
+	return lines, nil
+}
+
+// collectPluginOutputs resolves the content tree and MCP servers, builds the
+// plugin manifest, and renders all requested runtime bundles + marketplace. When
+// the config is a monorepo root ([marketplace].members set), it instead renders
+// each member's bundle plus the aggregate marketplace index.
+func (g *Generator) collectPluginOutputs(profile string) ([]config.OutputFile, error) {
+	if mkt := g.config.Marketplace; mkt != nil && len(mkt.Members) > 0 {
+		return g.collectMonorepoOutputs(mkt)
+	}
+
+	if g.config.Plugin == nil {
+		return nil, oops.
+			Hint("Add a [plugin] block (or a [marketplace] with members) to your config").
+			Errorf("no [plugin] block configured; nothing to generate with --plugin")
+	}
+
+	manifest, err := g.buildPluginManifest(profile)
+	if err != nil {
+		return nil, err
+	}
+	return plugin.Generate(manifest, g.config.BaseDir)
+}
+
+// buildPluginManifest resolves the content tree and MCP servers for the active
+// profile and builds the plugin manifest for the current config.
+func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error) {
+	if err := g.resolveMCPEnv(); err != nil {
+		return nil, err
+	}
+
+	activeProfile := g.resolveProfile(profile)
+	contentTree, err := g.getContentForProfile(activeProfile)
+	if err != nil {
+		return nil, err
+	}
+
+	mcpServers := g.collectMCPServersForContent(contentTree)
+
+	tempCfg := *g.config
+	tempCfg.Content = contentTree
+	tempCfg.MCPServers = mcpServers
+
+	return plugin.BuildManifest(&tempCfg, contentTree)
+}
+
+// collectMonorepoOutputs renders every member plugin under its source directory
+// and emits the aggregate root marketplace index. Each member is an independent
+// ai-rulez project loaded from <baseDir>/<member>.
+func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
+	entries := make([]plugin.MemberEntry, 0, len(mkt.Members))
+
+	for _, member := range mkt.Members {
+		memberDir := filepath.Join(g.config.BaseDir, member)
+		memberCfg, err := config.LoadConfig(context.Background(), memberDir)
+		if err != nil {
+			return nil, oops.With("member", member).Wrapf(err, "load monorepo member config")
+		}
+		if memberCfg.Plugin == nil {
+			return nil, oops.
+				With("member", member).
+				Hint("Each monorepo member must define its own [plugin] block").
+				Errorf("monorepo member %q has no [plugin] block", member)
+		}
+
+		memberGen := NewGenerator(memberCfg)
+		manifest, err := memberGen.buildPluginManifest("")
+		if err != nil {
+			return nil, oops.With("member", member).Wrapf(err, "build member manifest")
+		}
+
+		memberOutputs, err := plugin.GenerateMember(manifest, memberCfg.BaseDir)
+		if err != nil {
+			return nil, oops.With("member", member).Wrapf(err, "generate member bundle")
+		}
+		outputs = append(outputs, memberOutputs...)
+
+		entries = append(entries, plugin.MemberEntry{
+			Name:        manifest.Name,
+			Description: manifest.Description,
+			Source:      "./" + filepath.ToSlash(member),
+		})
+	}
+
+	market := plugin.ResolveMarketInfo(mkt)
+	marketplaceOutput, err := plugin.RenderMonorepoMarketplace(market, entries, g.config.BaseDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "render monorepo marketplace")
+	}
+	return append(outputs, marketplaceOutput), nil
 }
 
 // DryRun returns an inspectable generation plan without writing or deleting files.
