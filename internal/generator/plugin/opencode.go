@@ -17,17 +17,23 @@ const (
 )
 
 type openCodePackage struct {
-	Name         string            `json:"name"`
-	Version      string            `json:"version"`
-	Description  string            `json:"description,omitempty"`
-	Keywords     []string          `json:"keywords,omitempty"`
-	Homepage     string            `json:"homepage,omitempty"`
-	License      string            `json:"license,omitempty"`
-	Type         string            `json:"type"`
-	Main         string            `json:"main"`
-	Exports      map[string]string `json:"exports"`
-	Files        []string          `json:"files"`
-	Dependencies map[string]string `json:"dependencies"`
+	Name         string             `json:"name"`
+	Version      string             `json:"version"`
+	Description  string             `json:"description,omitempty"`
+	Keywords     []string           `json:"keywords,omitempty"`
+	Homepage     string             `json:"homepage,omitempty"`
+	Repository   openCodeRepository `json:"repository"`
+	License      string             `json:"license,omitempty"`
+	Type         string             `json:"type"`
+	Main         string             `json:"main"`
+	Exports      map[string]string  `json:"exports"`
+	Files        []string           `json:"files"`
+	Dependencies map[string]string  `json:"dependencies"`
+}
+
+type openCodeRepository struct {
+	Type string `json:"type"`
+	URL  string `json:"url"`
 }
 
 func init() {
@@ -47,6 +53,7 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		Description:  m.Description,
 		Keywords:     m.Keywords,
 		Homepage:     m.Homepage,
+		Repository:   openCodeRepository{Type: "git", URL: m.Repository},
 		License:      m.License,
 		Type:         "module",
 		Main:         filepath.ToSlash(entrypoint),
