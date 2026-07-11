@@ -53,6 +53,9 @@ func TestRenderOpenCodeGeneratesPackageFromMetadata(t *testing.T) {
 	assert.Equal(t, ".opencode/plugins/test-plugin.js", pkg["main"])
 	assert.Equal(t, "https://xberg.io", pkg["homepage"])
 	assert.Equal(t, "MIT", pkg["license"])
+	repository := pkg["repository"].(map[string]any)
+	assert.Equal(t, "git", repository["type"])
+	assert.Equal(t, "https://github.com/Xberg-IO/plugins", repository["url"])
 }
 
 func TestOpenCodePackageNameFallsBackWithoutGitHubRepository(t *testing.T) {
