@@ -2,8 +2,10 @@ package plugin
 
 import (
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/samber/oops"
 )
 
 func init() {
@@ -12,7 +14,7 @@ func init() {
 
 // codexMCPRef is the relative path Codex's plugin.json uses to reference its
 // external MCP server file.
-const codexMCPRef = "./.codex-plugin/.mcp.json"
+const codexMCPRef = "./.mcp.json"
 
 // codexManifest is the shape of .codex-plugin/plugin.json. Codex references its
 // MCP servers via an external file (mcpServers is a string path) and carries a
@@ -29,6 +31,10 @@ type codexManifest struct {
 	Skills      string         `json:"skills,omitempty"`
 	MCPServers  string         `json:"mcpServers,omitempty"`
 	Interface   *interfaceDoc  `json:"interface,omitempty"`
+}
+
+type codexMCPDoc struct {
+	MCPServers map[string]mcpEntry `json:"mcpServers"`
 }
 
 func renderCodex(m *Manifest, baseDir string) ([]config.OutputFile, error) {
@@ -62,18 +68,48 @@ func renderCodex(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	// External MCP server file: the bare {name: {command, args}} map, with the
 	// canonical ${PLUGIN_ROOT} preserved (Codex resolves it natively).
 	if servers := mcpServersFor(m, config.PluginRuntimeCodex); servers != nil {
-		mcpFile, err := jsonOutput(filepath.Join(pluginDir, ".mcp.json"), servers)
+		mcpFile, err := jsonOutput(filepath.Join(baseDir, ".mcp.json"), codexMCPDoc{MCPServers: servers})
 		if err != nil {
 			return nil, err
 		}
 		outputs = append(outputs, mcpFile)
 	}
 
-	content, err := bundleContent(m, baseDir, contentLayout{Root: ".codex-plugin", Skills: true, Commands: true, Agents: true})
+	content, err := bundleContent(m, baseDir, contentLayout{Skills: true})
 	if err != nil {
 		return nil, err
 	}
 	outputs = append(outputs, content...)
 
+	assets, err := bundleCodexAssets(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, assets...)
+
+	return outputs, nil
+}
+
+func bundleCodexAssets(m *Manifest, baseDir string) ([]config.OutputFile, error) {
+	if m.Interface == nil {
+		return nil, nil
+	}
+	paths := []string{m.Interface.ComposerIcon, m.Interface.Logo, m.Interface.LogoDark}
+	paths = append(paths, m.Interface.Screenshots...)
+	var outputs []config.OutputFile
+	for _, path := range paths {
+		if path == "" {
+			continue
+		}
+		clean := filepath.Clean(strings.TrimPrefix(path, "./"))
+		if filepath.IsAbs(path) || clean == ".." || strings.HasPrefix(filepath.ToSlash(clean), "../") {
+			return nil, oops.With("path", path).Errorf("Codex asset path must stay inside the plugin root")
+		}
+		out, err := passthroughFile(m.SourceDir, clean, filepath.Join(baseDir, clean))
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, out)
+	}
 	return outputs, nil
 }

@@ -53,6 +53,19 @@ func TestCollectPluginOutputs_Monorepo(t *testing.T) {
 	assert.Equal(t, "./plugins/alpha", sources["alpha"])
 	assert.Equal(t, "./plugins/beta", sources["beta"])
 
+	var codexMarket map[string]any
+	require.NoError(t, json.Unmarshal(byRel[".agents/plugins/marketplace.json"], &codexMarket))
+	assert.Equal(t, "acme", codexMarket["name"])
+	assert.Equal(t, "acme", codexMarket["interface"].(map[string]any)["displayName"])
+	codexPlugins := codexMarket["plugins"].([]any)
+	require.Len(t, codexPlugins, 2)
+	alphaEntry := codexPlugins[0].(map[string]any)
+	assert.Equal(t, "local", alphaEntry["source"].(map[string]any)["source"])
+	assert.Equal(t, "./plugins/alpha", alphaEntry["source"].(map[string]any)["path"])
+	assert.Equal(t, "AVAILABLE", alphaEntry["policy"].(map[string]any)["installation"])
+	assert.Equal(t, "ON_INSTALL", alphaEntry["policy"].(map[string]any)["authentication"])
+	assert.Equal(t, "Developer Tools", alphaEntry["category"])
+
 	// Member manifest carries its own version.
 	var alpha map[string]any
 	require.NoError(t, json.Unmarshal(byRel["plugins/alpha/.claude-plugin/plugin.json"], &alpha))
