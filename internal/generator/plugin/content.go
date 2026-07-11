@@ -32,11 +32,11 @@ func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.
 
 	if layout.Skills {
 		for i := range m.Skills {
-			out, err := passthroughContent(&m.Skills[i], filepath.Join(root, "skills", m.Skills[i].Name, "SKILL.md"))
+			skillOutputs, err := passthroughSkill(&m.Skills[i], filepath.Join(root, "skills", m.Skills[i].Name))
 			if err != nil {
 				return nil, err
 			}
-			outputs = appendIf(outputs, out)
+			outputs = append(outputs, skillOutputs...)
 		}
 	}
 	if layout.Commands {
@@ -56,6 +56,38 @@ func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.
 			}
 			outputs = appendIf(outputs, out)
 		}
+	}
+	return outputs, nil
+}
+
+// passthroughSkill copies the complete skill directory so references, scripts,
+// and assets used by SKILL.md remain valid in the generated plugin.
+func passthroughSkill(content *config.ContentFile, destinationDir string) ([]config.OutputFile, error) {
+	if content.Path == "" || strings.HasPrefix(content.Path, "builtin://") {
+		return nil, nil
+	}
+	sourceDir := filepath.Dir(content.Path)
+	var outputs []config.OutputFile
+	err := filepath.WalkDir(sourceDir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return oops.With("path", path).Wrapf(walkErr, "walk skill directory")
+		}
+		if !entry.Type().IsRegular() {
+			return nil
+		}
+		relativePath, err := filepath.Rel(sourceDir, path)
+		if err != nil {
+			return oops.With("path", path).Wrapf(err, "resolve skill file path")
+		}
+		out, err := passthroughFile(sourceDir, relativePath, filepath.Join(destinationDir, relativePath))
+		if err != nil {
+			return err
+		}
+		outputs = append(outputs, out)
+		return nil
+	})
+	if err != nil {
+		return nil, err
 	}
 	return outputs, nil
 }
