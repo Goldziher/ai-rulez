@@ -56,7 +56,7 @@ func TestGolden_AllRuntimeManifestsEmitted(t *testing.T) {
 		".claude-plugin/marketplace.json",
 		".cursor-plugin/plugin.json",
 		".codex-plugin/plugin.json",
-		".codex-plugin/.mcp.json",
+		".mcp.json",
 		"gemini-extension.json",
 		"kimi.plugin.json",
 		".factory-plugin/plugin.json",
@@ -75,16 +75,19 @@ func TestGolden_ClaudeHasNoSkillsKeyAndRewritesRoot(t *testing.T) {
 func TestGolden_CodexExternalMCPAndInterface(t *testing.T) {
 	out := generateFixture(t)
 	doc := parseJSON(t, out[".codex-plugin/plugin.json"])
-	assert.Equal(t, "./.codex-plugin/.mcp.json", doc["mcpServers"], "Codex references MCP via file path")
+	assert.Equal(t, "./.mcp.json", doc["mcpServers"], "Codex references root MCP companion file")
 	assert.Equal(t, "./skills/", doc["skills"])
 	require.Contains(t, doc, "interface")
 	iface := doc["interface"].(map[string]any)
 	assert.Equal(t, "Code-map MCP server for navigating large codebases", iface["shortDescription"])
+	assert.Equal(t, "https://example.com/privacy", iface["privacyPolicyURL"])
+	assert.Equal(t, "https://example.com/terms", iface["termsOfServiceURL"])
+	assert.Equal(t, "./assets/logo.png", iface["logo"])
+	assert.Contains(t, out, "assets/logo.png")
 
-	// External MCP file keeps the canonical ${PLUGIN_ROOT}.
-	mcpFile := parseJSON(t, out[".codex-plugin/.mcp.json"])
-	cmd := mcpFile["basemind"].(map[string]any)["command"]
-	assert.Equal(t, "${PLUGIN_ROOT}/scripts/mcp-launch.sh", cmd)
+	mcpFile := parseJSON(t, out[".mcp.json"])
+	cmd := mcpFile["mcpServers"].(map[string]any)["basemind"].(map[string]any)["command"]
+	assert.Equal(t, "./scripts/mcp-launch.sh", cmd)
 }
 
 func TestGolden_GeminiContextAndInlineHooks(t *testing.T) {
@@ -137,9 +140,15 @@ func TestGolden_SkillContentBundledVerbatim(t *testing.T) {
 	for _, p := range []string{
 		"skills/basemind/SKILL.md",
 		".cursor-plugin/skills/basemind/SKILL.md",
-		".codex-plugin/skills/basemind/SKILL.md",
+		"skills/basemind/SKILL.md",
 	} {
 		require.Contains(t, out, p, "expected bundled skill %s", p)
 		assert.Contains(t, string(out[p]), "name: basemind", "skill frontmatter passed through verbatim")
+	}
+	for _, p := range []string{
+		"skills/basemind/references/usage.md",
+		".cursor-plugin/skills/basemind/references/usage.md",
+	} {
+		assert.Contains(t, out, p, "expected referenced skill resource %s", p)
 	}
 }

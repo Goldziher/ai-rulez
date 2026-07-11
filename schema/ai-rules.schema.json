@@ -464,7 +464,13 @@
             "capabilities": { "type": "array", "items": { "type": "string" } },
             "default_prompt": { "type": "array", "items": { "type": "string" } },
             "website_url": { "type": "string" },
-            "brand_color": { "type": "string" }
+            "privacy_policy_url": { "type": "string" },
+            "terms_of_service_url": { "type": "string" },
+            "brand_color": { "type": "string" },
+            "composer_icon": { "type": "string" },
+            "logo": { "type": "string" },
+            "logo_dark": { "type": "string" },
+            "screenshots": { "type": "array", "items": { "type": "string" } }
           },
           "additionalProperties": false
         },

@@ -39,9 +39,15 @@ command = "bm-statusline"
 [plugin.interface]
 display_name = "basemind"
 short_description = "Code-map MCP server for navigating large codebases"
+long_description = "Navigate code, history, documents, and agent context through MCP."
+developer_name = "Goldziher"
 category = "Developer Tools"
 capabilities = ["Interactive", "Read"]
+default_prompt = ["Map this repository and identify the relevant code paths."]
 website_url = "https://github.com/Goldziher/basemind"
+privacy_policy_url = "https://example.com/privacy"
+terms_of_service_url = "https://example.com/terms"
+logo = "./assets/logo.png"
 
 [plugin.kimi]
 skill_instructions = "Prefer basemind tools over grep for structural questions."
