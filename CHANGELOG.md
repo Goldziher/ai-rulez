@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.7.0] - 2026-07-11
+
+### Added
+
+- Complete Codex plugin bundles with root MCP configuration, canonical marketplace metadata, recursive skill resources, and validated interface assets.
+- OpenCode plugin generation from `.ai-rulez/opencode/index.js`, including generated package metadata and a documented no-op scaffold when no adapter is authored.
+- Deterministic plugin provenance through generated-file headers and `.ai-rulez-generated.json` sidecars with BLAKE3 content and source hashes.
+
+### Fixed
+
+- Preserve nested skill resources and Codex interface metadata during plugin generation.
+- Emit runtime-safe relative MCP commands and strict JSON manifests without comment headers.
+
 ## [4.6.0] - 2026-07-08
 
 ### Added
