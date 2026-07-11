@@ -11,7 +11,10 @@ import (
 // semverLike matches a lenient semantic-version shape (major.minor[.patch][-pre]).
 // Plugin manifests across runtimes expect a version string; we only enforce a
 // sane shape, not strict SemVer 2.0.
-var semverLike = regexp.MustCompile(`^\d+\.\d+(\.\d+)?([-+][0-9A-Za-z.-]+)?$`)
+var semverLike = regexp.MustCompile(
+	`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)` +
+		`(?:-[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$`,
+)
 
 // validPluginRuntimes is the set membership test for authored runtime names.
 func isValidPluginRuntime(name string) bool {
@@ -56,6 +59,11 @@ func (c *Config) validatePluginAuthoring() error {
 			With("plugin_name", p.Name).
 			Hint("Add a 'description' to the [plugin] block").
 			Errorf("plugin %q requires field 'description'", p.Name)
+	}
+	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
+		if err := validateCodexPluginMetadata(p); err != nil {
+			return err
+		}
 	}
 
 	seen := make(map[string]bool, len(p.Runtimes))
@@ -108,6 +116,53 @@ func (c *Config) validatePluginAuthoring() error {
 	}
 
 	return c.validateHookGroups(p.Name, p.Hooks)
+}
+
+func pluginTargetsRuntime(plugin *PluginAuthoring, runtime string) bool {
+	for _, candidate := range plugin.ResolvedRuntimes() {
+		if candidate == runtime {
+			return true
+		}
+	}
+	return false
+}
+
+func validateCodexPluginMetadata(plugin *PluginAuthoring) error {
+	if plugin.Author == nil || plugin.Author.Name == "" {
+		return oops.With("field", "plugin.author.name").
+			Hint("Codex plugins require [plugin.author] with a non-empty name").
+			Errorf("plugin %q requires author.name for the Codex runtime", plugin.Name)
+	}
+	if plugin.Interface == nil {
+		return oops.With("field", "plugin.interface").
+			Hint("Codex plugins require a [plugin.interface] block").
+			Errorf("plugin %q requires interface metadata for the Codex runtime", plugin.Name)
+	}
+	required := []struct {
+		name  string
+		value string
+	}{
+		{"display_name", plugin.Interface.DisplayName},
+		{"short_description", plugin.Interface.ShortDescription},
+		{"long_description", plugin.Interface.LongDescription},
+		{"developer_name", plugin.Interface.DeveloperName},
+		{"category", plugin.Interface.Category},
+	}
+	for _, field := range required {
+		if field.value == "" {
+			return oops.With("field", "plugin.interface."+field.name).
+				Errorf("plugin %q requires interface.%s for the Codex runtime", plugin.Name, field.name)
+		}
+	}
+	if plugin.Interface.Capabilities == nil {
+		return oops.With("field", "plugin.interface.capabilities").
+			Errorf("plugin %q requires interface.capabilities for the Codex runtime", plugin.Name)
+	}
+	if len(plugin.Interface.DefaultPrompt) == 0 {
+		return oops.With("field", "plugin.interface.default_prompt").
+			Errorf("plugin %q requires interface.default_prompt for the Codex runtime", plugin.Name)
+	}
+	return nil
 }
 
 // validateHookGroups checks hook declarations for a plugin.

@@ -125,5 +125,5 @@ func TestRewriteRoot(t *testing.T) {
 	assert.Equal(t, "${extensionPath}/scripts/mcp-launch.sh", rewriteRoot(cmd, config.PluginRuntimeGemini))
 	assert.Equal(t, "./scripts/mcp-launch.sh", rewriteRoot(cmd, config.PluginRuntimeCursor))
 	assert.Equal(t, "./scripts/mcp-launch.sh", rewriteRoot(cmd, config.PluginRuntimeKimi))
-	assert.Equal(t, cmd, rewriteRoot(cmd, config.PluginRuntimeCodex))
+	assert.Equal(t, "./scripts/mcp-launch.sh", rewriteRoot(cmd, config.PluginRuntimeCodex))
 }

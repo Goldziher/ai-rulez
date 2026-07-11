@@ -58,6 +58,36 @@ type MemberEntry struct {
 	Name        string
 	Description string
 	Source      string
+	Category    string
+}
+
+const defaultCodexMarketplaceCategory = "Developer Tools"
+
+type codexMarketplaceDoc struct {
+	Name      string                    `json:"name"`
+	Interface codexMarketplaceInterface `json:"interface"`
+	Plugins   []codexMarketplacePlugin  `json:"plugins"`
+}
+
+type codexMarketplaceInterface struct {
+	DisplayName string `json:"displayName"`
+}
+
+type codexMarketplacePlugin struct {
+	Name     string                 `json:"name"`
+	Source   codexMarketplaceSource `json:"source"`
+	Policy   codexMarketplacePolicy `json:"policy"`
+	Category string                 `json:"category"`
+}
+
+type codexMarketplaceSource struct {
+	Source string `json:"source"`
+	Path   string `json:"path"`
+}
+
+type codexMarketplacePolicy struct {
+	Installation   string `json:"installation"`
+	Authentication string `json:"authentication"`
 }
 
 // RenderMonorepoMarketplace emits the root .claude-plugin/marketplace.json for a
@@ -79,6 +109,39 @@ func RenderMonorepoMarketplace(market MarketInfo, members []MemberEntry, baseDir
 		Plugins:     plugins,
 	}
 	return jsonOutput(filepath.Join(baseDir, ".claude-plugin", "marketplace.json"), doc)
+}
+
+// RenderCodexMonorepoMarketplace emits the repository-local Codex marketplace.
+func RenderCodexMonorepoMarketplace(
+	market MarketInfo,
+	members []MemberEntry,
+	baseDir string,
+) (config.OutputFile, error) {
+	plugins := make([]codexMarketplacePlugin, 0, len(members))
+	for _, member := range members {
+		category := member.Category
+		if category == "" {
+			category = defaultCodexMarketplaceCategory
+		}
+		plugins = append(plugins, codexMarketplacePlugin{
+			Name: member.Name,
+			Source: codexMarketplaceSource{
+				Source: "local",
+				Path:   member.Source,
+			},
+			Policy: codexMarketplacePolicy{
+				Installation:   "AVAILABLE",
+				Authentication: "ON_INSTALL",
+			},
+			Category: category,
+		})
+	}
+	doc := codexMarketplaceDoc{
+		Name:      market.Name,
+		Interface: codexMarketplaceInterface{DisplayName: market.Name},
+		Plugins:   plugins,
+	}
+	return jsonOutput(filepath.Join(baseDir, ".agents", "plugins", "marketplace.json"), doc)
 }
 
 // pluginEntry builds a marketplace plugins[] entry for m at the given source path.

@@ -120,15 +120,21 @@ type Statusline struct {
 
 // PluginInterface is the rich UI block shared by Codex and Kimi manifests.
 type PluginInterface struct {
-	DisplayName      string   `yaml:"display_name,omitempty" json:"display_name,omitempty" toml:"display_name,omitempty"`                //nolint:tagliatelle
-	ShortDescription string   `yaml:"short_description,omitempty" json:"short_description,omitempty" toml:"short_description,omitempty"` //nolint:tagliatelle
-	LongDescription  string   `yaml:"long_description,omitempty" json:"long_description,omitempty" toml:"long_description,omitempty"`    //nolint:tagliatelle
-	DeveloperName    string   `yaml:"developer_name,omitempty" json:"developer_name,omitempty" toml:"developer_name,omitempty"`          //nolint:tagliatelle
-	Category         string   `yaml:"category,omitempty" json:"category,omitempty" toml:"category,omitempty"`
-	Capabilities     []string `yaml:"capabilities,omitempty" json:"capabilities,omitempty" toml:"capabilities,omitempty"`
-	DefaultPrompt    []string `yaml:"default_prompt,omitempty" json:"default_prompt,omitempty" toml:"default_prompt,omitempty"` //nolint:tagliatelle
-	WebsiteURL       string   `yaml:"website_url,omitempty" json:"website_url,omitempty" toml:"website_url,omitempty"`          //nolint:tagliatelle
-	BrandColor       string   `yaml:"brand_color,omitempty" json:"brand_color,omitempty" toml:"brand_color,omitempty"`          //nolint:tagliatelle
+	DisplayName       string   `yaml:"display_name,omitempty" json:"display_name,omitempty" toml:"display_name,omitempty"`                //nolint:tagliatelle
+	ShortDescription  string   `yaml:"short_description,omitempty" json:"short_description,omitempty" toml:"short_description,omitempty"` //nolint:tagliatelle
+	LongDescription   string   `yaml:"long_description,omitempty" json:"long_description,omitempty" toml:"long_description,omitempty"`    //nolint:tagliatelle
+	DeveloperName     string   `yaml:"developer_name,omitempty" json:"developer_name,omitempty" toml:"developer_name,omitempty"`          //nolint:tagliatelle
+	Category          string   `yaml:"category,omitempty" json:"category,omitempty" toml:"category,omitempty"`
+	Capabilities      []string `yaml:"capabilities,omitempty" json:"capabilities,omitempty" toml:"capabilities,omitempty"`
+	DefaultPrompt     []string `yaml:"default_prompt,omitempty" json:"default_prompt,omitempty" toml:"default_prompt,omitempty"`                   //nolint:tagliatelle
+	WebsiteURL        string   `yaml:"website_url,omitempty" json:"website_url,omitempty" toml:"website_url,omitempty"`                            //nolint:tagliatelle
+	PrivacyPolicyURL  string   `yaml:"privacy_policy_url,omitempty" json:"privacy_policy_url,omitempty" toml:"privacy_policy_url,omitempty"`       //nolint:tagliatelle
+	TermsOfServiceURL string   `yaml:"terms_of_service_url,omitempty" json:"terms_of_service_url,omitempty" toml:"terms_of_service_url,omitempty"` //nolint:tagliatelle
+	BrandColor        string   `yaml:"brand_color,omitempty" json:"brand_color,omitempty" toml:"brand_color,omitempty"`                            //nolint:tagliatelle
+	ComposerIcon      string   `yaml:"composer_icon,omitempty" json:"composer_icon,omitempty" toml:"composer_icon,omitempty"`                      //nolint:tagliatelle
+	Logo              string   `yaml:"logo,omitempty" json:"logo,omitempty" toml:"logo,omitempty"`
+	LogoDark          string   `yaml:"logo_dark,omitempty" json:"logo_dark,omitempty" toml:"logo_dark,omitempty"` //nolint:tagliatelle
+	Screenshots       []string `yaml:"screenshots,omitempty" json:"screenshots,omitempty" toml:"screenshots,omitempty"`
 }
 
 // GeminiExtras holds Gemini-extension-specific manifest fields.
