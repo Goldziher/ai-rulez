@@ -188,6 +188,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]
 			Name:        manifest.Name,
 			Description: manifest.Description,
 			Source:      "./" + filepath.ToSlash(member),
+			Category:    manifest.Category,
 		})
 	}
 
@@ -196,7 +197,18 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]
 	if err != nil {
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
-	return append(outputs, marketplaceOutput), nil
+	codexMarketplaceOutput, err := plugin.RenderCodexMonorepoMarketplace(market, entries, g.config.BaseDir)
+	if err != nil {
+		return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
+	}
+	rootOutputs, err := plugin.AddProvenance(
+		[]config.OutputFile{marketplaceOutput, codexMarketplaceOutput},
+		g.config.BaseDir,
+	)
+	if err != nil {
+		return nil, oops.Wrapf(err, "add marketplace provenance")
+	}
+	return append(outputs, rootOutputs...), nil
 }
 
 // DryRun returns an inspectable generation plan without writing or deleting files.

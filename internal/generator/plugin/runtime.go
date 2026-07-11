@@ -33,14 +33,18 @@ func Generate(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "render marketplace")
 	}
-	return append(outputs, marketOutputs...), nil
+	return AddProvenance(append(outputs, marketOutputs...), baseDir)
 }
 
 // GenerateMember renders a monorepo member's runtime bundles rooted at baseDir
 // WITHOUT a marketplace index: in a monorepo only the root emits the aggregate
 // marketplace, so members carry manifests and content only.
 func GenerateMember(m *Manifest, baseDir string) ([]config.OutputFile, error) {
-	return renderRuntimes(m, baseDir)
+	outputs, err := renderRuntimes(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return AddProvenance(outputs, baseDir)
 }
 
 // renderRuntimes runs every requested runtime renderer, rooted at baseDir, then
@@ -89,15 +93,15 @@ const (
 
 // rewriteRoot rewrites the canonical ${PLUGIN_ROOT} launch variable to the form
 // a given runtime expects. Claude/Gemini use their own named variables; Cursor
-// and Kimi use plugin-relative paths ("./..."); Codex/OpenCode/Factory keep the
-// canonical variable.
+// Kimi, and Codex use plugin-relative paths ("./..."); OpenCode/Factory keep
+// the canonical variable.
 func rewriteRoot(s, runtime string) string {
 	switch runtime {
 	case config.PluginRuntimeClaude:
 		return strings.ReplaceAll(s, rootVarCanonical, rootVarClaude)
 	case config.PluginRuntimeGemini:
 		return strings.ReplaceAll(s, rootVarCanonical, rootVarGemini)
-	case config.PluginRuntimeCursor, config.PluginRuntimeKimi:
+	case config.PluginRuntimeCursor, config.PluginRuntimeKimi, config.PluginRuntimeCodex:
 		s = strings.ReplaceAll(s, rootVarCanonical+"/", "./")
 		return strings.ReplaceAll(s, rootVarCanonical, ".")
 	default:

@@ -119,6 +119,7 @@ func TestValidatePluginAuthoring(t *testing.T) {
 			Name:        "basemind",
 			Version:     "0.19.2",
 			Description: "Full AI context layer.",
+			Runtimes:    []string{"claude"},
 		}
 	}
 
@@ -132,6 +133,7 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "missing version", mutate: func(p *PluginAuthoring) { p.Version = "" }, wantErr: "requires field 'version'"},
 		{name: "bad version", mutate: func(p *PluginAuthoring) { p.Version = "not-a-version" }, wantErr: "invalid version"},
 		{name: "good prerelease version", mutate: func(p *PluginAuthoring) { p.Version = "1.2.3-beta.1" }},
+		{name: "short version", mutate: func(p *PluginAuthoring) { p.Version = "1.2" }, wantErr: "invalid version"},
 		{name: "missing description", mutate: func(p *PluginAuthoring) { p.Description = "" }, wantErr: "requires field 'description'"},
 		{name: "unknown runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "bogus"} }, wantErr: "unknown runtime"},
 		{name: "duplicate runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "claude"} }, wantErr: "duplicate runtime"},
@@ -164,6 +166,30 @@ func TestValidatePluginAuthoring(t *testing.T) {
 			assert.Contains(t, err.Error(), tc.wantErr)
 		})
 	}
+}
+
+func TestValidatePluginAuthoring_CodexRequiresCanonicalMetadata(t *testing.T) {
+	plugin := &PluginAuthoring{
+		Name:        "basemind",
+		Version:     "1.0.0",
+		Description: "Code map.",
+		Runtimes:    []string{"codex"},
+	}
+	err := (&Config{Plugin: plugin}).validatePluginAuthoring()
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "author.name")
+
+	plugin.Author = &Author{Name: "Goldziher"}
+	plugin.Interface = &PluginInterface{
+		DisplayName:      "basemind",
+		ShortDescription: "Code map",
+		LongDescription:  "Navigate source code with a structural index.",
+		DeveloperName:    "Goldziher",
+		Category:         "Developer Tools",
+		Capabilities:     []string{"Read"},
+		DefaultPrompt:    []string{"Map this repository."},
+	}
+	require.NoError(t, (&Config{Plugin: plugin}).validatePluginAuthoring())
 }
 
 func TestValidatePluginAuthoring_NilIsValid(t *testing.T) {

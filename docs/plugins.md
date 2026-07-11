@@ -55,7 +55,7 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`) | MCP referenced via external file; rich `interface` block |
 | Gemini   | `gemini-extension.json` | inline MCP + hooks, context file reference |
 | Kimi     | `kimi.plugin.json` | `sessionStart`, `skillInstructions`, `interface` |
-| OpenCode | registered runtime | JS/package glue is hand-authored and passed through |
+| OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`) | copies the authored adapter or emits a documented no-op scaffold |
 | Factory  | `.factory-plugin/plugin.json` | metadata-only |
 
 The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside.
@@ -64,12 +64,34 @@ Content files (SKILL.md, commands, agents) are copied **verbatim** from your sou
 into each runtime's directories — never re-rendered — so a bundled skill is identical
 to the authored one.
 
+### OpenCode adapter
+
+Put OpenCode-specific tools and hooks in `.ai-rulez/opencode/index.js`. The generator
+copies that source verbatim to `.opencode/plugins/<plugin-name>.js` and generates the
+package metadata OpenCode needs. Keep shared skills, commands, agents, and MCP settings
+in their normal `.ai-rulez` sources.
+
+When the source entrypoint is absent, generation emits a documented no-op module. The
+module keeps the plugin loadable and tells you where to create the user-owned source;
+it does not guess tool schemas, subprocess arguments, or business logic.
+
+### Generated-file provenance
+
+Generated JavaScript, TypeScript, and Markdown files include an ai-rulez warning plus
+deterministic BLAKE3 `Content-Hash` and `Source-Hash` values. Markdown headers follow
+YAML frontmatter so skill discovery remains valid.
+
+Strict JSON manifests and binary assets cannot safely contain comments. Each plugin
+therefore includes `.ai-rulez-generated.json`, which records the same source hash and
+a sorted content-hash entry for every generated output. Monorepo roots include a
+separate sidecar covering the aggregate marketplace files. Validators can recompute
+these hashes without adding unsupported fields to runtime manifests.
+
 ### MCP launch variable
 
 Write MCP launch commands once with the canonical `${PLUGIN_ROOT}`; each runtime
 rewrites it to the form it expects — `${CLAUDE_PLUGIN_ROOT}` (Claude),
-`${extensionPath}` (Gemini), plugin-relative `./` (Cursor, Kimi), or unchanged
-(Codex, which resolves `${PLUGIN_ROOT}` natively).
+`${extensionPath}` (Gemini), or plugin-relative `./` (Cursor, Codex, Kimi).
 
 ### Hooks
 
