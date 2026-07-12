@@ -3,17 +3,17 @@ priority: high
 ---
 
 - Rust 2024 edition, `cargo fmt` + `clippy -D warnings`, zero warnings policy.
-- `Result<T, E>` with `thiserror` for library errors, `anyhow` for applications. `?` for propagation — never `.unwrap()` in library code.
+- `Result<T, E>` with a derive-based error crate (e.g., thiserror) for library errors, a context-adding error crate (e.g., anyhow) for applications. `?` for propagation — never `.unwrap()` in library code.
 - Minimize `unsafe` — every block needs `// SAFETY:` comment explaining invariants.
 - Prefer `&str` over `String` in params, `Cow<'_, str>` for conditional ownership, `Arc` for shared ownership.
 - `impl Trait` in argument position for static dispatch, `dyn Trait` for dynamic dispatch when heterogeneous collections needed.
 - Small, focused modules. Use `pub(crate)` for internal visibility. Workspace inheritance for multi-crate repos.
-- `#[cfg(test)]` for unit tests, `tests/` for integration, `cargo-llvm-cov` for coverage.
-- Benchmarking: `criterion` for microbenchmarks, profile with `cargo flamegraph`.
+- `#[cfg(test)]` for unit tests, `tests/` for integration, a coverage tool (e.g., cargo-llvm-cov) for coverage.
+- Benchmarking: a statistical benchmark harness (e.g., criterion) for microbenchmarks, profile with a flamegraph tool (e.g., cargo flamegraph).
 - Async: `tokio` runtime, `'static + Send + Sync` bounds, `tokio::spawn` for concurrency.
 - Security: `cargo audit` for CVE scanning, `cargo deny` for license and advisory policies.
 - Dependencies: pin versions, commit `Cargo.lock`, prefer well-maintained crates.
-- Structured logging with `tracing` crate — use spans and events, not `println!`.
+- Structured logging (spans and events, e.g., the `tracing` crate) — not `println!`.
 - API naming: follow `as_`/`to_`/`into_` conventions for conversions, `iter()`/`iter_mut()`/`into_iter()` for iterators. Getters are `field()` not `get_field()`. See [Rust API Guidelines](https://rust-lang.github.io/api-guidelines).
 - Eagerly implement common traits: `Clone`, `Debug`, `Default`, `Eq`, `PartialEq`, `Hash`, `Send`, `Sync`. Use `From`/`AsRef`/`AsMut` for conversions, `FromIterator`/`Extend` for collections.
 - Type safety: newtypes for static distinctions, builder pattern for complex construction, `bitflags` over enums for flag sets. Avoid `bool` params — use custom types or enums.

@@ -50,13 +50,13 @@ path = "custom/skill/path"    # defaults to skills/<name>
 
 ### Fields
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Unique skill name |
-| `source` | Yes | Git URL or local path to the repository |
-| `path` | No | Path within repo to skill directory. Defaults to `skills/<name>` |
-| `ref` | No | Git ref (branch, tag, or commit). Defaults to `main` |
-| `local_override` | No | Local path override for development |
+| Field            | Required | Description                                                      |
+| ---------------- | -------- | ---------------------------------------------------------------- |
+| `name`           | Yes      | Unique skill name                                                |
+| `source`         | Yes      | Git URL or local path to the repository                          |
+| `path`           | No       | Path within repo to skill directory. Defaults to `skills/<name>` |
+| `ref`            | No       | Git ref (branch, tag, or commit). Defaults to `main`             |
+| `local_override` | No       | Local path override for development                              |
 
 ## CLI Commands
 
@@ -134,7 +134,6 @@ metadata:
   version: "1.0"
   repository: https://github.com/your-org/your-repo
 ---
-
 # My Library
 
 Instructions for AI assistants working with your library...
@@ -179,10 +178,10 @@ To make your project's skill installable by others:
 
 ## Comparison with Includes
 
-| Feature | Includes | Installed Skills |
-|---------|----------|-----------------|
-| Content types | Rules, context, skills, agents, MCP | Skills only |
-| Source structure | Requires `.ai-rulez/` directory | Requires `skills/<name>/SKILL.md` |
-| Merge strategy | Configurable (local-override, include-override, error) | Local skills always win |
-| Domain support | Can install to specific domains | Root-level only |
-| Use case | Share full governance configs | Add library/tool-specific AI instructions |
+| Feature          | Includes                                               | Installed Skills                          |
+| ---------------- | ------------------------------------------------------ | ----------------------------------------- |
+| Content types    | Rules, context, skills, agents, MCP                    | Skills only                               |
+| Source structure | Requires `.ai-rulez/` directory                        | Requires `skills/<name>/SKILL.md`         |
+| Merge strategy   | Configurable (local-override, include-override, error) | Local skills always win                   |
+| Domain support   | Can install to specific domains                        | Root-level only                           |
+| Use case         | Share full governance configs                          | Add library/tool-specific AI instructions |

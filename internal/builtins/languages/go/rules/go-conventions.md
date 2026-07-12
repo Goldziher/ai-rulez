@@ -4,9 +4,9 @@ priority: high
 
 - Follow Effective Go and Go Code Review Comments guidelines.
 - Handle every error return. Wrap errors with context: `fmt.Errorf("operation failed: %w", err)`.
-- Linting: `golangci-lint` with strict config (enable `govet`, `staticcheck`, `errcheck`, `gosec`, `gocritic`). Format with `gofmt`/`goimports`.
-- Security: `govulncheck` for CVE scanning, `gosec` for SAST. Run both in CI.
-- Testing: table-driven tests with `t.Run()`. Use `t.Parallel()` where safe. Use `testify` for assertions. Coverage with `go test -coverprofile`.
+- Linting: a meta-linter (e.g., golangci-lint) with strict config (enable `govet`, `staticcheck`, `errcheck`, and a security analyzer). Format with `gofmt`/`goimports`.
+- Security: `govulncheck` for CVE scanning, a SAST tool for static analysis. Run both in CI.
+- Testing: table-driven tests with `t.Run()` and the stdlib `testing` package. Use `t.Parallel()` where safe. An assertion library (e.g., testify) is optional. Coverage with `go test -coverprofile`.
 - Naming: use short, descriptive names. Receivers are 1-2 letters. Exported names are descriptive.
 - Prefer composition over inheritance. Use interfaces for abstraction (accept interfaces, return structs).
 - Keep packages small and focused. Avoid package-level state and `init()` functions.

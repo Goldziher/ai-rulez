@@ -4,9 +4,9 @@ priority: high
 
 - Elixir 1.14+ OTP 25+, pattern matching extensively, `mix format` non-negotiable.
 - Configure `.formatter.exs` with `:inputs` and `:import_deps` for consistent formatting across team.
-- Linting: `Credo --strict`, type checking: `Dialyzer` via `dialyxir`.
-- Security: `mix_audit` for dependency CVE scanning, `sobelow` for SAST. Run both in CI.
-- Testing: ExUnit with `describe` blocks, `doctest` for examples, `excoveralls` (80%+).
+- Linting: a linter (e.g., Credo `--strict`), type checking: Dialyzer (via `dialyxir`).
+- Security: `mix_audit` for dependency CVE scanning, a SAST tool (e.g., Sobelow) for static analysis. Run both in CI.
+- Testing: ExUnit with `describe` blocks, `doctest` for examples, a coverage tool (e.g., excoveralls) at 80%+.
 - Documentation: ExDoc for generation, `@moduledoc` on all modules, `@doc` + `@spec` on public functions.
 - `{:ok, value}` / `{:error, reason}` tuples — never raise for expected errors.
 - `with` for multi-step ops, guard clauses for function overloading.

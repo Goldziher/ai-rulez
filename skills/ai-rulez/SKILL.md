@@ -113,8 +113,8 @@ Rules, context, skills, and agents support YAML frontmatter:
 
 ```yaml
 ---
-priority: high          # critical, high, medium, low
-targets:                # Limit to specific presets
+priority: high # critical, high, medium, low
+targets: # Limit to specific presets
   - CLAUDE.md
   - .cursor/rules/*
 description: Brief description
@@ -131,10 +131,10 @@ Claude Code's subagent spec. Each is optional and only emitted into
 ---
 name: security-reviewer
 description: Reviews code for security regressions
-model: opus              # haiku | sonnet | opus | inherit
-effort: high             # low | medium | high | xhigh | max | inherit
+model: opus # haiku | sonnet | opus | inherit
+effort: high # low | medium | high | xhigh | max | inherit
 permission_mode: default
-tools:                   # Restrict tool access
+tools: # Restrict tool access
   - Read
   - Grep
   - Glob

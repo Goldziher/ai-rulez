@@ -319,8 +319,8 @@ Example:
 
 ```yaml
 includes:
-  - ../base-rules/.ai-rulez      # Loaded first
-  - ../team-rules/.ai-rulez      # Overrides base-rules
+  - ../base-rules/.ai-rulez # Loaded first
+  - ../team-rules/.ai-rulez # Overrides base-rules
   # Your rules/ directory overrides both
 ```
 
@@ -584,8 +584,8 @@ Use project-level rules to override, or change include order:
 
 ```yaml
 includes:
-  - ../stricter-rules/.ai-rulez    # Load strict rules first
-  - ../lenient-rules/.ai-rulez     # Load lenient rules last (wins)
+  - ../stricter-rules/.ai-rulez # Load strict rules first
+  - ../lenient-rules/.ai-rulez # Load lenient rules last (wins)
 ```
 
 Your `.ai-rulez/rules/security.md` overrides both includes.
