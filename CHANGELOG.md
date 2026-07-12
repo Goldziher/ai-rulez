@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Validate plugin paths consistently across operating systems and use portable path assertions for Hermes and OpenCode output tests.
+
+### Changed
+
+- Split plugin authoring validation into focused checks to keep complexity within project limits.
+
 ## [4.9.1] - 2026-07-12
 
 ### Fixed
