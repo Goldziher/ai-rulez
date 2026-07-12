@@ -499,7 +499,10 @@
         "hermes": {
           "type": "object",
           "properties": {
-            "source": { "type": "string", "description": "Project-relative Python module implementing register(ctx)" },
+            "source": {
+              "type": "string",
+              "description": "Project-relative Python module implementing register(ctx)"
+            },
             "requires_python": {
               "type": "string",
               "description": "Python requirement for the generated Hermes wheel (default: >=3.11)"

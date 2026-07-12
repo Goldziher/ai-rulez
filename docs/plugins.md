@@ -10,10 +10,10 @@ Your skills, commands, and agents are the payload; the `[plugin]` block adds the
 packaging metadata.
 
 !!! note "Authoring vs. installing"
-    The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
-    (authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
-    arrays, which are the **consumer** side (declaring plugins to *install* from a
-    marketplace, rendered into `.claude/plugins.json`).
+The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
+(authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
+arrays, which are the **consumer** side (declaring plugins to _install_ from a
+marketplace, rendered into `.claude/plugins.json`).
 
 ## Quick start
 
@@ -48,16 +48,16 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 
 ## What gets generated
 
-| Runtime  | Manifest | Notes |
-|----------|----------|-------|
-| Claude   | `.claude-plugin/plugin.json` | skills/commands/agents auto-discovered from top-level dirs |
-| Cursor   | `.cursor-plugin/plugin.json` (+ `hooks/hooks.json`) | bundles its own `skills/`, `commands/` |
-| Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`) | MCP referenced via external file; rich `interface` block |
-| Gemini   | `gemini-extension.json` | inline MCP + hooks, context file reference |
-| Kimi     | `kimi.plugin.json` | `sessionStart`, `skillInstructions`, `interface` |
+| Runtime  | Manifest                                                | Notes                                                            |
+| -------- | ------------------------------------------------------- | ---------------------------------------------------------------- |
+| Claude   | `.claude-plugin/plugin.json`                            | skills/commands/agents auto-discovered from top-level dirs       |
+| Cursor   | `.cursor-plugin/plugin.json` (+ `hooks/hooks.json`)     | bundles its own `skills/`, `commands/`                           |
+| Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`)             | MCP referenced via external file; rich `interface` block         |
+| Gemini   | `gemini-extension.json`                                 | inline MCP + hooks, context file reference                       |
+| Kimi     | `kimi.plugin.json`                                      | `sessionStart`, `skillInstructions`, `interface`                 |
 | OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`) | copies the authored adapter or emits a documented no-op scaffold |
-| Factory  | `.factory-plugin/plugin.json` | metadata-only |
-| Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package |
+| Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
+| Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 
 The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside.
 

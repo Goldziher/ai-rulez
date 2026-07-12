@@ -18,6 +18,7 @@ Directory-based AI governance for development teams.
 ai-rulez organizes your AI assistant rules, context, and domain-specific guidance in a single `.ai-rulez/` directory. Write once, generate native configurations for Claude, Cursor, Windsurf, Copilot, Gemini, and more.
 
 **Key features:**
+
 - **Directory-based** – One `.ai-rulez/` directory for all your AI tooling
 - **Multi-tool generation** – Generate configs for all major AI assistants from one source
 - **Plugin publishing** – `generate --plugin` packages the same source into distributable plugin bundles and a marketplace index (Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory)
@@ -31,16 +32,19 @@ ai-rulez organizes your AI assistant rules, context, and domain-specific guidanc
 ## Installation
 
 **uv:**
+
 ```bash
 uv tool install ai-rulez
 ```
 
 **pip:**
+
 ```bash
 pip install ai-rulez
 ```
 
 **Or use without installation:**
+
 ```bash
 uvx ai-rulez init "My Project"
 ```

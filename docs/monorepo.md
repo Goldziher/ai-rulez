@@ -14,9 +14,7 @@ The most effective strategy for large projects is to organize related rules, con
 
     By organizing into domains and using profiles, you provide your AI assistant with only the context it needs for the task at hand. A developer working on the frontend gets frontend-specific rules and context, while the backend developer gets API patterns and database standards. This results in faster, more accurate, and more relevant AI responses.
 
-!!! info "Domains and Profiles"
-    - **Domains** organize content by team, service, or feature (`backend`, `frontend`, `mobile`)
-    - **Profiles** select which domains are included in generation (`full`, `backend-team`, etc.)
+!!! info "Domains and Profiles" - **Domains** organize content by team, service, or feature (`backend`, `frontend`, `mobile`) - **Profiles** select which domains are included in generation (`full`, `backend-team`, etc.)
 
 A typical layout might look like this:
 

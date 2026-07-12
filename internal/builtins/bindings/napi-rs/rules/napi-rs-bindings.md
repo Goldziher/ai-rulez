@@ -7,7 +7,7 @@ priority: high
 - Use `napi::bindgen_prelude::*` for common type conversions. Use `Buffer` for binary data.
 - Support both CommonJS and ESM output. Generate `.d.ts` type definitions automatically.
 - Use `#[napi(ts_return_type = "...")]` for complex TypeScript types the macro can't infer.
-- Build with `napi build --release`. Test from TypeScript/JavaScript using `vitest`.
+- Build with `napi build --release`. Test from TypeScript/JavaScript using a JS test runner (e.g., Vitest or Jest).
 - Async: use `#[napi]` on `async fn` for Promise-returning functions. Use `AsyncTask` for CPU-bound work.
 - Keep Node.js wrappers thin — business logic in Rust, JS provides idiomatic API.
 - Handle `BigInt`, `Date`, and other JS-specific types explicitly.

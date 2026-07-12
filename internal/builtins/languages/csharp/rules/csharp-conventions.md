@@ -4,9 +4,9 @@ priority: high
 
 - .NET 8+ C# 12, file-scoped namespaces, primary constructors, `<Nullable>enable</Nullable>`.
 - Formatting: `dotnet format` + Roslyn analyzers, `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`.
-- Style enforcement: `.editorconfig` for consistent rules across team. Use StyleCop.Analyzers or Roslynator.
-- Testing: xUnit with `[Theory]`/`[InlineData]`, FluentAssertions, `coverlet` (80%+).
-- Benchmarking: BenchmarkDotNet for performance testing — never `Stopwatch` loops.
+- Style enforcement: `.editorconfig` for consistent rules across team. Use an analyzer set (e.g., StyleCop.Analyzers or Roslynator).
+- Testing: xUnit with `[Theory]`/`[InlineData]`, an assertion library (e.g., FluentAssertions), a coverage tool (e.g., coverlet) at 80%+.
+- Benchmarking: a benchmark harness (e.g., BenchmarkDotNet) for performance testing — never `Stopwatch` loops.
 - `record` types for immutable data, `required` properties, pattern matching in switch expressions.
 - Async: `async`/`await` throughout — never `.Result` or `.Wait()`, `ValueTask` for hot paths, avoid deadlocks.
 - Security: `dotnet list package --vulnerable` for CVE scanning. Zero tolerance for critical/high.

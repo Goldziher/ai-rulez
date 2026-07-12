@@ -3,9 +3,9 @@ priority: high
 ---
 
 - Java 17+ LTS, records for immutable data, sealed classes for restricted hierarchies, pattern matching.
-- Google Java Style (4-space, 100 char), `google-java-format`. Static analysis: `Error Prone` + `SpotBugs`.
+- A consistent style guide and auto-formatter (e.g., Google Java Style + google-java-format). Static analysis (e.g., Error Prone + SpotBugs).
 - Build: Maven or Gradle with wrapper scripts (`mvnw`/`gradlew`). Commit wrapper files.
-- Testing: JUnit 5 with `@ParameterizedTest`, AssertJ assertions, `JaCoCo` (80%+ coverage).
+- Testing: JUnit 5 with `@ParameterizedTest`, an assertion library (e.g., AssertJ), a coverage tool (e.g., JaCoCo) at 80%+.
 - Benchmarking: JMH for microbenchmarks — never use `System.nanoTime()` loops.
 - Error handling: specific exceptions only, never `catch (Exception)`, use try-with-resources for `AutoCloseable`.
 - `var` for obvious types, `Optional<T>` for returns (never params/fields), `final` fields by default.

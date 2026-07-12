@@ -40,7 +40,7 @@ ai-rulez generates correct, tool-native output for **20 platforms**: Claude, Cur
 
 ## Generate Plugins, Not Just Config
 
-ai-rulez doesn't only write config into *your* repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes Agent.
+ai-rulez doesn't only write config into _your_ repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes Agent.
 
 ```bash
 ai-rulez generate --plugin           # write plugin bundles + marketplace.json
@@ -58,28 +58,28 @@ ai-rulez isn't just a config generator. It ships with **33 builtin domains** con
 
 These activate automatically. No configuration needed.
 
-| Domain | What it enforces |
-|--------|-----------------|
-| **ai-governance** | No AI signatures in commits. Concise communication. Systematic debugging. Verification before claiming success. Critical review of subagent output. |
-| **code-quality** | Anti-patterns prevention. Complexity limits. Dead code removal. Error handling standards. Readability. |
-| **testing** | TDD workflow (red-green-refactor, no exceptions). Testing anti-patterns. Meaningful assertions. Test independence. |
-| **git-workflow** | Atomic commits. Conventional commit messages. Safe operations. Branch hygiene. |
-| **security** | Secrets handling. Input validation. Dependency auditing. Least privilege. |
-| **token-efficiency** | Task runner usage. Incremental approach. Context preservation. Batch operations. |
-| **agent-delegation** | Multi-agent coordination and delegation patterns. |
+| Domain               | What it enforces                                                                                                                                    |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **ai-governance**    | No AI signatures in commits. Concise communication. Systematic debugging. Verification before claiming success. Critical review of subagent output. |
+| **code-quality**     | Anti-patterns prevention. Complexity limits. Dead code removal. Error handling standards. Readability.                                              |
+| **testing**          | TDD workflow (red-green-refactor, no exceptions). Testing anti-patterns. Meaningful assertions. Test independence.                                  |
+| **git-workflow**     | Atomic commits. Conventional commit messages. Safe operations. Branch hygiene.                                                                      |
+| **security**         | Secrets handling. Input validation. Dependency auditing. Least privilege.                                                                           |
+| **token-efficiency** | Task runner usage. Incremental approach. Context preservation. Batch operations.                                                                    |
+| **agent-delegation** | Multi-agent coordination and delegation patterns.                                                                                                   |
 
 ### Builtin Agents
 
 Specialized agents ready to use as subagents:
 
-| Agent | Domain | Model | What it does |
-|-------|--------|-------|-------------|
-| **code-reviewer** | ai-governance | sonnet | Reviews changes for correctness, security, and conventions. Reports by severity. |
-| **test-writer** | testing | sonnet | Writes tests following strict TDD. Fails first, then implements. |
-| **security-auditor** | security | sonnet | Audits dependencies, scans for CVEs, reviews input validation. |
-| **docs-writer** | ai-governance | haiku | Writes clear, concise documentation. No fluff. |
-| **devops-engineer** | cicd | haiku | CI/CD pipelines, GitHub Actions, Docker, deployment automation. |
-| **release-engineer** | cicd | haiku | Version management, changelogs, multi-registry publishing. |
+| Agent                | Domain        | Model  | What it does                                                                     |
+| -------------------- | ------------- | ------ | -------------------------------------------------------------------------------- |
+| **code-reviewer**    | ai-governance | sonnet | Reviews changes for correctness, security, and conventions. Reports by severity. |
+| **test-writer**      | testing       | sonnet | Writes tests following strict TDD. Fails first, then implements.                 |
+| **security-auditor** | security      | sonnet | Audits dependencies, scans for CVEs, reviews input validation.                   |
+| **docs-writer**      | ai-governance | haiku  | Writes clear, concise documentation. No fluff.                                   |
+| **devops-engineer**  | cicd          | haiku  | CI/CD pipelines, GitHub Actions, Docker, deployment automation.                  |
+| **release-engineer** | cicd          | haiku  | Version management, changelogs, multi-registry publishing.                       |
 
 ### Opt-in Domains
 
@@ -98,13 +98,13 @@ builtins = ["rust", "python", "pyo3", "cicd", "docker", "default-commands"]
 
 ## Content Types
 
-| Type | Purpose | Example |
-|------|---------|---------|
-| **Rules** | What AI must/must not do | Security standards, coding conventions |
-| **Context** | What AI should know | Architecture docs, domain knowledge |
-| **Skills** | Reusable prompts and workflows | Deployment checklist, review protocol |
-| **Agents** | Specialized AI personas | Code reviewer, performance engineer |
-| **Commands** | Slash commands across tools | `/review`, `/deploy`, `/test` |
+| Type         | Purpose                        | Example                                |
+| ------------ | ------------------------------ | -------------------------------------- |
+| **Rules**    | What AI must/must not do       | Security standards, coding conventions |
+| **Context**  | What AI should know            | Architecture docs, domain knowledge    |
+| **Skills**   | Reusable prompts and workflows | Deployment checklist, review protocol  |
+| **Agents**   | Specialized AI personas        | Code reviewer, performance engineer    |
+| **Commands** | Slash commands across tools    | `/review`, `/deploy`, `/test`          |
 
 ## Organization at Scale
 
@@ -274,10 +274,10 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.9.3
+    rev: v4.9.4
     hooks:
-      - id: ai-rulez-recursive   # generate outputs across the repo
-      - id: ai-rulez-validate    # dry-run validation
+      - id: ai-rulez-recursive # generate outputs across the repo
+      - id: ai-rulez-validate # dry-run validation
 ```
 
 Available hook ids: `ai-rulez-validate`, `ai-rulez-generate`,

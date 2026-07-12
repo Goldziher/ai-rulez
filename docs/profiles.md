@@ -13,21 +13,21 @@ Presets define how content is formatted and where it's output for different tool
 
 AI-Rulez includes presets for popular tools:
 
-| Preset | Output | Format |
-|--------|--------|--------|
-| `claude` | `CLAUDE.md` | Markdown |
-| `cursor` | `.cursor/rules/` | Directory |
-| `gemini` | `GEMINI.md` | Markdown |
-| `copilot` | `.github/copilot-instructions.md` | Markdown |
-| `windsurf` | `.windsurf/` | Directory |
-| `continue-dev` | `.continue/` | Directory |
-| `cline` | `.clinerules/` | Directory |
-| `codex` | `AGENTS.md` and `.codex/` | Markdown and directory |
-| `amp` | `AMP.md` and `.amp/` | Markdown and JSON |
-| `junie` | `.junie/` | Directory |
-| `opencode` | `OPENCODE.md` and `.opencode/` | Markdown and directory |
-| `hermes` | `.hermes.md` | Markdown |
-| `antigravity` | `.agents/` | Directory |
+| Preset         | Output                            | Format                 |
+| -------------- | --------------------------------- | ---------------------- |
+| `claude`       | `CLAUDE.md`                       | Markdown               |
+| `cursor`       | `.cursor/rules/`                  | Directory              |
+| `gemini`       | `GEMINI.md`                       | Markdown               |
+| `copilot`      | `.github/copilot-instructions.md` | Markdown               |
+| `windsurf`     | `.windsurf/`                      | Directory              |
+| `continue-dev` | `.continue/`                      | Directory              |
+| `cline`        | `.clinerules/`                    | Directory              |
+| `codex`        | `AGENTS.md` and `.codex/`         | Markdown and directory |
+| `amp`          | `AMP.md` and `.amp/`              | Markdown and JSON      |
+| `junie`        | `.junie/`                         | Directory              |
+| `opencode`     | `OPENCODE.md` and `.opencode/`    | Markdown and directory |
+| `hermes`       | `.hermes.md`                      | Markdown               |
+| `antigravity`  | `.agents/`                        | Directory              |
 
 ## Creating Custom Presets
 
@@ -369,7 +369,7 @@ presets:
 rules:
   - name: "Public Rule"
     content: "This applies everywhere"
-    targets: []                    # Empty = all presets
+    targets: [] # Empty = all presets
 
   - name: "Claude Only Rule"
     content: "Only in Claude instructions"
@@ -524,7 +524,7 @@ Check targeting:
 rules:
   - name: "Test Rule"
     targets:
-      - CLAUDE.md      # Must match preset path exactly
+      - CLAUDE.md # Must match preset path exactly
 ```
 
 ## Advanced Example: Multi-Format Output

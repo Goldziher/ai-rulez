@@ -43,15 +43,15 @@ refreshing a branch reference.
 
 ## Available hooks
 
-| Hook | Command arguments | Purpose |
-|------|-------------------|---------|
-| `ai-rulez-validate` | `generate --dry-run` | Validate generation without writing files |
-| `ai-rulez-generate` | `generate` | Regenerate the root project |
-| `ai-rulez-recursive` | `generate --recursive` | Regenerate every project in a repository |
-| `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` | Regenerate plugin producers and marketplaces |
-| `ai-rulez-plugin-verify` | `verify --recursive --plugin --if-configured` | Verify plugin provenance without writing files |
-| `ai-rulez-enforce` | `enforce --level error` | Enforce configured source-code rules |
-| `ai-rulez-enforce-fix` | `enforce --fix --level error` | Enforce rules and apply fixes |
+| Hook                       | Command arguments                               | Purpose                                        |
+| -------------------------- | ----------------------------------------------- | ---------------------------------------------- |
+| `ai-rulez-validate`        | `generate --dry-run`                            | Validate generation without writing files      |
+| `ai-rulez-generate`        | `generate`                                      | Regenerate the root project                    |
+| `ai-rulez-recursive`       | `generate --recursive`                          | Regenerate every project in a repository       |
+| `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` | Regenerate plugin producers and marketplaces   |
+| `ai-rulez-plugin-verify`   | `verify --recursive --plugin --if-configured`   | Verify plugin provenance without writing files |
+| `ai-rulez-enforce`         | `enforce --level error`                         | Enforce configured source-code rules           |
+| `ai-rulez-enforce-fix`     | `enforce --fix --level error`                   | Enforce rules and apply fixes                  |
 
 Generation and plugin hooks trigger for root or nested `.ai-rulez/` changes.
 Enforcement hooks trigger for supported source-code extensions.
@@ -143,5 +143,5 @@ from duplicate concurrent work. Standalone plugin producers are processed normal
 generation and verification errors still fail the hook.
 
 !!! warning
-    Hook catalogs execute commands with your user permissions. Review source and lock
-    changes before running or installing hooks.
+Hook catalogs execute commands with your user permissions. Review source and lock
+changes before running or installing hooks.

@@ -13,4 +13,4 @@ Audit dependencies before adding them. Prefer well-maintained, widely-used packa
 - Java: OWASP `dependency-check` Maven/Gradle plugin
 - C#: `dotnet list package --vulnerable`
 - Elixir: `mix_audit`
-Zero tolerance for critical/high CVEs. Automate dependency update PRs where possible.
+  Zero tolerance for critical/high CVEs. Automate dependency update PRs where possible.
