@@ -14,13 +14,13 @@ func TestRenderHermesScaffoldsMissingSource(t *testing.T) {
 	outputs, err := renderHermes(m, "/out")
 	require.NoError(t, err)
 	require.Len(t, outputs, 7)
-	assert.Equal(t, "/out/.hermes/plugins/example/__init__.py", outputs[0].Path)
+	assert.Equal(t, filepath.Join("/out", ".hermes", "plugins", "example", "__init__.py"), outputs[0].Path)
 	assert.Contains(t, string(outputs[0].RawContent), "from .hermes import register")
 	assert.Contains(t, string(outputs[1].RawContent), ".ai-rulez/hermes/index.py")
 	assert.Contains(t, string(outputs[2].RawContent), `kind: "standalone"`)
-	assert.Equal(t, "/out/.hermes/package/pyproject.toml", outputs[3].Path)
+	assert.Equal(t, filepath.Join("/out", ".hermes", "package", "pyproject.toml"), outputs[3].Path)
 	assert.Contains(t, string(outputs[3].RawContent), `name = 'example-hermes-plugin'`)
-	assert.Equal(t, "/out/.hermes/package/src/example_hermes_plugin/__init__.py", outputs[4].Path)
+	assert.Equal(t, filepath.Join("/out", ".hermes", "package", "src", "example_hermes_plugin", "__init__.py"), outputs[4].Path)
 }
 
 func TestRenderHermesCopiesAuthoredSourceAndContent(t *testing.T) {

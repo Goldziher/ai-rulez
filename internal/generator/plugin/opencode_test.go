@@ -16,9 +16,9 @@ func TestRenderOpenCodeScaffoldsMissingSource(t *testing.T) {
 	outputs, err := renderOpenCode(m, "/out")
 	require.NoError(t, err)
 	require.Len(t, outputs, 2)
-	assert.Equal(t, "/out/.opencode/plugins/test-plugin.js", outputs[0].Path)
+	assert.Equal(t, filepath.Join("/out", ".opencode", "plugins", "test-plugin.js"), outputs[0].Path)
 	assert.Contains(t, string(outputs[0].RawContent), ".ai-rulez/opencode/index.js")
-	assert.Equal(t, "/out/package.json", outputs[1].Path)
+	assert.Equal(t, filepath.Join("/out", "package.json"), outputs[1].Path)
 }
 
 func TestRenderOpenCodeCopiesAuthoredSource(t *testing.T) {

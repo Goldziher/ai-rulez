@@ -137,7 +137,11 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "missing description", mutate: func(p *PluginAuthoring) { p.Description = "" }, wantErr: "requires field 'description'"},
 		{name: "safe content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "plugin" }},
 		{name: "absolute content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "/tmp/plugin" }, wantErr: "unsafe content root"},
+		{name: "Windows absolute content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = `C:\tmp\plugin` }, wantErr: "unsafe content root"},
 		{name: "escaping content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "../plugin" }, wantErr: "unsafe content root"},
+		{name: "Windows escaping Hermes source", mutate: func(p *PluginAuthoring) {
+			p.Hermes = &HermesExtras{Source: `..\outside.py`}
+		}, wantErr: "unsafe Hermes source"},
 		{name: "unknown runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "bogus"} }, wantErr: "unknown runtime"},
 		{name: "duplicate runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "claude"} }, wantErr: "duplicate runtime"},
 		{name: "Hermes runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"hermes"} }},
@@ -219,7 +223,7 @@ func TestValidateMarketplaceAuthoring(t *testing.T) {
 		assert.Contains(t, err.Error(), "duplicate member")
 	})
 	t.Run("member path traversal rejected", func(t *testing.T) {
-		for _, bad := range []string{"../outside", "plugins/../../etc", "/abs/path"} {
+		for _, bad := range []string{"../outside", `plugins\..\..\etc`, "/abs/path", `C:\abs\path`} {
 			cfg := &Config{Marketplace: &MarketplaceAuthoring{Name: "mp", Members: []string{bad}}}
 			err := cfg.validateMarketplaceAuthoring()
 			require.Error(t, err, "expected %q to be rejected", bad)
