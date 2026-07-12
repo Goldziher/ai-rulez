@@ -26,6 +26,7 @@ AI-Rulez includes presets for popular tools:
 | `amp` | `AMP.md` and `.amp/` | Markdown and JSON |
 | `junie` | `.junie/` | Directory |
 | `opencode` | `OPENCODE.md` and `.opencode/` | Markdown and directory |
+| `hermes` | `.hermes.md` | Markdown |
 | `antigravity` | `.agents/` | Directory |
 
 ## Creating Custom Presets
