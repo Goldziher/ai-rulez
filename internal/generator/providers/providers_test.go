@@ -41,6 +41,36 @@ func TestBuiltinNames(t *testing.T) {
 	names, err := providers.BuiltinNames()
 	require.NoError(t, err)
 	assert.Contains(t, names, "claude")
+	assert.Contains(t, names, "hermes")
+}
+
+func TestHermes_GenerateProjectContext(t *testing.T) {
+	t.Parallel()
+
+	gen, err := providers.LoadBuiltin("hermes")
+	require.NoError(t, err)
+	assert.Equal(t, []string{filepath.Join("/repo", ".hermes.md")}, gen.GetOutputPaths("/repo"))
+	assert.Contains(t, gen.Spec.Root.Sections, "agents_delegation")
+
+	content := &config.ContentTree{
+		Rules:   []config.ContentFile{{Name: "verify", Content: "Run targeted tests."}},
+		Context: []config.ContentFile{{Name: "layout", Content: "Use the existing module layout."}},
+		Agents: []config.ContentFile{{
+			Name:    "reviewer",
+			Content: "Review changes for correctness.",
+			Metadata: &config.Metadata{Extra: map[string]string{
+				"description": "Review implementation changes",
+			}},
+		}},
+	}
+	outputs, err := gen.Generate(content, "/repo", &config.Config{Name: "example", Description: "Example project."})
+	require.NoError(t, err)
+	require.Len(t, outputs, 1)
+	assert.Equal(t, filepath.Join("/repo", ".hermes.md"), outputs[0].Path)
+	assert.Contains(t, outputs[0].Content, "## Rules")
+	assert.Contains(t, outputs[0].Content, "Run targeted tests.")
+	assert.Contains(t, outputs[0].Content, "## Context")
+	assert.Contains(t, outputs[0].Content, "Use the existing module layout.")
 }
 
 // TestClaude_Generate verifies the output-count and structural-presence

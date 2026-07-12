@@ -14,6 +14,7 @@ const (
 	PresetAmp         PresetName = "amp"
 	PresetCodex       PresetName = "codex"
 	PresetJunie       PresetName = "junie"
+	PresetHermes      PresetName = "hermes"
 	PresetAntigravity PresetName = "antigravity"
 )
 
@@ -30,6 +31,7 @@ func AllPresetNames() []string {
 		string(PresetAmp),
 		string(PresetCodex),
 		string(PresetJunie),
+		string(PresetHermes),
 		string(PresetAntigravity),
 	}
 }
@@ -46,6 +48,7 @@ func IndividualPresetNames() []string {
 		string(PresetAmp),
 		string(PresetCodex),
 		string(PresetJunie),
+		string(PresetHermes),
 		string(PresetAntigravity),
 	}
 }

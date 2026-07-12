@@ -1,0 +1,13 @@
+# Hermes Agent project-context provider.
+#
+# Hermes loads .hermes.md as the highest-priority project instruction file,
+# ahead of AGENTS.md, CLAUDE.md, and Cursor compatibility rules. Procedures
+# remain in Hermes' user skill store or an explicitly configured external
+# skill directory, so this preset emits project context only.
+
+name = "hermes"
+display_name = "Hermes Agent"
+
+[root]
+file = ".hermes.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
