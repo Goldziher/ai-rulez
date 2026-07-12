@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- Reusable `poly-hooks.toml` catalog with multiple selectable hooks, guarded npx, uvx, and system execution paths, explicit managed install commands, and parity with the pre-commit hook catalog.
+- Recursive plugin generation and verification with `--if-configured`, including atomic marketplace traversal without duplicate member work.
+- Plugin generation and verification hooks for both Poly and pre-commit, triggered by root or nested `.ai-rulez/` changes.
+
+### Changed
+
+- Poly consumers declare local or Git sources in `poly.toml` and can select non-mutating validation and plugin verification while keeping generation and auto-fix hooks opt-in.
+
 ## [4.8.0] - 2026-07-12
 
 ### Added

@@ -113,6 +113,21 @@ YAML frontmatter so skill discovery remains valid.
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
 sidecar without modifying or regenerating the package.
 
+Reusable hook catalogs can run plugin checks across mixed repositories with
+`ai-rulez generate --recursive --plugin --if-configured` and
+`ai-rulez verify --recursive --plugin --if-configured`. Both commands exit successfully
+without doing work when the configuration has neither a producer `[plugin]`
+block nor a `[marketplace]` block with members.
+
+Recursive commands treat a marketplace root as one producer. The root processes
+its members and aggregate indexes; member configs are not processed again in
+parallel. Standalone `[plugin]` producers are still processed individually.
+Consumer-only `[[plugins]]` and `[[marketplaces]]` declarations are skipped.
+`--if-configured` does not suppress generation or verification errors.
+
+See [Poly Hooks](poly-hooks.md) to add non-mutating plugin verification to a
+repository's pre-commit stage.
+
 Strict JSON manifests and binary assets cannot safely contain comments. Each plugin
 therefore includes `.ai-rulez-generated.json`, which records the same source hash and
 a sorted content-hash entry for every generated output. Monorepo roots include a
