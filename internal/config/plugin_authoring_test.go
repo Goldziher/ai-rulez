@@ -138,6 +138,7 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "safe content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "plugin" }},
 		{name: "absolute content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "/tmp/plugin" }, wantErr: "unsafe content root"},
 		{name: "Windows absolute content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = `C:\tmp\plugin` }, wantErr: "unsafe content root"},
+		{name: "Windows drive-relative content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = `C:plugin` }, wantErr: "unsafe content root"},
 		{name: "escaping content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "../plugin" }, wantErr: "unsafe content root"},
 		{name: "Windows escaping Hermes source", mutate: func(p *PluginAuthoring) {
 			p.Hermes = &HermesExtras{Source: `..\outside.py`}
@@ -223,7 +224,7 @@ func TestValidateMarketplaceAuthoring(t *testing.T) {
 		assert.Contains(t, err.Error(), "duplicate member")
 	})
 	t.Run("member path traversal rejected", func(t *testing.T) {
-		for _, bad := range []string{"../outside", `plugins\..\..\etc`, "/abs/path", `C:\abs\path`} {
+		for _, bad := range []string{"../outside", `plugins\..\..\etc`, "/abs/path", `C:\abs\path`, `C:relative`} {
 			cfg := &Config{Marketplace: &MarketplaceAuthoring{Name: "mp", Members: []string{bad}}}
 			err := cfg.validateMarketplaceAuthoring()
 			require.Error(t, err, "expected %q to be rejected", bad)
