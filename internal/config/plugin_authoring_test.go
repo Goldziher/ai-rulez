@@ -135,8 +135,12 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "good prerelease version", mutate: func(p *PluginAuthoring) { p.Version = "1.2.3-beta.1" }},
 		{name: "short version", mutate: func(p *PluginAuthoring) { p.Version = "1.2" }, wantErr: "invalid version"},
 		{name: "missing description", mutate: func(p *PluginAuthoring) { p.Description = "" }, wantErr: "requires field 'description'"},
+		{name: "safe content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "plugin" }},
+		{name: "absolute content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "/tmp/plugin" }, wantErr: "unsafe content root"},
+		{name: "escaping content root", mutate: func(p *PluginAuthoring) { p.ContentRoot = "../plugin" }, wantErr: "unsafe content root"},
 		{name: "unknown runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "bogus"} }, wantErr: "unknown runtime"},
 		{name: "duplicate runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "claude"} }, wantErr: "duplicate runtime"},
+		{name: "Hermes runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"hermes"} }},
 		{name: "mcp missing name", mutate: func(p *PluginAuthoring) { p.MCP = []PluginMCPLaunch{{Command: "x"}} }, wantErr: "MCP entry"},
 		{name: "stdio mcp missing command", mutate: func(p *PluginAuthoring) { p.MCP = []PluginMCPLaunch{{Name: "s"}} }, wantErr: "no command"},
 		{name: "http mcp missing url", mutate: func(p *PluginAuthoring) {

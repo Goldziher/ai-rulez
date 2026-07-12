@@ -46,6 +46,7 @@ type Manifest struct {
 	Interface  *config.PluginInterface
 	Gemini     *config.GeminiExtras
 	Kimi       *config.KimiExtras
+	Hermes     *config.HermesExtras
 
 	// Content bundled into the plugin (skills/, commands/, agents/).
 	Skills   []config.ContentFile
@@ -102,6 +103,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Interface:   p.Interface,
 		Gemini:      p.Gemini,
 		Kimi:        p.Kimi,
+		Hermes:      p.Hermes,
 		Market:      resolveMarket(p, cfg.Marketplace),
 		SourceDir:   cfg.BaseDir,
 	}

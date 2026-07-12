@@ -57,6 +57,7 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Kimi     | `kimi.plugin.json` | `sessionStart`, `skillInstructions`, `interface` |
 | OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`) | copies the authored adapter or emits a documented no-op scaffold |
 | Factory  | `.factory-plugin/plugin.json` | metadata-only |
+| Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package |
 
 The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside.
 
@@ -75,11 +76,41 @@ When the source entrypoint is absent, generation emits a documented no-op module
 module keeps the plugin loadable and tells you where to create the user-owned source;
 it does not guess tool schemas, subprocess arguments, or business logic.
 
+### Hermes adapter
+
+Put Hermes-specific registrations in `.ai-rulez/hermes/index.py`. The generator
+copies it to `.hermes/plugins/<plugin-name>/__init__.py`, writes `plugin.yaml`, and
+bundles the plugin's skills, commands, and agents. The same adapter and content are
+packaged under `.hermes/package/src/<name>_hermes_plugin/`; its generated
+`pyproject.toml` publishes as `<name>-hermes-plugin`. If the source is absent, it emits
+a documented no-op `register(ctx)` scaffold. Hermes project plugins are trusted code
+and require `HERMES_ENABLE_PROJECT_PLUGINS=true`.
+
+To reuse another canonical adapter instead of `.ai-rulez/hermes/index.py`, configure
+a safe project-relative source:
+
+```toml
+[plugin.hermes]
+source = "plugin/hermes.py"
+```
+
+By default, plugin payload comes from the resolved ai-rulez content tree. To keep
+distributable content separate from developer governance, set a safe project-relative
+content root containing `skills/`, `commands/`, and `agents/`:
+
+```toml
+[plugin]
+content_root = "plugin"
+```
+
 ### Generated-file provenance
 
-Generated JavaScript, TypeScript, and Markdown files include an ai-rulez warning plus
+Generated JavaScript, TypeScript, Python, and Markdown files include an ai-rulez warning plus
 deterministic BLAKE3 `Content-Hash` and `Source-Hash` values. Markdown headers follow
 YAML frontmatter so skill discovery remains valid.
+
+Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
+sidecar without modifying or regenerating the package.
 
 Strict JSON manifests and binary assets cannot safely contain comments. Each plugin
 therefore includes `.ai-rulez-generated.json`, which records the same source hash and
