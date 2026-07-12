@@ -58,6 +58,9 @@ tasks:
         # Pre-commit bootstrap script default version (scripts/pre-commit/run-ai-rulez.sh)
         sed -i '' 's/AI_RULEZ_VERSION="\${AI_RULEZ_VERSION:-v[^"]*}"/AI_RULEZ_VERSION="\${AI_RULEZ_VERSION:-v{{.VERSION}}}"/' scripts/pre-commit/run-ai-rulez.sh
 
+        # README pre-commit example
+        sed -i '' 's/rev: v[0-9][0-9.]*/rev: v{{.VERSION}}/' README.md
+
         echo "Done. Updated version to {{.VERSION}} in:"
         echo "  - cmd/commands/root.go"
         echo "  - cmd/main.go"
@@ -67,6 +70,7 @@ tasks:
         echo "  - release/pypi/ai_rulez/__init__.py"
         echo "  - internal/hooks/setup.go"
         echo "  - scripts/pre-commit/run-ai-rulez.sh"
+        echo "  - README.md"
 
   build:
     desc: "Build the CLI binary"
