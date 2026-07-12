@@ -166,13 +166,7 @@ testing/**/.mcp.json
 .gemini/
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
-.agents/
 .ai-rulez/.generated-manifest.json
-.cline/
 .codex/
-.github/agents/
-.github/commands/
-.github/skills/
-.junie/
-.opencode/
+.hermes.md
 # END ai-rulez
