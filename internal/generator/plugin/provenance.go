@@ -103,6 +103,8 @@ func provenanceHeader(path, contentHash, sourceHash string) string {
 		return "<!--\n" + strings.Join(lines, "\n") + "\n-->\n"
 	case ".js", ".jsx", ".ts", ".tsx":
 		return "// " + strings.Join(lines, "\n// ") + "\n"
+	case ".py":
+		return "# " + strings.Join(lines, "\n# ") + "\n"
 	default:
 		return ""
 	}
@@ -115,7 +117,7 @@ func insertProvenanceHeader(body []byte, path, header string) []byte {
 		rest := content[len("---\n"):]
 		if index := strings.Index(rest, "\n---\n"); index >= 0 {
 			closing := len("---\n") + index + len("\n---\n")
-			return []byte(content[:closing] + "\n" + header + "\n" + content[closing:])
+			return []byte(content[:closing] + "\n" + header + content[closing:])
 		}
 	}
 	if strings.HasPrefix(content, "#!") {

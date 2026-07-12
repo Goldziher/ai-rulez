@@ -60,6 +60,8 @@ func TestGolden_AllRuntimeManifestsEmitted(t *testing.T) {
 		"gemini-extension.json",
 		"kimi.plugin.json",
 		".factory-plugin/plugin.json",
+		".hermes/plugins/basemind/plugin.yaml",
+		".hermes/plugins/basemind/__init__.py",
 	} {
 		assert.Contains(t, out, p, "expected manifest %s to be generated", p)
 	}
