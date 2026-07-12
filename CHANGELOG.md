@@ -4,12 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
-## [Unreleased]
+## [4.8.0] - 2026-07-12
 
 ### Added
 
-- Generate Hermes Agent project plugins and PyPI entry-point packages, including configurable adapter and payload sources.
-- Verify generated plugin freshness and provenance with `ai-rulez verify --plugin`.
+- Native Hermes Agent rules generation through the `hermes` preset and `.hermes.md` project context.
+- Hermes Agent project plugins and PyPI entry-point packages, with compatible `hermes`, `register`, and `__version__` exports.
+- Plugin-specific content through `plugin.content_root`, adapter reuse through `plugin.hermes.source`, and configurable Python compatibility through `plugin.hermes.requires_python`.
+- Generated plugin freshness and provenance verification with `ai-rulez verify --plugin`, including profile-aware rendering.
+
+### Fixed
+
+- Preserve authored Markdown whitespace when inserting and verifying generated-file provenance headers.
+- Serialize Hermes Python package metadata safely and emit Claude marketplace files only when targeting Claude.
 
 ## [4.7.0] - 2026-07-11
 
