@@ -9,6 +9,6 @@ priority: high
 - Async: use `wasm-bindgen-futures` for Promise-returning functions. Never block the main thread.
 - Bundle size: use `opt-level = "z"`, `lto = true`, `codegen-units = 1` in release profile.
 - Use `web-sys` and `js-sys` for Web API access. Feature-gate platform-specific APIs.
-- Test with `wasm-pack test --headless --firefox` and `vitest` for JS integration tests.
+- Test with `wasm-pack test --headless --firefox` and a JS test runner (e.g., Vitest or Jest) for JS integration tests.
 - Generate TypeScript definitions automatically. Keep `.d.ts` files in sync with Rust exports.
 - Anti-patterns: no `std::thread` (single-threaded), no synchronous I/O, no panics (becomes JS exception).

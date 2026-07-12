@@ -3,7 +3,7 @@ priority: high
 ---
 
 - PHP 8.2+, `declare(strict_types=1)`, typed properties, union types, enums, readonly classes.
-- Formatting: PSR-12 via `phpcs`/`phpcbf` or `php-cs-fixer`. Static analysis: `PHPStan` level 9 or `Psalm`.
+- Formatting: PSR-12 via a fixer (e.g., PHP_CodeSniffer/phpcbf or php-cs-fixer). Static analysis: a strict analyzer (e.g., PHPStan at max level or Psalm).
 - Testing: PHPUnit with `@dataProvider`, 80%+ coverage.
 - Error handling: specific exceptions extending `RuntimeException`, constructor promotion for value objects.
 - First-class callable syntax (`$fn = strlen(...)`) for callbacks. Arrow functions (`fn() =>`) for simple closures.

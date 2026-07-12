@@ -119,7 +119,6 @@ metadata:
   version: "1.0"
   repository: https://github.com/your-org/your-repo
 ---
-
 # My Library
 
 Instructions for AI assistants working with your library...

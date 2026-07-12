@@ -2,15 +2,15 @@
 priority: high
 ---
 
-- Python 3.10+, type hints on all public APIs, no `Any` — use `Unknown`/generics.
-- Formatting/linting: `ruff` (zero warnings), type checking: `mypy --strict`. Security: `bandit` for SAST.
+- Python 3.10+, type hints on all public APIs, avoid `Any` — use precise types, generics, or `typing.Protocol`.
+- Formatting/linting: a fast linter/formatter (e.g., Ruff), zero warnings; strict static type checking (e.g., mypy or pyright). Security: a SAST tool (e.g., Bandit).
 - Testing: `pytest` with function-based tests, `pytest-cov` (80%+), `hypothesis` for property-based.
 - Error handling: specific exceptions only, never bare `except:`, `contextlib.suppress` for intentional ignoring.
 - Dataclasses or Pydantic for structured data — avoid raw dicts for known schemas.
 - `pathlib.Path` over `os.path` for filesystem operations. Google-style docstrings on public APIs.
 - Async: `async`/`await` for I/O, never mix blocking and async, `asyncio.gather()` for concurrency.
-- Package management: `uv` with `uv.lock` committed, build with `maturin` or `hatchling`.
+- Package management: a fast, lockfile-based package manager (e.g., uv) with the lockfile committed, build with a PEP 517 backend (e.g., maturin or hatchling).
 - Security: `pip-audit` for dependency CVE scanning. Zero tolerance for critical/high vulnerabilities.
-- Logging: `structlog` with key=value pairs — never f-strings in log calls.
+- Logging: structured logging (key=value / JSON) — never f-strings in log calls.
 - Pattern matching (`match`/`case`) for multi-branch type dispatch (3.10+).
 - Anti-patterns: mutable default args, `import *`, global state, `time.sleep` in async.

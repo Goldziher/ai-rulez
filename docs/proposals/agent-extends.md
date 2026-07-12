@@ -23,11 +23,12 @@ produces a merged agent = base + this agent's overrides, instead of a full repla
 ```markdown
 ---
 name: code-reviewer
-extends: code-reviewer          # inherit the resolved base agent of this name (from lower layers)
-model: sonnet                   # optional override; omitted fields inherit from base
-effort: high                    # optional override
+extends: code-reviewer # inherit the resolved base agent of this name (from lower layers)
+model: sonnet # optional override; omitted fields inherit from base
+effort: high # optional override
 # tools omitted -> inherit base tools
 ---
+
 Additional project-specific review checks (Rust polyglot):
 
 - No `.unwrap()`/`.expect()` in library code

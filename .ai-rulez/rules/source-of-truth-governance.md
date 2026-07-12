@@ -7,7 +7,6 @@ targets:
   - .github/copilot-instructions.md
 trigger: model_decision
 description: Apply when working with AI tooling configuration
-
 ---
 
 # Source-of-Truth Governance

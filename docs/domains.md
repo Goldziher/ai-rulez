@@ -17,10 +17,10 @@ Profiles specify which domains are included when generating. Example:
 
 ```yaml
 profiles:
-  full: [backend, frontend, qa]        # All teams
-  backend: [backend, qa]               # Backend team only
-  frontend: [frontend, qa]             # Frontend team only
-  qa: [qa]                             # QA team only
+  full: [backend, frontend, qa] # All teams
+  backend: [backend, qa] # Backend team only
+  frontend: [frontend, qa] # Frontend team only
+  qa: [qa] # QA team only
 ```
 
 Generation always includes:
