@@ -1,7 +1,7 @@
 package config
 
 import (
-	"path/filepath"
+	"path"
 	"regexp"
 	"strings"
 
@@ -32,7 +32,33 @@ func (c *Config) validatePluginAuthoring() error {
 	if p == nil {
 		return nil
 	}
+	if err := validatePluginRequiredFields(p); err != nil {
+		return err
+	}
+	if err := validatePluginPaths(p); err != nil {
+		return err
+	}
+	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
+		if err := validateCodexPluginMetadata(p); err != nil {
+			return err
+		}
+	}
+	if err := validatePluginRuntimes(p); err != nil {
+		return err
+	}
+	if err := validatePluginMCP(p); err != nil {
+		return err
+	}
+	if p.Statusline != nil && p.Statusline.Script == "" {
+		return oops.
+			With("field", "plugin.statusline.script").
+			Hint("Point 'script' at the status-line script to bundle").
+			Errorf("plugin %q statusline requires 'script'", p.Name)
+	}
+	return c.validateHookGroups(p.Name, p.Hooks)
+}
 
+func validatePluginRequiredFields(p *PluginAuthoring) error {
 	if p.Name == "" {
 		return oops.
 			With("field", "plugin.name").
@@ -60,28 +86,34 @@ func (c *Config) validatePluginAuthoring() error {
 			Hint("Add a 'description' to the [plugin] block").
 			Errorf("plugin %q requires field 'description'", p.Name)
 	}
-	if p.ContentRoot != "" {
-		cleanRoot := filepath.Clean(p.ContentRoot)
-		if filepath.IsAbs(p.ContentRoot) || cleanRoot == ".." || strings.HasPrefix(cleanRoot, ".."+string(filepath.Separator)) {
-			return oops.With("field", "plugin.content_root").With("value", p.ContentRoot).
-				Hint("Use a project-relative directory that does not contain '..'").
-				Errorf("plugin %q has an unsafe content root", p.Name)
-		}
-	}
-	if p.Hermes != nil && p.Hermes.Source != "" {
-		cleanSource := filepath.Clean(p.Hermes.Source)
-		if filepath.IsAbs(p.Hermes.Source) || cleanSource == ".." || strings.HasPrefix(cleanSource, ".."+string(filepath.Separator)) {
-			return oops.With("field", "plugin.hermes.source").With("value", p.Hermes.Source).
-				Hint("Use a project-relative Python file that does not contain '..'").
-				Errorf("plugin %q has an unsafe Hermes source", p.Name)
-		}
-	}
-	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
-		if err := validateCodexPluginMetadata(p); err != nil {
-			return err
-		}
-	}
+	return nil
+}
 
+func validatePluginPaths(p *PluginAuthoring) error {
+	if p.ContentRoot != "" && isUnsafeProjectPath(p.ContentRoot) {
+		return oops.With("field", "plugin.content_root").With("value", p.ContentRoot).
+			Hint("Use a project-relative directory that does not contain '..'").
+			Errorf("plugin %q has an unsafe content root", p.Name)
+	}
+	if p.Hermes != nil && p.Hermes.Source != "" && isUnsafeProjectPath(p.Hermes.Source) {
+		return oops.With("field", "plugin.hermes.source").With("value", p.Hermes.Source).
+			Hint("Use a project-relative Python file that does not contain '..'").
+			Errorf("plugin %q has an unsafe Hermes source", p.Name)
+	}
+	return nil
+}
+
+func isUnsafeProjectPath(value string) bool {
+	normalized := strings.ReplaceAll(value, `\`, "/")
+	cleaned := path.Clean(normalized)
+	driveLetter := len(normalized) >= 1 && ((normalized[0] >= 'a' && normalized[0] <= 'z') ||
+		(normalized[0] >= 'A' && normalized[0] <= 'Z'))
+	windowsDrive := driveLetter && len(normalized) >= 3 && normalized[1] == ':' && normalized[2] == '/'
+	return path.IsAbs(normalized) || windowsDrive || strings.HasPrefix(normalized, "//") ||
+		cleaned == ".." || strings.HasPrefix(cleaned, "../")
+}
+
+func validatePluginRuntimes(p *PluginAuthoring) error {
 	seen := make(map[string]bool, len(p.Runtimes))
 	for _, r := range p.Runtimes {
 		if !isValidPluginRuntime(r) {
@@ -99,7 +131,10 @@ func (c *Config) validatePluginAuthoring() error {
 		}
 		seen[r] = true
 	}
+	return nil
+}
 
+func validatePluginMCP(p *PluginAuthoring) error {
 	for i, m := range p.MCP {
 		if m.Name == "" {
 			return oops.
@@ -123,15 +158,7 @@ func (c *Config) validatePluginAuthoring() error {
 				Errorf("plugin %q MCP server %q has no command", p.Name, m.Name)
 		}
 	}
-
-	if p.Statusline != nil && p.Statusline.Script == "" {
-		return oops.
-			With("field", "plugin.statusline.script").
-			Hint("Point 'script' at the status-line script to bundle").
-			Errorf("plugin %q statusline requires 'script'", p.Name)
-	}
-
-	return c.validateHookGroups(p.Name, p.Hooks)
+	return nil
 }
 
 func pluginTargetsRuntime(plugin *PluginAuthoring, runtime string) bool {
@@ -224,7 +251,7 @@ func (c *Config) validateMarketplaceAuthoring() error {
 				With("field", "marketplace.members").
 				Errorf("marketplace %q has an empty member path", m.Name)
 		}
-		if filepath.IsAbs(member) || strings.Contains(filepath.ToSlash(member), "../") {
+		if isUnsafeProjectPath(member) {
 			return oops.
 				With("field", "marketplace.members").
 				With("value", member).
