@@ -11,6 +11,8 @@ import (
 )
 
 var verifyPlugin bool
+var verifyIfConfigured bool
+var verifyRecursive bool
 
 // VerifyCmd verifies generated artifacts without modifying them.
 var VerifyCmd = &cobra.Command{
@@ -18,6 +20,10 @@ var VerifyCmd = &cobra.Command{
 	Short: "Verify generated artifacts",
 	Args:  cobra.MaximumNArgs(1),
 	Run: func(_ *cobra.Command, args []string) {
+		if verifyRecursive {
+			runRecursivePluginVerify()
+			return
+		}
 		cfg, err := loadConfigForCommand(context.Background(), args)
 		if err != nil {
 			fmtError(err)
@@ -31,6 +37,10 @@ var VerifyCmd = &cobra.Command{
 			fmtError(err)
 			os.Exit(1)
 		}
+		if verifyIfConfigured && !cfg.HasPluginAuthoring() {
+			logger.Info("Skipping plugin verification: no plugin authoring configuration")
+			return
+		}
 		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -41,6 +51,8 @@ var VerifyCmd = &cobra.Command{
 
 func init() {
 	VerifyCmd.Flags().BoolVar(&verifyPlugin, "plugin", false, "Verify generated plugin bundles using provenance hashes")
+	VerifyCmd.Flags().BoolVar(&verifyIfConfigured, "if-configured", false, "Skip plugin verification when no plugin authoring configuration is present")
+	VerifyCmd.Flags().BoolVarP(&verifyRecursive, "recursive", "r", false, "Verify plugin outputs for configurations recursively")
 	VerifyCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile used to generate the plugin bundle")
 	VerifyCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
