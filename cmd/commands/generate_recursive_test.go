@@ -114,3 +114,55 @@ func TestFindConfigFilesRecursively_ConfigPriority(t *testing.T) {
 		t.Errorf("expected toml to win, got %s", got[0])
 	}
 }
+
+func TestSelectRecursivePluginConfigsUsesMarketplaceRoot(t *testing.T) {
+	root := t.TempDir()
+	rootConfig := filepath.Join(root, ".ai-rulez", "config.toml")
+	memberConfig := filepath.Join(root, "plugins", "example", ".ai-rulez", "config.toml")
+	standaloneConfig := filepath.Join(root, "standalone", ".ai-rulez", "config.toml")
+	consumerConfig := filepath.Join(root, "consumer", ".ai-rulez", "config.toml")
+
+	writeFile(t, rootConfig, `
+version = "4.0"
+name = "marketplace"
+[marketplace]
+name = "marketplace"
+members = ["plugins/example"]
+`)
+	writeFile(t, memberConfig, `
+version = "4.0"
+name = "example"
+[plugin]
+name = "example"
+version = "1.0.0"
+`)
+	writeFile(t, standaloneConfig, `
+version = "4.0"
+name = "standalone"
+[plugin]
+name = "standalone"
+version = "1.0.0"
+`)
+	writeFile(t, consumerConfig, `
+version = "4.0"
+name = "consumer"
+[[plugins]]
+marketplace = "example"
+name = "example"
+`)
+
+	got, err := selectRecursivePluginConfigs([]string{memberConfig, consumerConfig, standaloneConfig, rootConfig})
+	if err != nil {
+		t.Fatalf("select plugin configs: %v", err)
+	}
+	want := []string{rootConfig, standaloneConfig}
+	sort.Strings(want)
+	if len(got) != len(want) {
+		t.Fatalf("plugin config count mismatch: got %v, want %v", got, want)
+	}
+	for index := range got {
+		if got[index] != want[index] {
+			t.Errorf("[%d] got %q, want %q", index, got[index], want[index])
+		}
+	}
+}

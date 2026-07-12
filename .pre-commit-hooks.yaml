@@ -6,7 +6,7 @@
     - generate
     - --dry-run
   language: script
-  files: '^\.ai-rulez/'
+  files: '(^|/)\.ai-rulez/'
   pass_filenames: false
   always_run: false
   require_serial: false
@@ -18,7 +18,7 @@
   args:
     - generate
   language: script
-  files: '^\.ai-rulez/'
+  files: '(^|/)\.ai-rulez/'
   pass_filenames: false
   always_run: false
   require_serial: false
@@ -31,7 +31,37 @@
     - generate
     - --recursive
   language: script
-  files: '^\.ai-rulez/'
+  files: '(^|/)\.ai-rulez/'
+  pass_filenames: false
+  always_run: false
+  require_serial: false
+
+- id: ai-rulez-plugin-generate
+  name: Generate AI assistant plugins (recursive)
+  description: Generate configured plugin bundles and marketplaces recursively
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  args:
+    - generate
+    - --recursive
+    - --plugin
+    - --if-configured
+  language: script
+  files: '(^|/)\.ai-rulez/'
+  pass_filenames: false
+  always_run: false
+  require_serial: false
+
+- id: ai-rulez-plugin-verify
+  name: Verify AI assistant plugins (recursive)
+  description: Verify configured plugin bundles and marketplaces recursively
+  entry: scripts/pre-commit/run-ai-rulez.sh
+  args:
+    - verify
+    - --recursive
+    - --plugin
+    - --if-configured
+  language: script
+  files: '(^|/)\.ai-rulez/'
   pass_filenames: false
   always_run: false
   require_serial: false
