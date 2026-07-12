@@ -22,16 +22,17 @@ import (
 )
 
 var (
-	dryRun          bool
-	updateGitignore bool
-	recursive       bool
-	skipCLIMCP      bool
-	noFetch         bool
-	profile         string
-	configDir       string
-	mcpEnv          []string
-	mcpEnvFiles     []string
-	pluginMode      bool
+	dryRun             bool
+	updateGitignore    bool
+	recursive          bool
+	skipCLIMCP         bool
+	noFetch            bool
+	profile            string
+	configDir          string
+	mcpEnv             []string
+	mcpEnvFiles        []string
+	pluginMode         bool
+	pluginIfConfigured bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -58,6 +59,7 @@ func init() {
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
+	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
 		logger.Debug("Failed to mark update-gitignore as deprecated", "error", err)
 	}
@@ -99,6 +101,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	applyGenerateOverrides(cfg)
+	if pluginMode && pluginIfConfigured && !cfg.HasPluginAuthoring() {
+		logger.Info("Skipping plugin generation: no plugin authoring configuration")
+		return
+	}
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
@@ -162,6 +168,14 @@ func loadConfigForCommand(ctx context.Context, args []string) (*config.Config, e
 
 func runRecursiveGenerate() {
 	configFiles := findConfigFilesRecursively()
+	if pluginMode {
+		var err error
+		configFiles, err = selectRecursivePluginConfigs(configFiles)
+		if err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+	}
 	if len(configFiles) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
 		return
@@ -350,6 +364,30 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
+	if pluginMode {
+		if pluginIfConfigured && !cfg.HasPluginAuthoring() {
+			fileCounter.FinishFile()
+			return 0
+		}
+		if dryRun {
+			plan, err := gen.DryRunPlugin(profile)
+			if err != nil {
+				fileCounter.Error(err)
+				return 0
+			}
+			for _, line := range plan {
+				progress.PrintlnIfNotQuiet("  " + line)
+			}
+			fileCounter.FinishFile()
+			return 0
+		}
+		if err := gen.GeneratePlugin(profile); err != nil {
+			fileCounter.Error(err)
+			return 0
+		}
+		fileCounter.FinishFile()
+		return 0
+	}
 
 	if dryRun {
 		plan, err := gen.DryRun(profile)
