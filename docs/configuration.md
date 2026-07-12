@@ -208,16 +208,16 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 
 Each entry supports:
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Unique server identifier |
-| `description` | No | Human-readable description of the server |
-| `command` | No | Command to run for local `stdio` servers (npx, uvx, ai-rulez, etc.) |
-| `args` | No | Array of command arguments for local servers |
-| `env` | No | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
-| `transport` | No | `stdio`, `http`, or `sse`. Defaults to `stdio`. |
-| `url` | No | Remote MCP server URL for `http` or `sse` transports. |
-| `enabled` | No | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`. |
+| Field         | Required | Description                                                                         |
+| ------------- | -------- | ----------------------------------------------------------------------------------- |
+| `name`        | Yes      | Unique server identifier                                                            |
+| `description` | No       | Human-readable description of the server                                            |
+| `command`     | No       | Command to run for local `stdio` servers (npx, uvx, ai-rulez, etc.)                 |
+| `args`        | No       | Array of command arguments for local servers                                        |
+| `env`         | No       | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
+| `transport`   | No       | `stdio`, `http`, or `sse`. Defaults to `stdio`.                                     |
+| `url`         | No       | Remote MCP server URL for `http` or `sse` transports.                               |
+| `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 
 Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`.
 
@@ -304,17 +304,17 @@ Run `ai-rulez builtins list` to see all available domains.
 
 **Universal** (language-agnostic):
 
-| Domain | Description |
-|--------|-------------|
-| `ai-governance` | AI agent behavior governance (auto-included) |
-| `security` | Security best practices and OWASP reference |
-| `git-workflow` | Git workflow and commit conventions |
-| `code-quality` | Code readability, error handling, and complexity |
-| `testing` | Testing conventions and best practices |
-| `token-efficiency` | Output efficiency and task automation |
-| `documentation` | Documentation standards and maintenance |
-| `polyglot-bindings` | Cross-language binding and native FFI conventions |
-| `default-commands` | Built-in slash commands (`/iterate`, `/parallelize`) |
+| Domain              | Description                                          |
+| ------------------- | ---------------------------------------------------- |
+| `ai-governance`     | AI agent behavior governance (auto-included)         |
+| `security`          | Security best practices and OWASP reference          |
+| `git-workflow`      | Git workflow and commit conventions                  |
+| `code-quality`      | Code readability, error handling, and complexity     |
+| `testing`           | Testing conventions and best practices               |
+| `token-efficiency`  | Output efficiency and task automation                |
+| `documentation`     | Documentation standards and maintenance              |
+| `polyglot-bindings` | Cross-language binding and native FFI conventions    |
+| `default-commands`  | Built-in slash commands (`/iterate`, `/parallelize`) |
 
 **Languages** (per-language conventions):
 
@@ -408,27 +408,27 @@ For models the order is:
 
 **Per-preset support matrix** — each preset accepts a different vocabulary, and ai-rulez maps your value to the closest tier the preset supports:
 
-| Preset | Where it's emitted | Field | Notes |
-|--------|-------------------|-------|-------|
-| `claude` | `.claude/agents/<id>.md` frontmatter | `effort` | Per-agent. Full vocabulary including `max` and `inherit`. |
-| `codex` | `.codex/agents/<id>.toml` (per-agent) and `.codex/config.toml` (global default) | `model_reasoning_effort` | Per-agent override beats global `.codex/config.toml`. `max` → `high`; `inherit` dropped. |
-| `amp` | `.amp/settings.json` | `amp.anthropic.effort` | Global only. `xhigh` → `high`. |
-| `windsurf` | `.windsurf/agents/<id>.md` frontmatter | `reasoning_effort` | Per-agent. `max` → `high`; `inherit` dropped. |
-| `opencode` | `.opencode/agents/<id>.md` frontmatter | `reasoningEffort` | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped. |
-| `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | — | — | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
+| Preset                                                                         | Where it's emitted                                                              | Field                    | Notes                                                                                                                                                                              |
+| ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `claude`                                                                       | `.claude/agents/<id>.md` frontmatter                                            | `effort`                 | Per-agent. Full vocabulary including `max` and `inherit`.                                                                                                                          |
+| `codex`                                                                        | `.codex/agents/<id>.toml` (per-agent) and `.codex/config.toml` (global default) | `model_reasoning_effort` | Per-agent override beats global `.codex/config.toml`. `max` → `high`; `inherit` dropped.                                                                                           |
+| `amp`                                                                          | `.amp/settings.json`                                                            | `amp.anthropic.effort`   | Global only. `xhigh` → `high`.                                                                                                                                                     |
+| `windsurf`                                                                     | `.windsurf/agents/<id>.md` frontmatter                                          | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
+| `opencode`                                                                     | `.opencode/agents/<id>.md` frontmatter                                          | `reasoningEffort`        | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
+| `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | —                                                                               | —                        | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 
 **Per-preset model matrix** — presets that emit a `model` value in their agent frontmatter:
 
-| Preset | Per-agent frontmatter key | Emitted field |
-|--------|--------------------------|---------------|
-| `claude` | `claude_model` | `model` in `.claude/agents/<id>.md` |
-| `copilot` | `copilot_model` | `model` in `.github/agents/<id>.agent.md` |
-| `cursor` | `cursor_model` | `model` in `.agents/agents/<id>.md` |
-| `cline` | `cline_model` | `model` in `.cline/agents/<id>.md` |
-| `opencode` | `opencode_model` | `model` in `.opencode/agents/<id>.md` |
-| `windsurf` | `windsurf_model` | `model` in `.windsurf/agents/<id>.md` |
-| `continue-dev` | `continue-dev_model` | `model` in `.continue/agents/<id>.md` |
-| `gemini` | `gemini_model` | `model` in `.agents/agents/<id>.md` (Gemini) |
+| Preset         | Per-agent frontmatter key | Emitted field                                |
+| -------------- | ------------------------- | -------------------------------------------- |
+| `claude`       | `claude_model`            | `model` in `.claude/agents/<id>.md`          |
+| `copilot`      | `copilot_model`           | `model` in `.github/agents/<id>.agent.md`    |
+| `cursor`       | `cursor_model`            | `model` in `.agents/agents/<id>.md`          |
+| `cline`        | `cline_model`             | `model` in `.cline/agents/<id>.md`           |
+| `opencode`     | `opencode_model`          | `model` in `.opencode/agents/<id>.md`        |
+| `windsurf`     | `windsurf_model`          | `model` in `.windsurf/agents/<id>.md`        |
+| `continue-dev` | `continue-dev_model`      | `model` in `.continue/agents/<id>.md`        |
+| `gemini`       | `gemini_model`            | `model` in `.agents/agents/<id>.md` (Gemini) |
 
 ### `header`
 
@@ -587,13 +587,13 @@ local_override = "../local" # use local path for development
 
 Each entry supports:
 
-| Field | Required | Description |
-|-------|----------|-------------|
-| `name` | Yes | Unique skill identifier |
-| `source` | Yes | Git URL or local path |
-| `path` | No | Path within repo to skill directory (defaults to `skills/<name>`) |
-| `ref` | No | Git ref (branch, tag, commit) |
-| `local_override` | No | Local path override for development |
+| Field            | Required | Description                                                       |
+| ---------------- | -------- | ----------------------------------------------------------------- |
+| `name`           | Yes      | Unique skill identifier                                           |
+| `source`         | Yes      | Git URL or local path                                             |
+| `path`           | No       | Path within repo to skill directory (defaults to `skills/<name>`) |
+| `ref`            | No       | Git ref (branch, tag, commit)                                     |
+| `local_override` | No       | Local path override for development                               |
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
@@ -832,7 +832,7 @@ A warning is logged if collisions are detected:
 ## Extending Agents
 
 Built-in and shared-module agents (`code-reviewer`, `docs-writer`, `security-auditor`, language
-specialists, ...) give you a solid base. When you only need to *add* project-specific guidance, don't
+specialists, ...) give you a solid base. When you only need to _add_ project-specific guidance, don't
 copy the whole agent — **extend** it.
 
 ### Agent precedence
@@ -855,6 +855,7 @@ additional instructions in the body:
 name: code-reviewer
 extends: code-reviewer
 ---
+
 Also enforce, for this repo:
 
 - No `.unwrap()`/`.expect()` in library code.
@@ -870,10 +871,11 @@ Frontmatter fields you set win over the base; fields you omit are inherited:
 ---
 name: docs-writer
 extends: docs-writer
-model: opus          # upgrade just this agent's model
+model: opus # upgrade just this agent's model
 effort: high
 # tools omitted → inherited from the base docs-writer
 ---
+
 When documenting the public API, include a runnable example in every supported language.
 ```
 

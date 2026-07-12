@@ -108,10 +108,10 @@ Content here
 
 The schema files are available in the repository:
 
-| File | Format | Version | Notes |
-|------|--------|---------|-------|
-| `schema/ai-rules.schema.json` | JSON Schema | V4/V3 | Current schema for V4 and V3 (backward compatible) |
-| `schema/ai-rules-mcp.schema.json` | JSON Schema | V4 | Schema for MCP server configurations |
+| File                              | Format      | Version | Notes                                              |
+| --------------------------------- | ----------- | ------- | -------------------------------------------------- |
+| `schema/ai-rules.schema.json`     | JSON Schema | V4/V3   | Current schema for V4 and V3 (backward compatible) |
+| `schema/ai-rules-mcp.schema.json` | JSON Schema | V4      | Schema for MCP server configurations               |
 
 Access them at:
 

@@ -6,29 +6,29 @@ All AI-Rulez CLI commands and flags.
 
 ### Core Commands
 
-| Command | Description |
-|---------|-------------|
-| `ai-rulez init` | Initialize V4 directory-based configuration |
-| `ai-rulez generate` | Generate presets for specific profile |
-| `ai-rulez validate` | Validate configuration |
-| `ai-rulez migrate` | Migrate configuration versions (migrate v4 command) |
-| `ai-rulez version` | Show version |
-| `ai-rulez mcp` | Start MCP server |
-| `ai-rulez builtins list` | List available built-in domains |
-| `ai-rulez builtins show <name>` | Show bundled content for a built-in domain |
+| Command                         | Description                                         |
+| ------------------------------- | --------------------------------------------------- |
+| `ai-rulez init`                 | Initialize V4 directory-based configuration         |
+| `ai-rulez generate`             | Generate presets for specific profile               |
+| `ai-rulez validate`             | Validate configuration                              |
+| `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
+| `ai-rulez version`              | Show version                                        |
+| `ai-rulez mcp`                  | Start MCP server                                    |
+| `ai-rulez builtins list`        | List available built-in domains                     |
+| `ai-rulez builtins show <name>` | Show bundled content for a built-in domain          |
 
 ### CRUD Commands (Configuration Management)
 
-| Command | Description |
-|---------|-------------|
-| `ai-rulez domain add/remove/list` | Manage domains |
-| `ai-rulez add rule/context/skill` | Create content files |
-| `ai-rulez remove rule/context/skill` | Delete content files |
-| `ai-rulez list rules/context/skills` | List content files |
-| `ai-rulez include add/remove/list` | Manage external includes |
-| `ai-rulez skill install/remove/list` | Manage installed skills |
-| `ai-rulez profile add/remove/list` | Manage profiles |
-| `ai-rulez profile set-default` | Set default profile |
+| Command                              | Description              |
+| ------------------------------------ | ------------------------ |
+| `ai-rulez domain add/remove/list`    | Manage domains           |
+| `ai-rulez add rule/context/skill`    | Create content files     |
+| `ai-rulez remove rule/context/skill` | Delete content files     |
+| `ai-rulez list rules/context/skills` | List content files       |
+| `ai-rulez include add/remove/list`   | Manage external includes |
+| `ai-rulez skill install/remove/list` | Manage installed skills  |
+| `ai-rulez profile add/remove/list`   | Manage profiles          |
+| `ai-rulez profile set-default`       | Set default profile      |
 
 ## CRUD Commands
 
@@ -699,21 +699,21 @@ ai-rulez init [project-name] [flags]
 
 **V4-specific Flags:**
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--format` / `-f` | string | `toml` | Configuration format: `toml`, `yaml`, or `json` |
-| `--domains` / `-d` | string | (none) | Comma-separated list of domain names to create |
-| `--skip-content` / `-s` | boolean | false | Skip creating example content files |
-| `--from` / `-F` | string | (none) | Import from existing tool files, such as `auto` or `.claude,.cursor` |
-| `--setup-hooks` / `-H` | boolean | false | Configure Git hooks after initialization |
-| `--yes` / `-y` | boolean | false | Automatically answer yes to prompts |
+| Flag                    | Type    | Default | Description                                                          |
+| ----------------------- | ------- | ------- | -------------------------------------------------------------------- |
+| `--format` / `-f`       | string  | `toml`  | Configuration format: `toml`, `yaml`, or `json`                      |
+| `--domains` / `-d`      | string  | (none)  | Comma-separated list of domain names to create                       |
+| `--skip-content` / `-s` | boolean | false   | Skip creating example content files                                  |
+| `--from` / `-F`         | string  | (none)  | Import from existing tool files, such as `auto` or `.claude,.cursor` |
+| `--setup-hooks` / `-H`  | boolean | false   | Configure Git hooks after initialization                             |
+| `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts                                  |
 
 **General Flags:**
 
-| Flag | Type | Description |
-|------|------|-------------|
+| Flag        | Type    | Description           |
+| ----------- | ------- | --------------------- |
 | `--verbose` | boolean | Enable verbose output |
-| `--debug` | boolean | Enable debug output |
+| `--debug`   | boolean | Enable debug output   |
 
 **Examples:**
 
@@ -759,26 +759,26 @@ ai-rulez generate [config-path] [flags]
 
 **Generation Flags:**
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
+| Flag               | Type   | Default       | Description         |
+| ------------------ | ------ | ------------- | ------------------- |
 | `--profile` / `-p` | string | (from config) | Profile to generate |
 
 **General Flags:**
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--dry-run` / `-d` | boolean | false | Show what would be generated without writing files |
-| `--gitignore` / `-i` | boolean | (from config) | Update `.gitignore` with generated output patterns |
-| `--recursive` / `-r` | boolean | false | Find and process configs recursively |
-| `--no-fetch` / `-f` | boolean | false | Skip fetching remote includes and use cached content |
-| `--config-dir` / `-n` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
-| `--env` / `-e` | string | | MCP env override in `KEY=VALUE` form; repeatable |
-| `--env-file` / `-E` | string | `.env` | Dotenv file for MCP env placeholders; repeatable |
-| `--no-configure-cli-mcp` / `-M` | boolean | false | Skip configuring CLI-based MCP tools such as Claude and Gemini |
-| `--skip-cli-mcp` / `-S` | boolean | false | Alias for `--no-configure-cli-mcp` |
-| `--plugin` | boolean | false | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
-| `--if-configured` | boolean | false | With `--plugin`, skip successfully when plugin authoring is not configured |
-| `--token` / `-T` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
+| Flag                            | Type    | Default       | Description                                                                                                                                             |
+| ------------------------------- | ------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--dry-run` / `-d`              | boolean | false         | Show what would be generated without writing files                                                                                                      |
+| `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns                                                                                                      |
+| `--recursive` / `-r`            | boolean | false         | Find and process configs recursively                                                                                                                    |
+| `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
+| `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
+| `--env` / `-e`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
+| `--env-file` / `-E`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
+| `--no-configure-cli-mcp` / `-M` | boolean | false         | Skip configuring CLI-based MCP tools such as Claude and Gemini                                                                                          |
+| `--skip-cli-mcp` / `-S`         | boolean | false         | Alias for `--no-configure-cli-mcp`                                                                                                                      |
+| `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
+| `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
+| `--token` / `-T`                | string  | (from env)    | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var)                                                                         |
 
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
 
@@ -888,13 +888,13 @@ ai-rulez verify [config-path] --plugin [flags]
 
 **Flags:**
 
-| Flag | Type | Default | Description |
-|------|------|---------|-------------|
-| `--plugin` | boolean | false | Verify generated plugin bundles and marketplace files |
-| `--recursive` / `-r` | boolean | false | Find and verify plugin producers recursively |
-| `--if-configured` | boolean | false | Succeed without work when no plugin producer is configured |
-| `--profile` / `-p` | string | configured default | Profile used when the plugin was generated |
-| `--config-dir` / `-n` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
+| Flag                  | Type    | Default            | Description                                                |
+| --------------------- | ------- | ------------------ | ---------------------------------------------------------- |
+| `--plugin`            | boolean | false              | Verify generated plugin bundles and marketplace files      |
+| `--recursive` / `-r`  | boolean | false              | Find and verify plugin producers recursively               |
+| `--if-configured`     | boolean | false              | Succeed without work when no plugin producer is configured |
+| `--profile` / `-p`    | string  | configured default | Profile used when the plugin was generated                 |
+| `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts       |
 
 Verify one producer:
 
@@ -931,11 +931,11 @@ ai-rulez validate [config-path] [flags]
 
 **Flags:**
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--config-dir` | string | Configuration directory name for non-default layouts |
-| `--verbose` | boolean | Enable verbose output |
-| `--debug` | boolean | Enable debug output |
+| Flag           | Type    | Description                                          |
+| -------------- | ------- | ---------------------------------------------------- |
+| `--config-dir` | string  | Configuration directory name for non-default layouts |
+| `--verbose`    | boolean | Enable verbose output                                |
+| `--debug`      | boolean | Enable debug output                                  |
 
 **Examples:**
 
@@ -1037,14 +1037,14 @@ See the [MCP Server Documentation](mcp-server.md) for more details.
 
 These flags work with all commands:
 
-| Flag | Type | Description |
-|------|------|-------------|
-| `--config` / `-C` | string | Config file path (auto-discovered if not specified) |
-| `--token` / `-T` | string | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
-| `--verbose` / `-V` | boolean | Enable verbose output |
-| `--debug` / `-D` | boolean | Enable debug output |
-| `--quiet` / `-q` | boolean | Suppress progress bars and non-essential output |
-| `--help` / `-h` | boolean | Show help for a command |
+| Flag               | Type    | Description                                                                     |
+| ------------------ | ------- | ------------------------------------------------------------------------------- |
+| `--config` / `-C`  | string  | Config file path (auto-discovered if not specified)                             |
+| `--token` / `-T`   | string  | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
+| `--verbose` / `-V` | boolean | Enable verbose output                                                           |
+| `--debug` / `-D`   | boolean | Enable debug output                                                             |
+| `--quiet` / `-q`   | boolean | Suppress progress bars and non-essential output                                 |
+| `--help` / `-h`    | boolean | Show help for a command                                                         |
 
 Most command-local flags also have shorthands. Common mappings are `--domain -d`, `--force -f`,
 `--json -j`, `--priority -p`, `--targets -t`, `--content -c`, `--description -s`, `--path -p`,
@@ -1100,11 +1100,11 @@ ai-rulez generate --config ./ai-policy/config.toml
 
 The CLI uses standard exit codes:
 
-| Code | Meaning |
-|------|---------|
-| 0 | Success |
-| 1 | General error (config not found, validation failed, etc.) |
-| 2 | Command syntax error (invalid flags, arguments) |
+| Code | Meaning                                                   |
+| ---- | --------------------------------------------------------- |
+| 0    | Success                                                   |
+| 1    | General error (config not found, validation failed, etc.) |
+| 2    | Command syntax error (invalid flags, arguments)           |
 
 ## Output Examples
 

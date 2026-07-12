@@ -1,52 +1,44 @@
 {
   "name": "ai-rulez",
-  "version": "4.9.3",
+  "version": "4.9.4",
   "description": "Complete AI development workflow for 19+ tools. Ships with builtin rules, agents, and conventions. Generate native configs for Claude, Cursor, Copilot, Windsurf, Gemini, Codex and more from a single source.",
   "keywords": [
+    "agents",
     "ai",
     "ai-assistant",
+    "ai-development",
     "ai-rules",
+    "assistant-configuration",
+    "automation",
     "claude",
-    "cursor",
-    "copilot",
-    "windsurf",
-    "gemini",
+    "cli",
     "cline",
+    "code-generation",
+    "config",
+    "configuration",
     "continue-dev",
+    "copilot",
+    "cursor",
+    "developer-tools",
+    "development",
+    "gemini",
+    "generator",
+    "git-hooks",
+    "go",
+    "golang",
     "mcp",
     "model-context-protocol",
-    "cli",
-    "configuration",
-    "config",
-    "rules",
-    "generator",
-    "golang",
-    "go",
-    "development",
-    "developer-tools",
-    "automation",
-    "workflow",
-    "productivity",
-    "pre-commit",
-    "git-hooks",
-    "code-generation",
-    "ai-development",
-    "assistant-configuration",
     "monorepo",
+    "pre-commit",
     "presets",
-    "agents"
+    "productivity",
+    "rules",
+    "windsurf",
+    "workflow"
   ],
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/Goldziher/ai-rulez.git"
-  },
   "homepage": "https://goldziher.github.io/ai-rulez/",
   "bugs": {
     "url": "https://github.com/Goldziher/ai-rulez/issues"
-  },
-  "funding": {
-    "type": "github",
-    "url": "https://github.com/sponsors/Goldziher"
   },
   "license": "MIT",
   "author": {
@@ -61,19 +53,23 @@
       "url": "https://github.com/Goldziher"
     }
   ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Goldziher/ai-rulez.git"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/Goldziher"
+  },
   "bin": {
     "ai-rulez": "./ai-rulez.js"
   },
-  "scripts": {},
   "files": [
     "ai-rulez.js",
     "install.js",
     "README.md",
     "bin/ai-rulez-*"
   ],
-  "engines": {
-    "node": ">=14.0.0"
-  },
   "os": [
     "darwin",
     "linux",
@@ -83,5 +79,9 @@
     "x64",
     "arm64",
     "ia32"
-  ]
+  ],
+  "scripts": {},
+  "engines": {
+    "node": ">=14.0.0"
+  }
 }
