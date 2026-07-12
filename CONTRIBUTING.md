@@ -51,7 +51,7 @@ The CLI and the MCP server are treated as thin "presentation layers." They are r
 - **`internal/mcp/handlers`**: This is where the MCP server's tool handlers are defined. A handler's only job is to parse incoming MCP parameters and call the appropriate function from the `internal/crud` package.
 
 !!! success "The Golden Rule of Contributing"
-    When adding a new feature or fixing a bug, the logic should almost always be implemented in the `internal/crud` package first. The CLI command and the MCP handler should then be simple wrappers around that core logic. This ensures consistent behavior across both interfaces.
+When adding a new feature or fixing a bug, the logic should almost always be implemented in the `internal/crud` package first. The CLI command and the MCP handler should then be simple wrappers around that core logic. This ensures consistent behavior across both interfaces.
 
 ---
 
@@ -127,7 +127,7 @@ Releases are fully automated using GitHub Actions and are triggered when a new t
     - **npm Publishing**: The `package.json` version is updated, and the package is published to npm.
 
 !!! danger "Do Not Release Manually"
-    Manual releases are strongly discouraged. The CI pipeline is the single source of truth for versioning. Releasing locally will result in version mismatches (as the `__version__` string will not be updated) and should be avoided.
+Manual releases are strongly discouraged. The CI pipeline is the single source of truth for versioning. Releasing locally will result in version mismatches (as the `__version__` string will not be updated) and should be avoided.
 
 ---
 
@@ -139,9 +139,9 @@ Community contributors can build and publish their own npm packages to private r
 
 The npm package supports an **offline mode**: if platform-specific binaries are present in the `bin/` directory, they will be used directly instead of downloading from GitHub.
 
-| Scenario | `bin/` directory | Behavior |
-|----------|------------------|----------|
-| Public npm | Empty | Downloads from GitHub Releases |
+| Scenario         | `bin/` directory  | Behavior                             |
+| ---------------- | ----------------- | ------------------------------------ |
+| Public npm       | Empty             | Downloads from GitHub Releases       |
 | Private registry | Contains binaries | Uses local binaries, no network call |
 
 ### Build and Publish

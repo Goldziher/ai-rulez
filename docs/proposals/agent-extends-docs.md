@@ -3,7 +3,7 @@
 <!-- DRAFT for inclusion in docs/configuration.md once `extends` ships. -->
 
 Built-in and shared-module agents give you a solid base (`code-reviewer`, `docs-writer`,
-`security-auditor`, `polyglot-architect`, language specialists, ...). When you only need to *add*
+`security-auditor`, `polyglot-architect`, language specialists, ...). When you only need to _add_
 project-specific guidance, don't copy the whole agent — **extend** it.
 
 ## Append a message to a built-in agent
@@ -16,6 +16,7 @@ additional instructions in the body:
 name: code-reviewer
 extends: code-reviewer
 ---
+
 Also enforce, for this repo:
 
 - No `.unwrap()`/`.expect()` in library code.
@@ -34,10 +35,11 @@ Frontmatter fields you set win over the base; fields you omit are inherited:
 ---
 name: docs-writer
 extends: docs-writer
-model: opus          # upgrade just this agent's model
+model: opus # upgrade just this agent's model
 effort: high
 # tools omitted -> inherited from the base docs-writer
 ---
+
 When documenting the public API, include a runnable example in every supported language.
 ```
 

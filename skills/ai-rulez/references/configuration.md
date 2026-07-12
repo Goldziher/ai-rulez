@@ -74,21 +74,21 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 
 ## Built-in Presets
 
-| Preset | Output Path |
-|--------|------------|
-| claude | CLAUDE.md |
-| cursor | .cursor/rules/ |
-| gemini | GEMINI.md |
-| copilot | .github/copilot-instructions.md |
-| continue-dev | .continue/ |
-| windsurf | .windsurfrules |
-| cline | .clinerules |
-| codex | AGENTS.md |
-| amp | AMP.md |
-| junie | .junie/guidelines.md |
-| opencode | OPENCODE.md |
-| hermes | .hermes.md |
-| antigravity | .agents/ |
+| Preset       | Output Path                     |
+| ------------ | ------------------------------- |
+| claude       | CLAUDE.md                       |
+| cursor       | .cursor/rules/                  |
+| gemini       | GEMINI.md                       |
+| copilot      | .github/copilot-instructions.md |
+| continue-dev | .continue/                      |
+| windsurf     | .windsurfrules                  |
+| cline        | .clinerules                     |
+| codex        | AGENTS.md                       |
+| amp          | AMP.md                          |
+| junie        | .junie/guidelines.md            |
+| opencode     | OPENCODE.md                     |
+| hermes       | .hermes.md                      |
+| antigravity  | .agents/                        |
 
 ## Available Builtins
 
@@ -102,16 +102,16 @@ Practice domains: `ai-governance` (auto), `security`, `git-workflow`, `code-qual
 
 ```yaml
 ---
-priority: medium         # critical | high | medium | low
-targets:                 # Limit to specific output targets
+priority: medium # critical | high | medium | low
+targets: # Limit to specific output targets
   - CLAUDE.md
   - .cursor/rules/*
-aliases:                 # Alternative names (commands)
+aliases: # Alternative names (commands)
   - alias1
-usage: "Usage text"      # Command usage info
-shortcut: "Ctrl+K"       # Keyboard shortcut (commands)
-category: "Category"     # Content category
-description: "Desc"      # Description (skills, agents)
+usage: "Usage text" # Command usage info
+shortcut: "Ctrl+K" # Keyboard shortcut (commands)
+category: "Category" # Content category
+description: "Desc" # Description (skills, agents)
 ---
 ```
 
