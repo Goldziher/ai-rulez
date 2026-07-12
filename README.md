@@ -296,7 +296,7 @@ repository needs. This requires AI-Rulez 4.9.0+ and Poly 0.14.0+:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v4.9.0"
+revision = "v4.9.3"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 
