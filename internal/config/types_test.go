@@ -736,3 +736,29 @@ func TestConfig_GetContentForProfile(t *testing.T) {
 		assert.Len(t, content.Domains["backend"].Rules, 1)
 	})
 }
+
+func TestConfigHasPluginAuthoring(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		cfg  config.Config
+		want bool
+	}{
+		{name: "empty"},
+		{name: "consumer plugin", cfg: config.Config{Plugins: []config.PluginConfig{{Name: "example"}}}},
+		{name: "plugin producer", cfg: config.Config{Plugin: &config.PluginAuthoring{}}, want: true},
+		{name: "empty marketplace", cfg: config.Config{Marketplace: &config.MarketplaceAuthoring{}}},
+		{
+			name: "marketplace producer",
+			cfg:  config.Config{Marketplace: &config.MarketplaceAuthoring{Members: []string{"plugins/example"}}},
+			want: true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			assert.Equal(t, test.want, test.cfg.HasPluginAuthoring())
+		})
+	}
+}

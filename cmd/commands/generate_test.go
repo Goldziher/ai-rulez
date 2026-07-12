@@ -26,6 +26,7 @@ func TestGenerateCommand(t *testing.T) {
 	assert.Equal(t, "n", flags.Lookup("config-dir").Shorthand)
 	assert.Equal(t, "e", flags.Lookup("env").Shorthand)
 	assert.Equal(t, "E", flags.Lookup("env-file").Shorthand)
+	assert.NotNil(t, flags.Lookup("if-configured"))
 }
 
 func TestGenerateCommand_ProfileFlag(t *testing.T) {

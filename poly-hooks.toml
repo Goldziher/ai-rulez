@@ -1,0 +1,176 @@
+version = 1
+
+[[hooks]]
+id = "ai-rulez-validate"
+stages = ["pre-commit"]
+args = ["generate", "--dry-run"]
+files = [".ai-rulez/**", "**/.ai-rulez/**"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
+
+[[hooks]]
+id = "ai-rulez-generate"
+stages = ["pre-commit"]
+args = ["generate"]
+files = [".ai-rulez/**", "**/.ai-rulez/**"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
+
+[[hooks]]
+id = "ai-rulez-recursive"
+stages = ["pre-commit"]
+args = ["generate", "--recursive"]
+files = [".ai-rulez/**", "**/.ai-rulez/**"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
+
+[[hooks]]
+id = "ai-rulez-enforce"
+stages = ["pre-commit"]
+args = ["enforce", "--level", "error"]
+files = ["**/*.{js,ts,jsx,tsx,py,go,java,c,cpp,rs,php}"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
+
+[[hooks]]
+id = "ai-rulez-enforce-fix"
+stages = ["pre-commit"]
+args = ["enforce", "--fix", "--level", "error"]
+files = ["**/*.{js,ts,jsx,tsx,py,go,java,c,cpp,rs,php}"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
+
+[[hooks]]
+id = "ai-rulez-plugin-generate"
+stages = ["pre-commit"]
+args = ["generate", "--recursive", "--plugin", "--if-configured"]
+files = [".ai-rulez/**", "**/.ai-rulez/**"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
+
+[[hooks]]
+id = "ai-rulez-plugin-verify"
+stages = ["pre-commit"]
+args = ["verify", "--recursive", "--plugin", "--if-configured"]
+files = [".ai-rulez/**", "**/.ai-rulez/**"]
+workspace = true
+pass_filenames = false
+
+[[hooks.paths]]
+channel = "npx"
+check = "command -v npx"
+run = "npx -y ai-rulez@latest"
+install = "npx -y ai-rulez@latest --version"
+
+[[hooks.paths]]
+channel = "uvx"
+check = "command -v uvx"
+run = "uvx ai-rulez"
+install = "uvx ai-rulez --version"
+
+[[hooks.paths]]
+channel = "system"
+check = "command -v ai-rulez"
+run = "ai-rulez"
