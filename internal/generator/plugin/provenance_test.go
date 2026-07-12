@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -43,4 +44,27 @@ func TestAddProvenanceIsDeterministic(t *testing.T) {
 	second, err := AddProvenance(outputs, baseDir)
 	require.NoError(t, err)
 	assert.Equal(t, first, second)
+}
+
+func TestVerifyProvenanceDetectsModifiedOutput(t *testing.T) {
+	baseDir := t.TempDir()
+	outputs := []config.OutputFile{{Path: baseDir + "/index.py", RawContent: []byte("def register(ctx):\n    pass\n")}}
+	generated, err := AddProvenance(outputs, baseDir)
+	require.NoError(t, err)
+	for _, output := range generated {
+		require.NoError(t, os.WriteFile(output.Path, output.RawContent, 0o644))
+	}
+	require.NoError(t, VerifyProvenance(baseDir))
+	require.NoError(t, os.WriteFile(outputs[0].Path, []byte("modified\n"), 0o644))
+	assert.Error(t, VerifyProvenance(baseDir))
+}
+
+func TestMarkdownProvenancePreservesFrontmatterWhitespace(t *testing.T) {
+	for _, blankLines := range []string{"", "\n", "\n\n\n"} {
+		body := []byte("---\nname: example\n---\n" + blankLines + "# Example\n")
+		header := provenanceHeader("SKILL.md", hashBytes(body), "blake3:source")
+		decorated := insertProvenanceHeader(body, "SKILL.md", header)
+		restored := removeProvenanceHeader(decorated, "SKILL.md", hashBytes(body), "blake3:source")
+		assert.Equal(t, body, restored, "blank lines after frontmatter must round-trip")
+	}
 }
