@@ -108,7 +108,7 @@ func isUnsafeProjectPath(value string) bool {
 	cleaned := path.Clean(normalized)
 	driveLetter := len(normalized) >= 1 && ((normalized[0] >= 'a' && normalized[0] <= 'z') ||
 		(normalized[0] >= 'A' && normalized[0] <= 'Z'))
-	windowsDrive := driveLetter && len(normalized) >= 3 && normalized[1] == ':' && normalized[2] == '/'
+	windowsDrive := driveLetter && len(normalized) >= 2 && normalized[1] == ':'
 	return path.IsAbs(normalized) || windowsDrive || strings.HasPrefix(normalized, "//") ||
 		cleaned == ".." || strings.HasPrefix(cleaned, "../")
 }

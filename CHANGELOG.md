@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Reject Windows drive-relative plugin paths such as `C:outside` on every host platform.
+
+### Changed
+
+- Pin Poly catalog npx and uvx execution paths to the catalog release for reproducible hook runs.
+
 ## [4.9.2] - 2026-07-12
 
 ### Fixed
