@@ -98,6 +98,7 @@ presets = [
   "amp",          # → AMP.md and .amp/
   "junie",        # → .junie/
   "opencode",     # → OPENCODE.md and .opencode/
+  "hermes",       # → .hermes.md
   "antigravity"   # → .agents/
 ]
 ```

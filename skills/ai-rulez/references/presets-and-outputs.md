@@ -27,6 +27,7 @@ presets = [
   "amp",          # → AMP.md
   "junie",        # → .junie/guidelines.md
   "opencode",     # → OPENCODE.md
+  "hermes",      # → .hermes.md
   "antigravity"   # → .agents/
 ]
 ```
@@ -43,7 +44,7 @@ When `defaults.effort` or `defaults.effort_by_preset` is set, presets with nativ
 | `windsurf` | `.windsurf/agents/<id>.md` | `reasoning_effort` | per-agent |
 | `opencode` | `.opencode/agents/<id>.md` | `reasoningEffort` | per-agent |
 
-Resolution order: per-agent metadata → `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit. Each preset maps the canonical tier to its own vocabulary (e.g. Codex caps at `xhigh`/drops `inherit`; Amp uses `max` instead of `xhigh`). Other presets (cursor, copilot, gemini, junie, antigravity, cline, continue-dev) silently skip — those tools expose effort via UI toggles or user-managed config files we don't generate.
+Resolution order: per-agent metadata → `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit. Each preset maps the canonical tier to its own vocabulary (e.g. Codex caps at `xhigh`/drops `inherit`; Amp uses `max` instead of `xhigh`). Other presets (cursor, copilot, gemini, junie, hermes, antigravity, cline, continue-dev) silently skip — those tools expose effort via UI toggles or user-managed config files we don't generate.
 
 ## Custom Presets
 
