@@ -394,11 +394,15 @@
         "logo": { "type": "string" },
         "keywords": { "type": "array", "items": { "type": "string" } },
         "tags": { "type": "array", "items": { "type": "string" } },
+        "content_root": {
+          "type": "string",
+          "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/"
+        },
         "runtimes": {
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory"]
+            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes"]
           }
         },
         "mcp": {
@@ -486,6 +490,17 @@
           "properties": {
             "skill_instructions": { "type": "string" },
             "session_start_skill": { "type": "string" }
+          },
+          "additionalProperties": false
+        },
+        "hermes": {
+          "type": "object",
+          "properties": {
+            "source": { "type": "string", "description": "Project-relative Python module implementing register(ctx)" },
+            "requires_python": {
+              "type": "string",
+              "description": "Python requirement for the generated Hermes wheel (default: >=3.11)"
+            }
           },
           "additionalProperties": false
         }

@@ -60,6 +60,22 @@ func (c *Config) validatePluginAuthoring() error {
 			Hint("Add a 'description' to the [plugin] block").
 			Errorf("plugin %q requires field 'description'", p.Name)
 	}
+	if p.ContentRoot != "" {
+		cleanRoot := filepath.Clean(p.ContentRoot)
+		if filepath.IsAbs(p.ContentRoot) || cleanRoot == ".." || strings.HasPrefix(cleanRoot, ".."+string(filepath.Separator)) {
+			return oops.With("field", "plugin.content_root").With("value", p.ContentRoot).
+				Hint("Use a project-relative directory that does not contain '..'").
+				Errorf("plugin %q has an unsafe content root", p.Name)
+		}
+	}
+	if p.Hermes != nil && p.Hermes.Source != "" {
+		cleanSource := filepath.Clean(p.Hermes.Source)
+		if filepath.IsAbs(p.Hermes.Source) || cleanSource == ".." || strings.HasPrefix(cleanSource, ".."+string(filepath.Separator)) {
+			return oops.With("field", "plugin.hermes.source").With("value", p.Hermes.Source).
+				Hint("Use a project-relative Python file that does not contain '..'").
+				Errorf("plugin %q has an unsafe Hermes source", p.Name)
+		}
+	}
 	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
 		if err := validateCodexPluginMetadata(p); err != nil {
 			return err
@@ -72,7 +88,7 @@ func (c *Config) validatePluginAuthoring() error {
 			return oops.
 				With("field", "plugin.runtimes").
 				With("value", r).
-				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory").
+				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes").
 				Errorf("plugin %q lists unknown runtime %q", p.Name, r)
 		}
 		if seen[r] {

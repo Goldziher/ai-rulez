@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- Generate Hermes Agent project plugins and PyPI entry-point packages, including configurable adapter and payload sources.
+- Verify generated plugin freshness and provenance with `ai-rulez verify --plugin`.
+
 ## [4.7.0] - 2026-07-11
 
 ### Added

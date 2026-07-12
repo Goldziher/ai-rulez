@@ -2,7 +2,7 @@ package config
 
 // This file defines the *authoring* (producer) side of plugins: describing a
 // distributable plugin bundle that ai-rulez packages from the project's content
-// tree for the Claude/Cursor/Codex/Gemini/Kimi/OpenCode/Factory runtimes.
+// tree for the Claude/Cursor/Codex/Gemini/Kimi/OpenCode/Factory/Hermes runtimes.
 //
 // It is intentionally distinct from PluginConfig / MarketplaceConfig in
 // types_v4.go, which are the *consumer* side ("install these plugins from a
@@ -17,6 +17,7 @@ const (
 	PluginRuntimeKimi     = "kimi"
 	PluginRuntimeOpenCode = "opencode"
 	PluginRuntimeFactory  = "factory"
+	PluginRuntimeHermes   = "hermes"
 )
 
 // AllPluginRuntimes lists every runtime the authoring generator can emit, in a
@@ -29,6 +30,7 @@ var AllPluginRuntimes = []string{
 	PluginRuntimeKimi,
 	PluginRuntimeOpenCode,
 	PluginRuntimeFactory,
+	PluginRuntimeHermes,
 }
 
 // Author identifies a person or organization in plugin/marketplace metadata.
@@ -56,6 +58,9 @@ type PluginAuthoring struct {
 	Logo        string   `yaml:"logo,omitempty" json:"logo,omitempty" toml:"logo,omitempty"`
 	Keywords    []string `yaml:"keywords,omitempty" json:"keywords,omitempty" toml:"keywords,omitempty"`
 	Tags        []string `yaml:"tags,omitempty" json:"tags,omitempty" toml:"tags,omitempty"`
+	// ContentRoot optionally points at a project-relative directory containing
+	// plugin-only skills/, commands/, and agents/. Empty uses governance content.
+	ContentRoot string `yaml:"content_root,omitempty" json:"content_root,omitempty" toml:"content_root,omitempty"` //nolint:tagliatelle
 
 	// Runtimes restricts which runtime manifests are emitted. Empty means all
 	// of AllPluginRuntimes.
@@ -84,6 +89,9 @@ type PluginAuthoring struct {
 
 	// Kimi holds Kimi-plugin-specific fields.
 	Kimi *KimiExtras `yaml:"kimi,omitempty" json:"kimi,omitempty" toml:"kimi,omitempty"`
+
+	// Hermes holds Hermes-Agent-specific packaging fields.
+	Hermes *HermesExtras `yaml:"hermes,omitempty" json:"hermes,omitempty" toml:"hermes,omitempty"`
 }
 
 // PluginMCPLaunch is a bundled MCP server launch declaration for a plugin. For
@@ -146,6 +154,16 @@ type GeminiExtras struct {
 type KimiExtras struct {
 	SkillInstructions string `yaml:"skill_instructions,omitempty" json:"skill_instructions,omitempty" toml:"skill_instructions,omitempty"`    //nolint:tagliatelle
 	SessionStartSkill string `yaml:"session_start_skill,omitempty" json:"session_start_skill,omitempty" toml:"session_start_skill,omitempty"` //nolint:tagliatelle
+}
+
+// HermesExtras holds Hermes-Agent-specific packaging fields.
+type HermesExtras struct {
+	// Source is a project-relative Python module implementing register(ctx).
+	// Empty defaults to .ai-rulez/hermes/index.py.
+	Source string `yaml:"source,omitempty" json:"source,omitempty" toml:"source,omitempty"`
+	// RequiresPython is the Python requirement for the generated wheel.
+	// Empty defaults to >=3.11.
+	RequiresPython string `yaml:"requires_python,omitempty" json:"requires_python,omitempty" toml:"requires_python,omitempty"` //nolint:tagliatelle
 }
 
 // MarketplaceAuthoring describes the marketplace index emitted for a plugin (or
