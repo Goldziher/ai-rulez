@@ -94,6 +94,41 @@ func (g *Generator) GeneratePlugin(profile string) error {
 	return nil
 }
 
+// VerifyPlugin verifies the generated plugin bundles against their provenance
+// sidecars without regenerating or modifying files.
+func (g *Generator) VerifyPlugin(profile string) error {
+	expected, err := g.collectPluginOutputs(profile)
+	if err != nil {
+		return oops.Wrapf(err, "render expected plugin outputs")
+	}
+	for _, output := range expected {
+		if output.IsDir {
+			continue
+		}
+		actual, readErr := os.ReadFile(output.Path)
+		if readErr != nil {
+			return oops.With("path", output.Path).Wrapf(readErr, "read generated plugin output")
+		}
+		expectedBytes := output.RawContent
+		if expectedBytes == nil {
+			expectedBytes = []byte(output.Content)
+		}
+		if !bytes.Equal(actual, expectedBytes) {
+			return oops.With("path", output.Path).
+				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
+				Errorf("generated plugin output is stale")
+		}
+	}
+	if marketplace := g.config.Marketplace; marketplace != nil && len(marketplace.Members) > 0 {
+		for _, member := range marketplace.Members {
+			if err := plugin.VerifyProvenance(filepath.Join(g.config.BaseDir, member)); err != nil {
+				return oops.With("member", member).Wrapf(err, "verify member plugin bundle")
+			}
+		}
+	}
+	return plugin.VerifyProvenance(g.config.BaseDir)
+}
+
 // DryRunPlugin returns the plugin generation plan without writing files.
 func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	outputs, err := g.collectPluginOutputs(profile)
@@ -141,6 +176,12 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	contentTree, err := g.getContentForProfile(activeProfile)
 	if err != nil {
 		return nil, err
+	}
+	if g.config.Plugin.ContentRoot != "" {
+		contentTree, err = config.ScanContentTree(filepath.Join(g.config.BaseDir, g.config.Plugin.ContentRoot))
+		if err != nil {
+			return nil, oops.With("content_root", g.config.Plugin.ContentRoot).Wrapf(err, "scan plugin content")
+		}
 	}
 
 	mcpServers := g.collectMCPServersForContent(contentTree)

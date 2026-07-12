@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"encoding/json"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -29,11 +30,14 @@ func Generate(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		return nil, err
 	}
 
-	marketOutputs, err := renderMarketplace(m, baseDir)
-	if err != nil {
-		return nil, oops.Wrapf(err, "render marketplace")
+	if slices.Contains(m.Runtimes, config.PluginRuntimeClaude) {
+		marketOutputs, err := renderMarketplace(m, baseDir)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render marketplace")
+		}
+		outputs = append(outputs, marketOutputs...)
 	}
-	return AddProvenance(append(outputs, marketOutputs...), baseDir)
+	return AddProvenance(outputs, baseDir)
 }
 
 // GenerateMember renders a monorepo member's runtime bundles rooted at baseDir
