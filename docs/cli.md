@@ -777,6 +777,7 @@ ai-rulez generate [config-path] [flags]
 | `--no-configure-cli-mcp` / `-M` | boolean | false | Skip configuring CLI-based MCP tools such as Claude and Gemini |
 | `--skip-cli-mcp` / `-S` | boolean | false | Alias for `--no-configure-cli-mcp` |
 | `--plugin` | boolean | false | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
+| `--if-configured` | boolean | false | With `--plugin`, skip successfully when plugin authoring is not configured |
 | `--token` / `-T` | string | (from env) | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var) |
 
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
@@ -872,6 +873,45 @@ ai-rulez generate --profile backend
 # Uses "frontend" profile only
 ai-rulez generate --profile frontend
 ```
+
+## Verify Command
+
+### `ai-rulez verify [config-path]`
+
+Verify generated plugin outputs and provenance hashes without modifying files.
+
+**Syntax:**
+
+```bash
+ai-rulez verify [config-path] --plugin [flags]
+```
+
+**Flags:**
+
+| Flag | Type | Default | Description |
+|------|------|---------|-------------|
+| `--plugin` | boolean | false | Verify generated plugin bundles and marketplace files |
+| `--recursive` / `-r` | boolean | false | Find and verify plugin producers recursively |
+| `--if-configured` | boolean | false | Succeed without work when no plugin producer is configured |
+| `--profile` / `-p` | string | configured default | Profile used when the plugin was generated |
+| `--config-dir` / `-n` | string | `.ai-rulez` | Configuration directory name for non-default layouts |
+
+Verify one producer:
+
+```bash
+ai-rulez verify --plugin
+```
+
+Verify every plugin producer and marketplace in a repository:
+
+```bash
+ai-rulez verify --recursive --plugin --if-configured
+```
+
+Recursive verification treats a marketplace root and its members as one atomic
+producer. Consumer-only plugin installation declarations are skipped. Missing
+authoring configuration is ignored only with `--if-configured`; stale, missing,
+or invalid generated outputs still fail verification.
 
 ## Validation Command
 

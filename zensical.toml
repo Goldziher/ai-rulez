@@ -18,6 +18,7 @@ nav = [
         { "Includes" = "includes.md" },
         { "Installed Skills" = "installed-skills.md" },
         { "Authoring Plugins" = "plugins.md" },
+        { "Poly Hooks" = "poly-hooks.md" },
         { "Monorepo" = "monorepo.md" },
         { "Examples" = "examples.md" },
     ] },
