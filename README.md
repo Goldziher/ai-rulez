@@ -274,13 +274,47 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.8.0
+    rev: v4.9.0
     hooks:
       - id: ai-rulez-recursive   # generate outputs across the repo
       - id: ai-rulez-validate    # dry-run validation
 ```
 
-Available hook ids: `ai-rulez-validate`, `ai-rulez-generate`, `ai-rulez-recursive`, `ai-rulez-enforce`, `ai-rulez-enforce-fix`. Triggers on changes under `.ai-rulez/`.
+Available hook ids: `ai-rulez-validate`, `ai-rulez-generate`,
+`ai-rulez-recursive`, `ai-rulez-plugin-generate`,
+`ai-rulez-plugin-verify`, `ai-rulez-enforce`, and
+`ai-rulez-enforce-fix`. They trigger on root or nested `.ai-rulez/` changes.
+</details>
+
+<details>
+<summary><strong>poly hook source</strong></summary>
+
+Add ai-rulez as a managed source in your existing `poly.toml` and select the hooks your
+repository needs. This requires AI-Rulez 4.9.0+ and Poly 0.14.0+:
+
+```toml
+[[hooks.sources]]
+id = "ai-rulez"
+git = "https://github.com/Goldziher/ai-rulez.git"
+revision = "v4.9.0"
+hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
+```
+
+The source also provides `ai-rulez-validate`, `ai-rulez-generate`,
+`ai-rulez-enforce`, `ai-rulez-enforce-fix`, and `ai-rulez-plugin-generate`.
+Plugin hooks use `--if-configured`, so they skip consumer-only repositories that
+do not contain a producer `[plugin]` or multi-member `[marketplace]` block.
+
+Resolve and commit the source lock, then install the Git shims:
+
+```bash
+poly hooks update
+git add poly.toml poly-hooks.lock
+poly hooks install
+```
+
+See the [Poly hooks guide](docs/poly-hooks.md) for local sources, machine install
+preferences, hook behavior, and the producer catalog.
 </details>
 
 <details>

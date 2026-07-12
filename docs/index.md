@@ -56,6 +56,7 @@ frontend = ["frontend", "qa"]
 - **[CLI Reference](cli.md)**: All commands and flags
 - **[Includes System](includes.md)**: Reusing configurations across projects
 - **[Installed Skills](installed-skills.md)**: Installing skills from external repositories
+- **[Poly Hooks](poly-hooks.md)**: Validate generated rules and plugins in Git hooks
 - **[Domains & Profiles](domains.md)**: Organizing by team or subsystem
 - **[Custom Presets](profiles.md)**: Creating custom output formats
 
