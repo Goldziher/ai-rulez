@@ -79,7 +79,8 @@ it does not guess tool schemas, subprocess arguments, or business logic.
 ### Hermes adapter
 
 Put Hermes-specific registrations in `.ai-rulez/hermes/index.py`. The generator
-copies it to `.hermes/plugins/<plugin-name>/__init__.py`, writes `plugin.yaml`, and
+copies it to `.hermes/plugins/<plugin-name>/hermes.py`, writes a compatible
+`__init__.py` plus `plugin.yaml`, and
 bundles the plugin's skills, commands, and agents. The same adapter and content are
 packaged under `.hermes/package/src/<name>_hermes_plugin/`; its generated
 `pyproject.toml` publishes as `<name>-hermes-plugin`. If the source is absent, it emits

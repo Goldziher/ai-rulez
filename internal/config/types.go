@@ -311,6 +311,7 @@ var builtInPresets = map[string]bool{
 	string(PresetCodex):       true,
 	string(PresetAmp):         true,
 	string(PresetJunie):       true,
+	string(PresetHermes):      true,
 	"opencode":                true,
 	string(PresetAntigravity): true,
 	"mcp":                     true,
