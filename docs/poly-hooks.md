@@ -112,13 +112,13 @@ pass_filenames = false
 channel = "npx"
 check = "command -v npx"
 run = "npx -y ai-rulez@latest"
-install = "npx -y ai-rulez@latest --version"
+install = "npx -y ai-rulez@latest version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
 run = "uvx ai-rulez"
-install = "uvx ai-rulez --version"
+install = "uvx ai-rulez version"
 
 [[hooks.paths]]
 channel = "system"
