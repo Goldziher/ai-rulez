@@ -3,7 +3,7 @@ module github.com/Goldziher/ai-rulez
 go 1.26.4
 
 require (
-	github.com/dgraph-io/ristretto/v2 v2.4.0
+	github.com/dgraph-io/ristretto/v2 v2.4.2
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/kaptinlin/jsonschema v0.9.2
 	github.com/modelcontextprotocol/go-sdk v1.6.1
