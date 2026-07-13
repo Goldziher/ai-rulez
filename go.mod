@@ -14,7 +14,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
 	github.com/teekennedy/goldmark-markdown v0.5.1
-	github.com/yuin/goldmark v1.8.2
+	github.com/yuin/goldmark v1.8.4
 	github.com/zeebo/blake3 v0.2.4
 	golang.org/x/text v0.38.0
 	gopkg.in/yaml.v3 v3.0.1
