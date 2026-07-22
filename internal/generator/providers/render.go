@@ -29,6 +29,16 @@ func (g *Generator) GetName() string {
 	return g.Spec.Name
 }
 
+// LocalRootFile implements config.LocalRootProvider. It returns the ".local"
+// variant of the spec's root file (CLAUDE.md → CLAUDE.local.md), or "" when the
+// spec has no single-file markdown root.
+func (g *Generator) LocalRootFile() string {
+	if g.Spec.Root == nil || g.Spec.Root.File == "" {
+		return ""
+	}
+	return config.LocalVariantPath(g.Spec.Root.File)
+}
+
 // GetOutputPaths implements config.PresetGenerator. Returns root file (if any)
 // plus the always-emitted directories declared in the spec.
 func (g *Generator) GetOutputPaths(baseDir string) []string {
@@ -217,9 +227,9 @@ func (g *Generator) renderItemBody(spec *OutputSpec, item config.ContentFile, co
 		case SectionBodyResourceIndex:
 			b.WriteString(presets.RenderSkillResourcesIndex(&item))
 		case SectionBodyTargetedRules:
-			writeTargetedSection(&b, "Rules", presets.FilterContentByExplicitTargetsExported(content.Rules, outputPath, cfg.BaseDir), true)
+			writeTargetedSection(&b, "Rules", presets.FilterContentByExplicitTargetsExported(content.Rules, outputPath, cfg.BaseDir), true, cfg.IsCompact())
 		case SectionBodyTargetedContext:
-			writeTargetedSection(&b, "Context", presets.FilterContentByExplicitTargetsExported(content.Context, outputPath, cfg.BaseDir), false)
+			writeTargetedSection(&b, "Context", presets.FilterContentByExplicitTargetsExported(content.Context, outputPath, cfg.BaseDir), false, cfg.IsCompact())
 		}
 	}
 	return b.String(), nil
@@ -227,8 +237,10 @@ func (g *Generator) renderItemBody(spec *OutputSpec, item config.ContentFile, co
 
 // writeTargetedSection writes a "## <Heading>" section listing the included
 // content files. includePriority controls whether the "**Priority:**" line is
-// emitted under each entry (matches the existing claude-skill formatting).
-func writeTargetedSection(b *strings.Builder, heading string, items []config.ContentFile, includePriority bool) {
+// emitted under each entry (matches the existing claude-skill formatting). When
+// compact is true the priority line is suppressed regardless of includePriority,
+// mirroring the inline-rules compact behavior.
+func writeTargetedSection(b *strings.Builder, heading string, items []config.ContentFile, includePriority, compact bool) {
 	if len(items) == 0 {
 		return
 	}
@@ -246,7 +258,7 @@ func writeTargetedSection(b *strings.Builder, heading string, items []config.Con
 		b.WriteString("### ")
 		b.WriteString(item.Name)
 		b.WriteString("\n")
-		if includePriority && item.Metadata != nil && item.Metadata.Priority != "" {
+		if includePriority && !compact && item.Metadata != nil && item.Metadata.Priority != "" {
 			b.WriteString("**Priority:** ")
 			b.WriteString(item.Metadata.Priority)
 			b.WriteString("\n\n")
@@ -410,7 +422,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		case SectionRootRulesInline:
 			writeInlineRules(&b, content, cfg.IsCompact())
 		case SectionRootContextInline:
-			writeInlineContext(&b, content)
+			writeInlineContext(&b, content, cfg.IsCompact())
 		case SectionRootAgentsDelegation:
 			allAgents := presets.AllAgents(content)
 			presets.RenderAgentsSectionExported(&b, content, allAgents)
@@ -458,8 +470,10 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact b
 }
 
 // writeInlineContext mirrors the "## Context" block produced by the legacy
-// renderClaudeMarkdown, including the per-entry "summary" extras handling.
-func writeInlineContext(b *strings.Builder, content *config.ContentTree) {
+// renderClaudeMarkdown, including the per-entry "summary" extras handling. When
+// compact is true the per-entry summary line is suppressed, mirroring the
+// compact suppression of the inline-rules priority line.
+func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact bool) {
 	allContext := presets.AllInlineContext(content)
 	if len(allContext) == 0 {
 		return
@@ -469,7 +483,7 @@ func writeInlineContext(b *strings.Builder, content *config.ContentTree) {
 		b.WriteString("### ")
 		b.WriteString(ctx.Name)
 		b.WriteString("\n\n")
-		if ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
+		if !compact && ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
 			b.WriteString(ctx.Metadata.Extra["summary"])
 			b.WriteString("\n\n")
 		}

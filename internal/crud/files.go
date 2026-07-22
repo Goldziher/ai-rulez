@@ -194,6 +194,13 @@ func (fm *FileManager) ListSubdirectories(path string) ([]string, error) {
 	return dirs, nil
 }
 
+// GetLocalFilePath returns the full path for a machine-local override content
+// file under .ai-rulez/local/{rules,context}/<name>.md. Local content is
+// gitignored and never merged into committed output.
+func (fm *FileManager) GetLocalFilePath(ftype, name string) string {
+	return filepath.Join(fm.aiRulezDir, "local", ftype, name+".md")
+}
+
 // GetDomainPath returns the path for a domain directory
 func (fm *FileManager) GetDomainPath(domainName string) string {
 	return filepath.Join(fm.aiRulezDir, "domains", domainName)

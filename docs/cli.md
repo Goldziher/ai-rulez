@@ -149,6 +149,7 @@ ai-rulez add rule <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root rules directory
+- `--local` (optional): Write a machine-local override under `.ai-rulez/local/rules/` instead of the shared tree. The output is gitignored and never committed. Mutually exclusive with `--domain` (combining them errors). See [Local Overrides](local-overrides.md).
 - `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low. Default: medium
 - `--targets <list>` / `-t` (optional): Comma-separated list of target providers (claude, cursor, etc.)
 - `--content <text>` / `-c` (optional): Rule content. Uses a template if omitted.
@@ -165,6 +166,12 @@ Create a domain-specific rule:
 
 ```bash
 ai-rulez add rule database-standards --domain backend --priority high
+```
+
+Create a machine-local override rule (gitignored, personal to this checkout):
+
+```bash
+ai-rulez add rule my-scratch-notes --local
 ```
 
 Create with specific targets:
@@ -190,6 +197,7 @@ ai-rulez add context <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root context directory
+- `--local` (optional): Write a machine-local override under `.ai-rulez/local/context/` instead of the shared tree. The output is gitignored and never committed. Mutually exclusive with `--domain` (combining them errors). See [Local Overrides](local-overrides.md).
 - `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low. Default: medium
 - `--content <text>` / `-c` (optional): Context content. Uses a template if omitted.
 
@@ -205,6 +213,12 @@ Create domain context:
 
 ```bash
 ai-rulez add context database-design --domain backend
+```
+
+Create a machine-local override context (gitignored, personal to this checkout):
+
+```bash
+ai-rulez add context local-env-notes --local
 ```
 
 #### `ai-rulez add skill <name> [flags]`

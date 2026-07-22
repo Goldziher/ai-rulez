@@ -43,6 +43,11 @@ func (g *GeminiPresetGenerator) GetName() string {
 	return presetNameGemini
 }
 
+// LocalRootFile implements config.LocalRootProvider: GEMINI.md → GEMINI.local.md.
+func (g *GeminiPresetGenerator) LocalRootFile() string {
+	return config.LocalVariantPath("GEMINI.md")
+}
+
 func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, ".gemini"),

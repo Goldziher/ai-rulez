@@ -33,11 +33,17 @@ type Config struct {
 	Marketplace *MarketplaceAuthoring `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
 
 	// Runtime fields (populated during load)
-	BaseDir       string                `yaml:"-" json:"-" toml:"-"`
-	ConfigDir     string                `yaml:"-" json:"-" toml:"-"`
-	ConfigDirName string                `yaml:"-" json:"-" toml:"-"`
-	ConfigFile    string                `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
-	Content       *ContentTree          `yaml:"-" json:"-" toml:"-"`
+	BaseDir       string       `yaml:"-" json:"-" toml:"-"`
+	ConfigDir     string       `yaml:"-" json:"-" toml:"-"`
+	ConfigDirName string       `yaml:"-" json:"-" toml:"-"`
+	ConfigFile    string       `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
+	Content       *ContentTree `yaml:"-" json:"-" toml:"-"`
+	// LocalContent holds machine-local override content scanned from
+	// .ai-rulez/local/ (rules + context only). It is kept strictly separate
+	// from Content so it never lands in committed output; it is emitted only to
+	// the per-preset ".local" root variants (CLAUDE.local.md, AGENTS.local.md,
+	// ...) and is always gitignored.
+	LocalContent  *ContentTree          `yaml:"-" json:"-" toml:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 
@@ -72,15 +78,18 @@ type ScopeConfig struct {
 	Presets []string `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
 }
 
+// headerStyleMinimal is the default header style for generated files.
+const headerStyleMinimal = "minimal"
+
 // HeaderConfig represents header style configuration for generated files
 type HeaderConfig struct {
 	Style string `yaml:"style,omitempty" json:"style,omitempty" toml:"style,omitempty"` // "detailed", "compact", or "minimal"
 }
 
-// GetHeaderStyle returns the header style, defaulting to "detailed"
+// GetHeaderStyle returns the header style, defaulting to "minimal"
 func (h *HeaderConfig) GetHeaderStyle() string {
 	if h == nil || h.Style == "" {
-		return "detailed"
+		return headerStyleMinimal
 	}
 	return h.Style
 }
@@ -520,10 +529,11 @@ func (c *Config) IsCompact() bool {
 	return c != nil && c.Compact != nil && *c.Compact
 }
 
-// GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal")
+// GetHeaderStyle returns the configured header style ("detailed", "compact", or "minimal").
+// Defaults to "minimal" when no header style is configured.
 func (c *Config) GetHeaderStyle() string {
 	if c.Header == nil {
-		return "detailed"
+		return headerStyleMinimal
 	}
 	return c.Header.GetHeaderStyle()
 }
@@ -569,6 +579,24 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 }
 
 // Helper methods for ContentTree
+
+// IsEmpty reports whether the tree carries no content of any kind.
+func (t *ContentTree) IsEmpty() bool {
+	if t == nil {
+		return true
+	}
+	if len(t.Rules) > 0 || len(t.Context) > 0 || len(t.Skills) > 0 ||
+		len(t.Agents) > 0 || len(t.Commands) > 0 {
+		return false
+	}
+	for _, domain := range t.Domains {
+		if domain != nil && (len(domain.Rules) > 0 || len(domain.Context) > 0 ||
+			len(domain.Skills) > 0 || len(domain.Agents) > 0 || len(domain.Commands) > 0) {
+			return false
+		}
+	}
+	return true
+}
 
 // GetAllContentFiles returns all content files from the tree
 func (t *ContentTree) GetAllContentFiles() []ContentFile {

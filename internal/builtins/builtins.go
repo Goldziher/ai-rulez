@@ -40,6 +40,7 @@ const (
 
 	contentTypeRules  = "rules"
 	contentTypeAgents = "agents"
+	contentTypeSkills = "skills"
 )
 
 // BuiltinDomain describes an available builtin domain
@@ -245,7 +246,7 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 
 	var entries []ContentEntry
 
-	contentTypes := []string{contentTypeRules, "context", "skills", contentTypeAgents, "commands"}
+	contentTypes := []string{contentTypeRules, "context", contentTypeSkills, contentTypeAgents, "commands"}
 	for _, contentType := range contentTypes {
 		// Use path.Join (forward slashes) so embed.FS can find files on all platforms.
 		dirPath := path.Join(basePath, contentType)
@@ -255,37 +256,90 @@ func LoadDomainContent(name string) ([]ContentEntry, error) {
 			continue
 		}
 
-		for _, entry := range dirEntries {
-			if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
-				continue
-			}
-
-			filePath := path.Join(dirPath, entry.Name())
-			data, err := content.ReadFile(filePath)
-			if err != nil {
-				continue
-			}
-
-			// All builtin content files use .md extension; trim it directly.
-			entryName := strings.TrimSuffix(entry.Name(), ".md")
-			rawContent := string(data)
-
-			// Parse frontmatter for priority
-			var priority string
-			meta, _ := parser.ParseFrontmatterNonFatal(rawContent)
-			if meta != nil && meta.Priority != "" {
-				priority = meta.Priority
-			}
-
-			entries = append(entries, ContentEntry{
-				Name:     entryName,
-				Path:     filePath,
-				Content:  rawContent,
-				Type:     contentType,
-				Priority: priority,
-			})
+		if contentType == contentTypeSkills {
+			entries = append(entries, loadBuiltinSkillEntries(dirPath, dirEntries)...)
+			continue
 		}
+
+		entries = append(entries, loadBuiltinFlatEntries(dirPath, contentType, dirEntries)...)
 	}
 
 	return entries, nil
+}
+
+// loadBuiltinSkillEntries walks skills/{id}/SKILL.md subdirectories under dirPath over
+// the embedded FS, mirroring scanSkills in internal/config/loader.go.
+//
+// Known limitation: only SKILL.md is loaded. Unlike on-disk scanSkills (which calls
+// LoadSkillResources), builtin skill supporting resources (references/, scripts/,
+// assets/) are NOT loaded from the embedded FS; builtin skills are expected to be
+// self-contained in SKILL.md.
+func loadBuiltinSkillEntries(dirPath string, dirEntries []fs.DirEntry) []ContentEntry {
+	var entries []ContentEntry
+	for _, entry := range dirEntries {
+		if !entry.IsDir() {
+			continue
+		}
+
+		skillID := entry.Name()
+		filePath := path.Join(dirPath, skillID, "SKILL.md")
+		data, err := content.ReadFile(filePath)
+		if err != nil {
+			// No SKILL.md in this subdir — skip.
+			continue
+		}
+
+		rawContent := string(data)
+
+		// Parse frontmatter for priority (parity with the flat scan).
+		var priority string
+		if meta, _ := parser.ParseFrontmatterNonFatal(rawContent); meta != nil {
+			priority = meta.Priority
+		}
+
+		entries = append(entries, ContentEntry{
+			Name:     skillID,
+			Path:     filePath,
+			Content:  rawContent,
+			Type:     contentTypeSkills,
+			Priority: priority,
+		})
+	}
+	return entries
+}
+
+// loadBuiltinFlatEntries reads flat *.md files directly under dirPath, naming each
+// entry by its filename stem.
+func loadBuiltinFlatEntries(dirPath, contentType string, dirEntries []fs.DirEntry) []ContentEntry {
+	var entries []ContentEntry
+	for _, entry := range dirEntries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		filePath := path.Join(dirPath, entry.Name())
+		data, err := content.ReadFile(filePath)
+		if err != nil {
+			continue
+		}
+
+		// All builtin content files use .md extension; trim it directly.
+		entryName := strings.TrimSuffix(entry.Name(), ".md")
+		rawContent := string(data)
+
+		// Parse frontmatter for priority.
+		var priority string
+		if meta, _ := parser.ParseFrontmatterNonFatal(rawContent); meta != nil {
+			priority = meta.Priority
+		}
+
+		entries = append(entries, ContentEntry{
+			Name:     entryName,
+			Path:     filePath,
+			Content:  rawContent,
+			Type:     contentType,
+			Priority: priority,
+		})
+	}
+	return entries
 }

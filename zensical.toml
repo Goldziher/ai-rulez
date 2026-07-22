@@ -9,23 +9,24 @@ edit_uri = "edit/main/docs/"
 copyright = "Copyright &copy; 2025-2026 Na'aman Hirschfeld"
 
 nav = [
-    { "Home" = "index.md" },
-    { "Installation" = "installation.md" },
-    { "Quick Start" = "quick-start.md" },
-    { "Configuration" = "configuration.md" },
-    { "Guides" = [
-        { "Domains & Profiles" = "domains.md" },
-        { "Includes" = "includes.md" },
-        { "Installed Skills" = "installed-skills.md" },
-        { "Authoring Plugins" = "plugins.md" },
-        { "Poly Hooks" = "poly-hooks.md" },
-        { "Monorepo" = "monorepo.md" },
-        { "Examples" = "examples.md" },
-    ] },
-    { "CLI Commands" = "cli.md" },
-    { "MCP Server" = "mcp-server.md" },
-    { "Schema" = "schema.md" },
-    { "Changelog" = "CHANGELOG.md" },
+  { "Home" = "index.md" },
+  { "Installation" = "installation.md" },
+  { "Quick Start" = "quick-start.md" },
+  { "Configuration" = "configuration.md" },
+  { "Guides" = [
+    { "Domains & Profiles" = "domains.md" },
+    { "Includes" = "includes.md" },
+    { "Local Overrides" = "local-overrides.md" },
+    { "Installed Skills" = "installed-skills.md" },
+    { "Authoring Plugins" = "plugins.md" },
+    { "Poly Hooks" = "poly-hooks.md" },
+    { "Monorepo" = "monorepo.md" },
+    { "Examples" = "examples.md" },
+  ] },
+  { "CLI Commands" = "cli.md" },
+  { "MCP Server" = "mcp-server.md" },
+  { "Schema" = "schema.md" },
+  { "Changelog" = "CHANGELOG.md" },
 ]
 
 [project.theme]
