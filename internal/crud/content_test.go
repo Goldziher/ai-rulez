@@ -159,6 +159,77 @@ func TestAddRuleDuplicate(t *testing.T) {
 	assert.Nil(t, result)
 }
 
+// TestUpdateFile tests that UpdateFile overwrites existing rules, context, and
+// skills, and returns ErrFileNotFound when the target does not exist. This is
+// the regression guard for the MCP update_* tools (issue #150), which failed
+// with "file already exists" because the update path used create-only writes.
+func TestUpdateFile(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("updates an existing rule", func(t *testing.T) {
+		baseDir := setupTestProject(t)
+		op, err := crud.NewOperator(baseDir)
+		require.NoError(t, err)
+
+		created, err := op.AddRule(ctx, &crud.AddFileRequest{Name: "ui-and-styling", Content: "# Original"})
+		require.NoError(t, err)
+
+		result, err := op.UpdateFile(ctx, "", "rules", "ui-and-styling", "# Updated body", "high", []string{"claude"})
+		require.NoError(t, err)
+		require.NotNil(t, result)
+		assert.Equal(t, created.FullPath, result.FullPath)
+
+		content, err := os.ReadFile(result.FullPath)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "# Updated body")
+		assert.Contains(t, string(content), "priority: high")
+		assert.NotContains(t, string(content), "# Original")
+	})
+
+	t.Run("updates an existing context file", func(t *testing.T) {
+		baseDir := setupTestProject(t)
+		op, err := crud.NewOperator(baseDir)
+		require.NoError(t, err)
+
+		_, err = op.AddContext(ctx, &crud.AddFileRequest{Name: "architecture", Content: "old"})
+		require.NoError(t, err)
+
+		result, err := op.UpdateFile(ctx, "", "context", "architecture", "new architecture notes", "", nil)
+		require.NoError(t, err)
+
+		content, err := os.ReadFile(result.FullPath)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "new architecture notes")
+	})
+
+	t.Run("updates an existing skill", func(t *testing.T) {
+		baseDir := setupTestProject(t)
+		op, err := crud.NewOperator(baseDir)
+		require.NoError(t, err)
+
+		_, err = op.AddSkill(ctx, &crud.AddFileRequest{Name: "deploy", Content: "---\nname: deploy\n---\n\noriginal"})
+		require.NoError(t, err)
+
+		result, err := op.UpdateFile(ctx, "", "skills", "deploy", "---\nname: deploy\n---\n\nupdated steps", "", nil)
+		require.NoError(t, err)
+		assert.Contains(t, filepath.ToSlash(result.FullPath), "skills/deploy/SKILL.md")
+
+		content, err := os.ReadFile(result.FullPath)
+		require.NoError(t, err)
+		assert.Contains(t, string(content), "updated steps")
+	})
+
+	t.Run("returns ErrFileNotFound for a missing rule", func(t *testing.T) {
+		baseDir := setupTestProject(t)
+		op, err := crud.NewOperator(baseDir)
+		require.NoError(t, err)
+
+		result, err := op.UpdateFile(ctx, "", "rules", "does-not-exist", "content", "", nil)
+		assert.Nil(t, result)
+		require.ErrorIs(t, err, crud.ErrFileNotFound)
+	})
+}
+
 // TestAddContext tests adding context files
 func TestAddContext(t *testing.T) {
 	tests := []struct {
