@@ -50,7 +50,10 @@ func collidingTree() *config.ContentTree {
 func TestClaude_DeduplicatesCollidingRuleName(t *testing.T) {
 	t.Parallel()
 
-	body := claudeMD(t, collidingTree(), &config.Config{Name: "test"})
+	// Use the detailed header so the rendered rule count appears in the banner
+	// (the default minimal header omits the "Content: rules=N" line).
+	cfg := &config.Config{Name: "test", Header: &config.HeaderConfig{Style: "detailed"}}
+	body := claudeMD(t, collidingTree(), cfg)
 
 	assert.Equal(t, 1, strings.Count(body, "### commit-messages\n"), "collided rule must render exactly once")
 	assert.Contains(t, body, "LOCAL WORDING", "root content wins over the builtin")

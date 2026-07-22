@@ -1,0 +1,16 @@
+---
+name: cgo-bindings
+description: cgo conventions for linking Go to a C or Rust static library: import "C" directives, type/string conversion, CString memory management, thread safety, and Go pointer pinning. Load when generating or reviewing cgo bindings that call a C or Rust core from Go.
+---
+
+- Use `import "C"` with `// #cgo LDFLAGS:` and `// #cgo CFLAGS:` directives for linking.
+- Declare C header functions in comment block immediately above `import "C"` — no blank line between.
+- Type mapping: `C.int`, `C.long`, `C.char`. Use `C.CString()` and `C.GoString()` for string conversion.
+- Memory: `C.CString()` allocates — always `defer C.free(unsafe.Pointer(cStr))` immediately after creation.
+- Error handling: return error codes from C functions, convert to Go `error` values. Check all return values.
+- Link Rust static libraries: `// #cgo LDFLAGS: -L./target/release -lmylib`. Build Rust with `crate-type = ["staticlib"]`.
+- Thread safety: C functions called from Go may run on any OS thread. Use `runtime.LockOSThread()` when needed.
+- Go pointer passing: use `runtime.Pinner` (Go 1.21+) to pin Go memory passed to C. Never pass Go pointers without pinning.
+- Test with `go test` (requires `CGO_ENABLED=1`). Mock C layer for unit tests, use integration tests for real FFI.
+- Build: `CGO_ENABLED=1 go build`. Cross-compilation requires appropriate C toolchain.
+- Anti-patterns: leaking `C.CString` memory, passing unpinned Go pointers to C, ignoring C return codes.

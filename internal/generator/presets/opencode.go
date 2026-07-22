@@ -42,6 +42,11 @@ func (g *OpencodePresetGenerator) GetName() string {
 	return opencodePresetName
 }
 
+// LocalRootFile implements config.LocalRootProvider: AGENTS.md → AGENTS.local.md.
+func (g *OpencodePresetGenerator) LocalRootFile() string {
+	return config.LocalVariantPath("AGENTS.md")
+}
+
 func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "AGENTS.md"),

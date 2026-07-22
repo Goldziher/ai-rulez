@@ -12,6 +12,43 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// errLocalWithDomain is returned when --local is combined with --domain. Local
+// override content is machine-specific and therefore cannot belong to a domain.
+var errLocalWithDomain = oops.
+	Hint("Machine-local content lives in .ai-rulez/local/ and cannot belong to a domain. Drop --domain or --local.").
+	Errorf("--local cannot be combined with --domain")
+
+// addLocalFile writes a machine-local override rule/context file under
+// .ai-rulez/local/{ftype}/<name>.md. It mirrors the content-templating and
+// existence checks of AddRule/AddContext but targets the gitignored local tree.
+func (op *OperatorImpl) addLocalFile(ftype string, req *AddFileRequest) (*FileResult, error) {
+	filePath := op.filesMgr.GetLocalFilePath(ftype, req.Name)
+	if op.filesMgr.PathExists(filePath) {
+		return nil, &FileExistsError{Path: filePath, Type: ftype}
+	}
+
+	content := req.Content
+	switch {
+	case content == "" && ftype == ContentTypeContext:
+		content = GenerateContextTemplate(req.Name, req.DefaultPriority(), req.Targets, "")
+	case content == "":
+		content = GenerateRuleTemplate(req.Name, req.DefaultPriority(), req.Targets, "")
+	case !strings.HasPrefix(content, "---"):
+		content = GenerateFrontmatter(req.DefaultPriority(), req.Targets) + content
+	}
+	content = EnsureTrailingNewline(content)
+
+	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+		return nil, err
+	}
+
+	return &FileResult{
+		Name:     req.Name,
+		FullPath: filePath,
+		Type:     ftype,
+	}, nil
+}
+
 // AddRule creates a new rule file in the root or domain rules directory
 // Returns FileResult with the created file information
 func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
@@ -31,6 +68,14 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 
 	if err := ValidatePriority(req.DefaultPriority()); err != nil {
 		return nil, err
+	}
+
+	// Machine-local override: route to .ai-rulez/local/rules/, never a domain.
+	if req.Local {
+		if req.Domain != "" {
+			return nil, errLocalWithDomain
+		}
+		return op.addLocalFile(ContentTypeRules, req)
 	}
 
 	// Validate domain if specified
@@ -102,6 +147,14 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 
 	if err := ValidatePriority(req.DefaultPriority()); err != nil {
 		return nil, err
+	}
+
+	// Machine-local override: route to .ai-rulez/local/context/, never a domain.
+	if req.Local {
+		if req.Domain != "" {
+			return nil, errLocalWithDomain
+		}
+		return op.addLocalFile(ContentTypeContext, req)
 	}
 
 	// Validate domain if specified

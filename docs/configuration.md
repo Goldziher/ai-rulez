@@ -177,6 +177,10 @@ and `.agents/` are added to `.gitignore` to prevent accidental commits. GitHub o
 `ai-rulez` ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
 and `.github/skills/` without ignoring all of `.github/`.
 
+Machine-local override outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`) and their
+`.ai-rulez/local/` source tree are **always** gitignored, even when `gitignore = false`. See
+[Local Overrides](local-overrides.md).
+
 ### `compact`
 
 Controls whether generated inline rule sections omit per-rule `**Priority:**` annotations.
@@ -318,11 +322,11 @@ Run `ai-rulez builtins list` to see all available domains.
 
 **Languages** (per-language conventions):
 
-`rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`
+`rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`, `r`
 
 **Bindings** (FFI binding conventions):
 
-`pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
+`pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
 
 #### What Builtins Provide
 
@@ -356,6 +360,32 @@ Run `ai-rulez builtins list` to see all available domains.
 - Build and distribution workflow
 - Performance considerations (GIL release, scheduler safety, bundle size)
 - Anti-patterns (no panics, no blocking, thin wrapper principle)
+
+#### Builtins as On-Demand Agent Skills
+
+Convention-heavy builtins no longer inline their content into `CLAUDE.md` (and the other always-loaded
+root files). Instead they emit as **Agent Skills** — `.claude/skills/<id>/SKILL.md` files with YAML
+`name:` / `description:` frontmatter — that the assistant loads on demand only when the work is
+relevant. This keeps the always-loaded governance file small while still shipping the full
+conventions.
+
+Builtins that emit as skills:
+
+- **Language** domains: `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`, `r`
+- **Binding** domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
+- **`polyglot-bindings`** conventions
+- **`security`**: the `owasp-quick-reference` and `dependency-awareness` entries
+
+Always-on behavioral directives stay inline in the root files — `code-quality`, `testing`,
+`git-workflow`, `token-efficiency`, `ai-governance`, `secrets-handling`, and the other universal rule
+sets are short, apply everywhere, and are not deferred to skills.
+
+Exclusions still work exactly the same for these now-skill entries. `!domain` drops a whole domain and
+`!domain/name` drops a single rule/skill within it (array form of `builtins` only):
+
+```toml
+builtins = ["rust", "security", "!security/owasp-quick-reference"]
+```
 
 #### Merge Priority
 
@@ -436,36 +466,42 @@ Configures the style of headers in generated files. Headers provide context abou
 
 ```toml
 [header]
-style = "detailed"  # Default: comprehensive header with full documentation
+style = "minimal"   # Default: bare minimum header
 # style = "compact"  # Shorter header with key information
-# style = "minimal"  # Bare minimum header
+# style = "detailed" # Comprehensive header with full documentation
 ```
+
+The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
+warning and the injected `Content-Hash` / `Source-Hash` freshness lines that ai-rulez uses to
+detect whether a generated file (or its sources) changed since the last `generate`. Only the
+amount of explanatory prose differs between styles.
 
 #### Header Styles
 
-**`detailed`** (default)
+**`minimal`** (default)
 
-- Comprehensive explanation of ai-rulez
-- Complete folder organization documentation
-- Full AI agent instructions with MCP server promotion
-- Best for: projects where AI agents need thorough context
-- Size: ~50 lines
+- Only critical information
+- Brief "DO NOT EDIT" warning
+- MCP server reference
+- `Content-Hash` / `Source-Hash` freshness lines
+- Best for: keeping always-loaded files small (the default)
+- Size: ~10 lines
 
 **`compact`**
 
 - Condensed version with essential information
 - Uses symbols (✗/✓) for clarity
 - Brief structure overview
-- Best for: projects where file size matters
+- Best for: projects that want a short structure overview
 - Size: ~20 lines
 
-**`minimal`**
+**`detailed`**
 
-- Only critical information
-- Brief "DO NOT EDIT" warning
-- MCP server reference
-- Best for: projects with strict file size requirements
-- Size: ~10 lines
+- Comprehensive explanation of ai-rulez
+- Complete folder organization documentation
+- Full AI agent instructions with MCP server promotion
+- Best for: projects where AI agents need thorough context
+- Size: ~50 lines
 
 #### Header Example (detailed)
 

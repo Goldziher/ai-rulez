@@ -448,13 +448,13 @@ func TestHeaderContent_WithLargeContentCounts(t *testing.T) {
 
 // TestGetHeaderStyle_DefaultBehavior verifies HeaderConfig.GetHeaderStyle() default
 func TestGetHeaderStyle_DefaultBehavior(t *testing.T) {
-	// Nil config should default to "detailed"
+	// Nil config should default to "minimal"
 	var nilConfig *config.HeaderConfig
-	assert.Equal(t, "detailed", nilConfig.GetHeaderStyle())
+	assert.Equal(t, "minimal", nilConfig.GetHeaderStyle())
 
-	// Empty style should default to "detailed"
+	// Empty style should default to "minimal"
 	emptyConfig := &config.HeaderConfig{}
-	assert.Equal(t, "detailed", emptyConfig.GetHeaderStyle())
+	assert.Equal(t, "minimal", emptyConfig.GetHeaderStyle())
 
 	// Set styles should be returned as-is
 	detailedConfig := &config.HeaderConfig{Style: "detailed"}

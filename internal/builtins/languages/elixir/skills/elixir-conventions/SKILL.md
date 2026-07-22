@@ -1,0 +1,16 @@
+---
+name: elixir-conventions
+description: Elixir code conventions covering Elixir 1.14+/OTP 25+, pattern matching, mix format, Credo/Dialyzer, ExUnit, ExDoc, OTP process patterns, and dependency security. Load when writing or reviewing Elixir code.
+---
+
+- Elixir 1.14+ OTP 25+, pattern matching extensively, `mix format` non-negotiable.
+- Configure `.formatter.exs` with `:inputs` and `:import_deps` for consistent formatting across team.
+- Linting: a linter (e.g., Credo `--strict`), type checking: Dialyzer (via `dialyxir`).
+- Security: `mix_audit` for dependency CVE scanning, a SAST tool (e.g., Sobelow) for static analysis. Run both in CI.
+- Testing: ExUnit with `describe` blocks, `doctest` for examples, a coverage tool (e.g., excoveralls) at 80%+.
+- Documentation: ExDoc for generation, `@moduledoc` on all modules, `@doc` + `@spec` on public functions.
+- `{:ok, value}` / `{:error, reason}` tuples — never raise for expected errors.
+- `with` for multi-step ops, guard clauses for function overloading.
+- OTP: GenServer for state, Supervisor for fault tolerance, `|>` pipe for transforms.
+- Dependencies: commit `mix.lock`, `hex` with `~>` constraints.
+- Anti-patterns: mutable state outside processes, long-running NIFs, `String.to_atom` with user input.

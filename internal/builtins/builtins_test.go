@@ -1,6 +1,7 @@
 package builtins
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -147,24 +148,28 @@ func TestLoadDomainContent(t *testing.T) {
 		assert.Equal(t, 2, agentCount)
 	})
 
-	t.Run("loads security domain with rules and context", func(t *testing.T) {
+	t.Run("loads security domain with rules and skills", func(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("security")
 		require.NoError(t, err)
-		assert.Len(t, entries, 6) // 4 rules + 1 context + 1 agent
+		assert.Len(t, entries, 6) // 3 rules + 2 skills + 1 agent
 
 		ruleCount := 0
 		contextCount := 0
+		skillCount := 0
 		for _, e := range entries {
 			switch e.Type {
 			case "rules":
 				ruleCount++
 			case "context":
 				contextCount++
+			case "skills":
+				skillCount++
 			}
 		}
-		assert.Equal(t, 4, ruleCount)
-		assert.Equal(t, 1, contextCount)
+		assert.Equal(t, 3, ruleCount)    // dependency-awareness moved rules → skills
+		assert.Equal(t, 0, contextCount) // owasp moved context → skills
+		assert.Equal(t, 2, skillCount)   // owasp-quick-reference + dependency-awareness
 	})
 
 	t.Run("loads language builtin", func(t *testing.T) {
@@ -207,19 +212,43 @@ func TestLoadDomainContent(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("polyglot-bindings")
 		require.NoError(t, err)
-		assert.Len(t, entries, 5) // 3 rules + 2 agents
+		assert.Len(t, entries, 5) // 3 skills + 2 agents
 
 		ruleCount := 0
+		skillCount := 0
 		agentCount := 0
 		for _, e := range entries {
 			switch e.Type {
 			case "rules":
 				ruleCount++
+			case "skills":
+				skillCount++
 			case "agents":
 				agentCount++
 			}
 		}
-		assert.Equal(t, 3, ruleCount)
+		assert.Equal(t, 0, ruleCount) // rules moved → skills
+		assert.Equal(t, 3, skillCount)
 		assert.Equal(t, 2, agentCount)
+	})
+
+	t.Run("language builtin emits conventions as a skill", func(t *testing.T) {
+		t.Parallel()
+		entries, err := LoadDomainContent("rust")
+		require.NoError(t, err)
+
+		var found *ContentEntry
+		for i := range entries {
+			if entries[i].Type == "skills" && entries[i].Name == "rust-conventions" {
+				found = &entries[i]
+				break
+			}
+		}
+		require.NotNil(t, found, "expected a rust-conventions skill entry")
+		assert.Equal(t, "skills", found.Type)
+		assert.Equal(t, "rust-conventions", found.Name)
+		assert.True(t, strings.HasSuffix(found.Path, "skills/rust-conventions/SKILL.md"),
+			"unexpected path: %s", found.Path)
+		assert.NotEmpty(t, found.Content)
 	})
 }

@@ -42,6 +42,11 @@ func (g *CodexPresetGenerator) GetName() string {
 	return codexPresetName
 }
 
+// LocalRootFile implements config.LocalRootProvider: AGENTS.md → AGENTS.local.md.
+func (g *CodexPresetGenerator) LocalRootFile() string {
+	return config.LocalVariantPath("AGENTS.md")
+}
+
 func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "AGENTS.md"),
