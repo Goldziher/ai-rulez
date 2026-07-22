@@ -243,6 +243,36 @@ func TestFileManagerWriteFileAlreadyExists(t *testing.T) {
 	assert.Equal(t, originalContent, string(data))
 }
 
+// TestFileManagerWriteFileOverwrite tests that WriteFileOverwrite replaces an
+// existing file and also creates new files.
+func TestFileManagerWriteFileOverwrite(t *testing.T) {
+	tmpDir := t.TempDir()
+	fm := crud.NewFileManager(tmpDir)
+
+	t.Run("overwrites existing file", func(t *testing.T) {
+		filePath := filepath.Join(tmpDir, "existing.txt")
+		require.NoError(t, os.WriteFile(filePath, []byte("original"), 0o644))
+
+		err := fm.WriteFileOverwrite(filePath, "updated content")
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(filePath)
+		require.NoError(t, err)
+		assert.Equal(t, "updated content", string(data))
+	})
+
+	t.Run("creates new file with nested directories", func(t *testing.T) {
+		filePath := filepath.Join(tmpDir, "nested", "dir", "new.txt")
+
+		err := fm.WriteFileOverwrite(filePath, "brand new")
+		require.NoError(t, err)
+
+		data, err := os.ReadFile(filePath)
+		require.NoError(t, err)
+		assert.Equal(t, "brand new", string(data))
+	})
+}
+
 // TestFileManagerDeleteFile tests file deletion
 func TestFileManagerDeleteFile(t *testing.T) {
 	tmpDir := t.TempDir()

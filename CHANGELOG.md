@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.11.0] - 2026-07-22
+
+### Added
+
+- `ai-rulez clean` command: removes the files produced by `generate` (the inverse of `generate`) — the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, …), the generated manifest, and the ai-rulez managed `.gitignore` block. The `.ai-rulez/` source tree is never touched and generated directories are removed only once empty (files you authored inside them are kept). Lists targets and prompts for confirmation by default; `--dry-run` previews, `--force` skips the prompt, `--keep-gitignore` / `--keep-manifest` preserve those. Exposed over MCP as `clean_outputs`.
+
+### Fixed
+
+- MCP `update_rule` / `update_context` / `update_skill` no longer fail with `file already exists` when updating existing content. The update path used a create-only write primitive that refused to overwrite; it now uses an overwrite-capable atomic write. (#150)
+
 ## [4.10.0] - 2026-07-22
 
 ### Added

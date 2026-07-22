@@ -43,7 +43,6 @@ func (s *MCPServerE2ETestSuite) TestGetVersion() {
 }
 
 func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
-	s.T().Skip("Skipping until MCP test infrastructure updated for v3.5.0")
 	// Create rule
 	createParams := map[string]interface{}{
 		"name":    "test-rule",
@@ -76,7 +75,6 @@ func (s *MCPServerE2ETestSuite) TestRuleCRUD_FullCycle() {
 }
 
 func (s *MCPServerE2ETestSuite) TestContextCRUD_FullCycle() {
-	s.T().Skip("Skipping until MCP test infrastructure updated for v3.5.0")
 	// Create context
 	createParams := map[string]interface{}{
 		"name":    "test-context",
@@ -210,7 +208,6 @@ func (s *MCPServerE2ETestSuite) TestInitProject() {
 }
 
 func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {
-	s.T().Skip("Skipping until MCP test infrastructure updated for v3.5.0")
 	// Validate config
 	validateResponse := s.client.CallTool(s.T(), "validate_config", map[string]interface{}{})
 	validateResponse.AssertToolSuccess(s.T())
@@ -222,4 +219,23 @@ func (s *MCPServerE2ETestSuite) TestGenerateAndValidate() {
 	generateResponse.AssertToolSuccess(s.T())
 	s.NotEmpty(generateResponse.Result.Content)
 	s.Contains(generateResponse.Result.Content[0].Text, "generated")
+}
+
+func (s *MCPServerE2ETestSuite) TestCleanOutputs_FullCycle() {
+	// Generate outputs first.
+	generateResponse := s.client.CallTool(s.T(), "generate_outputs", map[string]interface{}{})
+	generateResponse.AssertToolSuccess(s.T())
+	s.FileExists(filepath.Join(s.workingDir, "CLAUDE.md"))
+
+	// Dry-run clean lists targets but removes nothing.
+	dryResponse := s.client.CallTool(s.T(), "clean_outputs", map[string]interface{}{"dry_run": true})
+	dryResponse.AssertToolSuccess(s.T())
+	s.Contains(dryResponse.Result.Content[0].Text, "Dry run")
+	s.FileExists(filepath.Join(s.workingDir, "CLAUDE.md"))
+
+	// Real clean removes generated outputs, leaving the source tree intact.
+	cleanResponse := s.client.CallTool(s.T(), "clean_outputs", map[string]interface{}{})
+	cleanResponse.AssertToolSuccess(s.T())
+	s.NoFileExists(filepath.Join(s.workingDir, "CLAUDE.md"))
+	s.DirExists(filepath.Join(s.workingDir, ".ai-rulez"))
 }
