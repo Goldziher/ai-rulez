@@ -12,6 +12,7 @@ const (
 	keyContent   = "content"
 	keySource    = "source"
 	keyValid     = "valid"
+	keyConfig    = "config"
 )
 
 // Preset name constants used in MCP handlers.

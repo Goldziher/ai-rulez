@@ -10,6 +10,7 @@ All AI-Rulez CLI commands and flags.
 | ------------------------------- | --------------------------------------------------- |
 | `ai-rulez init`                 | Initialize V4 directory-based configuration         |
 | `ai-rulez generate`             | Generate presets for specific profile               |
+| `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez version`              | Show version                                        |
@@ -886,6 +887,51 @@ ai-rulez generate --profile backend
 
 # Uses "frontend" profile only
 ai-rulez generate --profile frontend
+```
+
+## Clean Command
+
+### `ai-rulez clean [config-path]`
+
+Remove the files and directories that `generate` produced — the inverse of `generate`. This deletes the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, etc.), the generated manifest (`.ai-rulez/.generated-manifest.json`), and the ai-rulez managed block in `.gitignore`.
+
+The `.ai-rulez/` source tree is never touched. Generated directories are only removed once they are empty, so any files you authored inside a generated directory are preserved.
+
+By default `clean` lists what it will remove and asks for confirmation. In non-interactive shells the prompt declines automatically — pass `--force` there.
+
+**Syntax:**
+
+```bash
+ai-rulez clean [config-path] [flags]
+```
+
+**Flags:**
+
+| Flag                  | Type    | Default            | Description                                             |
+| --------------------- | ------- | ------------------ | ------------------------------------------------------- |
+| `--dry-run` / `-d`    | boolean | false              | Show what would be removed without deleting anything    |
+| `--force` / `-y`      | boolean | false              | Skip the confirmation prompt                            |
+| `--profile` / `-p`    | string  | configured default | Profile whose outputs to remove                         |
+| `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts    |
+| `--keep-gitignore`    | boolean | false              | Leave the ai-rulez managed block in `.gitignore`        |
+| `--keep-manifest`     | boolean | false              | Leave the generated manifest in place                   |
+
+Preview what would be removed:
+
+```bash
+ai-rulez clean --dry-run
+```
+
+Remove all generated files without a prompt:
+
+```bash
+ai-rulez clean --force
+```
+
+Remove generated files but keep the `.gitignore` block and manifest:
+
+```bash
+ai-rulez clean --force --keep-gitignore --keep-manifest
 ```
 
 ## Verify Command

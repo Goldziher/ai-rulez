@@ -224,6 +224,20 @@ func (s *Server) registerProjectTools() {
 	)
 
 	s.addTool(
+		newAnnotatedTool("clean_outputs", "Remove the files produced by generate (the inverse of generate_outputs): generated assistant files, the generated manifest, and the ai-rulez managed .gitignore block. The .ai-rulez/ source tree is never touched.",
+			newSchemaBuilder().
+				String("config_file", "Path to the root configuration file (optional)", false).
+				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
+				Boolean("dry_run", "Preview what would be removed without deleting", false).
+				Boolean("keep_gitignore", "Leave the ai-rulez managed block in .gitignore", false).
+				Boolean("keep_manifest", "Leave the generated manifest in place", false).
+				WorkingDirectory(),
+			destructiveAnnotations(),
+		),
+		handlers.CleanOutputsHandler,
+	)
+
+	s.addTool(
 		newAnnotatedTool("validate_config", "Validate the configuration file, including all includes",
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file to validate (optional)", false).

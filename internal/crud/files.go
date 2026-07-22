@@ -69,7 +69,8 @@ func (fm *FileManager) DeleteDirectory(path string) error {
 	return nil
 }
 
-// WriteFile writes content to a file atomically (temp file → rename)
+// WriteFile writes content to a new file atomically (temp file → rename),
+// refusing to overwrite an existing file. Use WriteFileOverwrite for updates.
 func (fm *FileManager) WriteFile(path string, content string) error {
 	// Check if file already exists
 	if fm.PathExists(path) {
@@ -79,6 +80,20 @@ func (fm *FileManager) WriteFile(path string, content string) error {
 		}
 	}
 
+	return fm.writeFileAtomic(path, content)
+}
+
+// WriteFileOverwrite writes content to a file atomically (temp file → rename),
+// overwriting any existing file. Used by update operations where the target is
+// expected to already exist.
+func (fm *FileManager) WriteFileOverwrite(path string, content string) error {
+	return fm.writeFileAtomic(path, content)
+}
+
+// writeFileAtomic writes content via a temp file and atomic rename. The rename
+// overwrites the destination if it exists, so callers that must not clobber an
+// existing file guard with PathExists before calling.
+func (fm *FileManager) writeFileAtomic(path string, content string) error {
 	// Ensure parent directory exists
 	dir := filepath.Dir(path)
 	if err := fm.CreateDirectory(dir); err != nil {

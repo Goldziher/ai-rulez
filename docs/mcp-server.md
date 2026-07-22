@@ -146,7 +146,7 @@ The server provides Claude with access to read and modify your configuration, wh
 
 ## MCP Tools Reference
 
-The ai-rulez MCP server exposes 35 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
+The ai-rulez MCP server exposes 36 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
 
 ### Project and Utility Tools
 
@@ -160,6 +160,19 @@ Generate output files from the current configuration.
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
 - `dry_run` (optional, boolean): Preview changes without writing files
 - `recursive` (optional, boolean): Generate for all subdirectories containing `.ai-rulez/`
+- `working_directory` (optional, string): Directory to operate in
+
+#### `clean_outputs`
+
+Remove the files produced by `generate_outputs` (its inverse): the generated assistant files, the generated manifest, and the ai-rulez managed `.gitignore` block. The `.ai-rulez/` source tree is never touched, and generated directories are removed only once empty.
+
+**Parameters:**
+
+- `config_file` (optional, string): Path to the root configuration file
+- `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
+- `dry_run` (optional, boolean): Preview what would be removed without deleting
+- `keep_gitignore` (optional, boolean): Leave the ai-rulez managed block in `.gitignore`
+- `keep_manifest` (optional, boolean): Leave the generated manifest in place
 - `working_directory` (optional, string): Directory to operate in
 
 #### `validate_config`
