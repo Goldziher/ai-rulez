@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.10.0] - 2026-07-22
+
+### Added
+
+- Local-override content: drop machine-local rules and context under `.ai-rulez/local/rules/` and `.ai-rulez/local/context/` and they are emitted only to per-preset `.local` root files (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `.junie/guidelines.local.md`, `.github/copilot-instructions.local.md`, …). Local content is kept strictly separate from committed output and both the `.local` files and the `.ai-rulez/local/` source directory are gitignored unconditionally (even when `gitignore = false`). New `--local` flag on `ai-rulez add rule` and `ai-rulez add context` writes there directly.
+- Bare/flattened include layout: included repositories no longer need to wrap their content in an `.ai-rulez/` directory; a flattened `rules/`, `context/`, `skills/` layout is now supported.
+
+### Changed
+
+- Built-in language, binding, OWASP, and dependency-awareness conventions now emit as on-demand Agent Skills (`skills/<name>/SKILL.md`) instead of always-inlined rules/context, shrinking the generated `CLAUDE.md` (and peers) considerably. The agent loads them only when the relevant "Load when…" trigger applies.
+- Default header style is now `minimal` (was `detailed`), trimming ~37 lines of boilerplate from every generated root file while keeping the DO-NOT-EDIT warning plus the Content-Hash / Source-Hash provenance lines. `detailed` and `compact` remain available via `[header] style = "…"`.
+
 ## [4.9.4] - 2026-07-12
 
 ### Changed

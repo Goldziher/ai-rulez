@@ -28,12 +28,27 @@ type PresetGenerator interface {
 // Mode is the file permission bits to apply on write (0o644 if zero). Used
 // to preserve the executable bit on bundled skill scripts so the agent can
 // invoke them directly. Only honored on the raw-content write path.
+//
+// LocalOnly marks an output rendered from machine-local override content
+// (.ai-rulez/local/ → CLAUDE.local.md, AGENTS.local.md, ...). Such outputs are
+// gitignored unconditionally — even when config gitignore is disabled — because
+// committing them would leak machine-local configuration.
 type OutputFile struct {
 	Path       string
 	Content    string
 	RawContent []byte
 	Mode       os.FileMode
 	IsDir      bool
+	LocalOnly  bool
+}
+
+// LocalRootProvider is implemented by preset generators that emit a single
+// markdown root instructions file and therefore support a machine-local ".local"
+// variant of it (CLAUDE.md → CLAUDE.local.md). LocalRootFile returns the local
+// variant's path relative to the output base dir, or "" when the preset has no
+// single-file markdown root (e.g. cursor, windsurf) and so has no local variant.
+type LocalRootProvider interface {
+	LocalRootFile() string
 }
 
 // PresetRegistry maps preset names to their generators

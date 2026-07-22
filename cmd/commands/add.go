@@ -18,6 +18,7 @@ var (
 	addTargets  string
 	addContent  string
 	addDesc     string
+	addLocal    bool
 )
 
 var AddCmd = &cobra.Command{
@@ -67,10 +68,12 @@ func init() {
 	addRuleCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low")
 	addRuleCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated list of target providers (e.g., claude,cursor)")
 	addRuleCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
+	addRuleCmd.Flags().BoolVar(&addLocal, "local", false, "Write to .ai-rulez/local/ as a machine-local override (gitignored); cannot combine with --domain")
 
 	addContextCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
 	addContextCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low")
 	addContextCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
+	addContextCmd.Flags().BoolVar(&addLocal, "local", false, "Write to .ai-rulez/local/ as a machine-local override (gitignored); cannot combine with --domain")
 
 	addSkillCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
 	addSkillCmd.Flags().StringVarP(&addDesc, "description", "s", "", "Skill description")
@@ -79,6 +82,11 @@ func init() {
 
 func runAddRule(cmd *cobra.Command, args []string) {
 	name := args[0]
+
+	if addLocal && addDomain != "" {
+		logger.Error("--local cannot be combined with --domain")
+		os.Exit(1)
+	}
 
 	// Parse targets
 	var targets []string
@@ -104,6 +112,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 		Content:  addContent,
 		Priority: addPriority,
 		Targets:  targets,
+		Local:    addLocal,
 	}
 
 	result, err := op.AddRule(ctx, req)
@@ -130,6 +139,11 @@ func runAddRule(cmd *cobra.Command, args []string) {
 func runAddContext(cmd *cobra.Command, args []string) {
 	name := args[0]
 
+	if addLocal && addDomain != "" {
+		logger.Error("--local cannot be combined with --domain")
+		os.Exit(1)
+	}
+
 	ctx := context.Background()
 	op, err := crud.NewOperator(".")
 	if err != nil {
@@ -143,6 +157,7 @@ func runAddContext(cmd *cobra.Command, args []string) {
 		Name:     name,
 		Content:  addContent,
 		Priority: addPriority,
+		Local:    addLocal,
 	}
 
 	result, err := op.AddContext(ctx, req)

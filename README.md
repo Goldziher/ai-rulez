@@ -96,6 +96,12 @@ Enable these based on your stack:
 builtins = ["rust", "python", "pyo3", "cicd", "docker", "default-commands"]
 ```
 
+Language, binding, `polyglot-bindings`, and `security` (OWASP + dependency) conventions are emitted as
+**on-demand Agent Skills** (`.claude/skills/<id>/SKILL.md`) rather than inlined into `CLAUDE.md`, so the
+always-loaded file stays small and the conventions load only when relevant. Always-on rules
+(`code-quality`, `testing`, `git-workflow`, `ai-governance`, …) remain inline. `!domain` and
+`!domain/name` exclusions work for skill entries too.
+
 ## Content Types
 
 | Type         | Purpose                        | Example                                |
@@ -133,6 +139,19 @@ name = "company-standards"
 source = "https://github.com/company/ai-rules.git"
 merge_strategy = "local-override"
 ```
+
+Include sources can use a bare/flattened layout — expose `rules/`, `context/`, `skills/`, `agents/`
+directly (at the repo root or a sub-path via `path = "modules/core"`) with no `.ai-rulez/` wrapper.
+Recommended for shared, skill-first modules.
+
+**Local overrides** — Personal, machine-local instructions that never get committed:
+
+```bash
+ai-rulez add rule my-scratch-notes --local   # → .ai-rulez/local/rules/, generates CLAUDE.local.md
+```
+
+`.ai-rulez/local/` and the generated `*.local.md` outputs are gitignored unconditionally. See
+[docs/local-overrides.md](docs/local-overrides.md).
 
 **Reasoning effort across providers** — Tune how hard each AI tool thinks:
 

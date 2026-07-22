@@ -190,9 +190,10 @@ includes:
 
 ### Repository Structure Support
 
-ai-rulez supports two repository structures for includes:
+An include source does **not** have to wrap its content in a `.ai-rulez/` folder. ai-rulez
+supports both a wrapped and a bare (flattened) layout and auto-detects which one a source uses.
 
-1. **Standard structure** (recommended): Repository contains a `.ai-rulez/` subdirectory with the configuration
+1. **Wrapped structure**: Content lives inside a `.ai-rulez/` subdirectory
 
    ```text
    my-repo/
@@ -200,21 +201,41 @@ ai-rulez supports two repository structures for includes:
    │   ├── config.toml
    │   ├── rules/
    │   ├── context/
-   │   └── skills/
+   │   ├── skills/
+   │   └── agents/
    └── other files...
    ```
 
-2. **Root-level structure**: Repository root IS the ai-rulez structure (no nested `.ai-rulez/` directory)
+2. **Bare / flattened structure** (recommended for shared-module repos): the directory exposes
+   `rules/`, `context/`, `skills/`, and `agents/` directly — no `.ai-rulez/` wrapper needed. This
+   works at the repository root **or** at any sub-path:
 
    ```text
    my-repo/
-   ├── config.toml
-   ├── rules/
-   ├── context/
-   └── skills/
+   └── modules/
+       └── core/
+           ├── rules/
+           ├── context/
+           ├── skills/
+           └── agents/
    ```
 
-ai-rulez automatically detects which structure your repository uses and handles it accordingly.
+   Point an include at the sub-path with the `path` field:
+
+   ```toml
+   [[includes]]
+   name = "core"
+   source = "https://github.com/org/shared-modules.git"
+   path = "modules/core"     # resolves modules/core/rules, modules/core/skills, ...
+   include = ["rules", "skills"]
+   merge_strategy = "local-override"
+   ```
+
+ai-rulez detects the layout automatically: it first looks for a `.ai-rulez/` directory (at the
+source root or under `path`), and otherwise treats a directory that contains any of `rules/`,
+`context/`, `skills/`, or `agents/` as a bare ai-rulez structure. The flat layout keeps shared
+modules — especially skill-first modules that ship mostly `skills/<id>/SKILL.md` — clean and free
+of boilerplate wrapping.
 
 ### Private Repository Authentication (HTTPS)
 
@@ -301,6 +322,7 @@ generate:
 
 - **`name`**: Unique identifier for the include
 - **`source`**: Path or Git URL to the configuration
+- **`path`**: (Optional) Sub-path within the source to resolve (e.g. `modules/core`). Supports the bare/flattened layout described above; defaults to the source root
 - **`ref`**: (Git only) Branch, tag, or commit SHA (default: `main`)
 - **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`
 - **`merge_strategy`**: How to handle conflicts:
