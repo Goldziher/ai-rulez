@@ -9,7 +9,6 @@
 </p>
 
 <p align="center">
-  <a href="https://goreportcard.com/report/github.com/Goldziher/ai-rulez"><img src="https://goreportcard.com/badge/github.com/Goldziher/ai-rulez" alt="Go Report Card"></a>
   <a href="https://www.npmjs.com/package/ai-rulez"><img src="https://img.shields.io/npm/v/ai-rulez" alt="npm version"></a>
   <a href="https://pypi.org/project/ai-rulez/"><img src="https://img.shields.io/pypi/v/ai-rulez" alt="PyPI version"></a>
   <a href="https://github.com/Goldziher/ai-rulez/blob/main/LICENSE"><img src="https://img.shields.io/github/license/Goldziher/ai-rulez" alt="License"></a>
