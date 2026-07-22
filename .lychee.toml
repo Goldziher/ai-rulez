@@ -30,9 +30,6 @@ exclude = [
 
   # npm (rate-limited)
   "npmjs\\.com/package/",
-
-  # Go report card (rate-limited)
-  "goreportcard\\.com",
 ]
 
 # Accept these HTTP status codes as valid
