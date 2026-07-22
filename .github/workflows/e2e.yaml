@@ -56,7 +56,7 @@ jobs:
             ${{ runner.os }}-task-
 
       - name: Install Task
-        uses: arduino/setup-task@v2
+        uses: arduino/setup-task@v3
         if: steps.task-cache.outputs.cache-hit != 'true'
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
@@ -121,7 +121,7 @@ jobs:
             ${{ runner.os }}-task-
 
       - name: Install Task
-        uses: arduino/setup-task@v2
+        uses: arduino/setup-task@v3
         if: steps.task-cache.outputs.cache-hit != 'true'
         with:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
