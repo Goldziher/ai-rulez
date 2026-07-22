@@ -420,7 +420,7 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		}
 		return ToolSuccess(map[string]interface{}{
 			keyMessage: "Dry run complete",
-			"config":   cfg.ConfigDir,
+			keyConfig:  cfg.ConfigDir,
 			"plan":     plan,
 		})
 	}
@@ -429,8 +429,59 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 	}
 	return ToolSuccess(map[string]interface{}{
 		keyMessage: "Outputs generated successfully",
-		"config":   cfg.ConfigDir,
+		keyConfig:  cfg.ConfigDir,
 	})
+}
+
+// CleanOutputsHandler removes the files produced by generate for the project in
+// the working directory — the MCP counterpart of the `clean` CLI command. There
+// is no interactive prompt over MCP; callers preview with dry_run.
+func CleanOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
+	baseDir := workingDir(request)
+	dryRun := request.GetBool("dry_run", false)
+
+	cfg, err := loadProjectConfig(ctx, request, baseDir)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	gen := generator.NewGenerator(cfg)
+	plan, err := gen.Clean("", generator.CleanOptions{
+		DryRun:        dryRun,
+		KeepGitignore: request.GetBool("keep_gitignore", false),
+		KeepManifest:  request.GetBool("keep_manifest", false),
+	})
+	if err != nil {
+		return ToolError(err)
+	}
+
+	message := "Generated files removed"
+	if dryRun {
+		message = "Dry run complete"
+	}
+	return ToolSuccess(map[string]interface{}{
+		keyMessage:           message,
+		keyConfig:            cfg.ConfigDir,
+		"profile":            plan.Profile,
+		"files":              relPathList(cfg.BaseDir, plan.Files),
+		"directories":        relPathList(cfg.BaseDir, plan.Dirs),
+		"manifest_removed":   plan.ManifestPath != "",
+		"gitignore_stripped": plan.GitignoreEdited,
+	})
+}
+
+// relPathList renders absolute paths relative to baseDir (slash-separated) for
+// tidy, portable MCP responses, falling back to the original path on error.
+func relPathList(baseDir string, paths []string) []string {
+	out := make([]string, 0, len(paths))
+	for _, p := range paths {
+		if rel, err := filepath.Rel(baseDir, p); err == nil {
+			out = append(out, filepath.ToSlash(rel))
+		} else {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
