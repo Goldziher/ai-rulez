@@ -113,6 +113,13 @@ linters:
           - gocyclo
           - gocritic
 
+      # SA5011 false-positives: tests guard with `if x == nil { t.Fatalf(...) }`,
+      # which terminates, but staticcheck does not model t.Fatalf as terminating.
+      - path: _test\.go
+        text: "SA5011"
+        linters:
+          - staticcheck
+
       - path: tests/fixtures/violations/
         linters:
           - errcheck

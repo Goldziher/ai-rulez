@@ -24,6 +24,10 @@ import (
 const defaultProfileName = "default"
 const generatedManifestName = ".generated-manifest.json"
 
+// localSourceDirName is the subdirectory of the config dir (.ai-rulez/local)
+// holding machine-local override content. It is always gitignored.
+const localSourceDirName = "local"
+
 // Generator handles configuration generation
 type Generator struct {
 	config *config.Config
@@ -66,8 +70,10 @@ func (g *Generator) Generate(profile string) error {
 		logger.Warn("Failed to write generated manifest", "error", err)
 	}
 
-	// Update gitignore if enabled
-	if g.config.ShouldUpdateGitignore() {
+	// Update gitignore if enabled, or whenever machine-local content exists —
+	// local ".local" outputs and the .ai-rulez/local/ source subtree must be
+	// gitignored unconditionally, even when config gitignore is disabled.
+	if g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets() {
 		if err := g.updateGitignore(flatOutputs); err != nil {
 			logger.Warn("Failed to update .gitignore", "error", err)
 		}
@@ -336,6 +342,12 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 		}
 	}
 
+	// Append machine-local root variants (CLAUDE.local.md, AGENTS.local.md, ...)
+	// keyed by preset so they flow through the same flatten/manifest/stale path:
+	// duplicate local paths (codex + opencode both emit AGENTS.local.md) collapse,
+	// and removed local content deletes the file via stale-manifest cleanup.
+	g.appendLocalOutputs(allOutputs, &tempCfg)
+
 	// Flatten outputs for writing, detecting conflicts and deduplicating
 	flatOutputs := flattenPresetOutputs(allOutputs)
 
@@ -346,6 +358,40 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	flatOutputs = append(flatOutputs, scopedOutputs...)
 
 	return flatOutputs, activeProfile, nil
+}
+
+// appendLocalOutputs renders the ".local" root variant for every configured
+// preset that implements config.LocalRootProvider with a non-empty local
+// filename, appending it to allOutputs under that preset's key. It is a no-op
+// when there is no machine-local content. cfg is the profile-resolved temp
+// config (carries Name / header style / compact used by the renderer).
+func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config) {
+	if g.config.LocalContent == nil || g.config.LocalContent.IsEmpty() {
+		return
+	}
+	for _, preset := range g.config.Presets {
+		if !preset.IsBuiltIn() {
+			continue
+		}
+		generator, err := config.GetPresetGenerator(preset.BuiltIn)
+		if err != nil {
+			continue
+		}
+		provider, ok := generator.(config.LocalRootProvider)
+		if !ok {
+			continue
+		}
+		localFile := provider.LocalRootFile()
+		if localFile == "" {
+			continue
+		}
+		body := presets.RenderLocalRoot(g.config.LocalContent, cfg, localFile)
+		allOutputs[preset.GetName()] = append(allOutputs[preset.GetName()], config.OutputFile{
+			Path:      filepath.Join(g.config.BaseDir, localFile),
+			Content:   body,
+			LocalOnly: true,
+		})
+	}
 }
 
 // resolveProfile determines which profile to use
@@ -1082,11 +1128,31 @@ func (g *Generator) removeStaleFile(filePath string) {
 	}
 }
 
+// hasLocalGitignoreTargets reports whether machine-local content exists and so
+// requires unconditional gitignore entries (the ".local" outputs plus the
+// .ai-rulez/local/ source subtree).
+func (g *Generator) hasLocalGitignoreTargets() bool {
+	return g.config.LocalContent != nil && !g.config.LocalContent.IsEmpty()
+}
+
 // collectGitignorePaths collects unique patterns to add to .gitignore.
+//
+// Committed output patterns are only added when config gitignore management is
+// enabled. Machine-local ".local" outputs and the .ai-rulez/local/ source
+// subtree are added UNCONDITIONALLY (even when gitignore is disabled) because
+// committing them would leak machine-local configuration.
 func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[string]bool {
 	paths := make(map[string]bool)
+	includeCommitted := g.config.ShouldUpdateGitignore()
 	for _, output := range outputs {
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if output.LocalOnly {
+			paths[relPath] = true
+			continue
+		}
+		if !includeCommitted {
+			continue
+		}
 		if g.shouldSkipPath(relPath) {
 			continue
 		}
@@ -1095,10 +1161,20 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		}
 	}
 
+	// The .ai-rulez/local/ source subtree holds machine-local override content
+	// and must never be committed. Ignore it unconditionally, bypassing the
+	// config-dir skip that normally protects .ai-rulez/.
+	if g.hasLocalGitignoreTargets() {
+		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
+	}
+
 	// The generated manifest sits inside the config dir and is rewritten on
 	// every `generate`; include it explicitly so the managed fence covers it.
-	if manifestRel := filepath.ToSlash(g.convertToRelativePath(g.manifestPath())); manifestRel != "" {
-		paths[manifestRel] = true
+	// Only relevant when committed outputs are managed.
+	if includeCommitted {
+		if manifestRel := filepath.ToSlash(g.convertToRelativePath(g.manifestPath())); manifestRel != "" {
+			paths[manifestRel] = true
+		}
 	}
 
 	return paths
