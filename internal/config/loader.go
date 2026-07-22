@@ -34,6 +34,10 @@ const (
 	commandsDir         = "commands"
 	domainsDir          = "domains"
 	skillMarkerFile     = "SKILL.md"
+	// localDir holds machine-local override content under the config dir
+	// (.ai-rulez/local/rules, .ai-rulez/local/context). It is scanned into a
+	// separate tree and never merged into committed output.
+	localDir = "local"
 )
 
 // DetectConfigVersion detects whether a directory contains V2 or directory-based configuration
@@ -223,6 +227,15 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 		return nil, err
 	}
 	config.Content = contentTree
+
+	// Scan machine-local override content into a SEPARATE tree. This never
+	// enters config.Content, so it cannot leak into committed output; it is
+	// emitted only to the per-preset ".local" root variants.
+	localTree, err := ScanLocalContentTree(configDir)
+	if err != nil {
+		return nil, err
+	}
+	config.LocalContent = localTree
 
 	// Load builtins (lowest priority — loaded first so includes and local override them)
 	// Only load when the builtins field is explicitly configured in the config file
@@ -602,6 +615,38 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 			Wrapf(err, "scan domains directory")
 	}
 	tree.Domains = domains
+
+	return tree, nil
+}
+
+// ScanLocalContentTree scans machine-local override content from
+// <configDir>/local/rules and <configDir>/local/context, returning a tree that
+// carries only root-level rules and context. Local content is intentionally
+// limited to rules + context (skills/agents/commands are out of scope) and is
+// kept separate from the committed content tree so it is only ever emitted to
+// gitignored ".local" root files.
+func ScanLocalContentTree(configDir string) (*ContentTree, error) {
+	tree := &ContentTree{
+		Domains: make(map[string]*Domain),
+	}
+
+	localBase := filepath.Join(configDir, localDir)
+
+	rules, err := scanMarkdownFiles(filepath.Join(localBase, rulesDir))
+	if err != nil {
+		return nil, oops.
+			With("path", filepath.Join(localBase, rulesDir)).
+			Wrapf(err, "scan local rules directory")
+	}
+	tree.Rules = rules
+
+	contextFiles, err := scanMarkdownFiles(filepath.Join(localBase, contextDir))
+	if err != nil {
+		return nil, oops.
+			With("path", filepath.Join(localBase, contextDir)).
+			Wrapf(err, "scan local context directory")
+	}
+	tree.Context = contextFiles
 
 	return tree, nil
 }

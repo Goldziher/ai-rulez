@@ -236,8 +236,9 @@ builtins:
 
 		secDomain, exists := config.Content.Domains["security"]
 		require.True(t, exists)
-		assert.Equal(t, 4, len(secDomain.Rules))
-		assert.Equal(t, 1, len(secDomain.Context))
+		assert.Equal(t, 3, len(secDomain.Rules))   // dependency-awareness moved rules → skills
+		assert.Equal(t, 0, len(secDomain.Context)) // owasp moved context → skills
+		assert.Equal(t, 2, len(secDomain.Skills))  // owasp-quick-reference + dependency-awareness
 	})
 
 	t.Run("default-commands builtin has commands", func(t *testing.T) {

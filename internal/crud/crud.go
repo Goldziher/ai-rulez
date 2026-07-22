@@ -109,6 +109,7 @@ type AddFileRequest struct {
 	Content     string   // File content (optional, uses template if empty)
 	Priority    string   // Priority level: critical, high, medium, low
 	Targets     []string // Target providers: claude, cursor, etc.
+	Local       bool     // Write to .ai-rulez/local/ (machine-local override, gitignored). Mutually exclusive with Domain.
 }
 
 // FileResult represents the result of a file operation

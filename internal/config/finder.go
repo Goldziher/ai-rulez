@@ -74,14 +74,33 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 		Errorf("no configuration file found")
 }
 
+// localVariantName inserts ".local" before the extension of a base filename
+// (e.g. "CLAUDE.md" → "CLAUDE.local.md", "config.toml" → "config.local.toml").
+func localVariantName(base string) string {
+	ext := filepath.Ext(base)
+	return strings.TrimSuffix(base, ext) + ".local" + ext
+}
+
+// LocalVariantPath returns the sibling path with ".local" inserted before the
+// extension, but only for markdown files. It returns "" when p is not a ".md"
+// file — used by preset generators to derive the machine-local root filename
+// (CLAUDE.md → CLAUDE.local.md) while skipping presets whose root is not a
+// single markdown file.
+func LocalVariantPath(p string) string {
+	if filepath.Ext(p) != ".md" {
+		return ""
+	}
+	dir := filepath.Dir(p)
+	local := localVariantName(filepath.Base(p))
+	if dir == "" || dir == "." {
+		return local
+	}
+	return filepath.Join(dir, local)
+}
+
 func FindLocalConfigFile(mainConfigPath string) (string, error) {
 	dir := filepath.Dir(mainConfigPath)
-	base := filepath.Base(mainConfigPath)
-	ext := filepath.Ext(base)
-	nameWithoutExt := strings.TrimSuffix(base, ext)
-
-	localConfigName := nameWithoutExt + ".local" + ext
-	localConfigPath := filepath.Join(dir, localConfigName)
+	localConfigPath := filepath.Join(dir, localVariantName(filepath.Base(mainConfigPath)))
 
 	if _, err := os.Stat(localConfigPath); err == nil {
 		return localConfigPath, nil
