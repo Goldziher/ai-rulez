@@ -527,7 +527,7 @@ func (op *OperatorImpl) UpdateFile(_ context.Context, domain, ftype, name, conte
 		filePath = op.filesMgr.GetFilePath(domain, ftype, name)
 	}
 
-	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
+	if err := op.filesMgr.WriteFileOverwrite(filePath, content); err != nil {
 		return nil, err
 	}
 
