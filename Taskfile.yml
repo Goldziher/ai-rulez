@@ -58,8 +58,16 @@ tasks:
         # Pre-commit bootstrap script default version (scripts/pre-commit/run-ai-rulez.sh)
         sed -i '' 's/AI_RULEZ_VERSION="\${AI_RULEZ_VERSION:-v[^"]*}"/AI_RULEZ_VERSION="\${AI_RULEZ_VERSION:-v{{.VERSION}}}"/' scripts/pre-commit/run-ai-rulez.sh
 
-        # README pre-commit example
+        # README pre-commit example + poly hook source revision
         sed -i '' 's/rev: v[0-9][0-9.]*/rev: v{{.VERSION}}/' README.md
+        sed -i '' 's/revision = "v[0-9][0-9.]*"/revision = "v{{.VERSION}}"/g' README.md
+
+        # Poly hook catalog + docs: pinned ai-rulez versions (npx/uvx) and revisions
+        for f in poly-hooks.toml docs/poly-hooks.md; do
+          sed -i '' 's/ai-rulez@[0-9][0-9.]*/ai-rulez@{{.VERSION}}/g' "$f"
+          sed -i '' 's/ai-rulez==[0-9][0-9.]*/ai-rulez=={{.VERSION}}/g' "$f"
+        done
+        sed -i '' 's/revision = "v[0-9][0-9.]*"/revision = "v{{.VERSION}}"/g' docs/poly-hooks.md
 
         echo "Done. Updated version to {{.VERSION}} in:"
         echo "  - cmd/commands/root.go"
@@ -71,6 +79,8 @@ tasks:
         echo "  - internal/hooks/setup.go"
         echo "  - scripts/pre-commit/run-ai-rulez.sh"
         echo "  - README.md"
+        echo "  - poly-hooks.toml"
+        echo "  - docs/poly-hooks.md"
 
   build:
     desc: "Build the CLI binary"
