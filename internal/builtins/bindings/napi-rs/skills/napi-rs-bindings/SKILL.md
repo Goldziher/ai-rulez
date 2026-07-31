@@ -1,6 +1,6 @@
 ---
 name: napi-rs-bindings
-description: napi-rs conventions for exposing a Rust core to Node.js: #[napi] macros, napi::Error mapping, auto-generated .d.ts types, async Promises, and CommonJS/ESM output. Load when generating or reviewing napi-rs Node.js bindings for a Rust library.
+description: "napi-rs conventions for exposing a Rust core to Node.js: #[napi] macros, napi::Error mapping, auto-generated .d.ts types, async Promises, and CommonJS/ESM output. Load when generating or reviewing napi-rs Node.js bindings for a Rust library."
 ---
 
 - Use `#[napi]` macro for Node.js-visible functions and classes. Use `#[napi(constructor)]` for constructors.

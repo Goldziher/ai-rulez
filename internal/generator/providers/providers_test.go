@@ -258,6 +258,37 @@ func TestClaude_SkillFile_OmitsSectionsWithNoTargetMatch(t *testing.T) {
 	assert.NotContains(t, body, "\n## Context\n", "Context section must be omitted when nothing targets the skill")
 }
 
+// TestClaude_SkillFile_ClaudePresetTargetDoesNotLeak is the #156 regression: a
+// rule/context targeting the "claude" PRESET NAME must route only to CLAUDE.md,
+// not fan out into every .claude/skills/*/SKILL.md. Before the fix, the "claude"
+// target matched any path prefixed with ".claude/", inlining the entire rules
+// block into every generated skill file.
+func TestClaude_SkillFile_ClaudePresetTargetDoesNotLeak(t *testing.T) {
+	t.Parallel()
+
+	gen := claudeGen(t)
+	skill := config.ContentFile{
+		Name:    "leak-check-skill",
+		Path:    "/test/skills/leak-check-skill/SKILL.md",
+		Content: "# Leak Check Skill",
+	}
+	content := &config.ContentTree{
+		Skills: []config.ContentFile{skill},
+		Rules: []config.ContentFile{
+			{Name: "claude-preset-rule", Content: "Should NOT leak into skills", Metadata: &config.Metadata{Targets: []string{"claude"}}},
+		},
+		Context: []config.ContentFile{
+			{Name: "claude-preset-context", Content: "Should NOT leak into skills", Metadata: &config.Metadata{Targets: []string{"claude"}}},
+		},
+	}
+	cfg := &config.Config{Name: "test", BaseDir: "/test"}
+
+	body := findSkillBody(t, gen, content, cfg, "/test", "leak-check-skill")
+	assert.NotContains(t, body, "### claude-preset-rule", "a 'claude' preset-name rule must not leak into a SKILL.md")
+	assert.NotContains(t, body, "### claude-preset-context", "a 'claude' preset-name context must not leak into a SKILL.md")
+	assert.NotContains(t, body, "\n## Rules\n", "no Rules section should be inlined for a 'claude' preset-name target")
+}
+
 // TestClaude_Generate_DomainCollections covers the domain-skill / domain-agent
 // / domain-command / mixed-content assertions from the legacy tests.
 func TestClaude_Generate_DomainCollections(t *testing.T) {

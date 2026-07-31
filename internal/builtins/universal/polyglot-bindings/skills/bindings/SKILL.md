@@ -1,6 +1,6 @@
 ---
 name: bindings
-description: Cross-language binding architecture rules: bindings as minimal glue, canonical API surface ordering (core, ABI, language), per-language test suites in CI, generated-code discipline, and error/async boundary preservation. Load when designing or reviewing polyglot language bindings for a shared core.
+description: "Cross-language binding architecture rules: bindings as minimal glue, canonical API surface ordering (core, ABI, language), per-language test suites in CI, generated-code discipline, and error/async boundary preservation. Load when designing or reviewing polyglot language bindings for a shared core."
 ---
 
 - Bindings are minimal glue: call the core library, convert types, convert errors — no business logic.

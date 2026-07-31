@@ -526,8 +526,13 @@ func targetMatchesOutput(target string, outputCandidates []string) bool {
 		return false
 	}
 	if target == presetNameClaude {
+		// The "claude" preset name routes to the root instructions file only.
+		// It must NOT match nested per-item outputs under .claude/ (skills,
+		// agents, commands) — otherwise a rule targeting the Claude preset is
+		// inlined into every generated SKILL.md / agent file (#156). Explicit
+		// path, directory, and glob targets fall through to the matchers below.
 		for _, candidate := range outputCandidates {
-			if candidate == fileClaudeMD || strings.HasPrefix(candidate, ".claude/") {
+			if candidate == fileClaudeMD {
 				return true
 			}
 		}
