@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.11.1] - 2026-07-31
+
+### Fixed
+
+- `generate` no longer inlines the full rules block into every generated `.claude/skills/<name>/SKILL.md` and `.claude/agents/<name>.md`. A rule targeting the `claude` preset name was matching any output under `.claude/`, so it was duplicated into every per-item skill/agent file; it now routes to `CLAUDE.md` only. Explicit path, directory, and glob targets are unaffected. (#156)
+- `generate` no longer emits a second, raw frontmatter block in a skill file when the source frontmatter fails to parse. Malformed YAML frontmatter (e.g. an unquoted value containing `": "`) was returned unstripped and re-emitted after the generated block; it is now stripped with a warning. The 14 builtin skills whose `description` contained an unquoted `": "` are quoted so their descriptions parse and populate the generated frontmatter. (#156)
+
 ## [4.11.0] - 2026-07-22
 
 ### Added
