@@ -1,6 +1,6 @@
 ---
 name: ffi-and-language-interop
-description: FFI and native interop rules: single documented pointer ownership, opaque handles, null-pointer checks, allocate/free pairs, unsafe-block invariants, generated C headers, stable C ABI, frozen struct layouts, and error/context conversion. Load when writing or reviewing FFI boundaries between native and host languages.
+description: "FFI and native interop rules: single documented pointer ownership, opaque handles, null-pointer checks, allocate/free pairs, unsafe-block invariants, generated C headers, stable C ABI, frozen struct layouts, and error/context conversion. Load when writing or reviewing FFI boundaries between native and host languages."
 ---
 
 - Every pointer has one owner, documented with `SAFETY` comments or host-language ownership docs.
