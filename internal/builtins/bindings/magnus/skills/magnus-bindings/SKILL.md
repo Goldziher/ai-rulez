@@ -1,6 +1,6 @@
 ---
 name: magnus-bindings
-description: Magnus conventions for building Ruby native extensions from a Rust core: define_class, TryConvert/IntoValue, exception mapping, GVL handling, TypedData GC integration, and rake-compiler distribution. Load when generating or reviewing Magnus Ruby bindings for a Rust library.
+description: "Magnus conventions for building Ruby native extensions from a Rust core: define_class, TryConvert/IntoValue, exception mapping, GVL handling, TypedData GC integration, and rake-compiler distribution. Load when generating or reviewing Magnus Ruby bindings for a Rust library."
 ---
 
 - Use `magnus` crate for Ruby native extensions. Define classes with `magnus::define_class`.
