@@ -1,6 +1,6 @@
 ---
 name: vite-plus-conventions
-description: vite+ unified TypeScript toolchain conventions: the vp CLI for package/node management, oxlint/oxfmt, type-aware linting, vitest, rolldown/tsdown bundling, task caching, and migration. Load when configuring or reviewing a vite+ TypeScript toolchain.
+description: "vite+ unified TypeScript toolchain conventions: the vp CLI for package/node management, oxlint/oxfmt, type-aware linting, vitest, rolldown/tsdown bundling, task caching, and migration. Load when configuring or reviewing a vite+ TypeScript toolchain."
 ---
 
 - Use [vite+](https://viteplus.dev) as the unified TypeScript toolchain. It wraps best-in-class tools behind a single CLI. Configure your entire toolchain in `vite.config.ts` by importing `defineConfig` from `vite-plus`.

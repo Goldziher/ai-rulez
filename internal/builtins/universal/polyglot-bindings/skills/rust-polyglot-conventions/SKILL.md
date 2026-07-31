@@ -1,6 +1,6 @@
 ---
 name: rust-polyglot-conventions
-description: Rust conventions for a core that backs multiple language bindings: stable-edition tooling, typed Result errors with no panics in library paths, rustdoc with error docs, isolated unsafe, Send futures, FFI-friendly DTOs, and single-source version syncing. Load when writing or reviewing a Rust core exposed through polyglot bindings.
+description: "Rust conventions for a core that backs multiple language bindings: stable-edition tooling, typed Result errors with no panics in library paths, rustdoc with error docs, isolated unsafe, Send futures, FFI-friendly DTOs, and single-source version syncing. Load when writing or reviewing a Rust core exposed through polyglot bindings."
 ---
 
 - Use the current stable Rust edition, `cargo fmt`, and `clippy -D warnings` for Rust core and binding crates.
