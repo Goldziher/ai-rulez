@@ -1,6 +1,6 @@
 ---
 name: wasm-bindings
-description: wasm-bindgen conventions for compiling a Rust core to WebAssembly for JavaScript: wasm-pack packaging, JsValue mapping, async futures, bundle-size tuning, web-sys/js-sys, and TypeScript defs. Load when generating or reviewing WebAssembly/JS bindings for a Rust library.
+description: "wasm-bindgen conventions for compiling a Rust core to WebAssembly for JavaScript: wasm-pack packaging, JsValue mapping, async futures, bundle-size tuning, web-sys/js-sys, and TypeScript defs. Load when generating or reviewing WebAssembly/JS bindings for a Rust library."
 ---
 
 - Use `wasm-bindgen` for JavaScript interop. Use `wasm-pack` for building and packaging.

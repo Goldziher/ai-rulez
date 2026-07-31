@@ -536,7 +536,10 @@ No closing marker`
 		assert.Equal(t, content, actualContent)
 	})
 
-	t.Run("handles invalid frontmatter YAML", func(t *testing.T) {
+	t.Run("strips malformed frontmatter block instead of leaking it (#156)", func(t *testing.T) {
+		// A delimited frontmatter block whose YAML is unparseable must be
+		// stripped, not returned verbatim — otherwise generate re-emits the raw
+		// block after the generated frontmatter, producing two blocks.
 		content := `---
 invalid: yaml: syntax:
 ---
@@ -545,7 +548,7 @@ Content`
 
 		metadata, actualContent := parseFrontmatter(content)
 		assert.Nil(t, metadata)
-		assert.Equal(t, content, actualContent)
+		assert.Equal(t, "Content", actualContent)
 	})
 
 	t.Run("handles extra frontmatter fields", func(t *testing.T) {

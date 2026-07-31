@@ -912,6 +912,11 @@ func parseFrontmatter(content string) (metadata *Metadata, body string) {
 	frontmatterLines := lines[1:endIdx]
 	frontmatterYAML := strings.Join(frontmatterLines, "\n")
 
+	// Extract actual content (after the closing ---). Computed up front so a
+	// parse failure still strips the delimited block from the body.
+	body = strings.Join(lines[endIdx+1:], "\n")
+	body = strings.TrimPrefix(body, "\n")
+
 	// First try direct unmarshal into Metadata (works for simple key-value frontmatter)
 	var parsedMetadata Metadata
 	if err := yaml.Unmarshal([]byte(frontmatterYAML), &parsedMetadata); err != nil {
@@ -919,14 +924,16 @@ func parseFrontmatter(content string) (metadata *Metadata, body string) {
 		// Fall back to raw map parsing: extract known fields and stringify the rest.
 		result, ok := parseFrontmatterFromRawMap(frontmatterYAML)
 		if !ok {
-			return nil, content
+			// A delimited frontmatter block is present but its YAML is
+			// unparseable (e.g. an unquoted value containing ": "). Do NOT
+			// return the content unstripped — that would re-emit the raw block
+			// after the generated frontmatter (#156). Warn loudly and strip it.
+			logger.Warn("Ignoring malformed YAML frontmatter — check for unquoted values containing ': '",
+				"frontmatter", frontmatterYAML)
+			return nil, body
 		}
 		parsedMetadata = result
 	}
-
-	// Extract actual content (after frontmatter)
-	body = strings.Join(lines[endIdx+1:], "\n")
-	body = strings.TrimPrefix(body, "\n")
 
 	metadata = &parsedMetadata
 	return metadata, body

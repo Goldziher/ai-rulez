@@ -1,6 +1,6 @@
 ---
 name: pyo3-bindings
-description: PyO3 conventions for exposing a Rust core to Python: pyclass/pymethods, PyErr/PyResult error mapping, GIL release, properties, maturin builds, and pytest. Load when generating or reviewing PyO3 Python bindings for a Rust library.
+description: "PyO3 conventions for exposing a Rust core to Python: pyclass/pymethods, PyErr/PyResult error mapping, GIL release, properties, maturin builds, and pytest. Load when generating or reviewing PyO3 Python bindings for a Rust library."
 ---
 
 - Use `#[pyclass]` and `#[pymethods]` for Python-visible types. Use `#[new]` for constructors.

@@ -1,6 +1,6 @@
 ---
 name: jni-rs-bindings
-description: jni-rs conventions for exposing a Rust core to Java/JVM: JNI export naming, JNIEnv usage, string conversion, exception checks/throws, global references, and library loading. Load when generating or reviewing jni-rs Java/JVM bindings for a Rust library.
+description: "jni-rs conventions for exposing a Rust core to Java/JVM: JNI export naming, JNIEnv usage, string conversion, exception checks/throws, global references, and library loading. Load when generating or reviewing jni-rs Java/JVM bindings for a Rust library."
 ---
 
 - Use `jni` crate for Rust-Java/JVM interop. Functions must be `#[no_mangle] pub extern "system"`.
