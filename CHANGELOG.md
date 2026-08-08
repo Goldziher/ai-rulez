@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.11.2] - 2026-08-08
+
+### Fixed
+
+- `ai-rulez mcp` no longer wedges when a host sends `initialize` twice on one stdio session. The MCP SDK treats initialization as a one-shot state machine, so a repeated `initialize` failed with `duplicate "initialize" received` (and a repeated `notifications/initialized` likewise), permanently breaking any host that retries or reconnects over a long-lived server process — Claude Code's MCP client, or an mcpm/fastmcp bridge shared between consumers. A repeated `initialize` is now answered with the result of the original negotiation and a repeated `notifications/initialized` is dropped, leaving the session intact. Because the SDK's version negotiation is internal, a re-initialize receives the protocol version agreed on first connect. (#158)
+
+### Changed
+
+- Dependencies updated: `kaptinlin/jsonschema` 0.9.8, `oklog/ulid` 2.1.2, OpenTelemetry 1.45.0, `go.yaml.in/yaml` 3.0.5; docs toolchain to zensical 0.0.53. The unused `tool github.com/evilmartians/lefthook` directive was dropped, removing 27 indirect modules from `go.mod` — the repo moved off lefthook to poly hooks and nothing imported it.
+- `task update` now updates the whole Go module graph plus `uv.lock`, and `task lint` runs the poly checks. Both previously invoked `prek` against a `.pre-commit-config.yaml` that no longer exists.
+
 ## [4.11.1] - 2026-07-31
 
 ### Fixed
