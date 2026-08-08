@@ -110,6 +110,24 @@ func TestTolerantInitializeMiddleware(t *testing.T) {
 		assert.Equal(t, 2, next.calls, "a failed initialize must not be cached as an established session")
 	})
 
+	t.Run("should_not_suppress_initialized_after_a_rejected_one", func(t *testing.T) {
+		t.Parallel()
+
+		// An `initialized` arriving before `initialize` is rejected by the SDK. It
+		// must not count as the established handshake, or the real notification
+		// that follows would be dropped.
+		next := &countingHandler{err: errors.New(`"notifications/initialized" before "initialize"`)}
+		handler := tolerantInitializeMiddleware()(next.handle)
+
+		_, err := handler(context.Background(), notificationInitialized, initializedRequest())
+		require.Error(t, err)
+
+		next.err = nil
+		_, err = handler(context.Background(), notificationInitialized, initializedRequest())
+		require.NoError(t, err)
+		assert.Equal(t, 2, next.calls, "the notification after a rejected one must still reach the SDK handler")
+	})
+
 	t.Run("should_track_sessions_independently", func(t *testing.T) {
 		t.Parallel()
 
