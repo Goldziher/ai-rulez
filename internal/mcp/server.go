@@ -26,6 +26,8 @@ func NewServer(version string) *Server {
 		Instructions: serverInstructions,
 	})
 
+	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware())
+
 	srv := &Server{
 		mcpServer: mcpServer,
 		version:   version,
