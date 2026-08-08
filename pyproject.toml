@@ -12,5 +12,5 @@ classifiers = [
 ]
 dependencies = []
 
-[tool.uv]
-dev-dependencies = ["zensical"]
+[dependency-groups]
+dev = ["zensical"]
