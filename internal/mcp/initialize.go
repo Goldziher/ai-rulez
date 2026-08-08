@@ -82,15 +82,24 @@ func tolerantInitializeMiddleware() sdkmcp.Middleware {
 
 			case notificationInitialized:
 				mu.Lock()
-				tracked := state(request)
-				seen := tracked.initialized
-				tracked.initialized = true
+				seen := state(request).initialized
 				mu.Unlock()
 
 				if seen {
 					return nil, nil
 				}
-				return next(ctx, method, request)
+
+				result, err := next(ctx, method, request)
+				if err != nil {
+					return nil, err
+				}
+				// Only a notification the SDK accepted establishes the session, so a
+				// rejected one (e.g. arriving before `initialize`) must not suppress
+				// the real notification that follows.
+				mu.Lock()
+				state(request).initialized = true
+				mu.Unlock()
+				return result, nil
 
 			default:
 				return next(ctx, method, request)
