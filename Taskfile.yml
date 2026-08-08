@@ -15,11 +15,11 @@ tasks:
       - task --list
 
   update:
-    desc: "Update dependencies and pre-commit hooks"
+    desc: "Update Go modules and the docs lockfile"
     cmds:
-      - prek autoupdate
-      - go get -u ./...
+      - go get -u all
       - go mod tidy
+      - uv lock --upgrade
 
   upgrade:
     desc: "Upgrade all dependencies to latest then update"
@@ -140,9 +140,10 @@ tasks:
       - task: test:e2e
 
   lint:
-    desc: "Run all pre-commit hooks"
+    desc: "Run poly formatting and lint checks"
     cmds:
-      - prek run --all-files
+      - poly fmt --check .
+      - poly lint .
 
   check:
     desc: "Run go vet and golangci-lint"
