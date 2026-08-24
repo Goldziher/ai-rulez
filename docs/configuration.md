@@ -469,12 +469,28 @@ Configures the style of headers in generated files. Headers provide context abou
 style = "minimal"   # Default: bare minimum header
 # style = "compact"  # Shorter header with key information
 # style = "detailed" # Comprehensive header with full documentation
+timestamp = false    # Omit the "Generated:" line (default: true)
 ```
 
 The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
 warning and the injected `Content-Hash` / `Source-Hash` freshness lines that ai-rulez uses to
 detect whether a generated file (or its sources) changed since the last `generate`. Only the
 amount of explanatory prose differs between styles.
+
+#### `timestamp`
+
+Every header carries a `Generated:` line stamped with the time of the run. Set `timestamp = false`
+to omit it entirely:
+
+```toml
+[header]
+timestamp = false
+```
+
+This is worth doing in repositories that commit their generated outputs. `generate` already skips
+files whose sources are unchanged, so the timestamp does not normally churn — but dropping the line
+removes the last per-run value from the header, so any rewrite that does happen produces a diff only
+when the content actually changed.
 
 #### Header Styles
 

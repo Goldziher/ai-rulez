@@ -3,6 +3,7 @@ package templates
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -78,15 +79,33 @@ func determineCommentStyle(outputPath string) commentStyle {
 	}
 }
 
+// timestampSuffix renders the inline "| Generated: …" fragment used by the
+// compact header, collapsing to nothing when timestamps are disabled.
+func timestampSuffix(timestamp string) string {
+	if timestamp == "" {
+		return ""
+	}
+	return " | Generated: " + timestamp
+}
+
+// timestampLines renders the standalone "Generated: …" banner line, or no line
+// at all when timestamps are disabled.
+func timestampLines(timestamp string) []string {
+	if timestamp == "" {
+		return nil
+	}
+	return []string{"Generated: " + timestamp}
+}
+
 func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	banner := []string{
+	banner := slices.Concat([]string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
 		"Project: " + data.ProjectName,
-		"Generated: " + timestamp,
+	}, timestampLines(timestamp), []string{
 		"Source: .ai-rulez/" + configPath,
 		"Target: " + outputPath,
 		"Content: rules=" + fmt.Sprint(data.RuleCount) + ", sections=" + fmt.Sprint(data.SectionCount) + ", agents=" + fmt.Sprint(data.AgentCount),
-	}
+	})
 
 	banner = append(banner, "",
 		"WHAT IS AI-RULEZ",
@@ -136,7 +155,7 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 func buildCompactHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
 	banner := []string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
-		"Project: " + data.ProjectName + " | Generated: " + timestamp,
+		"Project: " + data.ProjectName + timestampSuffix(timestamp),
 		"Source: .ai-rulez/" + configPath + " | Target: " + outputPath,
 		"Content: " + fmt.Sprintf("rules=%d, sections=%d, agents=%d", data.RuleCount, data.SectionCount, data.AgentCount),
 	}
@@ -162,12 +181,12 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 }
 
 func buildMinimalHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
-	banner := []string{
+	banner := slices.Concat([]string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName,
-		"Generated: " + timestamp,
+	}, timestampLines(timestamp), []string{
 		"Source: .ai-rulez/" + configPath,
-	}
+	})
 
 	banner = append(banner,
 		"",
@@ -191,7 +210,12 @@ func buildHeaderLines(data *TemplateData) []string {
 		outputPath = "(preview output)"
 	}
 
-	timestamp := data.Timestamp.Format("2006-01-02 15:04:05")
+	// An empty timestamp means the "Generated:" line is omitted entirely, which
+	// is what [header] timestamp = false asks for.
+	timestamp := ""
+	if data.Config == nil || data.Config.ShowHeaderTimestamp() {
+		timestamp = data.Timestamp.Format("2006-01-02 15:04:05")
+	}
 
 	headerStyle := "detailed"
 	if data.StyleOverride != "" {
