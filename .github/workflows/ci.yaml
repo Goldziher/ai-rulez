@@ -16,7 +16,7 @@ permissions:
 
 jobs:
   validate:
-    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1.8.142
+    uses: xberg-io/actions/.github/workflows/reusable-validate.yml@v1.8.145
 
   lint:
     name: Lint
@@ -50,7 +50,7 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v7
+        uses: golangci/golangci-lint-action@v9
         with:
           version: latest
           args: --timeout=5m
