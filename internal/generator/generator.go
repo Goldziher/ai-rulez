@@ -941,6 +941,7 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	b.WriteString("description=" + cfg.Description + "\n")
 	b.WriteString("version=" + cfg.Version + "\n")
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
+	_, _ = fmt.Fprintf(&b, "header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
 
 	// MCP servers — sorted by name
 	mcpNames := make([]string, 0, len(cfg.MCPServers))

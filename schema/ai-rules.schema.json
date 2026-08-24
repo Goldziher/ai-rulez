@@ -290,7 +290,12 @@
           "type": "string",
           "enum": ["detailed", "compact", "minimal"],
           "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",
-          "default": "detailed"
+          "default": "minimal"
+        },
+        "timestamp": {
+          "type": "boolean",
+          "description": "Emit the \"Generated:\" line in generated headers. Set to false in projects that commit generated outputs so the header carries no per-run value.",
+          "default": true
         }
       },
       "additionalProperties": false
