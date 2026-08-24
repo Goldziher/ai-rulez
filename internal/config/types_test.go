@@ -762,3 +762,29 @@ func TestConfigHasPluginAuthoring(t *testing.T) {
 		})
 	}
 }
+
+func TestHeaderConfig_ShowTimestamp(t *testing.T) {
+	t.Parallel()
+
+	enabled := true
+	disabled := false
+
+	tests := []struct {
+		name   string
+		header *config.HeaderConfig
+		want   bool
+	}{
+		{name: "nil config defaults to enabled", header: nil, want: true},
+		{name: "unset field defaults to enabled", header: &config.HeaderConfig{}, want: true},
+		{name: "explicit true", header: &config.HeaderConfig{Timestamp: &enabled}, want: true},
+		{name: "explicit false", header: &config.HeaderConfig{Timestamp: &disabled}, want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, tt.header.ShowTimestamp())
+			assert.Equal(t, tt.want, (&config.Config{Header: tt.header}).ShowHeaderTimestamp())
+		})
+	}
+}

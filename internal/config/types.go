@@ -84,6 +84,10 @@ const headerStyleMinimal = "minimal"
 // HeaderConfig represents header style configuration for generated files
 type HeaderConfig struct {
 	Style string `yaml:"style,omitempty" json:"style,omitempty" toml:"style,omitempty"` // "detailed", "compact", or "minimal"
+	// Timestamp controls whether the "Generated:" line is emitted. Set it to
+	// false in projects that commit generated outputs so the header carries no
+	// per-run value at all. Nil means enabled.
+	Timestamp *bool `yaml:"timestamp,omitempty" json:"timestamp,omitempty" toml:"timestamp,omitempty"`
 }
 
 // GetHeaderStyle returns the header style, defaulting to "minimal"
@@ -92,6 +96,15 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 		return headerStyleMinimal
 	}
 	return h.Style
+}
+
+// ShowTimestamp reports whether generated headers include the "Generated:"
+// line. Defaults to true.
+func (h *HeaderConfig) ShowTimestamp() bool {
+	if h == nil || h.Timestamp == nil {
+		return true
+	}
+	return *h.Timestamp
 }
 
 // DefaultsConfig represents top-level defaults that propagate into generated outputs
@@ -536,6 +549,12 @@ func (c *Config) GetHeaderStyle() string {
 		return headerStyleMinimal
 	}
 	return c.Header.GetHeaderStyle()
+}
+
+// ShowHeaderTimestamp reports whether generated headers include the
+// "Generated:" line. Defaults to true.
+func (c *Config) ShowHeaderTimestamp() bool {
+	return c.Header.ShowTimestamp()
 }
 
 // GetContentForProfile returns all content for a given profile.

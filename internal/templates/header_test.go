@@ -599,3 +599,39 @@ func TestHeaderContent_ConfigPathAndOutputPath(t *testing.T) {
 	assert.Contains(t, header, "Source: .ai-rulez/config/custom-config.yaml")
 	assert.Contains(t, header, "Target: docs/output/CURSOR.md")
 }
+
+// TestHeaderTimestamp_OmittedWhenDisabled verifies that `[header] timestamp =
+// false` removes the "Generated:" line from every header style, so projects
+// that commit generated outputs carry no per-run value in the header (#166).
+func TestHeaderTimestamp_OmittedWhenDisabled(t *testing.T) {
+	t.Parallel()
+
+	disabled := false
+	enabled := true
+
+	for _, style := range []string{"detailed", "compact", "minimal"} {
+		t.Run(style, func(t *testing.T) {
+			t.Parallel()
+
+			off := templates.GenerateHeader(createTemplateData("P", &config.Config{
+				Name:   "P",
+				Header: &config.HeaderConfig{Style: style, Timestamp: &disabled},
+			}))
+			assert.NotContains(t, off, "Generated:",
+				"timestamp = false must drop the Generated line")
+			assert.Contains(t, off, "Project: P", "the rest of the header must survive")
+
+			on := templates.GenerateHeader(createTemplateData("P", &config.Config{
+				Name:   "P",
+				Header: &config.HeaderConfig{Style: style, Timestamp: &enabled},
+			}))
+			assert.Contains(t, on, "Generated:", "timestamp = true must keep the Generated line")
+
+			omitted := templates.GenerateHeader(createTemplateData("P", &config.Config{
+				Name:   "P",
+				Header: &config.HeaderConfig{Style: style},
+			}))
+			assert.Contains(t, omitted, "Generated:", "the timestamp defaults to enabled")
+		})
+	}
+}
