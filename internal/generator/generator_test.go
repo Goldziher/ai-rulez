@@ -1747,3 +1747,150 @@ func TestGenerator_writeOutput_RawContent_SkipsHeaderInjection(t *testing.T) {
 		assert.Equal(t, os.FileMode(0o755), info.Mode().Perm())
 	})
 }
+
+// TestHashPath covers the four normalization branches used when a content
+// file's path is folded into the source hash. See #166.
+func TestHashPath(t *testing.T) {
+	t.Parallel()
+
+	baseDir := filepath.Join(string(filepath.Separator), "checkout", "project")
+	configDir := filepath.Join(baseDir, ".ai-rulez")
+	cfg := &config.Config{BaseDir: baseDir, ConfigDir: configDir}
+
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{
+			name: "builtin paths pass through unchanged",
+			path: "builtin://rules/go-conventions.md",
+			want: "builtin://rules/go-conventions.md",
+		},
+		{
+			name: "path under the config dir becomes config-relative",
+			path: filepath.Join(configDir, "skills", "demo", "SKILL.md"),
+			want: "skills/demo/SKILL.md",
+		},
+		{
+			name: "path under the base dir but outside the config dir becomes base-relative",
+			path: filepath.Join(baseDir, "vendor", "shared", "rules", "style.md"),
+			want: "vendor/shared/rules/style.md",
+		},
+		{
+			name: "out-of-tree path collapses to its two-segment tail",
+			path: filepath.Join(string(filepath.Separator), "home", "someone", ".cache",
+				"ai-rulez", "includes", "shared", "skills", "demo", "SKILL.md"),
+			want: "demo/SKILL.md",
+		},
+		{
+			name: "empty path stays empty",
+			path: "",
+			want: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, hashPath(tt.path, cfg))
+		})
+	}
+}
+
+// TestComputeSourceHash_StableAcrossBaseDirs is the regression test for #166:
+// the same source tree generated from two different checkout roots must yield
+// the same Source-Hash, otherwise every relocated checkout rewrites its
+// generated files and churns the `Generated:` timestamp.
+func TestComputeSourceHash_StableAcrossBaseDirs(t *testing.T) {
+	t.Parallel()
+
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
+	ctx := context.Background()
+
+	loadFrom := func(dir string) *config.Config {
+		copyFixture(t, fixtureDir, dir)
+		cfg, err := config.LoadConfig(ctx, dir)
+		require.NoError(t, err)
+		return cfg
+	}
+
+	// Two distinct absolute roots, mirroring a laptop checkout vs a CI runner.
+	dirA := filepath.Join(t.TempDir(), "workspace", "project")
+	dirB := filepath.Join(t.TempDir(), "runner", "work", "project", "project")
+	require.NoError(t, os.MkdirAll(dirA, 0o755))
+	require.NoError(t, os.MkdirAll(dirB, 0o755))
+
+	cfgA := loadFrom(dirA)
+	cfgB := loadFrom(dirB)
+
+	assert.Equal(t,
+		computeSourceHash(cfgA, cfgA.Content),
+		computeSourceHash(cfgB, cfgB.Content),
+		"source hash must not depend on the checkout root")
+}
+
+// TestComputeSourceHash_IgnoresOutOfTreeRoot covers content that lives outside
+// the project — git includes under ~/.cache/ai-rulez and installed skills. The
+// machine-specific root must not enter the hash, but the skill directory name
+// must, because presets derive the skill id from it via extractSkillID.
+func TestComputeSourceHash_IgnoresOutOfTreeRoot(t *testing.T) {
+	t.Parallel()
+
+	cfg := &config.Config{
+		Name:      "x",
+		BaseDir:   filepath.Join(string(filepath.Separator), "project"),
+		ConfigDir: filepath.Join(string(filepath.Separator), "project", ".ai-rulez"),
+	}
+	hashFor := func(path string) string {
+		return computeSourceHash(cfg, &config.ContentTree{
+			Skills: []config.ContentFile{{Name: "demo", Path: path, Content: "body"}},
+		})
+	}
+
+	cacheA := hashFor(filepath.Join(string(filepath.Separator), "home", "alice",
+		".cache", "ai-rulez", "includes", "shared", "skills", "demo", "SKILL.md"))
+	cacheB := hashFor(filepath.Join(string(filepath.Separator), "Users", "bob",
+		"Library", "Caches", "ai-rulez", "includes", "shared", "skills", "demo", "SKILL.md"))
+	renamed := hashFor(filepath.Join(string(filepath.Separator), "home", "alice",
+		".cache", "ai-rulez", "includes", "shared", "skills", "other", "SKILL.md"))
+
+	assert.Equal(t, cacheA, cacheB, "include cache location must not affect the hash")
+	assert.NotEqual(t, cacheA, renamed, "the skill directory name feeds the rendered skill id and must affect the hash")
+}
+
+// TestGenerator_NoRewriteAfterRelocation reproduces the CI failure from #166
+// end to end: generate, relocate the whole tree (as a fresh checkout does),
+// generate again, and expect the second run to skip rather than rewrite.
+func TestGenerator_NoRewriteAfterRelocation(t *testing.T) {
+	fixtureDir := filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic")
+	ctx := context.Background()
+
+	dirA := filepath.Join(t.TempDir(), "first", "checkout")
+	require.NoError(t, os.MkdirAll(dirA, 0o755))
+	copyFixture(t, fixtureDir, dirA)
+
+	cfgA, err := config.LoadConfig(ctx, dirA)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfgA).Generate("default"))
+
+	outputPath := filepath.Join(dirA, "CLAUDE.md")
+	firstContent, err := os.ReadFile(outputPath)
+	require.NoError(t, err)
+
+	// Relocate the generated tree to a different absolute root, exactly as a
+	// clean checkout on another machine would place it.
+	dirB := filepath.Join(t.TempDir(), "relocated", "elsewhere", "checkout")
+	require.NoError(t, os.MkdirAll(dirB, 0o755))
+	copyFixture(t, dirA, dirB)
+
+	cfgB, err := config.LoadConfig(ctx, dirB)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfgB).Generate("default"))
+
+	secondContent, err := os.ReadFile(filepath.Join(dirB, "CLAUDE.md"))
+	require.NoError(t, err)
+
+	assert.Equal(t, string(firstContent), string(secondContent),
+		"relocating the checkout must not rewrite generated output")
+}

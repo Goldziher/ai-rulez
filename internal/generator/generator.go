@@ -926,12 +926,14 @@ func injectHashes(content, outputPath, contentHash, sourceHash string) string {
 //   - GeneratorSchemaVersion (so renderer changes invalidate)
 //   - Resolved config metadata that affects rendering
 //   - Resolved MCP servers
-//   - Every ContentFile in root + domains, sorted, with name/path/content/metadata
+//   - Every ContentFile in root + domains, with name/path/content/metadata
 //
 // Determinism requires sorted iteration everywhere — Go maps must be visited
-// in lexical key order, ContentFile slices must already be sorted by Name
-// (the scanner does this), and metadata serialization uses encoding/json which
-// sorts map keys.
+// in lexical key order, ContentFile slices must arrive in a stable order (the
+// scanner relies on os.ReadDir's lexical-by-filename ordering; include-merged
+// trees are ordered by the include resolver), and metadata serialization uses
+// encoding/json which sorts map keys. Paths are normalized by hashPath so the
+// checkout root never enters the hash.
 func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	var b strings.Builder
 	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
@@ -966,11 +968,11 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	}
 
 	// Root content categories — slices already sorted by Name in the scanner
-	writeContentFiles(&b, "root.rules", content.Rules)
-	writeContentFiles(&b, "root.context", content.Context)
-	writeContentFiles(&b, "root.skills", content.Skills)
-	writeContentFiles(&b, "root.agents", content.Agents)
-	writeContentFiles(&b, "root.commands", content.Commands)
+	writeContentFiles(&b, "root.rules", content.Rules, cfg)
+	writeContentFiles(&b, "root.context", content.Context, cfg)
+	writeContentFiles(&b, "root.skills", content.Skills, cfg)
+	writeContentFiles(&b, "root.agents", content.Agents, cfg)
+	writeContentFiles(&b, "root.commands", content.Commands, cfg)
 
 	// Domain content — domains visited in sorted name order
 	domainNames := make([]string, 0, len(content.Domains))
@@ -981,21 +983,59 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	for _, name := range domainNames {
 		domain := content.Domains[name]
 		_, _ = fmt.Fprintf(&b, "domain:%s,builtin=%t,from_include=%t\n", name, domain.Builtin, domain.FromInclude)
-		writeContentFiles(&b, "domain."+name+".rules", domain.Rules)
-		writeContentFiles(&b, "domain."+name+".context", domain.Context)
-		writeContentFiles(&b, "domain."+name+".skills", domain.Skills)
-		writeContentFiles(&b, "domain."+name+".agents", domain.Agents)
-		writeContentFiles(&b, "domain."+name+".commands", domain.Commands)
+		writeContentFiles(&b, "domain."+name+".rules", domain.Rules, cfg)
+		writeContentFiles(&b, "domain."+name+".context", domain.Context, cfg)
+		writeContentFiles(&b, "domain."+name+".skills", domain.Skills, cfg)
+		writeContentFiles(&b, "domain."+name+".agents", domain.Agents, cfg)
+		writeContentFiles(&b, "domain."+name+".commands", domain.Commands, cfg)
 	}
 
 	return templates.HashContent(b.String())
 }
 
+// builtinPathScheme prefixes the synthetic paths used for embedded builtin
+// content, which are already location-independent.
+const builtinPathScheme = "builtin://"
+
+// hashPath returns a location-independent identifier for a content file so the
+// source hash stays stable across checkout roots, machines, and operating
+// systems. ContentFile.Path is absolute for everything the scanner reads from
+// disk, so hashing it raw made the checkout root part of the hash: the same
+// tree generated from two directories produced different Source-Hash values,
+// forcing a rewrite and a fresh timestamp on every relocated checkout (#166).
+//
+// Out-of-tree content — git includes cached under the user's home directory,
+// installed skills, the temp symlink used for bare include layouts — collapses
+// to the last two segments. That is exactly what rendering consumes: presets
+// derive the skill id from filepath.Base(filepath.Dir(path)) via
+// extractSkillID, so the directory name still busts the hash while the
+// machine-specific prefix never enters it.
+func hashPath(path string, cfg *config.Config) string {
+	if path == "" || strings.HasPrefix(path, builtinPathScheme) {
+		return path
+	}
+
+	for _, root := range []string{cfg.ConfigDir, cfg.BaseDir} {
+		if root == "" {
+			continue
+		}
+		rel, err := filepath.Rel(root, path)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
+		}
+		return filepath.ToSlash(rel)
+	}
+
+	return filepath.ToSlash(filepath.Join(filepath.Base(filepath.Dir(path)), filepath.Base(path)))
+}
+
 // writeContentFiles serializes a ContentFile slice into the hash builder.
-// Slices reach this function pre-sorted by Name (scanner guarantee).
-func writeContentFiles(b *strings.Builder, label string, files []config.ContentFile) {
+// Slices reach this function in the scanner's os.ReadDir order, which is
+// lexical by filename; include-merged trees are ordered by the include
+// resolver instead.
+func writeContentFiles(b *strings.Builder, label string, files []config.ContentFile, cfg *config.Config) {
 	for _, f := range files {
-		b.WriteString(label + ":" + f.Name + "|path=" + f.Path + "|content=" + f.Content)
+		b.WriteString(label + ":" + f.Name + "|path=" + hashPath(f.Path, cfg) + "|content=" + f.Content)
 		if f.Metadata != nil {
 			metaJSON, err := json.Marshal(f.Metadata)
 			if err != nil {
