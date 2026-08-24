@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.11.3] - 2026-08-24
+
+### Fixed
+
+- `generate` is now reproducible across checkout paths. `computeSourceHash` folded the raw absolute `ContentFile.Path` into the source hash, so the same tree generated from two directories produced different `Source-Hash` values. The bodies were byte-identical, but the mismatch forced a rewrite and stamped a fresh `Generated:` timestamp, leaving clean-checkout CI drift checks permanently dirty. Paths are now normalized before hashing — relative to the config or base directory when in-tree, collapsed to their last two segments when not. The fallback also removes three cases the report did not cover: git includes cached under the user's home directory (so a laptop and a CI runner disagreed at the same commit), installed skills, and the randomly-named temp symlink used for bare include layouts (non-deterministic run to run on one machine). Normalizing through `filepath.ToSlash` additionally stops Windows and Linux disagreeing about the same tree. `GeneratorSchemaVersion` moves to `v3`, so every project regenerates once before the skip mechanism re-engages. (#166)
+- `ai-rulez mcp` no longer uses the deprecated `ServerOptions.HasTools`; tools are advertised through `Capabilities` with the same `{"listChanged":true}` value. Setting `Capabilities` suppresses the SDK's default `logging` capability, which is deprecated as of protocol version 2026-07-28 and which this server never emitted. This also unblocks the Lint job, which staticcheck's SA1019 had been failing on `main` since the SDK bump in 4.11.2.
+
+### Added
+
+- `[header] timestamp = false` omits the `Generated:` line from all three header styles, for projects that commit their generated outputs and want no per-run value in the header at all. Defaults to `true`, so existing output is unchanged.
+
+### Changed
+
+- Dependencies updated: `samber/oops` 1.23.1, `golang.org/x/text` 0.41.0, with indirect bumps to `golang.org/x/net` 0.58.0, `golang.org/x/crypto` 0.55.0, and `go-json-experiment/json`; docs toolchain to zensical 0.0.57. `govulncheck` reports no known vulnerabilities.
+- Workflow actions updated: `golangci-lint-action` v7 → v9, `xberg-io/actions` reusable-validate v1.8.142 → v1.8.145, and `astral-sh/setup-uv` v6 → v10.0.1. setup-uv is pinned to a full semver tag because it stopped publishing major and minor tags at v8 as a supply-chain measure, so `@v10` does not resolve.
+- The JSON schema's `header.style` default now reads `minimal`, matching the code default since 4.9.
+
 ## [4.11.2] - 2026-08-08
 
 ### Fixed

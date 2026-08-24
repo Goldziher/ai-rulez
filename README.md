@@ -292,7 +292,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.11.2
+    rev: v4.11.3
     hooks:
       - id: ai-rulez-recursive # generate outputs across the repo
       - id: ai-rulez-validate # dry-run validation
@@ -314,7 +314,7 @@ repository needs. This requires AI-Rulez 4.9.0+ and Poly 0.14.0+:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v4.11.2"
+revision = "v4.11.3"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 
