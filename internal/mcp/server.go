@@ -22,7 +22,13 @@ func NewServer(version string) *Server {
 		Version: version,
 	}
 	mcpServer := sdkmcp.NewServer(serverImpl, &sdkmcp.ServerOptions{
-		HasTools:     true,
+		// Advertise tools explicitly rather than relying on inference, matching
+		// what the deprecated HasTools option produced. Setting Capabilities at
+		// all drops the SDK's default "logging" capability, which is deprecated
+		// as of protocol version 2026-07-28 and which this server never uses.
+		Capabilities: &sdkmcp.ServerCapabilities{
+			Tools: &sdkmcp.ToolCapabilities{ListChanged: true},
+		},
 		Instructions: serverInstructions,
 	})
 
