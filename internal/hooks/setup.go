@@ -13,7 +13,7 @@ const (
 	preCommitSystem       = "pre-commit"
 	huskySystem           = "husky"
 	officialPreCommitRepo = "https://github.com/Goldziher/ai-rulez"
-	officialPreCommitRev  = "v4.11.2"
+	officialPreCommitRev  = "v4.11.3"
 	keyRepo               = "repo"
 	keyHooks              = "hooks"
 	binaryAIRulez         = "ai-rulez"
