@@ -632,6 +632,50 @@ func TestClaude_PerPresetModel(t *testing.T) {
 
 // --- helpers ---
 
+// TestClaude_MalformedFrontmatter_SkillGetsNameFallbackDescription is
+// regression coverage for #176: a skill whose frontmatter failed to parse
+// loads with nil Metadata, so the description whitelist never fires. The
+// generated SKILL.md must carry the documented name-as-description fallback
+// instead of shipping without a description (which would leave the skill
+// invisible to the assistant).
+func TestClaude_MalformedFrontmatter_SkillGetsNameFallbackDescription(t *testing.T) {
+	t.Parallel()
+
+	gen := claudeGen(t)
+	content := &config.ContentTree{
+		Skills: []config.ContentFile{
+			{
+				Name:                 "zz-probe",
+				Path:                 "/test/skills/zz-probe/SKILL.md",
+				Content:              "# Probe\n\nBody.\n",
+				MalformedFrontmatter: true,
+			},
+		},
+	}
+	cfg := &config.Config{Name: "example", Description: "Example project."}
+
+	skill := findSkillBody(t, gen, content, cfg, "/repo", "zz-probe")
+	assert.Equal(t, "zz-probe", frontmatterValue(skill, "description"),
+		"malformed-frontmatter skill must get the name fallback description")
+
+	// A healthy skill keeps its explicit description — the fallback must not
+	// clobber a real value.
+	healthy := &config.ContentTree{
+		Skills: []config.ContentFile{
+			{
+				Name:    "with-desc",
+				Path:    "/test/skills/with-desc/SKILL.md",
+				Content: "Body.\n",
+				Metadata: &config.Metadata{
+					Extra: map[string]string{"description": "Explicit description"},
+				},
+			},
+		},
+	}
+	healthySkill := findSkillBody(t, gen, healthy, cfg, "/repo", "with-desc")
+	assert.Equal(t, "Explicit description", frontmatterValue(healthySkill, "description"))
+}
+
 func findSkillBody(t *testing.T, gen *providers.Generator, content *config.ContentTree, cfg *config.Config, baseDir, skillID string) string {
 	t.Helper()
 	outputs, err := gen.Generate(content, baseDir, cfg)
