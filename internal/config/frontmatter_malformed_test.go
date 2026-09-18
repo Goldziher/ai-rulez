@@ -17,10 +17,13 @@ func TestParseFrontmatter_MalformedIsStripped(t *testing.T) {
 		"---\n\n" +
 		"Body line one.\nBody line two.\n"
 
-	metadata, body := parseFrontmatter(content)
+	metadata, body, malformed := parseFrontmatter(content)
 
 	if metadata != nil {
 		t.Errorf("expected nil metadata for unparseable frontmatter, got %+v", metadata)
+	}
+	if !malformed {
+		t.Error("expected malformed=true for unparseable frontmatter, got false")
 	}
 	if strings.Contains(body, "---") {
 		t.Errorf("frontmatter delimiters were not stripped; body still contains ---:\n%q", body)
@@ -42,10 +45,13 @@ func TestParseFrontmatter_ValidStillParses(t *testing.T) {
 		"---\n\n" +
 		"Body line one.\n"
 
-	metadata, body := parseFrontmatter(content)
+	metadata, body, malformed := parseFrontmatter(content)
 
 	if metadata == nil {
 		t.Fatal("expected metadata for valid frontmatter, got nil")
+	}
+	if malformed {
+		t.Error("expected malformed=false for valid frontmatter, got true")
 	}
 	if strings.Contains(body, "---") || strings.Contains(body, "description:") {
 		t.Errorf("valid frontmatter was not stripped from body:\n%q", body)

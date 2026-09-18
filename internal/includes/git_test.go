@@ -766,3 +766,98 @@ func TestGitSourceFetch_SkipFetch_WithCache(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEmpty(t, tree.Rules)
 }
+
+// revParseHead returns the current HEAD SHA of a repo.
+func revParseHead(t *testing.T, repoDir string) string {
+	t.Helper()
+	cmd := exec.Command("git", "rev-parse", "HEAD")
+	cmd.Dir = repoDir
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git rev-parse: %s", out)
+	return strings.TrimSpace(string(out))
+}
+
+// TestGitSourceFetch_PinnedSHA fetches content pinned to an exact commit SHA.
+// A raw SHA cannot be advertised by ls-remote, so Fetch must resolve it
+// without the remote HEAD lookup and clone the exact object (#167).
+func TestGitSourceFetch_PinnedSHA(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "---\nname: rule1\npriority: high\n---\n# Rule Pinned")
+	// Serving a raw SHA over file:// requires the server to expose reachable objects.
+	for _, args := range [][]string{
+		{"config", "uploadpack.allowReachableSHA1InWant", "true"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repoDir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+	sha := revParseHead(t, repoDir)
+	require.True(t, isFullSHA(sha), "test setup must produce a full SHA")
+
+	cacheDir := t.TempDir()
+	source := &GitSource{
+		name:        "test-sha",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		ref:         sha,
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	ctx := context.Background()
+
+	tree, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+	require.NotEmpty(t, tree.Rules)
+	assert.Contains(t, tree.Rules[0].Content, "Rule Pinned")
+
+	// Pinned SHA is deterministic: a second fetch is a cache hit with identical content.
+	tree2, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, tree2)
+	assert.Len(t, tree2.Rules, len(tree.Rules))
+	assert.Contains(t, tree2.Rules[0].Content, "Rule Pinned")
+}
+
+// TestGitSourceFetch_PinnedSHA_FailsClosed verifies that a pinned SHA the
+// remote cannot serve is an error — it must never silently fall back to
+// cached content (#167).
+func TestGitSourceFetch_PinnedSHA_FailsClosed(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, ".ai-rulez/rules/rule.md", "---\nname: rule1\npriority: high\n---\n# Rule")
+	for _, args := range [][]string{
+		{"config", "uploadpack.allowReachableSHA1InWant", "true"},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = repoDir
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, "git %v: %s", args, out)
+	}
+	goodSHA := revParseHead(t, repoDir)
+
+	cacheDir := t.TempDir()
+	source := &GitSource{
+		name:        "test-sha-fail-closed",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		ref:         goodSHA,
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	// Populate the cache with a valid pinned SHA.
+	_, err := source.Fetch(context.Background())
+	require.NoError(t, err)
+
+	// Now point at a well-formed but nonexistent SHA. This must error out —
+	// returning the stale cached content would be a silent fallback.
+	source.ref = strings.Repeat("0", 40)
+	require.False(t, isCacheHit(cacheDir, source.ref))
+
+	tree, err := source.Fetch(context.Background())
+	require.Error(t, err)
+	assert.Nil(t, tree)
+	assert.NotContains(t, err.Error(), "using cached content", "pinned SHA fetch must fail closed, not fall back to cache")
+}

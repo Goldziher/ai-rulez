@@ -174,3 +174,65 @@ func TestConfigValidateAgentEffort(t *testing.T) {
 		assert.NoError(t, cfg.Validate())
 	})
 }
+
+func TestConfigValidateMalformedFrontmatter(t *testing.T) {
+	base := func() *Config {
+		return &Config{
+			Version: "4.0",
+			Name:    "test",
+			Presets: []Preset{{BuiltIn: "claude"}},
+			Content: &ContentTree{},
+		}
+	}
+
+	t.Run("valid config passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "ok", Path: "skills/ok/SKILL.md", Metadata: &Metadata{Extra: map[string]string{"description": "fine"}}},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("content without frontmatter passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{{Name: "plain", Path: "skills/plain/SKILL.md"}}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("root skill with malformed frontmatter fails and names the file", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "zz-probe", Path: "skills/zz-probe/SKILL.md", MalformedFrontmatter: true},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "skills/zz-probe/SKILL.md")
+	})
+
+	t.Run("domain skill with malformed frontmatter fails", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Domains = map[string]*Domain{
+			"security": {
+				Name: "security",
+				Skills: []ContentFile{
+					{Name: "zz-probe", Path: "skills/zz-probe/SKILL.md", MalformedFrontmatter: true},
+				},
+			},
+		}
+		require.Error(t, cfg.Validate())
+	})
+
+	t.Run("multiple malformed files are all reported", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Rules = []ContentFile{
+			{Name: "a", Path: "rules/a.md", MalformedFrontmatter: true},
+		}
+		cfg.Content.Agents = []ContentFile{
+			{Name: "b", Path: "agents/b.md", MalformedFrontmatter: true},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "rules/a.md")
+		assert.Contains(t, err.Error(), "agents/b.md")
+	})
+}
