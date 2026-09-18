@@ -11,33 +11,50 @@ const (
 	OldHeader   = "# AI Rules generated files"
 )
 
-// ReplaceFencedBlock replaces the content between BEGIN and END markers
+// ReplaceFencedBlock splices newBlock in place of the existing BEGIN/END
+// region, keeping the lines before and after the fence where the user put
+// them. Any further managed region is dropped, so a file that picked up a
+// duplicate fence collapses back to one. With no fence present the block is
+// appended; an empty newBlock drops the region entirely.
 func ReplaceFencedBlock(content, newBlock string) string {
-	lines := strings.Split(content, "\n")
-	var result strings.Builder
-	inBlock := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == BeginMarker {
-			inBlock = true
+	var before, after []string
+	var inBlock, seenFence bool
+	for _, line := range strings.Split(content, "\n") {
+		switch strings.TrimSpace(line) {
+		case BeginMarker:
+			inBlock, seenFence = true, true
 			continue
-		}
-		if trimmed == EndMarker {
+		case EndMarker:
 			inBlock = false
 			continue
 		}
-		if !inBlock {
-			result.WriteString(line + "\n")
+		switch {
+		case inBlock:
+		case seenFence:
+			after = append(after, line)
+		default:
+			before = append(before, line)
 		}
 	}
 
-	// Remove trailing newlines to avoid accumulating blank lines
-	out := strings.TrimRight(result.String(), "\n")
-	if out != "" {
-		out += "\n\n"
+	out := strings.Trim(strings.Join(before, "\n"), "\n")
+	if block := strings.Trim(newBlock, "\n"); block != "" {
+		if out != "" {
+			out += "\n\n"
+		}
+		out += block
 	}
-	out += newBlock
+	if out != "" {
+		out += "\n"
+	}
+	// Keep the tail byte for byte, dropping only the blank lines that sat
+	// directly under the fence.
+	if tail := strings.TrimLeft(strings.Join(after, "\n"), "\n"); tail != "" {
+		if out != "" {
+			out += "\n"
+		}
+		out += tail
+	}
 	return out
 }
 
