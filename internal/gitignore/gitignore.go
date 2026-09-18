@@ -11,33 +11,42 @@ const (
 	OldHeader   = "# AI Rules generated files"
 )
 
-// ReplaceFencedBlock replaces the content between BEGIN and END markers
+// ReplaceFencedBlock splices newBlock in place of the existing BEGIN/END
+// region, keeping the lines before and after the fence where the user put
+// them. With no fence present the block is appended; an empty newBlock drops
+// the region entirely.
 func ReplaceFencedBlock(content, newBlock string) string {
 	lines := strings.Split(content, "\n")
-	var result strings.Builder
-	inBlock := false
-
-	for _, line := range lines {
-		trimmed := strings.TrimSpace(line)
-		if trimmed == BeginMarker {
-			inBlock = true
-			continue
-		}
-		if trimmed == EndMarker {
-			inBlock = false
-			continue
-		}
-		if !inBlock {
-			result.WriteString(line + "\n")
+	begin, end := -1, len(lines)
+	for i, line := range lines {
+		switch strings.TrimSpace(line) {
+		case BeginMarker:
+			if begin == -1 {
+				begin = i
+			}
+		case EndMarker:
+			if begin != -1 && end == len(lines) {
+				end = i + 1
+			}
 		}
 	}
 
-	// Remove trailing newlines to avoid accumulating blank lines
-	out := strings.TrimRight(result.String(), "\n")
+	prefix, suffix := content, ""
+	if begin != -1 {
+		prefix = strings.Join(lines[:begin], "\n")
+		suffix = strings.Join(lines[end:], "\n")
+	}
+
+	var parts []string
+	for _, part := range []string{prefix, newBlock, suffix} {
+		if trimmed := strings.Trim(part, "\n"); trimmed != "" {
+			parts = append(parts, trimmed)
+		}
+	}
+	out := strings.Join(parts, "\n\n")
 	if out != "" {
-		out += "\n\n"
+		out += "\n"
 	}
-	out += newBlock
 	return out
 }
 
