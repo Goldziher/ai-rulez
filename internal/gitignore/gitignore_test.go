@@ -40,6 +40,18 @@ func TestReplaceFencedBlock(t *testing.T) {
 			want:     "",
 		},
 		{
+			name:     "blank lines in the user tail survive untouched",
+			content:  BeginMarker + "\nold.md\n" + EndMarker + "\n\n*.log\n\n\n",
+			newBlock: block,
+			want:     block + "\n*.log\n\n\n",
+		},
+		{
+			name:     "a duplicate fence collapses back to one",
+			content:  "node_modules/\n\n" + BeginMarker + "\nold.md\n" + EndMarker + "\n\n*.log\n" + BeginMarker + "\nstale.md\n" + EndMarker + "\ndist/\n",
+			newBlock: block,
+			want:     "node_modules/\n\n" + block + "\n*.log\ndist/\n",
+		},
+		{
 			name:     "unterminated fence consumes the rest of the file",
 			content:  "node_modules/\n\n" + BeginMarker + "\nold.md\n",
 			newBlock: block,

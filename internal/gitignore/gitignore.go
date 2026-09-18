@@ -13,39 +13,47 @@ const (
 
 // ReplaceFencedBlock splices newBlock in place of the existing BEGIN/END
 // region, keeping the lines before and after the fence where the user put
-// them. With no fence present the block is appended; an empty newBlock drops
-// the region entirely.
+// them. Any further managed region is dropped, so a file that picked up a
+// duplicate fence collapses back to one. With no fence present the block is
+// appended; an empty newBlock drops the region entirely.
 func ReplaceFencedBlock(content, newBlock string) string {
-	lines := strings.Split(content, "\n")
-	begin, end := -1, len(lines)
-	for i, line := range lines {
+	var before, after []string
+	var inBlock, seenFence bool
+	for _, line := range strings.Split(content, "\n") {
 		switch strings.TrimSpace(line) {
 		case BeginMarker:
-			if begin == -1 {
-				begin = i
-			}
+			inBlock, seenFence = true, true
+			continue
 		case EndMarker:
-			if begin != -1 && end == len(lines) {
-				end = i + 1
-			}
+			inBlock = false
+			continue
+		}
+		switch {
+		case inBlock:
+		case seenFence:
+			after = append(after, line)
+		default:
+			before = append(before, line)
 		}
 	}
 
-	prefix, suffix := content, ""
-	if begin != -1 {
-		prefix = strings.Join(lines[:begin], "\n")
-		suffix = strings.Join(lines[end:], "\n")
-	}
-
-	var parts []string
-	for _, part := range []string{prefix, newBlock, suffix} {
-		if trimmed := strings.Trim(part, "\n"); trimmed != "" {
-			parts = append(parts, trimmed)
+	out := strings.Trim(strings.Join(before, "\n"), "\n")
+	if block := strings.Trim(newBlock, "\n"); block != "" {
+		if out != "" {
+			out += "\n\n"
 		}
+		out += block
 	}
-	out := strings.Join(parts, "\n\n")
 	if out != "" {
 		out += "\n"
+	}
+	// Keep the tail byte for byte, dropping only the blank lines that sat
+	// directly under the fence.
+	if tail := strings.TrimLeft(strings.Join(after, "\n"), "\n"); tail != "" {
+		if out != "" {
+			out += "\n"
+		}
+		out += tail
 	}
 	return out
 }
