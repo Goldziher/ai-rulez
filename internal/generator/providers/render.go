@@ -3,6 +3,7 @@ package providers
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -168,7 +169,7 @@ func (g *Generator) renderItem(typ string, spec *OutputSpec, item config.Content
 		})
 	}
 
-	body, err := g.renderItemBody(spec, item, content, cfg, outputPath)
+	body, err := g.renderItemBody(typ, spec, item, content, cfg, outputPath)
 	if err != nil {
 		return nil, err
 	}
@@ -210,7 +211,7 @@ func sanitizeAgentID(name string) string {
 // renderItemBody composes the body of a per-item file from the spec's
 // section list. Closed-set dispatch — adding a new section needs a new
 // constant in spec.go and a new case here.
-func (g *Generator) renderItemBody(spec *OutputSpec, item config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
+func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
 	var b strings.Builder
 	if spec.Body == nil {
 		return "", nil
@@ -219,7 +220,7 @@ func (g *Generator) renderItemBody(spec *OutputSpec, item config.ContentFile, co
 	for _, section := range spec.Body.Sections {
 		switch section {
 		case SectionBodyFrontmatter:
-			if err := g.writeFrontmatter(&b, spec.Frontmatter, item, cfg); err != nil {
+			if err := g.writeFrontmatter(&b, typ, spec.Frontmatter, item, cfg); err != nil {
 				return "", err
 			}
 		case SectionBodyContent:
@@ -284,8 +285,8 @@ func writeTargetedSection(b *strings.Builder, heading string, items []config.Con
 // YAML map keys are sorted alphabetically by yaml.v3 on marshal, so insertion
 // order here only matters when constants override a computed value (they
 // don't in any current builtin).
-func (g *Generator) writeFrontmatter(b *strings.Builder, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) error {
-	frontmatter := g.buildFrontmatterMap(spec, item, cfg)
+func (g *Generator) writeFrontmatter(b *strings.Builder, typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) error {
+	frontmatter := g.buildFrontmatterMap(typ, spec, item, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -299,7 +300,7 @@ func (g *Generator) writeFrontmatter(b *strings.Builder, spec *FrontmatterSpec, 
 
 // buildFrontmatterMap assembles the frontmatter map. Composition order is
 // documented on the writeFrontmatter docstring above.
-func (g *Generator) buildFrontmatterMap(spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) map[string]any {
+func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) map[string]any {
 	frontmatter := map[string]any{"name": item.Name}
 	if spec == nil {
 		return frontmatter
@@ -312,6 +313,16 @@ func (g *Generator) buildFrontmatterMap(spec *FrontmatterSpec, item config.Conte
 		applyTypedLists(frontmatter, spec, item.Metadata)
 		applyOrderedFields(frontmatter, spec, item.Metadata)
 		applyExtras(frontmatter, spec, item.Metadata)
+	}
+	// A skill whose frontmatter failed to parse loads with nil Metadata, so
+	// applyOrderedFields/applyExtras never get a chance to write its
+	// description — the generated SKILL.md would ship without one and the
+	// skill becomes invisible to the assistant. Honor the documented name
+	// fallback for any spec that surfaces a description field (#176).
+	if typ == OutputTypeSkills && (slices.Contains(spec.Fields, "description") || spec.IncludeExtras) {
+		if desc, ok := frontmatter["description"].(string); !ok || strings.TrimSpace(desc) == "" {
+			frontmatter["description"] = config.SkillDescriptionOrFallback(config.SkillDescription(item.Metadata), config.SkillID(item))
+		}
 	}
 	return frontmatter
 }

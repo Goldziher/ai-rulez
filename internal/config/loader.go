@@ -876,22 +876,24 @@ func scanDomains(domainsDir string) (map[string]*Domain, error) {
 
 // ParseFrontmatterPublic is the exported version of parseFrontmatter for use by other packages
 func ParseFrontmatterPublic(content string) (metadata *Metadata, body string) {
-	return parseFrontmatter(content)
+	metadata, body, _ = parseFrontmatter(content)
+	return metadata, body
 }
 
-// parseFrontmatter parses optional YAML frontmatter from content
-// Returns metadata (nil if none) and the actual content (without frontmatter)
-// Inlined here to avoid import cycle with parser package
-func parseFrontmatter(content string) (metadata *Metadata, body string) {
+// parseFrontmatter parses optional YAML frontmatter from content.
+// Returns metadata (nil if none), the actual content (without frontmatter),
+// and a malformed flag set to true when a delimited frontmatter block was
+// present but its YAML was unparseable (e.g. unquoted values containing ": ").
+func parseFrontmatter(content string) (metadata *Metadata, body string, malformed bool) {
 	// Check if content starts with ---
 	if !strings.HasPrefix(content, "---\n") && !strings.HasPrefix(content, "---\r\n") {
-		return nil, content
+		return nil, content, false
 	}
 
 	// Find the closing ---
 	lines := strings.Split(content, "\n")
 	if len(lines) < 3 {
-		return nil, content
+		return nil, content, false
 	}
 
 	endIdx := -1
@@ -905,7 +907,7 @@ func parseFrontmatter(content string) (metadata *Metadata, body string) {
 
 	if endIdx == -1 {
 		// No closing ---, treat as regular content
-		return nil, content
+		return nil, content, false
 	}
 
 	// Extract frontmatter YAML
@@ -928,15 +930,16 @@ func parseFrontmatter(content string) (metadata *Metadata, body string) {
 			// unparseable (e.g. an unquoted value containing ": "). Do NOT
 			// return the content unstripped — that would re-emit the raw block
 			// after the generated frontmatter (#156). Warn loudly and strip it.
+			// Mark it malformed so Config.Validate can fail fast (#175).
 			logger.Warn("Ignoring malformed YAML frontmatter — check for unquoted values containing ': '",
 				"frontmatter", frontmatterYAML)
-			return nil, body
+			return nil, body, true
 		}
 		parsedMetadata = result
 	}
 
 	metadata = &parsedMetadata
-	return metadata, body
+	return metadata, body, false
 }
 
 // parseFrontmatterFromRawMap parses frontmatter YAML into Metadata via a raw map.
@@ -1015,13 +1018,14 @@ func loadContentFile(path string) (ContentFile, error) {
 	name := strings.TrimSuffix(filename, filepath.Ext(filename))
 
 	// Parse frontmatter (if present) - inlined to avoid import cycle
-	metadata, actualContent := parseFrontmatter(content)
+	metadata, actualContent, malformed := parseFrontmatter(content)
 
 	return ContentFile{
-		Name:     name,
-		Path:     path,
-		Content:  actualContent,
-		Metadata: metadata,
+		Name:                 name,
+		Path:                 path,
+		Content:              actualContent,
+		Metadata:             metadata,
+		MalformedFrontmatter: malformed,
 	}, nil
 }
 
@@ -1312,12 +1316,13 @@ func loadBuiltins(config *Config) {
 			}
 
 			// Parse frontmatter from embedded content
-			metadata, body := parseFrontmatter(entry.Content)
+			metadata, body, malformed := parseFrontmatter(entry.Content)
 			cf := ContentFile{
-				Name:     entry.Name,
-				Path:     "builtin://" + entry.Path,
-				Content:  body,
-				Metadata: metadata,
+				Name:                 entry.Name,
+				Path:                 "builtin://" + entry.Path,
+				Content:              body,
+				Metadata:             metadata,
+				MalformedFrontmatter: malformed,
 			}
 
 			switch entry.Type {

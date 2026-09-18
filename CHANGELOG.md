@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.11.4] - 2026-09-18
+
+### Fixed
+
+- `generate` splices the managed `.gitignore` block back in place instead of re-emitting it after any user entries that followed `# END ai-rulez`. A `BEGIN`/`END` region that was stripped, kept, and re-appended silently reordered the file; the block is now written exactly where the fence stood, leaving the suffix untouched. (#178)
+- `ai-rulez validate` now fails (nonzero exit) when a content file's frontmatter fails to parse. Previously the malformed file was loaded with nil metadata and validation passed, hiding bad content until a later failure; the error lists every offending path. (#175)
+- A skill whose frontmatter fails to parse is no longer dropped from generated output. It loads with nil metadata, which used to leave the generated `SKILL.md` without a `description` (invisible to the assistant); the documented name-as-description fallback now applies — the skill id is emitted as its description, matching a healthy skill's frontmatter. (#176)
+- Includes pinned to a full commit SHA now resolve deterministically and fail closed. A 40-hex `ref` was passed to `git ls-remote`, which cannot advertise raw commits, so pinned refs never matched the cache and silently fell back to stale cached content on any transient error. Full SHAs are now recognized, cloned by fetching the exact object, and cached under that SHA; a SHA the remote cannot serve is an error, never a cache fallback. (#167)
+
+### Changed
+
+- Workflow actions updated: `xberg-io/actions` reusable-validate v1.11.6 → v1 (now pinned to the `v1` major tag), and `astral-sh/setup-uv` v10.0.1 → v10.1.0. setup-uv stays pinned to a full semver tag because it stopped publishing major and minor tags at v8 as a supply-chain measure, so `@v10` does not resolve.
+
 ## [4.11.3] - 2026-08-24
 
 ### Fixed
