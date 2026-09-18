@@ -421,6 +421,11 @@ type ContentFile struct {
 	// Resources holds skill supporting files (references/, scripts/, assets/)
 	// loaded alongside SKILL.md. Always empty for non-skill content.
 	Resources []SkillResource `yaml:"-" json:"-"`
+
+	// MalformedFrontmatter is true when the source file contained a delimited
+	// YAML frontmatter block (---...---) but its content was unparseable.
+	// It is set during loading and used by Config.Validate to fail fast.
+	MalformedFrontmatter bool `yaml:"-" json:"-"`
 }
 
 // SkillResource is one supporting file bundled with a skill.

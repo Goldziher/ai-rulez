@@ -2,6 +2,7 @@ package includes
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -13,6 +14,11 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
+
+// errRefLookupUnavailable signals that the remote ref could not be resolved but
+// a usable cache exists; Fetch then serves cached content. Only reachable from
+// the branch/tag path — a pinned SHA is never downgraded to cache (#167).
+var errRefLookupUnavailable = errors.New("ref lookup failed, using cached content")
 
 const (
 	rootPath   = "/"
@@ -183,14 +189,18 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 		return s.scanCachedContent()
 	}
 
-	currentSHA, err := remoteHEADSHA(ctx, s.originalURL, s.resolvedRef(), s.accessToken)
+	ref := s.resolvedRef()
+
+	// A full commit SHA cannot be advertised by ls-remote — it IS the commit.
+	// Use it as the authoritative SHA directly; the slow path fetches the exact
+	// object and fails closed if the remote cannot serve it (#167).
+	currentSHA, isSHA, err := s.resolveHeadSHA(ctx, ref)
 	if err != nil {
-		meta, metaErr := readCacheMeta(s.cacheDir)
-		if metaErr == nil && meta != nil {
+		if errors.Is(err, errRefLookupUnavailable) {
 			logger.Warn("ls-remote failed, using cached content", "name", s.name, "error", err)
 			return s.scanCachedContent()
 		}
-		return nil, oops.Wrapf(err, "failed to get remote HEAD for include %q", s.name)
+		return nil, err
 	}
 
 	// Fast path: cache SHA matches — touch FetchedAt and return without acquiring the write lock.
@@ -213,6 +223,32 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 		return s.scanCachedContent()
 	}
 
+	return s.refreshCache(ctx, ref, currentSHA, isSHA)
+}
+
+// resolveHeadSHA returns the authoritative commit SHA for ref. A full commit
+// SHA is used verbatim (it cannot be advertised by ls-remote); any other ref
+// is resolved against the remote, falling back to cached content when the
+// lookup fails (never for a pinned SHA — those fail closed, #167).
+func (s *GitSource) resolveHeadSHA(ctx context.Context, ref string) (currentSHA string, isSHA bool, err error) {
+	if isFullSHA(ref) {
+		currentSHA = ref
+		isSHA = true
+		return
+	}
+	currentSHA, err = remoteHEADSHA(ctx, s.originalURL, ref, s.accessToken)
+	if err != nil {
+		if meta, metaErr := readCacheMeta(s.cacheDir); metaErr == nil && meta != nil {
+			return "", false, errRefLookupUnavailable
+		}
+		return "", false, oops.Wrapf(err, "failed to get remote HEAD for include %q", s.name)
+	}
+	return
+}
+
+// refreshCache replaces the on-disk cache with a fresh sparse clone of ref,
+// records the fetched SHA, and returns the scanned content tree.
+func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, isSHA bool) (*config.ContentTree, error) {
 	// Invalidate any memoized scan since the on-disk tree is about to change.
 	if dir := s.findAIRulezDir(); dir != "" {
 		invalidateScan(dir)
@@ -230,8 +266,12 @@ func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 		return nil, err
 	}
 	pathSpec := s.sparsePathSpec()
-	if err := sparseClone(ctx, s.originalURL, s.resolvedRef(), pathSpec, s.cacheDir, s.accessToken); err != nil {
-		return nil, oops.With("repo", s.repoURL).Wrapf(err, "failed to clone include %q", s.name)
+	cloneErr := sparseClone(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken)
+	if isSHA {
+		cloneErr = sparseCloneSHA(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken)
+	}
+	if cloneErr != nil {
+		return nil, oops.With("repo", s.repoURL).Wrapf(cloneErr, "failed to clone include %q", s.name)
 	}
 
 	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run

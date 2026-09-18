@@ -494,7 +494,7 @@ priority: high
 
 Some content here.`
 
-		metadata, actualContent := parseFrontmatter(content)
+		metadata, actualContent, _ := parseFrontmatter(content)
 		require.NotNil(t, metadata)
 		assert.Equal(t, "high", metadata.Priority)
 		assert.Equal(t, "# Rule Content\n\nSome content here.", actualContent)
@@ -510,7 +510,7 @@ targets:
 
 Content here.`
 
-		metadata, actualContent := parseFrontmatter(content)
+		metadata, actualContent, _ := parseFrontmatter(content)
 		require.NotNil(t, metadata)
 		assert.Equal(t, "medium", metadata.Priority)
 		assert.Equal(t, []string{"*.py", "backend/*"}, metadata.Targets)
@@ -520,7 +520,7 @@ Content here.`
 	t.Run("returns nil metadata when no frontmatter", func(t *testing.T) {
 		content := "# Just regular content"
 
-		metadata, actualContent := parseFrontmatter(content)
+		metadata, actualContent, _ := parseFrontmatter(content)
 		assert.Nil(t, metadata)
 		assert.Equal(t, content, actualContent)
 	})
@@ -531,7 +531,7 @@ priority: high
 
 No closing marker`
 
-		metadata, actualContent := parseFrontmatter(content)
+		metadata, actualContent, _ := parseFrontmatter(content)
 		assert.Nil(t, metadata)
 		assert.Equal(t, content, actualContent)
 	})
@@ -539,15 +539,17 @@ No closing marker`
 	t.Run("strips malformed frontmatter block instead of leaking it (#156)", func(t *testing.T) {
 		// A delimited frontmatter block whose YAML is unparseable must be
 		// stripped, not returned verbatim — otherwise generate re-emits the raw
-		// block after the generated frontmatter, producing two blocks.
+		// block after the generated frontmatter, producing two blocks. The
+		// block must also be flagged malformed so validate() can fail (#175).
 		content := `---
 invalid: yaml: syntax:
 ---
 
 Content`
 
-		metadata, actualContent := parseFrontmatter(content)
+		metadata, actualContent, malformed := parseFrontmatter(content)
 		assert.Nil(t, metadata)
+		assert.True(t, malformed)
 		assert.Equal(t, "Content", actualContent)
 	})
 
@@ -560,7 +562,7 @@ another: data
 
 Content`
 
-		metadata, actualContent := parseFrontmatter(content)
+		metadata, actualContent, _ := parseFrontmatter(content)
 		require.NotNil(t, metadata)
 		assert.Equal(t, "low", metadata.Priority)
 		assert.Equal(t, "Content", actualContent)
@@ -575,7 +577,7 @@ effort: high
 
 Body`
 
-		metadata, body := parseFrontmatter(content)
+		metadata, body, _ := parseFrontmatter(content)
 		require.NotNil(t, metadata)
 		assert.Equal(t, "high", metadata.Effort)
 		assert.NotContains(t, metadata.Extra, "effort", "effort should not also leak into Extra")
@@ -595,7 +597,7 @@ hooks:
 
 Body`
 
-		metadata, body := parseFrontmatter(content)
+		metadata, body, _ := parseFrontmatter(content)
 		require.NotNil(t, metadata)
 		assert.Equal(t, "low", metadata.Effort)
 		assert.NotContains(t, metadata.Extra, "effort", "effort should not also leak into Extra in fallback")

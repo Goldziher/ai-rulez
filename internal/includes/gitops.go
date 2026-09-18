@@ -22,6 +22,17 @@ import (
 
 const refHead = "HEAD"
 
+// fullSHAPattern matches a full 40-hex-char commit SHA. Used by isFullSHA to
+// decide whether a `ref` pins an absolute commit rather than a branch/tag.
+var fullSHAPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
+// isFullSHA reports whether ref is a full commit SHA. A full SHA can never be
+// advertised by `git ls-remote` (only refs are), and `git clone --branch`
+// cannot resolve one either — both need special handling (#167).
+func isFullSHA(ref string) bool {
+	return fullSHAPattern.MatchString(ref)
+}
+
 var (
 	gitCheckOnce sync.Once
 	gitCheckErr  error
@@ -174,6 +185,79 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	checkoutCmd := exec.CommandContext(ctx, "git", "-C", destDir, "sparse-checkout", "set", pathSpec)
 	checkoutCmd.Env = env
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
+		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
+		return oops.
+			With("url", repoURL).
+			With("path_spec", pathSpec).
+			With("output", string(out)).
+			Wrapf(err, "git sparse-checkout set failed")
+	}
+
+	return nil
+}
+
+// sparseCloneSHA clones a single, pinned commit SHA into destDir.
+//
+// Unlike sparseClone it cannot pass --branch, because a raw SHA is not a ref.
+// Runs:
+//
+//	git clone --depth 1 --no-checkout --filter=blob:none --sparse <url> <destDir>
+//	git -C <destDir> fetch --depth 1 origin <commitSHA>
+//	git -C <destDir> checkout --detach <commitSHA>
+//	git -C <destDir> sparse-checkout set <pathSpec>   (omitted when pathSpec == "")
+//
+// destDir must not exist when this is called. Token is injected into HTTPS
+// URLs. On any error, destDir is cleaned up before returning. Callers rely on
+// this failing closed — a commit that the remote cannot serve is an error,
+// never a silent fallback to cached content (#167).
+func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, token string) error {
+	url := injectToken(repoURL, token)
+	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+
+	// nolint: gosec
+	cloneCmd := exec.CommandContext(ctx, "git", "clone", "--depth", "1", "--no-checkout", "--filter=blob:none", "--sparse", url, destDir)
+	cloneCmd.Env = env
+	if out, err := cloneCmd.CombinedOutput(); err != nil {
+		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
+		return oops.
+			With("url", repoURL).
+			With("commit", commitSHA).
+			With("output", string(out)).
+			Wrapf(err, "git sparse clone failed")
+	}
+
+	// nolint: gosec
+	fetchCmd := exec.CommandContext(ctx, "git", "-C", destDir, "fetch", "--depth", "1", "origin", commitSHA)
+	fetchCmd.Env = env
+	if out, err := fetchCmd.CombinedOutput(); err != nil {
+		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on fetch failure
+		return oops.
+			With("url", repoURL).
+			With("commit", commitSHA).
+			With("output", string(out)).
+			Wrapf(err, "git fetch of pinned commit failed")
+	}
+
+	// nolint: gosec
+	checkoutCmd := exec.CommandContext(ctx, "git", "-C", destDir, "checkout", "--detach", commitSHA)
+	checkoutCmd.Env = env
+	if out, err := checkoutCmd.CombinedOutput(); err != nil {
+		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on checkout failure
+		return oops.
+			With("url", repoURL).
+			With("commit", commitSHA).
+			With("output", string(out)).
+			Wrapf(err, "git checkout of pinned commit failed")
+	}
+
+	if pathSpec == "" {
+		return nil
+	}
+
+	// nolint: gosec
+	sparseCmd := exec.CommandContext(ctx, "git", "-C", destDir, "sparse-checkout", "set", pathSpec)
+	sparseCmd.Env = env
+	if out, err := sparseCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
 		return oops.
 			With("url", repoURL).

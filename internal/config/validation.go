@@ -29,6 +29,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateMalformedFrontmatter(); err != nil {
+		return err
+	}
+
 	if err := c.validateInstalledSkills(); err != nil {
 		return err
 	}
@@ -141,6 +145,52 @@ func validateAgentEffortSlice(agents []ContentFile, scope string) error {
 	return nil
 }
 
+// validateMalformedFrontmatter fails validation when any content file carried a
+// delimited frontmatter block whose YAML could not be parsed. A skill or agent
+// with malformed frontmatter is silently invisible downstream (no name, no
+// description, no tools), so `validate` — the CI gate — must exit non-zero
+// rather than warn-and-continue (#175).
+func (c *Config) validateMalformedFrontmatter() error {
+	if c.Content == nil {
+		return nil
+	}
+
+	var bad []string
+	visit := func(files []ContentFile) {
+		for _, f := range files {
+			if f.MalformedFrontmatter {
+				bad = append(bad, f.Path)
+			}
+		}
+	}
+
+	visit(c.Content.Rules)
+	visit(c.Content.Context)
+	visit(c.Content.Skills)
+	visit(c.Content.Agents)
+	visit(c.Content.Commands)
+	for _, domain := range c.Content.Domains {
+		if domain == nil {
+			continue
+		}
+		visit(domain.Rules)
+		visit(domain.Context)
+		visit(domain.Skills)
+		visit(domain.Agents)
+		visit(domain.Commands)
+	}
+
+	if len(bad) == 0 {
+		return nil
+	}
+
+	return oops.
+		With("paths", bad).
+		With("hint", "Check for unquoted values containing ': ' in the frontmatter block, e.g. description: key: value").
+		Errorf("malformed YAML frontmatter in %d file(s): %q", len(bad), bad)
+}
+
+// validateSkillDescriptions checks that every skill carries a description.
 func (c *Config) validateSkillDescriptions() error {
 	if c.Content == nil {
 		return nil
