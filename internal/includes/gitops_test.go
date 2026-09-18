@@ -13,6 +13,32 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestIsFullSHA(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name string
+		ref  string
+		want bool
+	}{
+		{name: "40 hex chars", ref: "0123456789abcdef0123456789abcdef01234567", want: true},
+		{name: "uppercase rejected", ref: "0123456789ABCDEF0123456789ABCDEF01234567", want: false},
+		{name: "branch name", ref: "main", want: false},
+		{name: "version tag", ref: "v1.2.3", want: false},
+		{name: "short sha", ref: "abc1234", want: false},
+		{name: "39 hex chars", ref: "0123456789abcdef0123456789abcdef0123456", want: false},
+		{name: "64 hex chars", ref: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef", want: false},
+		{name: "empty", ref: "", want: false},
+		{name: "HEAD", ref: "HEAD", want: false},
+		{name: "prefixed sha", ref: "refs/0123456789abcdef0123456789abcdef01234567", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.want, isFullSHA(tt.ref))
+		})
+	}
+}
+
 func TestCheckVersion225(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
