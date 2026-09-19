@@ -33,8 +33,6 @@ func SchemaURL(filename string) string {
 	return fmt.Sprintf("%s/%s/schema/%s", schemaBaseURL, ref, filename)
 }
 
-var compiler = jsonschema.NewCompiler()
-
 const propertiesField = "properties"
 
 // ValidateWithSchema validates configuration data against the schema
@@ -57,7 +55,7 @@ func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version stri
 			Wrapf(err, "convert YAML to JSON")
 	}
 
-	schema, err := compiler.Compile(schemaBytes)
+	schema, err := jsonschema.NewCompiler().Compile(schemaBytes)
 	if err != nil {
 		return oops.
 			Hint("This is an internal schema compilation error").
