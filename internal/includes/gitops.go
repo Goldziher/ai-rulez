@@ -210,6 +210,16 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 // URLs. On any error, destDir is cleaned up before returning. Callers rely on
 // this failing closed — a commit that the remote cannot serve is an error,
 // never a silent fallback to cached content (#167).
+// cloneFor picks the clone strategy for a ref. A pinned commit SHA needs
+// sparseCloneSHA; sparseClone would pass it to --branch, which only resolves
+// branch and tag names.
+func cloneFor(isSHA bool) func(ctx context.Context, repoURL, ref, pathSpec, destDir, token string) error {
+	if isSHA {
+		return sparseCloneSHA
+	}
+	return sparseClone
+}
+
 func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, token string) error {
 	url := injectToken(repoURL, token)
 	env := append(os.Environ(), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
