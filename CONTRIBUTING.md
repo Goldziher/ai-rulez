@@ -6,7 +6,7 @@ Thank you for your interest in contributing! This guide provides everything you 
 
 ### Prerequisites
 
-- **Go 1.26+**
+- **Go 1.27+**
 - **Node.js 20+** (for commit hooks)
 - **[Task](https://taskfile.dev)** (for running build scripts)
 
