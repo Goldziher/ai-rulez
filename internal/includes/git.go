@@ -266,12 +266,8 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 		return nil, err
 	}
 	pathSpec := s.sparsePathSpec()
-	cloneErr := sparseClone(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken)
-	if isSHA {
-		cloneErr = sparseCloneSHA(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken)
-	}
-	if cloneErr != nil {
-		return nil, oops.With("repo", s.repoURL).Wrapf(cloneErr, "failed to clone include %q", s.name)
+	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken); err != nil {
+		return nil, oops.With("repo", s.repoURL).Wrapf(err, "failed to clone include %q", s.name)
 	}
 
 	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
