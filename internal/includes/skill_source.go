@@ -100,13 +100,22 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 		return ScanInstalledSkillDir(skillDir, s.name)
 	}
 
-	currentSHA, err := remoteHEADSHA(ctx, s.originalURL, s.resolvedRef(), s.accessToken)
-	if err != nil {
-		if skillDir := s.findSkillDir(); skillDir != "" {
-			logger.Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
-			return ScanInstalledSkillDir(skillDir, s.name)
+	// A full commit SHA is already the resolved commit — ls-remote never advertises
+	// one. Use it verbatim so a pin that the remote cannot serve fails closed at
+	// clone time instead of silently degrading to cached content (#167).
+	ref := s.resolvedRef()
+	isSHA := isFullSHA(ref)
+	currentSHA := ref
+	if !isSHA {
+		var err error
+		currentSHA, err = remoteHEADSHA(ctx, s.originalURL, ref, s.accessToken)
+		if err != nil {
+			if skillDir := s.findSkillDir(); skillDir != "" {
+				logger.Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
+				return ScanInstalledSkillDir(skillDir, s.name)
+			}
+			return config.ContentFile{}, oops.With("repo", s.repoURL).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
 		}
-		return config.ContentFile{}, oops.With("repo", s.repoURL).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
 	}
 
 	if isCacheHit(s.cacheDir, currentSHA) {
@@ -126,7 +135,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 	if err := requireGit(ctx); err != nil {
 		return config.ContentFile{}, err
 	}
-	if err := sparseClone(ctx, s.originalURL, s.resolvedRef(), s.sparsePathSpec(), s.cacheDir, s.accessToken); err != nil {
+	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, s.sparsePathSpec(), s.cacheDir, s.accessToken); err != nil {
 		return config.ContentFile{}, oops.
 			With("repo", s.repoURL).
 			With("path", s.path).
