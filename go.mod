@@ -1,6 +1,6 @@
 module github.com/Goldziher/ai-rulez
 
-go 1.26.5
+go 1.27.0
 
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.2
