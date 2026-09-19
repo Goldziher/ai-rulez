@@ -3,7 +3,9 @@ package includes
 import (
 	"context"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -272,4 +274,75 @@ func TestSkillGitSourceFetch_CacheMiss_NewCommit(t *testing.T) {
 	cf2, err := source.Fetch(ctx)
 	require.NoError(t, err)
 	assert.Contains(t, cf2.Content, "New content.")
+}
+
+// TestSkillGitSourceFetch_PinnedSHA installs a skill pinned to an exact commit.
+// A raw SHA cannot be advertised by ls-remote, so Fetch must use it directly
+// and clone the exact object (#167).
+func TestSkillGitSourceFetch_PinnedSHA(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nPinned content.")
+	// Serving a raw SHA over file:// requires the server to expose reachable objects.
+	cmd := exec.Command("git", "config", "uploadpack.allowReachableSHA1InWant", "true")
+	cmd.Dir = repoDir
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git config: %s", out)
+
+	sha := revParseHead(t, repoDir)
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nLater content.")
+
+	cacheDir := t.TempDir()
+	source := &SkillGitSource{
+		name:        "myskill-pinned",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		path:        "skills/myskill",
+		ref:         sha,
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	ctx := context.Background()
+	cf, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, cf.Content, "Pinned content.", "pin must win over the branch tip")
+
+	// Pinned SHA is deterministic: the second fetch is a cache hit.
+	cf2, err := source.Fetch(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, cf.Content, cf2.Content)
+}
+
+// TestSkillGitSourceFetch_PinnedSHA_FailsClosed verifies a pinned SHA the remote
+// cannot serve is an error, never a silent fallback to cached content (#167).
+func TestSkillGitSourceFetch_PinnedSHA_FailsClosed(t *testing.T) {
+	repoDir := initLocalRepo(t)
+	commitFile(t, repoDir, "skills/myskill/SKILL.md", "---\nname: myskill\n---\n# My Skill\nCached content.")
+	cmd := exec.Command("git", "config", "uploadpack.allowReachableSHA1InWant", "true")
+	cmd.Dir = repoDir
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, "git config: %s", out)
+
+	cacheDir := t.TempDir()
+	source := &SkillGitSource{
+		name:        "myskill-fail-closed",
+		repoURL:     normalizeGitURL("file://" + repoDir),
+		originalURL: "file://" + repoDir,
+		path:        "skills/myskill",
+		ref:         revParseHead(t, repoDir),
+		cacheDir:    cacheDir,
+		accessToken: "",
+	}
+
+	// Populate the cache with a valid pin.
+	_, err = source.Fetch(context.Background())
+	require.NoError(t, err)
+
+	// A well-formed but nonexistent SHA must error — serving the stale cache here
+	// would be the silent fallback this fix removes.
+	source.ref = strings.Repeat("0", 40)
+	require.False(t, isCacheHit(cacheDir, source.ref))
+
+	_, err = source.Fetch(context.Background())
+	require.Error(t, err)
 }
