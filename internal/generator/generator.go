@@ -1136,17 +1136,11 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	// .agents/settings.json are merged by preset generators that have no spec.
 	// Those two are also the ones emitted only when MCP servers are declared, so
 	// they are exactly the paths a render omits while the manifest still lists them.
-	merged := make(map[string]bool)
-	for _, relPath := range providers.MergedSidecarPaths() {
-		merged[relPath] = true
-	}
-	for _, relPath := range presets.MergedDocumentPaths() {
-		merged[relPath] = true
-	}
+	merged := append(providers.MergedSidecarPaths(), presets.MergedDocumentPaths()...)
 
 	var stale []string
 	for _, relPath := range previous.Files {
-		if next[relPath] || merged[relPath] {
+		if next[relPath] || isMergedDocumentPath(merged, relPath) {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
@@ -1160,6 +1154,24 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	}
 	sort.Strings(stale)
 	return stale
+}
+
+// isMergedDocumentPath reports whether relPath names one of the merged settings
+// documents. The registries hold paths relative to a config's own base dir
+// (".mcp.json"), while a manifest entry is relative to the root config, so a
+// scope's document appears as "packages/api/.mcp.json". Matching on the tail --
+// the same rule presets.isRegisteredMergedDocument applies -- is what keeps a
+// scoped document out of the stale set; an exact match protected only the root
+// one and deleted every scope's, which is the #185 data loss this guard exists
+// to prevent.
+func isMergedDocumentPath(merged []string, relPath string) bool {
+	slashed := filepath.ToSlash(relPath)
+	for _, candidate := range merged {
+		if slashed == candidate || strings.HasSuffix(slashed, "/"+candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 func isUnderBaseDir(baseDir, path string) bool {

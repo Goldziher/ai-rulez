@@ -2406,3 +2406,52 @@ env = { SECRET_TOKEN = "${SECRET_VAR}" }
 	assert.NotContains(t, hint, "--gitignore",
 		"error hint must not suggest --gitignore for partially owned files")
 }
+
+// TestStaleManifestFilesProtectsScopedMergedDocuments covers the scoped half of
+// the #185 guard. Registry entries are relative to a config's own base dir
+// (".mcp.json"), but a manifest entry is relative to the root config, so a
+// scope's document is recorded as "packages/api/.mcp.json". An exact-match
+// lookup protected only the root document and deleted every scope's, taking the
+// consumer's hand-authored keys with it.
+func TestStaleManifestFilesProtectsScopedMergedDocuments(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		relPath   string
+		wantStale bool
+	}{
+		{name: "scoped merged document is protected", relPath: "packages/api/.mcp.json", wantStale: false},
+		{name: "root merged document is protected", relPath: ".mcp.json", wantStale: false},
+		{name: "scoped settings document is protected", relPath: "packages/api/.claude/settings.json", wantStale: false},
+		{name: "an ordinary generated file is still stale", relPath: "packages/api/CLAUDE.md", wantStale: true},
+	}
+
+	for _, testCase := range tests {
+		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange: a file on disk that the previous run recorded but this run does not emit.
+			baseDir := t.TempDir()
+			absPath := filepath.Join(baseDir, filepath.FromSlash(testCase.relPath))
+			require.NoError(t, os.MkdirAll(filepath.Dir(absPath), 0o755))
+			require.NoError(t, os.WriteFile(absPath, []byte(`{"hand":"written"}`), 0o644))
+
+			manifestPath := filepath.Join(baseDir, ".ai-rulez", generatedManifestName)
+			require.NoError(t, os.MkdirAll(filepath.Dir(manifestPath), 0o755))
+			manifest, err := json.Marshal(generatedManifest{Files: []string{testCase.relPath}})
+			require.NoError(t, err)
+			require.NoError(t, os.WriteFile(manifestPath, manifest, 0o644))
+
+			// Act
+			stale := NewGenerator(&config.Config{BaseDir: baseDir}).staleManifestFiles(nil)
+
+			// Assert
+			if testCase.wantStale {
+				assert.Contains(t, stale, absPath, "a plain generated file must still be cleaned up")
+				return
+			}
+			assert.NotContains(t, stale, absPath, "a merged settings document must never be deleted as stale")
+		})
+	}
+}
