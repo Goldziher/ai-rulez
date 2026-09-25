@@ -126,6 +126,23 @@ func TestGolden_CursorHooksUseCursorRootVar(t *testing.T) {
 	assert.Equal(t, false, action["async"])
 }
 
+// TestGolden_ClaudeHooksRootVarAndOmittedHandlerFields guards the rendered Claude
+// hooks.json: the plugin root variable is rewritten for the runtime, async always
+// serializes, and handler fields the fixture does not declare stay out of the
+// payload so a runtime never sees an empty args/timeout/if/statusMessage.
+func TestGolden_ClaudeHooksRootVarAndOmittedHandlerFields(t *testing.T) {
+	doc := parseJSON(t, generateFixture(t)["hooks/hooks.json"])
+	groups := doc["hooks"].(map[string]any)["SessionStart"].([]any)
+	group := groups[0].(map[string]any)
+	assert.Equal(t, "startup|resume|clear|compact", group["matcher"])
+	action := group["hooks"].([]any)[0].(map[string]any)
+	assert.Equal(t, `"${CLAUDE_PLUGIN_ROOT}/hooks/run-hook.cmd" session-start`, action["command"])
+	assert.Equal(t, false, action["async"])
+	for _, omitted := range []string{"args", "timeout", "if", "statusMessage"} {
+		assert.NotContains(t, action, omitted, "unset handler field %q must be omitted", omitted)
+	}
+}
+
 func TestGolden_MarketplaceSinglePluginSource(t *testing.T) {
 	doc := parseJSON(t, generateFixture(t)[".claude-plugin/marketplace.json"])
 	plugins := doc["plugins"].([]any)

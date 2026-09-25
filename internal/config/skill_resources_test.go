@@ -208,6 +208,98 @@ func TestLoadSkillResources(t *testing.T) {
 		assert.Equal(t, SkillKindScripts, resources[1].Kind)
 		assert.Equal(t, SkillKindAssets, resources[2].Kind)
 	})
+
+	t.Run("warns about unrecognized subdirectories", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+
+		// Create a recognized directory with content.
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "references"), 0o755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dir, "references", "api.md"), []byte("API docs\n"), 0o644))
+
+		// Create unrecognized subdirectories that should trigger warnings.
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "hooks"), 0o755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dir, "hooks", "pre.sh"), []byte("#!/bin/sh\n"), 0o755))
+
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "procedures"), 0o755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dir, "procedures", "step.md"), []byte("Step 1\n"), 0o644))
+
+		// Also create a regular file in the skill root (should be ignored, not warned).
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("skill"), 0o644))
+
+		resources, err := LoadSkillResources(dir)
+		require.NoError(t, err)
+		// Only the recognized references/ directory should be loaded.
+		require.Len(t, resources, 1)
+		assert.Equal(t, SkillKindReferences, resources[0].Kind)
+		assert.Equal(t, "references/api.md", resources[0].RelPath)
+
+		// The dropped directories must be named, or the data loss is silent —
+		// which is the whole of issue #183.
+		warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
+		require.NoError(t, err)
+		require.Len(t, warnings, 2)
+		assert.Equal(t, "hooks", warnings[0].Subdirectory)
+		assert.Equal(t, "procedures", warnings[1].Subdirectory)
+		assert.Equal(t,
+			"Unrecognized skill subdirectory will not be included in generated output",
+			warnings[0].Message)
+	})
+
+	t.Run("recognized kinds are not reported as unrecognized", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+
+		for _, kind := range []string{"references", "scripts", "assets"} {
+			require.NoError(t, os.MkdirAll(filepath.Join(dir, kind), 0o755))
+		}
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "SKILL.md"), []byte("skill"), 0o644))
+
+		warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
+		require.NoError(t, err)
+		assert.Empty(t, warnings)
+	})
+}
+
+func TestLoadResourcesCommandKind(t *testing.T) {
+	t.Parallel()
+
+	// A command directory is loaded by the same walker as a skill directory, so
+	// an author with a dropped subdirectory must be pointed at commands rather
+	// than at skills.
+	t.Run("unrecognized subdirectory warning names the command kind", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "procedures"), 0o755))
+		require.NoError(t, os.WriteFile(filepath.Join(dir, "COMMAND.md"), []byte("command"), 0o644))
+
+		warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindCommand)
+		require.NoError(t, err)
+		require.Len(t, warnings, 1)
+		assert.Equal(t,
+			"Unrecognized command subdirectory will not be included in generated output",
+			warnings[0].Message)
+		assert.Equal(t, ItemKindCommand, warnings[0].Kind)
+		assert.Equal(t, "procedures", warnings[0].Subdirectory)
+		assert.Equal(t, dir, warnings[0].Root)
+	})
+
+	t.Run("loads command resources from the canonical kinds", func(t *testing.T) {
+		t.Parallel()
+		dir := t.TempDir()
+		require.NoError(t, os.MkdirAll(filepath.Join(dir, "references"), 0o755))
+		require.NoError(t, os.WriteFile(
+			filepath.Join(dir, "references", "steps.md"), []byte("# Steps\n"), 0o644))
+
+		resources, err := LoadResources(dir, ItemKindCommand)
+		require.NoError(t, err)
+		require.Len(t, resources, 1)
+		assert.Equal(t, "references/steps.md", resources[0].RelPath)
+		assert.Equal(t, "Steps", resources[0].Description)
+	})
 }
 
 func TestExtractResourceDescription(t *testing.T) {

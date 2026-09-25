@@ -145,19 +145,46 @@ rewrites it to the form it expects — `${CLAUDE_PLUGIN_ROOT}` (Claude),
 Declare lifecycle hooks once; they render into each runtime's hook format with the
 correct root variable (`${CURSOR_PLUGIN_ROOT:-.}` for Cursor hooks, and so on).
 
+Each hook action requires exactly one of `command` or `script`:
+
+- **`command`**: An executable that already exists in the consumer's environment. Passed through verbatim.
+- **`script`**: A project-relative file ai-rulez bundles into the plugin's `hooks/` directory. The bundled script is addressable as `${PLUGIN_ROOT}/hooks/<basename>` and survives a fresh clone before generation has run. Use `script` for self-contained bootstrap hooks.
+
+Additional fields:
+
+- **`args`**: Array of arguments passed to the command/script. When set, the runtime spawns the executable directly (no shell).
+- **`timeout`**: Handler timeout in seconds; zero uses the runtime default.
+- **`async`**: Whether the handler runs asynchronously (default: false).
+- **`if`**: Restricts the handler to matching tool calls, in permission-rule syntax — one rule such as `"Bash(git *)"` or `"Edit(*.ts)"`, with no boolean operators and no expression language. Claude Code evaluates it **only** on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PermissionRequest` and `PermissionDenied`; on any other event a handler carrying `if` never runs at all, so it cannot be used to make a bootstrap hook conditional. `validate` warns when `if` appears on an event that ignores it.
+- **`status_message`**: Message shown to the user while the handler runs (useful for blocking bootstrap scripts). Rendered as `statusMessage` in the runtime's hook file.
+
+Example with bundled script. A bootstrap hook decides for itself whether its work is already done — there is no declarative guard for `SessionStart`:
+
 ```toml
 [[plugin.hooks]]
 event = "SessionStart"
-matcher = "startup|resume"
+matcher = "startup"
 
 [[plugin.hooks.hooks]]
-type = "command"
-command = '"${PLUGIN_ROOT}/hooks/run-hook.cmd" session-start'
+script = "scripts/bootstrap.sh"
+args = ["--check"]
+timeout = 30
+status_message = "Bootstrapping plugin on first use..."
 async = false
 ```
 
-Executable glue referenced by hooks (`run-hook.cmd`, launch scripts, a Claude
-`statusline.sh`) stays hand-authored and is passed through, not synthesized.
+Example with external command:
+
+```toml
+[[plugin.hooks]]
+event = "PreToolUse"
+
+[[plugin.hooks.hooks]]
+command = "my-tool validate"
+async = true
+```
+
+Event names must match a Claude Code lifecycle event (`SessionStart`, `Setup`, `PreToolUse`, `PostToolUse`, etc.). An unknown event produces a warning rather than an error, so a config written for a newer Claude Code keeps working on an older ai-rulez. Events in `HookEventsWithoutMatcher` (such as `UserPromptSubmit`, `PostToolBatch`, `Stop`) have no matchable subject, so a declared matcher is silently ignored at runtime.
 
 ### Restricting runtimes
 

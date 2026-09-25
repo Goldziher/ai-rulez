@@ -188,15 +188,15 @@
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": ["claude_settings_json", "claude_plugins_json"],
+          "enum": ["claude_settings_json", "claude_plugins_json", "mcp_json", "amp_settings_json"],
           "description": "Closed-set sidecar renderer. New kinds extend this enum and add a Go handler in providers/sidecars.go."
         },
         "path": {
           "type": "string",
-          "description": "Relative output path."
+          "description": "Relative output path. Object-shaped sidecars are merged into an existing file at this path: only the top-level keys the renderer owns are replaced, every other key is preserved."
         },
         "emit_when": {
-          "enum": ["always", "has_mcp_servers", "has_plugins"],
+          "enum": ["always", "has_mcp_servers", "has_plugins", "has_resolved_effort"],
           "description": "Closed-set predicate evaluated against the Config to decide whether to emit."
         }
       }

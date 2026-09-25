@@ -73,8 +73,9 @@ type PluginAuthoring struct {
 	MCP []PluginMCPLaunch `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
 
 	// Hooks declares lifecycle hooks emitted as hooks.json (Claude/Cursor) or
-	// inline hooks{} (Gemini). Hook scripts referenced by command are passed
-	// through, not synthesized.
+	// inline hooks{} (Gemini). A hook action either points at a command that
+	// already exists in the consumer's environment, or declares a project-local
+	// 'script' that is bundled into the plugin's hooks/ directory.
 	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
 
 	// Statusline is a Claude-only capability: a bundled status-line script plus
@@ -106,18 +107,117 @@ type PluginMCPLaunch struct {
 	URL       string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
 }
 
-// HookGroup is one lifecycle-event hook group.
+// HookTypeCommand is the default (and only bundled) hook handler type: the
+// runtime spawns Command, optionally with Args.
+const HookTypeCommand = "command"
+
+// KnownHookEvents lists every lifecycle event Claude Code documents. It exists so
+// a typo in an authored event name ("SesionStart") is reported instead of silently
+// producing a hook that never fires. Membership is advisory only — an event
+// outside this list is warned about, never rejected, so a config written against a
+// newer Claude Code keeps working on an older ai-rulez.
+var KnownHookEvents = []string{
+	"SessionStart",
+	"Setup",
+	"UserPromptSubmit",
+	"UserPromptExpansion",
+	"PreToolUse",
+	"PermissionRequest",
+	"PermissionDenied",
+	"PostToolUse",
+	"PostToolUseFailure",
+	"PostToolBatch",
+	"Notification",
+	"MessageDisplay",
+	"SubagentStart",
+	"SubagentStop",
+	"TaskCreated",
+	"TaskCompleted",
+	"Stop",
+	"StopFailure",
+	"TeammateIdle",
+	"InstructionsLoaded",
+	"ConfigChange",
+	"CwdChanged",
+	"DirectoryAdded",
+	"FileChanged",
+	"WorktreeCreate",
+	"WorktreeRemove",
+	"PreCompact",
+	"PostCompact",
+	"PreModelSwitch",
+	"PostModelSwitch",
+	"Elicitation",
+	"ElicitationResult",
+	"SessionEnd",
+}
+
+// HookEventsWithoutMatcher lists the events that carry no matchable subject, so a
+// declared matcher is silently ignored at runtime. Authors get a warning rather
+// than a hook that appears filtered but is not.
+var HookEventsWithoutMatcher = []string{
+	"UserPromptSubmit",
+	"PostToolBatch",
+	"Stop",
+	"TeammateIdle",
+	"TaskCreated",
+	"TaskCompleted",
+	"WorktreeCreate",
+	"WorktreeRemove",
+	"MessageDisplay",
+}
+
+// HookEventsEvaluatingIf lists the events on which Claude Code evaluates a
+// handler's `if` rule. The field is tool-scoped, so it only means anything where a
+// tool call is the subject of the event; on every other event a handler carrying
+// `if` never fires at all. Declaring `if` on, say, SessionStart therefore disables
+// the hook rather than conditioning it, which is worth a warning.
+var HookEventsEvaluatingIf = []string{
+	"PreToolUse",
+	"PostToolUse",
+	"PostToolUseFailure",
+	"PermissionRequest",
+	"PermissionDenied",
+}
+
+// HookGroup is one lifecycle-event hook group. Matcher filters which occurrences
+// of Event run the group (for SessionStart: startup, resume, clear, compact,
+// fork); it is ignored for the events in HookEventsWithoutMatcher.
 type HookGroup struct {
 	Event   string       `yaml:"event" json:"event" toml:"event"` // e.g. SessionStart, PreToolUse
 	Matcher string       `yaml:"matcher,omitempty" json:"matcher,omitempty" toml:"matcher,omitempty"`
 	Hooks   []HookAction `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
 }
 
-// HookAction is one action within a HookGroup.
+// HookAction is one action within a HookGroup. Exactly one of Command or Script
+// is required: Command is passed through verbatim and must already resolve in the
+// consumer's environment, while Script is a project-relative file that ai-rulez
+// bundles into the plugin's hooks/ directory and rewrites into a
+// ${PLUGIN_ROOT}-rooted command. Script is what makes a hook self-contained —
+// a bootstrap hook cannot rely on a path that only exists after generation has
+// already run (generated outputs are gitignored, so a fresh clone or a new git
+// worktree has none of them).
 type HookAction struct {
-	Type    string `yaml:"type,omitempty" json:"type,omitempty" toml:"type,omitempty"` // defaults to "command"
-	Command string `yaml:"command" json:"command" toml:"command"`
-	Async   bool   `yaml:"async,omitempty" json:"async,omitempty" toml:"async,omitempty"`
+	Type    string `yaml:"type,omitempty" json:"type,omitempty" toml:"type,omitempty"` // defaults to HookTypeCommand
+	Command string `yaml:"command,omitempty" json:"command,omitempty" toml:"command,omitempty"`
+	// Script is a project-relative path to a script bundled at hooks/<basename>.
+	Script string `yaml:"script,omitempty" json:"script,omitempty" toml:"script,omitempty"`
+	// Args are passed to the command as argv. When set, the runtime resolves the
+	// command as an executable and spawns it directly, with no shell.
+	Args []string `yaml:"args,omitempty" json:"args,omitempty" toml:"args,omitempty"`
+	// Timeout is the handler's timeout in seconds; zero leaves the runtime default.
+	Timeout int  `yaml:"timeout,omitempty" json:"timeout,omitempty" toml:"timeout,omitempty"`
+	Async   bool `yaml:"async,omitempty" json:"async,omitempty" toml:"async,omitempty"`
+	// If restricts the handler to matching tool calls, in permission-rule syntax
+	// ("Bash(git *)", "Edit(*.ts)") — exactly one rule, with no boolean operators
+	// and no expression language. Claude Code evaluates it only on the events in
+	// HookEventsEvaluatingIf; on any other event a handler carrying If never runs,
+	// so it cannot guard a bootstrap hook. A bootstrap script has to decide for
+	// itself whether its work is already done.
+	If string `yaml:"if,omitempty" json:"if,omitempty" toml:"if,omitempty"`
+	// StatusMessage is shown to the user while the handler runs, which matters for
+	// a bootstrap script that blocks the first turn.
+	StatusMessage string `yaml:"status_message,omitempty" json:"status_message,omitempty" toml:"status_message,omitempty"` //nolint:tagliatelle
 }
 
 // Statusline declares a Claude-only status-line script passthrough.

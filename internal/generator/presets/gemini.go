@@ -1,13 +1,13 @@
 package presets
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
@@ -81,16 +81,33 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		},
 	)
 
-	// Generate settings.json with MCP configuration
-	settingsContent, err := g.renderSettingsJSON(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("render settings.json: %w", err)
-	}
+	// Generate .gemini/settings.json with MCP configuration.
+	//
+	// The file is the consumer's: ai-rulez owns the mcpServers key and Gemini CLI
+	// users hand-author everything else (theme, contextFileName, telemetry, ...),
+	// so merge into what is already on disk rather than rendering a fresh document
+	// over it (#185).
+	//
+	// Merging alone is not enough, because an owned key is replaced wholesale. An
+	// unconditional write would still hand a Gemini user who keeps their own MCP
+	// servers in this file nothing but the ai-rulez self-registration entry, on
+	// every run, even when this config declares no servers at all. Gating on
+	// has-MCP-servers (as the claude provider's sidecar does) costs that
+	// self-registration in projects with no [[mcp_servers]] and keeps their file
+	// intact instead, which is the better trade.
+	if len(cfg.MCPServers) > 0 {
+		settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocGeminiSettings))
+		settings, err := g.renderSettingsJSON(settingsPath, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render settings.json: %w", err)
+		}
 
-	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, ".gemini", "settings.json"),
-		Content: settingsContent,
-	})
+		outputs = append(outputs, config.OutputFile{
+			Path:           settingsPath,
+			Content:        settings.Body,
+			PartiallyOwned: settings.PartiallyOwned,
+		})
+	}
 
 	// Generate GEMINI.md with all rules and context
 	geminiMD := g.renderGeminiMarkdown(content, cfg)
@@ -136,7 +153,11 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	return outputs, nil
 }
 
-func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, error) {
+// renderSettingsJSON renders the mcpServers key ai-rulez owns into the settings
+// document at settingsPath, preserving every other top-level key that is already
+// there. An empty settingsPath renders a fresh document, which is what the unit
+// tests exercise.
+func (g *GeminiPresetGenerator) renderSettingsJSON(settingsPath string, cfg *config.Config) (jsonmerge.Result, error) {
 	mcpServers := make(map[string]interface{})
 
 	// Always include the hardcoded ai-rulez MCP server
@@ -182,16 +203,9 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, 
 		mcpServers[name] = entry
 	}
 
-	settings := map[string]interface{}{
-		keyMCPServers: mcpServers,
-	}
-
-	jsonData, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal JSON: %w", err)
-	}
-
-	return string(jsonData) + "\n", nil
+	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
+		{Name: keyMCPServers, Value: mcpServers},
+	})
 }
 
 func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree, cfg *config.Config) string {

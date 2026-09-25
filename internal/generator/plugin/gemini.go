@@ -41,9 +41,18 @@ func renderGemini(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		Hooks:           hooksBlock(m, config.PluginRuntimeGemini),
 	}
 
+	// Gemini inlines the hooks block instead of writing hooks.json, but a
+	// script-declared action still renders a command addressing hooks/<basename>.
+	// The scripts have to be bundled here too, or that command dangles.
+	outputs, err := bundleHookScripts(m, filepath.Join(baseDir, hooksDirName))
+	if err != nil {
+		return nil, err
+	}
+
 	out, err := jsonOutput(filepath.Join(baseDir, "gemini-extension.json"), doc)
 	if err != nil {
 		return nil, err
 	}
-	return []config.OutputFile{out}, nil
+
+	return append(outputs, out), nil
 }

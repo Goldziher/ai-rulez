@@ -5,8 +5,10 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"gopkg.in/yaml.v3"
 )
 
 func TestLoadConfigTOML_PluginAuthoring(t *testing.T) {
@@ -156,9 +158,9 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		}},
 		{name: "statusline missing script", mutate: func(p *PluginAuthoring) { p.Statusline = &Statusline{Command: "bm"} }, wantErr: "statusline requires 'script'"},
 		{name: "hook missing event", mutate: func(p *PluginAuthoring) { p.Hooks = []HookGroup{{Matcher: "x"}} }, wantErr: "missing 'event'"},
-		{name: "hook action missing command", mutate: func(p *PluginAuthoring) {
+		{name: "hook action with neither command nor script", mutate: func(p *PluginAuthoring) {
 			p.Hooks = []HookGroup{{Event: "SessionStart", Hooks: []HookAction{{Type: "command"}}}}
-		}, wantErr: "missing 'command'"},
+		}, wantErr: "requires either 'command' or 'script'"},
 	}
 
 	for _, tc := range tests {
@@ -199,6 +201,245 @@ func TestValidatePluginAuthoring_CodexRequiresCanonicalMetadata(t *testing.T) {
 		DefaultPrompt:    []string{"Map this repository."},
 	}
 	require.NoError(t, (&Config{Plugin: plugin}).validatePluginAuthoring())
+}
+
+// hookHandlerTOML declares one hook action using every supported handler field,
+// shared by the TOML decode test and the JSON-schema agreement test below so the
+// two can never drift.
+const hookHandlerTOML = `
+version = "4.0"
+name = "basemind"
+description = "Code-map MCP server."
+
+[plugin]
+name = "basemind"
+description = "Full AI context layer over MCP."
+version = "1.0.0"
+
+[[plugin.hooks]]
+event = "SessionStart"
+matcher = "startup|resume|clear|compact|fork"
+
+[[plugin.hooks.hooks]]
+type = "command"
+script = ".ai-rulez/hooks/bootstrap.sh"
+args = ["generate", "--quiet"]
+timeout = 120
+async = false
+if = "!test -f CLAUDE.md"
+status_message = "Bootstrapping generated AI config"
+`
+
+func TestLoadConfigTOML_HookHandlerFields(t *testing.T) {
+	configFile := filepath.Join(t.TempDir(), "config.toml")
+	require.NoError(t, os.WriteFile(configFile, []byte(hookHandlerTOML), 0o644))
+
+	cfg, err := loadConfigTOML(configFile)
+	require.NoError(t, err)
+
+	require.NotNil(t, cfg.Plugin)
+	require.Len(t, cfg.Plugin.Hooks, 1)
+	group := cfg.Plugin.Hooks[0]
+	assert.Equal(t, "SessionStart", group.Event)
+	assert.Equal(t, "startup|resume|clear|compact|fork", group.Matcher)
+	require.Len(t, group.Hooks, 1)
+	assert.Equal(t, HookAction{
+		Type:          HookTypeCommand,
+		Script:        ".ai-rulez/hooks/bootstrap.sh",
+		Args:          []string{"generate", "--quiet"},
+		Timeout:       120,
+		Async:         false,
+		If:            "!test -f CLAUDE.md",
+		StatusMessage: "Bootstrapping generated AI config",
+	}, group.Hooks[0])
+}
+
+// TestHookHandlerFields_SchemaAcceptsEveryField guards the additionalProperties:
+// false hook objects in schema/ai-rules.schema.json: a field added to HookAction
+// without a matching schema property would be rejected for schema users.
+func TestHookHandlerFields_SchemaAcceptsEveryField(t *testing.T) {
+	yamlConfig := `
+version: "4.0"
+name: basemind
+description: Code-map MCP server.
+plugin:
+  name: basemind
+  description: Full AI context layer over MCP.
+  version: 1.0.0
+  hooks:
+    - event: SessionStart
+      matcher: startup|resume|clear|compact|fork
+      hooks:
+        - type: command
+          script: .ai-rulez/hooks/bootstrap.sh
+          args: [generate, --quiet]
+          timeout: 120
+          async: false
+          if: "!test -f CLAUDE.md"
+          status_message: Bootstrapping generated AI config
+`
+	require.NoError(t, schema.ValidateWithSchema([]byte(yamlConfig)))
+
+	var decoded Config
+	require.NoError(t, yaml.Unmarshal([]byte(yamlConfig), &decoded))
+	require.NotNil(t, decoded.Plugin)
+	require.Len(t, decoded.Plugin.Hooks, 1)
+	require.Len(t, decoded.Plugin.Hooks[0].Hooks, 1)
+	action := decoded.Plugin.Hooks[0].Hooks[0]
+	assert.Equal(t, ".ai-rulez/hooks/bootstrap.sh", action.Script)
+	assert.Equal(t, []string{"generate", "--quiet"}, action.Args)
+	assert.Equal(t, 120, action.Timeout)
+	assert.Equal(t, "!test -f CLAUDE.md", action.If)
+	assert.Equal(t, "Bootstrapping generated AI config", action.StatusMessage)
+}
+
+// hookProjectWithScript creates a project dir containing an executable bootstrap
+// script and returns the project dir plus the script's project-relative path.
+func hookProjectWithScript(t *testing.T) (projectDir, scriptPath string) {
+	t.Helper()
+	projectDir = t.TempDir()
+	hooksDir := filepath.Join(projectDir, ".ai-rulez", "hooks")
+	require.NoError(t, os.MkdirAll(hooksDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(hooksDir, "bootstrap.sh"), []byte("#!/bin/sh\nexit 0\n"), 0o755))
+	return projectDir, ".ai-rulez/hooks/bootstrap.sh"
+}
+
+func TestValidatePluginAuthoring_HookScriptDeclarations(t *testing.T) {
+	projectDir, scriptPath := hookProjectWithScript(t)
+
+	tests := []struct {
+		name    string
+		action  HookAction
+		wantErr string
+	}{
+		{name: "script alone is accepted", action: HookAction{Script: scriptPath}},
+		{name: "command alone is accepted", action: HookAction{Command: "echo hi"}},
+		{
+			name:    "command and script are mutually exclusive",
+			action:  HookAction{Command: "echo hi", Script: scriptPath},
+			wantErr: "sets both 'command' and 'script'",
+		},
+		{
+			name:    "script missing on disk",
+			action:  HookAction{Script: ".ai-rulez/hooks/absent.sh"},
+			wantErr: "hook script not found",
+		},
+		{
+			name:    "script escaping the project is rejected",
+			action:  HookAction{Script: "../outside.sh"},
+			wantErr: "unsafe hook script",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{
+				BaseDir: projectDir,
+				Plugin: &PluginAuthoring{
+					Name:        "basemind",
+					Version:     "1.0.0",
+					Description: "Full AI context layer.",
+					Runtimes:    []string{PluginRuntimeClaude},
+					Hooks: []HookGroup{{
+						Event: "SessionStart",
+						Hooks: []HookAction{tc.action},
+					}},
+				},
+			}
+			err := cfg.validatePluginAuthoring()
+			if tc.wantErr == "" {
+				require.NoError(t, err)
+				return
+			}
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tc.wantErr)
+		})
+	}
+}
+
+func TestKnownHookEvents_CoversDocumentedEventSet(t *testing.T) {
+	assert.Len(t, KnownHookEvents, 33, "Claude Code documents 33 hook events")
+	for _, event := range []string{"SessionStart", "Setup", "WorktreeCreate", "WorktreeRemove", "SessionEnd"} {
+		assert.Contains(t, KnownHookEvents, event)
+	}
+	for _, event := range HookEventsWithoutMatcher {
+		assert.Contains(t, KnownHookEvents, event, "matcher-less event %q must be a known event", event)
+	}
+}
+
+func TestHookDeclarationWarnings(t *testing.T) {
+	t.Run("known event with a supported matcher warns nothing", func(t *testing.T) {
+		warnings := hookDeclarationWarnings([]HookGroup{{
+			Event:   "SessionStart",
+			Matcher: "startup|resume",
+			Hooks:   []HookAction{{Command: "echo hi"}},
+		}})
+		assert.Empty(t, warnings)
+	})
+
+	t.Run("unknown event warns", func(t *testing.T) {
+		warnings := hookDeclarationWarnings([]HookGroup{{Event: "SesionStart"}})
+		require.Len(t, warnings, 1)
+		assert.Equal(t, warnUnknownHookEvent, warnings[0].Message)
+		assert.Equal(t, "SesionStart", warnings[0].Event)
+		assert.Equal(t, "plugin.hooks.event", warnings[0].Field)
+	})
+
+	t.Run("matcher on a matcher-less event warns", func(t *testing.T) {
+		warnings := hookDeclarationWarnings([]HookGroup{{Event: "Stop", Matcher: "*"}})
+		require.Len(t, warnings, 1)
+		assert.Equal(t, warnIgnoredHookMatcher, warnings[0].Message)
+		assert.Equal(t, "Stop", warnings[0].Event)
+		assert.Equal(t, "plugin.hooks.matcher", warnings[0].Field)
+	})
+
+	t.Run("matcher-less event without a matcher warns nothing", func(t *testing.T) {
+		assert.Empty(t, hookDeclarationWarnings([]HookGroup{{Event: "WorktreeCreate"}}))
+	})
+
+	t.Run("if on an event that does not evaluate it warns", func(t *testing.T) {
+		warnings := hookDeclarationWarnings([]HookGroup{{
+			Event: "SessionStart",
+			Hooks: []HookAction{{Script: "bootstrap.sh", If: "Bash(git *)"}},
+		}})
+		require.Len(t, warnings, 1)
+		assert.Equal(t, warnInertHookIf, warnings[0].Message)
+		assert.Equal(t, "SessionStart", warnings[0].Event)
+		assert.Equal(t, "plugin.hooks.hooks.if", warnings[0].Field)
+	})
+
+	t.Run("if on a tool-use event warns nothing", func(t *testing.T) {
+		for _, event := range HookEventsEvaluatingIf {
+			assert.Empty(t, hookDeclarationWarnings([]HookGroup{{
+				Event: event,
+				Hooks: []HookAction{{Command: "echo hi", If: "Edit(*.ts)"}},
+			}}), "%s evaluates 'if' and must not warn", event)
+		}
+	})
+
+	t.Run("if on an unknown event warns only about the event", func(t *testing.T) {
+		warnings := hookDeclarationWarnings([]HookGroup{{
+			Event: "PreToolUsage",
+			Hooks: []HookAction{{Command: "echo hi", If: "Bash(*)"}},
+		}})
+		require.Len(t, warnings, 1, "an unknown event must not also be judged on its 'if' support")
+		assert.Equal(t, warnUnknownHookEvent, warnings[0].Message)
+	})
+
+	t.Run("warnings are not errors", func(t *testing.T) {
+		cfg := &Config{Plugin: &PluginAuthoring{
+			Name:        "basemind",
+			Version:     "1.0.0",
+			Description: "Full AI context layer.",
+			Runtimes:    []string{PluginRuntimeClaude},
+			Hooks: []HookGroup{{
+				Event:   "FutureClaudeEvent",
+				Matcher: "whatever",
+				Hooks:   []HookAction{{Command: "echo hi"}},
+			}},
+		}}
+		require.NoError(t, cfg.validatePluginAuthoring())
+	})
 }
 
 func TestValidatePluginAuthoring_NilIsValid(t *testing.T) {

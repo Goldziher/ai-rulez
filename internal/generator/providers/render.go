@@ -98,13 +98,15 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 		if !g.evalPredicate(sidecar.EmitWhen, cfg) {
 			continue
 		}
-		body, err := g.renderSidecar(sidecar.Kind, cfg)
+		outputPath := filepath.Join(baseDir, sidecar.Path)
+		rendered, err := g.renderSidecar(sidecar.Kind, cfg, outputPath)
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
 		}
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, sidecar.Path),
-			Content: body,
+			Path:           outputPath,
+			Content:        rendered.Body,
+			PartiallyOwned: rendered.PartiallyOwned,
 		})
 	}
 

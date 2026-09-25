@@ -1,6 +1,7 @@
 package hooks
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"strings"
@@ -18,7 +19,15 @@ const (
 	keyHooks              = "hooks"
 	binaryAIRulez         = "ai-rulez"
 	unknownLabel          = "Unknown"
+	nullTag               = "!!null"
 )
+
+// yamlField is an ordered key/value pair. Emitting from a map would reorder the
+// fields on every invocation, since Go randomizes map iteration.
+type yamlField struct {
+	Key   string
+	Value string
+}
 
 func SetupHooks() error {
 	hookSystem := DetectGitHooks()
@@ -34,6 +43,8 @@ func SetupHooks() error {
 	}
 }
 
+// setupLefthook adds ai-rulez validation to lefthook configuration while preserving
+// comments, formatting, and key order using yaml.Node for comment-preserving round-tripping.
 func setupLefthook() error {
 	configFile := ""
 	files := []string{"lefthook.yaml", "lefthook.yml", ".lefthook.yml", ".lefthook.yaml"}
@@ -53,42 +64,46 @@ func setupLefthook() error {
 		return fmt.Errorf("failed to read lefthook config: %w", err)
 	}
 
-	var configData map[string]interface{}
-	if err := yaml.Unmarshal(data, &configData); err != nil {
+	var root yaml.Node
+	if err := yaml.Unmarshal(data, &root); err != nil {
 		return fmt.Errorf("failed to parse lefthook config: %w", err)
 	}
 
-	if configData["pre-commit"] == nil {
-		configData["pre-commit"] = map[string]interface{}{
-			"commands": map[string]interface{}{},
-		}
+	// The root is a Document node, we need the first child (the mapping)
+	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
+		return fmt.Errorf("invalid lefthook config: expected document node")
 	}
 
-	preCommit, ok := configData["pre-commit"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("invalid lefthook configuration structure")
+	doc := root.Content[0]
+	if doc.Kind != yaml.MappingNode {
+		return fmt.Errorf("invalid lefthook config: expected mapping at root")
 	}
 
-	if preCommit["commands"] == nil {
-		preCommit["commands"] = map[string]interface{}{}
+	// Find or create pre-commit section
+	preCommitNode := findOrCreateMapKey(doc, "pre-commit", yaml.MappingNode)
+	if !coerceNodeKind(preCommitNode, yaml.MappingNode) {
+		return fmt.Errorf("invalid lefthook config: pre-commit must be a mapping")
 	}
 
-	commands, ok := preCommit["commands"].(map[string]interface{})
-	if !ok {
-		return fmt.Errorf("invalid lefthook commands structure")
+	// Find or create commands section under pre-commit
+	commandsNode := findOrCreateMapKey(preCommitNode, "commands", yaml.MappingNode)
+	if !coerceNodeKind(commandsNode, yaml.MappingNode) {
+		return fmt.Errorf("invalid lefthook config: commands must be a mapping")
 	}
 
-	if _, exists := commands[binaryAIRulez]; exists {
+	// Check if ai-rulez command already exists
+	if hasMapKey(commandsNode, binaryAIRulez) {
 		return nil
 	}
 
-	commands[binaryAIRulez] = map[string]interface{}{
-		"glob":      ".ai-rulez/**",
-		"run":       "ai-rulez validate",
-		"fail_text": "AI rules validation failed",
-	}
+	// Add ai-rulez command
+	addMapEntry(commandsNode, binaryAIRulez, []yamlField{
+		{Key: "glob", Value: ".ai-rulez/**"},
+		{Key: "run", Value: "ai-rulez validate"},
+		{Key: "fail_text", Value: "AI rules validation failed"},
+	})
 
-	updatedData, err := yaml.Marshal(configData)
+	updatedData, err := marshalYAMLPreservingIndent(&root, data)
 	if err != nil {
 		return fmt.Errorf("failed to marshal lefthook config: %w", err)
 	}
@@ -100,26 +115,196 @@ func setupLefthook() error {
 	return nil
 }
 
+// marshalYAMLPreservingIndent encodes a node tree using the indentation width of
+// the document it came from.
+//
+// yaml.Marshal hardcodes a four-space indent, so round-tripping a two-space file
+// re-indents every line of it. Comments survive that, but the diff still rewrites
+// the whole file — on a long hand-maintained lefthook.yml that is just as
+// unwelcome as losing the comments was (#186).
+//
+// One kind of formatting still cannot be preserved: yaml.v3 does not model blank
+// lines between entries, so they are dropped, and padding used to align trailing
+// comments collapses to a single space. Everything else — comments, key order,
+// quoting style, indentation width — round-trips.
+func marshalYAMLPreservingIndent(root *yaml.Node, original []byte) ([]byte, error) {
+	var buf bytes.Buffer
+	encoder := yaml.NewEncoder(&buf)
+	encoder.SetIndent(detectYAMLIndent(original))
+	encodeErr := encoder.Encode(root)
+	// Close flushes, so its error matters even when Encode succeeded — but an
+	// Encode failure is the more specific diagnosis and wins.
+	closeErr := encoder.Close()
+	if encodeErr != nil {
+		return nil, encodeErr
+	}
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	return buf.Bytes(), nil
+}
+
+// detectYAMLIndent infers a document's indentation width from the first line
+// that is indented at all, ignoring comments and block scalar bodies by taking
+// the smallest non-zero indent seen on a line that ends in a mapping key.
+//
+// Falls back to two spaces, which is the prevailing convention for the hook
+// configs this package edits and matches what yaml.v3 would produce least
+// disruptively.
+func detectYAMLIndent(data []byte) int {
+	const defaultIndent = 2
+	smallest := 0
+	for _, line := range strings.Split(string(data), "\n") {
+		trimmed := strings.TrimLeft(line, " ")
+		// Only mapping keys are reliable: a block scalar's body can be indented
+		// arbitrarily deep and would understate nothing but confuse the minimum.
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") || !strings.Contains(trimmed, ":") {
+			continue
+		}
+		width := len(line) - len(trimmed)
+		if width == 0 || strings.Contains(line, "\t") {
+			continue
+		}
+		if smallest == 0 || width < smallest {
+			smallest = width
+		}
+	}
+	if smallest == 0 {
+		return defaultIndent
+	}
+	return smallest
+}
+
+// findOrCreateMapKey searches for a key in a mapping node and returns its value node.
+// If the key doesn't exist, it creates an empty value node of the requested kind.
+// An existing value is returned as it stands, kind included — coerceNodeKind decides
+// whether it is usable.
+func findOrCreateMapKey(mapping *yaml.Node, key string, kind yaml.Kind) *yaml.Node {
+	if mapping.Kind != yaml.MappingNode {
+		return nil
+	}
+
+	// Search for existing key
+	for i := 0; i < len(mapping.Content); i += 2 {
+		keyNode := mapping.Content[i]
+		if keyNode.Value == key {
+			return mapping.Content[i+1]
+		}
+	}
+
+	// Key not found, create it
+	keyNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: key,
+	}
+	valueNode := &yaml.Node{
+		Kind: kind,
+	}
+
+	mapping.Content = append(mapping.Content, keyNode, valueNode)
+	return valueNode
+}
+
+// hasMapKey checks if a mapping node contains a specific key.
+func hasMapKey(mapping *yaml.Node, key string) bool {
+	if mapping.Kind != yaml.MappingNode {
+		return false
+	}
+
+	for i := 0; i < len(mapping.Content); i += 2 {
+		keyNode := mapping.Content[i]
+		if keyNode.Value == key {
+			return true
+		}
+	}
+	return false
+}
+
+// coerceNodeKind reports whether node ends up with the wanted kind, treating a
+// `!!null` scalar as an absent value and filling it in.
+//
+// A key written without a value (`commands:`, `repos:`) is legal YAML and a legal
+// placeholder in both hook configs, so it deserves to be populated rather than
+// rejected. A node holding any real value keeps it and is reported as a mismatch,
+// so callers can refuse instead of discarding the user's data.
+//
+// The node is replaced wholesale rather than having its Kind reassigned: yaml.v3
+// only elides a non-scalar node's tag when it matches the kind's implicit tag, so
+// a leftover `!!null` Tag on a sequence or mapping is written out explicitly.
+func coerceNodeKind(node *yaml.Node, kind yaml.Kind) bool {
+	if node == nil {
+		return false
+	}
+	if node.Kind == kind {
+		return true
+	}
+	if node.Kind != yaml.ScalarNode || node.Tag != nullTag {
+		return false
+	}
+	*node = yaml.Node{Kind: kind}
+	return true
+}
+
+// addMapEntry adds a new key-value pair to a mapping node, whose value is a
+// mapping built from fields in the order given.
+func addMapEntry(mapping *yaml.Node, key string, fields []yamlField) {
+	keyNode := &yaml.Node{
+		Kind:  yaml.ScalarNode,
+		Value: key,
+	}
+
+	valueNode := &yaml.Node{
+		Kind: yaml.MappingNode,
+	}
+
+	for _, field := range fields {
+		fieldKey := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: field.Key,
+		}
+		fieldValue := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Value: field.Value,
+		}
+		valueNode.Content = append(valueNode.Content, fieldKey, fieldValue)
+	}
+
+	mapping.Content = append(mapping.Content, keyNode, valueNode)
+}
+
 func setupPreCommit() error {
 	configFile, err := findPreCommitConfig()
 	if err != nil {
 		return err
 	}
 
-	config, err := readPreCommitConfig(configFile)
+	root, original, err := readPreCommitConfig(configFile)
 	if err != nil {
 		return err
 	}
 
-	repos := extractRepoList(config)
+	// Get the document's content (mapping node)
+	if root.Kind != yaml.DocumentNode || len(root.Content) == 0 {
+		return fmt.Errorf("invalid pre-commit config: expected document node")
+	}
 
-	repos, officialRepo := ensureOfficialPreCommitRepo(repos)
-	ensureOfficialHooks(officialRepo)
-	repos = pruneLegacyLocalHooks(repos)
+	doc := root.Content[0]
+	if doc.Kind != yaml.MappingNode {
+		return fmt.Errorf("invalid pre-commit config: expected mapping at root")
+	}
 
-	config["repos"] = repos
+	// Find or create repos array
+	reposNode := findOrCreateMapKey(doc, "repos", yaml.SequenceNode)
+	if !coerceNodeKind(reposNode, yaml.SequenceNode) {
+		return fmt.Errorf("invalid pre-commit config: repos must be a sequence")
+	}
 
-	return writePreCommitConfig(configFile, config)
+	if err := ensureOfficialPreCommitRepoNode(reposNode); err != nil {
+		return err
+	}
+	pruneLegacyLocalHooksNode(reposNode)
+
+	return writePreCommitConfig(configFile, root, original)
 }
 
 func findPreCommitConfig() (string, error) {
@@ -132,122 +317,205 @@ func findPreCommitConfig() (string, error) {
 	return "", fmt.Errorf("pre-commit configuration file not found")
 }
 
-func readPreCommitConfig(path string) (map[string]interface{}, error) {
+// readPreCommitConfig reads the pre-commit config as a yaml.Node to preserve
+// comments. The raw bytes are returned alongside it so the writer can reproduce
+// the document's own indentation width.
+func readPreCommitConfig(path string) (*yaml.Node, []byte, error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read pre-commit config: %w", err)
+		return nil, nil, fmt.Errorf("failed to read pre-commit config: %w", err)
 	}
 
-	config := map[string]interface{}{}
 	if len(data) == 0 {
-		return config, nil
+		// Return an empty document with a mapping node
+		root := &yaml.Node{
+			Kind: yaml.DocumentNode,
+			Content: []*yaml.Node{
+				{Kind: yaml.MappingNode},
+			},
+		}
+		return root, data, nil
 	}
 
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("failed to parse pre-commit config: %w", err)
+	var root yaml.Node
+	if err := yaml.Unmarshal(data, &root); err != nil {
+		return nil, nil, fmt.Errorf("failed to parse pre-commit config: %w", err)
 	}
-	return config, nil
+	return &root, data, nil
 }
 
-func extractRepoList(config map[string]interface{}) []interface{} {
-	repos, ok := config["repos"].([]interface{})
-	if !ok {
-		return []interface{}{}
+// ensureOfficialPreCommitRepoNode ensures the official ai-rulez repo exists in the repos sequence
+// and has the correct hooks, while preserving comments and formatting.
+func ensureOfficialPreCommitRepoNode(reposNode *yaml.Node) error {
+	if reposNode.Kind != yaml.SequenceNode {
+		return fmt.Errorf("invalid pre-commit config: repos must be a sequence")
 	}
-	return repos
-}
 
-func ensureOfficialPreCommitRepo(repos []interface{}) (updated []interface{}, repo map[string]interface{}) {
-	updated = repos
-	for i, candidate := range updated {
-		repoMap, ok := candidate.(map[string]interface{})
-		if !ok {
+	// Look for existing official repo
+	var officialRepoNode *yaml.Node
+	for _, repo := range reposNode.Content {
+		if repo.Kind != yaml.MappingNode {
 			continue
 		}
-		if repoMap[keyRepo] == officialPreCommitRepo {
-			repoMap["rev"] = officialPreCommitRev
-			if _, ok := repoMap[keyHooks]; !ok {
-				repoMap[keyHooks] = []interface{}{}
-			}
-			updated[i] = repoMap
-			return updated, repoMap
+		repoURL := getMapValue(repo, keyRepo)
+		if repoURL == officialPreCommitRepo {
+			officialRepoNode = repo
+			// Update rev
+			setMapValue(repo, "rev", officialPreCommitRev)
+			break
 		}
 	}
 
-	repo = map[string]interface{}{
-		keyRepo:  officialPreCommitRepo,
-		"rev":    officialPreCommitRev,
-		keyHooks: []interface{}{},
+	// If official repo not found, create it
+	if officialRepoNode == nil {
+		officialRepoNode = &yaml.Node{
+			Kind: yaml.MappingNode,
+		}
+		setMapValue(officialRepoNode, keyRepo, officialPreCommitRepo)
+		setMapValue(officialRepoNode, "rev", officialPreCommitRev)
+
+		// Create hooks array
+		hooksKey := &yaml.Node{Kind: yaml.ScalarNode, Value: keyHooks}
+		hooksValue := &yaml.Node{Kind: yaml.SequenceNode}
+		officialRepoNode.Content = append(officialRepoNode.Content, hooksKey, hooksValue)
+
+		reposNode.Content = append(reposNode.Content, officialRepoNode)
 	}
-	updated = append(updated, repo)
-	return updated, repo
+
+	// Ensure hooks exist
+	return ensureOfficialHooksNode(officialRepoNode)
 }
 
-func ensureOfficialHooks(repo map[string]interface{}) {
-	hooks, ok := repo[keyHooks].([]interface{})
-	if !ok {
-		hooks = []interface{}{}
+// ensureOfficialHooksNode ensures the official hooks are present in a repo node.
+func ensureOfficialHooksNode(repoNode *yaml.Node) error {
+	hooksNode := findOrCreateMapKey(repoNode, keyHooks, yaml.SequenceNode)
+	if !coerceNodeKind(hooksNode, yaml.SequenceNode) {
+		return fmt.Errorf("invalid pre-commit config: hooks must be a sequence")
 	}
 
-	hookIDs := make(map[string]struct{}, len(hooks))
-	for _, hook := range hooks {
-		hookMap, ok := hook.(map[string]interface{})
-		if !ok {
+	// Build set of existing hook IDs
+	existingIDs := make(map[string]bool)
+	for _, hook := range hooksNode.Content {
+		if hook.Kind != yaml.MappingNode {
 			continue
 		}
-		if id, ok := hookMap["id"].(string); ok {
-			hookIDs[id] = struct{}{}
+		id := getMapValue(hook, "id")
+		if id != "" {
+			existingIDs[id] = true
 		}
 	}
 
+	// Add missing hooks
 	for _, id := range []string{"ai-rulez-validate", "ai-rulez-generate"} {
-		if _, exists := hookIDs[id]; exists {
+		if existingIDs[id] {
 			continue
 		}
-		hooks = append(hooks, map[string]interface{}{"id": id})
+		hookNode := &yaml.Node{Kind: yaml.MappingNode}
+		setMapValue(hookNode, "id", id)
+		hooksNode.Content = append(hooksNode.Content, hookNode)
 	}
 
-	repo[keyHooks] = hooks
+	return nil
 }
 
-func pruneLegacyLocalHooks(repos []interface{}) []interface{} {
-	for i, repo := range repos {
-		repoMap, ok := repo.(map[string]interface{})
-		if !ok {
+// pruneLegacyLocalHooksNode removes legacy ai-rulez hooks from local repos.
+func pruneLegacyLocalHooksNode(reposNode *yaml.Node) {
+	if reposNode.Kind != yaml.SequenceNode {
+		return
+	}
+
+	for _, repo := range reposNode.Content {
+		if repo.Kind != yaml.MappingNode {
 			continue
 		}
-		if repoMap[keyRepo] != "local" {
+
+		repoURL := getMapValue(repo, keyRepo)
+		if repoURL != "local" {
 			continue
 		}
-		hooks, ok := repoMap[keyHooks].([]interface{})
-		if !ok || len(hooks) == 0 {
+
+		// Find hooks
+		var hooksNode *yaml.Node
+		for i := 0; i < len(repo.Content); i += 2 {
+			if repo.Content[i].Value == keyHooks {
+				hooksNode = repo.Content[i+1]
+				break
+			}
+		}
+
+		if hooksNode == nil || hooksNode.Kind != yaml.SequenceNode {
 			continue
 		}
-		filtered := make([]interface{}, 0, len(hooks))
-		for _, hook := range hooks {
-			hookMap, ok := hook.(map[string]interface{})
-			if !ok {
+
+		// Filter out ai-rulez hooks
+		filtered := []*yaml.Node{}
+		for _, hook := range hooksNode.Content {
+			if hook.Kind != yaml.MappingNode {
 				filtered = append(filtered, hook)
 				continue
 			}
-			id, ok := hookMap["id"].(string)
-			if !ok {
-				filtered = append(filtered, hook)
-				continue
-			}
+			id := getMapValue(hook, "id")
 			if id == binaryAIRulez {
 				continue
 			}
 			filtered = append(filtered, hook)
 		}
-		repoMap[keyHooks] = filtered
-		repos[i] = repoMap //nolint:gosec // i is bounded by range over repos
+		hooksNode.Content = filtered
 	}
-	return repos
 }
 
-func writePreCommitConfig(path string, config map[string]interface{}) error {
-	data, err := yaml.Marshal(config)
+// getMapValue retrieves a string value from a mapping node by key.
+func getMapValue(mapping *yaml.Node, key string) string {
+	if mapping.Kind != yaml.MappingNode {
+		return ""
+	}
+
+	for i := 0; i < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key && i+1 < len(mapping.Content) {
+			return mapping.Content[i+1].Value
+		}
+	}
+	return ""
+}
+
+// setMapValue sets or updates a string value in a mapping node.
+//
+// An existing value node is replaced rather than having its Value reassigned.
+// yaml.v3 records the tag it inferred while parsing, and writes that tag out
+// explicitly once it no longer matches the value: an unquoted `rev: 24` carries
+// !!int, so assigning "v4.11.5" in place would emit `rev: !!int v4.11.5`, which
+// pre-commit then rejects.
+func setMapValue(mapping *yaml.Node, key, value string) {
+	if mapping.Kind != yaml.MappingNode {
+		return
+	}
+
+	// Look for existing key
+	for i := 0; i < len(mapping.Content); i += 2 {
+		if mapping.Content[i].Value == key {
+			existing := mapping.Content[i+1]
+			*existing = yaml.Node{
+				Kind:        yaml.ScalarNode,
+				Value:       value,
+				HeadComment: existing.HeadComment,
+				LineComment: existing.LineComment,
+				FootComment: existing.FootComment,
+			}
+			return
+		}
+	}
+
+	// Key not found, add it
+	keyNode := &yaml.Node{Kind: yaml.ScalarNode, Value: key}
+	valueNode := &yaml.Node{Kind: yaml.ScalarNode, Value: value}
+	mapping.Content = append(mapping.Content, keyNode, valueNode)
+}
+
+// writePreCommitConfig writes a yaml.Node back to file, preserving comments and
+// the original indentation width. original is the file's contents as read, used
+// only to detect that width.
+func writePreCommitConfig(path string, root *yaml.Node, original []byte) error {
+	data, err := marshalYAMLPreservingIndent(root, original)
 	if err != nil {
 		return fmt.Errorf("failed to marshal pre-commit config: %w", err)
 	}

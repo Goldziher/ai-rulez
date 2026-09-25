@@ -171,15 +171,16 @@ func TestCopilotPresetGenerator_renderMCPJSON(t *testing.T) {
 		},
 	}
 
-	content, err := g.renderMCPJSON(cfg)
+	rendered, err := g.renderMCPJSON("", cfg)
 	require.NoError(t, err)
-	assert.Contains(t, content, "test-server")
-	assert.Contains(t, content, "npx")
-	assert.Contains(t, content, "mcpServers")
+	assert.Contains(t, rendered.Body, "test-server")
+	assert.Contains(t, rendered.Body, "npx")
+	assert.Contains(t, rendered.Body, "mcpServers")
+	assert.False(t, rendered.PartiallyOwned, "a document ai-rulez created holds only the owned key")
 
 	// Verify valid JSON
 	var parsed map[string]interface{}
-	err = json.Unmarshal([]byte(content), &parsed)
+	err = json.Unmarshal([]byte(rendered.Body), &parsed)
 	require.NoError(t, err)
 	servers := parsed["mcpServers"].(map[string]interface{})
 	assert.Len(t, servers, 1)
@@ -206,11 +207,11 @@ func TestCopilotPresetGenerator_renderMCPJSON_RemoteTransports(t *testing.T) {
 		},
 	}
 
-	content, err := g.renderMCPJSON(cfg)
+	rendered, err := g.renderMCPJSON("", cfg)
 	require.NoError(t, err)
 
 	var parsed map[string]interface{}
-	require.NoError(t, json.Unmarshal([]byte(content), &parsed))
+	require.NoError(t, json.Unmarshal([]byte(rendered.Body), &parsed))
 	servers := parsed["mcpServers"].(map[string]interface{})
 
 	httpServer := servers["http-server"].(map[string]interface{})

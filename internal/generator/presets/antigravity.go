@@ -1,13 +1,13 @@
 package presets
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
@@ -67,16 +67,29 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		},
 	)
 
-	// Generate .agents/settings.json with MCP configuration
-	settingsContent, err := g.renderSettingsJSON(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("render settings.json: %w", err)
-	}
+	// Generate .agents/settings.json with MCP configuration.
+	//
+	// ai-rulez owns the mcpServers key of this document and the consumer owns the
+	// rest, so merge into whatever is on disk rather than replacing it (#185).
+	//
+	// Emitted only when there are MCP servers to contribute, for the same reason as
+	// the gemini preset: an owned key is replaced wholesale, so an unconditional
+	// write would still reduce a consumer's own mcpServers to the lone ai-rulez
+	// self-registration entry. Losing that self-registration in projects with no
+	// [[mcp_servers]] is the better trade.
+	if len(cfg.MCPServers) > 0 {
+		settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsSettings))
+		settings, err := g.renderSettingsJSON(settingsPath, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render settings.json: %w", err)
+		}
 
-	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, ".agents", "settings.json"),
-		Content: settingsContent,
-	})
+		outputs = append(outputs, config.OutputFile{
+			Path:           settingsPath,
+			Content:        settings.Body,
+			PartiallyOwned: settings.PartiallyOwned,
+		})
+	}
 
 	// Generate GEMINI.md with all rules and context
 	geminiMD := g.renderMarkdown(content, cfg)
@@ -122,7 +135,14 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	return outputs, nil
 }
 
-func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (string, error) {
+// renderSettingsJSON renders the mcpServers key ai-rulez owns into the settings
+// document at settingsPath, preserving every other top-level key that is already
+// there. An empty settingsPath renders a fresh document, which is what the unit
+// tests exercise.
+func (g *AntigravityPresetGenerator) renderSettingsJSON(
+	settingsPath string,
+	cfg *config.Config,
+) (jsonmerge.Result, error) {
 	mcpServers := make(map[string]interface{})
 
 	// Always include the hardcoded ai-rulez MCP server
@@ -164,16 +184,9 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(cfg *config.Config) (str
 		mcpServers[name] = entry
 	}
 
-	settings := map[string]interface{}{
-		keyMCPServers: mcpServers,
-	}
-
-	jsonData, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal JSON: %w", err)
-	}
-
-	return string(jsonData) + "\n", nil
+	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
+		{Name: keyMCPServers, Value: mcpServers},
+	})
 }
 
 func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree, cfg *config.Config) string {
