@@ -64,6 +64,38 @@ Content.
 `,
 			expected: ``,
 		},
+		{
+			name:     "leaves an H1-like comment inside a backtick fence",
+			input:    "# Title\n\n```bash\n# H1-like inside a fence\n## H2-like\necho x\n```\n",
+			expected: "```bash\n# H1-like inside a fence\n## H2-like\necho x\n```\n",
+		},
+		{
+			name:     "leaves an H1-like comment inside a tilde fence",
+			input:    "# Title\n\n~~~python\n# TODO(ABC-1): keep me\nvalue = 1\n~~~\n",
+			expected: "~~~python\n# TODO(ABC-1): keep me\nvalue = 1\n~~~\n",
+		},
+		{
+			name:     "leaves an indented H1-like comment inside a fence",
+			input:    "# Title\n\n```bash\n  # indented comment\n  echo x\n```\n",
+			expected: "```bash\n  # indented comment\n  echo x\n```\n",
+		},
+		{
+			name:     "strips only the first H1, not later ones",
+			input:    "# First\n\nBody.\n\n# Second\n\nMore.",
+			expected: "Body.\n\n# Second\n\nMore.",
+		},
+		{
+			name:     "leaves an H1-like line in an indented code block",
+			input:    "# Title\n\nExample:\n\n    # not a heading, this is indented code\n    echo x\n",
+			expected: "Example:\n\n    # not a heading, this is indented code\n    echo x\n",
+		},
+		{
+			// The fence is closed, so the H1 after it is a real heading and
+			// still the first one.
+			name:     "strips a real H1 that follows a closed fence",
+			input:    "```bash\necho x\n```\n\n# Title\n\nBody.",
+			expected: "```bash\necho x\n```\n\nBody.",
+		},
 	}
 
 	for _, tt := range tests {
