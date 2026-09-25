@@ -107,6 +107,28 @@ func validatePluginPaths(p *PluginAuthoring) error {
 	return nil
 }
 
+// escapesProject reports whether resolved leaves baseDir once symlinks are
+// followed. isUnsafeProjectPath only inspects the declared string, so a symlink
+// slips past it; the generator refuses such a source when bundling, and this
+// makes `validate` report it first instead of leaving it to generation. A path
+// that cannot be resolved is not treated as an escape — the os.Stat below
+// reports the missing file with a better message.
+func escapesProject(baseDir, resolved string) bool {
+	root, err := filepath.EvalSymlinks(baseDir)
+	if err != nil {
+		return false
+	}
+	resolvedReal, err := filepath.EvalSymlinks(resolved)
+	if err != nil {
+		return false
+	}
+	rel, err := filepath.Rel(root, resolvedReal)
+	if err != nil {
+		return true
+	}
+	return rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator))
+}
+
 func isUnsafeProjectPath(value string) bool {
 	normalized := strings.ReplaceAll(value, `\`, "/")
 	cleaned := path.Clean(normalized)
@@ -345,6 +367,14 @@ func (c *Config) validateHookAction(pluginName, event string, index int, action 
 	resolved := action.Script
 	if !filepath.IsAbs(resolved) {
 		resolved = filepath.Join(c.BaseDir, resolved)
+	}
+	if escapesProject(c.BaseDir, resolved) {
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			With("path", resolved).
+			Hint("A symlink out of the project would copy that file into the published bundle; point 'script' at a file inside the project").
+			Errorf("plugin %q hook %s[%d] hook script resolves outside the project: %q", pluginName, event, index, action.Script)
 	}
 	info, err := os.Stat(resolved)
 	if err != nil {
