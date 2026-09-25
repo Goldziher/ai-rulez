@@ -108,11 +108,12 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 	}
 
 	indent := detectTopLevelIndent(existing)
-	merged, err := replaceOwnedMembers(members, owned, indent)
+	newline := detectLineEnding(existing)
+	merged, err := replaceOwnedMembers(members, owned, indent, newline)
 	if err != nil {
 		return Result{}, oops.With("path", path).Wrapf(err, "merge owned keys into JSON settings document")
 	}
-	encoded, err := encodeTopLevelMembers(merged, indent)
+	encoded, err := encodeTopLevelMembers(merged, indent, newline)
 	if err != nil {
 		return Result{}, oops.With("path", path).Wrapf(err, "encode merged JSON settings document")
 	}
@@ -219,7 +220,7 @@ func decodeTopLevelMembers(data []byte) ([]jsonMember, error) {
 // replaceOwnedMembers rewrites the owned members in place and appends the ones
 // the document did not have yet. Duplicate occurrences of an owned key (legal
 // but ambiguous JSON) collapse into the first position.
-func replaceOwnedMembers(members []jsonMember, owned []OwnedKey, indent string) ([]jsonMember, error) {
+func replaceOwnedMembers(members []jsonMember, owned []OwnedKey, indent, newline string) ([]jsonMember, error) {
 	for _, key := range owned {
 		// Indent the owned value as a member of the root object: MarshalIndent's
 		// prefix is applied to every line after the first, which is exactly the
@@ -227,6 +228,11 @@ func replaceOwnedMembers(members []jsonMember, owned []OwnedKey, indent string) 
 		valueBytes, err := json.MarshalIndent(key.Value, indent, indent)
 		if err != nil {
 			return nil, fmt.Errorf("marshal owned key %q: %w", key.Name, err)
+		}
+		// MarshalIndent always breaks lines with LF, so the rendered value would
+		// be the one LF island in a CRLF document.
+		if newline != "\n" {
+			valueBytes = bytes.ReplaceAll(valueBytes, []byte("\n"), []byte(newline))
 		}
 
 		replaced := false
@@ -252,12 +258,12 @@ func replaceOwnedMembers(members []jsonMember, owned []OwnedKey, indent string) 
 
 // encodeTopLevelMembers writes members back as an indented JSON object, one
 // member per line, with each value emitted verbatim.
-func encodeTopLevelMembers(members []jsonMember, indent string) (string, error) {
+func encodeTopLevelMembers(members []jsonMember, indent, newline string) (string, error) {
 	if len(members) == 0 {
-		return "{}\n", nil
+		return "{}" + newline, nil
 	}
 	var b strings.Builder
-	b.WriteString("{\n")
+	b.WriteString("{" + newline)
 	for i, member := range members {
 		b.WriteString(indent)
 		// Re-quote through encoding/json so key escaping matches the rest of the
@@ -272,32 +278,106 @@ func encodeTopLevelMembers(members []jsonMember, indent string) (string, error) 
 		if i < len(members)-1 {
 			b.WriteString(",")
 		}
-		b.WriteString("\n")
+		b.WriteString(newline)
 	}
-	b.WriteString("}\n")
+	b.WriteString("}" + newline)
 	return b.String(), nil
 }
 
-// detectTopLevelIndent infers the indentation of an existing document from its
-// first indented line, so a file indented with four spaces or tabs is not
-// reformatted to two. Falls back to defaultJSONIndent for a single-line document
-// or one whose top-level members are all on the opening line.
+// detectLineEnding reports the line ending the document already uses. An
+// untouched member is re-emitted byte for byte, so its internal CRLFs survive
+// regardless; writing LF around them left a file carrying both, which reads as a
+// whole-file change to git and to the editor that wrote it.
+func detectLineEnding(doc string) string {
+	if strings.Contains(doc, "\r\n") {
+		return "\r\n"
+	}
+	return "\n"
+}
+
+// detectTopLevelIndent infers the indentation of an existing document from the
+// first line that starts a top-level member, so a file indented with four spaces
+// or tabs is not reformatted to two. Falls back to defaultJSONIndent for a
+// single-line document, or one whose members all sit on the opening line.
 //
-// Scanning for the first indented line rather than reading the line right after
-// the opening brace matters: a document with a blank line after '{', or with
-// leading blank lines before it, would otherwise measure a width of zero and get
-// its whole top level silently re-indented.
+// The member has to be located rather than guessed at. Reading the line right
+// after the opening brace measures zero on a document with a blank line there.
+// Taking the first indented line instead reads nested indentation whenever the
+// first key opens an object or array on the brace line --
+//
+//	{"permissions": {
+//	    "allow": []
+//	  },
+//	  "model": "opus"
+//	}
+//
+// where the first indented line is "allow" at four spaces, not the two the
+// document actually uses. Every hand-authored member then gets rewritten at the
+// wrong width, which is the whole-file diff this package exists to avoid. So
+// track brace depth (ignoring braces inside strings) and take the first line
+// whose leading non-blank character opens a key at depth one.
 func detectTopLevelIndent(doc string) string {
-	for _, line := range strings.Split(doc, "\n") {
-		width := 0
-		for width < len(line) && (line[width] == ' ' || line[width] == '\t') {
-			width++
-		}
-		// A line that is only whitespace says nothing about member indentation.
-		if width == 0 || width == len(line) {
+	depth, lineStart := 0, 0
+	inString, escaped, seenContent := false, false, false
+
+	for i := 0; i < len(doc); i++ {
+		char := doc[i]
+
+		if inString {
+			inString, escaped = advanceWithinString(char, escaped)
 			continue
 		}
-		return line[:width]
+		if char == '\n' {
+			lineStart, seenContent = i+1, false
+			continue
+		}
+		if char == ' ' || char == '\t' || char == '\r' {
+			continue
+		}
+
+		// First non-blank character on this line. A top-level member always
+		// starts with the quote of its key and sits at depth 1, directly inside
+		// the root object; anything deeper belongs to a nested value, and the
+		// root's own closing brace is not a member.
+		if !seenContent {
+			seenContent = true
+			if depth == 1 && char == '"' && i > lineStart {
+				return doc[lineStart:i]
+			}
+		}
+
+		inString, depth = advanceStructural(char, depth)
 	}
+
 	return defaultJSONIndent
+}
+
+// advanceWithinString steps one byte of a string literal, reporting whether the
+// literal continues and whether the next byte is escaped.
+func advanceWithinString(char byte, escaped bool) (stillInString, nowEscaped bool) {
+	switch {
+	case escaped:
+		return true, false
+	case char == '\\':
+		return true, true
+	case char == '"':
+		return false, false
+	default:
+		return true, false
+	}
+}
+
+// advanceStructural steps one byte outside a string literal, reporting whether a
+// string just opened and the resulting nesting depth.
+func advanceStructural(char byte, depth int) (inString bool, newDepth int) {
+	switch char {
+	case '"':
+		return true, depth
+	case '{', '[':
+		return false, depth + 1
+	case '}', ']':
+		return false, depth - 1
+	default:
+		return false, depth
+	}
 }
