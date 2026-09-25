@@ -480,3 +480,39 @@ func TestValidateMarketplaceAuthoring(t *testing.T) {
 		require.NoError(t, cfg.validateMarketplaceAuthoring())
 	})
 }
+
+// TestValidateHookActionRejectsSymlinkEscape covers the validate-time half of
+// the passthrough symlink defense: isUnsafeProjectPath is lexical, so a script
+// that reaches outside the project through a link has to be caught by resolving
+// it. The generator refuses to bundle such a file; validate should say so first.
+func TestValidateHookActionRejectsSymlinkEscape(t *testing.T) {
+	t.Parallel()
+
+	t.Run("should_reject_a_hook_script_symlinked_out_of_the_project", func(t *testing.T) {
+		t.Parallel()
+
+		outside := t.TempDir()
+		secret := filepath.Join(outside, "id_rsa")
+		require.NoError(t, os.WriteFile(secret, []byte("PRIVATE KEY"), 0o600))
+
+		baseDir := t.TempDir()
+		require.NoError(t, os.Symlink(secret, filepath.Join(baseDir, "bootstrap.sh")))
+
+		cfg := &Config{BaseDir: baseDir}
+		err := cfg.validateHookAction("basemind", "SessionStart", 0, &HookAction{Script: "bootstrap.sh"})
+
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "outside the project")
+	})
+
+	t.Run("should_accept_a_hook_script_inside_the_project", func(t *testing.T) {
+		t.Parallel()
+
+		baseDir := t.TempDir()
+		require.NoError(t, os.WriteFile(filepath.Join(baseDir, "bootstrap.sh"), []byte("#!/bin/sh\n"), 0o755))
+
+		cfg := &Config{BaseDir: baseDir}
+
+		require.NoError(t, cfg.validateHookAction("basemind", "SessionStart", 0, &HookAction{Script: "bootstrap.sh"}))
+	})
+}
