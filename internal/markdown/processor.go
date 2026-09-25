@@ -8,18 +8,38 @@ import (
 // StripFirstHeading removes the first H1 heading from markdown content.
 // This is useful when embedding content that has its own title but we're already
 // showing the title elsewhere (e.g., in a parent section).
+//
+// Only a real heading is removed. A line inside a fenced code block that happens
+// to start with "# " is a comment in whatever language the fence holds, not a
+// heading, and deleting it silently drops a line from the author's example --
+// which is what a shell or Python snippet in a rule body almost always is. An
+// indented code block is left alone for the same reason: ATX headings allow at
+// most three leading spaces, so four or more is code.
 func StripFirstHeading(content string) string {
 	lines := strings.Split(content, "\n")
 
-	// Find and remove the first H1 heading
+	stripped := false
 	inFirstHeading := false
+	fence := ""
 	result := make([]string, 0, len(lines))
 
 	for i, line := range lines {
 		trimmed := strings.TrimSpace(line)
 
-		// Check if this is an ATX-style H1 heading (starts with single #)
-		if !inFirstHeading && strings.HasPrefix(trimmed, "# ") && !strings.HasPrefix(trimmed, "## ") {
+		if marker := fenceMarker(trimmed); marker != "" {
+			switch {
+			case fence == "":
+				fence = marker
+			case strings.HasPrefix(marker, fence[:1]) && len(marker) >= len(fence):
+				fence = ""
+			}
+			result = append(result, line)
+			inFirstHeading = false
+			continue
+		}
+
+		if fence == "" && !stripped && !inFirstHeading && isATXHeading1(line) {
+			stripped = true
 			inFirstHeading = true
 			continue // Skip the H1 line
 		}
@@ -41,6 +61,37 @@ func StripFirstHeading(content string) string {
 	}
 
 	return strings.Join(result, "\n")
+}
+
+// fenceMarker returns the run of backticks or tildes opening or closing a fenced
+// code block, or "" when the line is not a fence. The caller has already trimmed
+// the line; a fence needs at least three markers.
+func fenceMarker(trimmed string) string {
+	for _, char := range []byte{'`', '~'} {
+		run := 0
+		for run < len(trimmed) && trimmed[run] == char {
+			run++
+		}
+		if run >= 3 {
+			return trimmed[:run]
+		}
+	}
+	return ""
+}
+
+// isATXHeading1 reports whether line is a level-one ATX heading: up to three
+// spaces of indentation, one '#', then whitespace. Four spaces makes it an
+// indented code block, and a second '#' makes it an H2.
+func isATXHeading1(line string) bool {
+	indent := 0
+	for indent < len(line) && line[indent] == ' ' {
+		indent++
+	}
+	if indent > 3 {
+		return false
+	}
+	rest := line[indent:]
+	return strings.HasPrefix(rest, "# ") || strings.HasPrefix(rest, "#\t")
 }
 
 // DemoteHeadings reduces all heading levels by the specified amount.
