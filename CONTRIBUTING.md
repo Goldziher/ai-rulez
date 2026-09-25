@@ -83,8 +83,10 @@ task test
 # Run all end-to-end tests
 task test:e2e
 
-# Run all checks (lint, format, test) before committing
-task ci
+# Run the checks CI runs, before committing
+task lint       # poly fmt --check + poly lint
+task check      # go vet + golangci-lint
+task test:all   # unit + platform + e2e
 ```
 
 ### Commit Messages
@@ -103,7 +105,7 @@ docs(contributing): clarify project architecture
 1.  Create a feature branch from `main`.
 2.  Make your changes, following the architectural guidelines.
 3.  Add or update unit and E2E tests for your changes.
-4.  Ensure all checks pass by running `task ci`.
+4.  Ensure all checks pass by running `task lint`, `task check`, and `task test:all`.
 5.  Push your branch and open a pull request with a title that follows the Conventional Commit format.
 
 ---
