@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.12.1] - 2026-09-25
+
+### Fixed
+
+- A merged settings document is no longer re-indented when its first key opens an object or array on the brace line. The indent was inferred from the first indented line, which in `{"permissions": {` / `"allow": []` is the nested member at four spaces rather than the two the document uses, so every hand-authored member came back at the wrong width — the whole-file diff the merge exists to avoid. Detection now tracks brace depth, ignoring braces inside strings, and reads the first line that opens a key at depth one.
+- A CRLF settings document keeps its line endings. Untouched members are re-emitted byte for byte, so their CRLFs survived, but the top level and the freshly rendered owned value were written with LF, leaving one document holding both.
+
+### Changed
+
+- Removed the unused `internal/scanner` package. Nothing imported it — content is scanned through `config.ScanContentTree` and profiles resolve through `Config.GetContentForProfile` — so it was a second, diverging copy of the same walk, and it mishandled the command directory form by dropping both items when a flat and a directory command collided in one source. `validate` reports that collision, which is why nothing depended on the broken path.
+
 ## [4.12.0] - 2026-09-25
 
 ### Added
