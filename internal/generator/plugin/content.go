@@ -106,6 +106,43 @@ func passthroughContent(cf *config.ContentFile, dstPath string) (config.OutputFi
 	return config.OutputFile{Path: dstPath, RawContent: data}, nil
 }
 
+// ensureWithinProject refuses a passthrough source that resolves outside the
+// project. The path guards in config.validatePluginPaths are lexical — they
+// reject "..", absolute paths and drive letters in the declared string — so a
+// symlink escapes them entirely: neither "bootstrap.sh" (linked at ~/.ssh/id_rsa)
+// nor "vendor/passwd" (where vendor links to /etc) contains a traversal
+// sequence. os.Stat and os.ReadFile then follow the link.
+//
+// That matters because passthrough bytes are published: they land in a plugin
+// bundle that consumers install, and a hook script is executed by the installing
+// runtime. Whoever builds the bundle would be exfiltrating a local file into it.
+// config.LoadResources already refuses symlinked skill resources for the same
+// reason; this is the bundling counterpart of that defense.
+//
+// Symlinks that stay inside the project are allowed — they are an ordinary
+// repository layout, and the bytes were publishable either way.
+func ensureWithinProject(sourceDir, abs string) error {
+	// Resolve the root too: a project legitimately living under a symlinked
+	// path (/tmp -> /private/tmp on macOS) would otherwise fail every check.
+	root, err := filepath.EvalSymlinks(sourceDir)
+	if err != nil {
+		return oops.With("path", sourceDir).Wrapf(err, "resolve project directory")
+	}
+	resolved, err := filepath.EvalSymlinks(abs)
+	if err != nil {
+		return oops.With("path", abs).Wrapf(err, "resolve passthrough file")
+	}
+	rel, err := filepath.Rel(root, resolved)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return oops.
+			With("path", abs).
+			With("resolved_to", resolved).
+			Hint("Point it at a file inside the project; a symlink out of the project would copy that file into the published bundle").
+			Errorf("passthrough file resolves outside the project")
+	}
+	return nil
+}
+
 // passthroughFile reads srcPath (resolved relative to the source project when
 // not absolute) and returns an OutputFile writing its bytes verbatim to dstPath,
 // preserving the executable bit for scripts.
@@ -113,6 +150,9 @@ func passthroughFile(sourceDir, srcPath, dstPath string) (config.OutputFile, err
 	abs := srcPath
 	if !filepath.IsAbs(abs) {
 		abs = filepath.Join(sourceDir, srcPath)
+	}
+	if err := ensureWithinProject(sourceDir, abs); err != nil {
+		return config.OutputFile{}, err
 	}
 	info, err := os.Stat(abs)
 	if err != nil {
