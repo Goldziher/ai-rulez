@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
@@ -371,6 +372,26 @@ func TestApply_PreservesExistingIndent(t *testing.T) {
 			wantKey:  "\n\t\"model\": \"opus\",",
 			wantOwn:  "\n\t\"mcpServers\": {\n\t\t\"generated\"",
 		},
+		// The first indented line belongs to a nested object, not the top
+		// level. Measuring it re-indents every hand-authored member.
+		"first key opens an object on the brace line": {
+			existing: "{\"permissions\": {\n    \"allow\": []\n  },\n  \"model\": \"opus\"\n}\n",
+			wantKey:  "\n  \"model\": \"opus\",",
+			wantOwn:  "\n  \"mcpServers\": {\n    \"generated\"",
+		},
+		// A nested array is the same trap: its entries are indented deeper
+		// than the top-level members that follow.
+		"first key opens an array on the brace line": {
+			existing: "{\"hooks\": [\n      \"a\"\n  ],\n  \"model\": \"opus\"\n}\n",
+			wantKey:  "\n  \"model\": \"opus\",",
+			wantOwn:  "\n  \"mcpServers\": {\n    \"generated\"",
+		},
+		// A brace inside a string must not be read as nesting.
+		"a brace inside a string value": {
+			existing: "{\n    \"note\": \"a { brace\",\n    \"model\": \"opus\"\n}\n",
+			wantKey:  "\n    \"model\": \"opus\",",
+			wantOwn:  "\n    \"mcpServers\": {\n        \"generated\"",
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -380,6 +401,42 @@ func TestApply_PreservesExistingIndent(t *testing.T) {
 			require.NoError(t, err)
 			assert.Contains(t, result.Body, testCase.wantKey)
 			assert.Contains(t, result.Body, testCase.wantOwn)
+		})
+	}
+}
+
+// TestApply_PreservesLineEndings covers the CRLF counterpart of indent
+// preservation. Untouched members are re-emitted verbatim, so their internal
+// CRLFs survive; writing LF around them produced a file with both, which reads
+// as a whole-file change to git and to the editor that wrote it.
+func TestApply_PreservesLineEndings(t *testing.T) {
+	t.Parallel()
+
+	for name, testCase := range map[string]struct {
+		existing string
+		want     string
+	}{
+		"crlf document stays crlf": {
+			existing: "{\r\n  \"permissions\": {\r\n    \"allow\": []\r\n  },\r\n  \"model\": \"opus\"\r\n}\r\n",
+			want:     "{\r\n  \"permissions\": {\r\n    \"allow\": []\r\n  },\r\n  \"model\": \"opus\",\r\n  \"mcpServers\": {\r\n",
+		},
+		"lf document stays lf": {
+			existing: "{\n  \"model\": \"opus\"\n}\n",
+			want:     "{\n  \"model\": \"opus\",\n  \"mcpServers\": {\n",
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			path := writeFixture(t, "settings.json", testCase.existing)
+
+			result, err := jsonmerge.Apply(path, ownedMCPServers())
+
+			require.NoError(t, err)
+			assert.Contains(t, result.Body, testCase.want)
+			if !strings.Contains(testCase.existing, "\r\n") {
+				assert.NotContains(t, result.Body, "\r", "an LF document must not gain carriage returns")
+			}
 		})
 	}
 }
