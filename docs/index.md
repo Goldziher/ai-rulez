@@ -100,7 +100,7 @@ frontend = ["frontend", "qa"]
 - Domain scoping to organize rules by team or subsystem
 - Profile-based customization for different contexts
 - Modular structure to reduce merge conflicts
-- Built-in presets for 20+ AI tools
+- Built-in presets for 13 AI tools
 - Custom presets for any tool and format
 - Installed skills from external repositories
 - Remote includes for sharing rules across projects

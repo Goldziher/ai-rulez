@@ -35,7 +35,7 @@ Write your rules, context, skills, agents, and commands once in `.ai-rulez/`. Ru
 npx ai-rulez@latest init && npx ai-rulez@latest generate
 ```
 
-ai-rulez generates correct, tool-native output for **20 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, and more. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
+ai-rulez generates correct, tool-native output for **13 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, and Antigravity. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
 
 ## Generate Plugins, Not Just Config
 
@@ -47,7 +47,7 @@ ai-rulez generate --plugin --dry-run # preview
 ai-rulez verify --plugin             # prove committed output matches its sources
 ```
 
-Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` variable; each runtime gets its own manifest with the variable and hook format rewritten to fit. Hermes generation emits both a project plugin and a buildable Python entry-point package. Use `plugin.content_root` to keep distributable skills separate from contributor governance. Supports single-plugin repos and monorepos (`[marketplace].members`), plus a Claude statusline passthrough. See [Authoring Plugins](docs/plugins.md).
+Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` variable — a hook either runs a command already on the consumer’s machine or bundles a project script into the plugin’s `hooks/` directory, so it works in a fresh clone — and each runtime gets its own manifest with the variable and hook format rewritten to fit. Hermes generation emits both a project plugin and a buildable Python entry-point package. Use `plugin.content_root` to keep distributable skills separate from contributor governance. Supports single-plugin repos and monorepos (`[marketplace].members`), plus a Claude statusline passthrough. See [Authoring Plugins](docs/plugins.md).
 
 ## What Ships Out of the Box
 
@@ -215,7 +215,7 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 
 ## MCP Server
 
-ai-rulez includes a built-in MCP server with 35+ tools that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.
+ai-rulez includes a built-in MCP server with 36 tools that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.
 
 ```toml
 [[mcp_servers]]
