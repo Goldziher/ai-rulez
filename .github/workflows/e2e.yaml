@@ -6,7 +6,7 @@ on:
     - cron: "0 2 * * *"
   push:
     paths:
-      - "testing/e2e/**"
+      - "tests/e2e/**"
       - "cmd/**"
       - "internal/**"
       - "Taskfile.yml"
@@ -73,8 +73,8 @@ jobs:
         with:
           name: comprehensive-e2e-results
           path: |
-            testing/e2e/*.log
-            testing/e2e/**/*.prof
+            tests/e2e/*.log
+            tests/e2e/**/*.prof
           retention-days: 7
 
   cross-platform-test:
@@ -137,5 +137,5 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: e2e-results-${{ matrix.os }}-${{ matrix.test-suite }}
-          path: testing/e2e/*.log
+          path: tests/e2e/*.log
           retention-days: 7
