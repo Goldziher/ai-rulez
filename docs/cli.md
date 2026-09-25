@@ -723,6 +723,12 @@ ai-rulez init [project-name] [flags]
 | `--setup-hooks` / `-H`  | boolean | false   | Configure Git hooks after initialization                             |
 | `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts                                  |
 
+`--setup-hooks` detects an existing lefthook, pre-commit, or husky setup and adds ai-rulez to it in
+place; it fails if none of the three is present. The two YAML configurations (`lefthook.yml`,
+`.pre-commit-config.yaml`) are edited node by node, so existing comments, key order and indentation
+width survive. Husky has no configuration file to preserve — the validation step is appended to
+`.husky/pre-commit`. Re-running is a no-op once ai-rulez is already wired in.
+
 **General Flags:**
 
 | Flag        | Type    | Description           |
@@ -1025,6 +1031,12 @@ ai-rulez validate --verbose
 - Referenced domains exist in filesystem
 - Profile definitions reference valid domains
 - File paths are accessible
+- No two skills, or two commands, in the same scope resolve to the same output id. The flat
+  (`commands/deploy.md`) and directory (`commands/deploy/COMMAND.md`) forms resolve identically, so
+  declaring both is a collision rather than an override.
+- No skill and command share an output id. Both render to `.claude/skills/{id}/SKILL.md`, differing
+  only in whether the item is user-invocable, so a shared id silently overwrites one with the other.
+  This check pools root and every domain, because the output layout has no domain segment.
 
 ## Migrate Command
 
