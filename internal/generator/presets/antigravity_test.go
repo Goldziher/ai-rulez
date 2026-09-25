@@ -31,8 +31,10 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 					{Name: "rule1", Content: "Rule content"},
 				},
 			},
-			baseDir:     "/test",
-			wantOutputs: 5, // .agents, .agents/skills, .agents/agents, .agents/settings.json, GEMINI.md
+			baseDir: "/test",
+			// No MCP servers in cfg, so no .agents/settings.json: .agents,
+			// .agents/skills, .agents/agents, GEMINI.md
+			wantOutputs: 4,
 			wantErr:     false,
 		},
 		{
@@ -47,7 +49,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 7, // 5 base + skill dir + SKILL.md
+			wantOutputs: 6, // 4 base + skill dir + SKILL.md
 			wantErr:     false,
 		},
 		{
@@ -66,7 +68,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 6, // 5 base + agent .md
+			wantOutputs: 5, // 4 base + agent .md
 			wantErr:     false,
 		},
 		{
@@ -90,7 +92,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 8, // 5 base + skill dir + SKILL.md + agent .md
+			wantOutputs: 7, // 4 base + skill dir + SKILL.md + agent .md
 			wantErr:     false,
 		},
 	}
@@ -136,7 +138,11 @@ func TestAntigravityPresetGenerator_GetOutputPaths(t *testing.T) {
 
 func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 	g := &AntigravityPresetGenerator{}
-	cfg := &config.Config{Name: "test"}
+	// An MCP server is what makes .agents/settings.json part of the output set.
+	cfg := &config.Config{
+		Name:       "test",
+		MCPServers: map[string]*config.MCPServer{"configured": {Command: "npx"}},
+	}
 
 	content := &config.ContentTree{
 		Rules: []config.ContentFile{
@@ -280,13 +286,13 @@ func TestAntigravityPresetGenerator_renderSettingsJSON_Transports(t *testing.T) 
 		},
 	}
 
-	content, err := g.renderSettingsJSON(cfg)
+	rendered, err := g.renderSettingsJSON("", cfg)
 	if err != nil {
 		t.Fatalf("renderSettingsJSON: %v", err)
 	}
 
 	var parsed map[string]interface{}
-	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+	if err := json.Unmarshal([]byte(rendered.Body), &parsed); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	servers := parsed["mcpServers"].(map[string]interface{})

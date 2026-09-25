@@ -13,6 +13,33 @@ import (
 	"github.com/samber/oops"
 )
 
+// Marker files that make a directory a skill or a command.
+const (
+	skillMarkerFile   = "SKILL.md"
+	commandMarkerFile = "COMMAND.md"
+)
+
+// basenameKey keys rules, context and agents, which exist only as flat files and
+// so compete for an output named after the file.
+func basenameKey(file config.ContentFile) string {
+	return filepath.Base(file.Path)
+}
+
+// nameKey keys skills and commands, which compete for an output named after the
+// item rather than the file. Both support a flat and a directory form, and the
+// two forms must produce the same key: commands/deploy.md and
+// commands/deploy/COMMAND.md render to the same .claude/skills/deploy/SKILL.md,
+// so keying one by its basename would hide the collision and emit both to that
+// one path. Name is the filename stem for a flat item and the directory name for
+// a directory one, which is exactly the identifier the generator resolves.
+//
+// Safe to call on root items only, which is all resolveCollisions keys: domain
+// items have their Name prefixed with the domain by applyNamespacing, after the
+// collision map is built.
+func nameKey(file config.ContentFile) string {
+	return file.Name
+}
+
 // Scanner scans content from .ai-rulez/ directories and builds an in-memory content tree
 type Scanner struct {
 	baseDir string
@@ -80,7 +107,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 			Wrapf(err, "scan root agents directory")
 	}
 
-	rootCommands, err := s.scanMarkdownFiles(filepath.Join(aiRulezDir, "commands"))
+	rootCommands, err := s.scanCommands(filepath.Join(aiRulezDir, "commands"))
 	if err != nil {
 		return nil, oops.
 			With("path", filepath.Join(aiRulezDir, "commands")).
@@ -88,35 +115,28 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 	}
 	logger.Info("Scanned root commands", "count", len(rootCommands))
 
-	// Build collision tracking maps (basename -> [root, domain1, domain2, ...])
-	// For skills, use the skill name (directory name) instead of file basename
+	// Build collision tracking maps (key -> [root, domain1, domain2, ...]).
+	// Each map is populated through the same key function resolveCollisions later
+	// reads it with, so the two sides cannot drift apart.
 	rulesMap := make(map[string][]string)
 	contextMap := make(map[string][]string)
 	skillsMap := make(map[string][]string)
 	agentsMap := make(map[string][]string)
 	commandsMap := make(map[string][]string)
 
+	trackSources := func(into map[string][]string, files []config.ContentFile, key func(config.ContentFile) string, source string) {
+		for _, file := range files {
+			itemKey := key(file)
+			into[itemKey] = append(into[itemKey], source)
+		}
+	}
+
 	// Track root files
-	for _, file := range rootRules {
-		basename := filepath.Base(file.Path)
-		rulesMap[basename] = append(rulesMap[basename], "root")
-	}
-	for _, file := range rootContext {
-		basename := filepath.Base(file.Path)
-		contextMap[basename] = append(contextMap[basename], "root")
-	}
-	for _, file := range rootSkills {
-		// For skills, use the skill name (not the file basename)
-		skillsMap[file.Name] = append(skillsMap[file.Name], "root")
-	}
-	for _, file := range rootAgents {
-		basename := filepath.Base(file.Path)
-		agentsMap[basename] = append(agentsMap[basename], "root")
-	}
-	for _, file := range rootCommands {
-		basename := filepath.Base(file.Path)
-		commandsMap[basename] = append(commandsMap[basename], "root")
-	}
+	trackSources(rulesMap, rootRules, basenameKey, "root")
+	trackSources(contextMap, rootContext, basenameKey, "root")
+	trackSources(skillsMap, rootSkills, nameKey, "root")
+	trackSources(agentsMap, rootAgents, basenameKey, "root")
+	trackSources(commandsMap, rootCommands, nameKey, "root")
 
 	// Scan domains and apply namespacing
 	domainMap := make(map[string]*config.Domain)
@@ -162,7 +182,7 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 				Wrapf(err, "scan domain agents directory")
 		}
 
-		domainCommands, err := s.scanMarkdownFiles(filepath.Join(domainPath, "commands"))
+		domainCommands, err := s.scanCommands(filepath.Join(domainPath, "commands"))
 		if err != nil {
 			return nil, oops.
 				With("domain", domainName).
@@ -172,26 +192,11 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 		logger.Debug("Scanned domain commands", "domain", domainName, "count", len(domainCommands))
 
 		// Track domain files for collision detection
-		for _, file := range domainRules {
-			basename := filepath.Base(file.Path)
-			rulesMap[basename] = append(rulesMap[basename], domainName)
-		}
-		for _, file := range domainContext {
-			basename := filepath.Base(file.Path)
-			contextMap[basename] = append(contextMap[basename], domainName)
-		}
-		for _, file := range domainSkills {
-			// For skills, use the skill name (not the file basename)
-			skillsMap[file.Name] = append(skillsMap[file.Name], domainName)
-		}
-		for _, file := range domainAgents {
-			basename := filepath.Base(file.Path)
-			agentsMap[basename] = append(agentsMap[basename], domainName)
-		}
-		for _, file := range domainCommands {
-			basename := filepath.Base(file.Path)
-			commandsMap[basename] = append(commandsMap[basename], domainName)
-		}
+		trackSources(rulesMap, domainRules, basenameKey, domainName)
+		trackSources(contextMap, domainContext, basenameKey, domainName)
+		trackSources(skillsMap, domainSkills, nameKey, domainName)
+		trackSources(agentsMap, domainAgents, basenameKey, domainName)
+		trackSources(commandsMap, domainCommands, nameKey, domainName)
 
 		// Apply namespacing to domain content
 		s.applyNamespacing(domainRules, domainName)
@@ -226,11 +231,11 @@ func (s *Scanner) ScanProfile(profileName string) (*config.ContentTree, error) {
 	s.logCollisions(commandsMap, "commands")
 
 	// Handle collisions: domain content overrides root content
-	finalRules := s.resolveCollisions(rootRules, allRules, rulesMap)
-	finalContext := s.resolveCollisions(rootContext, allContext, contextMap)
-	finalSkills := s.resolveCollisions(rootSkills, allSkills, skillsMap)
-	finalAgents := s.resolveCollisions(rootAgents, allAgents, agentsMap)
-	finalCommands := s.resolveCollisions(rootCommands, allCommands, commandsMap)
+	finalRules := s.resolveCollisions(rootRules, allRules, rulesMap, basenameKey)
+	finalContext := s.resolveCollisions(rootContext, allContext, contextMap, basenameKey)
+	finalSkills := s.resolveCollisions(rootSkills, allSkills, skillsMap, nameKey)
+	finalAgents := s.resolveCollisions(rootAgents, allAgents, agentsMap, basenameKey)
+	finalCommands := s.resolveCollisions(rootCommands, allCommands, commandsMap, nameKey)
 
 	// Sort alphabetically by name for stable, idempotent output.
 	// Priority is preserved in each item's metadata and rendered alongside the name.
@@ -343,7 +348,7 @@ func (s *Scanner) scanSkills(skillsDir, domainName string) ([]config.ContentFile
 
 		if entry.IsDir() {
 			// Directory structure: skills/name/SKILL.md
-			skillPath = filepath.Join(skillsDir, entry.Name(), "SKILL.md")
+			skillPath = filepath.Join(skillsDir, entry.Name(), skillMarkerFile)
 			if _, err := os.Stat(skillPath); os.IsNotExist(err) {
 				// No SKILL.md file, skip this directory
 				continue
@@ -381,6 +386,74 @@ func (s *Scanner) scanSkills(skillsDir, domainName string) ([]config.ContentFile
 	}
 
 	return skills, nil
+}
+
+// scanCommands scans a commands directory for .md files (flat form) and
+// COMMAND.md files in subdirectories (directory form with optional resources/).
+// Mirrors the structure of scanSkills to support bundled reference material.
+func (s *Scanner) scanCommands(commandsDir string) ([]config.ContentFile, error) {
+	// If directory doesn't exist, return empty slice (not an error)
+	if _, err := os.Stat(commandsDir); os.IsNotExist(err) {
+		return []config.ContentFile{}, nil
+	}
+
+	entries, err := os.ReadDir(commandsDir)
+	if err != nil {
+		return nil, oops.
+			With("path", commandsDir).
+			Wrapf(err, "read commands directory")
+	}
+
+	var commands []config.ContentFile
+	for _, entry := range entries {
+		var commandPath string
+		var contentFile config.ContentFile
+		var err error
+
+		if entry.IsDir() {
+			// Directory structure: commands/name/COMMAND.md
+			commandPath = filepath.Join(commandsDir, entry.Name(), commandMarkerFile)
+			if _, err := os.Stat(commandPath); os.IsNotExist(err) {
+				// No COMMAND.md file, skip this directory
+				continue
+			}
+
+			contentFile, err = s.loadContentFile(commandPath)
+			if err != nil {
+				// Log warning but continue
+				logger.Warn("failed to load command file", "path", commandPath, "error", err)
+				continue
+			}
+
+			// For commands in directories, use the directory name as the command name
+			contentFile.Name = entry.Name()
+
+			// Load command resources (references/, scripts/, assets/)
+			commandRoot := filepath.Join(commandsDir, entry.Name())
+			resources, resErr := config.LoadResources(commandRoot, config.ItemKindCommand)
+			if resErr != nil {
+				logger.Warn("Failed to load command resources", "command", entry.Name(), "error", resErr)
+			}
+			contentFile.Resources = resources
+		} else {
+			// Flat file structure: commands/name.md
+			if !strings.HasSuffix(entry.Name(), ".md") {
+				continue
+			}
+
+			commandPath = filepath.Join(commandsDir, entry.Name())
+			contentFile, err = s.loadContentFile(commandPath)
+			if err != nil {
+				logger.Warn("failed to load command file", "path", commandPath, "error", err)
+				continue
+			}
+			// loadContentFile already names a flat file after its filename stem.
+		}
+
+		commands = append(commands, contentFile)
+	}
+
+	return commands, nil
 }
 
 // loadContentFile loads a content file and parses optional frontmatter
@@ -475,22 +548,14 @@ func (s *Scanner) logCollisions(collisionMap map[string][]string, contentType st
 	}
 }
 
-// resolveCollisions resolves filename collisions: domain content overrides root content
-// For skills, we use the skill name (not basename) as the collision key
-func (s *Scanner) resolveCollisions(rootFiles, domainFiles []config.ContentFile, collisionMap map[string][]string) []config.ContentFile {
+// resolveCollisions resolves collisions: domain content overrides root content.
+// key must be the same function that populated collisionMap.
+func (s *Scanner) resolveCollisions(rootFiles, domainFiles []config.ContentFile, collisionMap map[string][]string, key func(config.ContentFile) string) []config.ContentFile {
 	result := make([]config.ContentFile, 0)
 
 	// Add root files that don't have collisions
 	for _, file := range rootFiles {
-		// For skills, use the skill name; for others, use basename
-		var key string
-		if strings.HasSuffix(file.Path, "SKILL.md") {
-			key = file.Name
-		} else {
-			key = filepath.Base(file.Path)
-		}
-
-		sources := collisionMap[key]
+		sources := collisionMap[key(file)]
 
 		// Only include root file if it's the only source
 		if len(sources) == 1 && sources[0] == "root" {

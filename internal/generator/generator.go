@@ -13,8 +13,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"     // Register remaining legacy preset generators
-	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
+	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
@@ -1082,10 +1082,14 @@ func (g *Generator) readGeneratedManifest() generatedManifest {
 	return manifest
 }
 
+// writeGeneratedManifest records the generated files so the next run can delete
+// the ones that dropped out. Partially owned outputs are deliberately left out:
+// the manifest exists only to drive deletion, and deleting a file ai-rulez
+// merely contributed a key to would take the hand-authored remainder with it.
 func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 	files := make([]string, 0, len(outputs))
 	for _, output := range outputs {
-		if output.IsDir {
+		if output.IsDir || output.PartiallyOwned {
 			continue
 		}
 		files = append(files, filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path))))
@@ -1120,9 +1124,29 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 		next[filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))] = true
 	}
 
+	// Never delete a merged settings document from a manifest entry. The manifest
+	// holds bare paths with no record of what the document contained, and one
+	// written by an older ai-rulez lists these files even when the consumer
+	// hand-authored them — so the flag on OutputFile cannot be consulted here.
+	// Leaving a wholly generated .mcp.json behind is the cost; the alternative
+	// deletes a tracked file full of the user's own settings (#185).
+	//
+	// Both sources are needed: provider sidecar specs cover .claude/settings.json,
+	// .mcp.json and .amp/settings.json, while .gemini/settings.json and
+	// .agents/settings.json are merged by preset generators that have no spec.
+	// Those two are also the ones emitted only when MCP servers are declared, so
+	// they are exactly the paths a render omits while the manifest still lists them.
+	merged := make(map[string]bool)
+	for _, relPath := range providers.MergedSidecarPaths() {
+		merged[relPath] = true
+	}
+	for _, relPath := range presets.MergedDocumentPaths() {
+		merged[relPath] = true
+	}
+
 	var stale []string
 	for _, relPath := range previous.Files {
-		if next[relPath] {
+		if next[relPath] || merged[relPath] {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
@@ -1191,6 +1215,12 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 			paths[relPath] = true
 			continue
 		}
+		// A partially owned settings document is hand-authored and tracked apart
+		// from the one key ai-rulez writes into it; telling git to ignore it
+		// would hide the user's own file (#185).
+		if output.PartiallyOwned {
+			continue
+		}
 		if !includeCommitted {
 			continue
 		}
@@ -1221,37 +1251,102 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	return paths
 }
 
+// gitignorePatternForOutput maps one generated output path to the pattern that
+// belongs in the managed .gitignore block, or "" when the path must not be ignored
+// at all. Each family of generated output gets its own resolver so none of them
+// has to be read through the others.
 func gitignorePatternForOutput(relPath string, isDir bool) string {
 	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
 	if relPath == ".github" || strings.HasSuffix(relPath, "/.github") {
 		return ""
 	}
-	for _, dir := range generatedAssistantDirs {
-		trimmedDir := strings.TrimSuffix(dir, "/")
-		if relPath == trimmedDir || strings.HasPrefix(relPath, dir) {
-			return dir
-		}
-		if idx := strings.Index(relPath, "/"+dir); idx >= 0 {
-			return relPath[:idx+1] + dir
-		}
+	if pattern, matched := assistantDirGitignorePattern(relPath, isDir); matched {
+		return pattern
 	}
 	for _, file := range generatedRootFiles {
 		if relPath == file {
 			return file
 		}
 	}
-	for _, pattern := range generatedGithubPatterns {
-		if relPath == strings.TrimSuffix(pattern, "/") || strings.HasPrefix(relPath, pattern) || relPath == pattern {
-			return pattern
-		}
-		if idx := strings.Index(relPath, "/"+pattern); idx >= 0 {
-			return relPath[:idx+1] + pattern
-		}
+	if pattern, matched := githubGitignorePattern(relPath); matched {
+		return pattern
 	}
 	if isDir {
 		return strings.TrimSuffix(relPath, "/") + "/"
 	}
 	return relPath
+}
+
+// assistantDirGitignorePattern resolves relPath against the assistant directories
+// ai-rulez shares with the user (.claude/, .gemini/, ...), whether at the repo root
+// or nested under a subproject. matched is false when relPath is not inside one of
+// them; a matched but empty pattern means the path is the shared directory itself,
+// which must stay un-ignored because the user tracks their own files in it (#184).
+func assistantDirGitignorePattern(relPath string, isDir bool) (pattern string, matched bool) {
+	for _, dir := range generatedAssistantDirs {
+		trimmedDir := strings.TrimSuffix(dir, "/")
+		if relPath == trimmedDir {
+			return "", true
+		}
+		if strings.HasPrefix(relPath, dir) {
+			return ownedAssistantSubPath("", dir, strings.TrimPrefix(relPath, dir), isDir), true
+		}
+		idx := strings.Index(relPath, "/"+trimmedDir)
+		if idx < 0 {
+			continue
+		}
+		remainder := relPath[idx+1+len(trimmedDir):]
+		if remainder == "" {
+			return "", true
+		}
+		// Anything else is a longer segment that merely starts with the directory
+		// name (".clauderc"), so keep looking.
+		if strings.HasPrefix(remainder, "/") {
+			return ownedAssistantSubPath(relPath[:idx+1], dir, remainder[1:], isDir), true
+		}
+	}
+	return "", false
+}
+
+// githubGitignorePattern resolves relPath against the .github/ content ai-rulez
+// generates, at the repo root or nested under a subproject.
+func githubGitignorePattern(relPath string) (pattern string, matched bool) {
+	for _, candidate := range generatedGithubPatterns {
+		if relPath == strings.TrimSuffix(candidate, "/") || strings.HasPrefix(relPath, candidate) {
+			return candidate, true
+		}
+		if idx := strings.Index(relPath, "/"+candidate); idx >= 0 {
+			return relPath[:idx+1] + candidate, true
+		}
+	}
+	return "", false
+}
+
+// ownedAssistantSubPath narrows a gitignore pattern to the content ai-rulez
+// actually writes inside an assistant directory.
+//
+// An assistant directory is shared territory: ai-rulez writes .claude/skills/
+// and .claude/agents/, while the user hand-authors and tracks
+// .claude/settings.json beside them. Ignoring the directory root makes git skip
+// those tracked files with no diagnostic (issue #184), so the pattern names the
+// first owned segment instead — .claude/skills/ rather than .claude/.
+//
+// remainder is the path relative to the assistant directory. A remainder with a
+// separator identifies an owned subdirectory; a single segment is either a
+// directory marker (isDir) or a file ai-rulez writes into the root, which is
+// ignored by name so narrowing never stops covering generated content.
+func ownedAssistantSubPath(nestedPrefix, assistantDir, remainder string, isDir bool) string {
+	if remainder == "" {
+		return ""
+	}
+	if idx := strings.Index(remainder, "/"); idx >= 0 {
+		return nestedPrefix + assistantDir + remainder[:idx+1]
+	}
+	if isDir {
+		return nestedPrefix + assistantDir + remainder + "/"
+	}
+
+	return nestedPrefix + assistantDir + remainder
 }
 
 var generatedRootFiles = [...]string{
@@ -1409,6 +1504,10 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 	}
 
 	var unsafe []string
+	// A partially owned document is the consumer's file: ai-rulez merges one key
+	// into it and cannot gitignore it on their behalf, so --gitignore is not the
+	// remedy and the hint must not suggest it.
+	shared := false
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -1419,16 +1518,23 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		}
 		if !isIgnored(relPath, patterns) {
 			unsafe = append(unsafe, relPath)
+			shared = shared || output.PartiallyOwned
 		}
 	}
 	if len(unsafe) == 0 {
 		return nil
 	}
 	sort.Strings(unsafe)
+	hint := "Enable gitignore generation with --gitignore or add these generated MCP config paths to .gitignore"
+	if shared {
+		hint = "These files hold hand-authored settings alongside the generated mcpServers key, so ai-rulez will " +
+			"not gitignore them for you. Either ignore them yourself, or move the secret-bearing server into a " +
+			"config whose MCP output is not shared."
+	}
 	return oops.
 		With("paths", unsafe).
 		With("env_keys", secretKeys).
-		Hint("Enable gitignore generation with --gitignore or add these generated MCP config paths to .gitignore").
+		Hint(hint).
 		Errorf("generated MCP config contains secrets but is not gitignored")
 }
 
@@ -1510,15 +1616,19 @@ func matchesPattern(filename, pattern string) bool {
 		contains(filename, pattern)
 }
 
-// matchesDirectory checks if filename matches a directory pattern
+// matchesDirectory checks if filename matches a directory pattern.
+//
+// A directory pattern covers the directory itself and everything nested under
+// it, so the nesting check has to run whether or not filename is itself a
+// directory: a pre-existing ".claude/" already ignores ".claude/skills/", and
+// re-listing the subdirectory inside the managed fence would duplicate it.
+// Trailing slashes and the leading anchor are notation, not path segments, so
+// both sides are normalised before comparing.
 func matchesDirectory(filename, pattern string) bool {
 	dirPrefix := trimPrefix(trimSuffix(pattern, "/"), "/")
+	candidate := trimPrefix(trimSuffix(filename, "/"), "/")
 
-	if hasSuffix(filename, "/") {
-		return pattern == filename || trimSuffix(filename, "/") == dirPrefix
-	}
-
-	return hasPrefix(filename, dirPrefix+"/") || filename == dirPrefix
+	return candidate == dirPrefix || hasPrefix(candidate, dirPrefix+"/")
 }
 
 // String helper functions to avoid importing strings package

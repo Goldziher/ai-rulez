@@ -1,13 +1,13 @@
 package presets
 
 import (
-	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
@@ -133,15 +133,19 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 		})
 	}
 
-	// Generate .mcp.json if MCP servers are configured
+	// Generate .mcp.json if MCP servers are configured. A tracked, hand-authored
+	// /.mcp.json is a common pattern, so merge the owned mcpServers key into what
+	// is already there instead of replacing the document (#185).
 	if len(cfg.MCPServers) > 0 {
-		mcpContent, err := g.renderMCPJSON(cfg)
+		mcpPath := filepath.Join(baseDir, MergedDocMCPJSON)
+		mcpFile, err := g.renderMCPJSON(mcpPath, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("render .mcp.json: %w", err)
 		}
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".mcp.json"),
-			Content: mcpContent,
+			Path:           mcpPath,
+			Content:        mcpFile.Body,
+			PartiallyOwned: mcpFile.PartiallyOwned,
 		})
 	}
 
@@ -324,8 +328,10 @@ func (g *CopilotPresetGenerator) renderCommandFile(command config.ContentFile) s
 	return builder.String()
 }
 
-// renderMCPJSON renders .mcp.json with MCP server configuration
-func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, error) {
+// renderMCPJSON renders the mcpServers key ai-rulez owns into the .mcp.json at
+// mcpPath, preserving every other top-level key that is already there. An empty
+// mcpPath renders a fresh document, which is what the unit tests exercise.
+func (g *CopilotPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
 	mcpServers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {
@@ -356,14 +362,7 @@ func (g *CopilotPresetGenerator) renderMCPJSON(cfg *config.Config) (string, erro
 		mcpServers[name] = entry
 	}
 
-	payload := map[string]interface{}{
-		keyMCPServers: mcpServers,
-	}
-
-	jsonBytes, err := json.MarshalIndent(payload, "", "  ")
-	if err != nil {
-		return "", fmt.Errorf("marshal MCP JSON: %w", err)
-	}
-
-	return string(jsonBytes) + "\n", nil
+	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
+		{Name: keyMCPServers, Value: mcpServers},
+	})
 }

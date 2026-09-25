@@ -431,21 +431,37 @@
         },
         "hooks": {
           "type": "array",
+          "description": "Lifecycle hook groups emitted as hooks.json (Claude/Cursor) or inline hooks (Gemini).",
           "items": {
             "type": "object",
             "required": ["event"],
             "properties": {
-              "event": { "type": "string" },
-              "matcher": { "type": "string" },
+              "event": {
+                "type": "string",
+                "description": "Lifecycle event, e.g. SessionStart. Unknown events are warned about, not rejected."
+              },
+              "matcher": {
+                "type": "string",
+                "description": "Filters which occurrences of the event run the group; ignored by events with no matchable subject."
+              },
               "hooks": {
                 "type": "array",
                 "items": {
                   "type": "object",
-                  "required": ["command"],
+                  "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
+                  "oneOf": [{ "required": ["command"] }, { "required": ["script"] }],
                   "properties": {
                     "type": { "type": "string" },
                     "command": { "type": "string" },
-                    "async": { "type": "boolean" }
+                    "script": {
+                      "type": "string",
+                      "description": "Project-relative script bundled at hooks/<basename> and invoked via the plugin root."
+                    },
+                    "args": { "type": "array", "items": { "type": "string" } },
+                    "timeout": { "type": "integer", "minimum": 0 },
+                    "async": { "type": "boolean" },
+                    "if": { "type": "string" },
+                    "status_message": { "type": "string" }
                   },
                   "additionalProperties": false
                 }
