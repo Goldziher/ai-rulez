@@ -84,7 +84,14 @@ func TestRenderHooksFile_BundlesScriptNextToHooksJSON(t *testing.T) {
 			script, ok := byPath[tc.wantScript]
 			require.True(t, ok, "expected bundled hook script at %s, got %v", tc.wantScript, byPath)
 			assert.Equal(t, "#!/bin/sh\nai-rulez generate\n", string(script.RawContent))
-			assert.Equal(t, os.FileMode(0o755), script.Mode, "executable bit must be preserved")
+
+			// Compared against the source file rather than a literal 0o755:
+			// Windows has no POSIX permission bits, so a chmod there cannot
+			// produce one and the contract is "carried over", not "executable".
+			sourceInfo, err := os.Stat(filepath.Join(m.SourceDir, filepath.FromSlash("scripts/bootstrap.sh")))
+			require.NoError(t, err)
+			assert.Equal(t, sourceInfo.Mode().Perm(), script.Mode,
+				"the source file's mode must be carried over, executable bit included")
 
 			hooksDoc, ok := byPath[tc.hooksJSON]
 			require.True(t, ok, "expected %s", tc.hooksJSON)
