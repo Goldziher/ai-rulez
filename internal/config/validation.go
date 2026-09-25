@@ -2,6 +2,9 @@ package config
 
 import (
 	"fmt"
+	"path/filepath"
+	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
@@ -53,8 +56,19 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateDuplicateOutputIDs(); err != nil {
+		return err
+	}
+
+	if err := c.validateOutputNamespaceCollisions(); err != nil {
+		return err
+	}
+
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
+
+	// Warn about inert argument-hint on skills (non-fatal)
+	c.warnSkillArgumentHint()
 
 	return nil
 }
@@ -433,4 +447,264 @@ func getBuiltInPresetNames() []string {
 		names = append(names, name)
 	}
 	return names
+}
+
+// scopeRoot names root content in diagnostics. Domain scopes read
+// "domain <name>".
+const scopeRoot = "root"
+
+// namespaceEntry is the first item seen for an output id: the id as authored
+// (for the message) plus its source path (so both sides of a collision are
+// nameable).
+type namespaceEntry struct {
+	id   string
+	path string
+}
+
+// validateDuplicateOutputIDs detects two skills, or two commands, that resolve
+// to the same output id within one scope. Both render to
+// .claude/skills/{id}/SKILL.md and nothing downstream deduplicates them —
+// combineContentFiles in internal/generator/presets concatenates and
+// stable-sorts — so whichever is written last silently replaces the other. The
+// directory form opened this hole: before it, two commands in one directory
+// could not share an id.
+//
+// A scope is root, or a single domain, and never a pool of the two. Cross-scope
+// duplicates are resolved on purpose: the scanner drops the root copy when a
+// domain defines the same item (resolveCollisions) and namespaces domain ids, so
+// two scopes never compete for one output path. Only duplicates inside a single
+// scope are resolved by nobody.
+func (c *Config) validateDuplicateOutputIDs() error {
+	if c.Content == nil {
+		return nil
+	}
+
+	var collisions []string
+	collectScope := func(skills, commands []ContentFile) {
+		collisions = append(collisions, duplicateOutputIDs(skills, skillDirectoryOutputID, ItemKindSkill)...)
+		collisions = append(collisions, duplicateOutputIDs(commands, commandOutputID, ItemKindCommand)...)
+	}
+
+	collectScope(c.Content.Skills, c.Content.Commands)
+
+	for _, domain := range c.Content.Domains {
+		if domain == nil {
+			continue
+		}
+		collectScope(domain.Skills, domain.Commands)
+	}
+
+	if len(collisions) == 0 {
+		return nil
+	}
+
+	// Domain map iteration is unordered; sort so the message is reproducible.
+	sort.Strings(collisions)
+
+	return oops.
+		With("collisions", collisions).
+		Hint("Two skills, or two commands, in one directory cannot share an output id: both render to "+
+			".claude/skills/{id}/SKILL.md and one silently replaces the other. The directory form "+
+			"(commands/name/COMMAND.md) and the flat form (commands/name.md) resolve to the same id — "+
+			"keep one, or rename one side.").
+		Errorf("duplicate output ids: %s", strings.Join(collisions, "; "))
+}
+
+// duplicateOutputIDs reports items of one kind, within one scope, that resolve
+// to the same output id. Ids are compared case-folded for the same reason as the
+// cross-kind check: on a case-insensitive checkout two ids differing only in
+// case are one output directory.
+func duplicateOutputIDs(items []ContentFile, outputID func(ContentFile) string, kind string) []string {
+	firstByKey := make(map[string]namespaceEntry, len(items))
+
+	var duplicates []string
+	for _, item := range items {
+		id := outputID(item)
+		if id == "" {
+			continue
+		}
+		key := strings.ToLower(id)
+		first, seen := firstByKey[key]
+		if !seen {
+			firstByKey[key] = namespaceEntry{id: id, path: item.Path}
+			continue
+		}
+		// One source listed twice — include merges carry the same entry into
+		// more than one slice — cannot overwrite itself.
+		if first.path == item.Path {
+			continue
+		}
+		duplicates = append(duplicates, fmt.Sprintf("%s %q (%s) vs %s %q (%s)",
+			kind, first.id, first.path, kind, id, item.Path))
+	}
+
+	return duplicates
+}
+
+// skillDirectoryOutputID returns the output id a skill competes for, or "" for a
+// flat skills/name.md file. A flat file resolves to its *parent directory* name
+// (computeItemID in internal/generator/providers/render.go takes
+// base(dir(path))), so every flat skill in one directory reports the same id.
+// That derivation is a defect in flat-skill support rather than an authoring
+// collision, and rejecting it here would refuse bare-structure includes that
+// generate today.
+func skillDirectoryOutputID(skill ContentFile) string {
+	if skill.Path != "" && filepath.Base(skill.Path) != skillMarkerFile {
+		return ""
+	}
+
+	return SkillID(skill)
+}
+
+// validateOutputNamespaceCollisions detects a skill and a command that would
+// write to the same output path. Skills and commands both render to
+// .claude/skills/{id}/SKILL.md, differing only in the user_invocable frontmatter
+// constant, so a shared id silently overwrites one with the other — data loss
+// that no other check catches.
+//
+// Root and every domain are pooled together because the output layout has no
+// domain segment: a skill in one domain and a command in another still land on
+// the same path for any profile that activates both. Collisions *within* one
+// kind are reported by validateDuplicateOutputIDs instead, which pools nothing:
+// root shadowing a domain is documented design, resolved by the scanner.
+func (c *Config) validateOutputNamespaceCollisions() error {
+	if c.Content == nil {
+		return nil
+	}
+
+	// Skill and command ids are derived differently by the generator, and the
+	// difference matters: a directory named "Foo_Bar" yields the skill id
+	// "Foo_Bar" but the command id "foo-bar". Mirroring each rule exactly is
+	// what makes this check agree with what is actually written to disk.
+	// Keyed case-folded: macOS and Windows checkouts are case-insensitive, so
+	// .claude/skills/Review/ and .claude/skills/review/ are one directory there.
+	// Treating that as a collision everywhere keeps the diagnosis portable.
+	skills := make(map[string]namespaceEntry)
+	commands := make(map[string]namespaceEntry)
+
+	collect := func(into map[string]namespaceEntry, items []ContentFile, id func(ContentFile) string) {
+		for _, item := range items {
+			itemID := id(item)
+			if itemID == "" {
+				continue
+			}
+			key := strings.ToLower(itemID)
+			if _, seen := into[key]; !seen {
+				into[key] = namespaceEntry{id: itemID, path: item.Path}
+			}
+		}
+	}
+
+	collect(skills, c.Content.Skills, SkillID)
+	collect(commands, c.Content.Commands, commandOutputID)
+
+	for _, domain := range c.Content.Domains {
+		if domain == nil {
+			continue
+		}
+		collect(skills, domain.Skills, SkillID)
+		collect(commands, domain.Commands, commandOutputID)
+	}
+
+	var collisions []string
+	for key, skill := range skills {
+		command, clash := commands[key]
+		if !clash {
+			continue
+		}
+		collisions = append(collisions, fmt.Sprintf(
+			"skill %q (%s) vs command %q (%s)", skill.id, skill.path, command.id, command.path))
+	}
+	if len(collisions) == 0 {
+		return nil
+	}
+
+	// Map iteration is unordered; sort so the message is reproducible.
+	sort.Strings(collisions)
+
+	return oops.
+		With("collisions", collisions).
+		Hint("Skills and commands share one output namespace (.claude/skills/{id}/SKILL.md), so an id must be unique across skills/ and commands/ in every domain. Rename one side.").
+		Errorf("skill and command ids collide in the output namespace: %s", strings.Join(collisions, "; "))
+}
+
+// commandOutputID mirrors sanitizeAgentID in
+// internal/generator/providers/render.go, the function commands actually resolve
+// through: lowercase, spaces and underscores to dashes. Duplicated rather than
+// shared because that function is unexported in a package this one cannot
+// import without a cycle; render.go remains the source of truth, so a change
+// there must be mirrored here.
+func commandOutputID(command ContentFile) string {
+	id := strings.ToLower(command.Name)
+	id = strings.ReplaceAll(id, " ", "-")
+	id = strings.ReplaceAll(id, "_", "-")
+
+	return id
+}
+
+// warnInertSkillArgumentHint is advisory rather than fatal: argument-hint is
+// inert on skills because user_invocable=false is a hard constant in the
+// claude.toml [outputs.skills] block, but a config that declares it still
+// generates correctly.
+const warnInertSkillArgumentHint = "skill declares argument-hint but it is inert " +
+	"(skills have user_invocable=false) — move it to commands/ instead"
+
+// skillWarning is one non-fatal skill advisory, carried as data rather than
+// logged at the point of detection so the detection logic stays testable.
+type skillWarning struct {
+	Scope   string
+	Skill   string
+	Path    string
+	Message string
+}
+
+// warnSkillArgumentHint logs the advisories collected by
+// skillArgumentHintWarnings.
+func (c *Config) warnSkillArgumentHint() {
+	for _, warning := range c.skillArgumentHintWarnings() {
+		logger.Warn(warning.Message, "scope", warning.Scope, "skill", warning.Skill, "path", warning.Path)
+	}
+}
+
+// skillArgumentHintWarnings reports skills declaring argument-hint in their
+// frontmatter, in root order followed by domains in alphabetical order so the
+// warning sequence is reproducible.
+func (c *Config) skillArgumentHintWarnings() []skillWarning {
+	if c.Content == nil {
+		return nil
+	}
+
+	var warnings []skillWarning
+	collect := func(skills []ContentFile, scope string) {
+		for _, skill := range skills {
+			if skill.Metadata == nil || skill.Metadata.Extra == nil {
+				continue
+			}
+			if _, hasHint := skill.Metadata.Extra["argument-hint"]; !hasHint {
+				continue
+			}
+			warnings = append(warnings, skillWarning{
+				Scope:   scope,
+				Skill:   SkillID(skill),
+				Path:    skill.Path,
+				Message: warnInertSkillArgumentHint,
+			})
+		}
+	}
+
+	collect(c.Content.Skills, scopeRoot)
+
+	domainNames := make([]string, 0, len(c.Content.Domains))
+	for domainName := range c.Content.Domains {
+		domainNames = append(domainNames, domainName)
+	}
+	sort.Strings(domainNames)
+
+	for _, domainName := range domainNames {
+		if domain := c.Content.Domains[domainName]; domain != nil {
+			collect(domain.Skills, "domain "+domainName)
+		}
+	}
+
+	return warnings
 }

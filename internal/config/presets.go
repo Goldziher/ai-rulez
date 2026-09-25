@@ -40,6 +40,12 @@ type OutputFile struct {
 	Mode       os.FileMode
 	IsDir      bool
 	LocalOnly  bool
+	// PartiallyOwned marks a file ai-rulez only contributes some of the content
+	// to — a settings document where it owns one top-level key and the consumer
+	// hand-authors and tracks the rest. Such a file must not be added to the
+	// managed .gitignore block, and must not be deleted as stale when it stops
+	// being generated: both would destroy or hide user-authored data (#185).
+	PartiallyOwned bool
 }
 
 // LocalRootProvider is implemented by preset generators that emit a single

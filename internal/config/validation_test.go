@@ -236,3 +236,396 @@ func TestConfigValidateMalformedFrontmatter(t *testing.T) {
 		assert.Contains(t, err.Error(), "agents/b.md")
 	})
 }
+
+func TestConfigValidateOutputNamespaceCollisions(t *testing.T) {
+	base := func() *Config {
+		return &Config{
+			Version: "4.0",
+			Name:    "test",
+			Presets: []Preset{{BuiltIn: "claude"}},
+			Content: &ContentTree{},
+		}
+	}
+
+	t.Run("root skill and root command with same id error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "code-review", Path: "skills/code-review/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "code-review", Path: "commands/code-review.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "code-review")
+		assert.Contains(t, err.Error(), "skills/code-review/SKILL.md")
+		assert.Contains(t, err.Error(), "commands/code-review.md")
+	})
+
+	t.Run("skill in domain A and command in domain B with same id error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Domains = map[string]*Domain{
+			"qa": {
+				Name: "qa",
+				Skills: []ContentFile{
+					{Name: "playwright-test", Path: "domains/qa/skills/playwright-test/SKILL.md"},
+				},
+			},
+			"backend": {
+				Name: "backend",
+				Commands: []ContentFile{
+					{Name: "playwright-test", Path: "domains/backend/commands/playwright-test.md"},
+				},
+			},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "playwright-test")
+		assert.Contains(t, err.Error(), "domains/qa/skills/playwright-test/SKILL.md")
+		assert.Contains(t, err.Error(), "domains/backend/commands/playwright-test.md")
+	})
+
+	t.Run("ids differing only by case collide after sanitization", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "MySkill", Path: "skills/MySkill/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "myskill", Path: "commands/myskill.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "myskill")
+	})
+
+	// Only commands have their underscores rewritten to dashes; a skill id is the
+	// directory name verbatim. So an underscore in a command name collides with a
+	// dashed skill, while an underscore in a skill name does not collide with a
+	// dashed command. The check has to follow that asymmetry or it reports
+	// collisions that never happen and misses the ones that do.
+	t.Run("underscored command collides with dashed skill", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "test-skill", Path: "skills/test-skill/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "test_skill", Path: "commands/test_skill.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "commands/test_skill.md")
+	})
+
+	t.Run("underscored skill does not collide with dashed command", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "test_skill", Path: "skills/test_skill/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "test-skill", Path: "commands/test-skill.md"},
+		}
+		assert.NoError(t, cfg.Validate(),
+			"skills/test_skill/ and skills/test-skill/ are different directories on disk")
+	})
+
+	t.Run("skill and command with genuinely distinct ids pass", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "review", Path: "skills/review/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "test", Path: "commands/test.md"},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("root skill shadowing domain skill of same name still passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "shared", Path: "skills/shared/SKILL.md"},
+		}
+		cfg.Content.Domains = map[string]*Domain{
+			"backend": {
+				Name: "backend",
+				Skills: []ContentFile{
+					{Name: "shared", Path: "domains/backend/skills/shared/SKILL.md"},
+				},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("multiple collisions reported", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "foo", Path: "skills/foo/SKILL.md"},
+			{Name: "bar", Path: "skills/bar/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "foo", Path: "commands/foo.md"},
+			{Name: "bar", Path: "commands/bar.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		// Every collision must be named — fixing one at a time, with a rerun to
+		// learn about the next, is what makes a 200-skill repository unfixable.
+		// The order is sorted, so the message is reproducible run to run.
+		assert.Equal(t,
+			`skill and command ids collide in the output namespace: `+
+				`skill "bar" (skills/bar/SKILL.md) vs command "bar" (commands/bar.md); `+
+				`skill "foo" (skills/foo/SKILL.md) vs command "foo" (commands/foo.md)`,
+			err.Error())
+	})
+
+	t.Run("command directory form is recognized", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "advanced", Path: "skills/advanced/SKILL.md"},
+		}
+		cfg.Content.Commands = []ContentFile{
+			{Name: "advanced", Path: "commands/advanced/COMMAND.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "advanced")
+	})
+}
+
+func TestConfigValidateDuplicateOutputIDs(t *testing.T) {
+	base := func() *Config {
+		return &Config{
+			Version: "4.0",
+			Name:    "test",
+			Presets: []Preset{{BuiltIn: "claude"}},
+			Content: &ContentTree{},
+		}
+	}
+
+	t.Run("flat and directory command with the same name error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{Name: "deploy", Path: "commands/deploy/COMMAND.md"},
+			{Name: "deploy", Path: "commands/deploy.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "commands/deploy/COMMAND.md")
+		assert.Contains(t, err.Error(), "commands/deploy.md")
+	})
+
+	// The directory form takes the directory name verbatim while the output id
+	// is case-folded and dashed, so these two only meet after normalization.
+	t.Run("command ids colliding only after normalization error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{Name: "My_Command", Path: "commands/My_Command/COMMAND.md"},
+			{Name: "my-command", Path: "commands/my-command.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "commands/My_Command/COMMAND.md")
+		assert.Contains(t, err.Error(), "commands/my-command.md")
+	})
+
+	t.Run("two skills differing only by case error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "Review", Path: "skills/Review/SKILL.md"},
+			{Name: "review", Path: "skills/review/SKILL.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "skills/Review/SKILL.md")
+		assert.Contains(t, err.Error(), "skills/review/SKILL.md")
+	})
+
+	t.Run("duplicate ids inside one domain error", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Domains = map[string]*Domain{
+			"qa": {
+				Name: "qa",
+				Commands: []ContentFile{
+					{Name: "rca", Path: "domains/qa/commands/rca/COMMAND.md"},
+					{Name: "rca", Path: "domains/qa/commands/rca.md"},
+				},
+			},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "domains/qa/commands/rca/COMMAND.md")
+		assert.Contains(t, err.Error(), "domains/qa/commands/rca.md")
+	})
+
+	// Cross-scope duplicates are resolved deliberately by the scanner (domain
+	// content overrides root, and domain ids are namespaced), so they must keep
+	// loading.
+	t.Run("same command id in root and in a domain passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{Name: "deploy", Path: "commands/deploy.md"},
+		}
+		cfg.Content.Domains = map[string]*Domain{
+			"qa": {
+				Name:     "qa",
+				Commands: []ContentFile{{Name: "deploy", Path: "domains/qa/commands/deploy.md"}},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("same command id in two domains passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Domains = map[string]*Domain{
+			"qa": {
+				Name:     "qa",
+				Commands: []ContentFile{{Name: "deploy", Path: "domains/qa/commands/deploy.md"}},
+			},
+			"backend": {
+				Name:     "backend",
+				Commands: []ContentFile{{Name: "deploy", Path: "domains/backend/commands/deploy.md"}},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("distinct ids in one scope pass", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{Name: "deploy", Path: "commands/deploy/COMMAND.md"},
+			{Name: "release", Path: "commands/release.md"},
+		}
+		cfg.Content.Skills = []ContentFile{
+			{Name: "review", Path: "skills/review/SKILL.md"},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	// Include merges carry the same entry into more than one slice; one file
+	// cannot overwrite itself, so only distinct sources are an authoring error.
+	t.Run("the same source file listed twice passes", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{Name: "deploy", Path: "commands/deploy.md"},
+			{Name: "deploy", Path: "commands/deploy.md"},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	// A flat skills/name.md file resolves to the *directory* name as its output
+	// id, so every flat skill in one directory reports the same id. That
+	// degenerate derivation predates the directory form for commands and is not
+	// this check's business.
+	t.Run("flat skill files sharing a directory pass", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{Name: "alpha", Path: "skills/alpha.md"},
+			{Name: "beta", Path: "skills/beta.md"},
+		}
+		assert.NoError(t, cfg.Validate())
+	})
+
+	t.Run("every duplicate is named in a reproducible order", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{Name: "deploy", Path: "commands/deploy/COMMAND.md"},
+			{Name: "deploy", Path: "commands/deploy.md"},
+		}
+		cfg.Content.Skills = []ContentFile{
+			{Name: "Review", Path: "skills/Review/SKILL.md"},
+			{Name: "review", Path: "skills/review/SKILL.md"},
+		}
+		err := cfg.Validate()
+		require.Error(t, err)
+		assert.Equal(t,
+			`duplicate output ids: `+
+				`command "deploy" (commands/deploy/COMMAND.md) vs command "deploy" (commands/deploy.md); `+
+				`skill "Review" (skills/Review/SKILL.md) vs skill "review" (skills/review/SKILL.md)`,
+			err.Error())
+	})
+}
+
+func TestConfigValidateSkillArgumentHint(t *testing.T) {
+	base := func() *Config {
+		return &Config{
+			Version: "4.0",
+			Name:    "test",
+			Presets: []Preset{{BuiltIn: "claude"}},
+			Content: &ContentTree{},
+		}
+	}
+
+	t.Run("skill with argument-hint warns", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{
+				Name: "my-skill",
+				Path: "skills/my-skill/SKILL.md",
+				Metadata: &Metadata{
+					Extra: map[string]string{"argument-hint": "some hint"},
+				},
+			},
+		}
+		assert.NoError(t, cfg.Validate(), "an inert argument-hint is advisory, never fatal")
+		assert.Equal(t, []skillWarning{{
+			Scope:   scopeRoot,
+			Skill:   "my-skill",
+			Path:    "skills/my-skill/SKILL.md",
+			Message: warnInertSkillArgumentHint,
+		}}, cfg.skillArgumentHintWarnings())
+	})
+
+	t.Run("domain skill with argument-hint warns", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Domains = map[string]*Domain{
+			"qa": {
+				Name: "qa",
+				Skills: []ContentFile{
+					{
+						Name: "test-skill",
+						Path: "domains/qa/skills/test-skill/SKILL.md",
+						Metadata: &Metadata{
+							Extra: map[string]string{"argument-hint": "args"},
+						},
+					},
+				},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+		assert.Equal(t, []skillWarning{{
+			Scope:   "domain qa",
+			Skill:   "test-skill",
+			Path:    "domains/qa/skills/test-skill/SKILL.md",
+			Message: warnInertSkillArgumentHint,
+		}}, cfg.skillArgumentHintWarnings())
+	})
+
+	t.Run("command with argument-hint does not warn", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Commands = []ContentFile{
+			{
+				Name: "my-command",
+				Path: "commands/my-command.md",
+				Metadata: &Metadata{
+					Extra: map[string]string{"argument-hint": "valid"},
+				},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+		assert.Empty(t, cfg.skillArgumentHintWarnings())
+	})
+
+	t.Run("skill without argument-hint does not warn", func(t *testing.T) {
+		cfg := base()
+		cfg.Content.Skills = []ContentFile{
+			{
+				Name: "clean-skill",
+				Path: "skills/clean-skill/SKILL.md",
+				Metadata: &Metadata{
+					Extra: map[string]string{"description": "a skill"},
+				},
+			},
+		}
+		assert.NoError(t, cfg.Validate())
+		assert.Empty(t, cfg.skillArgumentHintWarnings())
+	})
+}

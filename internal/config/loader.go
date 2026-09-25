@@ -34,6 +34,7 @@ const (
 	commandsDir         = "commands"
 	domainsDir          = "domains"
 	skillMarkerFile     = "SKILL.md"
+	commandMarkerFile   = "COMMAND.md"
 	// localDir holds machine-local override content under the config dir
 	// (.ai-rulez/local/rules, .ai-rulez/local/context). It is scanned into a
 	// separate tree and never merged into committed output.
@@ -598,7 +599,7 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 	// Scan root commands/
 	commandsPath := filepath.Join(configDir, commandsDir)
 	var commands []ContentFile
-	if commands, err = scanMarkdownFiles(commandsPath); err != nil {
+	if commands, err = scanCommands(commandsPath); err != nil {
 		return nil, oops.
 			With("path", commandsPath).
 			Wrapf(err, "scan commands directory")
@@ -743,6 +744,78 @@ func scanSkills(skillsDir string) ([]ContentFile, error) {
 	return skills, nil
 }
 
+// scanCommands scans the commands/ directory for .md files (flat form) and
+// COMMAND.md files in subdirectories (directory form with optional resources/).
+// Mirrors the structure of scanSkills to support bundled reference material.
+func scanCommands(commandsDir string) ([]ContentFile, error) {
+	// Check if directory exists
+	if _, err := os.Stat(commandsDir); os.IsNotExist(err) {
+		// Directory doesn't exist, return empty slice (not an error)
+		return []ContentFile{}, nil
+	}
+
+	var commands []ContentFile
+
+	entries, err := os.ReadDir(commandsDir)
+	if err != nil {
+		return nil, oops.
+			With("path", commandsDir).
+			Wrapf(err, "read commands directory")
+	}
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			// Directory structure: commands/name/COMMAND.md
+			commandRoot := filepath.Join(commandsDir, entry.Name())
+			commandPath := filepath.Join(commandRoot, commandMarkerFile)
+			if _, err := os.Stat(commandPath); os.IsNotExist(err) {
+				// No COMMAND.md file, skip this directory
+				continue
+			}
+
+			contentFile, err := loadContentFile(commandPath)
+			if err != nil {
+				// Non-fatal: one unreadable command must not fail the whole
+				// load, but dropping it without a diagnostic makes an
+				// unreadable COMMAND.md indistinguishable from a missing one.
+				logger.Warn("failed to load command file", "path", commandPath, "error", err)
+				continue
+			}
+
+			// Override the name with the directory name instead of filename
+			contentFile.Name = entry.Name()
+
+			// Load command supporting files (references/, scripts/, assets/) so
+			// presets can preserve the canonical layout instead of concatenating
+			// everything into COMMAND.md.
+			resources, resErr := LoadResources(commandRoot, ItemKindCommand)
+			if resErr != nil {
+				logger.Warn("Failed to load command resources", "command", entry.Name(), "error", resErr)
+			}
+			contentFile.Resources = resources
+
+			commands = append(commands, contentFile)
+			continue
+		}
+
+		// Flat file structure: commands/name.md
+		if !strings.HasSuffix(entry.Name(), ".md") {
+			continue
+		}
+
+		filePath := filepath.Join(commandsDir, entry.Name())
+		contentFile, err := loadContentFile(filePath)
+		if err != nil {
+			logger.Warn("failed to load command file", "path", filePath, "error", err)
+			continue
+		}
+
+		commands = append(commands, contentFile)
+	}
+
+	return commands, nil
+}
+
 // scanAgents scans the agents/ directory for .md files
 func scanAgents(agentsPath string) ([]ContentFile, error) {
 	// Check if directory exists
@@ -859,7 +932,7 @@ func scanDomains(domainsDir string) (map[string]*Domain, error) {
 		// Scan domain/commands/
 		domainCommandsPath := filepath.Join(domainPath, commandsDir)
 		var domainCommands []ContentFile
-		if domainCommands, err = scanMarkdownFiles(domainCommandsPath); err != nil {
+		if domainCommands, err = scanCommands(domainCommandsPath); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", domainCommandsPath).
