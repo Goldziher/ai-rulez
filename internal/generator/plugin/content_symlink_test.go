@@ -68,11 +68,16 @@ func TestPassthroughFileRejectsSymlinkEscape(t *testing.T) {
 		t.Parallel()
 
 		sourceDir := t.TempDir()
-		require.NoError(t, os.WriteFile(filepath.Join(sourceDir, "bootstrap.sh"), []byte("#!/bin/sh\n"), 0o755))
+		source := filepath.Join(sourceDir, "bootstrap.sh")
+		require.NoError(t, os.WriteFile(source, []byte("#!/bin/sh\n"), 0o755))
+		// Compared against the source's own mode rather than a literal 0o755:
+		// Windows has no executable bit, so Go reports 0o666 there.
+		info, err := os.Stat(source)
+		require.NoError(t, err)
 
 		out, err := passthroughFile(sourceDir, "bootstrap.sh", filepath.Join(t.TempDir(), "bootstrap.sh"))
 
 		require.NoError(t, err)
-		assert.Equal(t, os.FileMode(0o755), out.Mode.Perm())
+		assert.Equal(t, info.Mode().Perm(), out.Mode.Perm())
 	})
 }
