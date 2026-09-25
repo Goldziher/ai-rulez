@@ -167,6 +167,9 @@ testing/**/.mcp.json
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .ai-rulez/.generated-manifest.json
-.codex/
+.codex/agents/
+.codex/commands/
+.codex/plugins.json
+.codex/skills/
 .hermes.md
 # END ai-rulez

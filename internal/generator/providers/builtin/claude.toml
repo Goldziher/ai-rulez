@@ -32,7 +32,10 @@ sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targe
 
 [outputs.skills.frontmatter]
 include_extras = true
-extras_blacklist = ["priority", "targets"]
+# argument-hint is inert on a skill: user_invocable is a hard false below, so
+# Claude never prompts for arguments and the hint is dead metadata. Only a
+# command can carry it. Blacklisted here so it cannot leak into skill output.
+extras_blacklist = ["priority", "targets", "argument-hint"]
 
 [outputs.skills.frontmatter.constants]
 user_invocable = false
@@ -56,15 +59,18 @@ emit_model = true
 
 # Commands are rendered as user-invokable skills (Claude exposes slash
 # commands through the skills directory). Filter drops commands whose
-# Metadata.Targets explicitly excludes claude.
+# Metadata.Targets explicitly excludes claude. `resources = true` carries the
+# bundled references/ scripts/ assets/ of a directory-form command
+# (commands/{id}/COMMAND.md); a flat commands/{id}.md has no resources to emit.
 [outputs.commands]
 mode = "per_item_file"
 dir = ".claude/skills"
 filename = "{id}/SKILL.md"
+resources = true
 filter = "include_if_targeting_provider"
 
 [outputs.commands.body]
-sections = ["frontmatter", "content", "targeted_rules", "targeted_context"]
+sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targeted_context"]
 
 [outputs.commands.frontmatter]
 fields = ["description", "shortcut", "category"]

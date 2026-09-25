@@ -1,10 +1,14 @@
 package config
 
 import (
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -208,24 +212,156 @@ func validateCodexPluginMetadata(plugin *PluginAuthoring) error {
 	return nil
 }
 
-// validateHookGroups checks hook declarations for a plugin.
+// Config field paths reported for invalid hook declarations.
+const (
+	fieldHookGroups  = "plugin.hooks"
+	fieldHookEvent   = "plugin.hooks.event"
+	fieldHookMatcher = "plugin.hooks.matcher"
+	fieldHookActions = "plugin.hooks.hooks"
+	fieldHookIf      = "plugin.hooks.hooks.if"
+)
+
+// Advisory messages for hook declarations that load fine but will not behave as
+// authored. They are warnings rather than errors because both conditions are
+// judgements about the *runtime's* event vocabulary: rejecting them would make an
+// older ai-rulez refuse a config written against a newer Claude Code.
+const (
+	warnUnknownHookEvent = "plugin hook declares an event this ai-rulez does not know; " +
+		"a misspelled event name never fires"
+	warnIgnoredHookMatcher = "plugin hook sets a matcher on an event that has no matchable subject; " +
+		"the runtime silently ignores it"
+	warnInertHookIf = "plugin hook sets 'if' on an event that does not evaluate it; " +
+		"the handler never runs at all rather than running conditionally"
+)
+
+// hookWarning is one non-fatal hook advisory, carried as data rather than logged
+// at the point of detection so the detection logic stays pure and testable.
+type hookWarning struct {
+	Event   string
+	Field   string
+	Message string
+}
+
+// hookDeclarationWarnings reports hook declarations that are structurally valid
+// but will not do what the author expects: an event outside KnownHookEvents, or a
+// matcher on an event that ignores matchers.
+func hookDeclarationWarnings(groups []HookGroup) []hookWarning {
+	var warnings []hookWarning
+	for _, g := range groups {
+		if g.Event == "" {
+			continue // reported as an error by validateHookGroups
+		}
+		if !slices.Contains(KnownHookEvents, g.Event) {
+			warnings = append(warnings, hookWarning{
+				Event:   g.Event,
+				Field:   fieldHookEvent,
+				Message: warnUnknownHookEvent,
+			})
+		}
+		if g.Matcher != "" && slices.Contains(HookEventsWithoutMatcher, g.Event) {
+			warnings = append(warnings, hookWarning{
+				Event:   g.Event,
+				Field:   fieldHookMatcher,
+				Message: warnIgnoredHookMatcher,
+			})
+		}
+		// Only warn for events this ai-rulez recognizes: an unknown event is already
+		// flagged above, and guessing at a newer runtime's `if` support would be noise.
+		if !slices.Contains(KnownHookEvents, g.Event) || slices.Contains(HookEventsEvaluatingIf, g.Event) {
+			continue
+		}
+		for i := range g.Hooks {
+			if g.Hooks[i].If == "" {
+				continue
+			}
+			warnings = append(warnings, hookWarning{
+				Event:   g.Event,
+				Field:   fieldHookIf,
+				Message: warnInertHookIf,
+			})
+		}
+	}
+	return warnings
+}
+
+// validateHookGroups checks hook declarations for a plugin: every group needs an
+// event, and every action needs exactly one of 'command' or 'script'. Declarations
+// that are valid but suspicious are warned about, never rejected.
 func (c *Config) validateHookGroups(pluginName string, groups []HookGroup) error {
 	for i, g := range groups {
 		if g.Event == "" {
 			return oops.
-				With("field", "plugin.hooks").
+				With("field", fieldHookGroups).
 				Hint("Each [[plugin.hooks]] group needs an 'event' (e.g. SessionStart)").
 				Errorf("plugin %q hook group at index %d missing 'event'", pluginName, i)
 		}
-		for j, action := range g.Hooks {
-			if action.Command == "" {
-				return oops.
-					With("field", "plugin.hooks.hooks").
-					With("event", g.Event).
-					Hint("Each hook action needs a 'command'").
-					Errorf("plugin %q hook %s[%d] missing 'command'", pluginName, g.Event, j)
+		for j := range g.Hooks {
+			if err := c.validateHookAction(pluginName, g.Event, j, &g.Hooks[j]); err != nil {
+				return err
 			}
 		}
+	}
+	for _, warning := range hookDeclarationWarnings(groups) {
+		logger.Warn(warning.Message, "plugin", pluginName, "event", warning.Event, "field", warning.Field)
+	}
+	return nil
+}
+
+// validateHookAction enforces the command/script contract for one hook action. A
+// declared script must exist now, at load time: the generator copies it into the
+// plugin bundle, so a missing file would otherwise surface as a generation failure
+// or, worse, a bundle whose hook points at nothing.
+func (c *Config) validateHookAction(pluginName, event string, index int, action *HookAction) error {
+	switch {
+	case action.Command != "" && action.Script != "":
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			With("script", action.Script).
+			Hint("Use 'command' for an executable the consumer already has, or 'script' for a project "+
+				"file ai-rulez bundles into the plugin's hooks/ directory").
+			Errorf("plugin %q hook %s[%d] sets both 'command' and 'script'", pluginName, event, index)
+	case action.Command == "" && action.Script == "":
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			Hint("Each hook action needs a 'command' or a bundled 'script'").
+			Errorf("plugin %q hook %s[%d] requires either 'command' or 'script'", pluginName, event, index)
+	case action.Script == "":
+		return nil
+	}
+
+	if isUnsafeProjectPath(action.Script) {
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			With("script", action.Script).
+			Hint("Use a project-relative script path that does not contain '..'").
+			Errorf("plugin %q hook %s[%d] has an unsafe hook script %q", pluginName, event, index, action.Script)
+	}
+
+	// Resolved exactly as the generator's passthroughFile does: relative to the
+	// config's source directory unless already absolute.
+	resolved := action.Script
+	if !filepath.IsAbs(resolved) {
+		resolved = filepath.Join(c.BaseDir, resolved)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			With("path", resolved).
+			Hint("Point 'script' at a script committed to the project, relative to the project root").
+			Wrapf(err, "plugin %q hook %s[%d] hook script not found: %q", pluginName, event, index, action.Script)
+	}
+	if info.IsDir() {
+		return oops.
+			With("field", fieldHookActions).
+			With("event", event).
+			With("path", resolved).
+			Hint("Point 'script' at a file, not a directory").
+			Errorf("plugin %q hook %s[%d] hook script is a directory: %q", pluginName, event, index, action.Script)
 	}
 	return nil
 }

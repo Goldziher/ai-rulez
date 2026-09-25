@@ -31,8 +31,10 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 					{Name: "rule1", Content: "Rule content"},
 				},
 			},
-			baseDir:     "/test",
-			wantOutputs: 6, // .gemini, .agents, .agents/skills, .agents/agents, settings.json, GEMINI.md
+			baseDir: "/test",
+			// No MCP servers in cfg, so no .gemini/settings.json: .gemini, .agents,
+			// .agents/skills, .agents/agents, GEMINI.md
+			wantOutputs: 5,
 			wantErr:     false,
 		},
 		{
@@ -47,7 +49,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 8, // 6 base + skill dir + SKILL.md
+			wantOutputs: 7, // 5 base + skill dir + SKILL.md
 			wantErr:     false,
 		},
 		{
@@ -66,7 +68,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 7, // 6 base + agent .md
+			wantOutputs: 6, // 5 base + agent .md
 			wantErr:     false,
 		},
 		{
@@ -95,7 +97,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 9, // 6 base + skill dir + SKILL.md + agent .md
+			wantOutputs: 8, // 5 base + skill dir + SKILL.md + agent .md
 			wantErr:     false,
 		},
 	}
@@ -229,13 +231,13 @@ func TestGeminiPresetGenerator_renderSettingsJSON_Transports(t *testing.T) {
 		},
 	}
 
-	content, err := g.renderSettingsJSON(cfg)
+	rendered, err := g.renderSettingsJSON("", cfg)
 	if err != nil {
 		t.Fatalf("renderSettingsJSON: %v", err)
 	}
 
 	var parsed map[string]interface{}
-	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+	if err := json.Unmarshal([]byte(rendered.Body), &parsed); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	servers := parsed["mcpServers"].(map[string]interface{})
