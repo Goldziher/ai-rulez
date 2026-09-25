@@ -505,13 +505,13 @@ func TestCursorPresetGenerator_renderMCPJSON_Transports(t *testing.T) {
 		},
 	}
 
-	content, err := g.renderMCPJSON(cfg)
+	rendered, err := g.renderMCPJSON("", cfg)
 	if err != nil {
 		t.Fatalf("renderMCPJSON: %v", err)
 	}
 
 	var parsed map[string]interface{}
-	if err := json.Unmarshal([]byte(content), &parsed); err != nil {
+	if err := json.Unmarshal([]byte(rendered.Body), &parsed); err != nil {
 		t.Fatalf("invalid JSON: %v", err)
 	}
 	servers := parsed["mcpServers"].(map[string]interface{})

@@ -77,6 +77,9 @@ type ModelSpec struct {
 
 // SidecarSpec is a single conditionally-emitted file (settings.json, .mcp.json,
 // etc.). Kind picks the closed-set renderer in sidecars.go.
+//
+// Object-shaped sidecars are merged into an existing file rather than replacing
+// it: ai-rulez owns a fixed set of top-level keys and the consumer owns the rest.
 type SidecarSpec struct {
 	Kind     string `toml:"kind" yaml:"kind" json:"kind"`
 	Path     string `toml:"path" yaml:"path" json:"path"`

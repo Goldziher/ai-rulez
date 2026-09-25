@@ -10,8 +10,9 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 - **Rules**: Add/edit `.ai-rulez/rules/*.md` files or use `ai-rulez add rule`
 - **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
+- **Commands**: Add/edit `.ai-rulez/commands/{name}.md` (flat form) or `.ai-rulez/commands/{name}/COMMAND.md` (directory form with optional `references/` subdirectory)
 - **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent`
-- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents}/*.md` files or use `ai-rulez domain add`
+- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands}/*.md` files or use `ai-rulez domain add`
 - **MCP Servers**: Inline in `.ai-rulez/config.toml` (no separate mcp.yaml file)
 
 You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
@@ -68,6 +69,48 @@ name = "My Project"
 name = "acme-platform"
 name = "backend-api"
 ```
+
+## Content Layout
+
+### Skills
+
+Skills use a directory form with supporting resources:
+
+```text
+.ai-rulez/skills/deployment-checklist/
+├── SKILL.md              # Main skill content
+├── references/           # Markdown documentation (optional)
+│   └── api-endpoints.md
+├── scripts/              # Executable scripts (optional)
+│   └── deploy.sh
+└── assets/               # Binary assets (optional)
+    └── diagram.png
+```
+
+The skill directory name becomes the skill id. Resources under `references/`, `scripts/`, and `assets/` are emitted as separate files in the generated output, preserving the Agent Skills progressive-disclosure model. Subdirectories outside these three produce a warning naming the skill and the unrecognized directory.
+
+### Commands
+
+Commands support both flat and directory forms:
+
+**Flat form** (single file):
+
+```text
+.ai-rulez/commands/
+├── deploy.md
+└── review.md
+```
+
+**Directory form** (with supporting resources):
+
+```text
+.ai-rulez/commands/deploy/
+├── COMMAND.md            # Main command content
+└── references/           # Markdown documentation (optional)
+    └── deployment-guide.md
+```
+
+The directory form mirrors the skill layout and supports `references/`, `scripts/`, and `assets/` subdirectories. Use it when a command needs bundled reference material.
 
 ## Optional Fields
 
@@ -238,6 +281,34 @@ by the patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp
 `.claude/settings.json`, `.gemini/settings.json`, and `.agents/settings.json`, including scoped
 variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
 source-hash calculation, but generated MCP config files contain the actual resolved values.
+
+#### Settings document merge behavior
+
+Files such as `.claude/settings.json`, `.mcp.json`, `.amp/settings.json`, `.gemini/settings.json`,
+and `.agents/settings.json` are **shared documents**: ai-rulez owns specific top-level keys
+(`mcpServers` for MCP config, `amp.anthropic.effort` for Amp) and the consumer owns everything else.
+Generation replaces only the owned keys and preserves every other member byte-for-byte, including
+the document's original indentation.
+
+**Important implications**:
+
+- **Owned keys are replaced wholesale**: An MCP server you added by hand inside the `mcpServers`
+  object does NOT survive generation — the entire `mcpServers` key is replaced. To configure MCP
+  servers, add them to the `[[mcp_servers]]` array in `config.toml` instead of editing the JSON
+  directly.
+- **Written only when there is something to contribute**: A settings document is emitted only when
+  the config declares MCP servers (or, for Amp, a resolved effort tier). The `gemini` and
+  `antigravity` presets previously wrote their settings document on every run purely to self-register
+  the ai-rulez MCP server; they no longer do, so a project with no `[[mcp_servers]]` keeps whatever
+  is already at `.gemini/settings.json` / `.agents/settings.json` untouched.
+- **JSONC not supported**: A document containing comments or trailing commas is not valid JSON.
+  Generation fails with a hint naming the path rather than silently stripping comments. Remove
+  comments and trailing commas before running `generate`, or store notes in a separate file.
+- **Gitignore behavior**: A document still holding keys ai-rulez does not own is treated as the
+  user's file: it is NOT added to the managed `.gitignore` block and is NOT deleted as stale. This
+  preserves hand-authored settings such as Claude's `permissions`, `env`, `model`, and `statusLine`.
+  A document holding only ai-rulez's own keys remains a generated artifact and is still gitignored
+  (keeping resolved MCP secret values out of git).
 
 ### `plugins`
 
@@ -881,10 +952,40 @@ A warning is logged if collisions are detected:
     → Using backend domain version
 ```
 
+### Output ID Collisions
+
+Skills and commands are not deduplicated this way, because they do not share a filename — they share
+an *output id*. Both render to `.claude/skills/{id}/SKILL.md`, differing only in the `user_invocable`
+frontmatter constant, so two items resolving to one id means one silently overwrites the other.
+`ai-rulez validate` (and `generate`) refuse instead, with the two source paths named.
+
+Two skills, or two commands, in the same directory:
+
+```text
+duplicate output ids: command "deploy" (.ai-rulez/commands/deploy.md) vs command "deploy" (.ai-rulez/commands/deploy/COMMAND.md)
+```
+
+The flat form (`commands/deploy.md`) and the directory form (`commands/deploy/COMMAND.md`) resolve to
+the same id, so keeping both is the most common way to hit this. Delete one, or rename one side.
+
+A skill and a command sharing an id:
+
+```text
+skill and command ids collide in the output namespace: skill "review" (.ai-rulez/skills/review/SKILL.md) vs command "review" (.ai-rulez/domains/qa/commands/review.md)
+```
+
+This check pools root and every domain, because the output layout has no domain segment: a skill in
+one domain and a command in another still land on the same path for any profile that activates both.
+Ids are compared case-insensitively, since a macOS or Windows checkout treats `Review/` and `review/`
+as one directory.
+
+Root shadowing a domain is *not* an error — it is the documented resolution above, and it applies to
+a command regardless of which form each side uses.
+
 ## Extending Agents
 
 Built-in and shared-module agents (`code-reviewer`, `docs-writer`, `security-auditor`, language
-specialists, ...) give you a solid base. When you only need to _add_ project-specific guidance, don't
+specialists, ...) give you a solid base. When you only need to *add* project-specific guidance, don't
 copy the whole agent — **extend** it.
 
 ### Agent precedence

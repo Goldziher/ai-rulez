@@ -647,3 +647,170 @@ priority: high
 		})
 	}
 }
+
+// TestScanner_CommandDirectoryForm tests that directory-form commands work
+func TestScanner_CommandDirectoryForm(t *testing.T) {
+	// Arrange
+	tmpDir := t.TempDir()
+	setupCommandsStructure(t, tmpDir)
+
+	cfg := &config.Config{
+		Version: "3.0",
+		Name:    "test-project",
+		Profiles: map[string][]string{
+			"default": {"qa"},
+		},
+	}
+
+	scanner := NewScanner(tmpDir, cfg)
+
+	// Act
+	tree, err := scanner.ScanProfile("default")
+
+	// Assert
+	require.NoError(t, err)
+	require.NotNil(t, tree)
+
+	// Both root forms plus the one domain command, and nothing else.
+	assert.Len(t, tree.Commands, 3)
+
+	// Check that directory-form command is properly named
+	foundPlaywrightRCA := false
+	foundQuick := false
+	foundDomainCommand := false
+	for _, cmd := range tree.Commands {
+		if cmd.Name == "playwright-rca" {
+			foundPlaywrightRCA = true
+			// Should have resources
+			assert.NotEmpty(t, cmd.Resources, "Directory-form command should have resources")
+		}
+		if cmd.Name == "quick" {
+			foundQuick = true
+			// Flat form should not have resources
+			assert.Empty(t, cmd.Resources, "Flat-form command should not have resources")
+		}
+		if cmd.Name == "qa: playwright-write-test" {
+			foundDomainCommand = true
+			// Domain directory-form command should have resources
+			assert.NotEmpty(t, cmd.Resources, "Domain directory-form command should have resources")
+		}
+	}
+	assert.True(t, foundPlaywrightRCA, "Root directory-form command 'playwright-rca' should exist")
+	assert.True(t, foundQuick, "Root flat-form command 'quick' should exist")
+	assert.True(t, foundDomainCommand, "Domain directory-form command should exist")
+}
+
+// TestScanner_CommandShadowingIsFormAgnostic covers a root command and a domain
+// command of the same name written in different forms. Both render to
+// .claude/skills/{id}/SKILL.md, so they are one output and the documented
+// domain-overrides-root resolution has to apply — keying the flat form by its
+// file basename ("deploy.md") and the directory form by its directory name
+// ("deploy") makes the two look unrelated, and both get emitted to the same path.
+func TestScanner_CommandShadowingIsFormAgnostic(t *testing.T) {
+	for name, forms := range map[string]struct {
+		rootIsDirectory   bool
+		domainIsDirectory bool
+	}{
+		"root flat shadowed by domain directory": {rootIsDirectory: false, domainIsDirectory: true},
+		"root directory shadowed by domain flat": {rootIsDirectory: true, domainIsDirectory: false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// Arrange
+			tmpDir := t.TempDir()
+			aiRulezDir := filepath.Join(tmpDir, ".ai-rulez")
+			writeCommand(t, filepath.Join(aiRulezDir, "commands"), "deploy", "root deploy", forms.rootIsDirectory)
+			domainDir := filepath.Join(aiRulezDir, "domains", "backend")
+			require.NoError(t, os.MkdirAll(filepath.Join(domainDir, "rules"), 0o755))
+			writeCommand(t, filepath.Join(domainDir, "commands"), "deploy", "domain deploy", forms.domainIsDirectory)
+
+			scanner := NewScanner(tmpDir, &config.Config{
+				Version:  "3.0",
+				Name:     "test-project",
+				Profiles: map[string][]string{"default": {"backend"}},
+			})
+
+			// Act
+			tree, err := scanner.ScanProfile("default")
+
+			// Assert
+			require.NoError(t, err)
+			require.Len(t, tree.Commands, 1, "the domain command must replace the root one, not join it")
+			assert.Equal(t, "backend: deploy", tree.Commands[0].Name)
+			assert.Contains(t, tree.Commands[0].Content, "domain deploy")
+		})
+	}
+}
+
+// writeCommand materializes one command in either supported form, so a test can
+// vary the form without varying anything else.
+func writeCommand(t *testing.T, commandsDir, name, body string, asDirectory bool) {
+	t.Helper()
+
+	path := filepath.Join(commandsDir, name+".md")
+	if asDirectory {
+		path = filepath.Join(commandsDir, name, commandMarkerFile)
+	}
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte("# "+name+"\n\n"+body+"\n"), 0o644))
+}
+
+func setupCommandsStructure(t *testing.T, baseDir string) {
+	t.Helper()
+
+	aiRulezDir := filepath.Join(baseDir, ".ai-rulez")
+
+	// Create flat-form root command
+	commandsDir := filepath.Join(aiRulezDir, "commands")
+	require.NoError(t, os.MkdirAll(commandsDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(commandsDir, "quick.md"),
+		[]byte("# Quick Command\n\nDoes something quickly."),
+		0o644,
+	))
+
+	// Create directory-form root command
+	cmdDir := filepath.Join(commandsDir, "playwright-rca")
+	require.NoError(t, os.MkdirAll(cmdDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(cmdDir, "COMMAND.md"),
+		[]byte("# Playwright RCA\n\nAnalyze test failures."),
+		0o644,
+	))
+
+	// Create references for directory-form command
+	refDir := filepath.Join(cmdDir, "references")
+	require.NoError(t, os.MkdirAll(refDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(refDir, "rca-matrix.md"),
+		[]byte("# RCA Matrix\n\nFailure patterns."),
+		0o644,
+	))
+
+	// Create domain directory structure (scanner validates domains exist)
+	domainDir := filepath.Join(aiRulezDir, "domains", "qa")
+	require.NoError(t, os.MkdirAll(domainDir, 0o755))
+
+	// Create domain rules directory (domains must have at least one content directory)
+	domainRulesDir := filepath.Join(domainDir, "rules")
+	require.NoError(t, os.MkdirAll(domainRulesDir, 0o755))
+
+	// Create domain commands directory with directory-form command
+	domainCommandsDir := filepath.Join(domainDir, "commands")
+	require.NoError(t, os.MkdirAll(domainCommandsDir, 0o755))
+
+	domainCmdDir := filepath.Join(domainCommandsDir, "playwright-write-test")
+	require.NoError(t, os.MkdirAll(domainCmdDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(domainCmdDir, "COMMAND.md"),
+		[]byte("# Playwright Write Test\n\nWrite new Playwright test."),
+		0o644,
+	))
+
+	domainRefDir := filepath.Join(domainCmdDir, "references")
+	require.NoError(t, os.MkdirAll(domainRefDir, 0o755))
+	require.NoError(t, os.WriteFile(
+		filepath.Join(domainRefDir, "test-patterns.md"),
+		[]byte("# Test Patterns\n\nCommon test patterns."),
+		0o644,
+	))
+}

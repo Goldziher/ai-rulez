@@ -3,6 +3,7 @@ package generator
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -233,7 +235,9 @@ func TestGenerator_Gitignore_Enabled(t *testing.T) {
 	contentStr := string(content)
 
 	assert.Contains(t, contentStr, "CLAUDE.md")
-	assert.Contains(t, contentStr, ".claude/")
+	assert.Contains(t, contentStr, ".claude/skills/")
+	assert.NotRegexp(t, `(?m)^\.claude/$`, contentStr,
+		"ignoring the .claude/ root would hide the hand-authored settings.json beside it")
 }
 
 func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
@@ -254,14 +258,56 @@ func TestGenerator_Gitignore_CollectsPatterns(t *testing.T) {
 	patterns := gen.collectGitignorePaths(outputs)
 
 	assert.True(t, patterns["AGENTS.md"])
-	assert.True(t, patterns[".codex/"])
+	assert.True(t, patterns[".codex/agents/"])
+	assert.False(t, patterns[".codex/"])
 	assert.False(t, patterns[".github/"])
 	assert.True(t, patterns[".github/agents/"])
 	assert.True(t, patterns[".github/workflows/ci.yml"])
-	assert.True(t, patterns["packages/web/.codex/"])
+	assert.True(t, patterns["packages/web/.codex/skills/"])
+	assert.False(t, patterns["packages/web/.codex/"])
 	assert.True(t, patterns["custom-output/"])
 	assert.True(t, patterns[".ai-rulez/.generated-manifest.json"],
 		"the generated manifest is rewritten every run; it must land in the managed gitignore fence")
+}
+
+// An assistant directory holds hand-authored files alongside generated ones —
+// .claude/settings.json is tracked in real repositories. Ignoring the directory
+// root makes git silently skip them (issue #184), so the managed block must name
+// only the subdirectories ai-rulez actually writes.
+func TestGenerator_Gitignore_DoesNotIgnoreAssistantDirRoot(t *testing.T) {
+	tempDir := t.TempDir()
+	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+
+	outputs := []config.OutputFile{
+		{Path: filepath.Join(tempDir, ".claude"), IsDir: true},
+		{Path: filepath.Join(tempDir, ".claude", "skills"), IsDir: true},
+		{Path: filepath.Join(tempDir, ".claude", "agents"), IsDir: true},
+		{Path: filepath.Join(tempDir, ".claude", "skills", "demo", "SKILL.md")},
+		{Path: filepath.Join(tempDir, ".claude", "agents", "reviewer.md")},
+	}
+
+	patterns := gen.collectGitignorePaths(outputs)
+
+	assert.False(t, patterns[".claude/"],
+		".claude/ hides the hand-authored settings.json that lives beside generated content")
+	assert.True(t, patterns[".claude/skills/"])
+	assert.True(t, patterns[".claude/agents/"])
+}
+
+// A file ai-rulez writes directly into an assistant directory root must still be
+// ignored by name — narrowing the pattern must not stop covering owned content.
+func TestGenerator_Gitignore_IgnoresAssistantDirFileByName(t *testing.T) {
+	tempDir := t.TempDir()
+	gen := NewGenerator(&config.Config{BaseDir: tempDir})
+
+	outputs := []config.OutputFile{
+		{Path: filepath.Join(tempDir, ".gemini", "GEMINI.md")},
+	}
+
+	patterns := gen.collectGitignorePaths(outputs)
+
+	assert.True(t, patterns[".gemini/GEMINI.md"])
+	assert.False(t, patterns[".gemini/"])
 }
 
 func TestGenerator_Gitignore_IncludesManifest_CustomConfigDir(t *testing.T) {
@@ -899,6 +945,14 @@ func TestMatchesPattern(t *testing.T) {
 		{"glob no match", "file.txt", "*.md", false},
 		{"substring", "path/to/file.txt", "file.txt", true},
 		{"absolute pattern", "file.txt", "/file.txt", true},
+		// A directory pattern covers everything nested under it. These are the
+		// cases the managed fence relies on: if a user already ignores the whole
+		// assistant directory, the narrowed subdirectory patterns must be
+		// recognized as already covered rather than appended a second time.
+		{"directory pattern covers nested directory", ".claude/skills/", ".claude/", true},
+		{"anchored directory pattern covers nested directory", ".claude/skills/", "/.claude/", true},
+		{"directory pattern covers the directory itself", ".claude/", ".claude/", true},
+		{"directory pattern does not cover a sibling", ".claude-plugin/skills/", ".claude/", false},
 	}
 
 	for _, tt := range tests {
@@ -1893,4 +1947,462 @@ func TestGenerator_NoRewriteAfterRelocation(t *testing.T) {
 
 	assert.Equal(t, string(firstContent), string(secondContent),
 		"relocating the checkout must not rewrite generated output")
+}
+
+// TestGenerator_HandAuthoredSettings_SurvivesGeneration verifies that when
+// .claude/settings.json pre-exists with hand-authored keys, generation merges
+// only the mcpServers key and leaves all other keys intact (#185).
+func TestGenerator_HandAuthoredSettings_SurvivesGeneration(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+	// Pre-create .claude/settings.json with hand-authored keys plus a STALE mcpServers entry
+	claudeDir := filepath.Join(tempDir, ".claude")
+	require.NoError(t, os.MkdirAll(claudeDir, 0o755))
+	handAuthored := `{
+  "$schema": "https://claude.com/schema.json",
+  "permissions": {
+    "read": ["**/*"],
+    "write": ["src/**"]
+  },
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "model": "claude-3-5-sonnet-20241022",
+  "statusLine": "custom status",
+  "skillOverrides": {
+    "init": "off"
+  },
+  "mcpServers": {
+    "stale-server": {
+      "command": "old-command"
+    }
+  }
+}
+`
+	settingsPath := filepath.Join(claudeDir, "settings.json")
+	require.NoError(t, os.WriteFile(settingsPath, []byte(handAuthored), 0o644))
+
+	// Create config with a NEW MCP server
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "merge-test"
+presets = ["claude"]
+gitignore = false
+
+[[mcp_servers]]
+name = "new-server"
+command = "new-command"
+args = ["--flag"]
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	// Read the merged settings.json
+	merged, err := os.ReadFile(settingsPath)
+	require.NoError(t, err)
+
+	var parsed map[string]any
+	require.NoError(t, json.Unmarshal(merged, &parsed))
+
+	// Assert ALL hand-authored keys survived
+	assert.Equal(t, "https://claude.com/schema.json", parsed["$schema"],
+		"$schema key must survive generation")
+	assert.NotNil(t, parsed["permissions"], "permissions key must survive")
+	assert.NotNil(t, parsed["env"], "env key must survive")
+	assert.Equal(t, "claude-3-5-sonnet-20241022", parsed["model"],
+		"model key must survive")
+	assert.Equal(t, "custom status", parsed["statusLine"],
+		"statusLine key must survive")
+
+	// Assert skillOverrides.init is still exactly "off"
+	skillOverrides, ok := parsed["skillOverrides"].(map[string]any)
+	require.True(t, ok, "skillOverrides must be present and be an object")
+	assert.Equal(t, "off", skillOverrides["init"],
+		"skillOverrides.init must remain exactly 'off'")
+
+	// Assert mcpServers now reflects the configured server (stale entry replaced)
+	mcpServers, ok := parsed["mcpServers"].(map[string]any)
+	require.True(t, ok, "mcpServers must be present and be an object")
+	assert.Contains(t, mcpServers, "new-server",
+		"mcpServers must contain the new configured server")
+	assert.NotContains(t, mcpServers, "stale-server",
+		"mcpServers must not contain the stale server")
+}
+
+// TestGenerator_HandAuthoredSettings_NotGitignored verifies that a hand-authored
+// settings document (one carrying user keys alongside the ai-rulez-owned
+// mcpServers key) is NOT added to the managed .gitignore fence (#185).
+func TestGenerator_HandAuthoredSettings_NotGitignored(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+	// Pre-create .claude/settings.json with hand-authored keys
+	claudeDir := filepath.Join(tempDir, ".claude")
+	require.NoError(t, os.MkdirAll(claudeDir, 0o755))
+	settingsPath := filepath.Join(claudeDir, "settings.json")
+	require.NoError(t, os.WriteFile(settingsPath, []byte(`{
+  "permissions": { "read": ["**/*"] },
+  "skillOverrides": { "init": "off" }
+}
+`), 0o644))
+
+	// Create config with MCP server and gitignore enabled
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "gitignore-test"
+presets = ["claude"]
+gitignore = true
+
+[[mcp_servers]]
+name = "test-server"
+command = "test-command"
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	// Assert the managed gitignore fence exists
+	gitignorePath := filepath.Join(tempDir, ".gitignore")
+	require.FileExists(t, gitignorePath)
+	gitignoreContent, err := os.ReadFile(gitignorePath)
+	require.NoError(t, err)
+
+	contentStr := string(gitignoreContent)
+	assert.Contains(t, contentStr, "# BEGIN ai-rulez",
+		"managed gitignore fence must exist")
+	assert.Contains(t, contentStr, "# END ai-rulez",
+		"managed gitignore fence must exist")
+
+	// Assert .claude/settings.json is NOT in the fence
+	assert.NotContains(t, contentStr, ".claude/settings.json",
+		".claude/settings.json must not be gitignored when hand-authored")
+}
+
+// TestGenerator_WhollyGeneratedMCPJSON_IsGitignored verifies that a wholly
+// generated .mcp.json (one ai-rulez created itself with only the owned
+// mcpServers key) IS still gitignored, preserving the secret-containment
+// property.
+func TestGenerator_WhollyGeneratedMCPJSON_IsGitignored(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+	// No pre-existing .mcp.json
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "mcp-json-test"
+presets = ["cursor"]
+gitignore = true
+
+[[mcp_servers]]
+name = "generated-server"
+command = "cmd"
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	// Assert .mcp.json was generated
+	mcpJSONPath := filepath.Join(tempDir, ".mcp.json")
+	require.FileExists(t, mcpJSONPath,
+		".mcp.json must be generated when no pre-existing file exists")
+
+	// Assert it appears inside the managed gitignore fence
+	gitignorePath := filepath.Join(tempDir, ".gitignore")
+	require.FileExists(t, gitignorePath)
+	gitignoreContent, err := os.ReadFile(gitignorePath)
+	require.NoError(t, err)
+
+	contentStr := string(gitignoreContent)
+	assert.Contains(t, contentStr, ".mcp.json",
+		"wholly generated .mcp.json must be gitignored to contain resolved secrets")
+}
+
+// TestGenerator_StaleDeletion_GuardsPartiallyOwnedFiles verifies that when an
+// MCP server is removed from the config, regeneration does NOT delete
+// hand-authored settings files that ai-rulez previously merged into (#185).
+func TestGenerator_StaleDeletion_GuardsPartiallyOwnedFiles(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+	// Pre-create hand-authored .claude/settings.json and .mcp.json
+	claudeDir := filepath.Join(tempDir, ".claude")
+	require.NoError(t, os.MkdirAll(claudeDir, 0o755))
+	settingsPath := filepath.Join(claudeDir, "settings.json")
+	require.NoError(t, os.WriteFile(settingsPath, []byte(`{
+  "permissions": { "read": ["**/*"] },
+  "skillOverrides": { "init": "off" }
+}
+`), 0o644))
+
+	mcpJSONPath := filepath.Join(tempDir, ".mcp.json")
+	require.NoError(t, os.WriteFile(mcpJSONPath, []byte(`{
+  "customKey": "hand-authored-value"
+}
+`), 0o644))
+
+	// First generation WITH an MCP server
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "stale-test"
+presets = ["claude", "cursor"]
+gitignore = false
+
+[[mcp_servers]]
+name = "temp-server"
+command = "cmd"
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	// Assert files exist and contain both user keys and generated mcpServers
+	settingsContent, err := os.ReadFile(settingsPath)
+	require.NoError(t, err)
+	var settingsParsed map[string]any
+	require.NoError(t, json.Unmarshal(settingsContent, &settingsParsed))
+	assert.Contains(t, settingsParsed, "permissions", "user key must be present after first generation")
+	assert.Contains(t, settingsParsed, "mcpServers", "mcpServers must be present after first generation")
+
+	mcpJSONContent, err := os.ReadFile(mcpJSONPath)
+	require.NoError(t, err)
+	var mcpJSONParsed map[string]any
+	require.NoError(t, json.Unmarshal(mcpJSONContent, &mcpJSONParsed))
+	assert.Contains(t, mcpJSONParsed, "customKey", "user key must be present in .mcp.json after first generation")
+	assert.Contains(t, mcpJSONParsed, "mcpServers", "mcpServers must be present in .mcp.json after first generation")
+
+	// Remove the MCP server from config and regenerate
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "stale-test"
+presets = ["claude", "cursor"]
+gitignore = false
+`), 0o644))
+
+	cfg2, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg2).Generate("default"))
+
+	// Assert hand-authored files STILL EXIST
+	require.FileExists(t, settingsPath,
+		"hand-authored .claude/settings.json must not be deleted as stale")
+	require.FileExists(t, mcpJSONPath,
+		"hand-authored .mcp.json must not be deleted as stale")
+
+	// Assert user keys are intact
+	settingsContent2, err := os.ReadFile(settingsPath)
+	require.NoError(t, err)
+	var settingsParsed2 map[string]any
+	require.NoError(t, json.Unmarshal(settingsContent2, &settingsParsed2))
+	assert.Contains(t, settingsParsed2, "permissions",
+		"user keys must survive stale-deletion guard")
+	assert.Contains(t, settingsParsed2, "skillOverrides",
+		"user keys must survive stale-deletion guard")
+
+	mcpJSONContent2, err := os.ReadFile(mcpJSONPath)
+	require.NoError(t, err)
+	var mcpJSONParsed2 map[string]any
+	require.NoError(t, json.Unmarshal(mcpJSONContent2, &mcpJSONParsed2))
+	assert.Contains(t, mcpJSONParsed2, "customKey",
+		"user keys in .mcp.json must survive stale-deletion guard")
+}
+
+// TestGenerator_OlderManifest_GuardsPresetMergedDocuments covers the merged
+// documents no provider spec declares, so MergedSidecarPaths cannot see them.
+// .gemini/settings.json and .agents/settings.json are rendered by preset
+// generators, and up to 4.11.5 those presets wrote them unconditionally — so an
+// upgrading user's manifest lists the path while the new has-MCP-servers gate can
+// drop it from the render. Without the preset registry in the guard, that deletes
+// the Gemini user's hand-authored theme and telemetry settings (#185).
+func TestGenerator_OlderManifest_GuardsPresetMergedDocuments(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		preset  string
+		relPath string
+	}{
+		{preset: "gemini", relPath: presets.MergedDocGeminiSettings},
+		{preset: "antigravity", relPath: presets.MergedDocAgentsSettings},
+	} {
+		t.Run(tc.preset, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+			manifest := fmt.Sprintf("{\n  \"version\": \"1\",\n  \"files\": [\n    %q\n  ]\n}\n", tc.relPath)
+			require.NoError(t, os.WriteFile(
+				filepath.Join(aiRulezDir, ".generated-manifest.json"), []byte(manifest), 0o644))
+
+			settingsPath := filepath.Join(tempDir, filepath.FromSlash(tc.relPath))
+			require.NoError(t, os.MkdirAll(filepath.Dir(settingsPath), 0o755))
+			require.NoError(t, os.WriteFile(settingsPath, []byte(`{
+  "theme": "GitHub",
+  "contextFileName": "GEMINI.md"
+}
+`), 0o644))
+
+			// No [[mcp_servers]], so the gate drops the document from this render.
+			cfgTOML := fmt.Sprintf("version = \"4.0\"\nname = \"manifest-test\"\npresets = [%q]\ngitignore = false\n", tc.preset)
+			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(cfgTOML), 0o644))
+
+			cfg, err := config.LoadConfig(context.Background(), tempDir)
+			require.NoError(t, err)
+			require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+			require.FileExists(t, settingsPath,
+				"%s is a merged document and must not be deleted from an older manifest entry", tc.relPath)
+
+			content, err := os.ReadFile(settingsPath)
+			require.NoError(t, err)
+			var parsed map[string]any
+			require.NoError(t, json.Unmarshal(content, &parsed))
+			assert.Equal(t, "GitHub", parsed["theme"],
+				"the user's own keys must survive the older-manifest guard")
+			assert.Equal(t, "GEMINI.md", parsed["contextFileName"],
+				"the user's own keys must survive the older-manifest guard")
+		})
+	}
+}
+
+// TestGenerator_OlderManifest_GuardsPartiallyOwnedFiles verifies that when
+// an older ai-rulez manifest lists .claude/settings.json and .mcp.json
+// (before the PartiallyOwned flag existed), regeneration does NOT delete
+// hand-authored files at those paths (#185).
+func TestGenerator_OlderManifest_GuardsPartiallyOwnedFiles(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+	// Hand-write an older manifest listing merged sidecar paths
+	manifestPath := filepath.Join(aiRulezDir, ".generated-manifest.json")
+	oldManifest := `{
+  "version": "1",
+  "files": [
+    ".claude/settings.json",
+    ".mcp.json",
+    "CLAUDE.md"
+  ]
+}
+`
+	require.NoError(t, os.WriteFile(manifestPath, []byte(oldManifest), 0o644))
+
+	// Pre-create hand-authored files at those paths
+	claudeDir := filepath.Join(tempDir, ".claude")
+	require.NoError(t, os.MkdirAll(claudeDir, 0o755))
+	settingsPath := filepath.Join(claudeDir, "settings.json")
+	require.NoError(t, os.WriteFile(settingsPath, []byte(`{
+  "permissions": { "read": ["**/*"] },
+  "skillOverrides": { "init": "off" }
+}
+`), 0o644))
+
+	mcpJSONPath := filepath.Join(tempDir, ".mcp.json")
+	require.NoError(t, os.WriteFile(mcpJSONPath, []byte(`{
+  "customKey": "hand-authored-value"
+}
+`), 0o644))
+
+	// Create config WITHOUT those outputs being produced
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "manifest-test"
+presets = ["codex"]
+gitignore = false
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	// Assert neither hand-authored file was deleted
+	require.FileExists(t, settingsPath,
+		"hand-authored .claude/settings.json must not be deleted from older manifest entry")
+	require.FileExists(t, mcpJSONPath,
+		"hand-authored .mcp.json must not be deleted from older manifest entry")
+
+	// Assert user keys are intact
+	settingsContent, err := os.ReadFile(settingsPath)
+	require.NoError(t, err)
+	var settingsParsed map[string]any
+	require.NoError(t, json.Unmarshal(settingsContent, &settingsParsed))
+	assert.Contains(t, settingsParsed, "permissions",
+		"user keys must survive older-manifest guard")
+
+	mcpJSONContent, err := os.ReadFile(mcpJSONPath)
+	require.NoError(t, err)
+	var mcpJSONParsed map[string]any
+	require.NoError(t, json.Unmarshal(mcpJSONContent, &mcpJSONParsed))
+	assert.Contains(t, mcpJSONParsed, "customKey",
+		"user keys in .mcp.json must survive older-manifest guard")
+}
+
+// TestGenerator_SecretGuard_FiresForPartiallyOwnedFile verifies that when a
+// partially owned settings document (hand-authored) would receive a resolved
+// MCP secret, generation errors with a hint telling the user ai-rulez will NOT
+// gitignore it for them (#185).
+func TestGenerator_SecretGuard_FiresForPartiallyOwnedFile(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+
+	// Pre-create hand-authored .claude/settings.json
+	claudeDir := filepath.Join(tempDir, ".claude")
+	require.NoError(t, os.MkdirAll(claudeDir, 0o755))
+	settingsPath := filepath.Join(claudeDir, "settings.json")
+	require.NoError(t, os.WriteFile(settingsPath, []byte(`{
+  "permissions": { "read": ["**/*"] },
+  "skillOverrides": { "init": "off" }
+}
+`), 0o644))
+
+	// Create config with MCP server using ${VAR} placeholder, gitignore disabled
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "secret-test"
+presets = ["claude"]
+gitignore = false
+
+[[mcp_servers]]
+name = "secret-server"
+command = "cmd"
+env = { SECRET_TOKEN = "${SECRET_VAR}" }
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	// Resolve the placeholder via MCPEnvOverrides
+	cfg.MCPEnvOverrides = map[string]string{"SECRET_VAR": "resolved-secret-value"}
+
+	// Attempt generation — must fail
+	err = NewGenerator(cfg).Generate("default")
+	require.Error(t, err, "generation must fail when secret-bearing MCP output is not gitignored")
+
+	// Assert error message contains the correct text for partially owned files
+	assert.Contains(t, err.Error(), "generated MCP config contains secrets",
+		"error must indicate secret containment failure")
+
+	// Extract and verify the hint text
+	var oopsErr oops.OopsError
+	require.ErrorAs(t, err, &oopsErr)
+	hint := oopsErr.Hint()
+	assert.Contains(t, hint, "hand-authored settings",
+		"error hint must mention hand-authored settings")
+	assert.NotContains(t, hint, "--gitignore",
+		"error hint must not suggest --gitignore for partially owned files")
 }
