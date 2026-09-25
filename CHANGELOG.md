@@ -32,18 +32,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
-- Skill includes pinned to a full commit SHA now resolve deterministically and fail closed, extending the #167 fix to `SkillGitSource`. `Fetch` passes a raw SHA straight to `sparseCloneSHA` instead of `ls-remote` (which cannot advertise raw commits) and no longer double-clones a doomed branch clone on every refresh; a pin the remote cannot serve is an error, never silitent fallback to cached content. (#179)
-- `ai-rulez validate` (and any in-process validation, such as the MCP server) no longer fails on a second call. The package-level `jsonschema` compiler reused across validations, and jsonschema 0.9.10 rejects re-registering a schema resource URI on an existing compiler ("schema resource URI already registered"). Each validation now compiles with a fresh compiler, which also removes a shared-state race for concurrent validation. (#181)
-
-### Changed
-
-- Go toolchain bumped to 1.27: the module `go` directive, CI `go-version`, and the contribution guide now require Go 1.27, unblocking jsonschema 0.9.10 (which sets a `go 1.27` directive). (#180)
-- Dependency upgrades: `github.com/kaptinlin/jsonschema` 0.9.8 → 0.9.10 (#168), `github.com/modelcontextprotocol/go-sdk` 1.7.0 → 1.8.0 (#171), `github.com/yuin/goldmark` 1.8.5 → 1.8.6 (#169), `golang.org/x/text` 0.41.0 → 0.42.0 (#172).
-
-## [4.11.5] - 2026-09-19
-
-### Fixed
-
 - Skill includes pinned to a full commit SHA now resolve deterministically and fail closed, extending the 4.11.4 `GitSource` fix (#167) to `SkillGitSource`. A 40-hex pin is used verbatim and cloned by fetching the exact object instead of being passed through `ls-remote` (which cannot advertise raw commits) and silently degrading to cached content; the doomed `--branch` clone on refresh is gone too. A pin the remote cannot serve is an error, never a cache fallback. (#179)
 - Schema validation compiles with a fresh compiler per call. jsonschema 0.9.10 rejects re-registering a schema resource URI on an existing compiler, which broke the second in-process `ValidateWithSchema` call (e.g. the MCP server). The embedded schema only uses internal `$defs` refs; a per-call compiler also removes a shared-state race for concurrent validation. (#181)
 
