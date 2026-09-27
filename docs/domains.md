@@ -283,24 +283,31 @@ ai-rulez generate --profile full-stack
 
 ## Domain Content Priority
 
-When a file exists in both root and domain:
+When the same name exists in both root and a domain:
 
 ```text
 .ai-rulez/rules/testing.md              (root)
 .ai-rulez/domains/backend/rules/testing.md   (domain)
 ```
 
-The **domain version takes precedence** for that domain.
+The **root version takes precedence** and the domain copy is dropped, with a
+warning naming both sources. Precedence runs root > on-disk domain >
+include-sourced domain > builtin, and applies to rules, context, skills, agents
+and commands alike — see
+[Deduplication by Name](configuration.md#deduplication-by-name).
 
 ```text
 backend profile gets:
-  - everything from .ai-rulez/rules/* EXCEPT testing.md
-  - testing.md from .ai-rulez/domains/backend/rules/
+  - everything from .ai-rulez/rules/*, including the root testing.md
+  - every other backend rule from .ai-rulez/domains/backend/rules/
 
 frontend profile gets:
   - everything from .ai-rulez/rules/* (including testing.md)
   - frontend-specific rules from domains/frontend/
 ```
+
+To make a rule domain-specific, give it a name no other layer uses, or remove the
+root copy.
 
 ## Advanced Profile Combinations
 
@@ -481,14 +488,13 @@ ls -la .ai-rulez/domains/backend/
 
 ### Content Collisions
 
-If both root and domain have the same file:
+If both root and domain define the same name:
 
 ```bash
-# Check which version is used
-ai-rulez validate --verbose
+# Lists every collapsed duplicate with its kept and dropped source
+ai-rulez validate
 
-# Domain version takes precedence
-# Remove from root if you want domain-specific only
+# The root version wins; remove it if you want the domain version instead
 ```
 
 ## Migration Path
