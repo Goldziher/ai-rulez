@@ -88,7 +88,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 	}
 
 	// Generate skill files to .windsurf/skills/
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 
