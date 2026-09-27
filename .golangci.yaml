@@ -190,9 +190,15 @@ linters:
           - revive
         text: "var-naming: avoid .*package names"
 
+      # G304 and G703 are the same finding in two forms: a file path that came
+      # from configuration reaching a file operation. Every such path here is one
+      # ai-rulez computed from the config it was pointed at, which is the whole
+      # job. G703 is excluded alongside G304 rather than annotated per call site
+      # because its taint analysis attributes the warning to the innermost open,
+      # which moves whenever an unrelated caller is added.
       - linters:
           - gosec
-        text: "G301|G302|G304|G306"
+        text: "G301|G302|G304|G306|G703"
 
     paths:
       - vendor

@@ -35,6 +35,9 @@ func TestCRUDCommandShorthands(t *testing.T) {
 		{commands.SkillCmd, []string{"list"}, map[string]string{"json": "j"}},
 		{commands.BuiltinsCmd, []string{"list"}, map[string]string{"json": "j"}},
 		{commands.BuiltinsCmd, []string{"show"}, map[string]string{"json": "j"}},
+		// tokens is not CRUD, but its shorthands have to stay consistent with the
+		// rest of the tree: -j for JSON, -p for profile, -n for the config dir.
+		{commands.TokensCmd, nil, map[string]string{"json": "j", "budget": "b", "profile": "p", "config-dir": "n"}},
 	}
 
 	for _, tt := range tests {
