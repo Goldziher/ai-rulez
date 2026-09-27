@@ -1,6 +1,7 @@
 package providers_test
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -88,9 +89,10 @@ func claudeOutputs(t *testing.T, content *config.ContentTree, suffix string) []c
 	outputs, err := gen.Generate(content, "/test", &config.Config{Name: "test"})
 	require.NoError(t, err)
 
+	want := filepath.ToSlash(suffix)
 	var matched []config.OutputFile
 	for _, o := range outputs {
-		if !o.IsDir && strings.HasSuffix(o.Path, suffix) {
+		if !o.IsDir && strings.HasSuffix(filepath.ToSlash(o.Path), want) {
 			matched = append(matched, o)
 		}
 	}
