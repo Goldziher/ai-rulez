@@ -71,6 +71,11 @@ type Config struct {
 	// MCPEnvFiles are generation-time dotenv files used to resolve MCP env
 	// placeholders. Empty means "load .env from BaseDir when present".
 	MCPEnvFiles []string `yaml:"-" json:"-" toml:"-"`
+
+	// Analysis, when non-nil, makes the rendering layer record how each output
+	// was classified and what each of its sections contained. Only the `tokens`
+	// command sets it; generation leaves it nil and pays nothing.
+	Analysis *AnalysisCollector `yaml:"-" json:"-" toml:"-"`
 }
 
 // HasPluginAuthoring reports whether the configuration produces a plugin or a
@@ -521,21 +526,50 @@ func (c *Config) GetDefaultProfile() string {
 	return c.Default
 }
 
-// GetProfileDomains returns the list of domains for a profile
+// GetProfileDomains returns the list of domains for a profile. A composed value
+// ("base,backend") returns the de-duplicated union of its elements' domains, in
+// the order they are first named.
 func (c *Config) GetProfileDomains(profile string) []string {
 	if profile == "" {
 		profile = c.Default
 	}
-	if domains, ok := c.Profiles[profile]; ok {
-		return domains
+	names := SplitProfileNames(profile)
+	switch len(names) {
+	case 0:
+		return nil
+	case 1:
+		return c.Profiles[names[0]]
 	}
-	return nil
+
+	union := make([]string, 0, len(names))
+	seen := make(map[string]bool)
+	for _, name := range names {
+		for _, domain := range c.Profiles[name] {
+			if seen[domain] {
+				continue
+			}
+			seen[domain] = true
+			union = append(union, domain)
+		}
+	}
+	return union
 }
 
-// HasProfile returns true if the profile exists
+// HasProfile returns true if the profile exists. Every element of a composed
+// value must exist; a value with no elements at all exists only if a profile was
+// literally defined under that name.
 func (c *Config) HasProfile(profile string) bool {
-	_, ok := c.Profiles[profile]
-	return ok
+	names := SplitProfileNames(profile)
+	if len(names) == 0 {
+		_, ok := c.Profiles[profile]
+		return ok
+	}
+	for _, name := range names {
+		if _, ok := c.Profiles[name]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 // GetVersion returns the config version
@@ -775,7 +809,7 @@ func (f *ContentFile) GetFileExtension() string {
 // IsMarkdown returns true if the content file is markdown
 func (f *ContentFile) IsMarkdown() bool {
 	ext := f.GetFileExtension()
-	return ext == ".md" || ext == ".markdown"
+	return ext == markdownExt || ext == ".markdown"
 }
 
 // IncludeConfig represents a content source (git repo or local path)

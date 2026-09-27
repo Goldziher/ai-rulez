@@ -53,7 +53,7 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
 	GenerateCmd.Flags().BoolVarP(&skipCLIMCP, "no-configure-cli-mcp", "M", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
 	GenerateCmd.Flags().BoolVarP(&skipCLIMCP, "skip-cli-mcp", "S", false, "Skip configuring CLI-based MCP tools (alias)")
-	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate (default: from config or 'default')")
+	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
 	GenerateCmd.Flags().BoolVarP(&noFetch, "no-fetch", "f", false, "Skip fetching remote includes, use cached content only")
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
