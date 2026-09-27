@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
@@ -23,7 +22,7 @@ type AntigravityPresetGenerator struct{}
 func generateAntigravityPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
-		Timestamp:    time.Now(),
+		Timestamp:    cfg.HeaderTimestamp(),
 		ConfigFile:   configFileName(cfg),
 		OutputFile:   outputPath,
 		Config:       cfg,
