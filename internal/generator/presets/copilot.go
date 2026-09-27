@@ -80,7 +80,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	})
 
 	// Generate skill files to .github/skills/
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 
@@ -120,7 +120,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	})
 
 	// Generate command files to .github/commands/
-	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	allCommands := allCommands(content)
 	for _, command := range allCommands {
 		if !g.shouldIncludeCommand(command) {
 			continue

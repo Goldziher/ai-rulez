@@ -99,7 +99,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	})
 
 	// Generate skill files to .agents/skills/
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 

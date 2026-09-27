@@ -81,7 +81,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	}
 
 	// Combine all commands from root and domains
-	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	allCommands := allCommands(content)
 
 	// Generate command files to .cursor/commands/
 	for _, command := range allCommands {
@@ -98,7 +98,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	}
 
 	// Combine all skills from root and domains
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 
 	// Generate skill files to .agents/skills/
 	for _, skill := range allSkills {

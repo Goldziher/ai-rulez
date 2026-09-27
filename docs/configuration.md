@@ -919,7 +919,7 @@ Within each category, files are sorted by:
 
 ### Deduplication by Name
 
-When the same rule or context **name** appears in multiple sources, the generated output includes it only **once**. Precedence (highest to lowest):
+When the same rule, context, skill, agent or command **name** appears in multiple sources, the generated output includes it only **once**. Precedence (highest to lowest):
 
 1. **Root content** (`.ai-rulez/rules/`, `.ai-rulez/context/`, etc.)
 2. **Domain content** (`.ai-rulez/domains/{name}/rules/`, etc.)
@@ -928,36 +928,40 @@ When the same rule or context **name** appears in multiple sources, the generate
 
 Example: If both a builtin `git-workflow` domain and a local rule define `commit-messages`, the local version is used and the builtin version is dropped.
 
+Rules and context are *inlined*, so a duplicate there would render the same section twice. Skills and
+commands are *per-item files* (`.claude/skills/{id}/SKILL.md`), so a duplicate is worse than doubled
+output: both copies are written to one path and whichever lands last wins. Deduplication makes the
+precedence above the one that actually reaches disk.
+
+Shadowing a builtin skill with a project skill of the same name is a supported, intended pattern — it
+is a warning, never an error.
+
 During `ai-rulez generate` and `ai-rulez validate`, a warning is logged for each deduplicated item:
 
 ```text
-Duplicate rule collapsed name=commit-messages kept=.ai-rulez/rules/commit-messages.md dropped=<builtin>/git-workflow/commit-messages.md
+Duplicate rule collapsed name=commit-messages kept=.ai-rulez/rules/commit-messages.md dropped=builtin://universal/git-workflow/rules/commit-messages.md
+Duplicate skill collapsed name=go-conventions kept=.ai-rulez/skills/go-conventions/SKILL.md dropped=builtin://languages/go/skills/go-conventions/SKILL.md
 ```
 
 ### Name Collision Handling
 
-If a filename appears in both root and domain:
+If a name appears in both root and a domain:
 
 ```text
 .ai-rulez/rules/testing.md
 .ai-rulez/domains/backend/rules/testing.md
 ```
 
-The domain version takes precedence (backend gets the domain-specific version).
-
-A warning is logged if collisions are detected:
-
-```text
-⚠️  Content collision: rules/testing.md exists in both root and backend domain
-    → Using backend domain version
-```
+The root version takes precedence and the domain copy is dropped — the same precedence order as
+above. To keep a domain-specific version, give it a name no other layer uses, or remove the root copy.
 
 ### Output ID Collisions
 
-Skills and commands are not deduplicated this way, because they do not share a filename — they share
-an *output id*. Both render to `.claude/skills/{id}/SKILL.md`, differing only in the `user_invocable`
-frontmatter constant, so two items resolving to one id means one silently overwrites the other.
-`ai-rulez validate` (and `generate`) refuse instead, with the two source paths named.
+Deduplication resolves collisions *across* precedence layers. It cannot resolve two items in the
+**same** layer: there is no precedence between them. Skills and commands both render to
+`.claude/skills/{id}/SKILL.md`, differing only in the `user_invocable` frontmatter constant, so two
+items in one scope resolving to one id means one silently overwrites the other. `ai-rulez validate`
+(and `generate`) refuse instead, with the two source paths named.
 
 Two skills, or two commands, in the same directory:
 
