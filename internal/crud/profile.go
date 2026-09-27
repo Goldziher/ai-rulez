@@ -3,6 +3,7 @@ package crud
 import (
 	"context"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -220,6 +221,15 @@ func validateProfileName(name string) error {
 			With("name", name).
 			Hint("Choose a different name").
 			Errorf("'%s' is a reserved profile name", name)
+	}
+
+	// A comma composes several profiles into one value, so a name holding one
+	// could be written but never selected.
+	if strings.Contains(name, config.ProfileSeparator) {
+		return oops.
+			With("name", name).
+			Hint("A comma composes profiles when selecting one (--profile base,backend), so it cannot appear in a name").
+			Errorf("profile name %q contains %q", name, config.ProfileSeparator)
 	}
 
 	return nil
