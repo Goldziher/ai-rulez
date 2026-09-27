@@ -4,6 +4,35 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Changed
+
+- **Builtin rules cut roughly in half, with narrow guidance moved to skills.** Everything in a builtin pack's `rules/` directory is concatenated into the generated root instruction file, so it is re-read on every request of every session; a skill costs its name until it is invoked.
+
+  Two scopes, both measured on the generated `CLAUDE.md`, and worth not confusing: **across the seven auto-included packs** — what a project gets without naming anything — 33 rules / 11,596 bytes become 18 rules / 5,351 bytes, a little over 1,500 tokens back per request at the ~3.9 bytes/token rate that generated instruction prose measures at. **Across all thirteen universal packs**, including the opt-in `docker` and `observability`, 40 rules / 14,421 bytes become 23 / 7,209 bytes. Neither figure is the other; the corresponding source `rules/` trees go 10,033 → 3,929 bytes and 12,365 → 5,342 bytes.
+
+  Seventeen rules stopped being rules. Fifteen were **moved into skills**, not deleted, because they only matter once you are already in a specific activity — writing a test, writing an error path, writing a Dockerfile — which is exactly what a skill's description is for:
+
+  - `code-quality`: `readability-first`, `complexity-limits`, `dead-code`, `avoid-duplication` and `anti-patterns` → the `code-quality-standards` skill; `error-handling` → the `error-handling` skill. The pack now ships skills only.
+  - `testing`: `tdd-workflow` → the `tdd-workflow` skill; `meaningful-assertions`, `test-independence`, `test-naming` and `testing-anti-patterns` → the `testing-conventions` skill. `test-alongside-code` stays a rule — "tests ship with the change" has to land before the change is written — and now points at both skills.
+  - `token-efficiency`: `task-runner` → the `task-runner` skill (it only applies to a repository with a `Taskfile.yaml`, so it was never universal); `incremental-approach` → the `incremental-approach` skill.
+  - `docker`: `container-standards` → a skill of the same name. `observability`: `observability-standards` → a skill of the same name. Neither pack is auto-included, but both were a single technology-scoped rule loaded unconditionally once opted into, and both packs now ship skills only.
+
+  `verify-before-acting` was **merged into** `verification-before-completion`, which said the same thing about the other end of the task; the state-checking clause (branch, working directory, running processes) is preserved in the survivor. `batch-operations` was merged into `incremental-approach`, losing only its instruction to issue independent tool calls in parallel, which every current agent harness already states in its own tool documentation. `branch-hygiene` lost "use descriptive branch names", which no project without its own naming convention benefits from and every project with one overrides.
+
+  **Existing `!domain/rule` exclusions keep working.** The per-item exclusion is keyed by name, not by content type, so `!testing/tdd-workflow` now suppresses the skill. The five converted rules that collapsed into `code-quality-standards` and the four that collapsed into `testing-conventions` no longer have individual keys.
+
+  **Eight new skill names are now claimed by builtin packs**: `code-quality-standards`, `error-handling`, `tdd-workflow`, `testing-conventions`, `task-runner`, `incremental-approach`, `container-standards` and `observability-standards`. These are names a project plausibly already uses for a skill of its own. A project skill with the same name as a builtin skill shadows it — that is the documented precedence, root content over builtins — so check for a collision if you enable one of these packs and a skill of yours stops behaving as written. Exclude the builtin with `!<domain>/<name>` to be explicit about which one you mean.
+
+- The eighteen surviving builtin rules were tightened: frontmatter-plus-heading wrappers around a single sentence removed, and duplicated guidance cut to one owner — `communication-style` no longer restates commit formatting (`git-workflow/commit-messages` owns it, and the contradiction between the two made downstream projects override one of them), `atomic-commits` no longer repeats the conventional-commit type list, and `output-awareness` keeps only what `communication-style` does not already say.
+
+- The README and `docs/configuration.md` descriptions of what each builtin pack contains now match the packs. Both listed rules that are skills, or had moved, and both claimed that `code-quality` and `testing` "remain inline" when `code-quality` no longer ships a rule at all. The universal-domain table in `docs/configuration.md` was also missing `agent-delegation`, `cicd`, `docker` and `observability`, and marked only `ai-governance` as auto-included when six others are.
+
+### Fixed
+
+- The README no longer claims the auto-included builtin domains "activate automatically, no configuration needed". Builtins load only when the `builtins` field is present in the config — `loadBuiltins` is gated on it — so a project that never sets the field, which is what `ai-rulez init` writes, gets no builtin rules, skills or agents at all. Auto-inclusion means "included without being named once builtins are on", not "on by default". `docs/configuration.md` stated this correctly in one place and is now explicit about the omitted-field case.
+
 ## [4.12.1] - 2026-09-25
 
 ### Fixed

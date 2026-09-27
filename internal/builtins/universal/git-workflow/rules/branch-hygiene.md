@@ -2,6 +2,4 @@
 priority: medium
 ---
 
-# Branch Hygiene
-
-Use descriptive branch names. Keep branches short-lived. Delete merged branches. Rebase or merge from main regularly to avoid drift.
+Keep branches short-lived and delete them after merge. Rebase or merge from the default branch regularly to avoid drift.
