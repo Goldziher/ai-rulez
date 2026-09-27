@@ -1050,9 +1050,17 @@ failed".
   them. The headline is the largest single runtime, not the sum.
 
 `--tokenizer estimate` replaces the tokenizer with a bytes-per-token ratio. It is
-labelled as an estimate in the output because the real ratio has been measured
+labeled as an estimate in the output because the real ratio has been measured
 between 1.81 and 5.30 bytes per token across whole trees, so a tree-level total
 from it can be wrong by a factor of three.
+
+### Acting on the report
+
+The `agents_delegation` line under the root instructions file is the cheapest thing to
+cut: it restates every agent's name and description in a file loaded on every request,
+while `.claude/agents/*.md` already carry the same text on demand. Drop it with
+`builtins = ["!agent-delegation"]` — the agent files are still generated, so nothing is
+lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-files).
 
 ## Validation Command
 
