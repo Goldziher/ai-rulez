@@ -176,7 +176,7 @@ func TestLoadDomainContent(t *testing.T) {
 	t.Run("converted packs expose skills instead of rules", func(t *testing.T) {
 		t.Parallel()
 
-		// Narrow or non-behavioural guidance was moved out of rules/ (which is
+		// Narrow or non-behavioral guidance was moved out of rules/ (which is
 		// concatenated into the always-loaded root instruction file) and into
 		// skills/, whose bodies cost nothing until invoked.
 		cases := []struct {
