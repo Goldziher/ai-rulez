@@ -114,16 +114,19 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 }
 
 // collectItemsByType returns the merged root + domain item slice for the given
-// content type, alphabetised. Wraps the existing presets helpers so the
-// renderer stays preset-agnostic.
+// content type, deduplicated by name in source-precedence order and then
+// alphabetised. Wraps the existing presets helpers so the renderer stays
+// preset-agnostic. Every per-item output writes to a name-derived path, so the
+// deduplication is load-bearing: without it two same-named items both render and
+// the one written last replaces the other.
 func collectItemsByType(content *config.ContentTree, typ string) []config.ContentFile {
 	switch typ {
 	case OutputTypeSkills:
-		return presets.CombineContentFiles(content.Skills, presets.GetAllDomainSkills(content))
+		return presets.AllSkills(content)
 	case OutputTypeAgents:
 		return presets.AllAgents(content)
 	case OutputTypeCommands:
-		return presets.CombineContentFiles(content.Commands, presets.GetAllDomainCommands(content))
+		return presets.AllCommands(content)
 	}
 	return nil
 }

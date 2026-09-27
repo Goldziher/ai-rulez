@@ -78,3 +78,73 @@ func TestClaude_NonCompactKeepsPriority(t *testing.T) {
 	body := claudeMD(t, collidingTree(), &config.Config{Name: "test"})
 	assert.Contains(t, body, "**Priority:** high", "default rendering keeps priority annotations")
 }
+
+// claudeOutputs renders the claude preset and returns the non-directory outputs
+// whose path ends with the given suffix.
+func claudeOutputs(t *testing.T, content *config.ContentTree, suffix string) []config.OutputFile {
+	t.Helper()
+	gen, err := providers.LoadBuiltin("claude")
+	require.NoError(t, err)
+	outputs, err := gen.Generate(content, "/test", &config.Config{Name: "test"})
+	require.NoError(t, err)
+
+	var matched []config.OutputFile
+	for _, o := range outputs {
+		if !o.IsDir && strings.HasSuffix(o.Path, suffix) {
+			matched = append(matched, o)
+		}
+	}
+	return matched
+}
+
+// skillTree models one skill id claimed by the root, an on-disk domain, an
+// include-sourced domain and a builtin domain. Fixture domains carry the flags
+// directly so the test does not depend on any builtin pack's contents.
+func skillTree() *config.ContentTree {
+	skill := func(id, source, body string) config.ContentFile {
+		return config.ContentFile{Name: id, Path: source + "/skills/" + id + "/SKILL.md", Content: body}
+	}
+	return &config.ContentTree{
+		Skills: []config.ContentFile{skill("shared", "root", "ROOT BODY")},
+		Domains: map[string]*config.Domain{
+			"ondisk":   {Name: "ondisk", Skills: []config.ContentFile{skill("shared", "ondisk", "ONDISK BODY")}},
+			"included": {Name: "included", FromInclude: true, Skills: []config.ContentFile{skill("shared", "include", "INCLUDE BODY")}},
+			"testing":  {Name: "testing", Builtin: true, Skills: []config.ContentFile{skill("shared", "builtin", "BUILTIN BODY")}},
+		},
+	}
+}
+
+// TestClaude_CollidingSkillIsWrittenOnce is the end-to-end guard: four sources
+// claiming .claude/skills/shared/SKILL.md must produce one output, not four
+// writes to one path where the last one silently wins.
+func TestClaude_CollidingSkillIsWrittenOnce(t *testing.T) {
+	t.Parallel()
+
+	outputs := claudeOutputs(t, skillTree(), "skills/shared/SKILL.md")
+
+	require.Len(t, outputs, 1, "a collided skill id must be emitted exactly once")
+	assert.Contains(t, outputs[0].Content, "ROOT BODY", "root skill wins")
+	for _, dropped := range []string{"ONDISK BODY", "INCLUDE BODY", "BUILTIN BODY"} {
+		assert.NotContains(t, outputs[0].Content, dropped)
+	}
+}
+
+func TestClaude_CollidingCommandIsWrittenOnce(t *testing.T) {
+	t.Parallel()
+
+	command := func(id, source, body string) config.ContentFile {
+		return config.ContentFile{Name: id, Path: source + "/commands/" + id + ".md", Content: body}
+	}
+	tree := &config.ContentTree{
+		Commands: []config.ContentFile{command("shared", "root", "ROOT BODY")},
+		Domains: map[string]*config.Domain{
+			"testing": {Name: "testing", Builtin: true, Commands: []config.ContentFile{command("shared", "builtin", "BUILTIN BODY")}},
+		},
+	}
+
+	outputs := claudeOutputs(t, tree, "shared/SKILL.md")
+
+	require.Len(t, outputs, 1, "a collided command id must be emitted exactly once")
+	assert.Contains(t, outputs[0].Content, "ROOT BODY", "root command wins over the builtin")
+	assert.NotContains(t, outputs[0].Content, "BUILTIN BODY")
+}

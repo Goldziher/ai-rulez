@@ -463,17 +463,16 @@ type namespaceEntry struct {
 
 // validateDuplicateOutputIDs detects two skills, or two commands, that resolve
 // to the same output id within one scope. Both render to
-// .claude/skills/{id}/SKILL.md and nothing downstream deduplicates them —
-// combineContentFiles in internal/generator/presets concatenates and
-// stable-sorts — so whichever is written last silently replaces the other. The
-// directory form opened this hole: before it, two commands in one directory
-// could not share an id.
+// .claude/skills/{id}/SKILL.md, so whichever is written last silently replaces
+// the other. The directory form opened this hole: before it, two commands in one
+// directory could not share an id.
 //
 // A scope is root, or a single domain, and never a pool of the two. Cross-scope
-// duplicates are resolved on purpose: the scanner drops the root copy when a
-// domain defines the same item (resolveCollisions) and namespaces domain ids, so
-// two scopes never compete for one output path. Only duplicates inside a single
-// scope are resolved by nobody.
+// duplicates are resolved on purpose by allSkills/allCommands in
+// internal/generator/presets, which drop the lower-precedence copy (root beats
+// on-disk domain beats include beats builtin) and warn, so two scopes never
+// compete for one output path. Within a single scope there is no precedence to
+// apply and nothing resolves the clash — hence this check.
 func (c *Config) validateDuplicateOutputIDs() error {
 	if c.Content == nil {
 		return nil

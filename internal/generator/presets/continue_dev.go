@@ -174,7 +174,7 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 
 	// Add skills as prompts. continue.dev has no skill directory to read from,
 	// so bundled references are inlined into the prompt body.
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 	for _, skill := range allSkills {
 		body := skill.Content + InlineSkillResources(&skill)
 		processedContent := markdown.ProcessEmbeddedContent(body)
@@ -192,7 +192,7 @@ func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTr
 	}
 
 	// Add commands as prompts
-	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	allCommands := allCommands(content)
 	for _, command := range allCommands {
 		// Check if command is enabled and targets continue-dev
 		if !g.shouldIncludeCommand(command) {
