@@ -2,4 +2,4 @@
 priority: high
 ---
 
-Prefer subagents for non-trivial work — implementation, research, file exploration. Parallelize aggressively — launch independent subagents in a single message. Always critically review subagent output — check actual file changes, verify correctness, fix issues before reporting done. Never trust subagent summaries at face value; the summary describes intent, not necessarily what happened. Work in iterations: delegate → critically review → fix → verify. Run tests after every change — never assume code works without verification.
+Delegate non-trivial implementation, research and file exploration to subagents, launching independent ones in a single message. Never trust a subagent summary — it describes intent, not what happened; read the actual file changes and fix what is wrong before reporting done. Iterate: delegate → review → fix → verify.

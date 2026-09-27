@@ -334,7 +334,12 @@ enabled = true
 
 ### `builtins`
 
-Enables built-in domains that ship embedded in the `ai-rulez` binary. These provide opinionated rules, context, and commands without needing external includes.
+Enables built-in domains that ship embedded in the `ai-rulez` binary. These provide opinionated rules,
+skills, agents, context, and commands without needing external includes.
+
+**Omit the `builtins` field entirely and no builtin content is loaded**, auto-included domains included.
+Auto-inclusion applies only once the field is present, so the minimum opt-in is `builtins = true` or any
+array value.
 
 #### Enable all builtins
 
@@ -379,17 +384,21 @@ Run `ai-rulez builtins list` to see all available domains.
 
 **Universal** (language-agnostic):
 
-| Domain              | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| `ai-governance`     | AI agent behavior governance (auto-included)         |
-| `security`          | Security best practices and OWASP reference          |
-| `git-workflow`      | Git workflow and commit conventions                  |
-| `code-quality`      | Code readability, error handling, and complexity     |
-| `testing`           | Testing conventions and best practices               |
-| `token-efficiency`  | Output efficiency and task automation                |
-| `documentation`     | Documentation standards and maintenance              |
-| `polyglot-bindings` | Cross-language binding and native FFI conventions    |
-| `default-commands`  | Built-in slash commands (`/iterate`, `/parallelize`) |
+| Domain              | Description                                                        |
+| ------------------- | ------------------------------------------------------------------ |
+| `ai-governance`     | AI agent behavior governance (auto-included)                       |
+| `agent-delegation`  | Agent delegation instructions and listing (auto-included)          |
+| `security`          | Security best practices and OWASP reference (auto-included)        |
+| `git-workflow`      | Git workflow and commit conventions (auto-included)                |
+| `code-quality`      | Code readability, error handling, and complexity (auto-included)   |
+| `testing`           | Testing conventions and best practices (auto-included)             |
+| `token-efficiency`  | Output efficiency and task automation (auto-included)              |
+| `cicd`              | CI/CD pipeline standards and GitHub workflow conventions           |
+| `docker`            | Container build, security, and deployment best practices           |
+| `observability`     | Logging, metrics, health checks, and observability standards       |
+| `documentation`     | Documentation standards and maintenance                            |
+| `polyglot-bindings` | Cross-language binding and native FFI conventions                  |
+| `default-commands`  | Built-in slash commands (`/iterate`, `/parallelize`)               |
 
 **Languages** (per-language conventions):
 
@@ -401,17 +410,22 @@ Run `ai-rulez builtins list` to see all available domains.
 
 #### What Builtins Provide
 
-**Universal builtins** include opinionated rules for their domain:
+**Universal builtins** carry opinionated content for their domain, split between always-on rules
+(inlined into `CLAUDE.md`) and on-demand skills (loaded only when relevant):
 
-- `ai-governance`: Read-before-write, verify-before-acting, minimal changes, explain reasoning
-- `security`: Input validation, secrets handling, least privilege, dependency awareness (with per-language audit tool recommendations)
-- `git-workflow`: Conventional commits, atomic commits, branch hygiene, safe operations
-- `code-quality`: Complexity limits, error handling, readability, dead code removal, duplication
-- `testing`: TDD workflow, test independence, meaningful assertions, descriptive test naming
-- `token-efficiency`: Task runner preference, output awareness
-- `documentation`: Inline docs, README standards, docs-with-code updates
-- `polyglot-bindings`: Rust-core/native ABI boundaries, FFI ownership, cross-language error conversion, binding parity
-- `default-commands`: `/iterate` (implementation + review cycles) and `/parallelize` (subagent task splitting) slash commands
+- `ai-governance` — rules: read-before-write, minimal changes, verification before completion, systematic debugging, agent workflow, communication style, no AI signatures, explain reasoning
+- `security` — rules: input validation, secrets handling, least privilege. Skills: `owasp-quick-reference`, `dependency-awareness` (with per-language audit tool recommendations)
+- `git-workflow` — rules: conventional commits, atomic commits, branch hygiene, safe operations
+- `code-quality` — skills only: `code-quality-standards` (readability, complexity limits, anti-patterns, duplication, dead code), `error-handling`
+- `testing` — rule: tests ship with the behaviour change. Skills: `tdd-workflow`, `testing-conventions` (naming, assertions, independence, anti-patterns)
+- `token-efficiency` — rules: context preservation, output awareness. Skills: `task-runner`, `incremental-approach`
+- `agent-delegation` — context: delegation instructions and the generated agent listing
+- `cicd` — rules: pipeline standards, GitHub workflow conventions
+- `docker` — skill only: `container-standards`
+- `observability` — skill only: `observability-standards`
+- `documentation` — rules: inline docs, README standards, docs-with-code updates
+- `polyglot-bindings` — skills only: Rust-core/native ABI boundaries, FFI ownership, cross-language error conversion, binding parity
+- `default-commands` — commands: `/iterate` (implementation + review cycles) and `/parallelize` (subagent task splitting)
 
 **Language builtins** each provide a comprehensive conventions rule covering:
 
@@ -446,10 +460,17 @@ Builtins that emit as skills:
 - **Binding** domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
 - **`polyglot-bindings`** conventions
 - **`security`**: the `owasp-quick-reference` and `dependency-awareness` entries
+- **`code-quality`**, entirely: `code-quality-standards` and `error-handling`
+- **`testing`**, all but one rule: `tdd-workflow` and `testing-conventions`
+- **`token-efficiency`**: `task-runner` and `incremental-approach`
+- **`docker`** and **`observability`**, entirely: `container-standards` and `observability-standards`
 
-Always-on behavioral directives stay inline in the root files — `code-quality`, `testing`,
-`git-workflow`, `token-efficiency`, `ai-governance`, `secrets-handling`, and the other universal rule
-sets are short, apply everywhere, and are not deferred to skills.
+What stays inline is behavioural governance that has to land before the first file is read, where a skill
+loaded after the fact is too late: all of `ai-governance` and `git-workflow`, `security`'s
+`secrets-handling`, `input-validation` and `least-privilege`, `token-efficiency`'s `context-preservation`
+and `output-awareness`, and `testing`'s `test-alongside-code`. Guidance that only matters once you are
+already inside a specific activity — writing a test, writing an error path, writing a Dockerfile — is a
+skill, because its description can name that trigger and its body then costs nothing until it fires.
 
 Exclusions still work exactly the same for these now-skill entries. `!domain` drops a whole domain and
 `!domain/name` drops a single rule/skill within it (array form of `builtins` only):
