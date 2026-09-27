@@ -1,0 +1,4 @@
+# Check every text file out with LF on all platforms. Without this, Windows
+# (core.autocrlf=true) rewrites checked-out fixtures to CRLF, which changes
+# rendered output and the token counts the golden report pins.
+* text=auto eol=lf
