@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
@@ -418,7 +417,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 			ruleCount, agentCount := countContent(content)
 			data := &templates.TemplateData{
 				ProjectName: cfg.Name,
-				Timestamp:   time.Now(),
+				Timestamp:   cfg.HeaderTimestamp(),
 				ConfigFile:  presets.ConfigFileName(cfg),
 				OutputFile:  rootRelPath,
 				Config:      cfg,
