@@ -3,6 +3,8 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -54,6 +56,14 @@ type Config struct {
 	// changed in sources" without re-rendering. Format: "blake3:<hex>".
 	SourceHash string `yaml:"-" json:"-" toml:"-"`
 
+	// GeneratedAt is the single timestamp a generate run stamps into every header
+	// it writes, resolved once so sibling outputs (CLAUDE.md and AGENTS.md, which
+	// are otherwise byte-identical) can never disagree because their renders
+	// landed in different seconds. Zero means "not resolved yet"; HeaderTimestamp
+	// falls back to the wall clock for callers that render a preview without a
+	// generation run. Only read when [header] timestamp opts the line back in.
+	GeneratedAt time.Time `yaml:"-" json:"-" toml:"-"`
+
 	// MCPEnvOverrides are generation-time KEY=VALUE overrides used to resolve
 	// MCP env placeholders. They are intentionally not serialized.
 	MCPEnvOverrides map[string]string `yaml:"-" json:"-" toml:"-"`
@@ -84,9 +94,11 @@ const headerStyleMinimal = "minimal"
 // HeaderConfig represents header style configuration for generated files
 type HeaderConfig struct {
 	Style string `yaml:"style,omitempty" json:"style,omitempty" toml:"style,omitempty"` // "detailed", "compact", or "minimal"
-	// Timestamp controls whether the "Generated:" line is emitted. Set it to
-	// false in projects that commit generated outputs so the header carries no
-	// per-run value at all. Nil means enabled.
+	// Timestamp controls whether the "Generated:" line is emitted. Nil means
+	// disabled: generated output is byte-reproducible by default, so it can be
+	// verified by content hash and two sibling files rendered from the same
+	// sources cannot disagree. Set it to true to opt the line back in; pin it
+	// with SOURCE_DATE_EPOCH if reproducibility still matters.
 	Timestamp *bool `yaml:"timestamp,omitempty" json:"timestamp,omitempty" toml:"timestamp,omitempty"`
 }
 
@@ -99,10 +111,11 @@ func (h *HeaderConfig) GetHeaderStyle() string {
 }
 
 // ShowTimestamp reports whether generated headers include the "Generated:"
-// line. Defaults to true.
+// line. Defaults to false, so generation is reproducible unless a project asks
+// for the line.
 func (h *HeaderConfig) ShowTimestamp() bool {
 	if h == nil || h.Timestamp == nil {
-		return true
+		return false
 	}
 	return *h.Timestamp
 }
@@ -557,9 +570,43 @@ func (c *Config) GetHeaderStyle() string {
 }
 
 // ShowHeaderTimestamp reports whether generated headers include the
-// "Generated:" line. Defaults to true.
+// "Generated:" line. Defaults to false; see HeaderConfig.Timestamp.
 func (c *Config) ShowHeaderTimestamp() bool {
+	if c == nil {
+		return false
+	}
 	return c.Header.ShowTimestamp()
+}
+
+// HeaderTimestamp returns the timestamp every header of the current run carries.
+// Generation resolves it once into GeneratedAt; the wall-clock fallback covers
+// callers that render a header outside a generation run, such as a preview.
+func (c *Config) HeaderTimestamp() time.Time {
+	if c == nil || c.GeneratedAt.IsZero() {
+		return ResolveGenerationTime()
+	}
+	return c.GeneratedAt
+}
+
+// sourceDateEpochEnv is the reproducible-builds convention for pinning the
+// timestamp embedded in build artifacts.
+const sourceDateEpochEnv = "SOURCE_DATE_EPOCH"
+
+// ResolveGenerationTime returns the timestamp for one generation run: the value
+// of SOURCE_DATE_EPOCH when it holds a parsable Unix second count, otherwise the
+// wall clock. A malformed value falls through to the clock rather than failing
+// generation or silently stamping the epoch, which would be indistinguishable
+// from a deliberate pin to 1970.
+func ResolveGenerationTime() time.Time {
+	raw, ok := os.LookupEnv(sourceDateEpochEnv)
+	if !ok {
+		return time.Now()
+	}
+	seconds, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil {
+		return time.Now()
+	}
+	return time.Unix(seconds, 0)
 }
 
 // GetContentForProfile returns all content for a given profile.

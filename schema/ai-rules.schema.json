@@ -294,8 +294,8 @@
         },
         "timestamp": {
           "type": "boolean",
-          "description": "Emit the \"Generated:\" line in generated headers. Set to false in projects that commit generated outputs so the header carries no per-run value.",
-          "default": true
+          "description": "Emit the \"Generated:\" line in generated headers. Off by default so generated output is byte-reproducible; set to true to opt the line back in, and pin it with SOURCE_DATE_EPOCH if reproducibility still matters.",
+          "default": false
         }
       },
       "additionalProperties": false
