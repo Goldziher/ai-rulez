@@ -273,3 +273,39 @@ priority: high
 	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
 	result.AssertOutputContains(s.T(), "valid")
 }
+
+// TestValidateWarnsOnUnknownBuiltinExclusion asserts the exclusion typo surfaces
+// instead of passing silently, and that it stays a warning: validate still exits 0.
+func (s *ValidateCLITestSuite) TestValidateWarnsOnUnknownBuiltinExclusion() {
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+name = "unknown-exclusions"
+presets = ["claude"]
+builtins = ["!ai-governance/this-rule-does-not-exist", "!nosuchpack", "!git-workflow/commit-message"]
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
+
+	result.AssertOutputContains(s.T(), "Unknown builtin exclusion")
+	result.AssertOutputContains(s.T(), "!ai-governance/this-rule-does-not-exist")
+	result.AssertOutputContains(s.T(), "!nosuchpack")
+	result.AssertOutputContains(s.T(), "!git-workflow/commit-messages")
+}
+
+// TestValidateSilentOnValidBuiltinExclusions is the counterpart: exclusions that do
+// resolve must not warn, so the diagnostic does not fire on every real project.
+func (s *ValidateCLITestSuite) TestValidateSilentOnValidBuiltinExclusions() {
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+name = "valid-exclusions"
+presets = ["claude"]
+builtins = ["!agent-delegation", "!git-workflow/commit-messages", "!ai-governance/minimal-changes"]
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "validate")
+
+	result.AssertOutputContains(s.T(), "valid")
+	s.NotContains(result.Stdout+result.Stderr, "Unknown builtin exclusion")
+}

@@ -1336,10 +1336,31 @@ func fileExists(path string) bool {
 	return !info.IsDir()
 }
 
+// warnUnknownBuiltinExclusions logs a warning for every "!name" entry in the
+// builtins list that excludes something that does not exist. Such an entry is
+// otherwise inert: resolution simply never matches it, so the builtin the author
+// meant to drop stays in every generated file with nothing reporting it.
+//
+// Deliberately a warning, not an error: builtins are renamed and retired upstream,
+// and a project excluding a rule that has since moved into a skill must keep
+// generating. This runs during config load, so `validate` and `generate` — and
+// every other command that loads a config — report it alike.
+func warnUnknownBuiltinExclusions(names []string) {
+	for _, unknown := range builtins.UnknownExclusions(names) {
+		args := []any{"exclusion", "!" + unknown.Spec}
+		if unknown.Suggestion != "" {
+			args = append(args, "did_you_mean", "!"+unknown.Suggestion)
+		}
+		logger.Warn("Unknown builtin exclusion ignored; nothing was suppressed", args...)
+	}
+}
+
 // loadBuiltins resolves and loads builtin domains into the config content tree.
 // Builtins have the lowest priority: they are injected into domains that don't already exist.
 // If a domain already exists (from local content or includes), the builtin is skipped.
 func loadBuiltins(config *Config) {
+	warnUnknownBuiltinExclusions(config.Builtins.GetNames())
+
 	var resolved []string
 	if config.Builtins.IsAll() {
 		resolved = builtins.ResolveAll()
