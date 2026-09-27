@@ -11,6 +11,17 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
+// timestampedConfig returns a config for the given style with the "Generated:"
+// line opted back in. The line is off by default (generated output is
+// reproducible), so a test asserting on it has to ask for it.
+func timestampedConfig(name, style string) *config.Config {
+	enabled := true
+	return &config.Config{
+		Name:   name,
+		Header: &config.HeaderConfig{Style: style, Timestamp: &enabled},
+	}
+}
+
 // Helper function to create TemplateData with required fields
 func createTemplateData(projectName string, cfg *config.Config) *templates.TemplateData {
 	return &templates.TemplateData{
@@ -27,7 +38,7 @@ func createTemplateData(projectName string, cfg *config.Config) *templates.Templ
 
 // TestBuildDetailedHeader verifies the detailed header structure and content
 func TestBuildDetailedHeader(t *testing.T) {
-	data := createTemplateData("TestProject", nil)
+	data := createTemplateData("TestProject", timestampedConfig("TestProject", "detailed"))
 
 	// Call GenerateHeader to get the full header with wrapping
 	header := templates.GenerateHeader(data)
@@ -76,14 +87,7 @@ func TestBuildDetailedHeader(t *testing.T) {
 
 // TestBuildCompactHeader verifies the compact header structure and content
 func TestBuildCompactHeader(t *testing.T) {
-	data := createTemplateData("MyProject", nil)
-
-	// For compact header, we need to set the style in the config
-	cfg := &config.Config{
-		Name:   "MyProject",
-		Header: &config.HeaderConfig{Style: "compact"},
-	}
-	data.Config = cfg
+	data := createTemplateData("MyProject", timestampedConfig("MyProject", "compact"))
 
 	header := templates.GenerateHeader(data)
 
@@ -126,11 +130,7 @@ func TestBuildCompactHeader(t *testing.T) {
 
 // TestBuildMinimalHeader verifies the minimal header structure and content
 func TestBuildMinimalHeader(t *testing.T) {
-	cfg := &config.Config{
-		Name:   "SimpleProject",
-		Header: &config.HeaderConfig{Style: "minimal"},
-	}
-	data := createTemplateData("SimpleProject", cfg)
+	data := createTemplateData("SimpleProject", timestampedConfig("SimpleProject", "minimal"))
 
 	header := templates.GenerateHeader(data)
 
@@ -256,11 +256,7 @@ func TestGenerateHeader_AllStyles(t *testing.T) {
 
 	for _, style := range styles {
 		t.Run("style_"+style, func(t *testing.T) {
-			cfg := &config.Config{
-				Name:   "TestProject",
-				Header: &config.HeaderConfig{Style: style},
-			}
-			data := createTemplateData("TestProject", cfg)
+			data := createTemplateData("TestProject", timestampedConfig("TestProject", style))
 
 			header := templates.GenerateHeader(data)
 
@@ -359,11 +355,7 @@ func TestHeaderContent_WithEmptyOutputPath(t *testing.T) {
 
 // TestHeaderContent_TimestampFormatting verifies correct timestamp format
 func TestHeaderContent_TimestampFormatting(t *testing.T) {
-	cfg := &config.Config{
-		Name:   "TestProject",
-		Header: &config.HeaderConfig{Style: "minimal"},
-	}
-	data := createTemplateData("TestProject", cfg)
+	data := createTemplateData("TestProject", timestampedConfig("TestProject", "minimal"))
 	data.Timestamp = time.Date(2024, 12, 25, 10, 30, 45, 0, time.UTC)
 
 	header := templates.GenerateHeader(data)
@@ -631,7 +623,11 @@ func TestHeaderTimestamp_OmittedWhenDisabled(t *testing.T) {
 				Name:   "P",
 				Header: &config.HeaderConfig{Style: style},
 			}))
-			assert.Contains(t, omitted, "Generated:", "the timestamp defaults to enabled")
+			assert.NotContains(t, omitted, "Generated:", "the timestamp defaults to disabled")
+
+			nilConfig := templates.GenerateHeader(createTemplateData("P", nil))
+			assert.NotContains(t, nilConfig, "Generated:",
+				"a preview with no config takes the same default as generation")
 		})
 	}
 }
