@@ -55,6 +55,21 @@ jobs:
           version: latest
           args: --timeout=5m
 
+  npm-wrapper:
+    name: npm wrapper (Node 24)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+
+      - name: Run npm wrapper tests
+        run: node --test release/npm/install.test.js
+
   test:
     name: Test - ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
