@@ -1,6 +1,7 @@
 package builtins
 
 import (
+	"sort"
 	"strings"
 	"testing"
 
@@ -131,7 +132,7 @@ func TestLoadDomainContent(t *testing.T) {
 		t.Parallel()
 		entries, err := LoadDomainContent("ai-governance")
 		require.NoError(t, err)
-		assert.Len(t, entries, 11) // 9 rules + 2 agents
+		assert.Len(t, entries, 10) // 8 rules + 2 agents
 
 		ruleCount := 0
 		agentCount := 0
@@ -144,7 +145,7 @@ func TestLoadDomainContent(t *testing.T) {
 				agentCount++
 			}
 		}
-		assert.Equal(t, 9, ruleCount)
+		assert.Equal(t, 8, ruleCount) // verify-before-acting merged into verification-before-completion
 		assert.Equal(t, 2, agentCount)
 	})
 
@@ -170,6 +171,52 @@ func TestLoadDomainContent(t *testing.T) {
 		assert.Equal(t, 3, ruleCount)    // dependency-awareness moved rules → skills
 		assert.Equal(t, 0, contextCount) // owasp moved context → skills
 		assert.Equal(t, 2, skillCount)   // owasp-quick-reference + dependency-awareness
+	})
+
+	t.Run("converted packs expose skills instead of rules", func(t *testing.T) {
+		t.Parallel()
+
+		// Narrow or non-behavioural guidance was moved out of rules/ (which is
+		// concatenated into the always-loaded root instruction file) and into
+		// skills/, whose bodies cost nothing until invoked.
+		cases := []struct {
+			domain     string
+			wantRules  int
+			wantSkills []string
+		}{
+			{"code-quality", 0, []string{"code-quality-standards", "error-handling"}},
+			{"testing", 1, []string{"tdd-workflow", "testing-conventions"}},
+			{"token-efficiency", 2, []string{"incremental-approach", "task-runner"}},
+			{"docker", 0, []string{"container-standards"}},
+			{"observability", 0, []string{"observability-standards"}},
+		}
+
+		for _, tc := range cases {
+			t.Run(tc.domain, func(t *testing.T) {
+				t.Parallel()
+				entries, err := LoadDomainContent(tc.domain)
+				require.NoError(t, err)
+
+				ruleCount := 0
+				var skills []string
+				for _, e := range entries {
+					assert.NotEmpty(t, e.Content)
+					switch e.Type {
+					case contentTypeRules:
+						ruleCount++
+					case contentTypeSkills:
+						skills = append(skills, e.Name)
+						assert.True(t, strings.HasSuffix(e.Path, "/SKILL.md"),
+							"skill entry must come from skills/<id>/SKILL.md, got %s", e.Path)
+						assert.Contains(t, e.Content, "description:",
+							"skill %s needs a description for trigger precision", e.Name)
+					}
+				}
+				assert.Equal(t, tc.wantRules, ruleCount)
+				sort.Strings(skills)
+				assert.Equal(t, tc.wantSkills, skills)
+			})
+		}
 	})
 
 	t.Run("loads language builtin", func(t *testing.T) {

@@ -2,6 +2,4 @@
 priority: high
 ---
 
-# Input Validation
-
-Validate and sanitize all external input at system boundaries. Use allowlists over denylists. Validate types, ranges, and formats. Never trust user input.
+Validate and sanitize external input at the system boundary — types, ranges, formats — and allowlist rather than denylist.

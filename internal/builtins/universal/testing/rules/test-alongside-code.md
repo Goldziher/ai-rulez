@@ -2,4 +2,4 @@
 priority: high
 ---
 
-Write tests when writing code, update tests when modifying behavior. When fixing bugs, write a failing test first (TDD). Use integration tests for the public API surface and unit tests for complex internal logic. Run the full test suite before committing.
+Tests ship with the behaviour change, in the same commit. Reproduce a bug with a failing test before fixing it. Run the full suite before committing. Details: the `tdd-workflow` and `testing-conventions` skills.
