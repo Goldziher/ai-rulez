@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`ai-rulez tokens`**: reports the prompt-token cost of the generated configuration, split by when an agent actually loads it. Artifacts are measured as rendered strings in memory at the same seam `generate --dry-run` walks, so nothing is read back off disk and a stale or half-written output tree cannot corrupt the numbers. Output is grouped per runtime and then per bucket — `always` (the root instructions file, skill and command names, agent names and descriptions), `conditional` (skill and command descriptions, which some harness modes carry and others do not), `on demand` (bodies), and `unmodeled` (cost ai-rulez cannot see, such as the tool schemas an MCP manifest implies). The root file is broken down per section with rules and context listed individually, so an expensive one can be named; skill names, descriptions and bodies are separate lines, because a single per-file total hides which part is being paid for. Flags: `--json`/`-j`, `--budget`/`-b` (exit 2 when the headline is exceeded, distinct from 1 so a hook can tell over-budget from failure), `--compare-profiles` (renders several profiles in one process and prints a table), `--tokenizer` (`cl100k_base`, embedded, offline, no API key — or `estimate` for a byte ratio), plus the usual `--profile`/`-p` and `--config-dir`/`-n`. **The report states its own limits in its output**: counts are approximations because Claude's tokenizer is not published (`cl100k_base` measured 8% low against one real 19,230-byte instruction file); runtimes are not additive, since one session loads one root instructions file, so emitting both `CLAUDE.md` and `AGENTS.md` costs one of them and the headline is the largest single runtime rather than the sum; and ai-rulez counts only what it generates, never predicting a session total, because the harness's own system prompt, tool schemas and per-artifact overhead are invisible to it. Two consequences worth knowing: the per-file `Content-Hash` and `Source-Hash` lines cost about 76 tokens per artifact, because a blake3 hex digest is incompressible, and the `## Agents` roster in the root file duplicates every agent file's name and description.
+
 ## [4.12.1] - 2026-09-25
 
 ### Fixed

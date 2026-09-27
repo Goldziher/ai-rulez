@@ -61,6 +61,11 @@ type Config struct {
 	// MCPEnvFiles are generation-time dotenv files used to resolve MCP env
 	// placeholders. Empty means "load .env from BaseDir when present".
 	MCPEnvFiles []string `yaml:"-" json:"-" toml:"-"`
+
+	// Analysis, when non-nil, makes the rendering layer record how each output
+	// was classified and what each of its sections contained. Only the `tokens`
+	// command sets it; generation leaves it nil and pays nothing.
+	Analysis *AnalysisCollector `yaml:"-" json:"-" toml:"-"`
 }
 
 // HasPluginAuthoring reports whether the configuration produces a plugin or a
@@ -728,7 +733,7 @@ func (f *ContentFile) GetFileExtension() string {
 // IsMarkdown returns true if the content file is markdown
 func (f *ContentFile) IsMarkdown() bool {
 	ext := f.GetFileExtension()
-	return ext == ".md" || ext == ".markdown"
+	return ext == markdownExt || ext == ".markdown"
 }
 
 // IncludeConfig represents a content source (git repo or local path)
