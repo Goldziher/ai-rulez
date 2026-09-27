@@ -71,6 +71,7 @@ func init() {
 	RootCmd.AddCommand(ProfileCmd)
 	RootCmd.AddCommand(BuiltinsCmd)
 	RootCmd.AddCommand(SkillCmd)
+	RootCmd.AddCommand(TokensCmd)
 }
 
 func initConfig() {

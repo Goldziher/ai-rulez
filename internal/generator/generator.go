@@ -524,7 +524,12 @@ func (g *Generator) generateScopedOutputs(activeProfile string) ([]config.Output
 		scopeCfg.Presets = scopedPresets(scope.Presets)
 		scopeCfg.SourceHash = computeSourceHash(&scopeCfg, scopeContent)
 
+		// Label the analysis so a cost report keeps scoped roots out of the
+		// repository-root totals: a scoped instruction file is loaded only when
+		// the agent is working inside that subtree.
+		g.config.Analysis.EnterScope(scope.Path)
 		outputsByPreset, err := config.GeneratePresets(&scopeCfg)
+		g.config.Analysis.EnterScope("")
 		if err != nil {
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "generate scoped presets")
 		}
