@@ -87,7 +87,7 @@ func localVariantName(base string) string {
 // (CLAUDE.md → CLAUDE.local.md) while skipping presets whose root is not a
 // single markdown file.
 func LocalVariantPath(p string) string {
-	if filepath.Ext(p) != ".md" {
+	if filepath.Ext(p) != markdownExt {
 		return ""
 	}
 	dir := filepath.Dir(p)

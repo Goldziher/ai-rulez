@@ -111,6 +111,11 @@ func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 		}
 
 		results[preset.GetName()] = outputs
+		// Stamp the preset name onto every output. DSL-backed providers have
+		// already registered theirs with an exact kind and a per-section
+		// breakdown; this pass covers the hand-written generators, whose kind is
+		// inferred from the path. No-op when analysis is disabled.
+		cfg.Analysis.Attribute(preset.GetName(), cfg.BaseDir, outputs)
 	}
 
 	return results, nil
