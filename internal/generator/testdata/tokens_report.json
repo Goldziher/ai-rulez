@@ -195,6 +195,7 @@
     "Counts are approximations. Claude's tokenizer is not published; this report uses cl100k_base offline. Use the numbers to compare profiles and to compare before and after an edit, not as absolute truth.",
     "ai-rulez counts only the artifacts it generates. The agent harness adds a fixed floor of its own system prompt and tool schemas, plus per-artifact overhead, neither of which ai-rulez can see. This report never predicts a session total.",
     "Runtimes are not additive. One session loads one runtime's root instructions file, so emitting both CLAUDE.md and AGENTS.md costs one of them, not both. The headline figure is the largest single runtime.",
-    "\"conditional\" is surface some harness modes carry and others do not. Skill and command descriptions are the measured case: a non-interactive Claude Code run does not carry them, an interactive session surfaces them for user-invocable skills."
+    "\"conditional\" is surface some harness modes carry and others do not. Skill and command descriptions are the measured case: a non-interactive Claude Code run does not carry them, an interactive session surfaces them for user-invocable skills.",
+    "Provenance hash lines are content-dependent: a blake3 hex digest is incompressible, and two digests of the same length tokenize to slightly different counts. Expect a few tokens of movement per artifact between two profiles for that reason alone."
   ]
 }
