@@ -168,6 +168,58 @@ func existingDirs(paths []string) []string {
 	return out
 }
 
+// pruneDirsEmptiedBy removes the directories that deleting removed left empty.
+// Generate's stale pass deletes files a narrower profile no longer emits but used
+// to leave their directories standing, and an empty `<id>/` under skills/ reads —
+// to a human and to tooling that lists the directory — as a live skill that has
+// lost its body.
+//
+// Blast radius is bounded three ways. Only the ancestors of a file ai-rulez wrote
+// are candidates, so the walk never leaves the generated output roots. It stops
+// below the project root and refuses the .ai-rulez source tree. And a directory
+// holding any entry at all survives: a skill's hand-authored references/, scripts/
+// or assets/ file keeps both that subdirectory and the skill directory above it.
+func (g *Generator) pruneDirsEmptiedBy(removed []string) {
+	candidates := make(map[string]bool, len(removed))
+	for _, file := range removed {
+		for dir := filepath.Dir(file); g.isPrunableDir(dir); dir = filepath.Dir(dir) {
+			if candidates[dir] {
+				break // this chain's ancestors are already queued
+			}
+			candidates[dir] = true
+		}
+	}
+
+	dirs := make([]string, 0, len(candidates))
+	for dir := range candidates {
+		dirs = append(dirs, dir)
+	}
+	// Deepest-first, so emptying a child lets its parent go in the same pass.
+	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
+	for _, dir := range dirs {
+		removeDirIfEmpty(dir)
+	}
+}
+
+// isPrunableDir reports whether dir is a directory the generator may remove: one
+// strictly inside the project and outside the .ai-rulez configuration tree. It
+// bounds the upward walk in pruneDirsEmptiedBy, which stops at the first
+// directory this rejects.
+func (g *Generator) isPrunableDir(dir string) bool {
+	clean := filepath.Clean(dir)
+	if !isUnderBaseDir(g.config.BaseDir, clean) {
+		return false
+	}
+	if base, err := filepath.Abs(g.config.BaseDir); err == nil {
+		if abs, absErr := filepath.Abs(clean); absErr == nil && abs == base {
+			return false
+		}
+	}
+	// isUnderBaseDir is true for the directory itself, so this rejects the config
+	// dir along with everything in it.
+	return g.config.ConfigDir == "" || !isUnderBaseDir(g.config.ConfigDir, clean)
+}
+
 // removeDirIfEmpty removes a directory only when it holds no entries, so
 // user-authored files inside a generated directory are never destroyed.
 func removeDirIfEmpty(dir string) {

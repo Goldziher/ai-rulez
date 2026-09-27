@@ -2,7 +2,6 @@ package presets
 
 import (
 	"strings"
-	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
@@ -26,7 +25,7 @@ func RenderLocalRoot(local *config.ContentTree, cfg *config.Config, outputFile s
 
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,
-		Timestamp:    time.Now(),
+		Timestamp:    cfg.HeaderTimestamp(),
 		ConfigFile:   configFileName(cfg),
 		OutputFile:   outputFile,
 		Config:       cfg,

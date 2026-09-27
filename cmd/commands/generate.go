@@ -381,12 +381,13 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 			fileCounter.FinishFile()
 			return 0
 		}
-		if err := gen.GeneratePlugin(profile); err != nil {
+		written, err := gen.GeneratePluginFiles(profile)
+		if err != nil {
 			fileCounter.Error(err)
 			return 0
 		}
 		fileCounter.FinishFile()
-		return 0
+		return written
 	}
 
 	if dryRun {
@@ -403,15 +404,15 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	}
 
 	// Generate files
-	if err := gen.Generate(profile); err != nil {
+	written, err := gen.GenerateFiles(profile)
+	if err != nil {
 		fileCounter.Error(err)
 		return 0
 	}
 
 	fileCounter.FinishFile()
 
-	// Count generated files (estimate based on presets)
-	return len(cfg.Presets) * 3 // Rough estimate
+	return written
 }
 
 func applyGenerateOverrides(cfg *config.Config) {
