@@ -2,6 +2,4 @@
 priority: critical
 ---
 
-# Secrets Handling
-
-Never hardcode secrets, API keys, tokens, or passwords. Use environment variables or secret management systems. Never log or expose sensitive values. Reject commits containing secrets.
+Never hardcode a secret, API key, token or password — read it from the environment or a secret manager. Never log or echo a sensitive value. Refuse to commit a file containing one.

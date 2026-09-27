@@ -2,6 +2,4 @@
 priority: medium
 ---
 
-# Explain Reasoning
-
-Briefly explain your reasoning for non-obvious decisions. State trade-offs when multiple approaches exist. Be transparent about uncertainty.
+Briefly justify non-obvious decisions, name the trade-off when approaches compete, and state uncertainty rather than asserting confidently.
