@@ -210,10 +210,12 @@ func buildHeaderLines(data *TemplateData) []string {
 		outputPath = "(preview output)"
 	}
 
-	// An empty timestamp means the "Generated:" line is omitted entirely, which
-	// is what [header] timestamp = false asks for.
+	// An empty timestamp means the "Generated:" line is omitted entirely, which is
+	// the default: a per-run value makes output non-reproducible and lets two
+	// otherwise identical sibling files disagree. A nil Config takes the same
+	// default, so the header a preview renders matches the one generation writes.
 	timestamp := ""
-	if data.Config == nil || data.Config.ShowHeaderTimestamp() {
+	if data.Config.ShowHeaderTimestamp() {
 		timestamp = data.Timestamp.Format("2006-01-02 15:04:05")
 	}
 

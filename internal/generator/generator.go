@@ -45,17 +45,25 @@ func NewGenerator(cfg *config.Config) *Generator {
 	}
 }
 
-// Generate generates all outputs for the specified profile
+// Generate generates all outputs for the specified profile.
 func (g *Generator) Generate(profile string) error {
+	_, err := g.GenerateFiles(profile)
+	return err
+}
+
+// GenerateFiles generates all outputs for the specified profile and returns the
+// number of files it wrote, directories excluded, so a caller reporting a total
+// to the user can report a counted one.
+func (g *Generator) GenerateFiles(profile string) (int, error) {
 	flatOutputs, activeProfile, err := g.collectOutputs(profile)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	logger.Info("Generating with configuration", "profile", activeProfile)
 
 	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
-		return err
+		return 0, err
 	}
 
 	staleFiles := g.staleManifestFiles(flatOutputs)
@@ -63,8 +71,12 @@ func (g *Generator) Generate(profile string) error {
 
 	// Write all output files
 	if err := g.writeOutputs(flatOutputs); err != nil {
-		return err
+		return 0, err
 	}
+
+	// Writing happens first: a directory the stale pass emptied may be one this
+	// run re-creates, and pruning before the write would only have it made again.
+	g.pruneDirsEmptiedBy(staleFiles)
 
 	if err := g.writeGeneratedManifest(flatOutputs); err != nil {
 		logger.Warn("Failed to write generated manifest", "error", err)
@@ -79,9 +91,16 @@ func (g *Generator) Generate(profile string) error {
 		}
 	}
 
-	logger.Info("Generation complete", "files", len(flatOutputs))
+	written := 0
+	for _, output := range flatOutputs {
+		if !output.IsDir {
+			written++
+		}
+	}
 
-	return nil
+	logger.Info("Generation complete", "files", written)
+
+	return written, nil
 }
 
 // GeneratePlugin packages the project into distributable plugin bundles plus a
@@ -89,15 +108,28 @@ func (g *Generator) Generate(profile string) error {
 // normal generate path, plugin outputs are written verbatim (RawContent) and do
 // not participate in the generated-manifest / stale-file bookkeeping.
 func (g *Generator) GeneratePlugin(profile string) error {
+	_, err := g.GeneratePluginFiles(profile)
+	return err
+}
+
+// GeneratePluginFiles is GeneratePlugin returning the number of files written,
+// directories excluded.
+func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	if err := g.writeOutputs(outputs); err != nil {
-		return err
+		return 0, err
 	}
-	logger.Info("Plugin generation complete", "files", len(outputs))
-	return nil
+	written := 0
+	for _, output := range outputs {
+		if !output.IsDir {
+			written++
+		}
+	}
+	logger.Info("Plugin generation complete", "files", written)
+	return written, nil
 }
 
 // VerifyPlugin verifies the generated plugin bundles against their provenance
@@ -303,6 +335,15 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 
 	// Collect MCP servers based on the resolved content tree
 	mcpServers := g.collectMCPServersForContent(contentTree)
+
+	// Resolve the run's header timestamp once, before any renderer reads it, so
+	// every file this run writes carries the same value. Each preset used to call
+	// time.Now() for itself, which made CLAUDE.md and AGENTS.md — byte-identical
+	// otherwise — disagree whenever the two renders straddled a second boundary.
+	// A caller that set GeneratedAt explicitly keeps its value.
+	if g.config.GeneratedAt.IsZero() {
+		g.config.GeneratedAt = config.ResolveGenerationTime()
+	}
 
 	// Create a temporary config with the filtered content and MCP servers
 	tempCfg := *g.config

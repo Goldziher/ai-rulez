@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Changed
+
+- **The `Generated:` header line is now off by default.** Generated output is byte-reproducible unless a project asks for a per-run value: the same sources generate the same bytes, output can be verified by content hash, and `CLAUDE.md` and `AGENTS.md` — which the minimal header renders identically, since it carries no per-output field — can no longer disagree. They did before, because every preset called `time.Now()` for itself, so the two renders straddling a second boundary produced files differing in exactly that line; downstream completeness checks had to special-case it to compare them at all. `[header] timestamp = true` opts the line back in. **Upgrading**: the source hash already covered `header_timestamp`, so the first `generate` after upgrading rewrites every output once to drop the line, and runs after that are byte-stable; a project that wants the line must now say so. When it is enabled, one run resolves the timestamp once and stamps every file it writes with that value, and `SOURCE_DATE_EPOCH` pins it (an unparsable value is ignored in favour of the wall clock) so an opted-in project can still be reproducible.
+
+### Fixed
+
+- `generate` now removes the directories its own stale-file pass emptied. Narrowing a profile deleted the `SKILL.md` files the new profile no longer emits but left every `<id>/` directory standing — measured: 200 skills down to 62 left 138 empty directories — and an empty directory under `skills/` reads to a human, and to tooling that lists the directory, as a live skill that has lost its body. Only the ancestors of a file ai-rulez wrote are candidates, so the walk never leaves the generated output roots; it stops below the project root and refuses the `.ai-rulez/` source tree; and a directory holding any entry survives, so a hand-authored file in a skill's `references/`, `scripts/` or `assets/` keeps both that subdirectory and the skill directory above it. Directories a preset declares as outputs (`.codex/agents/`, `.codex/commands/`) are still created empty when there is nothing to put in them — they are current outputs, not leftovers.
+- `generate --recursive` reports a counted file total instead of `len(presets) * 3`. The estimate was wrong in both directions — one preset with three skills generates four files and was reported as three — and nothing measured it. `Generator.GenerateFiles` and `GeneratePluginFiles` return the number of files written, directories excluded; `Generate` and `GeneratePlugin` keep their signatures and delegate. Plugin generation reported `0` for the same summary and now reports its own count.
+
 ## [4.12.1] - 2026-09-25
 
 ### Fixed
