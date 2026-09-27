@@ -360,20 +360,34 @@ func (c *Config) validateProfiles() error {
 			Errorf("default profile %q specified but no profiles defined", c.Default)
 	}
 
-	// If default is specified, it must exist in profiles
-	if c.Default != "" {
-		if _, exists := c.Profiles[c.Default]; !exists {
-			profileNames := make([]string, 0, len(c.Profiles))
-			for name := range c.Profiles {
-				profileNames = append(profileNames, name)
-			}
+	// A comma separates the elements of a composed profile value, so a name
+	// containing one could never be selected.
+	for name := range c.Profiles {
+		if strings.Contains(name, ProfileSeparator) {
 			return oops.
-				With("field", "default").
-				With("default_profile", c.Default).
-				With("available_profiles", profileNames).
-				Hint(fmt.Sprintf("Set default to one of the defined profiles: %v\nOr add a profile named %q", profileNames, c.Default)).
-				Errorf("default profile %q does not exist in profiles", c.Default)
+				With("field", "profiles").
+				With("profile_name", name).
+				Hint("A comma composes several profiles into one value (profile: \"base,backend\"), so it cannot appear in a profile name\nRename the profile without a comma").
+				Errorf("profile name %q contains %q", name, ProfileSeparator)
 		}
+	}
+
+	// If default is specified, every element of it must exist in profiles. The
+	// default may be composed, the same as a --profile value.
+	if c.Default != "" && !c.HasProfile(c.Default) {
+		profileNames := make([]string, 0, len(c.Profiles))
+		for name := range c.Profiles {
+			profileNames = append(profileNames, name)
+		}
+		sort.Strings(profileNames)
+		unknown := c.UnknownProfileNames(c.Default)
+		return oops.
+			With("field", "default").
+			With("default_profile", c.Default).
+			With("unknown_profiles", unknown).
+			With("available_profiles", profileNames).
+			Hint(fmt.Sprintf("Set default to one of the defined profiles: %v\nOr add a profile named %q", profileNames, strings.Join(unknown, ", "))).
+			Errorf("default profile %q does not exist in profiles", strings.Join(unknown, ", "))
 	}
 
 	return nil

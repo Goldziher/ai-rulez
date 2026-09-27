@@ -171,6 +171,12 @@ The default profile name used when `ai-rulez generate` is run without `--profile
 default = "full"
 ```
 
+It may name several profiles to compose, the same as `--profile`:
+
+```toml
+default = "base,backend"
+```
+
 If not specified, all domains are included.
 
 ### `profiles`
@@ -189,6 +195,12 @@ Each profile specifies a list of domain names. When generating with a profile:
 
 1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`) is included
 2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
+
+Several profiles can be selected at once by separating them with commas — `--profile
+base,backend`, or `default = "base,backend"` — which generates the union of their
+domains. A profile name may therefore not contain a comma, and a profile's value lists
+domains only, never other profiles. See
+[Domains and Profiles](domains.md#composing-profiles).
 
 ### `scopes`
 
