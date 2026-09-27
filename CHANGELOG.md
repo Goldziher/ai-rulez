@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- Skills and commands now honour the documented source precedence (root > on-disk domain > include > builtin) instead of silently inverting it. Rules, context and agents were already deduplicated by name in precedence order; skills and commands never were, so two same-named items both rendered and both were written to the one name-derived output path (`.claude/skills/{id}/SKILL.md`) — leaving whichever the writer happened to reach last, which is the *lowest*-precedence copy. A project `.ai-rulez/skills/testing-conventions/` was therefore replaced wholesale, description and body, by a builtin pack's skill of that name, and a root skill lost to a domain skill, both with exit code 0 and no diagnostic. The lower-precedence copy is now dropped before rendering rather than overwritten after it, and `generate` and `validate` log `Duplicate skill collapsed` / `Duplicate command collapsed` naming the kept and dropped source paths. Shadowing a builtin with a project skill stays a supported pattern — it warns, it does not fail. `getAllDomainSkills` / `getAllDomainCommands` also switched from alphabetical domain order to precedence order, so which domain wins no longer depends on its name.
+- Corrected the domain-collision documentation, which claimed the domain version wins over root for rules and context, and illustrated it with a warning message no code emits (`docs/domains.md`, `docs/configuration.md`). Root wins, and has for as long as `allInlineRules` has been the collector; the domain-wins rule lived only in the `internal/scanner` package retired in 4.12.1, which nothing imported.
+
 ## [4.12.1] - 2026-09-25
 
 ### Fixed

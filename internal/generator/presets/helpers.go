@@ -130,6 +130,27 @@ func allInlineContext(content *config.ContentTree) []config.ContentFile {
 	return combineDedupedContentFiles(content.Context, getAllDomainContext(content))
 }
 
+// allSkills returns the deduplicated, precedence-ordered skills — root skills,
+// then on-disk domains, then include-sourced domains, then builtins. Unlike
+// rules, skills are not inlined: each renders to its own
+// <preset>/skills/{id}/SKILL.md, so a duplicate name is not a doubled section
+// but two writes to one path where the last one silently wins. Deduplicating
+// here is what makes the documented precedence (root > domain > include >
+// builtin) the one that actually reaches disk, instead of the reverse that
+// write order produced. Skill Name is the skill directory name — the same value
+// the output id derives from — so keying dedup on Name matches the path the two
+// copies compete for.
+func allSkills(content *config.ContentTree) []config.ContentFile {
+	return combineDedupedContentFiles(content.Skills, getAllDomainSkills(content))
+}
+
+// allCommands is the command counterpart to allSkills. Commands share the skill
+// output namespace (.claude/skills/{id}/SKILL.md with user_invocable set), so
+// they carry the same last-write-wins hazard and the same fix.
+func allCommands(content *config.ContentTree) []config.ContentFile {
+	return combineDedupedContentFiles(content.Commands, getAllDomainCommands(content))
+}
+
 // allAgents returns the deduplicated, precedence-ordered agents — root (local)
 // agents, then include-domain agents, then builtin-domain agents — collapsing
 // duplicate names to the single highest-precedence definition, then resolving
@@ -361,10 +382,11 @@ func getAllDomainContext(content *config.ContentTree) []config.ContentFile {
 	return context
 }
 
-// getAllDomainSkills extracts all skills from all domains in sorted domain order.
+// getAllDomainSkills extracts all skills from all domains in precedence order
+// (on-disk, then include, then builtin) so higher-priority sources win dedup.
 func getAllDomainSkills(content *config.ContentTree) []config.ContentFile {
 	var skills []config.ContentFile
-	for _, name := range sortedDomainNames(content) {
+	for _, name := range domainNamesByPrecedence(content) {
 		skills = append(skills, content.Domains[name].Skills...)
 	}
 	return skills
@@ -380,10 +402,12 @@ func getAllDomainAgents(content *config.ContentTree) []config.ContentFile {
 	return agents
 }
 
-// getAllDomainCommands extracts all commands from all domains in sorted domain order.
+// getAllDomainCommands extracts all commands from all domains in precedence
+// order (on-disk, then include, then builtin) so higher-priority sources win
+// dedup.
 func getAllDomainCommands(content *config.ContentTree) []config.ContentFile {
 	var commands []config.ContentFile
-	for _, name := range sortedDomainNames(content) {
+	for _, name := range domainNamesByPrecedence(content) {
 		commands = append(commands, content.Domains[name].Commands...)
 	}
 	return commands
@@ -592,25 +616,71 @@ func AllInlineContext(content *config.ContentTree) []config.ContentFile {
 	return allInlineContext(content)
 }
 
-// WarnDuplicateContent logs a warning for each rule or context name defined by
-// more than one source. The lower-precedence copies are dropped from generated
-// output by allInlineRules/allInlineContext; surfacing the collapse during both
-// `generate` and `validate` lets authors notice overlap and bloat. Shared by the
-// generator and the validate command so the message and precedence stay aligned.
+// AllSkills / AllCommands expose the deduplicated, precedence-ordered per-item
+// collectors for the DSL renderer in internal/generator/providers.
+func AllSkills(content *config.ContentTree) []config.ContentFile {
+	return allSkills(content)
+}
+
+func AllCommands(content *config.ContentTree) []config.ContentFile {
+	return allCommands(content)
+}
+
+// WarnDuplicateContent logs a warning for each rule, context, skill or command
+// name defined by more than one source. The lower-precedence copies are dropped
+// from generated output by allInlineRules/allInlineContext/allSkills/allCommands;
+// surfacing the collapse during both `generate` and `validate` lets authors
+// notice overlap and bloat. For skills and commands the warning is the only
+// signal there is: shadowing a builtin skill with a project one is legitimate
+// and must not fail generation, but a project skill that a builtin silently
+// replaced — or the reverse — is indistinguishable from a working config without
+// it. Shared by the generator and the validate command so the message and
+// precedence stay aligned.
 func WarnDuplicateContent(content *config.ContentTree) {
-	if content == nil {
-		return
+	for _, warning := range duplicateContentWarnings(content) {
+		logger.Warn("Duplicate "+warning.Kind+" collapsed",
+			"name", warning.Duplicate.Name,
+			"kept", warning.Duplicate.Winner,
+			"dropped", strings.Join(warning.Duplicate.Losers, ", "))
 	}
-	warn := func(kind string, dups []DuplicateContent) {
-		for _, dup := range dups {
-			logger.Warn("Duplicate "+kind+" collapsed",
-				"name", dup.Name,
-				"kept", dup.Winner,
-				"dropped", strings.Join(dup.Losers, ", "))
+}
+
+// duplicateContentWarning is one collapsed-duplicate diagnostic. Carried as data
+// rather than logged at the point of detection so the detection logic stays
+// testable — the logger is a process-wide singleton with no injection seam.
+type duplicateContentWarning struct {
+	Kind      string
+	Duplicate DuplicateContent
+}
+
+// duplicateContentWarnings collects the collapsed duplicates for every content
+// type, using the same root-then-domains-in-precedence-order pairs the
+// corresponding all* collectors deduplicate over, so a warning is emitted for
+// exactly the copies that were dropped.
+func duplicateContentWarnings(content *config.ContentTree) []duplicateContentWarning {
+	if content == nil {
+		return nil
+	}
+
+	sources := []struct {
+		kind string
+		root []config.ContentFile
+		// domains is the domain-sourced slice in precedence order.
+		domains []config.ContentFile
+	}{
+		{"rule", content.Rules, getAllDomainRules(content)},
+		{"context", content.Context, getAllDomainContext(content)},
+		{"skill", content.Skills, getAllDomainSkills(content)},
+		{"command", content.Commands, getAllDomainCommands(content)},
+	}
+
+	var warnings []duplicateContentWarning
+	for _, source := range sources {
+		for _, dup := range FindDuplicateContent(source.root, source.domains) {
+			warnings = append(warnings, duplicateContentWarning{Kind: source.kind, Duplicate: dup})
 		}
 	}
-	warn("rule", FindDuplicateContent(content.Rules, getAllDomainRules(content)))
-	warn("context", FindDuplicateContent(content.Context, getAllDomainContext(content)))
+	return warnings
 }
 
 // DuplicateContent describes a content name defined by more than one source,
