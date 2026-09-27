@@ -395,3 +395,42 @@ Test content
 
 	result.AssertOutputContains(s.T(), "Generation complete")
 }
+
+// TestGenerateWarnsOnUnknownBuiltinExclusion asserts generate reports an exclusion
+// that suppresses nothing — the rule is still being emitted and paid for — while
+// completing normally with exit 0.
+func (s *GenerateCLITestSuite) TestGenerateWarnsOnUnknownBuiltinExclusion() {
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+name = "unknown-exclusions"
+presets = ["claude"]
+gitignore = false
+builtins = ["!ai-governance/this-rule-does-not-exist", "!nosuchpack/whatever"]
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
+
+	result.AssertOutputContains(s.T(), "Unknown builtin exclusion")
+	result.AssertOutputContains(s.T(), "!ai-governance/this-rule-does-not-exist")
+	result.AssertOutputContains(s.T(), "!nosuchpack/whatever")
+	result.AssertOutputContains(s.T(), "Generation complete")
+}
+
+// TestGenerateSilentOnValidBuiltinExclusions keeps the warning from becoming noise:
+// exclusions that resolve produce no diagnostic.
+func (s *GenerateCLITestSuite) TestGenerateSilentOnValidBuiltinExclusions() {
+	aiRulesDir := filepath.Join(s.workingDir, ".ai-rulez")
+	s.NoError(os.MkdirAll(aiRulesDir, 0o755))
+	testutil.WriteFile(s.T(), aiRulesDir, "config.toml", `version = "4.0"
+name = "valid-exclusions"
+presets = ["claude"]
+gitignore = false
+builtins = ["!agent-delegation", "!git-workflow/commit-messages", "!testing/tdd-workflow"]
+`)
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
+
+	result.AssertOutputContains(s.T(), "Generation complete")
+	s.NotContains(result.Stdout+result.Stderr, "Unknown builtin exclusion")
+}
