@@ -783,7 +783,7 @@ ai-rulez generate [config-path] [flags]
 
 | Flag               | Type   | Default       | Description         |
 | ------------------ | ------ | ------------- | ------------------- |
-| `--profile` / `-p` | string | (from config) | Profile to generate |
+| `--profile` / `-p` | string | (from config) | Profile to generate; a comma-separated list composes several ([Composing Profiles](domains.md#composing-profiles)) |
 
 **General Flags:**
 
@@ -1003,15 +1003,16 @@ ai-rulez tokens [config-file] [flags]
 | --------------------- | ------- | ------------------ | ---------------------------------------------------------------- |
 | `--json` / `-j`       | boolean | false              | Emit the report as JSON                                          |
 | `--budget` / `-b`     | int     | 0                  | Exit 2 when the headline always-loaded count exceeds this ceiling |
-| `--compare-profiles`  | strings | none               | Render these profiles in one process and print a comparison table |
+| `--compare-profiles`  | strings | none               | One profile per column of a comparison table; repeat the flag per column |
 | `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
-| `--profile` / `-p`    | string  | configured default | Profile to report on                                             |
+| `--profile` / `-p`    | string  | configured default | Profile to report on; a comma-separated list composes several    |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts             |
 
 ```bash
 ai-rulez tokens
 ai-rulez tokens --json
-ai-rulez tokens --compare-profiles base,backend,full
+ai-rulez tokens --compare-profiles base --compare-profiles backend --compare-profiles full
+ai-rulez tokens --compare-profiles base --compare-profiles base,backend
 ai-rulez tokens --budget 6000
 ```
 
@@ -1048,6 +1049,9 @@ failed".
 - **Not additive across runtimes.** One session loads one runtime's root
   instructions file, so emitting both `CLAUDE.md` and `AGENTS.md` costs one of
   them. The headline is the largest single runtime, not the sum.
+- **Noisy in the provenance lines.** A blake3 hex digest is incompressible, and two
+  digests of the same length do not tokenize to the same count, so a few tokens per
+  artifact move between two profiles for no reason you can act on.
 
 `--tokenizer estimate` replaces the tokenizer with a bytes-per-token ratio. It is
 labeled as an estimate in the output because the real ratio has been measured
