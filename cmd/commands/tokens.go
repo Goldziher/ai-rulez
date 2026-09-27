@@ -55,11 +55,13 @@ func init() {
 	TokensCmd.Flags().BoolVarP(&tokensJSON, "json", "j", false, "Emit the report as JSON")
 	TokensCmd.Flags().IntVarP(&tokensBudget, "budget", "b", 0,
 		"Fail when the headline always-loaded count exceeds this ceiling")
-	TokensCmd.Flags().StringSliceVar(&tokensCompareProfiles, "compare-profiles", nil,
-		"Render these profiles in one process and print a comparison table")
+	// StringArray, not StringSlice: a comma composes several profiles into one
+	// value, so it cannot also mean "next entry". Repeat the flag per column.
+	TokensCmd.Flags().StringArrayVar(&tokensCompareProfiles, "compare-profiles", nil,
+		"Report this profile as one column of a comparison table; repeat per column")
 	TokensCmd.Flags().StringVar(&tokensTokenizer, "tokenizer", tokens.CounterCL100KBase,
 		"Token counter to use: "+strings.Join(tokens.Names(), " or "))
-	TokensCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to report on")
+	TokensCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to report on, or a comma-separated list to compose several")
 	TokensCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 

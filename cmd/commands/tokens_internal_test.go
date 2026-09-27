@@ -160,6 +160,40 @@ func TestRunTokens_CompareProfilesTable(t *testing.T) {
 	assert.Contains(t, table, "headline")
 }
 
+// TestRunTokens_CompareComposedProfiles covers the case composition exists for:
+// comparing a shared base against that base plus a role's extra domains. Each
+// column is one --compare-profiles occurrence, which is why the flag is a string
+// array rather than a comma-splitting slice — a comma composes here.
+func TestRunTokens_CompareComposedProfiles(t *testing.T) {
+	resetTokensFlags(t)
+	tokensCompareProfiles = []string{"backend", "backend,frontend"}
+	tokensJSON = true
+
+	var out bytes.Buffer
+	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	require.NoError(t, err)
+
+	var reports []map[string]any
+	require.NoError(t, json.Unmarshal(out.Bytes(), &reports))
+	require.Len(t, reports, 2)
+	assert.Equal(t, "backend", reports[0]["profile"])
+	assert.Equal(t, "backend,frontend", reports[1]["profile"])
+	assert.Greater(t, reports[1]["headline_always"].(float64), reports[0]["headline_always"].(float64),
+		"composing the frontend profile in adds its rule to the always-loaded surface")
+}
+
+func TestTokensCommand_CompareProfilesDoesNotSplitOnComma(t *testing.T) {
+	resetTokensFlags(t)
+	flag := TokensCmd.Flags().Lookup("compare-profiles")
+	require.NotNil(t, flag)
+	require.NoError(t, flag.Value.Set("base,backend"))
+	// A string array appends once it has been set, so clear the flag's own state
+	// too or the next test to touch it inherits this value.
+	t.Cleanup(func() { flag.Changed = false })
+	assert.Equal(t, []string{"base,backend"}, tokensCompareProfiles,
+		"a comma composes profiles, so it must not be read as a separator between columns")
+}
+
 func TestRunTokens_RejectsUnknownTokenizer(t *testing.T) {
 	resetTokensFlags(t)
 	tokensTokenizer = "gpt-9"
