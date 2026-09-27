@@ -102,6 +102,8 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
 		}
+		cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindSidecar, sidecar.Kind, "").
+			AddPart(config.PartKindSidecarDocument, sidecar.Kind, "", rendered.Body)
 		outputs = append(outputs, config.OutputFile{
 			Path:           outputPath,
 			Content:        rendered.Body,
@@ -173,7 +175,8 @@ func (g *Generator) renderItem(typ string, spec *OutputSpec, item config.Content
 		})
 	}
 
-	body, err := g.renderItemBody(typ, spec, item, content, cfg, outputPath)
+	analysis := cfg.Analysis.Begin(outputPath, g.Spec.Name, outputKindForType(typ), itemID, item.Path)
+	body, err := g.renderItemBody(typ, spec, item, content, cfg, outputPath, newPartRecorder(analysis))
 	if err != nil {
 		return nil, err
 	}
@@ -215,29 +218,44 @@ func sanitizeAgentID(name string) string {
 // renderItemBody composes the body of a per-item file from the spec's
 // section list. Closed-set dispatch — adding a new section needs a new
 // constant in spec.go and a new case here.
-func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string) (string, error) {
+func (g *Generator) renderItemBody(typ string, spec *OutputSpec, item config.ContentFile, content *config.ContentTree, cfg *config.Config, outputPath string, recorder *partRecorder) (string, error) {
 	var b strings.Builder
 	if spec.Body == nil {
 		return "", nil
 	}
 
 	for _, section := range spec.Body.Sections {
+		start := recorder.mark(&b)
 		switch section {
 		case SectionBodyFrontmatter:
-			if err := g.writeFrontmatter(&b, typ, spec.Frontmatter, item, cfg); err != nil {
+			frontmatter, err := g.writeFrontmatter(&b, typ, spec.Frontmatter, item, cfg)
+			if err != nil {
 				return "", err
 			}
+			recorder.section(config.PartKindItemFrontmatter, "frontmatter", item.Path, start, &b)
+			// name and description are reported apart from the rest of the
+			// frontmatter because a harness loads them on a different schedule
+			// from the block that carries them: the name appears in every skill
+			// listing, the description only in some harness modes.
+			recorder.literal(config.PartKindItemName, "name", item.Path, frontmatterString(frontmatter, "name"))
+			recorder.literal(config.PartKindItemDescription, "description", item.Path, frontmatterString(frontmatter, "description"))
 		case SectionBodyContent:
 			b.WriteString(item.Content)
+			recorder.section(config.PartKindItemBody, "body", item.Path, start, &b)
 		case SectionBodyResourceIndex:
 			b.WriteString(presets.RenderSkillResourcesIndex(&item))
+			recorder.section(config.PartKindItemResourceIndex, "resource_index", item.Path, start, &b)
 		case SectionBodyTargetedRules:
 			writeTargetedSection(&b, "Rules", presets.FilterContentByExplicitTargetsExported(content.Rules, outputPath, cfg.BaseDir), true, cfg.IsCompact())
+			recorder.section(config.PartKindItemTargetedRules, "targeted_rules", item.Path, start, &b)
 		case SectionBodyTargetedContext:
 			writeTargetedSection(&b, "Context", presets.FilterContentByExplicitTargetsExported(content.Context, outputPath, cfg.BaseDir), false, cfg.IsCompact())
+			recorder.section(config.PartKindItemTargetedContext, "targeted_context", item.Path, start, &b)
 		}
 	}
-	return b.String(), nil
+	rendered := b.String()
+	recorder.flush(rendered)
+	return rendered, nil
 }
 
 // writeTargetedSection writes a "## <Heading>" section listing the included
@@ -289,17 +307,19 @@ func writeTargetedSection(b *strings.Builder, heading string, items []config.Con
 // YAML map keys are sorted alphabetically by yaml.v3 on marshal, so insertion
 // order here only matters when constants override a computed value (they
 // don't in any current builtin).
-func (g *Generator) writeFrontmatter(b *strings.Builder, typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) error {
+// It returns the assembled frontmatter map so callers can report on individual
+// fields without re-parsing the rendered YAML.
+func (g *Generator) writeFrontmatter(b *strings.Builder, typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) (map[string]any, error) {
 	frontmatter := g.buildFrontmatterMap(typ, spec, item, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
-		return fmt.Errorf("marshal frontmatter: %w", err)
+		return nil, fmt.Errorf("marshal frontmatter: %w", err)
 	}
 	b.WriteString("---\n")
 	b.Write(yamlData)
 	b.WriteString("---\n\n")
-	return nil
+	return frontmatter, nil
 }
 
 // buildFrontmatterMap assembles the frontmatter map. Composition order is
@@ -411,7 +431,11 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 	var b strings.Builder
 
 	rootRelPath := g.Spec.Root.File
+	outputPath := filepath.Join(baseDir, rootRelPath)
+	recorder := newPartRecorder(cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindRoot, "", ""))
+
 	for _, section := range g.Spec.Root.Sections {
+		start := recorder.mark(&b)
 		switch section {
 		case SectionRootHeader:
 			ruleCount, agentCount := countContent(content)
@@ -435,18 +459,26 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 				b.WriteString("\n\n")
 			}
 		case SectionRootRulesInline:
-			writeInlineRules(&b, content, cfg.IsCompact())
+			// Rules and context are recorded per entry, not per section: a cost
+			// report has to be able to name the rule that is expensive.
+			writeInlineRules(&b, content, cfg.IsCompact(), recorder)
+			continue
 		case SectionRootContextInline:
-			writeInlineContext(&b, content, cfg.IsCompact())
+			writeInlineContext(&b, content, cfg.IsCompact(), recorder)
+			continue
 		case SectionRootAgentsDelegation:
 			allAgents := presets.AllAgents(content)
 			presets.RenderAgentsSectionExported(&b, content, allAgents)
 		}
+		recorder.section(partKindForRootSection(section), section, "", start, &b)
 	}
 
+	rendered := b.String()
+	recorder.flush(rendered)
+
 	return config.OutputFile{
-		Path:    filepath.Join(baseDir, rootRelPath),
-		Content: b.String(),
+		Path:    outputPath,
+		Content: rendered,
 	}, nil
 }
 
@@ -464,13 +496,14 @@ func countContent(content *config.ContentTree) (rules, agents int) {
 // writeInlineRules mirrors the "## Rules" block produced by the legacy
 // renderClaudeMarkdown — heading + entries with **Priority:** when set and
 // markdown-processed content.
-func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact bool) {
+func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact bool, recorder *partRecorder) {
 	allRules := presets.AllInlineRules(content)
 	if len(allRules) == 0 {
 		return
 	}
 	b.WriteString("## Rules\n\n")
 	for _, rule := range allRules {
+		start := recorder.mark(b)
 		b.WriteString("### ")
 		b.WriteString(rule.Name)
 		b.WriteString("\n\n")
@@ -481,6 +514,7 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact b
 		}
 		b.WriteString(markdown.ProcessEmbeddedContent(rule.Content))
 		b.WriteString("\n\n")
+		recorder.section(config.PartKindRootRule, rule.Name, rule.Path, start, b)
 	}
 }
 
@@ -488,13 +522,14 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact b
 // renderClaudeMarkdown, including the per-entry "summary" extras handling. When
 // compact is true the per-entry summary line is suppressed, mirroring the
 // compact suppression of the inline-rules priority line.
-func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact bool) {
+func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact bool, recorder *partRecorder) {
 	allContext := presets.AllInlineContext(content)
 	if len(allContext) == 0 {
 		return
 	}
 	b.WriteString("## Context\n\n")
 	for _, ctx := range allContext {
+		start := recorder.mark(b)
 		b.WriteString("### ")
 		b.WriteString(ctx.Name)
 		b.WriteString("\n\n")
@@ -504,5 +539,6 @@ func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact
 		}
 		b.WriteString(markdown.ProcessEmbeddedContent(ctx.Content))
 		b.WriteString("\n\n")
+		recorder.section(config.PartKindRootContext, ctx.Name, ctx.Path, start, b)
 	}
 }

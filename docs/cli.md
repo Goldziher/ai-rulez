@@ -13,6 +13,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
+| `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez version`              | Show version                                        |
 | `ai-rulez mcp`                  | Start MCP server                                    |
 | `ai-rulez builtins list`        | List available built-in domains                     |
@@ -782,7 +783,7 @@ ai-rulez generate [config-path] [flags]
 
 | Flag               | Type   | Default       | Description         |
 | ------------------ | ------ | ------------- | ------------------- |
-| `--profile` / `-p` | string | (from config) | Profile to generate |
+| `--profile` / `-p` | string | (from config) | Profile to generate; a comma-separated list composes several ([Composing Profiles](domains.md#composing-profiles)) |
 
 **General Flags:**
 
@@ -978,6 +979,92 @@ Recursive verification treats a marketplace root and its members as one atomic
 producer. Consumer-only plugin installation declarations are skipped. Missing
 authoring configuration is ignored only with `--if-configured`; stale, missing,
 or invalid generated outputs still fail verification.
+
+## Tokens Command
+
+### `ai-rulez tokens [config-file]`
+
+Report how many prompt tokens the generated configuration costs, split by when an
+agent loads it.
+
+Artifacts are measured as rendered strings in memory — nothing is read back off
+disk, so the report is correct even before `generate` has ever run, and a stale
+output tree cannot corrupt the numbers.
+
+**Syntax:**
+
+```bash
+ai-rulez tokens [config-file] [flags]
+```
+
+**Flags:**
+
+| Flag                  | Type    | Default            | Description                                                      |
+| --------------------- | ------- | ------------------ | ---------------------------------------------------------------- |
+| `--json` / `-j`       | boolean | false              | Emit the report as JSON                                          |
+| `--budget` / `-b`     | int     | 0                  | Exit 2 when the headline always-loaded count exceeds this ceiling |
+| `--compare-profiles`  | strings | none               | One profile per column of a comparison table; repeat the flag per column |
+| `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
+| `--profile` / `-p`    | string  | configured default | Profile to report on; a comma-separated list composes several    |
+| `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts             |
+
+```bash
+ai-rulez tokens
+ai-rulez tokens --json
+ai-rulez tokens --compare-profiles base --compare-profiles backend --compare-profiles full
+ai-rulez tokens --compare-profiles base --compare-profiles base,backend
+ai-rulez tokens --budget 6000
+```
+
+### Reading the report
+
+Output is grouped per runtime (one provider's files) and, within a runtime, by
+when the surface is loaded:
+
+| Bucket        | Meaning                                                                       |
+| ------------- | ----------------------------------------------------------------------------- |
+| `always`      | Paid on every request: the root instructions file, skill and command names, agent names and descriptions |
+| `conditional` | Paid in some harness modes only — skill and command descriptions              |
+| `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
+| `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
+
+The root instructions file is broken down per section, and rules and context are
+listed individually so an expensive one can be named. Skill names, descriptions and
+bodies are separate lines: they are loaded on different schedules, and a single
+per-file total hides which part is actually costing anything.
+
+`--budget` compares against the headline figure and exits `2` when it is exceeded,
+which is distinct from `1` so a hook can tell "over budget" from "the command
+failed".
+
+### What the numbers are not
+
+- **Approximate.** Claude's tokenizer is not published. The default counter uses
+  the embedded `cl100k_base` BPE vocabulary, which measured 8% low against one
+  real 19,230-byte instruction file. Use the numbers to compare profiles, and to
+  compare before an edit against after — not as absolute truth.
+- **Not a session total.** ai-rulez counts only the artifacts it generates. The
+  agent harness adds a fixed floor of its own system prompt and tool schemas, plus
+  per-artifact overhead, neither of which ai-rulez can see.
+- **Not additive across runtimes.** One session loads one runtime's root
+  instructions file, so emitting both `CLAUDE.md` and `AGENTS.md` costs one of
+  them. The headline is the largest single runtime, not the sum.
+- **Noisy in the provenance lines.** A blake3 hex digest is incompressible, and two
+  digests of the same length do not tokenize to the same count, so a few tokens per
+  artifact move between two profiles for no reason you can act on.
+
+`--tokenizer estimate` replaces the tokenizer with a bytes-per-token ratio. It is
+labeled as an estimate in the output because the real ratio has been measured
+between 1.81 and 5.30 bytes per token across whole trees, so a tree-level total
+from it can be wrong by a factor of three.
+
+### Acting on the report
+
+The `agents_delegation` line under the root instructions file is the cheapest thing to
+cut: it restates every agent's name and description in a file loaded on every request,
+while `.claude/agents/*.md` already carry the same text on demand. Drop it with
+`builtins = ["!agent-delegation"]` — the agent files are still generated, so nothing is
+lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-files).
 
 ## Validation Command
 
