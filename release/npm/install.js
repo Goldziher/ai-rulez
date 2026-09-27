@@ -298,9 +298,9 @@ async function install(isPostInstall = false) {
 
     const nodeVersion = process.version;
     const majorVersion = parseInt(nodeVersion.slice(1).split(".")[0], 10);
-    if (majorVersion < 20) {
+    if (majorVersion < 22) {
       console.error(
-        `Error: Node.js ${nodeVersion} is not supported. Please upgrade to Node.js 20 or later.`,
+        `Error: Node.js ${nodeVersion} is not supported. Please upgrade to Node.js 22 or later.`,
       );
       process.exit(1);
     }
