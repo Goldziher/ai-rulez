@@ -362,6 +362,22 @@ builtins = ["rust", "python", "pyo3", "security", "git-workflow", "default-comma
 builtins = ["rust", "!ai-governance"]
 ```
 
+#### Drop the agents roster from root files
+
+`agent-delegation` is auto-included, and it is what makes every root instructions file
+(`CLAUDE.md`, `AGENTS.md`, …) end in an `## Agents` section listing each agent's name and
+description. Exclude the domain to drop that section:
+
+```toml
+builtins = ["!agent-delegation"]
+```
+
+The per-agent files (`.claude/agents/*.md`) are still generated, so no capability is lost — the
+roster is a second copy of text the agent files already carry, and the root file is the copy read
+on every request. On a tree with 32 agents the roster measures about 1,100 always-loaded tokens;
+`ai-rulez tokens` reports it as the `agents_delegation` line so you can see the figure for your own
+tree before deciding.
+
 #### Exclude specific rules from a builtin domain
 
 When using the array form of `builtins`, you can exclude a single rule from a domain while keeping the rest:

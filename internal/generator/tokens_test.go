@@ -191,6 +191,69 @@ func TestTokenReport_AgentsRosterIsItsOwnSection(t *testing.T) {
 		"the roster renders after rules and context, ahead of the provenance residual")
 }
 
+// TestAgentsRosterExclusion proves that the "## Agents" roster can already be
+// suppressed from configuration, with no new knob: it renders only when the
+// agent-delegation builtin domain is loaded (internal/generator/presets/helpers.go,
+// renderAgentsSection), so "!agent-delegation" drops it. The roster restates every
+// agent's name and description in a file loaded on every request — measured at 1,094
+// always-loaded tokens on a 32-agent tree — while the per-agent files that carry the
+// same text on demand are still generated, so the duplication costs nothing to drop.
+func TestAgentsRosterExclusion(t *testing.T) {
+	tests := []struct {
+		name       string
+		builtins   string
+		wantRoster bool
+	}{
+		{
+			name:       "roster renders when the builtin is loaded",
+			builtins:   "builtins:\n  - agent-delegation\n",
+			wantRoster: true,
+		},
+		{
+			// A bare "!name" suppresses an auto-included builtin, so this list loads
+			// the other six auto-includes and no agent-delegation.
+			name:       "roster is gone when the builtin is excluded",
+			builtins:   "builtins:\n  - \"!agent-delegation\"\n",
+			wantRoster: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := tokensFixtureWith(t, func(original string) string {
+				return original + tt.builtins
+			})
+			outputs, _, err := NewGenerator(cfg).collectOutputs("backend")
+			require.NoError(t, err)
+
+			root := ""
+			agentFile := ""
+			for _, output := range outputs {
+				switch {
+				case filepath.Base(output.Path) == "CLAUDE.md":
+					root = output.Content
+				case strings.HasSuffix(filepath.ToSlash(output.Path), ".claude/agents/reviewer.md"):
+					agentFile = output.Content
+				}
+			}
+			require.NotEmpty(t, root, "the claude preset always writes a root instructions file")
+
+			if tt.wantRoster {
+				assert.Contains(t, root, "## Agents")
+				assert.Contains(t, root, "- **reviewer**")
+			} else {
+				assert.NotContains(t, root, "## Agents")
+				assert.NotContains(t, root, "- **reviewer**")
+			}
+
+			assert.NotEmpty(t, agentFile,
+				"excluding the roster must not stop the per-agent file from being generated")
+			assert.Contains(t, agentFile, "reviewer",
+				"the agent file still carries the name the roster duplicated")
+		})
+	}
+}
+
 func childLabels(entry Entry) []string {
 	labels := make([]string, 0, len(entry.Children))
 	for _, child := range entry.Children {
