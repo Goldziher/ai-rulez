@@ -774,8 +774,8 @@ func TestHeaderConfig_ShowTimestamp(t *testing.T) {
 		header *config.HeaderConfig
 		want   bool
 	}{
-		{name: "nil config defaults to enabled", header: nil, want: true},
-		{name: "unset field defaults to enabled", header: &config.HeaderConfig{}, want: true},
+		{name: "nil config defaults to disabled", header: nil, want: false},
+		{name: "unset field defaults to disabled", header: &config.HeaderConfig{}, want: false},
 		{name: "explicit true", header: &config.HeaderConfig{Timestamp: &enabled}, want: true},
 		{name: "explicit false", header: &config.HeaderConfig{Timestamp: &disabled}, want: false},
 	}
