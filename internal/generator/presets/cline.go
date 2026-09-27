@@ -86,7 +86,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	}
 
 	// Generate skill files to .cline/skills/
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 

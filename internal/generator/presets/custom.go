@@ -134,7 +134,7 @@ func (g *CustomPresetGenerator) prepareTemplateData(content *config.ContentTree,
 	// Combine all content
 	allRules := allInlineRules(content)
 	allContext := allInlineContext(content)
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 
 	// Convert to template-friendly structures
 	rules := make([]map[string]interface{}, 0, len(allRules))

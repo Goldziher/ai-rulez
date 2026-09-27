@@ -117,7 +117,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	})
 
 	// Generate skill files to .agents/skills/
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 

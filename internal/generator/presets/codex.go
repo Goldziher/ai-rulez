@@ -86,7 +86,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	})
 
 	// Combine all skills from root and domains
-	allSkills := combineContentFiles(content.Skills, getAllDomainSkills(content))
+	allSkills := allSkills(content)
 
 	// Generate skill files to .codex/skills/
 	for _, skill := range allSkills {
@@ -130,7 +130,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	})
 
 	// Generate command files to .codex/commands/
-	allCommands := combineContentFiles(content.Commands, getAllDomainCommands(content))
+	allCommands := allCommands(content)
 	for _, command := range allCommands {
 		if !g.shouldIncludeCommand(command) {
 			continue
