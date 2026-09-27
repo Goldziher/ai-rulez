@@ -51,21 +51,26 @@ Write MCP launch commands and hooks once with the canonical `${PLUGIN_ROOT}` var
 
 ## What Ships Out of the Box
 
-ai-rulez isn't just a config generator. It ships with **33 builtin domains** containing opinionated rules, agents, and workflows that establish a professional development baseline immediately.
+ai-rulez isn't just a config generator. It ships with **33 builtin domains** containing opinionated rules, skills, agents, and workflows that establish a professional development baseline immediately.
 
-### Builtin Rules (auto-included)
+### Auto-Included Domains
 
-These activate automatically. No configuration needed.
+Set `builtins` in your config — `true` for every domain, or a list to pick — and these seven come along
+without being named, unless you exclude one with `!`. Omit the `builtins` field entirely and no builtin
+content is loaded at all.
 
-| Domain               | What it enforces                                                                                                                                    |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **ai-governance**    | No AI signatures in commits. Concise communication. Systematic debugging. Verification before claiming success. Critical review of subagent output. |
-| **code-quality**     | Anti-patterns prevention. Complexity limits. Dead code removal. Error handling standards. Readability.                                              |
-| **testing**          | TDD workflow (red-green-refactor, no exceptions). Testing anti-patterns. Meaningful assertions. Test independence.                                  |
-| **git-workflow**     | Atomic commits. Conventional commit messages. Safe operations. Branch hygiene.                                                                      |
-| **security**         | Secrets handling. Input validation. Dependency auditing. Least privilege.                                                                           |
-| **token-efficiency** | Task runner usage. Incremental approach. Context preservation. Batch operations.                                                                    |
-| **agent-delegation** | Multi-agent coordination and delegation patterns.                                                                                                   |
+Each one ships **always-on rules**, which are inlined into `CLAUDE.md` and so are read on every request,
+and in some cases **on-demand skills**, whose body costs nothing until the assistant loads it.
+
+| Domain               | Always-on rules                                                                                                            | On-demand skills                        |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
+| **ai-governance**    | No AI signatures in commits. Concise communication. Read before write. Minimal changes. Systematic debugging. Verification before claiming success. Critical review of subagent output. Reasoning stated for non-obvious decisions. | —                                       |
+| **git-workflow**     | Atomic commits. Conventional commit messages. Safe operations. Branch hygiene.                                             | —                                       |
+| **security**         | Secrets handling. Input validation. Least privilege.                                                                       | `owasp-quick-reference`, `dependency-awareness` |
+| **token-efficiency** | Context preservation. Output awareness.                                                                                    | `task-runner`, `incremental-approach`   |
+| **testing**          | Tests ship with the behaviour change; failing test before a bug fix; full suite before committing.                         | `tdd-workflow`, `testing-conventions`   |
+| **code-quality**     | —                                                                                                                          | `code-quality-standards`, `error-handling` |
+| **agent-delegation** | Multi-agent coordination and delegation patterns (emitted as context).                                                      | —                                       |
 
 ### Builtin Agents
 
@@ -95,11 +100,15 @@ Enable these based on your stack:
 builtins = ["rust", "python", "pyo3", "cicd", "docker", "default-commands"]
 ```
 
-Language, binding, `polyglot-bindings`, and `security` (OWASP + dependency) conventions are emitted as
-**on-demand Agent Skills** (`.claude/skills/<id>/SKILL.md`) rather than inlined into `CLAUDE.md`, so the
-always-loaded file stays small and the conventions load only when relevant. Always-on rules
-(`code-quality`, `testing`, `git-workflow`, `ai-governance`, …) remain inline. `!domain` and
-`!domain/name` exclusions work for skill entries too.
+Anything scoped to one technology or one activity is emitted as an **on-demand Agent Skill**
+(`.claude/skills/<id>/SKILL.md`) rather than inlined into `CLAUDE.md`, so the always-loaded file stays
+small and the guidance arrives only when it is relevant: every language and binding domain,
+`polyglot-bindings`, `security`'s OWASP and dependency references, all of `code-quality`, most of
+`testing`, `token-efficiency`'s `task-runner` and `incremental-approach`, and the whole of `docker` and
+`observability`. What stays inline is behavioural governance that has to land before the first file is
+read — `ai-governance`, `git-workflow`, `security`'s secrets and boundary rules, and the one `testing`
+rule that says tests ship with the change. `!domain` and `!domain/name` exclusions work for skill
+entries too, so an exclusion written against a rule keeps working after it becomes a skill.
 
 ## Content Types
 

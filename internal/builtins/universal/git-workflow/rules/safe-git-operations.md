@@ -2,6 +2,4 @@
 priority: critical
 ---
 
-# Safe Git Operations
-
-Never force-push to shared branches. Always pull before pushing. Use `--force-with-lease` instead of `--force` when necessary. Confirm destructive operations with the user.
+Never force-push a shared branch. Pull before pushing. Use `--force-with-lease`, never a bare `--force`. Confirm destructive operations with the user first.
