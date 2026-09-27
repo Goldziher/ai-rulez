@@ -394,16 +394,19 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 	}
 }
 
-// resolveProfile determines which profile to use
+// resolveProfile determines which profile to use. A composed value
+// ("base,backend") is canonicalized but kept composed: it is resolved to the union
+// of its elements' domains later, and reporting it verbatim keeps the log and the
+// dry-run header honest about what was asked for.
 func (g *Generator) resolveProfile(profile string) string {
 	// 1. Use provided profile if specified
 	if profile != "" {
-		return profile
+		return config.CanonicalProfile(profile)
 	}
 
 	// 2. Use default profile from config if specified
 	if g.config.Default != "" {
-		return g.config.Default
+		return config.CanonicalProfile(g.config.Default)
 	}
 
 	// 3. Use "default" as fallback
@@ -474,14 +477,20 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 		}
 		sort.Strings(availableProfiles)
 
+		// Name the elements that are actually unknown. For a single name that is
+		// the value itself; for a composed value it is the difference between
+		// "one of these three is wrong" and knowing which.
+		unknown := g.config.UnknownProfileNames(profile)
+
 		return nil, oops.
 			With("profile", profile).
+			With("unknown_profiles", unknown).
 			With("available_profiles", availableProfiles).
 			Hint(fmt.Sprintf(
 				"Available profiles: %v\nUse 'default' for the built-in profile (all content when no profiles are defined; root content plus builtin and FromInclude domains when profiles are defined).",
 				availableProfiles,
 			)).
-			Errorf("profile not found: %s", profile)
+			Errorf("profile not found: %s", strings.Join(unknown, ", "))
 	}
 
 	// Get content for the profile (includes root + specified domains)

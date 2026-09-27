@@ -302,6 +302,51 @@ frontend profile gets:
   - frontend-specific rules from domains/frontend/
 ```
 
+## Composing Profiles
+
+Several profiles can be selected at once by separating their names with commas. The
+result is the union of their domains, de-duplicated, in the order the domains are first
+named:
+
+```bash
+ai-rulez generate --profile base,backend
+ai-rulez tokens --profile base,backend
+```
+
+This is what lets one profile hold the content everybody installs while the others add
+only their own extras:
+
+```yaml
+profiles:
+  base: [conventions, security]
+  backend: [api, database]
+  frontend: [web]
+```
+
+`--profile base,backend` and `--profile base,frontend` then cover both roles without a
+hand-written `base-backend` and `base-frontend` profile each — the combinatorial set a
+third role would double.
+
+A composed value works anywhere a profile name does, including the config's own default
+and a scope's `profile`:
+
+```yaml
+default: base,backend
+```
+
+Rules:
+
+- **Every element must be a defined profile.** An unknown one is an error naming the
+  element that was wrong, not the whole value.
+- **Profile values name domains, never other profiles.** Composition is one level deep,
+  so there is no nesting and no cycle to worry about.
+- **`default` composes only if you defined it.** The built-in `default` profile is a
+  fallback rule rather than a domain list, so it is meaningful only on its own.
+- **Whitespace and empty elements are ignored**: `base, backend` and `base,backend,` both
+  select the same two profiles. A value that is nothing but separators selects no profile
+  and is reported as not found.
+- **A profile name may not contain a comma**, since it could then never be selected.
+
 ## Advanced Profile Combinations
 
 ### Multi-Level Profiles
