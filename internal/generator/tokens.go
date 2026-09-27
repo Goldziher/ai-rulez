@@ -689,6 +689,9 @@ func reportNotes(report *TokenReport) []string {
 		"\"conditional\" is surface some harness modes carry and others do not. Skill and " +
 			"command descriptions are the measured case: a non-interactive Claude Code run " +
 			"does not carry them, an interactive session surfaces them for user-invocable skills.",
+		"Provenance hash lines are content-dependent: a blake3 hex digest is incompressible, " +
+			"and two digests of the same length tokenize to slightly different counts. Expect a " +
+			"few tokens of movement per artifact between two profiles for that reason alone.",
 	}
 	if report.Tokenizer.Estimate {
 		notes = append(notes, "This run used a bytes-per-token estimate, not a tokenizer. "+
