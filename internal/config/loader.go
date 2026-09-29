@@ -22,6 +22,7 @@ const (
 	aiRulezDirName     = ".ai-rulez"
 	configTOMLFilename = "config.toml"
 	configYAMLFilename = "config.yaml"
+	configYMLFilename  = "config.yml"
 	configJSONFilename = "config.json"
 	// configFilenameYAMLV2 is the legacy V2 flat-file YAML config name.
 	configFilenameYAMLV2 = "ai-rulez.yaml"
@@ -196,7 +197,7 @@ func looksLikeProjectRoot(dir string) bool {
 }
 
 func hasConfigFile(dir string) bool {
-	for _, name := range []string{configTOMLFilename, configYAMLFilename, "config.yml", configJSONFilename} {
+	for _, name := range []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename} {
 		if info, err := os.Stat(filepath.Join(dir, name)); err == nil && !info.IsDir() {
 			return true
 		}
@@ -386,7 +387,7 @@ func loadConfigFilePath(path string) (*Config, error) {
 		}
 		cfg.ConfigFile = filepath.Base(path)
 		return cfg, nil
-	case configYAMLFilename, "config.yml":
+	case configYAMLFilename, configYMLFilename:
 		if filepath.Base(path) == configYAMLFilename {
 			logger.Warn("YAML config is deprecated; run 'ai-rulez migrate v4' to convert to TOML")
 		}
@@ -1186,8 +1187,11 @@ func loadLegacyMCPFile(configDir string) map[string]*MCPServer {
 	return nil
 }
 
-// SaveConfig saves a configuration back to YAML or JSON format.
-// For YAML files, it uses yaml.Node round-tripping to preserve comments,
+// SaveConfig writes a configuration back to its original on-disk format.
+// The target format is taken from cfg.ConfigFile when it names a file present in
+// configDir (populated by the loader), falling back to probing config.toml,
+// config.yaml, then config.json. TOML is written with MarshalTOML (comments are
+// not preserved); YAML uses yaml.Node round-tripping to preserve comments,
 // field ordering, and formatting from the original file.
 func SaveConfig(cfg *Config, configDir string) error {
 	if cfg == nil {
@@ -1197,58 +1201,62 @@ func SaveConfig(cfg *Config, configDir string) error {
 			Errorf("config is nil")
 	}
 
-	// Check which format exists (prefer YAML if both exist)
-	yamlPath := filepath.Join(configDir, configYAMLFilename)
-	jsonPath := filepath.Join(configDir, configJSONFilename)
+	targetPath := selectConfigWritePath(cfg, configDir)
 
-	yamlExists := fileExists(yamlPath)
-	jsonExists := fileExists(jsonPath)
-
-	// Determine target format
-	var targetPath string
-	var isYAML bool
-
-	switch {
-	case yamlExists:
-		targetPath = yamlPath
-		isYAML = true
-	case jsonExists:
-		targetPath = jsonPath
-		isYAML = false
-	default:
-		// Default to YAML if neither exists
-		targetPath = yamlPath
-		isYAML = true
-	}
-
-	var data []byte
-	var err error
-
-	if isYAML {
-		data, err = marshalYAMLPreserving(cfg, targetPath)
+	switch filepath.Base(targetPath) {
+	case configTOMLFilename:
+		data, err := MarshalTOML(cfg)
 		if err != nil {
-			return oops.With("path", targetPath).Wrapf(err, "marshal config to YAML")
+			return oops.With("path", targetPath).Wrapf(err, "marshal config to TOML")
 		}
-	} else {
-		data, err = json.Marshal(cfg)
+		return writeConfigAtomically(targetPath, data)
+	case configJSONFilename:
+		data, err := json.Marshal(cfg)
 		if err != nil {
 			return oops.With("path", targetPath).Wrapf(err, "marshal config to JSON")
 		}
+		return writeConfigAtomically(targetPath, data)
+	default:
+		data, err := marshalYAMLPreserving(cfg, targetPath)
+		if err != nil {
+			return oops.With("path", targetPath).Wrapf(err, "marshal config to YAML")
+		}
+		return writeConfigAtomically(targetPath, data)
 	}
+}
 
-	// Write to temporary file first (atomic write)
+// selectConfigWritePath chooses the file SaveConfig rewrites. An explicit
+// cfg.ConfigFile that exists wins; otherwise the same extension preference the
+// loader uses (TOML, then YAML, then JSON). A TOML-only project must never be
+// handed a freshly created config.yaml, which the loader would then shadow.
+func selectConfigWritePath(cfg *Config, configDir string) string {
+	if cfg != nil && cfg.ConfigFile != "" {
+		candidate := filepath.Join(configDir, cfg.ConfigFile)
+		if fileExists(candidate) {
+			return candidate
+		}
+	}
+	for _, name := range []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename} {
+		candidate := filepath.Join(configDir, name)
+		if fileExists(candidate) {
+			return candidate
+		}
+	}
+	return filepath.Join(configDir, configTOMLFilename)
+}
+
+// writeConfigAtomically writes data to path via a temp file + rename.
+func writeConfigAtomically(targetPath string, data []byte) error {
 	tmpPath := targetPath + ".tmp"
 	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
 		return oops.With("path", tmpPath).Wrapf(err, "write temporary config file")
 	}
 
-	// Rename temporary file to actual config file (atomic)
 	if err := os.Rename(tmpPath, targetPath); err != nil {
 		//nolint:gosec,errcheck // temp file cleanup is best-effort
 		_ = os.Remove(tmpPath)
 		return oops.With("src", tmpPath).With("dst", targetPath).Wrapf(err, "rename config file")
 	}
-
 	return nil
 }
 

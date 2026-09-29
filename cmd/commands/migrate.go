@@ -8,7 +8,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	toml "github.com/pelletier/go-toml/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -53,7 +52,7 @@ func runMigrateV4() {
 
 	cfg.Version = "4.0"
 
-	data, err := marshalConfigTOML(cfg)
+	data, err := config.MarshalTOML(cfg)
 	if err != nil {
 		logger.Error("Failed to marshal TOML", "error", err)
 		os.Exit(1)
@@ -70,73 +69,6 @@ func runMigrateV4() {
 	fmt.Println("\n✅ Migration complete!")
 	fmt.Println("   Config: .ai-rulez/config.toml")
 	fmt.Println("   Version: 4.0")
-}
-
-type tomlOutput struct {
-	Version         string                        `toml:"version"`
-	Name            string                        `toml:"name"`
-	Description     string                        `toml:"description,omitempty"`
-	Gitignore       *bool                         `toml:"gitignore,omitempty"`
-	Default         string                        `toml:"default,omitempty"`
-	Presets         []string                      `toml:"presets,omitempty"`
-	Header          *config.HeaderConfig          `toml:"header,omitempty"`
-	Profiles        map[string][]string           `toml:"profiles,omitempty"`
-	Builtins        interface{}                   `toml:"builtins,omitempty"`
-	Includes        []config.IncludeConfig        `toml:"includes,omitempty"`
-	InstalledSkills []config.InstalledSkillConfig `toml:"installed_skills,omitempty"`
-	Plugins         []config.PluginConfig         `toml:"plugins,omitempty"`
-	Marketplaces    []config.MarketplaceConfig    `toml:"marketplaces,omitempty"`
-	MCPServers      []config.MCPServer            `toml:"mcp_servers,omitempty"`
-}
-
-func marshalConfigTOML(cfg *config.Config) ([]byte, error) {
-	presetNames := make([]string, len(cfg.Presets))
-	for i, p := range cfg.Presets {
-		presetNames[i] = p.GetName()
-	}
-
-	var builtinsVal interface{}
-	if cfg.Builtins != nil {
-		if cfg.Builtins.All != nil {
-			builtinsVal = *cfg.Builtins.All
-		} else if len(cfg.Builtins.Names) > 0 {
-			builtinsVal = cfg.Builtins.Names
-		}
-	}
-
-	// Use inline MCP servers if available, otherwise convert from the map
-	// (which includes servers merged from legacy mcp.yaml)
-	mcpServers := cfg.MCPServersRaw
-	if len(mcpServers) == 0 && len(cfg.MCPServers) > 0 {
-		for _, server := range cfg.MCPServers {
-			mcpServers = append(mcpServers, *server)
-		}
-	}
-
-	output := tomlOutput{
-		Version:         cfg.Version,
-		Name:            cfg.Name,
-		Description:     cfg.Description,
-		Gitignore:       cfg.Gitignore,
-		Default:         cfg.Default,
-		Presets:         presetNames,
-		Header:          cfg.Header,
-		Profiles:        cfg.Profiles,
-		Builtins:        builtinsVal,
-		Includes:        cfg.Includes,
-		InstalledSkills: cfg.InstalledSkills,
-		Plugins:         cfg.Plugins,
-		Marketplaces:    cfg.Marketplaces,
-		MCPServers:      mcpServers,
-	}
-
-	data, err := toml.Marshal(output)
-	if err != nil {
-		return nil, err
-	}
-
-	header := "# AI-Rulez Configuration (migrated to V4 TOML format)\n# Documentation: https://github.com/Goldziher/ai-rulez\n\n"
-	return []byte(header + string(data)), nil
 }
 
 func removeOldConfigFiles(configDir string) {
