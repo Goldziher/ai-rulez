@@ -30,7 +30,9 @@ Presets define how content is formatted and where it's output for different tool
 - `copilot` → generates `.github/copilot-instructions.md`
 - `windsurf` → generates `.windsurf/rules/`
 - `hermes` → generates `.hermes.md`
+- `xum` → generates `AGENTS.md` and `.xum/`
 - And many others...
+- Custom tools: use a template preset or a [provider-backed preset](configuration.md#provider-backed-presets-full-parity) for full parity with built-ins.
 
 ### Profiles
 
@@ -100,7 +102,7 @@ frontend = ["frontend", "qa"]
 - Domain scoping to organize rules by team or subsystem
 - Profile-based customization for different contexts
 - Modular structure to reduce merge conflicts
-- Built-in presets for 13 AI tools
+- Built-in presets for 14 AI tools
 - Custom presets for any tool and format
 - Installed skills from external repositories
 - Remote includes for sharing rules across projects
