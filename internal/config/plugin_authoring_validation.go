@@ -22,7 +22,7 @@ var semverLike = regexp.MustCompile(
 
 // validPluginRuntimes is the set membership test for authored runtime names.
 func isValidPluginRuntime(name string) bool {
-	for _, r := range AllPluginRuntimes {
+	for _, r := range KnownPluginRuntimes {
 		if r == name {
 			return true
 		}
@@ -49,6 +49,11 @@ func (c *Config) validatePluginAuthoring() error {
 	}
 	if err := validatePluginRuntimes(p); err != nil {
 		return err
+	}
+	if pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) {
+		if err := validateAgentPluginsName(p.Name); err != nil {
+			return err
+		}
 	}
 	if err := validatePluginMCP(p); err != nil {
 		return err
@@ -146,7 +151,7 @@ func validatePluginRuntimes(p *PluginAuthoring) error {
 			return oops.
 				With("field", "plugin.runtimes").
 				With("value", r).
-				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes").
+				Hint("Valid runtimes: claude, cursor, codex, gemini, kimi, opencode, factory, hermes, agent-plugins").
 				Errorf("plugin %q lists unknown runtime %q", p.Name, r)
 		}
 		if seen[r] {
@@ -158,6 +163,28 @@ func validatePluginRuntimes(p *PluginAuthoring) error {
 		seen[r] = true
 	}
 	return nil
+}
+
+// agentPluginsName matches the Agent Plugins 1.0.0 plugin name grammar: 1-64
+// lowercase alphanumerics, hyphens, and periods; alphanumeric at both ends; no
+// consecutive hyphens or periods.
+var agentPluginsName = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9.-]{0,62}[a-z0-9])?$`)
+
+// validateAgentPluginsName rejects a plugin name the Agent Plugins standard
+// cannot represent. The name is shared with the manifest, so a violation must
+// fail configuration rather than emit a non-conformant plugin.json.
+func validateAgentPluginsName(name string) error {
+	valid := len(name) >= 1 && len(name) <= 64 &&
+		agentPluginsName.MatchString(name) &&
+		!strings.Contains(name, "--") && !strings.Contains(name, "..")
+	if valid {
+		return nil
+	}
+	return oops.
+		With("field", "plugin.name").
+		With("value", name).
+		Hint("Agent Plugins names are 1-64 chars of [a-z0-9-.] starting and ending alphanumeric, with no '--' or '..'").
+		Errorf("plugin name %q is not valid for the agent-plugins runtime", name)
 }
 
 func validatePluginMCP(p *PluginAuthoring) error {

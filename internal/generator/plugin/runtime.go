@@ -105,7 +105,8 @@ func rewriteRoot(s, runtime string) string {
 		return strings.ReplaceAll(s, rootVarCanonical, rootVarClaude)
 	case config.PluginRuntimeGemini:
 		return strings.ReplaceAll(s, rootVarCanonical, rootVarGemini)
-	case config.PluginRuntimeCursor, config.PluginRuntimeKimi, config.PluginRuntimeCodex:
+	case config.PluginRuntimeCursor, config.PluginRuntimeKimi, config.PluginRuntimeCodex,
+		config.PluginRuntimeAgentPlugins:
 		s = strings.ReplaceAll(s, rootVarCanonical+"/", "./")
 		return strings.ReplaceAll(s, rootVarCanonical, ".")
 	default:

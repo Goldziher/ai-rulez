@@ -430,7 +430,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes"]
+            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"]
           }
         },
         "mcp": {
