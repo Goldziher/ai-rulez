@@ -239,6 +239,12 @@ type Preset struct {
 	Type     PresetType `yaml:"type,omitempty" json:"type,omitempty" toml:"type,omitempty"`
 	Path     string     `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
 	Template string     `yaml:"template,omitempty" json:"template,omitempty" toml:"template,omitempty"`
+
+	// Provider references a declarative provider spec (schema/provider.schema.json)
+	// relative to the project root. A provider-backed preset has full parity with
+	// a built-in preset (root file, skills/agents/commands, frontmatter, MCP
+	// sidecars). When set, Type and Path must be empty.
+	Provider string `yaml:"provider,omitempty" json:"provider,omitempty" toml:"provider,omitempty"`
 }
 
 // PresetType defines the type of custom preset output
@@ -276,6 +282,7 @@ func (p *Preset) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	p.Type = custom.Type
 	p.Path = custom.Path
 	p.Template = custom.Template
+	p.Provider = custom.Provider
 	return nil
 }
 
@@ -310,6 +317,7 @@ func (p *Preset) UnmarshalJSON(data []byte) error {
 	p.Type = custom.Type
 	p.Path = custom.Path
 	p.Template = custom.Template
+	p.Provider = custom.Provider
 	return nil
 }
 
@@ -341,6 +349,10 @@ func (p *Preset) GetName() string {
 func (p *Preset) IsValid() bool {
 	if p.IsBuiltIn() {
 		return isValidBuiltInPreset(p.BuiltIn)
+	}
+	// Provider-backed presets carry a spec reference instead of type/path.
+	if p.Provider != "" {
+		return p.Name != "" && p.Type == "" && p.Path == ""
 	}
 	return p.Name != "" && p.Type != "" && p.Path != ""
 }

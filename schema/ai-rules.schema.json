@@ -51,7 +51,7 @@
           },
           {
             "type": "object",
-            "required": ["name", "type", "path"],
+            "required": ["name"],
             "properties": {
               "name": {
                 "type": "string",
@@ -61,7 +61,7 @@
               "type": {
                 "type": "string",
                 "enum": ["markdown", "directory", "json"],
-                "description": "Output type"
+                "description": "Output type (markdown/directory/json presets)"
               },
               "path": {
                 "type": "string",
@@ -71,9 +71,26 @@
               "template": {
                 "type": "string",
                 "description": "Template content for custom presets"
+              },
+              "provider": {
+                "type": "string",
+                "description": "Project-relative path to a declarative provider spec (schema/provider.schema.json). Gives the preset full built-in parity (root file, skills/agents/commands, MCP sidecars).",
+                "minLength": 1
               }
             },
-            "additionalProperties": false
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "required": ["type", "path"],
+                "not": { "required": ["provider"] },
+                "description": "Template/custom preset"
+              },
+              {
+                "required": ["provider"],
+                "not": { "anyOf": [{ "required": ["type"] }, { "required": ["path"] }] },
+                "description": "Provider-backed preset"
+              }
+            ]
           }
         ]
       }
