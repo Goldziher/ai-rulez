@@ -35,11 +35,13 @@ Write your rules, context, skills, agents, and commands once in `.ai-rulez/`. Ru
 npx ai-rulez@latest init && npx ai-rulez@latest generate
 ```
 
-ai-rulez generates correct, tool-native output for **13 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, and Antigravity. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
+ai-rulez generates correct, tool-native output for **14 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, and Xum. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
+
+For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
 
 ## Generate Plugins, Not Just Config
 
-ai-rulez doesn't only write config into _your_ repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes Agent.
+ai-rulez doesn't only write config into _your_ repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes Agent. An opt-in **Agent Plugins** runtime (`runtimes = ["agent-plugins"]`) additionally emits portable [Agent Plugins 1.0.0](https://agent-plugins.org) packages.
 
 ```bash
 ai-rulez generate --plugin           # write plugin bundles + marketplace.json
@@ -189,6 +191,7 @@ Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez em
 - **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
 - **Windsurf** — `reasoning_effort` in `.windsurf/agents/*.md` frontmatter (per-agent)
 - **Opencode** — `reasoningEffort` in `.opencode/agents/*.md` frontmatter (per-agent)
+- **Xum** — `ai.thinkingLevel` in `.xum/agents/*.md` frontmatter (per-agent)
 
 Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
 

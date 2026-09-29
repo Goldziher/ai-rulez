@@ -269,7 +269,9 @@ gitignore = false  # Manual .gitignore management
 ```
 
 When `true`, generated roots such as `AGENTS.md`, `.mcp.json`, `.claude/`, `.codex/`, `.cursor/`,
-and `.agents/` are added to `.gitignore` to prevent accidental commits. GitHub output is narrower:
+`.opencode/`, and `.agents/` are added to `.gitignore` to prevent accidental commits. Only the
+subdirectories ai-rulez owns are ignored, so a hand-authored `.opencode/settings.json` beside them
+stays tracked. GitHub output is narrower:
 `ai-rulez` ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
 and `.github/skills/` without ignoring all of `.github/`.
 

@@ -89,6 +89,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | opencode     | OPENCODE.md                     |
 | hermes       | .hermes.md                      |
 | antigravity  | .agents/                        |
+| xum          | AGENTS.md and .xum/             |
 
 ## Available Builtins
 
