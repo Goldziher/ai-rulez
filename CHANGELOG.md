@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.14.0] - 2026-09-29
+
+### Added
+
+- **`xum` built-in preset** (#190): generates project files for the [Xum](https://xum.coder.com) coding agent — a shared `AGENTS.md`, skills under `.xum/skills/<id>/SKILL.md`, agent definitions under `.xum/agents/<id>.md` with Xum's frontmatter shape (`ai.model`, `ai.thinkingLevel`, `tools.add`), and stdio MCP servers in `.xum/mcp.jsonc`. Effort tiers `xhigh`/`max` map to `high`, matching Xum's `thinkingLevel` vocabulary; remote (http/sse) MCP servers are skipped with a warning because Xum's command-string format is stdio-only.
+
+- **Provider-backed custom presets** (#191): a `[[presets]]` entry may set `provider = "<project-relative spec path>"` to reference a declarative [provider spec](schema/provider.schema.json) instead of a template. A provider spec carries the full built-in feature set — root instructions file, skills/agents/commands, per-agent frontmatter, effort/model, and MCP sidecars — so custom tools no longer stop at `markdown`/`directory`/`json`. The spec is validated at `validate`/generate time, must stay inside the project root, and its `name` must match the preset's. TOML configs now also accept custom and provider presets as inline tables (`presets = ["claude", { name = "my-tool", provider = "..." }]`), which they previously could not express at all.
+
+- **Agent Plugins 1.0.0 plugin runtime** (#193): the opt-in `agent-plugins` runtime packages a plugin in the portable [Agent Plugins standard](https://agent-plugins.org) form — a root `plugin.json`, a root `skills/` directory, and a root `mcp.json` using the standard's closed server variants (`stdio`, `streamable-http`, `sse`). It is not in the default runtime set, so existing bundles are unchanged; enable it with `runtimes = ["agent-plugins"]`. Authored plugin names are validated against the standard's grammar, and `${PLUGIN_ROOT}`-rooted MCP commands are rewritten to the plugin-relative `./` form the standard requires.
+
+### Fixed
+
+- **CRUD commands wrote `config.yaml` into TOML-only projects** (#192): `skill install`/`remove`, `profile add`/`remove`/`set-default`, `include add`/`remove`, and the MCP `update_config` tool all rewrote the configuration through `SaveConfig`, which only knew about `config.yaml` and `config.json` and fell back to YAML when neither was present. On a V4 project (`config.toml`) this created a spurious `config.yaml` that the loader then shadowed, so the mutation was silently lost. `SaveConfig` now writes back in the file's actual format, preferring `config.toml`, then `config.yaml`/`config.yml`, then `config.json`. **Consequence**: TOML parsing does not round-trip comments, so a hand-commented `config.toml` loses those comments when a CRUD command rewrites it; the file keeps a standard header pointing at the documentation.
+
+### Changed
+
+- `ai-rulez migrate v4` now shares one TOML serializer with `SaveConfig`. The serializer previously flattened every preset to its name, which would have dropped custom/provider presets; it now emits built-in presets as strings and custom/provider presets as inline tables, and preserves all fields (including `defaults`, `scopes`, `compact`, `plugin`, and `marketplace`).
+
 ## [4.13.0] - 2026-09-27
 
 ### Added
