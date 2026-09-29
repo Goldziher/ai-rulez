@@ -181,7 +181,7 @@ name: "`)
 	builder.WriteString(`"
 
 # Presets: built-in tools or custom outputs
-# Built-in presets: claude, cursor, windsurf, copilot, gemini, cline, continue-dev, junie
+# Built-in presets: claude, cursor, windsurf, copilot, gemini, cline, continue-dev, junie, xum
 presets:
   - claude
 
@@ -242,7 +242,7 @@ name = "`)
 	builder.WriteString(`"
 
 # Presets: built-in tools or custom outputs
-# Built-in presets: claude, cursor, windsurf, copilot, gemini, cline, continue-dev, junie
+# Built-in presets: claude, cursor, windsurf, copilot, gemini, cline, continue-dev, junie, xum
 presets = ["claude"]
 
 # Default profile to use when generating

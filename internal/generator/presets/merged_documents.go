@@ -21,6 +21,7 @@ const (
 	MergedDocAgentsSettings = ".agents/settings.json"
 	MergedDocGeminiSettings = ".gemini/settings.json"
 	MergedDocMCPJSON        = ".mcp.json"
+	MergedDocXumMCP         = ".xum/mcp.jsonc"
 )
 
 // mergedDocumentPaths is the registry backing MergedDocumentPaths. Every path a
@@ -31,6 +32,7 @@ var mergedDocumentPaths = []string{
 	MergedDocAgentsSettings,
 	MergedDocGeminiSettings,
 	MergedDocMCPJSON,
+	MergedDocXumMCP,
 }
 
 // MergedDocumentPaths returns every base-relative, slash-separated path that a
