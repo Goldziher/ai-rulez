@@ -471,7 +471,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Version         string                 `toml:"version"`
 		Name            string                 `toml:"name"`
 		Description     string                 `toml:"description"`
-		Presets         []string               `toml:"presets"`
+		Presets         []any                  `toml:"presets"`
 		Default         string                 `toml:"default"`
 		Profiles        map[string][]string    `toml:"profiles"`
 		Gitignore       *bool                  `toml:"gitignore"`
@@ -497,9 +497,9 @@ func loadConfigTOML(path string) (*Config, error) {
 			Wrapf(err, "parse TOML config")
 	}
 
-	presets := make([]Preset, 0, len(raw.Presets))
-	for _, name := range raw.Presets {
-		presets = append(presets, Preset{BuiltIn: name})
+	presets, err := presetsFromTOML(raw.Presets)
+	if err != nil {
+		return nil, oops.With("path", path).Wrapf(err, "parse presets")
 	}
 
 	// Convert builtins from interface{} to BuiltinsConfig
@@ -544,6 +544,36 @@ func loadConfigTOML(path string) (*Config, error) {
 	}
 
 	return cfg, nil
+}
+
+// presetsFromTOML converts the TOML `presets` array — a mix of built-in name
+// strings and custom/provider inline tables (TOML 1.0 allows mixed arrays) —
+// into typed Presets. Inline tables are re-encoded as JSON and routed through
+// Preset.UnmarshalJSON so the YAML/JSON/TOML object forms share one code path.
+func presetsFromTOML(items []any) ([]Preset, error) {
+	presets := make([]Preset, 0, len(items))
+	for i, item := range items {
+		switch v := item.(type) {
+		case string:
+			presets = append(presets, Preset{BuiltIn: v})
+		case map[string]interface{}:
+			encoded, err := json.Marshal(v)
+			if err != nil {
+				return nil, oops.With("index", i).Wrapf(err, "encode preset entry")
+			}
+			var preset Preset
+			if err := preset.UnmarshalJSON(encoded); err != nil {
+				return nil, oops.With("index", i).Wrapf(err, "decode preset entry")
+			}
+			presets = append(presets, preset)
+		default:
+			return nil, oops.
+				With("index", i).
+				Hint("Each preset must be a built-in name string or a custom preset table").
+				Errorf("invalid preset entry of type %T", item)
+		}
+	}
+	return presets, nil
 }
 
 // ScanContentTree scans all content directories and returns a populated ContentTree.

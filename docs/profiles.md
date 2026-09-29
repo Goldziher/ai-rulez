@@ -67,6 +67,22 @@ presets:
       {{ end }}
 ```
 
+### Provider-backed Preset (full built-in parity)
+
+For tools that need the full feature set (skills, agents, commands, per-agent
+frontmatter, MCP sidecars), point the preset at a declarative provider spec
+instead of a template:
+
+```toml
+[[presets]]
+name = "my-tool"
+provider = ".ai-rulez/providers/my-tool.toml"
+```
+
+See [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity)
+for the spec format. This is the mechanism used to model tools whose output the
+simple `markdown`/`directory`/`json` types cannot express.
+
 ## Preset Types
 
 ### Markdown Type
