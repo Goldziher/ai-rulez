@@ -28,7 +28,8 @@ presets = [
   "junie",        # → .junie/guidelines.md
   "opencode",     # → OPENCODE.md
   "hermes",      # → .hermes.md
-  "antigravity"   # → .agents/
+  "antigravity",  # → .agents/
+  "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
 ]
 ```
 

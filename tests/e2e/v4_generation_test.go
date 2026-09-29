@@ -731,7 +731,7 @@ func (s *V4GenerationSuite) TestAllPresets_Generated() {
 	expectedPresets := []string{
 		"claude", "cursor", "windsurf", "copilot", "gemini",
 		"cline", "junie", "continue-dev", "codex", "opencode",
-		"amp", "antigravity", "mcp",
+		"amp", "antigravity", "mcp", "xum",
 	}
 
 	for _, preset := range expectedPresets {
@@ -750,7 +750,7 @@ func (s *V4GenerationSuite) TestV4Config_TOMLFormat() {
 	s.Assert().Equal("Full V4 test configuration with all presets", s.cfg.Description)
 	s.Assert().Equal("compact", s.cfg.GetHeaderStyle())
 	s.Assert().Equal("full", s.cfg.GetDefaultProfile())
-	s.Assert().Len(s.cfg.Presets, 13, "Should have 13 presets configured")
+	s.Assert().Len(s.cfg.Presets, 14, "Should have 14 presets configured")
 
 	// Profiles
 	s.Assert().Contains(s.cfg.Profiles, "full")
