@@ -10,18 +10,21 @@ package config
 
 // PluginRuntime names a supported target runtime for authored plugin bundles.
 const (
-	PluginRuntimeClaude   = "claude"
-	PluginRuntimeCursor   = "cursor"
-	PluginRuntimeCodex    = "codex"
-	PluginRuntimeGemini   = "gemini"
-	PluginRuntimeKimi     = "kimi"
-	PluginRuntimeOpenCode = "opencode"
-	PluginRuntimeFactory  = "factory"
-	PluginRuntimeHermes   = "hermes"
+	PluginRuntimeClaude       = "claude"
+	PluginRuntimeCursor       = "cursor"
+	PluginRuntimeCodex        = "codex"
+	PluginRuntimeGemini       = "gemini"
+	PluginRuntimeKimi         = "kimi"
+	PluginRuntimeOpenCode     = "opencode"
+	PluginRuntimeFactory      = "factory"
+	PluginRuntimeHermes       = "hermes"
+	PluginRuntimeAgentPlugins = "agent-plugins"
 )
 
-// AllPluginRuntimes lists every runtime the authoring generator can emit, in a
-// stable order. Used as the default when a plugin does not restrict Runtimes.
+// AllPluginRuntimes lists the runtimes emitted by default when a plugin does not
+// restrict Runtimes, in a stable order. PluginRuntimeAgentPlugins is deliberately
+// excluded: it is opt-in via an explicit runtimes = ["agent-plugins"] so adding it
+// never changes existing bundles' output.
 var AllPluginRuntimes = []string{
 	PluginRuntimeClaude,
 	PluginRuntimeCursor,
@@ -32,6 +35,10 @@ var AllPluginRuntimes = []string{
 	PluginRuntimeFactory,
 	PluginRuntimeHermes,
 }
+
+// KnownPluginRuntimes lists every runtime the generator can emit, including
+// opt-in ones. Used for validation and schema documentation.
+var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...), PluginRuntimeAgentPlugins)
 
 // Author identifies a person or organization in plugin/marketplace metadata.
 type Author struct {
