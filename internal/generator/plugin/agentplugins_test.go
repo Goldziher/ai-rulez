@@ -43,16 +43,16 @@ func TestRenderAgentPlugins_ManifestSkillsAndMCP(t *testing.T) {
 		byPath[filepath.ToSlash(o.Path)] = body
 	}
 
-	manifest := parseJSON(t, []byte(byPath[filepath.Join(baseDir, "plugin.json")]))
+	manifest := parseJSON(t, []byte(byPath[filepath.ToSlash(filepath.Join(baseDir, "plugin.json"))]))
 	assert.Equal(t, agentPluginsSchema, manifest["$schema"])
 	assert.Equal(t, "acme.tools", manifest["name"])
 	assert.Equal(t, "1.2.0", manifest["version"])
 	assert.NotContains(t, manifest, "runtimes")
 	assert.NotContains(t, manifest, "mcpServers")
 
-	assert.Contains(t, byPath, filepath.Join(baseDir, "skills", "deploy", "SKILL.md"))
+	assert.Contains(t, byPath, filepath.ToSlash(filepath.Join(baseDir, "skills", "deploy", "SKILL.md")))
 
-	mcp := parseJSON(t, []byte(byPath[filepath.Join(baseDir, "mcp.json")]))
+	mcp := parseJSON(t, []byte(byPath[filepath.ToSlash(filepath.Join(baseDir, "mcp.json"))]))
 	assert.Equal(t, agentPluginsMCPSchema, mcp["$schema"])
 	servers := mcp["mcpServers"].(map[string]any)
 	local := servers["local"].(map[string]any)
