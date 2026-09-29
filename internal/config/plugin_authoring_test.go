@@ -113,6 +113,10 @@ func TestResolvedRuntimes(t *testing.T) {
 		var p *PluginAuthoring
 		assert.Equal(t, AllPluginRuntimes, p.ResolvedRuntimes())
 	})
+	t.Run("agent-plugins is opt-in only", func(t *testing.T) {
+		assert.NotContains(t, AllPluginRuntimes, PluginRuntimeAgentPlugins)
+		assert.Contains(t, KnownPluginRuntimes, PluginRuntimeAgentPlugins)
+	})
 }
 
 func TestValidatePluginAuthoring(t *testing.T) {
@@ -148,6 +152,13 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "unknown runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "bogus"} }, wantErr: "unknown runtime"},
 		{name: "duplicate runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"claude", "claude"} }, wantErr: "duplicate runtime"},
 		{name: "Hermes runtime", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"hermes"} }},
+		{name: "agent-plugins runtime valid name", mutate: func(p *PluginAuthoring) { p.Runtimes = []string{"agent-plugins"} }},
+		{name: "agent-plugins invalid name", mutate: func(p *PluginAuthoring) {
+			p.Name, p.Runtimes = "Bad_Name", []string{"agent-plugins"}
+		}, wantErr: "not valid for the agent-plugins runtime"},
+		{name: "agent-plugins consecutive hyphen", mutate: func(p *PluginAuthoring) {
+			p.Name, p.Runtimes = "bad--name", []string{"agent-plugins"}
+		}, wantErr: "not valid for the agent-plugins runtime"},
 		{name: "mcp missing name", mutate: func(p *PluginAuthoring) { p.MCP = []PluginMCPLaunch{{Command: "x"}} }, wantErr: "MCP entry"},
 		{name: "stdio mcp missing command", mutate: func(p *PluginAuthoring) { p.MCP = []PluginMCPLaunch{{Name: "s"}} }, wantErr: "no command"},
 		{name: "http mcp missing url", mutate: func(p *PluginAuthoring) {

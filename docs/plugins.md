@@ -58,6 +58,7 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`) | copies the authored adapter or emits a documented no-op scaffold |
 | Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
+| Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
 
 The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside.
 
@@ -193,6 +194,21 @@ Event names must match a Claude Code lifecycle event (`SessionStart`, `Setup`, `
 # ...
 runtimes = ["claude", "cursor"]   # omit to emit all supported runtimes
 ```
+
+The `agent-plugins` runtime is **opt-in** and is not part of the default set, so
+adding it never changes existing bundles. Enable it explicitly:
+
+```toml
+[plugin]
+runtimes = ["agent-plugins"]
+```
+
+It emits a root `plugin.json`, a root `skills/` directory, and (when the plugin
+declares MCP servers) a root `mcp.json`, matching the Agent Plugins 1.0.0
+standard. The plugin `name` must satisfy the standard's naming rules (1–64
+lowercase alphanumerics/`-`/`.`, alphanumeric ends, no `--` or `..`). Commands,
+agents, hooks, and marketplaces are outside Agent Plugins v1 and are not emitted
+for this runtime.
 
 ## Single plugin vs. monorepo
 
