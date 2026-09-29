@@ -142,7 +142,8 @@ presets = [
   "junie",        # → .junie/
   "opencode",     # → OPENCODE.md and .opencode/
   "hermes",       # → .hermes.md
-  "antigravity"   # → .agents/
+  "antigravity",  # → .agents/
+  "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
 ]
 ```
 
@@ -584,7 +585,7 @@ cursor = "claude-3.7-sonnet"
 
 **Resolution order** (per preset, per agent):
 
-1. Per-agent `effort` in agent frontmatter (Claude, Codex, Windsurf, Opencode — presets that support per-agent effort)
+1. Per-agent `effort` in agent frontmatter (Claude, Codex, Windsurf, Opencode, Xum — presets that support per-agent effort)
 2. `defaults.effort_by_preset[<preset>]`
 3. `defaults.effort`
 4. Omit
@@ -605,6 +606,7 @@ For models the order is:
 | `amp`                                                                          | `.amp/settings.json`                                                            | `amp.anthropic.effort`   | Global only. `xhigh` → `high`.                                                                                                                                                     |
 | `windsurf`                                                                     | `.windsurf/agents/<id>.md` frontmatter                                          | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
 | `opencode`                                                                     | `.opencode/agents/<id>.md` frontmatter                                          | `reasoningEffort`        | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
+| `xum`                                                                         | `.xum/agents/<id>.md` frontmatter                                               | `ai.thinkingLevel`       | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
 | `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | —                                                                               | —                        | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 
 **Per-preset model matrix** — presets that emit a `model` value in their agent frontmatter:
@@ -619,6 +621,7 @@ For models the order is:
 | `windsurf`     | `windsurf_model`          | `model` in `.windsurf/agents/<id>.md`        |
 | `continue-dev` | `continue-dev_model`      | `model` in `.continue/agents/<id>.md`        |
 | `gemini`       | `gemini_model`            | `model` in `.agents/agents/<id>.md` (Gemini) |
+| `xum`          | `xum_model`               | `ai.model` in `.xum/agents/<id>.md`          |
 
 ### `header`
 

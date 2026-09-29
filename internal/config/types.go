@@ -373,6 +373,7 @@ var builtInPresets = map[string]bool{
 	"opencode":                true,
 	string(PresetAntigravity): true,
 	"mcp":                     true,
+	string(PresetXum):         true,
 }
 
 func isValidBuiltInPreset(name string) bool {
