@@ -75,8 +75,9 @@ func TestGeneratePresets_ProviderBacked(t *testing.T) {
 	require.True(t, ok, "provider-backed preset results are keyed by preset name")
 
 	var found bool
+	want := filepath.ToSlash(filepath.Join(baseDir, "DEMO.md"))
 	for _, o := range outputs {
-		if filepath.ToSlash(o.Path) == filepath.Join(baseDir, "DEMO.md") {
+		if filepath.ToSlash(o.Path) == want {
 			found = true
 		}
 	}
