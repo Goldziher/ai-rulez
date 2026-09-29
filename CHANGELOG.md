@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.14.1] - 2026-09-29
+
+### Fixed
+
+- **Windows CI for the 4.14.0 test suite**: two new tests (`TestRenderAgentPlugins_ManifestSkillsAndMCP`, `TestGeneratePresets_ProviderBacked`) keyed outputs by a slash-normalized path but looked them up with a native `filepath.Join`, so they failed on Windows only. No runtime behavior changed; this patch supersedes the red `v4.14.0` tag with a green one.
+
 ## [4.14.0] - 2026-09-29
 
 ### Added
