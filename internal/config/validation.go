@@ -311,6 +311,28 @@ func (c *Config) validatePreset(preset *Preset, index int) error {
 			Errorf("custom preset missing required field 'name'")
 	}
 
+	// Provider-backed custom presets reference a declarative provider spec
+	// instead of carrying type/path inline.
+	if preset.Provider != "" {
+		if preset.Type != "" || preset.Path != "" {
+			return oops.
+				With("field", fmt.Sprintf("presets[%d]", index)).
+				With("preset_name", preset.Name).
+				Hint("A provider-backed preset gets its type/path from the spec; drop 'type' and 'path'").
+				Errorf("custom preset %q sets both 'provider' and 'type'/'path'", preset.Name)
+		}
+		if ProviderSpecValidator != nil {
+			if err := ProviderSpecValidator(*preset, c.BaseDir); err != nil {
+				return oops.
+					With("field", fmt.Sprintf("presets[%d].provider", index)).
+					With("preset_name", preset.Name).
+					With("provider", preset.Provider).
+					Wrapf(err, "invalid provider spec for custom preset %q", preset.Name)
+			}
+		}
+		return nil
+	}
+
 	if preset.Type == "" {
 		return oops.
 			With("field", fmt.Sprintf("presets[%d].type", index)).

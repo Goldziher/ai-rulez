@@ -163,6 +163,46 @@ template = """
 """
 ```
 
+#### Provider-backed Presets (full parity)
+
+A custom preset may reference a declarative **provider spec** instead of a
+template. A provider spec has the same expressive power as the built-in presets
+— root instructions file, skills/agents/commands, frontmatter, effort/model, and
+MCP sidecars — and is validated against
+[`schema/provider.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/provider.schema.json).
+
+```toml
+[[presets]]
+name = "my-tool"
+provider = ".ai-rulez/providers/my-tool.toml"
+```
+
+The `provider` path is relative to the project root and must not escape it. The
+spec's `name` must match the preset's `name`. Example spec:
+
+```toml
+name = "my-tool"
+directories = [".my-tool"]
+
+[root]
+file = "MY_TOOL.md"
+sections = ["title", "rules_inline", "context_inline"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".my-tool/skills"
+filename = "{id}/SKILL.md"
+
+[[sidecars]]
+kind = "mcp_json"
+path = ".my-tool/mcp.json"
+emit_when = "has_mcp_servers"
+```
+
+Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
+provider-backed presets use the inline-table form shown above. TOML, YAML, and
+JSON configs all accept both.
+
 ### `default`
 
 The default profile name used when `ai-rulez generate` is run without `--profile`.
