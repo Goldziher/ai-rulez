@@ -67,6 +67,18 @@ type = "json"            # JSON output
 path = ".ai-config.json"
 ```
 
+For full parity with a built-in preset (skills, agents, commands, MCP sidecars),
+point a custom preset at a declarative provider spec instead of a template:
+
+```toml
+[[presets]]
+name = "my-tool"
+provider = ".ai-rulez/providers/my-tool.toml"   # relative to the project root
+```
+
+The spec is validated against `schema/provider.schema.json` and its `name` must
+match the preset's `name`.
+
 ## Profile-based Generation
 
 ```bash
