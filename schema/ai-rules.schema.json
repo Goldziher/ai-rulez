@@ -45,7 +45,8 @@
               "junie",
               "opencode",
               "hermes",
-              "antigravity"
+              "antigravity",
+              "xum"
             ],
             "description": "Built-in preset name"
           },
@@ -344,7 +345,8 @@
               "opencode",
               "hermes",
               "antigravity",
-              "mcp"
+              "mcp",
+              "xum"
             ]
           },
           "additionalProperties": {
@@ -370,7 +372,8 @@
               "opencode",
               "hermes",
               "antigravity",
-              "mcp"
+              "mcp",
+              "xum"
             ]
           },
           "additionalProperties": {
