@@ -39,8 +39,8 @@ Each preset that emits a single-file markdown root gets a `.local` sibling. Pres
 directory of split rule files (`cursor`, `windsurf`, `copilot`, …) have no single-file root and are
 **skipped** — they produce no local variant.
 
-Duplicate local paths collapse: `codex`, `opencode`, and `amp` all root on `AGENTS.md`, so they share
-a single `AGENTS.local.md`.
+Duplicate local paths collapse: `codex`, `opencode`, `amp`, and `xum` all root on `AGENTS.md`, so they
+share a single `AGENTS.local.md`.
 
 | Preset     | Committed root       | Local override output |
 | ---------- | -------------------- | --------------------- |
@@ -48,6 +48,7 @@ a single `AGENTS.local.md`.
 | `codex`    | `AGENTS.md`          | `AGENTS.local.md`     |
 | `opencode` | `AGENTS.md`          | `AGENTS.local.md`     |
 | `amp`      | `AGENTS.md`          | `AGENTS.local.md`     |
+| `xum`      | `AGENTS.md`          | `AGENTS.local.md`     |
 | `gemini`   | `GEMINI.md`          | `GEMINI.local.md`     |
 
 Any other preset with a single-file markdown root follows the same `<root>` → `<root>.local` rule
