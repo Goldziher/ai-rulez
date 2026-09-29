@@ -2,7 +2,8 @@
 
 `ai-rulez generate --plugin` packages your `.ai-rulez/` project into distributable
 **plugin bundles** and a **marketplace index** for the Claude, Cursor, Codex, Gemini,
-Kimi, OpenCode, and Factory runtimes. Where the normal `generate` writes in-repo
+Kimi, OpenCode, and Factory runtimes, plus the opt-in Agent Plugins 1.0.0 standard.
+Where the normal `generate` writes in-repo
 assistant config, `--plugin` produces installable artifacts other people can add to
 their own tools — reaching users who never run ai-rulez.
 
