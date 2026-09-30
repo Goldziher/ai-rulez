@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
@@ -117,7 +118,60 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		})
 	}
 
+	// Generate opencode.json in OpenCode's native v2 shape. Only the nested
+	// mcp.servers key is owned, so every other key a hand-authored opencode.json
+	// carries (model, permissions, mcp.timeout, ...) is preserved (#185, #194).
+	if len(cfg.MCPServers) > 0 {
+		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
+		mcpFile, err := g.renderMCPConfig(mcpPath, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render opencode.json: %w", err)
+		}
+		outputs = append(outputs, config.OutputFile{
+			Path:           mcpPath,
+			Content:        mcpFile.Body,
+			PartiallyOwned: mcpFile.PartiallyOwned,
+		})
+	}
+
 	return outputs, nil
+}
+
+// renderMCPConfig renders OpenCode's native v2 MCP servers into opencode.json.
+// It owns the nested mcp.servers key so every sibling key under mcp (such as
+// mcp.timeout) and every other top-level key survive the merge.
+func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
+	servers := make(map[string]interface{})
+
+	for name, server := range cfg.MCPServers {
+		entry := map[string]interface{}{
+			keyDisabled: !server.IsEnabled(),
+		}
+
+		// V2 has exactly two types: local (stdio) and remote (Streamable HTTP).
+		switch server.GetTransport() {
+		case config.TransportHTTP, config.TransportSSE:
+			entry["type"] = "remote"
+			if server.URL != "" {
+				entry["url"] = server.URL
+			}
+		default:
+			entry["type"] = "local"
+			if server.Command != "" {
+				// V2 takes the executable and its arguments as one array.
+				entry[keyCommand] = append([]string{server.Command}, server.Args...)
+			}
+			if len(server.Env) > 0 {
+				entry["environment"] = server.Env
+			}
+		}
+
+		servers[name] = entry
+	}
+
+	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
+		{Path: []string{"mcp", "servers"}, Value: servers},
+	})
 }
 
 func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
@@ -221,33 +275,53 @@ func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFi
 	return builder.String(), nil
 }
 
-// buildOpencodeAgentFrontmatter builds frontmatter for an OpenCode agent file
+// buildOpencodeAgentFrontmatter builds native v2 frontmatter for an OpenCode
+// agent file. The agent's identity comes from its filename, so no `name` key is
+// emitted; effort is expressed as a model variant, and temperature/top_p move
+// under request.body as v2 requires.
 func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
-	frontmatter := map[string]interface{}{
-		keyName: agent.Name,
+	frontmatter := map[string]interface{}{}
+
+	if agent.Metadata != nil {
+		if description := agent.Metadata.Extra[keyDescription]; description != "" {
+			frontmatter[keyDescription] = description
+		}
 	}
 
 	// Resolve effort before the metadata-nil short-circuit so a defaults-only
-	// effort still applies to agents with no frontmatter.
-	if effort := MapEffort(opencodePresetName, ResolveAgentEffort(opencodePresetName, agent, cfg)); effort != "" {
-		frontmatter["reasoningEffort"] = effort
-	}
+	// effort still applies to agents with no frontmatter. v2 joins model and
+	// variant into the "provider/model#variant" reference; v1 accepts the
+	// separate variant field, so an effort without a model emits variant alone.
+	effort := MapEffort(opencodePresetName, ResolveAgentEffort(opencodePresetName, agent, cfg))
 	if model := ResolveAgentModel(opencodePresetName, agent, cfg); model != "" {
-		frontmatter[keyModel] = model
+		if effort != "" {
+			frontmatter[keyModel] = model + "#" + effort
+		} else {
+			frontmatter[keyModel] = model
+		}
+	} else if effort != "" {
+		frontmatter["variant"] = effort
 	}
 
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	opencodeFields := []string{
-		keyDescription, "mode",
-		keyTemperature, "top_p", "hidden",
+	if mode := agent.Metadata.Extra["mode"]; mode != "" {
+		frontmatter["mode"] = mode
 	}
-	for _, field := range opencodeFields {
+	if hidden := agent.Metadata.Extra["hidden"]; hidden != "" {
+		frontmatter["hidden"] = hidden
+	}
+
+	body := map[string]interface{}{}
+	for _, field := range []string{keyTemperature, "top_p"} {
 		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
-			frontmatter[field] = val
+			body[field] = val
 		}
+	}
+	if len(body) > 0 {
+		frontmatter["request"] = map[string]interface{}{"body": body}
 	}
 
 	return frontmatter

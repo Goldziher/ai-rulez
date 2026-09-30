@@ -163,7 +163,7 @@ Per-preset support:
 - **Codex**: global in `.codex/config.toml` and per-agent in `.codex/agents/*.toml` (`max` → `high`; `inherit` dropped)
 - **Amp**: global in `.amp/settings.json` (`xhigh` → `high`)
 - **Windsurf**: per-agent in `.windsurf/agents/*.md` frontmatter (`max` → `high`)
-- **Opencode**: per-agent `reasoningEffort` in `.opencode/agents/*.md`
+- **Opencode**: per-agent `variant` in `.opencode/agents/*.md` (joins the agent's `model` as `model#variant`)
 - Cursor, Copilot, Gemini, Junie, Antigravity, Cline, Continue.dev: silently skipped (those tools expose effort via UI toggles or user-managed config files we don't generate).
 
 ## Domains and Profiles

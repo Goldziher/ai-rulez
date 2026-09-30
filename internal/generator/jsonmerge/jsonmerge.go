@@ -40,17 +40,31 @@ var errNotJSONObject = errors.New("root value is not a JSON object")
 // object. Rewriting the object would drop that content, so generation stops.
 var errTrailingJSONContent = errors.New("unexpected content after the root JSON object")
 
-// OwnedKey is a single top-level key ai-rulez owns inside an otherwise
-// user-authored JSON document, paired with the value to write.
+// OwnedKey is a single key ai-rulez owns inside an otherwise user-authored JSON
+// document, paired with the value to write. Name addresses a top-level key;
+// Path, when set, addresses a nested key such as {"mcp":{"servers":{...}}}, so
+// sibling keys the document already carries under the same ancestor survive.
 //
-// A slice rather than a map so that merging into an existing document appends new
-// keys in a deterministic sequence. Creating a document from scratch goes through
-// marshalOwnedJSONKeys instead, which sorts by key to stay byte-identical to
-// pre-merge output; the two agree for any caller passing a single key, which is
-// every caller today.
+// A slice of keys rather than a map so that merging into an existing document
+// appends new keys in a deterministic sequence. Creating a document from scratch
+// goes through marshalOwnedJSONKeys instead, which sorts by key to stay
+// byte-identical to pre-merge output.
 type OwnedKey struct {
 	Name  string
 	Value any
+	Path  []string
+}
+
+// segments returns the key path this OwnedKey addresses. Path wins when set;
+// otherwise the single Name is the path.
+func (k OwnedKey) segments() []string {
+	if len(k.Path) > 0 {
+		return k.Path
+	}
+	if k.Name == "" {
+		return nil
+	}
+	return []string{k.Name}
 }
 
 // Result is the outcome of one merge: the body to write, plus whether the
@@ -97,7 +111,7 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 		return Result{Body: body}, err
 	}
 
-	members, err := decodeTopLevelMembers([]byte(existing))
+	members, err := decodeObjectMembers([]byte(existing))
 	if err != nil {
 		return Result{}, oops.
 			With("path", path).
@@ -109,27 +123,74 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 
 	indent := detectTopLevelIndent(existing)
 	newline := detectLineEnding(existing)
-	merged, err := replaceOwnedMembers(members, owned, indent, newline)
-	if err != nil {
-		return Result{}, oops.With("path", path).Wrapf(err, "merge owned keys into JSON settings document")
+	merged := members
+	for _, key := range owned {
+		segs := key.segments()
+		if len(segs) == 0 {
+			continue
+		}
+		merged, err = replaceOwnedPath(merged, segs, key.Value, 1, indent, newline)
+		if err != nil {
+			return Result{}, oops.With("path", path).Wrapf(err, "merge owned keys into JSON settings document")
+		}
 	}
-	encoded, err := encodeTopLevelMembers(merged, indent, newline)
+	rendered, err := renderMembers(merged, 1, indent, newline)
 	if err != nil {
 		return Result{}, oops.With("path", path).Wrapf(err, "encode merged JSON settings document")
 	}
-	return Result{Body: encoded, PartiallyOwned: hasUnownedMembers(merged, owned)}, nil
+	return Result{Body: rendered + newline, PartiallyOwned: hasUnownedMembers(merged, owned)}, nil
 }
 
 // hasUnownedMembers reports whether the document carries a top-level key outside
 // the owned set. Such a key can only have come from the consumer, so the file is
 // theirs to track and ai-rulez must not ignore or delete it.
 func hasUnownedMembers(members []jsonMember, owned []OwnedKey) bool {
-	ownedNames := make(map[string]bool, len(owned))
+	paths := make([][]string, 0, len(owned))
 	for _, key := range owned {
-		ownedNames[key.Name] = true
+		if segs := key.segments(); len(segs) > 0 {
+			paths = append(paths, segs)
+		}
 	}
+	return hasUnownedPaths(members, paths)
+}
+
+// hasUnownedPaths reports whether any member is outside the owned paths. A member
+// addressed by a whole path is owned entirely; one addressed only by deeper paths
+// is inspected recursively, so a sibling the document carries under an owned
+// ancestor (mcp.timeout beside the owned mcp.servers) still counts as the
+// consumer's.
+func hasUnownedPaths(members []jsonMember, paths [][]string) bool {
+	roots := make(map[string][][]string, len(paths))
+	for _, path := range paths {
+		roots[path[0]] = append(roots[path[0]], path[1:])
+	}
+
 	for _, member := range members {
-		if !ownedNames[member.Key] {
+		rems, ok := roots[member.Key]
+		if !ok {
+			return true
+		}
+
+		var nested [][]string
+		wholeOwned := false
+		for _, rem := range rems {
+			if len(rem) == 0 {
+				wholeOwned = true
+				break
+			}
+			nested = append(nested, rem)
+		}
+		if wholeOwned {
+			continue
+		}
+
+		childMembers, err := decodeObjectMembers(bytes.TrimSpace(member.Raw))
+		if err != nil {
+			// A non-object we cannot introspect must be treated as the
+			// consumer's rather than silently ignored.
+			return true
+		}
+		if hasUnownedPaths(childMembers, nested) {
 			return true
 		}
 	}
@@ -167,7 +228,11 @@ func readExistingDocument(path string) (contents string, found bool, err error) 
 func marshalOwnedJSONKeys(owned []OwnedKey) (string, error) {
 	payload := make(map[string]any, len(owned))
 	for _, key := range owned {
-		payload[key.Name] = key.Value
+		segs := key.segments()
+		if len(segs) == 0 {
+			continue
+		}
+		insertOwnedValue(payload, segs, key.Value)
 	}
 	jsonBytes, err := json.MarshalIndent(payload, "", defaultJSONIndent)
 	if err != nil {
@@ -176,11 +241,26 @@ func marshalOwnedJSONKeys(owned []OwnedKey) (string, error) {
 	return string(jsonBytes) + "\n", nil
 }
 
-// decodeTopLevelMembers streams the top-level members of a JSON object,
-// capturing each value as its original source bytes. Comments, trailing commas
-// and any other JSON5/JSONC extension make this fail — deliberately, since
-// encoding/json cannot round-trip them.
-func decodeTopLevelMembers(data []byte) ([]jsonMember, error) {
+// insertOwnedValue places value at the nested path inside node, creating
+// intermediate objects. The last write wins for a path re-declared by several
+// owned keys, which no caller does.
+func insertOwnedValue(node map[string]any, path []string, value any) {
+	for i := 0; i < len(path)-1; i++ {
+		child, ok := node[path[i]].(map[string]any)
+		if !ok {
+			child = make(map[string]any)
+			node[path[i]] = child
+		}
+		node = child
+	}
+	node[path[len(path)-1]] = value
+}
+
+// decodeObjectMembers streams the members of a JSON object, capturing each value
+// as its original source bytes. Comments, trailing commas and any other
+// JSON5/JSONC extension make this fail — deliberately, since encoding/json
+// cannot round-trip them.
+func decodeObjectMembers(data []byte) ([]jsonMember, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	open, err := decoder.Token()
 	if err != nil {
@@ -217,55 +297,112 @@ func decodeTopLevelMembers(data []byte) ([]jsonMember, error) {
 	return members, nil
 }
 
-// replaceOwnedMembers rewrites the owned members in place and appends the ones
-// the document did not have yet. Duplicate occurrences of an owned key (legal
-// but ambiguous JSON) collapse into the first position.
-func replaceOwnedMembers(members []jsonMember, owned []OwnedKey, indent, newline string) ([]jsonMember, error) {
-	for _, key := range owned {
-		// Indent the owned value as a member of the root object: MarshalIndent's
-		// prefix is applied to every line after the first, which is exactly the
-		// nesting a depth-1 value needs.
-		valueBytes, err := json.MarshalIndent(key.Value, indent, indent)
-		if err != nil {
-			return nil, fmt.Errorf("marshal owned key %q: %w", key.Name, err)
-		}
-		// MarshalIndent always breaks lines with LF, so the rendered value would
-		// be the one LF island in a CRLF document.
-		if newline != "\n" {
-			valueBytes = bytes.ReplaceAll(valueBytes, []byte("\n"), []byte(newline))
-		}
+// replaceOwnedPath rewrites the member addressed by path in place, descending
+// into nested objects so only the addressed key changes, and appends the member
+// (and any missing ancestors) when the document did not have it. Duplicate
+// occurrences of an owned key (legal but ambiguous JSON) collapse into the first
+// position.
+func replaceOwnedPath(members []jsonMember, path []string, value any, depth int, indent, newline string) ([]jsonMember, error) {
+	head, rest := path[0], path[1:]
 
-		replaced := false
-		kept := make([]jsonMember, 0, len(members)+1)
-		for _, member := range members {
-			if member.Key != key.Name {
-				kept = append(kept, member)
-				continue
-			}
-			if replaced {
-				continue
-			}
-			kept = append(kept, jsonMember{Key: key.Name, Raw: valueBytes})
-			replaced = true
-		}
-		if !replaced {
-			kept = append(kept, jsonMember{Key: key.Name, Raw: valueBytes})
-		}
-		members = kept
+	if len(rest) == 0 {
+		return replaceMemberValue(members, head, value, depth, indent, newline)
 	}
-	return members, nil
+
+	idx := -1
+	for i, member := range members {
+		if member.Key == head {
+			idx = i
+			break
+		}
+	}
+
+	childMembers, err := childObjectMembers(members, idx, head)
+	if err != nil {
+		return nil, err
+	}
+	child, err := replaceOwnedPath(childMembers, rest, value, depth+1, indent, newline)
+	if err != nil {
+		return nil, err
+	}
+	raw, err := renderMembers(child, depth+1, indent, newline)
+	if err != nil {
+		return nil, err
+	}
+
+	if idx >= 0 {
+		members[idx] = jsonMember{Key: head, Raw: []byte(raw)}
+		return members, nil
+	}
+	return append(members, jsonMember{Key: head, Raw: []byte(raw)}), nil
 }
 
-// encodeTopLevelMembers writes members back as an indented JSON object, one
-// member per line, with each value emitted verbatim.
-func encodeTopLevelMembers(members []jsonMember, indent, newline string) (string, error) {
-	if len(members) == 0 {
-		return "{}" + newline, nil
+// childObjectMembers returns the members of the object at members[idx], or nil
+// when idx is absent (the caller creates the object). A present value that is not
+// an object is refused: merging into it would have to replace the consumer's
+// value outright, which is the clobbering this package exists to prevent.
+func childObjectMembers(members []jsonMember, idx int, head string) ([]jsonMember, error) {
+	if idx < 0 {
+		return nil, nil
 	}
+	raw := bytes.TrimSpace(members[idx].Raw)
+	if len(raw) == 0 || raw[0] != '{' {
+		return nil, oops.
+			With("key", head).
+			Hint("ai-rulez merges its keys into an object and will not replace a non-object value it cannot preserve").
+			Errorf("existing key %q is not a JSON object", head)
+	}
+	return decodeObjectMembers(raw)
+}
+
+// replaceMemberValue replaces the single member named name, or appends it. The
+// value is indented as a member at the given depth: MarshalIndent's prefix is
+// applied to every line after the first, which is exactly the nesting a value at
+// that depth needs.
+func replaceMemberValue(members []jsonMember, name string, value any, depth int, indent, newline string) ([]jsonMember, error) {
+	valueBytes, err := json.MarshalIndent(value, strings.Repeat(indent, depth), indent)
+	if err != nil {
+		return nil, fmt.Errorf("marshal owned key %q: %w", name, err)
+	}
+	// MarshalIndent always breaks lines with LF, so the rendered value would be
+	// the one LF island in a CRLF document.
+	if newline != "\n" {
+		valueBytes = bytes.ReplaceAll(valueBytes, []byte("\n"), []byte(newline))
+	}
+
+	replaced := false
+	kept := make([]jsonMember, 0, len(members)+1)
+	for _, member := range members {
+		if member.Key != name {
+			kept = append(kept, member)
+			continue
+		}
+		if replaced {
+			continue
+		}
+		kept = append(kept, jsonMember{Key: name, Raw: valueBytes})
+		replaced = true
+	}
+	if !replaced {
+		kept = append(kept, jsonMember{Key: name, Raw: valueBytes})
+	}
+	return kept, nil
+}
+
+// renderMembers writes members as an indented JSON object, one member per line,
+// with each value emitted verbatim. No trailing newline is added, so the result
+// is usable both as a whole document and as a nested member value; the caller
+// appends the document-level newline.
+func renderMembers(members []jsonMember, depth int, indent, newline string) (string, error) {
+	if len(members) == 0 {
+		return "{}", nil
+	}
+
+	pad := strings.Repeat(indent, depth)
 	var b strings.Builder
 	b.WriteString("{" + newline)
 	for i, member := range members {
-		b.WriteString(indent)
+		b.WriteString(pad)
 		// Re-quote through encoding/json so key escaping matches the rest of the
 		// document rather than Go's strconv rules.
 		keyBytes, err := json.Marshal(member.Key)
@@ -280,7 +417,7 @@ func encodeTopLevelMembers(members []jsonMember, indent, newline string) (string
 		}
 		b.WriteString(newline)
 	}
-	b.WriteString("}" + newline)
+	b.WriteString(strings.Repeat(indent, depth-1) + "}")
 	return b.String(), nil
 }
 
