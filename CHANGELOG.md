@@ -4,6 +4,28 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.17.0] - 2026-09-30
+
+### Added
+
+- **Path-scoped rules** (#199): a rule may declare `globs`/`paths` in its frontmatter (two spellings of the same path scope). A path-scoped rule is kept out of the root instructions file and delivered through the target tool's on-demand mechanism: `claude` emits `.claude/rules/<id>.md` with a `paths:` field (a new provider `outputs.rules` output plus a `path_scoped` filter), and `cursor` emits a `.mdc` with `globs:` and `alwaysApply: false`. Presets without a glob mechanism (for example `codex`) keep the rule inline. This lets one source keep `CLAUDE.md` small without a hand-maintained Claude-only copy.
+
+- **Cursor rule frontmatter** (#198): `.cursor/rules/*.mdc` now carry the frontmatter Cursor reads — `alwaysApply: true` for unscoped rules, or `globs:` with `alwaysApply: false` for path-scoped ones — plus the source `description` when set. Previously a generated rule had no frontmatter and was manual-`@`-mention-only.
+
+- **Profile-scoped MCP servers and installed skills** (#202): `[[mcp_servers]]` and `[[installed_skills]]` accept a `profiles` list. The server or skill is emitted only when the active profile names it; omitting `profiles` keeps today's include-everywhere behavior.
+
+- **`defaults.omit_agent_fields`** (#197): suppresses named agent frontmatter fields (`model`, `effort`, `tools`, `description`) for every preset, so an agent stays loadable in a tool where a field would be invalid — an unconfigured model or provider, or a tool name the tool does not recognize.
+
+### Fixed
+
+- **Generated agents are spawnable as subagents** (#196, #200): the `opencode` preset now defaults an agent to `mode: all` instead of OpenCode's implicit primary-only, and the `xum` preset emits `subagent: {runnable: true}`. Both could be used as a primary only before.
+
+- **Scoped outputs no longer repeat the root content** (#201): a `[[scopes]]` file contained the root rules and context in addition to the scope's own; the target tools load a subdirectory `CLAUDE.md`/`AGENTS.md` on top of the root file, so this duplicated the always-loaded text. A scope now contains only its profile's domains.
+
+- **The `add_include` MCP tool schema** and the repo's own poly hook catalog were stale: the tool advertised the removed `default|override|append` merge values and an `mcp` content type, and the hook catalog listed the removed `enforce` command. Both corrected.
+
+- **Documentation**: a second full pass corrected invalid TOML examples, the go-install guidance (the module path has no `/v4` suffix, so `go install …@latest` resolved to 1.x), marketplace/render paths, and more.
+
 ## [4.16.0] - 2026-09-30
 
 ### Added
