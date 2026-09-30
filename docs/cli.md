@@ -12,12 +12,15 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
+| `ai-rulez verify`               | Verify generated outputs are up to date             |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez version`              | Show version                                        |
 | `ai-rulez mcp`                  | Start MCP server                                    |
 | `ai-rulez builtins list`        | List available built-in domains                     |
 | `ai-rulez builtins show <name>` | Show bundled content for a built-in domain          |
+
+Aliases: `generate` → `gen`, `g`; `clean` → `clear`; `validate` → `val`, `v`, `check`.
 
 ### CRUD Commands (Configuration Management)
 
@@ -254,7 +257,7 @@ ai-rulez add skill code-reviewer
 Create a domain-specific skill:
 
 ```bash
-ai-rulez add skill performance-optimizer --domain backend --priority high
+ai-rulez add skill performance-optimizer --domain backend --description "Optimization workflow"
 ```
 
 #### `ai-rulez remove rule <name> [flags]`
@@ -497,8 +500,8 @@ ai-rulez include add <name> <source> [flags]
 **Flags:**
 
 - `--path <dir>` / `-p` (optional): Path within git repository where `.ai-rulez/` content is located
-- `--ref <branch>` / `-r` (optional): Git reference (branch, tag, commit). Default: main
-- `--include <types>` / `-i` (optional): Comma-separated content types: rules,context,skills,mcp
+- `--ref <branch>` / `-r` (optional): Git reference (branch, tag, commit). Defaults to the repository's default branch (`HEAD`), not necessarily `main`.
+- `--include <types>` / `-i` (optional): Comma-separated content types (default `rules,context,skills`): `rules,context,skills,agents,commands`
 - `--merge-strategy <strategy>` / `-m` (optional): Merge strategy: default, override, append
 - `--install-to <path>` / `-t` (optional): Installation target path in `.ai-rulez/`
 
@@ -711,7 +714,7 @@ ai-rulez init [project-name] [flags]
 
 **Arguments:**
 
-- `[project-name]` (optional): The project name. If not provided, prompted interactively.
+- `[project-name]` (optional): The project name. If omitted, the current directory's base name is used (falling back to `MyProject`). Nothing is prompted.
 
 **V4-specific Flags:**
 
@@ -765,14 +768,14 @@ ai-rulez init "my-project" --skip-content
 
 ## Generate Command
 
-### `ai-rulez generate [config-path]`
+### `ai-rulez generate [config-file]`
 
 Generate AI assistant rule files from configuration.
 
 **Syntax:**
 
 ```bash
-ai-rulez generate [config-path] [flags]
+ai-rulez generate [config-file] [flags]
 ```
 
 **Arguments:**
@@ -800,8 +803,8 @@ ai-rulez generate [config-path] [flags]
 | `--skip-cli-mcp` / `-S`         | boolean | false         | Alias for `--no-configure-cli-mcp`                                                                                                                      |
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
-| `--token` / `-T`                | string  | (from env)    | Git access token for private repositories (or use `AI_RULEZ_GIT_TOKEN` env var)                                                                         |
 
+`--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
 
 **Examples:**
@@ -1112,11 +1115,16 @@ ai-rulez validate --verbose
 
 ### What Gets Validated
 
+For V4 configs the raw file is also checked against `schema/ai-rules.schema.json`, so an unknown key
+or a value outside an enum fails rather than being silently dropped. The structural checks are:
+
 - `version` is `"3.0"` or `"4.0"`
 - `name` is present and non-empty
 - All preset names are valid
-- Referenced domains exist in filesystem
-- Profile definitions reference valid domains
+- A `builtin:<name>` reference in a profile names a real builtin
+- `default`, if set, names an existing profile
+- **A profile referencing a domain not present in the content tree is a warning, not a failure** (and
+  is downgraded to a debug hint when includes are configured, since the domain may come from an include)
 - File paths are accessible
 - No two skills, or two commands, in the same scope resolve to the same output id. The flat
   (`commands/deploy.md`) and directory (`commands/deploy/COMMAND.md`) forms resolve identically, so
@@ -1234,11 +1242,12 @@ ai-rulez init --help
 Commands that load a project directory use the following config order:
 
 1. **Explicit path**: Via `--config` flag or command argument
-2. **Directory config**: `.ai-rulez/config.toml`, `.ai-rulez/config.yaml`, or `.ai-rulez/config.json`
-3. **Error**: No configuration found
+2. **Directory config**: `.ai-rulez/config.toml`, `.ai-rulez/config.yaml`, `.ai-rulez/config.yml`, or `.ai-rulez/config.json`
+3. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, or `ai_rulez.*` are discovered for migration
+4. **Error**: No configuration found
 
-Legacy flat V2 config files such as `ai-rulez.yaml` are migration inputs. Use `ai-rulez migrate v4`
-before running V4 generation workflows.
+Legacy flat V2 config files are migration inputs. Use `ai-rulez migrate v4` before running V4
+generation workflows. `.ai-rulez/` is checked before the legacy flat filenames.
 
 Example detection flow:
 
@@ -1259,11 +1268,11 @@ ai-rulez generate --config ./ai-policy/config.toml
 
 The CLI uses standard exit codes:
 
-| Code | Meaning                                                   |
-| ---- | --------------------------------------------------------- |
-| 0    | Success                                                   |
-| 1    | General error (config not found, validation failed, etc.) |
-| 2    | Command syntax error (invalid flags, arguments)           |
+| Code | Meaning                                                          |
+| ---- | ---------------------------------------------------------------- |
+| 0    | Success                                                          |
+| 1    | Error (config not found, validation failed, bad flags, etc.)     |
+| 2    | `tokens --budget` exceeded — a hook can tell over-budget from failure |
 
 ## Output Examples
 

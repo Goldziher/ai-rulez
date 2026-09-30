@@ -1,6 +1,6 @@
 [project]
 site_name = "AI-Rulez"
-site_description = "Directory-based AI governance for Claude, Cursor, Copilot, Windsurf and 19+ tools"
+site_description = "Directory-based AI governance for Claude, Cursor, Copilot, Windsurf and 14 built-in presets"
 site_url = "https://goldziher.github.io/ai-rulez"
 site_author = "Na'aman Hirschfeld"
 repo_name = "Goldziher/ai-rulez"
@@ -15,6 +15,7 @@ nav = [
   { "Configuration" = "configuration.md" },
   { "Guides" = [
     { "Domains & Profiles" = "domains.md" },
+    { "Custom Presets" = "profiles.md" },
     { "Includes" = "includes.md" },
     { "Local Overrides" = "local-overrides.md" },
     { "Installed Skills" = "installed-skills.md" },

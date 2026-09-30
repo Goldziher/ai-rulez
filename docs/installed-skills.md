@@ -55,7 +55,7 @@ path = "custom/skill/path"    # defaults to skills/<name>
 | `name`           | Yes      | Unique skill name                                                |
 | `source`         | Yes      | Git URL or local path to the repository                          |
 | `path`           | No       | Path within repo to skill directory. Defaults to `skills/<name>` |
-| `ref`            | No       | Git ref (branch, tag, or commit). Defaults to `main`             |
+| `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `local_override` | No       | Local path override for development                              |
 
 ## CLI Commands
@@ -139,7 +139,7 @@ metadata:
 Instructions for AI assistants working with your library...
 ```
 
-The `description` field is required for validation.
+A missing `description` produces a warning rather than an error; the skill name is used as a fallback. Set it anyway — the description is how the assistant decides when to load the skill.
 
 ### References
 
@@ -149,11 +149,11 @@ Files in `references/` are read alphabetically and appended to the skill content
 
 For development workflows, use `local_override` to point to a local checkout instead of fetching from git:
 
-```yaml
-installed_skills:
-  - name: my-lib
-    source: https://github.com/org/my-lib
-    local_override: ../my-lib
+```toml
+[[installed_skills]]
+name = "my-lib"
+source = "https://github.com/org/my-lib"
+local_override = "../my-lib"
 ```
 
 If the local path exists and contains the skill, it's used. If it doesn't exist, the skill is skipped (not fetched from git).
@@ -180,7 +180,7 @@ To make your project's skill installable by others:
 
 | Feature          | Includes                                               | Installed Skills                          |
 | ---------------- | ------------------------------------------------------ | ----------------------------------------- |
-| Content types    | Rules, context, skills, agents, MCP                    | Skills only                               |
+| Content types    | Rules, context, skills, agents, commands               | Skills only                               |
 | Source structure | Requires `.ai-rulez/` directory                        | Requires `skills/<name>/SKILL.md`         |
 | Merge strategy   | Configurable (local-override, include-override, error) | Local skills always win                   |
 | Domain support   | Can install to specific domains                        | Root-level only                           |

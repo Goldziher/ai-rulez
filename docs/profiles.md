@@ -1,592 +1,173 @@
 # Custom Presets
 
-Create custom output formats and templates for tools not in the built-in list.
-
-## What Are Presets?
-
-Presets define how content is formatted and where it's output for different tools:
-
-- Built-in presets: Pre-configured for Claude, Cursor, Gemini, Copilot, Windsurf, and others
-- Custom presets: You define the format, path, and template
+Set `presets` in `.ai-rulez/config.toml` to control which tools ai-rulez generates for. Most projects
+use only built-in presets; custom presets cover a tool ai-rulez does not ship.
 
 ## Built-in Presets
 
-AI-Rulez includes presets for popular tools:
+| Preset         | Output                                             |
+| -------------- | -------------------------------------------------- |
+| `claude`       | `CLAUDE.md` and `.claude/`                         |
+| `cursor`       | `.cursor/rules/`, `.cursor/commands/`, `.agents/`  |
+| `gemini`       | `GEMINI.md`, `.gemini/`, `.agents/`                |
+| `copilot`      | `.github/copilot-instructions.md`, `.github/{skills,agents,commands}/` |
+| `windsurf`     | `.windsurf/`                                       |
+| `continue-dev` | `.continue/`                                       |
+| `cline`        | `.clinerules/`, `.cline/`                          |
+| `codex`        | `AGENTS.md` and `.codex/`                          |
+| `amp`          | `AGENTS.md` and `.agents/` (`.amp/settings.json` when an effort resolves) |
+| `junie`        | `.junie/`                                          |
+| `opencode`     | `AGENTS.md`, `.opencode/`, `opencode.json` (when MCP servers are set) |
+| `hermes`       | `.hermes.md`                                       |
+| `antigravity`  | `.agents/`, `GEMINI.md`                            |
+| `xum`          | `AGENTS.md` and `.xum/`                            |
 
-| Preset         | Output                            | Format                 |
-| -------------- | --------------------------------- | ---------------------- |
-| `claude`       | `CLAUDE.md`                       | Markdown               |
-| `cursor`       | `.cursor/rules/`                  | Directory              |
-| `gemini`       | `GEMINI.md`                       | Markdown               |
-| `copilot`      | `.github/copilot-instructions.md` | Markdown               |
-| `windsurf`     | `.windsurf/`                      | Directory              |
-| `continue-dev` | `.continue/`                      | Directory              |
-| `cline`        | `.clinerules/`                    | Directory              |
-| `codex`        | `AGENTS.md` and `.codex/`         | Markdown and directory |
-| `amp`          | `AMP.md` and `.amp/`              | Markdown and JSON      |
-| `junie`        | `.junie/`                         | Directory              |
-| `opencode`     | `AGENTS.md`, `.opencode/`, `opencode.json` | Markdown, directory, and JSON |
-| `hermes`       | `.hermes.md`                      | Markdown               |
-| `antigravity`  | `.agents/`                        | Directory              |
-| `xum`          | `AGENTS.md` and `.xum/`           | Markdown, directory, JSON |
+`mcp` is a shared utility preset (the generic `.mcp.json`) invoked automatically when MCP servers are
+configured; you normally do not name it.
 
-## Creating Custom Presets
+## Custom Presets
 
-### Basic Custom Preset
+A custom preset is an inline table in the `presets` array (you can mix it with built-in names). It
+has a `name`, a `type` (`markdown`, `directory`, or `json`), and a `path`:
 
-For a tool not in the built-in list:
-
-```yaml
-presets:
-  - name: my-tool
-    type: markdown
-    path: docs/MY_TOOL.md
+```toml
+presets = [
+  "claude",
+  { name = "my-tool", type = "markdown", path = "docs/MY_TOOL.md" },
+]
 ```
 
-This generates `docs/MY_TOOL.md` with all your rules and context.
-
-### With Custom Template
-
-Control exactly how content is formatted:
-
-```yaml
-presets:
-  - name: my-tool
-    type: markdown
-    path: docs/MY_TOOL.md
-    template: |
-      # AI Rules for {{ .Name }}
-
-      ## Rules
-      {{ range .Rules }}
-      - **{{ .Name }}** ({{ .Priority }}): {{ .Content }}
-      {{ end }}
-
-      ## Context
-      {{ range .Context }}
-      - {{ .Name }}: {{ .Content }}
-      {{ end }}
-```
-
-### Provider-backed Preset (full built-in parity)
-
-For tools that need the full feature set (skills, agents, commands, per-agent
-frontmatter, MCP sidecars), point the preset at a declarative provider spec
-instead of a template:
+A config that defines only custom presets can use `[[presets]]` instead:
 
 ```toml
 [[presets]]
 name = "my-tool"
-provider = ".ai-rulez/providers/my-tool.toml"
+type = "markdown"
+path = "docs/MY_TOOL.md"
 ```
 
-See [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity)
-for the spec format. This is the mechanism used to model tools whose output the
-simple `markdown`/`directory`/`json` types cannot express.
+!!! note "For a full tool, use a provider spec"
+    The `markdown`/`directory`/`json` types are intentionally small. If the tool needs skills, agents,
+    commands, per-agent frontmatter, effort/model, or an MCP sidecar — the same feature set as a
+    built-in preset — reference a declarative **provider spec** with `provider = "…"` instead. See
+    [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity).
 
-## Preset Types
+### Preset types
 
-### Markdown Type
+**`markdown`** — renders one file at `path`. Without a `template`, ai-rulez renders a default
+document with a title and the rule and context sections.
 
-Generates a single markdown file:
-
-```yaml
-presets:
-  - name: development-guide
-    type: markdown
-    path: docs/AI_DEVELOPMENT_GUIDE.md
-    template: |
-      # AI Development Guide
-
-      {{ range .Rules }}
-      ## {{ .Name }}
-      {{ .Content }}
-
-      {{ end }}
+```toml
+[[presets]]
+name = "dev-guide"
+type = "markdown"
+path = "docs/AI_DEVELOPMENT_GUIDE.md"
 ```
 
-### Directory Type
+**`directory`** — creates `path` and writes one markdown file per rule, named after the sanitized
+rule name (`<name>.md`). Rules are the only content kind this type emits.
 
-Generates individual files in a directory:
-
-```yaml
-presets:
-  - name: agent-rules
-    type: directory
-    path: .claude/agents/
-    naming_scheme: "{name}.md"
-    template: |
-      # {{ .Name }}
-
-      {{ .Content }}
+```toml
+[[presets]]
+name = "agent-rules"
+type = "directory"
+path = ".my-tool/rules"
 ```
 
-This creates one file per rule/context item.
+**`json`** — renders one JSON file at `path`. Without a `template`, ai-rulez marshals the template
+data (below) as indented JSON.
 
-### JSON Type
-
-Generates JSON configuration:
-
-```yaml
-presets:
-  - name: config-json
-    type: json
-    path: config/rules.json
-    template: |
-      {
-        "name": "{{ .Name }}",
-        "rules": [
-          {{- range .Rules }}
-          {
-            "name": "{{ .Name }}",
-            "priority": "{{ .Priority }}",
-            "content": "{{ .Content | jsonEscape }}"
-          }{{ if not (last .) }},{{ end }}
-          {{- end }}
-        ]
-      }
+```toml
+[[presets]]
+name = "config-json"
+type = "json"
+path = "config/rules.json"
 ```
 
-## Template Language
+### Templates
 
-Templates use Go's template syntax with access to your configuration:
+`markdown` and `json` presets accept a `template`, parsed with Go's
+[`text/template`](https://pkg.go.dev/text/template). **Only Go's built-in template functions are
+available** (`len`, `printf`, `eq`, `index`, `range`, `with`, `if`, …) — there is no extra function
+library, so helpers such as `where`, `truncate`, `sortByPriority`, or `now` are not defined and a
+template using them fails to parse.
 
-### Available Data
+```toml
+[[presets]]
+name = "my-tool"
+type = "markdown"
+path = "docs/MY_TOOL.md"
+template = """
+# {{ .Name }}
 
-```text
-.Name              Project name from config.toml
-.Description       Project description
-.Rules             All rules (filtered by targets)
-.Context           All context (filtered by targets)
-.Skills            All skills (filtered by targets)
-.Presets           All presets
-.Profiles          All profiles
-```
-
-### Rule/Context/Skill Fields
-
-Each item has:
-
-```text
-.Name              Name of the rule/context/skill
-.Content           Full markdown content
-.Priority          Priority level (critical, high, etc.)
-.Targets           Target presets this applies to
-.Description       Description (for skills)
-```
-
-### Common Template Functions
-
-**Looping:**
-
-```text
 {{ range .Rules }}
-  Name: {{ .Name }}
-  Content: {{ .Content }}
+## {{ .Name }}{{ if .Priority }} ({{ .Priority }}){{ end }}
+
+{{ .Content }}
 {{ end }}
+"""
 ```
 
-**Conditionals:**
+### Template data
 
-```text
-{{ if eq .Priority "critical" }}
-  CRITICAL: {{ .Name }}
-{{ end }}
+The template receives:
+
+| Field         | Contents                                                        |
+| ------------- | --------------------------------------------------------------- |
+| `.Name`       | Project name                                                    |
+| `.Description`| Project description                                             |
+| `.Version`    | Config version                                                  |
+| `.Rules`      | Root rules                                                      |
+| `.Context`    | Root context                                                    |
+| `.Skills`     | Root skills                                                     |
+| `.Domains`    | Map of domain name → `{ Name, Rules, Context, Skills }`         |
+
+Each rule/context/skill entry is a map with `Name` and `Content`, plus `Priority` and `Targets` when
+the source frontmatter sets them.
+
+## Targeting content at a preset
+
+Content is filtered to a preset with the file's frontmatter `targets`, not with inline config. A rule
+with `targets: ["CLAUDE.md"]` is only rendered into outputs matching that target; a rule with no
+`targets` goes to every output.
+
+```markdown
+---
+priority: high
+targets: ["CLAUDE.md", ".cursor/rules/*"]
+---
+
+Guidance that only Claude and Cursor should see.
 ```
 
-**Filters:**
+## Ordering
 
-```text
-{{ range .Rules | where "Priority" "high" }}
-  {{ .Name }}
-{{ end }}
-```
+Rules render in priority order (critical → high → medium → low → minimal) within each section, with
+name order breaking ties. Pinning a `priority` in frontmatter is the supported way to influence it.
 
-**String operations:**
+## Combining built-in and custom
 
-```text
-{{ .Name | lower }}              Convert to lowercase
-{{ .Name | upper }}              Convert to uppercase
-{{ .Content | truncate 100 }}    Truncate to 100 chars
-```
+Because `presets` is one array, list built-ins and custom presets together:
 
-## Common Custom Preset Examples
-
-### Development Guide
-
-```yaml
-presets:
-  - name: dev-guide
-    type: markdown
-    path: docs/DEVELOPMENT_GUIDE.md
-    template: |
-      # Development Guide
-
-      Last updated: {{ now.Format "2006-01-02" }}
-
-      ## Rules and Standards
-
-      {{ range .Rules }}
-      ### {{ .Name }} ({{ .Priority }})
-      {{ .Content }}
-
-      {{ end }}
-
-      ## Architecture and Context
-
-      {{ range .Context }}
-      ### {{ .Name }}
-      {{ .Content }}
-
-      {{ end }}
-
-      ## Expert Guidance
-
-      {{ range .Skills }}
-      ### {{ .Name }}
-      {{ .Description }}
-
-      {{ .Content }}
-
-      {{ end }}
-```
-
-### JSON Configuration
-
-```yaml
-presets:
-  - name: rules-json
-    type: json
-    path: config/rules.json
-    template: |
-      {
-        "project": "{{ .Name }}",
-        "description": "{{ .Description }}",
-        "rules": [
-          {{- range .Rules }}
-          {
-            "id": "{{ .Name | slugify }}",
-            "name": "{{ .Name }}",
-            "priority": "{{ .Priority }}",
-            "content": "{{ .Content | jsonEscape }}",
-            "targets": {{ .Targets | toJson }}
-          }{{ if not (last .) }},{{ end }}
-          {{- end }}
-        ]
-      }
-```
-
-### Agent Directory
-
-```yaml
-presets:
-  - name: agents
-    type: directory
-    path: .claude/agents/
-    naming_scheme: "{name}.md"
-    template: |
-      {{ if .Description }}
-      ---
-      description: "{{ .Description }}"
-      priority: {{ .Priority }}
-      ---
-
-      {{ end }}
-      # {{ .Name }}
-
-      {{ .Content }}
-```
-
-### Plain Text Format
-
-```yaml
-presets:
-  - name: text-rules
-    type: markdown
-    path: RULES.txt
-    template: |
-      {{ .Name }} - AI Assistant Rules
-      Generated: {{ now }}
-
-      RULES:
-      {{ range .Rules }}
-      [ {{ .Priority | upper }} ] {{ .Name }}
-      {{ .Content | indent "  " }}
-
-      {{ end }}
-```
-
-## Template Variables and Functions
-
-### Date/Time
-
-```text
-{{ now }}                         Current time
-{{ now.Format "2006-01-02" }}     Formatted date
-{{ now.Unix }}                    Unix timestamp
-```
-
-### String Functions
-
-```text
-{{ .Name | lower }}               Lowercase
-{{ .Name | upper }}               Uppercase
-{{ .Name | title }}               Title case
-{{ .Content | truncate 50 }}      Truncate to 50 chars
-{{ .Content | trim }}             Remove whitespace
-{{ .Content | replace "a" "b" }}  Replace text
-```
-
-### Collection Functions
-
-```text
-{{ range .Rules }}                Loop through items
-{{ .Name }}
-{{ end }}
-
-{{ first .Rules }}                First item
-{{ last .Rules }}                 Last item
-{{ len .Rules }}                  Count items
-
-{{ .Rules | where "Priority" "high" }}  Filter by field
-{{ .Rules | reverse }}            Reverse order
-```
-
-### JSON Functions
-
-```text
-{{ .Targets | toJson }}           Convert to JSON array
-{{ .Content | jsonEscape }}       Escape for JSON string
-```
-
-### Advanced Conditions
-
-```text
-{{ if eq .Priority "critical" }}  Equal check
-{{ if gt .Priority "high" }}      Greater than (string comparison)
-{{ if contains .Name "test" }}    Contains substring
-{{ if empty .Description }}       Is empty
-{{ if not .Targets }}             Is falsy
-```
-
-## Targeting Rules to Presets
-
-Control which content appears in which preset:
-
-```yaml
-presets:
-  - name: claude
-    type: markdown
-    path: CLAUDE.md
-
-  - name: internal-guide
-    type: markdown
-    path: docs/INTERNAL_GUIDE.md
-
-rules:
-  - name: "Public Rule"
-    content: "This applies everywhere"
-    targets: [] # Empty = all presets
-
-  - name: "Claude Only Rule"
-    content: "Only in Claude instructions"
-    targets:
-      - CLAUDE.md
-
-  - name: "Internal Rule"
-    content: "Only in internal guide"
-    targets:
-      - docs/INTERNAL_GUIDE.md
-```
-
-## Priority Ordering
-
-Content is ordered by priority level (highest to lowest):
-
-```text
-critical
-high
-medium (default)
-low
-minimal
-```
-
-Templates automatically sort by priority. To customize:
-
-```text
-{{ range (sortByPriority .Rules) }}
-  {{ .Name }}
-{{ end }}
-```
-
-## Combining Built-in and Custom
-
-Use both in the same configuration:
-
-```yaml
-presets:
-  # Built-in
-  - claude
-  - cursor
-  - gemini
-
-  # Custom
-  - name: internal-guide
-    type: markdown
-    path: docs/AI_DEVELOPMENT_GUIDE.md
-
-  - name: rules-database
-    type: json
-    path: config/rules.json
-```
-
-When you run `ai-rulez generate`, it creates:
-
-- `CLAUDE.md` (built-in)
-- `.cursorrules` (built-in)
-- `GEMINI.md` (built-in)
-- `docs/AI_DEVELOPMENT_GUIDE.md` (custom)
-- `config/rules.json` (custom)
-
-## Best Practices
-
-### Start Simple
-
-Begin with built-in presets, add custom ones only if needed:
-
-```yaml
-presets:
-  - claude
-  - cursor
-  - gemini
-```
-
-### Use Clear Names
-
-Names should indicate purpose:
-
-```yaml
-Good:
-  - name: development-guide
-  - name: api-specification
-  - name: internal-rules
-
-Bad:
-  - name: output1
-  - name: thing
-```
-
-### Document Your Template
-
-Add comments explaining what it does:
-
-```yaml
-presets:
-  - name: api-spec
-    type: markdown
-    path: docs/API_SPEC.md
-    template: |
-      # API Specification
-      # Generated from AI-Rulez config
-      # Updates automatically on config changes
-
-      {{ range .Rules }}
-      {{ .Name }}: {{ .Content }}
-      {{ end }}
-```
-
-### Keep Paths Consistent
-
-Use standard locations:
-
-```text
-docs/       Documentation
-config/     Configuration files
-.editor/    Editor-specific configs
-.tools/     Tool-specific configs
-```
-
-### Test Your Templates
-
-Preview before committing:
-
-```bash
-ai-rulez generate --dry-run
-cat docs/MY_TOOL.md
+```toml
+presets = [
+  "claude",
+  "cursor",
+  { name = "internal-guide", type = "markdown", path = "docs/INTERNAL.md" },
+]
 ```
 
 ## Troubleshooting
 
-### Template Syntax Error
+**Template fails to parse.** A referenced function is not one of Go's built-ins (see above). Remove
+it or rewrite the logic with `range`/`if`.
 
-Check for:
+**Output path is wrong.** `path` is relative to the project root and must stay inside it.
 
-- Missing closing `{{ end }}`
-- Unmatched braces
-- Invalid function names
-
-### Path Issues
-
-Ensure paths:
-
-- Don't start with `/`
-- Use forward slashes `/`
-- Are relative to project root
-
-### Content Not Appearing
-
-Check targeting:
-
-```yaml
-rules:
-  - name: "Test Rule"
-    targets:
-      - CLAUDE.md # Must match preset path exactly
-```
-
-## Advanced Example: Multi-Format Output
-
-```yaml
-presets:
-  # Markdown for humans
-  - name: human-guide
-    type: markdown
-    path: docs/AI_GUIDE.md
-    template: |
-      # AI Development Guide
-
-      {{ range .Rules }}
-      ## {{ .Name }}
-      {{ .Content }}
-      {{ end }}
-
-  # JSON for machines
-  - name: machine-readable
-    type: json
-    path: config/ai-rules.json
-    template: |
-      {
-        "name": "{{ .Name }}",
-        "rules": [
-          {{- range .Rules }}
-          {"name": "{{ .Name }}", "priority": "{{ .Priority }}"}{{ if not (last .) }},{{ end }}
-          {{- end }}
-        ]
-      }
-
-  # Plain text for simple tools
-  - name: plain-text
-    type: markdown
-    path: RULES.txt
-    template: |
-      RULES FOR {{ .Name | upper }}
-      {{ range .Rules }}
-      - {{ .Name }}: {{ .Content | truncate 50 }}
-      {{ end }}
-```
+**Content is empty.** Rules may be filtered out by `targets`; remove the frontmatter for a rule that
+should appear everywhere.
 
 ## Next Steps
 
-- **[Configuration Reference](configuration.md)**: All config options
-- **[Quick Start](quick-start.md)**: Getting started
-- **[Domains & Profiles](domains.md)**: Organizing by team
+- **[Configuration](configuration.md)**: full config reference, including provider specs
+- **[Domains & Profiles](domains.md)**: organizing content by team or service

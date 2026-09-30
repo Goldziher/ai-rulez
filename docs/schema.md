@@ -4,7 +4,9 @@ The `ai-rulez` configuration is validated against a formal JSON Schema to provid
 
 ## V4 Schema
 
-**For current V4 projects**, the schema is embedded in the CLI validation. Simply edit your `.ai-rulez/config.toml` file and the CLI will validate it.
+**For current V4 projects**, the schema is embedded in the CLI. `ai-rulez validate` validates the raw
+config file against it (converting TOML to JSON first) and then runs the structural checks, so edit
+your `.ai-rulez/config.toml` and run `ai-rulez validate`.
 
 ```toml
 # .ai-rulez/config.toml
@@ -19,17 +21,17 @@ Add a `.vscode/settings.json` to reference the schema:
 ```json
 {
   "evenBetterToml.schema.associations": {
-    ".ai-rulez/config.toml": "https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json"
+    ".ai-rulez/config.toml": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json"
   }
 }
 ```
 
 ## V3 Schema (Backward Compatible)
 
-**For V3 projects**, the schema is available for YAML:
+The same schema accepts `version = "3.0"`, so V3 YAML configs get editor support too:
 
 ```yaml
-# yaml-language-server: $schema=https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json
 version: "3.0"
 name: "My Project"
 ```
@@ -51,10 +53,19 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`presets`**: List of tool presets (e.g., `claude`, `cursor`, `gemini`)
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
+- **`scopes`**: Additional scoped output roots (subfolder `AGENTS.md`/`CLAUDE.md`)
 - **`gitignore`**: Whether to update .gitignore with generated output patterns (default: true)
+- **`includes`**: External content sources to merge
+- **`installed_skills`**: Skills to install from external repositories
+- **`header`**: Header style/timestamp for generated files
+- **`defaults`**: Global `effort` and per-preset `effort_by_preset` / `model_by_preset`
+- **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
+- **`compact`**: Omit per-rule priority annotations from inline sections
 - **`mcp_servers`**: Array of MCP server configurations
-- **`plugins`**: Array of plugin configurations
-- **`marketplaces`**: Array of marketplace integrations
+- **`plugins`**: Array of plugin installs from a marketplace (consumer side)
+- **`marketplaces`**: Array of marketplace sources
+- **`plugin`**: Producer-side authoring block for a distributable plugin bundle
+- **`marketplace`**: Producer-side marketplace index authoring block
 
 ### Field Constraints
 
@@ -108,15 +119,15 @@ Content here
 
 The schema files are available in the repository:
 
-| File                              | Format      | Version | Notes                                              |
-| --------------------------------- | ----------- | ------- | -------------------------------------------------- |
-| `schema/ai-rules.schema.json`     | JSON Schema | V4/V3   | Current schema for V4 and V3 (backward compatible) |
-| `schema/ai-rules-mcp.schema.json` | JSON Schema | V4      | Schema for MCP server configurations               |
+| File                              | Format      | Version | Notes                                               |
+| --------------------------------- | ----------- | ------- | --------------------------------------------------- |
+| `schema/ai-rules.schema.json`     | JSON Schema | V4/V3   | Config schema; accepts `version` `"4.0"` and `"3.0"` |
+| `schema/ai-rules-mcp.schema.json` | JSON Schema | V4      | Standalone schema for MCP server configurations      |
 
-Access them at:
+Access them at (versioned to the release; `main` is the tip):
 
-- Main schema: `https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json`
-- MCP schema: `https://github.com/Goldziher/ai-rulez/schema/ai-rules-mcp.schema.json`
+- Main schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json`
+- MCP schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-mcp.schema.json`
 
 ---
 

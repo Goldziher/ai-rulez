@@ -11,7 +11,7 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 - **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
 - **Commands**: Add/edit `.ai-rulez/commands/{name}.md` (flat form) or `.ai-rulez/commands/{name}/COMMAND.md` (directory form with optional `references/` subdirectory)
-- **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent`
+- **Agents**: Add/edit `.ai-rulez/agents/*.md` files (there is no `add agent` command; agents are edited as files)
 - **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands}/*.md` files or use `ai-rulez domain add`
 - **MCP Servers**: Inline in `.ai-rulez/config.toml` (no separate mcp.yaml file)
 
@@ -131,21 +131,25 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 ```toml
 presets = [
   "claude",       # → CLAUDE.md and .claude/
-  "cursor",       # → .cursor/rules/
-  "gemini",       # → GEMINI.md and .gemini/
-  "copilot",      # → .github/copilot-instructions.md
+  "cursor",       # → .cursor/rules/, .cursor/commands/, .agents/
+  "gemini",       # → GEMINI.md, .gemini/, .agents/
+  "copilot",      # → .github/copilot-instructions.md, .github/{skills,agents,commands}/
   "windsurf",     # → .windsurf/
   "continue-dev", # → .continue/
-  "cline",        # → .clinerules/
+  "cline",        # → .clinerules/, .cline/
   "codex",        # → AGENTS.md and .codex/
-  "amp",          # → AMP.md and .amp/
+  "amp",          # → AGENTS.md and .agents/ (.amp/settings.json when an effort resolves)
   "junie",        # → .junie/
-  "opencode",     # → AGENTS.md, .opencode/, opencode.json
+  "opencode",     # → AGENTS.md, .opencode/, opencode.json (when MCP servers are set)
   "hermes",       # → .hermes.md
-  "antigravity",  # → .agents/
+  "antigravity",  # → .agents/, GEMINI.md
   "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
 ]
 ```
+
+`mcp` is a built-in preset too, but it is a shared utility: it writes the generic `.mcp.json` and is
+invoked automatically when MCP servers are configured, so you normally do not name it. It is the only
+preset not produced by a coding-tool adapter, and `presets = ["mcp"]` alone generates nothing else.
 
 #### Custom Presets
 
@@ -163,6 +167,10 @@ template = """
 {{ end }}
 """
 ```
+
+The template uses Go's `text/template` with only its built-in functions; a helper such as `where`,
+`truncate`, or `now` is not defined and fails to parse. See [Custom Presets](profiles.md) for the
+available template data.
 
 #### Provider-backed Presets (full parity)
 
@@ -218,7 +226,13 @@ It may name several profiles to compose, the same as `--profile`:
 default = "base,backend"
 ```
 
-If not specified, all domains are included.
+When `default` is not set, the built-in `default` profile applies and its meaning depends on whether
+any profiles are defined:
+
+- If **no profiles** are defined at all, `default` includes root content and **all** domains.
+- If profiles are defined and one is named `default`, that definition is used.
+- If profiles are defined but none is named `default`, `default` includes root content, globally-active
+  builtin domains, and domains sourced from external includes — but not profile-only domains.
 
 ### `profiles`
 
@@ -234,8 +248,10 @@ qa = ["qa"]
 
 Each profile specifies a list of domain names. When generating with a profile:
 
-1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`) is included
-2. Content from specified domains (`.ai-rulez/domains/{name}/`) is included
+1. All root content (`.ai-rulez/rules/`, `.ai-rulez/context/`, `.ai-rulez/skills/`, `.ai-rulez/agents/`, `.ai-rulez/commands/`) is included
+2. Content from the specified domains (`.ai-rulez/domains/{name}/`) is included
+3. Globally-active builtin domains and every domain sourced from an external include are always included, whatever the profile
+4. A builtin named as `builtin:<name>` in the profile is loaded for that profile only
 
 Several profiles can be selected at once by separating them with commas — `--profile
 base,backend`, or `default = "base,backend"` — which generates the union of their
@@ -314,14 +330,34 @@ Each entry supports:
 | ------------- | -------- | ----------------------------------------------------------------------------------- |
 | `name`        | Yes      | Unique server identifier                                                            |
 | `description` | No       | Human-readable description of the server                                            |
-| `command`     | No       | Command to run for local `stdio` servers (npx, uvx, ai-rulez, etc.)                 |
-| `args`        | No       | Array of command arguments for local servers                                        |
+| `command`     | No       | Command to run for local `stdio` servers (npx, uvx, ai-rulez, etc.). May contain `${PROJECT_ROOT}`. |
+| `args`        | No       | Array of command arguments for local servers. Elements may contain `${PROJECT_ROOT}`. |
 | `env`         | No       | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
 | `transport`   | No       | `stdio`, `http`, or `sse`. Defaults to `stdio`.                                     |
 | `url`         | No       | Remote MCP server URL for `http` or `sse` transports.                               |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 
 Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`.
+
+A `command` or `args` value may use the `${PROJECT_ROOT}` placeholder, which resolves to the
+project root (the directory containing `.ai-rulez/`) during `ai-rulez generate`:
+
+```toml
+[[mcp_servers]]
+name = "repo-tools"
+command = "node"
+args = ["${PROJECT_ROOT}/scripts/mcp.js"]
+```
+
+This is the portable way to pass an absolute project path to a server that requires one, without
+hardcoding a machine-specific path. Because it resolves to an absolute path, the generated file
+carrying it is machine-specific: keep the output gitignored or regenerate it per machine. In `env`
+values, `${PROJECT_ROOT}` also resolves this way unless a real `PROJECT_ROOT` is supplied via
+`--env`, the process environment, or a dotenv file, in which case that value wins.
+
+For Claude Code specifically, a project-scoped `.mcp.json` can instead use Claude's own
+`${CLAUDE_PROJECT_DIR:-.}` token in `command`/`args`; ai-rulez passes it through unchanged, and it
+stays portable across machines.
 
 MCP env placeholders use `${VAR}` syntax, where `VAR` must match `[A-Za-z_][A-Za-z0-9_]*`. They are
 resolved during `ai-rulez generate` from repeated `--env KEY=VALUE` flags, process environment
@@ -367,24 +403,35 @@ the document's original indentation.
 
 ### `plugins`
 
-Plugin configuration for extending AI-Rulez functionality.
+Plugins to install from a configured marketplace. This is the **consumer** side of the plugin
+config: ai-rulez emits these declarations into `.claude/plugins.json` and `.codex/plugins.json`,
+and the target tool performs the install. It is distinct from the **producer** `[plugin]` block
+(see [Authoring Plugins](plugins.md)) that packages this project as a plugin.
 
 ```toml
 [[plugins]]
+marketplace = "official"   # name of a [[marketplaces]] entry
 name = "my-plugin"
-source = "https://github.com/org/plugin"
-version = "1.0.0"
+scope = "project"          # project or user; defaults to project
+enabled = true             # defaults to true
 ```
+
+!!! warning "Experimental"
+    The emitted `.claude/plugins.json` is not the same file Claude Code reads for installed
+    plugins — Claude Code records installs in `.claude/settings.json` (`enabledPlugins`,
+    `extraKnownMarketplaces`). Treat consumer plugin declarations as experimental until ai-rulez
+    emits the native format.
 
 ### `marketplaces`
 
-Marketplace integrations for discovering and installing extensions.
+Plugin marketplaces to register. ai-rulez records these sources but does not currently emit any
+marketplace output for them; a `[[plugins]]` entry references a marketplace by `name`.
 
 ```toml
 [[marketplaces]]
 name = "official"
-url = "https://marketplace.ai-rulez.io"
-enabled = true
+source = "https://github.com/org/marketplace"   # GitHub repo, git URL, local path, or URL
+type = "github"                                  # github, git, local, or url
 ```
 
 ### `builtins`
@@ -600,7 +647,7 @@ cursor = "claude-3.7-sonnet"
 
 **`defaults.effort_by_preset`** lets you override `defaults.effort` for specific presets. Per-agent metadata still wins. Useful when, for example, you want Codex to reason harder than Claude on the same project.
 
-**`defaults.model_by_preset`** sets the agent `model` value per preset. Model strings are provider-specific (`opus` makes sense for Claude, `gpt-5` for Copilot) so there is no provider-neutral `defaults.model` scalar — every entry is preset-scoped. Per-agent `<preset>_model` frontmatter still wins; the legacy single-value `model` field on an agent acts as the lowest-priority fallback. Presets that do not emit a per-agent model frontmatter (`codex`, `amp`, `antigravity`, `junie`) ignore entries for their preset.
+**`defaults.model_by_preset`** sets the agent `model` value per preset. Model strings are provider-specific (`opus` makes sense for Claude, `gpt-5` for Copilot) so there is no provider-neutral `defaults.model` scalar — every entry is preset-scoped. Per-agent `<preset>_model` frontmatter still wins; the legacy single-value `model` field on an agent acts as the lowest-priority fallback. Presets that do not emit a per-agent model frontmatter (`codex`, `antigravity`) ignore entries for their preset.
 
 **Resolution order** (per preset, per agent):
 
@@ -620,7 +667,7 @@ For models the order is:
 
 | Preset                                                                         | Where it's emitted                                                              | Field                    | Notes                                                                                                                                                                              |
 | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------- | ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `claude`                                                                       | `.claude/agents/<id>.md` frontmatter                                            | `effort`                 | Per-agent. Full vocabulary including `max` and `inherit`.                                                                                                                          |
+| `claude`                                                                       | `.claude/agents/<id>.md` frontmatter                                            | `effort`                 | Per-agent. Full vocabulary including `max`. `inherit` is not a Claude effort value and is dropped.                                                                                  |
 | `codex`                                                                        | `.codex/agents/<id>.toml` (per-agent) and `.codex/config.toml` (global default) | `model_reasoning_effort` | Per-agent override beats global `.codex/config.toml`. `max` → `high`; `inherit` dropped.                                                                                           |
 | `amp`                                                                          | `.amp/settings.json`                                                            | `amp.anthropic.effort`   | Global only. `xhigh` → `high`.                                                                                                                                                     |
 | `windsurf`                                                                     | `.windsurf/agents/<id>.md` frontmatter                                          | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
@@ -636,6 +683,8 @@ For models the order is:
 | `copilot`      | `copilot_model`           | `model` in `.github/agents/<id>.agent.md`    |
 | `cursor`       | `cursor_model`            | `model` in `.agents/agents/<id>.md`          |
 | `cline`        | `cline_model`             | `model` in `.cline/agents/<id>.md`           |
+| `amp`          | `amp_model`               | `model` in `.agents/agents/<id>.md` (Amp)    |
+| `junie`        | `junie_model`             | `model` in `.junie/agents/<id>.md`           |
 | `opencode`     | `opencode_model`          | `model` in `.opencode/agents/<id>.md`        |
 | `windsurf`     | `windsurf_model`          | `model` in `.windsurf/agents/<id>.md`        |
 | `continue-dev` | `continue-dev_model`      | `model` in `.continue/agents/<id>.md`        |
@@ -1330,23 +1379,23 @@ production = ["production-guidelines", "security-hardened"]
 
 ## Validation
 
-V4 configurations are validated against the JSON schema:
-
-```text
-schema/ai-rules.schema.json
-```
-
-To validate your configuration:
+For V4 configurations `ai-rulez validate` checks the raw config file against the JSON schema
+(`schema/ai-rules.schema.json`) — so an unknown key or a value outside an enum is reported rather
+than silently dropped — and then runs the structural checks below. TOML is converted to JSON for
+the schema check. V3 configurations are still accepted (`version = "3.0"`) and get the structural
+checks only, since the schema is V4-shaped.
 
 ```bash
 ai-rulez validate
 ```
 
-This checks:
+The structural checks cover:
 
 - `version` is `"4.0"` or `"3.0"` (for backward compatibility)
 - `name` is present and non-empty
 - All preset names are valid
+- `builtin:<name>` references in profiles name a real builtin
+- Profile references resolve (a missing domain is a warning, not a failure)
 - File paths are valid
 - MCP server definitions are well-formed
 

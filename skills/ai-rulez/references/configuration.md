@@ -77,33 +77,33 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | Preset       | Output Path                     |
 | ------------ | ------------------------------- |
 | claude       | CLAUDE.md                       |
-| cursor       | .cursor/rules/                  |
-| gemini       | GEMINI.md                       |
-| copilot      | .github/copilot-instructions.md |
+| cursor       | .cursor/rules/, .cursor/commands/, .agents/ |
+| gemini       | GEMINI.md, .gemini/, .agents/   |
+| copilot      | .github/copilot-instructions.md, .github/{skills,agents,commands}/ |
 | continue-dev | .continue/                      |
-| windsurf     | .windsurfrules                  |
-| cline        | .clinerules                     |
-| codex        | AGENTS.md                       |
-| amp          | AMP.md                          |
+| windsurf     | .windsurf/                      |
+| cline        | .clinerules/, .cline/           |
+| codex        | AGENTS.md and .codex/           |
+| amp          | AGENTS.md and .agents/ (.amp/settings.json) |
 | junie        | .junie/guidelines.md            |
 | opencode     | AGENTS.md, .opencode/, opencode.json |
 | hermes       | .hermes.md                      |
-| antigravity  | .agents/                        |
+| antigravity  | .agents/, GEMINI.md             |
 | xum          | AGENTS.md and .xum/             |
 
 ## Available Builtins
 
-Language domains: `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`
+Language domains: `rust`, `python`, `typescript`, `go`, `java`, `ruby`, `php`, `elixir`, `csharp`, `r`
 
-Cross-language binding domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`
+Cross-language binding domains: `pyo3`, `napi-rs`, `magnus`, `ext-php-rs`, `rustler`, `wasm`, `jni-rs`, `extendr`, `cgo`, `vite-plus`
 
-Practice domains: `ai-governance` (auto), `security`, `git-workflow`, `code-quality`, `testing`, `token-efficiency`, `documentation`, `default-commands`
+Practice domains: `ai-governance` (auto), `agent-delegation` (auto), `code-quality` (auto), `testing` (auto), `git-workflow` (auto), `security` (auto), `token-efficiency` (auto), `documentation`, `polyglot-bindings`, `default-commands`, `cicd`, `observability`, `docker`
 
 ## Content Frontmatter Fields
 
 ```yaml
 ---
-priority: medium # critical | high | medium | low
+priority: medium # critical | high | medium | low | minimal
 targets: # Limit to specific output targets
   - CLAUDE.md
   - .cursor/rules/*

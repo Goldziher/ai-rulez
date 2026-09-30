@@ -208,14 +208,15 @@ version = "4.0"
 name = "ML Research Platform"
 description = "Machine learning platform with team separation"
 
-presets = ["claude", "cursor", "gemini", "windsurf"]
+presets = [
+  "claude",
+  "cursor",
+  "gemini",
+  "windsurf",
+  { name = "internal-guide", type = "markdown", path = "docs/AI_DEVELOPMENT_GUIDE.md" },
+]
 default = "full"
 gitignore = true
-
-[[presets]]
-name = "internal-guide"
-type = "markdown"
-path = "docs/AI_DEVELOPMENT_GUIDE.md"
 
 [profiles]
 full = ["research", "infrastructure"]
@@ -299,18 +300,15 @@ For larger projects, reuse configurations across subdirectories.
 
 **`/.ai-rulez/config.toml`** (Root config):
 
-```yaml
-version: "3.0"
-name: "Platform"
+```toml
+version = "4.0"
+name = "Platform"
 
-presets:
-  - claude
-  - cursor
+presets = ["claude", "cursor"]
+default = "full"
 
-default: full
-
-profiles:
-  full: [shared]
+[profiles]
+full = ["shared"]
 ```
 
 **`/backend/.ai-rulez/config.toml`** (Backend-specific):
