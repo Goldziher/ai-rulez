@@ -12,6 +12,15 @@ import (
 	"github.com/samber/oops"
 )
 
+// Include merge strategies accepted by the include resolver. Kept in sync with
+// internal/includes; a config value outside this set makes the resolver error
+// and skip the include, so the CRUD layer rejects it up front.
+const (
+	MergeStrategyLocalOverride   = "local-override"
+	MergeStrategyIncludeOverride = "include-override"
+	MergeStrategyError           = "error"
+)
+
 // AddInclude adds a new include source to the config and validates it
 func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) error {
 	if err := validateAddIncludeRequest(req); err != nil {
@@ -181,34 +190,38 @@ func validateAddIncludeRequest(req *AddIncludeRequest) error {
 			Errorf("include source is required")
 	}
 
-	// Validate include types if provided
+	// Validate include types if provided. These are the content kinds the
+	// include resolver merges; MCP servers are not importable from an include.
 	validTypes := map[string]bool{
 		ContentTypeRules:   true,
 		ContentTypeContext: true,
 		ContentTypeSkills:  true,
-		"mcp":              true,
+		"agents":           true,
+		"commands":         true,
 	}
 
 	for _, t := range req.Include {
 		if !validTypes[t] {
 			return oops.
 				With("type", t).
-				Hint("Valid types: rules, context, skills, mcp").
+				Hint("Valid types: rules, context, skills, agents, commands").
 				Errorf("invalid include type '%s'", t)
 		}
 	}
 
-	// Validate merge strategy if provided
+	// Validate merge strategy if provided. These are the values the include
+	// resolver accepts; a stored value outside this set silently drops the
+	// include at generation.
 	if req.MergeStrategy != "" {
 		validStrategies := map[string]bool{
-			"default":  true,
-			"override": true,
-			"append":   true,
+			MergeStrategyLocalOverride:   true,
+			MergeStrategyIncludeOverride: true,
+			MergeStrategyError:           true,
 		}
 		if !validStrategies[req.MergeStrategy] {
 			return oops.
 				With("strategy", req.MergeStrategy).
-				Hint("Valid strategies: default, override, append").
+				Hint("Valid strategies: local-override, include-override, error").
 				Errorf("invalid merge strategy '%s'", req.MergeStrategy)
 		}
 	}

@@ -47,7 +47,7 @@ func ResolveGlobalEffort(preset string, cfg *config.Config) string {
 //   - amp:    low, medium, high, max — amp.anthropic.effort. xhigh → high (Amp has no xhigh).
 //   - windsurf: low, medium, high, xhigh — agent frontmatter reasoning_effort. max → high.
 //   - antigravity: low, medium, high, xhigh — thinking_level frontmatter. max → high.
-//   - opencode: low, medium, high — reasoningEffort agent frontmatter. xhigh|max → high.
+//   - opencode: low, medium, high — agent `variant` (joined to the model). xhigh|max → high.
 //   - continue-dev: handled out-of-band — emit reasoning: true and a budget tied to tier.
 //     MapEffort still returns the canonical tier; the preset uses its own table.
 func MapEffort(preset, tier string) string {

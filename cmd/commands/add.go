@@ -65,13 +65,13 @@ func init() {
 
 	// Common flags for all add commands
 	addRuleCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-	addRuleCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low")
+	addRuleCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
 	addRuleCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated list of target providers (e.g., claude,cursor)")
 	addRuleCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 	addRuleCmd.Flags().BoolVar(&addLocal, "local", false, "Write to .ai-rulez/local/ as a machine-local override (gitignored); cannot combine with --domain")
 
 	addContextCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
-	addContextCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low")
+	addContextCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
 	addContextCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 	addContextCmd.Flags().BoolVar(&addLocal, "local", false, "Write to .ai-rulez/local/ as a machine-local override (gitignored); cannot combine with --domain")
 

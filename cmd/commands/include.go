@@ -74,7 +74,7 @@ func init() {
 	includeAddCmd.Flags().StringVarP(&includePath, "path", "p", "", "Subdirectory within git repository (git only)")
 	includeAddCmd.Flags().StringVarP(&includeRef, "ref", "r", "", "Branch, tag, or commit to use (git only)")
 	includeAddCmd.Flags().StringVarP(&includeTypes, "include", "i", "rules,context,skills", "Content types to include (comma-separated)")
-	includeAddCmd.Flags().StringVarP(&includeMergeStrat, "merge-strategy", "m", "default", "Merge strategy: default|override|append")
+	includeAddCmd.Flags().StringVarP(&includeMergeStrat, "merge-strategy", "m", "", "Merge strategy: local-override (default), include-override, or error")
 	includeAddCmd.Flags().StringVarP(&includeInstallTo, "install-to", "t", "", "Installation path (optional)")
 
 	// Add flags for include remove
