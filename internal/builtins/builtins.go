@@ -104,15 +104,35 @@ var registry = map[string]BuiltinDomain{
 	"vite-plus":  {Name: "vite-plus", Category: CategoryBinding, Description: "Vite+ unified TypeScript toolchain"},
 }
 
+// RefPrefix marks a builtin reference in a context that also admits local domain
+// names, such as a profile's domain list. A bare name there means an on-disk or
+// include domain, while "builtin:<name>" means the builtin pack; keeping the two
+// namespaces explicit stops a builtin and a local domain of the same name from
+// silently colliding.
+const RefPrefix = "builtin:"
+
+// HasRefPrefix reports whether name is a "builtin:<name>" reference.
+func HasRefPrefix(name string) bool {
+	return strings.HasPrefix(name, RefPrefix)
+}
+
+// TrimRefPrefix returns the builtin name inside a "builtin:<name>" reference, or
+// name unchanged when it carries no prefix.
+func TrimRefPrefix(name string) string {
+	return strings.TrimPrefix(name, RefPrefix)
+}
+
 // Get returns the BuiltinDomain for the given name, or false if not found.
 func Get(name string) (BuiltinDomain, bool) {
 	d, ok := registry[name]
 	return d, ok
 }
 
-// IsValid returns true if the given name is a valid builtin (ignoring "!" prefix)
+// IsValid returns true if the given name is a valid builtin, tolerating the "!"
+// exclusion prefix and the "builtin:" reference prefix.
 func IsValid(name string) bool {
 	clean := strings.TrimPrefix(name, "!")
+	clean = TrimRefPrefix(clean)
 	_, ok := registry[clean]
 	return ok
 }

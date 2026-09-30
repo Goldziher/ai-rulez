@@ -281,6 +281,26 @@ ai-rulez generate --profile full-stack
 # Gets: root + backend + frontend content
 ```
 
+### Builtin Packs Per Profile
+
+A builtin pack can be scoped to one profile by referencing it as `builtin:<name>` in that
+profile's domain list:
+
+```yaml
+profiles:
+  backend:
+    - backend
+    - builtin:docker
+  frontend:
+    - frontend
+```
+
+The `backend` profile gets the `docker` builtin; `frontend` does not. This differs from the
+root `builtins` field, which makes a pack global once it is enabled. The reference is an
+explicit opt-in, so it works even when `builtins` is absent or `false`, and the `builtin:`
+prefix keeps the pack from colliding with a local domain of the same name. A pack the root
+field already enabled stays global regardless of where else it is named.
+
 ## Domain Content Priority
 
 When the same name exists in both root and a domain:

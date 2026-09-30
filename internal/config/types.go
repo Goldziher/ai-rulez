@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/internal/builtins"
 )
 
 // Config represents the configuration format
@@ -432,14 +434,15 @@ type ContentTree struct {
 
 // Domain represents content from a specific domain directory
 type Domain struct {
-	Name        string        `yaml:"name" json:"name"`
-	Rules       []ContentFile `yaml:"rules,omitempty" json:"rules,omitempty"`
-	Context     []ContentFile `yaml:"context,omitempty" json:"context,omitempty"`
-	Skills      []ContentFile `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Agents      []ContentFile `yaml:"agents,omitempty" json:"agents,omitempty"`
-	Commands    []ContentFile `yaml:"commands,omitempty" json:"commands,omitempty"`
-	Builtin     bool          `yaml:"-" json:"-"` // true if loaded from builtins
-	FromInclude bool          `yaml:"-" json:"-"` // true if loaded from an external include
+	Name          string        `yaml:"name" json:"name"`
+	Rules         []ContentFile `yaml:"rules,omitempty" json:"rules,omitempty"`
+	Context       []ContentFile `yaml:"context,omitempty" json:"context,omitempty"`
+	Skills        []ContentFile `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Agents        []ContentFile `yaml:"agents,omitempty" json:"agents,omitempty"`
+	Commands      []ContentFile `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Builtin       bool          `yaml:"-" json:"-"` // true if loaded from builtins
+	BuiltinScoped bool          `yaml:"-" json:"-"` // true if a builtin loaded only for the profiles that name it (builtin:<name>)
+	FromInclude   bool          `yaml:"-" json:"-"` // true if loaded from an external include
 }
 
 // ContentFile represents a single content file with optional frontmatter
@@ -667,23 +670,32 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 
 	profileDomains := c.GetProfileDomains(profile)
 
-	// Build filtered domains map: profile-listed domains + builtin + FromInclude
+	// Build filtered domains map: profile-listed domains + global builtins + FromInclude
 	activeDomains := make(map[string]*Domain)
 
-	// First pass: include all builtin and FromInclude domains unconditionally.
-	// This ensures that domains from external includes are always available,
-	// regardless of whether they are explicitly listed in the profile.
+	// First pass: include globally-active builtins and every FromInclude domain
+	// unconditionally. A builtin loaded only because a profile named it is
+	// excluded here and re-added by the second pass for that profile alone.
 	for name, domain := range c.Content.Domains {
-		if domain.Builtin || domain.FromInclude {
+		if domain.FromInclude || (domain.Builtin && !domain.BuiltinScoped) {
 			activeDomains[name] = domain
 		}
 	}
 
 	// Second pass: add profile-specified domains (may overlap with FromInclude).
-	for _, name := range profileDomains {
-		if domain, ok := c.Content.Domains[name]; ok {
-			activeDomains[name] = domain
+	// A "builtin:<name>" element selects a profile-scoped builtin; a bare name
+	// selects an on-disk or include domain and never widens a scoped builtin
+	// into a profile that did not ask for it.
+	for _, ref := range profileDomains {
+		name := builtins.TrimRefPrefix(ref)
+		domain, ok := c.Content.Domains[name]
+		if !ok {
+			continue
 		}
+		if domain.BuiltinScoped && !builtins.HasRefPrefix(ref) {
+			continue
+		}
+		activeDomains[name] = domain
 	}
 
 	return &ContentTree{
