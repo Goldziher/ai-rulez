@@ -13,6 +13,9 @@ import "github.com/Goldziher/ai-rulez/internal/config"
 //  3. agent.Metadata.Extra["model"]           (legacy single field, preset-agnostic)
 //  4. ""                                      (omit the model frontmatter)
 func ResolveAgentModel(preset string, agent config.ContentFile, cfg *config.Config) string {
+	if cfg.OmitsAgentField("model") {
+		return ""
+	}
 	if agent.Metadata != nil {
 		if v, ok := agent.Metadata.Extra[preset+"_model"]; ok && v != "" {
 			return v

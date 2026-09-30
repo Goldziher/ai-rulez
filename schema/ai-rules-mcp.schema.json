@@ -65,6 +65,13 @@
             "type": "boolean",
             "description": "Whether this MCP server is emitted into generated MCP outputs (default: true)",
             "default": true
+          },
+          "profiles": {
+            "type": "array",
+            "description": "Restrict this server to the named profiles. Omit to include it in every profile.",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
