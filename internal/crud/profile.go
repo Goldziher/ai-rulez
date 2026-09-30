@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/builtins"
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
@@ -42,19 +43,8 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 			Errorf("profile '%s' already exists", name)
 	}
 
-	// Validate all domains exist in content tree
-	if cfg.Content != nil {
-		for _, domain := range domains {
-			if domain != "" && cfg.Content.Domains != nil {
-				if _, exists := cfg.Content.Domains[domain]; !exists {
-					return oops.
-						With("profile", name).
-						With("domain", domain).
-						Hint("Domain does not exist in .ai-rulez/domains/").
-						Errorf("domain '%s' does not exist", domain)
-				}
-			}
-		}
+	if err := validateProfileDomains(cfg, name, domains); err != nil {
+		return err
 	}
 
 	// Initialize profiles map if needed
@@ -78,6 +68,38 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 		"domains", len(domains),
 	)
 
+	return nil
+}
+
+// validateProfileDomains checks every domain a profile names. A "builtin:<name>"
+// element must name a real builtin pack; a bare name must exist in the content
+// tree.
+func validateProfileDomains(cfg *config.Config, profile string, domains []string) error {
+	for _, domain := range domains {
+		if domain == "" {
+			continue
+		}
+		if builtins.HasRefPrefix(domain) {
+			if !builtins.IsValid(domain) {
+				return oops.
+					With("profile", profile).
+					With("builtin", domain).
+					Hint("Use a name from `ai-rulez builtins list`").
+					Errorf("unknown builtin '%s'", builtins.TrimRefPrefix(domain))
+			}
+			continue
+		}
+		if cfg.Content == nil || cfg.Content.Domains == nil {
+			continue
+		}
+		if _, exists := cfg.Content.Domains[domain]; !exists {
+			return oops.
+				With("profile", profile).
+				With("domain", domain).
+				Hint("Domain does not exist in .ai-rulez/domains/").
+				Errorf("domain '%s' does not exist", domain)
+		}
+	}
 	return nil
 }
 

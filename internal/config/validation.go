@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/builtins"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
@@ -394,6 +395,25 @@ func (c *Config) validateProfiles() error {
 		}
 	}
 
+	// A "builtin:<name>" element must name a real builtin pack. A misspelled
+	// reference loads nothing and would otherwise surface only as a vague
+	// missing-domain warning.
+	for name, domains := range c.Profiles {
+		for _, domain := range domains {
+			if !builtins.HasRefPrefix(domain) {
+				continue
+			}
+			ref := builtins.TrimRefPrefix(domain)
+			if !builtins.IsValid(ref) {
+				return oops.
+					With("field", fmt.Sprintf("profiles.%s", name)).
+					With("builtin", domain).
+					Hint("Use a name from `ai-rulez builtins list`, or drop the 'builtin:' prefix to reference a local domain").
+					Errorf("profile %q references unknown builtin %q", name, ref)
+			}
+		}
+	}
+
 	// If default is specified, every element of it must exist in profiles. The
 	// default may be composed, the same as a --profile value.
 	if c.Default != "" && !c.HasProfile(c.Default) {
@@ -455,11 +475,12 @@ func (c *Config) warnMissingDomainReferences() {
 
 	hasIncludes := len(c.Includes) > 0
 
-	// Collect all domain names referenced in profiles
+	// Collect all domain names referenced in profiles. A "builtin:<name>"
+	// reference addresses the builtin's bare domain name in the content tree.
 	referencedDomains := make(map[string]bool)
 	for _, domains := range c.Profiles {
 		for _, domain := range domains {
-			referencedDomains[domain] = true
+			referencedDomains[builtins.TrimRefPrefix(domain)] = true
 		}
 	}
 

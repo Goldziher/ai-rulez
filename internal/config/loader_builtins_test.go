@@ -391,6 +391,134 @@ func TestBuiltinsConfig_Methods(t *testing.T) {
 	})
 }
 
+func TestLoadConfig_ProfileBuiltinRefs(t *testing.T) {
+	t.Run("builtin ref loads the pack scoped to its profile only", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+		configContent := `version: "3.0"
+name: test-profile-builtins
+presets:
+  - claude
+profiles:
+  backend:
+    - builtin:docker
+  frontend:
+    - builtin:typescript
+`
+		require.NoError(t, os.WriteFile(
+			filepath.Join(configDir, configYAMLFilename),
+			[]byte(configContent), 0o644,
+		))
+
+		config, err := LoadConfig(context.Background(), tempDir)
+		require.NoError(t, err)
+
+		// Both packs are loaded, and both are marked profile-scoped.
+		require.Contains(t, config.Content.Domains, "docker")
+		require.Contains(t, config.Content.Domains, "typescript")
+		assert.True(t, config.Content.Domains["docker"].BuiltinScoped)
+
+		backend, err := config.GetContentForProfile("backend")
+		require.NoError(t, err)
+		assert.Contains(t, backend.Domains, "docker")
+		assert.NotContains(t, backend.Domains, "typescript")
+
+		frontend, err := config.GetContentForProfile("frontend")
+		require.NoError(t, err)
+		assert.Contains(t, frontend.Domains, "typescript")
+		assert.NotContains(t, frontend.Domains, "docker")
+	})
+
+	t.Run("builtin ref is honored when the root builtins field disables all", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+		configContent := `version: "3.0"
+name: test-profile-builtins-off
+presets:
+  - claude
+builtins: false
+profiles:
+  backend:
+    - builtin:rust
+`
+		require.NoError(t, os.WriteFile(
+			filepath.Join(configDir, configYAMLFilename),
+			[]byte(configContent), 0o644,
+		))
+
+		config, err := LoadConfig(context.Background(), tempDir)
+		require.NoError(t, err)
+
+		assert.Contains(t, config.Content.Domains, "rust")
+		assert.NotContains(t, config.Content.Domains, "ai-governance")
+
+		backend, err := config.GetContentForProfile("backend")
+		require.NoError(t, err)
+		assert.Contains(t, backend.Domains, "rust")
+	})
+
+	t.Run("globally enabled builtin is not downgraded by a profile ref", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+		configContent := `version: "3.0"
+name: test-profile-builtins-global
+presets:
+  - claude
+builtins:
+  - rust
+profiles:
+  backend:
+    - builtin:rust
+`
+		require.NoError(t, os.WriteFile(
+			filepath.Join(configDir, configYAMLFilename),
+			[]byte(configContent), 0o644,
+		))
+
+		config, err := LoadConfig(context.Background(), tempDir)
+		require.NoError(t, err)
+
+		require.Contains(t, config.Content.Domains, "rust")
+		assert.False(t, config.Content.Domains["rust"].BuiltinScoped,
+			"a pack enabled by the root field stays globally active")
+
+		// Global builtins are visible to every profile, not just the one that
+		// also names the pack.
+		frontend, err := config.GetContentForProfile("frontend")
+		require.NoError(t, err)
+		assert.Contains(t, frontend.Domains, "rust")
+	})
+
+	t.Run("unknown builtin ref fails validation", func(t *testing.T) {
+		tempDir := t.TempDir()
+		configDir := filepath.Join(tempDir, aiRulezDirName)
+		require.NoError(t, os.MkdirAll(configDir, 0o755))
+
+		configContent := `version: "3.0"
+name: test-profile-builtins-bad
+presets:
+  - claude
+profiles:
+  backend:
+    - builtin:not-a-pack
+`
+		require.NoError(t, os.WriteFile(
+			filepath.Join(configDir, configYAMLFilename),
+			[]byte(configContent), 0o644,
+		))
+
+		config, err := LoadConfig(context.Background(), tempDir)
+		require.NoError(t, err)
+		require.Error(t, config.Validate())
+	})
+}
+
 // domainNames extracts domain names from a loaded config
 func domainNames(config *Config) []string {
 	if config.Content == nil {

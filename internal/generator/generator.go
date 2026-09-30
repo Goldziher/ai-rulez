@@ -492,11 +492,12 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 
 		// When profiles are defined in the config, keep the previous
 		// behavior where the built-in "default" profile only sees
-		// root content and (optionally) built-in domains. FromInclude
-		// domains are always included regardless of profile definitions.
+		// root content, globally-active built-in domains, and FromInclude
+		// domains. A builtin scoped to a named profile via `builtin:<name>`
+		// is not global, so it is excluded unless `default` names it.
 		defaultDomains := make(map[string]*config.Domain)
 		for name, domain := range g.config.Content.Domains {
-			if domain.Builtin || domain.FromInclude {
+			if domain.FromInclude || (domain.Builtin && !domain.BuiltinScoped) {
 				defaultDomains[name] = domain
 			}
 		}
