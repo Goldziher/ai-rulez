@@ -21,14 +21,14 @@ presets = [
   "gemini",       # → GEMINI.md
   "copilot",      # → .github/copilot-instructions.md
   "continue-dev", # → .continue/rules/
-  "windsurf",     # → .windsurfrules
-  "cline",        # → .clinerules
-  "codex",        # → AGENTS.md
-  "amp",          # → AMP.md
+  "windsurf",     # → .windsurf/
+  "cline",        # → .clinerules/, .cline/
+  "codex",        # → AGENTS.md and .codex/
+  "amp",          # → AGENTS.md and .agents/ (.amp/settings.json)
   "junie",        # → .junie/guidelines.md
   "opencode",     # → AGENTS.md, .opencode/, opencode.json
   "hermes",      # → .hermes.md
-  "antigravity",  # → .agents/
+  "antigravity",  # → .agents/, GEMINI.md
   "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
 ]
 ```

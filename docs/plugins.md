@@ -2,7 +2,7 @@
 
 `ai-rulez generate --plugin` packages your `.ai-rulez/` project into distributable
 **plugin bundles** and a **marketplace index** for the Claude, Cursor, Codex, Gemini,
-Kimi, OpenCode, and Factory runtimes, plus the opt-in Agent Plugins 1.0.0 standard.
+Kimi, OpenCode, Factory, and Hermes runtimes, plus the opt-in Agent Plugins 1.0.0 standard.
 Where the normal `generate` writes in-repo
 assistant config, `--plugin` produces installable artifacts other people can add to
 their own tools — reaching users who never run ai-rulez.
@@ -13,8 +13,10 @@ packaging metadata.
 !!! note "Authoring vs. installing"
 The `[plugin]` / `[marketplace]` blocks documented here are the **producer**
 (authoring) side. They are distinct from the `[[plugins]]` / `[[marketplaces]]`
-arrays, which are the **consumer** side (declaring plugins to _install_ from a
-marketplace, rendered into `.claude/plugins.json`).
+arrays, which are the **consumer** side. `[[plugins]]` is rendered into
+`.claude/plugins.json` and `.codex/plugins.json`; `[[marketplaces]]` is currently
+recorded only and not emitted. See
+[Consumer plugins](configuration.md#plugins) for the fields.
 
 ## Quick start
 
@@ -61,7 +63,9 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
 
-The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside.
+The **marketplace index** is emitted alongside — `.claude-plugin/marketplace.json` for the Claude
+runtime and `.agents/plugins/marketplace.json` for Codex — but only when `claude` is among the
+bundle's runtimes (for the Claude index).
 
 Content files (SKILL.md, commands, agents) are copied **verbatim** from your source
 into each runtime's directories — never re-rendered — so a bundled skill is identical
@@ -81,9 +85,10 @@ When the source entrypoint is absent, generation emits a documented no-op module
 module keeps the plugin loadable and tells you where to create the user-owned source;
 it does not guess tool schemas, subprocess arguments, or business logic.
 
-The `opencode` preset itself is separate from plugin authoring. It emits a native v2
-`opencode.json` with `mcp.servers` populated from your `[[mcp_servers]]`, merged so any
-other keys in a hand-authored `opencode.json` are preserved.
+The `opencode` preset itself is separate from plugin authoring. It emits `AGENTS.md`,
+`.opencode/skills/`, and `.opencode/agents/`, and — only when `[[mcp_servers]]` are configured — a
+native v2 `opencode.json` with `mcp.servers`, merged so any other keys in a hand-authored
+`opencode.json` are preserved.
 
 ### Hermes adapter
 
@@ -147,7 +152,8 @@ these hashes without adding unsupported fields to runtime manifests.
 
 Write MCP launch commands once with the canonical `${PLUGIN_ROOT}`; each runtime
 rewrites it to the form it expects — `${CLAUDE_PLUGIN_ROOT}` (Claude),
-`${extensionPath}` (Gemini), or plugin-relative `./` (Cursor, Codex, Kimi).
+`${extensionPath}` (Gemini), plugin-relative `./` (Cursor, Codex, Kimi, Agent Plugins), or
+the canonical variable unchanged (OpenCode, Factory).
 
 ### Hooks
 
@@ -240,17 +246,20 @@ email = "dev@acme.example"
 
 Each member (`plugins/alpha/.ai-rulez/config.toml`, …) defines its own `[plugin]`
 block. `generate --plugin` renders every member's bundle under its directory and
-emits a single root `marketplace.json` listing each with `source: "./plugins/<name>"`.
+emits a single root marketplace index — `.claude-plugin/marketplace.json` (and the Codex
+index at `.agents/plugins/marketplace.json`) — listing each with `source: "./plugins/<name>"`.
 Members do not emit their own marketplace index.
 
 ## Field reference
 
 `[plugin]`: `name`, `version` (required); `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`. Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
+`tags`, `runtimes`, `content_root` (project-relative directory of plugin-only
+`skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
 (Codex/Kimi UI block), `[plugin.gemini]` (`context_file_name`), `[plugin.kimi]`
-(`skill_instructions`/`session_start_skill`).
+(`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
+(`source`/`requires_python`).
 
 `[marketplace]`: `name` (required); `description`, `members`, and `[marketplace.owner]`.

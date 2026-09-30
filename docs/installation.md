@@ -5,36 +5,43 @@ Install `ai-rulez` using your preferred package manager.
 ## Package Managers
 
 === "Homebrew (macOS/Linux)"
-`bash
-    brew install goldziher/tap/ai-rulez`
+    ```bash
+    brew install goldziher/tap/ai-rulez
+    ```
 
 === "Go"
-`bash
-    go install github.com/Goldziher/ai-rulez/cmd@latest`
+    ```bash
+    go install github.com/Goldziher/ai-rulez/cmd@latest
+    ```
 
 === "npm"
-`bash
-    npm install -g ai-rulez`
+    ```bash
+    npm install -g ai-rulez
+    ```
 
 === "pip"
-`bash
-    pip install ai-rulez`
+    ```bash
+    pip install ai-rulez
+    ```
 
 ## Run Without Installing
 
 You can also run `ai-rulez` directly without a permanent installation.
 
 === "Go"
-`bash
-    go run github.com/Goldziher/ai-rulez/cmd@latest --help`
+    ```bash
+    go run github.com/Goldziher/ai-rulez/cmd@latest --help
+    ```
 
 === "Python"
-`bash
-    uvx ai-rulez --help`
+    ```bash
+    uvx ai-rulez --help
+    ```
 
 === "Node.js"
-`bash
-    npx ai-rulez@latest --help`
+    ```bash
+    npx ai-rulez@latest --help
+    ```
 
 ## Shell Completion (Recommended)
 

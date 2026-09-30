@@ -148,6 +148,10 @@ The server provides Claude with access to read and modify your configuration, wh
 
 The ai-rulez MCP server exposes 36 tools for programmatic configuration management. These tools allow AI assistants to initialize projects, generate and clean outputs, validate configuration, inspect builtins, and create, read, update, and delete configuration elements.
 
+Every tool below accepts an optional `working_directory` parameter (the directory to operate in),
+except the two utility tools `get_version` and `show_builtin`. The per-tool parameter lists below
+name only the parameters specific to that tool unless noted.
+
 ### Project and Utility Tools
 
 #### `generate_outputs`
@@ -187,15 +191,16 @@ Validate the configuration file, including all includes.
 
 #### `init_project`
 
-Initialize a new ai-rulez project in the current directory.
+Initialize a new ai-rulez project in the current directory. Unlike the CLI `init` (which defaults to
+TOML), this writes `.ai-rulez/config.yaml`.
 
 **Parameters:**
 
 - `project_name` (optional, string): Project name
 - `providers` (optional, array): Providers to enable, such as `claude` or `cursor`
 - `with_agents` (optional, boolean): Include sample agent configurations
-- `all_providers` (optional, boolean): Enable all supported providers
-- `popular_providers` (optional, boolean): Enable the curated popular provider set
+- `all_providers` (optional, boolean): Enable the curated set of tool presets
+- `popular_providers` (optional, boolean): Same curated set — a shortcut for `all_providers`
 - `working_directory` (optional, string): Directory to operate in
 
 #### `get_version`
@@ -505,7 +510,7 @@ Add a new include source (git URL or local path) to the configuration.
 - `name` (required, string): Include name (unique identifier)
 - `source` (required, string): Git URL (`https://github.com/org/repo`) or local path (`./packages/shared`)
 - `path` (optional, string): Path within git repository where .ai-rulez/ content is located
-- `ref` (optional, string): Git reference - branch, tag, or commit hash (git sources only). Default: main
+- `ref` (optional, string): Git reference - branch, tag, or commit hash (git sources only). Defaults to the repository's default branch (`HEAD`)
 - `include` (optional, array): Content types to include - rules, context, skills, mcp
 - `merge_strategy` (optional, string): Merge strategy - default, override, append
 - `install_to` (optional, string): Installation target path in .ai-rulez/

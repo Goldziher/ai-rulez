@@ -15,18 +15,19 @@ Domains are named areas of your project with their own rules, context, and skill
 
 Profiles specify which domains are included when generating. Example:
 
-```yaml
-profiles:
-  full: [backend, frontend, qa] # All teams
-  backend: [backend, qa] # Backend team only
-  frontend: [frontend, qa] # Frontend team only
-  qa: [qa] # QA team only
+```toml
+[profiles]
+full = ["backend", "frontend", "qa"]   # All teams
+backend = ["backend", "qa"]            # Backend team only
+frontend = ["frontend", "qa"]          # Frontend team only
+qa = ["qa"]                            # QA team only
 ```
 
 Generation always includes:
 
-- All root content (rules, context, skills)
-- Content from selected domains only
+- All root content (rules, context, skills, agents, commands)
+- Content from the selected domains only
+- Globally-active builtins and include-sourced domains, whatever the profile
 
 ## Directory Structure
 
@@ -66,92 +67,69 @@ Generation always includes:
 
 For microservices or service-oriented architecture:
 
-```yaml
-domains:
-  - api: REST API service
-  - database: Database layer
-  - cache: Caching layer
-  - queue: Message queue
-  - frontend: Web UI
-```
+Domains: `api` (REST API service), `database` (database layer), `cache` (caching layer),
+`queue` (message queue), `frontend` (web UI).
 
 **Profiles:**
 
-```yaml
-profiles:
-  full: [api, database, cache, queue, frontend]
-  backend: [api, database, cache, queue]
-  frontend: [frontend]
-  infrastructure: [database, cache, queue]
+```toml
+[profiles]
+full = ["api", "database", "cache", "queue", "frontend"]
+backend = ["api", "database", "cache", "queue"]
+frontend = ["frontend"]
+infrastructure = ["database", "cache", "queue"]
 ```
 
 ### Team-Based Domains
 
 For organizations with dedicated teams:
 
-```yaml
-domains:
-  - backend: Go microservices
-  - frontend: React web app
-  - mobile: React Native mobile
-  - qa: Testing and quality assurance
-  - devops: Infrastructure and deployment
-```
+Domains: `backend` (Go microservices), `frontend` (React web app), `mobile` (React Native),
+`qa` (testing and quality assurance), `devops` (infrastructure and deployment).
 
 **Profiles:**
 
-```yaml
-profiles:
-  full: [backend, frontend, mobile, qa, devops]
-  backend-team: [backend, qa]
-  frontend-team: [frontend, qa]
-  mobile-team: [mobile, qa]
-  qa-team: [qa]
-  devops-team: [devops]
-  ci-all: [backend, frontend, mobile, qa, devops]
+```toml
+[profiles]
+full = ["backend", "frontend", "mobile", "qa", "devops"]
+backend-team = ["backend", "qa"]
+frontend-team = ["frontend", "qa"]
+mobile-team = ["mobile", "qa"]
+qa-team = ["qa"]
+devops-team = ["devops"]
+ci-all = ["backend", "frontend", "mobile", "qa", "devops"]
 ```
 
 ### Feature-Based Domains
 
 For projects organized by feature:
 
-```yaml
-domains:
-  - auth: Authentication and authorization
-  - payments: Payment processing
-  - notifications: Email, SMS, push notifications
-  - search: Search and indexing
-  - analytics: Data collection and analysis
-```
+Domains: `auth` (authentication and authorization), `payments` (payment processing),
+`notifications` (email, SMS, push), `search` (search and indexing), `analytics` (data collection).
 
 **Profiles:**
 
-```yaml
-profiles:
-  full: [auth, payments, notifications, search, analytics]
-  backend: [auth, payments, notifications, search, analytics]
-  frontend: [notifications, search]
+```toml
+[profiles]
+full = ["auth", "payments", "notifications", "search", "analytics"]
+backend = ["auth", "payments", "notifications", "search", "analytics"]
+frontend = ["notifications", "search"]
 ```
 
 ### Environment-Based Domains
 
 For different rules per environment:
 
-```yaml
-domains:
-  - dev: Development guidelines
-  - staging: Staging constraints
-  - prod: Production rules
-  - security-hardened: Extra security measures
-```
+Domains: `dev` (development guidelines), `staging` (staging constraints), `prod`
+(production rules), `security-hardened` (extra security measures).
 
 **Profiles:**
 
-```yaml
-profiles:
-  development: [dev]
-  staging: [staging, security-hardened]
-  production: [prod, security-hardened]
+```toml
+[profiles]
+development = ["dev"]
+staging = ["staging", "security-hardened"]
+production = ["prod", "security-hardened"]
 ```
 
 ## Domain Names
@@ -343,11 +321,11 @@ ai-rulez tokens --profile base,backend
 This is what lets one profile hold the content everybody installs while the others add
 only their own extras:
 
-```yaml
-profiles:
-  base: [conventions, security]
-  backend: [api, database]
-  frontend: [web]
+```toml
+[profiles]
+base = ["conventions", "security"]
+backend = ["api", "database"]
+frontend = ["web"]
 ```
 
 `--profile base,backend` and `--profile base,frontend` then cover both roles without a
@@ -357,8 +335,8 @@ third role would double.
 A composed value works anywhere a profile name does, including the config's own default
 and a scope's `profile`:
 
-```yaml
-default: base,backend
+```toml
+default = "base,backend"
 ```
 
 Rules:
@@ -380,67 +358,47 @@ Rules:
 
 Profiles can include multiple domains with shared subsets:
 
-```yaml
-profiles:
-  # Full stack for dev team
-  full-dev: [backend, frontend, devops, qa]
+```toml
+[profiles]
+# Full stack for dev team
+full-dev = ["backend", "frontend", "devops", "qa"]
 
-  # Minimal for contractors
-  frontend-only: [frontend]
+# Minimal for contractors
+frontend-only = ["frontend"]
 
-  # Security-focused for compliance
-  security-audit: [security, backend, database]
+# Security-focused for compliance
+security-audit = ["security", "backend", "database"]
 
-  # Performance optimization
-  perf-team: [backend, database, cache]
+# Performance optimization
+perf-team = ["backend", "database", "cache"]
 ```
 
 ### Environment-Specific Profiles
 
-```yaml
-profiles:
-  # Development: loose constraints
-  dev:
-    - dev-guidelines
-    - logging-verbose
+```toml
+[profiles]
+# Development: loose constraints
+dev = ["dev-guidelines", "logging-verbose"]
 
-  # Staging: stricter
-  staging:
-    - staging-checks
-    - logging-standard
-    - security-checks
+# Staging: stricter
+staging = ["staging-checks", "logging-standard", "security-checks"]
 
-  # Production: strictest
-  production:
-    - production-critical
-    - logging-minimal
-    - security-hardened
-    - compliance
+# Production: strictest
+production = ["production-critical", "logging-minimal", "security-hardened", "compliance"]
 ```
 
 ### Feature-Based Selection
 
-```yaml
-profiles:
-  # New features team
-  features:
-    - feature-auth
-    - feature-payments
-    - feature-notifications
+```toml
+[profiles]
+# New features team
+features = ["feature-auth", "feature-payments", "feature-notifications"]
 
-  # Infrastructure team
-  infrastructure:
-    - database
-    - cache
-    - queue
-    - monitoring
+# Infrastructure team
+infrastructure = ["database", "cache", "queue", "monitoring"]
 
-  # Quality team
-  quality:
-    - testing
-    - security
-    - performance
-    - accessibility
+# Quality team
+quality = ["testing", "security", "performance", "accessibility"]
 ```
 
 ## Best Practices
@@ -449,16 +407,9 @@ profiles:
 
 Each domain represents one area of responsibility:
 
-```yaml
-Good:
-domains:
-  - backend
-  - frontend
-
-Bad:
-domains:
-  - backend-with-all-services
-  - frontend-with-all-build-tools
+```text
+Good: backend, frontend
+Bad:  backend-with-all-services, frontend-with-all-build-tools
 ```
 
 ### Avoid Overlapping Domains
@@ -483,7 +434,7 @@ Domain-specific:
 
 Add comments in config.toml:
 
-```yaml
+```toml
 # Domains:
 # - backend: Go services, REST APIs, PostgreSQL
 # - frontend: React web app, TypeScript
@@ -491,8 +442,8 @@ Add comments in config.toml:
 # - qa: Testing standards
 # - devops: Infrastructure, CI/CD, deployment
 
-profiles:
-  full: [backend, frontend, mobile, qa, devops]
+[profiles]
+full = ["backend", "frontend", "mobile", "qa", "devops"]
 ```
 
 ### Use Consistent Names
@@ -526,8 +477,8 @@ Check that your domain is in the profile:
 # List available profiles
 ai-rulez validate --verbose
 
-# Check config.toml
-cat .ai-rulez/config.toml | grep -A 5 "profiles:"
+# Check config.toml (V4 is TOML: the section is [profiles])
+grep -A 5 '^\[profiles\]' .ai-rulez/config.toml
 ```
 
 ### Profile Not Found
@@ -548,7 +499,7 @@ Ensure the directory exists and has content:
 # Check domain directory
 ls -la .ai-rulez/domains/backend/
 
-# Domain needs at least one of: rules/, context/, skills/
+# Domain needs at least one of: rules/, context/, skills/, agents/, commands/
 ```
 
 ### Content Collisions
