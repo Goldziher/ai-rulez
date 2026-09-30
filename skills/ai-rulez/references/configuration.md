@@ -8,7 +8,11 @@ name = "my-project"           # Required, project name
 
 description = ""              # Optional project description
 
-presets = ["claude", "cursor"]  # Array of built-in presets (strings)
+presets = [                   # Built-in names and/or custom preset tables
+  "claude",
+  "cursor",
+  { name = "custom", type = "markdown", path = "docs/AI_GUIDE.md" },
+]
 
 default = ""                  # Default profile name
 
@@ -26,11 +30,6 @@ frontend = ["frontend", "shared"]
 path = "packages/web"
 profile = "frontend"
 presets = ["codex", "claude"] # Defaults to codex + claude when omitted
-
-[[presets]]
-name = "custom"               # Custom preset (object)
-type = "markdown"             # markdown | directory | json
-path = "docs/AI_GUIDE.md"
 
 [[installed_skills]]          # External skills to pull at generate time
 name = "kreuzberg"

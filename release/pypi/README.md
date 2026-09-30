@@ -77,5 +77,5 @@ This creates `CLAUDE.md`, `.cursorrules`, and other native configs from your `.a
 ## Other Platforms
 
 - **Homebrew** (macOS/Linux) – `brew install goldziher/tap/ai-rulez`
-- **Go** – `go install github.com/Goldziher/ai-rulez/cmd@latest`
+- **Go** – build from source: `git clone https://github.com/Goldziher/ai-rulez && cd ai-rulez && go build -o ai-rulez ./cmd`
 - **npm** (Node.js) – `npm install -g ai-rulez`

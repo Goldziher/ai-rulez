@@ -29,14 +29,16 @@ Use this skill when:
 ## Installation
 
 ```bash
-# Go (primary CLI)
-go install github.com/Goldziher/ai-rulez/cmd@latest
-
-# npm
+# npm (no install)
 npx ai-rulez@latest
 
-# Python
+# Python (no install)
 uvx ai-rulez
+
+# Go: build from source (the module path has no /v4 suffix, so
+# `go install …@latest` resolves to an old 1.x build)
+git clone https://github.com/Goldziher/ai-rulez
+cd ai-rulez && go build -o ai-rulez ./cmd
 ```
 
 ## Quick Start
@@ -159,7 +161,7 @@ Resolution order (per preset, per agent): per-agent `effort` →
 
 Per-preset support:
 
-- **Claude**: per-agent in `.claude/agents/*.md` (full vocabulary, including `max` and `inherit`)
+- **Claude**: per-agent in `.claude/agents/*.md` (full vocabulary including `max`; `inherit` is not a Claude value and is dropped)
 - **Codex**: global in `.codex/config.toml` and per-agent in `.codex/agents/*.toml` (`max` → `high`; `inherit` dropped)
 - **Amp**: global in `.amp/settings.json` (`xhigh` → `high`)
 - **Windsurf**: per-agent in `.windsurf/agents/*.md` frontmatter (`max` → `high`)
@@ -173,7 +175,7 @@ Domains group content for different teams or concerns. Profiles select which dom
 ```bash
 ai-rulez domain add backend
 ai-rulez add rule api-standards --domain backend
-ai-rulez profile add backend-team backend,shared
+ai-rulez profile add backend-team backend shared
 ai-rulez generate --profile backend-team
 ```
 
@@ -202,7 +204,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`.
+Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 
@@ -222,4 +224,4 @@ target paths are gitignored.
 
 ## Plugins and Marketplaces
 
-V4 introduces support for plugins and marketplace integrations to extend ai-rulez functionality with custom generators, presets, and validators.
+V4 can package the same source (skills, commands, agents, MCP servers) as distributable plugin bundles and a marketplace index for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes via `ai-rulez generate --plugin`. Consumer `[[plugins]]`/`[[marketplaces]]` arrays declare plugins to install from a marketplace (rendered into `.claude/plugins.json` and `.codex/plugins.json`).
