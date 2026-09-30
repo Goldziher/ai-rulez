@@ -62,6 +62,8 @@ func TestGolden_AllRuntimeManifestsEmitted(t *testing.T) {
 		".factory-plugin/plugin.json",
 		".hermes/plugins/basemind/plugin.yaml",
 		".hermes/plugins/basemind/__init__.py",
+		".opencode/plugins/basemind.js",
+		".opencode/skills/basemind/SKILL.md",
 	} {
 		assert.Contains(t, out, p, "expected manifest %s to be generated", p)
 	}
@@ -141,6 +143,23 @@ func TestGolden_ClaudeHooksRootVarAndOmittedHandlerFields(t *testing.T) {
 	for _, omitted := range []string{"args", "timeout", "if", "statusMessage"} {
 		assert.NotContains(t, action, omitted, "unset handler field %q must be omitted", omitted)
 	}
+}
+
+func TestGolden_OpenCodeV2PluginAndContent(t *testing.T) {
+	out := generateFixture(t)
+
+	plugin := string(out[".opencode/plugins/basemind.js"])
+	assert.Contains(t, plugin, `from "@opencode/plugin"`)
+	assert.Contains(t, plugin, "Plugin.define")
+	assert.Contains(t, plugin, `id: "basemind"`)
+
+	pkg := parseJSON(t, out["package.json"])
+	deps := pkg["dependencies"].(map[string]any)
+	assert.Equal(t, "^2.0.20", deps["@opencode/plugin"], "v2 plugin package dependency")
+
+	skill := string(out[".opencode/skills/basemind/SKILL.md"])
+	assert.Contains(t, skill, "name: basemind", "skill bundled verbatim")
+	assert.Contains(t, out, ".opencode/skills/basemind/references/usage.md", "skill resource bundled")
 }
 
 func TestGolden_MarketplaceSinglePluginSource(t *testing.T) {

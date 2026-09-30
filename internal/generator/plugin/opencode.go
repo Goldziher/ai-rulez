@@ -12,7 +12,9 @@ import (
 )
 
 const (
-	openCodePluginDependency = "^1.17.8"
+	// openCodePluginDependency targets OpenCode 2's plugin package, which a v1
+	// plugin implementation cannot run against (#194).
+	openCodePluginDependency = "^2.0.20"
 	openCodeSourcePath       = ".ai-rulez/opencode/index.js"
 )
 
@@ -59,12 +61,26 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		Main:         filepath.ToSlash(entrypoint),
 		Exports:      map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
 		Files:        []string{".opencode/", "assets/", "README.md"},
-		Dependencies: map[string]string{"@opencode-ai/plugin": openCodePluginDependency},
+		Dependencies: map[string]string{"@opencode/plugin": openCodePluginDependency},
 	})
 	if err != nil {
 		return nil, err
 	}
-	return []config.OutputFile{module, pkg}, nil
+	outputs := []config.OutputFile{module, pkg}
+
+	// Bundle the plugin's skills, commands, and agents into the OpenCode v2
+	// discovery directories so the package is self-contained.
+	content, err := bundleContent(m, baseDir, contentLayout{
+		Root:     ".opencode",
+		Skills:   true,
+		Commands: true,
+		Agents:   true,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return append(outputs, content...), nil
 }
 
 func openCodePackageName(m *Manifest) string {
@@ -95,13 +111,13 @@ func openCodeModule(m *Manifest, outputPath string) (config.OutputFile, error) {
 
 func openCodeScaffold(name string) string {
 	return fmt.Sprintf(`/**
- * OpenCode adapter for %s.
+ * OpenCode v2 adapter for %s.
  *
  * This generated no-op keeps the plugin loadable without inventing runtime behavior.
  * To add OpenCode-specific tools or hooks:
  *
  * 1. Create .ai-rulez/opencode/index.js.
- * 2. Export an OpenCode plugin function from that source file.
+ * 2. Default-export Plugin.define({ id, setup }) from that source file.
  * 3. Run ai-rulez generate --plugin --dry-run.
  * 4. Run ai-rulez generate --plugin.
  *
@@ -109,8 +125,13 @@ func openCodeScaffold(name string) string {
  * .ai-rulez sources. Validate all external input and never interpolate untrusted
  * values into shell commands.
  */
-const OpenCodePlugin = async () => ({});
+import { Plugin } from "@opencode/plugin"
 
-export default OpenCodePlugin;
-`, name)
+export default Plugin.define({
+  id: %q,
+  async setup(ctx) {
+    // Register hooks, transforms, tools, or subscriptions on ctx here.
+  },
+})
+`, name, name)
 }
