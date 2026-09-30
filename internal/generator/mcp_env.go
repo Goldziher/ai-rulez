@@ -15,6 +15,18 @@ import (
 
 var mcpEnvPlaceholderPattern = regexp.MustCompile(`\$\{([A-Za-z_][A-Za-z0-9_]*)\}`)
 
+// projectRootPlaceholder is a generation-time token that resolves to the project
+// root (the directory containing .ai-rulez/). It lets an MCP command or arg
+// reference an absolute project path without hardcoding one; it is expanded in
+// command, args, and env values. Because it resolves to a machine-specific
+// absolute path, generated output carrying it must be gitignored or regenerated
+// per machine.
+const projectRootPlaceholder = "${PROJECT_ROOT}"
+
+// projectRootEnvName is the env-variable name the placeholder resolves through,
+// so a real PROJECT_ROOT (from --env, the process env, or .env) overrides it.
+const projectRootEnvName = "PROJECT_ROOT"
+
 var sensitiveEnvNameParts = [...]string{
 	"TOKEN",
 	"SECRET",
@@ -38,35 +50,7 @@ func (g *Generator) resolveMCPEnv() error {
 		if !server.IsEnabled() {
 			continue
 		}
-		if len(server.Env) == 0 {
-			continue
-		}
-		resolved := make(map[string]string, len(server.Env))
-		secretKeys := make(map[string]bool)
-		for key, value := range server.Env {
-			wasPlaceholder := false
-			next := mcpEnvPlaceholderPattern.ReplaceAllStringFunc(value, func(match string) string {
-				wasPlaceholder = true
-				name := strings.TrimSuffix(strings.TrimPrefix(match, "${"), "}")
-				if replacement, ok := g.config.MCPEnvOverrides[name]; ok {
-					return replacement
-				}
-				if replacement, ok := os.LookupEnv(name); ok {
-					return replacement
-				}
-				if replacement, ok := dotenvValues[name]; ok {
-					return replacement
-				}
-				unresolved = append(unresolved, fmt.Sprintf("%s.env.%s references %s", serverName, key, match))
-				return match
-			})
-			resolved[key] = next
-			if wasPlaceholder || isSensitiveEnvName(key) {
-				secretKeys[key] = true
-			}
-		}
-		server.Env = resolved
-		server.SecretEnvKeys = sortedMapKeys(secretKeys)
+		unresolved = append(unresolved, g.resolveMCPServer(serverName, server, dotenvValues)...)
 	}
 
 	if len(unresolved) > 0 {
@@ -77,6 +61,57 @@ func (g *Generator) resolveMCPEnv() error {
 			Errorf("unresolved MCP env placeholders")
 	}
 	return nil
+}
+
+// resolveMCPServer expands ${PROJECT_ROOT} in a server's command and args, then
+// resolves ${VAR} placeholders in its env. It returns the unresolved placeholders
+// it found, formatted for the aggregate error.
+func (g *Generator) resolveMCPServer(serverName string, server *config.MCPServer, dotenvValues map[string]string) []string {
+	// ${PROJECT_ROOT} in command/args resolves to the project root. It is
+	// resolved here, in the single pre-render pass, so every preset/sidecar
+	// reads the expanded value without per-renderer changes.
+	server.Command = expandProjectRoot(server.Command, g.config.BaseDir)
+	for i := range server.Args {
+		server.Args[i] = expandProjectRoot(server.Args[i], g.config.BaseDir)
+	}
+
+	if len(server.Env) == 0 {
+		return nil
+	}
+
+	var unresolved []string
+	resolved := make(map[string]string, len(server.Env))
+	secretKeys := make(map[string]bool)
+	for key, value := range server.Env {
+		wasPlaceholder := false
+		next := mcpEnvPlaceholderPattern.ReplaceAllStringFunc(value, func(match string) string {
+			wasPlaceholder = true
+			name := strings.TrimSuffix(strings.TrimPrefix(match, "${"), "}")
+			if replacement, ok := g.config.MCPEnvOverrides[name]; ok {
+				return replacement
+			}
+			if replacement, ok := os.LookupEnv(name); ok {
+				return replacement
+			}
+			if replacement, ok := dotenvValues[name]; ok {
+				return replacement
+			}
+			// A bare ${PROJECT_ROOT} resolves to the project root unless a
+			// real PROJECT_ROOT was supplied above.
+			if name == projectRootEnvName && g.config.BaseDir != "" {
+				return g.config.BaseDir
+			}
+			unresolved = append(unresolved, fmt.Sprintf("%s.env.%s references %s", serverName, key, match))
+			return match
+		})
+		resolved[key] = next
+		if wasPlaceholder || isSensitiveEnvName(key) {
+			secretKeys[key] = true
+		}
+	}
+	server.Env = resolved
+	server.SecretEnvKeys = sortedMapKeys(secretKeys)
+	return unresolved
 }
 
 func (g *Generator) loadMCPDotenvValues() (map[string]string, error) {
@@ -182,11 +217,42 @@ func isSensitiveEnvName(name string) bool {
 	return false
 }
 
-func mcpServerForSourceHash(server *config.MCPServer) *config.MCPServer {
+// expandProjectRoot replaces ${PROJECT_ROOT} with the project root. A server
+// with no root set (or no placeholder) is returned unchanged.
+func expandProjectRoot(value, root string) string {
+	if root == "" || !strings.Contains(value, projectRootPlaceholder) {
+		return value
+	}
+	return strings.ReplaceAll(value, projectRootPlaceholder, root)
+}
+
+// normalizeProjectRoot is expandProjectRoot's inverse, applied before hashing so
+// the source hash stays identical across checkout roots and machines. It also
+// catches a path the user hardcoded, which is the same machine-specific input.
+func normalizeProjectRoot(value, root string) string {
+	if root == "" || !strings.Contains(value, root) {
+		return value
+	}
+	return strings.ReplaceAll(value, root, projectRootPlaceholder)
+}
+
+// mcpServerForSourceHash returns a copy of server safe to feed the source hash:
+// secret env values are redacted, and any resolved project root is normalized
+// back to ${PROJECT_ROOT} so the hash does not depend on the checkout location
+// (see TestComputeSourceHash_StableAcrossBaseDirs).
+func mcpServerForSourceHash(server *config.MCPServer, root string) *config.MCPServer {
 	if server == nil {
 		return nil
 	}
 	serverCopy := *server
+	serverCopy.Command = normalizeProjectRoot(serverCopy.Command, root)
+	if len(serverCopy.Args) > 0 {
+		args := make([]string, len(serverCopy.Args))
+		for i, arg := range serverCopy.Args {
+			args[i] = normalizeProjectRoot(arg, root)
+		}
+		serverCopy.Args = args
+	}
 	if len(server.Env) > 0 {
 		secretKeys := make(map[string]bool, len(server.SecretEnvKeys))
 		for _, key := range server.SecretEnvKeys {
@@ -197,7 +263,7 @@ func mcpServerForSourceHash(server *config.MCPServer) *config.MCPServer {
 			if secretKeys[key] || isSensitiveEnvName(key) {
 				serverCopy.Env[key] = "<redacted>"
 			} else {
-				serverCopy.Env[key] = value
+				serverCopy.Env[key] = normalizeProjectRoot(value, root)
 			}
 		}
 	}

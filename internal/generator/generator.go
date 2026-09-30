@@ -1006,7 +1006,7 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	}
 	sort.Strings(mcpNames)
 	for _, name := range mcpNames {
-		serverJSON, err := json.Marshal(mcpServerForSourceHash(cfg.MCPServers[name]))
+		serverJSON, err := json.Marshal(mcpServerForSourceHash(cfg.MCPServers[name], cfg.BaseDir))
 		if err != nil {
 			serverJSON = []byte("<marshal-error>")
 		}
