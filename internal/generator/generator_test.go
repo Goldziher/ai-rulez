@@ -1117,6 +1117,31 @@ func TestGenerator_DefaultProfileDomainsLogic_WithAndWithoutProfiles(t *testing.
 		assert.False(t, hasPHP, "expected non-builtin php domain to be excluded for default profile when profiles are defined")
 		assert.True(t, hasPython, "expected FromInclude python domain to be present for default profile when profiles are defined")
 	})
+
+	t.Run("default profile excludes a builtin scoped to another profile", func(t *testing.T) {
+		cfg := &config.Config{
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
+					"go":     {Name: "go", Builtin: true},
+					"docker": {Name: "docker", Builtin: true, BuiltinScoped: true},
+				},
+			},
+			Profiles: map[string][]string{
+				"backend": {"builtin:docker"},
+			},
+		}
+
+		gen := &Generator{config: cfg}
+
+		content, err := gen.getContentForProfile(defaultProfileName)
+		require.NoError(t, err)
+		require.NotNil(t, content)
+
+		_, hasGo := content.Domains["go"]
+		_, hasDocker := content.Domains["docker"]
+		assert.True(t, hasGo, "global builtin stays on the default profile")
+		assert.False(t, hasDocker, "a profile-scoped builtin is not global")
+	})
 }
 
 // Test MCP server collection from root config.

@@ -1,6 +1,11 @@
 package config
 
-import "strings"
+import (
+	"sort"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/builtins"
+)
 
 // ProfileSeparator separates the elements of a composed profile value, as in
 // "base,backend".
@@ -53,6 +58,34 @@ func CanonicalProfile(value string) string {
 		return value
 	}
 	return strings.Join(names, ProfileSeparator)
+}
+
+// ProfileBuiltinRefs returns every builtin named by a "builtin:<name>" element in
+// any profile's domain list, de-duplicated and in deterministic order. These packs
+// are loaded scoped to the profiles that name them rather than globally.
+func (c *Config) ProfileBuiltinRefs() []string {
+	profileNames := make([]string, 0, len(c.Profiles))
+	for name := range c.Profiles {
+		profileNames = append(profileNames, name)
+	}
+	sort.Strings(profileNames)
+
+	seen := make(map[string]bool)
+	var refs []string
+	for _, profile := range profileNames {
+		for _, domain := range c.Profiles[profile] {
+			if !builtins.HasRefPrefix(domain) {
+				continue
+			}
+			name := builtins.TrimRefPrefix(domain)
+			if name == "" || seen[name] {
+				continue
+			}
+			seen[name] = true
+			refs = append(refs, name)
+		}
+	}
+	return refs
 }
 
 // UnknownProfileNames returns the elements of a profile value that are not

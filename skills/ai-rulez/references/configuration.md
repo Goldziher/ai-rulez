@@ -19,7 +19,7 @@ builtins = true               # Enable all built-in domains
 # builtins = ["go", "security", "!ai-governance"]  # Enable specific builtins
 
 [profiles]                    # Profile → domain mappings
-backend = ["backend", "shared"]
+backend = ["backend", "shared", "builtin:docker"]  # builtin:<name> scopes a pack to this profile
 frontend = ["frontend", "shared"]
 
 [[scopes]]                    # Optional scoped outputs in subfolders

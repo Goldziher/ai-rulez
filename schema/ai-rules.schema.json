@@ -102,7 +102,7 @@
     },
     "profiles": {
       "type": "object",
-      "description": "Named profiles mapping profile names to lists of domain names",
+      "description": "Named profiles mapping profile names to lists of domain names. An element is either a local or included domain name, or a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`). A builtin referenced this way is loaded only for the profiles that name it, rather than globally.",
       "additionalProperties": {
         "type": "array",
         "items": {
