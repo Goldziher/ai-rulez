@@ -525,12 +525,20 @@ func loadProjectConfig(ctx context.Context, request *ToolRequest, baseDir string
 	return config.LoadConfig(ctx, baseDir)
 }
 
+// curatedPresets is the provider set emitted for the "all providers" and
+// curated "popular" shortcuts. Every entry is a real built-in preset: a config
+// listing a non-preset name (the old `popular`) fails validation.
+var curatedPresets = []string{
+	presetClaude, presetCursor, presetWindsurf, presetCopilot, presetGemini,
+	presetAmp, presetCodex, presetCline, presetContinueDev,
+}
+
 func getPresetsFromProviders(providers []interface{}, allProviders, popularProviders bool) ([]string, bool) {
 	if allProviders {
-		return []string{presetClaude, presetCursor, presetWindsurf, presetCopilot, presetGemini, presetAmp, presetCodex, presetCline, presetContinueDev}, true
+		return append([]string(nil), curatedPresets...), true
 	}
 	if popularProviders {
-		return []string{"popular"}, false
+		return append([]string(nil), curatedPresets...), true
 	}
 
 	var presets []string
