@@ -279,7 +279,7 @@ func (s *Server) registerUtilityTools() {
 	)
 }
 
-var priorityValues = []string{"critical", "high", "medium", "low"}
+var priorityValues = []string{"critical", "high", "medium", "low", "minimal"}
 
 func (s *Server) registerCRUDTools() {
 	// Domain tools

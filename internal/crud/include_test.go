@@ -23,7 +23,7 @@ func TestAddInclude(t *testing.T) {
 				Name:          "shared-rules",
 				Source:        "https://github.com/example/shared-rules.git",
 				Include:       []string{"rules", "context"},
-				MergeStrategy: "append",
+				MergeStrategy: "include-override",
 			},
 			shouldErr: false,
 			checkFn: func(t *testing.T, op crud.Operator) {
