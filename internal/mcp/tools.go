@@ -503,8 +503,8 @@ func (s *Server) registerCRUDTools() {
 				String("source", "Git URL or local filesystem path", true).
 				String("path", "Path within git repository (git sources only)", false).
 				String("ref", "Git reference: branch, tag, or commit hash (git sources only)", false).
-				StringArray("include", "Content types to include: rules, context, skills, mcp", false).
-				Enum("merge_strategy", "Merge strategy", []string{"default", "override", "append"}, false).
+				StringArray("include", "Content types to include: rules, context, skills, agents, commands", false).
+				Enum("merge_strategy", "Merge strategy", []string{"local-override", "include-override", "error"}, false).
 				String("install_to", "Installation target path (optional)", false).
 				WorkingDirectory(),
 			additiveAnnotations(),

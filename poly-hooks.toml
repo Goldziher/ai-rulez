@@ -76,56 +76,6 @@ check = "command -v ai-rulez"
 run = "ai-rulez"
 
 [[hooks]]
-id = "ai-rulez-enforce"
-stages = ["pre-commit"]
-args = ["enforce", "--level", "error"]
-files = ["**/*.{js,ts,jsx,tsx,py,go,java,c,cpp,rs,php}"]
-workspace = true
-pass_filenames = false
-
-[[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@4.16.0"
-install = "npx -y ai-rulez@4.16.0 version"
-
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==4.16.0"
-install = "uvx ai-rulez==4.16.0 version"
-
-[[hooks.paths]]
-channel = "system"
-check = "command -v ai-rulez"
-run = "ai-rulez"
-
-[[hooks]]
-id = "ai-rulez-enforce-fix"
-stages = ["pre-commit"]
-args = ["enforce", "--fix", "--level", "error"]
-files = ["**/*.{js,ts,jsx,tsx,py,go,java,c,cpp,rs,php}"]
-workspace = true
-pass_filenames = false
-
-[[hooks.paths]]
-channel = "npx"
-check = "command -v npx"
-run = "npx -y ai-rulez@4.16.0"
-install = "npx -y ai-rulez@4.16.0 version"
-
-[[hooks.paths]]
-channel = "uvx"
-check = "command -v uvx"
-run = "uvx ai-rulez==4.16.0"
-install = "uvx ai-rulez==4.16.0 version"
-
-[[hooks.paths]]
-channel = "system"
-check = "command -v ai-rulez"
-run = "ai-rulez"
-
-[[hooks]]
 id = "ai-rulez-plugin-generate"
 stages = ["pre-commit"]
 args = ["generate", "--recursive", "--plugin", "--if-configured"]
