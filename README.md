@@ -61,8 +61,9 @@ Set `builtins` in your config — `true` for every domain, or a list to pick —
 without being named, unless you exclude one with `!`. Omit the `builtins` field entirely and no builtin
 content is loaded at all.
 
-Each one ships **always-on rules**, which are inlined into `CLAUDE.md` and so are read on every request,
-and in some cases **on-demand skills**, whose body costs nothing until the assistant loads it.
+Each one ships **always-on content** (rules, or context such as the agent roster), inlined into
+`CLAUDE.md` and so read on every request, and some also ship **on-demand skills**, whose body costs
+nothing until the assistant loads it.
 
 | Domain               | Always-on rules                                                                                                            | On-demand skills                        |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -313,9 +314,8 @@ repos:
 ```
 
 Available hook ids: `ai-rulez-validate`, `ai-rulez-generate`,
-`ai-rulez-recursive`, `ai-rulez-plugin-generate`,
-`ai-rulez-plugin-verify`, `ai-rulez-enforce`, and
-`ai-rulez-enforce-fix`. They trigger on root or nested `.ai-rulez/` changes.
+`ai-rulez-recursive`, `ai-rulez-plugin-generate`, and
+`ai-rulez-plugin-verify`. They trigger on root or nested `.ai-rulez/` changes.
 </details>
 
 <details>
@@ -333,7 +333,7 @@ hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 
 The source also provides `ai-rulez-validate`, `ai-rulez-generate`,
-`ai-rulez-enforce`, `ai-rulez-enforce-fix`, and `ai-rulez-plugin-generate`.
+and `ai-rulez-plugin-generate`.
 Plugin hooks use `--if-configured`, so they skip consumer-only repositories that
 do not contain a producer `[plugin]` or multi-member `[marketplace]` block.
 

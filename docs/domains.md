@@ -247,11 +247,9 @@ ai-rulez generate --profile frontend
 
 If one person works on multiple areas:
 
-```yaml
-profiles:
-  full-stack:
-    - backend
-    - frontend
+```toml
+[profiles]
+full-stack = ["backend", "frontend"]
 ```
 
 ```bash
@@ -264,13 +262,10 @@ ai-rulez generate --profile full-stack
 A builtin pack can be scoped to one profile by referencing it as `builtin:<name>` in that
 profile's domain list:
 
-```yaml
-profiles:
-  backend:
-    - backend
-    - builtin:docker
-  frontend:
-    - frontend
+```toml
+[profiles]
+backend = ["backend", "builtin:docker"]
+frontend = ["frontend"]
 ```
 
 The `backend` profile gets the `docker` builtin; `frontend` does not. This differs from the
@@ -454,17 +449,9 @@ Use the same domain names across projects for clarity.
 
 Profile names should indicate their purpose:
 
-```yaml
-Good:
-profiles:
-  full: [all domains]
-  backend-team: [backend, shared-qa]
-  frontend-team: [frontend, shared-qa]
-
-Bad:
-profiles:
-  p1: [backend, frontend]
-  p2: [backend]
+```text
+Good:  full, backend-team, frontend-team
+Bad:   p1, p2
 ```
 
 ## Troubleshooting

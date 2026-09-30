@@ -231,9 +231,15 @@ supports both a wrapped and a bare (flattened) layout and auto-detects which one
 
 ai-rulez detects the layout automatically: it first looks for a `.ai-rulez/` directory (at the
 source root or under `path`), and otherwise treats a directory that contains any of `rules/`,
-`context/`, `skills/`, or `agents/` as a bare ai-rulez structure. The flat layout keeps shared
-modules — especially skill-first modules that ship mostly `skills/<id>/SKILL.md` — clean and free
-of boilerplate wrapping.
+`context/`, `skills/`, `agents/`, or `commands/` as a bare ai-rulez structure. The flat layout keeps
+shared modules — especially skill-first modules that ship mostly `skills/<id>/SKILL.md` — clean and
+free of boilerplate wrapping.
+
+!!! note
+    `ai-rulez include add` with a **local** path validates that the directory contains a `.ai-rulez/`
+    subdirectory, so a bare/flattened *local* source is rejected by the CLI even though the resolver
+    accepts it. Add a bare local include by editing `config.toml` directly (git sources are not
+    restricted this way).
 
 ### Private Repository Authentication (HTTPS)
 

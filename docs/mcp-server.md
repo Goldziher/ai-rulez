@@ -511,8 +511,8 @@ Add a new include source (git URL or local path) to the configuration.
 - `source` (required, string): Git URL (`https://github.com/org/repo`) or local path (`./packages/shared`)
 - `path` (optional, string): Path within git repository where .ai-rulez/ content is located
 - `ref` (optional, string): Git reference - branch, tag, or commit hash (git sources only). Defaults to the repository's default branch (`HEAD`)
-- `include` (optional, array): Content types to include - rules, context, skills, mcp
-- `merge_strategy` (optional, string): Merge strategy - default, override, append
+- `include` (optional, array): Content types to include - rules, context, skills, agents, commands
+- `merge_strategy` (optional, string): Merge strategy - local-override (default), include-override, error
 - `install_to` (optional, string): Installation target path in .ai-rulez/
 
 **Response:**
@@ -564,7 +564,7 @@ List all include sources in the configuration.
       "source": "https://github.com/myorg/shared-rules",
       "ref": "main",
       "path": ".ai-rulez",
-      "mergeStrategy": "default"
+      "mergeStrategy": "local-override"
     }
   ],
   "count": 1

@@ -99,7 +99,7 @@ ai-rulez generate --config-dir ai-policy
 
 ## Content Priority
 
-Content is rendered in priority order: critical → high → medium → low.
+Content is rendered in priority order: critical → high → medium → low → minimal.
 
 ## Target Filtering
 
