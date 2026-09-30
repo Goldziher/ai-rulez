@@ -56,7 +56,7 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`)             | MCP referenced via external file; rich `interface` block         |
 | Gemini   | `gemini-extension.json`                                 | inline MCP + hooks, context file reference                       |
 | Kimi     | `kimi.plugin.json`                                      | `sessionStart`, `skillInstructions`, `interface`                 |
-| OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`) | copies the authored adapter or emits a documented no-op scaffold |
+| OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`, bundled `.opencode/{skills,commands,agents}/`) | OpenCode v2 `Plugin.define` adapter; copies the authored entrypoint or emits a no-op scaffold |
 | Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
@@ -69,14 +69,21 @@ to the authored one.
 
 ### OpenCode adapter
 
-Put OpenCode-specific tools and hooks in `.ai-rulez/opencode/index.js`. The generator
-copies that source verbatim to `.opencode/plugins/<plugin-name>.js` and generates the
-package metadata OpenCode needs. Keep shared skills, commands, agents, and MCP settings
-in their normal `.ai-rulez` sources.
+The adapter targets OpenCode v2, whose plugin API differs from v1: a plugin default-exports
+`Plugin.define({ id, setup(ctx) })` from `@opencode/plugin`, and v1 function-entrypoint
+plugins do not run. Put OpenCode-specific tools and hooks in `.ai-rulez/opencode/index.js`.
+The generator copies that source verbatim to `.opencode/plugins/<plugin-name>.js`, generates
+the `package.json` metadata (depending on `@opencode/plugin`), and bundles the plugin's
+skills, commands, and agents under `.opencode/`. Keep shared MCP settings in their normal
+`.ai-rulez` sources; the `opencode` preset writes them to `opencode.json`.
 
 When the source entrypoint is absent, generation emits a documented no-op module. The
 module keeps the plugin loadable and tells you where to create the user-owned source;
 it does not guess tool schemas, subprocess arguments, or business logic.
+
+The `opencode` preset itself is separate from plugin authoring. It emits a native v2
+`opencode.json` with `mcp.servers` populated from your `[[mcp_servers]]`, merged so any
+other keys in a hand-authored `opencode.json` are preserved.
 
 ### Hermes adapter
 
