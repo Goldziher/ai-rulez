@@ -592,7 +592,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("add_profile", "Create a new profile with a set of domains",
 			newSchemaBuilder().
 				String("name", "Profile name (unique identifier)", true).
-				StringArray("domains", "List of domain names to include in the profile", true).
+				StringArray("domains", "List of domain names to include in the profile. A builtin pack is referenced as 'builtin:<name>' and is scoped to this profile.", true).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),

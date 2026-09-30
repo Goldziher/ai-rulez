@@ -53,6 +53,26 @@ func TestAddProfile(t *testing.T) {
 			},
 		},
 		{
+			name:      "add profile with builtin reference",
+			setup:     func(t *testing.T, op crud.Operator) {},
+			profName:  "with-builtin",
+			domains:   []string{"builtin:rust"},
+			shouldErr: false,
+			checkFn: func(t *testing.T, op crud.Operator) {
+				profiles, err := op.ListProfiles(context.Background())
+				require.NoError(t, err)
+				require.Len(t, profiles, 1)
+				assert.Equal(t, []string{"builtin:rust"}, profiles[0].Domains)
+			},
+		},
+		{
+			name:      "unknown builtin reference",
+			setup:     func(t *testing.T, op crud.Operator) {},
+			profName:  "bad-builtin",
+			domains:   []string{"builtin:not-a-pack"},
+			shouldErr: true,
+		},
+		{
 			name:      "empty profile name",
 			setup:     func(t *testing.T, op crud.Operator) {},
 			profName:  "",

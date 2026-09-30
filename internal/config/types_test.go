@@ -737,6 +737,67 @@ func TestConfig_GetContentForProfile(t *testing.T) {
 	})
 }
 
+func TestConfig_GetContentForProfile_ScopedBuiltins(t *testing.T) {
+	t.Parallel()
+
+	newConfig := func() *config.Config {
+		return &config.Config{
+			Version: "3.0",
+			Name:    "test",
+			Profiles: map[string][]string{
+				"backend":  {"builtin:docker"},
+				"frontend": {"frontend"},
+			},
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
+					"global": {Name: "global", Builtin: true},
+					"docker": {Name: "docker", Builtin: true, BuiltinScoped: true},
+					"frontend": {
+						Name: "frontend",
+					},
+				},
+			},
+		}
+	}
+
+	t.Run("globally active builtin is visible to every profile", func(t *testing.T) {
+		content, err := newConfig().GetContentForProfile("frontend")
+		require.NoError(t, err)
+		assert.Contains(t, content.Domains, "global")
+	})
+
+	t.Run("scoped builtin is visible only to the profile that names it", func(t *testing.T) {
+		cfg := newConfig()
+
+		backend, err := cfg.GetContentForProfile("backend")
+		require.NoError(t, err)
+		assert.Contains(t, backend.Domains, "docker")
+
+		frontend, err := cfg.GetContentForProfile("frontend")
+		require.NoError(t, err)
+		assert.NotContains(t, frontend.Domains, "docker")
+	})
+
+	t.Run("bare name does not widen a scoped builtin", func(t *testing.T) {
+		cfg := &config.Config{
+			Version: "3.0",
+			Name:    "test",
+			Profiles: map[string][]string{
+				"backend": {"docker"},
+			},
+			Content: &config.ContentTree{
+				Domains: map[string]*config.Domain{
+					"docker": {Name: "docker", Builtin: true, BuiltinScoped: true},
+				},
+			},
+		}
+
+		content, err := cfg.GetContentForProfile("backend")
+		require.NoError(t, err)
+		assert.NotContains(t, content.Domains, "docker")
+	})
+}
+
 func TestConfigHasPluginAuthoring(t *testing.T) {
 	t.Parallel()
 

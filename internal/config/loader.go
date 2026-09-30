@@ -239,11 +239,10 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	}
 	config.LocalContent = localTree
 
-	// Load builtins (lowest priority — loaded first so includes and local override them)
-	// Only load when the builtins field is explicitly configured in the config file
-	if config.Builtins.IsEnabled() && !config.Builtins.IsNone() {
-		loadBuiltins(config)
-	}
+	// Load builtins (lowest priority — loaded first so includes and local override them).
+	// The root `builtins` field is global; `builtin:<name>` references in profiles
+	// load packs scoped to the profiles that name them.
+	loadBuiltins(config)
 
 	if err := resolveIncludesIfNeeded(ctx, configDir, config); err != nil {
 		return nil, err
@@ -1396,30 +1395,49 @@ func warnUnknownBuiltinExclusions(names []string) {
 // loadBuiltins resolves and loads builtin domains into the config content tree.
 // Builtins have the lowest priority: they are injected into domains that don't already exist.
 // If a domain already exists (from local content or includes), the builtin is skipped.
+//
+// Two sources are loaded. The root `builtins` field is global: it governs the pack
+// set visible to every profile, including the auto-includes. A "builtin:<name>"
+// reference in a profile's domain list is scoped: the pack is loaded only if it is
+// not already global, and profile resolution then confines it to the profiles that
+// name it. Because a profile reference is an explicit opt-in, it is honored even
+// when the root field is absent or set to false.
 func loadBuiltins(config *Config) {
-	warnUnknownBuiltinExclusions(config.Builtins.GetNames())
-
-	var resolved []string
-	if config.Builtins.IsAll() {
-		resolved = builtins.ResolveAll()
-	} else {
-		resolved = builtins.ResolveBuiltins(config.Builtins.GetNames())
-	}
-	if len(resolved) == 0 {
-		return
-	}
-
-	ruleExclusions := builtins.ExcludedRules(config.Builtins.GetNames())
-
-	logger.Debug("Loading builtins", "count", len(resolved), "names", resolved)
-
 	if config.Content == nil {
 		config.Content = &ContentTree{
 			Domains: make(map[string]*Domain),
 		}
 	}
 
-	for _, name := range resolved {
+	if config.Builtins.IsEnabled() && !config.Builtins.IsNone() {
+		warnUnknownBuiltinExclusions(config.Builtins.GetNames())
+
+		var resolved []string
+		if config.Builtins.IsAll() {
+			resolved = builtins.ResolveAll()
+		} else {
+			resolved = builtins.ResolveBuiltins(config.Builtins.GetNames())
+		}
+		if len(resolved) > 0 {
+			logger.Debug("Loading builtins", "count", len(resolved), "names", resolved)
+			loadBuiltinDomains(config, resolved, builtins.ExcludedRules(config.Builtins.GetNames()), false)
+		}
+	}
+
+	for _, name := range config.ProfileBuiltinRefs() {
+		if _, exists := config.Content.Domains[name]; exists {
+			continue
+		}
+		loadBuiltinDomains(config, []string{name}, nil, true)
+	}
+}
+
+// loadBuiltinDomains loads each named builtin pack into config.Content.Domains,
+// skipping names a local or include domain already owns. When scoped is true the
+// domain is tagged BuiltinScoped so profile resolution confines it to the
+// profiles that reference it.
+func loadBuiltinDomains(config *Config, names []string, ruleExclusions map[string]bool, scoped bool) {
+	for _, name := range names {
 		// Skip if domain already exists (local content has higher priority)
 		if _, exists := config.Content.Domains[name]; exists {
 			logger.Debug("Skipping builtin (local domain exists)", "name", name)
@@ -1436,8 +1454,9 @@ func loadBuiltins(config *Config) {
 		}
 
 		domain := &Domain{
-			Name:    name,
-			Builtin: true,
+			Name:          name,
+			Builtin:       true,
+			BuiltinScoped: scoped,
 		}
 
 		for _, entry := range entries {
@@ -1474,6 +1493,7 @@ func loadBuiltins(config *Config) {
 		config.Content.Domains[name] = domain
 		logger.Debug("Loaded builtin domain",
 			"name", name,
+			"scoped", scoped,
 			"rules", len(domain.Rules),
 			"context", len(domain.Context),
 			"skills", len(domain.Skills),

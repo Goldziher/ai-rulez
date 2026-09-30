@@ -414,6 +414,23 @@ builtins = false
 builtins = ["rust", "python", "pyo3", "security", "git-workflow", "default-commands"]
 ```
 
+#### Scope a builtin to a profile
+
+A builtin pack can be named in a profile's domain list with the `builtin:` prefix. The pack
+is then loaded for that profile only, instead of every profile:
+
+```toml
+[profiles]
+backend = ["backend", "builtin:docker"]
+frontend = ["frontend"]
+```
+
+`backend` sees the `docker` pack; `frontend` does not. This works even when the root
+`builtins` field is absent or set to `false`, because a profile reference is an explicit
+opt-in. A pack the root `builtins` field already enables stays global — the prefix selects
+a pack, it does not un-globalize one. Prefixing also keeps a builtin (`builtin:rust`) from
+colliding with a local domain of the same name.
+
 #### Exclude auto-included builtins
 
 `ai-governance` is auto-included whenever builtins are configured. Exclude it with `!`:
