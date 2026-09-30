@@ -645,6 +645,83 @@ env = { GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_TOKEN}" }
 	assert.NotContains(t, string(content), "from-dotenv")
 }
 
+func TestGenerator_MCPEnv_ExpandsProjectRoot(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "mcp-root"
+presets = ["cursor"]
+gitignore = true
+
+[[mcp_servers]]
+name = "repo-tools"
+command = "node"
+args = ["${PROJECT_ROOT}/scripts/mcp.js", "--root", "${PROJECT_ROOT}"]
+`), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), tempDir)
+	require.NoError(t, err)
+	require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+	content, err := os.ReadFile(filepath.Join(tempDir, ".mcp.json"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(content), "${PROJECT_ROOT}")
+
+	var doc struct {
+		MCPServers map[string]struct {
+			Args []string `json:"args"`
+		} `json:"mcpServers"`
+	}
+	require.NoError(t, json.Unmarshal(content, &doc))
+	args := doc.MCPServers["repo-tools"].Args
+	require.Len(t, args, 3)
+	assert.Equal(t, filepath.Join(tempDir, "scripts", "mcp.js"), filepath.FromSlash(args[0]))
+	assert.Equal(t, filepath.Join(tempDir), filepath.FromSlash(args[2]))
+}
+
+func TestExpandProjectRoot(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "/proj/scripts/mcp.js", expandProjectRoot("${PROJECT_ROOT}/scripts/mcp.js", "/proj"))
+	assert.Equal(t, "/proj", expandProjectRoot("${PROJECT_ROOT}", "/proj"))
+	assert.Equal(t, "uvx", expandProjectRoot("uvx", "/proj"))
+	assert.Equal(t, "${PROJECT_ROOT}", expandProjectRoot("${PROJECT_ROOT}", ""),
+		"an unknown root must leave the token in place rather than resolve to empty")
+}
+
+func TestNormalizeProjectRoot(t *testing.T) {
+	t.Parallel()
+
+	assert.Equal(t, "${PROJECT_ROOT}/scripts/mcp.js", normalizeProjectRoot("/proj/scripts/mcp.js", "/proj"))
+	assert.Equal(t, "uvx", normalizeProjectRoot("uvx", "/proj"))
+	assert.Equal(t, "uvx", normalizeProjectRoot("uvx", ""))
+}
+
+// TestComputeSourceHash_StableWithProjectRootPlaceholder pins the determinism
+// requirement: resolving ${PROJECT_ROOT} to two different absolute roots must
+// not change the source hash, or every relocated checkout would rewrite its
+// generated files.
+func TestComputeSourceHash_StableWithProjectRootPlaceholder(t *testing.T) {
+	t.Parallel()
+
+	build := func(root string) *config.Config {
+		cfg := &config.Config{
+			Name: "x", Version: "4.0", BaseDir: root,
+			Content: &config.ContentTree{},
+			MCPServers: map[string]*config.MCPServer{
+				"repo": {Name: "repo", Command: "node", Args: []string{"${PROJECT_ROOT}/scripts/mcp.js"}},
+			},
+		}
+		require.NoError(t, (&Generator{config: cfg}).resolveMCPEnv())
+		return cfg
+	}
+
+	hashA := computeSourceHash(build(filepath.Join(string(filepath.Separator), "tmp", "a", "proj")), &config.ContentTree{})
+	hashB := computeSourceHash(build(filepath.Join(string(filepath.Separator), "tmp", "b", "work", "proj")), &config.ContentTree{})
+	assert.Equal(t, hashA, hashB, "source hash must not depend on the resolved project root")
+}
+
 func TestGenerator_MCPEnv_FailsUnresolvedPlaceholder(t *testing.T) {
 	tempDir := t.TempDir()
 	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
