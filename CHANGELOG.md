@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.16.0] - 2026-09-30
+
+### Added
+
+- **`${PROJECT_ROOT}` for MCP servers**: an MCP server's `command` or `args` may use the `${PROJECT_ROOT}` placeholder, resolved at generation time to the project root (the directory containing `.ai-rulez/`). It lets a server that requires an absolute path avoid a hardcoded, machine-specific one; `env` values resolve it too unless a real `PROJECT_ROOT` is supplied via `--env`, the process environment, or a dotenv file. Because it resolves to a machine-specific path, generated output carrying it must be gitignored or regenerated per machine. The source hash keeps the literal token, so it stays stable across checkout roots. (For Claude Code, `${CLAUDE_PROJECT_DIR:-.}` in `args` remains the portable native alternative and passes through unchanged.)
+
+### Fixed
+
+- **`ai-rulez validate` now checks the schema**: the raw config file is validated against `schema/ai-rules.schema.json` (TOML is converted to JSON first), so an unknown key or a value outside an enum is reported rather than silently dropped. V3 configs still get the structural checks only. The schema itself gained the consumer `plugins`/`marketplaces` arrays (previously rejected under `additionalProperties: false`), the correct includes enums (`commands`, `include-override`, `local_override`), the missing builtin names (`docker`, `cicd`, `observability`, `polyglot-bindings`, `vite-plus`), the TOML `schema`/`$comment` keys, and lost the dead deprecated `compression` property.
+
+- **`include add --merge-strategy` wrote a value the resolver rejected**: the CLI accepted `default|override|append` and stored the value verbatim, but the include resolver only accepts `local-override|include-override|error`, so an added include was silently skipped at generation. The CLI and CRUD layer now use the resolver's values (`local-override` is the default).
+
+- **The `popular` pseudo-preset**: it was not a registered built-in and had no generator, so MCP `init_project` with `popular_providers` wrote a config that failed validation. It now emits the curated provider set. `AllPresetNames`/`IndividualPresetNames` are derived from the built-in registry, so they include `opencode` and `mcp` and can no longer drift.
+
+- **Documentation audit**: corrected ~50 inaccuracies across `README.md` and `docs/` — stale preset output paths (`amp`→`AGENTS.md`/`.agents/`, `windsurf`→`.windsurf/`, `.cursorrules`→`.cursor/rules/`), V3-YAML examples labelled `config.toml`, the fictional custom-preset template-function reference (now describes the implemented `text/template` behavior and points at provider specs), wrong `[[plugins]]`/`[[marketplaces]]` fields, the `add skill --priority` example, exit codes, and more. The builtin-agent table, `go install` path, and builtins list in the shipped skill were also corrected.
+
 ## [4.15.0] - 2026-09-30
 
 ### Added
