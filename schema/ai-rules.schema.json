@@ -285,7 +285,7 @@
       }
     },
     "builtins": {
-      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus",
+      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown name is reported as a warning during generation, not a schema error.",
       "oneOf": [
         {
           "type": "boolean",
@@ -295,7 +295,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^(!?(ai-governance|agent-delegation|security|git-workflow|code-quality|testing|token-efficiency|documentation|polyglot-bindings|default-commands|cicd|observability|docker|rust|python|typescript|go|java|ruby|php|elixir|csharp|r|pyo3|napi-rs|magnus|ext-php-rs|rustler|wasm|jni-rs|extendr|cgo|vite-plus)|![a-z0-9-]+/[a-z0-9-]+)$"
+            "pattern": "^(!?[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)?)$"
           }
         }
       ]
