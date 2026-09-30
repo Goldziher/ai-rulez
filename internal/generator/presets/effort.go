@@ -18,6 +18,9 @@ const (
 // The returned value is the internal tier; callers must run it through MapEffort to
 // get the preset-specific value.
 func ResolveAgentEffort(preset string, agent config.ContentFile, cfg *config.Config) string {
+	if cfg.OmitsAgentField("effort") {
+		return ""
+	}
 	if agent.Metadata != nil && agent.Metadata.Effort != "" {
 		return agent.Metadata.Effort
 	}

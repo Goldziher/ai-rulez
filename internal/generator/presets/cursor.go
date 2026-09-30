@@ -181,6 +181,30 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 func (g *CursorPresetGenerator) renderRuleFile(rule config.ContentFile, compact bool) string {
 	var builder strings.Builder
 
+	// Cursor reads a rule's behavior from its `alwaysApply`, `globs`, and
+	// `description` frontmatter; without it a .mdc is manual-only. A rule with a
+	// path scope is attached when a matching file is in context; otherwise it
+	// applies to every session, matching how it renders into the root file.
+	frontmatter := map[string]interface{}{}
+	globScope := []string(nil)
+	if rule.Metadata != nil {
+		globScope = rule.Metadata.PathScope()
+		if desc := rule.Metadata.Extra["description"]; desc != "" {
+			frontmatter["description"] = desc
+		}
+	}
+	if len(globScope) > 0 {
+		frontmatter["globs"] = strings.Join(globScope, ",")
+		frontmatter["alwaysApply"] = false
+	} else {
+		frontmatter["alwaysApply"] = true
+	}
+	if yamlData, err := yaml.Marshal(frontmatter); err == nil {
+		builder.WriteString("---\n")
+		builder.Write(yamlData)
+		builder.WriteString("---\n\n")
+	}
+
 	// Add title
 	builder.WriteString("# ")
 	builder.WriteString(rule.Name)

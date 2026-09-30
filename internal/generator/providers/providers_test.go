@@ -104,7 +104,7 @@ func TestClaude_Generate(t *testing.T) {
 					},
 				},
 			},
-			wantOutputs: 6,
+			wantOutputs: 7,
 		},
 		{
 			name: "generates agents",
@@ -122,12 +122,12 @@ func TestClaude_Generate(t *testing.T) {
 					},
 				},
 			},
-			wantOutputs: 5,
+			wantOutputs: 6,
 		},
 		{
 			name:        "handles no skills",
 			content:     &config.ContentTree{},
-			wantOutputs: 4,
+			wantOutputs: 5,
 		},
 	}
 
@@ -311,7 +311,7 @@ func TestClaude_Generate_DomainCollections(t *testing.T) {
 		}
 		outputs, err := gen.Generate(content, "/test", cfg)
 		require.NoError(t, err)
-		assert.Len(t, outputs, 6)
+		assert.Len(t, outputs, 7)
 		assert.True(t, hasOutputPathSuffix(outputs, filepath.Join("domain-skill", "SKILL.md")))
 	})
 
@@ -329,7 +329,7 @@ func TestClaude_Generate_DomainCollections(t *testing.T) {
 		}
 		outputs, err := gen.Generate(content, "/test", cfg)
 		require.NoError(t, err)
-		assert.Len(t, outputs, 5)
+		assert.Len(t, outputs, 6)
 		assert.True(t, hasOutputPathSuffix(outputs, filepath.Join("agents", "domain-agent.md")))
 	})
 
@@ -347,7 +347,7 @@ func TestClaude_Generate_DomainCollections(t *testing.T) {
 		}
 		outputs, err := gen.Generate(content, "/test", cfg)
 		require.NoError(t, err)
-		assert.Len(t, outputs, 6)
+		assert.Len(t, outputs, 7)
 		assert.True(t, hasOutputPathSuffix(outputs, filepath.Join("domain-command", "SKILL.md")))
 	})
 
@@ -368,7 +368,7 @@ func TestClaude_Generate_DomainCollections(t *testing.T) {
 		}
 		outputs, err := gen.Generate(content, "/test", cfg)
 		require.NoError(t, err)
-		assert.Len(t, outputs, 14, "4 base + 2 skills*2 + 2 agents*1 + 2 commands*2 = 14")
+		assert.Len(t, outputs, 15, "5 base + 2 skills*2 + 2 agents*1 + 2 commands*2 = 15")
 		for _, name := range []string{"root-skill", "domain-skill", "root-agent", "domain-agent", "root-command", "domain-command"} {
 			assert.True(t, hasOutputPathContains(outputs, name), "%s should be present in outputs", name)
 		}
@@ -737,4 +737,46 @@ func frontmatterValue(content, key string) string {
 		}
 	}
 	return ""
+}
+
+// TestClaude_PathScopedRules covers issue #199: a rule declaring a path scope
+// is emitted as .claude/rules/<id>.md with a `paths` field and left out of
+// CLAUDE.md; an unscoped rule stays in CLAUDE.md.
+func TestClaude_PathScopedRules(t *testing.T) {
+	t.Parallel()
+
+	gen := claudeGen(t)
+	content := &config.ContentTree{
+		Rules: []config.ContentFile{
+			{Name: "always", Content: "ALWAYS_RULE"},
+			{
+				Name:    "tsx",
+				Content: "TSX_RULE",
+				Metadata: &config.Metadata{
+					Globs: []string{"**/*.tsx"},
+				},
+			},
+		},
+	}
+	cfg := &config.Config{Name: "test"}
+
+	outputs, err := gen.Generate(content, "/test", cfg)
+	require.NoError(t, err)
+
+	var claudeMD, ruleFile string
+	for _, o := range outputs {
+		switch {
+		case !o.IsDir && strings.HasSuffix(o.Path, "CLAUDE.md"):
+			claudeMD = o.Content
+		case !o.IsDir && strings.HasSuffix(o.Path, filepath.Join("rules", "tsx.md")):
+			ruleFile = o.Content
+		}
+	}
+
+	assert.Contains(t, claudeMD, "ALWAYS_RULE")
+	assert.NotContains(t, claudeMD, "TSX_RULE", "a path-scoped rule must not be inlined in CLAUDE.md")
+	require.NotEmpty(t, ruleFile, ".claude/rules/tsx.md should be emitted")
+	assert.Contains(t, ruleFile, "paths:")
+	assert.Contains(t, ruleFile, "**/*.tsx")
+	assert.Contains(t, ruleFile, "TSX_RULE")
 }

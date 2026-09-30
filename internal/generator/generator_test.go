@@ -1248,7 +1248,7 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
 
-		servers := gen.collectMCPServersForContent(content)
+		servers := gen.collectMCPServersForContent(content, "")
 		require.NotNil(t, servers)
 
 		// Should contain root MCP servers
@@ -1281,7 +1281,7 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
 
-		servers := gen.collectMCPServersForContent(content)
+		servers := gen.collectMCPServersForContent(content, "")
 		require.NotNil(t, servers)
 
 		// Should not contain disabled server
@@ -1313,7 +1313,7 @@ func TestGenerator_DefaultProfile_MCPServers_WithAndWithoutProfiles(t *testing.T
 		content, err := gen.getContentForProfile(defaultProfileName)
 		require.NoError(t, err)
 
-		servers := gen.collectMCPServersForContent(content)
+		servers := gen.collectMCPServersForContent(content, "")
 		require.NotNil(t, servers)
 
 		// Should contain all enabled servers
@@ -1755,9 +1755,12 @@ presets = ["codex", "claude"]
 	assert.Contains(t, string(rootContent), "ROOT_ONLY_RULE")
 	assert.NotContains(t, string(rootContent), "FRONTEND_SCOPED_RULE")
 
+	// A scoped file is loaded on top of the root file, so it must carry only the
+	// scope's own domain content; repeating the root rules would double the
+	// always-loaded text and defeat the point of scoping (#201).
 	scopedContent, err := os.ReadFile(scopedAgents)
 	require.NoError(t, err)
-	assert.Contains(t, string(scopedContent), "ROOT_ONLY_RULE")
+	assert.NotContains(t, string(scopedContent), "ROOT_ONLY_RULE")
 	assert.Contains(t, string(scopedContent), "FRONTEND_SCOPED_RULE")
 }
 
@@ -2556,4 +2559,47 @@ func TestStaleManifestFilesProtectsScopedMergedDocuments(t *testing.T) {
 			assert.NotContains(t, stale, absPath, "a merged settings document must never be deleted as stale")
 		})
 	}
+}
+
+func TestGenerator_MCPServersScopedToProfiles(t *testing.T) {
+	tempDir := t.TempDir()
+	aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "rules"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(`version = "4.0"
+name = "scoped-mcp"
+presets = ["cursor"]
+gitignore = true
+
+[profiles]
+backend = []
+frontend = []
+
+[[mcp_servers]]
+name = "global"
+command = "npx"
+args = ["global-server"]
+
+[[mcp_servers]]
+name = "backend-only"
+command = "npx"
+args = ["backend-server"]
+profiles = ["backend"]
+`), 0o644))
+
+	readMCP := func(profile string) string {
+		cfg, err := config.LoadConfig(context.Background(), tempDir)
+		require.NoError(t, err)
+		require.NoError(t, NewGenerator(cfg).Generate(profile))
+		content, err := os.ReadFile(filepath.Join(tempDir, ".mcp.json"))
+		require.NoError(t, err)
+		return string(content)
+	}
+
+	frontend := readMCP("frontend")
+	assert.Contains(t, frontend, "global-server")
+	assert.NotContains(t, frontend, "backend-server", "a backend-scoped server must not appear on frontend")
+
+	backend := readMCP("backend")
+	assert.Contains(t, backend, "global-server")
+	assert.Contains(t, backend, "backend-server")
 }

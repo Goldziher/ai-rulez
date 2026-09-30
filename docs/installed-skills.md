@@ -57,6 +57,7 @@ path = "custom/skill/path"    # defaults to skills/<name>
 | `path`           | No       | Path within repo to skill directory. Defaults to `skills/<name>` |
 | `ref`            | No       | Git ref (branch, tag, or commit). Defaults to the repository's default branch (`HEAD`) |
 | `local_override` | No       | Local path override for development                              |
+| `profiles`       | No       | Restrict the skill to the named profiles. Omit to include it in every profile |
 
 ## CLI Commands
 

@@ -283,7 +283,7 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 	frontmatter := map[string]interface{}{}
 
 	if agent.Metadata != nil {
-		if description := agent.Metadata.Extra[keyDescription]; description != "" {
+		if description := agent.Metadata.Extra[keyDescription]; EmitAgentField(cfg, "description") && description != "" {
 			frontmatter[keyDescription] = description
 		}
 	}
@@ -303,13 +303,22 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 		frontmatter["variant"] = effort
 	}
 
+	// Default to `all` so a generated agent is spawnable as a subagent as well
+	// as selectable as a primary; OpenCode defaults an agent with no `mode` to
+	// primary-only. A source `mode` still wins. Set before the metadata
+	// short-circuit so a bare agent is still spawnable.
+	mode := "all"
+	if agent.Metadata != nil {
+		if sourceMode := agent.Metadata.Extra["mode"]; sourceMode != "" {
+			mode = sourceMode
+		}
+	}
+	frontmatter["mode"] = mode
+
 	if agent.Metadata == nil {
 		return frontmatter
 	}
 
-	if mode := agent.Metadata.Extra["mode"]; mode != "" {
-		frontmatter["mode"] = mode
-	}
 	if hidden := agent.Metadata.Extra["hidden"]; hidden != "" {
 		frontmatter["hidden"] = hidden
 	}

@@ -334,7 +334,7 @@ func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.Content
 			frontmatter[field] = val
 		}
 	}
-	if len(agent.Metadata.Tools) > 0 {
+	if EmitAgentField(cfg, "tools") && len(agent.Metadata.Tools) > 0 {
 		frontmatter["tools"] = agent.Metadata.Tools
 	}
 

@@ -92,12 +92,23 @@
             "oneOf": [
               {
                 "required": ["type", "path"],
-                "not": { "required": ["provider"] },
+                "not": {
+                  "required": ["provider"]
+                },
                 "description": "Template/custom preset"
               },
               {
                 "required": ["provider"],
-                "not": { "anyOf": [{ "required": ["type"] }, { "required": ["path"] }] },
+                "not": {
+                  "anyOf": [
+                    {
+                      "required": ["type"]
+                    },
+                    {
+                      "required": ["path"]
+                    }
+                  ]
+                },
                 "description": "Provider-backed preset"
               }
             ]
@@ -223,6 +234,13 @@
             "type": "boolean",
             "description": "Whether this MCP server is emitted into generated MCP outputs (default: true)",
             "default": true
+          },
+          "profiles": {
+            "type": "array",
+            "description": "Restrict this server to the named profiles. Omit to include it in every profile.",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
@@ -332,6 +350,13 @@
           "local_override": {
             "type": "string",
             "description": "Local path override for development (used instead of source when present)"
+          },
+          "profiles": {
+            "type": "array",
+            "description": "Restrict this skill to the named profiles. Omit to include it in every profile.",
+            "items": {
+              "type": "string"
+            }
           }
         },
         "additionalProperties": false
@@ -464,6 +489,14 @@
           "additionalProperties": {
             "type": "string"
           }
+        },
+        "omit_agent_fields": {
+          "type": "array",
+          "description": "Agent frontmatter fields to suppress for every preset, so an agent stays loadable where a field is invalid (unconfigured model/provider, unrecognized tool name). Values: model, effort, tools, description.",
+          "items": {
+            "type": "string",
+            "enum": ["model", "effort", "tools", "description"]
+          }
         }
       },
       "additionalProperties": false
@@ -473,20 +506,55 @@
       "description": "Authoring metadata for a distributable plugin bundle (producer side). Skills, commands, and agents come from the content tree; this block only carries packaging metadata.",
       "required": ["name", "version"],
       "properties": {
-        "name": { "type": "string" },
-        "display_name": { "type": "string" },
-        "description": { "type": "string" },
-        "version": { "type": "string", "description": "Semantic version, e.g. 1.0.0" },
-        "author": { "$ref": "#/$defs/authorEntity" },
-        "homepage": { "type": "string" },
-        "repository": { "type": "string" },
-        "license": { "type": "string" },
-        "category": { "type": "string" },
-        "brand_color": { "type": "string" },
-        "icon": { "type": "string" },
-        "logo": { "type": "string" },
-        "keywords": { "type": "array", "items": { "type": "string" } },
-        "tags": { "type": "array", "items": { "type": "string" } },
+        "name": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string",
+          "description": "Semantic version, e.g. 1.0.0"
+        },
+        "author": {
+          "$ref": "#/$defs/authorEntity"
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "license": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "brand_color": {
+          "type": "string"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "keywords": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "content_root": {
           "type": "string",
           "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/"
@@ -504,12 +572,31 @@
             "type": "object",
             "required": ["name"],
             "properties": {
-              "name": { "type": "string" },
-              "command": { "type": "string" },
-              "args": { "type": "array", "items": { "type": "string" } },
-              "env": { "type": "object", "additionalProperties": { "type": "string" } },
-              "transport": { "type": "string", "enum": ["stdio", "http", "sse"] },
-              "url": { "type": "string" }
+              "name": {
+                "type": "string"
+              },
+              "command": {
+                "type": "string"
+              },
+              "args": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "env": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "transport": {
+                "type": "string",
+                "enum": ["stdio", "http", "sse"]
+              },
+              "url": {
+                "type": "string"
+              }
             },
             "additionalProperties": false
           }
@@ -534,19 +621,44 @@
                 "items": {
                   "type": "object",
                   "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
-                  "oneOf": [{ "required": ["command"] }, { "required": ["script"] }],
+                  "oneOf": [
+                    {
+                      "required": ["command"]
+                    },
+                    {
+                      "required": ["script"]
+                    }
+                  ],
                   "properties": {
-                    "type": { "type": "string" },
-                    "command": { "type": "string" },
+                    "type": {
+                      "type": "string"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
                     "script": {
                       "type": "string",
                       "description": "Project-relative script bundled at hooks/<basename> and invoked via the plugin root."
                     },
-                    "args": { "type": "array", "items": { "type": "string" } },
-                    "timeout": { "type": "integer", "minimum": 0 },
-                    "async": { "type": "boolean" },
-                    "if": { "type": "string" },
-                    "status_message": { "type": "string" }
+                    "args": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "timeout": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "async": {
+                      "type": "boolean"
+                    },
+                    "if": {
+                      "type": "string"
+                    },
+                    "status_message": {
+                      "type": "string"
+                    }
                   },
                   "additionalProperties": false
                 }
@@ -560,8 +672,12 @@
           "description": "Claude-only status-line script passthrough.",
           "required": ["script"],
           "properties": {
-            "script": { "type": "string" },
-            "command": { "type": "string" }
+            "script": {
+              "type": "string"
+            },
+            "command": {
+              "type": "string"
+            }
           },
           "additionalProperties": false
         },
@@ -569,36 +685,81 @@
           "type": "object",
           "description": "Rich UI block shared by Codex and Kimi manifests.",
           "properties": {
-            "display_name": { "type": "string" },
-            "short_description": { "type": "string" },
-            "long_description": { "type": "string" },
-            "developer_name": { "type": "string" },
-            "category": { "type": "string" },
-            "capabilities": { "type": "array", "items": { "type": "string" } },
-            "default_prompt": { "type": "array", "items": { "type": "string" } },
-            "website_url": { "type": "string" },
-            "privacy_policy_url": { "type": "string" },
-            "terms_of_service_url": { "type": "string" },
-            "brand_color": { "type": "string" },
-            "composer_icon": { "type": "string" },
-            "logo": { "type": "string" },
-            "logo_dark": { "type": "string" },
-            "screenshots": { "type": "array", "items": { "type": "string" } }
+            "display_name": {
+              "type": "string"
+            },
+            "short_description": {
+              "type": "string"
+            },
+            "long_description": {
+              "type": "string"
+            },
+            "developer_name": {
+              "type": "string"
+            },
+            "category": {
+              "type": "string"
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "default_prompt": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "website_url": {
+              "type": "string"
+            },
+            "privacy_policy_url": {
+              "type": "string"
+            },
+            "terms_of_service_url": {
+              "type": "string"
+            },
+            "brand_color": {
+              "type": "string"
+            },
+            "composer_icon": {
+              "type": "string"
+            },
+            "logo": {
+              "type": "string"
+            },
+            "logo_dark": {
+              "type": "string"
+            },
+            "screenshots": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
           },
           "additionalProperties": false
         },
         "gemini": {
           "type": "object",
           "properties": {
-            "context_file_name": { "type": "string" }
+            "context_file_name": {
+              "type": "string"
+            }
           },
           "additionalProperties": false
         },
         "kimi": {
           "type": "object",
           "properties": {
-            "skill_instructions": { "type": "string" },
-            "session_start_skill": { "type": "string" }
+            "skill_instructions": {
+              "type": "string"
+            },
+            "session_start_skill": {
+              "type": "string"
+            }
           },
           "additionalProperties": false
         },
@@ -624,13 +785,21 @@
       "description": "Authoring metadata for the marketplace index emitted for the plugin(s).",
       "required": ["name"],
       "properties": {
-        "name": { "type": "string" },
-        "description": { "type": "string" },
-        "owner": { "$ref": "#/$defs/authorEntity" },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "owner": {
+          "$ref": "#/$defs/authorEntity"
+        },
         "members": {
           "type": "array",
           "description": "Sub-project directories for a multi-plugin monorepo. Empty means single-plugin.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         }
       },
       "additionalProperties": false
@@ -640,9 +809,15 @@
     "authorEntity": {
       "type": "object",
       "properties": {
-        "name": { "type": "string" },
-        "email": { "type": "string" },
-        "url": { "type": "string" }
+        "name": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
       },
       "additionalProperties": false
     }

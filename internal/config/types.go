@@ -145,6 +145,27 @@ type DefaultsConfig struct {
 	// over this map; the legacy `model` field is the lowest-priority fallback. Presets
 	// that do not emit a per-agent model frontmatter ignore entries for their preset.
 	ModelByPreset map[string]string `yaml:"model_by_preset,omitempty" json:"model_by_preset,omitempty" toml:"model_by_preset,omitempty"`
+
+	// OmitAgentFields lists agent frontmatter fields to suppress for every preset,
+	// so an agent stays loadable in a tool where a field would be invalid (an
+	// unconfigured model/provider, a tool name the tool does not recognize, ...).
+	// Recognized values: "model", "effort", "tools", "description". Omitted fields
+	// are simply not written; nothing else changes.
+	OmitAgentFields []string `yaml:"omit_agent_fields,omitempty" json:"omit_agent_fields,omitempty" toml:"omit_agent_fields,omitempty"` //nolint:tagliatelle
+}
+
+// OmitsAgentField reports whether the named agent frontmatter field is configured
+// to be omitted.
+func (c *Config) OmitsAgentField(field string) bool {
+	if c == nil || c.Defaults == nil {
+		return false
+	}
+	for _, f := range c.Defaults.OmitAgentFields {
+		if f == field {
+			return true
+		}
+	}
+	return false
 }
 
 // BuiltinsConfig represents the builtins field which can be:
@@ -400,6 +421,9 @@ type MCPServer struct {
 	Transport   string            `yaml:"transport,omitempty" json:"transport,omitempty" toml:"transport,omitempty"`
 	URL         string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
 	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// Profiles restricts this server to the named profiles. Empty means every
+	// profile, preserving the pre-existing behavior.
+	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
 
 	// SecretEnvKeys records env keys whose generated values should be treated as
 	// sensitive. It is populated during generation and never serialized.
@@ -451,6 +475,9 @@ type ContentFile struct {
 	Path     string    `yaml:"path" json:"path"`
 	Content  string    `yaml:"content" json:"content"`
 	Metadata *Metadata `yaml:"metadata,omitempty" json:"metadata,omitempty"`
+	// Profiles scopes this file to the named profiles (used by installed
+	// skills). Empty means every profile. Runtime-only; not serialized.
+	Profiles []string `yaml:"-" json:"-"`
 
 	// Resources holds skill supporting files (references/, scripts/, assets/)
 	// loaded alongside SKILL.md. Always empty for non-skill content.
@@ -497,17 +524,34 @@ type SkillResource struct {
 // YAML sequences cannot round-trip through map[string]string — they would be
 // stringified via fmt %v ("[a b c]") instead of preserved as proper lists.
 type Metadata struct {
-	Priority string            `yaml:"priority,omitempty" json:"priority,omitempty"`
-	Targets  []string          `yaml:"targets,omitempty" json:"targets,omitempty"`
-	Aliases  []string          `yaml:"aliases,omitempty" json:"aliases,omitempty"`
-	Tools    []string          `yaml:"tools,omitempty" json:"tools,omitempty"`
-	Skills   []string          `yaml:"skills,omitempty" json:"skills,omitempty"`
-	Keywords []string          `yaml:"keywords,omitempty" json:"keywords,omitempty"`
-	Usage    string            `yaml:"usage,omitempty" json:"usage,omitempty"`
-	Shortcut string            `yaml:"shortcut,omitempty" json:"shortcut,omitempty"`
-	Category string            `yaml:"category,omitempty" json:"category,omitempty"`
-	Effort   string            `yaml:"effort,omitempty" json:"effort,omitempty"`
-	Extra    map[string]string `yaml:",inline" json:",inline"`
+	Priority string   `yaml:"priority,omitempty" json:"priority,omitempty"`
+	Targets  []string `yaml:"targets,omitempty" json:"targets,omitempty"`
+	Aliases  []string `yaml:"aliases,omitempty" json:"aliases,omitempty"`
+	Tools    []string `yaml:"tools,omitempty" json:"tools,omitempty"`
+	Skills   []string `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Keywords []string `yaml:"keywords,omitempty" json:"keywords,omitempty"`
+	Usage    string   `yaml:"usage,omitempty" json:"usage,omitempty"`
+	Shortcut string   `yaml:"shortcut,omitempty" json:"shortcut,omitempty"`
+	Category string   `yaml:"category,omitempty" json:"category,omitempty"`
+	Effort   string   `yaml:"effort,omitempty" json:"effort,omitempty"`
+	// Globs and Paths declare the files a rule applies to. They are two
+	// spellings of the same idea (Cursor calls them globs, Claude Code calls
+	// them paths); either populates the same path-scope used by presets.
+	Globs []string          `yaml:"globs,omitempty" json:"globs,omitempty"`
+	Paths []string          `yaml:"paths,omitempty" json:"paths,omitempty"`
+	Extra map[string]string `yaml:",inline" json:",inline"`
+}
+
+// PathScope returns the file globs a rule declares, from either `globs` or
+// `paths` frontmatter. Empty means the rule is not path-scoped.
+func (m *Metadata) PathScope() []string {
+	if m == nil {
+		return nil
+	}
+	if len(m.Globs) > 0 {
+		return m.Globs
+	}
+	return m.Paths
 }
 
 // GetPriority returns the priority as a Priority type, defaulting to medium
@@ -670,6 +714,13 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 
 	profileDomains := c.GetProfileDomains(profile)
 
+	// Installed skills may be scoped to profiles; drop the ones not active.
+	activeProfile := profile
+	if activeProfile == "" {
+		activeProfile = c.Default
+	}
+	rootSkills := FilterContentFilesByProfile(c.Content.Skills, activeProfile)
+
 	// Build filtered domains map: profile-listed domains + global builtins + FromInclude
 	activeDomains := make(map[string]*Domain)
 
@@ -701,7 +752,7 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 	return &ContentTree{
 		Rules:    c.Content.Rules,
 		Context:  c.Content.Context,
-		Skills:   c.Content.Skills,
+		Skills:   rootSkills,
 		Agents:   c.Content.Agents,
 		Commands: c.Content.Commands,
 		Domains:  activeDomains,
@@ -851,11 +902,12 @@ type IncludeConfig struct {
 
 // InstalledSkillConfig represents a named skill to install from an external source
 type InstalledSkillConfig struct {
-	Name          string `yaml:"name" json:"name" toml:"name"`
-	Source        string `yaml:"source" json:"source" toml:"source"`
-	Path          string `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
-	Ref           string `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
-	LocalOverride string `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
+	Name          string   `yaml:"name" json:"name" toml:"name"`
+	Source        string   `yaml:"source" json:"source" toml:"source"`
+	Path          string   `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
+	Ref           string   `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
+	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
+	Profiles      []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
 }
 
 // GetPath returns the path within the repo, defaulting to "skills/<name>"

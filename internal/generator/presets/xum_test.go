@@ -129,3 +129,15 @@ func TestXumThinkingLevel(t *testing.T) {
 		}
 	}
 }
+
+func TestXumPresetGenerator_AgentSubagentRunnable(t *testing.T) {
+	g := &XumPresetGenerator{}
+	agent := config.ContentFile{Name: "spawnable", Content: "x"}
+	result, err := g.renderAgentFile(agent, &config.Config{})
+	if err != nil {
+		t.Fatalf("renderAgentFile() error: %v", err)
+	}
+	if !strings.Contains(result, "runnable: true") {
+		t.Errorf("xum agents must be subagent-runnable, got:\n%s", result)
+	}
+}

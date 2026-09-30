@@ -130,7 +130,7 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 
 ```toml
 presets = [
-  "claude",       # → CLAUDE.md and .claude/
+  "claude",       # → CLAUDE.md, .claude/, and .claude/rules/ (path-scoped rules)
   "cursor",       # → .cursor/rules/, .cursor/commands/, .agents/
   "gemini",       # → GEMINI.md, .gemini/, .agents/
   "copilot",      # → .github/copilot-instructions.md, .github/{skills,agents,commands}/
@@ -273,7 +273,10 @@ profile = "frontend"
 presets = ["codex", "claude"]
 ```
 
-Scoped outputs keep root context separate from subfolder context. The default scoped presets are `codex` and `claude`, producing subfolder `AGENTS.md` and `CLAUDE.md` files.
+A scoped file contains **only** the scope's own content (its profile's domains), not the root rules and
+context: the target tools load a subdirectory `CLAUDE.md`/`AGENTS.md` on top of the root file, so
+repeating the root content would duplicate the always-loaded text. The default scoped presets are
+`codex` and `claude`, producing subfolder `AGENTS.md` and `CLAUDE.md` files.
 
 ### `gitignore`
 
@@ -336,6 +339,7 @@ Each entry supports:
 | `transport`   | No       | `stdio`, `http`, or `sse`. Defaults to `stdio`.                                     |
 | `url`         | No       | Remote MCP server URL for `http` or `sse` transports.                               |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
+| `profiles`    | No       | Restrict the server to the named profiles. Omit to include it in every profile.     |
 
 Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`.
 
@@ -632,6 +636,9 @@ Top-level defaults that propagate into generated outputs when individual content
 [defaults]
 effort = "medium"  # low | medium | high | xhigh | max | inherit
 
+# Suppress agent frontmatter fields that a target tool would reject.
+omit_agent_fields = ["model", "tools"]
+
 [defaults.effort_by_preset]
 codex = "high"
 claude = "xhigh"
@@ -642,6 +649,12 @@ claude = "opus"
 copilot = "gpt-5"
 cursor = "claude-3.7-sonnet"
 ```
+
+**`defaults.omit_agent_fields`** suppresses named agent frontmatter fields for every preset, so an
+agent stays loadable where a field would be invalid — an unconfigured model or provider, or a tool
+name the target tool does not recognize. Recognized values are `model`, `effort`, `tools`, and
+`description`; an omitted field is simply not written. This trades strictness for loadability, which
+is usually the right call when the same agent is generated for many tools.
 
 **`defaults.effort`** sets the reasoning effort applied to every preset that supports it. Per-agent overrides (via agent frontmatter) win where the preset accepts per-agent effort; if neither is set, the field is omitted entirely.
 
@@ -999,6 +1012,23 @@ priority: critical
 targets:
   - "CLAUDE.md"
   - ".cursor/rules/*"
+---
+```
+
+**`globs` / `paths`** (optional, array of strings — rules)
+
+- The files a rule applies to. The two keys are synonyms; either sets the same path scope.
+- A **path-scoped rule is not inlined into the root instructions file**. Instead each preset emits it
+  through the target tool's on-demand mechanism:
+  - `claude` → `.claude/rules/<id>.md` with a `paths:` frontmatter; Claude loads it when it reads a
+    matching file.
+  - `cursor` → `.cursor/rules/<id>.mdc` with `globs:` and `alwaysApply: false`.
+  - Presets with no glob mechanism (for example `codex`) keep the rule inline in `AGENTS.md`.
+
+```yaml
+---
+globs:
+  - "**/*.tsx"
 ---
 ```
 

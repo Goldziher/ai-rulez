@@ -75,7 +75,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 
 	// Per-type rendering in a fixed iteration order so output is deterministic
 	// across map iterations.
-	for _, typ := range []string{OutputTypeSkills, OutputTypeAgents, OutputTypeCommands} {
+	for _, typ := range []string{OutputTypeRules, OutputTypeSkills, OutputTypeAgents, OutputTypeCommands} {
 		spec, ok := g.Spec.Outputs[typ]
 		if !ok || spec == nil {
 			continue
@@ -122,6 +122,8 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 // the one written last replaces the other.
 func collectItemsByType(content *config.ContentTree, typ string) []config.ContentFile {
 	switch typ {
+	case OutputTypeRules:
+		return presets.AllInlineRules(content)
 	case OutputTypeSkills:
 		return presets.AllSkills(content)
 	case OutputTypeAgents:
@@ -130,6 +132,13 @@ func collectItemsByType(content *config.ContentTree, typ string) []config.Conten
 		return presets.AllCommands(content)
 	}
 	return nil
+}
+
+// hasPathScope reports whether a content file declares file globs, i.e. it
+// should be delivered through the tool's path-scoped mechanism rather than the
+// always-loaded root file.
+func hasPathScope(item config.ContentFile) bool {
+	return item.Metadata != nil && len(item.Metadata.PathScope()) > 0
 }
 
 // filterAllows applies the closed-set filter predicate. Currently only one
@@ -149,6 +158,9 @@ func (g *Generator) filterAllows(spec *OutputSpec, item config.ContentFile) bool
 			}
 		}
 		return false
+	}
+	if spec.Filter == FilterPathScoped {
+		return hasPathScope(item)
 	}
 	return false
 }
@@ -338,6 +350,20 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 		applyOrderedFields(frontmatter, spec, item.Metadata)
 		applyExtras(frontmatter, spec, item.Metadata)
 	}
+	if typ == OutputTypeRules && spec.Paths && item.Metadata != nil {
+		if scope := item.Metadata.PathScope(); len(scope) > 0 {
+			frontmatter["paths"] = scope
+		}
+	}
+	// Honor the global per-field omission policy. model/effort are already
+	// suppressed by the shared resolvers returning ""; tools and description
+	// are written here, so drop them post-hoc.
+	if cfg.OmitsAgentField("tools") {
+		delete(frontmatter, "tools")
+	}
+	if cfg.OmitsAgentField("description") {
+		delete(frontmatter, "description")
+	}
 	// A skill whose frontmatter failed to parse loads with nil Metadata, so
 	// applyOrderedFields/applyExtras never get a chance to write its
 	// description — the generated SKILL.md would ship without one and the
@@ -438,7 +464,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		start := recorder.mark(&b)
 		switch section {
 		case SectionRootHeader:
-			ruleCount, agentCount := countContent(content)
+			ruleCount, agentCount := countContent(content, g.Spec.Outputs[OutputTypeRules] != nil)
 			data := &templates.TemplateData{
 				ProjectName: cfg.Name,
 				Timestamp:   cfg.HeaderTimestamp(),
@@ -460,8 +486,9 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 			}
 		case SectionRootRulesInline:
 			// Rules and context are recorded per entry, not per section: a cost
-			// report has to be able to name the rule that is expensive.
-			writeInlineRules(&b, content, cfg.IsCompact(), recorder)
+			// report has to be able to name the rule that is expensive. Path-scoped
+			// rules move to the tool's rules directory instead of the root file.
+			writeInlineRules(&b, content, cfg.IsCompact(), g.Spec.Outputs[OutputTypeRules] != nil, recorder)
 			continue
 		case SectionRootContextInline:
 			writeInlineContext(&b, content, cfg.IsCompact(), recorder)
@@ -482,11 +509,16 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 	}, nil
 }
 
-func countContent(content *config.ContentTree) (rules, agents int) {
+func countContent(content *config.ContentTree, skipPathScoped bool) (rules, agents int) {
 	// Count rules after deduplication so the header reflects what is actually
 	// rendered — a builtin and an include defining the same rule name collapse
 	// to one entry (see writeInlineRules).
-	rules = len(presets.AllInlineRules(content))
+	for _, rule := range presets.AllInlineRules(content) {
+		if skipPathScoped && hasPathScope(rule) {
+			continue
+		}
+		rules++
+	}
 	// Count agents after dedup + extends resolution so the header matches what
 	// AllAgents actually renders (mirrors the rules count above).
 	agents = len(presets.AllAgents(content))
@@ -495,9 +527,19 @@ func countContent(content *config.ContentTree) (rules, agents int) {
 
 // writeInlineRules mirrors the "## Rules" block produced by the legacy
 // renderClaudeMarkdown — heading + entries with **Priority:** when set and
-// markdown-processed content.
-func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact bool, recorder *partRecorder) {
+// markdown-processed content. When skipPathScoped is true, rules declaring a
+// path scope are omitted because the tool emits them as scoped rule files.
+func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact, skipPathScoped bool, recorder *partRecorder) {
 	allRules := presets.AllInlineRules(content)
+	if skipPathScoped {
+		filtered := allRules[:0:0]
+		for _, rule := range allRules {
+			if !hasPathScope(rule) {
+				filtered = append(filtered, rule)
+			}
+		}
+		allRules = filtered
+	}
 	if len(allRules) == 0 {
 		return
 	}

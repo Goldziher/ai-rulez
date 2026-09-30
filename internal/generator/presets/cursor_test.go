@@ -544,3 +544,30 @@ func TestCursorPresetGenerator_renderMCPJSON_Transports(t *testing.T) {
 		}
 	}
 }
+
+func TestCursorPresetGenerator_RuleFrontmatter(t *testing.T) {
+	g := &CursorPresetGenerator{}
+
+	plain := g.renderRuleFile(config.ContentFile{Name: "plain", Content: "Use named exports."}, false)
+	if !strings.Contains(plain, "alwaysApply: true") {
+		t.Errorf("an unscoped rule must be alwaysApply: true, got:\n%s", plain)
+	}
+	if !strings.HasPrefix(plain, "---\n") {
+		t.Errorf("a cursor rule must open with frontmatter, got:\n%s", plain)
+	}
+
+	scoped := g.renderRuleFile(config.ContentFile{
+		Name:    "tsx",
+		Content: "x",
+		Metadata: &config.Metadata{
+			Globs: []string{"**/*.tsx"},
+			Extra: map[string]string{"description": "tsx rules"},
+		},
+	}, false)
+	if !strings.Contains(scoped, "alwaysApply: false") || !strings.Contains(scoped, "globs: '**/*.tsx'") {
+		t.Errorf("a globbed rule must carry globs + alwaysApply:false, got:\n%s", scoped)
+	}
+	if !strings.Contains(scoped, "description: tsx rules") {
+		t.Errorf("a rule description must pass through, got:\n%s", scoped)
+	}
+}

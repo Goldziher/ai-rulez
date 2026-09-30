@@ -103,7 +103,7 @@ func validateSpec(s *ProviderSpec) error {
 		if out.Mode != OutputModePerItemFile {
 			return fmt.Errorf("outputs[%q].mode: unknown mode %q", typ, out.Mode)
 		}
-		if out.Filter != "" && out.Filter != FilterIncludeIfTargetingProvider {
+		if out.Filter != "" && out.Filter != FilterIncludeIfTargetingProvider && out.Filter != FilterPathScoped {
 			return fmt.Errorf("outputs[%q].filter: unknown filter %q", typ, out.Filter)
 		}
 		if out.Body != nil {
