@@ -50,11 +50,8 @@ refreshing a branch reference.
 | `ai-rulez-recursive`       | `generate --recursive`                          | Regenerate every project in a repository       |
 | `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` | Regenerate plugin producers and marketplaces   |
 | `ai-rulez-plugin-verify`   | `verify --recursive --plugin --if-configured`   | Verify plugin provenance without writing files |
-| `ai-rulez-enforce`         | `enforce --level error`                         | Enforce configured source-code rules           |
-| `ai-rulez-enforce-fix`     | `enforce --fix --level error`                   | Enforce rules and apply fixes                  |
 
-Generation and plugin hooks trigger for root or nested `.ai-rulez/` changes.
-Enforcement hooks trigger for supported source-code extensions.
+Every hook triggers for root or nested `.ai-rulez/` changes.
 
 ## Choose an execution path
 
