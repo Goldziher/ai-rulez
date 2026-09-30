@@ -561,6 +561,10 @@ func (s *V4GenerationSuite) TestOpencode_FileStructure() {
 	// Agents
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".opencode", "agents", "security-reviewer.md")),
 		"Should generate agent file")
+
+	// Native v2 MCP config
+	s.Require().NotNil(s.findFile(outputs, "opencode.json"),
+		"Should generate opencode.json with MCP servers")
 }
 
 func (s *V4GenerationSuite) TestOpencode_Content() {
@@ -574,6 +578,12 @@ func (s *V4GenerationSuite) TestOpencode_Content() {
 	// Agent frontmatter
 	agentFile := s.requireFile(outputs, filepath.Join(".opencode", "agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "description:")
+
+	// MCP config uses the v2 nested shape and carries the configured server.
+	mcpConfig := s.requireFile(outputs, "opencode.json")
+	s.assertContentContains(mcpConfig, `"mcp"`)
+	s.assertContentContains(mcpConfig, `"servers"`)
+	s.assertContentContains(mcpConfig, "test-mcp-server")
 }
 
 // ==========================================
