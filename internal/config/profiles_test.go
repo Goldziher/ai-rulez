@@ -198,3 +198,28 @@ func TestConfig_Validate_ComposedDefault(t *testing.T) {
 		})
 	}
 }
+
+func TestFilterContentFilesByProfile(t *testing.T) {
+	t.Parallel()
+
+	files := []config.ContentFile{
+		{Name: "everyone"},
+		{Name: "backend-only", Profiles: []string{"backend"}},
+		{Name: "frontend-only", Profiles: []string{"frontend"}},
+	}
+
+	got := func(profile string) []string {
+		var names []string
+		for _, f := range config.FilterContentFilesByProfile(files, profile) {
+			names = append(names, f.Name)
+		}
+		return names
+	}
+
+	assert.Equal(t, []string{"everyone", "backend-only"}, got("backend"))
+	assert.Equal(t, []string{"everyone", "frontend-only"}, got("frontend"))
+	assert.ElementsMatch(t, []string{"everyone", "backend-only", "frontend-only"}, got(""),
+		"an unset profile applies no restriction")
+	assert.Equal(t, []string{"everyone", "backend-only"}, got("base,backend"),
+		"a composed profile matches any of its elements")
+}

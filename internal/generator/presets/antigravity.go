@@ -120,7 +120,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
-		agentContent, err := g.renderAgentFile(agent)
+		agentContent, err := g.renderAgentFile(agent, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate agent %s: %w", agent.Name, err)
 		}
@@ -264,10 +264,10 @@ func (g *AntigravityPresetGenerator) renderSkillFile(skill config.ContentFile) s
 	return builder.String()
 }
 
-func (g *AntigravityPresetGenerator) renderAgentFile(agent config.ContentFile) (string, error) {
+func (g *AntigravityPresetGenerator) renderAgentFile(agent config.ContentFile, cfg *config.Config) (string, error) {
 	var builder strings.Builder
 
-	frontmatter := g.buildAgentFrontmatter(agent)
+	frontmatter := g.buildAgentFrontmatter(agent, cfg)
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -283,7 +283,7 @@ func (g *AntigravityPresetGenerator) renderAgentFile(agent config.ContentFile) (
 	return builder.String(), nil
 }
 
-func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentFile) map[string]interface{} {
+func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
 		keyName: agent.Name,
 	}
@@ -298,7 +298,7 @@ func (g *AntigravityPresetGenerator) buildAgentFrontmatter(agent config.ContentF
 			frontmatter[field] = val
 		}
 	}
-	if len(agent.Metadata.Tools) > 0 {
+	if EmitAgentField(cfg, "tools") && len(agent.Metadata.Tools) > 0 {
 		frontmatter["tools"] = agent.Metadata.Tools
 	}
 

@@ -188,6 +188,13 @@ func (g *XumPresetGenerator) buildAgentFrontmatter(agent config.ContentFile, cfg
 		keyName: agent.Name,
 	}
 
+	// Xum only spawns an agent through the task tool when subagent.runnable is
+	// true; without it the definition is selectable as a primary mode only.
+	// A source `subagent_runnable` of "false" opts back out.
+	if agent.Metadata == nil || agent.Metadata.Extra["subagent_runnable"] != "false" {
+		frontmatter["subagent"] = map[string]interface{}{"runnable": true}
+	}
+
 	ai := map[string]interface{}{}
 	if model := ResolveAgentModel(xumPresetName, agent, cfg); model != "" {
 		ai["model"] = model
@@ -203,10 +210,10 @@ func (g *XumPresetGenerator) buildAgentFrontmatter(agent config.ContentFile, cfg
 		return frontmatter
 	}
 
-	if desc, ok := agent.Metadata.Extra[keyDescription]; ok && desc != "" {
+	if desc, ok := agent.Metadata.Extra[keyDescription]; ok && desc != "" && EmitAgentField(cfg, "description") {
 		frontmatter[keyDescription] = desc
 	}
-	if len(agent.Metadata.Tools) > 0 {
+	if EmitAgentField(cfg, "tools") && len(agent.Metadata.Tools) > 0 {
 		frontmatter["tools"] = map[string]interface{}{"add": agent.Metadata.Tools}
 	}
 
