@@ -4,9 +4,12 @@ import (
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/kaptinlin/jsonschema"
+	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
@@ -38,6 +41,34 @@ const propertiesField = "properties"
 // ValidateWithSchema validates configuration data against the schema
 func ValidateWithSchema(configData []byte) error {
 	return validateWithSchemaBytes(configData, schemaJSON, "config")
+}
+
+// ValidateFile reads a configuration file and validates it against the config
+// schema. TOML is converted to JSON first because the schema (and the validator)
+// consume JSON/YAML; a TOML key the struct would silently drop is therefore
+// reported instead of ignored.
+func ValidateFile(path string) error {
+	data, err := os.ReadFile(path) //nolint:gosec // path is the user's own config file
+	if err != nil {
+		return oops.With("path", path).Wrapf(err, "read config for schema validation")
+	}
+
+	if strings.EqualFold(filepath.Ext(path), ".toml") {
+		var doc map[string]any
+		if err := toml.Unmarshal(data, &doc); err != nil {
+			return oops.
+				With("path", path).
+				Hint("Check the TOML syntax").
+				Wrapf(err, "parse TOML for schema validation")
+		}
+		jsonData, err := json.Marshal(doc)
+		if err != nil {
+			return oops.With("path", path).Wrapf(err, "convert TOML to JSON for schema validation")
+		}
+		return validateWithSchemaBytes(jsonData, schemaJSON, "config")
+	}
+
+	return validateWithSchemaBytes(data, schemaJSON, "config")
 }
 
 func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string) error {

@@ -1,14 +1,22 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-v3.schema.json",
-  "title": "AI Rules Configuration V3",
-  "description": "Schema for ai-rulez V3 directory-based configuration files",
+  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules.schema.json",
+  "title": "AI Rules Configuration",
+  "description": "Schema for ai-rulez directory-based configuration files (V4, accepting V3)",
   "type": "object",
   "required": ["version", "name"],
   "properties": {
     "$schema": {
       "type": "string",
       "description": "Reference to this schema for editor support"
+    },
+    "$comment": {
+      "type": "string",
+      "description": "Free-form note, ignored by ai-rulez (accepted so a JSON config can carry a comment)"
+    },
+    "schema": {
+      "type": "string",
+      "description": "TOML spelling of $schema (the TOML key is `schema`); accepted so a config.toml carrying a schema reference validates"
     },
     "version": {
       "type": "string",
@@ -46,7 +54,8 @@
               "opencode",
               "hermes",
               "antigravity",
-              "xum"
+              "xum",
+              "mcp"
             ],
             "description": "Built-in preset name"
           },
@@ -136,7 +145,23 @@
             "description": "Assistant presets to generate in this scope. Defaults to codex and claude.",
             "items": {
               "type": "string",
-              "enum": ["claude", "codex"]
+              "enum": [
+                "claude",
+                "cursor",
+                "gemini",
+                "copilot",
+                "continue-dev",
+                "windsurf",
+                "cline",
+                "codex",
+                "amp",
+                "junie",
+                "opencode",
+                "hermes",
+                "antigravity",
+                "xum",
+                "mcp"
+              ]
             }
           }
         },
@@ -166,19 +191,19 @@
           },
           "command": {
             "type": "string",
-            "description": "Command to start a local stdio MCP server (e.g., 'npx', 'uvx', 'node')",
+            "description": "Command to start a local stdio MCP server (e.g., 'npx', 'uvx', 'node'). May contain the ${PROJECT_ROOT} placeholder, resolved to the project root at generation time.",
             "minLength": 1
           },
           "args": {
             "type": "array",
-            "description": "Command line arguments for a local MCP server",
+            "description": "Command line arguments for a local MCP server. An argument may contain the ${PROJECT_ROOT} placeholder, resolved to the project root at generation time.",
             "items": {
               "type": "string"
             }
           },
           "env": {
             "type": "object",
-            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders; placeholder names must match [A-Za-z_][A-Za-z0-9_]* and are resolved by ai-rulez generate from repeated --env KEY=VALUE, process env, then dotenv files.",
+            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders; placeholder names must match [A-Za-z_][A-Za-z0-9_]* and are resolved by ai-rulez generate from repeated --env KEY=VALUE, process env, then dotenv files. ${PROJECT_ROOT} resolves to the project root unless a real PROJECT_ROOT is supplied.",
             "additionalProperties": {
               "type": "string"
             }
@@ -203,8 +228,64 @@
         "additionalProperties": false
       }
     },
+    "plugins": {
+      "type": "array",
+      "description": "Plugins to install from a configured marketplace. ai-rulez emits these declarations into .claude/plugins.json and .codex/plugins.json; the target tool performs the install. Distinct from the producer `[plugin]` authoring block.",
+      "items": {
+        "type": "object",
+        "required": ["marketplace", "name"],
+        "properties": {
+          "marketplace": {
+            "type": "string",
+            "description": "Name of the marketplace the plugin comes from (see `marketplaces`).",
+            "minLength": 1
+          },
+          "name": {
+            "type": "string",
+            "description": "Plugin name within the marketplace.",
+            "minLength": 1
+          },
+          "scope": {
+            "type": "string",
+            "enum": ["project", "user"],
+            "description": "Install scope. Defaults to project."
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "Whether the plugin declaration is emitted. Defaults to true."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "marketplaces": {
+      "type": "array",
+      "description": "Plugin marketplaces to register. Declared sources only; ai-rulez currently records them without emitting marketplace output.",
+      "items": {
+        "type": "object",
+        "required": ["name", "source"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Marketplace name, referenced by `plugins[].marketplace`.",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "description": "Marketplace source (GitHub repository, git URL, local path, or URL).",
+            "minLength": 1
+          },
+          "type": {
+            "type": "string",
+            "enum": ["github", "git", "local", "url"],
+            "description": "Source type."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
     "builtins": {
-      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security, git-workflow, code-quality, testing, token-efficiency, documentation, default-commands, rust, python, typescript, go, java, ruby, php, elixir, csharp, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm",
+      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus",
       "oneOf": [
         {
           "type": "boolean",
@@ -214,7 +295,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "pattern": "^(!?(ai-governance|agent-delegation|security|git-workflow|code-quality|testing|token-efficiency|documentation|default-commands|rust|python|typescript|go|java|ruby|php|elixir|csharp|r|pyo3|napi-rs|magnus|ext-php-rs|rustler|wasm|jni-rs|extendr|cgo)|![a-z0-9-]+/[a-z0-9-]+)$"
+            "pattern": "^(!?(ai-governance|agent-delegation|security|git-workflow|code-quality|testing|token-efficiency|documentation|polyglot-bindings|default-commands|cicd|observability|docker|rust|python|typescript|go|java|ruby|php|elixir|csharp|r|pyo3|napi-rs|magnus|ext-php-rs|rustler|wasm|jni-rs|extendr|cgo|vite-plus)|![a-z0-9-]+/[a-z0-9-]+)$"
           }
         }
       ]
@@ -279,22 +360,26 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["rules", "context", "skills", "agents", "mcp"]
+              "enum": ["rules", "context", "skills", "agents", "commands"]
             },
-            "description": "What content types to import (defaults to all)"
+            "description": "What content types to import (defaults to all). MCP servers are not importable from an include."
           },
           "ref": {
             "type": "string",
-            "description": "Git ref - branch, tag, or commit hash (git repos only)"
+            "description": "Git ref - branch, tag, or commit hash (git repos only). Defaults to the remote's default branch."
           },
           "install_to": {
             "type": "string",
-            "description": "Where to merge content (defaults to root)"
+            "description": "Import content into a specific domain (defaults to root)"
+          },
+          "local_override": {
+            "type": "string",
+            "description": "Local path or content that overrides the include when present"
           },
           "merge_strategy": {
             "type": "string",
-            "enum": ["local-override", "domain-override", "error"],
-            "description": "How to handle conflicting files"
+            "enum": ["local-override", "include-override", "error"],
+            "description": "How to handle conflicting files: local-override (default, local wins), include-override (include wins), or error (fail on conflict)"
           }
         },
         "additionalProperties": false
@@ -379,26 +464,6 @@
           "additionalProperties": {
             "type": "string"
           }
-        }
-      },
-      "additionalProperties": false
-    },
-    "compression": {
-      "type": "object",
-      "description": "DEPRECATED: Compression is now a no-op and will be removed in a future version. Condense content at the source level instead.",
-      "deprecated": true,
-      "properties": {
-        "level": {
-          "type": "string"
-        },
-        "preserve_markdown": {
-          "type": "boolean"
-        },
-        "preserve_code": {
-          "type": "boolean"
-        },
-        "language": {
-          "type": "string"
         }
       },
       "additionalProperties": false
