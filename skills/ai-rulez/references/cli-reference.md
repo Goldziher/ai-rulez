@@ -38,6 +38,8 @@ Flags:
 - `--env, -e KEY=VALUE` — MCP env override; repeatable
 - `--env-file, -E <path>` — Dotenv file for MCP placeholders; repeatable
 - `--no-configure-cli-mcp, -M` / `--skip-cli-mcp, -S` — Skip configuring CLI-based MCP tools
+- `--plugin` — Generate distributable plugin bundles and a marketplace index from the `[plugin]` block
+- `--if-configured` — With `--plugin`, skip successfully when plugin authoring is not configured
 
 `--update-gitignore` remains as a hidden deprecated alias for `--gitignore`.
 

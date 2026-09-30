@@ -7,7 +7,7 @@ Reuse configurations across multiple projects through inheritance and compositio
 Includes work through configuration inheritance:
 
 1. Define common rules once in a shared configuration
-2. Share rules, context, and skills across projects
+2. Share rules, context, skills, agents, and commands across projects
 3. Mix and match includes to create project-specific configurations
 4. Track changes through version control
 
@@ -171,15 +171,13 @@ For private repositories that require SSH authentication, ai-rulez automatically
 
 **Example with SSH:**
 
-```yaml
-includes:
-  - name: private-rules
-    source: git@git.example.com:company/ai-rulez.git
-    ref: main
-    include:
-      - rules
-      - context
-    merge_strategy: local-override
+```toml
+[[includes]]
+name = "private-rules"
+source = "git@git.example.com:company/ai-rulez.git"
+ref = "main"
+include = ["rules", "context"]
+merge_strategy = "local-override"
 ```
 
 **Requirements:**
@@ -323,30 +321,40 @@ generate:
 - **`name`**: Unique identifier for the include
 - **`source`**: Path or Git URL to the configuration
 - **`path`**: (Optional) Sub-path within the source to resolve (e.g. `modules/core`). Supports the bare/flattened layout described above; defaults to the source root
-- **`ref`**: (Git only) Branch, tag, or commit SHA (default: `main`)
-- **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`
+- **`ref`**: (Git only) Branch, tag, or commit SHA. Defaults to the remote's default branch (`HEAD`), not necessarily `main`.
+- **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`, `commands`. MCP servers are not importable from an include.
+- **`install_to`**: (Optional) Import the included content into a specific domain instead of the root.
+- **`local_override`**: (Optional) Path or content that overrides the include when present.
 - **`merge_strategy`**: How to handle conflicts:
-  - `local-override`: Local content takes precedence (default)
-  - `remote-override`: Remote content takes precedence
+  - `local-override`: local content takes precedence (default)
+  - `include-override`: the included content takes precedence
+  - `error`: fail generation on a conflict
+
+Each include carries its own strategy, and no include may reference another include. Domains from an
+include are always carried over; `include` filters content kinds, not domains.
 
 ## Include Priority
 
-When the same file exists in multiple includes and your configuration:
+Resolution starts from your local content and folds each include in declaration order, using that
+include's strategy (default `local-override`, which means *the existing base wins*):
 
-1. Your configuration takes precedence (highest priority)
-2. Includes are merged in order
-3. Later includes override earlier ones
+1. Your local configuration has the highest priority.
+2. The first include's content becomes part of the base and therefore beats later includes of the same name.
+3. A later include only wins where its `merge_strategy` is `include-override`.
 
-Example:
+```toml
+[[includes]]
+name = "base"
+source = "../base-rules/.ai-rulez"   # loaded first
 
-```yaml
-includes:
-  - ../base-rules/.ai-rulez # Loaded first
-  - ../team-rules/.ai-rulez # Overrides base-rules
-  # Your rules/ directory overrides both
+[[includes]]
+name = "team"
+source = "../team-rules/.ai-rulez"   # only overrides "base" with merge_strategy = "include-override"
+merge_strategy = "include-override"
 ```
 
-If multiple includes define `.ai-rulez/rules/security.md`, the last one wins.
+If `base` and `team` both define `rules/security.md`, `base` wins unless `team` sets
+`merge_strategy = "include-override"`. Your own `rules/` directory always wins.
 
 ## Common Patterns
 
@@ -370,9 +378,10 @@ org-standards/
 
 **Each project includes it:**
 
-```yaml
-includes:
-  - https://github.com/myorg/standards/.ai-rulez
+```toml
+[[includes]]
+name = "standards"
+source = "https://github.com/myorg/standards/.ai-rulez"
 ```
 
 ### Framework-Specific Rules
@@ -403,23 +412,21 @@ frameworks/
 
 **Your project uses them:**
 
-```yaml
-includes:
-  - ../../frameworks/go-backend/.ai-rulez
-  - ../../frameworks/react-frontend/.ai-rulez
+```toml
+presets = ["claude", "cursor"]
 
-presets:
-  - claude
-  - cursor
+[[includes]]
+name = "go-backend"
+source = "../../frameworks/go-backend/.ai-rulez"
 
-profiles:
-  backend:
-    - backend
-  frontend:
-    - frontend
-  full:
-    - backend
-    - frontend
+[[includes]]
+name = "react-frontend"
+source = "../../frameworks/react-frontend/.ai-rulez"
+
+[profiles]
+backend = ["backend"]
+frontend = ["frontend"]
+full = ["backend", "frontend"]
 ```
 
 ### Monorepo with Shared and Team-Specific Rules
@@ -466,15 +473,11 @@ org-base/
 └── .ai-rulez/config.toml
 
 go-framework/
-└── .ai-rulez/config.toml
-    includes:
-      - ../org-base/.ai-rulez
+└── .ai-rulez/config.toml        # [[includes]] source = "../org-base/.ai-rulez"
 
 my-project/
-└── .ai-rulez/config.toml
-    includes:
-      - ../go-framework/.ai-rulez
-      - ../team-standards/.ai-rulez
+└── .ai-rulez/config.toml        # [[includes]] source = "../go-framework/.ai-rulez"
+                                 # [[includes]] source = "../team-standards/.ai-rulez"
 ```
 
 When you generate from `my-project`, it loads:
@@ -494,16 +497,17 @@ go-framework/.ai-rulez/rules/testing.md
 my-project/.ai-rulez/rules/testing.md
 ```
 
-Resolution order (last one wins):
+Under the default `local-override` strategy the earliest source wins, and your own content beats every
+include:
 
-1. `shared-rules/rules/testing.md` (loaded first)
-2. `go-framework/rules/testing.md` (overrides shared)
-3. `my-project/rules/testing.md` (overrides both)
+1. `my-project/rules/testing.md` (local content, highest priority)
+2. `shared-rules/rules/testing.md` (first include becomes part of the base)
+3. `go-framework/rules/testing.md` (only wins if it sets `merge_strategy = "include-override"`)
 
-A warning is logged:
+A collision is reported while resolving:
 
 ```text
-⚠️  Content collision: rules/testing.md found in multiple includes
+Content collision: rules/testing.md found in multiple includes
     → Using: my-project/.ai-rulez/rules/testing.md
 ```
 
@@ -571,9 +575,13 @@ Tag releases and reference specific versions:
 
 ```bash
 git tag v1.0.0 org-standards/
+```
 
-includes:
-  - https://github.com/org/standards/.ai-rulez@v1.0.0
+```toml
+[[includes]]
+name = "standards"
+source = "https://github.com/org/standards/.ai-rulez"
+ref = "v1.0.0"
 ```
 
 ## Troubleshooting
@@ -582,10 +590,13 @@ includes:
 
 ```bash
 ls -la ../shared-rules/.ai-rulez/config.toml
+```
 
-# Try absolute path
-includes:
-  - /path/to/shared-rules/.ai-rulez
+```toml
+# Or point at an absolute path
+[[includes]]
+name = "shared"
+source = "/path/to/shared-rules/.ai-rulez"
 ```
 
 ### Circular Includes
@@ -602,15 +613,20 @@ If `a` includes `b`, and `b` includes `a`:
 
 ### Conflicting Rules
 
-Use project-level rules to override, or change include order:
+Use project-level rules to override, or change which include wins with `merge_strategy`:
 
-```yaml
-includes:
-  - ../stricter-rules/.ai-rulez # Load strict rules first
-  - ../lenient-rules/.ai-rulez # Load lenient rules last (wins)
+```toml
+[[includes]]
+name = "stricter"
+source = "../stricter-rules/.ai-rulez"   # loads first, wins by default
+
+[[includes]]
+name = "lenient"
+source = "../lenient-rules/.ai-rulez"
+merge_strategy = "include-override"       # makes this one win instead
 ```
 
-Your `.ai-rulez/rules/security.md` overrides both includes.
+Your `.ai-rulez/rules/security.md` overrides every include.
 
 ### Content Not Merging
 
@@ -633,9 +649,10 @@ If you're currently using separate configurations:
 
 2. **Add include** to your config:
 
-   ```yaml
-   includes:
-     - ../shared-rules/.ai-rulez
+   ```toml
+   [[includes]]
+   name = "shared"
+   source = "../shared-rules/.ai-rulez"
    ```
 
 3. **Regenerate** and test:

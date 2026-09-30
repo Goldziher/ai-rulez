@@ -30,7 +30,7 @@ Use this skill when:
 
 ```bash
 # Go (primary CLI)
-go install github.com/Goldziher/ai-rulez@latest
+go install github.com/Goldziher/ai-rulez/cmd@latest
 
 # npm
 npx ai-rulez@latest
@@ -113,7 +113,7 @@ Rules, context, skills, and agents support YAML frontmatter:
 
 ```yaml
 ---
-priority: high # critical, high, medium, low
+priority: high # critical, high, medium, low, minimal
 targets: # Limit to specific presets
   - CLAUDE.md
   - .cursor/rules/*
