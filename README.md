@@ -190,7 +190,7 @@ Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez em
 - **Codex** — `model_reasoning_effort` in `.codex/config.toml` and `.codex/agents/*.toml`
 - **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
 - **Windsurf** — `reasoning_effort` in `.windsurf/agents/*.md` frontmatter (per-agent)
-- **Opencode** — `reasoningEffort` in `.opencode/agents/*.md` frontmatter (per-agent)
+- **Opencode** — `variant` in `.opencode/agents/*.md` frontmatter (per-agent); joins the agent's `model` as `model#variant`
 - **Xum** — `ai.thinkingLevel` in `.xum/agents/*.md` frontmatter (per-agent)
 
 Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
