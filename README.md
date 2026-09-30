@@ -80,12 +80,14 @@ Specialized agents ready to use as subagents:
 
 | Agent                | Domain        | Model  | What it does                                                                     |
 | -------------------- | ------------- | ------ | -------------------------------------------------------------------------------- |
-| **code-reviewer**    | ai-governance | sonnet | Reviews changes for correctness, security, and conventions. Reports by severity. |
-| **test-writer**      | testing       | sonnet | Writes tests following strict TDD. Fails first, then implements.                 |
-| **security-auditor** | security      | sonnet | Audits dependencies, scans for CVEs, reviews input validation.                   |
-| **docs-writer**      | ai-governance | haiku  | Writes clear, concise documentation. No fluff.                                   |
-| **devops-engineer**  | cicd          | haiku  | CI/CD pipelines, GitHub Actions, Docker, deployment automation.                  |
-| **release-engineer** | cicd          | haiku  | Version management, changelogs, multi-registry publishing.                       |
+| **code-reviewer**      | ai-governance     | sonnet | Reviews changes for correctness, security, and conventions. Reports by severity. |
+| **test-writer**        | testing           | sonnet | Writes tests following strict TDD. Fails first, then implements.                 |
+| **security-auditor**   | security          | sonnet | Audits dependencies, scans for CVEs, reviews input validation.                   |
+| **docs-writer**        | ai-governance     | sonnet | Writes clear, concise documentation. No fluff.                                   |
+| **devops-engineer**    | cicd              | sonnet | CI/CD pipelines, GitHub Actions, Docker, deployment automation.                  |
+| **release-engineer**   | cicd              | sonnet | Version management, changelogs, multi-registry publishing.                       |
+| **ffi-engineer**       | polyglot-bindings | sonnet | Native FFI and cross-language binding work.                                      |
+| **polyglot-architect** | polyglot-bindings | opus   | Cross-language architecture and binding design.                                  |
 
 ### Opt-in Domains
 
