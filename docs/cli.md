@@ -12,7 +12,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
-| `ai-rulez verify`               | Verify generated outputs are up to date             |
+| `ai-rulez verify`               | Verify generated plugin bundles (requires `--plugin`) |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez version`              | Show version                                        |
@@ -53,7 +53,7 @@ ai-rulez domain add <name> [flags]
 
 **Arguments:**
 
-- `<name>` (required): Domain name. Alphanumeric and underscores, 1-50 characters.
+- `<name>` (required): Domain name. Alphanumeric, hyphens, and underscores, 1-50 characters; must start and end with an alphanumeric character.
 
 **Flags:**
 
@@ -502,7 +502,7 @@ ai-rulez include add <name> <source> [flags]
 - `--path <dir>` / `-p` (optional): Path within git repository where `.ai-rulez/` content is located
 - `--ref <branch>` / `-r` (optional): Git reference (branch, tag, commit). Defaults to the repository's default branch (`HEAD`), not necessarily `main`.
 - `--include <types>` / `-i` (optional): Comma-separated content types (default `rules,context,skills`): `rules,context,skills,agents,commands`
-- `--merge-strategy <strategy>` / `-m` (optional): Merge strategy: default, override, append
+- `--merge-strategy <strategy>` / `-m` (optional): Merge strategy: `local-override` (default), `include-override`, or `error`
 - `--install-to <path>` / `-t` (optional): Installation target path in `.ai-rulez/`
 
 **Examples:**
@@ -728,7 +728,7 @@ ai-rulez init [project-name] [flags]
 | `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts                                  |
 
 `--setup-hooks` detects an existing lefthook, pre-commit, or husky setup and adds ai-rulez to it in
-place; it fails if none of the three is present. The two YAML configurations (`lefthook.yml`,
+place; if none of the three is present it logs a message and does nothing rather than failing. The two YAML configurations (`lefthook.yml`,
 `.pre-commit-config.yaml`) are edited node by node, so existing comments, key order and indentation
 width survive. Husky has no configuration file to preserve — the validation step is appended to
 `.husky/pre-commit`. Re-running is a no-op once ai-rulez is already wired in.
@@ -1243,7 +1243,7 @@ Commands that load a project directory use the following config order:
 
 1. **Explicit path**: Via `--config` flag or command argument
 2. **Directory config**: `.ai-rulez/config.toml`, `.ai-rulez/config.yaml`, `.ai-rulez/config.yml`, or `.ai-rulez/config.json`
-3. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, or `ai_rulez.*` are discovered for migration
+3. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, `ai_rulez.yaml`, `ai_rulez.yml`, `.ai_rulez.yaml`, or `.ai_rulez.yml` are discovered for migration
 4. **Error**: No configuration found
 
 Legacy flat V2 config files are migration inputs. Use `ai-rulez migrate v4` before running V4
@@ -1312,7 +1312,7 @@ Next steps:
 ```text
 ✅ Generated 3 file(s) successfully
   - CLAUDE.md
-  - .cursorrules
+  - .cursor/rules/example.mdc
   - docs/AI_GUIDE.md
 ```
 

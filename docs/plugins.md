@@ -63,9 +63,9 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
 
-The **marketplace index** is emitted alongside — `.claude-plugin/marketplace.json` for the Claude
-runtime and `.agents/plugins/marketplace.json` for Codex — but only when `claude` is among the
-bundle's runtimes (for the Claude index).
+The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside when `claude` is
+among the bundle's runtimes. (A monorepo root also emits a Codex index at
+`.agents/plugins/marketplace.json`; see the monorepo section.)
 
 Content files (SKILL.md, commands, agents) are copied **verbatim** from your source
 into each runtime's directories — never re-rendered — so a bundled skill is identical

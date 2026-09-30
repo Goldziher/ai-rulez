@@ -2,7 +2,7 @@
 
 ## Includes
 
-Includes let you import rules, context, skills, and MCP configuration from external git repositories or local paths.
+Includes let you import rules, context, skills, agents, and commands from external git repositories or local paths. (MCP servers are not importable from an include.)
 
 ### Adding Includes
 
@@ -40,7 +40,7 @@ local_override = "../local-shared" # Use local path for development
 ### How Includes Work
 
 1. During config load, each include source is fetched with sparse git checkout or local scan
-2. The source must contain an `.ai-rulez/` directory with content
+2. The source may use an `.ai-rulez/` wrapper or a bare/flattened layout (a directory exposing `rules/`, `context/`, `skills/`, `agents/`, or `commands/` directly, at the repo root or under `path`)
 3. Content is merged with local content using the configured merge strategy
 4. Domains from includes are marked as `FromInclude` and always included regardless of profile
 
