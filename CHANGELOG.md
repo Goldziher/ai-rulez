@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.15.0] - 2026-09-30
+
+### Added
+
+- **Profile-scoped builtin domains** (#195): a profile's domain list may reference a builtin pack as `builtin:<name>` (e.g. `builtin:docker`). The pack is loaded for that profile only, instead of every profile. This works even when the root `builtins` field is absent or `false` — a profile reference is an explicit opt-in — and the `builtin:` prefix keeps the pack from colliding with a local domain of the same name. A pack the root `builtins` field already enables stays globally active rather than being downgraded. Validation and `profile add` accept the prefixed form and reject an unknown pack.
+
+- **OpenCode v2 preset output** (#194): the `opencode` preset emits a native v2 `opencode.json` with MCP servers under `mcp.servers` (`type` of `local`/`remote`, `disabled`, `command` as a single array, `environment` for stdio). The file is merged, so every other key in a hand-authored `opencode.json` — including a sibling `mcp.timeout` — is preserved. Agent frontmatter moves to the v2 shape: effort becomes a model `variant` joined as `model#variant`, `temperature`/`top_p` move under `request.body`, and the non-schema `name` key is dropped because the filename is the agent ID.
+
+- **OpenCode v2 plugin adapter** (#194): the plugin runtime now emits an OpenCode v2 plugin — `Plugin.define({ id, setup })` from `@opencode/plugin` — instead of the v1 function entrypoint that v2 refuses to run, and bundles the plugin's skills, commands, and agents under `.opencode/`.
+
+### Changed
+
+- **Merged JSON documents can own a nested key path**: `jsonmerge` now supports `OwnedKey.Path`, letting a generator own `mcp.servers` while preserving sibling keys under the same ancestor, and the partially-owned check recurses to match.
+
 ## [4.14.1] - 2026-09-29
 
 ### Fixed
