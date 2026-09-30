@@ -37,12 +37,12 @@ presets = ["claude", "cursor", "gemini"]
 
 default = "full"
 
+gitignore = true
+
 [profiles]
 full = ["backend", "frontend", "qa"]
 backend = ["backend", "qa"]
 frontend = ["frontend", "qa"]
-
-gitignore = true
 
 [[mcp_servers]]
 name = "ai-rulez"
@@ -65,10 +65,10 @@ version = "4.0"
 The project name. Used in generated files and displayed in headers.
 
 ```toml
-name = "My Project"
 name = "acme-platform"
-name = "backend-api"
 ```
+
+Every project has one name; the value is used verbatim in generated headers.
 
 ## Content Layout
 
@@ -281,14 +281,14 @@ Controls whether `ai-rulez` automatically updates `.gitignore` with generated ou
 
 ```toml
 gitignore = true   # Default: update .gitignore automatically
-gitignore = false  # Manual .gitignore management
+# gitignore = false  # Manage .gitignore yourself
 ```
 
-When `true`, generated roots such as `AGENTS.md`, `.mcp.json`, `.claude/`, `.codex/`, `.cursor/`,
-`.opencode/`, and `.agents/` are added to `.gitignore` to prevent accidental commits. Only the
-subdirectories ai-rulez owns are ignored, so a hand-authored `.opencode/settings.json` beside them
-stays tracked. GitHub output is narrower:
-`ai-rulez` ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
+When `true`, ai-rulez adds the specific generated files and owned subdirectories to `.gitignore` —
+`AGENTS.md`/`CLAUDE.md`/`.mcp.json` and owned subtrees such as `.claude/skills/`, `.claude/agents/`,
+`.codex/`, `.opencode/skills/`. It never ignores an assistant directory wholesale, so a hand-authored
+`.opencode/settings.json` beside the generated files stays tracked. GitHub output is narrower:
+ai-rulez ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
 and `.github/skills/` without ignoring all of `.github/`.
 
 Machine-local override outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`) and their
@@ -301,7 +301,7 @@ Controls whether generated inline rule sections omit per-rule `**Priority:**` an
 
 ```toml
 compact = false  # Default: include Priority lines
-compact = true   # Omit Priority annotations, reduce output size
+# compact = true   # Omit Priority annotations, reduce output size
 ```
 
 When `true`, generated presets (CLAUDE.md, GEMINI.md, copilot-instructions.md, etc.) omit the per-rule
@@ -1008,7 +1008,7 @@ targets:
 - Sets the reasoning effort for a Claude Code subagent in its generated `.claude/agents/<name>.md` frontmatter
 - Available levels depend on the model
 - Falls back to `defaults.effort` in `config.toml` when not set, then to the session-level default
-- Other presets (Cursor, Windsurf, Copilot, Gemini, etc.) do not currently support this field — it is omitted from their outputs
+- Presets that don't emit effort — `cursor`, `copilot`, `gemini`, `junie`, `cline`, `continue-dev`, `antigravity` — omit it from their outputs. See the [per-preset support matrix](#defaults).
 
 ```yaml
 ---
@@ -1263,6 +1263,7 @@ description = "Multi-team SaaS platform"
 presets = ["claude", "cursor", "gemini"]
 
 default = "full"
+gitignore = true
 
 [profiles]
 full = ["backend", "frontend", "qa", "devops"]
@@ -1270,8 +1271,6 @@ backend = ["backend", "qa"]
 frontend = ["frontend", "qa"]
 qa = ["qa"]
 devops = ["devops"]
-
-gitignore = true
 ```
 
 Directory structure:
@@ -1312,22 +1311,22 @@ version = "4.0"
 name = "Advanced ML Platform"
 description = "Research platform with team separation"
 
-presets = ["claude", "cursor", "gemini", "windsurf"]
-
-[[presets]]
-name = "internal-guide"
-type = "markdown"
-path = "docs/AI_DEVELOPMENT_GUIDE.md"
+presets = [
+  "claude",
+  "cursor",
+  "gemini",
+  "windsurf",
+  { name = "internal-guide", type = "markdown", path = "docs/AI_DEVELOPMENT_GUIDE.md" },
+]
 
 default = "full"
+gitignore = true
 
 [profiles]
 full = ["research", "ml-ops", "infrastructure", "frontend"]
 research = ["research"]
 ml-ops = ["ml-ops", "infrastructure"]
 frontend = ["frontend"]
-
-gitignore = true
 ```
 
 ## Profile Design Patterns
@@ -1562,11 +1561,13 @@ Put content in the domain that owns it. Example:
 Each domain should represent one area:
 
 ```toml
-Good:
+# Good: one responsibility per domain
 [profiles]
 full = ["api", "frontend", "infrastructure"]
+```
 
-Bad:
+```toml
+# Bad: domains that bundle unrelated concerns
 [profiles]
 full = ["api-with-db", "frontend-with-build", "infrastructure-and-monitoring"]
 ```
