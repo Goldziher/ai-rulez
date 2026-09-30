@@ -3,10 +3,12 @@ package commands
 import (
 	"context"
 	"os"
+	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/spf13/cobra"
 )
 
@@ -25,6 +27,18 @@ schema compliance, and structural issues.`,
 			logger.Error("Failed to load config")
 			fmtError(err)
 			os.Exit(1)
+		}
+
+		// Validate the raw file against the JSON schema first so a key the
+		// struct would silently drop (and a value outside an enum) is reported.
+		// V3 configs keep the looser Go validation only: the schema is V4-shaped.
+		if !cfg.IsV3() && cfg.ConfigFile != "" {
+			configPath := filepath.Join(cfg.ConfigDir, cfg.ConfigFile)
+			if err := schema.ValidateFile(configPath); err != nil {
+				logger.Error("Configuration failed schema validation", "path", configPath)
+				fmtError(err)
+				os.Exit(1)
+			}
 		}
 
 		if err := cfg.Validate(); err != nil {
