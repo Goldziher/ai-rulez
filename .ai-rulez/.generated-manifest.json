@@ -91,6 +91,7 @@
     ".opencode/skills/test-fixture-maintainer/SKILL.md",
     ".opencode/skills/testing-conventions/SKILL.md",
     "AGENTS.md",
-    "CLAUDE.md"
+    "CLAUDE.md",
+    "opencode.json"
   ]
 }

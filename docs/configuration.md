@@ -140,7 +140,7 @@ presets = [
   "codex",        # → AGENTS.md and .codex/
   "amp",          # → AMP.md and .amp/
   "junie",        # → .junie/
-  "opencode",     # → OPENCODE.md and .opencode/
+  "opencode",     # → AGENTS.md, .opencode/, opencode.json
   "hermes",       # → .hermes.md
   "antigravity",  # → .agents/
   "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
@@ -624,7 +624,7 @@ For models the order is:
 | `codex`                                                                        | `.codex/agents/<id>.toml` (per-agent) and `.codex/config.toml` (global default) | `model_reasoning_effort` | Per-agent override beats global `.codex/config.toml`. `max` → `high`; `inherit` dropped.                                                                                           |
 | `amp`                                                                          | `.amp/settings.json`                                                            | `amp.anthropic.effort`   | Global only. `xhigh` → `high`.                                                                                                                                                     |
 | `windsurf`                                                                     | `.windsurf/agents/<id>.md` frontmatter                                          | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
-| `opencode`                                                                     | `.opencode/agents/<id>.md` frontmatter                                          | `reasoningEffort`        | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
+| `opencode`                                                                     | `.opencode/agents/<id>.md` frontmatter                                          | `variant`                | Per-agent. Joins the agent's `model` as `model#variant`, or stands alone when no model is set. `xhigh` and `max` → `high`; `inherit` dropped.                                       |
 | `xum`                                                                         | `.xum/agents/<id>.md` frontmatter                                               | `ai.thinkingLevel`       | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
 | `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | —                                                                               | —                        | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 

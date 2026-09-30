@@ -86,7 +86,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | codex        | AGENTS.md                       |
 | amp          | AMP.md                          |
 | junie        | .junie/guidelines.md            |
-| opencode     | OPENCODE.md                     |
+| opencode     | AGENTS.md, .opencode/, opencode.json |
 | hermes       | .hermes.md                      |
 | antigravity  | .agents/                        |
 | xum          | AGENTS.md and .xum/             |

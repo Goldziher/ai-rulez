@@ -21,6 +21,7 @@ func TestMergedDocumentPaths(t *testing.T) {
 		".gemini/settings.json",
 		".mcp.json",
 		".xum/mcp.jsonc",
+		"opencode.json",
 	}, MergedDocumentPaths())
 }
 

@@ -440,3 +440,99 @@ func TestApply_PreservesLineEndings(t *testing.T) {
 		})
 	}
 }
+
+// TestApply_NestedOwnedPathPreservesSiblings covers the OpenCode v2 shape:
+// ai-rulez owns mcp.servers, and the consumer's sibling mcp.timeout and
+// unrelated top-level keys must survive (#194).
+func TestApply_NestedOwnedPathPreservesSiblings(t *testing.T) {
+	t.Parallel()
+
+	const existing = `{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "anthropic/claude-sonnet-4-5",
+  "mcp": {
+    "timeout": {
+      "catalog": 30000
+    },
+    "servers": {
+      "old": {
+        "type": "local",
+        "command": ["old"]
+      }
+    }
+  }
+}
+`
+	path := writeFixture(t, "opencode.json", existing)
+
+	result, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{
+		{Path: []string{"mcp", "servers"}, Value: map[string]any{
+			"generated": map[string]any{"type": "local", "command": []string{"npx", "-y", "generated"}},
+		}},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.PartiallyOwned, "the consumer's own keys make the document shared")
+
+	// Top-level order and the sibling mcp.timeout survive untouched.
+	assert.Equal(t, []string{"$schema", "model", "mcp"}, jsonMemberOrder(t, result.Body))
+	mcp := rawValue(t, result.Body, "mcp")
+	assert.Contains(t, mcp, `"timeout"`)
+	assert.Contains(t, mcp, `"catalog": 30000`)
+
+	var parsed struct {
+		Model string `json:"model"`
+		MCP   struct {
+			Servers map[string]any `json:"servers"`
+		} `json:"mcp"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(result.Body), &parsed))
+	assert.Equal(t, "anthropic/claude-sonnet-4-5", parsed.Model)
+	assert.Contains(t, parsed.MCP.Servers, "generated")
+	assert.NotContains(t, parsed.MCP.Servers, "old", "the owned nested key is replaced outright")
+}
+
+// TestApply_NestedOwnedPathAloneIsNotPartiallyOwned pins the flag for a document
+// holding only the nested owned branch: it is wholly generated.
+func TestApply_NestedOwnedPathAloneIsNotPartiallyOwned(t *testing.T) {
+	t.Parallel()
+
+	const existing = `{
+  "mcp": {
+    "servers": {
+      "old": {
+        "type": "local",
+        "command": ["old"]
+      }
+    }
+  }
+}
+`
+	path := writeFixture(t, "opencode.json", existing)
+
+	result, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{
+		{Path: []string{"mcp", "servers"}, Value: map[string]any{"generated": map[string]any{"type": "local"}}},
+	})
+	require.NoError(t, err)
+	assert.False(t, result.PartiallyOwned,
+		"only the owned nested branch is present, so the file is a generated artifact")
+}
+
+// TestApply_NestedOwnedPathCreatesMissingAncestors covers a fresh document with
+// no mcp key at all: the path is materialized.
+func TestApply_NestedOwnedPathCreatesMissingAncestors(t *testing.T) {
+	t.Parallel()
+
+	path := writeFixture(t, "opencode.json", "{\n  \"model\": \"opus\"\n}\n")
+
+	result, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{
+		{Path: []string{"mcp", "servers"}, Value: map[string]any{"generated": map[string]any{"type": "local"}}},
+	})
+	require.NoError(t, err)
+	assert.True(t, result.PartiallyOwned)
+
+	var doc map[string]any
+	require.NoError(t, json.Unmarshal([]byte(result.Body), &doc))
+	assert.Equal(t, "opus", doc["model"])
+	servers := doc["mcp"].(map[string]any)["servers"].(map[string]any)
+	assert.Contains(t, servers, "generated")
+}

@@ -174,4 +174,5 @@ testing/**/.mcp.json
 .hermes.md
 .opencode/agents/
 .opencode/skills/
+opencode.json
 # END ai-rulez
