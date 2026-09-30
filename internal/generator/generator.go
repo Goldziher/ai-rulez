@@ -222,7 +222,7 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 		}
 	}
 
-	mcpServers := g.collectMCPServersForContent(contentTree)
+	mcpServers := g.collectMCPServersForContent(contentTree, "")
 
 	tempCfg := *g.config
 	tempCfg.Content = contentTree
@@ -333,8 +333,8 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 
 	presets.WarnDuplicateContent(contentTree)
 
-	// Collect MCP servers based on the resolved content tree
-	mcpServers := g.collectMCPServersForContent(contentTree)
+	// Collect MCP servers based on the resolved content tree and active profile
+	mcpServers := g.collectMCPServersForContent(contentTree, activeProfile)
 
 	// Resolve the run's header timestamp once, before any renderer reads it, so
 	// every file this run writes carries the same value. Each preset used to call
@@ -539,14 +539,16 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 	return g.config.GetContentForProfile(profile)
 }
 
-// collectMCPServersForContent collects MCP servers for the resolved content tree.
-// Only include enabled servers from root config.
-func (g *Generator) collectMCPServersForContent(content *config.ContentTree) map[string]*config.MCPServer {
+// collectMCPServersForContent collects the enabled root MCP servers active for
+// a profile. A server restricted with `profiles` is included only when the
+// active profile names it; an empty profile (no profiles configured) includes
+// every server.
+func (g *Generator) collectMCPServersForContent(content *config.ContentTree, profile string) map[string]*config.MCPServer {
 	collected := make(map[string]*config.MCPServer)
 
-	// Include root servers (if enabled)
+	// Include root servers (if enabled and active for the profile)
 	for name, server := range g.config.MCPServers {
-		if server.IsEnabled() {
+		if server.IsEnabled() && config.ProfileMatches(profile, server.Profiles) {
 			collected[name] = server
 		}
 	}
@@ -568,10 +570,20 @@ func (g *Generator) generateScopedOutputs(activeProfile string) ([]config.Output
 		if err != nil {
 			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "resolve scope profile")
 		}
+		// A scoped file is loaded on top of the root file (Claude loads a
+		// subdirectory CLAUDE.md; Codex concatenates AGENTS.md from the root
+		// down). Repeating the root content would duplicate it and defeat the
+		// point of scoping, so keep only the profile's domain content.
+		scopeContent.Rules = nil
+		scopeContent.Context = nil
+		scopeContent.Skills = nil
+		scopeContent.Agents = nil
+		scopeContent.Commands = nil
+
 		scopeCfg := *g.config
 		scopeCfg.BaseDir = filepath.Join(g.config.BaseDir, scope.Path)
 		scopeCfg.Content = scopeContent
-		scopeCfg.MCPServers = g.collectMCPServersForContent(scopeContent)
+		scopeCfg.MCPServers = g.collectMCPServersForContent(scopeContent, scopeProfile)
 		scopeCfg.Presets = scopedPresets(scope.Presets)
 		scopeCfg.SourceHash = computeSourceHash(&scopeCfg, scopeContent)
 

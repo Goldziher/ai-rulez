@@ -91,8 +91,8 @@
           "description": "When true, also emit bundled skill resources (references/, scripts/, assets/) under the item directory."
         },
         "filter": {
-          "enum": ["include_if_targeting_provider"],
-          "description": "Closed-set filter predicate. Currently only one predicate exists: a command/agent is included if its Metadata.Targets is empty or contains the provider name."
+          "enum": ["include_if_targeting_provider", "path_scoped"],
+          "description": "Closed-set filter predicate. include_if_targeting_provider keeps a command/agent whose Metadata.Targets is empty or contains the provider name. path_scoped keeps only items that declare a path scope (globs/paths frontmatter)."
         },
         "body": {
           "$ref": "#/$defs/body"
@@ -135,6 +135,10 @@
         "skills": {
           "type": "boolean",
           "description": "When true, emit Metadata.Skills as a YAML list under the `skills` key."
+        },
+        "paths": {
+          "type": "boolean",
+          "description": "When true, copy a rule's path scope (its globs/paths frontmatter) into a `paths` field, which is how Claude Code scopes a rule file."
         },
         "include_extras": {
           "type": "boolean",

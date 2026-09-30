@@ -88,6 +88,51 @@ func (c *Config) ProfileBuiltinRefs() []string {
 	return refs
 }
 
+// ProfileMatches reports whether an item scoped to the named profiles is active
+// for a (possibly composed) profile value. An empty scoped list means every
+// profile. A value with no usable elements is treated as the built-in default,
+// which includes everything.
+func ProfileMatches(profile string, scoped []string) bool {
+	if len(scoped) == 0 {
+		return true
+	}
+	elements := SplitProfileNames(profile)
+	if len(elements) == 0 {
+		return true
+	}
+	for _, element := range elements {
+		for _, restricted := range scoped {
+			if element == restricted {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// FilterContentFilesByProfile keeps the files active for a profile: those with
+// no profile restriction, plus those whose Profiles include one of the profile
+// value's elements.
+func FilterContentFilesByProfile(files []ContentFile, profile string) []ContentFile {
+	hasScoped := false
+	for _, file := range files {
+		if len(file.Profiles) > 0 {
+			hasScoped = true
+			break
+		}
+	}
+	if !hasScoped {
+		return files
+	}
+	out := make([]ContentFile, 0, len(files))
+	for _, file := range files {
+		if ProfileMatches(profile, file.Profiles) {
+			out = append(out, file)
+		}
+	}
+	return out
+}
+
 // UnknownProfileNames returns the elements of a profile value that are not
 // defined in the config, in the order they were written. Used to name the bad
 // element in an error rather than echoing the whole composed value, which leaves

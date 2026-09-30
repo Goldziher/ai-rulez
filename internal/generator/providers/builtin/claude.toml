@@ -10,7 +10,7 @@ name = "claude"
 display_name = "Claude Code"
 
 # Always-emitted IsDir markers — keep stale-file cleanup scoped correctly.
-directories = [".claude", ".claude/skills", ".claude/agents"]
+directories = [".claude", ".claude/skills", ".claude/agents", ".claude/rules"]
 
 # CLAUDE.md is composed by walking these sections in order.
 [root]
@@ -62,6 +62,22 @@ emit_model = true
 # Metadata.Targets explicitly excludes claude. `resources = true` carries the
 # bundled references/ scripts/ assets/ of a directory-form command
 # (commands/{id}/COMMAND.md); a flat commands/{id}.md has no resources to emit.
+# Path-scoped rules: a rule declaring `paths`/`globs` frontmatter is emitted as
+# .claude/rules/{id}.md with a `paths` field and left out of CLAUDE.md, so
+# Claude loads it only when it reads a matching file. Unscoped rules stay in
+# CLAUDE.md.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".claude/rules"
+filename = "{id}.md"
+filter = "path_scoped"
+
+[outputs.rules.body]
+sections = ["frontmatter", "content"]
+
+[outputs.rules.frontmatter]
+paths = true
+
 [outputs.commands]
 mode = "per_item_file"
 dir = ".claude/skills"

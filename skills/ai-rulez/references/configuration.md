@@ -50,6 +50,7 @@ local_override = ""           # Local dev path override
 
 [defaults]
 effort = "medium"             # low | medium | high | xhigh | max | inherit
+# omit_agent_fields = ["model", "tools"]  # model | effort | tools | description
 
 [defaults.effort_by_preset]   # Per-preset overrides (beat defaults.effort)
 codex = "high"
@@ -106,6 +107,8 @@ priority: medium # critical | high | medium | low | minimal
 targets: # Limit to specific output targets
   - CLAUDE.md
   - .cursor/rules/*
+globs: # Path scope (rules); synonym: paths. Keeps the rule out of the root
+  - "**/*.tsx" # file and emits it as .claude/rules/ or a Cursor .mdc rule.
 aliases: # Alternative names (commands)
   - alias1
 usage: "Usage text" # Command usage info

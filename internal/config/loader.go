@@ -318,12 +318,20 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 		existingNames[s.Name] = true
 	}
 
+	// Map each installed skill's profile scope so generation can drop it from
+	// profiles it was not declared for.
+	profilesByName := make(map[string][]string, len(config.InstalledSkills))
+	for i := range config.InstalledSkills {
+		profilesByName[config.InstalledSkills[i].Name] = config.InstalledSkills[i].Profiles
+	}
+
 	// Merge: local skills win over installed skills
 	for _, s := range skills {
 		if existingNames[s.Name] {
 			logger.Warn("Installed skill name conflicts with local skill, skipping", "name", s.Name)
 			continue
 		}
+		s.Profiles = profilesByName[s.Name]
 		config.Content.Skills = append(config.Content.Skills, s)
 		existingNames[s.Name] = true
 	}
@@ -1076,6 +1084,10 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 			m.Category = fmt.Sprintf("%v", v)
 		case "effort":
 			m.Effort = fmt.Sprintf("%v", v)
+		case "globs":
+			m.Globs = stringSliceFromAny(v)
+		case "paths":
+			m.Paths = stringSliceFromAny(v)
 		default:
 			m.Extra[k] = fmt.Sprintf("%v", v)
 		}

@@ -300,7 +300,7 @@ func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.Con
 			frontmatter[field] = val
 		}
 	}
-	if len(agent.Metadata.Tools) > 0 {
+	if EmitAgentField(cfg, "tools") && len(agent.Metadata.Tools) > 0 {
 		frontmatter["tools"] = agent.Metadata.Tools
 	}
 

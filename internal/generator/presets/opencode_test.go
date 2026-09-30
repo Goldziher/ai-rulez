@@ -387,3 +387,41 @@ func TestOpencodePresetGenerator_AgentMovesSamplingUnderRequestBody(t *testing.T
 		t.Errorf("expected request.body in frontmatter, got:\n%s", result)
 	}
 }
+
+func TestOpencodePresetGenerator_AgentDefaultsToModeAll(t *testing.T) {
+	g := &OpencodePresetGenerator{}
+	agent := config.ContentFile{Name: "spawnable", Content: "x"}
+	result, err := g.renderOpencodeAgentFile(agent, &config.Config{})
+	if err != nil {
+		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
+	}
+	if !strings.Contains(result, "mode: all") {
+		t.Errorf("a generated agent must default to mode: all so it is spawnable as a subagent, got:\n%s", result)
+	}
+}
+
+func TestOpencodePresetGenerator_OmitsConfiguredAgentFields(t *testing.T) {
+	g := &OpencodePresetGenerator{}
+	cfg := &config.Config{
+		Defaults: &config.DefaultsConfig{
+			Effort:          "high",
+			OmitAgentFields: []string{"model", "effort", "description"},
+		},
+	}
+	agent := config.ContentFile{
+		Name:    "bare",
+		Content: "x",
+		Metadata: &config.Metadata{
+			Extra: map[string]string{"description": "d", "model": "anthropic/claude-sonnet-4-5"},
+		},
+	}
+	result, err := g.renderOpencodeAgentFile(agent, cfg)
+	if err != nil {
+		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
+	}
+	for _, unwanted := range []string{"model:", "variant:", "description:"} {
+		if strings.Contains(result, unwanted) {
+			t.Errorf("omit_agent_fields should suppress %q, got:\n%s", unwanted, result)
+		}
+	}
+}

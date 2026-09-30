@@ -249,7 +249,7 @@ func TestAntigravityPresetGenerator_buildAgentFrontmatter_DoesNotEmitEffort(t *t
 		},
 	}
 
-	fm := g.buildAgentFrontmatter(agent)
+	fm := g.buildAgentFrontmatter(agent, &config.Config{})
 
 	// Antigravity's thinking control (thinkingLevel) is a model-variant selection
 	// at the API level, not a frontmatter field the IDE reads from agent files.
