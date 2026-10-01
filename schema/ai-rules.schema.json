@@ -420,6 +420,10 @@
           "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",
           "default": "minimal"
         },
+        "text": {
+          "type": "string",
+          "description": "Author-supplied header text that replaces the prose generated from `style`. It is wrapped in the output's comment syntax and still carries the Content-Hash / Source-Hash freshness lines. Use TOML multi-line syntax to span lines."
+        },
         "timestamp": {
           "type": "boolean",
           "description": "Emit the \"Generated:\" line in generated headers. Off by default so generated output is byte-reproducible; set to true to opt the line back in, and pin it with SOURCE_DATE_EPOCH if reproducibility still matters.",
