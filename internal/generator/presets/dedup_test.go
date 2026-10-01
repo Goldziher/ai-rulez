@@ -149,3 +149,71 @@ func TestFindDuplicateContent_reportsWinnerAndLosers(t *testing.T) {
 	assert.Equal(t, "local://commit-messages.md", dups[0].Winner)
 	assert.Equal(t, []string{"builtin://git-workflow/commit-messages.md"}, dups[0].Losers)
 }
+
+// TestAllInlineRules_ordersByPriorityThenName covers #204: rules render in
+// priority order (critical → minimal), with name order breaking ties, not
+// alphabetically.
+func TestAllInlineRules_ordersByPriorityThenName(t *testing.T) {
+	t.Parallel()
+
+	tree := &config.ContentTree{
+		Rules: []config.ContentFile{
+			{Name: "z-low", Content: "z", Metadata: &config.Metadata{Priority: "low"}},
+			{Name: "b-critical", Content: "b", Metadata: &config.Metadata{Priority: "critical"}},
+			{Name: "a-medium", Content: "a", Metadata: &config.Metadata{Priority: "medium"}},
+			{Name: "a-critical", Content: "a2", Metadata: &config.Metadata{Priority: "critical"}},
+			{Name: "unset", Content: "u"},
+		},
+	}
+
+	got := allInlineRules(tree)
+
+	// critical (a-critical, b-critical) → medium (a-medium, unset) → low (z-low).
+	assert.Equal(t,
+		[]string{"a-critical", "b-critical", "a-medium", "unset", "z-low"},
+		ruleNames(got))
+}
+
+// TestAllInlineContext_ordersByPriorityThenName covers the context half of #204:
+// context sections render in priority order too.
+func TestAllInlineContext_ordersByPriorityThenName(t *testing.T) {
+	t.Parallel()
+
+	tree := &config.ContentTree{
+		Context: []config.ContentFile{
+			{Name: "low", Content: "l", Metadata: &config.Metadata{Priority: "minimal"}},
+			{Name: "high", Content: "h", Metadata: &config.Metadata{Priority: "high"}},
+			{Name: "default", Content: "d"},
+		},
+	}
+
+	got := allInlineContext(tree)
+
+	// high → medium (default) → minimal.
+	assert.Equal(t, []string{"high", "default", "low"}, ruleNames(got))
+}
+
+// TestCombineDedupedContentFilesByPriority_precedenceWinsIndependentlyOfSort
+// pins that deduplication still keeps the highest-precedence copy even when a
+// dropped duplicate carries a higher priority — sorting happens after the
+// winner is chosen.
+func TestCombineDedupedContentFilesByPriority_precedenceWinsIndependentlyOfSort(t *testing.T) {
+	t.Parallel()
+
+	high := []config.ContentFile{
+		{Name: "shared", Content: "LOCAL", Metadata: &config.Metadata{Priority: "low"}},
+	}
+	low := []config.ContentFile{
+		{Name: "shared", Content: "BUILTIN", Metadata: &config.Metadata{Priority: "critical"}},
+		{Name: "aaa", Content: "BUILTIN", Metadata: &config.Metadata{Priority: "critical"}},
+	}
+
+	got := combineDedupedContentFilesByPriority(high, low)
+
+	assert.Equal(t, []string{"aaa", "shared"}, ruleNames(got), "priority order, name breaks ties")
+	for _, f := range got {
+		if f.Name == "shared" {
+			assert.Equal(t, "LOCAL", f.Content, "highest-precedence source survives dedup")
+		}
+	}
+}
