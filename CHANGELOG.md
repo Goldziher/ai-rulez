@@ -4,6 +4,36 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.18.0] - 2026-10-01
+
+### Added
+
+- **Custom header text** (#203): `[header] text` accepts a multi-line string that replaces the banner
+  generated from `header.style`. Useful when the predefined prose does not match the environment — for
+  example the default banner recommends `npx`, but a project manages tools with `mise`. The text is
+  written verbatim, wrapped in the output's comment syntax, and still carries the `Content-Hash` /
+  `Source-Hash` freshness lines, so hash-based regeneration keeps working. `style` is ignored while
+  `text` is set.
+
+### Fixed
+
+- **Rules and context render in priority order again** (#204): the generated files listed rules and
+  context alphabetically by name instead of by the documented `priority` frontmatter
+  (critical → high → medium → low → minimal, name breaking ties). The priority sort was dropped in
+  favor of alphabetical output for determinism; ordering is now priority desc with a name tie-break,
+  which is deterministic and matches the docs. Context gains the same ordering as rules.
+
+- **Regeneration is forced once** after the ordering fix: `GeneratorSchemaVersion` is bumped, so
+  `Source-Hash` values written by earlier versions no longer match and every file is re-rendered on
+  the next `ai-rulez generate`.
+
+- **Generated `opencode.json` stays a managed artifact**: the `opencode` preset now owns the top-level
+  `$schema` key alongside `mcp.servers`, and writes it into a freshly generated document. Previously a
+  generated `opencode.json` carried no `$schema`, so an editor that added one (or a user who did)
+  flipped the file to "partially owned", which drops it from the gitignore/manifest set and made every
+  `generate` disagree with the committed `.gitignore`. A file that adds real settings (`model`,
+  `mcp.timeout`, …) is still treated as the consumer's and preserved.
+
 ## [4.17.0] - 2026-09-30
 
 ### Added
