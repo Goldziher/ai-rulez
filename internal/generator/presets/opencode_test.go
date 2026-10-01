@@ -131,6 +131,9 @@ func TestOpencodePresetGenerator_GeneratesV2MCPConfig(t *testing.T) {
 	if err := json.Unmarshal([]byte(mcpOutput.Content), &doc); err != nil {
 		t.Fatalf("opencode.json is not valid JSON: %v", err)
 	}
+	if doc["$schema"] != opencodeSchemaURL {
+		t.Errorf("$schema = %v, want %s", doc["$schema"], opencodeSchemaURL)
+	}
 	mcp, ok := doc["mcp"].(map[string]any)
 	if !ok {
 		t.Fatalf("expected nested mcp object, got: %v", doc)
@@ -161,6 +164,53 @@ func TestOpencodePresetGenerator_GeneratesV2MCPConfig(t *testing.T) {
 	}
 	if remote["url"] != "https://mcp.example.com/mcp" {
 		t.Errorf("remote url = %v", remote["url"])
+	}
+}
+
+// TestOpencodePresetGenerator_FullyOwnedWhenOnlyAiRulezKeys pins that owning
+// $schema keeps a generated opencode.json in the gitignore/manifest set: a fresh
+// document, or one carrying only ai-rulez's own keys, must not be reported as
+// partially owned (#185).
+func TestOpencodePresetGenerator_FullyOwnedWhenOnlyAiRulezKeys(t *testing.T) {
+	dir := t.TempDir()
+	g := &OpencodePresetGenerator{}
+	cfg := &config.Config{
+		Name:       "test",
+		MCPServers: map[string]*config.MCPServer{"ai-rulez": {Name: "ai-rulez", Command: "npx"}},
+	}
+	path := filepath.Join(dir, "opencode.json")
+
+	// Fresh: nothing on disk.
+	fresh, err := g.renderMCPConfig(path, cfg)
+	if err != nil {
+		t.Fatalf("renderMCPConfig(fresh): %v", err)
+	}
+	if fresh.PartiallyOwned {
+		t.Error("a freshly generated opencode.json must be fully owned")
+	}
+	if !strings.Contains(fresh.Body, `"$schema": "`+opencodeSchemaURL+`"`) {
+		t.Errorf("fresh document must carry $schema, got:\n%s", fresh.Body)
+	}
+
+	// A file whose only keys are ai-rulez's is still fully owned.
+	seed := `{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "servers": {
+      "old": { "type": "local", "command": ["x"] }
+    }
+  }
+}
+`
+	if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	merged, err := g.renderMCPConfig(path, cfg)
+	if err != nil {
+		t.Fatalf("renderMCPConfig(merge): %v", err)
+	}
+	if merged.PartiallyOwned {
+		t.Error("a document holding only ai-rulez's keys must be fully owned")
 	}
 }
 
