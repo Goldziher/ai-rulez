@@ -714,6 +714,7 @@ style = "minimal"   # Default: bare minimum header
 # style = "compact"  # Shorter header with key information
 # style = "detailed" # Comprehensive header with full documentation
 # timestamp = true  # Emit the "Generated:" line (default: false)
+# text = "..."      # Override the generated prose (see "Custom header")
 ```
 
 The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
@@ -770,6 +771,31 @@ A value that is not a parsable integer is ignored and the wall clock is used.
 - Full AI agent instructions with MCP server promotion
 - Best for: projects where AI agents need thorough context
 - Size: ~50 lines
+
+#### Custom header
+
+When the predefined styles do not match your environment — for example the default banner tells
+agents to use `npx`, but your project manages tools with `mise` — set `text` to replace the
+generated prose with your own. It overrides `style` entirely (the `style` value is ignored while
+`text` is set) and is written verbatim, wrapped in the output's comment syntax:
+
+```toml
+[header]
+text = """
+Built by the platform team.
+Set up with: mise run setup
+Regenerate with: ai-rulez generate
+"""
+```
+
+A few details worth knowing:
+
+- The `Content-Hash` / `Source-Hash` freshness lines are still appended inside the banner, so
+  hash-based skip detection keeps working. Do not add a closing comment marker of your own.
+- `timestamp = true` still does nothing to a custom header; add a `Generated:` line in `text`
+  yourself if you want one.
+- Surrounding blank lines are trimmed; interior line breaks are preserved. Standard TOML multi-line
+  escaping applies (`"""` for a literal block).
 
 #### Header Example (detailed)
 

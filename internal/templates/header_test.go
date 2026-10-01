@@ -631,3 +631,44 @@ func TestHeaderTimestamp_OmittedWhenDisabled(t *testing.T) {
 		})
 	}
 }
+
+// customHeaderConfig builds a config whose header.text overrides the style.
+func customHeaderConfig(text string) *config.Config {
+	return &config.Config{Name: "P", Header: &config.HeaderConfig{Style: "detailed", Text: text}}
+}
+
+func TestCustomHeaderOverridesStyle(t *testing.T) {
+	t.Parallel()
+
+	data := createTemplateData("P", customHeaderConfig("Builder: mise run setup\nDocs: https://example.com"))
+	header := templates.GenerateHeader(data)
+
+	assert.Contains(t, header, "Builder: mise run setup")
+	assert.Contains(t, header, "Docs: https://example.com")
+	assert.NotContains(t, header, "WHAT IS AI-RULEZ", "custom text replaces the style prose")
+	assert.True(t, strings.HasPrefix(header, "<!--"), "markdown header stays an HTML comment")
+	assert.True(t, strings.HasSuffix(header, "-->\n\n"), "markdown header keeps the closing marker")
+}
+
+func TestCustomHeaderUsesOutputCommentStyle(t *testing.T) {
+	t.Parallel()
+
+	data := createTemplateData("P", customHeaderConfig("custom line"))
+	data.OutputFile = "AGENTS.go"
+	assert.Equal(t, "// custom line\n\n", templates.GenerateHeader(data))
+}
+
+func TestCustomHeaderTrimsSurroundingBlankLines(t *testing.T) {
+	t.Parallel()
+
+	data := createTemplateData("P", customHeaderConfig("\n\nfirst\nsecond\n\n"))
+	assert.Equal(t, "<!--\nfirst\nsecond\n-->\n\n", templates.GenerateHeader(data))
+}
+
+func TestCustomHeaderIgnoredWhenBlank(t *testing.T) {
+	t.Parallel()
+
+	data := createTemplateData("P", customHeaderConfig("   \n  "))
+	assert.Contains(t, templates.GenerateHeader(data), "WHAT IS AI-RULEZ",
+		"blank text falls back to the style banner")
+}

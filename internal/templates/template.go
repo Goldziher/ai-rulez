@@ -210,6 +210,16 @@ func buildHeaderLines(data *TemplateData) []string {
 		outputPath = "(preview output)"
 	}
 
+	// An author-supplied header (header.text) replaces the prose generated from
+	// header.style. It is wrapped in the output's comment syntax by
+	// GenerateHeader and still has the freshness lines injected, so the style
+	// is irrelevant when text is set.
+	if data.Config != nil {
+		if custom := data.Config.Header.GetCustomHeader(); strings.TrimSpace(custom) != "" {
+			return splitHeaderLines(custom)
+		}
+	}
+
 	// An empty timestamp means the "Generated:" line is omitted entirely, which is
 	// the default: a per-run value makes output non-reproducible and lets two
 	// otherwise identical sibling files disagree. A nil Config takes the same
@@ -234,6 +244,19 @@ func buildHeaderLines(data *TemplateData) []string {
 	default:
 		return buildDetailedHeader(configPath, outputPath, timestamp, data)
 	}
+}
+
+// splitHeaderLines turns author-supplied header text into the line slice the
+// comment-style wrappers consume. Line endings are normalized and surrounding
+// blank lines trimmed so a TOML `"""` block does not introduce stray newlines,
+// while interior indentation and blank lines are preserved verbatim.
+func splitHeaderLines(text string) []string {
+	normalized := strings.ReplaceAll(text, "\r\n", "\n")
+	normalized = strings.Trim(normalized, "\n")
+	if normalized == "" {
+		return nil
+	}
+	return strings.Split(normalized, "\n")
 }
 
 func wrapWithHTMLComment(lines []string) string {
