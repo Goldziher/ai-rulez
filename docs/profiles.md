@@ -142,8 +142,9 @@ Guidance that only Claude and Cursor should see.
 
 ## Ordering
 
-Rules render in priority order (critical → high → medium → low → minimal) within each section, with
-name order breaking ties. Pinning a `priority` in frontmatter is the supported way to influence it.
+Rules and context render in priority order (critical → high → medium → low → minimal) within each
+section, with name order breaking ties. Pinning a `priority` in frontmatter is the supported way to
+influence it.
 
 ## Combining built-in and custom
 

@@ -1020,7 +1020,8 @@ Your content here. Can include any markdown formatting.
 
 - Values: `critical`, `high`, `medium`, `low`, `minimal`
 - Default: `medium`
-- Controls sort order in generated files (higher priority first)
+- Controls the order of the **Rules** and **Context** sections in generated files (higher priority
+  first, name order breaking ties)
 
 ```yaml
 ---
