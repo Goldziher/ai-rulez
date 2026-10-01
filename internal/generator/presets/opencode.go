@@ -14,6 +14,13 @@ import (
 
 const opencodePresetName = "opencode"
 
+// opencodeSchemaURL points an author's editor at OpenCode's config schema.
+// ai-rulez owns this key alongside mcp.servers: emitting it means a freshly
+// generated opencode.json is entirely ai-rulez's (so it is gitignored and
+// manifest-tracked), while a hand-authored file that adds further keys — model,
+// mcp.timeout — still counts as the consumer's and is preserved (#185).
+const opencodeSchemaURL = "https://opencode.ai/config.json"
+
 func init() {
 	config.RegisterPreset(opencodePresetName, &OpencodePresetGenerator{})
 }
@@ -118,9 +125,9 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		})
 	}
 
-	// Generate opencode.json in OpenCode's native v2 shape. Only the nested
-	// mcp.servers key is owned, so every other key a hand-authored opencode.json
-	// carries (model, permissions, mcp.timeout, ...) is preserved (#185, #194).
+	// Generate opencode.json in OpenCode's native v2 shape. ai-rulez owns
+	// $schema and mcp.servers, so a fresh document is entirely ours; any other
+	// key a hand-authored opencode.json carries is preserved (#185, #194).
 	if len(cfg.MCPServers) > 0 {
 		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
 		mcpFile, err := g.renderMCPConfig(mcpPath, cfg)
@@ -138,8 +145,9 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 }
 
 // renderMCPConfig renders OpenCode's native v2 MCP servers into opencode.json.
-// It owns the nested mcp.servers key so every sibling key under mcp (such as
-// mcp.timeout) and every other top-level key survive the merge.
+// It owns the top-level $schema and the nested mcp.servers key, so every sibling
+// key under mcp (such as mcp.timeout) and every other top-level key survive the
+// merge.
 func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
 	servers := make(map[string]interface{})
 
@@ -170,6 +178,7 @@ func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Co
 	}
 
 	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
+		{Path: []string{"$schema"}, Value: opencodeSchemaURL},
 		{Path: []string{"mcp", "servers"}, Value: servers},
 	})
 }
