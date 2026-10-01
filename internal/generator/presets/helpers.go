@@ -116,18 +116,57 @@ func combineDedupedContentFiles(slices ...[]config.ContentFile) []config.Content
 	return kept
 }
 
+// contentPriority returns the sortable priority of a content file, defaulting
+// to medium when the frontmatter omits it (mirrors Metadata.GetPriority).
+func contentPriority(f config.ContentFile) int {
+	return f.Metadata.GetPriority().ToInt()
+}
+
+// sortContentFilesByPriority orders rules and context for rendering: highest
+// priority first (critical → minimal), with name order breaking ties. This is
+// the documented ordering; alphabetical output silently ignored frontmatter
+// priority (#204). The sort is stable, so entries with equal priority and name
+// keep the dedup precedence order they arrived in.
+func sortContentFilesByPriority(files []config.ContentFile) {
+	sort.SliceStable(files, func(i, j int) bool {
+		pi, pj := contentPriority(files[i]), contentPriority(files[j])
+		if pi != pj {
+			return pi > pj
+		}
+		return files[i].Name < files[j].Name
+	})
+}
+
+// combineDedupedContentFilesByPriority is the priority-ordered counterpart to
+// combineDedupedContentFiles: deduplicate in caller-supplied precedence order
+// (highest first) so the surviving copy is the highest-precedence source, then
+// order for rendering by priority desc, name asc. Used for rules and context,
+// which the docs promise to render in priority order; skills/commands/agents
+// keep the alphabetical order their per-item output paths imply.
+func combineDedupedContentFilesByPriority(slices ...[]config.ContentFile) []config.ContentFile {
+	var combined []config.ContentFile
+	for _, slice := range slices {
+		combined = append(combined, slice...)
+	}
+	kept, _ := dedupeByName(combined)
+	sortContentFilesByPriority(kept)
+	return kept
+}
+
 // allInlineRules returns the deduplicated, precedence-ordered rules for inline
 // rendering — root rules plus every domain's rules, collapsing duplicate names
 // (e.g. a builtin and an include both defining "commit-messages") to a single
-// highest-precedence entry. Every preset that renders a "## Rules" section
-// funnels through this so deduplication is applied uniformly.
+// highest-precedence entry, then ordered by priority (name breaks ties). Every
+// preset that renders a "## Rules" section funnels through this so
+// deduplication and ordering are applied uniformly.
 func allInlineRules(content *config.ContentTree) []config.ContentFile {
-	return combineDedupedContentFiles(content.Rules, getAllDomainRules(content))
+	return combineDedupedContentFilesByPriority(content.Rules, getAllDomainRules(content))
 }
 
-// allInlineContext is the context counterpart to allInlineRules.
+// allInlineContext is the context counterpart to allInlineRules and renders in
+// the same priority order (#204).
 func allInlineContext(content *config.ContentTree) []config.ContentFile {
-	return combineDedupedContentFiles(content.Context, getAllDomainContext(content))
+	return combineDedupedContentFilesByPriority(content.Context, getAllDomainContext(content))
 }
 
 // allSkills returns the deduplicated, precedence-ordered skills — root skills,
