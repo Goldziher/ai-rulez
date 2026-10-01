@@ -150,3 +150,31 @@ func TestClaude_CollidingCommandIsWrittenOnce(t *testing.T) {
 	assert.Contains(t, outputs[0].Content, "ROOT BODY", "root command wins over the builtin")
 	assert.NotContains(t, outputs[0].Content, "BUILTIN BODY")
 }
+
+// TestClaude_RendersRulesInPriorityOrder covers #204 end to end: the rendered
+// CLAUDE.md lists rules highest-priority first, name breaking ties.
+func TestClaude_RendersRulesInPriorityOrder(t *testing.T) {
+	t.Parallel()
+
+	content := &config.ContentTree{
+		Rules: []config.ContentFile{
+			{Name: "zeta-low", Content: "low body", Metadata: &config.Metadata{Priority: "low"}},
+			{Name: "beta-high", Content: "high body", Metadata: &config.Metadata{Priority: "high"}},
+			{Name: "alpha-critical", Content: "critical body", Metadata: &config.Metadata{Priority: "critical"}},
+			{Name: "unset", Content: "unset body"},
+		},
+	}
+
+	body := claudeMD(t, content, &config.Config{Name: "test"})
+
+	alpha := strings.Index(body, "### alpha-critical")
+	beta := strings.Index(body, "### beta-high")
+	unset := strings.Index(body, "### unset")
+	zeta := strings.Index(body, "### zeta-low")
+	require.NotEqual(t, -1, alpha)
+	require.NotEqual(t, -1, beta)
+	require.NotEqual(t, -1, unset)
+	require.NotEqual(t, -1, zeta)
+	assert.True(t, alpha < beta && beta < unset && unset < zeta,
+		"rules render critical → high → medium → low; positions %d %d %d %d", alpha, beta, unset, zeta)
+}
