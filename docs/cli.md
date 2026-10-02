@@ -726,6 +726,7 @@ ai-rulez init [project-name] [flags]
 | `--from` / `-F`         | string  | (none)  | Import from existing tool files, such as `auto` or `.claude,.cursor` |
 | `--setup-hooks` / `-H`  | boolean | false   | Configure Git hooks after initialization                             |
 | `--yes` / `-y`          | boolean | false   | Automatically answer yes to prompts                                  |
+| `--config-dir`          | string  | `.ai-rulez` | Directory to scaffold; use `.config/ai-rulez` for the `.config/` convention |
 
 `--setup-hooks` detects an existing lefthook, pre-commit, or husky setup and adds ai-rulez to it in
 place; if none of the three is present it logs a message and does nothing rather than failing. The two YAML configurations (`lefthook.yml`,
@@ -764,6 +765,12 @@ V4 with example content skipped:
 
 ```bash
 ai-rulez init "my-project" --skip-content
+```
+
+Scaffold the project-level `.config/` convention instead of `.ai-rulez/`:
+
+```bash
+ai-rulez init "my-project" --config-dir .config/ai-rulez
 ```
 
 ## Generate Command
