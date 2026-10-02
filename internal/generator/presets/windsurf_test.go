@@ -161,7 +161,7 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 			shouldNotContain: "",
 		},
 		{
-			name: "model_decision mode - generates frontmatter",
+			name: "model_decision mode without description - falls back to manual",
 			rule: config.ContentFile{
 				Name:    "Auto Rule",
 				Content: "Content",
@@ -171,8 +171,8 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 					},
 				},
 			},
-			shouldContain:    "trigger: model_decision",
-			shouldNotContain: "",
+			shouldContain:    "trigger: manual",
+			shouldNotContain: "model_decision",
 		},
 		{
 			name: "invalid mode - falls back to always_on",
@@ -316,7 +316,7 @@ func windsurfRuleFile(t *testing.T, g *WindsurfPresetGenerator, cfg *config.Conf
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	want := filepath.Join("/test", ".windsurf", "rules", sanitizeName(fileName)+".md")
+	want := filepath.Join("/test", ".windsurf", "rules", rulefiles.ItemID(fileName)+".md")
 	for _, o := range outputs {
 		if o.Path == want {
 			return o.Content
@@ -401,7 +401,8 @@ func TestWindsurf_MaxCharsWarning(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			rules := []config.ContentFile{{Name: "Big", Content: strings.Repeat("x", tt.size)}}
-			items, _, err := windsurfRuleItems(rules, nil)
+			items, _, _, err := rulefiles.Plan(rules, nil, &windsurfRulesTarget, rulefiles.RoutingEverything,
+				rulefiles.ScopeInfo{}, nil)
 			if err != nil || len(items) != 1 {
 				t.Fatalf("items=%d err=%v", len(items), err)
 			}

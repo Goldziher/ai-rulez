@@ -3,6 +3,7 @@ package presets
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -11,6 +12,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -173,11 +175,53 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 }
 
 // planCopilotRules routes rules and context between .github/instructions files
-// and the inline remainder of copilot-instructions.md.
+// and the inline remainder of copilot-instructions.md. Copilot applies an
+// instructions file on GitHub.com only through applyTo, so items that are not
+// always-on or glob-scoped (auto, manual) stay inline instead of becoming
+// files that would never be applied automatically.
 func planCopilotRules(content *config.ContentTree, cfg *config.Config) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
 	routing := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameCopilot), true)
 	target := copilotRulesTarget
-	return rulefiles.Plan(allInlineRules(content), allInlineContext(content), &target, routing, rulefiles.ScopeInfo{}, nil)
+	allRules, allContext := allInlineRules(content), allInlineContext(content)
+	// Items Copilot cannot apply automatically stay inline and never reach
+	// Plan, so they cannot collide with the files that do get written.
+	candidates := func(all []config.ContentFile, kind string) (out []config.ContentFile) {
+		for _, cf := range all {
+			switch mode := rulefiles.EffectiveModeOf(cf); {
+			case mode == config.ActivationAuto || mode == config.ActivationManual:
+			case rulefiles.OnlyNegatedGlobs(cf):
+				logger.Warn(kind+" \""+cf.Name+"\" has only negated globs, which Copilot's applyTo cannot express; "+
+					"kept in copilot-instructions.md", "path", cf.Path)
+			default:
+				out = append(out, cf)
+			}
+		}
+		return out
+	}
+	planned, _, _, err := rulefiles.Plan(candidates(allRules, "rule"), candidates(allContext, "context"),
+		&target, routing, rulefiles.ScopeInfo{}, nil)
+	if err != nil {
+		return nil, nil, nil, oops.With("preset", presetNameCopilot).Wrapf(err, "plan copilot rule files")
+	}
+	filed := make(map[string]struct{}, len(planned))
+	for i := range planned {
+		it := planned[i]
+		files = append(files, it)
+		filed[copilotItemKey(it.Kind, it.File)] = struct{}{}
+	}
+	keepInline := func(kind rulefiles.Kind, all []config.ContentFile) (out []config.ContentFile) {
+		for _, cf := range all {
+			if _, ok := filed[copilotItemKey(kind, cf)]; !ok {
+				out = append(out, cf)
+			}
+		}
+		return out
+	}
+	return files, keepInline(rulefiles.KindRule, allRules), keepInline(rulefiles.KindContext, allContext), nil
+}
+
+func copilotItemKey(kind rulefiles.Kind, cf config.ContentFile) string {
+	return strconv.Itoa(int(kind)) + "\x00" + cf.Path + "\x00" + cf.Name
 }
 
 func renderCopilotRuleFiles(items []rulefiles.Item, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
@@ -190,16 +234,11 @@ func renderCopilotRuleFiles(items []rulefiles.Item, baseDir string, cfg *config.
 		it := items[i]
 		text, notes, err := rulefiles.Render(t, it, cfg)
 		if err != nil {
-			return nil, fmt.Errorf("render copilot instructions %s: %w", it.File.Name, err)
+			return nil, oops.With("preset", presetNameCopilot, "rule", it.File.Name).Wrapf(err, "render copilot instructions")
 		}
-		for _, n := range notes {
-			logger.Warn(n)
-		}
-		name := rulefiles.FileName(t, it)
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(name)),
-			Content: text,
-		})
+		path := filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(rulefiles.FileName(t, it)))
+		rulefiles.ReportNotes(path, notes)
+		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}
 	return outputs, nil
 }

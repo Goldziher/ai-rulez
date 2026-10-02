@@ -9,7 +9,6 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
 const windsurfPresetName = "windsurf"
@@ -65,26 +64,12 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 		},
 	)
 
-	// Windsurf always writes one file per rule, so rules route to files regardless of [rules] mode.
-	ruleItems, ctxItems, err := windsurfRuleItems(allInlineRules(content), allInlineContext(content))
+	// Windsurf has no root file: every rule and context item is a file, whatever [rules] mode says.
+	ruleOutputs, err := rulesFolderOutputs(windsurfRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)
 	if err != nil {
 		return nil, err
 	}
-	items := append(append([]rulefiles.Item(nil), ruleItems...), ctxItems...)
-	for i := range items {
-		it := &items[i]
-		text, notes, err := rulefiles.Render(windsurfRulesTarget, *it, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("generate rule %s: %w", it.File.Name, err)
-		}
-		for _, note := range notes {
-			logger.Warn("Windsurf rule file", "note", note)
-		}
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, filepath.FromSlash(windsurfRulesTarget.Dir), rulefiles.FileName(windsurfRulesTarget, *it)),
-			Content: text,
-		})
-	}
+	outputs = append(outputs, ruleOutputs...)
 
 	// Generate skill files to .windsurf/skills/
 	allSkills := allSkills(content)
@@ -196,32 +181,4 @@ func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.Con
 	}
 
 	return frontmatter
-}
-
-// windsurfRuleItems routes every rule and context file to a rule file. Plan
-// keeps unscoped context inline, but Windsurf has no root file, so those
-// become always-on context files.
-func windsurfRuleItems(rules, context []config.ContentFile) (ruleItems, ctxItems []rulefiles.Item, err error) {
-	files, _, inlineCtx, err := rulefiles.Plan(rules, context, &windsurfRulesTarget, rulefiles.RoutingAll,
-		rulefiles.ScopeInfo{}, nil)
-	if err != nil {
-		return nil, nil, fmt.Errorf("plan windsurf rule files: %w", err)
-	}
-	for i := range files {
-		if files[i].Kind == rulefiles.KindContext {
-			ctxItems = append(ctxItems, files[i])
-		} else {
-			ruleItems = append(ruleItems, files[i])
-		}
-	}
-	for _, c := range inlineCtx {
-		id := rulefiles.ID(c.Name)
-		if id == "" {
-			return nil, nil, fmt.Errorf("context %q (%s) yields an empty rule file id", c.Name, c.Path)
-		}
-		ctxItems = append(ctxItems, rulefiles.Item{
-			File: c, Kind: rulefiles.KindContext, ID: id, Activation: c.Metadata.ResolveActivation(),
-		})
-	}
-	return ruleItems, ctxItems, nil
 }

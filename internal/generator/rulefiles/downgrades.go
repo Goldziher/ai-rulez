@@ -2,21 +2,47 @@ package rulefiles
 
 import (
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
+// The downgrade collector and the warn sink are process-global: a generate run
+// calls ResetDowngrades at its start and FlushDowngrades at its end, so runs
+// must not overlap. The generator serializes its public entry points.
 var (
 	downgradeMu sync.Mutex
 	downgrades  = map[string]struct{}{}
-	// warn is the sink for the aggregated downgrade warning; tests replace it.
+	// warn is the sink for warnings from this package; tests replace it.
 	warn = logger.Warn
 )
 
+// SetWarnSink replaces the sink for warnings from this package (the aggregated
+// downgrade warning and ReportNotes) and returns a function restoring the
+// previous one. It exists for tests.
+func SetWarnSink(fn func(msg string, args ...any)) (restore func()) {
+	downgradeMu.Lock()
+	defer downgradeMu.Unlock()
+	prev := warn
+	warn = fn
+	return func() {
+		downgradeMu.Lock()
+		defer downgradeMu.Unlock()
+		warn = prev
+	}
+}
+
+func warnSink() func(string, ...any) {
+	downgradeMu.Lock()
+	defer downgradeMu.Unlock()
+	return warn
+}
+
 // RecordDowngrade notes that an item's activation mode could not be expressed
-// in an inline root file and was rendered as always-on. Duplicates (the same
+// by the target (an inline root file or a rules-folder dialect) and was
+// rendered as always-on. Duplicates (the same
 // item rendered into several root files) collapse into one entry.
 func RecordDowngrade(kind, name, mode string) {
 	logger.Debug("Activation downgraded to always-on in inline output", "kind", kind, "name", name, "mode", mode)
@@ -48,6 +74,19 @@ func FlushDowngrades() {
 		return
 	}
 	sort.Strings(entries)
-	warn("Manual activation cannot be expressed in inline root files; rendered as always-on",
-		"items", strings.Join(entries, ", "))
+	warnSink()(strconv.Itoa(len(entries))+" rules/context items use an activation the target tool cannot express; "+
+		"they are loaded always:", "items", strings.Join(entries, ", "))
+}
+
+// ReportNotes forwards the notes Render returned for the file at path:
+// downgrades are aggregated into the per-run warning, anything else is warned
+// about once, naming the file.
+func ReportNotes(path string, notes []Note) {
+	for _, n := range notes {
+		if n.Downgrade {
+			RecordDowngrade(kindLabel(n.Kind), n.Name, string(n.Mode))
+			continue
+		}
+		warnSink()(n.Text, "file", path)
+	}
 }

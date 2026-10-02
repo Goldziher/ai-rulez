@@ -31,6 +31,9 @@ func TestFrontmatter_Dialects(t *testing.T) {
 	fallback := func(d, mode string) []string {
 		return []string{`rule "r": activation ` + mode + ` not supported by ` + d + `; loaded always`}
 	}
+	noApplyTo := func(mode string) []string {
+		return []string{`rule "r": ` + mode + ` activation is not applied automatically on GitHub.com (no applyTo)`}
+	}
 	tests := []struct {
 		name    string
 		dialect Dialect
@@ -45,7 +48,7 @@ func TestFrontmatter_Dialects(t *testing.T) {
 
 		{"cursor always", DialectCursor, always, m{"alwaysApply": true, "description": "d"}, nil},
 		{"cursor glob", DialectCursor, glob, m{"globs": "*.ts,*.tsx,src/**", "alwaysApply": false, "description": "d"}, nil},
-		{"cursor auto", DialectCursor, auto, m{"description": "d"}, nil},
+		{"cursor auto", DialectCursor, auto, m{"description": "d", "alwaysApply": false}, nil},
 		{"cursor manual", DialectCursor, manual, m{"alwaysApply": false}, nil},
 
 		{"trigger always", DialectTrigger, always, m{"trigger": "always_on"}, nil},
@@ -55,8 +58,8 @@ func TestFrontmatter_Dialects(t *testing.T) {
 
 		{"copilot always", DialectCopilot, always, m{"applyTo": "**"}, nil},
 		{"copilot glob", DialectCopilot, glob, m{"applyTo": "*.ts,*.tsx,src/**"}, nil},
-		{"copilot auto", DialectCopilot, auto, m{"description": "d"}, nil},
-		{"copilot manual", DialectCopilot, manual, nil, nil},
+		{"copilot auto", DialectCopilot, auto, m{"description": "d"}, noApplyTo("auto")},
+		{"copilot manual", DialectCopilot, manual, nil, noApplyTo("manual")},
 
 		{"cline always", DialectCline, always, nil, nil},
 		{"cline glob", DialectCline, glob, m{"paths": globs}, nil},
@@ -80,9 +83,17 @@ func TestFrontmatter_Dialects(t *testing.T) {
 			fm, notes := Frontmatter(tt.dialect, it)
 
 			assert.Equal(t, tt.want, map[string]any(fm))
-			assert.Equal(t, tt.notes, notes)
+			assert.Equal(t, tt.notes, noteTexts(notes))
 		})
 	}
+}
+
+func noteTexts(notes []Note) []string {
+	var out []string
+	for _, n := range notes {
+		out = append(out, n.Text)
+	}
+	return out
 }
 
 func TestExpandBraces(t *testing.T) {
@@ -208,7 +219,7 @@ func TestRender_ValidYAMLFrontmatter(t *testing.T) {
 			map[string]any{"globs": "*.ts,*.tsx", "alwaysApply": false}},
 		{"cursor description", Target{Ext: ".mdc", Dialect: DialectCursor},
 			item("r", config.ActivationAuto, desc),
-			map[string]any{"description": desc}},
+			map[string]any{"description": desc, "alwaysApply": false}},
 		{"copilot brace", Target{Ext: ".instructions.md", Dialect: DialectCopilot, Banner: true},
 			item("r", config.ActivationGlob, "", "{src,lib}/**"),
 			map[string]any{"applyTo": "src/**,lib/**"}},
@@ -287,7 +298,7 @@ func TestRender_MaxCharsNote(t *testing.T) {
 			assert.Contains(t, out, "Body.")
 			if tt.note {
 				require.Len(t, notes, 1)
-				assert.Contains(t, notes[0], "exceeds")
+				assert.Contains(t, notes[0].Text, "exceeds")
 			} else {
 				assert.Empty(t, notes)
 			}
@@ -458,16 +469,71 @@ func TestPlan_RegistryCollisions(t *testing.T) {
 	}
 }
 
-func TestPlan_CaseInsensitiveAndEmptyID(t *testing.T) {
+func TestPlan_Collisions(t *testing.T) {
+	tests := []struct {
+		name    string
+		rules   []config.ContentFile
+		context []config.ContentFile
+		wantErr string
+	}{
+		{"case-only rule names", []config.ContentFile{cf("Foo", "a.md"), cf("foo", "b.md")}, nil, "a.md"},
+		{"names equal after sanitizing", []config.ContentFile{cf("a b", "a.md"), cf("a_b", "b.md")}, nil, "a.md"},
+		{"rule context-x vs context x", []config.ContentFile{cf("context-x", "r.md")},
+			[]config.ContentFile{cf("x", "c.md")}, "c.md"},
+		{"case-only rule vs context", []config.ContentFile{cf("Context-X", "r.md")},
+			[]config.ContentFile{cf("x", "c.md")}, "r.md"},
+		{"case-only context names", nil, []config.ContentFile{cf("Ctx", "a.md"), cf("ctx", "b.md")}, "b.md"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tg := &Target{Preset: "cline", Ext: ".md"}
+
+			_, _, _, err := Plan(tt.rules, tt.context, tg, RoutingEverything, ScopeInfo{}, nil)
+
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+			assert.Contains(t, err.Error(), "collide")
+		})
+	}
+}
+
+func TestPlan_EmptyIDFallsBackToHash(t *testing.T) {
 	tg := &Target{Ext: ".md"}
 
-	_, _, _, err := Plan([]config.ContentFile{cf("Foo", "a.md"), cf("foo", "b.md")}, nil, tg, RoutingAll, ScopeInfo{}, nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "a.md")
+	files, _, _, err := Plan([]config.ContentFile{cf("!!!", "c.md"), cf("日本語", "d.md")},
+		[]config.ContentFile{cf("文脈", "e.md")}, tg, RoutingEverything, ScopeInfo{}, nil)
 
-	_, _, _, err = Plan([]config.ContentFile{cf("!!!", "c.md")}, nil, tg, RoutingAll, ScopeInfo{}, nil)
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "c.md")
+	require.NoError(t, err)
+	require.Len(t, files, 3)
+	assert.Equal(t, "rule-9a7b006d", ItemID("!!!"), "stable hash")
+	assert.Equal(t, ItemID("!!!")+".md", FileName(*tg, files[0]))
+	assert.Equal(t, ItemID("日本語")+".md", FileName(*tg, files[1]))
+	assert.Equal(t, "context-"+ItemID("文脈")+".md", FileName(*tg, files[2]))
+	assert.NotEqual(t, files[0].ID, files[1].ID)
+}
+
+func TestPlan_RoutingEverythingRoutesUnscopedContext(t *testing.T) {
+	tg := &Target{Ext: ".md"}
+	rules := []config.ContentFile{cf("r", "r.md")}
+	context := []config.ContentFile{cf("c", "c.md")}
+	tests := []struct {
+		name        string
+		routing     Routing
+		wantFiles   int
+		wantInlineC int
+	}{
+		{"all keeps unscoped context inline", RoutingAll, 1, 1},
+		{"everything routes context", RoutingEverything, 2, 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			files, _, inlineC, err := Plan(rules, context, tg, tt.routing, ScopeInfo{}, nil)
+
+			require.NoError(t, err)
+			assert.Len(t, files, tt.wantFiles)
+			assert.Len(t, inlineC, tt.wantInlineC)
+		})
+	}
 }
 
 func TestPlan_ScopeActivationRules(t *testing.T) {
@@ -500,4 +566,107 @@ func TestPlan_ScopedContextRecursive(t *testing.T) {
 
 	require.NoError(t, err)
 	assert.Equal(t, "api/context-x.md", FileName(*tg, files[0]))
+}
+
+func TestFrontmatter_ActivationEdgeCases(t *testing.T) {
+	type m = map[string]any
+	tests := []struct {
+		name     string
+		dialect  Dialect
+		it       Item
+		want     m
+		wantNote string
+	}{
+		{"glob without globs (trigger glob, no glob) is manual", DialectTrigger,
+			item("r", config.ActivationGlob, ""), m{"trigger": "manual"}, "glob activation without globs"},
+		{"glob without globs in cursor", DialectCursor,
+			item("r", config.ActivationGlob, ""), m{"alwaysApply": false}, "glob activation without globs"},
+		{"auto without description is manual", DialectTrigger,
+			item("r", config.ActivationAuto, ""), m{"trigger": "manual"}, "auto activation without a description"},
+		{"auto with blank description in cursor", DialectCursor,
+			item("r", config.ActivationAuto, "  "), m{"alwaysApply": false}, "auto activation without a description"},
+		{"cursor auto is explicitly not always-on", DialectCursor,
+			item("r", config.ActivationAuto, "when sql"), m{"description": "when sql", "alwaysApply": false}, ""},
+		{"copilot drops negated globs", DialectCopilot,
+			item("r", config.ActivationGlob, "", "src/**", "!src/gen/**"), m{"applyTo": "src/**"}, "no negated globs"},
+		{"copilot with only negated globs applies everywhere", DialectCopilot,
+			item("r", config.ActivationGlob, "", "!src/gen/**"), m{"applyTo": "**"}, "no negated globs"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm, notes := Frontmatter(tt.dialect, tt.it)
+
+			assert.Equal(t, tt.want, m(fm))
+			if tt.wantNote == "" {
+				assert.Empty(t, notes)
+				return
+			}
+			require.NotEmpty(t, notes)
+			assert.Contains(t, notes[0].Text, tt.wantNote)
+			assert.False(t, notes[0].Downgrade)
+		})
+	}
+}
+
+func TestFallbackNote_NamesContext(t *testing.T) {
+	it := item("overview", config.ActivationManual, "")
+	it.Kind = KindContext
+
+	_, notes := Frontmatter(DialectClaude, it)
+
+	require.Len(t, notes, 1)
+	assert.True(t, strings.HasPrefix(notes[0].Text, `context "overview":`), notes[0].Text)
+	assert.True(t, notes[0].Downgrade)
+	assert.Equal(t, KindContext, notes[0].Kind)
+}
+
+func TestReportNotes_DowngradesAggregateAcrossPresets(t *testing.T) {
+	// Arrange
+	type call struct {
+		msg  string
+		args []any
+	}
+	var calls []call
+	t.Cleanup(SetWarnSink(func(msg string, args ...any) { calls = append(calls, call{msg, args}) }))
+	ResetDowngrades()
+	it := item("shared", config.ActivationManual, "")
+	_, claudeNotes := Frontmatter(DialectClaude, it)
+	_, clineNotes := Frontmatter(DialectCline, it)
+	limit := Note{Kind: KindRule, Name: "big", Text: `rule "big": too long`}
+
+	// Act: the same item downgraded in two presets, plus one soft-limit note.
+	ReportNotes("/p/.claude/rules/shared.md", claudeNotes)
+	ReportNotes("/p/.clinerules/shared.md", clineNotes)
+	ReportNotes("/p/.claude/rules/big.md", []Note{limit})
+	FlushDowngrades()
+
+	// Assert: one aggregated downgrade warning and one per-file warning.
+	require.Len(t, calls, 2)
+	assert.Equal(t, `rule "big": too long`, calls[0].msg)
+	assert.Equal(t, []any{"file", "/p/.claude/rules/big.md"}, calls[0].args)
+	assert.Contains(t, calls[1].msg, "1 rules/context items use an activation the target tool cannot express")
+	assert.Equal(t, []any{"items", "rule shared"}, calls[1].args)
+}
+
+func TestFrontmatter_OneNotePerCause(t *testing.T) {
+	tests := []struct {
+		name          string
+		dialect       Dialect
+		it            Item
+		wantDowngrade bool
+	}{
+		{"claude glob without globs", DialectClaude, item("r", config.ActivationGlob, ""), true},
+		{"cline glob without globs", DialectCline, item("r", config.ActivationGlob, ""), true},
+		{"copilot glob without globs", DialectCopilot, item("r", config.ActivationGlob, ""), false},
+		{"claude auto without description", DialectClaude, item("r", config.ActivationAuto, ""), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, notes := Frontmatter(tt.dialect, tt.it)
+
+			require.Len(t, notes, 1)
+			assert.Equal(t, tt.wantDowngrade, notes[0].Downgrade)
+			assert.Contains(t, notes[0].Text, "without")
+		})
+	}
 }

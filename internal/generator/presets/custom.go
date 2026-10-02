@@ -8,6 +8,7 @@ import (
 	"text/template"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 )
 
 func init() {
@@ -86,7 +87,7 @@ func (g *CustomPresetGenerator) generateDirectory(content *config.ContentTree, b
 	// Generate files for each rule, context, and skill
 	allRules := allInlineRules(content)
 	for _, rule := range allRules {
-		sanitized := sanitizeName(rule.Name)
+		sanitized := rulefiles.ItemID(rule.Name)
 		ruleContent := g.renderContentFile(rule)
 
 		outputs = append(outputs, config.OutputFile{

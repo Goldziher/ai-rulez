@@ -16,6 +16,7 @@ const (
 	RoutingAll        Routing = iota // split: every rule and scoped context is a file
 	RoutingScopedOnly                // inline mode with a rules dir: only path-scoped items are files
 	RoutingNone                      // no rules dir: everything is inline
+	RoutingEverything                // every rule and every context item is a file
 )
 
 // RoutingFor maps the configured rules mode ("split" or "inline") to a Routing.
@@ -54,7 +55,7 @@ func (r *Registry) claim(t Target, it Item) error {
 	name := FileName(t, it)
 	key := strings.ToLower(path.Join(t.Dir, name))
 	if prev, dup := r.owner[key]; dup {
-		return oops.With("file", name).
+		return oops.With("file", name, "preset", t.Preset).
 			Hint("rename one of the two sources so they map to different file names").
 			Errorf("rule files collide on %q: %s and %s", name, prev, it.File.Path)
 	}
@@ -64,8 +65,8 @@ func (r *Registry) claim(t Target, it Item) error {
 
 // Plan routes already ordered and deduplicated rules and context into rule
 // files and inline remainders. t may be nil (no rules folder). Two items that
-// map to the same file path, or a name that sanitizes to nothing, are an
-// error. reg is shared by the caller across the root and scope plans of one
+// map to the same file path (names are compared case-insensitively, and
+// context files carry the "context-" prefix) are an error. reg is shared by the caller across the root and scope plans of one
 // target; nil uses a registry local to this call.
 func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope ScopeInfo, reg *Registry,
 ) (files []Item, inlineRules, inlineContext []config.ContentFile, err error) {
@@ -89,7 +90,7 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	for _, r := range rules {
-		if routing == RoutingAll || isScoped(r) {
+		if routing == RoutingAll || routing == RoutingEverything || isScoped(r) {
 			if err := add(r, KindRule); err != nil {
 				return nil, nil, nil, err
 			}
@@ -98,7 +99,7 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 		inlineRules = append(inlineRules, r)
 	}
 	for _, c := range context {
-		if isScoped(c) {
+		if routing == RoutingEverything || isScoped(c) {
 			if err := add(c, KindContext); err != nil {
 				return nil, nil, nil, err
 			}
@@ -115,16 +116,11 @@ func isScoped(cf config.ContentFile) bool {
 
 func newItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo) (Item, error) {
 	act := cf.Metadata.ResolveActivation()
-	id := ID(cf.Name)
-	if id == "" {
-		return Item{}, oops.With("source", cf.Path, "name", cf.Name).
-			Hint("give the file a name containing letters or digits").
-			Errorf("name %q (%s) yields an empty rule file id", cf.Name, cf.Path)
-	}
+	id := ItemID(cf.Name)
 	if prefix := cleanPrefix(scope.Prefix); prefix != "" {
 		var err error
 		if act, err = scopeActivation(act, prefix); err != nil {
-			return Item{}, oops.With("source", cf.Path).Wrapf(err, "scope %q", scope.Slug)
+			return Item{}, oops.With("source", cf.Path, "preset", t.Preset).Wrapf(err, "scope %q", scope.Slug)
 		}
 	}
 	return Item{File: cf, Kind: kind, ID: ScopedID(t, scope.Slug, id), Activation: act}, nil

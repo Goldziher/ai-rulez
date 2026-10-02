@@ -9,8 +9,8 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -69,7 +69,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	reg := rulefiles.NewRegistry()
 	plan, err := g.planRules(content, cfg, reg)
 	if err != nil {
-		return nil, fmt.Errorf("plan rules: %w", err)
+		return nil, oops.With("preset", g.Spec.Name).Wrapf(err, "plan rules")
 	}
 
 	if g.Spec.Root != nil {
@@ -196,7 +196,7 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 	plan.target = &target
 	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg), rulefiles.ScopeInfo{}, reg)
 	if err != nil {
-		return nil, err
+		return nil, oops.With("preset", g.Spec.Name).Wrapf(err, "plan %s rule files", g.Spec.Name)
 	}
 	plan.files, plan.inlineRules, plan.inlineContext = files, inlineRules, inlineContext
 	return plan, nil
@@ -244,32 +244,15 @@ func (g *Generator) renderRuleFiles(plan *rulesPlan, content *config.ContentTree
 		it := &plan.files[i]
 		text, notes, err := rulefiles.Render(*plan.target, *it, cfg)
 		if err != nil {
-			return nil, fmt.Errorf("render rule file %q: %w", it.File.Name, err)
+			return nil, oops.With("preset", g.Spec.Name, "rule", it.File.Name).Wrapf(err, "render rule file")
 		}
-		g.reportRuleNotes(*it, notes)
 		outputPath := filepath.Join(baseDir, spec.Dir, filepath.FromSlash(rulefiles.FileName(*plan.target, *it)))
+		rulefiles.ReportNotes(outputPath, notes)
 		cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindRuleFile, it.ID, it.File.Path).
 			AddPart(config.PartKindItemBody, "body", it.File.Path, text)
 		outputs = append(outputs, config.OutputFile{Path: outputPath, Content: text})
 	}
 	return outputs, nil
-}
-
-// reportRuleNotes forwards Render notes: activation fallbacks are aggregated
-// into the per-run downgrade warning, anything else (size limits) is warned
-// about directly.
-func (g *Generator) reportRuleNotes(it rulefiles.Item, notes []string) {
-	for _, note := range notes {
-		if strings.Contains(note, "activation ") && strings.Contains(note, "not supported by") {
-			kind := "rule"
-			if it.Kind == rulefiles.KindContext {
-				kind = "context"
-			}
-			rulefiles.RecordDowngrade(kind, it.File.Name, string(it.Activation.Mode))
-			continue
-		}
-		logger.Warn(note, "preset", g.Spec.Name)
-	}
 }
 
 // hasPathScope reports whether a content file declares file globs, i.e. it
