@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
 )
 
@@ -145,28 +147,103 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 	}
 }
 
-func TestCursorPresetGenerator_renderRuleFile(t *testing.T) {
+func TestCursorPresetGenerator_RuleFileContent(t *testing.T) {
+	// Arrange
 	g := &CursorPresetGenerator{}
+	content := &config.ContentTree{Rules: []config.ContentFile{{
+		Name:     "test rule",
+		Content:  "Test content",
+		Metadata: &config.Metadata{Priority: "high"},
+	}}}
 
-	rule := config.ContentFile{
-		Name:    "test rule",
-		Content: "Test content",
-		Metadata: &config.Metadata{
-			Priority: "high",
+	// Act
+	result := cursorRuleFile(t, g, content, "test-rule.mdc")
+
+	// Assert
+	assert.Contains(t, result, "# test rule")
+	assert.Contains(t, result, "**Priority:** high")
+	assert.Contains(t, result, "Test content")
+}
+
+// cursorRuleFile generates the preset and returns the content of the named file
+// under .cursor/rules.
+func cursorRuleFile(t *testing.T, g *CursorPresetGenerator, content *config.ContentTree, name string) string {
+	t.Helper()
+	outputs, err := g.Generate(content, "/test", &config.Config{})
+	require.NoError(t, err)
+	want := filepath.Join("/test", ".cursor", "rules", name)
+	for _, o := range outputs {
+		if o.Path == want {
+			return o.Content
+		}
+	}
+	t.Fatalf("output %s not generated", want)
+	return ""
+}
+
+func cursorFrontmatterOf(t *testing.T, text string) map[string]any {
+	t.Helper()
+	require.True(t, strings.HasPrefix(text, "---\n"), "must open with frontmatter:\n%s", text)
+	end := strings.Index(text[4:], "\n---\n")
+	require.GreaterOrEqual(t, end, 0)
+	var fm map[string]any
+	require.NoError(t, yaml.Unmarshal([]byte(text[4:4+end+1]), &fm))
+	return fm
+}
+
+func TestCursor_ContextAlwaysApply(t *testing.T) {
+	tests := []struct {
+		name string
+		meta *config.Metadata
+		want map[string]any
+	}{
+		{"unscoped context applies always", nil, map[string]any{"alwaysApply": true}},
+		{
+			"scoped context attaches by glob",
+			&config.Metadata{Globs: []string{"src/**"}},
+			map[string]any{"alwaysApply": false, "globs": "src/**"},
 		},
 	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			content := &config.ContentTree{Context: []config.ContentFile{{Name: "Arch Notes", Content: "body", Metadata: tt.meta}}}
 
-	result := g.renderRuleFile(rule, false)
+			// Act
+			text := cursorRuleFile(t, &CursorPresetGenerator{}, content, "context-Arch-Notes.mdc")
 
-	if !strings.Contains(result, "# test rule") {
-		t.Error("Expected rule name as heading")
+			// Assert
+			assert.Equal(t, tt.want, cursorFrontmatterOf(t, text))
+			assert.Contains(t, text, "# Arch Notes")
+		})
 	}
-	if !strings.Contains(result, "**Priority:** high") {
-		t.Error("Expected priority in output")
-	}
-	if !strings.Contains(result, "Test content") {
-		t.Error("Expected rule content in output")
-	}
+}
+
+func TestCursor_BraceGlobsExpanded(t *testing.T) {
+	// Arrange
+	content := &config.ContentTree{Rules: []config.ContentFile{{
+		Name: "ts", Content: "x", Metadata: &config.Metadata{Globs: []string{"*.{ts,tsx}"}},
+	}}}
+
+	// Act
+	text := cursorRuleFile(t, &CursorPresetGenerator{}, content, "ts.mdc")
+
+	// Assert
+	assert.Equal(t, map[string]any{"alwaysApply": false, "globs": "*.ts,*.tsx"}, cursorFrontmatterOf(t, text))
+}
+
+func TestCursor_ManualHasFrontmatter(t *testing.T) {
+	// Arrange
+	content := &config.ContentTree{Rules: []config.ContentFile{{
+		Name: "manual", Content: "x",
+		Metadata: &config.Metadata{Activation: "manual", Extra: map[string]string{"description": "ignored"}},
+	}}}
+
+	// Act
+	text := cursorRuleFile(t, &CursorPresetGenerator{}, content, "manual.mdc")
+
+	// Assert: an explicit alwaysApply: false and no description (which would make it agent-requested)
+	assert.Equal(t, map[string]any{"alwaysApply": false}, cursorFrontmatterOf(t, text))
 }
 
 func TestSanitizeName(t *testing.T) {
@@ -546,28 +623,41 @@ func TestCursorPresetGenerator_renderMCPJSON_Transports(t *testing.T) {
 }
 
 func TestCursorPresetGenerator_RuleFrontmatter(t *testing.T) {
-	g := &CursorPresetGenerator{}
-
-	plain := g.renderRuleFile(config.ContentFile{Name: "plain", Content: "Use named exports."}, false)
-	if !strings.Contains(plain, "alwaysApply: true") {
-		t.Errorf("an unscoped rule must be alwaysApply: true, got:\n%s", plain)
-	}
-	if !strings.HasPrefix(plain, "---\n") {
-		t.Errorf("a cursor rule must open with frontmatter, got:\n%s", plain)
-	}
-
-	scoped := g.renderRuleFile(config.ContentFile{
-		Name:    "tsx",
-		Content: "x",
-		Metadata: &config.Metadata{
-			Globs: []string{"**/*.tsx"},
-			Extra: map[string]string{"description": "tsx rules"},
+	tests := []struct {
+		name string
+		rule config.ContentFile
+		want map[string]any
+	}{
+		{
+			"unscoped rule is always applied",
+			config.ContentFile{Name: "plain", Content: "Use named exports."},
+			map[string]any{"alwaysApply": true},
 		},
-	}, false)
-	if !strings.Contains(scoped, "alwaysApply: false") || !strings.Contains(scoped, "globs: '**/*.tsx'") {
-		t.Errorf("a globbed rule must carry globs + alwaysApply:false, got:\n%s", scoped)
+		{
+			"globbed rule carries globs, alwaysApply false and its description",
+			config.ContentFile{Name: "plain", Content: "x", Metadata: &config.Metadata{
+				Globs: []string{"**/*.tsx"}, Extra: map[string]string{"description": "tsx rules"},
+			}},
+			map[string]any{"alwaysApply": false, "globs": "**/*.tsx", "description": "tsx rules"},
+		},
+		{
+			"always rule keeps its description",
+			config.ContentFile{Name: "plain", Content: "x", Metadata: &config.Metadata{
+				Extra: map[string]string{"description": "style"},
+			}},
+			map[string]any{"alwaysApply": true, "description": "style"},
+		},
 	}
-	if !strings.Contains(scoped, "description: tsx rules") {
-		t.Errorf("a rule description must pass through, got:\n%s", scoped)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			content := &config.ContentTree{Rules: []config.ContentFile{tt.rule}}
+
+			// Act
+			text := cursorRuleFile(t, &CursorPresetGenerator{}, content, "plain.mdc")
+
+			// Assert
+			assert.Equal(t, tt.want, cursorFrontmatterOf(t, text))
+		})
 	}
 }

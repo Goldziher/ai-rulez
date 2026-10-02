@@ -7,7 +7,8 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -66,19 +67,11 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		},
 	)
 
-	// Combine all rules from root and domains
-	allRules := allInlineRules(content)
-
-	// Generate rule files
-	for _, rule := range allRules {
-		ruleContent := g.renderRuleFile(rule, cfg.IsCompact())
-		sanitized := sanitizeName(rule.Name)
-
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".cursor", "rules", sanitized+".mdc"),
-			Content: ruleContent,
-		})
+	ruleOutputs, err := g.renderRuleFiles(content, baseDir, cfg)
+	if err != nil {
+		return nil, err
 	}
+	outputs = append(outputs, ruleOutputs...)
 
 	// Combine all commands from root and domains
 	allCommands := allCommands(content)
@@ -142,23 +135,6 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		})
 	}
 
-	// Generate context files as rule-like files in .cursor/rules/
-	allContext := allInlineContext(content)
-	for _, ctx := range allContext {
-		sanitized := sanitizeName(ctx.Name)
-		var ctxBuilder strings.Builder
-		ctxBuilder.WriteString("# ")
-		ctxBuilder.WriteString(ctx.Name)
-		ctxBuilder.WriteString("\n\n")
-		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
-		ctxBuilder.WriteString(processedContent)
-
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".cursor", "rules", "context-"+sanitized+".mdc"),
-			Content: ctxBuilder.String(),
-		})
-	}
-
 	// Generate .mcp.json if MCP servers are configured. A tracked, hand-authored
 	// /.mcp.json is a common pattern, so merge the owned mcpServers key into what
 	// is already there instead of replacing the document (#185).
@@ -178,49 +154,54 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	return outputs, nil
 }
 
-func (g *CursorPresetGenerator) renderRuleFile(rule config.ContentFile, compact bool) string {
-	var builder strings.Builder
+// cursorRulesTarget is the Cursor rules folder. Every .mdc carries frontmatter
+// (a file without it is manual-only in Cursor), so no banner is emitted.
+var cursorRulesTarget = rulefiles.Target{
+	Preset:    presetNameCursor,
+	Dir:       ".cursor/rules",
+	Ext:       ".mdc",
+	Dialect:   rulefiles.DialectCursor,
+	Recursive: true,
+}
 
-	// Cursor reads a rule's behavior from its `alwaysApply`, `globs`, and
-	// `description` frontmatter; without it a .mdc is manual-only. A rule with a
-	// path scope is attached when a matching file is in context; otherwise it
-	// applies to every session, matching how it renders into the root file.
-	frontmatter := map[string]interface{}{}
-	globScope := []string(nil)
-	if rule.Metadata != nil {
-		globScope = rule.Metadata.PathScope()
-		if desc := rule.Metadata.Extra["description"]; desc != "" {
-			frontmatter["description"] = desc
+// renderRuleFiles writes one .mdc per rule and per context file. Cursor always
+// writes one file per item, so the `[rules] mode` setting does not apply.
+func (g *CursorPresetGenerator) renderRuleFiles(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	t := cursorRulesTarget
+	rules := allInlineRules(content)
+	contexts := allInlineContext(content)
+
+	// Plan routes unscoped context inline; Cursor still writes it as a file.
+	items, _, inlineContext, err := rulefiles.Plan(rules, contexts, &t, rulefiles.RoutingAll, rulefiles.ScopeInfo{}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("plan cursor rules: %w", err)
+	}
+	for _, c := range inlineContext {
+		id := rulefiles.ID(c.Name)
+		if id == "" {
+			return nil, fmt.Errorf("context %q (%s) yields an empty rule file id", c.Name, c.Path)
 		}
-	}
-	if len(globScope) > 0 {
-		frontmatter["globs"] = strings.Join(globScope, ",")
-		frontmatter["alwaysApply"] = false
-	} else {
-		frontmatter["alwaysApply"] = true
-	}
-	if yamlData, err := yaml.Marshal(frontmatter); err == nil {
-		builder.WriteString("---\n")
-		builder.Write(yamlData)
-		builder.WriteString("---\n\n")
+		items = append(items, rulefiles.Item{
+			File: c, Kind: rulefiles.KindContext, ID: id, Activation: c.Metadata.ResolveActivation(),
+		})
 	}
 
-	// Add title
-	builder.WriteString("# ")
-	builder.WriteString(rule.Name)
-	builder.WriteString("\n\n")
-
-	// Add priority if present
-	if !compact && rule.Metadata != nil && rule.Metadata.Priority != "" {
-		builder.WriteString("**Priority:** ")
-		builder.WriteString(rule.Metadata.Priority)
-		builder.WriteString("\n\n")
+	outputs := make([]config.OutputFile, 0, len(items))
+	for i := range items {
+		it := &items[i]
+		text, notes, err := rulefiles.Render(t, *it, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render cursor rule %s: %w", it.File.Name, err)
+		}
+		for _, n := range notes {
+			logger.Warn(n)
+		}
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, filepath.FromSlash(t.Dir), rulefiles.FileName(t, *it)),
+			Content: text,
+		})
 	}
-
-	// Add content
-	builder.WriteString(rule.Content)
-
-	return builder.String()
+	return outputs, nil
 }
 
 // shouldIncludeCommand checks if a command should be included in the Cursor preset

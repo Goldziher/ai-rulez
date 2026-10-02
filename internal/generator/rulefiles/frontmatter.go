@@ -62,16 +62,25 @@ func junieNotes(it Item, mode config.ActivationMode) (fm map[string]any, notes [
 	return nil, nil
 }
 
+// cursorFrontmatter keeps a description on always and glob rules because Cursor
+// shows it in its rule UI. It is left off manual rules: in Cursor a description
+// without globs or alwaysApply makes a rule agent-requested, not manual.
 func cursorFrontmatter(act config.Activation, mode config.ActivationMode, globs string) map[string]any {
+	var fm map[string]any
 	switch mode {
 	case config.ActivationGlob:
-		return map[string]any{"globs": globs, keyAlwaysApply: false}
+		fm = map[string]any{"globs": globs, keyAlwaysApply: false}
 	case config.ActivationAuto:
 		return map[string]any{keyDescription: act.Description}
 	case config.ActivationManual:
 		return map[string]any{keyAlwaysApply: false}
+	default:
+		fm = map[string]any{keyAlwaysApply: true}
 	}
-	return map[string]any{keyAlwaysApply: true}
+	if act.Description != "" {
+		fm[keyDescription] = act.Description
+	}
+	return fm
 }
 
 func triggerFrontmatter(act config.Activation, mode config.ActivationMode, globs string) map[string]any {
