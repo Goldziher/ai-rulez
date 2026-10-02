@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -65,17 +66,29 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 		})
 	}
 
+	reg := rulefiles.NewRegistry()
+	plan, err := g.planRules(content, cfg, reg)
+	if err != nil {
+		return nil, fmt.Errorf("plan rules: %w", err)
+	}
+
 	if g.Spec.Root != nil {
-		rootOutput, err := g.renderRootFile(content, baseDir, cfg)
+		rootOutput, err := g.renderRootFile(content, baseDir, cfg, plan)
 		if err != nil {
 			return nil, fmt.Errorf("render root file: %w", err)
 		}
 		outputs = append(outputs, rootOutput)
 	}
 
+	ruleOutputs, err := g.renderRuleFiles(plan, content, baseDir, cfg)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, ruleOutputs...)
+
 	// Per-type rendering in a fixed iteration order so output is deterministic
-	// across map iterations.
-	for _, typ := range []string{OutputTypeRules, OutputTypeSkills, OutputTypeAgents, OutputTypeCommands} {
+	// across map iterations. Rules were rendered above from the routing plan.
+	for _, typ := range []string{OutputTypeSkills, OutputTypeAgents, OutputTypeCommands} {
 		spec, ok := g.Spec.Outputs[typ]
 		if !ok || spec == nil {
 			continue
@@ -134,9 +147,133 @@ func collectItemsByType(content *config.ContentTree, typ string) []config.Conten
 	return nil
 }
 
+// rulesPlan is the routing of rules and context between the root file and the
+// rules output. The root file renders exactly inlineRules/inlineContext; the
+// rules output renders exactly files (split specs) or legacy (non-split).
+type rulesPlan struct {
+	target        *rulefiles.Target
+	files         []rulefiles.Item
+	legacy        []config.ContentFile
+	inlineRules   []config.ContentFile
+	inlineContext []config.ContentFile
+}
+
+// ruleCount is the number of rules the root file inlines.
+func (p *rulesPlan) ruleCount() int { return len(p.inlineRules) }
+
+// rulesOutputAccepts reports whether the rules output of a legacy (non-split)
+// spec takes a rule. The root file skips exactly the accepted rules.
+func (g *Generator) rulesOutputAccepts(spec *OutputSpec, rule config.ContentFile) bool {
+	return g.filterAllows(spec, rule)
+}
+
+// planRules splits the deduplicated rules and context between the root file
+// and the rules output. Split specs delegate to rulefiles.Plan with the routing
+// that the configured rules mode selects; legacy specs keep the filter-based
+// behavior and leave context inline.
+func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, reg *rulefiles.Registry) (*rulesPlan, error) {
+	rules := presets.AllInlineRules(content)
+	ctx := presets.AllInlineContext(content)
+	spec := g.Spec.Outputs[OutputTypeRules]
+	plan := &rulesPlan{inlineRules: rules, inlineContext: ctx}
+	if spec == nil {
+		return plan, nil
+	}
+
+	if !spec.Split {
+		plan.inlineRules = nil
+		for _, rule := range rules {
+			if g.rulesOutputAccepts(spec, rule) {
+				plan.legacy = append(plan.legacy, rule)
+			} else {
+				plan.inlineRules = append(plan.inlineRules, rule)
+			}
+		}
+		return plan, nil
+	}
+
+	target := g.rulesTarget(spec)
+	plan.target = &target
+	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg), rulefiles.ScopeInfo{}, reg)
+	if err != nil {
+		return nil, err
+	}
+	plan.files, plan.inlineRules, plan.inlineContext = files, inlineRules, inlineContext
+	return plan, nil
+}
+
+// splitRouting picks the Routing for a split spec. In inline mode a spec
+// without inline_filter keeps everything in the root file.
+func (g *Generator) splitRouting(spec *OutputSpec, cfg *config.Config) rulefiles.Routing {
+	routing := rulefiles.RoutingFor(cfg.RulesModeFor(g.Spec.Name), true)
+	if routing == rulefiles.RoutingScopedOnly && spec.InlineFilter != InlineFilterPathScoped {
+		return rulefiles.RoutingNone
+	}
+	return routing
+}
+
+// rulesTarget builds the rulefiles Target of a split rules output.
+func (g *Generator) rulesTarget(spec *OutputSpec) rulefiles.Target {
+	dialect := rulefiles.Dialect(spec.Dialect)
+	return rulefiles.Target{
+		Preset:    g.Spec.Name,
+		Dir:       spec.Dir,
+		Ext:       strings.TrimPrefix(spec.Filename, "{id}"),
+		Dialect:   dialect,
+		Recursive: dialect == rulefiles.DialectClaude,
+		Banner:    true,
+	}
+}
+
+// renderRuleFiles emits the rules output: rule/context files of a split plan
+// or the legacy per-item rule files.
+func (g *Generator) renderRuleFiles(plan *rulesPlan, content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	spec := g.Spec.Outputs[OutputTypeRules]
+	if spec == nil {
+		return nil, nil
+	}
+	var outputs []config.OutputFile
+	for _, rule := range plan.legacy {
+		itemOutputs, err := g.renderItem(OutputTypeRules, spec, rule, content, baseDir, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render %s %q: %w", OutputTypeRules, rule.Name, err)
+		}
+		outputs = append(outputs, itemOutputs...)
+	}
+	for i := range plan.files {
+		it := &plan.files[i]
+		text, notes, err := rulefiles.Render(*plan.target, *it, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render rule file %q: %w", it.File.Name, err)
+		}
+		g.reportRuleNotes(*it, notes)
+		outputPath := filepath.Join(baseDir, spec.Dir, filepath.FromSlash(rulefiles.FileName(*plan.target, *it)))
+		cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindRuleFile, it.ID, it.File.Path).
+			AddPart(config.PartKindItemBody, "body", it.File.Path, text)
+		outputs = append(outputs, config.OutputFile{Path: outputPath, Content: text})
+	}
+	return outputs, nil
+}
+
+// reportRuleNotes forwards Render notes: activation fallbacks are aggregated
+// into the per-run downgrade warning, anything else (size limits) is warned
+// about directly.
+func (g *Generator) reportRuleNotes(it rulefiles.Item, notes []string) {
+	for _, note := range notes {
+		if strings.Contains(note, "activation ") && strings.Contains(note, "not supported by") {
+			kind := "rule"
+			if it.Kind == rulefiles.KindContext {
+				kind = "context"
+			}
+			rulefiles.RecordDowngrade(kind, it.File.Name, string(it.Activation.Mode))
+			continue
+		}
+		logger.Warn(note, "preset", g.Spec.Name)
+	}
+}
+
 // hasPathScope reports whether a content file declares file globs, i.e. it
-// should be delivered through the tool's path-scoped mechanism rather than the
-// always-loaded root file.
+// should be delivered through the tool's path-scoped mechanism.
 func hasPathScope(item config.ContentFile) bool {
 	return item.Metadata.ResolveActivation().Mode == config.ActivationGlob
 }
@@ -453,7 +590,7 @@ func buildBlacklistSet(blacklist []string) map[string]bool {
 
 // renderRootFile composes the root instructions file (CLAUDE.md, AGENTS.md, ...)
 // from the spec.Root.Sections list. Closed-set dispatch on each section.
-func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config) (config.OutputFile, error) {
+func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (config.OutputFile, error) {
 	var b strings.Builder
 
 	rootRelPath := g.Spec.Root.File
@@ -464,7 +601,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 		start := recorder.mark(&b)
 		switch section {
 		case SectionRootHeader:
-			ruleCount, agentCount := countContent(content, g.Spec.Outputs[OutputTypeRules] != nil)
+			ruleCount, agentCount := countContent(content, plan)
 			data := &templates.TemplateData{
 				ProjectName: cfg.Name,
 				Timestamp:   cfg.HeaderTimestamp(),
@@ -488,10 +625,10 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 			// Rules and context are recorded per entry, not per section: a cost
 			// report has to be able to name the rule that is expensive. Path-scoped
 			// rules move to the tool's rules directory instead of the root file.
-			writeInlineRules(&b, content, cfg.IsCompact(), g.Spec.Outputs[OutputTypeRules] != nil, recorder)
+			writeInlineRules(&b, plan.inlineRules, cfg.IsCompact(), recorder)
 			continue
 		case SectionRootContextInline:
-			writeInlineContext(&b, content, cfg.IsCompact(), recorder)
+			writeInlineContext(&b, plan.inlineContext, cfg.IsCompact(), recorder)
 			continue
 		case SectionRootAgentsDelegation:
 			allAgents := presets.AllAgents(content)
@@ -509,16 +646,10 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 	}, nil
 }
 
-func countContent(content *config.ContentTree, skipPathScoped bool) (rules, agents int) {
-	// Count rules after deduplication so the header reflects what is actually
-	// rendered — a builtin and an include defining the same rule name collapse
-	// to one entry (see writeInlineRules).
-	for _, rule := range presets.AllInlineRules(content) {
-		if skipPathScoped && hasPathScope(rule) {
-			continue
-		}
-		rules++
-	}
+func countContent(content *config.ContentTree, plan *rulesPlan) (rules, agents int) {
+	// Count the rules the root file inlines, after deduplication and routing, so
+	// the header reflects what is actually rendered.
+	rules = plan.ruleCount()
 	// Count agents after dedup + extends resolution so the header matches what
 	// AllAgents actually renders (mirrors the rules count above).
 	agents = len(presets.AllAgents(content))
@@ -527,33 +658,22 @@ func countContent(content *config.ContentTree, skipPathScoped bool) (rules, agen
 
 // writeInlineRules mirrors the "## Rules" block produced by the legacy
 // renderClaudeMarkdown — heading + entries with **Priority:** when set and
-// markdown-processed content. When skipPathScoped is true, rules declaring a
-// path scope are omitted because the tool emits them as scoped rule files.
-func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact, skipPathScoped bool, recorder *partRecorder) {
-	allRules := presets.AllInlineRules(content)
-	if skipPathScoped {
-		filtered := allRules[:0:0]
-		for _, rule := range allRules {
-			if !hasPathScope(rule) {
-				filtered = append(filtered, rule)
-			}
-		}
-		allRules = filtered
-	}
-	if len(allRules) == 0 {
+// markdown-processed content. rules is the already routed and deduplicated
+// slice the root file inlines.
+func writeInlineRules(b *strings.Builder, rules []config.ContentFile, compact bool, recorder *partRecorder) {
+	if len(rules) == 0 {
 		return
 	}
-	rulefiles.WriteInlineRules(b, allRules, rulefiles.InlineOpts{Compact: compact, AppliesTo: true}, recorder)
+	rulefiles.WriteInlineRules(b, rules, rulefiles.InlineOpts{Compact: compact, AppliesTo: true}, recorder)
 }
 
 // writeInlineContext mirrors the "## Context" block produced by the legacy
 // renderClaudeMarkdown, including the per-entry "summary" extras handling. When
 // compact is true the per-entry summary line is suppressed, mirroring the
 // compact suppression of the inline-rules priority line.
-func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact bool, recorder *partRecorder) {
-	allContext := presets.AllInlineContext(content)
-	if len(allContext) == 0 {
+func writeInlineContext(b *strings.Builder, contextFiles []config.ContentFile, compact bool, recorder *partRecorder) {
+	if len(contextFiles) == 0 {
 		return
 	}
-	rulefiles.WriteInlineContext(b, allContext, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: true}, recorder)
+	rulefiles.WriteInlineContext(b, contextFiles, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: true}, recorder)
 }
