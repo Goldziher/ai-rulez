@@ -38,13 +38,15 @@ func runMigrateV4() {
 		os.Exit(1)
 	}
 
+	migrateLocalOverlay(configDir)
+
 	tomlPath := filepath.Join(configDir, "config.toml")
 	if _, err := os.Stat(tomlPath); err == nil {
 		logger.Info("Already using config.toml — nothing to migrate")
 		return
 	}
 
-	cfg, err := config.LoadConfig(context.Background(), workingDir)
+	cfg, err := config.LoadConfig(context.Background(), workingDir, config.WithoutLocal())
 	if err != nil {
 		logger.Error("Failed to load config", "error", err)
 		os.Exit(1)
@@ -69,6 +71,18 @@ func runMigrateV4() {
 	fmt.Println("\n✅ Migration complete!")
 	fmt.Println("   Config: .ai-rulez/config.toml")
 	fmt.Println("   Version: 4.0")
+}
+
+// migrateLocalOverlay converts config.local.yaml|yml|json to config.local.toml.
+func migrateLocalOverlay(configDir string) {
+	from, to, err := config.MigrateLocalOverlayToTOML(configDir)
+	if err != nil {
+		logger.Error("Failed to migrate the local config", "error", err)
+		os.Exit(1)
+	}
+	if from != "" {
+		logger.Success("Converted local config", "from", filepath.Base(from), "to", filepath.Base(to))
+	}
 }
 
 func removeOldConfigFiles(configDir string) {

@@ -123,14 +123,3 @@ func LocalVariantPath(p string) string {
 	}
 	return filepath.Join(dir, local)
 }
-
-func FindLocalConfigFile(mainConfigPath string) (string, error) {
-	dir := filepath.Dir(mainConfigPath)
-	localConfigPath := filepath.Join(dir, localVariantName(filepath.Base(mainConfigPath)))
-
-	if _, err := os.Stat(localConfigPath); err == nil {
-		return localConfigPath, nil
-	}
-
-	return "", nil
-}
