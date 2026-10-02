@@ -344,6 +344,9 @@ func (g *CopilotPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Confi
 		switch t := server.GetTransport(); t {
 		case config.TransportHTTP, config.TransportSSE:
 			entry["type"] = t
+			if len(server.Headers) > 0 {
+				entry[keyHeaders] = server.Headers
+			}
 		default:
 			entry[keyCommand] = server.Command
 			if len(server.Args) > 0 {

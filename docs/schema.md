@@ -78,6 +78,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`mcp_servers[].command`**: Command to execute for local `stdio` servers (npx, uvx, ai-rulez, etc.)
 - **`mcp_servers[].transport`**: `stdio`, `http`, or `sse` (default: `stdio`)
 - **`mcp_servers[].url`**: Remote MCP URL for `http` or `sse` transports
+- **`mcp_servers[].headers`**: HTTP headers for `http`/`sse` servers; values may contain `${VAR}` placeholders resolved by `generate`
 - **`mcp_servers[].enabled`**: Set to `false` to omit the server from generated MCP outputs
 - **`mcp_servers[].env`**: Environment variables; values may contain `${VAR}` placeholders resolved by `generate`
 
