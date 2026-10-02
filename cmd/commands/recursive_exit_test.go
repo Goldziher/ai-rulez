@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/progress"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -119,5 +120,19 @@ func TestRunRecursiveValidate_NoConfigs(t *testing.T) {
 	t.Cleanup(func() { progress.SetQuiet(false) })
 	if got := runRecursiveValidate(); got != 0 {
 		t.Errorf("exit code = %d, want 0 when nothing is discovered", got)
+	}
+}
+
+func TestValidateCmd_HonoursQuietFlag(t *testing.T) {
+	twoRoots(t, validRootConfig)
+	progress.SetQuiet(false)
+	viper.Set("quiet", true)
+	t.Cleanup(func() { viper.Set("quiet", false) })
+	validateRecursive = true
+
+	ValidateCmd.Run(ValidateCmd, nil)
+
+	if !progress.IsQuiet() {
+		t.Error("validate must apply --quiet to progress output")
 	}
 }
