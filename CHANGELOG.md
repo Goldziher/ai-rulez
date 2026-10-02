@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **CRUD commands with `.config/ai-rulez/`** (#207): `add`, `remove`, `list`, `domain`, `profile`, `include`, `skill` and the MCP CRUD tools only looked for `.ai-rulez/` and failed with `.ai-rulez directory not found` in a project using the `.config/ai-rulez/` layout. They now resolve the config directory the same way `generate` and `validate` do. The MCP `update_config` tool likewise saved to a new `.ai-rulez/` instead of the directory it loaded, which then took precedence over `.config/ai-rulez/`.
+
 ## [4.20.0] - 2026-10-02
 
 ### Added
