@@ -141,3 +141,51 @@ func TestComputeSourceHash_RedactsSecretHeaders(t *testing.T) {
 		computeSourceHash(build("one"), &config.ContentTree{}),
 		computeSourceHash(build("two"), &config.ContentTree{}))
 }
+
+// Plugin bundles are distributed and never carry headers, so generating one
+// must not require header secrets to be resolvable.
+func TestGeneratePlugin_DoesNotResolveMCPHeaders(t *testing.T) {
+	dir := t.TempDir()
+	copyFixture(t, filepath.Join("..", "..", "tests", "fixtures", "plugin", "basemind"), dir)
+	cfgPath := filepath.Join(dir, ".ai-rulez", "config.toml")
+	raw, err := os.ReadFile(cfgPath)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(cfgPath, append(raw, []byte(`
+[[mcp_servers]]
+name = "remote"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+headers = { Authorization = "Bearer ${PLUGIN_UNSET_HEADER_TOKEN}" }
+`)...), 0o644))
+
+	cfg, err := config.LoadConfig(context.Background(), dir)
+	require.NoError(t, err)
+	gen := NewGenerator(cfg)
+
+	require.NoError(t, gen.GeneratePlugin(""))
+	require.NoError(t, gen.VerifyPlugin(""))
+}
+
+// A value is secret because it came from a placeholder; a second resolve pass
+// sees the expanded value and must not forget that.
+func TestResolveMCPEnv_KeepsSecretKeysAcrossPasses(t *testing.T) {
+	cfg := &config.Config{
+		Name: "x", Version: "4.0", BaseDir: t.TempDir(),
+		MCPEnvOverrides: map[string]string{"TENANT": "acme"},
+		MCPServers: map[string]*config.MCPServer{
+			"remote": {
+				Name: "remote", Transport: config.TransportHTTP, URL: "https://mcp.example.com/mcp",
+				Env:     map[string]string{"TENANT_ID": "${TENANT}"},
+				Headers: map[string]string{"X-Tenant": "${TENANT}"},
+			},
+		},
+	}
+	gen := &Generator{config: cfg}
+
+	require.NoError(t, gen.resolveMCPEnv())
+	require.NoError(t, gen.resolveMCPEnv())
+
+	server := cfg.MCPServers["remote"]
+	assert.Equal(t, []string{"TENANT_ID"}, server.SecretEnvKeys)
+	assert.Equal(t, []string{"X-Tenant"}, server.SecretHeaderKeys)
+}

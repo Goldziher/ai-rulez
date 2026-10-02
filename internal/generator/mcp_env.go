@@ -36,6 +36,17 @@ var sensitiveEnvNameParts = [...]string{
 }
 
 func (g *Generator) resolveMCPEnv() error {
+	return g.resolveMCPPlaceholders(true)
+}
+
+// resolveMCPEnvForPlugin resolves MCP placeholders for a plugin bundle. Bundles
+// never carry headers, so header placeholders are left unresolved rather than
+// requiring secrets the output will not contain.
+func (g *Generator) resolveMCPEnvForPlugin() error {
+	return g.resolveMCPPlaceholders(false)
+}
+
+func (g *Generator) resolveMCPPlaceholders(withHeaders bool) error {
 	if len(g.config.MCPServers) == 0 {
 		return nil
 	}
@@ -50,7 +61,7 @@ func (g *Generator) resolveMCPEnv() error {
 		if !server.IsEnabled() {
 			continue
 		}
-		unresolved = append(unresolved, g.resolveMCPServer(serverName, server, dotenvValues)...)
+		unresolved = append(unresolved, g.resolveMCPServer(serverName, server, dotenvValues, withHeaders)...)
 	}
 
 	if len(unresolved) > 0 {
@@ -66,7 +77,9 @@ func (g *Generator) resolveMCPEnv() error {
 // resolveMCPServer expands ${PROJECT_ROOT} in a server's command and args, then
 // resolves ${VAR} placeholders in its env and headers. It returns the unresolved placeholders
 // it found, formatted for the aggregate error.
-func (g *Generator) resolveMCPServer(serverName string, server *config.MCPServer, dotenvValues map[string]string) []string {
+func (g *Generator) resolveMCPServer(
+	serverName string, server *config.MCPServer, dotenvValues map[string]string, withHeaders bool,
+) []string {
 	// ${PROJECT_ROOT} in command/args resolves to the project root. It is
 	// resolved here, in the single pre-render pass, so every preset/sidecar
 	// reads the expanded value without per-renderer changes.
@@ -79,12 +92,12 @@ func (g *Generator) resolveMCPServer(serverName string, server *config.MCPServer
 	if len(server.Env) > 0 {
 		var secret []string
 		server.Env, secret, unresolved = g.resolvePlaceholderMap(serverName+".env", server.Env, dotenvValues, isSensitiveEnvName)
-		server.SecretEnvKeys = secret
+		server.SecretEnvKeys = mergeSortedKeys(server.SecretEnvKeys, secret)
 	}
-	if len(server.Headers) > 0 {
+	if withHeaders && len(server.Headers) > 0 {
 		var secret, missing []string
 		server.Headers, secret, missing = g.resolvePlaceholderMap(serverName+".headers", server.Headers, dotenvValues, isSensitiveHeaderName)
-		server.SecretHeaderKeys = secret
+		server.SecretHeaderKeys = mergeSortedKeys(server.SecretHeaderKeys, secret)
 		unresolved = append(unresolved, missing...)
 	}
 	return unresolved
@@ -314,6 +327,20 @@ func mcpServerForSourceHash(server *config.MCPServer, root string) *config.MCPSe
 	serverCopy.SecretEnvKeys = nil
 	serverCopy.SecretHeaderKeys = nil
 	return &serverCopy
+}
+
+// mergeSortedKeys unions previously recorded secret keys with newly detected
+// ones. A repeat resolve pass sees already-expanded values, so a key that was
+// secret only because it held a placeholder would otherwise be forgotten.
+func mergeSortedKeys(previous, current []string) []string {
+	keys := make(map[string]bool, len(previous)+len(current))
+	for _, key := range previous {
+		keys[key] = true
+	}
+	for _, key := range current {
+		keys[key] = true
+	}
+	return sortedMapKeys(keys)
 }
 
 func sortedMapKeys(values map[string]bool) []string {

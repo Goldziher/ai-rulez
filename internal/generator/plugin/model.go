@@ -13,6 +13,7 @@ import (
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -135,6 +136,9 @@ func resolveMCP(p *config.PluginAuthoring, cfg *config.Config) []config.PluginMC
 	out := make([]config.PluginMCPLaunch, 0, len(names))
 	for _, name := range names {
 		s := cfg.MCPServers[name]
+		if len(s.Headers) > 0 {
+			logger.Warn("MCP server headers are not included in plugin bundles", "server", name)
+		}
 		out = append(out, config.PluginMCPLaunch{
 			Name:      s.Name,
 			Command:   s.Command,

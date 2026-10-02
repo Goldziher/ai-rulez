@@ -397,9 +397,11 @@ url = "https://mcp.example.com/mcp"
 headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}", X-Team = "platform" }
 ```
 
-`headers` is rejected on a `stdio` server, header names must be valid HTTP tokens, and values must
-not contain line breaks. Each preset writes them where its tool reads them (`headers` in every MCP
-file ai-rulez generates). Headers are not included in distributable plugin bundles.
+`headers` is rejected on a `stdio` server, header names must be valid HTTP tokens (and unique ignoring
+case), and values must not contain line breaks. Each preset writes them where its tool reads them
+(`headers` in every MCP file ai-rulez generates). Headers are not included in distributable plugin
+bundles: `generate --plugin` warns for each affected server and does not require header placeholders
+to resolve.
 
 A `command` or `args` value may use the `${PROJECT_ROOT}` placeholder, which resolves to the
 project root (the directory containing `.ai-rulez/`) during `ai-rulez generate`:
