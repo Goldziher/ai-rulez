@@ -16,6 +16,9 @@ const (
 	presetNameJunie       = "junie"
 )
 
+// extMarkdown is the file extension of markdown rule files in native rules folders.
+const extMarkdown = ".md"
+
 // JSON / YAML object keys used when rendering settings, MCP, and frontmatter
 // payloads. These are deliberately untyped strings (not field names of a Go
 // struct) because the rendered maps are map[string]interface{}.

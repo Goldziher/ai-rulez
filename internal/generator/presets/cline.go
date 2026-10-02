@@ -13,7 +13,7 @@ import (
 const presetNameCline = "cline"
 
 var clineRulesTarget = rulefiles.Target{
-	Preset: presetNameCline, Dir: ".clinerules", Ext: ".md", Dialect: rulefiles.DialectCline, Recursive: true, Banner: true,
+	Preset: presetNameCline, Dir: ".clinerules", Ext: extMarkdown, Dialect: rulefiles.DialectCline, Recursive: true, Banner: true,
 }
 
 func init() {
