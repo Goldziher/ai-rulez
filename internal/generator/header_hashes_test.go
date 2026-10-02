@@ -213,3 +213,23 @@ func TestHeaderHashes_VerifyPluginPassesInEveryMode(t *testing.T) {
 		})
 	}
 }
+
+// With timestamp = true the Generated: stamp is ignored when deciding whether to
+// rewrite, but only in the header: a body line that happens to start with
+// "Generated: " is real content and its edits must reach disk.
+func TestHeaderHashes_TimestampIgnoresOnlyTheHeaderStamp(t *testing.T) {
+	for _, header := range []string{"header:\n  hashes: content\n  timestamp: true\n", "header:\n  hashes: none\n  timestamp: true\n"} {
+		t.Run(strings.ReplaceAll(header, "\n", " "), func(t *testing.T) {
+			dir := hashesProject(t, header)
+			writeHashesSkill(t, dir, "alpha", "Generated: see docs/a.md")
+			generateHashesProject(t, dir)
+
+			writeHashesSkill(t, dir, "alpha", "Generated: see docs/b.md")
+			generateHashesProject(t, dir)
+
+			data, err := os.ReadFile(filepath.Join(dir, ".claude", "skills", "alpha", "SKILL.md"))
+			require.NoError(t, err)
+			assert.Contains(t, string(data), "Generated: see docs/b.md")
+		})
+	}
+}
