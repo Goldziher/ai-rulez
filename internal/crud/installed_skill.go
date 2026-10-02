@@ -2,7 +2,6 @@ package crud
 
 import (
 	"context"
-	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -15,7 +14,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return err
 	}
 
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
@@ -69,7 +68,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 			Errorf("skill name is required")
 	}
 
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {
@@ -103,7 +102,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 
 // ListInstalledSkills returns all configured installed skills
 func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error) {
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	cfg, err := config.LoadConfig(ctx, baseDir)
 	if err != nil {

@@ -267,3 +267,25 @@ func TestReadConfigHandler_AlwaysEmitsEffortByPresetKey(t *testing.T) {
 	require.True(t, ok)
 	assert.Empty(t, m, "should be an empty map when nothing is configured")
 }
+
+// update_config must save into the config dir it loaded from, not create a
+// competing .ai-rulez/ next to a project-level .config/ai-rulez/ (#207).
+func TestUpdateConfigHandler_ConventionConfigDir(t *testing.T) {
+	dir := t.TempDir()
+	cfgDir := filepath.Join(dir, ".config", "ai-rulez")
+	require.NoError(t, os.MkdirAll(cfgDir, 0o755))
+	body := "version: \"4.0\"\nname: test\npresets:\n  - claude\n"
+	require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.yaml"), []byte(body), 0o644))
+
+	res, err := UpdateConfigHandler(context.Background(), newRequestWithArgs(map[string]any{
+		"working_directory": dir,
+		"default_effort":    "high",
+	}))
+	require.NoError(t, err)
+	require.False(t, res.IsError, "update should succeed")
+
+	assert.NoDirExists(t, filepath.Join(dir, ".ai-rulez"))
+	saved, err := os.ReadFile(filepath.Join(cfgDir, "config.yaml"))
+	require.NoError(t, err)
+	assert.Contains(t, string(saved), "effort: high")
+}
