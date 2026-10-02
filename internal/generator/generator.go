@@ -1820,7 +1820,29 @@ func (g *Generator) hasLocalOutputs(outputs []config.OutputFile) bool {
 // requires unconditional gitignore entries (the ".local" outputs plus the
 // .ai-rulez/local/ source subtree).
 func (g *Generator) hasLocalGitignoreTargets() bool {
-	return g.config.HasLocalInputs()
+	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0
+}
+
+// localGitignorePatternsOnDisk lists the machine-local ignore patterns for the
+// overlay file, its lock/temp files and the local/ content tree that exist on
+// disk. It checks the filesystem rather than the loaded config, so a run that
+// skipped local inputs (plugin mode, --no-local) still keeps them ignored.
+func (g *Generator) localGitignorePatternsOnDisk() []string {
+	dir := g.config.ConfigDir
+	if dir == "" {
+		return nil
+	}
+	prefix := g.configDirName() + "/"
+	var patterns []string
+	for _, p := range []string{"config.local.*", ".config.local.*"} {
+		if matches, err := filepath.Glob(filepath.Join(dir, p)); err == nil && len(matches) > 0 {
+			patterns = append(patterns, prefix+p)
+		}
+	}
+	if info, err := os.Stat(filepath.Join(dir, localSourceDirName)); err == nil && info.IsDir() {
+		patterns = append(patterns, prefix+localSourceDirName+"/")
+	}
+	return patterns
 }
 
 // collectGitignorePaths collects unique patterns to add to .gitignore.
@@ -1868,6 +1890,9 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 			paths[rel] = true
 		}
 		paths[g.configDirName()+"/config.local.*"] = true
+		for _, p := range g.localGitignorePatternsOnDisk() {
+			paths[p] = true
+		}
 	}
 
 	// The generated manifest sits inside the config dir and is rewritten on

@@ -22,6 +22,7 @@ const (
 	docKeyPath      = "path"
 	docKeyRemove    = "remove"
 	presetDropMark  = "!"
+	docKeyProfiles  = "profiles"
 )
 
 // namedListKeys are the top-level list keys merged entry-by-entry. The value
@@ -37,8 +38,8 @@ var namedListKeys = map[string]bool{
 
 // mapValuedKeys are top-level tables merged per key.
 var mapValuedKeys = map[string]bool{
-	"profiles": true, "header": true, "defaults": true, string(PresetMCP): true,
-	"plugin": true, "marketplace": true, "rules": true,
+	docKeyProfiles: true, "header": true, "defaults": true, string(PresetMCP): true,
+	"plugin": true, "marketplace": true, rulesDir: true,
 }
 
 // knownConfigDocKeys returns the TOML keys of Config (plus "schema").

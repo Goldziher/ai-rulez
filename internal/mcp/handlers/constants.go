@@ -13,6 +13,14 @@ const (
 	keySource    = "source"
 	keyValid     = "valid"
 	keyConfig    = "config"
+
+	keyDescription = "description"
+	keyBuiltins    = "builtins"
+	keyGitignore   = "gitignore"
+	keyUpdated     = "updated"
+	keyDefaults    = "defaults"
+	keyRules       = "rules"
+	opUpdateConfig = "update_config"
 )
 
 // Preset name constants used in MCP handlers.

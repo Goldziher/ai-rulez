@@ -40,7 +40,7 @@ const propertiesField = "properties"
 
 // ValidateWithSchema validates configuration data against the schema
 func ValidateWithSchema(configData []byte) error {
-	return validateWithSchemaBytes(configData, schemaJSON, "config")
+	return validateWithSchemaBytes(configData, schemaJSON, "config", false)
 }
 
 // ValidateFile reads a configuration file and validates it against the config
@@ -48,10 +48,10 @@ func ValidateWithSchema(configData []byte) error {
 // consume JSON/YAML; a TOML key the struct would silently drop is therefore
 // reported instead of ignored.
 func ValidateFile(path string) error {
-	return validateFileAgainst(path, schemaJSON, "config")
+	return validateFileAgainst(path, schemaJSON, "config", false)
 }
 
-func validateFileAgainst(path string, schemaBytes []byte, label string) error {
+func validateFileAgainst(path string, schemaBytes []byte, label string, redact bool) error {
 	data, err := os.ReadFile(path) //nolint:gosec // path is the user's own config file
 	if err != nil {
 		return oops.With("path", path).Wrapf(err, "read config for schema validation")
@@ -69,13 +69,13 @@ func validateFileAgainst(path string, schemaBytes []byte, label string) error {
 		if err != nil {
 			return oops.With("path", path).Wrapf(err, "convert TOML to JSON for schema validation")
 		}
-		return validateWithSchemaBytes(jsonData, schemaBytes, label)
+		return validateWithSchemaBytes(jsonData, schemaBytes, label, redact)
 	}
 
-	return validateWithSchemaBytes(data, schemaBytes, label)
+	return validateWithSchemaBytes(data, schemaBytes, label, redact)
 }
 
-func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string) error {
+func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string, redact bool) error {
 	var yamlData any
 	if err := yaml.Unmarshal(configData, &yamlData); err != nil {
 		return oops.
@@ -100,6 +100,9 @@ func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version stri
 	result := schema.Validate(jsonData)
 	if !result.IsValid() {
 		validationErrors := extractDetailedErrors(result)
+		if redact {
+			validationErrors = redactSchemaValues(validationErrors)
+		}
 		hint := "Check the YAML/JSON syntax using a validator\nEnsure required fields are present (version: \"3.0\", name)\nVerify the structure matches the schema\nRun 'ai-rulez validate' for detailed validation output"
 		return oops.
 			With("errors", validationErrors).

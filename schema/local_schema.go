@@ -152,5 +152,5 @@ func addPresetDrop(props map[string]any) error {
 // ValidateLocalFile validates a config.local.* overlay file against the local
 // overlay schema.
 func ValidateLocalFile(path string) error {
-	return validateFileAgainst(path, localSchemaJSON, "local config")
+	return validateFileAgainst(path, localSchemaJSON, "local config", true)
 }

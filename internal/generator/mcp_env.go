@@ -27,14 +27,6 @@ const projectRootPlaceholder = "${PROJECT_ROOT}"
 // so a real PROJECT_ROOT (from --env, the process env, or .env) overrides it.
 const projectRootEnvName = "PROJECT_ROOT"
 
-var sensitiveEnvNameParts = [...]string{
-	"TOKEN",
-	"SECRET",
-	"PASSWORD",
-	"KEY",
-	"CREDENTIAL",
-}
-
 func (g *Generator) resolveMCPEnv() error {
 	return g.resolveMCPPlaceholders(true)
 }
@@ -236,29 +228,9 @@ func isEnvNamePart(r rune) bool {
 	return isEnvNameStart(r) || (r >= '0' && r <= '9')
 }
 
-// sensitiveHeaderNames are credential-carrying headers whose names do not
-// contain one of sensitiveEnvNameParts.
-var sensitiveHeaderNames = [...]string{"AUTHORIZATION", "PROXY-AUTHORIZATION", "COOKIE"}
+func isSensitiveHeaderName(name string) bool { return config.IsSensitiveHeaderName(name) }
 
-func isSensitiveHeaderName(name string) bool {
-	upper := strings.ToUpper(name)
-	for _, header := range sensitiveHeaderNames {
-		if upper == header {
-			return true
-		}
-	}
-	return isSensitiveEnvName(name)
-}
-
-func isSensitiveEnvName(name string) bool {
-	upper := strings.ToUpper(name)
-	for _, part := range sensitiveEnvNameParts {
-		if strings.Contains(upper, part) {
-			return true
-		}
-	}
-	return false
-}
+func isSensitiveEnvName(name string) bool { return config.IsSensitiveEnvName(name) }
 
 // expandProjectRoot replaces ${PROJECT_ROOT} with the project root. A server
 // with no root set (or no placeholder) is returned unchanged.

@@ -676,6 +676,39 @@ ai-rulez profile list --json
 
 ---
 
+## Local Command
+
+### `ai-rulez local <subcommand>`
+
+Manage `config.local.{toml,yaml,json}`, the machine-local overlay merged onto the shared config at load time. It sits beside `config.toml`, is gitignored, and is never written into the shared file.
+
+```bash
+ai-rulez local init                     # commented skeleton in the main config's format
+ai-rulez local show [--json]            # keys the overlay sets, with the shared value each replaces
+ai-rulez local set <path> <value>       # value is a TOML literal, falling back to a plain string
+ai-rulez local unset <path>
+ai-rulez local path
+```
+
+Paths are dotted keys. For lists of named entries (`mcp_servers`, `plugins`, `includes`, `installed_skills`, `marketplaces`, `scopes`) the segment after the list is the entry name:
+
+```bash
+ai-rulez local set default dev
+ai-rulez local set presets '["codex", "!cursor"]'
+ai-rulez local set mcp_servers.github.command npx
+ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN ghp_xxx
+```
+
+Every change is validated against the local schema and the merged config (offline: remote includes are read from cache only) and rolled back if it is invalid. A new MCP server must have a `command` or `url`. Edits take an advisory lock (`.config.local.lock`) so two commands cannot interleave.
+
+`local show` is default-deny: it prints values only for keys known to hold no credentials (`name`, `description`, `default`, `presets`, `builtins`, profile names, the enum and bool settings under `defaults`, `rules` and `header`, an entry's own `transport`, `enabled` and `remove`, `mcp.self_server`); every other key is listed by path with `<redacted>`, on both the overlay and the shared side. `--reveal` prints everything.
+
+`local set` stores values under `env`/`headers` and known text fields (`url`, `command`, `source`, `path`, `ref`, `description`, `name`, `transport`, `default`, `*_version`) as strings; `--string` forces a string and `--stdin` reads the value from standard input so a secret stays out of shell history.
+
+The overlay is written owner-only (`0600`) through a temp file and rename, and `local` refuses to replace a symlinked `config.local.*`. On Windows the file mode is not enforced by the OS, so rely on your user profile directory permissions there; the advisory lock is also not taken.
+
+The `--local` flag on `profile add|remove|set-default`, `include add|remove` and `skill install|remove` writes to the overlay instead of the shared config. Removing something the shared config defines writes `remove = true` for it. The MCP tools `update_config`, `add_profile`, `remove_profile`, `set_default_profile`, `add_include`, `remove_include`, `install_skill` and `uninstall_skill` accept `local: true`.
+
 ## Builtins Command
 
 ### `ai-rulez builtins list [flags]`

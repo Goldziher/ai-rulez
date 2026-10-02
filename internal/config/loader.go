@@ -1368,14 +1368,39 @@ func selectConfigWritePath(cfg *Config, configDir string) string {
 
 // writeConfigAtomically writes data to path via a temp file + rename.
 func writeConfigAtomically(targetPath string, data []byte) error {
-	tmpPath := targetPath + ".tmp"
-	if err := os.WriteFile(tmpPath, data, 0o644); err != nil {
+	return writeFileAtomic(targetPath, data, 0o644)
+}
+
+// writeFileAtomic writes data to path with the given permissions: into an
+// exclusively created temp file beside it (so a stale or attacker-placed file can
+// never be reused), then synced and renamed over the target.
+func writeFileAtomic(targetPath string, data []byte, perm os.FileMode) (err error) {
+	f, err := os.CreateTemp(filepath.Dir(targetPath), "."+filepath.Base(targetPath)+"-*.tmp")
+	if err != nil {
+		return oops.With("path", targetPath).Wrapf(err, "create temporary config file")
+	}
+	tmpPath := f.Name()
+	defer func() {
+		if err != nil {
+			_ = os.Remove(tmpPath) //nolint:errcheck // temp file cleanup is best-effort
+		}
+	}()
+	if err = f.Chmod(perm); err != nil {
+		_ = f.Close() //nolint:errcheck // already failing
+		return oops.With("path", tmpPath).Wrapf(err, "set config file permissions")
+	}
+	if _, err = f.Write(data); err != nil {
+		_ = f.Close() //nolint:errcheck // already failing
 		return oops.With("path", tmpPath).Wrapf(err, "write temporary config file")
 	}
-
-	if err := os.Rename(tmpPath, targetPath); err != nil {
-		//nolint:gosec,errcheck // temp file cleanup is best-effort
-		_ = os.Remove(tmpPath)
+	if err = f.Sync(); err != nil {
+		_ = f.Close() //nolint:errcheck // already failing
+		return oops.With("path", tmpPath).Wrapf(err, "sync temporary config file")
+	}
+	if err = f.Close(); err != nil {
+		return oops.With("path", tmpPath).Wrapf(err, "close temporary config file")
+	}
+	if err = os.Rename(tmpPath, targetPath); err != nil {
 		return oops.With("src", tmpPath).With("dst", targetPath).Wrapf(err, "rename config file")
 	}
 	return nil

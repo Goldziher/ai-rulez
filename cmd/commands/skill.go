@@ -17,6 +17,7 @@ var (
 	skillRef    string
 	skillForce  bool
 	skillJSON   bool
+	skillLocal  bool
 )
 
 // SkillCmd is the top-level skill command
@@ -72,6 +73,9 @@ func init() {
 	SkillCmd.AddCommand(skillRemoveCmd)
 	SkillCmd.AddCommand(skillListCmd)
 
+	skillInstallCmd.Flags().BoolVar(&skillLocal, "local", false, localFlagUsage)
+	skillRemoveCmd.Flags().BoolVar(&skillLocal, "local", false, localFlagUsage)
+
 	// Flags for skill install
 	skillInstallCmd.Flags().StringVarP(&skillSource, "source", "s", "", "Git URL or local path (required)")
 	skillInstallCmd.Flags().StringVarP(&skillPath, "path", "p", "", "Path within repo to skill directory (defaults to skills/<name>)")
@@ -95,6 +99,9 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
+	}
+	if skillLocal {
+		op = op.Local()
 	}
 
 	req := &crud.InstallSkillRequest{
@@ -130,6 +137,9 @@ func runSkillRemove(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
+	}
+	if skillLocal {
+		op = op.Local()
 	}
 
 	if err := op.UninstallSkill(ctx, name); err != nil {

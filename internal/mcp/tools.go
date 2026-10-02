@@ -506,6 +506,7 @@ func (s *Server) registerCRUDTools() {
 				StringArray("include", "Content types to include: rules, context, skills, agents, commands", false).
 				Enum("merge_strategy", "Merge strategy", []string{"local-override", "include-override", "error"}, false).
 				String("install_to", "Installation target path (optional)", false).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),
@@ -516,6 +517,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("remove_include", "Remove an include source from the configuration",
 			newSchemaBuilder().
 				String("name", "Include name to remove", true).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			destructiveAnnotations(),
 		),
@@ -538,6 +540,7 @@ func (s *Server) registerCRUDTools() {
 				String("source", "Git URL or local filesystem path", true).
 				String("path", "Path within repo to skill directory (defaults to skills/<name>)", false).
 				String("ref", "Git reference: branch, tag, or commit hash", false).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),
@@ -548,6 +551,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("uninstall_skill", "Remove an installed skill from the configuration",
 			newSchemaBuilder().
 				String("name", "Skill name to remove", true).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			destructiveAnnotations(),
 		),
@@ -583,6 +587,7 @@ func (s *Server) registerCRUDTools() {
 				Object("default_effort_by_preset", "Per-preset reasoning effort override (e.g. {\"codex\": \"high\", \"claude\": \"xhigh\"}). Each value must be one of low, medium, high, xhigh, max, inherit. Pass {} to clear.", false).
 				String("rules_mode", "Default rules output mode: split (one file per rule, default) or inline (rules embedded in the root file). Empty string clears it.", false).
 				Object("rules_mode_by_preset", "Per-preset rules mode override (e.g. {\"claude\": \"split\", \"cursor\": \"inline\"}). Each value must be split or inline. Pass {} to clear.", false).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),
 		),
@@ -595,6 +600,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Profile name (unique identifier)", true).
 				StringArray("domains", "List of domain names to include in the profile. A builtin pack is referenced as 'builtin:<name>' and is scoped to this profile.", true).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),
@@ -605,6 +611,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("remove_profile", "Remove a profile from the configuration",
 			newSchemaBuilder().
 				String("name", "Profile name to remove", true).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			destructiveAnnotations(),
 		),
@@ -615,6 +622,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("set_default_profile", "Set a profile as the default",
 			newSchemaBuilder().
 				String("name", "Profile name to set as default", true).
+				Boolean("local", "Apply to the machine-local config.local.* overlay instead of the shared config", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),
 		),
