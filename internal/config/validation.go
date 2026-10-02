@@ -839,7 +839,15 @@ func (c *Config) validateMCPServerHeaders() error {
 				Hint(`Set transport = "http" or "sse", or remove headers; stdio servers take env instead`).
 				Errorf("mcp_servers.%s.headers require transport http or sse", name)
 		}
+		seen := make(map[string]string, len(server.Headers))
 		for key, value := range server.Headers {
+			if other, dup := seen[strings.ToLower(key)]; dup {
+				return oops.
+					With("server", name).
+					Hint("HTTP header names are case-insensitive; keep one of them").
+					Errorf("mcp_servers.%s.headers: duplicate header %q and %q", name, other, key)
+			}
+			seen[strings.ToLower(key)] = key
 			if !isHTTPToken(key) {
 				return oops.
 					With("server", name).
