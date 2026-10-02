@@ -163,6 +163,9 @@ func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Co
 			if server.URL != "" {
 				entry["url"] = server.URL
 			}
+			if len(server.Headers) > 0 {
+				entry[keyHeaders] = server.Headers
+			}
 		default:
 			entry["type"] = "local"
 			if server.Command != "" {

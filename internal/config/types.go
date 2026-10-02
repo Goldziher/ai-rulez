@@ -512,7 +512,10 @@ type MCPServer struct {
 	Env         map[string]string `yaml:"env,omitempty" json:"env,omitempty" toml:"env,omitempty"`
 	Transport   string            `yaml:"transport,omitempty" json:"transport,omitempty" toml:"transport,omitempty"`
 	URL         string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
-	Enabled     *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// Headers are HTTP headers sent to a remote (http/sse) server, typically for
+	// auth. Values may contain ${VAR} placeholders, resolved like Env.
+	Headers map[string]string `yaml:"headers,omitempty" json:"headers,omitempty" toml:"headers,omitempty"`
+	Enabled *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
 	// Profiles restricts this server to the named profiles. Empty means every
 	// profile, preserving the pre-existing behavior.
 	Profiles []string `yaml:"profiles,omitempty" json:"profiles,omitempty" toml:"profiles,omitempty"`
@@ -520,6 +523,8 @@ type MCPServer struct {
 	// SecretEnvKeys records env keys whose generated values should be treated as
 	// sensitive. It is populated during generation and never serialized.
 	SecretEnvKeys []string `yaml:"-" json:"-" toml:"-"`
+	// SecretHeaderKeys is the Headers counterpart of SecretEnvKeys.
+	SecretHeaderKeys []string `yaml:"-" json:"-" toml:"-"`
 }
 
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)

@@ -148,6 +148,34 @@ self_server_version = "4.19.0"
 		require.NoError(t, schema.ValidateFile(path))
 	})
 
+	t.Run("mcp server headers validate", func(t *testing.T) {
+		path := writeTOML(t, `version = "4.0"
+name = "x"
+presets = ["claude"]
+
+[[mcp_servers]]
+name = "remote"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+headers = { Authorization = "Bearer ${API_TOKEN}", X-Team = "core" }
+`)
+		require.NoError(t, schema.ValidateFile(path))
+	})
+
+	t.Run("invalid mcp header name is rejected", func(t *testing.T) {
+		path := writeTOML(t, `version = "4.0"
+name = "x"
+presets = ["claude"]
+
+[[mcp_servers]]
+name = "remote"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+headers = { "Bad Header" = "v" }
+`)
+		assert.Error(t, schema.ValidateFile(path))
+	})
+
 	t.Run("unknown mcp key is rejected", func(t *testing.T) {
 		path := writeTOML(t, `version = "4.0"
 name = "x"

@@ -227,6 +227,9 @@ func applyMCPTransport(entry map[string]any, server *config.MCPServer) {
 	switch t := server.GetTransport(); t {
 	case config.TransportHTTP, config.TransportSSE:
 		entry["type"] = t
+		if len(server.Headers) > 0 {
+			entry["headers"] = server.Headers
+		}
 	default:
 		entry["command"] = server.Command
 		if len(server.Args) > 0 {
