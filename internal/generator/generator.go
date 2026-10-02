@@ -275,7 +275,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]
 
 	for _, member := range mkt.Members {
 		memberDir := filepath.Join(g.config.BaseDir, member)
-		memberCfg, err := config.LoadConfig(context.Background(), memberDir)
+		memberCfg, err := config.LoadConfig(context.Background(), memberDir, config.WithoutLocal())
 		if err != nil {
 			return nil, oops.With("member", member).Wrapf(err, "load monorepo member config")
 		}
@@ -1820,7 +1820,7 @@ func (g *Generator) hasLocalOutputs(outputs []config.OutputFile) bool {
 // requires unconditional gitignore entries (the ".local" outputs plus the
 // .ai-rulez/local/ source subtree).
 func (g *Generator) hasLocalGitignoreTargets() bool {
-	return g.config.LocalContent != nil && !g.config.LocalContent.IsEmpty()
+	return g.config.HasLocalInputs()
 }
 
 // collectGitignorePaths collects unique patterns to add to .gitignore.
@@ -1867,6 +1867,7 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
 			paths[rel] = true
 		}
+		paths[g.configDirName()+"/config.local.*"] = true
 	}
 
 	// The generated manifest sits inside the config dir and is rewritten on

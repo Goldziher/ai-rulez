@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/Goldziher/ai-rulez/internal/walkutil"
+	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
 
@@ -30,7 +31,9 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		return ToolError(fmt.Errorf("read_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
-	cfg, err := config.LoadConfig(ctx, dir)
+	// The editable view is the shared config; the machine-local overlay is
+	// reported separately and by key path only (it may hold secrets).
+	cfg, err := config.LoadConfig(ctx, dir, config.WithoutLocal())
 	if err != nil {
 		return ToolError(err)
 	}
@@ -97,7 +100,27 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	// Same stable-contract rule for rules: always emit both keys.
 	result["rules_mode"], result["rules_mode_by_preset"] = configRules(cfg)
 
+	if info := localOverlayInfo(cfg); info != nil {
+		result["local_overlay"] = info
+	}
+
 	return ToolSuccess(result)
+}
+
+// localOverlayInfo describes the machine-local overlay beside cfg: its path and
+// the key paths it sets, never its values (it may hold secrets). Nil when there
+// is no overlay.
+const keyError = "error"
+
+func localOverlayInfo(cfg *config.Config) map[string]interface{} {
+	overlay, err := config.ReadLocalOverlay(cfg.ConfigDir, cfg.ConfigFile)
+	if err != nil {
+		return map[string]interface{}{keyError: err.Error()}
+	}
+	if overlay == nil {
+		return nil
+	}
+	return map[string]interface{}{"path": overlay.Path, "keys": overlay.KeyPaths()}
 }
 
 // configDefaultEffort returns the resolved defaults.effort value, or "" when unset.
@@ -330,7 +353,7 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return ToolError(fmt.Errorf("update_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
-	cfg, err := config.LoadConfig(ctx, dir)
+	cfg, err := config.LoadConfig(ctx, dir, config.WithoutLocal())
 	if err != nil {
 		return ToolError(err)
 	}
@@ -610,16 +633,24 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 	if err != nil {
 		result := map[string]interface{}{
 			keyValid: false,
-			"error":  err.Error(),
+			keyError: err.Error(),
 		}
 		return ToolSuccess(result)
 	}
 	if err := cfg.Validate(); err != nil {
 		result := map[string]interface{}{
 			keyValid: false,
-			"error":  err.Error(),
+			keyError: err.Error(),
 		}
 		return ToolSuccess(result)
+	}
+	if cfg.LocalOverlay != nil {
+		if err := schema.ValidateLocalFile(cfg.LocalOverlay.Path); err != nil {
+			return ToolSuccess(map[string]interface{}{
+				keyValid: false,
+				keyError: fmt.Sprintf("local overlay %s: %s", cfg.LocalOverlay.Path, err.Error()),
+			})
+		}
 	}
 	result := map[string]interface{}{
 		keyValid:   true,

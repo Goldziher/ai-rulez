@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
@@ -24,7 +25,7 @@ var VerifyCmd = &cobra.Command{
 			runRecursivePluginVerify()
 			return
 		}
-		cfg, err := loadConfigForCommand(context.Background(), args)
+		cfg, err := loadConfigForCommand(context.Background(), args, config.WithoutLocal())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)

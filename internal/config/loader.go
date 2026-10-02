@@ -151,16 +151,17 @@ func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
 // LoadConfig loads a configuration from the specified base directory.
 // The baseDir should contain an .ai-rulez/ subdirectory (or, as a fallback,
 // .config/ai-rulez/) with config.toml, config.yaml, or config.json.
-func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
+func LoadConfig(ctx context.Context, baseDir string, opts ...LoadOption) (*Config, error) {
 	dirName := ResolveConfigDirName(baseDir)
 	if dirName == "" {
 		dirName = aiRulezDirName
 	}
-	return LoadConfigFromDir(ctx, baseDir, dirName)
+	return LoadConfigFromDir(ctx, baseDir, dirName, opts...)
 }
 
 // LoadConfigFromDir loads configuration from configDirName below baseDir.
-func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string) (*Config, error) {
+func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string, opts ...LoadOption) (*Config, error) {
+	lo := applyLoadOptions(opts)
 	absDir, err := filepath.Abs(baseDir)
 	if err != nil {
 		return nil, oops.
@@ -192,18 +193,19 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string) (*Con
 			Errorf("%s exists but is not a directory", configDirName)
 	}
 
-	config, err := loadConfigFile(configDir)
+	config, err := loadConfigFile(configDir, lo)
 	if err != nil {
 		return nil, err
 	}
 
-	return finishLoadConfig(ctx, config, absDir, configDir)
+	return finishLoadConfig(ctx, config, absDir, configDir, lo)
 }
 
 // LoadConfigFromFile loads a configuration from an exact config file path or
 // from a config directory path. For a file path, the project base directory is
 // the parent of the config directory (skipping a generic .config/ wrapper).
-func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
+func LoadConfigFromFile(ctx context.Context, path string, opts ...LoadOption) (*Config, error) {
+	lo := applyLoadOptions(opts)
 	absPath, err := filepath.Abs(path)
 	if err != nil {
 		return nil, oops.
@@ -221,16 +223,23 @@ func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
 
 	if info.IsDir() {
 		if hasConfigFile(absPath) {
-			cfg, loadErr := loadConfigFile(absPath)
+			cfg, loadErr := loadConfigFile(absPath, lo)
 			if loadErr != nil {
 				return nil, loadErr
 			}
-			return finishLoadConfig(ctx, cfg, projectBaseDir(absPath), absPath)
+			return finishLoadConfig(ctx, cfg, projectBaseDir(absPath), absPath, lo)
 		}
-		return LoadConfig(ctx, absPath)
+		return LoadConfig(ctx, absPath, opts...)
 	}
 
-	cfg, err := loadConfigFilePath(absPath)
+	if isLocalConfigFilename(filepath.Base(absPath)) {
+		return nil, oops.
+			With("path", absPath).
+			Hint("Pass the main config; the overlay is applied automatically").
+			Errorf("%s is a local overlay, not a main config", filepath.Base(absPath))
+	}
+
+	cfg, err := loadConfigFilePath(absPath, lo)
 	if err != nil {
 		return nil, err
 	}
@@ -241,7 +250,7 @@ func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
 			Hint("Place config files inside a configuration directory such as .ai-rulez/config.toml, or pass a config directory path. This keeps generated outputs rooted in the project instead of the parent directory.").
 			Errorf("directory layout required for root-level config file")
 	}
-	return finishLoadConfig(ctx, cfg, projectBaseDir(configDir), configDir)
+	return finishLoadConfig(ctx, cfg, projectBaseDir(configDir), configDir, lo)
 }
 
 func looksLikeProjectRoot(dir string) bool {
@@ -262,7 +271,7 @@ func hasConfigFile(dir string) bool {
 	return false
 }
 
-func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string) (*Config, error) {
+func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string, lo loadOptions) (*Config, error) {
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
 	config.ConfigDirName = relConfigDirName(baseDir, configDir)
@@ -290,11 +299,13 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	// Scan machine-local override content into a SEPARATE tree. This never
 	// enters config.Content, so it cannot leak into committed output; it is
 	// emitted only to the per-preset ".local" root variants.
-	localTree, err := ScanLocalContentTree(configDir)
-	if err != nil {
-		return nil, err
+	if !lo.withoutLocal {
+		localTree, err := ScanLocalContentTree(configDir)
+		if err != nil {
+			return nil, err
+		}
+		config.LocalContent = localTree
 	}
-	config.LocalContent = localTree
 
 	// Load builtins (lowest priority — loaded first so includes and local override them).
 	// The root `builtins` field is global; `builtin:<name>` references in profiles
@@ -398,7 +409,7 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 }
 
 // loadConfigFile loads config.toml, config.yaml, or config.json from a config directory.
-func loadConfigFile(configDir string) (*Config, error) {
+func loadConfigFile(configDir string, lo loadOptions) (*Config, error) {
 	// Try TOML first (V4 preferred format)
 	tomlPath := filepath.Join(configDir, configTOMLFilename)
 	if _, err := os.Stat(tomlPath); err == nil {
@@ -407,7 +418,7 @@ func loadConfigFile(configDir string) (*Config, error) {
 			return nil, err
 		}
 		cfg.ConfigFile = configTOMLFilename
-		return cfg, nil
+		return withLocalOverlay(cfg, tomlPath, configDir, lo)
 	}
 
 	// Try YAML (deprecated in V4)
@@ -419,7 +430,7 @@ func loadConfigFile(configDir string) (*Config, error) {
 			return nil, err
 		}
 		cfg.ConfigFile = configYAMLFilename
-		return cfg, nil
+		return withLocalOverlay(cfg, yamlPath, configDir, lo)
 	}
 
 	// Try JSON
@@ -430,7 +441,7 @@ func loadConfigFile(configDir string) (*Config, error) {
 			return nil, err
 		}
 		cfg.ConfigFile = configJSONFilename
-		return cfg, nil
+		return withLocalOverlay(cfg, jsonPath, configDir, lo)
 	}
 
 	return nil, oops.
@@ -442,7 +453,15 @@ func loadConfigFile(configDir string) (*Config, error) {
 		Errorf("no config file found (tried %s, %s, and %s)", configTOMLFilename, configYAMLFilename, configJSONFilename)
 }
 
-func loadConfigFilePath(path string) (*Config, error) {
+func loadConfigFilePath(path string, lo loadOptions) (*Config, error) {
+	cfg, err := loadConfigFilePathMain(path)
+	if err != nil {
+		return nil, err
+	}
+	return withLocalOverlay(cfg, path, filepath.Dir(path), lo)
+}
+
+func loadConfigFilePathMain(path string) (*Config, error) {
 	switch filepath.Base(path) {
 	case configTOMLFilename:
 		cfg, err := loadConfigTOML(path)
@@ -485,7 +504,11 @@ func loadConfigYAML(path string) (*Config, error) {
 			Hint(fmt.Sprintf("Check if the file exists: %s\nVerify you have read permissions", path)).
 			Wrapf(err, "read config file")
 	}
+	return decodeConfigYAML(data, path)
+}
 
+// decodeConfigYAML decodes YAML bytes; path is used for error context only.
+func decodeConfigYAML(data []byte, path string) (*Config, error) {
 	var config Config
 	if err := yaml.Unmarshal(data, &config); err != nil {
 		return nil, oops.
@@ -506,7 +529,11 @@ func loadConfigJSON(path string) (*Config, error) {
 			Hint(fmt.Sprintf("Check if the file exists: %s\nVerify you have read permissions", path)).
 			Wrapf(err, "read config file")
 	}
+	return decodeConfigJSON(data, path)
+}
 
+// decodeConfigJSON decodes JSON bytes; path is used for error context only.
+func decodeConfigJSON(data []byte, path string) (*Config, error) {
 	var config Config
 	if err := json.Unmarshal(data, &config); err != nil {
 		return nil, oops.
@@ -527,7 +554,11 @@ func loadConfigTOML(path string) (*Config, error) {
 			Hint(fmt.Sprintf("Check if the file exists: %s\nVerify you have read permissions", path)).
 			Wrapf(err, "read config file")
 	}
+	return decodeConfigTOML(data, path)
+}
 
+// decodeConfigTOML decodes TOML bytes; path is used for error context only.
+func decodeConfigTOML(data []byte, path string) (*Config, error) {
 	// TOML presets are plain strings; we unmarshal into an intermediate
 	// struct then convert to []Preset. This avoids custom unmarshaler
 	// issues with the TOML library.
@@ -1251,17 +1282,17 @@ func loadLegacyMCPFile(configDir string) map[string]*MCPServer {
 		var cfg legacyMCPConfig
 		ext := filepath.Ext(filename)
 		switch ext {
-		case ".toml":
+		case extTOML:
 			if err := toml.Unmarshal(data, &cfg); err != nil {
 				logger.Warn("Failed to parse legacy MCP TOML", "path", path, "error", err)
 				return nil
 			}
-		case ".yaml", ".yml":
+		case extYAML, extYML:
 			if err := yaml.Unmarshal(data, &cfg); err != nil {
 				logger.Warn("Failed to parse legacy MCP YAML", "path", path, "error", err)
 				return nil
 			}
-		case ".json":
+		case extJSON:
 			if err := json.Unmarshal(data, &cfg); err != nil {
 				logger.Warn("Failed to parse legacy MCP JSON", "path", path, "error", err)
 				return nil
@@ -1285,6 +1316,10 @@ func SaveConfig(cfg *Config, configDir string) error {
 			With("config_dir", configDir).
 			Hint("Provide a valid Config struct").
 			Errorf("config is nil")
+	}
+
+	if cfg.LocalOverlay != nil {
+		return errMergedConfigWrite()
 	}
 
 	targetPath := selectConfigWritePath(cfg, configDir)

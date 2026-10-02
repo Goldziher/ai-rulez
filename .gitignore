@@ -13,6 +13,7 @@ Thumbs.db
 
 # Local configuration overrides
 *.local.yaml
+.ai-rulez/config.local.*
 .env
 bin/
 

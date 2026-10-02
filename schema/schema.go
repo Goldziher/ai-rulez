@@ -48,6 +48,10 @@ func ValidateWithSchema(configData []byte) error {
 // consume JSON/YAML; a TOML key the struct would silently drop is therefore
 // reported instead of ignored.
 func ValidateFile(path string) error {
+	return validateFileAgainst(path, schemaJSON, "config")
+}
+
+func validateFileAgainst(path string, schemaBytes []byte, label string) error {
 	data, err := os.ReadFile(path) //nolint:gosec // path is the user's own config file
 	if err != nil {
 		return oops.With("path", path).Wrapf(err, "read config for schema validation")
@@ -65,10 +69,10 @@ func ValidateFile(path string) error {
 		if err != nil {
 			return oops.With("path", path).Wrapf(err, "convert TOML to JSON for schema validation")
 		}
-		return validateWithSchemaBytes(jsonData, schemaJSON, "config")
+		return validateWithSchemaBytes(jsonData, schemaBytes, label)
 	}
 
-	return validateWithSchemaBytes(data, schemaJSON, "config")
+	return validateWithSchemaBytes(data, schemaBytes, label)
 }
 
 func validateWithSchemaBytes(configData []byte, schemaBytes []byte, version string) error {
@@ -200,7 +204,7 @@ func formatNestedError(field string, errMsg string, path string) string {
 	cleanPath = strings.Trim(cleanPath, ".")
 
 	switch field {
-	case "required":
+	case schemaRequiredKey:
 		if strings.Contains(errMsg, "Required property") {
 			start := strings.Index(errMsg, "'")
 			end := strings.LastIndex(errMsg, "'")
@@ -212,7 +216,7 @@ func formatNestedError(field string, errMsg string, path string) string {
 				return fmt.Sprintf("- %s: required field is missing", property)
 			}
 		}
-	case "type":
+	case schemaTypeKey:
 		if strings.Contains(errMsg, "null but should be") {
 			expectedType := strings.TrimPrefix(errMsg, "Value is null but should be ")
 			if cleanPath != "" {

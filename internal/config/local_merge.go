@@ -161,12 +161,12 @@ func mergeTopLevelKey(merged map[string]any, lv any, key string) ([]string, erro
 }
 
 func mergeVersion(merged map[string]any, sv any, hasShared bool, lv any) error {
-	ls, ok := lv.(string)
+	ls, ok := asString(lv)
 	if !ok {
 		return oops.Hint("version must be a string").Errorf("local config key version has type %T, expected string", lv)
 	}
 	if hasShared {
-		ss, ok := sv.(string)
+		ss, ok := asString(sv)
 		if !ok {
 			return oops.Hint("version must be a string").Errorf("shared config key version has type %T, expected string", sv)
 		}
@@ -248,15 +248,26 @@ func entryName(m map[string]any, desc string) (string, error) {
 	if !ok || v == nil {
 		return "", nil
 	}
-	s, ok := v.(string)
+	s, ok := asString(v)
 	if !ok {
 		return "", oops.Hint("name must be a string").Errorf("%s has a name of type %T, expected string", desc, v)
 	}
 	return s, nil
 }
 
+// asString accepts a string or a YAML scalar kept as source text.
+func asString(v any) (string, bool) {
+	switch t := v.(type) {
+	case string:
+		return t, true
+	case rawScalar:
+		return string(t), true
+	}
+	return "", false
+}
+
 func entryPath(m map[string]any) string {
-	s, ok := m[docKeyPath].(string)
+	s, ok := asString(m[docKeyPath])
 	if !ok {
 		return ""
 	}

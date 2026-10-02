@@ -16,7 +16,7 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 
 	baseDir := op.baseDir
 
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -61,6 +61,9 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 }
 
 // UninstallSkill removes an installed skill from the config
+// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
+// machine-local overlay entries are neither listed nor removed until the
+// op.Local() variant lands.
 func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 	if name == "" {
 		return oops.
@@ -70,7 +73,7 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 
 	baseDir := op.baseDir
 
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
@@ -101,10 +104,13 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 }
 
 // ListInstalledSkills returns all configured installed skills
+// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
+// machine-local overlay entries are neither listed nor removed until the
+// op.Local() variant lands.
 func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error) {
 	baseDir := op.baseDir
 
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.With("base_dir", baseDir).Wrapf(err, "load config")
 	}
