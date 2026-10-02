@@ -41,15 +41,12 @@ const antigravityRuleMaxChars = 24576
 // antigravityRouting decides which rules become files. GEMINI.md is written by
 // both the antigravity and gemini presets and the last writer wins, so when
 // both are enabled the root file must stay self-contained: everything inline,
-// unless the user set rules.mode_by_preset.antigravity explicitly. Scoped
-// generation keeps everything inline as well: rule files are written to the
-// project root's .agents/rules, which a scope's GEMINI.md cannot rely on, so
-// scoped rules stay in the scope's GEMINI.md until scoped rule files exist.
+// unless the user set rules.mode_by_preset.antigravity explicitly.
 //
 // demoted is the routing that would have applied without the gemini preset
 // (RoutingNone when nothing was demoted).
 func antigravityRouting(cfg *config.Config, warn func(msg string, args ...any)) (routing, demoted rulefiles.Routing) {
-	if cfg == nil || cfg.ScopePath != "" {
+	if cfg == nil {
 		return rulefiles.RoutingNone, rulefiles.RoutingNone
 	}
 	want := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
@@ -149,7 +146,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 	routing, demoted := antigravityRouting(cfg, logger.Warn)
 	rules, contexts := allInlineRules(content), allInlineContext(content)
 	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, contexts,
-		&antigravityRulesTarget, routing, rulefiles.ScopeInfo{}, nil)
+		&antigravityRulesTarget, routing, rulefiles.ScopeOf(cfg), rulefiles.RegistryFor(cfg, presetNameAntigravity))
 	if err != nil {
 		return nil, oops.With("preset", presetNameAntigravity).Wrapf(err, "plan antigravity rule files")
 	}
@@ -164,7 +161,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 			logger.Debug(msg)
 		}
 	}
-	if len(files) > 0 {
+	if len(files) > 0 && !rulefiles.InScope(cfg) {
 		outputs = append(outputs, config.OutputFile{
 			Path:  filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir)),
 			IsDir: true,
@@ -177,8 +174,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 			return nil, oops.With("preset", presetNameAntigravity, "rule", it.File.Name).
 				Wrapf(err, "render antigravity rule file")
 		}
-		path := filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir),
-			rulefiles.FileName(antigravityRulesTarget, *it))
+		path := rulefiles.RulesDirPath(cfg, baseDir, antigravityRulesTarget, rulefiles.FileName(antigravityRulesTarget, *it))
 		rulefiles.ReportNotes(path, notes)
 		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}

@@ -774,8 +774,11 @@ func sanitizeName(name string) string {
 func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir string, cfg *config.Config,
 	routing rulefiles.Routing, reg *rulefiles.Registry,
 ) ([]config.OutputFile, error) {
+	if reg == nil {
+		reg = rulefiles.RegistryFor(cfg, t.Preset)
+	}
 	files, _, _, err := rulefiles.Plan(allInlineRules(content), allInlineContext(content), &t, routing,
-		rulefiles.ScopeInfo{}, reg)
+		rulefiles.ScopeOf(cfg), reg)
 	if err != nil {
 		return nil, oops.With("preset", t.Preset).Wrapf(err, "plan %s rule files", t.Preset)
 	}
@@ -787,7 +790,7 @@ func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir
 		if err != nil {
 			return nil, oops.With("preset", t.Preset, "rule", it.File.Name).Wrapf(err, "render %s rule file", t.Preset)
 		}
-		outPath := filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(rulefiles.FileName(t, *it)))
+		outPath := rulefiles.RulesDirPath(cfg, baseDir, t, rulefiles.FileName(t, *it))
 		rulefiles.ReportNotes(outPath, notes)
 		outputs = append(outputs, config.OutputFile{Path: outPath, Content: text})
 	}

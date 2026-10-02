@@ -3,6 +3,8 @@ package presets
 import (
 	"encoding/json"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -490,27 +492,26 @@ func TestAntigravityGemini_SharedRootDemotion(t *testing.T) {
 	}
 }
 
-func TestAntigravity_ScopedStaysInline(t *testing.T) {
+func TestAntigravity_ScopedRulesGoToRootFolder(t *testing.T) {
 	// Arrange
 	content := &config.ContentTree{Rules: []config.ContentFile{
 		{Name: "plain", Content: "Plain body."},
 		{Name: "scoped", Content: "Scoped body.", Metadata: &config.Metadata{Paths: []string{"src/**"}}},
 	}}
 	cfg := antigravityRuleCfg("split", true)
-	cfg.ScopePath = "services/api"
+	cfg.Run = &config.RunState{Scope: &config.ScopeRun{Path: "services/api", Slug: "services-api", RootDir: "/test"}}
 
 	// Act
 	m := antigravityOutputMap(t, content, cfg)
 
 	// Assert
-	if files := antigravityRuleFiles(m); len(files) != 0 {
-		t.Errorf("scoped generation wrote rule files %v", files)
+	files := antigravityRuleFiles(m)
+	sort.Strings(files)
+	if want := []string{"services-api--plain.md", "services-api--scoped.md"}; !reflect.DeepEqual(files, want) {
+		t.Errorf("rule files = %v, want %v", files, want)
 	}
-	gemini := m["/test/GEMINI.md"]
-	for _, want := range []string{"Plain body.", "Scoped body."} {
-		if !strings.Contains(gemini, want) {
-			t.Errorf("scope GEMINI.md misses %q", want)
-		}
+	if got := m["/test/.agents/rules/services-api--scoped.md"]; !strings.Contains(got, "services/api/src/**") {
+		t.Errorf("scoped rule misses prefixed glob:\n%s", got)
 	}
 }
 
