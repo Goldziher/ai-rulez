@@ -2,7 +2,6 @@ package crud
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
@@ -24,8 +23,7 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 			Errorf("profile must have at least one domain")
 	}
 
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)
@@ -111,8 +109,7 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 			Errorf("profile name is required")
 	}
 
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)
@@ -161,8 +158,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 			Errorf("profile name is required")
 	}
 
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)
@@ -197,8 +193,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 
 // ListProfiles returns all configured profiles
 func (op *OperatorImpl) ListProfiles(ctx context.Context) ([]ProfileInfo, error) {
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)

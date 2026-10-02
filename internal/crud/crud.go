@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/samber/oops"
 )
 
@@ -55,13 +56,20 @@ type Operator interface {
 
 // OperatorImpl implements the Operator interface
 type OperatorImpl struct {
-	aiRulezDir string
+	baseDir    string // project directory that owns the config directory
+	aiRulezDir string // config directory: .ai-rulez/ or .config/ai-rulez/
 	filesMgr   *FileManager
 }
 
-// NewOperator creates a new Operator for the given base directory
+// NewOperator creates a new Operator for the given base directory. The config
+// directory is resolved like config.LoadConfig: .ai-rulez/ first, then the
+// project-level .config/ai-rulez/ convention.
 func NewOperator(baseDir string) (*OperatorImpl, error) {
-	aiRulezDir := filepath.Join(baseDir, ".ai-rulez")
+	dirName := config.ResolveConfigDirName(baseDir)
+	if dirName == "" {
+		dirName = ".ai-rulez"
+	}
+	aiRulezDir := filepath.Join(baseDir, filepath.FromSlash(dirName))
 
 	// Verify .ai-rulez directory exists
 	if _, err := os.Stat(aiRulezDir); err != nil {
@@ -72,6 +80,7 @@ func NewOperator(baseDir string) (*OperatorImpl, error) {
 	}
 
 	return &OperatorImpl{
+		baseDir:    baseDir,
 		aiRulezDir: aiRulezDir,
 		filesMgr:   NewFileManager(aiRulezDir),
 	}, nil
