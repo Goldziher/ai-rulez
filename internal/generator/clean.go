@@ -6,6 +6,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
@@ -49,25 +50,10 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	}
 
 	plan := &CleanPlan{Profile: activeProfile}
+	g.previousFiles = nil
+	defer func() { g.previousFiles = nil }()
 
-	var dirs []string
-	for _, output := range outputs {
-		abs := g.absOutputPath(output.Path)
-		if !isUnderBaseDir(g.config.BaseDir, abs) {
-			logger.Warn("Skipping generated path outside project", "path", output.Path)
-			continue
-		}
-		// A merged document that also holds hand-authored content is not ours to
-		// delete; removing it would take the user's own settings with it.
-		if output.PartiallyOwned {
-			continue
-		}
-		if output.IsDir {
-			dirs = append(dirs, abs)
-		} else {
-			plan.Files = append(plan.Files, abs)
-		}
-	}
+	dirs := g.collectCleanTargets(outputs, plan)
 
 	// Include files recorded in the manifest from earlier runs that the current
 	// profile no longer emits (e.g. a preset was removed): the exact set generate
@@ -109,6 +95,34 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	}
 
 	return plan, nil
+}
+
+// collectCleanTargets adds the generated files of outputs to plan.Files and
+// returns the generated directories.
+func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *CleanPlan) []string {
+	var dirs []string
+	for _, output := range outputs {
+		abs := g.absOutputPath(output.Path)
+		if !isUnderBaseDir(g.config.BaseDir, abs) {
+			logger.Warn("Skipping generated path outside project", "path", output.Path)
+			continue
+		}
+		// A merged document that also holds hand-authored content is not ours to
+		// delete; removing it would take the user's own settings with it.
+		if output.PartiallyOwned {
+			continue
+		}
+		if output.IsDir {
+			dirs = append(dirs, abs)
+			continue
+		}
+		// A hand-written file in a shared rules folder is not ours to delete.
+		if output.RawContent == nil && g.isUnmanagedRuleFile(abs, g.finalContent(output)) {
+			continue
+		}
+		plan.Files = append(plan.Files, abs)
+	}
+	return dirs
 }
 
 // gitignoreHasManagedBlock reports whether <BaseDir>/.gitignore contains the
