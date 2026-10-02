@@ -14,6 +14,7 @@ nav = [
   { "Quick Start" = "quick-start.md" },
   { "Configuration" = "configuration.md" },
   { "Guides" = [
+    { "Rules" = "rules.md" },
     { "Domains & Profiles" = "domains.md" },
     { "Custom Presets" = "profiles.md" },
     { "Includes" = "includes.md" },

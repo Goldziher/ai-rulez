@@ -780,7 +780,7 @@ claude = "split"
 - **`rules.mode`**: `split` writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 
-The default is currently `inline`; a later release will switch it to `split`.
+The default is `inline`. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
 
 ### `header`
 
@@ -1149,13 +1149,13 @@ targets:
 
 **`globs` / `paths`** (optional, array of strings — rules)
 
-- The files a rule applies to. The two keys are synonyms; either sets the same path scope.
-- A **path-scoped rule is not inlined into the root instructions file**. Instead each preset emits it
-  through the target tool's on-demand mechanism:
-  - `claude` → `.claude/rules/<id>.md` with a `paths:` frontmatter; Claude loads it when it reads a
-    matching file.
-  - `cursor` → `.cursor/rules/<id>.mdc` with `globs:` and `alwaysApply: false`.
-  - Presets with no glob mechanism (for example `codex`) keep the rule inline in `AGENTS.md`, under an `_Applies to: `glob`, ..._` line so the scope is not lost (auto rules get `_When relevant: <description>_`; `manual` rules render as always-on and log a warning).
+- The files a rule applies to. The two keys are synonyms; either sets the same path scope. A
+  comma-separated string is split into several globs (commas inside `{}` are kept).
+- A **path-scoped rule is not inlined into the root instructions file**. Each preset with a rules
+  folder (`.claude/rules`, `.cursor/rules`, `.github/instructions`, ...) writes it there with native
+  frontmatter; presets without one keep it inline under an `_Applies to: ..._` line.
+- `activation` (`always`, `glob`, `auto`, `manual`) and `description` select other modes. See
+  [Rules and native rules folders](rules.md).
 
 ```yaml
 ---

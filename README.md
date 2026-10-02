@@ -159,6 +159,8 @@ Include sources can use a bare/flattened layout — expose `rules/`, `context/`,
 directly (at the repo root or a sub-path via `path = "modules/core"`) with no `.ai-rulez/` wrapper.
 Recommended for shared, skill-first modules.
 
+**Native rules folders** — Path-scoped rules are written to each tool's own rules folder (`.claude/rules`, `.cursor/rules`, `.github/instructions`, `.windsurf/rules`, ...) with native `paths`/`globs` frontmatter, so they load only when relevant. `[rules] mode = "split"` moves every rule there. See [docs/rules.md](docs/rules.md).
+
 **Local overrides** — Personal, machine-local instructions that never get committed:
 
 ```bash
