@@ -29,6 +29,7 @@ type Config struct {
 	Plugins         []PluginConfig         `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
+	MCP             *MCPConfig             `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
@@ -93,6 +94,61 @@ type ScopeConfig struct {
 	Path    string   `yaml:"path" json:"path" toml:"path"`
 	Profile string   `yaml:"profile,omitempty" json:"profile,omitempty" toml:"profile,omitempty"`
 	Presets []string `yaml:"presets,omitempty" json:"presets,omitempty" toml:"presets,omitempty"`
+}
+
+// MCPConfig holds project-level MCP generation options, as opposed to the
+// individual server definitions in [[mcp_servers]].
+type MCPConfig struct {
+	// SelfServer, when true, makes generation add ai-rulez's own MCP server
+	// (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. The entry is
+	// merged into the file, so hand-authored servers beside it survive, and no
+	// other MCP output (.claude/settings.json, ...) is touched.
+	SelfServer bool `yaml:"self_server,omitempty" json:"self_server,omitempty" toml:"self_server,omitempty"`
+
+	// SelfServerVersion pins the ai-rulez version the entry runs. Empty means
+	// the version of the running binary, or "latest" for a dev build.
+	SelfServerVersion string `yaml:"self_server_version,omitempty" json:"self_server_version,omitempty" toml:"self_server_version,omitempty"`
+
+	// SelfServerCommand replaces the whole launch command (executable followed
+	// by its arguments), for installs that do not run through npx, for example
+	// ["ai-rulez", "mcp"]. SelfServerVersion is ignored when it is set.
+	SelfServerCommand []string `yaml:"self_server_command,omitempty" json:"self_server_command,omitempty" toml:"self_server_command,omitempty"`
+}
+
+// HasSelfServer reports whether generation should add the ai-rulez MCP server.
+func (c *Config) HasSelfServer() bool {
+	return c != nil && c.MCP != nil && c.MCP.SelfServer
+}
+
+// SelfMCPServerName is the key of the ai-rulez entry in generated MCP files.
+const SelfMCPServerName = "ai-rulez"
+
+// SelfMCPServerEntry builds the .mcp.json entry for ai-rulez's own MCP server.
+// binaryVersion is the running binary's version; it is used unless the config
+// pins one, and "dev"/empty resolve to "latest".
+func (c *Config) SelfMCPServerEntry(binaryVersion string) map[string]any {
+	if c.MCP != nil && len(c.MCP.SelfServerCommand) > 0 {
+		entry := map[string]any{"type": "stdio", "command": c.MCP.SelfServerCommand[0]}
+		if args := c.MCP.SelfServerCommand[1:]; len(args) > 0 {
+			entry["args"] = append([]string(nil), args...)
+		}
+		return entry
+	}
+	version := ""
+	if c.MCP != nil {
+		version = c.MCP.SelfServerVersion
+	}
+	if version == "" {
+		version = binaryVersion
+	}
+	if version == "" || version == "dev" {
+		version = "latest"
+	}
+	return map[string]any{
+		"type":    "stdio",
+		"command": "npx",
+		"args":    []string{"-y", "ai-rulez@" + version, "mcp"},
+	}
 }
 
 // headerStyleMinimal is the default header style for generated files.

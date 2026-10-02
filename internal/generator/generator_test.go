@@ -13,6 +13,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -2602,4 +2603,135 @@ profiles = ["backend"]
 	backend := readMCP("backend")
 	assert.Contains(t, backend, "global-server")
 	assert.Contains(t, backend, "backend-server")
+}
+
+// TestGenerator_SelfMCPServer covers [mcp] self_server: the ai-rulez entry is
+// merged into .mcp.json, hand-authored servers and .claude/settings.json stay
+// intact, and a second run changes nothing.
+func TestGenerator_SelfMCPServer(t *testing.T) {
+	const (
+		handMCP      = "{\n  \"mcpServers\": {\n    \"hand\": {\"type\":\"stdio\",\"command\":\"foo\"}\n  }\n}\n"
+		handSettings = "{\n  \"permissions\": {\"allow\": [\"Read\"]},\n  \"skillOverrides\": {\"init\": \"off\"}\n}\n"
+		baseConfig   = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n"
+	)
+
+	tests := []struct {
+		name         string
+		configExtra  string
+		existingMCP  string
+		wantServers  []string
+		wantArgs     string
+		wantSettings bool // whether generation may rewrite .claude/settings.json
+	}{
+		{
+			name:        "creates .mcp.json with only the ai-rulez entry",
+			configExtra: "[mcp]\nself_server = true\n",
+			wantServers: []string{"ai-rulez"},
+			wantArgs:    "ai-rulez@" + binaryPin(),
+		},
+		{
+			name:        "merges beside hand-authored servers",
+			configExtra: "[mcp]\nself_server = true\n",
+			existingMCP: handMCP,
+			wantServers: []string{"hand", "ai-rulez"},
+			wantArgs:    "ai-rulez@" + binaryPin(),
+		},
+		{
+			name:        "pinned version",
+			configExtra: "[mcp]\nself_server = true\nself_server_version = \"3.2.1\"\n",
+			wantServers: []string{"ai-rulez"},
+			wantArgs:    "ai-rulez@3.2.1",
+		},
+		{
+			name:         "declared servers and self server coexist",
+			configExtra:  "[mcp]\nself_server = true\n\n[[mcp_servers]]\nname = \"grafana\"\ncommand = \"uvx\"\nargs = [\"mcp-grafana\"]\n",
+			wantServers:  []string{"grafana", "ai-rulez"},
+			wantArgs:     "ai-rulez@" + binaryPin(),
+			wantSettings: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), baseConfig+tt.configExtra)
+			writeTestFile(t, filepath.Join(dir, ".ai-rulez", "rules", "a.md"), "---\npriority: high\n---\nbe nice\n")
+			writeTestFile(t, filepath.Join(dir, ".claude", "settings.json"), handSettings)
+			if tt.existingMCP != "" {
+				writeTestFile(t, filepath.Join(dir, ".mcp.json"), tt.existingMCP)
+			}
+
+			run := func() {
+				cfg, err := config.LoadConfig(context.Background(), dir)
+				require.NoError(t, err)
+				require.NoError(t, NewGenerator(cfg).Generate("default"))
+			}
+			run()
+
+			doc := readMCPServers(t, filepath.Join(dir, ".mcp.json"))
+			assert.Len(t, doc, len(tt.wantServers))
+			for _, name := range tt.wantServers {
+				assert.Contains(t, doc, name)
+			}
+			self := doc["ai-rulez"].(map[string]any)
+			assert.Equal(t, "stdio", self["type"])
+			assert.Equal(t, "npx", self["command"])
+			assert.Equal(t, []any{"-y", tt.wantArgs, "mcp"}, self["args"])
+
+			settings, err := os.ReadFile(filepath.Join(dir, ".claude", "settings.json"))
+			require.NoError(t, err)
+			if tt.wantSettings {
+				assert.Contains(t, string(settings), "skillOverrides")
+				assert.NotContains(t, string(settings), "ai-rulez@", "settings.json only carries [[mcp_servers]]")
+			} else {
+				assert.Equal(t, handSettings, string(settings), "self_server alone must not touch .claude/settings.json")
+			}
+
+			first, err := os.ReadFile(filepath.Join(dir, ".mcp.json"))
+			require.NoError(t, err)
+			run()
+			second, err := os.ReadFile(filepath.Join(dir, ".mcp.json"))
+			require.NoError(t, err)
+			assert.Equal(t, string(first), string(second), "second run must be idempotent")
+		})
+	}
+}
+
+func TestGenerator_SelfMCPServerDryRunWritesNothing(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\n\n[mcp]\nself_server = true\n")
+	writeTestFile(t, filepath.Join(dir, ".ai-rulez", "rules", "a.md"), "---\npriority: high\n---\nbe nice\n")
+
+	cfg, err := config.LoadConfig(context.Background(), dir)
+	require.NoError(t, err)
+	lines, err := NewGenerator(cfg).DryRun("default")
+	require.NoError(t, err)
+	assert.Contains(t, lines, "write-file: .mcp.json")
+	assert.NoFileExists(t, filepath.Join(dir, ".mcp.json"))
+}
+
+// binaryPin is the version the running test binary pins: schema.Version is "dev"
+// under `go test`, which resolves to "latest".
+func binaryPin() string {
+	if schema.Version == "" || schema.Version == "dev" {
+		return "latest"
+	}
+	return schema.Version
+}
+
+func writeTestFile(t *testing.T, path, content string) {
+	t.Helper()
+	require.NoError(t, os.MkdirAll(filepath.Dir(path), 0o755))
+	require.NoError(t, os.WriteFile(path, []byte(content), 0o644))
+}
+
+func readMCPServers(t *testing.T, path string) map[string]any {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	require.NoError(t, err)
+	var doc struct {
+		MCPServers map[string]any `json:"mcpServers"`
+	}
+	require.NoError(t, json.Unmarshal(data, &doc))
+	return doc.MCPServers
 }
