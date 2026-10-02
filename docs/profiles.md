@@ -128,8 +128,9 @@ the source frontmatter sets them.
 ## Targeting content at a preset
 
 Content is filtered to a preset with the file's frontmatter `targets`, not with inline config. A rule
-with `targets: ["CLAUDE.md"]` is only rendered into outputs matching that target; a rule with no
-`targets` goes to every output.
+with `targets: ["CLAUDE.md"]` is only rendered into outputs matching that target, including rules
+folders and every root file; a rule with no `targets` goes to every output. A target can be a preset
+name, root file, path, directory prefix, glob, or `*`; see [Targets](rules.md#targets).
 
 ```markdown
 ---

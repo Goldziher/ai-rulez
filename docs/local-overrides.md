@@ -35,9 +35,10 @@ or agents.
 
 ## Generated Output
 
-Each preset that emits a single-file markdown root gets a `.local` sibling. Presets whose output is a
-directory of split rule files (`cursor`, `windsurf`, `copilot`, …) have no single-file root and are
-**skipped** — they produce no local variant.
+Each preset that emits a single-file markdown root gets a `.local` sibling for local context, and for
+local rules the preset keeps in its root file. Presets whose output is a directory of rule files
+(`cursor`, `windsurf`, `cline`, `continue-dev`) have no root file; they receive local rules as
+[rule files](#local-rule-files) only.
 
 Duplicate local paths collapse: `codex`, `opencode`, `amp`, and `xum` all root on `AGENTS.md`, so they
 share a single `AGENTS.local.md`.
@@ -53,6 +54,39 @@ share a single `AGENTS.local.md`.
 
 Any other preset with a single-file markdown root follows the same `<root>` → `<root>.local` rule
 (for example `hermes` → `.hermes.local.md`, `junie` → `.junie/guidelines.local.md`).
+
+## Local Rule Files
+
+Where a built-in preset routes rules to rule files, a rule in `.ai-rulez/local/rules` is written as
+`<rulesdir>/<id>.local<ext>` instead of landing in the `*.local.md` root, so the tool loads it natively:
+
+| Preset   | Local rule file                              |
+| -------- | -------------------------------------------- |
+| `claude` | `.claude/rules/my-rule.local.md`             |
+| `cursor` | `.cursor/rules/my-rule.local.mdc`            |
+| `copilot`| `.github/instructions/my-rule.local.instructions.md` |
+
+Routing is the same as for shared rules (see [Rules](rules.md#rules-mode)):
+
+- With the default `[rules] mode = "split"`, every local rule becomes a rule file.
+- With `mode = "inline"`, only path-scoped local rules do, for presets that scope rules.
+- Cursor, Windsurf, Cline and Continue always write rule files.
+- Copilot keeps `auto`, `manual` and negated-only-glob rules inline, as for shared rules.
+
+Local context still goes to the `*.local.md` root file. Custom provider presets get no local rule files.
+
+Bookkeeping:
+
+- The files are gitignored through one `<rulesdir>/*.local.*` pattern per folder (for example
+  `.claude/rules/*.local.*`), written before the files themselves.
+- They are tracked in `.ai-rulez/.generated-manifest.local.json`, which is gitignored, not in the
+  committed manifest. A teammate's `generate` therefore never deletes your local files; `clean` removes
+  them through the local manifest.
+- Names matching `*.local.*` in a rules folder are reserved. An existing hand-written file with such a
+  name is skipped with a warning.
+- Local rules or context a preset has no place for (for example local context with Cursor, or unscoped
+  local rules with Copilot in inline mode) are not written. `generate` reports them in one warning per
+  preset.
 
 ## CLI
 

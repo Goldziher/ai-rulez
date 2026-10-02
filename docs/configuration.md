@@ -779,16 +779,16 @@ Controls how rules are written to generated outputs.
 
 ```toml
 [rules]
-mode = "inline"          # split | inline
+mode = "split"           # split (default) | inline
 
 [rules.mode_by_preset]
-claude = "split"
+claude = "inline"
 ```
 
-- **`rules.mode`**: `split` writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file.
+- **`rules.mode`**: `split` (the default since 4.22.0) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
 
-The default is `inline`. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
+Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
 
 ### `header`
 
@@ -1144,8 +1144,10 @@ priority: critical
 
 **`targets`** (optional, array of strings)
 
-- File glob patterns specifying which generated outputs include this content
+- Selects which generated outputs include this content: preset names, root files, file paths or base
+  names, directory prefixes (`.cursor/rules/`), globs, or `*`. Applies to rules-folder files and root files.
 - If empty, included in all outputs
+- See [Targets](rules.md#targets) for the match rules
 
 ```yaml
 ---

@@ -1046,7 +1046,7 @@ Native rule files (`.claude/rules`, `.cursor/rules`, `.github/instructions`, ...
 bucketed by their activation, read from each file's frontmatter: always-on files count
 as `always`, path-scoped files as `conditional` ("path-scoped rule files"),
 agent-requested rules split into an `always` description and an `on demand` body, and
-manual rules are `on demand`.
+manual rules are `on demand`. Machine-local rule files (`*.local.*`) count as `conditional`.
 
 The root instructions file is broken down per section, and rules and context are
 listed individually so an expensive one can be named. Skill names, descriptions and
