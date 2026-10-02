@@ -4,6 +4,24 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.19.0] - 2026-10-02
+
+### Added
+
+- **Project-level `.config/` convention**: configuration discovery now also accepts
+  `.config/ai-rulez/` (the [`.config` proposal](https://github.com/pi0/config-dir)) as a fallback to
+  the tool-specific `.ai-rulez/`. The CLI, recursive `generate`, MCP recursive discovery, generated
+  headers, and the managed `.gitignore` block all resolve the active config directory, and
+  `.ai-rulez/` still wins when both layouts exist at the same level. `ai-rulez init --config-dir
+  .config/ai-rulez` scaffolds the new layout.
+
+### Changed
+
+- **Generated headers follow the config directory**: banners now name the real source path
+  (`.config/ai-rulez/config.toml` and `.config/ai-rulez/rules/…`) instead of a hardcoded
+  `.ai-rulez/`. `GeneratorSchemaVersion` is bumped so `Source-Hash` values written by 4.18.0 no
+  longer match and every file is re-rendered once.
+
 ## [4.18.0] - 2026-10-01
 
 ### Added
