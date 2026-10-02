@@ -115,6 +115,27 @@ mcp_servers:
 	})
 }
 
+func TestValidateWithSchema_Rules(t *testing.T) {
+	const head = "version: \"4.0\"\nname: \"test-project\"\npresets:\n  - claude\n"
+
+	t.Run("valid rules mode and mode_by_preset", func(t *testing.T) {
+		cfg := head + "rules:\n  mode: split\n  mode_by_preset:\n    cursor: inline\n    my-custom: split\n"
+		require.NoError(t, schema.ValidateWithSchema([]byte(cfg)))
+	})
+
+	t.Run("invalid mode fails", func(t *testing.T) {
+		assert.Error(t, schema.ValidateWithSchema([]byte(head+"rules:\n  mode: both\n")))
+	})
+
+	t.Run("invalid mode_by_preset value fails", func(t *testing.T) {
+		assert.Error(t, schema.ValidateWithSchema([]byte(head+"rules:\n  mode_by_preset:\n    cursor: both\n")))
+	})
+
+	t.Run("unknown rules key fails", func(t *testing.T) {
+		assert.Error(t, schema.ValidateWithSchema([]byte(head+"rules:\n  bogus: true\n")))
+	})
+}
+
 func TestValidateFile_TOML(t *testing.T) {
 	t.Run("consumer plugins and marketplaces validate", func(t *testing.T) {
 		path := writeTOML(t, `version = "4.0"

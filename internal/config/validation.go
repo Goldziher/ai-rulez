@@ -110,6 +110,9 @@ func (c *Config) validateDefaults() error {
 	if err := c.validateHeaderHashes(); err != nil {
 		return err
 	}
+	if err := c.validateRules(); err != nil {
+		return err
+	}
 	if c.Defaults == nil {
 		return nil
 	}
@@ -131,6 +134,68 @@ func (c *Config) validateDefaults() error {
 		}
 	}
 	return nil
+}
+
+// validateRules checks rules.mode and rules.mode_by_preset values and preset keys.
+func (c *Config) validateRules() error {
+	if c.Rules == nil {
+		return nil
+	}
+	if err := validateRulesMode(c.Rules.Mode, "rules.mode"); err != nil {
+		return err
+	}
+	for preset, value := range c.Rules.ModeByPreset {
+		if !c.isKnownPreset(preset) {
+			return oops.
+				With("field", "rules.mode_by_preset").
+				With("preset", preset).
+				With("available_presets", getBuiltInPresetNames()).
+				Hint("Use a built-in preset name or a custom/provider preset name from `presets` as the key (e.g. claude, copilot, windsurf).").
+				Errorf("unknown preset %q in rules.mode_by_preset", preset)
+		}
+		if value == "" {
+			return oops.
+				With("field", "rules.mode_by_preset."+preset).
+				With("valid_values", validRulesModes).
+				Hint("Use one of: split, inline.").
+				Errorf("empty rules mode for preset %q in rules.mode_by_preset", preset)
+		}
+		if err := validateRulesMode(value, "rules.mode_by_preset."+preset); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func validateRulesMode(value, fieldPath string) error {
+	if value == "" {
+		return nil
+	}
+	for _, v := range validRulesModes {
+		if value == v {
+			return nil
+		}
+	}
+	return oops.
+		With("field", fieldPath).
+		With("actual_value", value).
+		With("valid_values", validRulesModes).
+		Hint("Use one of: split, inline (lowercase).").
+		Errorf("invalid rules mode %q at %s", value, fieldPath)
+}
+
+// isKnownPreset reports whether name is a built-in preset or the name of a
+// custom/provider preset declared in the config.
+func (c *Config) isKnownPreset(name string) bool {
+	if isValidBuiltInPreset(name) {
+		return true
+	}
+	for i := range c.Presets {
+		if c.Presets[i].Name == name {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Config) validateAgentEffort() error {
