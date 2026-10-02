@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`[rules] mode` and `mode_by_preset`**: config for choosing `split` or `inline` rules output, globally or per preset, validated by `validate` and the JSON schema. MCP `update_config` accepts `rules_mode` and `rules_mode_by_preset`, and `read_config` returns both. The default is currently `inline` and nothing renders differently yet.
+
 ## [4.21.0] - 2026-10-02
 
 ### Added

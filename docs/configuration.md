@@ -765,6 +765,23 @@ For models the order is:
 | `gemini`       | `gemini_model`            | `model` in `.agents/agents/<id>.md` (Gemini) |
 | `xum`          | `xum_model`               | `ai.model` in `.xum/agents/<id>.md`          |
 
+### `rules`
+
+Controls how rules are written to generated outputs.
+
+```toml
+[rules]
+mode = "inline"          # split | inline
+
+[rules.mode_by_preset]
+claude = "split"
+```
+
+- **`rules.mode`**: `split` writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file.
+- **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
+
+The default is currently `inline`; a later release will switch it to `split`.
+
 ### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.
