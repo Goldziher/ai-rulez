@@ -57,6 +57,11 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 			logger.Warn("Skipping generated path outside project", "path", output.Path)
 			continue
 		}
+		// A merged document that also holds hand-authored content is not ours to
+		// delete; removing it would take the user's own settings with it.
+		if output.PartiallyOwned {
+			continue
+		}
 		if output.IsDir {
 			dirs = append(dirs, abs)
 		} else {

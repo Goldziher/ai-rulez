@@ -119,3 +119,25 @@ func TestGenerator_Clean_Idempotent(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, second.Empty(), "a second clean should find nothing to remove")
 }
+
+// A merged settings document that also holds hand-authored content must survive
+// clean: ai-rulez only contributed some of its keys.
+func TestGenerator_Clean_KeepsPartiallyOwnedMergedDocument(t *testing.T) {
+	tempDir, gen := setupGeneratedProject(t)
+	gen.config.MCP = &config.MCPConfig{SelfServer: true}
+
+	mcpPath := filepath.Join(tempDir, ".mcp.json")
+	require.NoError(t, os.WriteFile(mcpPath, []byte(`{"mcpServers":{"mine":{"command":"x"}}}`+"\n"), 0o644))
+	require.NoError(t, gen.Generate("default"))
+	data, err := os.ReadFile(mcpPath)
+	require.NoError(t, err)
+	require.Contains(t, string(data), config.SelfMCPServerName)
+
+	plan, err := gen.Clean("default", CleanOptions{})
+	require.NoError(t, err)
+
+	assert.NotContains(t, plan.Files, mcpPath)
+	data, err = os.ReadFile(mcpPath)
+	require.NoError(t, err, ".mcp.json with hand-authored servers must not be deleted")
+	assert.Contains(t, string(data), `"mine"`)
+}
