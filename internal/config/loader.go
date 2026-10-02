@@ -1124,6 +1124,10 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 
 	m := Metadata{Extra: make(map[string]string)}
 	for k, v := range rawMap {
+		if dst := m.scalarField(k); dst != nil {
+			*dst = fmt.Sprintf("%v", v)
+			continue
+		}
 		switch k {
 		case "priority":
 			m.Priority = fmt.Sprintf("%v", v)
@@ -1137,24 +1141,34 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 			m.Skills = stringSliceFromAny(v)
 		case "keywords":
 			m.Keywords = stringSliceFromAny(v)
-		case "usage":
-			m.Usage = fmt.Sprintf("%v", v)
-		case "shortcut":
-			m.Shortcut = fmt.Sprintf("%v", v)
-		case "category":
-			m.Category = fmt.Sprintf("%v", v)
-		case "effort":
-			m.Effort = fmt.Sprintf("%v", v)
 		case "globs":
-			m.Globs = stringSliceFromAny(v)
+			m.Globs = NormalizeGlobs(stringSliceFromAny(v))
 		case "paths":
-			m.Paths = stringSliceFromAny(v)
+			m.Paths = NormalizeGlobs(stringSliceFromAny(v))
 		default:
 			m.Extra[k] = fmt.Sprintf("%v", v)
 		}
 	}
 
 	return m, true
+}
+
+// scalarField returns the destination for a plain string frontmatter key, or
+// nil when the key is not one of them.
+func (m *Metadata) scalarField(key string) *string {
+	switch key {
+	case "usage":
+		return &m.Usage
+	case "shortcut":
+		return &m.Shortcut
+	case "category":
+		return &m.Category
+	case "effort":
+		return &m.Effort
+	case "activation":
+		return &m.Activation
+	}
+	return nil
 }
 
 // stringSliceFromAny coerces a YAML value into a []string. Accepts a sequence

@@ -679,6 +679,9 @@ type Metadata struct {
 	Shortcut string   `yaml:"shortcut,omitempty" json:"shortcut,omitempty"`
 	Category string   `yaml:"category,omitempty" json:"category,omitempty"`
 	Effort   string   `yaml:"effort,omitempty" json:"effort,omitempty"`
+	// Activation selects when a rule or context file applies: always, glob,
+	// auto, or manual. See ResolveActivation for precedence and defaults.
+	Activation string `yaml:"activation,omitempty" json:"activation,omitempty"`
 	// Globs and Paths declare the files a rule applies to. They are two
 	// spellings of the same idea (Cursor calls them globs, Claude Code calls
 	// them paths); either populates the same path-scope used by presets.
@@ -694,9 +697,9 @@ func (m *Metadata) PathScope() []string {
 		return nil
 	}
 	if len(m.Globs) > 0 {
-		return m.Globs
+		return NormalizeGlobs(m.Globs)
 	}
-	return m.Paths
+	return NormalizeGlobs(m.Paths)
 }
 
 // GetPriority returns the priority as a Priority type, defaulting to medium
