@@ -62,6 +62,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
 - **`compact`**: Omit per-rule priority annotations from inline sections
 - **`mcp_servers`**: Array of MCP server configurations
+- **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)
 - **`marketplaces`**: Array of marketplace sources
 - **`plugin`**: Producer-side authoring block for a distributable plugin bundle
