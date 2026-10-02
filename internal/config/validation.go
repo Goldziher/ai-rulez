@@ -772,9 +772,13 @@ func (c *Config) skillArgumentHintWarnings() []skillWarning {
 	return warnings
 }
 
-// validateMCP checks the [mcp] options. The self-server tuning fields are
-// rejected when self_server is off, since they would otherwise be silently inert.
+// validateMCP checks [[mcp_servers]] headers and the [mcp] options. The
+// self-server tuning fields are rejected when self_server is off, since they
+// would otherwise be silently inert.
 func (c *Config) validateMCP() error {
+	if err := c.validateMCPServerHeaders(); err != nil {
+		return err
+	}
 	if c.MCP == nil {
 		return nil
 	}
@@ -813,4 +817,57 @@ func (c *Config) validateHeaderHashes() error {
 			Hint(`Use "full", "content" or "none".`).
 			Errorf("invalid header.hashes %q", mode)
 	}
+}
+
+// validateMCPServerHeaders checks [[mcp_servers]] headers: they only apply to
+// remote transports, names must be RFC 9110 tokens, and values must not carry
+// CR/LF (which would let a value inject further headers).
+func (c *Config) validateMCPServerHeaders() error {
+	names := make([]string, 0, len(c.MCPServers))
+	for name := range c.MCPServers {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range names {
+		server := c.MCPServers[name]
+		if server == nil || len(server.Headers) == 0 {
+			continue
+		}
+		if t := server.GetTransport(); t != TransportHTTP && t != TransportSSE {
+			return oops.
+				With("server", name).
+				Hint(`Set transport = "http" or "sse", or remove headers; stdio servers take env instead`).
+				Errorf("mcp_servers.%s.headers require transport http or sse", name)
+		}
+		for key, value := range server.Headers {
+			if !isHTTPToken(key) {
+				return oops.
+					With("server", name).
+					Hint("Header names may contain only letters, digits and !#$%&'*+-.^_`|~").
+					Errorf("mcp_servers.%s.headers: invalid header name %q", name, key)
+			}
+			if strings.ContainsAny(value, "\r\n") {
+				return oops.
+					With("server", name).
+					Errorf("mcp_servers.%s.headers.%s must not contain a line break", name, key)
+			}
+		}
+	}
+	return nil
+}
+
+// isHTTPToken reports whether s is a non-empty RFC 9110 token (a valid header name).
+func isHTTPToken(s string) bool {
+	if s == "" {
+		return false
+	}
+	for _, r := range s {
+		switch {
+		case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		case strings.ContainsRune("!#$%&'*+-.^_`|~", r):
+		default:
+			return false
+		}
+	}
+	return true
 }

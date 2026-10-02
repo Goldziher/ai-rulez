@@ -410,6 +410,9 @@ func (g *CursorPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Config
 			if server.URL != "" {
 				entry["url"] = server.URL
 			}
+			if len(server.Headers) > 0 {
+				entry[keyHeaders] = server.Headers
+			}
 		default:
 			entry[keyCommand] = server.Command
 			if len(server.Args) > 0 {

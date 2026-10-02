@@ -195,6 +195,9 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(settingsPath string, cfg *con
 		if len(server.Env) > 0 {
 			entry["env"] = server.Env
 		}
+		if t := server.GetTransport(); (t == config.TransportHTTP || t == config.TransportSSE) && len(server.Headers) > 0 {
+			entry[keyHeaders] = server.Headers
+		}
 		if !server.IsEnabled() {
 			entry[keyDisabled] = true
 		}

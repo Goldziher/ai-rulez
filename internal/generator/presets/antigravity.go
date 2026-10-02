@@ -166,6 +166,9 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 			if server.URL != "" {
 				entry["serverUrl"] = server.URL
 			}
+			if len(server.Headers) > 0 {
+				entry[keyHeaders] = server.Headers
+			}
 		default:
 			entry[keyCommand] = server.Command
 			if len(server.Args) > 0 {

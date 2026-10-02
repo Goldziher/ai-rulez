@@ -64,7 +64,7 @@ func (g *Generator) resolveMCPEnv() error {
 }
 
 // resolveMCPServer expands ${PROJECT_ROOT} in a server's command and args, then
-// resolves ${VAR} placeholders in its env. It returns the unresolved placeholders
+// resolves ${VAR} placeholders in its env and headers. It returns the unresolved placeholders
 // it found, formatted for the aggregate error.
 func (g *Generator) resolveMCPServer(serverName string, server *config.MCPServer, dotenvValues map[string]string) []string {
 	// ${PROJECT_ROOT} in command/args resolves to the project root. It is
@@ -75,14 +75,32 @@ func (g *Generator) resolveMCPServer(serverName string, server *config.MCPServer
 		server.Args[i] = expandProjectRoot(server.Args[i], g.config.BaseDir)
 	}
 
-	if len(server.Env) == 0 {
-		return nil
-	}
-
 	var unresolved []string
-	resolved := make(map[string]string, len(server.Env))
-	secretKeys := make(map[string]bool)
-	for key, value := range server.Env {
+	if len(server.Env) > 0 {
+		var secret []string
+		server.Env, secret, unresolved = g.resolvePlaceholderMap(serverName+".env", server.Env, dotenvValues, isSensitiveEnvName)
+		server.SecretEnvKeys = secret
+	}
+	if len(server.Headers) > 0 {
+		var secret, missing []string
+		server.Headers, secret, missing = g.resolvePlaceholderMap(serverName+".headers", server.Headers, dotenvValues, isSensitiveHeaderName)
+		server.SecretHeaderKeys = secret
+		unresolved = append(unresolved, missing...)
+	}
+	return unresolved
+}
+
+// resolvePlaceholderMap resolves ${VAR} placeholders in every value of values
+// from --env overrides, the process env, then dotenv values (and ${PROJECT_ROOT}
+// as a last resort). It returns the resolved map, the sorted keys whose values
+// are secret (placeholder-sourced or a sensitive key name), and the unresolved
+// placeholders, each labeled "<field>.<key> references ${NAME}".
+func (g *Generator) resolvePlaceholderMap(
+	field string, values, dotenvValues map[string]string, sensitive func(string) bool,
+) (resolved map[string]string, secretKeys, unresolved []string) {
+	resolved = make(map[string]string, len(values))
+	secret := make(map[string]bool)
+	for key, value := range values {
 		wasPlaceholder := false
 		next := mcpEnvPlaceholderPattern.ReplaceAllStringFunc(value, func(match string) string {
 			wasPlaceholder = true
@@ -101,17 +119,15 @@ func (g *Generator) resolveMCPServer(serverName string, server *config.MCPServer
 			if name == projectRootEnvName && g.config.BaseDir != "" {
 				return g.config.BaseDir
 			}
-			unresolved = append(unresolved, fmt.Sprintf("%s.env.%s references %s", serverName, key, match))
+			unresolved = append(unresolved, fmt.Sprintf("%s.%s references %s", field, key, match))
 			return match
 		})
 		resolved[key] = next
-		if wasPlaceholder || isSensitiveEnvName(key) {
-			secretKeys[key] = true
+		if wasPlaceholder || sensitive(key) {
+			secret[key] = true
 		}
 	}
-	server.Env = resolved
-	server.SecretEnvKeys = sortedMapKeys(secretKeys)
-	return unresolved
+	return resolved, sortedMapKeys(secret), unresolved
 }
 
 func (g *Generator) loadMCPDotenvValues() (map[string]string, error) {
@@ -207,6 +223,20 @@ func isEnvNamePart(r rune) bool {
 	return isEnvNameStart(r) || (r >= '0' && r <= '9')
 }
 
+// sensitiveHeaderNames are credential-carrying headers whose names do not
+// contain one of sensitiveEnvNameParts.
+var sensitiveHeaderNames = [...]string{"AUTHORIZATION", "PROXY-AUTHORIZATION", "COOKIE"}
+
+func isSensitiveHeaderName(name string) bool {
+	upper := strings.ToUpper(name)
+	for _, header := range sensitiveHeaderNames {
+		if upper == header {
+			return true
+		}
+	}
+	return isSensitiveEnvName(name)
+}
+
 func isSensitiveEnvName(name string) bool {
 	upper := strings.ToUpper(name)
 	for _, part := range sensitiveEnvNameParts {
@@ -267,7 +297,22 @@ func mcpServerForSourceHash(server *config.MCPServer, root string) *config.MCPSe
 			}
 		}
 	}
+	if len(server.Headers) > 0 {
+		secretKeys := make(map[string]bool, len(server.SecretHeaderKeys))
+		for _, key := range server.SecretHeaderKeys {
+			secretKeys[key] = true
+		}
+		serverCopy.Headers = make(map[string]string, len(server.Headers))
+		for key, value := range server.Headers {
+			if secretKeys[key] || isSensitiveHeaderName(key) {
+				serverCopy.Headers[key] = "<redacted>"
+			} else {
+				serverCopy.Headers[key] = value
+			}
+		}
+	}
 	serverCopy.SecretEnvKeys = nil
+	serverCopy.SecretHeaderKeys = nil
 	return &serverCopy
 }
 
