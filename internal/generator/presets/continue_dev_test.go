@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -280,7 +281,7 @@ func continueRuleOutput(t *testing.T, rule config.ContentFile) string {
 	outputs, err := g.Generate(content, "/tmp/test", &config.Config{Name: "test"})
 	require.NoError(t, err)
 
-	want := filepath.Join("/tmp/test", ".continue", "rules", sanitizeName(rule.Name)+".md")
+	want := filepath.Join("/tmp/test", ".continue", "rules", rulefiles.ItemID(rule.Name)+".md")
 	for _, o := range outputs {
 		if o.Path == want {
 			return o.Content

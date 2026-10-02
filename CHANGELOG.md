@@ -9,9 +9,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **Copilot path-specific instructions**: path-scoped rules and context are written to `.github/instructions/*.instructions.md` with `applyTo` frontmatter (all rules with `[rules] mode = "split"`); the rest stay in `.github/copilot-instructions.md`.
-- **`[rules] mode` and `mode_by_preset`**: config for choosing `split` or `inline` rules output, globally or per preset, validated by `validate` and the JSON schema. MCP `update_config` accepts `rules_mode` and `rules_mode_by_preset`, and `read_config` returns both. The default is currently `inline` and nothing renders differently yet.
+- **`[rules] mode` and `mode_by_preset`**: config for choosing `split` or `inline` rules output, globally or per preset, validated by `validate` and the JSON schema. MCP `update_config` accepts `rules_mode` and `rules_mode_by_preset`, and `read_config` returns both. The default is `inline`; `split` writes every rule to the tool's native rules folder for presets that have one.
 - **Rule `activation` frontmatter**: rules and context files can set `activation` to `always`, `glob`, `auto` or `manual`. `validate` rejects unknown values, `glob` without globs, `auto` without a description and `always` together with globs, and warns when a legacy `trigger` or `alwaysApply` contradicts it. Comma-separated `paths`/`globs` such as `paths: "src/**, docs/**"` now split into separate globs (commas inside `{}`, `[]` or escaped with a backslash are kept). An `activation` key is no longer passed through as an extra frontmatter field.
-
 - **Antigravity `.agents/rules`**: the antigravity preset writes rules as native rule files with `trigger`/`globs` frontmatter (top level only). The default `inline` mode moves only path-scoped rules there; `split` moves every rule. When the gemini preset is also enabled both write `GEMINI.md`, so rules stay inline unless `rules.mode_by_preset.antigravity` is set.
 - **Junie `.junie/rules`**: with `[rules] mode = "split"` Junie writes each rule to `.junie/rules/<id>.md`; the default inline mode keeps everything in `.junie/guidelines.md`.
 - **Provider specs**: `outputs.rules` accepts `split`, `inline_filter` and `dialect` so a custom provider can opt in to split-aware rules output.
@@ -19,8 +18,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Changed
 
 - **`ai-rulez tokens` rule-file accounting**: path-scoped rule files count as conditional, manual rules as on-demand, and agent-requested rules split into an always-loaded description and an on-demand body, instead of all counting as always-loaded.
-- **Claude rule files**: path-scoped rule files in `.claude/rules` now carry a generated banner, and path-scoped context is written to `.claude/rules/context-*.md`. With `[rules] mode = "split"` Claude and Junie write every rule to their rules folder instead of the root file. Claude rule file names keep the rule name's case. Generated files are rewritten once on upgrade (generator schema v6). Colliding or empty rule names now fail generation instead of silently overwriting.
+- **Claude rule files**: path-scoped rule files in `.claude/rules` now carry a generated banner, and path-scoped context is written to `.claude/rules/context-*.md`. With `[rules] mode = "split"` Claude and Junie write every rule to their rules folder instead of the root file. Claude rule file names keep the rule name's case. Generated files are rewritten once on upgrade (generator schema v6). Rule names that differ only in case or collide after sanitizing (including a context file `x` against a rule `context-x`) now fail generation in every rules-folder preset instead of silently overwriting each other; the custom `directory` preset is not part of this check. Names with no ASCII letters or digits (for example CJK-only) get a stable `rule-<hash>` file name instead of failing.
 - **Scope shown for rules inlined into root files**: rules inlined into root files (`AGENTS.md`, `GEMINI.md`, ...) now state their path scope (`_Applies to: ..._`) or trigger description (`_When relevant: ..._`) instead of silently becoming global. `manual` rules still render as always-on and log one warning listing them.
+- **Rule files are processed like inline rules**: bodies in per-rule files (Cursor, Windsurf, Cline, Continue, Copilot, Antigravity, Claude) now have a leading H1 that repeats the rule name removed.
+- **Legacy Cursor `alwaysApply: false`** now means agent-requested (when a description is set) or manual (without one) instead of always-on.
+- **Rule-file freshness hashes** now live in the generated banner instead of the frontmatter, because the tools' frontmatter parsers are not documented to tolerate YAML comments. Rules-folder files written by earlier versions are rewritten once to move the hashes.
+- **Copilot**: `auto` and `manual` rules stay in `.github/copilot-instructions.md` instead of becoming instructions files without `applyTo`, which Copilot would not apply automatically. Negated globs (`!x`) are dropped from `applyTo` with a warning, and a rule whose globs are all negated stays in `copilot-instructions.md`.
+- **Antigravity**: scoped (monorepo) generation keeps rules inline in the scope's `GEMINI.md`. Explicitly splitting rules while the gemini preset is enabled warns that they load twice; the quiet default demotion is only logged at info level when it actually costs rule files.
+- **Activation warnings**: an unknown legacy `trigger` or `alwaysApply` value is reported by `validate` and `generate` as a warning naming the file; `trigger` is matched case-insensitively. The downgrade summary now covers every rules-folder preset.
 
 ### Fixed
 
@@ -30,6 +35,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Cursor context rules were manual-only**: `context-<name>.mdc` files had no frontmatter, so Cursor never applied them automatically. They now get `alwaysApply: true`, or `globs` when path-scoped. Cursor rules and context are rendered by the shared rule-file renderer, so globs with braces such as `*.{ts,tsx}` are expanded (`*.ts,*.tsx`), which Cursor needs; rules with `activation: manual` get an explicit `alwaysApply: false`.
 - Generated rule files are gitignored per file (for example `.claude/rules/x.md`) instead of the whole rules folder, so hand-written rules in the same folder are no longer ignored.
 - `generate` no longer overwrites a hand-written rule file in a native rules folder that collides with a generated rule name. It warns and skips the file; rename one of them.
+- A legacy `trigger: glob` without globs, and `model_decision`/`auto` without a description, are written as manual instead of always-on. Cursor `auto` rules now carry an explicit `alwaysApply: false`.
+- Hash detection no longer gives up on frontmatter longer than 60 lines.
 
 ## [4.21.0] - 2026-10-02
 

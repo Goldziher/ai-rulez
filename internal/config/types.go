@@ -39,11 +39,14 @@ type Config struct {
 	Marketplace *MarketplaceAuthoring `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
 
 	// Runtime fields (populated during load)
-	BaseDir       string       `yaml:"-" json:"-" toml:"-"`
-	ConfigDir     string       `yaml:"-" json:"-" toml:"-"`
-	ConfigDirName string       `yaml:"-" json:"-" toml:"-"`
-	ConfigFile    string       `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
-	Content       *ContentTree `yaml:"-" json:"-" toml:"-"`
+	BaseDir       string `yaml:"-" json:"-" toml:"-"`
+	ConfigDir     string `yaml:"-" json:"-" toml:"-"`
+	ConfigDirName string `yaml:"-" json:"-" toml:"-"`
+	// ScopePath is the monorepo scope path while generating a scope's outputs;
+	// empty for the project root.
+	ScopePath  string       `yaml:"-" json:"-" toml:"-"`
+	ConfigFile string       `yaml:"-" json:"-" toml:"-"` // Actual config filename (e.g. "config.toml")
+	Content    *ContentTree `yaml:"-" json:"-" toml:"-"`
 	// LocalContent holds machine-local override content scanned from
 	// .ai-rulez/local/ (rules + context only). It is kept strictly separate
 	// from Content so it never lands in committed output; it is emitted only to

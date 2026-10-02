@@ -2,6 +2,7 @@ package providers_test
 
 import (
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -387,7 +388,6 @@ func TestClaude_RuleFileNameErrors(t *testing.T) {
 		rules   []config.ContentFile
 		wantErr string
 	}{
-		{"empty sanitized name", []config.ContentFile{{Name: "***", Content: "X", Metadata: scoped}}, "empty rule file id"},
 		{
 			"case-insensitive collision",
 			[]config.ContentFile{{Name: "Foo", Content: "A", Metadata: scoped}, {Name: "foo", Content: "B", Metadata: scoped}},
@@ -469,4 +469,29 @@ func TestClaude_SkillTargetedRulesSeeAllRulesInSplitMode(t *testing.T) {
 	// Assert
 	assert.Contains(t, body, "### targeted")
 	assert.Contains(t, body, "T_BODY")
+}
+
+func TestClaude_RuleFileNames(t *testing.T) {
+	t.Parallel()
+
+	// Arrange: spaces, underscores, case, dots and a name with no ASCII letters or digits.
+	rules := []config.ContentFile{
+		{Name: "My Rule", Content: "a"}, {Name: "snake_case_rule", Content: "b"}, {Name: "UPPER", Content: "c"},
+		{Name: "v1.2 notes", Content: "d"}, {Name: "日本語", Content: "e"},
+	}
+	cfg := splitCfg("claude", "split")
+
+	// Act
+	outputs, err := claudeGen(t).Generate(&config.ContentTree{Rules: rules}, "/test", cfg)
+
+	// Assert
+	require.NoError(t, err)
+	var got []string
+	for _, o := range outputs {
+		if p := filepath.ToSlash(o.Path); !o.IsDir && strings.Contains(p, "/.claude/rules/") {
+			got = append(got, p[strings.Index(p, "/.claude/rules/")+len("/.claude/rules/"):])
+		}
+	}
+	sort.Strings(got)
+	assert.Equal(t, []string{"My-Rule.md", "UPPER.md", "rule-c12140a0.md", "snake-case-rule.md", "v12-notes.md"}, got)
 }

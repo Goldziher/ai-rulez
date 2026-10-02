@@ -321,3 +321,37 @@ func TestValidate_RuleActivation_Wiring(t *testing.T) {
 		require.Error(t, cfg.validateRuleActivation())
 	})
 }
+
+func TestUnknownLegacyValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		extra map[string]string
+		want  int
+	}{
+		{"no legacy fields", nil, 0},
+		{"known trigger", map[string]string{"trigger": "glob"}, 0},
+		{"known trigger, odd case and spaces", map[string]string{"trigger": " Model_Decision "}, 0},
+		{"unknown trigger", map[string]string{"trigger": "sometimes"}, 1},
+		{"known alwaysApply", map[string]string{"alwaysApply": " TRUE "}, 0},
+		{"unknown alwaysApply", map[string]string{"alwaysApply": "maybe"}, 1},
+		{"both unknown", map[string]string{"trigger": "x", "alwaysApply": "y"}, 2},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := ContentFile{Path: "rules/r.md", Metadata: &Metadata{Extra: tt.extra}}
+
+			got := unknownLegacyValues(f)
+
+			require.Len(t, got, tt.want)
+			for _, w := range got {
+				assert.Equal(t, "rules/r.md", w.attrs[1], "warning names the file")
+			}
+		})
+	}
+}
+
+func TestResolveActivation_TriggerTrimmedAndLowercased(t *testing.T) {
+	m := &Metadata{Extra: map[string]string{"trigger": " Manual "}}
+
+	assert.Equal(t, ActivationManual, m.ResolveActivation().Mode)
+}

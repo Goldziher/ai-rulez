@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 )
 
 func TestAntigravityPresetGenerator_GetName(t *testing.T) {
@@ -452,19 +453,17 @@ func TestAntigravityGemini_SharedRootDemotion(t *testing.T) {
 		name      string
 		cfg       *config.Config
 		wantFiles int
-		wantWarn  bool
+		wantWarn  string
 	}{
-		{"gemini enabled, mode not explicit", antigravityRuleCfg("split", false, "antigravity", "gemini"), 0, false},
-		{"gemini enabled, explicit split", antigravityRuleCfg("split", true, "antigravity", "gemini"), 1, true},
-		{"gemini absent", antigravityRuleCfg("split", false, "antigravity"), 1, false},
+		{"gemini enabled, mode not explicit", antigravityRuleCfg("split", false, "antigravity", "gemini"), 0, ""},
+		{"gemini enabled, explicit split", antigravityRuleCfg("split", true, "antigravity", "gemini"), 1, "loaded twice"},
+		{"gemini absent", antigravityRuleCfg("split", false, "antigravity"), 1, ""},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
-			var warned bool
-			orig := antigravityWarn
-			antigravityWarn = func(string, ...any) { warned = true }
-			t.Cleanup(func() { antigravityWarn = orig })
+			var warned []string
+			routing, _ := antigravityRouting(tt.cfg, func(msg string, _ ...any) { warned = append(warned, msg) })
 			content := &config.ContentTree{Rules: []config.ContentFile{{Name: "style", Content: "Be tidy."}}}
 
 			// Act
@@ -478,19 +477,48 @@ func TestAntigravityGemini_SharedRootDemotion(t *testing.T) {
 			if inlined != (tt.wantFiles == 0) {
 				t.Errorf("GEMINI.md inlined = %v with %d rule files", inlined, tt.wantFiles)
 			}
-			if warned != tt.wantWarn {
-				t.Errorf("warned = %v, want %v", warned, tt.wantWarn)
+			if (routing == rulefiles.RoutingNone) != (tt.wantFiles == 0) {
+				t.Errorf("routing = %v with %d rule files", routing, tt.wantFiles)
+			}
+			if tt.wantWarn == "" && len(warned) != 0 {
+				t.Errorf("unexpected warnings %v", warned)
+			}
+			if tt.wantWarn != "" && (len(warned) != 1 || !strings.Contains(warned[0], tt.wantWarn)) {
+				t.Errorf("warnings = %v, want one containing %q", warned, tt.wantWarn)
 			}
 		})
+	}
+}
+
+func TestAntigravity_ScopedStaysInline(t *testing.T) {
+	// Arrange
+	content := &config.ContentTree{Rules: []config.ContentFile{
+		{Name: "plain", Content: "Plain body."},
+		{Name: "scoped", Content: "Scoped body.", Metadata: &config.Metadata{Paths: []string{"src/**"}}},
+	}}
+	cfg := antigravityRuleCfg("split", true)
+	cfg.ScopePath = "services/api"
+
+	// Act
+	m := antigravityOutputMap(t, content, cfg)
+
+	// Assert
+	if files := antigravityRuleFiles(m); len(files) != 0 {
+		t.Errorf("scoped generation wrote rule files %v", files)
+	}
+	gemini := m["/test/GEMINI.md"]
+	for _, want := range []string{"Plain body.", "Scoped body."} {
+		if !strings.Contains(gemini, want) {
+			t.Errorf("scope GEMINI.md misses %q", want)
+		}
 	}
 }
 
 func TestAntigravity_MaxCharsWarns(t *testing.T) {
 	// Arrange
 	var msgs []string
-	orig := antigravityWarn
-	antigravityWarn = func(msg string, _ ...any) { msgs = append(msgs, msg) }
-	t.Cleanup(func() { antigravityWarn = orig })
+	restore := rulefiles.SetWarnSink(func(msg string, _ ...any) { msgs = append(msgs, msg) })
+	t.Cleanup(restore)
 	big := strings.Repeat("x", antigravityRuleMaxChars+1)
 	content := &config.ContentTree{Rules: []config.ContentFile{{Name: "big", Content: big}}}
 

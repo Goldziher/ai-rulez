@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
@@ -55,6 +56,11 @@ func NewGenerator(cfg *config.Config) *Generator {
 	}
 }
 
+// generateMu serializes generate runs. The downgrade collector in rulefiles is
+// process-global, so two concurrent runs (for example from the MCP server)
+// would reset and flush each other's entries.
+var generateMu sync.Mutex
+
 // Generate generates all outputs for the specified profile.
 func (g *Generator) Generate(profile string) error {
 	_, err := g.GenerateFiles(profile)
@@ -65,6 +71,8 @@ func (g *Generator) Generate(profile string) error {
 // number of files it wrote, directories excluded, so a caller reporting a total
 // to the user can report a counted one.
 func (g *Generator) GenerateFiles(profile string) (int, error) {
+	generateMu.Lock()
+	defer generateMu.Unlock()
 	rulefiles.ResetDowngrades()
 	defer rulefiles.FlushDowngrades()
 
@@ -128,9 +136,6 @@ func (g *Generator) GeneratePlugin(profile string) error {
 // GeneratePluginFiles is GeneratePlugin returning the number of files written,
 // directories excluded.
 func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
-
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return 0, err
@@ -185,9 +190,6 @@ func (g *Generator) VerifyPlugin(profile string) error {
 
 // DryRunPlugin returns the plugin generation plan without writing files.
 func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
-	rulefiles.ResetDowngrades()
-	defer rulefiles.FlushDowngrades()
-
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return nil, err
@@ -311,6 +313,8 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]
 
 // DryRun returns an inspectable generation plan without writing or deleting files.
 func (g *Generator) DryRun(profile string) ([]string, error) {
+	generateMu.Lock()
+	defer generateMu.Unlock()
 	rulefiles.ResetDowngrades()
 	defer rulefiles.FlushDowngrades()
 
@@ -604,6 +608,7 @@ func (g *Generator) generateScopedOutputs(activeProfile string) ([]config.Output
 
 		scopeCfg := *g.config
 		scopeCfg.BaseDir = filepath.Join(g.config.BaseDir, scope.Path)
+		scopeCfg.ScopePath = scope.Path
 		scopeCfg.Content = scopeContent
 		scopeCfg.MCPServers = g.collectMCPServersForContent(scopeContent, scopeProfile)
 		scopeCfg.Presets = scopedPresets(scope.Presets)
@@ -866,7 +871,11 @@ func (g *Generator) finalContent(output config.OutputFile) string {
 func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, finalContent string) bool {
 	if g.config.GetHeaderHashes() == config.HeaderHashesFull {
 		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
-		existingContentHash, existingSourceHash := extractStoredHashes(absPath)
+		existingContentHash, existingSourceHash, legacy := scanStoredHashes(absPath)
+		if legacy && config.InRulesDir(output.Path) {
+			// Hashes in the frontmatter are the pre-banner layout: rewrite once.
+			return false
+		}
 		return existingContentHash != "" && existingContentHash == contentHash &&
 			existingSourceHash == g.config.SourceHash
 	}
@@ -968,38 +977,95 @@ func extractContentHash(filePath string) string {
 	return contentHash
 }
 
+// maxHeaderLines bounds how far extractStoredHashes reads past a frontmatter
+// block (or into a file without one).
+const maxHeaderLines = 60
+
 // extractStoredHashes scans the header of an existing file and returns the
 // Content-Hash and Source-Hash values found there (empty strings if missing).
-// It reads up to 60 lines to accommodate detailed headers.
+// A file starting with a YAML frontmatter block is scanned through the closing
+// "---" however long the block is, then up to maxHeaderLines more lines for the
+// banner; other files are scanned for maxHeaderLines lines.
 func extractStoredHashes(filePath string) (contentHash, sourceHash string) {
+	contentHash, sourceHash, _ = scanStoredHashes(filePath)
+	return contentHash, sourceHash
+}
+
+// scanStoredHashes is extractStoredHashes that also reports whether a hash was
+// found inside the frontmatter block (the layout older versions used for
+// rules-folder files). Lines of any length are handled and CRLF is accepted.
+func scanStoredHashes(filePath string) (contentHash, sourceHash string, inFrontmatterBlock bool) {
 	file, err := os.Open(filePath)
 	if err != nil {
-		return "", ""
+		return "", "", false
 	}
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
-	for i := 0; i < 60 && scanner.Scan(); i++ {
-		line := strings.TrimSpace(scanner.Text())
-		// Strip common comment prefixes so we can find hash lines
-		// regardless of comment style (HTML, hash, slash, semicolon).
-		stripped := line
-		for _, prefix := range []string{"<!--", "-->", "//", "#", ";", "/*", "*/"} {
-			stripped = strings.TrimPrefix(stripped, prefix)
+	st := hashScan{budget: maxHeaderLines}
+	reader := bufio.NewReader(file)
+	for first := true; ; first = false {
+		raw, readErr := reader.ReadString('\n')
+		if raw == "" && readErr != nil {
+			break // EOF, or a read error: end with what was found
 		}
-		stripped = strings.TrimSpace(stripped)
-
-		switch {
-		case strings.HasPrefix(stripped, "Content-Hash: "):
-			contentHash = strings.TrimPrefix(stripped, "Content-Hash: ")
-		case strings.HasPrefix(stripped, "Source-Hash: "):
-			sourceHash = strings.TrimPrefix(stripped, "Source-Hash: ")
-		}
-		if contentHash != "" && sourceHash != "" {
-			return contentHash, sourceHash
+		if st.line(strings.TrimRight(raw, "\r\n"), first) || readErr != nil {
+			break
 		}
 	}
-	return contentHash, sourceHash
+	return st.contentHash, st.sourceHash, st.inBlock
+}
+
+// hashScan is the state of scanStoredHashes.
+type hashScan struct {
+	contentHash, sourceHash string
+	inFrontmatter           bool // currently inside the frontmatter block
+	inBlock                 bool // a hash was found inside the frontmatter block
+	budget                  int  // lines left outside the frontmatter block
+}
+
+// line consumes one line and reports whether the scan is finished.
+func (h *hashScan) line(raw string, first bool) bool {
+	switch {
+	case first && raw == "---":
+		h.inFrontmatter = true
+		return false
+	case h.inFrontmatter && raw == "---":
+		h.inFrontmatter = false
+		return false
+	case !h.inFrontmatter:
+		h.budget--
+		if h.budget < 0 {
+			return true
+		}
+	}
+	c, s := hashFromLine(raw)
+	if c != "" {
+		h.contentHash = c
+	}
+	if s != "" {
+		h.sourceHash = s
+	}
+	if (c != "" || s != "") && h.inFrontmatter {
+		h.inBlock = true
+	}
+	return h.contentHash != "" && h.sourceHash != ""
+}
+
+// hashFromLine extracts a Content-Hash or Source-Hash value from one header
+// line, regardless of comment style (HTML, hash, slash, semicolon).
+func hashFromLine(raw string) (contentHash, sourceHash string) {
+	stripped := strings.TrimSpace(raw)
+	for _, prefix := range []string{"<!--", "-->", "//", "#", ";", "/*", "*/"} {
+		stripped = strings.TrimPrefix(stripped, prefix)
+	}
+	stripped = strings.TrimSpace(stripped)
+	switch {
+	case strings.HasPrefix(stripped, "Content-Hash: "):
+		return strings.TrimPrefix(stripped, "Content-Hash: "), ""
+	case strings.HasPrefix(stripped, "Source-Hash: "):
+		return "", strings.TrimPrefix(stripped, "Source-Hash: ")
+	}
+	return "", ""
 }
 
 // stripHeader removes the header comment from generated content, returning
@@ -1091,18 +1157,13 @@ func injectHashes(content, outputPath, contentHash, sourceHash string) string {
 	}
 	ext := strings.ToLower(filepath.Ext(outputPath))
 
-	hashBlock := func(linePrefix string) string {
-		var b strings.Builder
-		b.WriteString(linePrefix)
-		b.WriteString("Content-Hash: ")
-		b.WriteString(contentHash)
-		if sourceHash != "" {
-			b.WriteByte('\n')
-			b.WriteString(linePrefix)
-			b.WriteString("Source-Hash: ")
-			b.WriteString(sourceHash)
-		}
-		return b.String()
+	hashBlock := func(linePrefix string) string { return hashLines(linePrefix, contentHash, sourceHash) }
+
+	// 0. Native rules folders: the tools' frontmatter parsers are not documented
+	// to tolerate YAML comments (a failed parse can turn a scoped rule global or
+	// drop it), so the hashes go into the HTML banner after the frontmatter.
+	if out, ok := injectIntoRulesDirBanner(content, outputPath, hashBlock("")); ok {
+		return out
 	}
 
 	// 1. YAML frontmatter (skill/agent files): inject as YAML comment lines
@@ -1153,6 +1214,57 @@ func injectHashes(content, outputPath, contentHash, sourceHash string) string {
 		}
 	}
 	return content
+}
+
+// hashLines renders the Content-Hash line and, when set, the Source-Hash line,
+// each starting with linePrefix.
+func hashLines(linePrefix, contentHash, sourceHash string) string {
+	var b strings.Builder
+	b.WriteString(linePrefix)
+	b.WriteString("Content-Hash: ")
+	b.WriteString(contentHash)
+	if sourceHash != "" {
+		b.WriteByte('\n')
+		b.WriteString(linePrefix)
+		b.WriteString("Source-Hash: ")
+		b.WriteString(sourceHash)
+	}
+	return b.String()
+}
+
+// injectIntoRulesDirBanner is injectIntoBanner for files in a native rules
+// folder; it reports false for any other output. A rules-folder file without a
+// banner is returned unchanged: hashes never go into its frontmatter.
+func injectIntoRulesDirBanner(content, outputPath, block string) (string, bool) {
+	if !config.InRulesDir(outputPath) {
+		return content, false
+	}
+	out, _ := injectIntoBanner(content, block)
+	return out, true
+}
+
+// injectIntoBanner adds block before the closing "-->" of the HTML comment
+// banner that follows the optional frontmatter. It reports false when the
+// content has no such banner.
+func injectIntoBanner(content, block string) (string, bool) {
+	offset := 0
+	if strings.HasPrefix(content, "---\n") {
+		idx := strings.Index(content[len("---\n"):], "\n---\n")
+		if idx < 0 {
+			return content, false
+		}
+		offset = len("---\n") + idx + len("\n---\n")
+	}
+	rest := content[offset:]
+	if !strings.HasPrefix(rest, "<!--\n") && !strings.HasPrefix(strings.TrimPrefix(rest, "\n"), "<!--") {
+		return content, false
+	}
+	idx := strings.Index(rest, "\n-->\n")
+	if idx < 0 {
+		return content, false
+	}
+	at := offset + idx
+	return content[:at] + "\n" + block + content[at:], true
 }
 
 // computeSourceHash returns a stable blake3 hash over the inputs that determine
