@@ -86,7 +86,7 @@ func TestInlinePresets_AppliesTo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.preset, func(t *testing.T) {
 			baseDir := t.TempDir()
-			cfg := &config.Config{Name: "demo", BaseDir: baseDir}
+			cfg := &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 			for _, p := range tt.presets {
 				cfg.Presets = append(cfg.Presets, config.Preset{BuiltIn: p})
 			}
@@ -113,7 +113,7 @@ func TestInlinePresets_AppliesTo(t *testing.T) {
 // rule to .agents/rules and keeps it out of GEMINI.md.
 func TestAntigravityAlone_ScopedRuleLeavesGeminiMD(t *testing.T) {
 	baseDir := t.TempDir()
-	cfg := &config.Config{Name: "demo", BaseDir: baseDir}
+	cfg := &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 
 	outputs, err := presetGenerators(t)["antigravity"].Generate(scopedContent(), baseDir, cfg)
 
@@ -131,7 +131,7 @@ func TestAgentsMD_IdenticalAcrossSharingPresets(t *testing.T) {
 	var first, firstName string
 	for _, name := range []string{"codex", "opencode", "xum", "amp"} {
 		baseDir := t.TempDir()
-		outputs, err := gens[name].Generate(scopedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+		outputs, err := gens[name].Generate(scopedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 		require.NoError(t, err)
 		doc := rootFile(t, outputs, "AGENTS.md")
 		if first == "" {
@@ -160,7 +160,7 @@ func TestClaude_LegacyTriggerGlobSkippedFromInline(t *testing.T) {
 			Extra: map[string]string{"trigger": "glob", "glob": "src/**/*.ts"},
 		}},
 	}}
-	outputs, err := gen.Generate(content, baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+	outputs, err := gen.Generate(content, baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 	require.NoError(t, err)
 	doc := rootFile(t, outputs, "CLAUDE.md")
 	assert.Contains(t, doc, "### plain")

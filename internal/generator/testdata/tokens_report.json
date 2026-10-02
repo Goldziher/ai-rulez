@@ -6,14 +6,14 @@
     "estimate": false
   },
   "headline_preset": "claude",
-  "headline_always": 305,
+  "headline_always": 383,
   "runtimes": [
     {
       "preset": "claude",
-      "files": 6,
-      "always": 305,
+      "files": 9,
+      "always": 383,
       "conditional": 47,
-      "on_demand": 826,
+      "on_demand": 1117,
       "unmodeled": 0,
       "detailed": true,
       "root_files": 1,
@@ -21,7 +21,7 @@
         {
           "label": "CLAUDE.md",
           "bucket": "always",
-          "tokens": 284,
+          "tokens": 214,
           "artifacts": 1,
           "children": [
             {
@@ -43,32 +43,6 @@
               "artifacts": 1
             },
             {
-              "label": "rules_inline",
-              "bucket": "always",
-              "tokens": 67,
-              "artifacts": 3,
-              "children": [
-                {
-                  "label": "root-rule",
-                  "bucket": "always",
-                  "tokens": 24,
-                  "artifacts": 1
-                },
-                {
-                  "label": "backend-rule",
-                  "bucket": "always",
-                  "tokens": 20,
-                  "artifacts": 1
-                },
-                {
-                  "label": "frontend-rule",
-                  "bucket": "always",
-                  "tokens": 23,
-                  "artifacts": 1
-                }
-              ]
-            },
-            {
               "label": "context_inline",
               "bucket": "always",
               "tokens": 23,
@@ -85,10 +59,16 @@
             {
               "label": "provenance hashes and section boundaries",
               "bucket": "always",
-              "tokens": 99,
+              "tokens": 96,
               "artifacts": 1
             }
           ]
+        },
+        {
+          "label": "provider rule files",
+          "bucket": "always",
+          "tokens": 148,
+          "artifacts": 3
         },
         {
           "label": "skill names",
@@ -165,8 +145,8 @@
         {
           "label": "per-file provenance hashes",
           "bucket": "on_demand",
-          "tokens": 371,
-          "artifacts": 5
+          "tokens": 662,
+          "artifacts": 8
         }
       ]
     }
@@ -174,19 +154,19 @@
   "domains": [
     {
       "name": "(root)",
-      "always": 161,
+      "always": 186,
       "conditional": 44,
       "on_demand": 408
     },
     {
       "name": "frontend",
-      "always": 23,
+      "always": 51,
       "conditional": 0,
       "on_demand": 0
     },
     {
       "name": "backend",
-      "always": 22,
+      "always": 50,
       "conditional": 3,
       "on_demand": 47
     }

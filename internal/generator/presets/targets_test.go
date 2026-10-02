@@ -75,7 +75,7 @@ func TestTargets_RuleFilesPerPreset(t *testing.T) {
 			wantFiles: []string{"free.md"},
 		},
 		{
-			name: "antigravity inline", gen: &AntigravityPresetGenerator{}, cfg: &config.Config{Name: "test"},
+			name: "antigravity inline", gen: &AntigravityPresetGenerator{}, cfg: &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}},
 			dir: ".agents/rules", root: "GEMINI.md",
 			wantRoot: []string{"FREE_BODY"},
 			notRoot:  []string{"TO_CLAUDE_MD_BODY", "TO_CURSOR_BODY", "SKILL_ONLY_BODY"},
@@ -87,7 +87,7 @@ func TestTargets_RuleFilesPerPreset(t *testing.T) {
 			notRoot:   []string{"TO_CLAUDE_MD_BODY", "TO_CURSOR_BODY", "TO_CURSOR_DIR_BODY", "TO_GLOB_BODY"},
 		},
 		{
-			name: "copilot inline", gen: &CopilotPresetGenerator{}, cfg: &config.Config{Name: "test"}, dir: ".github/instructions",
+			name: "copilot inline", gen: &CopilotPresetGenerator{}, cfg: &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}, dir: ".github/instructions",
 			root:     ".github/copilot-instructions.md",
 			wantRoot: []string{"FREE_BODY"},
 			notRoot:  []string{"TO_CLAUDE_MD_BODY", "TO_CURSOR_BODY", "TO_CURSOR_DIR_BODY", "TO_GLOB_BODY"},
