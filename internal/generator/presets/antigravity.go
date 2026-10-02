@@ -8,6 +8,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -18,6 +19,56 @@ func init() {
 
 // AntigravityPresetGenerator generates Antigravity preset files
 type AntigravityPresetGenerator struct{}
+
+// antigravityRulesTarget is Antigravity's workspace rules folder. Antigravity
+// reads only the top level of the folder and documents a 24,576 byte limit per
+// file; it is applied here as a soft limit on the rendered runes, which
+// under-counts for non-ASCII text.
+var antigravityRulesTarget = rulefiles.Target{
+	Preset:    presetNameAntigravity,
+	Dir:       ".agents/rules",
+	Ext:       ".md",
+	Dialect:   rulefiles.DialectTrigger,
+	Recursive: false,
+	MaxChars:  antigravityRuleMaxChars,
+	Banner:    true,
+}
+
+const antigravityRuleMaxChars = 24576
+
+// antigravityWarn is a seam so tests can observe warnings.
+var antigravityWarn = logger.Warn
+
+// antigravityRouting decides which rules become files. GEMINI.md is written by
+// both the antigravity and gemini presets and the last writer wins, so when
+// both are enabled the root file must stay self-contained: everything inline,
+// unless the user set rules.mode_by_preset.antigravity explicitly.
+func antigravityRouting(cfg *config.Config) rulefiles.Routing {
+	if cfg == nil {
+		return rulefiles.RoutingNone
+	}
+	if !geminiPresetEnabled(cfg) {
+		return rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
+	}
+	if cfg.RulesModeExplicitFor(presetNameAntigravity) {
+		antigravityWarn("antigravity and gemini presets both write GEMINI.md; "+
+			"rules moved to .agents/rules may load twice or be missing from GEMINI.md",
+			"mode", cfg.RulesModeFor(presetNameAntigravity))
+		return rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
+	}
+	logger.Info("antigravity rule files disabled: the gemini preset also writes GEMINI.md, " +
+		"so all rules stay inline; set rules.mode_by_preset.antigravity to override")
+	return rulefiles.RoutingNone
+}
+
+func geminiPresetEnabled(cfg *config.Config) bool {
+	for i := range cfg.Presets {
+		if cfg.Presets[i].GetName() == presetNameGemini {
+			return true
+		}
+	}
+	return false
+}
 
 func generateAntigravityPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
 	data := &templates.TemplateData{
@@ -42,6 +93,7 @@ func (g *AntigravityPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "GEMINI.md"),
 		filepath.Join(baseDir, ".agents"),
+		filepath.Join(baseDir, ".agents", "rules"),
 		filepath.Join(baseDir, ".agents", "skills"),
 		filepath.Join(baseDir, ".agents", "agents"),
 	}
@@ -90,8 +142,36 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		})
 	}
 
-	// Generate GEMINI.md with all rules and context
-	geminiMD := g.renderMarkdown(content, cfg)
+	files, inlineRules, inlineContext, err := rulefiles.Plan(
+		allInlineRules(content), allInlineContext(content),
+		&antigravityRulesTarget, antigravityRouting(cfg), rulefiles.ScopeInfo{}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("plan antigravity rule files: %w", err)
+	}
+	if len(files) > 0 {
+		outputs = append(outputs, config.OutputFile{
+			Path:  filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir)),
+			IsDir: true,
+		})
+	}
+	for i := range files {
+		it := &files[i]
+		text, notes, err := rulefiles.Render(antigravityRulesTarget, *it, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render antigravity rule file %s: %w", it.File.Name, err)
+		}
+		for _, note := range notes {
+			antigravityWarn(note)
+		}
+		outputs = append(outputs, config.OutputFile{
+			Path: filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir),
+				rulefiles.FileName(antigravityRulesTarget, *it)),
+			Content: text,
+		})
+	}
+
+	// Generate GEMINI.md with the inline remainder and context
+	geminiMD := g.renderMarkdown(inlineRules, inlineContext, content, cfg)
 	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, "GEMINI.md"),
 		Content: geminiMD,
@@ -191,10 +271,13 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 	})
 }
 
-func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree, cfg *config.Config) string {
+func (g *AntigravityPresetGenerator) renderMarkdown(
+	allRules, allContext []config.ContentFile,
+	content *config.ContentTree,
+	cfg *config.Config,
+) string {
 	var builder strings.Builder
 
-	allRules := allInlineRules(content)
 	allAgents := allAgents(content)
 
 	header := generateAntigravityPresetHeader(cfg, "GEMINI.md", len(allRules), 0, len(allAgents))
@@ -211,7 +294,6 @@ func (g *AntigravityPresetGenerator) renderMarkdown(content *config.ContentTree,
 
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	allContext := allInlineContext(content)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)

@@ -83,7 +83,10 @@ func TestInlinePresets_AppliesTo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.preset, func(t *testing.T) {
 			baseDir := t.TempDir()
-			outputs, err := gens[tt.preset].Generate(scopedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+			// The gemini preset shares GEMINI.md with antigravity; enabling it keeps
+			// antigravity's rules inline, which is what this test exercises.
+			cfg := &config.Config{Name: "demo", BaseDir: baseDir, Presets: []config.Preset{{BuiltIn: "gemini"}}}
+			outputs, err := gens[tt.preset].Generate(scopedContent(), baseDir, cfg)
 			require.NoError(t, err)
 
 			doc := rootFile(t, outputs, tt.file)
