@@ -43,6 +43,44 @@ gitignore: false
 	testutil.WriteFile(s.T(), aiRulesDir, "config.yaml", cfg)
 }
 
+// writeConventionConfig writes a `<dir>/.config/ai-rulez/config.yaml` using the
+// project-level config-dir convention.
+func (s *RecursiveGenerateSuite) writeConventionConfig(dir, name string) {
+	cfg := fmt.Sprintf(`version: "4.0"
+name: "%s"
+description: "%s convention config"
+presets:
+  - claude
+gitignore: false
+`, name, name)
+	convDir := filepath.Join(dir, ".config", "ai-rulez")
+	s.NoError(os.MkdirAll(convDir, 0o755))
+	testutil.WriteFile(s.T(), convDir, "config.yaml", cfg)
+}
+
+func (s *RecursiveGenerateSuite) TestGenerateDiscoversConfigConvention() {
+	s.writeConventionConfig(s.workingDir, "convention")
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate")
+	result.AssertOutputContains(s.T(), "Generation complete")
+
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "CLAUDE.md")),
+		"a .config/ai-rulez/ config should be discovered without flags")
+}
+
+func (s *RecursiveGenerateSuite) TestRecursiveProcessesConfigConvention() {
+	s.writeConventionConfig(filepath.Join(s.workingDir, "svc"), "svc")
+	s.writeMinimalConfig(filepath.Join(s.workingDir, "legacy"), "legacy")
+
+	result := testutil.RunCLIExpectSuccess(s.T(), s.workingDir, "generate", "--recursive")
+	result.AssertOutputContains(s.T(), "Total: Generated")
+
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "svc", "CLAUDE.md")),
+		"the .config/ai-rulez/ config should be processed")
+	s.True(testutil.FileExists(s.T(), filepath.Join(s.workingDir, "legacy", "CLAUDE.md")),
+		"the .ai-rulez/ config should still be processed")
+}
+
 func (s *RecursiveGenerateSuite) TestRecursiveProcessesAllConfigsAndPrunesNoise() {
 	// Real configs we expect to be processed.
 	for _, name := range []string{"alpha", "beta", "gamma", "delta"} {

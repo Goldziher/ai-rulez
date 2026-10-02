@@ -35,7 +35,7 @@ func HashContent(content string) string {
 // header layout changes, fixed bugs in serialization). Bumping invalidates all
 // stored Source-Hash values, forcing one round of regeneration before the skip
 // mechanism can re-engage.
-const GeneratorSchemaVersion = "v4"
+const GeneratorSchemaVersion = "v5"
 
 type commentStyle int
 
@@ -97,12 +97,25 @@ func timestampLines(timestamp string) []string {
 	return []string{"Generated: " + timestamp}
 }
 
+// configDirLabel returns the project-relative config directory to show in
+// generated headers (e.g. ".ai-rulez" or ".config/ai-rulez"), defaulting to
+// ".ai-rulez" when the config carries no directory name (previews, V2 configs).
+func configDirLabel(data *TemplateData) string {
+	if data != nil && data.Config != nil {
+		if name := strings.TrimSpace(data.Config.ConfigDirName); name != "" {
+			return filepath.ToSlash(name)
+		}
+	}
+	return ".ai-rulez"
+}
+
 func buildDetailedHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
+	dir := configDirLabel(data) + "/"
 	banner := slices.Concat([]string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT DIRECTLY",
 		"Project: " + data.ProjectName,
 	}, timestampLines(timestamp), []string{
-		"Source: .ai-rulez/" + configPath,
+		"Source: " + dir + configPath,
 		"Target: " + outputPath,
 		"Content: rules=" + fmt.Sprint(data.RuleCount) + ", sections=" + fmt.Sprint(data.SectionCount) + ", agents=" + fmt.Sprint(data.AgentCount),
 	})
@@ -110,42 +123,42 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 	banner = append(banner, "",
 		"WHAT IS AI-RULEZ",
 		"AI-Rulez is a directory-based AI governance tool. All configuration lives in",
-		"the .ai-rulez/ directory. This file is auto-generated from source files.",
+		"the "+dir+" directory. This file is auto-generated from source files.",
 		"",
 		".AI-RULEZ FOLDER ORGANIZATION",
 		"Root content (always included):",
-		"  .ai-rulez/config.toml    Main configuration (presets, profiles)",
-		"  .ai-rulez/rules/         Mandatory rules for AI assistants",
-		"  .ai-rulez/context/       Reference documentation",
-		"  .ai-rulez/skills/        Specialized AI prompts",
-		"  .ai-rulez/agents/        Agent definitions",
+		"  "+dir+"config.toml    Main configuration (presets, profiles)",
+		"  "+dir+"rules/         Mandatory rules for AI assistants",
+		"  "+dir+"context/       Reference documentation",
+		"  "+dir+"skills/        Specialized AI prompts",
+		"  "+dir+"agents/        Agent definitions",
 		"",
 		"Domain content (profile-specific):",
-		"  .ai-rulez/domains/{name}/rules/    Domain-specific rules",
-		"  .ai-rulez/domains/{name}/context/  Domain-specific documentation",
-		"  .ai-rulez/domains/{name}/skills/   Domain-specific AI prompts",
+		"  "+dir+"domains/{name}/rules/    Domain-specific rules",
+		"  "+dir+"domains/{name}/context/  Domain-specific documentation",
+		"  "+dir+"domains/{name}/skills/   Domain-specific AI prompts",
 		"",
 		"Profiles in config.toml control which domains are included.",
 		"",
 		"INSTRUCTIONS FOR AI AGENTS",
 		"1. NEVER edit this file ("+outputPath+") - it is auto-generated",
 		"",
-		"2. ALWAYS edit files in .ai-rulez/ instead:",
-		"   - Add/modify rules: .ai-rulez/rules/*.md",
-		"   - Add/modify context: .ai-rulez/context/*.md",
-		"   - Update config: .ai-rulez/config.toml",
-		"   - Domain-specific: .ai-rulez/domains/{name}/rules/*.md",
+		"2. ALWAYS edit files in "+dir+" instead:",
+		"   - Add/modify rules: "+dir+"rules/*.md",
+		"   - Add/modify context: "+dir+"context/*.md",
+		"   - Update config: "+dir+"config.toml",
+		"   - Domain-specific: "+dir+"domains/{name}/rules/*.md",
 		"",
 		"3. PREFER using the MCP Server (if available):",
 		"   Command: npx -y ai-rulez@latest mcp",
-		"   Provides safe CRUD tools for reading and modifying .ai-rulez/ content",
+		"   Provides safe CRUD tools for reading and modifying "+dir+" content",
 		"",
 		"4. After making changes: ai-rulez generate",
 		"",
 		"5. Complete workflow:",
-		"   a. Edit source files in .ai-rulez/",
+		"   a. Edit source files in "+dir,
 		"   b. Run: ai-rulez generate",
-		"   c. Commit both .ai-rulez/ and generated files",
+		"   c. Commit both "+dir+" and generated files",
 		"",
 		"Documentation: https://github.com/Goldziher/ai-rulez",
 	)
@@ -153,27 +166,28 @@ func buildDetailedHeader(configPath, outputPath, timestamp string, data *Templat
 }
 
 func buildCompactHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
+	dir := configDirLabel(data) + "/"
 	banner := []string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName + timestampSuffix(timestamp),
-		"Source: .ai-rulez/" + configPath + " | Target: " + outputPath,
+		"Source: " + dir + configPath + " | Target: " + outputPath,
 		"Content: " + fmt.Sprintf("rules=%d, sections=%d, agents=%d", data.RuleCount, data.SectionCount, data.AgentCount),
 	}
 
 	banner = append(banner,
 		"",
-		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in .ai-rulez/",
+		"WHAT IS AI-RULEZ: Directory-based AI governance. Config in "+dir,
 		"",
 		"STRUCTURE:",
-		"  .ai-rulez/config.toml, rules/, context/, skills/, agents/ (root)",
-		"  .ai-rulez/domains/{name}/ (profile-specific)",
+		"  "+dir+"config.toml, rules/, context/, skills/, agents/ (root)",
+		"  "+dir+"domains/{name}/ (profile-specific)",
 		"",
 		"AI AGENT INSTRUCTIONS:",
 		"✗ NEVER edit "+outputPath+" (auto-generated)",
-		"✓ EDIT .ai-rulez/rules/*.md, .ai-rulez/context/*.md, .ai-rulez/config.toml",
+		"✓ EDIT "+dir+"rules/*.md, "+dir+"context/*.md, "+dir+"config.toml",
 		"✓ USE MCP server: npx -y ai-rulez@latest mcp (provides CRUD tools)",
 		"✓ REGENERATE: ai-rulez generate",
-		"✓ COMMIT: both .ai-rulez/ and generated files",
+		"✓ COMMIT: both "+dir+" and generated files",
 		"",
 		"Docs: https://github.com/Goldziher/ai-rulez",
 	)
@@ -181,16 +195,17 @@ func buildCompactHeader(configPath, outputPath, timestamp string, data *Template
 }
 
 func buildMinimalHeader(configPath, outputPath, timestamp string, data *TemplateData) []string {
+	dir := configDirLabel(data) + "/"
 	banner := slices.Concat([]string{
 		"🤖 AI-RULEZ :: GENERATED FILE — DO NOT EDIT",
 		"Project: " + data.ProjectName,
 	}, timestampLines(timestamp), []string{
-		"Source: .ai-rulez/" + configPath,
+		"Source: " + dir + configPath,
 	})
 
 	banner = append(banner,
 		"",
-		"NEVER edit this file - modify .ai-rulez/ content instead",
+		"NEVER edit this file - modify "+dir+" content instead",
 		"Use MCP server: npx -y ai-rulez@latest mcp",
 		"Regenerate: ai-rulez generate",
 		"",

@@ -17,19 +17,14 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 	if configDirName == "" {
 		configDirName = aiRulezDirName
 	}
-	configNames := []string{
-		// V4 directory-based config (TOML preferred)
-		filepath.Join(configDirName, "config.toml"),
-		// Directory-based config
-		filepath.Join(configDirName, "config.yaml"), filepath.Join(configDirName, "config.yml"),
-		// Directory-based config (JSON)
-		filepath.Join(configDirName, "config.json"),
-		// V2 flat file configs
-		".ai-rulez.yaml", ".ai-rulez.yml",
-		configFilenameYAMLV2, configFilenameYMLV2,
-		".ai_rulez.yaml", ".ai_rulez.yml",
-		"ai_rulez.yaml", "ai_rulez.yml",
+	// When discovering the default layout, also accept the project-level
+	// .config/ai-rulez/ convention as a fallback to .ai-rulez/. An explicitly
+	// supplied --config-dir is honored exactly and never expanded.
+	dirNames := []string{configDirName}
+	if configDirName == aiRulezDirName {
+		dirNames = append(dirNames, altConfigDirName)
 	}
+	configNames := configNamesForDirNames(dirNames)
 
 	dir, err := filepath.Abs(startDir)
 	if err != nil {
@@ -46,7 +41,7 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 		visited[dir] = true
 
 		for _, name := range configNames {
-			configPath := filepath.Join(dir, name)
+			configPath := filepath.Join(dir, filepath.FromSlash(name))
 			if _, err := os.Stat(configPath); err == nil {
 				return configPath, nil
 			}
@@ -61,17 +56,48 @@ func FindConfigFileInDirName(startDir, configDirName string) (string, error) {
 
 	return "", oops.
 		With("search_dir", startDir).
-		With("supported_names", []string{
-			filepath.Join(configDirName, "config.toml"),
-			filepath.Join(configDirName, "config.yaml"), filepath.Join(configDirName, "config.yml"),
-			filepath.Join(configDirName, "config.json"),
-			configFilenameYAMLV2, configFilenameYMLV2,
-			".ai-rulez.yaml", ".ai-rulez.yml",
-			"ai_rulez.yaml", "ai_rulez.yml",
-			".ai_rulez.yaml", ".ai_rulez.yml",
-		}).
-		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml, or %s/config.yaml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", configDirName)).
+		With("supported_names", configNames).
+		Hint(fmt.Sprintf("Run 'ai-rulez init' to create a new configuration file\nCreate one of the supported config files: ai-rulez.yaml, .ai-rulez.yaml, %s/config.yaml, or %s/config.toml\nCheck if you're in the correct directory\nUse --config flag to specify the config file path explicitly", aiRulezDirName, altConfigDirName)).
 		Errorf("no configuration file found")
+}
+
+// IsConfigDirAncestor reports whether path is a strict ancestor directory on
+// the way to a possibly nested config directory target — for example ".config"
+// (or "svc/.config") for target ".config/ai-rulez". Recursive walks use it to
+// descend into a wrapper directory that would otherwise be pruned as hidden.
+func IsConfigDirAncestor(path, configDirName string) bool {
+	parts := strings.Split(filepath.ToSlash(configDirName), "/")
+	if len(parts) < 2 {
+		return false
+	}
+	p := filepath.ToSlash(path)
+	for i := 1; i < len(parts); i++ {
+		ancestor := strings.Join(parts[:i], "/")
+		if p == ancestor || strings.HasSuffix(p, "/"+ancestor) {
+			return true
+		}
+	}
+	return false
+}
+
+// configNamesForDirNames returns, in priority order, the config file paths to
+// probe: for each config directory (tool-specific first, then the .config/
+// convention), the directory-based config filenames, followed by the legacy V2
+// flat files. Returned paths are slash-separated.
+func configNamesForDirNames(dirNames []string) []string {
+	bases := []string{configTOMLFilename, configYAMLFilename, configYMLFilename, configJSONFilename}
+	names := make([]string, 0, len(dirNames)*len(bases)+8)
+	for _, dirName := range dirNames {
+		for _, base := range bases {
+			names = append(names, dirName+"/"+base)
+		}
+	}
+	return append(names,
+		".ai-rulez.yaml", ".ai-rulez.yml",
+		configFilenameYAMLV2, configFilenameYMLV2,
+		".ai_rulez.yaml", ".ai_rulez.yml",
+		"ai_rulez.yaml", "ai_rulez.yml",
+	)
 }
 
 // localVariantName inserts ".local" before the extension of a base filename
