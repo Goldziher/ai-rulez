@@ -6,12 +6,15 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"gopkg.in/yaml.v3"
 )
 
 const presetNameCline = "cline"
+
+var clineRulesTarget = rulefiles.Target{
+	Preset: presetNameCline, Dir: ".clinerules", Ext: ".md", Dialect: rulefiles.DialectCline, Recursive: true, Banner: true,
+}
 
 func init() {
 	config.RegisterPreset(presetNameCline, &ClinePresetGenerator{})
@@ -19,23 +22,6 @@ func init() {
 
 // ClinePresetGenerator generates Cline preset files
 type ClinePresetGenerator struct{}
-
-// generateClinePresetHeader creates a header for Cline preset files
-func generateClinePresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
-	// Create TemplateData for header generation
-	data := &templates.TemplateData{
-		ProjectName:  cfg.Name,
-		Timestamp:    cfg.HeaderTimestamp(),
-		ConfigFile:   configFileName(cfg),
-		OutputFile:   outputPath,
-		Config:       cfg,
-		RuleCount:    ruleCount,
-		SectionCount: sectionCount,
-		AgentCount:   agentCount,
-	}
-
-	return templates.GenerateHeader(data)
-}
 
 func (g *ClinePresetGenerator) GetName() string {
 	return presetNameCline
@@ -69,20 +55,12 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 		},
 	)
 
-	// Combine all rules from root and domains
-	allRules := allInlineRules(content)
-
-	// Generate rule files
-	for _, rule := range allRules {
-		outputPath := filepath.Join(".clinerules", sanitizeName(rule.Name)+".md")
-		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
-		sanitized := sanitizeName(rule.Name)
-
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".clinerules", sanitized+".md"),
-			Content: ruleContent,
-		})
+	// Rules and context are written as native rule files with frontmatter
+	ruleOutputs, err := rulesFolderOutputs(clineRulesTarget, content, baseDir, cfg, true)
+	if err != nil {
+		return nil, fmt.Errorf("generate rule files: %w", err)
 	}
+	outputs = append(outputs, ruleOutputs...)
 
 	// Generate skill files to .cline/skills/
 	allSkills := allSkills(content)
@@ -101,23 +79,6 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 			},
 		)
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
-	}
-
-	// Generate context files as rule-like files in .clinerules/
-	allContext := allInlineContext(content)
-	for _, ctx := range allContext {
-		sanitized := sanitizeName(ctx.Name)
-		var ctxBuilder strings.Builder
-		ctxBuilder.WriteString("# ")
-		ctxBuilder.WriteString(ctx.Name)
-		ctxBuilder.WriteString("\n\n")
-		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
-		ctxBuilder.WriteString(processedContent)
-
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".clinerules", "context-"+sanitized+".md"),
-			Content: ctxBuilder.String(),
-		})
 	}
 
 	// Add .cline/agents directory
@@ -158,32 +119,6 @@ func (g *ClinePresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
-}
-
-func (g *ClinePresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.Config, outputPath string, ruleCount int) string {
-	var builder strings.Builder
-
-	// Generate and prepend header
-	header := generateClinePresetHeader(cfg, outputPath, ruleCount, 0, 0)
-	builder.WriteString(header)
-
-	// Add title
-	builder.WriteString("# ")
-	builder.WriteString(rule.Name)
-	builder.WriteString("\n\n")
-
-	// Add priority if present
-	if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
-		builder.WriteString("**Priority:** ")
-		builder.WriteString(rule.Metadata.Priority)
-		builder.WriteString("\n\n")
-	}
-
-	// Add content
-	processedContent := markdown.ProcessEmbeddedContent(rule.Content)
-	builder.WriteString(processedContent)
 
 	return builder.String()
 }

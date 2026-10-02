@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
+	"github.com/samber/oops"
 )
 
 const agentDelegationBuiltin = "agent-delegation"
@@ -812,4 +813,45 @@ func ConfigFileName(cfg *config.Config) string {
 // sanitizeName removes special characters from names for use in filenames.
 func sanitizeName(name string) string {
 	return rulefiles.ID(name)
+}
+
+// rulesFolderOutputs plans and renders every rule (and, when withContext, every
+// context file) of a preset into its native rules folder. Each item becomes a
+// file; the folder-relative file name comes from rulefiles.FileName.
+func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir string, cfg *config.Config,
+	withContext bool,
+) ([]config.OutputFile, error) {
+	files, _, _, err := rulefiles.Plan(allInlineRules(content), nil, &t, rulefiles.RoutingAll, rulefiles.ScopeInfo{}, nil)
+	if err != nil {
+		return nil, err
+	}
+	if withContext {
+		for _, c := range allInlineContext(content) {
+			id := rulefiles.ID(c.Name)
+			if id == "" {
+				return nil, oops.With("source", c.Path, "name", c.Name).
+					Errorf("name %q (%s) yields an empty rule file id", c.Name, c.Path)
+			}
+			files = append(files, rulefiles.Item{
+				File: c, Kind: rulefiles.KindContext, ID: id, Activation: c.Metadata.ResolveActivation(),
+			})
+		}
+	}
+
+	outputs := make([]config.OutputFile, 0, len(files))
+	for i := range files {
+		it := &files[i]
+		text, notes, err := rulefiles.Render(t, *it, cfg)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range notes {
+			logger.Warn(n)
+		}
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(rulefiles.FileName(t, *it))),
+			Content: text,
+		})
+	}
+	return outputs, nil
 }
