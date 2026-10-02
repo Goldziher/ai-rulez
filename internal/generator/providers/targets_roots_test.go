@@ -49,7 +49,7 @@ func TestAgentsMD_TargetsIdenticalAcrossSharingPresets(t *testing.T) {
 	var first, firstName string
 	for _, name := range []string{"codex", "opencode", "xum", "amp"} {
 		baseDir := t.TempDir()
-		outputs, err := gens[name].Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+		outputs, err := gens[name].Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 		require.NoError(t, err)
 		doc := rootFile(t, outputs, "AGENTS.md")
 		assertBodies(t, doc,
@@ -70,7 +70,7 @@ func TestGeminiMD_TargetsIdenticalAcrossGeminiAndAntigravity(t *testing.T) {
 	var docs []string
 	for _, name := range []string{"gemini", "antigravity"} {
 		baseDir := t.TempDir()
-		outputs, err := gens[name].Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+		outputs, err := gens[name].Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 		require.NoError(t, err)
 		doc := rootFile(t, outputs, "GEMINI.md")
 		assertBodies(t, doc,
@@ -96,7 +96,7 @@ func TestGeminiMD_TargetsOrderIndependent(t *testing.T) {
 		var last string
 		for _, name := range []string{first, second} {
 			baseDir := t.TempDir()
-			outputs, err := gens[name].Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+			outputs, err := gens[name].Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 			require.NoError(t, err)
 			last = extractSections(rootFile(t, outputs, "GEMINI.md"))
 		}
@@ -175,7 +175,7 @@ func TestAntigravity_DirTargetedRuleBecomesFileInInlineMode(t *testing.T) {
 		targeted("free"), targeted("dir-only", ".agents/rules/"), targeted("to-cursor", "cursor"),
 	}}
 
-	outputs, err := presetGenerators(t)["antigravity"].Generate(content, baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+	outputs, err := presetGenerators(t)["antigravity"].Generate(content, baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 
 	require.NoError(t, err)
 	_, ok := findOutput(outputs, ".agents/rules/dir-only.md")
@@ -235,7 +235,7 @@ func TestClaude_TargetsRootExcludesSkillOnlyAndRoutesDirOnly(t *testing.T) {
 	require.NoError(t, err)
 	baseDir := t.TempDir()
 
-	outputs, err := gen.Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir})
+	outputs, err := gen.Generate(targetedContent(), baseDir, &config.Config{Name: "demo", BaseDir: baseDir, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 
 	require.NoError(t, err)
 	assertBodies(t, rootFile(t, outputs, "CLAUDE.md"),
@@ -244,7 +244,7 @@ func TestClaude_TargetsRootExcludesSkillOnlyAndRoutesDirOnly(t *testing.T) {
 }
 
 func TestRenderLocalRoot_TargetsFilter(t *testing.T) {
-	cfg := &config.Config{Name: "demo"}
+	cfg := &config.Config{Name: "demo", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 	tests := []struct {
 		file    string
 		want    []string
