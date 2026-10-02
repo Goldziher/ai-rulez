@@ -5,6 +5,8 @@ targets:
   - .cursor/rules/*
   - .github/copilot-instructions.md
   - .windsurf/*
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # Go CLI Architecture
