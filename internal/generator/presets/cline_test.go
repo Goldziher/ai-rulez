@@ -115,3 +115,72 @@ func TestClinePresetGenerator_Generate_WithContext(t *testing.T) {
 	}
 	assert.True(t, found, "Context should be rendered in output")
 }
+
+func clineOutputs(t *testing.T, content *config.ContentTree) map[string]string {
+	t.Helper()
+	g := &ClinePresetGenerator{}
+	outputs, err := g.Generate(content, "/tmp/test", &config.Config{Name: "test"})
+	require.NoError(t, err)
+
+	byPath := map[string]string{}
+	for _, o := range outputs {
+		if !o.IsDir {
+			byPath[o.Path] = o.Content
+		}
+	}
+	return byPath
+}
+
+func TestCline_PathsFrontmatter(t *testing.T) {
+	tests := []struct {
+		name        string
+		metadata    *config.Metadata
+		wantPrefix  string
+		wantNoFront bool
+	}{
+		{
+			name:       "paths scoped rule gets paths frontmatter first",
+			metadata:   &config.Metadata{Paths: []string{"src/**/*.ts", "lib/**"}},
+			wantPrefix: "---\npaths:\n    - src/**/*.ts\n    - lib/**\n---\n",
+		},
+		{
+			name:       "globs spelling maps to paths",
+			metadata:   &config.Metadata{Globs: []string{"*.go"}},
+			wantPrefix: "---\npaths:\n    - '*.go'\n---\n",
+		},
+		{
+			name:        "always-on rule has no frontmatter",
+			metadata:    nil,
+			wantNoFront: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			content := &config.ContentTree{
+				Rules:   []config.ContentFile{{Name: "ts rules", Content: "Body", Metadata: tt.metadata}},
+				Context: []config.ContentFile{{Name: "arch", Content: "Context body", Metadata: tt.metadata}},
+				Domains: map[string]*config.Domain{},
+			}
+
+			// Act
+			files := clineOutputs(t, content)
+
+			// Assert: rules and context share the same frontmatter handling, banner after it
+			for _, p := range []string{
+				filepath.Join("/tmp/test", ".clinerules", "ts-rules.md"),
+				filepath.Join("/tmp/test", ".clinerules", "context-arch.md"),
+			} {
+				got, ok := files[p]
+				require.True(t, ok, "missing %s", p)
+				if tt.wantNoFront {
+					assert.False(t, strings.HasPrefix(got, "---\n"), "unexpected frontmatter in %s", p)
+					continue
+				}
+				require.True(t, strings.HasPrefix(got, tt.wantPrefix), "%s: %q", p, got)
+				assert.Contains(t, got[len(tt.wantPrefix):], "# ")
+			}
+		})
+	}
+}
