@@ -208,7 +208,7 @@ func (g *Generator) collectPluginOutputs(profile string) ([]config.OutputFile, e
 // buildPluginManifest resolves the content tree and MCP servers for the active
 // profile and builds the plugin manifest for the current config.
 func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error) {
-	if err := g.resolveMCPEnv(); err != nil {
+	if err := g.resolveMCPEnvForPlugin(); err != nil {
 		return nil, err
 	}
 
