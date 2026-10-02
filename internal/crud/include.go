@@ -27,8 +27,7 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 		return err
 	}
 
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)
@@ -94,8 +93,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 			Errorf("include name is required")
 	}
 
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)
@@ -139,8 +137,7 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 
 // ListIncludes returns all configured includes from the config
 func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error) {
-	// Determine base directory from aiRulezDir
-	baseDir := filepath.Dir(op.aiRulezDir)
+	baseDir := op.baseDir
 
 	// Load current config
 	cfg, err := config.LoadConfig(ctx, baseDir)

@@ -283,8 +283,9 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		})
 	}
 
-	configDir := filepath.Join(dir, ".ai-rulez")
-	if err := config.SaveConfig(cfg, configDir); err != nil {
+	// Save into the directory the config was loaded from (.ai-rulez/ or the
+	// project-level .config/ai-rulez/), never a fresh .ai-rulez/ beside it.
+	if err := config.SaveConfig(cfg, cfg.ConfigDir); err != nil {
 		return ToolError(fmt.Errorf("failed to save config: %w", err))
 	}
 
