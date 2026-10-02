@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 )
@@ -808,22 +809,7 @@ func ConfigFileName(cfg *config.Config) string {
 	return configFileName(cfg)
 }
 
-// sanitizeName removes special characters from names for use in filenames
+// sanitizeName removes special characters from names for use in filenames.
 func sanitizeName(name string) string {
-	// Replace spaces and special chars with dashes
-	replacer := strings.NewReplacer(
-		" ", "-",
-		"_", "-",
-		"/", "-",
-		"\\", "-",
-	)
-	sanitized := replacer.Replace(name)
-	// Remove any remaining non-alphanumeric chars except dashes
-	var builder strings.Builder
-	for _, r := range sanitized {
-		if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' {
-			builder.WriteRune(r)
-		}
-	}
-	return strings.Trim(builder.String(), "-")
+	return rulefiles.ID(name)
 }

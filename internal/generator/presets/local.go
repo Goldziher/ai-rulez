@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -35,40 +35,9 @@ func RenderLocalRoot(local *config.ContentTree, cfg *config.Config, outputFile s
 	}
 	builder.WriteString(templates.GenerateHeader(data))
 
-	if len(allRules) > 0 {
-		builder.WriteString("## Rules\n\n")
-		for _, rule := range allRules {
-			builder.WriteString("### ")
-			builder.WriteString(rule.Name)
-			builder.WriteString("\n\n")
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), ContextSummary: true}, nil)
 
-			if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
-				builder.WriteString("**Priority:** ")
-				builder.WriteString(rule.Metadata.Priority)
-				builder.WriteString("\n\n")
-			}
-
-			builder.WriteString(markdown.ProcessEmbeddedContent(rule.Content))
-			builder.WriteString("\n\n")
-		}
-	}
-
-	if len(allContext) > 0 {
-		builder.WriteString("## Context\n\n")
-		for _, ctx := range allContext {
-			builder.WriteString("### ")
-			builder.WriteString(ctx.Name)
-			builder.WriteString("\n\n")
-
-			if !cfg.IsCompact() && ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
-				builder.WriteString(ctx.Metadata.Extra["summary"])
-				builder.WriteString("\n\n")
-			}
-
-			builder.WriteString(markdown.ProcessEmbeddedContent(ctx.Content))
-			builder.WriteString("\n\n")
-		}
-	}
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), ContextSummary: true}, nil)
 
 	return builder.String()
 }

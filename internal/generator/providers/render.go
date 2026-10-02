@@ -8,7 +8,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -543,21 +543,7 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact, 
 	if len(allRules) == 0 {
 		return
 	}
-	b.WriteString("## Rules\n\n")
-	for _, rule := range allRules {
-		start := recorder.mark(b)
-		b.WriteString("### ")
-		b.WriteString(rule.Name)
-		b.WriteString("\n\n")
-		if !compact && rule.Metadata != nil && rule.Metadata.Priority != "" {
-			b.WriteString("**Priority:** ")
-			b.WriteString(rule.Metadata.Priority)
-			b.WriteString("\n\n")
-		}
-		b.WriteString(markdown.ProcessEmbeddedContent(rule.Content))
-		b.WriteString("\n\n")
-		recorder.section(config.PartKindRootRule, rule.Name, rule.Path, start, b)
-	}
+	rulefiles.WriteInlineRules(b, allRules, rulefiles.InlineOpts{Compact: compact}, recorder)
 }
 
 // writeInlineContext mirrors the "## Context" block produced by the legacy
@@ -569,18 +555,5 @@ func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact
 	if len(allContext) == 0 {
 		return
 	}
-	b.WriteString("## Context\n\n")
-	for _, ctx := range allContext {
-		start := recorder.mark(b)
-		b.WriteString("### ")
-		b.WriteString(ctx.Name)
-		b.WriteString("\n\n")
-		if !compact && ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
-			b.WriteString(ctx.Metadata.Extra["summary"])
-			b.WriteString("\n\n")
-		}
-		b.WriteString(markdown.ProcessEmbeddedContent(ctx.Content))
-		b.WriteString("\n\n")
-		recorder.section(config.PartKindRootContext, ctx.Name, ctx.Path, start, b)
-	}
+	rulefiles.WriteInlineContext(b, allContext, rulefiles.InlineOpts{Compact: compact, ContextSummary: true}, recorder)
 }

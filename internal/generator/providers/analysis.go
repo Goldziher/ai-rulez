@@ -45,6 +45,14 @@ func (r *partRecorder) mark(builder *strings.Builder) int {
 	return builder.Len()
 }
 
+// Mark implements rulefiles.Recorder.
+func (r *partRecorder) Mark(builder *strings.Builder) int { return r.mark(builder) }
+
+// Section implements rulefiles.Recorder.
+func (r *partRecorder) Section(kind config.PartKind, label, sourcePath string, start int, builder *strings.Builder) {
+	r.section(kind, label, sourcePath, start, builder)
+}
+
 // section records the byte range [start, builder.Len()) as one part.
 func (r *partRecorder) section(kind config.PartKind, label, sourcePath string, start int, builder *strings.Builder) {
 	if r == nil {
