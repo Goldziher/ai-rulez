@@ -190,7 +190,7 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	var builder strings.Builder
 
 	// Calculate content counts
-	allRules := allInlineRules(content)
+	allRules := rootRules(content, opencodePresetName, "AGENTS.md")
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -211,7 +211,7 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := allInlineContext(content)
+	allContext := rootContext(content, opencodePresetName, "AGENTS.md")
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
