@@ -138,7 +138,7 @@ func collectItemsByType(content *config.ContentTree, typ string) []config.Conten
 // should be delivered through the tool's path-scoped mechanism rather than the
 // always-loaded root file.
 func hasPathScope(item config.ContentFile) bool {
-	return item.Metadata != nil && len(item.Metadata.PathScope()) > 0
+	return item.Metadata.ResolveActivation().Mode == config.ActivationGlob
 }
 
 // filterAllows applies the closed-set filter predicate. Currently only one
@@ -543,7 +543,7 @@ func writeInlineRules(b *strings.Builder, content *config.ContentTree, compact, 
 	if len(allRules) == 0 {
 		return
 	}
-	rulefiles.WriteInlineRules(b, allRules, rulefiles.InlineOpts{Compact: compact}, recorder)
+	rulefiles.WriteInlineRules(b, allRules, rulefiles.InlineOpts{Compact: compact, AppliesTo: true}, recorder)
 }
 
 // writeInlineContext mirrors the "## Context" block produced by the legacy
@@ -555,5 +555,5 @@ func writeInlineContext(b *strings.Builder, content *config.ContentTree, compact
 	if len(allContext) == 0 {
 		return
 	}
-	rulefiles.WriteInlineContext(b, allContext, rulefiles.InlineOpts{Compact: compact, ContextSummary: true}, recorder)
+	rulefiles.WriteInlineContext(b, allContext, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: true}, recorder)
 }

@@ -1155,7 +1155,7 @@ targets:
   - `claude` → `.claude/rules/<id>.md` with a `paths:` frontmatter; Claude loads it when it reads a
     matching file.
   - `cursor` → `.cursor/rules/<id>.mdc` with `globs:` and `alwaysApply: false`.
-  - Presets with no glob mechanism (for example `codex`) keep the rule inline in `AGENTS.md`.
+  - Presets with no glob mechanism (for example `codex`) keep the rule inline in `AGENTS.md`, under an `_Applies to: `glob`, ..._` line so the scope is not lost (auto rules get `_When relevant: <description>_`; `manual` rules render as always-on and log a warning).
 
 ```yaml
 ---
