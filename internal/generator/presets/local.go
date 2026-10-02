@@ -21,7 +21,9 @@ import (
 func RenderLocalRootRules(local *config.ContentTree, allRules []config.ContentFile, cfg *config.Config, outputFile string) string {
 	var builder strings.Builder
 
-	allContext := allInlineContext(local)
+	root := rulefiles.RootTarget("", strings.Replace(outputFile, ".local.md", ".md", 1))
+	allRules = rulefiles.FilterInline(allRules, root)
+	allContext := rulefiles.FilterInline(allInlineContext(local), root)
 
 	data := &templates.TemplateData{
 		ProjectName:  cfg.Name,

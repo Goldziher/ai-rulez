@@ -71,7 +71,7 @@ func (r *Registry) claim(t Target, it Item) error {
 func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope ScopeInfo, reg *Registry,
 ) (files []Item, inlineRules, inlineContext []config.ContentFile, err error) {
 	if t == nil || routing == RoutingNone {
-		return nil, rules, context, nil
+		return nil, filterInlineFor(t, rules), filterInlineFor(t, context), nil
 	}
 	if reg == nil {
 		reg = NewRegistry()
@@ -89,25 +89,42 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 		return nil
 	}
 
+	place := func(cf config.ContentFile, kind Kind, asFile bool, inline *[]config.ContentFile) error {
+		return routeItem(*t, cf, kind, scope, asFile, inline, add)
+	}
+
 	for _, r := range rules {
-		if routing == RoutingAll || routing == RoutingEverything || isScoped(r) {
-			if err := add(r, KindRule); err != nil {
-				return nil, nil, nil, err
-			}
-			continue
+		asFile := routing == RoutingAll || routing == RoutingEverything || isScoped(r)
+		if err := place(r, KindRule, asFile, &inlineRules); err != nil {
+			return nil, nil, nil, err
 		}
-		inlineRules = append(inlineRules, r)
 	}
 	for _, c := range context {
-		if routing == RoutingEverything || isScoped(c) {
-			if err := add(c, KindContext); err != nil {
-				return nil, nil, nil, err
-			}
-			continue
+		asFile := routing == RoutingEverything || isScoped(c)
+		if err := place(c, KindContext, asFile, &inlineContext); err != nil {
+			return nil, nil, nil, err
 		}
-		inlineContext = append(inlineContext, c)
 	}
 	return files, inlineRules, inlineContext, nil
+}
+
+// routeItem writes cf as a rule file (asFile) or keeps it inline; targets may
+// drop it from either.
+func routeItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, asFile bool,
+	inline *[]config.ContentFile, add func(config.ContentFile, Kind) error,
+) error {
+	fileOK := fileAllowed(cf, t, kind, scope)
+	inlineOK := InlineAllowed(cf, t)
+	switch {
+	case asFile && fileOK, !asFile && !inlineOK && fileOK:
+		// Targeted only at the rules folder: a file even in inline mode.
+		return add(cf, kind)
+	case inlineOK:
+		// A root file shared with another preset (GEMINI.md) keeps items that
+		// target that other preset, so it renders the same whoever writes it.
+		*inline = append(*inline, cf)
+	}
+	return nil
 }
 
 func isScoped(cf config.ContentFile) bool {

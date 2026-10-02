@@ -5,8 +5,10 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
+	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
@@ -1036,7 +1038,38 @@ func unknownLegacyValues(f ContentFile) []legacyValueWarning {
 	return out
 }
 
+// invalidTargetWarned remembers the (file, target) pairs already reported so a
+// config validated several times warns once.
+var invalidTargetWarned sync.Map
+
+// warnInvalidTargets reports frontmatter targets that are malformed glob
+// patterns: they never match, so the item would be silently dropped from every
+// output that is restricted by targets.
+func warnInvalidTargets(f ContentFile) {
+	for _, target := range invalidTargets(f) {
+		if _, seen := invalidTargetWarned.LoadOrStore(f.Path+"\x00"+target, struct{}{}); seen {
+			continue
+		}
+		logger.Warn("invalid glob in targets never matches any output", logKeyFile, f.Path, "name", f.Name, "target", target)
+	}
+}
+
+// invalidTargets lists the malformed glob patterns among f's targets.
+func invalidTargets(f ContentFile) []string {
+	if f.Metadata == nil {
+		return nil
+	}
+	var out []string
+	for _, target := range f.Metadata.Targets {
+		if targetmatch.InvalidGlob(target) {
+			out = append(out, target)
+		}
+	}
+	return out
+}
+
 func validateActivation(f ContentFile) error {
+	warnInvalidTargets(f)
 	for _, w := range unknownLegacyValues(f) {
 		logger.Warn(w.msg, w.attrs...)
 	}
