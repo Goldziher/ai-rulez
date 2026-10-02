@@ -120,6 +120,7 @@ const (
 	// sidecars[].emit_when
 	PredicateAlways            = "always"
 	PredicateHasMCPServers     = "has_mcp_servers"
+	PredicateHasMCPJSONEntries = "has_mcp_json_entries"
 	PredicateHasPlugins        = "has_plugins"
 	PredicateHasResolvedEffort = "has_resolved_effort"
 

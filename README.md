@@ -241,6 +241,13 @@ command = "npx"
 args = ["-y", "ai-rulez@latest", "mcp"]
 ```
 
+Or let `generate` add it for you. With `[mcp] self_server = true` the entry is merged into the project `.mcp.json`, pinned to the running ai-rulez version, without touching hand-authored servers or `.claude/settings.json`:
+
+```toml
+[mcp]
+self_server = true
+```
+
 ## Installation
 
 No install needed — `npx ai-rulez@latest <command>` works out of the box. Pick a permanent option below:
