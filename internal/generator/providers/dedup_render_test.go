@@ -53,7 +53,7 @@ func TestClaude_DeduplicatesCollidingRuleName(t *testing.T) {
 
 	// Use the detailed header so the rendered rule count appears in the banner
 	// (the default minimal header omits the "Content: rules=N" line).
-	cfg := &config.Config{Name: "test", Header: &config.HeaderConfig{Style: "detailed"}}
+	cfg := &config.Config{Name: "test", Header: &config.HeaderConfig{Style: "detailed"}, Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 	body := claudeMD(t, collidingTree(), cfg)
 
 	assert.Equal(t, 1, strings.Count(body, "### commit-messages\n"), "collided rule must render exactly once")
@@ -67,7 +67,7 @@ func TestClaude_CompactOmitsPriority(t *testing.T) {
 	t.Parallel()
 
 	compact := true
-	body := claudeMD(t, collidingTree(), &config.Config{Name: "test", Compact: &compact})
+	body := claudeMD(t, collidingTree(), &config.Config{Name: "test", Compact: &compact, Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 
 	assert.NotContains(t, body, "**Priority:**", "compact mode omits per-rule priority annotations")
 	assert.Contains(t, body, "### commit-messages", "rules are still rendered in compact mode")
@@ -76,7 +76,7 @@ func TestClaude_CompactOmitsPriority(t *testing.T) {
 func TestClaude_NonCompactKeepsPriority(t *testing.T) {
 	t.Parallel()
 
-	body := claudeMD(t, collidingTree(), &config.Config{Name: "test"})
+	body := claudeMD(t, collidingTree(), &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 	assert.Contains(t, body, "**Priority:** high", "default rendering keeps priority annotations")
 }
 
@@ -86,7 +86,7 @@ func claudeOutputs(t *testing.T, content *config.ContentTree, suffix string) []c
 	t.Helper()
 	gen, err := providers.LoadBuiltin("claude")
 	require.NoError(t, err)
-	outputs, err := gen.Generate(content, "/test", &config.Config{Name: "test"})
+	outputs, err := gen.Generate(content, "/test", &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 	require.NoError(t, err)
 
 	want := filepath.ToSlash(suffix)
@@ -165,7 +165,7 @@ func TestClaude_RendersRulesInPriorityOrder(t *testing.T) {
 		},
 	}
 
-	body := claudeMD(t, content, &config.Config{Name: "test"})
+	body := claudeMD(t, content, &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 
 	alpha := strings.Index(body, "### alpha-critical")
 	beta := strings.Index(body, "### beta-high")

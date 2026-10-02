@@ -15,8 +15,8 @@ directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules"]
 file = ".junie/guidelines.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline"]
 
-# Rules: .junie/rules/{id}.md, written only with `[rules] mode = "split"`.
-# Junie has no glob activation, so in the default inline mode every rule stays
+# Rules: .junie/rules/{id}.md, written in `[rules] mode = "split"` (the default).
+# Junie has no glob activation, so in inline mode every rule stays
 # in guidelines.md.
 [outputs.rules]
 mode = "per_item_file"

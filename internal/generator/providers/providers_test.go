@@ -132,7 +132,7 @@ func TestClaude_Generate(t *testing.T) {
 	}
 
 	gen := claudeGen(t)
-	cfg := &config.Config{Name: "test", Description: "test config"}
+	cfg := &config.Config{Name: "test", Description: "test config", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -758,7 +758,7 @@ func TestClaude_PathScopedRules(t *testing.T) {
 			},
 		},
 	}
-	cfg := &config.Config{Name: "test"}
+	cfg := &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 
 	outputs, err := gen.Generate(content, "/test", cfg)
 	require.NoError(t, err)

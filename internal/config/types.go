@@ -273,7 +273,7 @@ const (
 
 // defaultRulesMode is the mode used when neither rules.mode_by_preset nor
 // rules.mode is set.
-const defaultRulesMode = RulesModeInline
+const defaultRulesMode = RulesModeSplit
 
 // validRulesModes lists the accepted values for rules.mode and rules.mode_by_preset.
 var validRulesModes = []string{RulesModeSplit, RulesModeInline}

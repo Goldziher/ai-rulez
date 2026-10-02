@@ -58,7 +58,7 @@ emit_effort = true
 emit_model = true
 
 # Rules: .claude/rules/{id}.md. With `[rules] mode = "split"` every rule and
-# path-scoped context item is a file; in the default inline mode only
+# path-scoped context item is a file; in inline mode only
 # path-scoped rules are (with a `paths` field, so Claude loads them when it reads
 # a matching file) and everything else stays in CLAUDE.md.
 [outputs.rules]
