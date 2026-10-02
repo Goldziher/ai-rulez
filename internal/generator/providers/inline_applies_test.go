@@ -56,6 +56,15 @@ func rootFile(t *testing.T, outputs []config.OutputFile, name string) string {
 	return ""
 }
 
+func findOutput(outputs []config.OutputFile, suffix string) (string, bool) {
+	for _, o := range outputs {
+		if strings.HasSuffix(strings.ReplaceAll(o.Path, "\\", "/"), suffix) {
+			return o.Content, true
+		}
+	}
+	return "", false
+}
+
 func TestInlinePresets_AppliesTo(t *testing.T) {
 	tests := []struct {
 		preset string
@@ -78,7 +87,15 @@ func TestInlinePresets_AppliesTo(t *testing.T) {
 			require.NoError(t, err)
 
 			doc := rootFile(t, outputs, tt.file)
-			assert.Contains(t, doc, "### go-only\n\n_Applies to: `**/*.go`, `go.mod`_\n\n")
+			if tt.preset == "copilot" {
+				// Path-scoped rules move to .github/instructions in inline mode.
+				assert.NotContains(t, doc, "### go-only")
+				file, ok := findOutput(outputs, ".github/instructions/go-only.instructions.md")
+				require.True(t, ok, "scoped rule file missing")
+				assert.Contains(t, file, "applyTo: '**/*.go,go.mod'")
+			} else {
+				assert.Contains(t, doc, "### go-only\n\n_Applies to: `**/*.go`, `go.mod`_\n\n")
+			}
 			assert.Contains(t, doc, "### sql\n\n_When relevant: when editing SQL_\n\n")
 			assert.Contains(t, doc, "### plain\n\nAlways on.\n\n")
 		})
