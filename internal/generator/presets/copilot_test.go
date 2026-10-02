@@ -20,7 +20,7 @@ func TestCopilotPresetGenerator_GetName(t *testing.T) {
 
 func TestCopilotPresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 	g := &CopilotPresetGenerator{}
-	cfg := &config.Config{Name: "test"}
+	cfg := &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 
 	content := &config.ContentTree{
 		Skills: []config.ContentFile{
@@ -319,7 +319,7 @@ func TestCopilot_InstructionsFiles(t *testing.T) {
 func TestCopilot_InlineMode(t *testing.T) {
 	// Arrange
 	g := &CopilotPresetGenerator{}
-	cfg := &config.Config{Name: "test"}
+	cfg := &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 	content := &config.ContentTree{Rules: []config.ContentFile{
 		copilotRuleFixture("global-rule", "Global body.", nil),
 		copilotRuleFixture("scoped-rule", "Scoped body.", &config.Metadata{Globs: []string{"src/**"}}),
@@ -347,7 +347,7 @@ func TestCopilot_InlineModeNoScopedRulesWritesNoInstructionsDir(t *testing.T) {
 	g := &CopilotPresetGenerator{}
 	content := &config.ContentTree{Rules: []config.ContentFile{copilotRuleFixture("global-rule", "Body.", nil)}}
 
-	outputs, err := g.Generate(content, "/test", &config.Config{Name: "test"})
+	outputs, err := g.Generate(content, "/test", &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}})
 
 	require.NoError(t, err)
 	_, hasDir := copilotOutputByPath(outputs, ".github/instructions")

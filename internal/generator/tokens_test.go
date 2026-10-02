@@ -59,6 +59,21 @@ func tokensReport(t *testing.T, profile string) *TokenReport {
 	return report
 }
 
+// tokensReportInline is tokensReport with `[rules] mode = "inline"`, for tests
+// about the rules_inline section of the root file (the default mode is split).
+func tokensReportInline(t *testing.T, profile string) *TokenReport {
+	t.Helper()
+	cfg := tokensFixtureWith(t, func(original string) string {
+		return original + "rules:\n  mode: inline\n"
+	})
+	report, err := NewGenerator(cfg).TokenReport(TokenReportOptions{
+		Profile: profile,
+		Counter: tokens.CL100KBase(),
+	})
+	require.NoError(t, err)
+	return report
+}
+
 // findRuntime returns the runtime for a preset in the repository-root scope.
 func findRuntime(t *testing.T, report *TokenReport, preset string) RuntimeTokens {
 	t.Helper()
@@ -149,7 +164,7 @@ func TestTokenReport_SplitsDescriptionFromBody(t *testing.T) {
 // instructions file is broken down far enough to name the expensive rule, and that
 // the children follow the order the provider DSL renders them in.
 func TestTokenReport_RootSectionsSplitPerRuleAndContext(t *testing.T) {
-	runtime := findRuntime(t, tokensReport(t, "backend"), "claude")
+	runtime := findRuntime(t, tokensReportInline(t, "backend"), "claude")
 	require.True(t, runtime.Detailed, "claude is described by the provider DSL")
 	require.Equal(t, 1, runtime.RootFiles)
 
@@ -166,6 +181,18 @@ func TestTokenReport_RootSectionsSplitPerRuleAndContext(t *testing.T) {
 		[]string{"header", "title", "description", "rules_inline", "context_inline",
 			"provenance hashes and section boundaries"},
 		childLabels(root), "children follow the DSL section order so the report reads like the file")
+}
+
+// TestTokenReport_DefaultSplitMovesRulesOutOfRootFile checks that with the
+// default split mode the rules are reported as provider rule files and the root
+// file carries no rules section.
+func TestTokenReport_DefaultSplitMovesRulesOutOfRootFile(t *testing.T) {
+	runtime := findRuntime(t, tokensReport(t, "backend"), "claude")
+
+	root := findEntry(t, runtime, "CLAUDE.md")
+	assert.NotContains(t, childLabels(root), "rules_inline")
+	assert.Equal(t, 2, findEntry(t, runtime, "provider rule files").Artifacts,
+		"backend profile has the root rule and the backend rule")
 }
 
 // TestTokenReport_AgentsRosterIsItsOwnSection covers the root section that
@@ -277,7 +304,7 @@ func TestTokenReport_ProfilesDiffer(t *testing.T) {
 	totals := make(map[string]int, len(tests))
 	for _, tt := range tests {
 		t.Run(tt.profile, func(t *testing.T) {
-			report := tokensReport(t, tt.profile)
+			report := tokensReportInline(t, tt.profile)
 			assert.Equal(t, tt.profile, report.Profile)
 			runtime := findRuntime(t, report, "claude")
 			assert.Equal(t, tt.rules, findChild(t, findEntry(t, runtime, "CLAUDE.md"), "rules_inline").Artifacts)

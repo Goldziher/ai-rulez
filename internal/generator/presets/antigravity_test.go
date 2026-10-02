@@ -103,7 +103,7 @@ func TestAntigravityPresetGenerator_Generate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			g := &AntigravityPresetGenerator{}
-			cfg := &config.Config{Name: "test-project"}
+			cfg := &config.Config{Name: "test-project", Rules: &config.RulesConfig{Mode: config.RulesModeInline}}
 
 			outputs, err := g.Generate(tt.content, tt.baseDir, cfg)
 			if (err != nil) != tt.wantErr {
@@ -144,7 +144,7 @@ func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 	g := &AntigravityPresetGenerator{}
 	// An MCP server is what makes .agents/settings.json part of the output set.
 	cfg := &config.Config{
-		Name:       "test",
+		Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline},
 		MCPServers: map[string]*config.MCPServer{"configured": {Command: "npx"}},
 	}
 

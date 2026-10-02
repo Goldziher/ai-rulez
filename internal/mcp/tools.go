@@ -581,7 +581,7 @@ func (s *Server) registerCRUDTools() {
 				Boolean("gitignore", "Whether to update .gitignore when generating outputs", false).
 				String("default_effort", "Default reasoning effort for Claude Code subagents (low, medium, high, xhigh, max, inherit). Empty string clears the default.", false).
 				Object("default_effort_by_preset", "Per-preset reasoning effort override (e.g. {\"codex\": \"high\", \"claude\": \"xhigh\"}). Each value must be one of low, medium, high, xhigh, max, inherit. Pass {} to clear.", false).
-				String("rules_mode", "Default rules output mode: split (one file per rule) or inline (rules embedded in the root file). Empty string clears it.", false).
+				String("rules_mode", "Default rules output mode: split (one file per rule, default) or inline (rules embedded in the root file). Empty string clears it.", false).
 				Object("rules_mode_by_preset", "Per-preset rules mode override (e.g. {\"claude\": \"split\", \"cursor\": \"inline\"}). Each value must be split or inline. Pass {} to clear.", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),

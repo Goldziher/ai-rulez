@@ -96,8 +96,8 @@ func TestClaude_RulesInlineModeScopedToFiles(t *testing.T) {
 	// Arrange
 	gen := claudeGen(t)
 
-	// Act: the default mode is inline, so only path-scoped items go to files
-	outputs, err := gen.Generate(splitContent(), "/test", splitCfg("claude", ""))
+	// Act: in inline mode only path-scoped items go to files
+	outputs, err := gen.Generate(splitContent(), "/test", splitCfg("claude", "inline"))
 
 	// Assert
 	require.NoError(t, err)
@@ -112,7 +112,7 @@ func TestClaude_RulesInlineModeScopedToFiles(t *testing.T) {
 func TestClaude_ScopedContextToRulesDir(t *testing.T) {
 	t.Parallel()
 
-	for _, mode := range []string{"", "split"} {
+	for _, mode := range []string{"inline", "split", ""} {
 		t.Run("mode="+mode, func(t *testing.T) {
 			t.Parallel()
 
@@ -152,7 +152,7 @@ func TestJunie_RulesSplit(t *testing.T) {
 			notInRoot:  []string{"ALWAYS_RULE", "TSX_RULE", "API_CTX"},
 		},
 		{
-			name: "inline keeps everything in guidelines", mode: "",
+			name: "inline keeps everything in guidelines", mode: "inline",
 			wantFiles:  nil,
 			wantInRoot: []string{"ALWAYS_RULE", "TSX_RULE", "LAYOUT_CTX", "API_CTX"},
 		},
@@ -312,8 +312,8 @@ sections = ["content"]
 		preset   string
 		accepted []string
 	}{
-		{"legacy accept-all", providers.New(parsed), "", "demo", []string{"always.md", "tsx.md"}},
-		{"claude inline", claudeGen(t), "", "claude", []string{"tsx.md"}},
+		{"legacy accept-all", providers.New(parsed), "inline", "demo", []string{"always.md", "tsx.md"}},
+		{"claude inline", claudeGen(t), "inline", "claude", []string{"tsx.md"}},
 		{"claude split", claudeGen(t), "split", "claude", []string{"always.md", "tsx.md"}},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -417,7 +417,7 @@ func TestClaude_HeaderRuleCountAfterRouting(t *testing.T) {
 		cfg.Header = &config.HeaderConfig{Style: "detailed"}
 		return cfg
 	}
-	inline, err := claudeGen(t).Generate(splitContent(), "/test", detailed(""))
+	inline, err := claudeGen(t).Generate(splitContent(), "/test", detailed("inline"))
 	require.NoError(t, err)
 	split, err := claudeGen(t).Generate(splitContent(), "/test", detailed("split"))
 	require.NoError(t, err)
@@ -439,7 +439,7 @@ func TestClaude_AutoAndManualRulesStayInlineInInlineMode(t *testing.T) {
 	}}
 
 	// Act
-	outputs, err := claudeGen(t).Generate(content, "/test", splitCfg("claude", ""))
+	outputs, err := claudeGen(t).Generate(content, "/test", splitCfg("claude", "inline"))
 
 	// Assert
 	require.NoError(t, err)

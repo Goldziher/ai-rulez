@@ -554,7 +554,7 @@
         "mode": {
           "type": "string",
           "enum": ["split", "inline"],
-          "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Currently defaults to inline."
+          "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Defaults to split."
         },
         "mode_by_preset": {
           "type": "object",

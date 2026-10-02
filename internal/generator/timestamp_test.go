@@ -25,7 +25,7 @@ func timestampProject(t *testing.T, header string) string {
 	configDir := filepath.Join(tempDir, ".ai-rulez")
 	require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(
-		"version: \"4.0\"\nname: stamped\npresets:\n  - claude\n  - codex\ngitignore: false\n"+header),
+		"version: \"4.0\"\nname: stamped\npresets:\n  - claude\n  - codex\ngitignore: false\nrules:\n  mode: inline\n"+header),
 		0o644))
 	require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
 		[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))

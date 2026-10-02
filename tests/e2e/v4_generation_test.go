@@ -114,6 +114,19 @@ func (s *V4GenerationSuite) assertContentContains(output config.OutputFile, expe
 	s.Assert().Contains(output.Content, expected, "File %s should contain %q", output.Path, expected)
 }
 
+// withRuleFiles returns root with the content of every file under dirSuffix
+// appended. Rules are written one file per rule by default (split mode), so the
+// text a preset renders for them lives beside the root file rather than in it.
+func (s *V4GenerationSuite) withRuleFiles(outputs []config.OutputFile, root config.OutputFile, dirSuffix string) config.OutputFile {
+	marker := string(filepath.Separator) + dirSuffix + string(filepath.Separator)
+	for _, o := range outputs {
+		if !o.IsDir && strings.Contains(o.Path, marker) {
+			root.Content += "\n" + o.Content
+		}
+	}
+	return root
+}
+
 // ==========================================
 // CLAUDE PRESET
 // ==========================================
@@ -156,7 +169,7 @@ func (s *V4GenerationSuite) TestClaude_Content() {
 	outputs := s.getOutputs("claude")
 
 	// CLAUDE.md content
-	claudeMD := s.requireFile(outputs, "CLAUDE.md")
+	claudeMD := s.withRuleFiles(outputs, s.requireFile(outputs, "CLAUDE.md"), filepath.Join(".claude", "rules"))
 	s.assertContentContains(claudeMD, "code-review-standards")
 	s.assertContentContains(claudeMD, "documentation-standards")
 	s.assertContentContains(claudeMD, "project-architecture")
@@ -336,7 +349,8 @@ func (s *V4GenerationSuite) TestCopilot_Content() {
 	outputs := s.getOutputs("copilot")
 
 	// Instructions content
-	instructions := s.requireFile(outputs, filepath.Join(".github", "copilot-instructions.md"))
+	instructions := s.withRuleFiles(outputs, s.requireFile(outputs, filepath.Join(".github", "copilot-instructions.md")),
+		filepath.Join(".github", "instructions"))
 	s.assertContentContains(instructions, "code-review-standards")
 	s.assertContentContains(instructions, "project-architecture")
 	s.assertContentContains(instructions, "api-standards")
@@ -455,7 +469,8 @@ func (s *V4GenerationSuite) TestJunie_Content() {
 	outputs := s.getOutputs("junie")
 
 	// Guidelines content
-	guidelines := s.requireFile(outputs, filepath.Join(".junie", "guidelines.md"))
+	guidelines := s.withRuleFiles(outputs, s.requireFile(outputs, filepath.Join(".junie", "guidelines.md")),
+		filepath.Join(".junie", "rules"))
 	s.assertContentContains(guidelines, "code-review-standards")
 	s.assertContentContains(guidelines, "project-architecture")
 
