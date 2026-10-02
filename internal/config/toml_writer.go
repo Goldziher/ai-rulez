@@ -45,6 +45,7 @@ type tomlOutput struct {
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
 	MCPServers      []MCPServer            `toml:"mcp_servers,omitempty"`
+	MCP             *MCPConfig             `toml:"mcp,omitempty"`
 	Plugin          *PluginAuthoring       `toml:"plugin,omitempty"`
 	Marketplace     *MarketplaceAuthoring  `toml:"marketplace,omitempty"`
 }
@@ -118,6 +119,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,
 		MCPServers:      mcpServers,
+		MCP:             cfg.MCP,
 		Plugin:          cfg.Plugin,
 		Marketplace:     cfg.Marketplace,
 	}

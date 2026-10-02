@@ -215,7 +215,7 @@ filename = "{id}/SKILL.md"
 [[sidecars]]
 kind = "mcp_json"
 path = ".my-tool/mcp.json"
-emit_when = "has_mcp_servers"
+emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries
 ```
 
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
@@ -319,6 +319,37 @@ compact = false  # Default: include Priority lines
 
 When `true`, generated presets (CLAUDE.md, GEMINI.md, copilot-instructions.md, etc.) omit the per-rule
 `**Priority:**` lines, reducing file size for large rule sets. Applies to all configured presets.
+
+### `mcp`
+
+Project-level MCP generation options.
+
+```toml
+[mcp]
+self_server = true                # add ai-rulez's own MCP server to .mcp.json
+# self_server_version = "4.19.0"  # default: the running binary's version ("latest" for a dev build)
+# self_server_command = ["ai-rulez", "mcp"]  # replace the whole launch command instead of npx
+```
+
+| Field                 | Description                                                                                                                                              |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `self_server`         | When `true`, `generate` adds `"ai-rulez": {"type": "stdio", "command": "npx", "args": ["-y", "ai-rulez@<version>", "mcp"]}` to the project `.mcp.json`. |
+| `self_server_version` | Version (or dist-tag) to pin. Defaults to the version of the ai-rulez binary running `generate`, or `latest` for a dev build. Needs `self_server`.       |
+| `self_server_command` | Executable followed by its arguments, replacing the npx launch. Mutually exclusive with `self_server_version`. Needs `self_server`.                      |
+
+Behavior:
+
+- **Merged, not replaced**: with `self_server` and no `[[mcp_servers]]`, ai-rulez owns only the
+  `mcpServers.ai-rulez` entry. Other servers in an existing `.mcp.json` (and every other key)
+  are preserved, so running `generate` twice produces no diff.
+- **Only `.mcp.json`**: `.claude/settings.json` and the other presets' MCP files are not written
+  for `self_server` alone, so hand-authored settings are never touched.
+- **With `[[mcp_servers]]`**: declared servers keep their existing behavior (ai-rulez owns the whole
+  `mcpServers` object, see [Settings document merge behavior](#settings-document-merge-behavior)),
+  and the ai-rulez entry is added to it unless you declare a server named `ai-rulez` yourself, which
+  wins.
+- **Per root**: each config root decides independently, including under `generate --recursive`.
+- The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
 
 ### `mcp_servers`
 

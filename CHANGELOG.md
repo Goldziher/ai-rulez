@@ -8,6 +8,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Added
 
+- **`[mcp] self_server`**: `generate` can now add ai-rulez's own MCP server
+  (`npx -y ai-rulez@<version> mcp`, `"type": "stdio"`) to the project `.mcp.json`. The entry is merged
+  into an existing file, so hand-authored servers survive, and `.claude/settings.json` is not touched.
+  The version defaults to the running binary (`latest` for a dev build); `self_server_version` pins it and
+  `self_server_command` replaces the launch command. Also adds the `has_mcp_json_entries` sidecar
+  predicate for provider specs.
 - **`validate --recursive` / `-r`**: validates every discovered config root and exits non-zero if any is invalid.
 
 ### Fixed
