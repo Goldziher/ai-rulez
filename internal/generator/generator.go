@@ -775,10 +775,23 @@ func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, final
 		return false
 	}
 	if g.config.ShowHeaderTimestamp() {
-		return generatedStampPattern.ReplaceAllString(string(existing), "") ==
-			generatedStampPattern.ReplaceAllString(finalContent, "")
+		return equalIgnoringHeaderStamp(string(existing), finalContent, output.Path)
 	}
 	return string(existing) == finalContent
+}
+
+// equalIgnoringHeaderStamp compares two renderings of outputPath, ignoring the
+// Generated: stamp in the header only. Bodies must match exactly, so a body line
+// that happens to start with "Generated: " is still compared.
+func equalIgnoringHeaderStamp(existing, final, outputPath string) bool {
+	existingBody, finalBody := stripHeader(existing, outputPath), stripHeader(final, outputPath)
+	if existingBody != finalBody {
+		return false
+	}
+	existingHeader := strings.TrimSuffix(existing, existingBody)
+	finalHeader := strings.TrimSuffix(final, finalBody)
+	return generatedStampPattern.ReplaceAllString(existingHeader, "") ==
+		generatedStampPattern.ReplaceAllString(finalHeader, "")
 }
 
 // generatedStampPattern matches the header timestamp in both its inline
