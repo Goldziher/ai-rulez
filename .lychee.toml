@@ -32,8 +32,9 @@ exclude = [
   "npmjs\\.com/package/",
 ]
 
-# Accept these HTTP status codes as valid
-accept = [200, 204, 301, 302, 429]
+# Accept these HTTP status codes as valid. 429 and 503 are throttling responses
+# (github.com serves blob pages to the checker with intermittent 503s), not dead links.
+accept = [200, 204, 301, 302, 429, 503]
 
 timeout = 30
 max_retries = 3
