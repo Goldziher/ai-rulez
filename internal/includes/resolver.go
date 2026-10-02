@@ -23,6 +23,7 @@ type Resolver struct {
 	baseDir     string
 	accessToken string
 	visited     map[string]bool // Circular dependency detection
+	memo        *fetchMemo      // shared fetch cache for this run (see Config.IncludeMemo)
 }
 
 // NewResolver creates a new include resolver
@@ -37,6 +38,7 @@ func NewResolver(baseDir string, accessToken string) *Resolver {
 // ResolveIncludes loads all includes and merges with local content
 func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
 	logger.Debug("Resolving includes", "count", len(cfg.Includes))
+	r.memo = memoFor(cfg)
 
 	// Start with local content
 	mergedContent := cfg.Content
@@ -80,8 +82,16 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 		return nil
 	}
 
-	// Fetch content
-	includedContent, err := source.Fetch(ctx)
+	// Fetch content (once per run per configured source)
+	key := memoKey(r.baseDir, includeConf, r.accessToken != "")
+	var includedContent *config.ContentTree
+	if r.memo != nil && key != "" {
+		includedContent, err = r.memo.fetchTree(key,
+			func() (*config.ContentTree, error) { return source.Fetch(ctx) },
+			func() (*config.ContentTree, error) { return source.Fetch(config.WithOfflineIncludes(ctx)) })
+	} else {
+		includedContent, err = source.Fetch(ctx)
+	}
 	if err != nil {
 		return oops.Wrapf(err, "failed to fetch include '%s'", includeConf.Name)
 	}

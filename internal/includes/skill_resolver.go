@@ -18,7 +18,13 @@ func ResolveInstalledSkills(ctx context.Context, cfg *config.Config, accessToken
 	for i := range cfg.InstalledSkills {
 		skillConf := &cfg.InstalledSkills[i]
 
-		contentFile, err := resolveInstalledSkill(ctx, cfg.BaseDir, skillConf, accessToken)
+		contentFile, err := memoFor(cfg).fetchSkill(memoKey(cfg.BaseDir, skillConf, accessToken != ""),
+			func() (config.ContentFile, error) {
+				return resolveInstalledSkill(ctx, cfg.BaseDir, skillConf, accessToken)
+			},
+			func() (config.ContentFile, error) {
+				return resolveInstalledSkill(config.WithOfflineIncludes(ctx), cfg.BaseDir, skillConf, accessToken)
+			})
 		if err != nil {
 			logger.Warn("Failed to resolve installed skill", "name", skillConf.Name, "error", err)
 			continue
