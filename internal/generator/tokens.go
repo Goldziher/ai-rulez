@@ -22,7 +22,6 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 	"github.com/samber/oops"
 )
@@ -213,9 +212,7 @@ func (g *Generator) finalPayloadByPath(outputs []config.OutputFile) map[string]s
 			result[output.Path] = string(output.RawContent)
 			continue
 		}
-		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
-		final := injectHashes(output.Content, output.Path, contentHash, g.config.SourceHash)
-		result[output.Path] = normalizeTrailingNewline(final)
+		result[output.Path] = g.finalContent(output)
 	}
 	return result
 }

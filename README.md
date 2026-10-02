@@ -230,6 +230,13 @@ name = "kreuzberg"
 source = "https://github.com/kreuzberg-dev/kreuzberg"
 ```
 
+**Committing generated output** — every generated file carries a `Content-Hash` and a `Source-Hash` line. `Source-Hash` covers the whole source set, so editing one skill rewrites a line in every generated file. If you commit the output, keep headers stable:
+
+```toml
+[header]
+hashes = "content"   # "full" (default) | "content" (Content-Hash only) | "none"
+```
+
 ## MCP Server
 
 ai-rulez includes a built-in MCP server with 36 tools that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.
