@@ -15,7 +15,7 @@ import (
 const continueDevPresetName = "continue-dev"
 
 var continueRulesTarget = rulefiles.Target{
-	Preset: continueDevPresetName, Dir: ".continue/rules", Ext: ".md", Dialect: rulefiles.DialectContinue, Recursive: true, Banner: true,
+	Preset: continueDevPresetName, Dir: ".continue/rules", Ext: extMarkdown, Dialect: rulefiles.DialectContinue, Recursive: true, Banner: true,
 }
 
 func init() {

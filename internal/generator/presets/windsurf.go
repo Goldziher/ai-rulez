@@ -19,7 +19,7 @@ const windsurfPresetName = "windsurf"
 var windsurfRulesTarget = rulefiles.Target{
 	Preset:    windsurfPresetName,
 	Dir:       ".windsurf/rules",
-	Ext:       ".md",
+	Ext:       extMarkdown,
 	Dialect:   rulefiles.DialectTrigger,
 	Recursive: true,
 	MaxChars:  12000,
