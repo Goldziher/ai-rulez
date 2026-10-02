@@ -176,11 +176,11 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 
 	// Add rules section
 	allRules := allInlineRules(content)
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
 	allContext := allInlineContext(content)
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Skills are generated to .github/skills/ directory, not inlined
 
