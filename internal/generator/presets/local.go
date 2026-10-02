@@ -35,9 +35,9 @@ func RenderLocalRoot(local *config.ContentTree, cfg *config.Config, outputFile s
 	}
 	builder.WriteString(templates.GenerateHeader(data))
 
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), ContextSummary: true}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), ContextSummary: true}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true, ContextSummary: true}, nil)
 
 	return builder.String()
 }

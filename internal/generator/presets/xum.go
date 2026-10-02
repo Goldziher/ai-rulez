@@ -118,9 +118,9 @@ func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, c
 		builder.WriteString("\n\n")
 	}
 
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, allInlineContext(content), rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
+	rulefiles.WriteInlineContext(&builder, allInlineContext(content), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
 

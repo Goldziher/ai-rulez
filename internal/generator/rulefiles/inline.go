@@ -20,7 +20,10 @@ type Recorder interface {
 type InlineOpts struct {
 	// Compact suppresses the per-rule priority line and the per-context summary.
 	Compact bool
-	// AppliesTo is reserved for rendering path-scope hints; currently unused.
+	// AppliesTo renders each entry's activation under its heading: an
+	// "_Applies to: ..._" line for glob entries and a "_When relevant: ..._"
+	// line for auto entries. Manual entries cannot be expressed inline, so they
+	// render as always-on and are reported in one aggregated warning per call.
 	AppliesTo bool
 	// ContextSummary emits the "summary" extra of a context entry (unless
 	// Compact) between its heading and body.
@@ -39,6 +42,9 @@ func WriteInlineRules(b *strings.Builder, rules []config.ContentFile, opts Inlin
 		b.WriteString("### ")
 		b.WriteString(rule.Name)
 		b.WriteString("\n\n")
+		if opts.AppliesTo {
+			writeActivation(b, "rules", rule)
+		}
 		if !opts.Compact && rule.Metadata != nil && rule.Metadata.Priority != "" {
 			b.WriteString("**Priority:** ")
 			b.WriteString(rule.Metadata.Priority)
@@ -64,6 +70,9 @@ func WriteInlineContext(b *strings.Builder, ctxFiles []config.ContentFile, opts 
 		b.WriteString("### ")
 		b.WriteString(ctx.Name)
 		b.WriteString("\n\n")
+		if opts.AppliesTo {
+			writeActivation(b, "context", ctx)
+		}
 		if opts.ContextSummary && !opts.Compact && ctx.Metadata != nil && ctx.Metadata.Extra["summary"] != "" {
 			b.WriteString(ctx.Metadata.Extra["summary"])
 			b.WriteString("\n\n")
@@ -74,6 +83,59 @@ func WriteInlineContext(b *strings.Builder, ctxFiles []config.ContentFile, opts 
 			rec.Section(config.PartKindRootContext, ctx.Name, ctx.Path, start, b)
 		}
 	}
+}
+
+// writeActivation writes the scope or trigger hint for f. Manual activation
+// has no inline form, so it is recorded as a downgrade and rendered as
+// always-on.
+func writeActivation(b *strings.Builder, kind string, f config.ContentFile) {
+	act := f.Metadata.ResolveActivation()
+	switch act.Mode {
+	case config.ActivationGlob:
+		if len(act.Globs) == 0 {
+			return
+		}
+		spans := make([]string, len(act.Globs))
+		for i, g := range act.Globs {
+			spans[i] = codeSpan(g)
+		}
+		b.WriteString("_Applies to: " + strings.Join(spans, ", ") + "_\n\n")
+	case config.ActivationAuto:
+		desc := sanitizeDescription(act.Description)
+		if desc == "" {
+			return
+		}
+		b.WriteString("_When relevant: " + desc + "_\n\n")
+	case config.ActivationManual:
+		RecordDowngrade(kind, f.Name, string(config.ActivationManual))
+	}
+}
+
+// sanitizeDescription flattens a description to one line and strips trailing
+// characters that would close or escape the surrounding emphasis.
+func sanitizeDescription(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	return strings.TrimSpace(strings.TrimRight(s, "_\\ "))
+}
+
+// codeSpan renders s as a Markdown code span whose fence is one backtick
+// longer than the longest backtick run in s.
+func codeSpan(s string) string {
+	s = strings.Join(strings.Fields(s), " ")
+	longest, run := 0, 0
+	for _, r := range s {
+		if r == '`' {
+			run++
+			longest = max(longest, run)
+		} else {
+			run = 0
+		}
+	}
+	fence := strings.Repeat("`", longest+1)
+	if strings.HasPrefix(s, "`") || strings.HasSuffix(s, "`") {
+		s = " " + s + " "
+	}
+	return fence + s + fence
 }
 
 func mark(rec Recorder, b *strings.Builder) int {

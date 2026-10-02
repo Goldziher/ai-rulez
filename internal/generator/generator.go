@@ -16,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
 	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
@@ -57,6 +58,9 @@ func (g *Generator) Generate(profile string) error {
 // number of files it wrote, directories excluded, so a caller reporting a total
 // to the user can report a counted one.
 func (g *Generator) GenerateFiles(profile string) (int, error) {
+	rulefiles.ResetDowngrades()
+	defer rulefiles.FlushDowngrades()
+
 	flatOutputs, activeProfile, err := g.collectOutputs(profile)
 	if err != nil {
 		return 0, err
@@ -117,6 +121,9 @@ func (g *Generator) GeneratePlugin(profile string) error {
 // GeneratePluginFiles is GeneratePlugin returning the number of files written,
 // directories excluded.
 func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
+	rulefiles.ResetDowngrades()
+	defer rulefiles.FlushDowngrades()
+
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return 0, err
@@ -171,6 +178,9 @@ func (g *Generator) VerifyPlugin(profile string) error {
 
 // DryRunPlugin returns the plugin generation plan without writing files.
 func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
+	rulefiles.ResetDowngrades()
+	defer rulefiles.FlushDowngrades()
+
 	outputs, err := g.collectPluginOutputs(profile)
 	if err != nil {
 		return nil, err
@@ -294,6 +304,9 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]
 
 // DryRun returns an inspectable generation plan without writing or deleting files.
 func (g *Generator) DryRun(profile string) ([]string, error) {
+	rulefiles.ResetDowngrades()
+	defer rulefiles.FlushDowngrades()
+
 	flatOutputs, activeProfile, err := g.collectOutputs(profile)
 	if err != nil {
 		return nil, err
