@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`validate --recursive` / `-r`**: validates every discovered config root and exits non-zero if any is invalid.
+
+### Fixed
+
+- **`generate --recursive` exit status**: a root that failed to load, validate, or generate was reported but the process still exited 0 (also with `--dry-run`). All roots are still processed and all errors printed, but the exit status is now 1 if any failed. Failures are also printed in quiet mode and are attributed to the right config when roots run concurrently.
+
 ## [4.19.0] - 2026-10-02
 
 ### Added

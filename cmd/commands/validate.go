@@ -2,15 +2,20 @@ package commands
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/Goldziher/ai-rulez/schema"
+	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
+
+var validateRecursive bool
 
 var ValidateCmd = &cobra.Command{
 	Use:   "validate [config-file]",
@@ -21,6 +26,17 @@ schema compliance, and structural issues.`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
+
+		if validateRecursive {
+			if len(args) > 0 {
+				fmtError(oops.Errorf("validate --recursive does not take a config file argument"))
+				os.Exit(1)
+			}
+			if code := runRecursiveValidate(); code != 0 {
+				os.Exit(code)
+			}
+			return
+		}
 
 		cfg, err := loadConfigForCommand(ctx, args)
 		if err != nil {
@@ -54,7 +70,51 @@ schema compliance, and structural issues.`,
 }
 
 func init() {
+	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
 	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
+}
+
+// runRecursiveValidate validates every discovered config, reports all failures,
+// and returns 1 if any config is invalid (0 otherwise, including when none exist).
+func runRecursiveValidate() int {
+	configFiles := findConfigFilesRecursively()
+	if len(configFiles) == 0 {
+		progress.PrintlnIfNotQuiet("No configuration files found")
+		return 0
+	}
+
+	var failed []string
+	for _, configPath := range configFiles {
+		if err := validateConfigFile(configPath); err != nil {
+			fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
+			fmtError(err)
+			failed = append(failed, configPath)
+			continue
+		}
+		progress.PrintIfNotQuiet("✅ %s\n", configPath)
+	}
+
+	if len(failed) > 0 {
+		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) invalid\n", len(failed), len(configFiles))
+		return 1
+	}
+	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
+	return 0
+}
+
+// validateConfigFile applies the same checks as single-root validate (schema for
+// V4 configs, then structural validation) to one config file.
+func validateConfigFile(configPath string) error {
+	cfg, err := config.LoadConfigFromFile(context.Background(), configPath)
+	if err != nil {
+		return err
+	}
+	if !cfg.IsV3() {
+		if err := schema.ValidateFile(configPath); err != nil {
+			return err
+		}
+	}
+	return cfg.Validate()
 }
 
 func displayConfigurationSummary(cfg *config.Config) {

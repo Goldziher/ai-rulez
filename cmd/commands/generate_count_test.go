@@ -53,7 +53,10 @@ func TestProcessConfigFile_ReportsCountedFiles(t *testing.T) {
 	t.Cleanup(func() { progress.SetQuiet(false) })
 
 	counter := progress.NewFileCounter(1, "Processing configurations")
-	got := processConfigFile(filepath.Join(configDir, "config.toml"), counter)
+	got, err := processConfigFile(filepath.Join(configDir, "config.toml"), counter)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	counter.Finish()
 
 	want := manifestFileCount(t, configDir)
@@ -79,7 +82,11 @@ func TestProcessConfigFile_ReportsZeroOnFailure(t *testing.T) {
 	t.Cleanup(func() { progress.SetQuiet(false) })
 
 	counter := progress.NewFileCounter(1, "Processing configurations")
-	if got := processConfigFile(configPath, counter); got != 0 {
+	got, err := processConfigFile(configPath, counter)
+	if err == nil {
+		t.Error("a config that failed to load must return an error")
+	}
+	if got != 0 {
 		t.Errorf("a config that failed to load reported %d generated file(s), want 0", got)
 	}
 	counter.Finish()
