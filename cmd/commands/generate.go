@@ -33,6 +33,8 @@ var (
 	mcpEnv             []string
 	mcpEnvFiles        []string
 	pluginMode         bool
+	noLocal            bool
+	allowLocalDrift    bool
 	pluginIfConfigured bool
 )
 
@@ -59,6 +61,9 @@ func init() {
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnvFiles, "env-file", "E", nil, "Dotenv file for MCP env placeholders (repeatable)")
+	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
+	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
+		"Write output even when machine-local config would change files shared with the team")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
@@ -111,6 +116,8 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
+	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetContext(ctx)
 
 	if pluginMode {
 		runPluginGenerate(gen)
@@ -157,6 +164,9 @@ func runPluginGenerate(gen *generator.Generator) {
 }
 
 func loadConfigForCommand(ctx context.Context, args []string, opts ...config.LoadOption) (*config.Config, error) {
+	if noLocal {
+		opts = append(opts, config.WithoutLocal())
+	}
 	if len(args) > 0 {
 		return config.LoadConfigFromFile(ctx, args[0], opts...)
 	}
@@ -172,7 +182,7 @@ func loadConfigForCommand(ctx context.Context, args []string, opts ...config.Loa
 // pluginLoadOptions returns the load options for plugin bundle work. Plugin
 // bundles are distributable, so machine-local overlays never apply to them.
 func pluginLoadOptions(plugin bool) []config.LoadOption {
-	if plugin {
+	if plugin || noLocal {
 		return []config.LoadOption{config.WithoutLocal()}
 	}
 	return nil
@@ -442,6 +452,8 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
+	gen.SetAllowLocalDrift(allowLocalDrift)
+	gen.SetContext(ctx)
 	if pluginMode {
 		if pluginIfConfigured && !cfg.HasPluginAuthoring() {
 			fileCounter.FinishFile()

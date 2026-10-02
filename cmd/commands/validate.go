@@ -82,6 +82,7 @@ schema compliance, and structural issues.`,
 
 func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
+	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
 
@@ -116,7 +117,7 @@ func runRecursiveValidate() int {
 // validateConfigFile applies the same checks as single-root validate (schema for
 // V4 configs, then structural validation) to one config file.
 func validateConfigFile(configPath string) error {
-	cfg, err := config.LoadConfigFromFile(context.Background(), configPath)
+	cfg, err := config.LoadConfigFromFile(context.Background(), configPath, pluginLoadOptions(false)...)
 	if err != nil {
 		return err
 	}

@@ -40,6 +40,10 @@ type OutputFile struct {
 	Mode       os.FileMode
 	IsDir      bool
 	LocalOnly  bool
+	// SourceHash, when set, replaces the run's Source-Hash in this output's
+	// header. The drift guard uses it to stamp shared outputs with the baseline
+	// hash and machine-local ones with a hash of their local inputs.
+	SourceHash string
 	// PartiallyOwned marks a file ai-rulez only contributes some of the content
 	// to — a settings document where it owns one top-level key and the consumer
 	// hand-authors and tracks the rest. Such a file must not be added to the

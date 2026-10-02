@@ -48,7 +48,8 @@ func LoadLockFile(dir string) (*Lock, error) {
 	return &lock, nil
 }
 
-// SaveLockFile saves resolved refs/timestamps to lock file
+// SaveLockFile saves resolved refs/timestamps to lock file. Credentials embedded
+// in a source URL are redacted: the lock is committed.
 func SaveLockFile(dir string, lock *Lock) error {
 	lockPath := filepath.Join(dir, ".ai-rulez", lockFileName)
 
@@ -57,7 +58,12 @@ func SaveLockFile(dir string, lock *Lock) error {
 		return oops.Wrapf(err, "failed to create lock file directory")
 	}
 
-	data, err := yaml.Marshal(lock)
+	redacted := &Lock{Includes: make(map[string]LockEntry, len(lock.Includes))}
+	for name, entry := range lock.Includes {
+		entry.Source = redactURL(entry.Source)
+		redacted.Includes[name] = entry
+	}
+	data, err := yaml.Marshal(redacted)
 	if err != nil {
 		return oops.Wrapf(err, "failed to marshal lock file")
 	}
