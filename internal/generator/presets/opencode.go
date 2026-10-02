@@ -7,7 +7,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -208,39 +208,11 @@ func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTr
 	}
 
 	// Add rules section
-	if len(allRules) > 0 {
-		builder.WriteString("## Rules\n\n")
-		for _, rule := range allRules {
-			builder.WriteString("### ")
-			builder.WriteString(rule.Name)
-			builder.WriteString("\n\n") // Add blank line after heading
-
-			if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
-				builder.WriteString("**Priority:** ")
-				builder.WriteString(rule.Metadata.Priority)
-				builder.WriteString("\n\n")
-			}
-
-			processedContent := markdown.ProcessEmbeddedContent(rule.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
-		}
-	}
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
 
 	// Add context section
 	allContext := allInlineContext(content)
-	if len(allContext) > 0 {
-		builder.WriteString("## Context\n\n")
-		for _, ctx := range allContext {
-			builder.WriteString("### ")
-			builder.WriteString(ctx.Name)
-			builder.WriteString("\n\n")
-
-			processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
-			builder.WriteString(processedContent)
-			builder.WriteString("\n\n")
-		}
-	}
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
