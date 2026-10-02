@@ -157,6 +157,9 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 		return nil, oops.Errorf("token report requires a counter")
 	}
 
+	generateMu.Lock()
+	defer generateMu.Unlock()
+
 	collector := config.NewAnalysisCollector()
 	g.config.Analysis = collector
 	defer func() { g.config.Analysis = nil }()

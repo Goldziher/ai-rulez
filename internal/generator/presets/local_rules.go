@@ -72,7 +72,7 @@ func (l alwaysFileLocalRules) LocalRuleOutputs(rules []config.ContentFile, baseD
 // rules exactly like shared ones: rules it cannot apply automatically stay inline.
 func (g *CopilotPresetGenerator) LocalRuleOutputs(rules []config.ContentFile, baseDir string, cfg *config.Config,
 ) ([]config.OutputFile, []config.ContentFile, error) {
-	items, inline, _, err := planCopilotItems(rules, nil, cfg)
+	items, inline, _, err := planCopilotItems(rules, nil, cfg, rulefiles.ScopeInfo{}, nil)
 	if err != nil {
 		return nil, nil, err
 	}

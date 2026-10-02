@@ -13,7 +13,7 @@ import (
 const presetNameCline = "cline"
 
 var clineRulesTarget = rulefiles.Target{
-	Preset: presetNameCline, Dir: ".clinerules", Ext: extMarkdown, Dialect: rulefiles.DialectCline, Recursive: true, Banner: true,
+	Preset: presetNameCline, Dir: ".clinerules", Ext: extMarkdown, Dialect: rulefiles.DialectCline, Banner: true,
 }
 
 func init() {
@@ -42,10 +42,6 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	// Create directory structure
 	outputs = append(outputs,
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".clinerules"),
-			IsDir: true,
-		},
-		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cline"),
 			IsDir: true,
 		},
@@ -54,6 +50,10 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 			IsDir: true,
 		},
 	)
+
+	if !rulefiles.InScope(cfg) {
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".clinerules"), IsDir: true})
+	}
 
 	// Rules and context are written as native rule files with frontmatter
 	ruleOutputs, err := rulesFolderOutputs(clineRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)

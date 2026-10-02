@@ -115,6 +115,9 @@ func (c *Config) validateDefaults() error {
 	if err := c.validateRules(); err != nil {
 		return err
 	}
+	if err := c.validateScopes(); err != nil {
+		return err
+	}
 	if c.Defaults == nil {
 		return nil
 	}
@@ -133,6 +136,16 @@ func (c *Config) validateDefaults() error {
 		fieldPath := fmt.Sprintf("defaults.effort_by_preset.%s", preset)
 		if err := validateEffort(value, fieldPath); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// validateScopes checks that every [[scopes]] path is a plain relative subdirectory.
+func (c *Config) validateScopes() error {
+	for _, scope := range c.Scopes {
+		if err := ValidateScopePath(scope.Path); err != nil {
+			return oops.With("field", "scopes.path").With("scope_name", scope.Name).Wrap(err)
 		}
 	}
 	return nil

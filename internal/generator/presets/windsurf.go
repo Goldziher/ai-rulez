@@ -16,13 +16,12 @@ const windsurfPresetName = "windsurf"
 // windsurfRulesTarget is the Windsurf rules folder. Windsurf truncates rule
 // files beyond 12000 characters.
 var windsurfRulesTarget = rulefiles.Target{
-	Preset:    windsurfPresetName,
-	Dir:       ".windsurf/rules",
-	Ext:       extMarkdown,
-	Dialect:   rulefiles.DialectTrigger,
-	Recursive: true,
-	MaxChars:  12000,
-	Banner:    true,
+	Preset:   windsurfPresetName,
+	Dir:      ".windsurf/rules",
+	Ext:      extMarkdown,
+	Dialect:  rulefiles.DialectTrigger,
+	MaxChars: 12000,
+	Banner:   true,
 }
 
 func init() {
@@ -55,14 +54,14 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 			IsDir: true,
 		},
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".windsurf", "rules"),
-			IsDir: true,
-		},
-		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".windsurf", "skills"),
 			IsDir: true,
 		},
 	)
+
+	if !rulefiles.InScope(cfg) {
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".windsurf", "rules"), IsDir: true})
+	}
 
 	// Windsurf has no root file: every rule and context item is a file, whatever [rules] mode says.
 	ruleOutputs, err := rulesFolderOutputs(windsurfRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)

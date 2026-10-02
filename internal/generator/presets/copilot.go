@@ -92,6 +92,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	if err != nil {
 		return nil, err
 	}
+	rulefiles.WarnUnreadScopeFile(cfg, presetNameCopilot, ".github/copilot-instructions.md", inlineRules, inlineContext)
 	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, ".github", "copilot-instructions.md"),
 		Content: g.renderInstructionsFile(cfg, inlineRules, inlineContext),
@@ -181,12 +182,14 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 // always-on or glob-scoped (auto, manual) stay inline instead of becoming
 // files that would never be applied automatically.
 func planCopilotRules(content *config.ContentTree, cfg *config.Config) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
-	return planCopilotItems(allInlineRules(content), allInlineContext(content), cfg)
+	return planCopilotItems(allInlineRules(content), allInlineContext(content), cfg, rulefiles.ScopeOf(cfg), rulefiles.RegistryFor(cfg, presetNameCopilot))
 }
 
 // planCopilotItems is planCopilotRules over explicit rule and context lists, so
-// machine-local rules are routed exactly like shared ones.
-func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Config,
+// machine-local rules are routed exactly like shared ones. Local rules pass a
+// zero scope and a nil registry: they are root-only and their files never
+// compete with the shared ones for a path.
+func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Config, scope rulefiles.ScopeInfo, reg *rulefiles.Registry,
 ) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
 	routing := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameCopilot), true)
 	target := copilotRulesTarget
@@ -195,7 +198,7 @@ func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Con
 	ruleCands, ruleInline := splitCopilotCandidates(allRules, "rule", target)
 	ctxCands, ctxInline := splitCopilotCandidates(allContext, "context", target)
 	planned, plannedRules, plannedContext, err := rulefiles.Plan(ruleCands, ctxCands, &target, routing,
-		rulefiles.ScopeInfo{}, nil)
+		scope, reg)
 	if err != nil {
 		return nil, nil, nil, oops.With("preset", presetNameCopilot).Wrapf(err, "plan copilot rule files")
 	}
@@ -264,14 +267,17 @@ func renderCopilotRuleFiles(items []rulefiles.Item, baseDir string, cfg *config.
 		return nil, nil
 	}
 	t := copilotRulesTarget
-	outputs := []config.OutputFile{{Path: filepath.Join(baseDir, filepath.FromSlash(t.Dir)), IsDir: true}}
+	var outputs []config.OutputFile
+	if !rulefiles.InScope(cfg) {
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, filepath.FromSlash(t.Dir)), IsDir: true})
+	}
 	for i := range items {
 		it := items[i]
 		text, notes, err := rulefiles.Render(t, it, cfg)
 		if err != nil {
 			return nil, oops.With("preset", presetNameCopilot, "rule", it.File.Name).Wrapf(err, "render copilot instructions")
 		}
-		path := filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(rulefiles.FileName(t, it)))
+		path := rulefiles.RulesDirPath(cfg, baseDir, t, rulefiles.FileName(t, it))
 		rulefiles.ReportNotes(path, notes)
 		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}

@@ -45,10 +45,6 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			IsDir: true,
 		},
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".cursor", "rules"),
-			IsDir: true,
-		},
-		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".cursor", "commands"),
 			IsDir: true,
 		},
@@ -66,6 +62,9 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		},
 	)
 
+	if !rulefiles.InScope(cfg) {
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".cursor", "rules"), IsDir: true})
+	}
 	ruleOutputs, err := g.renderRuleFiles(content, baseDir, cfg)
 	if err != nil {
 		return nil, err

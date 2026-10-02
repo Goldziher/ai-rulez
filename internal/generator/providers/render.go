@@ -72,18 +72,15 @@ func (g *Generator) GetOutputPaths(baseDir string) []string {
 func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 
-	for _, dir := range g.Spec.Directories {
-		outputs = append(outputs, config.OutputFile{
-			Path:  filepath.Join(baseDir, dir),
-			IsDir: true,
-		})
-	}
+	outputs = append(outputs, g.directoryOutputs(baseDir, cfg)...)
 
-	reg := rulefiles.NewRegistry()
+	reg := rulefiles.RegistryFor(cfg, g.Spec.Name)
 	plan, err := g.planRules(content, cfg, reg)
 	if err != nil {
 		return nil, oops.With("preset", g.Spec.Name).Wrapf(err, "plan rules")
 	}
+
+	g.warnScopeLimits(cfg, plan)
 
 	if g.Spec.Root != nil {
 		rootOutput, err := g.renderRootFile(content, baseDir, cfg, plan)
@@ -209,7 +206,7 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 
 	target := g.rulesTarget(spec)
 	plan.target = &target
-	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg), rulefiles.ScopeInfo{}, reg)
+	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg), rulefiles.ScopeOf(cfg), reg)
 	if err != nil {
 		return nil, oops.With("preset", g.Spec.Name).Wrapf(err, "plan %s rule files", g.Spec.Name)
 	}
@@ -234,6 +231,42 @@ func (g *Generator) rootTarget() rulefiles.Target {
 		file = g.Spec.Root.File
 	}
 	return rulefiles.RootTarget(g.Spec.Name, file)
+}
+
+// warnScopeLimits reports, in a scope run, rules the tool will not load from the
+// scope directory.
+func (g *Generator) warnScopeLimits(cfg *config.Config, plan *rulesPlan) {
+	if g.Spec.Root != nil && g.Spec.Name == presetNameJunie {
+		rulefiles.WarnUnreadScopeFile(cfg, g.Spec.Name, g.Spec.Root.File, plan.inlineRules, plan.inlineContext)
+	}
+	if spec := g.Spec.Outputs[OutputTypeRules]; spec != nil && !spec.Split {
+		rulefiles.WarnScopeLegacyRules(cfg, g.Spec.Name, spec.Dir)
+	}
+}
+
+// presetNameJunie names the preset whose root file only the repository root
+// provides.
+const presetNameJunie = "junie"
+
+// directoryOutputs returns the always-emitted directory markers of the spec,
+// without the rules folder when a monorepo scope is generated.
+func (g *Generator) directoryOutputs(baseDir string, cfg *config.Config) []config.OutputFile {
+	var outputs []config.OutputFile
+	for _, dir := range g.Spec.Directories {
+		if g.isScopedRulesDir(dir, cfg) {
+			continue
+		}
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, dir), IsDir: true})
+	}
+	return outputs
+}
+
+// isScopedRulesDir reports whether dir is the rules folder of a split rules
+// output while a monorepo scope is generated: the scope's rule files live in
+// the root folder, so the scope gets no folder of its own.
+func (g *Generator) isScopedRulesDir(dir string, cfg *config.Config) bool {
+	spec := g.Spec.Outputs[OutputTypeRules]
+	return rulefiles.InScope(cfg) && spec != nil && spec.Split && filepath.ToSlash(dir) == filepath.ToSlash(spec.Dir)
 }
 
 // rulesTarget builds the rulefiles Target of a split rules output.
@@ -271,7 +304,7 @@ func (g *Generator) renderRuleFiles(plan *rulesPlan, content *config.ContentTree
 		if err != nil {
 			return nil, oops.With("preset", g.Spec.Name, "rule", it.File.Name).Wrapf(err, "render rule file")
 		}
-		outputPath := filepath.Join(baseDir, spec.Dir, filepath.FromSlash(rulefiles.FileName(*plan.target, *it)))
+		outputPath := rulefiles.RulesDirPath(cfg, baseDir, *plan.target, rulefiles.FileName(*plan.target, *it))
 		rulefiles.ReportNotes(outputPath, notes)
 		cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindRuleFile, it.ID, it.File.Path).
 			AddPart(config.PartKindItemBody, "body", it.File.Path, text)

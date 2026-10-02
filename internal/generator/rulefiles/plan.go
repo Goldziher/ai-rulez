@@ -1,6 +1,8 @@
 package rulefiles
 
 import (
+	"errors"
+	"fmt"
 	"path"
 	"strings"
 
@@ -40,26 +42,29 @@ type ScopeInfo struct {
 
 // Registry detects rule files that would land on the same path across several
 // Plan calls (the root plan and one per scope). Paths compare
-// case-insensitively because common filesystems do. The zero value is not
-// usable; create one with NewRegistry.
+// case-insensitively because common filesystems do, and a source claiming a
+// path it already owns is not a collision. The zero value is not usable; create
+// one with NewRegistry or RegistryFor.
 type Registry struct {
-	owner map[string]string
+	claims *config.PathClaims
 }
 
 // NewRegistry returns an empty Registry.
 func NewRegistry() *Registry {
-	return &Registry{owner: map[string]string{}}
+	return &Registry{claims: config.NewPathClaims()}
 }
 
 func (r *Registry) claim(t Target, it Item) error {
 	name := FileName(t, it)
-	key := strings.ToLower(path.Join(t.Dir, name))
-	if prev, dup := r.owner[key]; dup {
+	owner := it.File.Path
+	if owner == "" {
+		owner = it.File.Name
+	}
+	if prev, ok := r.claims.Claim(path.Join(t.Dir, name), owner); !ok {
 		return oops.With("file", name, "preset", t.Preset).
 			Hint("rename one of the two sources so they map to different file names").
-			Errorf("rule files collide on %q: %s and %s", name, prev, it.File.Path)
+			Errorf("rule files collide on %q: %s and %s", name, prev, owner)
 	}
-	r.owner[key] = it.File.Path
 	return nil
 }
 
@@ -78,15 +83,11 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	add := func(cf config.ContentFile, kind Kind) error {
-		it, err := newItem(*t, cf, kind, scope)
-		if err != nil {
-			return err
+		it, ok, err := planItem(*t, cf, kind, scope, reg)
+		if ok {
+			files = append(files, it)
 		}
-		if err := reg.claim(*t, it); err != nil {
-			return err
-		}
-		files = append(files, it)
-		return nil
+		return err
 	}
 
 	place := func(cf config.ContentFile, kind Kind, asFile bool, inline *[]config.ContentFile) error {
@@ -127,6 +128,24 @@ func routeItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, asFi
 	return nil
 }
 
+// planItem builds and claims the file of one item. ok is false, with a nil
+// error, for an item that is skipped because its globs escape the scope.
+func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, reg *Registry) (it Item, ok bool, err error) {
+	it, err = newItem(t, cf, kind, scope)
+	if errors.Is(err, errEscapesScope) {
+		warnSink()("rule file skipped: a glob escapes the scope with \"..\"",
+			"scope", scope.Slug, "source", cf.Path, "error", err.Error())
+		return Item{}, false, nil
+	}
+	if err != nil {
+		return Item{}, false, err
+	}
+	if err := reg.claim(t, it); err != nil {
+		return Item{}, false, err
+	}
+	return it, true, nil
+}
+
 func isScoped(cf config.ContentFile) bool {
 	return cf.Metadata.ResolveActivation().Mode == config.ActivationGlob
 }
@@ -163,38 +182,62 @@ func cleanPrefix(p string) string {
 	return p
 }
 
-// scopeActivation prefixes glob activations with the scope path. Always-on
-// items (and glob items without globs) become a glob over the whole scope;
-// auto and manual items keep their mode. Globs containing ".." segments are
-// rejected because they would escape the scope.
+// errEscapesScope marks a glob that would leave the scope directory.
+var errEscapesScope = errors.New("glob escapes the scope")
+
+// scopeActivation prefixes glob activations with the scope path, so globs of a
+// scoped rule are relative to the scope root. Always-on items become a glob over
+// the whole scope; a glob item without globs is left for the renderer to handle
+// as in the root run; auto and manual items keep their mode. Globs with ".."
+// segments (also inside braces) are rejected with errEscapesScope because they
+// would escape the scope. When only negated globs remain, the whole scope is
+// added so the rule still matches something.
 func scopeActivation(act config.Activation, prefix string) (config.Activation, error) {
 	switch act.Mode {
 	case config.ActivationAuto, config.ActivationManual:
 		return act, nil
 	case config.ActivationGlob:
-		if len(act.Globs) > 0 {
-			break
+		if len(act.Globs) == 0 {
+			return act, nil
 		}
-		fallthrough
 	default:
 		act.Mode = config.ActivationGlob
 		act.Globs = []string{prefix + "/**"}
 		return act, nil
 	}
-	globs := make([]string, len(act.Globs))
-	for i, g := range act.Globs {
+	globs := make([]string, 0, len(act.Globs)+1)
+	positive := false
+	for _, g := range act.Globs {
 		neg := strings.HasPrefix(g, "!")
-		g = strings.TrimLeft(strings.TrimPrefix(g, "!"), "/")
-		for _, seg := range strings.Split(g, "/") {
-			if seg == ".." {
-				return act, oops.Errorf("glob %q escapes the scope with \"..\"", act.Globs[i])
-			}
+		body := strings.TrimLeft(strings.TrimPrefix(g, "!"), "/")
+		if escapesScope(body) {
+			return act, fmt.Errorf("%w: %q", errEscapesScope, g)
 		}
-		globs[i] = path.Join(prefix, g)
+		joined := path.Join(prefix, body)
+		if strings.HasSuffix(body, "/") {
+			joined += "/"
+		}
 		if neg {
-			globs[i] = "!" + globs[i]
+			joined = "!" + joined
+		} else {
+			positive = true
 		}
+		globs = append(globs, joined)
+	}
+	if !positive {
+		globs = append([]string{prefix + "/**"}, globs...)
 	}
 	act.Globs = globs
 	return act, nil
+}
+
+func escapesScope(glob string) bool {
+	for _, expanded := range append(ExpandBraces(glob), glob) {
+		for _, seg := range strings.Split(expanded, "/") {
+			if seg == ".." {
+				return true
+			}
+		}
+	}
+	return false
 }
