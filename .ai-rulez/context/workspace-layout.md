@@ -5,6 +5,8 @@ targets:
   - CLAUDE.md
   - .cursor/rules/*
   - GEMINI.md
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # Workspace Layout

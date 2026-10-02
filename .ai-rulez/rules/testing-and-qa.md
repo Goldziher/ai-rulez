@@ -4,6 +4,8 @@ targets:
   - CLAUDE.md
   - .cursor/rules/*
   - .github/copilot-instructions.md
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # Testing and QA

@@ -7,6 +7,8 @@ targets:
   - .cursor/rules/*
   - .windsurf/*
   - .github/copilot-instructions.md
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # AI-Rulez Overview

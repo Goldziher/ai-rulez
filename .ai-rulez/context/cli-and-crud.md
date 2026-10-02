@@ -6,6 +6,8 @@ targets:
   - GEMINI.md
   - .cursor/rules/*
   - .windsurf/*
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # CLI and CRUD Commands
