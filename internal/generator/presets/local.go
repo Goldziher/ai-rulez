@@ -8,19 +8,19 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
-// RenderLocalRoot renders the body of a machine-local root override file
+// RenderLocalRootRules renders the body of a machine-local root override file
 // (CLAUDE.local.md, AGENTS.local.md, GEMINI.local.md, ...). It emits the same
 // generated-file header plus "## Rules" and "## Context" sections, reusing the
 // exact inline-rule and inline-context formatting as the committed root file so
 // local overrides read identically to the files they augment.
 //
-// The local tree carries only rules and context (skills/agents are out of scope
-// for local overrides). outputFile is the local variant's path relative to the
-// base dir, used only for the header banner.
-func RenderLocalRoot(local *config.ContentTree, cfg *config.Config, outputFile string) string {
+// allRules is the rules the root inlines: the caller removes the ones written
+// as personal rule files. Context comes from the local tree (skills/agents are
+// out of scope for local overrides). outputFile is the local variant's path
+// relative to the base dir, used only for the header banner.
+func RenderLocalRootRules(local *config.ContentTree, allRules []config.ContentFile, cfg *config.Config, outputFile string) string {
 	var builder strings.Builder
 
-	allRules := allInlineRules(local)
 	allContext := allInlineContext(local)
 
 	data := &templates.TemplateData{
