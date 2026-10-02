@@ -1042,6 +1042,12 @@ when the surface is loaded:
 | `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
 | `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
 
+Native rule files (`.claude/rules`, `.cursor/rules`, `.github/instructions`, ...) are
+bucketed by their activation, read from each file's frontmatter: always-on files count
+as `always`, path-scoped files as `conditional` ("path-scoped rule files"),
+agent-requested rules split into an `always` description and an `on demand` body, and
+manual rules are `on demand`.
+
 The root instructions file is broken down per section, and rules and context are
 listed individually so an expensive one can be named. Skill names, descriptions and
 bodies are separate lines: they are loaded on different schedules, and a single

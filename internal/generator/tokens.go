@@ -348,10 +348,7 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 		runtime.Detailed = runtime.Detailed || hasSectionDetail(root)
 	}
 
-	if len(group.ruleFile) > 0 {
-		runtime.Entries = append(runtime.Entries, b.aggregate(
-			"provider rule files", BucketAlways, group.ruleFile, allPartKinds))
-	}
+	runtime.Entries = append(runtime.Entries, b.ruleFileEntries(group.ruleFile)...)
 
 	for _, kind := range []config.OutputKind{config.OutputKindSkill, config.OutputKindCommand, config.OutputKindAgent} {
 		runtime.Entries = append(runtime.Entries, b.itemEntries(kind, group.items[kind])...)
@@ -379,6 +376,67 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 		}
 	}
 	return runtime
+}
+
+// ruleFileEntries buckets native rule files by how the agent activates them:
+// always-on files are paid every request, path-scoped files only when matching
+// files are in play, agent-requested files cost their description every request
+// and their body on demand, and manual files are paid only when invoked.
+func (b *reportBuilder) ruleFileEntries(analyses []*config.OutputAnalysis) []Entry {
+	byMode := make(map[config.ActivationMode][]*config.OutputAnalysis)
+	for _, analysis := range analyses {
+		mode := activationFromRuleFile(analysis.Path, b.ruleFileText(analysis))
+		byMode[mode] = append(byMode[mode], analysis)
+	}
+
+	var entries []Entry
+	add := func(entry Entry) {
+		if entry.Artifacts > 0 {
+			entries = append(entries, entry)
+		}
+	}
+	add(b.aggregate("provider rule files", BucketAlways, byMode[config.ActivationAlways], allPartKinds))
+	add(b.aggregate("path-scoped rule files", BucketConditional, byMode[config.ActivationGlob], allPartKinds))
+	descriptions, bodies := b.agentRequestedEntries(byMode[config.ActivationAuto])
+	add(descriptions)
+	add(bodies)
+	add(b.aggregate("manual rule files", BucketOnDemand, byMode[config.ActivationManual], allPartKinds))
+	return entries
+}
+
+// ruleFileText is the rendered text of a rule file, before provenance hashes.
+func (b *reportBuilder) ruleFileText(analysis *config.OutputAnalysis) string {
+	var text strings.Builder
+	for _, part := range analysis.Parts {
+		text.WriteString(part.Content)
+	}
+	return text.String()
+}
+
+// agentRequestedEntries splits agent-requested rule files: the description is
+// what the harness lists to the model on every request, the rest is read only
+// when the model decides the rule applies. A file whose description cannot be
+// separated is counted whole as on-demand.
+func (b *reportBuilder) agentRequestedEntries(analyses []*config.OutputAnalysis) (descriptions, bodies Entry) {
+	descriptions = Entry{Label: "agent-requested rule descriptions", Bucket: BucketAlways}
+	bodies = Entry{Label: "agent-requested rule files", Bucket: BucketOnDemand}
+	for _, analysis := range analyses {
+		text := b.ruleFileText(analysis)
+		total := b.counter.Count(text)
+		described := 0
+		if description := ruleFileDescription(text); description != "" {
+			described = min(b.counter.Count(description), total)
+		}
+		if described > 0 {
+			descriptions.Tokens += described
+			descriptions.Artifacts++
+			b.attribute(analysis.SourcePath, BucketAlways, described)
+		}
+		bodies.Tokens += total - described
+		bodies.Artifacts++
+		b.attribute(analysis.SourcePath, BucketOnDemand, total-described)
+	}
+	return descriptions, bodies
 }
 
 // hasSectionDetail reports whether an analysis carries a real per-section split

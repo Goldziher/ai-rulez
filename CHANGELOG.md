@@ -18,6 +18,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- **`ai-rulez tokens` rule-file accounting**: path-scoped rule files count as conditional, manual rules as on-demand, and agent-requested rules split into an always-loaded description and an on-demand body, instead of all counting as always-loaded.
 - **Claude rule files**: path-scoped rule files in `.claude/rules` now carry a generated banner, and path-scoped context is written to `.claude/rules/context-*.md`. With `[rules] mode = "split"` Claude and Junie write every rule to their rules folder instead of the root file. Claude rule file names keep the rule name's case. Generated files are rewritten once on upgrade (generator schema v6). Colliding or empty rule names now fail generation instead of silently overwriting.
 - **Scope shown for rules inlined into root files**: rules inlined into root files (`AGENTS.md`, `GEMINI.md`, ...) now state their path scope (`_Applies to: ..._`) or trigger description (`_When relevant: ..._`) instead of silently becoming global. `manual` rules still render as always-on and log one warning listing them.
 
