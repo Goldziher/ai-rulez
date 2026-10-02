@@ -352,30 +352,45 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 			return filepath.SkipDir
 		}
 		if useConventionFallback && name == ".config" {
-			nested := filepath.Join(path, "ai-rulez")
-			sibling := filepath.Join(filepath.Dir(path), ".ai-rulez")
-			if !dirHasRecursiveConfig(sibling) && dirHasRecursiveConfig(nested) {
-				dirs = append(dirs, filepath.Dir(filepath.Dir(nested)))
+			if projectDir, ok := conventionConfigProject(path); ok {
+				dirs = append(dirs, projectDir)
 			}
 			return filepath.SkipDir
 		}
 		if path == absBase {
 			return nil
 		}
-		if name == "ai-rulez" && dirHasRecursiveConfig(path) {
-			return filepath.SkipDir
-		}
-		// Descend through a wrapper directory (e.g. .config/) that is an
-		// ancestor of a nested configDirName target such as .config/ai-rulez.
-		if config.IsConfigDirAncestor(path, configDirName) {
-			return nil
-		}
-		if walkutil.ShouldSkipDir(name) {
-			return filepath.SkipDir
-		}
-		return nil
+		return recursiveWalkDecision(path, name, configDirName)
 	})
 	return dirs, err
+}
+
+// conventionConfigProject reports the project directory owning a
+// `.config/ai-rulez/` config found at dotConfigPath, unless a sibling
+// `.ai-rulez/` config takes precedence.
+func conventionConfigProject(dotConfigPath string) (string, bool) {
+	projectDir := filepath.Dir(dotConfigPath)
+	if dirHasRecursiveConfig(filepath.Join(projectDir, ".ai-rulez")) {
+		return "", false
+	}
+	return projectDir, dirHasRecursiveConfig(filepath.Join(dotConfigPath, "ai-rulez"))
+}
+
+// recursiveWalkDecision decides whether the walk descends into a directory
+// that is neither a config directory nor the walk root.
+func recursiveWalkDecision(path, name, configDirName string) error {
+	if name == "ai-rulez" && dirHasRecursiveConfig(path) {
+		return filepath.SkipDir
+	}
+	// Descend through a wrapper directory (e.g. .config/) that is an
+	// ancestor of a nested configDirName target such as .config/ai-rulez.
+	if config.IsConfigDirAncestor(path, configDirName) {
+		return nil
+	}
+	if walkutil.ShouldSkipDir(name) {
+		return filepath.SkipDir
+	}
+	return nil
 }
 
 // projectDirAbove returns the project directory that owns a config directory
