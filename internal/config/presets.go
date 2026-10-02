@@ -57,6 +57,17 @@ type LocalRootProvider interface {
 	LocalRootFile() string
 }
 
+// LocalRuleProvider is implemented by preset generators that write one native
+// rule file per rule. LocalRuleOutputs plans machine-local rules with the same
+// routing the preset applies to shared rules and renders the ones it routes to
+// rule files as personal overrides, "<rulesdir>/<id>.local<ext>", which the tool
+// loads natively. The outputs are LocalOnly. Rules the routing keeps inline are
+// returned in inline for the local root file. Local rule IDs never contain a
+// path separator (local rules are not scoped).
+type LocalRuleProvider interface {
+	LocalRuleOutputs(rules []ContentFile, baseDir string, cfg *Config) (files []OutputFile, inline []ContentFile, err error)
+}
+
 // PresetRegistry maps preset names to their generators
 // Populated by init() functions in generator/presets/ package
 var PresetRegistry = make(map[string]PresetGenerator)

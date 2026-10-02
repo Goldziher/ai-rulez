@@ -136,7 +136,10 @@ type OutputAnalysis struct {
 	ItemID string
 	// SourcePath is the authored file this output was rendered from.
 	SourcePath string
-	Parts      []OutputPart
+	// MachineLocal marks an output rendered from .ai-rulez/local content. It is
+	// gitignored and exists only on the developer's machine.
+	MachineLocal bool
+	Parts        []OutputPart
 }
 
 // AddPart appends a measured slice. Safe to call on a nil receiver so renderers

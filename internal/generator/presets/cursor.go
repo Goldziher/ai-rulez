@@ -12,13 +12,13 @@ import (
 )
 
 func init() {
-	config.RegisterPreset("cursor", &CursorPresetGenerator{})
+	config.RegisterPreset("cursor", &CursorPresetGenerator{alwaysFileLocalRules{target: &cursorRulesTarget, routing: rulefiles.RoutingEverything}})
 }
 
 const presetNameCursor = "cursor"
 
 // CursorPresetGenerator generates Cursor preset files
-type CursorPresetGenerator struct{}
+type CursorPresetGenerator struct{ alwaysFileLocalRules }
 
 func (g *CursorPresetGenerator) GetName() string {
 	return presetNameCursor

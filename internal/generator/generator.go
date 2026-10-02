@@ -28,6 +28,11 @@ import (
 const defaultProfileName = "default"
 const generatedManifestName = ".generated-manifest.json"
 
+// generatedLocalManifestName is the gitignored manifest of machine-local
+// outputs. They stay out of the committed manifest so a teammate's run never
+// treats them as stale.
+const generatedLocalManifestName = ".generated-manifest.local.json"
+
 // localSourceDirName is the subdirectory of the config dir (.ai-rulez/local)
 // holding machine-local override content. It is always gitignored.
 const localSourceDirName = "local"
@@ -85,6 +90,14 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 
 	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
 		return 0, err
+	}
+
+	// Machine-local files must never reach git: make sure they are ignored before
+	// any is written, and refuse to write them when that fails.
+	if g.hasLocalOutputs(flatOutputs) {
+		if err := g.updateGitignore(flatOutputs); err != nil {
+			return 0, oops.Wrapf(err, "gitignore machine-local outputs before writing them")
+		}
 	}
 
 	staleFiles := g.staleManifestFiles(flatOutputs)
@@ -413,7 +426,9 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// keyed by preset so they flow through the same flatten/manifest/stale path:
 	// duplicate local paths (codex + opencode both emit AGENTS.local.md) collapse,
 	// and removed local content deletes the file via stale-manifest cleanup.
-	g.appendLocalOutputs(allOutputs, &tempCfg)
+	if err := g.appendLocalOutputs(allOutputs, &tempCfg); err != nil {
+		return nil, "", err
+	}
 
 	// Flatten outputs for writing, detecting conflicts and deduplicating
 	flatOutputs := flattenPresetOutputs(allOutputs)
@@ -427,38 +442,85 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	return flatOutputs, activeProfile, nil
 }
 
-// appendLocalOutputs renders the ".local" root variant for every configured
-// preset that implements config.LocalRootProvider with a non-empty local
-// filename, appending it to allOutputs under that preset's key. It is a no-op
-// when there is no machine-local content. cfg is the profile-resolved temp
-// config (carries Name / header style / compact used by the renderer).
-func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config) {
+// appendLocalOutputs renders the machine-local outputs of every configured
+// built-in preset, appending them to allOutputs under that preset's key.
+// Presets that implement config.LocalRuleProvider write local rules as personal
+// rule files ("<rulesdir>/<id>.local<ext>") when their routing sends them to rule
+// files; every other local rule, and local context, goes to the preset's ".local"
+// root (config.LocalRootProvider). Local content a preset has no place for is
+// reported once with a warning. It is a no-op when there is no machine-local
+// content. cfg is the profile-resolved temp config (carries Name / header style /
+// compact used by the renderer). Custom provider presets get no local outputs.
+func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config) error {
 	if g.config.LocalContent == nil || g.config.LocalContent.IsEmpty() {
-		return
+		return nil
 	}
+	allRules := presets.AllInlineRules(g.config.LocalContent)
+	allContext := presets.AllInlineContext(g.config.LocalContent)
+	done := make(map[string]bool)
 	for _, preset := range g.config.Presets {
-		if !preset.IsBuiltIn() {
+		name := preset.GetName()
+		if !preset.IsBuiltIn() || done[name] {
 			continue
 		}
+		done[name] = true
 		generator, err := config.GetPresetGenerator(preset.BuiltIn)
 		if err != nil {
+			logger.Debug("Skipping local outputs for unknown preset", "preset", name, "error", err)
 			continue
 		}
-		provider, ok := generator.(config.LocalRootProvider)
-		if !ok {
-			continue
+		rules := allRules
+		filed := 0
+		if provider, ok := generator.(config.LocalRuleProvider); ok {
+			var files []config.OutputFile
+			files, rules, err = provider.LocalRuleOutputs(allRules, g.config.BaseDir, cfg)
+			if err != nil {
+				return oops.With("preset", name).Wrapf(err, "render local rule files")
+			}
+			filed = len(files)
+			allOutputs[name] = append(allOutputs[name], files...)
 		}
-		localFile := provider.LocalRootFile()
+		localFile := ""
+		if rootProvider, ok := generator.(config.LocalRootProvider); ok {
+			localFile = rootProvider.LocalRootFile()
+		}
 		if localFile == "" {
+			warnDroppedLocal(name, rules, allContext)
 			continue
 		}
-		body := presets.RenderLocalRoot(g.config.LocalContent, cfg, localFile)
-		allOutputs[preset.GetName()] = append(allOutputs[preset.GetName()], config.OutputFile{
+		if filed > 0 && len(rules) == 0 && len(allContext) == 0 {
+			continue
+		}
+		allOutputs[name] = append(allOutputs[name], config.OutputFile{
 			Path:      filepath.Join(g.config.BaseDir, localFile),
-			Content:   body,
+			Content:   presets.RenderLocalRootRules(g.config.LocalContent, rules, cfg, localFile),
 			LocalOnly: true,
 		})
 	}
+	return nil
+}
+
+// droppedLocalItems labels local rules and context for the dropped-content warning.
+func droppedLocalItems(rules, contexts []config.ContentFile) []string {
+	var items []string
+	for _, r := range rules {
+		items = append(items, "rule "+r.Name)
+	}
+	for _, c := range contexts {
+		items = append(items, "context "+c.Name)
+	}
+	return items
+}
+
+// warnDroppedLocal warns about local rules and context a preset has no output
+// for: it writes no local root file and does not route them to rule files.
+func warnDroppedLocal(preset string, rules, contexts []config.ContentFile) {
+	items := droppedLocalItems(rules, contexts)
+	if len(items) == 0 {
+		return
+	}
+	logger.Warn("Machine-local content has no output for this preset and was not written",
+		"preset", preset, "items", strings.Join(items, ", "))
 }
 
 // resolveProfile determines which profile to use. A composed value
@@ -747,6 +809,12 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 			g.skippedPaths = make(map[string]bool)
 		}
 		g.skippedPaths[filepath.ToSlash(g.convertToRelativePath(absPath))] = true
+		if output.LocalOnly {
+			logger.Warn("Skipped existing hand-written file that collides with a machine-local rule file; "+
+				"*.local.* names in rules folders are reserved for ai-rulez local rules, rename the file",
+				"path", output.Path)
+			return nil
+		}
 		logger.Warn("Skipped existing hand-written rule file that collides with a generated rule; rename one of them"+
 			g.unmanagedHint(),
 			"path", output.Path, "rule", strings.TrimSuffix(filepath.Base(output.Path), filepath.Ext(output.Path)))
@@ -795,7 +863,7 @@ func (g *Generator) isUnmanagedRuleFile(absPath, wantContent string) bool {
 	}
 	if g.previousFiles == nil {
 		g.previousFiles = make(map[string]bool)
-		for _, f := range g.readGeneratedManifest().Files {
+		for _, f := range g.previousManifestFiles() {
 			g.previousFiles[filepath.ToSlash(f)] = true
 		}
 	}
@@ -1430,53 +1498,92 @@ func writeContentFiles(b *strings.Builder, label string, files []config.ContentF
 	}
 }
 
-func (g *Generator) manifestPath() string {
-	configDir := g.config.ConfigDir
-	if configDir == "" {
-		configDir = filepath.Join(g.config.BaseDir, ".ai-rulez")
+func (g *Generator) manifestDir() string {
+	if g.config.ConfigDir == "" {
+		return filepath.Join(g.config.BaseDir, ".ai-rulez")
 	}
-	return filepath.Join(configDir, generatedManifestName)
+	return g.config.ConfigDir
 }
 
-func (g *Generator) readGeneratedManifest() generatedManifest {
-	data, err := os.ReadFile(g.manifestPath())
+func (g *Generator) manifestPath() string {
+	return filepath.Join(g.manifestDir(), generatedManifestName)
+}
+
+func (g *Generator) localManifestPath() string {
+	return filepath.Join(g.manifestDir(), generatedLocalManifestName)
+}
+
+func readManifestFile(path string) generatedManifest {
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return generatedManifest{}
 	}
 	var manifest generatedManifest
 	if err := json.Unmarshal(data, &manifest); err != nil {
-		logger.Warn("Ignoring invalid generated manifest", "path", g.manifestPath(), "error", err)
+		logger.Warn("Ignoring invalid generated manifest", "path", path, "error", err)
 		return generatedManifest{}
 	}
 	return manifest
+}
+
+// previousManifestFiles returns every path the previous run generated: the
+// committed manifest plus the machine-local one. Committed entries that name a
+// ".local." file are ignored, because only the gitignored local manifest may
+// authorize deleting machine-local outputs (older versions recorded them in the
+// committed manifest, where a teammate's run would delete them).
+func (g *Generator) previousManifestFiles() []string {
+	var files []string
+	for _, f := range readManifestFile(g.manifestPath()).Files {
+		if !strings.Contains(filepath.Base(filepath.FromSlash(f)), ".local.") {
+			files = append(files, f)
+		}
+	}
+	return append(files, readManifestFile(g.localManifestPath()).Files...)
 }
 
 // writeGeneratedManifest records the generated files so the next run can delete
 // the ones that dropped out. Partially owned outputs are deliberately left out:
 // the manifest exists only to drive deletion, and deleting a file ai-rulez
 // merely contributed a key to would take the hand-authored remainder with it.
+// Machine-local outputs go to the separate, gitignored local manifest, which is
+// removed when no local output remains.
 func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
-	files := make([]string, 0, len(outputs))
+	var shared, local []string
 	for _, output := range outputs {
 		if output.IsDir || output.PartiallyOwned {
 			continue
 		}
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
-		if g.skippedPaths[rel] {
-			continue
+		switch {
+		case g.skippedPaths[rel]:
+		case output.LocalOnly:
+			local = append(local, rel)
+		default:
+			shared = append(shared, rel)
 		}
-		files = append(files, rel)
 	}
-	sort.Strings(files)
+	if err := writeManifestFile(g.manifestPath(), shared); err != nil {
+		return err
+	}
+	if len(local) == 0 {
+		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
+			return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
+		}
+		return nil
+	}
+	return writeManifestFile(g.localManifestPath(), local)
+}
 
-	manifest := generatedManifest{Version: "1", Files: files}
-	data, err := json.MarshalIndent(manifest, "", "  ")
+func writeManifestFile(path string, files []string) error {
+	sort.Strings(files)
+	if files == nil {
+		files = []string{}
+	}
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}
 	data = append(data, '\n')
-
-	path := g.manifestPath()
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return oops.With("dir", filepath.Dir(path)).Wrapf(err, "create manifest directory")
 	}
@@ -1484,8 +1591,8 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 }
 
 func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
-	previous := g.readGeneratedManifest()
-	if len(previous.Files) == 0 {
+	previous := g.previousManifestFiles()
+	if len(previous) == 0 {
 		return nil
 	}
 
@@ -1512,7 +1619,7 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	merged := append(providers.MergedSidecarPaths(), presets.MergedDocumentPaths()...)
 
 	var stale []string
-	for _, relPath := range previous.Files {
+	for _, relPath := range previous {
 		if next[relPath] || isMergedDocumentPath(merged, relPath) {
 			continue
 		}
@@ -1521,12 +1628,29 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			logger.Warn("Skipping generated manifest path outside project", "path", relPath)
 			continue
 		}
-		if _, err := os.Stat(absPath); err == nil {
-			stale = append(stale, absPath)
+		if _, err := os.Stat(absPath); err != nil {
+			continue
 		}
+		// A rules folder is shared with hand-written rules: delete only a file that
+		// still looks generated, even when a manifest lists it.
+		if config.InRulesDir(relPath) && !looksGenerated(absPath) {
+			logger.Debug("Keeping manifest-listed rule file without a generated marker", "path", relPath)
+			continue
+		}
+		stale = append(stale, absPath)
 	}
 	sort.Strings(stale)
 	return stale
+}
+
+// looksGenerated reports whether the file at absPath carries stored hashes or a
+// generated banner.
+func looksGenerated(absPath string) bool {
+	if contentHash, _ := extractStoredHashes(absPath); contentHash != "" {
+		return true
+	}
+	data, err := os.ReadFile(absPath)
+	return err == nil && hasGeneratedBanner(data)
 }
 
 // isMergedDocumentPath reports whether relPath names one of the merged settings
@@ -1578,6 +1702,16 @@ func (g *Generator) removeStaleFile(filePath string) {
 	}
 }
 
+// hasLocalOutputs reports whether any output is machine-local.
+func (g *Generator) hasLocalOutputs(outputs []config.OutputFile) bool {
+	for _, output := range outputs {
+		if output.LocalOnly {
+			return true
+		}
+	}
+	return false
+}
+
 // hasLocalGitignoreTargets reports whether machine-local content exists and so
 // requires unconditional gitignore entries (the ".local" outputs plus the
 // .ai-rulez/local/ source subtree).
@@ -1597,7 +1731,7 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	for _, output := range outputs {
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if output.LocalOnly {
-			paths[relPath] = true
+			paths[localGitignorePattern(relPath)] = true
 			continue
 		}
 		// A hand-written file the overwrite guard skipped is the user's, not ours.
@@ -1626,6 +1760,9 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	// config-dir skip that normally protects .ai-rulez/.
 	if g.hasLocalGitignoreTargets() {
 		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
+		if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
+			paths[rel] = true
+		}
 	}
 
 	// The generated manifest sits inside the config dir and is rewritten on
@@ -1638,6 +1775,17 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	}
 
 	return paths
+}
+
+// localGitignorePattern maps a machine-local output to its ignore pattern. Local
+// rule files share a rules folder with committed rules, so they get the stable
+// "<rulesdir>/*.local.*" pattern instead of one entry per file; that keeps the
+// block identical for teammates and covers rules added later.
+func localGitignorePattern(relPath string) string {
+	if config.InRulesDir(relPath) {
+		return relPath[:strings.LastIndex(relPath, "/")] + "/*.local.*"
+	}
+	return relPath
 }
 
 // gitignorePatternForOutput maps one generated output path to the pattern that
