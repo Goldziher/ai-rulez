@@ -61,7 +61,7 @@ The table shows the file each preset writes and the frontmatter it emits for eac
 | Cursor (`cursor`)             | `.cursor/rules/<id>.mdc`                     | `alwaysApply: true`            | `globs: "a,b"`, `alwaysApply: false`              | `description`                | `alwaysApply: false`         |
 | Windsurf (`windsurf`)         | `.windsurf/rules/<id>.md`                    | `trigger: always_on`           | `trigger: glob`, `globs: "a,b"`                   | `trigger: model_decision`, `description` | `trigger: manual` |
 | Antigravity (`antigravity`)   | `.agents/rules/<id>.md`                      | `trigger: always_on`           | `trigger: glob`, `globs: "a,b"`                   | `trigger: model_decision`, `description` | `trigger: manual` |
-| Copilot (`copilot`)           | `.github/instructions/<id>.instructions.md`  | `applyTo: "**"`                | `applyTo: "a,b"`                                  | `description` only           | no frontmatter               |
+| Copilot (`copilot`)           | `.github/instructions/<id>.instructions.md`  | `applyTo: "**"`                | `applyTo: "a,b"`                                  | stays inline                 | stays inline                 |
 | Cline (`cline`)               | `.clinerules/<id>.md`                        | none                           | `paths: [...]`                                    | always-on, warning           | always-on, warning           |
 | Continue (`continue-dev`)     | `.continue/rules/<id>.md`                    | `name`, `alwaysApply: true`    | `name`, `globs: [...]`, `alwaysApply: false`      | `name`, `description`        | `name`, `alwaysApply: false` |
 | Junie (`junie`)               | `.junie/rules/<id>.md`                       | none                           | none; an `_Applies to: ..._` line, always loaded  | always-on, warning           | always-on, warning           |
@@ -71,11 +71,16 @@ Notes:
 - Cursor also writes `description` on `always` and `glob` rules when one is set. It is left off `manual` rules because Cursor treats a description without globs as agent-requested.
 - Cursor, Windsurf, Antigravity and Copilot take a comma-joined glob string, so brace patterns are expanded: `*.{ts,tsx}` becomes `*.ts,*.tsx`.
 - Context files in a rules folder are named `context-<id>` and use the same frontmatter.
-- Each generated file starts with a generated banner (except `.mdc`, whose frontmatter carries the hashes). Scoped (monorepo) rule placement is not covered here; see [Monorepo](monorepo.md).
+- Each generated file has a generated banner after the frontmatter (see [Freshness hashes](#freshness-hashes)). Scoped (monorepo) rule placement is covered in [Monorepo](monorepo.md#scoped-rule-files).
+- Copilot keeps `auto` and `manual` rules in `.github/copilot-instructions.md`, because an instructions file without `applyTo` is not applied automatically. Negated globs (`!x`) are dropped from `applyTo` with a warning, and a rule whose globs are all negated stays in `copilot-instructions.md`.
 
 ### Fallbacks
 
-Where a tool cannot express `auto` or `manual`, the rule is written as always-on and `generate` logs one aggregated warning naming the rules and the downgrade. Nothing is dropped. Claude, Cline and Junie have no description or manual mechanism. Copilot cannot express `manual` and expresses `auto` only through a `description`.
+Where a tool cannot express `auto` or `manual`, the rule is written as always-on and `generate` logs one aggregated warning naming the rules and the downgrade. Nothing is dropped. Claude, Cline and Junie have no description or manual mechanism. Copilot has no per-file equivalent for either, so those rules stay inline in its root file.
+
+### Freshness hashes
+
+`Content-Hash` and `Source-Hash` lines are written inside the HTML comment banner that follows the frontmatter, never in the frontmatter, because the tools' frontmatter parsers are not documented to tolerate YAML comments. This applies to every rules-folder file, including `.mdc`. Files written by earlier versions with hashes in the frontmatter are rewritten once on the next `generate`. Hash lines follow `[header] hashes`.
 
 ### Tools without a rules folder
 
@@ -93,27 +98,38 @@ _Applies to: `src/**/*.{ts,tsx}`, `tests/**`_
 
 ```toml
 [rules]
-mode = "inline"            # split | inline
+mode = "split"             # split (default) | inline
 
 [rules.mode_by_preset]
-claude = "split"
-copilot = "inline"
+claude = "inline"
+copilot = "split"
 ```
 
-<!-- TODO(4.22.0): default flips to split -->
-
-Default: `inline`.
+Since 4.22.0 the default is `split`. To keep the previous behaviour, set `mode = "inline"` globally, or opt out for single presets with `mode_by_preset`.
 
 | Mode     | Rules folder receives                  | Root file keeps                          |
 | -------- | -------------------------------------- | ---------------------------------------- |
-| `inline` | path-scoped rules and context only     | all other rules, all unscoped context    |
 | `split`  | every rule, plus path-scoped context   | context and delegation notes, no rules   |
+| `inline` | path-scoped rules and context only     | all other rules, all unscoped context    |
 
 `mode_by_preset` overrides `mode` for one preset. Switching modes removes the stale files on the next `generate`.
 
-Applies to `claude`, `copilot`, `antigravity` and `junie`. Junie has no glob activation, so in `inline` mode it writes no rule files; `split` writes `.junie/rules/`.
+What each preset writes:
 
-Cursor, Windsurf, Cline and Continue have no rules-bearing root file, so they always write one file per rule and `mode` has no effect on them. Context goes to the folder as well, except for Continue, which keeps it in its prompts file.
+| Preset                          | `split`                                                                 | `inline`                                                   |
+| ------------------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------- |
+| `claude`                        | every rule in `.claude/rules/*.md` (`paths` when scoped)                | path-scoped rules in `.claude/rules`; the rest in `CLAUDE.md` |
+| `copilot`                       | rules in `.github/instructions/*.instructions.md` (`applyTo`)           | path-scoped rules only; `auto`, `manual` and negated-only-glob rules stay in `copilot-instructions.md` in both modes |
+| `antigravity`                   | every rule in `.agents/rules`; inline if `gemini` is also enabled and `mode_by_preset` does not set it | path-scoped rules in `.agents/rules` |
+| `junie`                         | every rule in `.junie/rules/*.md`                                       | no rule files; everything in `.junie/guidelines.md`        |
+| `cursor`, `windsurf`, `cline`, `continue-dev` | `.cursor/rules/*.mdc`, `.windsurf/rules`, `.clinerules`, `.continue/rules`; `mode` has no effect | same |
+| `gemini`, `codex`, `opencode`, `amp`, `xum`, `hermes` | rules inline, with `_Applies to:_` / `_When relevant:_` lines | same |
+
+Custom provider presets follow `mode` when their `outputs.rules` sets `split`.
+
+Cursor, Windsurf, Cline and Continue have no rules-bearing root file, so they always write one file per rule. Context goes to the folder as well, except for Continue, which keeps it in its prompts file.
+
+Root files always keep context (unscoped context in both modes) and the delegation notes.
 
 ### Context
 
@@ -125,16 +141,62 @@ Both presets write `GEMINI.md`, and the last writer wins. When both are enabled,
 
 ### Copilot
 
-- Instruction files without `applyTo` (`manual` rules, and `auto` rules that carry only a `description`) are not applied automatically on GitHub.com.
+- Instruction files without `applyTo` are not applied automatically on GitHub.com, so `auto` and `manual` rules are never written as files; they stay in `copilot-instructions.md`.
 - In `split` mode always-on rules become `applyTo: "**"` files, which Copilot applies only when it has file context. Use `inline` for Copilot if a rule must apply to chat without file context.
 
 ### Claude and Copilot together
 
 VS Code Copilot also reads `.claude/rules`. With both presets enabled, a rule can load twice. Path-scoped rules are written to both folders in either mode; `split` makes every rule load twice. Keep one of the two presets on `inline` to limit the overlap.
 
+### Junie and a root `AGENTS.md`
+
+Junie looks for guidance in tiers: `.junie/AGENTS.md`, then root `AGENTS.md` together with `.junie/rules`, then the legacy `.junie/guidelines.md`. If another preset (`codex`, `opencode`, `amp`, `xum`) writes a root `AGENTS.md`, Junie may prefer it over `.junie/guidelines.md`. Keep Junie content out of `guidelines.md` in that case, or use `split` so rules load from `.junie/rules`.
+
+## Targets
+
+Frontmatter `targets` restricts where a rule or context file is written. It applies to every rules-folder file and to every inlined root file (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.hermes.md`, `.junie/guidelines.md`, `.github/copilot-instructions.md`, and the `*.local.md` variants). Items without `targets` go everywhere.
+
+```markdown
+---
+targets: ["claude", ".cursor/rules/"]
+---
+```
+
+A target selects an output when it is one of:
+
+| Form                        | Example                          |
+| --------------------------- | -------------------------------- |
+| preset name                 | `claude`, `cursor`               |
+| root file                   | `CLAUDE.md`, `AGENTS.md`         |
+| exact path                  | `.claude/rules/go.md`            |
+| base name                   | `go.md`                          |
+| directory prefix            | `.cursor/rules/`                 |
+| whole tree                  | `.cursor/rules/*`, `.cursor/**`  |
+| glob (`path.Match` syntax)  | `.claude/rules/*.md`             |
+| everything                  | `*`                              |
+
+Matching rules:
+
+- Paths compare case-insensitively; `\` and a leading `./` or `/` are accepted.
+- `AGENTS.md` is shared by `codex`, `opencode`, `amp` and `xum`, and `GEMINI.md` by `gemini` and `antigravity`. Naming any preset that writes a shared file, or the file itself, selects it for all of them, so the file stays identical whichever preset writes it.
+- A rule targeted only at a rules folder (for example `.junie/rules/`) is written there even in `inline` mode. Where inline mode writes no files for that folder (Junie, and providers without `inline_filter`), it is omitted.
+- A rule targeted only at skill or agent files appears in no root file.
+- A malformed glob (such as `[x`) never matches; `validate` and `generate` warn about it.
+
+!!! note "Behaviour change in 4.22.0"
+    `targets` used to restrict only targeted sections, commands and skills. A rule with `targets: ["CLAUDE.md"]` now stops appearing in other root files and rules folders. Review rules whose `targets` omit an output they should still reach.
+
+## Local rules
+
+Rules in `.ai-rulez/local/rules` follow the same routing as shared rules. Where a preset sends rules to its rules folder, a local rule is written as `<rulesdir>/<id>.local<ext>` (for example `.claude/rules/my-rule.local.md`) instead of the `*.local.md` root file, so the tool loads it natively. Local context still goes to the `*.local.md` root file. See [Local Overrides](local-overrides.md).
+
+## Scopes
+
+For `[[scopes]]`, rule files are written to the root rules folder, with the scope path as a qualifier and glob prefix: `<dir>/<scope-slug>/<id>` for Claude, Cursor and Copilot, `<scope-slug>--<id>` for Windsurf, Cline, Continue, Antigravity and Junie. See [Monorepo](monorepo.md#scoped-rule-files).
+
 ## Hand-written rule files
 
-Generated rule files are gitignored one by one (for example `.claude/rules/x.md`), never the whole folder, so rules you write by hand in the same folder stay tracked. If a hand-written file collides with a generated rule name, `generate` warns and skips it instead of overwriting it; rename one of the two.
+Generated rule files are gitignored one by one (for example `.claude/rules/x.md`), never the whole folder, so rules you write by hand in the same folder stay tracked. A hand-written file is never overwritten: if it collides with a generated rule name, `generate` warns and skips it; rename one of the two. Names matching `*.local.*` in a rules folder are reserved for [local rules](#local-rules).
 
 ## Size limits
 
