@@ -107,6 +107,9 @@ func validateEffort(value, fieldPath string) error {
 }
 
 func (c *Config) validateDefaults() error {
+	if err := c.validateHeaderHashes(); err != nil {
+		return err
+	}
 	if c.Defaults == nil {
 		return nil
 	}
@@ -797,4 +800,17 @@ func (c *Config) validateMCP() error {
 			Errorf("mcp.self_server_version %q is not a valid version", m.SelfServerVersion)
 	}
 	return nil
+}
+
+func (c *Config) validateHeaderHashes() error {
+	switch mode := c.GetHeaderHashes(); mode {
+	case HeaderHashesFull, HeaderHashesContent, HeaderHashesNone:
+		return nil
+	default:
+		return oops.
+			With("field", "header.hashes").
+			With("value", mode).
+			Hint(`Use "full", "content" or "none".`).
+			Errorf("invalid header.hashes %q", mode)
+	}
 }

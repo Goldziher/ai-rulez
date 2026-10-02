@@ -759,12 +759,39 @@ style = "minimal"   # Default: bare minimum header
 # style = "detailed" # Comprehensive header with full documentation
 # timestamp = true  # Emit the "Generated:" line (default: false)
 # text = "..."      # Override the generated prose (see "Custom header")
+# hashes = "content" # Freshness lines: "full" (default), "content", or "none"
 ```
 
 The default is `minimal`. Every style — including `minimal` — carries the "DO NOT EDIT"
-warning and the injected `Content-Hash` / `Source-Hash` freshness lines that ai-rulez uses to
+warning and the injected `Content-Hash` / `Source-Hash` freshness lines (see [`hashes`](#hashes)) that ai-rulez uses to
 detect whether a generated file (or its sources) changed since the last `generate`. Only the
 amount of explanatory prose differs between styles.
+
+#### `hashes`
+
+Every generated file carries freshness lines in its header (a YAML comment inside the frontmatter for
+skills and agents, an HTML comment in `CLAUDE.md`). `hashes` selects which ones:
+
+| Value               | Lines written                 | Effect                                                                                      |
+| ------------------- | ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `full` (default)    | `Content-Hash`, `Source-Hash` | Unchanged behaviour.                                                                        |
+| `content`           | `Content-Hash`                | Each header depends only on that file's own body.                                           |
+| `none`              | neither                       | No hash lines at all.                                                                       |
+
+`Content-Hash` is a hash of the file's own body and is stable. `Source-Hash` is a hash of the entire
+source set (config, every rule, skill, agent, command, MCP server), so under `full` one edit changes the
+`Source-Hash` line in every generated file. That is harmless for gitignored output, but when generated
+files are committed it makes every change to `.ai-rulez/` rewrite hundreds of files and makes concurrent
+branches conflict. With `content` or `none`, editing one skill changes only that skill's output (and
+`CLAUDE.md` when the edit changes what `CLAUDE.md` renders).
+
+With `content` or `none`, `generate` decides whether to rewrite a file by comparing the whole rendered
+file to what is on disk (ignoring the `Generated:` text when `timestamp = true`), so a changed header
+style, custom header or config directory still re-renders. Consequently a formatter that edits generated
+files is undone by the next `generate`, as it would be for any committed-output check. `clean` does not
+read these lines in any mode. `verify --plugin` uses its own per-bundle provenance (the
+`.ai-rulez-generated.json` sidecar) and is independent of this setting. Switching modes rewrites every
+file once. Any other value is rejected by `validate`.
 
 #### `timestamp`
 
