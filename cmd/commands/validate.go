@@ -59,6 +59,15 @@ schema compliance, and structural issues.`,
 			}
 		}
 
+		if err := validateLocalOverlay(cfg); err != nil {
+			logger.Error("Local overlay failed schema validation", "path", cfg.LocalOverlay.Path)
+			fmtError(err)
+			os.Exit(1)
+		}
+		if cfg.LocalOverlay != nil {
+			progress.PrintIfNotQuiet("local overlay: %s\n", cfg.LocalOverlay.Path)
+		}
+
 		if err := cfg.Validate(); err != nil {
 			logger.Error("Configuration validation failed", "path", cfg.ConfigDir)
 			fmtError(err)
@@ -116,7 +125,22 @@ func validateConfigFile(configPath string) error {
 			return err
 		}
 	}
+	if err := validateLocalOverlay(cfg); err != nil {
+		return err
+	}
 	return cfg.Validate()
+}
+
+// validateLocalOverlay checks the config.local.* overlay, when one was merged,
+// against the local overlay schema. The returned error names the overlay file.
+func validateLocalOverlay(cfg *config.Config) error {
+	if cfg.LocalOverlay == nil {
+		return nil
+	}
+	if err := schema.ValidateLocalFile(cfg.LocalOverlay.Path); err != nil {
+		return oops.With("path", cfg.LocalOverlay.Path).Wrapf(err, "local overlay %s", cfg.LocalOverlay.Path)
+	}
+	return nil
 }
 
 func displayConfigurationSummary(cfg *config.Config) {

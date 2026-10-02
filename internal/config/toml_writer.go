@@ -59,6 +59,10 @@ func MarshalTOML(cfg *Config) ([]byte, error) {
 		return nil, oops.Hint("Provide a valid Config struct").Errorf("config is nil")
 	}
 
+	if cfg.LocalOverlay != nil {
+		return nil, errMergedConfigWrite()
+	}
+
 	data, err := toml.Marshal(toTOMLOutput(cfg))
 	if err != nil {
 		return nil, oops.Wrapf(err, "marshal config to TOML")

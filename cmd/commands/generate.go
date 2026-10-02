@@ -85,7 +85,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
 
 	// Load configuration
-	cfg, err := loadConfigForCommand(ctx, args)
+	cfg, err := loadConfigForCommand(ctx, args, pluginLoadOptions(pluginMode)...)
 	if err != nil {
 		fmtError(err)
 		os.Exit(1)
@@ -156,17 +156,26 @@ func runPluginGenerate(gen *generator.Generator) {
 	}
 }
 
-func loadConfigForCommand(ctx context.Context, args []string) (*config.Config, error) {
+func loadConfigForCommand(ctx context.Context, args []string, opts ...config.LoadOption) (*config.Config, error) {
 	if len(args) > 0 {
-		return config.LoadConfigFromFile(ctx, args[0])
+		return config.LoadConfigFromFile(ctx, args[0], opts...)
 	}
 	if cfgFile != "" {
-		return config.LoadConfigFromFile(ctx, cfgFile)
+		return config.LoadConfigFromFile(ctx, cfgFile, opts...)
 	}
 	if configDir != "" {
-		return config.LoadConfigFromDir(ctx, ".", configDir)
+		return config.LoadConfigFromDir(ctx, ".", configDir, opts...)
 	}
-	return config.LoadConfig(ctx, ".")
+	return config.LoadConfig(ctx, ".", opts...)
+}
+
+// pluginLoadOptions returns the load options for plugin bundle work. Plugin
+// bundles are distributable, so machine-local overlays never apply to them.
+func pluginLoadOptions(plugin bool) []config.LoadOption {
+	if plugin {
+		return []config.LoadOption{config.WithoutLocal()}
+	}
+	return nil
 }
 
 // runRecursiveGenerate processes every discovered config and returns the
@@ -417,7 +426,7 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
-	cfg, err := config.LoadConfigFromFile(ctx, configPath)
+	cfg, err := config.LoadConfigFromFile(ctx, configPath, pluginLoadOptions(pluginMode)...)
 	if err != nil {
 		fileCounter.ErrorFor(configPath, err)
 		return 0, err

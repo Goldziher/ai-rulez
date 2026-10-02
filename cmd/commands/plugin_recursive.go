@@ -24,7 +24,7 @@ func selectRecursivePluginConfigs(paths []string) ([]string, error) {
 	candidates := make([]candidate, 0, len(paths))
 	memberRoots := make([]string, 0)
 	for _, path := range paths {
-		cfg, err := config.LoadConfigFromFile(context.Background(), path)
+		cfg, err := config.LoadConfigFromFile(context.Background(), path, config.WithoutLocal())
 		if err != nil {
 			return nil, oops.With("config", path).Wrapf(err, "load recursive plugin configuration")
 		}
@@ -82,7 +82,7 @@ func runRecursivePluginVerify() {
 		os.Exit(1)
 	}
 	for _, path := range paths {
-		cfg, err := config.LoadConfigFromFile(context.Background(), path)
+		cfg, err := config.LoadConfigFromFile(context.Background(), path, config.WithoutLocal())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
