@@ -20,6 +20,7 @@ func TestValidateMCPServerHeaders(t *testing.T) {
 		{name: "stdio with headers", transport: "", headers: map[string]string{"X-A": "b"}, wantErr: "require transport"},
 		{name: "invalid header name", transport: TransportHTTP, headers: map[string]string{"Bad Header": "v"}, wantErr: "invalid header name"},
 		{name: "empty header name", transport: TransportHTTP, headers: map[string]string{"": "v"}, wantErr: "invalid header name"},
+		{name: "names differing only in case", transport: TransportHTTP, headers: map[string]string{"Authorization": "a", "authorization": "b"}, wantErr: "duplicate header"},
 		{name: "header value with newline", transport: TransportHTTP, headers: map[string]string{"X-A": "v\r\nX-B: injected"}, wantErr: "must not contain"},
 	}
 	for _, tt := range tests {
