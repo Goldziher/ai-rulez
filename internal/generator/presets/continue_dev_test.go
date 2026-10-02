@@ -272,22 +272,96 @@ func TestContinueDevPresetGenerator_renderPromptsYAML_ExcludesNonTargetedCommand
 	assert.NotContains(t, result, "claude-cmd")
 }
 
-func TestContinueDevPresetGenerator_renderRuleFile(t *testing.T) {
+func continueRuleOutput(t *testing.T, rule config.ContentFile) string {
+	t.Helper()
 	g := &ContinueDevPresetGenerator{}
+	content := &config.ContentTree{Rules: []config.ContentFile{rule}, Domains: map[string]*config.Domain{}}
 
+	outputs, err := g.Generate(content, "/tmp/test", &config.Config{Name: "test"})
+	require.NoError(t, err)
+
+	want := filepath.Join("/tmp/test", ".continue", "rules", sanitizeName(rule.Name)+".md")
+	for _, o := range outputs {
+		if o.Path == want {
+			return o.Content
+		}
+	}
+	t.Fatalf("rule file %s not generated", want)
+	return ""
+}
+
+func TestContinueDevPresetGenerator_RuleFile(t *testing.T) {
+	// Arrange
 	rule := config.ContentFile{
-		Name:    "test rule",
-		Content: "Test content",
-		Metadata: &config.Metadata{
-			Priority: "high",
-		},
+		Name:     "test rule",
+		Content:  "Test content",
+		Metadata: &config.Metadata{Priority: "high"},
 	}
 
-	result := g.renderRuleFile(rule, &config.Config{Name: "test"}, ".continue/rules/test-rule.md", 1)
+	// Act
+	result := continueRuleOutput(t, rule)
 
+	// Assert
 	assert.Contains(t, result, "# test rule")
 	assert.Contains(t, result, "**Priority:** high")
 	assert.Contains(t, result, "Test content")
+}
+
+func TestContinue_RuleFrontmatterName(t *testing.T) {
+	tests := []struct {
+		name     string
+		metadata *config.Metadata
+		want     []string
+		absent   []string
+	}{
+		{
+			name:     "no metadata is always on",
+			metadata: nil,
+			want:     []string{"name: Style Guide\n", "alwaysApply: true\n"},
+			absent:   []string{"globs:", "description:"},
+		},
+		{
+			name:     "glob rule carries globs and alwaysApply false",
+			metadata: &config.Metadata{Paths: []string{"src/**/*.go"}},
+			want:     []string{"name: Style Guide\n", "globs:\n    - src/**/*.go\n", "alwaysApply: false\n"},
+			absent:   []string{"alwaysApply: true"},
+		},
+		{
+			name:     "auto rule carries description",
+			metadata: &config.Metadata{Activation: "auto", Extra: map[string]string{"description": "when styling"}},
+			want:     []string{"name: Style Guide\n", "description: when styling\n"},
+			absent:   []string{"alwaysApply", "globs:"},
+		},
+		{
+			name:     "manual rule is not always applied",
+			metadata: &config.Metadata{Activation: "manual"},
+			want:     []string{"name: Style Guide\n", "alwaysApply: false\n"},
+			absent:   []string{"globs:", "alwaysApply: true"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			rule := config.ContentFile{Name: "Style Guide", Content: "Body", Metadata: tt.metadata}
+
+			// Act
+			out := continueRuleOutput(t, rule)
+
+			// Assert
+			require.True(t, strings.HasPrefix(out, "---\n"), "frontmatter must come first: %q", out)
+			end := strings.Index(out[4:], "\n---\n")
+			require.GreaterOrEqual(t, end, 0)
+			fm := out[:4+end]
+			for _, w := range tt.want {
+				assert.Contains(t, fm+"\n", w)
+			}
+			for _, a := range tt.absent {
+				assert.NotContains(t, fm, a)
+			}
+			assert.Contains(t, out[4+end:], "# Style Guide")
+		})
+	}
 }
 
 func TestContinueDevPresetGenerator_buildContinueDevAgentFrontmatter(t *testing.T) {

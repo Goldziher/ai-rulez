@@ -6,12 +6,17 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
 
 const continueDevPresetName = "continue-dev"
+
+var continueRulesTarget = rulefiles.Target{
+	Preset: continueDevPresetName, Dir: ".continue/rules", Ext: ".md", Dialect: rulefiles.DialectContinue, Recursive: true, Banner: true,
+}
 
 func init() {
 	config.RegisterPreset(continueDevPresetName, &ContinueDevPresetGenerator{})
@@ -69,20 +74,11 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 		},
 	)
 
-	// Combine all rules from root and domains
-	allRules := allInlineRules(content)
-
-	// Generate rule files
-	for _, rule := range allRules {
-		outputPath := filepath.Join(".continue", "rules", sanitizeName(rule.Name)+".md")
-		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
-		sanitized := sanitizeName(rule.Name)
-
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".continue", "rules", sanitized+".md"),
-			Content: ruleContent,
-		})
+	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, false)
+	if err != nil {
+		return nil, fmt.Errorf("generate rule files: %w", err)
 	}
+	outputs = append(outputs, ruleOutputs...)
 
 	// Generate prompts YAML file
 	promptsContent, err := g.renderPromptsYAML(content, cfg)
@@ -117,32 +113,6 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 	}
 
 	return outputs, nil
-}
-
-func (g *ContinueDevPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.Config, outputPath string, ruleCount int) string {
-	var builder strings.Builder
-
-	// Generate and prepend header
-	header := generateContinueDevPresetHeader(cfg, outputPath, ruleCount, 0, 0)
-	builder.WriteString(header)
-
-	// Add title
-	builder.WriteString("# ")
-	builder.WriteString(rule.Name)
-	builder.WriteString("\n\n")
-
-	// Add priority if present
-	if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
-		builder.WriteString("**Priority:** ")
-		builder.WriteString(rule.Metadata.Priority)
-		builder.WriteString("\n\n")
-	}
-
-	// Add content
-	processedContent := markdown.ProcessEmbeddedContent(rule.Content)
-	builder.WriteString(processedContent)
-
-	return builder.String()
 }
 
 func (g *ContinueDevPresetGenerator) renderPromptsYAML(content *config.ContentTree, cfg *config.Config) (string, error) {
