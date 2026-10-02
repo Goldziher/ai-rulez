@@ -5,6 +5,8 @@ targets:
   - .cursor/rules/*
   - GEMINI.md
   - .continue/**/*.yaml
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # Cross Runtime Distribution
