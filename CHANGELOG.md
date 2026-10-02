@@ -29,6 +29,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- Include and skill-source git URLs no longer leak credentials (`https://TOKEN@host/...`) into `--debug` logs, error context or echoed git output; userinfo is shown as `<redacted>`.
 - Cline rules (`.clinerules/`) now honor `paths`/`globs`: scoped rules and context files get `paths` frontmatter, which was previously dropped.
 - Continue rules (`.continue/rules/`) now carry the `name` Continue requires, plus `globs`, `alwaysApply` or `description` according to the rule's activation.
 - Windsurf rules honor `paths`/`globs` and emit `globs:` instead of `glob:`. Untriggered rules are written as `trigger: always_on` (Windsurf treated them as manual), and context files now get frontmatter. Legacy `trigger`/`glob`/`description` keep working, and files over Windsurf's 12000-character limit log a warning.
