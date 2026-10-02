@@ -72,6 +72,7 @@ func init() {
 	RootCmd.AddCommand(BuiltinsCmd)
 	RootCmd.AddCommand(SkillCmd)
 	RootCmd.AddCommand(TokensCmd)
+	RootCmd.AddCommand(LocalCmd)
 }
 
 func initConfig() {

@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **`config.local.*` overlay**: a machine-local `config.local.{toml,yaml,yml,json}` beside the main config is merged onto it at load time (scalars local-wins, maps per key, `presets` as an ordered union with `"!name"` drops, named lists such as `mcp_servers` merged by name with `remove = true`). It is gitignored, validated by `validate` against `schema/ai-rules-local.schema.json`, skipped for plugin bundles, and never written back by config mutators.
+- **`ai-rulez local`** (`init`, `show`, `set`, `unset`, `path`) edits the overlay, with `--local` on `profile`, `include` and `skill` mutators and `local: true` on the matching MCP tools. `read_config` reports the overlay by key path only, and `local show` withholds every value except a small allowlist unless `--reveal` is given.
+
 ## [4.22.2] - 2026-10-03
 
 ### Fixed

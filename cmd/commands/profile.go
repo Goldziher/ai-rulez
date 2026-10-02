@@ -16,6 +16,7 @@ var (
 	profileSetDefault bool
 	profileForce      bool
 	profileJSON       bool
+	profileLocal      bool
 )
 
 var ProfileCmd = &cobra.Command{
@@ -71,6 +72,10 @@ func init() {
 	ProfileCmd.AddCommand(profileSetDefaultCmd)
 	ProfileCmd.AddCommand(profileListCmd)
 
+	for _, c := range []*cobra.Command{profileAddCmd, profileRemoveCmd, profileSetDefaultCmd} {
+		c.Flags().BoolVar(&profileLocal, "local", false, localFlagUsage)
+	}
+
 	// Add flags for profile add
 	profileAddCmd.Flags().BoolVarP(&profileSetDefault, "set-default", "s", false, "Set this profile as the default")
 
@@ -90,6 +95,9 @@ func runProfileAdd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
+	}
+	if profileLocal {
+		op = op.Local()
 	}
 
 	if err := op.AddProfile(ctx, name, domains); err != nil {
@@ -129,6 +137,9 @@ func runProfileRemove(cmd *cobra.Command, args []string) {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
 	}
+	if profileLocal {
+		op = op.Local()
+	}
 
 	if err := op.RemoveProfile(ctx, name); err != nil {
 		logger.Error("Failed to remove profile", "error", err)
@@ -146,6 +157,9 @@ func runProfileSetDefault(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
+	}
+	if profileLocal {
+		op = op.Local()
 	}
 
 	if err := op.SetDefaultProfile(ctx, name); err != nil {

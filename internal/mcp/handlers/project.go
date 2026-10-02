@@ -81,15 +81,15 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	}
 
 	result := map[string]interface{}{
-		keySuccess:    true,
-		keyOperation:  "read_config",
-		keyName:       cfg.Name,
-		"description": cfg.Description,
-		"presets":     presets,
-		"profiles":    cfg.Profiles,
-		"builtins":    builtins,
-		"includes":    includes,
-		"gitignore":   cfg.ShouldUpdateGitignore(),
+		keySuccess:     true,
+		keyOperation:   "read_config",
+		keyName:        cfg.Name,
+		keyDescription: cfg.Description,
+		"presets":      presets,
+		"profiles":     cfg.Profiles,
+		keyBuiltins:    builtins,
+		"includes":     includes,
+		keyGitignore:   cfg.ShouldUpdateGitignore(),
 	}
 
 	// Always emit default_effort (possibly "") so MCP clients running read-modify-write
@@ -353,6 +353,10 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 		return ToolError(fmt.Errorf("update_config requires config (.ai-rulez/); found %s config — migrate with 'ai-rulez migrate'", version))
 	}
 
+	if request.GetBool("local", false) {
+		return updateLocalConfig(ctx, request, dir)
+	}
+
 	cfg, err := config.LoadConfig(ctx, dir, config.WithoutLocal())
 	if err != nil {
 		return ToolError(err)
@@ -371,9 +375,9 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	if len(updated) == 0 {
 		return ToolSuccess(map[string]interface{}{
 			keySuccess:   true,
-			keyOperation: "update_config",
+			keyOperation: opUpdateConfig,
 			keyMessage:   "No fields to update",
-			"updated":    updated,
+			keyUpdated:   updated,
 		})
 	}
 
@@ -385,9 +389,9 @@ func UpdateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 
 	return ToolSuccess(map[string]interface{}{
 		keySuccess:   true,
-		keyOperation: "update_config",
+		keyOperation: opUpdateConfig,
 		keyMessage:   "Config updated successfully",
-		"updated":    updated,
+		keyUpdated:   updated,
 	})
 }
 

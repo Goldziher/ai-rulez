@@ -164,7 +164,13 @@ func (g *Generator) stripGitignoreManagedBlock() error {
 		return oops.With("path", gitignorePath).Wrapf(err, "read .gitignore")
 	}
 
-	stripped := strings.TrimRight(gitignore.ReplaceFencedBlock(string(data), ""), "\n")
+	// Machine-local files (the config.local.* overlay, its lock, the local/ tree)
+	// stay ignored: clean removes generated outputs, not the secrets beside them.
+	keep := ""
+	if patterns := g.localGitignorePatternsOnDisk(); len(patterns) > 0 && contains(string(data), gitignore.BeginMarker) {
+		keep = gitignore.BeginMarker + "\n" + strings.Join(patterns, "\n") + "\n" + gitignore.EndMarker + "\n"
+	}
+	stripped := strings.TrimRight(gitignore.ReplaceFencedBlock(string(data), keep), "\n")
 	if strings.TrimSpace(stripped) == "" {
 		if err := os.Remove(gitignorePath); err != nil {
 			return oops.With("path", gitignorePath).Wrapf(err, "remove empty .gitignore")
