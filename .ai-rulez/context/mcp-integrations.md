@@ -5,6 +5,8 @@ targets:
   - CLAUDE.md
   - GEMINI.md
   - .cursor/rules/*
+  - AGENTS.md
+  - .hermes.md
 ---
 
 # MCP Server and Integrations

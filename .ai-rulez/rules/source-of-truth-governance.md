@@ -5,6 +5,8 @@ targets:
   - .cursor/rules/*
   - .windsurf/*
   - .github/copilot-instructions.md
+  - AGENTS.md
+  - .hermes.md
 trigger: model_decision
 description: Apply when working with AI tooling configuration
 ---
