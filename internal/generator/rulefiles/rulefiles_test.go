@@ -43,8 +43,8 @@ func TestFrontmatter_Dialects(t *testing.T) {
 		{"claude auto", DialectClaude, auto, nil, fallback("claude", "auto")},
 		{"claude manual", DialectClaude, manual, nil, fallback("claude", "manual")},
 
-		{"cursor always", DialectCursor, always, m{"alwaysApply": true}, nil},
-		{"cursor glob", DialectCursor, glob, m{"globs": "*.ts,*.tsx,src/**", "alwaysApply": false}, nil},
+		{"cursor always", DialectCursor, always, m{"alwaysApply": true, "description": "d"}, nil},
+		{"cursor glob", DialectCursor, glob, m{"globs": "*.ts,*.tsx,src/**", "alwaysApply": false, "description": "d"}, nil},
 		{"cursor auto", DialectCursor, auto, m{"description": "d"}, nil},
 		{"cursor manual", DialectCursor, manual, m{"alwaysApply": false}, nil},
 
