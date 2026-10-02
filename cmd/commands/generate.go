@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -75,7 +76,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	includes.SkipFetch = noFetch
 
 	if recursive {
-		runRecursiveGenerate()
+		if code := runRecursiveGenerate(); code != 0 {
+			os.Exit(code)
+		}
 		return
 	}
 
@@ -166,24 +169,35 @@ func loadConfigForCommand(ctx context.Context, args []string) (*config.Config, e
 	return config.LoadConfig(ctx, ".")
 }
 
-func runRecursiveGenerate() {
+// runRecursiveGenerate processes every discovered config and returns the
+// process exit code: 1 when any config failed to load, validate, or generate
+// (the remaining configs are still processed and every error is printed), else 0.
+func runRecursiveGenerate() int {
 	configFiles := findConfigFilesRecursively()
 	if pluginMode {
 		var err error
 		configFiles, err = selectRecursivePluginConfigs(configFiles)
 		if err != nil {
 			fmtError(err)
-			os.Exit(1)
+			return 1
 		}
 	}
 	if len(configFiles) == 0 {
 		progress.PrintlnIfNotQuiet("No configuration files found")
-		return
+		return 0
 	}
 
 	progress.PrintIfNotQuiet("Found %d configuration file(s)\n", len(configFiles))
-	totalGenerated := processConfigFiles(configFiles)
+	totalGenerated, failed := processConfigFiles(configFiles)
 	progress.PrintIfNotQuiet("\n✅ Total: Generated %d file(s) from %d config(s)\n", totalGenerated, len(configFiles))
+	if len(failed) > 0 {
+		fmt.Fprintf(os.Stderr, "\n❌ %d of %d config(s) failed:\n", len(failed), len(configFiles))
+		for _, path := range failed {
+			fmt.Fprintf(os.Stderr, "  - %s\n", path)
+		}
+		return 1
+	}
+	return 0
 }
 
 // configBaseNames lists, in priority order, the file names that mark a
@@ -354,7 +368,9 @@ func findConfigInDir(dir string) string {
 	return ""
 }
 
-func processConfigFiles(configFiles []string) int {
+// processConfigFiles generates from every config concurrently and returns the
+// number of files written plus the (sorted) paths of the configs that failed.
+func processConfigFiles(configFiles []string) (generated int, failed []string) {
 	fileCounter := progress.NewFileCounter(len(configFiles), "Processing configurations")
 
 	// Each config has its own working directory and produces independent
@@ -369,6 +385,7 @@ func processConfigFiles(configFiles []string) int {
 	}
 
 	var totalGenerated int64
+	var failedMu sync.Mutex
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, workers)
 
@@ -378,29 +395,38 @@ func processConfigFiles(configFiles []string) int {
 		go func() {
 			defer wg.Done()
 			defer func() { <-sem }()
-			atomic.AddInt64(&totalGenerated, int64(processConfigFile(configPath, fileCounter)))
+			written, err := processConfigFile(configPath, fileCounter)
+			atomic.AddInt64(&totalGenerated, int64(written))
+			if err != nil {
+				failedMu.Lock()
+				failed = append(failed, configPath)
+				failedMu.Unlock()
+			}
 		}()
 	}
 	wg.Wait()
 
 	fileCounter.Finish()
-	return int(totalGenerated)
+	sort.Strings(failed)
+	return int(totalGenerated), failed
 }
 
-func processConfigFile(configPath string, fileCounter *progress.FileCounter) int {
+// processConfigFile generates from one config. A non-nil error means the config
+// failed (and was already reported through fileCounter).
+func processConfigFile(configPath string, fileCounter *progress.FileCounter) (int, error) {
 	fileCounter.StartFile(configPath)
 
 	ctx := context.Background()
 	cfg, err := config.LoadConfigFromFile(ctx, configPath)
 	if err != nil {
-		fileCounter.Error(err)
-		return 0
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
 	}
 
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
-		fileCounter.Error(err)
-		return 0
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
 	}
 
 	applyGenerateOverrides(cfg)
@@ -410,52 +436,52 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) int
 	if pluginMode {
 		if pluginIfConfigured && !cfg.HasPluginAuthoring() {
 			fileCounter.FinishFile()
-			return 0
+			return 0, nil
 		}
 		if dryRun {
 			plan, err := gen.DryRunPlugin(profile)
 			if err != nil {
-				fileCounter.Error(err)
-				return 0
+				fileCounter.ErrorFor(configPath, err)
+				return 0, err
 			}
 			for _, line := range plan {
 				progress.PrintlnIfNotQuiet("  " + line)
 			}
 			fileCounter.FinishFile()
-			return 0
+			return 0, nil
 		}
 		written, err := gen.GeneratePluginFiles(profile)
 		if err != nil {
-			fileCounter.Error(err)
-			return 0
+			fileCounter.ErrorFor(configPath, err)
+			return 0, err
 		}
 		fileCounter.FinishFile()
-		return written
+		return written, nil
 	}
 
 	if dryRun {
 		plan, err := gen.DryRun(profile)
 		if err != nil {
-			fileCounter.Error(err)
-			return 0
+			fileCounter.ErrorFor(configPath, err)
+			return 0, err
 		}
 		for _, line := range plan {
 			progress.PrintlnIfNotQuiet("  " + line)
 		}
 		fileCounter.FinishFile()
-		return 0
+		return 0, nil
 	}
 
 	// Generate files
 	written, err := gen.GenerateFiles(profile)
 	if err != nil {
-		fileCounter.Error(err)
-		return 0
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
 	}
 
 	fileCounter.FinishFile()
 
-	return written
+	return written, nil
 }
 
 func applyGenerateOverrides(cfg *config.Config) {
