@@ -1680,6 +1680,8 @@ func (g *Generator) secretMCPEnvKeys() []string {
 
 func isMCPConfigOutput(relPath string) bool {
 	return relPath == ".mcp.json" ||
+		relPath == "opencode.json" ||
+		strings.HasSuffix(relPath, "/opencode.json") ||
 		relPath == ".claude/settings.json" ||
 		relPath == ".gemini/settings.json" ||
 		relPath == ".agents/settings.json" ||
