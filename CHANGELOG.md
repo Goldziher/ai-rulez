@@ -10,6 +10,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - **`[header] hashes`**: chooses the freshness lines in generated headers. `"full"` (the default, unchanged) writes `Content-Hash` and `Source-Hash`; `"content"` keeps only the per-file `Content-Hash`; `"none"` writes neither. `Source-Hash` hashes the whole source set, so when generated output is committed, editing one skill rewrote a line in every generated skill, agent and `CLAUDE.md`, and concurrent branches conflicted. With `"content"` or `"none"` an edit changes only the outputs it feeds. In these modes `generate` skips a file only when it is byte-identical to what would be written (the `Generated:` text is ignored under `timestamp = true`), so header-only changes such as `[header] style` still re-render. `clean` and `verify --plugin` are unaffected. Switching modes re-renders every file once. Invalid values are rejected by `validate` and the JSON schema.
 
+### Fixed
+
+- **Secret guard missed `opencode.json`**: MCP secrets resolved into `opencode.json` were written even when the file was not gitignored. It is now protected like `.mcp.json` and the other MCP settings files.
+
 ## [4.20.1] - 2026-10-02
 
 ### Fixed
