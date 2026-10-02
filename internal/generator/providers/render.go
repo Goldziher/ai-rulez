@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -187,7 +188,8 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 	rules := presets.AllInlineRules(content)
 	ctx := presets.AllInlineContext(content)
 	spec := g.Spec.Outputs[OutputTypeRules]
-	plan := &rulesPlan{inlineRules: rules, inlineContext: ctx}
+	root := g.rootTarget()
+	plan := &rulesPlan{inlineRules: rulefiles.FilterInline(rules, root), inlineContext: rulefiles.FilterInline(ctx, root)}
 	if spec == nil {
 		return plan, nil
 	}
@@ -195,9 +197,10 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 	if !spec.Split {
 		plan.inlineRules = nil
 		for _, rule := range rules {
-			if g.rulesOutputAccepts(spec, rule) {
+			switch {
+			case g.rulesOutputAccepts(spec, rule):
 				plan.legacy = append(plan.legacy, rule)
-			} else {
+			case rulefiles.InlineAllowed(rule, root):
 				plan.inlineRules = append(plan.inlineRules, rule)
 			}
 		}
@@ -224,12 +227,22 @@ func (g *Generator) splitRouting(spec *OutputSpec, cfg *config.Config) rulefiles
 	return routing
 }
 
+// rootTarget describes the root file for inline target filtering.
+func (g *Generator) rootTarget() rulefiles.Target {
+	file := ""
+	if g.Spec.Root != nil {
+		file = g.Spec.Root.File
+	}
+	return rulefiles.RootTarget(g.Spec.Name, file)
+}
+
 // rulesTarget builds the rulefiles Target of a split rules output.
 func (g *Generator) rulesTarget(spec *OutputSpec) rulefiles.Target {
 	dialect := rulefiles.Dialect(spec.Dialect)
 	return rulefiles.Target{
 		Preset:    g.Spec.Name,
 		Dir:       spec.Dir,
+		RootFile:  g.rootTarget().RootFile,
 		Ext:       strings.TrimPrefix(spec.Filename, "{id}"),
 		Dialect:   dialect,
 		Recursive: dialect == rulefiles.DialectClaude,
@@ -281,15 +294,10 @@ func (g *Generator) filterAllows(spec *OutputSpec, item config.ContentFile) bool
 		return true
 	}
 	if spec.Filter == FilterIncludeIfTargetingProvider {
-		if item.Metadata == nil || len(item.Metadata.Targets) == 0 {
+		if item.Metadata == nil {
 			return true
 		}
-		for _, target := range item.Metadata.Targets {
-			if target == g.Spec.Name {
-				return true
-			}
-		}
-		return false
+		return targetmatch.Allow(item.Metadata.Targets, []string{g.Spec.Name})
 	}
 	if spec.Filter == FilterPathScoped {
 		return hasPathScope(item)

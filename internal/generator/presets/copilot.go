@@ -22,6 +22,7 @@ const presetNameCopilot = "copilot"
 var copilotRulesTarget = rulefiles.Target{
 	Preset:    presetNameCopilot,
 	Dir:       ".github/instructions",
+	RootFile:  ".github/copilot-instructions.md",
 	Ext:       ".instructions.md",
 	Dialect:   rulefiles.DialectCopilot,
 	Recursive: true,
@@ -191,39 +192,67 @@ func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Con
 	target := copilotRulesTarget
 	// Items Copilot cannot apply automatically stay inline and never reach
 	// Plan, so they cannot collide with the files that do get written.
-	candidates := func(all []config.ContentFile, kind string) (out []config.ContentFile) {
-		for _, cf := range all {
-			switch mode := rulefiles.EffectiveModeOf(cf); {
-			case mode == config.ActivationAuto || mode == config.ActivationManual:
-			case rulefiles.OnlyNegatedGlobs(cf):
-				logger.Warn(kind+" \""+cf.Name+"\" has only negated globs, which Copilot's applyTo cannot express; "+
-					"kept in copilot-instructions.md", "path", cf.Path)
-			default:
-				out = append(out, cf)
-			}
-		}
-		return out
-	}
-	planned, _, _, err := rulefiles.Plan(candidates(allRules, "rule"), candidates(allContext, "context"),
-		&target, routing, rulefiles.ScopeInfo{}, nil)
+	ruleCands, ruleInline := splitCopilotCandidates(allRules, "rule", target)
+	ctxCands, ctxInline := splitCopilotCandidates(allContext, "context", target)
+	planned, plannedRules, plannedContext, err := rulefiles.Plan(ruleCands, ctxCands, &target, routing,
+		rulefiles.ScopeInfo{}, nil)
 	if err != nil {
 		return nil, nil, nil, oops.With("preset", presetNameCopilot).Wrapf(err, "plan copilot rule files")
 	}
-	filed := make(map[string]struct{}, len(planned))
-	for i := range planned {
-		it := planned[i]
-		files = append(files, it)
-		filed[copilotItemKey(it.Kind, it.File)] = struct{}{}
-	}
-	keepInline := func(kind rulefiles.Kind, all []config.ContentFile) (out []config.ContentFile) {
+	// The remainder is what Plan left inline plus the items it never saw, in
+	// source order.
+	keep := func(kind rulefiles.Kind, all, planInline, direct []config.ContentFile) (out []config.ContentFile) {
+		want := make(map[string]struct{}, len(planInline)+len(direct))
+		for _, cf := range append(append([]config.ContentFile{}, planInline...), direct...) {
+			want[copilotItemKey(kind, cf)] = struct{}{}
+		}
 		for _, cf := range all {
-			if _, ok := filed[copilotItemKey(kind, cf)]; !ok {
+			if _, ok := want[copilotItemKey(kind, cf)]; ok {
 				out = append(out, cf)
 			}
 		}
 		return out
 	}
-	return files, keepInline(rulefiles.KindRule, allRules), keepInline(rulefiles.KindContext, allContext), nil
+	return planned, keep(rulefiles.KindRule, allRules, plannedRules, ruleInline),
+		keep(rulefiles.KindContext, allContext, plannedContext, ctxInline), nil
+}
+
+// splitCopilotCandidates separates the items Plan may route to instructions
+// files from the ones that stay in copilot-instructions.md (auto, manual and
+// negated-only-glob items). The second result holds the latter that their
+// targets still allow in that file.
+func splitCopilotCandidates(all []config.ContentFile, kind string, target rulefiles.Target,
+) (candidates, inline []config.ContentFile) {
+	stay := func(cf config.ContentFile) {
+		if rulefiles.InlineAllowed(cf, target) {
+			inline = append(inline, cf)
+			return
+		}
+		if rulefiles.FileAllowed(cf, target, kindOf(kind)) {
+			logger.Warn(kind+" \""+cf.Name+"\" is targeted only at "+target.Dir+" but Copilot cannot apply it "+
+				"automatically there; omitted", "path", cf.Path)
+		}
+	}
+	for _, cf := range all {
+		switch mode := rulefiles.EffectiveModeOf(cf); {
+		case mode == config.ActivationAuto || mode == config.ActivationManual:
+			stay(cf)
+		case rulefiles.OnlyNegatedGlobs(cf):
+			logger.Warn(kind+" \""+cf.Name+"\" has only negated globs, which Copilot's applyTo cannot express; "+
+				"kept in copilot-instructions.md", "path", cf.Path)
+			stay(cf)
+		default:
+			candidates = append(candidates, cf)
+		}
+	}
+	return candidates, inline
+}
+
+func kindOf(kind string) rulefiles.Kind {
+	if kind == "context" {
+		return rulefiles.KindContext
+	}
+	return rulefiles.KindRule
 }
 
 func copilotItemKey(kind rulefiles.Kind, cf config.ContentFile) string {

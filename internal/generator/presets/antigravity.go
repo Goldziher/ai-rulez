@@ -28,6 +28,7 @@ type AntigravityPresetGenerator struct{}
 var antigravityRulesTarget = rulefiles.Target{
 	Preset:    presetNameAntigravity,
 	Dir:       ".agents/rules",
+	RootFile:  "GEMINI.md",
 	Ext:       ".md",
 	Dialect:   rulefiles.DialectTrigger,
 	Recursive: false,
