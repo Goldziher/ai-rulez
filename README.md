@@ -35,6 +35,8 @@ Write your rules, context, skills, agents, and commands once in `.ai-rulez/`. Ru
 npx ai-rulez@latest init && npx ai-rulez@latest generate
 ```
 
+Prefer the project-level [`.config/` convention](https://github.com/pi0/config-dir)? `ai-rulez` auto-discovers `.config/ai-rulez/` as well, and `ai-rulez init --config-dir .config/ai-rulez` scaffolds it.
+
 ai-rulez generates correct, tool-native output for **14 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, and Xum. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
 
 For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).

@@ -14,12 +14,13 @@ import (
 )
 
 var (
-	formatFlag      string
-	domainsFlag     string
-	skipContentFlag bool
-	fromFlag        string
-	setupHooks      bool
-	autoYes         bool
+	formatFlag       string
+	domainsFlag      string
+	skipContentFlag  bool
+	fromFlag         string
+	setupHooks       bool
+	autoYes          bool
+	initConfigDirArg string
 )
 
 var InitCmd = &cobra.Command{
@@ -45,25 +46,36 @@ func init() {
 	InitCmd.Flags().StringVarP(&fromFlag, "from", "F", "", "Import from existing tool files (e.g., 'auto', '.claude,.cursor')")
 	InitCmd.Flags().BoolVarP(&setupHooks, "setup-hooks", "H", false, "Automatically configure git hooks for ai-rulez validation")
 	InitCmd.Flags().BoolVarP(&autoYes, "yes", "y", false, "Automatically answer yes to prompts")
+	InitCmd.Flags().StringVar(&initConfigDirArg, "config-dir", "", "Configuration directory to create (default: .ai-rulez; use .config/ai-rulez for the .config/ convention)")
+}
+
+// initConfigDir returns the configuration directory to scaffold: the
+// --config-dir value when set (e.g. ".config/ai-rulez"), else ".ai-rulez".
+func initConfigDir() string {
+	if initConfigDirArg != "" {
+		return filepath.Clean(filepath.FromSlash(initConfigDirArg))
+	}
+	return ".ai-rulez"
 }
 
 func runInit(cmd *cobra.Command, args []string) {
 	projectName := getProjectName(args)
+	configDir := initConfigDir()
 
-	// Check if .ai-rulez/ already exists
-	if _, err := os.Stat(".ai-rulez"); err == nil {
-		logger.Info(".ai-rulez/ directory already exists")
-		if !shouldOverwriteConfig(".ai-rulez/") {
+	// Check if the configuration directory already exists
+	if _, err := os.Stat(configDir); err == nil {
+		logger.Info(configDir + "/ directory already exists")
+		if !shouldOverwriteConfig(configDir + "/") {
 			logger.Info("Operation canceled. Remove or rename the existing directory to initialize a new configuration")
 			os.Exit(1)
 		}
 
 		// Remove existing directory
-		if err := os.RemoveAll(".ai-rulez"); err != nil {
-			logger.Error("Failed to remove existing .ai-rulez/ directory", "error", err)
+		if err := os.RemoveAll(configDir); err != nil {
+			logger.Error("Failed to remove existing "+configDir+"/ directory", "error", err)
 			os.Exit(1)
 		}
-		logger.Info("Existing .ai-rulez/ directory removed")
+		logger.Info("Existing " + configDir + "/ directory removed")
 	}
 
 	// Handle --from flag for importing from existing tool files
@@ -74,7 +86,7 @@ func runInit(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 
-		aiRulezDir := filepath.Join(workingDir, ".ai-rulez")
+		aiRulezDir := filepath.Join(workingDir, filepath.FromSlash(configDir))
 
 		imp := importer.NewImporter(workingDir, aiRulezDir)
 		if err := imp.Import(fromFlag); err != nil {
@@ -82,12 +94,12 @@ func runInit(cmd *cobra.Command, args []string) {
 			os.Exit(1)
 		}
 
-		displayImportSuccessMessage(fromFlag)
+		displayImportSuccessMessage(fromFlag, configDir)
 		return
 	}
 
 	// Create directory structure
-	if err := createStructure(projectName); err != nil {
+	if err := createStructure(projectName, configDir); err != nil {
 		logger.Error("Failed to create structure", "error", err)
 		os.Exit(1)
 	}
@@ -95,7 +107,7 @@ func runInit(cmd *cobra.Command, args []string) {
 	// Create domain directories if specified
 	if domainsFlag != "" {
 		domains := parseDomains(domainsFlag)
-		if err := createDomainDirectories(domains); err != nil {
+		if err := createDomainDirectories(domains, configDir); err != nil {
 			logger.Error("Failed to create domain directories", "error", err)
 			os.Exit(1)
 		}
@@ -103,25 +115,25 @@ func runInit(cmd *cobra.Command, args []string) {
 
 	// Create example content unless --skip-content is specified
 	if !skipContentFlag {
-		if err := createExampleContent(); err != nil {
+		if err := createExampleContent(configDir); err != nil {
 			logger.Error("Failed to create example content", "error", err)
 			os.Exit(1)
 		}
 	}
 
-	displaySuccessMessage(projectName)
+	displaySuccessMessage(projectName, configDir)
 }
 
-// createStructure creates the basic .ai-rulez/ directory structure
-func createStructure(projectName string) error {
+// createStructure creates the basic configuration directory structure
+func createStructure(projectName, configDir string) error {
 	// Create base directories
 	dirs := []string{
-		".ai-rulez",
-		".ai-rulez/rules",
-		".ai-rulez/context",
-		".ai-rulez/skills",
-		".ai-rulez/agents",
-		".ai-rulez/domains",
+		configDir,
+		filepath.Join(configDir, "rules"),
+		filepath.Join(configDir, "context"),
+		filepath.Join(configDir, "skills"),
+		filepath.Join(configDir, "agents"),
+		filepath.Join(configDir, "domains"),
 	}
 
 	for _, dir := range dirs {
@@ -137,13 +149,13 @@ func createStructure(projectName string) error {
 	switch formatFlag {
 	case formatJSON:
 		configContent = generateConfigJSON(projectName)
-		configPath = ".ai-rulez/config.json"
+		configPath = filepath.Join(configDir, "config.json")
 	case formatTOML:
 		configContent = generateConfigTOML(projectName)
-		configPath = ".ai-rulez/config.toml"
+		configPath = filepath.Join(configDir, "config.toml")
 	default: // yaml
 		configContent = generateConfig(projectName)
-		configPath = ".ai-rulez/config.yaml"
+		configPath = filepath.Join(configDir, "config.yaml")
 	}
 
 	if err := os.WriteFile(configPath, []byte(configContent), 0o644); err != nil {
@@ -267,14 +279,14 @@ presets = ["claude"]
 }
 
 // createDomainDirectories creates domain subdirectories
-func createDomainDirectories(domains []string) error {
+func createDomainDirectories(domains []string, configDir string) error {
 	for _, domain := range domains {
 		dirs := []string{
-			filepath.Join(".ai-rulez", "domains", domain),
-			filepath.Join(".ai-rulez", "domains", domain, "rules"),
-			filepath.Join(".ai-rulez", "domains", domain, "context"),
-			filepath.Join(".ai-rulez", "domains", domain, "skills"),
-			filepath.Join(".ai-rulez", "domains", domain, "agents"),
+			filepath.Join(configDir, "domains", domain),
+			filepath.Join(configDir, "domains", domain, "rules"),
+			filepath.Join(configDir, "domains", domain, "context"),
+			filepath.Join(configDir, "domains", domain, "skills"),
+			filepath.Join(configDir, "domains", domain, "agents"),
 		}
 
 		for _, dir := range dirs {
@@ -290,9 +302,9 @@ func createDomainDirectories(domains []string) error {
 }
 
 // createExampleContent creates example rule, context, and skill files
-func createExampleContent() error {
+func createExampleContent(configDir string) error {
 	createSkill := func(skillID, content string) error {
-		skillDir := filepath.Join(".ai-rulez", "skills", skillID)
+		skillDir := filepath.Join(configDir, "skills", skillID)
 		if err := os.MkdirAll(skillDir, 0o755); err != nil {
 			return fmt.Errorf("failed to create skill directory %s: %w", skillID, err)
 		}
@@ -319,7 +331,7 @@ Follow these coding standards:
 - Handle errors explicitly, never silently
 `
 
-	if err := os.WriteFile(".ai-rulez/rules/code-quality.md", []byte(ruleContent), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "rules", "code-quality.md"), []byte(ruleContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write example rule: %w", err)
 	}
 
@@ -346,7 +358,7 @@ This project follows a modular architecture with clear separation of concerns.
 - Clear separation between business logic and infrastructure
 `
 
-	if err := os.WriteFile(".ai-rulez/context/architecture.md", []byte(contextContent), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(configDir, "context", "architecture.md"), []byte(contextContent), 0o644); err != nil {
 		return fmt.Errorf("failed to write example context: %w", err)
 	}
 
@@ -424,6 +436,7 @@ Use this skill when working in a project that is managed by AI-Rulez.
 - When changing presets, profiles, or domains in config.yaml, rerun validate then generate so downstream files stay in sync.
 `
 
+	aiRulezSkill = strings.ReplaceAll(aiRulezSkill, ".ai-rulez/", configDir+"/")
 	if err := createSkill("ai-rulez", aiRulezSkill); err != nil {
 		return err
 	}
@@ -448,10 +461,10 @@ func parseDomains(domainsStr string) []string {
 }
 
 // displaySuccessMessage displays a success message after initialization
-func displaySuccessMessage(projectName string) {
-	logger.Info("✅ Created .ai-rulez/ directory structure", "project", projectName)
+func displaySuccessMessage(projectName, configDir string) {
+	logger.Info("✅ Created "+configDir+"/ directory structure", "project", projectName)
 	logger.Info("\nDirectory structure:")
-	logger.Info("  .ai-rulez/")
+	logger.Info("  " + configDir + "/")
 
 	// Determine config filename based on format flag
 	var configFilename string
@@ -488,7 +501,7 @@ func displaySuccessMessage(projectName string) {
 	}
 
 	logger.Info("\nNext steps:")
-	logger.Info(fmt.Sprintf("  1. Edit .ai-rulez/%s to customize presets, profiles, and MCP servers", configFilename))
+	logger.Info(fmt.Sprintf("  1. Edit %s/%s to customize presets, profiles, and MCP servers", configDir, configFilename))
 	logger.Info("  2. Add your rules, context, skills, and agents to the appropriate directories")
 	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
 
@@ -498,20 +511,20 @@ func displaySuccessMessage(projectName string) {
 }
 
 // displayImportSuccessMessage displays a success message after import
-func displayImportSuccessMessage(sources string) {
-	logger.Info("✅ Successfully imported content to .ai-rulez/")
+func displayImportSuccessMessage(sources, configDir string) {
+	logger.Info("✅ Successfully imported content to " + configDir + "/")
 	logger.Info(fmt.Sprintf("   Sources: %s", sources))
 
 	logger.Info("\nImported structure:")
-	logger.Info("  .ai-rulez/")
+	logger.Info("  " + configDir + "/")
 	logger.Info("  ├── config.yaml")
 	logger.Info("  ├── rules/         # Imported rules")
 	logger.Info("  ├── context/       # Imported context")
 	logger.Info("  └── skills/        # Imported skills")
 
 	logger.Info("\nNext steps:")
-	logger.Info("  1. Review imported content in .ai-rulez/")
-	logger.Info("  2. Edit .ai-rulez/config.yaml to customize presets")
+	logger.Info("  1. Review imported content in " + configDir + "/")
+	logger.Info("  2. Edit " + configDir + "/config.yaml to customize presets")
 	logger.Info("  3. Run 'ai-rulez generate' to create tool-specific outputs")
 }
 

@@ -19,7 +19,11 @@ const (
 	// VersionDir is the config version returned when an .ai-rulez/ directory is detected.
 	VersionDir = "dir"
 
-	aiRulezDirName     = ".ai-rulez"
+	aiRulezDirName = ".ai-rulez"
+	// altConfigDirName is the project-level .config/ convention
+	// (https://github.com/pi0/config-dir). It is consulted as a fallback after
+	// .ai-rulez/ when no tool-specific directory exists at a given level.
+	altConfigDirName   = ".config/ai-rulez"
 	configTOMLFilename = "config.toml"
 	configYAMLFilename = "config.yaml"
 	configYMLFilename  = "config.yml"
@@ -42,8 +46,54 @@ const (
 	localDir = "local"
 )
 
+// configDirCandidates lists the supported directory-based config locations,
+// relative to a project base directory, in precedence order: the tool-specific
+// .ai-rulez/ first (backward compatible), then the project-level
+// .config/ai-rulez/ convention.
+var configDirCandidates = []string{aiRulezDirName, altConfigDirName}
+
+// ResolveConfigDirName returns the first config directory candidate that exists
+// under baseDir and contains a config file, or "" when none is present. The
+// returned name is slash-separated and relative to baseDir.
+func ResolveConfigDirName(baseDir string) string {
+	absDir, err := filepath.Abs(baseDir)
+	if err != nil {
+		return ""
+	}
+	for _, dirName := range configDirCandidates {
+		if hasConfigFile(filepath.Join(absDir, filepath.FromSlash(dirName))) {
+			return dirName
+		}
+	}
+	return ""
+}
+
+// projectBaseDir returns the project directory that owns configDir: the
+// directory containing the config directory. For the nested .config/ai-rulez/
+// layout it skips past the generic .config/ wrapper so generated outputs are
+// rooted in the project, not in .config/.
+func projectBaseDir(configDir string) string {
+	parent := filepath.Dir(configDir)
+	if filepath.Base(parent) == ".config" {
+		return filepath.Dir(parent)
+	}
+	return parent
+}
+
+// relConfigDirName names configDir relative to baseDir using forward slashes,
+// falling back to the base name when configDir is not under baseDir (e.g. a
+// machine-local override outside the project).
+func relConfigDirName(baseDir, configDir string) string {
+	rel, err := filepath.Rel(baseDir, configDir)
+	if err != nil || rel == "." || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return filepath.Base(configDir)
+	}
+	return filepath.ToSlash(rel)
+}
+
 // DetectConfigVersion detects whether a directory contains V2 or directory-based configuration
-// Returns "v2" if ai-rulez.yaml/yml exists, "dir" if .ai-rulez/ exists, "" otherwise
+// Returns "v2" if ai-rulez.yaml/yml exists, "dir" if .ai-rulez/ (or
+// .config/ai-rulez/) exists, "" otherwise
 func DetectConfigVersion(dir string) (string, error) {
 	absDir, err := filepath.Abs(dir)
 	if err != nil {
@@ -53,10 +103,13 @@ func DetectConfigVersion(dir string) (string, error) {
 			Wrapf(err, "resolve absolute path")
 	}
 
-	// Check for directory-based config (.ai-rulez/ directory)
-	configDir := filepath.Join(absDir, aiRulezDirName)
-	if info, err := os.Stat(configDir); err == nil && info.IsDir() {
-		return VersionDir, nil
+	// Check for directory-based config (.ai-rulez/ directory, then the
+	// project-level .config/ai-rulez/ convention).
+	for _, dirName := range configDirCandidates {
+		configDir := filepath.Join(absDir, filepath.FromSlash(dirName))
+		if info, err := os.Stat(configDir); err == nil && info.IsDir() {
+			return VersionDir, nil
+		}
 	}
 
 	// Check for V2 (ai-rulez.yaml or ai-rulez.yml)
@@ -96,10 +149,14 @@ func SetResolveInstalledSkillsCallback(fn ResolveInstalledSkillsCallback) {
 }
 
 // LoadConfig loads a configuration from the specified base directory.
-// The baseDir should contain a .ai-rulez/ subdirectory with config.toml,
-// config.yaml, or config.json.
+// The baseDir should contain an .ai-rulez/ subdirectory (or, as a fallback,
+// .config/ai-rulez/) with config.toml, config.yaml, or config.json.
 func LoadConfig(ctx context.Context, baseDir string) (*Config, error) {
-	return LoadConfigFromDir(ctx, baseDir, aiRulezDirName)
+	dirName := ResolveConfigDirName(baseDir)
+	if dirName == "" {
+		dirName = aiRulezDirName
+	}
+	return LoadConfigFromDir(ctx, baseDir, dirName)
 }
 
 // LoadConfigFromDir loads configuration from configDirName below baseDir.
@@ -115,7 +172,7 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string) (*Con
 	if configDirName == "" {
 		configDirName = aiRulezDirName
 	}
-	configDir := filepath.Join(absDir, configDirName)
+	configDir := filepath.Join(absDir, filepath.FromSlash(configDirName))
 
 	if info, err := os.Stat(configDir); err != nil {
 		if os.IsNotExist(err) {
@@ -145,7 +202,7 @@ func LoadConfigFromDir(ctx context.Context, baseDir, configDirName string) (*Con
 
 // LoadConfigFromFile loads a configuration from an exact config file path or
 // from a config directory path. For a file path, the project base directory is
-// the parent of the config directory.
+// the parent of the config directory (skipping a generic .config/ wrapper).
 func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
 	absPath, err := filepath.Abs(path)
 	if err != nil {
@@ -168,7 +225,7 @@ func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
 			if loadErr != nil {
 				return nil, loadErr
 			}
-			return finishLoadConfig(ctx, cfg, filepath.Dir(absPath), absPath)
+			return finishLoadConfig(ctx, cfg, projectBaseDir(absPath), absPath)
 		}
 		return LoadConfig(ctx, absPath)
 	}
@@ -184,7 +241,7 @@ func LoadConfigFromFile(ctx context.Context, path string) (*Config, error) {
 			Hint("Place config files inside a configuration directory such as .ai-rulez/config.toml, or pass a config directory path. This keeps generated outputs rooted in the project instead of the parent directory.").
 			Errorf("directory layout required for root-level config file")
 	}
-	return finishLoadConfig(ctx, cfg, filepath.Dir(configDir), configDir)
+	return finishLoadConfig(ctx, cfg, projectBaseDir(configDir), configDir)
 }
 
 func looksLikeProjectRoot(dir string) bool {
@@ -208,7 +265,7 @@ func hasConfigFile(dir string) bool {
 func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir string) (*Config, error) {
 	config.BaseDir = baseDir
 	config.ConfigDir = configDir
-	config.ConfigDirName = filepath.Base(configDir)
+	config.ConfigDirName = relConfigDirName(baseDir, configDir)
 
 	// Convert inline MCP servers to map
 	config.MCPServers = serversToMap(config.MCPServersRaw)

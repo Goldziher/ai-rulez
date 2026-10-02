@@ -97,6 +97,91 @@ func TestFindConfigFilesRecursively(t *testing.T) {
 	}
 }
 
+func TestFindConfigFilesRecursively_ConfigConvention(t *testing.T) {
+	root := t.TempDir()
+
+	// Conventional nested layout: <dir>/.config/ai-rulez/.
+	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"root\"\n")
+	writeFile(t, filepath.Join(root, "service-a", ".config", "ai-rulez", "config.yaml"), "version: \"4.0\"\nname: a\n")
+
+	// A different tool's .config subtree must be neither discovered nor descended.
+	writeFile(t, filepath.Join(root, ".config", "other-tool", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, ".config", "other-tool", ".config", "ai-rulez", "config.toml"), "x = 1")
+
+	// .ai-rulez continues to work alongside the convention.
+	writeFile(t, filepath.Join(root, "service-b", ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"b\"\n")
+
+	// Pruned dirs: must not be descended into.
+	writeFile(t, filepath.Join(root, "node_modules", "pkg", ".config", "ai-rulez", "config.toml"), "x = 1")
+
+	chdir(t, root)
+	got := findConfigFilesRecursively()
+	sort.Strings(got)
+
+	want := []string{
+		filepath.Join(".config", "ai-rulez", "config.toml"),
+		filepath.Join("service-a", ".config", "ai-rulez", "config.yaml"),
+		filepath.Join("service-b", ".ai-rulez", "config.toml"),
+	}
+	sort.Strings(want)
+
+	if len(got) != len(want) {
+		t.Fatalf("config count mismatch: got %d %v, want %d %v", len(got), got, len(want), want)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("[%d] got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+func TestFindConfigFilesRecursively_ConfigConventionPrefersDotAiRulez(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"preferred\"\n")
+	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"fallback\"\n")
+
+	chdir(t, root)
+	got := findConfigFilesRecursively()
+
+	if len(got) != 1 {
+		t.Fatalf("expected exactly one config (the .ai-rulez one), got %v", got)
+	}
+	if want := filepath.Join(".ai-rulez", "config.toml"); got[0] != want {
+		t.Errorf("got %q, want %q", got[0], want)
+	}
+}
+
+func TestFindConfigFilesRecursively_ExplicitNestedConfigDir(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, ".config", "ai-rulez", "config.toml"), "x = 1")
+	writeFile(t, filepath.Join(root, "svc", ".config", "ai-rulez", "config.toml"), "x = 1")
+	// A .ai-rulez/ does not match an explicit nested .config/ai-rulez target.
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "x = 1")
+
+	chdir(t, root)
+	prev := configDir
+	configDir = ".config/ai-rulez"
+	t.Cleanup(func() { configDir = prev })
+
+	got := findConfigFilesRecursively()
+	sort.Strings(got)
+
+	want := []string{
+		filepath.Join(".config", "ai-rulez", "config.toml"),
+		filepath.Join("svc", ".config", "ai-rulez", "config.toml"),
+	}
+	sort.Strings(want)
+
+	if len(got) != len(want) {
+		t.Fatalf("config count mismatch: got %d %v, want %d %v", len(got), got, len(want), want)
+	}
+	for i := range got {
+		if got[i] != want[i] {
+			t.Errorf("[%d] got %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
 func TestFindConfigFilesRecursively_ConfigPriority(t *testing.T) {
 	root := t.TempDir()
 	cfgDir := filepath.Join(root, ".ai-rulez")

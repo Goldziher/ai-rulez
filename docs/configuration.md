@@ -17,6 +17,16 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 
 You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
 
+## Configuration Discovery
+
+When no explicit path is given, the CLI discovers configuration by walking up from the current directory and trying, in order:
+
+1. `.ai-rulez/config.{toml,yaml,yml,json}` — the tool-specific directory (default)
+2. `.config/ai-rulez/config.{toml,yaml,yml,json}` — the project-level [`.config/` convention](https://github.com/pi0/config-dir)
+3. Legacy V2 flat files: `ai-rulez.yaml`, `.ai-rulez.yaml`, and their `.yml` / underscore variants
+
+`.ai-rulez/` wins when both directory layouts exist at the same level. `--config <file>` selects an exact file, and `--config-dir <path>` selects a non-default directory (for example `--config-dir .config/ai-rulez`). To scaffold the `.config/` layout, run `ai-rulez init --config-dir .config/ai-rulez`; generated outputs and the managed `.gitignore` block then reference `.config/ai-rulez/` instead of `.ai-rulez/`.
+
 ## Basic Structure
 
 The minimal valid V4 configuration:

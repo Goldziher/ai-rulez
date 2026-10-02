@@ -22,6 +22,7 @@ Flags:
 - `--from, -F <source>` — Import from existing tool files, such as `auto`
 - `--setup-hooks, -H` — Configure git hooks
 - `--yes, -y` — Automatically answer yes to prompts
+- `--config-dir <path>` — Directory to scaffold (default `.ai-rulez`; use `.config/ai-rulez` for the `.config/` convention)
 
 ### `ai-rulez generate`
 

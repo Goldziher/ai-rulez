@@ -592,6 +592,30 @@ func TestHeaderContent_ConfigPathAndOutputPath(t *testing.T) {
 	assert.Contains(t, header, "Target: docs/output/CURSOR.md")
 }
 
+// TestHeaderContent_ConfigConventionDir verifies the generated header points at
+// the real config directory (.config/ai-rulez/) instead of the hardcoded
+// .ai-rulez/ when the project opts into the .config convention.
+func TestHeaderContent_ConfigConventionDir(t *testing.T) {
+	t.Parallel()
+
+	for _, style := range []string{"detailed", "compact", "minimal"} {
+		t.Run(style, func(t *testing.T) {
+			t.Parallel()
+
+			data := createTemplateData("P", &config.Config{
+				Name:          "P",
+				ConfigDirName: ".config/ai-rulez",
+				Header:        &config.HeaderConfig{Style: style},
+			})
+
+			header := templates.GenerateHeader(data)
+
+			assert.Contains(t, header, "Source: .config/ai-rulez/config.toml")
+			assert.NotContains(t, header, ".ai-rulez/", "the tool-specific path must not leak in")
+		})
+	}
+}
+
 // TestHeaderTimestamp_OmittedWhenDisabled verifies that `[header] timestamp =
 // false` removes the "Generated:" line from every header style, so projects
 // that commit generated outputs carry no per-run value in the header (#166).

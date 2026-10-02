@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
@@ -318,14 +319,20 @@ func dirHasRecursiveConfig(dir string) bool {
 	return false
 }
 
-// findRecursiveConfigDirs walks absBase and returns the parent directories
-// of every `.ai-rulez/` that contains a config file. Build outputs, hidden
-// directories, and shared rule libraries (`ai-rulez/` with a root config)
-// are pruned. Errors on individual entries are skipped, not propagated.
+// findRecursiveConfigDirs walks absBase and returns the project directories
+// of every config directory that contains a config file: `.ai-rulez/` by
+// default, the project-level `.config/ai-rulez/` convention as a fallback, and
+// any explicit configDirName. Build outputs, hidden directories, and shared
+// rule libraries (`ai-rulez/` with a root config) are pruned. Errors on
+// individual entries are skipped, not propagated.
 func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
+	// An explicit configDirName is honored exactly; only the default triggers
+	// the .config/ convention fallback.
+	useConventionFallback := configDirName == ""
 	if configDirName == "" {
 		configDirName = ".ai-rulez"
 	}
+	target := "/" + filepath.ToSlash(configDirName)
 	var dirs []string
 	err := filepath.WalkDir(absBase, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
@@ -338,9 +345,17 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 			return nil
 		}
 		name := d.Name()
-		if name == configDirName {
+		if strings.HasSuffix(filepath.ToSlash(path), target) {
 			if dirHasRecursiveConfig(path) {
-				dirs = append(dirs, filepath.Dir(path))
+				dirs = append(dirs, projectDirAbove(path, configDirName))
+			}
+			return filepath.SkipDir
+		}
+		if useConventionFallback && name == ".config" {
+			nested := filepath.Join(path, "ai-rulez")
+			sibling := filepath.Join(filepath.Dir(path), ".ai-rulez")
+			if !dirHasRecursiveConfig(sibling) && dirHasRecursiveConfig(nested) {
+				dirs = append(dirs, filepath.Dir(filepath.Dir(nested)))
 			}
 			return filepath.SkipDir
 		}
@@ -350,12 +365,28 @@ func findRecursiveConfigDirs(absBase, configDirName string) ([]string, error) {
 		if name == "ai-rulez" && dirHasRecursiveConfig(path) {
 			return filepath.SkipDir
 		}
+		// Descend through a wrapper directory (e.g. .config/) that is an
+		// ancestor of a nested configDirName target such as .config/ai-rulez.
+		if config.IsConfigDirAncestor(path, configDirName) {
+			return nil
+		}
 		if walkutil.ShouldSkipDir(name) {
 			return filepath.SkipDir
 		}
 		return nil
 	})
 	return dirs, err
+}
+
+// projectDirAbove returns the project directory that owns a config directory
+// located at path, stripping one path component per component of configDirName
+// (e.g. ".config/ai-rulez" → the directory containing .config/).
+func projectDirAbove(path, configDirName string) string {
+	dir := path
+	for range strings.Split(filepath.ToSlash(configDirName), "/") {
+		dir = filepath.Dir(dir)
+	}
+	return dir
 }
 
 func generateRecursive(ctx context.Context, request *ToolRequest, baseDir string, dryRun bool) (*mcp.CallToolResult, error) {
