@@ -17,6 +17,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- Cline rules (`.clinerules/`) now honor `paths`/`globs`: scoped rules and context files get `paths` frontmatter, which was previously dropped.
+- Continue rules (`.continue/rules/`) now carry the `name` Continue requires, plus `globs`, `alwaysApply` or `description` according to the rule's activation.
 - Generated rule files are gitignored per file (for example `.claude/rules/x.md`) instead of the whole rules folder, so hand-written rules in the same folder are no longer ignored.
 - `generate` no longer overwrites a hand-written rule file in a native rules folder that collides with a generated rule name. It warns and skips the file; rename one of them.
 
