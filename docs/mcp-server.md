@@ -70,9 +70,15 @@ name = "grafana"
 command = "uvx"
 args = ["mcp-grafana"]
 env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }
+
+[[mcp_servers]]
+name = "remote-api"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}" }
 ```
 
-MCP env values may contain `${VAR}` placeholders. `ai-rulez generate` resolves them from repeated
+MCP env and header values may contain `${VAR}` placeholders. `ai-rulez generate` resolves them from repeated
 `--env KEY=VALUE` flags, process environment variables, then dotenv files. Placeholder names must
 match `[A-Za-z_][A-Za-z0-9_]*`. By default, `.env` is loaded from the generation base directory. If
 any `--env-file PATH` flags are supplied, the default `.env` is not loaded; multiple files are merged

@@ -25,6 +25,7 @@ const (
 	keyModel       = "model"
 	keyCommand     = "command"
 	keyDisabled    = "disabled"
+	keyHeaders     = "headers"
 	keyMCPServers  = "mcpServers"
 	keyMCP         = "mcp"
 	keyTemperature = "temperature"

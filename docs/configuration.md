@@ -382,10 +382,24 @@ Each entry supports:
 | `env`         | No       | Environment variables as key-value pairs. Values may contain `${VAR}` placeholders. |
 | `transport`   | No       | `stdio`, `http`, or `sse`. Defaults to `stdio`.                                     |
 | `url`         | No       | Remote MCP server URL for `http` or `sse` transports.                               |
+| `headers`     | No       | HTTP headers for `http` or `sse` servers (e.g. auth). Values may contain `${VAR}` placeholders. |
 | `enabled`     | No       | Set to `false` to skip the server in generated MCP outputs. Defaults to `true`.     |
 | `profiles`    | No       | Restrict the server to the named profiles. Omit to include it in every profile.     |
 
-Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`.
+Local `stdio` servers normally need `command`; remote `http` and `sse` servers normally use `url`,
+plus `headers` when the server needs auth:
+
+```toml
+[[mcp_servers]]
+name = "remote-api"
+transport = "http"
+url = "https://mcp.example.com/mcp"
+headers = { Authorization = "Bearer ${REMOTE_API_TOKEN}", X-Team = "platform" }
+```
+
+`headers` is rejected on a `stdio` server, header names must be valid HTTP tokens, and values must
+not contain line breaks. Each preset writes them where its tool reads them (`headers` in every MCP
+file ai-rulez generates). Headers are not included in distributable plugin bundles.
 
 A `command` or `args` value may use the `${PROJECT_ROOT}` placeholder, which resolves to the
 project root (the directory containing `.ai-rulez/`) during `ai-rulez generate`:
@@ -407,18 +421,19 @@ For Claude Code specifically, a project-scoped `.mcp.json` can instead use Claud
 `${CLAUDE_PROJECT_DIR:-.}` token in `command`/`args`; ai-rulez passes it through unchanged, and it
 stays portable across machines.
 
-MCP env placeholders use `${VAR}` syntax, where `VAR` must match `[A-Za-z_][A-Za-z0-9_]*`. They are
+MCP env and header placeholders use `${VAR}` syntax, where `VAR` must match `[A-Za-z_][A-Za-z0-9_]*`. They are
 resolved during `ai-rulez generate` from repeated `--env KEY=VALUE` flags, process environment
 variables, then dotenv files. By default, `ai-rulez` loads `.env` from the generation base directory.
 If any `--env-file PATH` flags are supplied, the default `.env` is not loaded; files are merged in
 flag order, with later files winning. Generation fails if a placeholder cannot be resolved.
 
-Generated MCP config files contain resolved values. If any resolved MCP env value comes from a
-placeholder, or if an env key looks sensitive (`TOKEN`, `SECRET`, `PASSWORD`, `KEY`, `CREDENTIAL`),
-generation fails before writing unless the generated MCP config path is covered by `.gitignore` or
-by the patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp.json`,
-`.claude/settings.json`, `.gemini/settings.json`, and `.agents/settings.json`, including scoped
-variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
+Generated MCP config files contain resolved values. If any resolved MCP env or header value comes
+from a placeholder, or if an env key or header name looks sensitive (`TOKEN`, `SECRET`, `PASSWORD`,
+`KEY`, `CREDENTIAL`, or the `Authorization`, `Proxy-Authorization` and `Cookie` headers), generation
+fails before writing unless the generated MCP config path is covered by `.gitignore` or by the
+patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp.json`,
+`.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`, and `opencode.json`,
+including scoped variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
 source-hash calculation, but generated MCP config files contain the actual resolved values.
 
 #### Settings document merge behavior

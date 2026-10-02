@@ -61,6 +61,17 @@
             "description": "URL for remote MCP servers (required when transport is http or sse)",
             "pattern": "^https?://[^\\s]+$"
           },
+          "headers": {
+            "type": "object",
+            "description": "HTTP headers sent to a remote (http or sse) MCP server, typically for auth. Values may contain ${VAR} placeholders, resolved like env; a header holding a placeholder or a credential (Authorization, Cookie, or a name containing TOKEN, SECRET, PASSWORD, KEY or CREDENTIAL) makes the generated MCP file secret, so it must be gitignored.",
+            "propertyNames": {
+              "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"
+            },
+            "additionalProperties": {
+              "type": "string",
+              "pattern": "^[^\\r\\n]*$"
+            }
+          },
           "enabled": {
             "type": "boolean",
             "description": "Whether this MCP server is emitted into generated MCP outputs (default: true)",

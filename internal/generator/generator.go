@@ -1674,6 +1674,9 @@ func (g *Generator) secretMCPEnvKeys() []string {
 		for _, key := range server.SecretEnvKeys {
 			keys[key] = true
 		}
+		for _, key := range server.SecretHeaderKeys {
+			keys["header:"+key] = true
+		}
 	}
 	return sortedMapKeys(keys)
 }
