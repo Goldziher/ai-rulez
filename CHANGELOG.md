@@ -19,6 +19,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - **`generate --recursive` exit status**: a root that failed to load, validate, or generate was reported but the process still exited 0 (also with `--dry-run`). All roots are still processed and all errors printed, but the exit status is now 1 if any failed. Failures are also printed in quiet mode and are attributed to the right config when roots run concurrently.
+- **`clean` deleting merged settings documents**: `clean` removed a merged file such as `.mcp.json` or `.claude/settings.json` wholesale, taking hand-authored servers and settings with it. A merged document that holds content ai-rulez did not write is now left in place.
 
 ## [4.19.0] - 2026-10-02
 
