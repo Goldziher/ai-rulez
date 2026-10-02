@@ -143,7 +143,7 @@ func TestAgentsMD_IdenticalAcrossSharingPresets(t *testing.T) {
 }
 
 func TestRenderLocalRoot_AppliesTo(t *testing.T) {
-	doc := presets.RenderLocalRoot(scopedContent(), &config.Config{Name: "demo"}, "AGENTS.local.md")
+	doc := presets.RenderLocalRootRules(scopedContent(), presets.AllInlineRules(scopedContent()), &config.Config{Name: "demo"}, "AGENTS.local.md")
 	assert.Contains(t, doc, "### go-only\n\n_Applies to: `**/*.go`, `go.mod`_\n\n")
 	assert.Contains(t, doc, "### sql\n\n_When relevant: when editing SQL_\n\n")
 }

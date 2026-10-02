@@ -110,6 +110,9 @@ func printCleanPlan(baseDir string, plan *generator.CleanPlan) {
 	if plan.ManifestPath != "" {
 		logger.Info("  remove manifest: " + relOrAbs(baseDir, plan.ManifestPath))
 	}
+	if plan.LocalManifestPath != "" {
+		logger.Info("  remove local manifest: " + relOrAbs(baseDir, plan.LocalManifestPath))
+	}
 	if plan.GitignoreEdited {
 		logger.Info("  strip ai-rulez block from .gitignore")
 	}

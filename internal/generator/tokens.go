@@ -384,7 +384,12 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 // and their body on demand, and manual files are paid only when invoked.
 func (b *reportBuilder) ruleFileEntries(analyses []*config.OutputAnalysis) []Entry {
 	byMode := make(map[config.ActivationMode][]*config.OutputAnalysis)
+	var machineLocal []*config.OutputAnalysis
 	for _, analysis := range analyses {
+		if analysis.MachineLocal {
+			machineLocal = append(machineLocal, analysis)
+			continue
+		}
 		mode := activationFromRuleFile(analysis.Path, b.ruleFileText(analysis))
 		byMode[mode] = append(byMode[mode], analysis)
 	}
@@ -401,6 +406,9 @@ func (b *reportBuilder) ruleFileEntries(analyses []*config.OutputAnalysis) []Ent
 	add(descriptions)
 	add(bodies)
 	add(b.aggregate("manual rule files", BucketOnDemand, byMode[config.ActivationManual], allPartKinds))
+	// Machine-local rule files are gitignored and exist only on the developer's
+	// machine, so, like a local root, they are not part of the shipped surface.
+	add(b.aggregate("machine-local rule files", BucketConditional, machineLocal, allPartKinds))
 	return entries
 }
 

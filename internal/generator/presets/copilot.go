@@ -180,9 +180,15 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 // always-on or glob-scoped (auto, manual) stay inline instead of becoming
 // files that would never be applied automatically.
 func planCopilotRules(content *config.ContentTree, cfg *config.Config) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
+	return planCopilotItems(allInlineRules(content), allInlineContext(content), cfg)
+}
+
+// planCopilotItems is planCopilotRules over explicit rule and context lists, so
+// machine-local rules are routed exactly like shared ones.
+func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Config,
+) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
 	routing := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameCopilot), true)
 	target := copilotRulesTarget
-	allRules, allContext := allInlineRules(content), allInlineContext(content)
 	// Items Copilot cannot apply automatically stay inline and never reach
 	// Plan, so they cannot collide with the files that do get written.
 	candidates := func(all []config.ContentFile, kind string) (out []config.ContentFile) {

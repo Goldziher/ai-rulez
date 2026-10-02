@@ -17,11 +17,11 @@ var clineRulesTarget = rulefiles.Target{
 }
 
 func init() {
-	config.RegisterPreset(presetNameCline, &ClinePresetGenerator{})
+	config.RegisterPreset(presetNameCline, &ClinePresetGenerator{alwaysFileLocalRules{target: &clineRulesTarget, routing: rulefiles.RoutingEverything}})
 }
 
 // ClinePresetGenerator generates Cline preset files
-type ClinePresetGenerator struct{}
+type ClinePresetGenerator struct{ alwaysFileLocalRules }
 
 func (g *ClinePresetGenerator) GetName() string {
 	return presetNameCline

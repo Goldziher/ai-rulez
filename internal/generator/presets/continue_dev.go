@@ -19,11 +19,11 @@ var continueRulesTarget = rulefiles.Target{
 }
 
 func init() {
-	config.RegisterPreset(continueDevPresetName, &ContinueDevPresetGenerator{})
+	config.RegisterPreset(continueDevPresetName, &ContinueDevPresetGenerator{alwaysFileLocalRules{target: &continueRulesTarget, routing: rulefiles.RoutingAll}})
 }
 
 // ContinueDevPresetGenerator generates Continue.dev preset files
-type ContinueDevPresetGenerator struct{}
+type ContinueDevPresetGenerator struct{ alwaysFileLocalRules }
 
 // generateContinueDevPresetHeader creates a header for Continue.dev preset files
 func generateContinueDevPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {

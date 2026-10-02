@@ -24,16 +24,19 @@ type CleanOptions struct {
 
 // CleanPlan describes what Clean removed (or, in dry-run, would remove).
 type CleanPlan struct {
-	Profile         string
-	Files           []string // absolute paths of generated files to remove
-	Dirs            []string // absolute generated dirs, deepest-first (removed only if empty)
-	ManifestPath    string   // absolute manifest path; "" when absent or kept
-	GitignoreEdited bool     // the managed .gitignore block will be / was stripped
+	Profile      string
+	Files        []string // absolute paths of generated files to remove
+	Dirs         []string // absolute generated dirs, deepest-first (removed only if empty)
+	ManifestPath string   // absolute manifest path; "" when absent or kept
+	// LocalManifestPath is the absolute path of the machine-local manifest; ""
+	// when absent or kept.
+	LocalManifestPath string
+	GitignoreEdited   bool // the managed .gitignore block will be / was stripped
 }
 
 // Empty reports whether the plan would remove nothing at all.
 func (p *CleanPlan) Empty() bool {
-	return len(p.Files) == 0 && len(p.Dirs) == 0 && p.ManifestPath == "" && !p.GitignoreEdited
+	return len(p.Files) == 0 && len(p.Dirs) == 0 && p.ManifestPath == "" && p.LocalManifestPath == "" && !p.GitignoreEdited
 }
 
 // Clean removes the files and directories that Generate produced for the given
@@ -69,6 +72,9 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		if mp := g.manifestPath(); pathIsFile(mp) {
 			plan.ManifestPath = mp
 		}
+		if mp := g.localManifestPath(); pathIsFile(mp) {
+			plan.LocalManifestPath = mp
+		}
 	}
 	if !opts.KeepGitignore {
 		plan.GitignoreEdited = g.gitignoreHasManagedBlock()
@@ -86,6 +92,9 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	}
 	if plan.ManifestPath != "" {
 		g.removeStaleFile(plan.ManifestPath)
+	}
+	if plan.LocalManifestPath != "" {
+		g.removeStaleFile(plan.LocalManifestPath)
 	}
 	if plan.GitignoreEdited {
 		if err := g.stripGitignoreManagedBlock(); err != nil {

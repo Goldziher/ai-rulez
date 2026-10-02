@@ -26,11 +26,11 @@ var windsurfRulesTarget = rulefiles.Target{
 }
 
 func init() {
-	config.RegisterPreset(windsurfPresetName, &WindsurfPresetGenerator{})
+	config.RegisterPreset(windsurfPresetName, &WindsurfPresetGenerator{alwaysFileLocalRules{target: &windsurfRulesTarget, routing: rulefiles.RoutingEverything}})
 }
 
 // WindsurfPresetGenerator generates Windsurf preset files
-type WindsurfPresetGenerator struct{}
+type WindsurfPresetGenerator struct{ alwaysFileLocalRules }
 
 func (g *WindsurfPresetGenerator) GetName() string {
 	return windsurfPresetName

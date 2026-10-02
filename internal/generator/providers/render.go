@@ -40,6 +40,18 @@ func (g *Generator) LocalRootFile() string {
 	return config.LocalVariantPath(g.Spec.Root.File)
 }
 
+// LocalRuleOutputs implements config.LocalRuleProvider for split-aware specs:
+// local rules are routed like shared ones and the routed rules become
+// "<dir>/<id>.local<ext>".
+func (g *Generator) LocalRuleOutputs(rules []config.ContentFile, baseDir string, cfg *config.Config,
+) ([]config.OutputFile, []config.ContentFile, error) {
+	spec := g.Spec.Outputs[OutputTypeRules]
+	if spec == nil || !spec.Split {
+		return nil, rules, nil
+	}
+	return presets.PlanLocalRules(g.rulesTarget(spec), g.splitRouting(spec, cfg), rules, baseDir, cfg)
+}
+
 // GetOutputPaths implements config.PresetGenerator. Returns root file (if any)
 // plus the always-emitted directories declared in the spec.
 func (g *Generator) GetOutputPaths(baseDir string) []string {
