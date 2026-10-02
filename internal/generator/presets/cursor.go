@@ -8,7 +8,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -155,53 +154,21 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 }
 
 // cursorRulesTarget is the Cursor rules folder. Every .mdc carries frontmatter
-// (a file without it is manual-only in Cursor), so no banner is emitted.
+// (a file without it is manual-only in Cursor); the banner after it holds the
+// freshness hashes.
 var cursorRulesTarget = rulefiles.Target{
 	Preset:    presetNameCursor,
 	Dir:       ".cursor/rules",
 	Ext:       ".mdc",
 	Dialect:   rulefiles.DialectCursor,
 	Recursive: true,
+	Banner:    true,
 }
 
 // renderRuleFiles writes one .mdc per rule and per context file. Cursor always
 // writes one file per item, so the `[rules] mode` setting does not apply.
 func (g *CursorPresetGenerator) renderRuleFiles(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
-	t := cursorRulesTarget
-	rules := allInlineRules(content)
-	contexts := allInlineContext(content)
-
-	// Plan routes unscoped context inline; Cursor still writes it as a file.
-	items, _, inlineContext, err := rulefiles.Plan(rules, contexts, &t, rulefiles.RoutingAll, rulefiles.ScopeInfo{}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("plan cursor rules: %w", err)
-	}
-	for _, c := range inlineContext {
-		id := rulefiles.ID(c.Name)
-		if id == "" {
-			return nil, fmt.Errorf("context %q (%s) yields an empty rule file id", c.Name, c.Path)
-		}
-		items = append(items, rulefiles.Item{
-			File: c, Kind: rulefiles.KindContext, ID: id, Activation: c.Metadata.ResolveActivation(),
-		})
-	}
-
-	outputs := make([]config.OutputFile, 0, len(items))
-	for i := range items {
-		it := &items[i]
-		text, notes, err := rulefiles.Render(t, *it, cfg)
-		if err != nil {
-			return nil, fmt.Errorf("render cursor rule %s: %w", it.File.Name, err)
-		}
-		for _, n := range notes {
-			logger.Warn(n)
-		}
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, filepath.FromSlash(t.Dir), rulefiles.FileName(t, *it)),
-			Content: text,
-		})
-	}
-	return outputs, nil
+	return rulesFolderOutputs(cursorRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)
 }
 
 // shouldIncludeCommand checks if a command should be included in the Cursor preset

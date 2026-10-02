@@ -21,13 +21,13 @@ import (
 // The "text" is measured before hash injection, so MaxChars counts runes of
 // the content as rendered here (a few lines of hash comments are added later).
 //
-// Hash injection assumptions (see generator.injectHashes/stripHeader): with
-// frontmatter, hash lines become YAML comments before the closing "---" and
-// stripHeader removes frontmatter then banner; without frontmatter, the hash
-// lines go inside the multi-line HTML banner. A file with neither (Banner
-// false and no fields) cannot carry hashes, so callers should keep Banner on
-// except for formats whose dialect always emits frontmatter (.mdc).
-func Render(t Target, it Item, cfg *config.Config) (text string, notes []string, err error) {
+// Hash injection assumptions (see generator.injectHashes/stripHeader): in a
+// rules folder the hash lines go inside the multi-line HTML banner that
+// follows the frontmatter, never into the frontmatter itself, because the
+// tools' frontmatter parsers are not documented to tolerate YAML comments.
+// stripHeader removes frontmatter then banner. A file with neither (Banner
+// false and no fields) cannot carry hashes, so callers keep Banner on.
+func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, err error) {
 	fm, notes := Frontmatter(t.Dialect, it)
 	if fm == nil && !t.Banner {
 		return "", nil, oops.With("rule", it.File.Name, "preset", t.Preset).
@@ -60,8 +60,8 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []string,
 
 	out := b.String()
 	if t.MaxChars > 0 && utf8.RuneCountInString(out) > t.MaxChars {
-		notes = append(notes, fmt.Sprintf("%s %q: %d chars exceeds the %s limit of %d",
-			kindLabel(it.Kind), it.File.Name, utf8.RuneCountInString(out), t.Preset, t.MaxChars))
+		notes = append(notes, newNote(t.Dialect, it, fmt.Sprintf("%d chars exceeds the %s limit of %d",
+			utf8.RuneCountInString(out), t.Preset, t.MaxChars), false))
 	}
 	return out, notes, nil
 }

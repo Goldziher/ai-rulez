@@ -74,7 +74,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 		},
 	)
 
-	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, false)
+	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, rulefiles.RoutingAll, nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate rule files: %w", err)
 	}

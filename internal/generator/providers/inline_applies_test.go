@@ -67,25 +67,29 @@ func findOutput(outputs []config.OutputFile, suffix string) (string, bool) {
 
 func TestInlinePresets_AppliesTo(t *testing.T) {
 	tests := []struct {
-		preset string
-		file   string
+		preset  string
+		file    string
+		presets []string // other presets enabled in the config
 	}{
-		{"gemini", "GEMINI.md"},
-		{"codex", "AGENTS.md"},
-		{"opencode", "AGENTS.md"},
-		{"xum", "AGENTS.md"},
-		{"amp", "AGENTS.md"},
-		{"hermes", ".hermes.md"},
-		{"copilot", "copilot-instructions.md"},
-		{"antigravity", "GEMINI.md"},
+		{"gemini", "GEMINI.md", nil},
+		{"codex", "AGENTS.md", nil},
+		{"opencode", "AGENTS.md", nil},
+		{"xum", "AGENTS.md", nil},
+		{"amp", "AGENTS.md", nil},
+		{"hermes", ".hermes.md", nil},
+		{"copilot", "copilot-instructions.md", nil},
+		// The gemini preset shares GEMINI.md with antigravity; enabling it keeps
+		// antigravity's rules inline, which is what this row exercises.
+		{"antigravity", "GEMINI.md", []string{"gemini"}},
 	}
 	gens := presetGenerators(t)
 	for _, tt := range tests {
 		t.Run(tt.preset, func(t *testing.T) {
 			baseDir := t.TempDir()
-			// The gemini preset shares GEMINI.md with antigravity; enabling it keeps
-			// antigravity's rules inline, which is what this test exercises.
-			cfg := &config.Config{Name: "demo", BaseDir: baseDir, Presets: []config.Preset{{BuiltIn: "gemini"}}}
+			cfg := &config.Config{Name: "demo", BaseDir: baseDir}
+			for _, p := range tt.presets {
+				cfg.Presets = append(cfg.Presets, config.Preset{BuiltIn: p})
+			}
 			outputs, err := gens[tt.preset].Generate(scopedContent(), baseDir, cfg)
 			require.NoError(t, err)
 
@@ -103,6 +107,23 @@ func TestInlinePresets_AppliesTo(t *testing.T) {
 			assert.Contains(t, doc, "### plain\n\nAlways on.\n\n")
 		})
 	}
+}
+
+// Without the gemini preset, antigravity in inline mode moves its path-scoped
+// rule to .agents/rules and keeps it out of GEMINI.md.
+func TestAntigravityAlone_ScopedRuleLeavesGeminiMD(t *testing.T) {
+	baseDir := t.TempDir()
+	cfg := &config.Config{Name: "demo", BaseDir: baseDir}
+
+	outputs, err := presetGenerators(t)["antigravity"].Generate(scopedContent(), baseDir, cfg)
+
+	require.NoError(t, err)
+	doc := rootFile(t, outputs, "GEMINI.md")
+	assert.NotContains(t, doc, "### go-only")
+	assert.Contains(t, doc, "### plain")
+	file, ok := findOutput(outputs, ".agents/rules/go-only.md")
+	require.True(t, ok, "scoped rule file missing")
+	assert.Contains(t, file, "globs:")
 }
 
 func TestAgentsMD_IdenticalAcrossSharingPresets(t *testing.T) {

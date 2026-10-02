@@ -10,6 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -36,29 +37,31 @@ var antigravityRulesTarget = rulefiles.Target{
 
 const antigravityRuleMaxChars = 24576
 
-// antigravityWarn is a seam so tests can observe warnings.
-var antigravityWarn = logger.Warn
-
 // antigravityRouting decides which rules become files. GEMINI.md is written by
 // both the antigravity and gemini presets and the last writer wins, so when
 // both are enabled the root file must stay self-contained: everything inline,
-// unless the user set rules.mode_by_preset.antigravity explicitly.
-func antigravityRouting(cfg *config.Config) rulefiles.Routing {
-	if cfg == nil {
-		return rulefiles.RoutingNone
+// unless the user set rules.mode_by_preset.antigravity explicitly. Scoped
+// generation keeps everything inline as well: rule files are written to the
+// project root's .agents/rules, which a scope's GEMINI.md cannot rely on, so
+// scoped rules stay in the scope's GEMINI.md until scoped rule files exist.
+//
+// demoted is the routing that would have applied without the gemini preset
+// (RoutingNone when nothing was demoted).
+func antigravityRouting(cfg *config.Config, warn func(msg string, args ...any)) (routing, demoted rulefiles.Routing) {
+	if cfg == nil || cfg.ScopePath != "" {
+		return rulefiles.RoutingNone, rulefiles.RoutingNone
 	}
+	want := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
 	if !geminiPresetEnabled(cfg) {
-		return rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
+		return want, rulefiles.RoutingNone
 	}
 	if cfg.RulesModeExplicitFor(presetNameAntigravity) {
-		antigravityWarn("antigravity and gemini presets both write GEMINI.md; "+
-			"rules moved to .agents/rules may load twice or be missing from GEMINI.md",
+		warn("antigravity and gemini presets both write GEMINI.md; rules moved to .agents/rules "+
+			"will be loaded twice (the gemini preset still inlines them in GEMINI.md)",
 			"mode", cfg.RulesModeFor(presetNameAntigravity))
-		return rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
+		return want, rulefiles.RoutingNone
 	}
-	logger.Info("antigravity rule files disabled: the gemini preset also writes GEMINI.md, " +
-		"so all rules stay inline; set rules.mode_by_preset.antigravity to override")
-	return rulefiles.RoutingNone
+	return rulefiles.RoutingNone, want
 }
 
 func geminiPresetEnabled(cfg *config.Config) bool {
@@ -142,11 +145,23 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		})
 	}
 
-	files, inlineRules, inlineContext, err := rulefiles.Plan(
-		allInlineRules(content), allInlineContext(content),
-		&antigravityRulesTarget, antigravityRouting(cfg), rulefiles.ScopeInfo{}, nil)
+	routing, demoted := antigravityRouting(cfg, logger.Warn)
+	rules, contexts := allInlineRules(content), allInlineContext(content)
+	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, contexts,
+		&antigravityRulesTarget, routing, rulefiles.ScopeInfo{}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("plan antigravity rule files: %w", err)
+		return nil, oops.With("preset", presetNameAntigravity).Wrapf(err, "plan antigravity rule files")
+	}
+	if demoted != rulefiles.RoutingNone {
+		// Informational only when the demotion actually costs rule files.
+		wouldBe, _, _, planErr := rulefiles.Plan(rules, contexts, &antigravityRulesTarget, demoted, rulefiles.ScopeInfo{}, nil)
+		msg := "antigravity rule files disabled: the gemini preset also writes GEMINI.md, " +
+			"so all rules stay inline; set rules.mode_by_preset.antigravity to override"
+		if planErr == nil && len(wouldBe) > 0 {
+			logger.Info(msg)
+		} else {
+			logger.Debug(msg)
+		}
 	}
 	if len(files) > 0 {
 		outputs = append(outputs, config.OutputFile{
@@ -158,16 +173,13 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		it := &files[i]
 		text, notes, err := rulefiles.Render(antigravityRulesTarget, *it, cfg)
 		if err != nil {
-			return nil, fmt.Errorf("render antigravity rule file %s: %w", it.File.Name, err)
+			return nil, oops.With("preset", presetNameAntigravity, "rule", it.File.Name).
+				Wrapf(err, "render antigravity rule file")
 		}
-		for _, note := range notes {
-			antigravityWarn(note)
-		}
-		outputs = append(outputs, config.OutputFile{
-			Path: filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir),
-				rulefiles.FileName(antigravityRulesTarget, *it)),
-			Content: text,
-		})
+		path := filepath.Join(baseDir, filepath.FromSlash(antigravityRulesTarget.Dir),
+			rulefiles.FileName(antigravityRulesTarget, *it))
+		rulefiles.ReportNotes(path, notes)
+		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}
 
 	// Generate GEMINI.md with the inline remainder and context

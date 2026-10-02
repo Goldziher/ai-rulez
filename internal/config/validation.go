@@ -1004,7 +1004,42 @@ func validateActivationSlice(files []ContentFile, lenient bool) error {
 	return nil
 }
 
+const logKeyFile = "file"
+
+// legacyValueWarning is one advisory about a legacy activation field.
+type legacyValueWarning struct {
+	msg   string
+	attrs []any
+}
+
+// unknownLegacyValues lists legacy `trigger` and `alwaysApply` values that are
+// not recognized and so are ignored when resolving activation.
+func unknownLegacyValues(f ContentFile) []legacyValueWarning {
+	if f.Metadata == nil {
+		return nil
+	}
+	var out []legacyValueWarning
+	if v := f.Metadata.Extra["trigger"]; strings.TrimSpace(v) != "" && triggerMode(v) == "" {
+		out = append(out, legacyValueWarning{
+			"unknown trigger value ignored; use always_on, glob, model_decision or manual",
+			[]any{logKeyFile, f.Path, "trigger", v},
+		})
+	}
+	switch v := f.Metadata.Extra["alwaysApply"]; strings.ToLower(strings.TrimSpace(v)) {
+	case "", boolTrue, boolFalse:
+	default:
+		out = append(out, legacyValueWarning{
+			"unknown alwaysApply value ignored; use true or false",
+			[]any{logKeyFile, f.Path, "alwaysApply", v},
+		})
+	}
+	return out
+}
+
 func validateActivation(f ContentFile) error {
+	for _, w := range unknownLegacyValues(f) {
+		logger.Warn(w.msg, w.attrs...)
+	}
 	if f.Metadata == nil || strings.TrimSpace(f.Metadata.Activation) == "" {
 		return nil
 	}

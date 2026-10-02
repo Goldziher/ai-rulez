@@ -81,6 +81,11 @@ func (m *Metadata) ShouldRenderTriggerFrontmatter() bool {
 	return mode != TriggerManual || desc != "" || glob != ""
 }
 
+const (
+	boolTrue  = "true"
+	boolFalse = "false"
+)
+
 // ActivationMode says when a rule or context file applies.
 type ActivationMode string
 
@@ -216,9 +221,9 @@ func (m *Metadata) ResolveActivation() Activation {
 // derived default when it is absent or unparseable.
 func (m *Metadata) alwaysApplyMode(act Activation) (mode ActivationMode, source string) {
 	switch strings.ToLower(strings.TrimSpace(m.Extra["alwaysApply"])) {
-	case "true":
+	case boolTrue:
 		return ActivationAlways, ActivationSourceAlwaysApply
-	case "false":
+	case boolFalse:
 		switch {
 		case len(act.Globs) > 0:
 			return ActivationGlob, ActivationSourceAlwaysApply
@@ -236,7 +241,7 @@ func (m *Metadata) alwaysApplyMode(act Activation) (mode ActivationMode, source 
 
 // triggerMode maps a Windsurf trigger value to an ActivationMode ("" if unknown).
 func triggerMode(trigger string) ActivationMode {
-	switch trigger {
+	switch strings.ToLower(strings.TrimSpace(trigger)) {
 	case TriggerAlwaysOn:
 		return ActivationAlways
 	case TriggerGlob:
