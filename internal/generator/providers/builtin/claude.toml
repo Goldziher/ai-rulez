@@ -57,27 +57,23 @@ skills = true
 emit_effort = true
 emit_model = true
 
+# Rules: .claude/rules/{id}.md. With `[rules] mode = "split"` every rule and
+# path-scoped context item is a file; in the default inline mode only
+# path-scoped rules are (with a `paths` field, so Claude loads them when it reads
+# a matching file) and everything else stays in CLAUDE.md.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".claude/rules"
+filename = "{id}.md"
+split = true
+inline_filter = "path_scoped"
+dialect = "claude"
+
 # Commands are rendered as user-invokable skills (Claude exposes slash
 # commands through the skills directory). Filter drops commands whose
 # Metadata.Targets explicitly excludes claude. `resources = true` carries the
 # bundled references/ scripts/ assets/ of a directory-form command
 # (commands/{id}/COMMAND.md); a flat commands/{id}.md has no resources to emit.
-# Path-scoped rules: a rule declaring `paths`/`globs` frontmatter is emitted as
-# .claude/rules/{id}.md with a `paths` field and left out of CLAUDE.md, so
-# Claude loads it only when it reads a matching file. Unscoped rules stay in
-# CLAUDE.md.
-[outputs.rules]
-mode = "per_item_file"
-dir = ".claude/rules"
-filename = "{id}.md"
-filter = "path_scoped"
-
-[outputs.rules.body]
-sections = ["frontmatter", "content"]
-
-[outputs.rules.frontmatter]
-paths = true
-
 [outputs.commands]
 mode = "per_item_file"
 dir = ".claude/skills"

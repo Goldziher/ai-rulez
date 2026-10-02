@@ -20,6 +20,15 @@ const (
 	DialectJunie    Dialect = "junie"
 )
 
+// IsDialect reports whether name is a supported dialect.
+func IsDialect(name string) bool {
+	switch Dialect(name) {
+	case DialectClaude, DialectCursor, DialectTrigger, DialectCopilot, DialectCline, DialectContinue, DialectJunie:
+		return true
+	}
+	return false
+}
+
 // Target describes one rules folder a preset writes into.
 type Target struct {
 	Preset    string

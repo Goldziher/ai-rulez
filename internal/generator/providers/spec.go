@@ -38,6 +38,15 @@ type OutputSpec struct {
 	Filter      string           `toml:"filter,omitempty" yaml:"filter,omitempty" json:"filter,omitempty"`
 	Body        *BodySpec        `toml:"body,omitempty" yaml:"body,omitempty" json:"body,omitempty"`
 	Frontmatter *FrontmatterSpec `toml:"frontmatter,omitempty" yaml:"frontmatter,omitempty" json:"frontmatter,omitempty"`
+	// Split (outputs.rules only) makes the output honor the `[rules] mode`
+	// setting: in split mode every rule and path-scoped context item becomes a
+	// file; in inline mode only what InlineFilter selects does.
+	Split bool `toml:"split,omitempty" yaml:"split,omitempty" json:"split,omitempty"`
+	// InlineFilter (split outputs only) selects the items that still get a file
+	// when the rules mode is inline: "path_scoped" or "" (none).
+	InlineFilter string `toml:"inline_filter,omitempty" yaml:"inline_filter,omitempty" json:"inline_filter,omitempty"`
+	// Dialect (split outputs only) names the rule-file frontmatter vocabulary.
+	Dialect string `toml:"dialect,omitempty" yaml:"dialect,omitempty" json:"dialect,omitempty"`
 }
 
 // BodySpec lists the ordered closed-set section renderers composed into a
@@ -98,6 +107,9 @@ const (
 	// outputs.<type>.filter
 	FilterIncludeIfTargetingProvider = "include_if_targeting_provider"
 	FilterPathScoped                 = "path_scoped"
+
+	// outputs.rules.inline_filter
+	InlineFilterPathScoped = "path_scoped"
 
 	// root.sections
 	SectionRootHeader           = "header"

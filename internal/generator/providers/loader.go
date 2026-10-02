@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"slices"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -106,6 +108,9 @@ func validateSpec(s *ProviderSpec) error {
 		if out.Filter != "" && out.Filter != FilterIncludeIfTargetingProvider && out.Filter != FilterPathScoped {
 			return fmt.Errorf("outputs[%q].filter: unknown filter %q", typ, out.Filter)
 		}
+		if err := validateSplitFields(typ, out, rootSections(s)); err != nil {
+			return err
+		}
 		if out.Body != nil {
 			for _, section := range out.Body.Sections {
 				if !isValidBodySection(section) {
@@ -132,6 +137,60 @@ func validateSpec(s *ProviderSpec) error {
 	}
 
 	return nil
+}
+
+func validateSplitEnums(typ string, out *OutputSpec) error {
+	if out.InlineFilter != "" && out.InlineFilter != InlineFilterPathScoped {
+		return fmt.Errorf("outputs[%q].inline_filter: unknown value %q", typ, out.InlineFilter)
+	}
+	if out.Dialect != "" && !rulefiles.IsDialect(out.Dialect) {
+		return fmt.Errorf("outputs[%q].dialect: unknown dialect %q", typ, out.Dialect)
+	}
+	return nil
+}
+
+// validateSplitFields checks the split/inline_filter/dialect trio of a rules
+// output.
+func validateSplitFields(typ string, out *OutputSpec, rootSections []string) error {
+	if !out.Split && out.InlineFilter == "" && out.Dialect == "" {
+		return nil
+	}
+	if typ != OutputTypeRules {
+		return fmt.Errorf("outputs[%q]: split, inline_filter and dialect are only valid on outputs.rules", typ)
+	}
+	if err := validateSplitEnums(typ, out); err != nil {
+		return err
+	}
+	if out.Dialect != "" && (out.Body != nil || out.Frontmatter != nil) {
+		return fmt.Errorf("outputs[%q]: dialect cannot be combined with body or frontmatter blocks", typ)
+	}
+	if !out.Split {
+		return fmt.Errorf("outputs[%q]: inline_filter and dialect require split = true", typ)
+	}
+	if !slices.Contains(rootSections, SectionRootRulesInline) {
+		return fmt.Errorf("outputs[%q]: split requires root.sections to include %q", typ, SectionRootRulesInline)
+	}
+	if out.Filter != "" {
+		return fmt.Errorf("outputs[%q]: split cannot be combined with filter %q", typ, out.Filter)
+	}
+	if out.Dialect == "" {
+		return fmt.Errorf("outputs[%q].dialect is required when split = true", typ)
+	}
+	return validateSplitFilename(typ, out.Filename)
+}
+
+func validateSplitFilename(typ, filename string) error {
+	if !strings.HasPrefix(filename, "{id}") || strings.Contains(filename, "/") {
+		return fmt.Errorf("outputs[%q].filename: split needs a flat {id}<ext> template, got %q", typ, filename)
+	}
+	return nil
+}
+
+func rootSections(s *ProviderSpec) []string {
+	if s.Root == nil {
+		return nil
+	}
+	return s.Root.Sections
 }
 
 func isValidOutputType(typ string) bool {

@@ -2735,3 +2735,21 @@ func readMCPServers(t *testing.T, path string) map[string]any {
 	require.NoError(t, json.Unmarshal(data, &doc))
 	return doc.MCPServers
 }
+
+func TestComputeSourceHash_ChangesWithRulesMode(t *testing.T) {
+	t.Parallel()
+
+	// Arrange
+	build := func(mode string) *config.Config {
+		return &config.Config{
+			Name:    "p",
+			Presets: []config.Preset{{BuiltIn: "claude"}},
+			Rules:   &config.RulesConfig{Mode: mode},
+		}
+	}
+	content := &config.ContentTree{}
+
+	// Act / Assert
+	assert.NotEqual(t, computeSourceHash(build("inline"), content), computeSourceHash(build("split"), content))
+	assert.Equal(t, computeSourceHash(build("split"), content), computeSourceHash(build("split"), content))
+}

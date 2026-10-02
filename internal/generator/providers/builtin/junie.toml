@@ -7,13 +7,23 @@
 name = "junie"
 display_name = "JetBrains Junie"
 
-directories = [".junie", ".junie/skills", ".junie/agents"]
+directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules"]
 
 # guidelines.md inlines rules and context but NOT the agents-delegation
 # section — Junie surfaces subagents through its own UI, not the root file.
 [root]
 file = ".junie/guidelines.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline"]
+
+# Rules: .junie/rules/{id}.md, written only with `[rules] mode = "split"`.
+# Junie has no glob activation, so in the default inline mode every rule stays
+# in guidelines.md.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".junie/rules"
+filename = "{id}.md"
+split = true
+dialect = "junie"
 
 [outputs.skills]
 mode = "per_item_file"
