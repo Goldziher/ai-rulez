@@ -801,7 +801,7 @@ ai-rulez generate [config-file] [flags]
 | ------------------------------- | ------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--dry-run` / `-d`              | boolean | false         | Show what would be generated without writing files                                                                                                      |
 | `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns                                                                                                      |
-| `--recursive` / `-r`            | boolean | false         | Find and process configs recursively                                                                                                                    |
+| `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
 | `--env` / `-e`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
@@ -857,6 +857,10 @@ Generate recursively in monorepo:
 ```bash
 ai-rulez generate --recursive
 ```
+
+Every discovered root is processed and all errors are printed; the exit status is 1 if any root failed to
+load, validate, or generate (also with `--dry-run`). With `--profile`, a root that does not define the named
+profile fails with a `profile not found` error for that root rather than falling back to default content.
 
 Generate from a non-default configuration directory:
 
@@ -1096,11 +1100,18 @@ ai-rulez validate [config-path] [flags]
 
 | Flag           | Type    | Description                                          |
 | -------------- | ------- | ---------------------------------------------------- |
+| `--recursive` / `-r` | boolean | Validate every discovered config; exits non-zero if any is invalid |
 | `--config-dir` | string  | Configuration directory name for non-default layouts |
 | `--verbose`    | boolean | Enable verbose output                                |
 | `--debug`      | boolean | Enable debug output                                  |
 
 **Examples:**
+
+Validate every config in a monorepo (all roots are checked; exit status 1 if any fails):
+
+```bash
+ai-rulez validate --recursive
+```
 
 Validate current configuration:
 

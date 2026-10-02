@@ -254,12 +254,27 @@ func (fc *FileCounter) Finish() {
 
 func (fc *FileCounter) Error(err error) {
 	fc.mu.Lock()
+	name := fc.currentFile
+	fc.mu.Unlock()
+	fc.ErrorFor(name, err)
+}
+
+// ErrorFor reports a failure for an explicitly named file. Unlike Error it does
+// not depend on the shared "current file", so it is correct when files are
+// processed concurrently, and it always prints: a failure must stay visible
+// even in quiet mode because it also drives a non-zero exit status.
+func (fc *FileCounter) ErrorFor(filename string, err error) {
+	fc.mu.Lock()
 	defer fc.mu.Unlock()
 
-	if !fc.bar.quiet && fc.currentFile != "" {
+	if !fc.bar.quiet {
 		//nolint:errcheck // Progress bar errors are non-critical
 		_ = fc.bar.Clear()
-		fmt.Fprintf(os.Stderr, "❌ Error processing %s: %v\n", fc.currentFile, err)
+	}
+	if filename != "" {
+		fmt.Fprintf(os.Stderr, "❌ Error processing %s: %v\n", filename, err)
+	} else {
+		fmt.Fprintf(os.Stderr, "❌ Error: %v\n", err)
 	}
 	fc.current++
 	//nolint:errcheck // Progress bar errors are non-critical

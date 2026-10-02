@@ -364,6 +364,9 @@ pre-commit:
       run: ai-rulez generate --recursive
 ```
 
+In a monorepo, `ai-rulez generate --recursive` and `ai-rulez validate --recursive` (`-r`) process every nested
+`.ai-rulez/` root, report all failures, and exit non-zero if any root failed.
+
 Or run `ai-rulez init --setup-hooks` while initializing a repo to wire hooks in automatically.
 </details>
 
