@@ -300,6 +300,10 @@ func InferOutputKind(path, baseDir string) OutputKind {
 		return OutputKindUnknown
 	}
 
+	if InRulesDir(rel) && isMarkdownPath(rel) {
+		return OutputKindRuleFile
+	}
+
 	for index, segment := range segments[:len(segments)-1] {
 		switch segment {
 		case skillsDir:
