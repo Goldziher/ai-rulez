@@ -312,6 +312,10 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	// load packs scoped to the profiles that name them.
 	loadBuiltins(config)
 
+	if lo.includeMemo != nil {
+		config.IncludeMemo = lo.includeMemo
+	}
+
 	if err := resolveIncludesIfNeeded(ctx, configDir, config); err != nil {
 		return nil, err
 	}

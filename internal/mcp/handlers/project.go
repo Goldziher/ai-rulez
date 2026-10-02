@@ -558,8 +558,9 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 		return ToolError(err)
 	}
 	gen := generator.NewGenerator(cfg)
+	gen.SetContext(ctx)
 	if dryRun {
-		plan, err := gen.DryRun("")
+		plan, err := gen.DryRun("") //nolint:contextcheck // the context reaches the baseline load through SetContext
 		if err != nil {
 			return ToolError(err)
 		}
@@ -569,7 +570,7 @@ func generateForDirectory(ctx context.Context, request *ToolRequest, baseDir str
 			"plan":     plan,
 		})
 	}
-	if err := gen.Generate(""); err != nil {
+	if err := gen.Generate(""); err != nil { //nolint:contextcheck // the context reaches the baseline load through SetContext
 		return ToolError(err)
 	}
 	return ToolSuccess(map[string]interface{}{
@@ -664,18 +665,23 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 }
 
 func loadProjectConfig(ctx context.Context, request *ToolRequest, baseDir string) (*config.Config, error) {
+	// no_local loads the view a teammate without the machine-local overlay sees.
+	var opts []config.LoadOption
+	if request.GetBool("no_local", false) {
+		opts = append(opts, config.WithoutLocal())
+	}
 	configFile := request.GetString("config_file", "")
 	if configFile != "" {
 		if !filepath.IsAbs(configFile) {
 			configFile = filepath.Join(baseDir, configFile)
 		}
-		return config.LoadConfigFromFile(ctx, configFile)
+		return config.LoadConfigFromFile(ctx, configFile, opts...)
 	}
 	configDirName := request.GetString("config_dir", "")
 	if configDirName != "" {
-		return config.LoadConfigFromDir(ctx, baseDir, configDirName)
+		return config.LoadConfigFromDir(ctx, baseDir, configDirName, opts...)
 	}
-	return config.LoadConfig(ctx, baseDir)
+	return config.LoadConfig(ctx, baseDir, opts...)
 }
 
 // curatedPresets is the provider set emitted for the "all providers" and

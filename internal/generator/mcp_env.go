@@ -56,7 +56,7 @@ func (g *Generator) resolveMCPPlaceholders(withHeaders bool) error {
 		unresolved = append(unresolved, g.resolveMCPServer(serverName, server, dotenvValues, withHeaders)...)
 	}
 
-	if len(unresolved) > 0 {
+	if len(unresolved) > 0 && !g.lenientMCP {
 		sort.Strings(unresolved)
 		return oops.
 			With("unresolved", unresolved).
