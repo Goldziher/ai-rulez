@@ -252,6 +252,7 @@ func TestCopilot_InstructionsFiles(t *testing.T) {
 		md         *config.Metadata
 		wantFM     []string
 		wantAbsent []string
+		wantInline bool // no applyTo possible: the rule stays in copilot-instructions.md
 	}{
 		{name: "always", md: nil, wantFM: []string{"applyTo: '**'"}},
 		{
@@ -260,15 +261,25 @@ func TestCopilot_InstructionsFiles(t *testing.T) {
 			wantFM: []string{"applyTo: src/**/*.ts,src/**/*.tsx,docs/**"},
 		},
 		{
-			name:       "auto description only",
+			name:       "auto stays inline",
 			md:         &config.Metadata{Activation: "auto", Extra: map[string]string{"description": "Use for API work"}},
-			wantFM:     []string{"description: Use for API work"},
-			wantAbsent: []string{"applyTo"},
+			wantInline: true,
 		},
 		{
-			name:       "manual has no frontmatter",
+			name:       "manual stays inline",
 			md:         &config.Metadata{Activation: "manual"},
-			wantAbsent: []string{"applyTo", "description:", "---\n"},
+			wantInline: true,
+		},
+		{
+			name:       "negated glob dropped from applyTo",
+			md:         &config.Metadata{Globs: []string{"src/**", "!src/gen/**"}},
+			wantFM:     []string{"applyTo: src/**"},
+			wantAbsent: []string{"!src"},
+		},
+		{
+			name:       "only negated globs stay inline",
+			md:         &config.Metadata{Globs: []string{"!src/gen/**"}},
+			wantInline: true,
 		},
 	}
 
@@ -284,6 +295,13 @@ func TestCopilot_InstructionsFiles(t *testing.T) {
 			// Assert
 			require.NoError(t, err)
 			file, ok := copilotOutputByPath(outputs, ".github/instructions/my-rule.instructions.md")
+			if tt.wantInline {
+				assert.False(t, ok, "rule without applyTo must not become an instructions file")
+				root, found := copilotOutputByPath(outputs, ".github/copilot-instructions.md")
+				require.True(t, found)
+				assert.Contains(t, root.Content, "Body text.")
+				return
+			}
 			require.True(t, ok, "instructions file missing")
 			for _, want := range tt.wantFM {
 				assert.Contains(t, file.Content, want)
@@ -373,4 +391,30 @@ func TestCopilot_SplitMode(t *testing.T) {
 	}
 	_, ok = copilotOutputByPath(outputs, ".github/instructions/context-plain-ctx.instructions.md")
 	assert.False(t, ok, "unscoped context stays inline")
+}
+
+func TestCopilot_InlineOnlyRulesDoNotCollide(t *testing.T) {
+	// Arrange: manual rules stay inline, so names that would map to the same
+	// file do not matter; the glob rule still gets its file.
+	manual := &config.Metadata{Activation: "manual"}
+	content := &config.ContentTree{Rules: []config.ContentFile{
+		copilotRuleFixture("Foo", "Upper.", manual),
+		copilotRuleFixture("foo", "Lower.", manual),
+		copilotRuleFixture("a b", "Space.", manual),
+		copilotRuleFixture("a_b", "Under.", manual),
+		copilotRuleFixture("scoped", "Scoped.", &config.Metadata{Globs: []string{"src/**"}}),
+	}}
+
+	// Act
+	outputs, err := (&CopilotPresetGenerator{}).Generate(content, "/test", splitCopilotConfig())
+
+	// Assert
+	require.NoError(t, err)
+	root, ok := copilotOutputByPath(outputs, ".github/copilot-instructions.md")
+	require.True(t, ok)
+	for _, body := range []string{"Upper.", "Lower.", "Space.", "Under."} {
+		assert.Contains(t, root.Content, body)
+	}
+	_, ok = copilotOutputByPath(outputs, ".github/instructions/scoped.instructions.md")
+	assert.True(t, ok)
 }

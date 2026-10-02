@@ -815,27 +815,17 @@ func sanitizeName(name string) string {
 	return rulefiles.ID(name)
 }
 
-// rulesFolderOutputs plans and renders every rule (and, when withContext, every
-// context file) of a preset into its native rules folder. Each item becomes a
-// file; the folder-relative file name comes from rulefiles.FileName.
+// rulesFolderOutputs plans and renders the items routing selects for a preset's
+// native rules folder; the folder-relative file name comes from
+// rulefiles.FileName. Presets that write one file per rule and context item pass
+// rulefiles.RoutingEverything; anything Plan leaves inline is not rendered here.
 func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir string, cfg *config.Config,
-	withContext bool,
+	routing rulefiles.Routing, reg *rulefiles.Registry,
 ) ([]config.OutputFile, error) {
-	files, _, _, err := rulefiles.Plan(allInlineRules(content), nil, &t, rulefiles.RoutingAll, rulefiles.ScopeInfo{}, nil)
+	files, _, _, err := rulefiles.Plan(allInlineRules(content), allInlineContext(content), &t, routing,
+		rulefiles.ScopeInfo{}, reg)
 	if err != nil {
-		return nil, err
-	}
-	if withContext {
-		for _, c := range allInlineContext(content) {
-			id := rulefiles.ID(c.Name)
-			if id == "" {
-				return nil, oops.With("source", c.Path, "name", c.Name).
-					Errorf("name %q (%s) yields an empty rule file id", c.Name, c.Path)
-			}
-			files = append(files, rulefiles.Item{
-				File: c, Kind: rulefiles.KindContext, ID: id, Activation: c.Metadata.ResolveActivation(),
-			})
-		}
+		return nil, oops.With("preset", t.Preset).Wrapf(err, "plan %s rule files", t.Preset)
 	}
 
 	outputs := make([]config.OutputFile, 0, len(files))
@@ -843,15 +833,11 @@ func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir
 		it := &files[i]
 		text, notes, err := rulefiles.Render(t, *it, cfg)
 		if err != nil {
-			return nil, err
+			return nil, oops.With("preset", t.Preset, "rule", it.File.Name).Wrapf(err, "render %s rule file", t.Preset)
 		}
-		for _, n := range notes {
-			logger.Warn(n)
-		}
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(rulefiles.FileName(t, *it))),
-			Content: text,
-		})
+		outPath := filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(rulefiles.FileName(t, *it)))
+		rulefiles.ReportNotes(outPath, notes)
+		outputs = append(outputs, config.OutputFile{Path: outPath, Content: text})
 	}
 	return outputs, nil
 }

@@ -56,7 +56,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 	)
 
 	// Rules and context are written as native rule files with frontmatter
-	ruleOutputs, err := rulesFolderOutputs(clineRulesTarget, content, baseDir, cfg, true)
+	ruleOutputs, err := rulesFolderOutputs(clineRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate rule files: %w", err)
 	}

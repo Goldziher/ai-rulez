@@ -3,7 +3,11 @@
 // inline "## Rules" / "## Context" sections.
 package rulefiles
 
-import "strings"
+import (
+	"crypto/sha1" //nolint:gosec // not security relevant: a stable short name
+	"encoding/hex"
+	"strings"
+)
 
 // ID converts a content name into a filesystem-safe identifier: spaces,
 // underscores and path separators become dashes, every other character outside
@@ -23,4 +27,15 @@ func ID(name string) string {
 		}
 	}
 	return strings.Trim(builder.String(), "-")
+}
+
+// ItemID is the file id of a rule or context name: ID, or for names without
+// any ASCII letter or digit the stable fallback "rule-<first 8 hex of
+// sha1(name)>".
+func ItemID(name string) string {
+	if id := ID(name); id != "" {
+		return id
+	}
+	sum := sha1.Sum([]byte(name)) //nolint:gosec // not security relevant: a stable short name
+	return "rule-" + hex.EncodeToString(sum[:])[:8]
 }
