@@ -200,7 +200,7 @@
           "description": "Relative output path. Object-shaped sidecars are merged into an existing file at this path: only the top-level keys the renderer owns are replaced, every other key is preserved."
         },
         "emit_when": {
-          "enum": ["always", "has_mcp_servers", "has_plugins", "has_resolved_effort"],
+          "enum": ["always", "has_mcp_servers", "has_mcp_json_entries", "has_plugins", "has_resolved_effort"],
           "description": "Closed-set predicate evaluated against the Config to decide whether to emit."
         }
       }

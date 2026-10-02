@@ -45,6 +45,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateMCP(); err != nil {
+		return err
+	}
+
 	if err := c.validateAgentEffort(); err != nil {
 		return err
 	}
@@ -763,4 +767,34 @@ func (c *Config) skillArgumentHintWarnings() []skillWarning {
 	}
 
 	return warnings
+}
+
+// validateMCP checks the [mcp] options. The self-server tuning fields are
+// rejected when self_server is off, since they would otherwise be silently inert.
+func (c *Config) validateMCP() error {
+	if c.MCP == nil {
+		return nil
+	}
+	m := c.MCP
+	if !m.SelfServer && (m.SelfServerVersion != "" || len(m.SelfServerCommand) > 0) {
+		return oops.
+			Hint("Set `self_server = true` under [mcp], or remove self_server_version / self_server_command").
+			Errorf("mcp.self_server_version and mcp.self_server_command require mcp.self_server = true")
+	}
+	if len(m.SelfServerCommand) > 0 && strings.TrimSpace(m.SelfServerCommand[0]) == "" {
+		return oops.
+			Hint("The first element of self_server_command is the executable, e.g. [\"ai-rulez\", \"mcp\"]").
+			Errorf("mcp.self_server_command executable must not be empty")
+	}
+	if len(m.SelfServerCommand) > 0 && m.SelfServerVersion != "" {
+		return oops.
+			Hint("self_server_command replaces the whole launch command, so a pinned version has no effect; remove one of them").
+			Errorf("mcp.self_server_version and mcp.self_server_command are mutually exclusive")
+	}
+	if strings.ContainsAny(m.SelfServerVersion, " \t\n@/") {
+		return oops.
+			Hint("Use a bare version or npm dist-tag such as \"4.19.0\" or \"latest\"").
+			Errorf("mcp.self_server_version %q is not a valid version", m.SelfServerVersion)
+	}
+	return nil
 }

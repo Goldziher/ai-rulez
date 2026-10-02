@@ -18,6 +18,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/samber/oops"
 )
 
@@ -368,7 +369,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// Auto-generate MCP output if servers exist. The MCP preset is now
 	// DSL-driven (internal/generator/providers/builtin/mcp.toml); fetch it
 	// from the registry rather than instantiating a hand-written generator.
-	if len(mcpServers) > 0 {
+	if len(mcpServers) > 0 || g.config.HasSelfServer() {
 		mcpGen, err := config.GetPresetGenerator("mcp")
 		if err != nil {
 			logger.Warn("Failed to resolve MCP preset generator", "error", err)
@@ -1023,6 +1024,14 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 			serverJSON = []byte("<marshal-error>")
 		}
 		b.WriteString("mcp:" + name + "=" + string(serverJSON) + "\n")
+	}
+
+	if cfg.HasSelfServer() {
+		entryJSON, err := json.Marshal(cfg.SelfMCPServerEntry(schema.Version))
+		if err != nil {
+			entryJSON = []byte("<marshal-error>")
+		}
+		b.WriteString("mcp-self=" + string(entryJSON) + "\n")
 	}
 
 	// Plugins — sorted by name to match output rendering order

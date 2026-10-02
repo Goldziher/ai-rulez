@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/schema"
 )
 
 // presetsResolveGlobalEffort is aliased so sidecar code can stay readable
@@ -42,6 +43,8 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 		return true
 	case PredicateHasMCPServers:
 		return cfg != nil && len(cfg.MCPServers) > 0
+	case PredicateHasMCPJSONEntries:
+		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
 	case PredicateHasPlugins:
 		return cfg != nil && len(cfg.Plugins) > 0
 	case PredicateHasResolvedEffort:
@@ -76,9 +79,7 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 			{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg)},
 		})
 	case SidecarMCPJSON:
-		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
-			{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg)},
-		})
+		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg))
 	case SidecarAmpSettingsJSON:
 		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
 			{Name: ampSettingsKeyEffort, Value: g.resolveGlobalEffort(cfg)},
@@ -173,6 +174,30 @@ func mcpJSONServerEntries(cfg *config.Config) map[string]any {
 		mcpServers[name] = entry
 	}
 	return mcpServers
+}
+
+// mcpJSONOwnedKeys decides what ai-rulez owns in .mcp.json.
+//
+// With [[mcp_servers]] declared it owns the whole mcpServers object, as it
+// always has, and the self-server entry (when enabled and not declared by name)
+// is one more member of it. With only [mcp] self_server it owns just the single
+// mcpServers.ai-rulez entry, so servers already in the file survive.
+func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
+	if cfg == nil || !cfg.HasSelfServer() {
+		return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg)}}
+	}
+	self := cfg.SelfMCPServerEntry(schema.Version)
+	if len(cfg.MCPServers) == 0 {
+		return []jsonmerge.OwnedKey{{
+			Path:  []string{settingsKeyMCPServers, config.SelfMCPServerName},
+			Value: self,
+		}}
+	}
+	servers := mcpJSONServerEntries(cfg)
+	if _, declared := servers[config.SelfMCPServerName]; !declared {
+		servers[config.SelfMCPServerName] = self
+	}
+	return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: servers}}
 }
 
 // claudeMCPServerEntries builds the .claude/settings.json server map. Lifted

@@ -136,6 +136,29 @@ type = "github"
 		require.NoError(t, schema.ValidateFile(path))
 	})
 
+	t.Run("mcp self_server options validate", func(t *testing.T) {
+		path := writeTOML(t, `version = "4.0"
+name = "x"
+presets = ["claude"]
+
+[mcp]
+self_server = true
+self_server_version = "4.19.0"
+`)
+		require.NoError(t, schema.ValidateFile(path))
+	})
+
+	t.Run("unknown mcp key is rejected", func(t *testing.T) {
+		path := writeTOML(t, `version = "4.0"
+name = "x"
+presets = ["claude"]
+
+[mcp]
+self_servers = true
+`)
+		assert.Error(t, schema.ValidateFile(path))
+	})
+
 	t.Run("unknown key is rejected", func(t *testing.T) {
 		path := writeTOML(t, `version = "4.0"
 name = "x"
