@@ -453,6 +453,12 @@
           "type": "boolean",
           "description": "Emit the \"Generated:\" line in generated headers. Off by default so generated output is byte-reproducible; set to true to opt the line back in, and pin it with SOURCE_DATE_EPOCH if reproducibility still matters.",
           "default": false
+        },
+        "hashes": {
+          "type": "string",
+          "enum": ["full", "content", "none"],
+          "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash (default); content keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
+          "default": "full"
         }
       },
       "additionalProperties": false

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -711,21 +712,12 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		return writeRawOutput(absPath, output)
 	}
 
-	body := stripHeader(output.Content, output.Path)
-	contentHash := templates.HashContent(body)
+	finalContent := g.finalContent(output)
 
-	existingContentHash, existingSourceHash := extractStoredHashes(absPath)
-	if existingContentHash != "" && existingContentHash == contentHash &&
-		existingSourceHash == g.config.SourceHash {
-		logger.Debug("Skipped unchanged file",
-			"path", output.Path,
-			"content_hash", contentHash,
-			"source_hash", g.config.SourceHash)
+	if g.canSkipWrite(absPath, output, finalContent) {
+		logger.Debug("Skipped unchanged file", "path", output.Path)
 		return nil
 	}
-
-	finalContent := injectHashes(output.Content, output.Path, contentHash, g.config.SourceHash)
-	finalContent = normalizeTrailingNewline(finalContent)
 
 	dir := filepath.Dir(absPath)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
@@ -746,6 +738,52 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	logger.Debug("Wrote file", "path", output.Path, "size", len(finalContent))
 	return nil
 }
+
+// finalContent is the exact text writeOutput puts on disk for a rendered
+// output: the body plus the freshness lines the header hash mode asks for,
+// normalized to a single trailing newline.
+func (g *Generator) finalContent(output config.OutputFile) string {
+	contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
+	sourceHash := g.config.SourceHash
+	switch g.config.GetHeaderHashes() {
+	case config.HeaderHashesNone:
+		contentHash, sourceHash = "", ""
+	case config.HeaderHashesContent:
+		sourceHash = ""
+	}
+	return normalizeTrailingNewline(injectHashes(output.Content, output.Path, contentHash, sourceHash))
+}
+
+// canSkipWrite reports whether the file on disk already matches what would be
+// written.
+//
+// In "full" mode the comparison is the in-header Content-Hash plus Source-Hash,
+// never the on-disk body, so a formatter touching the body does not matter.
+// "content" and "none" have no Source-Hash to carry header changes (style, text,
+// config directory), and "none" has no hash at all, so they compare the whole
+// rendered file. With [header] timestamp enabled the Generated: text is ignored
+// in that comparison, otherwise every run would rewrite every file.
+func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, finalContent string) bool {
+	if g.config.GetHeaderHashes() == config.HeaderHashesFull {
+		contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
+		existingContentHash, existingSourceHash := extractStoredHashes(absPath)
+		return existingContentHash != "" && existingContentHash == contentHash &&
+			existingSourceHash == g.config.SourceHash
+	}
+	existing, err := os.ReadFile(absPath)
+	if err != nil {
+		return false
+	}
+	if g.config.ShowHeaderTimestamp() {
+		return generatedStampPattern.ReplaceAllString(string(existing), "") ==
+			generatedStampPattern.ReplaceAllString(finalContent, "")
+	}
+	return string(existing) == finalContent
+}
+
+// generatedStampPattern matches the header timestamp in both its inline
+// (" | Generated: ...") and standalone ("Generated: ...") forms.
+var generatedStampPattern = regexp.MustCompile(`(?m)(?: \| )?Generated: [^\n]*$`)
 
 // writeRawOutput writes an OutputFile with non-nil RawContent verbatim,
 // preserving Mode (defaulting to 0o644). Skips the write when both the
@@ -924,6 +962,9 @@ func injectContentHash(content, outputPath, hash string) string {
 // and inserts the hash lines before it. If sourceHash is empty, only
 // Content-Hash is injected (e.g., from older callers).
 func injectHashes(content, outputPath, contentHash, sourceHash string) string {
+	if contentHash == "" {
+		return content
+	}
 	ext := strings.ToLower(filepath.Ext(outputPath))
 
 	hashBlock := func(linePrefix string) string {
