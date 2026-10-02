@@ -176,12 +176,12 @@ func (s *GitSource) sparsePathSpec() string {
 // or --no-fetch) is lock-free; only refresh of a stale cache is serialized
 // by a per-cacheDir mutex with double-checked locking.
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
-	logger.Debug("Fetching git source", "name", s.name, "repo", s.repoURL, "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
+	logger.Debug("Fetching git source", "name", s.name, "repo", redactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
 	if SkipFetch {
 		if s.findAIRulezDir() == "" {
 			return nil, oops.
-				With("repo", s.repoURL).
+				With("repo", redactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
 				Errorf("--no-fetch specified but no cached content found for include '%s'", s.name)
 		}
@@ -267,7 +267,7 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 	}
 	pathSpec := s.sparsePathSpec()
 	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken); err != nil {
-		return nil, oops.With("repo", s.repoURL).Wrapf(err, "failed to clone include %q", s.name)
+		return nil, oops.With("repo", redactURL(s.repoURL)).Wrapf(err, "failed to clone include %q", s.name)
 	}
 
 	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
@@ -286,7 +286,7 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 	aiRulezDir := s.findAIRulezDir()
 	if aiRulezDir == "" {
 		return nil, oops.
-			With("repo", s.repoURL).
+			With("repo", redactURL(s.repoURL)).
 			With("ref", s.ref).
 			With("path", s.path).
 			Errorf("no .ai-rulez directory found in repository")
@@ -304,7 +304,7 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 		scanned, err := config.ScanContentTree(aiRulezDir)
 		if err != nil {
 			return nil, oops.
-				With("repo", s.repoURL).
+				With("repo", redactURL(s.repoURL)).
 				Wrapf(err, "failed to scan content tree")
 		}
 		storeScan(aiRulezDir, scanned)
@@ -415,7 +415,7 @@ func validateGitURL(urlStr string) error {
 	// Check for HTTP/HTTPS URLs
 	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
 		return oops.
-			With("url", urlStr).
+			With("url", redactURL(urlStr)).
 			Hint("Git repository URLs must use http://, https://, file://, git@, or ssh:// protocol").
 			Errorf("invalid git repository URL format")
 	}
@@ -423,8 +423,8 @@ func validateGitURL(urlStr string) error {
 	// Try to parse as URL
 	if _, err := url.Parse(urlStr); err != nil {
 		return oops.
-			With("url", urlStr).
-			Wrapf(err, "invalid URL format")
+			With("url", redactURL(urlStr)).
+			Errorf("invalid URL format: %s", redactURL(err.Error()))
 	}
 
 	return nil
