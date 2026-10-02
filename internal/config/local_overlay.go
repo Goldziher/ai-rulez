@@ -43,13 +43,16 @@ const (
 	extJSON = ".json"
 )
 
-const formatYAML = "yaml"
+const (
+	formatYAML = "yaml"
+	formatJSON = "json"
+)
 
 var localConfigFormatByExt = map[string]string{
 	extTOML: "toml",
 	extYAML: formatYAML,
 	extYML:  formatYAML,
-	extJSON: "json",
+	extJSON: formatJSON,
 }
 
 func localConfigNames() []string {
@@ -114,7 +117,7 @@ func decodeConfigDoc(path string, data []byte) (map[string]any, error) {
 		err = toml.Unmarshal(data, &doc)
 	case formatYAML:
 		doc, err = decodeYAMLDoc(data)
-	case "json":
+	case formatJSON:
 		err = json.Unmarshal(data, &doc)
 	default:
 		return nil, oops.With("path", path).Errorf("unsupported config format: %s", filepath.Base(path))
@@ -365,60 +368,11 @@ func (o *LocalOverlay) KeyPaths() []string {
 		return nil
 	}
 	var out []string
-	collectKeyPaths("", o.Doc, &out)
+	walkLeaves(nil, o.Doc, func(segs []string, _ any) {
+		out = append(out, strings.Join(segs, "."))
+	})
 	sort.Strings(out)
 	return out
-}
-
-func collectKeyPaths(prefix string, v any, out *[]string) {
-	join := func(k string) string {
-		if prefix == "" {
-			return k
-		}
-		return prefix + "." + k
-	}
-	switch t := v.(type) {
-	case map[string]any:
-		if len(t) == 0 && prefix != "" {
-			*out = append(*out, prefix)
-		}
-		for k, e := range t {
-			collectKeyPaths(join(k), e, out)
-		}
-	case []any:
-		if !collectNamedEntryPaths(prefix, t, out) {
-			*out = append(*out, prefix)
-		}
-	default:
-		*out = append(*out, prefix)
-	}
-}
-
-// collectNamedEntryPaths expands a list of named tables; it reports false for
-// any other list.
-func collectNamedEntryPaths(prefix string, list []any, out *[]string) bool {
-	if len(list) == 0 {
-		return false
-	}
-	names := make([]string, len(list))
-	for i, e := range list {
-		m, ok := e.(map[string]any)
-		if !ok {
-			return false
-		}
-		name, ok := asString(m[docKeyName])
-		if !ok || name == "" {
-			if name, ok = asString(m[docKeyPath]); !ok || name == "" {
-				return false
-			}
-		}
-		names[i] = name
-	}
-	for i, e := range list {
-		m, _ := e.(map[string]any) //nolint:errcheck // validated above
-		collectKeyPaths(prefix+"."+names[i], m, out)
-	}
-	return true
 }
 
 // errMergedConfigWrite is returned when a merged configuration is saved.

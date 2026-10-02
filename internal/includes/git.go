@@ -178,7 +178,7 @@ func (s *GitSource) sparsePathSpec() string {
 func (s *GitSource) Fetch(ctx context.Context) (*config.ContentTree, error) {
 	logger.Debug("Fetching git source", "name", s.name, "repo", redactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
-	if SkipFetch {
+	if SkipFetch || config.OfflineIncludes(ctx) {
 		if s.findAIRulezDir() == "" {
 			return nil, oops.
 				With("repo", redactURL(s.repoURL)).

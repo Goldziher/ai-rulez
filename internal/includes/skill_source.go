@@ -89,7 +89,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 
 	logger.Debug("Fetching installed skill", "name", s.name, "repo", redactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
-	if SkipFetch {
+	if SkipFetch || config.OfflineIncludes(ctx) {
 		skillDir := s.findSkillDir()
 		if skillDir == "" {
 			return config.ContentFile{}, oops.

@@ -20,6 +20,7 @@ var (
 	includeInstallTo  string
 	includeForce      bool
 	includeJSON       bool
+	includeLocal      bool
 )
 
 var IncludeCmd = &cobra.Command{
@@ -70,6 +71,9 @@ func init() {
 	IncludeCmd.AddCommand(includeRemoveCmd)
 	IncludeCmd.AddCommand(includeListCmd)
 
+	includeAddCmd.Flags().BoolVar(&includeLocal, "local", false, localFlagUsage)
+	includeRemoveCmd.Flags().BoolVar(&includeLocal, "local", false, localFlagUsage)
+
 	// Add flags for include add
 	includeAddCmd.Flags().StringVarP(&includePath, "path", "p", "", "Subdirectory within git repository (git only)")
 	includeAddCmd.Flags().StringVarP(&includeRef, "ref", "r", "", "Branch, tag, or commit to use (git only)")
@@ -104,6 +108,9 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
+	}
+	if includeLocal {
+		op = op.Local()
 	}
 
 	req := &crud.AddIncludeRequest{
@@ -143,6 +150,9 @@ func runIncludeRemove(cmd *cobra.Command, args []string) {
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
+	}
+	if includeLocal {
+		op = op.Local()
 	}
 
 	if err := op.RemoveInclude(ctx, name); err != nil {

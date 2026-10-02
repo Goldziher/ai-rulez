@@ -195,7 +195,7 @@ func CreateRuleHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 
 	req := &crud.AddFileRequest{
 		Domain:   domain,
-		Type:     "rules",
+		Type:     crud.ContentTypeRules,
 		Name:     name,
 		Content:  content,
 		Priority: priority,
@@ -581,6 +581,9 @@ func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	if err != nil {
 		return ToolError(err)
 	}
+	if request.GetBool("local", false) {
+		op = op.Local()
+	}
 
 	name := request.GetString("name", "")
 	source := request.GetString("source", "")
@@ -618,6 +621,9 @@ func RemoveIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
+	}
+	if request.GetBool("local", false) {
+		op = op.Local()
 	}
 
 	name := request.GetString("name", "")
@@ -661,6 +667,9 @@ func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	if err != nil {
 		return ToolError(err)
 	}
+	if request.GetBool("local", false) {
+		op = op.Local()
+	}
 
 	name := request.GetString("name", "")
 	source := request.GetString("source", "")
@@ -692,6 +701,9 @@ func UninstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.C
 	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
+	}
+	if request.GetBool("local", false) {
+		op = op.Local()
 	}
 
 	name := request.GetString("name", "")
@@ -735,6 +747,9 @@ func AddProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	if err != nil {
 		return ToolError(err)
 	}
+	if request.GetBool("local", false) {
+		op = op.Local()
+	}
 
 	name := request.GetString("name", "")
 	domains := request.GetStringSlice("domains", nil)
@@ -758,6 +773,9 @@ func RemoveProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Ca
 	if err != nil {
 		return ToolError(err)
 	}
+	if request.GetBool("local", false) {
+		op = op.Local()
+	}
 
 	name := request.GetString("name", "")
 
@@ -778,6 +796,9 @@ func SetDefaultProfileHandler(ctx context.Context, request *ToolRequest) (*sdkmc
 	op, err := crud.NewOperator(workingDir(request))
 	if err != nil {
 		return ToolError(err)
+	}
+	if request.GetBool("local", false) {
+		op = op.Local()
 	}
 
 	name := request.GetString("name", "")

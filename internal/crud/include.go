@@ -27,6 +27,10 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 		return err
 	}
 
+	if op.local {
+		return op.addIncludeLocal(ctx, req)
+	}
+
 	baseDir := op.baseDir
 
 	// Load current config
@@ -86,14 +90,18 @@ func (op *OperatorImpl) AddInclude(ctx context.Context, req *AddIncludeRequest) 
 }
 
 // RemoveInclude removes an include source from the config
-// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
-// machine-local overlay entries are neither listed nor removed until the
-// op.Local() variant lands.
+// NOTE: this reads and writes the shared config layer (config.WithoutLocal); the
+// Local() operator variant writes the machine-local overlay instead. Listing
+// always shows the shared layer.
 func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 	if name == "" {
 		return oops.
 			Hint("Provide a valid include name").
 			Errorf("include name is required")
+	}
+
+	if op.local {
+		return op.removeIncludeLocal(ctx, name)
 	}
 
 	baseDir := op.baseDir
@@ -139,9 +147,9 @@ func (op *OperatorImpl) RemoveInclude(ctx context.Context, name string) error {
 }
 
 // ListIncludes returns all configured includes from the config
-// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
-// machine-local overlay entries are neither listed nor removed until the
-// op.Local() variant lands.
+// NOTE: this reads and writes the shared config layer (config.WithoutLocal); the
+// Local() operator variant writes the machine-local overlay instead. Listing
+// always shows the shared layer.
 func (op *OperatorImpl) ListIncludes(ctx context.Context) ([]IncludeInfo, error) {
 	baseDir := op.baseDir
 

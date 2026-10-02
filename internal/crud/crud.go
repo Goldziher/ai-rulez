@@ -59,6 +59,7 @@ type OperatorImpl struct {
 	baseDir    string // project directory that owns the config directory
 	aiRulezDir string // config directory: .ai-rulez/ or .config/ai-rulez/
 	filesMgr   *FileManager
+	local      bool // route config mutations to the config.local.* overlay (see Local)
 }
 
 // NewOperator creates a new Operator for the given base directory. The config

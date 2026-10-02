@@ -14,6 +14,10 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 		return err
 	}
 
+	if op.local {
+		return op.installSkillLocal(ctx, req)
+	}
+
 	baseDir := op.baseDir
 
 	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
@@ -61,14 +65,18 @@ func (op *OperatorImpl) InstallSkill(ctx context.Context, req *InstallSkillReque
 }
 
 // UninstallSkill removes an installed skill from the config
-// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
-// machine-local overlay entries are neither listed nor removed until the
-// op.Local() variant lands.
+// NOTE: this reads and writes the shared config layer (config.WithoutLocal); the
+// Local() operator variant writes the machine-local overlay instead. Listing
+// always shows the shared layer.
 func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 	if name == "" {
 		return oops.
 			Hint("Provide a valid skill name").
 			Errorf("skill name is required")
+	}
+
+	if op.local {
+		return op.uninstallSkillLocal(ctx, name)
 	}
 
 	baseDir := op.baseDir
@@ -104,9 +112,9 @@ func (op *OperatorImpl) UninstallSkill(ctx context.Context, name string) error {
 }
 
 // ListInstalledSkills returns all configured installed skills
-// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
-// machine-local overlay entries are neither listed nor removed until the
-// op.Local() variant lands.
+// NOTE: this reads and writes the shared config layer (config.WithoutLocal); the
+// Local() operator variant writes the machine-local overlay instead. Listing
+// always shows the shared layer.
 func (op *OperatorImpl) ListInstalledSkills(ctx context.Context) ([]InstalledSkillInfo, error) {
 	baseDir := op.baseDir
 
