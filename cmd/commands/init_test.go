@@ -24,6 +24,7 @@ func TestInitCommand(t *testing.T) {
 	assert.NotNil(t, flags.Lookup("from"))
 	assert.NotNil(t, flags.Lookup("setup-hooks"))
 	assert.NotNil(t, flags.Lookup("yes"))
+	assert.NotNil(t, flags.Lookup("config-dir"))
 	assert.Equal(t, "f", flags.Lookup("format").Shorthand)
 	assert.Equal(t, "d", flags.Lookup("domains").Shorthand)
 	assert.Equal(t, "s", flags.Lookup("skip-content").Shorthand)
@@ -65,6 +66,28 @@ func TestInit_BasicStructure(t *testing.T) {
 	assert.Contains(t, string(content), `version = "4.0"`)
 	assert.Contains(t, string(content), `name = "test-project"`)
 	assert.Contains(t, string(content), "presets = ")
+}
+
+func TestInit_ConfigConventionDir(t *testing.T) {
+	tmpDir := t.TempDir()
+	originalDir, err := os.Getwd()
+	require.NoError(t, err)
+	defer os.Chdir(originalDir)
+
+	require.NoError(t, os.Chdir(tmpDir))
+
+	require.NoError(t, commands.InitCmd.Flags().Set("config-dir", ".config/ai-rulez"))
+	require.NoError(t, commands.InitCmd.Flags().Set("skip-content", "true"))
+	defer commands.InitCmd.Flags().Set("config-dir", "")
+	defer commands.InitCmd.Flags().Set("skip-content", "false")
+
+	commands.InitCmd.Run(commands.InitCmd, []string{"test-project"})
+
+	assert.DirExists(t, ".config/ai-rulez/rules")
+	assert.DirExists(t, ".config/ai-rulez/context")
+	assert.DirExists(t, ".config/ai-rulez/skills")
+	assert.FileExists(t, ".config/ai-rulez/config.toml")
+	assert.NoDirExists(t, ".ai-rulez")
 }
 
 func TestInit_WithDomains(t *testing.T) {

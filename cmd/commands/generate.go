@@ -199,6 +199,13 @@ var configBaseNames = [...]string{
 // Only this directory is inspected; everything else is pruned.
 const defaultConfigDirName = ".ai-rulez"
 
+// configConventionRoot is the generic project-level config directory from the
+// pi0/config-dir proposal. The ai-rulez subtree inside it mirrors .ai-rulez/.
+const (
+	configConventionRoot   = ".config"
+	configConventionSubdir = "ai-rulez"
+)
+
 // libraryDirName marks a shared rule library (a directory containing a
 // root-level config plus included `.ai-rulez/` module configs that are
 // meant to be consumed via `includes`, not generated from). When the walk
@@ -265,12 +272,19 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *[]string, spinner
 
 	name := d.Name()
 
-	if name == targetConfigDirName() {
-		if cfg := findConfigInDir(path); cfg != "" {
-			*out = append(*out, cfg)
-			if addErr := spinner.Add(1); addErr != nil {
-				logger.Debug("Failed to update spinner", "error", addErr)
-			}
+	// Config directory at any depth: ".ai-rulez" by default, or the value of
+	// --config-dir (which may itself be a nested path such as .config/ai-rulez).
+	if isConfigDirPath(path) {
+		recordConfigDir(path, out, spinner)
+		return filepath.SkipDir
+	}
+
+	// Project-level .config/ai-rulez/ convention. Handled explicitly (and
+	// pruned) so the walk never descends into other tools' .config/ subtrees.
+	// A sibling .ai-rulez/ wins, matching the non-recursive precedence.
+	if configDir == "" && name == configConventionRoot {
+		if findConfigInDir(filepath.Join(filepath.Dir(path), defaultConfigDirName)) == "" {
+			recordConfigDir(filepath.Join(path, configConventionSubdir), out, spinner)
 		}
 		return filepath.SkipDir
 	}
@@ -286,6 +300,12 @@ func walkConfigDir(path string, d os.DirEntry, err error, out *[]string, spinner
 		return filepath.SkipDir
 	}
 
+	// Descend through a wrapper directory (e.g. .config/) that is an ancestor
+	// of a nested --config-dir target such as .config/ai-rulez.
+	if config.IsConfigDirAncestor(path, targetConfigDirName()) {
+		return nil
+	}
+
 	if walkutil.ShouldSkipDir(name) {
 		return filepath.SkipDir
 	}
@@ -297,6 +317,29 @@ func targetConfigDirName() string {
 		return configDir
 	}
 	return defaultConfigDirName
+}
+
+// isConfigDirPath reports whether path is a config directory for the active
+// target. The comparison is by trailing path suffix so both a top-level
+// ".ai-rulez" and a nested "svc/.ai-rulez" (or an explicit nested --config-dir
+// such as ".config/ai-rulez") match.
+func isConfigDirPath(path string) bool {
+	target := filepath.ToSlash(targetConfigDirName())
+	rel := filepath.ToSlash(path)
+	return rel == target || strings.HasSuffix(rel, "/"+target)
+}
+
+// recordConfigDir appends dir's config file to out when one exists and bumps
+// the spinner; directories without a config file are silently skipped.
+func recordConfigDir(dir string, out *[]string, spinner *progress.Bar) {
+	cfg := findConfigInDir(dir)
+	if cfg == "" {
+		return
+	}
+	*out = append(*out, cfg)
+	if err := spinner.Add(1); err != nil {
+		logger.Debug("Failed to update spinner", "error", err)
+	}
 }
 
 // findConfigInDir returns the path to the first config file in dir matching
