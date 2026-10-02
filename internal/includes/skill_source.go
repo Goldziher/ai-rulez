@@ -87,13 +87,13 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 	mu.Lock()
 	defer mu.Unlock()
 
-	logger.Debug("Fetching installed skill", "name", s.name, "repo", s.repoURL, "path", s.path, "ref", s.ref)
+	logger.Debug("Fetching installed skill", "name", s.name, "repo", redactURL(s.repoURL), "path", s.path, "ref", s.ref)
 
 	if SkipFetch {
 		skillDir := s.findSkillDir()
 		if skillDir == "" {
 			return config.ContentFile{}, oops.
-				With("repo", s.repoURL).
+				With("repo", redactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
 				Errorf("--no-fetch specified but no cached skill found for '%s'", s.name)
 		}
@@ -114,7 +114,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 				logger.Warn("ls-remote failed, using cached skill", "name", s.name, "error", err)
 				return ScanInstalledSkillDir(skillDir, s.name)
 			}
-			return config.ContentFile{}, oops.With("repo", s.repoURL).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
+			return config.ContentFile{}, oops.With("repo", redactURL(s.repoURL)).Wrapf(err, "failed to get remote HEAD for skill %q", s.name)
 		}
 	}
 
@@ -137,7 +137,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 	}
 	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, s.sparsePathSpec(), s.cacheDir, s.accessToken); err != nil {
 		return config.ContentFile{}, oops.
-			With("repo", s.repoURL).
+			With("repo", redactURL(s.repoURL)).
 			With("path", s.path).
 			Wrapf(err, "failed to clone skill %q", s.name)
 	}
@@ -152,7 +152,7 @@ func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) 
 	skillDir := s.findSkillDir()
 	if skillDir == "" {
 		return config.ContentFile{}, oops.
-			With("repo", s.repoURL).
+			With("repo", redactURL(s.repoURL)).
 			With("path", s.path).
 			Errorf("skill directory not found (expected SKILL.md at %s)", s.path)
 	}
