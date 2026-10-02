@@ -551,6 +551,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Scopes          []ScopeConfig          `toml:"scopes"`
 		MCP             *MCPConfig             `toml:"mcp"`
 		Defaults        *DefaultsConfig        `toml:"defaults"`
+		Rules           *RulesConfig           `toml:"rules"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 	}
@@ -606,6 +607,7 @@ func loadConfigTOML(path string) (*Config, error) {
 		Scopes:          raw.Scopes,
 		MCP:             raw.MCP,
 		Defaults:        raw.Defaults,
+		Rules:           raw.Rules,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 	}

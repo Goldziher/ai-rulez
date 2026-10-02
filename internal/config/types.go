@@ -30,6 +30,7 @@ type Config struct {
 	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
 	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
 	MCP             *MCPConfig             `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
+	Rules           *RulesConfig           `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
@@ -258,6 +259,53 @@ func (c *Config) OmitsAgentField(field string) bool {
 		}
 	}
 	return false
+}
+
+// Rules output modes. In split mode each rule is written as its own file in
+// the tool's native rules folder; in inline mode rules are embedded in the
+// root file.
+const (
+	RulesModeSplit  = "split"
+	RulesModeInline = "inline"
+)
+
+// defaultRulesMode is the mode used when neither rules.mode_by_preset nor
+// rules.mode is set.
+const defaultRulesMode = RulesModeInline
+
+// validRulesModes lists the accepted values for rules.mode and rules.mode_by_preset.
+var validRulesModes = []string{RulesModeSplit, RulesModeInline}
+
+// RulesConfig controls how rules are written to generated outputs.
+type RulesConfig struct {
+	// Mode is the default rules output mode: "split" or "inline".
+	Mode string `yaml:"mode,omitempty" json:"mode,omitempty" toml:"mode,omitempty"`
+
+	// ModeByPreset overrides Mode for specific presets. Keys are preset names.
+	ModeByPreset map[string]string `yaml:"mode_by_preset,omitempty" json:"mode_by_preset,omitempty" toml:"mode_by_preset,omitempty"` //nolint:tagliatelle
+}
+
+// RulesModeFor returns the rules output mode for a preset:
+// rules.mode_by_preset[preset] > rules.mode > the built-in default.
+func (c *Config) RulesModeFor(preset string) string {
+	if c != nil && c.Rules != nil {
+		if v := c.Rules.ModeByPreset[preset]; v != "" {
+			return v
+		}
+		if c.Rules.Mode != "" {
+			return c.Rules.Mode
+		}
+	}
+	return defaultRulesMode
+}
+
+// RulesModeExplicitFor reports whether the preset's rules mode is set
+// explicitly through rules.mode_by_preset.
+func (c *Config) RulesModeExplicitFor(preset string) bool {
+	if c == nil || c.Rules == nil {
+		return false
+	}
+	return c.Rules.ModeByPreset[preset] != ""
 }
 
 // BuiltinsConfig represents the builtins field which can be:

@@ -682,6 +682,8 @@ Update supported project configuration fields.
 - `gitignore` (optional, boolean): Whether generation updates `.gitignore`
 - `default_effort` (optional, string): Default reasoning effort
 - `default_effort_by_preset` (optional, object): Per-preset reasoning effort overrides
+- `rules_mode` (optional, string): Default rules output mode, `split` or `inline`; empty string clears it
+- `rules_mode_by_preset` (optional, object): Per-preset rules mode overrides. The map replaces the existing one; an entry with value `""` removes that preset's override, and `{}` or `null` clears them all
 - `working_directory` (optional, string): Directory to operate in
 
 ### Profile Tools

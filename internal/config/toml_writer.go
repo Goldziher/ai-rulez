@@ -41,6 +41,7 @@ type tomlOutput struct {
 	Includes        []IncludeConfig        `toml:"includes,omitempty"`
 	InstalledSkills []InstalledSkillConfig `toml:"installed_skills,omitempty"` //nolint:tagliatelle
 	Defaults        *DefaultsConfig        `toml:"defaults,omitempty"`
+	Rules           *RulesConfig           `toml:"rules,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
@@ -115,6 +116,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Includes:        cfg.Includes,
 		InstalledSkills: cfg.InstalledSkills,
 		Defaults:        cfg.Defaults,
+		Rules:           cfg.Rules,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,

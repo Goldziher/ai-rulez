@@ -547,6 +547,26 @@
       },
       "additionalProperties": false
     },
+    "rules": {
+      "type": "object",
+      "description": "Controls how rules are written to generated outputs",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["split", "inline"],
+          "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Currently defaults to inline."
+        },
+        "mode_by_preset": {
+          "type": "object",
+          "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
+          "additionalProperties": {
+            "type": "string",
+            "enum": ["split", "inline"]
+          }
+        }
+      },
+      "additionalProperties": false
+    },
     "plugin": {
       "type": "object",
       "description": "Authoring metadata for a distributable plugin bundle (producer side). Skills, commands, and agents come from the content tree; this block only carries packaging metadata.",
