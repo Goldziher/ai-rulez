@@ -1026,6 +1026,17 @@ func stripHeader(content, outputPath string) string {
 	}
 
 	switch ext {
+	case ".mdc":
+		// Cursor rule files always carry frontmatter, and a "# Name" heading
+		// follows it, so treat them like markdown. Without a banner nothing
+		// more is stripped, which keeps a "-->" in the body intact.
+		if !strings.HasPrefix(content, "<!--") {
+			return content
+		}
+		if idx := strings.Index(content, "-->\n\n"); idx >= 0 {
+			return content[idx+len("-->\n\n"):]
+		}
+		return content
 	case ".md", ".markdown", ".mdx", ".html":
 		// HTML comment banner: strip everything up to and including "-->\n\n".
 		// We do NOT strip line-prefix comments here because "# Heading" in
