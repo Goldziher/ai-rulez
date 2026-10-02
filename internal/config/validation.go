@@ -33,7 +33,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.validateMalformedFrontmatter(); err != nil {
+	if err := c.validateFrontmatter(); err != nil {
 		return err
 	}
 
@@ -230,6 +230,14 @@ func validateAgentEffortSlice(agents []ContentFile, scope string) error {
 		}
 	}
 	return nil
+}
+
+// validateFrontmatter runs the content frontmatter checks.
+func (c *Config) validateFrontmatter() error {
+	if err := c.validateMalformedFrontmatter(); err != nil {
+		return err
+	}
+	return c.validateRuleActivation()
 }
 
 // validateMalformedFrontmatter fails validation when any content file carried a
@@ -943,4 +951,108 @@ func isHTTPToken(s string) bool {
 		}
 	}
 	return true
+}
+
+// validateRuleActivation checks the `activation` frontmatter of rules and
+// context files in root content, domains and local content. Problems in
+// builtin or included domains are warnings, since the user cannot fix them
+// locally; everything else is an error.
+func (c *Config) validateRuleActivation() error {
+	for _, tree := range []*ContentTree{c.Content, c.LocalContent} {
+		if tree == nil {
+			continue
+		}
+		if err := validateActivationSlice(tree.Rules, false); err != nil {
+			return err
+		}
+		if err := validateActivationSlice(tree.Context, false); err != nil {
+			return err
+		}
+		names := make([]string, 0, len(tree.Domains))
+		for name := range tree.Domains {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			domain := tree.Domains[name]
+			if domain == nil {
+				continue
+			}
+			lenient := domain.Builtin || domain.FromInclude
+			if err := validateActivationSlice(domain.Rules, lenient); err != nil {
+				return err
+			}
+			if err := validateActivationSlice(domain.Context, lenient); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+func validateActivationSlice(files []ContentFile, lenient bool) error {
+	for _, f := range files {
+		err := validateActivation(f)
+		if err == nil {
+			continue
+		}
+		if !lenient {
+			return err
+		}
+		logger.Warn("invalid activation in included content", "file", f.Path, "error", err.Error())
+	}
+	return nil
+}
+
+func validateActivation(f ContentFile) error {
+	if f.Metadata == nil || strings.TrimSpace(f.Metadata.Activation) == "" {
+		return nil
+	}
+	m := f.Metadata
+	mode := m.ActivationValue()
+	fail := func(hint, format string, args ...any) error {
+		return oops.With("file", f.Path).With("hint", hint).Errorf(format, args...)
+	}
+
+	if !mode.IsValid() {
+		return fail("Use one of: always, glob, auto, manual",
+			"%s: unknown activation %q", f.Path, m.Activation)
+	}
+
+	act := m.ResolveActivation()
+	switch {
+	case mode == ActivationGlob && len(act.Globs) == 0:
+		return fail("Add globs/paths, or choose a different activation",
+			"%s: activation %q requires globs or paths", f.Path, m.Activation)
+	case mode == ActivationAuto && act.Description == "":
+		return fail("Add a description so the model can decide when to apply the rule",
+			"%s: activation %q requires a description", f.Path, m.Activation)
+	case mode == ActivationAlways && len(act.Globs) > 0:
+		return fail("Drop the globs/paths, or drop activation = \"always\"",
+			"%s: activation %q conflicts with globs/paths", f.Path, m.Activation)
+	}
+
+	warnLegacyActivation(f.Path, m, mode)
+	return nil
+}
+
+// warnLegacyActivation warns when a legacy field contradicts the explicit
+// activation, which takes precedence.
+func warnLegacyActivation(path string, m *Metadata, mode ActivationMode) {
+	if legacy := triggerMode(m.Extra["trigger"]); legacy != "" && legacy != mode {
+		logger.Warn("legacy trigger contradicts activation; activation wins",
+			"file", path, "trigger", m.Extra["trigger"], "activation", m.Activation)
+	}
+	switch strings.ToLower(strings.TrimSpace(m.Extra["alwaysApply"])) {
+	case "true":
+		if mode != ActivationAlways {
+			logger.Warn("legacy alwaysApply contradicts activation; activation wins",
+				"file", path, "alwaysApply", "true", "activation", m.Activation)
+		}
+	case "false":
+		if mode == ActivationAlways {
+			logger.Warn("legacy alwaysApply contradicts activation; activation wins",
+				"file", path, "alwaysApply", "false", "activation", m.Activation)
+		}
+	}
 }
