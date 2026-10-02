@@ -217,6 +217,7 @@ func (s *Server) registerProjectTools() {
 				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
 				Boolean("dry_run", "Preview changes without writing files", false).
 				Boolean("recursive", "Generate for all subdirectories containing .ai-rulez/", false).
+				Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content (the teammate view)", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),
 		),
@@ -242,6 +243,7 @@ func (s *Server) registerProjectTools() {
 			newSchemaBuilder().
 				String("config_file", "Path to the root configuration file to validate (optional)", false).
 				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
+				Boolean("no_local", "Validate without the machine-local config.local.* overlay", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),

@@ -48,6 +48,13 @@ type Generator struct {
 	// the latest writeOutputs pass. They are hand-written, so they stay out of
 	// the generated manifest and the managed .gitignore block.
 	skippedPaths map[string]bool
+
+	// Machine-local overlay handling (see local_drift.go).
+	ctx             context.Context // caller's context for the baseline load (nil means Background)
+	allowLocalDrift bool            // write merged output even when it drifts from the shared baseline
+	lenientMCP      bool            // tolerate unresolved MCP placeholders (baseline renders)
+	plan            *localPlan      // baseline comparison for this run; nil without local inputs
+	localSkipped    bool            // local files exist on disk but were not loaded (--no-local)
 }
 
 type generatedManifest struct {
@@ -87,6 +94,10 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		return 0, err
 	}
 
+	if err := g.guardLocal(profile, flatOutputs); err != nil {
+		return 0, err
+	}
+
 	logger.Info("Generating with configuration", "profile", activeProfile)
 
 	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
@@ -114,6 +125,10 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	g.pruneDirsEmptiedBy(staleFiles)
 
 	if err := g.writeGeneratedManifest(flatOutputs); err != nil {
+		if g.hasLocalOutputs(flatOutputs) {
+			// Without the local manifest a later run cannot clean these files up.
+			return 0, oops.Wrapf(err, "write the generated manifests")
+		}
 		logger.Warn("Failed to write generated manifest", "error", err)
 	}
 
@@ -337,7 +352,15 @@ func (g *Generator) DryRun(profile string) ([]string, error) {
 		return nil, err
 	}
 
+	plan, err := g.planLocal(profile, flatOutputs)
+	if err != nil {
+		return nil, err
+	}
+
 	lines := []string{fmt.Sprintf("profile: %s", activeProfile)}
+	if plan != nil {
+		lines = append(lines, plan.dryRunLines()...)
+	}
 	lines = append(lines, g.planLines(flatOutputs)...)
 	for _, stale := range g.staleManifestFiles(flatOutputs) {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(stale))
@@ -1011,7 +1034,7 @@ func containsBannerMarker(header string) bool {
 // normalized to a single trailing newline.
 func (g *Generator) finalContent(output config.OutputFile) string {
 	contentHash := templates.HashContent(stripHeader(output.Content, output.Path))
-	sourceHash := g.config.SourceHash
+	sourceHash := g.sourceHashFor(output)
 	switch g.config.GetHeaderHashes() {
 	case config.HeaderHashesNone:
 		contentHash, sourceHash = "", ""
@@ -1039,7 +1062,7 @@ func (g *Generator) canSkipWrite(absPath string, output config.OutputFile, final
 			return false
 		}
 		return existingContentHash != "" && existingContentHash == contentHash &&
-			existingSourceHash == g.config.SourceHash
+			existingSourceHash == g.sourceHashFor(output)
 	}
 	existing, err := os.ReadFile(absPath)
 	if err != nil {
@@ -1641,6 +1664,11 @@ func (g *Generator) previousManifestFiles() []string {
 			files = append(files, f)
 		}
 	}
+	if g.localSkipped {
+		// A run that deliberately ignores local inputs must not clean up the
+		// outputs of the inputs it ignored.
+		return files
+	}
 	return append(files, readManifestFile(g.localManifestPath()).Files...)
 }
 
@@ -1665,10 +1693,18 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 			shared = append(shared, rel)
 		}
 	}
+	if g.plan != nil {
+		// The committed manifest describes the shared baseline, not this machine.
+		shared = g.plan.sharedManifestFiles(g.skippedPaths)
+	}
 	if err := writeManifestFile(g.manifestPath(), shared); err != nil {
 		return err
 	}
 	if len(local) == 0 {
+		if g.localSkipped {
+			// Local files were deliberately not loaded: their manifest is not ours to drop.
+			return nil
+		}
 		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
 			return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
 		}
@@ -1701,6 +1737,12 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	}
 
 	next := make(map[string]bool)
+	// Files only the shared baseline produces are never this machine's to delete.
+	if g.plan != nil {
+		for _, rel := range g.plan.suppressed {
+			next[rel] = true
+		}
+	}
 	for _, output := range outputs {
 		if output.IsDir {
 			continue
@@ -1857,7 +1899,9 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	for _, output := range outputs {
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if output.LocalOnly {
-			paths[localGitignorePattern(relPath)] = true
+			if pattern := g.localOutputPattern(relPath); pattern != "" {
+				paths[pattern] = true
+			}
 			continue
 		}
 		// A hand-written file the overwrite guard skipped is the user's, not ours.
@@ -2167,19 +2211,12 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		return nil
 	}
 
-	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
-	existingData, err := os.ReadFile(gitignorePath)
-	if err != nil && !os.IsNotExist(err) {
-		return oops.With("path", gitignorePath).Wrapf(err, "read .gitignore")
-	}
-
-	patterns := gitignorePatterns(string(existingData))
+	var pending []string
 	if g.config.ShouldUpdateGitignore() {
-		for pattern := range g.collectGitignorePaths(outputs) {
-			patterns = append(patterns, pattern)
-		}
+		pending = g.pendingIgnorePatterns(outputs)
 	}
 
+	var candidates []string
 	var unsafe []string
 	// A partially owned document is the consumer's file: ai-rulez merges one key
 	// into it and cannot gitignore it on their behalf, so --gitignore is not the
@@ -2193,9 +2230,18 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		if !isMCPConfigOutput(relPath) {
 			continue
 		}
-		if !isIgnored(relPath, patterns) {
+		candidates = append(candidates, relPath)
+	}
+	ignored := g.ignoredSet(candidates, pending)
+	for _, relPath := range candidates {
+		if !ignored[relPath] {
 			unsafe = append(unsafe, relPath)
-			shared = shared || output.PartiallyOwned
+		}
+	}
+	for _, output := range outputs {
+		if output.PartiallyOwned && !output.IsDir {
+			relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+			shared = shared || (isMCPConfigOutput(relPath) && !ignored[relPath])
 		}
 	}
 	if len(unsafe) == 0 {

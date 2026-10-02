@@ -52,6 +52,11 @@ type Config struct {
 	// the per-preset ".local" root variants (CLAUDE.local.md, AGENTS.local.md,
 	// ...) and is always gitignored.
 	LocalContent *ContentTree `yaml:"-" json:"-" toml:"-"`
+	// IncludeMemo caches fetched include and skill sources for the lifetime of
+	// one generate run, so loading a second view of the same project (the
+	// shared baseline used by the drift guard) never fetches twice. It is owned
+	// by the includes resolver; nil means "not created yet".
+	IncludeMemo any `yaml:"-" json:"-" toml:"-"`
 	// LocalOverlay is set when a config.local.* overlay was merged into this
 	// configuration. Such a config is a merged view and is never written back.
 	LocalOverlay  *LocalOverlay         `yaml:"-" json:"-" toml:"-"`

@@ -3,6 +3,7 @@ package config
 // loadOptions are the resolved LoadOption settings.
 type loadOptions struct {
 	withoutLocal bool
+	includeMemo  any
 }
 
 // LoadOption customizes how a configuration is loaded.
@@ -14,6 +15,12 @@ type LoadOption func(*loadOptions)
 // teammate without local overrides sees.
 func WithoutLocal() LoadOption {
 	return func(o *loadOptions) { o.withoutLocal = true }
+}
+
+// WithIncludeMemo makes the loaded config share an include fetch cache created
+// by an earlier load (Config.IncludeMemo), so sources are fetched once per run.
+func WithIncludeMemo(memo any) LoadOption {
+	return func(o *loadOptions) { o.includeMemo = memo }
 }
 
 func applyLoadOptions(opts []LoadOption) loadOptions {

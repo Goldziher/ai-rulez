@@ -709,6 +709,20 @@ The overlay is written owner-only (`0600`) through a temp file and rename, and `
 
 The `--local` flag on `profile add|remove|set-default`, `include add|remove` and `skill install|remove` writes to the overlay instead of the shared config. Removing something the shared config defines writes `remove = true` for it. The MCP tools `update_config`, `add_profile`, `remove_profile`, `set_default_profile`, `add_include`, `remove_include`, `install_skill` and `uninstall_skill` accept `local: true`.
 
+### Local overrides and generate
+
+When a `config.local.*` overlay or `local/` content exists, `generate` also renders the shared baseline (the config as a teammate without them sees it) and compares:
+
+- **local-only** files exist only because of your local config (an extra preset, local content). They are git-ignored through `.git/info/exclude` and listed in the gitignored `.ai-rulez/.generated-manifest.local.json`, never in the committed manifest.
+- **drift** files are shared outputs your local config would change. Generation stops, listing paths only, if such a file is tracked by git or not ignored; pass `--allow-local-drift` to write it anyway.
+- **suppressed** files are shared outputs your local config no longer produces (for example a preset dropped with `"!claude"`). They are left alone, never deleted.
+
+`.git/info/exclude` is per clone and shared by linked worktrees, so each project gets its own block, delimited by `# BEGIN ai-rulez local: <absolute config dir>` / `# END ...` and anchored at the repository root; `generate` only ever rewrites its own block, removes it once the project has no overlay-derived outputs, and never touches other lines or other projects' blocks. Paths git's exclude file cannot hold (and every path outside a repository) go to the managed `.gitignore` block instead, with a warning.
+
+Whether a path is tracked or ignored is asked of git in one call each; if git fails inside a repository the guard assumes every affected file is tracked and refuses. `--allow-local-drift` is command-line only (MCP clients cannot pass it) and can write overlay values, including MCP `env` and `headers` secrets, into files that are tracked and shared, so review `git diff` before committing.
+
+Shared outputs keep the baseline `Source-Hash`, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `suppressed:` and `blocked:` lines. A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
+
 ## Builtins Command
 
 ### `ai-rulez builtins list [flags]`
@@ -836,6 +850,8 @@ ai-rulez generate [config-file] [flags]
 | `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns                                                                                                      |
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
+| `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
+| `--allow-local-drift`           | boolean | false         | Write output even when machine-local config would change files shared with the team (see below)                                                         |
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
 | `--env` / `-e`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
 | `--env-file` / `-E`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
