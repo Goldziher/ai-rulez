@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/samber/oops"
@@ -163,6 +164,17 @@ func combineDedupedContentFilesByPriority(slices ...[]config.ContentFile) []conf
 // deduplication and ordering are applied uniformly.
 func allInlineRules(content *config.ContentTree) []config.ContentFile {
 	return combineDedupedContentFilesByPriority(content.Rules, getAllDomainRules(content))
+}
+
+// rootRules is allInlineRules limited to the rules whose frontmatter targets
+// select the preset's root file (items without targets always qualify).
+func rootRules(content *config.ContentTree, preset, rootFile string) []config.ContentFile {
+	return rulefiles.FilterInline(allInlineRules(content), rulefiles.RootTarget(preset, rootFile))
+}
+
+// rootContext is the context counterpart to rootRules.
+func rootContext(content *config.ContentTree, preset, rootFile string) []config.ContentFile {
+	return rulefiles.FilterInline(allInlineContext(content), rulefiles.RootTarget(preset, rootFile))
 }
 
 // allInlineContext is the context counterpart to allInlineRules and renders in
@@ -541,89 +553,29 @@ func shouldIncludeInOutput(targets []string, outputPath, baseDir string) bool {
 }
 
 func buildOutputPathCandidates(outputPath, baseDir string) []string {
-	candidateSet := make(map[string]struct{})
-	addCandidate := func(value string) {
-		normalized := normalizeTargetPath(value)
-		if normalized == "" {
-			return
-		}
-		candidateSet[normalized] = struct{}{}
-	}
-
-	addCandidate(outputPath)
-	addCandidate(filepath.Base(outputPath))
-
-	baseDir = normalizeTargetPath(baseDir)
-	outputPath = normalizeTargetPath(outputPath)
-	if baseDir != "" {
-		prefix := baseDir + "/"
-		if strings.HasPrefix(outputPath, prefix) {
-			addCandidate(strings.TrimPrefix(outputPath, prefix))
-		}
-	}
-
-	candidates := make([]string, 0, len(candidateSet))
-	for candidate := range candidateSet {
-		candidates = append(candidates, candidate)
+	out := targetmatch.Normalize(outputPath)
+	candidates := []string{out, path.Base(out)}
+	if base := targetmatch.Normalize(baseDir); base != "" && strings.HasPrefix(out, base+"/") {
+		candidates = append(candidates, strings.TrimPrefix(out, base+"/"))
 	}
 	return candidates
 }
 
-func normalizeTargetPath(raw string) string {
-	if raw == "" {
-		return ""
-	}
-	hasTrailingSlash := strings.HasSuffix(raw, "/") || strings.HasSuffix(raw, "\\")
-	normalized := filepath.ToSlash(filepath.Clean(raw))
-	normalized = strings.TrimPrefix(normalized, "./")
-	if normalized == "." {
-		return ""
-	}
-	if hasTrailingSlash && normalized != "/" {
-		normalized += "/"
-	}
-	return normalized
-}
-
 func targetMatchesOutput(target string, outputCandidates []string) bool {
-	target = normalizeTargetPath(target)
-	if target == "" {
-		return false
-	}
 	if target == presetNameClaude {
 		// The "claude" preset name routes to the root instructions file only.
 		// It must NOT match nested per-item outputs under .claude/ (skills,
 		// agents, commands) — otherwise a rule targeting the Claude preset is
 		// inlined into every generated SKILL.md / agent file (#156). Explicit
-		// path, directory, and glob targets fall through to the matchers below.
+		// path, directory, and glob targets are matched by targetmatch.
 		for _, candidate := range outputCandidates {
-			if candidate == fileClaudeMD {
+			if targetmatch.Normalize(candidate) == targetmatch.Normalize(fileClaudeMD) {
 				return true
 			}
 		}
 		return false
 	}
-	if strings.HasSuffix(target, "/") {
-		prefix := strings.TrimSuffix(target, "/")
-		for _, candidate := range outputCandidates {
-			if candidate == prefix || strings.HasPrefix(candidate, prefix+"/") {
-				return true
-			}
-		}
-		return false
-	}
-	for _, candidate := range outputCandidates {
-		if candidate == target {
-			return true
-		}
-		if strings.ContainsAny(target, "*?[") {
-			matched, err := path.Match(target, candidate)
-			if err == nil && matched {
-				return true
-			}
-		}
-	}
-	return false
+	return targetmatch.Match([]string{target}, nil, outputCandidates...)
 }
 
 // CombineContentFiles is the exported variant of combineContentFiles, called

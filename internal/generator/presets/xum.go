@@ -94,7 +94,7 @@ func (g *XumPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
 	var builder strings.Builder
 
-	allRules := allInlineRules(content)
+	allRules := rootRules(content, xumPresetName, "AGENTS.md")
 	allAgents := allAgents(content)
 
 	data := &templates.TemplateData{
@@ -120,7 +120,7 @@ func (g *XumPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, c
 
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
-	rulefiles.WriteInlineContext(&builder, allInlineContext(content), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
+	rulefiles.WriteInlineContext(&builder, rootContext(content, xumPresetName, "AGENTS.md"), rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	renderAgentsSection(&builder, content, allAgents)
 

@@ -495,3 +495,70 @@ func TestClaude_RuleFileNames(t *testing.T) {
 	sort.Strings(got)
 	assert.Equal(t, []string{"My-Rule.md", "UPPER.md", "rule-c12140a0.md", "snake-case-rule.md", "v12-notes.md"}, got)
 }
+
+func targetsContent() *config.ContentTree {
+	mk := func(name string, targets ...string) config.ContentFile {
+		return config.ContentFile{
+			Name: name, Content: strings.ToUpper(strings.ReplaceAll(name, "-", "_")) + "_BODY",
+			Path:     "/p/.ai-rulez/rules/" + name + ".md",
+			Metadata: &config.Metadata{Targets: targets},
+		}
+	}
+	return &config.ContentTree{Rules: []config.ContentFile{
+		mk("free"),
+		mk("to-claude-md", "CLAUDE.md"),
+		mk("to-cursor", "cursor"),
+		mk("to-cursor-dir", ".cursor/rules/"),
+		mk("to-glob", "*.mdc"),
+		mk("to-claude-dir", ".claude/rules/"),
+	}}
+}
+
+func TestClaude_TargetsFilterRuleOutputs(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		mode      string
+		wantFiles []string
+		wantRoot  []string
+		notRoot   []string
+	}{
+		{
+			name:      "split",
+			mode:      "split",
+			wantFiles: []string{"free.md", "to-claude-md.md", "to-claude-dir.md"},
+			notRoot:   []string{"FREE_BODY", "TO_CURSOR_BODY", "TO_CURSOR_DIR_BODY", "TO_GLOB_BODY"},
+		},
+		{
+			name:      "inline",
+			mode:      "inline",
+			wantFiles: []string{"to-claude-dir.md"},
+			wantRoot:  []string{"FREE_BODY", "TO_CLAUDE_MD_BODY"},
+			notRoot:   []string{"TO_CURSOR_BODY", "TO_CURSOR_DIR_BODY", "TO_GLOB_BODY"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			gen := claudeGen(t)
+
+			// Act
+			outputs, err := gen.Generate(targetsContent(), "/test", splitCfg("claude", tt.mode))
+
+			// Assert
+			require.NoError(t, err)
+			assert.ElementsMatch(t, tt.wantFiles, fileSet(outputs, ".claude/rules"))
+			root, ok := outputByPath(outputs, "CLAUDE.md")
+			require.True(t, ok)
+			for _, body := range tt.wantRoot {
+				assert.Contains(t, root.Content, body)
+			}
+			for _, body := range tt.notRoot {
+				assert.NotContains(t, root.Content, body)
+			}
+		})
+	}
+}

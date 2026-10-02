@@ -33,6 +33,7 @@ func IsDialect(name string) bool {
 type Target struct {
 	Preset    string
 	Dir       string // rules directory relative to the output root
+	RootFile  string // root instruction file of the preset, "" when it has none; matched by frontmatter targets
 	Ext       string // file extension including the dot, e.g. ".md" or ".instructions.md"
 	Dialect   Dialect
 	Recursive bool // the tool discovers rules in subdirectories

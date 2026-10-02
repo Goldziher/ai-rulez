@@ -355,3 +355,23 @@ func TestResolveActivation_TriggerTrimmedAndLowercased(t *testing.T) {
 
 	assert.Equal(t, ActivationManual, m.ResolveActivation().Mode)
 }
+
+func TestInvalidTargets(t *testing.T) {
+	tests := []struct {
+		name    string
+		targets []string
+		want    []string
+	}{
+		{"none", nil, nil},
+		{"valid", []string{"CLAUDE.md", "*.mdc", ".cursor/rules/"}, nil},
+		{"malformed glob", []string{"CLAUDE.md", "[x", ".a/[b"}, []string{"[x", ".a/[b"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			f := ContentFile{Name: "r", Path: "r.md", Metadata: &Metadata{Targets: tt.targets}}
+
+			assert.Equal(t, tt.want, invalidTargets(f))
+		})
+	}
+	assert.Nil(t, invalidTargets(ContentFile{}))
+}
