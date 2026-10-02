@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 
@@ -47,6 +48,9 @@ func (p *CleanPlan) Empty() bool {
 // corresponding Keep* option is set. With DryRun the plan is computed but nothing
 // is deleted.
 func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error) {
+	generateMu.Lock()
+	defer generateMu.Unlock()
+
 	outputs, activeProfile, err := g.collectOutputs(profile)
 	if err != nil {
 		return nil, err
@@ -64,9 +68,12 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	plan.Files = append(plan.Files, g.staleManifestFiles(outputs)...)
 	plan.Files = existingSortedUnique(plan.Files)
 
+	// Scoped rule files sit in subfolders of the root rules folders that are not
+	// outputs themselves; the folders this removal empties are part of the plan.
+	dirs = append(existingDirs(dirs), g.emptiedDirs(plan.Files)...)
 	// Deepest-first so children are removed before their parents.
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
-	plan.Dirs = existingDirs(dirs)
+	plan.Dirs = slices.Compact(dirs)
 
 	if !opts.KeepManifest {
 		if mp := g.manifestPath(); pathIsFile(mp) {
@@ -208,25 +215,84 @@ func existingDirs(paths []string) []string {
 // holding any entry at all survives: a skill's hand-authored references/, scripts/
 // or assets/ file keeps both that subdirectory and the skill directory above it.
 func (g *Generator) pruneDirsEmptiedBy(removed []string) {
-	candidates := make(map[string]bool, len(removed))
-	for _, file := range removed {
-		for dir := filepath.Dir(file); g.isPrunableDir(dir); dir = filepath.Dir(dir) {
-			if candidates[dir] {
-				break // this chain's ancestors are already queued
-			}
-			candidates[dir] = true
-		}
-	}
-
-	dirs := make([]string, 0, len(candidates))
-	for dir := range candidates {
-		dirs = append(dirs, dir)
-	}
+	dirs := g.pruneCandidates(removed)
 	// Deepest-first, so emptying a child lets its parent go in the same pass.
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
 	for _, dir := range dirs {
 		removeDirIfEmpty(dir)
 	}
+}
+
+// emptiedDirs returns the directories that removing the given files would leave
+// empty, deepest first, without touching the filesystem.
+func (g *Generator) emptiedDirs(removed []string) []string {
+	gone := make(map[string]bool, len(removed))
+	for _, file := range removed {
+		gone[filepath.Clean(file)] = true
+	}
+	candidates := g.pruneCandidates(removed)
+	sort.Slice(candidates, func(i, j int) bool { return candidates[i] > candidates[j] })
+	var emptied []string
+dirLoop:
+	for _, dir := range candidates {
+		entries, err := os.ReadDir(dir)
+		if err != nil {
+			continue
+		}
+		for _, entry := range entries {
+			if !gone[filepath.Join(dir, entry.Name())] {
+				continue dirLoop
+			}
+		}
+		gone[dir] = true
+		emptied = append(emptied, dir)
+	}
+	return emptied
+}
+
+// pruneCandidates lists the directories above the removed files that may be
+// removed once empty. The walk up from a file stops at the generated output root:
+// the outermost hidden directory on its path (.claude, .github, ...), or just
+// the file's own directory when there is none. Visible directories above that,
+// such as a monorepo scope directory, hold sources and are never candidates.
+func (g *Generator) pruneCandidates(removed []string) []string {
+	seen := make(map[string]bool, len(removed))
+	var dirs []string
+	for _, file := range removed {
+		dir := filepath.Dir(file)
+		stop := g.outputRoot(dir)
+		for g.isPrunableDir(dir) {
+			if !seen[dir] {
+				seen[dir] = true
+				dirs = append(dirs, dir)
+			}
+			if dir == stop {
+				break
+			}
+			dir = filepath.Dir(dir)
+		}
+	}
+	return dirs
+}
+
+// outputRoot returns the outermost hidden directory at or above dir below the
+// project root, or dir itself when none of its path components is hidden.
+func (g *Generator) outputRoot(dir string) string {
+	base, absErr := filepath.Abs(g.config.BaseDir)
+	if absErr != nil {
+		return dir
+	}
+	rel, err := filepath.Rel(base, dir)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return dir
+	}
+	parts := strings.Split(filepath.ToSlash(rel), "/")
+	for i, part := range parts {
+		if strings.HasPrefix(part, ".") && part != "." {
+			return filepath.Join(append([]string{base}, parts[:i+1]...)...)
+		}
+	}
+	return dir
 }
 
 // isPrunableDir reports whether dir is a directory the generator may remove: one

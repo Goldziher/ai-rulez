@@ -553,9 +553,74 @@ func TestPlan_ScopeActivationRules(t *testing.T) {
 	assert.Empty(t, files[0].Activation.Globs)
 	assert.Equal(t, config.ActivationManual, files[1].Activation.Mode)
 	assert.Equal(t, []string{"services/api/*.go", "!services/api/gen/*.go"}, files[2].Activation.Globs)
+}
 
-	_, _, _, err = Plan([]config.ContentFile{cf("esc", "e.md", "../x/*.go")}, nil, tg, RoutingAll, scope, nil)
-	require.Error(t, err)
+func TestPlan_ScopeGlobEdgeCases(t *testing.T) {
+	scope := ScopeInfo{Slug: "api", Prefix: "services/api"}
+	tests := []struct {
+		name      string
+		rule      config.ContentFile
+		wantGlobs []string
+		wantMode  config.ActivationMode
+		wantSkip  bool
+	}{
+		{"negated-only globs gain the whole scope", cf("n", "n.md", "!gen/**"),
+			[]string{"services/api/**", "!services/api/gen/**"}, config.ActivationGlob, false},
+		{"trailing slash is kept", cf("d", "d.md", "docs/"),
+			[]string{"services/api/docs/"}, config.ActivationGlob, false},
+		{"dot-dot escapes", cf("e", "e.md", "../x/*.go"), nil, "", true},
+		{"dot-dot inside braces escapes", cf("b", "b.md", "{src,../other}/*.go"), nil, "", true},
+		{"dot-dot in a negated glob escapes", cf("ng", "ng.md", "src/**", "!../x"), nil, "", true},
+		{"glob item without globs stays as in the root run", withActivation(cf("g", "g.md"), "glob"),
+			nil, config.ActivationGlob, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			var warned []string
+			restore := SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) })
+			defer restore()
+
+			// Act
+			files, inline, _, err := Plan([]config.ContentFile{tt.rule}, nil, &Target{Ext: ".md"}, RoutingScopedOnly, scope, nil)
+
+			// Assert
+			require.NoError(t, err)
+			if tt.wantSkip {
+				assert.Empty(t, files)
+				assert.Empty(t, inline, "a skipped item is not inlined either")
+				assert.Len(t, warned, 1)
+				return
+			}
+			require.Len(t, files, 1)
+			assert.Equal(t, tt.wantMode, files[0].Activation.Mode)
+			assert.Equal(t, tt.wantGlobs, files[0].Activation.Globs)
+			assert.Empty(t, warned)
+		})
+	}
+}
+
+func withActivation(c config.ContentFile, mode string) config.ContentFile {
+	c.Metadata.Activation = mode
+	return c
+}
+
+func TestRegistry_SameSourceClaimingAgainIsNotACollision(t *testing.T) {
+	// Arrange
+	reg := NewRegistry()
+	tg := &Target{Dir: "rules", Ext: ".md"}
+	rule := []config.ContentFile{cf("x", "x.md")}
+	other := []config.ContentFile{cf("X", "other.md")}
+
+	// Act
+	_, _, _, err1 := Plan(rule, nil, tg, RoutingAll, ScopeInfo{}, reg)
+	_, _, _, err2 := Plan(rule, nil, tg, RoutingAll, ScopeInfo{}, reg)
+	_, _, _, err3 := Plan(other, nil, tg, RoutingAll, ScopeInfo{}, reg)
+
+	// Assert
+	require.NoError(t, err1)
+	require.NoError(t, err2)
+	require.Error(t, err3)
 }
 
 func TestPlan_ScopedContextRecursive(t *testing.T) {

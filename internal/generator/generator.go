@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -388,6 +389,10 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	tempCfg := *g.config
 	tempCfg.Content = contentTree
 	tempCfg.MCPServers = mcpServers
+	// Rule files of the root and of every scope land in the same rules folders;
+	// the run state carries what each preset has claimed so far.
+	run := config.NewRunState()
+	tempCfg.Run = run
 
 	// Compute a single source hash covering all profile-relevant inputs.
 	// Embedded in every output's header so subsequent runs can detect "no source
@@ -433,7 +438,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// Flatten outputs for writing, detecting conflicts and deduplicating
 	flatOutputs := flattenPresetOutputs(allOutputs)
 
-	scopedOutputs, err := g.generateScopedOutputs(activeProfile)
+	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
 	if err != nil {
 		return nil, "", err
 	}
@@ -642,63 +647,6 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 	}
 
 	return collected
-}
-
-func (g *Generator) generateScopedOutputs(activeProfile string) ([]config.OutputFile, error) {
-	var result []config.OutputFile
-	for _, scope := range g.config.Scopes {
-		if scope.Path == "" {
-			return nil, oops.Errorf("scope path is required")
-		}
-		scopeProfile := scope.Profile
-		if scopeProfile == "" {
-			scopeProfile = activeProfile
-		}
-		scopeContent, err := g.getContentForProfile(scopeProfile)
-		if err != nil {
-			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "resolve scope profile")
-		}
-		// A scoped file is loaded on top of the root file (Claude loads a
-		// subdirectory CLAUDE.md; Codex concatenates AGENTS.md from the root
-		// down). Repeating the root content would duplicate it and defeat the
-		// point of scoping, so keep only the profile's domain content.
-		scopeContent.Rules = nil
-		scopeContent.Context = nil
-		scopeContent.Skills = nil
-		scopeContent.Agents = nil
-		scopeContent.Commands = nil
-
-		scopeCfg := *g.config
-		scopeCfg.BaseDir = filepath.Join(g.config.BaseDir, scope.Path)
-		scopeCfg.ScopePath = scope.Path
-		scopeCfg.Content = scopeContent
-		scopeCfg.MCPServers = g.collectMCPServersForContent(scopeContent, scopeProfile)
-		scopeCfg.Presets = scopedPresets(scope.Presets)
-		scopeCfg.SourceHash = computeSourceHash(&scopeCfg, scopeContent)
-
-		// Label the analysis so a cost report keeps scoped roots out of the
-		// repository-root totals: a scoped instruction file is loaded only when
-		// the agent is working inside that subtree.
-		g.config.Analysis.EnterScope(scope.Path)
-		outputsByPreset, err := config.GeneratePresets(&scopeCfg)
-		g.config.Analysis.EnterScope("")
-		if err != nil {
-			return nil, oops.With("scope", scope.Name).With("path", scope.Path).Wrapf(err, "generate scoped presets")
-		}
-		result = append(result, flattenPresetOutputs(outputsByPreset)...)
-	}
-	return result, nil
-}
-
-func scopedPresets(names []string) []config.Preset {
-	if len(names) == 0 {
-		names = []string{"claude", "codex"}
-	}
-	result := make([]config.Preset, 0, len(names))
-	for _, name := range names {
-		result = append(result, config.Preset{BuiltIn: name})
-	}
-	return result
 }
 
 // writeOutputs writes all output files to disk
@@ -1354,6 +1302,9 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	b.WriteString("name=" + cfg.Name + "\n")
 	b.WriteString("description=" + cfg.Description + "\n")
 	b.WriteString("version=" + cfg.Version + "\n")
+	if cfg.Run != nil && cfg.Run.Scope != nil {
+		b.WriteString("scope=" + cfg.Run.Scope.Path + "\n")
+	}
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
 	_, _ = fmt.Fprintf(&b, "header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
 
@@ -1576,6 +1527,7 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 
 func writeManifestFile(path string, files []string) error {
 	sort.Strings(files)
+	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}

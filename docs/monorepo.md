@@ -278,3 +278,25 @@ backend = ["api", "database"]
 ```
 
 By combining domain organization with thoughtful profile design, you can create scalable, maintainable configurations that grow with your project.
+
+---
+
+## Scoped Rule Files
+
+For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such as `CLAUDE.md` stay in the scope directory, but native rule files are written to the **root** rules folder, because tools read rules folders at the workspace root only. Each scope's files get the scope path as a qualifier and as a glob prefix:
+
+| Preset | Scoped rule file for `packages/api`, rule `style` |
+| --- | --- |
+| Claude | `.claude/rules/packages-api/style.md` |
+| Cursor | `.cursor/rules/packages-api/style.mdc` |
+| Copilot | `.github/instructions/packages-api/style.instructions.md` |
+| Windsurf, Cline, Continue, Junie | `<rules dir>/packages-api--style.md` |
+| Antigravity | `.agents/rules/packages-api--style.md` |
+
+Globs in a scope's rules are relative to the scope root: a rule with `paths: ["**/*.go"]` gets `packages/api/**/*.go`, and a rule without globs applies to `packages/api/**`. A rule with only negated globs also gets `packages/api/**`. A glob that climbs out of the scope with `..` (also inside braces) skips that rule for the scope with a warning. `auto` and `manual` rules keep their mode. With `[rules] mode = "inline"` only path-scoped items move to the root folder; everything else stays in the scope's root file. Two files that map to the same path (names compare case-insensitively) fail generation, so rename one of the sources.
+
+Limitations:
+
+- Root files left in a scope (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, ...) are read by tools that load nested files. Copilot (`.github/copilot-instructions.md`) and Junie (`.junie/guidelines.md`) read theirs at the repository root only, so rules or context that stay inline in a scope's copy are never loaded; generation warns and names them. Use path-scoped rules or `[rules] mode = "split"` for those presets.
+- Domains the root run already renders are not repeated in a scope.
+- Presets without split rule files (custom provider specs with a non-split `outputs.rules`) keep a scope's rules in the scope directory; generation warns.

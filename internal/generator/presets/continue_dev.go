@@ -15,7 +15,7 @@ import (
 const continueDevPresetName = "continue-dev"
 
 var continueRulesTarget = rulefiles.Target{
-	Preset: continueDevPresetName, Dir: ".continue/rules", Ext: extMarkdown, Dialect: rulefiles.DialectContinue, Recursive: true, Banner: true,
+	Preset: continueDevPresetName, Dir: ".continue/rules", Ext: extMarkdown, Dialect: rulefiles.DialectContinue, Banner: true,
 }
 
 func init() {
@@ -65,15 +65,14 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 			IsDir: true,
 		},
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".continue", "rules"),
-			IsDir: true,
-		},
-		config.OutputFile{
 			Path:  filepath.Join(baseDir, ".continue", "prompts"),
 			IsDir: true,
 		},
 	)
 
+	if !rulefiles.InScope(cfg) {
+		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".continue", "rules"), IsDir: true})
+	}
 	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, rulefiles.RoutingAll, nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate rule files: %w", err)

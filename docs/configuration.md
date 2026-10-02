@@ -283,10 +283,18 @@ profile = "frontend"
 presets = ["codex", "claude"]
 ```
 
-A scoped file contains **only** the scope's own content (its profile's domains), not the root rules and
-context: the target tools load a subdirectory `CLAUDE.md`/`AGENTS.md` on top of the root file, so
+A scoped file contains **only** the scope's own content (its profile's domains that the root run does
+not already render), not the root rules and context: the target tools load a subdirectory `CLAUDE.md`/`AGENTS.md` on top of the root file, so
 repeating the root content would duplicate the always-loaded text. The default scoped presets are
 `codex` and `claude`, producing subfolder `AGENTS.md` and `CLAUDE.md` files.
+
+A domain that the root output already contains (a builtin, an include, or one selected by the root profile)
+is never repeated in a scope, and a scope left with nothing writes no files. Scope paths must be
+relative, stay inside the project and contain no glob characters (`* ? [ ] { } , !`); `validate` rejects
+anything else.
+
+Rule files of a scope are written to the root rules folders with the scope path as a qualifier and glob
+prefix, not into the scope directory; see [Scoped Rule Files](monorepo.md#scoped-rule-files).
 
 ### `gitignore`
 
