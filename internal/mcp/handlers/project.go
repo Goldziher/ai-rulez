@@ -94,6 +94,9 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	result["default_effort"] = configDefaultEffort(cfg)
 	result["default_effort_by_preset"] = configDefaultEffortByPreset(cfg)
 
+	// Same stable-contract rule for rules: always emit both keys.
+	result["rules_mode"], result["rules_mode_by_preset"] = configRules(cfg)
+
 	return ToolSuccess(result)
 }
 
@@ -118,6 +121,63 @@ func configDefaultEffortByPreset(cfg *config.Config) map[string]string {
 	return out
 }
 
+// configRules returns the configured rules.mode ("" when unset) and a non-nil copy
+// of rules.mode_by_preset.
+func configRules(cfg *config.Config) (mode string, byPreset map[string]string) {
+	byPreset = map[string]string{}
+	if cfg == nil || cfg.Rules == nil {
+		return "", byPreset
+	}
+	for k, v := range cfg.Rules.ModeByPreset {
+		byPreset[k] = v
+	}
+	return cfg.Rules.Mode, byPreset
+}
+
+// applyRulesUpdates applies rules_mode and rules_mode_by_preset when present in args.
+// An empty rules_mode clears the mode; an empty map clears the per-preset overrides.
+// The Rules block is dropped when nothing is left in it.
+func applyRulesUpdates(cfg *config.Config, args map[string]interface{}) ([]string, error) {
+	var updated []string
+	if raw, ok := args["rules_mode"]; ok {
+		mode, isString := raw.(string)
+		if !isString {
+			return nil, fmt.Errorf("rules_mode must be a string, got %T", raw)
+		}
+		if cfg.Rules == nil {
+			cfg.Rules = &config.RulesConfig{}
+		}
+		cfg.Rules.Mode = mode
+		updated = append(updated, "rules_mode")
+	}
+	if raw, ok := args["rules_mode_by_preset"]; ok {
+		m, err := parseStringMapArg("rules_mode_by_preset", "rules mode", raw)
+		if err != nil {
+			return nil, err
+		}
+		if cfg.Rules == nil {
+			cfg.Rules = &config.RulesConfig{}
+		}
+		// Mirror default_effort_by_preset: an empty value removes that preset's
+		// override, and the resulting map replaces the previous one.
+		cleaned := map[string]string{}
+		for k, v := range m {
+			if v != "" {
+				cleaned[k] = v
+			}
+		}
+		cfg.Rules.ModeByPreset = nil
+		if len(cleaned) > 0 {
+			cfg.Rules.ModeByPreset = cleaned
+		}
+		updated = append(updated, "rules_mode_by_preset")
+	}
+	if cfg.Rules != nil && cfg.Rules.Mode == "" && len(cfg.Rules.ModeByPreset) == 0 {
+		cfg.Rules = nil
+	}
+	return updated, nil
+}
+
 // defaultsIsEmpty reports whether a DefaultsConfig has nothing worth persisting.
 // Equivalence to the zero value can't be done with == because the struct contains
 // a map; we check each field explicitly.
@@ -129,6 +189,12 @@ func defaultsIsEmpty(d *config.DefaultsConfig) bool {
 // JSON-decoded shape (map[string]interface{}) and the already-typed shape. Returns an
 // empty (non-nil) map for nil input so callers can clear the field by passing {}.
 func parseEffortByPresetArg(raw interface{}) (map[string]string, error) {
+	return parseStringMapArg("default_effort_by_preset", "effort value", raw)
+}
+
+// parseStringMapArg is the shared coercion behind the per-preset map arguments;
+// field and valueDesc only shape the error messages.
+func parseStringMapArg(field, valueDesc string, raw interface{}) (map[string]string, error) {
 	out := map[string]string{}
 	if raw == nil {
 		return out, nil
@@ -142,12 +208,12 @@ func parseEffortByPresetArg(raw interface{}) (map[string]string, error) {
 		for k, v := range m {
 			s, ok := v.(string)
 			if !ok {
-				return nil, fmt.Errorf("default_effort_by_preset.%s must be a string, got %T", k, v)
+				return nil, fmt.Errorf("%s.%s must be a string, got %T", field, k, v)
 			}
 			out[k] = s
 		}
 	default:
-		return nil, fmt.Errorf("default_effort_by_preset must be an object mapping preset name to effort value, got %T", raw)
+		return nil, fmt.Errorf("%s must be an object mapping preset name to %s, got %T", field, valueDesc, raw)
 	}
 	return out, nil
 }
@@ -240,6 +306,11 @@ func applyConfigUpdates(cfg *config.Config, request *ToolRequest) ([]string, err
 		applyDefaultEffortByPresetUpdate(cfg, m)
 		updated = append(updated, "default_effort_by_preset")
 	}
+	rulesUpdated, err := applyRulesUpdates(cfg, args)
+	if err != nil {
+		return nil, err
+	}
+	updated = append(updated, rulesUpdated...)
 	return updated, nil
 }
 
