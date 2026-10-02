@@ -78,6 +78,20 @@ match `[A-Za-z_][A-Za-z0-9_]*`. By default, `.env` is loaded from the generation
 any `--env-file PATH` flags are supplied, the default `.env` is not loaded; multiple files are merged
 in flag order, with later files winning. Generation fails if a placeholder cannot be resolved.
 
+### Generated Self-Entry (`[mcp] self_server`)
+
+Instead of declaring the ai-rulez server yourself, let `generate` add it to the project `.mcp.json`,
+pinned to the version of the ai-rulez binary that ran it:
+
+```toml
+[mcp]
+self_server = true
+```
+
+The entry is merged into an existing `.mcp.json`, so hand-authored servers survive, and
+`.claude/settings.json` is not touched. See [Configuration: `mcp`](configuration.md#mcp) for
+`self_server_version`, `self_server_command`, and the interaction with `[[mcp_servers]]`.
+
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
 key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation fails before writing
 unless `.mcp.json`, `.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`, or a

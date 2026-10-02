@@ -350,6 +350,9 @@ Behavior:
   wins.
 - **Per root**: each config root decides independently, including under `generate --recursive`.
 - The pinned version changes when you upgrade ai-rulez, so the generated `.mcp.json` changes with it.
+- **Turning it off**: removing `self_server` stops ai-rulez from owning the entry but does not
+  delete it; remove `mcpServers.ai-rulez` from `.mcp.json` yourself. `ai-rulez clean` likewise leaves a
+  `.mcp.json` that holds hand-authored servers in place.
 
 ### `mcp_servers`
 
