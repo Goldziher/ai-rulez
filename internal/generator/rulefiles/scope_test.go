@@ -8,7 +8,7 @@ import (
 )
 
 func TestScopeHelpers(t *testing.T) {
-	scope := &config.ScopeRun{Path: "packages/api/", Slug: "packages-api", RootDir: "/repo"}
+	scope := &config.ScopeRun{Path: "packages/api/", Slug: "packages-api", RootDir: filepath.FromSlash("/repo")}
 	tests := []struct {
 		name       string
 		cfg        *config.Config
@@ -35,7 +35,7 @@ func TestScopeHelpers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			target := Target{Dir: ".claude/rules"}
-			baseDir := "/repo/packages/api"
+			baseDir := filepath.FromSlash("/repo/packages/api")
 
 			// Act
 			info, inside := ScopeOf(tt.cfg), InScope(tt.cfg)
