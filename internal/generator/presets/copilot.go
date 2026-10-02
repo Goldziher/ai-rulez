@@ -8,12 +8,23 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
 
 const presetNameCopilot = "copilot"
+
+// copilotRulesTarget is the path-specific instructions folder Copilot reads.
+var copilotRulesTarget = rulefiles.Target{
+	Preset:    presetNameCopilot,
+	Dir:       ".github/instructions",
+	Ext:       ".instructions.md",
+	Dialect:   rulefiles.DialectCopilot,
+	Recursive: true,
+	Banner:    true,
+}
 
 func init() {
 	config.RegisterPreset(presetNameCopilot, &CopilotPresetGenerator{})
@@ -47,6 +58,7 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, ".github"),
 		filepath.Join(baseDir, ".github", "copilot-instructions.md"),
+		filepath.Join(baseDir, ".github", "instructions"),
 		filepath.Join(baseDir, ".github", "skills"),
 		filepath.Join(baseDir, ".github", "agents"),
 		filepath.Join(baseDir, ".github", "commands"),
@@ -73,11 +85,19 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	)
 
 	// Generate copilot-instructions.md
-	instructionsContent := g.renderInstructionsFile(content, cfg)
+	ruleFiles, inlineRules, inlineContext, err := planCopilotRules(content, cfg)
+	if err != nil {
+		return nil, err
+	}
 	outputs = append(outputs, config.OutputFile{
 		Path:    filepath.Join(baseDir, ".github", "copilot-instructions.md"),
-		Content: instructionsContent,
+		Content: g.renderInstructionsFile(cfg, inlineRules, inlineContext),
 	})
+	ruleOutputs, err := renderCopilotRuleFiles(ruleFiles, baseDir, cfg)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, ruleOutputs...)
 
 	// Generate skill files to .github/skills/
 	allSkills := allSkills(content)
@@ -152,12 +172,44 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	return outputs, nil
 }
 
-func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentTree, cfg *config.Config) string {
+// planCopilotRules routes rules and context between .github/instructions files
+// and the inline remainder of copilot-instructions.md.
+func planCopilotRules(content *config.ContentTree, cfg *config.Config) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
+	routing := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameCopilot), true)
+	target := copilotRulesTarget
+	return rulefiles.Plan(allInlineRules(content), allInlineContext(content), &target, routing, rulefiles.ScopeInfo{}, nil)
+}
+
+func renderCopilotRuleFiles(items []rulefiles.Item, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
+	if len(items) == 0 {
+		return nil, nil
+	}
+	t := copilotRulesTarget
+	outputs := []config.OutputFile{{Path: filepath.Join(baseDir, filepath.FromSlash(t.Dir)), IsDir: true}}
+	for i := range items {
+		it := items[i]
+		text, notes, err := rulefiles.Render(t, it, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render copilot instructions %s: %w", it.File.Name, err)
+		}
+		for _, n := range notes {
+			logger.Warn(n)
+		}
+		name := rulefiles.FileName(t, it)
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, filepath.FromSlash(t.Dir), filepath.FromSlash(name)),
+			Content: text,
+		})
+	}
+	return outputs, nil
+}
+
+func (g *CopilotPresetGenerator) renderInstructionsFile(cfg *config.Config, allRules, allContext []config.ContentFile) string {
 	var builder strings.Builder
 
 	// Calculate content counts from the deduplicated rule set so the header
 	// count matches what is actually rendered.
-	ruleCount := len(allInlineRules(content))
+	ruleCount := len(allRules)
 
 	// Generate and prepend header
 	outputPath := ".github/copilot-instructions.md"
@@ -175,11 +227,9 @@ func (g *CopilotPresetGenerator) renderInstructionsFile(content *config.ContentT
 	}
 
 	// Add rules section
-	allRules := allInlineRules(content)
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := allInlineContext(content)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Skills are generated to .github/skills/ directory, not inlined

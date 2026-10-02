@@ -96,6 +96,7 @@ func TestCopilotPresetGenerator_GetOutputPaths(t *testing.T) {
 	wantPaths := []string{
 		filepath.Join("/base", ".github"),
 		filepath.Join("/base", ".github", "copilot-instructions.md"),
+		filepath.Join("/base", ".github", "instructions"),
 		filepath.Join("/base", ".github", "skills"),
 		filepath.Join("/base", ".github", "agents"),
 		filepath.Join("/base", ".github", "commands"),
@@ -226,4 +227,150 @@ func TestCopilotPresetGenerator_renderMCPJSON_RemoteTransports(t *testing.T) {
 	assert.Equal(t, "https://example.com/sse", sseServer["url"])
 	assert.NotContains(t, sseServer, "command")
 	assert.NotContains(t, sseServer, "transport")
+}
+
+func copilotRuleFixture(name, body string, md *config.Metadata) config.ContentFile {
+	return config.ContentFile{Name: name, Content: body, Path: "/test/.ai-rulez/rules/" + name + ".md", Metadata: md}
+}
+
+func copilotOutputByPath(outputs []config.OutputFile, suffix string) (config.OutputFile, bool) {
+	for _, o := range outputs {
+		if strings.HasSuffix(filepath.ToSlash(o.Path), suffix) {
+			return o, true
+		}
+	}
+	return config.OutputFile{}, false
+}
+
+func splitCopilotConfig() *config.Config {
+	return &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeSplit}}
+}
+
+func TestCopilot_InstructionsFiles(t *testing.T) {
+	tests := []struct {
+		name       string
+		md         *config.Metadata
+		wantFM     []string
+		wantAbsent []string
+	}{
+		{name: "always", md: nil, wantFM: []string{"applyTo: '**'"}},
+		{
+			name:   "glob comma-joined with brace expansion",
+			md:     &config.Metadata{Globs: []string{"src/**/*.{ts,tsx}", "docs/**"}},
+			wantFM: []string{"applyTo: src/**/*.ts,src/**/*.tsx,docs/**"},
+		},
+		{
+			name:       "auto description only",
+			md:         &config.Metadata{Activation: "auto", Extra: map[string]string{"description": "Use for API work"}},
+			wantFM:     []string{"description: Use for API work"},
+			wantAbsent: []string{"applyTo"},
+		},
+		{
+			name:       "manual has no frontmatter",
+			md:         &config.Metadata{Activation: "manual"},
+			wantAbsent: []string{"applyTo", "description:", "---\n"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			g := &CopilotPresetGenerator{}
+			content := &config.ContentTree{Rules: []config.ContentFile{copilotRuleFixture("my-rule", "Body text.", tt.md)}}
+
+			// Act
+			outputs, err := g.Generate(content, "/test", splitCopilotConfig())
+
+			// Assert
+			require.NoError(t, err)
+			file, ok := copilotOutputByPath(outputs, ".github/instructions/my-rule.instructions.md")
+			require.True(t, ok, "instructions file missing")
+			for _, want := range tt.wantFM {
+				assert.Contains(t, file.Content, want)
+			}
+			for _, absent := range tt.wantAbsent {
+				assert.NotContains(t, file.Content, absent)
+			}
+			assert.Contains(t, file.Content, "Body text.")
+			_, hasDir := copilotOutputByPath(outputs, ".github/instructions")
+			assert.True(t, hasDir, "instructions dir output missing")
+		})
+	}
+}
+
+func TestCopilot_InlineMode(t *testing.T) {
+	// Arrange
+	g := &CopilotPresetGenerator{}
+	cfg := &config.Config{Name: "test"}
+	content := &config.ContentTree{Rules: []config.ContentFile{
+		copilotRuleFixture("global-rule", "Global body.", nil),
+		copilotRuleFixture("scoped-rule", "Scoped body.", &config.Metadata{Globs: []string{"src/**"}}),
+	}}
+
+	// Act
+	outputs, err := g.Generate(content, "/test", cfg)
+
+	// Assert
+	require.NoError(t, err)
+	root, ok := copilotOutputByPath(outputs, ".github/copilot-instructions.md")
+	require.True(t, ok)
+	assert.Contains(t, root.Content, "## Rules")
+	assert.Contains(t, root.Content, "Global body.")
+	assert.NotContains(t, root.Content, "Scoped body.")
+
+	_, ok = copilotOutputByPath(outputs, ".github/instructions/global-rule.instructions.md")
+	assert.False(t, ok, "unscoped rule must stay inline")
+	scoped, ok := copilotOutputByPath(outputs, ".github/instructions/scoped-rule.instructions.md")
+	require.True(t, ok)
+	assert.Contains(t, scoped.Content, "applyTo: src/**")
+}
+
+func TestCopilot_InlineModeNoScopedRulesWritesNoInstructionsDir(t *testing.T) {
+	g := &CopilotPresetGenerator{}
+	content := &config.ContentTree{Rules: []config.ContentFile{copilotRuleFixture("global-rule", "Body.", nil)}}
+
+	outputs, err := g.Generate(content, "/test", &config.Config{Name: "test"})
+
+	require.NoError(t, err)
+	_, hasDir := copilotOutputByPath(outputs, ".github/instructions")
+	assert.False(t, hasDir)
+}
+
+func TestCopilot_SplitMode(t *testing.T) {
+	// Arrange
+	g := &CopilotPresetGenerator{}
+	content := &config.ContentTree{
+		Rules: []config.ContentFile{
+			copilotRuleFixture("global-rule", "Global body.", nil),
+			copilotRuleFixture("scoped-rule", "Scoped body.", &config.Metadata{Globs: []string{"src/**"}}),
+		},
+		Context: []config.ContentFile{
+			copilotRuleFixture("scoped-ctx", "Ctx body.", &config.Metadata{Globs: []string{"docs/**"}}),
+			copilotRuleFixture("plain-ctx", "Plain ctx body.", nil),
+		},
+	}
+
+	// Act
+	outputs, err := g.Generate(content, "/test", splitCopilotConfig())
+
+	// Assert
+	require.NoError(t, err)
+	root, ok := copilotOutputByPath(outputs, ".github/copilot-instructions.md")
+	require.True(t, ok)
+	assert.NotContains(t, root.Content, "## Rules")
+	assert.NotContains(t, root.Content, "Global body.")
+	assert.NotContains(t, root.Content, "Scoped body.")
+	assert.Contains(t, root.Content, "## Context")
+	assert.Contains(t, root.Content, "Plain ctx body.")
+
+	for _, p := range []string{
+		".github/instructions/global-rule.instructions.md",
+		".github/instructions/scoped-rule.instructions.md",
+		".github/instructions/context-scoped-ctx.instructions.md",
+	} {
+		_, ok := copilotOutputByPath(outputs, p)
+		assert.True(t, ok, p)
+	}
+	_, ok = copilotOutputByPath(outputs, ".github/instructions/context-plain-ctx.instructions.md")
+	assert.False(t, ok, "unscoped context stays inline")
 }
