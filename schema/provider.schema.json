@@ -92,7 +92,19 @@
         },
         "filter": {
           "enum": ["include_if_targeting_provider", "path_scoped"],
-          "description": "Closed-set filter predicate. include_if_targeting_provider keeps a command/agent whose Metadata.Targets is empty or contains the provider name. path_scoped keeps only items that declare a path scope (globs/paths frontmatter)."
+          "description": "Closed-set filter predicate. include_if_targeting_provider keeps a command/agent whose Metadata.Targets is empty or contains the provider name. path_scoped keeps only items that declare a path scope (globs/paths frontmatter). Not allowed together with `split`."
+        },
+        "split": {
+          "type": "boolean",
+          "description": "outputs.rules only. When true the output honors the `[rules] mode` setting: split mode writes every rule and path-scoped context item to a file, inline mode writes only the items selected by `inline_filter`. Requires `dialect` and a flat `{id}<ext>` filename."
+        },
+        "inline_filter": {
+          "enum": ["path_scoped"],
+          "description": "outputs.rules with `split` only. Items that still get a rule file when the rules mode is inline. Omit to keep everything inline."
+        },
+        "dialect": {
+          "enum": ["claude", "cursor", "trigger", "copilot", "cline", "continue", "junie"],
+          "description": "outputs.rules with `split` only. Frontmatter vocabulary of the rule files. Cannot be combined with `body` or `frontmatter`."
         },
         "body": {
           "$ref": "#/$defs/body"

@@ -108,6 +108,8 @@ func (r *partRecorder) flush(rendered string) {
 // outputKindForType maps a provider DSL output type onto the analysis kind.
 func outputKindForType(typ string) config.OutputKind {
 	switch typ {
+	case OutputTypeRules:
+		return config.OutputKindRuleFile
 	case OutputTypeSkills:
 		return config.OutputKindSkill
 	case OutputTypeAgents:

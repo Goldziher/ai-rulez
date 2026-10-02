@@ -1177,6 +1177,21 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
 	_, _ = fmt.Fprintf(&b, "header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
 
+	// Effective rules mode per enabled preset, sorted, so switching modes
+	// rewrites the affected files.
+	modes := make([]string, 0, len(cfg.Presets))
+	for _, preset := range cfg.Presets {
+		name := preset.Name
+		if name == "" {
+			name = preset.BuiltIn
+		}
+		modes = append(modes, name+"="+cfg.RulesModeFor(name))
+	}
+	sort.Strings(modes)
+	for _, mode := range modes {
+		b.WriteString("rules_mode:" + mode + "\n")
+	}
+
 	// MCP servers — sorted by name
 	mcpNames := make([]string, 0, len(cfg.MCPServers))
 	for name := range cfg.MCPServers {

@@ -35,7 +35,7 @@ func HashContent(content string) string {
 // header layout changes, fixed bugs in serialization). Bumping invalidates all
 // stored Source-Hash values, forcing one round of regeneration before the skip
 // mechanism can re-engage.
-const GeneratorSchemaVersion = "v5"
+const GeneratorSchemaVersion = "v6"
 
 type commentStyle int
 

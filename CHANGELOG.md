@@ -13,9 +13,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Rule `activation` frontmatter**: rules and context files can set `activation` to `always`, `glob`, `auto` or `manual`. `validate` rejects unknown values, `glob` without globs, `auto` without a description and `always` together with globs, and warns when a legacy `trigger` or `alwaysApply` contradicts it. Comma-separated `paths`/`globs` such as `paths: "src/**, docs/**"` now split into separate globs (commas inside `{}`, `[]` or escaped with a backslash are kept). An `activation` key is no longer passed through as an extra frontmatter field.
 
 - **Antigravity `.agents/rules`**: the antigravity preset writes rules as native rule files with `trigger`/`globs` frontmatter (top level only). The default `inline` mode moves only path-scoped rules there; `split` moves every rule. When the gemini preset is also enabled both write `GEMINI.md`, so rules stay inline unless `rules.mode_by_preset.antigravity` is set.
+- **Junie `.junie/rules`**: with `[rules] mode = "split"` Junie writes each rule to `.junie/rules/<id>.md`; the default inline mode keeps everything in `.junie/guidelines.md`.
+- **Provider specs**: `outputs.rules` accepts `split`, `inline_filter` and `dialect` so a custom provider can opt in to split-aware rules output.
 
 ### Changed
 
+- **Claude rule files**: path-scoped rule files in `.claude/rules` now carry a generated banner, and path-scoped context is written to `.claude/rules/context-*.md`. With `[rules] mode = "split"` Claude and Junie write every rule to their rules folder instead of the root file. Claude rule file names keep the rule name's case. Generated files are rewritten once on upgrade (generator schema v6). Colliding or empty rule names now fail generation instead of silently overwriting.
 - **Scope shown for rules inlined into root files**: rules inlined into root files (`AGENTS.md`, `GEMINI.md`, ...) now state their path scope (`_Applies to: ..._`) or trigger description (`_When relevant: ..._`) instead of silently becoming global. `manual` rules still render as always-on and log one warning listing them.
 
 ### Fixed
