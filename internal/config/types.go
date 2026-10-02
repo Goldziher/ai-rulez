@@ -51,7 +51,10 @@ type Config struct {
 	// from Content so it never lands in committed output; it is emitted only to
 	// the per-preset ".local" root variants (CLAUDE.local.md, AGENTS.local.md,
 	// ...) and is always gitignored.
-	LocalContent  *ContentTree          `yaml:"-" json:"-" toml:"-"`
+	LocalContent *ContentTree `yaml:"-" json:"-" toml:"-"`
+	// LocalOverlay is set when a config.local.* overlay was merged into this
+	// configuration. Such a config is a merged view and is never written back.
+	LocalOverlay  *LocalOverlay         `yaml:"-" json:"-" toml:"-"`
 	MCPServers    map[string]*MCPServer `yaml:"-" json:"-" toml:"-"`
 	MCPServersRaw []MCPServer           `yaml:"mcp_servers,omitempty" json:"mcp_servers,omitempty" toml:"mcp_servers,omitempty"`
 

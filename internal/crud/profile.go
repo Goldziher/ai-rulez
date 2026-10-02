@@ -26,7 +26,7 @@ func (op *OperatorImpl) AddProfile(ctx context.Context, name string, domains []s
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -102,6 +102,9 @@ func validateProfileDomains(cfg *config.Config, profile string, domains []string
 }
 
 // RemoveProfile removes a profile from the config
+// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
+// machine-local overlay entries are neither listed nor removed until the
+// op.Local() variant lands.
 func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 	if name == "" {
 		return oops.
@@ -112,7 +115,7 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -151,6 +154,9 @@ func (op *OperatorImpl) RemoveProfile(ctx context.Context, name string) error {
 }
 
 // SetDefaultProfile sets the default profile in the config
+// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
+// machine-local overlay entries are neither listed nor removed until the
+// op.Local() variant lands.
 func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) error {
 	if name == "" {
 		return oops.
@@ -161,7 +167,7 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return oops.
 			With("base_dir", baseDir).
@@ -192,11 +198,14 @@ func (op *OperatorImpl) SetDefaultProfile(ctx context.Context, name string) erro
 }
 
 // ListProfiles returns all configured profiles
+// NOTE: this reads and writes the shared config layer only (config.WithoutLocal);
+// machine-local overlay entries are neither listed nor removed until the
+// op.Local() variant lands.
 func (op *OperatorImpl) ListProfiles(ctx context.Context) ([]ProfileInfo, error) {
 	baseDir := op.baseDir
 
 	// Load current config
-	cfg, err := config.LoadConfig(ctx, baseDir)
+	cfg, err := config.LoadConfig(ctx, baseDir, config.WithoutLocal())
 	if err != nil {
 		return nil, oops.
 			With("base_dir", baseDir).

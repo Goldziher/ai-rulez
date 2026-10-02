@@ -1,0 +1,903 @@
+{
+  "$defs": {
+    "authorEntity": {
+      "additionalProperties": false,
+      "properties": {
+        "email": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "url": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "$id": "https://github.com/Goldziher/ai-rulez/schema/ai-rules-local.schema.json",
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "additionalProperties": false,
+  "description": "Schema for config.local.* machine-local overlay files merged onto the shared ai-rulez config",
+  "properties": {
+    "$comment": {
+      "description": "Free-form note, ignored by ai-rulez (accepted so a JSON config can carry a comment)",
+      "type": "string"
+    },
+    "$schema": {
+      "description": "Reference to this schema for editor support",
+      "type": "string"
+    },
+    "builtins": {
+      "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown name is reported as a warning during generation, not a schema error.",
+      "oneOf": [
+        {
+          "description": "true = enable all builtins, false = disable all (including auto-includes)",
+          "type": "boolean"
+        },
+        {
+          "items": {
+            "pattern": "^(!?[a-z0-9][a-z0-9-]*(/[a-z0-9][a-z0-9-]*)?)$",
+            "type": "string"
+          },
+          "type": "array"
+        }
+      ]
+    },
+    "compact": {
+      "description": "When true, omit per-rule '**Priority:**' annotations from generated inline rule sections to reduce output size. Defaults to false.",
+      "type": "boolean"
+    },
+    "default": {
+      "description": "Default profile name to use when --profile is not specified",
+      "type": "string"
+    },
+    "defaults": {
+      "additionalProperties": false,
+      "description": "Top-level defaults that propagate into generated outputs when individual content files do not override them",
+      "properties": {
+        "effort": {
+          "description": "Default reasoning effort applied across providers that support it. Each preset maps the value to its own vocabulary.",
+          "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+          "type": "string"
+        },
+        "effort_by_preset": {
+          "additionalProperties": {
+            "enum": ["low", "medium", "high", "xhigh", "max", "inherit"],
+            "type": "string"
+          },
+          "description": "Per-preset reasoning effort overrides. Beats `effort` for the matching preset; per-agent metadata still wins where the preset supports it.",
+          "propertyNames": {
+            "enum": [
+              "claude",
+              "cursor",
+              "gemini",
+              "copilot",
+              "continue-dev",
+              "windsurf",
+              "cline",
+              "codex",
+              "amp",
+              "junie",
+              "opencode",
+              "hermes",
+              "antigravity",
+              "mcp",
+              "xum"
+            ]
+          },
+          "type": "object"
+        },
+        "model_by_preset": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Per-preset model overrides for agents. Beats the legacy agent-level `model` field for the matching preset; per-agent `<preset>_model` frontmatter still wins. Presets that do not emit a per-agent model frontmatter ignore entries here.",
+          "propertyNames": {
+            "enum": [
+              "claude",
+              "cursor",
+              "gemini",
+              "copilot",
+              "continue-dev",
+              "windsurf",
+              "cline",
+              "codex",
+              "amp",
+              "junie",
+              "opencode",
+              "hermes",
+              "antigravity",
+              "mcp",
+              "xum"
+            ]
+          },
+          "type": "object"
+        },
+        "omit_agent_fields": {
+          "description": "Agent frontmatter fields to suppress for every preset, so an agent stays loadable where a field is invalid (unconfigured model/provider, unrecognized tool name). Values: model, effort, tools, description.",
+          "items": {
+            "enum": ["model", "effort", "tools", "description"],
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "description": {
+      "description": "Project description",
+      "type": "string"
+    },
+    "gitignore": {
+      "default": true,
+      "description": "Whether to automatically update .gitignore with generated output patterns (defaults to true)",
+      "type": "boolean"
+    },
+    "header": {
+      "additionalProperties": false,
+      "description": "Header style configuration for generated files",
+      "properties": {
+        "hashes": {
+          "default": "full",
+          "description": "Freshness lines in generated headers: full writes Content-Hash and Source-Hash (default); content keeps only the per-file Content-Hash so editing one source no longer rewrites a line in every generated file; none writes neither.",
+          "enum": ["full", "content", "none"],
+          "type": "string"
+        },
+        "style": {
+          "default": "minimal",
+          "description": "Header style: detailed (comprehensive), compact (concise), or minimal (bare minimum)",
+          "enum": ["detailed", "compact", "minimal"],
+          "type": "string"
+        },
+        "text": {
+          "description": "Author-supplied header text that replaces the prose generated from `style`. It is wrapped in the output's comment syntax and still carries the Content-Hash / Source-Hash freshness lines. Use TOML multi-line syntax to span lines.",
+          "type": "string"
+        },
+        "timestamp": {
+          "default": false,
+          "description": "Emit the \"Generated:\" line in generated headers. Off by default so generated output is byte-reproducible; set to true to opt the line back in, and pin it with SOURCE_DATE_EPOCH if reproducibility still matters.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "includes": {
+      "description": "Content sources (git repositories or local paths) to include and merge",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "include": {
+            "description": "What content types to import (defaults to all). MCP servers are not importable from an include.",
+            "items": {
+              "enum": ["rules", "context", "skills", "agents", "commands"],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "install_to": {
+            "description": "Import content into a specific domain (defaults to root)",
+            "type": "string"
+          },
+          "local_override": {
+            "description": "Local path or content that overrides the include when present",
+            "type": "string"
+          },
+          "merge_strategy": {
+            "description": "How to handle conflicting files: local-override (default, local wins), include-override (include wins), or error (fail on conflict)",
+            "enum": ["local-override", "include-override", "error"],
+            "type": "string"
+          },
+          "name": {
+            "description": "Local identifier for this include",
+            "type": "string"
+          },
+          "path": {
+            "description": "Path within git repository to .ai-rulez/ or domain folder (git repos only)",
+            "type": "string"
+          },
+          "ref": {
+            "description": "Git ref - branch, tag, or commit hash (git repos only). Defaults to the remote's default branch.",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "Git repository URL (https://...) or local file path (absolute or relative)",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "installed_skills": {
+      "description": "Named skills to install from external repositories. Skills are fetched dynamically during generation.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "local_override": {
+            "description": "Local path override for development (used instead of source when present)",
+            "type": "string"
+          },
+          "name": {
+            "description": "Skill name (unique identifier)",
+            "minLength": 1,
+            "type": "string"
+          },
+          "path": {
+            "description": "Path within repository to skill directory (defaults to skills/<name>)",
+            "type": "string"
+          },
+          "profiles": {
+            "description": "Restrict this skill to the named profiles. Omit to include it in every profile.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "ref": {
+            "description": "Git ref - branch, tag, or commit hash (git repos only)",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "Git repository URL (https://...) or local file path",
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "marketplace": {
+      "additionalProperties": false,
+      "description": "Authoring metadata for the marketplace index emitted for the plugin(s).",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "members": {
+          "description": "Sub-project directories for a multi-plugin monorepo. Empty means single-plugin.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "owner": {
+          "$ref": "#/$defs/authorEntity"
+        }
+      },
+      "type": "object"
+    },
+    "marketplaces": {
+      "description": "Plugin marketplaces to register. Declared sources only; ai-rulez currently records them without emitting marketplace output.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "description": "Marketplace name, referenced by `plugins[].marketplace`.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "source": {
+            "description": "Marketplace source (GitHub repository, git URL, local path, or URL).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "type": {
+            "description": "Source type.",
+            "enum": ["github", "git", "local", "url"],
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "mcp": {
+      "additionalProperties": false,
+      "description": "Project-level MCP generation options, distinct from the individual [[mcp_servers]] definitions.",
+      "properties": {
+        "self_server": {
+          "default": false,
+          "description": "Add ai-rulez's own MCP server (`npx -y ai-rulez@<version> mcp`) to the project .mcp.json. The entry is merged into the file, so hand-authored servers survive, and .claude/settings.json is not touched.",
+          "type": "boolean"
+        },
+        "self_server_command": {
+          "description": "Replace the whole launch command (executable followed by its arguments), for example [\"ai-rulez\", \"mcp\"] for a locally installed binary. Mutually exclusive with self_server_version; requires self_server = true.",
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "self_server_version": {
+          "description": "Pin the ai-rulez version the entry runs (for example \"4.19.0\" or \"latest\"). Defaults to the version of the ai-rulez binary that runs generate, or \"latest\" for a dev build. Requires self_server = true.",
+          "pattern": "^[^\\s@/]+$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "mcp_servers": {
+      "description": "Inline Model Context Protocol (MCP) server definitions generated into assistant MCP configuration files.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "args": {
+            "description": "Command line arguments for a local MCP server. An argument may contain the ${PROJECT_ROOT} placeholder, resolved to the project root at generation time.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "command": {
+            "description": "Command to start a local stdio MCP server (e.g., 'npx', 'uvx', 'node'). May contain the ${PROJECT_ROOT} placeholder, resolved to the project root at generation time.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "description": {
+            "description": "Optional description of the MCP server capabilities",
+            "type": "string"
+          },
+          "enabled": {
+            "default": true,
+            "description": "Whether this MCP server is emitted into generated MCP outputs (default: true)",
+            "type": "boolean"
+          },
+          "env": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Environment variables for the MCP server. Values may contain ${VAR} placeholders; placeholder names must match [A-Za-z_][A-Za-z0-9_]* and are resolved by ai-rulez generate from repeated --env KEY=VALUE, process env, then dotenv files. ${PROJECT_ROOT} resolves to the project root unless a real PROJECT_ROOT is supplied.",
+            "type": "object"
+          },
+          "headers": {
+            "additionalProperties": {
+              "pattern": "^[^\\r\\n]*$",
+              "type": "string"
+            },
+            "description": "HTTP headers sent to a remote (http or sse) MCP server, typically for auth. Values may contain ${VAR} placeholders, resolved like env; a header holding a placeholder or a credential (Authorization, Cookie, or a name containing TOKEN, SECRET, PASSWORD, KEY or CREDENTIAL) makes the generated MCP file secret, so it must be gitignored.",
+            "propertyNames": {
+              "pattern": "^[!#$%&'*+.^_`|~0-9A-Za-z-]+$"
+            },
+            "type": "object"
+          },
+          "name": {
+            "description": "MCP server name/identifier (used as unique key)",
+            "minLength": 1,
+            "type": "string"
+          },
+          "profiles": {
+            "description": "Restrict this server to the named profiles. Omit to include it in every profile.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "transport": {
+            "default": "stdio",
+            "description": "Transport protocol for MCP server communication (default: stdio)",
+            "enum": ["stdio", "http", "sse"],
+            "type": "string"
+          },
+          "url": {
+            "description": "URL for remote MCP servers using http or sse transport",
+            "pattern": "^https?://[^\\s]+$",
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "name": {
+      "description": "Project name",
+      "minLength": 1,
+      "type": "string"
+    },
+    "plugin": {
+      "additionalProperties": false,
+      "description": "Authoring metadata for a distributable plugin bundle (producer side). Skills, commands, and agents come from the content tree; this block only carries packaging metadata.",
+      "properties": {
+        "author": {
+          "$ref": "#/$defs/authorEntity"
+        },
+        "brand_color": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "content_root": {
+          "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/",
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "gemini": {
+          "additionalProperties": false,
+          "properties": {
+            "context_file_name": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "hermes": {
+          "additionalProperties": false,
+          "properties": {
+            "requires_python": {
+              "description": "Python requirement for the generated Hermes wheel (default: >=3.11)",
+              "type": "string"
+            },
+            "source": {
+              "description": "Project-relative Python module implementing register(ctx)",
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "homepage": {
+          "type": "string"
+        },
+        "hooks": {
+          "description": "Lifecycle hook groups emitted as hooks.json (Claude/Cursor) or inline hooks (Gemini).",
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "event": {
+                "description": "Lifecycle event, e.g. SessionStart. Unknown events are warned about, not rejected.",
+                "type": "string"
+              },
+              "hooks": {
+                "items": {
+                  "additionalProperties": false,
+                  "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
+                  "oneOf": [{}, {}],
+                  "properties": {
+                    "args": {
+                      "items": {
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "async": {
+                      "type": "boolean"
+                    },
+                    "command": {
+                      "type": "string"
+                    },
+                    "if": {
+                      "type": "string"
+                    },
+                    "script": {
+                      "description": "Project-relative script bundled at hooks/<basename> and invoked via the plugin root.",
+                      "type": "string"
+                    },
+                    "status_message": {
+                      "type": "string"
+                    },
+                    "timeout": {
+                      "minimum": 0,
+                      "type": "integer"
+                    },
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              "matcher": {
+                "description": "Filters which occurrences of the event run the group; ignored by events with no matchable subject.",
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "icon": {
+          "type": "string"
+        },
+        "interface": {
+          "additionalProperties": false,
+          "description": "Rich UI block shared by Codex and Kimi manifests.",
+          "properties": {
+            "brand_color": {
+              "type": "string"
+            },
+            "capabilities": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "category": {
+              "type": "string"
+            },
+            "composer_icon": {
+              "type": "string"
+            },
+            "default_prompt": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "developer_name": {
+              "type": "string"
+            },
+            "display_name": {
+              "type": "string"
+            },
+            "logo": {
+              "type": "string"
+            },
+            "logo_dark": {
+              "type": "string"
+            },
+            "long_description": {
+              "type": "string"
+            },
+            "privacy_policy_url": {
+              "type": "string"
+            },
+            "screenshots": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "short_description": {
+              "type": "string"
+            },
+            "terms_of_service_url": {
+              "type": "string"
+            },
+            "website_url": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "keywords": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "kimi": {
+          "additionalProperties": false,
+          "properties": {
+            "session_start_skill": {
+              "type": "string"
+            },
+            "skill_instructions": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "license": {
+          "type": "string"
+        },
+        "logo": {
+          "type": "string"
+        },
+        "mcp": {
+          "items": {
+            "additionalProperties": false,
+            "properties": {
+              "args": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "command": {
+                "type": "string"
+              },
+              "env": {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              "name": {
+                "type": "string"
+              },
+              "transport": {
+                "enum": ["stdio", "http", "sse"],
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "name": {
+          "type": "string"
+        },
+        "repository": {
+          "type": "string"
+        },
+        "runtimes": {
+          "items": {
+            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"],
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "statusline": {
+          "additionalProperties": false,
+          "description": "Claude-only status-line script passthrough.",
+          "properties": {
+            "command": {
+              "type": "string"
+            },
+            "script": {
+              "type": "string"
+            }
+          },
+          "type": "object"
+        },
+        "tags": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "version": {
+          "description": "Semantic version, e.g. 1.0.0",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "plugins": {
+      "description": "Plugins to install from a configured marketplace. ai-rulez emits these declarations into .claude/plugins.json and .codex/plugins.json; the target tool performs the install. Distinct from the producer `[plugin]` authoring block.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "description": "Whether the plugin declaration is emitted. Defaults to true.",
+            "type": "boolean"
+          },
+          "marketplace": {
+            "description": "Name of the marketplace the plugin comes from (see `marketplaces`).",
+            "minLength": 1,
+            "type": "string"
+          },
+          "name": {
+            "description": "Plugin name within the marketplace.",
+            "minLength": 1,
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "scope": {
+            "description": "Install scope. Defaults to project.",
+            "enum": ["project", "user"],
+            "type": "string"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "presets": {
+      "description": "List of presets to generate (built-in tool names or custom preset objects)",
+      "items": {
+        "oneOf": [
+          {
+            "description": "Built-in preset name",
+            "enum": [
+              "claude",
+              "cursor",
+              "gemini",
+              "copilot",
+              "continue-dev",
+              "windsurf",
+              "cline",
+              "codex",
+              "amp",
+              "junie",
+              "opencode",
+              "hermes",
+              "antigravity",
+              "xum",
+              "mcp"
+            ],
+            "type": "string"
+          },
+          {
+            "additionalProperties": false,
+            "oneOf": [
+              {
+                "description": "Template/custom preset",
+                "not": {}
+              },
+              {
+                "description": "Provider-backed preset",
+                "not": {
+                  "anyOf": [{}, {}]
+                }
+              }
+            ],
+            "properties": {
+              "name": {
+                "description": "Custom preset name",
+                "minLength": 1,
+                "type": "string"
+              },
+              "path": {
+                "description": "Output path",
+                "minLength": 1,
+                "type": "string"
+              },
+              "provider": {
+                "description": "Project-relative path to a declarative provider spec (schema/provider.schema.json). Gives the preset full built-in parity (root file, skills/agents/commands, MCP sidecars).",
+                "minLength": 1,
+                "type": "string"
+              },
+              "template": {
+                "description": "Template content for custom presets",
+                "type": "string"
+              },
+              "type": {
+                "description": "Output type (markdown/directory/json presets)",
+                "enum": ["markdown", "directory", "json"],
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          {
+            "description": "\"!name\" drops the shared preset of that name",
+            "pattern": "^!.+",
+            "type": "string"
+          }
+        ]
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "profiles": {
+      "additionalProperties": {
+        "items": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "description": "Named profiles mapping profile names to lists of domain names. An element is either a local or included domain name, or a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`). A builtin referenced this way is loaded only for the profiles that name it, rather than globally.",
+      "type": "object"
+    },
+    "rules": {
+      "additionalProperties": false,
+      "description": "Controls how rules are written to generated outputs",
+      "properties": {
+        "mode": {
+          "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Defaults to split.",
+          "enum": ["split", "inline"],
+          "type": "string"
+        },
+        "mode_by_preset": {
+          "additionalProperties": {
+            "enum": ["split", "inline"],
+            "type": "string"
+          },
+          "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
+    "schema": {
+      "description": "TOML spelling of $schema (the TOML key is `schema`); accepted so a config.toml carrying a schema reference validates",
+      "type": "string"
+    },
+    "scopes": {
+      "description": "Additional scoped output roots, such as subfolder AGENTS.md and CLAUDE.md files with profile-specific content.",
+      "items": {
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": ["name"]
+          },
+          {
+            "required": ["path"]
+          }
+        ],
+        "properties": {
+          "name": {
+            "description": "Optional display name for the scope",
+            "type": "string"
+          },
+          "path": {
+            "description": "Subdirectory where scoped assistant files should be generated",
+            "minLength": 1,
+            "type": "string"
+          },
+          "presets": {
+            "description": "Assistant presets to generate in this scope. Defaults to codex and claude.",
+            "items": {
+              "enum": [
+                "claude",
+                "cursor",
+                "gemini",
+                "copilot",
+                "continue-dev",
+                "windsurf",
+                "cline",
+                "codex",
+                "amp",
+                "junie",
+                "opencode",
+                "hermes",
+                "antigravity",
+                "xum",
+                "mcp"
+              ],
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "profile": {
+            "description": "Profile used for this scope. Defaults to the active generation profile.",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "version": {
+      "description": "Configuration version (3.0 or 4.0)",
+      "enum": ["3.0", "4.0"],
+      "type": "string"
+    }
+  },
+  "title": "AI Rules Local Overlay Configuration",
+  "type": "object"
+}
