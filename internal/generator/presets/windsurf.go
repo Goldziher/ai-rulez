@@ -8,12 +8,23 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
-	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
 const windsurfPresetName = "windsurf"
+
+// windsurfRulesTarget is the Windsurf rules folder. Windsurf truncates rule
+// files beyond 12000 characters.
+var windsurfRulesTarget = rulefiles.Target{
+	Preset:    windsurfPresetName,
+	Dir:       ".windsurf/rules",
+	Ext:       ".md",
+	Dialect:   rulefiles.DialectTrigger,
+	Recursive: true,
+	MaxChars:  12000,
+	Banner:    true,
+}
 
 func init() {
 	config.RegisterPreset(windsurfPresetName, &WindsurfPresetGenerator{})
@@ -21,23 +32,6 @@ func init() {
 
 // WindsurfPresetGenerator generates Windsurf preset files
 type WindsurfPresetGenerator struct{}
-
-// generateWindsurfPresetHeader creates a header for Windsurf preset files
-func generateWindsurfPresetHeader(cfg *config.Config, outputPath string, ruleCount, sectionCount, agentCount int) string {
-	// Create TemplateData for header generation
-	data := &templates.TemplateData{
-		ProjectName:  cfg.Name,
-		Timestamp:    cfg.HeaderTimestamp(),
-		ConfigFile:   configFileName(cfg),
-		OutputFile:   outputPath,
-		Config:       cfg,
-		RuleCount:    ruleCount,
-		SectionCount: sectionCount,
-		AgentCount:   agentCount,
-	}
-
-	return templates.GenerateHeader(data)
-}
 
 func (g *WindsurfPresetGenerator) GetName() string {
 	return windsurfPresetName
@@ -71,18 +65,24 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 		},
 	)
 
-	// Combine all rules from root and domains
-	allRules := allInlineRules(content)
-
-	// Generate rule files
-	for _, rule := range allRules {
-		outputPath := filepath.Join(".windsurf", "rules", sanitizeName(rule.Name)+".md")
-		ruleContent := g.renderRuleFile(rule, cfg, outputPath, len(allRules))
-		sanitized := sanitizeName(rule.Name)
-
+	// Windsurf always writes one file per rule, so rules route to files regardless of [rules] mode.
+	ruleItems, ctxItems, err := windsurfRuleItems(allInlineRules(content), allInlineContext(content))
+	if err != nil {
+		return nil, err
+	}
+	items := append(append([]rulefiles.Item(nil), ruleItems...), ctxItems...)
+	for i := range items {
+		it := &items[i]
+		text, notes, err := rulefiles.Render(windsurfRulesTarget, *it, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("generate rule %s: %w", it.File.Name, err)
+		}
+		for _, note := range notes {
+			logger.Warn("Windsurf rule file", "note", note)
+		}
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".windsurf", "rules", sanitized+".md"),
-			Content: ruleContent,
+			Path:    filepath.Join(baseDir, filepath.FromSlash(windsurfRulesTarget.Dir), rulefiles.FileName(windsurfRulesTarget, *it)),
+			Content: text,
 		})
 	}
 
@@ -103,23 +103,6 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 			},
 		)
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
-	}
-
-	// Generate context files as rule-like files in .windsurf/rules/
-	allContext := allInlineContext(content)
-	for _, ctx := range allContext {
-		sanitized := sanitizeName(ctx.Name)
-		var ctxBuilder strings.Builder
-		ctxBuilder.WriteString("# ")
-		ctxBuilder.WriteString(ctx.Name)
-		ctxBuilder.WriteString("\n\n")
-		processedContent := markdown.ProcessEmbeddedContent(ctx.Content)
-		ctxBuilder.WriteString(processedContent)
-
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".windsurf", "rules", "context-"+sanitized+".md"),
-			Content: ctxBuilder.String(),
-		})
 	}
 
 	// Add .windsurf/agents directory
@@ -160,98 +143,6 @@ func (g *WindsurfPresetGenerator) renderSkillFile(skill config.ContentFile) stri
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))
-
-	return builder.String()
-}
-
-// renderTriggerFrontmatter renders Windsurf trigger frontmatter if needed
-func (g *WindsurfPresetGenerator) renderTriggerFrontmatter(builder *strings.Builder, rule config.ContentFile) {
-	if rule.Metadata == nil {
-		return
-	}
-
-	// Check if we should render trigger frontmatter
-	if !rule.Metadata.ShouldRenderTriggerFrontmatter() {
-		return
-	}
-
-	rawMode := strings.TrimSpace(rule.Metadata.Extra["trigger"])
-	mode := rule.Metadata.GetTriggerMode()
-
-	// Warn when user provided an unknown trigger mode and we fallback to manual.
-	if rawMode != "" && !config.IsValidTriggerMode(rawMode) {
-		logger.Warn(
-			"Unknown trigger mode in Windsurf rule, using default",
-			"mode", rawMode,
-			"rule", rule.Name,
-			"default", config.TriggerManual,
-		)
-		mode = config.TriggerManual
-	}
-
-	// Only render if non-default
-	if mode == config.TriggerManual {
-		desc := rule.Metadata.GetTriggerDescription()
-		glob := rule.Metadata.GetTriggerGlob()
-
-		// Still render if has extra config
-		if desc == "" && glob == "" {
-			return
-		}
-	}
-
-	builder.WriteString("---\n")
-	builder.WriteString("trigger: ")
-	builder.WriteString(mode)
-	builder.WriteString("\n")
-
-	if desc := rule.Metadata.GetTriggerDescription(); desc != "" {
-		builder.WriteString("description: ")
-		builder.WriteString(quoteWindsurfYAMLString(desc))
-		builder.WriteString("\n")
-	}
-
-	if glob := rule.Metadata.GetTriggerGlob(); glob != "" {
-		builder.WriteString("glob: ")
-		builder.WriteString(quoteWindsurfYAMLString(glob))
-		builder.WriteString("\n")
-	}
-
-	builder.WriteString("---\n\n")
-}
-
-func quoteWindsurfYAMLString(value string) string {
-	escaped := strings.ReplaceAll(value, "\\", "\\\\")
-	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
-	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
-	return "\"" + escaped + "\""
-}
-
-func (g *WindsurfPresetGenerator) renderRuleFile(rule config.ContentFile, cfg *config.Config, outputPath string, ruleCount int) string {
-	var builder strings.Builder
-
-	// Render trigger frontmatter FIRST (must be at line 1 for Windsurf)
-	g.renderTriggerFrontmatter(&builder, rule)
-
-	// Generate and add header after frontmatter
-	header := generateWindsurfPresetHeader(cfg, outputPath, ruleCount, 0, 0)
-	builder.WriteString(header)
-
-	// Add title
-	builder.WriteString("# ")
-	builder.WriteString(rule.Name)
-	builder.WriteString("\n\n")
-
-	// Add priority if present
-	if !cfg.IsCompact() && rule.Metadata != nil && rule.Metadata.Priority != "" {
-		builder.WriteString("**Priority:** ")
-		builder.WriteString(rule.Metadata.Priority)
-		builder.WriteString("\n\n")
-	}
-
-	// Add content
-	processedContent := markdown.ProcessEmbeddedContent(rule.Content)
-	builder.WriteString(processedContent)
 
 	return builder.String()
 }
@@ -305,4 +196,32 @@ func (g *WindsurfPresetGenerator) buildWindsurfAgentFrontmatter(agent config.Con
 	}
 
 	return frontmatter
+}
+
+// windsurfRuleItems routes every rule and context file to a rule file. Plan
+// keeps unscoped context inline, but Windsurf has no root file, so those
+// become always-on context files.
+func windsurfRuleItems(rules, context []config.ContentFile) (ruleItems, ctxItems []rulefiles.Item, err error) {
+	files, _, inlineCtx, err := rulefiles.Plan(rules, context, &windsurfRulesTarget, rulefiles.RoutingAll,
+		rulefiles.ScopeInfo{}, nil)
+	if err != nil {
+		return nil, nil, fmt.Errorf("plan windsurf rule files: %w", err)
+	}
+	for i := range files {
+		if files[i].Kind == rulefiles.KindContext {
+			ctxItems = append(ctxItems, files[i])
+		} else {
+			ruleItems = append(ruleItems, files[i])
+		}
+	}
+	for _, c := range inlineCtx {
+		id := rulefiles.ID(c.Name)
+		if id == "" {
+			return nil, nil, fmt.Errorf("context %q (%s) yields an empty rule file id", c.Name, c.Path)
+		}
+		ctxItems = append(ctxItems, rulefiles.Item{
+			File: c, Kind: rulefiles.KindContext, ID: id, Activation: c.Metadata.ResolveActivation(),
+		})
+	}
+	return ruleItems, ctxItems, nil
 }
