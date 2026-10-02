@@ -13,6 +13,7 @@ import (
 	"github.com/Goldziher/ai-rulez/schema"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var validateRecursive bool
@@ -26,6 +27,7 @@ schema compliance, and structural issues.`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
+		progress.SetQuiet(viper.GetBool("quiet"))
 
 		if validateRecursive {
 			if len(args) > 0 {
