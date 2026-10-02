@@ -11,6 +11,8 @@ const (
 	keyName    = "name"
 	keyPath    = "path"
 	keyType    = "type"
+	keySource  = "source"
+	keyDesc    = "description"
 	keySuccess = "success"
 )
 

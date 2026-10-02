@@ -45,13 +45,11 @@ func MigrateLocalOverlayToTOML(configDir string) (from, to string, err error) {
 		return "", "", oops.With("path", sources[0]).Wrapf(err, "convert %s to TOML", filepath.Base(sources[0]))
 	}
 	// The overlay can hold secrets, so it is written owner-only.
-	tmp := target + ".tmp"
-	if err := os.WriteFile(tmp, data, 0o600); err != nil {
-		return "", "", oops.With("path", tmp).Wrapf(err, "write %s", filepath.Base(target))
+	if err := refuseSymlink(target); err != nil {
+		return "", "", err
 	}
-	if err := os.Rename(tmp, target); err != nil {
-		_ = os.Remove(tmp) //nolint:errcheck // best-effort cleanup
-		return "", "", oops.With("path", target).Wrapf(err, "write %s", filepath.Base(target))
+	if err := writeFileAtomic(target, data, 0o600); err != nil {
+		return "", "", err
 	}
 	if err := os.Remove(sources[0]); err != nil {
 		return "", "", oops.With("path", sources[0]).Wrapf(err, "remove %s", filepath.Base(sources[0]))
