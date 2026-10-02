@@ -11,6 +11,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`[rules] mode` and `mode_by_preset`**: config for choosing `split` or `inline` rules output, globally or per preset, validated by `validate` and the JSON schema. MCP `update_config` accepts `rules_mode` and `rules_mode_by_preset`, and `read_config` returns both. The default is currently `inline` and nothing renders differently yet.
 - **Rule `activation` frontmatter**: rules and context files can set `activation` to `always`, `glob`, `auto` or `manual`. `validate` rejects unknown values, `glob` without globs, `auto` without a description and `always` together with globs, and warns when a legacy `trigger` or `alwaysApply` contradicts it. Comma-separated `paths`/`globs` such as `paths: "src/**, docs/**"` now split into separate globs (commas inside `{}`, `[]` or escaped with a backslash are kept). An `activation` key is no longer passed through as an extra frontmatter field.
 
+### Changed
+
+- **Scope shown for rules inlined into root files**: rules inlined into root files (`AGENTS.md`, `GEMINI.md`, ...) now state their path scope (`_Applies to: ..._`) or trigger description (`_When relevant: ..._`) instead of silently becoming global. `manual` rules still render as always-on and log one warning listing them.
+
 ## [4.21.0] - 2026-10-02
 
 ### Added

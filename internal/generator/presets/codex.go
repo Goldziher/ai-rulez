@@ -190,11 +190,11 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree,
 	}
 
 	// Add rules section
-	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
+	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
 	allContext := allInlineContext(content)
-	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact()}, nil)
+	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
 	renderAgentsSection(&builder, content, allAgents)
