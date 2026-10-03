@@ -84,7 +84,7 @@ func writeExcludeFallback(baseDir string, patterns []string, keep bool) error {
 	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
 		return oops.With("path", exclude).Wrapf(err, "create git info directory")
 	}
-	if err := os.WriteFile(exclude, []byte(updated), 0o644); err != nil { //nolint:gosec // git's exclude file is world-readable
+	if err := gitutil.WriteFileAtomic(exclude, []byte(updated), 0o644); err != nil {
 		return oops.With("path", exclude).Wrapf(err, "write git exclude file")
 	}
 	return nil
