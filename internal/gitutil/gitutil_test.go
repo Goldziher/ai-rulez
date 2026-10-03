@@ -174,3 +174,56 @@ func TestIgnoreRulesMirrored_RewritesWithoutTouchingOriginals(t *testing.T) {
 	require.NoError(t, readErr)
 	assert.Equal(t, "mine\n# own\nowned\n", string(data))
 }
+
+func TestIgnoreRulesMirrored_SkipsSymlinkedIgnoreFiles(t *testing.T) {
+	gitAvailable(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.MkdirAll(sub, 0o755))
+	target := filepath.Join(t.TempDir(), "elsewhere")
+	require.NoError(t, os.WriteFile(target, []byte("secret.md\n"), 0o600))
+	if err := os.Symlink(target, filepath.Join(sub, ".gitignore")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+
+	rules, err := IgnoreRulesMirrored(dir, []string{"sub/secret.md"}, nil)
+
+	require.NoError(t, err)
+	assert.False(t, rules["sub/secret.md"].Matched(), "git does not read a symlinked .gitignore, and neither does the mirror")
+}
+
+func TestIgnoreRulesMirrored_SkipsDeviceIgnoreFiles(t *testing.T) {
+	gitAvailable(t)
+	if _, err := os.Stat("/dev/zero"); err != nil {
+		t.Skip("no /dev/zero")
+	}
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	sub := filepath.Join(dir, "sub")
+	require.NoError(t, os.MkdirAll(sub, 0o755))
+	require.NoError(t, os.Symlink("/dev/zero", filepath.Join(sub, ".gitignore")))
+
+	_, err := IgnoreRulesMirrored(dir, []string{"sub/x"}, nil)
+
+	require.NoError(t, err, "a link to an endless file must neither hang nor exhaust memory")
+}
+
+func TestIgnoreRulesMirrored_SkipsOversizedIgnoreFiles(t *testing.T) {
+	gitAvailable(t)
+	old := maxIgnoreFileSize
+	maxIgnoreFileSize = 16
+	t.Cleanup(func() { maxIgnoreFileSize = old })
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("small\n"), 0o600))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "sub"), 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "sub", ".gitignore"),
+		[]byte("big-file-name-that-exceeds-the-cap\n"), 0o600))
+
+	rules, err := IgnoreRulesMirrored(dir, []string{"small", "sub/big-file-name-that-exceeds-the-cap"}, nil)
+
+	require.NoError(t, err)
+	assert.True(t, rules["small"].Ignored(), "files within the cap still count")
+	assert.False(t, rules["sub/big-file-name-that-exceeds-the-cap"].Matched())
+}
