@@ -58,8 +58,14 @@ func allPatterns(content string) map[string]bool {
 // pattern already present anywhere in the file (inside or outside the managed
 // fence) is left alone; missing ones are appended to the ai-rulez managed fence,
 // which is created when absent. The call is idempotent.
+//
+// A .gitignore that is a symbolic link is never written through (git would not
+// read it): the entries go to .git/info/exclude instead, see ReplaceViaExclude.
 func EnsureEntries(baseDir string, patterns []string) error {
 	path := filepath.Join(baseDir, ".gitignore")
+	if IsSymlink(baseDir) {
+		return ensureViaExclude(baseDir, patterns)
+	}
 	data, err := os.ReadFile(path) //nolint:gosec // project .gitignore
 	if err != nil && !os.IsNotExist(err) {
 		return oops.With("path", path).Wrapf(err, "read .gitignore")
