@@ -154,7 +154,7 @@ presets = [
   "opencode",     # → AGENTS.md, .opencode/, opencode.json (when MCP servers are set)
   "hermes",       # → .hermes.md
   "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
-  "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
+  "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio, http and sse MCP servers)
 ]
 ```
 
