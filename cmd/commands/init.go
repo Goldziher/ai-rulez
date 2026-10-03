@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/hooks"
 	"github.com/Goldziher/ai-rulez/internal/importer"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -167,6 +168,11 @@ func createStructure(projectName, configDir string) error {
 }
 
 // generateConfig generates a YAML configuration template
+// builtinPresetList names every built-in preset, for the comment in a new config.
+func builtinPresetList() string {
+	return strings.Join(config.IndividualPresetNames(), ", ")
+}
+
 func generateConfig(projectName string) string {
 	var builder strings.Builder
 
@@ -193,7 +199,9 @@ name: "`)
 	builder.WriteString(`"
 
 # Presets: built-in tools or custom outputs
-# Built-in presets: claude, cursor, windsurf, copilot, gemini, cline, continue-dev, junie, xum
+# Built-in presets: `)
+	builder.WriteString(builtinPresetList())
+	builder.WriteString(`
 presets:
   - claude
 
@@ -254,7 +262,9 @@ name = "`)
 	builder.WriteString(`"
 
 # Presets: built-in tools or custom outputs
-# Built-in presets: claude, cursor, windsurf, copilot, gemini, cline, continue-dev, junie, xum
+# Built-in presets: `)
+	builder.WriteString(builtinPresetList())
+	builder.WriteString(`
 presets = ["claude"]
 
 # Default profile to use when generating
