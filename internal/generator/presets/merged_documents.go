@@ -15,6 +15,8 @@ const (
 	aiRulezLatest = "ai-rulez@latest"
 	// keySchema is the top-level $schema key of a settings document.
 	keySchema = "$schema"
+	// keyServers is the map of MCP servers inside Xum's mcp.jsonc and OpenCode's mcp key.
+	keyServers = "servers"
 )
 
 // Base-relative paths of the JSON settings documents preset generators share with
@@ -144,9 +146,9 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		}
 		return claims
 	case MergedDocXumMCP:
-		return memberClaimsOf([]string{"servers"}, xumServers(cfg))
+		return memberClaimsOf([]string{keyServers}, xumServers(cfg))
 	case MergedDocOpencodeConfig:
-		claims := memberClaimsOf([]string{"mcp", "servers"}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
+		claims := memberClaimsOf([]string{"mcp", keyServers}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
 		claims = append(claims,
 			jsonmerge.Claim{Path: []string{opencodeInstructionsKey}, Elements: opencodeLocalEntries()},
 			jsonmerge.Claim{Path: []string{keySchema}, Equals: opencodeSchemaURL, Alone: true})
