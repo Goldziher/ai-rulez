@@ -58,6 +58,7 @@ frontend = ["frontend", "qa"]
 
 - **[CLI Reference](cli.md)**: All commands and flags
 - **[Includes System](includes.md)**: Reusing configurations across projects
+- **[AGENTS.md and .agents/skills](agents-md.md)**: The `agents_md` flag: shared `AGENTS.md` and skills, tool support, per-preset output
 - **[Local Configuration](local-overrides.md)**: Personal, gitignored machine-local content and config overlay
 - **[Installed Skills](installed-skills.md)**: Installing skills from external repositories
 - **[Poly Hooks](poly-hooks.md)**: Validate generated rules and plugins in Git hooks
