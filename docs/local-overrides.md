@@ -43,11 +43,12 @@ of git.
 ### Generated output
 
 Where a local rule or context item lands depends on the preset and the [rules mode](rules.md#rules-mode).
+Every file below is one the tool loads on its own; a `.local.md` file a tool never reads is not written.
 
 - Local rules the preset routes to rule files are written as `<rulesdir>/<id>.local<ext>`, the same
   routing shared rules use, so the tool loads them natively.
-- Everything else (local context, and rules the preset keeps inline) goes to the preset's `.local`
-  root file. A root file is written only when there is something to put in it.
+- Everything else (local context, and rules the preset keeps inline) goes to the file the tool loads for
+  machine-local instructions, listed below. It is written only when there is something to put in it.
 - Local skills, agents and commands are written per item, to the same paths as shared ones (for
   example `.claude/skills/<name>/SKILL.md`). A preset that aggregates them into a shared file, or has no
   output for them, gets none; `generate` warns once per preset.
@@ -55,22 +56,27 @@ Where a local rule or context item lands depends on the preset and the [rules mo
   one warning per preset.
 - Custom providers (`.ai-rulez/providers/`) get no local output at all.
 
-| Preset | Split mode (default) | Inline mode |
-| ------ | -------------------- | ----------- |
-| `claude` | Rules: `.claude/rules/<id>.local.md`. Context: `CLAUDE.local.md` | Path-scoped rules: `.claude/rules/<id>.local.md`. Other rules and context: `CLAUDE.local.md` |
-| `junie` | Rules: `.junie/rules/<id>.local.md`. Context: `.junie/guidelines.local.md` | Rules and context: `.junie/guidelines.local.md` |
-| `cursor` | Rules: `.cursor/rules/<id>.local.mdc`. No place for context | Same |
-| `windsurf` | Rules: `.windsurf/rules/<id>.local.md`. No place for context | Same |
-| `cline` | Rules: `.clinerules/<id>.local.md`. No place for context | Same |
-| `continue-dev` | Rules: `.continue/rules/<id>.local.md`. No place for context | Same |
-| `copilot` | Routed rules: `.github/instructions/<id>.local.instructions.md`. Rules Copilot keeps inline (`auto`, `manual`, negated-only globs) and context: `.github/instructions/ai-rulez.local.instructions.md` (`applyTo: "**"`) | Same routing as shared rules; the remainder goes to `ai-rulez.local.instructions.md` |
-| `antigravity` | Rules: `.agents/rules/<id>.local.md`; they stay in `GEMINI.local.md` instead when `gemini` is also enabled and `mode_by_preset` does not set the mode. Context: `GEMINI.local.md` | Path-scoped rules: `.agents/rules/<id>.local.md`. Other rules and context: `GEMINI.local.md` |
-| `gemini` | Rules and context: `GEMINI.local.md` | Same |
-| `codex`, `opencode`, `amp`, `xum` | Rules and context: `AGENTS.local.md` (one shared file) | Same |
-| `hermes` | Rules and context: `.hermes.local.md` | Same |
+| Preset | Split mode (default) | Inline mode | Loaded by |
+| ------ | -------------------- | ----------- | --------- |
+| `claude` | Rules: `.claude/rules/<id>.local.md`. Context: `CLAUDE.local.md` | Path-scoped rules: `.claude/rules/<id>.local.md`. Other rules and context: `CLAUDE.local.md` | Claude Code reads `CLAUDE.local.md` after `CLAUDE.md` and the rules folder natively |
+| `junie` | Rules: `.junie/rules/<id>.local.md`. Context: `.junie/rules/ai-rulez.local.md` | Rules and context: `.junie/rules/ai-rulez.local.md` | Junie loads every `.junie/rules/*.md` (when there is no `.junie/AGENTS.md`) |
+| `cursor` | Rules: `.cursor/rules/<id>.local.mdc`. No place for context | Same | Cursor loads its rules folder |
+| `windsurf` | Rules: `.windsurf/rules/<id>.local.md`. No place for context | Same | Windsurf loads its rules folder |
+| `cline` | Rules: `.clinerules/<id>.local.md`. No place for context | Same | Cline loads its rules folder |
+| `continue-dev` | Rules: `.continue/rules/<id>.local.md`. No place for context | Same | Continue loads its rules folder |
+| `copilot` | Routed rules: `.github/instructions/<id>.local.instructions.md`. Rules Copilot keeps inline (`auto`, `manual`, negated-only globs) and context: `.github/instructions/ai-rulez.local.instructions.md` (`applyTo: "**"`) | Same routing as shared rules; the remainder goes to `ai-rulez.local.instructions.md` | Copilot loads path-specific instructions files |
+| `antigravity` | Rules: `.agents/rules/<id>.local.md`. Context: `.agents/rules/ai-rulez.local.md` (`trigger: always_on`) | Path-scoped rules: `.agents/rules/<id>.local.md`. Other rules and context: `.agents/rules/ai-rulez.local.md`. With `gemini` also enabled and no explicit `mode_by_preset`, all rules stay in `ai-rulez.local.md` | Antigravity loads every `.agents/rules/*.md` with a `trigger`; it never reads `GEMINI.local.md` |
+| `gemini` | Rules and context: `GEMINI.local.md` | Same | Gemini CLI loads it because `.gemini/settings.json` `context.fileName` lists it (written whether or not local content exists) |
+| `opencode` | Rules and context: `AGENTS.local.md` | Same | OpenCode loads it because `opencode.json` `instructions` lists it (written whether or not local content exists) |
+| `xum` | Rules and context: `AGENTS.local.md` (shared with `opencode`) | Same | xum appends `AGENTS.local.md` to `AGENTS.md` |
+| `codex` | Rules and context: `AGENTS.override.md` (root only) | Same | Codex loads `AGENTS.override.md` instead of `AGENTS.md` in the same directory, so the file repeats the shared `AGENTS.md` and appends the local sections |
+| `hermes` | With `agents_md`: `AGENTS.override.md`, as for Codex. Without it: nothing written, one warning | Same | Hermes loads `AGENTS.override.md` instead of `AGENTS.md` in the AGENTS chain; `.hermes.md` (without `agents_md`) beats the chain and has no local counterpart |
+| `amp` | Nothing written, one warning | Same | Amp has no project-local file; put personal guidance in `~/.config/amp/AGENTS.md` |
 
-The `.local` variant of a single-file root is `<root>` with `.local` before the extension. Duplicate
-paths collapse, which is why four presets share one `AGENTS.local.md`.
+`AGENTS.override.md` is generated, git-ignored and listed in the local manifest, so it is removed when the local
+content goes away. Do not edit it: it replaces `AGENTS.md` for those tools and is rebuilt from `AGENTS.md` on every
+`generate`. A local rule named `ai-rulez` would map to the same path as the generated `ai-rulez.local.*` root file of
+`junie`, `antigravity` and `copilot`, so it is written as `ai-rulez-<hash>.local<ext>` instead.
 
 ### Bookkeeping
 
@@ -94,6 +100,9 @@ paths collapse, which is why four presets share one `AGENTS.local.md`.
   through the local manifest.
 - **Permissions.** Generated files that contain a resolved MCP secret are written `0600`, whichever
   preset produced them. The overlay itself is written `0600`.
+- **Files from earlier versions.** `AGENTS.local.md` (codex and amp only setups), `.hermes.local.md`,
+  `.junie/guidelines.local.md` and Antigravity's `GEMINI.local.md` were never read by their tools. The first
+  `generate` after upgrading removes them through the local manifest.
 - **Reserved names.** `*.local.*` in a rules folder is reserved. A hand-written file with such a name is
   skipped with a warning.
 
