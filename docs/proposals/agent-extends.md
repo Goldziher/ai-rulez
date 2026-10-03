@@ -1,6 +1,12 @@
 # Proposal: `extends` — customize an inherited/builtin agent by appending a message
 
-Status: proposed (design handoff)
+!!! note "Historical"
+    This is the original design proposal. `extends` has shipped, and the shipped behavior differs from
+    parts of this draft (for example, an `extends` whose base agent cannot be found degrades to a plain
+    agent with a warning). The current behavior is documented in
+    [Extending Agents](../configuration.md#extending-agents).
+
+Status: implemented (kept for history)
 Motivation: eliminate agent-definition duplication and a confirmed silent-override bug.
 
 ## Problem

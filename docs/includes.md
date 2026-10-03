@@ -330,14 +330,30 @@ generate:
 - **`ref`**: (Git only) Branch, tag, or commit SHA. Defaults to the remote's default branch (`HEAD`), not necessarily `main`.
 - **`include`**: List of content types to fetch: `rules`, `context`, `skills`, `agents`, `commands`. MCP servers are not importable from an include.
 - **`install_to`**: (Optional) Import the included content into a specific domain instead of the root.
-- **`local_override`**: (Optional) Path or content that overrides the include when present.
+- **`local_override`**: (Optional) A local path used **instead of** `source` (for example a checkout you are developing). It is resolved against the project directory, and `path` is appended to it. If the directory does not exist, the include is skipped silently (an info line is logged); the remote source is not used as a fallback.
 - **`merge_strategy`**: How to handle conflicts:
   - `local-override`: local content takes precedence (default)
   - `include-override`: the included content takes precedence
   - `error`: fail generation on a conflict
 
-Each include carries its own strategy, and no include may reference another include. Domains from an
+Each include carries its own strategy. Includes are not recursive: an include contributes its own
+content, and any `includes` declared in the included configuration are ignored. Domains from an
 include are always carried over; `include` filters content kinds, not domains.
+
+An include that cannot be created, fetched or merged is logged as a warning and skipped; the other
+includes and your own content are still generated. Run `ai-rulez validate --verbose` to see the
+warning.
+
+### Machine-local includes and offline runs
+
+- `ai-rulez include add <name> <source> --local` (and the MCP `add_include` with `local: true`) writes
+  the include to your gitignored `config.local.*` overlay instead of the shared config, so a personal
+  checkout can be included without affecting teammates. Overlay includes merge by name with the shared
+  list; `remove = true` hides a shared include on your machine. See
+  [Local Configuration](local-overrides.md).
+- `ai-rulez generate --no-fetch` skips network fetches and uses cached content for remote includes.
+  CRUD commands that validate a change (including the `--local` ones) read remote includes from cache
+  only.
 
 ## Include Priority
 
@@ -387,7 +403,8 @@ org-standards/
 ```toml
 [[includes]]
 name = "standards"
-source = "https://github.com/myorg/standards/.ai-rulez"
+source = "https://github.com/myorg/standards.git"
+path = ".ai-rulez"
 ```
 
 ### Framework-Specific Rules
@@ -466,32 +483,20 @@ presets = ["claude", "cursor"]
 default = []
 ```
 
-## Multi-Level Hierarchy
+## Flat Composition
 
-Includes can themselves include other includes:
-
-**hierarchy:**
+Includes do not nest. To combine several layers, list each one in the project's own `includes`:
 
 ```text
-org-base/
-├── rules/
-│   └── security.md
-└── .ai-rulez/config.toml
-
-go-framework/
-└── .ai-rulez/config.toml        # [[includes]] source = "../org-base/.ai-rulez"
-
-my-project/
-└── .ai-rulez/config.toml        # [[includes]] source = "../go-framework/.ai-rulez"
-                                 # [[includes]] source = "../team-standards/.ai-rulez"
+org-base/.ai-rulez/       rules/security.md
+go-framework/.ai-rulez/   rules/testing.md
+team-standards/.ai-rulez/ rules/review.md
+my-project/.ai-rulez/     config.toml with one [[includes]] entry per directory above
 ```
 
-When you generate from `my-project`, it loads:
-
-1. `org-base` rules (base layer)
-2. `go-framework` rules (framework-specific)
-3. `team-standards` rules (team-specific)
-4. `my-project` rules (project-specific)
+An `includes` list inside `go-framework`'s own `config.toml` is ignored when `my-project` includes it,
+so `org-base` must be listed in `my-project` too. Includes fold in declaration order (see
+[Include Priority](#include-priority)).
 
 ## Collision Handling
 
@@ -506,16 +511,13 @@ my-project/.ai-rulez/rules/testing.md
 Under the default `local-override` strategy the earliest source wins, and your own content beats every
 include:
 
-1. `my-project/rules/testing.md` (local content, highest priority)
+1. `my-project/rules/testing.md` (your project content, highest priority)
 2. `shared-rules/rules/testing.md` (first include becomes part of the base)
 3. `go-framework/rules/testing.md` (only wins if it sets `merge_strategy = "include-override"`)
 
-A collision is reported while resolving:
-
-```text
-Content collision: rules/testing.md found in multiple includes
-    → Using: my-project/.ai-rulez/rules/testing.md
-```
+The losing copy is dropped; `generate` and `validate` log a `Duplicate rule collapsed` warning naming
+the kept and dropped paths (see [Deduplication by Name](configuration.md#deduplication-by-name)). With
+`merge_strategy = "error"`, the conflict fails generation instead.
 
 ## Best Practices
 
@@ -605,17 +607,15 @@ name = "shared"
 source = "/path/to/shared-rules/.ai-rulez"
 ```
 
-### Circular Includes
+### Include Skipped or Nested Includes Ignored
 
-If `a` includes `b`, and `b` includes `a`:
+Includes are not recursive, so a cycle between two shared configurations cannot occur. The resolver
+only guards against a repeated include name in one list and reports it as
+`circular dependency detected: <name>`; give every include a unique name.
 
-```bash
-# Error: Circular include detected
-#   a -> b -> a
-
-# Solution: Restructure to avoid cycles
-# Create a base layer that both include from
-```
+If an include's content is missing from the output, run `ai-rulez validate --verbose`: a failed
+include is logged as `Failed to process include` and skipped, and a `local_override` path that does not
+exist skips the include silently.
 
 ### Conflicting Rules
 

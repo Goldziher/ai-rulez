@@ -53,7 +53,9 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`presets`**: List of tool presets (e.g., `claude`, `cursor`, `gemini`)
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
-- **`scopes`**: Additional scoped output roots (subfolder `AGENTS.md`/`CLAUDE.md`)
+- **`schema`** (`$schema` in YAML/JSON): URL of the JSON Schema, for editor support. TOML configs use the key `schema`
+- **`rules`**: Rules output mode (`mode`, `mode_by_preset`; see [Rules](rules.md#rules-mode))
+- **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to update .gitignore with generated output patterns (default: true)
 - **`includes`**: External content sources to merge
 - **`installed_skills`**: Skills to install from external repositories
@@ -73,9 +75,12 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`version`**: Must be `"4.0"` or `"3.0"`
 - **`name`**: Non-empty string
 - **`priority`** (in markdown frontmatter): One of `critical`, `high`, `medium`, `low`, `minimal`
-- **`targets`** (in markdown frontmatter): File glob patterns (e.g., `CLAUDE.md`, `.cursor/rules/*`)
+- **`targets`** (in markdown frontmatter): Selects output files, as preset names (`claude`), root files (`CLAUDE.md`), paths or base names, directory prefixes (`.cursor/rules/`), globs (`.cursor/rules/*`), or `*`. See [Targets](rules.md#targets)
 - **`mcp_servers[].name`**: Unique identifier for each server
+- **`mcp_servers[].description`**: Human-readable description
 - **`mcp_servers[].command`**: Command to execute for local `stdio` servers (npx, uvx, ai-rulez, etc.)
+- **`mcp_servers[].args`**: Command arguments for local servers
+- **`mcp_servers[].profiles`**: Restrict the server to the named profiles
 - **`mcp_servers[].transport`**: `stdio`, `http`, or `sse` (default: `stdio`)
 - **`mcp_servers[].url`**: Remote MCP URL for `http` or `sse` transports
 - **`mcp_servers[].headers`**: HTTP headers for `http`/`sse` servers; values may contain `${VAR}` placeholders resolved by `generate`
@@ -125,11 +130,19 @@ The schema files are available in the repository:
 | --------------------------------- | ----------- | ------- | --------------------------------------------------- |
 | `schema/ai-rules.schema.json`     | JSON Schema | V4/V3   | Config schema; accepts `version` `"4.0"` and `"3.0"` |
 | `schema/ai-rules-mcp.schema.json` | JSON Schema | V4      | Standalone schema for MCP server configurations      |
+| `schema/ai-rules-local.schema.json` | JSON Schema | V4    | Machine-local `config.local.*` overlay; used by `validate`, `local set` and the MCP `validate_config` tool |
+| `schema/provider.schema.json`     | JSON Schema | V4      | Declarative provider spec referenced by `[[presets]] provider = "..."`; see [Provider-backed Presets](configuration.md#provider-backed-presets-full-parity) |
 
 Access them at (versioned to the release; `main` is the tip):
 
 - Main schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules.schema.json`
 - MCP schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-mcp.schema.json`
+- Local overlay schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/ai-rules-local.schema.json`
+- Provider schema: `https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/provider.schema.json`
+
+The local overlay schema accepts the same keys as the main schema without the requirement that
+`version` and `name` be present, and adds the overlay-only markers (`remove = true` on named-list
+entries, `"!name"` in `presets`). See [Local Configuration](local-overrides.md#config-overlay).
 
 ---
 

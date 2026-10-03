@@ -11,9 +11,10 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 - **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
 - **Commands**: Add/edit `.ai-rulez/commands/{name}.md` (flat form) or `.ai-rulez/commands/{name}/COMMAND.md` (directory form with optional `references/` subdirectory)
-- **Agents**: Add/edit `.ai-rulez/agents/*.md` files (there is no `add agent` command; agents are edited as files)
+- **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent` (`add command` likewise creates commands)
 - **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands}/*.md` files or use `ai-rulez domain add`
 - **MCP Servers**: Inline in `.ai-rulez/config.toml` (no separate mcp.yaml file)
+- **Machine-local configuration**: Personal content under `.ai-rulez/local/` and a `config.local.*` overlay, both gitignored. See [Local overlay](#local-overlay)
 
 You can either directly edit files with your editor or use CRUD commands for programmatic modification. After changes, run `ai-rulez generate` to create tool-specific outputs.
 
@@ -140,22 +141,27 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 
 ```toml
 presets = [
-  "claude",       # → CLAUDE.md, .claude/, and .claude/rules/ (path-scoped rules)
+  "claude",       # → CLAUDE.md, .claude/ (rules/, skills/, agents/)
   "cursor",       # → .cursor/rules/, .cursor/commands/, .agents/
   "gemini",       # → GEMINI.md, .gemini/, .agents/
-  "copilot",      # → .github/copilot-instructions.md, .github/{skills,agents,commands}/
+  "copilot",      # → .github/copilot-instructions.md, .github/instructions/, .github/{skills,agents,commands}/
   "windsurf",     # → .windsurf/
   "continue-dev", # → .continue/
   "cline",        # → .clinerules/, .cline/
   "codex",        # → AGENTS.md and .codex/
   "amp",          # → AGENTS.md and .agents/ (.amp/settings.json when an effort resolves)
-  "junie",        # → .junie/
+  "junie",        # → .junie/ (guidelines.md, rules/, skills/, agents/)
   "opencode",     # → AGENTS.md, .opencode/, opencode.json (when MCP servers are set)
   "hermes",       # → .hermes.md
-  "antigravity",  # → .agents/, GEMINI.md
+  "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
   "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
 ]
 ```
+
+With the default `[rules] mode = "split"`, rules are written to each tool's native rules folder
+(`.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `.junie/rules/`, `.agents/rules/`, and so
+on) and the root file keeps context and the agent roster. See [Rules](rules.md#rules-mode) for what each
+preset writes in each mode.
 
 `mcp` is a built-in preset too, but it is a shared utility: it writes the generic `.mcp.json` and is
 invoked automatically when MCP servers are configured, so you normally do not name it. It is the only
@@ -221,6 +227,38 @@ emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
 provider-backed presets use the inline-table form shown above. TOML, YAML, and
 JSON configs all accept both.
+
+##### Split rule files in a provider spec
+
+A provider can honour the `[rules] mode` setting like the built-in `claude` and `junie` presets by
+adding a `split` rules output:
+
+```toml
+[root]
+file = "MY_TOOL.md"
+sections = ["title", "rules_inline", "context_inline"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".my-tool/rules"
+filename = "{id}.md"
+split = true
+dialect = "claude"          # claude | cursor | trigger | copilot | cline | continue | junie
+inline_filter = "path_scoped"
+```
+
+| Field           | Description |
+| --------------- | ----------- |
+| `split`         | When `true`, the output follows `[rules] mode`: split mode writes every rule (and path-scoped context item) to a file, inline mode writes only the items `inline_filter` selects |
+| `dialect`       | Required with `split`. The frontmatter vocabulary of the rule files; cannot be combined with `body` or `frontmatter` |
+| `inline_filter` | Optional, `path_scoped` only. Items that still get a file in inline mode; omit to keep everything inline |
+| `dir`           | Required with `split`: a relative path inside the project |
+| `filename`      | Flat `{id}<ext>` template, no `/` |
+
+`split` also requires `rules_inline` in `root.sections` and cannot be combined with `filter`. The
+folder is treated like the built-in rules folders: hand-written files are never overwritten, hashes go
+in the banner, and generated files are gitignored one by one. A provider without `split` inlines all
+rules in its root file. Custom providers get no [local](local-overrides.md) output.
 
 ### `default`
 
@@ -312,9 +350,15 @@ When `true`, ai-rulez adds the specific generated files and owned subdirectories
 ai-rulez ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
 and `.github/skills/` without ignoring all of `.github/`.
 
-Machine-local override outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`) and their
-`.ai-rulez/local/` source tree are **always** gitignored, even when `gitignore = false`. See
-[Local Overrides](local-overrides.md).
+Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`: the
+`*.local.*` outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `<rulesdir>/*.local.*`,
+`.github/instructions/ai-rulez.local.instructions.md`), the `.ai-rulez/local/` source tree, the
+`config.local.*` overlay with its `.config.local.*` lock and temp files, and
+`.ai-rulez/.generated-manifest.local.json`. Overlay-derived outputs whose names differ per machine are
+excluded through `.git/info/exclude` instead. See [Local Configuration](local-overrides.md).
+
+`gitignore` defaults to `true`, so generated files are normally not committed; set it to `false` when
+the team commits generated output.
 
 ### `compact`
 
@@ -619,7 +663,8 @@ Run `ai-rulez builtins list` to see all available domains.
 #### What Builtins Provide
 
 **Universal builtins** carry opinionated content for their domain, split between always-on rules
-(inlined into `CLAUDE.md`) and on-demand skills (loaded only when relevant):
+(under the default split mode, written to `.claude/rules/*.md`; with `[rules] mode = "inline"`,
+inlined into `CLAUDE.md`) and on-demand skills (loaded only when relevant):
 
 - `ai-governance` — rules: read-before-write, minimal changes, verification before completion, systematic debugging, agent workflow, communication style, no AI signatures, explain reasoning
 - `security` — rules: input validation, secrets handling, least privilege. Skills: `owasp-quick-reference`, `dependency-awareness` (with per-language audit tool recommendations)
@@ -656,8 +701,8 @@ Run `ai-rulez builtins list` to see all available domains.
 
 #### Builtins as On-Demand Agent Skills
 
-Convention-heavy builtins no longer inline their content into `CLAUDE.md` (and the other always-loaded
-root files). Instead they emit as **Agent Skills** — `.claude/skills/<id>/SKILL.md` files with YAML
+Convention-heavy builtins no longer put their content into `CLAUDE.md`, `.claude/rules/` (or the other
+always-loaded surfaces). Instead they emit as **Agent Skills** — `.claude/skills/<id>/SKILL.md` files with YAML
 `name:` / `description:` frontmatter — that the assistant loads on demand only when the work is
 relevant. This keeps the always-loaded governance file small while still shipping the full
 conventions.
@@ -693,7 +738,8 @@ Builtins have the **lowest** priority. Content is merged in this order:
 
 1. **Builtins** (lowest) — embedded in binary
 2. **Includes** — from git repos or local paths
-3. **Local content** (highest) — in your `.ai-rulez/` directory
+3. **Project content** (highest) — in your `.ai-rulez/` directory (not to be confused with
+   machine-local content under `.ai-rulez/local/`, see [Local overlay](#local-overlay))
 
 If a local domain has the same name as a builtin, the local domain is used and the builtin is skipped entirely.
 
@@ -1042,6 +1088,27 @@ Each entry supports:
 
 Manage via CLI: `ai-rulez skill install/remove/list`.
 
+## Local overlay
+
+A `config.local.{toml,yaml,yml,json}` file beside `config.toml` is a machine-local, gitignored overlay
+that is merged onto this configuration in memory at load time. Use it for personal presets, profiles,
+MCP servers and secrets. It accepts the same keys as `config.toml` (it is validated against
+`schema/ai-rules-local.schema.json`; see [Schema Reference](schema.md)) and merges as follows: scalars
+and lists are replaced by the local value, tables merge per key, `presets` is an ordered union where
+`"!name"` drops a shared preset, and the named lists (`mcp_servers`, `plugins`, `includes`,
+`installed_skills`, `marketplaces`, `scopes`) merge by name, with `remove = true` deleting a shared
+entry. Unknown keys, a mismatched `version` and more than one overlay file are errors, and plugin
+bundles (`generate --plugin`) ignore the overlay.
+
+```toml
+# .ai-rulez/config.local.toml
+presets = ["codex", "!cursor"]
+```
+
+The full merge table, the `ai-rulez local` commands, `--local` content under `.ai-rulez/local/` and
+the drift guard are documented in [Local Configuration](local-overrides.md), which is the single
+source of truth for this feature.
+
 ## Directory Structure
 
 ### Root Content (Always Included)
@@ -1119,8 +1186,8 @@ All `.md` files are treated as content. Optional YAML frontmatter is supported:
 ---
 priority: high
 targets:
-  - "*.py"
-  - "backend/*"
+  - claude
+  - ".cursor/rules/"
 custom_field: value
 ---
 
@@ -1146,7 +1213,7 @@ priority: critical
 
 **`targets`** (optional, array of strings)
 
-- Selects which generated outputs include this content: preset names, root files, file paths or base
+- Selects which generated **outputs** include this content (not which source files it applies to; use `globs` / `paths` for that): preset names, root files, file paths or base
   names, directory prefixes (`.cursor/rules/`), globs, or `*`. Applies to rules-folder files and root files.
 - If empty, included in all outputs
 - See [Targets](rules.md#targets) for the match rules
@@ -1338,7 +1405,7 @@ copy the whole agent — **extend** it.
 
 Same-named agents resolve deterministically by layer, highest precedence first:
 
-1. **Local** — agents under your `.ai-rulez/agents/`
+1. **Project** — agents under your `.ai-rulez/agents/`
 2. **Include** — agents pulled in from external includes
 3. **Builtin** — agents shipped with ai-rulez builtin domains
 
@@ -1383,9 +1450,9 @@ When documenting the public API, include a runnable example in every supported l
 `extends: <name>` binds to the same-named (or explicitly named) agent resolved from the layers **below**
 the current one:
 
-- A **local** agent extends an **include** or **builtin** agent.
+- A **project** agent extends an **include** or **builtin** agent.
 - An **include** agent extends a **builtin** agent.
-- Chains compose in resolution order (builtin → include → local), across as many layers as extend one
+- Chains compose in resolution order (builtin → include → project), across as many layers as extend one
   another.
 
 If no lower-layer agent of that name exists, the agent degrades to a plain agent (your body only) with
@@ -1571,6 +1638,7 @@ The structural checks cover:
 - Profile references resolve (a missing domain is a warning, not a failure)
 - File paths are valid
 - MCP server definitions are well-formed
+- A `config.local.*` overlay, if present, passes `schema/ai-rules-local.schema.json` and merges into a valid config (`--no-local` skips this)
 
 ## Programmatic Modification with CRUD Operations
 
@@ -1606,7 +1674,9 @@ When you create a domain with `ai-rulez domain add`, the following structure is 
 .ai-rulez/domains/my-domain/
 ├── rules/           # Domain-specific rules
 ├── context/         # Domain-specific documentation
-└── skills/          # Domain-specific AI skills
+├── skills/          # Domain-specific AI skills
+├── agents/          # Domain-specific agents
+└── commands/        # Domain-specific commands
 ```
 
 This mirrors the root structure and allows you to organize content by ownership.
@@ -1628,17 +1698,26 @@ ai-rulez domain list                 # List all domains
 ai-rulez add rule <name>             # Create a rule
 ai-rulez add context <name>          # Create context
 ai-rulez add skill <name>            # Create a skill
+ai-rulez add agent <name>            # Create an agent
+ai-rulez add command <name>          # Create a command
 
 # Remove content
 ai-rulez remove rule <name>          # Delete a rule
 ai-rulez remove context <name>       # Delete context
 ai-rulez remove skill <name>         # Delete a skill
+ai-rulez remove agent <name>         # Delete an agent
+ai-rulez remove command <name>       # Delete a command
 
 # List content
 ai-rulez list rules                  # List all rules
 ai-rulez list context                # List all context
 ai-rulez list skills                 # List all skills
+ai-rulez list agents                 # List all agents
+ai-rulez list commands               # List all commands
 ```
+
+Add `--local` to any `add`, `remove` or `list` command to work on the machine-local tree
+`.ai-rulez/local/` instead (see [Local Configuration](local-overrides.md)).
 
 **Include Management:**
 
@@ -1656,6 +1735,9 @@ ai-rulez profile remove <name>             # Delete a profile
 ai-rulez profile set-default <name>        # Set default profile
 ai-rulez profile list                      # List all profiles
 ```
+
+`include add|remove`, `skill install|remove` and `profile add|remove|set-default` also take `--local`,
+which writes to the `config.local.*` overlay.
 
 ### Frontmatter Generation
 
@@ -1683,7 +1765,7 @@ ai-rulez add rule my-rule --priority high --targets claude,cursor
 3. **Organize by domain**: Put domain-specific rules in `domains/name/` directories
 4. **Validate after changes**: Run `ai-rulez validate` to check configuration
 5. **Regenerate after changes**: Run `ai-rulez generate` to create tool-specific outputs
-6. **Commit both sources and outputs**: Version control both `.ai-rulez/` and generated files
+6. **Commit sources, and outputs only if you set `gitignore = false`**: `gitignore` defaults to `true`, so generated files are normally ignored; commit `.ai-rulez/` always, and generated files only when the team chooses to version them
 
 ### Programmatic Workflow Example
 
@@ -1706,8 +1788,8 @@ ai-rulez validate
 # Generate
 ai-rulez generate
 
-# Commit
-git add .ai-rulez/ CLAUDE.md .cursor/
+# Commit (add generated files too only if gitignore = false)
+git add .ai-rulez/
 git commit -m "chore: add backend domain with database standards"
 ```
 
