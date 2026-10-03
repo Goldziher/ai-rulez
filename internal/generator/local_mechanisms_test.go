@@ -426,3 +426,40 @@ func TestLocalRoot_MigratesFilesWrittenBy4_23_0(t *testing.T) {
 		})
 	}
 }
+
+// The files that carry the local mechanisms (settings.json, opencode.json, the
+// rules folders) are static: a machine with local content and one without produce
+// identical committed outputs, whichever flag state.
+func TestLocalMechanisms_CommittedOutputsIgnoreLocalContent(t *testing.T) {
+	presets := strings.Join([]string{
+		`"gemini"`, `"opencode"`, `"codex"`, `"junie"`, `"antigravity"`, `"copilot"`, `"claude"`, `"amp"`, `"hermes"`, `"xum"`,
+	}, ", ")
+	for _, flag := range []string{"", "agents_md = true\n"} {
+		t.Run("flag "+strings.TrimSpace(flag), func(t *testing.T) {
+			// Arrange
+			cfgText := flag + strings.Replace(localContentConfig, `"%s"`, presets, 1)
+			withLocal := localContentProject(t, "claude")
+			seedLocalFile(t, filepath.Join(withLocal, ".ai-rulez", "config.toml"), cfgText)
+			without := t.TempDir()
+			seedLocalFile(t, filepath.Join(without, ".ai-rulez", "config.toml"), cfgText)
+			seedLocalFile(t, filepath.Join(without, ".ai-rulez", "rules", "shared.md"), "---\npriority: high\n---\n\nShared body.\n")
+
+			// Act
+			generateLocalIn(t, withLocal, "")
+			generateLocalIn(t, without, "")
+
+			// Assert
+			mine, theirs := treeSnapshot(t, withLocal), treeSnapshot(t, without)
+			for rel, content := range theirs {
+				if rel != ".gitignore" {
+					assert.Equal(t, content, mine[rel], rel)
+				}
+			}
+			for _, rel := range []string{".gemini/settings.json", "opencode.json"} {
+				assert.Contains(t, theirs, rel, "written without local content")
+			}
+			assert.Equal(t, readRel(t, without, ".ai-rulez/.generated-manifest.json"),
+				readRel(t, withLocal, ".ai-rulez/.generated-manifest.json"))
+		})
+	}
+}
