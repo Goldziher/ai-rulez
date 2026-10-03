@@ -3,11 +3,13 @@ package presets
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"gopkg.in/yaml.v3"
 )
 
@@ -31,7 +33,7 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".cursor", "commands"),
 		filepath.Join(baseDir, ".agents"),
 		filepath.Join(baseDir, ".agents", "skills"),
-		filepath.Join(baseDir, ".agents", "agents"),
+		filepath.Join(baseDir, ".cursor", "agents"),
 	}
 }
 
@@ -57,7 +59,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			IsDir: true,
 		},
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".agents", "agents"),
+			Path:  filepath.Join(baseDir, ".cursor", "agents"),
 			IsDir: true,
 		},
 	)
@@ -118,7 +120,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
-	// Generate agent files to .agents/agents/
+	// Generate agent files to .cursor/agents/ (Cursor does not read .agents/agents)
 	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
@@ -128,7 +130,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		}
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".cursor", "agents", agentID+".md"),
 			Content: agentContent,
 		})
 	}
@@ -328,11 +330,21 @@ func (g *CursorPresetGenerator) buildCursorAgentFrontmatter(agent config.Content
 		return frontmatter
 	}
 
-	cursorFields := []string{keyDescription, "readonly", "is_background"}
-	for _, field := range cursorFields {
-		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
-			frontmatter[field] = val
+	if val := agent.Metadata.Extra[keyDescription]; val != "" {
+		frontmatter[keyDescription] = val
+	}
+	// Cursor documents readonly and is_background as booleans.
+	for _, field := range []string{"readonly", "is_background"} {
+		raw := agent.Metadata.Extra[field]
+		if raw == "" {
+			continue
 		}
+		flag, err := strconv.ParseBool(raw)
+		if err != nil {
+			logger.Warn("Cursor agent field "+field+" must be true or false; omitting it", "agent", agent.Name, "value", raw)
+			continue
+		}
+		frontmatter[field] = flag
 	}
 
 	return frontmatter
