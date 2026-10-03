@@ -1,10 +1,15 @@
 package rulefiles
 
 import (
+	"crypto/sha1" //nolint:gosec // not security relevant: a stable short name
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"path"
+	"path/filepath"
+	"sort"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/samber/oops"
@@ -47,6 +52,7 @@ type ScopeInfo struct {
 // one with NewRegistry or RegistryFor.
 type Registry struct {
 	claims *config.PathClaims
+	root   string // config directory; sources are hashed relative to it so ids do not depend on the checkout
 }
 
 // NewRegistry returns an empty Registry.
@@ -54,24 +60,157 @@ func NewRegistry() *Registry {
 	return &Registry{claims: config.NewPathClaims()}
 }
 
-func (r *Registry) claim(t Target, it Item) error {
-	name := FileName(t, it)
-	owner := it.File.Path
-	if owner == "" {
-		owner = it.File.Name
+// NewRegistryFor returns an empty Registry for plans that do not share claims
+// with a generation (machine-local rules). cfg only supplies the config
+// directory that disambiguation suffixes are computed relative to.
+func NewRegistryFor(cfg *config.Config) *Registry {
+	r := NewRegistry()
+	if cfg != nil {
+		r.root = cfg.ConfigDir
 	}
-	if prev, ok := r.claims.Claim(path.Join(t.Dir, name), owner); !ok {
-		return oops.With("file", name, "preset", t.Preset).
-			Hint("rename one of the two sources so they map to different file names").
-			Errorf("rule files collide on %q: %s and %s", name, prev, owner)
+	return r
+}
+
+// source is the machine-independent identity of the file an item comes from.
+// It is both the sort key that decides which colliding item keeps the plain
+// name and the input of the suffix hash, so it must read the same on every
+// machine. See logicalSource.
+func (r *Registry) source(it Item) string {
+	if it.File.Path == "" {
+		return it.File.Name
+	}
+	return logicalSource(r.root, it.File.Path)
+}
+
+// logicalSource maps a content file path to an identity that does not depend on
+// the checkout location, the user's home directory or the operating system:
+//   - under the config directory: the slash-separated path relative to it
+//     ("rules/api.md", "domains/web/rules/x.md"), also when one of the two
+//     paths is relative;
+//   - from an include (cached under ".../ai-rulez/includes/<name>/..."): "include:<name>/<path below its .ai-rulez/>";
+//   - any other out-of-tree path: "include:<path below the last .ai-rulez/>", or
+//     its last two segments when there is no such directory.
+//
+// A relative path with no config dir to compare against is returned as given
+// (slashes normalized), it is already location-independent.
+func logicalSource(root, owner string) string {
+	if root != "" {
+		if rel, ok := relUnder(root, owner); ok {
+			return rel
+		}
+	}
+	norm := strings.ReplaceAll(owner, "\\", "/")
+	if len(norm) >= 2 && norm[1] == ':' && (norm[0]|0x20) >= 'a' && (norm[0]|0x20) <= 'z' {
+		norm = norm[2:] // drive letter
+	}
+	if !strings.HasPrefix(norm, "/") && root == "" {
+		return path.Clean(norm)
+	}
+	return outOfTreeIdentity(strings.FieldsFunc(norm, func(r rune) bool { return r == '/' }))
+}
+
+// outOfTreeIdentity is the include identity of a path outside the config dir,
+// given its segments.
+func outOfTreeIdentity(parts []string) string {
+	last := func(name string, from int) int {
+		for i := len(parts) - 1; i >= from; i-- {
+			if parts[i] == name {
+				return i
+			}
+		}
+		return -1
+	}
+	tail := func(from int) string { return strings.Join(parts[from:], "/") }
+	if i := last("includes", 1); i > 0 && i+1 < len(parts) && parts[i-1] == "ai-rulez" {
+		rest := i + 2
+		if j := last(".ai-rulez", i+2); j >= 0 {
+			rest = j + 1
+		}
+		return "include:" + parts[i+1] + "/" + tail(rest)
+	}
+	if i := last(".ai-rulez", 0); i >= 0 && i+1 < len(parts) {
+		return "include:" + tail(i+1)
+	}
+	return "include:" + tail(max(len(parts)-2, 0))
+}
+
+// relUnder returns target relative to root, in slash form, when target lies
+// inside root. Either path may be relative; both are made absolute first.
+func relUnder(root, target string) (string, bool) {
+	absRoot, err1 := filepath.Abs(root)
+	absTarget, err2 := filepath.Abs(target)
+	if err1 != nil || err2 != nil {
+		return "", false
+	}
+	rel, err := filepath.Rel(absRoot, absTarget)
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return "", false
+	}
+	return filepath.ToSlash(rel), true
+}
+
+// disambiguate renames an item whose file name is taken: "<id>-<first 6 hex of
+// sha1(source)>".
+func disambiguate(it *Item, source string) {
+	sum := sha1.Sum([]byte(source)) //nolint:gosec // not security relevant: a stable short name
+	it.ID += "-" + hex.EncodeToString(sum[:])[:6]
+}
+
+// resolve claims the file of every item. Two items that map to the same path
+// (names compare case-insensitively, and context files carry the "context-"
+// prefix) are not an error: the one whose source sorts later gets a stable
+// suffix, so the outcome does not depend on scan order. It is an error only
+// when the suffixed name is taken too.
+func (r *Registry) resolve(t Target, items []Item) error {
+	order := make([]int, len(items))
+	for i := range order {
+		order[i] = i
+	}
+	sort.SliceStable(order, func(a, b int) bool {
+		return r.source(items[order[a]]) < r.source(items[order[b]])
+	})
+	for _, i := range order {
+		it := &items[i]
+		owner := r.source(*it)
+		name := FileName(t, *it)
+		if _, ok := r.claims.Claim(path.Join(t.Dir, name), owner); ok {
+			continue
+		}
+		disambiguate(it, owner)
+		renamed := FileName(t, *it)
+		if prev, ok := r.claims.Claim(path.Join(t.Dir, renamed), owner); !ok {
+			return oops.With("file", renamed, "preset", t.Preset).
+				Hint("rename one of the two sources so they map to different file names").
+				Errorf("rule files collide on %q: %s and %s", renamed, prev, owner)
+		}
+		warnCollisionOnce(t.Preset+" "+name+" "+owner, "rule files map to the same file name; "+
+			"the later source was renamed (collide)", "preset", t.Preset, "file", name, "source", owner, "renamed", renamed)
 	}
 	return nil
+}
+
+var (
+	collisionMu     sync.Mutex
+	collisionWarned = map[string]struct{}{}
+)
+
+// warnCollisionOnce emits a warning once per generate run (ResetDowngrades
+// starts a run), however many presets plan the same items.
+func warnCollisionOnce(key, msg string, args ...any) {
+	collisionMu.Lock()
+	_, seen := collisionWarned[key]
+	collisionWarned[key] = struct{}{}
+	collisionMu.Unlock()
+	if !seen {
+		warnSink()(msg, args...)
+	}
 }
 
 // Plan routes already ordered and deduplicated rules and context into rule
 // files and inline remainders. t may be nil (no rules folder). Two items that
 // map to the same file path (names are compared case-insensitively, and
-// context files carry the "context-" prefix) are an error. reg is shared by the caller across the root and scope plans of one
+// context files carry the "context-" prefix) are disambiguated by Registry.resolve.
+// reg is shared by the caller across the root and scope plans of one
 // target; nil uses a registry local to this call.
 func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope ScopeInfo, reg *Registry,
 ) (files []Item, inlineRules, inlineContext []config.ContentFile, err error) {
@@ -83,7 +222,7 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	add := func(cf config.ContentFile, kind Kind) error {
-		it, ok, err := planItem(*t, cf, kind, scope, reg)
+		it, ok, err := planItem(*t, cf, kind, scope)
 		if ok {
 			files = append(files, it)
 		}
@@ -105,6 +244,9 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 		if err := place(c, KindContext, asFile, &inlineContext); err != nil {
 			return nil, nil, nil, err
 		}
+	}
+	if err := reg.resolve(*t, files); err != nil {
+		return nil, nil, nil, err
 	}
 	return files, inlineRules, inlineContext, nil
 }
@@ -140,9 +282,9 @@ func routeItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, asFi
 	return nil
 }
 
-// planItem builds and claims the file of one item. ok is false, with a nil
-// error, for an item that is skipped because its globs escape the scope.
-func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, reg *Registry) (it Item, ok bool, err error) {
+// planItem builds the file of one item. ok is false, with a nil error, for an
+// item that is skipped because its globs escape the scope.
+func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo) (it Item, ok bool, err error) {
 	it, err = newItem(t, cf, kind, scope)
 	if errors.Is(err, errEscapesScope) {
 		warnSink()("rule file skipped: a glob escapes the scope with \"..\"",
@@ -150,9 +292,6 @@ func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, reg *
 		return Item{}, false, nil
 	}
 	if err != nil {
-		return Item{}, false, err
-	}
-	if err := reg.claim(t, it); err != nil {
 		return Item{}, false, err
 	}
 	if scope.Prefix != "" && (it.Activation.Mode == config.ActivationAuto || it.Activation.Mode == config.ActivationManual) &&

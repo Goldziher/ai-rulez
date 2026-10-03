@@ -60,7 +60,7 @@ func RegistryFor(cfg *config.Config, preset string) *Registry {
 	if cfg == nil || cfg.Run == nil {
 		return NewRegistry()
 	}
-	return &Registry{claims: cfg.Run.ClaimsFor(preset)}
+	return &Registry{claims: cfg.Run.ClaimsFor(preset), root: cfg.ConfigDir}
 }
 
 // WarnUnreadScopeFile warns, in a scope run, that rules and context left inline
