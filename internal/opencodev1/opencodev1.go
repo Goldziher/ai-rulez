@@ -8,9 +8,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"net/url"
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -27,12 +29,12 @@ const MigrationHint = "OpenCode v2 does not run v1 plugins (an exported function
 const maxSourceBytes = 1 << 20
 
 var (
-	blockComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
-	lineComment  = regexp.MustCompile(`(?m)^[ \t]*//.*$`)
-
 	v2Define = regexp.MustCompile(`\bPlugin\.define\s*\(`)
-	v2ID     = regexp.MustCompile(`\bid\s*:\s*["'` + "`" + `]`)
-	v2Setup  = regexp.MustCompile(`\b(?:setup|effect)\s*[(:]`)
+	// v2ID matches an id property whatever its value is (a literal, an identifier or
+	// an expression) and the shorthand form { id, ... }.
+	v2ID      = regexp.MustCompile(`\bid\s*:\s*[^\s,}]`)
+	v2IDShort = regexp.MustCompile(`[{,]\s*id\s*[,}]`)
+	v2Setup   = regexp.MustCompile(`\b(?:setup|effect)\s*[(:,}]`)
 
 	v1DefaultFunction = regexp.MustCompile(
 		`(?m)^[ \t]*export\s+default\s+(?:async\s+)?(?:function\b|\([^)]*\)\s*=>|[A-Za-z_$][\w$]*\s*=>)`)
@@ -45,14 +47,65 @@ var (
 // shape. The heuristics are deliberately conservative: any v2 marker (a
 // Plugin.define call, or an id together with setup/effect) means "not v1".
 func IsV1Plugin(source string) bool {
-	code := lineComment.ReplaceAllString(blockComment.ReplaceAllString(source, ""), "")
-	if v2Define.MatchString(code) || (v2ID.MatchString(code) && v2Setup.MatchString(code)) {
+	code := stripComments(source)
+	hasID := v2ID.MatchString(code) || v2IDShort.MatchString(code)
+	if v2Define.MatchString(code) || (hasID && v2Setup.MatchString(code)) {
 		return false
 	}
 	return v1DefaultFunction.MatchString(code) ||
 		v1NamedArrow.MatchString(code) ||
 		v1NamedFunction.MatchString(code) ||
 		v1Package.MatchString(code)
+}
+
+// stripComments removes // and /* */ comments that sit outside string and template
+// literals, so a glob such as "src/**/*.js" is not mistaken for a comment opener.
+// Regular expression literals are not recognized; the heuristics tolerate that.
+func stripComments(source string) string {
+	var out strings.Builder
+	for i := 0; i < len(source); {
+		switch c := source[i]; {
+		case c == '"' || c == '\'' || c == '`':
+			end := stringEnd(source, i)
+			out.WriteString(source[i:end])
+			i = end
+		case strings.HasPrefix(source[i:], "//"):
+			for i < len(source) && source[i] != '\n' {
+				i++
+			}
+		case strings.HasPrefix(source[i:], "/*"):
+			end := strings.Index(source[i+2:], "*/")
+			if end < 0 {
+				return out.String()
+			}
+			i += end + 4
+			out.WriteByte(' ')
+		default:
+			out.WriteByte(c)
+			i++
+		}
+	}
+	return out.String()
+}
+
+// stringEnd returns the index just past the literal that opens at start. A quoted
+// string ends at its closing quote or, being unable to span lines, at the end of
+// the line; a template literal runs to its closing backtick.
+func stringEnd(source string, start int) int {
+	quote := source[start]
+	for i := start + 1; i < len(source); i++ {
+		switch source[i] {
+		case '\\':
+			i++
+		case quote:
+			return i + 1
+		case '\n':
+			if quote != '`' {
+				return i
+			}
+		}
+	}
+	return len(source)
 }
 
 // Finding is a local plugin file that has the v1 shape.
@@ -232,13 +285,36 @@ func pluginSpec(item any) string {
 func localTarget(base, spec string) (string, bool) {
 	switch {
 	case strings.HasPrefix(spec, "file://"):
-		return filepath.FromSlash(strings.TrimPrefix(spec, "file://")), true
+		path, ok := fileURLToPath(spec, runtime.GOOS == "windows")
+		return filepath.FromSlash(path), ok
 	case strings.HasPrefix(spec, "./"), strings.HasPrefix(spec, "../"):
 		return filepath.Join(base, filepath.FromSlash(spec)), true
 	case filepath.IsAbs(spec):
 		return spec, true
 	}
 	return "", false
+}
+
+// fileURLToPath converts a file: URL to a slash-separated path. On Windows the
+// leading slash before a drive letter goes (file:///C:/p.js is C:/p.js) and a host
+// names a UNC share; elsewhere only an empty or localhost host is local.
+func fileURLToPath(spec string, windows bool) (string, bool) {
+	parsed, err := url.Parse(spec)
+	if err != nil || parsed.Scheme != "file" {
+		return "", false
+	}
+	path := parsed.Path
+	if parsed.Host != "" && parsed.Host != "localhost" {
+		if !windows {
+			return "", false
+		}
+		return "//" + parsed.Host + path, true
+	}
+	if windows && len(path) >= 3 && path[0] == '/' && path[2] == ':' &&
+		(path[1] >= 'a' && path[1] <= 'z' || path[1] >= 'A' && path[1] <= 'Z') {
+		path = path[1:]
+	}
+	return path, true
 }
 
 func readBytes(path string) ([]byte, bool) {
