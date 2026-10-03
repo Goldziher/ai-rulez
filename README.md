@@ -41,6 +41,8 @@ ai-rulez generates correct, tool-native output for **14 platforms**: Claude, Cur
 
 For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
 
+Set `agents_md = true` to write `AGENTS.md` and `.agents/skills/` once for the tools that read them (Codex, Cursor, Copilot, Gemini, Claude through an `@AGENTS.md` shim, and more) instead of one copy per tool. Off by default. See [docs/agents-md.md](docs/agents-md.md).
+
 ## Generate Plugins, Not Just Config
 
 ai-rulez doesn't only write config into _your_ repo — it also packages your project as **distributable plugins**. Run `ai-rulez generate --plugin` and the same `.ai-rulez/` source (skills, commands, agents, MCP servers) becomes installable **plugin bundles and a marketplace index** for Claude, Cursor, Codex, Gemini, Kimi, OpenCode, Factory, and Hermes Agent. An opt-in **Agent Plugins** runtime (`runtimes = ["agent-plugins"]`) additionally emits portable [Agent Plugins 1.0.0](https://agent-plugins.org) packages.
