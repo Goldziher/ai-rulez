@@ -159,6 +159,18 @@ func TestValidatePluginAuthoring(t *testing.T) {
 		{name: "agent-plugins consecutive hyphen", mutate: func(p *PluginAuthoring) {
 			p.Name, p.Runtimes = "bad--name", []string{"agent-plugins"}
 		}, wantErr: "not valid for the agent-plugins runtime"},
+		{name: "dotted and underscored name ok", mutate: func(p *PluginAuthoring) { p.Name = "my_tool.v2-x" }},
+		{name: "uppercase name", mutate: func(p *PluginAuthoring) { p.Name = "MyTool" }, wantErr: "not a valid plugin name"},
+		{name: "scoped name with slash", mutate: func(p *PluginAuthoring) { p.Name = "@scope/tool" }, wantErr: "not a valid plugin name"},
+		{name: "path separator", mutate: func(p *PluginAuthoring) { p.Name = "a/b" }, wantErr: "not a valid plugin name"},
+		{name: "backslash", mutate: func(p *PluginAuthoring) { p.Name = `a\b` }, wantErr: "not a valid plugin name"},
+		{name: "parent segment", mutate: func(p *PluginAuthoring) { p.Name = "a..b" }, wantErr: "not a valid plugin name"},
+		{name: "leading dot", mutate: func(p *PluginAuthoring) { p.Name = ".hidden" }, wantErr: "not a valid plugin name"},
+		{name: "comment terminator", mutate: func(p *PluginAuthoring) { p.Name = "x*/y" }, wantErr: "not a valid plugin name"},
+		{name: "quote", mutate: func(p *PluginAuthoring) { p.Name = `x"y` }, wantErr: "not a valid plugin name"},
+		{name: "every runtime checks the name", mutate: func(p *PluginAuthoring) {
+			p.Name, p.Runtimes = "Bad Name", []string{"opencode"}
+		}, wantErr: "not a valid plugin name"},
 		{name: "mcp missing name", mutate: func(p *PluginAuthoring) { p.MCP = []PluginMCPLaunch{{Command: "x"}} }, wantErr: "MCP entry"},
 		{name: "stdio mcp missing command", mutate: func(p *PluginAuthoring) { p.MCP = []PluginMCPLaunch{{Name: "s"}} }, wantErr: "no command"},
 		{name: "http mcp missing url", mutate: func(p *PluginAuthoring) {
