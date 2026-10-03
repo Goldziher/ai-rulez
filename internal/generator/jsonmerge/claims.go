@@ -293,7 +293,7 @@ func unmergeLeaf(members []jsonMember, idx int, claim Claim, depth int, indent, 
 
 	var elements []json.RawMessage
 	if json.Unmarshal(members[idx].Raw, &elements) != nil {
-		return members, false, false, nil // not an array: the consumer's value, left alone
+		return members, false, false, nil //nolint:nilerr // not an array: the consumer's value, left alone
 	}
 	kept := make([]json.RawMessage, 0, len(elements))
 	for _, element := range elements {

@@ -200,7 +200,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 		}
 	}
 	if len(cfg.MCPServers) > 0 {
-		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", "servers"}, Value: g.mcpServersValue(cfg), Members: true})
+		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", keyServers}, Value: g.mcpServersValue(cfg), Members: true})
 	}
 	result, err = applyMergedDocument(mcpPath, owned)
 	if err != nil && len(cfg.MCPServers) == 0 {
