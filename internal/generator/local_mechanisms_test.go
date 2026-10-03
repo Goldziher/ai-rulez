@@ -344,3 +344,45 @@ func TestAntigravityLocalRoot_IsAnAlwaysOnRuleFile(t *testing.T) {
 		})
 	}
 }
+
+// A local rule named "ai-rulez" would land on the generated local root file
+// (<rulesdir>/ai-rulez.local<ext>); it takes a hash suffix like any other
+// colliding rule file instead of replacing the root or being replaced by it.
+func TestLocalRoot_RuleNamedLikeTheRootIsRenamed(t *testing.T) {
+	tests := []struct {
+		name   string
+		preset string
+		root   string
+		rule   string
+	}{
+		{name: "junie", preset: "junie", root: ".junie/rules/ai-rulez.local.md", rule: ".junie/rules/ai-rulez-"},
+		{name: "antigravity", preset: "antigravity", root: ".agents/rules/ai-rulez.local.md", rule: ".agents/rules/ai-rulez-"},
+		{
+			name: "copilot", preset: "copilot", root: ".github/instructions/ai-rulez.local.instructions.md",
+			rule: ".github/instructions/ai-rulez-",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := localRuleProject(t, tt.preset, "split")
+			seedLocalFile(t, filepath.Join(dir, ".ai-rulez", "local", "rules", "ai-rulez.md"), "NAMESAKE_BODY\n")
+
+			// Act
+			require.NoError(t, generateIn(t, dir))
+
+			// Assert
+			root := readRel(t, dir, tt.root)
+			assert.Contains(t, root, "Personal context body.")
+			assert.NotContains(t, root, "NAMESAKE_BODY", "the rule did not replace the root file")
+			var renamed []string
+			for _, f := range manifestFiles(t, dir, ".generated-manifest.local.json") {
+				if strings.HasPrefix(f, tt.rule) && strings.Contains(f, ".local.") {
+					renamed = append(renamed, f)
+				}
+			}
+			require.Len(t, renamed, 1, "the namesake rule is written under a suffixed name")
+			assert.Contains(t, readRel(t, dir, renamed[0]), "NAMESAKE_BODY")
+		})
+	}
+}
