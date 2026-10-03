@@ -241,8 +241,7 @@ func splitCopilotCandidates(all []config.ContentFile, kind string, target rulefi
 		case mode == config.ActivationAuto || mode == config.ActivationManual:
 			stay(cf)
 		case rulefiles.OnlyNegatedGlobs(cf):
-			logger.Warn(kind+" \""+cf.Name+"\" has only negated globs, which Copilot's applyTo cannot express; "+
-				"kept in copilot-instructions.md", "path", cf.Path)
+			rulefiles.WarnOnlyNegated(kind, cf, "copilot-instructions.md")
 			stay(cf)
 		default:
 			candidates = append(candidates, cf)

@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **Cursor `globs`** is written as the bare comma list Cursor's own rule files use (`globs: **/*.go,**/*.ts`) instead of a quoted YAML string; unusual values keep the quotes. Windsurf, Antigravity and Copilot keep quoted values. Generated files are rewritten once on upgrade (generator schema v7).
+- **Negated globs (`!x`)** are dropped from the frontmatter of every dialect, not only Copilot, with a warning. A rule whose globs are all negated stays in the root file where the preset has one and is otherwise written as an always-on rule file.
+- **Junie `_Applies to: ..._` lines** format globs as code spans, so `_` and `*` in a glob are no longer read as emphasis.
+- **`AGENTS.md` is identical across `codex`, `opencode`, `xum` and `amp`**: the `amp` preset no longer includes context `summary` lines in `AGENTS.md`, which the other three never emitted, so the shared file renders the same whichever preset writes it.
+- **Scoped `auto` and `manual` rules** are written to the root rules folder without a path restriction, as before; `generate` now warns once per scope about it.
+- **`targets` naming a root file by its base name** (`copilot-instructions.md`, `guidelines.md`) now selects that preset's root file and rule files, like a rule file's base name does.
+- **`validate`** warns when a legacy always-on activation (`trigger: always_on`, `alwaysApply: true`) comes with `paths`, which are ignored.
+- Claude rule file names keep the case of the source name (changed in 4.22.0, for example `API-Design.md`); rename a source if you relied on lowercase names.
+
 ## [4.22.0] - 2026-10-02
 
 ### Added

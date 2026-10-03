@@ -3,6 +3,7 @@ package rulefiles
 import (
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"unicode/utf8"
 
@@ -41,7 +42,7 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 			return "", nil, oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
 		}
 		b.WriteString("---\n")
-		b.Write(marshaled)
+		b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
 		b.WriteString("---\n")
 	}
 	if t.Banner {
@@ -52,8 +53,14 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 	if !cfg.IsCompact() && it.File.Metadata != nil && it.File.Metadata.Priority != "" {
 		b.WriteString("**Priority:** " + it.File.Metadata.Priority + "\n\n")
 	}
-	if t.Dialect == DialectJunie && len(it.Activation.Globs) > 0 && it.Activation.Mode == config.ActivationGlob {
-		b.WriteString("_Applies to: " + strings.Join(it.Activation.Globs, ", ") + "_\n\n")
+	if t.Dialect == DialectJunie && it.Activation.Mode == config.ActivationGlob {
+		if kept, _ := splitNegated(it.Activation.Globs); len(kept) > 0 {
+			spans := make([]string, len(kept))
+			for i, g := range kept {
+				spans[i] = codeSpan(g)
+			}
+			b.WriteString("_Applies to: " + strings.Join(spans, ", ") + "_\n\n")
+		}
 	}
 	b.WriteString(strings.TrimRight(markdown.ProcessEmbeddedContent(it.File.Content), "\n"))
 	b.WriteString("\n")
@@ -64,6 +71,33 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 			utf8.RuneCountInString(out), t.Preset, t.MaxChars), false))
 	}
 	return out, notes, nil
+}
+
+// bareGlobs is the allowlist for a Cursor globs value written without quotes.
+var bareGlobs = regexp.MustCompile(`^[A-Za-z0-9_./*?,{}\-]+$`)
+
+// unquoteGlobs rewrites the globs line of Cursor frontmatter to the bare comma
+// list Cursor writes itself (`globs: **/*.go,**/*.ts`); yaml.Marshal quotes a
+// value starting with "*". Cursor's parser is not a full YAML parser. Only
+// Cursor gets this: Windsurf and Antigravity parse real YAML, where a leading
+// "*" is an alias, so they keep the quoted form. A value outside a conservative
+// allowlist also keeps the quoting.
+func unquoteGlobs(d Dialect, fm map[string]any, marshaled []byte) []byte {
+	if d != DialectCursor {
+		return marshaled
+	}
+	globs, ok := fm[keyGlobs].(string)
+	if !ok || !bareGlobs.MatchString(globs) || strings.ContainsAny(globs[:1], "{[-!") {
+		return marshaled
+	}
+	lines := strings.Split(string(marshaled), "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, keyGlobs+": ") {
+			lines[i] = keyGlobs + ": " + globs
+			break
+		}
+	}
+	return []byte(strings.Join(lines, "\n"))
 }
 
 func kindLabel(k Kind) string {
