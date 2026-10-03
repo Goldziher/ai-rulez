@@ -20,7 +20,7 @@ func TestApplyClaims(t *testing.T) {
 		{
 			name:  "scalar key is claimed whole",
 			owned: []jsonmerge.OwnedKey{{Name: "effort", Value: "high"}},
-			want:  []jsonmerge.Claim{{Path: []string{"effort"}}},
+			want:  []jsonmerge.Claim{{Path: []string{"effort"}, Sum: jsonmerge.Digest("high")}},
 		},
 		{
 			name: "members claim each server by name, sorted",
@@ -28,12 +28,15 @@ func TestApplyClaims(t *testing.T) {
 				Path: []string{"mcp", "servers"}, Members: true,
 				Value: map[string]any{"b": 1, "a": 2},
 			}},
-			want: []jsonmerge.Claim{{Path: []string{"mcp", "servers", "a"}}, {Path: []string{"mcp", "servers", "b"}}},
+			want: []jsonmerge.Claim{
+				{Path: []string{"mcp", "servers", "a"}, Sum: jsonmerge.Digest(2)},
+				{Path: []string{"mcp", "servers", "b"}, Sum: jsonmerge.Digest(1)},
+			},
 		},
 		{
 			name:  "empty members map claims the key",
 			owned: []jsonmerge.OwnedKey{{Name: "mcpServers", Members: true, Value: map[string]any{}}},
-			want:  []jsonmerge.Claim{{Path: []string{"mcpServers"}}},
+			want:  []jsonmerge.Claim{{Path: []string{"mcpServers"}, Sum: jsonmerge.Digest(map[string]any{})}},
 		},
 		{
 			name: "elements claim only what was added",
@@ -76,6 +79,7 @@ func TestUnmerge(t *testing.T) {
 		want        string
 		wantChanged bool
 		wantEmpty   bool
+		wantKept    [][]string
 	}{
 		{
 			name: "removes a claimed server and keeps user keys and formatting",
@@ -125,6 +129,32 @@ func TestUnmerge(t *testing.T) {
 			claims:      []jsonmerge.Claim{{Path: []string{"$schema"}, Equals: "https://opencode.ai/config.json"}},
 			want:        "",
 			wantChanged: false,
+			wantKept:    [][]string{{"$schema"}},
+		},
+		{
+			name:        "sum guard removes the value that was written",
+			doc:         `{"mcpServers": {"h": {"command": "x"}, "mine": {}}}`,
+			claims:      []jsonmerge.Claim{{Path: []string{"mcpServers", "h"}, Sum: jsonmerge.Digest(map[string]any{"command": "x"})}},
+			want:        "{\n  \"mcpServers\": {\n    \"mine\": {}\n  }\n}\n",
+			wantChanged: true,
+		},
+		{
+			name:        "sum guard keeps a value the user edited",
+			doc:         `{"mcpServers": {"h": {"command": "edited"}}}`,
+			claims:      []jsonmerge.Claim{{Path: []string{"mcpServers", "h"}, Sum: jsonmerge.Digest(map[string]any{"command": "x"})}},
+			wantChanged: false,
+			wantKept:    [][]string{{"mcpServers", "h"}},
+		},
+		{
+			name: "a later claim that matches clears the mismatch of an earlier one",
+			doc:  `{"mcpServers": {"h": {"command": "new"}}}`,
+			claims: []jsonmerge.Claim{
+				{Path: []string{"mcpServers", "h"}, Sum: jsonmerge.Digest(map[string]any{"command": "old"})},
+				{Path: []string{"mcpServers", "h"}, Sum: jsonmerge.Digest(map[string]any{"command": "new"})},
+			},
+			want:        "{}\n",
+			wantChanged: true,
+			wantEmpty:   true,
 		},
 		{
 			name:        "alone claim is removed only when nothing else remains",
@@ -167,6 +197,7 @@ func TestUnmerge(t *testing.T) {
 			require.NoError(t, err)
 			assert.Equal(t, tt.wantChanged, got.Changed)
 			assert.Equal(t, tt.wantEmpty, got.Empty)
+			assert.Equal(t, tt.wantKept, got.Kept)
 			if tt.wantChanged {
 				assert.Equal(t, tt.want, got.Body)
 			}
@@ -204,6 +235,73 @@ func TestApplyReportsCommentsDistinctly(t *testing.T) {
 			// Assert
 			require.Error(t, err)
 			assert.Equal(t, tt.wantSoft, errors.Is(err, jsonmerge.ErrNotStrictJSON))
+		})
+	}
+}
+
+func TestApply_MembersMergeServerByServer(t *testing.T) {
+	const doc = `{
+  "permissions": {"allow": ["Bash"]},
+  "mcpServers": {
+    "mine": {"command": "mine"},
+    "s1": {"command": "stale"}
+  }
+}
+`
+	tests := []struct {
+		name          string
+		doc           string
+		servers       map[string]any
+		want          string
+		wantPartially bool
+	}{
+		{
+			name:    "hand-written server survives, same name is replaced in place, new one appended",
+			doc:     doc,
+			servers: map[string]any{"s1": map[string]any{"command": "fresh"}, "s2": map[string]any{"command": "two"}},
+			want: `{
+  "permissions": {"allow": ["Bash"]},
+  "mcpServers": {
+    "mine": {"command": "mine"},
+    "s1": {
+      "command": "fresh"
+    },
+    "s2": {
+      "command": "two"
+    }
+  }
+}
+`,
+			wantPartially: true,
+		},
+		{
+			name:          "document holding only our servers is not partially owned",
+			doc:           `{"mcpServers": {"s1": {"command": "stale"}}}`,
+			servers:       map[string]any{"s1": map[string]any{"command": "fresh"}},
+			want:          "{\n  \"mcpServers\": {\n    \"s1\": {\n      \"command\": \"fresh\"\n    }\n  }\n}\n",
+			wantPartially: false,
+		},
+		{
+			name:          "no servers leaves an existing map alone",
+			doc:           `{"mcpServers": {"mine": {}}}`,
+			servers:       map[string]any{},
+			want:          "{\n  \"mcpServers\": {\"mine\": {}}\n}\n",
+			wantPartially: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			path := filepath.Join(t.TempDir(), "settings.json")
+			require.NoError(t, os.WriteFile(path, []byte(tt.doc), 0o644))
+
+			// Act
+			got, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{{Name: "mcpServers", Value: tt.servers, Members: true}})
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got.Body)
+			assert.Equal(t, tt.wantPartially, got.PartiallyOwned)
 		})
 	}
 }

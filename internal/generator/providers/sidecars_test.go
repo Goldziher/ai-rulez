@@ -155,11 +155,11 @@ func TestClaudeSettingsSidecar_PreservesHandAuthoredKeys(t *testing.T) {
 	require.NoError(t, json.Unmarshal([]byte(settings.Content), &parsed))
 	assert.Equal(t, "off", parsed.SkillOverrides["init"], "skillOverrides.init must still be off")
 
-	// Only mcpServers changed: the generated server replaces the stale entry.
+	// Only mcpServers changed: the generated server joins the hand-written one.
 	assert.Equal(t, "npx", parsed.MCPServers["generated"].Command)
 	assert.Equal(t, []string{"-y", "generated-server"}, parsed.MCPServers["generated"].Args)
-	assert.NotContains(t, parsed.MCPServers, "stale-hand-authored",
-		"ai-rulez owns the mcpServers key outright")
+	assert.Contains(t, parsed.MCPServers, "stale-hand-authored",
+		"a server ai-rulez did not write is the consumer's")
 }
 
 // TestClaudeSettingsSidecar_CreatesFileWhenAbsent keeps the greenfield output

@@ -60,8 +60,12 @@ type OwnedKey struct {
 	Remove bool
 
 	// Members marks Value as a map whose entries are each ai-rulez's (the MCP
-	// server map): the ownership record then names every entry instead of the
-	// whole key, so an entry the consumer adds beside ours later is not claimed.
+	// server map). Apply then merges the entries one by one into the map the
+	// document already has, so an entry the consumer wrote under another name
+	// survives; an entry of the same name is replaced (ai-rulez's wins). The
+	// ownership record names every entry instead of the whole key, each guarded
+	// by the value written. An entry that dropped out of Value is not removed
+	// here; the previous record's claim for it is (see Unmerge).
 	Members bool
 
 	// Elements marks Value as an array of which ai-rulez added only these
@@ -142,7 +146,7 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 		if len(segs) == 0 {
 			continue
 		}
-		merged, err = replaceOwnedPath(merged, segs, key.Value, key.Remove, 1, indent, newline)
+		merged, err = replaceOwnedPath(merged, segs, key, 1, indent, newline)
 		if err != nil {
 			return Result{}, oops.With("path", path).Wrapf(err, "merge owned keys into JSON settings document")
 		}
@@ -160,9 +164,20 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 func hasUnownedMembers(members []jsonMember, owned []OwnedKey) bool {
 	paths := make([][]string, 0, len(owned))
 	for _, key := range owned {
-		if segs := key.segments(); len(segs) > 0 {
-			paths = append(paths, segs)
+		segs := key.segments()
+		if len(segs) == 0 {
+			continue
 		}
+		if key.Members {
+			// Only the entries written are ours; an empty map owns none of what the
+			// document already holds there.
+			names, _, _ := memberEntries(key.Value)
+			for _, name := range names {
+				paths = append(paths, append(append([]string{}, segs...), name))
+			}
+			continue
+		}
+		paths = append(paths, segs)
 	}
 	return hasUnownedPaths(members, paths)
 }
@@ -315,15 +330,18 @@ func decodeObjectMembers(data []byte) ([]jsonMember, error) {
 // (and any missing ancestors) when the document did not have it. Duplicate
 // occurrences of an owned key (legal but ambiguous JSON) collapse into the first
 // position.
-func replaceOwnedPath(members []jsonMember, path []string, value any, remove bool, depth int, indent, newline string,
+func replaceOwnedPath(members []jsonMember, path []string, key OwnedKey, depth int, indent, newline string,
 ) ([]jsonMember, error) {
 	head, rest := path[0], path[1:]
 
 	if len(rest) == 0 {
-		if remove {
+		if key.Remove {
 			return removeMember(members, head), nil
 		}
-		return replaceMemberValue(members, head, value, depth, indent, newline)
+		if key.Members {
+			return mergeMembers(members, head, key.Value, depth, indent, newline)
+		}
+		return replaceMemberValue(members, head, key.Value, depth, indent, newline)
 	}
 
 	idx := -1
@@ -338,14 +356,14 @@ func replaceOwnedPath(members []jsonMember, path []string, value any, remove boo
 	if err != nil {
 		return nil, err
 	}
-	if remove && idx < 0 {
+	if key.Remove && idx < 0 {
 		return members, nil
 	}
-	child, err := replaceOwnedPath(childMembers, rest, value, remove, depth+1, indent, newline)
+	child, err := replaceOwnedPath(childMembers, rest, key, depth+1, indent, newline)
 	if err != nil {
 		return nil, err
 	}
-	if remove && len(child) == 0 {
+	if key.Remove && len(child) == 0 {
 		return removeMember(members, head), nil
 	}
 	raw, err := renderMembers(child, depth+1, indent, newline)
@@ -353,6 +371,48 @@ func replaceOwnedPath(members []jsonMember, path []string, value any, remove boo
 		return nil, err
 	}
 
+	if idx >= 0 {
+		members[idx] = jsonMember{Key: head, Raw: []byte(raw)}
+		return members, nil
+	}
+	return append(members, jsonMember{Key: head, Raw: []byte(raw)}), nil
+}
+
+// mergeMembers writes each entry of value into the object at head, replacing the
+// entry of the same name in place and appending the others in name order, and
+// leaves every other entry of that object as it is. An absent object is created.
+// A value with no entries leaves an existing object alone.
+func mergeMembers(members []jsonMember, head string, value any, depth int, indent, newline string,
+) ([]jsonMember, error) {
+	names, entries, ok := memberEntries(value)
+	idx := -1
+	for i, member := range members {
+		if member.Key == head {
+			idx = i
+			break
+		}
+	}
+	if !ok {
+		if idx >= 0 {
+			return members, nil
+		}
+		return replaceMemberValue(members, head, value, depth, indent, newline)
+	}
+
+	child, err := childObjectMembers(members, idx, head)
+	if err != nil {
+		return nil, err
+	}
+	for _, name := range names {
+		child, err = replaceMemberValue(child, name, entries[name], depth+1, indent, newline)
+		if err != nil {
+			return nil, err
+		}
+	}
+	raw, err := renderMembers(child, depth+1, indent, newline)
+	if err != nil {
+		return nil, err
+	}
 	if idx >= 0 {
 		members[idx] = jsonMember{Key: head, Raw: []byte(raw)}
 		return members, nil
