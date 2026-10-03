@@ -21,25 +21,61 @@ type SharedOutputConsumer struct {
 	OwnSkillsDir string
 	// OwnRootFile is the preset's own root instruction file, relative to the
 	// output base dir, that it stops writing because AGENTS.md replaces it
-	// (GEMINI.md, .hermes.md). Empty when the preset keeps its root file.
+	// (GEMINI.md, .hermes.md). The preset skips rendering it. Empty when the
+	// preset keeps its root file.
 	OwnRootFile string
 	// ImportsAgentsMD marks a preset that does not read AGENTS.md itself and
 	// instead imports it from its own root file (CLAUDE.md with "@AGENTS.md").
 	// Such a preset still needs the shared AGENTS.md rendered, and owns it for
 	// frontmatter targets.
 	ImportsAgentsMD bool
-	// RulesFolder marks a preset whose own rules folder holds the rules and
-	// context that are not always-on, so the shared AGENTS.md does not have to
-	// carry them for it.
-	RulesFolder bool
-	// FolderNeedsSplit marks a RulesFolder preset whose folder only takes those
-	// items in the "split" rules mode; in "inline" mode they stay in a root file
-	// that agents_md no longer writes, so AGENTS.md must carry them.
-	FolderNeedsSplit bool
-	// FolderSkipsAutoManual marks a RulesFolder preset whose folder cannot hold
-	// auto and manual items (copilot applies a file only through applyTo), so
-	// AGENTS.md carries those.
-	FolderSkipsAutoManual bool
+	// Folder says what the preset's own rules folder holds once the shared
+	// AGENTS.md carries the always-on items; see RulesFolderKind.
+	Folder RulesFolderKind
+}
+
+// RulesFolderKind describes what a preset's rules folder holds beside the shared
+// AGENTS.md, which decides what AGENTS.md must carry for it.
+type RulesFolderKind int
+
+// Rules folder kinds.
+const (
+	// RulesFolderNone: the preset has no rules folder, so AGENTS.md carries
+	// everything for it.
+	RulesFolderNone RulesFolderKind = iota
+	// RulesFolderAlways: every item that is not always-on becomes a file, in
+	// both rules modes (cursor, windsurf, cline, continue).
+	RulesFolderAlways
+	// RulesFolderSplitOnly: files only in the "split" rules mode; in "inline"
+	// mode the preset writes none and AGENTS.md carries the scoped items (junie).
+	RulesFolderSplitOnly
+	// RulesFolderScopedInInline: in "split" mode every non-always-on item is a
+	// file; in "inline" mode only glob-scoped ones stay files (claude through
+	// inline_filter = path_scoped, antigravity through RoutingScopedOnly), so
+	// AGENTS.md carries the auto and manual items.
+	RulesFolderScopedInInline
+	// RulesFolderScopedOnly: only glob-scoped items are files in either mode;
+	// auto and manual items have no file the tool applies (copilot).
+	RulesFolderScopedOnly
+)
+
+// HasRootFile reports whether the preset has a root instructions file that the
+// shared AGENTS.md stands in for: dropped (GEMINI.md, .hermes.md, ...) or
+// turned into an import shim (CLAUDE.md).
+func (c SharedOutputConsumer) HasRootFile() bool {
+	return c.OwnRootFile != "" || c.ImportsAgentsMD
+}
+
+// ReplacedRootFile is that root file, relative to the output base dir, or ""
+// when the preset has none.
+func (c SharedOutputConsumer) ReplacedRootFile() string {
+	if c.OwnRootFile != "" {
+		return c.OwnRootFile
+	}
+	if c.ImportsAgentsMD {
+		return "CLAUDE.md"
+	}
+	return ""
 }
 
 // sharedOutputConsumers is the single place that decides which presets
@@ -53,7 +89,7 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	string(PresetAmp):      {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}},
 	// Claude Code reads CLAUDE.md only; its CLAUDE.md becomes an "@AGENTS.md"
 	// shim. It does not read .agents/skills, so it keeps .claude/skills.
-	string(PresetClaude): {ImportsAgentsMD: true, RulesFolder: true, FolderNeedsSplit: true},
+	string(PresetClaude): {ImportsAgentsMD: true, Folder: RulesFolderScopedInInline},
 	// Gemini CLI reads AGENTS.md through .gemini/settings.json context.fileName
 	// and .agents/skills natively.
 	string(PresetGemini): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: "GEMINI.md"},
@@ -61,32 +97,32 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	// .agents/rules folder for scoped rules.
 	string(PresetAntigravity): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: "GEMINI.md",
-		RulesFolder: true, FolderNeedsSplit: true,
+		Folder: RulesFolderScopedInInline,
 	},
 	// Cursor reads AGENTS.md and .agents/skills natively; .cursor/rules keeps the
 	// rules that are not always-on.
-	string(PresetCursor): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, RulesFolder: true},
+	string(PresetCursor): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, Folder: RulesFolderAlways},
 	// Copilot reads AGENTS.md, which also stops copilot-instructions.md from
 	// shadowing it elsewhere, and .agents/skills. .github/instructions keeps the
 	// applyTo-scoped items; auto and manual ones have no file Copilot applies.
 	string(PresetCopilot): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".github/skills",
-		OwnRootFile: ".github/copilot-instructions.md", RulesFolder: true, FolderSkipsAutoManual: true,
+		OwnRootFile: ".github/copilot-instructions.md", Folder: RulesFolderScopedOnly,
 	},
 	// Junie prefers AGENTS.md over .junie/guidelines.md and reads .agents/skills.
 	string(PresetJunie): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".junie/skills",
-		OwnRootFile: ".junie/guidelines.md", RulesFolder: true, FolderNeedsSplit: true,
+		OwnRootFile: ".junie/guidelines.md", Folder: RulesFolderSplitOnly,
 	},
 	string(PresetWindsurf): {
-		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".windsurf/skills", RulesFolder: true,
+		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".windsurf/skills", Folder: RulesFolderAlways,
 	},
 	string(PresetCline): {
-		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".cline/skills", RulesFolder: true,
+		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".cline/skills", Folder: RulesFolderAlways,
 	},
 	// Continue reads AGENTS.md at the repository root but not .agents/skills, so
 	// its prompts file keeps carrying skills.
-	string(PresetContinue): {Outputs: []SharedOutput{SharedAgentsMD}, RulesFolder: true},
+	string(PresetContinue): {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderAlways},
 	// Hermes would let .hermes.md shadow AGENTS.md, so the preset stops writing it.
 	string(PresetHermes): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: ".hermes.md"},
 }
@@ -133,7 +169,8 @@ type AgentsMDInlining struct {
 
 // SharedAgentsMDInlining decides what AGENTS.md carries beyond always-on rules
 // and context: scoped items only when a configured preset relying on the file
-// has no rules folder that holds them (the folder presets keep their own).
+// has no rules folder that holds them (the folder presets keep their own), the
+// auto and manual ones when a folder cannot hold those.
 func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 	var inlining AgentsMDInlining
 	for _, preset := range cfg.Presets {
@@ -144,11 +181,20 @@ func SharedAgentsMDInlining(cfg *Config) AgentsMDInlining {
 		if !ok || !consumer.NeedsAgentsMD() {
 			continue
 		}
-		switch {
-		case !consumer.RulesFolder, consumer.FolderNeedsSplit && cfg.RulesModeFor(preset.BuiltIn) != RulesModeSplit:
+		split := cfg.RulesModeFor(preset.BuiltIn) == RulesModeSplit
+		switch consumer.Folder {
+		case RulesFolderNone:
 			inlining.Scoped = true
-		case consumer.FolderSkipsAutoManual:
+		case RulesFolderSplitOnly:
+			// No files in inline mode: the glob-scoped items go to AGENTS.md.
+			inlining.Scoped = inlining.Scoped || !split
+		case RulesFolderScopedInInline:
+			// Inline mode still writes the glob-scoped files; auto and manual
+			// items have none.
+			inlining.AutoManual = inlining.AutoManual || !split
+		case RulesFolderScopedOnly:
 			inlining.AutoManual = true
+		case RulesFolderAlways:
 		}
 	}
 	// Scoped covers auto and manual items, so equal output means equal values.

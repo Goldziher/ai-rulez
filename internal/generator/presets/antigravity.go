@@ -185,12 +185,14 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 		outputs = append(outputs, config.OutputFile{Path: path, Content: text})
 	}
 
-	// Generate GEMINI.md with the inline remainder and context
-	geminiMD := g.renderMarkdown(inlineRules, inlineContext, content, cfg)
-	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, "GEMINI.md"),
-		Content: geminiMD,
-	})
+	// Generate GEMINI.md with the inline remainder and context. With agents_md the
+	// shared AGENTS.md replaces it, so it is not rendered.
+	if !cfg.AgentsMD {
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, "GEMINI.md"),
+			Content: g.renderMarkdown(inlineRules, inlineContext, content, cfg),
+		})
+	}
 
 	// Generate skill files to .agents/skills/
 	allSkills := allSkills(content)

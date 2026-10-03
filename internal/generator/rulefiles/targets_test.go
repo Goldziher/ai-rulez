@@ -160,3 +160,37 @@ func TestPlan_SharedRootKeepsSiblingTargets(t *testing.T) {
 	assert.Empty(t, files)
 	assert.Equal(t, []string{"scoped"}, contentNames(ir), "a sibling preset's target keeps it in the shared root file")
 }
+
+func TestTargetsAllow_RootAliases(t *testing.T) {
+	shared := Target{
+		Preset: "codex", RootFile: "AGENTS.md", Owners: []string{"codex", "claude"},
+		RootAliases: []string{"CLAUDE.md", "GEMINI.md", ".hermes.md", ".github/copilot-instructions.md", ".junie/guidelines.md"},
+	}
+	tests := []struct {
+		target string
+		want   bool
+	}{
+		{"AGENTS.md", true},
+		{"CLAUDE.md", true},
+		{"claude.md", true},
+		{"GEMINI.md", true},
+		{".hermes.md", true},
+		{".github/copilot-instructions.md", true},
+		{"copilot-instructions.md", true},
+		{".junie/guidelines.md", true},
+		{"guidelines.md", true},
+		{"OTHER.md", false},
+		{".cursor/rules/x.mdc", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.target, func(t *testing.T) {
+			assert.Equal(t, tt.want, TargetsAllow([]string{tt.target}, shared, ""))
+		})
+	}
+	t.Run("aliases do not select rule files", func(t *testing.T) {
+		assert.False(t, TargetsAllow([]string{"GEMINI.md"}, shared, ".cursor/rules/x.mdc"))
+	})
+	t.Run("no aliases", func(t *testing.T) {
+		assert.False(t, TargetsAllow([]string{"GEMINI.md"}, Target{Preset: "codex", RootFile: "AGENTS.md"}, ""))
+	})
+}

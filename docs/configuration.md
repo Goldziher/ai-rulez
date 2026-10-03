@@ -407,23 +407,45 @@ Per-preset behavior with the flag on:
 | `antigravity`                 | no `GEMINI.md`                             | shared `.agents/skills`               | scoped rules stay in `.agents/rules`; with `gemini` also enabled the rules folder is used, since no preset writes `GEMINI.md`          |
 | `cursor` | none | shared `.agents/skills` | `.cursor/rules` keeps path-scoped, auto and manual rules and path-scoped context only (no always-on rule files, no context files for unscoped context); commands, agents and MCP unchanged |
 | `copilot` | no `.github/copilot-instructions.md` (it would shadow `AGENTS.md` in other tools) | shared `.agents/skills` (no `.github/skills`) | `.github/instructions` keeps `applyTo`-scoped items only; auto and manual rules go into the shared `AGENTS.md` as inline text with a `_When relevant_` line; `.github/agents` and commands unchanged |
-| `windsurf`, `cline` | none | shared `.agents/skills` (no `.windsurf/skills`, `.cline/skills`) | `.windsurf/rules` and `.clinerules` keep path-scoped, auto and manual rules and path-scoped context only; agents and workflows unchanged |
-| `continue-dev` | none (`AGENTS.md` at the repository root only) | its own: `.continue/prompts` carries the skills, since Continue does not read `.agents/skills` | `.continue/rules` keeps path-scoped, auto and manual rules and path-scoped context only; the prompts file is unchanged (it also carries commands and context as prompts) |
+| `windsurf`, `cline` | none | shared `.agents/skills` (no `.windsurf/skills`, `.cline/skills`) | `.windsurf/rules` and `.clinerules` keep path-scoped, auto and manual rules and path-scoped context only; other outputs unchanged |
+| `continue-dev` | none (`AGENTS.md` at the repository root only) | its own: `.continue/prompts` carries the skills, since Continue does not read `.agents/skills` | `.continue/rules` keeps path-scoped, auto and manual rules and path-scoped context only; the prompts file is unchanged; it also carries context as prompts, so Continue loads the always-on context twice (from `AGENTS.md` and from the prompts) |
 | `junie` | no `.junie/guidelines.md` (Junie prefers `AGENTS.md` over it) | shared `.agents/skills` (no `.junie/skills`) | `.junie/rules` keeps path-scoped, auto and manual rules only; `.junie/agents` unchanged |
 | `hermes`                      | no `.hermes.md` (it would shadow `AGENTS.md`) | shared `.agents/skills`            | none                                                                                                                                  |
 
-Path-scoped, auto and manual rules, and path-scoped context, appear in the shared `AGENTS.md` (with their
-`_Applies to_` or `_When relevant_` line) only when a preset that relies on it has no rules folder that holds
-them: `codex`, `opencode`, `amp`, `xum`, `hermes` and `gemini`, or a folder preset whose `[rules] mode` is
-`inline` (`claude`, `antigravity`, `junie`). When every such preset has its own folder (`claude`, `cursor`,
-`copilot`, `windsurf`, `cline`, `continue-dev`, `junie`, `antigravity`), `AGENTS.md` carries always-on rules and
-context only, except that `copilot` adds the auto and manual rules its instruction files cannot express. Machine-local
-rules are not part of `AGENTS.md` and keep their per-preset files.
+What the shared `AGENTS.md` carries beyond always-on rules and context depends on the rules folders of the
+presets that rely on it:
 
-An item whose `targets` names any preset that relies on the shared `AGENTS.md` (for example `claude` or
-`gemini`) is included in it. `GEMINI.local.md` is still written when local content exists, but Gemini CLI
-does not load it unless you list it in `context.fileName` yourself, as before. Turning the flag off leaves the
-`AGENTS.md` entry in `.gemini/settings.json`, because that document is shared with you.
+- Path-scoped (glob) and auto/manual rules, and path-scoped context, are inlined (with their `_Applies to_` or
+  `_When relevant_` line) when a preset has no folder for them: `codex`, `opencode`, `amp`, `xum`, `hermes` and
+  `gemini`, and `junie` when its `[rules] mode` is `inline` (it writes no rule files then).
+- Only auto and manual rules are inlined when a folder cannot hold them: `copilot` (its instruction files apply
+  through `applyTo` only) and `claude` or `antigravity` in `inline` mode (their folder then keeps path-scoped
+  files only).
+- Items scoped only by negated globs (`!gen/**`) have no rule-file form, so they live in `AGENTS.md` and no
+  rules folder repeats them.
+- When every preset has a folder for the item, `AGENTS.md` carries always-on rules and context only.
+
+Trade-off: the inlining is decided for the whole file, not per reader. When a preset without a folder (say `codex`)
+is enabled next to a preset with one (say `cursor`), the scoped items are in `AGENTS.md` and in the folder, so the
+tool with the folder loads them twice. Machine-local rules are not part of `AGENTS.md` and keep their per-preset
+files.
+
+An item whose `targets` names a preset that relies on the shared `AGENTS.md` (for example `claude` or `gemini`),
+or the root file such a preset replaces (`CLAUDE.md`, `GEMINI.md`, `.hermes.md`, `.junie/guidelines.md`,
+`.github/copilot-instructions.md`, by path or base name), is included in it. The file is shared, so an always-on
+rule targeted at a single preset now reaches every tool that reads `AGENTS.md`; target it at a rules-folder file
+(for example `.cursor/rules/`) to keep it to one tool. Skills that set `targets` are not part of the shared
+`.agents/skills` tree: they are written to the per-preset skills directories of the presets their targets allow.
+
+`GEMINI.local.md` is still written when local content exists, but Gemini CLI does not load it unless you list it in
+`context.fileName` yourself, as before. `gemini` configured only for a `[[scopes]]` entry (not for the root)
+gets no content, because the root run points Gemini at `AGENTS.md`; `generate` warns, add `gemini` to the root
+presets.
+
+Turning the flag off regenerates the per-tool files. In `.gemini/settings.json`, `context.fileName` is removed when
+it is exactly `["AGENTS.md"]` (the value the flag wrote), so Gemini reads the regenerated `GEMINI.md` again. Any
+other value is yours and is left alone; if it lists `AGENTS.md` but not `GEMINI.md`, `generate` warns so you can
+add it.
 
 The shared `SKILL.md` uses the generic Agent Skills format (`name` and `description`). Codex's
 `metadata.short-description` is not emitted there.

@@ -536,3 +536,37 @@ func TestApply_NestedOwnedPathCreatesMissingAncestors(t *testing.T) {
 	servers := doc["mcp"].(map[string]any)["servers"].(map[string]any)
 	assert.Contains(t, servers, "generated")
 }
+
+func TestApply_RemovesOwnedKey(t *testing.T) {
+	t.Parallel()
+	remove := []jsonmerge.OwnedKey{{Path: []string{"context", "fileName"}, Remove: true}}
+	cases := []struct {
+		name, existing string
+		want           map[string]any
+	}{
+		{"sibling keys stay", `{"theme":"dark","context":{"fileName":["A"],"max":7}}`,
+			map[string]any{"theme": "dark", "context": map[string]any{"max": float64(7)}}},
+		{"emptied ancestor is dropped", `{"theme":"dark","context":{"fileName":["A"]}}`, map[string]any{"theme": "dark"}},
+		{"absent key is a no-op", `{"theme":"dark"}`, map[string]any{"theme": "dark"}},
+		{"absent ancestor is a no-op", `{"theme":"dark","context":{"max":7}}`,
+			map[string]any{"theme": "dark", "context": map[string]any{"max": float64(7)}}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			path := writeFixture(t, "settings.json", tc.existing)
+
+			result, err := jsonmerge.Apply(path, remove)
+
+			require.NoError(t, err)
+			var got map[string]any
+			require.NoError(t, json.Unmarshal([]byte(result.Body), &got))
+			assert.Equal(t, tc.want, got)
+		})
+	}
+	t.Run("no file", func(t *testing.T) {
+		result, err := jsonmerge.Apply("", remove)
+
+		require.NoError(t, err)
+		assert.JSONEq(t, `{}`, result.Body)
+	})
+}

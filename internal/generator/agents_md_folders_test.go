@@ -203,6 +203,14 @@ func TestAgentsMD_ScopedInlineDecision(t *testing.T) {
 		{name: "cursor and hermes", presets: []string{"cursor", "hermes"}, scoped: true, autoManual: true},
 		{
 			name: "claude in inline mode", presets: []string{"claude"}, extra: "\n[rules]\nmode = \"inline\"\n",
+			autoManual: true,
+		},
+		{
+			name: "antigravity in inline mode", presets: []string{"antigravity"}, extra: "\n[rules]\nmode = \"inline\"\n",
+			autoManual: true,
+		},
+		{
+			name: "junie in inline mode", presets: []string{"junie"}, extra: "\n[rules]\nmode = \"inline\"\n",
 			scoped: true, autoManual: true,
 		},
 		{

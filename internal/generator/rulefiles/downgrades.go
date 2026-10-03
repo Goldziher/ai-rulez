@@ -39,6 +39,11 @@ func SetWarnSink(fn func(msg string, args ...any)) (restore func()) {
 	}
 }
 
+// Warn emits a warning through the sink, so presets and tests share one channel.
+func Warn(msg string, args ...any) {
+	warnSink()(msg, args...)
+}
+
 func warnSink() func(string, ...any) {
 	downgradeMu.Lock()
 	defer downgradeMu.Unlock()
