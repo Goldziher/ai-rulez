@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	incl "github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -130,7 +131,7 @@ func runIncludeAdd(cmd *cobra.Command, args []string) {
 
 	logger.Info("Include added successfully",
 		"name", name,
-		"source", source,
+		"source", incl.RedactURL(source),
 	)
 }
 
@@ -188,7 +189,7 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		for i, inc := range includes {
 			output[i] = map[string]interface{}{
 				keyName:  inc.Name,
-				"source": inc.Source,
+				"source": incl.RedactURL(inc.Source),
 				keyType:  inc.Type,
 			}
 		}
@@ -204,7 +205,7 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 		for _, inc := range includes {
 			sourceInfo := fmt.Sprintf("[%s]", inc.Type)
 			logger.Info(fmt.Sprintf("  • %s %s", inc.Name, sourceInfo))
-			logger.Debug(fmt.Sprintf("    Source: %s", inc.Source))
+			logger.Debug(fmt.Sprintf("    Source: %s", incl.RedactURL(inc.Source)))
 		}
 	}
 }

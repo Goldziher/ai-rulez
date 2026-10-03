@@ -6,6 +6,8 @@ import (
 	"strings"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
 // Content type constants
@@ -22,6 +24,11 @@ const (
 // FileManager handles file I/O operations for CRUD
 type FileManager struct {
 	aiRulezDir string
+	// guard runs before anything is written; a failure aborts the write. The
+	// local operator uses it to make sure the tree is gitignored first.
+	guard func() error
+	// private makes new files owner-only (0600) and new directories 0700.
+	private bool
 }
 
 // NewFileManager creates a new FileManager for the given .ai-rulez directory
@@ -45,7 +52,16 @@ func (fm *FileManager) IsDirectory(path string) bool {
 
 // CreateDirectory creates a directory with all parent directories
 func (fm *FileManager) CreateDirectory(path string) error {
-	if err := os.MkdirAll(path, 0o755); err != nil {
+	if fm.guard != nil {
+		if err := fm.guard(); err != nil {
+			return err
+		}
+	}
+	mode := os.FileMode(0o755)
+	if fm.private {
+		mode = 0o700
+	}
+	if err := os.MkdirAll(path, mode); err != nil {
 		return oops.
 			With("path", path).
 			Hint("Check filesystem permissions and available disk space.").
@@ -104,24 +120,17 @@ func (fm *FileManager) writeFileAtomic(path string, content string) error {
 		return err
 	}
 
-	// Write to temp file first
-	tempFile := path + ".tmp"
-	if err := os.WriteFile(tempFile, []byte(content), 0o644); err != nil {
-		return oops.
-			With("path", tempFile).
-			Hint("Check filesystem permissions and available disk space.").
-			Wrapf(err, "write temporary file")
+	perm := os.FileMode(0o644)
+	if fm.private {
+		perm = 0o600
 	}
-
-	// Atomic rename
-	if err := os.Rename(tempFile, path); err != nil {
-		//nolint:gosec,errcheck // best effort cleanup on rename failure
-		_ = os.Remove(tempFile)
+	// Exclusively created temp file beside the target, then renamed over it: a
+	// pre-planted path (or symlink) can never be written through.
+	if err := config.WriteFileAtomic(path, []byte(content), perm); err != nil {
 		return oops.
 			With("path", path).
-			With("temp_path", tempFile).
 			Hint("Check filesystem permissions and available disk space.").
-			Wrapf(err, "atomic rename failed")
+			Wrapf(err, "write file")
 	}
 
 	return nil

@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	incl "github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -118,7 +119,7 @@ func runSkillInstall(cmd *cobra.Command, args []string) {
 
 	logger.Info("Skill installed successfully",
 		"name", name,
-		"source", skillSource,
+		"source", incl.RedactURL(skillSource),
 	)
 }
 
@@ -174,7 +175,7 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		for i, s := range skills {
 			output[i] = map[string]interface{}{
 				keyName:  s.Name,
-				"source": s.Source,
+				"source": incl.RedactURL(s.Source),
 				keyPath:  s.Path,
 				"ref":    s.Ref,
 				keyType:  s.Type,
@@ -191,7 +192,7 @@ func runSkillList(cmd *cobra.Command, args []string) {
 		for _, s := range skills {
 			sourceInfo := fmt.Sprintf("[%s]", s.Type)
 			logger.Info(fmt.Sprintf("  • %s %s", s.Name, sourceInfo))
-			logger.Debug(fmt.Sprintf("    Source: %s", s.Source))
+			logger.Debug(fmt.Sprintf("    Source: %s", incl.RedactURL(s.Source)))
 			if s.Path != "" {
 				logger.Debug(fmt.Sprintf("    Path: %s", s.Path))
 			}

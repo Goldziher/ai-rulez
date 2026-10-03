@@ -1,12 +1,14 @@
 package config
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -280,4 +282,124 @@ token = "u"
 		"name": false, "mcp_servers.gh.name": true, "mcp_servers.gh.auth": true,
 		"mcp_servers.gh.args": true, "foo.[0].token": true,
 	}, got)
+}
+
+func TestLoadConfig_OverlayTypeErrorsNeverEchoValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		mainFn  string
+		main    string
+		localFn string
+		local   string
+	}{
+		{
+			name: "yaml overlay on yaml main", mainFn: "config.yaml",
+			main:    "version: \"4.0\"\nname: x\npresets: [claude]\n",
+			localFn: "config.local.yaml",
+			local:   "mcp_servers:\n  - name: x\n    command: c\n    args: \"SECRETY2\"\n",
+		},
+		{
+			name: "toml overlay on toml main", mainFn: "config.toml",
+			main:    securityShared,
+			localFn: "config.local.toml",
+			local:   "[[mcp_servers]]\nname = \"x\"\ncommand = \"c\"\nargs = \"SECRETY2\"\n",
+		},
+		{
+			name: "json overlay on json main", mainFn: "config.json",
+			main:    "{\"version\":\"4.0\",\"name\":\"x\",\"presets\":[\"claude\"]}",
+			localFn: "config.local.json",
+			local:   "{\"mcp_servers\":[{\"name\":\"x\",\"command\":\"c\",\"args\":\"SECRETY2\"}]}",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			base, configDir := overlayProject(t, tt.main)
+			require.NoError(t, os.Remove(filepath.Join(configDir, "config.toml")))
+			writeProjectFile(t, configDir, tt.mainFn, tt.main)
+			writeProjectFile(t, configDir, tt.localFn, tt.local)
+
+			// Act
+			_, err := LoadConfig(t.Context(), base)
+
+			// Assert
+			require.Error(t, err)
+			rendered := fmt.Sprintf("%+v", err)
+			if o, ok := oops.AsOops(err); ok {
+				rendered += fmt.Sprint(o.Context())
+			}
+			assert.NotContains(t, rendered, "SECRET")
+		})
+	}
+}
+
+func TestShowTypeMismatchIsRedacted(t *testing.T) {
+	tests := []struct {
+		name     string
+		local    string
+		redacted bool
+		path     string
+	}{
+		{"bool key holding a string", "gitignore = \"SECRETTYPE1\"\n", true, "gitignore"},
+		{"bool key holding a bool", "gitignore = true\n", false, "gitignore"},
+		{"string key holding a list", "default = [\"SECRETY6\"]\n", true, "default"},
+		{"string key holding a string", "name = \"mine\"\n", false, "name"},
+		{"list key holding a string", "presets = \"SECRETTYPE2\"\n", true, "presets"},
+		{"list key holding a list", "presets = [\"codex\"]\n", false, "presets"},
+		{"list key holding a mixed list", "presets = [\"codex\", 5]\n", true, "presets"},
+		{"profile holding a string", "[profiles]\ndev = \"SECRETTYPE3\"\n", true, "profiles.dev"},
+		{"header bool holding a string", "[header]\ntimestamp = \"SECRETTYPE4\"\n", true, "header.timestamp"},
+		{"header style string", "[header]\nstyle = \"compact\"\n", false, "header.style"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			base, configDir := overlayProject(t, securityShared)
+			writeProjectFile(t, configDir, "config.local.toml", tt.local)
+
+			// Act
+			_, changes, err := DescribeLocalOverlay(base)
+
+			// Assert
+			require.NoError(t, err)
+			found := false
+			for _, c := range changes {
+				if c.Path == tt.path {
+					found = true
+					assert.Equal(t, tt.redacted, c.Redacted)
+				}
+			}
+			assert.True(t, found, "path %s not listed", tt.path)
+		})
+	}
+}
+
+func TestValidate_OverlayDefaultNeverEchoed(t *testing.T) {
+	tests := []struct {
+		name  string
+		local string
+	}{
+		{"no profiles defined", "default = \"SECRETY6\"\n"},
+		{"profile missing", "default = \"SECRETY6\"\n[profiles]\ndev = [\"x\"]\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			base, configDir := overlayProject(t, securityShared)
+			writeProjectFile(t, configDir, "config.local.toml", tt.local)
+			cfg, err := LoadConfig(t.Context(), base)
+			require.NoError(t, err)
+
+			// Act
+			err = cfg.Validate()
+
+			// Assert
+			require.Error(t, err)
+			rendered := fmt.Sprintf("%+v", err)
+			if o, ok := oops.AsOops(err); ok {
+				rendered += fmt.Sprint(o.Context())
+			}
+			assert.NotContains(t, rendered, "SECRET")
+		})
+	}
 }

@@ -13,6 +13,10 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`ai-rulez local`** (`init`, `show`, `set`, `unset`, `path`) edits the overlay, with `--local` on `profile`, `include` and `skill` mutators and `local: true` on the matching MCP tools. `read_config` reports the overlay by key path only, and `local show` withholds every value except a small allowlist unless `--reveal` is given.
 - **Local skills, agents, commands and domains**: `.ai-rulez/local/` now mirrors the shared layout. Local domains follow the active profile, `targets` apply, and local skills, agents and commands are written to the same per-item paths as shared ones (a name collision with a shared item is an error). Copilot gets `.github/instructions/ai-rulez.local.instructions.md` (`applyTo: "**"`) and Antigravity `GEMINI.local.md` for local context. `add`, `remove` and `list` take `--local` for every content type (`--local --domain x` writes `local/domains/x/`), and the MCP CRUD tools take `local: true`. Local content is never emitted in `[[scopes]]` runs.
 
+### Security
+
+- **Local configuration hardening**: `--local` content writes (and the MCP `local: true` tools) add `.ai-rulez/local/` to `.gitignore` before writing and fail if that is not possible; local content is written owner-only through exclusively created temp files, the overlay lock refuses to follow a symlink, and `.git/info/exclude` is replaced atomically. Generated files that contain resolved MCP secrets (`.mcp.json`, `.claude/settings.json`, ...) are written `0600`, and an existing file is tightened. Overlay decode errors no longer quote the offending value, `local show` withholds an allowlisted key whose value has the wrong type, validation messages do not echo an overlay `default`, and include and skill sources are logged and returned with URL credentials and query-string values redacted.
+
 ## [4.22.2] - 2026-10-03
 
 ### Fixed

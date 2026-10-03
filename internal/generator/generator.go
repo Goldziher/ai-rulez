@@ -103,6 +103,7 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	if err := g.ensureSecretOutputsIgnored(flatOutputs); err != nil {
 		return 0, err
 	}
+	g.markSensitiveOutputs(flatOutputs)
 
 	// Machine-local files must never reach git: make sure they are ignored before
 	// any is written, and refuse to write them when that fails.
@@ -885,6 +886,11 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	}
 
 	if g.canSkipWrite(absPath, output, finalContent) {
+		if output.Sensitive {
+			if err := os.Chmod(absPath, sensitiveFileMode); err != nil {
+				return oops.With("path", absPath).Wrapf(err, "restrict permissions of a file carrying secrets")
+			}
+		}
 		logger.Debug("Skipped unchanged file", "path", output.Path)
 		return nil
 	}
@@ -896,6 +902,19 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check directory permissions for: %s", dir)).
 			Wrapf(err, "create parent directory")
+	}
+
+	if output.Sensitive {
+		// Owner-only temp file renamed into place: the secret is never on disk
+		// with a wider mode, and an existing world-readable file is replaced.
+		if err := config.WriteFileAtomic(absPath, []byte(finalContent), sensitiveFileMode); err != nil {
+			return oops.
+				With("path", absPath).
+				Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
+				Wrapf(err, "write file")
+		}
+		logger.Debug("Wrote file", "path", output.Path, "size", len(finalContent), "mode", sensitiveFileMode)
+		return nil
 	}
 
 	if err := os.WriteFile(absPath, []byte(finalContent), 0o644); err != nil {
@@ -1133,6 +1152,12 @@ func writeRawOutput(absPath string, output config.OutputFile) error {
 	mode := output.Mode.Perm()
 	if mode == 0 {
 		mode = 0o644
+	}
+	if output.Sensitive {
+		mode &= sensitiveFileMode
+		if mode == 0 {
+			mode = sensitiveFileMode
+		}
 	}
 
 	if rawWriteCanSkip(absPath, output.RawContent, mode) {
@@ -2292,6 +2317,53 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		With("env_keys", secretKeys).
 		Hint(hint).
 		Errorf("generated MCP config contains secrets but is not gitignored")
+}
+
+// sensitiveFileMode is the mode of generated files that carry MCP secrets.
+const sensitiveFileMode os.FileMode = 0o600
+
+// secretMCPValues lists the resolved values of MCP env entries and headers that
+// are secret (placeholder-sourced or sensitively named).
+func (g *Generator) secretMCPValues() []string {
+	var values []string
+	for _, server := range g.config.MCPServers {
+		if server == nil {
+			continue
+		}
+		for _, key := range server.SecretEnvKeys {
+			if v := server.Env[key]; v != "" {
+				values = append(values, v)
+			}
+		}
+		for _, key := range server.SecretHeaderKeys {
+			if v := server.Headers[key]; v != "" {
+				values = append(values, v)
+			}
+		}
+	}
+	return values
+}
+
+// markSensitiveOutputs flags every output file whose content contains a resolved
+// MCP secret value, whichever preset produced it, so the writer keeps it
+// owner-only.
+func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
+	values := g.secretMCPValues()
+	if len(values) == 0 {
+		return
+	}
+	for i := range outputs {
+		o := &outputs[i]
+		if o.IsDir {
+			continue
+		}
+		for _, v := range values {
+			if strings.Contains(o.Content, v) || (o.RawContent != nil && bytes.Contains(o.RawContent, []byte(v))) {
+				o.Sensitive = true
+				break
+			}
+		}
+	}
 }
 
 func (g *Generator) secretMCPEnvKeys() []string {
