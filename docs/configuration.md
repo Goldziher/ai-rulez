@@ -392,7 +392,7 @@ agents_md = false  # Default: every preset writes its own files
 
 When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
 `[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
-(`codex`, `opencode`, `amp`, `xum`, `claude`, `gemini`, `antigravity` and `hermes`) stop writing their own
+(`codex`, `opencode`, `amp`, `xum`, `claude`, `gemini`, `antigravity` and `hermes`; `cursor` only for skills) stop writing their own
 `AGENTS.md` copy, root file and skills directory. Other presets are unchanged for now. Turning the flag
 off regenerates the per-tool files and removes the shared ones that no preset writes itself.
 
@@ -405,6 +405,7 @@ Per-preset behavior with the flag on:
 | `claude`                      | `CLAUDE.md` is a banner plus `@AGENTS.md`  | `.claude/skills` (Claude ignores `.agents/skills`) | `.claude/rules` keeps path-scoped, auto and manual rules only; `.claude/agents`, commands, MCP and settings unchanged; `CLAUDE.local.md` unchanged |
 | `gemini`                      | no `GEMINI.md`                             | shared `.agents/skills`               | `.gemini/settings.json` gets `context.fileName` with `AGENTS.md` (existing names and keys kept; not written for `[[scopes]]` runs, the root settings cover them) |
 | `antigravity`                 | no `GEMINI.md`                             | shared `.agents/skills`               | scoped rules stay in `.agents/rules`; with `gemini` also enabled the rules folder is used, since no preset writes `GEMINI.md`          |
+| `cursor`                      | unchanged                                  | shared `.agents/skills`               | rules, commands, agents and MCP files unchanged                                                                                       |
 | `hermes`                      | no `.hermes.md` (it would shadow `AGENTS.md`) | shared `.agents/skills`            | none                                                                                                                                  |
 
 An item whose `targets` names any preset that relies on the shared `AGENTS.md` (for example `claude` or
@@ -412,6 +413,15 @@ An item whose `targets` names any preset that relies on the shared `AGENTS.md` (
 does not load it unless you list it in `context.fileName` yourself, as before. Turning the flag off leaves the
 `AGENTS.md` entry in `.gemini/settings.json`, because that document is shared with you.
 
+The shared `SKILL.md` uses the generic Agent Skills format (`name` and `description`). Codex's
+`metadata.short-description` is not emitted there.
+
+If another preset (including a custom provider) also writes `AGENTS.md` or a file under `.agents/skills`, the
+shared output wins and the other copy is not written.
+
+### `mcp`
+
+Project-level MCP generation options.
 
 ```toml
 [mcp]
