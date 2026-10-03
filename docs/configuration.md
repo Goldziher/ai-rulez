@@ -143,7 +143,7 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 presets = [
   "claude",       # → CLAUDE.md, .claude/ (rules/, skills/, agents/)
   "cursor",       # → .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/
-  "gemini",       # → GEMINI.md, .gemini/, .agents/
+  "gemini",       # → GEMINI.md, .gemini/ (settings.json, agents/), .agents/skills/
   "copilot",      # → .github/copilot-instructions.md, .github/instructions/, .github/{skills,agents,commands}/
   "windsurf",     # → .windsurf/
   "continue-dev", # → .continue/
@@ -860,8 +860,10 @@ For models the order is:
 | `opencode`     | `opencode_model`          | `model` in `.opencode/agents/<id>.md`        |
 | `windsurf`     | `windsurf_model`          | `model` in `.windsurf/agents/<id>.md`        |
 | `continue-dev` | `continue-dev_model`      | `model` in `.continue/agents/<id>.md`        |
-| `gemini`       | `gemini_model`            | `model` in `.agents/agents/<id>.md` (Gemini) |
+| `gemini`       | `gemini_model`            | `model` in `.gemini/agents/<id>.md` (Gemini) |
 | `xum`          | `xum_model`               | `ai.model` in `.xum/agents/<id>.md`          |
+
+A bare Claude alias (`sonnet`, `opus`, `haiku`) is not a Gemini model, so `gemini` omits it with a warning and the agent inherits the session model; `gemini_model` and `defaults.model_by_preset.gemini` are written as given.
 
 ### `rules`
 

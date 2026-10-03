@@ -7,12 +7,14 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -59,7 +61,7 @@ func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, "GEMINI.md"),
 		filepath.Join(baseDir, ".agents"),
 		filepath.Join(baseDir, ".agents", "skills"),
-		filepath.Join(baseDir, ".agents", "agents"),
+		filepath.Join(baseDir, ".gemini", "agents"),
 	}
 }
 
@@ -81,7 +83,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			IsDir: true,
 		},
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".agents", "agents"),
+			Path:  filepath.Join(baseDir, ".gemini", "agents"),
 			IsDir: true,
 		},
 	)
@@ -150,7 +152,8 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
 
-	// Generate agent files to .agents/agents/
+	// Generate agent files to .gemini/agents/, the only project location Gemini
+	// CLI loads subagents from.
 	allAgents := allAgents(content)
 	for _, agent := range allAgents {
 		agentID := sanitizeAgentID(agent.Name)
@@ -160,7 +163,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		}
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".agents", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".gemini", "agents", agentID+".md"),
 			Content: agentContent,
 		})
 	}
@@ -415,15 +418,36 @@ func (g *GeminiPresetGenerator) renderGeminiAgentFile(agent config.ContentFile, 
 	return builder.String(), nil
 }
 
-// buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file
+// geminiClaudeAlias matches the bare Claude model aliases, which no Gemini model
+// id can be.
+var geminiClaudeAlias = regexp.MustCompile(`(?i)^(sonnet|opus|haiku)$`)
+
+// resolveGeminiModel returns the agent's model when Gemini CLI can use it,
+// otherwise "". A bare Claude alias (sonnet, opus, haiku) is no Gemini model, so
+// the agent is emitted without one and inherits the session model; an explicit
+// gemini_model or defaults.model_by_preset.gemini is kept verbatim.
+func resolveGeminiModel(agent config.ContentFile, cfg *config.Config) string {
+	model := ResolveAgentModel(presetNameGemini, agent, cfg)
+	if model == "" || !geminiClaudeAlias.MatchString(model) {
+		return model
+	}
+	logger.Warn("Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model",
+		"agent", agent.Name, "model", model,
+		"hint", "set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini")
+	return ""
+}
+
+// buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file. Gemini
+// requires name and description; an agent without a description gets a generic one.
 func (g *GeminiPresetGenerator) buildGeminiAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{
-		keyName: agent.Name,
+		keyName:        agent.Name,
+		keyDescription: "Subagent " + agent.Name,
 	}
 
 	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
 	// defaults-only model still applies to agents with no frontmatter.
-	if model := ResolveAgentModel(presetNameGemini, agent, cfg); model != "" {
+	if model := resolveGeminiModel(agent, cfg); model != "" {
 		frontmatter[keyModel] = model
 	}
 

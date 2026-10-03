@@ -34,6 +34,7 @@
   ".cursor/rules/context-overview.mdc": "089ba9a980513786f37a71af787cc188d262397977de58e0f851f148f5d7426b",
   ".cursor/rules/go-style.mdc": "708d416b5c7678c839a8d332744e3726385c8f1fe5e46d17a20fe077c97eaea2",
   ".cursor/rules/packages-api/api-style.mdc": "9a445b3f8af311e4e586e1d702ad1c773daeb0c255d1d1ff3a6131fd31fd3037",
+  ".gemini/agents/helper.md": "72b303f2f6aba7c094fc8b8f4d3cfe51ac0e0c78feb74de9aae78920f8e1db1d",
   ".gemini/settings.json": "8f95319ee0bfc13854b56ab5bc1061caa2518e6b39939be6d67518ec011be796",
   ".github/agents/helper.agent.md": "72b303f2f6aba7c094fc8b8f4d3cfe51ac0e0c78feb74de9aae78920f8e1db1d",
   ".github/copilot-instructions.md": "fe4ca1ede93df7c6835a92d790993978bab4816ebb6a22d26cc25d1d299f0286",

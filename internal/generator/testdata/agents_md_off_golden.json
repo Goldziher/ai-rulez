@@ -24,6 +24,7 @@
   ".cursor/agents/helper.md": "4ed3db1a8845c48b67aec4392f492903425a9c89b10781f62dbaf7ead3ff7f87",
   ".cursor/rules/always.mdc": "21fb491006c68994d711033169a39088e54c90b2cde1913e1c029a96a58f6a8b",
   ".cursor/rules/context-overview.mdc": "434145827f8bd85d8a7b4861b82c333374102838e878702b173871c969aad9c2",
+  ".gemini/agents/helper.md": "4ed3db1a8845c48b67aec4392f492903425a9c89b10781f62dbaf7ead3ff7f87",
   ".github/agents/helper.agent.md": "4ed3db1a8845c48b67aec4392f492903425a9c89b10781f62dbaf7ead3ff7f87",
   ".github/copilot-instructions.md": "c9b2e7ff9ce73430e1a05a5ef2c318ac8208f7c5ebc2e4e3c4e6a5b84a9de436",
   ".github/instructions/always.instructions.md": "4cd7d432771eb8be255619075afb9cc51afed69435f3f7ee5b1db00fdb7cf92b",

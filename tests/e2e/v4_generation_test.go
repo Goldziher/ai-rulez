@@ -380,8 +380,10 @@ func (s *V4GenerationSuite) TestGemini_FileStructure() {
 		"Should generate skill file")
 
 	// Agents
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md")),
-		"Should generate agent file")
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".gemini", "agents", "security-reviewer.md")),
+		"Should generate agent file where Gemini CLI loads subagents from")
+	s.Require().Nil(s.findFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md")),
+		"Gemini CLI does not read .agents/agents")
 }
 
 func (s *V4GenerationSuite) TestGemini_Content() {
@@ -401,6 +403,11 @@ func (s *V4GenerationSuite) TestGemini_Content() {
 	s.Require().True(ok, "settings.json should have mcpServers key")
 	s.Assert().Contains(mcpServers, "test-mcp-server",
 		"Should include user-configured MCP servers, not just hardcoded ai-rulez")
+
+	// Subagents need name and description to load
+	agentFile := s.requireFile(outputs, filepath.Join(".gemini", "agents", "security-reviewer.md"))
+	s.assertContentContains(agentFile, "name: security-reviewer")
+	s.assertContentContains(agentFile, "description:")
 }
 
 // ==========================================

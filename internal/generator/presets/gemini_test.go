@@ -3,6 +3,7 @@ package presets
 import (
 	"encoding/json"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -33,7 +34,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 			},
 			baseDir: "/test",
 			// No MCP servers in cfg, so no .gemini/settings.json: .gemini, .agents,
-			// .agents/skills, .agents/agents, GEMINI.md
+			// .agents/skills, .gemini/agents, GEMINI.md
 			wantOutputs: 5,
 			wantErr:     false,
 		},
@@ -197,7 +198,7 @@ func TestGeminiPresetGenerator_GetOutputPaths(t *testing.T) {
 		filepath.Join("/base", "GEMINI.md"),
 		filepath.Join("/base", ".agents"),
 		filepath.Join("/base", ".agents", "skills"),
-		filepath.Join("/base", ".agents", "agents"),
+		filepath.Join("/base", ".gemini", "agents"),
 	}
 
 	if len(paths) != len(wantPaths) {
@@ -273,5 +274,99 @@ func TestGeminiPresetGenerator_renderSettings_Transports(t *testing.T) {
 	}
 	if _, ok := sseServer["transport"]; ok {
 		t.Error("sse entry must not contain transport")
+	}
+}
+
+func TestGeminiPresetGenerator_AgentsGoToGeminiAgentsDir(t *testing.T) {
+	// Arrange
+	g := &GeminiPresetGenerator{}
+	content := &config.ContentTree{Agents: []config.ContentFile{{Name: "reviewer", Content: "Review."}}}
+
+	// Act
+	outputs, err := g.Generate(content, "/test", &config.Config{})
+
+	// Assert
+	if err != nil {
+		t.Fatalf("Generate() error: %v", err)
+	}
+	var paths []string
+	for _, o := range outputs {
+		paths = append(paths, filepath.ToSlash(o.Path))
+	}
+	if !slices.Contains(paths, "/test/.gemini/agents/reviewer.md") {
+		t.Errorf("agent not written to .gemini/agents: %v", paths)
+	}
+	for _, p := range paths {
+		if strings.Contains(p, ".agents/agents") {
+			t.Errorf("unexpected path %s", p)
+		}
+	}
+}
+
+func TestGeminiPresetGenerator_AgentFrontmatter(t *testing.T) {
+	tests := []struct {
+		name     string
+		extra    map[string]string
+		defaults map[string]string
+		want     map[string]any
+	}{
+		{
+			name: "bare agent gets the required keys only",
+			want: map[string]any{"name": "a", "description": "Subagent a"},
+		},
+		{
+			name:  "description is kept",
+			extra: map[string]string{"description": "Audits code"},
+			want:  map[string]any{"name": "a", "description": "Audits code"},
+		},
+		{
+			name:  "Claude alias model is omitted",
+			extra: map[string]string{"description": "d", "model": "sonnet"},
+			want:  map[string]any{"name": "a", "description": "d"},
+		},
+		{
+			name:  "Gemini model id is kept",
+			extra: map[string]string{"description": "d", "model": "gemini-3-flash"},
+			want:  map[string]any{"name": "a", "description": "d", "model": "gemini-3-flash"},
+		},
+		{
+			name:  "gemini_model is verbatim",
+			extra: map[string]string{"description": "d", "model": "opus", "gemini_model": "gemini-3-pro"},
+			want:  map[string]any{"name": "a", "description": "d", "model": "gemini-3-pro"},
+		},
+		{
+			name:     "preset default is verbatim",
+			extra:    map[string]string{"description": "d", "model": "haiku"},
+			defaults: map[string]string{"gemini": "gemini-3-flash"},
+			want:     map[string]any{"name": "a", "description": "d", "model": "gemini-3-flash"},
+		},
+		{
+			name:  "supported optional keys pass through",
+			extra: map[string]string{"description": "d", "kind": "local", "temperature": "0.2", "max_turns": "5", "timeout_mins": "3"},
+			want: map[string]any{
+				"name": "a", "description": "d", "kind": "local", "temperature": "0.2", "max_turns": "5", "timeout_mins": "3",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			g := &GeminiPresetGenerator{}
+			cfg := &config.Config{Defaults: &config.DefaultsConfig{ModelByPreset: tt.defaults}}
+			agent := config.ContentFile{Name: "a", Content: "Body.", Metadata: &config.Metadata{Extra: tt.extra}}
+
+			// Act
+			got := g.buildGeminiAgentFrontmatter(agent, cfg)
+
+			// Assert
+			if len(got) != len(tt.want) {
+				t.Fatalf("frontmatter = %v, want %v", got, tt.want)
+			}
+			for k, v := range tt.want {
+				if got[k] != v {
+					t.Errorf("frontmatter[%s] = %v, want %v", k, got[k], v)
+				}
+			}
+		})
 	}
 }
