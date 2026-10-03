@@ -450,6 +450,16 @@ func resolveOpencodeModel(agent config.ContentFile, cfg *config.Config) string {
 	return ""
 }
 
+// OpencodeAgentSettings returns the agent settings OpenCode understands (the
+// frontmatter keys the opencode preset writes), for callers that register the
+// agent through OpenCode's plugin API instead of a markdown file. The model is
+// "provider/model" with any variant as a separate "variant" key, and is absent
+// when it cannot be resolved (a bare alias such as "sonnet" is dropped with a
+// warning).
+func OpencodeAgentSettings(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
+	return (&OpencodePresetGenerator{}).buildOpencodeAgentFrontmatter(agent, cfg)
+}
+
 // buildOpencodeAgentFrontmatter builds native v2 frontmatter for an OpenCode
 // agent file. The agent's identity comes from its filename, so no `name` key is
 // emitted; effort is expressed as a separate model variant key.
