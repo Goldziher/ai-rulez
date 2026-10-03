@@ -4,7 +4,23 @@ import (
 	"fmt"
 	"os"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/crud"
 )
+
+// newContentOperator opens the CRUD operator for the current directory. With
+// local set, content operations work on the machine-local tree
+// (.ai-rulez/local/), which mirrors the shared layout.
+func newContentOperator(local bool) (*crud.OperatorImpl, error) {
+	op, err := crud.NewOperator(".")
+	if err != nil {
+		return nil, err
+	}
+	if local {
+		op = op.Local()
+	}
+	return op, nil
+}
 
 // confirmRemoval prompts the user to confirm a removal operation
 // Returns true if the user confirms, false otherwise

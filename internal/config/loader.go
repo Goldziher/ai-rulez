@@ -755,34 +755,15 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 }
 
 // ScanLocalContentTree scans machine-local override content from
-// <configDir>/local/rules and <configDir>/local/context, returning a tree that
-// carries only root-level rules and context. Local content is intentionally
-// limited to rules + context (skills/agents/commands are out of scope) and is
-// kept separate from the committed content tree so it is only ever emitted to
-// gitignored ".local" root files.
+// <configDir>/local/, which mirrors the shared layout: rules, context, skills,
+// agents, commands and domains. The tree is kept separate from the committed
+// content tree so local content is only ever written to gitignored outputs.
 func ScanLocalContentTree(configDir string) (*ContentTree, error) {
-	tree := &ContentTree{
-		Domains: make(map[string]*Domain),
-	}
-
 	localBase := filepath.Join(configDir, localDir)
-
-	rules, err := scanMarkdownFiles(filepath.Join(localBase, rulesDir))
+	tree, err := ScanContentTree(localBase)
 	if err != nil {
-		return nil, oops.
-			With("path", filepath.Join(localBase, rulesDir)).
-			Wrapf(err, "scan local rules directory")
+		return nil, oops.With("path", localBase).Wrapf(err, "scan local content")
 	}
-	tree.Rules = rules
-
-	contextFiles, err := scanMarkdownFiles(filepath.Join(localBase, contextDir))
-	if err != nil {
-		return nil, oops.
-			With("path", filepath.Join(localBase, contextDir)).
-			Wrapf(err, "scan local context directory")
-	}
-	tree.Context = contextFiles
-
 	return tree, nil
 }
 

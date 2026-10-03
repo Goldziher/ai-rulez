@@ -87,3 +87,42 @@ func (g *AntigravityPresetGenerator) LocalRuleOutputs(rules []config.ContentFile
 	routing, _ := antigravityRouting(cfg, func(string, ...any) {})
 	return PlanLocalRules(antigravityRulesTarget, routing, rules, baseDir, cfg)
 }
+
+// LocalRootFile implements config.LocalRootProvider. Copilot has no single local
+// root: its personal override is a path-specific instructions file that applies
+// to every file and that the tool loads natively.
+func (g *CopilotPresetGenerator) LocalRootFile() string {
+	return rulefiles.LocalPath(copilotRulesTarget, localRootID)
+}
+
+// localRootID names the generated local overrides file ("ai-rulez.local<ext>").
+const localRootID = "ai-rulez"
+
+// RenderLocalRoot implements config.LocalRootRenderer: the inline local rules and
+// the local context become one always-applied instructions file.
+func (g *CopilotPresetGenerator) RenderLocalRoot(local *config.ContentTree, rules []config.ContentFile, baseDir string,
+	cfg *config.Config,
+) (config.OutputFile, error) {
+	root := rulefiles.RootTarget(presetNameCopilot, copilotRulesTarget.RootFile)
+	body := localSections(rulefiles.FilterInline(rules, root), rulefiles.FilterInline(allInlineContext(local), root), cfg)
+	item := rulefiles.Item{
+		File: config.ContentFile{Name: "Local overrides", Path: "local", Content: body},
+		Kind: rulefiles.KindRule,
+		ID:   localRootID,
+		Activation: config.Activation{
+			Mode: config.ActivationAlways, Source: config.ActivationSourceDerived,
+		},
+	}
+	text, notes, err := rulefiles.Render(copilotRulesTarget, item, cfg)
+	if err != nil {
+		return config.OutputFile{}, oops.With("preset", presetNameCopilot).Wrapf(err, "render local copilot instructions")
+	}
+	path := filepath.Join(baseDir, filepath.FromSlash(g.LocalRootFile()))
+	rulefiles.ReportNotes(path, notes)
+	return config.OutputFile{Path: path, Content: text, LocalOnly: true}, nil
+}
+
+// LocalRootFile implements config.LocalRootProvider: GEMINI.md → GEMINI.local.md.
+func (g *AntigravityPresetGenerator) LocalRootFile() string {
+	return config.LocalVariantPath("GEMINI.md")
+}
