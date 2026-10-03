@@ -226,8 +226,8 @@ func (s *V4GenerationSuite) TestCursor_FileStructure() {
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "deployment-workflow", "SKILL.md")),
 		"Should generate skill file")
 
-	// Agents (in .agents/ directory)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md")),
+	// Agents (in .cursor/agents/)
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".cursor", "agents", "security-reviewer.md")),
 		"Should generate agent file")
 
 	// MCP servers (shared .mcp.json)
@@ -263,7 +263,7 @@ func (s *V4GenerationSuite) TestCursor_Content() {
 	s.assertContentContains(skillFile, "name: deployment-workflow")
 
 	// Agent frontmatter
-	agentFile := s.requireFile(outputs, filepath.Join(".agents", "agents", "security-reviewer.md"))
+	agentFile := s.requireFile(outputs, filepath.Join(".cursor", "agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "description:")
 }
 

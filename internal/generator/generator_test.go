@@ -2753,3 +2753,55 @@ func TestComputeSourceHash_ChangesWithRulesMode(t *testing.T) {
 	assert.NotEqual(t, computeSourceHash(build("inline"), content), computeSourceHash(build("split"), content))
 	assert.Equal(t, computeSourceHash(build("split"), content), computeSourceHash(build("split"), content))
 }
+
+// TestGenerator_CursorAgentMigration covers the move of Cursor agents from
+// .agents/agents to .cursor/agents: the old manifest-listed Cursor file is
+// removed, while files other tools write into .agents/agents survive.
+func TestGenerator_CursorAgentMigration(t *testing.T) {
+	t.Parallel()
+
+	for _, tc := range []struct {
+		name         string
+		presets      string
+		wantXRemains bool
+	}{
+		{name: "cursor only", presets: `["cursor"]`, wantXRemains: false},
+		{name: "gemini also generates x", presets: `["cursor", "gemini"]`, wantXRemains: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			tempDir := t.TempDir()
+			aiRulezDir := filepath.Join(tempDir, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(filepath.Join(aiRulezDir, "agents"), 0o755))
+			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "agents", "x.md"),
+				[]byte("---\ndescription: x agent\n---\nDo x.\n"), 0o644))
+			cfgTOML := fmt.Sprintf("version = \"4.0\"\nname = \"migrate\"\npresets = %s\ngitignore = false\n", tc.presets)
+			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, "config.toml"), []byte(cfgTOML), 0o644))
+
+			agentsDir := filepath.Join(tempDir, ".agents", "agents")
+			require.NoError(t, os.MkdirAll(agentsDir, 0o755))
+			oldX := filepath.Join(agentsDir, "x.md")
+			otherY := filepath.Join(agentsDir, "y.md")
+			require.NoError(t, os.WriteFile(oldX, []byte("old cursor agent\n"), 0o644))
+			require.NoError(t, os.WriteFile(otherY, []byte("written by another tool\n"), 0o644))
+
+			manifest := "{\n  \"version\": \"1\",\n  \"files\": [\n    \".agents/agents/x.md\"\n  ]\n}\n"
+			require.NoError(t, os.WriteFile(filepath.Join(aiRulezDir, ".generated-manifest.json"), []byte(manifest), 0o644))
+
+			cfg, err := config.LoadConfig(context.Background(), tempDir)
+			require.NoError(t, err)
+			require.NoError(t, NewGenerator(cfg).Generate("default"))
+
+			assert.FileExists(t, filepath.Join(tempDir, ".cursor", "agents", "x.md"))
+			assert.FileExists(t, otherY, "a file that is not in the manifest must survive")
+			if tc.wantXRemains {
+				content, err := os.ReadFile(oldX)
+				require.NoError(t, err)
+				assert.NotEqual(t, "old cursor agent\n", string(content), "gemini rewrites its own x.md")
+			} else {
+				assert.NoFileExists(t, oldX, "the old Cursor agent is removed")
+			}
+		})
+	}
+}

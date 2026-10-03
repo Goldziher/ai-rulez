@@ -765,7 +765,7 @@ For models the order is:
 | -------------- | ------------------------- | -------------------------------------------- |
 | `claude`       | `claude_model`            | `model` in `.claude/agents/<id>.md`          |
 | `copilot`      | `copilot_model`           | `model` in `.github/agents/<id>.agent.md`    |
-| `cursor`       | `cursor_model`            | `model` in `.agents/agents/<id>.md`          |
+| `cursor`       | `cursor_model`            | `model` in `.cursor/agents/<id>.md`          |
 | `cline`        | `cline_model`             | `model` in `.cline/agents/<id>.md`           |
 | `amp`          | `amp_model`               | `model` in `.agents/agents/<id>.md` (Amp)    |
 | `junie`        | `junie_model`             | `model` in `.junie/agents/<id>.md`           |
