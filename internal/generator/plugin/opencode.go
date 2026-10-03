@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 	"github.com/samber/oops"
 )
 
@@ -116,7 +117,12 @@ func openCodeModule(m *Manifest, outputPath string, hasContent bool) (config.Out
 		if info.IsDir() {
 			return config.OutputFile{}, oops.With("path", sourcePath).Errorf("OpenCode entrypoint must be a file")
 		}
-		return passthroughFile(m.SourceDir, sourcePath, outputPath)
+		out, err := passthroughFile(m.SourceDir, sourcePath, outputPath)
+		if err != nil {
+			return config.OutputFile{}, err
+		}
+		opencodev1.WarnSource(sourcePath, string(out.RawContent))
+		return out, nil
 	}
 	if !os.IsNotExist(err) {
 		return config.OutputFile{}, oops.With("path", sourcePath).Wrapf(err, "stat OpenCode entrypoint")
