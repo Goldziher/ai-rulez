@@ -5,6 +5,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 )
 
 // PresetGenerator defines the interface for preset generators
@@ -58,6 +60,10 @@ type OutputFile struct {
 	// headers). It is written owner-only (0600), and an existing file is
 	// tightened to that mode.
 	Sensitive bool
+	// MergeClaims records what ai-rulez wrote into a PartiallyOwned (or merged)
+	// JSON document, so it can take exactly that back out on clean or when the
+	// preset or server that wrote it goes away.
+	MergeClaims []jsonmerge.Claim
 }
 
 // LocalRootProvider is implemented by preset generators that emit a single

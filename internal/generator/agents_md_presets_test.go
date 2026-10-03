@@ -162,18 +162,18 @@ func TestAgentsMD_GeminiSettingsMerge(t *testing.T) {
 		{
 			name:     "user keys and names survive",
 			existing: `{"theme":"dark","context":{"fileName":["CUSTOM.md"],"discoveryMaxDirs":7}}`,
-			want:     []string{"CUSTOM.md", "AGENTS.md"},
+			want:     []string{"CUSTOM.md", "AGENTS.md", "GEMINI.local.md"},
 			keys:     map[string]any{"theme": "dark"},
 		},
 		{
 			name:     "single string name",
 			existing: `{"context":{"fileName":"CUSTOM.md"}}`,
-			want:     []string{"CUSTOM.md", "AGENTS.md"},
+			want:     []string{"CUSTOM.md", "AGENTS.md", "GEMINI.local.md"},
 		},
 		{
 			name:     "already listed stays single",
 			existing: `{"context":{"fileName":["AGENTS.md","CUSTOM.md"]}}`,
-			want:     []string{"AGENTS.md", "CUSTOM.md"},
+			want:     []string{"AGENTS.md", "CUSTOM.md", "GEMINI.local.md"},
 		},
 	}
 	for _, tc := range cases {

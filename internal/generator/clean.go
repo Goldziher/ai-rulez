@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -35,11 +36,15 @@ type CleanPlan struct {
 	// when absent or kept.
 	LocalManifestPath string
 	GitignoreEdited   bool // the managed .gitignore block will be / was stripped
+	// Unmerged lists the absolute paths of hand-authored JSON documents (such as
+	// .claude/settings.json) that ai-rulez merged keys into; clean removes those
+	// keys and keeps the rest. A document left with nothing else is in Files.
+	Unmerged []string
 }
 
 // Empty reports whether the plan would remove nothing at all.
 func (p *CleanPlan) Empty() bool {
-	return len(p.Files) == 0 && len(p.Dirs) == 0 && p.ManifestPath == "" && p.LocalManifestPath == "" && !p.GitignoreEdited
+	return len(p.Files) == 0 && len(p.Dirs) == 0 && len(p.Unmerged) == 0 && p.ManifestPath == "" && p.LocalManifestPath == "" && !p.GitignoreEdited
 }
 
 // Clean removes the files and directories that Generate produced for the given
@@ -52,6 +57,10 @@ func (p *CleanPlan) Empty() bool {
 func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error) {
 	generateMu.Lock()
 	defer generateMu.Unlock()
+	// Rendering the outputs to learn their paths also runs the generate-time
+	// advice (a context.fileName that misses a name, ...), which says nothing
+	// useful while the outputs are being removed.
+	defer rulefiles.SetWarnSink(func(msg string, _ ...any) { logger.Debug(msg) })()
 
 	outputs, activeProfile, err := g.collectOutputs(profile)
 	if err != nil {
@@ -72,6 +81,11 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	// profile no longer emits (e.g. a preset was removed): the exact set generate
 	// itself cleans up as stale.
 	plan.Files = append(plan.Files, g.staleManifestFiles(outputs)...)
+	// Merged documents shared with the user lose only what ai-rulez wrote into
+	// them; one that holds nothing else goes with the other generated files.
+	edits := g.planUnmerge(outputs, true)
+	plan.Files = append(plan.Files, deletedPaths(edits)...)
+	plan.Unmerged = editedPaths(edits)
 	plan.Files = existingSortedUnique(plan.Files)
 
 	// Scoped rule files sit in subfolders of the root rules folders that are not
@@ -97,6 +111,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		return plan, nil
 	}
 
+	g.applyUnmerge(rewrites(edits))
 	for _, f := range plan.Files {
 		g.removeStaleFile(f)
 	}

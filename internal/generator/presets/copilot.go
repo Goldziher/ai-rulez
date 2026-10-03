@@ -174,6 +174,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 			Path:           mcpPath,
 			Content:        mcpFile.Body,
 			PartiallyOwned: mcpFile.PartiallyOwned,
+			MergeClaims:    mcpFile.Claims,
 		})
 	}
 
@@ -478,6 +479,6 @@ func (g *CopilotPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Confi
 	}
 
 	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
-		{Name: keyMCPServers, Value: mcpServers},
+		{Name: keyMCPServers, Value: mcpServers, Members: true},
 	})
 }

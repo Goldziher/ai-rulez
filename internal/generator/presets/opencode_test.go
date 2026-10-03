@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 )
 
@@ -207,6 +208,10 @@ func TestOpencodePresetGenerator_FullyOwnedWhenOnlyAiRulezKeys(t *testing.T) {
 	if err := os.WriteFile(path, []byte(seed), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	// ai-rulez wrote the seed on an earlier run: it is in the generated manifest.
+	cfg.Run = config.NewRunState()
+	cfg.Run.SetPreviouslyGenerated([]string{"opencode.json"})
+	cfg.BaseDir = dir
 	merged, err := g.renderMCPConfig(path, cfg)
 	if err != nil {
 		t.Fatalf("renderMCPConfig(merge): %v", err)
@@ -629,6 +634,7 @@ func TestOpencodePresetGenerator_InstructionsListLocalFile(t *testing.T) {
 		servers     bool
 		want        []any
 		wantPartial bool
+		recorded    bool
 	}{
 		{name: "fresh document", want: []any{"AGENTS.local.md"}},
 		{name: "fresh document with servers", servers: true, want: []any{"AGENTS.local.md"}},
@@ -645,7 +651,12 @@ func TestOpencodePresetGenerator_InstructionsListLocalFile(t *testing.T) {
 		{
 			name:     "only our entry is fully owned",
 			existing: `{"$schema":"https://opencode.ai/config.json","instructions":["AGENTS.local.md"]}`,
-			want:     []any{"AGENTS.local.md"},
+			want:     []any{"AGENTS.local.md"}, recorded: true,
+		},
+		{
+			name:     "dot-slash spelling is ours too, not duplicated",
+			existing: `{"instructions":["./AGENTS.local.md"]}`,
+			want:     []any{"./AGENTS.local.md"}, wantPartial: true,
 		},
 		{
 			name:     "other user keys survive",
@@ -663,9 +674,16 @@ func TestOpencodePresetGenerator_InstructionsListLocalFile(t *testing.T) {
 					t.Fatal(err)
 				}
 			}
-			cfg := &config.Config{Name: "test"}
+			cfg := &config.Config{Name: "test", BaseDir: dir, Run: config.NewRunState()}
 			if tt.servers {
 				cfg.MCPServers = map[string]*config.MCPServer{"s": {Name: "s", Command: "npx"}}
+			}
+			if tt.recorded {
+				// The previous run recorded the entry (and $schema) as ai-rulez's.
+				cfg.Run.SetPreviousMerged(map[string][]jsonmerge.Claim{"opencode.json": {
+					{Path: []string{"$schema"}},
+					{Path: []string{"instructions"}, Elements: []any{"AGENTS.local.md"}},
+				}})
 			}
 
 			// Act

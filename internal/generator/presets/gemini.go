@@ -124,6 +124,7 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			Path:           settingsPath,
 			Content:        settings.Body,
 			PartiallyOwned: settings.PartiallyOwned,
+			MergeClaims:    settings.Claims,
 		})
 	}
 
@@ -176,13 +177,23 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 
 // renderSettings renders the keys ai-rulez owns in .gemini/settings.json into
 // the document at settingsPath. write is false when it owns none (a monorepo
-// scope run without MCP servers), in which case the document is left alone.
+// scope run without MCP servers), in which case the document is left alone, and
+// when the document uses comments and only the context.fileName registration
+// would be written: Gemini CLI accepts comments there, merging would delete
+// them, and the registration is not worth that (generation carries on).
 func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.Config) (result jsonmerge.Result, write bool, err error) {
 	owned, userNames, err := g.settingsKeys(settingsPath, cfg)
 	if err != nil || len(owned) == 0 {
 		return jsonmerge.Result{}, false, err
 	}
 	result, err = applyMergedDocument(settingsPath, owned)
+	if err != nil && len(cfg.MCPServers) == 0 {
+		rulefiles.Warn(".gemini/settings.json could not be merged into, so "+geminiLocalContextFile+
+			" is not added to context.fileName and Gemini CLI does not load machine-local content: "+err.Error(),
+			"hint", "add \""+geminiLocalContextFile+"\" to context.fileName by hand, or remove the comments",
+			"path", settingsPath)
+		return jsonmerge.Result{}, false, nil
+	}
 	// A context.fileName the user authored is theirs even when it is the only
 	// key left in the document, so the file must not be ignored or deleted.
 	result.PartiallyOwned = result.PartiallyOwned || userNames
@@ -197,16 +208,17 @@ var geminiLocalContextFile = config.LocalVariantPath(geminiRootFile)
 // when the config has servers, and context.fileName, which is the main context
 // file (GEMINI.md, or AGENTS.md with agents_md) followed by GEMINI.local.md.
 //
-// A context.fileName that is exactly a value ai-rulez wrote, in a document it
-// wrote whole (it is in the previous run's generated manifest), is rewritten, so
-// toggling agents_md moves it. Any other value is the user's: it is kept, with
-// AGENTS.md appended under agents_md as before, and a warning says what it lacks
-// (userNames reports that the user owns it). GEMINI.md is warned about with the
-// flag off because Gemini would otherwise keep ignoring the generated file.
+// A context.fileName that is exactly a value ai-rulez writes (see
+// ownedContextFileNames) is ai-rulez's, whether or not a manifest remembers it,
+// and is rewritten so toggling agents_md moves it. Any other value is the user's
+// list: it is kept and the names ai-rulez needs that it lacks are appended (a
+// single string becomes a list). Only the names ai-rulez added are claimed, so
+// clean and an agents_md toggle take back just those. userNames reports that the
+// user owns part of the value.
 func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Config,
 ) (owned []jsonmerge.OwnedKey, userNames bool, err error) {
 	if len(cfg.MCPServers) > 0 {
-		owned = append(owned, jsonmerge.OwnedKey{Name: keyMCPServers, Value: g.mcpServersValue(cfg)})
+		owned = append(owned, jsonmerge.OwnedKey{Name: keyMCPServers, Value: g.mcpServersValue(cfg), Members: true})
 	}
 	if rulefiles.InScope(cfg) {
 		return owned, false, nil
@@ -219,38 +231,82 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 	if err != nil {
 		return nil, false, err
 	}
-	if len(names) == 0 || (isList && g.wroteSettings(settingsPath, cfg) && isOwnedContextFileNames(names)) {
-		return append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: []string{main, geminiLocalContextFile}}), false, nil
+	ours := []string{main, geminiLocalContextFile}
+	if len(names) == 0 || (isList && isOwnedContextFileNames(names)) {
+		return append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: ours}), false, nil
 	}
-	if cfg.AgentsMD {
-		if !slices.Contains(names, main) {
-			names = append(slices.Clone(names), main)
-			owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: names})
+
+	// Names an earlier run added that this configuration no longer wants (the
+	// agents_md toggle) leave with it.
+	previous := previousClaimedNames(cfg, settingsPath)
+	wanted := wantedNames(cfg)
+	kept := make([]string, 0, len(names)+len(ours))
+	for _, name := range names {
+		if slices.Contains(previous, name) && !slices.Contains(wanted, name) {
+			continue
 		}
-	} else {
-		g.warnUnreachableGeminiMD(settingsPath, names, isList)
+		kept = append(kept, name)
 	}
-	if !slices.Contains(names, geminiLocalContextFile) {
-		rulefiles.Warn(".gemini/settings.json context.fileName does not list "+geminiLocalContextFile+", so Gemini CLI "+
-			"does not load machine-local content from it; the value is yours and is left alone",
-			"hint", "add \""+geminiLocalContextFile+"\" to context.fileName", "path", settingsPath)
+	claimed := []any{}
+	for _, name := range wanted {
+		if !slices.Contains(kept, name) {
+			kept = append(kept, name)
+			claimed = append(claimed, name)
+		} else if slices.Contains(previous, name) {
+			claimed = append(claimed, name)
+		}
 	}
-	return owned, true, nil
+	if !cfg.AgentsMD {
+		g.warnUnreachableGeminiMD(settingsPath, kept, isList)
+	}
+	return append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: kept, Elements: claimed}), true, nil
 }
 
-// isOwnedContextFileNames reports whether names is a value ai-rulez writes (or
-// wrote in 4.23.0, when agents_md produced just AGENTS.md).
-func isOwnedContextFileNames(names []string) bool {
-	for _, owned := range [][]string{
+// wantedNames are the names ai-rulez appends to a user's context.fileName. The
+// main file is not among them without agents_md: the user's list may deliberately
+// leave GEMINI.md out, and a warning says what that costs.
+func wantedNames(cfg *config.Config) []string {
+	if cfg.AgentsMD {
+		return []string{string(config.SharedAgentsMD), geminiLocalContextFile}
+	}
+	return []string{geminiLocalContextFile}
+}
+
+// previousClaimedNames lists the context.fileName names the previous run recorded
+// as its own in the document at settingsPath. A record of the whole key (the
+// value was ai-rulez's) stands for every name ai-rulez ever writes there.
+func previousClaimedNames(cfg *config.Config, settingsPath string) []string {
+	var names []string
+	for _, claim := range cfg.Run.PreviousClaims(projectRelative(cfg, settingsPath)) {
+		if !slices.Equal(claim.Path, geminiContextFileNamePath) {
+			continue
+		}
+		if claim.Elements == nil {
+			names = append(names, geminiRootFile, string(config.SharedAgentsMD), geminiLocalContextFile)
+			continue
+		}
+		for _, element := range claim.Elements {
+			if name, ok := element.(string); ok {
+				names = append(names, name)
+			}
+		}
+	}
+	return names
+}
+
+// ownedContextFileNames are the context.fileName values ai-rulez writes (or wrote
+// in 4.23.0, when agents_md produced just AGENTS.md).
+func ownedContextFileNames() [][]string {
+	return [][]string{
 		{string(config.SharedAgentsMD)},
 		{string(config.SharedAgentsMD), geminiLocalContextFile},
 		{geminiRootFile, geminiLocalContextFile},
-	} {
-		if slices.Equal(names, owned) {
-			return true
-		}
 	}
-	return false
+}
+
+// isOwnedContextFileNames reports whether names is a value ai-rulez writes.
+func isOwnedContextFileNames(names []string) bool {
+	return slices.ContainsFunc(ownedContextFileNames(), func(owned []string) bool { return slices.Equal(names, owned) })
 }
 
 // warnUnreachableGeminiMD warns, with agents_md off, about a user-authored
@@ -266,14 +322,6 @@ func (g *GeminiPresetGenerator) warnUnreachableGeminiMD(settingsPath string, nam
 			"so Gemini CLI ignores the generated GEMINI.md",
 			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
 	}
-}
-
-// wroteSettings reports whether the previous run wrote the settings document
-// whole (it is in the generated manifest). A document ai-rulez only merged keys
-// into is the user's, and so is a context.fileName in it, whatever its value.
-func (g *GeminiPresetGenerator) wroteSettings(settingsPath string, cfg *config.Config) bool {
-	rel, err := filepath.Rel(cfg.BaseDir, settingsPath)
-	return err == nil && cfg.Run.WasGenerated(rel)
 }
 
 // readGeminiContextFileNames returns the context.fileName names the document at
@@ -333,7 +381,7 @@ func (g *GeminiPresetGenerator) mcpServersValue(cfg *config.Config) map[string]i
 		keyCommand: cmdNPX,
 		keyArgs: []string{
 			"-y",
-			"ai-rulez@latest",
+			aiRulezLatest,
 			keyMCP,
 		},
 	}
