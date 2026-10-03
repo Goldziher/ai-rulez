@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,7 +114,9 @@ func TestLocalOperator_RoutesConfigMutationsToOverlay(t *testing.T) {
 			assert.Equal(t, p.shared, string(shared), "the shared config must be untouched")
 			info, err := os.Stat(p.localPath)
 			require.NoError(t, err)
-			assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			if runtime.GOOS != "windows" { // Windows has no Unix permission bits
+				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			}
 			merged, err := config.LoadConfig(ctx, p.baseDir)
 			require.NoError(t, err)
 			tt.check(t, merged)
