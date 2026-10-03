@@ -265,7 +265,7 @@ func (d *LocalDoc) RemoveProfile(name string) error {
 
 // SetDefault sets the local default profile.
 func (d *LocalDoc) SetDefault(name string) error {
-	return d.Set([]string{"default"}, name)
+	return d.Set([]string{docKeyDefault}, name)
 }
 
 // HasLocalProfile reports whether the overlay itself defines the profile.
@@ -417,7 +417,26 @@ func (d *LocalDoc) marshal() ([]byte, error) {
 // gitignorePatterns are the entries that keep the overlay (and its lock and
 // temp files) out of version control.
 func (d *LocalDoc) gitignorePatterns() []string {
-	return []string{d.configDirName + "/config.local.*", d.configDirName + "/.config.local.*"}
+	return overlayGitignorePatterns(d.configDirName)
+}
+
+func overlayGitignorePatterns(configDirName string) []string {
+	return []string{configDirName + "/config.local.*", configDirName + "/.config.local.*"}
+}
+
+// LocalGitignorePatterns are the stable ignore entries for every machine-local
+// input of the project whose config directory is configDir: the overlay, its
+// lock and temp files, and the local/ content tree. Writers of any of them
+// ensure these before writing.
+func LocalGitignorePatterns(configDir string) []string {
+	name := filepath.ToSlash(relConfigDirName(projectBaseDir(configDir), configDir))
+	return append(overlayGitignorePatterns(name), name+"/"+localDir+"/")
+}
+
+// WriteFileAtomic writes data to path with perm via an exclusively created temp
+// file in the same directory, then renames it over the target.
+func WriteFileAtomic(path string, data []byte, perm os.FileMode) error {
+	return writeFileAtomic(path, data, perm)
 }
 
 // Save writes the overlay (owner-only, atomically), then validates it against the
@@ -651,7 +670,7 @@ func DescribeLocalOverlay(baseDir string) (*LocalOverlay, []OverlayChange, error
 	walkLeaves(nil, d.Doc, func(segs []string, v any) {
 		sv, has := lookupSegs(shared, segs)
 		changes = append(changes, OverlayChange{
-			Path: strings.Join(segs, "."), Shared: sv, Local: v, HasShared: has, Redacted: !showAllowed(segs),
+			Path: strings.Join(segs, "."), Shared: sv, Local: v, HasShared: has, Redacted: !showAllowed(segs) || !showTypeMatches(segs, v),
 		})
 	})
 	return overlay, changes, nil
@@ -688,6 +707,97 @@ func showAllowed(segs []string) bool {
 		return len(segs) == 3 && (last == "transport" || last == "enabled" || last == docKeyRemove)
 	}
 	return len(segs) == 1 && showScalarKeys[segs[0]]
+}
+
+// valueKind is the type a displayable overlay value must have.
+type valueKind int
+
+const (
+	kindString valueKind = iota
+	kindBool
+	kindStringList
+	kindBoolOrStringList
+)
+
+// showTypeMatches reports whether v has the type its allowlisted key expects. A
+// mistyped value (a secret pasted into a bool key, say) is withheld like any
+// other: allowlisted keys are only safe to print when they hold what they should.
+func showTypeMatches(segs []string, v any) bool {
+	kind, ok := showKind(segs)
+	if !ok {
+		return false
+	}
+	switch kind {
+	case kindBool:
+		_, ok = v.(bool)
+		return ok
+	case kindString:
+		_, ok = v.(string)
+		return ok
+	case kindStringList:
+		return isStringList(v)
+	default:
+		_, ok = v.(bool)
+		return ok || isStringList(v)
+	}
+}
+
+func isStringList(v any) bool {
+	list, ok := v.([]any)
+	if !ok {
+		if _, isStrs := v.([]string); isStrs {
+			return true
+		}
+		return false
+	}
+	for _, e := range list {
+		if _, ok := e.(string); !ok {
+			return false
+		}
+	}
+	return true
+}
+
+var showScalarKinds = map[string]valueKind{
+	"name": kindString, "description": kindString, "default": kindString, "presets": kindStringList,
+	"gitignore": kindBool, "compact": kindBool, "builtins": kindBoolOrStringList,
+}
+
+// showKind returns the expected type of an allowlisted key path.
+func showKind(segs []string) (valueKind, bool) {
+	if len(segs) == 0 {
+		return 0, false
+	}
+	last := segs[len(segs)-1]
+	switch segs[0] {
+	case docKeyProfiles:
+		return kindStringList, true
+	case docKeyDefaults:
+		if last == "omit_agent_fields" {
+			return kindStringList, true
+		}
+		return kindString, true
+	case rulesDir:
+		return kindString, true
+	case docKeyHeader:
+		if last == "timestamp" {
+			return kindBool, true
+		}
+		return kindString, true
+	case string(PresetMCP):
+		if last == "self_server" {
+			return kindBool, true
+		}
+		return kindString, true
+	}
+	if isNamedListKey(segs[0]) {
+		if last == "transport" {
+			return kindString, true
+		}
+		return kindBool, true
+	}
+	kind, ok := showScalarKinds[segs[0]]
+	return kind, ok && len(segs) == 1
 }
 
 // showRules holds the allowed shapes of the table-valued keys, by position.

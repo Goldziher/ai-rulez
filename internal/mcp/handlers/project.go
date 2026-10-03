@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	incl "github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/Goldziher/ai-rulez/internal/walkutil"
 	"github.com/Goldziher/ai-rulez/schema"
@@ -50,7 +51,7 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		inc := &cfg.Includes[i]
 		entry := map[string]interface{}{
 			keyName:   inc.Name,
-			keySource: inc.Source,
+			keySource: incl.RedactURL(inc.Source),
 		}
 		if inc.Path != "" {
 			entry[keyPath] = inc.Path
@@ -115,7 +116,7 @@ const keyError = "error"
 func localOverlayInfo(cfg *config.Config) map[string]interface{} {
 	overlay, err := config.ReadLocalOverlay(cfg.ConfigDir, cfg.ConfigFile)
 	if err != nil {
-		return map[string]interface{}{keyError: err.Error()}
+		return map[string]interface{}{keyError: redactError(err)}
 	}
 	if overlay == nil {
 		return nil
@@ -630,6 +631,13 @@ func relPathList(baseDir string, paths []string) []string {
 	return out
 }
 
+// redactError renders err for a tool response with URL credentials removed and
+// any quoted source values dropped from decode errors: validation of a merged
+// config can quote machine-local values (secrets).
+func redactError(err error) string {
+	return incl.RedactURL(config.SanitizeDecodeError(err).Error())
+}
+
 func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallToolResult, error) {
 	baseDir := workingDir(request)
 
@@ -638,14 +646,14 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 	if err != nil {
 		result := map[string]interface{}{
 			keyValid: false,
-			keyError: err.Error(),
+			keyError: redactError(err),
 		}
 		return ToolSuccess(result)
 	}
 	if err := cfg.Validate(); err != nil {
 		result := map[string]interface{}{
 			keyValid: false,
-			keyError: err.Error(),
+			keyError: redactError(err),
 		}
 		return ToolSuccess(result)
 	}
@@ -653,7 +661,7 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 		if err := schema.ValidateLocalFile(cfg.LocalOverlay.Path); err != nil {
 			return ToolSuccess(map[string]interface{}{
 				keyValid: false,
-				keyError: fmt.Sprintf("local overlay %s: %s", cfg.LocalOverlay.Path, err.Error()),
+				keyError: fmt.Sprintf("local overlay %s: %s", cfg.LocalOverlay.Path, redactError(err)),
 			})
 		}
 	}

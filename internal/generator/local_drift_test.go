@@ -267,6 +267,29 @@ func TestGitignore_MachineSpecificPathsGoToInfoExclude(t *testing.T) {
 	assert.Contains(t, ignore, ".ai-rulez/.generated-manifest.local.json")
 }
 
+func TestGitignore_ExcludeIsWrittenAtomicallyKeepingUserLines(t *testing.T) {
+	// Arrange
+	p := newDriftProject(t, strings.Replace(driftShared, "gitignore = false", "gitignore = true", 1))
+	p.git(t, "init", "-q")
+	infoDir := filepath.Join(p.base, ".git", "info")
+	require.NoError(t, os.MkdirAll(infoDir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(infoDir, "exclude"), []byte("# mine\n*.swp\n"), 0o644))
+	p.overlay(t, "presets = [\"codex\"]\n")
+
+	// Act
+	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
+
+	// Assert
+	exclude := p.read(t, ".git/info/exclude")
+	assert.Contains(t, exclude, "*.swp")
+	assert.Contains(t, exclude, "/AGENTS.md")
+	entries, err := os.ReadDir(infoDir)
+	require.NoError(t, err)
+	for _, e := range entries {
+		assert.NotContains(t, e.Name(), ".tmp", "no temp file is left beside the exclude file")
+	}
+}
+
 func TestGitignore_ExcludeBlockFollowsTheLocalSet(t *testing.T) {
 	// Arrange
 	p := newDriftProject(t, strings.Replace(driftShared, "gitignore = false", "gitignore = true", 1))

@@ -2,8 +2,10 @@ package config
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 
@@ -199,9 +201,22 @@ func decodeMergedDoc(mainPath, localPath string, merged map[string]any) (*Config
 	if err != nil {
 		return nil, oops.
 			With("path", localPath).
-			Wrapf(err, "decode %s merged with %s", filepath.Base(mainPath), filepath.Base(localPath))
+			Hint("Check the value types in the local overlay").
+			Wrapf(SanitizeDecodeError(err), "decode %s merged with %s", filepath.Base(mainPath), filepath.Base(localPath))
 	}
 	return cfg, nil
+}
+
+// quotedValueRe matches the backtick-quoted source value that yaml decode errors
+// carry ("cannot unmarshal !!str `value` into []string").
+var quotedValueRe = regexp.MustCompile("\\s*`[^`]*`")
+
+// SanitizeDecodeError returns an error with the offending source values removed
+// from a decode failure, keeping line numbers and types. The merged document
+// includes machine-local values that may be credentials, so they must not reach
+// terminals, logs or MCP responses.
+func SanitizeDecodeError(err error) error {
+	return errors.New(quotedValueRe.ReplaceAllString(err.Error(), ""))
 }
 
 // decodeJSONDoc decodes a document through JSON. YAML numbers are first emitted

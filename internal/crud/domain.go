@@ -46,8 +46,8 @@ func (op *OperatorImpl) AddDomain(ctx context.Context, req *AddDomainRequest) (*
 	// Write description file if provided
 	if req.Description != "" {
 		descPath := filepath.Join(op.filesMgr.GetDomainPath(req.Name), ".description")
-		//nolint:gosec,errcheck // description file is optional, best effort
-		_ = os.WriteFile(descPath, []byte(req.Description), 0o644)
+		//nolint:errcheck // description file is optional, best effort
+		_ = op.filesMgr.WriteFileOverwrite(descPath, req.Description)
 	}
 
 	return &DomainResult{

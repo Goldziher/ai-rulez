@@ -16,7 +16,7 @@ import (
 // and returns the function that releases it. It polls without blocking and gives
 // up after localLockTimeout instead of hanging behind a stuck editor.
 func lockLocalConfig(path string) (func(), error) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR, 0o600) //nolint:gosec // lock file beside the config
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_RDWR|syscall.O_NOFOLLOW, 0o600) //nolint:gosec // lock file beside the config
 	if err != nil {
 		return nil, oops.With("path", path).Wrapf(err, "open local config lock")
 	}
