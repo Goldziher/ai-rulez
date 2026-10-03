@@ -95,7 +95,7 @@ func EnsureEntries(baseDir string, patterns []string) error {
 	block.WriteString(EndMarker + "\n")
 
 	out := spliceFence(content, block.String(), broken)
-	if err := os.WriteFile(path, []byte(out), 0o644); err != nil { //nolint:gosec // .gitignore is meant to be world-readable
+	if err := gitutil.WriteFileAtomic(path, []byte(out), gitignoreMode(path)); err != nil {
 		return oops.With("path", path).Wrapf(err, "write .gitignore")
 	}
 	return nil
@@ -132,4 +132,13 @@ func spliceFence(content, block string, broken bool) string {
 		out += "\n"
 	}
 	return out + "\n" + block
+}
+
+// gitignoreMode keeps the permissions of an existing .gitignore; a new one is
+// world-readable like any ignore file.
+func gitignoreMode(path string) os.FileMode {
+	if info, err := os.Stat(path); err == nil {
+		return info.Mode().Perm()
+	}
+	return 0o644
 }
