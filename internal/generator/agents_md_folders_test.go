@@ -44,7 +44,7 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 		{
 			name: "cursor", preset: "cursor",
 			want: sortedPaths(sharedSkills, []string{
-				".agents/agents/helper.md", ".cursor/rules/auto.mdc", ".cursor/rules/context-scoped.mdc",
+				".cursor/agents/helper.md", ".cursor/rules/auto.mdc", ".cursor/rules/context-scoped.mdc",
 				".cursor/rules/go-style.mdc", ".cursor/rules/manual.mdc", ".mcp.json", "AGENTS.md",
 			}),
 		},
@@ -93,7 +93,7 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 			runAgentsMDGenerate(t, root)
 
 			assert.Equal(t, tc.want, agentsMDPaths(t, root))
-			assert.Equal(t, tc.want, sortedPaths(filterOut(manifestFiles(t, root), ".ai-rulez/")),
+			assert.Equal(t, tc.want, sortedPaths(filterOut(sharedManifestFiles(t, root), ".ai-rulez/")),
 				"the manifest lists exactly the files written")
 		})
 	}

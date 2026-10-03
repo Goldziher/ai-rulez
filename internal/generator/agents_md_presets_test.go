@@ -287,7 +287,7 @@ func TestAgentsMD_ToggleRestoresRootFiles(t *testing.T) {
 			} else {
 				assert.NoFileExists(t, filepath.Join(root, tc.root), "flag on removes %s", tc.root)
 			}
-			assert.NotContains(t, manifestFiles(t, root), "GEMINI.md")
+			assert.NotContains(t, sharedManifestFiles(t, root), "GEMINI.md")
 
 			writeAgentsMDProject(t, root, agentsMDConfig(tc.presets, "", agentsMDMCPServer))
 			runAgentsMDGenerate(t, root)
