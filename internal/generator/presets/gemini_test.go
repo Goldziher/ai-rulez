@@ -33,9 +33,9 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir: "/test",
-			// No MCP servers in cfg, so no .gemini/settings.json: .gemini, .agents,
-			// .agents/skills, .gemini/agents, GEMINI.md
-			wantOutputs: 5,
+			// .gemini, .agents, .agents/skills, .gemini/agents, GEMINI.md and
+			// .gemini/settings.json (context.fileName is written without MCP servers)
+			wantOutputs: 6,
 			wantErr:     false,
 		},
 		{
@@ -50,7 +50,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 7, // 5 base + skill dir + SKILL.md
+			wantOutputs: 8, // 6 base + skill dir + SKILL.md
 			wantErr:     false,
 		},
 		{
@@ -69,7 +69,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 6, // 5 base + agent .md
+			wantOutputs: 7, // 6 base + agent .md
 			wantErr:     false,
 		},
 		{
@@ -98,7 +98,7 @@ func TestGeminiPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 8, // 5 base + skill dir + SKILL.md + agent .md
+			wantOutputs: 9, // 6 base + skill dir + SKILL.md + agent .md
 			wantErr:     false,
 		},
 	}
@@ -232,7 +232,7 @@ func TestGeminiPresetGenerator_renderSettings_Transports(t *testing.T) {
 		},
 	}
 
-	rendered, err := g.renderSettings("", cfg)
+	rendered, _, err := g.renderSettings("", cfg)
 	if err != nil {
 		t.Fatalf("renderSettings: %v", err)
 	}
