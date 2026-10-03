@@ -3,7 +3,7 @@ version = 1
 [[hooks]]
 id = "ai-rulez-validate"
 stages = ["pre-commit"]
-args = ["generate", "--dry-run"]
+args = ["generate", "--dry-run", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
@@ -28,7 +28,7 @@ run = "ai-rulez"
 [[hooks]]
 id = "ai-rulez-generate"
 stages = ["pre-commit"]
-args = ["generate"]
+args = ["generate", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
@@ -53,7 +53,7 @@ run = "ai-rulez"
 [[hooks]]
 id = "ai-rulez-recursive"
 stages = ["pre-commit"]
-args = ["generate", "--recursive"]
+args = ["generate", "--recursive", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
