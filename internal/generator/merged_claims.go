@@ -232,7 +232,7 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 			continue
 		}
 		for _, path := range result.Kept {
-			g.warnOnce("Leaving "+strings.Join(path, ".")+" in "+rel+": it is no longer the value ai-rulez wrote, "+
+			g.warnOnce("Leaving "+strings.Join(path, ".")+" in "+rel+": it is not the value ai-rulez writes, "+
 				"so it is treated as yours", "hint", "remove it by hand if you do not want it")
 		}
 		if result.Changed {
@@ -332,9 +332,9 @@ func writeFileAtomic(path string, data []byte) error {
 		return err
 	}
 	tmpName := tmp.Name()
-	cleanup := func() { _ = os.Remove(tmpName) }
+	cleanup := func() { _ = os.Remove(tmpName) } //nolint:errcheck // best-effort removal of our own temp file
 	if _, err := tmp.Write(data); err != nil {
-		_ = tmp.Close()
+		_ = tmp.Close() //nolint:errcheck // the write error is the one reported
 		cleanup()
 		return err
 	}
