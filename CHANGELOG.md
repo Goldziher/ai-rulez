@@ -9,6 +9,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Added
 
 - **xum stdio MCP `env`** (#209): Xum's `mcp.jsonc` loader keeps only the command string of a stdio entry, so `env` is written as a POSIX shell assignment prefix (`GITHUB_TOKEN=... npx -y pkg`, keys sorted, values shell-quoted) instead of being dropped with a warning. Names that are not shell identifiers are skipped with a warning. Resolved secrets in it fall under the existing MCP secret guard (`0600`, must be git-ignored).
+- **v1 OpenCode plugin warning**: OpenCode v2 does not run v1 plugins and only logs the refusal to its server log. `generate` now warns, once per file and without failing, about a v1-shaped authored `.ai-rulez/opencode/index.js` and about v1-shaped local files in `.opencode/plugin(s)/` or in the `plugin`/`plugins` array of `opencode.json(c)` (local paths only), with a link to the migration guide. See `docs/plugins.md`.
+
+### Fixed
+
+- **OpenCode plugin bundles**: the skills, commands and agents bundled under `.opencode/` were never discovered when the plugin was installed from npm, because OpenCode v2 only scans its own config directories. The generated entrypoint now registers them through the skill, command and agent transforms (`.opencode/ai-rulez-content.js`), and no longer imports `@opencode/plugin` at runtime, which failed to resolve for local plugins.
 
 ### Fixed
 
