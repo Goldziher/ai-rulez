@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -42,7 +43,9 @@ func TestWriteFileAtomic_Permissions(t *testing.T) {
 			require.NoError(t, err)
 			info, err := os.Stat(target)
 			require.NoError(t, err)
-			assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			if runtime.GOOS != "windows" { // Windows has no Unix permission bits
+				assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+			}
 			leftovers, err := filepath.Glob(filepath.Join(dir, ".config.local.toml-*.tmp"))
 			require.NoError(t, err)
 			assert.Empty(t, leftovers, "the temp file must not outlive the write")
@@ -107,7 +110,9 @@ func TestLocalDoc_SaveRewritesWorldReadableOverlayAsOwnerOnly(t *testing.T) {
 	// Assert
 	info, err := os.Stat(path)
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows has no Unix permission bits
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
 }
 
 func TestLocalDoc_SaveWritesNothingWhenGitignoreCannotBeUpdated(t *testing.T) {
@@ -128,6 +133,9 @@ func TestLocalDoc_SaveWritesNothingWhenGitignoreCannotBeUpdated(t *testing.T) {
 }
 
 func TestLocalDoc_LockSerializesEditors(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the overlay lock is a no-op on Windows")
+	}
 	// Arrange
 	_, configDir := overlayProject(t, securityShared)
 	first, err := OpenLocalDoc(configDir, "config.toml")
@@ -158,6 +166,9 @@ func TestLocalDoc_LockSerializesEditors(t *testing.T) {
 }
 
 func TestLocalDoc_RestoreFailureIsReported(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("directory permissions are not enforced on Windows")
+	}
 	// Arrange: the overlay's directory is not writable, so restoring fails.
 	dir := t.TempDir()
 	d := &LocalDoc{Path: filepath.Join(dir, "config.local.toml")}

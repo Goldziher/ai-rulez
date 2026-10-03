@@ -4,6 +4,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -40,6 +41,9 @@ func TestNotARepositoryDegradesGracefully(t *testing.T) {
 }
 
 func TestTrackedAmongIsRelativeToTheQueriedDirectory(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows file names cannot contain glob metacharacters")
+	}
 	gitAvailable(t)
 	top := t.TempDir()
 	runGit(t, top, "init", "-q")
