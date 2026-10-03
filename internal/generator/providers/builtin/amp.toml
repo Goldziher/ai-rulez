@@ -13,6 +13,8 @@ directories = [".agents", ".agents/skills", ".agents/agents"]
 
 [root]
 file = "AGENTS.md"
+# Amp reads no machine-local project file (only ~/.config/amp/AGENTS.md).
+local_file = "none"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
 
 [outputs.skills]

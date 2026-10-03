@@ -124,7 +124,7 @@ func TestLocalContent_PerPreset(t *testing.T) {
 			".agents/agents/mine-agent.md":       "LOCAL_AGENT.",
 		}},
 		{"codex", "codex", map[string]string{
-			"AGENTS.local.md":                   "LOCAL_CONTEXT.",
+			"AGENTS.override.md":                "LOCAL_CONTEXT.",
 			".codex/skills/mine-skill/SKILL.md": "LOCAL_SKILL.",
 			".codex/skills/dom-skill/SKILL.md":  "LOCAL_DOMAIN_SKILL.",
 			".codex/agents/mine-agent.toml":     "LOCAL_AGENT.",

@@ -2,6 +2,8 @@ package generator
 
 import (
 	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -149,5 +151,129 @@ func TestOpencodeConfig_ListsLocalRootFile(t *testing.T) {
 	}
 	for _, doc := range documents[1:] {
 		assert.Equal(t, documents[0], doc, "the committed document does not depend on local content")
+	}
+}
+
+// captureLocalWarnings collects the dropped-local-content warnings as
+// "preset: items" strings.
+func captureLocalWarnings(t *testing.T) *[]string {
+	t.Helper()
+	var got []string
+	previous := warnLocal
+	warnLocal = func(_ string, args ...any) {
+		fields := map[string]string{}
+		for i := 0; i+1 < len(args); i += 2 {
+			key, _ := args[i].(string)
+			value, _ := args[i+1].(string)
+			fields[key] = value
+		}
+		got = append(got, fields["preset"]+": "+fields["items"])
+	}
+	t.Cleanup(func() { warnLocal = previous })
+	return &got
+}
+
+// Codex and Hermes (reading the AGENTS chain) load a machine-local
+// AGENTS.override.md in place of AGENTS.md, so it carries the shared content too.
+func TestAgentsOverride_ReplacesAgentsMDForCodexAndHermes(t *testing.T) {
+	tests := []struct {
+		name         string
+		preset       string
+		flag         string
+		withLocal    bool
+		wantOverride bool
+	}{
+		{name: "codex", preset: "codex", withLocal: true, wantOverride: true},
+		{name: "codex with agents_md", preset: "codex", flag: "agents_md = true\n", withLocal: true, wantOverride: true},
+		{name: "codex without local content", preset: "codex"},
+		{name: "hermes with agents_md", preset: "hermes", flag: "agents_md = true\n", withLocal: true, wantOverride: true},
+		{name: "hermes without agents_md", preset: "hermes", withLocal: true},
+		{name: "opencode", preset: "opencode", withLocal: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{tt.preset}, "", ""))
+			if tt.withLocal {
+				writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+			}
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			override := filepath.Join(root, "AGENTS.override.md")
+			assert.NoFileExists(t, filepath.Join(root, ".hermes.local.md"))
+			if tt.preset != "opencode" {
+				assert.NoFileExists(t, filepath.Join(root, "AGENTS.local.md"))
+			}
+			if !tt.wantOverride {
+				assert.NoFileExists(t, override)
+				return
+			}
+			got := readAgentsMDFile(t, root, "AGENTS.override.md")
+			agents := readAgentsMDFile(t, root, "AGENTS.md")
+			assert.Contains(t, got, "ALWAYS_BODY", "carries the shared content")
+			assert.Contains(t, got, afterBanner(agents), "carries AGENTS.md as written")
+			assert.Contains(t, got, "LOCAL_BODY")
+			assert.NotContains(t, agents, "LOCAL_BODY")
+			assert.Contains(t, got, "replaces AGENTS.md for Codex and Hermes")
+			assert.Contains(t, manifestFiles(t, root, ".generated-manifest.local.json"), "AGENTS.override.md")
+			assert.NotContains(t, sharedManifestFiles(t, root), "AGENTS.override.md")
+		})
+	}
+}
+
+func TestAgentsOverride_FollowsLocalContent(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	writeAgentsMDProject(t, root, agentsMDConfig([]string{"codex"}, "", ""))
+	writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+	runAgentsMDGenerate(t, root)
+	require.FileExists(t, filepath.Join(root, "AGENTS.override.md"))
+
+	// Act: the local content goes away.
+	require.NoError(t, os.RemoveAll(filepath.Join(root, ".ai-rulez", "local")))
+	runAgentsMDGenerate(t, root)
+
+	// Assert
+	assert.NoFileExists(t, filepath.Join(root, "AGENTS.override.md"))
+	assert.FileExists(t, filepath.Join(root, "AGENTS.md"))
+}
+
+// A tool with no local-file mechanism gets nothing written, and one warning
+// naming it however many items it would have received.
+func TestLocalRoot_WarnsOnceWhereNoMechanismExists(t *testing.T) {
+	tests := []struct {
+		name   string
+		preset string
+		flag   string
+		want   []string
+	}{
+		{name: "hermes without agents_md", preset: "hermes", want: []string{"hermes: rule r, context notes"}},
+		{name: "amp", preset: "amp", want: []string{"amp: rule r, context notes"}},
+		{name: "amp with agents_md", preset: "amp", flag: "agents_md = true\n", want: []string{"amp: rule r, context notes"}},
+		{name: "hermes with agents_md has the override", preset: "hermes", flag: "agents_md = true\n"},
+		{name: "codex has the override", preset: "codex"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			warned := captureLocalWarnings(t)
+			root := t.TempDir()
+			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{tt.preset}, "", ""))
+			writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+			writeAgentsMDFile(t, root, ".ai-rulez/local/rules/r.md", "LOCAL_RULE\n")
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			assert.Equal(t, tt.want, *warned)
+			for _, rel := range []string{".hermes.local.md", "AGENTS.local.md"} {
+				assert.NoFileExists(t, filepath.Join(root, rel))
+			}
+		})
 	}
 }
