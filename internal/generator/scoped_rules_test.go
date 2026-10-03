@@ -369,29 +369,22 @@ func TestScopedRules_CleanRemovesScopedFiles(t *testing.T) {
 	assert.NoDirExists(t, filepath.Join(root, ".github", "instructions"))
 }
 
-func TestScopedRules_CollisionIsAnError(t *testing.T) {
-	tests := []struct {
-		name  string
-		extra map[string]string
-	}{
-		{
-			name:  "root rule named like a prefixed scoped rule (case-insensitive)",
-			extra: map[string]string{"rules/Packages-API--api-style.md": "# Clash\n\nCLASH\n"},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Arrange
-			root := writeScopedRulesProject(t, "split", tt.extra)
+func TestScopedRules_CollisionIsDisambiguated(t *testing.T) {
+	// Arrange: a root rule named like the file of a prefixed scoped rule, differing in case.
+	root := writeScopedRulesProject(t, "split", map[string]string{"rules/Packages-API--api-style.md": "# Clash\n\nCLASH\n"})
 
-			// Act
-			err := generateScopedProject(t, root)
+	// Act
+	err := generateScopedProject(t, root)
 
-			// Assert
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "collide")
-		})
+	// Assert: windsurf's folder is flat, so the clash happens there only
+	require.NoError(t, err)
+	var clashing []string
+	for _, f := range ruleFilesUnder(t, root) {
+		if strings.HasPrefix(strings.ToLower(filepath.Base(f)), "packages-api--api-style") && strings.HasPrefix(f, ".windsurf/") {
+			clashing = append(clashing, f)
+		}
 	}
+	assert.Len(t, clashing, 2, "both rules are written, one under a suffixed name: %v", clashing)
 }
 
 func TestScopedRules_ScopeSlugCollisionIsAnError(t *testing.T) {

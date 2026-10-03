@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
@@ -206,18 +207,56 @@ func TestWriteOutput_LegacyFrontmatterHashesMigrateToBanner(t *testing.T) {
 	assert.Equal(t, info1.ModTime(), info2.ModTime())
 }
 
-func TestInjectHashes_RulesDirWithoutBannerIsUnchanged(t *testing.T) {
-	tests := []struct{ name, content string }{
-		{"frontmatter and no banner", "---\nalwaysApply: true\n---\n# T\n\nBody.\n"},
-		{"no frontmatter and no banner", "# T\n\nBody.\n"},
+func TestInjectHashes_RulesDirWithoutBannerGetsHashBanner(t *testing.T) {
+	tests := []struct {
+		name, content, path string
+	}{
+		{"frontmatter and no banner", "---\nalwaysApply: true\n---\n# T\n\nBody.\n", ".cursor/rules/x.mdc"},
+		{"frontmatter, blank line, no banner", "---\nalwaysApply: true\n---\n\n# T\n\nBody.\n", ".cursor/rules/x.mdc"},
+		{"no frontmatter and no banner", "# T\n\nBody.\n", ".claude/rules/x.md"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := injectHashes(tt.content, filepath.Join("/p", ".cursor", "rules", "x.mdc"), "abc", "def")
+			got := injectHashes(tt.content, tt.path, "abc", "def")
 
-			assert.Equal(t, tt.content, got)
+			fm, rest := splitFrontmatter(t, got)
+			if strings.HasPrefix(tt.content, "---") {
+				assert.Equal(t, map[string]any{"alwaysApply": true}, fm, "frontmatter keeps its fields and no hash comments")
+				assert.NotContains(t, got[:len(got)-len(rest)], "Hash")
+			}
+			assert.Contains(t, rest, "Content-Hash: abc")
+			assert.Contains(t, rest, "Source-Hash: def")
+			assert.True(t, hasGeneratedBanner(tt.path, []byte(got)))
+			assert.Equal(t, "# T\n\nBody.\n", stripHeader(got, tt.path), "the banner is not part of the body")
+			assert.Equal(t, got, injectHashes(tt.content, tt.path, "abc", "def"), "deterministic")
 		})
 	}
+
+	t.Run("non markdown extension takes the generic fallback", func(t *testing.T) {
+		assert.Equal(t, "plain\n", injectHashes("plain\n", ".claude/rules/x.txt", "abc", "def"))
+	})
+}
+
+func TestWriteOutput_BannerlessRulesDirFile_IsStableAndManaged(t *testing.T) {
+	// Arrange: a legacy provider output in a rules folder, rendered without a banner.
+	dir := t.TempDir()
+	rel := ".claude/rules/legacy.md"
+	gen := NewGenerator(&config.Config{BaseDir: dir, SourceHash: "src"})
+	out := config.OutputFile{Path: rel, Content: "# Legacy\n\nBody.\n"}
+
+	// Act
+	require.NoError(t, gen.writeOutputs([]config.OutputFile{out}))
+	abs := filepath.Join(dir, rel)
+	old := time.Unix(1_600_000_000, 0)
+	require.NoError(t, os.Chtimes(abs, old, old))
+	require.NoError(t, gen.writeOutputs([]config.OutputFile{out}))
+	info, err := os.Stat(abs)
+	require.NoError(t, err)
+
+	// Assert
+	assert.True(t, info.ModTime().Equal(old), "second run does not rewrite the file")
+	assert.False(t, gen.skippedPaths[rel], "recognized as ours even with no manifest")
+	assert.True(t, looksGenerated(abs))
 }
 
 func TestExtractStoredHashes_Robustness(t *testing.T) {
