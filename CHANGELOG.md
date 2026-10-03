@@ -29,7 +29,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Security
 
-- **Generated files that contain resolved MCP secrets** (`.mcp.json`, `.claude/settings.json`, ...) are written `0600`, and an existing world-readable file is tightened.
+- **Generated files that contain resolved MCP secrets** (`.mcp.json`, `.claude/settings.json`, ...) are written `0600`, and an existing world-readable file is tightened. Credentials in a server URL (user info, `?token=`-style query values) and in secret-looking args (`--token=...`, `--api-key ...`) count as secrets too, and `generate` refuses to write such a config unless it is git-ignored; the error lists every path.
 - **Include and skill sources** are logged and returned with URL credentials and query-string values redacted.
 
 ## [4.22.2] - 2026-10-03

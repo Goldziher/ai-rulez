@@ -11,6 +11,8 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
+const kindSkill = "skill"
+
 // perItemContent returns a copy of a content tree that keeps only the content
 // written as one file per item: skills, agents and commands, at the root and in
 // every domain. Rules and context are dropped: they have their own local outputs
@@ -85,10 +87,10 @@ func checkLocalCollisions(shared, local *config.ContentTree) error {
 	index := func(t *config.ContentTree) map[string]source {
 		byKey := map[string]source{}
 		for _, f := range presets.AllSkills(t) {
-			byKey["skill:"+f.Name] = source{"skill", f.Name, f.Path}
+			byKey[kindSkill+":"+f.Name] = source{kindSkill, f.Name, f.Path}
 		}
 		for _, f := range presets.AllCommands(t) {
-			byKey["skill:"+f.Name] = source{"command", f.Name, f.Path}
+			byKey[kindSkill+":"+f.Name] = source{"command", f.Name, f.Path}
 		}
 		for _, f := range presets.AllAgents(t) {
 			byKey["agent:"+f.Name] = source{"agent", f.Name, f.Path}
@@ -149,16 +151,25 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 		}
 	}
 	g.warnDroppedItems(cfg, items, known, builtin)
-	names := make([]string, 0, len(all))
-	for name := range all {
+	appendNewLocalOutputs(allOutputs, all, known, builtin)
+	shared := map[string][]config.OutputFile{sharedOutputsKey: sharedLocalSkills(cfg, items)}
+	appendNewLocalOutputs(allOutputs, shared, known, map[string]bool{sharedOutputsKey: true})
+	return nil
+}
+
+// appendNewLocalOutputs appends, per preset in name order, the files of rendered
+// whose path is not known yet, as LocalOnly outputs; directories are left out.
+func appendNewLocalOutputs(allOutputs, rendered map[string][]config.OutputFile, known, only map[string]bool) {
+	names := make([]string, 0, len(rendered))
+	for name := range rendered {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 	for _, name := range names {
-		if !builtin[name] {
+		if !only[name] {
 			continue
 		}
-		for _, o := range all[name] {
+		for _, o := range rendered[name] {
 			if o.IsDir || known[o.Path] {
 				continue
 			}
@@ -167,15 +178,6 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 			allOutputs[name] = append(allOutputs[name], o)
 		}
 	}
-	for _, o := range sharedLocalSkills(cfg, items) {
-		if known[o.Path] {
-			continue
-		}
-		known[o.Path] = true
-		o.LocalOnly = true
-		allOutputs[sharedOutputsKey] = append(allOutputs[sharedOutputsKey], o)
-	}
-	return nil
 }
 
 // renderLocalPresets renders the presets for a content tree that carries local
@@ -256,7 +258,7 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 		files  func(*config.ContentTree) []config.ContentFile
 		narrow func(*config.ContentTree) *config.ContentTree
 	}{
-		{"skill", presets.AllSkills, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, true, false, false) }},
+		{kindSkill, presets.AllSkills, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, true, false, false) }},
 		{"agent", presets.AllAgents, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, true, false) }},
 		{"command", presets.AllCommands, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, true) }},
 	}
@@ -271,27 +273,13 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 		if err != nil {
 			continue // the combined render reports the error
 		}
-		sharedPlaced := false
-		if kind.label == "skill" {
-			for _, o := range sharedLocalSkills(cfg, narrowed) {
-				sharedPlaced = sharedPlaced || !known[o.Path]
-			}
-		}
+		sharedPlaced := kind.label == kindSkill && anyUnknown(sharedLocalSkills(cfg, narrowed), known)
 		for name, outs := range all {
 			if !builtin[name] {
 				continue
 			}
-			placed := false
-			if consumer, ok := config.SharedOutputConsumerFor(name); ok && sharedPlaced && consumer.Reads(config.SharedAgentSkills) {
-				placed = true
-			}
-			for _, o := range outs {
-				if !o.IsDir && !known[o.Path] {
-					placed = true
-					break
-				}
-			}
-			if placed {
+			consumer, isConsumer := config.SharedOutputConsumerFor(name)
+			if (sharedPlaced && isConsumer && consumer.Reads(config.SharedAgentSkills)) || anyUnknown(outs, known) {
 				continue
 			}
 			for _, f := range files {
@@ -303,6 +291,16 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 		sort.Strings(dropped[name])
 	}
 	return dropped
+}
+
+// anyUnknown reports whether outputs hold a file whose path is not known yet.
+func anyUnknown(outputs []config.OutputFile, known map[string]bool) bool {
+	for _, o := range outputs {
+		if !o.IsDir && !known[o.Path] {
+			return true
+		}
+	}
+	return false
 }
 
 // onlyKind keeps the selected per-item kinds of a content tree.
