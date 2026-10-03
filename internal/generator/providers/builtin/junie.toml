@@ -13,6 +13,9 @@ directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules"]
 # section — Junie surfaces subagents through its own UI, not the root file.
 [root]
 file = ".junie/guidelines.md"
+# Junie never reads .junie/guidelines.local.md, but it loads every .junie/rules/*.md,
+# so the machine-local context goes there.
+local_file = ".junie/rules/ai-rulez.local.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline"]
 
 # Rules: .junie/rules/{id}.md, written in `[rules] mode = "split"` (the default).
