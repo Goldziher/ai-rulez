@@ -101,30 +101,9 @@ func Unmerge(path string, claims []Claim) (Unmerged, error) {
 
 	indent := detectTopLevelIndent(existing)
 	newline := detectLineEnding(existing)
-	changed := false
-	apply := func(claim Claim) error {
-		next, did, err := unmergeClaim(members, claim.Path, claim, 1, indent, newline)
-		if err != nil {
-			return oops.With("path", path).Wrapf(err, "remove ai-rulez content from JSON settings document")
-		}
-		members, changed = next, changed || did
-		return nil
-	}
-	for _, claim := range claims {
-		if len(claim.Path) == 0 || claim.Alone {
-			continue
-		}
-		if err := apply(claim); err != nil {
-			return Unmerged{}, err
-		}
-	}
-	for _, claim := range claims {
-		if len(claim.Path) == 0 || !claim.Alone || len(members) != 1 {
-			continue
-		}
-		if err := apply(claim); err != nil {
-			return Unmerged{}, err
-		}
+	members, changed, err := unmergeAll(members, claims, indent, newline)
+	if err != nil {
+		return Unmerged{}, oops.With("path", path).Wrapf(err, "remove ai-rulez content from JSON settings document")
 	}
 	if !changed {
 		return Unmerged{}, nil
@@ -134,6 +113,25 @@ func Unmerge(path string, claims []Claim) (Unmerged, error) {
 		return Unmerged{}, oops.With("path", path).Wrapf(err, "encode JSON settings document")
 	}
 	return Unmerged{Body: rendered + newline, Changed: true, Empty: len(members) == 0}, nil
+}
+
+// unmergeAll applies the claims in order, the Alone ones last and only while a
+// single top-level member remains.
+func unmergeAll(members []jsonMember, claims []Claim, indent, newline string) ([]jsonMember, bool, error) {
+	changed := false
+	for _, alone := range []bool{false, true} {
+		for _, claim := range claims {
+			if len(claim.Path) == 0 || claim.Alone != alone || (alone && len(members) != 1) {
+				continue
+			}
+			next, did, err := unmergeClaim(members, claim.Path, claim, 1, indent, newline)
+			if err != nil {
+				return nil, false, err
+			}
+			members, changed = next, changed || did
+		}
+	}
+	return members, changed, nil
 }
 
 // unmergeClaim removes the member (or array elements) the claim addresses,
