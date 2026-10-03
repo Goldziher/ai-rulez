@@ -120,7 +120,7 @@ func TestLocalRuleFiles_InlineModeUnchanged(t *testing.T) {
 		{"claude", "claude", ".claude/rules/x.local.md", "CLAUDE.local.md"},
 		{"junie", "junie", ".junie/rules/x.local.md", ".junie/rules/ai-rulez.local.md"},
 		{"copilot", "copilot", ".github/instructions/x.local.instructions.md", ".github/instructions/ai-rulez.local.instructions.md"},
-		{"antigravity", "antigravity", ".agents/rules/x.local.md", "GEMINI.local.md"},
+		{"antigravity", "antigravity", ".agents/rules/x.local.md", ".agents/rules/ai-rulez.local.md"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
