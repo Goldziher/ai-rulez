@@ -361,7 +361,7 @@ Create a new rule file with optional YAML frontmatter.
   "operation": "create_rule",
   "path": ".ai-rulez/rules/code-quality.md",
   "name": "code-quality",
-  "domain": null,
+  "domain": "",
   "message": "Rule created successfully"
 }
 ```
@@ -409,7 +409,7 @@ Delete a rule file.
   "success": true,
   "operation": "delete_rule",
   "name": "code-quality",
-  "domain": null,
+  "domain": "",
   "message": "Rule deleted successfully"
 }
 ```
@@ -429,7 +429,7 @@ List all rules in the root or a specific domain.
 {
   "success": true,
   "operation": "list_rules",
-  "domain": null,
+  "domain": "",
   "rules": [
     {
       "Name": "code-quality",
