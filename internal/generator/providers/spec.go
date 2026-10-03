@@ -118,6 +118,10 @@ const (
 	SectionRootRulesInline      = "rules_inline"
 	SectionRootContextInline    = "context_inline"
 	SectionRootAgentsDelegation = "agents_delegation"
+	// SectionRootAgentsMDImport is not accepted in a spec: the renderer
+	// substitutes it for the declared sections when agents_md turns the root
+	// file into an "@AGENTS.md" shim.
+	SectionRootAgentsMDImport = "agents_md_import"
 
 	// outputs.<type>.body.sections
 	SectionBodyFrontmatter     = "frontmatter"

@@ -392,9 +392,25 @@ agents_md = false  # Default: every preset writes its own files
 
 When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
 `[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
-(currently `codex`, `opencode`, `amp` and `xum`) stop writing their own `AGENTS.md` copy and skills directory
-(`.codex/skills`, `.opencode/skills`, `.xum/skills`). Other presets are unchanged for now. Turning the flag
+(`codex`, `opencode`, `amp`, `xum`, `claude`, `gemini`, `antigravity` and `hermes`) stop writing their own
+`AGENTS.md` copy, root file and skills directory. Other presets are unchanged for now. Turning the flag
 off regenerates the per-tool files and removes the shared ones that no preset writes itself.
+
+Per-preset behavior with the flag on:
+
+| Preset                        | Root file                                  | Skills                                | Also                                                                                                                                  |
+| ----------------------------- | ------------------------------------------ | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `codex`, `opencode`, `xum`    | shared `AGENTS.md`                         | shared `.agents/skills`               | own agents, commands and MCP files unchanged                                                                                          |
+| `amp`                         | shared `AGENTS.md`                         | shared `.agents/skills`               | unchanged                                                                                                                             |
+| `claude`                      | `CLAUDE.md` is a banner plus `@AGENTS.md`  | `.claude/skills` (Claude ignores `.agents/skills`) | `.claude/rules` keeps path-scoped, auto and manual rules only; `.claude/agents`, commands, MCP and settings unchanged; `CLAUDE.local.md` unchanged |
+| `gemini`                      | no `GEMINI.md`                             | shared `.agents/skills`               | `.gemini/settings.json` gets `context.fileName` with `AGENTS.md` (existing names and keys kept; not written for `[[scopes]]` runs, the root settings cover them) |
+| `antigravity`                 | no `GEMINI.md`                             | shared `.agents/skills`               | scoped rules stay in `.agents/rules`; with `gemini` also enabled the rules folder is used, since no preset writes `GEMINI.md`          |
+| `hermes`                      | no `.hermes.md` (it would shadow `AGENTS.md`) | shared `.agents/skills`            | none                                                                                                                                  |
+
+An item whose `targets` names any preset that relies on the shared `AGENTS.md` (for example `claude` or
+`gemini`) is included in it. `GEMINI.local.md` is still written when local content exists, but Gemini CLI
+does not load it unless you list it in `context.fileName` yourself, as before. Turning the flag off leaves the
+`AGENTS.md` entry in `.gemini/settings.json`, because that document is shared with you.
 
 
 ```toml
