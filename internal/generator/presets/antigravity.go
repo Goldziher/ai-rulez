@@ -50,6 +50,12 @@ func antigravityRouting(cfg *config.Config, warn func(msg string, args ...any)) 
 		return rulefiles.RoutingNone, rulefiles.RoutingNone
 	}
 	want := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameAntigravity), true)
+	if cfg.AgentsMD {
+		// Neither antigravity nor gemini writes GEMINI.md: the always-on content
+		// is in the shared AGENTS.md, so the rules folder keeps the rest and
+		// nothing is loaded twice or demoted.
+		return rulefiles.WithoutAlwaysOn(want), rulefiles.RoutingNone
+	}
 	if !geminiPresetEnabled(cfg) {
 		return want, rulefiles.RoutingNone
 	}

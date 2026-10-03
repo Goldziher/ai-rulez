@@ -32,7 +32,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		if !ok {
 			continue
 		}
-		wantAgentsMD = wantAgentsMD || consumer.Reads(config.SharedAgentsMD)
+		wantAgentsMD = wantAgentsMD || consumer.NeedsAgentsMD()
 		wantSkills = wantSkills || consumer.Reads(config.SharedAgentSkills)
 		allOutputs[preset.BuiltIn] = dropOwnSharedOutputs(allOutputs[preset.BuiltIn], cfg.BaseDir, consumer)
 	}
@@ -43,7 +43,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	hash := computeSharedSourceHash(cfg, content)
 	var shared []config.OutputFile
 	if wantAgentsMD {
-		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg))
+		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, agentsMDOwners(cfg)))
 	}
 	if wantSkills {
 		shared = append(shared, presets.SharedAgentSkills(content, cfg.BaseDir)...)
@@ -56,8 +56,24 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 	allOutputs[sharedOutputsKey] = shared
 }
 
+// agentsMDOwners lists the configured built-in presets that rely on the shared
+// AGENTS.md, so frontmatter targets naming any of them select an item for it.
+func agentsMDOwners(cfg *config.Config) []string {
+	var owners []string
+	for _, preset := range cfg.Presets {
+		if !preset.IsBuiltIn() {
+			continue
+		}
+		if consumer, ok := config.SharedOutputConsumerFor(preset.BuiltIn); ok && consumer.NeedsAgentsMD() {
+			owners = append(owners, preset.BuiltIn)
+		}
+	}
+	return owners
+}
+
 // dropOwnSharedOutputs removes the outputs the shared ones replace: the root
-// AGENTS.md, the preset's own skills directory, and .agents/skills itself.
+// AGENTS.md, the preset's own root file and skills directory, and .agents/skills
+// itself.
 func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir string, consumer config.SharedOutputConsumer) []config.OutputFile {
 	roots := []string{filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills)))}
 	if consumer.Reads(config.SharedAgentSkills) && consumer.OwnSkillsDir != "" {
@@ -65,8 +81,16 @@ func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir string, consumer 
 	}
 	agentsMD := filepath.Join(baseDir, string(config.SharedAgentsMD))
 
+	ownRoot := ""
+	if consumer.OwnRootFile != "" {
+		ownRoot = filepath.Join(baseDir, filepath.FromSlash(consumer.OwnRootFile))
+	}
+
 	kept := outputs[:0:0]
 	for _, output := range outputs {
+		if ownRoot != "" && output.Path == ownRoot {
+			continue
+		}
 		if consumer.Reads(config.SharedAgentsMD) && output.Path == agentsMD {
 			continue
 		}

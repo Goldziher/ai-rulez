@@ -35,24 +35,34 @@ func TestAgentsMD_LoadAndSaveRoundTrip(t *testing.T) {
 
 func TestSharedOutputConsumerFor(t *testing.T) {
 	cases := []struct {
-		preset   string
-		ok       bool
-		ownSkill string
+		preset      string
+		ok          bool
+		agentsMD    bool // reads AGENTS.md directly
+		skills      bool // reads .agents/skills
+		imports     bool // imports AGENTS.md from its own root file
+		ownSkill    string
+		ownRootFile string
 	}{
-		{"codex", true, ".codex/skills"},
-		{"opencode", true, ".opencode/skills"},
-		{"xum", true, ".xum/skills"},
-		{"amp", true, ""},
-		{"claude", false, ""},
-		{"cursor", false, ""},
+		{preset: "codex", ok: true, agentsMD: true, skills: true, ownSkill: ".codex/skills"},
+		{preset: "opencode", ok: true, agentsMD: true, skills: true, ownSkill: ".opencode/skills"},
+		{preset: "xum", ok: true, agentsMD: true, skills: true, ownSkill: ".xum/skills"},
+		{preset: "amp", ok: true, agentsMD: true, skills: true},
+		{preset: "claude", ok: true, imports: true},
+		{preset: "gemini", ok: true, agentsMD: true, skills: true, ownRootFile: "GEMINI.md"},
+		{preset: "antigravity", ok: true, agentsMD: true, skills: true, ownRootFile: "GEMINI.md"},
+		{preset: "hermes", ok: true, agentsMD: true, skills: true, ownRootFile: ".hermes.md"},
+		{preset: "cursor"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.preset, func(t *testing.T) {
 			consumer, ok := SharedOutputConsumerFor(tc.preset)
 			assert.Equal(t, tc.ok, ok)
 			assert.Equal(t, tc.ownSkill, consumer.OwnSkillsDir)
-			assert.Equal(t, tc.ok, consumer.Reads(SharedAgentsMD))
-			assert.Equal(t, tc.ok, consumer.Reads(SharedAgentSkills))
+			assert.Equal(t, tc.ownRootFile, consumer.OwnRootFile)
+			assert.Equal(t, tc.agentsMD, consumer.Reads(SharedAgentsMD))
+			assert.Equal(t, tc.skills, consumer.Reads(SharedAgentSkills))
+			assert.Equal(t, tc.imports, consumer.ImportsAgentsMD)
+			assert.Equal(t, tc.agentsMD || tc.imports, consumer.NeedsAgentsMD())
 		})
 	}
 }

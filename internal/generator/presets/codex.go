@@ -169,10 +169,17 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 }
 
 func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
+	return g.renderAgentsMarkdownFor(content, cfg, nil)
+}
+
+// renderAgentsMarkdownFor renders AGENTS.md selecting items by the targets of
+// owners (the default AGENTS.md owners when nil).
+func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTree, cfg *config.Config, owners []string) string {
 	var builder strings.Builder
 
-	// Calculate content counts
-	allRules := rootRules(content, codexPresetName, "AGENTS.md")
+	root := rulefiles.RootTarget(codexPresetName, "AGENTS.md")
+	root.Owners = owners
+	allRules := rulefiles.FilterInline(allInlineRules(content), root)
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -193,7 +200,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree,
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := rootContext(content, codexPresetName, "AGENTS.md")
+	allContext := rulefiles.FilterInline(allInlineContext(content), root)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)

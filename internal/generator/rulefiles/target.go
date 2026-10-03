@@ -39,6 +39,10 @@ type Target struct {
 	Recursive bool // the tool discovers rules in subdirectories
 	MaxChars  int  // soft per-file limit; 0 means unlimited
 	Banner    bool // emit the generated-file banner
+	// Owners, when set, replaces the default owners of RootFile for target
+	// matching: the shared AGENTS.md is owned by every configured preset that
+	// relies on it.
+	Owners []string
 }
 
 // Kind distinguishes rules from context files.
