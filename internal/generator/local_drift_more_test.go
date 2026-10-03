@@ -200,7 +200,7 @@ func TestEscapeGitPattern_GitAgrees(t *testing.T) {
 	}, ignored)
 }
 
-func TestBaselineFailure_WithAndWithoutTheFlag(t *testing.T) {
+func TestBaselineFailure_FailsClosedWithAndWithoutTheFlag(t *testing.T) {
 	// Arrange: a profile that exists only in the overlay cannot be rendered as the
 	// shared baseline.
 	p := newDriftProject(t, driftIgnoring)
@@ -218,11 +218,11 @@ func TestBaselineFailure_WithAndWithoutTheFlag(t *testing.T) {
 	// Assert
 	require.Error(t, withoutFlag)
 	assert.Contains(t, withoutFlag.Error(), "shared baseline")
-	require.NoError(t, withFlag)
-	committed := p.read(t, ".ai-rulez/.generated-manifest.json")
-	local := p.read(t, ".ai-rulez/.generated-manifest.local.json")
-	assert.NotContains(t, committed, ".local.", "local outputs never enter the committed manifest")
-	assert.Contains(t, local, ".local.")
+	// The flag does not bypass a failed baseline: overlay-derived outputs could
+	// otherwise land in tracked files unmarked.
+	require.Error(t, withFlag)
+	assert.Contains(t, withFlag.Error(), "shared baseline")
+	assert.Contains(t, withFlag.Error(), "--no-local")
 }
 
 func TestRedactCredentials(t *testing.T) {

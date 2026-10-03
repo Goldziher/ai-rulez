@@ -13,6 +13,19 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`ai-rulez local`** (`init`, `show`, `set`, `unset`, `path`) edits the overlay, with `--local` on `profile`, `include` and `skill` mutators and `local: true` on the matching MCP tools. `read_config` reports the overlay by key path only, and `local show` withholds every value except a small allowlist unless `--reveal` is given.
 - **Local skills, agents, commands and domains**: `.ai-rulez/local/` now mirrors the shared layout. Local domains follow the active profile, `targets` apply, and local skills, agents and commands are written to the same per-item paths as shared ones (a name collision with a shared item is an error). Copilot gets `.github/instructions/ai-rulez.local.instructions.md` (`applyTo: "**"`) and Antigravity `GEMINI.local.md` for local context. `add`, `remove` and `list` take `--local` for every content type (`--local --domain x` writes `local/domains/x/`), and the MCP CRUD tools take `local: true`. Local content is never emitted in `[[scopes]]` runs.
 
+### Changed
+
+- **`generate --allow-local-drift` no longer bypasses a failed shared baseline**: when the shared view cannot be rendered, generation fails (use `--no-local` or fix the shared config), because overlay-derived outputs could otherwise land in tracked files unmarked.
+- **`generate --dry-run` exits non-zero when local drift is blocked**, after printing the plan.
+- **`config.local.*` and `local/` follow `--config`**: the `local` subcommands honor the global `--config` and `--config-dir`, and `local set` stores `profiles.default` (and other keys that merely share a text field's name) as typed values.
+- **`ai-rulez clean` removes this project's `.git/info/exclude` block**; local skills, agents and commands a preset can only aggregate into a shared file are reported in a warning instead of dropped silently.
+- **Config writes keep the file mode** of an existing config instead of resetting it to `0644`.
+- **`migrate v4`** reports a local overlay it cannot convert (for example a second `config.local.*` file) as a warning, and maps `$schema` to the TOML `schema` key.
+- **MCP `add_include`** defaults `merge_strategy` to `local-override` (it previously sent a value validation rejected).
+- **`validate` summarises the overlay** (key paths overridden, added and removed, never values), and `profile`, `include` and `skill list` note when local entries exist.
+- **Local profiles may use local domains**: `profile add --local` accepts domains defined under `.ai-rulez/local/domains/`; the shared path still rejects them. Names containing dots are addressed as `mcp_servers["foo.bar"].command`, and a scope keyed only by `path` is matched by path.
+- **Secret value matching** for owner-only output permissions ignores values shorter than 8 characters; MCP config files naming a secret key stay `0600` regardless.
+
 ### Security
 
 - **Local configuration hardening**: `--local` content writes (and the MCP `local: true` tools) add `.ai-rulez/local/` to `.gitignore` before writing and fail if that is not possible; local content is written owner-only through exclusively created temp files, the overlay lock refuses to follow a symlink, and `.git/info/exclude` is replaced atomically. Generated files that contain resolved MCP secrets (`.mcp.json`, `.claude/settings.json`, ...) are written `0600`, and an existing file is tightened. Overlay decode errors no longer quote the offending value, `local show` withholds an allowlisted key whose value has the wrong type, validation messages do not echo an overlay `default`, and include and skill sources are logged and returned with URL credentials and query-string values redacted.

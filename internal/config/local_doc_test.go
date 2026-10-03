@@ -25,6 +25,11 @@ func TestParseLocalPath(t *testing.T) {
 		{"named list needs an entry name", "mcp_servers", nil, "list of named entries"},
 		{"unknown top-level key", "nmea", nil, "unknown config key"},
 		{"empty segment", "profiles..dev", nil, "invalid key path"},
+		{"bracket-quoted segment with a dot", `mcp_servers["foo.bar"].command`, []string{"mcp_servers", "foo.bar", "command"}, ""},
+		{"bracket-quoted env key", `mcp_servers["a.b"].env["X.Y"]`, []string{"mcp_servers", "a.b", "env", "X.Y"}, ""},
+		{"bracket escape", `mcp_servers["a\"b"].command`, []string{"mcp_servers", `a"b`, "command"}, ""},
+		{"unterminated bracket", `mcp_servers["foo.command`, nil, "invalid key path"},
+		{"junk after bracket", `mcp_servers["foo"]x.command`, nil, "invalid key path"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -306,4 +311,40 @@ Authorization = "Bearer abc"
 	assert.True(t, byPath["mcp_servers.gh.env.TOKEN"].Redacted)
 	assert.True(t, byPath["mcp_servers.gh.headers.Authorization"].Redacted)
 	assert.False(t, byPath["mcp_servers.gh.headers.Authorization"].HasShared)
+}
+
+func TestLocalDoc_DottedNamesAreAddressable(t *testing.T) {
+	d := newLocalDoc(t, ``)
+	path, err := ParseLocalPath(`mcp_servers["foo.bar"].command`)
+	require.NoError(t, err)
+
+	require.NoError(t, d.Set(path, "npx"))
+	assert.JSONEq(t, `{"mcp_servers":[{"name":"foo.bar","command":"npx"}]}`, mustJSON(t, d.Doc))
+
+	require.NoError(t, d.Unset(path))
+	assert.JSONEq(t, `{}`, mustJSON(t, d.Doc))
+}
+
+func TestLocalDoc_ScopeWithoutNameMatchesSharedByPath(t *testing.T) {
+	_, configDir := overlayProject(t, "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n\n[[scopes]]\npath = \"svc/a\"\nprofile = \"p\"\n\n[profiles]\np = []\nq = []\n")
+	d, err := OpenLocalDoc(configDir, "config.toml")
+	require.NoError(t, err)
+	t.Cleanup(d.Close)
+
+	require.NoError(t, d.Set([]string{"scopes", "svc/a", "profile"}, "q"))
+	require.NoError(t, d.Save(t.Context()))
+
+	merged, err := LoadConfig(t.Context(), filepath.Dir(configDir))
+	require.NoError(t, err)
+	require.Len(t, merged.Scopes, 1)
+	assert.Equal(t, "q", merged.Scopes[0].Profile)
+}
+
+func TestOpenLocalDoc_MissingMainConfigHintsInitBeforeLocking(t *testing.T) {
+	configDir := filepath.Join(t.TempDir(), "missing", ".ai-rulez")
+
+	_, err := OpenLocalDoc(configDir, "")
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no main config file")
 }

@@ -108,11 +108,11 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 	return ToolSuccess(result)
 }
 
+const keyError = "error"
+
 // localOverlayInfo describes the machine-local overlay beside cfg: its path and
 // the key paths it sets, never its values (it may hold secrets). Nil when there
 // is no overlay.
-const keyError = "error"
-
 func localOverlayInfo(cfg *config.Config) map[string]interface{} {
 	overlay, err := config.ReadLocalOverlay(cfg.ConfigDir, cfg.ConfigFile)
 	if err != nil {
@@ -593,7 +593,7 @@ func CleanOutputsHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTo
 	}
 
 	gen := generator.NewGenerator(cfg)
-	plan, err := gen.Clean("", generator.CleanOptions{
+	plan, err := gen.Clean("", generator.CleanOptions{ //nolint:contextcheck // git exclude cleanup does not take a context
 		DryRun:        dryRun,
 		KeepGitignore: request.GetBool("keep_gitignore", false),
 		KeepManifest:  request.GetBool("keep_manifest", false),

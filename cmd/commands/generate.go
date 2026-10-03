@@ -125,13 +125,9 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	if dryRun {
-		plan, err := gen.DryRun(profile)
-		if err != nil {
+		if err := printDryRun(gen, ""); err != nil {
 			fmtError(err)
 			os.Exit(1)
-		}
-		for _, line := range plan {
-			progress.PrintlnIfNotQuiet(line)
 		}
 		return
 	}
@@ -141,6 +137,19 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		fmtError(err)
 		os.Exit(1)
 	}
+}
+
+// printDryRun prints the generation plan and returns an error when the plan
+// holds local drift a real run would refuse, so a blocked dry run exits non-zero.
+func printDryRun(gen *generator.Generator, indent string) error {
+	plan, err := gen.DryRun(profile)
+	if err != nil {
+		return err //nolint:wrapcheck // already contextual
+	}
+	for _, line := range plan {
+		progress.PrintlnIfNotQuiet(indent + line)
+	}
+	return gen.DryRunBlocked() //nolint:wrapcheck // already contextual
 }
 
 // runPluginGenerate handles `generate --plugin`: it renders (or, with --dry-run,
@@ -481,13 +490,9 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	}
 
 	if dryRun {
-		plan, err := gen.DryRun(profile)
-		if err != nil {
+		if err := printDryRun(gen, "  "); err != nil {
 			fileCounter.ErrorFor(configPath, err)
 			return 0, err
-		}
-		for _, line := range plan {
-			progress.PrintlnIfNotQuiet("  " + line)
 		}
 		fileCounter.FinishFile()
 		return 0, nil

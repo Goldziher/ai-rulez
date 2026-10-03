@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1221,4 +1222,38 @@ You are a helpful assistant.`
 		assert.Len(t, tree.Domains["backend"].Agents, 1)
 		assert.Equal(t, "api-agent", tree.Domains["backend"].Agents[0].Name)
 	})
+}
+
+func TestSaveConfig_PreservesFileMode(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("POSIX permission bits")
+	}
+	tests := []struct {
+		name     string
+		existing os.FileMode
+		create   bool
+		want     os.FileMode
+	}{
+		{name: "keeps 0600", existing: 0o600, create: true, want: 0o600},
+		{name: "keeps 0664", existing: 0o664, create: true, want: 0o664},
+		{name: "new file is 0644", want: 0o644},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := filepath.Join(t.TempDir(), ".ai-rulez")
+			require.NoError(t, os.MkdirAll(dir, 0o755))
+			path := filepath.Join(dir, "config.toml")
+			if tt.create {
+				require.NoError(t, os.WriteFile(path, []byte("version = \"4.0\"\nname = \"p\"\n"), tt.existing))
+				require.NoError(t, os.Chmod(path, tt.existing))
+			}
+			cfg := &Config{Version: "4.0", Name: "p", ConfigFile: "config.toml"}
+
+			require.NoError(t, SaveConfig(cfg, dir))
+
+			info, err := os.Stat(path)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, info.Mode().Perm())
+		})
+	}
 }

@@ -109,6 +109,13 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 			plan.GitignoreEdited = false
 		}
 	}
+	if !opts.KeepGitignore {
+		// This project's block in .git/info/exclude names machine-local outputs
+		// that were just removed; no paths means the block is dropped.
+		if err := g.syncMachineExcludes(nil); err != nil {
+			logger.Warn("Failed to remove .git/info/exclude block", "error", err)
+		}
+	}
 
 	return plan, nil
 }

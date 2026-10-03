@@ -64,7 +64,7 @@ Use --force to skip confirmation prompts.`,
 var skillListCmd = &cobra.Command{
 	Use:   cmdUseList,
 	Short: "List all installed skills",
-	Long:  `List all skills installed from external sources.`,
+	Long:  `List all skills installed from external sources.` + localListHint,
 	Args:  cobra.NoArgs,
 	Run:   runSkillList,
 }
@@ -167,6 +167,7 @@ func runSkillList(cmd *cobra.Command, args []string) {
 
 	if len(skills) == 0 {
 		logger.Info("No installed skills found")
+		logLocalEntriesHint("installed_skills")
 		return
 	}
 
@@ -200,5 +201,6 @@ func runSkillList(cmd *cobra.Command, args []string) {
 				logger.Debug(fmt.Sprintf("    Ref: %s", s.Ref))
 			}
 		}
+		logLocalEntriesHint("installed_skills")
 	}
 }

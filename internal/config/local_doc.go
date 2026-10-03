@@ -35,33 +35,103 @@ type LocalDoc struct {
 	release       func()
 }
 
-// ParseLocalPath splits a dotted overlay key path such as
+// ParseLocalPath splits an overlay key path such as
 // "mcp_servers.github.env.TOKEN" into segments and checks the leading key. For
 // named lists (mcp_servers, plugins, includes, installed_skills, marketplaces,
-// scopes) the segment after the list is the entry name.
+// scopes) the segment after the list is the entry name. A segment that contains
+// a dot is written in brackets with double quotes: mcp_servers["foo.bar"].command.
+// Inside the quotes, \" and \\ are escapes.
 func ParseLocalPath(s string) ([]string, error) {
-	segs := strings.Split(strings.TrimSpace(s), ".")
-	for _, seg := range segs {
-		if seg == "" {
-			return nil, oops.
-				Hint("Use dotted keys like profiles.dev or mcp_servers.<name>.command").
-				Errorf("invalid key path %q", s)
-		}
+	segs, err := splitLocalPath(strings.TrimSpace(s))
+	if err != nil {
+		return nil, err
 	}
 	if segs[0] == docKeySchemaDol {
 		segs[0] = docKeySchema
 	}
+	return segs, checkSegments(segs)
+}
+
+func errInvalidPath(s string) error {
+	return oops.
+		Hint(`Use dotted keys like profiles.dev or mcp_servers.<name>.command; quote dotted names: mcp_servers["a.b"].command`).
+		Errorf("invalid key path %q", s)
+}
+
+// splitLocalPath tokenizes a dotted path with optional ["quoted"] segments.
+func splitLocalPath(s string) ([]string, error) {
+	var segs []string
+	i := 0
+	for {
+		if i < len(s) && s[i] == '[' {
+			seg, next, ok := readQuotedSegment(s, i)
+			if !ok {
+				return nil, errInvalidPath(s)
+			}
+			segs = append(segs, seg)
+			i = next
+		} else {
+			j := i
+			for j < len(s) && s[j] != '.' && s[j] != '[' {
+				j++
+			}
+			if j == i {
+				return nil, errInvalidPath(s)
+			}
+			segs = append(segs, s[i:j])
+			i = j
+		}
+		switch {
+		case i == len(s):
+			return segs, nil
+		case s[i] == '.':
+			i++
+		case s[i] != '[':
+			return nil, errInvalidPath(s)
+		}
+	}
+}
+
+// readQuotedSegment reads ["..."] starting at s[i] and returns the unescaped
+// text and the index after the closing bracket.
+func readQuotedSegment(s string, i int) (seg string, next int, ok bool) {
+	if i+1 >= len(s) || s[i+1] != '"' {
+		return "", 0, false
+	}
+	var b strings.Builder
+	for j := i + 2; j < len(s); j++ {
+		switch s[j] {
+		case '\\':
+			j++
+			if j >= len(s) {
+				return "", 0, false
+			}
+			b.WriteByte(s[j])
+		case '"':
+			if j+1 < len(s) && s[j+1] == ']' && b.Len() > 0 {
+				return b.String(), j + 2, true
+			}
+			return "", 0, false
+		default:
+			b.WriteByte(s[j])
+		}
+	}
+	return "", 0, false
+}
+
+// checkSegments checks the leading key and the entry name of named lists.
+func checkSegments(segs []string) error {
 	if !knownConfigDocKeys()[segs[0]] {
-		return nil, oops.
+		return oops.
 			Hint("Valid keys: "+strings.Join(sortedKeys(knownConfigDocKeys()), ", ")).
 			Errorf("unknown config key %q", segs[0])
 	}
 	if _, named := namedListKeys[segs[0]]; named && len(segs) < 2 {
-		return nil, oops.
+		return oops.
 			Hint("Address a list entry by name, e.g. "+segs[0]+".<name>.<field>").
 			Errorf("%s is a list of named entries", segs[0])
 	}
-	return segs, nil
+	return nil
 }
 
 func mainConfigFileName(configDir string) string {
@@ -91,6 +161,38 @@ func OpenLocalDocInDir(baseDir string) (*LocalDoc, error) {
 	return OpenLocalDoc(configDir, mainFile)
 }
 
+// ResolveLocalConfigDir returns the config directory the local commands act on,
+// resolving the project the way loading does: configFlag (the global --config,
+// a config directory or a file inside one) wins, then dirName (--config-dir)
+// under baseDir, then discovery under baseDir.
+func ResolveLocalConfigDir(baseDir, configFlag, dirName string) string {
+	switch {
+	case configFlag != "":
+		abs, err := filepath.Abs(configFlag)
+		if err != nil {
+			abs = configFlag
+		}
+		if info, statErr := os.Stat(abs); statErr == nil && !info.IsDir() {
+			return filepath.Dir(abs)
+		}
+		return abs
+	case dirName != "":
+		return filepath.Join(baseDir, filepath.FromSlash(dirName))
+	}
+	configDir, _ := localDocLocation(baseDir)
+	return configDir
+}
+
+// OpenLocalDocAt is OpenLocalDocInDir for an explicit config directory.
+func OpenLocalDocAt(configDir string) (*LocalDoc, error) {
+	return OpenLocalDoc(configDir, mainConfigFileName(configDir))
+}
+
+// ViewLocalDocAt is ViewLocalDoc for an explicit config directory.
+func ViewLocalDocAt(configDir string) (*LocalDoc, error) {
+	return openLocalDoc(configDir, mainConfigFileName(configDir), false)
+}
+
 // ViewLocalDoc opens the overlay read-only, without taking the lock.
 func ViewLocalDoc(baseDir string) (*LocalDoc, error) {
 	configDir, mainFile := localDocLocation(baseDir)
@@ -106,6 +208,9 @@ func OpenLocalDoc(configDir, mainConfigFile string) (*LocalDoc, error) {
 }
 
 func openLocalDoc(configDir, mainConfigFile string, lock bool) (*LocalDoc, error) {
+	if lock && mainConfigFile == "" {
+		return nil, oops.Hint("Run 'ai-rulez init' first").Errorf("no main config file found in %s", configDir)
+	}
 	baseDir := projectBaseDir(configDir)
 	d := &LocalDoc{
 		configDir: configDir, mainFile: mainConfigFile,
@@ -289,10 +394,7 @@ func checkPath(path []string) error {
 	if len(path) == 0 {
 		return oops.Errorf("empty key path")
 	}
-	if _, err := ParseLocalPath(strings.Join(path, ".")); err != nil {
-		return err
-	}
-	return nil
+	return checkSegments(path)
 }
 
 func (d *LocalDoc) namedEntry(list, name string, create bool) map[string]any {
@@ -306,8 +408,38 @@ func (d *LocalDoc) namedEntry(list, name string, create bool) map[string]any {
 		return nil
 	}
 	m := map[string]any{docKeyName: name}
+	if namedListKeys[list] && d.sharedHasPathOnlyEntry(list, name) {
+		m = map[string]any{docKeyPath: name}
+	}
 	d.Doc[list] = append(entries, m)
 	return m
+}
+
+// sharedHasPathOnlyEntry reports whether the shared config has a nameless entry
+// of the list identified by path == key, so the overlay entry must be keyed by
+// path too to merge with it.
+func (d *LocalDoc) sharedHasPathOnlyEntry(list, key string) bool {
+	if d.mainFile == "" {
+		return false
+	}
+	doc, err := readConfigDoc(filepath.Join(d.configDir, d.mainFile))
+	if err != nil {
+		return false
+	}
+	entries, _ := normalizeConfigDocKeys(doc)[list].([]any) //nolint:errcheck // absent list reads as empty
+	for _, e := range entries {
+		m, ok := e.(map[string]any)
+		if !ok {
+			continue
+		}
+		if n, _ := asString(m[docKeyName]); n != "" { //nolint:errcheck // absent name reads as empty
+			continue
+		}
+		if p, _ := asString(m[docKeyPath]); p == key { //nolint:errcheck // absent path reads as empty
+			return true
+		}
+	}
+	return false
 }
 
 func entryIdentity(m map[string]any) string {
@@ -567,7 +699,20 @@ func refuseSymlink(path string) error {
 // InitLocalOverlay creates a commented config.local.* skeleton in the main
 // config's format. created is false when an overlay already exists.
 func InitLocalOverlay(baseDir string) (path string, created bool, err error) {
-	d, err := OpenLocalDocInDir(baseDir)
+	configDir, mainFile := localDocLocation(baseDir)
+	return initLocalOverlay(configDir, mainFile)
+}
+
+// InitLocalOverlayAt is InitLocalOverlay for an explicit config directory.
+func InitLocalOverlayAt(configDir string) (path string, created bool, err error) {
+	return initLocalOverlay(configDir, mainConfigFileName(configDir))
+}
+
+func initLocalOverlay(configDir, mainFile string) (path string, created bool, err error) {
+	if mainFile == "" {
+		return "", false, oops.Hint("Run 'ai-rulez init' first").Errorf("no main config file found in %s", configDir)
+	}
+	d, err := OpenLocalDoc(configDir, mainFile)
 	if err != nil {
 		return "", false, err
 	}
@@ -654,6 +799,19 @@ func DescribeLocalOverlay(baseDir string) (*LocalOverlay, []OverlayChange, error
 	if err != nil {
 		return nil, nil, err
 	}
+	return describeLocalOverlay(d)
+}
+
+// DescribeLocalOverlayAt is DescribeLocalOverlay for an explicit config directory.
+func DescribeLocalOverlayAt(configDir string) (*LocalOverlay, []OverlayChange, error) {
+	d, err := ViewLocalDocAt(configDir)
+	if err != nil {
+		return nil, nil, err
+	}
+	return describeLocalOverlay(d)
+}
+
+func describeLocalOverlay(d *LocalDoc) (*LocalOverlay, []OverlayChange, error) {
 	if !d.Exists() {
 		return nil, nil, nil
 	}
