@@ -9,6 +9,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 ### Fixed
 
 - **Generator schema v8** forces a one-time rewrite of existing generated files.
+- **Cursor agents** are written to `.cursor/agents/<id>.md`, which Cursor reads; `.agents/agents/` is not a Cursor agent location. The old files are removed on the next `generate`. `readonly` and `is_background` are written as YAML booleans; unparsable values are omitted with a warning.
 - **OpenCode agents with a bare model alias** (`model: sonnet`, the Claude form) are no longer written as is. OpenCode needs `provider/model`: it silently dropped the whole agent file, or failed the session with `Model not found: sonnet/.`. `generate` now omits an unqualified model with a warning, so the agent inherits the session model; set `opencode_model` in the agent frontmatter or `defaults.model_by_preset.opencode` to pin one. Surrounding whitespace in a model value is trimmed for every preset.
 - **OpenCode agent variant** is written as a separate `variant:` key next to a plain `provider/model`, because markdown agents do not accept the `model#variant` form (only `opencode.json` does). A `#variant` in the source model is split off and wins over the configured effort.
 - **OpenCode agent `hidden`, `temperature` and `top_p`** are written as a boolean and top-level numbers instead of quoted strings (and no longer under `request.body`), which OpenCode rejected; unparsable values are omitted with a warning.
