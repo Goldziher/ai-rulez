@@ -78,6 +78,12 @@ paths collapse, which is why four presets share one `AGENTS.local.md`.
   written (for example `.claude/rules/*.local.*`) before the files themselves. The managed block also
   lists `.ai-rulez/local/`, `.ai-rulez/config.local.*`, `.ai-rulez/.config.local.*` (lock and temp
   files) and `.ai-rulez/.generated-manifest.local.json`.
+- **Symlinked `.gitignore`.** Git does not read a `.gitignore` that is a symbolic link, and ai-rulez never
+  writes through it: every ignore entry goes to a per-project block in `.git/info/exclude` instead.
+- **Fail closed.** `generate` stops, listing the paths, when a machine-local or secret-bearing output, the
+  `config.local.*` overlay or the `local/` tree would not be git-ignored after the entries are written (for
+  example because a `.gitignore` line such as `!.ai-rulez/local/` un-ignores it). Narrow the rule, or use
+  `--no-local`.
 - **Per-clone excludes.** Local-only outputs whose names do not contain `.local.` (a local skill's
   `SKILL.md`, an output of an overlay-defined preset) differ per machine. They are listed in a block of
   this project's `.git/info/exclude`, keyed by the project's config directory, so they stay out of the
