@@ -59,15 +59,15 @@ Every file below is one the tool loads on its own; a `.local.md` file a tool nev
 | Preset | Split mode (default) | Inline mode | Loaded by |
 | ------ | -------------------- | ----------- | --------- |
 | `claude` | Rules: `.claude/rules/<id>.local.md`. Context: `CLAUDE.local.md` | Path-scoped rules: `.claude/rules/<id>.local.md`. Other rules and context: `CLAUDE.local.md` | Claude Code reads `CLAUDE.local.md` after `CLAUDE.md` and the rules folder natively |
-| `junie` | Rules: `.junie/rules/<id>.local.md`. Context: `.junie/rules/ai-rulez.local.md` | Rules and context: `.junie/rules/ai-rulez.local.md` | Junie loads every `.junie/rules/*.md` (when there is no `.junie/AGENTS.md`) |
+| `junie` | Rules: `.junie/rules/<id>.local.md`. Context: `.junie/rules/ai-rulez.local.md` | Rules and context: `.junie/rules/ai-rulez.local.md` | Junie loads `.junie/rules/*.md` only on its `AGENTS.md` discovery path: a root `AGENTS.md` combined with `.junie/playbook.md` and every `.junie/rules/*.md`. A `.junie/AGENTS.md` takes precedence and ends the search, and the legacy `.junie/guidelines.md` layout does not load the rules folder, so with either of those the local file is not read. Based on JetBrains' documentation; not tested against Junie |
 | `cursor` | Rules: `.cursor/rules/<id>.local.mdc`. No place for context | Same | Cursor loads its rules folder |
 | `windsurf` | Rules: `.windsurf/rules/<id>.local.md`. No place for context | Same | Windsurf loads its rules folder |
 | `cline` | Rules: `.clinerules/<id>.local.md`. No place for context | Same | Cline loads its rules folder |
 | `continue-dev` | Rules: `.continue/rules/<id>.local.md`. No place for context | Same | Continue loads its rules folder |
 | `copilot` | Routed rules: `.github/instructions/<id>.local.instructions.md`. Rules Copilot keeps inline (`auto`, `manual`, negated-only globs) and context: `.github/instructions/ai-rulez.local.instructions.md` (`applyTo: "**"`) | Same routing as shared rules; the remainder goes to `ai-rulez.local.instructions.md` | Copilot loads path-specific instructions files |
 | `antigravity` | Rules: `.agents/rules/<id>.local.md`. Context: `.agents/rules/ai-rulez.local.md` (`trigger: always_on`) | Path-scoped rules: `.agents/rules/<id>.local.md`. Other rules and context: `.agents/rules/ai-rulez.local.md`. With `gemini` also enabled and no explicit `mode_by_preset`, all rules stay in `ai-rulez.local.md` | Antigravity loads every `.agents/rules/*.md` with a `trigger`; it never reads `GEMINI.local.md` |
-| `gemini` | Rules and context: `GEMINI.local.md` | Same | Gemini CLI loads it because `.gemini/settings.json` `context.fileName` lists it (written whether or not local content exists) |
-| `opencode` | Rules and context: `AGENTS.local.md` | Same | OpenCode loads it because `opencode.json` `instructions` lists it (written whether or not local content exists) |
+| `gemini` | Rules and context: `GEMINI.local.md` | Same | Gemini CLI loads it because `.gemini/settings.json` `context.fileName` lists it (written whether or not local content exists). A `context.fileName` you wrote gets `GEMINI.local.md` appended; see [Settings documents shared with you](#settings-documents-shared-with-you) |
+| `opencode` | Rules and context: `AGENTS.local.md` | Same | OpenCode loads it because `opencode.json` `instructions` lists it (written whether or not local content exists; `./AGENTS.local.md` counts as the same entry) |
 | `xum` | Rules and context: `AGENTS.local.md` (shared with `opencode`) | Same | xum appends `AGENTS.local.md` to `AGENTS.md` |
 | `codex` | Rules and context: `AGENTS.override.md` (root only) | Same | Codex loads `AGENTS.override.md` instead of `AGENTS.md` in the same directory, so the file repeats the shared `AGENTS.md` and appends the local sections |
 | `hermes` | With `agents_md`: `AGENTS.override.md`, as for Codex. Without it: nothing written, one warning | Same | Hermes loads `AGENTS.override.md` instead of `AGENTS.md` in the AGENTS chain; `.hermes.md` (without `agents_md`) beats the chain and has no local counterpart |
@@ -75,7 +75,11 @@ Every file below is one the tool loads on its own; a `.local.md` file a tool nev
 
 `AGENTS.override.md` is generated, git-ignored and listed in the local manifest, so it is removed when the local
 content goes away. Do not edit it: it replaces `AGENTS.md` for those tools and is rebuilt from `AGENTS.md` on every
-`generate`. A local rule named `ai-rulez` would map to the same path as the generated `ai-rulez.local.*` root file of
+`generate`. It repeats the `AGENTS.md` body that run actually wrote (without that file's generated banner, which keeps a
+`[header] timestamp` from rewriting it every run). An `AGENTS.override.md` that is not in the local manifest and has no
+generated banner is yours: it is never overwritten or deleted, `generate` warns naming it, and Codex then reads it
+instead of the local content. If local content exists but no `AGENTS.md` is produced, the file is not written and
+`generate` warns. A local rule named `ai-rulez` would map to the same path as the generated `ai-rulez.local.*` root file of
 `junie`, `antigravity` and `copilot`, so it is written as `ai-rulez-<hash>.local<ext>` instead.
 
 ### Bookkeeping
@@ -91,13 +95,14 @@ content goes away. Do not edit it: it replaces `AGENTS.md` for those tools and i
   example because a `.gitignore` line such as `!.ai-rulez/local/` un-ignores it). Narrow the rule, or use
   `--no-local`.
 - **Per-clone excludes.** Local-only outputs whose names do not contain `.local.` (a local skill's
-  `SKILL.md`, an output of an overlay-defined preset) differ per machine. They are listed in a block of
+  `SKILL.md`, `AGENTS.override.md`, an output of an overlay-defined preset) differ per machine. They are listed in a block of
   this project's `.git/info/exclude`, keyed by the project's config directory, so they stay out of the
   shared `.gitignore`. Outside a git repository they fall back to the managed `.gitignore` block.
   `clean`, or a run with no local inputs left, removes the block.
 - **Local manifest.** Local outputs are tracked in `.ai-rulez/.generated-manifest.local.json`, not in
   the committed manifest. A teammate's `generate` never deletes your local files; `clean` removes them
-  through the local manifest.
+  through the local manifest. It also records what ai-rulez merged into settings documents you share with
+  it (below), because the server names can come from your overlay. It is ignored like the other local files.
 - **Permissions.** Generated files that contain a resolved MCP secret are written `0600`, whichever
   preset produced them. The overlay itself is written `0600`.
 - **Files from earlier versions.** `AGENTS.local.md` (codex and amp only setups), `.hermes.local.md`,
@@ -105,6 +110,42 @@ content goes away. Do not edit it: it replaces `AGENTS.md` for those tools and i
   `generate` after upgrading removes them through the local manifest.
 - **Reserved names.** `*.local.*` in a rules folder is reserved. A hand-written file with such a name is
   skipped with a warning.
+
+### Settings documents shared with you
+
+`.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, `.agents/settings.json` and
+`.xum/mcp.jsonc` can hold your own settings beside what ai-rulez writes. ai-rulez records, per document, the MCP
+server entries, array elements and scalar keys it merged in, in the local manifest.
+
+- **`clean`** removes exactly those entries and keeps every other key and the document's formatting. A key or
+  object the removal leaves empty is dropped, and a document with nothing else in it is deleted. This includes an
+  `mcpServers` entry that holds a resolved secret (a header or env value from your overlay), which previously
+  outlived the overlay in a hand-written `.claude/settings.json`.
+- **`generate`** takes back what an earlier run recorded and this one no longer produces: a preset removed from the
+  config, or an MCP server removed. It works after the overlay is deleted, because the record is the local
+  manifest. `generate --dry-run` lists these as `unmerge:` lines.
+- **No record.** A document merged by 4.23.0 or earlier, or a fresh clone, has no record. The fallback is narrow:
+  `clean` removes the MCP servers your config declares by name, the ai-rulez self-registration when it equals what
+  ai-rulez writes, a `context.fileName` that exactly equals a value ai-rulez wrote, `AGENTS.local.md` entries of
+  `instructions`, and an OpenCode `$schema` that is the document's only key. `generate` applies the same fallback
+  only when no enabled preset writes the document. A server removed from the config before the first run that
+  records it is not recognized and stays; delete it by hand.
+- **Gemini `context.fileName`.** A value that exactly equals one of ai-rulez's forms (`["AGENTS.md"]`,
+  `["AGENTS.md", "GEMINI.local.md"]`, `["GEMINI.md", "GEMINI.local.md"]`) is ai-rulez's, with or without a
+  manifest, and is rewritten to the current form (this is how `agents_md` toggles it). Any other value is yours: it
+  is kept, a single string becomes a list, and `GEMINI.local.md` (and `AGENTS.md` under `agents_md`) is appended
+  when missing, without a warning. Only the names ai-rulez added are taken back: `clean` on `"MY.md"` leaves
+  `["MY.md"]` (a list; the string form is not restored), and turning `agents_md` off removes only the `AGENTS.md`
+  it appended. An `AGENTS.md` you listed yourself stays. With `agents_md` off, a list without `GEMINI.md` still
+  gets a warning, because Gemini then ignores the generated file.
+- **OpenCode.** `AGENTS.local.md` is appended to your `instructions` (`./AGENTS.local.md` counts as the same entry)
+  and taken back by `clean`. `$schema` is written only when ai-rulez creates `opencode.json`, never added to yours.
+- **Comments (JSONC).** Gemini CLI and OpenCode accept comments in these files, but rewriting would delete them.
+  A document with comments or trailing commas is therefore left untouched: when only the `context.fileName` or
+  `instructions` registration would be written, `generate` warns (and `GEMINI.local.md` or `AGENTS.local.md` is not
+  loaded until you add it by hand); generation does not stop. When MCP servers must be written into such a document,
+  `generate` still stops with a hint, as before. `clean` leaves a commented document alone with a warning.
+- `clean` does not print the Gemini `context.fileName` advice.
 
 ### Collisions
 

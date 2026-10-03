@@ -91,9 +91,9 @@ their `AGENTS.md` or `.agents/skills` output is dropped in favor of the shared c
 - **Claude Code** reads `CLAUDE.md`, and only reads `AGENTS.md` itself from v2.1.277 and in every session from
   v2.1.281. ai-rulez therefore keeps `CLAUDE.md` as a generated shim: the generated-file banner followed by
   `@AGENTS.md`. The import works on every version and never loads the file twice.
-- **Gemini CLI** loads only the names in `context.fileName`. With the flag on, ai-rulez merges `"AGENTS.md"` into
-  `context.fileName` in `.gemini/settings.json`, keeping existing names and other keys (a single-string value
-  becomes a list), and writes the file even when there are no `[[mcp_servers]]`. Gemini replaces its default
+- **Gemini CLI** loads only the names in `context.fileName`. With the flag on, ai-rulez merges `"AGENTS.md"` (and
+  `"GEMINI.local.md"`) into `context.fileName` in `.gemini/settings.json`, keeping existing names and other keys (a
+  single-string value becomes a list), and writes the file even when there are no `[[mcp_servers]]`. Gemini replaces its default
   `GEMINI.md` with whatever is configured, which is why `GEMINI.md` is not written.
 - **Continue** reads `AGENTS.md` at the repository root only, so nested `<scope>/AGENTS.md` files are not read by it.
 
@@ -211,7 +211,8 @@ the root, Gemini gets no instructions for that scope and `generate` warns; add `
   content is not written and `generate` warns. Claude Code is covered through `CLAUDE.local.md`.
 - Gemini CLI loads `GEMINI.local.md` because `.gemini/settings.json` `context.fileName` lists it: ai-rulez writes
   `["AGENTS.md", "GEMINI.local.md"]` (`["GEMINI.md", "GEMINI.local.md"]` with the flag off), whether or not local
-  content exists. A `context.fileName` you wrote yourself is kept, with a warning when it lacks `GEMINI.local.md`.
+  content exists. A `context.fileName` you wrote yourself is kept and `GEMINI.local.md` is appended to it; `clean`
+  takes back only the names ai-rulez added.
 - Junie and Antigravity load the local context from their rules folders (`.junie/rules/ai-rulez.local.md`,
   `.agents/rules/ai-rulez.local.md`).
 
@@ -233,10 +234,10 @@ ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
   through the generated manifest. `CLAUDE.md` is rewritten as the shim.
 - **Off:** the per-tool files are regenerated and the shared `AGENTS.md` and `.agents/skills` files that no preset
   writes itself are removed. An off, on, off sequence ends where it began, except for the Gemini setting below.
-- **`.gemini/settings.json`:** on toggle-off, `context.fileName` is removed when it is exactly `["AGENTS.md"]` and
-  ai-rulez wrote the whole file (it is listed in the previous generated manifest), so Gemini reads the regenerated
-  `GEMINI.md` again. In a settings file you authored, and for any other value, nothing is changed; if the value lists
-  `AGENTS.md` but not `GEMINI.md`, `generate` warns so you can add it yourself. Other keys and existing
+- **`.gemini/settings.json`:** on toggle-off, a `context.fileName` that exactly equals a value ai-rulez wrote
+  (`["AGENTS.md"]`, `["AGENTS.md", "GEMINI.local.md"]`) is rewritten to `["GEMINI.md", "GEMINI.local.md"]`, whether or
+  not ai-rulez wrote the whole file. In a list you authored, only the `AGENTS.md` ai-rulez appended is removed; if the
+  value lists `AGENTS.md` but not `GEMINI.md`, `generate` warns so you can add it yourself. Other keys and existing
   `mcpServers` are untouched.
 - **Hand-written files** are never removed. A skill you wrote at `.codex/skills/mine/SKILL.md` or
   `.agents/skills/mine/SKILL.md` survives any number of toggles, because only manifest-tracked files are cleaned up.
