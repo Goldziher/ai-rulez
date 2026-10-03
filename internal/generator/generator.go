@@ -2405,13 +2405,14 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 	existingContent := string(existingData)
 
-	sortedPaths := dropUserPatterns(paths, existingContent)
-
 	// Git does not read a symlinked .gitignore, and writing through the link would
-	// change a file that lives elsewhere: keep the entries in .git/info/exclude.
+	// change a file that lives elsewhere: keep every entry in .git/info/exclude.
+	// The link's patterns protect nothing, so none may be dropped as user-covered.
 	if gitignore.IsSymlink(g.config.BaseDir) {
-		return gitignore.ReplaceViaExclude(g.config.BaseDir, sortedPaths) //nolint:wrapcheck // already contextual
+		return gitignore.ReplaceViaExclude(g.config.BaseDir, paths) //nolint:wrapcheck // already contextual
 	}
+
+	sortedPaths := dropUserPatterns(paths, existingContent)
 
 	if len(sortedPaths) == 0 {
 		logger.Debug("No paths to add to .gitignore")
