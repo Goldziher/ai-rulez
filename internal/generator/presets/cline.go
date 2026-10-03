@@ -51,15 +51,12 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 		},
 	)
 
-	if !rulefiles.InScope(cfg) {
-		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".clinerules"), IsDir: true})
-	}
-
 	// Rules and context are written as native rule files with frontmatter
 	ruleOutputs, err := rulesFolderOutputs(clineRulesTarget, content, baseDir, cfg, routingWithSharedAgentsMD(cfg, presetNameCline, rulefiles.RoutingEverything), nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate rule files: %w", err)
 	}
+	outputs = append(outputs, rulesDirMarker(cfg, presetNameCline, filepath.Join(baseDir, ".clinerules"), ruleOutputs)...)
 	outputs = append(outputs, ruleOutputs...)
 
 	// Generate skill files to .cline/skills/

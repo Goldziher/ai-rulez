@@ -767,6 +767,18 @@ func sanitizeName(name string) string {
 	return rulefiles.ID(name)
 }
 
+// rulesDirMarker returns the directory marker of a preset's rules folder, none
+// in a monorepo scope (its files live in the root folder). With agents_md on a
+// folder that receives no file gets no marker either: the shared AGENTS.md
+// carries the always-on content, and an empty folder would be pruned and
+// recreated on every toggle. Without the flag the marker is always emitted.
+func rulesDirMarker(cfg *config.Config, preset, dir string, files []config.OutputFile) []config.OutputFile {
+	if rulefiles.InScope(cfg) || (cfg.ReadsSharedAgentsMD(preset) && len(files) == 0) {
+		return nil
+	}
+	return []config.OutputFile{{Path: dir, IsDir: true}}
+}
+
 // rulesFolderOutputs plans and renders the items routing selects for a preset's
 // native rules folder; the folder-relative file name comes from
 // rulefiles.FileName. Presets that write one file per rule and context item pass
