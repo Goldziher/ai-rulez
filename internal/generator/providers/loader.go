@@ -82,6 +82,25 @@ func resolveFormat(filename string, format LoadFormat) LoadFormat {
 	}
 }
 
+// validateLocalFile checks root.local_file: "none", or a slash-separated path
+// inside the project that is not the root file itself (writing the local variant
+// over the shared root would replace it).
+func validateLocalFile(root *RootSpec) error {
+	local := root.LocalFile
+	if local == "" || local == LocalFileNone {
+		return nil
+	}
+	clean := path.Clean(local)
+	switch {
+	case !fs.ValidPath(local) || local == "." || strings.ContainsAny(local, `\:`):
+		return fmt.Errorf("root.local_file: %q must be %q or a relative, slash-separated path inside the project",
+			local, LocalFileNone)
+	case strings.EqualFold(clean, path.Clean(root.File)):
+		return fmt.Errorf("root.local_file: %q is the root file itself; it must name a separate file", local)
+	}
+	return nil
+}
+
 // validateSpec enforces the closed-set enum constraints documented in
 // schema/provider.schema.json. Strict TOML/YAML/JSON decoding catches unknown
 // fields; this layer catches unknown enum values and missing required combos.
@@ -96,8 +115,8 @@ func validateSpec(s *ProviderSpec) error {
 		if s.Root.File == "" {
 			return fmt.Errorf("root.file is required when root is set")
 		}
-		if local := s.Root.LocalFile; local != "" && local != LocalFileNone && !fs.ValidPath(local) {
-			return fmt.Errorf("root.local_file: %q must be %q or a relative path inside the project", local, LocalFileNone)
+		if err := validateLocalFile(s.Root); err != nil {
+			return err
 		}
 		for _, section := range s.Root.Sections {
 			if !isValidRootSection(section) {

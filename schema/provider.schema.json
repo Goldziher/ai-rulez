@@ -62,7 +62,7 @@
         },
         "local_file": {
           "type": "string",
-          "description": "Machine-local counterpart of the root file that the tool loads natively. Omit for the \".local\" variant of file (CLAUDE.md -> CLAUDE.local.md), \"none\" when the tool has no such file, or a relative path."
+          "description": "Machine-local counterpart of the root file that the tool loads natively. Omit for the \".local\" variant of file (CLAUDE.md -> CLAUDE.local.md), \"none\" when the tool has no such file, or a slash-separated relative path inside the project (no backslash, drive letter or \"..\", and not file itself)."
         },
         "sections": {
           "type": "array",
