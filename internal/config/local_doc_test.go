@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -187,7 +188,9 @@ func TestLocalDoc_SaveWritesOwnerOnlyAndIgnoresInGit(t *testing.T) {
 	require.NoError(t, err)
 	info, err := os.Stat(filepath.Join(configDir, "config.local.toml"))
 	require.NoError(t, err)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows has no Unix permission bits
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
 	ignore, err := os.ReadFile(filepath.Join(base, ".gitignore"))
 	require.NoError(t, err)
 	assert.Contains(t, string(ignore), ".ai-rulez/config.local.*")

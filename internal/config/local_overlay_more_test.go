@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -65,6 +66,9 @@ func TestSaveConfig_RefusesMergedConfig_YAMLMain(t *testing.T) {
 }
 
 func TestFindLocalConfigFile_StatErrorIsReturned(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("stat through a regular file reports not-exist on Windows")
+	}
 	// Arrange: a regular file where the config dir should be makes stat fail with ENOTDIR.
 	file := filepath.Join(t.TempDir(), "not-a-dir")
 	require.NoError(t, os.WriteFile(file, []byte("x"), 0o600))

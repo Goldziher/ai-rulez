@@ -3,6 +3,7 @@ package gitutil
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,8 +20,6 @@ func TestReadIgnoreFile(t *testing.T) {
 	if err := os.Symlink(regular, link); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
-	devLink := filepath.Join(dir, "dev")
-	require.NoError(t, os.Symlink(os.DevNull, devLink))
 	old := maxIgnoreFileSize
 	t.Cleanup(func() { maxIgnoreFileSize = old })
 
@@ -34,9 +33,20 @@ func TestReadIgnoreFile(t *testing.T) {
 	}{
 		{"regular file", regular, 100, "a\nb\n", nil, false},
 		{"symlink to regular file", link, 100, "a\nb\n", nil, false},
-		{"symlink to a device", devLink, 100, "", ErrNotRegular, false},
 		{"over the size limit", big, 5, "", ErrTooLarge, false},
 		{"missing", filepath.Join(dir, "nope"), 100, "", nil, true},
+	}
+	if runtime.GOOS != "windows" { // Windows has no device files to link to
+		devLink := filepath.Join(dir, "dev")
+		require.NoError(t, os.Symlink(os.DevNull, devLink))
+		tests = append(tests, struct {
+			name    string
+			path    string
+			limit   int64
+			want    string
+			wantErr error
+			missing bool
+		}{"symlink to a device", devLink, 100, "", ErrNotRegular, false})
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
