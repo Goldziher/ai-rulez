@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Fixed
+
+- **Generator schema v8** forces a one-time rewrite of existing generated files.
+- **OpenCode agents with a bare model alias** (`model: sonnet`, the Claude form) are no longer written as is. OpenCode needs `provider/model`: it silently dropped the whole agent file, or failed the session with `Model not found: sonnet/.`. `generate` now omits an unqualified model with a warning, so the agent inherits the session model; set `opencode_model` in the agent frontmatter or `defaults.model_by_preset.opencode` to pin one. Surrounding whitespace in a model value is trimmed for every preset.
+- **OpenCode agent variant** is written as a separate `variant:` key next to a plain `provider/model`, because markdown agents do not accept the `model#variant` form (only `opencode.json` does). A `#variant` in the source model is split off and wins over the configured effort.
+- **OpenCode agent `hidden`, `temperature` and `top_p`** are written as a boolean and top-level numbers instead of quoted strings (and no longer under `request.body`), which OpenCode rejected; unparsable values are omitted with a warning.
+
 ## [4.22.1] - 2026-10-03
 
 ### Fixed
