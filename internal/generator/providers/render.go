@@ -46,6 +46,15 @@ func (g *Generator) LocalRootFile() string {
 	return config.LocalVariantPath(g.Spec.Root.File)
 }
 
+// LocalRootStandsIn implements config.LocalRootStandIn: the root file the local
+// file extends, for target matching.
+func (g *Generator) LocalRootStandsIn() string {
+	if g.Spec.Root == nil {
+		return ""
+	}
+	return g.Spec.Root.File
+}
+
 // LocalRuleOutputs implements config.LocalRuleProvider for split-aware specs:
 // local rules are routed like shared ones and the routed rules become
 // "<dir>/<id>.local<ext>".
