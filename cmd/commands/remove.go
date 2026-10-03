@@ -13,6 +13,7 @@ import (
 var (
 	removeDomain string
 	removeForce  bool
+	removeLocal  bool
 )
 
 var RemoveCmd = &cobra.Command{
@@ -51,20 +52,31 @@ Use --force to skip confirmation prompts.`,
 	Run:  runRemoveSkill,
 }
 
+var removeAgentCmd = &cobra.Command{
+	Use:   "agent <name>",
+	Short: "Remove an agent",
+	Args:  cobra.ExactArgs(1),
+	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeAgents, "agent") },
+}
+
+var removeCommandCmd = &cobra.Command{
+	Use:   "command <name>",
+	Short: "Remove a command",
+	Args:  cobra.ExactArgs(1),
+	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeCommands, "command") },
+}
+
 func init() {
+	RemoveCmd.AddCommand(removeAgentCmd)
+	RemoveCmd.AddCommand(removeCommandCmd)
+	for _, c := range []*cobra.Command{removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd} {
+		c.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
+		c.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
+		c.Flags().BoolVar(&removeLocal, "local", false, "Remove from the machine-local tree (.ai-rulez/local/)")
+	}
 	RemoveCmd.AddCommand(removeRuleCmd)
 	RemoveCmd.AddCommand(removeContextCmd)
 	RemoveCmd.AddCommand(removeSkillCmd)
-
-	// Common flags
-	removeRuleCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-	removeRuleCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
-
-	removeContextCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-	removeContextCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
-
-	removeSkillCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
-	removeSkillCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
 }
 
 func runRemoveRule(cmd *cobra.Command, args []string) {
@@ -83,7 +95,7 @@ func runRemoveRule(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(removeLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -113,7 +125,7 @@ func runRemoveContext(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(removeLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -143,7 +155,7 @@ func runRemoveSkill(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(removeLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -155,4 +167,27 @@ func runRemoveSkill(cmd *cobra.Command, args []string) {
 	}
 
 	logger.Info("Skill removed successfully", "name", name)
+}
+
+func runRemoveItem(name, ftype, label string) {
+	if !removeForce {
+		resourceName := fmt.Sprintf("%s %s", label, name)
+		if removeDomain != "" {
+			resourceName = fmt.Sprintf("%s %s in domain %s", label, name, removeDomain)
+		}
+		if !confirmRemoval("", resourceName) {
+			logger.Info("Operation canceled")
+			return
+		}
+	}
+	op, err := newContentOperator(removeLocal)
+	if err != nil {
+		logger.Error("Failed to create CRUD operator", "error", err)
+		os.Exit(1)
+	}
+	if err := op.RemoveFile(context.Background(), removeDomain, ftype, name); err != nil {
+		logger.Error("Failed to remove "+label, "error", err)
+		os.Exit(1)
+	}
+	logger.Info(label+" removed successfully", "name", name)
 }

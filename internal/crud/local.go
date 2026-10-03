@@ -2,6 +2,7 @@ package crud
 
 import (
 	"context"
+	"path/filepath"
 
 	"github.com/samber/oops"
 
@@ -14,14 +15,20 @@ const (
 	listInstalledSkills = "installed_skills"
 )
 
-// Local returns an operator whose config mutations (profiles, includes,
-// installed skills) are written to the machine-local config.local.* overlay
-// instead of the shared config. Content-file operations are unaffected.
+// Local returns an operator for the machine-local layer. Config mutations
+// (profiles, includes, installed skills) are written to the config.local.*
+// overlay instead of the shared config, and content-file operations (rules,
+// context, skills, and their domains) work on <configdir>/local/, which mirrors
+// the shared layout. Everything under it is gitignored.
 func (op *OperatorImpl) Local() *OperatorImpl {
 	local := *op
 	local.local = true
+	local.filesMgr = NewFileManager(filepath.Join(op.aiRulezDir, localContentDir))
 	return &local
 }
+
+// localContentDir is the machine-local content tree inside the config directory.
+const localContentDir = "local"
 
 // IsLocal reports whether config mutations go to the local overlay.
 func (op *OperatorImpl) IsLocal() bool { return op.local }

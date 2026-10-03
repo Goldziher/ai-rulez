@@ -13,6 +13,10 @@ const (
 	ContentTypeRules   = "rules"
 	ContentTypeContext = "context"
 	ContentTypeSkills  = "skills"
+	// ContentTypeAgents and ContentTypeCommands are flat markdown files, like
+	// rules and context.
+	ContentTypeAgents   = "agents"
+	ContentTypeCommands = "commands"
 )
 
 // FileManager handles file I/O operations for CRUD
@@ -209,13 +213,6 @@ func (fm *FileManager) ListSubdirectories(path string) ([]string, error) {
 	return dirs, nil
 }
 
-// GetLocalFilePath returns the full path for a machine-local override content
-// file under .ai-rulez/local/{rules,context}/<name>.md. Local content is
-// gitignored and never merged into committed output.
-func (fm *FileManager) GetLocalFilePath(ftype, name string) string {
-	return filepath.Join(fm.aiRulezDir, "local", ftype, name+".md")
-}
-
 // GetDomainPath returns the path for a domain directory
 func (fm *FileManager) GetDomainPath(domainName string) string {
 	return filepath.Join(fm.aiRulezDir, "domains", domainName)
@@ -245,6 +242,23 @@ func (fm *FileManager) GetSkillsPath(domainName string) string {
 	return filepath.Join(fm.aiRulezDir, "skills")
 }
 
+// GetAgentsPath returns the path for the agents directory
+func (fm *FileManager) GetAgentsPath(domainName string) string {
+	return fm.contentDir(domainName, ContentTypeAgents)
+}
+
+// GetCommandsPath returns the path for the commands directory
+func (fm *FileManager) GetCommandsPath(domainName string) string {
+	return fm.contentDir(domainName, ContentTypeCommands)
+}
+
+func (fm *FileManager) contentDir(domainName, sub string) string {
+	if domainName != "" {
+		return filepath.Join(fm.GetDomainPath(domainName), sub)
+	}
+	return filepath.Join(fm.aiRulezDir, sub)
+}
+
 // GetFilePath returns the full path for a content file
 func (fm *FileManager) GetFilePath(domain, ftype, name string) string {
 	var dirPath string
@@ -254,6 +268,10 @@ func (fm *FileManager) GetFilePath(domain, ftype, name string) string {
 		dirPath = fm.GetRulesPath(domain)
 	case ContentTypeContext:
 		dirPath = fm.GetContextPath(domain)
+	case ContentTypeAgents:
+		dirPath = fm.GetAgentsPath(domain)
+	case ContentTypeCommands:
+		dirPath = fm.GetCommandsPath(domain)
 	case ContentTypeSkills:
 		// For skills, return the SKILL.md file within the skill directory
 		dirPath = fm.GetSkillsPath(domain)
@@ -275,7 +293,7 @@ func (fm *FileManager) CreateDomainStructure(domainName string) error {
 	}
 
 	// Create subdirectories
-	subdirs := []string{ContentTypeRules, ContentTypeContext, ContentTypeSkills}
+	subdirs := []string{ContentTypeRules, ContentTypeContext, ContentTypeSkills, ContentTypeAgents, ContentTypeCommands}
 	for _, subdir := range subdirs {
 		path := filepath.Join(domainPath, subdir)
 		if err := fm.CreateDirectory(path); err != nil {

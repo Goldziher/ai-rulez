@@ -119,8 +119,8 @@ func TestLocalRuleFiles_InlineModeUnchanged(t *testing.T) {
 	}{
 		{"claude", "claude", ".claude/rules/x.local.md", "CLAUDE.local.md"},
 		{"junie", "junie", ".junie/rules/x.local.md", ""},
-		{"copilot", "copilot", ".github/instructions/x.local.instructions.md", ""},
-		{"antigravity", "antigravity", ".agents/rules/x.local.md", ""},
+		{"copilot", "copilot", ".github/instructions/x.local.instructions.md", ".github/instructions/ai-rulez.local.instructions.md"},
+		{"antigravity", "antigravity", ".agents/rules/x.local.md", "GEMINI.local.md"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -137,7 +137,9 @@ func TestLocalRuleFiles_InlineModeUnchanged(t *testing.T) {
 				assert.Contains(t, root, "Personal rule body.")
 				assert.Contains(t, root, "Personal context body.")
 			}
-			assert.NotContains(t, readRel(t, dir, ".gitignore"), "*.local.*")
+			if !config.InRulesDir(tt.localRoot) {
+				assert.NotContains(t, readRel(t, dir, ".gitignore"), "*.local.*")
+			}
 		})
 	}
 }

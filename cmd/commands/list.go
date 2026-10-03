@@ -14,6 +14,7 @@ import (
 var (
 	listDomain string
 	listJSON   bool
+	listLocal  bool
 )
 
 var ListCmd = &cobra.Command{
@@ -52,25 +53,36 @@ You can filter by domain using --domain flag.`,
 	Run:  runListSkills,
 }
 
+var listAgentsCmd = &cobra.Command{
+	Use:   crud.ContentTypeAgents,
+	Short: "List all agents",
+	Args:  cobra.NoArgs,
+	Run:   func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeAgents, "Agents", "agents") },
+}
+
+var listCommandsCmd = &cobra.Command{
+	Use:   crud.ContentTypeCommands,
+	Short: "List all commands",
+	Args:  cobra.NoArgs,
+	Run:   func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeCommands, "Commands", "commands") },
+}
+
 func init() {
+	ListCmd.AddCommand(listAgentsCmd)
+	ListCmd.AddCommand(listCommandsCmd)
+	for _, c := range []*cobra.Command{listRulesCmd, listContextCmd, listSkillsCmd, listAgentsCmd, listCommandsCmd} {
+		c.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+		c.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
+		c.Flags().BoolVar(&listLocal, "local", false, "List the machine-local tree (.ai-rulez/local/)")
+	}
 	ListCmd.AddCommand(listRulesCmd)
 	ListCmd.AddCommand(listContextCmd)
 	ListCmd.AddCommand(listSkillsCmd)
-
-	// Common flags
-	listRulesCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
-	listRulesCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
-
-	listContextCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
-	listContextCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
-
-	listSkillsCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
-	listSkillsCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 }
 
 func runListRules(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(listLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -96,7 +108,7 @@ func runListRules(cmd *cobra.Command, args []string) {
 
 func runListContext(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(listLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -122,7 +134,7 @@ func runListContext(cmd *cobra.Command, args []string) {
 
 func runListSkills(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(listLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -194,5 +206,27 @@ func outputListTable(title string, files []crud.FileInfo) {
 			}
 			logger.Info(info)
 		}
+	}
+}
+
+func runListItems(ftype, title, noun string) {
+	op, err := newContentOperator(listLocal)
+	if err != nil {
+		logger.Error("Failed to create CRUD operator", "error", err)
+		os.Exit(1)
+	}
+	files, err := op.ListFiles(context.Background(), listDomain, ftype)
+	if err != nil {
+		logger.Error("Failed to list "+noun, "error", err)
+		os.Exit(1)
+	}
+	if len(files) == 0 {
+		logger.Info("No " + noun + " found")
+		return
+	}
+	if listJSON {
+		outputListJSON(ftype, files)
+	} else {
+		outputListTable(title, files)
 	}
 }

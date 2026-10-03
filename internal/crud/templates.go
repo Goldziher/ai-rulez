@@ -92,6 +92,26 @@ func GenerateSkillTemplate(name, description, priority string, targets []string,
 	return frontmatter + body
 }
 
+// GenerateAgentTemplate generates a template for an agent file
+func GenerateAgentTemplate(name, description string) string {
+	if description == "" {
+		description = name
+	}
+	caser := cases.Title(language.English)
+	return fmt.Sprintf("---\nname: %s\ndescription: %q\n---\n\n# %s\n\nYour agent instructions here...\n",
+		name, description, caser.String(strings.ReplaceAll(name, "-", " ")))
+}
+
+// GenerateCommandTemplate generates a template for a command file
+func GenerateCommandTemplate(name, description string) string {
+	if description == "" {
+		description = name
+	}
+	caser := cases.Title(language.English)
+	return fmt.Sprintf("---\npriority: medium\nusage: %q\ndescription: %q\n---\n\n# %s\n\nYour command instructions here...\n",
+		"/"+name, description, caser.String(strings.ReplaceAll(name, "-", " ")))
+}
+
 // GenerateEmptyRuleTemplate generates an empty rule template with just frontmatter
 func GenerateEmptyRuleTemplate() string {
 	return GenerateFrontmatter("medium", []string{})

@@ -875,7 +875,16 @@ func ResolveGenerationTime() time.Time {
 // Domains map so that preset generators can combine them via
 // combineContentFiles / getAllDomain* helpers without duplication.
 func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
-	if c.Content == nil {
+	return c.SelectContentForProfile(c.Content, profile)
+}
+
+// SelectContentForProfile applies a profile's domain selection to a content tree:
+// the root content plus the domains the profile names, the globally active
+// builtins and every domain that came from an include. It is the single
+// implementation of that selection, used for the shared tree and for the
+// machine-local one (.ai-rulez/local/) alike.
+func (c *Config) SelectContentForProfile(content *ContentTree, profile string) (*ContentTree, error) {
+	if content == nil {
 		return nil, ErrNoContent
 	}
 
@@ -886,7 +895,7 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 	if activeProfile == "" {
 		activeProfile = c.Default
 	}
-	rootSkills := FilterContentFilesByProfile(c.Content.Skills, activeProfile)
+	rootSkills := FilterContentFilesByProfile(content.Skills, activeProfile)
 
 	// Build filtered domains map: profile-listed domains + global builtins + FromInclude
 	activeDomains := make(map[string]*Domain)
@@ -894,7 +903,7 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 	// First pass: include globally-active builtins and every FromInclude domain
 	// unconditionally. A builtin loaded only because a profile named it is
 	// excluded here and re-added by the second pass for that profile alone.
-	for name, domain := range c.Content.Domains {
+	for name, domain := range content.Domains {
 		if domain.FromInclude || (domain.Builtin && !domain.BuiltinScoped) {
 			activeDomains[name] = domain
 		}
@@ -906,7 +915,7 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 	// into a profile that did not ask for it.
 	for _, ref := range profileDomains {
 		name := builtins.TrimRefPrefix(ref)
-		domain, ok := c.Content.Domains[name]
+		domain, ok := content.Domains[name]
 		if !ok {
 			continue
 		}
@@ -917,11 +926,11 @@ func (c *Config) GetContentForProfile(profile string) (*ContentTree, error) {
 	}
 
 	return &ContentTree{
-		Rules:    c.Content.Rules,
-		Context:  c.Content.Context,
+		Rules:    content.Rules,
+		Context:  content.Context,
 		Skills:   rootSkills,
-		Agents:   c.Content.Agents,
-		Commands: c.Content.Commands,
+		Agents:   content.Agents,
+		Commands: content.Commands,
 		Domains:  activeDomains,
 	}, nil
 }
