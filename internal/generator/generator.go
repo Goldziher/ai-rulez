@@ -710,9 +710,13 @@ func (g *Generator) localRootOutput(generator config.PresetGenerator, local *con
 		return out, false, nil
 	}
 	localFile := rootProvider.LocalRootFile()
+	content := presets.RenderLocalRootRules(local, rules, cfg, localFile)
+	if standIn, ok := generator.(config.LocalRootStandIn); ok {
+		content = presets.RenderLocalRootRulesFor(local, rules, cfg, localFile, standIn.LocalRootStandsIn())
+	}
 	return config.OutputFile{
 		Path:      filepath.Join(g.config.BaseDir, localFile),
-		Content:   presets.RenderLocalRootRules(local, rules, cfg, localFile),
+		Content:   content,
 		LocalOnly: true,
 	}, true, nil
 }

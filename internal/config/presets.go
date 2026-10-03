@@ -69,6 +69,14 @@ type LocalRootProvider interface {
 	LocalRootFile() string
 }
 
+// LocalRootStandIn is implemented by LocalRootProviders whose local file is not
+// the ".local" variant of the root file it stands in for (a file in a rules
+// folder). LocalRootStandsIn returns that root file, which frontmatter targets
+// are matched against.
+type LocalRootStandIn interface {
+	LocalRootStandsIn() string
+}
+
 // LocalRootRenderer is implemented by presets whose machine-local root file is
 // not the generic markdown override (Copilot writes a path-specific instructions
 // file with an applyTo frontmatter). RenderLocalRoot builds that file from the
