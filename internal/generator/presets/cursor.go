@@ -169,7 +169,7 @@ var cursorRulesTarget = rulefiles.Target{
 // renderRuleFiles writes one .mdc per rule and per context file. Cursor always
 // writes one file per item, so the `[rules] mode` setting does not apply.
 func (g *CursorPresetGenerator) renderRuleFiles(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
-	return rulesFolderOutputs(cursorRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)
+	return rulesFolderOutputs(cursorRulesTarget, content, baseDir, cfg, routingWithSharedAgentsMD(cfg, presetNameCursor, rulefiles.RoutingEverything), nil)
 }
 
 // shouldIncludeCommand checks if a command should be included in the Cursor preset

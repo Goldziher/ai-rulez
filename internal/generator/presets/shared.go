@@ -14,8 +14,11 @@ import (
 // byte-identical by design), so the shared file matches what any one of them
 // produced alone. owners are the configured presets relying on the file; they
 // extend the default AGENTS.md owners, so an item targeted at claude or gemini
-// lands in the shared file when that preset imports or reads it.
-func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config, owners []string) config.OutputFile {
+// lands in the shared file when that preset imports or reads it. inlining limits
+// the scoped rules and context to what a preset without a rules folder needs.
+func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config, owners []string,
+	inlining config.AgentsMDInlining,
+) config.OutputFile {
 	all := rulefiles.RootOwners("AGENTS.md")
 	for _, owner := range owners {
 		if !slices.Contains(all, owner) {
@@ -24,7 +27,7 @@ func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Con
 	}
 	return config.OutputFile{
 		Path:    filepath.Join(baseDir, "AGENTS.md"),
-		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, all),
+		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, all, &inlining),
 	}
 }
 
@@ -66,4 +69,48 @@ func renderAgentSkillFile(skill config.ContentFile) string {
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))
 	return builder.String()
+}
+
+// inlinedInAgentsMD drops, from the items AGENTS.md would inline, the ones
+// every preset relying on it takes from its own rules folder. A nil inlining
+// keeps everything. The folders hold exactly the items the routing sends to
+// files: not always-on rules, glob-scoped context. A rule therefore stays when
+// it is always-on, when inlining asks for its kind (auto and manual ones, which
+// include a glob rule without globs), or when only negated globs scope it (no
+// folder can express that). A context item stays unless it is glob-scoped.
+func inlinedInAgentsMD(items []config.ContentFile, inlining *config.AgentsMDInlining, context bool) []config.ContentFile {
+	if inlining == nil || inlining.Scoped {
+		return items
+	}
+	kept := make([]config.ContentFile, 0, len(items))
+	for _, cf := range items {
+		raw := cf.Metadata.ResolveActivation().Mode
+		effective := rulefiles.EffectiveModeOf(cf)
+		autoManual := effective == config.ActivationAuto || effective == config.ActivationManual
+		var keep bool
+		switch {
+		case raw == config.ActivationAlways:
+			keep = true
+		case context:
+			keep = raw != config.ActivationGlob || (autoManual && inlining.AutoManual)
+		case autoManual:
+			keep = inlining.AutoManual
+		default:
+			keep = rulefiles.OnlyNegatedGlobs(cf)
+		}
+		if keep {
+			kept = append(kept, cf)
+		}
+	}
+	return kept
+}
+
+// routingWithSharedAgentsMD adapts a rules-folder routing to agents_md: a preset
+// that reads the shared AGENTS.md finds its always-on rules and context there,
+// so its folder keeps only the items with a narrower activation.
+func routingWithSharedAgentsMD(cfg *config.Config, preset string, r rulefiles.Routing) rulefiles.Routing {
+	if cfg.ReadsSharedAgentsMD(preset) {
+		return rulefiles.WithoutAlwaysOn(r)
+	}
+	return r
 }
