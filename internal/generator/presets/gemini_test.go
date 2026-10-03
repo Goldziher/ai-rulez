@@ -370,3 +370,48 @@ func TestGeminiPresetGenerator_AgentFrontmatter(t *testing.T) {
 		})
 	}
 }
+
+func TestResolveGeminiModel_BareClaudeAliasesAreOmitted(t *testing.T) {
+	tests := []struct {
+		name  string
+		extra map[string]string
+		want  string
+	}{
+		{"sonnet alias is omitted", map[string]string{"model": "sonnet"}, ""},
+		{"opus alias is omitted", map[string]string{"model": "Opus"}, ""},
+		{"haiku alias is omitted", map[string]string{"model": "haiku"}, ""},
+		{"full Claude id is kept", map[string]string{"model": "claude-sonnet-4-5"}, "claude-sonnet-4-5"},
+		{"gemini_model is kept", map[string]string{"model": "sonnet", "gemini_model": "gemini-2.5-pro"}, "gemini-2.5-pro"},
+		{"no model", nil, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			agent := config.ContentFile{Name: "reviewer-" + tt.name, Metadata: &config.Metadata{Extra: tt.extra}}
+
+			// Act
+			got := resolveGeminiModel(agent, &config.Config{})
+
+			// Assert
+			if got != tt.want {
+				t.Errorf("resolveGeminiModel() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestWarnGeminiAliasOnce(t *testing.T) {
+	// Arrange
+	geminiAliasWarned.Delete("dedupe-agent\x00sonnet")
+
+	// Act
+	first := warnGeminiAliasOnce("dedupe-agent", "sonnet")
+	second := warnGeminiAliasOnce("dedupe-agent", "sonnet")
+	otherAgent := warnGeminiAliasOnce("dedupe-other", "sonnet")
+	geminiAliasWarned.Delete("dedupe-other\x00sonnet")
+
+	// Assert
+	if !first || second || !otherAgent {
+		t.Errorf("warned = %v, %v, %v; want true, false, true", first, second, otherAgent)
+	}
+}
