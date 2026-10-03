@@ -63,9 +63,10 @@ Set `builtins` in your config — `true` for every domain, or a list to pick —
 without being named, unless you exclude one with `!`. Omit the `builtins` field entirely and no builtin
 content is loaded at all.
 
-Each one ships **always-on content** (rules, or context such as the agent roster), inlined into
-`CLAUDE.md` and so read on every request, and some also ship **on-demand skills**, whose body costs
-nothing until the assistant loads it.
+Each one ships **always-on content** (rules, or context such as the agent roster) that is read on every
+request — rules in `.claude/rules/` under the default split mode (inlined into `CLAUDE.md` with
+`[rules] mode = "inline"`), context and the agent roster in `CLAUDE.md` — and some also ship
+**on-demand skills**, whose body costs nothing until the assistant loads it.
 
 | Domain               | Always-on rules                                                                                                            | On-demand skills                        |
 | -------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- |
@@ -161,14 +162,16 @@ Recommended for shared, skill-first modules.
 
 **Native rules folders** — Rules are written to each tool's own rules folder (`.claude/rules`, `.cursor/rules`, `.github/instructions`, `.windsurf/rules`, ...) with native `paths`/`globs` frontmatter, so path-scoped rules load only when relevant. `split` is the default since 4.22.0; set `[rules] mode = "inline"` to keep rules in the root files. See [docs/rules.md](docs/rules.md).
 
-**Local overrides** — Personal, machine-local instructions that never get committed:
+**Local configuration** — Personal, machine-local content and settings that never get committed:
 
 ```bash
-ai-rulez add rule my-scratch-notes --local   # → .ai-rulez/local/rules/, generates CLAUDE.local.md
+ai-rulez add rule my-scratch-notes --local   # → .ai-rulez/local/rules/, generates .claude/rules/my-scratch-notes.local.md
+ai-rulez local set presets '["codex", "!cursor"]'   # → .ai-rulez/config.local.toml overlay
 ```
 
-`.ai-rulez/local/` and the generated `*.local.md` outputs are gitignored unconditionally. See
-[docs/local-overrides.md](docs/local-overrides.md).
+`.ai-rulez/local/`, the `config.local.*` overlay and the generated `*.local.*` outputs are gitignored
+unconditionally, and `generate` refuses to let local config change tracked shared files (use
+`--no-local` for the teammate view). See [docs/local-overrides.md](docs/local-overrides.md).
 
 **Reasoning effort across providers** — Tune how hard each AI tool thinks:
 
@@ -377,8 +380,14 @@ pre-commit:
   commands:
     ai-rulez:
       glob: ".ai-rulez/**"
-      run: ai-rulez generate --recursive
+      run: ai-rulez generate --recursive --no-local
 ```
+
+Hooks run on each developer's machine and would otherwise load that developer's gitignored
+`config.local.*` overlay and `.ai-rulez/local/` content. Pass `--no-local` (also accepted by `validate`
+and `tokens`) where a hook should see only the shared configuration, as a teammate or CI does. If you do
+not, `generate` still refuses to write local-derived changes into tracked shared files; never add
+`--allow-local-drift` to a hook. See [Poly hooks guide](docs/poly-hooks.md#machine-local-configuration-in-hooks).
 
 In a monorepo, `ai-rulez generate --recursive` and `ai-rulez validate --recursive` (`-r`) process every nested
 `.ai-rulez/` root, report all failures, and exit non-zero if any root failed.

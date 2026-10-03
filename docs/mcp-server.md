@@ -8,7 +8,7 @@ The `ai-rulez` MCP (Model Context Protocol) server allows your AI assistant to p
 
 ## Configuration Examples
 
-To enable the server, add one of the following snippets to your AI assistant's configuration file (e.g., Cursor's `settings.json`), or define it inline in `.ai-rulez/config.toml`.
+To enable the server, add one of the following snippets to your AI assistant's configuration file (e.g., Cursor's `settings.json`), or define it inline in `.ai-rulez/config.toml`. The top-level key (`mcpServers` below) differs between clients; check your assistant's documentation.
 
 ### Using `npx` (Recommended for Node.js users)
 
@@ -16,7 +16,7 @@ This method ensures you are always using the latest version of `ai-rulez` withou
 
 ```json
 {
-  "mcp_servers": {
+  "mcpServers": {
     "ai-rulez": {
       "command": "npx",
       "args": ["-y", "ai-rulez@latest", "mcp"]
@@ -31,7 +31,7 @@ This method uses `uvx` to run `ai-rulez` in an ephemeral environment.
 
 ```json
 {
-  "mcp_servers": {
+  "mcpServers": {
     "ai-rulez": {
       "command": "uvx",
       "args": ["ai-rulez", "mcp"]
@@ -46,7 +46,7 @@ If you have installed `ai-rulez` locally with `go install`.
 
 ```json
 {
-  "mcp_servers": {
+  "mcpServers": {
     "ai-rulez": {
       "command": "ai-rulez",
       "args": ["mcp"]
@@ -100,9 +100,13 @@ The entry is merged into an existing `.mcp.json`, so hand-authored servers survi
 
 Generated MCP config files contain resolved values. If a value came from a placeholder, or if an env
 key contains `TOKEN`, `SECRET`, `PASSWORD`, `KEY`, or `CREDENTIAL`, generation fails before writing
-unless `.mcp.json`, `.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`, or a
-scoped variant is gitignored or covered by planned `--gitignore` patterns. Secret-bearing values are
-redacted before source-hash calculation, not from generated MCP config files.
+unless `.mcp.json`, `.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`,
+`opencode.json`, or a scoped variant is gitignored or covered by planned `--gitignore` patterns.
+Secret-bearing values are redacted before source-hash calculation, not from generated MCP config
+files. Any generated file that contains a resolved secret value is written with mode `0600`.
+
+Servers can also be defined per machine in the [`config.local.*` overlay](local-overrides.md), which
+keeps credentials out of the shared config.
 
 Set `enabled = false` on an inline `[[mcp_servers]]` entry to skip it in generated MCP outputs.
 
@@ -146,7 +150,7 @@ This approach ensures your configuration remains auditable and version-controlle
 3. **Commit changes**:
 
    ```bash
-   git add .ai-rulez/ CLAUDE.md .cursor/
+   git add .ai-rulez/   # plus generated files only if gitignore = false
    git commit -m "docs: update AI guidelines"
    ```
 
@@ -172,6 +176,28 @@ Every tool below accepts an optional `working_directory` parameter (the director
 except the two utility tools `get_version` and `show_builtin`. The per-tool parameter lists below
 name only the parameters specific to that tool unless noted.
 
+### Local configuration (`local: true`)
+
+Tools that change content or config accept an optional `local` boolean that redirects the change to
+the machine-local layer instead of the shared one. See [Local Configuration](local-overrides.md).
+
+| Tools | `local: true` targets |
+| ----- | --------------------- |
+| `create_*`, `read_*`, `update_*`, `delete_*`, `list_*` for rule, context and skill | The `.ai-rulez/local/` content tree (`domain` selects `local/domains/<name>/`) |
+| `add_include`, `remove_include`, `install_skill`, `uninstall_skill`, `update_config`, `add_profile`, `remove_profile`, `set_default_profile` | The `config.local.*` overlay |
+
+Not accepted: `create_domain`, `delete_domain`, `list_domains`, `list_includes`, `list_profiles`,
+`list_installed_skills`. Those list tools show the shared layer only.
+
+The drift guard applies to `generate_outputs` too. `--allow-local-drift` is CLI-only: the MCP server
+cannot write overlay-derived values over tracked shared files. Pass `no_local: true` to generate the
+shared view, or fix the reported paths.
+
+### Response keys
+
+Responses of the list tools serialize Go structs without JSON tags, so item keys are capitalised
+(`Name`, `Path`), unlike the lower-case envelope keys (`success`, `operation`, `count`).
+
 ### Project and Utility Tools
 
 #### `generate_outputs`
@@ -184,11 +210,12 @@ Generate output files from the current configuration.
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
 - `dry_run` (optional, boolean): Preview changes without writing files
 - `recursive` (optional, boolean): Generate for all subdirectories containing `.ai-rulez/`
+- `no_local` (optional, boolean): Ignore the machine-local `config.local.*` overlay and `local/` content (the view a teammate sees)
 - `working_directory` (optional, string): Directory to operate in
 
 #### `clean_outputs`
 
-Remove the files produced by `generate_outputs` (its inverse): the generated assistant files, the generated manifest, and the ai-rulez managed `.gitignore` block. The `.ai-rulez/` source tree is never touched, and generated directories are removed only once empty.
+Remove the files produced by `generate_outputs` (its inverse): the generated assistant files, the generated manifest (and local manifest with the local rule files it records), and the ai-rulez managed `.gitignore` block. The `.ai-rulez/` source tree is never touched, and generated directories are removed only once empty.
 
 **Parameters:**
 
@@ -201,12 +228,15 @@ Remove the files produced by `generate_outputs` (its inverse): the generated ass
 
 #### `validate_config`
 
-Validate the configuration file, including all includes.
+Validate the configuration file, including all includes. A `config.local.*` overlay, when present, is
+also validated against the local schema (`schema/ai-rules-local.schema.json`). Errors are redacted:
+URL credentials and quoted source values are removed, since the merged config can contain local secrets.
 
 **Parameters:**
 
 - `config_file` (optional, string): Path to the root configuration file
 - `config_dir` (optional, string): Configuration directory name (default: `.ai-rulez`)
+- `no_local` (optional, boolean): Validate without the machine-local overlay
 - `working_directory` (optional, string): Directory to operate in
 
 #### `init_project`
@@ -299,11 +329,9 @@ List all domains in the `.ai-rulez/` directory.
   "operation": "list_domains",
   "domains": [
     {
-      "name": "backend",
-      "path": ".ai-rulez/domains/backend",
-      "rulesCount": 3,
-      "contextCount": 2,
-      "skillsCount": 1
+      "Name": "backend",
+      "Path": ".ai-rulez/domains/backend",
+      "Description": "Backend services"
     }
   ],
   "count": 1
@@ -321,8 +349,9 @@ Create a new rule file with optional YAML frontmatter.
 - `name` (required, string): Rule filename without .md extension
 - `content` (optional, string): Markdown content with optional YAML frontmatter
 - `domain` (optional, string): Domain name (if not specified, creates in root)
-- `priority` (optional, string): Priority level - critical, high, medium, low. Default: medium
+- `priority` (optional, string): Priority level - critical, high, medium, low, minimal. Default: medium
 - `targets` (optional, array): Target providers (e.g., ["claude", "cursor"])
+- `local` (optional, boolean): Create in `.ai-rulez/local/` (gitignored) instead of the shared tree
 
 **Response:**
 
@@ -348,6 +377,7 @@ Update an existing rule file.
 - `domain` (optional, string): Domain name
 - `priority` (optional, string): Priority level
 - `targets` (optional, array): Target providers
+- `local` (optional, boolean): Update the file in `.ai-rulez/local/`
 
 **Response:** Same as create_rule
 
@@ -359,6 +389,7 @@ Read a rule file.
 
 - `name` (required, string): Rule filename without .md extension
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): Read from `.ai-rulez/local/`
 - `working_directory` (optional, string): Directory to operate in
 
 #### `delete_rule`
@@ -369,6 +400,7 @@ Delete a rule file.
 
 - `name` (required, string): Rule filename without .md extension
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): Delete from `.ai-rulez/local/`
 
 **Response:**
 
@@ -389,6 +421,7 @@ List all rules in the root or a specific domain.
 **Parameters:**
 
 - `domain` (optional, string): Domain name (lists root rules if not specified)
+- `local` (optional, boolean): List `.ai-rulez/local/` instead of the shared tree
 
 **Response:**
 
@@ -399,10 +432,12 @@ List all rules in the root or a specific domain.
   "domain": null,
   "rules": [
     {
-      "name": "code-quality",
-      "path": ".ai-rulez/rules/code-quality.md",
-      "priority": "high",
-      "targets": ["claude", "cursor"]
+      "Name": "code-quality",
+      "Path": ".ai-rulez/rules/code-quality.md",
+      "Type": "rules",
+      "Domain": "",
+      "Priority": "high",
+      "Targets": ["claude", "cursor"]
     }
   ],
   "count": 1
@@ -422,6 +457,7 @@ Create a new context file (documentation/reference material).
 - `domain` (optional, string): Domain name
 - `priority` (optional, string): Priority level
 - `targets` (optional, array): Target providers
+- `local` (optional, boolean): Create in `.ai-rulez/local/` (gitignored)
 
 **Response:** Similar to create_rule
 
@@ -441,6 +477,7 @@ Read a context file.
 
 - `name` (required, string): Context filename without .md extension
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): Read from `.ai-rulez/local/`
 - `working_directory` (optional, string): Directory to operate in
 
 #### `delete_context`
@@ -451,6 +488,7 @@ Delete a context file.
 
 - `name` (required, string): Context filename without .md extension
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): Delete from `.ai-rulez/local/`
 
 **Response:** Similar to delete_rule
 
@@ -461,8 +499,9 @@ List all context files in the root or a specific domain.
 **Parameters:**
 
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): List `.ai-rulez/local/` instead of the shared tree
 
-**Response:** Similar to list_rules, with "context" key instead of "rules"
+**Response:** Similar to list_rules (items use the capitalised `Name`, `Path`, `Type`, `Domain`, `Priority`, `Targets` keys), with a "context" key instead of "rules"
 
 ### Skill Tools
 
@@ -477,6 +516,7 @@ Create a new skill file (AI prompt/expert definition).
 - `domain` (optional, string): Domain name
 - `priority` (optional, string): Priority level
 - `targets` (optional, array): Target providers
+- `local` (optional, boolean): Create in `.ai-rulez/local/` (gitignored)
 
 **Response:** Similar to create_rule
 
@@ -496,6 +536,7 @@ Read a skill file.
 
 - `name` (required, string): Skill filename without .md extension
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): Read from `.ai-rulez/local/`
 - `working_directory` (optional, string): Directory to operate in
 
 #### `delete_skill`
@@ -506,6 +547,7 @@ Delete a skill file.
 
 - `name` (required, string): Skill filename without .md extension
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): Delete from `.ai-rulez/local/`
 
 **Response:** Similar to delete_rule
 
@@ -516,8 +558,9 @@ List all skill files in the root or a specific domain.
 **Parameters:**
 
 - `domain` (optional, string): Domain name
+- `local` (optional, boolean): List `.ai-rulez/local/` instead of the shared tree
 
-**Response:** Similar to list_rules, with "skills" key instead of "rules"
+**Response:** Similar to list_rules (items use the capitalised `Name`, `Path`, `Type`, `Domain`, `Priority`, `Targets` keys), with a "skills" key instead of "rules"
 
 ### Include Tools
 
@@ -534,6 +577,7 @@ Add a new include source (git URL or local path) to the configuration.
 - `include` (optional, array): Content types to include - rules, context, skills, agents, commands
 - `merge_strategy` (optional, string): Merge strategy - local-override (default), include-override, error
 - `install_to` (optional, string): Installation target path in .ai-rulez/
+- `local` (optional, boolean): Add the include to the `config.local.*` overlay instead of the shared config
 
 **Response:**
 
@@ -554,6 +598,7 @@ Remove an include source from the configuration.
 **Parameters:**
 
 - `name` (required, string): Include name to remove
+- `local` (optional, boolean): Remove through the overlay; an include from the shared config is hidden with `remove = true`
 
 **Response:**
 
@@ -580,11 +625,9 @@ List all include sources in the configuration.
   "operation": "list_includes",
   "includes": [
     {
-      "name": "corporate-rules",
-      "source": "https://github.com/myorg/shared-rules",
-      "ref": "main",
-      "path": ".ai-rulez",
-      "mergeStrategy": "local-override"
+      "Name": "corporate-rules",
+      "Source": "https://github.com/myorg/shared-rules",
+      "Type": "git"
     }
   ],
   "count": 1
@@ -603,6 +646,7 @@ Install a named skill from a git repository or local path.
 - `source` (required, string): Git URL or local filesystem path
 - `path` (optional, string): Path within repo to skill directory (defaults to `skills/<name>`)
 - `ref` (optional, string): Git reference (branch, tag, commit)
+- `local` (optional, boolean): Record the skill in the `config.local.*` overlay instead of the shared config
 
 **Response:**
 
@@ -623,6 +667,7 @@ Remove an installed skill from the configuration.
 **Parameters:**
 
 - `name` (required, string): Skill name to remove
+- `local` (optional, boolean): Remove through the overlay; a skill from the shared config is hidden with `remove = true`
 
 **Response:**
 
@@ -664,11 +709,18 @@ List all installed skills.
 
 #### `read_config`
 
-Read the current project configuration as structured JSON.
+Read the current project configuration as structured JSON. The result is the shared view (as if loaded
+with `--no-local`), so a read-modify-write loop never copies local values into the shared config.
 
 **Parameters:**
 
 - `working_directory` (optional, string): Directory to operate in
+
+**Response keys:** `name`, `description`, `presets`, `profiles`, `builtins`, `includes`, `gitignore`,
+`default_effort`, `default_effort_by_preset`, `rules_mode` and `rules_mode_by_preset`. The last four are
+always present, empty when unset. When a `config.local.*` overlay exists, `local_overlay` reports
+`{ "path": "...", "keys": ["presets", "mcp_servers.github.env.GITHUB_TOKEN", ...] }`: key paths only,
+never values.
 
 #### `update_config`
 
@@ -684,6 +736,7 @@ Update supported project configuration fields.
 - `default_effort_by_preset` (optional, object): Per-preset reasoning effort overrides
 - `rules_mode` (optional, string): Default rules output mode, `split` or `inline`; empty string clears it
 - `rules_mode_by_preset` (optional, object): Per-preset rules mode overrides. The map replaces the existing one; an entry with value `""` removes that preset's override, and `{}` or `null` clears them all
+- `local` (optional, boolean): Write the supplied fields to the `config.local.*` overlay instead of the shared config. Clearing a field (empty string or empty map, including `name` and `description`) removes that key from the overlay instead of writing an empty value
 - `working_directory` (optional, string): Directory to operate in
 
 ### Profile Tools
@@ -696,6 +749,7 @@ Create a new profile with a set of domains.
 
 - `name` (required, string): Profile name (unique identifier)
 - `domains` (required, array): List of domain names to include in the profile
+- `local` (optional, boolean): Define the profile in the `config.local.*` overlay; it may reference local domains
 
 **Response:**
 
@@ -716,6 +770,7 @@ Remove a profile from the configuration.
 **Parameters:**
 
 - `name` (required, string): Profile name to remove
+- `local` (optional, boolean): Remove a profile defined in the overlay; a shared profile cannot be removed locally (error)
 
 **Response:**
 
@@ -735,6 +790,7 @@ Set a profile as the default for generation.
 **Parameters:**
 
 - `name` (required, string): Profile name to set as default
+- `local` (optional, boolean): Set `default` in the overlay instead of the shared config
 
 **Response:**
 
@@ -761,14 +817,14 @@ List all profiles in the configuration.
   "operation": "list_profiles",
   "profiles": [
     {
-      "name": "full",
-      "domains": ["backend", "frontend", "qa"],
-      "isDefault": true
+      "Name": "full",
+      "Domains": ["backend", "frontend", "qa"],
+      "IsDefault": true
     },
     {
-      "name": "backend",
-      "domains": ["backend", "qa"],
-      "isDefault": false
+      "Name": "backend",
+      "Domains": ["backend", "qa"],
+      "IsDefault": false
     }
   ],
   "count": 2

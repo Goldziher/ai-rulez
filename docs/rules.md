@@ -58,7 +58,7 @@ The table shows the file each preset writes and the frontmatter it emits for eac
 | Tool (preset)                 | File                                         | always                         | glob                                              | auto                         | manual                       |
 | ----------------------------- | -------------------------------------------- | ------------------------------ | ------------------------------------------------- | ---------------------------- | ---------------------------- |
 | Claude (`claude`)             | `.claude/rules/<id>.md`                      | none                           | `paths: [...]`                                    | always-on, warning           | always-on, warning           |
-| Cursor (`cursor`)             | `.cursor/rules/<id>.mdc`                     | `alwaysApply: true`            | `globs: a,b` (bare), `alwaysApply: false`         | `description`                | `alwaysApply: false`         |
+| Cursor (`cursor`)             | `.cursor/rules/<id>.mdc`                     | `alwaysApply: true`            | `globs: a,b` (bare), `alwaysApply: false`         | `description`, `alwaysApply: false` | `alwaysApply: false`  |
 | Windsurf (`windsurf`)         | `.windsurf/rules/<id>.md`                    | `trigger: always_on`           | `trigger: glob`, `globs: "a,b"`                   | `trigger: model_decision`, `description` | `trigger: manual` |
 | Antigravity (`antigravity`)   | `.agents/rules/<id>.md`                      | `trigger: always_on`           | `trigger: glob`, `globs: "a,b"`                   | `trigger: model_decision`, `description` | `trigger: manual` |
 | Copilot (`copilot`)           | `.github/instructions/<id>.instructions.md`  | `applyTo: "**"`                | `applyTo: "a,b"`                                  | stays inline                 | stays inline                 |
@@ -191,9 +191,15 @@ Matching rules:
 !!! note "Behaviour change in 4.22.0"
     `targets` used to restrict only targeted sections, commands and skills. A rule with `targets: ["CLAUDE.md"]` now stops appearing in other root files and rules folders. Review rules whose `targets` omit an output they should still reach.
 
+## File names
+
+A rule file is named `<id><ext>`. The id is the source name with spaces, `_` and path separators turned into `-`, every character outside `[A-Za-z0-9-]` dropped, and surrounding dashes trimmed. Case is kept (`Go-Style.md` stays `Go-Style.md`), but collisions are detected case-insensitively. A name with no ASCII letter or digit gets `rule-<8 hex>`, the first eight hex digits of the SHA-1 of the name.
+
+When two sources map to the same file name (context files carry a `context-` prefix), the source whose path sorts first keeps the id and the later one is written as `<id>-<6 hex>`, the first six hex digits of the SHA-1 of its source path, with a warning. The result does not depend on scan order. Only if the suffixed name is taken too does `generate` fail, naming both sources. Two `[[scopes]]` whose paths produce the same file-name qualifier (compared case-insensitively) also fail; see [Monorepo](monorepo.md#scoped-rule-files).
+
 ## Local rules
 
-Rules in `.ai-rulez/local/rules` follow the same routing as shared rules. Where a preset sends rules to its rules folder, a local rule is written as `<rulesdir>/<id>.local<ext>` (for example `.claude/rules/my-rule.local.md`) instead of the `*.local.md` root file, so the tool loads it natively. Local context still goes to the `*.local.md` root file. See [Local Overrides](local-overrides.md).
+Rules in `.ai-rulez/local/rules` follow the same routing as shared rules. Where a preset sends rules to its rules folder, a local rule is written as `<rulesdir>/<id>.local<ext>` (for example `.claude/rules/my-rule.local.md`) instead of the `*.local.md` root file, so the tool loads it natively. Two local rules that collide get `<id>-<hash>.local<ext>`. Local context, and rules a preset keeps inline, go to the preset's `.local` root file: `CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `.junie/guidelines.local.md`, `.hermes.local.md`, or for Copilot `.github/instructions/ai-rulez.local.instructions.md` (`applyTo: "**"`). Custom providers get no local output. The per-preset table is in [Local Configuration](local-overrides.md#generated-output).
 
 ## Scopes
 
@@ -201,7 +207,7 @@ For `[[scopes]]`, rule files are written to the root rules folder, with the scop
 
 ## Hand-written rule files
 
-Generated rule files are gitignored one by one (for example `.claude/rules/x.md`), never the whole folder, so rules you write by hand in the same folder stay tracked. A hand-written file is never overwritten: if it collides with a generated rule name, `generate` warns and skips it; rename one of the two. Names matching `*.local.*` in a rules folder are reserved for [local rules](#local-rules).
+Generated rule files are gitignored one by one (for example `.claude/rules/x.md`), never the whole folder, so rules you write by hand in the same folder stay tracked. A hand-written file is never overwritten. Since 4.22.1, if it has the name of a generated rule, the generated rule is written as `<id>.ai-rulez<ext>` instead (`<id>.ai-rulez.instructions.md` for Copilot), `generate` warns, and the renamed file is recorded in the manifest and gitignored like any generated file. Rename or delete the hand-written file to put the rule back under its plain name; the next run removes the renamed file. If the renamed name is taken by a hand-written file too, the rule is skipped with a warning. Names matching `*.local.*` in a rules folder are reserved for [local rules](#local-rules): a hand-written file with such a name is skipped with a warning, and the local rule is not written.
 
 ## Size limits
 

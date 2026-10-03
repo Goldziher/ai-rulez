@@ -16,9 +16,9 @@ This creates a `.ai-rulez/` directory with:
 .ai-rulez/
 ├── config.toml
 ├── rules/
-│   └── example-rule.md
+│   └── code-quality.md
 ├── context/
-│   └── example-context.md
+│   └── architecture.md
 ├── skills/
 │   ├── code-reviewer/
 │   │   └── SKILL.md
@@ -138,7 +138,7 @@ ai-rulez generate
 
 This creates:
 
-- `CLAUDE.md` (from claude preset)
+- `CLAUDE.md` and `.claude/rules/` (from claude preset; with the default split mode your rules are in `.claude/rules/`)
 - `.cursor/rules/` (from cursor preset)
 - `GEMINI.md` (from gemini preset)
 
@@ -147,15 +147,22 @@ This creates:
 Check that files were generated:
 
 ```bash
-ls -la CLAUDE.md .cursor/rules/ GEMINI.md
+ls -la CLAUDE.md .claude/rules/ .cursor/rules/ GEMINI.md
 ```
 
-Commit everything:
+Commit the sources:
 
 ```bash
-git add .ai-rulez/ CLAUDE.md .cursor/rules/ GEMINI.md
+git add .ai-rulez/
 git commit -m "docs: initialize AI assistant configuration"
 ```
+
+`gitignore` defaults to `true`, so `generate` adds the generated files to `.gitignore` and teammates
+run `ai-rulez generate` themselves. To commit generated files instead, set `gitignore = false` in
+`config.toml` and add them to the commit.
+
+Personal notes that should not be shared go in `.ai-rulez/local/` (`ai-rulez add rule my-notes --local`);
+see [Local Configuration](local-overrides.md).
 
 ## Multi-Team Setup
 

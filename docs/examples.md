@@ -49,8 +49,9 @@ This is a monolithic application with:
 ```bash
 ai-rulez generate
 # Creates:
-# - CLAUDE.md
-# - .cursor/rules/
+# - CLAUDE.md (context and agent roster)
+# - .claude/rules/code-quality.md (the rule, under the default split mode)
+# - .cursor/rules/ (one .mdc file per rule and context item)
 ```
 
 ---
@@ -188,12 +189,9 @@ You are a system architect specializing in:
 
 ### Usage in Generated Files
 
-The generated CLAUDE.md will include instructions like:
-
-```text
-Use the @code-reviewer skill for pull request reviews.
-Use the @architecture-expert skill for design questions.
-```
+Each skill is written as its own file, for example `.claude/skills/code-reviewer/SKILL.md` and
+`.claude/skills/architecture-expert/SKILL.md`. The assistant reads the skill's `description` and loads
+the body when the task matches; nothing is added to `CLAUDE.md` for it.
 
 ---
 
