@@ -678,37 +678,60 @@ func (g *Generator) appendAgentsOverride(allOutputs map[string][]config.OutputFi
 	if len(readers) == 0 {
 		return
 	}
-	agentsMD, ok := rootAgentsMD(allOutputs, g.config.BaseDir)
-	if !ok {
+	owners := append(rulefiles.RootOwners(string(config.SharedAgentsMD)), readers...)
+	if _, has := presets.RenderAgentsOverride("", local, rules, cfg, owners); !has {
 		return
 	}
-	owners := append(rulefiles.RootOwners(string(config.SharedAgentsMD)), readers...)
-	content, ok := presets.RenderAgentsOverride(agentsMD, local, rules, cfg, owners)
+	names := strings.Join(readers, ", ")
+	overridePath := filepath.Join(g.config.BaseDir, presets.AgentsOverrideFile)
+	if g.isHandWritten(overridePath) {
+		rulefiles.Warn(presets.AgentsOverrideFile+" exists and was not written by ai-rulez, so it is left alone and "+
+			names+" do not load your machine-local content",
+			"hint", "move or delete the file to let ai-rulez write it", "path", presets.AgentsOverrideFile)
+		return
+	}
+	agentsMD, ok := rootAgentsMD(allOutputs, g.config.BaseDir)
+	if !ok {
+		rulefiles.Warn("machine-local content exists for "+names+", but this run produces no AGENTS.md, so "+
+			presets.AgentsOverrideFile+" is not written and they do not load it",
+			"hint", "enable a preset that writes AGENTS.md, or set agents_md = true")
+		return
+	}
+	// The override carries the AGENTS.md body without its generated banner: the
+	// file has a banner of its own, and a second one nested inside it would carry
+	// the per-run header stamp into the body and rewrite the file every run.
+	content, ok := presets.RenderAgentsOverride(stripHeader(agentsMD, string(config.SharedAgentsMD)), local, rules, cfg, owners)
 	if !ok {
 		return
 	}
 	allOutputs[readers[0]] = append(allOutputs[readers[0]], config.OutputFile{
-		Path:      filepath.Join(g.config.BaseDir, presets.AgentsOverrideFile),
+		Path:      overridePath,
 		Content:   content,
 		LocalOnly: true,
 	})
 }
 
-// rootAgentsMD returns the content of the project's AGENTS.md as rendered this
-// run: the shared one with agents_md, otherwise the one a preset writes itself
-// (codex, opencode, xum and amp render byte-identical files).
+// isHandWritten reports whether the file at path exists and is not one ai-rulez
+// wrote: it is in neither manifest and carries no generated banner or hashes.
+func (g *Generator) isHandWritten(path string) bool {
+	if !pathIsFile(path) {
+		return false
+	}
+	rel := filepath.ToSlash(g.convertToRelativePath(path))
+	if slices.Contains(g.previousManifestFiles(), rel) {
+		return false
+	}
+	return !looksGenerated(path)
+}
+
+// rootAgentsMD returns the content of the project's AGENTS.md as written this
+// run: the winner of flattenPresetOutputs, which is the shared one with agents_md
+// and otherwise the last preset in name order to render one.
 func rootAgentsMD(allOutputs map[string][]config.OutputFile, baseDir string) (string, bool) {
 	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
-	names := make([]string, 0, len(allOutputs))
-	for name := range allOutputs {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	for _, name := range append([]string{sharedOutputsKey}, names...) {
-		for _, o := range allOutputs[name] {
-			if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
-				return o.Content, true
-			}
+	for _, o := range flattenPresetOutputs(allOutputs) {
+		if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
+			return o.Content, true
 		}
 	}
 	return "", false
