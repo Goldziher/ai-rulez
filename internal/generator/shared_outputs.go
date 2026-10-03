@@ -1,0 +1,88 @@
+package generator
+
+import (
+	"path/filepath"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+)
+
+// sharedOutputsKey keys the shared outputs in the per-preset output map.
+const sharedOutputsKey = "<shared>"
+
+// applySharedOutputs implements the agents_md flag. When it is on and at least
+// one configured preset reads a shared output (config.SharedOutputConsumerFor),
+// the shared AGENTS.md and .agents/skills tree are rendered once, and the
+// outputs those presets would have written for themselves (their root AGENTS.md
+// and their own skills directory) are dropped. Dropping after the render keeps
+// the participating generators, including declarative providers, unaware of the
+// flag; paths a preset no longer emits fall out through the generated manifest.
+// It is a no-op when the flag is off, so default output is unchanged.
+func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config, content *config.ContentTree) {
+	if !cfg.AgentsMD {
+		return
+	}
+	var wantAgentsMD, wantSkills bool
+	for _, preset := range cfg.Presets {
+		if !preset.IsBuiltIn() {
+			continue
+		}
+		consumer, ok := config.SharedOutputConsumerFor(preset.BuiltIn)
+		if !ok {
+			continue
+		}
+		wantAgentsMD = wantAgentsMD || consumer.Reads(config.SharedAgentsMD)
+		wantSkills = wantSkills || consumer.Reads(config.SharedAgentSkills)
+		allOutputs[preset.BuiltIn] = dropOwnSharedOutputs(allOutputs[preset.BuiltIn], cfg.BaseDir, consumer)
+	}
+	if !wantAgentsMD && !wantSkills {
+		return
+	}
+
+	hash := computeSharedSourceHash(cfg, content)
+	var shared []config.OutputFile
+	if wantAgentsMD {
+		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg))
+	}
+	if wantSkills {
+		shared = append(shared, presets.SharedAgentSkills(content, cfg.BaseDir)...)
+	}
+	for i := range shared {
+		if !shared[i].IsDir && shared[i].RawContent == nil {
+			shared[i].SourceHash = hash
+		}
+	}
+	allOutputs[sharedOutputsKey] = shared
+}
+
+// dropOwnSharedOutputs removes the outputs the shared ones replace: the root
+// AGENTS.md, the preset's own skills directory, and .agents/skills itself.
+func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir string, consumer config.SharedOutputConsumer) []config.OutputFile {
+	roots := []string{filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills)))}
+	if consumer.Reads(config.SharedAgentSkills) && consumer.OwnSkillsDir != "" {
+		roots = append(roots, filepath.Join(baseDir, filepath.FromSlash(consumer.OwnSkillsDir)))
+	}
+	agentsMD := filepath.Join(baseDir, string(config.SharedAgentsMD))
+
+	kept := outputs[:0:0]
+	for _, output := range outputs {
+		if consumer.Reads(config.SharedAgentsMD) && output.Path == agentsMD {
+			continue
+		}
+		if consumer.Reads(config.SharedAgentSkills) && underAny(output.Path, roots) {
+			continue
+		}
+		kept = append(kept, output)
+	}
+	return kept
+}
+
+func underAny(path string, roots []string) bool {
+	for _, root := range roots {
+		if path == root || strings.HasPrefix(path, root+string(filepath.Separator)) {
+			return true
+		}
+	}
+	return false
+}
