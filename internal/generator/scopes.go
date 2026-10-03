@@ -2,6 +2,7 @@ package generator
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -27,6 +28,7 @@ func (g *Generator) generateScopedOutputs(activeProfile string, rootContent *con
 				Errorf("scopes %q and %q share the rule file qualifier %q", prev, scope.Path, scopeRun.Slug)
 		}
 		slugs[strings.ToLower(scopeRun.Slug)] = scope.Path
+		g.warnGeminiOnlyInScope(scope)
 
 		scopeCfg, skip, err := g.scopeConfig(scope, scopeRun, activeProfile, rootContent, run)
 		if err != nil {
@@ -99,6 +101,24 @@ func (g *Generator) scopeConfig(scope config.ScopeConfig, scopeRun *config.Scope
 	scopeCfg.Presets = scopedPresets(scope.Presets)
 	scopeCfg.SourceHash = computeSourceHash(&scopeCfg, scopeContent)
 	return &scopeCfg, false, nil
+}
+
+// warnGeminiOnlyInScope warns when agents_md is on and gemini is configured for a
+// scope but not for the root. Gemini CLI reads the project .gemini/settings.json
+// only, and the root run is what points it at AGENTS.md, so the scope's nested
+// AGENTS.md is never loaded and GEMINI.md is not written.
+func (g *Generator) warnGeminiOnlyInScope(scope config.ScopeConfig) {
+	if !g.config.AgentsMD || !slices.Contains(scope.Presets, "gemini") {
+		return
+	}
+	for i := range g.config.Presets {
+		if g.config.Presets[i].GetName() == "gemini" {
+			return
+		}
+	}
+	rulefiles.Warn("agents_md is on and gemini is configured for a scope but not for the root, so Gemini CLI gets no "+
+		"instructions for it (the root run points Gemini at AGENTS.md); add gemini to the root presets",
+		"scope", scope.Path)
 }
 
 func hasDomainContent(tree *config.ContentTree) bool {
