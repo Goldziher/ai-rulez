@@ -118,7 +118,7 @@ func TestLocalContent_PerPreset(t *testing.T) {
 		{"antigravity", "antigravity", map[string]string{
 			".agents/rules/mine-rule.local.md":   "LOCAL_RULE.",
 			".agents/rules/dom-rule.local.md":    "LOCAL_DOMAIN_RULE.",
-			"GEMINI.local.md":                    "LOCAL_CONTEXT.",
+			".agents/rules/ai-rulez.local.md":    "LOCAL_CONTEXT.",
 			".agents/skills/mine-skill/SKILL.md": "LOCAL_SKILL.",
 			".agents/skills/dom-skill/SKILL.md":  "LOCAL_DOMAIN_SKILL.",
 			".agents/agents/mine-agent.md":       "LOCAL_AGENT.",
