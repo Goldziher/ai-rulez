@@ -15,6 +15,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- **`.gitignore` management adds only what git does not already ignore**: `generate` checks each entry with `git check-ignore` against all ignore sources (with its own block left out) and skips entries you already ignore or have un-ignored with a `!` rule; the managed block is removed when empty. Machine-local and secret outputs you un-ignored stay out of the block with a warning. Outside a git repository every entry is still added.
 - **poly hook catalog**: `ai-rulez-validate`, `ai-rulez-generate` and `ai-rulez-recursive` pass `--no-local`, so hooks render the shared view and never fail on, or write, a developer's machine-local configuration.
 - **`generate --allow-local-drift` no longer bypasses a failed shared baseline**: when the shared view cannot be rendered, generation fails (use `--no-local` or fix the shared config), because overlay-derived outputs could otherwise land in tracked files unmarked.
 - **`generate --dry-run` exits non-zero when local drift is blocked**, after printing the plan.

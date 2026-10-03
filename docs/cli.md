@@ -714,7 +714,7 @@ on `add`, `remove` and `list`) and the `config.local.{toml,yaml,yml,json}` overl
 Manage `config.local.{toml,yaml,yml,json}`, the machine-local overlay merged onto the shared config at load time. It sits beside `config.toml`, is gitignored, and is never written into the shared file.
 
 ```bash
-ai-rulez local init                     # commented skeleton in the main config's format
+ai-rulez local init                     # skeleton in the main config's format (commented for TOML and YAML, {} for JSON)
 ai-rulez local show [--json] [--reveal] # keys the overlay sets, with the shared value each replaces
 ai-rulez local set <path> <value>       # value is a TOML literal, falling back to a plain string
 ai-rulez local set <path> --stdin       # read the value from standard input
@@ -884,7 +884,7 @@ ai-rulez generate [config-file] [flags]
 | Flag                            | Type    | Default       | Description                                                                                                                                             |
 | ------------------------------- | ------- | ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `--dry-run` / `-d`              | boolean | false         | Show what would be generated without writing files                                                                                                      |
-| `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns                                                                                                      |
+| `--gitignore` / `-i`            | boolean | (from config) | Update `.gitignore` with generated output patterns git does not already ignore (a rule or `!` override of yours wins)                                                                                                      |
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
