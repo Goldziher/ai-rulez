@@ -170,7 +170,7 @@ func TestAgentModelOverride_PerPreset(t *testing.T) {
 				"copilot_model":      "gpt-5",
 				"cursor_model":       "cursor-fast",
 				"cline_model":        "cline-anthropic",
-				"opencode_model":     "opencode-large",
+				"opencode_model":     "opencode/large",
 				"windsurf_model":     "windsurf-pro",
 				"continue-dev_model": "continue-pro",
 				"gemini_model":       "gemini-2.0",
@@ -211,7 +211,7 @@ func TestAgentModelOverride_PerPreset(t *testing.T) {
 			got: func() map[string]interface{} {
 				return (&OpencodePresetGenerator{}).buildOpencodeAgentFrontmatter(agent, nil)
 			},
-			want: "opencode-large",
+			want: "opencode/large",
 		},
 		{
 			preset: "windsurf",
@@ -263,4 +263,25 @@ func TestAgentModelOverride_DefaultsAppliesWithoutFrontmatter(t *testing.T) {
 	// preset frontmatter builders still honor defaults.model_by_preset.
 	copilotFM := (&CopilotPresetGenerator{}).buildCopilotAgentFrontmatter(agent, cfg)
 	assert.Equal(t, "gpt-4-turbo", copilotFM["model"], "copilot default should apply even without agent frontmatter")
+}
+
+func TestResolveAgentModel_TrimsWhitespace(t *testing.T) {
+	t.Parallel()
+
+	agent := config.ContentFile{Name: "a", Metadata: &config.Metadata{Extra: map[string]string{
+		"model": "  sonnet\n", "claude_model": "   ",
+	}}}
+	if got := ResolveAgentModel("claude", agent, nil); got != "sonnet" {
+		t.Errorf("legacy model = %q, want trimmed %q", got, "sonnet")
+	}
+
+	agent.Metadata.Extra["claude_model"] = " opus "
+	if got := ResolveAgentModel("claude", agent, nil); got != "opus" {
+		t.Errorf("preset model = %q, want %q", got, "opus")
+	}
+
+	cfg := &config.Config{Defaults: &config.DefaultsConfig{ModelByPreset: map[string]string{"gemini": " pro "}}}
+	if got := ResolveGlobalModel("gemini", cfg); got != "pro" {
+		t.Errorf("global model = %q, want %q", got, "pro")
+	}
 }
