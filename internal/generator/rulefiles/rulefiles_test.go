@@ -444,6 +444,8 @@ func TestPlan_OnlyNegatedGlobs(t *testing.T) {
 			RoutingScopedOnly, []string{"mixed.md"}, []string{"neg"}},
 		{"no root file: file, rendered always-on", &Target{Preset: "cursor", Ext: ".mdc"}, RoutingAll,
 			[]string{"neg.mdc", "mixed.mdc"}, nil},
+		{"shared root: inline even without a root file", &Target{Preset: "cursor", Ext: ".mdc"}, RoutingNonAlways,
+			[]string{"mixed.mdc"}, []string{"neg"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -462,7 +464,7 @@ func TestPlan_OnlyNegatedGlobs(t *testing.T) {
 			}
 			assert.Equal(t, tt.wantFiles, names)
 			assert.Equal(t, tt.wantInl, contentNames(inl))
-			if tt.target.RootFile != "" {
+			if tt.target.RootFile != "" || tt.routing == RoutingNonAlways {
 				require.Len(t, warned, 1)
 				assert.Contains(t, warned[0], "only negated globs")
 			}

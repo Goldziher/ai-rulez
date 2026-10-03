@@ -43,6 +43,10 @@ type Target struct {
 	// matching: the shared AGENTS.md is owned by every configured preset that
 	// relies on it.
 	Owners []string
+	// RootAliases are the root files of the presets whose content the shared
+	// AGENTS.md carries (CLAUDE.md, GEMINI.md, ...): a target naming one, by path
+	// or base name, selects an item for the inlined root file too.
+	RootAliases []string
 }
 
 // Kind distinguishes rules from context files.

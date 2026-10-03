@@ -211,7 +211,7 @@ func TestGeminiPresetGenerator_GetOutputPaths(t *testing.T) {
 	}
 }
 
-func TestGeminiPresetGenerator_renderSettingsJSON_Transports(t *testing.T) {
+func TestGeminiPresetGenerator_renderSettings_Transports(t *testing.T) {
 	g := &GeminiPresetGenerator{}
 
 	cfg := &config.Config{
@@ -231,9 +231,9 @@ func TestGeminiPresetGenerator_renderSettingsJSON_Transports(t *testing.T) {
 		},
 	}
 
-	rendered, err := g.renderSettingsJSON("", cfg)
+	rendered, err := g.renderSettings("", cfg)
 	if err != nil {
-		t.Fatalf("renderSettingsJSON: %v", err)
+		t.Fatalf("renderSettings: %v", err)
 	}
 
 	var parsed map[string]interface{}

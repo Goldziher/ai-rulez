@@ -14,29 +14,55 @@ import (
 // byte-identical by design), so the shared file matches what any one of them
 // produced alone. owners are the configured presets relying on the file; they
 // extend the default AGENTS.md owners, so an item targeted at claude or gemini
-// lands in the shared file when that preset imports or reads it. inlining limits
-// the scoped rules and context to what a preset without a rules folder needs.
+// lands in the shared file when that preset imports or reads it, and so does one
+// targeted at the root file such a preset replaces (CLAUDE.md, GEMINI.md, ...).
+// inlining limits the scoped rules and context to what a preset without a rules
+// folder needs.
 func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config, owners []string,
 	inlining config.AgentsMDInlining,
 ) config.OutputFile {
 	all := rulefiles.RootOwners("AGENTS.md")
+	var aliases []string
 	for _, owner := range owners {
 		if !slices.Contains(all, owner) {
 			all = append(all, owner)
 		}
+		if consumer, ok := config.SharedOutputConsumerFor(owner); ok && consumer.HasRootFile() {
+			aliases = append(aliases, consumer.ReplacedRootFile())
+		}
 	}
+	shared := &sharedAgentsMDOpts{owners: all, aliases: aliases, inlining: inlining, negatedOnly: !rulefiles.InScope(cfg)}
 	return config.OutputFile{
 		Path:    filepath.Join(baseDir, "AGENTS.md"),
-		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, all, &inlining),
+		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, shared),
 	}
+}
+
+// SkillTargets maps the id of every skill that restricts itself with frontmatter
+// targets to those targets. Such skills stay out of the shared .agents/skills
+// tree, which every reader sees whatever the targets say.
+func SkillTargets(content *config.ContentTree) map[string][]string {
+	targeted := map[string][]string{}
+	for _, skill := range allSkills(content) {
+		if skill.Metadata != nil && len(skill.Metadata.Targets) > 0 {
+			targeted[extractSkillID(skill.Path)] = skill.Metadata.Targets
+		}
+	}
+	return targeted
 }
 
 // SharedAgentSkills renders the shared .agents/skills tree: one
 // <name>/SKILL.md per skill, in the generic Agent Skills format (name and
-// description frontmatter), plus bundled resources. It returns nothing when the
-// content has no skills.
+// description frontmatter), plus bundled resources. Skills with targets are left
+// to the per-preset path (see SkillTargets). It returns nothing when the content
+// has no such skills.
 func SharedAgentSkills(content *config.ContentTree, baseDir string) []config.OutputFile {
-	skills := allSkills(content)
+	var skills []config.ContentFile
+	for _, skill := range allSkills(content) {
+		if skill.Metadata == nil || len(skill.Metadata.Targets) == 0 {
+			skills = append(skills, skill)
+		}
+	}
 	if len(skills) == 0 {
 		return nil
 	}
@@ -72,14 +98,16 @@ func renderAgentSkillFile(skill config.ContentFile) string {
 }
 
 // inlinedInAgentsMD drops, from the items AGENTS.md would inline, the ones
-// every preset relying on it takes from its own rules folder. A nil inlining
+// every preset relying on it takes from its own rules folder. A nil shared
 // keeps everything. The folders hold exactly the items the routing sends to
-// files: not always-on rules, glob-scoped context. A rule therefore stays when
-// it is always-on, when inlining asks for its kind (auto and manual ones, which
-// include a glob rule without globs), or when only negated globs scope it (no
-// folder can express that). A context item stays unless it is glob-scoped.
-func inlinedInAgentsMD(items []config.ContentFile, inlining *config.AgentsMDInlining, context bool) []config.ContentFile {
-	if inlining == nil || inlining.Scoped {
+// files: not always-on rules, glob-scoped context. An item therefore stays when
+// it is always-on, when only negated globs scope it (no folder can express that,
+// so the folders skip it and AGENTS.md is its single home; a scope run leaves it
+// to its scope-qualified file), when inlining asks for its kind (auto and manual
+// ones, which include a glob rule without globs). Other context stays unless it
+// is glob-scoped.
+func inlinedInAgentsMD(items []config.ContentFile, shared *sharedAgentsMDOpts, context bool) []config.ContentFile {
+	if shared == nil || shared.inlining.Scoped {
 		return items
 	}
 	kept := make([]config.ContentFile, 0, len(items))
@@ -91,12 +119,12 @@ func inlinedInAgentsMD(items []config.ContentFile, inlining *config.AgentsMDInli
 		switch {
 		case raw == config.ActivationAlways:
 			keep = true
+		case shared.negatedOnly && rulefiles.OnlyNegatedGlobs(cf):
+			keep = true
 		case context:
-			keep = raw != config.ActivationGlob || (autoManual && inlining.AutoManual)
+			keep = raw != config.ActivationGlob || (autoManual && shared.inlining.AutoManual)
 		case autoManual:
-			keep = inlining.AutoManual
-		default:
-			keep = rulefiles.OnlyNegatedGlobs(cf)
+			keep = shared.inlining.AutoManual
 		}
 		if keep {
 			kept = append(kept, cf)

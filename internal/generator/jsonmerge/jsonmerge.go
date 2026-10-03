@@ -49,10 +49,15 @@ var errTrailingJSONContent = errors.New("unexpected content after the root JSON 
 // appends new keys in a deterministic sequence. Creating a document from scratch
 // goes through marshalOwnedJSONKeys instead, which sorts by key to stay
 // byte-identical to pre-merge output.
+//
+// Remove deletes the addressed key instead of writing Value (and drops an
+// ancestor object the removal leaves empty), for a key ai-rulez wrote earlier
+// and no longer owns. Removing an absent key is a no-op.
 type OwnedKey struct {
-	Name  string
-	Value any
-	Path  []string
+	Name   string
+	Value  any
+	Path   []string
+	Remove bool
 }
 
 // segments returns the key path this OwnedKey addresses. Path wins when set;
@@ -129,7 +134,7 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 		if len(segs) == 0 {
 			continue
 		}
-		merged, err = replaceOwnedPath(merged, segs, key.Value, 1, indent, newline)
+		merged, err = replaceOwnedPath(merged, segs, key.Value, key.Remove, 1, indent, newline)
 		if err != nil {
 			return Result{}, oops.With("path", path).Wrapf(err, "merge owned keys into JSON settings document")
 		}
@@ -229,7 +234,7 @@ func marshalOwnedJSONKeys(owned []OwnedKey) (string, error) {
 	payload := make(map[string]any, len(owned))
 	for _, key := range owned {
 		segs := key.segments()
-		if len(segs) == 0 {
+		if len(segs) == 0 || key.Remove {
 			continue
 		}
 		insertOwnedValue(payload, segs, key.Value)
@@ -302,10 +307,14 @@ func decodeObjectMembers(data []byte) ([]jsonMember, error) {
 // (and any missing ancestors) when the document did not have it. Duplicate
 // occurrences of an owned key (legal but ambiguous JSON) collapse into the first
 // position.
-func replaceOwnedPath(members []jsonMember, path []string, value any, depth int, indent, newline string) ([]jsonMember, error) {
+func replaceOwnedPath(members []jsonMember, path []string, value any, remove bool, depth int, indent, newline string,
+) ([]jsonMember, error) {
 	head, rest := path[0], path[1:]
 
 	if len(rest) == 0 {
+		if remove {
+			return removeMember(members, head), nil
+		}
 		return replaceMemberValue(members, head, value, depth, indent, newline)
 	}
 
@@ -321,9 +330,15 @@ func replaceOwnedPath(members []jsonMember, path []string, value any, depth int,
 	if err != nil {
 		return nil, err
 	}
-	child, err := replaceOwnedPath(childMembers, rest, value, depth+1, indent, newline)
+	if remove && idx < 0 {
+		return members, nil
+	}
+	child, err := replaceOwnedPath(childMembers, rest, value, remove, depth+1, indent, newline)
 	if err != nil {
 		return nil, err
+	}
+	if remove && len(child) == 0 {
+		return removeMember(members, head), nil
 	}
 	raw, err := renderMembers(child, depth+1, indent, newline)
 	if err != nil {
@@ -353,6 +368,17 @@ func childObjectMembers(members []jsonMember, idx int, head string) ([]jsonMembe
 			Errorf("existing key %q is not a JSON object", head)
 	}
 	return decodeObjectMembers(raw)
+}
+
+// removeMember drops every member named name.
+func removeMember(members []jsonMember, name string) []jsonMember {
+	kept := make([]jsonMember, 0, len(members))
+	for _, member := range members {
+		if member.Key != name {
+			kept = append(kept, member)
+		}
+	}
+	return kept
 }
 
 // replaceMemberValue replaces the single member named name, or appends it. The

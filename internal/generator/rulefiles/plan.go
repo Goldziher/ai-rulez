@@ -247,13 +247,13 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	for _, r := range rules {
-		asFile := ruleIsFile(routing, r) && !keepNegatedInline(*t, scope, r, "rule")
+		asFile := ruleIsFile(routing, r) && !keepNegatedInline(*t, scope, routing, r, "rule")
 		if err := place(r, KindRule, asFile, &inlineRules); err != nil {
 			return nil, nil, nil, err
 		}
 	}
 	for _, c := range context {
-		asFile := (routing == RoutingEverything || isScoped(c)) && !keepNegatedInline(*t, scope, c, "context")
+		asFile := (routing == RoutingEverything || isScoped(c)) && !keepNegatedInline(*t, scope, routing, c, "context")
 		if err := place(c, KindContext, asFile, &inlineContext); err != nil {
 			return nil, nil, nil, err
 		}
@@ -267,12 +267,19 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 // keepNegatedInline reports whether cf, a rule with only negated globs, stays
 // in the root file. Such a rule has no scope a rules folder can express (scopes
 // add their own positive glob). Where the preset has a root file it stays
-// there; otherwise it becomes an always-on file (see Frontmatter).
-func keepNegatedInline(t Target, scope ScopeInfo, cf config.ContentFile, kind string) bool {
-	if t.RootFile == "" || scope.Prefix != "" || !OnlyNegatedGlobs(cf) || !InlineAllowed(cf, t) {
+// there, and under RoutingNonAlways the root content lives in the shared
+// AGENTS.md (the agents_md flag), which carries it for every reader so the
+// folder must not repeat it; otherwise it becomes an always-on file (see
+// Frontmatter).
+func keepNegatedInline(t Target, scope ScopeInfo, routing Routing, cf config.ContentFile, kind string) bool {
+	rootFile := t.RootFile
+	if routing == RoutingNonAlways {
+		rootFile = "AGENTS.md"
+	}
+	if rootFile == "" || scope.Prefix != "" || !OnlyNegatedGlobs(cf) || !InlineAllowed(cf, t) {
 		return false
 	}
-	WarnOnlyNegated(kind, cf, t.RootFile)
+	WarnOnlyNegated(kind, cf, rootFile)
 	return true
 }
 

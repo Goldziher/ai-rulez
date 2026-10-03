@@ -1,11 +1,13 @@
 package generator
 
 import (
+	pathpkg "path"
 	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
 )
 
 // sharedOutputsKey keys the shared outputs in the per-preset output map.
@@ -24,6 +26,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		return
 	}
 	var wantAgentsMD, wantSkills bool
+	targeted := skillTargets(presets.SkillTargets(content))
 	for _, preset := range cfg.Presets {
 		if !preset.IsBuiltIn() {
 			continue
@@ -34,17 +37,18 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		}
 		wantAgentsMD = wantAgentsMD || consumer.NeedsAgentsMD()
 		wantSkills = wantSkills || consumer.Reads(config.SharedAgentSkills)
-		allOutputs[preset.BuiltIn] = dropOwnSharedOutputs(allOutputs[preset.BuiltIn], cfg.BaseDir, consumer)
+		allOutputs[preset.BuiltIn] = dropOwnSharedOutputs(allOutputs[preset.BuiltIn], cfg.BaseDir, preset.BuiltIn, consumer, targeted)
 	}
 	if !wantAgentsMD && !wantSkills {
 		return
 	}
 
 	inlining := config.SharedAgentsMDInlining(cfg)
-	hash := computeSharedSourceHash(cfg, content, inlining)
+	owners := agentsMDOwners(cfg)
+	hash := computeSharedSourceHash(cfg, content, inlining, owners)
 	var shared []config.OutputFile
 	if wantAgentsMD {
-		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, agentsMDOwners(cfg), inlining))
+		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, owners, inlining))
 	}
 	if wantSkills {
 		shared = append(shared, presets.SharedAgentSkills(content, cfg.BaseDir)...)
@@ -54,7 +58,7 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 			shared[i].SourceHash = hash
 		}
 	}
-	dropShadowedByShared(allOutputs, cfg.BaseDir, wantAgentsMD, wantSkills)
+	dropShadowedByShared(allOutputs, cfg.BaseDir, wantAgentsMD, wantSkills, targeted)
 	allOutputs[sharedOutputsKey] = shared
 }
 
@@ -63,7 +67,9 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 // path, so a preset that is not a consumer (a custom provider writing AGENTS.md,
 // a tool writing .agents/skills in its own format) would otherwise overwrite the
 // shared file depending on how its name sorts. The shared outputs win.
-func dropShadowedByShared(allOutputs map[string][]config.OutputFile, baseDir string, agentsMD, skills bool) {
+func dropShadowedByShared(allOutputs map[string][]config.OutputFile, baseDir string, agentsMD, skills bool,
+	targeted skillTargets,
+) {
 	var roots []string
 	if skills {
 		roots = append(roots, filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills))))
@@ -72,7 +78,8 @@ func dropShadowedByShared(allOutputs map[string][]config.OutputFile, baseDir str
 	for name, outputs := range allOutputs {
 		kept := outputs[:0:0]
 		for _, output := range outputs {
-			if agentsMD && samePath(output.Path, agentsMDPath) || underAny(output.Path, roots) {
+			if (agentsMD && samePath(output.Path, agentsMDPath)) ||
+				(underAny(output.Path, roots) && !targeted.keeps(name, baseDir, output.Path, roots)) {
 				continue
 			}
 			kept = append(kept, output)
@@ -97,34 +104,61 @@ func agentsMDOwners(cfg *config.Config) []string {
 }
 
 // dropOwnSharedOutputs removes the outputs the shared ones replace: the root
-// AGENTS.md, the preset's own root file and skills directory, and .agents/skills
-// itself.
-func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir string, consumer config.SharedOutputConsumer) []config.OutputFile {
+// AGENTS.md, the preset's own skills directory and .agents/skills itself. A
+// preset's own root file (GEMINI.md, .hermes.md, ...) is not rendered in the
+// first place, see config.SharedOutputConsumer.OwnRootFile.
+func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir, preset string, consumer config.SharedOutputConsumer,
+	targeted skillTargets,
+) []config.OutputFile {
 	roots := []string{filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills)))}
 	if consumer.Reads(config.SharedAgentSkills) && consumer.OwnSkillsDir != "" {
 		roots = append(roots, filepath.Join(baseDir, filepath.FromSlash(consumer.OwnSkillsDir)))
 	}
 	agentsMD := filepath.Join(baseDir, string(config.SharedAgentsMD))
 
-	ownRoot := ""
-	if consumer.OwnRootFile != "" {
-		ownRoot = filepath.Join(baseDir, filepath.FromSlash(consumer.OwnRootFile))
-	}
-
 	kept := outputs[:0:0]
 	for _, output := range outputs {
-		if ownRoot != "" && samePath(output.Path, ownRoot) {
-			continue
-		}
 		if consumer.Reads(config.SharedAgentsMD) && samePath(output.Path, agentsMD) {
 			continue
 		}
-		if consumer.Reads(config.SharedAgentSkills) && underAny(output.Path, roots) {
+		if consumer.Reads(config.SharedAgentSkills) && underAny(output.Path, roots) &&
+			!targeted.keeps(preset, baseDir, output.Path, roots) {
 			continue
 		}
 		kept = append(kept, output)
 	}
 	return kept
+}
+
+// skillTargets maps a skill id to its frontmatter targets (presets.SkillTargets).
+type skillTargets map[string][]string
+
+// keeps reports whether path, below one of the skill roots, is an output of a
+// skill restricted by targets that the targets allow for preset: those skills
+// are not in the shared tree and keep the per-preset path they had before.
+func (s skillTargets) keeps(preset, baseDir, path string, roots []string) bool {
+	if len(s) == 0 {
+		return false
+	}
+	path = cleanPath(path)
+	for _, root := range roots {
+		rel, ok := strings.CutPrefix(path, cleanPath(root)+string(filepath.Separator))
+		if !ok {
+			continue
+		}
+		id, _, _ := strings.Cut(filepath.ToSlash(rel), "/")
+		targets, ok := s[id]
+		if !ok {
+			return false
+		}
+		fromBase, err := filepath.Rel(cleanPath(baseDir), path)
+		if err != nil {
+			return false
+		}
+		fromBase = filepath.ToSlash(fromBase)
+		return targetmatch.Allow(targets, []string{preset}, fromBase, pathpkg.Base(fromBase))
+	}
+	return false
 }
 
 func underAny(path string, roots []string) bool {

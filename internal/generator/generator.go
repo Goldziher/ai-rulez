@@ -1638,13 +1638,22 @@ func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.
 // .agents/skills). It covers the content and the settings that shape these files
 // and deliberately not the preset list, per-preset rules modes, MCP servers or
 // plugins: the files are written once for every preset that reads them, so adding
-// or removing a preset must not change their provenance line. What AGENTS.md
-// inlines for presets without a rules folder is an input, since it changes the file.
-func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, inlining config.AgentsMDInlining) string {
+// or removing a preset must not change their provenance line unless it changes
+// the file. Two inputs of that kind are included: what AGENTS.md inlines for
+// presets without a rules folder, and, when some rule or context item has
+// frontmatter targets, its owners (the configured presets relying on it, whose
+// names and root files those targets select items by). Without targets the
+// owners cannot change the file, so they stay out and the line stays stable.
+func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, inlining config.AgentsMDInlining,
+	owners []string,
+) string {
 	var b strings.Builder
 	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
 	b.WriteString("shared=agents_md\n")
 	_, _ = fmt.Fprintf(&b, "inline_scoped=%t,inline_auto_manual=%t\n", inlining.Scoped, inlining.AutoManual)
+	if hasTargetedRulesOrContext(content) {
+		b.WriteString("agents_md_owners=" + strings.Join(slices.Sorted(slices.Values(owners)), ",") + "\n")
+	}
 	b.WriteString("name=" + cfg.Name + "\n")
 	b.WriteString("description=" + cfg.Description + "\n")
 	b.WriteString("version=" + cfg.Version + "\n")
@@ -1656,6 +1665,25 @@ func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree, in
 	_, _ = fmt.Fprintf(&b, "compact=%t\n", cfg.IsCompact())
 	writeSourceContent(&b, cfg, content)
 	return templates.HashContent(b.String())
+}
+
+// hasTargetedRulesOrContext reports whether any rule or context item restricts
+// itself with frontmatter targets.
+func hasTargetedRulesOrContext(content *config.ContentTree) bool {
+	targeted := func(files []config.ContentFile) bool {
+		return slices.ContainsFunc(files, func(f config.ContentFile) bool {
+			return f.Metadata != nil && len(f.Metadata.Targets) > 0
+		})
+	}
+	if targeted(content.Rules) || targeted(content.Context) {
+		return true
+	}
+	for _, domain := range content.Domains {
+		if targeted(domain.Rules) || targeted(domain.Context) {
+			return true
+		}
+	}
+	return false
 }
 
 // builtinPathScheme prefixes the synthetic paths used for embedded builtin

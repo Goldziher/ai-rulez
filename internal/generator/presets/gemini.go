@@ -102,10 +102,15 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	// intact instead, which is the better trade.
 	//
 	// With agents_md the document also owns context.fileName (see
-	// geminiContextOwnedKey), which makes it worth writing without MCP servers.
-	if len(cfg.MCPServers) > 0 || g.readsSharedAgentsMD(cfg) {
-		settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocGeminiSettings))
-		settings, err := g.renderSettings(settingsPath, cfg)
+	// geminiContextFileNamePath), which makes it worth writing without MCP
+	// servers; switching the flag off removes the value it wrote.
+	settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocGeminiSettings))
+	owned, err := g.settingsKeys(settingsPath, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("render settings.json: %w", err)
+	}
+	if len(owned) > 0 {
+		settings, err := applyMergedDocument(settingsPath, owned)
 		if err != nil {
 			return nil, fmt.Errorf("render settings.json: %w", err)
 		}
@@ -163,16 +168,6 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	return outputs, nil
 }
 
-// renderSettingsJSON renders the mcpServers key ai-rulez owns into the settings
-// document at settingsPath, preserving every other top-level key that is already
-// there. An empty settingsPath renders a fresh document, which is what the unit
-// tests exercise.
-func (g *GeminiPresetGenerator) renderSettingsJSON(settingsPath string, cfg *config.Config) (jsonmerge.Result, error) {
-	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
-		{Name: keyMCPServers, Value: g.mcpServersValue(cfg)},
-	})
-}
-
 // readsSharedAgentsMD reports whether gemini takes AGENTS.md from the shared
 // output, which a monorepo scope run leaves to the root settings: Gemini reads
 // the project settings only, and the root document covers nested AGENTS.md files.
@@ -180,42 +175,71 @@ func (g *GeminiPresetGenerator) readsSharedAgentsMD(cfg *config.Config) bool {
 	return cfg.AgentsMD && !rulefiles.InScope(cfg)
 }
 
-// renderSettings renders the keys ai-rulez owns in .gemini/settings.json:
-// mcpServers when the config has servers, and context.fileName with agents_md.
+// renderSettings renders the keys ai-rulez owns in .gemini/settings.json into
+// the document at settingsPath.
 func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.Config) (jsonmerge.Result, error) {
-	var owned []jsonmerge.OwnedKey
-	if len(cfg.MCPServers) > 0 {
-		owned = append(owned, jsonmerge.OwnedKey{Name: keyMCPServers, Value: g.mcpServersValue(cfg)})
-	}
-	if g.readsSharedAgentsMD(cfg) {
-		names, err := geminiContextFileNames(settingsPath)
-		if err != nil {
-			return jsonmerge.Result{}, err
-		}
-		owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: names})
+	owned, err := g.settingsKeys(settingsPath, cfg)
+	if err != nil {
+		return jsonmerge.Result{}, err
 	}
 	return applyMergedDocument(settingsPath, owned)
 }
 
-// geminiContextFileNames is the context.fileName list to write: the names the
-// document already configures, in order, plus AGENTS.md. Existing names stay
-// because Gemini replaces its default (GEMINI.md) with whatever is configured.
-func geminiContextFileNames(settingsPath string) ([]string, error) {
-	names := []string{}
-	if settingsPath != "" {
-		data, err := os.ReadFile(settingsPath) //nolint:gosec // path is derived from the config base dir
+// settingsKeys lists the keys ai-rulez owns in .gemini/settings.json: mcpServers
+// when the config has servers, and context.fileName with agents_md. With the
+// flag off, a context.fileName that is exactly what agents_md wrote is removed,
+// since Gemini would otherwise keep ignoring the GEMINI.md that is back; any
+// other value is the user's and only gets a warning when it lacks GEMINI.md.
+func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Config) ([]jsonmerge.OwnedKey, error) {
+	var owned []jsonmerge.OwnedKey
+	if len(cfg.MCPServers) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Name: keyMCPServers, Value: g.mcpServersValue(cfg)})
+	}
+	switch {
+	case g.readsSharedAgentsMD(cfg):
+		names, _, err := readGeminiContextFileNames(settingsPath)
+		if err != nil {
+			return nil, err
+		}
+		if !slices.Contains(names, string(config.SharedAgentsMD)) {
+			names = append(names, string(config.SharedAgentsMD))
+		}
+		owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: names})
+	case !cfg.AgentsMD && !rulefiles.InScope(cfg):
+		names, isList, err := readGeminiContextFileNames(settingsPath)
+		if err != nil {
+			return nil, err
+		}
 		switch {
-		case errors.Is(err, fs.ErrNotExist):
-		case err != nil:
-			return nil, oops.With("path", settingsPath).Wrapf(err, "read gemini settings")
-		default:
-			names = append(names, existingContextFileNames(data)...)
+		case isList && slices.Equal(names, []string{string(config.SharedAgentsMD)}):
+			owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Remove: true})
+		case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, "GEMINI.md"):
+			rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
+				"so Gemini CLI ignores the generated GEMINI.md",
+				"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
 		}
 	}
-	if !slices.Contains(names, sharedAgentsMDName) {
-		names = append(names, sharedAgentsMDName)
+	return owned, nil
+}
+
+// readGeminiContextFileNames returns the context.fileName names the document at
+// settingsPath configures, in order, and whether the value is a list (a single
+// string is reported as one name). Existing names are kept when agents_md adds
+// AGENTS.md, because Gemini replaces its default (GEMINI.md) with whatever is
+// configured. A missing file configures none.
+func readGeminiContextFileNames(settingsPath string) (names []string, isList bool, err error) {
+	if settingsPath == "" {
+		return nil, false, nil
 	}
-	return names, nil
+	data, err := os.ReadFile(settingsPath) //nolint:gosec // path is derived from the config base dir
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return nil, false, nil
+	case err != nil:
+		return nil, false, oops.With("path", settingsPath).Wrapf(err, "read gemini settings")
+	}
+	names, isList = existingContextFileNames(data)
+	return names, isList, nil
 }
 
 // geminiContextFileNamePath addresses context.fileName in the settings document.
@@ -223,30 +247,27 @@ var geminiContextFileNamePath = []string{geminiContextKey, "fileName"}
 
 const geminiContextKey = "context"
 
-// sharedAgentsMDName is the file name Gemini is pointed at.
-const sharedAgentsMDName = "AGENTS.md"
-
 // existingContextFileNames reads context.fileName (a string or a list of
 // strings) from a settings document; unparseable input yields none, since the
 // merge reports the syntax error itself.
-func existingContextFileNames(data []byte) []string {
+func existingContextFileNames(data []byte) (names []string, isList bool) {
 	var doc struct {
 		Context struct {
 			FileName json.RawMessage `json:"fileName"`
 		} `json:"context"`
 	}
 	if json.Unmarshal(data, &doc) != nil || len(doc.Context.FileName) == 0 {
-		return nil
+		return nil, false
 	}
 	var list []string
 	if json.Unmarshal(doc.Context.FileName, &list) == nil {
-		return list
+		return list, true
 	}
 	var single string
 	if json.Unmarshal(doc.Context.FileName, &single) == nil && single != "" {
-		return []string{single}
+		return []string{single}, false
 	}
-	return nil
+	return nil, false
 }
 
 // mcpServersValue is the mcpServers value ai-rulez owns in the settings document.

@@ -73,6 +73,21 @@ func TestSharedOutputConsumerFor(t *testing.T) {
 	}
 }
 
+func TestSharedOutputConsumerFor_RootFiles(t *testing.T) {
+	cases := map[string]string{
+		"claude": "CLAUDE.md", "gemini": "GEMINI.md", "antigravity": "GEMINI.md", "hermes": ".hermes.md",
+		"copilot": ".github/copilot-instructions.md", "junie": ".junie/guidelines.md", "codex": "", "cursor": "",
+	}
+	for preset, want := range cases {
+		t.Run(preset, func(t *testing.T) {
+			consumer, ok := SharedOutputConsumerFor(preset)
+			require.True(t, ok)
+			assert.Equal(t, want, consumer.ReplacedRootFile())
+			assert.Equal(t, want != "", consumer.HasRootFile())
+		})
+	}
+}
+
 func TestSharedAgentsMDInlining(t *testing.T) {
 	cases := []struct {
 		name    string
@@ -86,7 +101,11 @@ func TestSharedAgentsMDInlining(t *testing.T) {
 		{"codex has no folder", []string{"claude", "codex"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
 		{"gemini has no folder", []string{"cursor", "gemini"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
 		{"hermes has no folder", []string{"hermes"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
-		{"claude in inline mode", []string{"claude"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"claude in inline mode", []string{"claude"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{AutoManual: true}},
+		{"antigravity in inline mode", []string{"antigravity"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{AutoManual: true}},
+		{"junie in inline mode alone", []string{"junie"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"copilot in inline mode", []string{"copilot"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{AutoManual: true}},
+		{"claude split and junie inline", []string{"claude", "junie"}, &RulesConfig{ModeByPreset: map[string]string{"junie": RulesModeInline}}, AgentsMDInlining{Scoped: true, AutoManual: true}},
 		{"junie in inline mode", []string{"cursor", "junie"}, &RulesConfig{ModeByPreset: map[string]string{"junie": RulesModeInline}}, AgentsMDInlining{Scoped: true, AutoManual: true}},
 		{"cursor ignores inline mode", []string{"cursor"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{}},
 	}

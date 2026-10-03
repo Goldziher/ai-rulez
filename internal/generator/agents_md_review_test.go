@@ -187,7 +187,7 @@ func TestDropShadowedByShared(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			all := build()
-			dropShadowedByShared(all, base, tc.agentsMD, tc.skills)
+			dropShadowedByShared(all, base, tc.agentsMD, tc.skills, nil)
 			assert.Equal(t, tc.wantCustom, paths(all["zzz-custom"]))
 			assert.Equal(t, tc.wantCursor, paths(all["cursor"]))
 		})
@@ -197,8 +197,6 @@ func TestDropShadowedByShared(t *testing.T) {
 func TestDropOwnSharedOutputs_ComparesCleanedPaths(t *testing.T) {
 	base := filepath.Join(string(filepath.Separator), "proj")
 	codex, ok := config.SharedOutputConsumerFor("codex")
-	require.True(t, ok)
-	hermes, ok := config.SharedOutputConsumerFor("hermes")
 	require.True(t, ok)
 
 	untidy := func(rel string) config.OutputFile {
@@ -212,11 +210,10 @@ func TestDropOwnSharedOutputs_ComparesCleanedPaths(t *testing.T) {
 	}{
 		{"codex AGENTS.md and own skills", codex,
 			[]config.OutputFile{untidy("AGENTS.md"), untidy(".codex/skills/a/SKILL.md"), untidy(".agents/skills/a/SKILL.md"), untidy("keep.md")}, 1},
-		{"hermes root file", hermes, []config.OutputFile{untidy(".hermes.md"), untidy("keep.md")}, 1},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			kept := dropOwnSharedOutputs(tc.input, base, tc.consumer)
+			kept := dropOwnSharedOutputs(tc.input, base, "codex", tc.consumer, nil)
 			assert.Len(t, kept, tc.want)
 		})
 	}

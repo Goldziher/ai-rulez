@@ -169,20 +169,32 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 }
 
 func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
-	return g.renderAgentsMarkdownFor(content, cfg, nil, nil)
+	return g.renderAgentsMarkdownFor(content, cfg, nil)
 }
 
-// renderAgentsMarkdownFor renders AGENTS.md selecting items by the targets of
-// owners (the default AGENTS.md owners when nil). A non-nil inlining keeps only
-// the always-on items plus the scoped ones it asks for.
-func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTree, cfg *config.Config, owners []string,
-	inlining *config.AgentsMDInlining,
+// sharedAgentsMDOpts shapes the shared AGENTS.md rendered when agents_md is on.
+type sharedAgentsMDOpts struct {
+	// owners and aliases extend the default AGENTS.md owners and root file names
+	// that frontmatter targets are matched against.
+	owners, aliases []string
+	// inlining keeps only the always-on items plus the scoped ones it asks for.
+	inlining config.AgentsMDInlining
+	// negatedOnly keeps the items scoped by negated globs only, which no rules
+	// folder can express.
+	negatedOnly bool
+}
+
+// renderAgentsMarkdownFor renders AGENTS.md; a nil shared renders the file the
+// codex preset writes on its own.
+func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTree, cfg *config.Config, shared *sharedAgentsMDOpts,
 ) string {
 	var builder strings.Builder
 
 	root := rulefiles.RootTarget(codexPresetName, "AGENTS.md")
-	root.Owners = owners
-	allRules := inlinedInAgentsMD(rulefiles.FilterInline(allInlineRules(content), root), inlining, false)
+	if shared != nil {
+		root.Owners, root.RootAliases = shared.owners, shared.aliases
+	}
+	allRules := inlinedInAgentsMD(rulefiles.FilterInline(allInlineRules(content), root), shared, false)
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -203,7 +215,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := inlinedInAgentsMD(rulefiles.FilterInline(allInlineContext(content), root), inlining, true)
+	allContext := inlinedInAgentsMD(rulefiles.FilterInline(allInlineContext(content), root), shared, true)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)

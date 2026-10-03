@@ -59,10 +59,14 @@ func rootOwners(t Target) []string {
 // inlined root file. A rule file is selected by the preset name, the preset's
 // root file, its path or base name, a directory prefix or a glob; the inlined
 // root file by the name of any preset writing it, or the root file itself (by
-// path or base name).
+// path or base name), or by a root file alias of t.
 func TargetsAllow(targets []string, t Target, relPath string) bool {
 	if relPath == "" {
-		return targetmatch.Allow(targets, rootOwners(t), t.RootFile, path.Base(t.RootFile))
+		names := []string{t.RootFile, path.Base(t.RootFile)}
+		for _, alias := range t.RootAliases {
+			names = append(names, alias, path.Base(alias))
+		}
+		return targetmatch.Allow(targets, rootOwners(t), names...)
 	}
 	var presets []string
 	if t.Preset != "" {
