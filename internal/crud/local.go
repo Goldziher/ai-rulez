@@ -7,6 +7,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
@@ -24,6 +25,12 @@ func (op *OperatorImpl) Local() *OperatorImpl {
 	local := *op
 	local.local = true
 	local.filesMgr = NewFileManager(filepath.Join(op.aiRulezDir, localContentDir))
+	local.filesMgr.private = true
+	// Content written here may hold secrets: fail closed unless the tree is
+	// ignored first.
+	local.filesMgr.guard = func() error {
+		return gitignore.EnsureEntries(op.baseDir, config.LocalGitignorePatterns(op.aiRulezDir)) //nolint:wrapcheck // already contextual
+	}
 	return &local
 }
 

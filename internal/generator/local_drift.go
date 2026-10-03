@@ -486,7 +486,9 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 	if err := os.MkdirAll(filepath.Dir(exclude), 0o755); err != nil {
 		return oops.With("path", exclude).Wrapf(err, "create git info directory")
 	}
-	if err := os.WriteFile(exclude, []byte(updated), 0o644); err != nil { //nolint:gosec // git's exclude file is plain text
+	// Temp file + rename: a concurrent run in another project sharing this
+	// repository never reads or leaves a half-written exclude file.
+	if err := config.WriteFileAtomic(exclude, []byte(updated), 0o644); err != nil {
 		return oops.With("path", exclude).Wrapf(err, "write git exclude file")
 	}
 	return nil

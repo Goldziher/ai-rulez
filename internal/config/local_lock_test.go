@@ -3,6 +3,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -29,4 +31,22 @@ func TestLocalDoc_LockTimesOutInsteadOfHanging(t *testing.T) {
 	assert.Nil(t, second)
 	assert.Contains(t, err.Error(), "another ai-rulez process is editing")
 	assert.Less(t, time.Since(start), 5*time.Second)
+}
+
+func TestLocalDoc_LockRefusesToFollowASymlink(t *testing.T) {
+	// Arrange: the lock path is a symlink to a file that must stay untouched
+	_, configDir := overlayProject(t, securityShared)
+	victim := filepath.Join(t.TempDir(), "victim.txt")
+	require.NoError(t, os.WriteFile(victim, []byte("keep"), 0o644))
+	require.NoError(t, os.Symlink(victim, filepath.Join(configDir, localLockName)))
+
+	// Act
+	d, err := OpenLocalDoc(configDir, "config.toml")
+
+	// Assert
+	require.Error(t, err)
+	assert.Nil(t, d)
+	info, statErr := os.Stat(victim)
+	require.NoError(t, statErr)
+	assert.Equal(t, os.FileMode(0o644), info.Mode().Perm())
 }

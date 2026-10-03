@@ -22,6 +22,12 @@ func TestRedactURL(t *testing.T) {
 		{"file url", "file:///tmp/repo", "file:///tmp/repo"},
 		{"at sign only in the path", "https://github.com/o/r@v1", "https://github.com/o/r@v1"},
 		{"git output echoing the url", "fatal: unable to access 'https://tok:x-oauth-basic@github.com/o/r/': 403", "fatal: unable to access 'https://<redacted>@github.com/o/r/': 403"},
+		{"query token", "https://example.com/r.git?access_token=SECRET", "https://example.com/r.git?access_token=<redacted>"},
+		{"several params", "https://example.com/r?a=1&token=SECRET&flag", "https://example.com/r?a=<redacted>&token=<redacted>&flag"},
+		{"query before fragment", "https://example.com/r?k=SECRET#frag", "https://example.com/r?k=<redacted>#frag"},
+		{"userinfo and query", "https://u:p@example.com/r?k=SECRET", "https://<redacted>@example.com/r?k=<redacted>"},
+		{"quoted url in git output", "fatal: unable to access 'https://example.com/r?k=SECRET': 403", "fatal: unable to access 'https://example.com/r?k=<redacted>': 403"},
+		{"question mark without scheme", "./dir?name=x", "./dir?name=x"},
 		{"empty", "", ""},
 	}
 	for _, tt := range tests {

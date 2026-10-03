@@ -471,6 +471,12 @@ func (c *Config) validatePreset(preset *Preset, index int) error {
 func (c *Config) validateProfiles() error {
 	// If default is specified, profiles must be defined
 	if c.Default != "" && len(c.Profiles) == 0 {
+		if c.defaultFromOverlay() {
+			return oops.
+				With("field", "default").
+				Hint("If you specify a default profile, you must define profiles\nRemove the 'default' field or add a 'profiles' section").
+				Errorf("the default profile set by the local overlay is specified but no profiles are defined")
+		}
 		return oops.
 			With("field", "default").
 			With("default_profile", c.Default).
@@ -518,6 +524,13 @@ func (c *Config) validateProfiles() error {
 		}
 		sort.Strings(profileNames)
 		unknown := c.UnknownProfileNames(c.Default)
+		if c.defaultFromOverlay() {
+			return oops.
+				With("field", "default").
+				With("available_profiles", profileNames).
+				Hint(fmt.Sprintf("Set default to one of the defined profiles: %v", profileNames)).
+				Errorf("the default profile set by the local overlay does not exist in profiles")
+		}
 		return oops.
 			With("field", "default").
 			With("default_profile", c.Default).
@@ -528,6 +541,17 @@ func (c *Config) validateProfiles() error {
 	}
 
 	return nil
+}
+
+// defaultFromOverlay reports whether the default profile was set by the local
+// overlay, whose values must not be echoed in messages (a mistyped key can hold
+// a secret).
+func (c *Config) defaultFromOverlay() bool {
+	if c.LocalOverlay == nil {
+		return false
+	}
+	_, ok := c.LocalOverlay.Doc["default"]
+	return ok
 }
 
 // validateInstalledSkills validates the installed_skills section

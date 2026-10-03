@@ -50,6 +50,10 @@ type OutputFile struct {
 	// managed .gitignore block, and must not be deleted as stale when it stops
 	// being generated: both would destroy or hide user-authored data (#185).
 	PartiallyOwned bool
+	// Sensitive marks an output that carries resolved MCP secrets (env values or
+	// headers). It is written owner-only (0600), and an existing file is
+	// tightened to that mode.
+	Sensitive bool
 }
 
 // LocalRootProvider is implemented by preset generators that emit a single
