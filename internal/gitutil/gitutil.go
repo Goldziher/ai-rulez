@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,6 +18,8 @@ import (
 	"time"
 
 	"github.com/samber/oops"
+
+	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
 const (
@@ -24,6 +27,10 @@ const (
 	// pathChunk bounds how many paths one git invocation receives.
 	pathChunk = 200
 )
+
+// maxIgnoreFileSize caps how much of one ignore file is mirrored; git itself
+// stops reading a .gitignore at 100 MB. A var so tests can lower it.
+var maxIgnoreFileSize int64 = 100 << 20
 
 // run executes git in dir. ok is false when git could not run or exited
 // non-zero; exitCode distinguishes "no match" (1) from failure (>1) for the
@@ -264,14 +271,37 @@ func fillIgnoreMirror(dir, top, mirror string, rewrite func(rel, content string)
 }
 
 // copyRewritten copies src to dst (creating parents) with its content passed
-// through rewrite. A missing src is skipped.
+// through rewrite. A missing src is skipped, and so is anything that is not a
+// regular file (git does not read a symlinked ignore file, and following one to
+// a device or a huge file would exhaust memory) or is larger than
+// maxIgnoreFileSize.
 func copyRewritten(src, dst, rel string, rewrite func(rel, content string) string) error {
-	data, err := os.ReadFile(src) //nolint:gosec // ignore file located through git
+	info, err := os.Lstat(src)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return oops.With("path", src).Wrapf(err, "stat ignore file")
+	}
+	if !info.Mode().IsRegular() {
+		logger.Debug("Skipping an ignore file that is not a regular file", "path", src)
+		return nil
+	}
+	f, err := os.Open(src) //nolint:gosec // ignore file located through git
 	if err != nil {
 		if os.IsNotExist(err) {
 			return nil
 		}
 		return oops.With("path", src).Wrapf(err, "read ignore file")
+	}
+	defer f.Close() //nolint:errcheck // read-only handle
+	data, err := io.ReadAll(io.LimitReader(f, maxIgnoreFileSize+1))
+	if err != nil {
+		return oops.With("path", src).Wrapf(err, "read ignore file")
+	}
+	if int64(len(data)) > maxIgnoreFileSize {
+		logger.Warn("Skipping an ignore file larger than the size limit", "path", src, "limit", maxIgnoreFileSize)
+		return nil
 	}
 	content := string(data)
 	if rewrite != nil {
