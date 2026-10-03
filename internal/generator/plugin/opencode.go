@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	_ "embed"
 	"fmt"
 	"net/url"
 	"os"
@@ -11,11 +12,17 @@ import (
 	"github.com/samber/oops"
 )
 
+// openCodeContentHelper registers the bundled skills, commands, and agents.
+//
+//go:embed opencode_content.js
+var openCodeContentHelper []byte
+
 const (
 	// openCodePluginDependency targets OpenCode 2's plugin package, which a v1
 	// plugin implementation cannot run against (#194).
 	openCodePluginDependency = "^2.0.20"
 	openCodeSourcePath       = ".ai-rulez/opencode/index.js"
+	openCodeHelperName       = "ai-rulez-content.js"
 )
 
 type openCodePackage struct {
@@ -44,7 +51,8 @@ func init() {
 
 func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	entrypoint := filepath.Join(".opencode", "plugins", m.Name+".js")
-	module, err := openCodeModule(m, filepath.Join(baseDir, entrypoint))
+	hasContent := len(m.Skills)+len(m.Commands)+len(m.Agents) > 0
+	module, err := openCodeModule(m, filepath.Join(baseDir, entrypoint), hasContent)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +88,14 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		return nil, err
 	}
 
-	return append(outputs, content...), nil
+	outputs = append(outputs, content...)
+	if hasContent {
+		outputs = append(outputs, config.OutputFile{
+			Path:       filepath.Join(baseDir, ".opencode", openCodeHelperName),
+			RawContent: openCodeContentHelper,
+		})
+	}
+	return outputs, nil
 }
 
 func openCodePackageName(m *Manifest) string {
@@ -94,7 +109,7 @@ func openCodePackageName(m *Manifest) string {
 	return "opencode-" + m.Name
 }
 
-func openCodeModule(m *Manifest, outputPath string) (config.OutputFile, error) {
+func openCodeModule(m *Manifest, outputPath string, hasContent bool) (config.OutputFile, error) {
 	sourcePath := filepath.Join(m.SourceDir, openCodeSourcePath)
 	info, err := os.Stat(sourcePath)
 	if err == nil {
@@ -106,32 +121,36 @@ func openCodeModule(m *Manifest, outputPath string) (config.OutputFile, error) {
 	if !os.IsNotExist(err) {
 		return config.OutputFile{}, oops.With("path", sourcePath).Wrapf(err, "stat OpenCode entrypoint")
 	}
-	return config.OutputFile{Path: outputPath, RawContent: []byte(openCodeScaffold(m.Name))}, nil
+	return config.OutputFile{Path: outputPath, RawContent: []byte(openCodeScaffold(m.Name, hasContent))}, nil
 }
 
-func openCodeScaffold(name string) string {
+func openCodeScaffold(name string, hasContent bool) string {
+	importLine, setupBody := "", "    // Register hooks, transforms, tools, or subscriptions on ctx here.\n"
+	if hasContent {
+		importLine = fmt.Sprintf("import { registerBundledContent } from \"../%s\"\n\n", openCodeHelperName)
+		setupBody = "    await registerBundledContent(ctx)\n"
+	}
 	return fmt.Sprintf(`/**
  * OpenCode v2 adapter for %s.
  *
- * This generated no-op keeps the plugin loadable without inventing runtime behavior.
  * To add OpenCode-specific tools or hooks:
  *
  * 1. Create .ai-rulez/opencode/index.js.
- * 2. Default-export Plugin.define({ id, setup }) from that source file.
- * 3. Run ai-rulez generate --plugin --dry-run.
- * 4. Run ai-rulez generate --plugin.
+ * 2. Default-export { id, setup(ctx) } from that source file. OpenCode v2 does not
+ *    run v1 plugins (an exported function returning hooks).
+ * 3. If the plugin bundles skills, commands, or agents, call
+ *    registerBundledContent(ctx) from ../%s in setup.
+ * 4. Run ai-rulez generate --plugin --dry-run, then ai-rulez generate --plugin.
  *
  * Keep shared skills, commands, agents, and MCP configuration in their normal
  * .ai-rulez sources. Validate all external input and never interpolate untrusted
  * values into shell commands.
  */
-import { Plugin } from "@opencode/plugin"
-
-export default Plugin.define({
+%s/** @type {import("@opencode/plugin").Plugin.Plugin} */
+export default {
   id: %q,
   async setup(ctx) {
-    // Register hooks, transforms, tools, or subscriptions on ctx here.
-  },
-})
-`, name, name)
+%s  },
+}
+`, name, openCodeHelperName, importLine, name, setupBody)
 }
