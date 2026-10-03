@@ -2381,7 +2381,7 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		With("paths", unsafe).
 		With("env_keys", secretKeys).
 		Hint(hint).
-		Errorf("generated MCP config contains secrets but is not gitignored")
+		Errorf("generated MCP config contains secrets but is not gitignored: %s", strings.Join(unsafe, ", "))
 }
 
 // sensitiveFileMode is the mode of generated files that carry MCP secrets.
@@ -2409,6 +2409,11 @@ func (g *Generator) secretMCPValues() []string {
 		}
 		for _, key := range server.SecretHeaderKeys {
 			if v := server.Headers[key]; len(v) >= minSecretMatchLen {
+				values = append(values, v)
+			}
+		}
+		for _, v := range literalSecrets(server) {
+			if len(v) >= minSecretMatchLen {
 				values = append(values, v)
 			}
 		}
@@ -2451,7 +2456,8 @@ func outputContainsAny(o *config.OutputFile, needles []string) bool {
 	return false
 }
 
-// secretMCPNames lists the names of secret MCP env entries and headers.
+// secretMCPNames lists the names of secret MCP env entries and headers, plus the
+// URL and flag credentials of servers, which an MCP config holds whatever their length.
 func (g *Generator) secretMCPNames() []string {
 	var names []string
 	for _, server := range g.config.MCPServers {
@@ -2460,13 +2466,17 @@ func (g *Generator) secretMCPNames() []string {
 		}
 		names = append(names, server.SecretEnvKeys...)
 		names = append(names, server.SecretHeaderKeys...)
+		names = append(names, literalSecrets(server)...)
 	}
 	return names
 }
 
 func (g *Generator) secretMCPEnvKeys() []string {
 	keys := make(map[string]bool)
-	for _, server := range g.config.MCPServers {
+	for name, server := range g.config.MCPServers {
+		if hasLiteralSecrets(server) {
+			keys["url or args of "+name] = true
+		}
 		for _, key := range server.SecretEnvKeys {
 			keys[key] = true
 		}
