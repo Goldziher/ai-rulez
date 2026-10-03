@@ -63,6 +63,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`defaults`**: Global `effort` and per-preset `effort_by_preset` / `model_by_preset`
 - **`builtins`**: Built-in domains (`true`, `false`, or a list with `!` exclusions)
 - **`compact`**: Omit per-rule priority annotations from inline sections
+- **`agents_md`**: Render `AGENTS.md` and `.agents/skills` once for the presets that read them (default `false`)
 - **`mcp_servers`**: Array of MCP server configurations
 - **`mcp`**: Project-level MCP generation options (`self_server`, `self_server_version`, `self_server_command`)
 - **`plugins`**: Array of plugin installs from a marketplace (consumer side)

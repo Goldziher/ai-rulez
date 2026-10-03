@@ -381,9 +381,21 @@ compact = false  # Default: include Priority lines
 When `true`, generated presets (CLAUDE.md, GEMINI.md, copilot-instructions.md, etc.) omit the per-rule
 `**Priority:**` lines, reducing file size for large rule sets. Applies to all configured presets.
 
-### `mcp`
+### `agents_md`
 
-Project-level MCP generation options.
+Renders the files several tools share once instead of once per tool.
+
+```toml
+agents_md = false  # Default: every preset writes its own files
+# agents_md = true
+```
+
+When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
+`[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
+(currently `codex`, `opencode`, `amp` and `xum`) stop writing their own `AGENTS.md` copy and skills directory
+(`.codex/skills`, `.opencode/skills`, `.xum/skills`). Other presets are unchanged for now. Turning the flag
+off regenerates the per-tool files and removes the shared ones that no preset writes itself.
+
 
 ```toml
 [mcp]
