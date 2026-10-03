@@ -91,7 +91,7 @@ func isSecretFlag(name string) bool {
 // authHeaderSecrets returns the credential of an "Authorization: <scheme> X" text.
 func authHeaderSecrets(arg string) []string {
 	m := authHeaderPattern.FindStringSubmatch(arg)
-	if m == nil || m[1] == "" {
+	if len(m) < 2 || m[1] == "" {
 		return nil
 	}
 	return []string{strings.Trim(m[1], `"'`)}
