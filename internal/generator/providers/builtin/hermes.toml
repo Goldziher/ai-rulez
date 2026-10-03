@@ -3,7 +3,9 @@
 # Hermes loads .hermes.md as the highest-priority project instruction file,
 # ahead of AGENTS.md, CLAUDE.md, and Cursor compatibility rules. Procedures
 # remain in Hermes' user skill store or an explicitly configured external
-# skill directory, so this preset emits project context only.
+# skill directory, so by default this preset emits project context only. With
+# the agents_md flag it stops writing .hermes.md (it would shadow AGENTS.md)
+# and reads the shared AGENTS.md and .agents/skills instead.
 
 name = "hermes"
 display_name = "Hermes Agent"

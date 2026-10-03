@@ -82,7 +82,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 
 	g.warnScopeLimits(cfg, plan)
 
-	if g.Spec.Root != nil {
+	if g.Spec.Root != nil && !g.rootReplacedByAgentsMD(cfg) {
 		rootOutput, err := g.renderRootFile(content, baseDir, cfg, plan)
 		if err != nil {
 			return nil, fmt.Errorf("render root file: %w", err)
@@ -240,7 +240,18 @@ func (g *Generator) foldsAlwaysOnIntoAgentsMD(cfg *config.Config) bool {
 		return false
 	}
 	consumer, _ := config.SharedOutputConsumerFor(g.Spec.Name)
-	return consumer.RulesFolder
+	return consumer.Folder != config.RulesFolderNone
+}
+
+// rootReplacedByAgentsMD reports whether agents_md makes the shared AGENTS.md
+// stand in for this provider's root file, which is then not written at all
+// (hermes, junie). Claude keeps its root file as an import shim.
+func (g *Generator) rootReplacedByAgentsMD(cfg *config.Config) bool {
+	if g.Spec.Root == nil || !cfg.ReadsSharedAgentsMD(g.Spec.Name) {
+		return false
+	}
+	consumer, _ := config.SharedOutputConsumerFor(g.Spec.Name)
+	return consumer.OwnRootFile != ""
 }
 
 // importsAgentsMD reports whether the agents_md flag turns this provider's root
@@ -273,7 +284,7 @@ func (g *Generator) contextSummary() bool {
 // warnScopeLimits reports, in a scope run, rules the tool will not load from the
 // scope directory.
 func (g *Generator) warnScopeLimits(cfg *config.Config, plan *rulesPlan) {
-	if g.Spec.Root != nil && g.Spec.Name == presetNameJunie {
+	if g.Spec.Root != nil && g.Spec.Name == presetNameJunie && !g.rootReplacedByAgentsMD(cfg) {
 		rulefiles.WarnUnreadScopeFile(cfg, g.Spec.Name, g.Spec.Root.File, plan.inlineRules, plan.inlineContext)
 	}
 	if spec := g.Spec.Outputs[OutputTypeRules]; spec != nil && !spec.Split {
