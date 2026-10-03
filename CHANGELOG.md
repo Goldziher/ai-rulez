@@ -20,6 +20,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Config writes keep the file mode** of an existing config instead of resetting it to `0644`.
 - **MCP `add_include`** defaults `merge_strategy` to `local-override` (it previously sent a value validation rejected).
 
+### Fixed
+
+- xum preset writes http/sse MCP servers (#208). Remote servers become `{transport, url, headers}` entries in `.xum/mcp.jsonc`, and disabled servers set `disabled: true`. The secret guard now also covers `.xum/mcp.jsonc`, which must be gitignored when it holds resolved header secrets.
+- xum preset: a disabled stdio MCP server is written as `{transport: "stdio", command, disabled: true}` instead of an enabled command string, and a server with `env` warns that Xum's `mcp.jsonc` cannot set environment variables (Xum reads only the command string of a stdio entry).
+
 ### Security
 
 - **Generated files that contain resolved MCP secrets** (`.mcp.json`, `.claude/settings.json`, ...) are written `0600`, and an existing world-readable file is tightened.

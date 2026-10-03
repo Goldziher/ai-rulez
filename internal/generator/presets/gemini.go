@@ -162,7 +162,7 @@ func (g *GeminiPresetGenerator) renderSettingsJSON(settingsPath string, cfg *con
 	// Always include the hardcoded ai-rulez MCP server
 	mcpServers["ai-rulez"] = map[string]interface{}{
 		keyCommand: cmdNPX,
-		"args": []string{
+		keyArgs: []string{
 			"-y",
 			"ai-rulez@latest",
 			keyMCP,
