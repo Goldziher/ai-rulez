@@ -15,6 +15,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Changed
 
+- **poly hook catalog**: `ai-rulez-validate`, `ai-rulez-generate` and `ai-rulez-recursive` pass `--no-local`, so hooks render the shared view and never fail on, or write, a developer's machine-local configuration.
 - **`generate --allow-local-drift` no longer bypasses a failed shared baseline**: when the shared view cannot be rendered, generation fails (use `--no-local` or fix the shared config), because overlay-derived outputs could otherwise land in tracked files unmarked.
 - **`generate --dry-run` exits non-zero when local drift is blocked**, after printing the plan.
 - **`config.local.*` and `local/` follow `--config`**: the `local` subcommands honor the global `--config` and `--config-dir`, and `local set` stores `profiles.default` (and other keys that merely share a text field's name) as typed values.
