@@ -83,6 +83,13 @@ func claim(path string) bool {
 	return true
 }
 
+// WasWarned reports whether a warning has already been emitted for path.
+func WasWarned(path string) bool {
+	warnedMu.Lock()
+	defer warnedMu.Unlock()
+	return warned[path]
+}
+
 // WarnSource warns once when an authored plugin entrypoint has the v1 shape.
 func WarnSource(path, source string) bool {
 	if !IsV1Plugin(source) || !claim(path) {
