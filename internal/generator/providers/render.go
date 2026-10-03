@@ -233,6 +233,14 @@ func (g *Generator) rootTarget() rulefiles.Target {
 	return rulefiles.RootTarget(g.Spec.Name, file)
 }
 
+// contextSummary reports whether inline context entries carry their "summary"
+// extra. A root file written by several presets (AGENTS.md: codex, opencode,
+// xum, amp) must render identically whichever writes it last; the hand-written
+// presets never emitted summaries, so the provider does not either.
+func (g *Generator) contextSummary() bool {
+	return g.Spec.Root == nil || !rulefiles.SharedRootFile(g.Spec.Root.File)
+}
+
 // warnScopeLimits reports, in a scope run, rules the tool will not load from the
 // scope directory.
 func (g *Generator) warnScopeLimits(cfg *config.Config, plan *rulesPlan) {
@@ -664,7 +672,7 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 			writeInlineRules(&b, plan.inlineRules, cfg.IsCompact(), recorder)
 			continue
 		case SectionRootContextInline:
-			writeInlineContext(&b, plan.inlineContext, cfg.IsCompact(), recorder)
+			writeInlineContext(&b, plan.inlineContext, cfg.IsCompact(), g.contextSummary(), recorder)
 			continue
 		case SectionRootAgentsDelegation:
 			allAgents := presets.AllAgents(content)
@@ -707,9 +715,9 @@ func writeInlineRules(b *strings.Builder, rules []config.ContentFile, compact bo
 // renderClaudeMarkdown, including the per-entry "summary" extras handling. When
 // compact is true the per-entry summary line is suppressed, mirroring the
 // compact suppression of the inline-rules priority line.
-func writeInlineContext(b *strings.Builder, contextFiles []config.ContentFile, compact bool, recorder *partRecorder) {
+func writeInlineContext(b *strings.Builder, contextFiles []config.ContentFile, compact, summary bool, recorder *partRecorder) {
 	if len(contextFiles) == 0 {
 		return
 	}
-	rulefiles.WriteInlineContext(b, contextFiles, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: true}, recorder)
+	rulefiles.WriteInlineContext(b, contextFiles, rulefiles.InlineOpts{Compact: compact, AppliesTo: true, ContextSummary: summary}, recorder)
 }

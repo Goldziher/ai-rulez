@@ -139,3 +139,39 @@ func TestGenerator_SourceDateEpochIgnoredWhenUnparsable(t *testing.T) {
 	year := strings.TrimPrefix(line, "Generated: ")[:4]
 	assert.GreaterOrEqual(t, year, "2024", "expected a wall-clock year, got %q", line)
 }
+
+// TestGenerator_SharedAgentsMDIdenticalAcrossPresets pins that codex, opencode,
+// xum and amp, which all write AGENTS.md, render it byte for byte alike, both
+// alone and together (where the last writer wins), including a context entry
+// that carries a summary.
+func TestGenerator_SharedAgentsMDIdenticalAcrossPresets(t *testing.T) {
+	t.Parallel()
+
+	project := func(presets ...string) string {
+		dir := t.TempDir()
+		configDir := filepath.Join(dir, ".ai-rulez")
+		require.NoError(t, os.MkdirAll(filepath.Join(configDir, "rules"), 0o755))
+		require.NoError(t, os.MkdirAll(filepath.Join(configDir, "context"), 0o755))
+		list := ""
+		for _, p := range presets {
+			list += "  - " + p + "\n"
+		}
+		require.NoError(t, os.WriteFile(filepath.Join(configDir, "config.yaml"), []byte(
+			"version: \"4.0\"\nname: shared\npresets:\n"+list+"gitignore: false\nrules:\n  mode: inline\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(configDir, "rules", "style.md"),
+			[]byte("---\npriority: high\n---\n# Style\n\nUse tabs.\n"), 0o644))
+		require.NoError(t, os.WriteFile(filepath.Join(configDir, "context", "arch.md"),
+			[]byte("---\nsummary: One line about the architecture\n---\n# Arch\n\nLayers.\n"), 0o644))
+		generateProfile(t, dir, "default")
+		// Source-Hash legitimately varies with the preset list.
+		return regexp.MustCompile(`(?m)^Source-Hash: .*\n`).ReplaceAllString(readFile(t, filepath.Join(dir, "AGENTS.md")), "")
+	}
+
+	codex := project("codex")
+
+	assert.NotContains(t, codex, "One line about the architecture")
+	for _, preset := range []string{"opencode", "xum", "amp"} {
+		assert.Equal(t, codex, project(preset), preset)
+	}
+	assert.Equal(t, codex, project("amp", "codex", "opencode", "xum"))
+}

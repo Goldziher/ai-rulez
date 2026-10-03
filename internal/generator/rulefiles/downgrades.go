@@ -6,6 +6,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
@@ -15,6 +16,10 @@ import (
 var (
 	downgradeMu sync.Mutex
 	downgrades  = map[string]struct{}{}
+	// scopeWarned holds the scopes already warned about unscoped auto/manual rules.
+	scopeWarned = map[string]struct{}{}
+	// negatedWarned holds the items already warned about for having only negated globs.
+	negatedWarned = map[string]struct{}{}
 	// warn is the sink for warnings from this package; tests replace it.
 	warn = logger.Warn
 )
@@ -57,6 +62,35 @@ func ResetDowngrades() {
 	downgradeMu.Lock()
 	defer downgradeMu.Unlock()
 	clear(downgrades)
+	clear(scopeWarned)
+	clear(negatedWarned)
+}
+
+// warnScopeOnce reports whether this is the first call for slug since the last
+// ResetDowngrades.
+func warnScopeOnce(slug string) bool {
+	downgradeMu.Lock()
+	defer downgradeMu.Unlock()
+	if _, ok := scopeWarned[slug]; ok {
+		return false
+	}
+	scopeWarned[slug] = struct{}{}
+	return true
+}
+
+// WarnOnlyNegated warns, once per item and run, that a rule or context file
+// with only negated globs cannot be scoped by the rule files and stays in the
+// root file.
+func WarnOnlyNegated(kind string, cf config.ContentFile, rootFile string) {
+	downgradeMu.Lock()
+	_, seen := negatedWarned[kind+" "+cf.Name]
+	negatedWarned[kind+" "+cf.Name] = struct{}{}
+	downgradeMu.Unlock()
+	if seen {
+		return
+	}
+	warnSink()(kind+" \""+cf.Name+"\" has only negated globs, which rule files cannot express; kept in "+rootFile,
+		"path", cf.Path)
 }
 
 // FlushDowngrades emits one warning listing every recorded downgrade, sorted,

@@ -213,19 +213,13 @@ func TestRender_ValidYAMLFrontmatter(t *testing.T) {
 	}{
 		{"claude star", Target{Ext: ".md", Dialect: DialectClaude, Banner: true},
 			item("r", config.ActivationGlob, "", "*.go", "{a,b}/**", "!vendor/**"),
-			map[string]any{"paths": []any{"*.go", "{a,b}/**", "!vendor/**"}}},
-		{"cursor brace", Target{Ext: ".mdc", Dialect: DialectCursor},
-			item("r", config.ActivationGlob, "", "*.{ts,tsx}"),
-			map[string]any{"globs": "*.ts,*.tsx", "alwaysApply": false}},
+			map[string]any{"paths": []any{"*.go", "{a,b}/**"}}},
 		{"cursor description", Target{Ext: ".mdc", Dialect: DialectCursor},
 			item("r", config.ActivationAuto, desc),
 			map[string]any{"description": desc, "alwaysApply": false}},
 		{"copilot brace", Target{Ext: ".instructions.md", Dialect: DialectCopilot, Banner: true},
 			item("r", config.ActivationGlob, "", "{src,lib}/**"),
 			map[string]any{"applyTo": "src/**,lib/**"}},
-		{"trigger negated", Target{Ext: ".md", Dialect: DialectTrigger, Banner: true},
-			item("r", config.ActivationGlob, "", "*.md", "!x/*.md"),
-			map[string]any{"trigger": "glob", "globs": "*.md,!x/*.md"}},
 		{"continue", Target{Ext: ".md", Dialect: DialectContinue, Banner: true},
 			item("r", config.ActivationGlob, "", "{a}/*.go"),
 			map[string]any{"name": "r", "globs": []any{"{a}/*.go"}, "alwaysApply": false}},
@@ -243,6 +237,94 @@ func TestRender_ValidYAMLFrontmatter(t *testing.T) {
 			assert.Equal(t, tt.want, parsed)
 		})
 	}
+}
+
+func TestRender_GlobsLineQuoting(t *testing.T) {
+	cursor := Target{Ext: ".mdc", Dialect: DialectCursor}
+	trigger := Target{Ext: ".md", Dialect: DialectTrigger, Banner: true}
+	glob := func(globs ...string) Item { return item("r", config.ActivationGlob, "", globs...) }
+	tests := []struct {
+		name string
+		tg   Target
+		it   Item
+		want string
+	}{
+		{"cursor bare list", cursor, glob("**/*.go", "**/*.ts"),
+			"---\nalwaysApply: false\nglobs: **/*.go,**/*.ts\n---\n"},
+		{"cursor brace expanded", cursor, glob("*.{ts,tsx}"), "---\nalwaysApply: false\nglobs: *.ts,*.tsx\n---\n"},
+		{"windsurf stays quoted", trigger, glob("**/*.go"), "---\nglobs: '**/*.go'\ntrigger: glob\n---\n"},
+		{"antigravity stays quoted", Target{Ext: ".md", Dialect: DialectTrigger}, glob("*.ts", "src/**"),
+			"---\nglobs: '*.ts,src/**'\ntrigger: glob\n---\n"},
+		{"cursor character class keeps quoting", cursor, glob("[a-z]*.go"),
+			"---\nalwaysApply: false\nglobs: '[a-z]*.go'\n---\n"},
+		{"cursor colon keeps quoting", cursor, glob("*.a: b"), "---\nalwaysApply: false\nglobs: '*.a: b'\n---\n"},
+		{"copilot stays quoted", Target{Ext: ".instructions.md", Dialect: DialectCopilot, Banner: true}, glob("**/*.ts"),
+			"---\napplyTo: '**/*.ts'\n---\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out, _, err := Render(tt.tg, tt.it, &config.Config{})
+
+			require.NoError(t, err)
+			assert.True(t, strings.HasPrefix(out, tt.want), out)
+		})
+	}
+}
+
+func TestUnquoteGlobs_KeepsQuotingOutsideAllowlist(t *testing.T) {
+	for _, globs := range []string{"!x/**", "{a,b}/**", "[a-z]*.go", "-x/**", "a b/**", "*.go\n"} {
+		t.Run(globs, func(t *testing.T) {
+			fm := map[string]any{"globs": globs}
+			marshaled, err := yaml.Marshal(fm)
+			require.NoError(t, err)
+
+			assert.Equal(t, string(marshaled), string(unquoteGlobs(DialectCursor, fm, marshaled)))
+		})
+	}
+}
+
+func TestFrontmatter_NegatedGlobsInEveryDialect(t *testing.T) {
+	type m = map[string]any
+	tests := []struct {
+		name    string
+		dialect Dialect
+		globs   []string
+		want    m
+		down    bool
+	}{
+		{"claude drops", DialectClaude, []string{"src/**", "!src/gen/**"}, m{"paths": []string{"src/**"}}, false},
+		{"cline drops", DialectCline, []string{"src/**", "!src/gen/**"}, m{"paths": []string{"src/**"}}, false},
+		{"cursor drops", DialectCursor, []string{"src/**", "!src/gen/**"}, m{"globs": "src/**", "alwaysApply": false}, false},
+		{"trigger drops", DialectTrigger, []string{"src/**", "!x"}, m{"trigger": "glob", "globs": "src/**"}, false},
+		{"continue drops", DialectContinue, []string{"src/**", "!x"},
+			m{"name": "r", "globs": []string{"src/**"}, "alwaysApply": false}, false},
+		{"copilot drops", DialectCopilot, []string{"src/**", "!x"}, m{"applyTo": "src/**"}, false},
+		{"claude only negated is always", DialectClaude, []string{"!x"}, nil, true},
+		{"cursor only negated is always", DialectCursor, []string{"!x"}, m{"alwaysApply": true}, true},
+		{"trigger only negated is always", DialectTrigger, []string{"!x"}, m{"trigger": "always_on"}, true},
+		{"continue only negated is always", DialectContinue, []string{"!x"}, m{"name": "r", "alwaysApply": true}, true},
+		{"copilot only negated is always", DialectCopilot, []string{"!x"}, m{"applyTo": "**"}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fm, notes := Frontmatter(tt.dialect, item("r", config.ActivationGlob, "", tt.globs...))
+
+			assert.Equal(t, tt.want, m(fm))
+			require.Len(t, notes, 1)
+			assert.Contains(t, notes[0].Text, "no negated globs")
+			assert.Equal(t, tt.down, notes[0].Downgrade)
+		})
+	}
+}
+
+func TestRender_JunieAppliesToDropsNegatedAndEscapes(t *testing.T) {
+	tg := Target{Ext: ".md", Dialect: DialectJunie, Banner: true}
+
+	out, _, err := Render(tg, item("r", config.ActivationGlob, "", "src/*_test.go", "!gen/**"), &config.Config{})
+
+	require.NoError(t, err)
+	assert.Contains(t, out, "_Applies to: `src/*_test.go`_\n")
+	assert.NotContains(t, out, "gen/**")
 }
 
 func TestRender_MaxCharsCountsRunes(t *testing.T) {
@@ -273,7 +355,7 @@ func TestRender_JunieAppliesTo(t *testing.T) {
 	out, _, err := Render(tg, item("r", config.ActivationGlob, "", "a/**", "b/**"), &config.Config{})
 
 	require.NoError(t, err)
-	assert.Contains(t, out, "_Applies to: a/**, b/**_\n")
+	assert.Contains(t, out, "_Applies to: `a/**`, `b/**`_\n")
 	assert.True(t, strings.HasPrefix(out, "<!--"))
 }
 
@@ -339,6 +421,47 @@ func TestPlan_Routing(t *testing.T) {
 			assert.Equal(t, tt.files, names)
 			assert.Equal(t, tt.inlineR, contentNames(ir))
 			assert.Equal(t, tt.inlineCtx, contentNames(ic))
+		})
+	}
+}
+
+func TestPlan_OnlyNegatedGlobs(t *testing.T) {
+	rules := []config.ContentFile{cf("neg", "neg.md", "!gen/**"), cf("mixed", "mixed.md", "src/**", "!gen/**")}
+	tests := []struct {
+		name      string
+		target    *Target
+		routing   Routing
+		wantFiles []string
+		wantInl   []string
+	}{
+		{"root file: inline", &Target{Preset: "claude", Ext: ".md", RootFile: "CLAUDE.md"}, RoutingAll,
+			[]string{"mixed.md"}, []string{"neg"}},
+		{"root file, scoped-only routing: inline", &Target{Preset: "claude", Ext: ".md", RootFile: "CLAUDE.md"},
+			RoutingScopedOnly, []string{"mixed.md"}, []string{"neg"}},
+		{"no root file: file, rendered always-on", &Target{Preset: "cursor", Ext: ".mdc"}, RoutingAll,
+			[]string{"neg.mdc", "mixed.mdc"}, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var warned []string
+			t.Cleanup(SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+
+			ResetDowngrades()
+			files, inl, _, err := Plan(rules, nil, tt.target, tt.routing, ScopeInfo{}, nil)
+			_, _, _, err2 := Plan(rules, nil, tt.target, tt.routing, ScopeInfo{}, nil) // another preset
+
+			require.NoError(t, err)
+			require.NoError(t, err2)
+			var names []string
+			for _, f := range files {
+				names = append(names, FileName(*tt.target, f))
+			}
+			assert.Equal(t, tt.wantFiles, names)
+			assert.Equal(t, tt.wantInl, contentNames(inl))
+			if tt.target.RootFile != "" {
+				require.Len(t, warned, 1)
+				assert.Contains(t, warned[0], "only negated globs")
+			}
 		})
 	}
 }
@@ -654,8 +777,6 @@ func TestFrontmatter_ActivationEdgeCases(t *testing.T) {
 			item("r", config.ActivationAuto, "when sql"), m{"description": "when sql", "alwaysApply": false}, ""},
 		{"copilot drops negated globs", DialectCopilot,
 			item("r", config.ActivationGlob, "", "src/**", "!src/gen/**"), m{"applyTo": "src/**"}, "no negated globs"},
-		{"copilot with only negated globs applies everywhere", DialectCopilot,
-			item("r", config.ActivationGlob, "", "!src/gen/**"), m{"applyTo": "**"}, "no negated globs"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -734,4 +855,25 @@ func TestFrontmatter_OneNotePerCause(t *testing.T) {
 			assert.Contains(t, notes[0].Text, "without")
 		})
 	}
+}
+
+func TestPlan_ScopedAutoManualWarnsOncePerScope(t *testing.T) {
+	// Arrange
+	var warned []string
+	t.Cleanup(SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+	ResetDowngrades()
+	tg := &Target{Ext: ".md"}
+	rules := []config.ContentFile{
+		withActivation(cf("a", "a.md"), "auto"), withActivation(cf("b", "b.md"), "manual"), cf("c", "c.md", "x/**"),
+	}
+
+	// Act
+	_, _, _, err := Plan(rules, nil, tg, RoutingAll, ScopeInfo{Slug: "api", Prefix: "api"}, nil)
+	_, _, _, err2 := Plan(rules, nil, &Target{Ext: ".mdc"}, RoutingAll, ScopeInfo{Slug: "api", Prefix: "api"}, nil)
+
+	// Assert
+	require.NoError(t, err)
+	require.NoError(t, err2)
+	require.Len(t, warned, 1)
+	assert.Contains(t, warned[0], "not limited to the scope")
 }
