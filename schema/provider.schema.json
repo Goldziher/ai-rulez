@@ -60,6 +60,10 @@
           "type": "string",
           "description": "Relative path of the root file."
         },
+        "local_file": {
+          "type": "string",
+          "description": "Machine-local counterpart of the root file that the tool loads natively. Omit for the \".local\" variant of file (CLAUDE.md -> CLAUDE.local.md), \"none\" when the tool has no such file, or a relative path."
+        },
         "sections": {
           "type": "array",
           "description": "Ordered list of section renderers to compose into the root file body.",

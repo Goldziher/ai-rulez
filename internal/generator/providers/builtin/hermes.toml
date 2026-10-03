@@ -12,4 +12,7 @@ display_name = "Hermes Agent"
 
 [root]
 file = ".hermes.md"
+# Hermes never reads .hermes.local.md. With agents_md it loads AGENTS.override.md
+# (written by the generator); otherwise .hermes.md beats the AGENTS chain.
+local_file = "none"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
