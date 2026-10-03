@@ -3,11 +3,13 @@ package presets
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"gopkg.in/yaml.v3"
 )
@@ -259,10 +261,25 @@ func (g *OpencodePresetGenerator) renderOpencodeAgentFile(agent config.ContentFi
 	return builder.String(), nil
 }
 
+// resolveOpencodeModel returns the agent's model when OpenCode can resolve it,
+// otherwise "". OpenCode only understands "provider/model"; a bare alias like
+// "sonnet" (valid for Claude) makes it drop the whole agent file without an
+// error, or fail at session time with "Model not found: sonnet/.". The agent
+// is emitted without a model instead, so it inherits the session's model.
+func resolveOpencodeModel(agent config.ContentFile, cfg *config.Config) string {
+	model := ResolveAgentModel(opencodePresetName, agent, cfg)
+	if model == "" || IsProviderQualifiedModel(model) {
+		return model
+	}
+	logger.Warn("OpenCode needs a provider-qualified model (provider/model); omitting it so the agent inherits the session model",
+		"agent", agent.Name, "model", model,
+		"hint", "set opencode_model in the agent frontmatter or defaults.model_by_preset.opencode")
+	return ""
+}
+
 // buildOpencodeAgentFrontmatter builds native v2 frontmatter for an OpenCode
 // agent file. The agent's identity comes from its filename, so no `name` key is
-// emitted; effort is expressed as a model variant, and temperature/top_p move
-// under request.body as v2 requires.
+// emitted; effort is expressed as a separate model variant key.
 func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {
 	frontmatter := map[string]interface{}{}
 
@@ -273,18 +290,20 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 	}
 
 	// Resolve effort before the metadata-nil short-circuit so a defaults-only
-	// effort still applies to agents with no frontmatter. v2 joins model and
-	// variant into the "provider/model#variant" reference; v1 accepts the
-	// separate variant field, so an effort without a model emits variant alone.
-	effort := MapEffort(opencodePresetName, ResolveAgentEffort(opencodePresetName, agent, cfg))
-	if model := ResolveAgentModel(opencodePresetName, agent, cfg); model != "" {
-		if effort != "" {
-			frontmatter[keyModel] = model + "#" + effort
-		} else {
-			frontmatter[keyModel] = model
+	// effort still applies to agents with no frontmatter. Markdown agents take
+	// the model as plain "provider/model" (the "#variant" form exists only in
+	// opencode.json), so the variant is always a separate key. A variant named
+	// in the source model wins over the generic effort.
+	variant := MapEffort(opencodePresetName, ResolveAgentEffort(opencodePresetName, agent, cfg))
+	if model := resolveOpencodeModel(agent, cfg); model != "" {
+		model, sourceVariant, _ := strings.Cut(model, "#")
+		frontmatter[keyModel] = model
+		if sourceVariant != "" {
+			variant = sourceVariant
 		}
-	} else if effort != "" {
-		frontmatter["variant"] = effort
+	}
+	if variant != "" {
+		frontmatter["variant"] = variant
 	}
 
 	// Default to `all` so a generated agent is spawnable as a subagent as well
@@ -303,19 +322,49 @@ func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.Con
 		return frontmatter
 	}
 
-	if hidden := agent.Metadata.Extra["hidden"]; hidden != "" {
+	if hidden, ok := opencodeHidden(agent); ok {
 		frontmatter["hidden"] = hidden
 	}
 
-	body := map[string]interface{}{}
-	for _, field := range []string{keyTemperature, "top_p"} {
-		if val, ok := agent.Metadata.Extra[field]; ok && val != "" {
-			body[field] = val
-		}
-	}
-	if len(body) > 0 {
-		frontmatter["request"] = map[string]interface{}{"body": body}
+	// temperature and top_p are top-level numeric keys; both OpenCode loaders
+	// accept them and v2 migrates them into the request body itself.
+	for field, num := range opencodeSampling(agent) {
+		frontmatter[field] = num
 	}
 
 	return frontmatter
+}
+
+// opencodeHidden parses the agent's hidden flag. OpenCode types it as a
+// boolean: a quoted string makes it drop the agent.
+func opencodeHidden(agent config.ContentFile) (value, ok bool) {
+	raw := agent.Metadata.Extra["hidden"]
+	if raw == "" {
+		return false, false
+	}
+	hidden, err := strconv.ParseBool(raw)
+	if err != nil {
+		logger.Warn("OpenCode agent field hidden must be true or false; omitting it", "agent", agent.Name, "value", raw)
+		return false, false
+	}
+	return hidden, true
+}
+
+// opencodeSampling collects the sampling parameters as numbers; a quoted
+// string would reach the provider as one.
+func opencodeSampling(agent config.ContentFile) map[string]float64 {
+	values := map[string]float64{}
+	for _, field := range []string{keyTemperature, "top_p"} {
+		raw := agent.Metadata.Extra[field]
+		if raw == "" {
+			continue
+		}
+		num, err := strconv.ParseFloat(raw, 64)
+		if err != nil {
+			logger.Warn("OpenCode agent field "+field+" must be a number; omitting it", "agent", agent.Name, "value", raw)
+			continue
+		}
+		values[field] = num
+	}
+	return values
 }

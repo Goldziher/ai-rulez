@@ -37,7 +37,7 @@ func TestOpencodePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 					Extra: map[string]string{
 						"description": "Reviews code",
 						"mode":        "subagent",
-						"model":       "claude-sonnet-4",
+						"model":       "anthropic/claude-sonnet-4",
 					},
 				},
 			},
@@ -81,7 +81,7 @@ func TestOpencodePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 			if !strings.Contains(o.Content, "mode: subagent") {
 				t.Error("Agent file should contain mode")
 			}
-			if !strings.Contains(o.Content, "model: claude-sonnet-4") {
+			if !strings.Contains(o.Content, "model: anthropic/claude-sonnet-4") {
 				t.Error("Agent file should contain model")
 			}
 		}
@@ -383,8 +383,11 @@ func TestOpencodePresetGenerator_AgentJoinsModelAndVariant(t *testing.T) {
 	if err != nil {
 		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
 	}
-	if !strings.Contains(result, "model: anthropic/claude-sonnet-4-5#high") {
-		t.Errorf("expected model#variant in frontmatter, got:\n%s", result)
+	if !strings.Contains(result, "model: anthropic/claude-sonnet-4-5\n") || !strings.Contains(result, "variant: high") {
+		t.Errorf("expected plain model plus a separate variant, got:\n%s", result)
+	}
+	if strings.Contains(result, "claude-sonnet-4-5#") {
+		t.Errorf("markdown agents must not carry model#variant, got:\n%s", result)
 	}
 }
 
@@ -417,7 +420,7 @@ func TestOpencodePresetGenerator_AgentEffortMaxMapsToHigh(t *testing.T) {
 	}
 }
 
-func TestOpencodePresetGenerator_AgentMovesSamplingUnderRequestBody(t *testing.T) {
+func TestOpencodePresetGenerator_AgentEmitsTopLevelNumericSampling(t *testing.T) {
 	g := &OpencodePresetGenerator{}
 	agent := config.ContentFile{
 		Name:    "sampled",
@@ -430,11 +433,11 @@ func TestOpencodePresetGenerator_AgentMovesSamplingUnderRequestBody(t *testing.T
 	if err != nil {
 		t.Fatalf("renderOpencodeAgentFile() error: %v", err)
 	}
-	if strings.Contains(result, "\ntemperature:") || strings.Contains(result, "\ntop_p:") {
-		t.Errorf("temperature/top_p must not be top-level in v2, got:\n%s", result)
+	if !strings.Contains(result, "\ntemperature: 0.2\n") || !strings.Contains(result, "\ntop_p: 0.9\n") {
+		t.Errorf("expected top-level numeric temperature/top_p, got:\n%s", result)
 	}
-	if !strings.Contains(result, "request:") || !strings.Contains(result, "body:") {
-		t.Errorf("expected request.body in frontmatter, got:\n%s", result)
+	if strings.Contains(result, "request:") {
+		t.Errorf("did not expect request.body, got:\n%s", result)
 	}
 }
 
@@ -473,5 +476,144 @@ func TestOpencodePresetGenerator_OmitsConfiguredAgentFields(t *testing.T) {
 		if strings.Contains(result, unwanted) {
 			t.Errorf("omit_agent_fields should suppress %q, got:\n%s", unwanted, result)
 		}
+	}
+}
+
+func TestIsProviderQualifiedModel(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		model string
+		want  bool
+	}{
+		{"anthropic/claude-sonnet-4-5", true},
+		{"openrouter/anthropic/claude-sonnet-4", true},
+		{"anthropic/claude-sonnet-4-5#high", true},
+		{"sonnet", false},
+		{"opus", false},
+		{"claude-sonnet-4", false},
+		{"/claude", false},
+		{"anthropic/", false},
+		{"anthropic/claude#", false},
+		{"a#b/c", false},
+		{"p//m", false},
+		{"anthropic/claude/", false},
+		{" anthropic/claude", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.model, func(t *testing.T) {
+			t.Parallel()
+			if got := IsProviderQualifiedModel(tt.model); got != tt.want {
+				t.Errorf("IsProviderQualifiedModel(%q) = %v, want %v", tt.model, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestOpencodeAgentFrontmatter_ModelValues(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		extra     map[string]string
+		defaults  *config.DefaultsConfig
+		wantModel string
+		wantNone  bool
+		wantVar   string
+	}{
+		{name: "unqualified alias is omitted", extra: map[string]string{"model": "sonnet"}, wantNone: true},
+		{
+			name:     "unqualified alias keeps effort as a bare variant",
+			extra:    map[string]string{"model": "opus"},
+			defaults: &config.DefaultsConfig{Effort: "high"},
+			wantNone: true,
+			wantVar:  "high",
+		},
+		{
+			name:      "provider-qualified model passes through",
+			extra:     map[string]string{"model": "anthropic/claude-sonnet-4-5"},
+			wantModel: "anthropic/claude-sonnet-4-5",
+		},
+		{
+			name:      "opencode_model wins over an unqualified legacy model",
+			extra:     map[string]string{"model": "sonnet", "opencode_model": "opencode-go/deepseek-v4.1-flash"},
+			wantModel: "opencode-go/deepseek-v4.1-flash",
+		},
+		{
+			name:      "defaults.model_by_preset wins over an unqualified legacy model",
+			extra:     map[string]string{"model": "sonnet"},
+			defaults:  &config.DefaultsConfig{ModelByPreset: map[string]string{"opencode": "anthropic/claude-opus-4-1"}},
+			wantModel: "anthropic/claude-opus-4-1",
+		},
+		{
+			name:      "a source model variant is split off and wins over effort",
+			extra:     map[string]string{"model": "anthropic/claude-sonnet-4-5#low"},
+			defaults:  &config.DefaultsConfig{Effort: "high"},
+			wantModel: "anthropic/claude-sonnet-4-5",
+			wantVar:   "low",
+		},
+		{
+			name:      "effort becomes a separate variant key",
+			extra:     map[string]string{"model": "anthropic/claude-sonnet-4-5"},
+			defaults:  &config.DefaultsConfig{Effort: "high"},
+			wantModel: "anthropic/claude-sonnet-4-5",
+			wantVar:   "high",
+		},
+		{name: "empty provider segment is omitted", extra: map[string]string{"model": "p//m"}, wantNone: true},
+		{name: "uppercase alias is omitted", extra: map[string]string{"model": "Sonnet"}, wantNone: true},
+		{
+			name:      "surrounding whitespace is trimmed",
+			extra:     map[string]string{"model": "  anthropic/claude-sonnet-4-5 \t"},
+			wantModel: "anthropic/claude-sonnet-4-5",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			g := &OpencodePresetGenerator{}
+			agent := config.ContentFile{Name: "a", Metadata: &config.Metadata{Extra: tt.extra}}
+			fm := g.buildOpencodeAgentFrontmatter(agent, &config.Config{Defaults: tt.defaults})
+
+			model, hasModel := fm["model"]
+			if tt.wantNone && hasModel {
+				t.Errorf("model = %v, want it omitted", model)
+			}
+			if tt.wantModel != "" && model != tt.wantModel {
+				t.Errorf("model = %v, want %q", model, tt.wantModel)
+			}
+			if got, _ := fm["variant"].(string); got != tt.wantVar {
+				t.Errorf("variant = %q, want %q", got, tt.wantVar)
+			}
+		})
+	}
+}
+
+func TestOpencodeAgentFrontmatter_TypedScalars(t *testing.T) {
+	t.Parallel()
+
+	g := &OpencodePresetGenerator{}
+	agent := config.ContentFile{Name: "a", Metadata: &config.Metadata{Extra: map[string]string{
+		"hidden": "true", "temperature": "0.2", "top_p": "0.9",
+	}}}
+	fm := g.buildOpencodeAgentFrontmatter(agent, &config.Config{})
+
+	if fm["hidden"] != true {
+		t.Errorf("hidden = %#v, want boolean true", fm["hidden"])
+	}
+	if fm["temperature"] != 0.2 || fm["top_p"] != 0.9 {
+		t.Errorf("temperature/top_p = %#v/%#v, want top-level numbers", fm["temperature"], fm["top_p"])
+	}
+
+	bad := config.ContentFile{Name: "b", Metadata: &config.Metadata{Extra: map[string]string{
+		"hidden": "yes please", "temperature": "warm",
+	}}}
+	fm = g.buildOpencodeAgentFrontmatter(bad, &config.Config{})
+	if _, ok := fm["hidden"]; ok {
+		t.Errorf("non-boolean hidden should be omitted, got %#v", fm["hidden"])
+	}
+	if _, ok := fm["temperature"]; ok {
+		t.Errorf("non-numeric temperature should be omitted, got %#v", fm["temperature"])
 	}
 }

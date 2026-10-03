@@ -1,6 +1,22 @@
 package presets
 
-import "github.com/Goldziher/ai-rulez/internal/config"
+import (
+	"regexp"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+)
+
+// providerQualifiedModel matches OpenCode's "provider/model" reference with an
+// optional "#variant" suffix, the same shape its config schema accepts.
+var providerQualifiedModel = regexp.MustCompile(`^[^/#\s]+(/[^/#\s]+)+(#[^#\s]+)?$`)
+
+// IsProviderQualifiedModel reports whether model is a "provider/model" reference
+// (optionally "#variant"), the only form OpenCode resolves. Tool-neutral aliases
+// such as "sonnet" are not: OpenCode reads them as a provider with no model.
+func IsProviderQualifiedModel(model string) bool {
+	return providerQualifiedModel.MatchString(model)
+}
 
 // ResolveAgentModel returns the model string to emit in an agent frontmatter for the
 // given preset, or "" to omit. Model strings are preset-specific (each provider has its
@@ -17,7 +33,7 @@ func ResolveAgentModel(preset string, agent config.ContentFile, cfg *config.Conf
 		return ""
 	}
 	if agent.Metadata != nil {
-		if v, ok := agent.Metadata.Extra[preset+"_model"]; ok && v != "" {
+		if v := strings.TrimSpace(agent.Metadata.Extra[preset+"_model"]); v != "" {
 			return v
 		}
 	}
@@ -25,7 +41,7 @@ func ResolveAgentModel(preset string, agent config.ContentFile, cfg *config.Conf
 		return v
 	}
 	if agent.Metadata != nil {
-		if v, ok := agent.Metadata.Extra["model"]; ok && v != "" {
+		if v := strings.TrimSpace(agent.Metadata.Extra["model"]); v != "" {
 			return v
 		}
 	}
@@ -37,8 +53,5 @@ func ResolveGlobalModel(preset string, cfg *config.Config) string {
 	if cfg == nil || cfg.Defaults == nil {
 		return ""
 	}
-	if v, ok := cfg.Defaults.ModelByPreset[preset]; ok && v != "" {
-		return v
-	}
-	return ""
+	return strings.TrimSpace(cfg.Defaults.ModelByPreset[preset])
 }
