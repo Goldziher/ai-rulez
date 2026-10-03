@@ -94,6 +94,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 	if err != nil {
 		return nil, err
 	}
+	outputs = append(outputs, g.withheldRulesDirMarker(baseDir, cfg, ruleOutputs)...)
 	outputs = append(outputs, ruleOutputs...)
 
 	// Per-type rendering in a fixed iteration order so output is deterministic
@@ -301,12 +302,36 @@ const presetNameJunie = "junie"
 func (g *Generator) directoryOutputs(baseDir string, cfg *config.Config) []config.OutputFile {
 	var outputs []config.OutputFile
 	for _, dir := range g.Spec.Directories {
-		if g.isScopedRulesDir(dir, cfg) {
+		if g.isScopedRulesDir(dir, cfg) || (g.withheldRulesDir(cfg) && g.isRulesDir(dir)) {
 			continue
 		}
 		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, dir), IsDir: true})
 	}
 	return outputs
+}
+
+// isRulesDir reports whether dir is the rules folder of a split rules output.
+func (g *Generator) isRulesDir(dir string) bool {
+	spec := g.Spec.Outputs[OutputTypeRules]
+	return spec != nil && spec.Split && filepath.ToSlash(dir) == filepath.ToSlash(spec.Dir)
+}
+
+// withheldRulesDirMarker returns the rules folder marker withheld by
+// directoryOutputs, once a rule file lands in the folder.
+func (g *Generator) withheldRulesDirMarker(baseDir string, cfg *config.Config, ruleOutputs []config.OutputFile) []config.OutputFile {
+	if len(ruleOutputs) == 0 || !g.withheldRulesDir(cfg) {
+		return nil
+	}
+	return []config.OutputFile{{Path: filepath.Join(baseDir, g.Spec.Outputs[OutputTypeRules].Dir), IsDir: true}}
+}
+
+// withheldRulesDir reports whether the rules folder marker is emitted only when a
+// rule file lands in the folder: agents_md moves the always-on content into the
+// shared AGENTS.md, so a folder without scoped items would stay empty (and be
+// pruned and recreated on each toggle). A monorepo scope has no folder of its own.
+func (g *Generator) withheldRulesDir(cfg *config.Config) bool {
+	spec := g.Spec.Outputs[OutputTypeRules]
+	return spec != nil && spec.Split && !rulefiles.InScope(cfg) && cfg.ReadsSharedAgentsMD(g.Spec.Name)
 }
 
 // isScopedRulesDir reports whether dir is the rules folder of a split rules

@@ -59,15 +59,12 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 		},
 	)
 
-	if !rulefiles.InScope(cfg) {
-		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".windsurf", "rules"), IsDir: true})
-	}
-
 	// Windsurf has no root file: every rule and context item is a file, whatever [rules] mode says.
 	ruleOutputs, err := rulesFolderOutputs(windsurfRulesTarget, content, baseDir, cfg, routingWithSharedAgentsMD(cfg, windsurfPresetName, rulefiles.RoutingEverything), nil)
 	if err != nil {
 		return nil, err
 	}
+	outputs = append(outputs, rulesDirMarker(cfg, windsurfPresetName, filepath.Join(baseDir, ".windsurf", "rules"), ruleOutputs)...)
 	outputs = append(outputs, ruleOutputs...)
 
 	// Generate skill files to .windsurf/skills/

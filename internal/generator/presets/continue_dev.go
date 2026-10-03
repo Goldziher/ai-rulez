@@ -70,13 +70,11 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 		},
 	)
 
-	if !rulefiles.InScope(cfg) {
-		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".continue", "rules"), IsDir: true})
-	}
 	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, routingWithSharedAgentsMD(cfg, continueDevPresetName, rulefiles.RoutingAll), nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate rule files: %w", err)
 	}
+	outputs = append(outputs, rulesDirMarker(cfg, continueDevPresetName, filepath.Join(baseDir, ".continue", "rules"), ruleOutputs)...)
 	outputs = append(outputs, ruleOutputs...)
 
 	// Generate prompts YAML file
