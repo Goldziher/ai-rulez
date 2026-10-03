@@ -20,6 +20,13 @@ func TestRootSpec_LocalFile(t *testing.T) {
 		{name: "explicit path", localFile: `local_file = "rules/demo.local.md"`, want: "rules/demo.local.md"},
 		{name: "absolute path is rejected", localFile: `local_file = "/etc/demo.md"`, wantErr: true},
 		{name: "parent path is rejected", localFile: `local_file = "../demo.md"`, wantErr: true},
+		{name: "nested parent path is rejected", localFile: `local_file = "a/../../demo.md"`, wantErr: true},
+		{name: "backslash path is rejected", localFile: `local_file = "rules\\demo.md"`, wantErr: true},
+		{name: "drive path is rejected", localFile: `local_file = "C:demo.md"`, wantErr: true},
+		{name: "the root file itself is rejected", localFile: `local_file = "DEMO.md"`, wantErr: true},
+		{name: "the root file in another case is rejected", localFile: `local_file = "demo.MD"`, wantErr: true},
+		{name: "the root file spelled with a dot is rejected", localFile: `local_file = "./DEMO.md"`, wantErr: true},
+		{name: "dot is rejected", localFile: `local_file = "."`, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
