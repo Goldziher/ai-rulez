@@ -51,7 +51,8 @@ func TestSharedOutputConsumerFor(t *testing.T) {
 		{preset: "gemini", ok: true, agentsMD: true, skills: true, ownRootFile: "GEMINI.md"},
 		{preset: "antigravity", ok: true, agentsMD: true, skills: true, ownRootFile: "GEMINI.md"},
 		{preset: "hermes", ok: true, agentsMD: true, skills: true, ownRootFile: ".hermes.md"},
-		{preset: "cursor"},
+		{preset: "cursor", ok: true, skills: true},
+		{preset: "windsurf"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.preset, func(t *testing.T) {

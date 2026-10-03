@@ -53,7 +53,31 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 			shared[i].SourceHash = hash
 		}
 	}
+	dropShadowedByShared(allOutputs, cfg.BaseDir, wantAgentsMD, wantSkills)
 	allOutputs[sharedOutputsKey] = shared
+}
+
+// dropShadowedByShared removes, from every preset, the outputs that would land on
+// a shared path: flattenPresetOutputs lets the last preset in name order win a
+// path, so a preset that is not a consumer (a custom provider writing AGENTS.md,
+// a tool writing .agents/skills in its own format) would otherwise overwrite the
+// shared file depending on how its name sorts. The shared outputs win.
+func dropShadowedByShared(allOutputs map[string][]config.OutputFile, baseDir string, agentsMD, skills bool) {
+	var roots []string
+	if skills {
+		roots = append(roots, filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills))))
+	}
+	agentsMDPath := filepath.Join(baseDir, string(config.SharedAgentsMD))
+	for name, outputs := range allOutputs {
+		kept := outputs[:0:0]
+		for _, output := range outputs {
+			if agentsMD && samePath(output.Path, agentsMDPath) || underAny(output.Path, roots) {
+				continue
+			}
+			kept = append(kept, output)
+		}
+		allOutputs[name] = kept
+	}
 }
 
 // agentsMDOwners lists the configured built-in presets that rely on the shared
@@ -88,10 +112,10 @@ func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir string, consumer 
 
 	kept := outputs[:0:0]
 	for _, output := range outputs {
-		if ownRoot != "" && output.Path == ownRoot {
+		if ownRoot != "" && samePath(output.Path, ownRoot) {
 			continue
 		}
-		if consumer.Reads(config.SharedAgentsMD) && output.Path == agentsMD {
+		if consumer.Reads(config.SharedAgentsMD) && samePath(output.Path, agentsMD) {
 			continue
 		}
 		if consumer.Reads(config.SharedAgentSkills) && underAny(output.Path, roots) {
@@ -103,10 +127,27 @@ func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir string, consumer 
 }
 
 func underAny(path string, roots []string) bool {
+	path = cleanPath(path)
 	for _, root := range roots {
+		root = cleanPath(root)
 		if path == root || strings.HasPrefix(path, root+string(filepath.Separator)) {
 			return true
 		}
 	}
 	return false
+}
+
+// samePath compares two paths after cleaning them, so "./a//AGENTS.md" and
+// "a/AGENTS.md" are the same file.
+func samePath(a, b string) bool {
+	return cleanPath(a) == cleanPath(b)
+}
+
+// cleanPath is the absolute, cleaned form of path (the cleaned path itself when
+// the working directory cannot be resolved).
+func cleanPath(path string) string {
+	if abs, err := filepath.Abs(path); err == nil {
+		return abs
+	}
+	return filepath.Clean(path)
 }

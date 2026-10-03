@@ -289,3 +289,46 @@ func TestUpdateConfigHandler_ConventionConfigDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(saved), "effort: high")
 }
+
+func TestAgentsMDConfigRoundTrip(t *testing.T) {
+	cases := []struct {
+		name    string
+		initial string
+		set     any
+		want    bool
+		wantTOM string // substring expected in the saved config.toml, "" for none
+	}{
+		{name: "enable", initial: "", set: true, want: true, wantTOM: "agents_md = true"},
+		{name: "disable", initial: "agents_md = true\n", set: false, want: false},
+		{name: "stays on when not passed", initial: "agents_md = true\n", set: nil, want: true, wantTOM: "agents_md = true"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			cfgDir := filepath.Join(dir, ".ai-rulez")
+			require.NoError(t, os.MkdirAll(cfgDir, 0o755))
+			body := "version = \"4.0\"\nname = \"test\"\n" + tc.initial + "presets = [\"claude\"]\n"
+			require.NoError(t, os.WriteFile(filepath.Join(cfgDir, "config.toml"), []byte(body), 0o644))
+
+			args := map[string]any{"working_directory": dir, "description": "d"}
+			if tc.set != nil {
+				args["agents_md"] = tc.set
+			}
+			res, err := UpdateConfigHandler(context.Background(), newRequestWithArgs(args))
+			require.NoError(t, err)
+			require.False(t, res.IsError)
+
+			saved, err := os.ReadFile(filepath.Join(cfgDir, "config.toml"))
+			require.NoError(t, err)
+			if tc.wantTOM != "" {
+				assert.Contains(t, string(saved), tc.wantTOM)
+			} else {
+				assert.NotContains(t, string(saved), "agents_md = true")
+			}
+
+			read, err := ReadConfigHandler(context.Background(), newRequestWithArgs(map[string]any{"working_directory": dir}))
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, resultPayload(t, read)["agents_md"])
+		})
+	}
+}
