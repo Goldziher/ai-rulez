@@ -194,25 +194,40 @@ const opencodeInstructionsKey = "instructions"
 // the existing value is not an array, which is the user's to fix: it is warned
 // about and left alone.
 func opencodeInstructions(path, entry string) (entries []any, userEntries bool, err error) {
-	entries = []any{}
-	if data, readErr := os.ReadFile(path); readErr == nil { //nolint:gosec // path is derived from the config base dir
-		var doc map[string]json.RawMessage
-		if json.Unmarshal(data, &doc) == nil {
-			if raw, ok := doc[opencodeInstructionsKey]; ok {
-				if json.Unmarshal(raw, &entries) != nil {
-					rulefiles.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
-						"; the value is yours and is left alone", "path", path)
-					return nil, true, nil
-				}
-			}
-		}
-	} else if !errors.Is(readErr, fs.ErrNotExist) {
-		return nil, false, oops.With("path", path).Wrapf(readErr, "read opencode.json")
+	entries, isArray, err := readOpencodeInstructions(path)
+	if err != nil {
+		return nil, false, err
+	}
+	if !isArray {
+		rulefiles.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
+			"; the value is yours and is left alone", "path", path)
+		return nil, true, nil
 	}
 	if slices.Contains(entries, any(entry)) {
 		return entries, len(entries) > 1, nil
 	}
 	return append(entries, entry), len(entries) > 0, nil
+}
+
+// readOpencodeInstructions reads the instructions entries of the document at path.
+// A missing file, an unparseable one (the merge reports its syntax) and a missing
+// key all have none; isArray is false only for a value that is not an array.
+func readOpencodeInstructions(path string) (entries []any, isArray bool, err error) {
+	entries = []any{}
+	data, err := os.ReadFile(path) //nolint:gosec // path is derived from the config base dir
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return entries, true, nil
+	case err != nil:
+		return nil, false, oops.With("path", path).Wrapf(err, "read opencode.json")
+	}
+	var doc map[string]json.RawMessage
+	parsed := json.Unmarshal(data, &doc) == nil
+	raw, present := doc[opencodeInstructionsKey]
+	if !parsed || !present {
+		return entries, true, nil
+	}
+	return entries, json.Unmarshal(raw, &entries) == nil, nil
 }
 
 // mcpServersValue renders the configured MCP servers in OpenCode's v2 shape.

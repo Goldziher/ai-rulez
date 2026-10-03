@@ -21,7 +21,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const presetNameGemini = "gemini"
+const (
+	presetNameGemini = "gemini"
+
+	// geminiRootFile is the root instructions file of the gemini preset.
+	geminiRootFile = "GEMINI.md"
+)
 
 func init() {
 	config.RegisterPreset(presetNameGemini, &GeminiPresetGenerator{})
@@ -53,7 +58,7 @@ func (g *GeminiPresetGenerator) GetName() string {
 
 // LocalRootFile implements config.LocalRootProvider: GEMINI.md → GEMINI.local.md.
 func (g *GeminiPresetGenerator) LocalRootFile() string {
-	return config.LocalVariantPath("GEMINI.md")
+	return config.LocalVariantPath(geminiRootFile)
 }
 
 func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
@@ -169,13 +174,6 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	return outputs, nil
 }
 
-// readsSharedAgentsMD reports whether gemini takes AGENTS.md from the shared
-// output, which a monorepo scope run leaves to the root settings: Gemini reads
-// the project settings only, and the root document covers nested AGENTS.md files.
-func (g *GeminiPresetGenerator) readsSharedAgentsMD(cfg *config.Config) bool {
-	return cfg.AgentsMD && !rulefiles.InScope(cfg)
-}
-
 // renderSettings renders the keys ai-rulez owns in .gemini/settings.json into
 // the document at settingsPath. write is false when it owns none (a monorepo
 // scope run without MCP servers), in which case the document is left alone.
@@ -193,7 +191,7 @@ func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.
 
 // geminiLocalContextFile is the machine-local root file Gemini CLI only loads
 // when context.fileName lists it.
-var geminiLocalContextFile = config.LocalVariantPath("GEMINI.md")
+var geminiLocalContextFile = config.LocalVariantPath(geminiRootFile)
 
 // settingsKeys lists the keys ai-rulez owns in .gemini/settings.json: mcpServers
 // when the config has servers, and context.fileName, which is the main context
@@ -213,7 +211,7 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 	if rulefiles.InScope(cfg) {
 		return owned, false, nil
 	}
-	main := "GEMINI.md"
+	main := geminiRootFile
 	if cfg.AgentsMD {
 		main = string(config.SharedAgentsMD)
 	}
@@ -246,7 +244,7 @@ func isOwnedContextFileNames(names []string) bool {
 	for _, owned := range [][]string{
 		{string(config.SharedAgentsMD)},
 		{string(config.SharedAgentsMD), geminiLocalContextFile},
-		{"GEMINI.md", geminiLocalContextFile},
+		{geminiRootFile, geminiLocalContextFile},
 	} {
 		if slices.Equal(names, owned) {
 			return true
@@ -263,7 +261,7 @@ func (g *GeminiPresetGenerator) warnUnreachableGeminiMD(settingsPath string, nam
 		rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName is [\"AGENTS.md\"], so Gemini CLI "+
 			"ignores the generated GEMINI.md; the file is not one ai-rulez wrote, so the value is left alone",
 			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
-	case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, "GEMINI.md"):
+	case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, geminiRootFile):
 		rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
 			"so Gemini CLI ignores the generated GEMINI.md",
 			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
