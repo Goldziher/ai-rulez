@@ -27,6 +27,7 @@ const (
 	keyDescription = "description"
 	keyModel       = "model"
 	keyCommand     = "command"
+	keyArgs        = "args"
 	keyDisabled    = "disabled"
 	keyHeaders     = "headers"
 	keyMCPServers  = "mcpServers"
