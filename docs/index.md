@@ -24,11 +24,12 @@ Your configuration lives in `.ai-rulez/` with organized subdirectories:
 
 Presets define how content is formatted and where it's output for different tools. Built-in presets include:
 
-- `claude` → generates `CLAUDE.md`
+- `claude` → generates `CLAUDE.md`, `.claude/rules/`, `.claude/skills/`, `.claude/agents/`
 - `cursor` → generates `.cursor/rules/`
 - `gemini` → generates `GEMINI.md`
-- `copilot` → generates `.github/copilot-instructions.md`
+- `copilot` → generates `.github/copilot-instructions.md` and `.github/instructions/`
 - `windsurf` → generates `.windsurf/rules/`
+- `junie` → generates `.junie/guidelines.md` and `.junie/rules/`
 - `hermes` → generates `.hermes.md`
 - `xum` → generates `AGENTS.md` and `.xum/`
 - And many others...
@@ -57,7 +58,7 @@ frontend = ["frontend", "qa"]
 
 - **[CLI Reference](cli.md)**: All commands and flags
 - **[Includes System](includes.md)**: Reusing configurations across projects
-- **[Local Overrides](local-overrides.md)**: Personal, gitignored machine-local instructions
+- **[Local Configuration](local-overrides.md)**: Personal, gitignored machine-local content and config overlay
 - **[Installed Skills](installed-skills.md)**: Installing skills from external repositories
 - **[Poly Hooks](poly-hooks.md)**: Validate generated rules and plugins in Git hooks
 - **[Domains & Profiles](domains.md)**: Organizing by team or subsystem
@@ -68,7 +69,7 @@ frontend = ["frontend", "qa"]
 - **[MCP Server](mcp-server.md)**: Exposing configuration to AI assistants
 - **[Examples](examples.md)**: Real-world configuration examples
 - **[Schema Reference](schema.md)**: JSON schema details
-- **[Best Practices](monorepo.md)**: Patterns for large projects
+- **[Monorepo](monorepo.md)**: Patterns for monorepos and large projects
 
 ## Typical Workflow
 
@@ -89,12 +90,15 @@ frontend = ["frontend", "qa"]
    ai-rulez generate
    ```
 
-4. **Commit** the results:
+4. **Commit** the sources:
 
    ```bash
-   git add .ai-rulez/ CLAUDE.md .cursor/ GEMINI.md
+   git add .ai-rulez/
    git commit -m "docs: update AI assistant guidelines"
    ```
+
+   Generated files are gitignored by default (`gitignore = true`). Add them to the commit too only
+   if you set `gitignore = false`.
 
 ## Key Features
 
@@ -124,7 +128,7 @@ project-root/
 │   └── domains/              # Team-specific content
 │       ├── backend/
 │       └── frontend/
-├── CLAUDE.md                 # Generated for Claude
+├── CLAUDE.md                 # Generated for Claude (context and agents; rules go to .claude/rules/)
 ├── .cursor/rules/            # Generated for Cursor
 ├── GEMINI.md                 # Generated for Gemini
 └── .github/copilot-instructions.md

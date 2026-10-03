@@ -17,6 +17,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
 | `ai-rulez version`              | Show version                                        |
 | `ai-rulez mcp`                  | Start MCP server                                    |
+| `ai-rulez local`                | Manage the machine-local config overlay ([details](#local-configuration)) |
 | `ai-rulez builtins list`        | List available built-in domains                     |
 | `ai-rulez builtins show <name>` | Show bundled content for a built-in domain          |
 
@@ -24,20 +25,28 @@ Aliases: `generate` → `gen`, `g`; `clean` → `clear`; `validate` → `val`, `
 
 ### CRUD Commands (Configuration Management)
 
-| Command                              | Description              |
-| ------------------------------------ | ------------------------ |
-| `ai-rulez domain add/remove/list`    | Manage domains           |
-| `ai-rulez add rule/context/skill`    | Create content files     |
-| `ai-rulez remove rule/context/skill` | Delete content files     |
-| `ai-rulez list rules/context/skills` | List content files       |
-| `ai-rulez include add/remove/list`   | Manage external includes |
-| `ai-rulez skill install/remove/list` | Manage installed skills  |
-| `ai-rulez profile add/remove/list`   | Manage profiles          |
-| `ai-rulez profile set-default`       | Set default profile      |
+| Command                                           | Description              |
+| ------------------------------------------------- | ------------------------ |
+| `ai-rulez domain add/remove/list`                 | Manage domains           |
+| `ai-rulez add rule/context/skill/agent/command`   | Create content files     |
+| `ai-rulez remove rule/context/skill/agent/command` | Delete content files    |
+| `ai-rulez list rules/context/skills/agents/commands` | List content files    |
+| `ai-rulez include add/remove/list`                | Manage external includes |
+| `ai-rulez skill install/remove/list`              | Manage installed skills  |
+| `ai-rulez profile add/remove/list`                | Manage profiles          |
+| `ai-rulez profile set-default`                    | Set default profile      |
+
+`add`, `remove` and `list` take `--local` to work on the machine-local tree `.ai-rulez/local/`;
+`include add|remove`, `skill install|remove` and `profile add|remove|set-default` take `--local` to
+write to the `config.local.*` overlay. See [Local Configuration](local-overrides.md).
 
 ## CRUD Commands
 
-AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills, manage includes, and organize profiles.
+AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` configuration. These commands allow you to create domains, add rules/context/skills/agents/commands, manage includes, and organize profiles.
+
+`add agent` and `add command` take `--domain`/`-d`, `--description`/`-s`, `--content`/`-c` and
+`--local`. `remove agent|command` and `list agents|commands` take the same flags as their rule/skill
+counterparts.
 
 ### Domain Management
 
@@ -154,8 +163,8 @@ ai-rulez add rule <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root rules directory
-- `--local` (optional): Write a machine-local override under `.ai-rulez/local/rules/` instead of the shared tree. The output is gitignored and never committed. Mutually exclusive with `--domain` (combining them errors). See [Local Overrides](local-overrides.md).
-- `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low. Default: medium
+- `--local` (optional): Write to the machine-local tree `.ai-rulez/local/rules/` instead of the shared tree. The output is gitignored and never committed. Combine with `--domain` to write to `.ai-rulez/local/domains/<name>/rules/`. See [Local Configuration](local-overrides.md).
+- `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low, minimal. Default: medium
 - `--targets <list>` / `-t` (optional): Comma-separated list of target providers (claude, cursor, etc.)
 - `--content <text>` / `-c` (optional): Rule content. Uses a template if omitted.
 
@@ -202,8 +211,8 @@ ai-rulez add context <name> [flags]
 **Flags:**
 
 - `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root context directory
-- `--local` (optional): Write a machine-local override under `.ai-rulez/local/context/` instead of the shared tree. The output is gitignored and never committed. Mutually exclusive with `--domain` (combining them errors). See [Local Overrides](local-overrides.md).
-- `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low. Default: medium
+- `--local` (optional): Write to the machine-local tree `.ai-rulez/local/context/` instead of the shared tree. The output is gitignored and never committed. Combine with `--domain` to write to `.ai-rulez/local/domains/<name>/context/`. See [Local Configuration](local-overrides.md).
+- `--priority <level>` / `-p` (optional): Priority: critical, high, medium, low, minimal. Default: medium
 - `--content <text>` / `-c` (optional): Context content. Uses a template if omitted.
 
 **Examples:**
@@ -244,6 +253,7 @@ ai-rulez add skill <name> [flags]
 
 - `--domain <name>` / `-d` (optional): Domain name. If not specified, creates in root skills directory
 - `--description <text>` / `-s` (optional): Skill description
+- `--local` (optional): Write to the machine-local tree `.ai-rulez/local/skills/` (gitignored)
 - `--content <text>` / `-c` (optional): Skill content. Uses a template if omitted.
 
 **Examples:**
@@ -278,6 +288,7 @@ ai-rulez remove rule <name> [flags]
 
 - `--domain <name>` / `-d` (optional): Domain name
 - `--force` / `-f` (optional): Skip confirmation
+- `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
@@ -311,6 +322,7 @@ ai-rulez remove context <name> [flags]
 
 - `--domain <name>` / `-d` (optional): Domain name
 - `--force` / `-f` (optional): Skip confirmation
+- `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
@@ -337,6 +349,7 @@ ai-rulez remove skill <name> [flags]
 
 - `--domain <name>` / `-d` (optional): Domain name
 - `--force` / `-f` (optional): Skip confirmation
+- `--local` (optional): Remove from the machine-local tree `.ai-rulez/local/`
 
 **Examples:**
 
@@ -359,6 +372,7 @@ ai-rulez list rules [flags]
 
 - `--domain <name>` / `-d` (optional): List rules in specific domain only
 - `--json` / `-j` (optional): Output as JSON
+- `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
 
@@ -388,6 +402,7 @@ ai-rulez list context [flags]
 
 - `--domain <name>` / `-d` (optional): List context in specific domain only
 - `--json` / `-j` (optional): Output as JSON
+- `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
 
@@ -410,6 +425,7 @@ ai-rulez list skills [flags]
 
 - `--domain <name>` / `-d` (optional): List skills in specific domain only
 - `--json` / `-j` (optional): Output as JSON
+- `--local` (optional): List the machine-local tree `.ai-rulez/local/` instead of the shared content
 
 **Examples:**
 
@@ -435,6 +451,7 @@ Install a named skill from a git repository or local path.
 - `--source <url>` / `-s` (required): Git URL or local path
 - `--path <dir>` / `-p` (optional): Path within repo to skill directory (defaults to `skills/<name>`)
 - `--ref <ref>` / `-r` (optional): Git reference (branch, tag, commit)
+- `--local` (optional): Record the skill in the machine-local `config.local.*` overlay instead of the shared config
 
 **Examples:**
 
@@ -455,6 +472,7 @@ Remove an installed skill from the configuration.
 **Flags:**
 
 - `--force` / `-f` (optional): Skip confirmation prompt
+- `--local` (optional): Remove through the `config.local.*` overlay. A skill installed in the shared config is hidden on this machine with `remove = true`
 
 **Examples:**
 
@@ -504,6 +522,7 @@ ai-rulez include add <name> <source> [flags]
 - `--include <types>` / `-i` (optional): Comma-separated content types (default `rules,context,skills`): `rules,context,skills,agents,commands`
 - `--merge-strategy <strategy>` / `-m` (optional): Merge strategy: `local-override` (default), `include-override`, or `error`
 - `--install-to <path>` / `-t` (optional): Installation target path in `.ai-rulez/`
+- `--local` (optional): Add the include to the machine-local `config.local.*` overlay instead of the shared config
 
 **Examples:**
 
@@ -542,6 +561,7 @@ ai-rulez include remove <name> [flags]
 **Flags:**
 
 - `--force` / `-f` (optional): Skip confirmation
+- `--local` (optional): Remove through the `config.local.*` overlay. An include defined in the shared config is hidden on this machine with `remove = true`
 
 **Examples:**
 
@@ -593,6 +613,7 @@ ai-rulez profile add <name> <domains...> [flags]
 **Flags:**
 
 - `--set-default` / `-s` (optional): Set this as the default profile
+- `--local` (optional): Define the profile in the machine-local `config.local.*` overlay. It may reference local domains
 
 **Examples:**
 
@@ -625,6 +646,7 @@ ai-rulez profile remove <name> [flags]
 **Flags:**
 
 - `--force` / `-f` (optional): Skip confirmation
+- `--local` (optional): Remove a profile defined in the overlay. A profile from the shared config cannot be removed locally (error)
 
 **Examples:**
 
@@ -646,6 +668,10 @@ ai-rulez profile set-default <name> [flags]
 **Arguments:**
 
 - `<name>` (required): Profile name to set as default
+
+**Flags:**
+
+- `--local` (optional): Set `default` in the machine-local overlay instead of the shared config
 
 **Examples:**
 
@@ -676,44 +702,55 @@ ai-rulez profile list --json
 
 ---
 
-## Local Command
+## Local Configuration
+
+Machine-local configuration has two layers: the `.ai-rulez/local/` content tree (managed with `--local`
+on `add`, `remove` and `list`) and the `config.local.{toml,yaml,yml,json}` overlay (managed with
+`ai-rulez local` and `--local` on the config commands). The full guide is
+[Local Configuration](local-overrides.md); this section is the command reference.
 
 ### `ai-rulez local <subcommand>`
 
-Manage `config.local.{toml,yaml,json}`, the machine-local overlay merged onto the shared config at load time. It sits beside `config.toml`, is gitignored, and is never written into the shared file.
+Manage `config.local.{toml,yaml,yml,json}`, the machine-local overlay merged onto the shared config at load time. It sits beside `config.toml`, is gitignored, and is never written into the shared file.
 
 ```bash
 ai-rulez local init                     # commented skeleton in the main config's format
-ai-rulez local show [--json]            # keys the overlay sets, with the shared value each replaces
+ai-rulez local show [--json] [--reveal] # keys the overlay sets, with the shared value each replaces
 ai-rulez local set <path> <value>       # value is a TOML literal, falling back to a plain string
+ai-rulez local set <path> --stdin       # read the value from standard input
 ai-rulez local unset <path>
 ai-rulez local path
 ```
 
-Paths are dotted keys. For lists of named entries (`mcp_servers`, `plugins`, `includes`, `installed_skills`, `marketplaces`, `scopes`) the segment after the list is the entry name:
+The subcommands honour the global `--config` / `-C` and their own persistent `--config-dir` / `-n`.
+
+Paths are dotted keys. For lists of named entries (`mcp_servers`, `plugins`, `includes`, `installed_skills`, `marketplaces`, `scopes`) the segment after the list is the entry name. A segment that contains a dot is written in brackets with double quotes:
 
 ```bash
 ai-rulez local set default dev
 ai-rulez local set presets '["codex", "!cursor"]'
 ai-rulez local set mcp_servers.github.command npx
-ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN ghp_xxx
+ai-rulez local set 'mcp_servers["foo.bar"].command' npx
+printf %s "$GITHUB_TOKEN" | ai-rulez local set mcp_servers.github.env.GITHUB_TOKEN --stdin
 ```
+
+Pass secrets with `--stdin`, not as an argument, so they stay out of shell history and the process list.
 
 Every change is validated against the local schema and the merged config (offline: remote includes are read from cache only) and rolled back if it is invalid. A new MCP server must have a `command` or `url`. Edits take an advisory lock (`.config.local.lock`) so two commands cannot interleave.
 
-`local show` is default-deny: it prints values only for keys known to hold no credentials (`name`, `description`, `default`, `presets`, `builtins`, profile names, the enum and bool settings under `defaults`, `rules` and `header`, an entry's own `transport`, `enabled` and `remove`, `mcp.self_server`); every other key is listed by path with `<redacted>`, on both the overlay and the shared side. `--reveal` prints everything.
+`local show` is default-deny: it prints values only for keys known to hold no credentials (`name`, `description`, `default`, `presets`, `gitignore`, `compact`, `builtins`, profile names, the enum and bool settings under `defaults`, `rules` and `header` (`style`, `hashes`, `timestamp`), an entry's own `transport`, `enabled` and `remove`, `mcp.self_server`, `mcp.self_server_version`); every other key is listed by path with `<redacted>`, on both the overlay and the shared side. `--reveal` prints everything.
 
 `local set` stores values under `env`/`headers` and known text fields (`url`, `command`, `source`, `path`, `ref`, `description`, `name`, `transport`, `default`, `*_version`) as strings; `--string` forces a string and `--stdin` reads the value from standard input so a secret stays out of shell history.
 
 The overlay is written owner-only (`0600`) through a temp file and rename, and `local` refuses to replace a symlinked `config.local.*`. On Windows the file mode is not enforced by the OS, so rely on your user profile directory permissions there; the advisory lock is also not taken.
 
-The `--local` flag on `profile add|remove|set-default`, `include add|remove` and `skill install|remove` writes to the overlay instead of the shared config. Removing something the shared config defines writes `remove = true` for it. The MCP tools `update_config`, `add_profile`, `remove_profile`, `set_default_profile`, `add_include`, `remove_include`, `install_skill` and `uninstall_skill` accept `local: true`.
+The `--local` flag on `profile add|remove|set-default`, `include add|remove` and `skill install|remove` writes to the overlay instead of the shared config. Removing a shared include or installed skill writes `remove = true` for it; `profile remove --local` of a shared profile is an error ("Shared profiles cannot be removed locally"). The MCP tools `update_config`, `add_profile`, `remove_profile`, `set_default_profile`, `add_include`, `remove_include`, `install_skill` and `uninstall_skill` accept `local: true`.
 
 ### Local overrides and generate
 
 When a `config.local.*` overlay or `local/` content exists, `generate` also renders the shared baseline (the config as a teammate without them sees it) and compares:
 
-- **local-only** files exist only because of your local config (an extra preset, local content). They are git-ignored through `.git/info/exclude` and listed in the gitignored `.ai-rulez/.generated-manifest.local.json`, never in the committed manifest.
+- **local-only** files exist only because of your local config (an extra preset, local content). They are git-ignored (`*.local.*` names through the managed `.gitignore` block, other names through `.git/info/exclude`) and listed in the gitignored `.ai-rulez/.generated-manifest.local.json`, never in the committed manifest. Generation stops, listing paths only, if such a file is tracked by git.
 - **drift** files are shared outputs your local config would change. Generation stops, listing paths only, if such a file is tracked by git or not ignored; pass `--allow-local-drift` to write it anyway.
 - **suppressed** files are shared outputs your local config no longer produces (for example a preset dropped with `"!claude"`). They are left alone, never deleted.
 
@@ -721,7 +758,7 @@ When a `config.local.*` overlay or `local/` content exists, `generate` also rend
 
 Whether a path is tracked or ignored is asked of git in one call each; if git fails inside a repository the guard assumes every affected file is tracked and refuses. `--allow-local-drift` is command-line only (MCP clients cannot pass it) and can write overlay values, including MCP `env` and `headers` secrets, into files that are tracked and shared, so review `git diff` before committing.
 
-Shared outputs keep the baseline `Source-Hash`, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `suppressed:` and `blocked:` lines. A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
+Shared outputs keep the baseline `Source-Hash`, so your headers match a teammate's; local-only outputs carry a hash of their local inputs. `generate --dry-run` prints `local-only:`, `drift:`, `suppressed:` and `blocked:` lines, and exits non-zero when any line is `blocked:` (the real run would refuse). A run with `--no-local` (or `generate --plugin`, which never uses local config) does not delete your local files.
 
 ## Builtins Command
 
@@ -834,7 +871,7 @@ ai-rulez generate [config-file] [flags]
 
 **Arguments:**
 
-- `[config-path]` (optional): Path to configuration file or directory. If not provided, auto-detected.
+- `[config-file]` (optional): Path to configuration file or directory. If not provided, auto-detected.
 
 **Generation Flags:**
 
@@ -851,7 +888,7 @@ ai-rulez generate [config-file] [flags]
 | `--recursive` / `-r`            | boolean | false         | Find and process configs recursively; exits non-zero if any root fails (the others are still processed)                                                 |
 | `--no-fetch` / `-f`             | boolean | false         | Skip fetching remote includes and use cached content                                                                                                    |
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
-| `--allow-local-drift`           | boolean | false         | Write output even when machine-local config would change files shared with the team (see below)                                                         |
+| `--allow-local-drift`           | boolean | false         | Write output even when machine-local config would change files shared with the team (see [Local Configuration](#local-configuration))                  |
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
 | `--env` / `-e`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
 | `--env-file` / `-E`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
@@ -963,7 +1000,7 @@ ai-rulez generate --profile frontend
 
 ### `ai-rulez clean [config-path]`
 
-Remove the files and directories that `generate` produced — the inverse of `generate`. This deletes the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, etc.), the generated manifest (`.ai-rulez/.generated-manifest.json`), and the ai-rulez managed block in `.gitignore`.
+Remove the files and directories that `generate` produced — the inverse of `generate`. This deletes the generated assistant outputs (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `.claude/`, `.codex/`, generated skills, etc.), the generated manifest (`.ai-rulez/.generated-manifest.json`), the local manifest (`.ai-rulez/.generated-manifest.local.json`) and the local rule files recorded in it, this project's block in `.git/info/exclude`, and the ai-rulez managed block in `.gitignore`. The ignore entries for the `config.local.*` overlay and `.ai-rulez/local/` stay in `.gitignore`: `clean` removes generated outputs, not the machine-local sources beside them.
 
 The `.ai-rulez/` source tree is never touched. Generated directories are only removed once they are empty, so any files you authored inside a generated directory are preserved.
 
@@ -1068,6 +1105,7 @@ ai-rulez tokens [config-file] [flags]
 | `--budget` / `-b`     | int     | 0                  | Exit 2 when the headline always-loaded count exceeds this ceiling |
 | `--compare-profiles`  | strings | none               | One profile per column of a comparison table; repeat the flag per column |
 | `--tokenizer`         | string  | `cl100k_base`      | `cl100k_base` (offline BPE) or `estimate` (byte ratio)           |
+| `--no-local`          | boolean | false              | Ignore the machine-local overlay and `local/` content            |
 | `--profile` / `-p`    | string  | configured default | Profile to report on; a comma-separated list composes several    |
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts             |
 
@@ -1087,7 +1125,7 @@ when the surface is loaded:
 | Bucket        | Meaning                                                                       |
 | ------------- | ----------------------------------------------------------------------------- |
 | `always`      | Paid on every request: the root instructions file, skill and command names, agent names and descriptions |
-| `conditional` | Paid in some harness modes only — skill and command descriptions              |
+| `conditional` | Paid in some harness modes only — skill and command descriptions — and machine-local files, labelled `(machine-local)` for roots |
 | `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
 | `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
 
@@ -1153,12 +1191,13 @@ ai-rulez validate [config-path] [flags]
 
 **Flags:**
 
-| Flag           | Type    | Description                                          |
-| -------------- | ------- | ---------------------------------------------------- |
-| `--recursive` / `-r` | boolean | Validate every discovered config; exits non-zero if any is invalid |
-| `--config-dir` | string  | Configuration directory name for non-default layouts |
-| `--verbose`    | boolean | Enable verbose output                                |
-| `--debug`      | boolean | Enable debug output                                  |
+| Flag                  | Type    | Description                                          |
+| --------------------- | ------- | ---------------------------------------------------- |
+| `--recursive` / `-r`  | boolean | Validate every discovered config; exits non-zero if any is invalid |
+| `--config-dir` / `-n` | string  | Configuration directory name for non-default layouts |
+| `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
+| `--verbose`           | boolean | Enable verbose output                                |
+| `--debug`             | boolean | Enable debug output                                  |
 
 **Examples:**
 
@@ -1191,6 +1230,7 @@ ai-rulez validate --verbose
 For V4 configs the raw file is also checked against `schema/ai-rules.schema.json`, so an unknown key
 or a value outside an enum fails rather than being silently dropped. The structural checks are:
 
+- A `config.local.*` overlay, when present, is checked against `schema/ai-rules-local.schema.json`, and the merged config is validated. The output names the overlay file and prints a one-line summary of overridden, added and removed key paths, never values
 - `version` is `"3.0"` or `"4.0"`
 - `name` is present and non-empty
 - All preset names are valid
@@ -1235,14 +1275,16 @@ ai-rulez migrate v4
 **What It Does:**
 
 1. Finds `.ai-rulez/` in the current directory
-2. Returns without changes if `.ai-rulez/config.toml` already exists
-3. Loads the existing configuration, including legacy MCP files if present
-4. Writes `.ai-rulez/config.toml` with `version = "4.0"`
-5. Removes old `.ai-rulez/config.yaml`, `.ai-rulez/config.json`, `.ai-rulez/mcp.yaml`, `.ai-rulez/mcp.toml`, and `.ai-rulez/mcp.json` files
+2. Converts a `config.local.yaml`, `.yml` or `.json` overlay to `config.local.toml` (owner-only, `$schema` becomes `schema`), whether or not `config.toml` already exists. If more than one `config.local.*` file exists the overlay is left alone with a warning
+3. Returns without further changes if `.ai-rulez/config.toml` already exists
+4. Loads the existing shared configuration (without the overlay), including legacy MCP files if present
+5. Writes `.ai-rulez/config.toml` with `version = "4.0"`
+6. Removes old `.ai-rulez/config.yaml`, `.ai-rulez/config.json`, `.ai-rulez/mcp.yaml`, `.ai-rulez/mcp.toml`, and `.ai-rulez/mcp.json` files
 
 **After Migration:**
 
 - `.ai-rulez/config.toml` — new V4 configuration (TOML)
+- `.ai-rulez/config.local.toml` — the converted overlay, if one existed
 - All other files remain unchanged
 
 Then regenerate outputs:
@@ -1316,11 +1358,12 @@ Commands that load a project directory use the following config order:
 
 1. **Explicit path**: Via `--config` flag or command argument
 2. **Directory config**: `.ai-rulez/config.toml`, `.ai-rulez/config.yaml`, `.ai-rulez/config.yml`, or `.ai-rulez/config.json`
-3. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, `ai_rulez.yaml`, `ai_rulez.yml`, `.ai_rulez.yaml`, or `.ai_rulez.yml` are discovered for migration
-4. **Error**: No configuration found
+3. **Project convention**: the same four filenames under `.config/ai-rulez/`, used only when discovering the default layout (an explicit `--config-dir` is honoured exactly and never falls back)
+4. **Legacy flat V2 config**: `ai-rulez.yaml`, `ai-rulez.yml`, `.ai-rulez.yaml`, `.ai-rulez.yml`, `ai_rulez.yaml`, `ai_rulez.yml`, `.ai_rulez.yaml`, or `.ai_rulez.yml` are discovered for migration
+5. **Error**: No configuration found
 
-Legacy flat V2 config files are migration inputs. Use `ai-rulez migrate v4` before running V4
-generation workflows. `.ai-rulez/` is checked before the legacy flat filenames.
+The search walks up from the current directory. Legacy flat V2 config files are migration inputs. Use `ai-rulez migrate v4` before running V4
+generation workflows. `.ai-rulez/` and `.config/ai-rulez/` are checked before the legacy flat filenames.
 
 Example detection flow:
 
@@ -1539,7 +1582,7 @@ ai-rulez validate
 ai-rulez generate
 
 # Commit changes
-git add .ai-rulez/ CLAUDE.md .cursor/ GEMINI.md
+git add .ai-rulez/   # plus generated files only if gitignore = false
 git commit -m "docs: update AI assistant guidelines"
 ```
 
@@ -1549,11 +1592,11 @@ git commit -m "docs: update AI assistant guidelines"
 #!/bin/bash
 # Simple CI/CD script
 
-# Validate configuration
-ai-rulez validate || exit 1
+# Validate configuration (--no-local: ignore any machine-local overlay)
+ai-rulez validate --no-local || exit 1
 
 # Generate all outputs
-ai-rulez generate || exit 1
+ai-rulez generate --no-local || exit 1
 
 # Check for uncommitted changes
 if ! git diff --quiet CLAUDE.md .cursor/ GEMINI.md; then

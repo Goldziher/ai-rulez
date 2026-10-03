@@ -7,20 +7,24 @@ use only built-in presets; custom presets cover a tool ai-rulez does not ship.
 
 | Preset         | Output                                             |
 | -------------- | -------------------------------------------------- |
-| `claude`       | `CLAUDE.md` and `.claude/`                         |
+| `claude`       | `CLAUDE.md` and `.claude/` (`rules/`, `skills/`, `agents/`) |
 | `cursor`       | `.cursor/rules/`, `.cursor/commands/`, `.agents/`  |
 | `gemini`       | `GEMINI.md`, `.gemini/`, `.agents/`                |
-| `copilot`      | `.github/copilot-instructions.md`, `.github/{skills,agents,commands}/` |
+| `copilot`      | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/{skills,agents,commands}/` |
 | `windsurf`     | `.windsurf/`                                       |
 | `continue-dev` | `.continue/`                                       |
 | `cline`        | `.clinerules/`, `.cline/`                          |
 | `codex`        | `AGENTS.md` and `.codex/`                          |
 | `amp`          | `AGENTS.md` and `.agents/` (`.amp/settings.json` when an effort resolves) |
-| `junie`        | `.junie/`                                          |
+| `junie`        | `.junie/` (`guidelines.md`, `rules/`, `skills/`, `agents/`) |
 | `opencode`     | `AGENTS.md`, `.opencode/`, `opencode.json` (when MCP servers are set) |
 | `hermes`       | `.hermes.md`                                       |
-| `antigravity`  | `.agents/`, `GEMINI.md`                            |
+| `antigravity`  | `.agents/` (`rules/`, `skills/`, `agents/`), `GEMINI.md` |
 | `xum`          | `AGENTS.md` and `.xum/`                            |
+
+Under the default `[rules] mode = "split"` each rule is written to the tool's rules folder
+(`.claude/rules/`, `.github/instructions/`, `.junie/rules/`, `.agents/rules/`, ...) and the root file
+keeps context. See [Rules](rules.md#rules-mode) for the per-preset behaviour in each mode.
 
 `mcp` is a shared utility preset (the generic `.mcp.json`) invoked automatically when MCP servers are
 configured; you normally do not name it.

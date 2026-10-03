@@ -1,6 +1,9 @@
 # Extending built-in agents
 
-<!-- DRAFT for inclusion in docs/configuration.md once `extends` ships. -->
+!!! note "Historical"
+    This draft was folded into [Extending Agents](../configuration.md#extending-agents), which is the
+    current reference. Where the two differ (for example, a missing `extends` target warns and degrades
+    to a plain agent), the configuration page is correct.
 
 Built-in and shared-module agents give you a solid base (`code-reviewer`, `docs-writer`,
 `security-auditor`, `polyglot-architect`, language specialists, ...). When you only need to _add_
