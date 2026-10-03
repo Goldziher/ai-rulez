@@ -48,6 +48,8 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	// Antigravity reads AGENTS.md and .agents/skills natively and keeps its
 	// .agents/rules folder for scoped rules.
 	string(PresetAntigravity): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: "GEMINI.md"},
+	// Cursor reads .agents/skills and already writes its skills there.
+	string(PresetCursor): {Outputs: []SharedOutput{SharedAgentSkills}},
 	// Hermes would let .hermes.md shadow AGENTS.md, so the preset stops writing it.
 	string(PresetHermes): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: ".hermes.md"},
 }
