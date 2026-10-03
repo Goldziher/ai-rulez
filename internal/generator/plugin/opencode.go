@@ -6,10 +6,14 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
+	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 	"github.com/samber/oops"
 )
@@ -71,7 +75,7 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 		Type:         "module",
 		Main:         filepath.ToSlash(entrypoint),
 		Exports:      map[string]string{".": "./" + filepath.ToSlash(entrypoint)},
-		Files:        []string{".opencode/", "assets/", "README.md"},
+		Files:        openCodePublishedFiles(m),
 		Dependencies: map[string]string{"@opencode/plugin": openCodePluginDependency},
 	})
 	if err != nil {
@@ -151,6 +155,48 @@ func openCodeBundleFor(m *Manifest) openCodeBundle {
 		}
 	}
 	return bundle
+}
+
+var pluginRootRef = regexp.MustCompile(`\$\{PLUGIN_ROOT\}/([^\s"'/]+)(/?)`)
+
+// openCodePublishedFiles returns the package.json "files" list: the generated
+// content plus every top-level source path an MCP server references through
+// ${PLUGIN_ROOT}, so a launcher such as scripts/run.sh is published with the
+// package. A referenced path missing from the source tree is warned about, not
+// listed.
+func openCodePublishedFiles(m *Manifest) []string {
+	files := []string{".opencode/", "assets/", "README.md"}
+	seen := map[string]bool{}
+	for _, server := range m.MCP {
+		refs := append([]string{server.Command, server.URL}, server.Args...)
+		for _, value := range server.Env {
+			refs = append(refs, value)
+		}
+		for _, ref := range refs {
+			for _, match := range pluginRootRef.FindAllStringSubmatch(ref, -1) {
+				top := match[1]
+				if top == ".." || top == "." || seen[top] {
+					continue
+				}
+				seen[top] = true
+				info, err := os.Stat(filepath.Join(m.SourceDir, top))
+				if err != nil {
+					logger.Warn("MCP server references a path missing from the plugin source; it will not be published",
+						"server", server.Name, "path", top)
+					continue
+				}
+				entry := top
+				if info.IsDir() {
+					entry += "/"
+				}
+				if !slices.Contains(files, entry) {
+					files = append(files, entry)
+				}
+			}
+		}
+	}
+	sort.Strings(files[3:])
+	return files
 }
 
 func openCodePackageName(m *Manifest) string {

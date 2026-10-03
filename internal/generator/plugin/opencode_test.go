@@ -308,3 +308,71 @@ func TestOpenCodeContentHelperRegistersMCPAndAgentSettings(t *testing.T) {
 		assert.Contains(t, helper, want)
 	}
 }
+
+func TestOpenCodePublishedFilesIncludeReferencedPaths(t *testing.T) {
+	tests := []struct {
+		name  string
+		mcp   []config.PluginMCPLaunch
+		tree  map[string]string
+		want  []string
+		extra string
+	}{
+		{
+			name: "directory referenced by command",
+			mcp:  []config.PluginMCPLaunch{{Name: "s", Command: "${PLUGIN_ROOT}/scripts/run.sh", Transport: config.TransportStdio}},
+			tree: map[string]string{"scripts/run.sh": "#!/bin/sh\n"},
+			want: []string{".opencode/", "assets/", "README.md", "scripts/"},
+		},
+		{
+			name: "file at the top level, args and env, deduplicated",
+			mcp: []config.PluginMCPLaunch{{
+				Name: "s", Command: "node", Args: []string{"${PLUGIN_ROOT}/server.js", "${PLUGIN_ROOT}/scripts/a"},
+				Env: map[string]string{"CFG": "${PLUGIN_ROOT}/scripts/b"}, Transport: config.TransportStdio,
+			}},
+			tree: map[string]string{"server.js": "x", "scripts/a": "x", "scripts/b": "x"},
+			want: []string{".opencode/", "assets/", "README.md", "scripts/", "server.js"},
+		},
+		{
+			name: "missing path is not listed",
+			mcp:  []config.PluginMCPLaunch{{Name: "s", Command: "${PLUGIN_ROOT}/bin/run", Transport: config.TransportStdio}},
+			tree: map[string]string{},
+			want: []string{".opencode/", "assets/", "README.md"},
+		},
+		{
+			name: "traversal and already-listed paths are ignored",
+			mcp: []config.PluginMCPLaunch{{
+				Name: "s", Command: "${PLUGIN_ROOT}/../etc/x", Args: []string{"${PLUGIN_ROOT}/assets/y"}, Transport: config.TransportStdio,
+			}},
+			tree: map[string]string{"assets/y": "x"},
+			want: []string{".opencode/", "assets/", "README.md"},
+		},
+		{
+			name: "remote url is scanned too",
+			mcp:  []config.PluginMCPLaunch{{Name: "s", Transport: config.TransportHTTP, URL: "file://${PLUGIN_ROOT}/sock/s"}},
+			tree: map[string]string{"sock/s": "x"},
+			want: []string{".opencode/", "assets/", "README.md", "sock/"},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			for rel, content := range tt.tree {
+				require.NoError(t, os.MkdirAll(filepath.Dir(filepath.Join(root, rel)), 0o755))
+				require.NoError(t, os.WriteFile(filepath.Join(root, rel), []byte(content), 0o644))
+			}
+			m := &Manifest{Name: "p", Version: "1.0.0", SourceDir: root, MCP: tt.mcp}
+
+			// Act
+			outputs, err := renderOpenCode(m, "/out")
+			require.NoError(t, err)
+
+			// Assert
+			var pkg struct {
+				Files []string `json:"files"`
+			}
+			require.NoError(t, json.Unmarshal(outputs[1].RawContent, &pkg))
+			assert.Equal(t, tt.want, pkg.Files)
+		})
+	}
+}
