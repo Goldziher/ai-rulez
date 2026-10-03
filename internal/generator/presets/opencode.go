@@ -1,8 +1,13 @@
 package presets
 
 import (
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io/fs"
+	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -11,6 +16,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
 
@@ -128,9 +134,12 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	}
 
 	// Generate opencode.json in OpenCode's native v2 shape. ai-rulez owns
-	// $schema and mcp.servers, so a fresh document is entirely ours; any other
-	// key a hand-authored opencode.json carries is preserved (#185, #194).
-	if len(cfg.MCPServers) > 0 {
+	// $schema, mcp.servers and its own entry of instructions, so a fresh document
+	// is entirely ours; any other key a hand-authored opencode.json carries is
+	// preserved (#185, #194). The instructions entry is written at the project
+	// root whether or not MCP servers exist (see renderMCPConfig); a monorepo
+	// scope writes the document only for its servers.
+	if len(cfg.MCPServers) > 0 || !rulefiles.InScope(cfg) {
 		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
 		mcpFile, err := g.renderMCPConfig(mcpPath, cfg)
 		if err != nil {
@@ -146,11 +155,68 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	return outputs, nil
 }
 
-// renderMCPConfig renders OpenCode's native v2 MCP servers into opencode.json.
-// It owns the top-level $schema and the nested mcp.servers key, so every sibling
-// key under mcp (such as mcp.timeout) and every other top-level key survive the
-// merge.
+// renderMCPConfig renders OpenCode's native v2 MCP servers and the machine-local
+// instructions entry into opencode.json. It owns the top-level $schema, the
+// nested mcp.servers key (when servers are configured) and, at the project root,
+// the AGENTS.local.md entry of instructions: OpenCode reads no AGENTS.local.md on
+// its own, and a listed file that is missing is skipped silently, so the entry is
+// written whether or not local content exists. Every sibling key under mcp (such
+// as mcp.timeout), every other top-level key and every other instructions entry
+// survive the merge.
 func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
+	owned := []jsonmerge.OwnedKey{{Path: []string{"$schema"}, Value: opencodeSchemaURL}}
+	userEntries := false
+	if !rulefiles.InScope(cfg) {
+		entries, user, err := opencodeInstructions(mcpPath, g.LocalRootFile())
+		if err != nil {
+			return jsonmerge.Result{}, err
+		}
+		userEntries = user
+		if entries != nil {
+			owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeInstructionsKey}, Value: entries})
+		}
+	}
+	if len(cfg.MCPServers) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", "servers"}, Value: g.mcpServersValue(cfg)})
+	}
+	result, err := applyMergedDocument(mcpPath, owned)
+	// An entry the user listed is theirs even when it is the only key left.
+	result.PartiallyOwned = result.PartiallyOwned || userEntries
+	return result, err
+}
+
+// opencodeInstructionsKey is the top-level array of extra instruction files.
+const opencodeInstructionsKey = "instructions"
+
+// opencodeInstructions returns the instructions array of the document at path
+// with entry added once, and whether the document lists anything else (a user
+// entry). The other entries are kept verbatim and in order. A nil result means
+// the existing value is not an array, which is the user's to fix: it is warned
+// about and left alone.
+func opencodeInstructions(path, entry string) (entries []any, userEntries bool, err error) {
+	entries = []any{}
+	if data, readErr := os.ReadFile(path); readErr == nil { //nolint:gosec // path is derived from the config base dir
+		var doc map[string]json.RawMessage
+		if json.Unmarshal(data, &doc) == nil {
+			if raw, ok := doc[opencodeInstructionsKey]; ok {
+				if json.Unmarshal(raw, &entries) != nil {
+					rulefiles.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
+						"; the value is yours and is left alone", "path", path)
+					return nil, true, nil
+				}
+			}
+		}
+	} else if !errors.Is(readErr, fs.ErrNotExist) {
+		return nil, false, oops.With("path", path).Wrapf(readErr, "read opencode.json")
+	}
+	if slices.Contains(entries, any(entry)) {
+		return entries, len(entries) > 1, nil
+	}
+	return append(entries, entry), len(entries) > 0, nil
+}
+
+// mcpServersValue renders the configured MCP servers in OpenCode's v2 shape.
+func (g *OpencodePresetGenerator) mcpServersValue(cfg *config.Config) map[string]interface{} {
 	servers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {
@@ -182,10 +248,7 @@ func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Co
 		servers[name] = entry
 	}
 
-	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
-		{Path: []string{"$schema"}, Value: opencodeSchemaURL},
-		{Path: []string{"mcp", "servers"}, Value: servers},
-	})
+	return servers
 }
 
 func (g *OpencodePresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {

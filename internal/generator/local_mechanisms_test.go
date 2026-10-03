@@ -103,3 +103,51 @@ func TestGeminiSettings_UserValueKeptAndWarned(t *testing.T) {
 		})
 	}
 }
+
+// opencodeInstructions reads the instructions array of the generated opencode.json.
+func opencodeInstructions(t *testing.T, root string) []string {
+	t.Helper()
+	var doc struct {
+		Instructions []string `json:"instructions"`
+	}
+	require.NoError(t, json.Unmarshal([]byte(readAgentsMDFile(t, root, "opencode.json")), &doc))
+	return doc.Instructions
+}
+
+// opencode.json is written for every opencode project, with or without MCP
+// servers and local content, and is identical either way.
+func TestOpencodeConfig_ListsLocalRootFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		flag      string
+		withLocal bool
+	}{
+		{name: "no local content"},
+		{name: "local content", withLocal: true},
+		{name: "agents_md on, local content", flag: "agents_md = true\n", withLocal: true},
+	}
+	var documents []string
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{"opencode"}, "", ""))
+			if tt.withLocal {
+				writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+			}
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			assert.Equal(t, []string{"AGENTS.local.md"}, opencodeInstructions(t, root))
+			documents = append(documents, readAgentsMDFile(t, root, "opencode.json"))
+			if tt.withLocal {
+				assert.Contains(t, readAgentsMDFile(t, root, "AGENTS.local.md"), "LOCAL_BODY")
+			}
+		})
+	}
+	for _, doc := range documents[1:] {
+		assert.Equal(t, documents[0], doc, "the committed document does not depend on local content")
+	}
+}
