@@ -84,7 +84,22 @@ plugin's skills, commands, and agents under `.opencode/`.
 OpenCode only scans its own config directories, so it never discovers the `.opencode/skills`,
 `commands` and `agents` of an npm-installed plugin. The generated entrypoint therefore calls
 `registerBundledContent(ctx)` from the generated `.opencode/ai-rulez-content.js`, which
-registers the bundled content through the skill, command and agent transforms. If you supply
+registers the bundled content through the skill, command, agent and MCP transforms. The helper
+reads `.opencode/ai-rulez-bundle.json`, which holds the plugin's MCP servers and the agent
+settings resolved at generation time.
+
+- **MCP servers** become OpenCode `local` (command array plus `environment`) or `remote`
+  (`url`) servers. At runtime `${PLUGIN_ROOT}` expands to the installed plugin directory and
+  `${NAME}` to `process.env.NAME` (empty when unset), so no install path or secret is written
+  into the package. Remote `headers` are not bundled, as for the other runtimes. A launcher such
+  as `${PLUGIN_ROOT}/scripts/run.sh` must itself be published with the package (`scripts/` is
+  not in the generated `files` list).
+- **Agents** take their model through the same resolution as the `opencode` preset
+  (`opencode_model`, then `defaults.model_by_preset.opencode`, then `model`). A
+  `provider/model` id passes through, and `#variant` (or the effort tier) becomes the model
+  variant. A bare alias such as `sonnet` is omitted with one warning so the agent inherits the
+  session model. `description`, `mode` (default `all`), `hidden`, `temperature` and `top_p` are
+  mapped too; `tools` and `permission` are not carried by ai-rulez agents and so are not mapped. If you supply
 your own `.ai-rulez/opencode/index.js` and the plugin bundles content, call it from `setup`:
 
 ```js
