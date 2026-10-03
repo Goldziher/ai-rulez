@@ -107,10 +107,12 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 
 	// Machine-local files must never reach git: make sure they are ignored before
 	// any is written, and refuse to write them when that fails.
+	ignoredEarly := false
 	if g.hasLocalOutputs(flatOutputs) {
 		if err := g.updateGitignore(flatOutputs); err != nil {
 			return 0, oops.Wrapf(err, "gitignore machine-local outputs before writing them")
 		}
+		ignoredEarly = true
 	}
 
 	staleFiles := g.staleManifestFiles(flatOutputs)
@@ -136,7 +138,10 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	// Update gitignore if enabled, or whenever machine-local content exists —
 	// local ".local" outputs and the .ai-rulez/local/ source subtree must be
 	// gitignored unconditionally, even when config gitignore is disabled.
-	if g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets() {
+	// The early pass already wrote the same block unless writing skipped a
+	// hand-written file, which drops that file's entry.
+	rewrite := !ignoredEarly || len(g.skippedPaths) > 0
+	if rewrite && (g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets()) {
 		if err := g.updateGitignore(flatOutputs); err != nil {
 			logger.Warn("Failed to update .gitignore", "error", err)
 		}
