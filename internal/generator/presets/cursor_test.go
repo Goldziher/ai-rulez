@@ -39,7 +39,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 8, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 2 rule files
+			wantOutputs: 8, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .cursor/agents, 2 rule files
 			wantErr:     false,
 		},
 		{
@@ -64,7 +64,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 8, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 2 rule files
+			wantOutputs: 8, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .cursor/agents, 2 rule files
 			wantErr:     false,
 		},
 		{
@@ -82,7 +82,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 7, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 1 command file
+			wantOutputs: 7, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .cursor/agents, 1 command file
 			wantErr:     false,
 		},
 		{
@@ -108,7 +108,7 @@ func TestCursorPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 7, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .agents/agents, 1 command file (only cursor-command)
+			wantOutputs: 7, // .cursor, .cursor/rules, .cursor/commands, .agents, .agents/skills, .cursor/agents, 1 command file (only cursor-command)
 			wantErr:     false,
 		},
 	}
@@ -433,6 +433,9 @@ func TestCursorPresetGenerator_Generate_WithAgents(t *testing.T) {
 	if !strings.Contains(agentContent, "description: Validates completed work") {
 		t.Error("Expected description in frontmatter")
 	}
+	if !strings.Contains(agentContent, "is_background: false\n") {
+		t.Error("Expected is_background as a YAML boolean")
+	}
 	if !strings.Contains(agentContent, "model: fast") {
 		t.Error("Expected model in frontmatter")
 	}
@@ -665,6 +668,33 @@ func TestCursorPresetGenerator_RuleFrontmatter(t *testing.T) {
 
 			// Assert
 			assert.Equal(t, tt.want, cursorFrontmatterOf(t, text))
+		})
+	}
+}
+
+func TestCursorAgentFrontmatter_BooleanFlags(t *testing.T) {
+	t.Parallel()
+
+	g := &CursorPresetGenerator{}
+	tests := []struct {
+		name      string
+		extra     map[string]string
+		wantRead  interface{}
+		wantBackg interface{}
+	}{
+		{"booleans are typed", map[string]string{"readonly": "true", "is_background": "false"}, true, false},
+		{"garbage is omitted", map[string]string{"readonly": "maybe", "is_background": "yes please"}, nil, nil},
+		{"unset stays absent", map[string]string{"description": "d"}, nil, nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			agent := config.ContentFile{Name: "a", Metadata: &config.Metadata{Extra: tt.extra}}
+			fm := g.buildCursorAgentFrontmatter(agent, &config.Config{})
+			if fm["readonly"] != tt.wantRead || fm["is_background"] != tt.wantBackg {
+				t.Errorf("readonly/is_background = %#v/%#v, want %#v/%#v",
+					fm["readonly"], fm["is_background"], tt.wantRead, tt.wantBackg)
+			}
 		})
 	}
 }
