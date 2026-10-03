@@ -242,14 +242,17 @@ Ways forward:
 
 - Git-ignore the files, or untrack them.
 - `generate --no-local` generates the shared view only (the view a teammate sees).
-- `generate --allow-local-drift` writes anyway. This can put overlay values such as MCP env and headers
-  into tracked files. It is CLI-only: the MCP server cannot bypass the guard.
+- `generate --allow-local-drift` writes anyway. This can put non-secret overlay values into tracked files.
+  It does not bypass the secret guard: a generated MCP config that would carry resolved secrets (env,
+  headers, URL credentials, secret flags) is still refused unless it is git-ignored. It is CLI-only: the MCP
+  server cannot bypass the guard.
 
 `generate --dry-run` prints the plan with these lines, and exits non-zero when it would be blocked:
 
 ```text
 local-only: .claude/rules/scratch.local.md
 drift: .mcp.json
+allowed: .gemini/settings.json (drift, but git-ignored)
 suppressed: .cursor/mcp.json
 blocked: .mcp.json (shared output is tracked and would change)
 ```
@@ -285,8 +288,8 @@ Removing a file under `.ai-rulez/local/` and regenerating drops the correspondin
 - The overlay is hashed into generated headers only in redacted form: env and header values and args
   are replaced, and URLs (including include and skill sources) lose their credentials, query and
   fragment; scheme, host and path still contribute to the hash.
-- `--allow-local-drift` is the one way to write overlay-derived values into tracked files. Do not use
-  it in shared scripts.
+- `--allow-local-drift` is the one way to write non-secret overlay-derived values into tracked files. Do
+  not use it in shared scripts. It never writes resolved secrets into an MCP config that is not git-ignored.
 
 ## Related
 
