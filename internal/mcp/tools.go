@@ -600,6 +600,7 @@ func (s *Server) registerCRUDTools() {
 				String("description", "Project description", false).
 				StringArray("builtins", "List of builtin names to enable (replaces current builtins setting)", false).
 				Boolean("gitignore", "Whether to update .gitignore when generating outputs", false).
+				Boolean("agents_md", "Render always-on rules and context once into a shared AGENTS.md and skills once into .agents/skills for tools that read them", false).
 				String("default_effort", "Default reasoning effort for Claude Code subagents (low, medium, high, xhigh, max, inherit). Empty string clears the default.", false).
 				Object("default_effort_by_preset", "Per-preset reasoning effort override (e.g. {\"codex\": \"high\", \"claude\": \"xhigh\"}). Each value must be one of low, medium, high, xhigh, max, inherit. Pass {} to clear.", false).
 				String("rules_mode", "Default rules output mode: split (one file per rule, default) or inline (rules embedded in the root file). Empty string clears it.", false).

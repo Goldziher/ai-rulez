@@ -358,6 +358,11 @@
       "type": "boolean",
       "description": "When true, omit per-rule '**Priority:**' annotations from generated inline rule sections to reduce output size. Defaults to false."
     },
+    "agents_md": {
+      "type": "boolean",
+      "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to false (per-tool outputs, unchanged).",
+      "default": false
+    },
     "installed_skills": {
       "type": "array",
       "description": "Named skills to install from external repositories. Skills are fetched dynamically during generation.",

@@ -33,6 +33,7 @@ type tomlOutput struct {
 	Description     string                 `toml:"description,omitempty"`
 	Gitignore       *bool                  `toml:"gitignore,omitempty"`
 	Compact         *bool                  `toml:"compact,omitempty"`
+	AgentsMD        bool                   `toml:"agents_md,omitempty"`
 	Default         string                 `toml:"default,omitempty"`
 	Presets         []any                  `toml:"presets,omitempty"`
 	Header          *HeaderConfig          `toml:"header,omitempty"`
@@ -112,6 +113,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Description:     cfg.Description,
 		Gitignore:       cfg.Gitignore,
 		Compact:         cfg.Compact,
+		AgentsMD:        cfg.AgentsMD,
 		Default:         cfg.Default,
 		Presets:         presets,
 		Header:          cfg.Header,

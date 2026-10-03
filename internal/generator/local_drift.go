@@ -540,7 +540,8 @@ func (p *localPlan) sharedManifestFiles(skipped map[string]bool) []string {
 }
 
 // sourceHashFor is the Source-Hash stamped into an output's header: the output's
-// own override when the drift guard set one, the run's hash otherwise.
+// own override when one is set (shared agents_md outputs, or the drift guard's
+// baseline hash), the run's hash otherwise.
 func (g *Generator) sourceHashFor(output config.OutputFile) string {
 	if output.SourceHash != "" {
 		return output.SourceHash
