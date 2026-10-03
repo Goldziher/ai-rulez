@@ -125,6 +125,45 @@ When the source entrypoint is absent, generation emits a documented module that 
 the bundled content. It keeps the plugin loadable and tells you where to create the user-owned
 source; it does not guess tool schemas, subprocess arguments, or business logic.
 
+#### Using the generated plugin
+
+Checked against OpenCode 2.0.20 with a local server. These routes load the plugin; `<name>` is the
+plugin name and `<bundle>` the directory `generate --plugin` wrote into.
+
+1. **Copy it into a project.** OpenCode loads every plugin in a project's `.opencode/plugins/`.
+   From `<bundle>`, copy into the consuming project:
+   `.opencode/plugins/<name>.js`, `.opencode/ai-rulez-content.js`, `.opencode/ai-rulez-bundle.json`,
+   `.opencode/skills/`, `.opencode/commands/` and `.opencode/agents/` (keeping those paths), plus every
+   top-level directory an MCP server reaches through `${PLUGIN_ROOT}` (for example `scripts/`) at the
+   project root: `${PLUGIN_ROOT}` is the parent of the `.opencode` directory that holds
+   `ai-rulez-content.js`. Restart OpenCode or reload its configuration.
+2. **Point `opencode.json` at a directory.** Add `"plugins": ["<dir>"]` (an absolute path, a path
+   starting `./` or `../`, or a `file://` URL) where `<dir>` is a copy of `<bundle>` that also has
+   an `index.js` at its root:
+
+   ```js
+   export { default } from "./.opencode/plugins/<name>.js";
+   ```
+
+   OpenCode loads the directory's root `index.js`. It ignores `main` and `exports` of the generated
+   `package.json`, so a bare `<bundle>` is not loaded, and a path to a file is refused
+   (`configured plugin path must be a directory`).
+3. **Put it in a project as a directory plugin.** Copy the bundle's files as in route 1, but
+   save the entrypoint as `.opencode/plugins/<name>/index.js` and change its helper import to
+   `../../ai-rulez-content.js`.
+
+The generated `package.json` (`main`, `exports`, `files`) exists for publishing to npm. Installing
+from npm was not exercised for this release, so follow the OpenCode plugin documentation for that route.
+
+Two properties of the bundled MCP servers are worth knowing before you install a third-party plugin:
+
+- `${NAME}` in a server's command, arguments, environment or URL is expanded from the OpenCode
+  process environment when the plugin loads. A plugin runs inside that process and can read all of its
+  environment variables, so install only plugins you trust and do not treat `${VAR}` as a boundary.
+- Remote `headers` are never bundled (generation warns), and a project server with `enabled = false`
+  is carried into the OpenCode bundle as `disabled: true`. The other runtimes have no such flag in
+  their bundles, so a disabled server is bundled enabled for them and generation warns about it.
+
 #### v1 plugin warning and migration
 
 OpenCode v2 does not run v1 plugins, and it only logs the refusal to its server log
@@ -138,7 +177,9 @@ therefore warns, once per file and without failing generation, when it finds a v
 
 A file counts as v1 when it default-exports a function, exports an `async` function or arrow
 function, or imports the v1 `@opencode-ai/plugin` package, and has no v2 marker
-(`Plugin.define(...)`, or an `id` together with `setup`/`effect`). To migrate, rename `plugin`
+(`Plugin.define(...)`, or an `id` property, written with any value or shorthand, together with
+`setup`/`effect`). Comments are removed before the check, but text inside string literals is kept,
+so a glob such as `"src/**/*.js"` does not hide the code after it. To migrate, rename `plugin`
 to `plugins` in the config, move the file to `.opencode/plugins/`, and replace the exported
 function with a default export `{ id, async setup(ctx) { ... } }` that registers hooks and
 transforms on `ctx`. See the official
@@ -312,7 +353,8 @@ Members do not emit their own marketplace index.
 
 ## Field reference
 
-`[plugin]`: `name`, `version` (required); `display_name`, `description`, `homepage`,
+`[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
+becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
 `tags`, `runtimes`, `content_root` (project-relative directory of plugin-only
 `skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),

@@ -542,10 +542,13 @@ the document's original indentation.
 
 **Important implications**:
 
-- **Owned keys are replaced wholesale**: An MCP server you added by hand inside the `mcpServers`
-  object does NOT survive generation — the entire `mcpServers` key is replaced. To configure MCP
-  servers, add them to the `[[mcp_servers]]` array in `config.toml` instead of editing the JSON
-  directly.
+- **MCP servers are owned one by one**: ai-rulez owns the servers it writes into `mcpServers`
+  (`mcp.servers` in `opencode.json`, `servers` in `.xum/mcp.jsonc`), not the whole object. A server
+  you added by hand under a name that is not in `config.toml` survives `generate` and `clean`. A
+  server dropped from `config.toml` is removed on the next `generate`, and only while it still holds
+  the value ai-rulez wrote: an entry you edited is yours, stays, and is reported once. If a
+  hand-written server has the same name as a configured one, the configured value wins on
+  `generate` and is the one recorded.
 - **Written only when there is something to contribute**: A settings document is emitted only when
   the config declares MCP servers (or, for Amp, a resolved effort tier). The `gemini` and
   `antigravity` presets previously wrote their settings document on every run purely to self-register
@@ -558,7 +561,8 @@ the document's original indentation.
   naming the path. When only the Gemini `context.fileName` or OpenCode `instructions` entry would be
   written, the document is left untouched with a warning and generation continues.
 - **Taking keys back out**: `ai-rulez clean`, and `generate` after a preset or server is removed,
-  remove the keys ai-rulez merged in and keep the rest of the document; see
+  remove the keys ai-rulez merged in, as long as they still hold the value it wrote, and keep the rest
+  of the document; see
   [Settings documents shared with you](local-overrides.md#settings-documents-shared-with-you).
 - **Gitignore behavior**: A document still holding keys ai-rulez does not own is treated as the
   user's file: it is NOT added to the managed `.gitignore` block and is NOT deleted as stale. This
