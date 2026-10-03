@@ -112,6 +112,10 @@ type PluginMCPLaunch struct {
 	Env       map[string]string `yaml:"env,omitempty" json:"env,omitempty" toml:"env,omitempty"`
 	Transport string            `yaml:"transport,omitempty" json:"transport,omitempty" toml:"transport,omitempty"`
 	URL       string            `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
+
+	// Disabled carries a project server's enabled = false into the bundle. It is
+	// not authored: [[plugin.mcp]] entries are always enabled.
+	Disabled bool `yaml:"-" json:"-" toml:"-"`
 }
 
 // HookTypeCommand is the default (and only bundled) hook handler type: the

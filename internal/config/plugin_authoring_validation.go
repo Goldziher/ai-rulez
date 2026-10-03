@@ -55,6 +55,9 @@ func (c *Config) validatePluginAuthoring() error {
 			return err
 		}
 	}
+	if err := validatePluginName(p.Name); err != nil {
+		return err
+	}
 	if err := validatePluginMCP(p); err != nil {
 		return err
 	}
@@ -185,6 +188,25 @@ func validateAgentPluginsName(name string) error {
 		With("value", name).
 		Hint("Agent Plugins names are 1-64 chars of [a-z0-9-.] starting and ending alphanumeric, with no '--' or '..'").
 		Errorf("plugin name %q is not valid for the agent-plugins runtime", name)
+}
+
+// pluginName is the name every runtime's bundle can carry. The name becomes a
+// directory (.opencode/plugins/<name>/, .hermes/plugins/<name>/), a file name and
+// an identifier in generated source, so separators, quotes and comment markers
+// are out.
+var pluginName = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
+
+// validatePluginName rejects a name that could not be used as a path segment or
+// embedded in generated code without escaping.
+func validatePluginName(name string) error {
+	if pluginName.MatchString(name) && !strings.Contains(name, "..") {
+		return nil
+	}
+	return oops.
+		With("field", "plugin.name").
+		With("value", name).
+		Hint("Use lowercase letters, digits, '.', '_' and '-', starting with a letter or digit, with no '..' (no '/', '\\' or quotes)").
+		Errorf("%q is not a valid plugin name", name)
 }
 
 func validatePluginMCP(p *PluginAuthoring) error {
