@@ -40,10 +40,11 @@ func applySharedOutputs(allOutputs map[string][]config.OutputFile, cfg *config.C
 		return
 	}
 
-	hash := computeSharedSourceHash(cfg, content)
+	inlining := config.SharedAgentsMDInlining(cfg)
+	hash := computeSharedSourceHash(cfg, content, inlining)
 	var shared []config.OutputFile
 	if wantAgentsMD {
-		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, agentsMDOwners(cfg)))
+		shared = append(shared, presets.SharedAgentsMD(content, cfg.BaseDir, cfg, agentsMDOwners(cfg), inlining))
 	}
 	if wantSkills {
 		shared = append(shared, presets.SharedAgentSkills(content, cfg.BaseDir)...)

@@ -169,17 +169,20 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 }
 
 func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {
-	return g.renderAgentsMarkdownFor(content, cfg, nil)
+	return g.renderAgentsMarkdownFor(content, cfg, nil, nil)
 }
 
 // renderAgentsMarkdownFor renders AGENTS.md selecting items by the targets of
-// owners (the default AGENTS.md owners when nil).
-func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTree, cfg *config.Config, owners []string) string {
+// owners (the default AGENTS.md owners when nil). A non-nil inlining keeps only
+// the always-on items plus the scoped ones it asks for.
+func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTree, cfg *config.Config, owners []string,
+	inlining *config.AgentsMDInlining,
+) string {
 	var builder strings.Builder
 
 	root := rulefiles.RootTarget(codexPresetName, "AGENTS.md")
 	root.Owners = owners
-	allRules := rulefiles.FilterInline(allInlineRules(content), root)
+	allRules := inlinedInAgentsMD(rulefiles.FilterInline(allInlineRules(content), root), inlining, false)
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -200,7 +203,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := rulefiles.FilterInline(allInlineContext(content), root)
+	allContext := inlinedInAgentsMD(rulefiles.FilterInline(allInlineContext(content), root), inlining, true)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)

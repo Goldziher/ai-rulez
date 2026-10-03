@@ -51,8 +51,13 @@ func TestSharedOutputConsumerFor(t *testing.T) {
 		{preset: "gemini", ok: true, agentsMD: true, skills: true, ownRootFile: "GEMINI.md"},
 		{preset: "antigravity", ok: true, agentsMD: true, skills: true, ownRootFile: "GEMINI.md"},
 		{preset: "hermes", ok: true, agentsMD: true, skills: true, ownRootFile: ".hermes.md"},
-		{preset: "cursor", ok: true, skills: true},
-		{preset: "windsurf"},
+		{preset: "cursor", ok: true, agentsMD: true, skills: true},
+		{preset: "copilot", ok: true, agentsMD: true, skills: true, ownSkill: ".github/skills", ownRootFile: ".github/copilot-instructions.md"},
+		{preset: "junie", ok: true, agentsMD: true, skills: true, ownSkill: ".junie/skills", ownRootFile: ".junie/guidelines.md"},
+		{preset: "windsurf", ok: true, agentsMD: true, skills: true, ownSkill: ".windsurf/skills"},
+		{preset: "cline", ok: true, agentsMD: true, skills: true, ownSkill: ".cline/skills"},
+		{preset: "continue-dev", ok: true, agentsMD: true},
+		{preset: "mcp"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.preset, func(t *testing.T) {
@@ -64,6 +69,34 @@ func TestSharedOutputConsumerFor(t *testing.T) {
 			assert.Equal(t, tc.skills, consumer.Reads(SharedAgentSkills))
 			assert.Equal(t, tc.imports, consumer.ImportsAgentsMD)
 			assert.Equal(t, tc.agentsMD || tc.imports, consumer.NeedsAgentsMD())
+		})
+	}
+}
+
+func TestSharedAgentsMDInlining(t *testing.T) {
+	cases := []struct {
+		name    string
+		presets []string
+		rules   *RulesConfig
+		want    AgentsMDInlining
+	}{
+		{"no consumer", []string{"mcp"}, nil, AgentsMDInlining{}},
+		{"folder presets only", []string{"claude", "cursor", "windsurf", "cline", "continue-dev", "junie", "antigravity"}, nil, AgentsMDInlining{}},
+		{"copilot adds auto and manual", []string{"copilot", "cursor"}, nil, AgentsMDInlining{AutoManual: true}},
+		{"codex has no folder", []string{"claude", "codex"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"gemini has no folder", []string{"cursor", "gemini"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"hermes has no folder", []string{"hermes"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"claude in inline mode", []string{"claude"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"junie in inline mode", []string{"cursor", "junie"}, &RulesConfig{ModeByPreset: map[string]string{"junie": RulesModeInline}}, AgentsMDInlining{Scoped: true, AutoManual: true}},
+		{"cursor ignores inline mode", []string{"cursor"}, &RulesConfig{Mode: RulesModeInline}, AgentsMDInlining{}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{AgentsMD: true, Rules: tc.rules}
+			for _, p := range tc.presets {
+				cfg.Presets = append(cfg.Presets, Preset{BuiltIn: p})
+			}
+			assert.Equal(t, tc.want, SharedAgentsMDInlining(cfg))
 		})
 	}
 }

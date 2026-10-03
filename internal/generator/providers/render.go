@@ -50,7 +50,7 @@ func (g *Generator) LocalRuleOutputs(rules []config.ContentFile, baseDir string,
 	if spec == nil || !spec.Split {
 		return nil, rules, nil
 	}
-	return presets.PlanLocalRules(g.rulesTarget(spec), g.splitRouting(spec, cfg), rules, baseDir, cfg)
+	return presets.PlanLocalRules(g.rulesTarget(spec), g.splitRouting(spec, cfg, true), rules, baseDir, cfg)
 }
 
 // GetOutputPaths implements config.PresetGenerator. Returns root file (if any)
@@ -206,7 +206,7 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 
 	target := g.rulesTarget(spec)
 	plan.target = &target
-	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg), rulefiles.ScopeOf(cfg), reg)
+	files, inlineRules, inlineContext, err := rulefiles.Plan(rules, ctx, plan.target, g.splitRouting(spec, cfg, false), rulefiles.ScopeOf(cfg), reg)
 	if err != nil {
 		return nil, oops.With("preset", g.Spec.Name).Wrapf(err, "plan %s rule files", g.Spec.Name)
 	}
@@ -216,16 +216,31 @@ func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, r
 
 // splitRouting picks the Routing for a split spec. In inline mode a spec
 // without inline_filter keeps everything in the root file.
-func (g *Generator) splitRouting(spec *OutputSpec, cfg *config.Config) rulefiles.Routing {
+//
+// Machine-local rules are not part of AGENTS.md, so their always-on rules stay in
+// the rules folder unless a local root file carries them (the claude shim has
+// none, so CLAUDE.local.md does).
+func (g *Generator) splitRouting(spec *OutputSpec, cfg *config.Config, local bool) rulefiles.Routing {
 	routing := rulefiles.RoutingFor(cfg.RulesModeFor(g.Spec.Name), true)
 	if routing == rulefiles.RoutingScopedOnly && spec.InlineFilter != InlineFilterPathScoped {
 		return rulefiles.RoutingNone
 	}
-	if g.importsAgentsMD(cfg) {
+	if g.foldsAlwaysOnIntoAgentsMD(cfg) && (!local || g.importsAgentsMD(cfg)) {
 		// Always-on rules and context live in the shared AGENTS.md.
 		return rulefiles.WithoutAlwaysOn(routing)
 	}
 	return routing
+}
+
+// foldsAlwaysOnIntoAgentsMD reports whether agents_md moves this provider's
+// always-on rules and context into the shared AGENTS.md, leaving its rules
+// folder the rest (claude, junie).
+func (g *Generator) foldsAlwaysOnIntoAgentsMD(cfg *config.Config) bool {
+	if g.Spec.Root == nil || !cfg.ReadsSharedAgentsMD(g.Spec.Name) {
+		return false
+	}
+	consumer, _ := config.SharedOutputConsumerFor(g.Spec.Name)
+	return consumer.RulesFolder
 }
 
 // importsAgentsMD reports whether the agents_md flag turns this provider's root

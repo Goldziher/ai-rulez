@@ -92,11 +92,15 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 	if err != nil {
 		return nil, err
 	}
-	rulefiles.WarnUnreadScopeFile(cfg, presetNameCopilot, ".github/copilot-instructions.md", inlineRules, inlineContext)
-	outputs = append(outputs, config.OutputFile{
-		Path:    filepath.Join(baseDir, ".github", "copilot-instructions.md"),
-		Content: g.renderInstructionsFile(cfg, inlineRules, inlineContext),
-	})
+	// With agents_md the shared AGENTS.md carries the always-on and the auto and
+	// manual items, and copilot-instructions.md would shadow it in other tools.
+	if !cfg.ReadsSharedAgentsMD(presetNameCopilot) {
+		rulefiles.WarnUnreadScopeFile(cfg, presetNameCopilot, ".github/copilot-instructions.md", inlineRules, inlineContext)
+		outputs = append(outputs, config.OutputFile{
+			Path:    filepath.Join(baseDir, ".github", "copilot-instructions.md"),
+			Content: g.renderInstructionsFile(cfg, inlineRules, inlineContext),
+		})
+	}
 	ruleOutputs, err := renderCopilotRuleFiles(ruleFiles, baseDir, cfg)
 	if err != nil {
 		return nil, err
@@ -182,16 +186,22 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 // always-on or glob-scoped (auto, manual) stay inline instead of becoming
 // files that would never be applied automatically.
 func planCopilotRules(content *config.ContentTree, cfg *config.Config) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
-	return planCopilotItems(allInlineRules(content), allInlineContext(content), cfg, rulefiles.ScopeOf(cfg), rulefiles.RegistryFor(cfg, presetNameCopilot))
+	return planCopilotItems(allInlineRules(content), allInlineContext(content), cfg, rulefiles.ScopeOf(cfg), rulefiles.RegistryFor(cfg, presetNameCopilot), false)
 }
 
 // planCopilotItems is planCopilotRules over explicit rule and context lists, so
 // machine-local rules are routed exactly like shared ones. Local rules pass a
 // zero scope and a nil registry: they are root-only and their files never
 // compete with the shared ones for a path.
-func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Config, scope rulefiles.ScopeInfo, reg *rulefiles.Registry,
+//
+// local is set for machine-local rules, which AGENTS.md does not carry: their
+// always-on rules stay files whatever agents_md says.
+func planCopilotItems(allRules, allContext []config.ContentFile, cfg *config.Config, scope rulefiles.ScopeInfo, reg *rulefiles.Registry, local bool,
 ) (files []rulefiles.Item, rules, ctx []config.ContentFile, err error) {
 	routing := rulefiles.RoutingFor(cfg.RulesModeFor(presetNameCopilot), true)
+	if !local {
+		routing = routingWithSharedAgentsMD(cfg, presetNameCopilot, routing)
+	}
 	target := copilotRulesTarget
 	// Items Copilot cannot apply automatically stay inline and never reach
 	// Plan, so they cannot collide with the files that do get written.

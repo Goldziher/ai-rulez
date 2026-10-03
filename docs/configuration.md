@@ -392,9 +392,9 @@ agents_md = false  # Default: every preset writes its own files
 
 When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
 `[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
-(`codex`, `opencode`, `amp`, `xum`, `claude`, `gemini`, `antigravity` and `hermes`; `cursor` only for skills) stop writing their own
-`AGENTS.md` copy, root file and skills directory. Other presets are unchanged for now. Turning the flag
-off regenerates the per-tool files and removes the shared ones that no preset writes itself.
+(`codex`, `opencode`, `amp`, `xum`, `claude`, `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `windsurf`,
+`cline`, `continue-dev` and `junie`) stop writing their own `AGENTS.md` copy, root file and skills directory.
+Turning the flag off regenerates the per-tool files and removes the shared ones that no preset writes itself.
 
 Per-preset behavior with the flag on:
 
@@ -405,8 +405,20 @@ Per-preset behavior with the flag on:
 | `claude`                      | `CLAUDE.md` is a banner plus `@AGENTS.md`  | `.claude/skills` (Claude ignores `.agents/skills`) | `.claude/rules` keeps path-scoped, auto and manual rules only; `.claude/agents`, commands, MCP and settings unchanged; `CLAUDE.local.md` unchanged |
 | `gemini`                      | no `GEMINI.md`                             | shared `.agents/skills`               | `.gemini/settings.json` gets `context.fileName` with `AGENTS.md` (existing names and keys kept; not written for `[[scopes]]` runs, the root settings cover them) |
 | `antigravity`                 | no `GEMINI.md`                             | shared `.agents/skills`               | scoped rules stay in `.agents/rules`; with `gemini` also enabled the rules folder is used, since no preset writes `GEMINI.md`          |
-| `cursor`                      | unchanged                                  | shared `.agents/skills`               | rules, commands, agents and MCP files unchanged                                                                                       |
+| `cursor` | none | shared `.agents/skills` | `.cursor/rules` keeps path-scoped, auto and manual rules and path-scoped context only (no always-on rule files, no context files for unscoped context); commands, agents and MCP unchanged |
+| `copilot` | no `.github/copilot-instructions.md` (it would shadow `AGENTS.md` in other tools) | shared `.agents/skills` (no `.github/skills`) | `.github/instructions` keeps `applyTo`-scoped items only; auto and manual rules go into the shared `AGENTS.md` as inline text with a `_When relevant_` line; `.github/agents` and commands unchanged |
+| `windsurf`, `cline` | none | shared `.agents/skills` (no `.windsurf/skills`, `.cline/skills`) | `.windsurf/rules` and `.clinerules` keep path-scoped, auto and manual rules and path-scoped context only; agents and workflows unchanged |
+| `continue-dev` | none (`AGENTS.md` at the repository root only) | its own: `.continue/prompts` carries the skills, since Continue does not read `.agents/skills` | `.continue/rules` keeps path-scoped, auto and manual rules and path-scoped context only; the prompts file is unchanged (it also carries commands and context as prompts) |
+| `junie` | no `.junie/guidelines.md` (Junie prefers `AGENTS.md` over it) | shared `.agents/skills` (no `.junie/skills`) | `.junie/rules` keeps path-scoped, auto and manual rules only; `.junie/agents` unchanged |
 | `hermes`                      | no `.hermes.md` (it would shadow `AGENTS.md`) | shared `.agents/skills`            | none                                                                                                                                  |
+
+Path-scoped, auto and manual rules, and path-scoped context, appear in the shared `AGENTS.md` (with their
+`_Applies to_` or `_When relevant_` line) only when a preset that relies on it has no rules folder that holds
+them: `codex`, `opencode`, `amp`, `xum`, `hermes` and `gemini`, or a folder preset whose `[rules] mode` is
+`inline` (`claude`, `antigravity`, `junie`). When every such preset has its own folder (`claude`, `cursor`,
+`copilot`, `windsurf`, `cline`, `continue-dev`, `junie`, `antigravity`), `AGENTS.md` carries always-on rules and
+context only, except that `copilot` adds the auto and manual rules its instruction files cannot express. Machine-local
+rules are not part of `AGENTS.md` and keep their per-preset files.
 
 An item whose `targets` names any preset that relies on the shared `AGENTS.md` (for example `claude` or
 `gemini`) is included in it. `GEMINI.local.md` is still written when local content exists, but Gemini CLI
