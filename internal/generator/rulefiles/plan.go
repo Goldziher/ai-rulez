@@ -84,6 +84,16 @@ func NewRegistryFor(cfg *config.Config) *Registry {
 	return r
 }
 
+// reservedOwner owns the paths Reserve claims.
+const reservedOwner = "ai-rulez:generated"
+
+// Reserve claims the file a rule with the given id would get in t's folder for a
+// file ai-rulez generates itself (the local root file), so a rule that maps to it
+// is disambiguated like any other colliding rule.
+func (r *Registry) Reserve(t Target, id string) {
+	r.claims.Claim(path.Join(t.Dir, FileName(t, Item{ID: id})), reservedOwner)
+}
+
 // source is the machine-independent identity of the file an item comes from.
 // It is both the sort key that decides which colliding item keeps the plain
 // name and the input of the suffix hash, so it must read the same on every

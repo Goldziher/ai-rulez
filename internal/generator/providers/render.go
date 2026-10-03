@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"path"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -64,7 +65,22 @@ func (g *Generator) LocalRuleOutputs(rules []config.ContentFile, baseDir string,
 	if spec == nil || !spec.Split {
 		return nil, rules, nil
 	}
-	return presets.PlanLocalRules(g.rulesTarget(spec), g.splitRouting(spec, cfg, true), rules, baseDir, cfg)
+	t := g.rulesTarget(spec)
+	return presets.PlanLocalRules(t, g.splitRouting(spec, cfg, true), rules, baseDir, cfg, g.reservedLocalRootIDs(t)...)
+}
+
+// reservedLocalRootIDs is the rule id whose local file the generated local root
+// file occupies, when that file sits in the rules folder of t ("ai-rulez" for
+// .junie/rules/ai-rulez.local.md).
+func (g *Generator) reservedLocalRootIDs(t rulefiles.Target) []string {
+	local := g.LocalRootFile()
+	if local == "" || path.Dir(local) != strings.TrimRight(t.Dir, "/") {
+		return nil
+	}
+	if id, ok := strings.CutSuffix(path.Base(local), ".local"+t.Ext); ok {
+		return []string{id}
+	}
+	return nil
 }
 
 // GetOutputPaths implements config.PresetGenerator. Returns root file (if any)
