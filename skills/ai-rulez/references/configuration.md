@@ -77,7 +77,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | Preset       | Output Path                     |
 | ------------ | ------------------------------- |
 | claude       | CLAUDE.md                       |
-| cursor       | .cursor/rules/, .cursor/commands/, .agents/ |
+| cursor       | .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/ |
 | gemini       | GEMINI.md, .gemini/, .agents/   |
 | copilot      | .github/copilot-instructions.md, .github/{skills,agents,commands}/ |
 | continue-dev | .continue/                      |

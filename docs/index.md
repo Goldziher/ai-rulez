@@ -113,6 +113,8 @@ frontend = ["frontend", "qa"]
 - Remote includes for sharing rules across projects
 - MCP integration for programmatic access
 - Support for monorepos and multi-team projects
+- Optional shared `AGENTS.md` and `.agents/skills` for every tool that reads them (`agents_md`)
+- Machine-local, gitignored content and config overlay (`config.local.*`, `.ai-rulez/local/`)
 
 ## Project Structure
 

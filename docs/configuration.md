@@ -142,7 +142,7 @@ Specifies which tools to generate configuration for. Can be built-in preset name
 ```toml
 presets = [
   "claude",       # → CLAUDE.md, .claude/ (rules/, skills/, agents/)
-  "cursor",       # → .cursor/rules/, .cursor/commands/, .agents/
+  "cursor",       # → .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/
   "gemini",       # → GEMINI.md, .gemini/, .agents/
   "copilot",      # → .github/copilot-instructions.md, .github/instructions/, .github/{skills,agents,commands}/
   "windsurf",     # → .windsurf/
@@ -157,6 +157,9 @@ presets = [
   "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio, http and sse MCP servers)
 ]
 ```
+
+With `agents_md = true`, one shared `AGENTS.md` and `.agents/skills/` replace the per-tool copies; see
+[`agents_md`](#agents_md).
 
 With the default `[rules] mode = "split"`, rules are written to each tool's native rules folder
 (`.claude/rules/`, `.cursor/rules/`, `.github/instructions/`, `.junie/rules/`, `.agents/rules/`, and so
