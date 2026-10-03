@@ -58,6 +58,10 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		return nil, err
 	}
 
+	// Clean removes the local manifest itself, so the files it lists go with it
+	// whether or not the local inputs are still loaded.
+	g.localSkipped = false
+
 	plan := &CleanPlan{Profile: activeProfile}
 	g.previousFiles = nil
 	defer func() { g.previousFiles = nil }()
