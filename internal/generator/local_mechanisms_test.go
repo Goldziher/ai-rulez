@@ -386,3 +386,43 @@ func TestLocalRoot_RuleNamedLikeTheRootIsRenamed(t *testing.T) {
 		})
 	}
 }
+
+// A 4.23.0 run recorded files nothing reads in the local manifest; the next
+// generate removes them through it and writes the mechanism the tool loads.
+func TestLocalRoot_MigratesFilesWrittenBy4_23_0(t *testing.T) {
+	tests := []struct {
+		name    string
+		preset  string
+		flag    string
+		stale   string
+		wantNew string
+	}{
+		{name: "codex", preset: "codex", stale: "AGENTS.local.md", wantNew: "AGENTS.override.md"},
+		{name: "hermes with agents_md", preset: "hermes", flag: "agents_md = true\n", stale: ".hermes.local.md", wantNew: "AGENTS.override.md"},
+		{name: "hermes", preset: "hermes", stale: ".hermes.local.md"},
+		{name: "amp", preset: "amp", stale: "AGENTS.local.md"},
+		{name: "junie", preset: "junie", stale: ".junie/guidelines.local.md", wantNew: ".junie/rules/ai-rulez.local.md"},
+		{name: "antigravity", preset: "antigravity", stale: "GEMINI.local.md", wantNew: ".agents/rules/ai-rulez.local.md"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange: the files and manifest the previous version left behind
+			root := t.TempDir()
+			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{tt.preset}, "", ""))
+			writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+			writeAgentsMDFile(t, root, tt.stale, "<!--\nGenerated\n-->\n\nOLD_LOCAL_BODY\n")
+			writeAgentsMDFile(t, root, ".ai-rulez/.generated-manifest.local.json",
+				`{"version":"1","files":["`+tt.stale+`"]}`)
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			assert.NoFileExists(t, filepath.Join(root, filepath.FromSlash(tt.stale)))
+			if tt.wantNew != "" {
+				assert.Contains(t, readAgentsMDFile(t, root, tt.wantNew), "LOCAL_BODY")
+				assert.Contains(t, manifestFiles(t, root, ".generated-manifest.local.json"), tt.wantNew)
+			}
+		})
+	}
+}
