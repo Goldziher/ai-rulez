@@ -1,6 +1,10 @@
 package rulefiles
 
 import (
+	"crypto/sha1" //nolint:gosec // test mirrors the implementation
+	"encoding/hex"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -474,17 +478,6 @@ func contentNames(in []config.ContentFile) []string {
 	return out
 }
 
-func TestPlan_IDCollision(t *testing.T) {
-	tg := &Target{Ext: ".md"}
-	rules := []config.ContentFile{cf("Go Style", "a/one.md"), cf("Go_Style", "b/two.md")}
-
-	_, _, _, err := Plan(rules, nil, tg, RoutingAll, ScopeInfo{}, nil)
-
-	require.Error(t, err)
-	assert.Contains(t, err.Error(), "a/one.md")
-	assert.Contains(t, err.Error(), "b/two.md")
-}
-
 func TestPlan_ContextDoesNotCollideWithRule(t *testing.T) {
 	tg := &Target{Ext: ".md"}
 
@@ -562,6 +555,78 @@ func TestExpandBraces_Cap(t *testing.T) {
 	require.Len(t, notes, 1)
 }
 
+func planNames(t *testing.T, rules, ctx []config.ContentFile, tg *Target, routing Routing) []string {
+	t.Helper()
+	files, _, _, err := Plan(rules, ctx, tg, routing, ScopeInfo{}, nil)
+	require.NoError(t, err)
+	names := make([]string, 0, len(files))
+	for _, f := range files {
+		names = append(names, FileName(*tg, f))
+	}
+	return names
+}
+
+func TestPlan_CollisionsDisambiguate(t *testing.T) {
+	// first 6 hex of sha1("b.md") and sha1("b/two.md") are computed in the test
+	// so the expectation does not restate the algorithm's output blindly.
+	suffix := func(src string) string {
+		sum := sha1.Sum([]byte(src)) //nolint:gosec // test mirrors the implementation
+		return hex.EncodeToString(sum[:])[:6]
+	}
+	tests := []struct {
+		name  string
+		rules []config.ContentFile
+		want  []string
+	}{
+		{"case-only names", []config.ContentFile{cf("Foo", "a.md"), cf("foo", "b.md")},
+			[]string{"Foo.md", "foo-" + suffix("b.md") + ".md"}},
+		{"separators", []config.ContentFile{cf("api_style", "a.md"), cf("api-style", "b.md")},
+			[]string{"api-style.md", "api-style-" + suffix("b.md") + ".md"}},
+		{"symbols dropped", []config.ContentFile{cf("C++ style", "a.md"), cf("C style", "b.md")},
+			[]string{"C-style.md", "C-style-" + suffix("b.md") + ".md"}},
+		{"later input order loses by source path, not position", []config.ContentFile{cf("foo", "z/foo.md"), cf("Foo", "a/Foo.md")},
+			[]string{"foo-" + suffix("z/foo.md") + ".md", "Foo.md"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var warned []string
+			defer SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) })()
+
+			got := planNames(t, tt.rules, nil, &Target{Preset: "claude", Ext: ".md"}, RoutingAll)
+
+			assert.Equal(t, tt.want, got)
+			require.Len(t, warned, 1)
+			assert.Contains(t, warned[0], "collide")
+		})
+	}
+}
+
+func TestPlan_CollisionContextAndRule(t *testing.T) {
+	var warned int
+	defer SetWarnSink(func(string, ...any) { warned++ })()
+
+	got := planNames(t, []config.ContentFile{cf("context-x", "r.md")}, []config.ContentFile{cf("x", "c.md")},
+		&Target{Preset: "cline", Ext: ".md"}, RoutingEverything)
+
+	require.Len(t, got, 2)
+	assert.Regexp(t, `^context-x-[0-9a-f]{6}\.md$`, got[0], "the rule's source r.md sorts after c.md")
+	assert.Equal(t, "context-x.md", got[1])
+	assert.Equal(t, 1, warned)
+}
+
+func TestPlan_CollisionStillCollidingIsError(t *testing.T) {
+	// A third rule is named exactly like the disambiguated id of the second.
+	sum := sha1.Sum([]byte("b.md")) //nolint:gosec // test mirrors the implementation
+	taken := "foo-" + hex.EncodeToString(sum[:])[:6]
+	defer SetWarnSink(func(string, ...any) {})()
+	rules := []config.ContentFile{cf("foo", "a.md"), cf("Foo", "b.md"), cf(taken, "0.md")}
+
+	_, _, _, err := Plan(rules, nil, &Target{Preset: "claude", Ext: ".md"}, RoutingAll, ScopeInfo{}, nil)
+
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "collide")
+}
+
 func TestPlan_RegistryCollisions(t *testing.T) {
 	tg := &Target{Dir: ".claude/rules", Ext: ".md"}
 	root := []config.ContentFile{cf("Foo", "root/Foo.md")}
@@ -571,51 +636,26 @@ func TestPlan_RegistryCollisions(t *testing.T) {
 		scope ScopeInfo
 		next  []config.ContentFile
 		nscp  ScopeInfo
-		fail  bool
+		want  string
 	}{
-		{"cross plan", root, ScopeInfo{}, []config.ContentFile{cf("foo", "s/foo.md")}, ScopeInfo{}, true},
+		{"cross plan", root, ScopeInfo{}, []config.ContentFile{cf("foo", "s/foo.md")}, ScopeInfo{}, "foo-"},
 		{"same slug twice", []config.ContentFile{cf("x", "a/x.md")}, ScopeInfo{Slug: "api", Prefix: "api"},
-			[]config.ContentFile{cf("x", "b/x.md")}, ScopeInfo{Slug: "api", Prefix: "api"}, true},
+			[]config.ContentFile{cf("x", "b/x.md")}, ScopeInfo{Slug: "api", Prefix: "api"}, "api--x-"},
 		{"different slugs", []config.ContentFile{cf("x", "a/x.md")}, ScopeInfo{Slug: "api", Prefix: "api"},
-			[]config.ContentFile{cf("x", "b/x.md")}, ScopeInfo{Slug: "web", Prefix: "web"}, false},
+			[]config.ContentFile{cf("x", "b/x.md")}, ScopeInfo{Slug: "web", Prefix: "web"}, "web--x.md"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			defer SetWarnSink(func(string, ...any) {})()
 			reg := NewRegistry()
 			_, _, _, err := Plan(tt.first, nil, tg, RoutingAll, tt.scope, reg)
 			require.NoError(t, err)
 
-			_, _, _, err = Plan(tt.next, nil, tg, RoutingAll, tt.nscp, reg)
+			files, _, _, err := Plan(tt.next, nil, tg, RoutingAll, tt.nscp, reg)
 
-			assert.Equal(t, tt.fail, err != nil)
-		})
-	}
-}
-
-func TestPlan_Collisions(t *testing.T) {
-	tests := []struct {
-		name    string
-		rules   []config.ContentFile
-		context []config.ContentFile
-		wantErr string
-	}{
-		{"case-only rule names", []config.ContentFile{cf("Foo", "a.md"), cf("foo", "b.md")}, nil, "a.md"},
-		{"names equal after sanitizing", []config.ContentFile{cf("a b", "a.md"), cf("a_b", "b.md")}, nil, "a.md"},
-		{"rule context-x vs context x", []config.ContentFile{cf("context-x", "r.md")},
-			[]config.ContentFile{cf("x", "c.md")}, "c.md"},
-		{"case-only rule vs context", []config.ContentFile{cf("Context-X", "r.md")},
-			[]config.ContentFile{cf("x", "c.md")}, "r.md"},
-		{"case-only context names", nil, []config.ContentFile{cf("Ctx", "a.md"), cf("ctx", "b.md")}, "b.md"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			tg := &Target{Preset: "cline", Ext: ".md"}
-
-			_, _, _, err := Plan(tt.rules, tt.context, tg, RoutingEverything, ScopeInfo{}, nil)
-
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantErr)
-			assert.Contains(t, err.Error(), "collide")
+			require.NoError(t, err)
+			require.Len(t, files, 1)
+			assert.True(t, strings.HasPrefix(FileName(*tg, files[0]), tt.want), FileName(*tg, files[0]))
 		})
 	}
 }
@@ -729,6 +769,7 @@ func withActivation(c config.ContentFile, mode string) config.ContentFile {
 }
 
 func TestRegistry_SameSourceClaimingAgainIsNotACollision(t *testing.T) {
+	defer SetWarnSink(func(string, ...any) {})()
 	// Arrange
 	reg := NewRegistry()
 	tg := &Target{Dir: "rules", Ext: ".md"}
@@ -738,12 +779,14 @@ func TestRegistry_SameSourceClaimingAgainIsNotACollision(t *testing.T) {
 	// Act
 	_, _, _, err1 := Plan(rule, nil, tg, RoutingAll, ScopeInfo{}, reg)
 	_, _, _, err2 := Plan(rule, nil, tg, RoutingAll, ScopeInfo{}, reg)
-	_, _, _, err3 := Plan(other, nil, tg, RoutingAll, ScopeInfo{}, reg)
+	files3, _, _, err3 := Plan(other, nil, tg, RoutingAll, ScopeInfo{}, reg)
 
 	// Assert
 	require.NoError(t, err1)
 	require.NoError(t, err2)
-	require.Error(t, err3)
+	require.NoError(t, err3)
+	require.Len(t, files3, 1)
+	assert.Regexp(t, `^X-[0-9a-f]{6}\.md$`, FileName(*tg, files3[0]))
 }
 
 func TestPlan_ScopedContextRecursive(t *testing.T) {
@@ -876,4 +919,52 @@ func TestPlan_ScopedAutoManualWarnsOncePerScope(t *testing.T) {
 	require.NoError(t, err2)
 	require.Len(t, warned, 1)
 	assert.Contains(t, warned[0], "not limited to the scope")
+}
+
+func TestLogicalSource(t *testing.T) {
+	cwd, err := os.Getwd()
+	require.NoError(t, err)
+	tests := []struct {
+		name, root, owner, want string
+	}{
+		{"under config dir", "/p/.ai-rulez", "/p/.ai-rulez/rules/api.md", "rules/api.md"},
+		{"relative config dir, absolute source", ".ai-rulez", filepath.Join(cwd, ".ai-rulez", "rules", "api.md"), "rules/api.md"},
+		{"absolute config dir, relative source", filepath.Join(cwd, ".ai-rulez"), ".ai-rulez/domains/web/rules/x.md", "domains/web/rules/x.md"},
+		{"git include cache", "/p/.ai-rulez", "/home/ann/.cache/ai-rulez/includes/shared/.ai-rulez/rules/x.md", "include:shared/rules/x.md"},
+		{"same include on another machine", "/q/.ai-rulez", "/Users/bob/.cache/ai-rulez/includes/shared/.ai-rulez/rules/x.md", "include:shared/rules/x.md"},
+		{"windows cache path", `C:\p\.ai-rulez`, `D:\Users\bob\.cache\ai-rulez\includes\shared\.ai-rulez\rules\x.md`, "include:shared/rules/x.md"},
+		{"local include elsewhere", "/p/.ai-rulez", "/shared/team/.ai-rulez/rules/x.md", "include:rules/x.md"},
+		{"no marker falls back to last two segments", "/p/.ai-rulez", "/tmp/abc123/rules/x.md", "include:rules/x.md"},
+		{"relative source without a config dir", "", "rules/x.md", "rules/x.md"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, logicalSource(tt.root, tt.owner))
+		})
+	}
+}
+
+func TestPlan_SuffixIsMachineIndependent(t *testing.T) {
+	defer SetWarnSink(func(string, ...any) {})()
+	tg := &Target{Preset: "claude", Ext: ".md"}
+	plan := func(root, home string) []string {
+		reg := NewRegistry()
+		reg.root = root
+		rules := []config.ContentFile{
+			cf("Foo", root+"/rules/foo.md"),
+			cf("foo", home+"/.cache/ai-rulez/includes/shared/.ai-rulez/rules/foo.md"),
+		}
+		files, _, _, err := Plan(rules, nil, tg, RoutingAll, ScopeInfo{}, reg)
+		require.NoError(t, err)
+		var names []string
+		for _, f := range files {
+			names = append(names, FileName(*tg, f))
+		}
+		return names
+	}
+
+	a := plan("/work/a/.ai-rulez", "/home/ann")
+	b := plan("/srv/b/.ai-rulez", "/Users/bob")
+
+	assert.Equal(t, a, b)
 }

@@ -62,6 +62,9 @@ func ResetDowngrades() {
 	downgradeMu.Lock()
 	defer downgradeMu.Unlock()
 	clear(downgrades)
+	collisionMu.Lock()
+	clear(collisionWarned)
+	collisionMu.Unlock()
 	clear(scopeWarned)
 	clear(negatedWarned)
 }

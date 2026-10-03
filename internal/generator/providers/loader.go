@@ -4,9 +4,12 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"path"
+	"regexp"
 	"slices"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -57,6 +60,7 @@ func LoadProviderSpec(raw []byte, filename string, format LoadFormat) (*Provider
 	if err := validateSpec(spec); err != nil {
 		return nil, oops.With("filename", filename).Wrapf(err, "invalid provider spec")
 	}
+	registerSplitRulesDir(spec)
 
 	return spec, nil
 }
@@ -176,7 +180,37 @@ func validateSplitFields(typ string, out *OutputSpec, rootSections []string) err
 	if out.Dialect == "" {
 		return fmt.Errorf("outputs[%q].dialect is required when split = true", typ)
 	}
+	if err := validateSplitDir(typ, out.Dir); err != nil {
+		return err
+	}
 	return validateSplitFilename(typ, out.Filename)
+}
+
+// registerSplitRulesDir marks the folder of a split rules output as a shared
+// rules folder, so it gets the protections the built-in folders have: the
+// overwrite guard for hand-written files, hashes in the banner, and per-file
+// gitignore entries. Registering on load is the one point every spec passes
+// through, built-in or custom, before any path check can run.
+func registerSplitRulesDir(s *ProviderSpec) {
+	if out := s.Outputs[OutputTypeRules]; out != nil && out.Split {
+		config.RegisterRulesDir(out.Dir)
+	}
+}
+
+// driveLetter matches a Windows drive prefix such as "C:".
+var driveLetter = regexp.MustCompile(`^[A-Za-z]:`)
+
+func validateSplitDir(typ, dir string) error {
+	if strings.TrimSpace(dir) == "" {
+		return fmt.Errorf("outputs[%q].dir is required when split = true", typ)
+	}
+	slashed := strings.ReplaceAll(dir, "\\", "/")
+	clean := path.Clean(slashed)
+	if strings.HasPrefix(slashed, "/") || driveLetter.MatchString(slashed) || path.IsAbs(clean) ||
+		clean == "." || clean == ".." || strings.HasPrefix(clean, "../") {
+		return fmt.Errorf("outputs[%q].dir: split needs a relative path inside the project, got %q", typ, dir)
+	}
+	return nil
 }
 
 func validateSplitFilename(typ, filename string) error {

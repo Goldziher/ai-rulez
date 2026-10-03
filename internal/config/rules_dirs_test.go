@@ -50,3 +50,33 @@ func TestRulesDirRemainder(t *testing.T) {
 		})
 	}
 }
+
+func TestRegisterRulesDir(t *testing.T) {
+	// Not parallel: registration is process-wide.
+	tests := []struct {
+		name       string
+		register   string
+		path       string
+		wantInDir  bool
+		wantRemain string
+	}{
+		{"file in registered dir", "custom-w3/rules", "custom-w3/rules/x.md", true, "x.md"},
+		{"nested under a subproject", "custom-w3/rules/", "apps/web/custom-w3/rules/x.md", true, "x.md"},
+		{"backslash and dot-slash forms", ".\\custom-w3b\\rules", "custom-w3b/rules/y.md", true, "y.md"},
+		{"sibling prefix is not the folder", "custom-w3c/rules", "custom-w3c/rules-extra/x.md", false, ""},
+		{"empty registration is ignored", "", "x.md", false, ""},
+		{"dot registration is ignored", ".", "x.md", false, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			RegisterRulesDir(tt.register)
+			RegisterRulesDir(tt.register) // idempotent
+			t.Cleanup(func() { UnregisterRulesDir(tt.register) })
+
+			rest, ok := RulesDirRemainder(tt.path)
+
+			assert.Equal(t, tt.wantInDir, ok && rest != "")
+			assert.Equal(t, tt.wantRemain, rest)
+		})
+	}
+}

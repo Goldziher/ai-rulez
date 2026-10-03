@@ -39,11 +39,11 @@ func localRuleOutputs(t rulefiles.Target, items []rulefiles.Item, baseDir string
 // preset applies to shared rules and renders the routed ones as
 // "<dir>/<id>.local<ext>". Rules the routing keeps inline are returned in
 // inline. The plan has its own registry: a local rule may share a name with a
-// shared rule, but two local rules that map to the same file name are an error.
+// shared rule, but two local rules that map to the same file name are disambiguated like shared ones.
 func PlanLocalRules(t rulefiles.Target, routing rulefiles.Routing, rules []config.ContentFile, baseDir string,
 	cfg *config.Config,
 ) (files []config.OutputFile, inline []config.ContentFile, err error) {
-	items, inline, _, err := rulefiles.Plan(rules, nil, &t, routing, rulefiles.ScopeInfo{}, nil)
+	items, inline, _, err := rulefiles.Plan(rules, nil, &t, routing, rulefiles.ScopeInfo{}, rulefiles.NewRegistryFor(cfg))
 	if err != nil {
 		return nil, nil, oops.With("preset", t.Preset).Wrapf(err, "plan local %s rule files", t.Preset)
 	}
@@ -72,7 +72,7 @@ func (l alwaysFileLocalRules) LocalRuleOutputs(rules []config.ContentFile, baseD
 // rules exactly like shared ones: rules it cannot apply automatically stay inline.
 func (g *CopilotPresetGenerator) LocalRuleOutputs(rules []config.ContentFile, baseDir string, cfg *config.Config,
 ) ([]config.OutputFile, []config.ContentFile, error) {
-	items, inline, _, err := planCopilotItems(rules, nil, cfg, rulefiles.ScopeInfo{}, nil)
+	items, inline, _, err := planCopilotItems(rules, nil, cfg, rulefiles.ScopeInfo{}, rulefiles.NewRegistryFor(cfg))
 	if err != nil {
 		return nil, nil, err
 	}
