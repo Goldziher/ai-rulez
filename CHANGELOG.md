@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Added
+
+- **xum stdio MCP `env`** (#209): Xum's `mcp.jsonc` loader keeps only the command string of a stdio entry, so `env` is written as a POSIX shell assignment prefix (`GITHUB_TOKEN=... npx -y pkg`, keys sorted, values shell-quoted) instead of being dropped with a warning. Names that are not shell identifiers are skipped with a warning. Resolved secrets in it fall under the existing MCP secret guard (`0600`, must be git-ignored).
+
 ## [4.23.0] - 2026-10-03
 
 ### Added

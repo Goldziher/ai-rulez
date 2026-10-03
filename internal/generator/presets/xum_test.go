@@ -187,11 +187,25 @@ func TestXumPresetGenerator_RenderMCPConfig(t *testing.T) {
 			want:    map[string]interface{}{"mem": "npx -y pkg"},
 		},
 		{
-			name: "stdio env cannot be expressed so the command string is kept",
+			name: "stdio env becomes a sorted shell assignment prefix",
 			servers: map[string]*config.MCPServer{"mem": {
-				Command: "npx", Args: []string{"-y", "pkg"}, Env: map[string]string{"TOKEN": "x"},
+				Command: "npx", Args: []string{"-y", "pkg"}, Env: map[string]string{"TOKEN": "x", "API_URL": "https://e.com"},
 			}},
-			want: map[string]interface{}{"mem": "npx -y pkg"},
+			want: map[string]interface{}{"mem": "API_URL=https://e.com TOKEN=x npx -y pkg"},
+		},
+		{
+			name: "stdio env values are shell-quoted",
+			servers: map[string]*config.MCPServer{"mem": {
+				Command: "npx", Env: map[string]string{"GREETING": "it's $HOME; rm -rf /"},
+			}},
+			want: map[string]interface{}{"mem": `GREETING='it'\''s $HOME; rm -rf /' npx`},
+		},
+		{
+			name: "env names that are not shell identifiers are skipped",
+			servers: map[string]*config.MCPServer{"mem": {
+				Command: "npx", Env: map[string]string{"BAD-NAME": "x", "1X": "y", "OK": "z"},
+			}},
+			want: map[string]interface{}{"mem": "OK=z npx"},
 		},
 		{
 			name: "mixed",
@@ -207,12 +221,12 @@ func TestXumPresetGenerator_RenderMCPConfig(t *testing.T) {
 		{
 			name: "disabled servers",
 			servers: map[string]*config.MCPServer{
-				"mem": {Command: "npx", Enabled: &disabled},
+				"mem": {Command: "npx", Env: map[string]string{"K": "v"}, Enabled: &disabled},
 				"api": {Transport: config.TransportHTTP, URL: "https://example.com/mcp", Enabled: &disabled},
 			},
 			want: map[string]interface{}{
 				"mem": map[string]interface{}{
-					"transport": "stdio", "command": "npx", "disabled": true,
+					"transport": "stdio", "command": "K=v npx", "disabled": true,
 				},
 				"api": map[string]interface{}{
 					"transport": "http", "url": "https://example.com/mcp", "disabled": true,
