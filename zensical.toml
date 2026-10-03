@@ -18,6 +18,7 @@ nav = [
     { "Domains & Profiles" = "domains.md" },
     { "Custom Presets" = "profiles.md" },
     { "Includes" = "includes.md" },
+    { "AGENTS.md and .agents/skills" = "agents-md.md" },
     { "Local Configuration" = "local-overrides.md" },
     { "Installed Skills" = "installed-skills.md" },
     { "Authoring Plugins" = "plugins.md" },
