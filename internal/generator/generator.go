@@ -486,6 +486,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// Rule files of the root and of every scope land in the same rules folders;
 	// the run state carries what each preset has claimed so far.
 	run := config.NewRunState()
+	run.SetPreviouslyGenerated(g.previousManifestFiles())
 	tempCfg.Run = run
 
 	// Compute a single source hash covering all profile-relevant inputs.
@@ -779,7 +780,6 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 	return collected
 }
 
-// writeOutputs writes all output files to disk
 // flattenPresetOutputs merges outputs from all presets, deduplicating directories
 // and detecting file conflicts (last write wins with a warning).
 func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) []config.OutputFile {
