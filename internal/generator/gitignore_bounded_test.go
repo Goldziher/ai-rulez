@@ -92,3 +92,34 @@ func TestIgnoreLocalInputs_CoversTheOverlayLockAndTempFilesBeforeTheyExist(t *te
 	assert.Contains(t, p.read(t, ".gitignore"), ".ai-rulez/.config.local.*")
 	assert.True(t, p.checkIgnored(t, ".ai-rulez/.config.local.toml.lock"))
 }
+
+func TestGenerate_UserNegationOfALocalInputFailsClosed(t *testing.T) {
+	tests := []struct {
+		name     string
+		negation string
+		want     string
+	}{
+		{"local content tree", "!.ai-rulez/local/\n", ".ai-rulez/local"},
+		{"overlay file", "!.ai-rulez/config.local.toml\n", ".ai-rulez/config.local.toml"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p := newDriftProject(t, driftSharedIgnoring)
+			p.git(t, "init", "-q")
+			p.overlay(t, "name = \"renamed\"\n")
+			p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
+			require.NoError(t, NewGenerator(p.load(t)).Generate(""))
+			// A negation below the managed block beats it.
+			p.writeFile(t, ".gitignore", p.read(t, ".gitignore")+tt.negation)
+
+			// Act
+			err := NewGenerator(p.load(t)).Generate("")
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), "not git-ignored")
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+}
