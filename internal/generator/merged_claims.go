@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
@@ -23,9 +24,20 @@ import (
 // overlay, so the record is per machine), and a claim that stops being produced,
 // or that clean is asked to remove, is taken back out with jsonmerge.Unmerge.
 //
-// Without a record (a document merged by 4.23.0 or earlier, or a fresh clone) the
-// fallback is deliberately narrow: only values ai-rulez would write itself, and
-// only MCP server names the current config declares. See presets.LegacyMergeClaims.
+// Every claim is guarded by a digest of the value ai-rulez wrote, and only a value
+// that still matches it is taken back: an entry the user edited is theirs, stays,
+// and is reported once. Claims without a guard (an older record) are held to the
+// value the current config renders now, and kept when there is none.
+//
+// Without a record (a document merged by 4.23.0 or earlier, or a fresh clone) clean
+// alone falls back, and deliberately narrowly: only values ai-rulez would write
+// itself, and only MCP servers the current config declares whose entry equals what
+// it would render. Generate never uses the fallback, because a hand-written entry
+// it cannot tell from its own must not be deleted on every run. See
+// presets.LegacyMergeClaims.
+
+// mergedWarn reports a merged document ai-rulez left alone; tests replace it.
+var mergedWarn = logger.Warn
 
 // mergedEdit is the result of taking ai-rulez's claims out of one document.
 type mergedEdit struct {
@@ -35,33 +47,85 @@ type mergedEdit struct {
 	delete bool // nothing user-authored remains
 }
 
-// previousMergedClaims returns the claims the previous run recorded; empty when
-// the run deliberately ignores local inputs (the record lives beside them).
+// previousMergedClaims returns the claims the previous run recorded: the
+// committed manifest's (documents ai-rulez wrote whole) and the machine-local
+// one's (documents shared with the user, or carrying machine-local servers). The
+// local record is skipped when the run deliberately ignores local inputs.
 func (g *Generator) previousMergedClaims() map[string][]jsonmerge.Claim {
-	if g.localSkipped {
-		return nil
+	previous := map[string][]jsonmerge.Claim{}
+	for rel, claims := range g.readManifest(g.manifestPath()).Merged {
+		previous[rel] = claims
 	}
-	return readManifestFile(g.localManifestPath()).Merged
+	if !g.localSkipped {
+		for rel, claims := range g.readManifest(g.localManifestPath()).Merged {
+			previous[rel] = claims
+		}
+	}
+	return previous
 }
 
 // currentMergedClaims collects the claims of this run's outputs by manifest path.
-// With sharedOnly set, only documents shared with the user are included: those are
-// the ones recorded in the manifest, because a document ai-rulez wrote whole is
-// deleted whole and needs no record (keeping one for every project that merely
-// has a gemini or opencode preset would put a machine-local file in all of them).
-func (g *Generator) currentMergedClaims(outputs []config.OutputFile, sharedOnly bool) map[string][]jsonmerge.Claim {
-	current := map[string][]jsonmerge.Claim{}
+func (g *Generator) currentMergedClaims(outputs []config.OutputFile) map[string][]jsonmerge.Claim {
+	committed, local := g.splitMergedClaims(outputs)
+	for rel, claims := range local {
+		committed[rel] = append(committed[rel], claims...)
+	}
+	return committed
+}
+
+// splitMergedClaims separates the claims worth recording by where they are kept.
+// A document ai-rulez wrote whole is deleted whole, but a server dropped from the
+// config still has to leave it without taking a hand-written one along, so its
+// claims are kept in the committed manifest (they hold names and digests only).
+// Claims of a document shared with the user, of one carrying resolved secrets or
+// of one the machine-local inputs change go to the machine-local manifest
+// instead: the server names there can come from the local overlay, and putting a record in the
+// committed manifest of every project with an MCP server would also leave a
+// gitignored file behind in all of them.
+func (g *Generator) splitMergedClaims(outputs []config.OutputFile,
+) (committed, local map[string][]jsonmerge.Claim) {
+	committed, local = map[string][]jsonmerge.Claim{}, map[string][]jsonmerge.Claim{}
 	for _, output := range outputs {
-		if output.IsDir || len(output.MergeClaims) == 0 || (sharedOnly && !output.PartiallyOwned) {
+		if output.IsDir || len(output.MergeClaims) == 0 {
 			continue
 		}
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if g.skippedPaths[rel] {
 			continue
 		}
-		current[rel] = append(current[rel], output.MergeClaims...)
+		if output.PartiallyOwned || output.Sensitive || output.LocalOnly || g.plan.diverges(rel, output.MergeClaims) {
+			local[rel] = append(local[rel], output.MergeClaims...)
+		} else {
+			committed[rel] = append(committed[rel], output.MergeClaims...)
+		}
 	}
-	return current
+	return committed, local
+}
+
+// reclaimStaleMembers clears PartiallyOwned on a merged document whose only
+// content besides this run's is what the previous run recorded writing and that
+// still holds the recorded value: a server just dropped from the config is still
+// in the file when it is rendered, and would otherwise make a document
+// ai-rulez wrote whole look hand-authored for one run. The stale entries leave
+// afterwards (planUnmerge); a value the user edited does not count.
+func (g *Generator) reclaimStaleMembers(outputs []config.OutputFile) {
+	previous := g.previousMergedClaims()
+	for i := range outputs {
+		output := &outputs[i]
+		if output.IsDir || !output.PartiallyOwned || len(output.MergeClaims) == 0 {
+			continue
+		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		claims := previous[rel]
+		if len(claims) == 0 {
+			continue
+		}
+		claims = append(guardClaims(claims, output.MergeClaims), output.MergeClaims...)
+		result, err := jsonmerge.UnmergeDocument(rel, g.finalContent(*output), claims)
+		if err == nil && result.Empty {
+			output.PartiallyOwned = false
+		}
+	}
 }
 
 // subtractClaims returns the claims in prev that cur no longer makes: a path cur
@@ -112,30 +176,25 @@ func jsonValuesEqual(a, b any) bool {
 	return reflect.DeepEqual(a, b)
 }
 
-// mergedDocumentOwners lists the presets that write each merged document, so the
-// fallback never touches a document whose preset is still on.
-var mergedDocumentOwners = map[string][]string{
-	presets.MergedDocGeminiSettings: {"gemini"},
-	presets.MergedDocOpencodeConfig: {"opencode"},
-	presets.MergedDocAgentsSettings: {"antigravity"},
-	presets.MergedDocXumMCP:         {"xum"},
-	presets.MergedDocMCPJSON:        {"cursor", "copilot", "mcp"},
-	".claude/settings.json":         {"claude"},
-}
-
-// presetEnabled reports whether any of the named presets generates this run.
-func (g *Generator) presetEnabled(names []string) bool {
-	for _, name := range names {
-		if name == "mcp" && (len(g.config.MCPServers) > 0 || g.config.HasSelfServer()) {
-			return true
+// guardClaims holds the claims of an older record, which carry no guard, to the
+// value the current claims record for the same path; one with no current
+// counterpart is dropped, so what it addresses stays.
+func guardClaims(claims, current []jsonmerge.Claim) []jsonmerge.Claim {
+	guarded := make([]jsonmerge.Claim, 0, len(claims))
+	for _, claim := range claims {
+		if claim.Guarded() || claim.Elements != nil {
+			guarded = append(guarded, claim)
+			continue
 		}
-		for _, preset := range g.config.Presets {
-			if preset.GetName() == name {
-				return true
+		for _, now := range current {
+			if now.Guarded() && slices.Equal(now.Path, claim.Path) {
+				claim.Equals, claim.Sum = now.Equals, now.Sum
+				guarded = append(guarded, claim)
+				break
 			}
 		}
 	}
-	return false
+	return guarded
 }
 
 // mergedDocuments lists every base-relative merged document path, sorted.
@@ -148,8 +207,8 @@ func mergedDocuments() []string {
 // planUnmerge computes, for every merged document with claims to take back, the
 // document without them. For generate (clean false) that is what the previous
 // run claimed and this run no longer does; for clean it is everything either run
-// claims. A document with no record falls back to presets.LegacyMergeClaims: on
-// clean always, on generate only when no preset that writes it is enabled.
+// claims. A document with no record falls back, on clean only, to
+// presets.LegacyMergeClaims.
 func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []mergedEdit {
 	claims := g.claimsToTakeBack(outputs, clean)
 	rels := make([]string, 0, len(claims))
@@ -169,8 +228,12 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 		}
 		result, err := jsonmerge.Unmerge(abs, claims[rel])
 		if err != nil {
-			warnUnmerge(rel, err)
+			g.warnUnmerge(rel, err)
 			continue
+		}
+		for _, path := range result.Kept {
+			g.warnOnce("Leaving "+strings.Join(path, ".")+" in "+rel+": it is no longer the value ai-rulez wrote, "+
+				"so it is treated as yours", "hint", "remove it by hand if you do not want it")
 		}
 		if result.Changed {
 			edits = append(edits, mergedEdit{rel: rel, abs: abs, body: result.Body, delete: result.Empty})
@@ -182,54 +245,61 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 // claimsToTakeBack selects, by manifest path, the claims planUnmerge removes.
 func (g *Generator) claimsToTakeBack(outputs []config.OutputFile, clean bool) map[string][]jsonmerge.Claim {
 	previous := g.previousMergedClaims()
-	current := g.currentMergedClaims(outputs, false)
+	current := g.currentMergedClaims(outputs)
 
 	claims := map[string][]jsonmerge.Claim{}
 	for rel, prev := range previous {
+		prev = guardClaims(prev, current[rel])
 		if clean {
 			claims[rel] = append(slices.Clone(prev), current[rel]...)
 		} else {
 			claims[rel] = subtractClaims(prev, current[rel])
 		}
 	}
-	if clean {
-		for rel, cur := range current {
-			if _, recorded := previous[rel]; !recorded {
-				claims[rel] = cur
-			}
+	if !clean {
+		return claims
+	}
+	for rel, cur := range current {
+		if _, recorded := previous[rel]; !recorded {
+			claims[rel] = cur
 		}
 	}
-	names := g.serverNames()
 	for _, rel := range mergedDocuments() {
 		if _, recorded := previous[rel]; recorded {
 			continue
 		}
-		if !clean && (len(current[rel]) > 0 || g.presetEnabled(mergedDocumentOwners[rel])) {
-			continue
-		}
-		claims[rel] = append(claims[rel], presets.LegacyMergeClaims(rel, names)...)
+		claims[rel] = append(claims[rel], g.legacyClaims(rel)...)
 	}
 	return claims
 }
 
+// legacyClaims are the guarded claims of the fallback for a document without a
+// record (see presets.LegacyMergeClaims).
+func (g *Generator) legacyClaims(rel string) []jsonmerge.Claim {
+	return append(presets.LegacyMergeClaims(rel, g.config), providers.LegacyMergeClaims(rel, g.config)...)
+}
+
+// warnOnce reports a merged-document problem once per run, however many times the
+// outputs are planned (a dry run, a baseline render and the real one).
+func (g *Generator) warnOnce(msg string, args ...any) {
+	if g.warned[msg] {
+		return
+	}
+	if g.warned == nil {
+		g.warned = map[string]bool{}
+	}
+	g.warned[msg] = true
+	mergedWarn(msg, args...)
+}
+
 // warnUnmerge reports a document ai-rulez could not take its content out of.
-func warnUnmerge(rel string, err error) {
+func (g *Generator) warnUnmerge(rel string, err error) {
 	if errors.Is(err, jsonmerge.ErrNotStrictJSON) {
-		logger.Warn(rel+" has comments or trailing commas, so ai-rulez leaves it alone and what it merged there stays",
+		g.warnOnce(rel+" has comments or trailing commas, so ai-rulez leaves it alone and what it merged there stays",
 			"hint", "remove the ai-rulez entries by hand")
 		return
 	}
-	logger.Warn("Could not remove ai-rulez content from "+rel, "error", err)
-}
-
-// serverNames lists the MCP servers the config declares, sorted.
-func (g *Generator) serverNames() []string {
-	names := make([]string, 0, len(g.config.MCPServers))
-	for name := range g.config.MCPServers {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	g.warnOnce("Could not remove ai-rulez content from "+rel, "error", err)
 }
 
 // applyUnmerge writes the edits: a document with nothing user-authored left is
@@ -240,17 +310,47 @@ func (g *Generator) applyUnmerge(edits []mergedEdit) {
 			g.removeStaleFile(edit.abs)
 			continue
 		}
-		mode := os.FileMode(0o644)
-		if info, err := os.Stat(edit.abs); err == nil {
-			mode = info.Mode().Perm()
-		}
-		if err := os.WriteFile(edit.abs, []byte(edit.body), mode); err != nil {
+		if err := writeFileAtomic(edit.abs, []byte(edit.body)); err != nil {
 			logger.Warn("Failed to remove ai-rulez content from merged document",
 				"path", edit.rel, "error", oops.Wrapf(err, "write merged document"))
 			continue
 		}
 		logger.Debug("Removed ai-rulez content from merged document", "path", edit.rel)
 	}
+}
+
+// writeFileAtomic replaces path with data through a temporary file in the same
+// directory, so an interrupted write never leaves the user's file truncated, and
+// keeps the file's mode.
+func writeFileAtomic(path string, data []byte) error {
+	mode := os.FileMode(0o644)
+	if info, err := os.Stat(path); err == nil {
+		mode = info.Mode().Perm()
+	}
+	tmp, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".ai-rulez-*")
+	if err != nil {
+		return err
+	}
+	tmpName := tmp.Name()
+	cleanup := func() { _ = os.Remove(tmpName) }
+	if _, err := tmp.Write(data); err != nil {
+		_ = tmp.Close()
+		cleanup()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Chmod(tmpName, mode); err != nil {
+		cleanup()
+		return err
+	}
+	if err := os.Rename(tmpName, path); err != nil {
+		cleanup()
+		return err
+	}
+	return nil
 }
 
 // deletedPaths lists the absolute paths of documents an edit set deletes.

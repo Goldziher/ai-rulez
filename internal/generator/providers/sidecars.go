@@ -270,3 +270,28 @@ func renderClaudePluginsJSON(cfg *config.Config) (string, error) {
 	}
 	return string(jsonBytes) + "\n", nil
 }
+
+// LegacyMergeClaims is what clean may take back out of a provider-owned merged
+// document at the base-relative path rel when no record of what was merged exists:
+// the MCP server entries the current config would render, each guarded by that
+// value so a hand-written server of the same name stays. See
+// presets.LegacyMergeClaims for the preset-owned documents.
+func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
+	if cfg == nil || len(cfg.MCPServers) == 0 {
+		return nil
+	}
+	var owned []jsonmerge.OwnedKey
+	switch rel {
+	case ".claude/settings.json":
+		owned = []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true}}
+	case presets.MergedDocMCPJSON:
+		owned = mcpJSONOwnedKeys(cfg)
+	default:
+		return nil
+	}
+	result, err := jsonmerge.Apply("", owned)
+	if err != nil {
+		return nil
+	}
+	return result.Claims
+}

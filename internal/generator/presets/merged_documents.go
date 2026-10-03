@@ -92,20 +92,21 @@ func isRegisteredMergedDocument(path string) bool {
 	return false
 }
 
-// LegacyMergeClaims is what ai-rulez may take back out of the merged document at
-// the base-relative path rel when no record of what it merged exists (a document
-// written by 4.23.0 or earlier, or a fresh clone). It is deliberately narrow: the
-// values ai-rulez itself writes (its self-registration entry, the context.fileName
-// forms it wrote, an opencode $schema it left as the only key) and the MCP servers
-// the current config declares by name. A server removed from the config before the
-// first run that records claims is not recognized and stays.
-func LegacyMergeClaims(rel string, serverNames []string) []jsonmerge.Claim {
-	servers := func(path ...string) []jsonmerge.Claim {
-		claims := make([]jsonmerge.Claim, 0, len(serverNames))
-		for _, name := range serverNames {
-			claims = append(claims, jsonmerge.Claim{Path: append(append([]string{}, path...), name)})
-		}
-		return claims
+// LegacyMergeClaims is what clean may take back out of the merged document at the
+// base-relative path rel when no record of what it merged exists (a document
+// written by 4.23.0 or earlier, or a fresh clone). It is deliberately narrow, and
+// every claim is guarded by a value: the entries the current config would render
+// for the preset(s) that write the document (a hand-written server of the same
+// name with another value is the user's), the self-registration entry, the
+// context.fileName forms ai-rulez wrote and an opencode $schema it left as the
+// only key. A server removed from the config before the first run that records
+// claims is not recognized and stays.
+//
+// The documents .claude/settings.json and the providers' .mcp.json are covered by
+// providers.LegacyMergeClaims.
+func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
+	if cfg == nil {
+		return nil
 	}
 	selfEntry := jsonmerge.Claim{
 		Path:   []string{keyMCPServers, "ai-rulez"},
@@ -114,25 +115,56 @@ func LegacyMergeClaims(rel string, serverNames []string) []jsonmerge.Claim {
 
 	switch rel {
 	case MergedDocGeminiSettings:
-		claims := append(servers(keyMCPServers), selfEntry)
+		claims := []jsonmerge.Claim{selfEntry}
+		if len(cfg.MCPServers) > 0 {
+			claims = append(claims, memberClaimsOf([]string{keyMCPServers}, (&GeminiPresetGenerator{}).mcpServersValue(cfg))...)
+		}
 		for _, names := range ownedContextFileNames() {
 			claims = append(claims, jsonmerge.Claim{Path: geminiContextFileNamePath, Equals: names})
 		}
 		return claims
 	case MergedDocAgentsSettings:
-		return append(servers(keyMCPServers), selfEntry)
-	case MergedDocMCPJSON, ".claude/settings.json":
-		return servers(keyMCPServers)
+		claims := []jsonmerge.Claim{selfEntry}
+		if len(cfg.MCPServers) > 0 {
+			if result, err := (&AntigravityPresetGenerator{}).renderSettingsJSON("", cfg); err == nil {
+				claims = append(claims, result.Claims...)
+			}
+		}
+		return claims
+	case MergedDocMCPJSON:
+		if len(cfg.MCPServers) == 0 {
+			return nil
+		}
+		var claims []jsonmerge.Claim
+		if result, err := (&CursorPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
+			claims = append(claims, result.Claims...)
+		}
+		if result, err := (&CopilotPresetGenerator{}).renderMCPJSON("", cfg); err == nil {
+			claims = append(claims, result.Claims...)
+		}
+		return claims
 	case MergedDocXumMCP:
-		return servers("servers")
+		return memberClaimsOf([]string{"servers"}, xumServers(cfg))
 	case MergedDocOpencodeConfig:
-		claims := servers("mcp", "servers")
+		claims := memberClaimsOf([]string{"mcp", "servers"}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
 		claims = append(claims,
 			jsonmerge.Claim{Path: []string{opencodeInstructionsKey}, Elements: opencodeLocalEntries()},
 			jsonmerge.Claim{Path: []string{keySchema}, Equals: opencodeSchemaURL, Alone: true})
 		return claims
 	}
 	return nil
+}
+
+// memberClaimsOf is the record a merge of value as the members at path would leave.
+func memberClaimsOf(path []string, value map[string]interface{}) []jsonmerge.Claim {
+	if len(value) == 0 {
+		return nil
+	}
+	result, err := jsonmerge.Apply("", []jsonmerge.OwnedKey{{Path: path, Value: value, Members: true}})
+	if err != nil {
+		return nil
+	}
+	return result.Claims
 }
 
 // projectRelative is the slash-separated path of a document relative to the

@@ -57,13 +57,17 @@ type Generator struct {
 	lenientMCP      bool            // tolerate unresolved MCP placeholders (baseline renders)
 	plan            *localPlan      // baseline comparison for this run; nil without local inputs
 	localSkipped    bool            // local files exist on disk but were not loaded (--no-local)
+
+	manifests map[string]generatedManifest // manifests read this run, by path
+	warned    map[string]bool              // merged-document warnings already issued this run
 }
 
 type generatedManifest struct {
 	Version string   `json:"version"`
 	Files   []string `json:"files"`
-	// Merged records, in the machine-local manifest only, what ai-rulez wrote
-	// into each merged JSON document (see merged_claims.go).
+	// Merged records what ai-rulez wrote into each merged JSON document (see
+	// merged_claims.go): in the committed manifest for a document it wrote whole,
+	// in the machine-local manifest for one shared with the user.
 	Merged map[string][]jsonmerge.Claim `json:"merged,omitempty"`
 }
 
@@ -91,6 +95,7 @@ func (g *Generator) Generate(profile string) error {
 func (g *Generator) GenerateFiles(profile string) (int, error) {
 	generateMu.Lock()
 	defer generateMu.Unlock()
+	g.beginRun()
 	rulefiles.ResetDowngrades()
 	defer rulefiles.FlushDowngrades()
 
@@ -393,6 +398,7 @@ func (g *Generator) DryRunBlocked() error {
 func (g *Generator) DryRun(profile string) ([]string, error) {
 	generateMu.Lock()
 	defer generateMu.Unlock()
+	g.beginRun()
 	rulefiles.ResetDowngrades()
 	defer rulefiles.FlushDowngrades()
 
@@ -585,6 +591,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	}
 	flatOutputs = append(flatOutputs, scopedOutputs...)
 	g.disambiguateRuleCollisions(flatOutputs)
+	g.reclaimStaleMembers(flatOutputs)
 
 	return flatOutputs, activeProfile, nil
 }
@@ -1906,6 +1913,25 @@ func (g *Generator) localManifestPath() string {
 	return filepath.Join(g.manifestDir(), generatedLocalManifestName)
 }
 
+// beginRun forgets what the previous run of this Generator read and reported.
+func (g *Generator) beginRun() {
+	g.manifests, g.warned = nil, nil
+}
+
+// readManifest reads a manifest at most once per run, so a corrupt one is
+// reported once and every consumer sees the same content.
+func (g *Generator) readManifest(path string) generatedManifest {
+	if manifest, ok := g.manifests[path]; ok {
+		return manifest
+	}
+	manifest := readManifestFile(path)
+	if g.manifests == nil {
+		g.manifests = map[string]generatedManifest{}
+	}
+	g.manifests[path] = manifest
+	return manifest
+}
+
 func readManifestFile(path string) generatedManifest {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -1926,7 +1952,7 @@ func readManifestFile(path string) generatedManifest {
 // committed manifest, where a teammate's run would delete them).
 func (g *Generator) previousManifestFiles() []string {
 	var files []string
-	for _, f := range readManifestFile(g.manifestPath()).Files {
+	for _, f := range g.readManifest(g.manifestPath()).Files {
 		if !strings.Contains(filepath.Base(filepath.FromSlash(f)), ".local.") {
 			files = append(files, f)
 		}
@@ -1936,7 +1962,7 @@ func (g *Generator) previousManifestFiles() []string {
 		// outputs of the inputs it ignored.
 		return files
 	}
-	return append(files, readManifestFile(g.localManifestPath()).Files...)
+	return append(files, g.readManifest(g.localManifestPath()).Files...)
 }
 
 // writeGeneratedManifest records the generated files so the next run can delete
@@ -1947,7 +1973,7 @@ func (g *Generator) previousManifestFiles() []string {
 // removed when no local output remains.
 func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 	var shared, local []string
-	merged := g.currentMergedClaims(outputs, true)
+	committedMerged, localMerged := g.splitMergedClaims(outputs)
 	for _, output := range outputs {
 		if output.IsDir || output.PartiallyOwned {
 			continue
@@ -1965,7 +1991,8 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		// The committed manifest describes the shared baseline, not this machine.
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 	}
-	if err := writeManifestFile(g.manifestPath(), shared, nil); err != nil {
+	defer func() { g.manifests = nil }()
+	if err := writeManifestFile(g.manifestPath(), shared, committedMerged); err != nil {
 		return err
 	}
 	if g.localSkipped {
@@ -1973,13 +2000,13 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		// drop, and its record of merged documents stays what it was.
 		return nil
 	}
-	if len(local) == 0 && len(merged) == 0 {
+	if len(local) == 0 && len(localMerged) == 0 {
 		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
 			return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
 		}
 		return nil
 	}
-	return writeManifestFile(g.localManifestPath(), local, merged)
+	return writeManifestFile(g.localManifestPath(), local, localMerged)
 }
 
 func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
@@ -2071,7 +2098,7 @@ func (g *Generator) localManifestSet() map[string]bool {
 	if g.localSkipped {
 		return set
 	}
-	for _, f := range readManifestFile(g.localManifestPath()).Files {
+	for _, f := range g.readManifest(g.localManifestPath()).Files {
 		set[f] = true
 	}
 	return set
@@ -2340,7 +2367,7 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	// local outputs, but the ones an earlier run left are still there and must
 	// stay ignored.
 	if g.localSkipped {
-		for _, rel := range readManifestFile(g.localManifestPath()).Files {
+		for _, rel := range g.readManifest(g.localManifestPath()).Files {
 			if pattern := g.skippedLocalPattern(rel); pattern != "" {
 				paths[pattern] = true
 			}

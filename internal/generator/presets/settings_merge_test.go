@@ -115,8 +115,8 @@ func mcpServerEntries(t *testing.T, doc string) map[string]map[string]any {
 }
 
 // assertPreservedHandAuthoredKeys is the shared body of the four regression
-// tests: the sibling keys are byte-identical, the stale owned entry is gone, and
-// the file is reported as shared with the consumer.
+// tests: the sibling keys are byte-identical, the hand-written server beside the
+// configured ones survives, and the file is reported as shared with the consumer.
 func assertPreservedHandAuthoredKeys(t *testing.T, output config.OutputFile) map[string]map[string]any {
 	t.Helper()
 
@@ -129,7 +129,7 @@ func assertPreservedHandAuthoredKeys(t *testing.T, output config.OutputFile) map
 		"a document holding hand-authored keys must not be gitignored or deleted as stale")
 
 	servers := mcpServerEntries(t, output.Content)
-	assert.NotContains(t, servers, "stale-hand-authored", "ai-rulez owns the mcpServers key outright")
+	assert.Contains(t, servers, "stale-hand-authored", "a server ai-rulez did not write is the consumer's")
 	return servers
 }
 

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"sort"
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -46,6 +48,8 @@ type localPlan struct {
 	suppressed []string
 	// baselineFiles: every file the baseline would own, for the shared manifest.
 	baselineFiles []string
+	// baselineClaims: what the baseline would merge into each merged document.
+	baselineClaims map[string][]jsonmerge.Claim
 	// violations: drift or local-only files that are tracked or not ignored.
 	violations []localViolation
 	// driftIgnored: drift files that are untracked and git-ignored (or will be,
@@ -175,7 +179,9 @@ func (g *Generator) classify(plan *localPlan, baseline, merged []config.OutputFi
 	base := g.outputIndex(baseline)
 	mine := g.outputIndex(merged)
 
+	plan.baselineClaims = map[string][]jsonmerge.Claim{}
 	for rel, b := range base {
+		plan.baselineClaims[rel] = b.MergeClaims
 		// The baseline reads a merged document as it is on disk, which after an
 		// earlier local run holds the overlay's keys: the baseline then treats them
 		// as hand-authored and flips to partial. The merged render, which owns
@@ -553,6 +559,14 @@ func (g *Generator) localInputsOnDisk() bool {
 	}
 	info, err := os.Stat(filepath.Join(dir, localSourceDirName))
 	return err == nil && info.IsDir()
+}
+
+// diverges reports whether the machine-local inputs change what is merged into
+// the document at rel: its claims differ from the shared baseline's. Comparing
+// the file's content would not do, because the baseline merges into the file this
+// machine already wrote. A nil plan (no local inputs) diverges nowhere.
+func (p *localPlan) diverges(rel string, claims []jsonmerge.Claim) bool {
+	return p != nil && !reflect.DeepEqual(p.baselineClaims[rel], claims)
 }
 
 // sharedManifestFiles lists what the committed manifest records: every file the

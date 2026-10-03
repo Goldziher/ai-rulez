@@ -2131,13 +2131,14 @@ args = ["--flag"]
 	assert.Equal(t, "off", skillOverrides["init"],
 		"skillOverrides.init must remain exactly 'off'")
 
-	// Assert mcpServers now reflects the configured server (stale entry replaced)
+	// Assert mcpServers holds the configured server and the hand-written one: only
+	// servers ai-rulez recorded writing are its to take back
 	mcpServers, ok := parsed["mcpServers"].(map[string]any)
 	require.True(t, ok, "mcpServers must be present and be an object")
 	assert.Contains(t, mcpServers, "new-server",
 		"mcpServers must contain the new configured server")
-	assert.NotContains(t, mcpServers, "stale-server",
-		"mcpServers must not contain the stale server")
+	assert.Contains(t, mcpServers, "stale-server",
+		"a hand-written server must survive generation")
 }
 
 // TestGenerator_HandAuthoredSettings_NotGitignored verifies that a hand-authored
