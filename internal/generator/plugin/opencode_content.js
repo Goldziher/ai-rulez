@@ -6,15 +6,16 @@ import path from "node:path";
 
 const root = import.meta.dirname;
 
-function parse(text) {
-  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/u.exec(text);
-  if (!match) return { meta: {}, body: text };
-  const meta = {};
-  for (const line of match[1].split(/\r?\n/u)) {
-    const pair = /^([A-Za-z0-9_-]+):\s*(.*)$/u.exec(line);
-    if (pair) meta[pair[1]] = pair[2].trim().replace(/^(["'])(.*)\1$/u, "$2");
-  }
-  return { meta, body: match[2] };
+// Returns the text after a leading YAML frontmatter block. The frontmatter fields the
+// helper needs (name, description) are resolved when the bundle is generated and read
+// from ai-rulez-bundle.json, so no YAML is parsed here.
+function body(text) {
+  const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?([\s\S]*)$/u.exec(text);
+  return match ? match[1] : text;
+}
+
+function skip(kind, name, error) {
+  console.warn(`ai-rulez: skipping bundled ${kind} ${name}: ${error?.message ?? error}`);
 }
 
 async function entries(dir) {
@@ -47,8 +48,13 @@ function expand(value) {
 }
 
 function mcpServer(server) {
-  if (server.type === "remote") return { type: "remote", url: expand(server.url) };
+  if (server.type === "remote") {
+    const entry = { type: "remote", url: expand(server.url) };
+    if (server.disabled) entry.disabled = true;
+    return entry;
+  }
   const entry = { type: "local", command: server.command.map(expand) };
+  if (server.disabled) entry.disabled = true;
   if (server.environment) {
     entry.environment = Object.fromEntries(
       Object.entries(server.environment).map(([key, value]) => [key, expand(value)]),
@@ -64,31 +70,40 @@ async function load() {
     if (!entry.isDirectory()) continue;
     const file = path.join(root, "skills", entry.name, "SKILL.md");
     try {
-      const { meta, body } = parse(await readFile(file, "utf8"));
+      const info = bundle.skills?.[entry.name] ?? {};
       skills.push({
         id: entry.name,
-        name: meta.name || entry.name,
-        description: meta.description,
+        name: info.name || entry.name,
+        description: info.description,
         path: file,
-        content: body,
+        content: body(await readFile(file, "utf8")),
       });
-    } catch {}
+    } catch (error) {
+      skip("skill", entry.name, error);
+    }
   }
   const commands = [];
   for (const entry of await entries("commands")) {
     if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
-    const { meta, body } = parse(await readFile(path.join(root, "commands", entry.name), "utf8"));
-    commands.push({ name: entry.name.slice(0, -3), description: meta.description, template: body });
+    const name = entry.name.slice(0, -3);
+    try {
+      const template = body(await readFile(path.join(root, "commands", entry.name), "utf8"));
+      commands.push({ name, description: bundle.commands?.[name]?.description, template });
+    } catch (error) {
+      skip("command", name, error);
+    }
   }
   const agents = [];
   for (const entry of await entries("agents")) {
     if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
-    const { meta, body } = parse(await readFile(path.join(root, "agents", entry.name), "utf8"));
     const id = entry.name.slice(0, -3);
-    // The bundle holds settings resolved at generation time (the model in particular); the
-    // frontmatter fallback never carries a model, since a bare alias is not valid in OpenCode.
-    const settings = bundle.agents?.[id] ?? { description: meta.description, mode: meta.mode };
-    agents.push({ id, system: body.trim(), settings });
+    try {
+      // The bundle holds settings resolved at generation time (the model in particular).
+      const system = body(await readFile(path.join(root, "agents", entry.name), "utf8"));
+      agents.push({ id, system: system.trim(), settings: bundle.agents?.[id] ?? {} });
+    } catch (error) {
+      skip("agent", id, error);
+    }
   }
   return { skills, commands, agents, mcp: bundle.mcp ?? {} };
 }
@@ -110,7 +125,7 @@ export async function registerBundledContent(ctx) {
             await ctx.session.prompt({
               ...prompt,
               sessionID,
-              text: command.template.replaceAll("$ARGUMENTS", prompt.text),
+              text: command.template.replaceAll("$ARGUMENTS", () => String(prompt.text ?? "")),
               delivery,
             });
           },
