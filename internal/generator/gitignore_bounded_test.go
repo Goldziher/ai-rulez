@@ -53,3 +53,27 @@ func TestGitignoreSymlinkedToADeviceNeverHangs(t *testing.T) {
 		})
 	}
 }
+
+func TestGenerate_SymlinkedGitignoreKeepsPatternsItListsItself(t *testing.T) {
+	// Arrange: the link's target already lists a pattern ai-rulez needs, but git
+	// does not read a symlinked .gitignore, so the pattern must still reach
+	// .git/info/exclude.
+	p := newDriftProject(t, driftSharedIgnoring)
+	p.git(t, "init", "-q")
+	target := filepath.Join(t.TempDir(), "shared-gitignore")
+	require.NoError(t, os.WriteFile(target, []byte(".claude/rules/*.local.*\n.ai-rulez/local/\n"), 0o644))
+	if err := os.Symlink(target, filepath.Join(p.base, ".gitignore")); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
+
+	// Act
+	err := NewGenerator(p.load(t)).Generate("")
+
+	// Assert
+	require.NoError(t, err)
+	exclude, readErr := os.ReadFile(filepath.Join(p.base, ".git", "info", "exclude"))
+	require.NoError(t, readErr)
+	assert.Contains(t, string(exclude), ".claude/rules/*.local.*")
+	assert.Contains(t, string(exclude), ".ai-rulez/local/")
+}
