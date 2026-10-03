@@ -185,7 +185,7 @@ func TestJunie_RulesSplit(t *testing.T) {
 		tsx, ok := outputByPath(outputs, ".junie/rules/tsx.md")
 		require.True(t, ok)
 		assert.NotContains(t, tsx.Content, "paths:")
-		assert.Contains(t, tsx.Content, "_Applies to: **/*.tsx_")
+		assert.Contains(t, tsx.Content, "_Applies to: `**/*.tsx`_")
 	})
 }
 

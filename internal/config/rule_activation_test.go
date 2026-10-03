@@ -335,6 +335,9 @@ func TestUnknownLegacyValues(t *testing.T) {
 		{"known alwaysApply", map[string]string{"alwaysApply": " TRUE "}, 0},
 		{"unknown alwaysApply", map[string]string{"alwaysApply": "maybe"}, 1},
 		{"both unknown", map[string]string{"trigger": "x", "alwaysApply": "y"}, 2},
+		{"always_on trigger with a legacy glob", map[string]string{"trigger": "always_on", "glob": "a/**"}, 1},
+		{"alwaysApply true with a legacy glob", map[string]string{"alwaysApply": "true", "glob": "a/**"}, 1},
+		{"always_on trigger without globs", map[string]string{"trigger": "always_on"}, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

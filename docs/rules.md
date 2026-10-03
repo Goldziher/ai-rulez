@@ -38,7 +38,7 @@ activation: glob
 | `auto`     | when the model judges the description relevant   | `description` |
 | `manual`   | only when explicitly invoked                     | nothing       |
 
-`validate` rejects an unknown mode, `glob` without `paths`, `auto` without a description, and `always` with `paths`.
+`validate` rejects an unknown mode, `glob` without `paths`, `auto` without a description, and an explicit `activation: always` with `paths`. A legacy always-on activation (`trigger: always_on`, `alwaysApply: true`) with `paths` is not rejected: `validate` warns that the paths are ignored and the rule applies everywhere.
 
 ### Resolution and legacy fields
 
@@ -58,7 +58,7 @@ The table shows the file each preset writes and the frontmatter it emits for eac
 | Tool (preset)                 | File                                         | always                         | glob                                              | auto                         | manual                       |
 | ----------------------------- | -------------------------------------------- | ------------------------------ | ------------------------------------------------- | ---------------------------- | ---------------------------- |
 | Claude (`claude`)             | `.claude/rules/<id>.md`                      | none                           | `paths: [...]`                                    | always-on, warning           | always-on, warning           |
-| Cursor (`cursor`)             | `.cursor/rules/<id>.mdc`                     | `alwaysApply: true`            | `globs: "a,b"`, `alwaysApply: false`              | `description`                | `alwaysApply: false`         |
+| Cursor (`cursor`)             | `.cursor/rules/<id>.mdc`                     | `alwaysApply: true`            | `globs: a,b` (bare), `alwaysApply: false`         | `description`                | `alwaysApply: false`         |
 | Windsurf (`windsurf`)         | `.windsurf/rules/<id>.md`                    | `trigger: always_on`           | `trigger: glob`, `globs: "a,b"`                   | `trigger: model_decision`, `description` | `trigger: manual` |
 | Antigravity (`antigravity`)   | `.agents/rules/<id>.md`                      | `trigger: always_on`           | `trigger: glob`, `globs: "a,b"`                   | `trigger: model_decision`, `description` | `trigger: manual` |
 | Copilot (`copilot`)           | `.github/instructions/<id>.instructions.md`  | `applyTo: "**"`                | `applyTo: "a,b"`                                  | stays inline                 | stays inline                 |
@@ -70,9 +70,12 @@ Notes:
 
 - Cursor also writes `description` on `always` and `glob` rules when one is set. It is left off `manual` rules because Cursor treats a description without globs as agent-requested.
 - Cursor, Windsurf, Antigravity and Copilot take a comma-joined glob string, so brace patterns are expanded: `*.{ts,tsx}` becomes `*.ts,*.tsx`.
+- Cursor writes the `globs` line as the bare comma list its own rule files use (`globs: **/*.go,**/*.ts`), not as a quoted YAML string, because its parser is not a full YAML parser. Values outside a conservative character set keep the quotes. Windsurf and Antigravity parse real YAML, where a leading `*` is an alias, so they keep the quoted form (`globs: '**/*.go'`), as does Copilot's `applyTo`.
+- No dialect can express negated globs (`!x`), so they are dropped from the frontmatter with a warning. A rule whose globs are all negated has no scope left: where the preset has a root file (Claude, Copilot, Antigravity, Junie, ...) the rule stays inline there; in presets without one (Cursor, Windsurf, Cline, Continue) it is written as an always-on file and logged as a downgrade. Each such rule is warned about once per run. Inside a [scope](monorepo.md#scoped-rule-files) the negation is dropped and the scope prefix becomes the positive glob: a rule with only negated globs gets `<path>/**`.
+- Junie's `_Applies to: ..._` line formats each glob as a code span, so characters such as `_` and `*` are not read as emphasis.
 - Context files in a rules folder are named `context-<id>` and use the same frontmatter.
 - Each generated file has a generated banner after the frontmatter (see [Freshness hashes](#freshness-hashes)). Scoped (monorepo) rule placement is covered in [Monorepo](monorepo.md#scoped-rule-files).
-- Copilot keeps `auto` and `manual` rules in `.github/copilot-instructions.md`, because an instructions file without `applyTo` is not applied automatically. Negated globs (`!x`) are dropped from `applyTo` with a warning, and a rule whose globs are all negated stays in `copilot-instructions.md`.
+- Copilot keeps `auto` and `manual` rules in `.github/copilot-instructions.md`, because an instructions file without `applyTo` is not applied automatically.
 
 ### Fallbacks
 
@@ -127,7 +130,7 @@ What each preset writes:
 
 Custom provider presets follow `mode` when their `outputs.rules` sets `split`.
 
-Cursor, Windsurf, Cline and Continue have no rules-bearing root file, so they always write one file per rule. Context goes to the folder as well, except for Continue, which keeps it in its prompts file.
+Cursor, Windsurf, Cline and Continue have no rules-bearing root file, so they always write one file per rule. Unscoped context goes to the folder as well for Cursor, Windsurf and Cline (the always-file presets); Continue keeps unscoped context in its prompts file, and only path-scoped context becomes a rule file.
 
 Root files always keep context (unscoped context in both modes) and the delegation notes.
 
@@ -167,16 +170,18 @@ A target selects an output when it is one of:
 | Form                        | Example                          |
 | --------------------------- | -------------------------------- |
 | preset name                 | `claude`, `cursor`               |
-| root file                   | `CLAUDE.md`, `AGENTS.md`         |
+| root file (path or base name) | `CLAUDE.md`, `.junie/guidelines.md`, `guidelines.md`, `copilot-instructions.md` |
 | exact path                  | `.claude/rules/go.md`            |
 | base name                   | `go.md`                          |
 | directory prefix            | `.cursor/rules/`                 |
-| whole tree                  | `.cursor/rules/*`, `.cursor/**`  |
+| whole tree                  | `.cursor/rules/*`, `.cursor/**`, `.cursor/rules/**` |
 | glob (`path.Match` syntax)  | `.claude/rules/*.md`             |
 | everything                  | `*`                              |
 
 Matching rules:
 
+- A target naming a preset's root file (for example `CLAUDE.md`) also selects that preset's rule files. In `split` mode every rule goes to the rules folder, so such a rule lives in `.claude/rules/` and not in `CLAUDE.md`; in `inline` mode only path-scoped rules do.
+- A whole-tree target is `<dir>/*` or `<dir>/**` with a literal directory (no wildcard in `<dir>`): it matches everything below `<dir>` at any depth, exactly like `<dir>/`. Only `*` and `**` alone match everything. Any other pattern is a `path.Match` glob against the full path or the base name, where `*` does not cross `/` and `**` is no deeper than `*`; so `.*/rules/**` matches only files directly in the folder.
 - Paths compare case-insensitively; `\` and a leading `./` or `/` are accepted.
 - `AGENTS.md` is shared by `codex`, `opencode`, `amp` and `xum`, and `GEMINI.md` by `gemini` and `antigravity`. Naming any preset that writes a shared file, or the file itself, selects it for all of them, so the file stays identical whichever preset writes it.
 - A rule targeted only at a rules folder (for example `.junie/rules/`) is written there even in `inline` mode. Where inline mode writes no files for that folder (Junie, and providers without `inline_filter`), it is omitted.
@@ -192,7 +197,7 @@ Rules in `.ai-rulez/local/rules` follow the same routing as shared rules. Where 
 
 ## Scopes
 
-For `[[scopes]]`, rule files are written to the root rules folder, with the scope path as a qualifier and glob prefix: `<dir>/<scope-slug>/<id>` for Claude, Cursor and Copilot, `<scope-slug>--<id>` for Windsurf, Cline, Continue, Antigravity and Junie. See [Monorepo](monorepo.md#scoped-rule-files).
+For `[[scopes]]`, rule files are written to the root rules folder, with the scope path as a qualifier and glob prefix. `auto` and `manual` rules keep their mode and so are not limited to the scope; `generate` warns once per scope about them. File names are `<dir>/<scope-slug>/<id>` for Claude, Cursor and Copilot, `<scope-slug>--<id>` for Windsurf, Cline, Continue, Antigravity and Junie. See [Monorepo](monorepo.md#scoped-rule-files).
 
 ## Hand-written rule files
 

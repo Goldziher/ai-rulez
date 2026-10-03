@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -15,6 +16,8 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+var unquotedGlobsLine = regexp.MustCompile(`(?m)^globs: [^'"].*$`)
+
 func splitFrontmatter(t *testing.T, text string) (fm map[string]any, rest string) {
 	t.Helper()
 	if !strings.HasPrefix(text, "---\n") {
@@ -22,7 +25,12 @@ func splitFrontmatter(t *testing.T, text string) (fm map[string]any, rest string
 	}
 	end := strings.Index(text[4:], "\n---\n")
 	require.GreaterOrEqual(t, end, 0)
-	require.NoError(t, yaml.Unmarshal([]byte(text[4:4+end+1]), &fm))
+	// Cursor and Windsurf write globs as a bare comma list, which is not valid
+	// YAML when it starts with "*"; quote it for the parse.
+	block := unquotedGlobsLine.ReplaceAllStringFunc(text[4:4+end+1], func(line string) string {
+		return "globs: '" + strings.ReplaceAll(strings.TrimPrefix(line, "globs: "), "'", "''") + "'"
+	})
+	require.NoError(t, yaml.Unmarshal([]byte(block), &fm))
 	return fm, text[4+end+5:]
 }
 

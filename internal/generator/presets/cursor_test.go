@@ -3,6 +3,7 @@ package presets
 import (
 	"encoding/json"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -186,8 +187,13 @@ func cursorFrontmatterOf(t *testing.T, text string) map[string]any {
 	require.True(t, strings.HasPrefix(text, "---\n"), "must open with frontmatter:\n%s", text)
 	end := strings.Index(text[4:], "\n---\n")
 	require.GreaterOrEqual(t, end, 0)
+	// Cursor's globs line is a bare comma list, not valid YAML when it starts
+	// with "*": quote it for the parse.
+	block := regexp.MustCompile(`(?m)^globs: [^'"].*$`).ReplaceAllStringFunc(text[4:4+end+1], func(line string) string {
+		return "globs: '" + strings.TrimPrefix(line, "globs: ") + "'"
+	})
 	var fm map[string]any
-	require.NoError(t, yaml.Unmarshal([]byte(text[4:4+end+1]), &fm))
+	require.NoError(t, yaml.Unmarshal([]byte(block), &fm))
 	return fm
 }
 
@@ -230,6 +236,7 @@ func TestCursor_BraceGlobsExpanded(t *testing.T) {
 
 	// Assert
 	assert.Equal(t, map[string]any{"alwaysApply": false, "globs": "*.ts,*.tsx"}, cursorFrontmatterOf(t, text))
+	assert.Contains(t, text, "\nglobs: *.ts,*.tsx\n", "Cursor writes globs as an unquoted comma list")
 }
 
 func TestCursor_ManualHasFrontmatter(t *testing.T) {

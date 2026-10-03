@@ -20,6 +20,12 @@ var rootPresets = map[string][]string{
 	".github/copilot-instructions.md": {"copilot"},
 }
 
+// SharedRootFile reports whether several presets write the root file, so it
+// must render identically whichever of them writes it last.
+func SharedRootFile(rootFile string) bool {
+	return len(rootPresets[targetmatch.Normalize(rootFile)]) > 1
+}
+
 // RootTarget describes a preset's root file for inline target filtering.
 func RootTarget(preset, rootFile string) Target {
 	return Target{Preset: preset, RootFile: rootFile}
@@ -43,16 +49,17 @@ func rootOwners(t Target) []string {
 // relPath is the rule file path relative to the output root, or "" for the
 // inlined root file. A rule file is selected by the preset name, the preset's
 // root file, its path or base name, a directory prefix or a glob; the inlined
-// root file by the name of any preset writing it, or the root file itself.
+// root file by the name of any preset writing it, or the root file itself (by
+// path or base name).
 func TargetsAllow(targets []string, t Target, relPath string) bool {
 	if relPath == "" {
-		return targetmatch.Allow(targets, rootOwners(t), t.RootFile)
+		return targetmatch.Allow(targets, rootOwners(t), t.RootFile, path.Base(t.RootFile))
 	}
 	var presets []string
 	if t.Preset != "" {
 		presets = []string{t.Preset}
 	}
-	return targetmatch.Allow(targets, presets, relPath, path.Base(relPath), t.RootFile)
+	return targetmatch.Allow(targets, presets, relPath, path.Base(relPath), t.RootFile, path.Base(t.RootFile))
 }
 
 func itemTargets(cf config.ContentFile) []string {

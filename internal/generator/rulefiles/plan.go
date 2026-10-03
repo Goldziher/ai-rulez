@@ -95,18 +95,30 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	for _, r := range rules {
-		asFile := routing == RoutingAll || routing == RoutingEverything || isScoped(r)
+		asFile := (routing == RoutingAll || routing == RoutingEverything || isScoped(r)) && !keepNegatedInline(*t, scope, r, "rule")
 		if err := place(r, KindRule, asFile, &inlineRules); err != nil {
 			return nil, nil, nil, err
 		}
 	}
 	for _, c := range context {
-		asFile := routing == RoutingEverything || isScoped(c)
+		asFile := (routing == RoutingEverything || isScoped(c)) && !keepNegatedInline(*t, scope, c, "context")
 		if err := place(c, KindContext, asFile, &inlineContext); err != nil {
 			return nil, nil, nil, err
 		}
 	}
 	return files, inlineRules, inlineContext, nil
+}
+
+// keepNegatedInline reports whether cf, a rule with only negated globs, stays
+// in the root file. Such a rule has no scope a rules folder can express (scopes
+// add their own positive glob). Where the preset has a root file it stays
+// there; otherwise it becomes an always-on file (see Frontmatter).
+func keepNegatedInline(t Target, scope ScopeInfo, cf config.ContentFile, kind string) bool {
+	if t.RootFile == "" || scope.Prefix != "" || !OnlyNegatedGlobs(cf) || !InlineAllowed(cf, t) {
+		return false
+	}
+	WarnOnlyNegated(kind, cf, t.RootFile)
+	return true
 }
 
 // routeItem writes cf as a rule file (asFile) or keeps it inline; targets may
@@ -142,6 +154,11 @@ func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo, reg *
 	}
 	if err := reg.claim(t, it); err != nil {
 		return Item{}, false, err
+	}
+	if scope.Prefix != "" && (it.Activation.Mode == config.ActivationAuto || it.Activation.Mode == config.ActivationManual) &&
+		warnScopeOnce(scope.Slug) {
+		warnSink()("auto and manual rules of a scope are written to the root rules folder and are not limited to the scope",
+			"scope", scope.Slug, "source", cf.Path)
 	}
 	return it, true, nil
 }
