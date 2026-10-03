@@ -26,7 +26,16 @@ type ProviderSpec struct {
 type RootSpec struct {
 	File     string   `toml:"file" yaml:"file" json:"file"`
 	Sections []string `toml:"sections" yaml:"sections" json:"sections"`
+	// LocalFile is the machine-local counterpart of File that the tool loads
+	// natively. Empty means the ".local" variant of File (CLAUDE.md →
+	// CLAUDE.local.md), LocalFileNone means the tool has no such file and local
+	// content is reported as not written, and any other value is a relative path.
+	LocalFile string `toml:"local_file,omitempty" yaml:"local_file,omitempty" json:"local_file,omitempty"`
 }
+
+// LocalFileNone is the RootSpec.LocalFile value for a tool with no machine-local
+// instructions file.
+const LocalFileNone = "none"
 
 // OutputSpec is the per-content-type emit rule. Keyed on content type
 // (rules, context, skills, agents, commands) inside ProviderSpec.Outputs.

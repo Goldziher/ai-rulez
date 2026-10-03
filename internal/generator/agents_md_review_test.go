@@ -116,13 +116,13 @@ func TestAgentsMD_ToggleKeepsHandWrittenSkills(t *testing.T) {
 	}
 }
 
-func TestAgentsMD_LocalAgentsFileUnaffected(t *testing.T) {
+func TestAgentsMD_LocalOverrideFileUnaffected(t *testing.T) {
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, "agents_md = true\n"+agentsMDConfig([]string{"codex"}, "", ""))
 	writeAgentsMDFile(t, root, ".ai-rulez/local/rules/mine.md", "# Mine\n\nLOCAL_BODY\n")
 	runAgentsMDGenerate(t, root)
 
-	assert.Contains(t, readAgentsMDFile(t, root, "AGENTS.local.md"), "LOCAL_BODY")
+	assert.Contains(t, readAgentsMDFile(t, root, "AGENTS.override.md"), "LOCAL_BODY")
 	assert.NotContains(t, readAgentsMDFile(t, root, "AGENTS.md"), "LOCAL_BODY")
 }
 
