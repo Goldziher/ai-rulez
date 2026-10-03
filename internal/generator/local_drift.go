@@ -118,8 +118,10 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 	}
 	g.classify(plan, baseline, merged)
 	g.stampSourceHashes(plan, merged)
-	plan.violations = g.findViolations(plan, merged)
+	// The violation scan computes the patterns this run will add to .gitignore,
+	// which depend on which outputs the plan marks machine-local.
 	g.plan = plan
+	plan.violations = g.findViolations(plan, merged)
 	return plan, nil
 }
 

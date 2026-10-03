@@ -444,3 +444,24 @@ func mustJSONString(t *testing.T, v any) string {
 	require.NoError(t, err)
 	return string(data)
 }
+
+func TestPlanLocal_PendingPatternsAreComputedFromThePlan(t *testing.T) {
+	// Arrange: the overlay adds codex, whose AGENTS.md exists only on this machine
+	// and is excluded through .git/info/exclude, not the shared .gitignore block.
+	p := newDriftProject(t, strings.Replace(driftShared, "gitignore = false", "gitignore = true", 1))
+	p.overlay(t, "presets = [\"codex\"]\n")
+	g := NewGenerator(p.load(t))
+	merged, _, err := g.collectOutputs("")
+	require.NoError(t, err)
+
+	// Act
+	plan, err := g.planLocal("", merged)
+
+	// Assert: the plan is the generator's own, so the patterns the violation scan
+	// saw leave out the machine-local file.
+	require.NoError(t, err)
+	require.NotNil(t, plan)
+	assert.Same(t, plan, g.plan)
+	require.True(t, plan.machineLocal["AGENTS.md"])
+	assert.NotContains(t, g.pendingIgnorePatterns(merged), "AGENTS.md")
+}
