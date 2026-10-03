@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/samber/oops"
 )
 
@@ -33,8 +34,19 @@ type codexManifest struct {
 	Interface   *interfaceDoc  `json:"interface,omitempty"`
 }
 
-type codexMCPDoc struct {
-	MCPServers map[string]mcpEntry `json:"mcpServers"`
+// mergedMCPFile renders the mcpServers key of the .mcp.json at path, merging into
+// the document already there.
+func mergedMCPFile(path string, servers map[string]mcpEntry) (config.OutputFile, error) {
+	result, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{{Name: "mcpServers", Value: servers, Members: true}})
+	if err != nil {
+		return config.OutputFile{}, oops.With("path", path).Wrapf(err, "merge MCP servers into .mcp.json")
+	}
+	return config.OutputFile{
+		Path:           path,
+		RawContent:     []byte(result.Body),
+		PartiallyOwned: result.PartiallyOwned,
+		MergeClaims:    result.Claims,
+	}, nil
 }
 
 func renderCodex(m *Manifest, baseDir string) ([]config.OutputFile, error) {
@@ -65,10 +77,12 @@ func renderCodex(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	}
 	outputs := []config.OutputFile{manifest}
 
-	// External MCP server file: the bare {name: {command, args}} map, with the
-	// canonical ${PLUGIN_ROOT} preserved (Codex resolves it natively).
+	// External MCP server file: the {name: {command, args}} map, with the
+	// canonical ${PLUGIN_ROOT} preserved (Codex resolves it natively). A .mcp.json
+	// the author already keeps in the repository is merged into server by server,
+	// like every other writer of that file, so their own servers and keys stay.
 	if servers := mcpServersFor(m, config.PluginRuntimeCodex); servers != nil {
-		mcpFile, err := jsonOutput(filepath.Join(baseDir, ".mcp.json"), codexMCPDoc{MCPServers: servers})
+		mcpFile, err := mergedMCPFile(filepath.Join(baseDir, ".mcp.json"), servers)
 		if err != nil {
 			return nil, err
 		}
