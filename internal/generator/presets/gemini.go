@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
@@ -431,11 +432,25 @@ func resolveGeminiModel(agent config.ContentFile, cfg *config.Config) string {
 	if model == "" || !geminiClaudeAlias.MatchString(model) {
 		return model
 	}
-	logger.Warn("Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model",
-		"agent", agent.Name, "model", model,
-		"hint", "set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini")
+	warnGeminiAliasOnce(agent.Name, model)
 	return ""
 }
+
+// warnGeminiAliasOnce warns that an agent's Claude alias was dropped, once per
+// agent and model: an overlay renders the shared baseline as well as the merged
+// view, so the same agent is resolved twice per run. It reports whether it warned.
+func warnGeminiAliasOnce(agent, model string) bool {
+	if _, seen := geminiAliasWarned.LoadOrStore(agent+"\x00"+model, struct{}{}); seen {
+		return false
+	}
+	logger.Warn("Gemini CLI does not know Claude model aliases; omitting the model so the agent inherits the session model",
+		"agent", agent, "model", model,
+		"hint", "set gemini_model in the agent frontmatter or defaults.model_by_preset.gemini")
+	return true
+}
+
+// geminiAliasWarned records the agent/model pairs already warned about.
+var geminiAliasWarned sync.Map
 
 // buildGeminiAgentFrontmatter builds frontmatter for a Gemini agent file. Gemini
 // requires name and description; an agent without a description gets a generic one.
