@@ -1,6 +1,7 @@
 package generator
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
@@ -151,7 +153,7 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 // gitignoreHasManagedBlock reports whether <BaseDir>/.gitignore contains the
 // ai-rulez fenced block.
 func (g *Generator) gitignoreHasManagedBlock() bool {
-	data, err := os.ReadFile(filepath.Join(g.config.BaseDir, ".gitignore"))
+	data, err := gitutil.ReadIgnoreFileOrEmpty(filepath.Join(g.config.BaseDir, ".gitignore"))
 	if err != nil {
 		return false
 	}
@@ -163,9 +165,9 @@ func (g *Generator) gitignoreHasManagedBlock() bool {
 // file is deleted rather than left empty.
 func (g *Generator) stripGitignoreManagedBlock() error {
 	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
-	data, err := os.ReadFile(gitignorePath)
+	data, err := gitutil.ReadIgnoreFile(gitignorePath)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if os.IsNotExist(err) || errors.Is(err, gitutil.ErrNotRegular) || errors.Is(err, gitutil.ErrTooLarge) {
 			return nil
 		}
 		return oops.With("path", gitignorePath).Wrapf(err, "read .gitignore")

@@ -2397,7 +2397,7 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 
 	// Read existing .gitignore content
-	existingData, err := os.ReadFile(gitignorePath)
+	existingData, err := gitutil.ReadIgnoreFileOrEmpty(gitignorePath)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.
 			With("path", gitignorePath).

@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/samber/oops"
 )
 
@@ -66,7 +67,7 @@ func EnsureEntries(baseDir string, patterns []string) error {
 	if IsSymlink(baseDir) {
 		return ensureViaExclude(baseDir, patterns)
 	}
-	data, err := os.ReadFile(path) //nolint:gosec // project .gitignore
+	data, err := gitutil.ReadIgnoreFileOrEmpty(path)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.With("path", path).Wrapf(err, "read .gitignore")
 	}
