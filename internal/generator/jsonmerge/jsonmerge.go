@@ -58,6 +58,16 @@ type OwnedKey struct {
 	Value  any
 	Path   []string
 	Remove bool
+
+	// Members marks Value as a map whose entries are each ai-rulez's (the MCP
+	// server map): the ownership record then names every entry instead of the
+	// whole key, so an entry the consumer adds beside ours later is not claimed.
+	Members bool
+
+	// Elements marks Value as an array of which ai-rulez added only these
+	// elements; the rest are the consumer's. A non-nil empty slice claims
+	// nothing. See Claim.
+	Elements []any
 }
 
 // segments returns the key path this OwnedKey addresses. Path wins when set;
@@ -87,6 +97,9 @@ func (k OwnedKey) segments() []string {
 type Result struct {
 	Body           string
 	PartiallyOwned bool
+	// Claims record what ai-rulez wrote, so that Unmerge can take exactly that
+	// back out when the owning preset or server goes away or on clean.
+	Claims []Claim
 }
 
 // jsonMember is one top-level key/value pair of a JSON object, with the value
@@ -113,17 +126,12 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 	}
 	if !found {
 		body, err := marshalOwnedJSONKeys(owned)
-		return Result{Body: body}, err
+		return Result{Body: body, Claims: claimsFor(owned)}, err
 	}
 
 	members, err := decodeObjectMembers([]byte(existing))
 	if err != nil {
-		return Result{}, oops.
-			With("path", path).
-			Hint(fmt.Sprintf(
-				"%s is not parseable JSON, and ai-rulez will not overwrite a file it cannot merge into. "+
-					"Fix the syntax (comments and trailing commas are not valid JSON), or move the file aside.", path)).
-			Wrapf(err, "parse existing JSON settings document")
+		return Result{}, parseFailure(path, existing, err)
 	}
 
 	indent := detectTopLevelIndent(existing)
@@ -143,7 +151,7 @@ func Apply(path string, owned []OwnedKey) (Result, error) {
 	if err != nil {
 		return Result{}, oops.With("path", path).Wrapf(err, "encode merged JSON settings document")
 	}
-	return Result{Body: rendered + newline, PartiallyOwned: hasUnownedMembers(merged, owned)}, nil
+	return Result{Body: rendered + newline, PartiallyOwned: hasUnownedMembers(merged, owned), Claims: claimsFor(owned)}, nil
 }
 
 // hasUnownedMembers reports whether the document carries a top-level key outside
