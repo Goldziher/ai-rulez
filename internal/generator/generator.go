@@ -112,17 +112,9 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	}
 	g.markSensitiveOutputs(flatOutputs)
 
-	// Machine-local files must never reach git: make sure they are ignored before
-	// any is written, and refuse to write them when that fails.
-	ignoredEarly := false
-	if g.hasLocalOutputs(flatOutputs) || g.hasGuardedSecretOutputs(flatOutputs) {
-		if err := g.updateGitignore(flatOutputs); err != nil {
-			return 0, oops.Wrapf(err, "gitignore machine-local outputs before writing them")
-		}
-		ignoredEarly = true
-		if err := g.verifyGuardedOutputsIgnored(flatOutputs); err != nil {
-			return 0, err
-		}
+	ignoredEarly, err := g.ignoreBeforeWriting(flatOutputs)
+	if err != nil {
+		return 0, err
 	}
 
 	staleFiles := g.staleManifestFiles(flatOutputs)
@@ -145,17 +137,7 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		logger.Warn("Failed to write generated manifest", "error", err)
 	}
 
-	// Update gitignore if enabled, or whenever machine-local content exists —
-	// local ".local" outputs and the .ai-rulez/local/ source subtree must be
-	// gitignored unconditionally, even when config gitignore is disabled.
-	// The early pass already wrote the same block unless writing skipped a
-	// hand-written file, which drops that file's entry.
-	rewrite := !ignoredEarly || len(g.skippedPaths) > 0
-	if rewrite && (g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets()) {
-		if err := g.updateGitignore(flatOutputs); err != nil {
-			logger.Warn("Failed to update .gitignore", "error", err)
-		}
-	}
+	g.finishGitignore(flatOutputs, ignoredEarly)
 
 	written := 0
 	for _, output := range flatOutputs {
@@ -167,6 +149,35 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	logger.Info("Generation complete", "files", written)
 
 	return written, nil
+}
+
+// ignoreBeforeWriting makes sure machine-local files and MCP configs holding
+// secrets are git-ignored before any is written, and refuses the run when git
+// still would not ignore them. It reports whether it wrote the ignore entries.
+func (g *Generator) ignoreBeforeWriting(outputs []config.OutputFile) (bool, error) {
+	if !g.hasLocalOutputs(outputs) && !g.hasGuardedSecretOutputs(outputs) {
+		return false, nil
+	}
+	if err := g.updateGitignore(outputs); err != nil {
+		return false, oops.Wrapf(err, "gitignore machine-local outputs before writing them")
+	}
+	return true, g.verifyGuardedOutputsIgnored(outputs)
+}
+
+// finishGitignore updates .gitignore if enabled, or whenever machine-local
+// content exists: local ".local" outputs and the .ai-rulez/local/ source subtree
+// are gitignored unconditionally, even when config gitignore is disabled. The
+// early pass already wrote the same block unless writing skipped a hand-written
+// file, which drops that file's entry.
+func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bool) {
+	if ignoredEarly && len(g.skippedPaths) == 0 {
+		return
+	}
+	if g.config.ShouldUpdateGitignore() || g.hasLocalGitignoreTargets() {
+		if err := g.updateGitignore(outputs); err != nil {
+			logger.Warn("Failed to update .gitignore", "error", err)
+		}
+	}
 }
 
 // GeneratePlugin packages the project into distributable plugin bundles plus a
@@ -2063,21 +2074,31 @@ func (g *Generator) verifyGuardedOutputsIgnored(outputs []config.OutputFile) err
 // content tree and the local manifest are git-ignored. It runs before any check
 // that can refuse the run.
 func (g *Generator) ignoreLocalInputs() error {
+	patterns := g.localInputPatterns()
+	if len(patterns) == 0 {
+		return nil
+	}
+	if err := gitignore.EnsureEntries(g.config.BaseDir, patterns); err != nil {
+		return oops.Wrapf(err, "gitignore the machine-local inputs")
+	}
+	return nil
+}
+
+// localInputPatterns lists the ignore patterns of the machine-local inputs: the
+// local/ content tree, the local manifest, the overlay and whichever of its lock
+// and temp files exist. It is empty when the project has no local inputs.
+func (g *Generator) localInputPatterns() []string {
 	if !g.hasLocalGitignoreTargets() {
 		return nil
 	}
 	patterns := []string{
 		g.configDirName() + "/" + localSourceDirName + "/",
 		g.configDirName() + "/config.local.*",
-		g.configDirName() + "/.config.local.*",
 	}
 	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
 		patterns = append(patterns, rel)
 	}
-	if err := gitignore.EnsureEntries(g.config.BaseDir, patterns); err != nil {
-		return oops.Wrapf(err, "gitignore the machine-local inputs")
-	}
-	return nil
+	return append(patterns, g.localGitignorePatternsOnDisk()...)
 }
 
 // hasLocalGitignoreTargets reports whether machine-local content exists and so
@@ -2150,15 +2171,8 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	// The .ai-rulez/local/ source subtree holds machine-local override content
 	// and must never be committed. Ignore it unconditionally, bypassing the
 	// config-dir skip that normally protects .ai-rulez/.
-	if g.hasLocalGitignoreTargets() {
-		paths[g.configDirName()+"/"+localSourceDirName+"/"] = true
-		if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
-			paths[rel] = true
-		}
-		paths[g.configDirName()+"/config.local.*"] = true
-		for _, p := range g.localGitignorePatternsOnDisk() {
-			paths[p] = true
-		}
+	for _, p := range g.localInputPatterns() {
+		paths[p] = true
 	}
 
 	// A run that skipped the local inputs on purpose (--no-local) writes no
@@ -2487,21 +2501,27 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		return nil
 	}
 	sort.Strings(unsafe)
-	hint := "Enable gitignore generation with --gitignore or add these generated MCP config paths to .gitignore"
-	if g.sharedWithTeam(unsafe) {
-		hint = "These MCP config files are shared with your team (committed) but would carry secrets. Add them to " +
-			".gitignore, or move the secret-bearing server out of config.local.* and out of the shared config."
-	}
-	if shared {
-		hint = "These files hold hand-authored settings alongside the generated mcpServers key, so ai-rulez will " +
-			"not gitignore them for you. Either ignore them yourself, or move the secret-bearing server into a " +
-			"config whose MCP output is not shared."
-	}
 	return oops.
 		With("paths", unsafe).
 		With("env_keys", secretKeys).
-		Hint(hint).
+		Hint(g.secretIgnoreHint(unsafe, shared)).
 		Errorf("generated MCP config contains secrets but is not gitignored: %s", strings.Join(unsafe, ", "))
+}
+
+// secretIgnoreHint tells how to fix MCP configs that hold secrets and are not
+// ignored. handAuthored marks a partially owned document, which ai-rulez cannot
+// gitignore on the consumer's behalf, so --gitignore is not the remedy there.
+func (g *Generator) secretIgnoreHint(unsafe []string, handAuthored bool) string {
+	switch {
+	case handAuthored:
+		return "These files hold hand-authored settings alongside the generated mcpServers key, so ai-rulez will " +
+			"not gitignore them for you. Either ignore them yourself, or move the secret-bearing server into a " +
+			"config whose MCP output is not shared."
+	case g.sharedWithTeam(unsafe):
+		return "These MCP config files are shared with your team (committed) but would carry secrets. Add them to " +
+			".gitignore, or move the secret-bearing server out of config.local.* and out of the shared config."
+	}
+	return "Enable gitignore generation with --gitignore or add these generated MCP config paths to .gitignore"
 }
 
 // sharedWithTeam reports whether any of the project-relative paths is a file the
