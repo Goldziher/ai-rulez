@@ -2200,8 +2200,13 @@ func (g *Generator) configDirName() string {
 func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	gitignorePath := filepath.Join(g.config.BaseDir, ".gitignore")
 
-	// Collect unique output paths
-	paths := g.collectGitignorePaths(outputs)
+	// Patterns git does not already cover: not ignored by a user rule, and not
+	// deliberately un-ignored by one.
+	paths, overridden := g.neededGitignorePatterns(outputs)
+	for _, o := range overridden {
+		logger.Warn("A .gitignore rule un-ignores a machine-local or secret output; ai-rulez will not re-ignore it",
+			"path", o.Pattern, "rule", o.Rule, "source", o.Source)
+	}
 
 	// Read existing .gitignore content
 	existingData, err := os.ReadFile(gitignorePath)
@@ -2212,32 +2217,16 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 	}
 	existingContent := string(existingData)
 
-	// Drop entries the user already has outside the managed fence — avoids
-	// duplicating lines like ".cursor/" that pre-existed in the file.
-	outsideFence := gitignore.PatternsOutsideFence(existingContent)
-
-	// Sort remaining paths for deterministic output
-	outsidePatterns := make([]string, 0, len(outsideFence))
-	for pattern := range outsideFence {
-		outsidePatterns = append(outsidePatterns, pattern)
-	}
-	var sortedPaths []string
-	for p := range paths {
-		if isIgnored(p, outsidePatterns) {
-			continue
-		}
-		sortedPaths = append(sortedPaths, p)
-	}
-	sort.Strings(sortedPaths)
+	sortedPaths := dropUserPatterns(paths, existingContent)
 
 	if len(sortedPaths) == 0 {
 		logger.Debug("No paths to add to .gitignore")
-		// If a managed block already exists but every entry is now covered
-		// outside the fence, replace the block with an empty one to keep the
-		// file tidy.
-		if !contains(existingContent, gitignore.BeginMarker) {
+		// Nothing is left to add: drop a block from an earlier run rather than
+		// leave an empty fence behind.
+		if !contains(existingContent, gitignore.BeginMarker) && !contains(existingContent, gitignore.OldHeader) {
 			return nil
 		}
+		return dropManagedBlock(gitignorePath, existingContent)
 	}
 
 	// Build the fenced block
@@ -2572,4 +2561,21 @@ func contains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// dropUserPatterns drops entries the user already has outside the managed fence,
+// which avoids duplicating lines like ".cursor/" that pre-existed in the file.
+func dropUserPatterns(paths []string, existingContent string) []string {
+	outside := gitignore.PatternsOutsideFence(existingContent)
+	outsidePatterns := make([]string, 0, len(outside))
+	for pattern := range outside {
+		outsidePatterns = append(outsidePatterns, pattern)
+	}
+	var kept []string
+	for _, p := range paths {
+		if !isIgnored(p, outsidePatterns) {
+			kept = append(kept, p)
+		}
+	}
+	return kept
 }

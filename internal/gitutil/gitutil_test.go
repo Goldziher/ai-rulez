@@ -110,3 +110,67 @@ func TestInfoExcludePathResolvesInLinkedWorktrees(t *testing.T) {
 	assert.Equal(t, "x/y.md", RepoRelative(TopLevel(linked), filepath.Join(linked, "x", "y.md")))
 	assert.Empty(t, RepoRelative(TopLevel(linked), filepath.Join(main, "x.md")))
 }
+
+func TestIgnoreRules(t *testing.T) {
+	gitAvailable(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("*.log\n!keep.log\nbuild/\n"), 0o644))
+
+	rules, err := IgnoreRules(dir, []string{"a.log", "keep.log", "build/x", "plain.md"})
+
+	require.NoError(t, err)
+	tests := []struct {
+		path                      string
+		ignored, negated, matched bool
+		pattern                   string
+		line                      int
+	}{
+		{"a.log", true, false, true, "*.log", 1},
+		{"keep.log", false, true, true, "!keep.log", 2},
+		{"build/x", true, false, true, "build/", 3},
+		{"plain.md", false, false, false, "", 0},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			m := rules[tt.path]
+			assert.Equal(t, tt.ignored, m.Ignored())
+			assert.Equal(t, tt.negated, m.Negated())
+			assert.Equal(t, tt.matched, m.Matched())
+			assert.Equal(t, tt.pattern, m.Pattern)
+			assert.Equal(t, tt.line, m.Line)
+		})
+	}
+}
+
+func TestIgnoreRulesOutsideRepository(t *testing.T) {
+	rules, err := IgnoreRules(t.TempDir(), []string{"a.md"})
+	require.NoError(t, err)
+	assert.Nil(t, rules)
+}
+
+func TestIgnoreRulesMirrored_RewritesWithoutTouchingOriginals(t *testing.T) {
+	gitAvailable(t)
+	dir := t.TempDir()
+	runGit(t, dir, "init", "-q")
+	gi := filepath.Join(dir, ".gitignore")
+	require.NoError(t, os.WriteFile(gi, []byte("mine\n# own\nowned\n"), 0o644))
+	exclude := InfoExcludePath(dir)
+	require.NoError(t, os.MkdirAll(filepath.Dir(exclude), 0o755))
+	require.NoError(t, os.WriteFile(exclude, []byte("excl\n"), 0o644))
+
+	rules, err := IgnoreRulesMirrored(dir, []string{"mine", "owned", "excl"}, func(rel, content string) string {
+		if rel == ".gitignore" {
+			return "mine\n"
+		}
+		return content
+	})
+
+	require.NoError(t, err)
+	assert.True(t, rules["mine"].Ignored())
+	assert.False(t, rules["owned"].Matched())
+	assert.True(t, rules["excl"].Ignored())
+	data, readErr := os.ReadFile(gi)
+	require.NoError(t, readErr)
+	assert.Equal(t, "mine\n# own\nowned\n", string(data))
+}

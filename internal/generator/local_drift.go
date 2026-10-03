@@ -355,11 +355,8 @@ func (g *Generator) findViolations(plan *localPlan, merged []config.OutputFile) 
 // pendingIgnorePatterns are the patterns this run is about to add to its managed
 // .gitignore block.
 func (g *Generator) pendingIgnorePatterns(outputs []config.OutputFile) []string {
-	var patterns []string
-	for pattern := range g.collectGitignorePaths(outputs) {
-		patterns = append(patterns, pattern)
-	}
-	return patterns
+	needed, _ := g.neededGitignorePatterns(outputs)
+	return needed
 }
 
 // ignoredSet reports which of rels (project-relative) are ignored. Inside a
