@@ -127,9 +127,6 @@ func TestOpenCodeContentHelper_Registers(t *testing.T) {
 }
 
 func TestOpenCodeContentHelper_SkipsAnUnreadableItemAndKeepsTheRest(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("file permissions do not stop root")
-	}
 	src := t.TempDir()
 	m := &Manifest{
 		Name: "p", Version: "1.0.0", SourceDir: src,
@@ -139,9 +136,12 @@ func TestOpenCodeContentHelper_SkipsAnUnreadableItemAndKeepsTheRest(t *testing.T
 		},
 	}
 
+	// A directory in place of the file fails the read on every platform,
+	// unlike permission bits, which Windows and root ignore.
 	result := runContentHelper(t, m, "x", func(dir string) {
-		require.NoError(t, os.Chmod(filepath.Join(dir, ".opencode", "commands", "bad.md"), 0o000))
-		t.Cleanup(func() { _ = os.Chmod(filepath.Join(dir, ".opencode", "commands", "bad.md"), 0o644) })
+		bad := filepath.Join(dir, ".opencode", "commands", "bad.md")
+		require.NoError(t, os.Remove(bad))
+		require.NoError(t, os.Mkdir(bad, 0o755))
 	})
 
 	commands := result["commands"].([]any)

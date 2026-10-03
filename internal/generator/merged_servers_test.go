@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -322,7 +323,9 @@ func TestWriteFileAtomic_ReplacesTheFileAndKeepsItsMode(t *testing.T) {
 	assert.Equal(t, "new", string(got))
 	info, statErr := os.Stat(path)
 	require.NoError(t, statErr)
-	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	if runtime.GOOS != "windows" { // Windows has no Unix permission bits
+		assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	}
 	entries, dirErr := os.ReadDir(filepath.Dir(path))
 	require.NoError(t, dirErr)
 	assert.Len(t, entries, 1, "no temporary file is left behind")
