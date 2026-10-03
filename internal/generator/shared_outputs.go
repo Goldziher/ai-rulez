@@ -110,19 +110,51 @@ func agentsMDOwners(cfg *config.Config) []string {
 func dropOwnSharedOutputs(outputs []config.OutputFile, baseDir, preset string, consumer config.SharedOutputConsumer,
 	targeted skillTargets,
 ) []config.OutputFile {
-	roots := []string{filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills)))}
-	if consumer.Reads(config.SharedAgentSkills) && consumer.OwnSkillsDir != "" {
-		roots = append(roots, filepath.Join(baseDir, filepath.FromSlash(consumer.OwnSkillsDir)))
-	}
-	agentsMD := filepath.Join(baseDir, string(config.SharedAgentsMD))
+	return dropOwnOutputs(dropSharedRootSkills(outputs, baseDir, preset, consumer, targeted), baseDir, preset, consumer, targeted)
+}
 
+// dropSharedRootSkills removes the preset's outputs below the shared
+// .agents/skills tree.
+func dropSharedRootSkills(outputs []config.OutputFile, baseDir, preset string, consumer config.SharedOutputConsumer,
+	targeted skillTargets,
+) []config.OutputFile {
+	if !consumer.Reads(config.SharedAgentSkills) {
+		return outputs
+	}
+	return dropUnder(outputs, baseDir, preset, targeted,
+		[]string{filepath.Join(baseDir, filepath.FromSlash(string(config.SharedAgentSkills)))})
+}
+
+// dropOwnOutputs removes the preset's own root AGENTS.md and its own skills
+// directory, the outputs the shared ones replace, leaving whatever it writes to
+// .agents/skills.
+func dropOwnOutputs(outputs []config.OutputFile, baseDir, preset string, consumer config.SharedOutputConsumer,
+	targeted skillTargets,
+) []config.OutputFile {
+	if consumer.Reads(config.SharedAgentsMD) {
+		agentsMD := filepath.Join(baseDir, string(config.SharedAgentsMD))
+		kept := outputs[:0:0]
+		for _, output := range outputs {
+			if !samePath(output.Path, agentsMD) {
+				kept = append(kept, output)
+			}
+		}
+		outputs = kept
+	}
+	if consumer.Reads(config.SharedAgentSkills) && consumer.OwnSkillsDir != "" {
+		outputs = dropUnder(outputs, baseDir, preset, targeted,
+			[]string{filepath.Join(baseDir, filepath.FromSlash(consumer.OwnSkillsDir))})
+	}
+	return outputs
+}
+
+// dropUnder removes the outputs below roots, except those of skills whose
+// targets keep them on the preset's own path.
+func dropUnder(outputs []config.OutputFile, baseDir, preset string, targeted skillTargets, roots []string,
+) []config.OutputFile {
 	kept := outputs[:0:0]
 	for _, output := range outputs {
-		if consumer.Reads(config.SharedAgentsMD) && samePath(output.Path, agentsMD) {
-			continue
-		}
-		if consumer.Reads(config.SharedAgentSkills) && underAny(output.Path, roots) &&
-			!targeted.keeps(preset, baseDir, output.Path, roots) {
+		if underAny(output.Path, roots) && !targeted.keeps(preset, baseDir, output.Path, roots) {
 			continue
 		}
 		kept = append(kept, output)

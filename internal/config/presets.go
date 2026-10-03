@@ -41,8 +41,9 @@ type OutputFile struct {
 	IsDir      bool
 	LocalOnly  bool
 	// SourceHash, when set, replaces the run's Source-Hash in this output's
-	// header. The drift guard uses it to stamp shared outputs with the baseline
-	// hash and machine-local ones with a hash of their local inputs.
+	// header. The agents_md shared outputs set their own (a hash of shared
+	// content only); the drift guard stamps machine-local outputs with a hash of
+	// their local inputs and every other output without one with the baseline hash.
 	SourceHash string
 	// PartiallyOwned marks a file ai-rulez only contributes some of the content
 	// to — a settings document where it owns one top-level key and the consumer

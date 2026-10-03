@@ -209,14 +209,17 @@ func sameOutput(a, b config.OutputFile) bool {
 	return a.Content == b.Content && bytes.Equal(a.RawContent, b.RawContent) && a.Mode == b.Mode
 }
 
-// stampSourceHashes gives shared outputs the baseline Source-Hash, so a teammate
-// regenerating sees no hash churn, and machine-local outputs a hash of their
-// local inputs.
+// stampSourceHashes gives machine-local outputs a hash of their local inputs and
+// shared outputs without a hash of their own the baseline Source-Hash, so a
+// teammate regenerating sees no hash churn. Outputs that carry their own hash
+// (the agents_md shared outputs, hashed from shared content only) keep it: it is
+// already the same on every machine.
 func (g *Generator) stampSourceHashes(plan *localPlan, merged []config.OutputFile) {
 	for i := range merged {
-		if merged[i].LocalOnly {
+		switch {
+		case merged[i].LocalOnly:
 			merged[i].SourceHash = plan.localHash
-		} else {
+		case merged[i].SourceHash == "":
 			merged[i].SourceHash = plan.baselineHash
 		}
 	}
