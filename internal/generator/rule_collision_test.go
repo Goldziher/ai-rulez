@@ -62,8 +62,8 @@ func TestGenerate_HandWrittenCollision_WritesDisambiguatedRule(t *testing.T) {
 	t.Run("dry run lists the disambiguated name only", func(t *testing.T) {
 		plan, err := newWindsurfGenerator(t, dir).DryRun("default")
 		require.NoError(t, err)
-		assert.Contains(t, plan, "write-file: "+alt)
-		assert.NotContains(t, plan, "write-file: "+rel)
+		assert.Contains(t, plan, "write-file: "+filepath.FromSlash(alt))
+		assert.NotContains(t, plan, "write-file: "+filepath.FromSlash(rel))
 	})
 
 	t.Run("clean removes ours and keeps the hand-written file", func(t *testing.T) {
@@ -107,7 +107,7 @@ func TestDryRun_OmitsGuardSkippedFiles(t *testing.T) {
 
 	got := gen.planLines(outputs)
 
-	assert.Equal(t, []string{"write-file: .claude/rules/fresh.md"}, got)
+	assert.Equal(t, []string{"write-file: " + filepath.FromSlash(".claude/rules/fresh.md")}, got)
 }
 
 func TestWriteOutput_Recognizes421CursorRuleFiles(t *testing.T) {
