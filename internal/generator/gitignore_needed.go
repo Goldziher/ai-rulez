@@ -18,14 +18,15 @@ import (
 const gitignoreProbeName = "ai-rulez-probe"
 
 // gitignoreProbe maps an ignore pattern to a representative path git can be
-// asked about: the path itself for a file, a child for a directory, and "x" in
-// place of each glob star.
+// asked about: the path itself for a file, a child for a directory, and the probe
+// name in place of each glob star. A short stand-in such as "x" would match a
+// user rule like "x.*" that does not cover the pattern's real files.
 func gitignoreProbe(pattern string) string {
 	p := strings.TrimPrefix(pattern, "/")
 	if strings.HasSuffix(p, "/") {
 		p += gitignoreProbeName
 	}
-	return strings.ReplaceAll(p, "*", "x")
+	return strings.ReplaceAll(p, "*", gitignoreProbeName)
 }
 
 // withoutManagedBlock returns content with the ai-rulez managed block removed.
@@ -59,12 +60,14 @@ func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMa
 		rootRel = prefix + "/.gitignore"
 	}
 	begin, end := g.excludeMarkers()
+	fallbackBegin, fallbackEnd := gitignore.FallbackMarkers(g.config.BaseDir)
 	rewrite := func(rel, content string) string {
 		switch rel {
 		case rootRel:
 			return withoutManagedBlock(content)
 		case "info/exclude":
-			return gitignore.ReplaceMarkedBlock(content, begin, end, "")
+			content = gitignore.ReplaceMarkedBlock(content, begin, end, "")
+			return gitignore.ReplaceMarkedBlock(content, fallbackBegin, fallbackEnd, "")
 		}
 		return content
 	}
@@ -91,7 +94,9 @@ func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
 		}
 	}
 	if exclude := gitutil.InfoExcludePath(g.config.BaseDir); exclude != "" {
-		if data, err := os.ReadFile(exclude); err == nil && strings.Contains(string(data), excludeBegin) { //nolint:gosec // git exclude file
+		fallbackBegin, _ := gitignore.FallbackMarkers(g.config.BaseDir)
+		if data, err := os.ReadFile(exclude); err == nil && //nolint:gosec // git exclude file
+			(strings.Contains(string(data), excludeBegin) || strings.Contains(string(data), fallbackBegin)) {
 			return true
 		}
 	}
@@ -104,12 +109,14 @@ func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
 func (g *Generator) protectedGitignorePatterns(outputs []config.OutputFile) map[string]bool {
 	protected := map[string]bool{}
 	for _, output := range outputs {
-		if !output.Sensitive {
-			continue
-		}
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
-		if pattern := gitignorePatternForOutput(relPath, output.IsDir); pattern != "" {
-			protected[pattern] = true
+		switch {
+		case output.LocalOnly:
+			protected[localGitignorePattern(relPath)] = true
+		case output.Sensitive:
+			if pattern := gitignorePatternForOutput(relPath, output.IsDir); pattern != "" {
+				protected[pattern] = true
+			}
 		}
 	}
 	return protected
@@ -150,7 +157,7 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 	}
 	rules := g.userIgnoreRules(probes)
 	if rules == nil {
-		return patterns, nil
+		return dropCoveredPatterns(patterns), nil
 	}
 	protected := g.protectedGitignorePatterns(outputs)
 	needed = make([]string, 0, len(patterns))
@@ -167,7 +174,35 @@ func (g *Generator) neededGitignorePatterns(outputs []config.OutputFile) (needed
 			needed = append(needed, pattern)
 		}
 	}
-	return needed, overridden
+	return dropCoveredPatterns(needed), overridden
+}
+
+// dropCoveredPatterns removes, from a sorted list, the patterns a directory
+// pattern of the same list already covers (".xum/" covers ".xum/mcp.jsonc").
+func dropCoveredPatterns(patterns []string) []string {
+	var dirs []string
+	for _, p := range patterns {
+		if strings.HasSuffix(p, "/") && !strings.HasPrefix(p, "/") && !strings.ContainsAny(p, "*?[") {
+			dirs = append(dirs, p)
+		}
+	}
+	if len(dirs) == 0 {
+		return patterns
+	}
+	kept := make([]string, 0, len(patterns))
+	for _, p := range patterns {
+		covered := false
+		for _, d := range dirs {
+			if p != d && strings.HasPrefix(p, d) {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			kept = append(kept, p)
+		}
+	}
+	return kept
 }
 
 // dropManagedBlock removes the ai-rulez block from the .gitignore at path,

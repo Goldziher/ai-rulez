@@ -48,6 +48,9 @@ type localPlan struct {
 	baselineFiles []string
 	// violations: drift or local-only files that are tracked or not ignored.
 	violations []localViolation
+	// driftIgnored: drift files that are untracked and git-ignored (or will be,
+	// once this run writes its ignore entries), so writing them is allowed.
+	driftIgnored map[string]bool
 }
 
 type localViolation struct {
@@ -173,7 +176,11 @@ func (g *Generator) classify(plan *localPlan, baseline, merged []config.OutputFi
 	mine := g.outputIndex(merged)
 
 	for rel, b := range base {
-		if !b.PartiallyOwned {
+		// The baseline reads a merged document as it is on disk, which after an
+		// earlier local run holds the overlay's keys: the baseline then treats them
+		// as hand-authored and flips to partial. The merged render, which owns
+		// those keys, tells whether the whole file is ours.
+		if m, inMine := mine[rel]; !b.PartiallyOwned || (inMine && !m.PartiallyOwned) {
 			plan.baselineFiles = append(plan.baselineFiles, rel)
 		}
 		if _, ok := mine[rel]; !ok {
@@ -339,6 +346,7 @@ func (g *Generator) findViolations(plan *localPlan, merged []config.OutputFile) 
 	isTracked := func(rel string) bool { return failClosed || tracked[rel] }
 
 	var out []localViolation
+	plan.driftIgnored = map[string]bool{}
 	for _, rel := range plan.localOnly {
 		if isTracked(rel) {
 			out = append(out, localViolation{rel, "local-only output is tracked by git"})
@@ -351,6 +359,8 @@ func (g *Generator) findViolations(plan *localPlan, merged []config.OutputFile) 
 			out = append(out, localViolation{rel, "shared output is tracked and would change"})
 		case !ignored[rel]:
 			out = append(out, localViolation{rel, "shared output would change and is not git-ignored"})
+		default:
+			plan.driftIgnored[rel] = true
 		}
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].path < out[j].path })
@@ -403,10 +413,18 @@ func (p *localPlan) check(allow bool) error {
 	for i, v := range p.violations {
 		lines[i] = fmt.Sprintf("%s (%s)", v.path, v.reason)
 	}
+	hint := "Git-ignore these files, run with --no-local to generate the shared view, " +
+		"or pass --allow-local-drift to write them anyway (this can put local secrets into tracked files)"
+	for _, v := range p.violations {
+		if isMCPConfigOutput(v.path) {
+			hint += ". MCP config files such as " + v.path + " are shared with your team (committed): " +
+				"git-ignore them, or move the server out of config.local.* so no overlay value reaches a shared file"
+			break
+		}
+	}
 	return oops.
 		With("errors", lines).
-		Hint("Git-ignore these files, run with --no-local to generate the shared view, "+
-			"or pass --allow-local-drift to write them anyway (this can put local secrets into tracked files)").
+		Hint(hint).
 		Errorf("local overrides would change %d shared output(s)", len(p.violations))
 }
 
@@ -418,6 +436,11 @@ func (p *localPlan) dryRunLines() []string {
 	}
 	for _, rel := range p.drift {
 		lines = append(lines, "drift: "+rel)
+	}
+	for _, rel := range p.drift {
+		if p.driftIgnored[rel] {
+			lines = append(lines, "allowed: "+rel+" (drift, but git-ignored)")
+		}
 	}
 	for _, rel := range p.suppressed {
 		lines = append(lines, "suppressed: "+rel)
