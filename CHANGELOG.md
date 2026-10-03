@@ -10,6 +10,16 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - **xum stdio MCP `env`** (#209): Xum's `mcp.jsonc` loader keeps only the command string of a stdio entry, so `env` is written as a POSIX shell assignment prefix (`GITHUB_TOKEN=... npx -y pkg`, keys sorted, values shell-quoted) instead of being dropped with a warning. Names that are not shell identifiers are skipped with a warning. Resolved secrets in it fall under the existing MCP secret guard (`0600`, must be git-ignored).
 
+### Fixed
+
+- **Local content reaches each tool through a file it loads.** Several `*.local.md` files ai-rulez wrote for machine-local content were never read by their tools. Local context and inline local rules now go to:
+  - Gemini CLI: `GEMINI.local.md` is listed in `.gemini/settings.json` `context.fileName` (`["GEMINI.md", "GEMINI.local.md"]`, or `["AGENTS.md", "GEMINI.local.md"]` with `agents_md`). The document is now written without `[[mcp_servers]]` and whether or not local content exists, so a committed `.gemini/settings.json` gains this one entry. A `context.fileName` you wrote is kept, with a warning when it lacks `GEMINI.local.md`.
+  - OpenCode: `opencode.json` `instructions` lists `AGENTS.local.md`, merged per entry with your own. `opencode.json` is now written without `[[mcp_servers]]`.
+  - Codex, and Hermes with `agents_md`: a git-ignored `AGENTS.override.md` that repeats the shared `AGENTS.md` and appends the local sections (both tools load it instead of `AGENTS.md`).
+  - Junie and Antigravity: `.junie/rules/ai-rulez.local.md` and `.agents/rules/ai-rulez.local.md` (`trigger: always_on`). A local rule named `ai-rulez` is written as `ai-rulez-<hash>.local<ext>`.
+  - Amp, and Hermes without `agents_md`, have no local file to load: nothing is written and `generate` warns once per preset.
+- `AGENTS.local.md` (codex or amp only), `.hermes.local.md`, `.junie/guidelines.local.md` and Antigravity's `GEMINI.local.md` are no longer written; the first `generate` removes the ones an earlier version left, through the local manifest.
+
 ## [4.23.0] - 2026-10-03
 
 ### Added
