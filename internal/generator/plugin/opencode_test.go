@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -44,6 +45,36 @@ func TestRenderOpenCodeCopiesAuthoredSource(t *testing.T) {
 	outputs, err := renderOpenCode(m, "/out")
 	require.NoError(t, err)
 	assert.Equal(t, "export default async () => ({});\n", string(outputs[0].RawContent))
+}
+
+func TestRenderOpenCodeWarnsOnV1AuthoredSource(t *testing.T) {
+	tests := []struct {
+		name       string
+		source     string
+		wantWarned bool
+	}{
+		{"v1 function entrypoint", "export const P = async () => ({})\n", true},
+		{"v2 definition", "export default { id: \"p\", async setup() {} }\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			opencodev1.ResetWarned()
+			root := t.TempDir()
+			source := filepath.Join(root, openCodeSourcePath)
+			require.NoError(t, os.MkdirAll(filepath.Dir(source), 0o755))
+			require.NoError(t, os.WriteFile(source, []byte(tt.source), 0o644))
+			m := &Manifest{Name: "test-plugin", Version: "1.2.3", SourceDir: root}
+
+			// Act
+			outputs, err := renderOpenCode(m, "/out")
+
+			// Assert: generation still succeeds and copies the file verbatim.
+			require.NoError(t, err)
+			assert.Equal(t, tt.source, string(outputs[0].RawContent))
+			assert.Equal(t, tt.wantWarned, opencodev1.WasWarned(source))
+		})
+	}
 }
 
 func TestRenderOpenCodeGeneratesPackageFromMetadata(t *testing.T) {
