@@ -10,6 +10,7 @@
 package plugin
 
 import (
+	"slices"
 	"sort"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -102,7 +103,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Keywords:    p.Keywords,
 		Tags:        p.Tags,
 		Runtimes:    p.ResolvedRuntimes(),
-		MCP:         resolveMCP(p, cfg),
+		MCP:         resolveMCP(p, cfg, p.ResolvedRuntimes()),
 		Hooks:       p.Hooks,
 		Statusline:  p.Statusline,
 		Interface:   p.Interface,
@@ -126,7 +127,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 // resolveMCP returns the plugin's bundled MCP servers: the explicit
 // [[plugin.mcp]] entries if present, otherwise the project's resolved
 // [[mcp_servers]] mapped to the canonical launch shape.
-func resolveMCP(p *config.PluginAuthoring, cfg *config.Config) []config.PluginMCPLaunch {
+func resolveMCP(p *config.PluginAuthoring, cfg *config.Config, runtimes []string) []config.PluginMCPLaunch {
 	if len(p.MCP) > 0 {
 		return p.MCP
 	}
@@ -144,6 +145,10 @@ func resolveMCP(p *config.PluginAuthoring, cfg *config.Config) []config.PluginMC
 		if len(s.Headers) > 0 {
 			logger.Warn("MCP server headers are not included in plugin bundles", "server", name)
 		}
+		if !s.IsEnabled() && slices.ContainsFunc(runtimes, func(r string) bool { return r != config.PluginRuntimeOpenCode }) {
+			logger.Warn("A disabled MCP server is bundled enabled; only the OpenCode bundle carries the disabled flag",
+				"server", name)
+		}
 		out = append(out, config.PluginMCPLaunch{
 			Name:      s.Name,
 			Command:   s.Command,
@@ -151,6 +156,7 @@ func resolveMCP(p *config.PluginAuthoring, cfg *config.Config) []config.PluginMC
 			Env:       s.Env,
 			Transport: s.GetTransport(),
 			URL:       s.URL,
+			Disabled:  !s.IsEnabled(),
 		})
 	}
 	return out
