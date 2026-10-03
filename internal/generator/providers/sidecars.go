@@ -76,7 +76,7 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 	switch kind {
 	case SidecarClaudeSettingsJSON:
 		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
-			{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg)},
+			{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true},
 		})
 	case SidecarMCPJSON:
 		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg))
@@ -184,7 +184,7 @@ func mcpJSONServerEntries(cfg *config.Config) map[string]any {
 // mcpServers.ai-rulez entry, so servers already in the file survive.
 func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
 	if cfg == nil || !cfg.HasSelfServer() {
-		return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg)}}
+		return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: mcpJSONServerEntries(cfg), Members: true}}
 	}
 	self := cfg.SelfMCPServerEntry(schema.Version)
 	if len(cfg.MCPServers) == 0 {
@@ -197,7 +197,7 @@ func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
 	if _, declared := servers[config.SelfMCPServerName]; !declared {
 		servers[config.SelfMCPServerName] = self
 	}
-	return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: servers}}
+	return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: servers, Members: true}}
 }
 
 // claudeMCPServerEntries builds the .claude/settings.json server map. Lifted

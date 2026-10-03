@@ -104,6 +104,9 @@ func printCleanPlan(baseDir string, plan *generator.CleanPlan) {
 	for _, f := range plan.Files {
 		logger.Info("  remove file: " + relOrAbs(baseDir, f))
 	}
+	for _, f := range plan.Unmerged {
+		logger.Info("  remove ai-rulez keys from: " + relOrAbs(baseDir, f))
+	}
 	for _, d := range plan.Dirs {
 		logger.Info("  remove dir (if empty): " + relOrAbs(baseDir, d))
 	}

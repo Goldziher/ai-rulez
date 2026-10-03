@@ -141,72 +141,162 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	// scope writes the document only for its servers.
 	if len(cfg.MCPServers) > 0 || !rulefiles.InScope(cfg) {
 		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
-		mcpFile, err := g.renderMCPConfig(mcpPath, cfg)
+		mcpFile, write, err := g.renderMCPDocument(mcpPath, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("render opencode.json: %w", err)
 		}
-		outputs = append(outputs, config.OutputFile{
-			Path:           mcpPath,
-			Content:        mcpFile.Body,
-			PartiallyOwned: mcpFile.PartiallyOwned,
-		})
+		if write {
+			outputs = append(outputs, config.OutputFile{
+				Path:           mcpPath,
+				Content:        mcpFile.Body,
+				PartiallyOwned: mcpFile.PartiallyOwned,
+				MergeClaims:    mcpFile.Claims,
+			})
+		}
 	}
 
 	return outputs, nil
 }
 
-// renderMCPConfig renders OpenCode's native v2 MCP servers and the machine-local
-// instructions entry into opencode.json. It owns the top-level $schema, the
-// nested mcp.servers key (when servers are configured) and, at the project root,
-// the AGENTS.local.md entry of instructions: OpenCode reads no AGENTS.local.md on
-// its own, and a listed file that is missing is skipped silently, so the entry is
-// written whether or not local content exists. Every sibling key under mcp (such
-// as mcp.timeout), every other top-level key and every other instructions entry
-// survive the merge.
+// renderMCPConfig is renderMCPDocument without the write decision, for callers
+// that only want the merged body.
 func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
-	owned := []jsonmerge.OwnedKey{{Path: []string{"$schema"}, Value: opencodeSchemaURL}}
+	result, _, err := g.renderMCPDocument(mcpPath, cfg)
+	return result, err
+}
+
+// renderMCPDocument renders OpenCode's native v2 MCP servers and the machine-local
+// instructions entry into opencode.json. It owns the nested mcp.servers key (when
+// servers are configured) and, at the project root, the AGENTS.local.md entry of
+// instructions: OpenCode reads no AGENTS.local.md on its own, and a listed file
+// that is missing is skipped silently, so the entry is written whether or not
+// local content exists. The top-level $schema is written only into a document
+// ai-rulez creates (or already wrote). Every sibling key under mcp (such as
+// mcp.timeout), every other top-level key and every other instructions entry
+// survive the merge.
+//
+// write is false when the document uses comments (OpenCode accepts them) and no
+// MCP servers need writing: merging would delete the comments, and the
+// instructions entry is not worth that, so a warning says what is missing.
+func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.Config) (result jsonmerge.Result, write bool, err error) {
+	var owned []jsonmerge.OwnedKey
+	if g.ownsSchema(mcpPath, cfg) {
+		owned = append(owned, jsonmerge.OwnedKey{Path: []string{keySchema}, Value: opencodeSchemaURL})
+	}
 	userEntries := false
 	if !rulefiles.InScope(cfg) {
-		entries, user, err := opencodeInstructions(mcpPath, g.LocalRootFile())
+		entries, claimed, user, err := opencodeInstructions(mcpPath, g.LocalRootFile(), previousClaimedInstructions(cfg, mcpPath))
 		if err != nil {
-			return jsonmerge.Result{}, err
+			return jsonmerge.Result{}, false, err
 		}
 		userEntries = user
 		if entries != nil {
-			owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeInstructionsKey}, Value: entries})
+			owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeInstructionsKey}, Value: entries, Elements: claimed})
 		}
 	}
 	if len(cfg.MCPServers) > 0 {
-		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", "servers"}, Value: g.mcpServersValue(cfg)})
+		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", "servers"}, Value: g.mcpServersValue(cfg), Members: true})
 	}
-	result, err := applyMergedDocument(mcpPath, owned)
+	result, err = applyMergedDocument(mcpPath, owned)
+	if err != nil && len(cfg.MCPServers) == 0 {
+		rulefiles.Warn("opencode.json could not be merged into, so "+g.LocalRootFile()+
+			" is not listed in its instructions and OpenCode does not load machine-local content: "+err.Error(),
+			"hint", "add \""+g.LocalRootFile()+"\" to instructions by hand, or remove the comments", "path", mcpPath)
+		return jsonmerge.Result{}, false, nil
+	}
 	// An entry the user listed is theirs even when it is the only key left.
 	result.PartiallyOwned = result.PartiallyOwned || userEntries
-	return result, err
+	return result, true, err
+}
+
+// ownsSchema reports whether $schema is ai-rulez's in the document at path: it is
+// when ai-rulez creates the document, or when the document already carries the
+// value ai-rulez wrote (the previous run recorded it, or generated the whole
+// file). A hand-authored document does not get one added.
+func (g *OpencodePresetGenerator) ownsSchema(path string, cfg *config.Config) bool {
+	data, err := os.ReadFile(path) //nolint:gosec // path is derived from the config base dir
+	if err != nil || strings.TrimSpace(string(data)) == "" {
+		return true
+	}
+	var doc map[string]json.RawMessage
+	if json.Unmarshal(data, &doc) != nil {
+		return false
+	}
+	var current string
+	if json.Unmarshal(doc["$schema"], &current) != nil || current != opencodeSchemaURL {
+		return false
+	}
+	rel := projectRelative(cfg, path)
+	if cfg.Run.WasGenerated(rel) {
+		return true
+	}
+	for _, claim := range cfg.Run.PreviousClaims(rel) {
+		if slices.Equal(claim.Path, []string{keySchema}) {
+			return true
+		}
+	}
+	return false
 }
 
 // opencodeInstructionsKey is the top-level array of extra instruction files.
 const opencodeInstructionsKey = "instructions"
 
+// opencodeLocalEntries are the spellings of the local root file OpenCode resolves
+// to the same path.
+func opencodeLocalEntries() []any {
+	local := config.LocalVariantPath("AGENTS.md")
+	return []any{local, "./" + local}
+}
+
+// previousClaimedInstructions lists the instructions entries the previous run
+// recorded as its own. A document the previous run wrote whole is all ai-rulez's,
+// so every spelling of the entry in it is.
+func previousClaimedInstructions(cfg *config.Config, path string) []any {
+	rel := projectRelative(cfg, path)
+	if cfg.Run.WasGenerated(rel) {
+		return opencodeLocalEntries()
+	}
+	var entries []any
+	for _, claim := range cfg.Run.PreviousClaims(rel) {
+		if slices.Equal(claim.Path, []string{opencodeInstructionsKey}) {
+			entries = append(entries, claim.Elements...)
+		}
+	}
+	return entries
+}
+
 // opencodeInstructions returns the instructions array of the document at path
-// with entry added once, and whether the document lists anything else (a user
-// entry). The other entries are kept verbatim and in order. A nil result means
-// the existing value is not an array, which is the user's to fix: it is warned
-// about and left alone.
-func opencodeInstructions(path, entry string) (entries []any, userEntries bool, err error) {
+// with entry added once, the entries of it that are ai-rulez's (added now, or
+// recorded by the previous run), and whether the document lists anything else (a
+// user entry). Either spelling of the entry ("AGENTS.local.md" or
+// "./AGENTS.local.md") counts as present. The other entries are kept verbatim and
+// in order. A nil result means the existing value is not an array, which is the
+// user's to fix: it is warned about and left alone.
+func opencodeInstructions(path, entry string, previous []any) (entries, claimed []any, userEntries bool, err error) {
 	entries, isArray, err := readOpencodeInstructions(path)
 	if err != nil {
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	if !isArray {
 		rulefiles.Warn("opencode.json instructions is not an array, so OpenCode cannot load "+entry+
 			"; the value is yours and is left alone", "path", path)
-		return nil, true, nil
+		return nil, nil, true, nil
 	}
-	if slices.Contains(entries, any(entry)) {
-		return entries, len(entries) > 1, nil
+	claimed = []any{}
+	present := false
+	for _, spelled := range opencodeLocalEntries() {
+		if slices.Contains(entries, spelled) {
+			present = true
+			if slices.Contains(previous, spelled) {
+				claimed = append(claimed, spelled)
+			}
+		}
 	}
-	return append(entries, entry), len(entries) > 0, nil
+	if !present {
+		entries = append(entries, entry)
+		claimed = append(claimed, entry)
+	}
+	return entries, claimed, len(entries) > len(claimed), nil
 }
 
 // readOpencodeInstructions reads the instructions entries of the document at path.

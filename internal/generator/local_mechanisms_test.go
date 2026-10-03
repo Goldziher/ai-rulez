@@ -73,7 +73,7 @@ func TestGeminiSettings_ToggleRewritesOwnedNames(t *testing.T) {
 	assert.Equal(t, []string{"GEMINI.md", "GEMINI.local.md"}, geminiContextNames(t, root))
 }
 
-func TestGeminiSettings_UserValueKeptAndWarned(t *testing.T) {
+func TestGeminiSettings_UserValueGetsOurNamesAppended(t *testing.T) {
 	tests := []struct {
 		name     string
 		flag     string
@@ -81,12 +81,14 @@ func TestGeminiSettings_UserValueKeptAndWarned(t *testing.T) {
 		want     []string
 		wantWarn bool
 	}{
-		{name: "off, user list without local warns", existing: `{"context":{"fileName":["CUSTOM.md","GEMINI.md"]}}`,
-			want: []string{"CUSTOM.md", "GEMINI.md"}, wantWarn: true},
+		{name: "off, user list without local gets it appended", existing: `{"context":{"fileName":["CUSTOM.md","GEMINI.md"]}}`,
+			want: []string{"CUSTOM.md", "GEMINI.md", "GEMINI.local.md"}},
+		{name: "off, user string becomes a list", existing: `{"context":{"fileName":"MY.md"}}`,
+			want: []string{"MY.md", "GEMINI.local.md"}},
 		{name: "off, user list with local is quiet", existing: `{"context":{"fileName":["GEMINI.md","GEMINI.local.md","X.md"]}}`,
 			want: []string{"GEMINI.md", "GEMINI.local.md", "X.md"}},
-		{name: "on, user list gets AGENTS.md only and warns", flag: "agents_md = true\n",
-			existing: `{"context":{"fileName":["CUSTOM.md"]}}`, want: []string{"CUSTOM.md", "AGENTS.md"}, wantWarn: true},
+		{name: "on, user list gets AGENTS.md and the local file", flag: "agents_md = true\n",
+			existing: `{"context":{"fileName":["CUSTOM.md"]}}`, want: []string{"CUSTOM.md", "AGENTS.md", "GEMINI.local.md"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -451,7 +453,8 @@ func TestLocalMechanisms_CommittedOutputsIgnoreLocalContent(t *testing.T) {
 			// Assert
 			mine, theirs := treeSnapshot(t, withLocal), treeSnapshot(t, without)
 			for rel, content := range theirs {
-				if rel != ".gitignore" {
+				// The local manifest differs by design: it lists the local outputs.
+				if rel != ".gitignore" && rel != ".ai-rulez/.generated-manifest.local.json" {
 					assert.Equal(t, content, mine[rel], rel)
 				}
 			}

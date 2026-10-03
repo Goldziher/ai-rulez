@@ -68,9 +68,9 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 		name     string
 		existing string
 		mcp      string
-		unowned  bool // .gemini/settings.json is not in the previous generated manifest
-		wantKey  bool // context.fileName still in the document
-		rewrite  bool // context.fileName is rewritten to [GEMINI.md, GEMINI.local.md]
+		want     []string // context.fileName after the run when it is the user's list
+		wantKey  bool     // context.fileName still in the document
+		rewrite  bool     // context.fileName is rewritten to [GEMINI.md, GEMINI.local.md]
 		wantWarn bool
 	}{
 		{
@@ -87,15 +87,24 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 		},
 		{
 			name: "user list lacking GEMINI.md warns", existing: `{"context":{"fileName":["CUSTOM.md","AGENTS.md"]}}`,
-			wantKey: true, wantWarn: true,
+			wantKey: true, wantWarn: true, want: []string{"CUSTOM.md", "AGENTS.md", "GEMINI.local.md"},
 		},
-		{name: "user list with GEMINI.md is quiet", existing: `{"context":{"fileName":["GEMINI.md","AGENTS.md"]}}`, wantKey: true},
-		{name: "unrelated list is quiet", existing: `{"context":{"fileName":["CONTEXT.md"]}}`, wantKey: true},
 		{
-			name:     "exactly AGENTS.md in a hand-authored document is left alone",
-			existing: `{"context":{"fileName":["AGENTS.md"]}}`, unowned: true, wantKey: true, wantWarn: true,
+			name: "user list with GEMINI.md is quiet", existing: `{"context":{"fileName":["GEMINI.md","AGENTS.md"]}}`,
+			wantKey: true, want: []string{"GEMINI.md", "AGENTS.md", "GEMINI.local.md"},
 		},
-		{name: "single string is not ours", existing: `{"context":{"fileName":"AGENTS.md"}}`, wantKey: true, wantWarn: true},
+		{
+			name: "unrelated list is quiet", existing: `{"context":{"fileName":["CONTEXT.md"]}}`,
+			wantKey: true, want: []string{"CONTEXT.md", "GEMINI.local.md"},
+		},
+		{
+			name:     "exactly AGENTS.md is ours even without a manifest",
+			existing: `{"context":{"fileName":["AGENTS.md"]}}`, wantKey: true, rewrite: true,
+		},
+		{
+			name: "single string is not ours", existing: `{"context":{"fileName":"AGENTS.md"}}`,
+			wantKey: true, wantWarn: true, want: []string{"AGENTS.md", "GEMINI.local.md"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -103,10 +112,6 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 			root := t.TempDir()
 			writeAgentsMDProject(t, root, agentsMDConfig([]string{"gemini"}, "", tc.mcp))
 			writeAgentsMDFile(t, root, ".gemini/settings.json", tc.existing)
-			if !tc.unowned {
-				writeAgentsMDFile(t, root, ".ai-rulez/.generated-manifest.json",
-					`{"version":"1","files":[".gemini/settings.json"]}`)
-			}
 			runAgentsMDGenerate(t, root)
 
 			settings := readAgentsMDFile(t, root, ".gemini/settings.json")
@@ -115,7 +120,7 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 			case tc.rewrite:
 				assert.Equal(t, []string{"GEMINI.md", "GEMINI.local.md"}, geminiContextNames(t, root))
 			case tc.wantKey:
-				assert.Equal(t, tc.existing, settings, "a value the user owns is left alone")
+				assert.Equal(t, tc.want, geminiContextNames(t, root), "the user's names stay, ours are appended")
 			}
 			assert.Equal(t, tc.wantWarn, countContaining(*warned, "GEMINI.md") > 0, *warned)
 			assert.Contains(t, readAgentsMDFile(t, root, "GEMINI.md"), "ALWAYS_BODY")

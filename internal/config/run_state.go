@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/samber/oops"
 )
 
@@ -52,6 +53,23 @@ type RunState struct {
 	// run recorded in its generated manifests, that is, the files ai-rulez wrote
 	// whole (a file it only merged keys into is never recorded).
 	generated map[string]bool
+	// merged holds, by project-relative path, what the previous run recorded as
+	// ai-rulez's in each merged JSON document.
+	merged map[string][]jsonmerge.Claim
+}
+
+// SetPreviousMerged records the ownership claims of the previous run.
+func (r *RunState) SetPreviousMerged(merged map[string][]jsonmerge.Claim) {
+	r.merged = merged
+}
+
+// PreviousClaims returns what the previous run recorded as ai-rulez's in the
+// merged JSON document at the project-relative path.
+func (r *RunState) PreviousClaims(rel string) []jsonmerge.Claim {
+	if r == nil {
+		return nil
+	}
+	return r.merged[filepath.ToSlash(rel)]
 }
 
 // SetPreviouslyGenerated records the files the previous run generated.
@@ -76,7 +94,7 @@ func NewRunState() *RunState {
 // ForScope returns the state for generating scope. It shares path claims with
 // the receiver.
 func (r *RunState) ForScope(scope *ScopeRun) *RunState {
-	return &RunState{Scope: scope, claims: r.claims, generated: r.generated}
+	return &RunState{Scope: scope, claims: r.claims, generated: r.generated, merged: r.merged}
 }
 
 // ClaimsFor returns the PathClaims of a preset, creating it on first use.

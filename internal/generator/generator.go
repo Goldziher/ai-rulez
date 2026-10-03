@@ -15,6 +15,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
 	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
@@ -61,6 +62,9 @@ type Generator struct {
 type generatedManifest struct {
 	Version string   `json:"version"`
 	Files   []string `json:"files"`
+	// Merged records, in the machine-local manifest only, what ai-rulez wrote
+	// into each merged JSON document (see merged_claims.go).
+	Merged map[string][]jsonmerge.Claim `json:"merged,omitempty"`
 }
 
 // NewGenerator creates a new generator
@@ -125,9 +129,15 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		return 0, err
 	}
 
+	// Merged documents lose what an earlier run merged in and this one does not
+	// (a preset or server that was removed). Planned after the write so that
+	// what this run claimed counts.
+	unmerged := g.planUnmerge(flatOutputs, false)
+	g.applyUnmerge(unmerged)
+
 	// Writing happens first: a directory the stale pass emptied may be one this
 	// run re-creates, and pruning before the write would only have it made again.
-	g.pruneDirsEmptiedBy(staleFiles)
+	g.pruneDirsEmptiedBy(append(staleFiles, deletedPaths(unmerged)...))
 
 	if err := g.writeGeneratedManifest(flatOutputs); err != nil {
 		if g.hasLocalOutputs(flatOutputs) {
@@ -404,6 +414,13 @@ func (g *Generator) DryRun(profile string) ([]string, error) {
 	for _, stale := range g.staleManifestFiles(flatOutputs) {
 		lines = append(lines, "delete-stale: "+g.convertToRelativePath(stale))
 	}
+	for _, edit := range g.planUnmerge(flatOutputs, false) {
+		if edit.delete {
+			lines = append(lines, "delete-stale: "+edit.rel)
+		} else {
+			lines = append(lines, "unmerge: "+edit.rel)
+		}
+	}
 	return lines, nil
 }
 
@@ -513,6 +530,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// the run state carries what each preset has claimed so far.
 	run := config.NewRunState()
 	run.SetPreviouslyGenerated(g.previousManifestFiles())
+	run.SetPreviousMerged(g.previousMergedClaims())
 	tempCfg.Run = run
 
 	// Compute a single source hash covering all profile-relevant inputs.
@@ -1906,6 +1924,7 @@ func (g *Generator) previousManifestFiles() []string {
 // removed when no local output remains.
 func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 	var shared, local []string
+	merged := g.currentMergedClaims(outputs, true)
 	for _, output := range outputs {
 		if output.IsDir || output.PartiallyOwned {
 			continue
@@ -1923,29 +1942,30 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 		// The committed manifest describes the shared baseline, not this machine.
 		shared = g.plan.sharedManifestFiles(g.skippedPaths)
 	}
-	if err := writeManifestFile(g.manifestPath(), shared); err != nil {
+	if err := writeManifestFile(g.manifestPath(), shared, nil); err != nil {
 		return err
 	}
-	if len(local) == 0 {
-		if g.localSkipped {
-			// Local files were deliberately not loaded: their manifest is not ours to drop.
-			return nil
-		}
+	if g.localSkipped {
+		// Local files were deliberately not loaded: their manifest is not ours to
+		// drop, and its record of merged documents stays what it was.
+		return nil
+	}
+	if len(local) == 0 && len(merged) == 0 {
 		if err := os.Remove(g.localManifestPath()); err != nil && !os.IsNotExist(err) {
 			return oops.With("path", g.localManifestPath()).Wrapf(err, "remove local manifest")
 		}
 		return nil
 	}
-	return writeManifestFile(g.localManifestPath(), local)
+	return writeManifestFile(g.localManifestPath(), local, merged)
 }
 
-func writeManifestFile(path string, files []string) error {
+func writeManifestFile(path string, files []string, merged map[string][]jsonmerge.Claim) error {
 	sort.Strings(files)
 	files = slices.Compact(files)
 	if files == nil {
 		files = []string{}
 	}
-	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files}, "", "  ")
+	data, err := json.MarshalIndent(generatedManifest{Version: "1", Files: files, Merged: merged}, "", "  ")
 	if err != nil {
 		return oops.Wrapf(err, "marshal generated manifest")
 	}
@@ -2220,9 +2240,10 @@ func (g *Generator) localInputPatterns() []string {
 
 // hasLocalGitignoreTargets reports whether machine-local content exists and so
 // requires unconditional gitignore entries (the ".local" outputs plus the
-// .ai-rulez/local/ source subtree).
+// .ai-rulez/local/ source subtree). The local manifest counts: besides local
+// outputs it records what ai-rulez merged into hand-authored documents.
 func (g *Generator) hasLocalGitignoreTargets() bool {
-	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0
+	return g.config.HasLocalInputs() || len(g.localGitignorePatternsOnDisk()) > 0 || pathIsFile(g.localManifestPath())
 }
 
 // localGitignorePatternsOnDisk lists the machine-local ignore patterns for the
