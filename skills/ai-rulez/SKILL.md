@@ -8,7 +8,7 @@ description: >-
 license: MIT
 metadata:
   author: Goldziher
-  version: "4.22.1"
+  version: "4.22.2"
   repository: https://github.com/Goldziher/ai-rulez
 ---
 
