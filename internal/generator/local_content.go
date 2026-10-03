@@ -131,10 +131,7 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 		return err
 	}
 
-	rendered := *cfg
-	rendered.Content = withLocalItems(cfg.Content, items)
-	rendered.Analysis = nil
-	all, err := config.GeneratePresets(&rendered)
+	all, err := renderLocalPresets(cfg, withLocalItems(cfg.Content, items))
 	if err != nil {
 		return oops.Wrapf(err, "render local skills, agents and commands")
 	}
@@ -170,7 +167,72 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 			allOutputs[name] = append(allOutputs[name], o)
 		}
 	}
+	for _, o := range sharedLocalSkills(cfg, items) {
+		if known[o.Path] {
+			continue
+		}
+		known[o.Path] = true
+		o.LocalOnly = true
+		allOutputs[sharedOutputsKey] = append(allOutputs[sharedOutputsKey], o)
+	}
 	return nil
+}
+
+// renderLocalPresets renders the presets for a content tree that carries local
+// items. With agents_md on, a consumer's own root AGENTS.md and own skills
+// directory are dropped, as in the shared render: otherwise every shared skill
+// would reappear as a "local" file in the consumer's own directory.
+func renderLocalPresets(cfg *config.Config, content *config.ContentTree) (map[string][]config.OutputFile, error) {
+	rendered := *cfg
+	rendered.Content = content
+	rendered.Analysis = nil
+	all, err := config.GeneratePresets(&rendered)
+	if err != nil {
+		return nil, err //nolint:wrapcheck // wrapped by the caller
+	}
+	if !cfg.AgentsMD {
+		return all, nil
+	}
+	targeted := skillTargets(presets.SkillTargets(content))
+	for name, outs := range all {
+		if consumer, ok := config.SharedOutputConsumerFor(name); ok {
+			all[name] = dropOwnOutputs(outs, cfg.BaseDir, name, consumer, targeted)
+		}
+	}
+	return all, nil
+}
+
+// readsSharedSkills reports whether agents_md is on and a configured built-in
+// preset reads the shared .agents/skills tree.
+func readsSharedSkills(cfg *config.Config) bool {
+	if !cfg.AgentsMD {
+		return false
+	}
+	for _, preset := range cfg.Presets {
+		if !preset.IsBuiltIn() {
+			continue
+		}
+		if consumer, ok := config.SharedOutputConsumerFor(preset.BuiltIn); ok && consumer.Reads(config.SharedAgentSkills) {
+			return true
+		}
+	}
+	return false
+}
+
+// sharedLocalSkills renders the local skills into the shared .agents/skills tree
+// (untargeted ones only, like the shared skills), so they land next to the shared
+// skills the consumers read. Directories are left out.
+func sharedLocalSkills(cfg *config.Config, items *config.ContentTree) []config.OutputFile {
+	if !readsSharedSkills(cfg) {
+		return nil
+	}
+	var files []config.OutputFile
+	for _, o := range presets.SharedAgentSkills(items, cfg.BaseDir) {
+		if !o.IsDir {
+			files = append(files, o)
+		}
+	}
+	return files
 }
 
 // warnDroppedItems warns, per preset and kind, about local skills, agents and
@@ -204,18 +266,25 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 		if len(files) == 0 {
 			continue
 		}
-		rendered := *cfg
-		rendered.Content = withLocalItems(cfg.Content, kind.narrow(items))
-		rendered.Analysis = nil
-		all, err := config.GeneratePresets(&rendered)
+		narrowed := kind.narrow(items)
+		all, err := renderLocalPresets(cfg, withLocalItems(cfg.Content, narrowed))
 		if err != nil {
 			continue // the combined render reports the error
+		}
+		sharedPlaced := false
+		if kind.label == "skill" {
+			for _, o := range sharedLocalSkills(cfg, narrowed) {
+				sharedPlaced = sharedPlaced || !known[o.Path]
+			}
 		}
 		for name, outs := range all {
 			if !builtin[name] {
 				continue
 			}
 			placed := false
+			if consumer, ok := config.SharedOutputConsumerFor(name); ok && sharedPlaced && consumer.Reads(config.SharedAgentSkills) {
+				placed = true
+			}
 			for _, o := range outs {
 				if !o.IsDir && !known[o.Path] {
 					placed = true
