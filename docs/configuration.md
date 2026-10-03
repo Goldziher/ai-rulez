@@ -550,10 +550,16 @@ the document's original indentation.
   the config declares MCP servers (or, for Amp, a resolved effort tier). The `gemini` and
   `antigravity` presets previously wrote their settings document on every run purely to self-register
   the ai-rulez MCP server; they no longer do, so a project with no `[[mcp_servers]]` keeps whatever
-  is already at `.gemini/settings.json` / `.agents/settings.json` untouched.
-- **JSONC not supported**: A document containing comments or trailing commas is not valid JSON.
-  Generation fails with a hint naming the path rather than silently stripping comments. Remove
-  comments and trailing commas before running `generate`, or store notes in a separate file.
+  is already at `.agents/settings.json` untouched. The exceptions are `.gemini/settings.json`
+  (`context.fileName`) and `opencode.json` (`instructions`), which carry the entry that loads
+  machine-local content.
+- **JSONC**: A document containing comments or trailing commas is not valid JSON, and rewriting it
+  would delete the comments. When MCP servers must be written into it, generation fails with a hint
+  naming the path. When only the Gemini `context.fileName` or OpenCode `instructions` entry would be
+  written, the document is left untouched with a warning and generation continues.
+- **Taking keys back out**: `ai-rulez clean`, and `generate` after a preset or server is removed,
+  remove the keys ai-rulez merged in and keep the rest of the document; see
+  [Settings documents shared with you](local-overrides.md#settings-documents-shared-with-you).
 - **Gitignore behavior**: A document still holding keys ai-rulez does not own is treated as the
   user's file: it is NOT added to the managed `.gitignore` block and is NOT deleted as stale. This
   preserves hand-authored settings such as Claude's `permissions`, `env`, `model`, and `statusLine`.
