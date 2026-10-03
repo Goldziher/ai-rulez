@@ -187,9 +187,11 @@ func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.
 
 // settingsKeys lists the keys ai-rulez owns in .gemini/settings.json: mcpServers
 // when the config has servers, and context.fileName with agents_md. With the
-// flag off, a context.fileName that is exactly what agents_md wrote is removed,
-// since Gemini would otherwise keep ignoring the GEMINI.md that is back; any
-// other value is the user's and only gets a warning when it lacks GEMINI.md.
+// flag off, a context.fileName that is exactly what agents_md wrote is removed
+// when ai-rulez wrote the whole document (it is in the previous run's generated
+// manifest), since Gemini would otherwise keep ignoring the GEMINI.md that is
+// back; in a document the user authored, and for any other value, it is only
+// warned about when it lacks GEMINI.md.
 func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Config) ([]jsonmerge.OwnedKey, error) {
 	var owned []jsonmerge.OwnedKey
 	if len(cfg.MCPServers) > 0 {
@@ -210,9 +212,14 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 		if err != nil {
 			return nil, err
 		}
+		onlyAgentsMD := isList && slices.Equal(names, []string{string(config.SharedAgentsMD)})
 		switch {
-		case isList && slices.Equal(names, []string{string(config.SharedAgentsMD)}):
+		case onlyAgentsMD && g.wroteSettings(settingsPath, cfg):
 			owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Remove: true})
+		case onlyAgentsMD:
+			rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName is [\"AGENTS.md\"], so Gemini CLI "+
+				"ignores the generated GEMINI.md; the file is not one ai-rulez wrote, so the value is left alone",
+				"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
 		case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, "GEMINI.md"):
 			rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
 				"so Gemini CLI ignores the generated GEMINI.md",
@@ -220,6 +227,14 @@ func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Co
 		}
 	}
 	return owned, nil
+}
+
+// wroteSettings reports whether the previous run wrote the settings document
+// whole (it is in the generated manifest). A document ai-rulez only merged keys
+// into is the user's, and so is a context.fileName in it, whatever its value.
+func (g *GeminiPresetGenerator) wroteSettings(settingsPath string, cfg *config.Config) bool {
+	rel, err := filepath.Rel(cfg.BaseDir, settingsPath)
+	return err == nil && cfg.Run.WasGenerated(rel)
 }
 
 // readGeminiContextFileNames returns the context.fileName names the document at

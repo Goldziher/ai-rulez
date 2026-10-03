@@ -48,6 +48,24 @@ type RunState struct {
 	// Scope is the scope being generated; nil for the project root.
 	Scope  *ScopeRun
 	claims map[string]*PathClaims
+	// generated holds the project-relative, slash-separated files the previous
+	// run recorded in its generated manifests, that is, the files ai-rulez wrote
+	// whole (a file it only merged keys into is never recorded).
+	generated map[string]bool
+}
+
+// SetPreviouslyGenerated records the files the previous run generated.
+func (r *RunState) SetPreviouslyGenerated(files []string) {
+	r.generated = make(map[string]bool, len(files))
+	for _, f := range files {
+		r.generated[f] = true
+	}
+}
+
+// WasGenerated reports whether the previous run wrote the project-relative file
+// whole, so its content is ai-rulez's rather than hand-authored.
+func (r *RunState) WasGenerated(rel string) bool {
+	return r != nil && r.generated[filepath.ToSlash(rel)]
 }
 
 // NewRunState returns the state of a generation, positioned at the project root.
@@ -58,7 +76,7 @@ func NewRunState() *RunState {
 // ForScope returns the state for generating scope. It shares path claims with
 // the receiver.
 func (r *RunState) ForScope(scope *ScopeRun) *RunState {
-	return &RunState{Scope: scope, claims: r.claims}
+	return &RunState{Scope: scope, claims: r.claims, generated: r.generated}
 }
 
 // ClaimsFor returns the PathClaims of a preset, creating it on first use.

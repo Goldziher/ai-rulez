@@ -227,9 +227,10 @@ ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
   through the generated manifest. `CLAUDE.md` is rewritten as the shim.
 - **Off:** the per-tool files are regenerated and the shared `AGENTS.md` and `.agents/skills` files that no preset
   writes itself are removed. An off, on, off sequence ends where it began, except for the Gemini setting below.
-- **`.gemini/settings.json`:** on toggle-off, `context.fileName` is removed when it is exactly `["AGENTS.md"]`, the
-  value the flag wrote, so Gemini reads the regenerated `GEMINI.md` again. Any other value is yours and is left alone;
-  if it lists `AGENTS.md` but not `GEMINI.md`, `generate` warns so you can add it. Other keys and existing
+- **`.gemini/settings.json`:** on toggle-off, `context.fileName` is removed when it is exactly `["AGENTS.md"]` and
+  ai-rulez wrote the whole file (it is listed in the previous generated manifest), so Gemini reads the regenerated
+  `GEMINI.md` again. In a settings file you authored, and for any other value, nothing is changed; if the value lists
+  `AGENTS.md` but not `GEMINI.md`, `generate` warns so you can add it yourself. Other keys and existing
   `mcpServers` are untouched.
 - **Hand-written files** are never removed. A skill you wrote at `.codex/skills/mine/SKILL.md` or
   `.agents/skills/mine/SKILL.md` survives any number of toggles, because only manifest-tracked files are cleaned up.
