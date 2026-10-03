@@ -89,7 +89,7 @@ func agentsMDSnapshot(t *testing.T, root string) map[string]string {
 	return tree
 }
 
-func manifestFiles(t *testing.T, root string) []string {
+func sharedManifestFiles(t *testing.T, root string) []string {
 	t.Helper()
 	return readManifestFile(filepath.Join(root, ".ai-rulez", generatedManifestName)).Files
 }
@@ -228,8 +228,8 @@ func TestAgentsMD_ToggleCleansAndRestores(t *testing.T) {
 				assert.NoDirExists(t, filepath.Join(root, filepath.FromSlash(dir)), "flag on removes %s", dir)
 			}
 			assert.FileExists(t, skill(".agents/skills"))
-			assert.NotContains(t, manifestFiles(t, root), ".codex/skills/alpha/SKILL.md")
-			assert.Contains(t, manifestFiles(t, root), ".agents/skills/alpha/SKILL.md")
+			assert.NotContains(t, sharedManifestFiles(t, root), ".codex/skills/alpha/SKILL.md")
+			assert.Contains(t, sharedManifestFiles(t, root), ".agents/skills/alpha/SKILL.md")
 
 			writeAgentsMDProject(t, root, agentsMDConfig(tc.presets, "", ""))
 			runAgentsMDGenerate(t, root)

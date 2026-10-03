@@ -103,7 +103,7 @@ func TestLocalContent_PerPreset(t *testing.T) {
 			".cursor/rules/dom-rule.local.mdc":   "LOCAL_DOMAIN_RULE.",
 			".agents/skills/mine-skill/SKILL.md": "LOCAL_SKILL.",
 			".agents/skills/dom-skill/SKILL.md":  "LOCAL_DOMAIN_SKILL.",
-			".agents/agents/mine-agent.md":       "LOCAL_AGENT.",
+			".cursor/agents/mine-agent.md":       "LOCAL_AGENT.",
 			".cursor/commands/mine-cmd.md":       "LOCAL_COMMAND.",
 		}},
 		{"copilot", "copilot", map[string]string{
