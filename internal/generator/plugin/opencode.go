@@ -2,6 +2,7 @@ package plugin
 
 import (
 	_ "embed"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
@@ -115,6 +116,16 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 type openCodeBundle struct {
 	MCP    map[string]openCodeMCP    `json:"mcp,omitempty"`
 	Agents map[string]map[string]any `json:"agents,omitempty"`
+	// Skills and Commands carry the frontmatter fields the helper registers, keyed
+	// by directory and file name, so it never has to parse YAML.
+	Skills   map[string]openCodeItem `json:"skills,omitempty"`
+	Commands map[string]openCodeItem `json:"commands,omitempty"`
+}
+
+// openCodeItem is the frontmatter of a bundled skill or command.
+type openCodeItem struct {
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
 }
 
 // openCodeMCP is an OpenCode v2 MCP server. ${PLUGIN_ROOT} and ${VAR}
@@ -125,6 +136,7 @@ type openCodeMCP struct {
 	Command     []string          `json:"command,omitempty"`
 	Environment map[string]string `json:"environment,omitempty"`
 	URL         string            `json:"url,omitempty"`
+	Disabled    bool              `json:"disabled,omitempty"`
 }
 
 func openCodeBundleFor(m *Manifest) openCodeBundle {
@@ -134,16 +146,19 @@ func openCodeBundleFor(m *Manifest) openCodeBundle {
 		for _, s := range m.MCP {
 			switch s.Transport {
 			case config.TransportHTTP, config.TransportSSE:
-				bundle.MCP[s.Name] = openCodeMCP{Type: "remote", URL: s.URL}
+				bundle.MCP[s.Name] = openCodeMCP{Type: "remote", URL: s.URL, Disabled: s.Disabled}
 			default:
 				bundle.MCP[s.Name] = openCodeMCP{
 					Type:        "local",
 					Command:     append([]string{s.Command}, s.Args...),
 					Environment: s.Env,
+					Disabled:    s.Disabled,
 				}
 			}
 		}
 	}
+	bundle.Skills = openCodeItems(m.Skills)
+	bundle.Commands = openCodeItems(m.Commands)
 	if len(m.Agents) > 0 {
 		cfg := m.Config
 		if cfg == nil {
@@ -157,7 +172,26 @@ func openCodeBundleFor(m *Manifest) openCodeBundle {
 	return bundle
 }
 
-var pluginRootRef = regexp.MustCompile(`\$\{PLUGIN_ROOT\}/([^\s"'/]+)(/?)`)
+// openCodeItems maps bundled content to its frontmatter name and description.
+func openCodeItems(files []config.ContentFile) map[string]openCodeItem {
+	if len(files) == 0 {
+		return nil
+	}
+	items := make(map[string]openCodeItem, len(files))
+	for _, file := range files {
+		item := openCodeItem{}
+		if file.Metadata != nil {
+			item.Name = file.Metadata.Extra["name"]
+			item.Description = file.Metadata.Extra["description"]
+		}
+		items[file.Name] = item
+	}
+	return items
+}
+
+// pluginRootRef finds ${PLUGIN_ROOT} followed by a path, whichever separator the
+// author used (a Windows launcher is written ${PLUGIN_ROOT}\scripts\run.cmd).
+var pluginRootRef = regexp.MustCompile(`\$\{PLUGIN_ROOT\}[\\/]([^\s"'/\\]+)([\\/]?)`)
 
 // openCodePublishedFiles returns the package.json "files" list: the generated
 // content plus every top-level source path an MCP server references through
@@ -254,9 +288,25 @@ func openCodeScaffold(name string, hasContent bool) string {
  */
 %s/** @type {import("@opencode/plugin").Plugin.Plugin} */
 export default {
-  id: %q,
+  id: %s,
   async setup(ctx) {
 %s  },
 }
-`, name, openCodeHelperName, importLine, name, setupBody)
+`, commentSafe(name), openCodeHelperName, importLine, jsString(name), setupBody)
+}
+
+// jsString renders value as a JavaScript string literal. Go's %q is not one: it
+// emits escapes such as \x00 and \U0001F600 that JavaScript reads differently.
+func jsString(value string) string {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return `""`
+	}
+	return string(encoded)
+}
+
+// commentSafe makes value harmless inside a block comment: it can neither end the
+// comment nor start a new line.
+func commentSafe(value string) string {
+	return strings.NewReplacer("*/", "* /", "\r", " ", "\n", " ").Replace(value)
 }
