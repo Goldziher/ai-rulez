@@ -163,3 +163,148 @@ func TestOpenCodeContentHelperUsesV2Domains(t *testing.T) {
 func TestOpenCodePackageNameFallsBackWithoutGitHubRepository(t *testing.T) {
 	assert.Equal(t, "opencode-example", openCodePackageName(&Manifest{Name: "example"}))
 }
+
+func bundleFrom(t *testing.T, m *Manifest) map[string]any {
+	t.Helper()
+	outputs, err := renderOpenCode(m, "/out")
+	require.NoError(t, err)
+	for _, o := range outputs {
+		if filepath.ToSlash(o.Path) == "/out/.opencode/ai-rulez-bundle.json" {
+			var doc map[string]any
+			require.NoError(t, json.Unmarshal(o.RawContent, &doc))
+			return doc
+		}
+	}
+	return nil
+}
+
+func TestRenderOpenCodeBundlesMCPServers(t *testing.T) {
+	m := &Manifest{
+		Name:      "test-plugin",
+		Version:   "1.2.3",
+		SourceDir: t.TempDir(),
+		MCP: []config.PluginMCPLaunch{
+			{
+				Name:      "local",
+				Command:   "${PLUGIN_ROOT}/scripts/launch.sh",
+				Args:      []string{"--port", "${PORT}"},
+				Env:       map[string]string{"TOKEN": "${API_TOKEN}"},
+				Transport: config.TransportStdio,
+			},
+			{Name: "remote", Transport: config.TransportHTTP, URL: "https://mcp.example.com"},
+		},
+	}
+
+	bundle := bundleFrom(t, m)
+
+	require.NotNil(t, bundle, "MCP servers alone are enough to emit the bundle")
+	servers := bundle["mcp"].(map[string]any)
+	local := servers["local"].(map[string]any)
+	assert.Equal(t, "local", local["type"])
+	assert.Equal(t, []any{"${PLUGIN_ROOT}/scripts/launch.sh", "--port", "${PORT}"}, local["command"])
+	assert.Equal(t, map[string]any{"TOKEN": "${API_TOKEN}"}, local["environment"],
+		"env references stay as references; the helper resolves them from process.env at runtime")
+	remote := servers["remote"].(map[string]any)
+	assert.Equal(t, "remote", remote["type"])
+	assert.Equal(t, "https://mcp.example.com", remote["url"])
+	assert.NotContains(t, remote, "command")
+}
+
+func TestRenderOpenCodeEntrypointRegistersWhenOnlyMCP(t *testing.T) {
+	m := &Manifest{
+		Name:      "test-plugin",
+		Version:   "1.2.3",
+		SourceDir: t.TempDir(),
+		MCP:       []config.PluginMCPLaunch{{Name: "s", Command: "x", Transport: config.TransportStdio}},
+	}
+
+	outputs, err := renderOpenCode(m, "/out")
+	require.NoError(t, err)
+
+	assert.Contains(t, string(outputs[0].RawContent), "await registerBundledContent(ctx)")
+}
+
+func TestRenderOpenCodeAgentSettings(t *testing.T) {
+	tests := []struct {
+		name  string
+		extra map[string]string
+		cfg   *config.Config
+		want  map[string]any
+		omit  []string
+	}{
+		{
+			name:  "provider-qualified model with variant",
+			extra: map[string]string{"model": "anthropic/claude-sonnet-4#high"},
+			want:  map[string]any{"model": "anthropic/claude-sonnet-4", "variant": "high", "mode": "all"},
+		},
+		{
+			name:  "bare alias is omitted",
+			extra: map[string]string{"model": "sonnet"},
+			want:  map[string]any{"mode": "all"},
+			omit:  []string{"model"},
+		},
+		{
+			name:  "opencode_model override wins over a bare alias",
+			extra: map[string]string{"model": "sonnet", "opencode_model": "openai/gpt-5"},
+			want:  map[string]any{"model": "openai/gpt-5"},
+		},
+		{
+			name:  "per-preset default model",
+			extra: map[string]string{},
+			cfg:   &config.Config{Defaults: &config.DefaultsConfig{ModelByPreset: map[string]string{"opencode": "openai/gpt-5"}}},
+			want:  map[string]any{"model": "openai/gpt-5"},
+		},
+		{
+			name:  "sampling, hidden, mode and description",
+			extra: map[string]string{"temperature": "0.2", "top_p": "0.9", "hidden": "true", "mode": "subagent", "description": "Reviews"},
+			want: map[string]any{
+				"temperature": 0.2, "top_p": 0.9, "hidden": true, "mode": "subagent", "description": "Reviews",
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := tt.cfg
+			if cfg == nil {
+				cfg = &config.Config{}
+			}
+			m := &Manifest{
+				Name:      "test-plugin",
+				Version:   "1.2.3",
+				SourceDir: t.TempDir(),
+				Config:    cfg,
+				Agents:    []config.ContentFile{{Name: "rev", Path: "builtin://rev", Metadata: &config.Metadata{Extra: tt.extra}}},
+			}
+
+			// Act
+			bundle := bundleFrom(t, m)
+
+			// Assert
+			require.NotNil(t, bundle)
+			agent := bundle["agents"].(map[string]any)["rev"].(map[string]any)
+			for key, want := range tt.want {
+				assert.Equal(t, want, agent[key], key)
+			}
+			for _, key := range tt.omit {
+				assert.NotContains(t, agent, key)
+			}
+		})
+	}
+}
+
+func TestOpenCodeContentHelperRegistersMCPAndAgentSettings(t *testing.T) {
+	helper := string(openCodeContentHelper)
+
+	for _, want := range []string{
+		"ai-rulez-bundle.json",
+		"ctx.mcp.transform",
+		"editor.set(",
+		"process.env",
+		"${PLUGIN_ROOT}",
+		"request.body",
+		"providerID",
+	} {
+		assert.Contains(t, helper, want)
+	}
+}
