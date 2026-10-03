@@ -25,6 +25,18 @@ func TestLiteralSecrets(t *testing.T) {
 		{"flag with equals", config.MCPServer{Args: []string{"--token=abc123", "--verbose"}}, []string{"abc123"}},
 		{"flag with separate value", config.MCPServer{Args: []string{"--api-key", "abc123", "serve"}}, []string{"abc123"}},
 		{"flag without a value", config.MCPServer{Args: []string{"--token", "--other"}}, nil},
+		{"max-tokens flag", config.MCPServer{Args: []string{"--max-tokens", "abcd", "--max_tokens=4000"}}, nil},
+		{"token-limit flag", config.MCPServer{Args: []string{"--token-limit", "100", "--token-limit=abc"}}, nil},
+		{"api-key-file flag", config.MCPServer{Args: []string{"--api-key-file", "/p", "--api-key-file=/q"}}, nil},
+		{"keyring flag", config.MCPServer{Args: []string{"--keyring", "x"}}, nil},
+		{"no-token-cache flag", config.MCPServer{Args: []string{"--no-token-cache", "serve"}}, nil},
+		{"numeric secret value", config.MCPServer{Args: []string{"--token", "12345", "--password=99"}}, nil},
+		{"ssh user is not a secret", config.MCPServer{URL: "ssh://git@host/repo", Args: []string{"git@host:repo"}}, nil},
+		{"secret-key and underscores", config.MCPServer{Args: []string{"--client_secret=abcdef", "--secret-key", "xyz"}}, []string{"abcdef", "xyz"}},
+		{"url after equals", config.MCPServer{Args: []string{"--url=https://u:Xpass@h/"}}, []string{"Xpass"}},
+		{"url in env value", config.MCPServer{Env: map[string]string{"DATABASE_URL": "postgres://u:Xpass@h/db", "PLAIN": "x"}}, []string{"Xpass"}},
+		{"bearer header next arg", config.MCPServer{Args: []string{"-H", "Authorization: Bearer abc.def"}}, []string{"abc.def"}},
+		{"basic header equals", config.MCPServer{Args: []string{"--header=Authorization: Basic dTpw"}}, []string{"dTpw"}},
 		{"url in args", config.MCPServer{Args: []string{"https://u:pw12345678@host/x"}}, []string{"pw12345678"}},
 	}
 	for _, tt := range tests {
