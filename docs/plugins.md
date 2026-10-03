@@ -91,9 +91,12 @@ settings resolved at generation time.
 - **MCP servers** become OpenCode `local` (command array plus `environment`) or `remote`
   (`url`) servers. At runtime `${PLUGIN_ROOT}` expands to the installed plugin directory and
   `${NAME}` to `process.env.NAME` (empty when unset), so no install path or secret is written
-  into the package. Remote `headers` are not bundled, as for the other runtimes. A launcher such
-  as `${PLUGIN_ROOT}/scripts/run.sh` must itself be published with the package (`scripts/` is
-  not in the generated `files` list).
+  into the package. Remote `headers` are not bundled, as for the other runtimes. Any top-level
+  source path an MCP server references as `${PLUGIN_ROOT}/<path>` (command, args, env or url),
+  such as `scripts/` for `${PLUGIN_ROOT}/scripts/run.sh`, is added to the generated
+  `package.json` `files` list when it exists in the plugin source; a missing one is warned
+  about and not listed. The other runtimes publish the repository tree or have no file list, so
+  they have no equivalent gap.
 - **Agents** take their model through the same resolution as the `opencode` preset
   (`opencode_model`, then `defaults.model_by_preset.opencode`, then `model`). A
   `provider/model` id passes through, and `#variant` (or the effort tier) becomes the model
