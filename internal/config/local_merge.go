@@ -23,6 +23,9 @@ const (
 	docKeyRemove    = "remove"
 	presetDropMark  = "!"
 	docKeyProfiles  = "profiles"
+	docKeyDefault   = "default"
+	docKeyDefaults  = "defaults"
+	docKeyHeader    = "header"
 )
 
 // namedListKeys are the top-level list keys merged entry-by-entry. The value
@@ -38,7 +41,7 @@ var namedListKeys = map[string]bool{
 
 // mapValuedKeys are top-level tables merged per key.
 var mapValuedKeys = map[string]bool{
-	docKeyProfiles: true, "header": true, "defaults": true, string(PresetMCP): true,
+	docKeyProfiles: true, docKeyHeader: true, docKeyDefaults: true, string(PresetMCP): true,
 	"plugin": true, "marketplace": true, rulesDir: true,
 }
 

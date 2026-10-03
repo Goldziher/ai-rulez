@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	incl "github.com/Goldziher/ai-rulez/internal/includes"
 	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
 	"gopkg.in/yaml.v3"
 )
@@ -626,7 +627,7 @@ func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 		keySuccess:   true,
 		keyOperation: "add_include",
 		keyName:      name,
-		keySource:    source,
+		keySource:    incl.RedactURL(source),
 		keyMessage:   "Include added successfully",
 	})
 }
@@ -664,6 +665,10 @@ func ListIncludesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 	includes, err := op.ListIncludes(ctx)
 	if err != nil {
 		return ToolError(err)
+	}
+
+	for i := range includes {
+		includes[i].Source = incl.RedactURL(includes[i].Source)
 	}
 
 	return ToolSuccess(map[string]interface{}{
@@ -706,7 +711,7 @@ func InstallSkillHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.Cal
 		keySuccess:   true,
 		keyOperation: "install_skill",
 		keyName:      name,
-		keySource:    source,
+		keySource:    incl.RedactURL(source),
 		keyMessage:   "Skill installed successfully",
 	})
 }
@@ -744,6 +749,10 @@ func ListInstalledSkillsHandler(ctx context.Context, request *ToolRequest) (*sdk
 	skills, err := op.ListInstalledSkills(ctx)
 	if err != nil {
 		return ToolError(err)
+	}
+
+	for i := range skills {
+		skills[i].Source = incl.RedactURL(skills[i].Source)
 	}
 
 	return ToolSuccess(map[string]interface{}{
