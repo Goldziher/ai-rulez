@@ -15,7 +15,7 @@ What changes:
 - Presets that read these files stop writing their root file (`GEMINI.md`, `.hermes.md`, ...), their copy of
   `AGENTS.md` and their own skills directory.
 - Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
-  MCP files and settings.
+  MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
 Without the flag, `codex`, `opencode`, `xum` and `amp` already write the same `AGENTS.md`, while `claude`, `gemini`,
 `cursor` and the rest each repeat the same content in their own file.
@@ -184,9 +184,11 @@ reach:
 - A target naming an unconfigured preset's root file (for example `GEMINI.md` with only `codex` configured) does not
   select the item for `AGENTS.md`.
 - **Widening:** the file is shared, so an always-on rule targeted at a single preset now reaches every tool that reads
-  `AGENTS.md`. Rules folders no longer hold always-on items with the flag on, so an always-on rule cannot be limited
-  to one tool; to restrict an item, give it a non-always-on activation and target that tool's preset or folder
-  path (derived from the targeting rules above, not covered by a test).
+  `AGENTS.md`.
+- **Folder-only targets:** an always-on rule or context item whose `targets` match only a rules folder or rule file
+  path (`.cursor/rules/`, `.claude/rules/`, `.github/instructions/`, `.windsurf/rules/`, ...) and no `AGENTS.md`
+  owner or root file is not in `AGENTS.md`. The preset writes it as a rule file in that folder, exactly as without
+  the flag. To limit an always-on item to one tool, target its rules folder path rather than its preset name.
 - Skills with `targets` are covered under [Skills](#skills).
 
 ## Scopes, local files and hashes
