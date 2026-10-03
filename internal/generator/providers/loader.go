@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"path"
 	"regexp"
 	"slices"
@@ -94,6 +95,9 @@ func validateSpec(s *ProviderSpec) error {
 	if s.Root != nil {
 		if s.Root.File == "" {
 			return fmt.Errorf("root.file is required when root is set")
+		}
+		if local := s.Root.LocalFile; local != "" && local != LocalFileNone && !fs.ValidPath(local) {
+			return fmt.Errorf("root.local_file: %q must be %q or a relative path inside the project", local, LocalFileNone)
 		}
 		for _, section := range s.Root.Sections {
 			if !isValidRootSection(section) {

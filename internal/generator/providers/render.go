@@ -31,12 +31,17 @@ func (g *Generator) GetName() string {
 	return g.Spec.Name
 }
 
-// LocalRootFile implements config.LocalRootProvider. It returns the ".local"
-// variant of the spec's root file (CLAUDE.md → CLAUDE.local.md), or "" when the
-// spec has no single-file markdown root.
+// LocalRootFile implements config.LocalRootProvider. It returns the spec's
+// machine-local root file: the ".local" variant of the root file (CLAUDE.md →
+// CLAUDE.local.md) unless root.local_file names another path, or "" when the spec
+// has no single-file markdown root or the tool has no local file (local_file =
+// "none").
 func (g *Generator) LocalRootFile() string {
-	if g.Spec.Root == nil || g.Spec.Root.File == "" {
+	if g.Spec.Root == nil || g.Spec.Root.File == "" || g.Spec.Root.LocalFile == LocalFileNone {
 		return ""
+	}
+	if g.Spec.Root.LocalFile != "" {
+		return filepath.ToSlash(g.Spec.Root.LocalFile)
 	}
 	return config.LocalVariantPath(g.Spec.Root.File)
 }

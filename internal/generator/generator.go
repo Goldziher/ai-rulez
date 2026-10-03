@@ -625,12 +625,75 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 			return oops.With("preset", name).Wrapf(err, "render local root file")
 		}
 		if !ok {
-			warnDroppedLocal(name, rules, allContext)
+			if !readsAgentsOverride(g.config, name) {
+				warnDroppedLocal(name, rules, allContext)
+			}
 			continue
 		}
 		allOutputs[name] = append(allOutputs[name], root)
 	}
+	g.appendAgentsOverride(allOutputs, local, allRules, cfg)
 	return g.appendLocalItemOutputs(allOutputs, cfg, local)
+}
+
+// readsAgentsOverride reports whether a built-in preset loads AGENTS.override.md
+// in place of AGENTS.md: Codex always, Hermes when agents_md makes it read the
+// AGENTS chain (without it .hermes.md wins over the chain and no local file is read).
+func readsAgentsOverride(cfg *config.Config, preset string) bool {
+	return preset == string(config.PresetCodex) || (preset == string(config.PresetHermes) && cfg.AgentsMD)
+}
+
+// appendAgentsOverride writes the machine-local AGENTS.override.md for the
+// configured presets that load it (see readsAgentsOverride). The file replaces
+// AGENTS.md for them, so it repeats the root AGENTS.md as written this run and
+// appends the local rules and context. Only the project root has one: scope runs
+// never reach this function.
+func (g *Generator) appendAgentsOverride(allOutputs map[string][]config.OutputFile, local *config.ContentTree,
+	rules []config.ContentFile, cfg *config.Config,
+) {
+	var readers []string
+	for _, preset := range g.config.Presets {
+		if preset.IsBuiltIn() && readsAgentsOverride(g.config, preset.BuiltIn) && !slices.Contains(readers, preset.BuiltIn) {
+			readers = append(readers, preset.BuiltIn)
+		}
+	}
+	if len(readers) == 0 {
+		return
+	}
+	agentsMD, ok := rootAgentsMD(allOutputs, g.config.BaseDir)
+	if !ok {
+		return
+	}
+	owners := append(rulefiles.RootOwners(string(config.SharedAgentsMD)), readers...)
+	content, ok := presets.RenderAgentsOverride(agentsMD, local, rules, cfg, owners)
+	if !ok {
+		return
+	}
+	allOutputs[readers[0]] = append(allOutputs[readers[0]], config.OutputFile{
+		Path:      filepath.Join(g.config.BaseDir, presets.AgentsOverrideFile),
+		Content:   content,
+		LocalOnly: true,
+	})
+}
+
+// rootAgentsMD returns the content of the project's AGENTS.md as rendered this
+// run: the shared one with agents_md, otherwise the one a preset writes itself
+// (codex, opencode, xum and amp render byte-identical files).
+func rootAgentsMD(allOutputs map[string][]config.OutputFile, baseDir string) (string, bool) {
+	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
+	names := make([]string, 0, len(allOutputs))
+	for name := range allOutputs {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	for _, name := range append([]string{sharedOutputsKey}, names...) {
+		for _, o := range allOutputs[name] {
+			if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
+				return o.Content, true
+			}
+		}
+	}
+	return "", false
 }
 
 // localRootOutput renders a preset's machine-local root file; ok is false when
@@ -673,9 +736,13 @@ func warnDroppedLocal(preset string, rules, contexts []config.ContentFile) {
 	if len(items) == 0 {
 		return
 	}
-	logger.Warn("Machine-local content has no output for this preset and was not written",
+	warnLocal("Machine-local content has no output for this preset and was not written",
 		"preset", preset, "items", strings.Join(items, ", "))
 }
+
+// warnLocal reports local content a preset has no place for; a variable so tests
+// can observe the warnings.
+var warnLocal = logger.Warn
 
 // resolveProfile determines which profile to use. A composed value
 // ("base,backend") is canonicalized but kept composed: it is resolved to the union
