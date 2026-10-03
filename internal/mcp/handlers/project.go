@@ -91,6 +91,7 @@ func ReadConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.CallTool
 		keyBuiltins:    builtins,
 		"includes":     includes,
 		keyGitignore:   cfg.ShouldUpdateGitignore(),
+		"agents_md":    cfg.AgentsMD,
 	}
 
 	// Always emit default_effort (possibly "") so MCP clients running read-modify-write
@@ -317,6 +318,10 @@ func applyConfigUpdates(cfg *config.Config, request *ToolRequest) ([]string, err
 		val := request.GetBool("gitignore", true)
 		cfg.Gitignore = &val
 		updated = append(updated, "gitignore")
+	}
+	if _, ok := args["agents_md"]; ok {
+		cfg.AgentsMD = request.GetBool("agents_md", false)
+		updated = append(updated, "agents_md")
 	}
 	if _, ok := args["default_effort"]; ok {
 		applyDefaultEffortUpdate(cfg, request.GetString("default_effort", ""))

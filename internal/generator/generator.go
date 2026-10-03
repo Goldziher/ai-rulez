@@ -503,6 +503,8 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 		return nil, "", oops.Wrapf(err, "generate presets")
 	}
 
+	applySharedOutputs(allOutputs, &tempCfg, contentTree)
+
 	// Auto-generate MCP output if servers exist. The MCP preset is now
 	// DSL-driven (internal/generator/providers/builtin/mcp.toml); fetch it
 	// from the registry rather than instantiating a hand-written generator.
@@ -1601,12 +1603,19 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 		b.WriteString("plugin=" + string(pluginJSON) + "\n")
 	}
 
+	writeSourceContent(&b, cfg, content)
+	return templates.HashContent(b.String())
+}
+
+// writeSourceContent writes every content category of the tree into a source
+// hash input.
+func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.ContentTree) {
 	// Root content categories — slices already sorted by Name in the scanner
-	writeContentFiles(&b, "root.rules", content.Rules, cfg)
-	writeContentFiles(&b, "root.context", content.Context, cfg)
-	writeContentFiles(&b, "root.skills", content.Skills, cfg)
-	writeContentFiles(&b, "root.agents", content.Agents, cfg)
-	writeContentFiles(&b, "root.commands", content.Commands, cfg)
+	writeContentFiles(b, "root.rules", content.Rules, cfg)
+	writeContentFiles(b, "root.context", content.Context, cfg)
+	writeContentFiles(b, "root.skills", content.Skills, cfg)
+	writeContentFiles(b, "root.agents", content.Agents, cfg)
+	writeContentFiles(b, "root.commands", content.Commands, cfg)
 
 	// Domain content — domains visited in sorted name order
 	domainNames := make([]string, 0, len(content.Domains))
@@ -1616,14 +1625,34 @@ func computeSourceHash(cfg *config.Config, content *config.ContentTree) string {
 	sort.Strings(domainNames)
 	for _, name := range domainNames {
 		domain := content.Domains[name]
-		_, _ = fmt.Fprintf(&b, "domain:%s,builtin=%t,from_include=%t\n", name, domain.Builtin, domain.FromInclude)
-		writeContentFiles(&b, "domain."+name+".rules", domain.Rules, cfg)
-		writeContentFiles(&b, "domain."+name+".context", domain.Context, cfg)
-		writeContentFiles(&b, "domain."+name+".skills", domain.Skills, cfg)
-		writeContentFiles(&b, "domain."+name+".agents", domain.Agents, cfg)
-		writeContentFiles(&b, "domain."+name+".commands", domain.Commands, cfg)
+		_, _ = fmt.Fprintf(b, "domain:%s,builtin=%t,from_include=%t\n", name, domain.Builtin, domain.FromInclude)
+		writeContentFiles(b, "domain."+name+".rules", domain.Rules, cfg)
+		writeContentFiles(b, "domain."+name+".context", domain.Context, cfg)
+		writeContentFiles(b, "domain."+name+".skills", domain.Skills, cfg)
+		writeContentFiles(b, "domain."+name+".agents", domain.Agents, cfg)
+		writeContentFiles(b, "domain."+name+".commands", domain.Commands, cfg)
 	}
+}
 
+// computeSharedSourceHash is the Source-Hash of the shared outputs (AGENTS.md,
+// .agents/skills). It covers the content and the settings that shape these files
+// and deliberately not the preset list, per-preset rules modes, MCP servers or
+// plugins: the files are written once for every preset that reads them, so adding
+// or removing a preset must not change their provenance line.
+func computeSharedSourceHash(cfg *config.Config, content *config.ContentTree) string {
+	var b strings.Builder
+	b.WriteString("schema=" + templates.GeneratorSchemaVersion + "\n")
+	b.WriteString("shared=agents_md\n")
+	b.WriteString("name=" + cfg.Name + "\n")
+	b.WriteString("description=" + cfg.Description + "\n")
+	b.WriteString("version=" + cfg.Version + "\n")
+	if cfg.Run != nil && cfg.Run.Scope != nil {
+		b.WriteString("scope=" + cfg.Run.Scope.Path + "\n")
+	}
+	b.WriteString("header_style=" + cfg.GetHeaderStyle() + "\n")
+	_, _ = fmt.Fprintf(&b, "header_timestamp=%t\n", cfg.ShowHeaderTimestamp())
+	_, _ = fmt.Fprintf(&b, "compact=%t\n", cfg.IsCompact())
+	writeSourceContent(&b, cfg, content)
 	return templates.HashContent(b.String())
 }
 

@@ -576,6 +576,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Profiles        map[string][]string    `toml:"profiles"`
 		Gitignore       *bool                  `toml:"gitignore"`
 		Compact         *bool                  `toml:"compact"`
+		AgentsMD        bool                   `toml:"agents_md"`
 		Includes        []IncludeConfig        `toml:"includes"`
 		InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
 		MCPServers      []MCPServer            `toml:"mcp_servers"`
@@ -632,6 +633,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Profiles:        raw.Profiles,
 		Gitignore:       raw.Gitignore,
 		Compact:         raw.Compact,
+		AgentsMD:        raw.AgentsMD,
 		Includes:        raw.Includes,
 		InstalledSkills: raw.InstalledSkills,
 		MCPServersRaw:   raw.MCPServers,
