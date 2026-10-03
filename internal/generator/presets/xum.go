@@ -21,7 +21,7 @@ func init() {
 
 // XumPresetGenerator renders the Xum coding agent's project files:
 // a shared AGENTS.md, project skills under .xum/skills, agent definitions under
-// .xum/agents, and the stdio MCP servers in .xum/mcp.jsonc.
+// .xum/agents, and the stdio, http and sse MCP servers in .xum/mcp.jsonc.
 type XumPresetGenerator struct{}
 
 func (g *XumPresetGenerator) GetName() string {
@@ -210,22 +210,17 @@ func xumThinkingLevel(tier string) string {
 	}
 }
 
-// renderMCPConfig writes Xum's repo-level MCP override (.xum/mcp.jsonc) with the
-// stdio servers as command strings. Xum's format only expresses stdio servers,
-// so remote (http/sse) entries are skipped with a warning. Returns nil when no
-// stdio servers are configured.
+// renderMCPConfig writes Xum's repo-level MCP override (.xum/mcp.jsonc). A stdio
+// server without env or disabled state keeps the legacy shell-command string;
+// otherwise, and for http/sse servers, the entry is Xum's object form so env,
+// headers and the disabled flag are preserved. Returns nil when no usable
+// servers are configured.
 func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config) (*config.OutputFile, error) {
-	servers := map[string]string{}
+	servers := map[string]interface{}{}
 	for name, server := range cfg.MCPServers {
-		if server.GetTransport() != config.TransportStdio {
-			logger.Warn("Xum preset supports stdio MCP servers only; skipping remote server",
-				"server", name, "transport", server.GetTransport())
-			continue
+		if entry := xumMCPEntry(server); entry != nil {
+			servers[name] = entry
 		}
-		if server.Command == "" {
-			continue
-		}
-		servers[name] = joinShellCommand(server.Command, server.Args)
 	}
 	if len(servers) == 0 {
 		return nil, nil
@@ -241,6 +236,41 @@ func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config)
 		Content:        result.Body,
 		PartiallyOwned: result.PartiallyOwned,
 	}, nil
+}
+
+// xumMCPEntry maps one server onto Xum's mcp.jsonc schema, or returns nil when
+// the server has nothing to launch or connect to.
+func xumMCPEntry(server *config.MCPServer) interface{} {
+	switch transport := server.GetTransport(); transport {
+	case config.TransportHTTP, config.TransportSSE:
+		if server.URL == "" {
+			return nil
+		}
+		entry := map[string]interface{}{"transport": transport, "url": server.URL}
+		if len(server.Headers) > 0 {
+			entry[keyHeaders] = server.Headers
+		}
+		if !server.IsEnabled() {
+			entry[keyDisabled] = true
+		}
+		return entry
+	default:
+		if server.Command == "" {
+			return nil
+		}
+		// Xum reads only the command string of a stdio entry in mcp.jsonc (args
+		// and env are honored for plugin servers only), so args are joined into
+		// the command and env cannot be expressed.
+		if len(server.Env) > 0 {
+			logger.Warn("Xum's mcp.jsonc cannot set environment variables for stdio MCP servers; "+
+				"set them in the environment Xum runs in", "server", server.Name)
+		}
+		command := joinShellCommand(server.Command, server.Args)
+		if server.IsEnabled() {
+			return command
+		}
+		return map[string]interface{}{"transport": config.TransportStdio, "command": command, keyDisabled: true}
+	}
 }
 
 // joinShellCommand renders a stdio MCP command and its args as the single shell
