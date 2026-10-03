@@ -323,6 +323,7 @@ func (s *Server) registerCRUDTools() {
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),
@@ -334,6 +335,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),
@@ -348,6 +350,7 @@ func (s *Server) registerCRUDTools() {
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),
 		),
@@ -359,6 +362,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Rule filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			destructiveAnnotations(),
 		),
@@ -369,6 +373,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("list_rules", "List all rules in the root or a specific domain",
 			newSchemaBuilder().
 				String("domain", "Domain name (optional, lists root rules if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),
@@ -384,6 +389,7 @@ func (s *Server) registerCRUDTools() {
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),
@@ -395,6 +401,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),
@@ -409,6 +416,7 @@ func (s *Server) registerCRUDTools() {
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),
 		),
@@ -420,6 +428,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Context filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			destructiveAnnotations(),
 		),
@@ -430,6 +439,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("list_context", "List all context files in the root or a specific domain with summaries",
 			newSchemaBuilder().
 				String("domain", "Domain name (optional, lists root context if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),
@@ -445,6 +455,7 @@ func (s *Server) registerCRUDTools() {
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			additiveAnnotations(),
 		),
@@ -456,6 +467,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),
@@ -470,6 +482,7 @@ func (s *Server) registerCRUDTools() {
 				String("domain", "Domain name (optional, uses root if not specified)", false).
 				Enum("priority", "Priority level", priorityValues, false).
 				StringArray("targets", "Target providers (e.g., claude, cursor)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			idempotentAnnotations(),
 		),
@@ -481,6 +494,7 @@ func (s *Server) registerCRUDTools() {
 			newSchemaBuilder().
 				String("name", "Skill filename without .md extension", true).
 				String("domain", "Domain name (optional, uses root if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			destructiveAnnotations(),
 		),
@@ -491,6 +505,7 @@ func (s *Server) registerCRUDTools() {
 		newAnnotatedTool("list_skills", "List all skill files in the root or a specific domain",
 			newSchemaBuilder().
 				String("domain", "Domain name (optional, lists root skills if not specified)", false).
+				Boolean("local", "Work on the machine-local tree (.ai-rulez/local/, gitignored) instead of the shared content", false).
 				WorkingDirectory(),
 			readOnlyAnnotations(),
 		),

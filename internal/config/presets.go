@@ -61,6 +61,15 @@ type LocalRootProvider interface {
 	LocalRootFile() string
 }
 
+// LocalRootRenderer is implemented by presets whose machine-local root file is
+// not the generic markdown override (Copilot writes a path-specific instructions
+// file with an applyTo frontmatter). RenderLocalRoot builds that file from the
+// local rules the preset keeps inline and the local context; local is the
+// profile-selected local content tree.
+type LocalRootRenderer interface {
+	RenderLocalRoot(local *ContentTree, rules []ContentFile, baseDir string, cfg *Config) (OutputFile, error)
+}
+
 // LocalRuleProvider is implemented by preset generators that write one native
 // rule file per rule. LocalRuleOutputs plans machine-local rules with the same
 // routing the preset applies to shared rules and renders the ones it routes to

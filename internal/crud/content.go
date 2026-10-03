@@ -12,43 +12,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// errLocalWithDomain is returned when --local is combined with --domain. Local
-// override content is machine-specific and therefore cannot belong to a domain.
-var errLocalWithDomain = oops.
-	Hint("Machine-local content lives in .ai-rulez/local/ and cannot belong to a domain. Drop --domain or --local.").
-	Errorf("--local cannot be combined with --domain")
-
-// addLocalFile writes a machine-local override rule/context file under
-// .ai-rulez/local/{ftype}/<name>.md. It mirrors the content-templating and
-// existence checks of AddRule/AddContext but targets the gitignored local tree.
-func (op *OperatorImpl) addLocalFile(ftype string, req *AddFileRequest) (*FileResult, error) {
-	filePath := op.filesMgr.GetLocalFilePath(ftype, req.Name)
-	if op.filesMgr.PathExists(filePath) {
-		return nil, &FileExistsError{Path: filePath, Type: ftype}
-	}
-
-	content := req.Content
-	switch {
-	case content == "" && ftype == ContentTypeContext:
-		content = GenerateContextTemplate(req.Name, req.DefaultPriority(), req.Targets, "")
-	case content == "":
-		content = GenerateRuleTemplate(req.Name, req.DefaultPriority(), req.Targets, "")
-	case !strings.HasPrefix(content, "---"):
-		content = GenerateFrontmatter(req.DefaultPriority(), req.Targets) + content
-	}
-	content = EnsureTrailingNewline(content)
-
-	if err := op.filesMgr.WriteFile(filePath, content); err != nil {
-		return nil, err
-	}
-
-	return &FileResult{
-		Name:     req.Name,
-		FullPath: filePath,
-		Type:     ftype,
-	}, nil
-}
-
 // AddRule creates a new rule file in the root or domain rules directory
 // Returns FileResult with the created file information
 func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*FileResult, error) {
@@ -70,25 +33,14 @@ func (op *OperatorImpl) AddRule(ctx context.Context, req *AddFileRequest) (*File
 		return nil, err
 	}
 
-	// Machine-local override: route to .ai-rulez/local/rules/, never a domain.
-	if req.Local {
-		if req.Domain != "" {
-			return nil, errLocalWithDomain
-		}
-		return op.addLocalFile(ContentTypeRules, req)
-	}
-
 	// Validate domain if specified
 	if req.Domain != "" {
 		if err := ValidateDomainName(req.Domain); err != nil {
 			return nil, err
 		}
 
-		if !op.filesMgr.DomainExists(req.Domain) {
-			return nil, &DomainNotFoundError{
-				Name: req.Domain,
-				Path: op.filesMgr.GetDomainPath(req.Domain),
-			}
+		if err := op.requireDomain(req.Domain); err != nil {
+			return nil, err
 		}
 	}
 
@@ -149,25 +101,14 @@ func (op *OperatorImpl) AddContext(ctx context.Context, req *AddFileRequest) (*F
 		return nil, err
 	}
 
-	// Machine-local override: route to .ai-rulez/local/context/, never a domain.
-	if req.Local {
-		if req.Domain != "" {
-			return nil, errLocalWithDomain
-		}
-		return op.addLocalFile(ContentTypeContext, req)
-	}
-
 	// Validate domain if specified
 	if req.Domain != "" {
 		if err := ValidateDomainName(req.Domain); err != nil {
 			return nil, err
 		}
 
-		if !op.filesMgr.DomainExists(req.Domain) {
-			return nil, &DomainNotFoundError{
-				Name: req.Domain,
-				Path: op.filesMgr.GetDomainPath(req.Domain),
-			}
+		if err := op.requireDomain(req.Domain); err != nil {
+			return nil, err
 		}
 	}
 
@@ -238,11 +179,8 @@ func (op *OperatorImpl) AddSkill(ctx context.Context, req *AddFileRequest) (*Fil
 			return nil, err
 		}
 
-		if !op.filesMgr.DomainExists(req.Domain) {
-			return nil, &DomainNotFoundError{
-				Name: req.Domain,
-				Path: op.filesMgr.GetDomainPath(req.Domain),
-			}
+		if err := op.requireDomain(req.Domain); err != nil {
+			return nil, err
 		}
 	}
 
@@ -409,10 +347,14 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 		dirPath = op.filesMgr.GetContextPath(domainName)
 	case ContentTypeSkills:
 		dirPath = op.filesMgr.GetSkillsPath(domainName)
+	case ContentTypeAgents:
+		dirPath = op.filesMgr.GetAgentsPath(domainName)
+	case ContentTypeCommands:
+		dirPath = op.filesMgr.GetCommandsPath(domainName)
 	default:
 		return nil, oops.
 			With("type", fileType).
-			Hint("Valid types: rules, context, skills.").
+			Hint("Valid types: rules, context, skills, agents, commands.").
 			Errorf("invalid file type: %s", fileType)
 	}
 
@@ -537,4 +479,65 @@ func (op *OperatorImpl) UpdateFile(_ context.Context, domain, ftype, name, conte
 		Type:     ftype,
 		Domain:   domain,
 	}, nil
+}
+
+// requireDomain checks that a domain exists. A local operator creates it on
+// demand: machine-local domains are private scratch space with no other way to
+// be declared.
+func (op *OperatorImpl) requireDomain(name string) error {
+	if op.filesMgr.DomainExists(name) {
+		return nil
+	}
+	if op.local {
+		return op.filesMgr.CreateDomainStructure(name)
+	}
+	return &DomainNotFoundError{Name: name, Path: op.filesMgr.GetDomainPath(name)}
+}
+
+// AddAgent creates a new agent file in the root or domain agents directory.
+func (op *OperatorImpl) AddAgent(_ context.Context, req *AddFileRequest) (*FileResult, error) {
+	return op.addFlatItem(req, ContentTypeAgents, func(r *AddFileRequest) string {
+		return GenerateAgentTemplate(r.Name, r.Description)
+	})
+}
+
+// AddCommand creates a new command file in the root or domain commands directory.
+func (op *OperatorImpl) AddCommand(_ context.Context, req *AddFileRequest) (*FileResult, error) {
+	return op.addFlatItem(req, ContentTypeCommands, func(r *AddFileRequest) string {
+		return GenerateCommandTemplate(r.Name, r.Description)
+	})
+}
+
+// addFlatItem writes a flat markdown content file (agent or command). Content
+// supplied without frontmatter is written as given, since agent and command
+// frontmatter carries no priority or targets of its own to generate.
+func (op *OperatorImpl) addFlatItem(req *AddFileRequest, ftype string, template func(*AddFileRequest) string) (*FileResult, error) {
+	if req == nil {
+		return nil, oops.Hint("AddFileRequest cannot be nil").Errorf("invalid request")
+	}
+	req.Type = ftype
+	if err := ValidateFileName(req.Name); err != nil {
+		return nil, err
+	}
+	if req.Domain != "" {
+		if err := ValidateDomainName(req.Domain); err != nil {
+			return nil, err
+		}
+		if err := op.requireDomain(req.Domain); err != nil {
+			return nil, err
+		}
+	}
+
+	filePath := op.filesMgr.GetFilePath(req.Domain, ftype, req.Name)
+	if op.filesMgr.PathExists(filePath) {
+		return nil, &FileExistsError{Path: filePath, Type: ftype}
+	}
+	content := req.Content
+	if content == "" {
+		content = template(req)
+	}
+	if err := op.filesMgr.WriteFile(filePath, EnsureTrailingNewline(content)); err != nil {
+		return nil, err
+	}
+	return &FileResult{Name: req.Name, FullPath: filePath, Type: ftype, Domain: req.Domain}, nil
 }

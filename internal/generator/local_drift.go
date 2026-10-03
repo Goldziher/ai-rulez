@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -133,8 +134,8 @@ func (g *Generator) renderBaseline(profile string) ([]config.OutputFile, string,
 	if g.config.ConfigDir == "" || g.config.ConfigFile == "" {
 		return nil, "", oops.Errorf("the config file location is unknown")
 	}
-	path := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
-	cfg, err := config.LoadConfigFromFile(g.context(), path,
+	cfgPath := filepath.Join(g.config.ConfigDir, g.config.ConfigFile)
+	cfg, err := config.LoadConfigFromFile(g.context(), cfgPath,
 		config.WithoutLocal(), config.WithIncludeMemo(g.config.IncludeMemo))
 	if err != nil {
 		return nil, "", err //nolint:wrapcheck // wrapped by planLocal
@@ -189,10 +190,14 @@ func (g *Generator) classify(plan *localPlan, baseline, merged []config.OutputFi
 		switch {
 		case !inBase:
 			plan.localOnly = append(plan.localOnly, rel)
-			if !o.LocalOnly {
+			// A ".local." file name (CLAUDE.local.md, <rulesdir>/x.local.md) is
+			// covered by a stable pattern in the shared .gitignore. Anything else
+			// (a local skill's SKILL.md, an overlay preset's output) is named after
+			// machine-local content, so it is excluded per clone instead.
+			if !o.LocalOnly || !stableLocalName(rel) {
 				plan.machineLocal[rel] = true
-				o.LocalOnly = true
 			}
+			o.LocalOnly = true
 		case !sameOutput(b, *o):
 			plan.drift = append(plan.drift, rel)
 		}
@@ -239,6 +244,23 @@ func (g *Generator) localSourceHash(baselineHash string) (string, error) {
 		writeContentFiles(&b, "local.skills", t.Skills, g.config)
 		writeContentFiles(&b, "local.agents", t.Agents, g.config)
 		writeContentFiles(&b, "local.commands", t.Commands, g.config)
+		names := make([]string, 0, len(t.Domains))
+		for name := range t.Domains {
+			names = append(names, name)
+		}
+		sort.Strings(names)
+		for _, name := range names {
+			d := t.Domains[name]
+			if d == nil {
+				continue
+			}
+			prefix := "local.domain." + name + "."
+			writeContentFiles(&b, prefix+"rules", d.Rules, g.config)
+			writeContentFiles(&b, prefix+"context", d.Context, g.config)
+			writeContentFiles(&b, prefix+"skills", d.Skills, g.config)
+			writeContentFiles(&b, prefix+"agents", d.Agents, g.config)
+			writeContentFiles(&b, prefix+"commands", d.Commands, g.config)
+		}
 	}
 	return templates.HashContent(b.String()), nil
 }
@@ -248,32 +270,32 @@ const redactedValue = "<redacted>"
 // canonicalOverlay returns a copy of an overlay document that is safe to hash:
 // env and header values, args, URLs (credentials and query removed), include and
 // skill sources, and anything under a secret-looking key are replaced.
-func canonicalOverlay(path []string, v any) any {
+func canonicalOverlay(keyPath []string, v any) any {
 	switch t := v.(type) {
 	case map[string]any:
 		out := make(map[string]any, len(t))
 		for k, e := range t {
-			out[k] = canonicalOverlay(append(append([]string(nil), path...), k), e)
+			out[k] = canonicalOverlay(append(append([]string(nil), keyPath...), k), e)
 		}
 		return out
 	case []any:
 		out := make([]any, len(t))
 		for i, e := range t {
-			out[i] = canonicalOverlay(path, e)
+			out[i] = canonicalOverlay(keyPath, e)
 		}
 		return out
 	case string:
-		return canonicalString(path, t)
+		return canonicalString(keyPath, t)
 	}
 	return v
 }
 
-func canonicalString(path []string, value string) string {
-	if len(path) == 0 {
+func canonicalString(keyPath []string, value string) string {
+	if len(keyPath) == 0 {
 		return value
 	}
-	last := path[len(path)-1]
-	for _, seg := range path {
+	last := keyPath[len(keyPath)-1]
+	for _, seg := range keyPath {
 		if seg == "env" || seg == "headers" {
 			return redactedValue
 		}
@@ -473,9 +495,9 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 // escapeGitPattern escapes a literal path for use in a gitignore pattern:
 // wildcard and bracket characters, a leading '#' or '!', and trailing spaces
 // (which git otherwise strips).
-func escapeGitPattern(path string) string {
+func escapeGitPattern(literal string) string {
 	var b strings.Builder
-	for i, r := range path {
+	for i, r := range literal {
 		switch r {
 		case '\\', '[', ']', '*', '?':
 			b.WriteByte('\\')
@@ -557,4 +579,11 @@ func (g *Generator) localOutputPattern(relPath string) string {
 		return ""
 	}
 	return localGitignorePattern(relPath)
+}
+
+// stableLocalName reports whether a file's name marks it as machine-local
+// (".local." before the extension), which the shared .gitignore can cover with a
+// pattern that does not depend on which local content a machine has.
+func stableLocalName(rel string) bool {
+	return strings.Contains(path.Base(rel), ".local.")
 }

@@ -28,6 +28,8 @@ type Operator interface {
 	AddRule(ctx context.Context, req *AddFileRequest) (*FileResult, error)
 	AddContext(ctx context.Context, req *AddFileRequest) (*FileResult, error)
 	AddSkill(ctx context.Context, req *AddFileRequest) (*FileResult, error)
+	AddAgent(ctx context.Context, req *AddFileRequest) (*FileResult, error)
+	AddCommand(ctx context.Context, req *AddFileRequest) (*FileResult, error)
 	RemoveFile(ctx context.Context, domain, ftype, name string) error
 	ListFiles(ctx context.Context, domain, ftype string) ([]FileInfo, error)
 
@@ -119,7 +121,6 @@ type AddFileRequest struct {
 	Content     string   // File content (optional, uses template if empty)
 	Priority    string   // Priority level: critical, high, medium, low
 	Targets     []string // Target providers: claude, cursor, etc.
-	Local       bool     // Write to .ai-rulez/local/ (machine-local override, gitignored). Mutually exclusive with Domain.
 }
 
 // FileResult represents the result of a file operation

@@ -29,9 +29,17 @@ or agents.
 └── local/              # machine-local, gitignored
     ├── rules/
     │   └── my-scratch-notes.md
-    └── context/
-        └── local-env-notes.md
+    ├── context/
+    │   └── local-env-notes.md
+    ├── skills/ agents/ commands/
+    └── domains/<name>/   # selected by the active profile, like shared domains
 ```
+
+Local skills, agents and commands are written to the same per-item paths as shared ones
+(for example `.claude/skills/<name>/SKILL.md`) and are excluded from git per clone. A local item
+with the same name as a shared one is an error. Use `--local` on `add`, `remove` and `list` (or
+`local: true` on the MCP CRUD tools) to manage them; `--local --domain x` writes to
+`.ai-rulez/local/domains/x/`.
 
 ## Generated Output
 
@@ -127,6 +135,7 @@ combining the two flags errors.
 
 ## Notes
 
+- Local content is root-only: `[[scopes]]` runs never emit local outputs.
 - The unconditional gitignore is a safety guarantee: local content is intended for personal or
   machine-specific instructions and must never leak into version control.
 - Because local content is a separate overlay, removing `.ai-rulez/local/` (or an individual file
