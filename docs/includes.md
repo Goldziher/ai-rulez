@@ -609,9 +609,8 @@ source = "/path/to/shared-rules/.ai-rulez"
 
 ### Include Skipped or Nested Includes Ignored
 
-Includes are not recursive, so a cycle between two shared configurations cannot occur. The resolver
-only guards against a repeated include name in one list and reports it as
-`circular dependency detected: <name>`; give every include a unique name.
+Includes are not recursive, so cycles cannot occur. Give each include a unique name: duplicate names are
+not rejected and are processed independently.
 
 If an include's content is missing from the output, run `ai-rulez validate --verbose`: a failed
 include is logged as `Failed to process include` and skipped, and a `local_override` path that does not

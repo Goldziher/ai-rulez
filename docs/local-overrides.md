@@ -156,7 +156,7 @@ The `ai-rulez local` command edits the overlay:
 
 | Command | Action |
 | ------- | ------ |
-| `local init` | Create a commented `config.local.*` skeleton in the main config's format (gitignored) |
+| `local init` | Create a `config.local.*` skeleton in the main config's format (commented for TOML and YAML, `{}` for JSON; gitignored) |
 | `local show` | Print every key the overlay sets and the shared value it replaces |
 | `local set <path> [value]` | Set a key |
 | `local unset <path>` | Remove a key |
@@ -181,7 +181,7 @@ ai-rulez local show --json
   `mcp_servers["foo.bar"].command`.
 - **Redaction.** `local show` withholds values by default. Only an allowlist of keys known to hold no
   credentials (`name`, `description`, `default`, `presets`, `gitignore`, `compact`, `builtins`,
-  `profiles.*`, `defaults.effort*`, `rules.mode*`, `header.style|hashes|timestamp`,
+  `profiles.*`, `defaults.effort*`, `defaults.omit_agent_fields`, `rules.mode*`, `header.style|hashes|timestamp`,
   `mcp.self_server`, `mcp.self_server_version`, and `transport`, `enabled`, `remove` of list entries)
   is printed, and only when the value has the expected type. Everything else shows its key path and
   `<redacted>`. `--reveal` prints everything and may print secrets.
@@ -189,8 +189,8 @@ ai-rulez local show --json
   config. If validation fails the previous file is restored.
 - **Location.** The subcommands honour the global `--config` and `--config-dir` / `-n`.
 
-The list commands (`list ...`, `profile list`, `include list`) show the shared layer only and print how
-many local entries `config.local.*` adds. Use `local show` to see them.
+`profile list`, `include list` and `skill list` show the shared layer only and print how many local
+entries `config.local.*` adds. Use `local show` to see them.
 
 ### Content and config CRUD with `--local`
 
@@ -207,8 +207,8 @@ ai-rulez add rule local-paths --local                   # .ai-rulez/local/rules/
 ai-rulez add context local-env-notes --local
 ai-rulez add skill my-debug-skill --local
 ai-rulez add rule team-notes --local --domain backend   # .ai-rulez/local/domains/backend/rules/
-ai-rulez profile add dev --local --domains backend,my-local-domain
-ai-rulez include add scratch --local --source ../scratch-rules
+ai-rulez profile add dev backend my-local-domain --local
+ai-rulez include add scratch ../scratch-rules --local
 ```
 
 - `--local --domain <name>` writes to `.ai-rulez/local/domains/<name>/`, creating a local domain.
@@ -282,8 +282,9 @@ Removing a file under `.ai-rulez/local/` and regenerating drops the correspondin
 - The overlay and local tree may hold secrets. They are written owner-only, and ignore entries are
   written before the files themselves; writers fail closed if the entries cannot be written.
 - The `local show` default withholds values; `read_config` over MCP returns key paths only.
-- The overlay is hashed into generated headers only in redacted form: env and header values, args,
-  URL credentials and queries, include and skill sources are replaced.
+- The overlay is hashed into generated headers only in redacted form: env and header values and args
+  are replaced, and URLs (including include and skill sources) lose their credentials, query and
+  fragment; scheme, host and path still contribute to the hash.
 - `--allow-local-drift` is the one way to write overlay-derived values into tracked files. Do not use
   it in shared scripts.
 
