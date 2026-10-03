@@ -1351,9 +1351,14 @@ func selectConfigWritePath(cfg *Config, configDir string) string {
 	return filepath.Join(configDir, configTOMLFilename)
 }
 
-// writeConfigAtomically writes data to path via a temp file + rename.
+// writeConfigAtomically writes data to path via a temp file + rename. An
+// existing file keeps its permission bits; a new one is created 0644.
 func writeConfigAtomically(targetPath string, data []byte) error {
-	return writeFileAtomic(targetPath, data, 0o644)
+	perm := os.FileMode(0o644)
+	if info, err := os.Stat(targetPath); err == nil {
+		perm = info.Mode().Perm()
+	}
+	return writeFileAtomic(targetPath, data, perm)
 }
 
 // writeFileAtomic writes data to path with the given permissions: into an

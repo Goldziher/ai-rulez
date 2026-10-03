@@ -67,3 +67,34 @@ func TestMigrateLocalOverlay_KeepsOldFileWhenTargetExists(t *testing.T) {
 	require.Error(t, err)
 	assert.FileExists(t, filepath.Join(dir, "config.local.yaml"))
 }
+
+func TestMigrateV4_StrayOverlayIsAWarningNotAFailure(t *testing.T) {
+	// Arrange: a TOML main config and two overlays in different formats.
+	project := t.TempDir()
+	dir := filepath.Join(project, ".ai-rulez")
+	require.NoError(t, os.MkdirAll(dir, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte("version = \"4.0\"\nname = \"x\"\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.toml"), []byte("name = \"a\"\n"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.yaml"), []byte("name: b\n"), 0o600))
+	t.Chdir(project)
+
+	// Act: os.Exit would terminate the test binary.
+	runMigrateV4()
+
+	// Assert
+	assert.FileExists(t, filepath.Join(dir, "config.local.yaml"), "the stray file is left for the user")
+}
+
+func TestMigrateLocalOverlay_MapsSchemaKey(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.yaml"),
+		[]byte("$schema: https://example.com/s.json\nname: a\n"), 0o600))
+
+	_, to, err := config.MigrateLocalOverlayToTOML(dir)
+
+	require.NoError(t, err)
+	data, err := os.ReadFile(to)
+	require.NoError(t, err)
+	assert.Contains(t, string(data), `schema = 'https://example.com/s.json'`)
+	assert.NotContains(t, string(data), "$schema")
+}

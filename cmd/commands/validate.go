@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
@@ -65,7 +66,7 @@ schema compliance, and structural issues.`,
 			os.Exit(1)
 		}
 		if cfg.LocalOverlay != nil {
-			progress.PrintIfNotQuiet("local overlay: %s\n", cfg.LocalOverlay.Path)
+			progress.PrintIfNotQuiet("%s\n", localOverlaySummary(cfg))
 		}
 
 		if err := cfg.Validate(); err != nil {
@@ -171,4 +172,37 @@ func displayConfigurationSummary(cfg *config.Config) {
 	}
 
 	logger.Info("  - Presets:", "count", len(cfg.Presets))
+}
+
+// localOverlaySummary is the one-line overlay description validate prints: the
+// path and how many key paths the overlay overrides, adds and removes. It never
+// includes a value, since the overlay may hold secrets.
+func localOverlaySummary(cfg *config.Config) string {
+	line := "local overlay: " + cfg.LocalOverlay.Path
+	_, changes, err := config.DescribeLocalOverlayAt(cfg.ConfigDir)
+	if err != nil {
+		return line
+	}
+	var overridden, added, removed int
+	for _, c := range changes {
+		if isEntryNamePath(c.Path) {
+			continue // the identity of a list entry is not a setting
+		}
+		isRemove, _ := c.Local.(bool) //nolint:errcheck // a non-bool value is not a remove marker
+		switch {
+		case strings.HasSuffix(c.Path, ".remove") && isRemove:
+			removed++
+		case c.HasShared:
+			overridden++
+		default:
+			added++
+		}
+	}
+	return fmt.Sprintf("%s (%d overridden, %d added, %d removed)", line, overridden, added, removed)
+}
+
+// isEntryNamePath reports whether path is "<named list>.<entry>.name".
+func isEntryNamePath(path string) bool {
+	list, rest, ok := strings.Cut(path, ".")
+	return ok && isNamedListPath(list) && strings.HasSuffix(rest, ".name")
 }

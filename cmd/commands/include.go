@@ -62,7 +62,7 @@ Use --force to skip confirmation prompts.`,
 var includeListCmd = &cobra.Command{
 	Use:   cmdUseList,
 	Short: "List all includes",
-	Long:  `List all configured include sources.`,
+	Long:  `List all configured include sources.` + localListHint,
 	Args:  cobra.NoArgs,
 	Run:   runIncludeList,
 }
@@ -180,6 +180,7 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 
 	if len(includes) == 0 {
 		logger.Info("No includes found")
+		logLocalEntriesHint("includes")
 		return
 	}
 
@@ -207,5 +208,6 @@ func runIncludeList(cmd *cobra.Command, args []string) {
 			logger.Info(fmt.Sprintf("  • %s %s", inc.Name, sourceInfo))
 			logger.Debug(fmt.Sprintf("    Source: %s", incl.RedactURL(inc.Source)))
 		}
+		logLocalEntriesHint("includes")
 	}
 }

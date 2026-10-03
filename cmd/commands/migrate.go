@@ -77,8 +77,11 @@ func runMigrateV4() {
 func migrateLocalOverlay(configDir string) {
 	from, to, err := config.MigrateLocalOverlayToTOML(configDir)
 	if err != nil {
-		logger.Error("Failed to migrate the local config", "error", err)
-		os.Exit(1)
+		// The overlay is optional and machine-local: a conflict in it (for
+		// example a second config.local.* file) must not block migrating the
+		// shared config.
+		logger.Warn("Local config was not converted to TOML", "error", err)
+		return
 	}
 	if from != "" {
 		logger.Success("Converted local config", "from", filepath.Base(from), "to", filepath.Base(to))

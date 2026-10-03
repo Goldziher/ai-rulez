@@ -2,11 +2,13 @@ package generator
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/samber/oops"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
 // perItemContent returns a copy of a content tree that keeps only the content
@@ -149,6 +151,7 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 			builtin[p.GetName()] = true
 		}
 	}
+	g.warnDroppedItems(cfg, items, known, builtin)
 	names := make([]string, 0, len(all))
 	for name := range all {
 		names = append(names, name)
@@ -168,4 +171,90 @@ func (g *Generator) appendLocalItemOutputs(allOutputs map[string][]config.Output
 		}
 	}
 	return nil
+}
+
+// warnDroppedItems warns, per preset and kind, about local skills, agents and
+// commands the preset aggregates into a shared file (or has no output for): they
+// get no per-item file, and a machine-local item is never merged into a file the
+// team shares, so they are not written at all.
+func (g *Generator) warnDroppedItems(cfg *config.Config, items *config.ContentTree, known, builtin map[string]bool) {
+	for name, dropped := range g.droppedItems(cfg, items, known, builtin) {
+		logger.Warn("Machine-local skills, agents or commands have no per-item output for this preset and were not written",
+			"preset", name, "items", strings.Join(dropped, ", "))
+	}
+}
+
+// droppedItems maps each builtin preset to the labels of the local items it
+// produces no file for. Each kind is rendered on its own so one kind's files
+// cannot hide another's absence.
+func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, known, builtin map[string]bool,
+) map[string][]string {
+	kinds := []struct {
+		label  string
+		files  func(*config.ContentTree) []config.ContentFile
+		narrow func(*config.ContentTree) *config.ContentTree
+	}{
+		{"skill", presets.AllSkills, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, true, false, false) }},
+		{"agent", presets.AllAgents, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, true, false) }},
+		{"command", presets.AllCommands, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, true) }},
+	}
+	dropped := map[string][]string{}
+	for _, kind := range kinds {
+		files := kind.files(items)
+		if len(files) == 0 {
+			continue
+		}
+		rendered := *cfg
+		rendered.Content = withLocalItems(cfg.Content, kind.narrow(items))
+		rendered.Analysis = nil
+		all, err := config.GeneratePresets(&rendered)
+		if err != nil {
+			continue // the combined render reports the error
+		}
+		for name, outs := range all {
+			if !builtin[name] {
+				continue
+			}
+			placed := false
+			for _, o := range outs {
+				if !o.IsDir && !known[o.Path] {
+					placed = true
+					break
+				}
+			}
+			if placed {
+				continue
+			}
+			for _, f := range files {
+				dropped[name] = append(dropped[name], kind.label+" "+f.Name)
+			}
+		}
+	}
+	for name := range dropped {
+		sort.Strings(dropped[name])
+	}
+	return dropped
+}
+
+// onlyKind keeps the selected per-item kinds of a content tree.
+func onlyKind(t *config.ContentTree, skills, agents, commands bool) *config.ContentTree {
+	pick := func(on bool, files []config.ContentFile) []config.ContentFile {
+		if on {
+			return files
+		}
+		return nil
+	}
+	out := &config.ContentTree{
+		Skills:   pick(skills, t.Skills),
+		Agents:   pick(agents, t.Agents),
+		Commands: pick(commands, t.Commands),
+		Domains:  make(map[string]*config.Domain, len(t.Domains)),
+	}
+	for name, d := range t.Domains {
+		out.Domains[name] = &config.Domain{
+			Name: d.Name, Skills: pick(skills, d.Skills), Agents: pick(agents, d.Agents), Commands: pick(commands, d.Commands),
+			Builtin: d.Builtin, BuiltinScoped: d.BuiltinScoped, FromInclude: d.FromInclude,
+		}
+	}
+	return out
 }

@@ -52,7 +52,10 @@ func updateLocalConfig(ctx context.Context, request *ToolRequest, dir string) (*
 
 func setLocalFields(doc *config.LocalDoc, scratch *config.Config, updated []string) error {
 	for _, field := range updated {
-		path, value, cleared := localFieldValue(scratch, field)
+		path, value, cleared, ok := localFieldValue(scratch, field)
+		if !ok {
+			return fmt.Errorf("update_config field %q cannot be written to the local config", field)
+		}
 		var err error
 		if cleared {
 			err = doc.Unset(path)
@@ -116,6 +119,11 @@ var localFields = map[string]localField{
 	},
 }
 
-func localFieldValue(c *config.Config, field string) (path []string, value any, cleared bool) {
-	return localFields[field](c)
+func localFieldValue(c *config.Config, field string) (path []string, value any, cleared, ok bool) {
+	fn := localFields[field]
+	if fn == nil {
+		return nil, nil, false, false
+	}
+	path, value, cleared = fn(c)
+	return path, value, cleared, true
 }

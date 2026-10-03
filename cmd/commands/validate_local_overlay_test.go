@@ -61,3 +61,20 @@ func TestRunRecursiveValidate_BadOverlayFails(t *testing.T) {
 	// Assert
 	assert.Equal(t, 1, code)
 }
+
+func TestLocalOverlaySummary_CountsKeysAndHidesValues(t *testing.T) {
+	// Arrange
+	dir := filepath.Join(t.TempDir(), ".ai-rulez")
+	writeFile(t, filepath.Join(dir, "config.toml"), localCmdShared)
+	writeFile(t, filepath.Join(dir, "config.local.toml"),
+		"name = \"mine\"\ndescription = \"SECRETISH\"\n\n[[mcp_servers]]\nname = \"gh\"\nremove = true\n")
+	cfg, err := config.LoadConfig(t.Context(), filepath.Dir(dir))
+	require.NoError(t, err)
+
+	// Act
+	line := localOverlaySummary(cfg)
+
+	// Assert
+	assert.Contains(t, line, "1 overridden, 1 added, 1 removed")
+	assert.NotContains(t, line, "SECRETISH")
+}

@@ -159,3 +159,20 @@ func TestLocalOperator_RejectsDuplicatesAcrossLayers(t *testing.T) {
 	assert.Error(t, op.Local().AddInclude(ctx, &crud.AddIncludeRequest{Name: "inc", Source: filepath.Join(p.ext, "loc")}))
 	assert.Error(t, op.Local().RemoveInclude(ctx, "ghost"))
 }
+
+func TestLocalOperator_AddProfileAcceptsLocalDomain(t *testing.T) {
+	ctx := context.Background()
+	p := setupLocalOpProject(t)
+	scratch := filepath.Join(p.baseDir, ".ai-rulez", "local", "domains", "scratch", "rules")
+	require.NoError(t, os.MkdirAll(scratch, 0o755))
+	require.NoError(t, os.WriteFile(filepath.Join(scratch, "r.md"), []byte("# R\n"), 0o600))
+	op, err := crud.NewOperator(p.baseDir)
+	require.NoError(t, err)
+
+	require.NoError(t, op.Local().AddProfile(ctx, "mine", []string{"scratch"}))
+
+	// The shared path must still reject a domain teammates do not have.
+	err = op.AddProfile(ctx, "shared-mine", []string{"scratch"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "does not exist")
+}

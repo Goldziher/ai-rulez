@@ -13,7 +13,7 @@ import (
 
 // MigrateLocalOverlayToTOML converts a config.local.yaml, .yml or .json file in
 // configDir to config.local.toml at the document level (no Config round trip,
-// so nothing is dropped or defaulted). The old file is removed only after the
+// so nothing is dropped or defaulted; only "$schema" becomes the TOML key "schema"). The old file is removed only after the
 // new one is written. It returns the old and new paths, or "" when there is
 // nothing to convert.
 func MigrateLocalOverlayToTOML(configDir string) (from, to string, err error) {
@@ -40,7 +40,7 @@ func MigrateLocalOverlayToTOML(configDir string) (from, to string, err error) {
 	if err != nil {
 		return "", "", err
 	}
-	data, err := toml.Marshal(tomlSafeValue(pickNumberMode(doc)))
+	data, err := toml.Marshal(tomlSafeValue(pickNumberMode(normalizeConfigDocKeys(doc))))
 	if err != nil {
 		return "", "", oops.With("path", sources[0]).Wrapf(err, "convert %s to TOML", filepath.Base(sources[0]))
 	}

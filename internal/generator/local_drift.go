@@ -101,13 +101,11 @@ func (g *Generator) planLocal(profile string, merged []config.OutputFile) (*loca
 	baseline, baselineHash, err := g.renderBaseline(profile)
 	if err != nil {
 		err = redactCredentials(err)
-		if g.allowLocalDrift {
-			logger.Warn("Could not render the shared baseline; local drift is not checked", "error", err)
-			return nil, nil
-		}
+		// Fail closed even with --allow-local-drift: without the baseline,
+		// overlay-derived outputs cannot be told apart from shared ones.
 		return nil, oops.
-			Hint("Use --allow-local-drift to generate anyway, or --no-local to generate the shared view").
-			Wrapf(err, "render the shared baseline to detect local drift")
+			Hint("Fix the shared config, or run with --no-local to generate the shared view").
+			Wrapf(err, "render the shared baseline to detect local drift (fix the shared config or use --no-local)")
 	}
 
 	localHash, err := g.localSourceHash(baselineHash)

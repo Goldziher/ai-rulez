@@ -94,7 +94,7 @@ func validateProfileDomains(cfg *config.Config, profile string, domains []string
 		if cfg.Content == nil || cfg.Content.Domains == nil {
 			continue
 		}
-		if _, exists := cfg.Content.Domains[domain]; !exists {
+		if _, exists := cfg.Content.Domains[domain]; !exists && !hasLocalDomain(cfg, domain) {
 			return oops.
 				With("profile", profile).
 				With("domain", domain).
@@ -103,6 +103,17 @@ func validateProfileDomains(cfg *config.Config, profile string, domains []string
 		}
 	}
 	return nil
+}
+
+// hasLocalDomain reports whether the machine-local content tree defines the
+// domain. LocalContent is only populated for merged loads, so the shared path
+// (config.WithoutLocal) never accepts a local-only domain.
+func hasLocalDomain(cfg *config.Config, domain string) bool {
+	if cfg.LocalContent == nil {
+		return false
+	}
+	_, ok := cfg.LocalContent.Domains[domain]
+	return ok
 }
 
 // RemoveProfile removes a profile from the config
