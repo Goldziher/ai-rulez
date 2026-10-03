@@ -64,7 +64,9 @@ func writeExcludeFallback(baseDir string, patterns []string, keep bool) error {
 	prefix := gitutil.RepoRelative(top, baseDir)
 	for _, p := range patterns {
 		if p = strings.TrimSpace(p); p != "" && !strings.ContainsAny(p, "\r\n") {
-			entries[anchored(prefix, p)] = true
+			if a := anchored(prefix, p); a != "" {
+				entries[a] = true
+			}
 		}
 	}
 
@@ -92,12 +94,21 @@ func writeExcludeFallback(baseDir string, patterns []string, keep bool) error {
 
 // anchored rewrites a .gitignore pattern of a project at repoPrefix (relative to
 // the work tree root; "" or "." for the root) so it means the same in the
-// repository's exclude file.
+// repository's exclude file, where patterns are relative to the repository
+// root. A pattern with a slash before its last character is relative to the
+// project directory; one without matches at any depth below it. It returns ""
+// for a negation, which must not leak out of the project's block.
 func anchored(repoPrefix, pattern string) string {
+	if strings.HasPrefix(pattern, "!") {
+		return ""
+	}
 	if repoPrefix == "" || repoPrefix == "." {
 		return pattern
 	}
-	return "/" + repoPrefix + "/" + strings.TrimPrefix(pattern, "/")
+	if strings.Contains(strings.TrimSuffix(pattern, "/"), "/") {
+		return "/" + repoPrefix + "/" + strings.TrimPrefix(pattern, "/")
+	}
+	return "/" + repoPrefix + "/**/" + pattern
 }
 
 func blockEntries(content, begin, end string) map[string]bool {
