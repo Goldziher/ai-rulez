@@ -191,6 +191,7 @@ func TestJunie_RulesSplit(t *testing.T) {
 
 func TestValidateSpec_SplitFields(t *testing.T) {
 	t.Parallel()
+	t.Cleanup(func() { config.UnregisterRulesDir("r") }) // the valid case registers its dir
 
 	const head = "name = \"demo\"\n[root]\nfile = \"D.md\"\nsections = [\"rules_inline\"]\n[outputs.rules]\nmode = \"per_item_file\"\ndir = \"r\"\nfilename = \"{id}.md\"\n"
 	tests := []struct {
@@ -218,7 +219,22 @@ func TestValidateSpec_SplitFields(t *testing.T) {
 			spec:    strings.Replace(head, "\"rules_inline\"", "\"title\"", 1) + "split = true\ndialect = \"claude\"\n",
 			wantErr: "rules_inline",
 		},
+		{name: "dir with drive letter", spec: strings.Replace(head, "dir = \"r\"", "dir = \"C:/rules\"", 1) + "split = true\ndialect = \"claude\"\n", wantErr: "relative path"},
+		{name: "dir with drive letter and backslash", spec: strings.Replace(head, "dir = \"r\"", "dir = 'C:\\rules'", 1) + "split = true\ndialect = \"claude\"\n", wantErr: "relative path"},
+		{name: "UNC dir", spec: strings.Replace(head, "dir = \"r\"", "dir = '\\\\host\\share'", 1) + "split = true\ndialect = \"claude\"\n", wantErr: "relative path"},
+		{name: "double slash dir", spec: strings.Replace(head, "dir = \"r\"", "dir = \"//host/share\"", 1) + "split = true\ndialect = \"claude\"\n", wantErr: "relative path"},
+		{name: "dot dir", spec: strings.Replace(head, "dir = \"r\"", "dir = \".\"", 1) + "split = true\ndialect = \"claude\"\n", wantErr: "relative path"},
 		{name: "split without dialect", spec: head + "split = true\n", wantErr: "dialect is required"},
+		{
+			name:    "split without dir",
+			spec:    strings.Replace(head, "dir = \"r\"\n", "", 1) + "split = true\ndialect = \"claude\"\n",
+			wantErr: "dir is required",
+		},
+		{
+			name:    "split with dir escaping the project",
+			spec:    strings.Replace(head, "dir = \"r\"", "dir = \"../r\"", 1) + "split = true\ndialect = \"claude\"\n",
+			wantErr: "relative path",
+		},
 		{name: "dialect without split", spec: head + "dialect = \"claude\"\n", wantErr: "require split"},
 		{
 			name:    "nested filename",
@@ -247,6 +263,20 @@ func TestValidateSpec_SplitFields(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.wantErr)
 		})
 	}
+}
+
+func TestLoadProviderSpec_SplitRegistersRulesDir(t *testing.T) {
+	// Not parallel: the registry of rules folders is process-wide.
+	spec := "name = \"demo\"\n[root]\nfile = \"D.md\"\nsections = [\"rules_inline\"]\n" +
+		"[outputs.rules]\nmode = \"per_item_file\"\ndir = \".w3-demo/rules\"\nfilename = \"{id}.md\"\n" +
+		"split = true\ndialect = \"claude\"\n"
+	require.False(t, config.InRulesDir(".w3-demo/rules/x.md"))
+	t.Cleanup(func() { config.UnregisterRulesDir(".w3-demo/rules") })
+
+	_, err := providers.LoadProviderSpec([]byte(spec), "demo.toml", providers.FormatTOML)
+
+	require.NoError(t, err)
+	assert.True(t, config.InRulesDir(".w3-demo/rules/x.md"))
 }
 
 func TestCustomProvider_LegacyRulesFilterUnchanged(t *testing.T) {
@@ -379,33 +409,25 @@ sections = ["content"]
 	assert.Equal(t, []string{"go-style.v2.md"}, fileSet(outputs, "rules"))
 }
 
-func TestClaude_RuleFileNameErrors(t *testing.T) {
+func TestClaude_RuleNameCollisionKeepsBothRules(t *testing.T) {
 	t.Parallel()
 
+	// Arrange: names that map to the same id once case is ignored.
 	scoped := &config.Metadata{Globs: []string{"*.go"}}
-	tests := []struct {
-		name    string
-		rules   []config.ContentFile
-		wantErr string
-	}{
-		{
-			"case-insensitive collision",
-			[]config.ContentFile{{Name: "Foo", Content: "A", Metadata: scoped}, {Name: "foo", Content: "B", Metadata: scoped}},
-			"collide",
-		},
+	rules := []config.ContentFile{
+		{Name: "Foo", Path: "a.md", Content: "A", Metadata: scoped},
+		{Name: "foo", Path: "b.md", Content: "B", Metadata: scoped},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
 
-			// Act
-			_, err := claudeGen(t).Generate(&config.ContentTree{Rules: tt.rules}, "/test", splitCfg("claude", ""))
+	// Act
+	outputs, err := claudeGen(t).Generate(&config.ContentTree{Rules: rules}, "/test", splitCfg("claude", ""))
 
-			// Assert
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), tt.wantErr)
-		})
-	}
+	// Assert
+	require.NoError(t, err)
+	files := fileSet(outputs, "rules")
+	require.Len(t, files, 2)
+	assert.Equal(t, "Foo.md", files[0])
+	assert.Regexp(t, `^foo-[0-9a-f]{6}\.md$`, files[1])
 }
 
 func TestClaude_HeaderRuleCountAfterRouting(t *testing.T) {

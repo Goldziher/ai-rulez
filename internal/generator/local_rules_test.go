@@ -180,7 +180,7 @@ func TestLocalRuleFiles_OnlyLocalRulesSkipsEmptyRoot(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(dir, "CLAUDE.local.md"))
 }
 
-func TestLocalRuleFiles_CollisionErrors(t *testing.T) {
+func TestLocalRuleFiles_CollisionsAreDisambiguated(t *testing.T) {
 	tests := []struct {
 		name  string
 		first string
@@ -200,8 +200,10 @@ func TestLocalRuleFiles_CollisionErrors(t *testing.T) {
 			err := generateIn(t, dir)
 
 			// Assert
-			require.Error(t, err)
-			assert.Contains(t, err.Error(), "collide")
+			require.NoError(t, err)
+			matches, globErr := filepath.Glob(filepath.Join(dir, ".cursor", "rules", "[Ff]oo-[Bb]ar*.local.mdc"))
+			require.NoError(t, globErr)
+			assert.Len(t, matches, 2, "both local rules are written, one under a suffixed name")
 		})
 	}
 }

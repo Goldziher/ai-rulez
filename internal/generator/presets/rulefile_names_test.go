@@ -76,7 +76,7 @@ func TestRulesFolders_FileNames(t *testing.T) {
 	}
 }
 
-func TestRulesFolders_NameCollisionsFail(t *testing.T) {
+func TestRulesFolders_NameCollisionsAreDisambiguated(t *testing.T) {
 	tests := []struct {
 		name        string
 		rules       []config.ContentFile
@@ -97,15 +97,15 @@ func TestRulesFolders_NameCollisionsFail(t *testing.T) {
 				content := &config.ContentTree{Rules: tt.rules, Context: tt.context}
 
 				// Act
-				_, err := p.gen.Generate(content, "/test", splitRulesConfig())
+				outputs, err := p.gen.Generate(content, "/test", splitRulesConfig())
 
 				// Assert
+				require.NoError(t, err)
+				names := ruleFolderFiles(outputs, p.dir)
 				if tt.needContext && !p.contextFiles {
-					require.NoError(t, err)
 					return
 				}
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), "collide")
+				assert.Len(t, names, len(tt.rules)+len(tt.context), "every item keeps its own file: %v", names)
 			})
 		}
 	}
