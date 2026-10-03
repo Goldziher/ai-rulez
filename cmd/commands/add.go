@@ -21,6 +21,8 @@ var (
 	addLocal    bool
 )
 
+const addLocalUsage = "Write to .ai-rulez/local/ as a machine-local item (gitignored); combine with --domain for a local domain"
+
 var AddCmd = &cobra.Command{
 	Use:   "add",
 	Short: "Add content to your rules",
@@ -58,7 +60,35 @@ Skills define specialized capabilities or personas for AI assistants.`,
 	Run:  runAddSkill,
 }
 
+var addAgentCmd = &cobra.Command{
+	Use:   "agent <name>",
+	Short: "Add a new agent",
+	Long: `Add a new agent file.
+
+Agents define specialized sub-agents for tools that support them.`,
+	Args: cobra.ExactArgs(1),
+	Run:  runAddAgent,
+}
+
+var addCommandCmd = &cobra.Command{
+	Use:   "command <name>",
+	Short: "Add a new command",
+	Long: `Add a new command file.
+
+Commands define reusable slash commands for tools that support them.`,
+	Args: cobra.ExactArgs(1),
+	Run:  runAddCommand,
+}
+
 func init() {
+	AddCmd.AddCommand(addAgentCmd)
+	AddCmd.AddCommand(addCommandCmd)
+	for _, c := range []*cobra.Command{addAgentCmd, addCommandCmd} {
+		c.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
+		c.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
+		c.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
+		c.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
+	}
 	AddCmd.AddCommand(addRuleCmd)
 	AddCmd.AddCommand(addContextCmd)
 	AddCmd.AddCommand(addSkillCmd)
@@ -68,25 +98,21 @@ func init() {
 	addRuleCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
 	addRuleCmd.Flags().StringVarP(&addTargets, "targets", "t", "", "Comma-separated list of target providers (e.g., claude,cursor)")
 	addRuleCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
-	addRuleCmd.Flags().BoolVar(&addLocal, "local", false, "Write to .ai-rulez/local/ as a machine-local override (gitignored); cannot combine with --domain")
+	addRuleCmd.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
 
 	addContextCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
 	addContextCmd.Flags().StringVarP(&addPriority, "priority", "p", "medium", "Priority level: critical|high|medium|low|minimal")
 	addContextCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
-	addContextCmd.Flags().BoolVar(&addLocal, "local", false, "Write to .ai-rulez/local/ as a machine-local override (gitignored); cannot combine with --domain")
+	addContextCmd.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
 
 	addSkillCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
 	addSkillCmd.Flags().StringVarP(&addDesc, "description", "s", "", "Skill description")
+	addSkillCmd.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
 	addSkillCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 }
 
 func runAddRule(cmd *cobra.Command, args []string) {
 	name := args[0]
-
-	if addLocal && addDomain != "" {
-		logger.Error("--local cannot be combined with --domain")
-		os.Exit(1)
-	}
 
 	// Parse targets
 	var targets []string
@@ -99,7 +125,7 @@ func runAddRule(cmd *cobra.Command, args []string) {
 	}
 
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(addLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -112,7 +138,6 @@ func runAddRule(cmd *cobra.Command, args []string) {
 		Content:  addContent,
 		Priority: addPriority,
 		Targets:  targets,
-		Local:    addLocal,
 	}
 
 	result, err := op.AddRule(ctx, req)
@@ -139,13 +164,8 @@ func runAddRule(cmd *cobra.Command, args []string) {
 func runAddContext(cmd *cobra.Command, args []string) {
 	name := args[0]
 
-	if addLocal && addDomain != "" {
-		logger.Error("--local cannot be combined with --domain")
-		os.Exit(1)
-	}
-
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(addLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -157,7 +177,6 @@ func runAddContext(cmd *cobra.Command, args []string) {
 		Name:     name,
 		Content:  addContent,
 		Priority: addPriority,
-		Local:    addLocal,
 	}
 
 	result, err := op.AddContext(ctx, req)
@@ -185,7 +204,7 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	name := args[0]
 
 	ctx := context.Background()
-	op, err := crud.NewOperator(".")
+	op, err := newContentOperator(addLocal)
 	if err != nil {
 		logger.Error("Failed to create CRUD operator", "error", err)
 		os.Exit(1)
@@ -220,4 +239,30 @@ func runAddSkill(cmd *cobra.Command, args []string) {
 	jsonOutput, _ := json.MarshalIndent(output, "", "  ")
 	logger.Info(fmt.Sprintf("Skill added successfully: %s", result.FullPath))
 	logger.Debug(string(jsonOutput))
+}
+
+func runAddAgent(cmd *cobra.Command, args []string) {
+	runAddItem(args[0], crud.ContentTypeAgents, "agent", (*crud.OperatorImpl).AddAgent)
+}
+
+func runAddCommand(cmd *cobra.Command, args []string) {
+	runAddItem(args[0], crud.ContentTypeCommands, "command", (*crud.OperatorImpl).AddCommand)
+}
+
+func runAddItem(name, ftype, label string,
+	add func(*crud.OperatorImpl, context.Context, *crud.AddFileRequest) (*crud.FileResult, error),
+) {
+	op, err := newContentOperator(addLocal)
+	if err != nil {
+		logger.Error("Failed to create CRUD operator", "error", err)
+		os.Exit(1)
+	}
+	result, err := add(op, context.Background(), &crud.AddFileRequest{
+		Domain: addDomain, Type: ftype, Name: name, Description: addDesc, Content: addContent,
+	})
+	if err != nil {
+		logger.Error("Failed to add "+label, "error", err)
+		os.Exit(1)
+	}
+	logger.Info(fmt.Sprintf("%s added successfully: %s", strings.ToUpper(label[:1])+label[1:], result.FullPath))
 }

@@ -512,7 +512,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// keyed by preset so they flow through the same flatten/manifest/stale path:
 	// duplicate local paths (codex + opencode both emit AGENTS.local.md) collapse,
 	// and removed local content deletes the file via stale-manifest cleanup.
-	if err := g.appendLocalOutputs(allOutputs, &tempCfg); err != nil {
+	if err := g.appendLocalOutputs(allOutputs, &tempCfg, activeProfile); err != nil {
 		return nil, "", err
 	}
 
@@ -530,20 +530,30 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 }
 
 // appendLocalOutputs renders the machine-local outputs of every configured
-// built-in preset, appending them to allOutputs under that preset's key.
+// built-in preset, appending them to allOutputs under that preset's key. Local
+// content is the .ai-rulez/local/ tree with the active profile applied, so local
+// domains are selected like shared ones.
+//
 // Presets that implement config.LocalRuleProvider write local rules as personal
 // rule files ("<rulesdir>/<id>.local<ext>") when their routing sends them to rule
 // files; every other local rule, and local context, goes to the preset's ".local"
-// root (config.LocalRootProvider). Local content a preset has no place for is
-// reported once with a warning. It is a no-op when there is no machine-local
-// content. cfg is the profile-resolved temp config (carries Name / header style /
-// compact used by the renderer). Custom provider presets get no local outputs.
-func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config) error {
+// root (config.LocalRootProvider, or a config.LocalRootRenderer for presets whose
+// root is not plain markdown). Local content a preset has no place for is
+// reported once with a warning. Local skills, agents and commands are written as
+// per-item files only (see appendLocalItemOutputs). It is a no-op when there is
+// no machine-local content. cfg is the profile-resolved temp config (carries
+// Name / header style / compact used by the renderer). Custom provider presets get
+// no local outputs.
+func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile, cfg *config.Config, profile string) error {
 	if g.config.LocalContent == nil || g.config.LocalContent.IsEmpty() {
 		return nil
 	}
-	allRules := presets.AllInlineRules(g.config.LocalContent)
-	allContext := presets.AllInlineContext(g.config.LocalContent)
+	local, err := selectProfileContent(g.config, g.config.LocalContent, profile)
+	if err != nil {
+		return oops.Wrapf(err, "select local content for the profile")
+	}
+	allRules := presets.AllInlineRules(local)
+	allContext := presets.AllInlineContext(local)
 	done := make(map[string]bool)
 	for _, preset := range g.config.Presets {
 		name := preset.GetName()
@@ -557,34 +567,49 @@ func (g *Generator) appendLocalOutputs(allOutputs map[string][]config.OutputFile
 			continue
 		}
 		rules := allRules
-		filed := 0
 		if provider, ok := generator.(config.LocalRuleProvider); ok {
 			var files []config.OutputFile
 			files, rules, err = provider.LocalRuleOutputs(allRules, g.config.BaseDir, cfg)
 			if err != nil {
 				return oops.With("preset", name).Wrapf(err, "render local rule files")
 			}
-			filed = len(files)
 			allOutputs[name] = append(allOutputs[name], files...)
 		}
-		localFile := ""
-		if rootProvider, ok := generator.(config.LocalRootProvider); ok {
-			localFile = rootProvider.LocalRootFile()
+		if len(rules) == 0 && len(allContext) == 0 {
+			continue
 		}
-		if localFile == "" {
+		root, ok, err := g.localRootOutput(generator, local, rules, cfg)
+		if err != nil {
+			return oops.With("preset", name).Wrapf(err, "render local root file")
+		}
+		if !ok {
 			warnDroppedLocal(name, rules, allContext)
 			continue
 		}
-		if filed > 0 && len(rules) == 0 && len(allContext) == 0 {
-			continue
-		}
-		allOutputs[name] = append(allOutputs[name], config.OutputFile{
-			Path:      filepath.Join(g.config.BaseDir, localFile),
-			Content:   presets.RenderLocalRootRules(g.config.LocalContent, rules, cfg, localFile),
-			LocalOnly: true,
-		})
+		allOutputs[name] = append(allOutputs[name], root)
 	}
-	return nil
+	return g.appendLocalItemOutputs(allOutputs, cfg, local)
+}
+
+// localRootOutput renders a preset's machine-local root file; ok is false when
+// the preset has none.
+func (g *Generator) localRootOutput(generator config.PresetGenerator, local *config.ContentTree,
+	rules []config.ContentFile, cfg *config.Config,
+) (out config.OutputFile, ok bool, err error) {
+	if renderer, isRenderer := generator.(config.LocalRootRenderer); isRenderer {
+		out, err = renderer.RenderLocalRoot(local, rules, g.config.BaseDir, cfg)
+		return out, err == nil, err
+	}
+	rootProvider, isProvider := generator.(config.LocalRootProvider)
+	if !isProvider || rootProvider.LocalRootFile() == "" {
+		return out, false, nil
+	}
+	localFile := rootProvider.LocalRootFile()
+	return config.OutputFile{
+		Path:      filepath.Join(g.config.BaseDir, localFile),
+		Content:   presets.RenderLocalRootRules(local, rules, cfg, localFile),
+		LocalOnly: true,
+	}, true, nil
 }
 
 // droppedLocalItems labels local rules and context for the dropped-content warning.
@@ -629,11 +654,19 @@ func (g *Generator) resolveProfile(profile string) string {
 	return defaultProfileName
 }
 
-// getContentForProfile returns the content tree for a specific profile
+// getContentForProfile returns the shared content tree for a specific profile.
 func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, error) {
+	return selectProfileContent(g.config, g.config.Content, profile)
+}
+
+// selectProfileContent applies profile selection to a content tree: the built-in
+// "default" profile rules, named and composed profiles, and the unknown-profile
+// error. The shared tree and the machine-local one (.ai-rulez/local/) go through
+// it, so a local domain is selected exactly like a shared one.
+func selectProfileContent(cfg *config.Config, content *config.ContentTree, profile string) (*config.ContentTree, error) {
 	// Guard against nil content to avoid panics when Generator is created
 	// with a Config that hasn't been fully loaded.
-	if g.config.Content == nil {
+	if content == nil {
 		return nil, config.ErrNoContent
 	}
 
@@ -641,26 +674,26 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 	if profile == defaultProfileName {
 		// If the user explicitly defined profiles["default"], honor it like any
 		// other named profile rather than applying the built-in fallback logic.
-		if g.config.HasProfile(defaultProfileName) {
-			return g.config.GetContentForProfile(defaultProfileName)
+		if cfg.HasProfile(defaultProfileName) {
+			return cfg.SelectContentForProfile(content, defaultProfileName)
 		}
 
 		// When no profiles are defined, "default" should include all content
 		// (root + all domains). This is important for consumers that rely on
 		// includes and don't define their own profiles.
-		if len(g.config.Profiles) == 0 {
+		if len(cfg.Profiles) == 0 {
 			// Shallow-copy domains to avoid exposing internal map for mutation.
-			domainsCopy := make(map[string]*config.Domain, len(g.config.Content.Domains))
-			for name, domain := range g.config.Content.Domains {
+			domainsCopy := make(map[string]*config.Domain, len(content.Domains))
+			for name, domain := range content.Domains {
 				domainsCopy[name] = domain
 			}
 
 			return &config.ContentTree{
-				Rules:    g.config.Content.Rules,
-				Context:  g.config.Content.Context,
-				Skills:   g.config.Content.Skills,
-				Agents:   g.config.Content.Agents,
-				Commands: g.config.Content.Commands,
+				Rules:    content.Rules,
+				Context:  content.Context,
+				Skills:   content.Skills,
+				Agents:   content.Agents,
+				Commands: content.Commands,
 				Domains:  domainsCopy,
 			}, nil
 		}
@@ -671,25 +704,25 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 		// domains. A builtin scoped to a named profile via `builtin:<name>`
 		// is not global, so it is excluded unless `default` names it.
 		defaultDomains := make(map[string]*config.Domain)
-		for name, domain := range g.config.Content.Domains {
+		for name, domain := range content.Domains {
 			if domain.FromInclude || (domain.Builtin && !domain.BuiltinScoped) {
 				defaultDomains[name] = domain
 			}
 		}
 		return &config.ContentTree{
-			Rules:    g.config.Content.Rules,
-			Context:  g.config.Content.Context,
-			Skills:   g.config.Content.Skills,
-			Agents:   g.config.Content.Agents,
-			Commands: g.config.Content.Commands,
+			Rules:    content.Rules,
+			Context:  content.Context,
+			Skills:   content.Skills,
+			Agents:   content.Agents,
+			Commands: content.Commands,
 			Domains:  defaultDomains,
 		}, nil
 	}
 
 	// Check if profile exists
-	if !g.config.HasProfile(profile) {
-		availableProfiles := make([]string, 0, len(g.config.Profiles))
-		for name := range g.config.Profiles {
+	if !cfg.HasProfile(profile) {
+		availableProfiles := make([]string, 0, len(cfg.Profiles))
+		for name := range cfg.Profiles {
 			availableProfiles = append(availableProfiles, name)
 		}
 		sort.Strings(availableProfiles)
@@ -697,7 +730,7 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 		// Name the elements that are actually unknown. For a single name that is
 		// the value itself; for a composed value it is the difference between
 		// "one of these three is wrong" and knowing which.
-		unknown := g.config.UnknownProfileNames(profile)
+		unknown := cfg.UnknownProfileNames(profile)
 
 		return nil, oops.
 			With("profile", profile).
@@ -711,7 +744,7 @@ func (g *Generator) getContentForProfile(profile string) (*config.ContentTree, e
 	}
 
 	// Get content for the profile (includes root + specified domains)
-	return g.config.GetContentForProfile(profile)
+	return cfg.SelectContentForProfile(content, profile)
 }
 
 // collectMCPServersForContent collects the enabled root MCP servers active for
