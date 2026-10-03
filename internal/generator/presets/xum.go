@@ -3,6 +3,7 @@ package presets
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -259,18 +260,49 @@ func xumMCPEntry(server *config.MCPServer) interface{} {
 			return nil
 		}
 		// Xum reads only the command string of a stdio entry in mcp.jsonc (args
-		// and env are honored for plugin servers only), so args are joined into
-		// the command and env cannot be expressed.
-		if len(server.Env) > 0 {
-			logger.Warn("Xum's mcp.jsonc cannot set environment variables for stdio MCP servers; "+
-				"set them in the environment Xum runs in", "server", server.Name)
-		}
+		// and env are honored for plugin servers only) and runs it through a
+		// POSIX shell, so args are joined into the command and env becomes a
+		// leading KEY=value assignment list.
 		command := joinShellCommand(server.Command, server.Args)
+		if prefix := xumEnvPrefix(server); prefix != "" {
+			command = prefix + " " + command
+		}
 		if server.IsEnabled() {
 			return command
 		}
 		return map[string]interface{}{"transport": config.TransportStdio, "command": command, keyDisabled: true}
 	}
+}
+
+// xumEnvPrefix renders a stdio server's env as shell assignments ("A=1 B='x y'")
+// in key order. Names that are not shell identifiers cannot be assigned this way
+// and are skipped with a warning.
+func xumEnvPrefix(server *config.MCPServer) string {
+	keys := make([]string, 0, len(server.Env))
+	for key := range server.Env {
+		if !isShellIdentifier(key) {
+			logger.Warn("Skipping an MCP env variable Xum's mcp.jsonc cannot express; "+
+				"set it in the environment Xum runs in", "server", server.Name, "variable", key)
+			continue
+		}
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	parts := make([]string, 0, len(keys))
+	for _, key := range keys {
+		parts = append(parts, key+"="+shellQuote(server.Env[key]))
+	}
+	return strings.Join(parts, " ")
+}
+
+func isShellIdentifier(name string) bool {
+	for i, r := range name {
+		letter := r == '_' || (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z')
+		if !letter && (i == 0 || r < '0' || r > '9') {
+			return false
+		}
+	}
+	return name != ""
 }
 
 // joinShellCommand renders a stdio MCP command and its args as the single shell
