@@ -20,6 +20,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/Goldziher/ai-rulez/schema"
@@ -94,6 +95,12 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 		return 0, err
 	}
 
+	// The machine-local inputs (overlay, local/ tree) are ignored before any check
+	// can refuse the run, so a refused first run never leaves them unignored.
+	if err := g.ignoreLocalInputs(); err != nil {
+		return 0, err
+	}
+
 	if err := g.guardLocal(profile, flatOutputs); err != nil {
 		return 0, err
 	}
@@ -108,11 +115,14 @@ func (g *Generator) GenerateFiles(profile string) (int, error) {
 	// Machine-local files must never reach git: make sure they are ignored before
 	// any is written, and refuse to write them when that fails.
 	ignoredEarly := false
-	if g.hasLocalOutputs(flatOutputs) {
+	if g.hasLocalOutputs(flatOutputs) || g.hasGuardedSecretOutputs(flatOutputs) {
 		if err := g.updateGitignore(flatOutputs); err != nil {
 			return 0, oops.Wrapf(err, "gitignore machine-local outputs before writing them")
 		}
 		ignoredEarly = true
+		if err := g.verifyGuardedOutputsIgnored(flatOutputs); err != nil {
+			return 0, err
+		}
 	}
 
 	staleFiles := g.staleManifestFiles(flatOutputs)
@@ -1992,6 +2002,84 @@ func (g *Generator) hasLocalOutputs(outputs []config.OutputFile) bool {
 	return false
 }
 
+// guardedOutputs lists the project-relative files that must never be committable:
+// machine-local outputs and MCP configs holding resolved secrets.
+func (g *Generator) guardedOutputs(outputs []config.OutputFile) []string {
+	var rels []string
+	for _, output := range outputs {
+		if output.IsDir {
+			continue
+		}
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if output.LocalOnly || (output.Sensitive && isMCPConfigOutput(rel)) {
+			rels = append(rels, rel)
+		}
+	}
+	sort.Strings(rels)
+	return rels
+}
+
+func (g *Generator) hasGuardedSecretOutputs(outputs []config.OutputFile) bool {
+	for _, output := range outputs {
+		if output.IsDir || !output.Sensitive {
+			continue
+		}
+		if isMCPConfigOutput(filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))) {
+			return true
+		}
+	}
+	return false
+}
+
+// verifyGuardedOutputsIgnored asks git (or, outside a repository, the project's
+// .gitignore) about the real paths of the guarded outputs, after the ignore
+// entries are written. The entries were chosen from probes and patterns; a user
+// rule that un-ignores a path, a rule that only looked like it covered a pattern,
+// or an ignore file git does not read would otherwise leave local or secret
+// content committable without any message. It names paths only.
+func (g *Generator) verifyGuardedOutputsIgnored(outputs []config.OutputFile) error {
+	rels := g.guardedOutputs(outputs)
+	if len(rels) == 0 {
+		return nil
+	}
+	ignored := g.ignoredSet(rels, nil)
+	var open []string
+	for _, rel := range rels {
+		if !ignored[rel] {
+			open = append(open, rel)
+		}
+	}
+	if len(open) == 0 {
+		return nil
+	}
+	return oops.
+		With("paths", open).
+		Hint("Machine-local and secret-bearing files must be git-ignored. A .gitignore rule probably un-ignores them " +
+			"(for example \"!.claude/skills/**\"): narrow that rule, or run with --no-local to generate the shared view").
+		Errorf("generated machine-local or secret outputs are not git-ignored: %s", strings.Join(open, ", "))
+}
+
+// ignoreLocalInputs makes sure the overlay file, its temp files, the local/
+// content tree and the local manifest are git-ignored. It runs before any check
+// that can refuse the run.
+func (g *Generator) ignoreLocalInputs() error {
+	if !g.hasLocalGitignoreTargets() {
+		return nil
+	}
+	patterns := []string{
+		g.configDirName() + "/" + localSourceDirName + "/",
+		g.configDirName() + "/config.local.*",
+		g.configDirName() + "/.config.local.*",
+	}
+	if rel := filepath.ToSlash(g.convertToRelativePath(g.localManifestPath())); rel != "" {
+		patterns = append(patterns, rel)
+	}
+	if err := gitignore.EnsureEntries(g.config.BaseDir, patterns); err != nil {
+		return oops.Wrapf(err, "gitignore the machine-local inputs")
+	}
+	return nil
+}
+
 // hasLocalGitignoreTargets reports whether machine-local content exists and so
 // requires unconditional gitignore entries (the ".local" outputs plus the
 // .ai-rulez/local/ source subtree).
@@ -2073,6 +2161,17 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		}
 	}
 
+	// A run that skipped the local inputs on purpose (--no-local) writes no
+	// local outputs, but the ones an earlier run left are still there and must
+	// stay ignored.
+	if g.localSkipped {
+		for _, rel := range readManifestFile(g.localManifestPath()).Files {
+			if pattern := g.skippedLocalPattern(rel); pattern != "" {
+				paths[pattern] = true
+			}
+		}
+	}
+
 	// The generated manifest sits inside the config dir and is rewritten on
 	// every `generate`; include it explicitly so the managed fence covers it.
 	// Only relevant when committed outputs are managed.
@@ -2083,6 +2182,17 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	}
 
 	return paths
+}
+
+// skippedLocalPattern is the managed-.gitignore pattern for a machine-local file
+// an earlier run recorded, for a run that did not render local inputs. Files
+// named after local content are excluded per clone and stay in .git/info/exclude,
+// which such a run leaves alone; only outside a repository do they need the block.
+func (g *Generator) skippedLocalPattern(rel string) string {
+	if stableLocalName(rel) || gitutil.InfoExcludePath(g.config.BaseDir) == "" {
+		return localGitignorePattern(rel)
+	}
+	return ""
 }
 
 // localGitignorePattern maps a machine-local output to its ignore pattern. Local
@@ -2283,6 +2393,12 @@ func (g *Generator) updateGitignore(outputs []config.OutputFile) error {
 
 	sortedPaths := dropUserPatterns(paths, existingContent)
 
+	// Git does not read a symlinked .gitignore, and writing through the link would
+	// change a file that lives elsewhere: keep the entries in .git/info/exclude.
+	if gitignore.IsSymlink(g.config.BaseDir) {
+		return gitignore.ReplaceViaExclude(g.config.BaseDir, sortedPaths) //nolint:wrapcheck // already contextual
+	}
+
 	if len(sortedPaths) == 0 {
 		logger.Debug("No paths to add to .gitignore")
 		// Nothing is left to add: drop a block from an earlier run rather than
@@ -2372,6 +2488,10 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 	}
 	sort.Strings(unsafe)
 	hint := "Enable gitignore generation with --gitignore or add these generated MCP config paths to .gitignore"
+	if g.sharedWithTeam(unsafe) {
+		hint = "These MCP config files are shared with your team (committed) but would carry secrets. Add them to " +
+			".gitignore, or move the secret-bearing server out of config.local.* and out of the shared config."
+	}
 	if shared {
 		hint = "These files hold hand-authored settings alongside the generated mcpServers key, so ai-rulez will " +
 			"not gitignore them for you. Either ignore them yourself, or move the secret-bearing server into a " +
@@ -2382,6 +2502,20 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 		With("env_keys", secretKeys).
 		Hint(hint).
 		Errorf("generated MCP config contains secrets but is not gitignored: %s", strings.Join(unsafe, ", "))
+}
+
+// sharedWithTeam reports whether any of the project-relative paths is a file the
+// shared baseline also produces, that is, one teammates generate and commit.
+func (g *Generator) sharedWithTeam(rels []string) bool {
+	if g.plan == nil {
+		return false
+	}
+	for _, rel := range rels {
+		if slices.Contains(g.plan.baselineFiles, rel) || slices.Contains(g.plan.drift, rel) {
+			return true
+		}
+	}
+	return false
 }
 
 // sensitiveFileMode is the mode of generated files that carry MCP secrets.
