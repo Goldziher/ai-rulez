@@ -86,6 +86,41 @@ func TestIsV1Plugin(t *testing.T) {
 			want:   false,
 		},
 		{
+			name:   "comment markers inside a string are not comments",
+			source: "const glob = \"src/**/*.js\"\nexport const X = async () => ({})\nconst end = \"*/\"\n",
+			want:   true,
+		},
+		{
+			name:   "v1 export after a string that contains a block comment opener",
+			source: "const g = 'a/*b'\nexport async function P() { return {} }\n// done */\n",
+			want:   true,
+		},
+		{
+			name:   "trailing line comment is stripped",
+			source: "export default { id: \"x\", setup() {} } // export default async () => ({})\n",
+			want:   false,
+		},
+		{
+			name:   "v2 with an identifier id",
+			source: "const id = \"x\"\nexport default { id: pluginId, async setup(ctx) {} }\nexport async function helper() {}\n",
+			want:   false,
+		},
+		{
+			name:   "v2 with shorthand id",
+			source: "const id = \"x\"\nexport async function helper() {}\nexport default { id, async setup(ctx) {} }\n",
+			want:   false,
+		},
+		{
+			name:   "v2 with shorthand id last in the object",
+			source: "export const helper = async () => 1\nexport default { setup: async (ctx) => {}, id }\n",
+			want:   false,
+		},
+		{
+			name:   "v1 that merely destructures an id",
+			source: "export const P = async ({ client }) => { const { id } = await client.get(); return {} }\n",
+			want:   true,
+		},
+		{
 			name:   "empty file",
 			source: "",
 			want:   false,
@@ -228,6 +263,38 @@ func TestWarnProjectWarnsOncePerFile(t *testing.T) {
 	// Assert
 	assert.Len(t, first, 1)
 	assert.Empty(t, second, "a file already warned about in this run is not reported again")
+}
+
+func TestFileURLToPath(t *testing.T) {
+	tests := []struct {
+		name, spec string
+		windows    bool
+		want       string
+	}{
+		{"unix path", "file:///home/me/p.js", false, "/home/me/p.js"},
+		{"percent escapes are decoded", "file:///home/me/my%20plugin.js", false, "/home/me/my plugin.js"},
+		{"localhost host", "file://localhost/home/me/p.js", false, "/home/me/p.js"},
+		{"windows drive letter", "file:///C:/Users/me/p.js", true, "C:/Users/me/p.js"},
+		{"windows drive letter with escapes", "file:///C:/Users/me/my%20p.js", true, "C:/Users/me/my p.js"},
+		{"windows UNC share", "file://server/share/p.js", true, "//server/share/p.js"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got, ok := fileURLToPath(tt.spec, tt.windows)
+
+			// Assert
+			require.True(t, ok)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestFileURLToPathRejectsNonFileURLs(t *testing.T) {
+	for _, spec := range []string{"https://example.com/p.js", "file://%zz/p.js", "file:///home/%zz"} {
+		_, ok := fileURLToPath(spec, false)
+		assert.False(t, ok, spec)
+	}
 }
 
 func TestMigrationHintNamesDocs(t *testing.T) {
