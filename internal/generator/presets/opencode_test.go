@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 )
 
 func TestOpencodePresetGenerator_GetName(t *testing.T) {
@@ -717,5 +718,32 @@ func TestOpencodePresetGenerator_WritesConfigWithoutMCPServers(t *testing.T) {
 				t.Errorf("opencode.json written = %v, want %v", found, tt.wantWrite)
 			}
 		})
+	}
+}
+
+func TestOpencodePresetGenerator_NonArrayInstructionsAreLeftAlone(t *testing.T) {
+	// Arrange
+	var warned []string
+	t.Cleanup(rulefiles.SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) }))
+	path := filepath.Join(t.TempDir(), "opencode.json")
+	if err := os.WriteFile(path, []byte(`{"instructions":"CONTRIBUTING.md"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Act
+	result, err := (&OpencodePresetGenerator{}).renderMCPConfig(path, &config.Config{Name: "test"})
+
+	// Assert
+	if err != nil {
+		t.Fatalf("renderMCPConfig: %v", err)
+	}
+	if !strings.Contains(result.Body, `"instructions": "CONTRIBUTING.md"`) {
+		t.Errorf("the user's value was changed:\n%s", result.Body)
+	}
+	if !result.PartiallyOwned {
+		t.Error("a value the user owns keeps the document partially owned")
+	}
+	if len(warned) != 1 {
+		t.Errorf("warnings = %v, want one", warned)
 	}
 }
