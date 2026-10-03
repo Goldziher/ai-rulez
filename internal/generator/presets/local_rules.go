@@ -104,6 +104,25 @@ func (g *CopilotPresetGenerator) RenderLocalRoot(local *config.ContentTree, rule
 	cfg *config.Config,
 ) (config.OutputFile, error) {
 	root := rulefiles.RootTarget(presetNameCopilot, copilotRulesTarget.RootFile)
+	return renderLocalRootRuleFile(copilotRulesTarget, root, local, rules, baseDir, cfg)
+}
+
+// RenderLocalRoot implements config.LocalRootRenderer. Antigravity reads neither
+// GEMINI.local.md nor any other local file, but loads every .agents/rules/*.md
+// that declares a trigger, so the inline local rules and the local context become
+// one always-on rule file there.
+func (g *AntigravityPresetGenerator) RenderLocalRoot(local *config.ContentTree, rules []config.ContentFile, baseDir string,
+	cfg *config.Config,
+) (config.OutputFile, error) {
+	root := rulefiles.RootTarget(presetNameAntigravity, antigravityRulesTarget.RootFile)
+	return renderLocalRootRuleFile(antigravityRulesTarget, root, local, rules, baseDir, cfg)
+}
+
+// renderLocalRootRuleFile renders the local inline rules and context as the
+// always-applied rule file "<dir>/ai-rulez.local<ext>" of t.
+func renderLocalRootRuleFile(t rulefiles.Target, root rulefiles.Target, local *config.ContentTree,
+	rules []config.ContentFile, baseDir string, cfg *config.Config,
+) (config.OutputFile, error) {
 	body := localSections(rulefiles.FilterInline(rules, root), rulefiles.FilterInline(allInlineContext(local), root), cfg)
 	item := rulefiles.Item{
 		File: config.ContentFile{Name: "Local overrides", Path: "local", Content: body},
@@ -113,16 +132,11 @@ func (g *CopilotPresetGenerator) RenderLocalRoot(local *config.ContentTree, rule
 			Mode: config.ActivationAlways, Source: config.ActivationSourceDerived,
 		},
 	}
-	text, notes, err := rulefiles.Render(copilotRulesTarget, item, cfg)
+	text, notes, err := rulefiles.Render(t, item, cfg)
 	if err != nil {
-		return config.OutputFile{}, oops.With("preset", presetNameCopilot).Wrapf(err, "render local copilot instructions")
+		return config.OutputFile{}, oops.With("preset", t.Preset).Wrapf(err, "render local %s rule file", t.Preset)
 	}
-	path := filepath.Join(baseDir, filepath.FromSlash(g.LocalRootFile()))
+	path := filepath.Join(baseDir, filepath.FromSlash(rulefiles.LocalPath(t, localRootID)))
 	rulefiles.ReportNotes(path, notes)
 	return config.OutputFile{Path: path, Content: text, LocalOnly: true}, nil
-}
-
-// LocalRootFile implements config.LocalRootProvider: GEMINI.md → GEMINI.local.md.
-func (g *AntigravityPresetGenerator) LocalRootFile() string {
-	return config.LocalVariantPath("GEMINI.md")
 }

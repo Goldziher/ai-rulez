@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -307,6 +308,39 @@ func TestJunieLocalRoot_GoesToRulesFolder(t *testing.T) {
 			assert.NoFileExists(t, filepath.Join(root, ".junie", "guidelines.local.md"))
 			assert.Contains(t, manifestFiles(t, root, ".generated-manifest.local.json"), ".junie/rules/ai-rulez.local.md")
 			assert.NotContains(t, sharedManifestFiles(t, root), ".junie/rules/ai-rulez.local.md")
+		})
+	}
+}
+
+// Antigravity loads every .agents/rules/*.md that declares a trigger, so its
+// local context is an always-on rule file there; GEMINI.local.md is the gemini
+// preset's, which Antigravity never reads.
+func TestAntigravityLocalRoot_IsAnAlwaysOnRuleFile(t *testing.T) {
+	tests := []struct {
+		name       string
+		presets    []string
+		wantGemini bool
+	}{
+		{name: "antigravity alone", presets: []string{"antigravity"}},
+		{name: "with gemini", presets: []string{"antigravity", "gemini"}, wantGemini: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeAgentsMDProject(t, root, agentsMDConfig(tt.presets, "", ""))
+			writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			got := readAgentsMDFile(t, root, ".agents/rules/ai-rulez.local.md")
+			assert.Contains(t, got, "LOCAL_BODY")
+			assert.Contains(t, got, "trigger: always_on")
+			assert.True(t, strings.HasPrefix(got, "---\n"), "frontmatter comes first")
+			assert.Equal(t, tt.wantGemini, fileExists(filepath.Join(root, "GEMINI.local.md")))
+			assert.Contains(t, manifestFiles(t, root, ".generated-manifest.local.json"), ".agents/rules/ai-rulez.local.md")
 		})
 	}
 }
