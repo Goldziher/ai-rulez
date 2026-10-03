@@ -20,12 +20,16 @@ func TestRenderOpenCodeScaffoldsMissingSource(t *testing.T) {
 	assert.Equal(t, filepath.Join("/out", ".opencode", "plugins", "test-plugin.js"), outputs[0].Path)
 	assert.Contains(t, string(outputs[0].RawContent), ".ai-rulez/opencode/index.js")
 
-	// The scaffold must use the OpenCode v2 plugin API, not the v1 function
-	// entrypoint that v2 refuses to run (#194).
+	// The scaffold must default-export a v2 { id, setup } definition, not the
+	// v1 function entrypoint that v2 refuses to run (#194). It must not import
+	// @opencode/plugin at runtime: OpenCode does not install dependencies for
+	// local plugins, so the import would fail to resolve.
 	scaffold := string(outputs[0].RawContent)
-	assert.Contains(t, scaffold, `from "@opencode/plugin"`)
-	assert.Contains(t, scaffold, "Plugin.define")
+	assert.Contains(t, scaffold, "export default {")
 	assert.Contains(t, scaffold, `id: "test-plugin"`)
+	assert.Contains(t, scaffold, "async setup(ctx)")
+	assert.NotContains(t, scaffold, `from "@opencode/plugin"`)
+	assert.NotContains(t, scaffold, "import { registerBundledContent }", "no bundled content, no helper import")
 
 	assert.Equal(t, filepath.Join("/out", "package.json"), outputs[1].Path)
 }
@@ -95,6 +99,34 @@ func TestRenderOpenCodeBundlesContent(t *testing.T) {
 	}
 	assert.True(t, paths["/out/.opencode/skills/review/SKILL.md"], "skill bundled under .opencode")
 	assert.True(t, paths["/out/.opencode/agents/reviewer.md"], "agent bundled under .opencode")
+	assert.True(t, paths["/out/.opencode/ai-rulez-content.js"], "registration helper emitted")
+
+	// A package-installed plugin is not a config directory, so OpenCode never
+	// scans its .opencode/skills; the entrypoint has to register them itself.
+	for _, o := range outputs {
+		if filepath.ToSlash(o.Path) == "/out/.opencode/plugins/test-plugin.js" {
+			assert.Contains(t, string(o.RawContent), `import { registerBundledContent } from "../ai-rulez-content.js"`)
+			assert.Contains(t, string(o.RawContent), "await registerBundledContent(ctx)")
+		}
+	}
+}
+
+func TestOpenCodeContentHelperUsesV2Domains(t *testing.T) {
+	helper := string(openCodeContentHelper)
+
+	// Shapes verified against OpenCode 2.0.20: skills are added with their
+	// content, commands are executors, agents are updated by id.
+	for _, want := range []string{
+		"ctx.skill.transform",
+		"editor.add(skill)",
+		"ctx.command.transform",
+		"ctx.session.prompt(",
+		"ctx.agent.transform",
+		"editor.update(agent.id",
+		"export async function registerBundledContent(ctx)",
+	} {
+		assert.Contains(t, helper, want)
+	}
 }
 
 func TestOpenCodePackageNameFallsBackWithoutGitHubRepository(t *testing.T) {
