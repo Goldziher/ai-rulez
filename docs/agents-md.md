@@ -157,7 +157,8 @@ Cursor or Claude Code, and none for the Copilot cloud agent. A mixed setup that 
 presets that all have folders, accept the overlap, or leave `agents_md` off.
 
 Machine-local rules are never part of the shared `AGENTS.md`. They keep their per-preset files (for example
-`.github/instructions/<id>.local.instructions.md`, `CLAUDE.local.md`, `AGENTS.local.md`).
+`.github/instructions/<id>.local.instructions.md`, `CLAUDE.local.md`, `AGENTS.override.md`). See
+[Local Configuration](local-overrides.md#generated-output) for the file each tool loads.
 
 ## Skills
 
@@ -203,11 +204,16 @@ the root, Gemini gets no instructions for that scope and `generate` warns; add `
 
 - `CLAUDE.local.md` is still written when local content exists. Claude Code ignores `AGENTS.md` when a
   `CLAUDE.local.md` exists, but `CLAUDE.md` imports it explicitly, so nothing is lost.
-- `AGENTS.local.md` is written by the AGENTS.md presets, but of the tools above only Roo Code and xum read it;
-  Claude Code, which does not, is covered through `CLAUDE.local.md`. Put machine-local rules that matter to other
-  tools in their native local files.
-- `GEMINI.local.md` is still written but Gemini CLI does not load it unless you list it in `context.fileName`,
-  as before.
+- Tools that read an AGENTS chain get local content through the file they load for it. Codex, and Hermes with the
+  flag on, load `AGENTS.override.md` instead of `AGENTS.md`, so ai-rulez writes a git-ignored `AGENTS.override.md`
+  that repeats the shared `AGENTS.md` and appends the local rules and context. OpenCode lists `AGENTS.local.md` in
+  `opencode.json` `instructions`; xum appends `AGENTS.local.md` itself. Amp has no project-local file, so its local
+  content is not written and `generate` warns. Claude Code is covered through `CLAUDE.local.md`.
+- Gemini CLI loads `GEMINI.local.md` because `.gemini/settings.json` `context.fileName` lists it: ai-rulez writes
+  `["AGENTS.md", "GEMINI.local.md"]` (`["GEMINI.md", "GEMINI.local.md"]` with the flag off), whether or not local
+  content exists. A `context.fileName` you wrote yourself is kept, with a warning when it lacks `GEMINI.local.md`.
+- Junie and Antigravity load the local context from their rules folders (`.junie/rules/ai-rulez.local.md`,
+  `.agents/rules/ai-rulez.local.md`).
 
 **Hashes.** The shared outputs carry one `Source-Hash` (and `Content-Hash`, per `[header] hashes`) computed from the
 content and the settings that shape the file. It does not depend on the list of presets, rules modes, MCP servers or
