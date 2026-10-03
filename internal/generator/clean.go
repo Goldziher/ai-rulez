@@ -57,6 +57,7 @@ func (p *CleanPlan) Empty() bool {
 func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error) {
 	generateMu.Lock()
 	defer generateMu.Unlock()
+	g.beginRun()
 	// Rendering the outputs to learn their paths also runs the generate-time
 	// advice (a context.fileName that misses a name, ...), which says nothing
 	// useful while the outputs are being removed.

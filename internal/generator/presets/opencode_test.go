@@ -201,7 +201,7 @@ func TestOpencodePresetGenerator_FullyOwnedWhenOnlyAiRulezKeys(t *testing.T) {
   "$schema": "https://opencode.ai/config.json",
   "mcp": {
     "servers": {
-      "old": { "type": "local", "command": ["x"] }
+      "ai-rulez": { "type": "local", "command": ["x"] }
     }
   }
 }
@@ -301,8 +301,8 @@ func TestOpencodePresetGenerator_MCPMergePreservesUserKeys(t *testing.T) {
 	if _, ok := servers["ai-rulez"]; !ok {
 		t.Errorf("owned server missing: %v", servers)
 	}
-	if _, ok := servers["user-server"]; ok {
-		t.Errorf("owned mcp.servers must replace the whole map, found user-server: %v", servers)
+	if _, ok := servers["user-server"]; !ok {
+		t.Errorf("a hand-written server must survive the merge: %v", servers)
 	}
 }
 
