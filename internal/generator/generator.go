@@ -2068,7 +2068,7 @@ func (g *Generator) hasGuardedSecretOutputs(outputs []config.OutputFile) bool {
 // or an ignore file git does not read would otherwise leave local or secret
 // content committable without any message. It names paths only.
 func (g *Generator) verifyGuardedOutputsIgnored(outputs []config.OutputFile) error {
-	rels := g.guardedOutputs(outputs)
+	rels := append(g.guardedOutputs(outputs), g.localInputRels()...)
 	if len(rels) == 0 {
 		return nil
 	}
@@ -2087,6 +2087,31 @@ func (g *Generator) verifyGuardedOutputsIgnored(outputs []config.OutputFile) err
 		Hint("Machine-local and secret-bearing files must be git-ignored. A .gitignore rule probably un-ignores them "+
 			"(for example \"!.claude/skills/**\"): narrow that rule, or run with --no-local to generate the shared view").
 		Errorf("generated machine-local or secret outputs are not git-ignored: %s", strings.Join(open, ", "))
+}
+
+// localInputRels lists the project-relative machine-local inputs that exist: the
+// overlay files and the local/ content tree. They are guarded like outputs, so a
+// rule that un-ignores them fails the run instead of exposing their content.
+func (g *Generator) localInputRels() []string {
+	dir := g.config.ConfigDir
+	if dir == "" {
+		return nil
+	}
+	var rels []string
+	if matches, err := filepath.Glob(filepath.Join(dir, "config.local.*")); err == nil {
+		for _, m := range matches {
+			if rel := filepath.ToSlash(g.convertToRelativePath(m)); rel != "" {
+				rels = append(rels, rel)
+			}
+		}
+	}
+	if info, err := os.Stat(filepath.Join(dir, localSourceDirName)); err == nil && info.IsDir() {
+		if rel := filepath.ToSlash(g.convertToRelativePath(filepath.Join(dir, localSourceDirName))); rel != "" {
+			rels = append(rels, rel)
+		}
+	}
+	sort.Strings(rels)
+	return rels
 }
 
 // ignoreLocalInputs makes sure the overlay file, its temp files, the local/
