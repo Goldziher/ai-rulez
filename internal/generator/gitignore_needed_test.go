@@ -282,8 +282,8 @@ func TestGitignoreProbe(t *testing.T) {
 	tests := map[string]string{
 		"CLAUDE.md":                "CLAUDE.md",
 		".claude/skills/":          ".claude/skills/ai-rulez-probe",
-		".ai-rulez/config.local.*": ".ai-rulez/config.local.x",
-		".claude/rules/*.local.*":  ".claude/rules/x.local.x",
+		".ai-rulez/config.local.*": ".ai-rulez/config.local.ai-rulez-probe",
+		".claude/rules/*.local.*":  ".claude/rules/ai-rulez-probe.local.ai-rulez-probe",
 		"/root-only.md":            "root-only.md",
 	}
 	for in, want := range tests {
