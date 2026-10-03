@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 	"github.com/samber/oops"
 )
@@ -24,6 +25,7 @@ const (
 	openCodePluginDependency = "^2.0.20"
 	openCodeSourcePath       = ".ai-rulez/opencode/index.js"
 	openCodeHelperName       = "ai-rulez-content.js"
+	openCodeBundleName       = "ai-rulez-bundle.json"
 )
 
 type openCodePackage struct {
@@ -52,7 +54,7 @@ func init() {
 
 func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	entrypoint := filepath.Join(".opencode", "plugins", m.Name+".js")
-	hasContent := len(m.Skills)+len(m.Commands)+len(m.Agents) > 0
+	hasContent := len(m.Skills)+len(m.Commands)+len(m.Agents)+len(m.MCP) > 0
 	module, err := openCodeModule(m, filepath.Join(baseDir, entrypoint), hasContent)
 	if err != nil {
 		return nil, err
@@ -91,12 +93,64 @@ func renderOpenCode(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 
 	outputs = append(outputs, content...)
 	if hasContent {
-		outputs = append(outputs, config.OutputFile{
+		bundle, err := jsonOutput(filepath.Join(baseDir, ".opencode", openCodeBundleName), openCodeBundleFor(m))
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, bundle, config.OutputFile{
 			Path:       filepath.Join(baseDir, ".opencode", openCodeHelperName),
 			RawContent: openCodeContentHelper,
 		})
 	}
 	return outputs, nil
+}
+
+// openCodeBundle is the data the content helper registers at runtime: MCP
+// servers in OpenCode's native shape and per-agent settings resolved here, so
+// model resolution matches the opencode preset.
+type openCodeBundle struct {
+	MCP    map[string]openCodeMCP    `json:"mcp,omitempty"`
+	Agents map[string]map[string]any `json:"agents,omitempty"`
+}
+
+// openCodeMCP is an OpenCode v2 MCP server. ${PLUGIN_ROOT} and ${VAR}
+// references are left intact; the helper resolves them at runtime so no secret
+// or install path is baked into the package.
+type openCodeMCP struct {
+	Type        string            `json:"type"`
+	Command     []string          `json:"command,omitempty"`
+	Environment map[string]string `json:"environment,omitempty"`
+	URL         string            `json:"url,omitempty"`
+}
+
+func openCodeBundleFor(m *Manifest) openCodeBundle {
+	var bundle openCodeBundle
+	if len(m.MCP) > 0 {
+		bundle.MCP = make(map[string]openCodeMCP, len(m.MCP))
+		for _, s := range m.MCP {
+			switch s.Transport {
+			case config.TransportHTTP, config.TransportSSE:
+				bundle.MCP[s.Name] = openCodeMCP{Type: "remote", URL: s.URL}
+			default:
+				bundle.MCP[s.Name] = openCodeMCP{
+					Type:        "local",
+					Command:     append([]string{s.Command}, s.Args...),
+					Environment: s.Env,
+				}
+			}
+		}
+	}
+	if len(m.Agents) > 0 {
+		cfg := m.Config
+		if cfg == nil {
+			cfg = &config.Config{}
+		}
+		bundle.Agents = make(map[string]map[string]any, len(m.Agents))
+		for _, agent := range m.Agents {
+			bundle.Agents[agent.Name] = presets.OpencodeAgentSettings(agent, cfg)
+		}
+	}
+	return bundle
 }
 
 func openCodePackageName(m *Manifest) string {

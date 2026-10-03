@@ -57,6 +57,10 @@ type Manifest struct {
 	// Market describes the marketplace index emitted alongside the plugin.
 	Market MarketInfo
 
+	// Config is the resolved project config, used for settings that resolve
+	// through project defaults (such as the per-preset agent model).
+	Config *config.Config
+
 	// SourceDir is the source project's base directory, used to resolve
 	// passthrough asset/script paths.
 	SourceDir string
@@ -106,6 +110,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Kimi:        p.Kimi,
 		Hermes:      p.Hermes,
 		Market:      resolveMarket(p, cfg.Marketplace),
+		Config:      cfg,
 		SourceDir:   cfg.BaseDir,
 	}
 
