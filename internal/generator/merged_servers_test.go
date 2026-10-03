@@ -2,6 +2,7 @@ package generator
 
 import (
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -265,4 +266,64 @@ func TestGuardClaims(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestGenerate_CommentedXumDocumentIsReportedOncePerRun(t *testing.T) {
+	// Arrange: the servers were merged, the user added a comment, then the config dropped them.
+	root := t.TempDir()
+	writeAgentsMDProject(t, root, agentsMDConfig([]string{"xum"}, "", mcpServerS1))
+	runAgentsMDGenerate(t, root)
+	commented := "// my notes\n" + readAgentsMDFile(t, root, ".xum/mcp.jsonc")
+	writeAgentsMDFile(t, root, ".xum/mcp.jsonc", commented)
+	writeAgentsMDProject(t, root, agentsMDConfig([]string{"xum"}, "", ""))
+	warned := capturedMergeWarnings(t)
+
+	// Act
+	runAgentsMDGenerate(t, root)
+
+	// Assert
+	assert.Equal(t, commented, readAgentsMDFile(t, root, ".xum/mcp.jsonc"), "the commented file cannot be edited and is left alone")
+	assert.Equal(t, 1, countContaining(*warned, ".xum/mcp.jsonc has comments"), "%v", *warned)
+}
+
+func TestReadManifest_ReadsEachManifestOncePerRun(t *testing.T) {
+	// Arrange
+	root := t.TempDir()
+	writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude"}, "", ""))
+	g := NewGenerator(loadAgentsMDConfig(t, root))
+	path := g.manifestPath()
+	writeAgentsMDFile(t, root, ".ai-rulez/.generated-manifest.json", "not json")
+
+	// Act
+	first := g.readManifest(path)
+	writeAgentsMDFile(t, root, ".ai-rulez/.generated-manifest.json", `{"version":"1","files":["a"]}`)
+	second := g.readManifest(path)
+	g.beginRun()
+	third := g.readManifest(path)
+
+	// Assert
+	assert.Empty(t, first.Files)
+	assert.Empty(t, second.Files, "the first read of the run is the one every consumer sees")
+	assert.Equal(t, []string{"a"}, third.Files)
+}
+
+func TestWriteFileAtomic_ReplacesTheFileAndKeepsItsMode(t *testing.T) {
+	// Arrange
+	path := filepath.Join(t.TempDir(), "settings.json")
+	require.NoError(t, os.WriteFile(path, []byte("old"), 0o600))
+
+	// Act
+	err := writeFileAtomic(path, []byte("new"))
+
+	// Assert
+	require.NoError(t, err)
+	got, readErr := os.ReadFile(path)
+	require.NoError(t, readErr)
+	assert.Equal(t, "new", string(got))
+	info, statErr := os.Stat(path)
+	require.NoError(t, statErr)
+	assert.Equal(t, os.FileMode(0o600), info.Mode().Perm())
+	entries, dirErr := os.ReadDir(filepath.Dir(path))
+	require.NoError(t, dirErr)
+	assert.Len(t, entries, 1, "no temporary file is left behind")
 }

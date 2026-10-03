@@ -22,6 +22,9 @@ var (
 	negatedWarned = map[string]struct{}{}
 	// warn is the sink for warnings from this package; tests replace it.
 	warn = logger.Warn
+	// warnedMessages holds the warnings already issued since the last reset, so a
+	// message the baseline render and the real render both produce is shown once.
+	warnedMessages = map[string]struct{}{}
 )
 
 // SetWarnSink replaces the sink for warnings from this package (the aggregated
@@ -32,6 +35,7 @@ func SetWarnSink(fn func(msg string, args ...any)) (restore func()) {
 	defer downgradeMu.Unlock()
 	prev := warn
 	warn = fn
+	clear(warnedMessages)
 	return func() {
 		downgradeMu.Lock()
 		defer downgradeMu.Unlock()
@@ -40,8 +44,16 @@ func SetWarnSink(fn func(msg string, args ...any)) (restore func()) {
 }
 
 // Warn emits a warning through the sink, so presets and tests share one channel.
+// A message already issued since the last ResetDowngrades is not repeated.
 func Warn(msg string, args ...any) {
-	warnSink()(msg, args...)
+	downgradeMu.Lock()
+	_, seen := warnedMessages[msg]
+	warnedMessages[msg] = struct{}{}
+	sink := warn
+	downgradeMu.Unlock()
+	if !seen {
+		sink(msg, args...)
+	}
 }
 
 func warnSink() func(string, ...any) {
@@ -72,6 +84,7 @@ func ResetDowngrades() {
 	collisionMu.Unlock()
 	clear(scopeWarned)
 	clear(negatedWarned)
+	clear(warnedMessages)
 }
 
 // warnScopeOnce reports whether this is the first call for slug since the last

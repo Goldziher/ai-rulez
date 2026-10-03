@@ -693,14 +693,14 @@ func (g *Generator) appendAgentsOverride(allOutputs map[string][]config.OutputFi
 	overridePath := filepath.Join(g.config.BaseDir, presets.AgentsOverrideFile)
 	if g.isHandWritten(overridePath) {
 		rulefiles.Warn(presets.AgentsOverrideFile+" exists and was not written by ai-rulez, so it is left alone and "+
-			names+" do not load your machine-local content",
+			"the presets that read it ("+names+") do not load your machine-local content",
 			"hint", "move or delete the file to let ai-rulez write it", "path", presets.AgentsOverrideFile)
 		return
 	}
 	agentsMD, ok := rootAgentsMD(allOutputs, g.config.BaseDir)
 	if !ok {
 		rulefiles.Warn("machine-local content exists for "+names+", but this run produces no AGENTS.md, so "+
-			presets.AgentsOverrideFile+" is not written and they do not load it",
+			presets.AgentsOverrideFile+" is not written and the presets that read it do not load it",
 			"hint", "enable a preset that writes AGENTS.md, or set agents_md = true")
 		return
 	}

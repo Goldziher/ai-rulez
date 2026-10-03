@@ -970,3 +970,19 @@ func TestPlan_SuffixIsMachineIndependent(t *testing.T) {
 
 	assert.Equal(t, a, b)
 }
+
+func TestWarn_RepeatsOnlyAfterAReset(t *testing.T) {
+	// Arrange
+	var warned []string
+	defer SetWarnSink(func(msg string, _ ...any) { warned = append(warned, msg) })()
+
+	// Act
+	Warn("same")
+	Warn("same")
+	Warn("other")
+	ResetDowngrades()
+	Warn("same")
+
+	// Assert
+	assert.Equal(t, []string{"same", "other", "same"}, warned)
+}
