@@ -217,12 +217,7 @@ func xumThinkingLevel(tier string) string {
 // headers and the disabled flag are preserved. Returns nil when no usable
 // servers are configured.
 func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config) (*config.OutputFile, error) {
-	servers := map[string]interface{}{}
-	for name, server := range cfg.MCPServers {
-		if entry := xumMCPEntry(server); entry != nil {
-			servers[name] = entry
-		}
-	}
+	servers := xumServers(cfg)
 	if len(servers) == 0 {
 		return nil, nil
 	}
@@ -238,6 +233,17 @@ func (g *XumPresetGenerator) renderMCPConfig(baseDir string, cfg *config.Config)
 		PartiallyOwned: result.PartiallyOwned,
 		MergeClaims:    result.Claims,
 	}, nil
+}
+
+// xumServers maps the configured servers onto Xum's mcp.jsonc entries.
+func xumServers(cfg *config.Config) map[string]interface{} {
+	servers := map[string]interface{}{}
+	for name, server := range cfg.MCPServers {
+		if entry := xumMCPEntry(server); entry != nil {
+			servers[name] = entry
+		}
+	}
+	return servers
 }
 
 // xumMCPEntry maps one server onto Xum's mcp.jsonc schema, or returns nil when
