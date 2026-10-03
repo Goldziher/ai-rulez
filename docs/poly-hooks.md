@@ -45,9 +45,9 @@ refreshing a branch reference.
 
 | Hook                       | Command arguments                               | Purpose                                        |
 | -------------------------- | ----------------------------------------------- | ---------------------------------------------- |
-| `ai-rulez-validate`        | `generate --dry-run`                            | Validate generation without writing files      |
-| `ai-rulez-generate`        | `generate`                                      | Regenerate the root project                    |
-| `ai-rulez-recursive`       | `generate --recursive`                          | Regenerate every project in a repository       |
+| `ai-rulez-validate`        | `generate --dry-run --no-local`                 | Validate generation without writing files      |
+| `ai-rulez-generate`        | `generate --no-local`                           | Regenerate the root project                    |
+| `ai-rulez-recursive`       | `generate --recursive --no-local`               | Regenerate every project in a repository       |
 | `ai-rulez-plugin-generate` | `generate --recursive --plugin --if-configured` | Regenerate plugin producers and marketplaces   |
 | `ai-rulez-plugin-verify`   | `verify --recursive --plugin --if-configured`   | Verify plugin provenance without writing files |
 
@@ -55,18 +55,11 @@ Every hook triggers for root or nested `.ai-rulez/` changes.
 
 ### Machine-local configuration in hooks
 
-The `generate` hooks run on a developer's machine, so they load that developer's gitignored
-`config.local.*` overlay and `.ai-rulez/local/` content. Two consequences:
-
-- Results can differ between machines. A hook that must reflect only the shared configuration should
-  run `ai-rulez generate --no-local` (also accepted by `validate` and `tokens`), which produces the view
-  a teammate or CI sees. The catalog hooks above do not pass `--no-local`; add it in a hook of your own
-  or in CI. `ai-rulez-plugin-verify` already checks the shared view, and plugin generation ignores the
-  overlay.
-- The drift guard still protects tracked files: if the overlay would change a tracked or unignored
-  shared output, the hook fails with the affected paths rather than writing them, and
-  `generate --dry-run` exits non-zero in that case. Do not add `--allow-local-drift` to hooks. See
-  [Local Configuration](local-overrides.md#drift-guard).
+The `generate` hooks pass `--no-local`, so they render the shared view a teammate or CI sees and ignore
+the developer's gitignored `config.local.*` overlay and `.ai-rulez/local/` content. Machine-local outputs
+are left in place; run `ai-rulez generate` without the flag to refresh them. `ai-rulez-plugin-verify`
+already checks the shared view, and plugin generation ignores the overlay. Do not add
+`--allow-local-drift` to hooks. See [Local Configuration](local-overrides.md#drift-guard).
 
 ## Choose an execution path
 
@@ -115,7 +108,7 @@ version = 1
 [[hooks]]
 id = "ai-rulez-validate"
 stages = ["pre-commit"]
-args = ["generate", "--dry-run"]
+args = ["generate", "--dry-run", "--no-local"]
 files = [".ai-rulez/**", "**/.ai-rulez/**"]
 workspace = true
 pass_filenames = false
