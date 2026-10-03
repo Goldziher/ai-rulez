@@ -11,6 +11,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 )
 
 func TestOpencodePresetGenerator_GetName(t *testing.T) {
@@ -763,5 +764,42 @@ func TestOpencodePresetGenerator_NonArrayInstructionsAreLeftAlone(t *testing.T) 
 	}
 	if len(warned) != 1 {
 		t.Errorf("warnings = %v, want one", warned)
+	}
+}
+
+func TestOpencodePresetGenerator_WarnsOnV1LocalPlugins(t *testing.T) {
+	tests := []struct {
+		name       string
+		source     string
+		wantWarned bool
+	}{
+		{"v1 plugin file", "export const P = async () => ({})\n", true},
+		{"v2 plugin file", "export default { id: \"p\", async setup() {} }\n", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			opencodev1.ResetWarned()
+			root := t.TempDir()
+			plugin := filepath.Join(root, ".opencode", "plugins", "p.js")
+			if err := os.MkdirAll(filepath.Dir(plugin), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(plugin, []byte(tt.source), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			g := &OpencodePresetGenerator{}
+
+			// Act
+			_, err := g.Generate(&config.ContentTree{}, root, &config.Config{Name: "test"})
+
+			// Assert: generation succeeds either way; only a v1 file is reported.
+			if err != nil {
+				t.Fatalf("Generate() error: %v", err)
+			}
+			if got := opencodev1.WasWarned(plugin); got != tt.wantWarned {
+				t.Errorf("WasWarned(%s) = %v, want %v", plugin, got, tt.wantWarned)
+			}
+		})
 	}
 }
