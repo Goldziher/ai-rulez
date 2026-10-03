@@ -35,12 +35,52 @@ shared config at load time. It is gitignored and never written into the shared
 config; use it for personal presets, profiles, MCP servers and secrets.`,
 }
 
+// localListHint is the Long-help sentence of list commands, which show the
+// shared layer only.
+const localListHint = "\n\nThe list shows the shared layer only; machine-local entries from config.local.* " +
+	"are not included (see `ai-rulez local show`)."
+
+// logLocalEntriesHint logs the localEntriesHint for key when there is one.
+func logLocalEntriesHint(key string) {
+	if hint := localEntriesHint(key); hint != "" {
+		logger.Info(hint)
+	}
+}
+
+// localEntriesHint tells the user how many entries of the top-level key the
+// machine-local overlay defines, since list commands show the shared layer only.
+// It is empty when there is no overlay or it defines none.
+func localEntriesHint(key string) string {
+	// The list commands read the project in the working directory.
+	overlay, _, err := config.DescribeLocalOverlayAt(config.ResolveLocalConfigDir(".", "", ""))
+	if err != nil || overlay == nil {
+		return ""
+	}
+	n := 0
+	switch v := overlay.Doc[key].(type) {
+	case map[string]any:
+		n = len(v)
+	case []any:
+		n = len(v)
+	}
+	if n == 0 {
+		return ""
+	}
+	return fmt.Sprintf("+ %d local entries; see `ai-rulez local show`", n)
+}
+
+// localConfigDir resolves the config directory the local subcommands act on,
+// honoring the global --config and the --config-dir flag like other commands.
+func localConfigDir() string {
+	return config.ResolveLocalConfigDir(".", cfgFile, configDir)
+}
+
 var localInitCmd = &cobra.Command{
 	Use:   "init",
 	Short: "Create a commented config.local skeleton",
 	Args:  cobra.NoArgs,
 	Run: func(_ *cobra.Command, _ []string) {
-		path, created, err := config.InitLocalOverlay(".")
+		path, created, err := config.InitLocalOverlayAt(localConfigDir())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -63,7 +103,7 @@ default, presets, profiles, defaults, rules, header, builtins, transport, enable
 printed; all others show their key path with <redacted>. Pass --reveal to print everything.`,
 	Args: cobra.NoArgs,
 	Run: func(_ *cobra.Command, _ []string) {
-		overlay, changes, err := config.DescribeLocalOverlay(".")
+		overlay, changes, err := config.DescribeLocalOverlayAt(localConfigDir())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -89,9 +129,13 @@ var localSetCmd = &cobra.Command{
 	Short: "Set a key in the local overlay",
 	Long: `Set a key in the local overlay. The value is parsed as a TOML literal and falls
 back to a plain string, except under env/headers and for known text fields (url,
-command, source, path, ref, description, name, transport, default, *_version),
-which are always strings. Use --string to force a string, or --stdin to read the
+command, source, path, ref, description, name, transport, default, *_version) at
+their real positions (top-level scalars and <list>.<name>.<field>), which are
+always strings. Use --string to force a string, or --stdin to read the
 value from standard input (keeps secrets out of shell history).
+
+A path segment containing a dot is written in brackets with double quotes:
+  ai-rulez local set 'mcp_servers["foo.bar"].command' npx
 
 Examples:
   ai-rulez local set default dev
@@ -147,7 +191,7 @@ var localUnsetCmd = &cobra.Command{
 // editLocal opens the overlay under its lock, applies edit, saves (validating the
 // merged config) and releases the lock. It returns the overlay path.
 func editLocal(edit func(doc *config.LocalDoc) error) (string, error) {
-	doc, err := config.OpenLocalDocInDir(".")
+	doc, err := config.OpenLocalDocAt(localConfigDir())
 	if err != nil {
 		return "", err //nolint:wrapcheck // already contextual
 	}
@@ -163,7 +207,7 @@ var localPathCmd = &cobra.Command{
 	Short: "Print the local overlay file path",
 	Args:  cobra.NoArgs,
 	Run: func(_ *cobra.Command, _ []string) {
-		doc, err := config.ViewLocalDoc(".")
+		doc, err := config.ViewLocalDocAt(localConfigDir())
 		if err != nil {
 			fmtError(err)
 			os.Exit(1)
@@ -173,6 +217,7 @@ var localPathCmd = &cobra.Command{
 }
 
 func init() {
+	LocalCmd.PersistentFlags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	LocalCmd.AddCommand(localInitCmd, localShowCmd, localSetCmd, localUnsetCmd, localPathCmd)
 	localShowCmd.Flags().BoolVar(&localShowJSON, "json", false, "Output as JSON")
 	localShowCmd.Flags().BoolVar(&localShowReveal, "reveal", false, "Print values of keys that are withheld by default (may print secrets)")
@@ -183,7 +228,7 @@ func init() {
 // stringFields are keys whose value is always text, whatever it looks like.
 var stringFields = map[string]bool{
 	"url": true, "command": true, keySource: true, "path": true, "ref": true,
-	keyDesc: true, "name": true, "transport": true, "default": true,
+	keyDesc: true, "name": true, "transport": true, "default": true, "version": true,
 }
 
 // isStringPath reports whether the value at path must stay a string: env and
@@ -194,8 +239,28 @@ func isStringPath(path []string) bool {
 	if len(path) >= 4 && path[0] == "mcp_servers" && (path[2] == "env" || path[2] == "headers") {
 		return true
 	}
-	last := path[len(path)-1]
-	return stringFields[last] || strings.HasSuffix(last, "_version")
+	// The named text fields only count at their real positions: a top-level
+	// scalar, or a field of a named-list entry (<list>.<name>.<field>). A key
+	// that merely shares the name (profiles.default) keeps its typed value.
+	var field string
+	switch {
+	case len(path) == 1:
+		field = path[0]
+	case len(path) == 3 && isNamedListPath(path[0]):
+		field = path[2]
+	default:
+		return false
+	}
+	return stringFields[field] || strings.HasSuffix(field, "_version")
+}
+
+// isNamedListPath reports whether key is a top-level list of named entries.
+func isNamedListPath(key string) bool {
+	switch key {
+	case "mcp_servers", "plugins", "includes", "installed_skills", "marketplaces", "scopes":
+		return true
+	}
+	return false
 }
 
 // parseLocalValue reads raw as a TOML literal and falls back to the plain

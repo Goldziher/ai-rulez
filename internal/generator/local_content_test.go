@@ -350,3 +350,37 @@ func TestLocalContent_NeverEmittedInScopeRuns(t *testing.T) {
 }
 
 func jsonUnmarshal(s string, v any) error { return json.Unmarshal([]byte(s), v) }
+
+func TestLocalContent_ReportsItemsAPresetCannotPlace(t *testing.T) {
+	tests := []struct {
+		name    string
+		preset  string
+		dropped []string // labels expected for the preset; nil means everything is placed
+	}{
+		{"claude writes a file per item", "claude", nil},
+		{"opencode aggregates commands into opencode.json", "opencode", []string{"command mine-cmd"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := localContentProject(t, tt.preset)
+			cfg, err := config.LoadConfig(context.Background(), dir)
+			require.NoError(t, err)
+			g := NewGenerator(cfg)
+			all, err := config.GeneratePresets(cfg)
+			require.NoError(t, err)
+			known := map[string]bool{}
+			for _, outs := range all {
+				for _, o := range outs {
+					known[o.Path] = true
+				}
+			}
+
+			// Act
+			dropped := g.droppedItems(cfg, perItemContent(cfg.LocalContent), known, map[string]bool{tt.preset: true})
+
+			// Assert
+			assert.Equal(t, tt.dropped, dropped[tt.preset])
+		})
+	}
+}

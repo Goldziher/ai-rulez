@@ -378,3 +378,54 @@ func containsPrefix(lines []string, prefix string) bool {
 	}
 	return false
 }
+
+func TestClean_RemovesTheInfoExcludeBlock(t *testing.T) {
+	// Arrange
+	p := newDriftProject(t, strings.Replace(driftShared, "gitignore = false", "gitignore = true", 1))
+	p.git(t, "init", "-q")
+	p.overlay(t, "presets = [\"codex\"]\n")
+	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
+	require.Contains(t, p.read(t, ".git/info/exclude"), "/AGENTS.md")
+
+	t.Run("dry run keeps the block", func(t *testing.T) {
+		_, err := NewGenerator(p.load(t)).Clean("", CleanOptions{DryRun: true})
+		require.NoError(t, err)
+		assert.Contains(t, p.read(t, ".git/info/exclude"), "/AGENTS.md")
+	})
+
+	t.Run("clean removes it", func(t *testing.T) {
+		_, err := NewGenerator(p.load(t)).Clean("", CleanOptions{})
+		require.NoError(t, err)
+		exclude := p.read(t, ".git/info/exclude")
+		assert.NotContains(t, exclude, "AGENTS.md")
+		assert.NotContains(t, exclude, "ai-rulez local")
+	})
+}
+
+func TestDryRunBlocked_FollowsTheDriftGuard(t *testing.T) {
+	tests := []struct {
+		name    string
+		allow   bool
+		wantErr bool
+	}{
+		{"blocked drift is reported", false, true},
+		{"allowed drift is not", true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			p := newDriftProject(t, driftShared)
+			p.overlay(t, "name = \"mine\"\npresets = [\"codex\"]\n")
+			gen := NewGenerator(p.load(t))
+			gen.SetAllowLocalDrift(tt.allow)
+
+			// Act
+			_, err := gen.DryRun("")
+			blocked := gen.DryRunBlocked()
+
+			// Assert
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantErr, blocked != nil)
+		})
+	}
+}

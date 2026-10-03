@@ -22,6 +22,11 @@ func TestParseLocalValue_EnvZoneIsPositional(t *testing.T) {
 		{"mcp_servers.env.profiles", `["dev"]`, []any{"dev"}},
 		// not under an MCP server at all
 		{"profiles.env", `["a"]`, []any{"a"}},
+		// named text fields only count at their real position
+		{"profiles.default", `["a"]`, []any{"a"}},
+		{"defaults.name", `5`, int64(5)},
+		{"mcp_servers.x.command", `5`, "5"},
+		{"default", `5`, "5"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {

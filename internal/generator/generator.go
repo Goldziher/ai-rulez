@@ -341,6 +341,18 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]
 	return append(outputs, rootOutputs...), nil
 }
 
+// DryRunBlocked reports whether the plan from the last DryRun contains local
+// drift that Generate would refuse to write (nil when it is allowed or absent).
+// DryRun itself still returns the full plan, including the blocked lines.
+func (g *Generator) DryRunBlocked() error {
+	generateMu.Lock()
+	defer generateMu.Unlock()
+	if g.plan == nil {
+		return nil
+	}
+	return g.plan.check(g.allowLocalDrift)
+}
+
 // DryRun returns an inspectable generation plan without writing or deleting files.
 func (g *Generator) DryRun(profile string) ([]string, error) {
 	generateMu.Lock()
@@ -2322,8 +2334,15 @@ func (g *Generator) ensureSecretOutputsIgnored(outputs []config.OutputFile) erro
 // sensitiveFileMode is the mode of generated files that carry MCP secrets.
 const sensitiveFileMode os.FileMode = 0o600
 
+// minSecretMatchLen is the shortest secret value matched against output content.
+// A shorter value ("1", "dev") would match unrelated files and tighten their
+// permissions for no benefit; secret key names are handled separately and always
+// count.
+const minSecretMatchLen = 8
+
 // secretMCPValues lists the resolved values of MCP env entries and headers that
-// are secret (placeholder-sourced or sensitively named).
+// are secret (placeholder-sourced or sensitively named) and long enough to match
+// output content reliably.
 func (g *Generator) secretMCPValues() []string {
 	var values []string
 	for _, server := range g.config.MCPServers {
@@ -2331,12 +2350,12 @@ func (g *Generator) secretMCPValues() []string {
 			continue
 		}
 		for _, key := range server.SecretEnvKeys {
-			if v := server.Env[key]; v != "" {
+			if v := server.Env[key]; len(v) >= minSecretMatchLen {
 				values = append(values, v)
 			}
 		}
 		for _, key := range server.SecretHeaderKeys {
-			if v := server.Headers[key]; v != "" {
+			if v := server.Headers[key]; len(v) >= minSecretMatchLen {
 				values = append(values, v)
 			}
 		}
@@ -2349,7 +2368,8 @@ func (g *Generator) secretMCPValues() []string {
 // owner-only.
 func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
 	values := g.secretMCPValues()
-	if len(values) == 0 {
+	names := g.secretMCPNames()
+	if len(values) == 0 && len(names) == 0 {
 		return
 	}
 	for i := range outputs {
@@ -2357,13 +2377,38 @@ func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
 		if o.IsDir {
 			continue
 		}
-		for _, v := range values {
-			if strings.Contains(o.Content, v) || (o.RawContent != nil && bytes.Contains(o.RawContent, []byte(v))) {
-				o.Sensitive = true
-				break
-			}
+		if outputContainsAny(o, values) {
+			o.Sensitive = true
+			continue
+		}
+		// An MCP config file naming a secret key is sensitive whatever the value's
+		// length, so a short secret cannot loosen it.
+		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
+		o.Sensitive = o.Sensitive || (isMCPConfigOutput(rel) && outputContainsAny(o, names))
+	}
+}
+
+// outputContainsAny reports whether the output's content holds any of the strings.
+func outputContainsAny(o *config.OutputFile, needles []string) bool {
+	for _, n := range needles {
+		if strings.Contains(o.Content, n) || (o.RawContent != nil && bytes.Contains(o.RawContent, []byte(n))) {
+			return true
 		}
 	}
+	return false
+}
+
+// secretMCPNames lists the names of secret MCP env entries and headers.
+func (g *Generator) secretMCPNames() []string {
+	var names []string
+	for _, server := range g.config.MCPServers {
+		if server == nil {
+			continue
+		}
+		names = append(names, server.SecretEnvKeys...)
+		names = append(names, server.SecretHeaderKeys...)
+	}
+	return names
 }
 
 func (g *Generator) secretMCPEnvKeys() []string {

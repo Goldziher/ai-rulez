@@ -61,7 +61,7 @@ var profileSetDefaultCmd = &cobra.Command{
 var profileListCmd = &cobra.Command{
 	Use:   cmdUseList,
 	Short: "List all profiles",
-	Long:  `List all configured profiles and show which is default.`,
+	Long:  `List all configured profiles and show which is default.` + localListHint,
 	Args:  cobra.NoArgs,
 	Run:   runProfileList,
 }
@@ -186,6 +186,7 @@ func runProfileList(cmd *cobra.Command, args []string) {
 
 	if len(profiles) == 0 {
 		logger.Info("No profiles found")
+		logLocalEntriesHint("profiles")
 		return
 	}
 
@@ -216,5 +217,6 @@ func runProfileList(cmd *cobra.Command, args []string) {
 			logger.Info(fmt.Sprintf("  • %s%s", profile.Name, marker))
 			logger.Debug(fmt.Sprintf("    Domains: %v", profile.Domains))
 		}
+		logLocalEntriesHint("profiles")
 	}
 }

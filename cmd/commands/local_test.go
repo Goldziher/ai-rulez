@@ -9,6 +9,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator"
 )
 
 const localCmdShared = "version = \"4.0\"\nname = \"shared-name\"\npresets = [\"claude\"]\n\n" +
@@ -60,7 +63,7 @@ func TestParseLocalValue(t *testing.T) {
 		{"env value 1e5 stays text", []string{"mcp_servers", "x", "env", "PIN"}, "1e5", false, "1e5"},
 		{"header value stays text", []string{"mcp_servers", "x", "headers", "X-Id"}, "42", false, "42"},
 		{"known text field stays text", []string{"mcp_servers", "x", "url"}, "true", false, "true"},
-		{"version field stays text", []string{"mcp", "self_server_version"}, "1.0", false, "1.0"},
+		{"version field stays text", []string{"mcp_servers", "x", "self_server_version"}, "1.0", false, "1.0"},
 		{"--string forces text", []string{"gitignore"}, "true", true, "true"},
 	}
 	for _, tt := range tests {
@@ -150,4 +153,52 @@ func TestProfileAddLocal_WritesOnlyTheOverlay(t *testing.T) {
 	local, err := os.ReadFile(filepath.Join(dir, "config.local.toml"))
 	require.NoError(t, err)
 	assert.Contains(t, string(local), "mine")
+}
+
+func TestLocalCommands_HonourConfigFlag(t *testing.T) {
+	// Arrange: the project lives elsewhere; the working directory is unrelated
+	root := t.TempDir()
+	dir := filepath.Join(root, "proj", ".ai-rulez")
+	writeFile(t, filepath.Join(dir, "config.toml"), localCmdShared)
+	chdir(t, t.TempDir())
+	prev := cfgFile
+	cfgFile = dir
+	t.Cleanup(func() { cfgFile = prev })
+
+	// Act
+	path, created, err := config.InitLocalOverlayAt(localConfigDir())
+
+	// Assert
+	require.NoError(t, err)
+	assert.True(t, created)
+	assert.Equal(t, filepath.Join(dir, "config.local.toml"), path)
+}
+
+func TestPrintDryRun_BlockedDriftIsAnError(t *testing.T) {
+	// Arrange: the overlay renames the project, so shared CLAUDE.md would change.
+	dir := localProject(t)
+	writeFile(t, filepath.Join(dir, "config.toml"), "version = \"4.0\"\nname = \"shared\"\npresets = [\"claude\"]\ngitignore = false\n")
+	writeFile(t, filepath.Join(dir, "config.local.toml"), "name = \"mine\"\npresets = [\"codex\"]\n")
+	cfg, err := config.LoadConfig(t.Context(), ".")
+	require.NoError(t, err)
+
+	// Act
+	var runErr error
+	out := captureStdout(t, func() { runErr = printDryRun(generator.NewGenerator(cfg), "") })
+
+	// Assert
+	require.Error(t, runErr)
+	assert.Contains(t, out, "blocked: CLAUDE.md")
+}
+
+func TestLocalEntriesHint(t *testing.T) {
+	dir := localProject(t)
+	assert.Empty(t, localEntriesHint("profiles"), "no overlay, no hint")
+
+	writeFile(t, filepath.Join(dir, "config.local.toml"),
+		"[profiles]\nmine = [\"backend\"]\nother = [\"backend\"]\n\n[[includes]]\nname = \"i\"\nsource = \"./x\"\n")
+
+	assert.Equal(t, "+ 2 local entries; see `ai-rulez local show`", localEntriesHint("profiles"))
+	assert.Equal(t, "+ 1 local entries; see `ai-rulez local show`", localEntriesHint("includes"))
+	assert.Empty(t, localEntriesHint("installed_skills"))
 }
