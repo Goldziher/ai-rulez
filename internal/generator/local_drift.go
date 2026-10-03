@@ -394,7 +394,7 @@ func (g *Generator) ignoredSet(rels, pending []string) map[string]bool {
 		return ignored
 	}
 	patterns := append([]string(nil), pending...)
-	if data, readErr := os.ReadFile(filepath.Join(g.config.BaseDir, ".gitignore")); readErr == nil {
+	if data, readErr := gitutil.ReadIgnoreFileOrEmpty(filepath.Join(g.config.BaseDir, ".gitignore")); readErr == nil {
 		patterns = append(patterns, gitignorePatterns(string(data))...)
 	}
 	for _, rel := range rels {
@@ -492,7 +492,7 @@ func (g *Generator) syncMachineExcludes(plan *localPlan) error {
 	}
 	sort.Strings(patterns)
 
-	data, err := os.ReadFile(exclude) //nolint:gosec // git's own exclude file
+	data, err := gitutil.ReadIgnoreFile(exclude)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.With("path", exclude).Wrapf(err, "read git exclude file")
 	}

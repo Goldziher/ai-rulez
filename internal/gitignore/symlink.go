@@ -49,7 +49,7 @@ func writeExcludeFallback(baseDir string, patterns []string, keep bool) error {
 	logger.Warn(".gitignore is a symbolic link, which git does not read; writing ignore entries to .git/info/exclude instead",
 		"path", exclude)
 
-	data, err := os.ReadFile(exclude) //nolint:gosec // git's own exclude file
+	data, err := gitutil.ReadIgnoreFile(exclude)
 	if err != nil && !os.IsNotExist(err) {
 		return oops.With("path", exclude).Wrapf(err, "read git exclude file")
 	}

@@ -88,14 +88,14 @@ func (g *Generator) userIgnoreRules(probes []string) map[string]gitutil.IgnoreMa
 // hasOwnIgnoreBlock reports whether the root .gitignore or the repository
 // exclude file holds an ai-rulez block that must be left out of the evaluation.
 func (g *Generator) hasOwnIgnoreBlock(excludeBegin string) bool {
-	if data, err := os.ReadFile(filepath.Join(g.config.BaseDir, ".gitignore")); err == nil { //nolint:gosec // project .gitignore
+	if data, err := gitutil.ReadIgnoreFileOrEmpty(filepath.Join(g.config.BaseDir, ".gitignore")); err == nil {
 		if withoutManagedBlock(string(data)) != string(data) {
 			return true
 		}
 	}
 	if exclude := gitutil.InfoExcludePath(g.config.BaseDir); exclude != "" {
 		fallbackBegin, _ := gitignore.FallbackMarkers(g.config.BaseDir)
-		if data, err := os.ReadFile(exclude); err == nil && //nolint:gosec // git exclude file
+		if data, err := gitutil.ReadIgnoreFileOrEmpty(exclude); err == nil &&
 			(strings.Contains(string(data), excludeBegin) || strings.Contains(string(data), fallbackBegin)) {
 			return true
 		}
