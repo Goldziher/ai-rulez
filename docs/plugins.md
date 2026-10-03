@@ -58,7 +58,7 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Codex    | `.codex-plugin/plugin.json` (+ `.mcp.json`)             | MCP referenced via external file; rich `interface` block         |
 | Gemini   | `gemini-extension.json`                                 | inline MCP + hooks, context file reference                       |
 | Kimi     | `kimi.plugin.json`                                      | `sessionStart`, `skillInstructions`, `interface`                 |
-| OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`, bundled `.opencode/{skills,commands,agents}/`) | OpenCode v2 `Plugin.define` adapter; copies the authored entrypoint or emits a no-op scaffold |
+| OpenCode | `.opencode/plugins/<plugin-name>.js` (+ `package.json`, `.opencode/ai-rulez-content.js`, bundled `.opencode/{skills,commands,agents}/`) | OpenCode v2 `{ id, setup }` adapter; copies the authored entrypoint or emits a scaffold that registers the bundled content |
 | Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
@@ -74,16 +74,58 @@ to the authored one.
 ### OpenCode adapter
 
 The adapter targets OpenCode v2, whose plugin API differs from v1: a plugin default-exports
-`Plugin.define({ id, setup(ctx) })` from `@opencode/plugin`, and v1 function-entrypoint
-plugins do not run. Put OpenCode-specific tools and hooks in `.ai-rulez/opencode/index.js`.
-The generator copies that source verbatim to `.opencode/plugins/<plugin-name>.js`, generates
-the `package.json` metadata (depending on `@opencode/plugin`), and bundles the plugin's
-skills, commands, and agents under `.opencode/`. Keep shared MCP settings in their normal
-`.ai-rulez` sources; the `opencode` preset writes them to `opencode.json`.
+a definition `{ id, setup(ctx) }` (`Plugin.define` from `@opencode/plugin` is the identity
+helper for it), and v1 plugins (an exported function that returns hooks) do not run. Put
+OpenCode-specific tools and hooks in `.ai-rulez/opencode/index.js`. The generator copies that
+source verbatim to `.opencode/plugins/<plugin-name>.js`, generates the `package.json` metadata
+(`main` and `exports` point at that file; it depends on `@opencode/plugin`), and bundles the
+plugin's skills, commands, and agents under `.opencode/`.
 
-When the source entrypoint is absent, generation emits a documented no-op module. The
-module keeps the plugin loadable and tells you where to create the user-owned source;
-it does not guess tool schemas, subprocess arguments, or business logic.
+OpenCode only scans its own config directories, so it never discovers the `.opencode/skills`,
+`commands` and `agents` of an npm-installed plugin. The generated entrypoint therefore calls
+`registerBundledContent(ctx)` from the generated `.opencode/ai-rulez-content.js`, which
+registers the bundled content through the skill, command and agent transforms. If you supply
+your own `.ai-rulez/opencode/index.js` and the plugin bundles content, call it from `setup`:
+
+```js
+import { registerBundledContent } from "../ai-rulez-content.js";
+
+export default {
+  id: "my-plugin",
+  async setup(ctx) {
+    await registerBundledContent(ctx);
+  },
+};
+```
+
+The generated entrypoint does not import `@opencode/plugin` at runtime: OpenCode installs no
+dependencies for local `.opencode/plugins/` files, so the import would fail to resolve. Keep
+shared MCP settings in their normal `.ai-rulez` sources; the `opencode` preset writes them to
+`opencode.json`.
+
+When the source entrypoint is absent, generation emits a documented module that only registers
+the bundled content. It keeps the plugin loadable and tells you where to create the user-owned
+source; it does not guess tool schemas, subprocess arguments, or business logic.
+
+#### v1 plugin warning and migration
+
+OpenCode v2 does not run v1 plugins, and it only logs the refusal to its server log
+(`Plugin must export a default definition with an id and an effect or setup function`). ai-rulez
+therefore warns, once per file and without failing generation, when it finds a v1-shaped plugin:
+
+- the authored `.ai-rulez/opencode/index.js` while generating a plugin bundle;
+- any file in the project's `.opencode/plugin/` or `.opencode/plugins/` directories, and any
+  local path in the `plugin`/`plugins` array of `opencode.json(c)` (npm package names are never
+  fetched), while generating the `opencode` preset.
+
+A file counts as v1 when it default-exports a function, exports an `async` function or arrow
+function, or imports the v1 `@opencode-ai/plugin` package, and has no v2 marker
+(`Plugin.define(...)`, or an `id` together with `setup`/`effect`). To migrate, rename `plugin`
+to `plugins` in the config, move the file to `.opencode/plugins/`, and replace the exported
+function with a default export `{ id, async setup(ctx) { ... } }` that registers hooks and
+transforms on `ctx`. See the official
+[V1 plugin migration guide](https://opencode.ai/v2/docs/build/plugins/migrate-v1) and the
+[plugins guide](https://opencode.ai/v2/docs/build/plugins).
 
 The `opencode` preset itself is separate from plugin authoring. It emits `AGENTS.md`,
 `.opencode/skills/`, and `.opencode/agents/`, and — only when `[[mcp_servers]]` are configured — a
