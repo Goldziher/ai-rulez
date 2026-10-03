@@ -70,6 +70,7 @@ Install a named skill.
 - `--source <url>` (required): Git URL or local path
 - `--path <dir>` (optional): Path within repo to skill directory
 - `--ref <ref>` (optional): Git ref (branch, tag, commit)
+- `--local` (optional): Record the skill in your gitignored `config.local.*` overlay instead of `config.toml`, so it applies on this machine only. See [Local Configuration](local-overrides.md)
 
 **Examples:**
 
@@ -91,6 +92,7 @@ Remove an installed skill from the configuration.
 **Flags:**
 
 - `--force` (optional): Skip confirmation prompt
+- `--local` (optional): Remove through the overlay. A skill defined in the shared config is hidden on this machine by writing `remove = true` to the overlay; the shared config is not changed
 
 ### `ai-rulez skill list [flags]`
 
@@ -163,9 +165,11 @@ If the local path exists and contains the skill, it's used. If it doesn't exist,
 
 The MCP server exposes three tools for managing installed skills:
 
-- `install_skill` — Install a skill (params: `name`, `source`, `path`, `ref`)
-- `uninstall_skill` — Remove a skill (params: `name`)
-- `list_installed_skills` — List all installed skills
+- `install_skill` — Install a skill (params: `name`, `source`, `path`, `ref`, `local`)
+- `uninstall_skill` — Remove a skill (params: `name`, `local`)
+- `list_installed_skills` — List all installed skills (shared layer only; takes no `local`)
+
+`local: true` writes to the `config.local.*` overlay instead of the shared config.
 
 ## Creating Distributable Skills
 
@@ -182,7 +186,7 @@ To make your project's skill installable by others:
 | Feature          | Includes                                               | Installed Skills                          |
 | ---------------- | ------------------------------------------------------ | ----------------------------------------- |
 | Content types    | Rules, context, skills, agents, commands               | Skills only                               |
-| Source structure | Requires `.ai-rulez/` directory                        | Requires `skills/<name>/SKILL.md`         |
+| Source structure | A `.ai-rulez/` directory or a bare layout (`rules/`, `skills/`, ...), see [Repository Structure Support](includes.md#repository-structure-support) | Requires `skills/<name>/SKILL.md` |
 | Merge strategy   | Configurable (local-override, include-override, error) | Local skills always win                   |
 | Domain support   | Can install to specific domains                        | Root-level only                           |
 | Use case         | Share full governance configs                          | Add library/tool-specific AI instructions |
