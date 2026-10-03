@@ -1919,9 +1919,15 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	// they are exactly the paths a render omits while the manifest still lists them.
 	merged := append(providers.MergedSidecarPaths(), presets.MergedDocumentPaths()...)
 
+	// The gitignored local manifest lists only whole files ai-rulez wrote from
+	// machine-local inputs (never a partially owned document), so it may remove
+	// a merged document too: a secret-bearing .mcp.json must not outlive the
+	// overlay that produced it.
+	local := g.localManifestSet()
+
 	var stale []string
 	for _, relPath := range previous {
-		if next[relPath] || isMergedDocumentPath(merged, relPath) {
+		if next[relPath] || (isMergedDocumentPath(merged, relPath) && !local[relPath]) {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
@@ -1942,6 +1948,19 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 	}
 	sort.Strings(stale)
 	return stale
+}
+
+// localManifestSet is the set of paths the machine-local manifest authorizes
+// deleting; empty when the run deliberately ignores local inputs.
+func (g *Generator) localManifestSet() map[string]bool {
+	set := map[string]bool{}
+	if g.localSkipped {
+		return set
+	}
+	for _, f := range readManifestFile(g.localManifestPath()).Files {
+		set[f] = true
+	}
+	return set
 }
 
 // looksGenerated reports whether the file at absPath carries stored hashes or a
