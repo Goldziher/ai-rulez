@@ -786,6 +786,11 @@ type OverlayChange struct {
 	Local     any
 	HasShared bool
 	Redacted  bool
+	// Merged is the value the key has after the overlay is merged, set for keys
+	// the overlay combines with the shared value instead of replacing (presets:
+	// an ordered union with "!name" drops).
+	Merged    any
+	HasMerged bool
 }
 
 // RedactedValue is shown in place of secret values.
@@ -827,9 +832,15 @@ func describeLocalOverlay(d *LocalDoc) (*LocalOverlay, []OverlayChange, error) {
 	var changes []OverlayChange
 	walkLeaves(nil, d.Doc, func(segs []string, v any) {
 		sv, has := lookupSegs(shared, segs)
-		changes = append(changes, OverlayChange{
+		change := OverlayChange{
 			Path: strings.Join(segs, "."), Shared: sv, Local: v, HasShared: has, Redacted: !showAllowed(segs) || !showTypeMatches(segs, v),
-		})
+		}
+		if len(segs) == 1 && segs[0] == docKeyPresets {
+			if merged, _, mergeErr := mergePresets(sv, has, v); mergeErr == nil {
+				change.Merged, change.HasMerged = merged, true
+			}
+		}
+		changes = append(changes, change)
 	})
 	return overlay, changes, nil
 }

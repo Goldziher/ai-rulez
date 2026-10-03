@@ -95,3 +95,29 @@ func TestLocalSet_StdinAndStringFlags(t *testing.T) {
 	assert.Contains(t, string(local), "GH_TOKEN = '123_456'")
 	assert.Contains(t, string(local), "description = 'true'")
 }
+
+func TestLocalShow_PresetsShowTheMergedResult(t *testing.T) {
+	tests := []struct {
+		name  string
+		local string
+		want  string
+	}{
+		{"adds a preset", `presets = ["windsurf"]`, `["claude","windsurf"]`},
+		{"drops a preset", `presets = ["!claude", "codex"]`, `["codex"]`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			resetLocalFlags(t)
+			dir := localProject(t)
+			require.NoError(t, os.WriteFile(filepath.Join(dir, "config.local.toml"), []byte(tt.local+"\n"), 0o600))
+
+			// Act
+			out := captureStdout(t, func() { localShowCmd.Run(localShowCmd, nil) })
+
+			// Assert
+			assert.Contains(t, out, "-> "+tt.want)
+			assert.Contains(t, out, "merged, not a replacement")
+		})
+	}
+}

@@ -119,6 +119,11 @@ printed; all others show their key path with <redacted>. Pass --reveal to print 
 		fmt.Printf("local overlay: %s\n", overlay.Path)
 		for _, c := range changes {
 			hide := c.Redacted && !localShowReveal
+			if c.HasMerged && !hide {
+				fmt.Printf("  %s: %s -> %s (local %s is merged, not a replacement)\n", c.Path,
+					shownValue(c.Shared, c.HasShared, false), shownValue(c.Merged, true, false), shownValue(c.Local, true, false))
+				continue
+			}
 			fmt.Printf("  %s: %s -> %s\n", c.Path, shownValue(c.Shared, c.HasShared, hide), shownValue(c.Local, true, hide))
 		}
 	},
@@ -327,6 +332,9 @@ func printOverlayJSON(overlay *config.LocalOverlay, changes []config.OverlayChan
 			item["local"] = c.Local
 			if c.HasShared {
 				item["shared"] = c.Shared
+			}
+			if c.HasMerged {
+				item["merged"] = c.Merged
 			}
 		}
 		items = append(items, item)
