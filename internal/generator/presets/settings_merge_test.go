@@ -151,12 +151,11 @@ func TestGeminiPreset_SettingsJSON_PreservesHandAuthoredKeys(t *testing.T) {
 	assert.Equal(t, []any{"-y", "ai-rulez@latest", "mcp"}, servers["ai-rulez"]["args"])
 }
 
-// TestGeminiPreset_SettingsJSON_SkippedWithoutMCPServers pins the other half of
-// the #185 fix: the settings document is no longer written on every run. With no
-// configured servers there is nothing to contribute but the self-registration
-// entry, which is not worth creating (or rewriting the owned key of) a settings
-// file for.
-func TestGeminiPreset_SettingsJSON_SkippedWithoutMCPServers(t *testing.T) {
+// TestGeminiPreset_SettingsJSON_WithoutMCPServers pins what the document holds
+// when no servers are configured: the existing mcpServers key is not ai-rulez's
+// to rewrite, but context.fileName always is (it registers GEMINI.local.md), so
+// the document is written and the hand-authored keys survive.
+func TestGeminiPreset_SettingsJSON_WithoutMCPServers(t *testing.T) {
 	relPath := filepath.Join(".gemini", "settings.json")
 	baseDir := writeDocumentFixture(t, relPath, handAuthoredMCPDocument)
 
@@ -164,12 +163,11 @@ func TestGeminiPreset_SettingsJSON_SkippedWithoutMCPServers(t *testing.T) {
 	outputs, err := g.Generate(&config.ContentTree{}, baseDir, &config.Config{Name: "test-project"})
 	require.NoError(t, err)
 
-	_, found := findOutput(outputs, filepath.Join(baseDir, relPath))
-	assert.False(t, found, "no MCP servers configured, so no settings.json output")
-
-	onDisk, readErr := os.ReadFile(filepath.Join(baseDir, relPath))
-	require.NoError(t, readErr)
-	assert.Equal(t, handAuthoredMCPDocument, string(onDisk), "the existing document is left untouched")
+	settings := requireOutput(t, outputs, filepath.Join(baseDir, relPath))
+	assert.True(t, settings.PartiallyOwned, "the document carries hand-authored keys")
+	assert.Contains(t, settings.Content, `"this-entry-is-replaced"`, "mcpServers is not ours without servers")
+	assert.Contains(t, settings.Content, `"trailingUserKey": "kept"`)
+	assert.Contains(t, settings.Content, `"GEMINI.local.md"`)
 }
 
 func TestAntigravityPreset_SettingsJSON_PreservesHandAuthoredKeys(t *testing.T) {
@@ -258,7 +256,11 @@ func TestLegacyPresets_JSONDocument_GreenfieldIsWhollyOwned(t *testing.T) {
 
 			output := requireOutput(t, outputs, filepath.Join(baseDir, testCase.relPath))
 			assert.False(t, output.PartiallyOwned, "a freshly created document is wholly generated")
-			assert.Equal(t, []string{"mcpServers"}, topLevelKeys(t, output.Content))
+			want := []string{"mcpServers"}
+			if name == "gemini" {
+				want = []string{"mcpServers", "context"} // context.fileName registers GEMINI.local.md
+			}
+			assert.ElementsMatch(t, want, topLevelKeys(t, output.Content))
 		})
 	}
 }

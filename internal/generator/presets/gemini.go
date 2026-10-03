@@ -104,20 +104,17 @@ func (g *GeminiPresetGenerator) Generate(content *config.ContentTree, baseDir st
 	// self-registration in projects with no [[mcp_servers]] and keeps their file
 	// intact instead, which is the better trade.
 	//
-	// With agents_md the document also owns context.fileName (see
-	// geminiContextFileNamePath), which makes it worth writing without MCP
-	// servers; switching the flag off removes the value it wrote.
+	// The document also owns context.fileName (see geminiContextFileNamePath):
+	// [main file, "GEMINI.local.md"], the second entry being how Gemini CLI loads
+	// the machine-local content. It is written whether or not local content exists,
+	// so the committed document is the same on every machine, and that makes the
+	// document worth writing without MCP servers.
 	settingsPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocGeminiSettings))
-	owned, err := g.settingsKeys(settingsPath, cfg)
+	settings, write, err := g.renderSettings(settingsPath, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("render settings.json: %w", err)
 	}
-	if len(owned) > 0 {
-		settings, err := applyMergedDocument(settingsPath, owned)
-		if err != nil {
-			return nil, fmt.Errorf("render settings.json: %w", err)
-		}
-
+	if write {
 		outputs = append(outputs, config.OutputFile{
 			Path:           settingsPath,
 			Content:        settings.Body,
@@ -180,57 +177,97 @@ func (g *GeminiPresetGenerator) readsSharedAgentsMD(cfg *config.Config) bool {
 }
 
 // renderSettings renders the keys ai-rulez owns in .gemini/settings.json into
-// the document at settingsPath.
-func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.Config) (jsonmerge.Result, error) {
-	owned, err := g.settingsKeys(settingsPath, cfg)
-	if err != nil {
-		return jsonmerge.Result{}, err
+// the document at settingsPath. write is false when it owns none (a monorepo
+// scope run without MCP servers), in which case the document is left alone.
+func (g *GeminiPresetGenerator) renderSettings(settingsPath string, cfg *config.Config) (result jsonmerge.Result, write bool, err error) {
+	owned, userNames, err := g.settingsKeys(settingsPath, cfg)
+	if err != nil || len(owned) == 0 {
+		return jsonmerge.Result{}, false, err
 	}
-	return applyMergedDocument(settingsPath, owned)
+	result, err = applyMergedDocument(settingsPath, owned)
+	// A context.fileName the user authored is theirs even when it is the only
+	// key left in the document, so the file must not be ignored or deleted.
+	result.PartiallyOwned = result.PartiallyOwned || userNames
+	return result, true, err
 }
 
+// geminiLocalContextFile is the machine-local root file Gemini CLI only loads
+// when context.fileName lists it.
+var geminiLocalContextFile = config.LocalVariantPath("GEMINI.md")
+
 // settingsKeys lists the keys ai-rulez owns in .gemini/settings.json: mcpServers
-// when the config has servers, and context.fileName with agents_md. With the
-// flag off, a context.fileName that is exactly what agents_md wrote is removed
-// when ai-rulez wrote the whole document (it is in the previous run's generated
-// manifest), since Gemini would otherwise keep ignoring the GEMINI.md that is
-// back; in a document the user authored, and for any other value, it is only
-// warned about when it lacks GEMINI.md.
-func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Config) ([]jsonmerge.OwnedKey, error) {
-	var owned []jsonmerge.OwnedKey
+// when the config has servers, and context.fileName, which is the main context
+// file (GEMINI.md, or AGENTS.md with agents_md) followed by GEMINI.local.md.
+//
+// A context.fileName that is exactly a value ai-rulez wrote, in a document it
+// wrote whole (it is in the previous run's generated manifest), is rewritten, so
+// toggling agents_md moves it. Any other value is the user's: it is kept, with
+// AGENTS.md appended under agents_md as before, and a warning says what it lacks
+// (userNames reports that the user owns it). GEMINI.md is warned about with the
+// flag off because Gemini would otherwise keep ignoring the generated file.
+func (g *GeminiPresetGenerator) settingsKeys(settingsPath string, cfg *config.Config,
+) (owned []jsonmerge.OwnedKey, userNames bool, err error) {
 	if len(cfg.MCPServers) > 0 {
 		owned = append(owned, jsonmerge.OwnedKey{Name: keyMCPServers, Value: g.mcpServersValue(cfg)})
 	}
-	switch {
-	case g.readsSharedAgentsMD(cfg):
-		names, _, err := readGeminiContextFileNames(settingsPath)
-		if err != nil {
-			return nil, err
+	if rulefiles.InScope(cfg) {
+		return owned, false, nil
+	}
+	main := "GEMINI.md"
+	if cfg.AgentsMD {
+		main = string(config.SharedAgentsMD)
+	}
+	names, isList, err := readGeminiContextFileNames(settingsPath)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(names) == 0 || (isList && g.wroteSettings(settingsPath, cfg) && isOwnedContextFileNames(names)) {
+		return append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: []string{main, geminiLocalContextFile}}), false, nil
+	}
+	if cfg.AgentsMD {
+		if !slices.Contains(names, main) {
+			names = append(slices.Clone(names), main)
+			owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: names})
 		}
-		if !slices.Contains(names, string(config.SharedAgentsMD)) {
-			names = append(names, string(config.SharedAgentsMD))
-		}
-		owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Value: names})
-	case !cfg.AgentsMD && !rulefiles.InScope(cfg):
-		names, isList, err := readGeminiContextFileNames(settingsPath)
-		if err != nil {
-			return nil, err
-		}
-		onlyAgentsMD := isList && slices.Equal(names, []string{string(config.SharedAgentsMD)})
-		switch {
-		case onlyAgentsMD && g.wroteSettings(settingsPath, cfg):
-			owned = append(owned, jsonmerge.OwnedKey{Path: geminiContextFileNamePath, Remove: true})
-		case onlyAgentsMD:
-			rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName is [\"AGENTS.md\"], so Gemini CLI "+
-				"ignores the generated GEMINI.md; the file is not one ai-rulez wrote, so the value is left alone",
-				"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
-		case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, "GEMINI.md"):
-			rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
-				"so Gemini CLI ignores the generated GEMINI.md",
-				"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
+	} else {
+		g.warnUnreachableGeminiMD(settingsPath, names, isList)
+	}
+	if !slices.Contains(names, geminiLocalContextFile) {
+		rulefiles.Warn(".gemini/settings.json context.fileName does not list "+geminiLocalContextFile+", so Gemini CLI "+
+			"does not load machine-local content from it; the value is yours and is left alone",
+			"hint", "add \""+geminiLocalContextFile+"\" to context.fileName", "path", settingsPath)
+	}
+	return owned, true, nil
+}
+
+// isOwnedContextFileNames reports whether names is a value ai-rulez writes (or
+// wrote in 4.23.0, when agents_md produced just AGENTS.md).
+func isOwnedContextFileNames(names []string) bool {
+	for _, owned := range [][]string{
+		{string(config.SharedAgentsMD)},
+		{string(config.SharedAgentsMD), geminiLocalContextFile},
+		{"GEMINI.md", geminiLocalContextFile},
+	} {
+		if slices.Equal(names, owned) {
+			return true
 		}
 	}
-	return owned, nil
+	return false
+}
+
+// warnUnreachableGeminiMD warns, with agents_md off, about a user-authored
+// context.fileName under which Gemini CLI ignores the generated GEMINI.md.
+func (g *GeminiPresetGenerator) warnUnreachableGeminiMD(settingsPath string, names []string, isList bool) {
+	switch {
+	case isList && slices.Equal(names, []string{string(config.SharedAgentsMD)}):
+		rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName is [\"AGENTS.md\"], so Gemini CLI "+
+			"ignores the generated GEMINI.md; the file is not one ai-rulez wrote, so the value is left alone",
+			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
+	case slices.Contains(names, string(config.SharedAgentsMD)) && !slices.Contains(names, "GEMINI.md"):
+		rulefiles.Warn("agents_md is off but .gemini/settings.json context.fileName still lists AGENTS.md without GEMINI.md, "+
+			"so Gemini CLI ignores the generated GEMINI.md",
+			"hint", "add \"GEMINI.md\" to context.fileName or remove the key", "path", settingsPath)
+	}
 }
 
 // wroteSettings reports whether the previous run wrote the settings document

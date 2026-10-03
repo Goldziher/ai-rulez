@@ -158,7 +158,7 @@ func TestAgentsMD_GeminiSettingsMerge(t *testing.T) {
 		want     []string
 		keys     map[string]any
 	}{
-		{name: "no file", existing: "", want: []string{"AGENTS.md"}},
+		{name: "no file", existing: "", want: []string{"AGENTS.md", "GEMINI.local.md"}},
 		{
 			name:     "user keys and names survive",
 			existing: `{"theme":"dark","context":{"fileName":["CUSTOM.md"],"discoveryMaxDirs":7}}`,

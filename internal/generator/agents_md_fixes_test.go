@@ -70,13 +70,21 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 		mcp      string
 		unowned  bool // .gemini/settings.json is not in the previous generated manifest
 		wantKey  bool // context.fileName still in the document
+		rewrite  bool // context.fileName is rewritten to [GEMINI.md, GEMINI.local.md]
 		wantWarn bool
 	}{
-		{name: "value ai-rulez wrote is removed", existing: `{"theme":"dark","context":{"fileName":["AGENTS.md"]}}`},
 		{
-			name: "removed beside other context keys", existing: `{"context":{"fileName":["AGENTS.md"],"discoveryMaxDirs":7}}`,
+			name: "value ai-rulez wrote is rewritten", existing: `{"theme":"dark","context":{"fileName":["AGENTS.md"]}}`,
+			wantKey: true, rewrite: true,
 		},
-		{name: "removed with mcp servers", existing: `{"context":{"fileName":["AGENTS.md"]}}`, mcp: agentsMDMCPServer},
+		{
+			name: "rewritten beside other context keys", existing: `{"context":{"fileName":["AGENTS.md"],"discoveryMaxDirs":7}}`,
+			wantKey: true, rewrite: true,
+		},
+		{
+			name: "rewritten with mcp servers", existing: `{"context":{"fileName":["AGENTS.md"]}}`, mcp: agentsMDMCPServer,
+			wantKey: true, rewrite: true,
+		},
 		{
 			name: "user list lacking GEMINI.md warns", existing: `{"context":{"fileName":["CUSTOM.md","AGENTS.md"]}}`,
 			wantKey: true, wantWarn: true,
@@ -103,7 +111,10 @@ func TestAgentsMD_GeminiSettingsWhenFlagIsOff(t *testing.T) {
 
 			settings := readAgentsMDFile(t, root, ".gemini/settings.json")
 			assert.Equal(t, tc.wantKey, strings.Contains(settings, `"fileName"`), settings)
-			if tc.wantKey {
+			switch {
+			case tc.rewrite:
+				assert.Equal(t, []string{"GEMINI.md", "GEMINI.local.md"}, geminiContextNames(t, root))
+			case tc.wantKey:
 				assert.Equal(t, tc.existing, settings, "a value the user owns is left alone")
 			}
 			assert.Equal(t, tc.wantWarn, countContaining(*warned, "GEMINI.md") > 0, *warned)
@@ -132,7 +143,7 @@ func TestAgentsMD_ToggleOffRestoresGeminiContext(t *testing.T) {
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"gemini"}, "", ""))
 	runAgentsMDGenerate(t, root)
 
-	assert.NotContains(t, readAgentsMDFile(t, root, ".gemini/settings.json"), "fileName")
+	assert.Equal(t, []string{"GEMINI.md", "GEMINI.local.md"}, geminiContextNames(t, root))
 	assert.Contains(t, readAgentsMDFile(t, root, "GEMINI.md"), "ALWAYS_BODY")
 	assert.Empty(t, *warned)
 }
