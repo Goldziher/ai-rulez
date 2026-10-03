@@ -162,6 +162,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			Path:           outputPath,
 			Content:        rendered.Body,
 			PartiallyOwned: rendered.PartiallyOwned,
+			MergeClaims:    rendered.Claims,
 		})
 	}
 

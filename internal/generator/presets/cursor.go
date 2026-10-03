@@ -146,6 +146,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 			Path:           mcpPath,
 			Content:        mcpFile.Body,
 			PartiallyOwned: mcpFile.PartiallyOwned,
+			MergeClaims:    mcpFile.Claims,
 		})
 	}
 
@@ -385,6 +386,6 @@ func (g *CursorPresetGenerator) renderMCPJSON(mcpPath string, cfg *config.Config
 	}
 
 	return applyMergedDocument(mcpPath, []jsonmerge.OwnedKey{
-		{Name: keyMCPServers, Value: mcpServers},
+		{Name: keyMCPServers, Value: mcpServers, Members: true},
 	})
 }

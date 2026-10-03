@@ -146,6 +146,7 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 			Path:           settingsPath,
 			Content:        settings.Body,
 			PartiallyOwned: settings.PartiallyOwned,
+			MergeClaims:    settings.Claims,
 		})
 	}
 
@@ -246,7 +247,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 		keyCommand: cmdNPX,
 		keyArgs: []string{
 			"-y",
-			"ai-rulez@latest",
+			aiRulezLatest,
 			keyMCP,
 		},
 	}
@@ -284,7 +285,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 	}
 
 	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
-		{Name: keyMCPServers, Value: mcpServers},
+		{Name: keyMCPServers, Value: mcpServers, Members: true},
 	})
 }
 
