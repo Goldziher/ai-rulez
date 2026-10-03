@@ -15,6 +15,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/internal/opencodev1"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
@@ -73,6 +74,10 @@ func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 
 func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
+
+	// A v1 plugin in this project builds fine but never loads in OpenCode v2,
+	// and OpenCode only logs that to its own server log; surface it here.
+	opencodev1.WarnProject(baseDir)
 
 	// Create .opencode directory structure
 	outputs = append(outputs,
