@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -49,11 +50,11 @@ func TestOpencodePresetGenerator_Generate_WithSkillsAndAgents(t *testing.T) {
 		t.Fatalf("Generate() error: %v", err)
 	}
 
-	// Base: .opencode, .opencode/skills, .opencode/agents, AGENTS.md = 4
+	// Base: .opencode, .opencode/skills, .opencode/agents, AGENTS.md, opencode.json = 5
 	// Skill: dir + SKILL.md = 2
 	// Agent: .md = 1
-	if len(outputs) != 7 {
-		t.Errorf("Generate() got %d outputs, want 7", len(outputs))
+	if len(outputs) != 8 {
+		t.Errorf("Generate() got %d outputs, want 8", len(outputs))
 	}
 
 	// Verify skill
@@ -615,5 +616,106 @@ func TestOpencodeAgentFrontmatter_TypedScalars(t *testing.T) {
 	}
 	if _, ok := fm["temperature"]; ok {
 		t.Errorf("non-numeric temperature should be omitted, got %#v", fm["temperature"])
+	}
+}
+
+// opencode.json lists AGENTS.local.md in instructions whenever the preset is on:
+// OpenCode never reads it otherwise, and a missing listed file is skipped silently.
+func TestOpencodePresetGenerator_InstructionsListLocalFile(t *testing.T) {
+	tests := []struct {
+		name        string
+		existing    string
+		servers     bool
+		want        []any
+		wantPartial bool
+	}{
+		{name: "fresh document", want: []any{"AGENTS.local.md"}},
+		{name: "fresh document with servers", servers: true, want: []any{"AGENTS.local.md"}},
+		{
+			name:     "user entries are kept and ours is added once",
+			existing: `{"instructions":["CONTRIBUTING.md","docs/*.md"]}`,
+			want:     []any{"CONTRIBUTING.md", "docs/*.md", "AGENTS.local.md"}, wantPartial: true,
+		},
+		{
+			name:     "already listed stays single",
+			existing: `{"instructions":["AGENTS.local.md","CONTRIBUTING.md"]}`,
+			want:     []any{"AGENTS.local.md", "CONTRIBUTING.md"}, wantPartial: true,
+		},
+		{
+			name:     "only our entry is fully owned",
+			existing: `{"$schema":"https://opencode.ai/config.json","instructions":["AGENTS.local.md"]}`,
+			want:     []any{"AGENTS.local.md"},
+		},
+		{
+			name:     "other user keys survive",
+			existing: `{"model":"anthropic/claude-sonnet-4-5"}`,
+			want:     []any{"AGENTS.local.md"}, wantPartial: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			dir := t.TempDir()
+			path := filepath.Join(dir, "opencode.json")
+			if tt.existing != "" {
+				if err := os.WriteFile(path, []byte(tt.existing), 0o644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cfg := &config.Config{Name: "test"}
+			if tt.servers {
+				cfg.MCPServers = map[string]*config.MCPServer{"s": {Name: "s", Command: "npx"}}
+			}
+
+			// Act
+			result, err := (&OpencodePresetGenerator{}).renderMCPConfig(path, cfg)
+
+			// Assert
+			if err != nil {
+				t.Fatalf("renderMCPConfig: %v", err)
+			}
+			var doc map[string]any
+			if err := json.Unmarshal([]byte(result.Body), &doc); err != nil {
+				t.Fatalf("invalid JSON: %v", err)
+			}
+			if got := doc["instructions"]; !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("instructions = %v, want %v", got, tt.want)
+			}
+			if result.PartiallyOwned != tt.wantPartial {
+				t.Errorf("PartiallyOwned = %v, want %v", result.PartiallyOwned, tt.wantPartial)
+			}
+		})
+	}
+}
+
+func TestOpencodePresetGenerator_WritesConfigWithoutMCPServers(t *testing.T) {
+	tests := []struct {
+		name      string
+		cfg       *config.Config
+		wantWrite bool
+	}{
+		{name: "project root", cfg: &config.Config{Name: "test"}, wantWrite: true},
+		{
+			name: "monorepo scope without servers",
+			cfg:  &config.Config{Name: "test", Run: &config.RunState{Scope: &config.ScopeRun{}}},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			outputs, err := (&OpencodePresetGenerator{}).Generate(&config.ContentTree{}, "/test", tt.cfg)
+
+			// Assert
+			if err != nil {
+				t.Fatalf("Generate() error: %v", err)
+			}
+			found := false
+			for _, o := range outputs {
+				found = found || filepath.ToSlash(o.Path) == "/test/opencode.json"
+			}
+			if found != tt.wantWrite {
+				t.Errorf("opencode.json written = %v, want %v", found, tt.wantWrite)
+			}
+		})
 	}
 }
