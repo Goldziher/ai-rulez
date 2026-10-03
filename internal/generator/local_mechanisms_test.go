@@ -277,3 +277,36 @@ func TestLocalRoot_WarnsOnceWhereNoMechanismExists(t *testing.T) {
 		})
 	}
 }
+
+// Junie loads every .junie/rules/*.md, so its local context goes there; the
+// guidelines.local.md it never read is not written.
+func TestJunieLocalRoot_GoesToRulesFolder(t *testing.T) {
+	tests := []struct {
+		name string
+		flag string
+		mode string
+	}{
+		{name: "split mode"},
+		{name: "inline mode", mode: "\n[rules]\nmode = \"inline\"\n"},
+		{name: "agents_md", flag: "agents_md = true\n"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			root := t.TempDir()
+			writeAgentsMDProject(t, root, tt.flag+agentsMDConfig([]string{"junie"}, "", tt.mode))
+			writeAgentsMDFile(t, root, ".ai-rulez/local/context/notes.md", "LOCAL_BODY\n")
+
+			// Act
+			runAgentsMDGenerate(t, root)
+
+			// Assert
+			got := readAgentsMDFile(t, root, ".junie/rules/ai-rulez.local.md")
+			assert.Contains(t, got, "LOCAL_BODY")
+			assert.NotContains(t, got, "ALWAYS_BODY", "shared content is not repeated")
+			assert.NoFileExists(t, filepath.Join(root, ".junie", "guidelines.local.md"))
+			assert.Contains(t, manifestFiles(t, root, ".generated-manifest.local.json"), ".junie/rules/ai-rulez.local.md")
+			assert.NotContains(t, sharedManifestFiles(t, root), ".junie/rules/ai-rulez.local.md")
+		})
+	}
+}

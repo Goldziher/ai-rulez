@@ -19,9 +19,18 @@ import (
 // out of scope for local overrides). outputFile is the local variant's path
 // relative to the base dir, used only for the header banner.
 func RenderLocalRootRules(local *config.ContentTree, allRules []config.ContentFile, cfg *config.Config, outputFile string) string {
+	return RenderLocalRootRulesFor(local, allRules, cfg, outputFile, strings.Replace(outputFile, ".local.md", ".md", 1))
+}
+
+// RenderLocalRootRulesFor is RenderLocalRootRules for a local file whose name does
+// not derive from the shared root file it stands in for (sharedRoot), such as
+// .junie/rules/ai-rulez.local.md for .junie/guidelines.md. sharedRoot decides which
+// items a frontmatter targets list selects.
+func RenderLocalRootRulesFor(local *config.ContentTree, allRules []config.ContentFile, cfg *config.Config,
+	outputFile, sharedRoot string,
+) string {
 	var builder strings.Builder
 
-	sharedRoot := strings.Replace(outputFile, ".local.md", ".md", 1)
 	allRules = rulefiles.FilterInline(allRules, rulefiles.RootTarget("", sharedRoot))
 	allContext := rulefiles.FilterInline(allInlineContext(local), rulefiles.RootTarget("", sharedRoot))
 
