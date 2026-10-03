@@ -2078,6 +2078,8 @@ func (g *Generator) ignoreLocalInputs() error {
 	if len(patterns) == 0 {
 		return nil
 	}
+	// The overlay's lock and temp files come and go: ignore them before they exist.
+	patterns = append(patterns, g.configDirName()+"/.config.local.*")
 	if err := gitignore.EnsureEntries(g.config.BaseDir, patterns); err != nil {
 		return oops.Wrapf(err, "gitignore the machine-local inputs")
 	}

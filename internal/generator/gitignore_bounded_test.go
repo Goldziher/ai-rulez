@@ -77,3 +77,18 @@ func TestGenerate_SymlinkedGitignoreKeepsPatternsItListsItself(t *testing.T) {
 	assert.Contains(t, string(exclude), ".claude/rules/*.local.*")
 	assert.Contains(t, string(exclude), ".ai-rulez/local/")
 }
+
+func TestIgnoreLocalInputs_CoversTheOverlayLockAndTempFilesBeforeTheyExist(t *testing.T) {
+	// Arrange: a local rule makes the project local, without any lock file on disk.
+	p := newDriftProject(t, driftSharedIgnoring)
+	p.git(t, "init", "-q")
+	p.writeFile(t, ".ai-rulez/local/rules/mine.md", "---\npriority: low\n---\n\nPrivate.\n")
+
+	// Act
+	err := NewGenerator(p.load(t)).ignoreLocalInputs()
+
+	// Assert
+	require.NoError(t, err)
+	assert.Contains(t, p.read(t, ".gitignore"), ".ai-rulez/.config.local.*")
+	assert.True(t, p.checkIgnored(t, ".ai-rulez/.config.local.toml.lock"))
+}
