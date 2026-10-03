@@ -1028,7 +1028,8 @@ type legacyValueWarning struct {
 }
 
 // unknownLegacyValues lists legacy `trigger` and `alwaysApply` values that are
-// not recognized and so are ignored when resolving activation.
+// not recognized and so are ignored when resolving activation, and always-on
+// legacy activations whose globs are ignored.
 func unknownLegacyValues(f ContentFile) []legacyValueWarning {
 	if f.Metadata == nil {
 		return nil
@@ -1047,6 +1048,14 @@ func unknownLegacyValues(f ContentFile) []legacyValueWarning {
 			"unknown alwaysApply value ignored; use true or false",
 			[]any{logKeyFile, f.Path, "alwaysApply", v},
 		})
+	}
+	if f.Metadata.Activation == "" {
+		if act := f.Metadata.ResolveActivation(); act.Mode == ActivationAlways && len(act.Globs) > 0 {
+			out = append(out, legacyValueWarning{
+				"legacy always-on trigger with globs/paths: the globs are ignored and the rule applies everywhere",
+				[]any{logKeyFile, f.Path, "source", act.Source},
+			})
+		}
 	}
 	return out
 }

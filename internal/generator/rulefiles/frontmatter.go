@@ -10,6 +10,7 @@ const (
 	keyDescription = "description"
 	keyTrigger     = "trigger"
 	keyAlwaysApply = "alwaysApply"
+	keyGlobs       = "globs"
 )
 
 // Note reports something a caller should surface about one rendered item: an
@@ -78,25 +79,24 @@ func OnlyNegatedGlobs(cf config.ContentFile) bool {
 // always-on) or that had to be adjusted. The map is nil when the dialect emits
 // no fields.
 func Frontmatter(d Dialect, it Item) (fm map[string]any, notes []Note) {
-	act := it.Activation
 	mode, notes := effectiveMode(d, it)
+	if mode == config.ActivationGlob {
+		kept, dropped := splitNegated(it.Activation.Globs)
+		if len(dropped) > 0 {
+			notes = append(notes, negatedNote(d, it, kept, dropped))
+		}
+		if len(kept) == 0 {
+			// Nothing positive is left to scope by: load always.
+			mode = config.ActivationAlways
+		}
+		it.Activation.Globs = kept
+	}
+	act := it.Activation
 
 	joined := ""
 	if mode == config.ActivationGlob && (d == DialectCursor || d == DialectTrigger || d == DialectCopilot) {
-		globs := act.Globs
-		if d == DialectCopilot {
-			var dropped []string
-			globs, dropped = splitNegated(globs)
-			if len(dropped) > 0 {
-				notes = append(notes, newNote(d, it, "Copilot has no negated globs; dropped "+
-					strings.Join(dropped, ", "), false))
-			}
-			if len(globs) == 0 {
-				globs = []string{"**"}
-			}
-		}
 		var braceNotes []string
-		joined, braceNotes = joinExpanded(it.File.Name, globs)
+		joined, braceNotes = joinExpanded(it.File.Name, act.Globs)
 		for _, text := range braceNotes {
 			notes = append(notes, newNote(d, it, text, false))
 		}
@@ -148,6 +148,16 @@ func splitNegated(globs []string) (kept, dropped []string) {
 	return kept, dropped
 }
 
+// negatedNote reports negated globs a dialect cannot express. When nothing
+// positive is left the rule loses its scope, which counts as a downgrade.
+func negatedNote(d Dialect, it Item, kept, dropped []string) Note {
+	text := string(d) + " has no negated globs; dropped " + strings.Join(dropped, ", ")
+	if len(kept) == 0 {
+		text += "; loaded always"
+	}
+	return newNote(d, it, text, len(kept) == 0)
+}
+
 func fallbackNote(d Dialect, it Item, mode config.ActivationMode) []Note {
 	return []Note{newNote(d, it, "activation "+string(mode)+" not supported by "+string(d)+"; loaded always", true)}
 }
@@ -176,7 +186,7 @@ func cursorFrontmatter(act config.Activation, mode config.ActivationMode, globs 
 	var fm map[string]any
 	switch mode {
 	case config.ActivationGlob:
-		fm = map[string]any{"globs": globs, keyAlwaysApply: false}
+		fm = map[string]any{keyGlobs: globs, keyAlwaysApply: false}
 	case config.ActivationAuto:
 		return map[string]any{keyDescription: act.Description, keyAlwaysApply: false}
 	case config.ActivationManual:
@@ -193,7 +203,7 @@ func cursorFrontmatter(act config.Activation, mode config.ActivationMode, globs 
 func triggerFrontmatter(act config.Activation, mode config.ActivationMode, globs string) map[string]any {
 	switch mode {
 	case config.ActivationGlob:
-		return map[string]any{keyTrigger: config.TriggerGlob, "globs": globs}
+		return map[string]any{keyTrigger: config.TriggerGlob, keyGlobs: globs}
 	case config.ActivationAuto:
 		return map[string]any{keyTrigger: config.TriggerModelDecision, keyDescription: act.Description}
 	case config.ActivationManual:
@@ -225,7 +235,7 @@ func continueFrontmatter(it Item, mode config.ActivationMode) map[string]any {
 	fm := map[string]any{"name": it.File.Name}
 	switch mode {
 	case config.ActivationGlob:
-		fm["globs"] = append([]string(nil), it.Activation.Globs...)
+		fm[keyGlobs] = append([]string(nil), it.Activation.Globs...)
 		fm[keyAlwaysApply] = false
 	case config.ActivationAuto:
 		fm[keyDescription] = it.Activation.Description
