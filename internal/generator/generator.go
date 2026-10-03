@@ -2054,7 +2054,7 @@ func (g *Generator) verifyGuardedOutputsIgnored(outputs []config.OutputFile) err
 	}
 	return oops.
 		With("paths", open).
-		Hint("Machine-local and secret-bearing files must be git-ignored. A .gitignore rule probably un-ignores them " +
+		Hint("Machine-local and secret-bearing files must be git-ignored. A .gitignore rule probably un-ignores them "+
 			"(for example \"!.claude/skills/**\"): narrow that rule, or run with --no-local to generate the shared view").
 		Errorf("generated machine-local or secret outputs are not git-ignored: %s", strings.Join(open, ", "))
 }
