@@ -24,6 +24,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **Gemini agents** are written to `.gemini/agents/<id>.md`, the only project location Gemini CLI loads subagents from; `.agents/agents/` was never read. The old files are removed on the next `generate` (files other tools still write there stay). Every agent now has the required `description` (a generic one when the source has none), and a bare Claude model alias (`sonnet`, `opus`, `haiku`) is omitted with a warning so the agent inherits the session model; `gemini_model` and `defaults.model_by_preset.gemini` are written as given.
 - **xum disabled stdio MCP servers** are written as `{transport: "stdio", command, disabled: true}` instead of an enabled command string, and a server with `env` warns that Xum's `mcp.jsonc` cannot set environment variables (Xum reads only the command string of a stdio entry).
 
 ### Security
