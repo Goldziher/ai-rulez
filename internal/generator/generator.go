@@ -59,7 +59,7 @@ type Generator struct {
 	localSkipped    bool            // local files exist on disk but were not loaded (--no-local)
 
 	manifests map[string]generatedManifest // manifests read this run, by path
-	warned    map[string]bool              // merged-document warnings already issued this run
+	warned    map[string]bool              // merged-document warnings already issued by this Generator
 }
 
 type generatedManifest struct {
@@ -1913,9 +1913,11 @@ func (g *Generator) localManifestPath() string {
 	return filepath.Join(g.manifestDir(), generatedLocalManifestName)
 }
 
-// beginRun forgets what the previous run of this Generator read and reported.
+// beginRun forgets the manifests the previous run of this Generator read. The
+// warnings it issued are kept: clean plans (and so warns) once to show the plan
+// and again to apply it, and the user should see each only once.
 func (g *Generator) beginRun() {
-	g.manifests, g.warned = nil, nil
+	g.manifests = nil
 }
 
 // readManifest reads a manifest at most once per run, so a corrupt one is
