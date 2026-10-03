@@ -31,8 +31,11 @@ type PresetGenerator interface {
 //
 // LocalOnly marks an output rendered from machine-local override content
 // (.ai-rulez/local/ → CLAUDE.local.md, AGENTS.local.md, ...). Such outputs are
-// gitignored unconditionally — even when config gitignore is disabled — because
-// committing them would leak machine-local configuration.
+// kept out of git unconditionally — even when config gitignore is disabled —
+// because committing them would leak machine-local configuration. A ".local."
+// name is covered by a pattern in the managed .gitignore block; a path that
+// exists only on this machine goes to .git/info/exclude (the .gitignore block
+// when that is not possible).
 type OutputFile struct {
 	Path       string
 	Content    string
