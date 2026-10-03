@@ -605,7 +605,7 @@ func AddIncludeHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallT
 	path := request.GetString("path", "")
 	ref := request.GetString("ref", "")
 	include := request.GetStringSlice("include", nil)
-	mergeStrategy := request.GetString("merge_strategy", "default")
+	mergeStrategy := request.GetString("merge_strategy", crud.MergeStrategyLocalOverride)
 	installTo := request.GetString("install_to", "")
 
 	req := &crud.AddIncludeRequest{

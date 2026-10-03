@@ -605,7 +605,7 @@ func (c *Config) warnMissingDomainReferences() {
 
 	// Check which domains are missing
 	for domain := range referencedDomains {
-		if _, exists := c.Content.Domains[domain]; !exists {
+		if _, exists := c.Content.Domains[domain]; !exists && !c.hasLocalDomain(domain) {
 			if hasIncludes {
 				logger.Debug("profile references domain not found in merged content (may be missing from include source)",
 					"domain", domain)
@@ -614,6 +614,15 @@ func (c *Config) warnMissingDomainReferences() {
 			}
 		}
 	}
+}
+
+// hasLocalDomain reports whether machine-local content defines the domain.
+func (c *Config) hasLocalDomain(domain string) bool {
+	if c.LocalContent == nil {
+		return false
+	}
+	_, ok := c.LocalContent.Domains[domain]
+	return ok
 }
 
 // getBuiltInPresetNames returns a list of built-in preset names

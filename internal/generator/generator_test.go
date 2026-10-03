@@ -2805,3 +2805,46 @@ func TestGenerator_CursorAgentMigration(t *testing.T) {
 		})
 	}
 }
+
+func TestMarkSensitiveOutputs_IgnoresShortSecretValues(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  bool
+	}{
+		{"short value does not match", "dev", false},
+		{"seven characters do not match", "1234567", false},
+		{"eight characters match", "12345678", true},
+		{"long value matches", "ghp_longer_token_value", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			cfg := &config.Config{MCPServers: map[string]*config.MCPServer{
+				"s": {Env: map[string]string{"TOKEN": tt.value}, SecretEnvKeys: []string{"TOKEN"}},
+			}}
+			outputs := []config.OutputFile{{Path: "x.md", Content: "uses " + tt.value + " here"}}
+
+			// Act
+			NewGenerator(cfg).markSensitiveOutputs(outputs)
+
+			// Assert
+			assert.Equal(t, tt.want, outputs[0].Sensitive)
+		})
+	}
+}
+
+func TestMarkSensitiveOutputs_MCPConfigNamingASecretKeyIsSensitive(t *testing.T) {
+	cfg := &config.Config{BaseDir: t.TempDir(), MCPServers: map[string]*config.MCPServer{
+		"s": {Env: map[string]string{"TOKEN": "x"}, SecretEnvKeys: []string{"TOKEN"}},
+	}}
+	outputs := []config.OutputFile{
+		{Path: filepath.Join(cfg.BaseDir, ".mcp.json"), Content: `{"env":{"TOKEN":"x"}}`},
+		{Path: filepath.Join(cfg.BaseDir, "NOTES.md"), Content: "TOKEN is mentioned"},
+	}
+
+	NewGenerator(cfg).markSensitiveOutputs(outputs)
+
+	assert.True(t, outputs[0].Sensitive)
+	assert.False(t, outputs[1].Sensitive)
+}
