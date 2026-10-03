@@ -2,20 +2,29 @@ package presets
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 )
 
 // SharedAgentsMD renders the shared AGENTS.md written once when agents_md is on.
 // It is the file codex, opencode, xum and amp each render today (their roots are
 // byte-identical by design), so the shared file matches what any one of them
-// produced alone. AGENTS.md names every preset that reads it as an owner, so the
-// preset name passed here does not change which items are selected.
-func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config) config.OutputFile {
+// produced alone. owners are the configured presets relying on the file; they
+// extend the default AGENTS.md owners, so an item targeted at claude or gemini
+// lands in the shared file when that preset imports or reads it.
+func SharedAgentsMD(content *config.ContentTree, baseDir string, cfg *config.Config, owners []string) config.OutputFile {
+	all := rulefiles.RootOwners("AGENTS.md")
+	for _, owner := range owners {
+		if !slices.Contains(all, owner) {
+			all = append(all, owner)
+		}
+	}
 	return config.OutputFile{
 		Path:    filepath.Join(baseDir, "AGENTS.md"),
-		Content: (&CodexPresetGenerator{}).renderAgentsMarkdown(content, cfg),
+		Content: (&CodexPresetGenerator{}).renderAgentsMarkdownFor(content, cfg, all),
 	}
 }
 

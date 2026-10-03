@@ -24,7 +24,20 @@ const (
 	RoutingScopedOnly                // inline mode with a rules dir: only path-scoped items are files
 	RoutingNone                      // no rules dir: everything is inline
 	RoutingEverything                // every rule and every context item is a file
+	RoutingNonAlways                 // every rule that is not always-on and every path-scoped context item is a file
 )
+
+// WithoutAlwaysOn adapts a routing to a preset whose root file is replaced by
+// the shared AGENTS.md (the agents_md flag): always-on rules and context live
+// there, so only items with a narrower activation still become rule files.
+// Inline and none stay as they are, since they create no files for always-on
+// items either.
+func WithoutAlwaysOn(r Routing) Routing {
+	if r == RoutingAll || r == RoutingEverything {
+		return RoutingNonAlways
+	}
+	return r
+}
 
 // RoutingFor maps the configured rules mode ("split" or "inline") to a Routing.
 func RoutingFor(mode string, hasRulesDir bool) Routing {
@@ -234,7 +247,7 @@ func Plan(rules, context []config.ContentFile, t *Target, routing Routing, scope
 	}
 
 	for _, r := range rules {
-		asFile := (routing == RoutingAll || routing == RoutingEverything || isScoped(r)) && !keepNegatedInline(*t, scope, r, "rule")
+		asFile := ruleIsFile(routing, r) && !keepNegatedInline(*t, scope, r, "rule")
 		if err := place(r, KindRule, asFile, &inlineRules); err != nil {
 			return nil, nil, nil, err
 		}
@@ -300,6 +313,22 @@ func planItem(t Target, cf config.ContentFile, kind Kind, scope ScopeInfo) (it I
 			"scope", scope.Slug, "source", cf.Path)
 	}
 	return it, true, nil
+}
+
+// ruleIsFile reports whether routing sends the rule to a rule file.
+func ruleIsFile(routing Routing, r config.ContentFile) bool {
+	switch routing {
+	case RoutingAll, RoutingEverything:
+		return true
+	case RoutingNonAlways:
+		return !isAlwaysOn(r)
+	default:
+		return isScoped(r)
+	}
+}
+
+func isAlwaysOn(cf config.ContentFile) bool {
+	return cf.Metadata.ResolveActivation().Mode == config.ActivationAlways
 }
 
 func isScoped(cf config.ContentFile) bool {

@@ -221,7 +221,21 @@ func (g *Generator) splitRouting(spec *OutputSpec, cfg *config.Config) rulefiles
 	if routing == rulefiles.RoutingScopedOnly && spec.InlineFilter != InlineFilterPathScoped {
 		return rulefiles.RoutingNone
 	}
+	if g.importsAgentsMD(cfg) {
+		// Always-on rules and context live in the shared AGENTS.md.
+		return rulefiles.WithoutAlwaysOn(routing)
+	}
 	return routing
+}
+
+// importsAgentsMD reports whether the agents_md flag turns this provider's root
+// file into a shim importing the shared AGENTS.md (claude).
+func (g *Generator) importsAgentsMD(cfg *config.Config) bool {
+	if !cfg.AgentsMD || g.Spec.Root == nil {
+		return false
+	}
+	consumer, ok := config.SharedOutputConsumerFor(g.Spec.Name)
+	return ok && consumer.ImportsAgentsMD
 }
 
 // rootTarget describes the root file for inline target filtering.
@@ -632,6 +646,11 @@ func buildBlacklistSet(blacklist []string) map[string]bool {
 	return set
 }
 
+// agentsMDImportLine is the Claude Code memory import of the shared AGENTS.md.
+// The path is relative to the importing file, so a scope's CLAUDE.md imports the
+// AGENTS.md next to it.
+const agentsMDImportLine = "@AGENTS.md"
+
 // renderRootFile composes the root instructions file (CLAUDE.md, AGENTS.md, ...)
 // from the spec.Root.Sections list. Closed-set dispatch on each section.
 func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, cfg *config.Config, plan *rulesPlan) (config.OutputFile, error) {
@@ -641,7 +660,12 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 	outputPath := filepath.Join(baseDir, rootRelPath)
 	recorder := newPartRecorder(cfg.Analysis.Begin(outputPath, g.Spec.Name, config.OutputKindRoot, "", ""))
 
-	for _, section := range g.Spec.Root.Sections {
+	sections := g.Spec.Root.Sections
+	if g.importsAgentsMD(cfg) {
+		// A shim: the banner and the import, nothing that AGENTS.md already carries.
+		sections = []string{SectionRootHeader, SectionRootAgentsMDImport}
+	}
+	for _, section := range sections {
 		start := recorder.mark(&b)
 		switch section {
 		case SectionRootHeader:
@@ -656,6 +680,9 @@ func (g *Generator) renderRootFile(content *config.ContentTree, baseDir string, 
 				AgentCount:  agentCount,
 			}
 			b.WriteString(templates.GenerateHeader(data))
+		case SectionRootAgentsMDImport:
+			b.WriteString(agentsMDImportLine)
+			b.WriteString("\n")
 		case SectionRootTitle:
 			b.WriteString("# ")
 			b.WriteString(cfg.Name)

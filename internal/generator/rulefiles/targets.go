@@ -20,6 +20,12 @@ var rootPresets = map[string][]string{
 	".github/copilot-instructions.md": {"copilot"},
 }
 
+// RootOwners returns the presets that write the root file by default, or nil
+// when no table entry exists. The caller owns the returned slice.
+func RootOwners(rootFile string) []string {
+	return append([]string(nil), rootPresets[targetmatch.Normalize(rootFile)]...)
+}
+
 // SharedRootFile reports whether several presets write the root file, so it
 // must render identically whichever of them writes it last.
 func SharedRootFile(rootFile string) bool {
@@ -34,6 +40,9 @@ func RootTarget(preset, rootFile string) Target {
 // rootOwners returns the preset names a target must name to select the root
 // file of t.
 func rootOwners(t Target) []string {
+	if len(t.Owners) > 0 {
+		return t.Owners
+	}
 	if owners, ok := rootPresets[targetmatch.Normalize(t.RootFile)]; ok {
 		return owners
 	}
