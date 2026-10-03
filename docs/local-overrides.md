@@ -115,21 +115,30 @@ instead of the local content. If local content exists but no `AGENTS.md` is prod
 
 `.claude/settings.json`, `.gemini/settings.json`, `opencode.json`, `.mcp.json`, `.agents/settings.json` and
 `.xum/mcp.jsonc` can hold your own settings beside what ai-rulez writes. ai-rulez records, per document, the MCP
-server entries, array elements and scalar keys it merged in, in the local manifest.
+server entries, array elements and scalar keys it merged in, each with a digest of the value it wrote (never the
+value, which may be a secret). A document it wrote whole is recorded in the committed manifest, a document shared
+with you or carrying overlay content in the local manifest.
 
-- **`clean`** removes exactly those entries and keeps every other key and the document's formatting. A key or
-  object the removal leaves empty is dropped, and a document with nothing else in it is deleted. This includes an
-  `mcpServers` entry that holds a resolved secret (a header or env value from your overlay), which previously
-  outlived the overlay in a hand-written `.claude/settings.json`.
+- **`clean`** removes exactly those entries, only while they still hold the value ai-rulez wrote, and keeps every
+  other key and the document's formatting. An entry you edited is yours: it stays and `clean` warns once, naming
+  the file and key. A key or object the removal leaves empty is dropped, and a document with nothing else in it is
+  deleted (a document made only of ai-rulez's keys, such as one it created, is therefore deleted by `clean`). This
+  includes an `mcpServers` entry that holds a resolved secret (a header or env value from your overlay), which
+  previously outlived the overlay in a hand-written `.claude/settings.json`.
 - **`generate`** takes back what an earlier run recorded and this one no longer produces: a preset removed from the
   config, or an MCP server removed. It works after the overlay is deleted, because the record is the local
   manifest. `generate --dry-run` lists these as `unmerge:` lines.
-- **No record.** A document merged by 4.23.0 or earlier, or a fresh clone, has no record. The fallback is narrow:
-  `clean` removes the MCP servers your config declares by name, the ai-rulez self-registration when it equals what
-  ai-rulez writes, a `context.fileName` that exactly equals a value ai-rulez wrote, `AGENTS.local.md` entries of
-  `instructions`, and an OpenCode `$schema` that is the document's only key. `generate` applies the same fallback
-  only when no enabled preset writes the document. A server removed from the config before the first run that
-  records it is not recognized and stays; delete it by hand.
+- **No record.** A document merged by 4.23.0 or earlier, or a fresh clone, has no record. The fallback runs on
+  `clean` only, never on `generate`, and is narrow: it removes an MCP server your config declares by name only when
+  its value equals what the config would render for that document (a hand-written server of the same name with
+  another value stays, with a warning, even if the preset that would write it is off), the ai-rulez
+  self-registration when it equals what ai-rulez writes, a `context.fileName` that exactly equals a value ai-rulez
+  wrote, `AGENTS.local.md` entries of `instructions`, and an OpenCode `$schema` that is the document's only key. A
+  hand-written value that happens to equal what ai-rulez would render is indistinguishable from its own and is
+  removed. A server removed from the config before the first run that records it is not recognized and stays;
+  delete it by hand.
+- **Hand-written servers.** A server whose name is not in your config is never touched. One with the same name as
+  a configured server is replaced by the configured value on `generate`.
 - **Gemini `context.fileName`.** A value that exactly equals one of ai-rulez's forms (`["AGENTS.md"]`,
   `["AGENTS.md", "GEMINI.local.md"]`, `["GEMINI.md", "GEMINI.local.md"]`) is ai-rulez's, with or without a
   manifest, and is rewritten to the current form (this is how `agents_md` toggles it). Any other value is yours: it
@@ -145,6 +154,9 @@ server entries, array elements and scalar keys it merged in, in the local manife
   `instructions` registration would be written, `generate` warns (and `GEMINI.local.md` or `AGENTS.local.md` is not
   loaded until you add it by hand); generation does not stop. When MCP servers must be written into such a document,
   `generate` still stops with a hint, as before. `clean` leaves a commented document alone with a warning.
+  This includes `.xum/mcp.jsonc`, which is JSONC by definition: once you add a comment, ai-rulez can no longer
+  edit it, so the servers it merged stay after a preset or server is removed or after `clean`. It warns once per
+  run; remove those entries by hand.
 - `clean` does not print the Gemini `context.fileName` advice.
 
 ### Collisions
