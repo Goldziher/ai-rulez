@@ -64,7 +64,7 @@ func (g *WindsurfPresetGenerator) Generate(content *config.ContentTree, baseDir 
 	}
 
 	// Windsurf has no root file: every rule and context item is a file, whatever [rules] mode says.
-	ruleOutputs, err := rulesFolderOutputs(windsurfRulesTarget, content, baseDir, cfg, rulefiles.RoutingEverything, nil)
+	ruleOutputs, err := rulesFolderOutputs(windsurfRulesTarget, content, baseDir, cfg, routingWithSharedAgentsMD(cfg, windsurfPresetName, rulefiles.RoutingEverything), nil)
 	if err != nil {
 		return nil, err
 	}

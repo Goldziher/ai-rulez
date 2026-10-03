@@ -73,7 +73,7 @@ func (g *ContinueDevPresetGenerator) Generate(content *config.ContentTree, baseD
 	if !rulefiles.InScope(cfg) {
 		outputs = append(outputs, config.OutputFile{Path: filepath.Join(baseDir, ".continue", "rules"), IsDir: true})
 	}
-	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, rulefiles.RoutingAll, nil)
+	ruleOutputs, err := rulesFolderOutputs(continueRulesTarget, content, baseDir, cfg, routingWithSharedAgentsMD(cfg, continueDevPresetName, rulefiles.RoutingAll), nil)
 	if err != nil {
 		return nil, fmt.Errorf("generate rule files: %w", err)
 	}
