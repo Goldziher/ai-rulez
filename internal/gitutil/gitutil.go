@@ -9,8 +9,10 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -122,6 +124,166 @@ func IgnoredAmong(dir string, paths []string) (map[string]bool, error) {
 		}
 	}
 	return ignored, nil
+}
+
+// IgnoreMatch is the last ignore rule git found for one path.
+type IgnoreMatch struct {
+	Source  string // file holding the rule; empty when nothing matched
+	Line    int
+	Pattern string // as written, "!" prefix included; empty when nothing matched
+}
+
+// Matched reports whether any rule matched the path.
+func (m IgnoreMatch) Matched() bool { return m.Pattern != "" }
+
+// Negated reports whether the last matching rule un-ignores the path.
+func (m IgnoreMatch) Negated() bool { return strings.HasPrefix(m.Pattern, "!") }
+
+// Ignored reports whether the last matching rule ignores the path.
+func (m IgnoreMatch) Ignored() bool { return m.Matched() && !m.Negated() }
+
+// IgnoreRules returns, for each of paths (slash-separated, relative to dir), the
+// last rule git matched across .gitignore files, .git/info/exclude and the global
+// excludes file, negations included. Paths nothing matched map to a zero
+// IgnoreMatch. It returns (nil, nil) outside a repository.
+func IgnoreRules(dir string, paths []string) (map[string]IgnoreMatch, error) {
+	if len(paths) == 0 || !IsRepo(dir) {
+		return nil, nil
+	}
+	return checkIgnore(dir, nil, paths)
+}
+
+// checkIgnore runs one batched verbose check-ignore in dir.
+func checkIgnore(dir string, gitFlags, paths []string) (map[string]IgnoreMatch, error) {
+	var stdin bytes.Buffer
+	for _, p := range paths {
+		stdin.WriteString(p)
+		stdin.WriteByte(0)
+	}
+	args := append(append([]string{}, gitFlags...), "check-ignore", "--no-index", "-v", "-n", "--stdin", "-z")
+	out, code, err := run(dir, stdin.Bytes(), args...)
+	if err != nil && code != 1 { // exit status 1 means "none of them is ignored"
+		return nil, err
+	}
+	// -z -v -n emits <source> <line> <pattern> <path>, each NUL-terminated.
+	fields := strings.Split(string(out), "\x00")
+	rules := make(map[string]IgnoreMatch, len(paths))
+	for i := 0; i+3 < len(fields); i += 4 {
+		line := 0
+		if n, convErr := strconv.Atoi(fields[i+1]); convErr == nil {
+			line = n
+		}
+		rules[filepath.ToSlash(fields[i+3])] = IgnoreMatch{Source: fields[i], Line: line, Pattern: fields[i+2]}
+	}
+	return rules, nil
+}
+
+// IgnoreRulesMirrored is IgnoreRules evaluated against a throwaway copy of the
+// repository's ignore files, so the caller can leave out content of its own
+// without touching the user's files. rewrite receives each ignore file's path
+// (slash-separated, relative to the work tree root, or "info/exclude" for the
+// repository exclude file) and its content, and returns the content to use. The
+// global excludes file is honored as configured. Paths are relative to dir. It
+// returns (nil, nil) outside a repository.
+func IgnoreRulesMirrored(dir string, paths []string, rewrite func(rel, content string) string) (map[string]IgnoreMatch, error) {
+	if len(paths) == 0 || !IsRepo(dir) {
+		return nil, nil
+	}
+	top := TopLevel(dir)
+	prefix := RepoRelative(top, dir)
+	if top == "" || prefix == "" {
+		return nil, oops.Errorf("cannot place %s inside its repository", dir)
+	}
+	if prefix == "." {
+		prefix = ""
+	} else {
+		prefix += "/"
+	}
+
+	mirror, err := os.MkdirTemp("", "ai-rulez-ignore-")
+	if err != nil {
+		return nil, oops.Wrapf(err, "create ignore mirror")
+	}
+	defer os.RemoveAll(mirror) //nolint:errcheck // best-effort cleanup of a temp dir
+	if err := fillIgnoreMirror(dir, top, mirror, rewrite); err != nil {
+		return nil, err
+	}
+
+	var flags []string
+	if v, _, cfgErr := run(dir, nil, "config", "--get", "--type=path", "core.excludesFile"); cfgErr == nil {
+		if path := strings.TrimSpace(string(v)); path != "" {
+			flags = []string{"-c", "core.excludesFile=" + path}
+		}
+	}
+	prefixed := make([]string, len(paths))
+	for i, p := range paths {
+		prefixed[i] = prefix + p
+	}
+	rules, err := checkIgnore(mirror, flags, prefixed)
+	if err != nil {
+		return nil, err
+	}
+	back := make(map[string]IgnoreMatch, len(rules))
+	for p, m := range rules {
+		back[strings.TrimPrefix(p, prefix)] = m
+	}
+	return back, nil
+}
+
+// fillIgnoreMirror makes mirror a repository holding copies of top's ignore
+// files (and the exclude file) passed through rewrite.
+func fillIgnoreMirror(dir, top, mirror string, rewrite func(rel, content string) string) error {
+	if _, _, err := run(mirror, nil, "init", "-q"); err != nil {
+		return err
+	}
+
+	// Tracked and untracked-but-not-ignored files cover every .gitignore git
+	// would read; one inside an ignored directory is never consulted anyway.
+	out, _, err := run(top, nil, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ":(glob)**/.gitignore")
+	if err != nil {
+		return err
+	}
+	seen := map[string]bool{}
+	for _, rel := range strings.Split(string(out), "\x00") {
+		rel = filepath.ToSlash(rel)
+		if rel == "" || seen[rel] {
+			continue
+		}
+		seen[rel] = true
+		if err := copyRewritten(filepath.Join(top, filepath.FromSlash(rel)), filepath.Join(mirror, filepath.FromSlash(rel)), rel, rewrite); err != nil {
+			return err
+		}
+	}
+	if exclude := InfoExcludePath(dir); exclude != "" {
+		if err := copyRewritten(exclude, filepath.Join(mirror, ".git", "info", "exclude"), "info/exclude", rewrite); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// copyRewritten copies src to dst (creating parents) with its content passed
+// through rewrite. A missing src is skipped.
+func copyRewritten(src, dst, rel string, rewrite func(rel, content string) string) error {
+	data, err := os.ReadFile(src) //nolint:gosec // ignore file located through git
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return oops.With("path", src).Wrapf(err, "read ignore file")
+	}
+	content := string(data)
+	if rewrite != nil {
+		content = rewrite(rel, content)
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return oops.Wrapf(err, "create ignore mirror directory")
+	}
+	if err := os.WriteFile(dst, []byte(content), 0o600); err != nil {
+		return oops.With("path", dst).Wrapf(err, "write ignore mirror")
+	}
+	return nil
 }
 
 // InfoExcludePath returns the repository's info/exclude file, resolved through

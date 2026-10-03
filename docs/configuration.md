@@ -350,6 +350,15 @@ When `true`, ai-rulez adds the specific generated files and owned subdirectories
 ai-rulez ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
 and `.github/skills/` without ignoring all of `.github/`.
 
+ai-rulez adds only what git does not already ignore. Before writing, it asks git (`git check-ignore`) about each
+entry against every ignore source (all `.gitignore` files, `.git/info/exclude`, `core.excludesFile`) with its own
+block left out, and skips an entry when a rule of yours already ignores it, or when your last matching rule is a
+negation (`!CLAUDE.md`), which is read as a deliberate override and never re-ignored. The managed
+`# BEGIN ai-rulez` / `# END ai-rulez` block holds only the remainder and is removed when nothing is left. A negated
+machine-local or secret output (`*.local.*`, `config.local.*`, `.ai-rulez/local/`, a generated MCP config holding
+secrets) is also left out of the block, with a warning; generation still refuses to write a secret-bearing MCP config
+that ends up unignored. Outside a git repository, or when git is unavailable, every entry is added.
+
 Machine-local outputs and sources are **always** gitignored, even when `gitignore = false`: the
 `*.local.*` outputs (`CLAUDE.local.md`, `AGENTS.local.md`, `GEMINI.local.md`, `<rulesdir>/*.local.*`,
 `.github/instructions/ai-rulez.local.instructions.md`), the `.ai-rulez/local/` source tree, the
