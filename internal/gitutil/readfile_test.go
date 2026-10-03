@@ -1,0 +1,66 @@
+package gitutil
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestReadIgnoreFile(t *testing.T) {
+	dir := t.TempDir()
+	regular := filepath.Join(dir, "regular")
+	require.NoError(t, os.WriteFile(regular, []byte("a\nb\n"), 0o644))
+	big := filepath.Join(dir, "big")
+	require.NoError(t, os.WriteFile(big, []byte("0123456789"), 0o644))
+	link := filepath.Join(dir, "link")
+	if err := os.Symlink(regular, link); err != nil {
+		t.Skipf("symlinks unavailable: %v", err)
+	}
+	devLink := filepath.Join(dir, "dev")
+	require.NoError(t, os.Symlink(os.DevNull, devLink))
+	old := maxIgnoreFileSize
+	t.Cleanup(func() { maxIgnoreFileSize = old })
+
+	tests := []struct {
+		name    string
+		path    string
+		limit   int64
+		want    string
+		wantErr error
+		missing bool
+	}{
+		{"regular file", regular, 100, "a\nb\n", nil, false},
+		{"symlink to regular file", link, 100, "a\nb\n", nil, false},
+		{"symlink to a device", devLink, 100, "", ErrNotRegular, false},
+		{"over the size limit", big, 5, "", ErrTooLarge, false},
+		{"missing", filepath.Join(dir, "nope"), 100, "", nil, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
+			maxIgnoreFileSize = tt.limit
+
+			// Act
+			data, err := ReadIgnoreFile(tt.path)
+
+			// Assert
+			switch {
+			case tt.missing:
+				assert.True(t, os.IsNotExist(err))
+			case tt.wantErr != nil:
+				assert.ErrorIs(t, err, tt.wantErr)
+			default:
+				require.NoError(t, err)
+				assert.Equal(t, tt.want, string(data))
+			}
+			lenient, lenientErr := ReadIgnoreFileOrEmpty(tt.path)
+			if tt.wantErr != nil {
+				assert.NoError(t, lenientErr)
+				assert.Empty(t, lenient)
+			}
+		})
+	}
+}
