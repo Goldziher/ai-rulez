@@ -149,9 +149,10 @@ func TestGolden_OpenCodeV2PluginAndContent(t *testing.T) {
 	out := generateFixture(t)
 
 	plugin := string(out[".opencode/plugins/basemind.js"])
-	assert.Contains(t, plugin, `from "@opencode/plugin"`)
-	assert.Contains(t, plugin, "Plugin.define")
+	assert.Contains(t, plugin, "export default {")
 	assert.Contains(t, plugin, `id: "basemind"`)
+	assert.Contains(t, plugin, "registerBundledContent(ctx)")
+	assert.Contains(t, out, ".opencode/ai-rulez-content.js", "bundled content registration helper")
 
 	pkg := parseJSON(t, out["package.json"])
 	deps := pkg["dependencies"].(map[string]any)
