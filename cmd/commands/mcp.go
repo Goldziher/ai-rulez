@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"os"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -12,6 +13,9 @@ import (
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )
+
+// flagServeDomain names the --domain flag of the skills server.
+const flagServeDomain = "domain"
 
 var MCPCmd = &cobra.Command{
 	Use:   "mcp",
@@ -33,7 +37,7 @@ that mode, so it is safe to hand to an unattended agent.`,
 
 func runMCPServer(cmd *cobra.Command, args []string) {
 	ctx := context.Background()
-	serveOnly := []string{"profile", "targets", "domain", "allow", "deny"}
+	serveOnly := []string{"profile", "targets", flagServeDomain, "allow", "deny"}
 	if serve, _ := cmd.Flags().GetBool("serve-skills"); !serve {
 		for _, name := range serveOnly {
 			if cmd.Flags().Changed(name) {
@@ -69,11 +73,22 @@ func runMCPServer(cmd *cobra.Command, args []string) {
 // read-only serving server. Nothing is written to disk.
 func buildSkillServer(ctx context.Context, cmd *cobra.Command) (*mcp.Server, error) {
 	flags := cmd.Flags()
-	profile, _ := flags.GetString("profile")
-	preset, _ := flags.GetString("targets")
-	domains, _ := flags.GetStringSlice("domain")
-	allow, _ := flags.GetStringSlice("allow")
-	deny, _ := flags.GetStringSlice("deny")
+	var flagErr error
+	str := func(name string) string {
+		v, err := flags.GetString(name)
+		flagErr = errors.Join(flagErr, err)
+		return v
+	}
+	list := func(name string) []string {
+		v, err := flags.GetStringSlice(name)
+		flagErr = errors.Join(flagErr, err)
+		return v
+	}
+	profile, preset := str("profile"), str("targets")
+	domains, allow, deny := list(flagServeDomain), list("allow"), list("deny")
+	if flagErr != nil {
+		return nil, oops.Wrapf(flagErr, "read flags")
+	}
 
 	wd, err := os.Getwd()
 	if err != nil {
@@ -101,7 +116,7 @@ func init() {
 	MCPCmd.Flags().Bool("serve-skills", false, "Serve skills read-only over the MCP Skills extension instead of the authoring tools")
 	MCPCmd.Flags().String("profile", "", "Profile whose skills to serve (default: the configured default profile; requires --serve-skills)")
 	MCPCmd.Flags().String("targets", "", "Preset whose rendering of the skills to serve (default: first configured preset with skills; requires --serve-skills)")
-	MCPCmd.Flags().StringSlice("domain", nil, "Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills)")
+	MCPCmd.Flags().StringSlice(flagServeDomain, nil, "Only serve skills of these domains; 'root' selects skills in no domain (requires --serve-skills)")
 	MCPCmd.Flags().StringSlice("allow", nil, "Only serve skills whose name matches one of these glob patterns (requires --serve-skills)")
 	MCPCmd.Flags().StringSlice("deny", nil, "Never serve skills whose name matches one of these glob patterns; wins over --allow (requires --serve-skills)")
 	MCPCmd.Flags().String("transport", "stdio", "Transport method (stdio, websocket)")

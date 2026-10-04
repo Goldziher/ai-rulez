@@ -247,7 +247,9 @@ func runListItems(ftype, title, noun string) {
 
 func runListRoot(cmd *cobra.Command, _ []string) {
 	if !listPlacement {
-		_ = cmd.Help()
+		if err := cmd.Help(); err != nil {
+			logger.Error("Failed to print help", "error", err)
+		}
 		return
 	}
 	cfg, err := loadConfigForCommand(context.Background(), nil, pluginLoadOptions(true)...)
