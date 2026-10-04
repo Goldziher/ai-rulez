@@ -751,15 +751,15 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 			lines = append(lines, "create-dir: "+relPath)
 			continue
 		}
-		kind, compared := g.outputState(output)
+		kind, rewrite, compared := g.outputState(output)
 		switch {
 		case !compared:
-		case kind == "":
-			lines = append(lines, "unchanged: "+relPath)
+		case rewrite:
+			lines = append(lines, "write-file: "+relPath)
 		case kind == DriftEdited:
 			lines = append(lines, "edited: "+relPath)
 		default:
-			lines = append(lines, "write-file: "+relPath)
+			lines = append(lines, "unchanged: "+relPath)
 		}
 	}
 	return lines
