@@ -41,6 +41,14 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`AGENTS.md` is now shared by `pi` as well** (`codex`, `opencode`, `xum`, `amp`, `pi`): a frontmatter `targets` naming any of them selects the item for all, and the file renders identically whichever preset writes it last.
 - **Dependency updates**: `go.opentelemetry.io/otel` and `otel/trace` `1.46.0` → `1.47.0`, `github.com/dlclark/regexp2/v2` `2.8.0` → `2.8.2`, and the docs lockfile (`zensical`, `markupsafe`).
 - **Shared MCP entry builder**: the stdio/url MCP server shape used by pi and Gemini is now one helper (`presets.MCPServerEntry`), which Xum's `mcp.jsonc` entry builder also builds on.
+### Added
+
+- **Domain content in plugin bundles**: `[plugin] include_domains` (names or globs) bundles the skills, commands and agents of those domains next to the root content. The default is unchanged (root only).
+- **Per-domain plugins**: `[marketplace.from_domains]` turns each domain into its own plugin, and `[[marketplace.plugins]]` declares plugins from domains and root content. `generate --plugin` writes `<output_dir>/plugins/<name>/` for each and one `.claude-plugin/marketplace.json` with relative sources. Entries can carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance`. `verify --plugin` covers every plugin directory. See `docs/plugins.md`.
+- **Placement**: `[placement]` and a per-item `placement: core|plugin` frontmatter key keep skills and commands out of `.claude/skills` (plugin-only), with `honor_targets` applying frontmatter `targets` to skills. Default: every item is core, as before.
+- **Plugin keys in `.claude/settings.json`**: `[claude.settings] manage = true` owns `extraKnownMarketplaces.<marketplace>` and the listed `enabledPlugins` entries one by one through the existing settings merge, leaving every other key alone. Default off.
+- **Catalog skill**: `[marketplace.catalog_skill]` generates a skill that lists the plugins and how to enable them. Default off.
+- The local overlay and the schema accept `placement` and `claude`; provider specs accept the `placement_core` filter and the `has_mcp_servers_or_plugin_settings` sidecar predicate.
 
 ## [4.23.1] - 2026-10-03
 
