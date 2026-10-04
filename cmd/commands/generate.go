@@ -26,7 +26,6 @@ var (
 	dryRun             bool
 	updateGitignore    bool
 	recursive          bool
-	skipCLIMCP         bool
 	noFetch            bool
 	profile            string
 	configDir          string
@@ -54,8 +53,7 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Deprecated alias for --gitignore")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
-	GenerateCmd.Flags().BoolVarP(&skipCLIMCP, "no-configure-cli-mcp", "M", false, "Skip configuring CLI-based MCP tools (claude, gemini, etc.)")
-	GenerateCmd.Flags().BoolVarP(&skipCLIMCP, "skip-cli-mcp", "S", false, "Skip configuring CLI-based MCP tools (alias)")
+	registerRemovedCLIMCPFlags(GenerateCmd)
 	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
 	GenerateCmd.Flags().BoolVarP(&noFetch, "no-fetch", "f", false, "Skip fetching remote includes, use cached content only")
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
@@ -71,6 +69,20 @@ func init() {
 	}
 	if err := GenerateCmd.Flags().MarkHidden("update-gitignore"); err != nil {
 		logger.Debug("Failed to hide update-gitignore flag", "error", err)
+	}
+}
+
+// registerRemovedCLIMCPFlags keeps --no-configure-cli-mcp / -M and --skip-cli-mcp
+// / -S accepted so existing scripts do not break. generate never configures
+// CLI-based MCP tools (it writes MCP config files only), so the flags have
+// nothing to skip; they are hidden and print a deprecation notice.
+func registerRemovedCLIMCPFlags(cmd *cobra.Command) {
+	var unused bool
+	for _, f := range []struct{ name, short string }{{"no-configure-cli-mcp", "M"}, {"skip-cli-mcp", "S"}} {
+		cmd.Flags().BoolVarP(&unused, f.name, f.short, false, "Has no effect: generate does not configure CLI-based MCP tools")
+		if err := cmd.Flags().MarkDeprecated(f.name, "it has no effect, generate only writes MCP config files"); err != nil {
+			logger.Debug("Failed to mark flag as deprecated", "flag", f.name, "error", err)
+		}
 	}
 }
 

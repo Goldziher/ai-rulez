@@ -892,13 +892,12 @@ ai-rulez generate [config-file] [flags]
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
 | `--env` / `-e`                  | string  |               | MCP env override in `KEY=VALUE` form; repeatable                                                                                                        |
 | `--env-file` / `-E`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
-| `--no-configure-cli-mcp` / `-M` | boolean | false         | Skip configuring CLI-based MCP tools such as Claude and Gemini                                                                                          |
-| `--skip-cli-mcp` / `-S`         | boolean | false         | Alias for `--no-configure-cli-mcp`                                                                                                                      |
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
+`--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S` are hidden deprecated no-ops kept so existing scripts keep working: `generate` only writes MCP config files and never configures CLI tools, so there is nothing to skip.
 
 **Examples:**
 
