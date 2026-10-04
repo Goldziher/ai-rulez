@@ -657,7 +657,7 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 func (g *Generator) applyResolvedScalars(frontmatter map[string]any, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) {
 	if spec.EmitEffort {
 		if mapped := g.resolveEffort(item, cfg); mapped != "" {
-			frontmatter["effort"] = mapped
+			frontmatter[effortFrontmatterKey(spec)] = mapped
 		}
 	}
 	if spec.EmitModel && g.Spec.Model != nil {
@@ -665,6 +665,15 @@ func (g *Generator) applyResolvedScalars(frontmatter map[string]any, spec *Front
 			frontmatter[g.Spec.Model.Field] = model
 		}
 	}
+}
+
+// effortFrontmatterKey is the key the resolved effort is written under: the
+// spec's effort_field, or "effort" when it leaves it unset.
+func effortFrontmatterKey(spec *FrontmatterSpec) string {
+	if spec.EffortField != "" {
+		return spec.EffortField
+	}
+	return "effort"
 }
 
 func applyTypedLists(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
