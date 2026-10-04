@@ -46,6 +46,12 @@ type Config struct {
 	Plugin      *PluginAuthoring      `yaml:"plugin,omitempty" json:"plugin,omitempty" toml:"plugin,omitempty"`
 	Marketplace *MarketplaceAuthoring `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
 
+	// Placement decides whether skills and commands are generated into
+	// .claude/skills (core) or shipped only through a plugin.
+	Placement *PlacementConfig `yaml:"placement,omitempty" json:"placement,omitempty" toml:"placement,omitempty"`
+	// Claude holds Claude Code specific output options.
+	Claude *ClaudeConfig `yaml:"claude,omitempty" json:"claude,omitempty" toml:"claude,omitempty"`
+
 	// Runtime fields (populated during load)
 	BaseDir       string `yaml:"-" json:"-" toml:"-"`
 	ConfigDir     string `yaml:"-" json:"-" toml:"-"`
@@ -103,7 +109,7 @@ type Config struct {
 // HasPluginAuthoring reports whether the configuration produces a plugin or a
 // multi-plugin marketplace. Consumer-side [[plugins]] declarations do not count.
 func (c *Config) HasPluginAuthoring() bool {
-	return c.Plugin != nil || (c.Marketplace != nil && len(c.Marketplace.Members) > 0)
+	return c.Plugin != nil || (c.Marketplace != nil && (len(c.Marketplace.Members) > 0 || c.Marketplace.HasDomainPlugins()))
 }
 
 // ScopeConfig configures an additional scoped output root for directory-aware
