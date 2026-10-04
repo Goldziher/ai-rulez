@@ -63,7 +63,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	// useful while the outputs are being removed.
 	defer rulefiles.SetWarnSink(func(msg string, _ ...any) { logger.Debug(msg) })()
 
-	outputs, activeProfile, err := g.collectOutputs(profile)
+	outputs, activeProfile, err := g.collectForClean(profile)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +81,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	// Include files recorded in the manifest from earlier runs that the current
 	// profile no longer emits (e.g. a preset was removed): the exact set generate
 	// itself cleans up as stale.
-	plan.Files = append(plan.Files, g.staleManifestFiles(outputs)...)
+	plan.Files = append(plan.Files, g.cleanStaleFiles(outputs)...)
 	// Merged documents shared with the user lose only what ai-rulez wrote into
 	// them; one that holds nothing else goes with the other generated files.
 	edits := g.planUnmerge(outputs, true)
@@ -104,9 +104,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 			plan.LocalManifestPath = mp
 		}
 	}
-	if !opts.KeepGitignore {
-		plan.GitignoreEdited = g.gitignoreHasManagedBlock()
-	}
+	plan.GitignoreEdited = !opts.KeepGitignore && !g.userMode && g.gitignoreHasManagedBlock()
 
 	if opts.DryRun {
 		return plan, nil
@@ -125,19 +123,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 	if plan.LocalManifestPath != "" {
 		g.removeStaleFile(plan.LocalManifestPath)
 	}
-	if plan.GitignoreEdited {
-		if err := g.stripGitignoreManagedBlock(); err != nil {
-			logger.Warn("Failed to strip .gitignore managed block", "error", err)
-			plan.GitignoreEdited = false
-		}
-	}
-	if !opts.KeepGitignore {
-		// This project's block in .git/info/exclude names machine-local outputs
-		// that were just removed; no paths means the block is dropped.
-		if err := g.syncMachineExcludes(nil); err != nil {
-			logger.Warn("Failed to remove .git/info/exclude block", "error", err)
-		}
-	}
+	g.cleanGitignore(opts, plan)
 
 	return plan, nil
 }
@@ -163,6 +149,10 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 		}
 		// A hand-written file in a shared rules folder is not ours to delete.
 		if output.RawContent == nil && g.isUnmanagedRuleFile(abs, g.finalContent(output)) {
+			continue
+		}
+		// In user scope a file is removed only when ai-rulez wrote it.
+		if g.userMode && !g.userManaged(abs, output) {
 			continue
 		}
 		plan.Files = append(plan.Files, abs)
@@ -291,6 +281,9 @@ dirLoop:
 // the file's own directory when there is none. Visible directories above that,
 // such as a monorepo scope directory, hold sources and are never candidates.
 func (g *Generator) pruneCandidates(removed []string) []string {
+	if g.userMode {
+		return g.userPruneCandidates(removed)
+	}
 	seen := make(map[string]bool, len(removed))
 	var dirs []string
 	for _, file := range removed {
@@ -370,4 +363,45 @@ func removeDirIfEmpty(dir string) {
 func pathIsFile(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()
+}
+
+// collectForClean collects the outputs clean plans against: the project's, or in
+// user scope the ones mapped into the home directory.
+func (g *Generator) collectForClean(profile string) ([]config.OutputFile, string, error) {
+	if !g.userMode {
+		return g.collectOutputs(profile)
+	}
+	outputs, active, _, err := g.collectUserOutputs(profile)
+	return outputs, active, err
+}
+
+// cleanStaleFiles lists the files the manifest records that the current outputs
+// no longer include. In user scope a file the user has since replaced stays.
+func (g *Generator) cleanStaleFiles(outputs []config.OutputFile) []string {
+	if g.userMode {
+		return g.userStale(outputs)
+	}
+	return g.staleManifestFiles(outputs)
+}
+
+// cleanGitignore strips the managed .gitignore block and the project's block in
+// .git/info/exclude. User scope has neither: it never touches the home directory's
+// git configuration.
+func (g *Generator) cleanGitignore(opts CleanOptions, plan *CleanPlan) {
+	if g.userMode {
+		return
+	}
+	if plan.GitignoreEdited {
+		if err := g.stripGitignoreManagedBlock(); err != nil {
+			logger.Warn("Failed to strip .gitignore managed block", "error", err)
+			plan.GitignoreEdited = false
+		}
+	}
+	if !opts.KeepGitignore {
+		// This project's block in .git/info/exclude names machine-local outputs
+		// that were just removed; no paths means the block is dropped.
+		if err := g.syncMachineExcludes(nil); err != nil {
+			logger.Warn("Failed to remove .git/info/exclude block", "error", err)
+		}
+	}
 }
