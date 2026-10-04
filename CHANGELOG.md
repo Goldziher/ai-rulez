@@ -49,6 +49,9 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Plugin keys in `.claude/settings.json`**: `[claude.settings] manage = true` owns `extraKnownMarketplaces.<marketplace>` and the listed `enabledPlugins` entries one by one through the existing settings merge, leaving every other key alone. Default off.
 - **Catalog skill**: `[marketplace.catalog_skill]` generates a skill that lists the plugins and how to enable them. Default off.
 - The local overlay and the schema accept `placement` and `claude`; provider specs accept the `placement_core` filter and the `has_mcp_servers_or_plugin_settings` sidecar predicate.
+### Added
+
+- **`ai-rulez validate --strict`**: deep content validation that finds instructions that parse but do not work. Twenty checks with stable codes (`AR101`...`AR951`) cover `paths`/`globs` that match no tracked file, unresolved relative links and anchors, references to skills, agents, rules and commands that do not exist, missing repo paths, hook files that are missing or not executable, skill scripts without the executable bit, MCP commands not on `PATH`, duplicate and near-duplicate descriptions, description and skill-name quality, size budgets and required frontmatter keys. Findings carry a severity and `file:line`; `--format json` prints them as JSON, `--recursive` lints every nested root, and exit status 2 (distinct from 1 for an invalid config) means findings at or above `--fail-on`. Severities, ignores, allow-lists, budgets and required metadata are configured in a new `[lint]` table, and one finding can be silenced with an `ai-rulez-lint-ignore` comment. See `docs/strict-validation.md`.
 
 ## [4.23.1] - 2026-10-03
 
