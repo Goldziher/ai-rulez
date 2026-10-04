@@ -71,6 +71,9 @@ func init() {
 	GenerateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	GenerateCmd.Flags().BoolVar(&allowLocalDrift, "allow-local-drift", false,
 		"Write output even when machine-local config would change files shared with the team")
+	GenerateCmd.Flags().BoolVar(&userScope, "user", false,
+		"Generate the user-level config (default ~/.config/ai-rulez, or --config) into the home directories each harness reads: ~/.claude, ~/.agents/skills, ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent")
+	GenerateCmd.Flags().BoolVarP(&assumeYes, "yes", "y", false, "With --user: write without the confirmation prompt")
 	GenerateCmd.Flags().BoolVar(&pluginMode, "plugin", false, "Generate distributable plugin bundles and a marketplace index from the [plugin] block")
 	GenerateCmd.Flags().BoolVar(&pluginIfConfigured, "if-configured", false, "Skip plugin generation when no plugin authoring configuration is present")
 	if err := GenerateCmd.Flags().MarkDeprecated("update-gitignore", "use --gitignore instead"); err != nil {
@@ -104,6 +107,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	if generateCheck {
 		runGenerateCheck(args)
+		return
+	}
+
+	if handleUserGenerate(args) {
 		return
 	}
 

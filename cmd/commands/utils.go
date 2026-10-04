@@ -26,7 +26,19 @@ func newContentOperator(local bool) (*crud.OperatorImpl, error) {
 // Returns true if the user confirms, false otherwise
 // If resourceType is empty, uses resourceName as the full description
 func confirmRemoval(resourceType, resourceName string) bool {
-	// Check for non-interactive terminal
+	// Build confirmation message
+	var prompt string
+	if resourceType == "" {
+		prompt = fmt.Sprintf("Are you sure you want to remove %s? (y/N): ", resourceName)
+	} else {
+		prompt = fmt.Sprintf("Are you sure you want to remove %s '%s'? (y/N): ", resourceType, resourceName)
+	}
+	return askYesNo(prompt)
+}
+
+// askYesNo prints prompt and reads a yes/no answer from an interactive terminal;
+// a pipe, CI or any other non-interactive input answers no.
+func askYesNo(prompt string) bool {
 	stat, err := os.Stdin.Stat()
 	if err != nil {
 		return false
@@ -34,14 +46,6 @@ func confirmRemoval(resourceType, resourceName string) bool {
 	if (stat.Mode() & os.ModeCharDevice) == 0 {
 		// Non-interactive terminal
 		return false
-	}
-
-	// Build confirmation message
-	var prompt string
-	if resourceType == "" {
-		prompt = fmt.Sprintf("Are you sure you want to remove %s? (y/N): ", resourceName)
-	} else {
-		prompt = fmt.Sprintf("Are you sure you want to remove %s '%s'? (y/N): ", resourceType, resourceName)
 	}
 
 	fmt.Print(prompt)
