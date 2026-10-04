@@ -61,15 +61,20 @@ func TestBaz_ComposesWithClaudeAndCodex(t *testing.T) {
 			_, err := os.Stat(filepath.Join(root, ".agents", "commands"))
 			assert.True(t, os.IsNotExist(err))
 
-			claude := false
+			claude, codex := false, false
 			for _, p := range tt.presets {
 				claude = claude || p == "claude"
+				codex = codex || p == "codex"
 			}
 			_, skillsErr := os.Stat(filepath.Join(root, ".agents", "skills", "alpha", "SKILL.md"))
 			_, claudeSkillsErr := os.Stat(filepath.Join(root, ".claude", "skills", "alpha", "SKILL.md"))
 			if claude && tt.flag == "" {
-				assert.True(t, os.IsNotExist(skillsErr), "claude already provides the skill at .claude/skills")
 				assert.NoError(t, claudeSkillsErr)
+				if codex {
+					assert.NoError(t, skillsErr, "codex writes the skill to .agents/skills")
+				} else {
+					assert.True(t, os.IsNotExist(skillsErr), "claude already provides the skill at .claude/skills")
+				}
 			}
 		})
 	}
