@@ -292,6 +292,8 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		m.Homepage = root.Homepage
 		m.Repository = root.Repository
 		m.License = root.License
+		m.Codex = root.Codex
+		m.Cursor = root.Cursor
 	}
 	if m.Market.Owner == nil {
 		m.Market.Owner = m.Author

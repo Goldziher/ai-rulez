@@ -1,9 +1,12 @@
 package plugin
 
 import (
+	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/samber/oops"
 )
 
 func init() {
@@ -53,6 +56,76 @@ func renderGemini(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	if err != nil {
 		return nil, err
 	}
+	outputs = append(outputs, out)
 
-	return append(outputs, out), nil
+	if m.Gemini != nil && m.Gemini.Commands {
+		commands, err := geminiCommands(m, baseDir)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, commands...)
+	}
+	return outputs, nil
+}
+
+// geminiCommands converts each bundled command to a Gemini custom command,
+// commands/<name>.toml with a required prompt and an optional description
+// (https://geminicli.com/docs/cli/custom-commands/). The Claude-style
+// $ARGUMENTS placeholder becomes Gemini's {{args}}; the body is otherwise kept.
+// Agents and hooks are not bundled: the extension reference links their formats
+// elsewhere and ai-rulez does not translate into an unverified one.
+func geminiCommands(m *Manifest, baseDir string) ([]config.OutputFile, error) {
+	var outputs []config.OutputFile
+	for i := range m.Commands {
+		cf := &m.Commands[i]
+		if cf.Path == "" || strings.HasPrefix(cf.Path, "builtin://") {
+			continue
+		}
+		data, err := os.ReadFile(cf.Path)
+		if err != nil {
+			return nil, oops.With("path", cf.Path).Wrapf(err, "read command source")
+		}
+		meta, body := config.ParseFrontmatterPublic(string(data))
+		body = strings.ReplaceAll(strings.TrimSpace(body), "$ARGUMENTS", "{{args}}")
+		var toml strings.Builder
+		if desc := config.SkillDescription(meta); desc != "" {
+			toml.WriteString("description = " + tomlBasicString(desc) + "\n")
+		}
+		toml.WriteString("prompt = \"\"\"\n" + tomlMultiline(body) + "\n\"\"\"\n")
+		outputs = append(outputs, config.OutputFile{
+			Path:       filepath.Join(baseDir, "commands", cf.Name+".toml"),
+			RawContent: []byte(toml.String()),
+		})
+	}
+	return outputs, nil
+}
+
+// tomlBasicString renders s as a single-line TOML basic string.
+func tomlBasicString(s string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for _, r := range s {
+		switch r {
+		case '\\':
+			b.WriteString(`\\`)
+		case '"':
+			b.WriteString(`\"`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		default:
+			b.WriteRune(r)
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
+}
+
+// tomlMultiline escapes s for the inside of a TOML multi-line basic string.
+func tomlMultiline(s string) string {
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	return strings.ReplaceAll(s, `"""`, `\"\"\"`)
 }

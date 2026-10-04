@@ -2,6 +2,7 @@ package plugin
 
 import (
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -49,7 +50,37 @@ func mergedMCPFile(path string, servers map[string]mcpEntry) (config.OutputFile,
 	}, nil
 }
 
+// codexRootLayout reports whether the Codex runtime writes the Agent Plugins
+// root plugin.json (manifest = "root" or "both").
+func codexRootLayout(m *Manifest) bool {
+	return slices.Contains(m.Runtimes, config.PluginRuntimeCodex) && m.Codex.ManifestLayout() != config.CodexManifestLegacy
+}
+
 func renderCodex(m *Manifest, baseDir string) ([]config.OutputFile, error) {
+	layout := m.Codex.ManifestLayout()
+	if layout == config.CodexManifestLegacy {
+		return renderCodexLegacy(m, baseDir)
+	}
+	root, err := agentPluginsCore(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	assets, err := bundleCodexAssets(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	root = append(root, assets...)
+	if layout == config.CodexManifestRoot {
+		return root, nil
+	}
+	legacy, err := renderCodexLegacy(m, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(root, legacy...), nil
+}
+
+func renderCodexLegacy(m *Manifest, baseDir string) ([]config.OutputFile, error) {
 	pluginDir := filepath.Join(baseDir, ".codex-plugin")
 
 	var mcpRef string

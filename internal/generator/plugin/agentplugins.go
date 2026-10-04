@@ -30,6 +30,9 @@ type agentPluginsManifest struct {
 	Repository  string         `json:"repository,omitempty"`
 	License     string         `json:"license,omitempty"`
 	Keywords    []string       `json:"keywords,omitempty"`
+	// Extensions carries client-specific manifest data keyed by reverse-domain
+	// namespace. ai-rulez writes only com.openai (the Codex interface block).
+	Extensions map[string]any `json:"extensions,omitempty"`
 }
 
 // agentPluginsMCPDoc is the root mcp.json shape: exactly $schema + mcpServers.
@@ -52,7 +55,15 @@ type agentPluginsMCPServer struct {
 // plugin.json, the fixed skills/ directory, and (when configured) mcp.json.
 // Commands, agents, hooks, and marketplaces are outside Agent Plugins v1.
 func renderAgentPlugins(m *Manifest, baseDir string) ([]config.OutputFile, error) {
-	manifest, err := jsonOutput(filepath.Join(baseDir, "plugin.json"), agentPluginsManifest{
+	return agentPluginsCore(m, baseDir)
+}
+
+// buildAgentPluginsManifest is the one root plugin.json every runtime built on
+// the standard (agent-plugins, copilot, codex in root layout) writes, so the
+// runtimes can share the file. The Codex interface block is added under
+// extensions.com.openai exactly when the Codex root layout is active.
+func buildAgentPluginsManifest(m *Manifest) agentPluginsManifest {
+	doc := agentPluginsManifest{
 		Schema:      agentPluginsSchema,
 		Name:        m.Name,
 		Version:     m.Version,
@@ -62,7 +73,18 @@ func renderAgentPlugins(m *Manifest, baseDir string) ([]config.OutputFile, error
 		Repository:  m.Repository,
 		License:     m.License,
 		Keywords:    m.Keywords,
-	})
+	}
+	if codexRootLayout(m) {
+		if iface := buildInterface(m.Interface); iface != nil {
+			doc.Extensions = map[string]any{"com.openai": map[string]any{"interface": iface}}
+		}
+	}
+	return doc
+}
+
+// agentPluginsCore writes the root plugin.json, skills/ and mcp.json.
+func agentPluginsCore(m *Manifest, baseDir string) ([]config.OutputFile, error) {
+	manifest, err := jsonOutput(filepath.Join(baseDir, "plugin.json"), buildAgentPluginsManifest(m))
 	if err != nil {
 		return nil, err
 	}

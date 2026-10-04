@@ -27,6 +27,11 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Worktree caveat for the managed marketplace**: `ai-rulez validate` warns once when the managed `extraKnownMarketplaces` directory source is relative and the project is in a linked git worktree.
 - **`ai-rulez list --placement`** prints where every skill and command ends up (core or plugin-only), the plugins that bundle it, and flags plugin-only items no enabled plugin or catalog skill makes reachable.
 - **`AR961 plugin-version-drift`** (`validate --strict`, warning): a generated plugin changed since `HEAD` but kept its version.
+- **Codex root `plugin.json`**: `[plugin.codex] manifest = "root" | "both"` writes the Agent Plugins root manifest Codex documents as preferred (interface under `extensions.com.openai`, fixed `skills/`, root `mcp.json`); `legacy` (`.codex-plugin/plugin.json`) stays the default. `[plugin.codex] marketplace = true` writes `.agents/plugins/marketplace.json` for a single-plugin repository.
+- **`copilot` plugin runtime** (opt-in): root `plugin.json`, `skills/`, `mcp.json`, `com.github.copilot/agents/<name>.agent.md` and `.github/plugin/marketplace.json` in the Agent Plugins 1.0 layout. Commands and hooks are not emitted (no documented format) and a warning says so.
+- **Cursor marketplace index** (opt-in): `[plugin.cursor] marketplace = true` and `[marketplace] cursor_index = true` write `.cursor-plugin/marketplace.json`.
+- **Gemini custom commands** (opt-in): `[plugin.gemini] commands = true` bundles commands as `commands/<name>.toml`.
+- `docs/plugins.md` lists, per runtime, the content types emitted with vendor links and the verification date.
 
 ### Changed
 
@@ -36,6 +41,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - **Claude skills are user-invocable again by default**: the `claude` preset no longer writes the constant `user-invocable: false` on skills (which, with the key now spelled correctly, hid every skill from the `/` menu). The key is written only when the skill sets it or `[claude.skills] hide_from_menu` is on; an author-set `user-invocable` or `disable-model-invocation` is always honoured and written as a boolean. `argument-hint` is passed through on skills again and its "inert" warning was removed.
 - **Claude skill frontmatter key**: skills and commands emitted `user_invocable`, which Claude Code ignores as an unknown field; the documented key is `user-invocable`. Output now carries `user-invocable: true` for commands, and a stale authored `user_invocable` key is no longer passed through.
+- **Deprecated consumer files**: `generate` warns when `[[plugins]]` is set with the `claude` or `codex` preset, because `.claude/plugins.json` and `.codex/plugins.json` are read by neither tool. The files are still written.
+- **Claude skill frontmatter key**: skills and commands emitted `user_invocable`, which Claude Code ignores as an unknown field; the documented key is `user-invocable`. Output now carries `user-invocable: false` for skills and `user-invocable: true` for commands, and a stale authored `user_invocable` key is no longer passed through. Note that Claude Code now honors `false` on skills, which hides them from the `/` menu (Claude can still invoke them).
 - **`--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S`** did nothing (no CLI MCP configuration step exists). They are now hidden, deprecated no-ops that print a notice instead of silently accepting the flag.
 - **Skill and command resource bundling skips build artifacts**: `.venv*`, `venv`, `__pycache__`, `*.pyc`, `node_modules` and `.git` are never listed in `## Resources` or copied, files ignored by `.gitignore` are skipped when the project is in a git work tree, and the new `bundle_exclude` key adds patterns.
 
