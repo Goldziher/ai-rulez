@@ -37,8 +37,12 @@ func (r *runner) scanBody(it *item, d doc) {
 		for _, target := range linkTargets(l.Plain) {
 			r.checkLink(it, l.No, target)
 		}
-		for _, m := range backtickRe.FindAllStringSubmatch(l.Text, -1) {
-			r.checkToken(it, l.No, m[1])
+		for _, m := range backtickRe.FindAllStringSubmatchIndex(l.Text, -1) {
+			tok := l.Text[m[2]:m[3]]
+			if tickSlashRe.MatchString(strings.TrimSpace(tok)) && !slashInvocation(l.Text[:m[0]]) {
+				continue // `/api-docs` in prose is a route, not a command
+			}
+			r.checkToken(it, l.No, tok)
 		}
 		r.checkNames(it, l)
 	}
@@ -194,6 +198,31 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 	r.add(CodeReferenceUnknown, it.abs, line, "references %s %q, which does not exist", kind, name)
 }
 
+var (
+	listMarkerRe = regexp.MustCompile(`^(?:[-*+>]|\d+[.)])\s+`)
+	invokeWords  = map[string]bool{
+		"run": true, "runs": true, "invoke": true, "invokes": true, "type": true, "use": true,
+		"call": true, "command": true, "commands": true, "slash": true, "execute": true, "try": true, "via": true, "or": true, "then": true,
+	}
+)
+
+// slashInvocation reports whether a "/name" token following before reads as a
+// slash command invocation: it starts the line or a list item, or follows a word
+// like "run" or "command". Any other "/word-word" in prose is usually an HTTP
+// route or a URL path, which must not be reported as a missing command.
+func slashInvocation(before string) bool {
+	before = strings.TrimSpace(before)
+	for listMarkerRe.MatchString(before + " ") {
+		before = strings.TrimSpace(listMarkerRe.ReplaceAllString(before+" ", ""))
+	}
+	if before == "" {
+		return true
+	}
+	words := strings.Fields(before)
+	last := strings.ToLower(strings.Trim(words[len(words)-1], "*_:,.;()\"'"))
+	return invokeWords[last]
+}
+
 func (r *runner) checkNames(it *item, l bodyLine) {
 	for _, m := range nameAfterRe.FindAllStringSubmatch(l.Text, -1) {
 		switch m[2] {
@@ -212,8 +241,11 @@ func (r *runner) checkNames(it *item, l bodyLine) {
 			r.requireName(it, l.No, m[2], "agent", r.agents)
 		}
 	}
-	for _, m := range slashRe.FindAllStringSubmatch(l.Plain, -1) {
-		r.requireName(it, l.No, m[1], "command", r.commands, r.skills)
+	for _, m := range slashRe.FindAllStringSubmatchIndex(l.Plain, -1) {
+		if !slashInvocation(l.Plain[:m[2]-1]) {
+			continue // "GET /user-profile" is a route, not a command
+		}
+		r.requireName(it, l.No, l.Plain[m[2]:m[3]], "command", r.commands, r.skills)
 	}
 	for _, m := range skillCallRe.FindAllStringSubmatch(l.Text, -1) {
 		r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
