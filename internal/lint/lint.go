@@ -189,6 +189,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if so.SecurityOnly {
 		r.findings = securityOnly(r.findings)
 	}
+	r.checkSettingsConfig()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		a, b := r.findings[i], r.findings[j]
@@ -946,4 +947,50 @@ func hasFiles(dir string) bool {
 		return nil
 	})
 	return found
+}
+
+// checkSettingsConfig checks the [[hooks]] and [permissions] blocks of
+// config.toml against the tree. The generated settings files may be gitignored,
+// so the declaration is checked at its source: a hook script that is missing or
+// not executable fails the hook at runtime, and an allow rule for a whole tool
+// defeats the point of listing rules.
+func (r *runner) checkSettingsConfig() {
+	if len(r.cfg.Hooks) == 0 && r.cfg.Permissions.IsEmpty() {
+		return
+	}
+	path := r.configFilePath()
+	if path == "" {
+		return
+	}
+	var text []string
+	if data, err := os.ReadFile(path); err == nil {
+		text = strings.Split(string(data), "\n")
+		r.docs[path] = doc{lines: text}
+	}
+	lineOf := func(needle string) int {
+		for i, l := range text {
+			if strings.Contains(l, needle) {
+				return i + 1
+			}
+		}
+		return 1
+	}
+	for _, group := range r.cfg.Hooks {
+		for _, action := range group.Hooks {
+			if action.Script == "" {
+				continue
+			}
+			rel := joinRel(r.baseRel, filepath.ToSlash(filepath.Clean(action.Script)))
+			if !r.tree.Exists(rel) {
+				r.add(CodeHookSourceMissing, path, lineOf(action.Script), "%s hook runs %q, which does not exist", group.Event, action.Script)
+				continue
+			}
+			if exe, known := r.tree.Executable(rel); known && !exe {
+				r.add(CodeHookSourceNotExec, path, lineOf(action.Script), "%s hook runs %q, which is not executable", group.Event, action.Script)
+			}
+		}
+	}
+	for _, rule := range r.cfg.Permissions.OverbroadAllowRules() {
+		r.add(CodePermissionOverbroad, path, lineOf(rule), "permissions.allow %q permits every call of the tool; name the commands or paths it may run", rule)
+	}
 }
