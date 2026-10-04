@@ -643,6 +643,13 @@
           "type": "string",
           "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/"
         },
+        "include_domains": {
+          "type": "array",
+          "description": "Domains (names or globs) whose skills, commands and agents are bundled next to the root content. Empty keeps the bundle root-only. A root item wins over a same-named domain item.",
+          "items": {
+            "type": "string"
+          }
+        },
         "runtimes": {
           "type": "array",
           "items": {
@@ -864,6 +871,70 @@
       },
       "additionalProperties": false
     },
+    "placement": {
+      "type": "object",
+      "description": "Whether skills and commands are generated into .claude/skills (core) or shipped only through a plugin. Absent means every item is core.",
+      "properties": {
+        "default": {
+          "enum": ["core", "plugin"],
+          "description": "Placement of items no pattern or frontmatter decides. Default core."
+        },
+        "core": {
+          "$ref": "#/$defs/patternList",
+          "description": "Names or globs kept in .claude/skills. A pattern matches the item name or domains/<domain>/<name>. Wins over plugin."
+        },
+        "plugin": {
+          "$ref": "#/$defs/patternList",
+          "description": "Names or globs left out of .claude/skills (for example domains/*)."
+        },
+        "honor_targets": {
+          "type": "boolean",
+          "description": "Apply frontmatter targets to skills in .claude/skills, as is already done for commands. Default false."
+        }
+      },
+      "additionalProperties": false
+    },
+    "claude": {
+      "type": "object",
+      "description": "Claude Code specific output options.",
+      "properties": {
+        "settings": {
+          "type": "object",
+          "description": "Opt-in management of the plugin keys of .claude/settings.json. Only the listed entries are owned; every other key survives.",
+          "properties": {
+            "manage": { "type": "boolean", "description": "Default false." },
+            "register_marketplace": {
+              "type": "boolean",
+              "description": "Own extraKnownMarketplaces.<marketplace.name>. Default true when manage is set."
+            },
+            "marketplace_source": {
+              "type": "object",
+              "description": "Source written for the marketplace. Default: a directory source at marketplace.output_dir.",
+              "required": ["source"],
+              "properties": {
+                "source": { "enum": ["directory", "github", "git", "url"] },
+                "path": { "type": "string" },
+                "repo": { "type": "string" },
+                "url": { "type": "string" },
+                "ref": { "type": "string" }
+              },
+              "additionalProperties": false
+            },
+            "auto_update": { "type": "boolean" },
+            "enable_plugins": {
+              "$ref": "#/$defs/patternList",
+              "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": true."
+            },
+            "disable_plugins": {
+              "$ref": "#/$defs/patternList",
+              "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": false."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
     "marketplace": {
       "type": "object",
       "description": "Authoring metadata for the marketplace index emitted for the plugin(s).",
@@ -884,12 +955,126 @@
           "items": {
             "type": "string"
           }
+        },
+        "output_dir": {
+          "type": "string",
+          "description": "Project-relative directory the domain-plugin marketplace is written to (.claude-plugin/marketplace.json and plugins/<name>/ beneath it). Empty means the project root. Cannot be combined with members."
+        },
+        "from_domains": {
+          "type": "object",
+          "description": "Generate one plugin per domain, named name_prefix + domain. Builtin domains are skipped.",
+          "properties": {
+            "enabled": { "type": "boolean", "description": "Defaults to true when the block is present." },
+            "name_prefix": {
+              "type": "string",
+              "description": "Prepended to the lower-cased domain name to form the plugin name."
+            },
+            "include": {
+              "$ref": "#/$defs/patternList",
+              "description": "Domain names or globs to generate. Empty means all."
+            },
+            "exclude": { "$ref": "#/$defs/patternList", "description": "Domain names or globs to leave out." },
+            "version": { "type": "string" },
+            "category": { "type": "string" },
+            "keywords": { "type": "array", "items": { "type": "string" } },
+            "default_enabled": {
+              "type": "boolean",
+              "description": "Emitted as the marketplace entry's defaultEnabled; false makes Claude Code start the plugin disabled."
+            },
+            "runtimes": { "$ref": "#/$defs/pluginRuntimes" }
+          },
+          "additionalProperties": false
+        },
+        "plugins": {
+          "type": "array",
+          "description": "Plugins declared by hand from domains and root content. An entry named like a from_domains plugin replaces it.",
+          "items": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": { "type": "string" },
+              "description": { "type": "string" },
+              "domains": {
+                "$ref": "#/$defs/patternList",
+                "description": "Domains (names or globs) whose content the plugin bundles."
+              },
+              "skills": { "$ref": "#/$defs/patternList", "description": "Root skills (names or globs) to bundle." },
+              "commands": { "$ref": "#/$defs/patternList", "description": "Root commands (names or globs) to bundle." },
+              "agents": { "$ref": "#/$defs/patternList", "description": "Root agents (names or globs) to bundle." },
+              "version": { "type": "string" },
+              "category": { "type": "string" },
+              "keywords": { "type": "array", "items": { "type": "string" } },
+              "default_enabled": { "type": "boolean" },
+              "runtimes": { "$ref": "#/$defs/pluginRuntimes" },
+              "relevance": {
+                "type": "object",
+                "description": "When Claude Code suggests the plugin. At least one signal is required.",
+                "properties": {
+                  "topic": { "type": "string", "maxLength": 64 },
+                  "signals": {
+                    "type": "object",
+                    "properties": {
+                      "cwd": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 256 } },
+                      "cli": { "type": "array", "maxItems": 10, "items": { "type": "string", "maxLength": 64 } },
+                      "hosts": { "type": "array", "maxItems": 20, "items": { "type": "string", "maxLength": 128 } },
+                      "files_read": {
+                        "type": "array",
+                        "maxItems": 10,
+                        "items": { "type": "string", "maxLength": 256 }
+                      },
+                      "manifest_deps": {
+                        "type": "array",
+                        "maxItems": 10,
+                        "items": {
+                          "type": "object",
+                          "required": ["file", "pattern"],
+                          "properties": {
+                            "file": { "type": "string" },
+                            "pattern": { "type": "string" }
+                          },
+                          "additionalProperties": false
+                        }
+                      }
+                    },
+                    "minProperties": 1,
+                    "additionalProperties": false
+                  }
+                },
+                "required": ["signals"],
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "catalog_skill": {
+          "type": "object",
+          "description": "Generate a skill listing the plugins and how to enable them (default off). It goes to the preset skill outputs only, never into a plugin bundle.",
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "name": { "type": "string", "description": "Skill name (default plugin-catalog)." },
+            "description": { "type": "string" }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
     }
   },
   "$defs": {
+    "patternList": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "pluginRuntimes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"]
+      }
+    },
     "authorEntity": {
       "type": "object",
       "properties": {

@@ -95,8 +95,8 @@
           "description": "When true, also emit bundled skill resources (references/, scripts/, assets/) under the item directory."
         },
         "filter": {
-          "enum": ["include_if_targeting_provider", "path_scoped"],
-          "description": "Closed-set filter predicate. include_if_targeting_provider keeps a command/agent whose Metadata.Targets is empty or contains the provider name. path_scoped keeps only items that declare a path scope (globs/paths frontmatter). Not allowed together with `split`."
+          "enum": ["include_if_targeting_provider", "path_scoped", "placement_core"],
+          "description": "Closed-set filter predicate. include_if_targeting_provider keeps a command/agent whose Metadata.Targets is empty or contains the provider name. path_scoped keeps only items that declare a path scope (globs/paths frontmatter). placement_core keeps skills and commands generated into the provider directory: it drops items that [placement] or the `placement` frontmatter ships only through a plugin, and applies `targets` to commands (and to skills with placement.honor_targets). Not allowed together with `split`."
         },
         "split": {
           "type": "boolean",
@@ -220,7 +220,14 @@
           "description": "Relative output path. Object-shaped sidecars are merged into an existing file at this path: only the top-level keys the renderer owns are replaced, every other key is preserved."
         },
         "emit_when": {
-          "enum": ["always", "has_mcp_servers", "has_mcp_json_entries", "has_plugins", "has_resolved_effort"],
+          "enum": [
+            "always",
+            "has_mcp_servers",
+            "has_mcp_json_entries",
+            "has_plugins",
+            "has_resolved_effort",
+            "has_mcp_servers_or_plugin_settings"
+          ],
           "description": "Closed-set predicate evaluated against the Config to decide whether to emit."
         }
       }
