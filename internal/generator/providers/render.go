@@ -215,6 +215,18 @@ func (g *Generator) rulesOutputAccepts(spec *OutputSpec, rule config.ContentFile
 // that the configured rules mode selects; legacy specs keep the filter-based
 // behavior and leave context inline.
 func (g *Generator) planRules(content *config.ContentTree, cfg *config.Config, reg *rulefiles.Registry) (*rulesPlan, error) {
+	plan, err := g.planRulesRaw(content, cfg, reg)
+	if err != nil || g.Spec.Root == nil || g.Spec.Root.File != "AGENTS.md" {
+		return plan, err
+	}
+	// The shared AGENTS.md must match codex's: path-scoped items that the baz
+	// preset moves into nested AGENTS.md files are not inlined at the root.
+	plan.inlineRules = presets.WithoutBazNested(plan.inlineRules, cfg)
+	plan.inlineContext = presets.WithoutBazNested(plan.inlineContext, cfg)
+	return plan, nil
+}
+
+func (g *Generator) planRulesRaw(content *config.ContentTree, cfg *config.Config, reg *rulefiles.Registry) (*rulesPlan, error) {
 	rules := presets.AllInlineRules(content)
 	ctx := presets.AllInlineContext(content)
 	spec := g.Spec.Outputs[OutputTypeRules]

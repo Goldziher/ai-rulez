@@ -447,7 +447,7 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	var builder strings.Builder
 
 	// Calculate content counts
-	allRules := rootRules(content, presetNameGemini, "GEMINI.md")
+	allRules := rootRules(content, cfg, presetNameGemini, "GEMINI.md")
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -468,7 +468,7 @@ func (g *GeminiPresetGenerator) renderGeminiMarkdown(content *config.ContentTree
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := rootContext(content, presetNameGemini, "GEMINI.md")
+	allContext := rootContext(content, cfg, presetNameGemini, "GEMINI.md")
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
