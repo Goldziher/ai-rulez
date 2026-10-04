@@ -71,6 +71,7 @@ const (
 	CodeSizeLines            = "AR901"
 	CodeSizeTokens           = "AR902"
 	CodeMetadataMissing      = "AR951"
+	CodePluginVersionDrift   = "AR961"
 )
 
 // RuleInfo describes one check.
@@ -102,6 +103,7 @@ var registry = []RuleInfo{
 	{CodeSizeLines, "size-lines", SeverityWarning, "an item exceeds its line budget"},
 	{CodeSizeTokens, "size-tokens", SeverityWarning, "an item exceeds its token budget"},
 	{CodeMetadataMissing, "metadata-missing", SeverityError, "an item lacks a frontmatter key required by lint.require_metadata"},
+	{CodePluginVersionDrift, "plugin-version-drift", SeverityWarning, "a generated plugin's content changed since HEAD but its version did not, so installs keep the cached copy"},
 }
 
 // Rules returns the registry sorted by code.

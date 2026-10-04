@@ -4,7 +4,9 @@ import (
 	"os"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/lint"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
 
@@ -46,7 +48,15 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "index repository files")
 	}
-	return lint.Run(cfg, tree)
+	var opts []lint.Option
+	if cfg.Plugin != nil || cfg.Marketplace != nil {
+		drift, driftErr := generator.NewGenerator(cfg).PluginVersionDrift("")
+		if driftErr != nil {
+			logger.Warn("Skipped the plugin version drift check", "error", driftErr)
+		}
+		opts = append(opts, lint.WithPluginDrift(drift))
+	}
+	return lint.Run(cfg, tree, opts...)
 }
 
 // failOnFor resolves the threshold: the flag, else [lint] fail_on, else error.

@@ -395,8 +395,49 @@ relative to the marketplace root as Claude Code requires. The Codex index
 (`.agents/plugins/marketplace.json`) is written only when some plugin targets `codex`.
 Domain names are lower-cased to form the plugin name; a name that still is not valid is an
 error (use `exclude`). A domain without bundleable content is skipped with a warning.
-`verify --plugin` checks the marketplace root and every plugin directory. A plugin whose
-domain disappears is not deleted; remove its directory by hand.
+`verify --plugin` checks the marketplace root and every plugin directory.
+
+When a plugin's domain disappears (or its declaration is removed), the next
+`generate --plugin` deletes the files it generated for that plugin and the directories they
+leave empty. A directory counts as generated only when it carries ai-rulez's provenance
+sidecar, so a hand-made directory under `plugins/` is never touched, and a file inside a stale
+directory that ai-rulez did not generate is kept (with a warning). `generate --plugin --dry-run`
+lists each removal as `delete-stale:`, and `verify --plugin` fails while a stale generated
+directory exists. Removing the whole `[marketplace]` domain-plugin configuration cannot be
+detected, because the output root is no longer known; delete that tree by hand.
+
+#### Linked git worktrees
+
+With `[claude.settings] manage = true` the generated `extraKnownMarketplaces` entry defaults to a
+relative `directory` source (`./<output_dir>`). Claude Code's documentation does not describe how
+such a source resolves in a linked worktree (`git worktree add`); the behaviour reported for it,
+and assumed by the generator's own source comment, is that it resolves against the main checkout.
+Vendor documentation that does cover worktrees says project-local settings follow the main
+checkout, so treat edits to plugin content in a linked worktree as not visible to Claude Code until
+they reach the main checkout, unless you point the marketplace somewhere absolute. `ai-rulez
+validate` prints one warning when the directory source is relative and the project is in a linked
+worktree (detected with `git rev-parse --git-dir` versus `--git-common-dir`). To test plugin changes
+from a worktree, set `[claude.settings.marketplace_source]` to an absolute `directory` path or a
+`github`/`git` source. The warning is advisory: nothing fails. This behaviour was not verified
+against a running Claude Code; it is phrased as a caveat for that reason.
+
+#### Placement report
+
+`ai-rulez list --placement` (`--profile`, `--json`) prints every skill and command of the profile
+with its destination: `core` (written to the assistants' own directories) or `plugin` (kept out of
+them by `[placement]`), the domain it came from, and the plugins that bundle it. A plugin-only item
+is flagged when no plugin bundles it, or when none of its plugins is enabled through
+`[claude.settings] enable_plugins` and no `[marketplace.catalog_skill]` lists it, because then
+nothing tells anyone the plugin exists.
+
+#### Version drift
+
+Claude Code's documentation says a client that installed a plugin from a git-hosted marketplace
+keeps its cached copy until the plugin's version string changes (a plugin that declares no version
+is tracked by commit, and a plugin loaded in place from a local marketplace is not controlled by
+`version`). `ai-rulez validate --strict` therefore reports `AR961 plugin-version-drift` (warning)
+when a generated plugin's content differs from its committed provenance sidecar at `HEAD` while the
+version in its manifest is unchanged. Bump `version`, or omit it to track commits.
 
 The `[plugin]` block is optional in this mode. When present it supplies defaults (author,
 license, homepage, repository, version, category, keywords, runtimes) and is not bundled on

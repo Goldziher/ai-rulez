@@ -62,3 +62,117 @@ func TestGeneratePlugin_StaleDirKeepsFilesItDidNotGenerate(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(teamB, "agents", "ag.md"))
 	assert.NoFileExists(t, filepath.Join(teamB, ".ai-rulez-generated.json"))
 }
+
+func TestPlacementReport(t *testing.T) {
+	tests := []struct {
+		name      string
+		tail      string
+		wantCore  []string
+		wantIssue map[string]string // item name -> substring of the issue
+		wantPlug  map[string][]string
+	}{
+		{
+			name: "plugin-only items in enabled plugins are clean",
+			tail: `
+[placement]
+default = "plugin"
+core = ["core-s", "niche-s"]
+
+[marketplace]
+name = "mk"
+output_dir = "mkt"
+[marketplace.from_domains]
+name_prefix = "demo-"
+
+[claude.settings]
+manage = true
+enable_plugins = ["demo-teama", "demo-teamb"]
+`,
+			wantCore:  []string{"core-s", "niche-s"},
+			wantIssue: map[string]string{},
+			wantPlug:  map[string][]string{"a-s": {"demo-teama"}, "b-s": {"demo-teamb"}, "do-it": {"demo-teama"}},
+		},
+		{
+			name: "plugin not enabled and no catalog is flagged",
+			tail: `
+[placement]
+default = "plugin"
+core = ["core-s", "niche-s"]
+
+[marketplace]
+name = "mk"
+output_dir = "mkt"
+[marketplace.from_domains]
+name_prefix = "demo-"
+
+[claude.settings]
+manage = true
+enable_plugins = ["demo-teama"]
+`,
+			wantCore:  []string{"core-s", "niche-s"},
+			wantIssue: map[string]string{"b-s": "not enabled"},
+			wantPlug:  map[string][]string{"a-s": {"demo-teama"}, "b-s": {"demo-teamb"}},
+		},
+		{
+			name: "a catalog skill makes every plugin discoverable",
+			tail: `
+[placement]
+default = "plugin"
+core = ["core-s", "niche-s"]
+
+[marketplace]
+name = "mk"
+output_dir = "mkt"
+[marketplace.from_domains]
+name_prefix = "demo-"
+[marketplace.catalog_skill]
+enabled = true
+`,
+			wantCore:  []string{"core-s", "niche-s"},
+			wantIssue: map[string]string{},
+		},
+		{
+			name: "plugin-only items outside any marketplace plugin are flagged",
+			tail: `
+[placement]
+default = "plugin"
+core = ["niche-s"]
+`,
+			wantCore:  []string{"niche-s"},
+			wantIssue: map[string]string{"core-s": "not enabled", "a-s": "no plugin bundles", "b-s": "no plugin bundles", "do-it": "no plugin bundles"},
+		},
+		{
+			name:      "default placement keeps everything core",
+			tail:      "",
+			wantCore:  []string{"a-s", "b-s", "core-s", "niche-s"},
+			wantIssue: map[string]string{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := newDomainsProject(t, tt.tail)
+			report, err := loadDomainsProject(t, dir).PlacementReport("")
+			require.NoError(t, err)
+
+			var core []string
+			issues := map[string]string{}
+			for _, it := range report.Items {
+				if it.Destination == DestinationCore && it.Type == "skill" {
+					core = append(core, it.Name)
+				}
+				if it.Issue != "" {
+					issues[it.Name] = it.Issue
+				}
+				if want, ok := tt.wantPlug[it.Name]; ok {
+					assert.Equal(t, want, it.Plugins, it.Name)
+				}
+			}
+			assert.Equal(t, tt.wantCore, core)
+			assert.Len(t, issues, len(tt.wantIssue), "%v", issues)
+			for name, sub := range tt.wantIssue {
+				assert.Contains(t, issues[name], sub, name)
+			}
+			assert.Len(t, report.Items, 5, "4 skills and 1 command")
+		})
+	}
+}
