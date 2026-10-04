@@ -365,6 +365,15 @@
       "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to false (per-tool outputs, unchanged).",
       "default": false
     },
+    "bundle_exclude": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Extra patterns for files left out of skill and command resource bundles (the SKILL.md Resources section and the copied files), added to the always-skipped .git, .venv*, venv, __pycache__, *.pyc and node_modules. A pattern without '/' matches any path segment; one with '/' matches the path relative to the skill directory. Files ignored by .gitignore are skipped too."
+    },
+    "codex_skills_dir": {
+      "type": "string",
+      "description": "Where the codex preset writes skills, relative to the project root. Defaults to '.agents/skills', the location Codex documents. Set '.codex/skills' to keep the location used before 4.24."
+    },
     "installed_skills": {
       "type": "array",
       "description": "Named skills to install from external repositories. Skills are fetched dynamically during generation.",

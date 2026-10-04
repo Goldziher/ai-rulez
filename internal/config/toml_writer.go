@@ -34,6 +34,8 @@ type tomlOutput struct {
 	Gitignore       *bool                  `toml:"gitignore,omitempty"`
 	Compact         *bool                  `toml:"compact,omitempty"`
 	AgentsMD        bool                   `toml:"agents_md,omitempty"`
+	BundleExclude   []string               `toml:"bundle_exclude,omitempty"`
+	CodexSkillsDir  string                 `toml:"codex_skills_dir,omitempty"`
 	Default         string                 `toml:"default,omitempty"`
 	Presets         []any                  `toml:"presets,omitempty"`
 	Header          *HeaderConfig          `toml:"header,omitempty"`
@@ -114,6 +116,8 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Gitignore:       cfg.Gitignore,
 		Compact:         cfg.Compact,
 		AgentsMD:        cfg.AgentsMD,
+		BundleExclude:   cfg.BundleExclude,
+		CodexSkillsDir:  cfg.CodexSkillsDir,
 		Default:         cfg.Default,
 		Presets:         presets,
 		Header:          cfg.Header,
