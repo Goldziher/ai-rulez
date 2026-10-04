@@ -899,6 +899,8 @@ ai-rulez generate [config-file] [flags]
 | `--env-file` / `-E`             | string  | `.env`        | Dotenv file for MCP env placeholders; repeatable                                                                                                        |
 | `--plugin`                      | boolean | false         | Generate distributable plugin bundles and a marketplace index from the `[plugin]` block instead of in-repo config (see [Authoring Plugins](plugins.md)) |
 | `--if-configured`               | boolean | false         | With `--plugin`, skip successfully when plugin authoring is not configured                                                                              |
+| `--user`                        | boolean | false         | Generate the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the home directories each harness reads; lists every path first (see [User-level configuration](user-scope.md)) |
+| `--yes` / `-y`                  | boolean | false         | With `--user`, write without the confirmation prompt (required in a non-interactive shell)                                                              |
 
 `--token` / `-T` is a global flag (see [Global Flags](#global-flags)); it is not generate-specific.
 `--update-gitignore` still works as a hidden deprecated alias for `--gitignore` for backward compatibility.
@@ -1043,6 +1045,7 @@ ai-rulez clean [config-path] [flags]
 | `--config-dir` / `-n` | string  | `.ai-rulez`        | Configuration directory name for non-default layouts    |
 | `--keep-gitignore`    | boolean | false              | Leave the ai-rulez managed block in `.gitignore`        |
 | `--keep-manifest`     | boolean | false              | Leave the generated manifest in place                   |
+| `--user`              | boolean | false              | Remove what `generate --user` wrote into the home directory, as recorded in `~/.config/ai-rulez/.generated-manifest.json` (see [User-level configuration](user-scope.md)) |
 
 Preview what would be removed:
 

@@ -4,6 +4,10 @@ Personal, machine-local configuration that is never committed. Use it for scratc
 paths, personal presets and MCP servers, secrets, and experiments that belong to your checkout but
 not to the shared configuration.
 
+Local configuration belongs to one checkout. Instructions and skills that should follow you across every
+repository (including ones that do not use ai-rulez) go to your home directories instead; see
+[User-level configuration](user-scope.md).
+
 Local configuration has two layers. Both are gitignored unconditionally, even when `gitignore = false`.
 
 | Layer | Location | Holds |
