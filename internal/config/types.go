@@ -58,6 +58,13 @@ type Config struct {
 	// Codex groups Codex specific options; see CodexConfig.
 	Codex *CodexConfig `yaml:"codex,omitempty" json:"codex,omitempty" toml:"codex,omitempty"`
 
+	// Hooks declares lifecycle hooks rendered into each harness's native project
+	// settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json,
+	// .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin.
+	Hooks []HookGroup `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
+	// Permissions declares allow/ask/deny rules for .claude/settings.json.
+	Permissions *Permissions `yaml:"permissions,omitempty" json:"permissions,omitempty" toml:"permissions,omitempty"`
+
 	// Runtime fields (populated during load)
 	BaseDir       string `yaml:"-" json:"-" toml:"-"`
 	ConfigDir     string `yaml:"-" json:"-" toml:"-"`
@@ -97,6 +104,12 @@ type Config struct {
 	// falls back to the wall clock for callers that render a preview without a
 	// generation run. Only read when [header] timestamp opts the line back in.
 	GeneratedAt time.Time `yaml:"-" json:"-" toml:"-"`
+
+	// UserScope is set while rendering for `generate --user`: outputs are mapped
+	// into the person's home config directories, so renderers leave out keys that
+	// only make sense inside a project (MCP servers, plugin registration,
+	// machine-local context names).
+	UserScope bool `yaml:"-" json:"-" toml:"-"`
 
 	// MCPEnvOverrides are generation-time KEY=VALUE overrides used to resolve
 	// MCP env placeholders. They are intentionally not serialized.

@@ -104,6 +104,27 @@
               "description": "Default false.",
               "type": "boolean"
             },
+            "managed": {
+              "additionalProperties": false,
+              "description": "Further keys of .claude/settings.json owned entry by entry. Declaring an entry is the opt-in; `manage` is not required.",
+              "properties": {
+                "env": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Owns env.<NAME> for every listed variable.",
+                  "type": "object"
+                },
+                "skill_overrides": {
+                  "additionalProperties": {
+                    "enum": ["on", "name-only", "user-invocable-only", "off"]
+                  },
+                  "description": "Owns skillOverrides.<skill> for every listed skill.",
+                  "type": "object"
+                }
+              },
+              "type": "object"
+            },
             "marketplace_source": {
               "additionalProperties": false,
               "description": "Source written for the marketplace. Default: a directory source at marketplace.output_dir.",
@@ -281,6 +302,83 @@
         }
       },
       "type": "object"
+    },
+    "hooks": {
+      "description": "Lifecycle hooks rendered into each harness's native project settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json, .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin. Events use Claude Code names; a group a harness cannot express is skipped with a warning.",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "event": {
+            "description": "Claude Code lifecycle event, e.g. PreToolUse. Unknown events are warned about, not rejected.",
+            "type": "string"
+          },
+          "hooks": {
+            "items": {
+              "additionalProperties": false,
+              "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
+              "oneOf": [{}, {}],
+              "properties": {
+                "args": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "type": "array"
+                },
+                "async": {
+                  "type": "boolean"
+                },
+                "command": {
+                  "type": "string"
+                },
+                "if": {
+                  "description": "claude only; a handler with `if` is skipped elsewhere.",
+                  "type": "string"
+                },
+                "script": {
+                  "description": "Project-relative script, addressed through the harness's project-root variable (user scope: relative to the user config directory).",
+                  "type": "string"
+                },
+                "status_message": {
+                  "type": "string"
+                },
+                "timeout": {
+                  "description": "Seconds; converted to milliseconds for gemini.",
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": {
+                  "enum": ["command"]
+                }
+              },
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "matcher": {
+            "description": "Filters which occurrences of the event run the group. Copied to claude and codex; other harnesses need matchers.<harness>.",
+            "type": "string"
+          },
+          "matchers": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "description": "Per-harness matcher overriding `matcher`, for harnesses that name tools differently.",
+            "propertyNames": {
+              "enum": ["claude", "codex", "cursor", "gemini", "copilot"]
+            },
+            "type": "object"
+          },
+          "targets": {
+            "description": "Restrict the group to these harnesses. Default: every harness the group can be expressed for.",
+            "items": {
+              "enum": ["claude", "codex", "cursor", "gemini", "copilot"]
+            },
+            "type": "array"
+          }
+        },
+        "type": "object"
+      },
+      "type": "array"
     },
     "includes": {
       "description": "Content sources (git repositories or local paths) to include and merge",
@@ -949,6 +1047,22 @@
       "description": "Project name",
       "minLength": 1,
       "type": "string"
+    },
+    "permissions": {
+      "additionalProperties": false,
+      "description": "Allow/ask/deny rules in Claude Code permission-rule syntax, owned rule by rule in .claude/settings.json (claude only).",
+      "properties": {
+        "allow": {
+          "$ref": "#/$defs/patternList"
+        },
+        "ask": {
+          "$ref": "#/$defs/patternList"
+        },
+        "deny": {
+          "$ref": "#/$defs/patternList"
+        }
+      },
+      "type": "object"
     },
     "placement": {
       "additionalProperties": false,
