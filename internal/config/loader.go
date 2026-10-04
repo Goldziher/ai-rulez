@@ -593,6 +593,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Rules           *RulesConfig           `toml:"rules"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
+		Placement       *PlacementConfig       `toml:"placement"`
+		Claude          *ClaudeConfig          `toml:"claude"`
 	}
 
 	var raw tomlConfig
@@ -652,6 +654,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Rules:           raw.Rules,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
+		Placement:       raw.Placement,
+		Claude:          raw.Claude,
 	}
 
 	return cfg, nil

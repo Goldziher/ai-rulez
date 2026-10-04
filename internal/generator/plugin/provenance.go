@@ -127,3 +127,6 @@ func insertProvenanceHeader(body []byte, path, header string) []byte {
 	}
 	return []byte(header + "\n" + content)
 }
+
+// ProvenanceFileName is the sidecar every generated bundle root carries.
+const ProvenanceFileName = provenanceFileName
