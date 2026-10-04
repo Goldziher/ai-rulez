@@ -1,0 +1,76 @@
+# pi coding agent provider spec.
+#
+# pi reads project guidance from AGENTS.md (inline rules only — it has no
+# native rules folder), loads project skills from `.agents/skills` and falls
+# back to `.pi/skills`, and reads MCP servers from `.pi/mcp.json` with the
+# stdio (`command`/`args`/`env`) and remote (`url`/`headers`) forms (SSE is not
+# supported). Agents are a non-built-in extension: the popular subagents plugin
+# reads `.pi/agents/**/*.md` with a `name`/`description`/`tools`/`model` and an
+# optional `thinking` frontmatter; ai-rulez's internal effort tiers translate
+# onto `thinking`.
+
+name = "pi"
+display_name = "pi"
+
+directories = [".pi", ".pi/agents"]
+
+# AGENTS.md is shared byte-for-byte with codex, opencode, xum and amp, so the
+# sections and ordering mirror theirs.
+[root]
+file = "AGENTS.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# Skills: `.agents/skills/{id}/SKILL.md` is the location the shared tree writes
+# and pi prefers, so the shared tree stands in for this output when agents_md is
+# on (see config.sharedOutputConsumers). Without the flag a directly generated
+# pi skill still lands there, which pi reads.
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# Agents: `.pi/agents/{id}.md` for the subagents extension. `thinking` carries
+# the resolved effort, `model` the resolved model, `tools` the tool list.
+[outputs.agents]
+mode = "per_item_file"
+dir = ".pi/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_effort = true
+effort_field = "thinking"
+emit_model = true
+
+[model]
+field = "model"
+
+# pi accepts the canonical effort tiers verbatim as thinking levels.
+[effort_map]
+style = "string"
+
+[effort_map.values]
+low = "low"
+medium = "medium"
+high = "high"
+xhigh = "xhigh"
+max = "max"
+
+# .pi/mcp.json holds the configured MCP servers. Emitted only when the config
+# declares servers; the file is gitignored like the other MCP documents because
+# it can carry resolved secrets.
+[[sidecars]]
+kind = "pi_mcp_json"
+path = ".pi/mcp.json"
+emit_when = "has_mcp_servers"

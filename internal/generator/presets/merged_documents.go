@@ -33,6 +33,7 @@ const (
 	MergedDocMCPJSON        = ".mcp.json"
 	MergedDocXumMCP         = ".xum/mcp.jsonc"
 	MergedDocOpencodeConfig = "opencode.json"
+	MergedDocPiMCP          = ".pi/mcp.json"
 )
 
 // mergedDocumentPaths is the registry backing MergedDocumentPaths. Every path a
@@ -45,6 +46,7 @@ var mergedDocumentPaths = []string{
 	MergedDocMCPJSON,
 	MergedDocXumMCP,
 	MergedDocOpencodeConfig,
+	MergedDocPiMCP,
 }
 
 // MergedDocumentPaths returns every base-relative, slash-separated path that a
@@ -56,6 +58,66 @@ func MergedDocumentPaths() []string {
 	sort.Strings(paths)
 
 	return paths
+}
+
+// MCPServerEntry builds the canonical MCP server entry shared by the tools
+// whose config uses the `mcpServers` object with a stdio `command/args/env`
+// form and, for remote servers, `url` plus optional `headers`. It is the shape
+// pi (`url`, `headers`, `description`) and Gemini (`url`, `headers`) use; a
+// tool that keys remote transport differently (Claude's `type`, Gemini's
+// `httpUrl`) still builds its own entry. Returns nil for a server with nothing
+// to launch or connect to.
+func MCPServerEntry(server *config.MCPServer) map[string]interface{} {
+	if server == nil {
+		return nil
+	}
+	entry := map[string]interface{}{}
+	switch server.GetTransport() {
+	case config.TransportHTTP, config.TransportSSE:
+		if server.URL == "" {
+			return nil
+		}
+		entry["url"] = server.URL
+		if server.Description != "" {
+			entry[keyDescription] = server.Description
+		}
+		if len(server.Headers) > 0 {
+			entry[keyHeaders] = server.Headers
+		}
+	default:
+		if server.Command == "" {
+			return nil
+		}
+		entry[keyCommand] = server.Command
+		if len(server.Args) > 0 {
+			entry[keyArgs] = server.Args
+		}
+		if len(server.Env) > 0 {
+			entry["env"] = server.Env
+		}
+	}
+	return entry
+}
+
+// MCPServersByKey maps the configured MCP servers onto the `mcpServers` object
+// that tools with the shared stdio/url shape load, skipping any server that
+// cannot be expressed (see MCPServerEntry).
+func MCPServersByKey(cfg *config.Config) map[string]interface{} {
+	servers := map[string]interface{}{}
+	if cfg == nil {
+		return servers
+	}
+	for name, server := range cfg.MCPServers {
+		if entry := MCPServerEntry(server); entry != nil {
+			servers[name] = entry
+		}
+	}
+	return servers
+}
+
+// piMCPServers is the `mcpServers` object of pi's .pi/mcp.json.
+func piMCPServers(cfg *config.Config) map[string]interface{} {
+	return MCPServersByKey(cfg)
 }
 
 // applyMergedDocument merges the owned keys into the JSON document at path,
@@ -147,6 +209,8 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		return claims
 	case MergedDocXumMCP:
 		return memberClaimsOf([]string{keyServers}, xumServers(cfg))
+	case MergedDocPiMCP:
+		return memberClaimsOf([]string{keyMCPServers}, piMCPServers(cfg))
 	case MergedDocOpencodeConfig:
 		claims := memberClaimsOf([]string{"mcp", keyServers}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
 		claims = append(claims,

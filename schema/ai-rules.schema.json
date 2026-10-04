@@ -55,6 +55,7 @@
               "hermes",
               "antigravity",
               "xum",
+              "pi",
               "mcp"
             ],
             "description": "Built-in preset name"
@@ -171,6 +172,7 @@
                 "hermes",
                 "antigravity",
                 "xum",
+                "pi",
                 "mcp"
               ]
             }
@@ -507,7 +509,8 @@
               "hermes",
               "antigravity",
               "mcp",
-              "xum"
+              "xum",
+              "pi"
             ]
           },
           "additionalProperties": {
@@ -534,7 +537,8 @@
               "hermes",
               "antigravity",
               "mcp",
-              "xum"
+              "xum",
+              "pi"
             ]
           },
           "additionalProperties": {

@@ -246,9 +246,14 @@ func xumServers(cfg *config.Config) map[string]interface{} {
 	return servers
 }
 
-// xumMCPEntry maps one server onto Xum's mcp.jsonc schema, or returns nil when
-// the server has nothing to launch or connect to.
+// xumMCPEntry maps one server onto Xum's mcp.jsonc schema. Xum needs a full
+// entry where the shared stdio/url shape is enough: a stdio server is a shell
+// command string (or an object when disabled), and a remote one carries the
+// `transport` key the other tools do not.
 func xumMCPEntry(server *config.MCPServer) interface{} {
+	if server == nil {
+		return nil
+	}
 	switch transport := server.GetTransport(); transport {
 	case config.TransportHTTP, config.TransportSSE:
 		if server.URL == "" {

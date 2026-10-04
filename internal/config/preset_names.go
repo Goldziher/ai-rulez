@@ -20,6 +20,7 @@ const (
 	PresetAntigravity PresetName = "antigravity"
 	PresetMCP         PresetName = "mcp"
 	PresetXum         PresetName = "xum"
+	PresetPi          PresetName = "pi"
 )
 
 // AllPresetNames returns every built-in preset name, sorted. It is derived from

@@ -682,9 +682,50 @@ func (s *V4GenerationSuite) TestAntigravity_Content() {
 }
 
 // ==========================================
-// MCP (STANDALONE) PRESET
+// PI PRESET
 // ==========================================
 
+func (s *V4GenerationSuite) TestPi_FileStructure() {
+	outputs := s.getOutputs("pi")
+
+	s.Require().NotNil(s.findFile(outputs, "AGENTS.md"), "Should generate AGENTS.md")
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "deployment-workflow", "SKILL.md")),
+		"Should generate skill file under the pi-preferred .agents/skills")
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".pi", "agents", "security-reviewer.md")),
+		"Should generate agent file under .pi/agents")
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".pi", "mcp.json")),
+		"Should generate .pi/mcp.json")
+}
+
+func (s *V4GenerationSuite) TestPi_Content() {
+	outputs := s.getOutputs("pi")
+
+	agentsMD := s.requireFile(outputs, "AGENTS.md")
+	s.assertContentContains(agentsMD, "code-review-standards")
+
+	agentFile := s.requireFile(outputs, filepath.Join(".pi", "agents", "security-reviewer.md"))
+	s.assertContentContains(agentFile, "description:")
+
+	mcpFile := s.requireFile(outputs, filepath.Join(".pi", "mcp.json"))
+	var mcpJSON map[string]interface{}
+	err := json.Unmarshal([]byte(mcpFile.Content), &mcpJSON)
+	s.Require().NoError(err, ".pi/mcp.json should be valid JSON")
+	mcpServers, ok := mcpJSON["mcpServers"].(map[string]interface{})
+	s.Require().True(ok, ".pi/mcp.json should have mcpServers key")
+
+	stdio, ok := mcpServers["test-mcp-server"].(map[string]interface{})
+	s.Require().True(ok, "Should have test-mcp-server entry")
+	s.Assert().Equal("npx", stdio["command"])
+
+	remote, ok := mcpServers["http-mcp-server"].(map[string]interface{})
+	s.Require().True(ok, "Should have http-mcp-server entry")
+	s.Assert().Equal("http://localhost:8080", remote["url"])
+	s.Assert().NotContains(remote, "transport", "pi keys remote transport on `url`, not `transport`")
+}
+
+// ==========================================
+// MCP (STANDALONE) PRESET
+// ==========================================
 func (s *V4GenerationSuite) TestMCP_FileStructure() {
 	outputs := s.getOutputs("mcp")
 
@@ -763,7 +804,7 @@ func (s *V4GenerationSuite) TestAllPresets_Generated() {
 	expectedPresets := []string{
 		"claude", "cursor", "windsurf", "copilot", "gemini",
 		"cline", "junie", "continue-dev", "codex", "opencode",
-		"amp", "antigravity", "mcp", "xum",
+		"amp", "antigravity", "mcp", "xum", "pi",
 	}
 
 	for _, preset := range expectedPresets {
@@ -782,7 +823,7 @@ func (s *V4GenerationSuite) TestV4Config_TOMLFormat() {
 	s.Assert().Equal("Full V4 test configuration with all presets", s.cfg.Description)
 	s.Assert().Equal("compact", s.cfg.GetHeaderStyle())
 	s.Assert().Equal("full", s.cfg.GetDefaultProfile())
-	s.Assert().Len(s.cfg.Presets, 14, "Should have 14 presets configured")
+	s.Assert().Len(s.cfg.Presets, 15, "Should have 15 presets configured")
 
 	// Profiles
 	s.Assert().Contains(s.cfg.Profiles, "full")

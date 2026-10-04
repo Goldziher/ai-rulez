@@ -2840,11 +2840,13 @@ func isMCPConfigOutput(relPath string) bool {
 		relPath == ".gemini/settings.json" ||
 		relPath == ".agents/settings.json" ||
 		relPath == ".xum/mcp.jsonc" ||
+		relPath == ".pi/mcp.json" ||
 		strings.HasSuffix(relPath, "/.mcp.json") ||
 		strings.HasSuffix(relPath, "/.claude/settings.json") ||
 		strings.HasSuffix(relPath, "/.gemini/settings.json") ||
 		strings.HasSuffix(relPath, "/.agents/settings.json") ||
-		strings.HasSuffix(relPath, "/.xum/mcp.jsonc")
+		strings.HasSuffix(relPath, "/.xum/mcp.jsonc") ||
+		strings.HasSuffix(relPath, "/.pi/mcp.json")
 }
 
 func gitignorePatterns(content string) []string {
