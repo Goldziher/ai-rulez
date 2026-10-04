@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -229,6 +230,30 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	return written, nil
 }
 
+// ErrPluginNotGenerated is returned by VerifyPlugin when none of the expected
+// plugin files exist on disk, so a caller can tell "never generated" from "stale".
+var ErrPluginNotGenerated = errors.New("plugin bundle not generated")
+
+// checkPluginGenerated fails with ErrPluginNotGenerated, and the command that
+// fixes it, when no expected plugin file exists.
+func checkPluginGenerated(expected []config.OutputFile) error {
+	files, present := 0, 0
+	for _, output := range expected {
+		if output.IsDir {
+			continue
+		}
+		files++
+		if _, err := os.Stat(output.Path); err == nil {
+			present++
+		}
+	}
+	if files > 0 && present == 0 {
+		return oops.Hint("Run ai-rulez generate --plugin, then commit the bundle (or pass --if-generated to skip verification until it exists)").
+			Wrapf(ErrPluginNotGenerated, "plugin bundle not generated; run `ai-rulez generate --plugin`")
+	}
+	return nil
+}
+
 // VerifyPlugin verifies the generated plugin bundles against their provenance
 // sidecars without regenerating or modifying files.
 func (g *Generator) VerifyPlugin(profile string) error {
@@ -236,13 +261,18 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if err != nil {
 		return oops.Wrapf(err, "render expected plugin outputs")
 	}
+	if err := checkPluginGenerated(expected); err != nil {
+		return err
+	}
 	for _, output := range expected {
 		if output.IsDir {
 			continue
 		}
 		actual, readErr := os.ReadFile(output.Path)
 		if readErr != nil {
-			return oops.With("path", output.Path).Wrapf(readErr, "read generated plugin output")
+			return oops.With("path", output.Path).
+				Hint("Run ai-rulez generate --plugin to restore the missing file").
+				Wrapf(readErr, "read generated plugin output")
 		}
 		expectedBytes := output.RawContent
 		if expectedBytes == nil {
@@ -706,8 +736,10 @@ func (g *Generator) DryRun(profile string) ([]string, error) {
 	return lines, nil
 }
 
-// planLines lists the directories and files a run would create. A file the
-// overwrite guard would leave alone is not listed, because it is not written.
+// planLines lists the directories and files a run would create. A file whose
+// rendering already matches the disk is listed as unchanged, one that was
+// edited by hand as edited (generate keeps it until its sources change), and a
+// file the overwrite guard would leave alone is not listed, because it is not written.
 func (g *Generator) planLines(outputs []config.OutputFile) []string {
 	g.previousFiles = nil
 	defer func() { g.previousFiles = nil }()
@@ -715,10 +747,17 @@ func (g *Generator) planLines(outputs []config.OutputFile) []string {
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
 		relPath := g.convertToRelativePath(abs)
-		switch {
-		case output.IsDir:
+		if output.IsDir {
 			lines = append(lines, "create-dir: "+relPath)
-		case output.RawContent == nil && g.isUnmanagedRuleFile(abs, g.finalContent(output)):
+			continue
+		}
+		kind, compared := g.outputState(output)
+		switch {
+		case !compared:
+		case kind == "":
+			lines = append(lines, "unchanged: "+relPath)
+		case kind == DriftEdited:
+			lines = append(lines, "edited: "+relPath)
 		default:
 			lines = append(lines, "write-file: "+relPath)
 		}

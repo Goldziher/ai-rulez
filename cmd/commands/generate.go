@@ -35,6 +35,7 @@ var (
 	noLocal            bool
 	allowLocalDrift    bool
 	pluginIfConfigured bool
+	generateCheck      bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -50,6 +51,8 @@ Cursor, Devin, etc. based on your configuration.`,
 
 func init() {
 	GenerateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be generated without writing files")
+	GenerateCmd.Flags().BoolVar(&generateCheck, "check", false,
+		"Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI)")
 	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Deprecated alias for --gitignore")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
@@ -91,6 +94,17 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	// Set no-fetch flag for include resolution (before any config loading)
 	includes.SkipFetch = noFetch
+
+	if generateCheck {
+		if err := checkGenerateCheckFlags(); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		if code := runDriftCheck(args, recursive, driftRender); code != 0 {
+			os.Exit(code)
+		}
+		return
+	}
 
 	if recursive {
 		if code := runRecursiveGenerate(); code != 0 {
@@ -566,4 +580,18 @@ func fmtError(err error) {
 	} else {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 	}
+}
+
+// checkGenerateCheckFlags rejects flags that make no sense with --check, which
+// must never write.
+func checkGenerateCheckFlags() error {
+	switch {
+	case dryRun:
+		return oops.Errorf("--check and --dry-run are mutually exclusive: --check already writes nothing")
+	case pluginMode:
+		return oops.Errorf("--check does not cover plugin bundles; use `ai-rulez verify --plugin`")
+	case updateGitignore:
+		return oops.Errorf("--check cannot be combined with --gitignore, which writes .gitignore files")
+	}
+	return nil
 }
