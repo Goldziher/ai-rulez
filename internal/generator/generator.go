@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -496,6 +497,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		outputs = append(outputs, memberOutputs...)
 		entries = append(entries, entry)
 	}
+	codexEntries := slices.Clone(entries) // members are always Codex-capable
 
 	root := g.marketplaceRoot(mkt)
 	codex := len(mkt.Members) > 0
@@ -507,7 +509,10 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		outputs = append(outputs, bundles...)
 		entries = append(entries, domainEntries...)
 		for i := range domainEntries {
-			codex = codex || domainEntries[i].Codex
+			if domainEntries[i].Codex {
+				codex = true
+				codexEntries = append(codexEntries, domainEntries[i])
+			}
 		}
 	}
 
@@ -520,7 +525,7 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
 	rootFiles := []config.OutputFile{marketplaceOutput}
-	extraIndexes, err := renderExtraMarketplaces(mkt, market, entries, root, codex)
+	extraIndexes, err := renderExtraMarketplaces(mkt, market, entries, codexEntries, root, codex)
 	if err != nil {
 		return nil, err
 	}
@@ -535,10 +540,10 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 // renderExtraMarketplaces renders the non-Claude marketplace indexes of a
 // monorepo or domain-plugin root: the Codex index when some plugin ships a Codex
 // bundle, and the Cursor index when [marketplace] cursor_index is set.
-func renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
+func renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries, codexEntries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
 	var files []config.OutputFile
 	if codex {
-		out, err := plugin.RenderCodexMonorepoMarketplace(market, entries, root)
+		out, err := plugin.RenderCodexMonorepoMarketplace(market, codexEntries, root)
 		if err != nil {
 			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
 		}
@@ -1419,7 +1424,9 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 		return nil
 	}
 
-	if err := os.WriteFile(absPath, []byte(finalContent), 0o644); err != nil {
+	// Temp file + rename so a crash never leaves a truncated hand-authored file;
+	// keeps an existing file's mode and writes through symlinks.
+	if err := writeFileAtomic(absPath, []byte(finalContent)); err != nil {
 		return oops.
 			With("path", absPath).
 			Hint(fmt.Sprintf("Check write permissions for: %s", absPath)).
@@ -1430,6 +1437,12 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 	return nil
 }
 
+// isNestedAgentsMD reports whether rel is an AGENTS.md below the project root
+// (the baz nested files, monorepo scope files): hand-written ones are common.
+func isNestedAgentsMD(rel string) bool {
+	return rel != "AGENTS.md" && path.Base(rel) == "AGENTS.md"
+}
+
 // isUnmanagedRuleFile reports whether absPath is an existing file inside a
 // shared rules folder that ai-rulez did not write. A file counts as ours when
 // any of these hold: it is in the previous generated manifest, it stores a
@@ -1438,7 +1451,7 @@ func (g *Generator) writeOutput(output config.OutputFile) error {
 // mistake our own output for a hand-written file).
 func (g *Generator) isUnmanagedRuleFile(absPath, wantContent string) bool {
 	rel := filepath.ToSlash(g.convertToRelativePath(absPath))
-	if !config.InRulesDir(rel) {
+	if !config.InRulesDir(rel) && !isNestedAgentsMD(rel) {
 		return false
 	}
 	info, err := os.Stat(absPath)
