@@ -351,12 +351,141 @@ emits a single root marketplace index — `.claude-plugin/marketplace.json` (and
 index at `.agents/plugins/marketplace.json`) — listing each with `source: "./plugins/<name>"`.
 Members do not emit their own marketplace index.
 
+## Domain content and per-domain plugins
+
+A project that keeps its content in `.ai-rulez/domains/<name>/` can ship it as plugins
+without hand-made member projects. Everything here is opt-in; a config without these keys
+generates exactly what it did before.
+
+### Bundle domain content into the `[plugin]` bundle
+
+A `[plugin]` bundle holds the root skills, commands and agents only. List domains in
+`include_domains` (names or globs) to bundle theirs too:
+
+```toml
+[plugin]
+name = "acme-conventions"
+version = "1.0.0"
+include_domains = ["backend", "ui"]   # or ["*"]
+```
+
+On a name collision the root item wins, then the domain earlier in name order. Builtin
+domains are never bundled.
+
+### One plugin per domain
+
+```toml
+[marketplace]
+name = "acme"
+description = "Acme skill packs"
+output_dir = "tools/acme-marketplace"   # default: the project root
+
+[marketplace.from_domains]
+name_prefix = "acme-"        # plugin "acme-backend" from domains/backend
+exclude = ["scratch"]        # include defaults to every domain
+version = "1.0.0"            # default: the [plugin] version, else 1.0.0
+default_enabled = false      # marketplace entry defaultEnabled
+runtimes = ["claude"]        # default: the [plugin] runtimes, else all
+```
+
+`generate --plugin` writes `<output_dir>/plugins/<name>/` for each domain (skills, commands
+and agents, plus the runtime manifests and a provenance sidecar) and one
+`<output_dir>/.claude-plugin/marketplace.json` whose entries use `source: "./plugins/<name>"`,
+relative to the marketplace root as Claude Code requires. The Codex index
+(`.agents/plugins/marketplace.json`) is written only when some plugin targets `codex`.
+Domain names are lower-cased to form the plugin name; a name that still is not valid is an
+error (use `exclude`). A domain without bundleable content is skipped with a warning.
+`verify --plugin` checks the marketplace root and every plugin directory. A plugin whose
+domain disappears is not deleted; remove its directory by hand.
+
+The `[plugin]` block is optional in this mode. When present it supplies defaults (author,
+license, homepage, repository, version, category, keywords, runtimes) and is not bundled on
+its own; declare a plugin for the root content with `[[marketplace.plugins]]` instead.
+`owner` falls back to the `[plugin]` author. `members` and domain plugins may be combined,
+but then `output_dir` must be unset.
+
+Hand-declared plugins mix domains and root content, and replace a derived plugin of the
+same name:
+
+```toml
+[[marketplace.plugins]]
+name = "acme-essentials"
+skills = ["development-standards", "personal-*"]   # root content, by name or glob
+domains = []                                       # domains, by name or glob
+default_enabled = true
+
+[marketplace.plugins.relevance]                    # when Claude Code suggests the plugin
+topic = "Terraform"
+[marketplace.plugins.relevance.signals]
+cli = ["terraform"]
+files_read = ["**/*.tf"]
+```
+
+Entries carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance`
+(`cwd`, `cli`, `hosts`, `files_read`, `manifest_deps` signals, at least one). These are the
+fields Claude Code documents for a marketplace entry; `claude plugin validate` accepts the output.
+Monorepo `members` entries stay minimal.
+
+### Keep a skill out of `.claude/skills`
+
+By default every root and domain skill and command is written to `.claude/skills`. The
+`[placement]` block moves some to plugin-only:
+
+```toml
+[placement]
+default = "core"                          # core (today) or plugin
+plugin = ["domains/*"]                    # names or globs; "domains/<domain>/<name>" also matches
+core = ["domains/backend/python-conventions", "git-*"]
+honor_targets = true                      # skills: apply frontmatter `targets`, as commands always do
+```
+
+An item's frontmatter `placement: core|plugin` wins, then `core`, then `plugin`, then `default`.
+The key is removed from the generated frontmatter. Placement changes only the Claude preset's
+`.claude/skills` output; plugin bundles always contain the item, so a plugin-only skill stays
+reachable through the plugin that bundles it. Agents are not affected, and other presets
+keep writing every skill. With `honor_targets` a skill whose `targets` do not name `claude`
+is not written to `.claude/skills`.
+
+### Register the marketplace in `.claude/settings.json`
+
+```toml
+[claude.settings]
+manage = true                       # default false
+register_marketplace = true         # default when managing: extraKnownMarketplaces.<marketplace.name>
+enable_plugins = ["acme-essentials"]    # enabledPlugins."acme-essentials@acme": true
+disable_plugins = []                    # ... : false
+# marketplace_source = { source = "github", repo = "acme/skills" }   # default: a directory source at output_dir
+# auto_update = true
+```
+
+Only those entries are owned, with the same machinery as `mcpServers`: every other key, marketplace
+and plugin entry in the file survives byte-for-byte, an entry dropped from the config is removed
+on the next `generate`, and `clean` removes what was written. A hand-written entry with the same
+key is replaced by the configured value. The default `directory` source is the marketplace
+root relative to the repository (`"./tools/acme-marketplace"`); Claude Code resolves it against the
+main checkout. `extraKnownMarketplaces` takes effect only after the user trusts the folder.
+Relative-path plugins listed in `enabledPlugins` load from the marketplace without an install
+step; the key cannot force an install of a plugin from an external source.
+
+### Catalog skill
+
+```toml
+[marketplace.catalog_skill]
+enabled = true                 # default false
+name = "plugin-catalog"
+```
+
+Generates a skill listing each plugin, its default state, the skills it bundles and how to
+install or enable it (`claude plugin marketplace add`, `claude plugin install`,
+`enabledPlugins`). It is written like a root skill to the preset skill outputs and is never bundled into a plugin. A
+root skill with the same name wins.
+
 ## Field reference
 
 `[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
 becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`, `content_root` (project-relative directory of plugin-only
+`tags`, `runtimes`, `include_domains`, `content_root` (project-relative directory of plugin-only
 `skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`
@@ -364,4 +493,7 @@ becomes a directory and file name in every runtime), `version` (required); `disp
 (`skill_instructions`/`session_start_skill`), `[plugin.hermes]`
 (`source`/`requires_python`).
 
-`[marketplace]`: `name` (required); `description`, `members`, and `[marketplace.owner]`.
+`[marketplace]`: `name` (required); `description`, `members`, `output_dir`, `[marketplace.owner]`,
+`[marketplace.from_domains]`, `[[marketplace.plugins]]` and `[marketplace.catalog_skill]` (see
+[Domain content and per-domain plugins](#domain-content-and-per-domain-plugins)). Related top-level
+tables: `[placement]` and `[claude.settings]`.
