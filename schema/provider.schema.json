@@ -52,7 +52,11 @@
         "commands": { "type": "boolean" },
         "agents": { "type": "boolean" },
         "include_path": { "type": "boolean", "description": "Each entry also carries the item's file path." },
-        "description_limit": { "type": "integer", "minimum": 0, "description": "Per-entry description truncation limit in characters; 0 when unknown." }
+        "description_limit": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Per-entry description truncation limit in characters; 0 when unknown."
+        }
       }
     },
     "sidecars": {

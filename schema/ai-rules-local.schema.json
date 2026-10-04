@@ -1111,16 +1111,16 @@
         "icon": {
           "type": "string"
         },
-        "include_evals": {
-          "type": "boolean",
-          "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
-        },
         "include_domains": {
           "description": "Domains (names or globs) whose skills, commands and agents are bundled next to the root content. Empty keeps the bundle root-only. A root item wins over a same-named domain item.",
           "items": {
             "type": "string"
           },
           "type": "array"
+        },
+        "include_evals": {
+          "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default.",
+          "type": "boolean"
         },
         "interface": {
           "additionalProperties": false,
@@ -1502,6 +1502,17 @@
         "type": "object"
       },
       "type": "array"
+    },
+    "usage": {
+      "additionalProperties": false,
+      "description": "Usage-telemetry support (opt-in, no network).",
+      "properties": {
+        "skills_index": {
+          "description": "Write <config dir>/skills-index.json on generate: one record per generated skill (id, source, content hash, owner, version, outputs per preset).",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
     },
     "version": {
       "description": "Configuration version (3.0 or 4.0)",

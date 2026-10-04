@@ -25,11 +25,11 @@ import (
 	"cmp"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"gopkg.in/yaml.v3"
-	"strconv"
 )
 
 // ListingEntryOverheadTokens is the estimated framing cost of one listing
@@ -217,7 +217,7 @@ func listingFrontmatter(text string) (fields map[string]any, body string) {
 		if next < 0 {
 			next = len(line)
 		}
-		if strings.TrimRight(line[:next], "\r") == "---" {
+		if strings.TrimRight(line[:next], "\r") == frontmatterFence {
 			end = offset
 			break
 		}
@@ -239,7 +239,7 @@ func listingFrontmatter(text string) (fields map[string]any, body string) {
 }
 
 func scalarString(value any) string {
-	text, _ := value.(string)
+	text, _ := value.(string) //nolint:errcheck // a non-string value reads as empty
 	return strings.TrimSpace(text)
 }
 
@@ -269,7 +269,7 @@ func firstBodyLine(body string) string {
 func listingNotes(report *TokenReport) []string {
 	listed := false
 	truncated := 0
-	for _, runtime := range append(append([]RuntimeTokens{}, report.Runtimes...), report.Scoped...) {
+	for _, runtime := range append(append([]RuntimeTokens{}, report.Runtimes...), report.Scoped...) { //nolint:gocritic // small report, copied once
 		if runtime.ListedItems > 0 {
 			listed = true
 		}

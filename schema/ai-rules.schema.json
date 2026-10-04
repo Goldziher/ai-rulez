@@ -588,6 +588,17 @@
       },
       "additionalProperties": false
     },
+    "usage": {
+      "type": "object",
+      "description": "Usage-telemetry support (opt-in, no network).",
+      "properties": {
+        "skills_index": {
+          "type": "boolean",
+          "description": "Write <config dir>/skills-index.json on generate: one record per generated skill (id, source, content hash, owner, version, outputs per preset)."
+        }
+      },
+      "additionalProperties": false
+    },
     "lint": {
       "type": "object",
       "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
@@ -747,7 +758,11 @@
           "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
           "properties": {
             "require": { "type": "boolean", "description": "Enable evals-missing at warning severity." },
-            "allow": { "type": "array", "items": { "type": "string" }, "description": "Skill names or globs exempt from the check." }
+            "allow": {
+              "type": "array",
+              "items": { "type": "string" },
+              "description": "Skill names or globs exempt from the check."
+            }
           },
           "additionalProperties": false
         }
