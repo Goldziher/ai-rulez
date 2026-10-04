@@ -109,7 +109,19 @@ type runner struct {
 	docs        map[string]doc
 	counter     tokens.Counter
 	findings    []Finding
-	drift       []PluginDrift
+	// forceSev replaces the severity of every finding while imported content is
+	// scanned (lint.security.scan_imports).
+	forceSev Severity
+	opts     Options
+	drift    []PluginDrift
+}
+
+// Options selects what a run does beyond the default strict checks.
+type Options struct {
+	// SecurityOnly keeps only the security family (AR0xx).
+	SecurityOnly bool
+	// External also runs the scanners configured in lint.external.
+	External bool
 }
 
 // PluginDrift describes a generated plugin whose content changed against the
@@ -135,11 +147,16 @@ func WithPluginDrift(drift []PluginDrift) Option {
 
 // Run lints one loaded configuration against the repository tree.
 func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
+	return RunWith(cfg, tree, Options{}, opts...)
+}
+
+// RunWith is Run with the security and external-scanner options.
+func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Report, error) {
 	counter, err := tokens.New("")
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
-	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter}
+	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so}
 	for _, opt := range opts {
 		opt(r)
 	}
@@ -162,7 +179,16 @@ func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
 	r.checkDuplicates()
 	r.checkMCP()
 	r.checkHooks(baseAbs)
+	r.checkCollapsed()
+	r.checkUnpinned()
+	r.scanImported()
 	r.checkPluginDrift()
+	if so.External {
+		r.runExternal()
+	}
+	if so.SecurityOnly {
+		r.findings = securityOnly(r.findings)
+	}
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		a, b := r.findings[i], r.findings[j]
@@ -240,6 +266,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 			problems = append(problems, fmt.Sprintf("lint.require_metadata: unknown content kind %q", kind))
 		}
 	}
+	problems = append(problems, validateNewSettings(lc)...)
 	sort.Strings(problems)
 	return problems
 }
@@ -260,6 +287,9 @@ func (r *runner) add(code, abs string, line int, format string, args ...any) {
 	}
 	if r.pathIgnored(abs) || r.inlineIgnored(abs, line, code) {
 		return
+	}
+	if r.forceSev != "" {
+		sev = r.forceSev
 	}
 	rule, _ := lookupRule(code) //nolint:errcheck // every emitted code is registered
 	r.findings = append(r.findings, Finding{
@@ -296,6 +326,9 @@ func (r *runner) pathIgnored(abs string) bool {
 }
 
 func (r *runner) inlineIgnored(abs string, line int, code string) bool {
+	if r.forceSev != "" {
+		return false // imported text cannot silence its own findings
+	}
 	d, ok := r.docs[abs]
 	if !ok {
 		return false
@@ -434,11 +467,18 @@ func (r *runner) checkItem(it *item) {
 	}
 	d := parseDoc(raw)
 	r.docs[it.abs] = d
+	r.securityScan(it.abs, raw)
 	if !it.isDoc {
+		fm := parseFrontmatterDoc(d)
+		r.checkFrontmatterKeys(it, fm)
+		r.checkTypedMetadata(it, fm)
+		r.checkSuperseded(it, fm)
+		r.checkToolBreadth(it, fm)
+		r.scanResources(it)
 		r.checkGlobs(it, d)
 		r.checkDescription(it, d)
 		r.checkBudget(it, raw)
-		r.checkRequiredMetadata(it, d)
+		r.checkRequiredMetadata(it, d, fm)
 		r.checkSkillName(it, d)
 		r.checkFrontmatterSkills(it, d)
 		r.checkScripts(it)
@@ -538,33 +578,36 @@ func metaValue(m *config.Metadata, key string) string {
 		return m.Category
 	case "shortcut":
 		return m.Shortcut
-	case "effort":
+	case keyEffort:
 		return m.Effort
 	case "activation":
 		return m.Activation
 	case "targets":
 		return strings.Join(m.Targets, ",")
-	case "tools":
+	case keyTools:
 		return strings.Join(m.Tools, ",")
-	case "skills":
+	case keySkills:
 		return strings.Join(m.Skills, ",")
 	case "keywords":
 		return strings.Join(m.Keywords, ",")
-	case "paths":
+	case keyPaths:
 		return strings.Join(m.Paths, ",")
-	case "globs":
+	case keyGlobs:
 		return strings.Join(m.Globs, ",")
 	}
 	return m.Extra[key]
 }
 
-func (r *runner) checkRequiredMetadata(it *item, d doc) {
+func (r *runner) checkRequiredMetadata(it *item, _ doc, fm frontmatter) {
 	for _, key := range r.lc.RequireMetadata[it.kind] {
-		if strings.TrimSpace(metaValue(it.cf.Metadata, key)) == "" {
-			r.add(CodeMetadataMissing, it.abs, 1, "%s %q is missing required frontmatter key %q", it.kind, itemID(it.kind, it.cf), key)
+		if strings.TrimSpace(metaValue(it.cf.Metadata, key)) != "" {
+			continue
 		}
+		if k, ok := fm.lookup(key); ok && scalar(k.Value) != "" {
+			continue // set inside the Agent Skills `metadata` map
+		}
+		r.add(CodeMetadataMissing, it.abs, 1, "%s %q is missing required frontmatter key %q", it.kind, itemID(it.kind, it.cf), key)
 	}
-	_ = d
 }
 
 func (r *runner) checkSkillName(it *item, d doc) {

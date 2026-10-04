@@ -129,7 +129,7 @@ func writeLockAt(path, kind string, names []string) int {
 		return 1
 	}
 	for _, e := range append(append([]lockfile.Entry(nil), next.Include...), next.Skill...) {
-		fmt.Fprintf(os.Stdout, "locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
+		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
 	}
 	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
 	return 0

@@ -58,6 +58,7 @@ func init() {
 	RootCmd.AddCommand(GenerateCmd)
 	RootCmd.AddCommand(CleanCmd)
 	RootCmd.AddCommand(ValidateCmd)
+	RootCmd.AddCommand(ScanCmd)
 	RootCmd.AddCommand(VerifyCmd)
 	RootCmd.AddCommand(VersionCmd)
 	RootCmd.AddCommand(InitCmd)
