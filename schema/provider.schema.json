@@ -154,7 +154,11 @@
         },
         "paths": {
           "type": "boolean",
-          "description": "When true, copy a rule's path scope (its globs/paths frontmatter) into a `paths` field, which is how Claude Code scopes a rule file."
+          "description": "When true, copy a rule's or skill's path scope (its globs/paths frontmatter) into a `paths` field, which is how Claude Code scopes a rule file and gates a skill to matching files."
+        },
+        "hide_key": {
+          "type": "string",
+          "description": "Skills only. The frontmatter key written false (e.g. user-invocable) to hide a skill from the tool's slash menu when the project sets [claude.skills] hide_from_menu. Never overrides a value the author set."
         },
         "include_extras": {
           "type": "boolean",

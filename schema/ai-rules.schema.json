@@ -998,6 +998,30 @@
             }
           },
           "additionalProperties": false
+        },
+        "skills": {
+          "type": "object",
+          "description": "Options for the skills written to .claude/skills.",
+          "properties": {
+            "hide_from_menu": {
+              "type": "boolean",
+              "default": false,
+              "description": "Write user-invocable: false on every skill that does not set the key itself, so Claude Code hides it from the / menu and only the model loads it. Off by default: a skill without the key is user-invocable. A user-invocable value set in the skill's frontmatter always wins."
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "codex": {
+      "type": "object",
+      "description": "Codex specific options.",
+      "properties": {
+        "project_doc_max_bytes": {
+          "type": "integer",
+          "default": 32768,
+          "description": "The project_doc_max_bytes your Codex is configured with. generate warns when the AGENTS.md files Codex concatenates (root down to a directory) exceed it, naming the largest sections. Unset means the Codex default of 32 KiB; 0 turns the warning off."
         }
       },
       "additionalProperties": false
