@@ -40,6 +40,8 @@ type LintConfig struct {
 	// External lists third-party scanners whose findings are merged into the
 	// report when `validate --strict --external` (or `scan --external`) runs.
 	External []LintExternal `yaml:"external,omitempty" json:"external,omitempty" toml:"external,omitempty"`
+	// Evals configures the evals-missing check (AR962).
+	Evals *LintEvals `yaml:"evals,omitempty" json:"evals,omitempty" toml:"evals,omitempty"`
 }
 
 // LintMetadataRule types one frontmatter key.
@@ -88,6 +90,17 @@ type LintExternal struct {
 	Command []string `yaml:"command" json:"command" toml:"command"`
 	// Format is "sarif" (default) or "json".
 	Format string `yaml:"format,omitempty" json:"format,omitempty" toml:"format,omitempty"`
+}
+
+// LintEvals configures the check for skills that have no eval cases. A skill
+// has cases when its evals/ directory, or .ai-rulez/evals/<skill-name>/, holds
+// at least one file.
+type LintEvals struct {
+	// Require turns the evals-missing check on at warning severity. An explicit
+	// [lint.severity] entry for evals-missing wins.
+	Require bool `yaml:"require,omitempty" json:"require,omitempty" toml:"require,omitempty"`
+	// Allow lists skill names or globs exempt from the check.
+	Allow []string `yaml:"allow,omitempty" json:"allow,omitempty" toml:"allow,omitempty"`
 }
 
 // LintDescription tunes description quality checks.

@@ -88,6 +88,7 @@ const (
 	CodeMetadataStale        = "AR953"
 	CodeSupersededMissing    = "AR954"
 	CodePluginVersionDrift   = "AR961"
+	CodeEvalsMissing         = "AR962"
 )
 
 // RuleInfo describes one check.
@@ -136,6 +137,7 @@ var registry = []RuleInfo{
 	{CodeMetadataStale, "metadata-stale", SeverityWarning, "a dated frontmatter value is older than its lint.metadata max_age_days"},
 	{CodeSupersededMissing, "superseded-by-missing", SeverityError, "a deprecated item names a superseded_by replacement that does not exist"},
 	{CodePluginVersionDrift, "plugin-version-drift", SeverityWarning, "a generated plugin's content changed since HEAD but its version did not, so installs keep the cached copy"},
+	{CodeEvalsMissing, "evals-missing", SeverityOff, "a skill has no eval cases (enabled by lint.evals.require or lint.severity; exempt skills go in lint.evals.allow)"},
 }
 
 // Rules returns the registry sorted by code.
