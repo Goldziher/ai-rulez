@@ -75,9 +75,6 @@ func (c *Config) Validate() error {
 	// Warn about missing domain references (non-fatal)
 	c.warnMissingDomainReferences()
 
-	// Warn about inert argument-hint on skills (non-fatal)
-	c.warnSkillArgumentHint()
-
 	return nil
 }
 
@@ -650,10 +647,6 @@ func getBuiltInPresetNames() []string {
 	return names
 }
 
-// scopeRoot names root content in diagnostics. Domain scopes read
-// "domain <name>".
-const scopeRoot = "root"
-
 // namespaceEntry is the first item seen for an output id: the id as authored
 // (for the message) plus its source path (so both sides of a collision are
 // nameable).
@@ -840,73 +833,6 @@ func commandOutputID(command ContentFile) string {
 	id = strings.ReplaceAll(id, "_", "-")
 
 	return id
-}
-
-// warnInertSkillArgumentHint is advisory rather than fatal: argument-hint is
-// inert on skills because user-invocable=false is a hard constant in the
-// claude.toml [outputs.skills] block, but a config that declares it still
-// generates correctly.
-const warnInertSkillArgumentHint = "skill declares argument-hint but it is inert " +
-	"(skills have user-invocable=false) — move it to commands/ instead"
-
-// skillWarning is one non-fatal skill advisory, carried as data rather than
-// logged at the point of detection so the detection logic stays testable.
-type skillWarning struct {
-	Scope   string
-	Skill   string
-	Path    string
-	Message string
-}
-
-// warnSkillArgumentHint logs the advisories collected by
-// skillArgumentHintWarnings.
-func (c *Config) warnSkillArgumentHint() {
-	for _, warning := range c.skillArgumentHintWarnings() {
-		logger.Warn(warning.Message, "scope", warning.Scope, "skill", warning.Skill, "path", warning.Path)
-	}
-}
-
-// skillArgumentHintWarnings reports skills declaring argument-hint in their
-// frontmatter, in root order followed by domains in alphabetical order so the
-// warning sequence is reproducible.
-func (c *Config) skillArgumentHintWarnings() []skillWarning {
-	if c.Content == nil {
-		return nil
-	}
-
-	var warnings []skillWarning
-	collect := func(skills []ContentFile, scope string) {
-		for _, skill := range skills {
-			if skill.Metadata == nil || skill.Metadata.Extra == nil {
-				continue
-			}
-			if _, hasHint := skill.Metadata.Extra["argument-hint"]; !hasHint {
-				continue
-			}
-			warnings = append(warnings, skillWarning{
-				Scope:   scope,
-				Skill:   SkillID(skill),
-				Path:    skill.Path,
-				Message: warnInertSkillArgumentHint,
-			})
-		}
-	}
-
-	collect(c.Content.Skills, scopeRoot)
-
-	domainNames := make([]string, 0, len(c.Content.Domains))
-	for domainName := range c.Content.Domains {
-		domainNames = append(domainNames, domainName)
-	}
-	sort.Strings(domainNames)
-
-	for _, domainName := range domainNames {
-		if domain := c.Content.Domains[domainName]; domain != nil {
-			collect(domain.Skills, "domain "+domainName)
-		}
-	}
-
-	return warnings
 }
 
 // validateMCP checks [[mcp_servers]] headers and the [mcp] options. The

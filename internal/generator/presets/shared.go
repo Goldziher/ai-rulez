@@ -1,9 +1,12 @@
 package presets
 
 import (
+	"bytes"
 	"path/filepath"
 	"slices"
 	"strings"
+
+	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
@@ -91,6 +94,7 @@ func renderAgentSkillFile(skill config.ContentFile) string {
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
+	writeSkillSpecFields(&builder, skill, nil)
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))
@@ -141,4 +145,58 @@ func routingWithSharedAgentsMD(cfg *config.Config, preset string, r rulefiles.Ro
 		return rulefiles.WithoutAlwaysOn(r)
 	}
 	return r
+}
+
+// writeSkillSpecFields appends the optional Agent Skills specification fields
+// the skill sets (license, compatibility, metadata, allowed-tools), plus any
+// preset-specific extra fields, as YAML with their original types. Keys are
+// sorted, so output is deterministic. Nothing is written when there are none,
+// which keeps a skill without those fields byte-identical to before.
+func writeSkillSpecFields(b *strings.Builder, skill config.ContentFile, extra map[string]any) {
+	fields := skill.Metadata.SkillSpecFields()
+	for k, v := range extra {
+		fields[k] = v
+	}
+	if len(fields) == 0 {
+		return
+	}
+	var buf bytes.Buffer
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(fields); err != nil {
+		return
+	}
+	if err := enc.Close(); err != nil {
+		return
+	}
+	b.Write(buf.Bytes())
+}
+
+// mergeShortDescription returns the metadata value with short-description added
+// as a nested key. existing is the author's metadata (a mapping node) or nil; a
+// metadata value that is not a map is returned unchanged, and an author-set
+// short-description wins.
+func mergeShortDescription(existing any, shortDesc string) any {
+	entry := func() (*yaml.Node, *yaml.Node) {
+		return &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: "short-description"},
+			&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: shortDesc, Style: yaml.DoubleQuotedStyle}
+	}
+	switch m := existing.(type) {
+	case nil:
+		k, v := entry()
+		return &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map", Content: []*yaml.Node{k, v}}
+	case *yaml.Node:
+		if m.Kind != yaml.MappingNode {
+			return existing
+		}
+		for i := 0; i+1 < len(m.Content); i += 2 {
+			if m.Content[i].Value == "short-description" {
+				return existing
+			}
+		}
+		k, v := entry()
+		m.Content = append(m.Content, k, v)
+		return m
+	}
+	return existing
 }

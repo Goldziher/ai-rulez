@@ -331,6 +331,7 @@ func (g *AntigravityPresetGenerator) renderSkillFile(skill config.ContentFile) s
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
 
+	writeSkillSpecFields(&builder, skill, nil)
 	builder.WriteString("---\n\n")
 
 	builder.WriteString(skill.Content)
