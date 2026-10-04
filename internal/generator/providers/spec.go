@@ -80,6 +80,10 @@ type FrontmatterSpec struct {
 	ExtrasBlacklist []string `toml:"extras_blacklist,omitempty" yaml:"extras_blacklist,omitempty" json:"extras_blacklist,omitempty"`
 	EmitEffort      bool     `toml:"emit_effort,omitempty" yaml:"emit_effort,omitempty" json:"emit_effort,omitempty"`
 	EmitModel       bool     `toml:"emit_model,omitempty" yaml:"emit_model,omitempty" json:"emit_model,omitempty"`
+	// EffortField is the frontmatter key the resolved effort is written under
+	// when EmitEffort is true. Empty means "effort"; tools whose thinking knob
+	// is spelled differently (pi: "thinking") set it explicitly.
+	EffortField string `toml:"effort_field,omitempty" yaml:"effort_field,omitempty" json:"effort_field,omitempty"`
 }
 
 // EffortMapSpec is the provider's effort tier → native value translation.
@@ -154,6 +158,7 @@ const (
 	SidecarClaudePluginsJSON  = "claude_plugins_json"
 	SidecarMCPJSON            = "mcp_json"
 	SidecarAmpSettingsJSON    = "amp_settings_json"
+	SidecarPiMCPJSON          = "pi_mcp_json"
 
 	// Content type keys in ProviderSpec.Outputs
 	OutputTypeRules    = "rules"
