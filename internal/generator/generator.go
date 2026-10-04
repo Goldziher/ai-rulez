@@ -61,7 +61,12 @@ type Generator struct {
 	localSkipped    bool            // local files exist on disk but were not loaded (--no-local)
 
 	manifests map[string]generatedManifest // manifests read this run, by path
-	warned    map[string]bool              // merged-document warnings already issued by this Generator
+
+	// userMode renders for the person rather than a project (see user.go);
+	// projectDir is the project the user command runs from, for overlap warnings.
+	userMode   bool
+	projectDir string
+	warned     map[string]bool // merged-document warnings already issued by this Generator
 }
 
 type generatedManifest struct {
