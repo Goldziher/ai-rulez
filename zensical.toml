@@ -25,6 +25,7 @@ nav = [
     { "Installed Skills" = "installed-skills.md" },
     { "Strict Validation" = "strict-validation.md" },
     { "Authoring Plugins" = "plugins.md" },
+    { "Evals" = "evals.md" },
     { "Poly Hooks" = "poly-hooks.md" },
     { "Monorepo" = "monorepo.md" },
     { "Examples" = "examples.md" },

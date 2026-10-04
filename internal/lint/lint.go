@@ -211,6 +211,9 @@ func (r *runner) resolveSettings() {
 	if r.lc.Description != nil && r.lc.Description.RequireUseWhen {
 		r.sev[CodeDescriptionStyle] = SeverityWarning
 	}
+	if r.lc.Evals != nil && r.lc.Evals.Require {
+		r.sev[CodeEvalsMissing] = SeverityWarning
+	}
 	for key, val := range r.lc.Severity {
 		rule, ok := lookupRule(key)
 		s, sok := ParseSeverity(val)
@@ -482,6 +485,7 @@ func (r *runner) checkItem(it *item) {
 		r.checkSkillName(it, d)
 		r.checkFrontmatterSkills(it, d)
 		r.checkScripts(it)
+		r.checkEvals(it, d)
 	}
 	r.scanBody(it, d)
 }
@@ -891,4 +895,55 @@ func (r *runner) checkPluginDrift() {
 			"plugin %q changed since the baseline (%s) but its version is still %s; installs that cache the plugin keep the old copy until the version changes",
 			d.Plugin, changed, d.Version)
 	}
+}
+
+// checkEvals reports a skill that ships no eval cases. Cases live in the
+// skill's own evals/ directory or in .ai-rulez/evals/<skill-name>/.
+func (r *runner) checkEvals(it *item, d doc) {
+	if r.sev[CodeEvalsMissing] == SeverityOff || it.kind != kindSkill || it.itemDir == "" {
+		return
+	}
+	id := config.SkillID(it.cf)
+	if r.evalsAllowed(id) {
+		return
+	}
+	for _, dir := range []string{
+		filepath.Join(it.itemDir, config.SkillKindEvals),
+		filepath.Join(r.cfg.ConfigDir, config.EvalsDirName, id),
+	} {
+		if hasFiles(dir) {
+			return
+		}
+	}
+	r.add(CodeEvalsMissing, it.abs, d.lineOf("name", 1), "skill %q has no eval cases (add files under %s/ or %s/%s/)",
+		id, config.SkillKindEvals, config.EvalsDirName, id)
+}
+
+func (r *runner) evalsAllowed(id string) bool {
+	if r.lc.Evals == nil {
+		return false
+	}
+	for _, pattern := range r.lc.Evals.Allow {
+		if m, ok := newGlob(pattern); ok && m.match(id) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasFiles reports whether dir holds at least one regular, non-hidden file.
+func hasFiles(dir string) bool {
+	found := false
+	//nolint:errcheck // an unreadable or missing directory simply has no cases
+	_ = filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if entry.Type().IsRegular() && !strings.HasPrefix(entry.Name(), ".") {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
 }

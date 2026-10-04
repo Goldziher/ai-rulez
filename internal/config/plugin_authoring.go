@@ -81,6 +81,12 @@ type PluginAuthoring struct {
 	// root-only. On a name collision the root item wins.
 	IncludeDomains []string `yaml:"include_domains,omitempty" json:"include_domains,omitempty" toml:"include_domains,omitempty"` //nolint:tagliatelle
 
+	// IncludeEvals bundles eval cases into the plugin: each skill's evals/
+	// directory and the project-level .ai-rulez/evals/ tree (the latter at
+	// <bundle>/evals/). Off by default, so a skill's evals/ directory is not
+	// shipped to consumers of the bundle.
+	IncludeEvals bool `yaml:"include_evals,omitempty" json:"include_evals,omitempty" toml:"include_evals,omitempty"` //nolint:tagliatelle
+
 	// Runtimes restricts which runtime manifests are emitted. Empty means all
 	// of AllPluginRuntimes.
 	Runtimes []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`
