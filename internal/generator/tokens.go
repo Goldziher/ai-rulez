@@ -73,6 +73,8 @@ type Entry struct {
 	// a single file or section.
 	Artifacts int     `json:"artifacts"`
 	Children  []Entry `json:"children,omitempty"`
+	// listing marks the entries that make up the item listing estimate.
+	listing bool
 }
 
 // RuntimeTokens is the cost of everything ai-rulez generates for one provider.
@@ -90,6 +92,21 @@ type RuntimeTokens struct {
 	Conditional int    `json:"conditional"`
 	OnDemand    int    `json:"on_demand"`
 	Unmodeled   int    `json:"unmodeled"`
+	// Listing is the estimated cost of the skill, command and agent listing the
+	// harness puts in the prompt at session start: name, description and
+	// per-entry framing of every item it lists. It is already included in Always.
+	Listing int `json:"listing"`
+	// ListedItems is how many items the listing covers.
+	ListedItems int `json:"listed_items"`
+	// TruncatedDescriptions counts listed entries whose description exceeds the
+	// harness's per-entry limit, where one is known.
+	TruncatedDescriptions int `json:"truncated_descriptions,omitempty"`
+	// LegacyAlways and LegacyConditional are the figures the pre-listing model
+	// reported for this runtime (only item names, and agent descriptions, counted
+	// as always-loaded; skill descriptions conditional). Kept so a number
+	// recorded before the listing bucket existed stays comparable.
+	LegacyAlways      int `json:"always_legacy"`
+	LegacyConditional int `json:"conditional_legacy"`
 	// Detailed is true when the provider is described by the provider DSL, whose
 	// renderer reports an exact artifact kind and a per-section split of the root
 	// instructions file. False for the hand-written preset generators, whose
@@ -126,13 +143,21 @@ type TokenReport struct {
 	// surface, and HeadlineAlways is that surface. It is the figure to watch and
 	// the figure a budget is checked against, because it is the worst case a
 	// single session can pay for the artifacts ai-rulez controls.
-	HeadlinePreset string          `json:"headline_preset"`
-	HeadlineAlways int             `json:"headline_always"`
-	Runtimes       []RuntimeTokens `json:"runtimes"`
-	Scoped         []RuntimeTokens `json:"scoped,omitempty"`
-	Domains        []DomainTokens  `json:"domains"`
-	Budget         *BudgetResult   `json:"budget,omitempty"`
-	Notes          []string        `json:"notes"`
+	HeadlinePreset string `json:"headline_preset"`
+	// HeadlineAlways includes the item listing. HeadlineListing is the listing's
+	// share of it and HeadlineAlwaysLegacy the figure the pre-listing model gave
+	// for the same runtime.
+	HeadlineAlways       int `json:"headline_always"`
+	HeadlineListing      int `json:"headline_listing"`
+	HeadlineAlwaysLegacy int `json:"headline_always_legacy"`
+	// ListingEntryOverhead is the per-entry framing estimate, in tokens, added to
+	// every listed item. See ListingEntryOverheadTokens.
+	ListingEntryOverhead int             `json:"listing_entry_overhead"`
+	Runtimes             []RuntimeTokens `json:"runtimes"`
+	Scoped               []RuntimeTokens `json:"scoped,omitempty"`
+	Domains              []DomainTokens  `json:"domains"`
+	Budget               *BudgetResult   `json:"budget,omitempty"`
+	Notes                []string        `json:"notes"`
 }
 
 // TokenReportOptions parameterises TokenReport.
@@ -175,6 +200,8 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 	}
 
 	builder := &reportBuilder{
+		collector:    collector,
+		baseDir:      g.config.BaseDir,
 		counter:      options.Counter,
 		finalPayload: g.finalPayloadByPath(outputs),
 		domainByPath: domainIndex(contentTree),
@@ -187,6 +214,7 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 			Approximate: true,
 			Estimate:    options.Counter.IsEstimate(),
 		},
+		ListingEntryOverhead: ListingEntryOverheadTokens,
 	}
 	builder.build(collector.Analyses(), report)
 	report.Notes = reportNotes(report)
@@ -250,6 +278,8 @@ func domainIndex(content *config.ContentTree) map[string]string {
 
 // reportBuilder accumulates a report from recorded analyses.
 type reportBuilder struct {
+	collector    *config.AnalysisCollector
+	baseDir      string
 	counter      tokens.Counter
 	finalPayload map[string]string
 	domainByPath map[string]string
@@ -277,6 +307,7 @@ func (b *reportBuilder) build(analyses []*config.OutputAnalysis, report *TokenRe
 		}
 		group.add(analysis)
 	}
+	b.assignListed(groups, analyses)
 
 	for _, key := range order {
 		b.currentRuntime = key
@@ -294,6 +325,8 @@ func (b *reportBuilder) build(analyses []*config.OutputAnalysis, report *TokenRe
 	if len(report.Runtimes) > 0 {
 		report.HeadlinePreset = report.Runtimes[0].Preset
 		report.HeadlineAlways = report.Runtimes[0].Always
+		report.HeadlineListing = report.Runtimes[0].Listing
+		report.HeadlineAlwaysLegacy = report.Runtimes[0].LegacyAlways
 		report.Domains = b.domainRows(runtimeKey(report.Runtimes[0].Preset, report.Runtimes[0].Scope))
 	}
 }
@@ -318,6 +351,10 @@ type runtimeGroup struct {
 	ruleFile []*config.OutputAnalysis
 	items    map[config.OutputKind][]*config.OutputAnalysis
 	other    []*config.OutputAnalysis
+	// listed is every skill, command and agent output this runtime's harness can
+	// see, including shared paths (.agents/skills) that another preset rendered
+	// first and that therefore sit in that preset's items.
+	listed []*config.OutputAnalysis
 	// files counts distinct outputs. Entry.Artifacts cannot be summed for this:
 	// one file contributes to several entries (its name, its description and its
 	// body are separate lines), so summing them counts most files three times.
@@ -356,9 +393,11 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 
 	runtime.Entries = append(runtime.Entries, b.ruleFileEntries(group.ruleFile)...)
 
-	for _, kind := range []config.OutputKind{config.OutputKindSkill, config.OutputKindCommand, config.OutputKindAgent} {
-		runtime.Entries = append(runtime.Entries, b.itemEntries(kind, group.items[kind])...)
+	listing := b.listingEntries(group)
+	for _, kind := range listedKinds {
+		runtime.Entries = append(runtime.Entries, b.itemEntries(kind, group.items[kind], listing.replaces[kind], &listing)...)
 	}
+	runtime.Entries = append(runtime.Entries, listing.entries...)
 
 	if len(group.other) > 0 {
 		runtime.Entries = append(runtime.Entries, b.otherEntries(group.other)...)
@@ -370,6 +409,9 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 	}
 
 	for _, entry := range runtime.Entries {
+		if entry.listing {
+			runtime.Listing += entry.Tokens
+		}
 		switch entry.Bucket {
 		case BucketAlways:
 			runtime.Always += entry.Tokens
@@ -381,6 +423,10 @@ func (b *reportBuilder) buildRuntime(group *runtimeGroup) RuntimeTokens {
 			runtime.Unmodeled += entry.Tokens
 		}
 	}
+	runtime.ListedItems = listing.items
+	runtime.TruncatedDescriptions = listing.truncated
+	runtime.LegacyAlways = runtime.Always - runtime.Listing + listing.replacedAlways
+	runtime.LegacyConditional = runtime.Conditional + listing.replacedConditional
 	return runtime
 }
 
@@ -532,15 +578,13 @@ func (b *reportBuilder) rootEntry(analysis *config.OutputAnalysis) Entry {
 	return entry
 }
 
-// itemBuckets is the loading model for a per-item artifact, by part kind.
-//
-// Calibrated against Claude Code. Ablating one component at a time from a real
-// 198-skill, 32-agent tree showed that a skill costs about four prompt tokens —
-// its name in the skill listing — and nothing else: inflating all 198
-// descriptions by roughly 17,000 tokens of text moved the measured prompt by 19
-// tokens, and a session asked to quote a description verbatim could not. Agents
-// are different: the harness injects each agent's name and description into the
-// Agent tool schema, which measured about 48 tokens per agent for 32 agents.
+// itemModel is the pre-listing loading model for a per-item artifact, kept to
+// compute the legacy figures and for runtimes whose harness does not list the
+// kind. It was calibrated against Claude Code with a tree whose descriptions
+// had been inflated; a later probe with realistic descriptions showed the
+// description is in the session-start listing (see tokens_listing.go), which is
+// why listed kinds no longer use it. Agents measured about 48 prompt tokens each
+// because the harness injects their name and description into the Agent tool.
 type itemModel struct {
 	nameBucket        Bucket
 	descriptionBucket Bucket
@@ -568,18 +612,36 @@ var overheadPartKinds = []config.PartKind{
 // split (a provider rule file, a whole-file fallback).
 var allPartKinds []config.PartKind
 
-func (b *reportBuilder) itemEntries(kind config.OutputKind, analyses []*config.OutputAnalysis) []Entry {
+func (b *reportBuilder) itemEntries(kind config.OutputKind, analyses []*config.OutputAnalysis, listed bool, listing *listingResult) []Entry {
 	if len(analyses) == 0 {
 		return nil
 	}
 	model := modelFor(kind)
 	noun := string(kind)
-	entries := []Entry{
-		b.aggregate(noun+" names", model.nameBucket, analyses, []config.PartKind{config.PartKindItemName}),
-		b.aggregate(noun+" descriptions", model.descriptionBucket, analyses, []config.PartKind{config.PartKindItemDescription}),
-		b.aggregate(noun+" bodies", BucketOnDemand, analyses, []config.PartKind{config.PartKindItemBody}),
-		b.aggregate(noun+" file overhead", BucketOnDemand, analyses, overheadPartKinds),
+	var entries []Entry
+	if listed {
+		// The listing entry carries the name and description, so counting them
+		// here as well would charge them twice. What the old model reported for
+		// them is remembered for the legacy figures.
+		for _, part := range []struct {
+			kind   config.PartKind
+			bucket Bucket
+		}{{config.PartKindItemName, model.nameBucket}, {config.PartKindItemDescription, model.descriptionBucket}} {
+			tokens := b.partTokens(analyses, part.kind)
+			if part.bucket == BucketAlways {
+				listing.replacedAlways += tokens
+			} else {
+				listing.replacedConditional += tokens
+			}
+		}
+	} else {
+		entries = append(entries,
+			b.aggregate(noun+" names", model.nameBucket, analyses, []config.PartKind{config.PartKindItemName}),
+			b.aggregate(noun+" descriptions", model.descriptionBucket, analyses, []config.PartKind{config.PartKindItemDescription}))
 	}
+	entries = append(entries,
+		b.aggregate(noun+" bodies", BucketOnDemand, analyses, []config.PartKind{config.PartKindItemBody}),
+		b.aggregate(noun+" file overhead", BucketOnDemand, analyses, overheadPartKinds))
 	result := make([]Entry, 0, len(entries))
 	for _, entry := range entries {
 		if entry.Tokens > 0 {
@@ -587,6 +649,20 @@ func (b *reportBuilder) itemEntries(kind config.OutputKind, analyses []*config.O
 		}
 	}
 	return result
+}
+
+// partTokens sums the tokens of one part kind across artifacts without
+// attributing them to a domain.
+func (b *reportBuilder) partTokens(analyses []*config.OutputAnalysis, kind config.PartKind) int {
+	total := 0
+	for _, analysis := range analyses {
+		for _, part := range analysis.Parts {
+			if part.Kind == kind {
+				total += b.counter.Count(part.Content)
+			}
+		}
+	}
+	return total
 }
 
 func (b *reportBuilder) otherEntries(analyses []*config.OutputAnalysis) []Entry {
@@ -755,9 +831,9 @@ func reportNotes(report *TokenReport) []string {
 		"Runtimes are not additive. One session loads one runtime's root instructions file, " +
 			"so emitting both CLAUDE.md and AGENTS.md costs one of them, not both. The " +
 			"headline figure is the largest single runtime.",
-		"\"conditional\" is surface some harness modes carry and others do not. Skill and " +
-			"command descriptions are the measured case: a non-interactive Claude Code run " +
-			"does not carry them, an interactive session surfaces them for user-invocable skills.",
+		"\"conditional\" is surface some harness modes carry and others do not. For a harness " +
+			"that lists skills (see the listing lines) skill descriptions are part of the " +
+			"always-loaded listing instead.",
 		"Provenance hash lines are content-dependent: a blake3 hex digest is incompressible, " +
 			"and two digests of the same length tokenize to slightly different counts. Expect a " +
 			"few tokens of movement per artifact between two profiles for that reason alone.",
@@ -768,6 +844,7 @@ func reportNotes(report *TokenReport) []string {
 			"and 5.30 bytes per token across whole trees, so a tree-level total from it can be "+
 			"wrong by a factor of three.")
 	}
+	notes = append(notes, listingNotes(report)...)
 	for _, runtime := range append(append([]RuntimeTokens{}, report.Runtimes...), report.Scoped...) {
 		if runtime.RootFiles > 0 && !runtime.Detailed {
 			notes = append(notes, "Preset \""+runtime.Preset+"\" is not described by the provider "+

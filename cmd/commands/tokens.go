@@ -32,8 +32,13 @@ Artifacts are measured as rendered strings in memory, never read back from disk,
 so the report is correct even when no output has been generated yet.
 
 The report separates surface paid on every request from surface paid only when an
-artifact is opened, because a flat per-file count misleads: a skill's description
-and body are far larger than its name, and only the name reaches the prompt.
+artifact is opened, because a flat per-file count misleads: a skill's body is far
+larger than its listing entry, and only the entry reaches the prompt. For every
+harness that lists skills, commands or agents at session start, the always-loaded
+figure includes an estimated listing: each item's name and description (and path,
+where the harness adds one) plus a per-entry framing constant. --budget gates that
+figure. The JSON keeps always_legacy and conditional_legacy for the numbers the
+earlier name-only model reported.
 
 Counts are approximations — Claude's tokenizer is not published — and cover only
 what ai-rulez generates. The agent harness adds a fixed floor of its own that
@@ -175,6 +180,10 @@ func writeTokenReport(w reportWriter, report *generator.TokenReport) {
 	if report.HeadlinePreset != "" {
 		w.printf("Headline always-loaded surface: %s tokens (%s, the largest single runtime)\n",
 			humanCount(report.HeadlineAlways), report.HeadlinePreset)
+		if report.HeadlineListing > 0 {
+			w.printf("  of which item listing (estimate): %s tokens; pre-listing model reported %s\n",
+				humanCount(report.HeadlineListing), humanCount(report.HeadlineAlwaysLegacy))
+		}
 	}
 
 	if len(report.Domains) > 0 {
