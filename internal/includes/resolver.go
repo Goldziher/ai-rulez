@@ -2,11 +2,13 @@ package includes
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
@@ -24,6 +26,8 @@ type Resolver struct {
 	accessToken string
 	visited     map[string]bool // Circular dependency detection
 	memo        *fetchMemo      // shared fetch cache for this run (see Config.IncludeMemo)
+	cfg         *config.Config
+	lock        *lockfile.File // ai-rulez.lock of the project being resolved (nil: none)
 }
 
 // NewResolver creates a new include resolver
@@ -39,6 +43,12 @@ func NewResolver(baseDir string, accessToken string) *Resolver {
 func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*config.ContentTree, error) {
 	logger.Debug("Resolving includes", "count", len(cfg.Includes))
 	r.memo = memoFor(cfg)
+	r.cfg = cfg
+	lock, err := loadLockFor(cfg)
+	if err != nil {
+		return nil, err
+	}
+	r.lock = lock
 
 	// Start with local content
 	mergedContent := cfg.Content
@@ -49,8 +59,12 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 	}
 
 	// Process each include
+	var violations []error
 	for i := range cfg.Includes {
 		if err := r.processInclude(ctx, &mergedContent, &cfg.Includes[i]); err != nil {
+			if errors.Is(err, config.ErrLockViolation) {
+				violations = append(violations, err)
+			}
 			logger.Warn("Failed to process include", "name", cfg.Includes[i].Name, "error", err)
 			// Continue processing other includes despite errors
 			continue
@@ -59,6 +73,9 @@ func (r *Resolver) ResolveIncludes(ctx context.Context, cfg *config.Config) (*co
 		logger.Debug("Successfully resolved include", "name", cfg.Includes[i].Name)
 	}
 
+	if len(violations) > 0 {
+		return nil, errors.Join(violations...)
+	}
 	return mergedContent, nil
 }
 
@@ -112,7 +129,7 @@ func (r *Resolver) processInclude(ctx context.Context, mergedContent **config.Co
 // (nil, nil) so the caller can skip this include silently.
 func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, error) {
 	// Check for local override: use a local path instead of git
-	if includeConf.LocalOverride != "" {
+	if includeConf.LocalOverride != "" && !refreshing(lockfile.KindInclude, includeConf.Name) {
 		localPath := r.resolveLocalOverride(includeConf)
 		if localPath == "" {
 			// Local override path does not exist — skip silently
@@ -143,11 +160,18 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 			includeConf.Include,
 		), nil
 	case SourceTypeGit:
+		p, err := pinFor(r.cfg, r.lock, lockfile.Want{
+			Kind: lockfile.KindInclude, Name: includeConf.Name, Source: RedactURL(includeConf.Source),
+			Path: includeConf.Path, Ref: includeConf.Ref,
+		})
+		if err != nil {
+			return nil, err
+		}
 		source, err := NewGitSource(
 			includeConf.Name,
 			includeConf.Source,
 			includeConf.Path,
-			includeConf.Ref,
+			p.effectiveRef(includeConf.Ref),
 			r.baseDir,
 			includeConf.Include,
 			r.accessToken,
@@ -155,6 +179,7 @@ func (r *Resolver) createSource(includeConf *config.IncludeConfig) (Source, erro
 		if err != nil {
 			return nil, oops.Wrapf(err, "failed to create git source for include '%s'", includeConf.Name)
 		}
+		source.pin = p
 		return source, nil
 	default:
 		return nil, oops.Errorf("unknown source type: %s", sourceType)
