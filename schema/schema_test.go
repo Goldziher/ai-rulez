@@ -255,3 +255,28 @@ builtins = ["docker", "cicd", "observability", "polyglot-bindings", "vite-plus",
 		require.NoError(t, schema.ValidateFile(path))
 	})
 }
+
+func TestLintSection(t *testing.T) {
+	const head = "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\"]\n"
+	tests := []struct {
+		name    string
+		body    string
+		wantErr bool
+	}{
+		{"full section", head + "[lint]\nfail_on = \"warning\"\nignore = [\"AR401\"]\n[lint.severity]\nAR101 = \"off\"\n[lint.budgets.skill]\nmax_lines = 10\n[lint.description]\nmin_length = 5\n", false},
+		{"bad fail_on", head + "[lint]\nfail_on = \"loud\"\n", true},
+		{"unknown key", head + "[lint]\nbogus = true\n", true},
+		{"bad severity", head + "[lint.severity]\nAR101 = \"loud\"\n", true},
+		{"unknown budget key", head + "[lint.budgets.skill]\nmax_words = 3\n", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := schema.ValidateFile(writeTOML(t, tt.body))
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}

@@ -343,6 +343,102 @@
       },
       "type": "array"
     },
+    "lint": {
+      "additionalProperties": false,
+      "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
+      "properties": {
+        "allow_paths": {
+          "description": "Globs of repo paths that may be referenced without existing in the tracked tree.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "budgets": {
+          "additionalProperties": {
+            "additionalProperties": false,
+            "properties": {
+              "max_lines": {
+                "type": "integer"
+              },
+              "max_tokens": {
+                "type": "integer"
+              }
+            },
+            "type": "object"
+          },
+          "description": "Size limits per content kind (rule, context, skill, agent, command). 0 keeps the default, negative removes the limit.",
+          "type": "object"
+        },
+        "description": {
+          "additionalProperties": false,
+          "properties": {
+            "max_length": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "min_length": {
+              "minimum": 0,
+              "type": "integer"
+            },
+            "near_duplicate_threshold": {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            "require_use_when": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
+        "fail_on": {
+          "description": "Lowest severity that makes strict validation exit non-zero. Defaults to error.",
+          "enum": ["error", "warning", "none"],
+          "type": "string"
+        },
+        "ignore": {
+          "description": "Finding codes (AR401) or names (path-missing) to drop.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "ignore_paths": {
+          "description": "Globs, relative to the config directory, of source files whose findings are dropped.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "known_names": {
+          "description": "Skill, agent, rule or command names provided outside this tree.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "require_metadata": {
+          "additionalProperties": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "description": "Frontmatter keys every item of a content kind must set.",
+          "type": "object"
+        },
+        "severity": {
+          "additionalProperties": {
+            "enum": ["error", "warning", "info", "off"],
+            "type": "string"
+          },
+          "description": "Severity override per finding code or name.",
+          "type": "object"
+        }
+      },
+      "type": "object"
+    },
     "marketplace": {
       "additionalProperties": false,
       "description": "Authoring metadata for the marketplace index emitted for the plugin(s).",
