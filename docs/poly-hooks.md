@@ -14,7 +14,7 @@ Add a Git source to `poly.toml`:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v4.24.0"
+revision = "v4.24.1"
 hooks = ["ai-rulez-validate"]
 ```
 
@@ -116,14 +116,14 @@ pass_filenames = false
 [[hooks.paths]]
 channel = "npx"
 check = "command -v npx"
-run = "npx -y ai-rulez@4.24.0"
-install = "npx -y ai-rulez@4.24.0 version"
+run = "npx -y ai-rulez@4.24.1"
+install = "npx -y ai-rulez@4.24.1 version"
 
 [[hooks.paths]]
 channel = "uvx"
 check = "command -v uvx"
-run = "uvx ai-rulez==4.24.0"
-install = "uvx ai-rulez==4.24.0 version"
+run = "uvx ai-rulez==4.24.1"
+install = "uvx ai-rulez==4.24.1 version"
 
 [[hooks.paths]]
 channel = "system"
