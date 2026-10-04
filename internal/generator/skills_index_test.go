@@ -20,6 +20,7 @@ func indexProject(t *testing.T, extraConfig string) string {
 		".ai-rulez/skills/alpha/SKILL.md":             "---\nname: alpha\ndescription: Use when a thing happens.\nowner: team-a\nversion: 1.2.0\n---\nbody\n",
 		".ai-rulez/skills/alpha/references/r.md":      "ref\n",
 		".ai-rulez/skills/beta/SKILL.md":              "---\nname: beta\ndescription: Use when another thing happens.\n---\nbody\n",
+		".ai-rulez/commands/Deploy_Now.md":            "---\nname: Deploy_Now\ndescription: Deploy right now.\n---\nbody\n",
 		".ai-rulez/domains/ops/skills/gamma/SKILL.md": "---\nname: gamma\ndescription: Use when ops things happen.\n---\nbody\n",
 	}
 	for name, body := range files {
@@ -51,7 +52,7 @@ func TestSkillsIndex_ListsEverySkillWithItsOutputs(t *testing.T) {
 
 	index, err := usage.LoadIndex(filepath.Join(root, ".ai-rulez", usage.IndexFileName))
 	require.NoError(t, err)
-	require.Len(t, index.Skills, 3)
+	require.Len(t, index.Skills, 4)
 
 	byID := map[string]usage.SkillRecord{}
 	for _, record := range index.Skills {
@@ -65,6 +66,11 @@ func TestSkillsIndex_ListsEverySkillWithItsOutputs(t *testing.T) {
 	assert.Equal(t, []string{".claude/skills/alpha/SKILL.md"}, alpha.Outputs["claude"])
 	assert.Equal(t, []string{".agents/skills/alpha/SKILL.md"}, alpha.Outputs["codex"])
 	assert.Equal(t, "ops", byID["gamma"].Domain)
+	assert.Equal(t, usage.KindSkill, alpha.Kind)
+	command, ok := byID["deploy-now"]
+	require.True(t, ok, "a command written as a skill is indexed under its skill directory name")
+	assert.Equal(t, usage.KindCommand, command.Kind)
+	assert.Equal(t, []string{".claude/skills/deploy-now/SKILL.md"}, command.Outputs["claude"])
 	assert.NotEqual(t, alpha.Hash, byID["beta"].Hash)
 
 	for _, record := range index.Skills {
