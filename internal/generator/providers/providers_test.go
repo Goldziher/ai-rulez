@@ -693,7 +693,7 @@ func findSkillBody(t *testing.T, gen *providers.Generator, content *config.Conte
 func requireFile(t *testing.T, outputs []config.OutputFile, suffix string) config.OutputFile {
 	t.Helper()
 	for _, o := range outputs {
-		if !o.IsDir && strings.HasSuffix(o.Path, suffix) {
+		if !o.IsDir && strings.HasSuffix(normalizePath(o.Path), normalizePath(suffix)) {
 			return o
 		}
 	}
@@ -702,8 +702,9 @@ func requireFile(t *testing.T, outputs []config.OutputFile, suffix string) confi
 }
 
 func hasOutputPathSuffix(outputs []config.OutputFile, suffix string) bool {
+	want := normalizePath(suffix)
 	for _, o := range outputs {
-		if strings.HasSuffix(o.Path, suffix) {
+		if strings.HasSuffix(normalizePath(o.Path), want) {
 			return true
 		}
 	}
@@ -711,12 +712,20 @@ func hasOutputPathSuffix(outputs []config.OutputFile, suffix string) bool {
 }
 
 func hasOutputPathContains(outputs []config.OutputFile, fragment string) bool {
+	want := normalizePath(fragment)
 	for _, o := range outputs {
-		if strings.Contains(o.Path, fragment) {
+		if strings.Contains(normalizePath(o.Path), want) {
 			return true
 		}
 	}
 	return false
+}
+
+// normalizePath renders a path or suffix with forward slashes so native output
+// paths and filepath.Join suffixes match on every platform (Windows uses
+// backslashes, which would otherwise never match a slash literal and vice versa).
+func normalizePath(path string) string {
+	return strings.ReplaceAll(path, "\\", "/")
 }
 
 // frontmatterValue returns the string value for `key` in the leading YAML
