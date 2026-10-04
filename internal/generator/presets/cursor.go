@@ -282,6 +282,17 @@ func (g *CursorPresetGenerator) renderSkillFile(skill config.ContentFile, cfg *c
 		}
 	}
 
+	// Cursor documents paths (glob-gated loading) and disable-model-invocation on
+	// skills, besides the Agent Skills specification fields.
+	extra := map[string]any{}
+	if scope := skill.Metadata.PathScope(); len(scope) > 0 {
+		extra["paths"] = scope
+	}
+	if disabled, set := skill.Metadata.ExtraBool("disable-model-invocation"); set {
+		extra["disable-model-invocation"] = disabled
+	}
+	writeSkillSpecFields(&builder, skill, extra)
+
 	builder.WriteString("---\n\n")
 
 	// Add skill content

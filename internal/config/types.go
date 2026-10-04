@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/Goldziher/ai-rulez/internal/builtins"
 )
 
@@ -52,6 +54,8 @@ type Config struct {
 	Placement *PlacementConfig `yaml:"placement,omitempty" json:"placement,omitempty" toml:"placement,omitempty"`
 	// Claude holds Claude Code specific output options.
 	Claude *ClaudeConfig `yaml:"claude,omitempty" json:"claude,omitempty" toml:"claude,omitempty"`
+	// Codex groups Codex specific options; see CodexConfig.
+	Codex *CodexConfig `yaml:"codex,omitempty" json:"codex,omitempty" toml:"codex,omitempty"`
 
 	// Runtime fields (populated during load)
 	BaseDir       string `yaml:"-" json:"-" toml:"-"`
@@ -751,6 +755,12 @@ type Metadata struct {
 	Globs []string          `yaml:"globs,omitempty" json:"globs,omitempty"`
 	Paths []string          `yaml:"paths,omitempty" json:"paths,omitempty"`
 	Extra map[string]string `yaml:",inline" json:",inline"`
+
+	// extraNodes holds the original, typed YAML value of every Extra key (nested
+	// maps, lists, booleans, numbers, dates). Extra keeps a string form for the
+	// lookups that only need text; generators emit the typed value through
+	// TypedExtra so the frontmatter round-trips without Go syntax.
+	extraNodes map[string]*yaml.Node
 }
 
 // PathScope returns the file globs a rule declares, from either `globs` or

@@ -13,7 +13,7 @@
       "files": 9,
       "always": 382,
       "conditional": 47,
-      "on_demand": 1109,
+      "on_demand": 1088,
       "unmodeled": 0,
       "detailed": true,
       "root_files": 1,
@@ -91,7 +91,7 @@
         {
           "label": "skill file overhead",
           "bucket": "on_demand",
-          "tokens": 93,
+          "tokens": 72,
           "artifacts": 3
         },
         {
@@ -156,7 +156,7 @@
       "name": "(root)",
       "always": 186,
       "conditional": 44,
-      "on_demand": 408
+      "on_demand": 394
     },
     {
       "name": "frontend",
@@ -168,7 +168,7 @@
       "name": "backend",
       "always": 50,
       "conditional": 3,
-      "on_demand": 47
+      "on_demand": 40
     }
   ],
   "notes": [

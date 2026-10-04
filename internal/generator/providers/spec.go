@@ -75,8 +75,15 @@ type FrontmatterSpec struct {
 	Skills    bool           `toml:"skills,omitempty" yaml:"skills,omitempty" json:"skills,omitempty"`
 	// Paths copies a rule's path scope (its `globs`/`paths` frontmatter) into a
 	// `paths` frontmatter field, which is how Claude Code scopes a rule file.
-	Paths           bool     `toml:"paths,omitempty" yaml:"paths,omitempty" json:"paths,omitempty"`
-	IncludeExtras   bool     `toml:"include_extras,omitempty" yaml:"include_extras,omitempty" json:"include_extras,omitempty"`
+	//
+	// It applies to skills too: Claude Code and Cursor load a path-gated skill
+	// only when files matching the paths are in play.
+	Paths         bool `toml:"paths,omitempty" yaml:"paths,omitempty" json:"paths,omitempty"`
+	IncludeExtras bool `toml:"include_extras,omitempty" yaml:"include_extras,omitempty" json:"include_extras,omitempty"`
+	// HideKey is the frontmatter key that, written false, hides a skill from the
+	// tool's slash menu. It is written only when the project opts in with
+	// [claude.skills] hide_from_menu, and never over a value the author set.
+	HideKey         string   `toml:"hide_key,omitempty" yaml:"hide_key,omitempty" json:"hide_key,omitempty"`
 	ExtrasBlacklist []string `toml:"extras_blacklist,omitempty" yaml:"extras_blacklist,omitempty" json:"extras_blacklist,omitempty"`
 	EmitEffort      bool     `toml:"emit_effort,omitempty" yaml:"emit_effort,omitempty" json:"emit_effort,omitempty"`
 	EmitModel       bool     `toml:"emit_model,omitempty" yaml:"emit_model,omitempty" json:"emit_model,omitempty"`

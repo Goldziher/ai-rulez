@@ -768,6 +768,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	flatOutputs = append(flatOutputs, scopedOutputs...)
 	g.disambiguateRuleCollisions(flatOutputs)
 	g.reclaimStaleMembers(flatOutputs)
+	g.warnInstructionSizes(flatOutputs)
 
 	return flatOutputs, activeProfile, nil
 }

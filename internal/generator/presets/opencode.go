@@ -408,6 +408,7 @@ func (g *OpencodePresetGenerator) renderSkillFile(skill config.ContentFile) stri
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
+	writeSkillSpecFields(&builder, skill, nil)
 	builder.WriteString("---\n\n")
 	builder.WriteString(skill.Content)
 	builder.WriteString(RenderSkillResourcesIndex(&skill))
