@@ -87,7 +87,7 @@ Where a tool cannot express `auto` or `manual`, the rule is written as always-on
 
 ### Tools without a rules folder
 
-`gemini`, `codex`, `opencode`, `amp`, `xum` and `hermes` read a single root file, so rules are inlined there. The activation is kept as text under the rule heading so the scope is not lost:
+`gemini`, `codex`, `opencode`, `amp`, `xum`, `pi` and `hermes` read a single root file, so rules are inlined there. The activation is kept as text under the rule heading so the scope is not lost:
 
 ```markdown
 ## TypeScript conventions
@@ -126,7 +126,7 @@ What each preset writes:
 | `antigravity`                   | every rule in `.agents/rules`; inline if `gemini` is also enabled and `mode_by_preset` does not set it | path-scoped rules in `.agents/rules` |
 | `junie`                         | every rule in `.junie/rules/*.md`                                       | no rule files; everything in `.junie/guidelines.md`        |
 | `cursor`, `windsurf`, `cline`, `continue-dev` | `.cursor/rules/*.mdc`, `.windsurf/rules`, `.clinerules`, `.continue/rules`; `mode` has no effect | same |
-| `gemini`, `codex`, `opencode`, `amp`, `xum`, `hermes` | rules inline, with `_Applies to:_` / `_When relevant:_` lines | same |
+| `gemini`, `codex`, `opencode`, `amp`, `xum`, `pi`, `hermes` | rules inline, with `_Applies to:_` / `_When relevant:_` lines | same |
 
 Custom provider presets follow `mode` when their `outputs.rules` sets `split`.
 
@@ -153,7 +153,7 @@ VS Code Copilot also reads `.claude/rules`. With both presets enabled, a rule ca
 
 ### Junie and a root `AGENTS.md`
 
-Junie looks for guidance in tiers: `.junie/AGENTS.md`, then root `AGENTS.md` together with `.junie/rules`, then the legacy `.junie/guidelines.md`. If another preset (`codex`, `opencode`, `amp`, `xum`) writes a root `AGENTS.md`, Junie may prefer it over `.junie/guidelines.md`. Keep Junie content out of `guidelines.md` in that case, or use `split` so rules load from `.junie/rules`.
+Junie looks for guidance in tiers: `.junie/AGENTS.md`, then root `AGENTS.md` together with `.junie/rules`, then the legacy `.junie/guidelines.md`. If another preset (`codex`, `opencode`, `amp`, `xum`, `pi`) writes a root `AGENTS.md`, Junie may prefer it over `.junie/guidelines.md`. Keep Junie content out of `guidelines.md` in that case, or use `split` so rules load from `.junie/rules`.
 
 ## Targets
 
@@ -183,7 +183,7 @@ Matching rules:
 - A target naming a preset's root file (for example `CLAUDE.md`) also selects that preset's rule files. In `split` mode every rule goes to the rules folder, so such a rule lives in `.claude/rules/` and not in `CLAUDE.md`; in `inline` mode only path-scoped rules do.
 - A whole-tree target is `<dir>/*` or `<dir>/**` with a literal directory (no wildcard in `<dir>`): it matches everything below `<dir>` at any depth, exactly like `<dir>/`. Only `*` and `**` alone match everything. Any other pattern is a `path.Match` glob against the full path or the base name, where `*` does not cross `/` and `**` is no deeper than `*`; so `.*/rules/**` matches only files directly in the folder.
 - Paths compare case-insensitively; `\` and a leading `./` or `/` are accepted.
-- `AGENTS.md` is shared by `codex`, `opencode`, `amp` and `xum`, and `GEMINI.md` by `gemini` and `antigravity`. Naming any preset that writes a shared file, or the file itself, selects it for all of them, so the file stays identical whichever preset writes it. With `agents_md = true` every preset that reads the shared `AGENTS.md` is an owner, and rules-folder presets stop inlining always-on items into their own root files; see [AGENTS.md and .agents/skills](agents-md.md).
+- `AGENTS.md` is shared by `codex`, `opencode`, `amp`, `xum` and `pi`, and `GEMINI.md` by `gemini` and `antigravity`. Naming any preset that writes a shared file, or the file itself, selects it for all of them, so the file stays identical whichever preset writes it. With `agents_md = true` every preset that reads the shared `AGENTS.md` is an owner, and rules-folder presets stop inlining always-on items into their own root files; see [AGENTS.md and .agents/skills](agents-md.md).
 - A rule targeted only at a rules folder (for example `.junie/rules/`) is written there even in `inline` mode. Where inline mode writes no files for that folder (Junie, and providers without `inline_filter`), it is omitted.
 - A rule targeted only at skill or agent files appears in no root file.
 - A malformed glob (such as `[x`) never matches; `validate` and `generate` warn about it.

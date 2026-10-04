@@ -37,7 +37,7 @@ npx ai-rulez@latest init && npx ai-rulez@latest generate
 
 Prefer the project-level [`.config/` convention](https://github.com/pi0/config-dir)? `ai-rulez` auto-discovers `.config/ai-rulez/` as well, and `ai-rulez init --config-dir .config/ai-rulez` scaffolds it.
 
-ai-rulez generates correct, tool-native output for **14 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, and Xum. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
+ai-rulez generates correct, tool-native output for **15 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, Xum, and pi. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
 
 For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
 
@@ -204,6 +204,7 @@ Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez em
 - **Windsurf** — `reasoning_effort` in `.windsurf/agents/*.md` frontmatter (per-agent)
 - **Opencode** — `variant` in `.opencode/agents/*.md` frontmatter (per-agent); a separate key beside the agent's `provider/model`
 - **Xum** — `ai.thinkingLevel` in `.xum/agents/*.md` frontmatter (per-agent)
+- **pi** — `thinking` in `.pi/agents/*.md` frontmatter (per-agent)
 
 Each preset maps the value to its own vocabulary; tools without a documented config surface (Cursor, Copilot, Gemini, etc.) are silently skipped. See [docs/configuration.md](docs/configuration.md#defaults) for the full mapping table.
 
@@ -330,7 +331,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/Goldziher/ai-rulez
-    rev: v4.23.1
+    rev: v4.24.0
     hooks:
       - id: ai-rulez-recursive # generate outputs across the repo
       - id: ai-rulez-validate # dry-run validation
@@ -351,7 +352,7 @@ repository needs. This requires AI-Rulez 4.9.0+ and Poly 0.14.0+:
 [[hooks.sources]]
 id = "ai-rulez"
 git = "https://github.com/Goldziher/ai-rulez.git"
-revision = "v4.23.1"
+revision = "v4.24.0"
 hooks = ["ai-rulez-recursive", "ai-rulez-plugin-verify"]
 ```
 

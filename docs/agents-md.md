@@ -17,7 +17,7 @@ What changes:
 - Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
   MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
-Without the flag, `codex`, `opencode`, `xum` and `amp` already write the same `AGENTS.md`, while `claude`, `gemini`,
+Without the flag, `codex`, `opencode`, `xum`, `pi` and `amp` already write the same `AGENTS.md`, while `claude`, `gemini`,
 `cursor` and the rest each repeat the same content in their own file.
 
 ## Tool support
@@ -42,6 +42,7 @@ tools that only matter because they can shadow `AGENTS.md`.
 | opencode                   | V                                                                 | V lazily, nearest file per read                             | Finds the first existing of `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md` and stacks every ancestor copy of it                                                         | N               | V `.agents/skills`, `.claude/skills`, `.opencode/skills`             | N (`.opencode`)                                    |
 | Amp                        | V                                                                 | V when the agent reads a file in the subtree                | Per directory `AGENTS.md`, else `AGENT.md`, else `CLAUDE.md`                                                                                                    | N               | V `.agents/skills` in project and parents                            | ?                                                  |
 | xum                        | V                                                                 | V                                                           | `AGENTS.md` > `AGENT.md` > `CLAUDE.md`; also `AGENTS.local.md`                                                                                                  | N               | ?                                                                    | ?                                                  |
+| pi                         | V                                                                 | V                                                           | Reads `AGENTS.md`; skills from `.agents/skills` (preferred) or `.pi/skills`; MCP in `.pi/mcp.json`                                                            | N               | V `.agents/skills` beats `.pi/skills`                                | ? (`.pi/agents` subagents extension)               |
 | Hermes                     | V git root to cwd                                                 | V                                                           | One context type only: `.hermes.md` shadows `AGENTS.md` entirely                                                                                                | N               | V `.hermes/skills`, `.agents/skills`                                 | ?                                                  |
 | Zed                        | V                                                                 | N                                                           | One file per worktree root: the first existing of `.rules`, `.cursorrules`, `.windsurfrules`, `.clinerules`, `.github/copilot-instructions.md`, `AGENT.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`. Earlier entries shadow `AGENTS.md` | N               | V `.agents/skills`                                                   | N                                                  |
 | Warp                       | V file name must be upper case                                    | V root and current directory                                | `WARP.md` beats `AGENTS.md` in the same directory                                                                                                               | N               | V `.agents/skills` (recommended)                                     | ?                                                  |
@@ -66,7 +67,7 @@ rules, a glob-scoped context file, two skills, one agent and one MCP server writ
 
 | Preset                         | Reads AGENTS.md                      | Root file                                   | Skills                                         | Written beside the shared files                                                                                                  |
 | ------------------------------ | ------------------------------------ | ------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `codex`, `opencode`, `xum`     | natively                             | shared `AGENTS.md`                          | shared; `.codex/skills`, `.opencode/skills`, `.xum/skills` dropped | their own agents, commands and MCP files                                                                                         |
+| `codex`, `opencode`, `xum`, `pi` | natively                             | shared `AGENTS.md`                          | shared; `.codex/skills`, `.opencode/skills`, `.xum/skills` dropped | their own agents, commands and MCP files                                                                                         |
 | `amp`                          | natively                             | shared `AGENTS.md`                          | shared                                         | unchanged                                                                                                                        |
 | `claude`                       | through `CLAUDE.md` containing `@AGENTS.md` | `CLAUDE.md` is a banner plus `@AGENTS.md` | `.claude/skills` kept (Claude ignores `.agents/skills`) | `.claude/rules/*.md` for non-always-on items, `.claude/agents`, `.claude/settings.json`, `.mcp.json`                              |
 | `gemini`                       | through `context.fileName` in `.gemini/settings.json` | `GEMINI.md` not written       | shared                                         | `.gemini/settings.json`, `.gemini/agents/<id>.md`, `.mcp.json`                                                                   |
@@ -86,7 +87,7 @@ their `AGENTS.md` or `.agents/skills` output is dropped in favor of the shared c
 
 ### How each tool finds AGENTS.md
 
-- **Native readers** (`codex`, `opencode`, `xum`, `amp`, `hermes`, `cursor`, `copilot`, `windsurf`, `cline`,
+- **Native readers** (`codex`, `opencode`, `xum`, `amp`, `pi`, `hermes`, `cursor`, `copilot`, `windsurf`, `cline`,
   `junie`, `antigravity`): nothing to configure.
 - **Claude Code** reads `CLAUDE.md`, and only reads `AGENTS.md` itself from v2.1.277 and in every session from
   v2.1.281. ai-rulez therefore keeps `CLAUDE.md` as a generated shim: the generated-file banner followed by
@@ -123,7 +124,7 @@ shared file.
 The shared `AGENTS.md` always carries always-on rules and context, and anything scoped only by negated globs
 (`!gen/**`), which no rules folder can express. What else it carries depends on the presets that rely on it.
 
-| Kind                                      | Rules folder presets (`cursor`, `windsurf`, `cline`, `continue-dev`, `claude` and `antigravity` in split mode, `junie` in split mode) | Presets without a folder (`codex`, `opencode`, `amp`, `xum`, `hermes`, `gemini`) |
+| Kind                                      | Rules folder presets (`cursor`, `windsurf`, `cline`, `continue-dev`, `claude` and `antigravity` in split mode, `junie` in split mode) | Presets without a folder (`codex`, `opencode`, `amp`, `xum`, `pi`, `hermes`, `gemini`) |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Always-on rule or context                 | `AGENTS.md` only                                                                                                                      | `AGENTS.md`                                                                      |
 | Glob-scoped rule or context               | the preset's folder                                                                                                                   | `AGENTS.md` with an `_Applies to_` line                                          |
@@ -135,7 +136,7 @@ The decision is made once for the whole file, from the configured built-in prese
 
 | Configured preset (rules mode)                         | Scoped items (glob rules, glob context) in `AGENTS.md` | Auto and manual items in `AGENTS.md` |
 | ------------------------------------------------------ | ------------------------------------------------------ | ------------------------------------ |
-| `codex`, `opencode`, `amp`, `xum`, `hermes`, `gemini`  | yes                                                    | yes                                  |
+| `codex`, `opencode`, `amp`, `xum`, `pi`, `hermes`, `gemini`  | yes                                                    | yes                                  |
 | `claude`, `antigravity` (split)                        | no                                                     | no                                   |
 | `claude`, `antigravity` (inline)                       | no                                                     | yes                                  |
 | `cursor`, `windsurf`, `cline`, `continue-dev` (either) | no                                                     | no                                   |
@@ -171,7 +172,7 @@ Machine-local rules are never part of the shared `AGENTS.md`. They keep their pe
   presets the targets allow, exactly as without the flag. A skill targeting `codex` goes to `.codex/skills` while an
   untargeted skill goes to `.agents/skills`; a skill targeting a preset that is not configured is written nowhere.
 - `.agents/skills` is read by Codex, Cursor, Copilot, Windsurf, Gemini CLI, Antigravity, Junie, Cline, opencode, Amp,
-  Hermes, Zed, Warp and others, per the table above.
+  Hermes, pi, Zed, Warp and others, per the table above.
 
 ## targets
 
@@ -181,7 +182,7 @@ reach:
 - A rule or context item is included in `AGENTS.md` when its `targets` name a preset that relies on the file
   (`claude`, `gemini`, `cursor`, `codex`, ...), the root file such a preset replaced (`CLAUDE.md`, `GEMINI.md`,
   `.hermes.md`, `.junie/guidelines.md`, `.github/copilot-instructions.md`, by path or base name), or any default
-  owner of `AGENTS.md` (`codex`, `opencode`, `xum`, `amp`), configured or not.
+  owner of `AGENTS.md` (`codex`, `opencode`, `xum`, `amp`, `pi`), configured or not.
 - A target naming an unconfigured preset's root file (for example `GEMINI.md` with only `codex` configured) does not
   select the item for `AGENTS.md`.
 - **Widening:** the file is shared, so an always-on rule targeted at a single preset now reaches every tool that reads
@@ -207,8 +208,8 @@ the root, Gemini gets no instructions for that scope and `generate` warns; add `
 - Tools that read an AGENTS chain get local content through the file they load for it. Codex, and Hermes with the
   flag on, load `AGENTS.override.md` instead of `AGENTS.md`, so ai-rulez writes a git-ignored `AGENTS.override.md`
   that repeats the shared `AGENTS.md` and appends the local rules and context. OpenCode lists `AGENTS.local.md` in
-  `opencode.json` `instructions`; xum appends `AGENTS.local.md` itself. Amp has no project-local file, so its local
-  content is not written and `generate` warns. Claude Code is covered through `CLAUDE.local.md`.
+  `opencode.json` `instructions`; xum appends `AGENTS.local.md` itself. Amp and pi have no project-local file, so
+  their local content is not written and `generate` warns. Claude Code is covered through `CLAUDE.local.md`.
 - Gemini CLI loads `GEMINI.local.md` because `.gemini/settings.json` `context.fileName` lists it: ai-rulez writes
   `["AGENTS.md", "GEMINI.local.md"]` (`["GEMINI.md", "GEMINI.local.md"]` with the flag off), whether or not local
   content exists. A `context.fileName` you wrote yourself is kept and `GEMINI.local.md` is appended to it; `clean`

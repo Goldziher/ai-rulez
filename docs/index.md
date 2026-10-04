@@ -32,6 +32,7 @@ Presets define how content is formatted and where it's output for different tool
 - `junie` → generates `.junie/guidelines.md` and `.junie/rules/`
 - `hermes` → generates `.hermes.md`
 - `xum` → generates `AGENTS.md` and `.xum/`
+- `pi` → generates `AGENTS.md`, `.agents/skills/`, `.pi/agents/`, and `.pi/mcp.json`
 - And many others...
 - Custom tools: use a template preset or a [provider-backed preset](configuration.md#provider-backed-presets-full-parity) for full parity with built-ins.
 

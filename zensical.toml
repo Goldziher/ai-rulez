@@ -1,6 +1,6 @@
 [project]
 site_name = "AI-Rulez"
-site_description = "Directory-based AI governance with 14 built-in presets (Claude, Cursor, Copilot, Windsurf, …)"
+site_description = "Directory-based AI governance with 15 built-in presets (Claude, Cursor, Copilot, Windsurf, …)"
 site_url = "https://goldziher.github.io/ai-rulez"
 site_author = "Na'aman Hirschfeld"
 repo_name = "Goldziher/ai-rulez"

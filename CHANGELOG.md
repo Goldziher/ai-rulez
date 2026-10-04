@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.24.0] - 2026-10-04
+
+### Added
+
+- **`pi` preset** (#210): generates project files for the [pi](https://pi.dev) coding agent. The preset writes a shared `AGENTS.md` (pi has no native rules folder, so every rule is inlined), skills to the pi-preferred `.agents/skills/<id>/SKILL.md`, subagent definitions to `.pi/agents/<id>.md` with `name`/`description`/`tools`/`model`/`thinking` frontmatter, and MCP servers to `.pi/mcp.json` (`mcpServers` with the stdio `command`/`args`/`env` form and the remote `url`/`headers`/`description` form; SSE is not supported). Resolved effort maps onto `thinking`, model onto `model`. `.pi/mcp.json` is a merged document: the configured servers are written one by one and a hand-authored sibling key survives. With `agents_md = true` the shared `.agents/skills` tree replaces the pi skills output, so no skill is ever written under `.pi`. `.pi/mcp.json` falls under the MCP secret guard (`0600`, must be git-ignored).
+- **Provider spec `frontmatter.effort_field`**: a declarative provider can now name the frontmatter key its resolved effort is written under (pi uses `thinking`); it defaults to `effort`.
+- **Provider sidecar `pi_mcp_json`**: emits a `{mcpServers: {...}}` document from the shared stdio/url MCP entry shape.
+
+### Changed
+
+- **`AGENTS.md` is now shared by `pi` as well** (`codex`, `opencode`, `xum`, `amp`, `pi`): a frontmatter `targets` naming any of them selects the item for all, and the file renders identically whichever preset writes it last.
+- **Dependency updates**: `go.opentelemetry.io/otel` and `otel/trace` `1.46.0` → `1.47.0`, `github.com/dlclark/regexp2/v2` `2.8.0` → `2.8.2`, and the docs lockfile (`zensical`, `markupsafe`).
+- **Shared MCP entry builder**: the stdio/url MCP server shape used by pi and Gemini is now one helper (`presets.MCPServerEntry`), which Xum's `mcp.jsonc` entry builder also builds on.
+
 ## [4.23.1] - 2026-10-03
 
 ### Added

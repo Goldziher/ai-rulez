@@ -154,7 +154,8 @@ presets = [
   "opencode",     # → AGENTS.md, .opencode/, opencode.json (when MCP servers are set)
   "hermes",       # → .hermes.md
   "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
-  "xum"           # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio with env as a shell prefix, http and sse MCP servers)
+  "xum",          # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio with env as a shell prefix, http and sse MCP servers)
+  "pi"            # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json (stdio and http MCP servers)
 ]
 ```
 
@@ -395,7 +396,7 @@ agents_md = false  # Default: every preset writes its own files
 
 When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
 `[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
-(`codex`, `opencode`, `amp`, `xum`, `claude`, `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `windsurf`,
+(`codex`, `opencode`, `amp`, `xum`, `pi`, `claude`, `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `windsurf`,
 `cline`, `continue-dev` and `junie`) stop writing their own `AGENTS.md` copy, root file and skills directory.
 Turning the flag off regenerates the per-tool files and removes the shared ones that no preset writes itself.
 
@@ -535,7 +536,7 @@ source-hash calculation, but generated MCP config files contain the actual resol
 #### Settings document merge behavior
 
 Files such as `.claude/settings.json`, `.mcp.json`, `.amp/settings.json`, `.gemini/settings.json`,
-and `.agents/settings.json` are **shared documents**: ai-rulez owns specific top-level keys
+`.agents/settings.json` and `.pi/mcp.json` are **shared documents**: ai-rulez owns specific top-level keys
 (`mcpServers` for MCP config, `amp.anthropic.effort` for Amp) and the consumer owns everything else.
 Generation replaces only the owned keys and preserves every other member byte-for-byte, including
 the document's original indentation.
@@ -855,6 +856,7 @@ For models the order is:
 | `windsurf`                                                                     | `.windsurf/agents/<id>.md` frontmatter                                          | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
 | `opencode`                                                                     | `.opencode/agents/<id>.md` frontmatter                                          | `variant`                | Per-agent. A separate `variant:` key beside a plain `provider/model` (the `model#variant` form is `opencode.json` only); a `#variant` in the source model is split off. `xhigh` and `max` → `high`; `inherit` dropped.                                       |
 | `xum`                                                                         | `.xum/agents/<id>.md` frontmatter                                               | `ai.thinkingLevel`       | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
+| `pi`                                                                          | `.pi/agents/<id>.md` frontmatter                                                | `thinking`               | Per-agent. Full vocabulary; `inherit` dropped.                                                                                                                                     |
 | `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | —                                                                               | —                        | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 
 **Per-preset model matrix** — presets that emit a `model` value in their agent frontmatter:
@@ -872,6 +874,7 @@ For models the order is:
 | `continue-dev` | `continue-dev_model`      | `model` in `.continue/agents/<id>.md`        |
 | `gemini`       | `gemini_model`            | `model` in `.gemini/agents/<id>.md` (Gemini) |
 | `xum`          | `xum_model`               | `ai.model` in `.xum/agents/<id>.md`          |
+| `pi`           | `pi_model`                | `model` in `.pi/agents/<id>.md`              |
 
 A bare Claude alias (`sonnet`, `opus`, `haiku`) is not a Gemini model, so `gemini` omits it with a warning and the agent inherits the session model; `gemini_model` and `defaults.model_by_preset.gemini` are written as given.
 

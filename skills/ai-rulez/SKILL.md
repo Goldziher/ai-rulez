@@ -204,7 +204,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
+Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`, `pi`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 
