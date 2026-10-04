@@ -721,7 +721,7 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"]
+            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins", "copilot"]
           }
         },
         "mcp": {
@@ -900,11 +900,32 @@
           },
           "additionalProperties": false
         },
+        "codex": {
+          "type": "object",
+          "description": "Codex layout. manifest: legacy (default, .codex-plugin/plugin.json), root (Agent Plugins plugin.json with the interface under extensions.com.openai, skills/ and mcp.json) or both. marketplace writes .agents/plugins/marketplace.json for a single-plugin repository.",
+          "properties": {
+            "manifest": { "type": "string", "enum": ["legacy", "root", "both"] },
+            "marketplace": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
+        "cursor": {
+          "type": "object",
+          "description": "Cursor packaging switches. marketplace writes .cursor-plugin/marketplace.json for a single-plugin repository.",
+          "properties": {
+            "marketplace": { "type": "boolean" }
+          },
+          "additionalProperties": false
+        },
         "gemini": {
           "type": "object",
           "properties": {
             "context_file_name": {
               "type": "string"
+            },
+            "commands": {
+              "type": "boolean",
+              "description": "Also bundle the plugin's commands as commands/<name>.toml Gemini custom commands (default off). $ARGUMENTS becomes {{args}}."
             }
           },
           "additionalProperties": false
@@ -1138,6 +1159,10 @@
             "additionalProperties": false
           }
         },
+        "cursor_index": {
+          "type": "boolean",
+          "description": "Also write .cursor-plugin/marketplace.json next to the Claude index for members and domain plugins (default off)."
+        },
         "catalog_skill": {
           "type": "object",
           "description": "Generate a skill listing the plugins and how to enable them (default off). It goes to the preset skill outputs only, never into a plugin bundle.",
@@ -1163,7 +1188,7 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"]
+        "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins", "copilot"]
       }
     },
     "authorEntity": {

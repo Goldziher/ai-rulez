@@ -3,6 +3,7 @@ package generator
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -174,5 +175,32 @@ core = ["niche-s"]
 			}
 			assert.Len(t, report.Items, 5, "4 skills and 1 command")
 		})
+	}
+}
+
+func TestCollectPluginOutputs_CursorIndexForDomainPlugins(t *testing.T) {
+	for _, enabled := range []bool{false, true} {
+		tail := staleTail
+		if enabled {
+			tail += "cursor_index = true\n"
+		}
+		// cursor_index belongs to [marketplace], not [marketplace.from_domains].
+		tail = strings.Replace(tail, "[marketplace.from_domains]\nname_prefix = \"demo-\"\n", "", 1)
+		if enabled {
+			tail = strings.Replace(tail, "cursor_index = true\n", "cursor_index = true\n[marketplace.from_domains]\nname_prefix = \"demo-\"\n", 1)
+		} else {
+			tail += "[marketplace.from_domains]\nname_prefix = \"demo-\"\n"
+		}
+		dir := newDomainsProject(t, tail)
+		gen := loadDomainsProject(t, dir)
+		outputs, err := gen.collectPluginOutputs("")
+		require.NoError(t, err)
+		files := outputsByRel(t, dir, outputs)
+		_, has := files["mkt/.cursor-plugin/marketplace.json"]
+		assert.Equal(t, enabled, has, "cursor_index=%v", enabled)
+		if enabled {
+			assert.Contains(t, files["mkt/.cursor-plugin/marketplace.json"], `"source": "plugins/demo-teama"`)
+			assert.Contains(t, files["mkt/.ai-rulez-generated.json"], ".cursor-plugin/marketplace.json")
+		}
 	}
 }
