@@ -17,7 +17,7 @@ What changes:
 - Everything the tool cannot read from the shared files stays per-preset: scoped rules folders, agents, commands,
   MCP files and settings. A rules folder is created only when at least one rule file is written into it.
 
-Without the flag, `codex`, `opencode`, `xum`, `pi` and `amp` already write the same `AGENTS.md`, while `claude`, `gemini`,
+Without the flag, `codex`, `opencode`, `xum`, `pi`, `amp` and `baz` already write the same `AGENTS.md`, while `claude`, `gemini`,
 `cursor` and the rest each repeat the same content in their own file.
 
 ## Tool support

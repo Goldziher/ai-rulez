@@ -156,6 +156,7 @@ presets = [
   "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
   "xum",          # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio with env as a shell prefix, http and sse MCP servers)
   "pi"            # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json (stdio and http MCP servers)
+  "baz"           # → AGENTS.md (root and nested), .agents/skills, .claude/agents; see baz.md
 ]
 ```
 
@@ -953,6 +954,7 @@ claude = "inline"
 
 - **`rules.mode`**: `split` (the default since 4.22.0) writes one file per rule in the tool's native rules folder; `inline` embeds rules in the root file, moving only path-scoped rules to the folder.
 - **`rules.mode_by_preset`**: per-preset override that beats `rules.mode`. Keys are built-in, custom, or provider preset names.
+- **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 
 Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
 
