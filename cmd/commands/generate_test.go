@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/Goldziher/ai-rulez/cmd/commands"
 )
@@ -19,8 +20,14 @@ func TestGenerateCommand(t *testing.T) {
 	assert.NotNil(t, flags.Lookup("update-gitignore"))
 	assert.True(t, flags.Lookup("update-gitignore").Hidden)
 	assert.Equal(t, "r", flags.Lookup("recursive").Shorthand)
-	assert.Equal(t, "M", flags.Lookup("no-configure-cli-mcp").Shorthand)
-	assert.Equal(t, "S", flags.Lookup("skip-cli-mcp").Shorthand)
+	// Removed behavior: the flags stay accepted but are hidden, deprecated no-ops.
+	for name, short := range map[string]string{"no-configure-cli-mcp": "M", "skip-cli-mcp": "S"} {
+		flag := flags.Lookup(name)
+		require.NotNil(t, flag, name)
+		assert.Equal(t, short, flag.Shorthand, name)
+		assert.True(t, flag.Hidden, name)
+		assert.NotEmpty(t, flag.Deprecated, name)
+	}
 	assert.Equal(t, "p", flags.Lookup("profile").Shorthand)
 	assert.Equal(t, "f", flags.Lookup("no-fetch").Shorthand)
 	assert.Equal(t, "n", flags.Lookup("config-dir").Shorthand)
