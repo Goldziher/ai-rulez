@@ -2,7 +2,6 @@ package lint
 
 import "testing"
 
-
 func evalsFixture(extraConfig string) map[string]string {
 	skill := func(name string) string {
 		return "---\nname: " + name + "\ndescription: Deploy the billing service to staging. Use when releasing billing changes to the staging cluster.\n---\nbody\n"
