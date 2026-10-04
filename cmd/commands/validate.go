@@ -9,6 +9,7 @@ import (
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/Goldziher/ai-rulez/schema"
@@ -28,7 +29,12 @@ schema compliance, and structural issues.`,
 	Args:    cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
-		progress.SetQuiet(viper.GetBool("quiet"))
+		if err := checkStrictFlags(); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		// JSON output must be the only thing on stdout.
+		progress.SetQuiet(viper.GetBool("quiet") || validateFormat == formatJSON)
 
 		if validateRecursive {
 			if len(args) > 0 {
@@ -76,6 +82,12 @@ schema compliance, and structural issues.`,
 		}
 
 		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		if validateStrict {
+			if code := runStrictSingle(cfg); code != 0 {
+				os.Exit(code)
+			}
+			return
+		}
 		presets.WarnDuplicateContent(cfg.Content)
 		displayConfigurationSummary(cfg)
 	},
@@ -83,6 +95,9 @@ schema compliance, and structural issues.`,
 
 func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
+	ValidateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Also run deep content checks: globs that match nothing, dead links and references, missing hooks, oversize or duplicate content (see the [lint] config table)")
+	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default) or json")
+	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest --strict severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }
@@ -97,14 +112,31 @@ func runRecursiveValidate() int {
 	}
 
 	var failed []string
+	var reports []*lint.Report
+	var cfgs []*config.Config
 	for _, configPath := range configFiles {
-		if err := validateConfigFile(configPath); err != nil {
+		cfg, err := validateConfigFile(configPath)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
 			fmtError(err)
 			failed = append(failed, configPath)
 			continue
 		}
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
+		if validateStrict {
+			report, lerr := strictLint(cfg)
+			if lerr != nil {
+				fmt.Fprintf(os.Stderr, "❌ %s\n", configPath)
+				fmtError(lerr)
+				failed = append(failed, configPath)
+				continue
+			}
+			reports, cfgs = append(reports, report), append(cfgs, cfg)
+		}
+	}
+	strictCode := 0
+	if validateStrict {
+		strictCode = reportStrict(reports, cfgs)
 	}
 
 	if len(failed) > 0 {
@@ -112,25 +144,28 @@ func runRecursiveValidate() int {
 		return 1
 	}
 	progress.PrintIfNotQuiet("\nAll %d config(s) are valid\n", len(configFiles))
-	return 0
+	return strictCode
 }
 
 // validateConfigFile applies the same checks as single-root validate (schema for
 // V4 configs, then structural validation) to one config file.
-func validateConfigFile(configPath string) error {
+func validateConfigFile(configPath string) (*config.Config, error) {
 	cfg, err := config.LoadConfigFromFile(context.Background(), configPath, pluginLoadOptions(false)...)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if !cfg.IsV3() {
 		if err := schema.ValidateFile(configPath); err != nil {
-			return err
+			return nil, err
 		}
 	}
 	if err := validateLocalOverlay(cfg); err != nil {
-		return err
+		return nil, err
 	}
-	return cfg.Validate()
+	if err := cfg.Validate(); err != nil {
+		return nil, err
+	}
+	return cfg, nil
 }
 
 // validateLocalOverlay checks the config.local.* overlay, when one was merged,
