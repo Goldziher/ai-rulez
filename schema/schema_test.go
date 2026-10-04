@@ -123,6 +123,11 @@ func TestValidateWithSchema_Rules(t *testing.T) {
 		require.NoError(t, schema.ValidateWithSchema([]byte(cfg)))
 	})
 
+	t.Run("baz preset and baz_scoped", func(t *testing.T) {
+		require.NoError(t, schema.ValidateWithSchema([]byte(head+"  - baz\nrules:\n  baz_scoped: root\n")))
+		assert.Error(t, schema.ValidateWithSchema([]byte(head+"rules:\n  baz_scoped: deep\n")))
+	})
+
 	t.Run("invalid mode fails", func(t *testing.T) {
 		assert.Error(t, schema.ValidateWithSchema([]byte(head+"rules:\n  mode: both\n")))
 	})
