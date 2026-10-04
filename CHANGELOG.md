@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.24.1] - 2026-10-04
+
+### Fixed
+
+- **pi preset tests on Windows**: the provider test helpers normalize output paths to forward slashes before matching, so the `filepath.Join` suffixes (backslashes on Windows) never matched. The `pi` tests now use literal slash paths, as the other provider tests do. Test-only; no generated output changes.
+
 ## [4.24.0] - 2026-10-04
 
 ### Added
