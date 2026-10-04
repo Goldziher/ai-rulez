@@ -1,6 +1,11 @@
 package commands
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/lint"
+)
 
 func TestCheckStrictFlags(t *testing.T) {
 	tests := []struct {
@@ -74,5 +79,23 @@ func TestEnforceScanImports(t *testing.T) {
 	cfg = importingConfig(t, "")
 	if err := enforceScanImports(cfg); err != nil {
 		t.Fatalf("scanning is off by default: %v", err)
+	}
+}
+
+func TestReportStrictJudgesEachRootByItsOwnThreshold(t *testing.T) {
+	oldF, oldO := validateFormat, validateFailOn
+	t.Cleanup(func() { validateFormat, validateFailOn = oldF, oldO })
+	validateFormat, validateFailOn = "text", ""
+	failing := &lint.Report{Findings: []lint.Finding{{Code: lint.CodeReferenceUnknown, Severity: lint.SeverityError}}}
+	top := &config.Config{}
+	nested := &config.Config{Lint: &config.LintConfig{FailOn: "none"}}
+
+	got := reportStrict([]*lint.Report{failing, {}}, []*config.Config{top, nested})
+
+	if got != exitStrictFindings {
+		t.Errorf("exit = %d, want %d: a nested fail_on=none must not silence the top root", got, exitStrictFindings)
+	}
+	if got := reportStrict([]*lint.Report{{}, failing}, []*config.Config{top, nested}); got != 0 {
+		t.Errorf("exit = %d, want 0: the nested root opted out of failing", got)
 	}
 }
