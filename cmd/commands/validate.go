@@ -82,6 +82,7 @@ schema compliance, and structural issues.`,
 		}
 
 		logger.Success("Configuration is valid", "path", cfg.ConfigDir)
+		warnWorktreeMarketplace(cfg)
 		if validateStrict {
 			if code := runStrictSingle(cfg); code != 0 {
 				os.Exit(code)
@@ -165,6 +166,7 @@ func validateConfigFile(configPath string) (*config.Config, error) {
 	if err := cfg.Validate(); err != nil {
 		return nil, err
 	}
+	warnWorktreeMarketplace(cfg)
 	return cfg, nil
 }
 

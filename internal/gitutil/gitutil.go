@@ -394,3 +394,29 @@ func TrackedFiles(dir string) (files map[string]uint32, ok bool, err error) {
 	}
 	return files, true, nil
 }
+
+// IsLinkedWorktree reports whether dir is inside a linked git worktree (one made
+// with `git worktree add`) rather than the main checkout. Outside a repository,
+// or when git cannot run, it is false.
+func IsLinkedWorktree(dir string) bool {
+	gitDir := gitPath(dir, "--git-dir")
+	common := gitPath(dir, "--git-common-dir")
+	return gitDir != "" && common != "" && gitDir != common
+}
+
+// gitPath resolves the path `git rev-parse <flag>` prints, which may be
+// relative to dir, to a symlink-free absolute path.
+func gitPath(dir, flag string) string {
+	out, _, err := run(dir, nil, "rev-parse", flag)
+	if err != nil {
+		return ""
+	}
+	p := strings.TrimSpace(string(out))
+	if p == "" {
+		return ""
+	}
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(dir, p)
+	}
+	return Resolve(p)
+}
