@@ -34,6 +34,15 @@
       "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to false (per-tool outputs, unchanged).",
       "type": "boolean"
     },
+    "bundle_exclude": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "Extra patterns for files left out of skill and command resource bundles (the SKILL.md Resources section and the copied files), added to the always-skipped .git, .venv*, venv, __pycache__, *.pyc and node_modules. A pattern without '/' matches any path segment; one with '/' matches the path relative to the skill directory. Files ignored by .gitignore are skipped too."
+    },
+    "codex_skills_dir": {
+      "type": "string",
+      "description": "Where the codex preset writes skills, relative to the project root. Defaults to '.agents/skills', the location Codex documents. Set '.codex/skills' to keep the location used before 4.24."
+    },
     "builtins": {
       "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown name is reported as a warning during generation, not a schema error.",
       "oneOf": [
