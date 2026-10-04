@@ -291,7 +291,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	}
 
 	// Scan content directories
-	contentTree, err := ScanContentTree(configDir)
+	contentTree, err := ScanContentTreeWith(configDir, config.BundleExclude)
 	if err != nil {
 		return nil, err
 	}
@@ -301,7 +301,7 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 	// enters config.Content, so it cannot leak into committed output; it is
 	// emitted only to the per-preset ".local" root variants.
 	if !lo.withoutLocal {
-		localTree, err := ScanLocalContentTree(configDir)
+		localTree, err := ScanLocalContentTreeWith(configDir, config.BundleExclude)
 		if err != nil {
 			return nil, err
 		}
@@ -578,6 +578,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Gitignore       *bool                  `toml:"gitignore"`
 		Compact         *bool                  `toml:"compact"`
 		AgentsMD        bool                   `toml:"agents_md"`
+		BundleExclude   []string               `toml:"bundle_exclude"`
+		CodexSkillsDir  string                 `toml:"codex_skills_dir"`
 		Includes        []IncludeConfig        `toml:"includes"`
 		InstalledSkills []InstalledSkillConfig `toml:"installed_skills"`
 		MCPServers      []MCPServer            `toml:"mcp_servers"`
@@ -635,6 +637,8 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Gitignore:       raw.Gitignore,
 		Compact:         raw.Compact,
 		AgentsMD:        raw.AgentsMD,
+		BundleExclude:   raw.BundleExclude,
+		CodexSkillsDir:  raw.CodexSkillsDir,
 		Includes:        raw.Includes,
 		InstalledSkills: raw.InstalledSkills,
 		MCPServersRaw:   raw.MCPServers,
@@ -687,6 +691,12 @@ func presetsFromTOML(items []any) ([]Preset, error) {
 // Root content goes into the top-level slices; domain content goes only into the Domains map.
 // This keeps the two layers separate so callers (e.g. include sources) can merge without duplication.
 func ScanContentTree(configDir string) (*ContentTree, error) {
+	return ScanContentTreeWith(configDir, nil)
+}
+
+// ScanContentTreeWith is ScanContentTree with extra bundle_exclude patterns
+// applied to the resources of every skill and command.
+func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
 	tree := &ContentTree{
 		Domains: make(map[string]*Domain),
 	}
@@ -715,7 +725,7 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 	// Scan root skills/
 	skillsPath := filepath.Join(configDir, skillsDir)
 	var skills []ContentFile
-	if skills, err = scanSkills(skillsPath); err != nil {
+	if skills, err = scanSkills(skillsPath, bundleExclude); err != nil {
 		return nil, oops.
 			With("path", skillsPath).
 			Wrapf(err, "scan skills directory")
@@ -736,7 +746,7 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 	// Scan root commands/
 	commandsPath := filepath.Join(configDir, commandsDir)
 	var commands []ContentFile
-	if commands, err = scanCommands(commandsPath); err != nil {
+	if commands, err = scanCommandsWith(commandsPath, bundleExclude); err != nil {
 		return nil, oops.
 			With("path", commandsPath).
 			Wrapf(err, "scan commands directory")
@@ -747,7 +757,7 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
 	var domains map[string]*Domain
-	if domains, err = scanDomains(domainsPath); err != nil {
+	if domains, err = scanDomains(domainsPath, bundleExclude); err != nil {
 		return nil, oops.
 			With("path", domainsPath).
 			Wrapf(err, "scan domains directory")
@@ -762,8 +772,13 @@ func ScanContentTree(configDir string) (*ContentTree, error) {
 // agents, commands and domains. The tree is kept separate from the committed
 // content tree so local content is only ever written to gitignored outputs.
 func ScanLocalContentTree(configDir string) (*ContentTree, error) {
+	return ScanLocalContentTreeWith(configDir, nil)
+}
+
+// ScanLocalContentTreeWith is ScanLocalContentTree with extra bundle_exclude patterns.
+func ScanLocalContentTreeWith(configDir string, bundleExclude []string) (*ContentTree, error) {
 	localBase := filepath.Join(configDir, localDir)
-	tree, err := ScanContentTree(localBase)
+	tree, err := ScanContentTreeWith(localBase, bundleExclude)
 	if err != nil {
 		return nil, oops.With("path", localBase).Wrapf(err, "scan local content")
 	}
@@ -810,7 +825,7 @@ func scanMarkdownFiles(dir string) ([]ContentFile, error) {
 }
 
 // scanSkills scans the skills/ directory for SKILL.md files in subdirectories
-func scanSkills(skillsDir string) ([]ContentFile, error) {
+func scanSkills(skillsDir string, bundleExclude []string) ([]ContentFile, error) {
 	// Check if directory exists
 	if _, err := os.Stat(skillsDir); os.IsNotExist(err) {
 		// Directory doesn't exist, return empty slice (not an error)
@@ -850,7 +865,7 @@ func scanSkills(skillsDir string) ([]ContentFile, error) {
 		// Load skill supporting files (references/, scripts/, assets/) so
 		// presets can preserve the canonical Agent Skills layout instead of
 		// concatenating everything into SKILL.md.
-		resources, resErr := LoadSkillResources(skillRoot)
+		resources, resErr := LoadResourcesWith(skillRoot, ItemKindSkill, bundleExclude)
 		if resErr != nil {
 			logger.Warn("Failed to load skill resources", "skill", entry.Name(), "error", resErr)
 		}
@@ -866,6 +881,10 @@ func scanSkills(skillsDir string) ([]ContentFile, error) {
 // COMMAND.md files in subdirectories (directory form with optional resources/).
 // Mirrors the structure of scanSkills to support bundled reference material.
 func scanCommands(commandsDir string) ([]ContentFile, error) {
+	return scanCommandsWith(commandsDir, nil)
+}
+
+func scanCommandsWith(commandsDir string, bundleExclude []string) ([]ContentFile, error) {
 	// Check if directory exists
 	if _, err := os.Stat(commandsDir); os.IsNotExist(err) {
 		// Directory doesn't exist, return empty slice (not an error)
@@ -906,7 +925,7 @@ func scanCommands(commandsDir string) ([]ContentFile, error) {
 			// Load command supporting files (references/, scripts/, assets/) so
 			// presets can preserve the canonical layout instead of concatenating
 			// everything into COMMAND.md.
-			resources, resErr := LoadResources(commandRoot, ItemKindCommand)
+			resources, resErr := LoadResourcesWith(commandRoot, ItemKindCommand, bundleExclude)
 			if resErr != nil {
 				logger.Warn("Failed to load command resources", "command", entry.Name(), "error", resErr)
 			}
@@ -974,7 +993,7 @@ func scanAgents(agentsPath string) ([]ContentFile, error) {
 }
 
 // scanDomains scans the domains/ directory and returns a map of domain name to Domain
-func scanDomains(domainsDir string) (map[string]*Domain, error) {
+func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain, error) {
 	// Check if directory exists
 	if _, err := os.Stat(domainsDir); os.IsNotExist(err) {
 		// Directory doesn't exist, return empty map (not an error)
@@ -1028,7 +1047,7 @@ func scanDomains(domainsDir string) (map[string]*Domain, error) {
 		// Scan domain/skills/
 		skillsPath := filepath.Join(domainPath, skillsDir)
 		var skills []ContentFile
-		if skills, err = scanSkills(skillsPath); err != nil {
+		if skills, err = scanSkills(skillsPath, bundleExclude); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", skillsPath).
@@ -1050,7 +1069,7 @@ func scanDomains(domainsDir string) (map[string]*Domain, error) {
 		// Scan domain/commands/
 		domainCommandsPath := filepath.Join(domainPath, commandsDir)
 		var domainCommands []ContentFile
-		if domainCommands, err = scanCommands(domainCommandsPath); err != nil {
+		if domainCommands, err = scanCommandsWith(domainCommandsPath, bundleExclude); err != nil {
 			return nil, oops.
 				With("domain", domainName).
 				With("path", domainCommandsPath).
