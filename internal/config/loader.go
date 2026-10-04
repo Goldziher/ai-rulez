@@ -596,6 +596,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
 		Claude          *ClaudeConfig          `toml:"claude"`
+		Codex           *CodexConfig           `toml:"codex"`
 	}
 
 	var raw tomlConfig
@@ -658,6 +659,7 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,
 		Claude:          raw.Claude,
+		Codex:           raw.Codex,
 	}
 
 	return cfg, nil
@@ -1154,6 +1156,7 @@ func parseFrontmatter(content string) (metadata *Metadata, body string, malforme
 		parsedMetadata = result
 	}
 
+	parsedMetadata.extraNodes = extraNodes(frontmatterYAML)
 	metadata = &parsedMetadata
 	return metadata, body, false
 }
@@ -1167,6 +1170,7 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 	}
 
 	m := Metadata{Extra: make(map[string]string)}
+	nodes := extraNodes(frontmatterYAML)
 	for k, v := range rawMap {
 		if dst := m.scalarField(k); dst != nil {
 			*dst = fmt.Sprintf("%v", v)
@@ -1190,11 +1194,26 @@ func parseFrontmatterFromRawMap(frontmatterYAML string) (Metadata, bool) {
 		case "paths":
 			m.Paths = NormalizeGlobs(stringSliceFromAny(v))
 		default:
-			m.Extra[k] = fmt.Sprintf("%v", v)
+			m.Extra[k] = extraText(nodes[k], v)
 		}
 	}
 
 	return m, true
+}
+
+// extraText is the string form of an extra frontmatter value. A scalar keeps its
+// source text (a date stays 2026-10-01, not the Go time rendering); a collection
+// becomes flow YAML.
+func extraText(n *yaml.Node, v any) string {
+	if n != nil {
+		if n.Kind == yaml.ScalarNode {
+			return n.Value
+		}
+		if text := flowText(n); text != "" {
+			return text
+		}
+	}
+	return fmt.Sprintf("%v", v)
 }
 
 // scalarField returns the destination for a plain string frontmatter key, or

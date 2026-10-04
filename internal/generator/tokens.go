@@ -190,6 +190,9 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 	}
 	builder.build(collector.Analyses(), report)
 	report.Notes = reportNotes(report)
+	for _, finding := range g.instructionSizeFindings(outputs) {
+		report.Notes = append(report.Notes, finding.message()+". "+finding.Hint+".")
+	}
 	if options.Budget > 0 {
 		report.Budget = &BudgetResult{
 			Limit:    options.Budget,

@@ -438,6 +438,22 @@ type PlacementConfig struct {
 // ClaudeConfig groups Claude Code specific output options.
 type ClaudeConfig struct {
 	Settings *ClaudeSettings `yaml:"settings,omitempty" json:"settings,omitempty" toml:"settings,omitempty"`
+	Skills   *ClaudeSkills   `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
+}
+
+// ClaudeSkills is the [claude.skills] block: options for the skills written to
+// .claude/skills.
+type ClaudeSkills struct {
+	// HideFromMenu writes `user-invocable: false` on every skill that does not
+	// set the key itself, so Claude Code hides them from the / menu and only the
+	// model loads them. Off by default: a skill without the key is user-invocable.
+	HideFromMenu bool `yaml:"hide_from_menu,omitempty" json:"hide_from_menu,omitempty" toml:"hide_from_menu,omitempty"` //nolint:tagliatelle
+}
+
+// HidesSkillsFromMenu reports whether [claude.skills] hide_from_menu is set.
+// Safe on a nil receiver.
+func (c *ClaudeConfig) HidesSkillsFromMenu() bool {
+	return c != nil && c.Skills != nil && c.Skills.HideFromMenu
 }
 
 // ClaudeSettings is the [claude.settings] block: opt-in management of the
@@ -483,4 +499,28 @@ func (p *PluginAuthoring) ResolvedRuntimes() []string {
 		return AllPluginRuntimes
 	}
 	return p.Runtimes
+}
+
+// DefaultCodexProjectDocMaxBytes is Codex's default project_doc_max_bytes: the
+// most combined AGENTS.md content Codex reads (32 KiB).
+const DefaultCodexProjectDocMaxBytes = 32 * 1024
+
+// CodexConfig is the [codex] block.
+type CodexConfig struct {
+	// ProjectDocMaxBytes is the project_doc_max_bytes your Codex is configured
+	// with; generate warns when the AGENTS.md chain exceeds it. Unset means the
+	// Codex default (32 KiB); 0 or a negative value turns the warning off.
+	ProjectDocMaxBytes *int `yaml:"project_doc_max_bytes,omitempty" json:"project_doc_max_bytes,omitempty" toml:"project_doc_max_bytes,omitempty"` //nolint:tagliatelle
+}
+
+// ProjectDocLimit returns the AGENTS.md byte budget to warn against, or 0 when
+// the warning is disabled. Safe on a nil receiver.
+func (c *CodexConfig) ProjectDocLimit() int {
+	if c == nil || c.ProjectDocMaxBytes == nil {
+		return DefaultCodexProjectDocMaxBytes
+	}
+	if *c.ProjectDocMaxBytes <= 0 {
+		return 0
+	}
+	return *c.ProjectDocMaxBytes
 }
