@@ -21,6 +21,7 @@ nav = [
     { "AGENTS.md and .agents/skills" = "agents-md.md" },
     { "Local Configuration" = "local-overrides.md" },
     { "Installed Skills" = "installed-skills.md" },
+    { "Strict Validation" = "strict-validation.md" },
     { "Authoring Plugins" = "plugins.md" },
     { "Poly Hooks" = "poly-hooks.md" },
     { "Monorepo" = "monorepo.md" },
