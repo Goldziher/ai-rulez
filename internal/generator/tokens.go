@@ -627,11 +627,11 @@ func (b *reportBuilder) itemEntries(kind config.OutputKind, analyses []*config.O
 			kind   config.PartKind
 			bucket Bucket
 		}{{config.PartKindItemName, model.nameBucket}, {config.PartKindItemDescription, model.descriptionBucket}} {
-			tokens := b.partTokens(analyses, part.kind)
+			counted := b.partTokens(analyses, part.kind)
 			if part.bucket == BucketAlways {
-				listing.replacedAlways += tokens
+				listing.replacedAlways += counted
 			} else {
-				listing.replacedConditional += tokens
+				listing.replacedConditional += counted
 			}
 		}
 	} else {
@@ -845,7 +845,7 @@ func reportNotes(report *TokenReport) []string {
 			"wrong by a factor of three.")
 	}
 	notes = append(notes, listingNotes(report)...)
-	for _, runtime := range append(append([]RuntimeTokens{}, report.Runtimes...), report.Scoped...) {
+	for _, runtime := range append(append([]RuntimeTokens{}, report.Runtimes...), report.Scoped...) { //nolint:gocritic // small report, copied once
 		if runtime.RootFiles > 0 && !runtime.Detailed {
 			notes = append(notes, "Preset \""+runtime.Preset+"\" is not described by the provider "+
 				"DSL, so its outputs are classified from their paths and its instructions file is "+

@@ -1259,6 +1259,16 @@ while `.claude/agents/*.md` already carry the same text on demand. Drop it with
 `builtins = ["!agent-delegation"]` — the agent files are still generated, so nothing is
 lost. See [Configuration](configuration.md#drop-the-agents-roster-from-root-files).
 
+## Usage Commands
+
+Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
+
+| Command | Purpose |
+| --- | --- |
+| `ai-rulez usage hook [-o file] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the Claude Code hooks block that records skill invocations |
+| `ai-rulez usage record [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
+| `ai-rulez report usage <log> [--index f] [--json] [-n dir]` | Join a usage log with `skills-index.json`: used, never used, changed since used, unknown |
+
 ## Validation Command
 
 ### `ai-rulez validate [config-path]`

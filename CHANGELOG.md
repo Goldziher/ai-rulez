@@ -41,6 +41,8 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 - **Evals support**: `skills/<name>/evals/` is a recognized directory (no "unrecognized subdirectory" warning) and is never written into per-tool skill trees. `[plugin] include_evals = true` bundles each skill's `evals/` and the optional project-level `.ai-rulez/evals/` tree (at `<bundle>/evals/`, or only `<skill>/` subtrees for per-domain plugins); `verify --plugin` covers them through the provenance sidecar. New strict-validation rule `AR961` (`evals-missing`, off by default) reports skills with no cases, enabled with `[lint.evals] require = true` or `[lint.severity]`, with `[lint.evals] allow` for exemptions. See `docs/evals.md`.
 
+- **Usage telemetry support** (opt-in, no network): `[usage] skills_index = true` makes `generate` write a byte-stable `.ai-rulez/skills-index.json` with one record per skill (id, domain, source, blake3 content hash of the authored skill, owner, version, outputs per preset). `ai-rulez usage hook` prints a Claude Code hooks block (`PreToolUse` on the Skill tool and `UserPromptExpansion`) that runs `ai-rulez usage record`, which appends an identifier-only JSON line (never prompts, arguments or contents) to a machine-local log or pipes it to a user-supplied `--sink-command`. `ai-rulez report usage <log>` joins a log with the index to list never-used skills, skills edited since they were used, and unknown ids. See `docs/usage-telemetry.md`.
+
 ### Changed
 
 - **`generate --dry-run`** marks files that are already current as `unchanged:` instead of `write-file:`. Scripts that match on `write-file:` for every file need updating.

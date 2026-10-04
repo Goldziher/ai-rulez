@@ -906,6 +906,9 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 
 	// Flatten outputs for writing, detecting conflicts and deduplicating
 	flatOutputs := flattenPresetOutputs(allOutputs)
+	if index, ok := g.skillsIndexOutput(contentTree, allOutputs); ok {
+		flatOutputs = append(flatOutputs, index)
+	}
 
 	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
 	if err != nil {

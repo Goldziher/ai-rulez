@@ -170,11 +170,11 @@ func writeTokenReport(w reportWriter, report *generator.TokenReport) {
 	w.printf("Token surface — profile %q\n", report.Profile)
 	w.printf("Tokenizer: %s (approximate)\n\n", report.Tokenizer.Name)
 
-	for _, runtime := range report.Runtimes {
-		writeRuntime(w, runtime)
+	for i := range report.Runtimes {
+		writeRuntime(w, &report.Runtimes[i])
 	}
-	for _, runtime := range report.Scoped {
-		writeRuntime(w, runtime)
+	for i := range report.Scoped {
+		writeRuntime(w, &report.Scoped[i])
 	}
 
 	if report.HeadlinePreset != "" {
@@ -210,7 +210,7 @@ func writeTokenReport(w reportWriter, report *generator.TokenReport) {
 	}
 }
 
-func writeRuntime(w reportWriter, runtime generator.RuntimeTokens) {
+func writeRuntime(w reportWriter, runtime *generator.RuntimeTokens) {
 	heading := "runtime " + runtime.Preset
 	if runtime.Scope != "" {
 		heading += " (scope " + runtime.Scope + ")"
@@ -260,7 +260,8 @@ func writeComparisonTable(w reportWriter, reports []*generator.TokenReport) {
 	w.printf("Tokenizer: %s (approximate)\n\n", reports[0].Tokenizer.Name)
 	w.printf("  %-24s %-14s %10s %12s %12s\n", "profile", "runtime", "always", "conditional", "on demand")
 	for _, report := range reports {
-		for _, runtime := range report.Runtimes {
+		for i := range report.Runtimes {
+			runtime := &report.Runtimes[i]
 			w.printf("  %-24s %-14s %10s %12s %12s\n",
 				truncate(report.Profile, 24), truncate(runtime.Preset, 14),
 				humanCount(runtime.Always), humanCount(runtime.Conditional), humanCount(runtime.OnDemand))
