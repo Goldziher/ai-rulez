@@ -314,3 +314,32 @@ func TestCollectOutputs_DefaultsLeaveClaudeOutputUnchanged(t *testing.T) {
 	assert.NotContains(t, byRel, ".claude/settings.json")
 	assert.NotContains(t, byRel, ".claude/skills/plugin-catalog/SKILL.md")
 }
+
+func TestCollectPluginOutputs_CodexMarketplaceSkipsClaudeOnlyPlugins(t *testing.T) {
+	// Arrange
+	dir := newDomainsProject(t, `
+[marketplace]
+name = "mk"
+[marketplace.from_domains]
+[[marketplace.plugins]]
+name = "teama"
+domains = ["teamA"]
+runtimes = ["claude"]
+[[marketplace.plugins]]
+name = "teamb"
+domains = ["teamB"]
+runtimes = ["claude", "codex"]
+`)
+	gen := loadDomainsProject(t, dir)
+
+	// Act
+	outputs, err := gen.collectPluginOutputs("")
+
+	// Assert
+	require.NoError(t, err)
+	byRel := outputsByRel(t, dir, outputs)
+	require.Contains(t, byRel, ".agents/plugins/marketplace.json")
+	assert.Contains(t, byRel[".agents/plugins/marketplace.json"], `"teamb"`)
+	assert.NotContains(t, byRel[".agents/plugins/marketplace.json"], `"teama"`)
+	assert.Contains(t, byRel[".claude-plugin/marketplace.json"], `"teama"`)
+}
