@@ -42,6 +42,7 @@ type Config struct {
 	MCP            *MCPConfig          `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
+	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
