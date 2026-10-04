@@ -25,6 +25,69 @@ type LintConfig struct {
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
 	// RequireMetadata maps a content kind to frontmatter keys every item of that kind must set.
 	RequireMetadata map[string][]string `yaml:"require_metadata,omitempty" json:"require_metadata,omitempty" toml:"require_metadata,omitempty"` //nolint:tagliatelle
+	// AllowOverrides lists content names ("name") or domain-qualified names
+	// ("domain/name") whose shadowing of another copy is intentional, so they
+	// are not reported as collapsed duplicates.
+	AllowOverrides []string `yaml:"allow_overrides,omitempty" json:"allow_overrides,omitempty" toml:"allow_overrides,omitempty"` //nolint:tagliatelle
+	// AllowedKeys lists frontmatter keys accepted in addition to the built-in
+	// Agent Skills, Claude Code and ai-rulez keys.
+	AllowedKeys []string `yaml:"allowed_keys,omitempty" json:"allowed_keys,omitempty" toml:"allowed_keys,omitempty"` //nolint:tagliatelle
+	// Metadata types and bounds the values of frontmatter keys (top-level, or
+	// inside the Agent Skills `metadata` map), keyed by the frontmatter key.
+	Metadata map[string]LintMetadataRule `yaml:"metadata,omitempty" json:"metadata,omitempty" toml:"metadata,omitempty"`
+	// Security configures the security rule family (AR001...).
+	Security *LintSecurity `yaml:"security,omitempty" json:"security,omitempty" toml:"security,omitempty"`
+	// External lists third-party scanners whose findings are merged into the
+	// report when `validate --strict --external` (or `scan --external`) runs.
+	External []LintExternal `yaml:"external,omitempty" json:"external,omitempty" toml:"external,omitempty"`
+}
+
+// LintMetadataRule types one frontmatter key.
+type LintMetadataRule struct {
+	// Type is "string" (default), "date" or "enum".
+	Type string `yaml:"type,omitempty" json:"type,omitempty" toml:"type,omitempty"`
+	// Values lists the accepted values of an enum.
+	Values []string `yaml:"values,omitempty" json:"values,omitempty" toml:"values,omitempty"`
+	// MaxAgeDays reports a date older than this many days as stale (date only).
+	MaxAgeDays int `yaml:"max_age_days,omitempty" json:"max_age_days,omitempty" toml:"max_age_days,omitempty"` //nolint:tagliatelle
+	// Kinds limits the rule to content kinds (rule, context, skill, agent, command); empty means all.
+	Kinds []string `yaml:"kinds,omitempty" json:"kinds,omitempty" toml:"kinds,omitempty"`
+	// Required reports an item of the configured kinds that lacks the key.
+	Required bool `yaml:"required,omitempty" json:"required,omitempty" toml:"required,omitempty"`
+}
+
+// LintSecurity configures the security checks. Everything is optional.
+type LintSecurity struct {
+	// ScanImports also scans content imported through includes and installed
+	// skills, and makes `generate` refuse to write it when a finding reaches
+	// the level: "off" (default), "warn" or "error". The level replaces the
+	// severity of findings in imported content.
+	ScanImports string `yaml:"scan_imports,omitempty" json:"scan_imports,omitempty" toml:"scan_imports,omitempty"` //nolint:tagliatelle
+	// AllowedHosts restricts the hosts URLs may point to ("example.com", "*.example.com").
+	// Empty disables the outbound host check.
+	AllowedHosts []string `yaml:"allowed_hosts,omitempty" json:"allowed_hosts,omitempty" toml:"allowed_hosts,omitempty"` //nolint:tagliatelle
+	// AllowedTools lists allowed-tools entries that may be unrestricted (for example "Bash").
+	AllowedTools []string `yaml:"allowed_tools,omitempty" json:"allowed_tools,omitempty" toml:"allowed_tools,omitempty"` //nolint:tagliatelle
+	// SecretPatterns adds regular expressions to the built-in secret detectors.
+	SecretPatterns []LintSecretPattern `yaml:"secret_patterns,omitempty" json:"secret_patterns,omitempty" toml:"secret_patterns,omitempty"` //nolint:tagliatelle
+	// InjectionPhrases adds case-insensitive phrases to the prompt-injection detector.
+	InjectionPhrases []string `yaml:"injection_phrases,omitempty" json:"injection_phrases,omitempty" toml:"injection_phrases,omitempty"` //nolint:tagliatelle
+}
+
+// LintSecretPattern is a named secret detector.
+type LintSecretPattern struct {
+	Name  string `yaml:"name" json:"name" toml:"name"`
+	Regex string `yaml:"regex" json:"regex" toml:"regex"`
+}
+
+// LintExternal is an external scanner. Command is an argv, run from the
+// project root with the paths of the scanned files appended; it must print
+// SARIF 2.1.0 or the ai-rulez JSON list to stdout.
+type LintExternal struct {
+	Name    string   `yaml:"name" json:"name" toml:"name"`
+	Command []string `yaml:"command" json:"command" toml:"command"`
+	// Format is "sarif" (default) or "json".
+	Format string `yaml:"format,omitempty" json:"format,omitempty" toml:"format,omitempty"`
 }
 
 // LintDescription tunes description quality checks.
