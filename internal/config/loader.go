@@ -3,6 +3,7 @@ package config
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -317,6 +318,10 @@ func finishLoadConfig(ctx context.Context, config *Config, baseDir, configDir st
 		config.IncludeMemo = lo.includeMemo
 	}
 
+	if lo.withoutRemote {
+		return config, nil
+	}
+
 	if err := resolveIncludesIfNeeded(ctx, configDir, config); err != nil {
 		return nil, err
 	}
@@ -344,6 +349,9 @@ func resolveIncludesIfNeeded(ctx context.Context, configDir string, config *Conf
 
 	mergedContent, err := resolveIncludesFunc(ctx, config)
 	if err != nil {
+		if errors.Is(err, ErrLockViolation) {
+			return err
+		}
 		logger.Warn("Failed to resolve includes", "error", err)
 		// Continue with local content only (non-fatal)
 		return nil
@@ -375,6 +383,9 @@ func resolveInstalledSkillsIfNeeded(ctx context.Context, config *Config) error {
 
 	skills, err := resolveInstalledSkillsFunc(ctx, config)
 	if err != nil {
+		if errors.Is(err, ErrLockViolation) {
+			return err
+		}
 		logger.Warn("Failed to resolve installed skills", "error", err)
 		return nil
 	}

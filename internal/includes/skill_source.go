@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 )
@@ -39,6 +40,8 @@ type SkillGitSource struct {
 	ref         string
 	cacheDir    string
 	accessToken string
+	pin         *pin   // ai-rulez.lock entry this skill must match (nil: unpinned)
+	baseDir     string // project the skill belongs to, for recording what it resolved to
 }
 
 // NewSkillGitSource creates a new SkillGitSource for fetching a skill from a git repo
@@ -83,6 +86,43 @@ func (s *SkillGitSource) sparsePathSpec() string {
 // Unlike GitSource.Fetch, the lock is acquired first (before ls-remote)
 // since skills always check freshness under the lock.
 func (s *SkillGitSource) Fetch(ctx context.Context) (config.ContentFile, error) {
+	file, err := s.fetch(ctx)
+	if err != nil {
+		return config.ContentFile{}, err
+	}
+	err = s.checkPin()
+	if retryable(ctx, err) {
+		// The cache may be damaged: fetch the pinned commit again before failing.
+		_ = os.Remove(filepath.Join(s.cacheDir, cacheMetaFile)) //nolint:errcheck // best-effort; a stale meta only skips the retry
+		if file, err = s.fetch(ctx); err != nil {
+			return config.ContentFile{}, err
+		}
+		err = s.checkPin()
+	}
+	if err != nil {
+		return config.ContentFile{}, err
+	}
+	return file, nil
+}
+
+// checkPin records what the cache holds and verifies it against the lock.
+func (s *SkillGitSource) checkPin() error {
+	dir := s.findSkillDir()
+	if dir == "" {
+		return nil
+	}
+	digest, err := lockfile.DigestDir(dir)
+	if err != nil {
+		return oops.With("skill", s.name).Wrapf(err, "digest skill content")
+	}
+	commit := ""
+	if meta, metaErr := readCacheMeta(s.cacheDir); metaErr == nil && meta != nil {
+		commit = meta.RemoteHEADSHA
+	}
+	return s.pin.check(s.baseDir, lockfile.KindSkill, s.name, commit, digest)
+}
+
+func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) {
 	mu := lockForFetch(s.cacheDir)
 	mu.Lock()
 	defer mu.Unlock()
