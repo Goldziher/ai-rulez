@@ -808,3 +808,23 @@ func rulesFolderOutputs(t rulefiles.Target, content *config.ContentTree, baseDir
 	}
 	return outputs, nil
 }
+
+// CollapsedDuplicate is a content name that more than one source defines, so a
+// lower-precedence copy was dropped from the generated output.
+type CollapsedDuplicate struct {
+	Kind   string // rule, context, skill or command
+	Name   string
+	Winner string // path of the copy that was kept
+	Losers []string
+}
+
+// CollapsedDuplicates lists the names generation silently collapses, with the
+// kept and dropped source paths. It is the data behind the "Duplicate ...
+// collapsed" warning, for callers that need to report it as a finding.
+func CollapsedDuplicates(content *config.ContentTree) []CollapsedDuplicate {
+	var out []CollapsedDuplicate
+	for _, w := range duplicateContentWarnings(content) {
+		out = append(out, CollapsedDuplicate{Kind: w.Kind, Name: w.Duplicate.Name, Winner: w.Duplicate.Winner, Losers: w.Duplicate.Losers})
+	}
+	return out
+}
