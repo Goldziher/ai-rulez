@@ -70,7 +70,7 @@ func TestPi_Generate(t *testing.T) {
 	outputs, err := gen.Generate(content, "/test", cfg)
 	require.NoError(t, err)
 
-	agentsMD := requireFile(t, outputs, filepath.Join("AGENTS.md"))
+	agentsMD := requireFile(t, outputs, "AGENTS.md")
 	assert.Contains(t, agentsMD.Content, "## Rules")
 	assert.Contains(t, agentsMD.Content, "Always be nice.")
 	assert.Contains(t, agentsMD.Content, "TSX_RULE", "pi has no rules folder, so scoped rules inline")
@@ -78,12 +78,12 @@ func TestPi_Generate(t *testing.T) {
 	assert.Contains(t, agentsMD.Content, "Use the existing module layout.")
 
 	// Skills go to .agents/skills, not .pi/skills.
-	_, ok := findOutput(outputs, filepath.Join(".agents", "skills", "demo", "SKILL.md"))
+	_, ok := findOutput(outputs, ".agents/skills/demo/SKILL.md")
 	assert.True(t, ok, "skill must land in .agents/skills")
-	_, ok = findOutput(outputs, filepath.Join(".pi", "skills", "demo", "SKILL.md"))
+	_, ok = findOutput(outputs, ".pi/skills/demo/SKILL.md")
 	assert.False(t, ok, "pi must not write skills to .pi/skills")
 
-	agentFile := requireFile(t, outputs, filepath.Join(".pi", "agents", "scout.md"))
+	agentFile := requireFile(t, outputs, ".pi/agents/scout.md")
 	assert.Equal(t, "scout", frontmatterValue(agentFile.Content, "name"))
 	assert.Equal(t, "Fast codebase recon", frontmatterValue(agentFile.Content, "description"))
 	assert.Equal(t, "high", frontmatterValue(agentFile.Content, "thinking"), "effort maps to the thinking key")
@@ -119,7 +119,7 @@ func TestPi_MCPJSON(t *testing.T) {
 		outputs, err := gen.Generate(&config.ContentTree{}, "/test", cfg)
 		require.NoError(t, err)
 
-		mcp := requireFile(t, outputs, filepath.Join(".pi", "mcp.json"))
+		mcp := requireFile(t, outputs, ".pi/mcp.json")
 		var doc map[string]map[string]any
 		require.NoError(t, json.Unmarshal([]byte(mcp.Content), &doc))
 		servers := doc["mcpServers"]
@@ -142,7 +142,7 @@ func TestPi_MCPJSON(t *testing.T) {
 		t.Parallel()
 		outputs, err := piGen(t).Generate(&config.ContentTree{}, "/test", &config.Config{Name: "demo"})
 		require.NoError(t, err)
-		assert.False(t, hasOutputPathSuffix(outputs, filepath.Join(".pi", "mcp.json")))
+		assert.False(t, hasOutputPathSuffix(outputs, ".pi/mcp.json"))
 	})
 
 	t.Run("merges into a hand-authored document", func(t *testing.T) {
@@ -157,7 +157,7 @@ func TestPi_MCPJSON(t *testing.T) {
 		outputs, err := piGen(t).Generate(&config.ContentTree{}, baseDir, cfg)
 		require.NoError(t, err)
 
-		mcp := requireFile(t, outputs, filepath.Join(".pi", "mcp.json"))
+		mcp := requireFile(t, outputs, ".pi/mcp.json")
 		assert.Contains(t, mcp.Content, `"theme"`, "user key is preserved")
 		assert.Contains(t, mcp.Content, `"mine"`, "hand-written server survives")
 		assert.Contains(t, mcp.Content, `"shared"`, "configured server is written")
