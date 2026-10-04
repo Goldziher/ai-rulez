@@ -109,15 +109,40 @@ type runner struct {
 	docs        map[string]doc
 	counter     tokens.Counter
 	findings    []Finding
+	drift       []PluginDrift
+}
+
+// PluginDrift describes a generated plugin whose content changed against the
+// baseline while its declared version stayed the same.
+type PluginDrift struct {
+	// Plugin is the plugin name.
+	Plugin string
+	// File is the absolute path of the manifest that carries the version.
+	File string
+	// Version is the unchanged version.
+	Version string
+	// Changed lists some of the bundle files whose content changed.
+	Changed []string
+}
+
+// Option adds inputs the runner cannot compute from the repository tree alone.
+type Option func(*runner)
+
+// WithPluginDrift supplies the plugin version drift to report as AR961.
+func WithPluginDrift(drift []PluginDrift) Option {
+	return func(r *runner) { r.drift = drift }
 }
 
 // Run lints one loaded configuration against the repository tree.
-func Run(cfg *config.Config, tree *Tree) (*Report, error) {
+func Run(cfg *config.Config, tree *Tree, opts ...Option) (*Report, error) {
 	counter, err := tokens.New("")
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
 	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter}
+	for _, opt := range opts {
+		opt(r)
+	}
 	if cfg.Lint != nil {
 		r.lc = *cfg.Lint
 	}
@@ -137,6 +162,7 @@ func Run(cfg *config.Config, tree *Tree) (*Report, error) {
 	r.checkDuplicates()
 	r.checkMCP()
 	r.checkHooks(baseAbs)
+	r.checkPluginDrift()
 
 	sort.SliceStable(r.findings, func(i, j int) bool {
 		a, b := r.findings[i], r.findings[j]
@@ -809,4 +835,17 @@ func hookLine(d doc, needle string) int {
 		}
 	}
 	return 1
+}
+
+// checkPluginDrift reports plugins whose content changed but whose version did
+// not. A client that installed from a git-hosted marketplace keeps its cached
+// copy until the version string changes (a plugin that declares no version is
+// tracked by commit and is never reported).
+func (r *runner) checkPluginDrift() {
+	for _, d := range r.drift {
+		changed := strings.Join(d.Changed, ", ")
+		r.add(CodePluginVersionDrift, d.File, 1,
+			"plugin %q changed since the baseline (%s) but its version is still %s; installs that cache the plugin keep the old copy until the version changes",
+			d.Plugin, changed, d.Version)
+	}
 }
