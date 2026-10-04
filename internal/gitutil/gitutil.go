@@ -362,3 +362,35 @@ func Resolve(path string) string {
 		}
 	}
 }
+
+// TrackedFiles returns every path in the git index below dir, slash-separated
+// and relative to dir, mapped to its git file mode (0o100644, 0o100755,
+// 0o120000 for a symlink, ...). ok is false outside a repository, where
+// callers fall back to walking the file system. The index is the source, so a
+// path listed there counts even when its working-tree file is absent.
+func TrackedFiles(dir string) (files map[string]uint32, ok bool, err error) {
+	if !IsRepo(dir) {
+		return nil, false, nil
+	}
+	out, _, err := run(dir, nil, "ls-files", "-s", "-z")
+	if err != nil {
+		return nil, true, err
+	}
+	files = map[string]uint32{}
+	for _, entry := range strings.Split(string(out), "\x00") {
+		meta, name, found := strings.Cut(entry, "\t")
+		if !found {
+			continue
+		}
+		fields := strings.Fields(meta)
+		if len(fields) == 0 {
+			continue
+		}
+		mode, perr := strconv.ParseUint(fields[0], 8, 32)
+		if perr != nil {
+			continue
+		}
+		files[filepath.ToSlash(name)] = uint32(mode)
+	}
+	return files, true, nil
+}

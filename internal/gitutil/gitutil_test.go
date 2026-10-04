@@ -231,3 +231,36 @@ func TestIgnoreRulesMirrored_SkipsOversizedIgnoreFiles(t *testing.T) {
 	assert.True(t, rules["small"].Ignored(), "files within the cap still count")
 	assert.False(t, rules["sub/big-file-name-that-exceeds-the-cap"].Matched())
 }
+
+func TestTrackedFiles(t *testing.T) {
+	t.Run("outside a repository", func(t *testing.T) {
+		files, ok, err := TrackedFiles(t.TempDir())
+		if err != nil || ok || files != nil {
+			t.Fatalf("got %v %v %v, want nil,false,nil", files, ok, err)
+		}
+	})
+	t.Run("reports index entries with modes", func(t *testing.T) {
+		dir := t.TempDir()
+		if err := os.WriteFile(filepath.Join(dir, "plain.txt"), []byte("x"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(dir, "run.sh"), []byte("#!/bin/sh\n"), 0o755); err != nil { //nolint:gosec // test needs an executable file
+			t.Fatal(err)
+		}
+		for _, args := range [][]string{{"init", "-q"}, {"add", "-A"}} {
+			if _, _, err := run(dir, nil, args...); err != nil {
+				t.Skipf("git unavailable: %v", err)
+			}
+		}
+		files, ok, err := TrackedFiles(dir)
+		if err != nil || !ok {
+			t.Fatalf("TrackedFiles: ok=%v err=%v", ok, err)
+		}
+		if files["plain.txt"] != 0o100644 {
+			t.Errorf("plain.txt mode = %o", files["plain.txt"])
+		}
+		if runtime.GOOS != "windows" && files["run.sh"] != 0o100755 {
+			t.Errorf("run.sh mode = %o", files["run.sh"])
+		}
+	})
+}
