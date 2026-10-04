@@ -325,3 +325,24 @@ func TestExtractResourceDescription(t *testing.T) {
 		})
 	}
 }
+
+func TestUnrecognizedSubdirectoryWarnings_EvalsIsRecognized(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "evals"), 0o750))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "other"), 0o750))
+
+	warnings, err := unrecognizedSubdirectoryWarnings(dir, ItemKindSkill)
+	require.NoError(t, err)
+	require.Len(t, warnings, 1)
+	assert.Equal(t, "other", warnings[0].Subdirectory, "evals/ is a known directory and must not warn")
+}
+
+func TestLoadResources_IgnoresEvalsDirectory(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, "evals"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "evals", "case.json"), []byte("{}"), 0o600))
+
+	resources, err := LoadSkillResources(dir)
+	require.NoError(t, err)
+	assert.Empty(t, resources, "eval cases are never emitted into per-tool skill trees")
+}

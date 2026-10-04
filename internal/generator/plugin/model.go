@@ -10,6 +10,7 @@
 package plugin
 
 import (
+	"path/filepath"
 	"slices"
 	"sort"
 
@@ -56,6 +57,16 @@ type Manifest struct {
 	Skills   []config.ContentFile
 	Commands []config.ContentFile
 	Agents   []config.ContentFile
+
+	// IncludeEvals bundles eval cases: each skill's evals/ directory and the
+	// project-level eval tree at EvalsDir.
+	IncludeEvals bool
+	// EvalsDir is the project-level eval tree (.ai-rulez/evals). May not exist.
+	EvalsDir string
+	// EvalsPerSkillOnly limits the project-level tree to the <skill-name>/
+	// subdirectories of bundled skills. Set for domain plugins, whose bundle
+	// must not carry another plugin's cases.
+	EvalsPerSkillOnly bool
 
 	// Market describes the marketplace index emitted alongside the plugin.
 	Market MarketInfo
@@ -117,6 +128,9 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Market:      resolveMarket(p, cfg.Marketplace),
 		Config:      cfg,
 		SourceDir:   cfg.BaseDir,
+
+		IncludeEvals: p.IncludeEvals,
+		EvalsDir:     evalsDir(cfg, p),
 	}
 
 	if content != nil {
@@ -203,4 +217,13 @@ func resolveMarket(p *config.PluginAuthoring, mkt *config.MarketplaceAuthoring) 
 		Owner:       owner,
 		Members:     mkt.Members,
 	}
+}
+
+// evalsDir is the project-level eval tree: evals/ under the plugin content root
+// when one is configured, otherwise under the config directory.
+func evalsDir(cfg *config.Config, p *config.PluginAuthoring) string {
+	if p != nil && p.ContentRoot != "" {
+		return filepath.Join(cfg.BaseDir, p.ContentRoot, config.EvalsDirName)
+	}
+	return filepath.Join(cfg.ConfigDir, config.EvalsDirName)
 }

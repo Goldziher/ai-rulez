@@ -32,11 +32,18 @@ func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.
 
 	if layout.Skills {
 		for i := range m.Skills {
-			skillOutputs, err := passthroughSkill(&m.Skills[i], filepath.Join(root, "skills", m.Skills[i].Name))
+			skillOutputs, err := passthroughSkill(&m.Skills[i], filepath.Join(root, "skills", m.Skills[i].Name), m.IncludeEvals)
 			if err != nil {
 				return nil, err
 			}
 			outputs = append(outputs, skillOutputs...)
+		}
+		if m.IncludeEvals {
+			evalOutputs, err := passthroughEvals(m, filepath.Join(root, config.EvalsDirName))
+			if err != nil {
+				return nil, err
+			}
+			outputs = append(outputs, evalOutputs...)
 		}
 	}
 	if layout.Commands {
@@ -61,8 +68,10 @@ func bundleContent(m *Manifest, baseDir string, layout contentLayout) ([]config.
 }
 
 // passthroughSkill copies the complete skill directory so references, scripts,
-// and assets used by SKILL.md remain valid in the generated plugin.
-func passthroughSkill(content *config.ContentFile, destinationDir string) ([]config.OutputFile, error) {
+// and assets used by SKILL.md remain valid in the generated plugin. The skill's
+// evals/ directory is copied only when includeEvals is set: eval cases are
+// authoring material, not something consumers of the bundle need.
+func passthroughSkill(content *config.ContentFile, destinationDir string, includeEvals bool) ([]config.OutputFile, error) {
 	if content.Path == "" || strings.HasPrefix(content.Path, "builtin://") {
 		return nil, nil
 	}
@@ -78,6 +87,9 @@ func passthroughSkill(content *config.ContentFile, destinationDir string) ([]con
 		relativePath, err := filepath.Rel(sourceDir, path)
 		if err != nil {
 			return oops.With("path", path).Wrapf(err, "resolve skill file path")
+		}
+		if !includeEvals && isEvalsPath(relativePath) {
+			return nil
 		}
 		out, err := passthroughFile(sourceDir, relativePath, filepath.Join(destinationDir, relativePath))
 		if err != nil {
@@ -171,4 +183,57 @@ func appendIf(outputs []config.OutputFile, out config.OutputFile) []config.Outpu
 		return outputs
 	}
 	return append(outputs, out)
+}
+
+// isEvalsPath reports whether a skill-relative path is inside its evals/ dir.
+func isEvalsPath(relativePath string) bool {
+	first, _, _ := strings.Cut(filepath.ToSlash(relativePath), "/")
+	return first == config.SkillKindEvals
+}
+
+// passthroughEvals copies the project-level eval tree to destinationDir. A
+// missing tree is not an error. When the manifest limits evals to its own
+// skills, only the <skill-name>/ subdirectories of bundled skills are copied.
+func passthroughEvals(m *Manifest, destinationDir string) ([]config.OutputFile, error) {
+	if m.EvalsDir == "" {
+		return nil, nil
+	}
+	info, err := os.Stat(m.EvalsDir)
+	if err != nil || !info.IsDir() {
+		return nil, nil //nolint:nilerr // an absent eval tree simply contributes nothing
+	}
+	bundled := make(map[string]bool, len(m.Skills))
+	for i := range m.Skills {
+		bundled[m.Skills[i].Name] = true
+	}
+
+	var outputs []config.OutputFile
+	err = filepath.WalkDir(m.EvalsDir, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return oops.With("path", path).Wrapf(walkErr, "walk eval directory")
+		}
+		if !entry.Type().IsRegular() {
+			return nil
+		}
+		relativePath, err := filepath.Rel(m.EvalsDir, path)
+		if err != nil {
+			return oops.With("path", path).Wrapf(err, "resolve eval file path")
+		}
+		if m.EvalsPerSkillOnly {
+			skill, rest, nested := strings.Cut(filepath.ToSlash(relativePath), "/")
+			if !nested || rest == "" || !bundled[skill] {
+				return nil
+			}
+		}
+		out, err := passthroughFile(m.EvalsDir, relativePath, filepath.Join(destinationDir, relativePath))
+		if err != nil {
+			return err
+		}
+		outputs = append(outputs, out)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return outputs, nil
 }

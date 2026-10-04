@@ -741,6 +741,15 @@
             },
             "additionalProperties": false
           }
+        },
+        "evals": {
+          "type": "object",
+          "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
+          "properties": {
+            "require": { "type": "boolean", "description": "Enable evals-missing at warning severity." },
+            "allow": { "type": "array", "items": { "type": "string" }, "description": "Skill names or globs exempt from the check." }
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -802,6 +811,10 @@
         "content_root": {
           "type": "string",
           "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/"
+        },
+        "include_evals": {
+          "type": "boolean",
+          "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
         },
         "include_domains": {
           "type": "array",

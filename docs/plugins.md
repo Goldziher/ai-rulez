@@ -593,7 +593,7 @@ root skill with the same name wins.
 `[plugin]`: `name` (lowercase letters, digits, `.`, `_` and `-`, starting with a letter or digit, no `..`; it
 becomes a directory and file name in every runtime), `version` (required); `display_name`, `description`, `homepage`,
 `repository`, `license`, `category`, `brand_color`, `icon`, `logo`, `keywords`,
-`tags`, `runtimes`, `include_domains`, `content_root` (project-relative directory of plugin-only
+`tags`, `runtimes`, `include_domains`, `include_evals` (bundle eval cases, see [Evals](evals.md)), `content_root` (project-relative directory of plugin-only
 `skills/`, `commands/`, and `agents/`). Sub-tables: `[plugin.author]` (`name`/`email`/`url`),
 `[[plugin.mcp]]`, `[[plugin.hooks]]` (+ `[[plugin.hooks.hooks]]`),
 `[plugin.statusline]` (`script`/`command`, Claude-only), `[plugin.interface]`

@@ -288,6 +288,9 @@ func BuildDomainManifest(cfg *config.Config, p *PlannedPlugin) *Manifest {
 		SourceDir:   cfg.BaseDir,
 	}
 	if root := cfg.Plugin; root != nil {
+		m.IncludeEvals = root.IncludeEvals
+		m.EvalsDir = evalsDir(cfg, root)
+		m.EvalsPerSkillOnly = true
 		m.Author = root.Author
 		m.Homepage = root.Homepage
 		m.Repository = root.Repository
