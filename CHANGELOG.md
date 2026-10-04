@@ -22,6 +22,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Codex invocation policy**: `disable-model-invocation: true` on a skill writes `.agents/skills/<id>/agents/openai.yaml` with `policy.allow_implicit_invocation: false`. Cursor also receives `disable-model-invocation`.
 - **`[claude.skills] hide_from_menu`**: opt-in `user-invocable: false` on skills that do not set the key. Off by default.
 - **Codex `AGENTS.md` size warning**: `generate` and `tokens` warn when the `AGENTS.md` files Codex reads (root down to a directory) exceed `project_doc_max_bytes` (32 KiB by default), with the size and the largest sections. `[codex] project_doc_max_bytes` sets the limit (`0` disables the warning).
+- **`ai-rulez mcp --serve-skills`**: a read-only MCP server that serves the skills of a profile per the MCP Skills extension (SEP-2640): `skill://<name>/<file>` resources, the `skills/list` and `skills/get` methods with per-file sha256 digests and sizes, and `search_skills`, `get_skill` and `read_skill_file` tools with provenance (`digest`, `source`, `ref`, `pinned`). `--profile`, `--targets`, `--domain`, `--allow` and `--deny` choose what is exposed; the authoring tools are not registered in this mode. Served bytes equal the generated `SKILL.md` and resource files. The default `ai-rulez mcp` server is unchanged. See `docs/mcp-server.md`.
 
 ### Changed
 
