@@ -12,7 +12,7 @@ import (
 // target naming any of them selects an item for all. The local variants
 // (CLAUDE.local.md, ...) resolve through their base file.
 var rootPresets = map[string][]string{
-	"agents.md":                       {"codex", "opencode", "xum", "amp", "pi"},
+	"agents.md":                       {"codex", "opencode", "xum", "amp", "pi", "baz"},
 	"gemini.md":                       {"gemini", "antigravity"},
 	"claude.md":                       {"claude"},
 	".hermes.md":                      {"hermes"},
