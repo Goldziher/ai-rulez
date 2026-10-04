@@ -21,6 +21,7 @@ const (
 	PresetMCP         PresetName = "mcp"
 	PresetXum         PresetName = "xum"
 	PresetPi          PresetName = "pi"
+	PresetBaz         PresetName = "baz"
 )
 
 // AllPresetNames returns every built-in preset name, sorted. It is derived from

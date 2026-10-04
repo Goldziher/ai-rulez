@@ -308,6 +308,43 @@ type RulesConfig struct {
 
 	// ModeByPreset overrides Mode for specific presets. Keys are preset names.
 	ModeByPreset map[string]string `yaml:"mode_by_preset,omitempty" json:"mode_by_preset,omitempty" toml:"mode_by_preset,omitempty"` //nolint:tagliatelle
+
+	// BazScoped says where the baz preset puts path-scoped rules and context:
+	// "nested" (the default) writes them to the AGENTS.md of the directory the
+	// globs point into, "root" keeps them in the root AGENTS.md with an
+	// "Applies to" line.
+	BazScoped string `yaml:"baz_scoped,omitempty" json:"baz_scoped,omitempty" toml:"baz_scoped,omitempty"` //nolint:tagliatelle
+}
+
+// Values of rules.baz_scoped.
+const (
+	BazScopedNested = "nested"
+	BazScopedRoot   = "root"
+)
+
+// validBazScoped lists the accepted values for rules.baz_scoped.
+var validBazScoped = []string{BazScopedNested, BazScopedRoot}
+
+// BazScopedRules returns where the baz preset puts path-scoped items:
+// BazScopedNested unless rules.baz_scoped says BazScopedRoot.
+func (c *Config) BazScopedRules() string {
+	if c != nil && c.Rules != nil && c.Rules.BazScoped != "" {
+		return c.Rules.BazScoped
+	}
+	return BazScopedNested
+}
+
+// HasBuiltInPreset reports whether the built-in preset is configured.
+func (c *Config) HasBuiltInPreset(name string) bool {
+	if c == nil {
+		return false
+	}
+	for i := range c.Presets {
+		if c.Presets[i].IsBuiltIn() && c.Presets[i].BuiltIn == name {
+			return true
+		}
+	}
+	return false
 }
 
 // RulesModeFor returns the rules output mode for a preset:
@@ -563,6 +600,7 @@ var builtInPresets = map[string]bool{
 	"mcp":                     true,
 	string(PresetXum):         true,
 	string(PresetPi):          true,
+	string(PresetBaz):         true,
 }
 
 func isValidBuiltInPreset(name string) bool {
