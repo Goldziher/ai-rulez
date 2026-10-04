@@ -42,7 +42,7 @@ var namedListKeys = map[string]bool{
 // mapValuedKeys are top-level tables merged per key.
 var mapValuedKeys = map[string]bool{
 	docKeyProfiles: true, docKeyHeader: true, docKeyDefaults: true, string(PresetMCP): true,
-	"plugin": true, "marketplace": true, rulesDir: true,
+	"plugin": true, "marketplace": true, "placement": true, "claude": true, rulesDir: true,
 }
 
 // knownConfigDocKeys returns the TOML keys of Config (plus "schema").

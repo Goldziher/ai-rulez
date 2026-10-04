@@ -116,9 +116,7 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 	}
 
 	if content != nil {
-		m.Skills = content.Skills
-		m.Commands = content.Commands
-		m.Agents = content.Agents
+		m.Skills, m.Commands, m.Agents = includeDomainContent(content, p.IncludeDomains)
 	}
 
 	return m, nil

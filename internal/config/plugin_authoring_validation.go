@@ -67,6 +67,9 @@ func (c *Config) validatePluginAuthoring() error {
 			Hint("Point 'script' at the status-line script to bundle").
 			Errorf("plugin %q statusline requires 'script'", p.Name)
 	}
+	if err := validatePatterns("plugin.include_domains", p.IncludeDomains); err != nil {
+		return err
+	}
 	return c.validateHookGroups(p.Name, p.Hooks)
 }
 
@@ -445,8 +448,12 @@ func (c *Config) validateHookAction(pluginName, event string, index int, action 
 	return nil
 }
 
-// validateMarketplaceAuthoring checks the [marketplace] authoring block.
+// validateMarketplaceAuthoring checks the [marketplace] authoring block, plus
+// the [placement] and [claude.settings] options that refer to it.
 func (c *Config) validateMarketplaceAuthoring() error {
+	if err := c.validateOutputOptions(); err != nil {
+		return err
+	}
 	m := c.Marketplace
 	if m == nil {
 		return nil
@@ -481,5 +488,5 @@ func (c *Config) validateMarketplaceAuthoring() error {
 		}
 		seen[member] = true
 	}
-	return nil
+	return m.validateDomainPlugins()
 }

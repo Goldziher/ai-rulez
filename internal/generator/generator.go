@@ -256,7 +256,25 @@ func (g *Generator) VerifyPlugin(profile string) error {
 			}
 		}
 	}
+	if marketplace := g.config.Marketplace; marketplace != nil && marketplace.HasDomainPlugins() {
+		return g.verifyDomainPluginProvenance(expected)
+	}
 	return plugin.VerifyProvenance(g.config.BaseDir)
+}
+
+// verifyDomainPluginProvenance verifies every bundle root the domain-plugin
+// marketplace wrote: the marketplace root and each plugin directory.
+func (g *Generator) verifyDomainPluginProvenance(expected []config.OutputFile) error {
+	for _, output := range expected {
+		if filepath.Base(output.Path) != plugin.ProvenanceFileName {
+			continue
+		}
+		dir := filepath.Dir(output.Path)
+		if err := plugin.VerifyProvenance(dir); err != nil {
+			return oops.With("bundle", dir).Wrapf(err, "verify domain plugin bundle")
+		}
+	}
+	return nil
 }
 
 // DryRunPlugin returns the plugin generation plan without writing files.
@@ -275,11 +293,11 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 
 // collectPluginOutputs resolves the content tree and MCP servers, builds the
 // plugin manifest, and renders all requested runtime bundles + marketplace. When
-// the config is a monorepo root ([marketplace].members set), it instead renders
-// each member's bundle plus the aggregate marketplace index.
+// the config is a marketplace root ([marketplace].members or domain plugins), it
+// instead renders each plugin's bundle plus the aggregate marketplace index.
 func (g *Generator) collectPluginOutputs(profile string) ([]config.OutputFile, error) {
-	if mkt := g.config.Marketplace; mkt != nil && len(mkt.Members) > 0 {
-		return g.collectMonorepoOutputs(mkt)
+	if mkt := g.config.Marketplace; mkt != nil && (len(mkt.Members) > 0 || mkt.HasDomainPlugins()) {
+		return g.collectMonorepoOutputs(mkt, profile)
 	}
 
 	if g.config.Plugin == nil {
@@ -323,63 +341,215 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	return plugin.BuildManifest(&tempCfg, contentTree)
 }
 
-// collectMonorepoOutputs renders every member plugin under its source directory
-// and emits the aggregate root marketplace index. Each member is an independent
-// ai-rulez project loaded from <baseDir>/<member>.
-func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring) ([]config.OutputFile, error) {
+// marketplaceRoot is the directory the marketplace index is written to:
+// [marketplace].output_dir for domain plugins, the project root otherwise.
+func (g *Generator) marketplaceRoot(mkt *config.MarketplaceAuthoring) string {
+	if mkt.OutputDir == "" {
+		return g.config.BaseDir
+	}
+	return filepath.Join(g.config.BaseDir, mkt.OutputDir)
+}
+
+// collectMonorepoOutputs renders every member plugin under its source directory,
+// every domain plugin under <output_dir>/plugins/<name>, and emits the aggregate
+// root marketplace index. Each member is an independent ai-rulez project loaded
+// from <baseDir>/<member>.
+func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, profile string) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 	entries := make([]plugin.MemberEntry, 0, len(mkt.Members))
 
 	for _, member := range mkt.Members {
-		memberDir := filepath.Join(g.config.BaseDir, member)
-		memberCfg, err := config.LoadConfig(context.Background(), memberDir, config.WithoutLocal())
+		memberOutputs, entry, err := g.collectMemberOutputs(member)
 		if err != nil {
-			return nil, oops.With("member", member).Wrapf(err, "load monorepo member config")
-		}
-		if memberCfg.Plugin == nil {
-			return nil, oops.
-				With("member", member).
-				Hint("Each monorepo member must define its own [plugin] block").
-				Errorf("monorepo member %q has no [plugin] block", member)
-		}
-
-		memberGen := NewGenerator(memberCfg)
-		manifest, err := memberGen.buildPluginManifest("")
-		if err != nil {
-			return nil, oops.With("member", member).Wrapf(err, "build member manifest")
-		}
-
-		memberOutputs, err := plugin.GenerateMember(manifest, memberCfg.BaseDir)
-		if err != nil {
-			return nil, oops.With("member", member).Wrapf(err, "generate member bundle")
+			return nil, err
 		}
 		outputs = append(outputs, memberOutputs...)
+		entries = append(entries, entry)
+	}
 
-		entries = append(entries, plugin.MemberEntry{
-			Name:        manifest.Name,
-			Description: manifest.Description,
-			Source:      "./" + filepath.ToSlash(member),
-			Category:    manifest.Category,
-		})
+	root := g.marketplaceRoot(mkt)
+	codex := len(mkt.Members) > 0
+	if mkt.HasDomainPlugins() {
+		bundles, domainEntries, err := g.collectDomainPluginOutputs(profile, root)
+		if err != nil {
+			return nil, err
+		}
+		outputs = append(outputs, bundles...)
+		entries = append(entries, domainEntries...)
+		for i := range domainEntries {
+			codex = codex || domainEntries[i].Codex
+		}
 	}
 
 	market := plugin.ResolveMarketInfo(mkt)
-	marketplaceOutput, err := plugin.RenderMonorepoMarketplace(market, entries, g.config.BaseDir)
+	if market.Owner == nil && mkt.HasDomainPlugins() && g.config.Plugin != nil {
+		market.Owner = g.config.Plugin.Author // Claude Code requires an owner
+	}
+	marketplaceOutput, err := plugin.RenderMonorepoMarketplace(market, entries, root)
 	if err != nil {
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
-	codexMarketplaceOutput, err := plugin.RenderCodexMonorepoMarketplace(market, entries, g.config.BaseDir)
-	if err != nil {
-		return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
+	rootFiles := []config.OutputFile{marketplaceOutput}
+	if codex {
+		codexMarketplaceOutput, err := plugin.RenderCodexMonorepoMarketplace(market, entries, root)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
+		}
+		rootFiles = append(rootFiles, codexMarketplaceOutput)
 	}
-	rootOutputs, err := plugin.AddProvenance(
-		[]config.OutputFile{marketplaceOutput, codexMarketplaceOutput},
-		g.config.BaseDir,
-	)
+	rootOutputs, err := plugin.AddProvenance(rootFiles, root)
 	if err != nil {
 		return nil, oops.Wrapf(err, "add marketplace provenance")
 	}
 	return append(outputs, rootOutputs...), nil
+}
+
+// withCatalogSkill adds the generated plugin-catalog skill to a copy of tree
+// when [marketplace.catalog_skill] is enabled. A root skill of the same name
+// wins. The catalog goes to the preset outputs only, never into plugin bundles.
+func (g *Generator) withCatalogSkill(tree *config.ContentTree) (*config.ContentTree, error) {
+	mkt := g.config.Marketplace
+	if mkt == nil || mkt.CatalogSkill == nil || !mkt.CatalogSkill.Enabled {
+		return tree, nil
+	}
+	plan, err := plugin.PlanDomainPlugins(g.config, tree)
+	if err != nil {
+		return nil, oops.Wrapf(err, "plan domain plugins for the catalog skill")
+	}
+	skill := plugin.CatalogSkill(g.config, plan)
+	for i := range tree.Skills {
+		if tree.Skills[i].Name == skill.Name {
+			logger.Warn("A skill named like the catalog skill exists; not generating the catalog", "skill", skill.Name)
+			return tree, nil
+		}
+	}
+	withCatalog := *tree
+	withCatalog.Skills = append(slices.Clone(tree.Skills), skill)
+	return &withCatalog, nil
+}
+
+// collectMemberOutputs renders one monorepo member and returns its marketplace
+// entry.
+func (g *Generator) collectMemberOutputs(member string) ([]config.OutputFile, plugin.MemberEntry, error) {
+	memberDir := filepath.Join(g.config.BaseDir, member)
+	memberCfg, err := config.LoadConfig(context.Background(), memberDir, config.WithoutLocal())
+	if err != nil {
+		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "load monorepo member config")
+	}
+	if memberCfg.Plugin == nil {
+		return nil, plugin.MemberEntry{}, oops.
+			With("member", member).
+			Hint("Each monorepo member must define its own [plugin] block").
+			Errorf("monorepo member %q has no [plugin] block", member)
+	}
+
+	manifest, err := NewGenerator(memberCfg).buildPluginManifest("")
+	if err != nil {
+		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "build member manifest")
+	}
+	memberOutputs, err := plugin.GenerateMember(manifest, memberCfg.BaseDir)
+	if err != nil {
+		return nil, plugin.MemberEntry{}, oops.With("member", member).Wrapf(err, "generate member bundle")
+	}
+	return memberOutputs, plugin.MemberEntry{
+		Name:        manifest.Name,
+		Description: manifest.Description,
+		Source:      "./" + filepath.ToSlash(member),
+		Category:    manifest.Category,
+	}, nil
+}
+
+// collectDomainPluginOutputs renders every planned domain plugin under
+// <root>/plugins/<name> and returns their marketplace entries.
+func (g *Generator) collectDomainPluginOutputs(profile, root string) ([]config.OutputFile, []plugin.MemberEntry, error) {
+	planned, err := g.planDomainPlugins(profile)
+	if err != nil {
+		return nil, nil, err
+	}
+	var outputs []config.OutputFile
+	entries := make([]plugin.MemberEntry, 0, len(planned))
+	for i := range planned {
+		p := &planned[i]
+		bundle, err := plugin.GenerateMember(plugin.BuildDomainManifest(g.config, p), p.Dir(root))
+		if err != nil {
+			return nil, nil, oops.With("plugin", p.Name).Wrapf(err, "generate domain plugin bundle")
+		}
+		outputs = append(outputs, bundle...)
+		entries = append(entries, plugin.MemberEntryFor(p))
+	}
+	return outputs, entries, nil
+}
+
+// warnUnbundledPluginOnly warns about skills and commands that placement keeps
+// out of .claude/skills although no configured plugin bundles them, which would
+// make them unreachable.
+func (g *Generator) warnUnbundledPluginOnly(tree *config.ContentTree) {
+	if g.config.Placement == nil && !hasPlacementFrontmatter(tree) {
+		return
+	}
+	var plugged []struct{ typ, name string }
+	collect := func(typ string, items []config.ContentFile) {
+		for i := range items {
+			if providers.ResolvePlacement(g.config, typ, items[i], tree) == config.PlacementPlugin {
+				plugged = append(plugged, struct{ typ, name string }{typ, items[i].Name})
+			}
+		}
+	}
+	collect(providers.OutputTypeSkills, presets.AllSkills(tree))
+	collect(providers.OutputTypeCommands, presets.AllCommands(tree))
+	if len(plugged) == 0 {
+		return
+	}
+	plan, err := plugin.PlanDomainPlugins(g.config, tree)
+	if err != nil {
+		return // reported by the plugin run itself
+	}
+	skills, commands := plugin.BundledNames(g.config, tree, plan)
+	var missing []string
+	for _, item := range plugged {
+		bundled := skills
+		if item.typ == providers.OutputTypeCommands {
+			bundled = commands
+		}
+		if !bundled[item.name] {
+			missing = append(missing, item.name)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		logger.Warn("Plugin-only skills or commands are in no plugin and are not generated anywhere",
+			"count", len(missing), "names", strings.Join(missing, ", "))
+	}
+}
+
+func hasPlacementFrontmatter(tree *config.ContentTree) bool {
+	has := func(items []config.ContentFile) bool {
+		for i := range items {
+			if items[i].Metadata != nil && items[i].Metadata.Extra["placement"] != "" {
+				return true
+			}
+		}
+		return false
+	}
+	if has(tree.Skills) || has(tree.Commands) {
+		return true
+	}
+	for _, d := range tree.Domains {
+		if has(d.Skills) || has(d.Commands) {
+			return true
+		}
+	}
+	return false
+}
+
+// planDomainPlugins resolves the domain plugins from the content tree of the
+// active profile.
+func (g *Generator) planDomainPlugins(profile string) ([]plugin.PlannedPlugin, error) {
+	tree, err := g.getContentForProfile(g.resolveProfile(profile))
+	if err != nil {
+		return nil, err
+	}
+	return plugin.PlanDomainPlugins(g.config, tree)
 }
 
 // DryRunBlocked reports whether the plan from the last DryRun contains local
@@ -507,6 +677,11 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 		return nil, "", err
 	}
 
+	contentTree, err = g.withCatalogSkill(contentTree)
+	if err != nil {
+		return nil, "", err
+	}
+
 	logger.Debug("Content scanned",
 		"rules", len(contentTree.Rules),
 		"context", len(contentTree.Context),
@@ -515,6 +690,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 		"domains", len(contentTree.Domains))
 
 	presets.WarnDuplicateContent(contentTree)
+	g.warnUnbundledPluginOnly(contentTree)
 
 	// Collect MCP servers based on the resolved content tree and active profile
 	mcpServers := g.collectMCPServersForContent(contentTree, activeProfile)

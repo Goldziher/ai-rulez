@@ -52,6 +52,8 @@ type tomlOutput struct {
 	MCP             *MCPConfig             `toml:"mcp,omitempty"`
 	Plugin          *PluginAuthoring       `toml:"plugin,omitempty"`
 	Marketplace     *MarketplaceAuthoring  `toml:"marketplace,omitempty"`
+	Placement       *PlacementConfig       `toml:"placement,omitempty"`
+	Claude          *ClaudeConfig          `toml:"claude,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -134,5 +136,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		MCP:             cfg.MCP,
 		Plugin:          cfg.Plugin,
 		Marketplace:     cfg.Marketplace,
+		Placement:       cfg.Placement,
+		Claude:          cfg.Claude,
 	}
 }

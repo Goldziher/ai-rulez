@@ -366,7 +366,7 @@ func (c *Config) validatePresets() error {
 	// plugin generator renders runtime manifests directly rather than through the
 	// preset pipeline.
 	if len(c.Presets) == 0 {
-		if c.Plugin != nil || (c.Marketplace != nil && len(c.Marketplace.Members) > 0) {
+		if c.HasPluginAuthoring() {
 			return nil
 		}
 		return oops.
