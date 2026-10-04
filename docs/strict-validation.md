@@ -36,7 +36,7 @@ still exits 1 and never reaches the content checks.
   hand-authored `.claude/` directory of an ancestor, because assistants load the ancestors' instructions.
   `--recursive` lints every root and merges the findings.
 - **Only files you own.** Content pulled in from builtins or includes is used to resolve names but is never
-  reported on.
+  reported on, except by the security checks when `[lint.security] scan_imports` is set.
 - **Prose, not code.** Fenced code blocks and inline code spans are ignored for links; backticked tokens are only
   read as paths or slash commands.
 
@@ -44,11 +44,23 @@ still exits 1 and never reaches the content checks.
 
 | Code | Name | Default | Finds |
 | --- | --- | --- | --- |
+| AR001 | `secret-detected` | error | A credential pattern (AWS, GitHub, Slack, Google, Stripe, Anthropic/OpenAI keys, private keys, JWTs, `password = "..."` with a mixed-character value, or a `secret_patterns` entry) in content or a script. The finding masks the match |
+| AR002 | `hidden-characters` | error | Zero-width, bidirectional-control or Unicode tag characters (a joiner between two non-ASCII characters, as in emoji, and a leading byte order mark are fine) |
+| AR003 | `html-comment-instruction` | warning | An HTML comment, invisible when rendered, with instruction-like text (`curl`, `eval`, `run:`, "secretly", injection phrases) |
+| AR004 | `prompt-injection-phrase` | warning | Text that tries to override earlier instructions or hide actions from the user ("ignore previous instructions", "do not tell the user", ...) |
+| AR005 | `risky-shell-exec` | error | `curl ... \| sh` (or an interpreter), `bash <(curl ...)`, `eval` of dynamic text, a base64 payload decoded into a shell. `eval "$(ssh-agent -s)"` and similar environment initializers are exempt |
+| AR006 | `risky-shell-access` | warning | Reads of `~/.ssh`, `~/.aws`, `.netrc` and other credential locations, writes to `~/`, `/etc`, `/usr`..., `chmod 777` |
+| AR007 | `tool-breadth` | warning | A skill or command `allowed-tools` entry that is unrestricted: `Bash`, `Bash(*)`, `*` (listed exceptions in `allowed_tools` pass) |
+| AR008 | `outbound-host` | warning | A URL whose host is not in `[lint.security] allowed_hosts`; checked only when that list is set (`localhost` and `127.0.0.1` always pass) |
+| AR009 | `encoded-blob` | warning | A base64-like run of 200 or more characters that a reviewer cannot read |
+| AR010 | `unpinned-remote` | warning | A remote include or installed skill follows a moving ref and `ai-rulez.lock` does not pin it (a full commit SHA counts as pinned) |
+| AR011 | `external-finding` | warning | A finding from a `[[lint.external]]` scanner (its own severity is kept) |
 | AR101 | `glob-no-match` | error | A `paths`/`globs` pattern in a rule or context file matches no file tracked by git |
 | AR201 | `link-unresolved` | error | A relative markdown link (or image, or reference definition) points at a file that does not exist |
 | AR202 | `anchor-unresolved` | warning | `file.md#anchor` where the target has no heading producing that anchor |
 | AR301 | `reference-unknown` | error | Prose names a skill, agent, rule or command that does not exist (`` `x-y` skill ``, `skill `x``, `/x-y`, `Skill(x)`, `subagent_type: x`) |
 | AR302 | `frontmatter-skill-unknown` | error | Frontmatter `skills:` lists a skill that does not exist |
+| AR303 | `frontmatter-key-unknown` | warning | A top-level frontmatter key no tool reads (`allowed_tools` for `allowed-tools`). Known keys are the Agent Skills specification, the Claude Code skill and subagent references and the keys ai-rulez reads; extend with `allowed_keys` |
 | AR401 | `path-missing` | warning | A backticked repo path (first segment is a top-level entry of the repo) does not exist |
 | AR402 | `skill-resource-missing` | error | A `references/`, `scripts/` or `assets/` path exists neither in the skill or command nor in the repo |
 | AR501 | `hook-missing` | error | A `.claude/settings.json` hook command runs a `$CLAUDE_PROJECT_DIR/...` file that does not exist |
@@ -57,6 +69,7 @@ still exits 1 and never reaches the content checks.
 | AR601 | `mcp-command-not-found` | warning | A stdio `[[mcp_servers]]` `command` is not on `PATH` (or not an existing relative file) |
 | AR701 | `description-duplicate` | warning | Two skills, agents or commands have identical descriptions |
 | AR702 | `description-near-duplicate` | warning | Descriptions overlap at or above `near_duplicate_threshold` (word-set Jaccard) |
+| AR703 | `duplicate-collapsed` | warning | Two sources define the same rule, context, skill or command name and generation silently keeps one (root over domains over includes over builtins). Message names both paths; allow intentional shadowing with `allow_overrides` |
 | AR801 | `description-missing` | warning | A skill, agent or command has no `description` |
 | AR802 | `description-length` | warning | Description shorter than `min_length` (default 20) or longer than `max_length` (default 1024, the Agent Skills limit) |
 | AR803 | `description-style` | off | Description does not say when to use the item; turned on by `require_use_when = true` |
@@ -65,6 +78,10 @@ still exits 1 and never reaches the content checks.
 | AR902 | `size-tokens` | warning | Item exceeds its token budget (cl100k_base, an approximation) |
 | AR951 | `metadata-missing` | error | Item lacks a frontmatter key listed in `require_metadata` (no key is required by default) |
 | AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
+| AR951 | `metadata-missing` | error | Item lacks a frontmatter key listed in `require_metadata`, or a `[lint.metadata.<key>] required = true` key (no key is required by default). A key inside the Agent Skills `metadata` map counts |
+| AR952 | `metadata-invalid` | error | A `[lint.metadata.<key>]` value is not a date, is not one of the `values` of an enum, or is a date in the future |
+| AR953 | `metadata-stale` | warning | A date older than `max_age_days` |
+| AR954 | `superseded-by-missing` | error | `superseded_by: <name>` names an item that does not exist |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -81,6 +98,8 @@ ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
+allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
+allowed_keys = ["team"]                                 # extra frontmatter keys (AR303)
 
 [lint.severity]                    # error | warning | info | off
 AR401 = "error"
@@ -99,6 +118,28 @@ max_tokens = 4000                  # 0 keeps the default, a negative value remov
 [lint.require_metadata]
 skill = ["owner"]
 rule = ["owner"]
+
+[lint.metadata.last_verified]      # typed metadata, top-level or inside the `metadata` map
+type = "date"                      # string (default) | date | enum
+max_age_days = 90                  # AR953 when older; a bad date is AR952
+required = true                    # AR951 when absent
+kinds = ["skill"]                  # default: every kind
+
+[lint.metadata.tier]
+type = "enum"
+values = ["gold", "silver"]
+
+[lint.security]
+scan_imports = "error"             # off (default) | warn | error, see below
+allowed_hosts = ["github.com", "*.example.org"]   # enables AR008
+allowed_tools = ["Bash"]           # unrestricted allowed-tools entries that are accepted (AR007)
+injection_phrases = ["as root user"]
+secret_patterns = [{ name = "internal token", regex = "corp_[a-z0-9]{10}" }]
+
+[[lint.external]]                  # run with --external only
+name = "my-scanner"
+command = ["my-scanner", "--sarif"]
+format = "sarif"                   # sarif (default) | json
 ```
 
 Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,
@@ -116,6 +157,30 @@ every finding there:
 <!-- ai-rulez-lint-ignore: AR401, AR301 -->
 See `legacy/old-tool/README.md` and the `retired-helper` skill.
 ```
+
+## Security checks
+
+`AR001` to `AR011` are deterministic and offline: they read text and report patterns, they never fetch or run
+anything. `ai-rulez scan` runs only this family (same `--format`, `--fail-on`, `--recursive`, exit codes);
+`validate --strict` runs it together with everything else.
+
+They cover `SKILL.md`, rules, context, agents, commands, markdown references and the text files a skill ships
+(scripts, data). Disable a rule everywhere with `ignore`, one file with `ignore_paths`, one line with
+`ai-rulez-lint-ignore`. The patterns are heuristics tuned for precision, and a finding in prose that *documents*
+a risky command needs an inline ignore.
+
+**Imported content.** Owned files are checked by default. With `[lint.security] scan_imports`, content from
+`includes` and `installed_skills` is scanned too: `validate --strict` reports it, and `generate` scans it *before
+writing anything* and stops at level `error` (`warn` only logs). The level replaces the severity of findings in
+imported text, and an `ai-rulez-lint-ignore` comment inside imported text is not honored, so an import cannot
+silence the check on its own content. Pair it with `ai-rulez lock` so the scanned bytes are the pinned bytes.
+
+**External scanners.** `[[lint.external]]` plugs in a classifier or a third-party scanner. The command is run from
+the project root with the scanned file paths appended, and prints SARIF 2.1.0 (`runs[].results[]`) or a JSON list
+of `{file, line, severity, rule, message}` to stdout; a non-zero exit is fine when the output parses. Findings are
+merged as `AR011` (with the scanner's severity) into the text and `--format json` reports. A scanner that fails or
+prints nothing parseable is itself reported. Because the command comes from the repository, it runs only when you
+pass `--external`.
 
 ## JSON output
 
