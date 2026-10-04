@@ -23,6 +23,12 @@ const IndexFileName = "skills-index.json"
 // IndexSchemaVersion is bumped on any incompatible change to the index shape.
 const IndexSchemaVersion = 1
 
+// Record kinds.
+const (
+	KindSkill   = "skill"
+	KindCommand = "command"
+)
+
 // Index lists every skill a generate run produced.
 type Index struct {
 	SchemaVersion int           `json:"schema_version"`
@@ -34,6 +40,9 @@ type SkillRecord struct {
 	// ID is the stable skill identifier: the skill's directory name, which is the
 	// name every harness invokes it by.
 	ID string `json:"id"`
+	// Kind is "skill", or "command" for a command a harness runs as a skill
+	// (written to a skills directory, so it is listed and invoked like one).
+	Kind string `json:"kind"`
 	// Domain is the domain the skill lives in, empty for a root skill.
 	Domain string `json:"domain,omitempty"`
 	// Source is the authored SKILL.md, relative to the project root with forward

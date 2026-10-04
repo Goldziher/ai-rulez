@@ -29,14 +29,20 @@ func (g *Generator) skillsIndexOutput(content *config.ContentTree, allOutputs ma
 
 	outputsByID := skillOutputsByID(allOutputs, g.config.BaseDir)
 	index := usage.Index{SchemaVersion: usage.IndexSchemaVersion}
-	add := func(domain string, skills []config.ContentFile) {
+	add := func(domain string, skills, commands []config.ContentFile) {
 		for i := range skills {
-			if record, ok := g.skillRecord(domain, &skills[i], outputsByID); ok {
+			if record, ok := g.skillRecord(domain, usage.KindSkill, config.SkillID(skills[i]), &skills[i], outputsByID); ok {
+				index.Skills = append(index.Skills, record)
+			}
+		}
+		for i := range commands {
+			id := commandSkillID(commands[i].Name)
+			if record, ok := g.skillRecord(domain, usage.KindCommand, id, &commands[i], outputsByID); ok && len(record.Outputs) > 0 {
 				index.Skills = append(index.Skills, record)
 			}
 		}
 	}
-	add("", content.Skills)
+	add("", content.Skills, content.Commands)
 	names := make([]string, 0, len(content.Domains))
 	for name := range content.Domains {
 		names = append(names, name)
@@ -44,7 +50,7 @@ func (g *Generator) skillsIndexOutput(content *config.ContentTree, allOutputs ma
 	sort.Strings(names)
 	for _, name := range names {
 		if domain := content.Domains[name]; domain != nil {
-			add(name, domain.Skills)
+			add(name, domain.Skills, domain.Commands)
 		}
 	}
 
@@ -59,13 +65,13 @@ func (g *Generator) skillsIndexOutput(content *config.ContentTree, allOutputs ma
 }
 
 // skillRecord builds the index record of one skill.
-func (g *Generator) skillRecord(domain string, skill *config.ContentFile, outputsByID map[string]map[string][]string) (usage.SkillRecord, bool) {
-	id := config.SkillID(*skill)
+func (g *Generator) skillRecord(domain, kind, id string, skill *config.ContentFile, outputsByID map[string]map[string][]string) (usage.SkillRecord, bool) {
 	if id == "" {
 		return usage.SkillRecord{}, false
 	}
 	record := usage.SkillRecord{
 		ID:      id,
+		Kind:    kind,
 		Domain:  domain,
 		Source:  g.relToProject(skill.Path),
 		Hash:    skillHash(skill),
@@ -79,6 +85,13 @@ func (g *Generator) skillRecord(domain string, skill *config.ContentFile, output
 		record.Outputs[preset] = paths
 	}
 	return record, true
+}
+
+// commandSkillID is the directory name a command is written under when a
+// harness runs it as a skill: the lowercased name with spaces and underscores
+// as dashes.
+func commandSkillID(name string) string {
+	return strings.NewReplacer(" ", "-", "_", "-").Replace(strings.ToLower(name))
 }
 
 // relToProject renders a source path relative to the project root with forward

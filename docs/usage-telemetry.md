@@ -25,6 +25,7 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
   "skills": [
     {
       "id": "deploy-staging",
+      "kind": "skill",
       "domain": "ops",
       "source": ".ai-rulez/domains/ops/skills/deploy-staging/SKILL.md",
       "hash": "blake3:0699fc6b...",
@@ -41,6 +42,8 @@ from files on disk, and is byte-stable across runs, so it is safe to commit.
 
 - `id` is the skill's directory name, which is the name every harness invokes it by. It is the stable identity:
   generated skills already carry it as `name`.
+- `kind` is `skill`, or `command` for a command that a harness runs as a skill (the `claude` preset writes commands
+  into `.claude/skills`); such a command is listed and invoked like a skill, so its usage is logged the same way.
 - `hash` is a blake3 digest of the authored skill: `SKILL.md` as written, then each bundled resource in path order.
   It changes when, and only when, the authored skill changes.
 - `owner` and `version` are read from the `owner` and `version` frontmatter keys when set. Add
