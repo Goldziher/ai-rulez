@@ -665,6 +665,28 @@ manage = true
 enable_plugins = ["acme-essentials"]
 ```
 
+### `claude.skills`
+
+By default a skill is user-invocable and appears in Claude Code's `/` menu. `hide_from_menu = true` writes
+`user-invocable: false` on every skill that does not set the key itself, so only the model loads it. A `user-invocable`
+value in a skill's frontmatter always wins. See [Skill Frontmatter](skills.md#invocation-keys).
+
+```toml
+[claude.skills]
+hide_from_menu = true
+```
+
+### `codex`
+
+`project_doc_max_bytes` is the limit your Codex is configured with (default 32 KiB). `generate` warns when the
+`AGENTS.md` files Codex concatenates exceed it, naming the largest sections; `0` turns the warning off. See
+[Rules: size limits](rules.md#size-limits).
+
+```toml
+[codex]
+project_doc_max_bytes = 65536
+```
+
 ### `builtins`
 
 Enables built-in domains that ship embedded in the `ai-rulez` binary. These provide opinionated rules,
@@ -1508,7 +1530,7 @@ above. To keep a domain-specific version, give it a name no other layer uses, or
 
 Deduplication resolves collisions *across* precedence layers. It cannot resolve two items in the
 **same** layer: there is no precedence between them. Skills and commands both render to
-`.claude/skills/{id}/SKILL.md`, differing only in the `user-invocable` frontmatter constant, so two
+`.claude/skills/{id}/SKILL.md`, differing only in the `user-invocable` frontmatter a command gets, so two
 items in one scope resolving to one id means one silently overwrites the other. `ai-rulez validate`
 (and `generate`) refuse instead, with the two source paths named.
 

@@ -47,15 +47,6 @@
       "description": "When true, always-on rules and context are rendered once into a shared AGENTS.md (nested <scope>/AGENTS.md for scopes) and skills once into .agents/skills/<name>/SKILL.md, instead of per-tool copies. Presets that read these files skip their own copies. Defaults to false (per-tool outputs, unchanged).",
       "type": "boolean"
     },
-    "bundle_exclude": {
-      "type": "array",
-      "items": { "type": "string" },
-      "description": "Extra patterns for files left out of skill and command resource bundles (the SKILL.md Resources section and the copied files), added to the always-skipped .git, .venv*, venv, __pycache__, *.pyc and node_modules. A pattern without '/' matches any path segment; one with '/' matches the path relative to the skill directory. Files ignored by .gitignore are skipped too."
-    },
-    "codex_skills_dir": {
-      "type": "string",
-      "description": "Where the codex preset writes skills, relative to the project root. Defaults to '.agents/skills', the location Codex documents. Set '.codex/skills' to keep the location used before 4.24."
-    },
     "builtins": {
       "description": "Built-in domains to include. Use `true` to enable all, `false` to disable all, or an array of specific names. Prefix with '!' to exclude an entire auto-included domain (e.g., '!ai-governance'), or use '!domain/rule' to exclude a single builtin rule while keeping the rest of the domain (e.g., '!git-workflow/commit-messages'). Available: ai-governance (auto), agent-delegation (auto), security (auto), git-workflow (auto), code-quality (auto), testing (auto), token-efficiency (auto), documentation, polyglot-bindings, default-commands, cicd, observability, docker, rust, python, typescript, go, java, ruby, php, elixir, csharp, r, pyo3, napi-rs, magnus, ext-php-rs, rustler, wasm, jni-rs, extendr, cgo, vite-plus. An unknown name is reported as a warning during generation, not a schema error.",
       "oneOf": [
@@ -71,6 +62,13 @@
           "type": "array"
         }
       ]
+    },
+    "bundle_exclude": {
+      "description": "Extra patterns for files left out of skill and command resource bundles (the SKILL.md Resources section and the copied files), added to the always-skipped .git, .venv*, venv, __pycache__, *.pyc and node_modules. A pattern without '/' matches any path segment; one with '/' matches the path relative to the skill directory. Files ignored by .gitignore are skipped too.",
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
     },
     "claude": {
       "additionalProperties": false,
@@ -123,9 +121,37 @@
             }
           },
           "type": "object"
+        },
+        "skills": {
+          "additionalProperties": false,
+          "description": "Options for the skills written to .claude/skills.",
+          "properties": {
+            "hide_from_menu": {
+              "default": false,
+              "description": "Write user-invocable: false on every skill that does not set the key itself, so Claude Code hides it from the / menu and only the model loads it. Off by default: a skill without the key is user-invocable. A user-invocable value set in the skill's frontmatter always wins.",
+              "type": "boolean"
+            }
+          },
+          "type": "object"
         }
       },
       "type": "object"
+    },
+    "codex": {
+      "additionalProperties": false,
+      "description": "Codex specific options.",
+      "properties": {
+        "project_doc_max_bytes": {
+          "default": 32768,
+          "description": "The project_doc_max_bytes your Codex is configured with. generate warns when the AGENTS.md files Codex concatenates (root down to a directory) exceed it, naming the largest sections. Unset means the Codex default of 32 KiB; 0 turns the warning off.",
+          "type": "integer"
+        }
+      },
+      "type": "object"
+    },
+    "codex_skills_dir": {
+      "description": "Where the codex preset writes skills, relative to the project root. Defaults to '.agents/skills', the location Codex documents. Set '.codex/skills' to keep the location used before 4.24.",
+      "type": "string"
     },
     "compact": {
       "description": "When true, omit per-rule '**Priority:**' annotations from generated inline rule sections to reduce output size. Defaults to false.",
@@ -1201,6 +1227,11 @@
       "additionalProperties": false,
       "description": "Controls how rules are written to generated outputs",
       "properties": {
+        "baz_scoped": {
+          "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
+          "enum": ["nested", "root"],
+          "type": "string"
+        },
         "mode": {
           "description": "Default rules output mode. split writes one file per rule in the tool's native rules folder; inline embeds rules in the root file. Defaults to split.",
           "enum": ["split", "inline"],
@@ -1213,11 +1244,6 @@
           },
           "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
           "type": "object"
-        },
-        "baz_scoped": {
-          "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
-          "enum": ["nested", "root"],
-          "type": "string"
         }
       },
       "type": "object"

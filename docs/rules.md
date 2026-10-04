@@ -217,3 +217,16 @@ Generated rule files are gitignored one by one (for example `.claude/rules/x.md`
 | Antigravity  | 24576 characters per file  |
 
 A file over the limit produces a warning. Content is never truncated; split the rule instead.
+
+Codex limits the combined `AGENTS.md` content instead of one file. It concatenates the files from the project root down
+to the working directory and stops at `project_doc_max_bytes` (32 KiB by default), so trailing content is dropped. ai-rulez
+inlines path-scoped rules into `AGENTS.md` for Codex, so with the `codex` preset `generate` and `tokens` warn when the
+root `AGENTS.md`, or a nested `AGENTS.md` plus the files above it, exceeds the limit. The warning gives the size and the
+five largest sections. Set the limit your Codex uses, or turn the warning off, with:
+
+```toml
+[codex]
+project_doc_max_bytes = 65536   # 0 disables the warning; unset means 32768
+```
+
+Use `compact = true`, skills, or `[[scopes]]` to shrink the file. The warning does not change the output.
