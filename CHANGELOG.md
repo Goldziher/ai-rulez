@@ -37,9 +37,12 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **Gemini custom commands** (opt-in): `[plugin.gemini] commands = true` bundles commands as `commands/<name>.toml`.
 - `docs/plugins.md` lists, per runtime, the content types emitted with vendor links and the verification date.
 
+- **`ai-rulez tokens` counts the item listing**: every harness that lists skills, commands or agents at session start (`claude`, `codex`, `pi`, `gemini`, `opencode`, `windsurf`, `cline`, `junie`, `cursor`, `copilot`) gets a `skill listing` line, and `command listing` / `agent listing` where it lists those, costing each entry's name, description, path where included and an estimated 27 tokens of framing. The figure is calibrated against Claude Code (100 skills: 6,402 measured, 6,400 reported), is included in `always`, the headline and `--budget`, and skips `disable-model-invocation` items. Provider specs declare it with a `[listing]` table. New JSON fields: `listing`, `listed_items`, `truncated_descriptions`, `always_legacy`, `conditional_legacy` per runtime and `headline_listing`, `headline_always_legacy`, `listing_entry_overhead` on the report. See `docs/cli.md`.
+
 ### Changed
 
 - **`generate --dry-run`** marks files that are already current as `unchanged:` instead of `write-file:`. Scripts that match on `write-file:` for every file need updating.
+- **`tokens` `always` and `headline_always` now include the item listing** and skill descriptions are no longer `conditional` for harnesses that list them, so `--budget` gates the number the prompt really carries and can start failing where it passed. The previous figures stay available as `always_legacy`, `conditional_legacy` and `headline_always_legacy`.
 - **The `codex` preset writes skills to `.agents/skills`** (the directory Codex documents; it does not read `.codex/skills`) instead of `.codex/skills`. The files previously written to `.codex/skills` are removed by the manifest-based cleanup on the next `generate`; hand-written files there are kept. Set `codex_skills_dir = ".codex/skills"` to keep the old location. With `agents_md` on, a skill that targets only `codex` is now written to `.agents/skills`, so other readers of that directory see it too.
 
 ### Fixed

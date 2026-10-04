@@ -72,7 +72,7 @@ func TestRunTokens_TextReport(t *testing.T) {
 	assert.Contains(t, report, `profile "backend"`)
 	assert.Contains(t, report, "cl100k_base")
 	assert.Contains(t, report, "always loaded")
-	assert.Contains(t, report, "skill descriptions")
+	assert.Contains(t, report, "skill listing")
 	assert.Contains(t, report, "skill bodies")
 	assert.Contains(t, report, "Headline always-loaded surface")
 	assert.Contains(t, report, "never predicts a session total",
@@ -220,4 +220,33 @@ func TestHumanCount(t *testing.T) {
 	for _, tt := range tests {
 		assert.Equal(t, tt.expected, humanCount(tt.value))
 	}
+}
+
+// TestRunTokens_BudgetGatesTheListing checks that a ceiling the pre-listing
+// figure passes is exceeded once the listing is counted.
+func TestRunTokens_BudgetGatesTheListing(t *testing.T) {
+	resetTokensFlags(t)
+	profile = "backend"
+	tokensJSON = true
+
+	var out bytes.Buffer
+	_, err := runTokens(&out, []string{tokensFixturePath(t)})
+	require.NoError(t, err)
+	var report struct {
+		HeadlineAlways       int `json:"headline_always"`
+		HeadlineAlwaysLegacy int `json:"headline_always_legacy"`
+		HeadlineListing      int `json:"headline_listing"`
+	}
+	require.NoError(t, json.Unmarshal(out.Bytes(), &report))
+	require.Positive(t, report.HeadlineListing)
+	require.Greater(t, report.HeadlineAlways, report.HeadlineAlwaysLegacy)
+
+	resetTokensFlags(t)
+	profile = "backend"
+	tokensBudget = report.HeadlineAlwaysLegacy + 1
+	out.Reset()
+	overBudget, err := runTokens(&out, []string{tokensFixturePath(t)})
+	require.NoError(t, err)
+	assert.True(t, overBudget, "only the listing pushes the total over the ceiling")
+	assert.Contains(t, out.String(), "Over budget")
 }

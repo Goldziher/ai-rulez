@@ -1150,8 +1150,8 @@ when the surface is loaded:
 
 | Bucket        | Meaning                                                                       |
 | ------------- | ----------------------------------------------------------------------------- |
-| `always`      | Paid on every request: the root instructions file, skill and command names, agent names and descriptions |
-| `conditional` | Paid in some harness modes only — skill and command descriptions — and machine-local files, labelled `(machine-local)` for roots |
+| `always`      | Paid on every request: the root instructions file and the item listing (below) |
+| `conditional` | Paid in some harness modes only — path-scoped rule files and machine-local files, labelled `(machine-local)` for roots |
 | `on demand`   | Paid when the artifact is opened: skill, command and agent bodies             |
 | `unmodeled`   | Cost ai-rulez cannot model, such as the tool schemas an MCP manifest implies  |
 
@@ -1162,9 +1162,69 @@ agent-requested rules split into an `always` description and an `on demand` body
 manual rules are `on demand`. Machine-local rule files (`*.local.*`) count as `conditional`.
 
 The root instructions file is broken down per section, and rules and context are
-listed individually so an expensive one can be named. Skill names, descriptions and
-bodies are separate lines: they are loaded on different schedules, and a single
-per-file total hides which part is actually costing anything.
+listed individually so an expensive one can be named. The item listing, bodies and
+file overhead are separate lines: they are loaded on different schedules, and a
+single per-file total hides which part is actually costing anything.
+
+#### The item listing
+
+A harness that supports skills does not wait for a skill to be opened. At session
+start it puts a listing of the skills (and, for some, commands and agents) it can
+load into the prompt: one entry per item with its name and description, and for
+Codex and pi its path. That listing is paid on every request, whether or not a
+skill is ever used, and it is usually the largest always-loaded cost a skill tree
+adds. Each runtime whose harness lists items gets one `skill listing` line (and
+`command listing` / `agent listing` where the harness lists those), with the
+names, descriptions, paths and per-entry framing as children. The listing is
+included in the runtime's `always` figure, in the headline and in `--budget`.
+
+| Harness                                  | Lists                       | Source of the model |
+| ---------------------------------------- | --------------------------- | ------------------- |
+| `claude`                                 | skills, commands, agents (descriptions cut at 1,536 characters) | documented, measured |
+| `codex`                                  | skills, with path           | documented          |
+| `pi`                                     | skills, with path           | documented          |
+| `gemini`, `opencode`, `windsurf`, `cline`, `junie` | skills            | documented          |
+| `cursor`, `copilot`                      | skills                      | implied by the docs, not stated as a per-request listing |
+| `amp`, `antigravity`, `baz`, `continue-dev`, `hermes`, `xum` | not modeled | no listing is reported |
+
+An item with `disable-model-invocation: true` is not offered to the model and is
+not listed. Each entry costs the token count of its name, description and path
+plus a framing constant of 27 tokens (`listing_entry_overhead` in the JSON).
+
+The figure is an estimate, and so is the constant. Calibration method, which you
+can repeat on your own harness version:
+
+```bash
+mkdir p && cd p && git init -q
+# empty project
+claude -p "reply with the single word ok" --output-format json \
+  --setting-sources project --strict-mcp-config --mcp-config '{"mcpServers":{}}'
+# then add 100 skills with ~165-character descriptions under .claude/skills and rerun
+```
+
+The prompt size is `input_tokens + cache_creation_input_tokens +
+cache_read_input_tokens`. On Claude Code 2.1.289, 100 such skills added 6,402
+tokens (64 per skill); `ai-rulez tokens` reports 6,400 for the same skills as an
+ai-rulez source. The constant is the difference between that per-skill figure and
+the `cl100k_base` count of the name and description (3 + 34 tokens), so it also
+absorbs the tokenizer gap on that text.
+
+What the estimate does not model: a harness bounds its listing and shortens or
+omits entries beyond it (Codex: a share of the context window; Claude Code: a total
+budget in addition to the 1,536-character per-entry cap, which capped the same probe
+at about 9.6k tokens from 100 skills up). A very large skill set is therefore an
+upper estimate. `truncated_descriptions` counts entries whose description exceeds a
+known per-entry limit. With `agents_md`, skills written only to the shared
+`.agents/skills` tree are not attributed to a preset.
+
+The earlier model counted only skill and command names (and agent descriptions) as
+`always` and skill descriptions as `conditional`. Those figures remain in the JSON
+as `always_legacy`, `conditional_legacy` (per runtime) and `headline_always_legacy`,
+and the text report prints the pre-listing headline next to the listing share, so a
+number recorded before this change stays comparable. `headline_always` itself now
+includes the listing, so a `--budget` that passed before can fail; raise the ceiling
+or trim descriptions. Provider specs declare the listing with a `[listing]` table
+(`skills`, `commands`, `agents`, `include_path`, `description_limit`).
 
 `--budget` compares against the headline figure and exits `2` when it is exceeded,
 which is distinct from `1` so a hook can tell "over budget" from "the command
