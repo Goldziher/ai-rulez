@@ -172,6 +172,10 @@
         "emit_model": {
           "type": "boolean",
           "description": "When true, call the shared per-preset model resolver and emit under model.field."
+        },
+        "effort_field": {
+          "type": "string",
+          "description": "Frontmatter key the resolved effort is written under when emit_effort is true. Defaults to \"effort\"; tools whose thinking knob is spelled differently set it (pi: \"thinking\")."
         }
       }
     },
@@ -208,7 +212,7 @@
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": ["claude_settings_json", "claude_plugins_json", "mcp_json", "amp_settings_json"],
+          "enum": ["claude_settings_json", "claude_plugins_json", "mcp_json", "amp_settings_json", "pi_mcp_json"],
           "description": "Closed-set sidecar renderer. New kinds extend this enum and add a Go handler in providers/sidecars.go."
         },
         "path": {

@@ -26,6 +26,9 @@ const (
 	// .amp/settings.json; users keep arbitrary Amp settings alongside it.
 	ampSettingsKeyEffort = "amp.anthropic.effort"
 
+	// piMCPKeyServers is the only top-level key ai-rulez owns in .pi/mcp.json.
+	piMCPKeyServers = "mcpServers"
+
 	// arraySidecarIndent is the indentation for the one sidecar ai-rulez owns
 	// outright (.claude/plugins.json, a JSON array). Object-shaped sidecars take
 	// their indentation from jsonmerge instead, which adapts to the document that
@@ -84,6 +87,10 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
 			{Name: ampSettingsKeyEffort, Value: g.resolveGlobalEffort(cfg)},
 		})
+	case SidecarPiMCPJSON:
+		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
+			{Name: piMCPKeyServers, Value: piMCPServerEntries(cfg), Members: true},
+		})
 	case SidecarClaudePluginsJSON:
 		// .claude/plugins.json is a JSON array wholly owned by ai-rulez: there
 		// are no user-authored sibling keys to preserve.
@@ -106,7 +113,7 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 // deletes a hand-authored settings file.
 func SidecarIsMergedDocument(kind string) bool {
 	switch kind {
-	case SidecarClaudeSettingsJSON, SidecarMCPJSON, SidecarAmpSettingsJSON:
+	case SidecarClaudeSettingsJSON, SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON:
 		return true
 	}
 	return false
@@ -271,6 +278,15 @@ func renderClaudePluginsJSON(cfg *config.Config) (string, error) {
 	return string(jsonBytes) + "\n", nil
 }
 
+// piMCPServerEntries builds the mcpServers object of .pi/mcp.json. Unlike the
+// settings-style sidecars this document is a plain {mcpServers: {...}} file, so
+// it drops the escaping the shared `mcp_json` sidecar needs (pi has no `${VAR}`
+// expansion of its own to preserve) and emits the stdio `command/args/env`
+// form and the remote `url/headers` form.
+func piMCPServerEntries(cfg *config.Config) map[string]any {
+	return presets.MCPServersByKey(cfg)
+}
+
 // LegacyMergeClaims is what clean may take back out of a provider-owned merged
 // document at the base-relative path rel when no record of what was merged exists:
 // the MCP server entries the current config would render, each guarded by that
@@ -286,6 +302,8 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		owned = []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true}}
 	case presets.MergedDocMCPJSON:
 		owned = mcpJSONOwnedKeys(cfg)
+	case presets.MergedDocPiMCP:
+		owned = []jsonmerge.OwnedKey{{Name: piMCPKeyServers, Value: piMCPServerEntries(cfg), Members: true}}
 	default:
 		return nil
 	}
