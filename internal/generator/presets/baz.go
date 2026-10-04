@@ -156,6 +156,12 @@ func bazNestedActive(cfg *config.Config) bool {
 	return cfg.HasBuiltInPreset(bazPresetName) && !rulefiles.InScope(cfg) && cfg.BazScopedRules() == config.BazScopedNested
 }
 
+// WithoutBazNested exposes withoutBazNested for the DSL renderer in
+// internal/generator/providers.
+func WithoutBazNested(items []config.ContentFile, cfg *config.Config) []config.ContentFile {
+	return withoutBazNested(items, cfg)
+}
+
 // withoutBazNested drops, from the items the root AGENTS.md inlines, the ones
 // that bazNestedOutputs writes to a nested AGENTS.md instead. It is applied by
 // every renderer of the root AGENTS.md (codex, the shared file, baz), so they
@@ -192,7 +198,7 @@ func bazNestedDirs(cf config.ContentFile, cfg *config.Config) []string {
 		}
 		found := false
 		for _, expanded := range rulefiles.ExpandBraces(glob) {
-			dir := globStaticDir(expanded)
+			dir := bazScopeDir(expanded, cfg)
 			if dir == "" || !bazDirUsable(dir, cfg) {
 				return nil
 			}
@@ -224,6 +230,22 @@ func globStaticDir(glob string) string {
 		dir = append(dir, seg)
 	}
 	return strings.Join(dir, "/")
+}
+
+// bazScopeDir is globStaticDir, except that a glob whose last segment is a
+// wildcard-free existing directory ("src/api") scopes to that directory: a bare
+// directory means everything below it, so its parent would over-scope.
+func bazScopeDir(glob string, cfg *config.Config) string {
+	trimmed := strings.TrimPrefix(strings.TrimPrefix(glob, "./"), "/")
+	last := trimmed[strings.LastIndex(trimmed, "/")+1:]
+	if last != "" && !strings.ContainsAny(last, "*?[{\\") && last != ".." && last != "." {
+		if dir := globStaticDir(trimmed + "/"); dir == strings.TrimSuffix(trimmed, "/") {
+			if info, err := os.Stat(filepath.Join(cfg.BaseDir, filepath.FromSlash(dir))); err == nil && info.IsDir() {
+				return dir
+			}
+		}
+	}
+	return globStaticDir(glob)
 }
 
 // bazDirUsable reports whether a nested AGENTS.md can be written to dir: it is an
