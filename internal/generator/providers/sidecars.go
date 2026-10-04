@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
@@ -21,6 +22,16 @@ const (
 	// sidecars (.claude/settings.json, .mcp.json) own. Every other key in those
 	// documents is hand-authored by the consumer and must survive generation.
 	settingsKeyMCPServers = "mcpServers"
+
+	// settingsKeyExtraKnownMarketplaces and settingsKeyEnabledPlugins are the
+	// plugin keys of .claude/settings.json ai-rulez owns, entry by entry, when
+	// [claude.settings] manage is set.
+	settingsKeyExtraKnownMarketplaces = "extraKnownMarketplaces"
+	settingsKeyEnabledPlugins         = "enabledPlugins"
+
+	// sourceKey is the key naming a marketplace source's kind, and the key holding
+	// the source object in an extraKnownMarketplaces entry.
+	sourceKey = "source"
 
 	// ampSettingsKeyEffort is the only top-level key ai-rulez owns in
 	// .amp/settings.json; users keep arbitrary Amp settings alongside it.
@@ -46,6 +57,8 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 		return true
 	case PredicateHasMCPServers:
 		return cfg != nil && len(cfg.MCPServers) > 0
+	case PredicateHasMCPServersOrPluginSettings:
+		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.ManagesClaudeSettings())
 	case PredicateHasMCPJSONEntries:
 		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
 	case PredicateHasPlugins:
@@ -78,9 +91,7 @@ type sidecarRender = jsonmerge.Result
 func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath string) (sidecarRender, error) {
 	switch kind {
 	case SidecarClaudeSettingsJSON:
-		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
-			{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true},
-		})
+		return jsonmerge.Apply(outputPath, claudeSettingsOwnedKeys(cfg))
 	case SidecarMCPJSON:
 		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg))
 	case SidecarAmpSettingsJSON:
@@ -207,6 +218,78 @@ func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
 	return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: servers, Members: true}}
 }
 
+// claudeSettingsOwnedKeys decides what ai-rulez owns in .claude/settings.json:
+// the configured MCP servers, and with [claude.settings] manage = true the
+// marketplace registration and plugin switches. The plugin keys are owned entry
+// by entry (Members), so every other marketplace and plugin the file lists
+// survives, and an entry dropped from the config is removed by the previous
+// run's ownership record. An MCP-less config does not claim mcpServers at all.
+func claudeSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
+	var owned []jsonmerge.OwnedKey
+	if cfg != nil && len(cfg.MCPServers) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true})
+	}
+	if !cfg.ManagesClaudeSettings() {
+		return owned
+	}
+	s := cfg.Claude.Settings
+	market := ""
+	if cfg.Marketplace != nil {
+		market = cfg.Marketplace.Name
+	}
+	if s.RegistersMarketplace() {
+		owned = append(owned, jsonmerge.OwnedKey{
+			Name:    settingsKeyExtraKnownMarketplaces,
+			Value:   map[string]any{market: marketplaceSettingsEntry(cfg, s)},
+			Members: true,
+		})
+	}
+	plugins := map[string]any{}
+	for _, name := range s.EnablePlugins {
+		plugins[name+"@"+market] = true
+	}
+	for _, name := range s.DisablePlugins {
+		plugins[name+"@"+market] = false
+	}
+	if len(plugins) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{Name: settingsKeyEnabledPlugins, Value: plugins, Members: true})
+	}
+	return owned
+}
+
+// marketplaceSettingsEntry builds the extraKnownMarketplaces value. Without an
+// explicit marketplace_source it points a `directory` source at the marketplace
+// output directory, relative to the repository (Claude Code resolves it against
+// the main checkout).
+func marketplaceSettingsEntry(cfg *config.Config, s *config.ClaudeSettings) map[string]any {
+	source := map[string]any{sourceKey: "directory", "path": marketplaceDirPath(cfg)}
+	if src := s.MarketplaceSource; src != nil {
+		source = map[string]any{sourceKey: src.Source}
+		for key, value := range map[string]string{"path": src.Path, "repo": src.Repo, "url": src.URL, "ref": src.Ref} {
+			if value != "" {
+				source[key] = value
+			}
+		}
+	}
+	entry := map[string]any{sourceKey: source}
+	if s.AutoUpdate != nil {
+		entry["autoUpdate"] = *s.AutoUpdate
+	}
+	return entry
+}
+
+// marketplaceDirPath is the marketplace root as a repository-relative path.
+func marketplaceDirPath(cfg *config.Config) string {
+	dir := "."
+	if cfg.Marketplace != nil && cfg.Marketplace.OutputDir != "" {
+		dir = filepath.ToSlash(filepath.Clean(cfg.Marketplace.OutputDir))
+	}
+	if dir != "." && !strings.HasPrefix(dir, "./") {
+		dir = "./" + dir
+	}
+	return dir
+}
+
 // claudeMCPServerEntries builds the .claude/settings.json server map. Lifted
 // verbatim from the legacy claude.go::renderSettingsJSON so the migrated output
 // is byte-for-byte identical.
@@ -293,13 +376,13 @@ func piMCPServerEntries(cfg *config.Config) map[string]any {
 // value so a hand-written server of the same name stays. See
 // presets.LegacyMergeClaims for the preset-owned documents.
 func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
-	if cfg == nil || len(cfg.MCPServers) == 0 {
+	if cfg == nil || (len(cfg.MCPServers) == 0 && !cfg.ManagesClaudeSettings()) {
 		return nil
 	}
 	var owned []jsonmerge.OwnedKey
 	switch rel {
 	case ".claude/settings.json":
-		owned = []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: claudeMCPServerEntries(cfg), Members: true}}
+		owned = claudeSettingsOwnedKeys(cfg)
 	case presets.MergedDocMCPJSON:
 		owned = mcpJSONOwnedKeys(cfg)
 	case presets.MergedDocPiMCP:
