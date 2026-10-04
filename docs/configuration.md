@@ -956,6 +956,28 @@ claude = "inline"
 
 Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
 
+### `lint`
+
+Tunes `ai-rulez validate --strict`: severities, ignores, allow-lists, description bounds, size budgets and
+required frontmatter keys.
+
+```toml
+[lint]
+fail_on = "warning"
+ignore = ["AR803"]
+
+[lint.severity]
+AR401 = "error"
+
+[lint.budgets.skill]
+max_lines = 400
+
+[lint.require_metadata]
+skill = ["owner"]
+```
+
+Every key, the finding codes and the exit codes are in [Strict validation](strict-validation.md).
+
 ### `header`
 
 Configures the style of headers in generated files. Headers provide context about ai-rulez, explain the folder structure, and instruct AI agents on proper usage.

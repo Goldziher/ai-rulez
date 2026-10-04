@@ -1197,10 +1197,19 @@ ai-rulez validate [config-path] [flags]
 | `--recursive` / `-r`  | boolean | Validate every discovered config; exits non-zero if any is invalid |
 | `--config-dir` / `-n` | string  | Configuration directory name for non-default layouts |
 | `--no-local`          | boolean | Skip the machine-local overlay and `local/` content: validate the shared view |
+| `--strict`            | boolean | Also run deep content checks (dead globs, links, references, hooks, size); exits 2 on findings. See [Strict validation](strict-validation.md) |
+| `--format`            | string  | With `--strict`: `text` (default) or `json` |
+| `--fail-on`           | string  | With `--strict`: lowest severity that exits 2 (`error` default, `warning`, `info`, `none`) |
 | `--verbose`           | boolean | Enable verbose output                                |
 | `--debug`             | boolean | Enable debug output                                  |
 
 **Examples:**
+
+Run the deep content checks, as JSON, across every root:
+
+```bash
+ai-rulez validate --strict --recursive --format json
+```
 
 Validate every config in a monorepo (all roots are checked; exit status 1 if any fails):
 
