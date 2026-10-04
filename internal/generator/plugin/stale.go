@@ -65,12 +65,18 @@ func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 		return nil, oops.With("path", sidecarPath).Wrapf(err, "remove plugin provenance")
 	}
 	pruneEmptyDirs(dir)
-	_ = filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr == nil && !d.IsDir() {
+	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err //nolint:wrapcheck // reported by the caller below
+		}
+		if !d.IsDir() {
 			kept = append(kept, path)
 		}
 		return nil
 	})
+	if walkErr != nil && !os.IsNotExist(walkErr) {
+		return nil, oops.With("path", dir).Wrapf(walkErr, "list files left in the stale plugin directory")
+	}
 	sort.Strings(kept)
 	return kept, nil
 }
@@ -79,13 +85,20 @@ func RemoveGeneratedPluginDir(dir string) (kept []string, err error) {
 // itself when nothing is left in it.
 func pruneEmptyDirs(root string) {
 	var dirs []string
-	_ = filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr == nil && d.IsDir() {
+	if err := filepath.WalkDir(root, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr //nolint:wrapcheck // the caller only needs to know the walk stopped
+		}
+		if d.IsDir() {
 			dirs = append(dirs, path)
 		}
 		return nil
-	})
+	}); err != nil {
+		return
+	}
 	for i := len(dirs) - 1; i >= 0; i-- {
-		_ = os.Remove(dirs[i]) // fails, harmlessly, when the directory is not empty
+		if err := os.Remove(dirs[i]); err != nil {
+			continue // not empty: a file that is not generated lives there
+		}
 	}
 }

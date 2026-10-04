@@ -61,12 +61,24 @@ func TestBuildCatalog_Filters(t *testing.T) {
 	}
 }
 
-func TestBuildCatalog_RejectsMissingDescription(t *testing.T) {
+func TestBuildCatalog_SkipsUnrepresentableSkills(t *testing.T) {
 	t.Parallel()
-	bad := generator.ServedSkill{ID: "x", Files: []generator.ServedSkillFile{{RelPath: "SKILL.md", Content: []byte("---\nname: x\n---\nbody")}}}
-	_, err := BuildCatalog("p", "claude", []generator.ServedSkill{bad}, SkillFilter{})
+	noDescription := generator.ServedSkill{ID: "x", Files: []generator.ServedSkillFile{{RelPath: "SKILL.md", Content: []byte("---\nname: x\n---\nbody")}}}
+	noFrontmatter := generator.ServedSkill{ID: "y", Files: []generator.ServedSkillFile{{RelPath: "SKILL.md", Content: []byte("body only")}}}
+	good := servedSkill("good", "", "A good skill", nil)
+	cat, err := BuildCatalog("p", "claude", []generator.ServedSkill{noDescription, noFrontmatter, good}, SkillFilter{})
+	require.NoError(t, err, "one bad skill must not stop the server")
+	require.Len(t, cat.Skills(), 1)
+	assert.Equal(t, "good", cat.Skills()[0].Name)
+}
+
+func TestBuildCatalog_DuplicateNamesAreAnError(t *testing.T) {
+	t.Parallel()
+	a := servedSkill("same", "", "one", nil)
+	b := servedSkill("same", "docs", "two", nil)
+	_, err := BuildCatalog("p", "claude", []generator.ServedSkill{a, b}, SkillFilter{})
 	require.Error(t, err)
-	assert.Contains(t, err.Error(), "description")
+	assert.Contains(t, err.Error(), "same")
 }
 
 func TestCatalog_DigestsAreStableAndContentAddressed(t *testing.T) {

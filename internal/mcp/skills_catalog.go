@@ -3,13 +3,13 @@ package mcp
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"fmt"
 	"path"
 	"sort"
 	"strings"
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )
@@ -79,8 +79,9 @@ type Catalog struct {
 }
 
 // BuildCatalog converts rendered skills into a catalog, applying the filter.
-// Skills whose rendered frontmatter cannot be parsed, or that lack a name or
-// description, are rejected: the extension requires both.
+// Skills whose rendered frontmatter cannot be parsed, or that lack a description,
+// are skipped with a warning: the extension requires one. Two served skills
+// with the same name are an error.
 func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter SkillFilter) (*Catalog, error) {
 	cat := &Catalog{
 		Profile: profile,
@@ -96,7 +97,11 @@ func BuildCatalog(profile, preset string, served []generator.ServedSkill, filter
 		}
 		skill, err := newCatalogSkill(src)
 		if err != nil {
-			return nil, err
+			// One malformed skill must not take the whole server down; the
+			// extension cannot represent it (name and description are required
+			// and the served bytes must match), so it is left out and reported.
+			logger.Warn("Not serving a skill the Skills extension cannot represent", "skill", src.ID, "reason", err.Error())
+			continue
 		}
 		if _, dup := cat.byName[skill.Name]; dup {
 			return nil, oops.Errorf("two skills are named %q; skill names must be unique to be served", skill.Name)
@@ -154,12 +159,12 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "skill %q: frontmatter", src.ID)
 	}
-	name, _ := front["name"].(string)
+	name := stringField(front, "name")
 	if name == "" {
 		name = src.ID
 		front["name"] = name
 	}
-	desc, _ := front["description"].(string)
+	desc := stringField(front, "description")
 	if strings.TrimSpace(desc) == "" {
 		return nil, oops.Errorf("skill %q has no description; the Skills extension requires one", src.ID)
 	}
@@ -190,10 +195,17 @@ func newCatalogSkill(src *generator.ServedSkill) (*CatalogSkill, error) {
 	sorted := append([]CatalogFile(nil), skill.Files...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].URI < sorted[j].URI })
 	for i := range sorted {
-		fmt.Fprintf(hash, "%s\x00%s\n", sorted[i].URI, sorted[i].Digest)
+		hash.Write([]byte(sorted[i].URI + "\x00" + sorted[i].Digest + "\n")) //nolint:errcheck // hash.Hash.Write never fails
 	}
 	skill.Digest = "sha256:" + hex.EncodeToString(hash.Sum(nil))
 	return skill, nil
+}
+
+func stringField(m map[string]any, key string) string {
+	if v, ok := m[key].(string); ok {
+		return v
+	}
+	return ""
 }
 
 func mimeFor(rel string, content []byte) string {
@@ -316,7 +328,8 @@ func scoreSkill(s *CatalogSkill, tokens []string) int {
 
 func containsWord(text, word string) bool {
 	for _, w := range strings.FieldsFunc(text, func(r rune) bool {
-		return !(r == '-' || r == '_' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r > 127)
+		isWord := r == '-' || r == '_' || r >= '0' && r <= '9' || r >= 'a' && r <= 'z' || r > 127
+		return !isWord
 	}) {
 		if w == word {
 			return true
