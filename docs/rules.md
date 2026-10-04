@@ -87,7 +87,7 @@ Where a tool cannot express `auto` or `manual`, the rule is written as always-on
 
 ### Tools without a rules folder
 
-`gemini`, `codex`, `opencode`, `amp`, `xum`, `pi` and `hermes` read a single root file, so rules are inlined there. The activation is kept as text under the rule heading so the scope is not lost:
+`gemini`, `codex`, `opencode`, `amp`, `xum`, `pi`, `baz` and `hermes` read a single root file, so rules are inlined there. The activation is kept as text under the rule heading so the scope is not lost:
 
 ```markdown
 ## TypeScript conventions
@@ -127,6 +127,7 @@ What each preset writes:
 | `junie`                         | every rule in `.junie/rules/*.md`                                       | no rule files; everything in `.junie/guidelines.md`        |
 | `cursor`, `windsurf`, `cline`, `continue-dev` | `.cursor/rules/*.mdc`, `.windsurf/rules`, `.clinerules`, `.continue/rules`; `mode` has no effect | same |
 | `gemini`, `codex`, `opencode`, `amp`, `xum`, `pi`, `hermes` | rules inline, with `_Applies to:_` / `_When relevant:_` lines | same |
+| `baz`                           | rules inline in `AGENTS.md`; path-scoped ones in the `AGENTS.md` of their directory (`rules.baz_scoped`, see [Baz](baz.md)) | same |
 
 Custom provider presets follow `mode` when their `outputs.rules` sets `split`.
 

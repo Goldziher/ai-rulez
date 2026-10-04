@@ -22,6 +22,7 @@ use only built-in presets; custom presets cover a tool ai-rulez does not ship.
 | `antigravity`  | `.agents/` (`rules/`, `skills/`, `agents/`), `GEMINI.md` |
 | `xum`          | `AGENTS.md` and `.xum/`                            |
 | `pi`           | `AGENTS.md`, `.agents/skills/`, `.pi/agents/`, `.pi/mcp.json` |
+| `baz`          | `AGENTS.md` (root and nested), `.agents/skills/`, `.claude/agents/` (see [Baz](baz.md)) |
 
 Under the default `[rules] mode = "split"` each rule is written to the tool's rules folder
 (`.claude/rules/`, `.github/instructions/`, `.junie/rules/`, `.agents/rules/`, ...) and the root file

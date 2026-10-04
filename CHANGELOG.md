@@ -6,6 +6,17 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ## [Unreleased]
 
+### Added
+
+- **Domain content in plugin bundles**: `[plugin] include_domains` (names or globs) bundles the skills, commands and agents of those domains next to the root content. The default is unchanged (root only).
+- **Per-domain plugins**: `[marketplace.from_domains]` turns each domain into its own plugin, and `[[marketplace.plugins]]` declares plugins from domains and root content. `generate --plugin` writes `<output_dir>/plugins/<name>/` for each and one `.claude-plugin/marketplace.json` with relative sources. Entries can carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance`. `verify --plugin` covers every plugin directory. See `docs/plugins.md`.
+- **Placement**: `[placement]` and a per-item `placement: core|plugin` frontmatter key keep skills and commands out of `.claude/skills` (plugin-only), with `honor_targets` applying frontmatter `targets` to skills. Default: every item is core, as before.
+- **Plugin keys in `.claude/settings.json`**: `[claude.settings] manage = true` owns `extraKnownMarketplaces.<marketplace>` and the listed `enabledPlugins` entries one by one through the existing settings merge, leaving every other key alone. Default off.
+- **Catalog skill**: `[marketplace.catalog_skill]` generates a skill that lists the plugins and how to enable them. Default off.
+- The local overlay and the schema accept `placement` and `claude`; provider specs accept the `placement_core` filter and the `has_mcp_servers_or_plugin_settings` sidecar predicate.
+- **`ai-rulez validate --strict`**: deep content validation that finds instructions that parse but do not work. Twenty checks with stable codes (`AR101`...`AR951`) cover `paths`/`globs` that match no tracked file, unresolved relative links and anchors, references to skills, agents, rules and commands that do not exist, missing repo paths, hook files that are missing or not executable, skill scripts without the executable bit, MCP commands not on `PATH`, duplicate and near-duplicate descriptions, description and skill-name quality, size budgets and required frontmatter keys. Findings carry a severity and `file:line`; `--format json` prints them as JSON, `--recursive` lints every nested root, and exit status 2 (distinct from 1 for an invalid config) means findings at or above `--fail-on`. Severities, ignores, allow-lists, budgets and required metadata are configured in a new `[lint]` table, and one finding can be silenced with an `ai-rulez-lint-ignore` comment. See `docs/strict-validation.md`.
+- **`baz` preset** for the [Baz](https://baz.ai) reviewer, which has no repository config file and reads only instruction files from the default branch. It writes `AGENTS.md`, root-only `.agents/skills/` and `.claude/agents/` (neither next to `claude`, which already provides them), and no commands or `.claude/rules/`, which Baz does not read. Path-scoped rules and context go to the `AGENTS.md` of the directory their globs point into, where Baz scopes them; `rules.baz_scoped = "root"` keeps them in the root file. The root `AGENTS.md` stays identical across `baz`, `codex`, `opencode`, `amp`, `xum` and the shared `agents_md` file. See `docs/baz.md`.
+
 ### Changed
 
 - **The `codex` preset writes skills to `.agents/skills`** (the directory Codex documents; it does not read `.codex/skills`) instead of `.codex/skills`. The files previously written to `.codex/skills` are removed by the manifest-based cleanup on the next `generate`; hand-written files there are kept. Set `codex_skills_dir = ".codex/skills"` to keep the old location. With `agents_md` on, a skill that targets only `codex` is now written to `.agents/skills`, so other readers of that directory see it too.
@@ -41,17 +52,6 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 - **`AGENTS.md` is now shared by `pi` as well** (`codex`, `opencode`, `xum`, `amp`, `pi`): a frontmatter `targets` naming any of them selects the item for all, and the file renders identically whichever preset writes it last.
 - **Dependency updates**: `go.opentelemetry.io/otel` and `otel/trace` `1.46.0` → `1.47.0`, `github.com/dlclark/regexp2/v2` `2.8.0` → `2.8.2`, and the docs lockfile (`zensical`, `markupsafe`).
 - **Shared MCP entry builder**: the stdio/url MCP server shape used by pi and Gemini is now one helper (`presets.MCPServerEntry`), which Xum's `mcp.jsonc` entry builder also builds on.
-### Added
-
-- **Domain content in plugin bundles**: `[plugin] include_domains` (names or globs) bundles the skills, commands and agents of those domains next to the root content. The default is unchanged (root only).
-- **Per-domain plugins**: `[marketplace.from_domains]` turns each domain into its own plugin, and `[[marketplace.plugins]]` declares plugins from domains and root content. `generate --plugin` writes `<output_dir>/plugins/<name>/` for each and one `.claude-plugin/marketplace.json` with relative sources. Entries can carry `version`, `category`, `keywords`, `defaultEnabled` and `relevance`. `verify --plugin` covers every plugin directory. See `docs/plugins.md`.
-- **Placement**: `[placement]` and a per-item `placement: core|plugin` frontmatter key keep skills and commands out of `.claude/skills` (plugin-only), with `honor_targets` applying frontmatter `targets` to skills. Default: every item is core, as before.
-- **Plugin keys in `.claude/settings.json`**: `[claude.settings] manage = true` owns `extraKnownMarketplaces.<marketplace>` and the listed `enabledPlugins` entries one by one through the existing settings merge, leaving every other key alone. Default off.
-- **Catalog skill**: `[marketplace.catalog_skill]` generates a skill that lists the plugins and how to enable them. Default off.
-- The local overlay and the schema accept `placement` and `claude`; provider specs accept the `placement_core` filter and the `has_mcp_servers_or_plugin_settings` sidecar predicate.
-### Added
-
-- **`ai-rulez validate --strict`**: deep content validation that finds instructions that parse but do not work. Twenty checks with stable codes (`AR101`...`AR951`) cover `paths`/`globs` that match no tracked file, unresolved relative links and anchors, references to skills, agents, rules and commands that do not exist, missing repo paths, hook files that are missing or not executable, skill scripts without the executable bit, MCP commands not on `PATH`, duplicate and near-duplicate descriptions, description and skill-name quality, size budgets and required frontmatter keys. Findings carry a severity and `file:line`; `--format json` prints them as JSON, `--recursive` lints every nested root, and exit status 2 (distinct from 1 for an invalid config) means findings at or above `--fail-on`. Severities, ignores, allow-lists, budgets and required metadata are configured in a new `[lint]` table, and one finding can be silenced with an `ai-rulez-lint-ignore` comment. See `docs/strict-validation.md`.
 
 ## [4.23.1] - 2026-10-03
 
