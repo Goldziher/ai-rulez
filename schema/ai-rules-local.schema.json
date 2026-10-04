@@ -89,7 +89,8 @@
               "hermes",
               "antigravity",
               "mcp",
-              "xum"
+              "xum",
+              "pi"
             ]
           },
           "type": "object"
@@ -115,7 +116,8 @@
               "hermes",
               "antigravity",
               "mcp",
-              "xum"
+              "xum",
+              "pi"
             ]
           },
           "type": "object"
@@ -747,6 +749,7 @@
               "hermes",
               "antigravity",
               "xum",
+              "pi",
               "mcp"
             ],
             "type": "string"
@@ -878,6 +881,7 @@
                 "hermes",
                 "antigravity",
                 "xum",
+                "pi",
                 "mcp"
               ],
               "type": "string"

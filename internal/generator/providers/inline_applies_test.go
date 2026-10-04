@@ -37,7 +37,7 @@ func presetGenerators(t *testing.T) map[string]generator {
 		"copilot":     &presets.CopilotPresetGenerator{},
 		"antigravity": &presets.AntigravityPresetGenerator{},
 	}
-	for _, name := range []string{"amp", "hermes"} {
+	for _, name := range []string{"amp", "hermes", "pi"} {
 		gen, err := providers.LoadBuiltin(name)
 		require.NoError(t, err)
 		gens[name] = gen

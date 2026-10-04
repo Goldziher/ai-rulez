@@ -20,7 +20,7 @@ builtins = false
 presets = [
   "claude", "cursor", "windsurf", "copilot", "gemini",
   "cline", "junie", "continue-dev", "codex", "opencode",
-  "amp", "antigravity", "mcp", "xum"
+  "amp", "antigravity", "mcp", "xum", "pi"
 ]
 
 [header]
