@@ -67,7 +67,7 @@ rules, a glob-scoped context file, two skills, one agent and one MCP server writ
 
 | Preset                         | Reads AGENTS.md                      | Root file                                   | Skills                                         | Written beside the shared files                                                                                                  |
 | ------------------------------ | ------------------------------------ | ------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| `codex`, `opencode`, `xum`, `pi` | natively                             | shared `AGENTS.md`                          | shared; `.codex/skills`, `.opencode/skills`, `.xum/skills` dropped | their own agents, commands and MCP files                                                                                         |
+| `codex`, `opencode`, `xum`, `pi` | natively                             | shared `AGENTS.md`                          | shared; `.opencode/skills`, `.xum/skills` dropped (`pi` never writes skills under `.pi`) | their own agents, commands and MCP files                                                                                         |
 | `amp`                          | natively                             | shared `AGENTS.md`                          | shared                                         | unchanged                                                                                                                        |
 | `claude`                       | through `CLAUDE.md` containing `@AGENTS.md` | `CLAUDE.md` is a banner plus `@AGENTS.md` | `.claude/skills` kept (Claude ignores `.agents/skills`) | `.claude/rules/*.md` for non-always-on items, `.claude/agents`, `.claude/settings.json`, `.mcp.json`                              |
 | `gemini`                       | through `context.fileName` in `.gemini/settings.json` | `GEMINI.md` not written       | shared                                         | `.gemini/settings.json`, `.gemini/agents/<id>.md`, `.mcp.json`                                                                   |
@@ -169,8 +169,8 @@ Machine-local rules are never part of the shared `AGENTS.md`. They keep their pe
 - **Continue** reads neither, so the `.continue/prompts` file keeps carrying skills (and no `.agents/skills` tree is
   written if `continue-dev` is the only reader).
 - Skills that set `targets` stay out of the shared tree: they are written to the per-preset skills directories of the
-  presets the targets allow, exactly as without the flag. A skill targeting `codex` goes to `.codex/skills` while an
-  untargeted skill goes to `.agents/skills`; a skill targeting a preset that is not configured is written nowhere.
+  presets the targets allow, exactly as without the flag. A skill targeting `codex` goes to Codex's own skills directory (`.agents/skills`, or `codex_skills_dir`), the only
+  place Codex reads, so other `.agents/skills` readers see it too; an untargeted skill goes to the shared tree; a skill targeting a preset that is not configured is written nowhere.
 - `.agents/skills` is read by Codex, Cursor, Copilot, Windsurf, Gemini CLI, Antigravity, Junie, Cline, opencode, Amp,
   Hermes, pi, Zed, Warp and others, per the table above.
 
@@ -231,7 +231,7 @@ ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
 ```
 
 - **On:** files that were only needed by the per-tool layout (`GEMINI.md`, `.hermes.md`,
-  `.github/copilot-instructions.md`, `.junie/guidelines.md`, `.codex/skills`, `.windsurf/skills`, ...) are removed
+  `.github/copilot-instructions.md`, `.junie/guidelines.md`, `.windsurf/skills`, ...) are removed
   through the generated manifest. `CLAUDE.md` is rewritten as the shim.
 - **Off:** the per-tool files are regenerated and the shared `AGENTS.md` and `.agents/skills` files that no preset
   writes itself are removed. An off, on, off sequence ends where it began, except for the Gemini setting below.
