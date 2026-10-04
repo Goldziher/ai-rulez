@@ -39,31 +39,36 @@ type Drift struct {
 }
 
 // outputState classifies one rendered file against the disk without writing
-// anything. ok is false for an output that is not compared (directories, and
-// hand-written rule files that generate deliberately leaves alone).
-func (g *Generator) outputState(output config.OutputFile) (kind DriftKind, ok bool) {
+// anything. kind is "" when the file is current. rewrite reports whether a
+// generate run would write the file; a hand-edited file in the default "full"
+// hash mode is reported as edited but not rewritten, because generate compares
+// header hashes. ok is false for an output that is not compared (directories,
+// and hand-written rule files that generate deliberately leaves alone).
+func (g *Generator) outputState(output config.OutputFile) (kind DriftKind, rewrite, ok bool) {
 	if output.IsDir {
-		return "", false
+		return "", false, false
 	}
 	abs := g.absOutputPath(output.Path)
 	if output.RawContent != nil {
-		return rawState(abs, output), true
+		kind = rawState(abs, output)
+		return kind, kind != "", true
 	}
 	final := g.finalContent(output)
 	if g.isUnmanagedRuleFile(abs, final) {
-		return "", false
+		return "", false, false
 	}
 	existing, err := os.ReadFile(abs)
 	if err != nil {
-		return DriftMissing, true
+		return DriftMissing, true, true
 	}
-	if !g.canSkipWrite(abs, output, final) {
-		return DriftStale, true
+	rewrite = !g.canSkipWrite(abs, output, final)
+	switch {
+	case g.config.GetHeaderHashes() != config.HeaderHashesNone && bodyEdited(string(existing), abs):
+		return DriftEdited, rewrite, true
+	case rewrite:
+		return DriftStale, true, true
 	}
-	if g.config.GetHeaderHashes() == config.HeaderHashesFull && bodyEdited(string(existing), abs) {
-		return DriftEdited, true
-	}
-	return "", true
+	return "", false, true
 }
 
 func rawState(abs string, output config.OutputFile) DriftKind {
@@ -125,7 +130,7 @@ func (g *Generator) CheckDrift(profile string) ([]Drift, error) {
 	g.previousFiles = nil
 	var drift []Drift
 	for _, output := range outputs {
-		kind, ok := g.outputState(output)
+		kind, _, ok := g.outputState(output)
 		if !ok || kind == "" {
 			continue
 		}
