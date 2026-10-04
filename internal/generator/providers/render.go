@@ -632,16 +632,27 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 		frontmatter[k] = v
 	}
 	g.applyResolvedScalars(frontmatter, spec, item, cfg)
+	if typ == OutputTypeSkills && spec.HideKey != "" && cfg.Claude.HidesSkillsFromMenu() {
+		frontmatter[spec.HideKey] = false
+	}
 	if item.Metadata != nil {
 		applyTypedLists(frontmatter, spec, item.Metadata)
 		applyOrderedFields(frontmatter, spec, item.Metadata)
 		applyExtras(frontmatter, spec, item.Metadata)
+		applyAuthorControlled(frontmatter, item.Metadata)
 	}
-	if typ == OutputTypeRules && spec.Paths && item.Metadata != nil {
+	if (typ == OutputTypeRules || typ == OutputTypeSkills) && spec.Paths && item.Metadata != nil {
 		if scope := item.Metadata.PathScope(); len(scope) > 0 {
 			frontmatter["paths"] = scope
 		}
 	}
+	g.finishFrontmatter(frontmatter, typ, spec, item, cfg)
+	return frontmatter
+}
+
+// finishFrontmatter applies the global per-field omission policy and the skill
+// description fallback to an assembled frontmatter map.
+func (g *Generator) finishFrontmatter(frontmatter map[string]any, typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) {
 	// Honor the global per-field omission policy. model/effort are already
 	// suppressed by the shared resolvers returning ""; tools and description
 	// are written here, so drop them post-hoc.
@@ -661,7 +672,6 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 			frontmatter["description"] = config.SkillDescriptionOrFallback(config.SkillDescription(item.Metadata), config.SkillID(item))
 		}
 	}
-	return frontmatter
 }
 
 func (g *Generator) applyResolvedScalars(frontmatter map[string]any, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) {
@@ -697,8 +707,23 @@ func applyTypedLists(frontmatter map[string]any, spec *FrontmatterSpec, meta *co
 
 func applyOrderedFields(frontmatter map[string]any, spec *FrontmatterSpec, meta *config.Metadata) {
 	for _, field := range spec.Fields {
-		if val, ok := meta.Extra[field]; ok && val != "" {
+		if val, ok := meta.TypedExtra(field); ok {
 			frontmatter[field] = val
+		}
+	}
+}
+
+// authorControlledKeys are invocation switches the author decides. A preset
+// default (a constant or the hide-from-menu option) applies only while the
+// author has not set the key.
+var authorControlledKeys = []string{"user-invocable", "disable-model-invocation"}
+
+// applyAuthorControlled writes the author's value of each author-controlled key
+// as a canonical boolean, replacing any preset default already in the map.
+func applyAuthorControlled(frontmatter map[string]any, meta *config.Metadata) {
+	for _, key := range authorControlledKeys {
+		if val, set := meta.ExtraBool(key); set {
+			frontmatter[key] = val
 		}
 	}
 }
@@ -713,6 +738,10 @@ func applyExtras(frontmatter map[string]any, spec *FrontmatterSpec, meta *config
 			continue
 		}
 		if _, alreadySet := frontmatter[k]; alreadySet {
+			continue
+		}
+		if typed, ok := meta.TypedExtra(k); ok {
+			frontmatter[k] = typed
 			continue
 		}
 		frontmatter[k] = v

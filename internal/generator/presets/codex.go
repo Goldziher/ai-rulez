@@ -109,6 +109,16 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		// Emit bundled resources alongside SKILL.md so the agent can read
 		// references on demand rather than receiving them all inlined.
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
+
+		// Codex has no SKILL.md key for invocation control; an author-set
+		// disable-model-invocation becomes agents/openai.yaml policy.
+		if disabled, set := skill.Metadata.ExtraBool("disable-model-invocation"); set && disabled {
+			agentsDir := filepath.Join(skillDir, "agents")
+			outputs = append(outputs,
+				config.OutputFile{Path: agentsDir, IsDir: true},
+				config.OutputFile{Path: filepath.Join(agentsDir, "openai.yaml"), Content: codexImplicitInvocationOff},
+			)
+		}
 	}
 
 	// Generate agent files to .codex/agents/ (TOML format)
@@ -227,6 +237,11 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	return builder.String()
 }
 
+// codexImplicitInvocationOff is the agents/openai.yaml of a skill Codex must
+// only run when the user names it ($skill), the Codex counterpart of
+// disable-model-invocation.
+const codexImplicitInvocationOff = "policy:\n  allow_implicit_invocation: false\n"
+
 // renderSkillFile renders a skill file in SKILL.md format for Codex
 func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string {
 	var builder strings.Builder
@@ -242,15 +257,13 @@ func (g *CodexPresetGenerator) renderSkillFile(skill config.ContentFile) string 
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
 	builder.WriteString("\n")
 
-	if skill.Metadata != nil {
-		// Add short-description for user-facing display.
-		if shortDesc := config.SkillShortDescription(skill.Metadata); shortDesc != "" {
-			builder.WriteString("metadata:\n")
-			builder.WriteString("  short-description: ")
-			builder.WriteString(quoteYAMLString(shortDesc))
-			builder.WriteString("\n")
-		}
+	// short-description is nested under metadata, merged into the author's own
+	// metadata map when there is one.
+	extra := map[string]any{}
+	if shortDesc := config.SkillShortDescription(skill.Metadata); shortDesc != "" {
+		extra["metadata"] = mergeShortDescription(skill.Metadata.SkillSpecFields()["metadata"], shortDesc)
 	}
+	writeSkillSpecFields(&builder, skill, extra)
 
 	builder.WriteString("---\n\n")
 

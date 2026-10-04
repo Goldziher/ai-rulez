@@ -55,6 +55,7 @@ type tomlOutput struct {
 	Marketplace     *MarketplaceAuthoring  `toml:"marketplace,omitempty"`
 	Placement       *PlacementConfig       `toml:"placement,omitempty"`
 	Claude          *ClaudeConfig          `toml:"claude,omitempty"`
+	Codex           *CodexConfig           `toml:"codex,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -140,5 +141,6 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Marketplace:     cfg.Marketplace,
 		Placement:       cfg.Placement,
 		Claude:          cfg.Claude,
+		Codex:           cfg.Codex,
 	}
 }
