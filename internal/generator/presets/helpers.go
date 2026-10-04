@@ -168,13 +168,21 @@ func allInlineRules(content *config.ContentTree) []config.ContentFile {
 
 // rootRules is allInlineRules limited to the rules whose frontmatter targets
 // select the preset's root file (items without targets always qualify).
-func rootRules(content *config.ContentTree, preset, rootFile string) []config.ContentFile {
-	return rulefiles.FilterInline(allInlineRules(content), rulefiles.RootTarget(preset, rootFile))
+func rootRules(content *config.ContentTree, cfg *config.Config, preset, rootFile string) []config.ContentFile {
+	return withoutBazNestedAt(rulefiles.FilterInline(allInlineRules(content), rulefiles.RootTarget(preset, rootFile)), cfg, rootFile)
 }
 
 // rootContext is the context counterpart to rootRules.
-func rootContext(content *config.ContentTree, preset, rootFile string) []config.ContentFile {
-	return rulefiles.FilterInline(allInlineContext(content), rulefiles.RootTarget(preset, rootFile))
+func rootContext(content *config.ContentTree, cfg *config.Config, preset, rootFile string) []config.ContentFile {
+	return withoutBazNestedAt(rulefiles.FilterInline(allInlineContext(content), rulefiles.RootTarget(preset, rootFile)), cfg, rootFile)
+}
+
+// withoutBazNestedAt applies withoutBazNested to the shared AGENTS.md only.
+func withoutBazNestedAt(items []config.ContentFile, cfg *config.Config, rootFile string) []config.ContentFile {
+	if rootFile != "AGENTS.md" {
+		return items
+	}
+	return withoutBazNested(items, cfg)
 }
 
 // allInlineContext is the context counterpart to allInlineRules and renders in
