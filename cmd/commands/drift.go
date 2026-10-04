@@ -56,7 +56,7 @@ func checkConfigDrift(cfg *config.Config, mode driftMode) (int, error) {
 		return 0, err //nolint:wrapcheck // already contextual
 	}
 	for _, d := range drift {
-		fmt.Fprintf(os.Stdout, "%s: %s\n", d.Kind, displayDriftPath(cfg, d.Path))
+		fmt.Printf("%s: %s\n", d.Kind, displayDriftPath(cfg, d.Path))
 	}
 	if len(drift) == 0 && mode == driftManifest {
 		progress.PrintlnIfNotQuiet(fmt.Sprintf("verified %d generated file(s) against their Content-Hash", checked))

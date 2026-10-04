@@ -1,10 +1,13 @@
 package commands
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/samber/oops"
@@ -15,16 +18,19 @@ import (
 const exitStrictFindings = 2
 
 var (
-	validateStrict  bool
-	validateFormat  string
-	validateFailOn  string
-	strictTreeCache lint.Loader
+	validateStrict bool
+	validateFormat string
+	validateFailOn string
+	validateExtern bool
+	// strictSecurityOnly restricts strict validation to the security family (the scan command).
+	strictSecurityOnly bool
+	strictTreeCache    lint.Loader
 )
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "") {
-		return oops.Errorf("--format and --fail-on require --strict")
+	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern) {
+		return oops.Errorf("--format, --fail-on and --external require --strict")
 	}
 	switch validateFormat {
 	case "", "text", formatJSON:
@@ -56,7 +62,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 		}
 		opts = append(opts, lint.WithPluginDrift(drift))
 	}
-	return lint.Run(cfg, tree, opts...)
+	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern}, opts...)
 }
 
 // failOnFor resolves the threshold: the flag, else [lint] fail_on, else error.
@@ -97,4 +103,46 @@ func runStrictSingle(cfg *config.Config) int {
 		return 1
 	}
 	return reportStrict([]*lint.Report{report}, []*config.Config{cfg})
+}
+
+// warnUnpinned logs the remote includes and installed skills that follow a
+// moving ref without a pin in ai-rulez.lock. It is advice, not a failure; the
+// strict rule AR010 and "generate --locked" are the gates.
+func warnUnpinned(cfg *config.Config) {
+	for _, w := range includes.Unpinned(cfg) {
+		ref := w.Ref
+		if ref == "" {
+			ref = "the default branch (HEAD)"
+		}
+		logger.Warn("Remote source is not pinned; run `ai-rulez lock`", "kind", w.Kind, "name", w.Name, "follows", ref)
+	}
+}
+
+// enforceScanImports runs the security rules over imported content when
+// [lint.security] scan_imports is set, before anything is written. At level
+// "error" a finding stops the run; at "warn" it is logged.
+func enforceScanImports(cfg *config.Config) error {
+	findings, err := lint.ScanImports(cfg)
+	if err != nil {
+		return oops.Wrapf(err, "scan imported content")
+	}
+	if len(findings) == 0 {
+		return nil
+	}
+	var lines []string
+	blocked := false
+	for _, f := range findings {
+		lines = append(lines, fmt.Sprintf("%s:%d: %s %s: %s", f.File, f.Line, f.Severity, f.Code, f.Message))
+		if f.Severity == lint.SeverityError {
+			blocked = true
+		}
+	}
+	if !blocked {
+		for _, l := range lines {
+			logger.Warn("Imported content: " + l)
+		}
+		return nil
+	}
+	return oops.Hint("Review the imported source, or lower [lint.security] scan_imports to \"warn\"").
+		Errorf("imported content failed the security scan; nothing was written:\n  %s", strings.Join(lines, "\n  "))
 }

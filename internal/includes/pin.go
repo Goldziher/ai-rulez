@@ -171,9 +171,8 @@ func (p *pin) check(baseDir, kind, name, commit, digest string) error {
 // BuildLock turns the recorded resolutions of cfg's sources into a lock file.
 // Entries not selected by RefreshFilter keep their current pin. The returned
 // problems name every source that could not be locked.
-func BuildLock(cfg *config.Config, current *lockfile.File) (*lockfile.File, []string) {
+func BuildLock(cfg *config.Config, current *lockfile.File) (lock *lockfile.File, problems []string) {
 	out := &lockfile.File{Version: lockfile.Version}
-	var problems []string
 	for _, w := range Lockable(cfg) {
 		if !refreshing(w.Kind, w.Name) {
 			if e := current.Find(w.Kind, w.Name); e.Covers(w) {
@@ -239,16 +238,7 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 			problems = append(problems, Problem{w.Kind, w.Name, fmt.Sprintf("cached content digest %s does not match the lock's %s", digest, entry.Digest)})
 		}
 	}
-	for _, list := range []struct {
-		kind    string
-		entries []lockfile.Entry
-	}{{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill}} {
-		for _, e := range list.entries {
-			if !configured[list.kind+"\x00"+e.Name] {
-				problems = append(problems, Problem{list.kind, e.Name, "in the lock but no longer configured"})
-			}
-		}
-	}
+	problems = append(problems, unconfiguredEntries(lock, configured)...)
 	sort.Slice(problems, func(i, j int) bool { return problems[i].String() < problems[j].String() })
 	return problems, cached
 }
@@ -314,4 +304,39 @@ func loadLockFor(cfg *config.Config) (*lockfile.File, error) {
 		return nil, oops.Wrapf(errors.Join(config.ErrLockViolation, err), "read %s", lockfile.FileName)
 	}
 	return lock, nil
+}
+
+// Unpinned lists the remote sources that follow a moving ref and are not
+// covered by ai-rulez.lock. A full commit SHA counts as pinned. An unreadable
+// lock leaves every moving source unpinned.
+func Unpinned(cfg *config.Config) []lockfile.Want {
+	wants := Lockable(cfg)
+	if len(wants) == 0 {
+		return nil
+	}
+	lock, _ := lockfile.Load(cfg.ConfigDir) //nolint:errcheck // an unreadable lock pins nothing
+	var out []lockfile.Want
+	for _, w := range wants {
+		if lockfile.IsFullSHA(w.Ref) || lock.Find(w.Kind, w.Name).Covers(w) {
+			continue
+		}
+		out = append(out, w)
+	}
+	return out
+}
+
+// unconfiguredEntries reports lock entries whose source is no longer configured.
+func unconfiguredEntries(lock *lockfile.File, configured map[string]bool) []Problem {
+	var out []Problem
+	for _, list := range []struct {
+		kind    string
+		entries []lockfile.Entry
+	}{{lockfile.KindInclude, lock.Include}, {lockfile.KindSkill, lock.Skill}} {
+		for _, e := range list.entries {
+			if !configured[list.kind+"\x00"+e.Name] {
+				out = append(out, Problem{list.kind, e.Name, "in the lock but no longer configured"})
+			}
+		}
+	}
+	return out
 }

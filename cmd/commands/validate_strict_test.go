@@ -41,3 +41,38 @@ func TestFailOnPrecedence(t *testing.T) {
 		t.Errorf("flag = %q, want none", got)
 	}
 }
+
+func TestCheckStrictFlags_External(t *testing.T) {
+	t.Cleanup(func() { validateStrict, validateExtern = false, false })
+	validateStrict, validateExtern = false, true
+	if err := checkStrictFlags(); err == nil {
+		t.Error("--external without --strict must be rejected")
+	}
+	validateStrict = true
+	if err := checkStrictFlags(); err != nil {
+		t.Errorf("--external with --strict must be accepted: %v", err)
+	}
+}
+
+func TestScanCommand(t *testing.T) {
+	for _, name := range []string{"recursive", "external", "format", "fail-on", "no-local", "config-dir"} {
+		if ScanCmd.Flags().Lookup(name) == nil {
+			t.Errorf("scan is missing --%s", name)
+		}
+	}
+}
+
+func TestEnforceScanImports(t *testing.T) {
+	cfg := importingConfig(t, "error")
+	if err := enforceScanImports(cfg); err == nil {
+		t.Fatal("an imported secret must stop generation at level error")
+	}
+	cfg = importingConfig(t, "warn")
+	if err := enforceScanImports(cfg); err != nil {
+		t.Fatalf("level warn must only log: %v", err)
+	}
+	cfg = importingConfig(t, "")
+	if err := enforceScanImports(cfg); err != nil {
+		t.Fatalf("scanning is off by default: %v", err)
+	}
+}

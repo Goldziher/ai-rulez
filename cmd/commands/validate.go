@@ -90,6 +90,7 @@ schema compliance, and structural issues.`,
 			return
 		}
 		presets.WarnDuplicateContent(cfg.Content)
+		warnUnpinned(cfg)
 		displayConfigurationSummary(cfg)
 	},
 }
@@ -97,6 +98,7 @@ schema compliance, and structural issues.`,
 func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
 	ValidateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Also run deep content checks: globs that match nothing, dead links and references, missing hooks, oversize or duplicate content (see the [lint] config table)")
+	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "With --strict, also run the scanners configured in [[lint.external]] and merge their findings")
 	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default) or json")
 	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest --strict severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
@@ -124,6 +126,9 @@ func runRecursiveValidate() int {
 			continue
 		}
 		progress.PrintIfNotQuiet("✅ %s\n", configPath)
+		if !validateStrict {
+			warnUnpinned(cfg)
+		}
 		if validateStrict {
 			report, lerr := strictLint(cfg)
 			if lerr != nil {
@@ -242,4 +247,33 @@ func localOverlaySummary(cfg *config.Config) string {
 func isEntryNamePath(path string) bool {
 	list, rest, ok := strings.Cut(path, ".")
 	return ok && isNamedListPath(list) && strings.HasSuffix(rest, ".name")
+}
+
+// ScanCmd runs the security checks only: strict validation restricted to the
+// AR0xx rules, with the same flags, output and exit codes.
+var ScanCmd = &cobra.Command{
+	Use:   "scan [config-file]",
+	Short: "Scan skills, rules and scripts for secrets, hidden text, injection and risky shell",
+	Long: `Run the deterministic security checks of "validate --strict" on their own:
+secret patterns, hidden or bidirectional characters, prompt-injection phrases,
+HTML comments that carry instructions, curl-pipe-shell, eval and base64 payloads,
+credential access, unrestricted allowed-tools, outbound hosts outside an
+allow-list, and unpinned remote sources. Nothing is fetched or executed.
+
+Configure it in [lint] and [lint.security]. Exit codes: 0 clean, 1 the
+configuration could not be loaded, 2 findings at or above --fail-on.`,
+	Args: cobra.MaximumNArgs(1),
+	Run: func(cmd *cobra.Command, args []string) {
+		validateStrict, strictSecurityOnly = true, true
+		ValidateCmd.Run(cmd, args)
+	},
+}
+
+func init() {
+	ScanCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Scan every configuration file found recursively")
+	ScanCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
+	ScanCmd.Flags().StringVar(&validateFormat, "format", "", "Output format: text (default) or json")
+	ScanCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
+	ScanCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
+	ScanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

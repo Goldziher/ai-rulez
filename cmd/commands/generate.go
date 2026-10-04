@@ -100,21 +100,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	// Set no-fetch flag for include resolution (before any config loading)
 	includes.SkipFetch = noFetch
-	switch {
-	case generateFrozen:
-		includes.Mode, includes.SkipFetch = includes.LockFrozen, true
-	case generateLocked:
-		includes.Mode = includes.LockRequire
-	}
+	applyLockFlags()
 
 	if generateCheck {
-		if err := checkGenerateCheckFlags(); err != nil {
-			fmtError(err)
-			os.Exit(1)
-		}
-		if code := runDriftCheck(args, recursive, driftRender); code != 0 {
-			os.Exit(code)
-		}
+		runGenerateCheck(args)
 		return
 	}
 
@@ -147,6 +136,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	}
 
 	applyGenerateOverrides(cfg)
+	if err := importGate(cfg); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
 	if pluginMode && pluginIfConfigured && !cfg.HasPluginAuthoring() {
 		logger.Info("Skipping plugin generation: no plugin authoring configuration")
 		return
@@ -496,35 +489,17 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	}
 
 	applyGenerateOverrides(cfg)
+	if err := importGate(cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
 
 	// Create generator
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetContext(ctx)
 	if pluginMode {
-		if pluginIfConfigured && !cfg.HasPluginAuthoring() {
-			fileCounter.FinishFile()
-			return 0, nil
-		}
-		if dryRun {
-			plan, err := gen.DryRunPlugin(profile)
-			if err != nil {
-				fileCounter.ErrorFor(configPath, err)
-				return 0, err
-			}
-			for _, line := range plan {
-				progress.PrintlnIfNotQuiet("  " + line)
-			}
-			fileCounter.FinishFile()
-			return 0, nil
-		}
-		written, err := gen.GeneratePluginFiles(profile)
-		if err != nil {
-			fileCounter.ErrorFor(configPath, err)
-			return 0, err
-		}
-		fileCounter.FinishFile()
-		return written, nil
+		return processPluginConfig(configPath, cfg, gen, fileCounter)
 	}
 
 	if dryRun {
@@ -606,4 +581,61 @@ func checkGenerateCheckFlags() error {
 		return oops.Errorf("--check cannot be combined with --gitignore, which writes .gitignore files")
 	}
 	return nil
+}
+
+// processPluginConfig is processConfigFile for `generate --plugin`.
+func processPluginConfig(configPath string, cfg *config.Config, gen *generator.Generator, fileCounter *progress.FileCounter) (int, error) {
+	if pluginIfConfigured && !cfg.HasPluginAuthoring() {
+		fileCounter.FinishFile()
+		return 0, nil
+	}
+	if dryRun {
+		plan, err := gen.DryRunPlugin(profile)
+		if err != nil {
+			fileCounter.ErrorFor(configPath, err)
+			return 0, err
+		}
+		for _, line := range plan {
+			progress.PrintlnIfNotQuiet("  " + line)
+		}
+		fileCounter.FinishFile()
+		return 0, nil
+	}
+	written, err := gen.GeneratePluginFiles(profile)
+	if err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+	fileCounter.FinishFile()
+	return written, nil
+}
+
+// applyLockFlags turns --locked and --frozen into the include lock policy.
+func applyLockFlags() {
+	switch {
+	case generateFrozen:
+		includes.Mode, includes.SkipFetch = includes.LockFrozen, true
+	case generateLocked:
+		includes.Mode = includes.LockRequire
+	}
+}
+
+// runGenerateCheck runs `generate --check` and exits with its code.
+func runGenerateCheck(args []string) {
+	if err := checkGenerateCheckFlags(); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+	if code := runDriftCheck(args, recursive, driftRender); code != 0 {
+		os.Exit(code)
+	}
+}
+
+// importGate scans imported content before anything is written, when
+// [lint.security] scan_imports asks for it. Dry runs and plugin bundles skip it.
+func importGate(cfg *config.Config) error {
+	if dryRun || pluginMode {
+		return nil
+	}
+	return enforceScanImports(cfg)
 }
