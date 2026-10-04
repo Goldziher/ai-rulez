@@ -91,6 +91,7 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | antigravity  | .agents/, GEMINI.md             |
 | xum          | AGENTS.md and .xum/             |
 | pi           | AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json |
+| baz          | AGENTS.md (root and nested), .agents/skills, .claude/agents |
 
 ## Available Builtins
 

@@ -54,7 +54,7 @@ V4 accepts both `"4.0"` and `"3.0"` versions for backward compatibility.
 - **`profiles`**: Named profiles specifying which domains to include
 - **`default`**: Default profile name
 - **`schema`** (`$schema` in YAML/JSON): URL of the JSON Schema, for editor support. TOML configs use the key `schema`
-- **`rules`**: Rules output mode (`mode`, `mode_by_preset`; see [Rules](rules.md#rules-mode))
+- **`rules`**: Rules output mode (`mode`, `mode_by_preset`, `baz_scoped`; see [Rules](rules.md#rules-mode))
 - **`scopes`**: Additional scoped output roots. Their root files (`AGENTS.md`/`CLAUDE.md`) stay in the subfolder; rule files go to the root rules folders
 - **`gitignore`**: Whether to update .gitignore with generated output patterns (default: true)
 - **`includes`**: External content sources to merge
