@@ -270,25 +270,8 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if err := checkPluginGenerated(expected); err != nil {
 		return err
 	}
-	for _, output := range expected {
-		if output.IsDir {
-			continue
-		}
-		actual, readErr := os.ReadFile(output.Path)
-		if readErr != nil {
-			return oops.With("path", output.Path).
-				Hint("Run ai-rulez generate --plugin to restore the missing file").
-				Wrapf(readErr, "read generated plugin output")
-		}
-		expectedBytes := output.RawContent
-		if expectedBytes == nil {
-			expectedBytes = []byte(output.Content)
-		}
-		if !bytes.Equal(actual, expectedBytes) {
-			return oops.With("path", output.Path).
-				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
-				Errorf("generated plugin output is stale")
-		}
+	if err := verifyPluginOutputs(expected); err != nil {
+		return err
 	}
 	stale, err := g.stalePluginDirs(profile)
 	if err != nil {
@@ -310,6 +293,31 @@ func (g *Generator) VerifyPlugin(profile string) error {
 		return g.verifyDomainPluginProvenance(expected)
 	}
 	return plugin.VerifyProvenance(g.config.BaseDir)
+}
+
+// verifyPluginOutputs compares every expected plugin file with what is on disk.
+func verifyPluginOutputs(expected []config.OutputFile) error {
+	for _, output := range expected {
+		if output.IsDir {
+			continue
+		}
+		actual, readErr := os.ReadFile(output.Path)
+		if readErr != nil {
+			return oops.With("path", output.Path).
+				Hint("Run ai-rulez generate --plugin to restore the missing file").
+				Wrapf(readErr, "read generated plugin output")
+		}
+		expectedBytes := output.RawContent
+		if expectedBytes == nil {
+			expectedBytes = []byte(output.Content)
+		}
+		if !bytes.Equal(actual, expectedBytes) {
+			return oops.With("path", output.Path).
+				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
+				Errorf("generated plugin output is stale")
+		}
+	}
+	return nil
 }
 
 // verifyDomainPluginProvenance verifies every bundle root the domain-plugin

@@ -98,6 +98,13 @@ func registerRemovedCLIMCPFlags(cmd *cobra.Command) {
 	}
 }
 
+// suggestTOMLMigration hints at the TOML migration when a YAML config is still in use.
+func suggestTOMLMigration(configDir string) {
+	if _, err := os.Stat(filepath.Join(configDir, "config.yaml")); err == nil {
+		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
+	}
+}
+
 func runGenerate(cmd *cobra.Command, args []string) {
 	progress.SetQuiet(viper.GetBool("quiet"))
 
@@ -136,11 +143,7 @@ func runGenerate(cmd *cobra.Command, args []string) {
 		os.Exit(1)
 	}
 
-	// Suggest migration for YAML configs
-	yamlPath := filepath.Join(cfg.ConfigDir, "config.yaml")
-	if _, err := os.Stat(yamlPath); err == nil {
-		logger.Info("Tip: run 'ai-rulez migrate v4' to convert config.yaml to TOML format")
-	}
+	suggestTOMLMigration(cfg.ConfigDir)
 
 	applyGenerateOverrides(cfg)
 	if err := importGate(cfg); err != nil {
