@@ -69,6 +69,11 @@ type PluginAuthoring struct {
 	// plugin-only skills/, commands/, and agents/. Empty uses governance content.
 	ContentRoot string `yaml:"content_root,omitempty" json:"content_root,omitempty" toml:"content_root,omitempty"` //nolint:tagliatelle
 
+	// IncludeDomains lists the domains (names or globs) whose skills, commands
+	// and agents are bundled next to the root content. Empty keeps the bundle
+	// root-only. On a name collision the root item wins.
+	IncludeDomains []string `yaml:"include_domains,omitempty" json:"include_domains,omitempty" toml:"include_domains,omitempty"` //nolint:tagliatelle
+
 	// Runtimes restricts which runtime manifests are emitted. Empty means all
 	// of AllPluginRuntimes.
 	Runtimes []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`
@@ -287,6 +292,188 @@ type MarketplaceAuthoring struct {
 	// Members lists sub-project directories for a multi-plugin monorepo. Empty
 	// means single-plugin (marketplace source "./").
 	Members []string `yaml:"members,omitempty" json:"members,omitempty" toml:"members,omitempty"`
+
+	// OutputDir is the project-relative directory the domain-plugin marketplace
+	// is written to (".claude-plugin/marketplace.json" and "plugins/<name>/"
+	// beneath it). Empty means the project root. Used only when FromDomains or
+	// Plugins is set.
+	OutputDir string `yaml:"output_dir,omitempty" json:"output_dir,omitempty" toml:"output_dir,omitempty"` //nolint:tagliatelle
+
+	// FromDomains turns every selected domain into its own plugin.
+	FromDomains *DomainPluginsConfig `yaml:"from_domains,omitempty" json:"from_domains,omitempty" toml:"from_domains,omitempty"` //nolint:tagliatelle
+
+	// Plugins declares plugins by hand, mixing domains and root content. An entry
+	// named like a FromDomains plugin replaces it.
+	Plugins []MarketplacePlugin `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
+
+	// CatalogSkill generates a skill listing the plugins and how to enable them.
+	CatalogSkill *CatalogSkillConfig `yaml:"catalog_skill,omitempty" json:"catalog_skill,omitempty" toml:"catalog_skill,omitempty"` //nolint:tagliatelle
+}
+
+// HasDomainPlugins reports whether the marketplace generates plugins from the
+// domain tree (from_domains or [[marketplace.plugins]]).
+func (m *MarketplaceAuthoring) HasDomainPlugins() bool {
+	if m == nil {
+		return false
+	}
+	return m.FromDomains.IsEnabled() || len(m.Plugins) > 0
+}
+
+// DomainPluginsConfig is the [marketplace.from_domains] block: one plugin per
+// domain, named NamePrefix + domain.
+type DomainPluginsConfig struct {
+	// Enabled defaults to true when the block is present.
+	Enabled *bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// NamePrefix is prepended to the domain name to form the plugin name.
+	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
+	// Include and Exclude select domains by name or glob. Empty Include means all.
+	Include []string `yaml:"include,omitempty" json:"include,omitempty" toml:"include,omitempty"`
+	Exclude []string `yaml:"exclude,omitempty" json:"exclude,omitempty" toml:"exclude,omitempty"`
+	// PluginDefaults supplies version, category, keywords, default_enabled and
+	// runtimes to every generated plugin.
+	PluginDefaults `yaml:",inline"`
+}
+
+// IsEnabled reports whether the block is present and not switched off.
+func (d *DomainPluginsConfig) IsEnabled() bool {
+	return d != nil && (d.Enabled == nil || *d.Enabled)
+}
+
+// PluginDefaults are the per-plugin fields shared by from_domains and
+// [[marketplace.plugins]]. Unset fields fall back to the [plugin] block.
+type PluginDefaults struct {
+	Version  string   `yaml:"version,omitempty" json:"version,omitempty" toml:"version,omitempty"`
+	Category string   `yaml:"category,omitempty" json:"category,omitempty" toml:"category,omitempty"`
+	Keywords []string `yaml:"keywords,omitempty" json:"keywords,omitempty" toml:"keywords,omitempty"`
+	// DefaultEnabled is emitted as the marketplace entry's defaultEnabled
+	// (Claude Code starts the plugin disabled when false). Unset omits it.
+	DefaultEnabled *bool    `yaml:"default_enabled,omitempty" json:"default_enabled,omitempty" toml:"default_enabled,omitempty"` //nolint:tagliatelle
+	Runtimes       []string `yaml:"runtimes,omitempty" json:"runtimes,omitempty" toml:"runtimes,omitempty"`
+}
+
+// MarketplacePlugin is one [[marketplace.plugins]] entry.
+type MarketplacePlugin struct {
+	Name        string `yaml:"name" json:"name" toml:"name"`
+	Description string `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	// Domains are the domains (names or globs) whose skills, commands and agents
+	// the plugin bundles.
+	Domains []string `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`
+	// Skills, Commands and Agents select root content by name or glob.
+	Skills   []string `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
+	Commands []string `yaml:"commands,omitempty" json:"commands,omitempty" toml:"commands,omitempty"`
+	Agents   []string `yaml:"agents,omitempty" json:"agents,omitempty" toml:"agents,omitempty"`
+	// Relevance tells Claude Code when to suggest the plugin.
+	Relevance      *PluginRelevance `yaml:"relevance,omitempty" json:"relevance,omitempty" toml:"relevance,omitempty"`
+	PluginDefaults `yaml:",inline"`
+}
+
+// PluginRelevance is the marketplace entry's relevance object: when Claude Code
+// suggests installing the plugin. See https://code.claude.com/docs/en/plugins/relevance.
+type PluginRelevance struct {
+	Topic   string           `yaml:"topic,omitempty" json:"topic,omitempty" toml:"topic,omitempty"`
+	Signals RelevanceSignals `yaml:"signals" json:"signals" toml:"signals"`
+}
+
+// RelevanceSignals are the matchers of a relevance object. At least one is set.
+type RelevanceSignals struct {
+	CWD          []string           `yaml:"cwd,omitempty" json:"cwd,omitempty" toml:"cwd,omitempty"`
+	CLI          []string           `yaml:"cli,omitempty" json:"cli,omitempty" toml:"cli,omitempty"`
+	Hosts        []string           `yaml:"hosts,omitempty" json:"hosts,omitempty" toml:"hosts,omitempty"`
+	FilesRead    []string           `yaml:"files_read,omitempty" json:"files_read,omitempty" toml:"files_read,omitempty"`          //nolint:tagliatelle
+	ManifestDeps []ManifestDepMatch `yaml:"manifest_deps,omitempty" json:"manifest_deps,omitempty" toml:"manifest_deps,omitempty"` //nolint:tagliatelle
+}
+
+// IsEmpty reports whether no signal is set.
+func (s RelevanceSignals) IsEmpty() bool {
+	return len(s.CWD)+len(s.CLI)+len(s.Hosts)+len(s.FilesRead)+len(s.ManifestDeps) == 0
+}
+
+// ManifestDepMatch pairs a manifest path regex with a content regex.
+type ManifestDepMatch struct {
+	File    string `yaml:"file" json:"file" toml:"file"`
+	Pattern string `yaml:"pattern" json:"pattern" toml:"pattern"`
+}
+
+// CatalogSkillConfig is the [marketplace.catalog_skill] block.
+type CatalogSkillConfig struct {
+	Enabled bool `yaml:"enabled,omitempty" json:"enabled,omitempty" toml:"enabled,omitempty"`
+	// Name is the skill name; empty means "plugin-catalog".
+	Name string `yaml:"name,omitempty" json:"name,omitempty" toml:"name,omitempty"`
+	// Description is the skill description shown to the model.
+	Description string `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+}
+
+// DefaultCatalogSkillName is the catalog skill name when none is configured.
+const DefaultCatalogSkillName = "plugin-catalog"
+
+// SkillName returns the configured or default catalog skill name.
+func (c *CatalogSkillConfig) SkillName() string {
+	if c == nil || c.Name == "" {
+		return DefaultCatalogSkillName
+	}
+	return c.Name
+}
+
+// Placement values for [placement] and the `placement` frontmatter key.
+const (
+	PlacementCore   = "core"
+	PlacementPlugin = "plugin"
+)
+
+// PlacementConfig is the [placement] block: whether a skill or command is
+// generated into .claude/skills ("core") or shipped only through a plugin.
+type PlacementConfig struct {
+	// Default is "core" (today's behavior) or "plugin".
+	Default string `yaml:"default,omitempty" json:"default,omitempty" toml:"default,omitempty"`
+	// Core and Plugin list names or globs. A pattern matches the item name or
+	// "domains/<domain>/<name>". Core wins over Plugin; frontmatter `placement`
+	// wins over both.
+	Core   []string `yaml:"core,omitempty" json:"core,omitempty" toml:"core,omitempty"`
+	Plugin []string `yaml:"plugin,omitempty" json:"plugin,omitempty" toml:"plugin,omitempty"`
+	// HonorTargets makes frontmatter `targets` filter skills in .claude/skills,
+	// as it already does for commands.
+	HonorTargets bool `yaml:"honor_targets,omitempty" json:"honor_targets,omitempty" toml:"honor_targets,omitempty"` //nolint:tagliatelle
+}
+
+// ClaudeConfig groups Claude Code specific output options.
+type ClaudeConfig struct {
+	Settings *ClaudeSettings `yaml:"settings,omitempty" json:"settings,omitempty" toml:"settings,omitempty"`
+}
+
+// ClaudeSettings is the [claude.settings] block: opt-in management of the
+// plugin keys of .claude/settings.json. Only the listed entries are owned.
+type ClaudeSettings struct {
+	Manage bool `yaml:"manage,omitempty" json:"manage,omitempty" toml:"manage,omitempty"`
+	// RegisterMarketplace owns extraKnownMarketplaces.<marketplace.name>.
+	// Defaults to true when Manage is set.
+	RegisterMarketplace *bool `yaml:"register_marketplace,omitempty" json:"register_marketplace,omitempty" toml:"register_marketplace,omitempty"` //nolint:tagliatelle
+	// MarketplaceSource overrides the default directory source.
+	MarketplaceSource *MarketplaceSource `yaml:"marketplace_source,omitempty" json:"marketplace_source,omitempty" toml:"marketplace_source,omitempty"` //nolint:tagliatelle
+	AutoUpdate        *bool              `yaml:"auto_update,omitempty" json:"auto_update,omitempty" toml:"auto_update,omitempty"`                      //nolint:tagliatelle
+	// EnablePlugins and DisablePlugins own enabledPlugins."<name>@<marketplace>"
+	// as true and false. Names are plugin names in the marketplace.
+	EnablePlugins  []string `yaml:"enable_plugins,omitempty" json:"enable_plugins,omitempty" toml:"enable_plugins,omitempty"`    //nolint:tagliatelle
+	DisablePlugins []string `yaml:"disable_plugins,omitempty" json:"disable_plugins,omitempty" toml:"disable_plugins,omitempty"` //nolint:tagliatelle
+}
+
+// MarketplaceSource is a Claude Code marketplace source object.
+type MarketplaceSource struct {
+	Source string `yaml:"source" json:"source" toml:"source"` // directory, github, git, url
+	Path   string `yaml:"path,omitempty" json:"path,omitempty" toml:"path,omitempty"`
+	Repo   string `yaml:"repo,omitempty" json:"repo,omitempty" toml:"repo,omitempty"`
+	URL    string `yaml:"url,omitempty" json:"url,omitempty" toml:"url,omitempty"`
+	Ref    string `yaml:"ref,omitempty" json:"ref,omitempty" toml:"ref,omitempty"`
+}
+
+// ManagesClaudeSettings reports whether generate owns plugin keys in
+// .claude/settings.json.
+func (c *Config) ManagesClaudeSettings() bool {
+	return c != nil && c.Claude != nil && c.Claude.Settings != nil && c.Claude.Settings.Manage
+}
+
+// RegistersMarketplace reports whether extraKnownMarketplaces is owned.
+func (s *ClaudeSettings) RegistersMarketplace() bool {
+	return s != nil && s.Manage && (s.RegisterMarketplace == nil || *s.RegisterMarketplace)
 }
 
 // ResolvedRuntimes returns the runtimes to emit for this plugin: the explicit
