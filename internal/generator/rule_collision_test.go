@@ -62,8 +62,10 @@ func TestGenerate_HandWrittenCollision_WritesDisambiguatedRule(t *testing.T) {
 	t.Run("dry run lists the disambiguated name only", func(t *testing.T) {
 		plan, err := newDevinGenerator(t, dir).DryRun("default")
 		require.NoError(t, err)
-		assert.Contains(t, plan, "write-file: "+filepath.FromSlash(alt))
+		// The file was generated above, so the plan reports it as current.
+		assert.Contains(t, plan, "unchanged: "+filepath.FromSlash(alt))
 		assert.NotContains(t, plan, "write-file: "+filepath.FromSlash(rel))
+		assert.NotContains(t, plan, "unchanged: "+filepath.FromSlash(rel))
 	})
 
 	t.Run("clean removes ours and keeps the hand-written file", func(t *testing.T) {

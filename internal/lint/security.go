@@ -51,7 +51,7 @@ var (
 	pipeToShellRe   = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+(?:-\S+\s+)*)?(?:ba|z|da|k)?sh\b`)
 	pipeToInterpRe  = regexp.MustCompile(`(?i)\b(?:curl|wget)\b[^|\n]*\|\s*(?:sudo\s+)?(?:python3?|perl|ruby|node)\b`)
 	procSubstRe     = regexp.MustCompile(`(?i)(?:\b(?:ba|z)?sh|\bsource|\.)\s+<\(\s*(?:curl|wget)\b`)
-	evalRe          = regexp.MustCompile("(?i)\\beval\\s*[(\"'$`]|\\beval\\s+\\$")
+	evalRe          = regexp.MustCompile("(?i)(?:^|[^\\w.'\"`])eval(?:\\s+[\"'$`]|\\s*\\()")
 	evalBenignRe    = regexp.MustCompile(`(?i)\beval\s+"?\$\(\s*(?:ssh-agent|pyenv|rbenv|nodenv|direnv|brew\s+shellenv|fnm|starship|zoxide|mise|rtx|asdf|opam|thefuck)\b`)
 	base64ExecRe    = regexp.MustCompile(`(?i)base64\s+(?:-d|-D|--decode)\b.*\|\s*(?:sudo\s+)?(?:ba|z|da)?sh\b|\bexec\s*\(\s*(?:base64\.)?b64decode`)
 	credReadRe      = regexp.MustCompile(`(?:~|\$HOME|\$\{HOME\}|/home/[^/\s]+|/Users/[^/\s]+)/\.(?:ssh|aws|gnupg|kube|netrc|npmrc|pypirc|docker/config\.json|config/gcloud)\b|/etc/shadow\b|\bid_(?:rsa|ed25519|ecdsa)\b|\bsecurity\s+find-(?:generic|internet)-password\b`)
