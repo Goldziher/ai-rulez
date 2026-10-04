@@ -69,6 +69,7 @@ Every file below is one the tool loads on its own; a `.local.md` file a tool nev
 | `gemini` | Rules and context: `GEMINI.local.md` | Same | Gemini CLI loads it because `.gemini/settings.json` `context.fileName` lists it (written whether or not local content exists). A `context.fileName` you wrote gets `GEMINI.local.md` appended; see [Settings documents shared with you](#settings-documents-shared-with-you) |
 | `opencode` | Rules and context: `AGENTS.local.md` | Same | OpenCode loads it because `opencode.json` `instructions` lists it (written whether or not local content exists; `./AGENTS.local.md` counts as the same entry) |
 | `xum` | Rules and context: `AGENTS.local.md` (shared with `opencode`) | Same | xum appends `AGENTS.local.md` to `AGENTS.md` |
+| `pi` | Nothing written, one warning | Same | pi reads no project-local `AGENTS.local.md`; put personal guidance in pi's user config |
 | `codex` | Rules and context: `AGENTS.override.md` (root only) | Same | Codex loads `AGENTS.override.md` instead of `AGENTS.md` in the same directory, so the file repeats the shared `AGENTS.md` and appends the local sections |
 | `hermes` | With `agents_md`: `AGENTS.override.md`, as for Codex. Without it: nothing written, one warning | Same | Hermes loads `AGENTS.override.md` instead of `AGENTS.md` in the AGENTS chain; `.hermes.md` (without `agents_md`) beats the chain and has no local counterpart |
 | `amp` | Nothing written, one warning | Same | Amp has no project-local file; put personal guidance in `~/.config/amp/AGENTS.md` |
