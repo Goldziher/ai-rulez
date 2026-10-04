@@ -179,7 +179,11 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 		})
 	}
 
-	return outputs, nil
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(outputs, hookOutputs...), nil
 }
 
 // planCopilotRules routes rules and context between .github/instructions files

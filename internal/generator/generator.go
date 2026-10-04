@@ -21,6 +21,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"   // Register remaining legacy preset generators
 	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -837,6 +838,9 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	presets.WarnDuplicateContent(contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
 	g.warnUnreadConsumerFiles()
+	for _, diagnostic := range settings.UnsupportedDiagnostics(g.config) {
+		rulefiles.Warn(diagnostic)
+	}
 
 	// Collect MCP servers based on the resolved content tree and active profile
 	mcpServers := g.collectMCPServersForContent(contentTree, activeProfile)

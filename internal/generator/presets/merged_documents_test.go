@@ -18,6 +18,8 @@ func TestMergedDocumentPaths(t *testing.T) {
 
 	assert.Equal(t, []string{
 		".agents/settings.json",
+		".codex/hooks.json",
+		".cursor/hooks.json",
 		".gemini/settings.json",
 		".mcp.json",
 		".pi/mcp.json",

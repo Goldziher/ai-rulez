@@ -171,6 +171,10 @@ const (
 	// PredicateHasMCPServersOrPluginSettings holds when the config has MCP
 	// servers or manages the plugin keys of .claude/settings.json.
 	PredicateHasMCPServersOrPluginSettings = "has_mcp_servers_or_plugin_settings"
+	// PredicateHasClaudeSettings holds when the config has MCP servers, manages
+	// the plugin keys of .claude/settings.json, or declares [[hooks]],
+	// [permissions] or [claude.settings.managed].
+	PredicateHasClaudeSettings = "has_claude_settings"
 
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"

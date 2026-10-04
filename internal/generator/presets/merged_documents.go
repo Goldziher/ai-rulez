@@ -36,6 +36,9 @@ const (
 	MergedDocPiMCP          = ".pi/mcp.json"
 )
 
+// MergedDocCodexHooks and MergedDocCursorHooks (hooks_documents.go) are the hooks
+// documents of the codex and cursor presets.
+
 // mergedDocumentPaths is the registry backing MergedDocumentPaths. Every path a
 // preset passes to applyMergedDocument must appear here; applyMergedDocument
 // fails loudly otherwise, so a new merged document cannot silently skip the
@@ -47,6 +50,8 @@ var mergedDocumentPaths = []string{
 	MergedDocXumMCP,
 	MergedDocOpencodeConfig,
 	MergedDocPiMCP,
+	MergedDocCodexHooks,
+	MergedDocCursorHooks,
 }
 
 // MergedDocumentPaths returns every base-relative, slash-separated path that a
@@ -179,14 +184,11 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 
 	switch rel {
 	case MergedDocGeminiSettings:
-		claims := []jsonmerge.Claim{selfEntry}
-		if len(cfg.MCPServers) > 0 {
-			claims = append(claims, memberClaimsOf([]string{keyMCPServers}, (&GeminiPresetGenerator{}).mcpServersValue(cfg))...)
-		}
-		for _, names := range ownedContextFileNames() {
-			claims = append(claims, jsonmerge.Claim{Path: geminiContextFileNamePath, Equals: names})
-		}
-		return claims
+		return geminiLegacyClaims(cfg, selfEntry)
+	case MergedDocCodexHooks:
+		return hooksLegacyClaims(cfg, config.HarnessCodex)
+	case MergedDocCursorHooks:
+		return hooksLegacyClaims(cfg, config.HarnessCursor)
 	case MergedDocAgentsSettings:
 		claims := []jsonmerge.Claim{selfEntry}
 		if len(cfg.MCPServers) > 0 {
@@ -219,6 +221,18 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		return claims
 	}
 	return nil
+}
+
+// geminiLegacyClaims is LegacyMergeClaims for .gemini/settings.json.
+func geminiLegacyClaims(cfg *config.Config, selfEntry jsonmerge.Claim) []jsonmerge.Claim {
+	claims := []jsonmerge.Claim{selfEntry}
+	if len(cfg.MCPServers) > 0 {
+		claims = append(claims, memberClaimsOf([]string{keyMCPServers}, (&GeminiPresetGenerator{}).mcpServersValue(cfg))...)
+	}
+	for _, names := range ownedContextFileNames() {
+		claims = append(claims, jsonmerge.Claim{Path: geminiContextFileNamePath, Equals: names})
+	}
+	return append(claims, hooksLegacyClaims(cfg, config.HarnessGemini)...)
 }
 
 // memberClaimsOf is the record a merge of value as the members at path would leave.
