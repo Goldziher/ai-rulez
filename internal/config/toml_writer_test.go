@@ -117,3 +117,48 @@ func TestPresetProvider_JSONRoundTrip(t *testing.T) {
 	assert.Equal(t, "spec.toml", decoded.Provider)
 	assert.True(t, decoded.IsValid())
 }
+
+func TestLintConfig_TOMLRoundTripAndLoad(t *testing.T) {
+	src := `version = "4.0"
+name = "proj"
+presets = ["claude"]
+
+[lint]
+fail_on = "warning"
+ignore = ["AR401"]
+allow_paths = [".claude/**"]
+
+[lint.severity]
+glob-no-match = "warning"
+
+[lint.description]
+min_length = 30
+
+[lint.budgets.skill]
+max_lines = 400
+
+[lint.require_metadata]
+skill = ["owner"]
+`
+	dir := t.TempDir()
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".ai-rulez"), 0o755))
+	path := filepath.Join(dir, ".ai-rulez", "config.toml")
+	require.NoError(t, os.WriteFile(path, []byte(src), 0o644))
+
+	cfg, err := LoadConfigFromFile(context.Background(), path)
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Lint)
+	assert.Equal(t, "warning", cfg.Lint.FailOn)
+	assert.Equal(t, []string{"AR401"}, cfg.Lint.Ignore)
+	assert.Equal(t, "warning", cfg.Lint.Severity["glob-no-match"])
+	assert.Equal(t, 30, cfg.Lint.Description.MinLength)
+	assert.Equal(t, 400, cfg.Lint.Budgets["skill"].MaxLines)
+	assert.Equal(t, []string{"owner"}, cfg.Lint.RequireMetadata["skill"])
+
+	out, err := MarshalTOML(cfg)
+	require.NoError(t, err)
+	require.NoError(t, os.WriteFile(path, out, 0o644))
+	again, err := LoadConfigFromFile(context.Background(), path)
+	require.NoError(t, err)
+	assert.Equal(t, cfg.Lint, again.Lint, "[lint] must survive a config rewrite")
+}
