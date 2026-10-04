@@ -56,6 +56,7 @@
               "antigravity",
               "xum",
               "pi",
+              "baz",
               "mcp"
             ],
             "description": "Built-in preset name"
@@ -173,6 +174,7 @@
                 "antigravity",
                 "xum",
                 "pi",
+                "baz",
                 "mcp"
               ]
             }
@@ -581,6 +583,11 @@
             "type": "string",
             "enum": ["split", "inline"]
           }
+        },
+        "baz_scoped": {
+          "type": "string",
+          "enum": ["nested", "root"],
+          "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line."
         }
       },
       "additionalProperties": false

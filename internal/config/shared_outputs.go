@@ -91,6 +91,10 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	// no separate OwnSkillsDir to drop).
 	string(PresetPi):  {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}},
 	string(PresetAmp): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}},
+	// Baz reads AGENTS.md at any depth. It keeps writing its own root-only
+	// .agents/skills (or none, next to claude), so it does not pull the shared
+	// skills tree in: another preset that wants that tree still gets it.
+	string(PresetBaz): {Outputs: []SharedOutput{SharedAgentsMD}},
 	// Claude Code reads CLAUDE.md only; its CLAUDE.md becomes an "@AGENTS.md"
 	// shim. It does not read .agents/skills, so it keeps .claude/skills.
 	string(PresetClaude): {ImportsAgentsMD: true, Folder: RulesFolderScopedInInline},

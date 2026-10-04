@@ -86,6 +86,10 @@ func TestValidate_RulesMode(t *testing.T) {
 		{"unknown preset key", &RulesConfig{ModeByPreset: map[string]string{"nope": "split"}}, `unknown preset "nope"`},
 		{"unknown by-preset value", &RulesConfig{ModeByPreset: map[string]string{"claude": "x"}}, `invalid rules mode "x"`},
 		{"empty by-preset value", &RulesConfig{ModeByPreset: map[string]string{"claude": ""}}, "empty rules mode"},
+		{"baz nested", &RulesConfig{BazScoped: "nested"}, ""},
+		{"baz root", &RulesConfig{BazScoped: "root"}, ""},
+		{"baz unknown", &RulesConfig{BazScoped: "deep"}, `invalid baz_scoped value "deep"`},
+		{"baz case sensitive", &RulesConfig{BazScoped: "Root"}, `invalid baz_scoped value "Root"`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -168,4 +172,30 @@ func TestTOMLWriter_OmitsEmptyRules(t *testing.T) {
 	data, err := MarshalTOML(&Config{Version: "4.0", Name: "p", Presets: []Preset{{BuiltIn: "claude"}}})
 	require.NoError(t, err)
 	assert.NotContains(t, string(data), "[rules]")
+}
+
+func TestBazScopedRules(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  *Config
+		want string
+	}{
+		{"nil config", nil, BazScopedNested},
+		{"no rules block", &Config{}, BazScopedNested},
+		{"empty rules block", &Config{Rules: &RulesConfig{}}, BazScopedNested},
+		{"root", &Config{Rules: &RulesConfig{BazScoped: "root"}}, BazScopedRoot},
+		{"nested", &Config{Rules: &RulesConfig{BazScoped: "nested"}}, BazScopedNested},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.cfg.BazScopedRules())
+		})
+	}
+}
+
+func TestHasBuiltInPreset(t *testing.T) {
+	cfg := &Config{Presets: []Preset{{BuiltIn: "claude"}, {Name: "baz", Type: PresetTypeMarkdown, Path: "X.md"}}}
+	assert.True(t, cfg.HasBuiltInPreset("claude"))
+	assert.False(t, cfg.HasBuiltInPreset("baz"), "a custom preset named baz is not the built-in")
+	assert.False(t, (*Config)(nil).HasBuiltInPreset("claude"))
 }

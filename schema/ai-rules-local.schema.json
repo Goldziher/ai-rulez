@@ -1132,6 +1132,7 @@
               "antigravity",
               "xum",
               "pi",
+              "baz",
               "mcp"
             ],
             "type": "string"
@@ -1215,6 +1216,11 @@
           },
           "description": "Per-preset rules mode overrides (keys are preset names, including custom and provider presets). Beats `mode` for the matching preset.",
           "type": "object"
+        },
+        "baz_scoped": {
+          "description": "Where the baz preset puts path-scoped rules and context. nested (default) writes them to the AGENTS.md of the directory their globs point into, which Baz scopes to that directory; root keeps them in the root AGENTS.md with an Applies to line.",
+          "enum": ["nested", "root"],
+          "type": "string"
         }
       },
       "type": "object"
@@ -1264,6 +1270,7 @@
                 "antigravity",
                 "xum",
                 "pi",
+                "baz",
                 "mcp"
               ],
               "type": "string"

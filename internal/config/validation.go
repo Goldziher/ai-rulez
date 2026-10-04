@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -159,6 +160,9 @@ func (c *Config) validateRules() error {
 	if err := validateRulesMode(c.Rules.Mode, "rules.mode"); err != nil {
 		return err
 	}
+	if err := validateBazScoped(c.Rules.BazScoped); err != nil {
+		return err
+	}
 	for preset, value := range c.Rules.ModeByPreset {
 		if !c.isKnownPreset(preset) {
 			return oops.
@@ -180,6 +184,18 @@ func (c *Config) validateRules() error {
 		}
 	}
 	return nil
+}
+
+func validateBazScoped(value string) error {
+	if value == "" || slices.Contains(validBazScoped, value) {
+		return nil
+	}
+	return oops.
+		With("field", "rules.baz_scoped").
+		With("actual_value", value).
+		With("valid_values", validBazScoped).
+		Hint("Use one of: nested, root (lowercase).").
+		Errorf("invalid baz_scoped value %q at rules.baz_scoped", value)
 }
 
 func validateRulesMode(value, fieldPath string) error {
