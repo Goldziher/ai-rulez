@@ -32,7 +32,7 @@ func TestValidateConfigFile_OverlaySchema(t *testing.T) {
 			writeFile(t, overlayPath, tt.overlay)
 
 			// Act
-			err := validateConfigFile(filepath.Join(dir, "config.toml"))
+			_, err := validateConfigFile(filepath.Join(dir, "config.toml"))
 
 			// Assert
 			if !tt.wantErr {

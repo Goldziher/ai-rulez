@@ -1,0 +1,224 @@
+package lint
+
+import (
+	"net/url"
+	"os"
+	"path"
+	"path/filepath"
+	"regexp"
+	"strings"
+)
+
+var (
+	// "`name` skill", "`name` agent", "`name` rule": hyphenated names only, since
+	// a bare word in backticks before "skill" is usually prose.
+	nameAfterRe  = regexp.MustCompile("`([a-z][a-z0-9]*(?:-[a-z0-9]+)+)`\\s+(skill|subagent|agent|rule)s?\\b")
+	nameBeforeRe = regexp.MustCompile("\\b(skill|subagent|agent)\\s+`([a-z][a-z0-9_-]*)`")
+	slashRe      = regexp.MustCompile(`(?:^|[\s(])/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:[\s,;:)]|\.(?:\s|$)|$)`)
+	tickSlashRe  = regexp.MustCompile(`^/([a-z][a-z0-9]*(?:-[a-z0-9]+)+)(?:\s|$)`)
+	skillCallRe  = regexp.MustCompile(`\bSkill\(\s*["']?([a-z][a-z0-9-]*)["']?\s*\)`)
+	subagentRe   = regexp.MustCompile(`\bsubagent_type["']?\s*[:=]\s*["']([a-z][a-z0-9-]*)["']`)
+	skillRelRe   = regexp.MustCompile(`^(references|scripts|assets)/`)
+	extRe        = regexp.MustCompile(`^\.[A-Za-z0-9]{1,6}$`)
+	fragLineRe   = regexp.MustCompile(`^L\d+`)
+)
+
+func looksPlaceholder(name string) bool {
+	for _, p := range []string{"my-", "new-", "your-", "some-"} {
+		if strings.HasPrefix(name, p) {
+			return true
+		}
+	}
+	return name == "foo" || strings.HasPrefix(name, "foo-") || strings.Contains(name, "example")
+}
+
+func (r *runner) scanBody(it *item, d doc) {
+	for _, l := range d.body() {
+		for _, target := range linkTargets(l.Plain) {
+			r.checkLink(it, l.No, target)
+		}
+		for _, m := range backtickRe.FindAllStringSubmatch(l.Text, -1) {
+			r.checkToken(it, l.No, m[1])
+		}
+		r.checkNames(it, l)
+	}
+}
+
+func (r *runner) existsAbs(abs string) bool {
+	if rel := r.tree.Rel(abs); rel != "" {
+		return r.tree.Exists(rel)
+	}
+	_, err := os.Stat(abs)
+	return err == nil
+}
+
+func (r *runner) checkLink(it *item, line int, target string) {
+	if target == "" || schemeRe.MatchString(target) || strings.HasPrefix(target, "//") {
+		return
+	}
+	pathPart, frag, _ := strings.Cut(target, "#")
+	pathPart, _, _ = strings.Cut(pathPart, "?")
+	if dec, err := url.PathUnescape(pathPart); err == nil {
+		pathPart = dec
+	}
+	if dec, err := url.PathUnescape(frag); err == nil {
+		frag = dec
+	}
+	if strings.ContainsAny(pathPart, "<>{}$*") {
+		return
+	}
+	if pathPart == "" {
+		r.checkAnchor(it, line, it.abs, frag, target)
+		return
+	}
+	var cands []string
+	if strings.HasPrefix(pathPart, "/") {
+		cands = append(cands, filepath.Join(r.tree.Top, filepath.FromSlash(pathPart)))
+	} else {
+		cands = append(cands, filepath.Join(filepath.Dir(it.abs), filepath.FromSlash(pathPart)))
+		if it.itemDir != "" {
+			cands = append(cands, filepath.Join(it.itemDir, filepath.FromSlash(pathPart)))
+		}
+		cands = append(cands, filepath.Join(r.rootAbs(), filepath.FromSlash(pathPart)))
+	}
+	for _, c := range cands {
+		if r.existsAbs(c) {
+			r.checkAnchor(it, line, c, frag, target)
+			return
+		}
+	}
+	r.add(CodeLinkUnresolved, it.abs, line, "link target %q does not exist", target)
+}
+
+func (r *runner) checkAnchor(it *item, line int, file, frag, target string) {
+	if frag == "" || fragLineRe.MatchString(frag) || !strings.HasSuffix(strings.ToLower(file), ".md") {
+		return
+	}
+	var raw string
+	if file == it.abs && it.isDoc {
+		raw = it.cf.Content
+	} else if data, err := os.ReadFile(file); err == nil {
+		raw = string(data)
+	} else {
+		return
+	}
+	if _, ok := headingSlugs(raw)[strings.ToLower(frag)]; !ok {
+		r.add(CodeAnchorUnresolved, it.abs, line, "link %q: no heading produces the anchor #%s", target, frag)
+	}
+}
+
+// checkToken handles one backticked token: a slash command, a skill-relative
+// file, or a repo path.
+func (r *runner) checkToken(it *item, line int, tok string) {
+	tok = strings.TrimSpace(tok)
+	if m := tickSlashRe.FindStringSubmatch(tok); m != nil {
+		r.requireName(it, line, m[1], "command", r.commands, r.skills)
+		return
+	}
+	tok = lineSuffixRe.ReplaceAllString(strings.TrimRight(tok, ".,;:"), "")
+	if !pathLike(tok) {
+		return
+	}
+	tok = strings.TrimPrefix(tok, "./")
+	if m := skillRelRe.FindString(tok); m != "" {
+		if r.checkSkillRelative(it, line, tok, m) {
+			return
+		}
+	}
+	first, _, hasSlash := strings.Cut(tok, "/")
+	if !hasSlash || first == "" || r.allowed(tok) {
+		return
+	}
+	if !r.tree.IsTopLevel(first) && (r.baseRel == "" || !r.tree.Exists(r.baseRel+"/"+first)) {
+		return
+	}
+	if !r.existsRepo(tok) {
+		r.add(CodePathMissing, it.abs, line, "path %q does not exist in the repository", path.Clean(tok))
+	}
+}
+
+// pathLike filters out tokens that are prose, placeholders, URLs, bazel labels,
+// absolute or parent-relative paths, or dotted symbols such as helpers.run_async.
+func pathLike(tok string) bool {
+	if tok == "" || strings.Contains(tok, ":") || placeholder.MatchString(tok) {
+		return false
+	}
+	if strings.HasPrefix(tok, "~") || strings.HasPrefix(tok, "/") || strings.HasPrefix(tok, "../") {
+		return false
+	}
+	ext := path.Ext(tok)
+	return ext == "" || extRe.MatchString(ext)
+}
+
+func (r *runner) allowed(tok string) bool {
+	for _, g := range r.allow {
+		if g.match(tok) {
+			return true
+		}
+	}
+	return false
+}
+
+// checkSkillRelative handles references/, scripts/ and assets/ tokens. It
+// returns true when the token is fully handled (resolved, reported, or prose).
+func (r *runner) checkSkillRelative(it *item, line int, tok, prefix string) bool {
+	if tok == prefix || tok == strings.TrimSuffix(prefix, "/") {
+		return true // the bare directory name, used as prose
+	}
+	if it.itemDir == "" {
+		return false
+	}
+	if r.existsAbs(filepath.Join(it.itemDir, filepath.FromSlash(tok))) || r.existsRepo(tok) || r.allowed(tok) {
+		return true
+	}
+	r.add(CodeSkillResourceMissing, it.abs, line, "%q exists neither in this %s nor in the repository", tok, it.kind)
+	return true
+}
+
+// existsRepo resolves a repo-relative path from the repository top or, for a
+// nested root, from that root's directory.
+func (r *runner) existsRepo(rel string) bool {
+	return r.tree.Exists(rel) || (r.baseRel != "" && r.tree.Exists(r.baseRel+"/"+rel))
+}
+
+func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[string]bool) {
+	key := strings.ToLower(name)
+	if looksPlaceholder(key) || strings.Contains(key, ":") {
+		return
+	}
+	for _, s := range sets {
+		if s[key] {
+			return
+		}
+	}
+	r.add(CodeReferenceUnknown, it.abs, line, "references %s %q, which does not exist", kind, name)
+}
+
+func (r *runner) checkNames(it *item, l bodyLine) {
+	for _, m := range nameAfterRe.FindAllStringSubmatch(l.Text, -1) {
+		switch m[2] {
+		case "skill":
+			r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
+		case "rule":
+			r.requireName(it, l.No, m[1], "rule", r.rules)
+		default:
+			r.requireName(it, l.No, m[1], "agent", r.agents)
+		}
+	}
+	for _, m := range nameBeforeRe.FindAllStringSubmatch(l.Text, -1) {
+		if m[1] == "skill" {
+			r.requireName(it, l.No, m[2], "skill", r.skills, r.commands)
+		} else {
+			r.requireName(it, l.No, m[2], "agent", r.agents)
+		}
+	}
+	for _, m := range slashRe.FindAllStringSubmatch(l.Plain, -1) {
+		r.requireName(it, l.No, m[1], "command", r.commands, r.skills)
+	}
+	for _, m := range skillCallRe.FindAllStringSubmatch(l.Text, -1) {
+		r.requireName(it, l.No, m[1], "skill", r.skills, r.commands)
+	}
+	for _, m := range subagentRe.FindAllStringSubmatch(l.Text, -1) {
+		r.requireName(it, l.No, m[1], "agent", r.agents)
+	}
+}
