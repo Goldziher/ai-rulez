@@ -32,13 +32,13 @@ sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targe
 
 [outputs.skills.frontmatter]
 include_extras = true
-# argument-hint is inert on a skill: user_invocable is a hard false below, so
+# argument-hint is inert on a skill: user-invocable is a hard false below, so
 # Claude never prompts for arguments and the hint is dead metadata. Only a
 # command can carry it. Blacklisted here so it cannot leak into skill output.
-extras_blacklist = ["priority", "targets", "argument-hint"]
+extras_blacklist = ["priority", "targets", "argument-hint", "user_invocable"]
 
 [outputs.skills.frontmatter.constants]
-user_invocable = false
+"user-invocable" = false
 
 # Agents: .claude/agents/{id}.md with effort + model resolved from the shared
 # resolvers, plus tools/skills lists and the standard scalar fields.
@@ -87,10 +87,10 @@ sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targe
 [outputs.commands.frontmatter]
 fields = ["description", "shortcut", "category"]
 include_extras = true
-extras_blacklist = ["priority", "targets", "shortcut", "category"]
+extras_blacklist = ["priority", "targets", "shortcut", "category", "user_invocable"]
 
 [outputs.commands.frontmatter.constants]
-user_invocable = true
+"user-invocable" = true
 
 # Model strings flow through verbatim — no per-tier translation needed.
 [model]

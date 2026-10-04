@@ -4,6 +4,18 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [Unreleased]
+
+### Changed
+
+- **The `codex` preset writes skills to `.agents/skills`** (the directory Codex documents; it does not read `.codex/skills`) instead of `.codex/skills`. The files previously written to `.codex/skills` are removed by the manifest-based cleanup on the next `generate`; hand-written files there are kept. Set `codex_skills_dir = ".codex/skills"` to keep the old location. With `agents_md` on, a skill that targets only `codex` is now written to `.agents/skills`, so other readers of that directory see it too.
+
+### Fixed
+
+- **Claude skill frontmatter key**: skills and commands emitted `user_invocable`, which Claude Code ignores as an unknown field; the documented key is `user-invocable`. Output now carries `user-invocable: false` for skills and `user-invocable: true` for commands, and a stale authored `user_invocable` key is no longer passed through. Note that Claude Code now honors `false` on skills, which hides them from the `/` menu (Claude can still invoke them).
+- **`--no-configure-cli-mcp` / `-M` and `--skip-cli-mcp` / `-S`** did nothing (no CLI MCP configuration step exists). They are now hidden, deprecated no-ops that print a notice instead of silently accepting the flag.
+- **Skill and command resource bundling skips build artifacts**: `.venv*`, `venv`, `__pycache__`, `*.pyc`, `node_modules` and `.git` are never listed in `## Resources` or copied, files ignored by `.gitignore` are skipped when the project is in a git work tree, and the new `bundle_exclude` key adds patterns.
+
 ## [4.24.2] - 2026-10-04
 
 ### Fixed

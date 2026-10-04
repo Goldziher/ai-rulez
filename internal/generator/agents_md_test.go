@@ -204,16 +204,16 @@ func TestAgentsMD_ToggleCleansAndRestores(t *testing.T) {
 	cases := []struct {
 		name         string
 		presets      []string
-		wantSharedOn bool // .agents/skills survives the flag turning off (amp writes it itself)
+		wantSharedOn bool // .agents/skills survives the flag turning off (codex and amp write it themselves)
 	}{
-		{"without amp", []string{"codex", "opencode", "xum"}, false},
+		{"without amp", []string{"codex", "opencode", "xum"}, true},
 		{"with amp", []string{"codex", "opencode", "xum", "amp"}, true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
 			skill := func(dir string) string { return filepath.Join(root, filepath.FromSlash(dir), "alpha", "SKILL.md") }
-			perTool := []string{".codex/skills", ".opencode/skills", ".xum/skills"}
+			perTool := []string{".opencode/skills", ".xum/skills"}
 
 			writeAgentsMDProject(t, root, agentsMDConfig(tc.presets, "", ""))
 			runAgentsMDGenerate(t, root)
@@ -228,7 +228,6 @@ func TestAgentsMD_ToggleCleansAndRestores(t *testing.T) {
 				assert.NoDirExists(t, filepath.Join(root, filepath.FromSlash(dir)), "flag on removes %s", dir)
 			}
 			assert.FileExists(t, skill(".agents/skills"))
-			assert.NotContains(t, sharedManifestFiles(t, root), ".codex/skills/alpha/SKILL.md")
 			assert.Contains(t, sharedManifestFiles(t, root), ".agents/skills/alpha/SKILL.md")
 
 			writeAgentsMDProject(t, root, agentsMDConfig(tc.presets, "", ""))

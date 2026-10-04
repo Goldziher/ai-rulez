@@ -530,7 +530,7 @@ func (s *V4GenerationSuite) TestCodex_FileStructure() {
 	s.Require().NotNil(s.findFile(outputs, "AGENTS.md"), "Should generate AGENTS.md")
 
 	// Skills
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "skills", "deployment-workflow", "SKILL.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".agents", "skills", "deployment-workflow", "SKILL.md")),
 		"Should generate skill file")
 
 	// Agents (TOML format)

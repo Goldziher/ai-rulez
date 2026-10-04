@@ -742,7 +742,7 @@ func skillDirectoryOutputID(skill ContentFile) string {
 
 // validateOutputNamespaceCollisions detects a skill and a command that would
 // write to the same output path. Skills and commands both render to
-// .claude/skills/{id}/SKILL.md, differing only in the user_invocable frontmatter
+// .claude/skills/{id}/SKILL.md, differing only in the user-invocable frontmatter
 // constant, so a shared id silently overwrites one with the other — data loss
 // that no other check catches.
 //
@@ -827,11 +827,11 @@ func commandOutputID(command ContentFile) string {
 }
 
 // warnInertSkillArgumentHint is advisory rather than fatal: argument-hint is
-// inert on skills because user_invocable=false is a hard constant in the
+// inert on skills because user-invocable=false is a hard constant in the
 // claude.toml [outputs.skills] block, but a config that declares it still
 // generates correctly.
 const warnInertSkillArgumentHint = "skill declares argument-hint but it is inert " +
-	"(skills have user_invocable=false) — move it to commands/ instead"
+	"(skills have user-invocable=false) — move it to commands/ instead"
 
 // skillWarning is one non-fatal skill advisory, carried as data rather than
 // logged at the point of detection so the detection logic stays testable.
