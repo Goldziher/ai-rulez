@@ -80,3 +80,25 @@ func TestIgnoreDirective(t *testing.T) {
 		}
 	}
 }
+
+func TestBodyNestedFences(t *testing.T) {
+	raw := "````md\n```yaml\nsee /no-such-cmd and [x](nowhere.md)\n```\n````\nafter\n~~~\nin tilde\n```\nstill in\n~~~\nlast"
+	var got []string
+	for _, l := range parseDoc(raw).body() {
+		got = append(got, l.Text)
+	}
+	if !reflect.DeepEqual(got, []string{"after", "last"}) {
+		t.Errorf("body = %q", got)
+	}
+}
+
+func TestSlashInvocation(t *testing.T) {
+	for before, want := range map[string]bool{
+		"": true, "- ": true, "1. ": true, "Run ": true, "Use the command ": true,
+		"The endpoint ": false, "Call GET ": false,
+	} {
+		if got := slashInvocation(before); got != want {
+			t.Errorf("slashInvocation(%q) = %v, want %v", before, got, want)
+		}
+	}
+}

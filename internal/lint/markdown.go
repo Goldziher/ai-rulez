@@ -47,21 +47,30 @@ type bodyLine struct {
 }
 
 var (
-	fenceRe    = regexp.MustCompile("^\\s*(```|~~~)")
+	fenceRe    = regexp.MustCompile("^\\s{0,3}(`{3,}|~{3,})(.*)$")
 	codeSpanRe = regexp.MustCompile("`[^`\n]*`")
 	headingRe  = regexp.MustCompile(`^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$`)
 )
 
 func (d doc) body() []bodyLine {
 	var out []bodyLine
-	fenced := false
+	var open string // the opening fence run while inside a fenced block
 	for i := d.bodyStart; i < len(d.lines); i++ {
 		line := d.lines[i]
-		if fenceRe.MatchString(line) {
-			fenced = !fenced
-			continue
+		if m := fenceRe.FindStringSubmatch(line); m != nil {
+			run, info := m[1], strings.TrimSpace(m[2])
+			switch {
+			case open == "":
+				if run[0] != '`' || !strings.Contains(info, "`") {
+					open = run
+				}
+				continue
+			case run[0] == open[0] && len(run) >= len(open) && info == "":
+				open = ""
+				continue
+			}
 		}
-		if fenced {
+		if open != "" {
 			continue
 		}
 		plain := codeSpanRe.ReplaceAllStringFunc(line, func(s string) string { return strings.Repeat(" ", len(s)) })
