@@ -305,3 +305,33 @@ func TestGenerate_IgnoresTheLocalManifestWithoutAnyLocalInput(t *testing.T) {
 	require.FileExists(t, filepath.Join(root, ".ai-rulez", ".generated-manifest.local.json"))
 	assert.True(t, p.checkIgnored(t, ".ai-rulez/.generated-manifest.local.json"))
 }
+
+func TestWriteFileAtomic_WritesThroughSymlink(t *testing.T) {
+	// Arrange
+	dir := t.TempDir()
+	target := filepath.Join(dir, "real", "settings.json")
+	require.NoError(t, os.MkdirAll(filepath.Dir(target), 0o750))
+	require.NoError(t, os.WriteFile(target, []byte("old"), 0o600))
+	link := filepath.Join(dir, "settings.json")
+	require.NoError(t, os.Symlink(target, link))
+
+	// Act
+	require.NoError(t, writeFileAtomic(link, []byte("new")))
+
+	// Assert
+	info, err := os.Lstat(link)
+	require.NoError(t, err)
+	assert.NotZero(t, info.Mode()&os.ModeSymlink, "the link survives")
+	got, err := os.ReadFile(target)
+	require.NoError(t, err)
+	assert.Equal(t, "new", string(got))
+	stat, err := os.Stat(target)
+	require.NoError(t, err)
+	assert.Equal(t, os.FileMode(0o600), stat.Mode().Perm(), "existing mode is kept")
+}
+
+func TestIsNestedAgentsMD(t *testing.T) {
+	assert.False(t, isNestedAgentsMD("AGENTS.md"))
+	assert.True(t, isNestedAgentsMD("src/web/AGENTS.md"))
+	assert.False(t, isNestedAgentsMD("src/web/README.md"))
+}
