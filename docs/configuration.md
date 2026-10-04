@@ -581,6 +581,11 @@ the document's original indentation.
   the value ai-rulez wrote: an entry you edited is yours, stays, and is reported once. If a
   hand-written server has the same name as a configured one, the configured value wins on
   `generate` and is the one recorded.
+- **Hooks, permissions and managed keys**: top-level `[[hooks]]`, `[permissions]` and
+  `[claude.settings.managed]` add `hooks`, `permissions.allow|ask|deny`, `env` and `skillOverrides`
+  to the shared documents, owned element by element (hook groups, rules) or entry by entry (env,
+  skill overrides). Hand-authored keys, groups and rules in the same arrays survive `generate` and
+  `clean`. See [Hooks and permissions](settings.md).
 - **Plugin keys of `.claude/settings.json`**: with `[claude.settings] manage = true`, ai-rulez also
   owns `extraKnownMarketplaces.<marketplace.name>` and the listed `enabledPlugins.<plugin>@<marketplace>`
   entries, each entry on its own; other marketplaces and plugins in those objects survive.
@@ -690,6 +695,16 @@ hide_from_menu = true
 [codex]
 project_doc_max_bytes = 65536
 ```
+`[claude.settings.managed]` additionally owns `env.<NAME>` and `skillOverrides.<skill>` entries without
+`manage = true`; `[[hooks]]` and `[permissions]` render the hooks and permission rules. See
+[Hooks and permissions](settings.md).
+
+### `hooks` and `permissions`
+
+Top-level `[[hooks]]` (lifecycle hooks for `claude`, `codex`, `cursor`, `gemini` and `copilot`) and
+`[permissions]` (`allow`, `ask`, `deny` rules for `claude`) are rendered into each harness's native
+settings file outside any plugin, merged key by key so hand-authored content survives. See
+[Hooks and permissions](settings.md).
 
 ### `builtins`
 
