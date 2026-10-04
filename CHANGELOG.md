@@ -4,11 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on Keep a Changelog and this project adheres to Semantic Versioning.
 
+## [4.24.2] - 2026-10-04
+
+### Fixed
+
+- **Provider test path helpers on Windows**: `requireFile`, `hasOutputPathSuffix`, `hasOutputPathContains` and `findOutput` normalized the output path to forward slashes but compared the suffix raw, so a `filepath.Join` suffix (backslashes on Windows) never matched, nor did a slash literal against a native path. Both sides are now normalized, so the assertions hold on every platform. Test-only; no generated output changes.
+
 ## [4.24.1] - 2026-10-04
 
 ### Fixed
 
-- **pi preset tests on Windows**: the provider test helpers normalize output paths to forward slashes before matching, so the `filepath.Join` suffixes (backslashes on Windows) never matched. The `pi` tests now use literal slash paths, as the other provider tests do. Test-only; no generated output changes.
+- **pi preset tests on Windows**: the `pi` tests used `filepath.Join` suffixes against helpers that compared raw paths. They now use slash literals, consistent with the other provider tests. Superseded by the separator-agnostic helpers in 4.24.2.
 
 ## [4.24.0] - 2026-10-04
 
