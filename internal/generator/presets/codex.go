@@ -46,7 +46,7 @@ func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
 		filepath.Join(baseDir, "AGENTS.md"),
 		filepath.Join(baseDir, ".codex"),
-		filepath.Join(baseDir, ".codex", "skills"),
+		filepath.Join(baseDir, filepath.FromSlash(config.DefaultCodexSkillsDir)),
 		filepath.Join(baseDir, ".codex", "agents"),
 		filepath.Join(baseDir, ".codex", "commands"),
 	}
@@ -55,6 +55,11 @@ func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 
+	skillsRoot := filepath.Join(baseDir, filepath.FromSlash(cfg.CodexSkillsDirOrDefault()))
+	if err := config.ValidateOutputSubdir("codex_skills_dir", cfg.CodexSkillsDirOrDefault()); err != nil {
+		return nil, err
+	}
+
 	// Create .codex directory structure
 	outputs = append(outputs,
 		config.OutputFile{
@@ -62,7 +67,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 			IsDir: true,
 		},
 		config.OutputFile{
-			Path:  filepath.Join(baseDir, ".codex", "skills"),
+			Path:  skillsRoot,
 			IsDir: true,
 		},
 		config.OutputFile{
@@ -83,12 +88,12 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 	// Combine all skills from root and domains
 	allSkills := allSkills(content)
 
-	// Generate skill files to .codex/skills/
+	// Generate skill files to the skills root (.agents/skills by default)
 	for _, skill := range allSkills {
 		skillID := extractSkillID(skill.Path)
 
 		// Create skill directory
-		skillDir := filepath.Join(baseDir, ".codex", "skills", skillID)
+		skillDir := filepath.Join(skillsRoot, skillID)
 		outputs = append(outputs, config.OutputFile{
 			Path:  skillDir,
 			IsDir: true,

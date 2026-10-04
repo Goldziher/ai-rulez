@@ -198,7 +198,7 @@ func allSkills(content *config.ContentTree) []config.ContentFile {
 }
 
 // allCommands is the command counterpart to allSkills. Commands share the skill
-// output namespace (.claude/skills/{id}/SKILL.md with user_invocable set), so
+// output namespace (.claude/skills/{id}/SKILL.md with user-invocable set), so
 // they carry the same last-write-wins hazard and the same fix.
 func allCommands(content *config.ContentTree) []config.ContentFile {
 	return combineDedupedContentFiles(content.Commands, getAllDomainCommands(content))

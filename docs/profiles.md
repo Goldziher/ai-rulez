@@ -14,7 +14,7 @@ use only built-in presets; custom presets cover a tool ai-rulez does not ship.
 | `windsurf`     | `.windsurf/`                                       |
 | `continue-dev` | `.continue/`                                       |
 | `cline`        | `.clinerules/`, `.cline/`                          |
-| `codex`        | `AGENTS.md` and `.codex/`                          |
+| `codex`        | `AGENTS.md`, `.agents/skills/` and `.codex/`       |
 | `amp`          | `AGENTS.md` and `.agents/` (`.amp/settings.json` when an effort resolves) |
 | `junie`        | `.junie/` (`guidelines.md`, `rules/`, `skills/`, `agents/`) |
 | `opencode`     | `AGENTS.md`, `.opencode/`, `opencode.json` (when MCP servers are set) |

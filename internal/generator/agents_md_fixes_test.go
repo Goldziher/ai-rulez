@@ -188,8 +188,9 @@ func TestAgentsMD_TargetedSkillsStayPerPreset(t *testing.T) {
 	}{
 		{
 			name: "codex target", presets: []string{"codex", "gemini"}, targets: `["codex"]`,
-			present: []string{".codex/skills/gamma/SKILL.md", ".agents/skills/alpha/SKILL.md"},
-			absent:  []string{".agents/skills/gamma/SKILL.md"},
+			// Codex reads .agents/skills only, so its own path is that directory.
+			present: []string{".agents/skills/gamma/SKILL.md", ".agents/skills/alpha/SKILL.md"},
+			absent:  []string{".codex/skills/gamma/SKILL.md"},
 		},
 		{
 			name: "gemini target", presets: []string{"codex", "gemini"}, targets: `["gemini"]`,
@@ -354,4 +355,27 @@ func TestAgentsMD_SourceHashCoversOwnersOnlyWhenTargetsUseThem(t *testing.T) {
 	}
 	assert.Equal(t, hash(false, "codex"), hash(false, "codex", "gemini"))
 	assert.NotEqual(t, hash(true, "codex"), hash(true, "codex", "gemini"))
+}
+
+// Claude Code reads the hyphenated user-invocable key; the underscore spelling
+// is ignored as an unknown field, so neither skills nor commands may emit it.
+func TestClaudeSkillFrontmatterUsesVendorKey(t *testing.T) {
+	root := t.TempDir()
+	writeAgentsMDProject(t, root, agentsMDConfig([]string{"claude"}, "", ""))
+	writeAgentsMDFile(t, root, ".ai-rulez/commands/go/COMMAND.md",
+		"---\ndescription: Go cmd\nuser_invocable: false\n---\nGO_BODY\n")
+	writeAgentsMDFile(t, root, ".ai-rulez/skills/legacy/SKILL.md",
+		"---\ndescription: Legacy\nuser_invocable: true\n---\nLEGACY_BODY\n")
+	runAgentsMDGenerate(t, root)
+
+	skill := readAgentsMDFile(t, root, ".claude/skills/alpha/SKILL.md")
+	assert.Contains(t, skill, "user-invocable: false")
+	command := readAgentsMDFile(t, root, ".claude/skills/go/SKILL.md")
+	assert.Contains(t, command, "user-invocable: true")
+	// A stale authored underscore key neither leaks nor overrides the constant.
+	legacy := readAgentsMDFile(t, root, ".claude/skills/legacy/SKILL.md")
+	assert.Contains(t, legacy, "user-invocable: false")
+	for _, content := range []string{skill, command, legacy} {
+		assert.NotContains(t, content, "user_invocable")
+	}
 }

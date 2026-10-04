@@ -98,7 +98,7 @@ Skills use a directory form with supporting resources:
     └── diagram.png
 ```
 
-The skill directory name becomes the skill id. Resources under `references/`, `scripts/`, and `assets/` are emitted as separate files in the generated output, preserving the Agent Skills progressive-disclosure model. Subdirectories outside these three produce a warning naming the skill and the unrecognized directory.
+The skill directory name becomes the skill id. Resources under `references/`, `scripts/`, and `assets/` are emitted as separate files in the generated output, preserving the Agent Skills progressive-disclosure model. Subdirectories outside these three produce a warning naming the skill and the unrecognized directory. Build artifacts (`.venv*`, `__pycache__`, `node_modules`, anything `.gitignore` ignores, ...) are not bundled; see [`bundle_exclude`](#bundle_exclude).
 
 ### Commands
 
@@ -148,7 +148,7 @@ presets = [
   "windsurf",     # → .windsurf/
   "continue-dev", # → .continue/
   "cline",        # → .clinerules/, .cline/
-  "codex",        # → AGENTS.md and .codex/
+  "codex",        # → AGENTS.md, .agents/skills/ and .codex/
   "amp",          # → AGENTS.md and .agents/ (.amp/settings.json when an effort resolves)
   "junie",        # → .junie/ (guidelines.md, rules/, skills/, agents/)
   "opencode",     # → AGENTS.md, .opencode/, opencode.json (when MCP servers are set)
@@ -414,6 +414,37 @@ Quick reference:
 
 Tool support, per-preset file lists, the duplication trade-off, `targets`, scopes and the on/off behavior are in
 [AGENTS.md and .agents/skills](agents-md.md).
+
+### `codex_skills_dir`
+
+Where the `codex` preset writes skills, relative to the project root. The default is `.agents/skills`, the
+directory Codex documents for repository skills (it scans `.agents/skills` from the working directory up to the
+repository root; `.codex/skills` is not read). Releases before 4.24 wrote `.codex/skills`; set it back to keep that
+location:
+
+```toml
+codex_skills_dir = ".codex/skills"  # Default: ".agents/skills"
+```
+
+After the default changes, `generate` writes the new tree and removes the files it previously wrote to
+`.codex/skills` (only manifest-tracked files; hand-written skills stay). The path must stay inside the project.
+With `agents_md` on, skills are written once to `.agents/skills` whatever this is set to.
+
+### `bundle_exclude`
+
+Extra patterns for files that are left out of a skill's or command's bundled resources (`references/`, `scripts/`,
+`assets/`): they are neither listed in the generated `SKILL.md` `## Resources` section nor copied. Independently of
+this key the bundle skips `.git`, `.venv*`, `venv`, `__pycache__`, `*.pyc` and `node_modules`, and, when the project
+is in a git work tree, everything `.gitignore` ignores (tracked files and untracked files that are not ignored are
+kept). A skill directory that is itself gitignored is bundled without the `.gitignore` filter.
+
+```toml
+bundle_exclude = ["*.log", "scripts/build/", "assets/raw/*.psd"]
+```
+
+A pattern without `/` matches any path segment (`*.log`, `tmp`); one with `/` matches the path relative to the skill
+directory, or a directory on it. Patterns use glob syntax (`*`, `?`, `[a-z]`). Skills fetched through `includes` and
+`installed_skills` get the built-in list and `.gitignore` only.
 
 ### `mcp`
 
@@ -1425,7 +1456,7 @@ above. To keep a domain-specific version, give it a name no other layer uses, or
 
 Deduplication resolves collisions *across* precedence layers. It cannot resolve two items in the
 **same** layer: there is no precedence between them. Skills and commands both render to
-`.claude/skills/{id}/SKILL.md`, differing only in the `user_invocable` frontmatter constant, so two
+`.claude/skills/{id}/SKILL.md`, differing only in the `user-invocable` frontmatter constant, so two
 items in one scope resolving to one id means one silently overwrites the other. `ai-rulez validate`
 (and `generate`) refuse instead, with the two source paths named.
 

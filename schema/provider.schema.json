@@ -142,7 +142,7 @@
         },
         "constants": {
           "type": "object",
-          "description": "Fixed key/value pairs unconditionally written to the frontmatter (e.g. {\"user_invocable\": false})."
+          "description": "Fixed key/value pairs unconditionally written to the frontmatter (e.g. {\"user-invocable\": false})."
         },
         "tools": {
           "type": "boolean",

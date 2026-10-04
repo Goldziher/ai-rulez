@@ -358,3 +358,40 @@ func TestCodexPresetGenerator_InheritTierIsDropped(t *testing.T) {
 		}
 	}
 }
+
+func TestCodexPresetGenerator_SkillsDir(t *testing.T) {
+	content := &config.ContentTree{Skills: []config.ContentFile{{
+		Name: "alpha", Path: "/src/skills/alpha/SKILL.md", Content: "body",
+		Metadata: &config.Metadata{Extra: map[string]string{"description": "Alpha"}},
+	}}}
+	tests := []struct {
+		name    string
+		dir     string
+		want    string
+		notWant string
+		wantErr bool
+	}{
+		{"default is the documented .agents/skills", "", "/test/.agents/skills/alpha/SKILL.md", "/test/.codex/skills", false},
+		{"legacy location stays available", ".codex/skills", "/test/.codex/skills/alpha/SKILL.md", "/test/.agents/skills", false},
+		{"escaping the project is refused", "../out", "", "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := &CodexPresetGenerator{}
+			outputs, err := g.Generate(content, "/test", &config.Config{Name: "t", CodexSkillsDir: tt.dir})
+			if tt.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			var paths []string
+			for _, o := range outputs {
+				paths = append(paths, filepath.ToSlash(o.Path))
+			}
+			assert.Contains(t, paths, tt.want)
+			for _, p := range paths {
+				assert.NotContains(t, p, tt.notWant)
+			}
+		})
+	}
+}
