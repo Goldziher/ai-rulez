@@ -73,6 +73,9 @@ const (
 	CodeHookMissing          = "AR501"
 	CodeHookNotExecutable    = "AR502"
 	CodeScriptNotExecutable  = "AR503"
+	CodeHookSourceMissing    = "AR504"
+	CodeHookSourceNotExec    = "AR505"
+	CodePermissionOverbroad  = "AR506"
 	CodeMCPCommandNotFound   = "AR601"
 	CodeDescriptionDup       = "AR701"
 	CodeDescriptionNearDup   = "AR702"
@@ -121,6 +124,9 @@ var registry = []RuleInfo{
 	{CodeSkillResourceMissing, "skill-resource-missing", SeverityError, "a skill references a references/, scripts/ or assets/ file it does not ship"},
 	{CodeHookMissing, "hook-missing", SeverityError, "a hook command points at a repo file that does not exist"},
 	{CodeHookNotExecutable, "hook-not-executable", SeverityError, "a hook command runs a repo file that lacks the executable bit"},
+	{CodeHookSourceMissing, "hook-source-missing", SeverityError, "a [[hooks]] script in config.toml does not exist"},
+	{CodeHookSourceNotExec, "hook-source-not-executable", SeverityError, "a [[hooks]] script in config.toml lacks the executable bit"},
+	{CodePermissionOverbroad, "permission-overbroad", SeverityWarning, "a [permissions] allow rule permits every call of a tool"},
 	{CodeScriptNotExecutable, "script-not-executable", SeverityWarning, "a skill script with a shebang lacks the executable bit"},
 	{CodeMCPCommandNotFound, "mcp-command-not-found", SeverityWarning, "a stdio MCP server command is not on PATH"},
 	{CodeDescriptionDup, "description-duplicate", SeverityWarning, "two skills, agents or commands share an identical description"},
