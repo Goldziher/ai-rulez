@@ -76,12 +76,12 @@ still exits 1 and never reaches the content checks.
 | AR804 | `skill-name-invalid` | warning | Skill `name` is not lowercase letters/digits/single hyphens, exceeds 64 characters, or differs from its directory (Agent Skills specification) |
 | AR901 | `size-lines` | warning | Item exceeds its line budget |
 | AR902 | `size-tokens` | warning | Item exceeds its token budget (cl100k_base, an approximation) |
-| AR951 | `metadata-missing` | error | Item lacks a frontmatter key listed in `require_metadata` (no key is required by default) |
-| AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
 | AR951 | `metadata-missing` | error | Item lacks a frontmatter key listed in `require_metadata`, or a `[lint.metadata.<key>] required = true` key (no key is required by default). A key inside the Agent Skills `metadata` map counts |
 | AR952 | `metadata-invalid` | error | A `[lint.metadata.<key>]` value is not a date, is not one of the `values` of an enum, or is a date in the future |
 | AR953 | `metadata-stale` | warning | A date older than `max_age_days` |
 | AR954 | `superseded-by-missing` | error | `superseded_by: <name>` names an item that does not exist |
+| AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
+| AR962 | `evals-missing` | off | A skill has no eval cases; turned on by `[lint.evals] require = true` or a `[lint.severity]` entry (see [Evals](evals.md)) |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -140,6 +140,10 @@ secret_patterns = [{ name = "internal token", regex = "corp_[a-z0-9]{10}" }]
 name = "my-scanner"
 command = ["my-scanner", "--sarif"]
 format = "sarif"                   # sarif (default) | json
+
+[lint.evals]
+require = true                     # enables AR962 at warning
+allow = ["scratch-*"]              # skills exempt from the check
 ```
 
 Default budgets (lines / tokens): rule 200 / 2500, context 300 / 3000, skill 500 / 5000, agent 300 / 3000,

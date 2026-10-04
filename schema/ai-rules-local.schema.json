@@ -587,6 +587,15 @@
           },
           "type": "object"
         },
+        "evals": {
+          "type": "object",
+          "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
+          "properties": {
+            "require": { "type": "boolean", "description": "Enable evals-missing at warning severity." },
+            "allow": { "type": "array", "items": { "type": "string" }, "description": "Skill names or globs exempt from the check." }
+          },
+          "additionalProperties": false
+        },
         "severity": {
           "additionalProperties": {
             "enum": ["error", "warning", "info", "off"],
@@ -1101,6 +1110,10 @@
         },
         "icon": {
           "type": "string"
+        },
+        "include_evals": {
+          "type": "boolean",
+          "description": "Bundle eval cases: each skill's evals/ directory and the project-level evals/ tree (at <bundle>/evals/). Off by default."
         },
         "include_domains": {
           "description": "Domains (names or globs) whose skills, commands and agents are bundled next to the root content. Empty keeps the bundle root-only. A root item wins over a same-named domain item.",

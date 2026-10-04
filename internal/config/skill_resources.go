@@ -26,6 +26,15 @@ const (
 	ItemKindCommand = "command"
 )
 
+// SkillKindEvals is the conventional directory for eval cases next to a skill.
+// It is recognized (no warning) but never emitted into a per-tool skill tree,
+// because cases must not cost context; `[plugin] include_evals` opts in to
+// bundling them.
+const SkillKindEvals = "evals"
+
+// EvalsDirName is the name of the project-level eval tree under the config dir.
+const EvalsDirName = "evals"
+
 // skillResourceKinds is the ordered list of subdirectories the loader walks
 // under a skill root. Order is meaningful: it determines the order
 // resources appear in the rendered SKILL.md index.
@@ -59,7 +68,7 @@ func LoadResources(root, itemKind string) ([]SkillResource, error) {
 // so the loader can decide whether to surface or warn.
 //
 // Unrecognized subdirectories (any directory other than references/, scripts/,
-// or assets/) trigger a warning naming the item and the offending directory.
+// assets/ or evals/) trigger a warning naming the item and the offending directory.
 // The Agent Skills spec defines only these three as canonical resource kinds.
 //
 // Build artifacts are not bundled: files git ignores (when root is in a git
@@ -157,10 +166,12 @@ func unrecognizedSubdirectoryWarnings(root, itemKind string) ([]resourceWarning,
 		return nil, oops.With("path", root).Wrapf(err, "read %s directory for unrecognized subdirs", itemKind)
 	}
 
-	recognized := make(map[string]bool, len(skillResourceKinds))
+	recognized := make(map[string]bool, len(skillResourceKinds)+1)
 	for _, kind := range skillResourceKinds {
 		recognized[kind] = true
 	}
+	// evals/ is a known directory that is deliberately not emitted.
+	recognized[SkillKindEvals] = true
 
 	var warnings []resourceWarning
 	for _, entry := range entries {
