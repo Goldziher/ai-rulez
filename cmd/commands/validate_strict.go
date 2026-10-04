@@ -65,20 +65,21 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern}, opts...)
 }
 
-// failOnFor resolves the threshold: the flag, else [lint] fail_on, else error.
-func failOnFor(cfgs []*config.Config) string {
+// failOnFor resolves one root's threshold: the flag, else its [lint] fail_on,
+// else error.
+func failOnFor(cfg *config.Config) string {
 	if validateFailOn != "" {
 		return validateFailOn
 	}
-	for _, c := range cfgs {
-		if c.Lint != nil && c.Lint.FailOn != "" {
-			return c.Lint.FailOn
-		}
+	if cfg != nil && cfg.Lint != nil && cfg.Lint.FailOn != "" {
+		return cfg.Lint.FailOn
 	}
 	return "error"
 }
 
 // reportStrict prints the combined report and returns the process exit code.
+// Each root is judged against its own threshold, so one root's [lint] fail_on
+// never silences or tightens another's.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	combined := lint.Combine(reports)
 	if validateFormat == formatJSON {
@@ -90,8 +91,14 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		fmtError(err)
 		return 1
 	}
-	if lint.Failed(combined.Findings, failOnFor(cfgs)) {
-		return exitStrictFindings
+	for i, report := range reports {
+		var cfg *config.Config
+		if i < len(cfgs) {
+			cfg = cfgs[i]
+		}
+		if lint.Failed(report.Findings, failOnFor(cfg)) {
+			return exitStrictFindings
+		}
 	}
 	return 0
 }
