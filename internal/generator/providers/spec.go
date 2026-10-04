@@ -9,6 +9,8 @@
 // remains authoritative until commit (b) swaps registration.
 package providers
 
+import "github.com/Goldziher/ai-rulez/internal/config"
+
 // ProviderSpec is the typed mirror of schema/provider.schema.json. Loaded
 // from disk (TOML/YAML/JSON), validated, and fed into Render.
 type ProviderSpec struct {
@@ -20,6 +22,9 @@ type ProviderSpec struct {
 	EffortMap   *EffortMapSpec         `toml:"effort_map,omitempty" yaml:"effort_map,omitempty" json:"effort_map,omitempty"`
 	Model       *ModelSpec             `toml:"model,omitempty" yaml:"model,omitempty" json:"model,omitempty"`
 	Sidecars    []*SidecarSpec         `toml:"sidecars,omitempty" yaml:"sidecars,omitempty" json:"sidecars,omitempty"`
+	// Listing says which item kinds the harness lists in its prompt at session
+	// start, so `ai-rulez tokens` can charge their name and description.
+	Listing *config.ListingSpec `toml:"listing,omitempty" yaml:"listing,omitempty" json:"listing,omitempty"`
 }
 
 // RootSpec declares the top-level instructions file (CLAUDE.md, AGENTS.md, ...).

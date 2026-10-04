@@ -13,6 +13,15 @@ display_name = "Claude Code"
 directories = [".claude", ".claude/skills", ".claude/agents", ".claude/rules"]
 
 # CLAUDE.md is composed by walking these sections in order.
+# The skill listing (skills and commands, which Claude Code merges into one list)
+# and the Agent tool description carry each item's name and description on every
+# request. The combined description text of an entry is cut at 1,536 characters.
+[listing]
+skills = true
+commands = true
+agents = true
+description_limit = 1536
+
 [root]
 file = "CLAUDE.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]

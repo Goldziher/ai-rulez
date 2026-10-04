@@ -144,20 +144,24 @@ func TestTokenReport_FoldedScalarDescription(t *testing.T) {
 // TestTokenReport_SplitsDescriptionFromBody proves the split the whole report
 // exists for: the fixture's big-body skill has a two-word description and a long
 // body, and the two must not be reported as one per-file number.
-func TestTokenReport_SplitsDescriptionFromBody(t *testing.T) {
+func TestTokenReport_SplitsListingFromBody(t *testing.T) {
 	runtime := findRuntime(t, tokensReport(t, "backend"), "claude")
 
-	descriptions := findEntry(t, runtime, "skill descriptions")
+	listing := findEntry(t, runtime, "skill listing")
 	bodies := findEntry(t, runtime, "skill bodies")
 
-	assert.Equal(t, BucketConditional, descriptions.Bucket,
-		"a skill description is not carried by every harness mode")
+	assert.Equal(t, BucketAlways, listing.Bucket,
+		"the harness lists a skill's name and description on every request")
 	assert.Equal(t, BucketOnDemand, bodies.Bucket)
-	assert.Greater(t, bodies.Tokens, descriptions.Tokens*3,
-		"fixture bodies are far larger than their descriptions; a single per-file total would hide that")
-	assert.Positive(t, findEntry(t, runtime, "skill names").Tokens)
-	assert.Equal(t, BucketAlways, findEntry(t, runtime, "skill names").Bucket,
-		"a skill name reaches the prompt on every request")
+	assert.Greater(t, bodies.Tokens, listing.Tokens,
+		"fixture bodies are larger than their listing entries; a single per-file total would hide that")
+	assert.Positive(t, findChild(t, listing, "names").Tokens)
+	assert.Positive(t, findChild(t, listing, "descriptions").Tokens)
+
+	for _, entry := range runtime.Entries {
+		assert.NotEqual(t, "skill names", entry.Label, "names are inside the listing, not counted twice")
+		assert.NotEqual(t, "skill descriptions", entry.Label, "descriptions are inside the listing, not counted twice")
+	}
 }
 
 // TestTokenReport_RootSectionsSplitPerRuleAndContext checks that the root

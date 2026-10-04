@@ -102,6 +102,7 @@ func (g *Generator) GetOutputPaths(baseDir string) []string {
 func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
 	var outputs []config.OutputFile
 
+	cfg.Analysis.DeclareListing(g.Spec.Name, g.Spec.Listing)
 	outputs = append(outputs, g.directoryOutputs(baseDir, cfg)...)
 
 	reg := rulefiles.RegistryFor(cfg, g.Spec.Name)

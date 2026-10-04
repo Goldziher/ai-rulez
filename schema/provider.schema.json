@@ -43,6 +43,18 @@
     "model": {
       "$ref": "#/$defs/model"
     },
+    "listing": {
+      "type": "object",
+      "description": "Item kinds the harness lists in its prompt at session start (name + description per entry). Used by `ai-rulez tokens` to charge the always-loaded listing cost.",
+      "additionalProperties": false,
+      "properties": {
+        "skills": { "type": "boolean" },
+        "commands": { "type": "boolean" },
+        "agents": { "type": "boolean" },
+        "include_path": { "type": "boolean", "description": "Each entry also carries the item's file path." },
+        "description_limit": { "type": "integer", "minimum": 0, "description": "Per-entry description truncation limit in characters; 0 when unknown." }
+      }
+    },
     "sidecars": {
       "type": "array",
       "description": "Conditionally-emitted single files (settings.json, .mcp.json, etc.) dispatched on the closed-set `kind` enum.",
