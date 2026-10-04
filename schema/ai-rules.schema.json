@@ -721,7 +721,18 @@
           "type": "array",
           "items": {
             "type": "string",
-            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins", "copilot"]
+            "enum": [
+              "claude",
+              "cursor",
+              "codex",
+              "gemini",
+              "kimi",
+              "opencode",
+              "factory",
+              "hermes",
+              "agent-plugins",
+              "copilot"
+            ]
           }
         },
         "mcp": {
@@ -1188,7 +1199,18 @@
       "type": "array",
       "items": {
         "type": "string",
-        "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins", "copilot"]
+        "enum": [
+          "claude",
+          "cursor",
+          "codex",
+          "gemini",
+          "kimi",
+          "opencode",
+          "factory",
+          "hermes",
+          "agent-plugins",
+          "copilot"
+        ]
       }
     },
     "authorEntity": {

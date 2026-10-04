@@ -42,22 +42,8 @@ func (c *Config) validatePluginAuthoring() error {
 	if err := validatePluginPaths(p); err != nil {
 		return err
 	}
-	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
-		if err := validateCodexPluginMetadata(p); err != nil {
-			return err
-		}
-	}
-	if err := validatePluginRuntimes(p); err != nil {
+	if err := validatePluginRuntimeRules(p); err != nil {
 		return err
-	}
-	if err := validateCodexExtras(p); err != nil {
-		return err
-	}
-	if pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) || pluginTargetsRuntime(p, PluginRuntimeCopilot) ||
-		(pluginTargetsRuntime(p, PluginRuntimeCodex) && p.Codex.ManifestLayout() != CodexManifestLegacy) {
-		if err := validateAgentPluginsName(p.Name); err != nil {
-			return err
-		}
 	}
 	if err := validatePluginName(p.Name); err != nil {
 		return err
@@ -493,6 +479,29 @@ func (c *Config) validateMarketplaceAuthoring() error {
 		seen[member] = true
 	}
 	return m.validateDomainPlugins()
+}
+
+// validatePluginRuntimeRules applies the per-runtime rules: Codex metadata, the
+// runtime list, the Codex layout and the Agent Plugins name grammar that every
+// runtime built on the standard shares.
+func validatePluginRuntimeRules(p *PluginAuthoring) error {
+	if pluginTargetsRuntime(p, PluginRuntimeCodex) {
+		if err := validateCodexPluginMetadata(p); err != nil {
+			return err
+		}
+	}
+	if err := validatePluginRuntimes(p); err != nil {
+		return err
+	}
+	if err := validateCodexExtras(p); err != nil {
+		return err
+	}
+	usesStandard := pluginTargetsRuntime(p, PluginRuntimeAgentPlugins) || pluginTargetsRuntime(p, PluginRuntimeCopilot) ||
+		(pluginTargetsRuntime(p, PluginRuntimeCodex) && p.Codex.ManifestLayout() != CodexManifestLegacy)
+	if usesStandard {
+		return validateAgentPluginsName(p.Name)
+	}
+	return nil
 }
 
 // validateCodexExtras rejects an unknown [plugin.codex] manifest layout.

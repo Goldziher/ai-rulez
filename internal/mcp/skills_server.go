@@ -21,6 +21,12 @@ const (
 	maxSearchLimit     = 50
 )
 
+// keyDigest is the JSON key digests are reported under.
+const (
+	keyDigest = "digest"
+	keyURI    = "uri"
+)
+
 const skillServerInstructions = "ai-rulez serves the skills of one profile read-only. " +
 	"Skills are MCP resources under skill://<name>/SKILL.md (supporting files sit beside it); " +
 	"skills/list and skills/get return each skill's frontmatter plus the SHA-256 digest and size of every file. " +
@@ -162,7 +168,7 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 		return handlers.ToolError(fmt.Errorf("%s is binary; read it with resources/read", uri))
 	}
 	return handlers.ToolSuccess(map[string]any{
-		"uri": file.URI, "digest": file.Digest, "size": file.Size, "content": string(file.Content),
+		keyURI: file.URI, keyDigest: file.Digest, "size": file.Size, "content": string(file.Content),
 	})
 }
 
@@ -179,10 +185,10 @@ func domainLabel(domain string) string {
 func skillSummary(s *CatalogSkill, score int) map[string]any {
 	out := map[string]any{
 		"name":        s.Name,
-		"uri":         s.URI,
+		keyURI:        s.URI,
 		"description": s.Description,
 		"domain":      domainLabel(s.Domain),
-		"digest":      s.Digest,
+		keyDigest:     s.Digest,
 		"files":       len(s.Files),
 	}
 	if s.Source != "" {
@@ -199,7 +205,7 @@ func skillSummary(s *CatalogSkill, score int) map[string]any {
 }
 
 func fileEntry(f *CatalogFile) map[string]any {
-	return map[string]any{"uri": f.URI, "digest": f.Digest, "size": f.Size}
+	return map[string]any{keyURI: f.URI, keyDigest: f.Digest, "size": f.Size}
 }
 
 // skillEntry renders a skills/list or skills/get entry per SEP-2640.
@@ -208,7 +214,7 @@ func skillEntry(s *CatalogSkill) map[string]any {
 	for i := range s.Files {
 		resources = append(resources, fileEntry(&s.Files[i]))
 	}
-	return map[string]any{"uri": s.URI, "frontmatter": s.Frontmatter, "resources": resources}
+	return map[string]any{keyURI: s.URI, "frontmatter": s.Frontmatter, "resources": resources}
 }
 
 // WrapTransport returns a transport that answers skills/list and skills/get
@@ -258,14 +264,14 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 		} else {
 			resp.Result = raw
 		}
-		if err := c.Connection.Write(ctx, resp); err != nil {
+		if err := c.Write(ctx, resp); err != nil {
 			return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 		}
 	}
 }
 
 // handleSkillsMethod computes the result of skills/list or skills/get.
-func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (map[string]any, *jsonrpc.Error) {
+func (c *Catalog) handleSkillsMethod(method string, params json.RawMessage) (result map[string]any, rpcErr *jsonrpc.Error) {
 	switch method {
 	case methodSkillsList:
 		entries := make([]map[string]any, 0, len(c.skills))
