@@ -20,6 +20,7 @@ nav = [
     { "Includes" = "includes.md" },
     { "AGENTS.md and .agents/skills" = "agents-md.md" },
     { "Baz" = "baz.md" },
+    { "Skill Frontmatter" = "skills.md" },
     { "Local Configuration" = "local-overrides.md" },
     { "Installed Skills" = "installed-skills.md" },
     { "Strict Validation" = "strict-validation.md" },
