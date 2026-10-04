@@ -1,0 +1,172 @@
+package lint
+
+import (
+	"io/fs"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/internal/walkutil"
+)
+
+// Tree is the set of files the checks resolve references against: the git
+// index when the root is inside a repository, else a walk of the directory.
+type Tree struct {
+	Top      string // repo root (git toplevel) or the base dir outside git
+	Git      bool
+	files    map[string]uint32
+	dirs     map[string]struct{}
+	topNames map[string]struct{}
+}
+
+// LoadTree indexes the tracked files below the repository containing base.
+func LoadTree(base string) (*Tree, error) {
+	base = gitutil.Resolve(base)
+	t := &Tree{files: map[string]uint32{}, dirs: map[string]struct{}{}, topNames: map[string]struct{}{}}
+	if top := gitutil.TopLevel(base); top != "" {
+		files, ok, err := gitutil.TrackedFiles(top)
+		if err != nil {
+			return nil, err //nolint:wrapcheck // already contextual
+		}
+		if ok {
+			t.Top, t.Git, t.files = gitutil.Resolve(top), true, files
+		}
+	}
+	if !t.Git {
+		t.Top = base
+		t.walk()
+	}
+	for f := range t.files {
+		if i := strings.IndexByte(f, '/'); i >= 0 {
+			t.topNames[f[:i]] = struct{}{}
+		} else {
+			t.topNames[f] = struct{}{}
+		}
+		for d := filepath.ToSlash(filepath.Dir(f)); d != "." && d != "/"; d = filepath.ToSlash(filepath.Dir(d)) {
+			if _, seen := t.dirs[d]; seen {
+				break
+			}
+			t.dirs[d] = struct{}{}
+		}
+	}
+	return t, nil
+}
+
+func (t *Tree) walk() {
+	_ = filepath.WalkDir(t.Top, func(p string, d fs.DirEntry, err error) error { //nolint:errcheck // unreadable entries are skipped
+		if err != nil {
+			return nil //nolint:nilerr // best effort
+		}
+		if d.IsDir() {
+			if p != t.Top && walkutil.ShouldSkipDir(d.Name()) {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		rel, rerr := filepath.Rel(t.Top, p)
+		if rerr != nil {
+			return nil //nolint:nilerr // best effort
+		}
+		mode := uint32(0o100644)
+		if info, ierr := d.Info(); ierr == nil && info.Mode()&0o111 != 0 {
+			mode = 0o100755
+		}
+		t.files[filepath.ToSlash(rel)] = mode
+		return nil
+	})
+}
+
+// Rel returns abs as a slash path relative to the tree top, or "" when outside.
+func (t *Tree) Rel(abs string) string {
+	rel, err := filepath.Rel(t.Top, gitutil.Resolve(abs))
+	if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		return ""
+	}
+	return filepath.ToSlash(rel)
+}
+
+// Paths lists every indexed file.
+func (t *Tree) Paths() []string {
+	out := make([]string, 0, len(t.files))
+	for f := range t.files {
+		out = append(out, f)
+	}
+	return out
+}
+
+// IsTopLevel reports whether name is a top-level file or directory of the repo.
+func (t *Tree) IsTopLevel(name string) bool { _, ok := t.topNames[name]; return ok }
+
+// Exists reports whether rel (slash path from the top) is a tracked file or
+// directory, or is present on disk (so a new, not yet added file resolves).
+func (t *Tree) Exists(rel string) bool {
+	rel = strings.TrimSuffix(filepath.ToSlash(filepath.Clean(rel)), "/")
+	if rel == "." || rel == "" {
+		return true
+	}
+	if _, ok := t.files[rel]; ok {
+		return true
+	}
+	if _, ok := t.dirs[rel]; ok {
+		return true
+	}
+	_, err := os.Stat(filepath.Join(t.Top, filepath.FromSlash(rel)))
+	return err == nil
+}
+
+// Executable reports whether rel is executable: by git mode when tracked, else
+// by the file-system mode. known is false when the file cannot be found.
+func (t *Tree) Executable(rel string) (exec, known bool) {
+	if mode, ok := t.files[rel]; ok {
+		return mode&0o111 != 0, true
+	}
+	info, err := os.Stat(filepath.Join(t.Top, filepath.FromSlash(rel)))
+	if err != nil || info.IsDir() {
+		return false, false
+	}
+	return info.Mode()&0o111 != 0, true
+}
+
+// matchAny reports whether the glob matches at least one tracked file, taking
+// paths relative to the repo top or, for a nested root, to the root's own
+// directory (baseRel, slash path from the top; empty for the top itself).
+func (t *Tree) matchAny(g globMatcher, baseRel string) bool {
+	prefix := ""
+	if baseRel != "" {
+		prefix = baseRel + "/"
+	}
+	for f := range t.files {
+		if g.match(f) {
+			return true
+		}
+		if prefix != "" && strings.HasPrefix(f, prefix) && g.match(f[len(prefix):]) {
+			return true
+		}
+	}
+	return false
+}
+
+// Loader memoizes trees so linting many roots of one repository reads the git
+// index once.
+type Loader struct{ cache map[string]*Tree }
+
+// Load returns the tree for the repository containing base.
+func (l *Loader) Load(base string) (*Tree, error) {
+	if l.cache == nil {
+		l.cache = map[string]*Tree{}
+	}
+	key := gitutil.TopLevel(gitutil.Resolve(base))
+	if key == "" {
+		key = "fs:" + gitutil.Resolve(base)
+	}
+	if t, ok := l.cache[key]; ok {
+		return t, nil
+	}
+	t, err := LoadTree(base)
+	if err != nil {
+		return nil, err
+	}
+	l.cache[key] = t
+	return t, nil
+}
