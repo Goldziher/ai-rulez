@@ -211,9 +211,14 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
+	stale, err := g.stalePluginDirs(profile)
+	if err != nil {
+		return 0, err
+	}
 	if err := g.writeOutputs(outputs); err != nil {
 		return 0, err
 	}
+	g.removeStalePluginDirs(stale)
 	written := 0
 	for _, output := range outputs {
 		if !output.IsDir {
@@ -248,6 +253,15 @@ func (g *Generator) VerifyPlugin(profile string) error {
 				Hint("Run ai-rulez generate --plugin and commit the regenerated output").
 				Errorf("generated plugin output is stale")
 		}
+	}
+	stale, err := g.stalePluginDirs(profile)
+	if err != nil {
+		return err
+	}
+	if len(stale) > 0 {
+		return oops.With("dirs", strings.Join(stale, ", ")).
+			Hint("Run ai-rulez generate --plugin to remove the plugin directories of domains that no longer exist").
+			Errorf("stale generated plugin directory")
 	}
 	if marketplace := g.config.Marketplace; marketplace != nil && len(marketplace.Members) > 0 {
 		for _, member := range marketplace.Members {
@@ -287,6 +301,13 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	lines = append(lines, "plugin bundle:")
 	for _, output := range outputs {
 		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
+	}
+	stale, err := g.stalePluginDirs(profile)
+	if err != nil {
+		return nil, err
+	}
+	for _, dir := range stale {
+		lines = append(lines, "delete-stale: "+g.convertToRelativePath(dir))
 	}
 	return lines, nil
 }
@@ -339,6 +360,43 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	tempCfg.MCPServers = mcpServers
 
 	return plugin.BuildManifest(&tempCfg, contentTree)
+}
+
+// stalePluginDirs lists the generated domain-plugin directories whose plugin is
+// no longer planned (its domain disappeared, or its declaration was removed).
+// Only directories carrying ai-rulez's provenance sidecar qualify.
+func (g *Generator) stalePluginDirs(profile string) ([]string, error) {
+	mkt := g.config.Marketplace
+	if mkt == nil || !mkt.HasDomainPlugins() {
+		return nil, nil
+	}
+	planned, err := g.planDomainPlugins(profile)
+	if err != nil {
+		return nil, err
+	}
+	keep := make(map[string]bool, len(planned))
+	for i := range planned {
+		keep[planned[i].Name] = true
+	}
+	return plugin.StalePluginDirs(g.marketplaceRoot(mkt), keep)
+}
+
+// removeStalePluginDirs deletes the generated files of each stale plugin
+// directory and nothing else. A failure is reported and does not stop the run.
+func (g *Generator) removeStalePluginDirs(dirs []string) {
+	for _, dir := range dirs {
+		kept, err := plugin.RemoveGeneratedPluginDir(dir)
+		rel := g.convertToRelativePath(dir)
+		switch {
+		case err != nil:
+			logger.Warn("Could not remove a stale plugin directory", "dir", rel, "error", err)
+		case len(kept) > 0:
+			logger.Warn("Removed the generated files of a stale plugin directory; files that are not generated were kept",
+				"dir", rel, "kept", strings.Join(kept, ", "))
+		default:
+			logger.Info("Removed stale plugin directory", "dir", rel)
+		}
+	}
 }
 
 // marketplaceRoot is the directory the marketplace index is written to:

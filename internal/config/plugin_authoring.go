@@ -1,5 +1,10 @@
 package config
 
+import (
+	"path/filepath"
+	"strings"
+)
+
 // This file defines the *authoring* (producer) side of plugins: describing a
 // distributable plugin bundle that ai-rulez packages from the project's content
 // tree for the Claude/Cursor/Codex/Gemini/Kimi/OpenCode/Factory/Hermes runtimes.
@@ -490,6 +495,33 @@ func (c *Config) ManagesClaudeSettings() bool {
 // RegistersMarketplace reports whether extraKnownMarketplaces is owned.
 func (s *ClaudeSettings) RegistersMarketplace() bool {
 	return s != nil && s.Manage && (s.RegisterMarketplace == nil || *s.RegisterMarketplace)
+}
+
+// RelativeDirectoryMarketplace reports whether the managed
+// extraKnownMarketplaces entry points at a directory given as a relative path,
+// which is the default when no marketplace_source is set. It returns the path.
+func (c *Config) RelativeDirectoryMarketplace() (path string, ok bool) {
+	if !c.ManagesClaudeSettings() {
+		return "", false
+	}
+	s := c.Claude.Settings
+	if !s.RegistersMarketplace() {
+		return "", false
+	}
+	if src := s.MarketplaceSource; src != nil {
+		if src.Source != "directory" || src.Path == "" || filepath.IsAbs(src.Path) {
+			return "", false
+		}
+		return src.Path, true
+	}
+	dir := "."
+	if c.Marketplace != nil && c.Marketplace.OutputDir != "" {
+		dir = filepath.ToSlash(filepath.Clean(c.Marketplace.OutputDir))
+	}
+	if dir != "." && !strings.HasPrefix(dir, "./") {
+		dir = "./" + dir
+	}
+	return dir, true
 }
 
 // ResolvedRuntimes returns the runtimes to emit for this plugin: the explicit
