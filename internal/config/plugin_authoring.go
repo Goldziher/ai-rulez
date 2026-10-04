@@ -24,12 +24,14 @@ const (
 	PluginRuntimeFactory      = "factory"
 	PluginRuntimeHermes       = "hermes"
 	PluginRuntimeAgentPlugins = "agent-plugins"
+	PluginRuntimeCopilot      = "copilot"
 )
 
 // AllPluginRuntimes lists the runtimes emitted by default when a plugin does not
-// restrict Runtimes, in a stable order. PluginRuntimeAgentPlugins is deliberately
-// excluded: it is opt-in via an explicit runtimes = ["agent-plugins"] so adding it
-// never changes existing bundles' output.
+// restrict Runtimes, in a stable order. PluginRuntimeAgentPlugins and
+// PluginRuntimeCopilot are deliberately excluded: they are opt-in via an explicit
+// runtimes = ["agent-plugins"] / ["copilot"] so adding them never changes
+// existing bundles' output.
 var AllPluginRuntimes = []string{
 	PluginRuntimeClaude,
 	PluginRuntimeCursor,
@@ -43,7 +45,7 @@ var AllPluginRuntimes = []string{
 
 // KnownPluginRuntimes lists every runtime the generator can emit, including
 // opt-in ones. Used for validation and schema documentation.
-var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...), PluginRuntimeAgentPlugins)
+var KnownPluginRuntimes = append(append([]string{}, AllPluginRuntimes...), PluginRuntimeAgentPlugins, PluginRuntimeCopilot)
 
 // Author identifies a person or organization in plugin/marketplace metadata.
 type Author struct {
@@ -101,6 +103,12 @@ type PluginAuthoring struct {
 
 	// Interface carries the rich UI block used by Codex and Kimi manifests.
 	Interface *PluginInterface `yaml:"interface,omitempty" json:"interface,omitempty" toml:"interface,omitempty"`
+
+	// Codex selects the Codex manifest layout and marketplace index.
+	Codex *CodexExtras `yaml:"codex,omitempty" json:"codex,omitempty" toml:"codex,omitempty"`
+
+	// Cursor holds Cursor-plugin-specific packaging switches.
+	Cursor *CursorExtras `yaml:"cursor,omitempty" json:"cursor,omitempty" toml:"cursor,omitempty"`
 
 	// Gemini holds Gemini-extension-specific fields.
 	Gemini *GeminiExtras `yaml:"gemini,omitempty" json:"gemini,omitempty" toml:"gemini,omitempty"`
@@ -266,9 +274,48 @@ type PluginInterface struct {
 	Screenshots       []string `yaml:"screenshots,omitempty" json:"screenshots,omitempty" toml:"screenshots,omitempty"`
 }
 
+// Codex manifest layouts for [plugin.codex] manifest.
+const (
+	// CodexManifestLegacy writes .codex-plugin/plugin.json only (the default).
+	CodexManifestLegacy = "legacy"
+	// CodexManifestRoot writes the Agent Plugins root plugin.json that Codex
+	// documents as the preferred format, with the Codex interface block under
+	// extensions.com.openai, skills/ and a root mcp.json.
+	CodexManifestRoot = "root"
+	// CodexManifestBoth writes the root manifest and the legacy one.
+	CodexManifestBoth = "both"
+)
+
+// CodexExtras selects how the Codex runtime is laid out.
+type CodexExtras struct {
+	// Manifest is legacy (default), root or both; see the CodexManifest constants.
+	Manifest string `yaml:"manifest,omitempty" json:"manifest,omitempty" toml:"manifest,omitempty"`
+	// Marketplace also writes the Codex marketplace index
+	// (.agents/plugins/marketplace.json) for a single-plugin repository.
+	Marketplace bool `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
+}
+
+// ManifestLayout returns the resolved Codex manifest layout.
+func (c *CodexExtras) ManifestLayout() string {
+	if c == nil || c.Manifest == "" {
+		return CodexManifestLegacy
+	}
+	return c.Manifest
+}
+
+// CursorExtras holds Cursor-plugin-specific switches.
+type CursorExtras struct {
+	// Marketplace also writes .cursor-plugin/marketplace.json for a
+	// single-plugin repository.
+	Marketplace bool `yaml:"marketplace,omitempty" json:"marketplace,omitempty" toml:"marketplace,omitempty"`
+}
+
 // GeminiExtras holds Gemini-extension-specific manifest fields.
 type GeminiExtras struct {
 	ContextFileName string `yaml:"context_file_name,omitempty" json:"context_file_name,omitempty" toml:"context_file_name,omitempty"` //nolint:tagliatelle
+	// Commands also bundles the plugin's commands as commands/<name>.toml
+	// custom commands (default off).
+	Commands bool `yaml:"commands,omitempty" json:"commands,omitempty" toml:"commands,omitempty"`
 }
 
 // KimiExtras holds Kimi-plugin-specific manifest fields.
@@ -310,6 +357,10 @@ type MarketplaceAuthoring struct {
 	// Plugins declares plugins by hand, mixing domains and root content. An entry
 	// named like a FromDomains plugin replaces it.
 	Plugins []MarketplacePlugin `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
+
+	// CursorIndex also writes .cursor-plugin/marketplace.json next to the
+	// Claude index for members and domain plugins (default off).
+	CursorIndex bool `yaml:"cursor_index,omitempty" json:"cursor_index,omitempty" toml:"cursor_index,omitempty"` //nolint:tagliatelle
 
 	// CatalogSkill generates a skill listing the plugins and how to enable them.
 	CatalogSkill *CatalogSkillConfig `yaml:"catalog_skill,omitempty" json:"catalog_skill,omitempty" toml:"catalog_skill,omitempty"` //nolint:tagliatelle

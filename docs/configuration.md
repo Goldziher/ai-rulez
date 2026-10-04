@@ -620,11 +620,15 @@ scope = "project"          # project or user; defaults to project
 enabled = true             # defaults to true
 ```
 
-!!! warning "Experimental"
-    The emitted `.claude/plugins.json` is not the same file Claude Code reads for installed
-    plugins — Claude Code records installs in `.claude/settings.json` (`enabledPlugins`,
-    `extraKnownMarketplaces`). Treat consumer plugin declarations as experimental until ai-rulez
-    emits the native format.
+!!! warning "Deprecated"
+    `.claude/plugins.json` and `.codex/plugins.json` are not read by Claude Code or Codex (checked
+    2026-10-04). Claude Code records installs in `.claude/settings.json` (`enabledPlugins`,
+    `extraKnownMarketplaces`); Codex enables plugins with `[plugins."name@marketplace"] enabled = true`
+    in `config.toml`. `generate` keeps writing the files and now warns when `[[plugins]]` is set
+    together with the `claude` or `codex` preset. Migrate to [`[claude.settings]`](#claudesettings)
+    for Claude Code, and to a `config.toml` entry you keep yourself for Codex; ai-rulez does not write
+    `.codex/config.toml` plugin entries because it owns that file outright. The Copilot
+    `enabledPlugins` settings syntax is not shown in the vendor documentation, so it is not generated.
 
 ### `marketplaces`
 
