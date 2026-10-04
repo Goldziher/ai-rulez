@@ -66,6 +66,9 @@ still exits 1 and never reaches the content checks.
 | AR501 | `hook-missing` | error | A `.claude/settings.json` hook command runs a `$CLAUDE_PROJECT_DIR/...` file that does not exist |
 | AR502 | `hook-not-executable` | error | That hook file is executed directly but lacks the executable bit |
 | AR503 | `script-not-executable` | warning | A skill `scripts/` file with a shebang lacks the executable bit |
+| AR504 | `hook-source-missing` | error | A `script` of a top-level `[[hooks]]` entry in `config.toml` does not exist |
+| AR505 | `hook-source-not-executable` | error | That `[[hooks]]` script lacks the executable bit |
+| AR506 | `permission-overbroad` | warning | A `[permissions] allow` rule permits every call of a tool (`Bash`, `Bash(*)`, `*`) |
 | AR601 | `mcp-command-not-found` | warning | A stdio `[[mcp_servers]]` `command` is not on `PATH` (or not an existing relative file) |
 | AR701 | `description-duplicate` | warning | Two skills, agents or commands have identical descriptions |
 | AR702 | `description-near-duplicate` | warning | Descriptions overlap at or above `near_duplicate_threshold` (word-set Jaccard) |
