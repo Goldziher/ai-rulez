@@ -86,7 +86,11 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 	string(PresetCodex):    {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".codex/skills"},
 	string(PresetOpenCode): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".opencode/skills"},
 	string(PresetXum):      {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".xum/skills"},
-	string(PresetAmp):      {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}},
+	// pi reads the shared AGENTS.md natively and prefers .agents/skills over its
+	// own .pi/skills, so the shared tree replaces the pi skills output (there is
+	// no separate OwnSkillsDir to drop).
+	string(PresetPi):  {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}},
+	string(PresetAmp): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}},
 	// Claude Code reads CLAUDE.md only; its CLAUDE.md becomes an "@AGENTS.md"
 	// shim. It does not read .agents/skills, so it keeps .claude/skills.
 	string(PresetClaude): {ImportsAgentsMD: true, Folder: RulesFolderScopedInInline},
