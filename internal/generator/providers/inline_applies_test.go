@@ -58,7 +58,7 @@ func rootFile(t *testing.T, outputs []config.OutputFile, name string) string {
 
 func findOutput(outputs []config.OutputFile, suffix string) (string, bool) {
 	for _, o := range outputs {
-		if strings.HasSuffix(strings.ReplaceAll(o.Path, "\\", "/"), suffix) {
+		if strings.HasSuffix(normalizePath(o.Path), suffix) {
 			return o.Content, true
 		}
 	}
