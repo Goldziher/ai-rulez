@@ -120,6 +120,10 @@ const (
 	// outputs.<type>.filter
 	FilterIncludeIfTargetingProvider = "include_if_targeting_provider"
 	FilterPathScoped                 = "path_scoped"
+	// FilterPlacementCore keeps a skill or command generated into the
+	// provider's own directory: it drops items that [placement] or the
+	// `placement` frontmatter ships only through a plugin, and applies `targets`.
+	FilterPlacementCore = "placement_core"
 
 	// outputs.rules.inline_filter
 	InlineFilterPathScoped = "path_scoped"
@@ -152,6 +156,9 @@ const (
 	PredicateHasMCPJSONEntries = "has_mcp_json_entries"
 	PredicateHasPlugins        = "has_plugins"
 	PredicateHasResolvedEffort = "has_resolved_effort"
+	// PredicateHasMCPServersOrPluginSettings holds when the config has MCP
+	// servers or manages the plugin keys of .claude/settings.json.
+	PredicateHasMCPServersOrPluginSettings = "has_mcp_servers_or_plugin_settings"
 
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"

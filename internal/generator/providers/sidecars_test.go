@@ -267,3 +267,108 @@ func TestJSONSidecar_PreservesFourSpaceIndent(t *testing.T) {
 	assert.Contains(t, settings.Content, "\n    \"model\": \"opus\",")
 	assert.Contains(t, settings.Content, "\n    \"mcpServers\": {\n        \"generated\"")
 }
+
+func pluginSettingsConfig(baseDir string, settings *config.ClaudeSettings) *config.Config {
+	return &config.Config{
+		Name:        "test",
+		BaseDir:     baseDir,
+		Marketplace: &config.MarketplaceAuthoring{Name: "mk", OutputDir: "tools/mkt"},
+		Claude:      &config.ClaudeConfig{Settings: settings},
+	}
+}
+
+func TestClaudeSettingsSidecar_PluginKeys(t *testing.T) {
+	t.Parallel()
+
+	const existing = `{
+  "permissions": {"allow": ["Read"]},
+  "extraKnownMarketplaces": {
+    "theirs": {"source": {"source": "github", "repo": "o/r"}}
+  },
+  "enabledPlugins": {
+    "theirs-plugin@theirs": true,
+    "demo-a@mk": false
+  }
+}
+`
+	relPath := filepath.Join(".claude", "settings.json")
+	tests := []struct {
+		name     string
+		settings *config.ClaudeSettings
+		assertFn func(t *testing.T, doc string)
+	}{
+		{
+			name:     "enable and disable are owned entry by entry",
+			settings: &config.ClaudeSettings{Manage: true, EnablePlugins: []string{"demo-b"}, DisablePlugins: []string{"demo-a"}},
+			assertFn: func(t *testing.T, doc string) {
+				var got struct {
+					EnabledPlugins map[string]bool           `json:"enabledPlugins"`
+					Marketplaces   map[string]map[string]any `json:"extraKnownMarketplaces"`
+				}
+				require.NoError(t, json.Unmarshal([]byte(doc), &got))
+				assert.Equal(t, map[string]bool{"theirs-plugin@theirs": true, "demo-a@mk": false, "demo-b@mk": true}, got.EnabledPlugins)
+				assert.Contains(t, got.Marketplaces, "theirs")
+				assert.Equal(t, map[string]any{"source": "directory", "path": "./tools/mkt"}, got.Marketplaces["mk"]["source"])
+			},
+		},
+		{
+			name: "explicit source and auto_update",
+			settings: &config.ClaudeSettings{
+				Manage: true, AutoUpdate: boolRef(true),
+				MarketplaceSource: &config.MarketplaceSource{Source: "github", Repo: "org/market", Ref: "main"},
+			},
+			assertFn: func(t *testing.T, doc string) {
+				var got struct {
+					Marketplaces map[string]map[string]any `json:"extraKnownMarketplaces"`
+				}
+				require.NoError(t, json.Unmarshal([]byte(doc), &got))
+				assert.Equal(t, map[string]any{"source": "github", "repo": "org/market", "ref": "main"}, got.Marketplaces["mk"]["source"])
+				assert.Equal(t, true, got.Marketplaces["mk"]["autoUpdate"])
+			},
+		},
+		{
+			name:     "register_marketplace false leaves that key alone",
+			settings: &config.ClaudeSettings{Manage: true, RegisterMarketplace: boolRef(false), EnablePlugins: []string{"demo-b"}},
+			assertFn: func(t *testing.T, doc string) {
+				assert.NotContains(t, doc, `"mk": {`)
+				assert.Contains(t, doc, `"demo-b@mk": true`)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Arrange
+			baseDir := writeFixture(t, relPath, existing)
+
+			// Act
+			outputs, err := claudeGen(t).Generate(&config.ContentTree{}, baseDir, pluginSettingsConfig(baseDir, tt.settings))
+
+			// Assert
+			require.NoError(t, err)
+			settings := requireFile(t, outputs, relPath)
+			assert.True(t, settings.PartiallyOwned, "the file carries keys ai-rulez does not own")
+			assert.JSONEq(t, `{"allow": ["Read"]}`, rawValue(t, settings.Content, "permissions"))
+			assert.NotContains(t, settings.Content, "mcpServers", "no MCP servers means no mcpServers key")
+			tt.assertFn(t, settings.Content)
+		})
+	}
+}
+
+func TestClaudeSettingsSidecar_NotEmittedUnlessManaged(t *testing.T) {
+	t.Parallel()
+
+	// Arrange: a marketplace and plugin lists, but manage is off.
+	baseDir := t.TempDir()
+	cfg := pluginSettingsConfig(baseDir, &config.ClaudeSettings{EnablePlugins: []string{"demo-b"}})
+
+	// Act
+	outputs, err := claudeGen(t).Generate(&config.ContentTree{}, baseDir, cfg)
+
+	// Assert
+	require.NoError(t, err)
+	assert.False(t, hasOutputPathSuffix(outputs, filepath.Join(".claude", "settings.json")))
+}
+
+func boolRef(b bool) *bool { return &b }

@@ -26,6 +26,9 @@ mode = "per_item_file"
 dir = ".claude/skills"
 filename = "{id}/SKILL.md"
 resources = true
+# Drops skills that [placement] or `placement: plugin` frontmatter ships only
+# through a plugin. Without a [placement] block every skill is kept.
+filter = "placement_core"
 
 [outputs.skills.body]
 sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targeted_context"]
@@ -35,7 +38,7 @@ include_extras = true
 # argument-hint is inert on a skill: user-invocable is a hard false below, so
 # Claude never prompts for arguments and the hint is dead metadata. Only a
 # command can carry it. Blacklisted here so it cannot leak into skill output.
-extras_blacklist = ["priority", "targets", "argument-hint", "user_invocable"]
+extras_blacklist = ["priority", "targets", "argument-hint", "user_invocable", "placement"]
 
 [outputs.skills.frontmatter.constants]
 "user-invocable" = false
@@ -79,7 +82,7 @@ mode = "per_item_file"
 dir = ".claude/skills"
 filename = "{id}/SKILL.md"
 resources = true
-filter = "include_if_targeting_provider"
+filter = "placement_core"
 
 [outputs.commands.body]
 sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targeted_context"]
@@ -87,7 +90,7 @@ sections = ["frontmatter", "content", "resource_index", "targeted_rules", "targe
 [outputs.commands.frontmatter]
 fields = ["description", "shortcut", "category"]
 include_extras = true
-extras_blacklist = ["priority", "targets", "shortcut", "category", "user_invocable"]
+extras_blacklist = ["priority", "targets", "shortcut", "category", "user_invocable", "placement"]
 
 [outputs.commands.frontmatter.constants]
 "user-invocable" = true
@@ -112,7 +115,7 @@ max = "max"
 [[sidecars]]
 kind = "claude_settings_json"
 path = ".claude/settings.json"
-emit_when = "has_mcp_servers"
+emit_when = "has_mcp_servers_or_plugin_settings"
 
 [[sidecars]]
 kind = "claude_plugins_json"

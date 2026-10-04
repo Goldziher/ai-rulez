@@ -132,7 +132,7 @@ func validateSpec(s *ProviderSpec) error {
 		if out.Mode != OutputModePerItemFile {
 			return fmt.Errorf("outputs[%q].mode: unknown mode %q", typ, out.Mode)
 		}
-		if out.Filter != "" && out.Filter != FilterIncludeIfTargetingProvider && out.Filter != FilterPathScoped {
+		if out.Filter != "" && out.Filter != FilterIncludeIfTargetingProvider && out.Filter != FilterPathScoped && out.Filter != FilterPlacementCore {
 			return fmt.Errorf("outputs[%q].filter: unknown filter %q", typ, out.Filter)
 		}
 		if err := validateSplitFields(typ, out, rootSections(s)); err != nil {
@@ -278,7 +278,7 @@ func isValidBodySection(section string) bool {
 
 func isValidPredicate(p string) bool {
 	switch p {
-	case PredicateAlways, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort:
+	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort:
 		return true
 	}
 	return false
