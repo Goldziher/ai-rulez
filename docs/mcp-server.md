@@ -185,6 +185,8 @@ skill), and, for installed skills, `ref` and `pinned` (true when `ref` is a full
 - `skills/list` returns the whole catalog in one page (no `nextCursor`).
 - A skill URI uses the skill name as its path, so two served skills must not share a name; the server
   refuses to start when they do.
+- The extension requires every skill to have a `name` and a `description`. A skill without a
+  description is not served and a warning on stderr names it; the rest are unaffected.
 - Semantic (embedding) search is not implemented; the ranking is lexical.
 
 ## Typical Workflow

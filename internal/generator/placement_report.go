@@ -11,6 +11,9 @@ import (
 	"github.com/samber/oops"
 )
 
+// placementKindCommand labels a command row of the placement report.
+const placementKindCommand = "command"
+
 // Placement destinations reported for an item.
 const (
 	// DestinationCore: generated into the assistants' own directories.
@@ -100,7 +103,7 @@ func (g *Generator) PlacementReport(profile string) (*PlacementReport, error) {
 
 func placementTypeLabel(typ string) string {
 	if typ == providers.OutputTypeCommands {
-		return "command"
+		return placementKindCommand
 	}
 	return "skill"
 }

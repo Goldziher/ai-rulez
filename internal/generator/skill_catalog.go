@@ -114,24 +114,30 @@ func (g *Generator) servedSkillsForPreset(profile, preset string) ([]ServedSkill
 			skill.Domain, skill.Source, skill.Ref, skill.Pinned = owner.domain, owner.source, owner.ref, owner.pinned
 			skill.Keywords, skill.Category = owner.keywords, owner.category
 		}
-		skill.Files = append(skill.Files, ServedSkillFile{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))})
-		var rest []ServedSkillFile
-		for _, res := range outputs {
-			if res.IsDir || res.RawContent == nil || filepath.Dir(res.Path) == dir && filepath.Base(res.Path) == skillEntryFile {
-				continue
-			}
-			rel, relErr := filepath.Rel(dir, res.Path)
-			if relErr != nil || strings.HasPrefix(rel, "..") {
-				continue
-			}
-			rest = append(rest, ServedSkillFile{RelPath: filepath.ToSlash(rel), Content: res.RawContent})
-		}
-		sort.Slice(rest, func(i, j int) bool { return rest[i].RelPath < rest[j].RelPath })
-		skill.Files = append(skill.Files, rest...)
+		skill.Files = append([]ServedSkillFile{{RelPath: skillEntryFile, Content: []byte(sub.finalContent(out))}},
+			skillResourceFiles(outputs, dir)...)
 		skills = append(skills, skill)
 	}
 	sort.Slice(skills, func(i, j int) bool { return skills[i].ID < skills[j].ID })
 	return skills, nil
+}
+
+// skillResourceFiles collects the raw supporting files written under a skill
+// directory, in path order. SKILL.md itself is not one of them.
+func skillResourceFiles(outputs []config.OutputFile, dir string) []ServedSkillFile {
+	var files []ServedSkillFile
+	for _, res := range outputs {
+		if res.IsDir || res.RawContent == nil {
+			continue
+		}
+		rel, err := filepath.Rel(dir, res.Path)
+		if err != nil || strings.HasPrefix(rel, "..") || rel == skillEntryFile {
+			continue
+		}
+		files = append(files, ServedSkillFile{RelPath: filepath.ToSlash(rel), Content: res.RawContent})
+	}
+	sort.Slice(files, func(i, j int) bool { return files[i].RelPath < files[j].RelPath })
+	return files
 }
 
 type skillOwner struct {

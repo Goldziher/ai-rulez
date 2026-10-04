@@ -476,25 +476,38 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 		return nil, oops.Wrapf(err, "render monorepo marketplace")
 	}
 	rootFiles := []config.OutputFile{marketplaceOutput}
-	if codex {
-		codexMarketplaceOutput, err := plugin.RenderCodexMonorepoMarketplace(market, entries, root)
-		if err != nil {
-			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
-		}
-		rootFiles = append(rootFiles, codexMarketplaceOutput)
+	extraIndexes, err := renderExtraMarketplaces(mkt, market, entries, root, codex)
+	if err != nil {
+		return nil, err
 	}
-	if mkt.CursorIndex {
-		cursorOutput, err := plugin.RenderCursorMarketplace(market, entries, root)
-		if err != nil {
-			return nil, oops.Wrapf(err, "render Cursor marketplace")
-		}
-		rootFiles = append(rootFiles, cursorOutput)
-	}
+	rootFiles = append(rootFiles, extraIndexes...)
 	rootOutputs, err := plugin.AddProvenance(rootFiles, root)
 	if err != nil {
 		return nil, oops.Wrapf(err, "add marketplace provenance")
 	}
 	return append(outputs, rootOutputs...), nil
+}
+
+// renderExtraMarketplaces renders the non-Claude marketplace indexes of a
+// monorepo or domain-plugin root: the Codex index when some plugin ships a Codex
+// bundle, and the Cursor index when [marketplace] cursor_index is set.
+func renderExtraMarketplaces(mkt *config.MarketplaceAuthoring, market plugin.MarketInfo, entries []plugin.MemberEntry, root string, codex bool) ([]config.OutputFile, error) {
+	var files []config.OutputFile
+	if codex {
+		out, err := plugin.RenderCodexMonorepoMarketplace(market, entries, root)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
+		}
+		files = append(files, out)
+	}
+	if mkt.CursorIndex {
+		out, err := plugin.RenderCursorMarketplace(market, entries, root)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render Cursor marketplace")
+		}
+		files = append(files, out)
+	}
+	return files, nil
 }
 
 // withCatalogSkill adds the generated plugin-catalog skill to a copy of tree
