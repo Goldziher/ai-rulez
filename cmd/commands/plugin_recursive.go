@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"sort"
@@ -92,6 +93,10 @@ func runRecursivePluginVerify() {
 			os.Exit(1)
 		}
 		if err := generator.NewGenerator(cfg).VerifyPlugin(profile); err != nil {
+			if verifyIfGenerated && errors.Is(err, generator.ErrPluginNotGenerated) {
+				logger.Info("Skipping plugin verification: the plugin bundle has not been generated", "config", path)
+				continue
+			}
 			fmtError(oops.With("config", path).Wrapf(err, "verify plugin outputs"))
 			os.Exit(1)
 		}
