@@ -64,6 +64,7 @@ still exits 1 and never reaches the content checks.
 | AR901 | `size-lines` | warning | Item exceeds its line budget |
 | AR902 | `size-tokens` | warning | Item exceeds its token budget (cl100k_base, an approximation) |
 | AR951 | `metadata-missing` | error | Item lacks a frontmatter key listed in `require_metadata` (no key is required by default) |
+| AR961 | `plugin-version-drift` | warning | A generated plugin's content changed since `HEAD` but its manifest `version` did not, so clients that cache the plugin keep the old copy (only for configs with `[plugin]` or `[marketplace]`; needs a git repository) |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
