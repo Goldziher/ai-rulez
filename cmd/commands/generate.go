@@ -36,6 +36,8 @@ var (
 	allowLocalDrift    bool
 	pluginIfConfigured bool
 	generateCheck      bool
+	generateLocked     bool
+	generateFrozen     bool
 )
 
 var GenerateCmd = &cobra.Command{
@@ -53,6 +55,10 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be generated without writing files")
 	GenerateCmd.Flags().BoolVar(&generateCheck, "check", false,
 		"Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI)")
+	GenerateCmd.Flags().BoolVar(&generateLocked, "locked", false,
+		"Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI)")
+	GenerateCmd.Flags().BoolVar(&generateFrozen, "frozen", false,
+		"Like --locked, and never use the network: resolve only from the local cache, verified against the lock")
 	GenerateCmd.Flags().BoolVarP(&updateGitignore, "gitignore", "i", false, "Update .gitignore files to include generated output patterns")
 	GenerateCmd.Flags().BoolVar(&updateGitignore, "update-gitignore", false, "Deprecated alias for --gitignore")
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
@@ -94,6 +100,12 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	// Set no-fetch flag for include resolution (before any config loading)
 	includes.SkipFetch = noFetch
+	switch {
+	case generateFrozen:
+		includes.Mode, includes.SkipFetch = includes.LockFrozen, true
+	case generateLocked:
+		includes.Mode = includes.LockRequire
+	}
 
 	if generateCheck {
 		if err := checkGenerateCheckFlags(); err != nil {
