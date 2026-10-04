@@ -323,6 +323,9 @@ func (g *Generator) applyUnmerge(edits []mergedEdit) {
 // directory, so an interrupted write never leaves the user's file truncated, and
 // keeps the file's mode.
 func writeFileAtomic(path string, data []byte) error {
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		path = resolved // write through a symlink instead of replacing it
+	}
 	mode := os.FileMode(0o644)
 	if info, err := os.Stat(path); err == nil {
 		mode = info.Mode().Perm()
