@@ -420,3 +420,14 @@ func gitPath(dir, flag string) string {
 	}
 	return Resolve(p)
 }
+
+// ShowFile returns the content of repoRelPath at ref (for example "HEAD"), read
+// from the repository containing dir. ok is false when the path does not exist
+// at that ref, the ref is unknown, or git cannot run.
+func ShowFile(dir, ref, repoRelPath string) (content []byte, ok bool) {
+	out, _, err := run(dir, nil, "show", ref+":"+filepath.ToSlash(repoRelPath))
+	if err != nil {
+		return nil, false
+	}
+	return out, true
+}

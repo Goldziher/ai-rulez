@@ -1,6 +1,7 @@
 package plugin
 
 import (
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"sort"
@@ -130,3 +131,18 @@ func insertProvenanceHeader(body []byte, path, header string) []byte {
 
 // ProvenanceFileName is the sidecar every generated bundle root carries.
 const ProvenanceFileName = provenanceFileName
+
+// ProvenanceOutputs decodes a provenance sidecar into the content hash of each
+// bundle file it records, keyed by bundle-relative path, plus the bundle's
+// source hash.
+func ProvenanceOutputs(sidecar []byte) (hashes map[string]string, sourceHash string, err error) {
+	var document provenanceDocument
+	if err := json.Unmarshal(sidecar, &document); err != nil {
+		return nil, "", oops.Wrapf(err, "parse plugin provenance")
+	}
+	hashes = make(map[string]string, len(document.Outputs))
+	for path, out := range document.Outputs {
+		hashes[path] = out.ContentHash
+	}
+	return hashes, document.SourceHash, nil
+}

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/crud"
+	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 	"github.com/spf13/cobra"
 )
@@ -15,12 +17,21 @@ var (
 	listDomain string
 	listJSON   bool
 	listLocal  bool
+
+	listPlacement bool
+	listProfile   string
 )
 
 var ListCmd = &cobra.Command{
 	Use:   cmdUseList,
 	Short: "List rules, context, and skills",
-	Long:  `List rules, context, or skills in your .ai-rulez/ configuration.`,
+	Long: `List rules, context, or skills in your .ai-rulez/ configuration.
+
+With --placement, print where every skill and command ends up: core (generated
+into the assistants' own directories) or plugin-only (shipped by plugins), with
+the plugins that bundle it and a flag on plugin-only items nobody can reach.`,
+	Args: cobra.NoArgs,
+	Run:  runListRoot,
 }
 
 var listRulesCmd = &cobra.Command{
@@ -68,6 +79,9 @@ var listCommandsCmd = &cobra.Command{
 }
 
 func init() {
+	ListCmd.Flags().BoolVar(&listPlacement, "placement", false, "Report where each skill and command is placed: core or plugin-only, and which plugins bundle it")
+	ListCmd.Flags().StringVarP(&listProfile, "profile", "p", "", "Profile for --placement (default: from config or 'default')")
+	ListCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 	ListCmd.AddCommand(listAgentsCmd)
 	ListCmd.AddCommand(listCommandsCmd)
 	for _, c := range []*cobra.Command{listRulesCmd, listContextCmd, listSkillsCmd, listAgentsCmd, listCommandsCmd} {
@@ -228,5 +242,54 @@ func runListItems(ftype, title, noun string) {
 		outputListJSON(ftype, files)
 	} else {
 		outputListTable(title, files)
+	}
+}
+
+func runListRoot(cmd *cobra.Command, _ []string) {
+	if !listPlacement {
+		_ = cmd.Help()
+		return
+	}
+	cfg, err := loadConfigForCommand(context.Background(), nil, pluginLoadOptions(true)...)
+	if err != nil {
+		logger.Error("Failed to load config", "error", err)
+		os.Exit(1)
+	}
+	report, err := generator.NewGenerator(cfg).PlacementReport(listProfile)
+	if err != nil {
+		logger.Error("Failed to resolve placement", "error", err)
+		os.Exit(1)
+	}
+	if listJSON {
+		data, _ := json.MarshalIndent(report, "", "  ") //nolint:errcheck // plain structs always marshal
+		fmt.Println(string(data))
+		return
+	}
+	printPlacementReport(report)
+}
+
+func printPlacementReport(report *generator.PlacementReport) {
+	fmt.Printf("Placement for profile %q\n\n", report.Profile)
+	if len(report.Items) == 0 {
+		fmt.Println("No skills or commands.")
+		return
+	}
+	fmt.Printf("%-8s %-32s %-16s %-7s %s\n", "TYPE", "NAME", "DOMAIN", "WHERE", "PLUGINS")
+	for _, it := range report.Items {
+		domain := it.Domain
+		if domain == "" {
+			domain = "-"
+		}
+		plugins := "-"
+		if len(it.Plugins) > 0 {
+			plugins = strings.Join(it.Plugins, ", ")
+		}
+		fmt.Printf("%-8s %-32s %-16s %-7s %s\n", it.Type, it.Name, domain, it.Destination, plugins)
+	}
+	if issues := report.Issues(); len(issues) > 0 {
+		fmt.Println()
+		for _, it := range issues {
+			fmt.Printf("warning: %s %q is plugin-only but %s\n", it.Type, it.Name, it.Issue)
+		}
 	}
 }
