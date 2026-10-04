@@ -194,7 +194,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	if shared != nil {
 		root.Owners, root.RootAliases = shared.owners, shared.aliases
 	}
-	allRules := inlinedInAgentsMD(rulefiles.FilterInline(allInlineRules(content), root), shared, false)
+	allRules := withoutBazNested(inlinedInAgentsMD(rulefiles.FilterInline(allInlineRules(content), root), shared, false), cfg)
 	allAgents := allAgents(content)
 
 	// Add header before title
@@ -215,7 +215,7 @@ func (g *CodexPresetGenerator) renderAgentsMarkdownFor(content *config.ContentTr
 	rulefiles.WriteInlineRules(&builder, allRules, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add context section
-	allContext := inlinedInAgentsMD(rulefiles.FilterInline(allInlineContext(content), root), shared, true)
+	allContext := withoutBazNested(inlinedInAgentsMD(rulefiles.FilterInline(allInlineContext(content), root), shared, true), cfg)
 	rulefiles.WriteInlineContext(&builder, allContext, rulefiles.InlineOpts{Compact: cfg.IsCompact(), AppliesTo: true}, nil)
 
 	// Add agents section listing available subagents (if agent-delegation builtin is enabled)
