@@ -15,6 +15,10 @@ directories = [".junie", ".junie/skills", ".junie/agents", ".junie/rules"]
 # Junie surfaces subagents through its own UI, not the root file. Junie is a
 # native AGENTS.md reader, so it shares the file byte-for-byte with the other
 # AGENTS.md presets.
+# Junie exposes each skill's name and description up front.
+[listing]
+skills = true
+
 [root]
 file = "AGENTS.md"
 # Junie never reads AGENTS.local.md, but it loads every .junie/rules/*.md, so

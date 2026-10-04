@@ -170,11 +170,22 @@ type AnalysisCollector struct {
 	byPath map[string]*OutputAnalysis
 	order  []string
 	scope  string
+	// claims lists, per output path, every preset that offered that path, in
+	// first-offer order. byPath keeps one analysis per path (the first preset to
+	// write it), but a harness lists every skill it can read, so a path shared by
+	// several presets (.agents/skills) is a listing cost for each of them.
+	claims map[string][]string
+	// listings holds the listing model declared by provider-DSL generators.
+	listings map[string]ListingSpec
 }
 
 // NewAnalysisCollector returns an empty, enabled collector.
 func NewAnalysisCollector() *AnalysisCollector {
-	return &AnalysisCollector{byPath: make(map[string]*OutputAnalysis)}
+	return &AnalysisCollector{
+		byPath:   make(map[string]*OutputAnalysis),
+		claims:   make(map[string][]string),
+		listings: make(map[string]ListingSpec),
+	}
 }
 
 // EnterScope stamps every subsequently begun analysis with the given scope
@@ -195,6 +206,7 @@ func (c *AnalysisCollector) Begin(path, preset string, kind OutputKind, itemID, 
 	if c == nil {
 		return nil
 	}
+	c.claim(path, preset)
 	if existing, ok := c.byPath[path]; ok {
 		return existing
 	}
@@ -225,6 +237,7 @@ func (c *AnalysisCollector) Attribute(preset, baseDir string, outputs []OutputFi
 			continue
 		}
 		if _, ok := c.byPath[output.Path]; ok {
+			c.claim(output.Path, preset)
 			continue
 		}
 		kind := InferOutputKind(output.Path, baseDir)
@@ -347,4 +360,41 @@ func isMarkdownPath(path string) bool {
 
 func isDocumentPath(path string) bool {
 	return slices.Contains(documentExtensions, strings.ToLower(filepath.Ext(path)))
+}
+
+func (c *AnalysisCollector) claim(path, preset string) {
+	if preset == "" || slices.Contains(c.claims[path], preset) {
+		return
+	}
+	c.claims[path] = append(c.claims[path], preset)
+}
+
+// Claimants returns every preset that offered the output path, in first-offer
+// order.
+func (c *AnalysisCollector) Claimants(path string) []string {
+	if c == nil {
+		return nil
+	}
+	return c.claims[path]
+}
+
+// DeclareListing records the listing model a provider-DSL generator declares.
+// A nil spec is ignored.
+func (c *AnalysisCollector) DeclareListing(preset string, spec *ListingSpec) {
+	if c == nil || spec == nil {
+		return
+	}
+	c.listings[preset] = *spec
+}
+
+// ListingFor resolves the listing model of a preset: the provider spec's own
+// declaration first, then the builtin table. The zero value lists nothing.
+func (c *AnalysisCollector) ListingFor(preset string) ListingSpec {
+	if c != nil {
+		if spec, ok := c.listings[preset]; ok {
+			return spec
+		}
+	}
+	spec, _ := BuiltinListing(preset)
+	return spec
 }
