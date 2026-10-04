@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -13,7 +14,8 @@ import (
 // DefaultBundleExcludes are the names that are never bundled with a skill or
 // command, whatever the project's .gitignore says: virtualenvs, bytecode caches,
 // dependency trees and VCS metadata are build artifacts, not skill content.
-// Projects add to the list with the top-level bundle_exclude config key.
+// Projects add to the list with the top-level bundle_exclude config key; an entry
+// prefixed with "!" re-includes a path a default excluded (e.g. "!references/venv").
 var DefaultBundleExcludes = []string{".git", ".venv*", "venv", "__pycache__", "*.pyc", "node_modules"}
 
 // bundleFilter decides which files below a skill or command root are bundled.
@@ -75,23 +77,37 @@ func gitVisibleFiles(root, marker string) map[string]bool {
 // relative path or any leading directory of it.
 func (f *bundleFilter) excluded(rel string) bool {
 	segments := strings.Split(rel, "/")
+	skip := false
+	matched := ""
+	// Later patterns win, so a "!pattern" entry re-includes what a default or an
+	// earlier pattern excluded.
 	for _, pattern := range f.patterns {
-		pattern = strings.Trim(pattern, "/")
-		if pattern == "" {
-			continue
+		negate := strings.HasPrefix(pattern, "!")
+		raw := strings.TrimPrefix(pattern, "!")
+		if matchesPattern(raw, segments) {
+			skip = !negate
+			matched = pattern
 		}
-		if !strings.Contains(pattern, "/") {
-			for _, seg := range segments {
-				if globMatch(pattern, seg) {
-					return true
-				}
-			}
-			continue
-		}
-		for i := range segments {
-			if globMatch(pattern, strings.Join(segments[:i+1], "/")) {
-				return true
-			}
+	}
+	if skip {
+		logger.Debug("Skipped bundle path matching an exclude pattern", "path", rel, "pattern", matched)
+	}
+	return skip
+}
+
+// matchesPattern reports whether pattern matches a segment (slash-less pattern)
+// or the whole path / a leading directory of it (pattern with a slash).
+func matchesPattern(pattern string, segments []string) bool {
+	pattern = strings.Trim(pattern, "/")
+	if pattern == "" {
+		return false
+	}
+	if !strings.Contains(pattern, "/") {
+		return slices.ContainsFunc(segments, func(seg string) bool { return globMatch(pattern, seg) })
+	}
+	for i := range segments {
+		if globMatch(pattern, strings.Join(segments[:i+1], "/")) {
+			return true
 		}
 	}
 	return false

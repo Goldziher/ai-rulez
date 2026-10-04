@@ -186,3 +186,21 @@ func TestValidateOutputSubdir(t *testing.T) {
 		assert.Equal(t, ok, err == nil, dir)
 	}
 }
+
+func TestBundleFilterNegationReincludes(t *testing.T) {
+	t.Parallel()
+	f := newBundleFilter(t.TempDir(), "SKILL.md", []string{"!references/venv", "!**/node_modules-fixtures"})
+	assert.False(t, f.excluded("references/venv/notes.md"))
+	assert.True(t, f.excluded("scripts/venv/pyvenv.cfg"), "other venv dirs stay excluded")
+	assert.True(t, f.excluded("scripts/node_modules/x.js"))
+}
+
+func TestValidateOutputSubdirRejectsSourceTrees(t *testing.T) {
+	t.Parallel()
+	for dir, ok := range map[string]bool{
+		".ai-rulez/skills": false, ".ai-rulez": false, ".config/ai-rulez/x": false, ".git/hooks": false,
+		"a/../../esc": false, "a/b": true, ".ai-rulezish": true,
+	} {
+		assert.Equal(t, ok, ValidateOutputSubdir("k", dir) == nil, dir)
+	}
+}
