@@ -28,6 +28,12 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if strings.TrimSpace(c.CodexSkillsDir) != "" {
+		if err := ValidateOutputSubdir("codex_skills_dir", c.CodexSkillsDirOrDefault()); err != nil {
+			return err
+		}
+	}
+
 	if err := c.validateProfiles(); err != nil {
 		return err
 	}
