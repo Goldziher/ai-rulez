@@ -1,0 +1,23 @@
+{
+  "hooks": {
+    "preToolUse": [
+      {
+        "command": "echo guard",
+        "timeout": 10,
+        "matcher": "Shell"
+      }
+    ],
+    "sessionStart": [
+      {
+        "command": "./scripts/boot.sh --quick 'a b'",
+        "timeout": 5
+      }
+    ],
+    "stop": [
+      {
+        "command": "echo done"
+      }
+    ]
+  },
+  "version": 1
+}

@@ -176,7 +176,11 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		})
 	}
 
-	return outputs, nil
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(outputs, hookOutputs...), nil
 }
 
 func (g *CodexPresetGenerator) renderAgentsMarkdown(content *config.ContentTree, cfg *config.Config) string {

@@ -218,10 +218,22 @@ var HookEventsEvaluatingIf = []string{
 // HookGroup is one lifecycle-event hook group. Matcher filters which occurrences
 // of Event run the group (for SessionStart: startup, resume, clear, compact,
 // fork); it is ignored for the events in HookEventsWithoutMatcher.
+//
+// Targets and Matchers apply to the top-level [[hooks]] only, which render for
+// several harnesses whose event and tool vocabularies differ; a plugin hook
+// group is rendered per runtime and rejects them.
 type HookGroup struct {
 	Event   string       `yaml:"event" json:"event" toml:"event"` // e.g. SessionStart, PreToolUse
 	Matcher string       `yaml:"matcher,omitempty" json:"matcher,omitempty" toml:"matcher,omitempty"`
 	Hooks   []HookAction `yaml:"hooks,omitempty" json:"hooks,omitempty" toml:"hooks,omitempty"`
+	// Targets restricts a top-level [[hooks]] group to the listed harnesses
+	// (claude, codex, cursor, gemini, copilot). Empty means every harness the
+	// group can be expressed for.
+	Targets []string `yaml:"targets,omitempty" json:"targets,omitempty" toml:"targets,omitempty"`
+	// Matchers overrides Matcher per harness, for harnesses that name tools
+	// differently from Claude Code (gemini matches `write_file|replace` where
+	// Claude matches `Write|Edit`).
+	Matchers map[string]string `yaml:"matchers,omitempty" json:"matchers,omitempty" toml:"matchers,omitempty"`
 }
 
 // HookAction is one action within a HookGroup. Exactly one of Command or Script
@@ -532,6 +544,9 @@ type ClaudeSettings struct {
 	// as true and false. Names are plugin names in the marketplace.
 	EnablePlugins  []string `yaml:"enable_plugins,omitempty" json:"enable_plugins,omitempty" toml:"enable_plugins,omitempty"`    //nolint:tagliatelle
 	DisablePlugins []string `yaml:"disable_plugins,omitempty" json:"disable_plugins,omitempty" toml:"disable_plugins,omitempty"` //nolint:tagliatelle
+	// Managed owns further keys of .claude/settings.json entry by entry (env,
+	// skillOverrides). It needs no Manage flag.
+	Managed *ManagedSettings `yaml:"managed,omitempty" json:"managed,omitempty" toml:"managed,omitempty"`
 }
 
 // MarketplaceSource is a Claude Code marketplace source object.

@@ -57,6 +57,8 @@ type tomlOutput struct {
 	Placement       *PlacementConfig       `toml:"placement,omitempty"`
 	Claude          *ClaudeConfig          `toml:"claude,omitempty"`
 	Codex           *CodexConfig           `toml:"codex,omitempty"`
+	Hooks           []HookGroup            `toml:"hooks,omitempty"`
+	Permissions     *Permissions           `toml:"permissions,omitempty"`
 }
 
 // MarshalTOML serializes a Config to a TOML document with a leading docs header.
@@ -144,5 +146,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Placement:       cfg.Placement,
 		Claude:          cfg.Claude,
 		Codex:           cfg.Codex,
+		Hooks:           cfg.Hooks,
+		Permissions:     cfg.Permissions,
 	}
 }

@@ -125,7 +125,7 @@ max = "max"
 [[sidecars]]
 kind = "claude_settings_json"
 path = ".claude/settings.json"
-emit_when = "has_mcp_servers_or_plugin_settings"
+emit_when = "has_claude_settings"
 
 [[sidecars]]
 kind = "claude_plugins_json"
