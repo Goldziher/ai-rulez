@@ -585,6 +585,70 @@
       },
       "additionalProperties": false
     },
+    "lint": {
+      "type": "object",
+      "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
+      "properties": {
+        "fail_on": {
+          "type": "string",
+          "enum": ["error", "warning", "none"],
+          "description": "Lowest severity that makes strict validation exit non-zero. Defaults to error."
+        },
+        "ignore": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Finding codes (AR401) or names (path-missing) to drop."
+        },
+        "ignore_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Globs, relative to the config directory, of source files whose findings are dropped."
+        },
+        "severity": {
+          "type": "object",
+          "description": "Severity override per finding code or name.",
+          "additionalProperties": { "type": "string", "enum": ["error", "warning", "info", "off"] }
+        },
+        "allow_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Globs of repo paths that may be referenced without existing in the tracked tree."
+        },
+        "known_names": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Skill, agent, rule or command names provided outside this tree."
+        },
+        "description": {
+          "type": "object",
+          "properties": {
+            "min_length": { "type": "integer", "minimum": 0 },
+            "max_length": { "type": "integer", "minimum": 0 },
+            "require_use_when": { "type": "boolean" },
+            "near_duplicate_threshold": { "type": "number", "minimum": 0, "maximum": 1 }
+          },
+          "additionalProperties": false
+        },
+        "budgets": {
+          "type": "object",
+          "description": "Size limits per content kind (rule, context, skill, agent, command). 0 keeps the default, negative removes the limit.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "max_lines": { "type": "integer" },
+              "max_tokens": { "type": "integer" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "require_metadata": {
+          "type": "object",
+          "description": "Frontmatter keys every item of a content kind must set.",
+          "additionalProperties": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "additionalProperties": false
+    },
     "plugin": {
       "type": "object",
       "description": "Authoring metadata for a distributable plugin bundle (producer side). Skills, commands, and agents come from the content tree; this block only carries packaging metadata.",

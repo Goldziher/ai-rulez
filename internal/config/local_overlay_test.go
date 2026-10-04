@@ -415,3 +415,17 @@ presets = ["claude", {name = "mine", path = "OUT.md", type = "markdown"}]
 		})
 	}
 }
+
+func TestLoadConfig_LocalOverlayMergesLintPerKey(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, ".ai-rulez")
+	writeProjectFile(t, dir, "config.toml", overlayMainTOML+"\n[lint]\nfail_on = \"warning\"\nignore = [\"AR401\"]\n")
+	writeProjectFile(t, dir, "config.local.toml", "[lint]\nignore = [\"AR101\"]\n")
+
+	cfg, err := LoadConfig(context.Background(), base)
+
+	require.NoError(t, err)
+	require.NotNil(t, cfg.Lint)
+	assert.Equal(t, "warning", cfg.Lint.FailOn, "keys the overlay does not set keep the shared value")
+	assert.Equal(t, []string{"AR101"}, cfg.Lint.Ignore, "keys the overlay sets replace the shared value")
+}
