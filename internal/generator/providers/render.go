@@ -136,7 +136,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 		}
 		items := collectItemsByType(content, typ)
 		for _, item := range items {
-			if !g.filterAllows(spec, item) {
+			if !g.itemAllowed(typ, spec, item, content, cfg) {
 				continue
 			}
 			itemOutputs, err := g.renderItem(typ, spec, item, content, baseDir, cfg)
@@ -440,6 +440,16 @@ func (g *Generator) filterAllows(spec *OutputSpec, item config.ContentFile) bool
 		return hasPathScope(item)
 	}
 	return false
+}
+
+// itemAllowed applies the output's filter to one item. placement_core needs the
+// content tree and config (an item's domain and the [placement] block), so it is
+// handled apart from the item-only filters.
+func (g *Generator) itemAllowed(typ string, spec *OutputSpec, item config.ContentFile, content *config.ContentTree, cfg *config.Config) bool {
+	if spec.Filter == FilterPlacementCore {
+		return g.placementAllows(typ, item, content, cfg)
+	}
+	return g.filterAllows(spec, item)
 }
 
 // renderItem produces the OutputFile(s) for a single per-item file: the file
