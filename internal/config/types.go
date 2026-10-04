@@ -27,11 +27,18 @@ type Config struct {
 	Builtins        *BuiltinsConfig        `yaml:"builtins,omitempty" json:"builtins,omitempty" toml:"builtins,omitempty"`
 	Compact         *bool                  `yaml:"compact,omitempty" json:"compact,omitempty" toml:"compact,omitempty"`
 	AgentsMD        bool                   `yaml:"agents_md,omitempty" json:"agents_md,omitempty" toml:"agents_md,omitempty"` //nolint:tagliatelle
-	Plugins         []PluginConfig         `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
-	Marketplaces    []MarketplaceConfig    `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
-	Scopes          []ScopeConfig          `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
-	MCP             *MCPConfig             `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
-	Rules           *RulesConfig           `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
+	// BundleExclude adds patterns to DefaultBundleExcludes: skill and command
+	// resources matching one are not listed in SKILL.md or copied.
+	BundleExclude []string `yaml:"bundle_exclude,omitempty" json:"bundle_exclude,omitempty" toml:"bundle_exclude,omitempty"` //nolint:tagliatelle
+	// CodexSkillsDir is where the codex preset writes skills, relative to the
+	// output base dir. Empty means the documented ".agents/skills"; set
+	// ".codex/skills" to keep the pre-4.24 location.
+	CodexSkillsDir string              `yaml:"codex_skills_dir,omitempty" json:"codex_skills_dir,omitempty" toml:"codex_skills_dir,omitempty"` //nolint:tagliatelle
+	Plugins        []PluginConfig      `yaml:"plugins,omitempty" json:"plugins,omitempty" toml:"plugins,omitempty"`
+	Marketplaces   []MarketplaceConfig `yaml:"marketplaces,omitempty" json:"marketplaces,omitempty" toml:"marketplaces,omitempty"`
+	Scopes         []ScopeConfig       `yaml:"scopes,omitempty" json:"scopes,omitempty" toml:"scopes,omitempty"`
+	MCP            *MCPConfig          `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
+	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the

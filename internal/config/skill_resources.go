@@ -41,6 +41,11 @@ func LoadSkillResources(skillDir string) ([]SkillResource, error) {
 	return LoadResources(skillDir, ItemKindSkill)
 }
 
+// LoadResources is LoadResourcesWith with only the default bundle excludes.
+func LoadResources(root, itemKind string) ([]SkillResource, error) {
+	return LoadResourcesWith(root, itemKind, nil)
+}
+
 // LoadResources walks a skill or command directory and returns its supporting
 // files from references/, scripts/, and assets/ subdirectories. Files are read
 // as raw bytes so binary assets round-trip without UTF-8 corruption.
@@ -57,8 +62,19 @@ func LoadSkillResources(skillDir string) ([]SkillResource, error) {
 // or assets/) trigger a warning naming the item and the offending directory.
 // The Agent Skills spec defines only these three as canonical resource kinds.
 //
-// itemKind is one of the ItemKind constants and only affects diagnostics.
-func LoadResources(root, itemKind string) ([]SkillResource, error) {
+// Build artifacts are not bundled: files git ignores (when root is in a git
+// work tree), anything matching DefaultBundleExcludes (.venv*, venv,
+// __pycache__, *.pyc, node_modules, .git) and anything matching extraExcludes
+// (the bundle_exclude config key) are skipped.
+//
+// itemKind is one of the ItemKind constants and selects the entry file name
+// (SKILL.md, COMMAND.md) and the diagnostics wording.
+func LoadResourcesWith(root, itemKind string, extraExcludes []string) ([]SkillResource, error) {
+	marker := skillMarkerFile
+	if itemKind == ItemKindCommand {
+		marker = commandMarkerFile
+	}
+	filter := newBundleFilter(root, marker, extraExcludes)
 	var resources []SkillResource
 
 	for _, kind := range skillResourceKinds {
@@ -83,7 +99,7 @@ func LoadResources(root, itemKind string) ([]SkillResource, error) {
 			continue
 		}
 
-		kindResources, err := walkSkillResourceDir(root, kindDir, kind)
+		kindResources, err := walkSkillResourceDir(root, kindDir, kind, filter)
 		if err != nil {
 			return nil, err
 		}
@@ -186,7 +202,7 @@ func unrecognizedSubdirectoryWarnings(root, itemKind string) ([]resourceWarning,
 // walkSkillResourceDir walks one of the kind subdirectories recursively.
 // Nested directories under references/, scripts/, or assets/ are preserved in
 // the resource RelPath so generators can mirror the layout in their output.
-func walkSkillResourceDir(skillDir, kindDir, kind string) ([]SkillResource, error) {
+func walkSkillResourceDir(skillDir, kindDir, kind string, filter *bundleFilter) ([]SkillResource, error) {
 	var resources []SkillResource
 
 	err := filepath.WalkDir(kindDir, func(path string, d os.DirEntry, walkErr error) error {
@@ -194,6 +210,9 @@ func walkSkillResourceDir(skillDir, kindDir, kind string) ([]SkillResource, erro
 			return oops.With("path", path).Wrapf(walkErr, "walk skill resource dir")
 		}
 		if d.IsDir() {
+			if path != kindDir && filter.excluded(filter.rel(skillDir, path)) {
+				return filepath.SkipDir
+			}
 			return nil
 		}
 
@@ -216,6 +235,9 @@ func walkSkillResourceDir(skillDir, kindDir, kind string) ([]SkillResource, erro
 		// platforms — generators feed this straight into filepath.Join, which
 		// accepts forward slashes on Windows.
 		relToSkill = filepath.ToSlash(relToSkill)
+		if !filter.keepFile(relToSkill) {
+			return nil
+		}
 
 		// nolint:gosec // G122: WalkDir callback uses path; the symlink
 		// check above prevents following arbitrary links into /etc/passwd.
