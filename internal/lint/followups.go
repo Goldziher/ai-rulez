@@ -239,7 +239,7 @@ func (r *runner) labelPath(p string) string {
 	if filepath.IsAbs(p) {
 		return r.display(p)
 	}
-	return "builtin " + p
+	return p // an embedded builtin, already written as builtin://...
 }
 
 func (r *runner) labelPaths(paths []string) string {

@@ -53,6 +53,14 @@ func TestCheckDrift(t *testing.T) {
 			subset: true,
 		},
 		{
+			name:   "hashes content reports a hand edit as edited",
+			header: "header:\n  hashes: content\n",
+			mutate: func(t *testing.T, dir string) {
+				appendTo(t, filepath.Join(dir, "CLAUDE.md"), "tamper\n")
+			},
+			want: []Drift{{Path: "CLAUDE.md", Kind: DriftEdited}},
+		},
+		{
 			name:   "hashes none compares the whole file",
 			header: "header:\n  hashes: none\n",
 			mutate: func(t *testing.T, dir string) {
