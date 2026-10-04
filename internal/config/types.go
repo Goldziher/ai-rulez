@@ -548,6 +548,7 @@ var builtInPresets = map[string]bool{
 	string(PresetAntigravity): true,
 	"mcp":                     true,
 	string(PresetXum):         true,
+	string(PresetPi):          true,
 }
 
 func isValidBuiltInPreset(name string) bool {
