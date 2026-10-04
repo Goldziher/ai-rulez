@@ -146,7 +146,11 @@ A missing `description` produces a warning rather than an error; the skill name 
 
 ### References
 
-Files in `references/` are read alphabetically and appended to the skill content under `## Reference: <filename>` headings. This lets you separate detailed API docs, configuration guides, etc. from the main skill instructions.
+Files in `references/` (like `scripts/` and `assets/`) are kept as separate files next to the generated `SKILL.md`, for both path and git sources; they are not appended to the skill body. This lets you separate detailed API docs, configuration guides, etc. from the main skill instructions, and the assistant loads them on demand.
+
+## Pinning with a lock file
+
+`ref` defaults to the repository's default branch (`HEAD`), which moves. Run `ai-rulez lock` (or `ai-rulez skill update <name>`) to record the resolved commit and a content digest in `.ai-rulez/ai-rulez.lock`. Later `generate` runs fetch exactly that commit and fail if the files do not match the digest; `generate --locked` fails when a skill is not covered, and `--frozen` never uses the network. See the [Lock Command](cli.md#lock-command). Imported skill text is instruction text: with `[lint.security] scan_imports`, it is also scanned for secrets, hidden characters and risky commands before it is written ([Security checks](strict-validation.md#security-checks)).
 
 ## Local Override
 
