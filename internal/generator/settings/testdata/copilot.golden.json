@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "agentStop": [
+      {
+        "type": "command",
+        "bash": "echo done"
+      }
+    ],
+    "sessionStart": [
+      {
+        "type": "command",
+        "bash": "\"$(git rev-parse --show-toplevel)\"/scripts/boot.sh --quick 'a b'",
+        "timeoutSec": 5
+      }
+    ]
+  },
+  "version": 1
+}

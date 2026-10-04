@@ -150,7 +150,11 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		})
 	}
 
-	return outputs, nil
+	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, err
+	}
+	return append(outputs, hookOutputs...), nil
 }
 
 // cursorRulesTarget is the Cursor rules folder. Every .mdc carries frontmatter

@@ -246,7 +246,8 @@
             "has_mcp_json_entries",
             "has_plugins",
             "has_resolved_effort",
-            "has_mcp_servers_or_plugin_settings"
+            "has_mcp_servers_or_plugin_settings",
+            "has_claude_settings"
           ],
           "description": "Closed-set predicate evaluated against the Config to decide whether to emit."
         }

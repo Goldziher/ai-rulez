@@ -1148,6 +1148,23 @@
             "disable_plugins": {
               "$ref": "#/$defs/patternList",
               "description": "Plugin names written as enabledPlugins.\"<name>@<marketplace>\": false."
+            },
+            "managed": {
+              "type": "object",
+              "description": "Further keys of .claude/settings.json owned entry by entry. Declaring an entry is the opt-in; `manage` is not required.",
+              "properties": {
+                "env": {
+                  "type": "object",
+                  "description": "Owns env.<NAME> for every listed variable.",
+                  "additionalProperties": { "type": "string" }
+                },
+                "skill_overrides": {
+                  "type": "object",
+                  "description": "Owns skillOverrides.<skill> for every listed skill.",
+                  "additionalProperties": { "enum": ["on", "name-only", "user-invocable-only", "off"] }
+                }
+              },
+              "additionalProperties": false
             }
           },
           "additionalProperties": false
@@ -1176,6 +1193,72 @@
           "default": 32768,
           "description": "The project_doc_max_bytes your Codex is configured with. generate warns when the AGENTS.md files Codex concatenates (root down to a directory) exceed it, naming the largest sections. Unset means the Codex default of 32 KiB; 0 turns the warning off."
         }
+      },
+      "additionalProperties": false
+    },
+    "hooks": {
+      "type": "array",
+      "description": "Lifecycle hooks rendered into each harness's native project settings (.claude/settings.json, .codex/hooks.json, .cursor/hooks.json, .gemini/settings.json, .github/hooks/ai-rulez.json), outside any plugin. Events use Claude Code names; a group a harness cannot express is skipped with a warning.",
+      "items": {
+        "type": "object",
+        "required": ["event"],
+        "properties": {
+          "event": {
+            "type": "string",
+            "description": "Claude Code lifecycle event, e.g. PreToolUse. Unknown events are warned about, not rejected."
+          },
+          "matcher": {
+            "type": "string",
+            "description": "Filters which occurrences of the event run the group. Copied to claude and codex; other harnesses need matchers.<harness>."
+          },
+          "targets": {
+            "type": "array",
+            "items": { "enum": ["claude", "codex", "cursor", "gemini", "copilot"] },
+            "description": "Restrict the group to these harnesses. Default: every harness the group can be expressed for."
+          },
+          "matchers": {
+            "type": "object",
+            "description": "Per-harness matcher overriding `matcher`, for harnesses that name tools differently.",
+            "propertyNames": { "enum": ["claude", "codex", "cursor", "gemini", "copilot"] },
+            "additionalProperties": { "type": "string" }
+          },
+          "hooks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "description": "One hook handler. Exactly one of 'command' or 'script' is required.",
+              "oneOf": [{ "required": ["command"] }, { "required": ["script"] }],
+              "properties": {
+                "type": { "enum": ["command"] },
+                "command": { "type": "string" },
+                "script": {
+                  "type": "string",
+                  "description": "Project-relative script, addressed through the harness's project-root variable (user scope: relative to the user config directory)."
+                },
+                "args": { "type": "array", "items": { "type": "string" } },
+                "timeout": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Seconds; converted to milliseconds for gemini."
+                },
+                "async": { "type": "boolean" },
+                "if": { "type": "string", "description": "claude only; a handler with `if` is skipped elsewhere." },
+                "status_message": { "type": "string" }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "permissions": {
+      "type": "object",
+      "description": "Allow/ask/deny rules in Claude Code permission-rule syntax, owned rule by rule in .claude/settings.json (claude only).",
+      "properties": {
+        "allow": { "$ref": "#/$defs/patternList" },
+        "ask": { "$ref": "#/$defs/patternList" },
+        "deny": { "$ref": "#/$defs/patternList" }
       },
       "additionalProperties": false
     },

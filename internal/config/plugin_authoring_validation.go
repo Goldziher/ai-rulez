@@ -359,6 +359,12 @@ func (c *Config) validateHookGroups(pluginName string, groups []HookGroup) error
 				Hint("Each [[plugin.hooks]] group needs an 'event' (e.g. SessionStart)").
 				Errorf("plugin %q hook group at index %d missing 'event'", pluginName, i)
 		}
+		if len(g.Targets) > 0 || len(g.Matchers) > 0 {
+			return oops.
+				With("field", fieldHookGroups).
+				Hint("'targets' and 'matchers' select harnesses for the top-level [[hooks]]; a plugin hook group is rendered for every runtime of the plugin").
+				Errorf("plugin %q hook group at index %d sets 'targets' or 'matchers'", pluginName, i)
+		}
 		for j := range g.Hooks {
 			if err := c.validateHookAction(pluginName, g.Event, j, &g.Hooks[j]); err != nil {
 				return err

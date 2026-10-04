@@ -278,7 +278,7 @@ func isValidBodySection(section string) bool {
 
 func isValidPredicate(p string) bool {
 	switch p {
-	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort:
+	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasClaudeSettings, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort:
 		return true
 	}
 	return false
