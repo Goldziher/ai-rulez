@@ -225,7 +225,7 @@ filename = "{id}/SKILL.md"
 [[sidecars]]
 kind = "mcp_json"
 path = ".my-tool/mcp.json"
-emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries
+emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries, has_mcp_servers_or_plugin_settings
 ```
 
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
@@ -581,8 +581,11 @@ the document's original indentation.
   the value ai-rulez wrote: an entry you edited is yours, stays, and is reported once. If a
   hand-written server has the same name as a configured one, the configured value wins on
   `generate` and is the one recorded.
+- **Plugin keys of `.claude/settings.json`**: with `[claude.settings] manage = true`, ai-rulez also
+  owns `extraKnownMarketplaces.<marketplace.name>` and the listed `enabledPlugins.<plugin>@<marketplace>`
+  entries, each entry on its own; other marketplaces and plugins in those objects survive.
 - **Written only when there is something to contribute**: A settings document is emitted only when
-  the config declares MCP servers (or, for Amp, a resolved effort tier). The `gemini` and
+  the config declares MCP servers (or, for Amp, a resolved effort tier; for Claude, managed plugin keys). The `gemini` and
   `antigravity` presets previously wrote their settings document on every run purely to self-register
   the ai-rulez MCP server; they no longer do, so a project with no `[[mcp_servers]]` keeps whatever
   is already at `.agents/settings.json` untouched. The exceptions are `.gemini/settings.json`
@@ -633,6 +636,33 @@ marketplace output for them; a `[[plugins]]` entry references a marketplace by `
 name = "official"
 source = "https://github.com/org/marketplace"   # GitHub repo, git URL, local path, or URL
 type = "github"                                  # github, git, local, or url
+```
+
+### `placement`
+
+Decides whether skills and commands are generated into `.claude/skills` (`core`, the default) or
+shipped only through a plugin. Absent block: nothing changes. See
+[Keep a skill out of `.claude/skills`](plugins.md#keep-a-skill-out-of-claudeskills).
+
+```toml
+[placement]
+default = "core"
+plugin = ["domains/*"]
+core = ["domains/backend/python-conventions"]
+honor_targets = false
+```
+
+### `claude.settings`
+
+Opt-in ownership of `extraKnownMarketplaces.<marketplace.name>` and `enabledPlugins.<plugin>@<marketplace>`
+in `.claude/settings.json`, merged like `mcpServers` (see
+[Settings document merge behavior](#settings-document-merge-behavior)). See
+[Register the marketplace in `.claude/settings.json`](plugins.md#register-the-marketplace-in-claudesettingsjson).
+
+```toml
+[claude.settings]
+manage = true
+enable_plugins = ["acme-essentials"]
 ```
 
 ### `builtins`
