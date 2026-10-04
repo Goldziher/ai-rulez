@@ -46,6 +46,8 @@ type Manifest struct {
 	Hooks      []config.HookGroup
 	Statusline *config.Statusline
 	Interface  *config.PluginInterface
+	Codex      *config.CodexExtras
+	Cursor     *config.CursorExtras
 	Gemini     *config.GeminiExtras
 	Kimi       *config.KimiExtras
 	Hermes     *config.HermesExtras
@@ -107,6 +109,8 @@ func BuildManifest(cfg *config.Config, content *config.ContentTree) (*Manifest, 
 		Hooks:       p.Hooks,
 		Statusline:  p.Statusline,
 		Interface:   p.Interface,
+		Codex:       p.Codex,
+		Cursor:      p.Cursor,
 		Gemini:      p.Gemini,
 		Kimi:        p.Kimi,
 		Hermes:      p.Hermes,

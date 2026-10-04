@@ -23,7 +23,18 @@
     },
     "pluginRuntimes": {
       "items": {
-        "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"],
+        "enum": [
+          "claude",
+          "cursor",
+          "codex",
+          "gemini",
+          "kimi",
+          "opencode",
+          "factory",
+          "hermes",
+          "agent-plugins",
+          "copilot"
+        ],
         "type": "string"
       },
       "type": "array"
@@ -484,6 +495,10 @@
           },
           "type": "object"
         },
+        "cursor_index": {
+          "description": "Also write .cursor-plugin/marketplace.json next to the Claude index for members and domain plugins (default off).",
+          "type": "boolean"
+        },
         "description": {
           "type": "string"
         },
@@ -838,9 +853,33 @@
         "category": {
           "type": "string"
         },
+        "codex": {
+          "additionalProperties": false,
+          "description": "Codex layout. manifest: legacy (default, .codex-plugin/plugin.json), root (Agent Plugins plugin.json with the interface under extensions.com.openai, skills/ and mcp.json) or both. marketplace writes .agents/plugins/marketplace.json for a single-plugin repository.",
+          "properties": {
+            "manifest": {
+              "enum": ["legacy", "root", "both"],
+              "type": "string"
+            },
+            "marketplace": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
+        },
         "content_root": {
           "description": "Project-relative directory containing plugin-only skills/, commands/, and agents/",
           "type": "string"
+        },
+        "cursor": {
+          "additionalProperties": false,
+          "description": "Cursor packaging switches. marketplace writes .cursor-plugin/marketplace.json for a single-plugin repository.",
+          "properties": {
+            "marketplace": {
+              "type": "boolean"
+            }
+          },
+          "type": "object"
         },
         "description": {
           "type": "string"
@@ -851,6 +890,10 @@
         "gemini": {
           "additionalProperties": false,
           "properties": {
+            "commands": {
+              "description": "Also bundle the plugin's commands as commands/<name>.toml Gemini custom commands (default off). $ARGUMENTS becomes {{args}}.",
+              "type": "boolean"
+            },
             "context_file_name": {
               "type": "string"
             }
@@ -1069,7 +1112,18 @@
         },
         "runtimes": {
           "items": {
-            "enum": ["claude", "cursor", "codex", "gemini", "kimi", "opencode", "factory", "hermes", "agent-plugins"],
+            "enum": [
+              "claude",
+              "cursor",
+              "codex",
+              "gemini",
+              "kimi",
+              "opencode",
+              "factory",
+              "hermes",
+              "agent-plugins",
+              "copilot"
+            ],
             "type": "string"
           },
           "type": "array"

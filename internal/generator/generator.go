@@ -362,6 +362,34 @@ func (g *Generator) buildPluginManifest(profile string) (*plugin.Manifest, error
 	return plugin.BuildManifest(&tempCfg, contentTree)
 }
 
+// warnUnreadConsumerFiles warns that [[plugins]] is written to files no tool
+// reads. Claude Code records installed plugins in .claude/settings.json
+// (enabledPlugins, extraKnownMarketplaces) and its documentation lists no
+// .claude/plugins.json; Codex documents plugin enablement as
+// [plugins."name@marketplace"] in config.toml, not .codex/plugins.json. The files
+// are still written, so nothing changes for users who depend on them.
+func (g *Generator) warnUnreadConsumerFiles() {
+	if len(g.config.Plugins) == 0 {
+		return
+	}
+	var files []string
+	for i := range g.config.Presets {
+		switch g.config.Presets[i].GetName() {
+		case "claude":
+			files = append(files, ".claude/plugins.json")
+		case "codex":
+			files = append(files, ".codex/plugins.json")
+		}
+	}
+	if len(files) == 0 {
+		return
+	}
+	logger.Warn("[[plugins]] is written to a file no tool reads; it is deprecated and will be removed. "+
+		"For Claude Code set [claude.settings] manage = true with enable_plugins (writes enabledPlugins in .claude/settings.json); "+
+		"for Codex enable plugins with [plugins.\"name@marketplace\"] enabled = true in .codex/config.toml",
+		"files", strings.Join(files, ", "))
+}
+
 // stalePluginDirs lists the generated domain-plugin directories whose plugin is
 // no longer planned (its domain disappeared, or its declaration was removed).
 // Only directories carrying ai-rulez's provenance sidecar qualify.
@@ -454,6 +482,13 @@ func (g *Generator) collectMonorepoOutputs(mkt *config.MarketplaceAuthoring, pro
 			return nil, oops.Wrapf(err, "render Codex monorepo marketplace")
 		}
 		rootFiles = append(rootFiles, codexMarketplaceOutput)
+	}
+	if mkt.CursorIndex {
+		cursorOutput, err := plugin.RenderCursorMarketplace(market, entries, root)
+		if err != nil {
+			return nil, oops.Wrapf(err, "render Cursor marketplace")
+		}
+		rootFiles = append(rootFiles, cursorOutput)
 	}
 	rootOutputs, err := plugin.AddProvenance(rootFiles, root)
 	if err != nil {
@@ -749,6 +784,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 
 	presets.WarnDuplicateContent(contentTree)
 	g.warnUnbundledPluginOnly(contentTree)
+	g.warnUnreadConsumerFiles()
 
 	// Collect MCP servers based on the resolved content tree and active profile
 	mcpServers := g.collectMCPServersForContent(contentTree, activeProfile)

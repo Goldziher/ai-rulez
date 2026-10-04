@@ -62,10 +62,77 @@ ai-rulez generate --plugin --dry-run  # preview what would be written
 | Factory  | `.factory-plugin/plugin.json`                           | metadata-only                                                    |
 | Hermes   | `.hermes/plugins/<plugin-name>/` and `.hermes/package/` | project plugin plus buildable Python entry-point package         |
 | Agent Plugins | `plugin.json`, `skills/`, `mcp.json`               | portable [Agent Plugins 1.0.0](https://agent-plugins.org) package; opt-in |
+| Copilot  | `plugin.json`, `skills/`, `mcp.json`, `com.github.copilot/agents/<name>.agent.md`, `.github/plugin/marketplace.json` | GitHub Copilot plugin in the Agent Plugins 1.0 layout; opt-in |
 
 The **marketplace index** (`.claude-plugin/marketplace.json`) is emitted alongside when `claude` is
 among the bundle's runtimes. (A monorepo root also emits a Codex index at
-`.agents/plugins/marketplace.json`; see the monorepo section.)
+`.agents/plugins/marketplace.json`; see the monorepo section.) The `copilot` runtime writes its own
+index, and the Codex and Cursor indexes for a single-plugin repository are opt-in, see below.
+
+### Runtime coverage
+
+What each runtime bundles, checked against the vendors' documentation on 2026-10-04. A dash means
+ai-rulez does not emit it: either the runtime has no such component, or the vendor documents no file
+format for it (ai-rulez does not guess formats).
+
+| Runtime | Skills | Commands | Agents | Hooks | MCP | Marketplace index | Vendor documentation |
+| ------- | :----: | :------: | :----: | :---: | :-: | :---------------: | -------------------- |
+| Claude | yes | yes | yes | yes | yes | yes | [plugins](https://code.claude.com/docs/en/plugins), [marketplaces](https://code.claude.com/docs/en/plugin-marketplaces) |
+| Cursor | yes | yes | - | yes | manifest | opt-in (`[plugin.cursor] marketplace`, `[marketplace] cursor_index`) | [plugins](https://cursor.com/docs/plugins), [reference](https://cursor.com/docs/reference/plugins) |
+| Codex | yes | - | - | - | yes | monorepo roots; single plugin opt-in (`[plugin.codex] marketplace`) | [build plugins](https://developers.openai.com/codex/plugins/build) |
+| Copilot | yes | - | yes | - | yes | yes (`.github/plugin/marketplace.json`) | [CLI plugin reference](https://docs.github.com/en/copilot/reference/copilot-cli-reference/cli-plugin-reference) |
+| Gemini | - | opt-in (`[plugin.gemini] commands`) | - | yes | yes | - | [extension reference](https://geminicli.com/docs/extensions/reference/), [custom commands](https://geminicli.com/docs/cli/custom-commands/) |
+| Agent Plugins | yes | - | - | - | yes | - | [agent-plugins.org](https://agent-plugins.org) |
+
+Kimi, OpenCode, Factory and Hermes are unchanged. Known gaps, all because the format is undocumented
+or outside the runtime: Codex and Copilot commands and hooks, Copilot rules and LSP, Gemini agents,
+policies and `hooks/hooks.json` (hooks are inlined in `gemini-extension.json`), Cursor
+agents/rules.
+
+### Codex: root `plugin.json`
+
+Codex documents a root `plugin.json` in the Agent Plugins format as the preferred manifest for new
+packages and keeps `.codex-plugin/plugin.json` as a compatibility fallback. The Codex `interface`
+block moves under `extensions.com.openai`, skills live in the fixed `skills/` directory and MCP servers
+in a root `mcp.json` whose entries need a transport `type` (a renamed `.mcp.json` is not enough).
+The default stays the legacy layout so existing bundles do not change:
+
+```toml
+[plugin.codex]
+manifest = "root"      # legacy (default) | root | both
+marketplace = true     # also write .agents/plugins/marketplace.json for this single-plugin repo
+```
+
+`both` writes the two manifests side by side. The root layout needs an Agent Plugins plugin name
+(lowercase alphanumerics, `-` and `.`). When `codex` and `agent-plugins` (or `copilot`) are bundled
+together they share one root `plugin.json`; the Codex overlay is only written when the `codex` runtime
+is part of the bundle. The single-plugin Codex index uses `source = { source = "local", path = "./" }`.
+Codex documents that a marketplace may list one plugin and that paths start with `./` and stay inside
+the marketplace root; `./` itself as the plugin path was not exercised against a running Codex.
+
+### Copilot
+
+`runtimes = ["copilot"]` (opt-in) emits the Agent Plugins 1.0 layout that Copilot CLI and the cloud
+agent read: a root `plugin.json` with the standard's `$schema`, `skills/<name>/`, a root `mcp.json`,
+custom agents at `com.github.copilot/agents/<name>.agent.md` (copied verbatim) and a single-plugin
+marketplace at `.github/plugin/marketplace.json` (`name`, `owner`, `metadata`, `plugins[]`, which
+Copilot searches after a root `marketplace.json`). Copilot lists `com.github.copilot/commands/` and
+`com.github.copilot/hooks/hooks.json` but documents neither file format, so commands and hooks are not
+emitted and a warning says so. Enabling plugins (`enabledPlugins` in `.github/copilot/settings.json`) is
+not generated: the vendor page does not show the settings syntax.
+
+### Cursor marketplace
+
+Cursor documents `.cursor-plugin/marketplace.json` for multi-plugin repositories (`name`, `owner.name`,
+optional `metadata`, `plugins[]` with `name` and a relative `source` directory). It is opt-in:
+`[plugin.cursor] marketplace = true` for a single-plugin repository (`source` is `.`), and
+`[marketplace] cursor_index = true` next to the Claude index for members and domain plugins.
+
+### Gemini commands
+
+`[plugin.gemini] commands = true` also bundles each command as `commands/<name>.toml` (a required
+`prompt`, an optional `description`); the Claude-style `$ARGUMENTS` becomes Gemini's `{{args}}`. Shell
+(`!{...}`) and file (`@{...}`) injections are not translated.
 
 Content files (SKILL.md, commands, agents) are copied **verbatim** from your source
 into each runtime's directories — never re-rendered — so a bundled skill is identical
