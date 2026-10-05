@@ -22,3 +22,7 @@ const (
 	configFileYAML = "config.yaml"
 	configFileJSON = "config.json"
 )
+
+// flagRole is the --role flag of generate, tokens, usage and mcp --serve-skills.
+// It always names a role of the project's [[roles]] (see `ai-rulez roles list`).
+const flagRole = "role"

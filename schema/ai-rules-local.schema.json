@@ -644,9 +644,20 @@
               },
               "type": "array"
             },
+            "min_pass_rate": {
+              "description": "Enable eval-score-low (AR998): report a skill whose recorded eval pass rate (eval-results.json) is below this. Also the pass mark of `ai-rulez eval run`.",
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
             "require": {
               "description": "Enable evals-missing at warning severity.",
               "type": "boolean"
+            },
+            "require_fresh": {
+              "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval.",
+              "enum": ["off", "warn", "error"],
+              "type": "string"
             }
           },
           "type": "object"
@@ -797,30 +808,6 @@
           },
           "type": "object"
         },
-        "evals": {
-          "type": "object",
-          "description": "evals-missing check (AR962): skills with no eval cases. A skill has cases when its evals/ directory or .ai-rulez/evals/<skill>/ holds a file.",
-          "properties": {
-            "require": { "type": "boolean", "description": "Enable evals-missing at warning severity." },
-            "allow": {
-              "type": "array",
-              "items": { "type": "string" },
-              "description": "Skill names or globs exempt from the check."
-            },
-            "min_pass_rate": {
-              "type": "number",
-              "minimum": 0,
-              "maximum": 1,
-              "description": "Enable eval-score-low (AR998): report a skill whose recorded eval pass rate (eval-results.json) is below this. Also the pass mark of `ai-rulez eval run`."
-            },
-            "require_fresh": {
-              "type": "string",
-              "enum": ["off", "warn", "error"],
-              "description": "Enable eval-stale (AR997) at this severity: report a skill edited after its last recorded passing eval."
-            }
-          },
-          "additionalProperties": false
-        },
         "severity": {
           "additionalProperties": {
             "enum": ["error", "warning", "info", "off"],
@@ -834,11 +821,19 @@
     },
     "lock": {
       "additionalProperties": false,
-      "description": "Lock behaviour at serve time.",
+      "description": "Content pinning in ai-rulez.lock (see docs/lockfile.md).",
       "properties": {
         "enforce": {
-          "description": "Refuse to serve a skill whose digest is not the one recorded in ai-rulez.lock (kind served), and one that the lock does not pin at all. Run `ai-rulez lock` to record the digests.",
+          "description": "Report content drift as AR981/AR982 in `validate --strict`, make `lock --check` fail on a lock without content pins, and make the skills server (`mcp --serve-skills`) refuse a served skill whose digest is not the one recorded in ai-rulez.lock (kind served) or that the lock does not pin at all. Run `ai-rulez lock` to record the digests.",
           "type": "boolean"
+        },
+        "include_outputs": {
+          "description": "Also pin digests of generated output files. Defaults to true.",
+          "type": "boolean"
+        },
+        "scope": {
+          "description": "all (default) pins every authored item; skills pins skills, remote includes and installed skills only.",
+          "enum": ["all", "skills"]
         }
       },
       "type": "object"
@@ -1702,6 +1697,156 @@
       },
       "description": "Named profiles mapping profile names to lists of domain names. An element is either a local or included domain name, or a builtin pack written as `builtin:<name>` (e.g. `builtin:rust`). A builtin referenced this way is loaded only for the profiles that name it, rather than globally.",
       "type": "object"
+    },
+    "role_manifest": {
+      "additionalProperties": false,
+      "description": "Options for the roles.json manifest (a separate table because roles is an array).",
+      "properties": {
+        "enabled": {
+          "description": "Write <config dir>/roles.json on generate: every role with its resolved item ids, byte sizes and token estimates.",
+          "type": "boolean"
+        }
+      },
+      "type": "object"
+    },
+    "roles": {
+      "description": "Roles map a person's job to a slice of the shared content. Select one with `ai-rulez generate --role <name>`. ai-rulez never decides who holds a role; an external tool picks the name (see `match`).",
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "agents": {
+            "additionalProperties": false,
+            "description": "Include/exclude selectors for agents. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "exclude": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "include": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "commands": {
+            "additionalProperties": false,
+            "description": "Include/exclude selectors for commands. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "exclude": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "include": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "description": {
+            "type": "string"
+          },
+          "domains": {
+            "description": "Domains the role selects, with the same meaning as a profile's list (builtin:<name> allowed).",
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "extends": {
+            "description": "Name of one parent role (one level only). Domains and excludes are unioned, includes are unioned when both set one, skill_mode is merged with the child winning. match is not inherited.",
+            "type": "string"
+          },
+          "match": {
+            "additionalProperties": false,
+            "description": "Hints for an external identity tool. ai-rulez stores and republishes them in roles.json and never interprets them.",
+            "properties": {
+              "groups": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "name": {
+            "description": "Role name, as passed to --role.",
+            "pattern": "^[a-z0-9][a-z0-9_-]*$",
+            "type": "string"
+          },
+          "remove": {
+            "description": "Set to true to delete the shared entry with the same name",
+            "type": "boolean"
+          },
+          "rules": {
+            "additionalProperties": false,
+            "description": "Include/exclude selectors for rules. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "exclude": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "include": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          },
+          "skill_mode": {
+            "additionalProperties": {
+              "enum": ["on", "name-only", "user-invocable-only", "off"]
+            },
+            "description": "Skill id or glob to Claude Code skillOverrides state. An exact id beats a glob, a longer glob beats a shorter one, ties go to the lexically first pattern.",
+            "type": "object"
+          },
+          "skills": {
+            "additionalProperties": false,
+            "description": "Include/exclude selectors for skills. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "exclude": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "include": {
+                "items": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "type": "object"
+          }
+        },
+        "required": ["name"],
+        "type": "object"
+      },
+      "type": "array"
     },
     "rules": {
       "additionalProperties": false,

@@ -2,7 +2,6 @@ package mcp
 
 import (
 	"path"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -29,33 +28,24 @@ type RoleScope struct {
 	Allow []string
 	// Deny drops skills whose name matches one of these patterns; it wins over Allow.
 	Deny []string
-	// Delivery maps a skill name, or a domain name, to static/served/both. It is
-	// the per-role override config.Config.EffectiveDelivery accepts.
+	// Keep, when set, decides for a skill (its domain, "" for root, and name)
+	// whether the role keeps it; it is what RolesFromConfig provides.
+	Keep func(domain, name string) bool
+	// Delivery maps a skill ("<domain>/<name>", or the name alone for a root
+	// skill) to static/served/both. It is the per-role override
+	// config.Config.EffectiveDelivery accepts.
 	Delivery map[string]string
 }
 
 // RoleResolver maps a role name to its scope. ok is false for an unknown role.
-// The roles implementation plugs in here; ProfileRoles is the built-in one.
+// RolesFromConfig resolves the project's [[roles]].
 type RoleResolver func(role string) (scope RoleScope, ok bool)
-
-// ProfileRoles resolves a role as a profile of the configuration: the domains the
-// profile lists. It is the resolver used until a richer role model is wired in.
-func ProfileRoles(profiles map[string][]string) RoleResolver {
-	return func(role string) (RoleScope, bool) {
-		domains, ok := profiles[role]
-		if !ok {
-			return RoleScope{}, false
-		}
-		clean := make([]string, 0, len(domains))
-		for _, d := range domains {
-			clean = append(clean, strings.TrimPrefix(d, "builtin:"))
-		}
-		return RoleScope{Domains: clean}, true
-	}
-}
 
 // Includes reports whether a skill is in the role's scope.
 func (r RoleScope) Includes(s *CatalogSkill) bool {
+	if r.Keep != nil && !r.Keep(s.Domain, s.Name) {
+		return false
+	}
 	if matchesAny(r.Deny, s.Name) {
 		return false
 	}
@@ -76,6 +66,8 @@ type SessionTelemetry struct {
 	Client  string
 	// Resource is true when a supporting file, not SKILL.md, was loaded.
 	Resource bool
+	// Role is the role the server was started with ("" when none).
+	Role string
 }
 
 // ServeOptions configures the dynamic-loading surface of a skills server. The
@@ -156,21 +148,12 @@ func (s *Server) cat() *Catalog {
 	return s.catalog
 }
 
-// roleNames lists the roles a resolver knows about when it can enumerate them.
+// scope resolves a role name through the configured resolver.
 func (st *serveState) scope(role string) (RoleScope, bool) {
 	if role == "" || st.opts.Roles == nil {
 		return RoleScope{}, false
 	}
 	return st.opts.Roles(role)
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	sort.Strings(out)
-	return out
 }
 
 // cleanRelPath normalizes a skill-relative path argument and rejects anything

@@ -262,7 +262,7 @@ func isStringPath(path []string) bool {
 // isNamedListPath reports whether key is a top-level list of named entries.
 func isNamedListPath(key string) bool {
 	switch key {
-	case "mcp_servers", "plugins", "includes", "installed_skills", "marketplaces", "scopes":
+	case "mcp_servers", "plugins", "includes", "installed_skills", "marketplaces", "scopes", "roles":
 		return true
 	}
 	return false

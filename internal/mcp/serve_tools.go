@@ -162,7 +162,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 			len(content), s.serve.opts.budget(), remaining))
 	}
 	if t := s.serve.opts.Telemetry; t != nil {
-		t(SessionTelemetry{Skill: skill.Name, Digest: skill.Digest, Session: session, Client: client, Resource: rel != skillMarkdown})
+		t(SessionTelemetry{Skill: skill.Name, Digest: skill.Digest, Session: session, Client: client, Resource: rel != skillMarkdown, Role: s.serve.opts.Role})
 	}
 
 	resources := make([]map[string]any, 0, len(skill.Files))

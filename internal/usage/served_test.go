@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -87,4 +88,47 @@ func TestRecordServed_SinkCommandReceivesTheLine(t *testing.T) {
 	data, err := os.ReadFile(out)
 	require.NoError(t, err)
 	assert.Contains(t, string(data), `"served":true`)
+}
+
+func TestRecordServed_CarriesRoleHarnessVersionAndASaltedSession(t *testing.T) {
+	dir := t.TempDir()
+	log := filepath.Join(dir, "usage.jsonl")
+
+	entry, err := RecordServed(ServedLoad{Skill: "refund-policy", Digest: "sha256:abc", Session: "mcp-session-1", Harness: "claude-code", Role: "billing-agent"},
+		RecordOptions{LogPath: log, Now: fixedClock})
+	require.NoError(t, err)
+	assert.Equal(t, EntrySchemaVersion, entry.Version)
+	assert.Equal(t, OutcomeLoaded, entry.Outcome)
+	assert.Equal(t, "billing-agent", entry.Role)
+	assert.Equal(t, "claude-code", entry.Harness)
+	assert.True(t, entry.Served)
+	assert.NotContains(t, entry.Session, "mcp-session-1", "the raw session id never reaches the log")
+	assert.Len(t, entry.Session, 16)
+
+	salt, err := os.ReadFile(filepath.Join(dir, "usage.salt"))
+	require.NoError(t, err)
+	assert.Equal(t, HashSession(strings.TrimSpace(string(salt)), "mcp-session-1"), entry.Session, "the same hash a hook-recorded load of that session gets")
+
+	entries, skipped, err := ReadLog(log)
+	require.NoError(t, err)
+	require.Zero(t, skipped)
+	assert.Equal(t, "billing-agent", entries[0].Role)
+	assert.Equal(t, "sha256:abc", entries[0].Digest)
+}
+
+func TestReadLog_ReadsVersion1AndVersion2LinesTogether(t *testing.T) {
+	log := filepath.Join(t.TempDir(), "usage.jsonl")
+	lines := `{"ts":"2026-10-01T00:00:00Z","event":"skill_invoked","skill":"a","id":"a","session":"raw-id","invocation":"tool","harness":"claude"}
+{"v":2,"ts":"2026-10-02T00:00:00Z","event":"skill_invoked","skill":"a","id":"a","session":"0123456789abcdef","invocation":"mcp","harness":"claude-code","outcome":"loaded","served":true,"role":"r","digest":"sha256:x"}
+`
+	require.NoError(t, os.WriteFile(log, []byte(lines), 0o600))
+	entries, skipped, err := ReadLog(log)
+	require.NoError(t, err)
+	require.Zero(t, skipped)
+	require.Len(t, entries, 2)
+	assert.Zero(t, entries[0].Version)
+	assert.False(t, entries[0].Served)
+	assert.Equal(t, 2, entries[1].Version)
+	assert.True(t, entries[1].Served)
+	assert.Equal(t, "r", entries[1].Role)
 }

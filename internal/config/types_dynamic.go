@@ -29,16 +29,6 @@ func ParseDelivery(v string) (Delivery, bool) {
 	return "", false
 }
 
-// LockConfig is the [lock] table.
-//
-// Integration note: the skills-governance branch also adds a [lock] table with an
-// `enforce` key; when the two merge, keep one LockConfig with one Enforce field.
-type LockConfig struct {
-	// Enforce makes the skills server refuse to serve a skill whose digest is not
-	// the one recorded in ai-rulez.lock.
-	Enforce bool `yaml:"enforce,omitempty" json:"enforce,omitempty" toml:"enforce,omitempty"`
-}
-
 // DomainConfigs maps a domain name to its [domains.<name>] table.
 type DomainConfigs map[string]DomainConfig
 
@@ -85,6 +75,3 @@ type SkillSourceConfig struct {
 	// Trust is the scan level: "error" (default) or "warn". See TrustError.
 	Trust string `yaml:"trust,omitempty" json:"trust,omitempty" toml:"trust,omitempty"`
 }
-
-// LockEnforced reports whether [lock] enforce is on.
-func (c *Config) LockEnforced() bool { return c != nil && c.Lock != nil && c.Lock.Enforce }
