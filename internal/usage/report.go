@@ -84,6 +84,9 @@ func BuildReport(index *Index, entries []Entry, skipped int) *Report {
 	tallies := map[string]*tally{}
 	for i := range entries {
 		entry := &entries[i]
+		if entry.Resource {
+			continue // a supporting file of a skill already counted
+		}
 		t := tallies[entry.ID]
 		if t == nil {
 			t = &tally{hashes: map[string]bool{}}

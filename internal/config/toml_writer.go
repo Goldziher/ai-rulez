@@ -47,6 +47,10 @@ type tomlOutput struct {
 	Rules           *RulesConfig           `toml:"rules,omitempty"`
 	Lint            *LintConfig            `toml:"lint,omitempty"`
 	Usage           *UsageConfig           `toml:"usage,omitempty"`
+	Skills          *SkillsConfig          `toml:"skills,omitempty"`
+	DomainSettings  DomainConfigs          `toml:"domains,omitempty"`
+	SkillSources    []SkillSourceConfig    `toml:"skill_sources,omitempty"`
+	Lock            *LockConfig            `toml:"lock,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
@@ -136,6 +140,10 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Rules:           cfg.Rules,
 		Lint:            cfg.Lint,
 		Usage:           cfg.Usage,
+		Skills:          cfg.Skills,
+		DomainSettings:  cfg.DomainSettings,
+		SkillSources:    cfg.SkillSources,
+		Lock:            cfg.Lock,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,

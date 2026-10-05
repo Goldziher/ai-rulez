@@ -48,6 +48,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateDynamicSkills(); err != nil {
+		return err
+	}
+
 	if err := c.validateDefaults(); err != nil {
 		return err
 	}

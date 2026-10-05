@@ -749,6 +749,90 @@
       },
       "additionalProperties": false
     },
+    "skills": {
+      "type": "object",
+      "description": "Defaults for every skill (dynamic skill loading).",
+      "properties": {
+        "delivery": {
+          "$ref": "#/$defs/delivery",
+          "description": "Global default delivery: static (default) writes skills into every harness skill tree, served leaves them out and serves them over MCP on demand (`ai-rulez mcp --serve-skills`), both does both. A skill's own `delivery` frontmatter, a role override and [domains.<name>] delivery take precedence."
+        }
+      },
+      "additionalProperties": false
+    },
+    "domains": {
+      "type": "object",
+      "description": "Per-domain settings, keyed by domain name.",
+      "additionalProperties": {
+        "type": "object",
+        "properties": {
+          "delivery": {
+            "$ref": "#/$defs/delivery",
+            "description": "Default delivery of the domain's skills. A skill's own `delivery` frontmatter wins."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "skill_sources": {
+      "type": "array",
+      "description": "Remote or local skill sources that are served over MCP, never written to the static skill trees. A tag or full commit SHA is resolved to a commit and pinned in ai-rulez.lock (kind source); a branch ref is reported as unpinned (AR010).",
+      "items": {
+        "type": "object",
+        "required": ["name", "url"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._-]*$",
+            "description": "Identifies the source in the lock and in provenance."
+          },
+          "url": {
+            "type": "string",
+            "description": "A git URL (https, ssh, file; a leading git+ is accepted) or a local directory."
+          },
+          "ref": {
+            "type": "string",
+            "description": "A tag or full commit SHA. A branch or no ref follows a moving ref and is reported as unpinned."
+          },
+          "path": {
+            "type": "string",
+            "description": "Subdirectory of the repository whose child directories are skills."
+          },
+          "include": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Keep only skills whose directory name matches one of these globs."
+          },
+          "exclude": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Drop skills whose directory name matches one of these globs; wins over include."
+          },
+          "name_prefix": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "description": "Prepended to every served skill name, so two sources cannot collide."
+          },
+          "trust": {
+            "type": "string",
+            "enum": ["error", "warn"],
+            "description": "Security-scan level. error (default) blocks a skill on any finding; warn blocks only findings that are errors by their own severity (secrets, hidden characters, risky shell)."
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "lock": {
+      "type": "object",
+      "description": "Lock behaviour at serve time.",
+      "properties": {
+        "enforce": {
+          "type": "boolean",
+          "description": "Refuse to serve a skill whose digest is not the one recorded in ai-rulez.lock (kind served), and one that the lock does not pin at all. Run `ai-rulez lock` to record the digests."
+        }
+      },
+      "additionalProperties": false
+    },
     "lint": {
       "type": "object",
       "description": "Settings for `ai-rulez validate --strict` (deep content validation).",
@@ -1554,6 +1638,10 @@
     }
   },
   "$defs": {
+    "delivery": {
+      "type": "string",
+      "enum": ["static", "served", "both"]
+    },
     "patternList": {
       "type": "array",
       "items": {
