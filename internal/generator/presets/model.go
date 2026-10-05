@@ -55,3 +55,25 @@ func ResolveGlobalModel(preset string, cfg *config.Config) string {
 	}
 	return strings.TrimSpace(cfg.Defaults.ModelByPreset[preset])
 }
+
+// bareModelAliases are the tool-neutral Claude model aliases and the inherit
+// marker, none of which is a model id in another tool's namespace.
+var bareModelAliases = map[string]bool{"sonnet": true, "opus": true, "haiku": true, "inherit": true}
+
+// IsBareModelAlias reports whether model is one of the bare Claude aliases
+// (sonnet, opus, haiku) or the inherit marker.
+func IsBareModelAlias(model string) bool {
+	return bareModelAliases[strings.ToLower(strings.TrimSpace(model))]
+}
+
+// ResolveNativeAgentModel is ResolveAgentModel for a tool with its own model
+// namespace: a bare Claude alias is dropped (the agent then inherits the session
+// model), while an explicit <preset>_model or per-preset default is a native id
+// and kept.
+func ResolveNativeAgentModel(preset string, agent config.ContentFile, cfg *config.Config) string {
+	model := ResolveAgentModel(preset, agent, cfg)
+	if IsBareModelAlias(model) {
+		return ""
+	}
+	return model
+}

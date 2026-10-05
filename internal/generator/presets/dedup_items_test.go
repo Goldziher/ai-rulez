@@ -1,9 +1,11 @@
 package presets
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -209,4 +211,24 @@ func TestAllSkills_sameSourceListedTwiceCollapses(t *testing.T) {
 	got := allSkills(tree)
 	require.Len(t, got, 1)
 	assert.Equal(t, "INCLUDE", got[0].Content)
+}
+
+func TestCommandAsSkills_WarnsWhenACommandIDCollides(t *testing.T) {
+	// Arrange
+	var warnings []string
+	t.Cleanup(rulefiles.SetWarnSink(func(msg string, _ ...any) { warnings = append(warnings, msg) }))
+	content := &config.ContentTree{
+		Skills:   []config.ContentFile{{Name: "ship", Path: "skills/ship/SKILL.md", Content: "skill"}},
+		Commands: []config.ContentFile{{Name: "ship", Path: "commands/ship.md", Content: "cmd"}, {Name: "my-cmd", Path: "commands/a.md", Content: "d1"}, {Name: "my_cmd", Path: "commands/b.md", Content: "d2"}},
+	}
+
+	// Act
+	skills := commandAsSkills(content, "codex")
+
+	// Assert
+	require.Len(t, skills, 1)
+	assert.Equal(t, "d1", skills[0].Content)
+	joined := strings.Join(warnings, "\n")
+	assert.Contains(t, joined, `command "ship" is not written as a codex skill`)
+	assert.Contains(t, joined, `command "my_cmd" is not written as a codex skill`)
 }

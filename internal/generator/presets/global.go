@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
@@ -24,6 +25,37 @@ type GlobalPaths struct {
 	// MCPSidecars maps a document's project path to the user-scope file holding
 	// its MCP servers, for tools whose servers do not live at the Sidecars path.
 	MCPSidecars map[string]string
+	// SkillReaders lists every user-level skill directory the tool reads (its own
+	// SkillsDir included), absolute. Two of them holding the same skill name load
+	// it twice. Empty when the tool is only known to read SkillsDir.
+	SkillReaders []string
+	// RelocatedHome is the absolute directory the tool's home environment variable
+	// (HomeEnv) points at, when it is set; paths below HomeDir were re-rooted there.
+	// Empty when the tool lives under the user's home.
+	RelocatedHome string
+	// SkillPrecedence says which copy runs when a skill of the same name exists at
+	// user and project level, as the vendor documents it. Empty means the vendor
+	// documents none.
+	SkillPrecedence string
+}
+
+// ProjectLayout is where a preset writes the project-level counterparts of the
+// GlobalPaths fields, relative to the project root and slash-separated. User
+// scope maps an output below one of these onto the matching GlobalPaths field.
+type ProjectLayout struct {
+	RootFile, SkillsDir, AgentsDir, CommandsDir, RulesDir string
+}
+
+// ProjectLayoutProvider is implemented by every preset generator that can be
+// mapped into user scope, next to GlobalOutputProvider.
+type ProjectLayoutProvider interface {
+	ProjectLayout() ProjectLayout
+}
+
+// ConfiguredProjectLayoutProvider is implemented by a preset whose project layout
+// depends on the config (codex_skills_dir). It takes precedence over ProjectLayout.
+type ConfiguredProjectLayoutProvider interface {
+	ProjectLayoutFor(cfg *config.Config) ProjectLayout
 }
 
 // GlobalOutputProvider is implemented by a preset generator that knows its
@@ -42,6 +74,11 @@ type GlobalLayout struct {
 	RootFile, SkillsDir, AgentsDir, CommandsDir, RulesDir string
 
 	Sidecars, MCPSidecars map[string]string
+
+	// SkillReaders and SkillPrecedence are described on GlobalPaths; SkillReaders
+	// are home-relative here.
+	SkillReaders    []string
+	SkillPrecedence string
 }
 
 // Resolve turns the layout into absolute paths under home.
@@ -51,12 +88,18 @@ func (l GlobalLayout) Resolve(home string, getenv func(string) string) *GlobalPa
 	}
 	resolve := func(rel string) string { return ResolveHomePath(rel, l.HomeEnv, l.HomeDir, home, getenv) }
 	paths := &GlobalPaths{
-		RootFile:    resolve(l.RootFile),
-		SkillsDir:   resolve(l.SkillsDir),
-		AgentsDir:   resolve(l.AgentsDir),
-		CommandsDir: resolve(l.CommandsDir),
-		RulesDir:    resolve(l.RulesDir),
-		Sidecars:    map[string]string{},
+		RelocatedHome: HomeOverride(l.HomeEnv, getenv),
+		RootFile:      resolve(l.RootFile),
+		SkillsDir:     resolve(l.SkillsDir),
+		AgentsDir:     resolve(l.AgentsDir),
+		CommandsDir:   resolve(l.CommandsDir),
+		RulesDir:      resolve(l.RulesDir),
+		Sidecars:      map[string]string{},
+
+		SkillPrecedence: l.SkillPrecedence,
+	}
+	for _, rel := range l.SkillReaders {
+		paths.SkillReaders = append(paths.SkillReaders, resolve(rel))
 	}
 	for project, rel := range l.Sidecars {
 		paths.Sidecars[project] = resolve(rel)
@@ -77,18 +120,29 @@ func ResolveHomePath(rel, homeEnv, homeDir, home string, getenv func(string) str
 	if rel == "" {
 		return ""
 	}
-	if homeEnv != "" && getenv != nil {
-		override := getenv(homeEnv)
-		if override != "" && !filepath.IsAbs(override) {
-			logger.Warn("ignoring relative home override; using the home directory", "env", homeEnv, "value", override)
-			override = ""
-		}
-		if override != "" && underDir(rel, homeDir) {
-			rest := strings.TrimPrefix(strings.TrimPrefix(rel, strings.TrimSuffix(homeDir, "/")), "/")
-			return filepath.Join(override, filepath.FromSlash(path.Clean(rest)))
-		}
+	if override := HomeOverride(homeEnv, getenv); override != "" && underDir(rel, homeDir) {
+		rest := strings.TrimPrefix(strings.TrimPrefix(rel, strings.TrimSuffix(homeDir, "/")), "/")
+		return filepath.Join(override, filepath.FromSlash(path.Clean(rest)))
 	}
 	return filepath.Join(home, filepath.FromSlash(rel))
+}
+
+// HomeOverride returns the absolute directory the home-relocating variable homeEnv
+// is set to, or "" when it is unset, empty or not absolute (a relative value is
+// ignored with a warning: it would depend on the working directory).
+func HomeOverride(homeEnv string, getenv func(string) string) string {
+	if homeEnv == "" || getenv == nil {
+		return ""
+	}
+	override := getenv(homeEnv)
+	if override == "" {
+		return ""
+	}
+	if !filepath.IsAbs(override) {
+		logger.Warn("ignoring relative home override; using the home directory", "env", homeEnv, "value", override)
+		return ""
+	}
+	return filepath.Clean(override)
 }
 
 // underDir reports whether p is dir or lies inside it (slash-separated, relative).

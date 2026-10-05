@@ -21,6 +21,7 @@ func TestMergedDocumentPaths(t *testing.T) {
 		".agents/settings.json",
 		".codex/config.toml",
 		".codex/hooks.json",
+		".cursor/BUGBOT.md",
 		".cursor/hooks.json",
 		".cursor/mcp.json",
 		".devin/mcp_config.json",

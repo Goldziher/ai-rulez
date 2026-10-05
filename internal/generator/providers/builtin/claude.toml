@@ -127,7 +127,7 @@ kind = "claude_settings_json"
 path = ".claude/settings.json"
 global_path = ".claude/settings.json"
 # Claude Code reads user-scope MCP servers from ~/.claude.json, not from
-# ~/.claude/settings.json: a --global run writes mcpServers there and the other
+# ~/.claude/settings.json: a user-scope run would write mcpServers there and the other
 # keys (plugin settings, effort) to global_path.
 global_mcp_path = ".claude.json"
 emit_when = "has_claude_settings"
@@ -145,3 +145,5 @@ skills_dir = ".claude/skills"
 agents_dir = ".claude/agents"
 commands_dir = ".claude/commands"
 rules_dir = ".claude/rules"
+# A skill present at both levels: the personal one wins.
+skill_precedence = "Claude Code runs the user-level skill (personal over project)"

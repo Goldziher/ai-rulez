@@ -115,7 +115,7 @@ func (g *Generator) Clean(profile string, opts CleanOptions) (*CleanPlan, error)
 		g.removeStaleFile(f)
 	}
 	for _, d := range plan.Dirs {
-		removeDirIfEmpty(d)
+		g.removeEmptyDir(d)
 	}
 	if plan.ManifestPath != "" {
 		g.removeStaleFile(plan.ManifestPath)
@@ -134,7 +134,7 @@ func (g *Generator) collectCleanTargets(outputs []config.OutputFile, plan *Clean
 	var dirs []string
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
-		if !isUnderBaseDir(g.config.BaseDir, abs) {
+		if !g.withinScope(abs) {
 			logger.Warn("Skipping generated path outside project", "path", output.Path)
 			continue
 		}
@@ -244,7 +244,7 @@ func (g *Generator) pruneDirsEmptiedBy(removed []string) {
 	// Deepest-first, so emptying a child lets its parent go in the same pass.
 	sort.Slice(dirs, func(i, j int) bool { return dirs[i] > dirs[j] })
 	for _, dir := range dirs {
-		removeDirIfEmpty(dir)
+		g.removeEmptyDir(dir)
 	}
 }
 
@@ -340,6 +340,15 @@ func (g *Generator) isPrunableDir(dir string) bool {
 	// isUnderBaseDir is true for the directory itself, so this rejects the config
 	// dir along with everything in it.
 	return g.config.ConfigDir == "" || !isUnderBaseDir(g.config.ConfigDir, clean)
+}
+
+// removeEmptyDir is removeDirIfEmpty, which in user scope first refuses a
+// directory that resolves outside the home directory (or a relocated tool home).
+func (g *Generator) removeEmptyDir(dir string) {
+	if g.userMode && !g.userMayTouch(dir) {
+		return
+	}
+	removeDirIfEmpty(dir)
 }
 
 // removeDirIfEmpty removes a directory only when it holds no entries, so

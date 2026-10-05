@@ -23,6 +23,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/providers" // Register DSL-backed preset generators (overrides legacy registrations where they overlap)
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/generator/settings"
+	"github.com/Goldziher/ai-rulez/internal/generator/userscope"
 	"github.com/Goldziher/ai-rulez/internal/gitignore"
 	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -67,7 +68,13 @@ type Generator struct {
 	// projectDir is the project the user command runs from, for overlap warnings.
 	userMode   bool
 	projectDir string
-	warned     map[string]bool // merged-document warnings already issued by this Generator
+	// userGetenv looks up the layouts' home variables (nil: os.Getenv). userLayouts
+	// are the resolved layouts of this run and userHomes the tool homes those
+	// variables relocated outside the home directory.
+	userGetenv  func(string) string
+	userLayouts map[string]*userscope.Layout
+	userHomes   []string
+	warned      map[string]bool // merged-document warnings already issued by this Generator
 }
 
 type generatedManifest struct {
@@ -1232,6 +1239,7 @@ func selectProfileContent(cfg *config.Config, content *config.ContentTree, profi
 				Skills:   content.Skills,
 				Agents:   content.Agents,
 				Commands: content.Commands,
+				Checks:   content.Checks,
 				Domains:  domainsCopy,
 			}, nil
 		}
@@ -1253,6 +1261,7 @@ func selectProfileContent(cfg *config.Config, content *config.ContentTree, profi
 			Skills:   content.Skills,
 			Agents:   content.Agents,
 			Commands: content.Commands,
+			Checks:   content.Checks,
 			Domains:  defaultDomains,
 		}, nil
 	}
@@ -2198,6 +2207,7 @@ func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.
 	writeContentFiles(b, "root.skills", content.Skills, cfg)
 	writeContentFiles(b, "root.agents", content.Agents, cfg)
 	writeContentFiles(b, "root.commands", content.Commands, cfg)
+	writeContentFiles(b, "root.checks", content.Checks, cfg)
 
 	// Domain content — domains visited in sorted name order
 	domainNames := make([]string, 0, len(content.Domains))
@@ -2213,6 +2223,7 @@ func writeSourceContent(b *strings.Builder, cfg *config.Config, content *config.
 		writeContentFiles(b, "domain."+name+".skills", domain.Skills, cfg)
 		writeContentFiles(b, "domain."+name+".agents", domain.Agents, cfg)
 		writeContentFiles(b, "domain."+name+".commands", domain.Commands, cfg)
+		writeContentFiles(b, "domain."+name+".checks", domain.Checks, cfg)
 	}
 }
 
@@ -2418,6 +2429,11 @@ func (g *Generator) writeGeneratedManifest(outputs []config.OutputFile) error {
 			continue
 		}
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
+		if g.userMode && filepath.IsAbs(filepath.FromSlash(rel)) {
+			// No relative form (another volume): a later run could not resolve the entry.
+			logger.Warn("Not recording a generated file the manifest cannot express", "path", rel)
+			continue
+		}
 		switch {
 		case g.skippedPaths[rel]:
 		case output.LocalOnly:
@@ -2511,8 +2527,11 @@ func (g *Generator) staleManifestFiles(outputs []config.OutputFile) []string {
 			continue
 		}
 		absPath := filepath.Join(g.config.BaseDir, filepath.FromSlash(relPath))
-		if !isUnderBaseDir(g.config.BaseDir, absPath) {
+		if !g.withinScope(absPath) {
 			logger.Warn("Skipping generated manifest path outside project", "path", relPath)
+			continue
+		}
+		if g.userMode && !g.userManifestEntryOK(relPath, absPath) {
 			continue
 		}
 		if _, err := os.Stat(absPath); err != nil {
@@ -2595,6 +2614,13 @@ func (g *Generator) removeStaleManifestFiles(files []string) {
 
 // removeStaleFile removes a single stale file.
 func (g *Generator) removeStaleFile(filePath string) {
+	// In user scope a file is removed only when the directory holding it still
+	// resolves inside the home directory: a symlinked folder must not carry the
+	// removal out of it.
+	if g.userMode && filePath != g.manifestPath() && filePath != g.localManifestPath() &&
+		!g.userMayTouch(filepath.Dir(filePath)) {
+		return
+	}
 	if err := os.Remove(filePath); err != nil {
 		logger.Warn("Failed to remove stale file", "path", filePath, "error", err)
 	} else {
@@ -2766,6 +2792,7 @@ func (g *Generator) localGitignorePatternsOnDisk() []string {
 func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[string]bool {
 	paths := make(map[string]bool)
 	includeCommitted := g.config.ShouldUpdateGitignore()
+	committed := g.committedOutputPaths(outputs)
 	for _, output := range outputs {
 		relPath := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
 		if output.LocalOnly {
@@ -2784,15 +2811,30 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 		if output.PartiallyOwned {
 			continue
 		}
+		// Check outputs are read by hosted reviewers from the committed tree.
+		if output.Committed {
+			continue
+		}
 		if !includeCommitted {
 			continue
 		}
 		if g.shouldSkipPath(relPath) {
 			continue
 		}
-		if pattern := gitignorePatternForOutput(relPath, output.IsDir); pattern != "" {
-			paths[pattern] = true
+		pattern := gitignorePatternForOutput(relPath, output.IsDir)
+		if pattern == "" {
+			continue
 		}
+		// A directory pattern that would swallow a committed output (the factory
+		// skills dir holding the review-guidelines check) is narrowed to the
+		// generated files themselves, since git cannot re-include under it.
+		if strings.HasSuffix(pattern, "/") && coversCommitted(pattern, committed) {
+			if output.IsDir {
+				continue
+			}
+			pattern = relPath
+		}
+		paths[pattern] = true
 	}
 
 	// The .ai-rulez/local/ source subtree holds machine-local override content
@@ -2823,6 +2865,28 @@ func (g *Generator) collectGitignorePaths(outputs []config.OutputFile) map[strin
 	}
 
 	return paths
+}
+
+// committedOutputPaths lists the relative paths of outputs that must stay tracked.
+func (g *Generator) committedOutputPaths(outputs []config.OutputFile) []string {
+	var paths []string
+	for _, output := range outputs {
+		if output.Committed && !output.IsDir {
+			paths = append(paths, filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path))))
+		}
+	}
+	return paths
+}
+
+// coversCommitted reports whether a directory pattern contains a committed path.
+func coversCommitted(dirPattern string, committed []string) bool {
+	dir := strings.TrimPrefix(dirPattern, "./")
+	for _, rel := range committed {
+		if strings.HasPrefix(rel, dir) || strings.Contains(rel, "/"+dir) {
+			return true
+		}
+	}
+	return false
 }
 
 // skippedLocalPattern is the managed-.gitignore pattern for a machine-local file
@@ -3092,11 +3156,23 @@ func (g *Generator) convertToRelativePath(path string) string {
 	if !filepath.IsAbs(path) {
 		return path
 	}
-	relPath, err := filepath.Rel(g.config.BaseDir, path)
+	relPath, err := g.relativeToBase(path)
 	if err != nil {
-		return filepath.Base(path)
+		// Never the base name alone: that would name an unrelated file below the
+		// base directory. The whole path cannot match one either.
+		return path
 	}
 	return relPath
+}
+
+// relativeToBase makes abs relative to the base directory, failing when no
+// relative form exists (a different volume on Windows).
+func (g *Generator) relativeToBase(abs string) (string, error) {
+	rel, err := filepath.Rel(g.config.BaseDir, abs)
+	if err != nil {
+		return "", oops.With("path", abs).Wrapf(err, "express the path relative to %s", g.config.BaseDir)
+	}
+	return rel, nil
 }
 
 // shouldSkipPath checks if a path should be skipped for .gitignore
@@ -3312,7 +3388,8 @@ func (g *Generator) secretMCPValues() []string {
 func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
 	values := g.secretMCPValues()
 	names := g.secretMCPNames()
-	if len(values) == 0 && len(names) == 0 {
+	refValues := g.referencedMCPValues()
+	if len(values) == 0 && len(names) == 0 && len(refValues) == 0 {
 		return
 	}
 	for i := range outputs {
@@ -3327,7 +3404,9 @@ func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
 		// An MCP config file naming a secret key is sensitive whatever the value's
 		// length, so a short secret cannot loosen it.
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
-		o.Sensitive = o.Sensitive || (isMCPConfigOutputIn(rel, g.scopeDirs()) && outputContainsAny(o, names))
+		if isMCPConfigOutputIn(rel, g.scopeDirs()) && (outputContainsAny(o, names) || outputContainsAny(o, refValues)) {
+			o.Sensitive = true
+		}
 	}
 }
 
@@ -3384,11 +3463,50 @@ func (g *Generator) secretMCPNames() []string {
 		if server == nil {
 			continue
 		}
-		names = append(names, server.SecretEnvKeys...)
-		names = append(names, server.SecretHeaderKeys...)
+		// A key written as an environment reference holds no secret in the file,
+		// so its name alone does not make the file sensitive (see referencedMCPValues).
+		for _, key := range server.SecretEnvKeys {
+			if _, ref := server.EnvRefs[key]; !ref {
+				names = append(names, key)
+			}
+		}
+		for _, key := range server.SecretHeaderKeys {
+			if _, ref := server.HeaderRefs[key]; !ref {
+				names = append(names, key)
+			}
+		}
 		names = append(names, literalSecrets(server)...)
 	}
 	return names
+}
+
+// referencedMCPValues lists the resolved values, of any length, of secret keys that
+// a tool may be given as an environment reference. A config file is sensitive when
+// it holds one verbatim as a whole quoted string (the tool did not support
+// references), not when it only names the key. Quoting keeps a short value from
+// matching unrelated text.
+func (g *Generator) referencedMCPValues() []string {
+	var values []string
+	for _, server := range g.config.MCPServers {
+		if server == nil {
+			continue
+		}
+		for _, key := range server.SecretEnvKeys {
+			if _, ref := server.EnvRefs[key]; ref && server.Env[key] != "" {
+				values = append(values, quotedForms(server.Env[key])...)
+			}
+		}
+		for _, key := range server.SecretHeaderKeys {
+			if _, ref := server.HeaderRefs[key]; ref && server.Headers[key] != "" {
+				values = append(values, quotedForms(server.Headers[key])...)
+			}
+		}
+	}
+	return values
+}
+
+func quotedForms(v string) []string {
+	return []string{`"` + v + `"`, `'` + v + `'`}
 }
 
 func (g *Generator) secretMCPEnvKeys() []string {
@@ -3413,6 +3531,18 @@ var legacyMCPConfigPaths = [...]string{
 	".agents/settings.json", ".xum/mcp.jsonc", ".pi/mcp.json",
 }
 
+// mergedMCPDocumentPaths is every merged document a preset writes, less the hooks
+// documents, which never hold MCP servers.
+func mergedMCPDocumentPaths() []string {
+	var paths []string
+	for _, p := range presets.MergedDocumentPaths() {
+		if p != presets.MergedDocCodexHooks && p != presets.MergedDocCursorHooks {
+			paths = append(paths, p)
+		}
+	}
+	return paths
+}
+
 // isMCPConfigOutput reports whether relPath, relative to the project root, is an
 // MCP config file a preset writes.
 func isMCPConfigOutput(relPath string) bool { return isMCPConfigOutputIn(relPath, nil) }
@@ -3434,7 +3564,8 @@ func isMCPConfigOutputIn(relPath string, scopeDirs []string) bool {
 		if !ok {
 			continue
 		}
-		if slices.Contains(legacyMCPConfigPaths[:], rest) || slices.Contains(specMCPConfigPaths(), rest) {
+		if slices.Contains(legacyMCPConfigPaths[:], rest) || slices.Contains(mergedMCPDocumentPaths(), rest) ||
+			slices.Contains(specMCPConfigPaths(), rest) {
 			return true
 		}
 	}

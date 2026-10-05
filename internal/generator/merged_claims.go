@@ -210,6 +210,11 @@ func mergedDocFormat(rel string) docmerge.Format {
 	if format, ok := docmerge.FormatFromPath(rel); ok {
 		return format
 	}
+	if strings.EqualFold(filepath.Ext(rel), ".md") {
+		// The only Markdown documents with claims are the review-check files, where
+		// ai-rulez owns a marker-delimited block (also at a monorepo scope's path).
+		return docmerge.FormatMarkdown
+	}
 	return docmerge.FormatJSON
 }
 
@@ -239,7 +244,10 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 			continue
 		}
 		abs := filepath.Join(g.config.BaseDir, filepath.FromSlash(rel))
-		if !isUnderBaseDir(g.config.BaseDir, abs) || !pathIsFile(abs) {
+		if !g.withinScope(abs) || !pathIsFile(abs) {
+			continue
+		}
+		if g.userMode && !g.userMayTouch(abs) {
 			continue
 		}
 		result, err := docmerge.Unmerge(abs, mergedDocFormat(rel), claims[rel])
@@ -319,6 +327,9 @@ func (g *Generator) applyUnmerge(edits []mergedEdit) {
 	for _, edit := range edits {
 		if edit.delete {
 			g.removeStaleFile(edit.abs)
+			continue
+		}
+		if g.userMode && !g.userMayTouch(edit.abs) {
 			continue
 		}
 		if err := writeFileAtomic(edit.abs, []byte(edit.body)); err != nil {

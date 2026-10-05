@@ -30,6 +30,7 @@ type Operator interface {
 	AddSkill(ctx context.Context, req *AddFileRequest) (*FileResult, error)
 	AddAgent(ctx context.Context, req *AddFileRequest) (*FileResult, error)
 	AddCommand(ctx context.Context, req *AddFileRequest) (*FileResult, error)
+	AddCheck(ctx context.Context, req *AddFileRequest) (*FileResult, error)
 	RemoveFile(ctx context.Context, domain, ftype, name string) error
 	ListFiles(ctx context.Context, domain, ftype string) ([]FileInfo, error)
 

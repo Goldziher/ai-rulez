@@ -63,7 +63,7 @@ filename = "{id}.md"
 sections = ["frontmatter", "content"]
 
 [outputs.commands.frontmatter]
-fields = ["description"]
+fields = ["description", "argument-hint"]
 omit_name = true
 
 [model]

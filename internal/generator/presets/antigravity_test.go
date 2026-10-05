@@ -122,7 +122,6 @@ func TestAntigravityPresetGenerator_GetOutputPaths(t *testing.T) {
 	paths := g.GetOutputPaths("/base")
 
 	wantPaths := []string{
-		filepath.Join("/base", ".agents", "workflows"),
 		filepath.Join("/base", "GEMINI.md"),
 		filepath.Join("/base", ".agents"),
 		filepath.Join("/base", ".agents", "rules"),
@@ -143,7 +142,6 @@ func TestAntigravityPresetGenerator_GetOutputPaths(t *testing.T) {
 
 func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 	g := &AntigravityPresetGenerator{}
-	// An MCP server is what makes .agents/settings.json part of the output set.
 	cfg := &config.Config{
 		Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline},
 		MCPServers: map[string]*config.MCPServer{"configured": {Command: "npx"}},
@@ -184,7 +182,7 @@ func TestAntigravityPresetGenerator_outputStructure(t *testing.T) {
 
 	expectedPaths := []string{
 		"/test/GEMINI.md",
-		"/test/.agents/settings.json",
+		"/test/.agents/mcp_config.json",
 		"/test/.agents/skills/deploy/SKILL.md",
 		"/test/.agents/agents/reviewer.md",
 	}
@@ -533,5 +531,59 @@ func TestAntigravity_MaxCharsWarns(t *testing.T) {
 	}
 	if !strings.Contains(m["/test/.agents/rules/big.md"], big) {
 		t.Error("oversized rule must not be truncated")
+	}
+}
+
+func TestAntigravityAgentFrontmatter(t *testing.T) {
+	tests := []struct {
+		name  string
+		agent config.Metadata
+		want  map[string]any
+		gone  []string
+	}{
+		{"alias maps by tier and gemini keys drop", config.Metadata{
+			Tools: []string{"Read", "Bash", "WebFetch"},
+			Extra: map[string]string{"description": "d", "model": "sonnet", "temperature": "0.2", "kind": "local", "max_turns": "3"},
+		}, map[string]any{"description": "d", "model": "pro", "tools": []string{"view_file", "run_command"}},
+			[]string{"temperature", "kind", "max_turns", "timeout_mins"}},
+		{"haiku is flash, inherit stays", config.Metadata{Extra: map[string]string{"model": "haiku"}},
+			map[string]any{"model": "flash"}, nil},
+		{"unknown model drops", config.Metadata{Extra: map[string]string{"model": "gpt-5"}}, nil, []string{"model"}},
+		{"no mappable tool writes none", config.Metadata{Tools: []string{"TodoWrite"}}, nil, []string{"tools"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			fm := (&AntigravityPresetGenerator{}).buildAgentFrontmatter(
+				config.ContentFile{Name: "a", Metadata: &tt.agent}, &config.Config{})
+
+			// Assert
+			for k, v := range tt.want {
+				if !reflect.DeepEqual(fm[k], v) {
+					t.Errorf("%s = %v, want %v", k, fm[k], v)
+				}
+			}
+			for _, k := range tt.gone {
+				if _, ok := fm[k]; ok {
+					t.Errorf("%s must be absent", k)
+				}
+			}
+		})
+	}
+}
+
+func TestAntigravityMCPServers_SelfServerIsOptIn(t *testing.T) {
+	declared := map[string]*config.MCPServer{"x": {Command: "npx"}}
+	off := antigravityMCPServers(&config.Config{MCPServers: declared})
+	if _, ok := off["ai-rulez"]; ok {
+		t.Errorf("the ai-rulez server must not be written unless [mcp] self_server is set")
+	}
+	on := antigravityMCPServers(&config.Config{MCPServers: declared, MCP: &config.MCPConfig{SelfServer: true}})
+	self, ok := on["ai-rulez"].(map[string]any)
+	if !ok || self["command"] != "npx" {
+		t.Fatalf("self_server must add the ai-rulez entry, got %v", on["ai-rulez"])
+	}
+	if _, typed := self["type"]; typed {
+		t.Errorf("Antigravity entries carry no type key")
 	}
 }

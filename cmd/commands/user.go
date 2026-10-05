@@ -50,6 +50,11 @@ func newUserGenerator(ctx context.Context) (*generator.Generator, *config.Config
 	if err != nil || home == "" {
 		return nil, nil, oops.Wrapf(err, "find the home directory")
 	}
+	if !filepath.IsAbs(home) {
+		return nil, nil, oops.With("home", home).
+			Hint("Set HOME to an absolute path; --user never writes relative to the working directory").
+			Errorf("the home directory %q is not an absolute path", home)
+	}
 	path := userConfigPath(home)
 	if err := requireUserConfig(path); err != nil {
 		return nil, nil, err
@@ -147,6 +152,9 @@ func printUserPlan(home string, plan *generator.UserPlan) {
 	}
 	if plan.Dropped > 0 {
 		progress.PrintlnIfNotQuiet(fmt.Sprintf("  %d project-shaped output(s) have no documented user-level location and are not written", plan.Dropped))
+		for _, entry := range plan.Unmapped {
+			logger.Debug("not written: no user-level location", "output", entry)
+		}
 	}
 	for _, w := range plan.Warnings {
 		logger.Warn(w)

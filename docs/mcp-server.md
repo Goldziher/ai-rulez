@@ -621,6 +621,20 @@ List all skill files in the root or a specific domain.
 
 **Response:** Similar to list_rules (items use the capitalised `Name`, `Path`, `Type`, `Domain`, `Priority`, `Targets` keys), with a "skills" key instead of "rules"
 
+### Check Tools
+
+Checks are code-review guidelines (see [Checks](checks.md)). They live in the shared tree only: there is no `local` argument.
+
+| Tool           | Arguments                                                                                          |
+| -------------- | -------------------------------------------------------------------------------------------------- |
+| `create_check` | `name`, `content`, `description`, `severity` (low\|medium\|high\|critical), `tools`, `targets`, `domain` |
+| `read_check`   | `name`, `domain`                                                                                   |
+| `update_check` | `name`, `domain`, and `content` and/or any of `description`, `severity`, `tools`, `targets`         |
+| `delete_check` | `name`, `domain`                                                                                   |
+| `list_checks`  | `domain`                                                                                           |
+
+Names are limited to `[A-Za-z0-9._-]`. Content without frontmatter gets one built from the structured arguments (marshalled as YAML, `severity` and `targets` validated). `update_check` rejects a call with neither `content` nor a field; content without frontmatter replaces the body and keeps the existing frontmatter, and fields are set on it.
+
 ### Include Tools
 
 #### `add_include`

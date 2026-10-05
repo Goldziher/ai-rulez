@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"slices"
 	"sort"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/generator/userscope"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -19,9 +19,12 @@ import (
 
 // User scope renders the person's own configuration (not a project's) into the
 // per-user directories each harness reads: ~/.claude, ~/.agents/skills,
-// ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent. It reuses the
-// preset renderers and maps their project-relative output through the closed
-// table in package userscope, so only locations a vendor documents are written.
+// ~/.codex, ~/.gemini, ~/.config/opencode, ~/.copilot, ~/.pi/agent, ... It reuses
+// the preset renderers and maps their project-relative output through the layout
+// each preset declares (its spec's [global] block, or presets.GlobalOutputProvider),
+// so only locations a vendor documents are written. A tool's home variable
+// (CODEX_HOME, HERMES_HOME, ...) relocates its directory, and only an absolute
+// value is honoured.
 //
 // The config directory (default ~/.config/ai-rulez) keeps the generated manifest
 // beside the user config, which is what `clean --user` reads. Nothing is written
@@ -46,8 +49,10 @@ type UserPlan struct {
 	Stale []string
 	// Unmerge are shared documents from which an earlier run's keys are taken back out.
 	Unmerge []string
-	// Dropped counts project outputs with no documented user-level destination.
-	Dropped int
+	// Dropped counts project outputs with no documented user-level destination;
+	// Unmapped names them as "preset: project-relative path", sorted.
+	Dropped  int
+	Unmapped []string
 	// Warnings are advisories: skills loaded twice, precedence against a project.
 	Warnings []string
 }
@@ -64,28 +69,95 @@ func (g *Generator) SetUserScope() {
 // IsUserScope reports whether the Generator runs in user scope.
 func (g *Generator) IsUserScope() bool { return g.userMode }
 
+// SetUserEnv sets the environment lookup the layouts' home variables are read
+// through (default os.Getenv); tests use it to relocate a tool's home.
+func (g *Generator) SetUserEnv(getenv func(string) string) { g.userGetenv = getenv }
+
+func (g *Generator) userEnv() func(string) string {
+	if g.userGetenv != nil {
+		return g.userGetenv
+	}
+	return os.Getenv
+}
+
+// resolveUserLayouts resolves the user-scope layout of every built-in preset
+// below the home directory, and records the tool homes environment variables
+// relocated outside it, for the configured presets. It returns the supported layouts and the reason for each
+// unsupported preset.
+func (g *Generator) resolveUserLayouts() (map[string]*userscope.Layout, map[string]string, error) {
+	layouts, unsupported, err := userscope.AllFor(g.config, g.config.BaseDir, g.userEnv())
+	if err != nil {
+		return nil, nil, oops.With("home", g.config.BaseDir).
+			Hint("The home directory must be an absolute path").Wrapf(err, "resolve the user-level layouts")
+	}
+	g.userLayouts = layouts
+	g.userHomes = nil
+	// Only a configured preset may widen the writable scope: a home variable of a
+	// tool the user does not generate for says nothing about where to write.
+	for _, preset := range userPresets(g.config, layouts) {
+		if home := layouts[preset.BuiltIn].RelocatedHome; home != "" && !slices.Contains(g.userHomes, home) {
+			g.userHomes = append(g.userHomes, home)
+		}
+	}
+	return layouts, unsupported, nil
+}
+
+// withinScope reports whether abs lies where the run may touch files: below the
+// base directory (the home directory in user scope) or, in user scope, below a
+// tool home an environment variable relocated.
+func (g *Generator) withinScope(abs string) bool {
+	if isUnderBaseDir(g.config.BaseDir, abs) {
+		return true
+	}
+	return g.userMode && slices.ContainsFunc(g.userHomes, func(home string) bool { return isUnderBaseDir(home, abs) })
+}
+
 // SetProjectDir names the project the user runs from, so skills that exist at
 // both levels can be reported. Empty disables the check.
 func (g *Generator) SetProjectDir(dir string) { g.projectDir = dir }
 
 // collectUserOutputs renders every configured preset and maps the result to the
-// user-level destinations under BaseDir (the home directory).
-func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputFile, activeProfile string, dropped int, err error) {
+// user-level destinations of the preset's layout.
+//
+// The presets render into a scratch directory, not the home directory: a preset
+// merges into the existing settings document at the path it renders, and a tool
+// whose home variable relocates that document (CODEX_HOME) must merge into the
+// relocated file. The scratch directory holds a copy of each such document at its
+// project-relative path; the mapped output is then written to the real location.
+func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputFile, activeProfile string, dropped []string, err error) {
 	activeProfile = g.resolveProfile(profile)
 	contentTree, err := g.getContentForProfile(activeProfile)
 	if err != nil {
-		return nil, "", 0, err
+		return nil, "", nil, err
 	}
-	presets := userPresets(g.config)
-	for _, name := range userUnsupportedPresets(g.config) {
-		rulefiles.Warn("preset "+name+" has no documented user-level location, so --user writes nothing for it",
-			"hint", "supported: "+strings.Join(userscope.Presets(), ", "))
+	layouts, unsupported, err := g.resolveUserLayouts()
+	if err != nil {
+		return nil, "", nil, err
+	}
+	presets := userPresets(g.config, layouts)
+	for _, name := range userUnsupportedPresets(g.config, layouts) {
+		reason := unsupported[name]
+		if reason == "" {
+			reason = "it is not a built-in preset"
+		}
+		rulefiles.Warn("preset "+name+" has no documented user-level location, so --user writes nothing for it ("+reason+")",
+			"hint", "supported: "+strings.Join(userscope.Supported(layouts), ", "))
 	}
 	if g.config.GeneratedAt.IsZero() {
 		g.config.GeneratedAt = config.ResolveGenerationTime()
 	}
 
+	stage, err := os.MkdirTemp("", "ai-rulez-user-")
+	if err != nil {
+		return nil, "", nil, oops.Wrapf(err, "create the scratch directory")
+	}
+	defer func() { _ = os.RemoveAll(stage) }()
+	if err := stageUserDocuments(stage, presets, layouts); err != nil {
+		return nil, "", nil, err
+	}
+
 	tempCfg := *g.config
+	tempCfg.BaseDir = stage
 	tempCfg.Content = contentTree
 	tempCfg.MCPServers = nil
 	tempCfg.MCP = nil
@@ -94,48 +166,152 @@ func (g *Generator) collectUserOutputs(profile string) (outputs []config.OutputF
 	tempCfg.UserScope = true
 	tempCfg.Presets = presets
 	run := config.NewRunState()
-	run.SetPreviouslyGenerated(g.previousManifestFiles())
-	run.SetPreviousMerged(g.previousMergedClaims())
+	previous, merged := g.userPreviousAliases(presets, layouts)
+	run.SetPreviouslyGenerated(previous)
+	run.SetPreviousMerged(merged)
 	tempCfg.Run = run
 	tempCfg.SourceHash = computeSourceHash(&tempCfg, contentTree)
 	g.config.SourceHash = tempCfg.SourceHash
 
-	rendered, err := config.GeneratePresets(&tempCfg)
+	rendered, err := g.renderUserPresets(&tempCfg, stage, presets)
 	if err != nil {
-		return nil, "", 0, oops.Wrapf(err, "generate presets")
+		return nil, "", nil, err
 	}
-	mapped := make(map[string][]config.OutputFile, len(rendered))
-	for preset, outs := range rendered {
-		for _, output := range outs {
-			if output.LocalOnly {
-				dropped++
-				continue
-			}
-			rel := filepath.ToSlash(g.convertToRelativePath(output.Path))
-			dest, _, ok := userscope.Map(preset, rel)
-			if !ok {
-				if !output.IsDir {
-					dropped++
-				}
-				continue
-			}
-			output.Path = filepath.Join(g.config.BaseDir, filepath.FromSlash(dest))
-			mapped[preset] = append(mapped[preset], output)
-		}
+	mapped, dropped, err := g.mapUserOutputs(stage, rendered, layouts)
+	if err != nil {
+		return nil, "", nil, err
 	}
 	outputs, err = flattenPresetOutputs(mapped)
 	if err != nil {
-		return nil, "", 0, err
+		return nil, "", nil, err
 	}
 	g.reclaimStaleMembers(outputs)
+	sort.Strings(dropped)
 	return outputs, activeProfile, dropped, nil
 }
 
-// userPresets keeps the configured presets that have a user-level destination.
-func userPresets(cfg *config.Config) []config.Preset {
+// userStageDir is the scratch directory one preset renders into. Each preset has
+// its own, so two presets that render the same project-relative path (and map it
+// to different user-level files) never read each other's staged document.
+func userStageDir(stage, preset string) string { return filepath.Join(stage, preset) }
+
+// renderUserPresets renders every preset into its own scratch directory below
+// stage. cfg keeps the full preset list, so presets that adapt to the others
+// (a shared AGENTS.md) behave as in a combined run.
+func (g *Generator) renderUserPresets(cfg *config.Config, stage string, presets []config.Preset) (map[string][]config.OutputFile, error) {
+	rendered := make(map[string][]config.OutputFile, len(presets))
+	for _, preset := range presets {
+		gen, err := config.GetPresetGenerator(preset.BuiltIn)
+		if err != nil {
+			return nil, oops.With("preset", preset.GetName()).Wrapf(err, "resolve preset")
+		}
+		presetCfg := *cfg
+		presetCfg.BaseDir = userStageDir(stage, preset.BuiltIn)
+		outputs, err := gen.Generate(cfg.Content, presetCfg.BaseDir, &presetCfg)
+		if err != nil {
+			return nil, oops.With("preset", preset.GetName()).Wrapf(err, "generate presets")
+		}
+		rendered[preset.GetName()] = outputs
+		presetCfg.Analysis.Attribute(preset.GetName(), presetCfg.BaseDir, outputs)
+	}
+	return rendered, nil
+}
+
+// mapUserOutputs moves the outputs rendered below stage to their user-level
+// destinations and names the ones with none ("preset: project-relative path").
+func (g *Generator) mapUserOutputs(stage string, rendered map[string][]config.OutputFile, layouts map[string]*userscope.Layout,
+) (mapped map[string][]config.OutputFile, dropped []string, err error) {
+	mapped = make(map[string][]config.OutputFile, len(rendered))
+	for preset, outs := range rendered {
+		layout := layouts[preset]
+		for _, output := range outs {
+			if output.LocalOnly {
+				dropped = append(dropped, preset+": "+filepath.ToSlash(g.convertToRelativePath(output.Path)))
+				continue
+			}
+			rel, relErr := filepath.Rel(userStageDir(stage, preset), output.Path)
+			if relErr != nil {
+				return nil, nil, oops.With("path", output.Path).Wrapf(relErr, "locate a rendered output")
+			}
+			dest, _, ok := layout.Map(filepath.ToSlash(rel))
+			if !ok {
+				if !output.IsDir {
+					dropped = append(dropped, preset+": "+filepath.ToSlash(rel))
+				}
+				continue
+			}
+			output.Path = dest
+			mapped[preset] = append(mapped[preset], output)
+		}
+	}
+	return mapped, dropped, nil
+}
+
+// stageUserDocuments copies the existing settings documents the presets merge
+// into from their user-level location to the path they render at.
+func stageUserDocuments(stage string, presets []config.Preset, layouts map[string]*userscope.Layout) error {
+	for _, preset := range presets {
+		for _, row := range layouts[preset.BuiltIn].Rows {
+			if row.Kind != userscope.KindSettings || row.To == "" {
+				continue
+			}
+			data, err := os.ReadFile(row.To)
+			if err != nil {
+				continue // absent, or not readable: the merge starts from nothing, and the guard reports the path
+			}
+			target := filepath.Join(userStageDir(stage, preset.BuiltIn), filepath.FromSlash(row.From))
+			if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+				return oops.Wrapf(err, "create the scratch directory")
+			}
+			if err := os.WriteFile(target, data, 0o600); err != nil {
+				return oops.Wrapf(err, "stage %s", row.To)
+			}
+		}
+	}
+	return nil
+}
+
+// userPreviousAliases returns the previous run's generated files and merge claims
+// under the project-relative paths the presets render at. The manifest records the
+// user-level destinations, and a preset looks its own files up by what it renders.
+func (g *Generator) userPreviousAliases(presets []config.Preset, layouts map[string]*userscope.Layout) ([]string, map[string][]jsonmerge.Claim) {
+	files := g.previousManifestFiles()
+	claims := g.previousMergedClaims()
+	generated := slices.Clone(files)
+	merged := make(map[string][]jsonmerge.Claim, len(claims))
+	for rel, c := range claims {
+		merged[rel] = c
+	}
+	for _, preset := range presets {
+		for _, row := range layouts[preset.BuiltIn].Rows {
+			if row.To == "" {
+				continue
+			}
+			dest := filepath.ToSlash(g.convertToRelativePath(row.To))
+			if dest == row.From {
+				continue
+			}
+			for _, f := range files {
+				switch {
+				case f == dest:
+					generated = append(generated, row.From)
+				case row.Dir && strings.HasPrefix(f, dest+"/"):
+					generated = append(generated, row.From+strings.TrimPrefix(f, dest))
+				}
+			}
+			if c, ok := claims[dest]; ok {
+				merged[row.From] = c
+			}
+		}
+	}
+	return generated, merged
+}
+
+// userPresets keeps the configured presets that have a user-level layout.
+func userPresets(cfg *config.Config, layouts map[string]*userscope.Layout) []config.Preset {
 	var out []config.Preset
 	for _, p := range cfg.Presets {
-		if p.IsBuiltIn() && userscope.Supports(p.BuiltIn) {
+		if p.IsBuiltIn() && layouts[p.BuiltIn] != nil {
 			out = append(out, p)
 		}
 	}
@@ -144,11 +320,11 @@ func userPresets(cfg *config.Config) []config.Preset {
 
 // userUnsupportedPresets names the configured presets user scope cannot write
 // for (the shared mcp preset is not a harness and is not reported).
-func userUnsupportedPresets(cfg *config.Config) []string {
+func userUnsupportedPresets(cfg *config.Config, layouts map[string]*userscope.Layout) []string {
 	var out []string
 	for _, p := range cfg.Presets {
 		name := p.GetName()
-		if name == string(config.PresetMCP) || (p.IsBuiltIn() && userscope.Supports(name)) {
+		if name == string(config.PresetMCP) || (p.IsBuiltIn() && layouts[name] != nil) {
 			continue
 		}
 		out = append(out, name)
@@ -170,18 +346,17 @@ func (g *Generator) guardUserOutputs(outputs []config.OutputFile) (kept []config
 	for _, rel := range g.previousManifestFiles() {
 		previous[rel] = true
 	}
-	realHome, err := filepath.EvalSymlinks(g.config.BaseDir)
-	if err != nil {
+	if _, err := filepath.EvalSymlinks(g.config.BaseDir); err != nil {
 		return nil, nil, oops.With("home", g.config.BaseDir).Wrapf(err, "resolve the home directory")
 	}
 
 	skippedDirs := map[string]bool{}
 	for _, output := range outputs {
 		abs := g.absOutputPath(output.Path)
-		if !isUnderBaseDir(g.config.BaseDir, abs) {
+		if !g.withinScope(abs) {
 			return nil, nil, oops.With("path", abs).Errorf("user-level output %s is outside the home directory", abs)
 		}
-		if err := g.checkSymlinkEscape(realHome, abs); err != nil {
+		if err := g.checkSymlinkEscape(abs); err != nil {
 			return nil, nil, err
 		}
 		if output.IsDir {
@@ -232,15 +407,28 @@ func skippedSkillDir(skipped map[string]bool, abs string) string {
 }
 
 // checkSymlinkEscape refuses an output whose nearest existing ancestor resolves
-// outside the resolved home directory.
-func (g *Generator) checkSymlinkEscape(realHome, abs string) error {
+// outside the resolved root it lies in: the home directory, or a tool home an
+// environment variable relocated.
+func (g *Generator) checkSymlinkEscape(abs string) error {
+	root := g.config.BaseDir
+	if !isUnderBaseDir(root, abs) {
+		i := slices.IndexFunc(g.userHomes, func(home string) bool { return isUnderBaseDir(home, abs) })
+		if i < 0 {
+			return nil // withinScope has refused it already
+		}
+		root = g.userHomes[i]
+	}
+	realRoot, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		realRoot = root // a relocated home that does not exist yet holds no symlink
+	}
 	probe := abs
 	for {
 		if _, err := os.Lstat(probe); err == nil {
 			break
 		}
 		parent := filepath.Dir(probe)
-		if parent == probe {
+		if parent == probe || !isUnderBaseDir(root, parent) {
 			return nil
 		}
 		probe = parent
@@ -249,7 +437,7 @@ func (g *Generator) checkSymlinkEscape(realHome, abs string) error {
 	if err != nil {
 		return oops.With("path", abs).Wrapf(err, "resolve %s", probe)
 	}
-	if !isUnderBaseDir(realHome, resolved) {
+	if !isUnderBaseDir(realRoot, resolved) {
 		return oops.With("path", abs).With("resolves_to", resolved).
 			Hint("A symlink below the home directory points out of it; generate --user writes only inside the home directory").
 			Errorf("%s resolves outside the home directory", abs)
@@ -294,18 +482,77 @@ func (g *Generator) userFileIsOurs(abs string, output config.OutputFile) bool {
 }
 
 // userStaleOK reports whether a file the manifest lists may still be removed: it
-// must not have been replaced by the user since ai-rulez wrote it. Files that
-// carry a header must still look generated; headerless ones (JSON, scripts,
-// assets) are trusted to the manifest.
+// must not have been replaced by the user since ai-rulez wrote it. A file that can
+// carry a header must still look generated, whatever the header mode. A headerless
+// one (JSON, scripts, assets) is trusted to the manifest only inside a content
+// folder a layout owns (a skill's resources), never beside the tool's own files.
 func (g *Generator) userStaleOK(abs string) bool {
 	info, err := os.Lstat(abs)
-	if err != nil || info.IsDir() {
+	if err != nil || info.IsDir() || !g.userMayTouch(filepath.Dir(abs)) {
 		return false
 	}
-	if g.config.GetHeaderHashes() == config.HeaderHashesNone || !headerCapable(abs) {
-		return true
+	if headerCapable(abs) {
+		return looksGenerated(abs)
 	}
-	return looksGenerated(abs)
+	return g.userInContentFolder(abs)
+}
+
+// userMayTouch reports whether abs, which must exist or have an existing ancestor,
+// lies in scope and resolves inside the home directory (or a relocated tool home).
+func (g *Generator) userMayTouch(abs string) bool {
+	if !g.withinScope(abs) {
+		return false
+	}
+	if err := g.checkSymlinkEscape(abs); err != nil {
+		logger.Warn("Skipping a path that resolves outside the home directory", "path", abs)
+		return false
+	}
+	return true
+}
+
+// userInContentFolder reports whether abs lies below a content folder (a directory
+// row) of any user-level layout.
+func (g *Generator) userInContentFolder(abs string) bool {
+	return g.userDestination(abs, true)
+}
+
+// userDestination reports whether abs is a user-level destination of some layout:
+// a file row's path, or anything below a directory row's. dirOnly restricts it to
+// directory rows.
+func (g *Generator) userDestination(abs string, dirOnly bool) bool {
+	abs = filepath.Clean(abs)
+	for _, layout := range g.userLayouts {
+		for _, row := range layout.Rows {
+			if row.To == "" || (dirOnly && !row.Dir) {
+				continue
+			}
+			if abs == filepath.Clean(row.To) && !row.Dir {
+				return true
+			}
+			if row.Dir && abs != filepath.Clean(row.To) && isUnderBaseDir(row.To, abs) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// userManifestEntryOK vets a manifest entry before it is trusted for removal. The
+// manifest is a plain file in the user's config directory, so an entry is treated
+// as untrusted input: it must not climb with ".." (except into a relocated tool
+// home, which a manifest records relative to the home directory), and it must be
+// a destination some layout writes to.
+func (g *Generator) userManifestEntryOK(rel, abs string) bool {
+	if slices.Contains(strings.Split(filepath.ToSlash(rel), "/"), "..") &&
+		!slices.ContainsFunc(g.userHomes, func(home string) bool { return isUnderBaseDir(home, abs) }) {
+		logger.Warn("Ignoring a manifest entry that climbs out of the home directory", "path", rel)
+		return false
+	}
+	if !g.userDestination(abs, false) {
+		logger.Warn("Ignoring a manifest entry that is not a user-level destination", "path", rel)
+		return false
+	}
+	return true
 }
 
 func headerCapable(abs string) bool {
@@ -345,7 +592,7 @@ func (g *Generator) planUser(profile string) (*UserPlan, []config.OutputFile, er
 	if err != nil {
 		return nil, nil, err
 	}
-	plan := &UserPlan{Profile: active, Skips: skips, Dropped: dropped}
+	plan := &UserPlan{Profile: active, Skips: skips, Dropped: len(dropped), Unmapped: dropped}
 	for _, output := range kept {
 		if output.IsDir {
 			continue
@@ -404,20 +651,38 @@ func (g *Generator) GenerateUser(profile string) (*UserPlan, error) {
 }
 
 // userPruneCandidates lists the directories above removed files that clean may
-// remove once empty: only those inside a directory user scope owns the
-// content of (~/.claude/skills and below, never ~/.claude itself).
+// remove once empty. A directory qualifies when it lies inside a content folder
+// some preset owns (~/.claude/skills and below), or is deeper than the first level
+// below the home directory (~/.copilot/hooks, ~/.config/devin): the directories at
+// the first level (~/.claude, ~/.codex, ~/.config), a relocated tool home and the
+// user config directory are never candidates. Only empty directories are removed.
 func (g *Generator) userPruneCandidates(removed []string) []string {
 	var roots []string
-	for _, root := range userscope.Roots() {
-		roots = append(roots, filepath.Join(g.config.BaseDir, filepath.FromSlash(root)))
+	for _, layout := range g.userLayouts {
+		for _, root := range layout.Roots() {
+			// A root is a content folder; the home directory or a parent of it never is.
+			if !isUnderBaseDir(root, g.config.BaseDir) && !slices.Contains(g.userHomes, root) {
+				roots = append(roots, root)
+			}
+		}
+	}
+	home := filepath.Clean(g.config.BaseDir)
+	keep := func(dir string) bool {
+		if slices.Contains(g.userHomes, dir) || dir == home || filepath.Dir(dir) == home {
+			return true
+		}
+		return g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir)
 	}
 	seen := map[string]bool{}
 	var dirs []string
 	for _, file := range removed {
-		for dir := filepath.Dir(file); ; dir = filepath.Dir(dir) {
-			below := slices.ContainsFunc(roots, func(root string) bool { return isUnderBaseDir(root, dir) })
-			if !below {
+		for dir := filepath.Dir(file); g.withinScope(dir); dir = filepath.Dir(dir) {
+			inRoot := slices.ContainsFunc(roots, func(root string) bool { return isUnderBaseDir(root, dir) })
+			if keep(dir) && !inRoot {
 				break
+			}
+			if g.config.ConfigDir != "" && isUnderBaseDir(dir, g.config.ConfigDir) {
+				break // the user config lives here; never an output folder
 			}
 			if !seen[dir] {
 				seen[dir] = true
@@ -445,31 +710,20 @@ func (g *Generator) userManaged(abs string, output config.OutputFile) bool {
 // reads several of the user-level directories written, and against a project
 // that holds a skill of the same name.
 func (g *Generator) userWarnings(outputs []config.OutputFile) []string {
-	home := g.config.BaseDir
-	byDir := map[string][]string{} // user-level skill dir -> skill ids
+	byDir := map[string][]string{} // user-level skill dir (absolute) -> skill ids
 	for _, output := range outputs {
-		if output.IsDir {
+		abs := g.absOutputPath(output.Path)
+		if output.IsDir || filepath.Base(abs) != "SKILL.md" {
 			continue
 		}
-		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(output.Path)))
-		if path.Base(rel) != "SKILL.md" {
-			continue
-		}
-		id := path.Base(path.Dir(rel))
-		dir := path.Dir(path.Dir(rel))
-		byDir[dir] = append(byDir[dir], id)
-	}
-	configured := map[string]bool{}
-	for _, preset := range userPresets(g.config) {
-		configured[preset.BuiltIn] = true
+		dir := filepath.Dir(filepath.Dir(abs))
+		byDir[dir] = append(byDir[dir], filepath.Base(filepath.Dir(abs)))
 	}
 	var warnings []string
-	for _, harness := range userscope.ReaderNames() {
-		if !configured[harness] {
-			continue // a harness the user did not configure is not reported on
-		}
+	for _, preset := range userPresets(g.config, g.userLayouts) {
+		layout := g.userLayouts[preset.BuiltIn]
 		var dirs []string
-		for _, dir := range userscope.SkillReaders[harness] {
+		for _, dir := range layout.SkillReaders {
 			if len(byDir[dir]) > 0 {
 				dirs = append(dirs, dir)
 			}
@@ -481,12 +735,26 @@ func (g *Generator) userWarnings(outputs []config.OutputFile) []string {
 		if len(dup) == 0 {
 			continue
 		}
-		warnings = append(warnings, fmt.Sprintf("%s reads ~/%s, so these skills load twice: %s",
-			harness, strings.Join(dirs, ", ~/"), abbreviate(dup, maxListedSkills)))
+		shown := make([]string, len(dirs))
+		for i, dir := range dirs {
+			shown[i] = g.displayUserPath(dir)
+		}
+		warnings = append(warnings, fmt.Sprintf("%s reads %s, so these skills load twice: %s",
+			preset.BuiltIn, strings.Join(shown, ", "), abbreviate(dup, maxListedSkills)))
 	}
-	warnings = append(warnings, g.projectOverlapWarnings(home, byDir)...)
+	warnings = append(warnings, g.projectOverlapWarnings(byDir)...)
 	sort.Strings(warnings)
 	return slices.Compact(warnings)
+}
+
+// displayUserPath writes a path below the home directory as ~/relative.
+func (g *Generator) displayUserPath(abs string) string {
+	if isUnderBaseDir(g.config.BaseDir, abs) {
+		if rel, err := filepath.Rel(g.config.BaseDir, abs); err == nil {
+			return "~/" + filepath.ToSlash(rel)
+		}
+	}
+	return abs
 }
 
 // maxListedSkills bounds how many skill names a warning spells out.
@@ -524,22 +792,25 @@ func duplicateIDs(byDir map[string][]string, dirs []string) []string {
 
 // projectOverlapWarnings reports user-level skills whose name also exists in the
 // project the command runs from, with the vendor's documented precedence.
-func (g *Generator) projectOverlapWarnings(home string, byDir map[string][]string) []string {
-	if g.projectDir == "" || filepath.Clean(g.projectDir) == filepath.Clean(home) {
+func (g *Generator) projectOverlapWarnings(byDir map[string][]string) []string {
+	if g.projectDir == "" || filepath.Clean(g.projectDir) == filepath.Clean(g.config.BaseDir) {
 		return nil
 	}
 	var warnings []string
-	for _, entry := range userscope.Entries() {
-		if entry.Kind != userscope.KindSkills {
-			continue
-		}
-		for _, id := range byDir[entry.To] {
-			projectSkill := filepath.Join(g.projectDir, filepath.FromSlash(entry.From), id, "SKILL.md")
-			if _, err := os.Stat(projectSkill); err != nil {
+	for _, preset := range userPresets(g.config, g.userLayouts) {
+		layout := g.userLayouts[preset.BuiltIn]
+		for _, row := range layout.Rows {
+			if row.Kind != userscope.KindSkills || row.To == "" {
 				continue
 			}
-			warnings = append(warnings, fmt.Sprintf("skill %q exists in the project (%s/%s) and at user level (~/%s/%s): %s",
-				id, entry.From, id, entry.To, id, userscope.Precedence[entry.Preset]))
+			for _, id := range byDir[row.To] {
+				projectSkill := filepath.Join(g.projectDir, filepath.FromSlash(row.From), id, "SKILL.md")
+				if _, err := os.Stat(projectSkill); err != nil {
+					continue
+				}
+				warnings = append(warnings, fmt.Sprintf("skill %q exists in the project (%s/%s) and at user level (%s/%s): %s",
+					id, row.From, id, g.displayUserPath(row.To), id, layout.Precedence()))
+			}
 		}
 	}
 	return warnings

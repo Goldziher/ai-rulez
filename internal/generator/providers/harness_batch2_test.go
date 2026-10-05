@@ -232,6 +232,19 @@ func TestKilo_InstructionsRegistersRulesFolder(t *testing.T) {
 		assert.NotContains(t, tree, "mcp")
 	})
 
+	t.Run("the project-relative glob is left out of the user scope", func(t *testing.T) {
+		t.Parallel()
+		gen, err := providers.LoadBuiltin("kilo")
+		require.NoError(t, err)
+		cfg := &config.Config{Name: "demo", BaseDir: t.TempDir(), UserScope: true, MCPServers: batch2Servers()}
+		outputs, err := gen.Generate(&config.ContentTree{}, cfg.BaseDir, cfg)
+		require.NoError(t, err)
+		var tree map[string]any
+		require.NoError(t, json.Unmarshal([]byte(requireFile(t, outputs, "kilo.jsonc").Content), &tree))
+		assert.NotContains(t, tree, "instructions")
+		assert.Contains(t, tree, "mcp")
+	})
+
 	t.Run("keeps user entries, comments and is idempotent", func(t *testing.T) {
 		t.Parallel()
 		gen, err := providers.LoadBuiltin("kilo")

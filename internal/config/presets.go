@@ -56,6 +56,10 @@ type OutputFile struct {
 	// managed .gitignore block, and must not be deleted as stale when it stops
 	// being generated: both would destroy or hide user-authored data (#185).
 	PartiallyOwned bool
+	// Committed marks an output that must stay tracked in git even when
+	// gitignore management is on: hosted reviewers (Bugbot, Kilo, Rovo Dev, ...)
+	// only read committed files, so ignoring a check output would hide it.
+	Committed bool
 	// Sensitive marks an output that carries resolved MCP secrets (env values or
 	// headers). It is written owner-only (0600), and an existing file is
 	// tightened to that mode.

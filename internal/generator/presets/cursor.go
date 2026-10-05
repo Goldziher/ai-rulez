@@ -38,14 +38,26 @@ func (g *CursorPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *CursorPresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{RulesDir: ".cursor/rules", SkillsDir: ".agents/skills", AgentsDir: ".cursor/agents", CommandsDir: ".cursor/commands"}
+}
+
 // GlobalOutputPaths is the Cursor user-scope layout under ~/.cursor. User rules
 // live in Cursor's settings UI, so there is no root file.
 func (g *CursorPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
 	return GlobalLayout{
-		SkillsDir:   ".cursor/skills",
+		// Cursor reads ~/.agents/skills, the directory the project skills use too, so a
+		// skill shared with codex and gemini is written once.
+		SkillsDir:   ".agents/skills",
 		AgentsDir:   ".cursor/agents",
 		CommandsDir: ".cursor/commands",
-		Sidecars:    map[string]string{MergedDocCursorMCP: ".cursor/mcp.json"},
+		Sidecars: map[string]string{
+			MergedDocCursorMCP:   ".cursor/mcp.json",
+			MergedDocCursorHooks: ".cursor/hooks.json",
+		},
+		SkillReaders: []string{".cursor/skills", ".agents/skills", ".claude/skills", ".codex/skills"},
 	}.Resolve(home, getenv)
 }
 
@@ -100,6 +112,13 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		}
 	}
 
+	// Checks collapse into Bugbot's single repository-root instruction file.
+	checkOutputs, err := cursorCheckOutputs(content, baseDir, cfg)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, checkOutputs...)
+
 	// Combine all skills from root and domains
 	allSkills := allSkills(content)
 
@@ -147,7 +166,7 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 
 	// Cursor reads project MCP servers from .cursor/mcp.json, merged so the user's
 	// own servers survive.
-	if servers := mcpEntries(cfg, nativeMCPEntry); len(servers) > 0 {
+	if servers := mcpEntries(cfg, cursorMCPEntry); len(servers) > 0 {
 		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocCursorMCP))
 		doc, err := renderMergedMCP(path, docmerge.FormatJSON, []string{keyMCPServers}, servers)
 		if err != nil {
