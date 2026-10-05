@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/logger"
 )
 
@@ -47,17 +48,14 @@ func newBundleFilter(root, marker string, extra []string) *bundleFilter {
 // gitVisibleFiles lists the files under root that git would not ignore, or nil
 // when that cannot be determined.
 func gitVisibleFiles(root, marker string) map[string]bool {
-	git, err := exec.LookPath("git")
-	if err != nil {
+	if _, err := exec.LookPath("git"); err != nil {
 		return nil
 	}
 	// Exit 0: the entry file is ignored, so the whole item is; 128: not a repo.
-	//nolint:gosec // git is resolved by LookPath; root and marker are paths of the project being generated.
-	if err := exec.Command(git, "-C", root, "check-ignore", "-q", "--no-index", "--", marker).Run(); err == nil {
+	if err := gitutil.CommandNoContext(root, "check-ignore", "-q", "--no-index", "--", marker).Run(); err == nil {
 		return nil
 	}
-	//nolint:gosec // same arguments as above, no shell involved.
-	out, err := exec.Command(git, "-C", root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".").Output()
+	out, err := gitutil.CommandNoContext(root, "ls-files", "-z", "--cached", "--others", "--exclude-standard", "--", ".").Output()
 	if err != nil {
 		logger.Debug("git ls-files unavailable, bundling without .gitignore", "path", root, "error", err)
 		return nil

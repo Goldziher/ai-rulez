@@ -73,6 +73,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **Running inside a git hook no longer corrupts the repository**: the ignore-mirror `git -C <tmp> init` inherited the hook's `GIT_DIR`, re-initialised the hook's repository instead of the temp directory and, in a linked worktree, wrote `core.bare = true` into the shared config, breaking every git command in every worktree. Every git subprocess (`internal/gitutil`, include clones, bundle ignore listing, agent git history) now runs through one helper that drops `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the inherited environment, as do `usage` sink commands.
 - **`verify --plugin` on a project whose bundle was never generated** prints `plugin bundle not generated; run ai-rulez generate --plugin` once (the message was repeated after a colon); `--if-generated` still skips it.
 - **Top-level `[[hooks]]` handler `type`**: `validate` (JSON schema) rejected `type = "prompt"` or `"http"` while `generate` accepted it and silently wrote a `command` handler. Both now reject any type other than `command` (or omitted).
 - **Unknown top-level config key** is reported by name (`Additional property 'bogus_key' does not match the schema`) instead of the literal `{property}` placeholder.
