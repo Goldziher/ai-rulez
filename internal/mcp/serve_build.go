@@ -392,7 +392,7 @@ func (st *ServeSetup) LockRecords(ctx context.Context) (sources, served []lockfi
 		sources = append(sources, res.Entry())
 	}
 	for _, s := range b.catalog.Skills() {
-		served = append(served, lockfile.Entry{Name: s.Name, Source: s.Source, Ref: s.Ref, Commit: s.Commit, Digest: s.Digest})
+		served = append(served, lockfile.Entry{Name: s.Name, Source: s.Source, Ref: s.Ref, Commit: s.Commit, Digest: s.LockDigest})
 	}
 	sort.Slice(served, func(i, j int) bool { return served[i].Name < served[j].Name })
 	return sources, served, b.catalog.Refusals(), nil
@@ -415,8 +415,8 @@ func (st *ServeSetup) ServedProblems(ctx context.Context) ([]string, error) {
 		switch e := b.lock.Find(lockfile.KindServed, s.Name); {
 		case e == nil:
 			problems = append(problems, fmt.Sprintf("served %s: not pinned in %s", s.Name, lockfile.FileName))
-		case e.Digest != s.Digest:
-			problems = append(problems, fmt.Sprintf("served %s: digest %s differs from the lock's %s", s.Name, s.Digest, e.Digest))
+		case e.Digest != s.LockDigest:
+			problems = append(problems, fmt.Sprintf("served %s: digest %s differs from the lock's %s", s.Name, s.LockDigest, e.Digest))
 		}
 	}
 	if b.lock != nil {
