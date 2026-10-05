@@ -65,6 +65,9 @@ func newUserGenerator(ctx context.Context) (*generator.Generator, *config.Config
 	gen := generator.NewGenerator(cfg)
 	gen.SetUserScope()
 	gen.SetContext(ctx)
+	if err := applyRole(gen); err != nil {
+		return nil, nil, err
+	}
 	if wd, err := os.Getwd(); err == nil {
 		gen.SetProjectDir(wd)
 	}
