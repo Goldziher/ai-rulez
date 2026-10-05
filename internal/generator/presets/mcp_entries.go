@@ -218,3 +218,67 @@ func cursorMCPEntry(server *config.MCPServer) map[string]any {
 	ApplyEnvRefs(entry, server, func(name string) string { return "${env:" + name + "}" })
 	return entry
 }
+
+// bracedEnvRef is ${NAME}, the reference Claude Code, Gemini CLI, Amp and Pi expand.
+func bracedEnvRef(name string) string { return "${" + name + "}" }
+
+// BracedMCPEntry is the entry with every ${VAR} placeholder that resolved from the
+// process environment written as ${VAR}, for a tool that expands that itself.
+func BracedMCPEntry(entry map[string]any, server *config.MCPServer) map[string]any {
+	ApplyEnvRefs(entry, server, bracedEnvRef)
+	return entry
+}
+
+// opencodeEnvRef is {env:NAME}, the substitution OpenCode applies to its config.
+func opencodeEnvRef(name string) string { return "{env:" + name + "}" }
+
+// sharedMCPJSONLiteralWriters are the presets writing the root .mcp.json whose tool
+// documents no environment expansion. The file is one copy every writer must
+// render identically, so one of them keeps every value resolved.
+var sharedMCPJSONLiteralWriters = []string{"qoder"}
+
+var upperEnvName = regexp.MustCompile(`^[A-Z_][A-Z0-9_]*$`)
+
+// SharedMCPJSONRefs reports whether the root .mcp.json may carry ${VAR} references:
+// Claude Code, CodeBuddy, Command Code and Reasonix expand them, so they are
+// written unless a writer of the file does not.
+func SharedMCPJSONRefs(cfg *config.Config) bool {
+	for _, name := range sharedMCPJSONLiteralWriters {
+		if cfg.HasBuiltInPreset(name) {
+			return false
+		}
+	}
+	return true
+}
+
+// ApplySharedMCPJSONRefs writes the ${VAR} references of a server into an entry of
+// the root .mcp.json (see SharedMCPJSONRefs). CodeBuddy expands upper-case names
+// only, so a placeholder naming another variable keeps its resolved value.
+func ApplySharedMCPJSONRefs(entry map[string]any, server *config.MCPServer, cfg *config.Config) {
+	if entry == nil || server == nil || !SharedMCPJSONRefs(cfg) {
+		return
+	}
+	narrowed := *server
+	narrowed.EnvRefs = upperCaseRefs(server.EnvRefs)
+	narrowed.HeaderRefs = upperCaseRefs(server.HeaderRefs)
+	BracedMCPEntry(entry, &narrowed)
+}
+
+// upperCaseRefs keeps the references that name only upper-case variables.
+func upperCaseRefs(refs map[string]string) map[string]string {
+	kept := make(map[string]string, len(refs))
+	for key, raw := range refs {
+		ok := true
+		for _, m := range envRefPlaceholder.FindAllStringSubmatch(raw, -1) {
+			ok = ok && upperEnvName.MatchString(m[1])
+		}
+		if ok {
+			kept[key] = raw
+		}
+	}
+	return kept
+}
+
+// devinMCPEntry is the .devin/mcp_config.json entry: the shared native entry with
+// ${VAR} placeholders written as ${env:VAR}, which Devin expands itself.
+func devinMCPEntry(server *config.MCPServer) map[string]any { return cursorMCPEntry(server) }

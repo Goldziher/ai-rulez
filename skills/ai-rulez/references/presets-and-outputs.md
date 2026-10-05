@@ -20,20 +20,44 @@ presets = [
   "cursor",       # → .cursor/rules/*.mdc
   "gemini",       # → GEMINI.md
   "copilot",      # → .github/copilot-instructions.md
-  "devin",        # → .devin/
+  "devin",        # → AGENTS.md, .devin/
   "cline",        # → .clinerules/, .cline/
-  "codex",        # → AGENTS.md and .codex/
+  "codex",        # → AGENTS.md, .agents/skills/ and .codex/
   "amp",          # → AGENTS.md and .agents/ (.amp/settings.json)
   "junie",        # → AGENTS.md and .junie/
   "opencode",     # → AGENTS.md, .opencode/, opencode.json
-  "hermes",      # → .hermes.md
+  "hermes",       # → .hermes.md
   "antigravity",  # → .agents/, GEMINI.md
   "xum",          # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
-  "pi"            # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json
+  "pi",           # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json
   "baz",          # → AGENTS.md (root and nested), .agents/skills, .claude/agents
   "okf"           # → docs/okf/ (Open Knowledge Format bundle)
 ]
 ```
+
+These are 15 of the 52 built-in presets. The others: `aiassistant`, `augment`, `bob`, `codebuddy`, `codebuff`,
+`codewhale`, `commandcode`, `copilot-cli`, `cortex`, `crush`, `deepagents`, `dsh`, `factory`, `gitlab-duo`, `goose`,
+`grok`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `poolside`, `qoder`, `qwen`,
+`reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `zcode`, `zed`, `zoocode`. `docs/harnesses.md` is the
+matrix of what each writes (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
+
+Removed and renamed: `windsurf` is `devin` (`.windsurf/` is `.devin/`, `windsurf_model` is `devin_model`);
+`continue-dev` is gone.
+
+## Features by Preset Family
+
+- **Hooks**: top-level `[[hooks]]` render for 36 harnesses, into the harness's settings file or a generated plugin
+  module (`opencode`, `kilo`, `mimocode`, `pi`, `amp`). `junie`, `zcode`, `hermes` and `kimi` read hooks from the
+  user config only, so they need `generate --user`.
+- **Permissions**: top-level `[permissions]` render for 24 harnesses. `amp`, `pi`, `cline`, `kiro`, `factory`,
+  `crush` and `rovodev` have no committable permission file and are named in a warning.
+- **Checks**: `.ai-rulez/checks/` render for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and
+  `gitlab-duo`.
+- **User scope**: `generate --user` supports 47 presets; `aiassistant`, `baz`, `codebuff`, `replit` and `xum` have no
+  user-level location.
+- **Commands as skills**: `claude`, `codex`, `antigravity`, `devin` and `warp` write commands as skills.
+- **Shared outputs**: presets that write the same path must render identical bytes, otherwise `generate` fails and
+  names them.
 
 ## Reasoning Effort Per Preset
 

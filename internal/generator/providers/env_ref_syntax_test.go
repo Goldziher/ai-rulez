@@ -67,3 +67,33 @@ func TestBodySpecRewrite_SinglePassLongestKeyFirst(t *testing.T) {
 		})
 	}
 }
+
+func TestApplyRefSyntax_BracedAndOpencode_RewriteEmbeddedRefs(t *testing.T) {
+	tests := []struct {
+		syntax string
+		want   string
+	}{
+		{EnvRefSyntaxBraced, "Bearer ${T}"},
+		{EnvRefSyntaxOpencodeEnv, "Bearer {env:T}"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.syntax, func(t *testing.T) {
+			// Arrange
+			server := &config.MCPServer{Headers: map[string]string{"A": "Bearer x"}, HeaderRefs: map[string]string{"A": "Bearer ${T}"}}
+			entry := map[string]any{"headers": server.Headers}
+
+			// Act
+			applyRefSyntax(entry, server, tt.syntax)
+
+			// Assert
+			assert.Equal(t, map[string]string{"A": tt.want}, entry["headers"])
+		})
+	}
+}
+
+func TestIsEnvRefSyntax(t *testing.T) {
+	for _, name := range []string{"dollar", "env_prefix", "braced", "opencode_env"} {
+		assert.True(t, IsEnvRefSyntax(name), name)
+	}
+	assert.False(t, IsEnvRefSyntax("percent"))
+}

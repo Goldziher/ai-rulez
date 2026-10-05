@@ -30,7 +30,7 @@ A committed repository config is attacker-controlled input: cloning a repository
 
 | Key | Repository config and `config.local.*` | User config file / `AI_RULEZ_LLM_*` |
 | --- | --- | --- |
-| `allow_network`, `base_url`, `api_key_env`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `ai-rulez doctor` and strict finding `AR9C1` | honoured |
+| `allow_network`, `base_url`, `api_key_env`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `ai-rulez doctor` and strict finding `AR9L1` | honoured |
 | `provider`, `model`, `backend`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honoured | honoured |
 | `max_cost_usd`, `max_tokens`, `max_calls` | honoured, but can only tighten: the lower non-zero value of repository and user wins | honoured |
 
@@ -47,11 +47,11 @@ or export `AI_RULEZ_LLM_ALLOW_NETWORK=1` (and `_BASE_URL`, `_API_KEY_ENV`). Prec
 
 ### Environment overrides
 
-`AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_BACKEND`, `_BASE_URL`, `_API_KEY_ENV`, `_EMBEDDING_MODEL`, `_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE`, `_ALLOW_NETWORK`. An environment value wins over the config file. An unparsable value is an `AR9C0` error, not a silent default.
+`AI_RULEZ_LLM_PROVIDER`, `_MODEL`, `_BACKEND`, `_BASE_URL`, `_API_KEY_ENV`, `_EMBEDDING_MODEL`, `_MAX_COST_USD`, `_MAX_TOKENS`, `_MAX_CALLS`, `_TIMEOUT_SECONDS`, `_CACHE`, `_ALLOW_NETWORK`. An environment value wins over the config file. An unparsable value is an `AR9L0` error, not a silent default.
 
-### Validation: `AR9C0 llm-config-invalid`
+### Validation: `AR9L0 llm-config-invalid`
 
-`validate --strict`, the JSON schema and `ai-rulez doctor` reject an unknown `backend`, a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`), a `max_retries` above 10, and negative limits. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9C1`.
+`validate --strict`, the JSON schema and `ai-rulez doctor` reject an unknown `backend`, a secret where a variable name belongs (`api_key = ...`, or a key-looking `api_key_env` such as `sk-proj-...` or `AKIA...`), credentials or a query string in `base_url`, plain `http://` to a non-loopback host when an API key is sent (use `https`; `localhost`, `127.0.0.1` and `::1` may use `http`), a `max_retries` above 10, and negative limits. A message never repeats the offending value, and `llm doctor`, `ai-rulez doctor` and the JSON report show `api_key_env` only when it is a valid variable name. The literal-secret key check (`api_key = ...`) covers both `config.toml` and `config.local.*`. A repository key the trust rule ignores is reported as `AR9L1`.
 
 ## Commands
 
@@ -78,7 +78,7 @@ Outermost first: network gate and timeout, cache, retry, budget, backend.
 
 When `allow_network` is true, the prompt text of each feature is sent to the configured endpoint. What that is depends on the feature; for an eval judge it is the rubric and the transcript of the agent session, which can contain source code, file paths, tool output and anything a user typed. ai-rulez adds no other data, and never sends config files, keys or environment.
 
-To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI gateway in your VPC, Ollama or vLLM on an internal host) and use `api_key_env` for the gateway credential. The `openaicompat` backend speaks only the OpenAI chat and embeddings shapes and talks to the configured host alone: it never follows an HTTP redirect (a 3xx is a provider error), so a prompt is not re-sent to another host; `llm doctor` shows the host so a reviewer can check it. `base_url` must not embed credentials or a query string (`AR9C0`). The default endpoint (used only when `provider` is `openai` or empty and no `base_url` is set) is `https://api.openai.com/v1`. A key is sent only as an `Authorization: Bearer` header to that host, and only over `https` unless the host is loopback. `base_url`, `allow_network` and `api_key_env` are honoured only from user scope (see the trust rule above).
+To keep data inside your network, point `base_url` at a gateway you run (a LiteLLM proxy, a Bedrock or Azure OpenAI gateway in your VPC, Ollama or vLLM on an internal host) and use `api_key_env` for the gateway credential. The `openaicompat` backend speaks only the OpenAI chat and embeddings shapes and talks to the configured host alone: it never follows an HTTP redirect (a 3xx is a provider error), so a prompt is not re-sent to another host; `llm doctor` shows the host so a reviewer can check it. `base_url` must not embed credentials or a query string (`AR9L0`). The default endpoint (used only when `provider` is `openai` or empty and no `base_url` is set) is `https://api.openai.com/v1`. A key is sent only as an `Authorization: Bearer` header to that host, and only over `https` unless the host is loopback. `base_url`, `allow_network` and `api_key_env` are honoured only from user scope (see the trust rule above).
 
 Model-side retention and training terms are the provider's; check them before sending transcripts that contain private code.
 
@@ -93,7 +93,7 @@ Set `max_cost_usd`, `max_tokens` and `max_calls` for any feature that loops. Use
 | `openaicompat` | always (pure Go, `net/http`) | chat (JSON-schema `response_format`), embeddings; no streaming; no new dependencies |
 | `literllm` | `-tags literllm`, cgo, separate module | experimental; same request/response shapes over the liter-llm FFI; 165 providers via `provider/model` |
 
-`backend = "auto"` picks `literllm` when it is compiled in and `openaicompat` otherwise. Choosing `literllm` in a binary without it is an `AR9C0` error that says how to build it.
+`backend = "auto"` picks `literllm` when it is compiled in and `openaicompat` otherwise. Choosing `literllm` in a binary without it is an `AR9L0` error that says how to build it.
 
 For `openaicompat` the `model` is sent verbatim (so a gateway sees exactly the name you configured); `provider` is used for cost lookup and for the `literllm` backend's `provider/model` routing.
 
@@ -167,7 +167,7 @@ Version pin: `github.com/xberg-io/liter-llm/packages/go/v2 v2.1.2`, in `internal
 lc, err := cfg.ResolvedLLM()            // cfg is the loaded *config.Config; env overrides applied
 if err != nil { return err }
 client, err := llm.New(lc, llm.Options{ConfigDir: cfg.ConfigDir})
-if err != nil { return err }            // AR9C0; a disabled network surfaces on the first call
+if err != nil { return err }            // AR9L0; a disabled network surfaces on the first call
 defer client.Close()
 
 v, err := llm.Judge(ctx, client, rubric, transcript)   // v.Score in [0,1], v.Rationale

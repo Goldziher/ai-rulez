@@ -43,8 +43,15 @@ Flags:
 - `--no-configure-cli-mcp, -M` / `--skip-cli-mcp, -S` — Skip configuring CLI-based MCP tools
 - `--plugin` — Generate distributable plugin bundles and a marketplace index from the `[plugin]` block
 - `--if-configured` — With `--plugin`, skip successfully when plugin authoring is not configured
+- `--watch, -w` — Generate, then regenerate on every change to `.ai-rulez/`, the local overlay and local includes (not combinable with `--dry-run`, `--check`, `--user`, `--plugin` or `--recursive`)
+- `--check` — Render in memory and compare with the disk without writing; exits 2 on drift
+- `--user` — Render the user config (`~/.config/ai-rulez`, or `--config <dir>`) into the per-user directories of each harness; `--yes, -y` skips the confirmation
 
 `--update-gitignore` remains as a hidden deprecated alias for `--gitignore`.
+
+### `ai-rulez clean`
+
+Remove generated outputs. `--dry-run` previews, `--force` skips the prompt, `--user` removes what `generate --user` wrote.
 
 ### `ai-rulez validate`
 
@@ -53,6 +60,18 @@ Check configuration and content structure for errors.
 Flags:
 
 - `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
+- `--strict` — Deep content validation with stable finding codes; exits 2 on findings at or above `--fail-on`
+
+### `ai-rulez doctor`
+
+Read-only diagnostics with `error`, `warning` and `info` findings: config validity, removed presets (`windsurf` is
+`devin`; `continue-dev` is gone), generated-output drift, generated paths git does not ignore, unresolved MCP
+`${VAR}` placeholders, missing hook scripts and preset tools missing from `PATH`. Flags: `--strict`, `--json`.
+Exits 2 on errors (and warnings with `--strict`), 1 when the configuration cannot be loaded.
+
+### `ai-rulez verify`
+
+Check generated files against their `Content-Hash` offline (`--plugin` for plugin bundles).
 
 ### `ai-rulez export okf` / `import okf` / `okf validate`
 

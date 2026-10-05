@@ -108,10 +108,22 @@ stdout.
 | AR973 | `role-unreachable-dependency` | warning | An item a role keeps lists a skill in its `skills:` frontmatter that the role drops, or hides from the model with `skill_mode` `off` or `user-invocable-only` |
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
-| AR9C0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
-| AR9C1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
+| AR9L0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
+| AR9L1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
 | AR9K0 | `telemetry-config-invalid` | error | A `[telemetry]` value is invalid: out-of-range `sample`, unsupported `otlp_protocol`, a non-https or credential-bearing `otlp_endpoint`, or a literal credential in `headers_env` (see [Item-load telemetry](telemetry.md)). AR9D, AR9E and AR9F are proposed by other open designs, so telemetry uses AR9K |
 | AR9K1 | `telemetry-repo-key-ignored` | warning | The repository `[telemetry]` sets a key only the user config or `AI_RULEZ_TELEMETRY_*` may set (`allow_network`, `otlp_endpoint`, `headers_env`, ...); it is ignored |
+| AR9C1 | `cursor-rule-extension-ignored` | warning | A file in `.cursor/rules` that is not `.mdc` (Cursor ignores it; `README.md` and folder-style `RULE.md` are exempt); error when ai-rulez generated it. See [Harness traps](harness-traps.md) |
+| AR9C2 | `cursor-rule-not-applied` | warning | A hand-written `.mdc` rule with no `description`, `globs` or `alwaysApply`, so it applies only when @-mentioned |
+| AR9C3 | `copilot-exclude-agent-invalid` | warning | A `.instructions.md` file whose `excludeAgent` is neither `code-review` nor `cloud-agent` (the older `coding-agent` is still accepted) |
+| AR9C4 | `copilot-instructions-suffix` | warning | A file in `.github/instructions` not named `*.instructions.md` (Copilot skips it); error when ai-rulez generated it |
+| AR9E0 | `scanner-config-invalid` | error | A `[[lint.external]]` entry has an invalid `timeout` or an `env_pass` name (proxy or credential) an `egress = false` scanner must not get; the scanner is not run |
+| AR9E1 | `scanner-egress-undeclared` | warning | A `[[lint.external]]` entry does not set `egress`, so it runs with the full environment |
+| AR9E2 | `scanner-unavailable` | warning | A `[[lint.external]]` scanner's binary is not on `PATH`; it was not run (a notice, not an error) |
+| AR9E3 | `scanner-run-failed` | error | A scanner timed out, printed more than 32 MiB, or printed unreadable, wrong-version or unsuccessful (`executionSuccessful = false`) SARIF, or exited non-zero with no results |
+| AR9E4 | `scanner-egress-blocked` | error | A scanner was not run: `egress = true` without `--allow-egress=<name>`, or a network flag (`--use-llm`, a non-loopback `--*-url`, ...) on an `egress = false` scanner |
+
+Code ranges: `AR0xx` security, `AR1xx`-`AR8xx` content, `AR9xx` budgets, metadata, plugins and evals, `AR9C1`-`AR9C9`
+harness traps, `AR9E0`-`AR9E4` external scanners, `AR9F0`-`AR9F5` the `convert` report (never emitted by `validate`), `AR9L0`-`AR9L1` LLM access, `AR9K0`-`AR9K1` telemetry. `AR9L0` and `AR9D*` are reserved for other designs.
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
@@ -182,6 +194,12 @@ secret_patterns = [{ name = "internal token", regex = "corp_[a-z0-9]{10}" }]
 name = "my-scanner"
 command = ["my-scanner", "--sarif"]
 format = "sarif"                   # sarif (default) | json
+egress = false                     # required for hardening; see External scanners
+timeout = "120s"                   # default 2m, max 15m
+env_pass = []                      # extra environment variable names for an egress = false scanner
+
+[lint.traps]
+extra_harnesses = ["cursor"]       # run these harnesses' traps without a preset, see Harness traps
 
 [lint.evals]
 require = true                     # enables AR962 at warning
@@ -430,9 +448,51 @@ silence the check on its own content. Pair it with `ai-rulez lock` so the scanne
 **External scanners.** `[[lint.external]]` plugs in a classifier or a third-party scanner. The command is run from
 the project root with the scanned file paths appended, and prints SARIF 2.1.0 (`runs[].results[]`) or a JSON list
 of `{file, line, severity, rule, message}` to stdout; a non-zero exit is fine when the output parses. Findings are
-merged as `AR011` (with the scanner's severity) into the text and `--format json` reports. A scanner that fails or
-prints nothing parseable is itself reported. Because the command comes from the repository, it runs only when you
-pass `--external`.
+merged as `AR011` (with the scanner's severity) into the text and `--format json` reports. Because the command
+comes from the repository, it runs only when you pass `--external`. The command is an argv and never goes through
+a shell.
+
+Every run is bounded: a `timeout` (default 2 minutes, at most 15, applied to each run), a 32 MiB cap on each of
+stdout and stderr, and a kill of the whole process group at the timeout and again after the command exits, so a
+daemonised helper does not outlive the run. On Windows the child is placed in a Job Object that is terminated the
+same way; a grandchild spawned in the instant between process start and job assignment can escape it. Output
+past the cap is dropped without blocking the scanner: stdout past it is `AR9E3` (never ingested), while stderr
+past it is truncated silently, and stderr is only ever used, cleaned and cut to 500 characters, in the detail of
+an `AR9E3` message. A command that exits 0 while a helper still holds its output pipe open is a success: its output
+is kept and the helper is killed after a 2 second grace. A very long file list is split into several runs so the
+command line stays under the operating system limit (128 KiB of arguments on Unix, 24 KiB on Windows); a failing run
+stops the remaining ones. A scanner that is not installed is a notice (`AR9E2`, warning),
+not a failure; a command found only through a relative `PATH` entry (`.`, `bin`) counts as not installed, because
+its meaning depends on the current directory. One that times out, overflows the cap, or prints unreadable output, a SARIF version other than 2.1.0,
+a run with `executionSuccessful = false`, a tool notification at level `error`, an empty `runs` (SARIF) or an empty list or `null` (JSON) with a non-zero
+exit, is reported as `AR9E3`: it is never ingested in part, and a crashed scanner never looks clean. Results the
+tool marked suppressed are dropped. Messages are cleaned before printing (escape sequences, control,
+bidirectional, zero-width and tag characters removed, one line, 500 characters, secret-shaped text masked), and a
+reported path is normalised (`file://`, percent-encoding, Windows separators on Windows only; a backslash is an
+ordinary character on Unix). A SARIF `uriBaseId` is resolved against the base the log declares in
+`originalUriBaseIds` (an undeclared id is resolved against the project root). A path outside the project, a
+`file://` URI naming a host other than `localhost` (a UNC or remote share), or a base that points outside the
+project is attributed to `config.toml` with a note.
+
+`egress` declares whether content derived from the scanned files can leave the machine (a hosted model, an
+upload, a credential used for a network call):
+
+| `egress` | Environment | Network flags | Runs |
+| --- | --- | --- | --- |
+| unset (legacy) | the full inherited environment | not checked | always; `AR9E1` warns |
+| `false` | scrubbed: `PATH`, `HOME`, `USER`, `LANG`/`LC_*`, temp and (on Windows) system variables, `NO_COLOR=1`, `TERM=dumb`, plus `env_pass` | `--use-llm`, `--use-virustotal`, `--vt-upload-files`, `--use-aidefense`, `--use-osv`, `--system-one-endpoint`, `--llm-*`, `--dangerously-run-mcp-servers`, and any `--*endpoint*` or `--*url*` flag with a non-loopback value (`localhost`, `127.0.0.0/8`, `::1`, with or without brackets and port) are rejected (`AR9E4`); single-dash spellings (`-use-llm`) count, and an explicit `=false`, `=0`, `=no` or `=off` turns a flag off | always |
+| `true` | scrubbed as above | not checked | only with `--allow-egress=<name>` on the command line (repeatable); otherwise `AR9E4` |
+
+`egress = false` is a declaration with two enforced layers, not a sandbox: the scrubbed environment (proxy and
+credential variables, such as `*_TOKEN`, `*_SECRET`, `*_PASSWORD`, `*_API_KEY`, `*_PAT`, `*_DSN`,
+`*_WEBHOOK_URL`, `COOKIE`, `SESSION`, `DATABASE_URL`, `AWS_*` keys and `HTTPS_PROXY`, are removed and rejected in
+`env_pass`, `AR9E0`; `HOME` is kept, so credentials stored in files below it, such as `~/.aws`, `~/.config` or
+`~/.netrc`, stay reachable by the scanner) and the argv check, which is a heuristic that catches a flag added later, not a scanner that
+ignores its flags. Network isolation (`unshare`, `sandbox-exec`) is not implemented; run the scanner under
+`docker run --network=none` when you need it. Repository config alone cannot enable an egress scanner, so a CI job
+opts in per invocation. Timeout, caps and the group kill apply to every entry, including legacy ones; the
+environment scrub applies once `egress` is set. The hardened runner is the `internal/runner` package, reused by
+later features that execute commands.
 
 ## OKF bundle checks
 
@@ -1602,25 +1662,95 @@ an OKF concept carries x-ai-rulez data that cannot be mapped and imports as plai
 - Bad: A concept with an unknown `x-ai-rulez` key
 - Good: Keep only mappable `x-ai-rulez` keys
 
-### AR9C0 llm-config-invalid
+### AR9C1 cursor-rule-extension-ignored
 
-the [llm] table is invalid: unknown backend, a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit
-
-- Default severity: `error`
-- Analyzer: `budgets` (scope `item`)
-- Why: An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.
-- Bad: `api_key_env = "sk-live-123"`
-- Good: `api_key_env = "ANTHROPIC_API_KEY"`
-
-### AR9C1 llm-untrusted-key
-
-a repository [llm] table sets allow_network, base_url, api_key_env or a price override, which only the user config file and AI_RULEZ_LLM_* may set; the value is ignored
+a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in lint.traps.extra_harnesses)
 
 - Default severity: `warning`
 - Analyzer: `budgets` (scope `item`)
-- Why: A repository can be cloned from anyone, so its [llm] table may not enable the network, point base_url elsewhere, name the API key variable or override prices; the value is ignored and only the user config file or AI_RULEZ_LLM_* may set it.
-- Bad: `allow_network = true` in the repository ai-rulez.toml
-- Good: Set `allow_network = true` in the user config file (`~/.config/ai-rulez/config.toml`) or AI_RULEZ_LLM_ALLOW_NETWORK
+- Why: Cursor reads only .mdc files in .cursor/rules, so a rule in another extension is silently ignored.
+- Bad: `.cursor/rules/style.md`
+- Good: `.cursor/rules/style.mdc`
+
+### AR9C2 cursor-rule-not-applied
+
+a hand-written .mdc rule has no description, globs or alwaysApply, so it applies only when @-mentioned
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: A .mdc rule with no description, globs or alwaysApply applies only when someone @-mentions it.
+- Bad: A `.mdc` rule whose frontmatter has none of `description`, `globs`, `alwaysApply`
+- Good: Add `alwaysApply: true`, `globs` or a `description`
+
+### AR9C3 copilot-exclude-agent-invalid
+
+a Copilot instructions file sets excludeAgent to something other than code-review or cloud-agent
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: Copilot rejects an excludeAgent value it does not know, so the file is applied to the wrong agents.
+- Bad: `excludeAgent: reviewer`
+- Good: `excludeAgent: code-review` or `cloud-agent`
+
+### AR9C4 copilot-instructions-suffix
+
+a file in .github/instructions does not end in .instructions.md, so Copilot skips it (error when ai-rulez generated it)
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: Copilot reads only files named *.instructions.md in .github/instructions and skips the rest.
+- Bad: `.github/instructions/tests.md`
+- Good: `.github/instructions/tests.instructions.md`
+
+### AR9E0 scanner-config-invalid
+
+a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run
+
+- Default severity: `error`
+- Analyzer: `budgets` (scope `item`)
+- Why: An invalid timeout, or a proxy or credential variable passed to a scanner that must not have network access, defeats the scanner isolation.
+- Bad: `egress = false` with `env_pass = ["HTTPS_PROXY"]`
+- Good: Remove the variable or declare `egress = true`
+
+### AR9E1 scanner-egress-undeclared
+
+a [[lint.external]] entry does not declare egress, so it runs with the full environment
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: A scanner that does not declare egress runs with the full environment, including credentials.
+- Bad: A `[[lint.external]]` entry without `egress`
+- Good: Set `egress = false` (or `true` and allow it with `--allow-egress`)
+
+### AR9E2 scanner-unavailable
+
+a [[lint.external]] scanner's binary was not found, so it did not run
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: The scanner binary is not on PATH, so its checks did not run.
+- Bad: A `[[lint.external]]` command that is not installed
+- Good: Install the scanner or remove the entry
+
+### AR9E3 scanner-run-failed
+
+a [[lint.external]] scanner timed out, exceeded the output cap, or printed unreadable, unsuccessful or oversized output
+
+- Default severity: `error`
+- Analyzer: `budgets` (scope `item`)
+- Why: A scanner that times out, floods output or prints unreadable SARIF gives no result, which must not read as a clean scan.
+- Bad: A scanner that exceeds its timeout or prints invalid SARIF
+- Good: Fix the scanner, raise `timeout` within the limit, or narrow its scope
+
+### AR9E4 scanner-egress-blocked
+
+a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner
+
+- Default severity: `error`
+- Analyzer: `budgets` (scope `item`)
+- Why: A scanner that can reach the network could send repository content away, so it runs only when the user allows it.
+- Bad: `egress = true` run without `--allow-egress`
+- Good: Run with `--allow-egress=<name>` after reviewing the scanner
 
 ### AR9K0 telemetry-config-invalid
 
@@ -1641,5 +1771,25 @@ a repository [telemetry] sets a key only user scope may set (allow_network, otlp
 - Why: Only the user config and AI_RULEZ_TELEMETRY_* variables may choose where data is sent, so a repository cannot opt its contributors into export; the key has no effect.
 - Bad: `allow_network = true` in the repository `[telemetry]`
 - Good: Set it in the user config, or remove it from the repository
+
+### AR9L0 llm-config-invalid
+
+the [llm] table is invalid: unknown backend, a literal secret instead of an api_key_env variable name, credentials in base_url, or a negative limit
+
+- Default severity: `error`
+- Analyzer: `budgets` (scope `item`)
+- Why: An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.
+- Bad: `api_key_env = "sk-live-123"`
+- Good: `api_key_env = "ANTHROPIC_API_KEY"`
+
+### AR9L1 llm-untrusted-key
+
+a repository [llm] table sets allow_network, base_url, api_key_env or a price override, which only the user config file and AI_RULEZ_LLM_* may set; the value is ignored
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: A repository can be cloned from anyone, so its [llm] table may not enable the network, point base_url elsewhere, name the API key variable or override prices; the value is ignored and only the user config file or AI_RULEZ_LLM_* may set it.
+- Bad: `allow_network = true` in the repository ai-rulez.toml
+- Good: Set `allow_network = true` in the user config file (`~/.config/ai-rulez/config.toml`) or AI_RULEZ_LLM_ALLOW_NETWORK
 
 <!-- rules:end -->
