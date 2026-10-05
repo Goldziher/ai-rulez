@@ -7,6 +7,8 @@ package roles
 import (
 	"encoding/json"
 	"os"
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -29,7 +31,10 @@ type Item struct {
 	Kind   string `json:"kind"`
 	ID     string `json:"id"`
 	Domain string `json:"domain,omitempty"`
-	// Path is the source, relative to the configuration directory.
+	// Path is the source, relative to the configuration directory. An item that
+	// comes from an include lives outside it and is reported as
+	// included/<path inside that include's .ai-rulez>, so the manifest does not
+	// depend on a cache or temporary directory of this machine.
 	Path string `json:"path,omitempty"`
 	// Mode is the skill_mode the role sets for a skill; empty when it sets none.
 	Mode string `json:"mode,omitempty"`
@@ -128,9 +133,24 @@ func BuildRole(cfg *config.Config, name string, counter tokens.Counter) (*Role, 
 	return role, nil
 }
 
+// manifestPath keeps a path relative to the configuration directory as it is and
+// turns an absolute one (an item from an include, read from a cache or a
+// temporary directory) into a location that is the same on every machine.
+func manifestPath(p string) string {
+	if p == "" || !filepath.IsAbs(p) {
+		return p
+	}
+	slash := filepath.ToSlash(p)
+	const marker = "/.ai-rulez/"
+	if i := strings.LastIndex(slash, marker); i >= 0 {
+		return "included/" + slash[i+len(marker):]
+	}
+	return "included/" + path.Base(slash)
+}
+
 // ItemOf measures one item.
 func ItemOf(it *config.RoleItem, counter tokens.Counter) Item {
-	out := Item{Kind: it.Kind, ID: it.ID, Domain: it.Domain, Path: it.Path, Mode: it.Mode, Delivery: it.Delivery}
+	out := Item{Kind: it.Kind, ID: it.ID, Domain: it.Domain, Path: manifestPath(it.Path), Mode: it.Mode, Delivery: it.Delivery}
 	cf := it.File
 	if cf == nil {
 		return out
