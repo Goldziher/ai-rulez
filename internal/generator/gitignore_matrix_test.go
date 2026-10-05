@@ -35,12 +35,22 @@ var matrixFixtures = map[string]string{
 // project directory with every output the run produced.
 func generateWithGitignore(t *testing.T, preset string, agentsMD bool) (string, []config.OutputFile) {
 	t.Helper()
+	return generateWithUserGitignore(t, preset, agentsMD, "")
+}
+
+// generateWithUserGitignore is generateWithGitignore with a hand-written root
+// .gitignore in place before the run.
+func generateWithUserGitignore(t *testing.T, preset string, agentsMD bool, userGitignore string) (string, []config.OutputFile) {
+	t.Helper()
 	if _, err := exec.LookPath("git"); err != nil {
 		t.Skip("git not installed")
 	}
 	base := t.TempDir()
 	cmd := exec.Command("git", "-C", base, "init", "-q") //nolint:gosec // test
 	require.NoError(t, cmd.Run())
+	if userGitignore != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(base, ".gitignore"), []byte(userGitignore), 0o600))
+	}
 
 	dir := filepath.Join(base, ".ai-rulez")
 	for rel, body := range matrixFixtures {
@@ -170,6 +180,23 @@ func TestGitignoreMatrix_EveryPresetIgnoresItsOutputs(t *testing.T) {
 				assertSiblingsNotIgnored(t, base, outputs)
 			})
 		}
+	}
+}
+
+// TestGitignoreMatrix_UserRulesMatchingTheProbeNameDoNotHideOutputs: a user rule
+// such as the Go-binary pattern "/ai-rulez-*" matched the stand-in name used to
+// ask git about directory patterns, so directories were judged already ignored
+// and never written to the managed block.
+func TestGitignoreMatrix_UserRulesMatchingTheProbeNameDoNotHideOutputs(t *testing.T) {
+	user := "bin/\n/ai-rulez\n/ai-rulez-*\n**/ai-rulez-*\n"
+	for _, preset := range []string{"codex", "opencode", "claude"} {
+		t.Run(preset, func(t *testing.T) {
+			// Arrange + Act
+			base, outputs := generateWithUserGitignore(t, preset, false, user)
+
+			// Assert
+			assertGitignoreMatrix(t, base, outputs)
+		})
 	}
 }
 
