@@ -134,14 +134,9 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 }
 
 func git(ctx context.Context, dir string, args ...string) error {
-	base := []string{
-		"-c", "core.hooksPath=/dev/null", "-c", "protocol.allow=never",
-		"-c", "protocol.https.allow=always", "-c", "protocol.ssh.allow=always", "-c", "protocol.file.allow=always",
-		"-c", "credential.helper=", "-c", "core.fsmonitor=false", "-c", "submodule.recurse=false",
-	}
-	cmd := gitutil.Command(ctx, "", append(base, args...)...)
+	cmd := gitutil.Command(ctx, "", append(gitutil.HardenedConfig(), args...)...)
 	cmd.Dir = dir
-	cmd.Env = append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=true", "GIT_CONFIG_NOSYSTEM=1", "GIT_LFS_SKIP_SMUDGE=1")
+	cmd.Env = gitutil.HardenedEnv(nil)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(out)))
 	}

@@ -115,6 +115,7 @@ type GitSource struct {
 	accessToken string
 	pin         *pin   // ai-rulez.lock entry this source must match (nil: unpinned)
 	baseDir     string // project the include belongs to, for recording what it resolved to
+	okf         bool   // the repository holds an OKF bundle (at path) instead of an .ai-rulez directory
 }
 
 // NewGitSource creates a new git source
@@ -147,6 +148,24 @@ func NewGitSource(name, repoURL, path, ref, baseDir string, include []string, ac
 	return source, nil
 }
 
+// NewOKFGitSource is NewGitSource for a repository holding an Open Knowledge
+// Format bundle, at path or at the repository root. The bundle is cached, pinned
+// and digested like any other git include, fetched with hardened git options,
+// and converted to content on each use.
+func NewOKFGitSource(name, repoURL, path, ref, baseDir string, include []string, accessToken string) (*GitSource, error) {
+	for _, seg := range strings.Split(path, "/") {
+		if seg == ".." {
+			return nil, oops.With("include", name).Errorf("invalid OKF bundle path %q", path)
+		}
+	}
+	s, err := NewGitSource(name, repoURL, path, ref, baseDir, include, accessToken)
+	if err != nil {
+		return nil, err
+	}
+	s.okf = true
+	return s, nil
+}
+
 // GetType returns the source type
 func (s *GitSource) GetType() SourceType {
 	return SourceTypeGit
@@ -168,6 +187,12 @@ func (s *GitSource) resolvedRef() string {
 // sparsePathSpec returns the git pathSpec to pass to sparseClone.
 // Includes without a configured sub-path use ".ai-rulez/" as the narrow spec.
 func (s *GitSource) sparsePathSpec() string {
+	if s.okf {
+		if s.path == "" || s.path == rootPath {
+			return "" // the whole repository
+		}
+		return strings.Trim(s.path, "/") + "/"
+	}
 	if s.path == "" || s.path == "/" {
 		return ".ai-rulez/"
 	}
@@ -217,6 +242,9 @@ func (s *GitSource) checkPin() error {
 }
 
 func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
+	if s.okf {
+		ctx = withHardenedGit(ctx)
+	}
 	logger.Debug("Fetching git source", "name", s.name, "repo", redactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
 	if SkipFetch || config.OfflineIncludes(ctx) {
@@ -323,6 +351,13 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 
 // scanCachedContent locates the .ai-rulez directory in the cache and returns its content tree.
 func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
+	if s.okf {
+		dir := s.findAIRulezDir()
+		if dir == "" {
+			return nil, oops.With("repo", redactURL(s.repoURL)).With("path", s.path).Errorf("no OKF bundle found in repository")
+		}
+		return convertOKFBundle(dir, s.name, s.include)
+	}
 	// Find the .ai-rulez directory in the extracted content
 	aiRulezDir := s.findAIRulezDir()
 	if aiRulezDir == "" {
@@ -366,6 +401,16 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 
 // findAIRulezDir finds the .ai-rulez directory in the cache
 func (s *GitSource) findAIRulezDir() string {
+	if s.okf {
+		dir := s.cacheDir
+		if s.path != "" && s.path != rootPath {
+			dir = filepath.Join(s.cacheDir, filepath.FromSlash(strings.Trim(s.path, "/")))
+		}
+		if info, err := os.Stat(dir); err == nil && info.IsDir() {
+			return dir
+		}
+		return ""
+	}
 	// Check for .ai-rulez in the cache directory
 	// It could be at the root level or under the specified path
 

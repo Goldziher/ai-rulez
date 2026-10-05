@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -42,7 +43,7 @@ var (
 // Result is cached for the process lifetime.
 func requireGit(ctx context.Context) error {
 	gitCheckOnce.Do(func() {
-		cmd := gitutil.Command(ctx, "", "version")
+		cmd := gitCmd(ctx, "", "version")
 		out, err := cmd.Output()
 		if err != nil {
 			gitCheckErr = oops.Wrapf(err, "git not found in PATH")
@@ -108,11 +109,11 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 		refspecs = []string{"refs/heads/" + ref, "refs/tags/" + ref}
 	}
 
-	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+	env := gitEnvFor(ctx)
 
 	for i, refspec := range refspecs {
 		// nolint: gosec
-		cmd := gitutil.Command(ctx, "", "ls-remote", url, refspec)
+		cmd := gitCmd(ctx, "", "ls-remote", url, refspec)
 		cmd.Env = env
 		out, err := cmd.Output()
 		if err != nil {
@@ -149,7 +150,7 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 // Runs:
 //
 //	git clone --depth 1 --filter=blob:none --sparse [--branch <ref>] <url> <destDir>
-//	git -C <destDir> sparse-checkout set <pathSpec>   (omitted when pathSpec == "")
+//	git -C <destDir> sparse-checkout set <pathSpec>   (omitted when pathSpec == ""; --sparse too: the whole repository is checked out)
 //
 // destDir must not exist when this is called (caller does RemoveAll+MkdirAll first
 // so the dir exists but is empty — that is fine; git clone into an empty dir works).
@@ -157,16 +158,19 @@ func remoteHEADSHA(ctx context.Context, repoURL, ref, token string) (string, err
 // On any error, destDir is cleaned up before returning.
 func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token string) error {
 	url := injectToken(repoURL, token)
-	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+	env := gitEnvFor(ctx)
 
-	cloneArgs := []string{"clone", "--depth", "1", "--filter=blob:none", "--sparse"}
+	cloneArgs := []string{"clone", "--depth", "1", "--filter=blob:none"}
+	if pathSpec != "" {
+		cloneArgs = append(cloneArgs, "--sparse")
+	}
 	if ref != "" && ref != refHead {
 		cloneArgs = append(cloneArgs, "--branch", ref)
 	}
 	cloneArgs = append(cloneArgs, url, destDir)
 
 	// nolint: gosec
-	cloneCmd := gitutil.Command(ctx, "", cloneArgs...)
+	cloneCmd := gitCmd(ctx, "", cloneArgs...)
 	cloneCmd.Env = env
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
@@ -182,7 +186,7 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 	}
 
 	// nolint: gosec
-	checkoutCmd := gitutil.Command(ctx, destDir, "sparse-checkout", "set", pathSpec)
+	checkoutCmd := gitCmd(ctx, destDir, "sparse-checkout", "set", pathSpec)
 	checkoutCmd.Env = env
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
@@ -204,7 +208,7 @@ func sparseClone(ctx context.Context, repoURL, ref, pathSpec, destDir, token str
 //	git clone --depth 1 --no-checkout --filter=blob:none --sparse <url> <destDir>
 //	git -C <destDir> fetch --depth 1 origin <commitSHA>
 //	git -C <destDir> checkout --detach <commitSHA>
-//	git -C <destDir> sparse-checkout set <pathSpec>   (omitted when pathSpec == "")
+//	git -C <destDir> sparse-checkout set <pathSpec>   (omitted when pathSpec == ""; --sparse too: the whole repository is checked out)
 //
 // destDir must not exist when this is called. Token is injected into HTTPS
 // URLs. On any error, destDir is cleaned up before returning. Callers rely on
@@ -222,10 +226,14 @@ func cloneFor(isSHA bool) func(ctx context.Context, repoURL, ref, pathSpec, dest
 
 func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, token string) error {
 	url := injectToken(repoURL, token)
-	env := append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") //nolint:gocritic
+	env := gitEnvFor(ctx)
 
 	// nolint: gosec
-	cloneCmd := gitutil.Command(ctx, "", "clone", "--depth", "1", "--no-checkout", "--filter=blob:none", "--sparse", url, destDir)
+	cloneArgs := []string{"clone", "--depth", "1", "--no-checkout", "--filter=blob:none"}
+	if pathSpec != "" {
+		cloneArgs = append(cloneArgs, "--sparse")
+	}
+	cloneCmd := gitCmd(ctx, "", append(cloneArgs, url, destDir)...)
 	cloneCmd.Env = env
 	if out, err := cloneCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on clone failure
@@ -237,7 +245,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	}
 
 	// nolint: gosec
-	fetchCmd := gitutil.Command(ctx, destDir, "fetch", "--depth", "1", "origin", commitSHA)
+	fetchCmd := gitCmd(ctx, destDir, "fetch", "--depth", "1", "origin", commitSHA)
 	fetchCmd.Env = env
 	if out, err := fetchCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on fetch failure
@@ -249,7 +257,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	}
 
 	// nolint: gosec
-	checkoutCmd := gitutil.Command(ctx, destDir, "checkout", "--detach", commitSHA)
+	checkoutCmd := gitCmd(ctx, destDir, "checkout", "--detach", commitSHA)
 	checkoutCmd.Env = env
 	if out, err := checkoutCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on checkout failure
@@ -265,7 +273,7 @@ func sparseCloneSHA(ctx context.Context, repoURL, commitSHA, pathSpec, destDir, 
 	}
 
 	// nolint: gosec
-	sparseCmd := gitutil.Command(ctx, destDir, "sparse-checkout", "set", pathSpec)
+	sparseCmd := gitCmd(ctx, destDir, "sparse-checkout", "set", pathSpec)
 	sparseCmd.Env = env
 	if out, err := sparseCmd.CombinedOutput(); err != nil {
 		_ = os.RemoveAll(destDir) //nolint:errcheck // best-effort cleanup on sparse-checkout failure
@@ -383,4 +391,34 @@ func computeFileHashes(dir string) (map[string]string, error) {
 			Wrapf(err, "walk directory for file hashes")
 	}
 	return hashes, nil
+}
+
+type hardenedKey struct{}
+
+// withHardenedGit marks ctx so the git commands run for it use the hardened
+// options of gitutil.HardenedConfig: content an include takes from a bundle
+// format (OKF) is as untrusted as an imported one.
+func withHardenedGit(ctx context.Context) context.Context {
+	return context.WithValue(ctx, hardenedKey{}, true)
+}
+
+func hardenedGit(ctx context.Context) bool {
+	v, _ := ctx.Value(hardenedKey{}).(bool) //nolint:errcheck // absent means false
+	return v
+}
+
+// gitCmd builds a git command for an include fetch: the environment carries no
+// repository selection and, for a hardened ctx, the hardened options.
+func gitCmd(ctx context.Context, dir string, args ...string) *exec.Cmd {
+	if hardenedGit(ctx) {
+		args = append(gitutil.HardenedConfig(), args...)
+	}
+	return gitutil.Command(ctx, dir, args...)
+}
+
+func gitEnvFor(ctx context.Context) []string {
+	if hardenedGit(ctx) {
+		return gitutil.HardenedEnv(nil)
+	}
+	return append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0")
 }

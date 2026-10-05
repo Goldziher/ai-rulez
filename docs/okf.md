@@ -309,7 +309,12 @@ include = ["rules", "skills"]                    # optional kind filter
 At load time the bundle is converted with the same mapping as `import okf` (into a temporary directory that is
 discarded) and merged like any other include, with the usual precedence. The AR001-AR011 security scan runs on the
 converted text; a bundle with an error-level finding is refused as a whole, and the include is skipped with an error.
-OKF includes are not recorded in `ai-rulez.lock` (use a commit SHA as `ref`). `install_to` places the content in a
+A bundle in a git repository is cached under `~/.cache/ai-rulez/includes/<name>` and recorded in `ai-rulez.lock`
+exactly like a git include: `ai-rulez lock` pins a tag or branch to its commit and a content digest, a locked run
+fetches the pinned commit (a moved tag changes nothing until you relock), `--frozen` and `--no-fetch` use the cache and
+fail when the digest differs, `lock --check` and `[lock] enforce` apply, and a branch or tag that is not locked is
+reported as `AR010`. The clone runs with hooks, credential helpers and submodules off and only the https, ssh and file
+transports. See [Lock file](lockfile.md). `install_to` places the content in a
 domain like other includes. Configure with `includes[].format`; the only value is `okf`.
 
 ## Security

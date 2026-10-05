@@ -252,7 +252,11 @@ func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok
 			if cfg.Includes[i].Name != w.Name {
 				continue
 			}
-			src, err := NewGitSource(w.Name, cfg.Includes[i].Source, cfg.Includes[i].Path, cfg.Includes[i].Ref, cfg.BaseDir, nil, "")
+			newSource := NewGitSource
+			if cfg.Includes[i].Format == config.IncludeFormatOKF {
+				newSource = NewOKFGitSource
+			}
+			src, err := newSource(w.Name, cfg.Includes[i].Source, cfg.Includes[i].Path, cfg.Includes[i].Ref, cfg.BaseDir, nil, "")
 			if err != nil {
 				return "", "", false
 			}
