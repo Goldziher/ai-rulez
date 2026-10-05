@@ -107,7 +107,7 @@ func (r *reservation) settle(respModel string, usage Usage) (costUSD float64, kn
 // fail settles a call that returned an error. A clean rejection (an HTTP error
 // status, or an error raised before anything was sent) is not billed, so only
 // the call count stays. Anything else (a timeout, a transport error after the
-// request may have been sent, an undecodable reply, a cancelled context) may
+// request may have been sent, an undecodable reply, a canceled context) may
 // have been billed or may still be running, so the worst case is charged.
 func (r *reservation) fail(err error) {
 	if unbilled(err) {

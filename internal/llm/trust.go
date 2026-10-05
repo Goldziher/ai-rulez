@@ -5,7 +5,7 @@ import "strings"
 // A committed repository config, and the machine-local overlay that lives in
 // the checkout, is attacker-controlled input: cloning a repository must not
 // enable network use, pick the host a prompt goes to, or choose which
-// environment variable is sent as a credential. Those keys are honoured only
+// environment variable is sent as a credential. Those keys are honored only
 // from user scope (the user config file or AI_RULEZ_LLM_* environment variables).
 // This mirrors the trust rule of [telemetry].
 
