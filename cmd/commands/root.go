@@ -75,6 +75,7 @@ func init() {
 	RootCmd.AddCommand(SkillCmd)
 	RootCmd.AddCommand(LockCmd)
 	RootCmd.AddCommand(TokensCmd)
+	RootCmd.AddCommand(CostCmd)
 	RootCmd.AddCommand(UsageCmd)
 	RootCmd.AddCommand(ReportCmd)
 	RootCmd.AddCommand(LocalCmd)
