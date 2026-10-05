@@ -115,6 +115,13 @@ func TestRecord(t *testing.T) {
 				return
 			}
 			tt.want.Time, tt.want.Event, tt.want.Harness = "2026-10-04T12:00:00Z", EventSkillInvoked, "claude"
+			tt.want.Version, tt.want.Outcome = EntrySchemaVersion, OutcomeLoaded
+			if tt.want.Session != "" {
+				salt, saltErr := os.ReadFile(filepath.Join(filepath.Dir(log), "usage.salt"))
+				require.NoError(t, saltErr)
+				tt.want.Session = HashSession(strings.TrimSpace(string(salt)), tt.want.Session)
+				assert.Len(t, tt.want.Session, 16)
+			}
 			assert.Equal(t, tt.want, entry)
 
 			data, err := os.ReadFile(log)
