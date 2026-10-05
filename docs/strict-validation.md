@@ -222,3 +222,17 @@ skill/command namespace collisions, plugin hook `script` existence, unresolved i
   `${CLAUDE_PROJECT_DIR}`.
 - Anchors use GitHub-style heading slugs.
 - The MCP command check depends on the `PATH` of the machine running the command.
+
+## Additional rules (content, config and security)
+
+<!-- lint-rules:begin -->
+The rules below were added after the first release of strict validation. Each has a stable code, is deterministic
+and offline, honors `[lint.severity]`, `[lint] ignore` and the inline `ai-rulez-lint-ignore` comment, and is listed
+by `ai-rulez validate --strict --format json` under its name. "Default" is the severity when `[lint.severity]`
+does not override it; a rule that reports mild and serious cases at different levels says so.
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR304 | `frontmatter-value-invalid` | warning | A frontmatter value the Claude Code skill or subagent reference does not accept: `effort` (`low`, `medium`, `high`, `xhigh`, `max`), `context` (`fork`), `shell` (`bash`, `powershell`), `permissionMode`, `memory`, `isolation`, `color`, a quoted or `yes`-style value where a YAML boolean is required, a non-integer `maxTurns`, a `model` that is neither an alias (`sonnet`, `opus`, `haiku`, `inherit`), a full model ID nor a known vendor ID, and a `paths`/`globs` value that is not a glob string or a list of glob strings. The message suggests the nearest valid value |
+| AR305 | `tool-name-unknown` | warning | An `allowed-tools`, `disallowed-tools`, `tools` or `disallowedTools` entry that names no Claude Code tool (with a did-you-mean), a malformed `mcp__server__tool` name, unbalanced parentheses in a `Bash(...)` pattern, or a tool listed as both allowed and denied. MCP tools, `Bash(...)`/`WebFetch(...)` patterns and `Agent(name)` are valid. Tools provided elsewhere go in `lint.known_names`. Not checked when `claude` is not among the presets |
+<!-- lint-rules:end -->
