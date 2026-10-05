@@ -678,9 +678,11 @@ func (r *runner) checkSkillName(it *item, d doc) {
 	line := d.lineOf("name", 1)
 	switch {
 	case !skillNameRe.MatchString(name) || len(name) > maxSkillNameLen:
-		r.add(CodeSkillNameInvalid, it.abs, line, "skill name %q must be lowercase letters, digits and single hyphens, at most %d characters", name, maxSkillNameLen)
+		r.addFix(r.renameSkillFix(it, d, line, normalizeSkillName(name), name), CodeSkillNameInvalid, it.abs, line,
+			"skill name %q must be lowercase letters, digits and single hyphens, at most %d characters", name, maxSkillNameLen)
 	case name != config.SkillID(it.cf):
-		r.add(CodeSkillNameInvalid, it.abs, line, "skill name %q differs from its directory %q", name, config.SkillID(it.cf))
+		r.addFix(r.renameSkillFix(it, d, line, config.SkillID(it.cf), name), CodeSkillNameInvalid, it.abs, line,
+			"skill name %q differs from its directory %q", name, config.SkillID(it.cf))
 	}
 }
 
@@ -714,7 +716,7 @@ func (r *runner) checkScripts(it *item) {
 			}
 		}
 		if known && !exe {
-			r.add(CodeScriptNotExecutable, abs, 1, "script has a shebang but is not executable (chmod +x, and commit the mode)")
+			r.addFix(chmodFix(abs), CodeScriptNotExecutable, abs, 1, "script has a shebang but is not executable (chmod +x, and commit the mode)")
 		}
 	}
 }
@@ -918,7 +920,7 @@ func (r *runner) checkHookCommand(settings, event, command string) {
 		r.dep(settings, filepath.Join(r.tree.Top, filepath.FromSlash(found)))
 		direct := m[0] == len(command)-len(trimmed)
 		if exe, known := r.tree.Executable(found); direct && known && !exe {
-			r.add(CodeHookNotExecutable, settings, line, "%s hook runs %q, which is not executable", event, rel)
+			r.addFix(chmodFix(filepath.Join(r.tree.Top, filepath.FromSlash(found))), CodeHookNotExecutable, settings, line, "%s hook runs %q, which is not executable", event, rel)
 		}
 	}
 }
@@ -1040,7 +1042,7 @@ func (r *runner) checkSettingsConfig() {
 				continue
 			}
 			if exe, known := r.tree.Executable(rel); known && !exe {
-				r.add(CodeHookSourceNotExec, path, lineOf(action.Script), "%s hook runs %q, which is not executable", group.Event, action.Script)
+				r.addFix(chmodFix(filepath.Join(r.tree.Top, filepath.FromSlash(rel))), CodeHookSourceNotExec, path, lineOf(action.Script), "%s hook runs %q, which is not executable", group.Event, action.Script)
 			}
 		}
 	}

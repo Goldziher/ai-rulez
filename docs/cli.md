@@ -1364,6 +1364,9 @@ ai-rulez validate [config-path] [flags]
 | `--strict-baseline`   | boolean | With `--strict`: exit 2 when the baseline has stale or expired entries (ratchet) |
 | `--since`             | string  | With `--strict`: report only findings in files changed since this git revision and in files that refer to them (the whole tree is still resolved) |
 | `--changed`           | boolean | With `--strict`: shorthand for `--since HEAD` (uncommitted and untracked changes) |
+| `--fix`               | boolean | With `--strict`: apply the safe automatic fixes (executable bits, frontmatter key renames) to authored sources; never generated outputs or security findings |
+| `--fix-unsafe`        | boolean | With `--strict`: also apply fixes that can change meaning (skill name normalization); implies `--fix` |
+| `--dry-run`           | boolean | With `--fix`/`--fix-unsafe`: print the unified diff and change nothing |
 | `--analyzer`          | strings | With `--strict`: report only these analyzers (`security`, `references`, `hooks`, `mcp`, `duplicates`, `descriptions`, `budgets`, `metadata`, `plugin`) |
 | `--lint-profile`      | string  | With `--strict`: lint preset `default`, `strict` or `permissive` (overrides `[lint] profile`; not the generation `--profile`) |
 | `--explain`           | string  | Print what a rule (code or name) checks, why, a bad and a good example, how to suppress it and its docs link, then exit (`--format json` for a record) |
