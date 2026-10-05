@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 	"github.com/Goldziher/ai-rulez/internal/roles"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
@@ -188,4 +189,38 @@ func mustCounter(t *testing.T) tokens.Counter {
 	c, err := tokens.New("")
 	require.NoError(t, err)
 	return c
+}
+
+// generate --check must agree with generate: right after `generate --role dev`
+// the role check is clean, and checking without the role sees that a generate
+// would take the role's skillOverrides back out of .claude/settings.json.
+func TestGenerateCheckRoleSkillModeRoundTrip(t *testing.T) {
+	root := rolesCmdProject(t)
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+
+	gen := generator.NewGenerator(cfg)
+	require.NoError(t, gen.SetRole("dev"))
+	require.NoError(t, gen.Generate(""))
+	settings, err := os.ReadFile(filepath.Join(root, ".claude", "settings.json"))
+	require.NoError(t, err)
+	require.Contains(t, string(settings), "skillOverrides")
+
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	gen = generator.NewGenerator(cfg)
+	require.NoError(t, gen.SetRole("dev"))
+	drift, err := gen.CheckDrift("")
+	require.NoError(t, err)
+	assert.Empty(t, drift, "a role check right after generating that role is clean")
+
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	drift, err = generator.NewGenerator(cfg).CheckDrift("")
+	require.NoError(t, err)
+	var paths []string
+	for _, d := range drift {
+		paths = append(paths, d.Path)
+	}
+	assert.Contains(t, paths, ".claude/settings.json", "generating without the role would take its skillOverrides back")
 }
