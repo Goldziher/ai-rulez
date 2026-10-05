@@ -100,7 +100,7 @@ func TestHarnessBatch_Outputs(t *testing.T) {
 			notFiles: []string{"AGENTS.md"},
 			frontmatter: map[string]map[string]string{
 				".trae/rules/always.md":      {"alwaysApply": "true"},
-				".trae/rules/tsx.md":         {"alwaysApply": "false", "globs": "'**/*.tsx,src/**/*.ts'"},
+				".trae/rules/tsx.md":         {"alwaysApply": "false", "globs": "**/*.tsx,src/**/*.ts"},
 				".trae/rules/auto-rule.md":   {"alwaysApply": "false", "description": "when X"},
 				".trae/rules/manual-rule.md": {"alwaysApply": "false", "globs": "", "description": ""},
 			},
@@ -138,12 +138,11 @@ func TestHarnessBatch_Outputs(t *testing.T) {
 		{
 			preset: "zoocode",
 			wantFiles: []string{
-				"AGENTS.md", ".roo/rules/always.md", ".roo/rules/tsx.md", ".roo/skills/demo/SKILL.md",
+				"AGENTS.md", ".roo/skills/demo/SKILL.md",
 				".roo/commands/ship.md", ".roo/mcp.json",
 			},
-			notFiles: []string{".roomodes", ".roo/agents/scout.md"},
+			notFiles: []string{".roomodes", ".roo/agents/scout.md", ".roo/rules/always.md"},
 			frontmatter: map[string]map[string]string{
-				".roo/rules/always.md":      {"name": "", "inclusion": ""},
 				".roo/commands/ship.md":     {"description": "Ship", "name": ""},
 				".roo/skills/demo/SKILL.md": {"name": "demo", "description": "Demo skill"},
 			},
@@ -277,8 +276,8 @@ func TestHarnessBatch_GlobalPaths(t *testing.T) {
 		want   providers.GlobalPaths
 	}{
 		{"kiro", providers.GlobalPaths{
-			RootFile: j(".kiro/steering/product.md"), RulesDir: j(".kiro/steering"),
-			SkillsDir: j(".kiro/skills"), AgentsDir: j(".kiro/agents"),
+			RootFile: j(".kiro/steering/AGENTS.md"), RulesDir: j(".kiro/steering"),
+			SkillsDir: j(".kiro/skills"), AgentsDir: j(".kiro/agents"), CommandsDir: j(".kiro/prompts"),
 			Sidecars: map[string]string{".kiro/settings/mcp.json": j(".kiro/settings/mcp.json")},
 		}},
 		{"trae", providers.GlobalPaths{SkillsDir: j(".trae/skills"), Sidecars: map[string]string{}}},

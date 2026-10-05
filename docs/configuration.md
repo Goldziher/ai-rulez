@@ -11,8 +11,9 @@ V4 uses a file-based approach where you edit files directly with your editor or 
 - **Context**: Add/edit `.ai-rulez/context/*.md` files or use `ai-rulez add context`
 - **Skills**: Add/edit `.ai-rulez/skills/{name}/SKILL.md` files or use `ai-rulez add skill`
 - **Commands**: Add/edit `.ai-rulez/commands/{name}.md` (flat form) or `.ai-rulez/commands/{name}/COMMAND.md` (directory form with optional `references/` subdirectory)
+- **Checks**: Add/edit `.ai-rulez/checks/{name}.md` code-review guidelines (frontmatter `description`, `severity`, `tools`, `targets`) or use `ai-rulez add check`; see [Checks](checks.md)
 - **Agents**: Add/edit `.ai-rulez/agents/*.md` files or use `ai-rulez add agent` (`add command` likewise creates commands)
-- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands}/*.md` files or use `ai-rulez domain add`
+- **Domains**: Add/edit `.ai-rulez/domains/{name}/{rules,context,skills,agents,commands,checks}/*.md` files or use `ai-rulez domain add`
 - **MCP Servers**: Inline in `.ai-rulez/config.toml` (no separate mcp.yaml file)
 - **Machine-local configuration**: Personal content under `.ai-rulez/local/` and a `config.local.*` overlay, both gitignored. See [Local overlay](#local-overlay)
 
@@ -231,6 +232,24 @@ emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
 provider-backed presets use the inline-table form shown above. TOML, YAML, and
 JSON configs all accept both.
+
+##### Native tool and model names in a provider spec
+
+A tool with its own tool and model vocabulary can be given a translation instead of Claude's names.
+These keys go under `[outputs.<kind>.frontmatter]`:
+
+| Key                 | Description |
+| ------------------- | ----------- |
+| `tool_names`        | Table of Claude tool name to the tool's own name for the `tools` list (matched ignoring case). A tool the table does not name is dropped; an agent left with none writes no `tools` key |
+| `tool_case`         | `"lower"` writes every tool name lower-case (after `tool_names`) |
+| `model_aliases`     | Table of resolved model (matched ignoring case) to the tool's own id; `""` drops the model |
+| `drop_bare_aliases` | Drops a model that is `sonnet`, `opus`, `haiku` or `inherit`, so the agent inherits the session model; runs after `model_aliases` |
+
+`[outputs.<kind>.body]` takes `replace` (a table of placeholder to replacement in the item's content, such as
+`{ "$ARGUMENTS" = "$prompt" }`) and `replace_flag` (a frontmatter key written `true` when a replacement happened).
+An `mcp` sidecar takes `transports` (`["stdio"]` leaves remote servers out), `env_ref_syntax` (`"dollar"` or
+`"env_prefix"`: a value that came from a `${VAR}` placeholder is written as `$VAR` or `${env:VAR}` instead of the
+resolved secret), and `elements.project_only` (the elements are project-relative and skipped in the user scope).
 
 ##### Split rule files in a provider spec
 
@@ -585,14 +604,14 @@ from a placeholder, or if an env key or header name looks sensitive (`TOKEN`, `S
 `KEY`, `CREDENTIAL`, or the `Authorization`, `Proxy-Authorization` and `Cookie` headers), generation
 fails before writing unless the generated MCP config path is covered by `.gitignore` or by the
 patterns `ai-rulez` is about to add. Protected MCP output paths are `.mcp.json`,
-`.claude/settings.json`, `.gemini/settings.json`, `.agents/settings.json`, and `opencode.json`,
+`.claude/settings.json`, `.gemini/settings.json`, `.agents/mcp_config.json`, and `opencode.json`,
 including scoped variants such as `packages/web/.claude/settings.json`. Resolved secret values are redacted before
 source-hash calculation, but generated MCP config files contain the actual resolved values.
 
 #### Settings document merge behavior
 
 Files such as `.claude/settings.json`, `.mcp.json`, `.amp/settings.json`, `.gemini/settings.json`,
-`.agents/settings.json` and `.pi/mcp.json` are **shared documents**: ai-rulez owns specific top-level keys
+`.agents/mcp_config.json` and `.pi/mcp.json` are **shared documents**: ai-rulez owns specific top-level keys
 (`mcpServers` for MCP config, `amp.anthropic.effort` for Amp) and the consumer owns everything else.
 Generation replaces only the owned keys and preserves every other member byte-for-byte, including
 the document's original indentation.
@@ -600,7 +619,7 @@ the document's original indentation.
 **Important implications**:
 
 - **MCP servers are owned one by one**: ai-rulez owns the servers it writes into `mcpServers`
-  (`mcp.servers` in `opencode.json`, `servers` in `.xum/mcp.jsonc`), not the whole object. A server
+  (`mcp.<name>` in `opencode.json`, `servers` in `.xum/mcp.jsonc`), not the whole object. A server
   you added by hand under a name that is not in `config.toml` survives `generate` and `clean`. A
   server dropped from `config.toml` is removed on the next `generate`, and only while it still holds
   the value ai-rulez wrote: an entry you edited is yours, stays, and is reported once. If a
@@ -618,7 +637,7 @@ the document's original indentation.
   the config declares MCP servers (or, for Amp, a resolved effort tier; for Claude, managed plugin keys). The `gemini` and
   `antigravity` presets previously wrote their settings document on every run purely to self-register
   the ai-rulez MCP server; they no longer do, so a project with no `[[mcp_servers]]` keeps whatever
-  is already at `.agents/settings.json` untouched. The exceptions are `.gemini/settings.json`
+  is already at `.agents/mcp_config.json` untouched. The exceptions are `.gemini/settings.json`
   (`context.fileName`) and `opencode.json` (`instructions`), which carry the entry that loads
   machine-local content.
 - **JSONC**: A document containing comments or trailing commas is not valid JSON, and rewriting it
@@ -994,7 +1013,7 @@ For models the order is:
 | `claude`       | `claude_model`            | `model` in `.claude/agents/<id>.md`          |
 | `copilot`      | `copilot_model`           | `model` in `.github/agents/<id>.agent.md`    |
 | `cursor`       | `cursor_model`            | `model` in `.cursor/agents/<id>.md`          |
-| `cline`        | `cline_model`             | `model` in `.cline/agents/<id>.md`           |
+| `cline`        | `cline_model`             | `modelId` in `.cline/agents/<id>.yaml`         |
 | `amp`          | `amp_model`               | `model` in `.agents/agents/<id>.md` (Amp)    |
 | `junie`        | `junie_model`             | `model` in `.junie/agents/<id>.md`           |
 | `opencode`     | `opencode_model`          | `model` in `.opencode/agents/<id>.md`        |

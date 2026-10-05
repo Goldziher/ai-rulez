@@ -14,22 +14,23 @@ import (
 const kindSkill = "skill"
 
 // perItemContent returns a copy of a content tree that keeps only the content
-// written as one file per item: skills, agents and commands, at the root and in
-// every domain. Rules and context are dropped: they have their own local outputs
+// written as one file per item: skills, agents, commands and checks, at the root
+// and in every domain. Rules and context are dropped: they have their own local outputs
 // (personal rule files and the .local root).
 func perItemContent(t *config.ContentTree) *config.ContentTree {
 	out := &config.ContentTree{
 		Skills:   t.Skills,
 		Agents:   t.Agents,
 		Commands: t.Commands,
+		Checks:   t.Checks,
 		Domains:  make(map[string]*config.Domain, len(t.Domains)),
 	}
 	for name, d := range t.Domains {
-		if d == nil || len(d.Skills)+len(d.Agents)+len(d.Commands) == 0 {
+		if d == nil || len(d.Skills)+len(d.Agents)+len(d.Commands)+len(d.Checks) == 0 {
 			continue
 		}
 		out.Domains[name] = &config.Domain{
-			Name: d.Name, Skills: d.Skills, Agents: d.Agents, Commands: d.Commands,
+			Name: d.Name, Skills: d.Skills, Agents: d.Agents, Commands: d.Commands, Checks: d.Checks,
 			Builtin: d.Builtin, BuiltinScoped: d.BuiltinScoped, FromInclude: d.FromInclude,
 		}
 	}
@@ -37,11 +38,11 @@ func perItemContent(t *config.ContentTree) *config.ContentTree {
 }
 
 func hasPerItemContent(t *config.ContentTree) bool {
-	if len(t.Skills)+len(t.Agents)+len(t.Commands) > 0 {
+	if len(t.Skills)+len(t.Agents)+len(t.Commands)+len(t.Checks) > 0 {
 		return true
 	}
 	for _, d := range t.Domains {
-		if d != nil && len(d.Skills)+len(d.Agents)+len(d.Commands) > 0 {
+		if d != nil && len(d.Skills)+len(d.Agents)+len(d.Commands)+len(d.Checks) > 0 {
 			return true
 		}
 	}
@@ -58,6 +59,7 @@ func withLocalItems(shared, local *config.ContentTree) *config.ContentTree {
 		Skills:   append(append([]config.ContentFile(nil), shared.Skills...), local.Skills...),
 		Agents:   append(append([]config.ContentFile(nil), shared.Agents...), local.Agents...),
 		Commands: append(append([]config.ContentFile(nil), shared.Commands...), local.Commands...),
+		Checks:   append(append([]config.ContentFile(nil), shared.Checks...), local.Checks...),
 		Domains:  make(map[string]*config.Domain, len(shared.Domains)+len(local.Domains)),
 	}
 	for name, d := range shared.Domains {
@@ -73,13 +75,14 @@ func withLocalItems(shared, local *config.ContentTree) *config.ContentTree {
 		merged.Skills = append(append([]config.ContentFile(nil), sd.Skills...), ld.Skills...)
 		merged.Agents = append(append([]config.ContentFile(nil), sd.Agents...), ld.Agents...)
 		merged.Commands = append(append([]config.ContentFile(nil), sd.Commands...), ld.Commands...)
+		merged.Checks = append(append([]config.ContentFile(nil), sd.Checks...), ld.Checks...)
 		out.Domains[name] = &merged
 	}
 	return out
 }
 
-// checkLocalCollisions fails when a local skill, command or agent has the same ID
-// as a shared one: both would be written to the same file, and a machine-local
+// checkLocalCollisions fails when a local skill, command, agent or check has the
+// same ID as a shared one: both would be written to the same file, and a machine-local
 // file must never replace a shared one. Skills and commands share one output
 // namespace, so they are compared together.
 func checkLocalCollisions(shared, local *config.ContentTree) error {
@@ -94,6 +97,9 @@ func checkLocalCollisions(shared, local *config.ContentTree) error {
 		}
 		for _, f := range presets.AllAgents(t) {
 			byKey["agent:"+f.Name] = source{"agent", f.Name, f.Path}
+		}
+		for _, f := range presets.AllChecks(t) {
+			byKey["check:"+strings.ToLower(f.Name)] = source{"check", f.Name, f.Path}
 		}
 		return byKey
 	}
@@ -237,13 +243,13 @@ func sharedLocalSkills(cfg *config.Config, items *config.ContentTree) []config.O
 	return files
 }
 
-// warnDroppedItems warns, per preset and kind, about local skills, agents and
-// commands the preset aggregates into a shared file (or has no output for): they
+// warnDroppedItems warns, per preset and kind, about local skills, agents,
+// commands and checks the preset aggregates into a shared file (or has no output for): they
 // get no per-item file, and a machine-local item is never merged into a file the
 // team shares, so they are not written at all.
 func (g *Generator) warnDroppedItems(cfg *config.Config, items *config.ContentTree, known, builtin map[string]bool) {
 	for name, dropped := range g.droppedItems(cfg, items, known, builtin) {
-		logger.Warn("Machine-local skills, agents or commands have no per-item output for this preset and were not written",
+		logger.Warn("Machine-local skills, agents, commands or checks have no per-item output for this preset and were not written",
 			"preset", name, "items", strings.Join(dropped, ", "))
 	}
 }
@@ -258,9 +264,10 @@ func (g *Generator) droppedItems(cfg *config.Config, items *config.ContentTree, 
 		files  func(*config.ContentTree) []config.ContentFile
 		narrow func(*config.ContentTree) *config.ContentTree
 	}{
-		{kindSkill, presets.AllSkills, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, true, false, false) }},
-		{"agent", presets.AllAgents, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, true, false) }},
-		{"command", presets.AllCommands, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, true) }},
+		{kindSkill, presets.AllSkills, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, true, false, false, false) }},
+		{"agent", presets.AllAgents, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, true, false, false) }},
+		{"command", presets.AllCommands, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, true, false) }},
+		{"check", presets.AllChecks, func(t *config.ContentTree) *config.ContentTree { return onlyKind(t, false, false, false, true) }},
 	}
 	dropped := map[string][]string{}
 	for _, kind := range kinds {
@@ -304,7 +311,7 @@ func anyUnknown(outputs []config.OutputFile, known map[string]bool) bool {
 }
 
 // onlyKind keeps the selected per-item kinds of a content tree.
-func onlyKind(t *config.ContentTree, skills, agents, commands bool) *config.ContentTree {
+func onlyKind(t *config.ContentTree, skills, agents, commands, checks bool) *config.ContentTree {
 	pick := func(on bool, files []config.ContentFile) []config.ContentFile {
 		if on {
 			return files
@@ -315,11 +322,13 @@ func onlyKind(t *config.ContentTree, skills, agents, commands bool) *config.Cont
 		Skills:   pick(skills, t.Skills),
 		Agents:   pick(agents, t.Agents),
 		Commands: pick(commands, t.Commands),
+		Checks:   pick(checks, t.Checks),
 		Domains:  make(map[string]*config.Domain, len(t.Domains)),
 	}
 	for name, d := range t.Domains {
 		out.Domains[name] = &config.Domain{
 			Name: d.Name, Skills: pick(skills, d.Skills), Agents: pick(agents, d.Agents), Commands: pick(commands, d.Commands),
+			Checks:  pick(checks, d.Checks),
 			Builtin: d.Builtin, BuiltinScoped: d.BuiltinScoped, FromInclude: d.FromInclude,
 		}
 	}

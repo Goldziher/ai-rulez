@@ -251,6 +251,20 @@ func (s *Server) registerProjectTools() {
 	)
 
 	s.addTool(
+		newAnnotatedTool("doctor", "Run read-only diagnostics: config validity, preset names, generated-output drift, gitignore coverage, shared settings documents, MCP env placeholders, hook scripts, lock file, and tool binaries. Returns findings by severity (error, warning, info).",
+			newSchemaBuilder().
+				String("config_file", "Path to the root configuration file (optional)", false).
+				String("config_dir", "Configuration directory name (default: .ai-rulez)", false).
+				String("profile", "Profile to render for the drift and gitignore checks", false).
+				Boolean("strict", "Treat warnings as failures in the ok field", false).
+				Boolean("no_local", "Ignore the machine-local config.local.* overlay and local/ content", false).
+				WorkingDirectory(),
+			readOnlyAnnotations(),
+		),
+		handlers.DoctorHandler,
+	)
+
+	s.addTool(
 		newAnnotatedTool("init_project", "Initialize a new ai-rulez project in the current directory",
 			newSchemaBuilder().
 				String("project_name", "The name for the new project", false).
@@ -378,6 +392,71 @@ func (s *Server) registerCRUDTools() {
 			readOnlyAnnotations(),
 		),
 		handlers.ListRulesHandler,
+	)
+
+	// Check tools (code-review guidelines)
+	s.addTool(
+		newAnnotatedTool("create_check", "Create a new code-review check file (.ai-rulez/checks/<name>.md)",
+			newSchemaBuilder().
+				String("name", "Check filename without .md extension (letters, digits, '.', '_', '-')", true).
+				String("content", "Markdown body, or a full file with YAML frontmatter", false).
+				String("description", "Short summary of the check", false).
+				Enum("severity", "Severity level", []string{"low", "medium", "high", "critical"}, false).
+				StringArray("tools", "Tool names the check may use", false).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				StringArray("targets", "Target providers (e.g., cursor, kilo)", false).
+				WorkingDirectory(),
+			additiveAnnotations(),
+		),
+		handlers.CreateCheckHandler,
+	)
+
+	s.addTool(
+		newAnnotatedTool("read_check", "Read the content of a check file",
+			newSchemaBuilder().
+				String("name", "Check filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
+			readOnlyAnnotations(),
+		),
+		handlers.ReadCheckHandler,
+	)
+
+	s.addTool(
+		newAnnotatedTool("update_check", "Update an existing check file atomically: give content, a field (description, severity, tools, targets), or both",
+			newSchemaBuilder().
+				String("name", "Check filename without .md extension", true).
+				String("content", "New markdown body (the existing frontmatter is kept), or a full file with YAML frontmatter. Optional when a field below is given", false).
+				String("description", "Short summary of the check; given fields are set on the existing frontmatter", false).
+				Enum("severity", "Severity level", []string{"low", "medium", "high", "critical"}, false).
+				StringArray("tools", "Tool names the check may use", false).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				StringArray("targets", "Target presets or path globs (e.g., cursor, kilo, src/**)", false).
+				WorkingDirectory(),
+			idempotentAnnotations(),
+		),
+		handlers.UpdateCheckHandler,
+	)
+
+	s.addTool(
+		newAnnotatedTool("delete_check", "Delete a check file",
+			newSchemaBuilder().
+				String("name", "Check filename without .md extension", true).
+				String("domain", "Domain name (optional, uses root if not specified)", false).
+				WorkingDirectory(),
+			destructiveAnnotations(),
+		),
+		handlers.DeleteCheckHandler,
+	)
+
+	s.addTool(
+		newAnnotatedTool("list_checks", "List all checks in the root or a specific domain",
+			newSchemaBuilder().
+				String("domain", "Domain name (optional, lists root checks if not specified)", false).
+				WorkingDirectory(),
+			readOnlyAnnotations(),
+		),
+		handlers.ListChecksHandler,
 	)
 
 	// Context tools

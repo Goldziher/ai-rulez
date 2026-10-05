@@ -25,6 +25,8 @@ const (
 const (
 	keyDigest = "digest"
 	keyURI    = "uri"
+	keyName   = "name"
+	keySize   = "size"
 )
 
 const skillServerInstructions = "ai-rulez serves the skills of one profile read-only. " +
@@ -138,7 +140,7 @@ func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolReques
 }
 
 func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
-	key := req.GetString("name", "")
+	key := req.GetString(keyName, "")
 	skill, ok := s.cat().Lookup(key)
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("no served skill %q", key))
@@ -163,7 +165,7 @@ func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolReque
 		return handlers.ToolError(fmt.Errorf("%s is binary; read it with resources/read", uri))
 	}
 	return handlers.ToolSuccess(map[string]any{
-		keyURI: file.URI, keyDigest: file.Digest, "size": file.Size, "content": string(file.Content),
+		keyURI: file.URI, keyDigest: file.Digest, keySize: file.Size, "content": string(file.Content),
 	})
 }
 
@@ -179,7 +181,7 @@ func domainLabel(domain string) string {
 // an installed skill came from so an audit log can pin exactly what was loaded.
 func skillSummary(s *CatalogSkill, score int) map[string]any {
 	out := map[string]any{
-		"name":        s.Name,
+		keyName:       s.Name,
 		keyURI:        s.URI,
 		"description": s.Description,
 		"domain":      domainLabel(s.Domain),
@@ -200,7 +202,7 @@ func skillSummary(s *CatalogSkill, score int) map[string]any {
 }
 
 func fileEntry(f *CatalogFile) map[string]any {
-	return map[string]any{keyURI: f.URI, keyDigest: f.Digest, "size": f.Size}
+	return map[string]any{keyURI: f.URI, keyDigest: f.Digest, keySize: f.Size}
 }
 
 // skillEntry renders a skills/list or skills/get entry per SEP-2640.

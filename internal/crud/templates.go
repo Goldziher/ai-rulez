@@ -112,6 +112,19 @@ func GenerateCommandTemplate(name, description string) string {
 		"/"+name, description, caser.String(strings.ReplaceAll(name, "-", " ")))
 }
 
+// GenerateCheckTemplate generates a template for a code-review check file
+func GenerateCheckTemplate(name, description string) string {
+	if description == "" {
+		description = name
+	}
+	content, err := MergeCheckContent("", "Describe what the reviewer should look for.\n", true,
+		CheckFields{Description: description, Severity: "medium"})
+	if err != nil {
+		return "Describe what the reviewer should look for.\n" // unreachable: the fields are fixed and valid
+	}
+	return content
+}
+
 // GenerateEmptyRuleTemplate generates an empty rule template with just frontmatter
 func GenerateEmptyRuleTemplate() string {
 	return GenerateFrontmatter("medium", []string{})

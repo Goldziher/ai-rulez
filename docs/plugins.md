@@ -255,7 +255,7 @@ transforms on `ctx`. See the official
 
 The `opencode` preset itself is separate from plugin authoring. It emits `AGENTS.md`,
 `.opencode/skills/`, and `.opencode/agents/`, and — only when `[[mcp_servers]]` are configured — a
-native v2 `opencode.json` owning `$schema` and `mcp.servers`, merged so any other keys in a
+native `opencode.json` owning `$schema` and the `mcp.<name>` entries, merged so any other keys in a
 hand-authored `opencode.json` are preserved.
 
 ### Hermes adapter

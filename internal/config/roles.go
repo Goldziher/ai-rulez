@@ -26,10 +26,11 @@ const (
 	RoleKindSkill   = "skill"
 	RoleKindAgent   = "agent"
 	RoleKindCommand = "command"
+	RoleKindCheck   = "check"
 )
 
 // RoleKinds lists the kinds a role selects, in output order.
-var RoleKinds = []string{RoleKindRule, RoleKindSkill, RoleKindAgent, RoleKindCommand}
+var RoleKinds = []string{RoleKindRule, RoleKindSkill, RoleKindAgent, RoleKindCommand, RoleKindCheck}
 
 // Problem kinds reported by RoleProblems; the lint package maps them to AR codes.
 const (
@@ -65,6 +66,7 @@ type RoleConfig struct {
 	Rules       *RoleSelector `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Agents      *RoleSelector `yaml:"agents,omitempty" json:"agents,omitempty" toml:"agents,omitempty"`
 	Commands    *RoleSelector `yaml:"commands,omitempty" json:"commands,omitempty" toml:"commands,omitempty"`
+	Checks      *RoleSelector `yaml:"checks,omitempty" json:"checks,omitempty" toml:"checks,omitempty"`
 	// SkillMode maps a skill id or glob to on, name-only, user-invocable-only or
 	// off, Claude Code's skillOverrides values.
 	SkillMode map[string]string `yaml:"skill_mode,omitempty" json:"skill_mode,omitempty" toml:"skill_mode,omitempty"` //nolint:tagliatelle
@@ -105,6 +107,8 @@ func (r *RoleConfig) selector(kind string) *RoleSelector {
 		return r.Agents
 	case RoleKindCommand:
 		return r.Commands
+	case RoleKindCheck:
+		return r.Checks
 	}
 	return nil
 }
@@ -363,6 +367,8 @@ func (r *RoleConfig) setSelector(kind string, s *RoleSelector) {
 		r.Agents = s
 	case RoleKindCommand:
 		r.Commands = s
+	case RoleKindCheck:
+		r.Checks = s
 	}
 }
 
@@ -534,6 +540,7 @@ func (c *Config) FilterTreeForRole(content *ContentTree, flat *RoleConfig) (*Con
 		Skills:   filterRoleFiles(flat, RoleKindSkill, "", selected.Skills),
 		Agents:   filterRoleFiles(flat, RoleKindAgent, "", selected.Agents),
 		Commands: filterRoleFiles(flat, RoleKindCommand, "", selected.Commands),
+		Checks:   filterRoleFiles(flat, RoleKindCheck, "", selected.Checks),
 		Domains:  make(map[string]*Domain, len(selected.Domains)),
 	}
 	for name, d := range selected.Domains {
@@ -542,6 +549,7 @@ func (c *Config) FilterTreeForRole(content *ContentTree, flat *RoleConfig) (*Con
 		nd.Skills = filterRoleFiles(flat, RoleKindSkill, name, d.Skills)
 		nd.Agents = filterRoleFiles(flat, RoleKindAgent, name, d.Agents)
 		nd.Commands = filterRoleFiles(flat, RoleKindCommand, name, d.Commands)
+		nd.Checks = filterRoleFiles(flat, RoleKindCheck, name, d.Checks)
 		out.Domains[name] = &nd
 	}
 	return out, nil
@@ -598,7 +606,7 @@ func (c *Config) ResolveRole(name string) (*ResolvedRole, error) {
 		add(kind, "", treeFiles(tree, kind))
 		for _, dn := range sortedKeys(tree.Domains) {
 			add(kind, dn, treeFiles(&ContentTree{Rules: tree.Domains[dn].Rules, Skills: tree.Domains[dn].Skills,
-				Agents: tree.Domains[dn].Agents, Commands: tree.Domains[dn].Commands}, kind))
+				Agents: tree.Domains[dn].Agents, Commands: tree.Domains[dn].Commands, Checks: tree.Domains[dn].Checks}, kind))
 		}
 	}
 	sort.SliceStable(res.Items, func(i, j int) bool {
@@ -641,6 +649,8 @@ func treeFiles(t *ContentTree, kind string) []ContentFile {
 		return t.Agents
 	case RoleKindCommand:
 		return t.Commands
+	case RoleKindCheck:
+		return t.Checks
 	}
 	return nil
 }
@@ -655,7 +665,7 @@ func (c *Config) relToConfigDir(p string) string {
 	return filepath.ToSlash(p)
 }
 
-// AllItems lists every rule, skill, agent and command of the full content tree
+// AllItems lists every rule, skill, agent, command and check of the full content tree
 // (all domains), sorted by kind, domain and id.
 func (c *Config) AllItems() []RoleItem {
 	if c.Content == nil {
@@ -671,7 +681,7 @@ func (c *Config) AllItems() []RoleItem {
 		add(kind, "", treeFiles(c.Content, kind))
 		for _, dn := range sortedKeys(c.Content.Domains) {
 			d := c.Content.Domains[dn]
-			add(kind, dn, treeFiles(&ContentTree{Rules: d.Rules, Skills: d.Skills, Agents: d.Agents, Commands: d.Commands}, kind))
+			add(kind, dn, treeFiles(&ContentTree{Rules: d.Rules, Skills: d.Skills, Agents: d.Agents, Commands: d.Commands, Checks: d.Checks}, kind))
 		}
 	}
 	return out

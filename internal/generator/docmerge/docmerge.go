@@ -68,8 +68,12 @@ const (
 	FormatYAML Format = "yaml"
 )
 
+// FormatMarkdown, a Markdown document ai-rulez owns only blocks of, is declared
+// in markdown.go.
+
 // FormatFromPath infers the format from a file extension: .json, .jsonc, .toml,
-// .yaml and .yml. ok is false for any other extension.
+// .yaml and .yml. ok is false for any other extension, .md included: a Markdown
+// file is mergeable only where the caller knows it holds ai-rulez blocks.
 func FormatFromPath(path string) (format Format, ok bool) {
 	switch strings.ToLower(filepath.Ext(path)) {
 	case ".json":
@@ -88,7 +92,7 @@ func FormatFromPath(path string) (format Format, ok bool) {
 // Valid reports whether the format is one docmerge can merge into.
 func (f Format) Valid() bool {
 	switch f {
-	case FormatJSON, FormatJSONC, FormatTOML, FormatYAML:
+	case FormatJSON, FormatJSONC, FormatTOML, FormatYAML, FormatMarkdown:
 		return true
 	default:
 		return false
@@ -150,6 +154,8 @@ func ApplyDocument(path string, format Format, existing string, owned []OwnedKey
 		return jsonmerge.ApplyDocument(path, existing, owned)
 	case FormatTOML:
 		return tomlmerge.ApplyDocument(path, existing, owned)
+	case FormatMarkdown:
+		return applyMarkdown(path, existing, owned)
 	default:
 		return yamlmerge.ApplyDocument(path, existing, owned)
 	}
@@ -168,6 +174,8 @@ func create(format Format, owned []OwnedKey) (Result, error) {
 		result, err = jsonmerge.Apply("", owned)
 	case FormatTOML:
 		result, err = tomlmerge.Apply("", owned)
+	case FormatMarkdown:
+		result, err = applyMarkdown("", "", owned)
 	default:
 		result, err = yamlmerge.Apply("", owned)
 	}
@@ -189,6 +197,12 @@ func Unmerge(path string, format Format, claims []Claim) (Unmerged, error) {
 		return tomlmerge.Unmerge(path, claims)
 	case FormatYAML:
 		return yamlmerge.Unmerge(path, claims)
+	case FormatMarkdown:
+		existing, found, err := jsonmerge.ReadExisting(path)
+		if err != nil || !found {
+			return Unmerged{}, err
+		}
+		return unmergeMarkdown(path, existing, claims)
 	default:
 		return Unmerged{}, unsupported(format)
 	}
@@ -204,6 +218,8 @@ func UnmergeDocument(path string, format Format, existing string, claims []Claim
 		return tomlmerge.UnmergeDocument(path, existing, claims)
 	case FormatYAML:
 		return yamlmerge.UnmergeDocument(path, existing, claims)
+	case FormatMarkdown:
+		return unmergeMarkdown(path, existing, claims)
 	default:
 		return Unmerged{}, unsupported(format)
 	}

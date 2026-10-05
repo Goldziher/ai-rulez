@@ -34,6 +34,11 @@ func AllPresetNames() []string {
 	return sortedPresetNames(false)
 }
 
+// IsBuiltInPresetName reports whether name is a built-in preset.
+func IsBuiltInPresetName(name string) bool {
+	return isValidBuiltInPreset(name)
+}
+
 // IndividualPresetNames returns the per-tool presets, excluding the shared `mcp`
 // config preset, sorted.
 func IndividualPresetNames() []string {
