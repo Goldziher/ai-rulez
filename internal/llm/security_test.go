@@ -10,8 +10,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 func TestLiteralKeyInAPIKeyEnvIsNeverEchoed(t *testing.T) {
@@ -131,5 +133,128 @@ func TestEstimateTokensIsConservativeForNonASCII(t *testing.T) {
 	}
 	if EstimateTokens("") != 0 || EstimateTokens("a") != 1 {
 		t.Error("edge cases")
+	}
+}
+
+// slowBackend answers after a pause, so concurrent callers overlap in flight.
+type slowBackend struct {
+	Fake
+	calls atomic.Int32
+	model string
+	usage Usage
+	err   error
+}
+
+func (s *slowBackend) Chat(ctx context.Context, req ChatRequest) (ChatResponse, error) {
+	s.calls.Add(1)
+	time.Sleep(20 * time.Millisecond)
+	if s.err != nil {
+		return ChatResponse{}, s.err
+	}
+	return ChatResponse{Text: "ok", Model: s.model, Usage: s.usage}, nil
+}
+
+func TestBudgetConcurrentCallsCannotOvershoot(t *testing.T) {
+	const workers = 40
+	req := chatReq("hello")
+	req.MaxTokens = 100
+	worstTokens := EstimatePromptTokens(req) + 100
+	cases := []struct {
+		name  string
+		cfg   Config
+		admit int // the most calls the limit can admit
+	}{
+		{"max_calls", Config{Model: "gpt-4o-mini", MaxCalls: 5}, 5},
+		{"max_tokens", Config{Model: "gpt-4o-mini", MaxTokens: worstTokens*3 + 1}, 3},
+		{"max_cost_usd", Config{Model: "gpt-4o-mini", PriceInputPerMTok: 1_000_000, PriceOutputPerMTok: 1_000_000, MaxCostUSD: float64(worstTokens)*2 + 1}, 2},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			b := &slowBackend{model: "gpt-4o-mini", usage: Usage{PromptTokens: worstTokens - 100, CompletionTokens: 100}}
+			cfg := allowed(tc.cfg)
+			cfg.Cache = ptr(false)
+			m := Wrap(b, cfg, Options{Retry: &RetryPolicy{}})
+			var wg sync.WaitGroup
+			var ok atomic.Int32
+			for range workers {
+				wg.Add(1)
+				go func() {
+					defer wg.Done()
+					if _, err := m.Chat(context.Background(), req); err == nil {
+						ok.Add(1)
+					} else if !errors.Is(err, ErrBudget) {
+						t.Errorf("unexpected error: %v", err)
+					}
+				}()
+			}
+			wg.Wait()
+			if int(ok.Load()) > tc.admit || int(b.calls.Load()) > tc.admit {
+				t.Fatalf("admitted %d calls (backend saw %d), limit allows %d", ok.Load(), b.calls.Load(), tc.admit)
+			}
+			if ok.Load() == 0 {
+				t.Fatal("at least one call must fit")
+			}
+			sp := m.Spent()
+			if (cfg.MaxTokens > 0 && sp.Tokens > cfg.MaxTokens) || (cfg.MaxCostUSD > 0 && sp.CostUSD > cfg.MaxCostUSD) || (cfg.MaxCalls > 0 && sp.Calls > cfg.MaxCalls) {
+				t.Fatalf("overshoot: %+v", sp)
+			}
+		})
+	}
+}
+
+func TestBudgetChargesRequestedModelNotTheReportedOne(t *testing.T) {
+	// The provider reports a model name the table does not know. It must not charge $0.
+	b := &slowBackend{model: "totally-unpriced-model", usage: Usage{PromptTokens: 1_000_000, CompletionTokens: 1_000_000}}
+	cfg := allowed(Config{Model: "gpt-4o", MaxCostUSD: 100, Cache: ptr(false)})
+	m := Wrap(b, cfg, Options{Retry: &RetryPolicy{}})
+	resp, err := m.Chat(context.Background(), chatReq("x"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	// gpt-4o: 1M in at $2.50 + 1M out at $10
+	if sp := m.Spent(); sp.CostUSD < 12.49 || sp.CostUSD > 12.51 || !resp.CostKnown || resp.CostUSD < 12.49 {
+		t.Fatalf("charged %+v, response cost %v known=%v", sp, resp.CostUSD, resp.CostKnown)
+	}
+	// a cheaper reported name must not lower the price either
+	b.model = "gpt-4o-mini"
+	before := m.Spent().CostUSD
+	if _, err := m.Chat(context.Background(), chatReq("y")); err != nil {
+		t.Fatal(err)
+	}
+	if got := m.Spent().CostUSD - before; got < 12.49 {
+		t.Fatalf("second call charged %v at the reported model's price", got)
+	}
+	// with a cost cap, a requested model without a price is refused before any call
+	b2 := &slowBackend{model: "custom", usage: Usage{PromptTokens: 1, CompletionTokens: 1}}
+	m2 := Wrap(b2, allowed(Config{Model: "custom", MaxCostUSD: 1, Cache: ptr(false)}), Options{Retry: &RetryPolicy{}})
+	if _, err := m2.Chat(context.Background(), chatReq("x")); !errors.Is(err, ErrBudget) || b2.calls.Load() != 0 {
+		t.Fatalf("unknown price under a cost cap must be refused: %v", err)
+	}
+}
+
+func TestBudgetAmbiguousFailuresChargeTheWorstCase(t *testing.T) {
+	req := chatReq("x")
+	req.MaxTokens = 100
+	worst := EstimatePromptTokens(req) + 100
+	run := func(err error) Spent {
+		b := &slowBackend{err: err}
+		m := Wrap(b, allowed(Config{Model: "gpt-4o-mini", MaxCalls: 10, Cache: ptr(false)}), Options{Retry: &RetryPolicy{}})
+		_, _ = m.Chat(context.Background(), req) //nolint:errcheck // the error is the input
+		return m.Spent()
+	}
+	if sp := run(&Error{Kind: KindProvider, Status: 400, Message: "bad"}); sp.Tokens != 0 || sp.Calls != 1 {
+		t.Errorf("a clean 4xx is not billed: %+v", sp)
+	}
+	if sp := run(&Error{Kind: KindAuth, Status: 401}); sp.Tokens != 0 {
+		t.Errorf("auth failure is not billed: %+v", sp)
+	}
+	for name, err := range map[string]error{
+		"timeout":   &Error{Kind: KindTimeout, Message: "slow"},
+		"transport": &Error{Kind: KindProvider, Message: "request failed"},
+		"cancelled": context.DeadlineExceeded,
+	} {
+		if sp := run(err); sp.Tokens != worst || sp.CostUSD <= 0 {
+			t.Errorf("%s may have been billed, want worst case %d: %+v", name, worst, sp)
+		}
 	}
 }
