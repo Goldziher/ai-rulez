@@ -266,7 +266,7 @@ func (r *runner) scanHosts(abs string, no int, line string) {
 	}
 	for _, m := range urlRe.FindAllStringSubmatch(line, -1) {
 		host := strings.ToLower(m[1])
-		if host == "localhost" || host == "127.0.0.1" || hostAllowed(host, allowed) {
+		if host == hostLocalhost || host == "127.0.0.1" || hostAllowed(host, allowed) {
 			continue
 		}
 		r.add(CodeOutboundHost, abs, no, "URL points to %q, which is not in lint.security.allowed_hosts", host)
