@@ -88,6 +88,11 @@ func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
 	if err != nil {
 		return nil, oops.Wrapf(err, "resolve local skill source %q", spec.Name)
 	}
+	// A symlinked root is the user's own choice of directory: resolve it and read
+	// (and digest) the real directory. Links below the root are never followed.
+	if resolved, linkErr := filepath.EvalSymlinks(root); linkErr == nil {
+		root = resolved
+	}
 	info, err := os.Stat(root)
 	if err != nil || !info.IsDir() {
 		return nil, oops.With("path", root).Errorf("skill source %q: %s is not a directory", spec.Name, root)
@@ -229,6 +234,9 @@ func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, cove
 	dir := treeDir
 	if spec.Path != "" {
 		dir = filepath.Join(treeDir, filepath.FromSlash(spec.Path))
+		if err := rejectSymlinkedPath(treeDir, spec.Path); err != nil {
+			return nil, oops.With("url", spec.Redacted()).Wrapf(err, "skill source %q", spec.Name)
+		}
 	}
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		return nil, oops.With("url", spec.Redacted()).Errorf("skill source %q: path %q does not exist at commit %s", spec.Name, spec.Path, commit)
@@ -247,6 +255,27 @@ func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, cove
 	}
 	res.Skills, err = Discover(spec, dir)
 	return res, err
+}
+
+// rejectSymlinkedPath fails when any component of rel below root is a symlink: a
+// fetched repository could otherwise point its skills path at a file tree outside
+// the checkout, whose content neither the digest nor the scan would cover.
+func rejectSymlinkedPath(root, rel string) error {
+	cur := root
+	for _, part := range strings.Split(filepath.ToSlash(rel), "/") {
+		if part == "" || part == "." {
+			continue
+		}
+		cur = filepath.Join(cur, part)
+		info, err := os.Lstat(cur)
+		if err != nil {
+			return nil //nolint:nilerr // a missing path is reported by the caller
+		}
+		if info.Mode()&os.ModeSymlink != 0 {
+			return oops.Errorf("path %q goes through a symlink (%s); symlinks in a fetched repository are not followed", rel, part)
+		}
+	}
+	return nil
 }
 
 func fetchInto(ctx context.Context, url, ref, kind, commit, token, treeDir string, fetched *bool) error {
