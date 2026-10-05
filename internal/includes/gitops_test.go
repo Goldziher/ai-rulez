@@ -262,3 +262,17 @@ func TestRemoteHEADSHA_LocalRepo(t *testing.T) {
 	assert.NotEmpty(t, sha2)
 	assert.NotEqual(t, sha1, sha2, "SHA should change after a new commit")
 }
+
+func TestGitFetchRejectsOptionLikeURLAndRef(t *testing.T) {
+	marker := filepath.Join(t.TempDir(), "pwned")
+	ctx := context.Background()
+	evil := "--upload-pack=touch " + marker + ";@h:p"
+
+	_, err := remoteHEADSHA(ctx, evil, "main", "")
+	require.Error(t, err)
+	require.Error(t, sparseClone(ctx, evil, "main", "", t.TempDir(), ""))
+	require.Error(t, sparseClone(ctx, "https://h/r.git", "--upload-pack=x", "", t.TempDir(), ""))
+	require.Error(t, sparseCloneSHA(ctx, evil, strings.Repeat("a", 40), "", t.TempDir(), ""))
+	_, statErr := os.Stat(marker)
+	assert.True(t, os.IsNotExist(statErr), "the option was executed by git")
+}

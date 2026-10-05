@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/samber/oops"
 )
 
@@ -66,6 +67,14 @@ func (s *SkillSourceConfig) Validate(index int) error {
 	if strings.TrimSpace(s.URL) == "" {
 		return oops.With("field", field("url")).Hint("Provide a git URL or a local directory").
 			Errorf("skill source %q missing required field 'url'", s.Name)
+	}
+	if err := gitutil.CheckArg("url", strings.TrimPrefix(s.URL, "git+")); err != nil {
+		return oops.With("field", field("url")).Hint("A url or ref that starts with '-' would be read by git as an option").
+			Errorf("skill source %q: %s", s.Name, err.Error())
+	}
+	if err := gitutil.CheckArg("ref", s.Ref); err != nil {
+		return oops.With("field", field("ref")).Hint("A url or ref that starts with '-' would be read by git as an option").
+			Errorf("skill source %q: %s", s.Name, err.Error())
 	}
 	if s.NamePrefix != "" && !namePrefixRe.MatchString(s.NamePrefix) {
 		return oops.With("field", field("name_prefix")).Hint("The prefix becomes part of a skill:// path segment").

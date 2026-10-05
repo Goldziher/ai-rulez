@@ -101,6 +101,12 @@ func (s Source) Fetch(ctx context.Context) (dir string, cleanup func(), err erro
 	if s.URL == "" {
 		return s.Dir, noop, nil
 	}
+	if err := gitutil.CheckArg("bundle url", s.URL); err != nil {
+		return "", noop, err
+	}
+	if err := gitutil.CheckArg("bundle ref", s.Ref); err != nil {
+		return "", noop, err
+	}
 	tmp, err := os.MkdirTemp("", "ai-rulez-okf-*")
 	if err != nil {
 		return "", noop, fmt.Errorf("create temp dir: %w", err)

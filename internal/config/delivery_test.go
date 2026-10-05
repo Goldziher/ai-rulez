@@ -198,3 +198,14 @@ func TestValidateDynamicSkills(t *testing.T) {
 		})
 	}
 }
+
+func TestSkillSourceConfigValidate_RejectsGitOptions(t *testing.T) {
+	t.Parallel()
+	for _, s := range []SkillSourceConfig{
+		{Name: "s", URL: "--upload-pack=touch /tmp/x;@h:p"},
+		{Name: "s", URL: "git+--upload-pack=x;@h:p"},
+		{Name: "s", URL: "https://h/r.git", Ref: "--upload-pack=x"},
+	} {
+		assert.Error(t, s.Validate(0), "%+v", s)
+	}
+}
