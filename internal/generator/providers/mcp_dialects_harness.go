@@ -16,7 +16,45 @@ const (
 	// MCPDialectGrok is Grok Build's [mcp_servers.<name>] shape: command/args/env
 	// or url/headers, and `enabled = false` for a disabled server.
 	MCPDialectGrok = "grok"
+	// MCPDialectRoo is the Roo Code family's mcpServers shape (Zoo Code): command/
+	// args/env for a local server, `type` streamable-http or sse plus url/headers
+	// for a remote one, and `disabled: true` for a disabled server.
+	MCPDialectRoo = "roo"
+	// MCPDialectCodewhale is CodeWhale's servers shape: command/args/env or
+	// url/headers, `transport: "sse"` for a legacy SSE endpoint (a bare url is
+	// streamable HTTP), and `disabled: true` for a disabled server.
+	MCPDialectCodewhale = "codewhale"
 )
+
+// codewhaleMCPEntry is the .codewhale/mcp.json entry.
+func codewhaleMCPEntry(server *config.MCPServer) map[string]any {
+	entry := standardMCPEntry(server)
+	if entry == nil {
+		return nil
+	}
+	delete(entry, "description")
+	if server.GetTransport() == config.TransportSSE {
+		entry["transport"] = "sse"
+	}
+	return entry
+}
+
+// rooMCPEntry is the .roo/mcp.json entry. Roo needs `type` on every remote
+// server: a typeless url entry is not read as streamable HTTP.
+func rooMCPEntry(server *config.MCPServer) map[string]any {
+	entry := standardMCPEntry(server)
+	if entry == nil {
+		return nil
+	}
+	delete(entry, "description")
+	switch server.GetTransport() {
+	case config.TransportHTTP:
+		entry["type"] = "streamable-http"
+	case config.TransportSSE:
+		entry["type"] = "sse"
+	}
+	return entry
+}
 
 // bobMCPEntry is the .bob/mcp.json entry.
 func bobMCPEntry(server *config.MCPServer) map[string]any {

@@ -69,6 +69,15 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *CopilotPresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{
+		RootFile: ".github/copilot-instructions.md", RulesDir: ".github/instructions", SkillsDir: ".github/skills",
+		AgentsDir: ".github/agents", CommandsDir: ".github/prompts",
+	}
+}
+
 // GlobalOutputPaths is the Copilot user-scope layout under ~/.copilot: the
 // personal instructions file, skills and agents.
 func (g *CopilotPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
@@ -77,6 +86,9 @@ func (g *CopilotPresetGenerator) GlobalOutputPaths(home string, getenv func(stri
 		RulesDir:  ".copilot/instructions",
 		SkillsDir: ".copilot/skills",
 		AgentsDir: ".copilot/agents",
+		Sidecars:  map[string]string{MergedDocCopilotHooks: ".copilot/hooks/ai-rulez.json"},
+		// Copilot also reads the shared agent skill directory.
+		SkillReaders: []string{".copilot/skills", ".agents/skills"},
 	}.Resolve(home, getenv)
 }
 
@@ -430,32 +442,29 @@ func (g *CopilotPresetGenerator) shouldIncludeCommand(command config.ContentFile
 	return true
 }
 
-// renderCommandFile renders a command file in Markdown format for Copilot
+// renderCommandFile renders a command as a Copilot prompt file: `description`
+// (and `argument-hint`, when the command has one) as frontmatter and the command
+// as the body. VS Code takes input from ${input:name}, not $ARGUMENTS, so the
+// placeholder is rewritten to ${input:args}.
 func (g *CopilotPresetGenerator) renderCommandFile(command config.ContentFile) string {
-	var builder strings.Builder
-
-	builder.WriteString("# /")
-	builder.WriteString(command.Name)
-	builder.WriteString("\n\n")
-
-	if command.Metadata != nil && command.Metadata.Extra != nil {
-		if desc, ok := command.Metadata.Extra[keyDescription]; ok && desc != "" {
-			builder.WriteString("**Description:** ")
-			builder.WriteString(desc)
-			builder.WriteString("\n\n")
+	frontmatter := map[string]any{}
+	if command.Metadata != nil {
+		if desc := command.Metadata.Extra[keyDescription]; desc != "" {
+			frontmatter[keyDescription] = desc
+		}
+		if hint := command.Metadata.Extra["argument-hint"]; hint != "" {
+			frontmatter["argument-hint"] = hint
 		}
 	}
-
-	if command.Metadata != nil && command.Metadata.Usage != "" {
-		builder.WriteString("**Usage:** `")
-		builder.WriteString(command.Metadata.Usage)
-		builder.WriteString("`\n\n")
+	body := strings.ReplaceAll(markdown.ProcessEmbeddedContent(command.Content), "$ARGUMENTS", "${input:args}")
+	if len(frontmatter) == 0 {
+		return body
 	}
-
-	processedContent := markdown.ProcessEmbeddedContent(command.Content)
-	builder.WriteString(processedContent)
-
-	return builder.String()
+	data, err := yaml.Marshal(frontmatter)
+	if err != nil {
+		return body
+	}
+	return "---\n" + string(data) + "---\n\n" + body
 }
 
 // renderMCPJSON renders the mcpServers key ai-rulez owns into the .mcp.json at

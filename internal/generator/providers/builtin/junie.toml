@@ -70,6 +70,10 @@ filename = "{id}.md"
 
 [outputs.commands.body]
 sections = ["frontmatter", "content"]
+# Junie's free-text placeholder is $prompt, and a command takes it only with
+# allowPromptArgument: true in its frontmatter.
+replace = { "$ARGUMENTS" = "$prompt" }
+replace_flag = "allowPromptArgument"
 
 [outputs.commands.frontmatter]
 fields = ["description"]

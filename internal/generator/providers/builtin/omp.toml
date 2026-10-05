@@ -54,6 +54,11 @@ sections = ["frontmatter", "content"]
 fields = ["description"]
 tools = true
 emit_model = true
+# oh-my-pi tool names are lower-case; "inherit" is its @default selector and the
+# other bare Claude aliases are no oh-my-pi model.
+tool_case = "lower"
+drop_bare_aliases = true
+model_aliases = { inherit = "@default" }
 
 [outputs.commands]
 mode = "per_item_file"

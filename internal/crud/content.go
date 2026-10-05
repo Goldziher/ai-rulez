@@ -351,10 +351,12 @@ func (op *OperatorImpl) listFilesInDirectory(domainName, fileType string) ([]Fil
 		dirPath = op.filesMgr.GetAgentsPath(domainName)
 	case ContentTypeCommands:
 		dirPath = op.filesMgr.GetCommandsPath(domainName)
+	case ContentTypeChecks:
+		dirPath = op.filesMgr.GetChecksPath(domainName)
 	default:
 		return nil, oops.
 			With("type", fileType).
-			Hint("Valid types: rules, context, skills, agents, commands.").
+			Hint("Valid types: rules, context, skills, agents, commands, checks.").
 			Errorf("invalid file type: %s", fileType)
 	}
 
@@ -505,6 +507,18 @@ func (op *OperatorImpl) AddAgent(_ context.Context, req *AddFileRequest) (*FileR
 func (op *OperatorImpl) AddCommand(_ context.Context, req *AddFileRequest) (*FileResult, error) {
 	return op.addFlatItem(req, ContentTypeCommands, func(r *AddFileRequest) string {
 		return GenerateCommandTemplate(r.Name, r.Description)
+	})
+}
+
+// AddCheck creates a new check file in the root or domain checks directory.
+func (op *OperatorImpl) AddCheck(_ context.Context, req *AddFileRequest) (*FileResult, error) {
+	if req != nil {
+		if err := ValidateCheckName(req.Name); err != nil {
+			return nil, err
+		}
+	}
+	return op.addFlatItem(req, ContentTypeChecks, func(r *AddFileRequest) string {
+		return GenerateCheckTemplate(r.Name, r.Description)
 	})
 }
 

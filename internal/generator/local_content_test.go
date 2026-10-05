@@ -128,7 +128,7 @@ func TestLocalContent_PerPreset(t *testing.T) {
 			".agents/skills/mine-skill/SKILL.md": "LOCAL_SKILL.",
 			".agents/skills/dom-skill/SKILL.md":  "LOCAL_DOMAIN_SKILL.",
 			".codex/agents/mine-agent.toml":      "LOCAL_AGENT.",
-			".codex/prompts/mine-cmd.md":         "LOCAL_COMMAND.",
+			".agents/skills/mine-cmd/SKILL.md":   "LOCAL_COMMAND.",
 		}},
 	}
 	for _, tt := range tests {

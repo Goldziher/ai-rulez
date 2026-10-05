@@ -1,71 +1,68 @@
 package providers
 
 import (
+	"fmt"
 	"path/filepath"
-	"regexp"
-	"strings"
+	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/samber/oops"
 )
 
-// checkItems is the extension point that supplies the items of an
-// outputs.checks block. Until the checks content kind exists in the content tree
-// it yields none, so a spec can already declare [outputs.checks] and render
-// nothing; the content kind replaces this function when it lands.
-var checkItems = func(_ *config.ContentTree) []config.ContentFile { return nil }
-
-// checkSectionMarker opens one check section of an aggregate file. The marker
-// names the check, so a tool (or a later run) can find its section.
-const checkSectionMarker = "<!-- ai-rulez:check:%s -->"
-
-var unsafeCheckNameChars = regexp.MustCompile(`[^A-Za-z0-9._-]`)
+// checkItems supplies the items of an outputs.checks block: the deduplicated
+// checks of the (already profile-selected) content tree. It is a variable so
+// tests can substitute fixed items.
+var checkItems = presets.AllChecks
 
 // sanitizeCheckName limits a check name to [A-Za-z0-9._-] for use in the section
 // marker, so no name can close the HTML comment ("-->") or break its line.
-func sanitizeCheckName(name string) string {
-	if clean := unsafeCheckNameChars.ReplaceAllString(name, "-"); clean != "" {
-		return clean
-	}
-	return "check"
-}
+func sanitizeCheckName(name string) string { return presets.SanitizeCheckName(name) }
+
+// checkSizeLimits are the documented character limits of an aggregate check file
+// the tool truncates at, by provider: Kilo Code Reviews stops reading REVIEW.md at
+// 10,000 characters.
+var checkSizeLimits = map[string]int{"kilo": 10000}
 
 // renderAggregate renders every item of an aggregate output into its single file:
 //
 //	<header>
 //
+//	<!-- ai-rulez:checks:begin -->
 //	<!-- ai-rulez:check:NAME -->
 //
 //	## NAME
 //
 //	body
+//	<!-- ai-rulez:checks:end -->
 //
-// It returns nil when there are no items, so a project without checks gets no
-// file.
-func (g *Generator) renderAggregate(typ string, spec *OutputSpec, items []config.ContentFile, baseDir string, cfg *config.Config) *config.OutputFile {
-	var sections []string
+// The sections sit between the begin and end markers, and a file that exists
+// already keeps everything outside them (see presets.MergedChecksFile). It
+// returns nil when there are no items, so a project without checks gets no file.
+func (g *Generator) renderAggregate(typ string, spec *OutputSpec, items []config.ContentFile, baseDir string, cfg *config.Config) (*config.OutputFile, error) {
+	var allowed []config.ContentFile
 	for _, item := range items {
-		if !g.filterAllows(spec, item) {
-			continue
+		if g.filterAllows(spec, item) {
+			allowed = append(allowed, item)
 		}
-		sections = append(sections, strings.Join([]string{
-			strings.Replace(checkSectionMarker, "%s", sanitizeCheckName(item.Name), 1),
-			"## " + item.Name,
-			strings.TrimRight(item.Content, "\n"),
-		}, "\n\n"))
 	}
-	if len(sections) == 0 {
-		return nil
+	text := presets.RenderCheckSections(allowed, "")
+	if text == "" {
+		return nil, nil
 	}
-	var b strings.Builder
-	if header := strings.TrimRight(spec.Header, "\n"); header != "" {
-		b.WriteString(header)
-		b.WriteString("\n\n")
-	}
-	b.WriteString(strings.Join(sections, "\n\n"))
-	b.WriteString("\n")
-
 	outputPath := filepath.Join(baseDir, filepath.FromSlash(spec.File))
+	out, err := presets.MergedChecksFile(outputPath, spec.Header, text)
+	if err != nil {
+		return nil, oops.With("preset", g.Spec.Name, "path", outputPath).Wrap(err)
+	}
+	if limit, ok := checkSizeLimits[g.Spec.Name]; ok {
+		if size := utf8.RuneCount(out.RawContent); size > limit {
+			rulefiles.Warn(fmt.Sprintf("%s is %d characters, over the %d that %s truncates the file at, so trailing checks are not read",
+				spec.File, size, limit, g.Spec.Name), "hint", "shorten or drop checks, or target some of them at other presets")
+		}
+	}
 	cfg.Analysis.Begin(outputPath, g.Spec.Name, outputKindForType(typ), "", "").
-		AddPart(config.PartKindItemBody, typ, "", b.String())
-	return &config.OutputFile{Path: outputPath, Content: b.String()}
+		AddPart(config.PartKindItemBody, typ, "", text)
+	return &out, nil
 }

@@ -418,3 +418,23 @@ func TestCopilot_InlineOnlyRulesDoNotCollide(t *testing.T) {
 	_, ok = copilotOutputByPath(outputs, ".github/instructions/scoped.instructions.md")
 	assert.True(t, ok)
 }
+
+func TestCopilotPresetGenerator_renderCommandFile_PromptFile(t *testing.T) {
+	g := &CopilotPresetGenerator{}
+	tests := []struct {
+		name    string
+		command config.ContentFile
+		want    string
+	}{
+		{"description, hint and input variable", config.ContentFile{
+			Name: "ship", Content: "Ship $ARGUMENTS now.",
+			Metadata: &config.Metadata{Extra: map[string]string{"description": "Ship it", "argument-hint": "<env>"}},
+		}, "---\nargument-hint: <env>\ndescription: Ship it\n---\n\nShip ${input:args} now."},
+		{"no metadata is the bare body", config.ContentFile{Name: "ship", Content: "Do it."}, "Do it."},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, g.renderCommandFile(tt.command))
+		})
+	}
+}

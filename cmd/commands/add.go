@@ -80,15 +80,32 @@ Commands define reusable slash commands for tools that support them.`,
 	Run:  runAddCommand,
 }
 
+var addCheckCmd = &cobra.Command{
+	Use:   "check <name>",
+	Short: "Add a new code-review check",
+	Long: `Add a new check file.
+
+Checks are code-review guidelines (.ai-rulez/checks/<name>.md) rendered for the
+review tools that support them. Frontmatter: description, severity
+(low|medium|high|critical), tools, targets.`,
+	Args: cobra.ExactArgs(1),
+	Run:  runAddCheck,
+}
+
 func init() {
 	AddCmd.AddCommand(addAgentCmd)
 	AddCmd.AddCommand(addCommandCmd)
+	AddCmd.AddCommand(addCheckCmd)
 	for _, c := range []*cobra.Command{addAgentCmd, addCommandCmd} {
 		c.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
 		c.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
 		c.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 		c.Flags().BoolVar(&addLocal, "local", false, addLocalUsage)
 	}
+	// Checks are shared review guidance: there is no machine-local check tree.
+	addCheckCmd.Flags().StringVarP(&addDomain, "domain", "d", "", "Domain name (optional, uses root if not specified)")
+	addCheckCmd.Flags().StringVarP(&addDesc, "description", "s", "", "Description")
+	addCheckCmd.Flags().StringVarP(&addContent, "content", "c", "", "File content (uses template if not specified)")
 	AddCmd.AddCommand(addRuleCmd)
 	AddCmd.AddCommand(addContextCmd)
 	AddCmd.AddCommand(addSkillCmd)
@@ -247,6 +264,10 @@ func runAddAgent(cmd *cobra.Command, args []string) {
 
 func runAddCommand(cmd *cobra.Command, args []string) {
 	runAddItem(args[0], crud.ContentTypeCommands, "command", (*crud.OperatorImpl).AddCommand)
+}
+
+func runAddCheck(cmd *cobra.Command, args []string) {
+	runAddItem(args[0], crud.ContentTypeChecks, "check", (*crud.OperatorImpl).AddCheck)
 }
 
 func runAddItem(name, ftype, label string,

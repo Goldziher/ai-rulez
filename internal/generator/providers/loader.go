@@ -196,6 +196,14 @@ func validateOutputMode(typ string, out *OutputSpec) error {
 		if fm := out.Frontmatter; fm != nil && fm.JoinLists && !fm.Tools && !fm.Skills {
 			return fmt.Errorf("outputs[%q].frontmatter.join_lists needs tools or skills to be true", typ)
 		}
+		if fm := out.Frontmatter; fm != nil {
+			if fm.ToolCase != "" && fm.ToolCase != ToolCaseLower {
+				return fmt.Errorf("outputs[%q].frontmatter.tool_case: unknown case %q", typ, fm.ToolCase)
+			}
+			if (len(fm.ToolNames) > 0 || fm.ToolCase != "") && !fm.Tools {
+				return fmt.Errorf("outputs[%q].frontmatter.tool_names and tool_case need tools to be true", typ)
+			}
+		}
 	case OutputModeAggregate:
 		if typ != OutputTypeChecks {
 			return fmt.Errorf("outputs[%q].mode: %q is only valid on outputs.%s", typ, out.Mode, OutputTypeChecks)
@@ -251,6 +259,20 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].global_mcp_path is only valid on a sidecar that holds MCP servers", i)
 		}
 	}
+	for _, tr := range sc.Transports {
+		if tr != config.TransportStdio && tr != config.TransportHTTP && tr != config.TransportSSE {
+			return fmt.Errorf("sidecars[%d].transports: unknown transport %q", i, tr)
+		}
+	}
+	if sc.EnvRefSyntax != "" && sc.EnvRefSyntax != EnvRefSyntaxDollar && sc.EnvRefSyntax != EnvRefSyntaxEnvPrefix {
+		return fmt.Errorf("sidecars[%d].env_ref_syntax: unknown syntax %q", i, sc.EnvRefSyntax)
+	}
+	if sc.EnvRefSyntax != "" && sc.Kind != SidecarMCP {
+		return fmt.Errorf("sidecars[%d].env_ref_syntax is only valid on kind %q", i, SidecarMCP)
+	}
+	if len(sc.Transports) > 0 && !IsMCPSidecarKind(sc.Kind) {
+		return fmt.Errorf("sidecars[%d].transports is only valid on a sidecar that holds MCP servers", i)
+	}
 	if !isGenericSidecarKind(sc.Kind) {
 		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" || sc.Elements != nil {
 			return fmt.Errorf("sidecars[%d]: format, key and dialect are only valid on the generic kinds (%s, %s, %s)",
@@ -274,8 +296,16 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].key: segments must not be empty", i)
 		}
 	}
-	if sc.Dialect != "" && sc.Kind != SidecarMCP {
-		return fmt.Errorf("sidecars[%d].dialect is only valid on kind %q", i, SidecarMCP)
+	if sc.Dialect != "" && sc.Kind != SidecarMCP && sc.Kind != SidecarChecks {
+		return fmt.Errorf("sidecars[%d].dialect is only valid on kinds %q and %q", i, SidecarMCP, SidecarChecks)
+	}
+	if sc.Kind == SidecarChecks {
+		if !isChecksDialect(sc.Dialect) {
+			return fmt.Errorf("sidecars[%d].dialect: kind %q needs dialect %q or %q", i, SidecarChecks, ChecksDialectAugment, ChecksDialectGitLabDuo)
+		}
+		if sc.DocFormat() != DocFormatYAML || len(sc.Key) > 0 {
+			return fmt.Errorf("sidecars[%d]: kind %q writes a yaml document and takes no key", i, SidecarChecks)
+		}
 	}
 	if sc.Kind == SidecarMCP {
 		if _, err := mcpDialectFor(sc.Dialect); err != nil {
@@ -307,6 +337,11 @@ func validateGlobal(g *GlobalSpec) error {
 	}
 	if g.HomeDir != "" {
 		if err := validateRelativeFile("global.home_dir", g.HomeDir); err != nil {
+			return err
+		}
+	}
+	for _, reader := range g.SkillReaders {
+		if err := validateRelativeFile("global.skill_readers", reader); err != nil {
 			return err
 		}
 	}
@@ -511,7 +546,7 @@ func isValidSidecarKind(k string) bool {
 	switch k {
 	case SidecarClaudeSettingsJSON, SidecarClaudePluginsJSON,
 		SidecarMCPJSON, SidecarAmpSettingsJSON, SidecarPiMCPJSON,
-		SidecarMCP, SidecarPermissions, SidecarHooks:
+		SidecarMCP, SidecarChecks, SidecarPermissions, SidecarHooks:
 		return true
 	}
 	return false

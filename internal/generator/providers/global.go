@@ -39,7 +39,7 @@ func (s *ProviderSpec) GlobalPaths(home string, getenv func(string) string) *Glo
 		return nil
 	}
 	g := s.Global
-	return &GlobalPaths{
+	paths := &GlobalPaths{
 		RootFile:    g.resolve(g.field(func(g *GlobalSpec) string { return g.RootFile }), home, getenv),
 		SkillsDir:   g.resolve(g.field(func(g *GlobalSpec) string { return g.SkillsDir }), home, getenv),
 		AgentsDir:   g.resolve(g.field(func(g *GlobalSpec) string { return g.AgentsDir }), home, getenv),
@@ -48,6 +48,42 @@ func (s *ProviderSpec) GlobalPaths(home string, getenv func(string) string) *Glo
 		Sidecars:    sidecars,
 		MCPSidecars: mcpSidecars,
 	}
+	if g != nil {
+		paths.RelocatedHome = presets.HomeOverride(g.HomeEnv, getenv)
+		paths.SkillPrecedence = g.SkillPrecedence
+		for _, rel := range g.SkillReaders {
+			paths.SkillReaders = append(paths.SkillReaders, g.resolve(rel, home, getenv))
+		}
+	}
+	return paths
+}
+
+// GlobalOutputPaths makes the generator a presets.GlobalOutputProvider.
+func (g *Generator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return g.Spec.GlobalPaths(home, getenv)
+}
+
+// ProjectLayout makes the generator a presets.ProjectLayoutProvider: the root
+// file and per-item output directories the spec renders into.
+func (g *Generator) ProjectLayout() presets.ProjectLayout {
+	layout := presets.ProjectLayout{}
+	if g.Spec.Root != nil {
+		layout.RootFile = g.Spec.Root.File
+	}
+	dir := func(typ string) string {
+		if out := g.Spec.Outputs[typ]; out != nil && out.Mode == OutputModePerItemFile {
+			return out.Dir
+		}
+		return ""
+	}
+	layout.SkillsDir, layout.AgentsDir, layout.CommandsDir, layout.RulesDir =
+		dir("skills"), dir("agents"), dir("commands"), dir("rules")
+	if layout.SkillsDir == "" && g.Spec.Outputs[OutputTypeSkills] == nil && g.Spec.Global != nil {
+		// A user-level skills store with no project counterpart: a user-scope run
+		// renders the skills at the store's own path (see userOnlyOutput).
+		layout.SkillsDir = g.Spec.Global.SkillsDir
+	}
+	return layout
 }
 
 // field reads one path of a possibly nil block.

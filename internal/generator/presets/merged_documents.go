@@ -63,6 +63,7 @@ var mergedDocumentPaths = []string{
 	MergedDocAgentsMCP,
 	MergedDocCodexHooks,
 	MergedDocCursorHooks,
+	MergedDocCursorBugbot,
 }
 
 // MergedDocumentPaths returns every base-relative, slash-separated path that a
@@ -246,7 +247,7 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		}
 		return claims
 	case MergedDocOpencodeConfig:
-		claims := memberClaimsOf([]string{"mcp", keyServers}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
+		claims := memberClaimsOf([]string{opencodeMCPKey}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
 		claims = append(claims,
 			jsonmerge.Claim{Path: []string{opencodeInstructionsKey}, Elements: opencodeLocalEntries()},
 			jsonmerge.Claim{Path: []string{keySchema}, Equals: opencodeSchemaURL, Alone: true})

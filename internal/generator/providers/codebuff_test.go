@@ -18,9 +18,10 @@ func codebuffGen(t *testing.T) *providers.Generator {
 	return gen
 }
 
-// TestCodebuff_MCPOnly: the MCP document is the only output. Codebuff's strict
+// TestCodebuff_Outputs: AGENTS.md (its knowledge file), skills and the MCP document.
+// Codebuff's strict
 // schema takes stdio {type, command, args, env} and remote {type, url, headers}.
-func TestCodebuff_MCPOnly(t *testing.T) {
+func TestCodebuff_Outputs(t *testing.T) {
 	t.Parallel()
 
 	content := &config.ContentTree{
@@ -46,7 +47,9 @@ func TestCodebuff_MCPOnly(t *testing.T) {
 			files = append(files, filepath.ToSlash(o.Path))
 		}
 	}
-	assert.Equal(t, []string{"/test/.agents/mcp.json"}, files)
+	assert.ElementsMatch(t, []string{"/test/AGENTS.md", "/test/.agents/skills/demo/SKILL.md", "/test/.agents/mcp.json"}, files)
+	agentsMD := requireFile(t, outputs, "AGENTS.md")
+	assert.Contains(t, agentsMD.Content, "Always be nice.", "rules are inlined into the knowledge file")
 
 	var doc map[string]map[string]map[string]any
 	require.NoError(t, json.Unmarshal([]byte(requireFile(t, outputs, ".agents/mcp.json").Content), &doc))

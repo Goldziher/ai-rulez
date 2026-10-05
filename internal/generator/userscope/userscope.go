@@ -1,22 +1,33 @@
-// Package userscope is the table of user-level (per person, all projects)
-// destinations that `generate --user` writes to.
+// Package userscope maps what a preset renders for a project onto the per-user
+// directories its tool reads (`generate --user`).
 //
-// The table is deliberately closed: an output is written under the home
-// directory only when a vendor documents that location for that kind of content.
-// Everything else a preset renders (commands, rules folders a harness does not
-// read from the home directory, MCP configuration, project-only sidecars) is
-// dropped. Each row names the vendor page it was read from; VerifiedOn is the
-// date the whole table was last checked against those pages.
+// There is no table in this package. Every preset declares its own user-scope
+// layout once: provider specs in a [global] block (plus global_path on their
+// sidecars), Go presets through presets.GlobalOutputProvider. A preset also
+// declares where it writes the project-level counterparts
+// (presets.ProjectLayoutProvider; specs derive that from their outputs). Resolve
+// joins the two into a Layout, so an output is written below the home directory
+// only where its preset declares a user-level location for that kind of content.
+// Everything else a preset renders (MCP files, plugin sidecars, kinds the tool has
+// no user-level folder for) is dropped.
+//
+// Home-relocating environment variables a layout names (CODEX_HOME,
+// HERMES_HOME, ...) move the paths below them, and only absolute values are
+// honoured.
 package userscope
 
 import (
+	"errors"
+	"fmt"
 	"path"
+	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
-)
 
-// VerifiedOn is the date the table was last checked against vendor documentation.
-const VerifiedOn = "2026-10-04"
+	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/presets"
+)
 
 // Kind classifies what a row carries.
 type Kind string
@@ -24,187 +35,255 @@ type Kind string
 // Content kinds of a row.
 const (
 	KindInstructions Kind = "instructions"
+	KindRules        Kind = "rules"
 	KindSkills       Kind = "skills"
 	KindAgents       Kind = "agents"
-	KindRules        Kind = "rules"
+	KindCommands     Kind = "commands"
 	KindSettings     Kind = "settings"
 )
 
-// Entry maps a project-relative output of one preset to its user-level
-// destination below the home directory. Both paths are slash-separated and
-// relative; From and To are a file, or a directory whose contents map one to one.
-type Entry struct {
+// Row maps a project-relative output of one preset to its user-level location.
+// From is slash-separated and relative to the project root; a directory row maps
+// the files below it one to one. To is absolute, or empty when the tool has no
+// user-level counterpart of that kind (the output is classified but dropped).
+type Row struct {
+	Kind Kind
+	From string
+	To   string
+	// Dir is true when From and To are directories.
+	Dir bool
+}
+
+// Layout is the user-scope mapping of one preset.
+type Layout struct {
 	Preset string
-	Kind   Kind
-	From   string
-	To     string
-	// Source is the vendor page the destination was read from.
-	Source string
+	Rows   []Row
+	// SkillReaders are the user-level skill directories the tool reads, absolute;
+	// SkillPrecedence is the vendor's rule for a skill present at both levels.
+	SkillReaders    []string
+	SkillPrecedence string
+	// RelocatedHome is the absolute directory the tool's home variable points at
+	// (CODEX_HOME), when set. Destinations below it lie outside the home directory
+	// on purpose.
+	RelocatedHome string
 }
 
-// Vendor documentation pages the rows cite.
-const (
-	srcClaudeMemory = "https://code.claude.com/docs/en/memory"
-	srcClaudeSkills = "https://code.claude.com/docs/en/skills"
-	srcClaudeAgents = "https://code.claude.com/docs/en/sub-agents"
-	srcClaudeConfig = "https://code.claude.com/docs/en/settings"
-	srcCodexAgents  = "https://learn.chatgpt.com/docs/agent-configuration/agents-md"
-	srcCodexSkills  = "https://learn.chatgpt.com/docs/build-skills"
-	srcCodexHooks   = "https://learn.chatgpt.com/docs/hooks"
-	srcGeminiMD     = "https://geminicli.com/docs/cli/gemini-md/"
-	srcGeminiSkills = "https://geminicli.com/docs/cli/skills/"
-	srcGeminiAgents = "https://geminicli.com/docs/core/subagents/"
-	srcGeminiHooks  = "https://geminicli.com/docs/hooks/"
-	srcOpenCodeRule = "https://opencode.ai/docs/rules/"
-	srcOpenCodeSkil = "https://opencode.ai/docs/skills/"
-	srcOpenCodeAgnt = "https://opencode.ai/docs/agents/"
-	srcCursorSkills = "https://cursor.com/docs/context/skills"
-	srcCursorHooks  = "https://cursor.com/docs/hooks"
-	srcCopilotSkill = "https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-skills"
-	srcCopilotHooks = "https://docs.github.com/en/copilot/reference/hooks-configuration"
-	srcPiConfig     = "https://pi.dev/docs/latest/configuration"
-)
-
-// Project-relative paths and preset names the table repeats.
-const (
-	agentsSkillsDir = ".agents/skills"
-	claudeSkillsDir = ".claude/skills"
-	agentsMD        = "AGENTS.md"
-
-	presetClaude   = "claude"
-	presetCodex    = "codex"
-	presetGemini   = "gemini"
-	presetOpenCode = "opencode"
-	presetCursor   = "cursor"
-	presetCopilot  = "copilot"
-	presetPi       = "pi"
-)
-
-var table = []Entry{
-	{presetClaude, KindInstructions, "CLAUDE.md", ".claude/CLAUDE.md", srcClaudeMemory},
-	{presetClaude, KindRules, ".claude/rules", ".claude/rules", srcClaudeMemory},
-	{presetClaude, KindSkills, claudeSkillsDir, claudeSkillsDir, srcClaudeSkills},
-	{presetClaude, KindAgents, ".claude/agents", ".claude/agents", srcClaudeAgents},
-	{presetClaude, KindSettings, ".claude/settings.json", ".claude/settings.json", srcClaudeConfig},
-
-	{presetCodex, KindInstructions, agentsMD, ".codex/AGENTS.md", srcCodexAgents},
-	{presetCodex, KindSkills, agentsSkillsDir, agentsSkillsDir, srcCodexSkills},
-	{presetCodex, KindSettings, ".codex/hooks.json", ".codex/hooks.json", srcCodexHooks},
-
-	{presetGemini, KindInstructions, "GEMINI.md", ".gemini/GEMINI.md", srcGeminiMD},
-	{presetGemini, KindSkills, agentsSkillsDir, agentsSkillsDir, srcGeminiSkills},
-	{presetGemini, KindAgents, ".gemini/agents", ".gemini/agents", srcGeminiAgents},
-	{presetGemini, KindSettings, ".gemini/settings.json", ".gemini/settings.json", srcGeminiHooks},
-
-	{presetOpenCode, KindInstructions, agentsMD, ".config/opencode/AGENTS.md", srcOpenCodeRule},
-	{presetOpenCode, KindSkills, ".opencode/skills", ".config/opencode/skills", srcOpenCodeSkil},
-	{presetOpenCode, KindAgents, ".opencode/agents", ".config/opencode/agents", srcOpenCodeAgnt},
-
-	{presetCursor, KindSkills, agentsSkillsDir, agentsSkillsDir, srcCursorSkills},
-	{presetCursor, KindSettings, ".cursor/hooks.json", ".cursor/hooks.json", srcCursorHooks},
-
-	{presetCopilot, KindSkills, ".github/skills", ".copilot/skills", srcCopilotSkill},
-	{presetCopilot, KindSettings, ".github/hooks/ai-rulez.json", ".copilot/hooks/ai-rulez.json", srcCopilotHooks},
-
-	{presetPi, KindInstructions, agentsMD, ".pi/agent/AGENTS.md", srcPiConfig},
-	{presetPi, KindSkills, agentsSkillsDir, ".pi/agent/skills", srcPiConfig},
+// UnsupportedError reports a preset user scope cannot write for.
+type UnsupportedError struct {
+	Preset string
+	Reason string
 }
 
-// Entries returns the table in a stable order.
-func Entries() []Entry {
-	out := make([]Entry, len(table))
-	copy(out, table)
-	return out
+func (e *UnsupportedError) Error() string {
+	return fmt.Sprintf("preset %s has no user-level location: %s", e.Preset, e.Reason)
 }
 
-// Presets returns the presets that have at least one user-level destination.
-func Presets() []string {
-	seen := map[string]bool{}
-	var out []string
-	for _, e := range table {
-		if !seen[e.Preset] {
-			seen[e.Preset] = true
-			out = append(out, e.Preset)
-		}
+// IsUnsupported reports whether err says a preset has no user scope.
+func IsUnsupported(err error) bool {
+	var target *UnsupportedError
+	return errors.As(err, &target)
+}
+
+// Resolve builds the layout of a built-in preset below home, which must be an
+// absolute path; getenv looks up the layout's home-relocating variable (pass
+// os.Getenv). It returns an *UnsupportedError when the preset declares no user
+// scope.
+func Resolve(preset, home string, getenv func(string) string) (*Layout, error) {
+	return ResolveFor(nil, preset, home, getenv)
+}
+
+// ResolveFor is Resolve for a config: a preset whose project layout depends on it
+// (codex_skills_dir) maps the folder the config names. cfg may be nil.
+func ResolveFor(cfg *config.Config, preset, home string, getenv func(string) string) (*Layout, error) {
+	if !filepath.IsAbs(home) {
+		return nil, fmt.Errorf("the home directory %q must be an absolute path", home)
 	}
-	sort.Strings(out)
-	return out
-}
-
-// Supports reports whether a preset has any user-level destination.
-func Supports(preset string) bool {
-	for _, e := range table {
-		if e.Preset == preset {
-			return true
-		}
+	gen, err := config.GetPresetGenerator(preset)
+	if err != nil {
+		return nil, &UnsupportedError{preset, "it is not a built-in preset"}
 	}
-	return false
+	provider, ok := gen.(presets.GlobalOutputProvider)
+	if !ok {
+		return nil, &UnsupportedError{preset, "no vendor-documented user-level location is declared for it"}
+	}
+	global := provider.GlobalOutputPaths(home, getenv)
+	if global == nil {
+		return nil, &UnsupportedError{preset, "no vendor-documented user-level location is declared for it"}
+	}
+	if reason := unsafeRelocation(global, home); reason != "" {
+		return nil, &UnsupportedError{preset, reason}
+	}
+	layouter, ok := gen.(presets.ProjectLayoutProvider)
+	if !ok {
+		return nil, &UnsupportedError{preset, "it does not declare its project layout"}
+	}
+	project := layouter.ProjectLayout()
+	if configured, ok := gen.(presets.ConfiguredProjectLayoutProvider); ok {
+		project = configured.ProjectLayoutFor(cfg)
+	}
+	layout := build(preset, project, global)
+	if !layout.hasContentDestination() {
+		return nil, &UnsupportedError{preset, "none of the instructions, rules, skills, agents or commands it renders has a user-level location (MCP servers are not generated at user level)"}
+	}
+	return layout, nil
 }
 
-// Map returns the user-level destination of a project-relative output of preset,
-// and the row that matched. ok is false for an output with no documented
-// user-level location.
-func Map(preset, rel string) (dest string, entry Entry, ok bool) {
+// unsafeRelocation explains why the tool home its variable names cannot be written
+// to: the filesystem root, the home directory itself or a directory above it would
+// spread the tool's files over places that are not the tool's.
+func unsafeRelocation(global *presets.GlobalPaths, home string) string {
+	reloc := global.RelocatedHome
+	if reloc == "" {
+		return ""
+	}
+	reloc = filepath.Clean(reloc)
+	isRoot := filepath.Dir(reloc) == reloc
+	rel, err := filepath.Rel(reloc, filepath.Clean(home))
+	contains := err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
+	if !isRoot && !contains {
+		return ""
+	}
+	return fmt.Sprintf("its home variable points at %s, the filesystem root, your home directory or a directory above it; "+
+		"point it at the tool's own folder", global.RelocatedHome)
+}
+
+func build(preset string, project presets.ProjectLayout, global *presets.GlobalPaths) *Layout {
+	layout := &Layout{Preset: preset, SkillReaders: global.SkillReaders, SkillPrecedence: global.SkillPrecedence,
+		RelocatedHome: global.RelocatedHome}
+	add := func(kind Kind, from, to string, dir bool) {
+		if from == "" {
+			return
+		}
+		layout.Rows = append(layout.Rows, Row{Kind: kind, From: path.Clean(from), To: to, Dir: dir})
+	}
+	add(KindInstructions, project.RootFile, global.RootFile, false)
+	add(KindRules, project.RulesDir, global.RulesDir, true)
+	add(KindSkills, project.SkillsDir, global.SkillsDir, true)
+	add(KindAgents, project.AgentsDir, global.AgentsDir, true)
+	// A tool that keeps commands in its skills folder (Claude Code) renders them
+	// there, and they leave with the skills.
+	if path.Clean(project.CommandsDir) != path.Clean(project.SkillsDir) {
+		add(KindCommands, project.CommandsDir, global.CommandsDir, true)
+	}
+	sidecars := make([]string, 0, len(global.Sidecars))
+	for from := range global.Sidecars {
+		sidecars = append(sidecars, from)
+	}
+	sort.Strings(sidecars)
+	for _, from := range sidecars {
+		add(KindSettings, from, global.Sidecars[from], false)
+	}
+	return layout
+}
+
+// hasContentDestination reports whether the layout writes instructions, rules,
+// skills, agents or commands. Settings documents alone do not count: a preset that
+// declares only an MCP file has nothing --user would write.
+func (l *Layout) hasContentDestination() bool {
+	return slices.ContainsFunc(l.Rows, func(r Row) bool { return r.To != "" && r.Kind != KindSettings })
+}
+
+// Classify returns the row an output of the preset belongs to, even when the
+// preset has no user-level location for that kind.
+func (l *Layout) Classify(rel string) (Row, bool) {
 	rel = path.Clean(strings.ReplaceAll(rel, "\\", "/"))
-	for _, e := range table {
-		if e.Preset != preset {
+	best, found := Row{}, false
+	for _, row := range l.Rows {
+		if !row.covers(rel) {
 			continue
 		}
-		if rel == e.From {
-			return e.To, e, true
-		}
-		if strings.HasPrefix(rel, e.From+"/") {
-			return e.To + strings.TrimPrefix(rel, e.From), e, true
+		if !found || len(row.From) > len(best.From) {
+			best, found = row, true
 		}
 	}
-	return "", Entry{}, false
+	return best, found
 }
 
-// Roots returns the user-level directories below which generate owns the content
-// of a directory row, sorted. clean never removes a directory above them.
-func Roots() []string {
-	seen := map[string]bool{}
+func (r Row) covers(rel string) bool {
+	if rel == r.From {
+		return true
+	}
+	return r.Dir && strings.HasPrefix(rel, r.From+"/")
+}
+
+// Map returns the absolute user-level destination of a project-relative output.
+// ok is false for an output the preset has no user-level location for. The
+// longest matching row wins, so a commands folder inside a rules folder keeps its
+// own destination.
+func (l *Layout) Map(rel string) (dest string, row Row, ok bool) {
+	rel = path.Clean(strings.ReplaceAll(rel, "\\", "/"))
+	row, found := l.Classify(rel)
+	if !found || row.To == "" {
+		return "", Row{}, false
+	}
+	if rel == row.From {
+		return row.To, row, true
+	}
+	return filepath.Join(row.To, filepath.FromSlash(strings.TrimPrefix(rel, row.From+"/"))), row, true
+}
+
+// Roots returns the user-level directories whose contents the preset owns,
+// sorted: clean may remove directories emptied inside them, never one above.
+func (l *Layout) Roots() []string {
 	var out []string
-	for _, e := range table {
-		if e.Kind == KindSettings || e.Kind == KindInstructions {
-			continue
-		}
-		if !seen[e.To] {
-			seen[e.To] = true
-			out = append(out, e.To)
+	for _, row := range l.Rows {
+		if row.Dir && row.To != "" {
+			out = append(out, row.To)
 		}
 	}
 	sort.Strings(out)
+	return slices.Compact(out)
+}
+
+// Kinds lists the content kinds the layout writes, in table order.
+func (l *Layout) Kinds() []Kind {
+	var out []Kind
+	for _, row := range l.Rows {
+		if row.To != "" && !slices.Contains(out, row.Kind) {
+			out = append(out, row.Kind)
+		}
+	}
 	return out
 }
 
-// Precedence describes, per harness, which copy of a skill wins when the same name
-// exists at user and project level, as the vendor documents it.
-var Precedence = map[string]string{
-	presetClaude:   "Claude Code runs the user-level skill (personal over project)",
-	presetGemini:   "Gemini CLI runs the workspace skill (workspace over user)",
-	presetCodex:    "Codex lists both; it does not merge or override same-named skills",
-	presetOpenCode: "OpenCode does not document a precedence; keep names unique",
-	presetCursor:   "Cursor does not document a precedence; keep names unique",
-	presetCopilot:  "Copilot does not document a precedence; keep names unique",
-	presetPi:       "pi does not document a precedence; keep names unique",
+// Precedence is the vendor's rule for a skill present at user and project level;
+// presets that document none get the generic advice.
+func (l *Layout) Precedence() string {
+	if l.SkillPrecedence != "" {
+		return l.SkillPrecedence
+	}
+	return l.Preset + " does not document a precedence; keep names unique"
 }
 
-// SkillReaders lists, per harness, every user-level skill directory it reads, as
-// the vendor documents it. Two of them holding the same skill name load it twice.
-var SkillReaders = map[string][]string{
-	presetClaude:   {claudeSkillsDir},
-	presetCodex:    {agentsSkillsDir},
-	presetGemini:   {".gemini/skills", agentsSkillsDir},
-	presetOpenCode: {".config/opencode/skills", claudeSkillsDir, agentsSkillsDir},
-	presetCursor:   {".cursor/skills", agentsSkillsDir, claudeSkillsDir, ".codex/skills"},
-	presetCopilot:  {".copilot/skills", agentsSkillsDir},
+// All resolves every built-in preset (except the shared mcp preset, which is no
+// harness). layouts holds the supported ones by name, unsupported the reason for
+// each of the others.
+func All(home string, getenv func(string) string) (layouts map[string]*Layout, unsupported map[string]string, err error) {
+	return AllFor(nil, home, getenv)
 }
 
-// ReaderNames returns the harnesses of SkillReaders, sorted.
-func ReaderNames() []string {
-	out := make([]string, 0, len(SkillReaders))
-	for name := range SkillReaders {
+// AllFor is All for a config; see ResolveFor.
+func AllFor(cfg *config.Config, home string, getenv func(string) string) (layouts map[string]*Layout, unsupported map[string]string, err error) {
+	layouts, unsupported = map[string]*Layout{}, map[string]string{}
+	for _, name := range config.IndividualPresetNames() {
+		layout, err := ResolveFor(cfg, name, home, getenv)
+		var reason *UnsupportedError
+		switch {
+		case errors.As(err, &reason):
+			unsupported[name] = reason.Reason
+		case err != nil:
+			return nil, nil, err
+		default:
+			layouts[name] = layout
+		}
+	}
+	return layouts, unsupported, nil
+}
+
+// Supported lists the names of the supported presets in layouts, sorted.
+func Supported(layouts map[string]*Layout) []string {
+	out := make([]string, 0, len(layouts))
+	for name := range layouts {
 		out = append(out, name)
 	}
 	sort.Strings(out)

@@ -64,6 +64,11 @@ type OwnedKey struct {
 	Path   []string
 	Remove bool
 
+	// RemoveIf, when set on a Remove key, guards the removal: the key is deleted
+	// only when RemoveIf accepts its current raw JSON value, so a value the
+	// consumer rewrote or authored is left alone.
+	RemoveIf func(raw json.RawMessage) bool
+
 	// Members marks Value as a map whose entries are each ai-rulez's (the MCP
 	// server map). Apply then merges the entries one by one into the map the
 	// document already has, so an entry the consumer wrote under another name
@@ -408,6 +413,9 @@ func replaceOwnedPath(members []jsonMember, path []string, key OwnedKey, depth i
 
 	if len(rest) == 0 {
 		if key.Remove {
+			if key.RemoveIf != nil && !removalAccepted(members, head, key.RemoveIf) {
+				return members, nil
+			}
 			return removeMember(members, head), nil
 		}
 		if key.Members {
@@ -448,6 +456,16 @@ func replaceOwnedPath(members []jsonMember, path []string, key OwnedKey, depth i
 		return members, nil
 	}
 	return append(members, jsonMember{Key: head, Raw: []byte(raw)}), nil
+}
+
+// removalAccepted reports whether the member head exists and accept takes its value.
+func removalAccepted(members []jsonMember, head string, accept func(json.RawMessage) bool) bool {
+	for _, member := range members {
+		if member.Key == head {
+			return accept(json.RawMessage(member.Raw))
+		}
+	}
+	return false
 }
 
 // mergeMembers writes each entry of value into the object at head, replacing the
