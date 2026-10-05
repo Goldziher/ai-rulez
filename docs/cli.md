@@ -826,6 +826,8 @@ place; if none of the three is present it logs a message and does nothing rather
 width survive. Husky has no configuration file to preserve — the validation step is appended to
 `.husky/pre-commit`. Re-running is a no-op once ai-rulez is already wired in.
 
+ai-rulez is safe to run inside a git hook. Git exports `GIT_DIR`, `GIT_INDEX_FILE` and related variables to hooks, which would make every nested `git` call act on the hook's repository; ai-rulez removes `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, `GIT_OBJECT_DIRECTORY`, `GIT_ALTERNATE_OBJECT_DIRECTORIES` and `GIT_NAMESPACE` from the environment of every git subprocess it starts (and of `usage` sink commands) and targets repositories only with an explicit `-C`.
+
 **General Flags:**
 
 | Flag        | Type    | Description           |

@@ -38,7 +38,7 @@ var maxIgnoreFileSize int64 = 100 << 20
 func run(dir string, stdin []byte, args ...string) (out []byte, exitCode int, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), commandTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, "git", append([]string{"-C", dir}, args...)...) //nolint:gosec // fixed git subcommands
+	cmd := Command(ctx, dir, args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
 	if stdin != nil {

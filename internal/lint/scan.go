@@ -84,6 +84,9 @@ func (r *runner) checkLink(it *item, line int, target string) {
 			cands = append(cands, filepath.Join(it.itemDir, filepath.FromSlash(pathPart)))
 		}
 		cands = append(cands, filepath.Join(r.rootAbs(), filepath.FromSlash(pathPart)))
+		if r.tree.Explicit {
+			cands = append(cands, filepath.Join(r.tree.Top, filepath.FromSlash(pathPart)))
+		}
 	}
 	for _, c := range cands {
 		if r.existsAbs(c) {
@@ -175,7 +178,8 @@ func (r *runner) checkSkillRelative(it *item, line int, tok, prefix string) bool
 	if r.existsAbs(filepath.Join(it.itemDir, filepath.FromSlash(tok))) || r.existsRepo(tok) || r.allowed(tok) {
 		return true
 	}
-	r.add(CodeSkillResourceMissing, it.abs, line, "%q exists neither in this %s nor in the repository", tok, it.kind)
+	r.add(CodeSkillResourceMissing, it.abs, line, "%q was not found relative to this %s's directory (%s) or relative to the repo root (%s)",
+		tok, it.kind, r.display(it.itemDir), r.display(r.tree.Top))
 	return true
 }
 
@@ -191,6 +195,14 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 		return
 	}
 	for _, s := range sets {
+		if s[key] {
+			return
+		}
+	}
+	// "the `test-writer` agent" or "`test-writer` rules" is prose about a name
+	// that exists as another kind: the kind word is a loose description, not a
+	// lookup, so only a name no namespace defines is unknown.
+	for _, s := range []map[string]bool{r.rules, r.skills, r.agents, r.commands, r.contexts} {
 		if s[key] {
 			return
 		}

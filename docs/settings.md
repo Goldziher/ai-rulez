@@ -32,7 +32,7 @@ status_message = "Checking generated files"
 
 A group has the same fields as a [`[[plugin.hooks]]`](plugins.md) group (`event`, `matcher`, and `hooks`
 with `command` or `script`, `args`, `timeout`, `async`, `if`, `status_message`) plus two that only exist
-here, because the same declaration is rendered for several harnesses:
+here, because the same declaration is rendered for several harnesses. Only `type = "command"` handlers exist here (omit `type`); `validate` and `generate` both reject other types:
 
 - `targets`: the harnesses the group is rendered for. Empty means every harness the group can be
   expressed for. One of the harnesses named in the tables below.
