@@ -132,22 +132,27 @@ func verifyLockedSources(cfg *config.Config) ([]string, error) {
 }
 
 // lockDriftFor returns the AR981 and AR982 findings for strict validation. It
-// reports nothing unless a lock exists and [lock] enforce is set.
-func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
+// reports nothing unless [lock] enforce is set. Under enforce a lock that cannot
+// be read or compared (corrupt, newer than this ai-rulez, a source that cannot be
+// snapshotted) is itself a finding: enforcement never fails open.
+func lockDriftFor(cfg *config.Config) []lint.LockDrift {
 	if !cfg.LockEnforced() {
-		return nil, nil
-	}
-	lock, err := lockfile.Load(cfg.ConfigDir)
-	if err != nil {
-		return nil, err //nolint:wrapcheck // already contextual
-	}
-	if lock == nil {
-		return nil, nil
+		return nil
 	}
 	configRel := relToBase(cfg, cfg.ConfigDir)
 	lockRel := filepath.ToSlash(filepath.Join(configRel, lockfile.FileName))
+	unverifiable := func(err error) []lint.LockDrift {
+		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("cannot verify %s and [lock] enforce = true: %v", lockfile.FileName, err)}}
+	}
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	if err != nil {
+		return unverifiable(err)
+	}
+	if lock == nil {
+		return nil
+	}
 	if !lock.HasContentPins() {
-		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}, nil
+		return []lint.LockDrift{{Path: lockRel, Message: fmt.Sprintf("%s (version %d) has no content pins and [lock] enforce = true; run `ai-rulez lock`", lockfile.FileName, lock.Version)}}
 	}
 	shared := cfg
 	if cfg.LocalOverlay != nil || cfg.LocalContent != nil {
@@ -158,7 +163,7 @@ func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
 	}
 	snap, err := lockSnapshot(shared, lock.Profile, false)
 	if err != nil {
-		return nil, err
+		return unverifiable(err)
 	}
 	var out []lint.LockDrift
 	changes := contentlock.Compare(lock, snap).Changes
@@ -177,7 +182,7 @@ func lockDriftFor(cfg *config.Config) ([]lint.LockDrift, error) {
 			out = append(out, lint.LockDrift{Path: lockRel, Message: c.Line()})
 		}
 	}
-	return out, nil
+	return out
 }
 
 func relToBase(cfg *config.Config, abs string) string {
