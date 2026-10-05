@@ -2,6 +2,7 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,6 +39,7 @@ var (
 	generateCheck      bool
 	generateLocked     bool
 	generateFrozen     bool
+	generateRole       string
 )
 
 var GenerateCmd = &cobra.Command{
@@ -64,6 +66,8 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and process configuration files recursively")
 	registerRemovedCLIMCPFlags(GenerateCmd)
 	GenerateCmd.Flags().StringVarP(&profile, "profile", "p", "", "Profile to generate, or a comma-separated list to compose several (default: from config or 'default')")
+	GenerateCmd.Flags().StringVar(&generateRole, "role", "",
+		"Generate the slice of content a role selects instead of a profile (see `ai-rulez roles list`); mutually exclusive with --profile")
 	GenerateCmd.Flags().BoolVarP(&noFetch, "no-fetch", "f", false, "Skip fetching remote includes, use cached content only")
 	GenerateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 	GenerateCmd.Flags().StringArrayVarP(&mcpEnv, "env", "e", nil, "MCP env override in KEY=VALUE form (repeatable)")
@@ -112,6 +116,11 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	includes.SkipFetch = noFetch
 	applyLockFlags()
 
+	if err := checkRoleFlags(); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
+
 	if generateCheck {
 		runGenerateCheck(args)
 		return
@@ -145,6 +154,14 @@ func runGenerate(cmd *cobra.Command, args []string) {
 
 	suggestTOMLMigration(cfg.ConfigDir)
 
+	if err := enforceLockedContent(cfg); err != nil {
+		fmtError(err)
+		if errors.Is(err, errLockedSourceDrift) {
+			os.Exit(exitDrift)
+		}
+		os.Exit(1)
+	}
+
 	applyGenerateOverrides(cfg)
 	if err := importGate(cfg); err != nil {
 		fmtError(err)
@@ -159,6 +176,10 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetContext(ctx)
+	if err := applyRole(gen); err != nil {
+		fmtError(err)
+		os.Exit(1)
+	}
 
 	if pluginMode {
 		runPluginGenerate(gen)
@@ -498,6 +519,11 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 		return 0, err
 	}
 
+	if err := enforceLockedContent(cfg); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
+
 	applyGenerateOverrides(cfg)
 	if err := importGate(cfg); err != nil {
 		fileCounter.ErrorFor(configPath, err)
@@ -508,6 +534,10 @@ func processConfigFile(configPath string, fileCounter *progress.FileCounter) (in
 	gen := generator.NewGenerator(cfg)
 	gen.SetAllowLocalDrift(allowLocalDrift)
 	gen.SetContext(ctx)
+	if err := applyRole(gen); err != nil {
+		fileCounter.ErrorFor(configPath, err)
+		return 0, err
+	}
 	if pluginMode {
 		return processPluginConfig(configPath, cfg, gen, fileCounter)
 	}
@@ -648,4 +678,46 @@ func importGate(cfg *config.Config) error {
 		return nil
 	}
 	return enforceScanImports(cfg)
+}
+
+// checkRoleFlags rejects --role together with --profile.
+func checkRoleFlags() error {
+	if generateRole != "" && profile != "" {
+		return oops.Hint("A role replaces the profile selection; pass only one").
+			Errorf("--role and --profile are mutually exclusive")
+	}
+	if generateRole != "" && pluginMode {
+		return oops.Errorf("--role cannot be combined with --plugin: plugin bundles are built from the full content")
+	}
+	return nil
+}
+
+// applyRole switches a Generator to the role given with --role, if any.
+func applyRole(gen *generator.Generator) error {
+	if generateRole == "" {
+		return nil
+	}
+	return gen.SetRole(generateRole) //nolint:wrapcheck // already contextual
+}
+
+// errLockedSourceDrift marks a `generate --locked` refusal because authored
+// content no longer matches ai-rulez.lock.
+var errLockedSourceDrift = errors.New("authored content differs from " + "ai-rulez.lock")
+
+// enforceLockedContent is the content half of --locked and --frozen: when the
+// lock pins authored content, every source must still match it. generate never
+// writes the lock.
+func enforceLockedContent(cfg *config.Config) error {
+	if !generateLocked && !generateFrozen {
+		return nil
+	}
+	lines, err := verifyLockedSources(cfg)
+	if err != nil {
+		return err
+	}
+	if len(lines) == 0 {
+		return nil
+	}
+	return oops.Hint("Review the change with `ai-rulez lock --diff`, then run `ai-rulez lock` to accept it").
+		Wrapf(errLockedSourceDrift, "%s does not match the sources:\n  %s", "ai-rulez.lock", strings.Join(lines, "\n  "))
 }
