@@ -91,3 +91,27 @@ func TestStrictAgentSkillStillError(t *testing.T) {
 		t.Fatalf("want one AR302, got %+v", fs)
 	}
 }
+
+func TestReferenceUnknown_KindWordDoesNotHideAnotherNamespace(t *testing.T) {
+	root := t.TempDir()
+	writeFiles(t, root, map[string]string{
+		".ai-rulez/config.toml":            baseConfig,
+		".ai-rulez/agents/test-writer.md":  "---\nname: test-writer\ndescription: Writes tests. Use when tests are missing.\n---\nBody\n",
+		".ai-rulez/context/style-guide.md": "# Style\n",
+		".ai-rulez/rules/r.md": "# R\n" +
+			"Follow the `test-writer` rules for new code.\n" +
+			"Delegate to the `test-writer` agent.\n" +
+			"See the `style-guide` rule and the `test-writer` skill.\n" +
+			"Also the `ghost-thing` rules and the `ghost-thing` agent.\n",
+	})
+	gitAdd(t, root)
+	fs := lintDir(t, root)
+	if n := countCode(fs, CodeReferenceUnknown); n != 2 {
+		t.Fatalf("want AR301 only for ghost-thing (2 phrases), got %d: %+v", n, fs)
+	}
+	for _, f := range fs {
+		if f.Code == CodeReferenceUnknown && !strings.Contains(f.Message, "ghost-thing") {
+			t.Errorf("false positive: %+v", f)
+		}
+	}
+}

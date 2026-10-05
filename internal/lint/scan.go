@@ -195,6 +195,14 @@ func (r *runner) requireName(it *item, line int, name, kind string, sets ...map[
 			return
 		}
 	}
+	// "the `test-writer` agent" or "`test-writer` rules" is prose about a name
+	// that exists as another kind: the kind word is a loose description, not a
+	// lookup, so only a name no namespace defines is unknown.
+	for _, s := range []map[string]bool{r.rules, r.skills, r.agents, r.commands, r.contexts} {
+		if s[key] {
+			return
+		}
+	}
 	r.add(CodeReferenceUnknown, it.abs, line, "references %s %q, which does not exist", kind, name)
 }
 
