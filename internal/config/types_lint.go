@@ -25,6 +25,8 @@ type LintConfig struct {
 	// unaccepted findings number at most N does not count toward the exit code.
 	// Lower N over time to ratchet a rule down.
 	Budget map[string]int `yaml:"budget,omitempty" json:"budget,omitempty" toml:"budget,omitempty"`
+	// Risk sets the weights of the advisory risk score.
+	Risk *LintRisk `yaml:"risk,omitempty" json:"risk,omitempty" toml:"risk,omitempty"`
 	// Budgets maps a content kind (rule, context, skill, agent, command) to its size limits.
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
 	// RequireMetadata maps a content kind to frontmatter keys every item of that kind must set.
@@ -123,4 +125,13 @@ type LintDescription struct {
 type LintBudget struct {
 	MaxLines  int `yaml:"max_lines,omitempty" json:"max_lines,omitempty" toml:"max_lines,omitempty"`    //nolint:tagliatelle
 	MaxTokens int `yaml:"max_tokens,omitempty" json:"max_tokens,omitempty" toml:"max_tokens,omitempty"` //nolint:tagliatelle
+}
+
+// LintRisk weights the advisory risk score: the points one finding of each
+// severity adds (capped at 100 per item or bundle). Unset keeps the default
+// (error 25, warning 8, info 1); 0 is a valid weight.
+type LintRisk struct {
+	Error   *int `yaml:"error,omitempty" json:"error,omitempty" toml:"error,omitempty"`
+	Warning *int `yaml:"warning,omitempty" json:"warning,omitempty" toml:"warning,omitempty"`
+	Info    *int `yaml:"info,omitempty" json:"info,omitempty" toml:"info,omitempty"`
 }

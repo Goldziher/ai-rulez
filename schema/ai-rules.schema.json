@@ -798,6 +798,16 @@
           "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down.",
           "additionalProperties": { "type": "integer", "minimum": 0 }
         },
+        "risk": {
+          "type": "object",
+          "description": "Weights of the advisory risk score shown next to the findings (never affects the exit code). Points per finding; the score is capped at 100.",
+          "properties": {
+            "error": { "type": "integer", "minimum": 0, "description": "Points per error finding. Default 25." },
+            "warning": { "type": "integer", "minimum": 0, "description": "Points per warning finding. Default 8." },
+            "info": { "type": "integer", "minimum": 0, "description": "Points per info finding. Default 1." }
+          },
+          "additionalProperties": false
+        },
         "budgets": {
           "type": "object",
           "description": "Size limits per content kind (rule, context, skill, agent, command). 0 keeps the default, negative removes the limit.",

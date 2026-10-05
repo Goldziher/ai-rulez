@@ -119,6 +119,18 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		fmtError(err)
 		return 1
 	}
+	for i, report := range reports {
+		var lc *config.LintConfig
+		if cfg := cfgAt(cfgs, i); cfg != nil {
+			lc = cfg.Lint
+		}
+		var rc *config.LintRisk
+		if lc != nil {
+			rc = lc.Risk
+		}
+		risk := lint.ComputeRisk(report.Findings, lint.RiskWeightsFrom(rc))
+		report.Risk = &risk
+	}
 	combined := lint.Combine(reports)
 	for _, e := range excess {
 		combined.Budgets = append(combined.Budgets, e...)
