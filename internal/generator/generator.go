@@ -212,8 +212,8 @@ func (g *Generator) finishGitignore(outputs []config.OutputFile, ignoredEarly bo
 
 // GeneratePlugin packages the project into distributable plugin bundles plus a
 // marketplace index for the runtimes named in the [plugin] block. Unlike the
-// normal generate path, plugin outputs are written verbatim (RawContent) and do
-// not participate in the generated-manifest / stale-file bookkeeping.
+// normal generate path, plugin outputs are written verbatim (RawContent) and
+// reconcile obsolete files using each bundle's provenance inventory.
 func (g *Generator) GeneratePlugin(profile string) error {
 	_, err := g.GeneratePluginFiles(profile)
 	return err
@@ -230,7 +230,27 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	if err := g.writeOutputs(outputs); err != nil {
+	obsolete, err := plugin.PlanStaleOutputs(outputs)
+	if err != nil {
+		return 0, err
+	}
+	// Keep the previous inventory until cleanup succeeds, so a failed deletion
+	// can be retried without losing the ownership record.
+	var files, inventories []config.OutputFile
+	for _, output := range outputs {
+		if !output.IsDir && filepath.Base(output.Path) == plugin.ProvenanceFileName {
+			inventories = append(inventories, output)
+		} else {
+			files = append(files, output)
+		}
+	}
+	if err := g.writeOutputs(files); err != nil {
+		return 0, err
+	}
+	if err := plugin.RemoveStaleOutputs(obsolete); err != nil {
+		return 0, err
+	}
+	if err := g.writeOutputs(inventories); err != nil {
 		return 0, err
 	}
 	g.removeStalePluginDirs(stale)
@@ -353,6 +373,13 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	lines = append(lines, "plugin bundle:")
 	for _, output := range outputs {
 		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
+	}
+	obsolete, err := plugin.PlanStaleOutputs(outputs)
+	if err != nil {
+		return nil, err
+	}
+	for _, output := range obsolete {
+		lines = append(lines, "delete-stale: "+g.convertToRelativePath(output.Path))
 	}
 	stale, err := g.stalePluginDirs()
 	if err != nil {

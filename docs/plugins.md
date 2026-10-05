@@ -295,6 +295,15 @@ YAML frontmatter so skill discovery remains valid.
 Run `ai-rulez verify --plugin` to verify every output recorded by the provenance
 sidecar without modifying or regenerating the package.
 
+Regeneration compares each bundle's previous provenance inventory with its new
+outputs. Obsolete generated files are removed only when their bytes still match
+the recorded generated version; unrelated hand-written files are preserved.
+Empty parent directories of removed files are pruned up to the bundle root.
+`generate --plugin --dry-run` lists these removals as `delete-stale:` without
+changing files. If an obsolete file was edited, generation stops before writing
+and reports its path. Move or remove that file explicitly, then regenerate.
+Malformed provenance or symlinked obsolete paths also stop generation safely.
+
 Reusable hook catalogs can run plugin checks across mixed repositories with
 `ai-rulez generate --recursive --plugin --if-configured` and
 `ai-rulez verify --recursive --plugin --if-configured`. Both commands exit successfully
