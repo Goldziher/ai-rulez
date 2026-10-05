@@ -43,7 +43,6 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 		Provider:       cfg.Provider,
 		Model:          cfg.FullModel(),
 		EmbeddingModel: cfg.EmbeddingModel,
-		APIKeyEnv:      cfg.APIKeyEnv,
 		AllowNetwork:   cfg.AllowNetwork,
 		CacheEnabled:   cfg.CacheEnabled() && !opts.NoCache && opts.ConfigDir != "",
 		Limits:         Limits{MaxCostUSD: cfg.MaxCostUSD, MaxTokens: cfg.MaxTokens, MaxCalls: cfg.MaxCalls}.Describe(),
@@ -55,7 +54,9 @@ func Diagnose(cfg Config, opts Options) Diagnosis {
 	if u, err := url.Parse(cfg.BaseURL); err == nil {
 		d.BaseURLHost = u.Host
 	}
+	// Only a valid variable name is shown or looked up; anything else may be a pasted key.
 	if cfg.APIKeyEnv != "" && envNameRe.MatchString(cfg.APIKeyEnv) && !looksLikeSecret(cfg.APIKeyEnv) {
+		d.APIKeyEnv = cfg.APIKeyEnv
 		d.APIKeySet = strings.TrimSpace(getenv(cfg.APIKeyEnv)) != ""
 	}
 	if d.Backend == BackendLiterLLM && !d.NativeCompiled {

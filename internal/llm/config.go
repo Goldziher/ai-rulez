@@ -1,7 +1,6 @@
 package llm
 
 import (
-	"fmt"
 	"net/url"
 	"os"
 	"regexp"
@@ -119,7 +118,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
 			f, err := strconv.ParseFloat(v, 64)
 			if err != nil {
-				errs = append(errs, fmt.Sprintf("AI_RULEZ_LLM_%s=%q is not a number", name, v))
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a number")
 				return
 			}
 			*dst = f
@@ -129,7 +128,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		if v := strings.TrimSpace(getenv("AI_RULEZ_LLM_" + name)); v != "" {
 			n, err := strconv.Atoi(v)
 			if err != nil {
-				errs = append(errs, fmt.Sprintf("AI_RULEZ_LLM_%s=%q is not an integer", name, v))
+				errs = append(errs, "AI_RULEZ_LLM_"+name+" is not an integer")
 				return
 			}
 			*dst = n
@@ -142,7 +141,7 @@ func (c Config) WithEnv(getenv func(string) string) (Config, error) {
 		}
 		b, err := strconv.ParseBool(v)
 		if err != nil {
-			errs = append(errs, fmt.Sprintf("AI_RULEZ_LLM_%s=%q is not a boolean", name, v))
+			errs = append(errs, "AI_RULEZ_LLM_"+name+" is not a boolean")
 			return false, false
 		}
 		return b, true
@@ -198,13 +197,13 @@ func (c Config) Validate() []string {
 	switch c.Backend {
 	case "", BackendAuto, BackendOpenAICompat, BackendLiterLLM:
 	default:
-		out = append(out, fmt.Sprintf("backend %q is not one of auto, openaicompat, literllm", c.Backend))
+		out = append(out, "backend is not one of auto, openaicompat, literllm")
 	}
 	out = append(out, c.validateAPIKeyEnv()...)
 	out = append(out, c.validateBaseURL()...)
 	out = append(out, c.validateNumbers()...)
 	if c.Model != "" && strings.ContainsAny(c.Model, " \t\n") {
-		out = append(out, fmt.Sprintf("model %q must not contain whitespace", c.Model))
+		out = append(out, "model must not contain whitespace")
 	}
 	sort.Strings(out)
 	return out
@@ -217,7 +216,7 @@ func (c Config) validateAPIKeyEnv() []string {
 	case looksLikeSecret(c.APIKeyEnv):
 		return []string{"api_key_env looks like a literal API key; it must be the NAME of an environment variable (for example OPENAI_API_KEY), never the key"}
 	case !envNameRe.MatchString(c.APIKeyEnv):
-		return []string{fmt.Sprintf("api_key_env %q is not an environment variable name; it must be the NAME of an environment variable, never the key", c.APIKeyEnv)}
+		return []string{"api_key_env is not an environment variable name; it must be the NAME of an environment variable (for example OPENAI_API_KEY), never the key"}
 	}
 	return nil
 }
