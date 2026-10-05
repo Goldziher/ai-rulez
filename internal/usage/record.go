@@ -212,7 +212,7 @@ func entryFor(event *hookEvent, harness string) *Entry {
 		// Both harnesses name the event PreToolUse (Codex) or preToolUse (Cursor) and
 		// load a skill by reading its SKILL.md.
 		if strings.EqualFold(event.Name, hookPreToolUse) {
-			entry.Skill = skillFromPath(event.ToolInput.Command, event.ToolInput.FilePath, event.ToolInput.Path)
+			entry.Skill = skillRead(event)
 			entry.Invocation = "read"
 		}
 	}
@@ -220,6 +220,56 @@ func entryFor(event *hookEvent, harness string) *Entry {
 		return nil
 	}
 	return entry
+}
+
+// readTools are the tool names of file readers; a path handed to any other tool
+// (Write, Edit, ...) is not a skill load.
+var readTools = map[string]bool{"read": true, "readfile": true, "read_file": true, "view": true, "open": true, "openfile": true, "open_file": true, "cat": true}
+
+// shellReaders are the commands that only read the file they are given.
+var shellReaders = map[string]bool{"cat": true, "head": true, "tail": true, "less": true, "more": true, "bat": true, "nl": true, "sed": true, "get-content": true, "type": true}
+
+// skillRead returns the id of the skill a Codex or Cursor pre-tool-use event
+// loads: a read tool opening skills/<id>/SKILL.md, or a shell command whose
+// reader (cat, head, sed -n, ...) is handed that path. Writes, edits, and other
+// commands that merely mention the path (git add, rm, a linter) are not loads.
+func skillRead(event *hookEvent) string {
+	if readTools[strings.ToLower(event.Tool)] {
+		if id := skillFromPath(event.ToolInput.FilePath, event.ToolInput.Path); id != "" {
+			return id
+		}
+	}
+	return skillFromReadingCommand(event.ToolInput.Command)
+}
+
+var shellSeparators = regexp.MustCompile(`&&|\|\||[;|\n]`)
+
+func skillFromReadingCommand(command string) string {
+	for _, segment := range shellSeparators.Split(command, -1) {
+		fields := strings.Fields(segment)
+		for len(fields) > 0 && strings.Contains(fields[0], "=") && !strings.ContainsAny(fields[0], "/") {
+			fields = fields[1:] // leading VAR=value assignments
+		}
+		if len(fields) == 0 || !shellReaders[strings.ToLower(filepath.Base(fields[0]))] {
+			continue
+		}
+		if strings.EqualFold(filepath.Base(fields[0]), "sed") && sedEditsInPlace(fields[1:]) {
+			continue
+		}
+		if id := skillFromPath(strings.Join(fields[1:], " ")); id != "" {
+			return id
+		}
+	}
+	return ""
+}
+
+func sedEditsInPlace(args []string) bool {
+	for _, arg := range args {
+		if strings.HasPrefix(arg, "--in-place") || (strings.HasPrefix(arg, "-") && !strings.HasPrefix(arg, "--") && strings.Contains(arg, "i")) {
+			return true
+		}
+	}
+	return false
 }
 
 var skillPathPattern = regexp.MustCompile(`(?:^|[\s/'"=:])skills/([a-z0-9][a-z0-9._-]*)/SKILL\.md`)
