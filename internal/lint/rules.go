@@ -237,6 +237,8 @@ type findingJSON struct {
 	Fingerprint  string   `json:"fingerprint,omitempty"`
 	Accepted     bool     `json:"accepted,omitempty"`
 	AcceptReason string   `json:"accept_reason,omitempty"`
+	Analyzer     string   `json:"analyzer,omitempty"`
+	Scope        string   `json:"scope,omitempty"`
 }
 
 // MarshalJSON flattens Meta's reportable fields next to the core ones.
@@ -247,6 +249,7 @@ func (f Finding) MarshalJSON() ([]byte, error) {
 	}
 	if f.Meta != nil {
 		out.Accepted, out.AcceptReason = f.Meta.Accepted, f.Meta.AcceptReason
+		out.Analyzer, out.Scope = f.Meta.Analyzer, f.Meta.Scope
 	}
 	return json.Marshal(out) //nolint:wrapcheck // plain struct
 }

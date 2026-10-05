@@ -53,6 +53,7 @@ func assignIdentity(findings []Finding, tree *Tree, cwd string) {
 			}
 		}
 		f.meta().Path = path
+		annotateAnalyzer(f)
 		ls, ok := lines[abs]
 		if !ok {
 			if data, err := os.ReadFile(abs); err == nil {

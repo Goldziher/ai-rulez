@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -29,6 +30,8 @@ var (
 	// validateLintProfile overrides [lint] profile. It is not --profile: that
 	// name selects a generation profile everywhere else.
 	validateLintProfile string
+	// validateAnalyzers restricts the report to these analyzers.
+	validateAnalyzers []string
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
@@ -36,7 +39,7 @@ var (
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || validateLintProfile != "" || baselineFlagsSet() || changedRev() != "") {
+	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || validateLintProfile != "" || len(validateAnalyzers) > 0 || baselineFlagsSet() || changedRev() != "") {
 		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed and the baseline flags require --strict")
 	}
 	if !lint.IsFormat(validateFormat) {
@@ -46,6 +49,12 @@ func checkStrictFlags() error {
 	case "", "error", "warning", "info", "none":
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
+	}
+	known := lint.AnalyzerNames()
+	for _, a := range validateAnalyzers {
+		if !slices.Contains(known, strings.ToLower(strings.TrimSpace(a))) {
+			return oops.Errorf("unknown --analyzer %q (use %s)", a, strings.Join(known, ", "))
+		}
 	}
 	if _, ok := lint.LookupProfile(validateLintProfile); !ok {
 		return oops.Errorf("unknown --lint-profile %q (use %s)", validateLintProfile, strings.Join(lint.ProfileNames(), ", "))
@@ -133,6 +142,9 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	excess := make([][]lint.BudgetExcess, len(reports))
 	for i, report := range reports {
 		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
+	}
+	for _, report := range reports {
+		lint.FilterAnalyzers(report, validateAnalyzers)
 	}
 	if err := narrowToChanged(reports, cfgs); err != nil {
 		fmtError(err)
