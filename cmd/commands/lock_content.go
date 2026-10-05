@@ -66,9 +66,9 @@ func lockDiff(cfg *config.Config, lock *lockfile.File, profileName string, remot
 		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Added,
 			Detail: lockfile.FileName + " does not exist but [lock] enforce = true; run `ai-rulez lock`"})
 	case lock != nil && diff.NoPins:
-		// A lock without content pins (version 1, or hash_version 0) cannot tell
-		// whether a source changed, so a check never passes on it: that would let
-		// a downgraded lock switch the content checks off.
+		// A lock without content pins cannot tell whether a source changed, so a
+		// check never passes on it: that would let a stripped lock switch the
+		// content checks off.
 		diff.Changes = append(diff.Changes, contentlock.Change{Scope: contentlock.ScopeLock, Change: contentlock.Changed,
 			Detail: fmt.Sprintf("%s (version %d) has no content pins, so authored content is not verified; run `ai-rulez lock` to pin it", lockfile.FileName, lock.Version)})
 	}

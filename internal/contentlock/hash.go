@@ -1,7 +1,9 @@
 // Package contentlock computes and compares the content pins stored in
 // ai-rulez.lock: sha256 digests of every authored item (rules, skills with their
-// resources, agents, commands, context, hooks, roles and the settings sources) and
-// of the generated outputs, plus one digest over the whole set.
+// resources, agents, commands, context, hooks, roles and the settings sources),
+// of the generated outputs, of remote includes, installed skills, skill sources
+// and OKF includes (DigestDir) and of served skills, plus one digest over the
+// whole set. It is the only hashing scheme in the lock.
 //
 // The scheme is specified in docs/lockfile.md and frozen by the test vectors in
 // hash_test.go. In short, every digest is a SHA-256 over length-prefixed fields
@@ -30,14 +32,16 @@ import (
 // Algorithm prefixes every digest in the lock.
 const Algorithm = "sha256"
 
-// Domain-separation labels. The version suffix changes only with lockfile.HashVersion.
-const (
-	labelFile = "ai-rulez/file/v1"
-	labelTree = "ai-rulez/tree/v1"
-)
+// textExt are the extensions whose CRLF line endings are normalized to LF:
+// documents and data files only. Scripts (.sh, .py, .js, ...) are hashed byte
+// for byte, because a CRLF in a shell script is a different program.
+var textExt = map[string]bool{
+	".md": true, ".markdown": true, ".mdc": true, ".mdx": true, ".txt": true,
+	".toml": true, ".yaml": true, ".yml": true, ".json": true, ".jsonc": true,
+}
 
-// kindLabel is the label of a tree of files of one item kind.
-func kindLabel(kind string) string { return "ai-rulez/" + kind + "/v1" }
+// label is the domain-separation label of a tree of kind, "ai-rulez/<kind>/v1".
+func label(kind string) string { return "ai-rulez/" + kind + "/v1" }
 
 // File modes recorded in the digest. Only the executable bit is significant.
 const (
@@ -45,23 +49,13 @@ const (
 	ModeExecutable = "100755"
 )
 
-// textExtensions are the file extensions whose line endings are normalized
-// (CRLF to LF) before hashing, so a checkout with autocrlf does not change a
-// digest. Every other file is hashed byte for byte. The list is part of the
-// scheme: changing it means a new hash_version.
-var textExtensions = map[string]bool{
-	".md": true, ".markdown": true, ".mdc": true, ".mdx": true, ".txt": true,
-	".toml": true, ".yaml": true, ".yml": true, ".json": true, ".jsonc": true,
-	".sh": true, ".bash": true, ".zsh": true, ".py": true, ".js": true, ".mjs": true, ".cjs": true, ".ts": true,
-}
-
 // IsTextPath reports whether p is hashed with line-ending normalization.
-func IsTextPath(p string) bool { return textExtensions[strings.ToLower(path.Ext(p))] }
+func IsTextPath(p string) bool { return textExt[strings.ToLower(path.Ext(p))] }
 
 // TextExtensions returns the normalized extensions, sorted.
 func TextExtensions() []string {
-	out := make([]string, 0, len(textExtensions))
-	for e := range textExtensions {
+	out := make([]string, 0, len(textExt))
+	for e := range textExt {
 		out = append(out, e)
 	}
 	sort.Strings(out)
@@ -120,7 +114,7 @@ func leafDigest(l Leaf) [sha256.Size]byte {
 		data = NormalizeText(data)
 	}
 	var buf bytes.Buffer
-	lps(&buf, labelFile)
+	lps(&buf, label("file"))
 	lps(&buf, l.Path)
 	lps(&buf, l.Mode)
 	lp(&buf, data)
@@ -137,7 +131,7 @@ func TreeDigest(kind string, leaves []Leaf) (string, error) {
 	sorted := append([]Leaf(nil), leaves...)
 	sort.Slice(sorted, func(i, j int) bool { return sorted[i].Path < sorted[j].Path })
 	var buf bytes.Buffer
-	lps(&buf, kindLabel(kind))
+	lps(&buf, label(kind))
 	u64(&buf, len(sorted))
 	for i, l := range sorted {
 		if err := validLeafPath(l.Path); err != nil {
@@ -189,7 +183,7 @@ func TopDigest(entries []Entry) string {
 		return sorted[i].Key < sorted[j].Key
 	})
 	var buf bytes.Buffer
-	lps(&buf, labelTree)
+	lps(&buf, label("tree"))
 	u64(&buf, len(sorted))
 	for _, e := range sorted {
 		lps(&buf, e.Kind)

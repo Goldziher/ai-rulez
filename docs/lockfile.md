@@ -9,7 +9,9 @@ is made of. It pins three things:
 3. **Generated outputs**: a digest of each generated file, so a change to what agents are actually told shows up
    in review even when nobody touched a source.
 
-One file, one `tree` digest over all of it. Format version 2; version 1 locks still load (and carry no content pins).
+One file, one `tree` digest over all of it, under **one hashing scheme** for every kind (authored items, outputs,
+remote includes, installed skills, skill sources, OKF includes and served skills). Lock `version = 1`; a lock with
+any other version is refused with an instruction to run `ai-rulez lock` again.
 
 ## Threat model
 
@@ -25,12 +27,12 @@ What the lock gives you:
 
 | It detects | How |
 | --- | --- |
-| A remote source serving different bytes than you reviewed | commit and tree digest (unchanged from lock version 1) |
+| A remote source serving different bytes than you reviewed | commit and tree digest |
 | An added, removed or edited rule / skill / resource / hook / role | per-item digest, named in the check output |
 | An executable bit added to a script | the file mode is part of the digest |
 | A change in what gets generated, by any cause | output digests |
 | An accidentally edited or truncated lock | the `tree` digest no longer matches the pins, or is missing |
-| A lock replaced by one without content pins (a downgrade to version 1) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate --strict` fail |
+| A lock replaced by one without content pins (a downgrade) | `lock --check` fails and `generate --locked` warns; under `enforce`, `generate --locked` and `validate --strict` fail |
 
 The `tree` digest is an integrity check, not a signature: whoever can edit the lock can recompute it (`ai-rulez
 lock` does exactly that). It catches accidental edits and merge mistakes; a deliberate change to the pins is caught
@@ -69,8 +71,7 @@ yours it is not pinned as a whole; its sources (the hooks, permissions, managed 
 above) are.
 
 ```toml
-version = 2
-hash_version = 1
+version = 1
 ai_rulez_version = "4.25.0"
 scope = "all"
 outputs_pinned = true
@@ -127,8 +128,9 @@ out (the project-wide `Source-Hash` and the `Generated:` stamp, comment lines in
 cannot collide with the digest of the authored skill of the same name. There is one implementation
 (`contentlock.ServedDigest`); the skills server, `lock`, `lock --check`/`--diff` and `[lock] enforce` all use it,
 and the per-file and whole-skill digests the server reports (`digest`) are the same scheme over the bytes as served.
-A fetched source tree and a remote include are digested with the older per-file hash of `include`/`skill` entries
-(`lockfile.DigestDir`, unchanged so existing pins stay valid); both kinds of entry are covered by `tree`.
+A fetched source tree, a remote include, an OKF include and an installed skill are digested with the same scheme
+(`contentlock.DigestDir`: the regular files below the directory as one tree, kinds `include`, `okf-include`,
+`installed-skill` and `skill-source`, with `.git` and the cache bookkeeping left out); all entries are covered by `tree`.
 
 `lock --check` and `lock --diff` compare these entries without the network: a changed served skill is a `served`
 change, a source whose cached tree no longer matches its pin is a `remote` change. `[lock] enforce = true` makes
@@ -137,10 +139,10 @@ source|served` refreshes one kind, `generate --frozen`/`mcp --serve-skills --fro
 `lock --content-only` recomputes authored content and the served digests of local skills offline while keeping the
 remote pins.
 
-## Hashing scheme (`hash_version = 1`)
+## Hashing scheme
 
-All digests are **SHA-256**, written `sha256:<64 hex digits>`. The scheme is frozen by `hash_version`; any change
-to it bumps that number and `lock --check` refuses a newer scheme than it understands.
+All digests are **SHA-256**, written `sha256:<64 hex digits>`. The scheme is part of the lock format: any change
+to it bumps the lock `version`, and a lock of another version is refused.
 
 Notation: `lp(x)` is the 8-byte big-endian length of `x` followed by `x`; `u64(n)` is `n` as 8 bytes big-endian.
 
@@ -157,19 +159,17 @@ leaf = SHA256( lp("ai-rulez/file/v1") || lp(path) || lp(mode) || lp(data) )
   checks out on Unix); if git is not available or the file is not tracked it is `100644`. A checkout whose
   repository records the executable bit therefore pins the same digest on every operating system. A script that is
   executable on disk but not recorded as such in git will pin differently on Windows than elsewhere; commit the
-  bit (`git update-index --chmod=+x`). The per-file digest of remote includes and installed skills (`include` and
-  `skill` entries, kind 1 algorithm) still reads the file's own bits.
-- `data` is the **raw bytes on disk**, never the frontmatter-stripped text the loader keeps in memory. For files
-  with a text extension (`.md .markdown .mdc .mdx .txt .toml .yaml .yml .json .jsonc .sh .bash .zsh .py .js .mjs
-  .cjs .ts`) `CRLF` is converted to `LF` first, so a Windows checkout with `autocrlf` pins the same digest. A lone
-  `CR` is kept. Every other file (images, binaries, extensionless files) is hashed byte for byte. The list includes
-  shell and script extensions, where a `CRLF` can change behaviour (`#!/bin/sh\r` fails with "bad interpreter"), so
-  a script whose only change is its line endings pins the same digest. Keep scripts `LF` in git
-  (`.gitattributes`: `*.sh text eol=lf`). Narrowing the list would change existing pins, so it needs a new
-  `hash_version`.
+  bit (`git update-index --chmod=+x`). Remote trees are digested the same way (the mode helper is shared).
+- `data` is the **raw bytes on disk**, never the frontmatter-stripped text the loader keeps in memory. For
+  documents and data files (`.md .markdown .mdc .mdx .txt .toml .yaml .yml .json .jsonc`) `CRLF` is converted to
+  `LF` first, so a Windows checkout with `autocrlf` pins the same digest. A lone `CR` is kept. Every other file
+  (images, binaries, extensionless files) and every **script** (`.sh .bash .zsh .py .js .mjs .cjs .ts`) is hashed
+  byte for byte: a `CRLF` in a shell script changes behaviour (`#!/bin/sh\r` fails with "bad interpreter"), so a
+  script whose only change is its line endings pins a different digest. Keep scripts `LF` in git
+  (`.gitattributes`: `*.sh text eol=lf`).
 
 **Item tree** (domain-separated per kind: `rule`, `context`, `skill`, `agent`, `command`, `check`, `hook`, `role`,
-`settings`, `output`, `served-skill`):
+`settings`, `output`, `include`, `okf-include`, `installed-skill`, `skill-source`, `served-skill`):
 
 ```text
 digest = SHA256( lp("ai-rulez/<kind>/v1") || u64(n) || leaf_1 || … || leaf_n )
@@ -206,10 +206,17 @@ These were computed independently (Python's `hashlib`) and are checked by the te
 | tree `skill`: `SKILL.md` = `---\nname: deploy\n---\nDeploy.\n` (`100644`), `scripts/run.sh` = `#!/bin/sh\necho hi\n` (`100755`), `assets/logo.bin` = bytes `00 01 0d 0a 02` (`100644`) | `sha256:262d721306783b4c3b554a1345253c266f6f991733dad6a347e1b55d5e57ac05` |
 | the same skill with `run.sh` at `100644` | `sha256:aea011299a41f59be23cee1a602ab3c03fb3e60aa6ce4dc31f947255925d5c73` |
 | top digest of `(item/skill, "\0deploy", <the skill digest above>)` and `(output, "CLAUDE.md", "sha256:" + "ab"×32)` | `sha256:6cd1d810fce0e91263b3ebfa3610821a820a07b415a8f2a4b9415de191b6c24e` |
+| tree `skill`: `run.sh` = `echo hi\n` (`100755`) | `sha256:d7aec0e55512be14e8c20554ee6da9911881211fec26eec3927bb18b21212b54` |
+| the same with `echo hi\r\n` (scripts are not normalized) | `sha256:5b9fcff355356346b64a0f8146b7c65b765f377d1deddf29318ef9e686e7ee92` |
+| tree `installed-skill`: `SKILL.md` = `# S\n` | `sha256:018df4aac28d9eca573a05cb491c6704407d9b5de8ca10e0dfe20300928140db` |
+| tree `skill-source`: `SKILL.md` = `# S\n` | `sha256:cf90b42b8c9bbb2e9bc94075e4d8a183117f45b46d0b746b7bc617587f64bc7b` |
+| tree `served-skill`: `SKILL.md` = `# x\n` | `sha256:2225664563ac4bc0affa10d8ca1ea4dcd5ed2a61792b124824005493dffb458c` |
+| directory digest, kind `include`: `rules/a.md` = `# A\n` (`100644`), `hooks/x.sh` = `#!/bin/sh\n` (`100755`) | `sha256:94a2c6de5e10aa7eef64adb55330c4a84c02d49566d56adcedbd7f5db2ddf01c` |
+| the same directory, kind `okf-include` | `sha256:990b39514f6589c5e61d584b7f59173cb8b1a3bd260ee93af92ebedc819da5e7` |
 | top digest of no entries | `sha256:e8c93a22e1ed47e16dd881a55dc4fbc5ba685af20083b93469265da901784029` |
 
-The remote-source `digest` of an include or installed skill keeps the lock-version-1 algorithm (a `sha256` over the
-sorted file list, each with its path, executable flag and content hash), so existing pins stay valid.
+The remote-source `digest` of an include, OKF include, installed skill or skill source is the directory digest above:
+there is no second algorithm.
 
 ## Commands
 
@@ -250,11 +257,10 @@ revision), and that is worth a look too. Exit codes: `0` in sync, `1` the comman
 A change of the ai-rulez version is a note, not a failure: output digests can differ between releases, and the
 output lines then tell you which.
 
-A lock written before content pins existed (`version = 1`, or no `hash_version`) has none to compare, and a lock
-whose pins were stripped looks the same. `--check` therefore fails on it (exit `2`) and asks for `ai-rulez lock`,
+A lock without content pins (one written by `lock <name>` before any content was pinned) has none to compare, and a
+lock whose pins were stripped looks the same. `--check` therefore fails on it (exit `2`) and asks for `ai-rulez lock`,
 whatever `enforce` says: a check that passes on such a lock would let a downgrade switch the content checks off.
-Reading version 1 locks still works, and `generate` keeps using their include and skill pins. `generate --locked`
-on such a lock warns, and fails under `enforce`. A lock with content pins must also carry a `tree` digest.
+`generate` keeps using the include and skill pins of such a lock. `generate --locked` on it warns, and fails under `enforce`. A lock with content pins must also carry a `tree` digest.
 A hook `script` outside the project cannot be pinned; it is reported as a `lock` change (not an abort) until it
 moves inside the project.
 
@@ -272,8 +278,7 @@ prints the document described by
 {
   "schema_version": 1,
   "in_sync": false,
-  "lock_version": 2,
-  "hash_version": 1,
+  "lock_version": 1,
   "changes": [
     { "scope": "source", "change": "changed", "kind": "skill", "id": "deploy", "domain": "backend",
       "path": "domains/backend/skills/deploy", "old": "sha256:…", "new": "sha256:…", "detail": "version \"1.0.0\" -> \"1.1.0\"" },
@@ -302,7 +307,7 @@ With `enforce = true`, and only when a lock exists, `validate --strict` adds:
 
 | Code | Meaning |
 | --- | --- |
-| `AR981` `lock-source-drift` | An authored item was added, removed or changed since the lock was written, the lock has no content pins, or the lock cannot be read or compared (corrupt, a newer `hash_version`, an unpinnable source). Enforcement never skips a check it cannot run. |
+| `AR981` `lock-source-drift` | An authored item was added, removed or changed since the lock was written, the lock has no content pins, or the lock cannot be read or compared (corrupt, another lock `version`, an unpinnable source). Enforcement never skips a check it cannot run. |
 | `AR982` `lock-output-drift` | A generated output differs from its pinned digest. |
 
 Both default to `error`; they can be tuned with `[lint.severity]` like any other code.

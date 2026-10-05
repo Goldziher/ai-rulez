@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
@@ -235,7 +236,11 @@ func (s *GitSource) checkPin() error {
 	if dir == "" {
 		return nil
 	}
-	digest, err := lockfile.DigestDir(dir)
+	kind := contentlock.KindInclude
+	if s.okf {
+		kind = contentlock.KindOKFInclude
+	}
+	digest, err := contentlock.DigestDir(kind, dir)
 	if err != nil {
 		return oops.With("include", s.name).Wrapf(err, "digest include content")
 	}

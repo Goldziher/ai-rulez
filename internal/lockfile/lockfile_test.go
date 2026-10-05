@@ -2,7 +2,6 @@ package lockfile
 
 import (
 	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -39,7 +38,7 @@ func TestLoad(t *testing.T) {
 
 	require.NoError(t, os.WriteFile(Path(dir), []byte("version = 99\n"), 0o644))
 	_, err = Load(dir)
-	assert.ErrorContains(t, err, "unsupported lock file version")
+	assert.ErrorContains(t, err, "unsupported lock version 99")
 
 	require.NoError(t, os.WriteFile(Path(dir), []byte("not toml ["), 0o644))
 	_, err = Load(dir)
@@ -74,61 +73,26 @@ func TestIsFullSHA(t *testing.T) {
 	assert.False(t, IsFullSHA("0123456"))
 }
 
-func TestDigestDir(t *testing.T) {
-	write := func(dir, rel, body string, mode os.FileMode) {
-		p := filepath.Join(dir, rel)
-		require.NoError(t, os.MkdirAll(filepath.Dir(p), 0o755))
-		require.NoError(t, os.WriteFile(p, []byte(body), mode))
-		require.NoError(t, os.Chmod(p, mode))
-	}
-	a, b := t.TempDir(), t.TempDir()
-	for _, d := range []string{a, b} {
-		write(d, "x/one.md", "1", 0o644)
-		write(d, "two.md", "2", 0o644)
-	}
-	write(b, ".git/HEAD", "ref", 0o644)
-	write(b, ".cache_meta.json", "{}", 0o644)
-	da, err := DigestDir(a)
-	require.NoError(t, err)
-	db, err := DigestDir(b)
-	require.NoError(t, err)
-	assert.Equal(t, da, db, "VCS metadata and cache bookkeeping do not count")
-
-	write(b, "two.md", "changed", 0o644)
-	dc, err := DigestDir(b)
-	require.NoError(t, err)
-	assert.NotEqual(t, da, dc, "content changes the digest")
-
-	write(b, "two.md", "2", 0o755)
-	dd, err := DigestDir(b)
-	require.NoError(t, err)
-	assert.NotEqual(t, da, dd, "the executable bit changes the digest")
-}
-
-func TestLoadAcceptsVersion1AndRejectsNewerHashVersion(t *testing.T) {
+func TestLoadRefusesOtherVersionsWithAnActionableError(t *testing.T) {
 	dir := t.TempDir()
-	require.NoError(t, os.WriteFile(Path(dir), []byte("version = 1\n[[include]]\nname = \"a\"\nsource = \"https://example.com/a\"\ncommit = \"c\"\ndigest = \"sha256:1\"\n"), 0o644))
+	for _, body := range []string{"version = 0\n", "version = 2\n", "version = 99\n", "[[include]]\nname = \"a\"\n"} {
+		require.NoError(t, os.WriteFile(Path(dir), []byte(body), 0o644))
+		_, err := Load(dir)
+		require.Error(t, err, body)
+		assert.ErrorContains(t, err, "unsupported lock version")
+		assert.ErrorContains(t, err, "run `ai-rulez lock` to regenerate")
+	}
+
+	require.NoError(t, os.Remove(Path(dir)))
 	got, err := Load(dir)
 	require.NoError(t, err)
-	assert.False(t, got.HasContentPins(), "a version 1 lock has no content pins")
-	assert.Equal(t, "a", got.Include[0].Name)
-
-	// saving upgrades the format and keeps the remote pins
-	require.NoError(t, Save(dir, got))
-	again, err := Load(dir)
-	require.NoError(t, err)
-	assert.Equal(t, Version, again.Version)
-	assert.Equal(t, "a", again.Include[0].Name)
-
-	require.NoError(t, os.WriteFile(Path(dir), []byte("version = 2\nhash_version = 99\n"), 0o644))
-	_, err = Load(dir)
-	assert.ErrorContains(t, err, "hash_version")
+	assert.Nil(t, got)
 }
 
 func TestSaveSortsContentPinsAndIsStable(t *testing.T) {
 	dir := t.TempDir()
 	f := &File{
-		HashVersion: HashVersion, AIRulezVersion: "1.2.3", Tree: "sha256:t",
+		AIRulezVersion: "1.2.3", Tree: "sha256:t",
 		Item: []Item{
 			{Kind: "skill", ID: "b", Domain: "x", Digest: "sha256:2"},
 			{Kind: "rule", ID: "z", Digest: "sha256:1"},
@@ -149,16 +113,4 @@ func TestSaveSortsContentPinsAndIsStable(t *testing.T) {
 	assert.Equal(t, "a.md", got.Output[0].Path)
 	assert.Equal(t, "team", got.Item[1].Owner)
 	assert.NotContains(t, string(first), "Z\n", "no timestamps")
-}
-
-func TestDigestDir_RefusesASymlinkedRoot(t *testing.T) {
-	real := t.TempDir()
-	require.NoError(t, os.WriteFile(filepath.Join(real, "a.md"), []byte("a"), 0o644))
-	link := filepath.Join(t.TempDir(), "link")
-	require.NoError(t, os.Symlink(real, link))
-
-	_, err := DigestDir(link)
-	require.Error(t, err, "a symlink root would otherwise digest to the empty hash")
-	_, err = DigestDir(real)
-	require.NoError(t, err)
 }
