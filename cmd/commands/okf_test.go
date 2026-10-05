@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -176,4 +177,48 @@ func TestOKFImportRefusesSecrets(t *testing.T) {
 	assert.Equal(t, exitOKFProblems, runOKFImport(context.Background(), bundle, &out))
 	assert.Contains(t, out.String(), "AR001")
 	assert.NoDirExists(t, filepath.Join(target, ".ai-rulez", "rules"))
+}
+
+func TestStrictValidateLintsTheOKFBundle(t *testing.T) {
+	root := okfProject(t)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"okf\"]\n")
+	require.Equal(t, 0, runRecursiveGenerate())
+
+	strictCodes := func() map[string]string {
+		cfg, err := loadConfigForCommand(context.Background(), nil)
+		require.NoError(t, err)
+		report, err := strictLint(cfg)
+		require.NoError(t, err)
+		got := map[string]string{}
+		for _, f := range report.Findings {
+			if strings.HasPrefix(f.Code, "AR9B") {
+				got[f.Code+" "+f.File] = string(f.Severity)
+			}
+		}
+		return got
+	}
+	assert.Empty(t, strictCodes(), "a freshly generated bundle is clean")
+
+	bundle := filepath.Join(root, "docs", "okf")
+	writeFile(t, filepath.Join(bundle, "rules", "style.md"), "---\ntype: Decision\n---\n[gone](nope.md)\n")
+	got := strictCodes()
+	assert.Equal(t, "error", got["AR9B5 docs/okf/rules/style.md"])
+	assert.Equal(t, "warning", got["AR9B2 docs/okf/rules/style.md"])
+
+	require.NoError(t, os.Remove(filepath.Join(bundle, "rules", "style.md")))
+	got = strictCodes()
+	assert.Equal(t, "error", got["AR9B5 docs/okf/rules/style.md"])
+	assert.Equal(t, "warning", got["AR9B0 docs/okf/rules/index.md"])
+}
+
+func TestDoctorReportsOKFBundleProblems(t *testing.T) {
+	root := okfProject(t)
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), "version = \"4.0\"\nname = \"x\"\npresets = [\"claude\", \"okf\"]\n")
+	require.Equal(t, 0, runRecursiveGenerate())
+	writeFile(t, filepath.Join(root, "docs", "okf", "rules", "notype.md"), "plain text\n")
+	t.Cleanup(func() { doctorStrict, doctorJSON, doctorProfile = false, false, "" })
+	var out bytes.Buffer
+	code := runDoctor(context.Background(), nil, &out)
+	assert.Equal(t, exitDoctorFindings, code, out.String())
+	assert.Contains(t, out.String(), "AR9B1")
 }
