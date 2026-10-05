@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/convert-report.schema.json",
+  "title": "ai-rulez convert report",
+  "description": "The report printed by `ai-rulez convert --format json`: every input construct as mapped, approximated, dropped, needs-action or unsupported.",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "importer",
+    "source",
+    "into",
+    "written",
+    "counts",
+    "findings",
+    "files",
+    "security",
+    "validation"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "importer": { "type": "string", "description": "Comma-separated importer names that ran." },
+    "source": { "type": "string" },
+    "into": { "type": "string", "description": "The config directory the tree is written to." },
+    "written": { "type": "boolean" },
+    "counts": {
+      "type": "object",
+      "required": ["mapped", "approximated", "dropped", "needs_action", "unsupported"],
+      "additionalProperties": false,
+      "properties": {
+        "mapped": { "type": "integer", "minimum": 0 },
+        "approximated": { "type": "integer", "minimum": 0 },
+        "dropped": { "type": "integer", "minimum": 0 },
+        "needs_action": { "type": "integer", "minimum": 0 },
+        "unsupported": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["status", "source"],
+        "additionalProperties": false,
+        "properties": {
+          "status": { "enum": ["mapped", "approximated", "dropped", "needs-action", "unsupported"] },
+          "source": { "type": "string", "description": "Input file." },
+          "field": { "type": "string", "description": "Field or construct inside the source." },
+          "target": { "type": "string", "description": "Where it went; empty when dropped." },
+          "reason": { "type": "string" },
+          "code": { "enum": ["AR9F1", "AR9F2", "AR9F3", "AR9F4"], "description": "Absent for mapped findings." }
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "action"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "description": "Relative to the config directory." },
+          "action": { "enum": ["create", "unchanged", "overwrite", "merge", "conflict", "manual"] }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "required": ["blocked", "findings"],
+      "additionalProperties": false,
+      "properties": {
+        "blocked": { "type": "boolean" },
+        "code": { "const": "AR9F5" },
+        "findings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["code", "severity", "file", "message"],
+            "additionalProperties": false,
+            "properties": {
+              "code": { "type": "string" },
+              "severity": { "type": "string" },
+              "file": { "type": "string" },
+              "line": { "type": "integer" },
+              "message": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "required": ["errors", "warnings"],
+      "additionalProperties": false,
+      "properties": {
+        "errors": { "type": "integer", "minimum": 0 },
+        "warnings": { "type": "integer", "minimum": 0 },
+        "messages": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

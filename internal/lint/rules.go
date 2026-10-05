@@ -51,47 +51,56 @@ func ParseSeverity(v string) (Severity, bool) {
 // Rule codes. They are part of the public contract (config, JSON output,
 // inline ignores): never renumber or reuse one.
 const (
-	CodeSecretDetected       = "AR001"
-	CodeHiddenCharacters     = "AR002"
-	CodeCommentInstruction   = "AR003"
-	CodeInjectionPhrase      = "AR004"
-	CodeShellExec            = "AR005"
-	CodeShellAccess          = "AR006"
-	CodeToolBreadth          = "AR007"
-	CodeOutboundHost         = "AR008"
-	CodeEncodedBlob          = "AR009"
-	CodeUnpinnedRemote       = "AR010"
-	CodeExternalFinding      = "AR011"
-	CodeGlobNoMatch          = "AR101"
-	CodeLinkUnresolved       = "AR201"
-	CodeAnchorUnresolved     = "AR202"
-	CodeReferenceUnknown     = "AR301"
-	CodeFrontmatterSkill     = "AR302"
-	CodeFrontmatterKey       = "AR303"
-	CodePathMissing          = "AR401"
-	CodeSkillResourceMissing = "AR402"
-	CodeHookMissing          = "AR501"
-	CodeHookNotExecutable    = "AR502"
-	CodeScriptNotExecutable  = "AR503"
-	CodeHookSourceMissing    = "AR504"
-	CodeHookSourceNotExec    = "AR505"
-	CodePermissionOverbroad  = "AR506"
-	CodeMCPCommandNotFound   = "AR601"
-	CodeDescriptionDup       = "AR701"
-	CodeDescriptionNearDup   = "AR702"
-	CodeDuplicateCollapsed   = "AR703"
-	CodeDescriptionMissing   = "AR801"
-	CodeDescriptionLength    = "AR802"
-	CodeDescriptionStyle     = "AR803"
-	CodeSkillNameInvalid     = "AR804"
-	CodeSizeLines            = "AR901"
-	CodeSizeTokens           = "AR902"
-	CodeMetadataMissing      = "AR951"
-	CodeMetadataInvalid      = "AR952"
-	CodeMetadataStale        = "AR953"
-	CodeSupersededMissing    = "AR954"
-	CodePluginVersionDrift   = "AR961"
-	CodeEvalsMissing         = "AR962"
+	CodeSecretDetected          = "AR001"
+	CodeHiddenCharacters        = "AR002"
+	CodeCommentInstruction      = "AR003"
+	CodeInjectionPhrase         = "AR004"
+	CodeShellExec               = "AR005"
+	CodeShellAccess             = "AR006"
+	CodeToolBreadth             = "AR007"
+	CodeOutboundHost            = "AR008"
+	CodeEncodedBlob             = "AR009"
+	CodeUnpinnedRemote          = "AR010"
+	CodeExternalFinding         = "AR011"
+	CodeScannerConfigInvalid    = "AR9E0"
+	CodeScannerEgressUndeclared = "AR9E1"
+	CodeScannerUnavailable      = "AR9E2"
+	CodeScannerRunFailed        = "AR9E3"
+	CodeScannerEgressBlocked    = "AR9E4"
+	CodeCursorRuleExtension     = "AR9C1"
+	CodeCursorRuleNotApplied    = "AR9C2"
+	CodeCopilotExcludeAgent     = "AR9C3"
+	CodeCopilotInstructionsName = "AR9C4"
+	CodeGlobNoMatch             = "AR101"
+	CodeLinkUnresolved          = "AR201"
+	CodeAnchorUnresolved        = "AR202"
+	CodeReferenceUnknown        = "AR301"
+	CodeFrontmatterSkill        = "AR302"
+	CodeFrontmatterKey          = "AR303"
+	CodePathMissing             = "AR401"
+	CodeSkillResourceMissing    = "AR402"
+	CodeHookMissing             = "AR501"
+	CodeHookNotExecutable       = "AR502"
+	CodeScriptNotExecutable     = "AR503"
+	CodeHookSourceMissing       = "AR504"
+	CodeHookSourceNotExec       = "AR505"
+	CodePermissionOverbroad     = "AR506"
+	CodeMCPCommandNotFound      = "AR601"
+	CodeDescriptionDup          = "AR701"
+	CodeDescriptionNearDup      = "AR702"
+	CodeDuplicateCollapsed      = "AR703"
+	CodeDescriptionMissing      = "AR801"
+	CodeDescriptionLength       = "AR802"
+	CodeDescriptionStyle        = "AR803"
+	CodeSkillNameInvalid        = "AR804"
+	CodeSizeLines               = "AR901"
+	CodeSizeTokens              = "AR902"
+	CodeMetadataMissing         = "AR951"
+	CodeMetadataInvalid         = "AR952"
+	CodeMetadataStale           = "AR953"
+	CodeSupersededMissing       = "AR954"
+	CodePluginVersionDrift      = "AR961"
+	CodeEvalsMissing            = "AR962"
 )
 
 // RuleInfo describes one check.
@@ -114,6 +123,15 @@ var registry = []RuleInfo{
 	{CodeEncodedBlob, "encoded-blob", SeverityWarning, "a long base64-like blob that a reviewer cannot read"},
 	{CodeUnpinnedRemote, "unpinned-remote", SeverityWarning, "a remote include or installed skill follows a moving ref and ai-rulez.lock does not pin it"},
 	{CodeExternalFinding, "external-finding", SeverityWarning, "a finding reported by a scanner configured in lint.external"},
+	{CodeScannerConfigInvalid, "scanner-config-invalid", SeverityError, "a [[lint.external]] entry has an invalid timeout or an env_pass name an egress = false scanner must not receive; it is not run"},
+	{CodeScannerEgressUndeclared, "scanner-egress-undeclared", SeverityWarning, "a [[lint.external]] entry does not declare egress, so it runs with the full environment"},
+	{CodeScannerUnavailable, "scanner-unavailable", SeverityWarning, "a [[lint.external]] scanner's binary was not found, so it did not run"},
+	{CodeScannerRunFailed, "scanner-run-failed", SeverityError, "a [[lint.external]] scanner timed out, exceeded the output cap, or printed unreadable, unsuccessful or oversized output"},
+	{CodeScannerEgressBlocked, "scanner-egress-blocked", SeverityError, "a [[lint.external]] scanner was not run: egress = true without --allow-egress, or a network flag on an egress = false scanner"},
+	{CodeCursorRuleExtension, "cursor-rule-extension-ignored", SeverityWarning, "a file in .cursor/rules is not .mdc, so Cursor ignores it (error when ai-rulez generated it; runs when cursor is a configured preset or in lint.traps.extra_harnesses)"},
+	{CodeCursorRuleNotApplied, "cursor-rule-not-applied", SeverityWarning, "a hand-written .mdc rule has no description, globs or alwaysApply, so it applies only when @-mentioned"},
+	{CodeCopilotExcludeAgent, "copilot-exclude-agent-invalid", SeverityWarning, "a Copilot instructions file sets excludeAgent to something other than code-review or cloud-agent"},
+	{CodeCopilotInstructionsName, "copilot-instructions-suffix", SeverityWarning, "a file in .github/instructions does not end in .instructions.md, so Copilot skips it (error when ai-rulez generated it)"},
 	{CodeGlobNoMatch, "glob-no-match", SeverityError, "a paths/globs pattern matches no tracked file"},
 	{CodeLinkUnresolved, "link-unresolved", SeverityError, "a relative markdown link does not resolve to a file"},
 	{CodeAnchorUnresolved, "anchor-unresolved", SeverityWarning, "a markdown link anchor matches no heading in the target"},
@@ -173,4 +191,11 @@ type Finding struct {
 	Line     int      `json:"line"`
 	Message  string   `json:"message"`
 	Root     string   `json:"root,omitempty"`
+	// Harness, Evidence, VerifiedOn and Hint describe a harness trap (AR9C*):
+	// the tool that ignores the file, the vendor page that says so, the date it
+	// was checked, and how to fix it.
+	Harness    string `json:"harness,omitempty"`
+	Evidence   string `json:"evidence,omitempty"`
+	VerifiedOn string `json:"verified_on,omitempty"`
+	Hint       string `json:"hint,omitempty"`
 }

@@ -1,0 +1,84 @@
+# Harness trap table: files a harness silently ignores. Each row is data, not
+# code: a closed predicate vocabulary (see traps.go), provenance (source, an
+# anchor quote copied from the vendor page, verified_on) and a fix hint.
+# A row must not ship without a quote and a date. docs/harness-traps.md is
+# generated from this table (go test checks it for drift).
+schema = 1
+
+[[trap]]
+code = "AR9C1"
+name = "cursor-rule-extension-ignored"
+harness = "cursor"
+message = "Cursor ignores files in .cursor/rules that are not .mdc"
+certainly_inert = true
+hint = "Rename it to .mdc and add frontmatter (description, globs, alwaysApply), or move the text to AGENTS.md."
+source = "https://cursor.com/docs/rules"
+quote = "A plain .md file in .cursor/rules is ignored by the rules system"
+verified_on = "2026-10-05"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".cursor/rules"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "ext-not-in"
+allowed = [".mdc"]
+ignore_names = ["README.md", "RULE.md"]
+
+[[trap]]
+code = "AR9C2"
+name = "cursor-rule-not-applied"
+harness = "cursor"
+message = "this Cursor rule has no description, globs or alwaysApply, so it applies only when @-mentioned in chat"
+certainly_inert = false
+hint = "Set alwaysApply: true, add globs, or add a description so the agent can request it. Ignore this finding if manual-only is intended."
+source = "https://cursor.com/docs/rules"
+quote = "Included only when you @-mention the rule in chat."
+verified_on = "2026-10-05"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".cursor/rules"
+suffix = ".mdc"
+kinds = ["handwritten"]
+[trap.predicate]
+kind = "frontmatter-missing-all"
+keys = ["globs", "description"]
+unless = ["alwaysApply"]
+
+[[trap]]
+code = "AR9C3"
+name = "copilot-exclude-agent-invalid"
+harness = "copilot"
+message = "excludeAgent must be \"code-review\" or \"cloud-agent\""
+certainly_inert = false
+hint = "The current docs list \"code-review\" and \"cloud-agent\"; the older \"coding-agent\" spelling is still accepted. Any other value is undocumented."
+source = "https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions"
+quote = "Use either \"code-review\" or \"cloud-agent\""
+verified_on = "2026-10-05"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".github/instructions"
+suffix = ".instructions.md"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "frontmatter-enum"
+key = "excludeAgent"
+allowed = ["code-review", "cloud-agent", "coding-agent"]
+
+[[trap]]
+code = "AR9C4"
+name = "copilot-instructions-suffix"
+harness = "copilot"
+message = "Copilot reads path-specific instructions only from files named *.instructions.md"
+certainly_inert = true
+hint = "Rename the file to <name>.instructions.md, or move the text to .github/copilot-instructions.md."
+source = "https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions"
+quote = "The file name must end with .instructions.md"
+verified_on = "2026-10-05"
+harness_version = "docs as of verified_on"
+[trap.scope]
+dir = ".github/instructions"
+kinds = ["generated", "handwritten"]
+[trap.predicate]
+kind = "name-suffix-required"
+suffix = ".instructions.md"
+ignore_names = ["README.md"]

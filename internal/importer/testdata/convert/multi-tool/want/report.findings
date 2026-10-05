@@ -1,0 +1,12 @@
+mapped | .claude/agents/planner.md | agent | agents/planner.md | 
+approximated | .claude/agents/planner.md | tools | tools | comma-separated tools string converted to a list
+mapped | .claude/commands/build.md | command | commands/build.md | 
+mapped | .claude/skills/review | skill | skills/review/SKILL.md | 
+approximated | .cursor/rules/go-style.mdc | frontmatter |  | frontmatter is not valid YAML as written; it was read leniently, review the result
+mapped | .cursor/rules/go-style.mdc | rule | rules/go-style.md | 
+mapped | .github/instructions/tests.instructions.md | rule | rules/tests.md | 
+mapped | .kiro/steering/product.md | rule | rules/product.md | 
+mapped | .mcp.json | mcpServers.docs | mcp_servers.docs | 
+needs-action | .mcp.json | mcpServers.docs.headers.Authorization |  | literal credential replaced by a ${AUTHORIZATION} reference; export the variable before generating
+mapped | .windsurf/rules/security.md | rule | rules/security.md | 
+mapped | AGENTS.md | context | context/agents.md | identical content also found in CLAUDE.md
