@@ -227,6 +227,31 @@ one entry per accepted finding:
   report says `budget: AR401 has 13 finding(s), over its budget of 12`). Lower the number over time. Budgets apply
   per root, after the baseline.
 
+## Changed-only mode
+
+```bash
+ai-rulez validate --strict --since origin/main    # files changed since a revision
+ai-rulez validate --strict --changed              # shorthand for --since HEAD
+```
+
+The whole tree is still indexed and linted, so a link, a skill name or a hook path is resolved against everything
+that exists, not only against the changed files. Only the *report* is narrowed, to findings located in
+
+1. files that changed since the revision (committed, staged and unstaged changes, deletions, and untracked files that
+   are not ignored), and
+2. files that refer to a changed file: by a markdown link, a backticked repository path, a skill, agent, rule or
+   command name, a skill's `references/` or `scripts/` path, a frontmatter `skills:` entry or a hook command.
+
+So editing or deleting `guide.md` also shows the broken link in the rule that points at it. The dependency is one
+hop (a file that refers to a dependent is not shown). The text report ends with a `changed-only since <rev>` line and
+`--format json` carries a `changed_only` object. The baseline is applied to the full set first, so stale entries are
+judged against every finding, and a `[lint.budget]` is judged against the full set too; exit status reflects only
+the findings shown. `--update-baseline` cannot be combined with `--since`.
+
+git is run with the repository variables a parent git process exports (`GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`,
+`GIT_CONFIG_*`, ...) removed from its environment, so the command is safe inside a git hook and never addresses the
+hook's repository instead of the project.
+
 ## Security checks
 
 `AR001` to `AR011` are deterministic and offline: they read text and report patterns, they never fetch or run

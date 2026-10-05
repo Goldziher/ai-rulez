@@ -33,14 +33,8 @@ var (
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || baselineFlagsSet()) {
-		return oops.Errorf("--format, --output, --fail-on, --external and the baseline flags require --strict")
-	}
-	if validateUpdateBaseline && validateStrictBaseline {
-		return oops.Errorf("--update-baseline and --strict-baseline cannot be combined: updating rewrites the entries that --strict-baseline would reject")
-	}
-	if validateBaselineReason != "" && !validateUpdateBaseline {
-		return oops.Errorf("--baseline-reason only applies with --update-baseline")
+	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || baselineFlagsSet() || changedRev() != "") {
+		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed and the baseline flags require --strict")
 	}
 	if !lint.IsFormat(validateFormat) {
 		return oops.Errorf("unknown --format %q (use %s)", validateFormat, strings.Join(lint.Formats(), ", "))
@@ -49,6 +43,23 @@ func checkStrictFlags() error {
 	case "", "error", "warning", "info", "none":
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
+	}
+	return checkFlagCombinations()
+}
+
+// checkFlagCombinations rejects strict flags that contradict each other.
+func checkFlagCombinations() error {
+	if validateSince != "" && validateChanged {
+		return oops.Errorf("--since and --changed cannot be combined (--changed is --since HEAD)")
+	}
+	if validateUpdateBaseline && validateStrictBaseline {
+		return oops.Errorf("--update-baseline and --strict-baseline cannot be combined: updating rewrites the entries that --strict-baseline would reject")
+	}
+	if validateUpdateBaseline && changedRev() != "" {
+		return oops.Errorf("--update-baseline needs every finding; it cannot be combined with --since or --changed")
+	}
+	if validateBaselineReason != "" && !validateUpdateBaseline {
+		return oops.Errorf("--baseline-reason only applies with --update-baseline")
 	}
 	return nil
 }
@@ -100,9 +111,17 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		fmtError(err)
 		return 1
 	}
-	combined := lint.Combine(reports)
+	excess := make([][]lint.BudgetExcess, len(reports))
 	for i, report := range reports {
-		combined.Budgets = append(combined.Budgets, budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)...)
+		excess[i] = budgetsFor(cfgAt(cfgs, i)).Excess(report.Findings)
+	}
+	if err := narrowToChanged(reports, cfgs); err != nil {
+		fmtError(err)
+		return 1
+	}
+	combined := lint.Combine(reports)
+	for _, e := range excess {
+		combined.Budgets = append(combined.Budgets, e...)
 	}
 	if err := writeReport(combined, failOnFor(cfgAt(cfgs, 0))); err != nil {
 		fmtError(err)
@@ -111,7 +130,7 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	code := 0
 	for i, report := range reports {
 		cfg := cfgAt(cfgs, i)
-		if lint.FailedWith(report.Findings, failOnFor(cfg), budgetsFor(cfg)) {
+		if lint.FailedWithExcess(report.Findings, failOnFor(cfg), budgetsFor(cfg), excess[i]) {
 			code = exitStrictFindings
 		}
 	}

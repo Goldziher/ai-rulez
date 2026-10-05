@@ -37,6 +37,8 @@ type Combined struct {
 	Baseline *BaselineSummary `json:"baseline,omitempty"`
 	// Budgets lists rules over their [lint.budget].
 	Budgets []BudgetExcess `json:"budgets_exceeded,omitempty"`
+	// ChangedOnly is set when the report was narrowed to changed files.
+	ChangedOnly *ChangedScope `json:"changed_only,omitempty"`
 }
 
 // Combine merges per-root reports into one document.
@@ -45,6 +47,14 @@ func Combine(reports []*Report) Combined {
 	for _, r := range reports {
 		c.Roots = append(c.Roots, r.Root)
 		c.Findings = append(c.Findings, r.Findings...)
+		if r.Scope != nil {
+			if c.ChangedOnly == nil {
+				c.ChangedOnly = &ChangedScope{Since: r.Scope.Since}
+			}
+			c.ChangedOnly.Changed += r.Scope.Changed
+			c.ChangedOnly.Dependents += r.Scope.Dependents
+			c.ChangedOnly.Dropped += r.Scope.Dropped
+		}
 		if r.Baseline != nil {
 			if c.Baseline == nil {
 				c.Baseline = &BaselineSummary{Paths: []string{}}
@@ -117,6 +127,9 @@ func WriteText(w io.Writer, c Combined) error {
 
 // writeBaselineText adds the baseline and budget lines of the text report.
 func writeBaselineText(sb *strings.Builder, c Combined) {
+	if s := c.ChangedOnly; s != nil {
+		fmt.Fprintf(sb, "changed-only since %s: %d changed file(s), %d file(s) referring to them; %d finding(s) in other files not shown\n", s.Since, s.Changed, s.Dependents, s.Dropped)
+	}
 	for _, e := range c.Budgets {
 		fmt.Fprintf(sb, "budget: %s has %d finding(s), over its budget of %d\n", e.Code, e.Count, e.Max)
 	}
