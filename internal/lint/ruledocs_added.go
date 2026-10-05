@@ -295,5 +295,10 @@ func init() {
 			Bad:  "`api_key_env = \"sk-live-123\"`",
 			Good: "`api_key_env = \"ANTHROPIC_API_KEY\"`",
 		},
+		CodeLLMUntrustedKey: {
+			Why:  "A repository can be cloned from anyone, so its [llm] table may not enable the network, point base_url elsewhere, name the API key variable or override prices; the value is ignored and only the user config file or AI_RULEZ_LLM_* may set it.",
+			Bad:  "`allow_network = true` in the repository ai-rulez.toml",
+			Good: "Set `allow_network = true` in the user config file (`~/.config/ai-rulez/config.toml`) or AI_RULEZ_LLM_ALLOW_NETWORK",
+		},
 	})
 }

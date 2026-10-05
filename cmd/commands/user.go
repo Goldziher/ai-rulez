@@ -19,11 +19,6 @@ var (
 	assumeYes bool
 )
 
-const (
-	userConfigSubdir = "ai-rulez"
-	userConfigRoot   = ".config"
-)
-
 // userHomeDir is the home directory user scope writes below; a variable so tests
 // can point it at a temporary directory.
 var userHomeDir = os.UserHomeDir
@@ -35,10 +30,7 @@ func userConfigPath(home string) string {
 	if cfgFile != "" {
 		return cfgFile
 	}
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
-		return filepath.Join(xdg, userConfigSubdir)
-	}
-	return filepath.Join(home, userConfigRoot, userConfigSubdir)
+	return config.UserConfigDir(os.Getenv, home)
 }
 
 // newUserGenerator loads the user config and returns a Generator in user scope

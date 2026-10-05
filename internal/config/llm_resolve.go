@@ -21,17 +21,13 @@ type LLMResolution struct {
 	UserFile string
 }
 
-// userLLMConfigPath is $XDG_CONFIG_HOME/ai-rulez/config.toml (XDG_CONFIG_HOME
-// absolute) or ~/.config/ai-rulez/config.toml.
+// userLLMConfigPath is config.toml in UserConfigDir.
 func userLLMConfigPath(getenv func(string) string) string {
-	if xdg := getenv("XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
-		return filepath.Join(xdg, "ai-rulez", "config.toml")
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
+	dir := UserConfigDir(getenv, "")
+	if dir == "" {
 		return ""
 	}
-	return filepath.Join(home, ".config", "ai-rulez", "config.toml")
+	return filepath.Join(dir, "config.toml")
 }
 
 // loadUserLLM reads the [llm] table of the user config file. A missing file or

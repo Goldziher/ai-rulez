@@ -300,26 +300,10 @@ func contains(list []string, want string) bool {
 	return false
 }
 
-// UserConfigDir is the user-level ai-rulez directory: $XDG_CONFIG_HOME/ai-rulez
-// when XDG_CONFIG_HOME is absolute, else ~/.config/ai-rulez.
-func UserConfigDir(getenv func(string) string) string {
-	if getenv == nil {
-		getenv = os.Getenv
-	}
-	if xdg := getenv("XDG_CONFIG_HOME"); xdg != "" && filepath.IsAbs(xdg) {
-		return filepath.Join(xdg, "ai-rulez")
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return ""
-	}
-	return filepath.Join(home, ".config", "ai-rulez")
-}
-
 // LoadUser reads the [telemetry] table of the user config file. A missing file
 // or table is not an error.
 func LoadUser(getenv func(string) string) (*config.TelemetryConfig, string, error) {
-	dir := UserConfigDir(getenv)
+	dir := config.UserConfigDir(getenv, "")
 	if dir == "" {
 		return nil, "", nil
 	}
