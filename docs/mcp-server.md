@@ -254,7 +254,8 @@ into generated frontmatter.
 ### What `generate` does
 
 - A skill whose delivery is `served` is not written to any preset's skill tree. `static` and `both` skills are.
-- When any skill is `served` or `both`, one stub skill named `dynamic-skills` is added to the root skills of
+- When any skill is `served` or `both`, or a `[[skill_sources]]` entry is configured (its skills are served,
+  never written), one stub skill named `dynamic-skills` is added to the root skills of
   every preset whose harness can call MCP tools. A skill you author with that name is used instead of the stub.
 - A preset whose harness cannot call MCP (for example `cline`, `rovodev`, or any custom preset) keeps every
   served skill as a static file and gets no stub. Each such preset is named in a warning (`AR992`).
@@ -288,7 +289,7 @@ A project that sets no delivery anywhere serves every skill, as `--serve-skills`
 | `--frozen` | Never use the network and require `ai-rulez.lock` to cover every remote include, installed skill and skill source. |
 | `--offline` | Never use the network; use the lock and the cache when present. |
 | `--include-static` | Also serve skills whose delivery is static. |
-| `--budget-bytes` | Bytes `load_skill` may return per session. Default 262144 (256 KiB); `-1` removes the cap. |
+| `--budget-bytes` | Bytes of skill content a session may read, through `load_skill`, `get_skill`, `read_skill_file` and `resources/read` together. Default 262144 (256 KiB); `-1` removes the cap. |
 | `--usage-log`, `--usage-sink` | Where to record each `load_skill` (see [Usage telemetry](#usage-telemetry)). |
 | `--no-watch`, `--reload-interval` | Turn live reload off, or change the two-second check interval. |
 
@@ -311,11 +312,16 @@ working as described above. All tools are annotated read-only.
   It is lexical and deterministic: score descending, then name. Embedding search is not implemented.
 - **Roles.** `role` is resolved against the project's `[[roles]]` (`mcp.RolesFromConfig`): a skill is in scope
   when the role keeps it (its domains and `skills` include and exclude selectors, `extends` merged in). Matches
-  inside the scope come first, then the rest marked `in_role: false`; an unknown role is an error. A skill that
+  inside the scope come first, then the rest marked `in_role: false`; an unknown role is an error. The `role`
+  argument is a ranking lens the caller chooses, not access control: what a server can load is decided by
+  `--role` at start, which builds the catalog without the skills outside the role (they cannot be found,
+  loaded, listed or read by name). A skill that
   comes from a `[[skill_sources]]` entry is matched by name against the role's `skills` selectors. The role is
   read again on every live reload.
-- **Budget.** Each session may receive `--budget-bytes` bytes from `load_skill`. A load that would exceed the
-  remainder is refused with the bytes left and is not charged; `budget_bytes` on one call truncates that
+- **Budget.** Each session may read `--budget-bytes` bytes of skill content; `load_skill`, `get_skill`,
+  `read_skill_file` and `resources/read` draw on the same budget (listing tools cost nothing, and a repeated
+  read is charged again). A read that would exceed the
+  remainder is refused and is not charged (`load_skill` reports the bytes left); the server tracks at most 1024 sessions; `budget_bytes` on one call truncates that
   call's file (at a character boundary) and reports `truncated` and `total_bytes`. Supporting files count too.
 - **Path.** `path` is relative to the skill. Absolute paths, `..`, backslashes and names that are not valid
   `skill://` path segments are rejected. Binary files are read with `resources/read`.
@@ -329,13 +335,15 @@ A source is a repository (or a directory) of skill directories, served and never
 ```toml
 [[skill_sources]]
 name = "acme"                                  # identifies the source in the lock
-url = "https://github.com/acme/skills.git"     # git URL (a leading git+ is accepted) or a local directory
+url = "https://github.com/acme/skills.git"     # git URL (https, ssh or file; a leading git+ is accepted) or a local directory
 ref = "v1.2.0"                                 # a tag or a full commit SHA
 path = "skills"                                # subdirectory whose children are skills
 include = ["pdf-*", "sql"]                     # directory-name globs; exclude wins
 exclude = ["*-wip"]
 name_prefix = "acme-"                          # served as acme-pdf-forms, and SKILL.md name is rewritten
 trust = "error"                                # scan level: error (default) or warn
+max_skills = 200                               # optional: skills the source may load (default 200)
+max_bytes = 67108864                           # optional: bytes of skill files it may load (default 64 MiB)
 ```
 
 `--source` takes the same thing on the command line: `[git+]<url>[@<tag|commit>][#<subdir>]` or a directory,
@@ -345,22 +353,41 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
 
 - **Pinning.** A tag is resolved to the commit it points at (an annotated tag is peeled), a full SHA is used as
   is. `ai-rulez lock` records the commit and the tree digest (the same `sha256` scheme as includes) as a `[[source]]`
-  entry in `ai-rulez.lock`. With the lock, the pinned commit is fetched even if the tag later moves, and the fetched
-  tree must match the digest or serving fails.
-- **Unpinned refs.** A branch, or no ref, follows a moving ref; it is reported as unpinned (`AR010`, and a warning
-  at serve time) until the lock covers it.
+  entry in `ai-rulez.lock`. With the lock, the pinned commit is fetched by its SHA even if the tag or branch has
+  since moved, and the fetched tree must match the digest or serving fails. A server that refuses fetching a
+  commit by SHA is asked for the ref with its history instead; if the pinned commit is no longer reachable from
+  it (history was rewritten), the fetch fails closed and says so. The `commit` in a lock entry must be a full hex
+  SHA.
+- **Unpinned refs.** A branch, a tag the lock does not cover, or no ref, follows a moving ref; it is reported as
+  unpinned (`AR010`, and a warning at serve time) until the lock covers it.
+- **Transports and private repositories.** Git runs without hooks, credential helpers, prompts or submodules and
+  only speaks `https`, `ssh` and `file` (never `ext::`; plain `http://` is not fetched). A `url` or `ref` that
+  starts with `-` is rejected, as git would read it as an option. Credentials are not injected and the git
+  credential helpers are off, so a private repository needs an `ssh` URL that works non-interactively (an
+  ssh-agent key); a private `https` repository is not supported. Each git command is cut off after five minutes.
+- **Limits.** A source may load at most `max_skills` skills (default 200) and `max_bytes` bytes of skill files
+  (default 64 MiB); a larger source is an error naming the key. A skill has at most 2000 files.
 - **Cache and network.** Trees are cached per commit under `~/.cache/ai-rulez/skill-sources/`. `--frozen` requires
   the lock to cover the source and never touches the network (the commit must be cached). `--offline` does not
   require the lock: it uses the lock's commit, or the commit an earlier online run recorded for that ref.
 - **Local directories** need no network; a lock entry pins their digest, and serving refuses a changed tree.
-- **Safety.** Symlinks are never followed, files over 2 MiB and skills over 8 MiB are skipped with a warning,
-  and a skill whose name collides with one already served is skipped (set `name_prefix`).
+- **Safety.** Symlinks below the source are never followed; a `path` of a git source that goes through a
+  symlink is refused, and a local source directory that is itself a symlink is resolved and digested through
+  the link. A file over 2 MiB is dropped with a warning, a skill over 8 MiB is skipped with a warning. A source
+  skill is served under its directory name (with `name_prefix`), whatever its `name:` says (SKILL.md is
+  rewritten), and a skill whose name collides with one already served is skipped (set `name_prefix`); the
+  project's skill wins.
 
 ### Security scan
 
 Every served skill is scanned before it is served, with the rules of `ai-rulez scan` (secrets,
 hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, encoded blobs) over
-`SKILL.md` and every text file. A skill that fails is not served: it is absent from `resources/list`,
+`SKILL.md` and every text file of at most 512 KiB. A file the scan cannot read (binary: a NUL byte or invalid
+UTF-8; or over 512 KiB) is reported as `AR989`. At `trust = "error"` (remote sources, installed skills) such a
+file is not served at all (`load_skill`, `resources/read` and the file list omit it; provenance lists it under
+`unserved_unscannable_files`, and the lock digest still covers it), and a `SKILL.md` that cannot be scanned
+refuses the skill. At `trust = "warn"` (skills authored in the project) the file is served with the warning.
+A skill that fails is not served: it is absent from `resources/list`,
 `skills/list` and `find_skill`, a warning names the finding on stderr, and `load_skill` says why. Inline
 `ai-rulez-lint-ignore` comments are not honored. The level is `trust` for a source skill:
 
@@ -382,8 +409,10 @@ enforce = true
 the server refuses a served skill whose digest differs from the lock, and one the lock does not pin, with
 `AR995`. `validate --strict` reports the same. The lock digest is a `sha256:` tree digest in the same scheme as
 the other pins ([Lock file](lockfile.md#served-skills-and-skill-sources), domain `ai-rulez/served-skill/v1`). It
-covers the rendered files but not the header lines that change without the skill changing (the project-wide
-`Source-Hash` and the `Generated:` stamp), so editing one skill does not invalidate the others. The digest is of
+covers the rendered files but not the generated header lines that change without the skill changing (a whole
+`Source-Hash: <algorithm>:<hex>` line and the `Generated:` date stamp, in the first 40 lines of a rendered
+file), so editing one skill does not invalidate the others. Files of a skill source are digested exactly as
+they are: nothing in them is ignored. The digest is of
 the rendering for the default preset (`--targets` to serve another preset's rendering fails enforcement by
 design). Skills that only a role serves are pinned too: `lock` builds the unscoped view and the view of every
 role. `ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
@@ -402,7 +431,9 @@ or enable `[usage] skills_index = true`, which logs to `<config dir>/local/usage
 
 The server checks the configuration directory (and local source directories) every two seconds. When a file
 changes it rebuilds the catalog, swaps it in, and sends `notifications/resources/list_changed`. A rebuild that
-fails keeps the previous catalog serving. Polling keeps the dependency set unchanged; git sources are immutable
+fails keeps the previous catalog serving and is retried with a growing pause (up to a minute) until it works or
+the files change again. Usage logs (`.jsonl` files in a `local/` directory, or `--usage-log`) do not count as
+changes. Polling keeps the dependency set unchanged; git sources are immutable
 per commit and are not re-fetched.
 
 ### Strict validation
@@ -415,6 +446,7 @@ per commit and are not re-fetched.
 | `AR993` | warning | Skills are served but no `[[mcp_servers]]` entry runs `--serve-skills` |
 | `AR994` | error | `delivery` frontmatter is not static, served or both |
 | `AR995` | error | `[lock] enforce` and a served skill is unpinned or its digest differs |
+| `AR989` | warning / error | A served file cannot be scanned (binary or over 512 KiB); an error for `SKILL.md` |
 
 See [Strict validation](strict-validation.md) for the full table.
 
