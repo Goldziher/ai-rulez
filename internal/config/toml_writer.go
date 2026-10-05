@@ -1,6 +1,7 @@
 package config
 
 import (
+	"github.com/Goldziher/ai-rulez/internal/llm"
 	toml "github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 )
@@ -53,6 +54,7 @@ type tomlOutput struct {
 	Roles           []RoleConfig           `toml:"roles,omitempty"`
 	RoleManifest    *RoleManifestConfig    `toml:"role_manifest,omitempty"`
 	Lock            *LockConfig            `toml:"lock,omitempty"`
+	LLM             *llm.Config            `toml:"llm,omitempty"`
 	Scopes          []ScopeConfig          `toml:"scopes,omitempty"`
 	Plugins         []PluginConfig         `toml:"plugins,omitempty"`
 	Marketplaces    []MarketplaceConfig    `toml:"marketplaces,omitempty"`
@@ -148,6 +150,7 @@ func toTOMLOutput(cfg *Config) tomlOutput {
 		Roles:           cfg.Roles,
 		RoleManifest:    cfg.RoleManifest,
 		Lock:            cfg.Lock,
+		LLM:             cfg.LLM,
 		Scopes:          cfg.Scopes,
 		Plugins:         cfg.Plugins,
 		Marketplaces:    cfg.Marketplaces,
