@@ -29,16 +29,22 @@ func ChangedSkills(run GitFunc, repoDir, base string, skills []Skill) (map[strin
 	if base == "" {
 		base = "HEAD"
 	}
+	if strings.HasPrefix(base, "-") {
+		return nil, fmt.Errorf("--base %q looks like an option, not a git ref", base)
+	}
 	top, err := run(repoDir, "rev-parse", "--show-toplevel")
 	if err != nil {
 		return nil, fmt.Errorf("--changed-only needs a git repository: %w", err)
 	}
 	topDir := strings.TrimSpace(top)
+	if _, err := run(repoDir, "rev-parse", "--verify", "--quiet", base+"^{commit}"); err != nil {
+		return nil, fmt.Errorf("--base %q is not a commit: %w", base, err)
+	}
 	diff, err := run(repoDir, "diff", "--name-only", base, "--")
 	if err != nil {
 		return nil, err
 	}
-	untracked, err := run(repoDir, "ls-files", "--others", "--exclude-standard")
+	untracked, err := run(repoDir, "ls-files", "--others", "--exclude-standard", "--full-name")
 	if err != nil {
 		return nil, err
 	}
