@@ -22,17 +22,19 @@
     "directories": {
       "type": "array",
       "description": "Directory paths (relative to baseDir) the renderer must emit as IsDir outputs so they participate in stale-file cleanup.",
-      "items": { "type": "string" }
+      "items": {
+        "type": "string"
+      }
     },
     "outputs": {
       "type": "object",
       "description": "Per-content-type emit rules. Keys are the content types defined in the content tree.",
       "additionalProperties": false,
       "propertyNames": {
-        "enum": ["rules", "context", "skills", "agents", "commands"]
+        "enum": ["rules", "context", "skills", "agents", "commands", "checks"]
       },
       "patternProperties": {
-        "^(rules|context|skills|agents|commands)$": {
+        "^(rules|context|skills|agents|commands|checks)$": {
           "$ref": "#/$defs/output"
         }
       }
@@ -46,7 +48,12 @@
     "sidecars": {
       "type": "array",
       "description": "Conditionally-emitted single files (settings.json, .mcp.json, etc.) dispatched on the closed-set `kind` enum.",
-      "items": { "$ref": "#/$defs/sidecar" }
+      "items": {
+        "$ref": "#/$defs/sidecar"
+      }
+    },
+    "global": {
+      "$ref": "#/$defs/global"
     }
   },
   "$defs": {
@@ -79,8 +86,8 @@
       "additionalProperties": false,
       "properties": {
         "mode": {
-          "enum": ["per_item_file"],
-          "description": "Currently only `per_item_file` is supported. Inlined-only content types are expressed via the root.sections list instead."
+          "enum": ["per_item_file", "aggregate"],
+          "description": "`per_item_file` writes one file per item. `aggregate` (outputs.checks only) renders every item into the single file named by `file`, as `<!-- ai-rulez:check:NAME -->` sections. Inlined-only content types are expressed via the root.sections list instead."
         },
         "dir": {
           "type": "string",
@@ -107,14 +114,25 @@
           "description": "outputs.rules with `split` only. Items that still get a rule file when the rules mode is inline. Omit to keep everything inline."
         },
         "dialect": {
-          "enum": ["claude", "cursor", "trigger", "copilot", "cline", "continue", "junie"],
-          "description": "outputs.rules with `split` only. Frontmatter vocabulary of the rule files. Cannot be combined with `body` or `frontmatter`."
+          "enum": ["claude", "cursor", "trigger", "copilot", "cline", "continue", "junie", "mapped"],
+          "description": "outputs.rules with `split` only. Frontmatter vocabulary of the rule files. `mapped` is implied by an `activation` block and builds the frontmatter from it. Cannot be combined with `body` or `frontmatter`."
         },
         "body": {
           "$ref": "#/$defs/body"
         },
         "frontmatter": {
           "$ref": "#/$defs/frontmatter"
+        },
+        "activation": {
+          "$ref": "#/$defs/activation"
+        },
+        "file": {
+          "type": "string",
+          "description": "outputs with mode `aggregate` only. Relative, slash-separated path of the single file every item is rendered into."
+        },
+        "header": {
+          "type": "string",
+          "description": "outputs with mode `aggregate` only. Text written above the first item."
         }
       }
     },
@@ -138,7 +156,9 @@
         "fields": {
           "type": "array",
           "description": "Whitelisted Metadata.Extra keys to copy into the frontmatter, in this order. Empty/missing keys are skipped.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "constants": {
           "type": "object",
@@ -163,7 +183,9 @@
         "extras_blacklist": {
           "type": "array",
           "description": "Keys to exclude when `include_extras` is true. Used to drop ai-rulez internals (priority, targets) and keys handled elsewhere.",
-          "items": { "type": "string" }
+          "items": {
+            "type": "string"
+          }
         },
         "emit_effort": {
           "type": "boolean",
@@ -176,6 +198,10 @@
         "effort_field": {
           "type": "string",
           "description": "Frontmatter key the resolved effort is written under when emit_effort is true. Defaults to \"effort\"; tools whose thinking knob is spelled differently set it (pi: \"thinking\")."
+        },
+        "omit_name": {
+          "type": "boolean",
+          "description": "When true, leave the always-present `name` key out of the frontmatter (tools that take the name from the filename)."
         }
       }
     },
@@ -190,8 +216,12 @@
         },
         "values": {
           "type": "object",
-          "propertyNames": { "enum": ["low", "medium", "high", "xhigh", "max"] },
-          "additionalProperties": { "type": "string" }
+          "propertyNames": {
+            "enum": ["low", "medium", "high", "xhigh", "max"]
+          },
+          "additionalProperties": {
+            "type": "string"
+          }
         }
       }
     },
@@ -212,12 +242,21 @@
       "additionalProperties": false,
       "properties": {
         "kind": {
-          "enum": ["claude_settings_json", "claude_plugins_json", "mcp_json", "amp_settings_json", "pi_mcp_json"],
-          "description": "Closed-set sidecar renderer. New kinds extend this enum and add a Go handler in providers/sidecars.go."
+          "enum": [
+            "claude_settings_json",
+            "claude_plugins_json",
+            "mcp_json",
+            "amp_settings_json",
+            "pi_mcp_json",
+            "mcp",
+            "permissions",
+            "hooks"
+          ],
+          "description": "Closed-set sidecar renderer. The tool-specific kinds render a fixed document; the generic kinds (`mcp`, and the reserved `permissions` and `hooks`) merge into any json, jsonc, toml or yaml document. `permissions` and `hooks` validate but are not rendered yet. New kinds extend this enum and add a Go handler in providers/sidecars.go."
         },
         "path": {
           "type": "string",
-          "description": "Relative output path. Object-shaped sidecars are merged into an existing file at this path: only the top-level keys the renderer owns are replaced, every other key is preserved."
+          "description": "Relative output path. Object-shaped sidecars are merged into an existing file at this path: only the keys the renderer owns are replaced, every other key is preserved."
         },
         "emit_when": {
           "enum": [
@@ -228,7 +267,102 @@
             "has_resolved_effort",
             "has_mcp_servers_or_plugin_settings"
           ],
-          "description": "Closed-set predicate evaluated against the Config to decide whether to emit."
+          "description": "Closed-set predicate evaluated against the Config to decide whether to emit. Defaults to `has_mcp_servers` for kind `mcp`, otherwise `always`."
+        },
+        "format": {
+          "enum": ["json", "jsonc", "toml", "yaml"],
+          "description": "Generic kinds only. Document format; defaults to the one the path's extension names."
+        },
+        "key": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Generic kinds only. Path of the owned member; each element is a literal member name, so [\"amp.mcpServers\"] is one flat key and [\"amp\",\"mcpServers\"] a nested object. Defaults to the dialect's key."
+        },
+        "dialect": {
+          "enum": ["standard", "claude", "gemini", "opencode", "vscode", "zed", "codex", "amp", "yaml-standard"],
+          "description": "Kind `mcp` only. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block). Defaults to standard. Each dialect has a default `key`."
+        },
+        "global_path": {
+          "type": "string",
+          "description": "User-scope path of the sidecar, relative to the home directory."
+        },
+        "global_mcp_path": {
+          "type": "string",
+          "description": "User-scope path of the sidecar's MCP servers when it differs from global_path, relative to the home directory (Claude Code keeps them in .claude.json). Only valid on a sidecar that holds MCP servers."
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "outputs.rules with `split` only. Maps each activation mode of a rule onto the frontmatter fields of the tool's rules folder. String values may use the placeholders {globs} (globs joined with \",\"), {globs_list} (the globs as a list when it is the whole value), {description} and {name}; a key that resolves to nothing is dropped. A mode without a table is loaded always (reported as a downgrade); an absent `always` table writes no frontmatter.",
+      "properties": {
+        "always": {
+          "type": "object",
+          "description": "Frontmatter of an always-applied rule.",
+          "additionalProperties": {
+            "type": ["string", "boolean", "number"]
+          }
+        },
+        "glob": {
+          "type": "object",
+          "description": "Frontmatter of a rule scoped to file globs.",
+          "additionalProperties": {
+            "type": ["string", "boolean", "number"]
+          }
+        },
+        "auto": {
+          "type": "object",
+          "description": "Frontmatter of a rule the model applies from its description.",
+          "additionalProperties": {
+            "type": ["string", "boolean", "number"]
+          }
+        },
+        "manual": {
+          "type": "object",
+          "description": "Frontmatter of a rule applied only when invoked.",
+          "additionalProperties": {
+            "type": ["string", "boolean", "number"]
+          }
+        },
+        "format": {
+          "enum": ["yaml", "lines"],
+          "description": "`yaml` (default) or `lines`: bare `key: value` lines between --- fences with lists joined by \", \"."
+        }
+      }
+    },
+    "global": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "User-scope (home directory) layout of the tool. Every path is relative to the user's home and slash-separated. Declarative only: parsed and validated, exposed through ProviderSpec.GlobalPaths.",
+      "properties": {
+        "home_env": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$",
+          "description": "Environment variable that relocates the tool's home (e.g. HERMES_HOME). When set, the part of each path under `home_dir` is re-rooted at its value. Requires `home_dir`."
+        },
+        "home_dir": {
+          "type": "string",
+          "description": "The tool's directory under the user's home (e.g. \".hermes\"). Requires `home_env`; every other path must lie inside it."
+        },
+        "root_file": {
+          "type": "string",
+          "description": "User-scope root instructions file."
+        },
+        "skills_dir": {
+          "type": "string"
+        },
+        "agents_dir": {
+          "type": "string"
+        },
+        "commands_dir": {
+          "type": "string"
+        },
+        "rules_dir": {
+          "type": "string"
         }
       }
     }

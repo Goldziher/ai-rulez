@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"slices"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -2605,21 +2606,62 @@ func gitignorePatternForOutput(relPath string, isDir bool) string {
 			return relPath
 		}
 	}
+	if pattern, matched := githubGitignorePattern(relPath); matched {
+		return pattern
+	}
+	if pattern, matched := sharedDirGitignorePattern(relPath, isDir); matched {
+		return pattern
+	}
+	if !isDir && isSpecSidecarFile(relPath) {
+		return relPath
+	}
 	if pattern, matched := assistantDirGitignorePattern(relPath, isDir); matched {
 		return pattern
 	}
-	for _, file := range generatedRootFiles {
+	for _, file := range gitignoreRootFiles() {
 		if relPath == file {
 			return file
 		}
-	}
-	if pattern, matched := githubGitignorePattern(relPath); matched {
-		return pattern
 	}
 	if isDir {
 		return strings.TrimSuffix(relPath, "/") + "/"
 	}
 	return relPath
+}
+
+// sharedDirGitignorePattern resolves relPath against the directories users keep
+// their own files in (providers.IsSharedDir), at the repo root or nested under a
+// subproject. Such a directory and its direct children (.config/<tool>/) are
+// never ignored as a whole; a generated file in them is ignored by exact path and
+// only a deeper directory, which is the tool's own, becomes a directory pattern.
+func sharedDirGitignorePattern(relPath string, isDir bool) (pattern string, matched bool) {
+	segments := strings.Split(strings.TrimSuffix(relPath, "/"), "/")
+	for i, segment := range segments {
+		if !providers.IsSharedDir(segment) {
+			continue
+		}
+		below := len(segments) - i - 1
+		switch {
+		case !isDir:
+			return relPath, true
+		case below <= 1:
+			return "", true
+		default:
+			return strings.TrimSuffix(relPath, "/") + "/", true
+		}
+	}
+	return "", false
+}
+
+// isSpecSidecarFile reports whether relPath, at the repo root or under a
+// subproject, is a sidecar file a provider spec writes.
+func isSpecSidecarFile(relPath string) bool {
+	for _, p := range specSidecarPaths() {
+		if relPath == p || strings.HasSuffix(relPath, "/"+p) {
+			return true
+		}
+	}
+	return false
 }
 
 // assistantDirGitignorePattern resolves relPath against the assistant directories
@@ -2628,7 +2670,7 @@ func gitignorePatternForOutput(relPath string, isDir bool) string {
 // them; a matched but empty pattern means the path is the shared directory itself,
 // which must stay un-ignored because the user tracks their own files in it (#184).
 func assistantDirGitignorePattern(relPath string, isDir bool) (pattern string, matched bool) {
-	for _, dir := range generatedAssistantDirs {
+	for _, dir := range gitignoreAssistantDirs() {
 		trimmedDir := strings.TrimSuffix(dir, "/")
 		if relPath == trimmedDir {
 			return "", true
@@ -2694,6 +2736,10 @@ func ownedAssistantSubPath(nestedPrefix, assistantDir, remainder string, isDir b
 	return nestedPrefix + assistantDir + remainder
 }
 
+// generatedRootFiles and generatedAssistantDirs are the static entries for the
+// Go-implemented presets. Declarative provider specs add their own through
+// providers.GitignoreHints, merged in by gitignoreRootFiles and
+// gitignoreAssistantDirs, so a new builtin spec needs no entry here.
 var generatedRootFiles = [...]string{
 	"AGENTS.md",
 	"CLAUDE.md",
@@ -2714,6 +2760,61 @@ var generatedAssistantDirs = [...]string{
 	".junie/",
 	".opencode/",
 	".amp/",
+	".xum/",
+}
+
+var (
+	gitignoreTablesOnce sync.Once
+	gitignoreRoots      []string
+	gitignoreDirs       []string
+	mcpConfigPathsOnce  sync.Once
+	mcpConfigPaths      []string
+	sidecarPathsOnce    sync.Once
+	sidecarPaths        []string
+)
+
+func gitignoreTables() {
+	gitignoreTablesOnce.Do(func() {
+		hintFiles, hintDirs := providers.GitignoreHints()
+		gitignoreRoots = mergeUnique(generatedRootFiles[:], hintFiles)
+		gitignoreDirs = mergeUnique(generatedAssistantDirs[:], hintDirs)
+	})
+}
+
+// gitignoreRootFiles returns the static root files plus those the provider specs declare.
+func gitignoreRootFiles() []string {
+	gitignoreTables()
+	return gitignoreRoots
+}
+
+// gitignoreAssistantDirs returns the static assistant directories plus those the
+// provider specs write into.
+func gitignoreAssistantDirs() []string {
+	gitignoreTables()
+	return gitignoreDirs
+}
+
+// specMCPConfigPaths returns the MCP config paths the provider specs declare.
+func specMCPConfigPaths() []string {
+	mcpConfigPathsOnce.Do(func() { mcpConfigPaths = providers.MCPConfigPaths() })
+	return mcpConfigPaths
+}
+
+// specSidecarPaths returns the sidecar file paths the provider specs declare.
+func specSidecarPaths() []string {
+	sidecarPathsOnce.Do(func() { sidecarPaths = providers.SidecarPaths() })
+	return sidecarPaths
+}
+
+// mergeUnique appends the entries of extra missing from base, keeping base order.
+func mergeUnique(base, extra []string) []string {
+	out := append([]string(nil), base...)
+	for _, e := range extra {
+		if !slices.Contains(out, e) {
+			out = append(out, e)
+		}
+	}
+	return out
 }
 
 var generatedGithubPatterns = [...]string{
@@ -2963,18 +3064,53 @@ func (g *Generator) markSensitiveOutputs(outputs []config.OutputFile) {
 		// An MCP config file naming a secret key is sensitive whatever the value's
 		// length, so a short secret cannot loosen it.
 		rel := filepath.ToSlash(g.convertToRelativePath(g.absOutputPath(o.Path)))
-		o.Sensitive = o.Sensitive || (isMCPConfigOutput(rel) && outputContainsAny(o, names))
+		o.Sensitive = o.Sensitive || (isMCPConfigOutputIn(rel, g.scopeDirs()) && outputContainsAny(o, names))
 	}
 }
 
 // outputContainsAny reports whether the output's content holds any of the strings.
+// Each needle is also tried in the escaped forms JSON, TOML and YAML encoders
+// write (a secret with a quote or backslash never appears raw in such a file).
 func outputContainsAny(o *config.OutputFile, needles []string) bool {
 	for _, n := range needles {
-		if strings.Contains(o.Content, n) || (o.RawContent != nil && bytes.Contains(o.RawContent, []byte(n))) {
-			return true
+		for _, form := range secretForms(n) {
+			if strings.Contains(o.Content, form) || (o.RawContent != nil && bytes.Contains(o.RawContent, []byte(form))) {
+				return true
+			}
 		}
 	}
 	return false
+}
+
+// secretForms lists the spellings of v a structured document may hold: raw, JSON
+// string content (both with and without HTML escaping), Go/TOML basic-string
+// escapes, and a YAML single-quoted scalar.
+func secretForms(v string) []string {
+	if v == "" {
+		return nil
+	}
+	forms := []string{v}
+	add := func(form string) {
+		if !slices.Contains(forms, form) {
+			forms = append(forms, form)
+		}
+	}
+	if b, err := json.Marshal(v); err == nil {
+		add(string(b[1 : len(b)-1]))
+	}
+	var plain bytes.Buffer
+	enc := json.NewEncoder(&plain)
+	enc.SetEscapeHTML(false)
+	if enc.Encode(v) == nil {
+		if s := strings.TrimSuffix(plain.String(), "\n"); len(s) >= 2 {
+			add(s[1 : len(s)-1])
+		}
+	}
+	if q := strconv.Quote(v); len(q) >= 2 {
+		add(q[1 : len(q)-1])
+	}
+	add(strings.ReplaceAll(v, "'", "''"))
+	return forms
 }
 
 // secretMCPNames lists the names of secret MCP env entries and headers, plus the
@@ -3008,21 +3144,47 @@ func (g *Generator) secretMCPEnvKeys() []string {
 	return sortedMapKeys(keys)
 }
 
-func isMCPConfigOutput(relPath string) bool {
-	return relPath == ".mcp.json" ||
-		relPath == "opencode.json" ||
-		strings.HasSuffix(relPath, "/opencode.json") ||
-		relPath == ".claude/settings.json" ||
-		relPath == ".gemini/settings.json" ||
-		relPath == ".agents/settings.json" ||
-		relPath == ".xum/mcp.jsonc" ||
-		relPath == ".pi/mcp.json" ||
-		strings.HasSuffix(relPath, "/.mcp.json") ||
-		strings.HasSuffix(relPath, "/.claude/settings.json") ||
-		strings.HasSuffix(relPath, "/.gemini/settings.json") ||
-		strings.HasSuffix(relPath, "/.agents/settings.json") ||
-		strings.HasSuffix(relPath, "/.xum/mcp.jsonc") ||
-		strings.HasSuffix(relPath, "/.pi/mcp.json")
+// legacyMCPConfigPaths are the MCP config files of the Go-implemented presets.
+var legacyMCPConfigPaths = [...]string{
+	".mcp.json", "opencode.json", ".claude/settings.json", ".gemini/settings.json",
+	".agents/settings.json", ".xum/mcp.jsonc", ".pi/mcp.json",
+}
+
+// isMCPConfigOutput reports whether relPath, relative to the project root, is an
+// MCP config file a preset writes.
+func isMCPConfigOutput(relPath string) bool { return isMCPConfigOutputIn(relPath, nil) }
+
+// isMCPConfigOutputIn is isMCPConfigOutput for a project with scoped output roots:
+// besides the project root, each scope directory (relative to it) holds the same
+// layout. Matching is exact; a path nested at any other depth is not a config file
+// of this project.
+func isMCPConfigOutputIn(relPath string, scopeDirs []string) bool {
+	relPath = strings.TrimPrefix(filepath.ToSlash(relPath), "./")
+	bases := []string{""}
+	for _, dir := range scopeDirs {
+		if dir = strings.Trim(filepath.ToSlash(dir), "/"); dir != "" && dir != "." {
+			bases = append(bases, dir+"/")
+		}
+	}
+	for _, base := range bases {
+		rest, ok := strings.CutPrefix(relPath, base)
+		if !ok {
+			continue
+		}
+		if slices.Contains(legacyMCPConfigPaths[:], rest) || slices.Contains(specMCPConfigPaths(), rest) {
+			return true
+		}
+	}
+	return false
+}
+
+// scopeDirs lists the scoped output roots of the project, relative to its base.
+func (g *Generator) scopeDirs() []string {
+	dirs := make([]string, 0, len(g.config.Scopes))
+	for _, scope := range g.config.Scopes {
+		dirs = append(dirs, scope.Path)
+	}
+	return dirs
 }
 
 func gitignorePatterns(content string) []string {

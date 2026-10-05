@@ -1,10 +1,13 @@
 package generator
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"gopkg.in/yaml.v3"
 )
 
@@ -129,6 +132,92 @@ func activationFromRuleFile(path, content string) config.ActivationMode {
 		return copilotActivation(fields)
 	}
 	return config.ActivationAlways
+}
+
+// activationFromMappedRuleFile classifies a rule file in the folder of a provider
+// whose frontmatter comes from an activation map: the mode whose table the
+// file's frontmatter matches. ok is false when the path is in no mapped folder.
+func activationFromMappedRuleFile(path, content string, folders []providers.MappedRulesFolder) (config.ActivationMode, bool) {
+	slashed := "/" + filepath.ToSlash(path)
+	for _, folder := range folders {
+		if !strings.Contains(slashed, "/"+strings.TrimSuffix(folder.Dir, "/")+"/") {
+			continue
+		}
+		return mappedActivation(folder.Mapping, mappedFrontmatterFields(content, folder.Mapping.Format)), true
+	}
+	return config.ActivationAlways, false
+}
+
+// mappedFrontmatterFields reads the frontmatter of a mapped rule file in its
+// declared format. A "lines" block is bare `key: value` lines that need not be
+// valid YAML (a glob such as **/*.go is not), so it is split by hand.
+func mappedFrontmatterFields(content, format string) map[string]any {
+	if format != rulefiles.MappedFormatLines {
+		fields, _ := ruleFileFrontmatter(content)
+		return fields
+	}
+	rest := strings.TrimLeft(strings.TrimPrefix(content, byteOrderMark), " \t\r\n")
+	rest, ok := strings.CutPrefix(rest, frontmatterFence)
+	if !ok {
+		return nil
+	}
+	rest = strings.TrimLeft(rest, " \t")
+	rest, ok = strings.CutPrefix(rest, "\n")
+	if !ok {
+		return nil
+	}
+	end := strings.Index(rest, "\n"+frontmatterFence)
+	if end < 0 {
+		return nil
+	}
+	fields := map[string]any{}
+	for _, line := range strings.Split(rest[:end], "\n") {
+		if key, value, found := strings.Cut(line, ":"); found {
+			fields[strings.TrimSpace(key)] = strings.TrimSpace(value)
+		}
+	}
+	return fields
+}
+
+// mappedActivation picks the mode of the activation map the frontmatter matches
+// best: every key of the mode's table must be present, and a literal value must
+// equal the file's. The mode with the most keys wins, always on a tie; a file
+// that matches no table is conservatively always-on.
+func mappedActivation(mapping *rulefiles.ActivationMap, fields map[string]any) config.ActivationMode {
+	best, bestScore := config.ActivationAlways, -1
+	for _, candidate := range []struct {
+		mode  config.ActivationMode
+		table map[string]any
+	}{
+		{config.ActivationAlways, mapping.Always},
+		{config.ActivationGlob, mapping.Glob},
+		{config.ActivationAuto, mapping.Auto},
+		{config.ActivationManual, mapping.Manual},
+	} {
+		if candidate.table == nil || !mappedTableMatches(candidate.table, fields) {
+			continue
+		}
+		if len(candidate.table) > bestScore {
+			best, bestScore = candidate.mode, len(candidate.table)
+		}
+	}
+	return best
+}
+
+func mappedTableMatches(table, fields map[string]any) bool {
+	for key, want := range table {
+		got, present := fields[key]
+		if !present {
+			return false
+		}
+		if text, isText := want.(string); isText && strings.Contains(text, "{") {
+			continue // a placeholder: present is enough
+		}
+		if fmt.Sprint(got) != fmt.Sprint(want) {
+			return false
+		}
+	}
+	return true
 }
 
 // alwaysApplyActivation reads the cursor and continue dialects. A rule with

@@ -115,9 +115,23 @@ max = "max"
 [[sidecars]]
 kind = "claude_settings_json"
 path = ".claude/settings.json"
+global_path = ".claude/settings.json"
+# Claude Code reads user-scope MCP servers from ~/.claude.json, not from
+# ~/.claude/settings.json: a --global run writes mcpServers there and the other
+# keys (plugin settings, effort) to global_path.
+global_mcp_path = ".claude.json"
 emit_when = "has_mcp_servers_or_plugin_settings"
 
 [[sidecars]]
 kind = "claude_plugins_json"
 path = ".claude/plugins.json"
 emit_when = "has_plugins"
+
+# User-scope layout (paths relative to the home directory). Claude Code reads
+# user-level memory, skills, agents, commands and rules from ~/.claude.
+[global]
+root_file = ".claude/CLAUDE.md"
+skills_dir = ".claude/skills"
+agents_dir = ".claude/agents"
+commands_dir = ".claude/commands"
+rules_dir = ".claude/rules"

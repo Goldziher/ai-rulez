@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -97,5 +99,47 @@ func TestTokenReport_ScopedRuleFilesConditional(t *testing.T) {
 		if entry.Label != "path-scoped rule files" {
 			assert.NotEqual(t, BucketConditional, entry.Bucket, entry.Label)
 		}
+	}
+}
+
+func TestActivationFromMappedRuleFile(t *testing.T) {
+	yamlMap := &rulefiles.ActivationMap{
+		Always: map[string]any{"alwaysApply": true},
+		Glob:   map[string]any{"alwaysApply": false, "globs": "{globs_list}"},
+		Auto:   map[string]any{"alwaysApply": false, "description": "{description}"},
+		Manual: map[string]any{"alwaysApply": false, "manual": true},
+	}
+	linesMap := &rulefiles.ActivationMap{
+		Format: rulefiles.MappedFormatLines,
+		Always: map[string]any{"type": "always"},
+		Glob:   map[string]any{"type": "glob", "glob": "{globs}"},
+	}
+	folders := []providers.MappedRulesFolder{
+		{Dir: ".yamltool/rules", Mapping: yamlMap},
+		{Dir: ".linestool/rules", Mapping: linesMap},
+	}
+	tests := []struct {
+		name, path, content string
+		want                config.ActivationMode
+		wantMapped          bool
+	}{
+		{"yaml always", ".yamltool/rules/a.md", "---\nalwaysApply: true\n---\nb\n", config.ActivationAlways, true},
+		{"yaml glob", "/r/.yamltool/rules/a.md", "---\nalwaysApply: false\nglobs:\n  - src/**\n---\nb\n", config.ActivationGlob, true},
+		{"yaml auto", ".yamltool/rules/a.md", "---\nalwaysApply: false\ndescription: d\n---\nb\n", config.ActivationAuto, true},
+		{"yaml manual", ".yamltool/rules/a.md", "---\nalwaysApply: false\nmanual: true\n---\nb\n", config.ActivationManual, true},
+		{"yaml no frontmatter is always", ".yamltool/rules/a.md", "b\n", config.ActivationAlways, true},
+		{"lines glob", ".linestool/rules/a.md", "---\nglob: **/*.go\ntype: glob\n---\nb\n", config.ActivationGlob, true},
+		{"lines always", ".linestool/rules/a.md", "---\ntype: always\n---\nb\n", config.ActivationAlways, true},
+		{"outside every mapped folder", ".cursor/rules/a.mdc", "---\nalwaysApply: true\n---\n", config.ActivationAlways, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Act
+			got, mapped := activationFromMappedRuleFile(tt.path, tt.content, folders)
+
+			// Assert
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantMapped, mapped)
+		})
 	}
 }

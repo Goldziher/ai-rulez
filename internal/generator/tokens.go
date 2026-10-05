@@ -22,6 +22,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/providers"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 	"github.com/samber/oops"
 )
@@ -175,9 +176,10 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 	}
 
 	builder := &reportBuilder{
-		counter:      options.Counter,
-		finalPayload: g.finalPayloadByPath(outputs),
-		domainByPath: domainIndex(contentTree),
+		counter:       options.Counter,
+		finalPayload:  g.finalPayloadByPath(outputs),
+		domainByPath:  domainIndex(contentTree),
+		mappedFolders: providers.MappedRulesFolders(g.config),
 	}
 
 	report := &TokenReport{
@@ -250,6 +252,9 @@ type reportBuilder struct {
 	counter      tokens.Counter
 	finalPayload map[string]string
 	domainByPath map[string]string
+	// mappedFolders are the rules folders whose frontmatter an activation map
+	// declares, which the path-based dialects cannot classify.
+	mappedFolders []providers.MappedRulesFolder
 	// domains is keyed by runtime first, then by domain. Domain cost is tallied
 	// per runtime and reported for the headline one only: every runtime renders the
 	// same authored rules, so a single tally summed across all of them would
@@ -393,7 +398,11 @@ func (b *reportBuilder) ruleFileEntries(analyses []*config.OutputAnalysis) []Ent
 			machineLocal = append(machineLocal, analysis)
 			continue
 		}
-		mode := activationFromRuleFile(analysis.Path, b.ruleFileText(analysis))
+		text := b.ruleFileText(analysis)
+		mode, mapped := activationFromMappedRuleFile(analysis.Path, text, b.mappedFolders)
+		if !mapped {
+			mode = activationFromRuleFile(analysis.Path, text)
+		}
 		byMode[mode] = append(byMode[mode], analysis)
 	}
 
