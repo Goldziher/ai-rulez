@@ -42,6 +42,9 @@ func driftLoadOptions(mode driftMode) []config.LoadOption {
 func checkConfigDrift(cfg *config.Config, mode driftMode) (int, error) {
 	gen := generator.NewGenerator(cfg)
 	gen.SetContext(context.Background())
+	if err := applyRole(gen); err != nil {
+		return 0, err
+	}
 	var (
 		drift   []generator.Drift
 		checked int

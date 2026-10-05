@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -14,28 +15,42 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const formatText = "text"
+
 var (
-	lockCheck     bool
-	lockRecursive bool
-	lockKind      string
+	lockCheck       bool
+	lockDiffFlag    bool
+	lockContentOnly bool
+	lockFormat      string
+	lockRecursive   bool
+	lockKind        string
+	lockProfile     string
 )
 
 // LockCmd writes and verifies ai-rulez.lock.
 var LockCmd = &cobra.Command{
 	Use:   "lock [name...]",
-	Short: "Pin remote includes and installed skills in ai-rulez.lock",
+	Short: "Pin remote includes, installed skills and authored content in ai-rulez.lock",
 	Long: `Resolve every remote include and installed skill, and record the commit it
-points to and a digest of the imported files in .ai-rulez/ai-rulez.lock.
+points to and a digest of the imported files in .ai-rulez/ai-rulez.lock. The
+lock also pins the authored content: a sha256 digest of every rule, skill (with
+its resources), agent, command, context file, hook and role, and of the
+generated outputs, plus one digest over the whole set. See docs/lockfile.md.
 
 Once the lock is committed, "generate" fetches exactly the pinned commits and
 fails if the fetched files do not match the recorded digest, so output no longer
 depends on where a branch points today. Names limit the refresh to those
-includes or skills; the other pins are kept.
+includes or skills; the other pins (and the content pins) are kept.
 
-  ai-rulez lock                 pin everything (uses the network)
+  ai-rulez lock                 pin everything (uses the network for remotes)
   ai-rulez lock shared          re-pin one include or skill
-  ai-rulez lock --check         verify the lock against the config and the local
-                                cache without using the network
+  ai-rulez lock --content-only  re-pin authored content and outputs, offline
+  ai-rulez lock --check         verify the lock against the config, the local
+                                cache and the sources, without the network
+  ai-rulez lock --diff          show what "lock" would change (--format json)
+
+--check names every added, removed or changed item and whether its source or its
+generated output changed.
 
 The lock also pins [[skill_sources]] (commit and tree digest, kind "source") and
 the digest of every skill the skills server would serve (kind "served"), which
@@ -47,6 +62,10 @@ Exit codes: 0 ok, 1 the command could not run, 2 --check found a stale lock.`,
 
 func init() {
 	LockCmd.Flags().BoolVar(&lockCheck, "check", false, "Verify ai-rulez.lock against the configuration and cached content without writing or using the network")
+	LockCmd.Flags().BoolVar(&lockDiffFlag, "diff", false, "Show how the lock differs from the sources and outputs (for pull request review); exits 0")
+	LockCmd.Flags().BoolVar(&lockContentOnly, "content-only", false, "Re-pin authored content and outputs only: no network, remote pins are kept")
+	LockCmd.Flags().StringVar(&lockFormat, "format", "", "Output format of --diff: text (default) or json")
+	LockCmd.Flags().StringVar(&lockProfile, "profile", "", "Profile whose outputs are pinned (default: the profile recorded in the lock, else the config default)")
 	LockCmd.Flags().BoolVarP(&lockRecursive, "recursive", "r", false, "Process every configuration found recursively")
 	LockCmd.Flags().StringVar(&lockKind, "kind", "", "Limit the refresh to include, skill, source or served entries")
 	LockCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
@@ -55,6 +74,14 @@ func init() {
 func runLock(_ *cobra.Command, args []string) {
 	if lockKind != "" && !knownLockKind(lockKind) {
 		fmtError(oops.Errorf("unknown --kind %q (use include, skill, source or served)", lockKind))
+		os.Exit(1)
+	}
+	if lockFormat != "" && lockFormat != formatText && lockFormat != formatJSON {
+		fmtError(oops.Errorf("unknown --format %q (use text or json)", lockFormat))
+		os.Exit(1)
+	}
+	if lockCheck && lockDiffFlag {
+		fmtError(oops.Errorf("--check and --diff are mutually exclusive"))
 		os.Exit(1)
 	}
 	if code := runLockFor(lockKind, args); code != 0 {
@@ -72,9 +99,12 @@ func runLockFor(kind string, names []string) int {
 	code := 0
 	for _, path := range paths {
 		var c int
-		if lockCheck {
+		switch {
+		case lockCheck:
 			c = checkLockAt(path)
-		} else {
+		case lockDiffFlag:
+			c = diffLockAt(path)
+		default:
 			c = writeLockAt(path, kind, names)
 		}
 		if c > code {
@@ -96,12 +126,19 @@ func writeLockAt(path, kind string, names []string) int {
 	for _, n := range names {
 		wanted[n] = true
 	}
-	includes.Mode = includes.LockRefresh
-	includes.RefreshFilter = func(k, n string) bool {
-		return (kind == "" || kind == k) && (len(wanted) == 0 || wanted[n])
+	remoteRefresh := !lockContentOnly
+	if remoteRefresh {
+		includes.Mode = includes.LockRefresh
+		includes.RefreshFilter = func(k, n string) bool {
+			return (kind == "" || kind == k) && (len(wanted) == 0 || wanted[n])
+		}
+		includes.ResetObserved()
+		defer func() { includes.Mode, includes.RefreshFilter = includes.LockAuto, nil }()
+	} else {
+		prev := includes.SkipFetch
+		includes.SkipFetch = true
+		defer func() { includes.SkipFetch = prev }()
 	}
-	includes.ResetObserved()
-	defer func() { includes.Mode, includes.RefreshFilter = includes.LockAuto, nil }()
 
 	cfg, err := loadForLock(path, config.WithoutLocal())
 	if err != nil {
@@ -113,25 +150,60 @@ func writeLockAt(path, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
-	next, problems := includes.BuildLock(cfg, current)
-	if len(problems) > 0 {
-		fmtError(oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  ")))
-		return 1
+	next := &lockfile.File{Version: lockfile.Version}
+	if remoteRefresh {
+		var problems []string
+		next, problems = includes.BuildLock(cfg, current)
+		if len(problems) > 0 {
+			fmtError(oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  ")))
+			return 1
+		}
+	} else if current != nil {
+		next.Include, next.Skill = current.Include, current.Skill
 	}
-	if problems := mergeDynamicLock(cfg, current, next, kind, wanted); len(problems) > 0 {
-		fmtError(oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  ")))
-		return 1
+
+	// Source and served pins: refreshed with the remote pins; --content-only
+	// refreshes only the served digests, and only when that works offline.
+	dynamicKind := kind
+	if !remoteRefresh {
+		dynamicKind = lockfile.KindServed
+	}
+	if problems := mergeDynamicLock(cfg, current, next, dynamicKind, wanted); len(problems) > 0 {
+		if remoteRefresh {
+			fmtError(oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  ")))
+			return 1
+		}
+		logger.Warn("Kept the served pins: they cannot be recomputed offline", "problems", strings.Join(problems, "; "))
 	}
 	for name := range wanted {
 		if !lockHasName(next, name) {
-			fmtError(oops.Errorf("%q is not a remote include or installed skill in %s", name, cfg.ConfigDir))
+			fmtError(oops.Errorf("%q is not a remote include, installed skill, skill source or served skill in %s", name, cfg.ConfigDir))
 			return 1
 		}
 	}
-	if len(next.Include)+len(next.Skill)+len(next.Source)+len(next.Served) == 0 {
-		logger.Info("No remote includes, installed skills or skill sources to lock", "config", cfg.ConfigDir)
-		return 0
+
+	// A refresh limited to some remote sources leaves the content pins alone;
+	// otherwise they are recomputed from the sources on disk.
+	if len(wanted) == 0 && kind == "" {
+		profileName := lockProfile
+		if profileName == "" && current != nil {
+			profileName = current.Profile
+		}
+		snap, err := lockSnapshot(cfg, profileName, false)
+		if err != nil {
+			fmtError(err)
+			return 1
+		}
+		contentlock.Build(next, snap)
+	} else if current != nil {
+		next.HashVersion, next.AIRulezVersion, next.Profile = current.HashVersion, current.AIRulezVersion, current.Profile
+		next.Scope, next.OutputsPinned = current.Scope, current.OutputsPinned
+		next.Item, next.Output = current.Item, current.Output
+		if next.HasContentPins() {
+			next.Tree = contentlock.TreeOf(next)
+		}
 	}
+
 	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
 		fmtError(err)
 		return 1
@@ -139,12 +211,27 @@ func writeLockAt(path, kind string, names []string) int {
 	for _, e := range lockedEntries(next) {
 		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
 	}
+	if next.HasContentPins() {
+		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.Output), next.Tree)
+	}
 	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
 	return 0
 }
 
+// lockProfileFor picks the profile a check renders: --profile, else the one the
+// lock recorded.
+func lockProfileFor(lock *lockfile.File) string {
+	if lockProfile != "" {
+		return lockProfile
+	}
+	if lock != nil {
+		return lock.Profile
+	}
+	return ""
+}
+
 func checkLockAt(path string) int {
-	cfg, err := loadForLock(path, config.WithoutLocal(), config.WithoutRemote())
+	cfg, remoteSkipped, err := loadForLockCheck(path)
 	if err != nil {
 		fmtError(err)
 		return 1
@@ -154,14 +241,57 @@ func checkLockAt(path string) int {
 		fmtError(err)
 		return 1
 	}
-	problems, cached := includes.CheckLock(cfg, lock)
-	dynamic := checkDynamicLock(cfg, lock)
-	if len(problems)+len(dynamic) > 0 {
-		fmt.Fprintf(os.Stderr, "%s does not match %s:\n%s\nrun `ai-rulez lock` to refresh it\n", lockfile.FileName, cfg.ConfigDir,
-			strings.TrimLeft(includes.FormatProblems(problems)+"\n"+strings.Join(dynamic, "\n"), "\n"))
+	diff, err := lockDiff(cfg, lock, lockProfileFor(lock), remoteSkipped)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
+	if !diff.InSync {
+		fmt.Fprintf(os.Stderr, "%s does not match %s:\n", lockfile.FileName, cfg.ConfigDir)
+		if werr := diff.WriteText(os.Stderr); werr != nil {
+			fmtError(werr)
+		}
+		fmt.Fprintln(os.Stderr, "run `ai-rulez lock` to refresh it (after reviewing the change with `ai-rulez lock --diff`)")
 		return exitDrift
 	}
-	logger.Success("Lock file is up to date", "config", cfg.ConfigDir, "verified_from_cache", cached)
+	for _, n := range diff.Notes {
+		logger.Info(n)
+	}
+	logger.Success("Lock file is up to date", "config", cfg.ConfigDir)
+	return 0
+}
+
+// diffLockAt prints how the sources and outputs differ from the lock. It exits 0
+// even when they differ: use --check to gate.
+func diffLockAt(path string) int {
+	cfg, remoteSkipped, err := loadForLockCheck(path)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
+	lock, err := lockfile.Load(cfg.ConfigDir)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
+	diff, err := lockDiff(cfg, lock, lockProfileFor(lock), remoteSkipped)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
+	switch {
+	case lockFormat == formatJSON:
+		err = diff.WriteJSON(os.Stdout)
+	case diff.InSync:
+		fmt.Println("ai-rulez.lock matches the sources and outputs")
+		err = diff.WriteText(os.Stdout)
+	default:
+		err = diff.WriteText(os.Stdout)
+	}
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
 	return 0
 }
 

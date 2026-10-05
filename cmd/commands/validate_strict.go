@@ -65,6 +65,13 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 	if findings := deliveryFindings(cfg); !strictSecurityOnly && len(findings) > 0 {
 		opts = append(opts, lint.WithDelivery(findings))
 	}
+	drift, lockErr := lockDriftFor(cfg)
+	if lockErr != nil {
+		logger.Warn("Skipped the lock drift check", "error", lockErr)
+	}
+	if len(drift) > 0 {
+		opts = append(opts, lint.WithLockDrift(drift))
+	}
 	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern}, opts...)
 }
 

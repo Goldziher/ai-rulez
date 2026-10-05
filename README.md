@@ -245,6 +245,27 @@ source = "https://github.com/kreuzberg-dev/kreuzberg"
 hashes = "content"   # "full" (default) | "content" (Content-Hash only) | "none"
 ```
 
+**Roles** — map a job to the slice of the shared content a person needs, and render it for them. ai-rulez never does identity; an external tool (or you) picks the role name:
+
+```toml
+[[roles]]
+name = "backend-engineer"
+domains = ["shared", "backend"]
+[roles.skills]
+exclude = ["deploy-*"]
+[roles.skill_mode]
+"review-*" = "name-only"      # becomes Claude Code skillOverrides
+```
+
+```bash
+ai-rulez roles list --format json
+ai-rulez generate --user --role backend-engineer
+```
+
+See [Roles](docs/roles.md).
+
+**Supply-chain lock** — `ai-rulez lock` pins remote includes and skills by commit, and every rule, skill (with its scripts), hook and role plus the generated outputs by `sha256`. `lock --check` names each difference, `lock --diff --format json` feeds pull request review, `generate --locked` refuses a source that changed without a reviewed lock update. See [Lock file](docs/lockfile.md).
+
 ## MCP Server
 
 ai-rulez includes a built-in MCP server with 36 tools that lets AI assistants manage their own governance. Add rules, update context, generate configs — all programmatically.

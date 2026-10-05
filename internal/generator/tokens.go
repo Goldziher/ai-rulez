@@ -16,6 +16,7 @@ package generator
 
 import (
 	"cmp"
+	"fmt"
 	"path/filepath"
 	"slices"
 	"sort"
@@ -138,7 +139,10 @@ type BudgetResult struct {
 
 // TokenReport is the always-loaded and on-demand token surface of one profile.
 type TokenReport struct {
-	Profile   string        `json:"profile"`
+	// Profile is the profile reported on, or "role:<name>" for a role report.
+	Profile string `json:"profile"`
+	// Role is the role reported on; empty for a profile report.
+	Role      string        `json:"role,omitempty"`
 	Tokenizer TokenizerInfo `json:"tokenizer"`
 	// HeadlinePreset is the root-scope runtime with the largest always-loaded
 	// surface, and HeadlineAlways is that surface. It is the figure to watch and
@@ -153,12 +157,17 @@ type TokenReport struct {
 	HeadlineAlwaysLegacy int `json:"headline_always_legacy"`
 	// ListingEntryOverhead is the per-entry framing estimate, in tokens, added to
 	// every listed item. See ListingEntryOverheadTokens.
-	ListingEntryOverhead int             `json:"listing_entry_overhead"`
-	Runtimes             []RuntimeTokens `json:"runtimes"`
-	Scoped               []RuntimeTokens `json:"scoped,omitempty"`
-	Domains              []DomainTokens  `json:"domains"`
-	Budget               *BudgetResult   `json:"budget,omitempty"`
-	Notes                []string        `json:"notes"`
+	ListingEntryOverhead int `json:"listing_entry_overhead"`
+	// ServedSkills are the skills left out of the static skill trees because the
+	// skills server delivers them (delivery served): they are not listed in the
+	// agent's context, so they add nothing to the always-loaded figure. A
+	// harness without MCP support keeps them static and lists them.
+	ServedSkills []string        `json:"served_skills,omitempty"`
+	Runtimes     []RuntimeTokens `json:"runtimes"`
+	Scoped       []RuntimeTokens `json:"scoped,omitempty"`
+	Domains      []DomainTokens  `json:"domains"`
+	Budget       *BudgetResult   `json:"budget,omitempty"`
+	Notes        []string        `json:"notes"`
 }
 
 // TokenReportOptions parameterises TokenReport.
@@ -209,8 +218,13 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 		mappedFolders: providers.MappedRulesFolders(g.config),
 	}
 
+	reportProfile := activeProfile
+	if g.role != nil {
+		reportProfile = "role:" + g.role.Name
+	}
 	report := &TokenReport{
-		Profile: activeProfile,
+		Profile: reportProfile,
+		Role:    g.Role(),
 		Tokenizer: TokenizerInfo{
 			Name:        options.Counter.Name(),
 			Approximate: true,
@@ -219,7 +233,13 @@ func (g *Generator) TokenReport(options TokenReportOptions) (*TokenReport, error
 		ListingEntryOverhead: ListingEntryOverheadTokens,
 	}
 	builder.build(collector.Analyses(), report)
+	report.ServedSkills = g.servedSkillIDs(contentTree)
 	report.Notes = reportNotes(report)
+	if len(report.ServedSkills) > 0 {
+		report.Notes = append(report.Notes, fmt.Sprintf(
+			"%d skill(s) are served over MCP and not listed (%s); presets without MCP support still list them.",
+			len(report.ServedSkills), strings.Join(report.ServedSkills, ", ")))
+	}
 	for _, finding := range g.instructionSizeFindings(outputs) {
 		report.Notes = append(report.Notes, finding.message()+". "+finding.Hint+".")
 	}
@@ -866,4 +886,22 @@ func reportNotes(report *TokenReport) []string {
 			"while working inside that subdirectory, so they are not part of the headline.")
 	}
 	return notes
+}
+
+// servedSkillIDs lists the skills of tree whose delivery is served, sorted. For a
+// role report the delivery is the role's.
+func (g *Generator) servedSkillIDs(tree *config.ContentTree) []string {
+	var ids []string
+	for _, p := range g.config.SkillDeliveries(tree, nil) {
+		if p.Delivery != config.DeliveryServed {
+			continue
+		}
+		id := p.ID
+		if p.Domain != "" {
+			id = p.Domain + "/" + p.ID
+		}
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	return ids
 }

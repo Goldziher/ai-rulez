@@ -1,0 +1,86 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/Goldziher/ai-rulez/main/schema/catalog.schema.json",
+  "title": "ai-rulez catalog",
+  "description": "Output of `ai-rulez catalog --format json`: every item with owner, version, size, digest and roles, a summary of every role, and the lock status.",
+  "type": "object",
+  "required": ["schema_version", "tokenizer", "items", "roles", "lock"],
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": { "const": 1 },
+    "tokenizer": { "type": "string" },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "id", "bytes", "tokens", "roles"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "enum": ["rule", "context", "skill", "agent", "command"] },
+          "id": { "type": "string" },
+          "domain": { "type": "string" },
+          "path": { "type": "string", "description": "Source path relative to the configuration directory." },
+          "mode": { "type": "string" },
+          "delivery": { "enum": ["static", "served", "both"], "description": "How a skill reaches the agent: written to the skill trees (static), fetched over MCP on demand and never listed (served), or both." },
+          "owner": { "type": "string" },
+          "version": { "type": "string" },
+          "bytes": { "type": "integer", "minimum": 0 },
+          "tokens": { "type": "integer", "minimum": 0 },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$", "description": "The digest ai-rulez.lock pins for this item." },
+          "roles": { "type": "array", "items": { "type": "string" }, "description": "Roles that keep the item." },
+          "role_delivery": {
+            "type": "object",
+            "description": "For a skill: the delivery each role that keeps it gives it, where it differs from the item's own delivery.",
+            "additionalProperties": { "enum": ["static", "served", "both"] }
+          }
+        }
+      }
+    },
+    "roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "domains", "totals"],
+        "additionalProperties": false,
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "extends": { "type": "string" },
+          "match": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": { "groups": { "type": "array", "items": { "type": "string" } } }
+          },
+          "domains": { "type": "array", "items": { "type": "string" } },
+          "delivery": { "type": "object", "additionalProperties": { "enum": ["static", "served", "both"] } },
+          "totals": {
+            "type": "object",
+            "required": ["items", "bytes", "tokens", "by_kind", "served_skills", "served_tokens"],
+            "properties": {
+              "items": { "type": "integer" },
+              "bytes": { "type": "integer" },
+              "tokens": { "type": "integer" },
+              "served_skills": { "type": "integer" },
+              "served_tokens": { "type": "integer" },
+              "by_kind": { "type": "object", "additionalProperties": { "type": "integer" } }
+            }
+          }
+        }
+      }
+    },
+    "lock": {
+      "type": "object",
+      "required": ["present", "has_content_pins", "enforce", "sources_in_sync", "sources_changed"],
+      "additionalProperties": false,
+      "properties": {
+        "present": { "type": "boolean" },
+        "version": { "type": "integer" },
+        "has_content_pins": { "type": "boolean" },
+        "enforce": { "type": "boolean" },
+        "tree": { "type": "string" },
+        "sources_in_sync": { "type": ["boolean", "null"], "description": "null when the lock has no content pins to compare with." },
+        "sources_changed": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

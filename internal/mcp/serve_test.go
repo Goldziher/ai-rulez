@@ -3,6 +3,7 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/Goldziher/ai-rulez/internal/contentlock"
 	"slices"
 	"strings"
 	"sync"
@@ -174,7 +175,9 @@ func TestFindSkill_RoleRanksItsScopeFirstViaTheResolverHook(t *testing.T) {
 
 func TestFindSkill_DefaultRoleFromServerOptionsAndLimit(t *testing.T) {
 	t.Parallel()
-	resolver := ProfileRoles(map[string][]string{"backend": {"docs"}})
+	resolver := func(role string) (RoleScope, bool) {
+		return RoleScope{Domains: []string{"docs"}}, role == "backend"
+	}
 	p, _ := startSkillServerWith(t, roleCatalog(t), ServeOptions{Role: "backend", Roles: resolver})
 	out, isErr, _ := callTool(t, p, "find_skill", map[string]any{"task": "customer", "limit": 1})
 	require.False(t, isErr)
@@ -186,19 +189,6 @@ func TestFindSkill_DefaultRoleFromServerOptionsAndLimit(t *testing.T) {
 	_, isErr, text := callTool(t, p, "find_skill", map[string]any{"task": "  "})
 	assert.True(t, isErr)
 	assert.Contains(t, text, "task is required")
-}
-
-func TestProfileRoles(t *testing.T) {
-	t.Parallel()
-	res := ProfileRoles(map[string][]string{"backend": {"api", "builtin:security"}})
-	scope, ok := res("backend")
-	require.True(t, ok)
-	assert.Equal(t, []string{"api", "security"}, scope.Domains)
-	_, ok = res("frontend")
-	assert.False(t, ok)
-	root := &CatalogSkill{Name: "x"}
-	assert.True(t, scope.Includes(root), "root skills apply to every role")
-	assert.False(t, scope.Includes(&CatalogSkill{Name: "y", Domain: "web"}))
 }
 
 func loadCatalog(t *testing.T) *Catalog {
@@ -508,5 +498,5 @@ func TestLockDigest_IgnoresTheProjectWideSourceHashOnly(t *testing.T) {
 	assert.NotEqual(t, a.LockDigest, changed.LockDigest)
 
 	body := []byte("---\nname: x\n---\n\n" + strings.Repeat("filler\n", 50) + "# Source-Hash: not a header, deep in the body\n")
-	assert.Equal(t, body, normalizeForLock(body), "only the leading header region is normalized")
+	assert.Equal(t, body, contentlock.StripVolatileHeader(body), "only the leading header region is normalized")
 }
