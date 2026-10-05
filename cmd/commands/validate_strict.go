@@ -26,6 +26,9 @@ var (
 	validateFailOn string
 	validateExtern bool
 	validateOutput string
+	// validateLintProfile overrides [lint] profile. It is not --profile: that
+	// name selects a generation profile everywhere else.
+	validateLintProfile string
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
@@ -33,7 +36,7 @@ var (
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || baselineFlagsSet() || changedRev() != "") {
+	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "" || validateLintProfile != "" || baselineFlagsSet() || changedRev() != "") {
 		return oops.Errorf("--format, --output, --fail-on, --external, --since/--changed and the baseline flags require --strict")
 	}
 	if !lint.IsFormat(validateFormat) {
@@ -43,6 +46,9 @@ func checkStrictFlags() error {
 	case "", "error", "warning", "info", "none":
 	default:
 		return oops.Errorf("unknown --fail-on %q (use error, warning, info or none)", validateFailOn)
+	}
+	if _, ok := lint.LookupProfile(validateLintProfile); !ok {
+		return oops.Errorf("unknown --lint-profile %q (use %s)", validateLintProfile, strings.Join(lint.ProfileNames(), ", "))
 	}
 	return checkFlagCombinations()
 }
@@ -66,6 +72,14 @@ func checkFlagCombinations() error {
 
 // strictLint lints one loaded root.
 func strictLint(cfg *config.Config) (*lint.Report, error) {
+	if validateLintProfile != "" {
+		lc := config.LintConfig{}
+		if cfg.Lint != nil {
+			lc = *cfg.Lint
+		}
+		lc.Profile = validateLintProfile
+		cfg.Lint = &lc
+	}
 	if problems := lint.ValidateSettings(cfg.Lint); len(problems) > 0 {
 		return nil, oops.Errorf("invalid [lint] settings: %v", problems)
 	}
@@ -90,8 +104,13 @@ func failOnFor(cfg *config.Config) string {
 	if validateFailOn != "" {
 		return validateFailOn
 	}
-	if cfg != nil && cfg.Lint != nil && cfg.Lint.FailOn != "" {
-		return cfg.Lint.FailOn
+	if cfg != nil && cfg.Lint != nil {
+		if cfg.Lint.FailOn != "" {
+			return cfg.Lint.FailOn
+		}
+		if f := lint.ProfileFailOn(cfg.Lint.Profile); f != "" {
+			return f
+		}
 	}
 	return "error"
 }
