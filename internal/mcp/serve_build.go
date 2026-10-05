@@ -204,7 +204,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	b := &built{cfg: cfg, lock: lock}
 	taken := map[string]bool{}
 	for i := range served {
-		taken[served[i].ID] = true
+		taken[catalogName(&served[i])] = true
 	}
 	for _, spec := range specs {
 		res, err := skillsource.Resolve(ctx, spec, skillsource.Options{
@@ -307,6 +307,19 @@ func selectByDelivery(all []generator.ServedSkill, includeStatic bool) []generat
 		}
 	}
 	return out
+}
+
+// catalogName is the name a served skill gets in the catalog: the frontmatter
+// name, or the ID when the frontmatter names none.
+func catalogName(s *generator.ServedSkill) string {
+	if len(s.Files) > 0 && s.Files[0].RelPath == skillMarkdown {
+		if front, err := parseFrontmatter(s.Files[0].Content); err == nil {
+			if name := stringField(front, "name"); name != "" {
+				return name
+			}
+		}
+	}
+	return s.ID
 }
 
 func servedFromSource(res *skillsource.Resolved, sk skillsource.Skill) generator.ServedSkill {
