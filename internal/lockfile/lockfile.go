@@ -22,8 +22,16 @@ import (
 // FileName is the lock file, kept in the configuration directory.
 const FileName = "ai-rulez.lock"
 
-// Version is the lock format version.
-const Version = 1
+// Version is the lock format version. Version 2 adds content pins (Item,
+// Output, Tree); a version 1 lock is still accepted and has none.
+const Version = 2
+
+// MinVersion is the oldest lock format Load accepts.
+const MinVersion = 1
+
+// HashVersion identifies the content hashing scheme (see internal/contentlock
+// and docs/lockfile.md). A lock whose HashVersion is 0 carries no content pins.
+const HashVersion = 1
 
 // Entry kinds.
 const (
@@ -44,12 +52,53 @@ type Entry struct {
 	Digest string `toml:"digest"`
 }
 
+// Item pins one authored item: a rule, skill, agent, command, context file,
+// hook, role or settings source. Digest is "sha256:<hex>" over its raw files
+// (scheme in docs/lockfile.md).
+type Item struct {
+	Kind   string `toml:"kind"`
+	ID     string `toml:"id"`
+	Domain string `toml:"domain,omitempty"`
+	// Path is the item's source, relative to the configuration directory with
+	// forward slashes; empty for items declared in config.toml.
+	Path    string `toml:"path,omitempty"`
+	Digest  string `toml:"digest"`
+	Owner   string `toml:"owner,omitempty"`
+	Version string `toml:"version,omitempty"`
+}
+
+// Key identifies an item independently of its digest.
+func (i Item) Key() string { return i.Kind + "\x00" + i.Domain + "\x00" + i.ID }
+
+// OutputPin pins one generated output file: its path relative to the project
+// root and the digest of its header-free rendering.
+type OutputPin struct {
+	Path   string `toml:"path"`
+	Digest string `toml:"digest"`
+}
+
 // File is the parsed lock.
 type File struct {
-	Version int     `toml:"version"`
-	Include []Entry `toml:"include,omitempty"`
-	Skill   []Entry `toml:"skill,omitempty"`
+	Version int `toml:"version"`
+	// HashVersion is the content hashing scheme; 0 means the lock has no content pins.
+	HashVersion int `toml:"hash_version,omitempty"`
+	// AIRulezVersion is the ai-rulez release that wrote the content pins.
+	AIRulezVersion string `toml:"ai_rulez_version,omitempty"`
+	// Profile is the profile the output pins were rendered for ("" = the default).
+	Profile string `toml:"profile,omitempty"`
+	// Scope and OutputsPinned record the [lock] settings the pins were written with.
+	Scope         string `toml:"scope,omitempty"`
+	OutputsPinned bool   `toml:"outputs_pinned,omitempty"`
+	// Tree is the "sha256:<hex>" digest over every content pin and remote entry.
+	Tree    string      `toml:"tree,omitempty"`
+	Include []Entry     `toml:"include,omitempty"`
+	Skill   []Entry     `toml:"skill,omitempty"`
+	Item    []Item      `toml:"item,omitempty"`
+	Output  []OutputPin `toml:"output,omitempty"`
 }
+
+// HasContentPins reports whether the lock pins authored content.
+func (f *File) HasContentPins() bool { return f != nil && f.HashVersion > 0 }
 
 // Path returns the lock path for a configuration directory.
 func Path(configDir string) string { return filepath.Join(configDir, FileName) }
@@ -67,19 +116,29 @@ func Load(configDir string) (*File, error) {
 	if err := toml.Unmarshal(data, &f); err != nil {
 		return nil, oops.With("path", Path(configDir)).Wrapf(err, "parse lock file")
 	}
-	if f.Version != Version {
+	if f.Version < MinVersion || f.Version > Version {
 		return nil, oops.With("path", Path(configDir)).
 			Hint("Regenerate the lock with `ai-rulez lock`").
-			Errorf("unsupported lock file version %d (want %d)", f.Version, Version)
+			Errorf("unsupported lock file version %d (want %d or %d)", f.Version, MinVersion, Version)
+	}
+	if f.HashVersion > HashVersion {
+		return nil, oops.With("path", Path(configDir)).
+			Hint("Upgrade ai-rulez, or regenerate the lock with `ai-rulez lock`").
+			Errorf("lock file uses hash_version %d, this ai-rulez understands %d", f.HashVersion, HashVersion)
 	}
 	return &f, nil
 }
 
-// Save writes the lock deterministically: entries sorted by name, no timestamps.
+// Save writes the lock deterministically: entries sorted by name, items by
+// kind, domain and id, outputs by path, no timestamps. It always writes the
+// current format version.
 func Save(configDir string, f *File) error {
-	out := File{Version: Version, Include: sorted(f.Include), Skill: sorted(f.Skill)}
+	out := *f
+	out.Version = Version
+	out.Include, out.Skill = sorted(f.Include), sorted(f.Skill)
+	out.Item, out.Output = sortedItems(f.Item), sortedOutputs(f.Output)
 	var buf bytes.Buffer
-	buf.WriteString("# ai-rulez.lock: pins every remote include and installed skill. Commit this file.\n")
+	buf.WriteString("# ai-rulez.lock: pins remote includes, installed skills and authored content. Commit this file.\n")
 	buf.WriteString("# Refresh it with `ai-rulez lock`; `ai-rulez generate --locked` fails when it is stale.\n\n")
 	enc := toml.NewEncoder(&buf)
 	if err := enc.Encode(out); err != nil {
@@ -92,6 +151,30 @@ func Save(configDir string, f *File) error {
 		return oops.With("path", Path(configDir)).Wrapf(err, "write lock file")
 	}
 	return nil
+}
+
+func sortedItems(in []Item) []Item {
+	out := append([]Item(nil), in...)
+	sort.SliceStable(out, func(i, j int) bool {
+		a, b := out[i], out[j]
+		if a.Kind != b.Kind {
+			return a.Kind < b.Kind
+		}
+		if a.Domain != b.Domain {
+			return a.Domain < b.Domain
+		}
+		if a.ID != b.ID {
+			return a.ID < b.ID
+		}
+		return a.Path < b.Path
+	})
+	return out
+}
+
+func sortedOutputs(in []OutputPin) []OutputPin {
+	out := append([]OutputPin(nil), in...)
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Path < out[j].Path })
+	return out
 }
 
 func sorted(in []Entry) []Entry {

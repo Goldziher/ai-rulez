@@ -104,3 +104,49 @@ func TestDigestDir(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, da, dd, "the executable bit changes the digest")
 }
+
+func TestLoadAcceptsVersion1AndRejectsNewerHashVersion(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(Path(dir), []byte("version = 1\n[[include]]\nname = \"a\"\nsource = \"https://example.com/a\"\ncommit = \"c\"\ndigest = \"sha256:1\"\n"), 0o644))
+	got, err := Load(dir)
+	require.NoError(t, err)
+	assert.False(t, got.HasContentPins(), "a version 1 lock has no content pins")
+	assert.Equal(t, "a", got.Include[0].Name)
+
+	// saving upgrades the format and keeps the remote pins
+	require.NoError(t, Save(dir, got))
+	again, err := Load(dir)
+	require.NoError(t, err)
+	assert.Equal(t, Version, again.Version)
+	assert.Equal(t, "a", again.Include[0].Name)
+
+	require.NoError(t, os.WriteFile(Path(dir), []byte("version = 2\nhash_version = 99\n"), 0o644))
+	_, err = Load(dir)
+	assert.ErrorContains(t, err, "hash_version")
+}
+
+func TestSaveSortsContentPinsAndIsStable(t *testing.T) {
+	dir := t.TempDir()
+	f := &File{
+		HashVersion: HashVersion, AIRulezVersion: "1.2.3", Tree: "sha256:t",
+		Item: []Item{
+			{Kind: "skill", ID: "b", Domain: "x", Digest: "sha256:2"},
+			{Kind: "rule", ID: "z", Digest: "sha256:1"},
+			{Kind: "skill", ID: "a", Domain: "x", Digest: "sha256:3", Owner: "team", Version: "1.0.0"},
+		},
+		Output: []OutputPin{{Path: "b.md", Digest: "sha256:5"}, {Path: "a.md", Digest: "sha256:4"}},
+	}
+	require.NoError(t, Save(dir, f))
+	first, err := os.ReadFile(Path(dir))
+	require.NoError(t, err)
+	got, err := Load(dir)
+	require.NoError(t, err)
+	require.NoError(t, Save(dir, got))
+	second, err := os.ReadFile(Path(dir))
+	require.NoError(t, err)
+	assert.Equal(t, string(first), string(second))
+	assert.Equal(t, []string{"z", "a", "b"}, []string{got.Item[0].ID, got.Item[1].ID, got.Item[2].ID})
+	assert.Equal(t, "a.md", got.Output[0].Path)
+	assert.Equal(t, "team", got.Item[1].Owner)
+	assert.NotContains(t, string(first), "Z\n", "no timestamps")
+}
