@@ -30,7 +30,8 @@ presets = [
   "antigravity",  # → .agents/, GEMINI.md
   "xum",          # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc
   "pi"            # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json
-  "baz"           # → AGENTS.md (root and nested), .agents/skills, .claude/agents
+  "baz",          # → AGENTS.md (root and nested), .agents/skills, .claude/agents
+  "okf"           # → docs/okf/ (Open Knowledge Format bundle)
 ]
 ```
 
