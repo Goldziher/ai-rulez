@@ -140,41 +140,16 @@ func IsCaseFile(name string) bool {
 // authored ones, before near-miss expansion. Problems do not stop parsing: every
 // case that could be read is returned next to them.
 func ParseFile(name string, data []byte) ([]Case, []Problem) {
-	var doc CaseFile
-	var lines caseLines
-	var problems []Problem
+	doc, lines, problems := decodeCaseFile(name, data)
+	if len(problems) > 0 {
+		return nil, problems
+	}
 	fail := func(line int, format string, args ...any) {
 		problems = append(problems, Problem{File: name, Line: line, Message: fmt.Sprintf(format, args...)})
 	}
 
-	if strings.EqualFold(filepath.Ext(name), ".json") {
-		decoder := json.NewDecoder(bytes.NewReader(data))
-		decoder.DisallowUnknownFields()
-		if err := decoder.Decode(&doc); err != nil {
-			fail(jsonLine(data, err), "invalid JSON: %v", err)
-			return nil, problems
-		}
-	} else {
-		decoder := yaml.NewDecoder(bytes.NewReader(data))
-		decoder.KnownFields(true)
-		if err := decoder.Decode(&doc); err != nil {
-			if errors.Is(err, io.EOF) {
-				fail(1, "file is empty")
-			} else {
-				fail(yamlErrLine(err), "invalid YAML: %v", yamlErrMessage(err))
-			}
-			return nil, problems
-		}
-		lines = yamlCaseLines(data)
-	}
-
-	if doc.SchemaVersion != 0 && doc.SchemaVersion != CaseSchemaVersion {
-		fail(1, "unsupported schema_version %d (this ai-rulez reads %d)", doc.SchemaVersion, CaseSchemaVersion)
-		return nil, problems
-	}
-
 	cases := doc.Cases
-	single := doc.Case.ID != "" || doc.Case.Prompt != "" || doc.Case.PromptFile != "" || doc.Case.ExpectTrigger != nil
+	single := doc.ID != "" || doc.Prompt != "" || doc.PromptFile != "" || doc.ExpectTrigger != nil
 	switch {
 	case len(cases) > 0 && single:
 		fail(1, "a file holds either a top-level case or a cases list, not both")
@@ -191,6 +166,13 @@ func ParseFile(name string, data []byte) ([]Case, []Problem) {
 		return nil, problems
 	}
 
+	out, more := validateCases(name, cases, lines)
+	return out, append(problems, more...)
+}
+
+// validateCases stamps each case with its file and line and reports its problems.
+func validateCases(name string, cases []Case, lines caseLines) ([]Case, []Problem) {
+	var problems []Problem
 	seen := map[string]bool{}
 	out := make([]Case, 0, len(cases))
 	for i := range cases {
@@ -201,17 +183,49 @@ func ParseFile(name string, data []byte) ([]Case, []Problem) {
 			c.Line = lines.cases[i]
 		}
 		for _, message := range c.validate() {
-			fail(c.Line, "case %q: %s", caseLabel(c, i), message)
+			problems = append(problems, Problem{File: name, Line: c.Line, Message: fmt.Sprintf("case %q: %s", caseLabel(c, i), message)})
 		}
 		if c.ID != "" {
 			if seen[c.ID] {
-				fail(c.Line, "duplicate case id %q in this file", c.ID)
+				problems = append(problems, Problem{File: name, Line: c.Line, Message: fmt.Sprintf("duplicate case id %q in this file", c.ID)})
 			}
 			seen[c.ID] = true
 		}
 		out = append(out, c)
 	}
 	return out, problems
+}
+
+// decodeCaseFile strictly decodes a YAML or JSON case file and checks its
+// schema_version.
+func decodeCaseFile(name string, data []byte) (doc CaseFile, lines caseLines, problems []Problem) {
+	fail := func(line int, format string, args ...any) {
+		problems = append(problems, Problem{File: name, Line: line, Message: fmt.Sprintf(format, args...)})
+	}
+	if strings.EqualFold(filepath.Ext(name), ".json") {
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.DisallowUnknownFields()
+		if err := decoder.Decode(&doc); err != nil {
+			fail(jsonLine(data, err), "invalid JSON: %v", err)
+			return doc, lines, problems
+		}
+	} else {
+		decoder := yaml.NewDecoder(bytes.NewReader(data))
+		decoder.KnownFields(true)
+		if err := decoder.Decode(&doc); err != nil {
+			if errors.Is(err, io.EOF) {
+				fail(1, "file is empty")
+			} else {
+				fail(yamlErrLine(err), "invalid YAML: %v", yamlErrMessage(err))
+			}
+			return doc, lines, problems
+		}
+		lines = yamlCaseLines(data)
+	}
+	if doc.SchemaVersion != 0 && doc.SchemaVersion != CaseSchemaVersion {
+		fail(1, "unsupported schema_version %d (this ai-rulez reads %d)", doc.SchemaVersion, CaseSchemaVersion)
+	}
+	return doc, lines, problems
 }
 
 func caseLabel(c Case, index int) string {
@@ -233,25 +247,26 @@ func defaultCaseID(name string) string {
 
 // validate returns the case's problems, in a stable order.
 func (c *Case) validate() []string {
+	out := c.validateIdentity()
+	out = append(out, c.validateFixtures()...)
+	for i := range c.Assertions {
+		for _, message := range c.Assertions[i].validate() {
+			out = append(out, fmt.Sprintf("assertions[%d]: %s", i, message))
+		}
+	}
+	return append(out, c.validateGrading()...)
+}
+
+func (c *Case) validateIdentity() []string {
 	var out []string
 	add := func(format string, args ...any) { out = append(out, fmt.Sprintf(format, args...)) }
-
 	switch {
 	case c.ID == "":
 		add("id is required")
 	case !idPattern.MatchString(c.ID):
 		add("id %q must be lowercase letters, digits, '.', '_' or '-'", c.ID)
 	}
-	switch {
-	case c.Prompt == "" && c.PromptFile == "":
-		add("one of prompt and prompt_file is required")
-	case c.Prompt != "" && c.PromptFile != "":
-		add("prompt and prompt_file are mutually exclusive")
-	case c.PromptFile != "":
-		if err := checkRelPath(c.PromptFile); err != "" {
-			add("prompt_file %s", err)
-		}
-	}
+	out = append(out, c.validatePrompt()...)
 	if c.ExpectTrigger == nil {
 		add("expect_trigger is required (true or false)")
 	}
@@ -263,6 +278,31 @@ func (c *Case) validate() []string {
 	if len(c.NearMiss) > 0 && c.ExpectTrigger != nil && !*c.ExpectTrigger {
 		add("near_miss only makes sense on a case with expect_trigger: true")
 	}
+	for i, tag := range c.Tags {
+		if !tagPattern.MatchString(tag) {
+			add("tags[%d] %q must be lowercase letters, digits, '.', '_', ':' or '-'", i, tag)
+		}
+	}
+	return out
+}
+
+func (c *Case) validatePrompt() []string {
+	switch {
+	case c.Prompt == "" && c.PromptFile == "":
+		return []string{"one of prompt and prompt_file is required"}
+	case c.Prompt != "" && c.PromptFile != "":
+		return []string{"prompt and prompt_file are mutually exclusive"}
+	case c.PromptFile != "":
+		if err := checkRelPath(c.PromptFile); err != "" {
+			return []string{"prompt_file " + err}
+		}
+	}
+	return nil
+}
+
+func (c *Case) validateFixtures() []string {
+	var out []string
+	add := func(format string, args ...any) { out = append(out, fmt.Sprintf(format, args...)) }
 	for i, f := range c.Files {
 		if err := checkRelPath(f.Path); err != "" {
 			add("files[%d].path %s", i, err)
@@ -276,22 +316,17 @@ func (c *Case) validate() []string {
 			}
 		}
 	}
-	for i := range c.Assertions {
-		for _, message := range c.Assertions[i].validate() {
-			add("assertions[%d]: %s", i, message)
-		}
-	}
+	return out
+}
+
+func (c *Case) validateGrading() []string {
+	var out []string
 	if c.RubricMinScore != nil {
 		if c.Rubric == "" {
-			add("rubric_min_score needs a rubric")
+			out = append(out, "rubric_min_score needs a rubric")
 		}
 		if *c.RubricMinScore < 0 || *c.RubricMinScore > 1 {
-			add("rubric_min_score must be between 0 and 1")
-		}
-	}
-	for i, tag := range c.Tags {
-		if !tagPattern.MatchString(tag) {
-			add("tags[%d] %q must be lowercase letters, digits, '.', '_', ':' or '-'", i, tag)
+			out = append(out, "rubric_min_score must be between 0 and 1")
 		}
 	}
 	return out
