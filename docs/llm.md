@@ -34,6 +34,8 @@ A committed repository config is attacker-controlled input: cloning a repository
 | `provider`, `model`, `backend`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honoured | honoured |
 | `max_cost_usd`, `max_tokens`, `max_calls` | honoured, but can only tighten: the lower non-zero value of repository and user wins | honoured |
 
+See the [trust model](trust-model.md) for every knob that reaches the network or runs a process.
+
 The local overlay lives in the checkout, so it counts as repository scope. Opt in once on your machine in the user config file (`$XDG_CONFIG_HOME/ai-rulez/config.toml`, else `~/.config/ai-rulez/config.toml`):
 
 ```toml
