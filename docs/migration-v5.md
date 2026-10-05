@@ -44,6 +44,10 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
   a changed line ending in a script is a changed digest. `lock --check` exits 2 on a lock without content pins,
   whatever `[lock] enforce` says. A lock with another `version` is refused with the instruction to run
   `ai-rulez lock` again. Run it once, review the diff and commit the file. See [Lock file](lockfile.md).
+- **`[lock] enforce` defaults to `true` whenever `ai-rulez.lock` exists.** Set `enforce = false` to opt out. A remote
+  include or installed skill the lock does not cover now makes `generate` fail (as `--locked` always did) and `AR010`
+  an error; `lock --check` keeps its exit code 2 contract. `generate --frozen` and `--locked` are unchanged: they
+  require the lock whether or not enforcement is on.
 - **`[lock] enforce = true` is strict.** It makes `validate --strict` report `AR981` (source drift) and `AR982`
   (output drift), makes `generate --locked` fail on drift, and makes the skills server refuse a served skill that
   the lock does not pin or whose digest differs. A corrupt lock, a lock of another `version` or a source that cannot be

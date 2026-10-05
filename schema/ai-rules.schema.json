@@ -853,7 +853,7 @@
       "properties": {
         "enforce": {
           "type": "boolean",
-          "description": "Report content drift as AR981/AR982 in `validate --strict`, make `lock --check` fail on a lock without content pins, and make the skills server (`mcp --serve-skills`) refuse a served skill whose digest is not the one recorded in ai-rulez.lock (kind served) or that the lock does not pin at all. Run `ai-rulez lock` to record the digests."
+          "description": "Defaults to true whenever ai-rulez.lock exists (set false to opt out). Report content drift as AR981/AR982 in `validate --strict`, make `lock --check` fail on a lock without content pins, make `generate` refuse a remote include or installed skill the lock does not pin (AR010 becomes an error), and make the skills server (`mcp --serve-skills`) refuse a served skill whose digest is not the one recorded in ai-rulez.lock (kind served) or that the lock does not pin at all. Run `ai-rulez lock` to record the digests."
         },
         "include_outputs": {
           "type": "boolean",
