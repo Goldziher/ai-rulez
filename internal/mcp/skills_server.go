@@ -30,8 +30,8 @@ const (
 const skillServerInstructions = "ai-rulez serves the skills of one profile read-only. " +
 	"Skills are MCP resources under skill://<name>/SKILL.md (supporting files sit beside it); " +
 	"skills/list and skills/get return each skill's frontmatter plus the SHA-256 digest and size of every file. " +
-	"Use search_skills to find a skill by meaning of its name, keywords or description, get_skill to load one, " +
-	"and read_skill_file for a supporting file. This server cannot modify any content."
+	"Call find_skill with a task to get ranked matches and load_skill to read one (list_skill_resources shows its files); " +
+	"search_skills, get_skill and read_skill_file are the lexical equivalents. This server cannot modify any content."
 
 // NewSkillServer builds the read-only serving surface: the Skills extension
 // (skills/list, skills/get, skill:// resources) plus search_skills, get_skill
@@ -39,9 +39,16 @@ const skillServerInstructions = "ai-rulez serves the skills of one profile read-
 // authoring tools are registered, so the surface cannot create, change or
 // delete content.
 func NewSkillServer(version string, catalog *Catalog) *Server {
+	return NewSkillServerWith(version, catalog, ServeOptions{})
+}
+
+// NewSkillServerWith is NewSkillServer with the dynamic-loading options: the
+// find_skill / load_skill / list_skill_resources tools, their session budget,
+// roles, usage telemetry and live reload.
+func NewSkillServerWith(version string, catalog *Catalog, opts ServeOptions) *Server {
 	caps := &sdkmcp.ServerCapabilities{
 		Tools:     &sdkmcp.ToolCapabilities{},
-		Resources: &sdkmcp.ResourceCapabilities{},
+		Resources: &sdkmcp.ResourceCapabilities{ListChanged: true},
 	}
 	caps.AddExtension(SkillsExtensionID, map[string]any{})
 	mcpServer := sdkmcp.NewServer(
@@ -50,36 +57,24 @@ func NewSkillServer(version string, catalog *Catalog) *Server {
 	)
 	mcpServer.AddReceivingMiddleware(tolerantInitializeMiddleware())
 
-	srv := &Server{mcpServer: mcpServer, version: version, catalog: catalog}
+	srv := &Server{mcpServer: mcpServer, version: version, catalog: catalog, serve: newServeState(opts)}
 	srv.registerSkillResources()
 	srv.registerSkillTools()
+	srv.registerServeTools()
 	return srv
 }
 
 // Catalog returns the served skill set; nil for the authoring server.
-func (s *Server) Catalog() *Catalog { return s.catalog }
+func (s *Server) Catalog() *Catalog { return s.cat() }
 
 func (s *Server) registerSkillResources() {
-	for _, skill := range s.catalog.Skills() {
-		for i := range skill.Files {
-			file := &skill.Files[i]
-			s.mcpServer.AddResource(&sdkmcp.Resource{
-				URI:         file.URI,
-				Name:        skill.Name + "/" + file.RelPath,
-				Description: skill.Description,
-				MIMEType:    file.MIME,
-				Size:        int64(file.Size),
-				Meta: sdkmcp.Meta{
-					skillsMetaPrefix + "digest": file.Digest,
-					"ai-rulez/skill-digest":     skill.Digest,
-				},
-			}, s.readResource)
-		}
+	for _, skill := range s.cat().Skills() {
+		s.registerSkillFiles(skill)
 	}
 }
 
 func (s *Server) readResource(_ context.Context, req *sdkmcp.ReadResourceRequest) (*sdkmcp.ReadResourceResult, error) {
-	file, ok := s.catalog.File(req.Params.URI)
+	file, ok := s.cat().File(req.Params.URI)
 	if !ok {
 		return nil, sdkmcp.ResourceNotFoundError(req.Params.URI)
 	}
@@ -130,7 +125,7 @@ func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolReques
 	// Rank everything, filter by domain, then cut: the limit must apply to the
 	// filtered list, not to hits the domain filter would drop.
 	var results []map[string]any
-	for _, hit := range s.catalog.Search(req.GetString("query", ""), 0) {
+	for _, hit := range s.cat().Search(req.GetString("query", ""), 0) {
 		if domain != "" && domainLabel(hit.Skill.Domain) != domain {
 			continue
 		}
@@ -139,12 +134,12 @@ func (s *Server) searchSkillsHandler(_ context.Context, req *handlers.ToolReques
 			break
 		}
 	}
-	return handlers.ToolSuccess(map[string]any{"profile": s.catalog.Profile, "count": len(results), "results": results})
+	return handlers.ToolSuccess(map[string]any{"profile": s.cat().Profile, "count": len(results), "results": results})
 }
 
 func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
 	key := req.GetString("name", "")
-	skill, ok := s.catalog.Lookup(key)
+	skill, ok := s.cat().Lookup(key)
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("no served skill %q", key))
 	}
@@ -160,7 +155,7 @@ func (s *Server) getSkillHandler(_ context.Context, req *handlers.ToolRequest) (
 
 func (s *Server) readSkillFileHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
 	uri := req.GetString("uri", "")
-	file, ok := s.catalog.File(uri)
+	file, ok := s.cat().File(uri)
 	if !ok {
 		return handlers.ToolError(fmt.Errorf("no served skill file %q", uri))
 	}
@@ -222,15 +217,15 @@ func skillEntry(s *CatalogSkill) map[string]any {
 // before middleware runs, so the extension's two custom methods have to be
 // served at the JSON-RPC layer; everything else passes through untouched.
 func (s *Server) WrapTransport(inner sdkmcp.Transport) sdkmcp.Transport {
-	if s.catalog == nil {
+	if s.cat() == nil {
 		return inner
 	}
-	return &skillsTransport{inner: inner, catalog: s.catalog}
+	return &skillsTransport{inner: inner, srv: s}
 }
 
 type skillsTransport struct {
-	inner   sdkmcp.Transport
-	catalog *Catalog
+	inner sdkmcp.Transport
+	srv   *Server
 }
 
 func (t *skillsTransport) Connect(ctx context.Context) (sdkmcp.Connection, error) {
@@ -238,12 +233,12 @@ func (t *skillsTransport) Connect(ctx context.Context) (sdkmcp.Connection, error
 	if err != nil {
 		return nil, err //nolint:wrapcheck // transport errors pass through unchanged
 	}
-	return &skillsConn{Connection: conn, catalog: t.catalog}, nil
+	return &skillsConn{Connection: conn, srv: t.srv}, nil
 }
 
 type skillsConn struct {
 	sdkmcp.Connection
-	catalog *Catalog
+	srv *Server
 }
 
 func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
@@ -257,7 +252,7 @@ func (c *skillsConn) Read(ctx context.Context) (jsonrpc.Message, error) {
 			return msg, nil
 		}
 		resp := &jsonrpc.Response{ID: req.ID}
-		if result, rpcErr := c.catalog.handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
+		if result, rpcErr := c.srv.cat().handleSkillsMethod(req.Method, req.Params); rpcErr != nil {
 			resp.Error = rpcErr
 		} else if raw, mErr := json.Marshal(result); mErr != nil {
 			resp.Error = &jsonrpc.Error{Code: jsonrpc.CodeInternalError, Message: mErr.Error()}
