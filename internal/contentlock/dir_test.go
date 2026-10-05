@@ -37,7 +37,6 @@ func TestDigestDir_Vectors(t *testing.T) {
 	got, err = DigestDir(KindOKFInclude, dir)
 	require.NoError(t, err)
 	assert.Equal(t, "sha256:990b39514f6589c5e61d584b7f59173cb8b1a3bd260ee93af92ebedc819da5e7", got, "every tree kind is its own domain")
-
 }
 
 func TestDigestDir_SensitiveToContentModeAndScriptLineEndings(t *testing.T) {

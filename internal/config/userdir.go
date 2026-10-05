@@ -3,6 +3,8 @@ package config
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/samber/oops"
 )
 
 // UserConfigFileName is the user config file inside UserConfigDir: the one file
@@ -40,4 +42,18 @@ func UserConfigDir(getenv func(string) string, home string) string {
 		home = h
 	}
 	return filepath.Join(home, ".config", "ai-rulez")
+}
+
+// CacheDir is a directory below the user cache root, ~/.cache/ai-rulez/<parts...>.
+// It is the one place that decides where fetched includes, installed skills, skill
+// sources and remote documents are cached. There is no fallback to the shared
+// temp directory: a cache other users can write to could hold a tree they planted,
+// and an unlocked source trusts its cache. Without a home directory it errors.
+func CacheDir(parts ...string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return "", oops.Hint("Set HOME, or run from an account with a home directory").
+			Errorf("cannot place the ai-rulez cache: no home directory")
+	}
+	return filepath.Join(append([]string{home, ".cache", "ai-rulez"}, parts...)...), nil
 }

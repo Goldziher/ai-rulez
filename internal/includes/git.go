@@ -98,15 +98,8 @@ func invalidateScan(aiRulezDir string) {
 }
 
 // getIncludeCacheDir returns the cache directory for a given include source.
-// Uses ~/.cache/ai-rulez/ (XDG convention) for consistent cross-platform behavior.
 func getIncludeCacheDir(sourceName string) (string, error) {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		homeDir = os.TempDir()
-	}
-
-	cacheDir := filepath.Join(homeDir, ".cache", "ai-rulez", "includes", sourceName)
-	return cacheDir, nil
+	return config.CacheDir("includes", sourceName) //nolint:wrapcheck // already contextual
 }
 
 // GitSource represents a git repository source
@@ -255,12 +248,12 @@ func (s *GitSource) fetch(ctx context.Context) (*config.ContentTree, error) {
 	if s.okf {
 		ctx = withHardenedGit(ctx)
 	}
-	logger.Debug("Fetching git source", "name", s.name, "repo", redactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
+	logger.Debug("Fetching git source", "name", s.name, "repo", RedactURL(s.repoURL), "ref", s.ref, "path", s.path, "has_token", s.accessToken != "")
 
 	if SkipFetch || config.OfflineIncludes(ctx) {
 		if s.findAIRulezDir() == "" {
 			return nil, oops.
-				With("repo", redactURL(s.repoURL)).
+				With("repo", RedactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
 				Wrapf(ErrNotCached, "--no-fetch specified but no cached content found for include '%s'", s.name)
 		}
@@ -346,7 +339,7 @@ func (s *GitSource) refreshCache(ctx context.Context, ref, currentSHA string, is
 	}
 	pathSpec := s.sparsePathSpec()
 	if err := cloneFor(isSHA)(ctx, s.originalURL, ref, pathSpec, s.cacheDir, s.accessToken); err != nil {
-		return nil, oops.With("repo", redactURL(s.repoURL)).Wrapf(err, "failed to clone include %q", s.name)
+		return nil, oops.With("repo", RedactURL(s.repoURL)).Wrapf(err, "failed to clone include %q", s.name)
 	}
 
 	hashes, _ := computeFileHashes(s.cacheDir) //nolint:errcheck // best-effort; missing hashes degrade to full refetch next run
@@ -364,7 +357,7 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 	if s.okf {
 		dir := s.findAIRulezDir()
 		if dir == "" {
-			return nil, oops.With("repo", redactURL(s.repoURL)).With("path", s.path).Errorf("no OKF bundle found in repository")
+			return nil, oops.With("repo", RedactURL(s.repoURL)).With("path", s.path).Errorf("no OKF bundle found in repository")
 		}
 		return convertOKFBundle(dir, s.name, s.include)
 	}
@@ -372,7 +365,7 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 	aiRulezDir := s.findAIRulezDir()
 	if aiRulezDir == "" {
 		return nil, oops.
-			With("repo", redactURL(s.repoURL)).
+			With("repo", RedactURL(s.repoURL)).
 			With("ref", s.ref).
 			With("path", s.path).
 			Errorf("no .ai-rulez directory found in repository")
@@ -390,7 +383,7 @@ func (s *GitSource) scanCachedContent() (*config.ContentTree, error) {
 		scanned, err := config.ScanContentTree(aiRulezDir)
 		if err != nil {
 			return nil, oops.
-				With("repo", redactURL(s.repoURL)).
+				With("repo", RedactURL(s.repoURL)).
 				Wrapf(err, "failed to scan content tree")
 		}
 		storeScan(aiRulezDir, scanned)
@@ -514,7 +507,7 @@ func validateGitURL(urlStr string) error {
 	// Check for HTTP/HTTPS URLs
 	if !strings.HasPrefix(urlStr, "http://") && !strings.HasPrefix(urlStr, "https://") {
 		return oops.
-			With("url", redactURL(urlStr)).
+			With("url", RedactURL(urlStr)).
 			Hint("Git repository URLs must use http://, https://, file://, git@, or ssh:// protocol").
 			Errorf("invalid git repository URL format")
 	}
@@ -522,8 +515,8 @@ func validateGitURL(urlStr string) error {
 	// Try to parse as URL
 	if _, err := url.Parse(urlStr); err != nil {
 		return oops.
-			With("url", redactURL(urlStr)).
-			Errorf("invalid URL format: %s", redactURL(err.Error()))
+			With("url", RedactURL(urlStr)).
+			Errorf("invalid URL format: %s", RedactURL(err.Error()))
 	}
 
 	return nil

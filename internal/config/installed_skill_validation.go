@@ -61,40 +61,63 @@ func ValidateInstalledSkillFields(skill *InstalledSkillConfig) error {
 			With("skill_name", skill.Name).
 			Errorf("installed skill %q: %s %s", skill.Name, field, reason)
 	}
-	src := strings.TrimSpace(skill.Source)
-	switch {
-	case strings.HasPrefix(src, "-"):
-		return bad("source", "must not start with '-' (it would be read as a git option)")
-	case transportHelper.MatchString(src):
-		return bad("source", "must not use a git transport helper such as ext::")
-	case hasControl(skill.Source):
-		return bad("source", "must not contain control characters")
-	case strings.HasPrefix(strings.ToLower(src), "http://"):
-		return bad("source", "uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh, git@host:path, file://)")
+	if reason := skillSourceProblem(skill.Source); reason != "" {
+		return bad("source", reason)
 	}
-	if skill.Ref != "" {
-		switch {
-		case strings.HasPrefix(skill.Ref, "-"):
-			return bad("ref", "must not start with '-'")
-		case hasControl(skill.Ref) || strings.ContainsAny(skill.Ref, " ~^:?*[\\") || strings.Contains(skill.Ref, "..") || strings.Contains(skill.Ref, "@{"):
-			return bad("ref", "is not a valid git ref")
-		}
+	if reason := skillRefProblem(skill.Ref); reason != "" {
+		return bad("ref", reason)
 	}
-	if skill.Path != "" {
-		p := skill.Path
-		switch {
-		case strings.HasPrefix(p, "/") || strings.HasPrefix(p, "\\") || (len(p) >= 2 && p[1] == ':'):
-			return bad("path", "must be relative to the skill repository")
-		case hasControl(p):
-			return bad("path", "must not contain control characters")
-		}
-		for _, seg := range strings.FieldsFunc(p, func(r rune) bool { return r == '/' || r == '\\' }) {
-			if seg == ".." {
-				return bad("path", "must not contain '..'")
-			}
-		}
+	if reason := skillPathProblem(skill.Path); reason != "" {
+		return bad("path", reason)
 	}
 	return nil
+}
+
+// skillRefProblem says why a ref cannot be handed to git ("" when it can).
+func skillRefProblem(ref string) string {
+	switch {
+	case ref == "":
+		return ""
+	case strings.HasPrefix(ref, "-"):
+		return "must not start with '-'"
+	case hasControl(ref) || strings.ContainsAny(ref, " ~^:?*[\\") || strings.Contains(ref, "..") || strings.Contains(ref, "@{"):
+		return "is not a valid git ref"
+	}
+	return ""
+}
+
+// skillPathProblem says why a path cannot address a directory inside the skill repository.
+func skillPathProblem(p string) string {
+	switch {
+	case p == "":
+		return ""
+	case strings.HasPrefix(p, "/") || strings.HasPrefix(p, "\\") || (len(p) >= 2 && p[1] == ':'):
+		return "must be relative to the skill repository"
+	case hasControl(p):
+		return "must not contain control characters"
+	}
+	for _, seg := range strings.FieldsFunc(p, func(r rune) bool { return r == '/' || r == '\\' }) {
+		if seg == ".." {
+			return "must not contain '..'"
+		}
+	}
+	return ""
+}
+
+// skillSourceProblem says why a skill source cannot be handed to git ("" when it can).
+func skillSourceProblem(source string) string {
+	src := strings.TrimSpace(source)
+	switch {
+	case strings.HasPrefix(src, "-"):
+		return "must not start with '-' (it would be read as a git option)"
+	case transportHelper.MatchString(src):
+		return "must not use a git transport helper such as ext::"
+	case hasControl(source):
+		return "must not contain control characters"
+	case strings.HasPrefix(strings.ToLower(src), "http://"):
+		return "uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh, git@host:path, file://)"
+	}
+	return ""
 }
 
 func hasControl(s string) bool {
