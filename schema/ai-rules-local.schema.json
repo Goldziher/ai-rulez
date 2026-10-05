@@ -2468,6 +2468,63 @@
       },
       "type": "object"
     },
+    "telemetry": {
+      "additionalProperties": false,
+      "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",
+      "properties": {
+        "allow_network": {
+          "description": "Consent to OTLP export. Ignored in a repository config; honoured in the user config and AI_RULEZ_TELEMETRY_ALLOW_NETWORK. Default false.",
+          "type": "boolean"
+        },
+        "enabled": {
+          "description": "Record identifier-only load events for skills, rules, agents and context files to the local usage log. Default false.",
+          "type": "boolean"
+        },
+        "headers_env": {
+          "description": "Names of environment variables holding 'key=value,key2=value2' header lists. Names only; a literal credential is rejected. Ignored in a repository config.",
+          "items": {
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "include_paths": {
+          "description": "Add the repo-relative path of a loaded item to exported events. Default false. Ignored in a repository config.",
+          "type": "boolean"
+        },
+        "include_session": {
+          "description": "Add the salted session hash to exported log records (never to metric labels). Default false. Ignored in a repository config.",
+          "type": "boolean"
+        },
+        "otlp_endpoint": {
+          "description": "OTLP/HTTP collector base URL (https, or http on loopback). /v1/logs and /v1/metrics are appended. Ignored in a repository config.",
+          "type": "string"
+        },
+        "otlp_protocol": {
+          "description": "OTLP encoding. Only http/json is implemented.",
+          "enum": [
+            "http/json"
+          ],
+          "type": "string"
+        },
+        "salt_file": {
+          "description": "File holding the session-hash salt. Ignored in a repository config.",
+          "type": "string"
+        },
+        "sample": {
+          "description": "Fraction of sessions exported, decided per salted session hash. Default 1.",
+          "maximum": 1,
+          "minimum": 0,
+          "type": "number"
+        },
+        "service_name": {
+          "description": "service.name resource attribute. Default ai-rulez.",
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
     "usage": {
       "additionalProperties": false,
       "description": "Usage-telemetry support (opt-in, no network).",

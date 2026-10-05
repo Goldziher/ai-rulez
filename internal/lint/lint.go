@@ -218,6 +218,7 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkRoles()
 	r.checkLockDrift()
 	r.checkOKF()
+	r.checkTelemetry()
 	if so.External {
 		r.runExternal()
 	}
