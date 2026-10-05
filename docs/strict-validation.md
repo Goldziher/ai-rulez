@@ -1392,6 +1392,16 @@ a generated output differs from the digest pinned in ai-rulez.lock (raised only 
 - Bad: A hand-edited `.claude/skills/x/SKILL.md`
 - Good: Regenerate with `ai-rulez generate`, then `ai-rulez lock`
 
+### AR989 served-file-unscannable
+
+a served skill file is binary or larger than 512 KiB, so the security scan cannot read it; the server does not serve such a file from a remote source (trust=error) and refuses a skill whose SKILL.md is one
+
+- Default severity: `warning`
+- Analyzer: `plugin` (scope `item`)
+- Why: The security scan only reads text of bounded size, so a binary or oversized served file would reach the agent unscanned; the server refuses it from a remote source and refuses a skill whose SKILL.md is one.
+- Bad: A served skill that bundles a compiled binary or a 2 MiB text dump next to SKILL.md
+- Good: Keep served skill files small UTF-8 text; ship binaries outside the served skill
+
 ### AR990 served-skill-referenced-statically
 
 a static rule, context or skill names a skill whose delivery is served, which is not in the harness's skill tree
@@ -1601,6 +1611,16 @@ the [llm] table is invalid: unknown backend, a literal secret instead of an api_
 - Why: An invalid [llm] table either fails at run time or, with a literal secret or credentials in base_url, leaks a credential into the repository.
 - Bad: `api_key_env = "sk-live-123"`
 - Good: `api_key_env = "ANTHROPIC_API_KEY"`
+
+### AR9C1 llm-untrusted-key
+
+a repository [llm] table sets allow_network, base_url, api_key_env or a price override, which only the user config file and AI_RULEZ_LLM_* may set; the value is ignored
+
+- Default severity: `warning`
+- Analyzer: `budgets` (scope `item`)
+- Why: A repository can be cloned from anyone, so its [llm] table may not enable the network, point base_url elsewhere, name the API key variable or override prices; the value is ignored and only the user config file or AI_RULEZ_LLM_* may set it.
+- Bad: `allow_network = true` in the repository ai-rulez.toml
+- Good: Set `allow_network = true` in the user config file (`~/.config/ai-rulez/config.toml`) or AI_RULEZ_LLM_ALLOW_NETWORK
 
 ### AR9K0 telemetry-config-invalid
 

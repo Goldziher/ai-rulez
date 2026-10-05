@@ -1,8 +1,8 @@
 package contentlock
 
 import (
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -31,8 +31,7 @@ func fileModeFor(goos, abs string, info os.FileInfo, index func(abs string) (str
 
 // gitIndexMode reads the mode git has recorded for abs.
 func gitIndexMode(abs string) (string, bool) {
-	cmd := exec.Command("git", "ls-files", "-s", "--", filepath.Base(abs)) //nolint:gosec // fixed arguments
-	cmd.Dir = filepath.Dir(abs)
+	cmd := gitutil.CommandNoContext(filepath.Dir(abs), "ls-files", "-s", "--", filepath.Base(abs))
 	out, err := cmd.Output()
 	if err != nil {
 		return "", false
