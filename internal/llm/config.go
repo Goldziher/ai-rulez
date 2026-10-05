@@ -57,6 +57,9 @@ type Config struct {
 	PriceOutputPerMTok float64 `yaml:"price_output_per_mtok,omitempty" json:"price_output_per_mtok,omitempty" toml:"price_output_per_mtok,omitempty"`
 }
 
+// MaxRetriesLimit bounds max_retries so a typo cannot keep a run retrying for hours.
+const MaxRetriesLimit = 10
+
 // Defaults.
 const (
 	DefaultTimeoutSeconds = 60
@@ -255,6 +258,9 @@ func (c Config) validateNumbers() []string {
 		if v < 0 {
 			out = append(out, name+" must not be negative")
 		}
+	}
+	if c.MaxRetries > MaxRetriesLimit {
+		out = append(out, "max_retries must not exceed "+strconv.Itoa(MaxRetriesLimit))
 	}
 	for name, v := range map[string]int{"max_tokens": c.MaxTokens, "max_calls": c.MaxCalls, "timeout_seconds": c.TimeoutSeconds} {
 		if v < 0 {
