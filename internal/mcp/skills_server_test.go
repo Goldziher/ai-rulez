@@ -280,7 +280,7 @@ func TestSkillServer_ExtensionMethods(t *testing.T) {
 			ann := m["annotations"].(map[string]any)
 			assert.Equal(t, true, ann["readOnlyHint"], m["name"])
 		}
-		assert.ElementsMatch(t, []string{"search_skills", "get_skill", "read_skill_file"}, names)
+		assert.ElementsMatch(t, []string{"search_skills", "get_skill", "read_skill_file", "find_skill", "load_skill", "list_skill_resources"}, names)
 		for _, n := range names {
 			assert.False(t, strings.HasPrefix(n, "create_") || strings.HasPrefix(n, "update_") || strings.HasPrefix(n, "delete_"))
 		}

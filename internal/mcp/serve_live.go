@@ -1,0 +1,101 @@
+package mcp
+
+import (
+	"context"
+	"time"
+
+	"github.com/Goldziher/ai-rulez/internal/logger"
+	sdkmcp "github.com/modelcontextprotocol/go-sdk/mcp"
+)
+
+const defaultPollInterval = 2 * time.Second
+
+// Replace swaps in a freshly built catalog and updates the registered skill://
+// resources to match: removed skills disappear, new and changed ones are
+// (re-)registered. The SDK debounces the resulting changes into one
+// notifications/resources/list_changed per connected client.
+func (s *Server) Replace(next *Catalog) {
+	s.catMu.Lock()
+	prev := s.catalog
+	s.catalog = next
+	s.catMu.Unlock()
+
+	if prev != nil {
+		var gone []string
+		for uri := range prev.byFile {
+			if _, ok := next.byFile[uri]; !ok {
+				gone = append(gone, uri)
+			}
+		}
+		if len(gone) > 0 {
+			s.mcpServer.RemoveResources(gone...)
+		}
+	}
+	for _, skill := range next.Skills() {
+		if prev != nil {
+			if old, ok := prev.byName[skill.Name]; ok && old.Digest == skill.Digest {
+				continue
+			}
+		}
+		s.registerSkillFiles(skill)
+	}
+}
+
+func (s *Server) registerSkillFiles(skill *CatalogSkill) {
+	for i := range skill.Files {
+		file := &skill.Files[i]
+		s.mcpServer.AddResource(&sdkmcp.Resource{
+			URI:         file.URI,
+			Name:        skill.Name + "/" + file.RelPath,
+			Description: skill.Description,
+			MIMEType:    file.MIME,
+			Size:        int64(file.Size),
+			Meta: sdkmcp.Meta{
+				skillsMetaPrefix + "digest": file.Digest,
+				"ai-rulez/skill-digest":     skill.Digest,
+			},
+		}, s.readResource)
+	}
+}
+
+// Watch polls the Fingerprint of the catalog's inputs and, when it changes,
+// rebuilds the catalog and calls Replace. A failed rebuild keeps the previous
+// catalog serving and is logged. It returns when ctx ends, or at once when the
+// server was built without Rebuild and Fingerprint. Polling (not fsnotify)
+// keeps the dependency set unchanged and behaves the same on every platform.
+func (s *Server) Watch(ctx context.Context) {
+	o := s.serve.opts
+	if o.Rebuild == nil || o.Fingerprint == nil {
+		return
+	}
+	interval := o.PollInterval
+	if interval <= 0 {
+		interval = defaultPollInterval
+	}
+	last, err := o.Fingerprint()
+	if err != nil {
+		logger.Warn("Live reload disabled: cannot fingerprint the skill files", "error", err.Error())
+		return
+	}
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+		cur, err := o.Fingerprint()
+		if err != nil || cur == last {
+			continue
+		}
+		last = cur
+		next, err := o.Rebuild()
+		if err != nil {
+			logger.Warn("Skill files changed but the catalog could not be rebuilt; keeping the previous one", "error", err.Error())
+			continue
+		}
+		s.Replace(next)
+		logger.Info("Reloaded served skills", "skills", len(next.Skills()))
+	}
+}
