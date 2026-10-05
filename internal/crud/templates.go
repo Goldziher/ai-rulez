@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )

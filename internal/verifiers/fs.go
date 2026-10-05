@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/verifiers/vspec"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/verifiers/vspec"
 	"github.com/samber/oops"
 )
 

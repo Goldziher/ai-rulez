@@ -12,10 +12,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/opencodev1"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
 	"github.com/samber/oops"
 )
 

@@ -6,9 +6,9 @@ import (
 	"os"
 	"text/tabwriter"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/progress"
-	"github.com/Goldziher/ai-rulez/internal/verifiers"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/progress"
+	"github.com/Goldziher/ai-rulez/v5/internal/verifiers"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )

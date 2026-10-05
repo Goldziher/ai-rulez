@@ -13,7 +13,7 @@ import (
 
 	toml "github.com/pelletier/go-toml/v2"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Harness traps (AR9C1...): files a harness silently ignores. The traps are

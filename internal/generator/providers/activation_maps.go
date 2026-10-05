@@ -3,8 +3,8 @@ package providers
 import (
 	"path/filepath"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
 )
 
 // MappedRulesFolder is the rules folder of a configured provider whose

@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/lint"
+	"github.com/Goldziher/ai-rulez/v5/internal/lint"
 )
 
 // A credential is never carried into config.toml: every string of an MCP server

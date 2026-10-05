@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	_ "github.com/Goldziher/ai-rulez/internal/includes" // registers the includes resolver
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // registers the includes resolver
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

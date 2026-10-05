@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 // ElementsSpec makes a generic sidecar also own some elements of an array

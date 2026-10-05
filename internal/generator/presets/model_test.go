@@ -3,7 +3,7 @@ package presets
 import (
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/stretchr/testify/assert"
 )
 

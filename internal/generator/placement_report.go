@@ -4,10 +4,10 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/plugin"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/plugin"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 	"github.com/samber/oops"
 )
 

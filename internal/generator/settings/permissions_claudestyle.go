@@ -3,7 +3,7 @@ package settings
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 // Harnesses whose settings.json carries Claude Code's permission rule syntax:

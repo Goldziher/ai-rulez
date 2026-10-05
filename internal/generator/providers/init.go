@@ -1,7 +1,7 @@
 package providers
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // init registers every embedded provider spec under its declared name with

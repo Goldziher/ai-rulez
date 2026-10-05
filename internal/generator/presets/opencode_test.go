@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/opencodev1"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/opencodev1"
 )
 
 func TestOpencodePresetGenerator_GetName(t *testing.T) {

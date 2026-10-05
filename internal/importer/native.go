@@ -7,8 +7,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/generator"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 )
 
 const nativeName = "native"

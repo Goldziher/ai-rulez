@@ -12,8 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	cmdrun "github.com/Goldziher/ai-rulez/internal/runner"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	cmdrun "github.com/Goldziher/ai-rulez/v5/internal/runner"
 )
 
 // knownEgressFlags are flags that make a scanner send scanned content, or call a

@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	_ "github.com/Goldziher/ai-rulez/internal/includes" // register includes resolver for tests
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // register includes resolver for tests
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

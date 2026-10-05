@@ -9,7 +9,7 @@
 // remains authoritative until commit (b) swaps registration.
 package providers
 
-import "github.com/Goldziher/ai-rulez/internal/config"
+import "github.com/Goldziher/ai-rulez/v5/internal/config"
 
 // ProviderSpec is the typed mirror of schema/provider.schema.json. Loaded
 // from disk (TOML/YAML/JSON), validated, and fed into Render.

@@ -7,7 +7,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // SourceType represents the type of include source

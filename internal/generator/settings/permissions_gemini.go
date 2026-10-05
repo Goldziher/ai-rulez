@@ -1,7 +1,7 @@
 package settings
 
 import (
-	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/jsonmerge"
 )
 
 // Gemini CLI: .gemini/settings.json `tools.allowed` (skip the confirmation) and

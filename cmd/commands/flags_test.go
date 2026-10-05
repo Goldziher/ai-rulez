@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/cmd/commands"
+	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

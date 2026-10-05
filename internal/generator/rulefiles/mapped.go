@@ -6,7 +6,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // DialectMapped builds frontmatter from an ActivationMap declared in a provider

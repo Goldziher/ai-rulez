@@ -9,7 +9,7 @@ import (
 
 	"github.com/samber/oops"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Reserved domain names that should not be used
