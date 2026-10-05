@@ -45,6 +45,14 @@ type Config struct {
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
 	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
 
+	// Dynamic skill loading (types_dynamic.go, delivery.go).
+	Skills         *SkillsConfig           `yaml:"skills,omitempty" json:"skills,omitempty" toml:"skills,omitempty"`
+	DomainSettings map[string]DomainConfig `yaml:"domains,omitempty" json:"domains,omitempty" toml:"domains,omitempty"`
+	SkillSources   []SkillSourceConfig     `yaml:"skill_sources,omitempty" json:"skill_sources,omitempty" toml:"skill_sources,omitempty"` //nolint:tagliatelle
+	// ServeMode is set while a skills server renders: every skill is rendered,
+	// served ones included, and no dynamic-skills stub is added.
+	ServeMode bool `yaml:"-" json:"-" toml:"-"`
+
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
 	// consumer Plugins/Marketplaces fields above.
