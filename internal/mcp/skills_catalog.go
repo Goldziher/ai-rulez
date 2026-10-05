@@ -71,8 +71,11 @@ type CatalogSkill struct {
 	Locked bool
 	// ScanFindings counts security findings that did not block serving.
 	ScanFindings int
-	Frontmatter  map[string]any
-	Files        []CatalogFile
+	// Unscanned lists files that are not served because the security scan cannot
+	// read them (binary or over 512 KiB) and the skill's trust level is error.
+	Unscanned   []string
+	Frontmatter map[string]any
+	Files       []CatalogFile
 	// Digest identifies the skill as a whole: sha256 over its sorted file URIs
 	// and digests, so one value changes whenever any file does.
 	Digest string
