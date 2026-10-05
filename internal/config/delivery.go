@@ -165,8 +165,16 @@ func (c *Config) DeliveryConfigured(tree *ContentTree) bool {
 	return false
 }
 
-// hasServedSkills reports whether any skill of tree is served or both.
-func (c *Config) hasServedSkills(tree *ContentTree) bool { return c.DeliveryConfigured(tree) }
+// ServesSkills reports whether a skills server has anything to serve: a skill
+// of tree whose delivery is served or both, or a [[skill_sources]] entry (whose
+// skills are served, never written). The dynamic-skills stub, and the checks
+// that an agent is told to call find_skill, apply exactly then.
+func (c *Config) ServesSkills(tree *ContentTree) bool {
+	return len(c.SkillSources) > 0 || c.DeliveryConfigured(tree)
+}
+
+// hasServedSkills reports whether anything is served (see ServesSkills).
+func (c *Config) hasServedSkills(tree *ContentTree) bool { return c.ServesSkills(tree) }
 
 // DeliveryFallback describes served skills a preset keeps static because its
 // harness has no MCP support.

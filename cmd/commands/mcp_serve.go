@@ -36,7 +36,7 @@ func registerDynamicServeFlags(cmd *cobra.Command) {
 	f.Bool(flagServeFrozen, false, "Never use the network and require ai-rulez.lock to cover every remote include, installed skill and skill source (requires --serve-skills)")
 	f.Bool(flagServeOffline, false, "Never use the network; use cached content (requires --serve-skills)")
 	f.Bool(flagServeIncludeStatic, false, "Also serve skills whose delivery is static (requires --serve-skills)")
-	f.Int(flagServeBudget, 0, "Bytes load_skill may return per session; 0 is the default (256 KiB), -1 removes the cap (requires --serve-skills)")
+	f.Int(flagServeBudget, 0, "Bytes of skill content a session may read (load_skill, get_skill, read_skill_file, resources/read); 0 is the default (256 KiB), -1 removes the cap (requires --serve-skills)")
 	f.String(flagServeUsageLog, "", "Append one identifier-only JSON line per load_skill to this file (requires --serve-skills)")
 	f.String(flagServeUsageSink, "", "Shell command that receives each load_skill usage line on stdin (requires --serve-skills)")
 	f.Bool(flagServeNoWatch, false, "Do not reload skills when their files change (requires --serve-skills)")
