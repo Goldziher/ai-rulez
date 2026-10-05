@@ -18,7 +18,7 @@ import (
 
 const userConfigTOML = `version = "4.0"
 name = "me"
-presets = ["claude", "codex", "gemini", "opencode", "cursor", "copilot", "pi", "windsurf"]
+presets = ["claude", "codex", "gemini", "opencode", "cursor", "copilot", "pi", "devin"]
 
 [profiles]
 work = ["work"]
@@ -145,7 +145,7 @@ func TestUser_WritesOnlyDocumentedLocations(t *testing.T) {
 	assert.FileExists(t, filepath.Join(home, ".config", "ai-rulez", generatedManifestName))
 	assert.NoFileExists(t, filepath.Join(home, "CLAUDE.md"), "project-shaped files never land in the home root")
 	assert.NoFileExists(t, filepath.Join(home, ".gitignore"))
-	assert.Contains(t, strings.Join(*warnings, "\n"), "preset windsurf has no documented user-level location")
+	assert.Contains(t, strings.Join(*warnings, "\n"), "preset devin has no documented user-level location")
 
 	// Work-domain content is outside the default profile.
 	assert.NoFileExists(t, filepath.Join(home, ".claude", "skills", "work-skill", "SKILL.md"))
