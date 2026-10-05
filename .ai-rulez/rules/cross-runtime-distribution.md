@@ -4,7 +4,6 @@ targets:
   - CLAUDE.md
   - .cursor/rules/*
   - GEMINI.md
-  - .continue/**/*.yaml
   - AGENTS.md
   - .hermes.md
 ---

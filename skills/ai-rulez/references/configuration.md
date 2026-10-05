@@ -80,12 +80,11 @@ env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "
 | cursor       | .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/ |
 | gemini       | GEMINI.md, .gemini/, .agents/   |
 | copilot      | .github/copilot-instructions.md, .github/{skills,agents,commands}/ |
-| continue-dev | .continue/                      |
-| windsurf     | .windsurf/                      |
+| devin        | .devin/                         |
 | cline        | .clinerules/, .cline/           |
 | codex        | AGENTS.md and .codex/           |
 | amp          | AGENTS.md and .agents/ (.amp/settings.json) |
-| junie        | .junie/guidelines.md            |
+| junie        | AGENTS.md and .junie/           |
 | opencode     | AGENTS.md, .opencode/, opencode.json |
 | hermes       | .hermes.md                      |
 | antigravity  | .agents/, GEMINI.md             |
@@ -154,7 +153,7 @@ planned `--gitignore` patterns. Secret values are redacted before source-hash ca
 - `ai-rulez generate --config-dir <name>` and `validate --config-dir <name>` use another config directory (nested values such as `.config/ai-rulez` are supported).
 - `ai-rulez generate <path/to/config.toml>` and `--config <path/to/config.toml>` load that exact file.
 - Generation writes `.generated-manifest.json` under the active config directory and removes only stale files listed in that manifest.
-- Assistant directories such as `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.windsurf/`, and `.agents/` are not considered fully owned; user settings, hooks, personal skills, and other local files are preserved.
+- Assistant directories such as `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.devin/`, and `.agents/` are not considered fully owned; user settings, hooks, personal skills, and other local files are preserved.
 
 ## Scoped Outputs
 

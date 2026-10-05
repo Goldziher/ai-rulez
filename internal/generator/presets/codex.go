@@ -48,7 +48,7 @@ func (g *CodexPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".codex"),
 		filepath.Join(baseDir, filepath.FromSlash(config.DefaultCodexSkillsDir)),
 		filepath.Join(baseDir, ".codex", "agents"),
-		filepath.Join(baseDir, ".codex", "commands"),
+		filepath.Join(baseDir, ".codex", "prompts"),
 	}
 }
 
@@ -123,13 +123,14 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		})
 	}
 
-	// Generate .codex/commands directory
+	// Generate .codex/prompts directory. Codex CLI reads custom prompts from
+	// .codex/prompts/*.md.
 	outputs = append(outputs, config.OutputFile{
-		Path:  filepath.Join(baseDir, ".codex", "commands"),
+		Path:  filepath.Join(baseDir, ".codex", "prompts"),
 		IsDir: true,
 	})
 
-	// Generate command files to .codex/commands/
+	// Generate command files to .codex/prompts/
 	allCommands := allCommands(content)
 	for _, command := range allCommands {
 		if !g.shouldIncludeCommand(command) {
@@ -138,7 +139,7 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		sanitized := sanitizeName(command.Name)
 		commandContent := g.renderCommandFile(command)
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".codex", "commands", sanitized+".md"),
+			Path:    filepath.Join(baseDir, ".codex", "prompts", sanitized+".md"),
 			Content: commandContent,
 		})
 	}

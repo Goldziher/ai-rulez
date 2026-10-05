@@ -13,7 +13,7 @@ type Dialect string
 const (
 	DialectClaude   Dialect = "claude"
 	DialectCursor   Dialect = "cursor"
-	DialectTrigger  Dialect = "trigger" // windsurf, antigravity
+	DialectTrigger  Dialect = "trigger" // devin, antigravity
 	DialectCopilot  Dialect = "copilot"
 	DialectCline    Dialect = "cline"
 	DialectContinue Dialect = "continue"

@@ -126,7 +126,7 @@ func distributeSpecialistTasks(context *ProjectContext, providerConfig templates
 
 	baseTasks := []string{"project description", taskCodingStandards, taskDocumentation}
 
-	if providerConfig.Claude || providerConfig.ContinueDev {
+	if providerConfig.Claude {
 		baseTasks = append(baseTasks, "agent definitions")
 	}
 
@@ -508,8 +508,10 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 			sb.WriteString("    naming_scheme: '{name}.md'\n")
 			hasOutputs = true
 		}
-		if providerConfig.Windsurf {
-			sb.WriteString("  - path: .windsurfrules\n")
+		if providerConfig.Devin {
+			sb.WriteString("  - path: .devin/rules/\n")
+			sb.WriteString("    type: rule\n")
+			sb.WriteString("    naming_scheme: '{name}.md'\n")
 			hasOutputs = true
 		}
 		if providerConfig.Copilot {
@@ -528,16 +530,6 @@ func buildInitialConfigTemplate(context *ProjectContext, providerConfig template
 			sb.WriteString("  - path: .clinerules/\n")
 			sb.WriteString("    type: rule\n")
 			sb.WriteString("    naming_scheme: '{name}.md'\n")
-			hasOutputs = true
-		}
-		if providerConfig.ContinueDev {
-			sb.WriteString("  - path: .continue/rules/\n")
-			sb.WriteString("    type: rule\n")
-			sb.WriteString("    naming_scheme: '{name}.md'\n")
-			sb.WriteString("  - path: .continue/prompts/ai_rulez_prompts.yaml\n")
-			sb.WriteString("    template:\n")
-			sb.WriteString("      type: builtin\n")
-			sb.WriteString("      value: continue-prompts\n")
 			hasOutputs = true
 		}
 

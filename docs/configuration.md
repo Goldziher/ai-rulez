@@ -145,12 +145,11 @@ presets = [
   "cursor",       # → .cursor/rules/, .cursor/commands/, .cursor/agents/, .agents/skills/
   "gemini",       # → GEMINI.md, .gemini/ (settings.json, agents/), .agents/skills/
   "copilot",      # → .github/copilot-instructions.md, .github/instructions/, .github/{skills,agents,commands}/
-  "windsurf",     # → .windsurf/
-  "continue-dev", # → .continue/
+  "devin",        # → .devin/
   "cline",        # → .clinerules/, .cline/
   "codex",        # → AGENTS.md, .agents/skills/ and .codex/
   "amp",          # → AGENTS.md and .agents/ (.amp/settings.json when an effort resolves)
-  "junie",        # → .junie/ (guidelines.md, rules/, skills/, agents/)
+  "junie",        # → AGENTS.md and .junie/ (rules/, skills/, agents/)
   "opencode",     # → AGENTS.md, .opencode/, opencode.json (when MCP servers are set)
   "hermes",       # → .hermes.md
   "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
@@ -352,7 +351,7 @@ When `true`, ai-rulez adds the specific generated files and owned subdirectories
 `AGENTS.md`/`CLAUDE.md`/`.mcp.json` and owned subtrees such as `.claude/skills/`, `.claude/agents/`,
 `.codex/`, `.opencode/skills/`. It never ignores an assistant directory wholesale, so a hand-authored
 `.opencode/settings.json` beside the generated files stays tracked. GitHub output is narrower:
-ai-rulez ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/commands/`,
+ai-rulez ignores generated `.github/copilot-instructions.md`, `.github/agents/`, `.github/prompts/`,
 and `.github/skills/` without ignoring all of `.github/`.
 
 ai-rulez adds only what git does not already ignore. Before writing, it asks git (`git check-ignore`) about each
@@ -397,8 +396,8 @@ agents_md = false  # Default: every preset writes its own files
 
 When `true`, always-on rules and context go into one `AGENTS.md` (plus a nested `<scope>/AGENTS.md` for each
 `[[scopes]]` entry) and skills go into one `.agents/skills/<name>/SKILL.md`. The presets that read these files
-(`codex`, `opencode`, `amp`, `xum`, `pi`, `claude`, `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `windsurf`,
-`cline`, `continue-dev` and `junie`) stop writing their own `AGENTS.md` copy, root file and skills directory.
+(`codex`, `opencode`, `amp`, `xum`, `pi`, `claude`, `gemini`, `antigravity`, `hermes`, `cursor`, `copilot`, `devin`,
+`cline` and `junie`) stop writing their own `AGENTS.md` copy, root file and skills directory.
 Turning the flag off regenerates the per-tool files and removes the shared ones that no preset writes itself.
 
 Quick reference:
@@ -407,7 +406,7 @@ Quick reference:
   are also inlined into `AGENTS.md` when a configured preset has no folder for them (duplicated for tools that have
   one).
 - `claude` keeps `CLAUDE.md` as a banner plus `@AGENTS.md`; `gemini` gets `AGENTS.md` added to `context.fileName` in
-  `.gemini/settings.json`; `GEMINI.md`, `.hermes.md`, `.junie/guidelines.md` and `.github/copilot-instructions.md`
+  `.gemini/settings.json`; `GEMINI.md`, `.hermes.md` and `.github/copilot-instructions.md`
   are not written.
 - Skills with `targets`, machine-local files and agents, commands and MCP files stay per-preset.
 - If another preset (including a custom provider) also writes `AGENTS.md` or a file under `.agents/skills`, the
@@ -896,7 +895,7 @@ is usually the right call when the same agent is generated for many tools.
 
 **Resolution order** (per preset, per agent):
 
-1. Per-agent `effort` in agent frontmatter (Claude, Codex, Windsurf, Opencode, Xum — presets that support per-agent effort)
+1. Per-agent `effort` in agent frontmatter (Claude, Codex, Devin, Opencode, Xum — presets that support per-agent effort)
 2. `defaults.effort_by_preset[<preset>]`
 3. `defaults.effort`
 4. Omit
@@ -915,11 +914,11 @@ For models the order is:
 | `claude`                                                                       | `.claude/agents/<id>.md` frontmatter                                            | `effort`                 | Per-agent. Full vocabulary including `max`. `inherit` is not a Claude effort value and is dropped.                                                                                  |
 | `codex`                                                                        | `.codex/agents/<id>.toml` (per-agent) and `.codex/config.toml` (global default) | `model_reasoning_effort` | Per-agent override beats global `.codex/config.toml`. `max` → `high`; `inherit` dropped.                                                                                           |
 | `amp`                                                                          | `.amp/settings.json`                                                            | `amp.anthropic.effort`   | Global only. `xhigh` → `high`.                                                                                                                                                     |
-| `windsurf`                                                                     | `.windsurf/agents/<id>.md` frontmatter                                          | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
+| `devin`                                                                        | `.devin/agents/<id>.md` frontmatter                                             | `reasoning_effort`       | Per-agent. `max` → `high`; `inherit` dropped.                                                                                                                                      |
 | `opencode`                                                                     | `.opencode/agents/<id>.md` frontmatter                                          | `variant`                | Per-agent. A separate `variant:` key beside a plain `provider/model` (the `model#variant` form is `opencode.json` only); a `#variant` in the source model is split off. `xhigh` and `max` → `high`; `inherit` dropped.                                       |
 | `xum`                                                                         | `.xum/agents/<id>.md` frontmatter                                               | `ai.thinkingLevel`       | Per-agent. `xhigh` and `max` → `high`; `inherit` dropped.                                                                                                                          |
 | `pi`                                                                          | `.pi/agents/<id>.md` frontmatter                                                | `thinking`               | Per-agent. Full vocabulary; `inherit` dropped.                                                                                                                                     |
-| `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`, `continue-dev` | —                                                                               | —                        | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
+| `cursor`, `copilot`, `gemini`, `junie`, `antigravity`, `cline`                 | —                                                                               | —                        | These tools either gate effort behind UI toggles or read it from user-managed config files. ai-rulez does not emit anything for them; configure effort in the tool's own settings. |
 
 **Per-preset model matrix** — presets that emit a `model` value in their agent frontmatter:
 
@@ -932,8 +931,7 @@ For models the order is:
 | `amp`          | `amp_model`               | `model` in `.agents/agents/<id>.md` (Amp)    |
 | `junie`        | `junie_model`             | `model` in `.junie/agents/<id>.md`           |
 | `opencode`     | `opencode_model`          | `model` in `.opencode/agents/<id>.md`        |
-| `windsurf`     | `windsurf_model`          | `model` in `.windsurf/agents/<id>.md`        |
-| `continue-dev` | `continue-dev_model`      | `model` in `.continue/agents/<id>.md`        |
+| `devin`        | `devin_model`             | `model` in `.devin/agents/<id>.md`           |
 | `gemini`       | `gemini_model`            | `model` in `.gemini/agents/<id>.md` (Gemini) |
 | `xum`          | `xum_model`               | `ai.model` in `.xum/agents/<id>.md`          |
 | `pi`           | `pi_model`                | `model` in `.pi/agents/<id>.md`              |
@@ -1391,7 +1389,7 @@ globs:
 - Sets the reasoning effort for a Claude Code subagent in its generated `.claude/agents/<name>.md` frontmatter
 - Available levels depend on the model
 - Falls back to `defaults.effort` in `config.toml` when not set, then to the session-level default
-- Presets that don't emit effort — `cursor`, `copilot`, `gemini`, `junie`, `cline`, `continue-dev`, `antigravity` — omit it from their outputs. See the [per-preset support matrix](#defaults).
+- Presets that don't emit effort — `cursor`, `copilot`, `gemini`, `junie`, `cline`, `antigravity` — omit it from their outputs. See the [per-preset support matrix](#defaults).
 
 ```yaml
 ---
@@ -1698,7 +1696,7 @@ presets = [
   "claude",
   "cursor",
   "gemini",
-  "windsurf",
+  "devin",
   { name = "internal-guide", type = "markdown", path = "docs/AI_DEVELOPMENT_GUIDE.md" },
 ]
 

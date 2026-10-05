@@ -20,12 +20,11 @@ presets = [
   "cursor",       # → .cursor/rules/*.mdc
   "gemini",       # → GEMINI.md
   "copilot",      # → .github/copilot-instructions.md
-  "continue-dev", # → .continue/rules/
-  "windsurf",     # → .windsurf/
+  "devin",        # → .devin/
   "cline",        # → .clinerules/, .cline/
   "codex",        # → AGENTS.md and .codex/
   "amp",          # → AGENTS.md and .agents/ (.amp/settings.json)
-  "junie",        # → .junie/guidelines.md
+  "junie",        # → AGENTS.md and .junie/
   "opencode",     # → AGENTS.md, .opencode/, opencode.json
   "hermes",      # → .hermes.md
   "antigravity",  # → .agents/, GEMINI.md
@@ -44,12 +43,12 @@ When `defaults.effort` or `defaults.effort_by_preset` is set, presets with nativ
 | `claude`   | `.claude/agents/<id>.md`                        | `effort`                 | per-agent            |
 | `codex`    | `.codex/config.toml`, `.codex/agents/<id>.toml` | `model_reasoning_effort` | global and per-agent |
 | `amp`      | `.amp/settings.json`                            | `amp.anthropic.effort`   | global               |
-| `windsurf` | `.windsurf/agents/<id>.md`                      | `reasoning_effort`       | per-agent            |
+| `devin`    | `.devin/agents/<id>.md`                         | `reasoning_effort`       | per-agent            |
 | `opencode` | `.opencode/agents/<id>.md`                      | `variant`                | per-agent            |
 | `xum`      | `.xum/agents/<id>.md`                           | `ai.thinkingLevel`       | per-agent            |
 | `pi`       | `.pi/agents/<id>.md`                            | `thinking`               | per-agent            |
 
-Resolution order: per-agent metadata → `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit. Each preset maps the canonical tier to its own vocabulary (e.g. Codex caps at `xhigh`/drops `inherit`; Amp uses `max` instead of `xhigh`). Other presets (cursor, copilot, gemini, junie, hermes, antigravity, cline, continue-dev) silently skip — those tools expose effort via UI toggles or user-managed config files we don't generate.
+Resolution order: per-agent metadata → `defaults.effort_by_preset[<preset>]` → `defaults.effort` → omit. Each preset maps the canonical tier to its own vocabulary (e.g. Codex caps at `xhigh`/drops `inherit`; Amp uses `max` instead of `xhigh`). Other presets (cursor, copilot, gemini, junie, hermes, antigravity, cline) silently skip — those tools expose effort via UI toggles or user-managed config files we don't generate.
 
 ## Custom Presets
 
@@ -138,5 +137,5 @@ Generation no longer treats assistant directories as fully owned. Stale cleanup 
 
 - The manifest lives at `<config-dir>/.generated-manifest.json`.
 - Only files listed in the previous manifest can be deleted as stale.
-- User-owned files in `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.windsurf/`, `.cline/`, `.agents/`, `.continue/`, `.opencode/`, `.junie/`, and custom output directories are preserved.
+- User-owned files in `.claude/`, `.codex/`, `.cursor/`, `.gemini/`, `.devin/`, `.cline/`, `.agents/`, `.opencode/`, `.junie/`, and custom output directories are preserved.
 - `ai-rulez generate --dry-run` prints `write-file`, `create-dir`, and `delete-stale` entries without changing the filesystem.

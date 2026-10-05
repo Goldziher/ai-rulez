@@ -16,7 +16,7 @@ import (
 var RulesDirs = [...]string{
 	".claude/rules/",
 	".cursor/rules/",
-	".windsurf/rules/",
+	".devin/rules/",
 	".clinerules/",
 	".continue/rules/",
 	".agents/rules/",

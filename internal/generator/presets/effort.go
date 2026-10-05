@@ -48,11 +48,9 @@ func ResolveGlobalEffort(preset string, cfg *config.Config) string {
 //     max → high (Codex tops at xhigh; max would be a silent over-promise → cap at high
 //     to stay below xhigh's cost). inherit dropped (no equivalent).
 //   - amp:    low, medium, high, max — amp.anthropic.effort. xhigh → high (Amp has no xhigh).
-//   - windsurf: low, medium, high, xhigh — agent frontmatter reasoning_effort. max → high.
+//   - devin:  low, medium, high, xhigh — agent frontmatter reasoning_effort. max → high.
 //   - antigravity: low, medium, high, xhigh — thinking_level frontmatter. max → high.
 //   - opencode: low, medium, high — agent `variant` (joined to the model). xhigh|max → high.
-//   - continue-dev: handled out-of-band — emit reasoning: true and a budget tied to tier.
-//     MapEffort still returns the canonical tier; the preset uses its own table.
 func MapEffort(preset, tier string) string {
 	if tier == "" {
 		return ""
@@ -64,12 +62,10 @@ func MapEffort(preset, tier string) string {
 		return mapCodex(tier)
 	case presetNameAmp:
 		return mapAmp(tier)
-	case windsurfPresetName, presetNameAntigravity:
-		return mapWindsurfAntigravity(tier)
+	case devinPresetName, presetNameAntigravity:
+		return mapDevinAntigravity(tier)
 	case opencodePresetName:
 		return mapOpenCode(tier)
-	case continueDevPresetName:
-		return mapContinueDev(tier)
 	default:
 		return ""
 	}
@@ -97,7 +93,7 @@ func mapAmp(tier string) string {
 	}
 }
 
-func mapWindsurfAntigravity(tier string) string {
+func mapDevinAntigravity(tier string) string {
 	switch tier {
 	case effortLow, effortMedium, effortHigh, effortXHigh:
 		return tier
@@ -115,17 +111,6 @@ func mapOpenCode(tier string) string {
 	case effortXHigh, effortMax:
 		return effortHigh
 	default: // inherit, anything unknown
-		return ""
-	}
-}
-
-func mapContinueDev(tier string) string {
-	switch tier {
-	case effortLow, effortMedium, effortHigh:
-		return tier
-	case effortXHigh, effortMax:
-		return effortHigh
-	default:
 		return ""
 	}
 }

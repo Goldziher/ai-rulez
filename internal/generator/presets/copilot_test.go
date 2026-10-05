@@ -99,7 +99,7 @@ func TestCopilotPresetGenerator_GetOutputPaths(t *testing.T) {
 		filepath.Join("/base", ".github", "instructions"),
 		filepath.Join("/base", ".github", "skills"),
 		filepath.Join("/base", ".github", "agents"),
-		filepath.Join("/base", ".github", "commands"),
+		filepath.Join("/base", ".github", "prompts"),
 	}
 
 	if len(paths) != len(wantPaths) {

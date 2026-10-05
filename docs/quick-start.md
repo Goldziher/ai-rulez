@@ -250,7 +250,7 @@ mkdir -p .ai-rulez/domains/newdomain/context
 Edit presets in `config.toml`:
 
 ```toml
-presets = ["claude", "cursor", "windsurf", "copilot"]
+presets = ["claude", "cursor", "devin", "copilot"]
 ```
 
 ### Create Custom Output

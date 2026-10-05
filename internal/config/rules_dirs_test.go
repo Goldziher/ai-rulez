@@ -19,9 +19,8 @@ func TestRulesDirRemainder(t *testing.T) {
 	}{
 		{"claude file", ".claude/rules/x.md", "x.md", true},
 		{"cursor file", ".cursor/rules/x.mdc", "x.mdc", true},
-		{"windsurf file", ".windsurf/rules/x.md", "x.md", true},
+		{"devin file", ".devin/rules/x.md", "x.md", true},
 		{"cline file", ".clinerules/x.md", "x.md", true},
-		{"continue file", ".continue/rules/x.md", "x.md", true},
 		{"agents file", ".agents/rules/x.md", "x.md", true},
 		{"junie file", ".junie/rules/x.md", "x.md", true},
 		{"copilot file", ".github/instructions/x.instructions.md", "x.instructions.md", true},
