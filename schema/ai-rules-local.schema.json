@@ -2422,6 +2422,16 @@
             },
             "type": "array"
           },
+          "max_bytes": {
+            "description": "Total size in bytes of the skill files this source may load (default 67108864, 64 MiB); a larger source is an error.",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "max_skills": {
+            "description": "Number of skills this source may load (default 200); a larger source is an error.",
+            "minimum": 0,
+            "type": "integer"
+          },
           "name": {
             "description": "Identifies the source in the lock and in provenance.",
             "pattern": "^[a-z0-9][a-z0-9._-]*$",

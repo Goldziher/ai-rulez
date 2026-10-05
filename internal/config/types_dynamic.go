@@ -74,4 +74,8 @@ type SkillSourceConfig struct {
 	NamePrefix string `yaml:"name_prefix,omitempty" json:"name_prefix,omitempty" toml:"name_prefix,omitempty"` //nolint:tagliatelle
 	// Trust is the scan level: "error" (default) or "warn". See TrustError.
 	Trust string `yaml:"trust,omitempty" json:"trust,omitempty" toml:"trust,omitempty"`
+	// MaxSkills caps how many skills the source may load (0 selects the default of 200).
+	MaxSkills int `yaml:"max_skills,omitempty" json:"max_skills,omitempty" toml:"max_skills,omitempty"` //nolint:tagliatelle
+	// MaxBytes caps the total size of the files the source loads (0 selects the default of 64 MiB).
+	MaxBytes int `yaml:"max_bytes,omitempty" json:"max_bytes,omitempty" toml:"max_bytes,omitempty"` //nolint:tagliatelle
 }

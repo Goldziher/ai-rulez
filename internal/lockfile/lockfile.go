@@ -263,6 +263,13 @@ func IsFullSHA(ref string) bool {
 // its bytes. VCS metadata and ai-rulez cache bookkeeping are left out, so the
 // digest of a fresh clone equals the digest of the same tree re-read later.
 func DigestDir(dir string) (string, error) {
+	// WalkDir does not follow a symlinked root: it would visit one non-directory
+	// entry and digest nothing, so every such tree would share one constant digest.
+	if info, err := os.Lstat(dir); err != nil {
+		return "", oops.With("dir", dir).Wrapf(err, "digest directory")
+	} else if !info.IsDir() {
+		return "", oops.With("dir", dir).Errorf("digest directory: %s is not a real directory (a symlink is not followed)", dir)
+	}
 	h := sha256.New()
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
