@@ -10,7 +10,7 @@ import (
 )
 
 // The vectors below were computed with an independent Python implementation of
-// the scheme in docs/lockfile.md. If one changes, hash_version must change.
+// the scheme in docs/lockfile.md. If one changes, lockfile.Version must change.
 func TestVectors(t *testing.T) {
 	skill := []Leaf{
 		{Path: "SKILL.md", Mode: ModeRegular, Data: []byte("---\nname: deploy\n---\nDeploy.\n")},
@@ -31,6 +31,16 @@ func TestVectors(t *testing.T) {
 			"sha256:6e09fc1d734e8a2db85a25265407b4e78e44e45e712d4f60d2682c121f95c40b"},
 		{"skill with resources, binary bytes kept", "skill", skill,
 			"sha256:262d721306783b4c3b554a1345253c266f6f991733dad6a347e1b55d5e57ac05"},
+		{"script LF", "skill", []Leaf{{Path: "run.sh", Mode: ModeExecutable, Data: []byte("echo hi\n")}},
+			"sha256:d7aec0e55512be14e8c20554ee6da9911881211fec26eec3927bb18b21212b54"},
+		{"script CRLF is a different file (issue 233)", "skill", []Leaf{{Path: "run.sh", Mode: ModeExecutable, Data: []byte("echo hi\r\n")}},
+			"sha256:5b9fcff355356346b64a0f8146b7c65b765f377d1deddf29318ef9e686e7ee92"},
+		{"installed skill", KindInstalledSkill, []Leaf{{Path: "SKILL.md", Mode: ModeRegular, Data: []byte("# S\n")}},
+			"sha256:018df4aac28d9eca573a05cb491c6704407d9b5de8ca10e0dfe20300928140db"},
+		{"skill source", KindSkillSource, []Leaf{{Path: "SKILL.md", Mode: ModeRegular, Data: []byte("# S\n")}},
+			"sha256:cf90b42b8c9bbb2e9bc94075e4d8a183117f45b46d0b746b7bc617587f64bc7b"},
+		{"served skill", KindServedSkill, []Leaf{{Path: "SKILL.md", Mode: ModeRegular, Data: []byte("# x\n")}},
+			"sha256:2225664563ac4bc0affa10d8ca1ea4dcd5ed2a61792b124824005493dffb458c"},
 		{"no files", "rule", nil,
 			"sha256:c36b2dc178586a67dfcf7bc1e18ab82e0aa267eb5c5a7d7cba0a6ee7b062ec26"},
 	}
@@ -117,4 +127,17 @@ func TestModeFor(t *testing.T) {
 	assert.Equal(t, ModeRegular, ModeFor(0o600))
 	assert.Equal(t, ModeExecutable, ModeFor(0o755))
 	assert.Equal(t, ModeExecutable, ModeFor(0o100))
+}
+
+func TestScriptsAreHashedByteForByte(t *testing.T) {
+	for _, name := range []string{"a.sh", "a.bash", "a.zsh", "a.py", "a.js", "a.mjs", "a.cjs", "a.ts", "A.SH"} {
+		assert.False(t, IsTextPath(name), name)
+		lf, err := TreeDigest("skill", []Leaf{{Path: name, Mode: ModeExecutable, Data: []byte("x\n")}})
+		require.NoError(t, err)
+		crlf, err := TreeDigest("skill", []Leaf{{Path: name, Mode: ModeExecutable, Data: []byte("x\r\n")}})
+		require.NoError(t, err)
+		assert.NotEqual(t, lf, crlf, name)
+	}
+	assert.True(t, IsTextPath("a.md"))
+	assert.Equal(t, []string{".json", ".jsonc", ".markdown", ".md", ".mdc", ".mdx", ".toml", ".txt", ".yaml", ".yml"}, TextExtensions())
 }

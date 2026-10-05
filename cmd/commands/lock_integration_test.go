@@ -25,13 +25,13 @@ func dynamicLockProject(t *testing.T) (root, vendor string) {
 	return root, vendor
 }
 
-func TestLock_OneV2FileHoldsContentPinsSourcesAndServedSkills(t *testing.T) {
+func TestLock_OneFileHoldsContentPinsSourcesAndServedSkills(t *testing.T) {
 	root, _ := dynamicLockProject(t)
 	require.Equal(t, 0, writeLockAt("", "", nil))
 
 	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
 	require.NoError(t, err)
-	assert.Equal(t, 2, lock.Version)
+	assert.Equal(t, lockfile.Version, lock.Version)
 	assert.True(t, lock.HasContentPins())
 	require.Len(t, lock.Source, 1)
 	assert.Equal(t, "vendor", lock.Source[0].Name)
