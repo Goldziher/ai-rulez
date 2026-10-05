@@ -8,6 +8,7 @@ and a `file:line`.
 ```bash
 ai-rulez validate --strict                       # text report, exit 2 on errors
 ai-rulez validate --strict --format json         # machine-readable
+ai-rulez validate --strict --format sarif --output ai-rulez.sarif   # code scanning upload
 ai-rulez validate --strict --recursive           # every nested root
 ai-rulez validate --strict --fail-on warning     # warnings also fail
 ```
@@ -23,8 +24,9 @@ still exits 1 and never reaches the content checks.
 | 1 | Configuration invalid or could not be loaded (unchanged), or an invalid `[lint]` setting |
 | 2 | Strict findings at or above the threshold (`--fail-on`, else `[lint] fail_on`, else `error`) |
 
-`--fail-on` accepts `error`, `warning`, `info` or `none` (report, never fail). `--format` and `--fail-on` require
-`--strict`. With `--format json` nothing but the JSON document is written to stdout.
+`--fail-on` accepts `error`, `warning`, `info` or `none` (report, never fail). `--format`, `--output` and `--fail-on`
+require `--strict`. With any structured `--format` (everything but `text`) nothing but the report is written to
+stdout.
 
 ## What is checked against what
 
@@ -212,6 +214,47 @@ pass `--external`.
 ```
 
 `file` is relative to the working directory when inside it. Findings are sorted by file, line and code.
+
+### Output formats
+
+`--format` selects the report shape; `--output <file>` writes it to a file (atomically, parent directories are
+created) instead of stdout. `scan` accepts the same flags. The exit code does not depend on the format.
+
+| Format | Use |
+| --- | --- |
+| `text` (default) | One line per finding plus a per-code tally |
+| `json` | The document above |
+| `sarif` | SARIF 2.1.0 for GitHub code scanning and other SARIF consumers |
+| `github` | GitHub Actions workflow commands (`::error file=,line=,title=::message`), shown as inline annotations |
+| `junit` | JUnit XML: one `testsuite` per root, one `testcase` per finding |
+| `markdown` | A pull-request comment: a summary line and tables grouped by severity |
+
+**SARIF.** `ruleId` is the `AR` code and `rules[]` carries each rule's name, description, help text (rationale and
+examples, with a Markdown form) and a `helpUri` to the [rule reference](#rule-reference). Levels map `error` to
+`error`, `warning` to `warning` and `info` to `note`. The security family (`AR001`-`AR011`) also sets
+`security-severity` (`8.0` error, `5.0` warning, `2.0` info) so code scanning ranks the alerts. Artifact locations are
+relative to the repository root (`uriBaseId` `%SRCROOT%`). Every result has
+`partialFingerprints["aiRulezFingerprint/v1"]`, so an alert survives edits that only move it (see below).
+
+```yaml
+# .github/workflows/ai-rulez.yml
+- run: ai-rulez validate --strict --format sarif --output ai-rulez.sarif
+  continue-on-error: true
+- uses: github/codeql-action/upload-sarif@v3
+  with: { sarif_file: ai-rulez.sarif }
+```
+
+**GitHub annotations.** `--format github` needs no upload step: run it in a workflow and findings appear on the
+diff. `error`, `warning` and `info` become `::error`, `::warning` and `::notice`.
+
+**JUnit.** A finding at or above the `--fail-on` threshold is a `<failure type="AR401">`; a lower one is `<skipped>`
+with its severity in the message, so it stays visible without failing the job.
+
+**Fingerprints.** Each finding has a `fingerprint` (`ar1:` plus 24 hex digits): a hash of the rule code, the
+repository-relative path and the whitespace-normalized text of the flagged line. It does not include the line
+number, so inserting text above a finding does not change it; editing the flagged line does. Two findings with
+the same code on identical lines of one file are told apart by their order. The `fingerprint` key is new in the
+JSON output; the other keys are unchanged.
 
 ## Relation to other checks
 
