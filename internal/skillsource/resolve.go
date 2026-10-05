@@ -302,7 +302,7 @@ func fetchInto(ctx context.Context, url, ref, kind, commit, treeDir string, fetc
 
 func kindFor(ref string) string {
 	switch {
-	case ref == "" || ref == "HEAD":
+	case ref == "" || ref == refHEAD:
 		return kindHead
 	case fullSHA.MatchString(ref):
 		return kindSHA
