@@ -262,14 +262,41 @@ func SkillDigest(skillDir string) (string, error) {
 func CasesDigest(skill *Skill) (string, error) {
 	roots := make([]digestRoot, 0, len(skill.EvalDirs))
 	for _, dir := range skill.EvalDirs {
-		roots = append(roots, digestRoot{dir: dir})
+		roots = append(roots, digestRoot{dir: dir, authored: true})
 	}
 	return treeDigest(roots)
 }
 
 type digestRoot struct {
-	dir  string
+	dir string
+	// skip is a top-level directory left out of the digest.
 	skip string
+	// authored leaves out the results and node_modules directories, which case
+	// discovery skips too. Hidden fixtures stay in: a case can reference them.
+	authored bool
+}
+
+// osJunk are files operating systems and editors drop into folders; they must not
+// change a digest, or the same skill would hash differently on two machines.
+func osJunk(name string) bool {
+	return name == ".DS_Store" || name == "Thumbs.db" || name == "desktop.ini" || strings.HasPrefix(name, "._")
+}
+
+// digestSkips says whether the walk leaves an entry out.
+func (r digestRoot) skips(rel, name string, isDir bool) bool {
+	if rel == "." {
+		return false
+	}
+	if isDir && r.skip != "" && rel == r.skip {
+		return true
+	}
+	if osJunk(name) {
+		return true
+	}
+	if r.authored {
+		return isDir && (name == "results" || name == "node_modules")
+	}
+	return false
 }
 
 func treeDigest(roots []digestRoot) (string, error) {
@@ -284,13 +311,13 @@ func treeDigest(roots []digestRoot) (string, error) {
 			if relErr != nil {
 				return relErr
 			}
-			if d.IsDir() {
-				if root.skip != "" && rel == root.skip {
+			if root.skips(rel, d.Name(), d.IsDir()) {
+				if d.IsDir() {
 					return filepath.SkipDir
 				}
 				return nil
 			}
-			if d.Type().IsRegular() {
+			if !d.IsDir() && (d.Type().IsRegular() || d.Type()&fs.ModeSymlink != 0) {
 				files = append(files, rel)
 			}
 			return nil
@@ -301,7 +328,7 @@ func treeDigest(roots []digestRoot) (string, error) {
 		sort.Strings(files)
 		hash.Write([]byte("root " + strconv.Itoa(i) + "\n"))
 		for _, rel := range files {
-			data, err := os.ReadFile(filepath.Join(root.dir, rel)) //nolint:gosec // walking the user's own tree
+			data, err := digestContent(filepath.Join(root.dir, rel))
 			if err != nil {
 				return "", fmt.Errorf("digest %s: %w", rel, err)
 			}
@@ -310,4 +337,21 @@ func treeDigest(roots []digestRoot) (string, error) {
 		}
 	}
 	return "sha256:" + hex.EncodeToString(hash.Sum(nil)), nil
+}
+
+// digestContent is a file's bytes, or for a symlink its target path, so
+// retargeting a link changes the digest without the digest reading outside the tree.
+func digestContent(file string) ([]byte, error) {
+	info, err := os.Lstat(file)
+	if err != nil {
+		return nil, err
+	}
+	if info.Mode()&fs.ModeSymlink != 0 {
+		target, err := os.Readlink(file)
+		if err != nil {
+			return nil, err
+		}
+		return []byte("-> " + target), nil
+	}
+	return os.ReadFile(file) //nolint:gosec // walking the user's own tree
 }
