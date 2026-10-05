@@ -61,6 +61,20 @@ sections = ["frontmatter", "content"]
 fields = ["description"]
 tools = true
 emit_model = true
+# Kiro tools are the category names read, write, shell and web; the bare
+# Claude model aliases are no Kiro model id.
+drop_bare_aliases = true
+
+[outputs.agents.frontmatter.tool_names]
+Read = "read"
+Grep = "read"
+Glob = "read"
+Write = "write"
+Edit = "write"
+MultiEdit = "write"
+Bash = "shell"
+WebFetch = "web"
+WebSearch = "web"
 
 [model]
 field = "model"
@@ -81,9 +95,11 @@ path = ".kiro/settings/mcp.json"
 format = "json"
 global_path = ".kiro/settings/mcp.json"
 
-# User scope: Kiro does not read ~/AGENTS.md, so the root guidance is a steering file.
+# User scope: Kiro does not read ~/AGENTS.md, but it reads an AGENTS.md in the
+# global steering folder.
 [global]
-root_file = ".kiro/steering/product.md"
+root_file = ".kiro/steering/AGENTS.md"
+commands_dir = ".kiro/prompts"
 rules_dir = ".kiro/steering"
 skills_dir = ".kiro/skills"
 agents_dir = ".kiro/agents"

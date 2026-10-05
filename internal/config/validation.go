@@ -52,6 +52,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateChecks(); err != nil {
+		return err
+	}
+
 	if err := c.validateInstalledSkills(); err != nil {
 		return err
 	}
@@ -318,6 +322,7 @@ func (c *Config) validateMalformedFrontmatter() error {
 	visit(c.Content.Skills)
 	visit(c.Content.Agents)
 	visit(c.Content.Commands)
+	visit(c.Content.Checks)
 	for _, domain := range c.Content.Domains {
 		if domain == nil {
 			continue
@@ -327,6 +332,7 @@ func (c *Config) validateMalformedFrontmatter() error {
 		visit(domain.Skills)
 		visit(domain.Agents)
 		visit(domain.Commands)
+		visit(domain.Checks)
 	}
 
 	if len(bad) == 0 {

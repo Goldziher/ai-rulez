@@ -16,7 +16,7 @@
         "required": ["kind", "id", "bytes", "tokens", "roles"],
         "additionalProperties": false,
         "properties": {
-          "kind": { "enum": ["rule", "context", "skill", "agent", "command"] },
+          "kind": { "enum": ["rule", "context", "skill", "agent", "command", "check"] },
           "id": { "type": "string" },
           "domain": { "type": "string" },
           "path": { "type": "string", "description": "Source path relative to the configuration directory." },

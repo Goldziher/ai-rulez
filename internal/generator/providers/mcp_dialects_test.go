@@ -86,6 +86,22 @@ func TestMCPDialectEntries(t *testing.T) {
 				"off": {"command": "off-cmd", "enabled": false}}`,
 		},
 		{
+			name: "roo types every remote server", dialect: MCPDialectRoo,
+			want: `{
+				"local": {"command": "npx", "args": ["-y", "pkg"], "env": {"API_KEY": "secret"}},
+				"http": {"type": "streamable-http", "url": "https://mcp.example.com/mcp", "headers": {"Authorization": "Bearer t"}},
+				"sse": {"type": "sse", "url": "https://mcp.example.com/sse"},
+				"off": {"command": "off-cmd", "disabled": true}}`,
+		},
+		{
+			name: "codewhale marks sse", dialect: MCPDialectCodewhale,
+			want: `{
+				"local": {"command": "npx", "args": ["-y", "pkg"], "env": {"API_KEY": "secret"}},
+				"http": {"url": "https://mcp.example.com/mcp", "headers": {"Authorization": "Bearer t"}},
+				"sse": {"url": "https://mcp.example.com/sse", "transport": "sse"},
+				"off": {"command": "off-cmd", "disabled": true}}`,
+		},
+		{
 			name: "amp is standard without the description", dialect: MCPDialectAmp,
 			want: `{
 				"local": {"command": "npx", "args": ["-y", "pkg"], "env": {"API_KEY": "secret"}},
@@ -232,9 +248,10 @@ header = "# Bugbot rules\n"
 				{Name: "sql-injection", Content: "Flag string-built SQL.\n"},
 				{Name: "secrets", Content: "Flag hardcoded tokens."},
 			},
-			want: "# Bugbot rules\n\n" +
+			want: "# Bugbot rules\n\n<!-- ai-rulez:checks:begin -->\n" +
 				"<!-- ai-rulez:check:sql-injection -->\n\n## sql-injection\n\nFlag string-built SQL.\n\n" +
-				"<!-- ai-rulez:check:secrets -->\n\n## secrets\n\nFlag hardcoded tokens.\n",
+				"<!-- ai-rulez:check:secrets -->\n\n## secrets\n\nFlag hardcoded tokens.\n" +
+				"<!-- ai-rulez:checks:end -->\n",
 		},
 	}
 	for _, tt := range tests {
@@ -260,7 +277,7 @@ header = "# Bugbot rules\n"
 				return
 			}
 			require.NotNil(t, got)
-			assert.Equal(t, tt.want, got.Content)
+			assert.Equal(t, tt.want, string(got.RawContent))
 		})
 	}
 }
@@ -415,7 +432,7 @@ func TestMCPDialects_AllResolve(t *testing.T) {
 	tests := []string{
 		"", MCPDialectStandard, MCPDialectClaude, MCPDialectGemini, MCPDialectOpencode, MCPDialectVSCode,
 		MCPDialectZed, MCPDialectCodex, MCPDialectAmp, MCPDialectYAMLStandard, MCPDialectBob,
-		MCPDialectZcode, MCPDialectGrok, MCPDialectTransport, MCPDialectVibe,
+		MCPDialectZcode, MCPDialectGrok, MCPDialectTransport, MCPDialectVibe, MCPDialectRoo, MCPDialectCodewhale,
 	}
 	for _, name := range tests {
 		t.Run("dialect "+name, func(t *testing.T) {
@@ -429,6 +446,10 @@ func TestMCPDialects_AllResolve(t *testing.T) {
 	for _, spec := range loadBuiltinSpecs() {
 		for _, sidecar := range spec.Sidecars {
 			if sidecar.Dialect == "" {
+				continue
+			}
+			if sidecar.Kind == SidecarChecks {
+				assert.True(t, isChecksDialect(sidecar.Dialect), "%s sidecar %s uses unknown checks dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)
 				continue
 			}
 			assert.True(t, IsMCPDialect(sidecar.Dialect), "%s sidecar %s uses unknown dialect %q", spec.Name, sidecar.Path, sidecar.Dialect)

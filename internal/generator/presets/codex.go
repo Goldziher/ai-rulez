@@ -10,7 +10,6 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"github.com/Goldziher/ai-rulez/internal/templates"
 )
 
@@ -91,8 +90,10 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		IsDir:   false,
 	})
 
-	// Combine all skills from root and domains
-	allSkills := allSkills(content)
+	// Combine all skills from root and domains. Codex reads custom
+	// prompts from no folder (project or user scope), but it runs a
+	// skill on an explicit $name, so a command is written as a skill.
+	allSkills := append(allSkills(content), commandAsSkills(content, codexPresetName)...)
 
 	// Generate skill files to the skills root (.agents/skills by default)
 	for _, skill := range allSkills {
@@ -136,27 +137,6 @@ func (g *CodexPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		outputs = append(outputs, config.OutputFile{
 			Path:    filepath.Join(baseDir, ".codex", "agents", agentID+".toml"),
 			Content: agentContent,
-		})
-	}
-
-	// Generate .codex/prompts directory. Codex CLI reads custom prompts from
-	// .codex/prompts/*.md.
-	outputs = append(outputs, config.OutputFile{
-		Path:  filepath.Join(baseDir, ".codex", "prompts"),
-		IsDir: true,
-	})
-
-	// Generate command files to .codex/prompts/
-	allCommands := allCommands(content)
-	for _, command := range allCommands {
-		if !g.shouldIncludeCommand(command) {
-			continue
-		}
-		sanitized := sanitizeName(command.Name)
-		commandContent := g.renderCommandFile(command)
-		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".codex", "prompts", sanitized+".md"),
-			Content: commandContent,
 		})
 	}
 
@@ -212,6 +192,16 @@ func (g *CodexPresetGenerator) renderConfigTOML(path string, cfg *config.Config)
 	return mergedOutput(path, res), true, nil
 }
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *CodexPresetGenerator) ProjectLayout() ProjectLayout { return g.ProjectLayoutFor(nil) }
+
+// ProjectLayoutFor is ProjectLayout with the skills folder codex_skills_dir names.
+func (g *CodexPresetGenerator) ProjectLayoutFor(cfg *config.Config) ProjectLayout {
+	skills := cfg.CodexSkillsDirOrDefault()
+	return ProjectLayout{RootFile: "AGENTS.md", SkillsDir: skills, AgentsDir: ".codex/agents", CommandsDir: skills}
+}
+
 // GlobalOutputPaths is the Codex user-scope layout under ~/.codex (CODEX_HOME).
 func (g *CodexPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
 	return GlobalLayout{
@@ -219,8 +209,13 @@ func (g *CodexPresetGenerator) GlobalOutputPaths(home string, getenv func(string
 		RootFile:    ".codex/AGENTS.md",
 		SkillsDir:   config.DefaultCodexSkillsDir,
 		AgentsDir:   ".codex/agents",
-		CommandsDir: ".codex/prompts",
-		Sidecars:    map[string]string{MergedDocCodexConfig: ".codex/config.toml"},
+		CommandsDir: config.DefaultCodexSkillsDir,
+		Sidecars: map[string]string{
+			MergedDocCodexConfig: ".codex/config.toml",
+			MergedDocCodexHooks:  ".codex/hooks.json",
+		},
+		SkillReaders:    []string{config.DefaultCodexSkillsDir},
+		SkillPrecedence: "Codex lists both; it does not merge or override same-named skills",
 	}.Resolve(home, getenv)
 }
 
@@ -351,50 +346,6 @@ func quoteYAMLString(value string) string {
 	escaped = strings.ReplaceAll(escaped, "\"", "\\\"")
 	escaped = strings.ReplaceAll(escaped, "\n", "\\n")
 	return "\"" + escaped + "\""
-}
-
-// shouldIncludeCommand checks if a command should be included in the Codex preset
-func (g *CodexPresetGenerator) shouldIncludeCommand(command config.ContentFile) bool {
-	if command.Metadata == nil {
-		return true
-	}
-	if len(command.Metadata.Targets) > 0 {
-		for _, target := range command.Metadata.Targets {
-			if target == codexPresetName {
-				return true
-			}
-		}
-		return false
-	}
-	return true
-}
-
-// renderCommandFile renders a command file in Markdown format for Codex
-func (g *CodexPresetGenerator) renderCommandFile(command config.ContentFile) string {
-	var builder strings.Builder
-
-	builder.WriteString("# /")
-	builder.WriteString(command.Name)
-	builder.WriteString("\n\n")
-
-	if command.Metadata != nil && command.Metadata.Extra != nil {
-		if desc, ok := command.Metadata.Extra[keyDescription]; ok && desc != "" {
-			builder.WriteString("**Description:** ")
-			builder.WriteString(desc)
-			builder.WriteString("\n\n")
-		}
-	}
-
-	if command.Metadata != nil && command.Metadata.Usage != "" {
-		builder.WriteString("**Usage:** `")
-		builder.WriteString(command.Metadata.Usage)
-		builder.WriteString("`\n\n")
-	}
-
-	processedContent := markdown.ProcessEmbeddedContent(command.Content)
-	builder.WriteString(processedContent)
-
-	return builder.String()
 }
 
 // renderPluginsJSON generates .codex/plugins.json with plugin declarations

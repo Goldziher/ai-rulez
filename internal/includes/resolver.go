@@ -244,6 +244,7 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTree, strategy string)
 		merged.Skills = mergeContentFiles(base.Skills, include.Skills, true)
 		merged.Agents = mergeContentFiles(base.Agents, include.Agents, true)
 		merged.Commands = mergeContentFiles(base.Commands, include.Commands, true)
+		merged.Checks = mergeContentFiles(base.Checks, include.Checks, true)
 
 	case mergeStrategyIncludeOverride:
 		// Include wins for root content
@@ -252,6 +253,7 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTree, strategy string)
 		merged.Skills = mergeContentFiles(base.Skills, include.Skills, false)
 		merged.Agents = mergeContentFiles(base.Agents, include.Agents, false)
 		merged.Commands = mergeContentFiles(base.Commands, include.Commands, false)
+		merged.Checks = mergeContentFiles(base.Checks, include.Checks, false)
 
 	case mergeStrategyError:
 		// Fail on any conflict
@@ -270,6 +272,9 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTree, strategy string)
 		if detectConflicts(base.Commands, include.Commands) {
 			return nil, oops.Errorf("conflict detected in commands between base and include")
 		}
+		if detectConflicts(base.Checks, include.Checks) {
+			return nil, oops.Errorf("conflict detected in checks between base and include")
+		}
 		merged.Rules = make([]config.ContentFile, 0, len(base.Rules)+len(include.Rules))
 		merged.Rules = append(merged.Rules, base.Rules...)
 		merged.Rules = append(merged.Rules, include.Rules...)
@@ -285,6 +290,9 @@ func (r *Resolver) mergeRoot(base, include *config.ContentTree, strategy string)
 		merged.Commands = make([]config.ContentFile, 0, len(base.Commands)+len(include.Commands))
 		merged.Commands = append(merged.Commands, base.Commands...)
 		merged.Commands = append(merged.Commands, include.Commands...)
+		merged.Checks = make([]config.ContentFile, 0, len(base.Checks)+len(include.Checks))
+		merged.Checks = append(merged.Checks, base.Checks...)
+		merged.Checks = append(merged.Checks, include.Checks...)
 
 	default:
 		return nil, oops.Errorf("unknown merge strategy: %s", strategy)
@@ -313,6 +321,7 @@ func (r *Resolver) mergeDomainInstall(base, include *config.ContentTree, install
 		Skills:   base.Skills,
 		Agents:   base.Agents,
 		Commands: base.Commands,
+		Checks:   base.Checks,
 		Domains:  make(map[string]*config.Domain),
 	}
 
@@ -342,6 +351,7 @@ func (r *Resolver) mergeDomainInstall(base, include *config.ContentTree, install
 			Skills:      include.Skills,
 			Agents:      include.Agents,
 			Commands:    include.Commands,
+			Checks:      include.Checks,
 			FromInclude: true,
 		}
 	}
@@ -365,6 +375,7 @@ func (r *Resolver) mergeDomainContent(target *config.Domain, include *config.Con
 		merged.Skills = mergeContentFiles(target.Skills, include.Skills, true)
 		merged.Agents = mergeContentFiles(target.Agents, include.Agents, true)
 		merged.Commands = mergeContentFiles(target.Commands, include.Commands, true)
+		merged.Checks = mergeContentFiles(target.Checks, include.Checks, true)
 
 	case mergeStrategyIncludeOverride:
 		// Include content wins
@@ -373,6 +384,7 @@ func (r *Resolver) mergeDomainContent(target *config.Domain, include *config.Con
 		merged.Skills = mergeContentFiles(target.Skills, include.Skills, false)
 		merged.Agents = mergeContentFiles(target.Agents, include.Agents, false)
 		merged.Commands = mergeContentFiles(target.Commands, include.Commands, false)
+		merged.Checks = mergeContentFiles(target.Checks, include.Checks, false)
 
 	default:
 		// Default to local-override
@@ -381,6 +393,7 @@ func (r *Resolver) mergeDomainContent(target *config.Domain, include *config.Con
 		merged.Skills = mergeContentFiles(target.Skills, include.Skills, true)
 		merged.Agents = mergeContentFiles(target.Agents, include.Agents, true)
 		merged.Commands = mergeContentFiles(target.Commands, include.Commands, true)
+		merged.Checks = mergeContentFiles(target.Checks, include.Checks, true)
 	}
 
 	return merged

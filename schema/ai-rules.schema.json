@@ -511,7 +511,7 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["rules", "context", "skills", "agents", "commands"]
+              "enum": ["rules", "context", "skills", "agents", "commands", "checks"]
             },
             "description": "What content types to import (defaults to all). MCP servers are not importable from an include."
           },
@@ -753,7 +753,7 @@
           "description": { "type": "string" },
           "extends": {
             "type": "string",
-            "description": "Name of one parent role (one level only). Domains and excludes are unioned, includes are unioned when both set one, skill_mode is merged with the child winning. match is not inherited."
+            "description": "Name of one parent role (one level only). Domains and excludes are unioned, includes are unioned when both set one, skill_mode and delivery are merged with the child winning. match is not inherited."
           },
           "domains": {
             "type": "array",
@@ -796,10 +796,24 @@
             },
             "additionalProperties": false
           },
+          "checks": {
+            "type": "object",
+            "description": "Include/exclude selectors for checks. Entries are item ids or path.Match globs; an entry containing / matches domain/id. An empty include keeps everything the role's domains provide.",
+            "properties": {
+              "include": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+              "exclude": { "type": "array", "items": { "type": "string", "minLength": 1 } }
+            },
+            "additionalProperties": false
+          },
           "skill_mode": {
             "type": "object",
             "description": "Skill id or glob to Claude Code skillOverrides state. An exact id beats a glob, a longer glob beats a shorter one, ties go to the lexically first pattern.",
             "additionalProperties": { "enum": ["on", "name-only", "user-invocable-only", "off"] }
+          },
+          "delivery": {
+            "type": "object",
+            "description": "Skill id or glob (domain/id for one domain) to how the skill reaches this role's agent: static (written to the skill trees), served (fetched over MCP on demand with `ai-rulez mcp --serve-skills --role`, never listed) or both. Same specificity rule as skill_mode; a skill's own `delivery` frontmatter wins, and the entries are inherited through extends with the child winning.",
+            "additionalProperties": { "enum": ["static", "served", "both"] }
           },
           "match": {
             "type": "object",

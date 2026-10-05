@@ -66,9 +66,19 @@ var removeCommandCmd = &cobra.Command{
 	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeCommands, "command") },
 }
 
+var removeCheckCmd = &cobra.Command{
+	Use:   "check <name>",
+	Short: "Remove a code-review check",
+	Args:  cobra.ExactArgs(1),
+	Run:   func(_ *cobra.Command, args []string) { runRemoveItem(args[0], crud.ContentTypeChecks, "check") },
+}
+
 func init() {
 	RemoveCmd.AddCommand(removeAgentCmd)
 	RemoveCmd.AddCommand(removeCommandCmd)
+	RemoveCmd.AddCommand(removeCheckCmd)
+	removeCheckCmd.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
+	removeCheckCmd.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")
 	for _, c := range []*cobra.Command{removeRuleCmd, removeContextCmd, removeSkillCmd, removeAgentCmd, removeCommandCmd} {
 		c.Flags().StringVarP(&removeDomain, "domain", "d", "", "Domain name (optional, searches root if not specified)")
 		c.Flags().BoolVarP(&removeForce, "force", "f", false, "Skip confirmation prompts")

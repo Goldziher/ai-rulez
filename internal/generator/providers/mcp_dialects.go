@@ -2,6 +2,7 @@ package providers
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -71,6 +72,8 @@ var mcpDialects = map[string]mcpDialect{
 	MCPDialectCodex:        {defaultKey: []string{"mcp_servers"}, build: codexMCPEntry},
 	MCPDialectAmp:          {defaultKey: []string{"amp.mcpServers"}, build: ampMCPEntry},
 	MCPDialectYAMLStandard: {defaultKey: []string{"mcp_servers"}, build: yamlStandardMCPEntry},
+	MCPDialectCodewhale:    {defaultKey: []string{"servers"}, build: codewhaleMCPEntry},
+	MCPDialectRoo:          {defaultKey: []string{"mcpServers"}, build: rooMCPEntry},
 	MCPDialectBob:          {defaultKey: []string{"mcpServers"}, build: bobMCPEntry},
 	MCPDialectZcode:        {defaultKey: []string{"mcp", "servers"}, build: zcodeMCPEntry},
 	MCPDialectGrok:         {defaultKey: []string{"mcp_servers"}, build: grokMCPEntry},
@@ -109,12 +112,33 @@ func mcpDialectFor(name string) (mcpDialect, error) {
 // mcpDialectEntries renders every configured server in the dialect, keyed by
 // server name.
 func mcpDialectEntries(d mcpDialect, cfg *config.Config) map[string]any {
+	return mcpDialectEntriesFor(d, cfg, nil)
+}
+
+// mcpEntryOpts narrows and adapts the entries of a generic mcp sidecar.
+type mcpEntryOpts struct {
+	// transports limits the servers to these transports (stdio, http, sse); empty
+	// means every server.
+	transports []string
+	// refSyntax is how an environment reference is written (EnvRefSyntax*); empty
+	// writes the resolved value.
+	refSyntax string
+}
+
+// mcpDialectEntriesFor is mcpDialectEntries with the options of a sidecar.
+func mcpDialectEntriesFor(d mcpDialect, cfg *config.Config, opts *mcpEntryOpts) map[string]any {
 	entries := make(map[string]any)
 	if cfg == nil {
 		return entries
 	}
+	if opts == nil {
+		opts = &mcpEntryOpts{}
+	}
 	for name, server := range cfg.MCPServers {
 		if server == nil {
+			continue
+		}
+		if len(opts.transports) > 0 && !slices.Contains(opts.transports, server.GetTransport()) {
 			continue
 		}
 		if why := incompleteMCPServer(server); why != "" {
@@ -122,10 +146,44 @@ func mcpDialectEntries(d mcpDialect, cfg *config.Config) map[string]any {
 			continue
 		}
 		if entry := d.build(server); entry != nil {
+			applyRefSyntax(entry, server, opts.refSyntax)
 			entries[name] = entry
 		}
 	}
 	return entries
+}
+
+// Environment reference syntaxes of a sidecar's env_ref_syntax: how a value that
+// came from a ${VAR} placeholder is written, for a tool that expands references
+// itself, so the secret stays out of the file.
+const (
+	// EnvRefSyntaxDollar is $NAME (Codebuff). Codebuff documents no braced form, so
+	// only a value that is exactly one placeholder is written as a reference.
+	EnvRefSyntaxDollar = "dollar"
+	// EnvRefSyntaxEnvPrefix is ${env:NAME} (Cursor).
+	EnvRefSyntaxEnvPrefix = "env_prefix"
+)
+
+// applyRefSyntax rewrites the values of an entry that held a placeholder to the
+// tool's reference syntax; see presets.ApplyEnvRefs.
+func applyRefSyntax(entry map[string]any, server *config.MCPServer, syntax string) {
+	if syntax == "" {
+		return
+	}
+	format := func(name string) string { return formatEnvRef(syntax, name) }
+	if syntax == EnvRefSyntaxDollar {
+		presets.ApplyWholeEnvRefs(entry, server, format)
+		return
+	}
+	presets.ApplyEnvRefs(entry, server, format)
+}
+
+// formatEnvRef is a reference to the environment variable name in syntax.
+func formatEnvRef(syntax, name string) string {
+	if syntax == EnvRefSyntaxEnvPrefix {
+		return "${env:" + name + "}"
+	}
+	return "$" + name
 }
 
 // incompleteMCPServer names what a server lacks to be written at all: the command
@@ -196,7 +254,7 @@ func geminiMCPEntry(server *config.MCPServer) map[string]any {
 	return entry
 }
 
-// opencodeMCPEntry is the OpenCode v2 entry: local servers take the executable
+// opencodeMCPEntry is the OpenCode entry (mcp.<name>): local servers take the executable
 // and its arguments as one `command` array and `environment` for env; remote
 // servers take url/headers. `enabled` is always written.
 func opencodeMCPEntry(server *config.MCPServer) map[string]any {

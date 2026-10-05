@@ -98,6 +98,21 @@ func TestPi_Generate(t *testing.T) {
 func TestPi_MCPJSON(t *testing.T) {
 	t.Parallel()
 
+	t.Run("a disabled server is not written as an active one", func(t *testing.T) {
+		t.Parallel()
+		off := false
+		cfg := &config.Config{Name: "demo", MCPServers: map[string]*config.MCPServer{
+			"on":  {Name: "on", Command: "npx"},
+			"off": {Name: "off", Command: "npx", Enabled: &off},
+		}}
+		outputs, err := piGen(t).Generate(&config.ContentTree{}, "/test", cfg)
+		require.NoError(t, err)
+		var doc map[string]map[string]any
+		require.NoError(t, json.Unmarshal([]byte(requireFile(t, outputs, ".pi/mcp.json").Content), &doc))
+		assert.Contains(t, doc["mcpServers"], "on")
+		assert.NotContains(t, doc["mcpServers"], "off")
+	})
+
 	t.Run("stdio and remote entries", func(t *testing.T) {
 		t.Parallel()
 		gen := piGen(t)

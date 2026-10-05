@@ -195,8 +195,12 @@ func TestAgentModelOverride_PerPreset(t *testing.T) {
 		},
 		{
 			preset: "cline",
-			got:    func() map[string]interface{} { return (&ClinePresetGenerator{}).buildClineAgentFrontmatter(agent, nil) },
-			want:   "cline-anthropic",
+			got: func() map[string]interface{} {
+				// Cline's agent YAML names the model `modelId`; present it as "model" for the shared check.
+				fm := (&ClinePresetGenerator{}).buildClineAgentFrontmatter(agent, nil)
+				return map[string]interface{}{"model": fm["modelId"]}
+			},
+			want: "cline-anthropic",
 		},
 		{
 			preset: "opencode",

@@ -43,6 +43,12 @@ func TestServerToolRegistration(t *testing.T) {
 		"update_skill",
 		"delete_skill",
 		"list_skills",
+		// Check tools
+		"create_check",
+		"read_check",
+		"update_check",
+		"delete_check",
+		"list_checks",
 		// Include tools
 		"add_include",
 		"remove_include",
@@ -54,5 +60,5 @@ func TestServerToolRegistration(t *testing.T) {
 		"list_profiles",
 	}
 
-	assert.Equal(t, 26, len(expectedTools), "Should have 26 MCP tools")
+	assert.Equal(t, 31, len(expectedTools), "Should have 31 MCP tools")
 }

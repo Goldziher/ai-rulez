@@ -15,7 +15,7 @@ import (
 // isGenericSidecarKind reports whether kind is one of the format-agnostic kinds
 // that merge into any JSON, JSONC, TOML or YAML document.
 func isGenericSidecarKind(kind string) bool {
-	return slices.Contains([]string{SidecarMCP, SidecarPermissions, SidecarHooks}, kind)
+	return slices.Contains([]string{SidecarMCP, SidecarChecks, SidecarPermissions, SidecarHooks}, kind)
 }
 
 // isDocFormat reports whether format is a document format a generic sidecar can
@@ -84,12 +84,17 @@ func (g *Generator) renderGenericSidecar(sc *SidecarSpec, cfg *config.Config, ou
 			}
 			return mergeDocument(outputPath, sc.DocFormat(), []jsonmerge.OwnedKey{key})
 		}
-		entries := mcpDialectEntries(dialect, cfg)
+		// Elements that are project-relative globs mean nothing in the user scope.
+		elements := sc.Elements
+		if elements != nil && elements.ProjectOnly && cfg != nil && cfg.UserScope {
+			elements = nil
+		}
+		entries := mcpDialectEntriesFor(dialect, cfg, &mcpEntryOpts{transports: sc.Transports, refSyntax: sc.EnvRefSyntax})
 		var owned []jsonmerge.OwnedKey
-		if len(entries) > 0 || sc.Elements == nil {
+		if len(entries) > 0 || elements == nil {
 			owned = append(owned, jsonmerge.OwnedKey{Path: sc.ownedKeyPath(dialect), Value: entries, Members: true})
 		}
-		if sc.Elements != nil {
+		if elements != nil {
 			key, ok, err := elementsOwnedKey(sc, cfg, outputPath)
 			if err != nil {
 				return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
@@ -117,7 +122,7 @@ func mergeDocument(outputPath, format string, owned []jsonmerge.OwnedKey) (sidec
 // MergedSidecarDoc is a merged document declared by a builtin spec.
 type MergedSidecarDoc struct {
 	Path   string // base-relative, slash-separated
-	Format string // json, jsonc, toml or yaml
+	Format string // json, jsonc, toml, yaml or markdown
 }
 
 // MergedSidecarDocs is MergedSidecarPaths with each document's format, for
@@ -136,6 +141,10 @@ func MergedSidecarDocs() []MergedSidecarDoc {
 				format = sc.DocFormat()
 			}
 			docs = append(docs, MergedSidecarDoc{Path: filepath.ToSlash(sc.Path), Format: format})
+		}
+		if path := aggregateChecksPath(spec); path != "" && !seen[path] {
+			seen[path] = true
+			docs = append(docs, MergedSidecarDoc{Path: path, Format: string(docmerge.FormatMarkdown)})
 		}
 	}
 	slices.SortFunc(docs, func(a, b MergedSidecarDoc) int { return strings.Compare(a.Path, b.Path) })

@@ -197,6 +197,9 @@ func (s *LocalSource) filterContent(tree *config.ContentTree) *config.ContentTre
 	if shouldInclude("commands") {
 		filtered.Commands = tree.Commands
 	}
+	if shouldInclude("checks") {
+		filtered.Checks = tree.Checks
+	}
 
 	// Copy domains (domains always included if they exist)
 	filtered.Domains = tree.Domains

@@ -57,6 +57,8 @@ func init() {
 	GenerateCmd.Flags().BoolVarP(&dryRun, "dry-run", "d", false, "Show what would be generated without writing files")
 	GenerateCmd.Flags().BoolVar(&generateCheck, "check", false,
 		"Verify the committed output matches the sources without writing: list differing files and exit 2 on drift (for CI)")
+	GenerateCmd.Flags().BoolVarP(&generateWatch, "watch", "w", false,
+		"Generate, then watch the configuration directory and local include sources and regenerate on every change (Ctrl-C to stop)")
 	GenerateCmd.Flags().BoolVar(&generateLocked, "locked", false,
 		"Require ai-rulez.lock to cover every remote include and installed skill and fetch exactly the pinned commits (for CI)")
 	GenerateCmd.Flags().BoolVar(&generateFrozen, "frozen", false,
@@ -119,6 +121,14 @@ func runGenerate(cmd *cobra.Command, args []string) {
 	if err := checkRoleFlags(); err != nil {
 		fmtError(err)
 		os.Exit(1)
+	}
+
+	if generateWatch {
+		if err := runGenerateWatch(watchParentContext(cmd), args); err != nil {
+			fmtError(err)
+			os.Exit(1)
+		}
+		return
 	}
 
 	if generateCheck {

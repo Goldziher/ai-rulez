@@ -304,6 +304,166 @@ func ListRulesHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallTo
 	})
 }
 
+// Check Handlers
+
+// checkFields reads the structured fields of a check from the tool arguments;
+// an empty value counts as not given.
+func checkFields(request *ToolRequest) crud.CheckFields {
+	return crud.CheckFields{
+		Description: request.GetString("description", ""),
+		Severity:    request.GetString("severity", ""),
+		Tools:       request.GetStringSlice("tools", nil),
+		Targets:     request.GetStringSlice("targets", nil),
+	}
+}
+
+func CreateCheckHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	if err := crud.ValidateCheckName(name); err != nil {
+		return ToolError(err)
+	}
+	fields := checkFields(request)
+	var content string
+	if body := request.GetString("content", ""); body != "" {
+		// A body, or a full file with its own frontmatter; the fields apply over it.
+		content, err = crud.BuildCheckContent(body, fields.Description, fields.Severity, fields.Tools, fields.Targets)
+	} else {
+		// No body: the template supplies the placeholder text, the fields apply over it.
+		content, err = crud.MergeCheckContent(crud.GenerateCheckTemplate(name, fields.Description), "", false, fields)
+	}
+	if err != nil {
+		return ToolError(err)
+	}
+
+	result, err := op.AddCheck(ctx, &crud.AddFileRequest{
+		Domain:      request.GetString("domain", ""),
+		Type:        crud.ContentTypeChecks,
+		Name:        name,
+		Description: fields.Description,
+		Content:     content,
+	})
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		keySuccess:   true,
+		keyOperation: "create_check",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Check created successfully",
+	})
+}
+
+func ReadCheckHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	domain := request.GetString("domain", "")
+	if err := crud.ValidateCheckName(name); err != nil {
+		return ToolError(err)
+	}
+
+	content, path, err := readFileContent(ctx, op, domain, crud.ContentTypeChecks, name)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		keySuccess:   true,
+		keyOperation: "read_check",
+		keyName:      name,
+		keyDomain:    domain,
+		keyPath:      path,
+		"content":    content,
+	})
+}
+
+func UpdateCheckHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	if err := crud.ValidateCheckName(name); err != nil {
+		return ToolError(err)
+	}
+	content := request.GetString("content", "")
+
+	// Content without frontmatter replaces the body and keeps the check's own
+	// frontmatter; the structured fields are set over it. Giving neither is an error.
+	result, err := op.UpdateCheck(ctx, request.GetString("domain", ""), name, content, content != "", checkFields(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		keySuccess:   true,
+		keyOperation: "update_check",
+		keyPath:      result.FullPath,
+		keyName:      result.Name,
+		keyDomain:    result.Domain,
+		keyMessage:   "Check updated successfully",
+	})
+}
+
+func DeleteCheckHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	name := request.GetString("name", "")
+	domain := request.GetString("domain", "")
+	if err := crud.ValidateCheckName(name); err != nil {
+		return ToolError(err)
+	}
+
+	if err := op.RemoveFile(ctx, domain, crud.ContentTypeChecks, name); err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		keySuccess:   true,
+		keyOperation: "delete_check",
+		keyName:      name,
+		keyDomain:    domain,
+		keyMessage:   "Check deleted successfully",
+	})
+}
+
+func ListChecksHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {
+	op, err := crud.NewOperator(workingDir(request))
+	if err != nil {
+		return ToolError(err)
+	}
+
+	domain := request.GetString("domain", "")
+
+	files, err := op.ListFiles(ctx, domain, crud.ContentTypeChecks)
+	if err != nil {
+		return ToolError(err)
+	}
+
+	return ToolSuccess(map[string]interface{}{
+		keySuccess:   true,
+		keyOperation: "list_checks",
+		keyDomain:    domain,
+		"checks":     files,
+		keyCount:     len(files),
+	})
+}
+
 // Context Handlers
 
 func CreateContextHandler(ctx context.Context, request *ToolRequest) (*sdkmcp.CallToolResult, error) {

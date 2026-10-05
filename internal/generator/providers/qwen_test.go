@@ -113,7 +113,7 @@ func TestQwen_Generate(t *testing.T) {
 	assert.Equal(t, "scout", frontmatterValue(agent.Content, "name"))
 	assert.Equal(t, "Fast recon", frontmatterValue(agent.Content, "description"))
 	assert.Equal(t, "fast-model", frontmatterValue(agent.Content, "model"))
-	assert.Contains(t, agent.Content, "tools:\n    - read\n    - grep\n")
+	assert.Contains(t, agent.Content, "tools:\n    - read_file\n    - grep_search\n")
 
 	skill, _ := outputByPath(outputs, ".qwen/skills/demo/SKILL.md")
 	assert.Equal(t, "demo", frontmatterValue(skill.Content, "name"))

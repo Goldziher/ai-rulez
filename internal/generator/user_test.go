@@ -18,7 +18,7 @@ import (
 
 const userConfigTOML = `version = "4.0"
 name = "me"
-presets = ["claude", "codex", "gemini", "opencode", "cursor", "copilot", "pi", "devin"]
+presets = ["claude", "codex", "gemini", "opencode", "cursor", "copilot", "pi", "baz"]
 
 [profiles]
 work = ["work"]
@@ -117,17 +117,23 @@ var expectedUserFiles = []string{
 	".claude/settings.json",
 	".claude/skills/my-skill/SKILL.md",
 	".codex/AGENTS.md",
+	".codex/agents/helper.toml",
 	".codex/hooks.json",
 	".config/opencode/AGENTS.md",
 	".config/opencode/agents/helper.md",
 	".config/opencode/skills/my-skill/SKILL.md",
+	".copilot/agents/helper.agent.md",
+	".copilot/copilot-instructions.md",
 	".copilot/hooks/ai-rulez.json",
+	".copilot/instructions/personal.instructions.md",
 	".copilot/skills/my-skill/SKILL.md",
+	".cursor/agents/helper.md",
 	".cursor/hooks.json",
 	".gemini/GEMINI.md",
 	".gemini/agents/helper.md",
 	".gemini/settings.json",
 	".pi/agent/AGENTS.md",
+	".pi/agent/agents/helper.md",
 	".pi/agent/skills/my-skill/SKILL.md",
 }
 
@@ -145,7 +151,7 @@ func TestUser_WritesOnlyDocumentedLocations(t *testing.T) {
 	assert.FileExists(t, filepath.Join(home, ".config", "ai-rulez", generatedManifestName))
 	assert.NoFileExists(t, filepath.Join(home, "CLAUDE.md"), "project-shaped files never land in the home root")
 	assert.NoFileExists(t, filepath.Join(home, ".gitignore"))
-	assert.Contains(t, strings.Join(*warnings, "\n"), "preset devin has no documented user-level location")
+	assert.Contains(t, strings.Join(*warnings, "\n"), "preset baz has no documented user-level location")
 
 	// Work-domain content is outside the default profile.
 	assert.NoFileExists(t, filepath.Join(home, ".claude", "skills", "work-skill", "SKILL.md"))

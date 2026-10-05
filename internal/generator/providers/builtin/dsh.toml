@@ -12,7 +12,8 @@ directories = [".dsh", ".dsh/skills"]
 
 [root]
 file = "AGENTS.md"
-local_file = "none"
+# dsh loads AGENTS.local.md next to AGENTS.md.
+local_file = "AGENTS.local.md"
 sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
 
 [outputs.skills]

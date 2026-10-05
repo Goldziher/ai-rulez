@@ -157,6 +157,9 @@ func (e *editor) setIn(cur *yaml.Node, path []string, value any) error {
 // comment when a scalar is replaced by another single-line value.
 func (e *editor) replaceMember(cur *yaml.Node, idx int, key string, value any) error {
 	old := cur.Content[2*idx+1]
+	if old.Kind == yaml.SequenceNode && old.Style&yaml.FlowStyle == 0 && e.replaceBlockSequence(cur, idx, key, old, value) {
+		return nil
+	}
 	if old.Kind == yaml.SequenceNode && old.Style&yaml.FlowStyle != 0 {
 		value = flowSequence(value)
 	}
@@ -580,4 +583,110 @@ func blankAfterLen(src string, pos int) int {
 		return 0
 	}
 	return nl + 1
+}
+
+// replaceBlockSequence rewrites the block sequence at cur.Content[2*idx] to hold
+// value (a slice) one element at a time: an element that is unchanged keeps its
+// source text, comments and key order included, and only changed or new elements
+// are rendered. Re-rendering the whole list would sort every mapping's keys and
+// drop the comments of elements the caller meant to leave alone, such as the
+// groups a user wrote in a list ai-rulez shares with them. It returns false,
+// with the document untouched, when the layout is not one it can edit this way
+// (an element whose dash is not on its first line, a value that is not a list) or
+// the result does not read back as value; the caller then renders the whole list.
+func (e *editor) replaceBlockSequence(cur *yaml.Node, idx int, key string, old *yaml.Node, value any) bool {
+	items, ok := sliceItems(value)
+	if !ok || len(old.Content) == 0 {
+		return false
+	}
+	start, end := e.memberSpan(cur, idx)
+	lines := strings.SplitAfter(e.src, "\n")
+	offsets := make([]int, len(lines))
+	for i := 1; i < len(lines); i++ {
+		offsets[i] = offsets[i-1] + len(lines[i-1])
+	}
+	starts := make([]int, len(old.Content))
+	oldValues := make([]any, len(old.Content))
+	dashIndent := -1
+	for i, item := range old.Content {
+		if item.Line < 1 || item.Line > len(lines) {
+			return false
+		}
+		line := lines[item.Line-1]
+		prefix := strings.TrimRight(line[:min(byteColumn(line, item.Column-1), len(line))], " ")
+		indent, isDash := strings.CutSuffix(prefix, "-")
+		if !isDash || strings.TrimSpace(indent) != "" || (dashIndent >= 0 && len(indent) != dashIndent) {
+			return false
+		}
+		dashIndent = len(indent)
+		starts[i] = offsets[item.Line-1]
+		if starts[i] < start || (i > 0 && starts[i] <= starts[i-1]) {
+			return false
+		}
+		if err := item.Decode(&oldValues[i]); err != nil {
+			return false
+		}
+	}
+	spanEnd := func(i int) int {
+		if i+1 < len(starts) {
+			return starts[i+1]
+		}
+		return end
+	}
+
+	var b strings.Builder
+	b.WriteString(e.src[start:starts[0]])
+	used := make([]bool, len(oldValues))
+	retained := 0
+	for _, item := range items {
+		chunk := ""
+		for j := range oldValues {
+			if !used[j] && jsonmerge.Digest(oldValues[j]) == jsonmerge.Digest(item) {
+				used[j] = true
+				retained++
+				chunk = e.src[starts[j]:spanEnd(j)]
+				break
+			}
+		}
+		if chunk == "" {
+			rendered, err := marshal([]any{item}, e.unit)
+			if err != nil {
+				return false
+			}
+			chunk = e.indentText(rendered, dashIndent)
+		}
+		if b.Len() > 0 && !strings.HasSuffix(b.String(), "\n") {
+			b.WriteString(e.newline)
+		}
+		b.WriteString(chunk)
+	}
+	if retained == 0 {
+		return false // nothing to keep: rendering the whole list is the same edit
+	}
+	if !strings.HasSuffix(b.String(), "\n") && end < len(e.src) {
+		b.WriteString(e.newline)
+	}
+	replaced := b.String()
+
+	// The new member must read back as value on its own, before it goes in.
+	var parsedMember map[string]any
+	if err := yaml.Unmarshal([]byte(replaced), &parsedMember); err != nil ||
+		jsonmerge.Digest(parsedMember[key]) != jsonmerge.Digest(value) {
+		return false
+	}
+	e.src = e.src[:start] + replaced + e.src[end:]
+	return true
+}
+
+// sliceItems returns the elements of a slice or array value.
+func sliceItems(value any) ([]any, bool) {
+	rv := reflect.ValueOf(value)
+	if rv.Kind() != reflect.Slice && rv.Kind() != reflect.Array {
+		return nil, false
+	}
+	items := make([]any, rv.Len())
+	for i := range items {
+		items[i] = rv.Index(i).Interface()
+	}
+	return items, true
 }

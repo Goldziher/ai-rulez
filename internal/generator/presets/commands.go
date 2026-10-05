@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
 	"github.com/Goldziher/ai-rulez/internal/markdown"
 	"gopkg.in/yaml.v3"
 )
@@ -98,4 +99,42 @@ func renderCommandMarkdown(command config.ContentFile, spec commandFilesSpec) (s
 	b.WriteString("---\n\n")
 	b.WriteString(body)
 	return b.String(), nil
+}
+
+// commandAsSkills renders the commands that target preset as skills, for a tool
+// whose custom-command folder is retired or not read at project scope (Codex
+// prompts, Antigravity workflows) but that runs a skill on an explicit
+// invocation. A command takes the shape of a SKILL.md of the shared
+// .agents/skills tree, so two presets writing the same command write the same
+// bytes; it is marked disable-model-invocation because a command runs only when
+// the user asks. A command whose name is already a skill's keeps the skill.
+func commandAsSkills(content *config.ContentTree, preset string) []config.ContentFile {
+	taken := map[string]bool{}
+	for _, skill := range allSkills(content) {
+		taken[extractSkillID(skill.Path)] = true
+	}
+	var skills []config.ContentFile
+	for _, command := range allCommands(content) {
+		id := sanitizeName(command.Name)
+		if !commandTargets(command, preset) {
+			continue
+		}
+		if taken[id] {
+			rulefiles.Warn(fmt.Sprintf("command %q is not written as a %s skill: a skill or another command already has the id %q",
+				command.Name, preset, id), "hint", "rename the command or the skill so both are available")
+			continue
+		}
+		taken[id] = true
+		extra := map[string]string{"disable-model-invocation": "true"}
+		if desc := commandDescription(command); desc != "" {
+			extra[keyDescription] = desc
+		}
+		skills = append(skills, config.ContentFile{
+			Name:     id,
+			Path:     filepath.Join(filepath.Dir(command.Path), id, "SKILL.md"),
+			Content:  markdown.ProcessEmbeddedContent(command.Content),
+			Metadata: &config.Metadata{Extra: extra},
+		})
+	}
+	return skills
 }

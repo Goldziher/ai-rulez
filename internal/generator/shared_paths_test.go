@@ -227,7 +227,7 @@ func TestSharedPaths_PairsAgree(t *testing.T) {
 // without a folder); presets with folders agree among themselves.
 func TestSharedPaths_SplitRulesYieldToInliningWriter(t *testing.T) {
 	base := loadSharedPathsConfig(t, sharedPathsVariant{name: "agents_md off, split rules"})
-	folders := []string{"junie", "kiro", "augment", "zoocode", "kilo", "bob", "grok", "codewhale", "omp", "qoder"}
+	folders := []string{"junie", "kiro", "augment", "kilo", "bob", "grok", "codewhale", "omp", "qoder"}
 
 	agentsMD := func(flat []config.OutputFile) string {
 		for _, o := range flat {

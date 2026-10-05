@@ -16,6 +16,9 @@ import (
 // the agent to call find_skill / load_skill when any skill is served.
 const DynamicSkillsName = "dynamic-skills"
 
+// keyFrontmatterDescription is the frontmatter key of a description.
+const keyFrontmatterDescription = "description"
+
 const dynamicSkillsPath = "generated://" + DynamicSkillsName + "/SKILL.md"
 
 const dynamicSkillsDescription = "Find and load more skills on demand from the ai-rulez MCP server. " +
@@ -205,7 +208,7 @@ func DynamicSkillsStub() ContentFile {
 		Name:     DynamicSkillsName,
 		Path:     dynamicSkillsPath,
 		Content:  dynamicSkillsBody,
-		Metadata: &Metadata{Extra: map[string]string{"description": dynamicSkillsDescription}},
+		Metadata: &Metadata{Extra: map[string]string{keyFrontmatterDescription: dynamicSkillsDescription}},
 	}
 }
 
