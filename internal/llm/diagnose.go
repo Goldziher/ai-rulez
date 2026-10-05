@@ -25,6 +25,8 @@ type Diagnosis struct {
 	CacheDir       string   `json:"cache_dir,omitempty"`
 	Limits         string   `json:"limits"`
 	Problems       []string `json:"problems,omitempty"`
+	// IgnoredRepoKeys names user-scope-only keys a repository config set; they have no effect (filled by the caller).
+	IgnoredRepoKeys []string `json:"ignored_repo_keys,omitempty"`
 }
 
 // Diagnose resolves cfg (with env overrides applied by the caller) into a
@@ -87,6 +89,9 @@ func (d Diagnosis) WriteText(w io.Writer) {
 	printf(w, "network allowed: %v\n", d.AllowNetwork)
 	printf(w, "cache:           %s\n", cache)
 	printf(w, "limits:          %s\n", d.Limits)
+	if len(d.IgnoredRepoKeys) > 0 {
+		printf(w, "warning:         %s\n", IgnoredKeysMessage(d.IgnoredRepoKeys))
+	}
 	for _, p := range d.Problems {
 		printf(w, "problem:         %s %s\n", CodeConfigInvalid, p)
 	}

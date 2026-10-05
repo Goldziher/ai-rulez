@@ -7,7 +7,7 @@ Some ai-rulez features need a language model: rubric graders for evals, semantic
 ## Configuration
 
 ```toml
-# .ai-rulez/config.toml
+# .ai-rulez/config.toml   (allow_network, base_url and api_key_env below only take effect from user scope, see "Trust rule")
 [llm]
 provider        = "openai"                 # provider prefix; the literllm backend routes on provider/model
 model           = "gpt-4o-mini"
@@ -24,15 +24,26 @@ allow_network   = false                    # default false; nothing is sent unle
 
 Other keys: `timeout_seconds` (default 60, covers the retries), `max_retries` (default 3, `-1` disables), `price_input_per_mtok` and `price_output_per_mtok` (USD per million tokens; override the built-in price table, needed for cost limits on models the table does not know).
 
-Keep the opt-in on your machine, not in the shared file: a machine-local `.ai-rulez/config.local.toml` is merged key by key, so
+### Trust rule
+
+A committed repository config is attacker-controlled input: cloning a repository must not switch on network use, choose the host a prompt goes to, or pick which environment variable is sent as a credential. So, like `[telemetry]`:
+
+| Key | Repository config and `config.local.*` | User config file / `AI_RULEZ_LLM_*` |
+| --- | --- | --- |
+| `allow_network`, `base_url`, `api_key_env`, `price_input_per_mtok`, `price_output_per_mtok` | **ignored**, reported by `llm doctor`, `ai-rulez doctor` and strict finding `AR9C1` | honoured |
+| `provider`, `model`, `backend`, `embedding_model`, `cache`, `timeout_seconds`, `max_retries` | honoured | honoured |
+| `max_cost_usd`, `max_tokens`, `max_calls` | honoured, but can only tighten: the lower non-zero value of repository and user wins | honoured |
+
+The local overlay lives in the checkout, so it counts as repository scope. Opt in once on your machine in the user config file (`$XDG_CONFIG_HOME/ai-rulez/config.toml`, else `~/.config/ai-rulez/config.toml`):
 
 ```toml
-# .ai-rulez/config.local.toml (git-ignored)
 [llm]
 allow_network = true
+base_url      = "https://llm-gateway.internal.example/v1"
+api_key_env   = "OPENAI_API_KEY"
 ```
 
-turns it on for you while a teammate who has not opted in stays offline.
+or export `AI_RULEZ_LLM_ALLOW_NETWORK=1` (and `_BASE_URL`, `_API_KEY_ENV`). Precedence, highest first: environment, user config file, repository config, defaults.
 
 ### Environment overrides
 
