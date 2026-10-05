@@ -220,7 +220,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	}
 	mode := ModeRegular
 	if info, statErr := os.Stat(cf.Path); statErr == nil {
-		mode = ModeFor(uint32(info.Mode().Perm()))
+		mode = fileMode(cf.Path, info)
 	}
 	leaves := []Leaf{{Path: filepath.Base(cf.Path), Mode: mode, Data: primary}}
 	dir := filepath.Dir(cf.Path)
@@ -230,7 +230,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 		if disk, readErr := os.ReadFile(abs); readErr == nil {
 			data = disk
 			if info, statErr := os.Stat(abs); statErr == nil {
-				resMode = ModeFor(uint32(info.Mode().Perm()))
+				resMode = fileMode(abs, info)
 			}
 		}
 		leaves = append(leaves, Leaf{Path: res.RelPath, Mode: resMode, Data: data})
@@ -297,7 +297,7 @@ func (c *collector) collectDeclared() error {
 			if disk, readErr := os.ReadFile(abs); readErr == nil {
 				leaf.Data = disk
 				if info, statErr := os.Stat(abs); statErr == nil {
-					leaf.Mode = ModeFor(uint32(info.Mode().Perm()))
+					leaf.Mode = fileMode(abs, info)
 				}
 			} else {
 				leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
