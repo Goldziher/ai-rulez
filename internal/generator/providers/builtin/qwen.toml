@@ -57,6 +57,21 @@ sections = ["frontmatter", "content"]
 fields = ["description"]
 tools = true
 emit_model = true
+# Qwen Code names its tools read_file, grep_search, ...; a Claude tool with no
+# counterpart is dropped, and the bare Claude model aliases are no Qwen model
+# (only "inherit" and a concrete id are).
+drop_bare_aliases = true
+model_aliases = { inherit = "inherit" }
+
+[outputs.agents.frontmatter.tool_names]
+Read = "read_file"
+Grep = "grep_search"
+Glob = "glob"
+Write = "write_file"
+Edit = "edit"
+MultiEdit = "edit"
+Bash = "run_shell_command"
+WebFetch = "web_fetch"
 
 # Commands: .qwen/commands/{id}.md; the name comes from the file name.
 [outputs.commands]
@@ -70,6 +85,13 @@ sections = ["frontmatter", "content"]
 [outputs.commands.frontmatter]
 fields = ["description"]
 omit_name = true
+
+# Code-review checks: /review reads .qwen/review-rules.md ahead of its fallbacks
+# and injects it into the review agents as additional criteria.
+[outputs.checks]
+mode = "aggregate"
+file = ".qwen/review-rules.md"
+filter = "include_if_targeting_provider"
 
 [model]
 field = "model"

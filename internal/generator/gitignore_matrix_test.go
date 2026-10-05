@@ -27,6 +27,7 @@ var matrixFixtures = map[string]string{
 	"skills/demo/SKILL.md": "---\nname: demo\ndescription: Demo skill.\n---\n\n# Demo\n\nDo the demo.\n",
 	"agents/helper.md":     "---\nname: helper\ndescription: Helper agent.\nmodel: sonnet\n---\n\nHelp.\n",
 	"commands/build.md":    "---\npriority: medium\nusage: \"/build\"\ndescription: \"Build\"\n---\n\n# Build\n",
+	"checks/review.md":     "---\ndescription: Review\nseverity: high\n---\n\nCheck the diff.\n",
 }
 
 // generateWithGitignore writes a project enabling preset (and agentsMD), generates
@@ -65,7 +66,7 @@ func generateWithGitignore(t *testing.T, preset string, agentsMD bool) (string, 
 }
 
 // assertGitignoreMatrix checks every written file of one generation against git:
-// owned outputs are ignored, partially owned (hand-authored) ones are not.
+// owned outputs are ignored; partially owned (hand-authored) and committed (check) ones are not.
 func assertGitignoreMatrix(t *testing.T, base string, outputs []config.OutputFile) {
 	t.Helper()
 	checked := 0
@@ -85,6 +86,8 @@ func assertGitignoreMatrix(t *testing.T, base string, outputs []config.OutputFil
 		cmd := exec.Command("git", "-C", base, "check-ignore", "--no-index", "-q", rel) //nolint:gosec // test
 		ignored := cmd.Run() == nil
 		switch {
+		case out.Committed:
+			assert.False(t, ignored, "check output %s must stay committed, not git-ignored", rel)
 		case out.PartiallyOwned:
 			assert.False(t, ignored, "partially owned %s must not be git-ignored", rel)
 		default:

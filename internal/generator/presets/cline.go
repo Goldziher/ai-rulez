@@ -41,6 +41,12 @@ func (g *ClinePresetGenerator) GetOutputPaths(baseDir string) []string {
 // workflow is a plain markdown file invoked as /{id}.md.
 var clineWorkflows = commandFilesSpec{preset: presetNameCline, dir: ".clinerules/workflows", ext: ".md", noFrontmatter: true}
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *ClinePresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{RulesDir: ".clinerules", SkillsDir: ".cline/skills", AgentsDir: ".cline/agents", CommandsDir: ".clinerules/workflows"}
+}
+
 // GlobalOutputPaths is the Cline user-scope layout: rules and workflows under
 // ~/Documents/Cline, skills and agents under ~/.cline. Cline has no project MCP
 // file (its servers live in the extension's global settings).
@@ -118,7 +124,7 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 		}
 
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".cline", "agents", agentID+".md"),
+			Path:    filepath.Join(baseDir, ".cline", "agents", agentID+".yaml"),
 			Content: agentContent,
 		})
 	}
@@ -132,7 +138,7 @@ func (g *ClinePresetGenerator) renderSkillFile(skill config.ContentFile) string 
 
 	builder.WriteString("---\n")
 	builder.WriteString("name: ")
-	builder.WriteString(skill.Name)
+	builder.WriteString(yamlScalar(skill.Name))
 	builder.WriteString("\n")
 	builder.WriteString("description: ")
 	builder.WriteString(quoteYAMLString(config.SkillDescriptionForContent(skill)))
@@ -172,9 +178,11 @@ func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFi
 
 	// Resolve model via the shared resolver before the metadata-nil short-circuit so a
 	// defaults-only model still applies to agents with no frontmatter.
-	if model := ResolveAgentModel(presetNameCline, agent, cfg); model != "" {
-		frontmatter[keyModel] = model
+	if model := ResolveNativeAgentModel(presetNameCline, agent, cfg); model != "" {
+		frontmatter["modelId"] = model
 	}
+	// Cline requires a description and falls back to "<name> subagent" itself.
+	frontmatter[keyDescription] = agent.Name + " subagent"
 
 	if agent.Metadata == nil {
 		return frontmatter
@@ -186,9 +194,63 @@ func (g *ClinePresetGenerator) buildClineAgentFrontmatter(agent config.ContentFi
 			frontmatter[field] = val
 		}
 	}
-	if EmitAgentField(cfg, "tools") && len(agent.Metadata.Tools) > 0 {
-		frontmatter["tools"] = agent.Metadata.Tools
+	if EmitAgentField(cfg, "tools") {
+		if tools := clineTools(agent.Metadata.Tools); len(tools) > 0 {
+			frontmatter["tools"] = tools
+		}
 	}
 
 	return frontmatter
+}
+
+// yamlScalar renders s as a YAML scalar, quoted only when plain would change its
+// meaning (a colon, a hash, a leading indicator).
+func yamlScalar(s string) string {
+	out, err := yaml.Marshal(s)
+	if err != nil {
+		return quoteYAMLString(s)
+	}
+	return strings.TrimSuffix(string(out), "\n")
+}
+
+// clineToolNames maps the tool names assistants commonly list to Cline's own
+// vocabulary (ClineDefaultTool in the Cline source). Cline throws on a name it does
+// not know, which skips the whole agent, so anything unmapped is dropped.
+var clineToolNames = map[string]string{
+	"read": "read_file", "write": "write_to_file", "edit": "replace_in_file", "multiedit": "replace_in_file",
+	"bash": "execute_command", "grep": "search_files", "glob": "list_files", "ls": "list_files",
+	"webfetch": "web_fetch", "websearch": "web_search", "task": "use_subagents", "skill": "use_skill",
+	"askuserquestion": "ask_followup_question",
+}
+
+var clineNativeTools = map[string]bool{
+	"ask_followup_question": true, "attempt_completion": true, "execute_command": true, "replace_in_file": true,
+	"read_file": true, "write_to_file": true, "search_files": true, "list_files": true,
+	"list_code_definition_names": true, "browser_action": true, "use_mcp_tool": true, "access_mcp_resource": true,
+	"load_mcp_documentation": true, "new_task": true, "plan_mode_respond": true, "act_mode_respond": true,
+	"focus_chain": true, "web_fetch": true, "web_search": true, "condense": true, "summarize_task": true,
+	"report_bug": true, "new_rule": true, "apply_patch": true, "use_skill": true, "use_subagents": true,
+}
+
+// clineTools translates tool names into Cline's vocabulary, keeping order and
+// dropping duplicates and names Cline has no equivalent for.
+func clineTools(tools []string) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, tool := range tools {
+		tool = strings.TrimSpace(tool)
+		name := tool
+		if !clineNativeTools[name] {
+			mapped, ok := clineToolNames[strings.ToLower(tool)]
+			if !ok {
+				continue
+			}
+			name = mapped
+		}
+		if !seen[name] {
+			seen[name] = true
+			out = append(out, name)
+		}
+	}
+	return out
 }

@@ -1,13 +1,14 @@
 # Letta Code provider spec.
 #
 # Letta Code has custom subagents under .letta/agents and Agent Skills in the
-# shared .agents/skills tree. It documents no rules, commands or MCP file this
-# tool can target, so those are not written. https://docs.letta.com
+# shared .agents/skills tree and custom slash commands under .commands. It
+# documents no rules or MCP file this tool can target, so those are not written.
+# https://docs.letta.com
 
 name = "letta"
 display_name = "Letta Code"
 
-directories = [".letta", ".letta/agents", ".agents", ".agents/skills"]
+directories = [".letta", ".letta/agents", ".agents", ".agents/skills", ".commands"]
 
 [outputs.skills]
 mode = "per_item_file"
@@ -42,6 +43,20 @@ skills = true
 emit_model = true
 join_lists = true
 
+# Custom slash commands: .commands/{id}.md, the name from the file name; description
+# and argument-hint are the documented frontmatter, $ARGUMENTS the placeholder.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
+
 [model]
 field = "model"
 
@@ -49,3 +64,4 @@ field = "model"
 [global]
 agents_dir = ".letta/agents"
 skills_dir = ".letta/skills"
+commands_dir = ".letta/commands"

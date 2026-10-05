@@ -3,7 +3,6 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Goldziher/ai-rulez/internal/contentlock"
 	"slices"
 	"strings"
 	"sync"
@@ -11,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/internal/generator"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/stretchr/testify/assert"
@@ -233,7 +233,7 @@ func TestLoadSkill_BodyResourceIndexAndProvenance(t *testing.T) {
 	assert.Len(t, out["content"], 1000)
 
 	for _, path := range []string{"../git-workflow/SKILL.md", "/etc/passwd", "references/../../x", `a\b`, "missing.md"} {
-		_, isErr, text = callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing", "path": path})
+		_, isErr, _ = callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing", "path": path})
 		assert.True(t, isErr, path)
 	}
 	_, isErr, text = callTool(t, p, "load_skill", map[string]any{"name": "pdf-processing", "path": "assets/logo.bin"})

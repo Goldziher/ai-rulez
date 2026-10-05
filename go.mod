@@ -4,6 +4,7 @@ go 1.27.0
 
 require (
 	github.com/dgraph-io/ristretto/v2 v2.4.2
+	github.com/fsnotify/fsnotify v1.10.1
 	github.com/go-resty/resty/v2 v2.17.2
 	github.com/kaptinlin/jsonschema v0.9.10
 	github.com/modelcontextprotocol/go-sdk v1.8.0
@@ -26,7 +27,6 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dlclark/regexp2/v2 v2.8.2 // indirect
 	github.com/dustin/go-humanize v1.1.0 // indirect
-	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect

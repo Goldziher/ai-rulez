@@ -698,6 +698,12 @@ type MCPServer struct {
 	SecretEnvKeys []string `yaml:"-" json:"-" toml:"-"`
 	// SecretHeaderKeys is the Headers counterpart of SecretEnvKeys.
 	SecretHeaderKeys []string `yaml:"-" json:"-" toml:"-"`
+	// EnvRefs and HeaderRefs map the Env and Headers keys whose value held a
+	// ${VAR} placeholder to that value as written. They are populated during
+	// generation and never serialized; a tool that expands environment references
+	// itself (Codex, Cursor) is given the reference instead of the resolved secret.
+	EnvRefs    map[string]string `yaml:"-" json:"-" toml:"-"`
+	HeaderRefs map[string]string `yaml:"-" json:"-" toml:"-"`
 }
 
 // IsEnabled returns true if the MCP server is enabled (defaults to true if not specified)
@@ -723,6 +729,7 @@ type ContentTree struct {
 	Skills   []ContentFile      `yaml:"skills,omitempty" json:"skills,omitempty"`
 	Agents   []ContentFile      `yaml:"agents,omitempty" json:"agents,omitempty"`
 	Commands []ContentFile      `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Checks   []ContentFile      `yaml:"checks,omitempty" json:"checks,omitempty"`
 	Domains  map[string]*Domain `yaml:"domains,omitempty" json:"domains,omitempty"`
 }
 
@@ -734,6 +741,7 @@ type Domain struct {
 	Skills        []ContentFile `yaml:"skills,omitempty" json:"skills,omitempty"`
 	Agents        []ContentFile `yaml:"agents,omitempty" json:"agents,omitempty"`
 	Commands      []ContentFile `yaml:"commands,omitempty" json:"commands,omitempty"`
+	Checks        []ContentFile `yaml:"checks,omitempty" json:"checks,omitempty"`
 	Builtin       bool          `yaml:"-" json:"-"` // true if loaded from builtins
 	BuiltinScoped bool          `yaml:"-" json:"-"` // true if a builtin loaded only for the profiles that name it (builtin:<name>)
 	FromInclude   bool          `yaml:"-" json:"-"` // true if loaded from an external include
@@ -1058,6 +1066,7 @@ func (c *Config) selectContent(content *ContentTree, profileDomains []string, ac
 		Skills:   rootSkills,
 		Agents:   content.Agents,
 		Commands: content.Commands,
+		Checks:   content.Checks,
 		Domains:  activeDomains,
 	}, nil
 }
@@ -1070,12 +1079,12 @@ func (t *ContentTree) IsEmpty() bool {
 		return true
 	}
 	if len(t.Rules) > 0 || len(t.Context) > 0 || len(t.Skills) > 0 ||
-		len(t.Agents) > 0 || len(t.Commands) > 0 {
+		len(t.Agents) > 0 || len(t.Commands) > 0 || len(t.Checks) > 0 {
 		return false
 	}
 	for _, domain := range t.Domains {
 		if domain != nil && (len(domain.Rules) > 0 || len(domain.Context) > 0 ||
-			len(domain.Skills) > 0 || len(domain.Agents) > 0 || len(domain.Commands) > 0) {
+			len(domain.Skills) > 0 || len(domain.Agents) > 0 || len(domain.Commands) > 0 || len(domain.Checks) > 0) {
 			return false
 		}
 	}
@@ -1090,12 +1099,14 @@ func (t *ContentTree) GetAllContentFiles() []ContentFile {
 	files = append(files, t.Skills...)
 	files = append(files, t.Agents...)
 	files = append(files, t.Commands...)
+	files = append(files, t.Checks...)
 	for _, domain := range t.Domains {
 		files = append(files, domain.Rules...)
 		files = append(files, domain.Context...)
 		files = append(files, domain.Skills...)
 		files = append(files, domain.Agents...)
 		files = append(files, domain.Commands...)
+		files = append(files, domain.Checks...)
 	}
 	return files
 }
@@ -1160,6 +1171,19 @@ func (t *ContentTree) GetCommandsForDomains(domains []string) []ContentFile {
 	for _, domainName := range domains {
 		if domain, ok := t.Domains[domainName]; ok {
 			files = append(files, domain.Commands...)
+		}
+	}
+	return files
+}
+
+// GetChecksForDomains returns checks for specified domains (including root)
+func (t *ContentTree) GetChecksForDomains(domains []string) []ContentFile {
+	files := make([]ContentFile, len(t.Checks))
+	copy(files, t.Checks)
+
+	for _, domainName := range domains {
+		if domain, ok := t.Domains[domainName]; ok {
+			files = append(files, domain.Checks...)
 		}
 	}
 	return files

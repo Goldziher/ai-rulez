@@ -43,6 +43,14 @@ key = ["mcpServers"]
 dialect = "vscode"
 global_path = ".gitlab/duo/mcp.json"
 
+# Code-review checks: Duo Code Review reads custom instructions from
+# .gitlab/duo/mr-review-instructions.yaml, a hand-written file, so ai-rulez owns
+# only the `instructions` groups it renders (one per check, matched by name).
+[[sidecars]]
+kind = "checks"
+path = ".gitlab/duo/mr-review-instructions.yaml"
+dialect = "gitlab-duo"
+
 # User-scope layout: ~/.gitlab/duo on Linux and macOS.
 [global]
 root_file = ".gitlab/duo/chat-rules.md"

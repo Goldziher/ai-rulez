@@ -72,6 +72,12 @@ func (g *GeminiPresetGenerator) GetOutputPaths(baseDir string) []string {
 	}
 }
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *GeminiPresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{RootFile: "GEMINI.md", SkillsDir: ".agents/skills", AgentsDir: ".gemini/agents"}
+}
+
 // GlobalOutputPaths is the Gemini CLI user-scope layout under ~/.gemini; user
 // skills are read from the shared ~/.agents/skills like the project ones.
 func (g *GeminiPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
@@ -80,6 +86,9 @@ func (g *GeminiPresetGenerator) GlobalOutputPaths(home string, getenv func(strin
 		SkillsDir: ".agents/skills",
 		AgentsDir: ".gemini/agents",
 		Sidecars:  map[string]string{MergedDocGeminiSettings: ".gemini/settings.json"},
+		// Gemini CLI also reads its own ~/.gemini/skills.
+		SkillReaders:    []string{".gemini/skills", ".agents/skills"},
+		SkillPrecedence: "Gemini CLI runs the workspace skill (workspace over user)",
 	}.Resolve(home, getenv)
 }
 

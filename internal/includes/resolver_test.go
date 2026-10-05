@@ -584,3 +584,67 @@ func TestResolverMergeDomains(t *testing.T) {
 		t.Errorf("expected new domain from include")
 	}
 }
+
+func TestResolverMergeChecks(t *testing.T) {
+	base := &config.ContentTree{
+		Checks:  []config.ContentFile{{Name: "shared", Content: "base"}, {Name: "mine", Content: "m"}},
+		Domains: map[string]*config.Domain{},
+	}
+	include := &config.ContentTree{
+		Checks:  []config.ContentFile{{Name: "shared", Content: "include"}, {Name: "theirs", Content: "t"}},
+		Domains: map[string]*config.Domain{},
+	}
+	r := NewResolver("/tmp", "")
+
+	local, err := r.mergeRoot(base, include, "local-override")
+	if err != nil {
+		t.Fatal(err)
+	}
+	override, err := r.mergeRoot(base, include, "include-override")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, conflictErr := r.mergeRoot(base, include, "error")
+	installed, err := r.mergeDomainInstall(base, include, "domains/backend", "local-override")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	content := func(files []config.ContentFile, name string) string {
+		for _, f := range files {
+			if f.Name == name {
+				return f.Content
+			}
+		}
+		return "<missing>"
+	}
+	if len(local.Checks) != 3 || content(local.Checks, "shared") != "base" {
+		t.Errorf("local-override checks = %+v", local.Checks)
+	}
+	if len(override.Checks) != 3 || content(override.Checks, "shared") != "include" {
+		t.Errorf("include-override checks = %+v", override.Checks)
+	}
+	if conflictErr == nil {
+		t.Error("error strategy must fail on a conflicting check")
+	}
+	if got := installed.Domains["backend"]; got == nil || len(got.Checks) != 2 || !got.FromInclude {
+		t.Errorf("installTo domain checks = %+v", got)
+	}
+	if len(installed.Checks) != 2 {
+		t.Errorf("installTo kept root checks = %+v", installed.Checks)
+	}
+}
+
+func TestLocalSourceFilterContent_Checks(t *testing.T) {
+	tree := &config.ContentTree{Checks: []config.ContentFile{{Name: "c"}}, Rules: []config.ContentFile{{Name: "r"}}}
+
+	with := (&LocalSource{include: []string{"checks"}}).filterContent(tree)
+	without := (&LocalSource{include: []string{"rules"}}).filterContent(tree)
+
+	if len(with.Checks) != 1 || len(with.Rules) != 0 {
+		t.Errorf("include checks = %+v", with)
+	}
+	if len(without.Checks) != 0 {
+		t.Errorf("checks must be dropped when not listed, got %+v", without.Checks)
+	}
+}

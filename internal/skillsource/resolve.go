@@ -126,53 +126,12 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 		return nil, errLock(spec, "not covered by %s (or the lock is stale); run `ai-rulez lock`", lockfile.FileName)
 	}
 
-	var commit, kind string
-	switch {
-	case covered:
-		commit, kind = entry.Commit, kindFor(spec.Ref)
-		if fullSHA.MatchString(spec.Ref) && spec.Ref != commit {
-			return nil, errLock(spec, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", spec.Ref, commit)
-		}
-	case fullSHA.MatchString(spec.Ref):
-		commit, kind = spec.Ref, kindSHA
-	case offline:
-		commit = readRef(repoDir, spec.Ref)
-		kind = kindFor(spec.Ref)
-		if commit == "" {
-			return nil, oops.With("url", spec.Redacted()).Errorf("skill source %q: offline and %q was never resolved; run once online (or `ai-rulez lock`) first", spec.Name, spec.Ref)
-		}
-	default:
-		if commit, kind, err = lsRemote(ctx, url, spec.Ref, opts.Token); err != nil {
-			return nil, err
-		}
-		writeRef(repoDir, spec.Ref, commit)
-	}
-
-	treeDir := filepath.Join(repoDir, commit, "tree")
-	fetched := false
-	ensure := func() error {
-		if _, statErr := os.Stat(treeDir); statErr == nil {
-			return nil
-		}
-		if offline {
-			return oops.With("url", spec.Redacted()).With("commit", commit).
-				Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", spec.Name, commit)
-		}
-		return fetchInto(ctx, url, spec.Ref, kind, commit, opts.Token, treeDir, &fetched)
-	}
-	if err := ensure(); err != nil {
+	commit, kind, err := pickCommit(ctx, spec, opts, commitSearch{url: url, repoDir: repoDir, entry: entry, covered: covered, offline: offline})
+	if err != nil {
 		return nil, err
 	}
 
-	res, err := finish(spec, treeDir, commit, kind, entry, covered)
-	if err != nil && errors.Is(err, errDigest) && !fetched && !offline {
-		// A damaged cache looks like tampering; fetch the pinned commit again before failing.
-		if rmErr := os.RemoveAll(filepath.Join(repoDir, commit)); rmErr == nil {
-			if err = ensure(); err == nil {
-				res, err = finish(spec, treeDir, commit, kind, entry, covered)
-			}
-		}
-	}
+	res, err := materialize(ctx, spec, opts, treeRequest{url: url, repoDir: repoDir, commit: commit, kind: kind, entry: entry, covered: covered, offline: offline})
 	if err != nil {
 		return nil, err
 	}
@@ -181,6 +140,76 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 			"source", spec.Name, "ref", refLabel(spec.Ref), "commit", commit)
 	}
 	return res, nil
+}
+
+// treeRequest describes the tree of one commit to make available.
+type treeRequest struct {
+	url, repoDir, commit, kind string
+	entry                      *lockfile.Entry
+	covered, offline           bool
+}
+
+// materialize makes the tree of a commit available in the cache (fetching it
+// unless offline) and verifies it against the lock.
+func materialize(ctx context.Context, spec Spec, opts Options, q treeRequest) (*Resolved, error) {
+	treeDir := filepath.Join(q.repoDir, q.commit, "tree")
+	fetched := false
+	ensure := func() error {
+		if _, statErr := os.Stat(treeDir); statErr == nil {
+			return nil
+		}
+		if q.offline {
+			return oops.With("url", spec.Redacted()).With("commit", q.commit).
+				Errorf("skill source %q: commit %s is not cached and the network is off (--frozen/--offline); run `ai-rulez lock` or serve once online", spec.Name, q.commit)
+		}
+		return fetchInto(ctx, q.url, spec.Ref, q.kind, q.commit, opts.Token, treeDir, &fetched)
+	}
+	if err := ensure(); err != nil {
+		return nil, err
+	}
+
+	res, err := finish(spec, treeDir, q.commit, q.kind, q.entry, q.covered)
+	if err != nil && errors.Is(err, errDigest) && !fetched && !q.offline {
+		// A damaged cache looks like tampering; fetch the pinned commit again before failing.
+		if rmErr := os.RemoveAll(filepath.Join(q.repoDir, q.commit)); rmErr == nil {
+			if err = ensure(); err == nil {
+				res, err = finish(spec, treeDir, q.commit, q.kind, q.entry, q.covered)
+			}
+		}
+	}
+	return res, err
+}
+
+// commitSearch is what pickCommit needs besides the spec and the options.
+type commitSearch struct {
+	url, repoDir string
+	entry        *lockfile.Entry
+	covered      bool
+	offline      bool
+}
+
+// pickCommit decides which commit of a git source to use: the lock's, a pinned
+// SHA, the one last resolved (offline), or whatever the ref points to now.
+func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (commit, kind string, err error) {
+	switch {
+	case q.covered:
+		if fullSHA.MatchString(spec.Ref) && spec.Ref != q.entry.Commit {
+			return "", "", errLock(spec, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", spec.Ref, q.entry.Commit)
+		}
+		return q.entry.Commit, kindFor(spec.Ref), nil
+	case fullSHA.MatchString(spec.Ref):
+		return spec.Ref, kindSHA, nil
+	case q.offline:
+		if commit = readRef(q.repoDir, spec.Ref); commit == "" {
+			return "", "", oops.With("url", spec.Redacted()).Errorf("skill source %q: offline and %q was never resolved; run once online (or `ai-rulez lock`) first", spec.Name, spec.Ref)
+		}
+		return commit, kindFor(spec.Ref), nil
+	}
+	if commit, kind, err = lsRemote(ctx, q.url, spec.Ref, opts.Token); err != nil {
+		return "", "", err
+	}
+	writeRef(q.repoDir, spec.Ref, commit)
+	return commit, kind, nil
 }
 
 var errDigest = errors.New("content digest mismatch")

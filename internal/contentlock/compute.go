@@ -22,6 +22,7 @@ const (
 	KindSkill    = "skill"
 	KindAgent    = "agent"
 	KindCommand  = "command"
+	KindCheck    = "check"
 	KindHook     = "hook"
 	KindRole     = "role"
 	KindSettings = "settings"
@@ -128,7 +129,7 @@ func (c *collector) wants(kind string) bool {
 
 func (c *collector) collect() error {
 	if c.cfg.Content != nil {
-		if err := c.collectFiles("", c.cfg.Content.Rules, c.cfg.Content.Context, c.cfg.Content.Skills, c.cfg.Content.Agents, c.cfg.Content.Commands); err != nil {
+		if err := c.collectFiles("", c.cfg.Content.Rules, c.cfg.Content.Context, c.cfg.Content.Skills, c.cfg.Content.Agents, c.cfg.Content.Commands, c.cfg.Content.Checks); err != nil {
 			return err
 		}
 		for _, name := range sortedDomainNames(c.cfg.Content.Domains) {
@@ -136,7 +137,7 @@ func (c *collector) collect() error {
 			if d == nil || d.FromInclude || d.Builtin {
 				continue // remote includes are pinned by their own digest; builtins by the tool version
 			}
-			if err := c.collectFiles(name, d.Rules, d.Context, d.Skills, d.Agents, d.Commands); err != nil {
+			if err := c.collectFiles(name, d.Rules, d.Context, d.Skills, d.Agents, d.Commands, d.Checks); err != nil {
 				return err
 			}
 		}
@@ -156,11 +157,11 @@ func sortedDomainNames(m map[string]*config.Domain) []string {
 	return names
 }
 
-func (c *collector) collectFiles(domain string, rules, contexts, skills, agents, commands []config.ContentFile) error {
+func (c *collector) collectFiles(domain string, rules, contexts, skills, agents, commands, checks []config.ContentFile) error {
 	for _, group := range []struct {
 		kind  string
 		files []config.ContentFile
-	}{{KindRule, rules}, {KindContext, contexts}, {KindSkill, skills}, {KindAgent, agents}, {KindCommand, commands}} {
+	}{{KindRule, rules}, {KindContext, contexts}, {KindSkill, skills}, {KindAgent, agents}, {KindCommand, commands}, {KindCheck, checks}} {
 		if !c.wants(group.kind) {
 			continue
 		}

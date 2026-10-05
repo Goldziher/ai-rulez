@@ -40,6 +40,9 @@ sections = ["frontmatter", "content"]
 [outputs.agents.frontmatter]
 fields = ["description"]
 emit_model = true
+# The bare Claude aliases (sonnet, opus, haiku) are no model id of this tool: drop
+# them so the agent inherits the session model.
+drop_bare_aliases = true
 
 [model]
 field = "model"

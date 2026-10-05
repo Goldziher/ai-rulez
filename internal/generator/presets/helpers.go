@@ -673,6 +673,7 @@ func duplicateContentWarnings(content *config.ContentTree) []duplicateContentWar
 		{"context", content.Context, getAllDomainContext(content)},
 		{"skill", content.Skills, getAllDomainSkills(content)},
 		{"command", content.Commands, getAllDomainCommands(content)},
+		{"check", content.Checks, getAllDomainChecks(content)},
 	}
 
 	var warnings []duplicateContentWarning

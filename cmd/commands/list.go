@@ -78,12 +78,23 @@ var listCommandsCmd = &cobra.Command{
 	Run:   func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeCommands, "Commands", "commands") },
 }
 
+var listChecksCmd = &cobra.Command{
+	Use:     crud.ContentTypeChecks,
+	Aliases: []string{"check"},
+	Short:   "List all code-review checks",
+	Args:    cobra.NoArgs,
+	Run:     func(_ *cobra.Command, _ []string) { runListItems(crud.ContentTypeChecks, "Checks", "checks") },
+}
+
 func init() {
 	ListCmd.Flags().BoolVar(&listPlacement, "placement", false, "Report where each skill and command is placed: core or plugin-only, and which plugins bundle it")
 	ListCmd.Flags().StringVarP(&listProfile, "profile", "p", "", "Profile for --placement (default: from config or 'default')")
 	ListCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 	ListCmd.AddCommand(listAgentsCmd)
 	ListCmd.AddCommand(listCommandsCmd)
+	ListCmd.AddCommand(listChecksCmd)
+	listChecksCmd.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
+	listChecksCmd.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")
 	for _, c := range []*cobra.Command{listRulesCmd, listContextCmd, listSkillsCmd, listAgentsCmd, listCommandsCmd} {
 		c.Flags().StringVarP(&listDomain, "domain", "d", "", "Filter by domain (shows all if not specified)")
 		c.Flags().BoolVarP(&listJSON, "json", "j", false, "Output as JSON")

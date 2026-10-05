@@ -191,7 +191,7 @@ func printRole(w reportWriter, label string, r *config.RoleConfig) {
 	w.printf("  domains: %s\n", dash(strings.Join(r.Domains, ", ")))
 	for _, kind := range config.RoleKinds {
 		sel := map[string]*config.RoleSelector{
-			config.RoleKindRule: r.Rules, config.RoleKindSkill: r.Skills, config.RoleKindAgent: r.Agents, config.RoleKindCommand: r.Commands,
+			config.RoleKindRule: r.Rules, config.RoleKindSkill: r.Skills, config.RoleKindAgent: r.Agents, config.RoleKindCommand: r.Commands, config.RoleKindCheck: r.Checks,
 		}[kind]
 		if sel == nil {
 			continue

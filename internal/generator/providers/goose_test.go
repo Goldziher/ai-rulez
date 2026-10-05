@@ -45,6 +45,8 @@ func TestGoose_MCP(t *testing.T) {
 	assert.Equal(t, map[string]any{
 		"command": "npx", "args": []any{"-y", "pkg"}, "env": map[string]any{"K": "v"},
 	}, servers["local"])
+	// A remote entry makes goose skip the whole plugin document.
+	assert.Len(t, servers, 1, "the plugin .mcp.json is stdio-only")
 }
 
 func TestGoose_Global(t *testing.T) {

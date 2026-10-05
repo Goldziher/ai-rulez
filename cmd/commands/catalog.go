@@ -136,11 +136,10 @@ func lockSummary(l catalogLock) string {
 	}
 }
 
-func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, error) {
-	doc := &catalogDoc{SchemaVersion: catalogSchemaVersion, Tokenizer: counter.Name(), Items: []catalogItem{}, Roles: []catalogRole{}}
-
-	membership := map[string][]string{}
-	roleDelivery := map[string]map[string]string{}
+// addCatalogRoles appends every resolvable role to doc and returns, per item,
+// the roles that keep it and the delivery each gives it (skills only).
+func addCatalogRoles(doc *catalogDoc, cfg *config.Config, counter tokens.Counter) (membership map[string][]string, roleDelivery map[string]map[string]string) {
+	membership, roleDelivery = map[string][]string{}, map[string]map[string]string{}
 	for _, name := range cfg.RoleNames() {
 		role, err := roles.BuildRole(cfg, name, counter)
 		if err != nil {
@@ -160,6 +159,13 @@ func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, erro
 			}
 		}
 	}
+	return membership, roleDelivery
+}
+
+func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, error) {
+	doc := &catalogDoc{SchemaVersion: catalogSchemaVersion, Tokenizer: counter.Name(), Items: []catalogItem{}, Roles: []catalogRole{}}
+
+	membership, roleDelivery := addCatalogRoles(doc, cfg, counter)
 
 	snap, err := lockSnapshot(cfg, "", true)
 	if err != nil {
@@ -192,25 +198,37 @@ func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, erro
 		doc.Items = append(doc.Items, catalogItem{Item: measured, Digest: digests[key], Roles: members, RoleDelivery: differing})
 	}
 
-	doc.Lock = catalogLock{Enforce: cfg.LockEnforced()}
+	lockStatus, err := catalogLockStatus(cfg)
+	if err != nil {
+		return nil, err
+	}
+	doc.Lock = lockStatus
+	return doc, nil
+}
+
+// catalogLockStatus reports whether a lock exists, whether it pins content and
+// how many authored sources differ from it.
+func catalogLockStatus(cfg *config.Config) (catalogLock, error) {
+	status := catalogLock{Enforce: cfg.LockEnforced()}
 	lock, err := lockfile.Load(cfg.ConfigDir)
 	if err != nil {
-		return nil, err //nolint:wrapcheck // already contextual
+		return status, err //nolint:wrapcheck // already contextual
 	}
-	if lock != nil {
-		doc.Lock.Present, doc.Lock.Version = true, lock.Version
-		doc.Lock.HasContentPins, doc.Lock.Tree = lock.HasContentPins(), lock.Tree
-		if lock.HasContentPins() {
-			sourcesOnly, cerr := lockSnapshot(cfg, lock.Profile, true)
-			if cerr != nil {
-				return nil, cerr
-			}
-			diff := contentlock.Compare(lock, sourcesOnly)
-			inSync := diff.InSync
-			doc.Lock.SourcesInSync, doc.Lock.Changed = &inSync, len(diff.Changes)
+	if lock == nil {
+		return status, nil
+	}
+	status.Present, status.Version = true, lock.Version
+	status.HasContentPins, status.Tree = lock.HasContentPins(), lock.Tree
+	if lock.HasContentPins() {
+		sourcesOnly, err := lockSnapshot(cfg, lock.Profile, true)
+		if err != nil {
+			return status, err
 		}
+		diff := contentlock.Compare(lock, sourcesOnly)
+		inSync := diff.InSync
+		status.SourcesInSync, status.Changed = &inSync, len(diff.Changes)
 	}
-	return doc, nil
+	return status, nil
 }
 
 // allCatalogItems lists the content of every domain, context files included,

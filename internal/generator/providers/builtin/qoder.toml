@@ -59,6 +59,9 @@ fields = ["description", "disallowedTools"]
 tools = true
 skills = true
 emit_model = true
+# The bare Claude aliases (sonnet, opus, haiku) are no model id of this tool: drop
+# them so the agent inherits the session model.
+drop_bare_aliases = true
 
 [outputs.commands]
 mode = "per_item_file"
@@ -69,7 +72,7 @@ filename = "{id}.md"
 sections = ["frontmatter", "content"]
 
 [outputs.commands.frontmatter]
-fields = ["description"]
+fields = ["description", "argument-hint"]
 omit_name = true
 
 [model]

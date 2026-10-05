@@ -83,13 +83,17 @@ func (g *Generator) resolveMCPServer(
 	var unresolved []string
 	if len(server.Env) > 0 {
 		var secret []string
-		server.Env, secret, unresolved = g.resolvePlaceholderMap(serverName+".env", server.Env, dotenvValues, isSensitiveEnvName)
+		var refs map[string]string
+		server.Env, secret, unresolved, refs = g.resolvePlaceholderMap(serverName+".env", server.Env, dotenvValues, isSensitiveEnvName)
 		server.SecretEnvKeys = mergeSortedKeys(server.SecretEnvKeys, secret)
+		server.EnvRefs = mergeRefs(server.EnvRefs, refs)
 	}
 	if withHeaders && len(server.Headers) > 0 {
 		var secret, missing []string
-		server.Headers, secret, missing = g.resolvePlaceholderMap(serverName+".headers", server.Headers, dotenvValues, isSensitiveHeaderName)
+		var refs map[string]string
+		server.Headers, secret, missing, refs = g.resolvePlaceholderMap(serverName+".headers", server.Headers, dotenvValues, isSensitiveHeaderName)
 		server.SecretHeaderKeys = mergeSortedKeys(server.SecretHeaderKeys, secret)
+		server.HeaderRefs = mergeRefs(server.HeaderRefs, refs)
 		unresolved = append(unresolved, missing...)
 	}
 	return unresolved
@@ -99,23 +103,31 @@ func (g *Generator) resolveMCPServer(
 // from --env overrides, the process env, then dotenv values (and ${PROJECT_ROOT}
 // as a last resort). It returns the resolved map, the sorted keys whose values
 // are secret (placeholder-sourced or a sensitive key name), and the unresolved
-// placeholders, each labeled "<field>.<key> references ${NAME}".
+// placeholders, each labeled "<field>.<key> references ${NAME}". refs maps each key
+// whose value held a placeholder to that value as written, so a tool that expands
+// environment references itself can be given the reference instead of the secret.
 func (g *Generator) resolvePlaceholderMap(
 	field string, values, dotenvValues map[string]string, sensitive func(string) bool,
-) (resolved map[string]string, secretKeys, unresolved []string) {
+) (resolved map[string]string, secretKeys, unresolved []string, refs map[string]string) {
 	resolved = make(map[string]string, len(values))
 	secret := make(map[string]bool)
 	for key, value := range values {
 		wasPlaceholder := false
+		// allFromProcess stays true only while every placeholder resolved through
+		// the process environment: only then can a tool be handed the reference,
+		// since --env, .env and PROJECT_ROOT values are not in its environment.
+		allFromProcess := true
 		next := mcpEnvPlaceholderPattern.ReplaceAllStringFunc(value, func(match string) string {
 			wasPlaceholder = true
 			name := strings.TrimSuffix(strings.TrimPrefix(match, "${"), "}")
 			if replacement, ok := g.config.MCPEnvOverrides[name]; ok {
+				allFromProcess = false
 				return replacement
 			}
 			if replacement, ok := os.LookupEnv(name); ok {
 				return replacement
 			}
+			allFromProcess = false
 			if replacement, ok := dotenvValues[name]; ok {
 				return replacement
 			}
@@ -131,8 +143,29 @@ func (g *Generator) resolvePlaceholderMap(
 		if wasPlaceholder || sensitive(key) {
 			secret[key] = true
 		}
+		if wasPlaceholder && allFromProcess {
+			if refs == nil {
+				refs = map[string]string{}
+			}
+			refs[key] = value
+		}
 	}
-	return resolved, sortedMapKeys(secret), unresolved
+	return resolved, sortedMapKeys(secret), unresolved, refs
+}
+
+// mergeRefs adds refs to existing, keeping what an earlier resolution recorded
+// (a second pass sees only resolved values and so finds no placeholder).
+func mergeRefs(existing, refs map[string]string) map[string]string {
+	if len(refs) == 0 {
+		return existing
+	}
+	if existing == nil {
+		existing = make(map[string]string, len(refs))
+	}
+	for k, v := range refs {
+		existing[k] = v
+	}
+	return existing
 }
 
 func (g *Generator) loadMCPDotenvValues() (map[string]string, error) {

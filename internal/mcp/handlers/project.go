@@ -678,8 +678,13 @@ func ValidateConfigHandler(ctx context.Context, request *ToolRequest) (*mcp.Call
 }
 
 func loadProjectConfig(ctx context.Context, request *ToolRequest, baseDir string) (*config.Config, error) {
+	return loadProjectConfigWith(ctx, request, baseDir)
+}
+
+// loadProjectConfigWith is loadProjectConfig plus extra load options.
+func loadProjectConfigWith(ctx context.Context, request *ToolRequest, baseDir string, extra ...config.LoadOption) (*config.Config, error) {
 	// no_local loads the view a teammate without the machine-local overlay sees.
-	var opts []config.LoadOption
+	opts := append([]config.LoadOption(nil), extra...)
 	if request.GetBool("no_local", false) {
 		opts = append(opts, config.WithoutLocal())
 	}
