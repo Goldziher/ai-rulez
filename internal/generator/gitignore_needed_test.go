@@ -96,6 +96,24 @@ func TestUpdateGitignore_AddsOnlyWhatGitDoesNotIgnore(t *testing.T) {
 			wantAbsent: []string{"CLAUDE.md"},
 		},
 		{
+			name:       "user rule catching only one stand-in name does not cover the directory (tmp)",
+			userRules:  ".claude/skills/*.tmp\n",
+			wantBlock:  []string{".claude/skills/"},
+			wantAbsent: nil,
+		},
+		{
+			name:       "user rule catching only one stand-in name does not cover the directory (prefix)",
+			userRules:  ".claude/skills/generated-*\n",
+			wantBlock:  []string{".claude/skills/"},
+			wantAbsent: nil,
+		},
+		{
+			name:       "user rule covering everything under the directory does",
+			userRules:  ".claude/skills/*\n",
+			wantBlock:  []string{"CLAUDE.md"},
+			wantAbsent: []string{".claude/skills/"},
+		},
+		{
 			name:       "nested .gitignore covers its own subtree",
 			subRules:   "AGENTS.md\n",
 			wantBlock:  []string{"CLAUDE.md", "AGENTS.md", ".claude/skills/"},
@@ -278,16 +296,19 @@ func TestWithoutManagedBlock(t *testing.T) {
 	}
 }
 
-func TestGitignoreProbe(t *testing.T) {
-	tests := map[string]string{
-		"CLAUDE.md":                "CLAUDE.md",
-		".claude/skills/":          ".claude/skills/ai-rulez-probe",
-		".ai-rulez/config.local.*": ".ai-rulez/config.local.ai-rulez-probe",
-		".claude/rules/*.local.*":  ".claude/rules/ai-rulez-probe.local.ai-rulez-probe",
-		"/root-only.md":            "root-only.md",
+func TestGitignoreProbes(t *testing.T) {
+	tests := map[string][]string{
+		"CLAUDE.md":                {"CLAUDE.md"},
+		"/root-only.md":            {"root-only.md"},
+		".claude/skills/":          {".claude/skills/generated-probe", ".claude/skills/x7q-probe.tmp"},
+		".ai-rulez/config.local.*": {".ai-rulez/config.local.generated-probe", ".ai-rulez/config.local.x7q-probe.tmp"},
+		".claude/rules/*.local.*": {
+			".claude/rules/generated-probe.local.generated-probe",
+			".claude/rules/x7q-probe.tmp.local.x7q-probe.tmp",
+		},
 	}
 	for in, want := range tests {
-		assert.Equal(t, want, gitignoreProbe(in), in)
+		assert.Equal(t, want, gitignoreProbes(in), in)
 	}
 }
 
