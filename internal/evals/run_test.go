@@ -7,6 +7,7 @@ import (
 	"errors"
 	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -602,4 +603,44 @@ func TestRun_RejectsBadBudgetAndThreshold(t *testing.T) {
 			assert.Zero(t, runner.calls)
 		})
 	}
+}
+
+func realGit(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	return string(out)
+}
+
+func TestChangedSkills_ProjectInASubdirectoryOfTheRepo(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	repo := t.TempDir()
+	project := filepath.Join(repo, "services", "foo")
+	cfg := filepath.Join(project, ".ai-rulez")
+	writeSkill(t, cfg, "old", "x", twoCases)
+	realGit(t, repo, "init", "-q")
+	realGit(t, repo, "add", "-A")
+	realGit(t, repo, "commit", "-q", "-m", "init")
+	// a brand-new untracked skill, and a tracked one that was edited
+	writeSkill(t, cfg, "fresh", "x", twoCases)
+	writeSkill(t, cfg, "old", "x edited", twoCases)
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	changed, err := ChangedSkills(ExecGit, project, "HEAD", skills)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"fresh": true, "old": true}, changed)
+}
+
+func TestChangedSkills_RejectsOptionLikeBase(t *testing.T) {
+	git := func(string, ...string) (string, error) {
+		t.Fatal("git must not be called with an option-like base")
+		return "", nil
+	}
+	_, err := ChangedSkills(git, t.TempDir(), "--output=/tmp/evil", nil)
+	assert.ErrorContains(t, err, "base")
 }
