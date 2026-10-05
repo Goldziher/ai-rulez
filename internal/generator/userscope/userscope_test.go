@@ -32,7 +32,7 @@ func TestMap(t *testing.T) {
 		{"pi skills", "pi", ".agents/skills/x/SKILL.md", ".pi/agent/skills/x/SKILL.md", true},
 		{"codex commands are not documented", "codex", ".codex/commands/ship.md", "", false},
 		{"a prefix is not a path prefix", "claude", ".claude/skills-extra/x.md", "", false},
-		{"unsupported preset", "windsurf", ".windsurf/rules/x.md", "", false},
+		{"unsupported preset", "devin", ".devin/rules/x.md", "", false},
 		{"backslashes are normalised", "claude", `.claude\skills\x\SKILL.md`, ".claude/skills/x/SKILL.md", true},
 	}
 	for _, tt := range tests {
@@ -64,7 +64,7 @@ func TestTableInvariants(t *testing.T) {
 	assert.NotEmpty(t, userscope.Roots())
 	assert.NotContains(t, userscope.Roots(), ".claude", "a harness home is never a root clean may remove")
 	assert.True(t, userscope.Supports("claude"))
-	assert.False(t, userscope.Supports("windsurf"))
+	assert.False(t, userscope.Supports("devin"))
 }
 
 // TestDocsTable pins the "where things go" table of docs/user-scope.md to the

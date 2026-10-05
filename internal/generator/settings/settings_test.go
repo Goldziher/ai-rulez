@@ -341,20 +341,20 @@ func TestSupportedEvents(t *testing.T) {
 	native, ok := settings.NativeEvent(config.HarnessGemini, "PreToolUse")
 	assert.True(t, ok)
 	assert.Equal(t, "BeforeTool", native)
-	assert.Nil(t, settings.SupportedEvents("windsurf"))
+	assert.Nil(t, settings.SupportedEvents("devin"))
 }
 
 func TestUnsupportedDiagnostics(t *testing.T) {
 	cfg := &config.Config{
-		Presets:     []config.Preset{{BuiltIn: "claude"}, {BuiltIn: "codex"}, {BuiltIn: "windsurf"}, {BuiltIn: "mcp"}, {BuiltIn: "amp"}},
+		Presets:     []config.Preset{{BuiltIn: "claude"}, {BuiltIn: "codex"}, {BuiltIn: "devin"}, {BuiltIn: "mcp"}, {BuiltIn: "amp"}},
 		Hooks:       sampleHooks(),
 		Permissions: &config.Permissions{Allow: []string{"Bash(ls)"}},
 	}
 	diagnostics := settings.UnsupportedDiagnostics(cfg)
 	require.Len(t, diagnostics, 2)
-	assert.Contains(t, diagnostics[0], "amp, windsurf")
+	assert.Contains(t, diagnostics[0], "amp, devin")
 	assert.NotContains(t, diagnostics[0], "mcp")
-	assert.Contains(t, diagnostics[1], "amp, codex, windsurf")
+	assert.Contains(t, diagnostics[1], "amp, codex, devin")
 
 	assert.Empty(t, settings.UnsupportedDiagnostics(&config.Config{Presets: cfg.Presets}))
 }

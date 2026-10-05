@@ -53,7 +53,7 @@ const ClaudeSkillDescriptionLimit = 1536
 //     system prompt" (geminicli.com/docs/cli/skills).
 //   - opencode: names and descriptions in the skill tool description
 //     (opencode.ai/docs/skills).
-//   - windsurf: "only name + description until invoked" (Cascade skills docs).
+//   - devin: "only name + description until invoked" (Cascade skills docs).
 //   - cline: name and description loaded at startup (docs.cline.bot skills).
 //   - cursor, copilot: the docs describe discovery by name and description
 //     without saying it is a per-request listing; modeled as listed.
@@ -65,7 +65,7 @@ var builtinListings = map[string]ListingSpec{
 	"codex":    {Skills: true, IncludePath: true},
 	"gemini":   {Skills: true},
 	"opencode": {Skills: true},
-	"windsurf": {Skills: true},
+	"devin":    {Skills: true},
 	"cline":    {Skills: true},
 	"cursor":   {Skills: true},
 	"copilot":  {Skills: true},

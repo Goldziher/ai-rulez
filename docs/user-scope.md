@@ -122,7 +122,7 @@ Sources: Claude Code `/docs/en/memory`, `/skills`, `/sub-agents`, `/settings`; C
 
 Not written, because no vendor page documents a user-level file for them: Cursor rules, commands and agents
 (Cursor keeps user rules outside the file system), Codex agents and commands, Copilot instructions and
-agents, Amp, and every preset not listed (`windsurf`, `junie`, `cline`, `continue-dev`, `antigravity`,
+agents, Amp, and every preset not listed (`devin`, `junie`, `cline`, `continue-dev`, `antigravity`,
 `hermes`, `baz`, `xum`). Codex's `CODEX_HOME`, pi's `PI_CODING_AGENT_DIR` and Copilot's `COPILOT_HOME` are
 not honoured: the default locations are used.
 
