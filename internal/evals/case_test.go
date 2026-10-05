@@ -203,3 +203,124 @@ func TestDigests_SkillDigestIgnoresEvals(t *testing.T) {
 	require.NoError(t, err)
 	assert.NotEqual(t, c1, c2)
 }
+
+func TestLoadCases_RejectsSymlinkedEscapes(t *testing.T) {
+	cfg := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("TOP SECRET"), 0o600))
+	skillDir := filepath.Join(cfg, "skills", "deploy")
+	evalDir := filepath.Join(skillDir, "evals")
+	require.NoError(t, os.MkdirAll(evalDir, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("x"), 0o600))
+	require.NoError(t, os.Symlink(outside, filepath.Join(evalDir, "link")))
+	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "ok.txt"), []byte("fine"), 0o600))
+	require.NoError(t, os.Symlink(filepath.Join(outside, "secret.txt"), filepath.Join(evalDir, "file-link.txt")))
+	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "a.eval.yaml"), []byte(
+		"cases:\n  - id: a\n    prompt_file: link/secret.txt\n    expect_trigger: true\n    files:\n      - path: f.txt\n        source: link/secret.txt\n"+
+			"  - id: b\n    prompt_file: file-link.txt\n    expect_trigger: true\n"+
+			"  - id: c\n    prompt_file: /etc/passwd\n    expect_trigger: true\n"), 0o600))
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	cases, problems := LoadCases(&skills[0])
+	require.NotEmpty(t, problems)
+	for i := range cases {
+		assert.NotContains(t, cases[i].Prompt, "TOP SECRET")
+		for _, f := range cases[i].Files {
+			assert.NotContains(t, f.Content, "TOP SECRET")
+		}
+	}
+	var text []string
+	for _, p := range problems {
+		text = append(text, p.Message)
+	}
+	assert.Contains(t, strings.Join(text, "\n"), "outside")
+}
+
+func TestFindSkills_RejectsEvalDirThatEscapesTheProject(t *testing.T) {
+	cfg := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("TOP SECRET"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "a.eval.yaml"), []byte(
+		"cases:\n  - id: a\n    prompt_file: secret.txt\n    expect_trigger: true\n"), 0o600))
+	skillDir := filepath.Join(cfg, "skills", "deploy")
+	require.NoError(t, os.MkdirAll(skillDir, 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("x"), 0o600))
+	require.NoError(t, os.Symlink(outside, filepath.Join(skillDir, "evals")))
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	cases, problems := LoadCases(&skills[0])
+	assert.Empty(t, cases)
+	require.NotEmpty(t, problems)
+	assert.Contains(t, problems[0].Message, "outside")
+}
+
+func TestFileAssertions_DoNotFollowSymlinksOutOfTheWorkDir(t *testing.T) {
+	work := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("hunter2"), 0o600))
+	require.NoError(t, os.Symlink(filepath.Join(outside, "secret.txt"), filepath.Join(work, "out.txt")))
+	require.NoError(t, os.Symlink(outside, filepath.Join(work, "dir")))
+	require.NoError(t, os.WriteFile(filepath.Join(work, "real.txt"), []byte("hello"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(work, "big.txt"), make([]byte, maxCaseFileBytes+1), 0o600))
+
+	r := &Result{WorkDir: work}
+	check := func(a Assertion) string { return checkAssertion(&a, r, GradeOptions{}) }
+
+	assert.Empty(t, check(Assertion{Type: AssertContains, Path: "real.txt", Value: "hello"}))
+	assert.NotEmpty(t, check(Assertion{Type: AssertContains, Path: "out.txt", Value: "hunter2"}), "a symlink to a host file is not read")
+	assert.NotEmpty(t, check(Assertion{Type: AssertContains, Path: "dir/secret.txt", Value: "hunter2"}))
+	assert.NotEmpty(t, check(Assertion{Type: AssertFileExists, Path: "out.txt"}), "existence of host files is not leaked")
+	assert.NotEmpty(t, check(Assertion{Type: AssertFileExists, Path: "dir/secret.txt"}))
+	assert.NotEmpty(t, check(Assertion{Type: AssertContains, Path: "big.txt", Value: "x"}), "oversized files are refused")
+	exists := false
+	assert.Empty(t, check(Assertion{Type: AssertFileExists, Path: "missing.txt", Exists: &exists}))
+}
+
+func TestDigests_IgnoreOSJunkAndResultsButNotSymlinkTargets(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "deploy", "body", twoCases)
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	skill := &skills[0]
+	skillBefore, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	casesBefore, err := CasesDigest(skill)
+	require.NoError(t, err)
+
+	evalDir := filepath.Join(skill.Dir, "evals")
+	for _, junk := range []string{filepath.Join(skill.Dir, ".DS_Store"), filepath.Join(evalDir, ".DS_Store"), filepath.Join(evalDir, "._main.eval.yaml")} {
+		require.NoError(t, os.WriteFile(junk, []byte("junk"), 0o600))
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(evalDir, "results"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "results", "run.json"), []byte("{}"), 0o600))
+	skillAfter, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	casesAfter, err := CasesDigest(skill)
+	require.NoError(t, err)
+	assert.Equal(t, skillBefore, skillAfter)
+	assert.Equal(t, casesBefore, casesAfter)
+
+	// a symlink counts by its target, so retargeting it is a change
+	require.NoError(t, os.Symlink("SKILL.md", filepath.Join(skill.Dir, "alias.md")))
+	linked, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	assert.NotEqual(t, skillBefore, linked)
+	require.NoError(t, os.Remove(filepath.Join(skill.Dir, "alias.md")))
+	require.NoError(t, os.Symlink("other.md", filepath.Join(skill.Dir, "alias.md")))
+	retargeted, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	assert.NotEqual(t, linked, retargeted)
+}
+
+func TestLoadCases_NearMissIDCollidingWithAnAuthoredCaseIsAProblem(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "deploy", "x", "cases:\n  - id: deploy\n    prompt: p\n    expect_trigger: true\n    near_miss: [something close]\n"+
+		"  - id: deploy.near-miss-1\n    prompt: q\n    expect_trigger: false\n")
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	_, problems := LoadCases(&skills[0])
+	require.Len(t, problems, 1)
+	assert.Contains(t, problems[0].Message, "deploy.near-miss-1")
+}

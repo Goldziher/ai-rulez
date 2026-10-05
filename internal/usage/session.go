@@ -45,7 +45,12 @@ func saltPathFor(options RecordOptions, cwd string) string {
 }
 
 // loadSalt returns the salt from the environment or the salt file, creating the
-// file (mode 0600) with 16 random bytes when missing. It returns "" on failure.
+// file (mode 0600) with 16 random bytes when missing or empty. It returns "" on
+// failure.
+//
+// The salt is written to a private temporary file and hard-linked into place, so
+// a concurrent reader sees either no file or the complete salt, never an empty
+// one; a crash leaves no truncated file behind.
 func loadSalt(path string) string {
 	if salt := os.Getenv(SaltEnv); salt != "" {
 		return salt
@@ -53,28 +58,53 @@ func loadSalt(path string) string {
 	if path == "" {
 		return ""
 	}
-	if data, err := os.ReadFile(path); err == nil { //nolint:gosec // the machine-local salt file
-		return strings.TrimSpace(string(data))
+	if salt := readSalt(path); salt != "" {
+		return salt
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
+		return ""
+	}
+	// An empty file (from an older crash) is replaced; a missing one is created.
+	if _, err := os.Stat(path); err == nil {
+		if salt := readSalt(path); salt != "" {
+			return salt // a concurrent hook just wrote it
+		}
+		_ = os.Remove(path) //nolint:errcheck // a concurrent writer may have replaced it; the read below settles it
 	}
 	raw := make([]byte, 16)
 	if _, err := rand.Read(raw); err != nil {
 		return ""
 	}
 	salt := hex.EncodeToString(raw)
-	if err := os.MkdirAll(filepath.Dir(path), 0o750); err != nil {
-		return ""
-	}
-	// O_EXCL: when two hooks race, one wins and the other reads the winner's salt.
-	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600) //nolint:gosec // the machine-local salt file
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".usage-salt-*") // mode 0600
 	if err != nil {
-		if data, readErr := os.ReadFile(path); readErr == nil { //nolint:gosec // the machine-local salt file
-			return strings.TrimSpace(string(data))
-		}
 		return ""
 	}
-	_, writeErr := file.WriteString(salt + "\n")
-	if closeErr := file.Close(); writeErr != nil || closeErr != nil {
+	defer os.Remove(tmp.Name()) //nolint:errcheck // the link below is the real file
+	_, writeErr := tmp.WriteString(salt + "\n")
+	if closeErr := tmp.Close(); writeErr != nil || closeErr != nil {
 		return ""
+	}
+	// Link fails when a concurrent hook won the race; then use the winner's salt.
+	if err := os.Link(tmp.Name(), path); err != nil {
+		return readSalt(path)
+	}
+	return salt
+}
+
+// readSalt returns the trimmed contents of the salt file, tightening its mode to
+// 0600 when it is looser. "" means missing, empty or unreadable.
+func readSalt(path string) string {
+	data, err := os.ReadFile(path) //nolint:gosec // the machine-local salt file
+	if err != nil {
+		return ""
+	}
+	salt := strings.TrimSpace(string(data))
+	if salt == "" {
+		return ""
+	}
+	if info, statErr := os.Stat(path); statErr == nil && info.Mode().Perm()&0o077 != 0 {
+		_ = os.Chmod(path, 0o600) //nolint:errcheck // best effort: the salt is still usable
 	}
 	return salt
 }

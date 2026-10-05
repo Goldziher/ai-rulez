@@ -53,6 +53,11 @@ type ClaudePluginEval struct {
 // Name implements Runner.
 func (*ClaudePluginEval) Name() string { return RunnerClaudePluginEval }
 
+// Fingerprint implements Fingerprinter: the settings that change what claude runs.
+func (r *ClaudePluginEval) Fingerprint() string {
+	return fmt.Sprintf("bin=%s runs=%d judge=%s args=%q", r.Bin, r.Runs, r.JudgeModel, r.ExtraArgs)
+}
+
 // Run implements Runner.
 func (r *ClaudePluginEval) Run(ctx context.Context, req *Request) (*Response, error) {
 	if req.Harness != "" && req.Harness != "claude" {
@@ -174,7 +179,7 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 		if err := writeMarkdown(filepath.Join(caseDir, "prompt.md"), front, c.Prompt); err != nil {
 			return nil, err
 		}
-		trigger := map[string]any{keyType: "tool_used", "tool": "Skill", "input_match": regexp.QuoteMeta(req.Skill.ID)}
+		trigger := map[string]any{keyType: "tool_used", "tool": "Skill", "input_match": triggerMatch(req.Skill.ID)}
 		if !c.Expects() {
 			trigger["min"], trigger["max"], trigger["arm"] = 0, 0, "both"
 		}
@@ -194,6 +199,14 @@ func BuildClaudePlugin(dir string, req *Request) (*ClaudeTranslation, error) {
 		}
 	}
 	return tr, nil
+}
+
+// triggerMatch anchors the skill id so a call to test-driven-development or
+// plugin:contest does not count as a call to the skill "test". A plugin prefix
+// ("plugin:id") still matches, since ":" is a boundary.
+func triggerMatch(id string) string {
+	const boundary = `[^A-Za-z0-9._-]`
+	return "(^|" + boundary + ")" + regexp.QuoteMeta(id) + "($|" + boundary + ")"
 }
 
 // claudeUnsupported says why a case cannot be translated, or "".
@@ -331,6 +344,9 @@ func ParseClaudeResult(data []byte, req *Request, tr *ClaudeTranslation) (*Respo
 		if req.Ablation && len(entry.Arms.Without) > 0 {
 			resp.Results = append(resp.Results, claudeArm(c, ArmWithout, entry.Arms.Without, false))
 		}
+	}
+	if err := resp.Validate(req); err != nil {
+		return nil, fmt.Errorf("claude plugin eval result: %w", err)
 	}
 	return resp, nil
 }

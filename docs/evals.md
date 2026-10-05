@@ -22,25 +22,27 @@ running, and a model grader is whatever the runner provides.
     deploy-staging/
       SKILL.md
       evals/                 # cases for this skill
-        trigger-basic/
-          case.yaml
-          prompt.md
-        graders/
-          contains_release_note.py
-  evals/                     # optional: cases that span skills, or cases filed per skill name
+        trigger-basic.eval.yaml
+        prompts/
+          long-request.md    # referenced by prompt_file
+        fixtures/
+          notes.txt          # referenced by files[].source
+  evals/                     # optional: cases filed per skill name, away from the skill directory
     deploy-staging/
-      cross-skill-handoff.yaml
+      handoff.eval.yaml
     README.md
 ```
 
 - `skills/<name>/evals/` is a recognized directory. `generate` does not warn about it, and it is **never** written
   into any per-tool skill tree (`.claude/skills`, `.agents/skills`, ...): eval cases must not cost context.
-- `.ai-rulez/evals/` is an optional project-level tree. Use it for cases that involve several skills, or when you
-  prefer to keep cases away from the skill directory. `.ai-rulez/evals/<skill-name>/` counts as that skill's cases
-  for the lint rule below.
+- `.ai-rulez/evals/` is an optional project-level tree. Use it when you prefer to keep cases away from the skill
+  directory. Cases are filed per skill: `.ai-rulez/evals/<skill-name>/` counts as that skill's cases, and a case
+  file outside such a directory belongs to no skill and is never run.
 - ai-rulez parses only files named `*.eval.yaml`, `*.eval.yml` or `*.eval.json` (the [case format](#case-format)
-  below). Everything else in those directories (another tool's `case.yaml`, `prompt.md`, graders, fixtures) is yours;
-  ai-rulez copies it byte for byte and does not read it.
+  below). Everything else in those directories (another tool's `case.yaml`, `prompt.md`, graders, fixtures) is yours:
+  ai-rulez never parses it, but it is hashed into the skill's cases digest (so editing a fixture re-runs the skill)
+  and copied byte for byte into plugin bundles. `.DS_Store`-style junk, `results/` and `node_modules/` are left out
+  of the hash.
 
 ## Case format
 
@@ -105,7 +107,11 @@ Assertions:
 | `file_exists` | `path`, `exists` (default true) | the file is / is not in the working directory |
 | `command_exit` | `command`, `exit_code` (default 0) | the command, run through the shell in the working directory, exits with that status; **needs `--allow-exec`** because it executes text from a case file |
 
-Every path must be relative and stay inside its directory (no leading `/` or `~`, no `..`). A case with no
+Every path must be relative and stay inside its directory (no leading `/` or `~`, no `..`). `prompt_file` and
+`files[].source` are also checked after symlinks are resolved: a symlink (to a file or to a directory) whose target
+lies outside the eval directory is refused, and so is an eval directory that itself resolves outside the config
+directory. `files[].path` names a file for the runner to create in the working directory; ai-rulez validates it is
+relative and inside, and the runner must keep it there. A case with no
 assertions and no rubric is a trigger-only case: it measures recall (positive) or precision (negative) and nothing else.
 Unknown fields are errors, so a typo cannot silently disable an assertion. Problems are reported by
 `ai-rulez validate --strict` as `AR996 eval-case-invalid` with the file and line.
@@ -136,10 +142,15 @@ ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xm
 | `--date`, `$AI_RULEZ_EVAL_DATE` | The date recorded in the results. The clock is never read, so equal inputs give an equal file. |
 | `--changed-only`, `--base REF` | Only skills with files changed against `REF` (default `HEAD`; committed, uncommitted and untracked). |
 | `--force` | Ignore the [result cache](#caching). |
-| `--threshold R` | Pass rate a skill needs (default `[lint.evals] min_pass_rate`, else 1). |
+| `--threshold R` | Pass rate (0 to 1) a skill needs (default `[lint.evals] min_pass_rate`, else 1). `0` records scores without gating on them; a value outside 0-1 is rejected. |
 | `--allow-exec` | Run `command_exit` assertions. |
 | `--no-write`, `--results FILE` | Do not update, or use another, results file. |
 | `--price-in`, `--price-out` | USD per million tokens for the estimate (default by model tier). |
+
+Every flag is validated before any runner is started: an unknown `--format`, a `--max-cost`, `--price-in` or
+`--price-out` that is NaN, infinite or negative, or a `--threshold` outside 0-1 is an error that costs nothing. Each
+skill's result is written to the results file (atomically) as soon as it finishes, so a crash or Ctrl-C keeps the
+skills that already ran; the rest are reported as not run and the command exits non-zero.
 
 Exit status: `0` when every selected skill passes, `2` when a skill is below its threshold, errored, was skipped over
 budget, or has invalid cases, `1` for a failure to run at all.
@@ -206,8 +217,13 @@ Cases are self-contained: near misses are expanded and `prompt_file` and fixture
 ### Caching
 
 A skill is not re-run when the results file already holds a run with the same cache key: the skill's sha256 digest,
-the digest of its eval material, the runner, harness, model and the ablation setting. Editing a case or the skill,
-or changing any of those, re-runs it. `--force` ignores the cache. The pass/fail verdict is recomputed from the stored
+the digest of its eval material (cases, fixtures, rubrics and graders), the runner and its own settings (the
+`--runner-command` text, or `--claude-bin`, `--runs`, `--judge-model` and `--runner-arg` for `claude-plugin-eval`),
+harness, model, the ablation setting, `--allow-exec` (it changes how `command_exit` assertions grade) and the
+ai-rulez version. Editing a case or the skill, or changing any of those, re-runs it. `--force` ignores the cache.
+Only real grading results are cached: a run in which any case errored (rate limit, missing credentials, no result
+from the runner) or nothing was scored is not stored and is retried on the next run, so an outage never turns into a
+cached failure. A failed grade (a case that ran and did not pass) is a result and is cached. The pass/fail verdict is recomputed from the stored
 score against the current threshold, so lowering `--threshold` needs no re-run.
 
 ### Cost controls
@@ -220,7 +236,11 @@ score against the current threshold, so lowering `--threshold` needs no re-run.
   Treat it as an order of magnitude.
 - `--max-cost USD` refuses to start when the estimate exceeds it, hands each runner the remaining budget
   (`max_cost_usd`; `claude-plugin-eval` passes it as `--max-cost-usd`), and skips the remaining skills once the
-  reported spend reaches it (status `skipped-over-budget`, exit 2).
+  reported spend reaches it (status `skipped-over-budget`, exit 2). Spend is counted conservatively: the larger of
+  the sum of per-case costs and the runner's own total, tokens priced with `--price-in`/`--price-out` when no cost is
+  reported, and a runner call that fails is assumed to have spent the whole remaining budget, so the run stops. A
+  `command` runner should enforce `max_cost_usd` itself: it is the only one that knows what it spends. Negative or
+  non-finite costs and token counts in a response are rejected.
 - `--changed-only`, the cache and `--runs` keep the number of runs down; `tags` and skill names narrow it by hand.
 
 ## Scores and the results file
@@ -266,7 +286,7 @@ failing run, which is what freshness compares against.
 
 ## Linting cases and results
 
-Three more rules join `AR962` in [strict validation](strict-validation.md):
+Four more rules join `AR962` in [strict validation](strict-validation.md):
 
 | Code | Name | Default | Reports |
 | --- | --- | --- | --- |

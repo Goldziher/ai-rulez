@@ -20,6 +20,9 @@ const (
 	DefaultMinTrigger  = 0.8
 	// MinUsefulDelta is the ablation delta under which a skill is not shown to help.
 	MinUsefulDelta = 0.05
+	// MinAblationCases is how many with/without case pairs an ablation delta needs
+	// before it counts as evidence: one flaky case is a swing of 100 points.
+	MinAblationCases = 3
 )
 
 // RankSkill is what the ranking knows about one skill.
@@ -53,6 +56,7 @@ type RankRow struct {
 	TriggerPrecision *float64       `json:"trigger_precision"`
 	TriggerRecall    *float64       `json:"trigger_recall"`
 	AblationDelta    *float64       `json:"ablation_delta"`
+	AblationCases    int            `json:"ablation_cases,omitempty"`
 	SkillTokens      int            `json:"skill_tokens"`
 	Feedback         map[string]int `json:"feedback,omitempty"`
 	Stale            bool           `json:"stale,omitempty"`
@@ -120,14 +124,17 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 	if record != nil {
 		sc := record.Score
 		row.PassRate, row.TriggerPrecision, row.TriggerRecall, row.AblationDelta = &sc.PassRate, sc.TriggerPrecision, sc.TriggerRecall, sc.AblationDelta
+		row.AblationCases = sc.AblationCases
 	}
 	if reasons := rewriteReasons(in, skill, record, &row); len(reasons) > 0 {
 		row.Action, row.Reasons = ActionRewrite, reasons
 		return row
 	}
 
-	unused := row.Uses != nil && *row.Uses == 0
-	showsValue := record != nil && row.AblationDelta != nil && *row.AblationDelta > MinUsefulDelta
+	// "Never used" needs a log that recorded something, or an empty or wrong log
+	// would mark every skill for pruning.
+	unused := row.Uses != nil && *row.Uses == 0 && totalUses(in.Uses) > 0
+	showsValue := record != nil && reliableDelta(&record.Score) && *row.AblationDelta > MinUsefulDelta
 	switch {
 	case unused && !showsValue:
 		row.Action = ActionPrune
@@ -145,9 +152,23 @@ func rankOne(in *RankInput, skill RankSkill) RankRow {
 	return row
 }
 
+// reliableDelta says whether the score carries an ablation delta measured over
+// enough cases to act on.
+func reliableDelta(sc *SkillScore) bool {
+	return sc.AblationDelta != nil && sc.AblationCases >= MinAblationCases
+}
+
+func totalUses(uses map[string]int) int {
+	total := 0
+	for _, n := range uses {
+		total += n
+	}
+	return total
+}
+
 func pruneReasons(row *RankRow, hasRecord bool) []string {
 	reasons := []string{"never used in the usage log"}
-	if !hasRecord || row.AblationDelta == nil {
+	if !hasRecord || row.AblationDelta == nil || row.AblationCases < MinAblationCases {
 		reasons = append(reasons, "no ablation evidence that it helps")
 	} else {
 		reasons = append(reasons, "ablation delta "+deltaText(row.AblationDelta)+" shows no benefit")
@@ -172,7 +193,7 @@ func rewriteReasons(in *RankInput, skill RankSkill, record *SkillRecord, row *Ra
 		if sc.TriggerRecall != nil && *sc.TriggerRecall < in.MinTrigger {
 			reasons = append(reasons, fmt.Sprintf("trigger recall %s is below %s: it misses prompts it should handle", Percent(sc.TriggerRecall), pct(in.MinTrigger)))
 		}
-		if sc.AblationDelta != nil && *sc.AblationDelta < 0 {
+		if reliableDelta(sc) && *sc.AblationDelta < 0 {
 			reasons = append(reasons, fmt.Sprintf("ablation delta %s: outcomes are worse with the skill", deltaText(sc.AblationDelta)))
 		}
 		if last, stale := in.Store.Stale(skill.ID, skill.Digest); stale && skill.Digest != "" {

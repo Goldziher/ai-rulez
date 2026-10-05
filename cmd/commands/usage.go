@@ -98,6 +98,8 @@ var usageRecordCmd = &cobra.Command{
 	Short: "Record one skill invocation from a hook event on stdin",
 	Long: `Read one hook event from standard input and, when it is a skill invocation, append a
 JSON line (ts, skill, id, hash, session, invocation) to the log. Any other event is ignored.
+For codex and cursor only a read of skills/<id>/SKILL.md counts (a read tool, or cat, head, sed -n and
+similar); writes, git add and other mentions of the path do not. The payload is inferred, not verified.
 The command never fails a session: errors are reported on standard error and the exit status
 stays 0.`,
 	Args: cobra.NoArgs,

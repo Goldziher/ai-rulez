@@ -26,6 +26,12 @@ type Runner interface {
 	Run(ctx context.Context, req *Request) (*Response, error)
 }
 
+// Fingerprinter is implemented by runners whose settings change what a run
+// produces. The fingerprint joins the result cache key.
+type Fingerprinter interface {
+	Fingerprint() string
+}
+
 // SkillRef identifies the skill under test to a runner.
 type SkillRef struct {
 	ID string `json:"id"`
@@ -90,6 +96,9 @@ func (r *Response) Validate(req *Request) error {
 	if r.Version != ProtocolVersion {
 		return fmt.Errorf("runner answered protocol version %d, want %d", r.Version, ProtocolVersion)
 	}
+	if err := checkMoney("cost_usd", r.CostUSD); err != nil {
+		return err
+	}
 	known := map[string]bool{}
 	for i := range req.Cases {
 		known[req.Cases[i].ID] = true
@@ -101,6 +110,12 @@ func (r *Response) Validate(req *Request) error {
 		}
 		if result.Arm != ArmWith && result.Arm != ArmWithout {
 			return fmt.Errorf("results[%d]: arm must be %q or %q, got %q", i, ArmWith, ArmWithout, result.Arm)
+		}
+		if err := checkMoney("cost_usd", result.CostUSD); err != nil {
+			return fmt.Errorf("results[%d]: %w", i, err)
+		}
+		if result.InputTokens < 0 || result.OutputTokens < 0 {
+			return fmt.Errorf("results[%d]: token counts must be >= 0", i)
 		}
 		if result.RubricScore != nil && (*result.RubricScore < 0 || *result.RubricScore > 1) {
 			return fmt.Errorf("results[%d]: rubric_score must be between 0 and 1", i)

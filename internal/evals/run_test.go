@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"errors"
+	"math"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -215,7 +217,8 @@ func TestRun_ThresholdControlsPassing(t *testing.T) {
 	assert.False(t, report.Skills[0].Passing)
 	assert.True(t, report.Failed)
 
-	opts.PassThreshold = 0.6
+	threshold := 0.6
+	opts.PassThreshold = &threshold
 	opts.Force = true
 	report, err = Run(context.Background(), opts)
 	require.NoError(t, err)
@@ -419,4 +422,234 @@ func TestEstimateRun_ScalesWithArmsRunsAndRubric(t *testing.T) {
 	assert.Greater(t, abl.CostUSD, one.CostUSD)
 	assert.Equal(t, Price{InPerMTok: 1, OutPerMTok: 5}, PriceFor("Claude-Haiku-4"))
 	assert.Equal(t, Price{InPerMTok: 15, OutPerMTok: 75}, PriceFor("opus"))
+}
+
+func erroringRunner() *fakeRunner {
+	return &fakeRunner{fn: func(req *Request) (*Response, error) {
+		resp := &Response{Version: ProtocolVersion}
+		for i := range req.Cases {
+			resp.Results = append(resp.Results, Result{Case: req.Cases[i].ID, Arm: ArmWith, Error: "rate limited"})
+		}
+		return resp, nil
+	}}
+}
+
+func TestRun_ErroredRunsAreNeverCached(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "alpha", "x", twoCases)
+
+	for name, runner := range map[string]*fakeRunner{
+		"per-case errors": erroringRunner(),
+		"no results":      {fn: func(*Request) (*Response, error) { return &Response{Version: ProtocolVersion}, nil }},
+	} {
+		t.Run(name, func(t *testing.T) {
+			opts := baseOptions(cfg, runner)
+			_, err := Run(context.Background(), opts)
+			require.NoError(t, err)
+			require.Equal(t, 1, runner.calls)
+			report, err := Run(context.Background(), opts)
+			require.NoError(t, err)
+			assert.Equal(t, 2, runner.calls, "an errored run is retried, not replayed")
+			assert.Equal(t, RunRan, report.Skills[0].Status)
+			assert.True(t, report.Failed)
+		})
+	}
+}
+
+func TestRun_StoredErroredRecordIsNotReplayed(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "alpha", "x", twoCases)
+	runner := goodRunner()
+	opts := baseOptions(cfg, runner)
+	_, err := Run(context.Background(), opts)
+	require.NoError(t, err)
+	rec, _ := opts.Store.Get("alpha")
+	rec.Score.Errors = 1 // an older ai-rulez stored an errored run under a valid key
+	_, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 2, runner.calls)
+}
+
+// printRunner is goodRunner with a fingerprint, like a runner with settings.
+type printRunner struct {
+	*fakeRunner
+	print string
+}
+
+func (p *printRunner) Fingerprint() string { return p.print }
+
+func TestRun_CacheKeyCoversRunnerSettingsAndExecFlag(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "alpha", "x", twoCases)
+	inner := goodRunner()
+	runner := &printRunner{fakeRunner: inner, print: "cmd=a"}
+	opts := baseOptions(cfg, runner)
+	_, err := Run(context.Background(), opts)
+	require.NoError(t, err)
+	_, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 1, inner.calls, "same settings hit the cache")
+
+	runner.print = "cmd=b"
+	_, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 2, inner.calls, "a different runner command re-runs")
+
+	opts.Grade.AllowExec = true
+	_, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 3, inner.calls, "--allow-exec changes command_exit grading")
+
+	opts.ToolVersion = "9.9.9"
+	_, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 4, inner.calls, "a new ai-rulez version re-runs")
+}
+
+func TestRun_ThresholdZeroDoesNotGate(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "alpha", "x", twoCases)
+	runner := &fakeRunner{fn: func(req *Request) (*Response, error) {
+		resp := &Response{Version: ProtocolVersion}
+		for i := range req.Cases {
+			resp.Results = append(resp.Results, Result{Case: req.Cases[i].ID, Arm: ArmWith, Triggered: bp(!req.Cases[i].Expects()), Output: "bad"})
+		}
+		return resp, nil
+	}}
+	opts := baseOptions(cfg, runner)
+	zero := 0.0
+	opts.PassThreshold = &zero
+	report, err := Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.True(t, report.Skills[0].Passing)
+	assert.False(t, report.Failed)
+}
+
+func TestRun_SpendIsCountedConservatively(t *testing.T) {
+	cfg := projectWithSkills(t)
+	// the runner's total exceeds the sum of per-case costs (a case went missing)
+	underCounted := &fakeRunner{fn: func(req *Request) (*Response, error) {
+		return &Response{Version: ProtocolVersion, CostUSD: 11, Results: []Result{
+			{Case: "fires", Arm: ArmWith, Triggered: bp(true), Output: "ok", CostUSD: 1},
+		}}, nil
+	}}
+	opts := baseOptions(cfg, underCounted)
+	opts.MaxCostUSD = 10
+	report, err := Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 1, underCounted.calls)
+	assert.Equal(t, RunOverBudget, report.Skills[1].Status)
+
+	// a runner that fails may still have spent money, so with a cap set the run stops
+	cfg = projectWithSkills(t)
+	failing := &fakeRunner{fn: func(*Request) (*Response, error) { return nil, errors.New("exit status 1") }}
+	opts = baseOptions(cfg, failing)
+	opts.MaxCostUSD = 10
+	report, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, RunError, report.Skills[0].Status)
+	assert.Equal(t, 1, failing.calls, "a failed call may have spent the whole budget")
+	assert.Equal(t, RunOverBudget, report.Skills[1].Status)
+
+	// without a cap a failing runner is still tried for every skill
+	failing.calls = 0
+	opts.MaxCostUSD = 0
+	_, err = Run(context.Background(), opts)
+	require.NoError(t, err)
+	assert.Equal(t, 2, failing.calls)
+}
+
+func TestRun_OnSkillSeesEachFinishedSkillAndInterruptKeepsThem(t *testing.T) {
+	cfg := projectWithSkills(t)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	runner := goodRunner()
+	opts := baseOptions(cfg, runner)
+	var seen []string
+	opts.OnSkill = func(run *SkillRun) error {
+		if run.Status == RunRan {
+			_, ok := opts.Store.Get(run.ID)
+			assert.True(t, ok, "the record is in the store when the hook fires")
+			cancel() // simulate Ctrl-C after the first expensive skill
+		}
+		seen = append(seen, run.ID)
+		return nil
+	}
+	report, err := Run(ctx, opts)
+	require.ErrorIs(t, err, context.Canceled)
+	require.NotNil(t, report)
+	assert.Equal(t, []string{"alpha"}, seen)
+	assert.Equal(t, 1, runner.calls)
+	assert.True(t, report.Failed)
+	assert.Len(t, report.Skills, 1)
+}
+
+func TestRun_RejectsBadBudgetAndThreshold(t *testing.T) {
+	cfg := projectWithSkills(t)
+	for name, mutate := range map[string]func(*RunOptions){
+		"nan max cost":      func(o *RunOptions) { o.MaxCostUSD = math.NaN() },
+		"negative max cost": func(o *RunOptions) { o.MaxCostUSD = -5 },
+		"inf max cost":      func(o *RunOptions) { o.MaxCostUSD = math.Inf(1) },
+		"threshold over 1":  func(o *RunOptions) { v := 1.5; o.PassThreshold = &v },
+		"negative price":    func(o *RunOptions) { o.Price = Price{InPerMTok: -1} },
+		"nan price":         func(o *RunOptions) { o.Price = Price{OutPerMTok: math.NaN()} },
+	} {
+		t.Run(name, func(t *testing.T) {
+			runner := goodRunner()
+			opts := baseOptions(cfg, runner)
+			mutate(opts)
+			_, err := Run(context.Background(), opts)
+			require.Error(t, err)
+			assert.Zero(t, runner.calls)
+		})
+	}
+}
+
+func realGit(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", append([]string{"-c", "user.email=t@example.com", "-c", "user.name=t", "-c", "commit.gpgsign=false"}, args...)...)
+	cmd.Dir = dir
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+	return string(out)
+}
+
+func TestChangedSkills_ProjectInASubdirectoryOfTheRepo(t *testing.T) {
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git is not installed")
+	}
+	repo := t.TempDir()
+	project := filepath.Join(repo, "services", "foo")
+	cfg := filepath.Join(project, ".ai-rulez")
+	writeSkill(t, cfg, "old", "x", twoCases)
+	realGit(t, repo, "init", "-q")
+	realGit(t, repo, "add", "-A")
+	realGit(t, repo, "commit", "-q", "-m", "init")
+	// a brand-new untracked skill, and a tracked one that was edited
+	writeSkill(t, cfg, "fresh", "x", twoCases)
+	writeSkill(t, cfg, "old", "x edited", twoCases)
+
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	changed, err := ChangedSkills(ExecGit, project, "HEAD", skills)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]bool{"fresh": true, "old": true}, changed)
+}
+
+func TestChangedSkills_RejectsOptionLikeBase(t *testing.T) {
+	git := func(string, ...string) (string, error) {
+		t.Fatal("git must not be called with an option-like base")
+		return "", nil
+	}
+	_, err := ChangedSkills(git, t.TempDir(), "--output=/tmp/evil", nil)
+	assert.ErrorContains(t, err, "base")
+}
+
+func TestRun_InvalidCaseProblemsAreProjectRelative(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), ".ai-rulez")
+	writeSkill(t, cfg, "broken", "x", "cases:\n  - id: a\n    prompt: p\n")
+	report, err := Run(context.Background(), baseOptions(cfg, goodRunner()))
+	require.NoError(t, err)
+	require.Len(t, report.Skills[0].Problems, 1)
+	assert.Equal(t, ".ai-rulez/skills/broken/evals/main.eval.yaml", report.Skills[0].Problems[0].File)
 }
