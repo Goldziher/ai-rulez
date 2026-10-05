@@ -134,7 +134,7 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 			roots = append(roots, abs)
 		}
 	}
-	return fingerprint(roots)
+	return fingerprint(roots, st.UsageLog)
 }
 
 type buildOptions struct {
@@ -390,9 +390,11 @@ func (st *ServeSetup) watchRoots(b *built) []string {
 }
 
 // fingerprint hashes the path, size and modification time of every file below
-// roots, leaving out VCS metadata and usage logs (a load_skill appends to one,
-// which must not trigger a reload).
-func fingerprint(roots []string) (string, error) {
+// roots, leaving out VCS metadata and the usage logs a load_skill appends to
+// (which must not trigger a reload): .jsonl files directly inside a `local`
+// directory, and the files named in logs. A .jsonl file anywhere else is skill
+// content and counts.
+func fingerprint(roots []string, logs ...string) (string, error) {
 	h := sha256.New()
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
@@ -408,7 +410,7 @@ func fingerprint(roots []string) (string, error) {
 				}
 				return nil
 			}
-			if strings.HasSuffix(d.Name(), ".jsonl") || strings.HasPrefix(d.Name(), ".cache_meta") {
+			if isUsageLog(p, logs) || strings.HasPrefix(d.Name(), ".cache_meta") {
 				return nil
 			}
 			info, err := d.Info()
@@ -426,6 +428,18 @@ func fingerprint(roots []string) (string, error) {
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func isUsageLog(p string, logs []string) bool {
+	if strings.HasSuffix(p, ".jsonl") && filepath.Base(filepath.Dir(p)) == "local" {
+		return true
+	}
+	for _, l := range logs {
+		if l != "" && filepath.Clean(l) == filepath.Clean(p) {
+			return true
+		}
+	}
+	return false
 }
 
 // buildAll builds the full view and, for each role of the project, the role's
