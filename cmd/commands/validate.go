@@ -41,7 +41,7 @@ schema compliance, and structural issues.`,
 			os.Exit(1)
 		}
 		// JSON output must be the only thing on stdout.
-		progress.SetQuiet(viper.GetBool("quiet") || validateFormat == formatJSON)
+		progress.SetQuiet(viper.GetBool("quiet") || structuredFormat(validateFormat))
 
 		if validateRecursive {
 			if len(args) > 0 {
@@ -106,7 +106,8 @@ func init() {
 	ValidateCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Validate every configuration file found recursively")
 	ValidateCmd.Flags().BoolVar(&validateStrict, "strict", false, "Also run deep content checks: globs that match nothing, dead links and references, missing hooks, oversize or duplicate content (see the [lint] config table)")
 	ValidateCmd.Flags().BoolVar(&validateExtern, "external", false, "With --strict, also run the scanners configured in [[lint.external]] and merge their findings")
-	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default) or json")
+	ValidateCmd.Flags().StringVar(&validateFormat, "format", "", "Output format for --strict findings: text (default), json, sarif, github, junit or markdown")
+	ValidateCmd.Flags().StringVar(&validateOutput, "output", "", "With --strict, write the report to this file instead of stdout")
 	ValidateCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest --strict severity that exits 2: error (default), warning, info or none")
 	ValidateCmd.Flags().StringVar(&validateExplain, "explain", "", "Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit")
 	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
@@ -280,7 +281,8 @@ configuration could not be loaded, 2 findings at or above --fail-on.`,
 func init() {
 	ScanCmd.Flags().BoolVarP(&validateRecursive, "recursive", "r", false, "Scan every configuration file found recursively")
 	ScanCmd.Flags().BoolVar(&validateExtern, "external", false, "Also run the scanners configured in [[lint.external]] and merge their findings")
-	ScanCmd.Flags().StringVar(&validateFormat, "format", "", "Output format: text (default) or json")
+	ScanCmd.Flags().StringVar(&validateFormat, "format", "", "Output format: text (default), json, sarif, github, junit or markdown")
+	ScanCmd.Flags().StringVar(&validateOutput, "output", "", "Write the report to this file instead of stdout")
 	ScanCmd.Flags().StringVar(&validateFailOn, "fail-on", "", "Lowest severity that exits 2: error (default), warning, info or none")
 	ScanCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content")
 	ScanCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")

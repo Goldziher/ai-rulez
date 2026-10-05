@@ -1,12 +1,15 @@
 package commands
 
 import (
+	"bytes"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lint"
 	"github.com/Goldziher/ai-rulez/internal/logger"
@@ -22,6 +25,7 @@ var (
 	validateFormat string
 	validateFailOn string
 	validateExtern bool
+	validateOutput string
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
@@ -29,13 +33,11 @@ var (
 
 // checkStrictFlags rejects strict-only flags used without --strict.
 func checkStrictFlags() error {
-	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern) {
-		return oops.Errorf("--format, --fail-on and --external require --strict")
+	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern || validateOutput != "") {
+		return oops.Errorf("--format, --output, --fail-on and --external require --strict")
 	}
-	switch validateFormat {
-	case "", "text", formatJSON:
-	default:
-		return oops.Errorf("unknown --format %q (use text or json)", validateFormat)
+	if !lint.IsFormat(validateFormat) {
+		return oops.Errorf("unknown --format %q (use %s)", validateFormat, strings.Join(lint.Formats(), ", "))
 	}
 	switch validateFailOn {
 	case "", "error", "warning", "info", "none":
@@ -82,12 +84,11 @@ func failOnFor(cfg *config.Config) string {
 // never silences or tightens another's.
 func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 	combined := lint.Combine(reports)
-	if validateFormat == formatJSON {
-		if err := lint.WriteJSON(os.Stdout, combined); err != nil {
-			fmtError(err)
-			return 1
-		}
-	} else if err := lint.WriteText(os.Stdout, combined); err != nil {
+	var first *config.Config
+	if len(cfgs) > 0 {
+		first = cfgs[0]
+	}
+	if err := writeReport(combined, failOnFor(first)); err != nil {
 		fmtError(err)
 		return 1
 	}
@@ -101,6 +102,33 @@ func reportStrict(reports []*lint.Report, cfgs []*config.Config) int {
 		}
 	}
 	return 0
+}
+
+// structuredFormat reports whether the format must be the only thing on stdout.
+func structuredFormat(format string) bool {
+	return format != "" && format != lint.FormatText
+}
+
+// writeReport prints the combined report in the chosen format, to --output
+// (written atomically) or stdout.
+func writeReport(combined lint.Combined, failOn string) error {
+	opts := lint.WriteOptions{Version: Version, FailOn: failOn}
+	if validateOutput == "" {
+		return lint.Write(os.Stdout, validateFormat, combined, opts)
+	}
+	var buf bytes.Buffer
+	if err := lint.Write(&buf, validateFormat, combined, opts); err != nil {
+		return err //nolint:wrapcheck // formatter error
+	}
+	if dir := filepath.Dir(validateOutput); dir != "." {
+		if err := os.MkdirAll(dir, 0o750); err != nil {
+			return oops.With("path", validateOutput).Wrapf(err, "create output directory")
+		}
+	}
+	if err := gitutil.WriteFileAtomic(validateOutput, buf.Bytes(), 0o644); err != nil {
+		return oops.With("path", validateOutput).Wrapf(err, "write report")
+	}
+	return nil
 }
 
 func runStrictSingle(cfg *config.Config) int {
