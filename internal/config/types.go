@@ -44,6 +44,7 @@ type Config struct {
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
 	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
+	Telemetry      *TelemetryConfig    `yaml:"telemetry,omitempty" json:"telemetry,omitempty" toml:"telemetry,omitempty"`
 
 	// Plugin / Marketplace are the *authoring* (producer) side: they describe a
 	// distributable plugin bundle and its marketplace index. Distinct from the
