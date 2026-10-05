@@ -76,6 +76,10 @@ func (s *SkillSourceConfig) Validate(index int) error {
 		return oops.With("field", field("ref")).Hint("A url or ref that starts with '-' would be read by git as an option").
 			Errorf("skill source %q: %s", s.Name, err.Error())
 	}
+	if s.MaxSkills < 0 || s.MaxBytes < 0 {
+		return oops.With("field", field("max_skills")).Hint("Use a positive number, or omit it for the default").
+			Errorf("skill source %q has a negative max_skills or max_bytes", s.Name)
+	}
 	if s.NamePrefix != "" && !namePrefixRe.MatchString(s.NamePrefix) {
 		return oops.With("field", field("name_prefix")).Hint("The prefix becomes part of a skill:// path segment").
 			Errorf("skill source %q has an invalid name_prefix %q", s.Name, s.NamePrefix)
