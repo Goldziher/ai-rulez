@@ -114,6 +114,7 @@ func init() {
 	ValidateCmd.Flags().StringVar(&validateExplain, "explain", "", "Print what a rule (code or name, for example AR001) checks, why, examples and how to suppress it, then exit")
 	addBaselineFlags(ValidateCmd)
 	addChangedFlags(ValidateCmd)
+	addFixFlags(ValidateCmd)
 	ValidateCmd.Flags().BoolVar(&noLocal, "no-local", false, "Ignore the machine-local config.local.* overlay and local/ content (the view a teammate without them sees)")
 	ValidateCmd.Flags().StringVarP(&configDir, "config-dir", "n", "", "Configuration directory name (default: .ai-rulez)")
 }

@@ -197,6 +197,8 @@ type FindingMeta struct {
 	AcceptReason string
 	// Analyzer and Scope classify the rule that produced the finding.
 	Analyzer, Scope string
+	// Fix is the mechanical correction, when one exists.
+	Fix *Fix
 }
 
 func (f *Finding) meta() *FindingMeta {

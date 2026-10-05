@@ -503,3 +503,33 @@ func ChangedSince(dir, rev string) ([]string, error) {
 	}
 	return out, nil
 }
+
+// StageExecutable records the executable bit for a tracked file in the index
+// (`git update-index --chmod=+x`), which is what git, and tools that read the
+// index mode, see; the working-tree mode alone does not change it. It reports
+// whether the index changed. An untracked file, a file already executable in
+// the index, and a path outside a repository are not errors: nothing to do.
+func StageExecutable(absPath string) (changed bool, err error) {
+	dir := filepath.Dir(absPath)
+	top := TopLevel(dir)
+	if top == "" {
+		return false, nil
+	}
+	rel, relErr := filepath.Rel(Resolve(top), Resolve(absPath))
+	if relErr != nil || strings.HasPrefix(rel, "..") {
+		return false, nil //nolint:nilerr // outside this repository: not ours to stage
+	}
+	rel = filepath.ToSlash(rel)
+	out, _, err := run(top, nil, "ls-files", "-s", "--", ":(literal)"+rel)
+	if err != nil {
+		return false, oops.Wrapf(err, "read index mode of %s", rel)
+	}
+	fields := strings.Fields(string(out))
+	if len(fields) == 0 || fields[0] != "100644" {
+		return false, nil
+	}
+	if _, _, err := run(top, nil, "update-index", "--chmod=+x", "--", rel); err != nil {
+		return false, oops.Wrapf(err, "stage executable bit of %s", rel)
+	}
+	return true, nil
+}
