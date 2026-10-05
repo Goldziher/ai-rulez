@@ -119,13 +119,8 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	if opts.Runner == nil && !opts.DryRun {
 		return nil, fmt.Errorf("no runner configured")
 	}
-	if t := opts.PassThreshold; t != nil && (math.IsNaN(*t) || *t < 0 || *t > 1) {
-		return nil, fmt.Errorf("pass threshold must be between 0 and 1, got %v", *t)
-	}
-	for name, v := range map[string]float64{"max cost": opts.MaxCostUSD, "price in": opts.Price.InPerMTok, "price out": opts.Price.OutPerMTok} {
-		if err := checkMoney(name, v); err != nil {
-			return nil, err
-		}
+	if err := checkOptions(opts); err != nil {
+		return nil, err
 	}
 	e := &engine{opts: opts, counter: opts.Counter, threshold: defaultThreshold, price: opts.Price, store: opts.Store, model: opts.Model, runnerName: "none"}
 	if e.counter == nil {
@@ -154,6 +149,19 @@ func newEngine(opts *RunOptions) (*engine, error) {
 	return e, nil
 }
 
+// checkOptions rejects settings that would silently disable a guard.
+func checkOptions(opts *RunOptions) error {
+	if t := opts.PassThreshold; t != nil && (math.IsNaN(*t) || *t < 0 || *t > 1) {
+		return fmt.Errorf("pass threshold must be between 0 and 1, got %v", *t)
+	}
+	for name, v := range map[string]float64{"max cost": opts.MaxCostUSD, "price in": opts.Price.InPerMTok, "price out": opts.Price.OutPerMTok} {
+		if err := checkMoney(name, v); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // Run executes the eval cases of the selected skills and records the results in
 // opts.Store (the caller saves it). With DryRun it only reports what would run.
 func Run(ctx context.Context, opts *RunOptions) (*RunReport, error) {
@@ -170,7 +178,16 @@ func Run(ctx context.Context, opts *RunOptions) (*RunReport, error) {
 		return nil, err
 	}
 
-	// Plan first, so the pre-flight cost check sees the whole run.
+	plans, err := e.planAll(selected)
+	if err != nil {
+		return nil, err
+	}
+	return e.report, e.executeAll(ctx, plans)
+}
+
+// planAll plans every selected skill first, so the pre-flight cost check sees the
+// whole run.
+func (e *engine) planAll(selected []Skill) ([]plannedSkill, error) {
 	plans := make([]plannedSkill, 0, len(selected))
 	for i := range selected {
 		p, err := e.plan(&selected[i])
@@ -178,36 +195,37 @@ func Run(ctx context.Context, opts *RunOptions) (*RunReport, error) {
 			return nil, err
 		}
 		plans = append(plans, p)
-		if p.run.Status == RunCached {
-			continue
-		}
-		if p.run.Estimate != nil {
+		if p.run.Status != RunCached && p.run.Estimate != nil {
 			e.report.Estimate = e.report.Estimate.Add(*p.run.Estimate)
 		}
 	}
-	if !opts.DryRun && opts.MaxCostUSD > 0 && e.report.Estimate.CostUSD > opts.MaxCostUSD {
+	if !e.opts.DryRun && e.opts.MaxCostUSD > 0 && e.report.Estimate.CostUSD > e.opts.MaxCostUSD {
 		return nil, fmt.Errorf("estimated cost $%.2f exceeds --max-cost $%.2f (%d agent runs); narrow the skills, lower runs, or raise the limit",
-			e.report.Estimate.CostUSD, opts.MaxCostUSD, e.report.Estimate.AgentRuns)
+			e.report.Estimate.CostUSD, e.opts.MaxCostUSD, e.report.Estimate.AgentRuns)
 	}
+	return plans, nil
+}
 
+// executeAll runs the plans in order. On an interrupt or a failing OnSkill hook it
+// stops and the report keeps what finished.
+func (e *engine) executeAll(ctx context.Context, plans []plannedSkill) error {
 	for i := range plans {
 		if err := ctx.Err(); err != nil {
-			// Interrupted: hand back what finished so the caller can keep it.
 			e.report.Failed = true
-			return e.report, fmt.Errorf("interrupted before %s: %w", plans[i].skill.ID, err)
+			return fmt.Errorf("interrupted before %s: %w", plans[i].skill.ID, err)
 		}
 		run := e.execute(ctx, &plans[i])
 		if failedRun(&run) {
 			e.report.Failed = true
 		}
 		e.report.Skills = append(e.report.Skills, run)
-		if opts.OnSkill != nil {
-			if err := opts.OnSkill(&run); err != nil {
-				return e.report, err
+		if e.opts.OnSkill != nil {
+			if err := e.opts.OnSkill(&run); err != nil {
+				return err
 			}
 		}
 	}
-	return e.report, nil
+	return nil
 }
 
 func failedRun(run *SkillRun) bool {
@@ -328,7 +346,7 @@ func (e *engine) execute(ctx context.Context, p *plannedSkill) SkillRun {
 			}
 			return run
 		}
-		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price})
+		score, cases := Score(p.req.Cases, resp, ScoreOptions{Grade: e.opts.Grade, SkillTokens: skillTokens(p.skill, e.counter), Price: e.price}) //nolint:contextcheck // local grading is bounded by GradeOptions.CommandTimeout
 		e.report.CostUSD = round(e.report.CostUSD + score.CostUSD)
 		run.Status, run.Score, run.Cases = RunRan, &score, cases
 		run.Passing = score.Scored > 0 && score.PassRate >= e.threshold
