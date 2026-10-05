@@ -62,7 +62,10 @@ ai-rulez usage hook -o hooks.json   # or write it to a file
 ```
 
 The block is a template for the `hooks` key of `.claude/settings.json` (or a plugin's hooks file). Merge it in by
-hand; nothing installs it. It registers `ai-rulez usage record` for the two ways a skill is used:
+hand; nothing installs it. To have `generate` keep it in sync, declare the same commands as top-level
+[`[[hooks]]`](settings.md) (the payload fields above are read by `usage record` itself, so the command is all a
+harness needs); ai-rulez then writes them into each supported harness's own hooks file next to your other hooks,
+without touching hooks you wrote by hand. The template registers `ai-rulez usage record` for the two ways a skill is used:
 
 | Claude Code event | Fires when | Field read |
 | --- | --- | --- |

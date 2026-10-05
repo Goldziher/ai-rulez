@@ -142,3 +142,65 @@ func TestSetRoleDoesNotLeakOverridesIntoTheSharedConfig(t *testing.T) {
 	require.NoError(t, NewGenerator(cfg).SetRole("backend"))
 	assert.Nil(t, cfg.ManagedClaudeSettings(), "the loaded config is untouched")
 }
+
+// A role's skillOverrides, the top-level [[hooks]] and the [permissions] rules
+// all live in .claude/settings.json. Each is owned key by key, so a role run,
+// a plain run, a user's own entries and `clean` leave the others alone.
+func TestRoleSkillOverridesCoexistWithHooksAndPermissions(t *testing.T) {
+	dir := rolesProject(t)
+	cfgPath := filepath.Join(dir, ".ai-rulez", "config.toml")
+	base, err := os.ReadFile(cfgPath)
+	require.NoError(t, err)
+	extra := `
+[permissions]
+allow = ["Bash(go test:*)"]
+deny = ["Read(.env)"]
+
+[[hooks]]
+event = "PreToolUse"
+matcher = "Bash"
+[[hooks.hooks]]
+command = "echo guard"
+`
+	require.NoError(t, os.WriteFile(cfgPath, append(base, []byte(extra)...), 0o644))
+	require.NoError(t, os.MkdirAll(filepath.Join(dir, ".claude"), 0o755))
+	user := `{"model": "opus", "permissions": {"allow": ["Bash(ls:*)"]}, "hooks": {"Stop": [{"hooks": [{"type": "command", "command": "echo mine"}]}]}}` + "\n"
+	require.NoError(t, os.WriteFile(filepath.Join(dir, ".claude", "settings.json"), []byte(user), 0o644))
+
+	check := func(t *testing.T, s map[string]any, wantOverrides map[string]any) {
+		t.Helper()
+		assert.Equal(t, "opus", s["model"])
+		perms, _ := s["permissions"].(map[string]any)                                   //nolint:errcheck // asserted below
+		assert.ElementsMatch(t, []any{"Bash(ls:*)", "Bash(go test:*)"}, perms["allow"]) // the user's rule and ours
+		assert.Equal(t, []any{"Read(.env)"}, perms["deny"])
+		hooks, _ := s["hooks"].(map[string]any) //nolint:errcheck // asserted below
+		assert.Contains(t, hooks, "Stop", "the user's hook survives")
+		assert.Contains(t, hooks, "PreToolUse")
+		if wantOverrides == nil {
+			assert.NotContains(t, s, "skillOverrides")
+		} else {
+			assert.Equal(t, wantOverrides, s["skillOverrides"])
+		}
+	}
+
+	require.NoError(t, roleGenerator(t, dir, "").Generate(""))
+	check(t, readSettings(t, dir), nil)
+
+	require.NoError(t, roleGenerator(t, dir, "backend").Generate(""))
+	check(t, readSettings(t, dir), map[string]any{"migrate": "name-only", "deploy": "off"})
+
+	require.NoError(t, roleGenerator(t, dir, "").Generate(""))
+	check(t, readSettings(t, dir), nil)
+
+	require.NoError(t, roleGenerator(t, dir, "backend").Generate(""))
+	_, err = roleGenerator(t, dir, "").Clean("", CleanOptions{})
+	require.NoError(t, err)
+	after := readSettings(t, dir)
+	assert.Equal(t, "opus", after["model"])
+	assert.NotContains(t, after, "skillOverrides")
+	perms, _ := after["permissions"].(map[string]any) //nolint:errcheck // asserted below
+	assert.Equal(t, []any{"Bash(ls:*)"}, perms["allow"], "clean removes only the rules we own")
+	hooks, _ := after["hooks"].(map[string]any) //nolint:errcheck // asserted below
+	assert.Contains(t, hooks, "Stop")
+	assert.NotContains(t, hooks, "PreToolUse")
+}
