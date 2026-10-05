@@ -1230,7 +1230,13 @@ type IncludeConfig struct {
 	InstallTo     string   `yaml:"install_to,omitempty" json:"install_to,omitempty" toml:"install_to,omitempty"`             //nolint:tagliatelle
 	MergeStrategy string   `yaml:"merge_strategy,omitempty" json:"merge_strategy,omitempty" toml:"merge_strategy,omitempty"` //nolint:tagliatelle
 	LocalOverride string   `yaml:"local_override,omitempty" json:"local_override,omitempty" toml:"local_override,omitempty"` //nolint:tagliatelle
+	// Format names a non-default source layout. "okf" reads the source as an
+	// Open Knowledge Format bundle instead of an .ai-rulez directory.
+	Format string `yaml:"format,omitempty" json:"format,omitempty" toml:"format,omitempty"`
 }
+
+// IncludeFormatOKF reads an include as an OKF bundle (see docs/okf.md).
+const IncludeFormatOKF = "okf"
 
 // InstalledSkillConfig represents a named skill to install from an external source
 type InstalledSkillConfig struct {
