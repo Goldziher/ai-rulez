@@ -62,6 +62,8 @@ func npmPinProblem(spec string) string {
 	}
 	_, ver := pinOf(spec)
 	switch {
+	case strings.ContainsAny(ver, "<>${}"):
+		return "" // a placeholder in documentation
 	case ver == "":
 		return "no version is pinned"
 	case versionPinRe.MatchString(ver):

@@ -35,7 +35,8 @@ func TestConfigTamperAR019(t *testing.T) {
 		{name: "mention", skill: body("See CLAUDE.md for conventions\n"), absent: []string{"AR019"}},
 		{name: "ai-rulez workflow", skill: body("Update AGENTS.md through .ai-rulez/rules.\n"), absent: []string{"AR019"}},
 		{name: "guardrail", skill: body("Never edit CLAUDE.md from a skill.\n"), absent: []string{"AR019"}},
-		{name: "settings.json", skill: body("Add the hook to .claude/settings.json\n"), want: []string{"AR019:SKILL.md:5"}},
+		{name: "claude settings.json", skill: body("Add the hook to .claude/settings.json\n"), want: []string{"AR019:SKILL.md:5"}},
+		{name: "another tool's settings.json", skill: body("ai writes the effort to .amp/settings.json\n"), absent: []string{"AR019"}},
 	})
 }
 

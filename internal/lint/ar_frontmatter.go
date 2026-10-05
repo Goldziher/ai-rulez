@@ -179,7 +179,7 @@ var claudeTools = []string{
 	"EnterWorktree", "ExitPlanMode", "ExitWorktree", "Glob", "Grep", "KillBash", "KillShell", "LS", "LSP", "ListMcpResourcesTool",
 	"Monitor", "MultiEdit", "NotebookEdit", "NotebookRead", "PowerShell", "Read", "ReadMcpResourceTool", "SendMessage", "Skill",
 	"SlashCommand", "Task", "TaskCreate", "TaskGet", "TaskList", "TaskOutput", "TaskStop", "TaskUpdate", "TeamCreate", "TeamDelete",
-	"TodoRead", "TodoWrite", "ToolSearch", "WebFetch", "WebSearch", "Write",
+	"TodoRead", "TodoWrite", "ToolSearch", "WebFetch", "WebSearch", "Workflow", "Write", "ScheduleWakeup", "PushNotification", "RemoteTrigger",
 }
 
 var mcpToolRe = regexp.MustCompile(`^mcp__[A-Za-z0-9_.-]+?(?:__(?:[A-Za-z0-9_.-]+|\*))?$`)

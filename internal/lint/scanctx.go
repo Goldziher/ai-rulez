@@ -139,12 +139,21 @@ func (t *scanText) shellLike(l scanLine) bool {
 // prose reports whether a line is markdown prose (outside frontmatter and fences).
 func (t *scanText) prose(l scanLine) bool { return t.md && !l.Fenced && !l.Front }
 
-var segSplitRe = regexp.MustCompile(`&&|\|\||[;|]|\$\(|\x60`)
+var (
+	segSplitRe = regexp.MustCompile(`&&|\|\||[;|]|\$\(|\x60`)
+	// pipeSegSplitRe splits only at command separators, keeping $( and backticks inside a word.
+	pipeSegSplitRe = regexp.MustCompile(`&&|\|\||[;|]`)
+)
 
 // commandSegments returns the command-shaped pieces of a line: every segment of
 // a shell line, the inline code spans of a prose line, and a prose line that
 // itself starts with one of the start words ("npx -y pkg" as a bare line).
 func (t *scanText) commandSegments(l scanLine, start *regexp.Regexp) []string {
+	return t.commandSegmentsWith(l, start, segSplitRe)
+}
+
+// commandSegmentsWith is commandSegments with the separator pattern chosen by the caller.
+func (t *scanText) commandSegmentsWith(l scanLine, start, split *regexp.Regexp) []string {
 	var src []string
 	switch {
 	case t.shellLike(l):
@@ -164,7 +173,7 @@ func (t *scanText) commandSegments(l scanLine, start *regexp.Regexp) []string {
 	var out []string
 	for _, s := range src {
 		s = stripShellComment(strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(s), "$ ")))
-		for _, seg := range segSplitRe.Split(s, -1) {
+		for _, seg := range split.Split(s, -1) {
 			if seg = strings.TrimSpace(seg); seg != "" {
 				out = append(out, seg)
 			}
