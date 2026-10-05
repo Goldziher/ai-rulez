@@ -1268,9 +1268,19 @@ Opt-in usage telemetry, documented in [Usage telemetry](usage-telemetry.md).
 
 | Command | Purpose |
 | --- | --- |
-| `ai-rulez usage hook [-o file] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the Claude Code hooks block that records skill invocations |
-| `ai-rulez usage record [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
-| `ai-rulez report usage <log> [--index f] [--json] [-n dir]` | Join a usage log with `skills-index.json`: used, never used, changed since used, unknown |
+| `ai-rulez usage hook [-o file] [--harness claude\|codex\|cursor] [--role r] [--log f] [--sink-command c] [--index f] [--executable e]` | Print (or write) the hooks block that records skill invocations; other harnesses warn and print nothing |
+| `ai-rulez usage record [--harness h] [--outcome o] [--role r] [--served] [--salt-file f] [--log f] [--sink-command c] [--index f]` | Read one hook event on stdin and append an identifier-only JSON line; always exits 0 |
+| `ai-rulez usage feedback <skill> --kind misled\|stale\|wrong\|great [--note-file f] [--log f] [--harness h] [--role r]` | Append an identifier-only feedback record; the note text stays in `feedback-notes/` |
+| `ai-rulez report usage <log> [--index f] [--feedback f] [--evals f] [--json] [-n dir]` | Join a usage log with `skills-index.json`, feedback and eval scores: used, never used, changed since used, unknown |
+| `ai-rulez report evals [--usage-log f] [--feedback f] [--results f] [--min-pass-rate r] [--min-trigger r] [--json] [-n dir]` | Rank skills to rewrite, prune, review or keep from eval scores joined with usage and feedback |
+
+## Eval Commands
+
+Documented in [Evals](evals.md).
+
+| Command | Purpose |
+| --- | --- |
+| `ai-rulez eval run [skill...] [--harness h] [--runner claude-plugin-eval\|command] [--runner-command c] [--ablation] [--dry-run] [--format json\|markdown\|junit] [--out dir] [--max-cost usd] [--changed-only] [--base ref] [--date d] [--force] [--threshold r] [--allow-exec] [--model m] [--runs n]` | Run eval cases through a runner, score each skill and record `.ai-rulez/eval-results.json`. Exit 2 when a skill fails its threshold, errors, or has invalid cases |
 
 ## Validation Command
 

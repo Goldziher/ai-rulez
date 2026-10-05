@@ -16,6 +16,10 @@ type SkillUsage struct {
 	Owner    string `json:"owner,omitempty"`
 	Count    int    `json:"count"`
 	LastSeen string `json:"last_seen,omitempty"`
+	// Feedback counts feedback records by kind; Eval is the recorded eval score.
+	// Both are set by Report.Join.
+	Feedback map[string]int `json:"feedback,omitempty"`
+	Eval     *EvalSummary   `json:"eval,omitempty"`
 }
 
 // ChangedSkill is a skill used at a content hash other than its current one.
@@ -28,6 +32,8 @@ type ChangedSkill struct {
 // Report joins a usage log with the skills index.
 type Report struct {
 	Events int `json:"events"`
+	// FeedbackEvents counts the feedback records joined into the report.
+	FeedbackEvents int `json:"feedback_events,omitempty"`
 	// Skipped counts log lines that were not valid entries.
 	Skipped int          `json:"skipped_lines"`
 	Used    []SkillUsage `json:"used"`

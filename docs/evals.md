@@ -1,8 +1,18 @@
 # Evals
 
-ai-rulez does not run evaluations and does not implement graders. It gives eval cases a supported place to live,
-keeps them out of the context your agents load, ships them in plugin bundles when you ask, and can report skills
-that have none. Running the cases is the job of whatever evaluation tooling your harness or team uses.
+ai-rulez gives eval cases a supported place to live, keeps them out of the context your agents load, ships them in
+plugin bundles when you ask, and can report skills that have none. It also defines a harness-neutral case format,
+runs the cases through a pluggable runner (`ai-rulez eval run`), scores each skill (pass rate, trigger precision
+and recall, ablation delta, token cost), records the scores next to the skill's content digest, and gates on them in
+[strict validation](strict-validation.md). It does not implement an agent or a grader of its own: a runner does the
+running, and a model grader is whatever the runner provides.
+
+- [Case format](#case-format)
+- [Running evals](#running-evals)
+- [Scores and the results file](#scores-and-the-results-file)
+- [Linting cases and results](#linting-cases-and-results)
+- [Reports](#reports)
+- [Running evals in CI](#running-evals-in-ci)
 
 ## Layout
 
@@ -28,8 +38,267 @@ that have none. Running the cases is the job of whatever evaluation tooling your
 - `.ai-rulez/evals/` is an optional project-level tree. Use it for cases that involve several skills, or when you
   prefer to keep cases away from the skill directory. `.ai-rulez/evals/<skill-name>/` counts as that skill's cases
   for the lint rule below.
-- The file layout inside those directories (`case.yaml`, `prompt.md`, graders, JSON cases) is yours; ai-rulez
-  copies the files byte for byte and does not parse them.
+- ai-rulez parses only files named `*.eval.yaml`, `*.eval.yml` or `*.eval.json` (the [case format](#case-format)
+  below). Everything else in those directories (another tool's `case.yaml`, `prompt.md`, graders, fixtures) is yours;
+  ai-rulez copies it byte for byte and does not read it.
+
+## Case format
+
+A case file is YAML or JSON. It holds a `cases` list, or one case written at the top level (its `id` then defaults to
+the file name). The JSON schema is [`schema/eval-case.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/eval-case.schema.json).
+
+```yaml
+# .ai-rulez/skills/deploy-staging/evals/deploy.eval.yaml
+schema_version: 1
+cases:
+  - id: deploy-basic
+    description: The plain request fires the skill and names the cluster
+    prompt: Deploy the billing service to staging
+    expect_trigger: true
+    near_miss:                       # look similar, must NOT fire the skill
+      - Explain how our staging and production environments differ
+      - Roll back the last production deploy
+    files:                           # created in the working directory first
+      - path: services/billing/config.yaml
+        content: "env: staging"
+      - path: notes.txt
+        source: fixtures/notes.txt   # copied from next to this file
+    assertions:
+      - type: contains
+        value: staging-eu
+      - type: not_contains
+        value: production
+      - type: regex
+        value: 'deployed \d+ services?'
+      - type: file_exists
+        path: deploy.log
+      - type: command_exit
+        command: grep -q ok deploy.log
+        exit_code: 0
+    rubric: The answer names the staging cluster and the rollout command it ran.
+    rubric_min_score: 0.8            # default 0.7
+    model: haiku                     # overrides --model for this case
+    tags: [smoke, deploy]
+
+  - id: unrelated-question
+    prompt: What is the capital of France?
+    expect_trigger: false
+```
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Lowercase letters, digits, `.`, `_`, `-`. Unique per skill. Required inside a `cases` list. |
+| `prompt` / `prompt_file` | The user prompt, inline or a file next to the case file. Exactly one. |
+| `expect_trigger` | **Required.** Whether the skill should fire for the prompt. |
+| `near_miss` | Prompts that look like they should fire the skill but must not. Each becomes a derived negative case `<id>.near-miss-<n>` tagged `near-miss`. Only on `expect_trigger: true` cases. |
+| `files` | Fixtures: `path` (relative to the working directory) with inline `content` or a `source` file. |
+| `assertions` | Deterministic checks, below. |
+| `rubric`, `rubric_min_score` | Judged by a model grader that the runner supplies. |
+| `model`, `tags` | Per-case model override, free tags. |
+
+Assertions:
+
+| `type` | Fields | Holds when |
+| --- | --- | --- |
+| `contains` / `not_contains` | `value`, optional `path` | the final answer (or the file at `path`) does / does not contain the text |
+| `regex` | `value` (RE2), optional `path` | the answer (or file) matches |
+| `file_exists` | `path`, `exists` (default true) | the file is / is not in the working directory |
+| `command_exit` | `command`, `exit_code` (default 0) | the command, run through the shell in the working directory, exits with that status; **needs `--allow-exec`** because it executes text from a case file |
+
+Every path must be relative and stay inside its directory (no leading `/` or `~`, no `..`). A case with no
+assertions and no rubric is a trigger-only case: it measures recall (positive) or precision (negative) and nothing else.
+Unknown fields are errors, so a typo cannot silently disable an assertion. Problems are reported by
+`ai-rulez validate --strict` as `AR996 eval-case-invalid` with the file and line.
+
+## Running evals
+
+```bash
+ai-rulez eval run                                   # every skill with cases, claude-plugin-eval runner
+ai-rulez eval run deploy-staging --ablation         # one skill, also run it without the skill
+ai-rulez eval run --dry-run                         # what would run and roughly what it costs
+ai-rulez eval run --runner command --runner-command ./my-runner.sh --harness codex
+ai-rulez eval run --format junit --out eval-report  # eval-report/eval-report.xml
+```
+
+`eval run [skill...]` flags:
+
+| Flag | Meaning |
+| --- | --- |
+| `--harness` | Harness the cases run against (default `claude`); recorded in the results. |
+| `--runner`, `--runner-command` | `claude-plugin-eval` or `command`. The default is `claude-plugin-eval` for the claude harness and `command` when `--runner-command` is set. |
+| `--claude-bin`, `--runner-arg`, `--runs`, `--judge-model` | `claude-plugin-eval` only: the executable, extra arguments (repeatable, for example `--runner-arg --trust-plugin`), runs per case, grader model. |
+| `--timeout` | `command` runner: time limit for one skill (default 30m). |
+| `--model` | Model for the cases. |
+| `--ablation` | Also run every case without the skill and report the delta. |
+| `--dry-run` | List what would run with an estimated cost. Calls no runner, writes nothing. |
+| `--format`, `--out dir` | `json`, `markdown` (default) or `junit`; with `--out` the report goes to `<dir>/eval-report.<md\|json\|xml>`. |
+| `--max-cost USD` | Cost control, see [below](#cost-controls). |
+| `--date`, `$AI_RULEZ_EVAL_DATE` | The date recorded in the results. The clock is never read, so equal inputs give an equal file. |
+| `--changed-only`, `--base REF` | Only skills with files changed against `REF` (default `HEAD`; committed, uncommitted and untracked). |
+| `--force` | Ignore the [result cache](#caching). |
+| `--threshold R` | Pass rate a skill needs (default `[lint.evals] min_pass_rate`, else 1). |
+| `--allow-exec` | Run `command_exit` assertions. |
+| `--no-write`, `--results FILE` | Do not update, or use another, results file. |
+| `--price-in`, `--price-out` | USD per million tokens for the estimate (default by model tier). |
+
+Exit status: `0` when every selected skill passes, `2` when a skill is below its threshold, errored, was skipped over
+budget, or has invalid cases, `1` for a failure to run at all.
+
+### The claude-plugin-eval runner
+
+Builds a throwaway plugin containing the skill (without its `evals/`) and translates each case into the directory
+format `claude plugin eval` reads: `evals/<case>/prompt.md` plus `graders/*.md`. A `tool_used: Skill` grader observes
+whether the skill fired (inverted for `expect_trigger: false`); `contains`, `not_contains`, `regex` and `file_exists`
+become `regex` and `file_exists` graders; `rubric` becomes an `llm` grader. It then runs
+
+```text
+claude plugin eval <plugin dir> --json <file> --no-publish --threshold 0 --ablation with-without|none [--runs N] [--model M] [--judge-model M] [--max-cost-usd X]
+```
+
+and reads the per-run JSON back, taking a majority vote over a case's runs. Cases the tool cannot express
+(`command_exit` assertions, `files` fixtures) are reported as **skipped**, not failed, and left out of the score.
+The adapter never adds `--trust-plugin` itself: pass `--runner-arg --trust-plugin` once you trust the plugin
+directory. It was written against the help text and interview prompt of Claude Code 2.1.289; the JSON shape it reads
+(`cases[].arms.with|without[]` with `graders[]`, `costUsd`, `error`) was not checked against a live run, and an
+unrecognized document is an error rather than a silent pass. `claude plugin eval` publishes its report to claude.ai by
+default; the adapter always passes `--no-publish`.
+
+### The command runner
+
+`--runner-command CMD` runs `CMD` through the shell once per skill. It receives the request on standard input and
+prints the response on standard output; standard error passes through. `AI_RULEZ_EVAL_PROTOCOL=1` and
+`AI_RULEZ_EVAL_SKILL=<id>` are in its environment.
+
+```json
+{
+  "version": 1,
+  "skill": { "id": "deploy-staging", "dir": "/abs/.ai-rulez/skills/deploy-staging", "digest": "sha256:..." },
+  "harness": "codex", "model": "haiku", "ablation": true, "max_cost_usd": 2.5,
+  "cases": [
+    { "id": "deploy-basic", "prompt": "Deploy the billing service to staging", "expect_trigger": true,
+      "assertions": [{ "type": "contains", "value": "staging-eu" }], "rubric": "...", "tags": ["smoke"] },
+    { "id": "deploy-basic.near-miss-1", "prompt": "Explain how ...", "expect_trigger": false, "near_miss_of": "deploy-basic" }
+  ]
+}
+```
+
+Cases are self-contained: near misses are expanded and `prompt_file` and fixture `source` are inlined. The response:
+
+```json
+{
+  "version": 1,
+  "results": [
+    { "case": "deploy-basic", "arm": "with", "triggered": true, "output": "deployed 3 services to staging-eu",
+      "work_dir": "/tmp/run-1", "rubric_score": 0.9, "input_tokens": 5200, "output_tokens": 410, "cost_usd": 0.031 },
+    { "case": "deploy-basic", "arm": "without", "output": "I cannot deploy from here", "cost_usd": 0.012 }
+  ],
+  "cost_usd": 0.043
+}
+```
+
+- `triggered` is required for the `with` arm. The `without` arm (only with `--ablation`) needs no `triggered`.
+- Give `output` (and `work_dir`, for file assertions) and ai-rulez grades the assertions itself; or give `passed` to
+  report your own verdict on the outcome checks, which wins over local grading. `rubric_score` (0-1) is required for
+  cases with a `rubric` unless `passed` is set.
+- `skipped: true` with a `reason` leaves a case out of the score; `error` counts the case as a failure.
+- Costs and tokens are optional. The protocol version must be `1`; an unknown case or arm is an error.
+
+### Caching
+
+A skill is not re-run when the results file already holds a run with the same cache key: the skill's sha256 digest,
+the digest of its eval material, the runner, harness, model and the ablation setting. Editing a case or the skill,
+or changing any of those, re-runs it. `--force` ignores the cache. The pass/fail verdict is recomputed from the stored
+score against the current threshold, so lowering `--threshold` needs no re-run.
+
+### Cost controls
+
+- `--dry-run` prints the number of agent runs, estimated tokens and USD. The estimate is deterministic and offline:
+  the harness's own overhead (2,000 tokens), the prompt, fixtures, the skill's `SKILL.md` (counted with the embedded
+  `cl100k_base` tokenizer, an approximation), 600 output tokens per run, an extra grader call per rubric, times the
+  runs per case (3 for `claude-plugin-eval` unless `--runs`), times two arms with `--ablation`. Prices come from a
+  model tier (haiku, sonnet, opus; sonnet for anything else) and go stale: override with `--price-in` and `--price-out`.
+  Treat it as an order of magnitude.
+- `--max-cost USD` refuses to start when the estimate exceeds it, hands each runner the remaining budget
+  (`max_cost_usd`; `claude-plugin-eval` passes it as `--max-cost-usd`), and skips the remaining skills once the
+  reported spend reaches it (status `skipped-over-budget`, exit 2).
+- `--changed-only`, the cache and `--runs` keep the number of runs down; `tags` and skill names narrow it by hand.
+
+## Scores and the results file
+
+Per skill, over the run's cases (near misses included, skipped cases excluded):
+
+| Score | Definition |
+| --- | --- |
+| `pass_rate` | passed cases / scored cases. A case passes when the skill fired exactly as `expect_trigger` says **and** its assertions and rubric hold. Runner errors count as failures. |
+| `trigger_precision` | TP / (TP + FP) over the `with` runs, where TP is a positive case that fired and FP is a negative case (near misses included) that fired. `null` with no denominator. |
+| `trigger_recall` | TP / (TP + FN). `null` with no denominator. |
+| `near_miss_false_positives` | near-miss cases where the skill fired. |
+| `ablation_delta` | outcome pass rate with the skill minus without it, over the positive cases that have assertions or a rubric and ran in both arms. `null` without `--ablation` data. |
+| `skill_tokens`, `run_tokens`, `cost_usd` | approximate tokens of `SKILL.md`; tokens and USD the runner reported. |
+
+Rates are rounded to four decimals.
+
+`eval run` records each skill in **`.ai-rulez/eval-results.json`** (commit it; it is deterministic, sorted by skill id,
+and holds no prompts or outputs):
+
+```json
+{
+  "schema_version": 1,
+  "skills": [
+    {
+      "id": "deploy-staging",
+      "digest": "sha256:...",            // the skill's authored content when the run happened
+      "cases_digest": "sha256:...",
+      "cache_key": "sha256:...",
+      "runner": "claude-plugin-eval", "harness": "claude", "model": "haiku", "ablation": true,
+      "date": "2026-10-05",             // from --date / $AI_RULEZ_EVAL_DATE, omitted when neither is set
+      "passing": true,
+      "score": { "cases": 3, "pass_rate": 1, "trigger_precision": 1, "trigger_recall": 1, "ablation_delta": 0.5, "...": "..." },
+      "last_pass": { "digest": "sha256:...", "date": "2026-10-05" }
+    }
+  ]
+}
+```
+
+The skill digest is the sha256 of every regular file under the skill directory except its top-level `evals/`, in path
+order (`path NUL length NUL bytes`); editing a case does not make the skill look edited. `last_pass` survives a later
+failing run, which is what freshness compares against.
+
+## Linting cases and results
+
+Three more rules join `AR962` in [strict validation](strict-validation.md):
+
+| Code | Name | Default | Reports |
+| --- | --- | --- | --- |
+| `AR996` | `eval-case-invalid` | error | A `*.eval.yaml`/`*.eval.yml`/`*.eval.json` file is malformed: unknown field, missing `expect_trigger` or prompt, bad assertion, invalid regex, unsafe path, duplicate id |
+| `AR997` | `eval-stale` | off | The skill changed after its last recorded **passing** run. `[lint.evals] require_fresh = "warn"` or `"error"` turns it on |
+| `AR998` | `eval-score-low` | off | The recorded pass rate is below `[lint.evals] min_pass_rate` (0-1); setting it turns the rule on at error |
+| `AR9A0` | `eval-results-invalid` | error | `eval-results.json` cannot be parsed or has an unsupported `schema_version` |
+
+```toml
+[lint.evals]
+require = true            # AR962: skills need cases
+require_fresh = "error"   # AR997: edited after the last passing eval
+min_pass_rate = 0.8       # AR998, and the default pass mark of eval run
+```
+
+A skill with no recorded passing run is not reported stale (that is what `AR962` and the score are for).
+
+## Reports
+
+`ai-rulez report evals` joins the results with the usage log and the feedback log (see
+[Usage telemetry](usage-telemetry.md)) and recommends an action per skill. The rules are fixed:
+
+| Action | When |
+| --- | --- |
+| `rewrite` | pass rate below `--min-pass-rate` (0.8), trigger precision or recall below `--min-trigger` (0.8), a negative ablation delta, edited since the last passing eval, or `misled`+`wrong`+`stale` feedback outweighing `great` |
+| `prune` | not rewrite; a usage log was given; never used in it; and evals do not show it helping (no record, or ablation delta of 5 points or less) |
+| `review` | not rewrite or prune, but unused while evals show value, or no eval results yet |
+| `keep` | everything else |
+
+Rows are ordered by action, then by number of reasons, then by pass rate (worst first), then by `SKILL.md` size.
+Without a usage log nothing is concluded about use. `--json` prints the same data. `report usage` shows feedback
+counts and the eval pass rate next to each skill.
 
 ## Bundling cases into a plugin
 
@@ -78,20 +347,40 @@ $ ai-rulez validate --strict
 .ai-rulez/skills/deploy-staging/SKILL.md:2  warning  AR962 evals-missing  skill "deploy-staging" has no eval cases ...
 ```
 
-## CI recipe
+## Running evals in CI
 
 ```bash
 set -euo pipefail
 
-ai-rulez validate --strict                 # exit 2 on findings at or above fail_on (AR962 included when enabled)
+ai-rulez validate --strict                 # AR962/AR996/AR997/AR998 included when enabled; exit 2 on findings at or above fail_on
 ai-rulez generate --plugin                 # writes the bundle, cases included with include_evals = true
 ai-rulez verify --plugin                   # exit non-zero if any bundled file differs from its recorded hash
 
-# Run your harness's evaluation tooling against the bundle. ai-rulez does not ship one:
-# point it at the bundle directory that generate --plugin printed.
-"$EVAL_COMMAND" "$BUNDLE_DIR"
+# Only the skills this change touched, with a JUnit report CI can display.
+ai-rulez eval run --changed-only --base origin/main \
+    --ablation --max-cost 5 --date "$(date -u +%F)" \
+    --format junit --out eval-report --runner-arg --trust-plugin
 ```
 
-Exit codes to gate on: `validate --strict` exits `0` clean, `1` for an invalid configuration and `2` for findings at
-or above `fail_on`; `verify --plugin` exits non-zero on any mismatch; your evaluation command's own exit code decides
-whether the cases passed.
+- **Against the git diff.** `--changed-only --base origin/main` runs the skills that have a changed or untracked file
+  below their directory or below `.ai-rulez/evals/<skill>/`. Make the base ref available (`git fetch origin main`, or a
+  full-depth checkout). Without `--changed-only` every skill with cases is selected.
+- **JUnit.** `--format junit --out eval-report` writes `eval-report/eval-report.xml`: one suite per skill, one test case
+  per eval case (near misses included), failures for failed cases, errors for runner errors and invalid case files,
+  skipped for skipped or dry-run entries, and the scores as suite properties. The file has no timestamps or timings, so
+  it is byte-stable. Point your CI's test reporter at it.
+- **Caching by digest.** Commit `.ai-rulez/eval-results.json`, or restore it from your CI cache. A skill whose digest
+  and cases digest match the stored run is reported as `cached` with its stored score and is not run again, so an
+  unchanged skill costs nothing even without `--changed-only`. Commit the updated file (or save it back to the cache)
+  after a run that changed it; `validate --strict` with `require_fresh` then fails the next change that edits a skill
+  without re-running its evals.
+- **Cost controls.** Run `eval run --dry-run` first to see the estimate; set `--max-cost` so a runaway suite stops
+  (estimate above the cap: refuse to start; spend reaching it: skip the rest, exit 2); keep `--runs` low in CI and
+  `--ablation` on only where you track the delta; use a cheap `--model` or per-case `model` for smoke cases; a
+  `--date` is required for a dated result and comes from CI, never from the clock inside ai-rulez.
+- **Exit codes.** `eval run` exits `0` clean, `2` for a failing/errored/over-budget/invalid skill, `1` when it could not
+  run at all. `validate --strict` exits `0` clean, `1` for an invalid configuration and `2` for findings at or above
+  `fail_on`; `verify --plugin` exits non-zero on any mismatch.
+- **Secrets and trust.** The runner runs the harness as the CI user with whatever credentials that job has. Evaluate
+  only skills and cases you trust; `command_exit` assertions and `--runner-arg --trust-plugin` are opt-ins for that
+  reason. ai-rulez itself makes no network call; the runner you choose does.
