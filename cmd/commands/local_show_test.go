@@ -102,7 +102,7 @@ func TestLocalShow_PresetsShowTheMergedResult(t *testing.T) {
 		local string
 		want  string
 	}{
-		{"adds a preset", `presets = ["windsurf"]`, `["claude","windsurf"]`},
+		{"adds a preset", `presets = ["devin"]`, `["claude","devin"]`},
 		{"drops a preset", `presets = ["!claude", "codex"]`, `["codex"]`},
 	}
 	for _, tt := range tests {

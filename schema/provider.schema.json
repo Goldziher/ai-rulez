@@ -186,7 +186,7 @@
       "properties": {
         "style": {
           "enum": ["string"],
-          "description": "Currently only `string`-valued effort maps are supported. `budget` (numeric tokens, for continue-dev) will be added when that preset migrates."
+          "description": "Currently only `string`-valued effort maps are supported."
         },
         "values": {
           "type": "object",

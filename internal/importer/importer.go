@@ -66,7 +66,7 @@ func (i *Importer) Import(sources string) error {
 
 		if len(sourcesToImport) == 0 {
 			return oops.
-				Hint("No existing AI tool files found to import\nSupported: CLAUDE.md, .claude/, .cursor/, .windsurf/, .windsurf/rules/, .gemini/, .github/copilot-instructions.md, .continue/, .clinerules/").
+				Hint("No existing AI tool files found to import\nSupported: CLAUDE.md, .claude/, .cursor/, .devin/, .devin/rules/, .gemini/, .github/copilot-instructions.md, .clinerules/").
 				Errorf("no sources detected for import")
 		}
 
@@ -150,10 +150,8 @@ func (i *Importer) detectSources() ([]string, error) {
 		".claude/skills",
 		".claude/agents",
 		".cursor/rules",
-		".windsurf",
-		".windsurf/rules",
-		".continue/rules",
-		".continue/prompts",
+		".devin",
+		".devin/rules",
 		".clinerules",
 	}
 
@@ -231,12 +229,8 @@ func (i *Importer) importFromDirectory(source, path string) ([]ImportedContent, 
 		return i.importClaudeAgents(source, path)
 	case strings.Contains(source, ".cursor/rules"):
 		return i.importCursorRules(source, path)
-	case strings.Contains(source, ".windsurf"):
-		return i.importWindsurfRules(source, path)
-	case strings.Contains(source, ".continue/rules"):
-		return i.importContinueRules(source, path)
-	case strings.Contains(source, ".continue/prompts"):
-		return i.importContinuePrompts(source, path)
+	case strings.Contains(source, ".devin"):
+		return i.importDevinRules(source, path)
 	case strings.Contains(source, ".clinerules"):
 		return i.importClineRules(source, path)
 	default:
@@ -339,72 +333,9 @@ func (i *Importer) importCursorRules(source, path string) ([]ImportedContent, st
 	return i.importGenericMarkdownDirectory(source, path)
 }
 
-// importWindsurfRules imports from .windsurf/ or .windsurf/rules/ directory
-func (i *Importer) importWindsurfRules(source, path string) ([]ImportedContent, string, error) {
+// importDevinRules imports from .devin/ or .devin/rules/ directory
+func (i *Importer) importDevinRules(source, path string) ([]ImportedContent, string, error) {
 	return i.importGenericMarkdownDirectory(source, path)
-}
-
-// importContinueRules imports from .continue/rules/ directory
-func (i *Importer) importContinueRules(source, path string) ([]ImportedContent, string, error) {
-	return i.importGenericMarkdownDirectory(source, path)
-}
-
-// importContinuePrompts imports from .continue/prompts/ directory (YAML files)
-func (i *Importer) importContinuePrompts(source, path string) ([]ImportedContent, string, error) {
-	var items []ImportedContent
-
-	entries, err := os.ReadDir(path)
-	if err != nil {
-		return nil, "", oops.
-			With("source", source).
-			With("path", path).
-			Wrapf(err, "read directory")
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-
-		if !strings.HasSuffix(entry.Name(), ".yaml") && !strings.HasSuffix(entry.Name(), ".yml") {
-			continue
-		}
-
-		filePath := filepath.Join(path, entry.Name())
-		data, err := os.ReadFile(filePath)
-		if err != nil {
-			logger.Warn("Failed to read prompt file", "path", filePath, "error", err)
-			continue
-		}
-
-		// Parse YAML prompt format
-		var prompt struct {
-			Name        string `yaml:"name"`
-			Description string `yaml:"description"`
-			Prompt      string `yaml:"prompt"`
-		}
-
-		if err := yaml.Unmarshal(data, &prompt); err != nil {
-			logger.Warn("Failed to parse prompt YAML", "path", filePath, "error", err)
-			continue
-		}
-
-		// Use prompt content as context
-		content := prompt.Prompt
-		if prompt.Description != "" {
-			content = fmt.Sprintf("# %s\n\n%s\n\n%s", prompt.Name, prompt.Description, content)
-		}
-
-		items = append(items, ImportedContent{
-			Name:    filenameWithoutExt(entry.Name()),
-			Type:    ContentTypeContext,
-			Content: content,
-			Source:  source,
-			Hash:    hashContent(content),
-		})
-	}
-
-	return items, string(config.PresetContinue), nil
 }
 
 // importClineRules imports from .clinerules/ directory
@@ -900,10 +831,8 @@ func detectPresetFromSource(source string) string {
 		return "gemini"
 	case strings.Contains(sourceLower, "copilot"):
 		return "copilot"
-	case strings.Contains(sourceLower, "continue"):
-		return string(config.PresetContinue)
-	case strings.Contains(sourceLower, "windsurf"):
-		return "windsurf"
+	case strings.Contains(sourceLower, "devin"):
+		return string(config.PresetDevin)
 	case strings.Contains(sourceLower, "cline"):
 		return "cline"
 	default:

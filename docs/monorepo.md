@@ -290,13 +290,13 @@ For `[[scopes]]` (see [Configuration](configuration.md#scopes)), root files such
 | Claude | `.claude/rules/packages-api/style.md` |
 | Cursor | `.cursor/rules/packages-api/style.mdc` |
 | Copilot | `.github/instructions/packages-api/style.instructions.md` |
-| Windsurf, Cline, Continue, Junie | `<rules dir>/packages-api--style.md` |
+| Devin, Cline, Junie | `<rules dir>/packages-api--style.md` |
 | Antigravity | `.agents/rules/packages-api--style.md` |
 
 Globs in a scope's rules are relative to the scope root: a rule with `paths: ["**/*.go"]` gets `packages/api/**/*.go`, and a rule without globs applies to `packages/api/**`. A rule with only negated globs also gets `packages/api/**`. A glob that climbs out of the scope with `..` (also inside braces) skips that rule for the scope with a warning. `auto` and `manual` rules keep their mode. With `[rules] mode = "inline"` only path-scoped items move to the root folder; everything else stays in the scope's root file. Two files that map to the same path (names compare case-insensitively) do not fail: the source that sorts later is written as `<id>-<6 hex>` with a warning (see [File names](rules.md#file-names)). Generation fails only when two scopes produce the same qualifier (for example `packages/api` and `packages-api`); rename one of the scope paths.
 
 Limitations:
 
-- Root files left in a scope (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, ...) are read by tools that load nested files. Copilot (`.github/copilot-instructions.md`) and Junie (`.junie/guidelines.md`) read theirs at the repository root only, so rules or context that stay inline in a scope's copy are never loaded; generation warns and names them. Use path-scoped rules or `[rules] mode = "split"` for those presets.
+- Root files left in a scope (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, ...) are read by tools that load nested files. Copilot (`.github/copilot-instructions.md`) reads its instructions at the repository root only, so rules or context that stay inline in a scope's copy are never loaded; generation warns and names them. Use path-scoped rules or `[rules] mode = "split"` for that preset.
 - Domains the root run already renders are not repeated in a scope.
 - Presets without split rule files (custom provider specs with a non-split `outputs.rules`) keep a scope's rules in the scope directory; generation warns.

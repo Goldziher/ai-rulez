@@ -24,7 +24,7 @@ func RenderLocalRootRules(local *config.ContentTree, allRules []config.ContentFi
 
 // RenderLocalRootRulesFor is RenderLocalRootRules for a local file whose name does
 // not derive from the shared root file it stands in for (sharedRoot), such as
-// .junie/rules/ai-rulez.local.md for .junie/guidelines.md. sharedRoot decides which
+// .junie/rules/ai-rulez.local.md for a root AGENTS.md. sharedRoot decides which
 // items a frontmatter targets list selects.
 func RenderLocalRootRulesFor(local *config.ContentTree, allRules []config.ContentFile, cfg *config.Config,
 	outputFile, sharedRoot string,

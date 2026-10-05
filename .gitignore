@@ -113,11 +113,9 @@ claude.md
 .cursorignore
 .cursorindexingignore
 
-# Windsurf AI
-.windsurf/
-.windsurfrules
-.windsurfrules/
-.codeiumignore
+# Devin AI
+.devin/
+.devinignore
 
 # GitHub Copilot
 .github/copilot-instructions.md
@@ -137,11 +135,6 @@ agents.md
 .clinerules/
 .clineignore
 
-# Continue.dev
-.continue/
-.continuerules
-**/.continue/assistants/
-
 # Generic AI assistant files
 ai-rules.md
 .aiignore
@@ -150,12 +143,10 @@ ai-rules.md
 testing/**/CLAUDE.md
 testing/**/claude.md
 testing/**/.cursorrules
-testing/**/.windsurfrules
 testing/**/.cursor/
-testing/**/.windsurf/
+testing/**/.devin/
 testing/**/.clinerules
 testing/**/.clinerules/
-testing/**/.continue/
 testing/**/GEMINI.md
 testing/**/AGENTS.md
 testing/**/.github/copilot-instructions.md
@@ -168,12 +159,7 @@ testing/**/.mcp.json
 
 # BEGIN ai-rulez (DO NOT EDIT - managed by ai-rulez)
 .ai-rulez/.generated-manifest.json
-.codex/agents/
-.codex/commands/
 .codex/plugins.json
-.codex/skills/
 .hermes.md
-.opencode/agents/
-.opencode/skills/
 opencode.json
 # END ai-rulez

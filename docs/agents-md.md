@@ -33,18 +33,17 @@ tools that only matter because they can shadow `AGENTS.md`.
 | Cursor                     | V                                                                 | V any subdirectory, more specific wins                      | ? Docs call `AGENTS.md` an alternative to `.cursor/rules`; co-presence and deduplication not documented                                                         | N               | V `.agents/skills`, `.cursor/skills`, nested ones anywhere           | V `.cursor/agents`, `.claude/agents`, `.codex/agents`; no `.agents/agents` |
 | Copilot cloud agent, CLI   | V                                                                 | V nearest file in the tree takes precedence                 | Cloud agent: all relevant instruction sets are provided, no deduplication. CLI: removes duplicate copies of identical instructions, defines no general precedence | N               | V `.github/skills`, `.claude/skills`, `.agents/skills`               | ? (`.github/agents`)                               |
 | Copilot in VS Code         | V chat and agent                                                  | P experimental `chat.useNestedAgentsMdFiles`                | Additive. `CLAUDE.md` needs `chat.useClaudeMdFile`                                                                                                              | N               | V same three locations                                               | ?                                                  |
-| Windsurf (Devin)           | V always-on rule; `agents.md` also recognized                     | V subdirectory file is a glob rule `<dir>/**`               | Same rules engine as `.devin/rules`; `.devin/` wins over `.windsurf/`                                                                                           | N               | V `.agents/skills`, native `.devin/skills`, `.windsurf/skills`       | ? workflows                                        |
+| Devin                      | V always-on rule; `agents.md` also recognized                     | V subdirectory file is a glob rule `<dir>/**`               | Same rules engine as `.devin/rules`                                                                                                                            | N               | V `.agents/skills`, native `.devin/skills`                          | ? workflows                                        |
 | Gemini CLI                 | N by default: reads only `GEMINI.md` unless `context.fileName` lists more | V for configured names, hierarchical and on file access | Only names in `context.fileName` load (`.gemini/settings.json`); `@file.md` imports work in `GEMINI.md`                                                          | N               | V `.agents/skills` beats `.gemini/skills` within a tier              | N (`.gemini/agents`, `.gemini/commands` only)      |
 | Antigravity                | V                                                                 | V `AGENTS.md`, `GEMINI.md` or `.agents/rules/` in any subdirectory | Cumulative; directory level wins on conflict. 24 KB per file, 20k tokens in aggregate                                                                          | V any directory level, immediate `.md` children only, `trigger` frontmatter | V `<workspace>/.agents/skills`; legacy `.agent/skills`               | ? workflows are being superseded by skills         |
 | Junie                      | V                                                                 | ? not in the fetched docs                                   | `.junie/AGENTS.md` first; else `AGENTS.md` + `.junie/rules/*.md`; else legacy `.junie/guidelines.md`; identical content deduplicated                           | N               | V `.junie/skills`, `.agents/skills`                                  | ?                                                  |
-| Cline                      | V                                                                 | ? shipped code reads the root file only                     | Listed beside `.clinerules`, `.cursorrules`, `.windsurfrules`; per-file toggles                                                                                 | N               | V in code (`.agents/skills`); docs list only `.cline/skills` and others | N                                                  |
-| Continue                   | P root only; a loop bug means only `AGENTS.md` is read, not `AGENT.md` or `CLAUDE.md` | N                                           | Always-apply rule, additive with `.continue/rules` and `.continue/prompts`                                                                                      | N               | N                                                                    | N                                                  |
+| Cline                      | V                                                                 | ? shipped code reads the root file only                     | Listed beside `.clinerules`, `.cursorrules`; per-file toggles                                                                                                  | N               | V in code (`.agents/skills`); docs list only `.cline/skills` and others | N                                                  |
 | opencode                   | V                                                                 | V lazily, nearest file per read                             | Finds the first existing of `AGENTS.md`, `CLAUDE.md`, `CONTEXT.md` and stacks every ancestor copy of it                                                         | N               | V `.agents/skills`, `.claude/skills`, `.opencode/skills`             | N (`.opencode`)                                    |
 | Amp                        | V                                                                 | V when the agent reads a file in the subtree                | Per directory `AGENTS.md`, else `AGENT.md`, else `CLAUDE.md`                                                                                                    | N               | V `.agents/skills` in project and parents                            | ?                                                  |
 | xum                        | V                                                                 | V                                                           | `AGENTS.md` > `AGENT.md` > `CLAUDE.md`; also `AGENTS.local.md`                                                                                                  | N               | ?                                                                    | ?                                                  |
 | pi                         | V                                                                 | V                                                           | Reads `AGENTS.md`; skills from `.agents/skills` (preferred) or `.pi/skills`; MCP in `.pi/mcp.json`                                                            | N               | V `.agents/skills` beats `.pi/skills`                                | ? (`.pi/agents` subagents extension)               |
 | Hermes                     | V git root to cwd                                                 | V                                                           | One context type only: `.hermes.md` shadows `AGENTS.md` entirely                                                                                                | N               | V `.hermes/skills`, `.agents/skills`                                 | ?                                                  |
-| Zed                        | V                                                                 | N                                                           | One file per worktree root: the first existing of `.rules`, `.cursorrules`, `.windsurfrules`, `.clinerules`, `.github/copilot-instructions.md`, `AGENT.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`. Earlier entries shadow `AGENTS.md` | N               | V `.agents/skills`                                                   | N                                                  |
+| Zed                        | V                                                                 | N                                                           | One file per worktree root: the first existing of `.rules`, `.cursorrules`, `.devin/rules`, `.clinerules`, `.github/copilot-instructions.md`, `AGENT.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`. Earlier entries shadow `AGENTS.md` | N               | V `.agents/skills`                                                   | N                                                  |
 | Warp                       | V file name must be upper case                                    | V root and current directory                                | `WARP.md` beats `AGENTS.md` in the same directory                                                                                                               | N               | V `.agents/skills` (recommended)                                     | ?                                                  |
 
 Only Antigravity reads `.agents/rules`; ai-rulez uses it for that tool alone. Other tools covered in the research
@@ -56,8 +55,8 @@ instructions and agent skills; the VS Code custom-instructions matrix; Devin doc
 skills); Gemini CLI docs and source (`settingsSchema.ts`, `memoryTool.ts`); the Antigravity rules and skills pages;
 Junie guidelines and agent-skills docs; Cline rules docs and extension source; Amp docs
 (`ampcode.com/docs/customize/agents-md`); and source reads of Codex (`agents_md.rs`, skills host roots), opencode
-(`instruction.ts`), Continue (`loadMarkdownRules.ts`), Hermes (`prompt_builder.py`) and Zed (`prompts.rs`,
-`agent.rs`). Tools change quickly; re-check a cell before relying on it.
+(`instruction.ts`), Hermes (`prompt_builder.py`) and Zed (`prompts.rs`, `agent.rs`). Tools change quickly; re-check a
+cell before relying on it.
 
 ## What each preset does
 
@@ -75,10 +74,9 @@ rules, a glob-scoped context file, two skills, one agent and one MCP server writ
 | `hermes`                       | natively                             | `.hermes.md` not written                    | shared                                         | `.mcp.json`                                                                                                                      |
 | `cursor`                       | natively                             | none                                        | shared                                         | `.cursor/rules/*.mdc` for non-always-on items and glob context, `.cursor/agents/<id>.md`, `.mcp.json`                            |
 | `copilot`                      | natively                             | `.github/copilot-instructions.md` not written | shared; `.github/skills` dropped             | `.github/instructions/*.instructions.md` for `applyTo`-scoped items, `.github/agents/<id>.agent.md`                              |
-| `windsurf`                     | natively                             | none                                        | shared; `.windsurf/skills` dropped             | `.windsurf/rules/*.md` for non-always-on items and glob context, `.windsurf/agents/<id>.md`                                      |
+| `devin`                        | natively                             | none                                        | shared; `.devin/skills` dropped                | `.devin/rules/*.md` for non-always-on items and glob context, `.devin/agents/<id>.md`                                           |
 | `cline`                        | natively                             | none                                        | shared; `.cline/skills` dropped                | `.clinerules/*.md` for non-always-on items and glob context, `.cline/agents/<id>.md`                                             |
-| `continue-dev`                 | root file only                       | none                                        | not shared: `.continue/prompts/ai_rulez_prompts.yaml` keeps the skills | `.continue/rules/*.md` for non-always-on items and glob context, `.continue/agents/<id>.md`                                      |
-| `junie`                        | natively                             | `.junie/guidelines.md` not written          | shared; `.junie/skills` dropped                | `.junie/rules/*.md` for non-always-on items, `.junie/agents/<id>.md`                                                             |
+| `junie`                        | natively                             | shared `AGENTS.md`                          | shared; `.junie/skills` dropped                | `.junie/rules/*.md` for non-always-on items, `.junie/agents/<id>.md`                                                             |
 
 Every preset above still writes its MCP file where it did before. Declarative providers (`amp`, `hermes`, `claude`,
 `junie`, ...) honor the flag as well. Custom presets and provider specs that are not in the table take no part, and
@@ -87,7 +85,7 @@ their `AGENTS.md` or `.agents/skills` output is dropped in favor of the shared c
 
 ### How each tool finds AGENTS.md
 
-- **Native readers** (`codex`, `opencode`, `xum`, `amp`, `pi`, `hermes`, `cursor`, `copilot`, `windsurf`, `cline`,
+- **Native readers** (`codex`, `opencode`, `xum`, `amp`, `pi`, `hermes`, `cursor`, `copilot`, `devin`, `cline`,
   `junie`, `antigravity`): nothing to configure.
 - **Claude Code** reads `CLAUDE.md`, and only reads `AGENTS.md` itself from v2.1.277 and in every session from
   v2.1.281. ai-rulez therefore keeps `CLAUDE.md` as a generated shim: the generated-file banner followed by
@@ -96,13 +94,12 @@ their `AGENTS.md` or `.agents/skills` output is dropped in favor of the shared c
   `"GEMINI.local.md"`) into `context.fileName` in `.gemini/settings.json`, keeping existing names and other keys (a
   single-string value becomes a list), and writes the file even when there are no `[[mcp_servers]]`. Gemini replaces its default
   `GEMINI.md` with whatever is configured, which is why `GEMINI.md` is not written.
-- **Continue** reads `AGENTS.md` at the repository root only, so nested `<scope>/AGENTS.md` files are not read by it.
 
 ### Why copilot-instructions.md, .hermes.md and friends are dropped
 
 Some tools load a single instruction file and pick it by order, so a preset's own root file would hide `AGENTS.md`:
 
-- **Zed** takes the first existing of `.rules`, `.cursorrules`, `.windsurfrules`, `.clinerules`,
+- **Zed** takes the first existing of `.rules`, `.cursorrules`, `.devin/rules`, `.clinerules`,
   `.github/copilot-instructions.md`, `AGENT.md`, `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`. A generated
   `.github/copilot-instructions.md` would hide `AGENTS.md` from Zed, so the `copilot` preset does not write it.
   `CLAUDE.md` and `GEMINI.md` come later and do not shadow it. `.clinerules` is a directory here, which Zed does not
@@ -110,8 +107,9 @@ Some tools load a single instruction file and pick it by order, so a preset's ow
 - **Hermes** loads one context type, and `.hermes.md` shadows the whole `AGENTS.md` chain; the `hermes` preset does
   not write it.
 - **Warp** prefers `WARP.md` in the same directory. No preset writes it; do not add one by hand.
-- **Junie** prefers `.junie/AGENTS.md`, then `AGENTS.md` plus `.junie/rules`, and only then the legacy
-  `.junie/guidelines.md`. The guidelines file is dropped because it duplicates `AGENTS.md`.
+- **Junie** prefers `.junie/AGENTS.md`; otherwise it reads the project-root `AGENTS.md` together with `.junie/rules`
+  and `.junie/playbook.md`. The legacy `.junie/guidelines.md` layout is no longer written; the root `AGENTS.md` is the
+  open-standard file Junie reads.
 
 ### Overlapping writers
 
@@ -124,7 +122,7 @@ shared file.
 The shared `AGENTS.md` always carries always-on rules and context, and anything scoped only by negated globs
 (`!gen/**`), which no rules folder can express. What else it carries depends on the presets that rely on it.
 
-| Kind                                      | Rules folder presets (`cursor`, `windsurf`, `cline`, `continue-dev`, `claude` and `antigravity` in split mode, `junie` in split mode) | Presets without a folder (`codex`, `opencode`, `amp`, `xum`, `pi`, `hermes`, `gemini`) |
+| Kind                                      | Rules folder presets (`cursor`, `devin`, `cline`, `claude` and `antigravity` in split mode, `junie` in split mode) | Presets without a folder (`codex`, `opencode`, `amp`, `xum`, `pi`, `hermes`, `gemini`) |
 | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
 | Always-on rule or context                 | `AGENTS.md` only                                                                                                                      | `AGENTS.md`                                                                      |
 | Glob-scoped rule or context               | the preset's folder                                                                                                                   | `AGENTS.md` with an `_Applies to_` line                                          |
@@ -139,7 +137,7 @@ The decision is made once for the whole file, from the configured built-in prese
 | `codex`, `opencode`, `amp`, `xum`, `pi`, `hermes`, `gemini`  | yes                                                    | yes                                  |
 | `claude`, `antigravity` (split)                        | no                                                     | no                                   |
 | `claude`, `antigravity` (inline)                       | no                                                     | yes                                  |
-| `cursor`, `windsurf`, `cline`, `continue-dev` (either) | no                                                     | no                                   |
+| `cursor`, `devin`, `cline` (either)                    | no                                                     | no                                   |
 | `copilot` (either)                                     | no                                                     | yes, its folder only holds `applyTo` items |
 | `junie` (split)                                        | no                                                     | no                                   |
 | `junie` (inline)                                       | yes, it writes no rule files                           | yes                                  |
@@ -166,12 +164,10 @@ Machine-local rules are never part of the shared `AGENTS.md`. They keep their pe
 - Skills without `targets` are written once to `.agents/skills/<name>/SKILL.md`, with bundled resources, in the
   generic Agent Skills format (`name`, `description`). Codex's `metadata.short-description` is not emitted there.
 - **Claude Code** reads `.claude/skills`, not `.agents/skills`, so the `claude` preset keeps writing its own copy.
-- **Continue** reads neither, so the `.continue/prompts` file keeps carrying skills (and no `.agents/skills` tree is
-  written if `continue-dev` is the only reader).
 - Skills that set `targets` stay out of the shared tree: they are written to the per-preset skills directories of the
   presets the targets allow, exactly as without the flag. A skill targeting `codex` goes to Codex's own skills directory (`.agents/skills`, or `codex_skills_dir`), the only
   place Codex reads, so other `.agents/skills` readers see it too; an untargeted skill goes to the shared tree; a skill targeting a preset that is not configured is written nowhere.
-- `.agents/skills` is read by Codex, Cursor, Copilot, Windsurf, Gemini CLI, Antigravity, Junie, Cline, opencode, Amp,
+- `.agents/skills` is read by Codex, Cursor, Copilot, Devin, Gemini CLI, Antigravity, Junie, Cline, opencode, Amp,
   Hermes, pi, Zed, Warp and others, per the table above.
 
 ## targets
@@ -181,14 +177,14 @@ reach:
 
 - A rule or context item is included in `AGENTS.md` when its `targets` name a preset that relies on the file
   (`claude`, `gemini`, `cursor`, `codex`, ...), the root file such a preset replaced (`CLAUDE.md`, `GEMINI.md`,
-  `.hermes.md`, `.junie/guidelines.md`, `.github/copilot-instructions.md`, by path or base name), or any default
-  owner of `AGENTS.md` (`codex`, `opencode`, `xum`, `amp`, `pi`), configured or not.
+  `.hermes.md`, `.github/copilot-instructions.md`, by path or base name), or any default
+  owner of `AGENTS.md` (`codex`, `opencode`, `xum`, `amp`, `pi`, `junie`), configured or not.
 - A target naming an unconfigured preset's root file (for example `GEMINI.md` with only `codex` configured) does not
   select the item for `AGENTS.md`.
 - **Widening:** the file is shared, so an always-on rule targeted at a single preset now reaches every tool that reads
   `AGENTS.md`.
 - **Folder-only targets:** an always-on rule or context item whose `targets` match only a rules folder or rule file
-  path (`.cursor/rules/`, `.claude/rules/`, `.github/instructions/`, `.windsurf/rules/`, ...) and no `AGENTS.md`
+  path (`.cursor/rules/`, `.claude/rules/`, `.github/instructions/`, `.devin/rules/`, ...) and no `AGENTS.md`
   owner or root file is not in `AGENTS.md`. The preset writes it as a rule file in that folder, exactly as without
   the flag. To limit an always-on item to one tool, target its rules folder path rather than its preset name.
 - Skills with `targets` are covered under [Skills](#skills).
@@ -231,7 +227,7 @@ ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
 ```
 
 - **On:** files that were only needed by the per-tool layout (`GEMINI.md`, `.hermes.md`,
-  `.github/copilot-instructions.md`, `.junie/guidelines.md`, `.windsurf/skills`, ...) are removed
+  `.github/copilot-instructions.md`, `.devin/skills`, ...) are removed
   through the generated manifest. `CLAUDE.md` is rewritten as the shim.
 - **Off:** the per-tool files are regenerated and the shared `AGENTS.md` and `.agents/skills` files that no preset
   writes itself are removed. An off, on, off sequence ends where it began, except for the Gemini setting below.
@@ -251,15 +247,13 @@ ai-rulez generate        # after editing agents_md in .ai-rulez/config.toml
 - **Duplication is possible** in mixed setups (see the [trade-off](#duplication-trade-off)). The Copilot cloud agent
   and Copilot in VS Code provide all relevant instruction sets and document no deduplication; Copilot CLI only removes
   identical copies.
-- **Continue** loads the always-on context twice with the flag on: once from `AGENTS.md` and once as prompts, because
-  its prompts file carries context as well.
 - **Size limits** apply to the one larger file: Codex reads at most 32 KiB of project instructions by default
   (`project_doc_max_bytes`), Kimi CLI caps at 32 KiB, and Antigravity reads 24 KB per file and 20k tokens in
   aggregate. Use `compact = true` or move bulk content to skills when the file grows.
 - **Cursor** documents neither co-presence nor deduplication of `AGENTS.md` with `.cursor/rules`; the preset keeps
   only non-always-on items in `.cursor/rules` so the same text is not in both.
 - **Nested `AGENTS.md`** support varies: Codex reads only from the project root down to cwd, Cursor, Copilot, Amp
-  and opencode load nested files; Zed and Continue do not; Cline and Junie are unverified.
+  and opencode load nested files; Zed does not; Cline and Junie are unverified.
 - **Not verified:** the entries marked `?` in the tool table, and whether Copilot expands the `@AGENTS.md` line of
   the Claude shim when it reads `CLAUDE.md` as agent instructions.
 

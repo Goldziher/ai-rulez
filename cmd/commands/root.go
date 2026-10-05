@@ -20,7 +20,7 @@ var (
 var RootCmd = &cobra.Command{
 	Use:          "ai-rulez",
 	Short:        "Lightning-fast CLI tool for managing AI assistant rules",
-	Long:         `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules \nacross multiple platforms including Claude, Cursor, Windsurf, GitHub Copilot, \nand more. It provides a unified configuration format with support for remote \nincludes, dynamic generation, and MCP server integration.`,
+	Long:         `ai-rulez is a lightning-fast CLI tool for managing AI assistant rules \nacross multiple platforms including Claude, Cursor, Devin, GitHub Copilot, \nand more. It provides a unified configuration format with support for remote \nincludes, dynamic generation, and MCP server integration.`,
 	SilenceUsage: true,
 	PersistentPreRun: func(_ *cobra.Command, _ []string) {
 		switch {

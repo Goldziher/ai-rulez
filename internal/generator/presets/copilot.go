@@ -64,7 +64,7 @@ func (g *CopilotPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".github", "instructions"),
 		filepath.Join(baseDir, ".github", "skills"),
 		filepath.Join(baseDir, ".github", "agents"),
-		filepath.Join(baseDir, ".github", "commands"),
+		filepath.Join(baseDir, ".github", "prompts"),
 	}
 }
 
@@ -141,13 +141,14 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 		})
 	}
 
-	// Generate .github/commands directory
+	// Generate .github/prompts directory. GitHub Copilot reads reusable
+	// prompt files from .github/prompts/*.prompt.md.
 	outputs = append(outputs, config.OutputFile{
-		Path:  filepath.Join(baseDir, ".github", "commands"),
+		Path:  filepath.Join(baseDir, ".github", "prompts"),
 		IsDir: true,
 	})
 
-	// Generate command files to .github/commands/
+	// Generate command files to .github/prompts/*.prompt.md
 	allCommands := allCommands(content)
 	for _, command := range allCommands {
 		if !g.shouldIncludeCommand(command) {
@@ -156,7 +157,7 @@ func (g *CopilotPresetGenerator) Generate(content *config.ContentTree, baseDir s
 		sanitized := sanitizeName(command.Name)
 		commandContent := g.renderCommandFile(command)
 		outputs = append(outputs, config.OutputFile{
-			Path:    filepath.Join(baseDir, ".github", "commands", sanitized+".md"),
+			Path:    filepath.Join(baseDir, ".github", "prompts", sanitized+".prompt.md"),
 			Content: commandContent,
 		})
 	}

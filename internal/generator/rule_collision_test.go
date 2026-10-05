@@ -29,14 +29,14 @@ func TestDisambiguatedRuleName(t *testing.T) {
 func TestGenerate_HandWrittenCollision_WritesDisambiguatedRule(t *testing.T) {
 	t.Parallel()
 
-	dir := newWindsurfProject(t)
-	rel := ".windsurf/rules/coding-style.md"
-	alt := ".windsurf/rules/coding-style.ai-rulez.md"
+	dir := newDevinProject(t)
+	rel := ".devin/rules/coding-style.md"
+	alt := ".devin/rules/coding-style.ai-rulez.md"
 	hand := seedRuleFile(t, dir, rel, "my own rule\n")
 
 	var first string
 	for run := 1; run <= 2; run++ {
-		require.NoError(t, newWindsurfGenerator(t, dir).Generate("default"), "run %d", run)
+		require.NoError(t, newDevinGenerator(t, dir).Generate("default"), "run %d", run)
 
 		got, err := os.ReadFile(hand)
 		require.NoError(t, err)
@@ -60,14 +60,14 @@ func TestGenerate_HandWrittenCollision_WritesDisambiguatedRule(t *testing.T) {
 	assert.NotRegexp(t, `(?m)^`+strings.ReplaceAll(rel, ".", `\.`)+`$`, string(ignore))
 
 	t.Run("dry run lists the disambiguated name only", func(t *testing.T) {
-		plan, err := newWindsurfGenerator(t, dir).DryRun("default")
+		plan, err := newDevinGenerator(t, dir).DryRun("default")
 		require.NoError(t, err)
 		assert.Contains(t, plan, "write-file: "+filepath.FromSlash(alt))
 		assert.NotContains(t, plan, "write-file: "+filepath.FromSlash(rel))
 	})
 
 	t.Run("clean removes ours and keeps the hand-written file", func(t *testing.T) {
-		_, err := newWindsurfGenerator(t, dir).Clean("default", CleanOptions{})
+		_, err := newDevinGenerator(t, dir).Clean("default", CleanOptions{})
 		require.NoError(t, err)
 		assert.NoFileExists(t, filepath.Join(dir, alt))
 		assert.FileExists(t, hand)
@@ -77,14 +77,14 @@ func TestGenerate_HandWrittenCollision_WritesDisambiguatedRule(t *testing.T) {
 func TestGenerate_CollisionGone_CleansDisambiguatedFile(t *testing.T) {
 	t.Parallel()
 
-	dir := newWindsurfProject(t)
-	hand := seedRuleFile(t, dir, ".windsurf/rules/coding-style.md", "my own rule\n")
-	require.NoError(t, newWindsurfGenerator(t, dir).Generate("default"))
-	alt := filepath.Join(dir, ".windsurf/rules/coding-style.ai-rulez.md")
+	dir := newDevinProject(t)
+	hand := seedRuleFile(t, dir, ".devin/rules/coding-style.md", "my own rule\n")
+	require.NoError(t, newDevinGenerator(t, dir).Generate("default"))
+	alt := filepath.Join(dir, ".devin/rules/coding-style.ai-rulez.md")
 	require.FileExists(t, alt)
 
 	require.NoError(t, os.Remove(hand))
-	require.NoError(t, newWindsurfGenerator(t, dir).Generate("default"))
+	require.NoError(t, newDevinGenerator(t, dir).Generate("default"))
 
 	assert.NoFileExists(t, alt)
 	assert.FileExists(t, hand)

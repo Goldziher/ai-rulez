@@ -131,7 +131,7 @@ func (c *Config) validateDefaults() error {
 				With("field", "defaults.effort_by_preset").
 				With("preset", preset).
 				With("available_presets", getBuiltInPresetNames()).
-				Hint("Use a built-in preset name as the key (e.g. claude, codex, windsurf).").
+				Hint("Use a built-in preset name as the key (e.g. claude, codex, devin).").
 				Errorf("unknown preset %q in defaults.effort_by_preset", preset)
 		}
 		fieldPath := fmt.Sprintf("defaults.effort_by_preset.%s", preset)
@@ -169,7 +169,7 @@ func (c *Config) validateRules() error {
 				With("field", "rules.mode_by_preset").
 				With("preset", preset).
 				With("available_presets", getBuiltInPresetNames()).
-				Hint("Use a built-in preset name or a custom/provider preset name from `presets` as the key (e.g. claude, copilot, windsurf).").
+				Hint("Use a built-in preset name or a custom/provider preset name from `presets` as the key (e.g. claude, copilot, devin).").
 				Errorf("unknown preset %q in rules.mode_by_preset", preset)
 		}
 		if value == "" {
@@ -387,7 +387,7 @@ func (c *Config) validatePresets() error {
 		}
 		return oops.
 			With("field", "presets").
-			Hint("Add at least one preset to your config file\nExample: presets: [claude]\nAvailable built-in presets: claude, cursor, gemini, windsurf, copilot, continue-dev, cline").
+			Hint("Add at least one preset to your config file\nExample: presets: [claude]\nAvailable built-in presets: " + strings.Join(AllPresetNames(), ", ")).
 			Errorf("at least one preset is required")
 	}
 

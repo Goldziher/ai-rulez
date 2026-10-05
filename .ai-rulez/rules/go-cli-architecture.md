@@ -4,7 +4,7 @@ targets:
   - CLAUDE.md
   - .cursor/rules/*
   - .github/copilot-instructions.md
-  - .windsurf/*
+  - .devin/*
   - AGENTS.md
   - .hermes.md
 ---

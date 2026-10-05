@@ -2,7 +2,7 @@ package config
 
 import "strings"
 
-// Trigger constants for Windsurf rules (matches Windsurf's actual field names)
+// Trigger constants for the shared `trigger` frontmatter dialect (Devin, Antigravity)
 const (
 	TriggerManual        = "manual"         // Manual activation via @mention (default, no frontmatter needed)
 	TriggerAlwaysOn      = "always_on"      // Always active in every interaction
@@ -192,7 +192,7 @@ func (m *Metadata) ActivationValue() ActivationMode {
 }
 
 // ResolveActivation resolves when the item applies. Precedence: explicit
-// `activation`, legacy Windsurf `trigger`, legacy Cursor `alwaysApply`, then
+// `activation`, the `trigger` dialect (Devin, Antigravity), legacy Cursor `alwaysApply`, then
 // derived (globs present means glob, otherwise always). A description alone
 // never implies auto. Safe on a nil receiver (always).
 func (m *Metadata) ResolveActivation() Activation {
@@ -239,7 +239,7 @@ func (m *Metadata) alwaysApplyMode(act Activation) (mode ActivationMode, source 
 	return ActivationAlways, ActivationSourceDerived
 }
 
-// triggerMode maps a Windsurf trigger value to an ActivationMode ("" if unknown).
+// triggerMode maps a `trigger` dialect value to an ActivationMode ("" if unknown).
 func triggerMode(trigger string) ActivationMode {
 	switch strings.ToLower(strings.TrimSpace(trigger)) {
 	case TriggerAlwaysOn:

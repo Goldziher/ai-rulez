@@ -11,12 +11,11 @@ use only built-in presets; custom presets cover a tool ai-rulez does not ship.
 | `cursor`       | `.cursor/rules/`, `.cursor/commands/`, `.agents/`  |
 | `gemini`       | `GEMINI.md`, `.gemini/`, `.agents/`                |
 | `copilot`      | `.github/copilot-instructions.md`, `.github/instructions/`, `.github/{skills,agents,commands}/` |
-| `windsurf`     | `.windsurf/`                                       |
-| `continue-dev` | `.continue/`                                       |
+| `devin`        | `.devin/`                                          |
 | `cline`        | `.clinerules/`, `.cline/`                          |
 | `codex`        | `AGENTS.md`, `.agents/skills/` and `.codex/`       |
 | `amp`          | `AGENTS.md` and `.agents/` (`.amp/settings.json` when an effort resolves) |
-| `junie`        | `.junie/` (`guidelines.md`, `rules/`, `skills/`, `agents/`) |
+| `junie`        | `AGENTS.md` and `.junie/` (`rules/`, `skills/`, `agents/`) |
 | `opencode`     | `AGENTS.md`, `.opencode/`, `opencode.json` (when MCP servers are set) |
 | `hermes`       | `.hermes.md`                                       |
 | `antigravity`  | `.agents/` (`rules/`, `skills/`, `agents/`), `GEMINI.md` |

@@ -254,7 +254,7 @@ type DefaultsConfig struct {
 	Effort string `yaml:"effort,omitempty" json:"effort,omitempty" toml:"effort,omitempty"`
 
 	// EffortByPreset overrides Effort for specific presets. Keys are preset names (e.g. "codex",
-	// "claude", "windsurf"). Per-agent frontmatter still wins over this map where the preset
+	// "claude", "devin"). Per-agent frontmatter still wins over this map where the preset
 	// supports per-agent effort.
 	EffortByPreset map[string]string `yaml:"effort_by_preset,omitempty" json:"effort_by_preset,omitempty" toml:"effort_by_preset,omitempty"`
 
@@ -588,8 +588,7 @@ var builtInPresets = map[string]bool{
 	string(PresetCursor):      true,
 	string(PresetGemini):      true,
 	string(PresetCopilot):     true,
-	string(PresetContinue):    true,
-	string(PresetWindsurf):    true,
+	string(PresetDevin):       true,
 	string(PresetCline):       true,
 	string(PresetCodex):       true,
 	string(PresetAmp):         true,

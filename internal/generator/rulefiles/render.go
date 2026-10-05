@@ -79,7 +79,7 @@ var bareGlobs = regexp.MustCompile(`^[A-Za-z0-9_./*?,{}\-]+$`)
 // unquoteGlobs rewrites the globs line of Cursor frontmatter to the bare comma
 // list Cursor writes itself (`globs: **/*.go,**/*.ts`); yaml.Marshal quotes a
 // value starting with "*". Cursor's parser is not a full YAML parser. Only
-// Cursor gets this: Windsurf and Antigravity parse real YAML, where a leading
+// Cursor gets this: Devin and Antigravity parse real YAML, where a leading
 // "*" is an alias, so they keep the quoted form. A value outside a conservative
 // allowlist also keeps the quoting.
 func unquoteGlobs(d Dialect, fm map[string]any, marshaled []byte) []byte {

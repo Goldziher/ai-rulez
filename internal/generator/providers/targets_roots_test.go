@@ -195,8 +195,8 @@ func TestJunie_TargetsFilterRootAndFiles(t *testing.T) {
 	}{
 		{
 			name: "inline", mode: "inline",
-			wantRoot: []string{"BODY_FREE", "BODY_TO_JUNIE", "BODY_JUNIE_DIR"},
-			notRoot:  []string{"BODY_TO_CURSOR", "BODY_RULES_ONLY"},
+			wantRoot: []string{"BODY_FREE", "BODY_TO_JUNIE"},
+			notRoot:  []string{"BODY_TO_CURSOR", "BODY_RULES_ONLY", "BODY_JUNIE_DIR"},
 		},
 		{
 			name: "split", mode: "split",
@@ -225,7 +225,7 @@ func TestJunie_TargetsFilterRootAndFiles(t *testing.T) {
 				_, ok := findOutput(outputs, f)
 				assert.True(t, ok, "missing %s", f)
 			}
-			assertBodies(t, rootFile(t, outputs, "guidelines.md"), tt.wantRoot, tt.notRoot)
+			assertBodies(t, rootFile(t, outputs, "AGENTS.md"), tt.wantRoot, tt.notRoot)
 		})
 	}
 }

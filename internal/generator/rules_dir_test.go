@@ -25,9 +25,8 @@ func TestGitignorePattern_RulesDirPerFile(t *testing.T) {
 	}{
 		{"claude rules file", ".claude/rules/x.md", false, ".claude/rules/x.md"},
 		{"cursor rules file", ".cursor/rules/x.mdc", false, ".cursor/rules/x.mdc"},
-		{"windsurf rules file", ".windsurf/rules/x.md", false, ".windsurf/rules/x.md"},
+		{"devin rules file", ".devin/rules/x.md", false, ".devin/rules/x.md"},
 		{"cline rules file", ".clinerules/x.md", false, ".clinerules/x.md"},
-		{"continue rules file", ".continue/rules/x.md", false, ".continue/rules/x.md"},
 		{"agents rules file", ".agents/rules/x.md", false, ".agents/rules/x.md"},
 		{"junie rules file", ".junie/rules/x.md", false, ".junie/rules/x.md"},
 		{"copilot instructions file", ".github/instructions/x.instructions.md", false, ".github/instructions/x.instructions.md"},
@@ -140,16 +139,16 @@ func TestWriteOutput_NonRulesDirOverwritesUnmanagedFile(t *testing.T) {
 	assert.Contains(t, string(got), "new body")
 }
 
-func newWindsurfProject(t *testing.T) string {
+func newDevinProject(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
 	copyFixture(t, filepath.Join("..", "..", "tests", "fixtures", "config", "generator", "basic"), dir)
-	cfgYAML := "version: \"3.0\"\nname: x\npresets:\n  - windsurf\ngitignore: true\n"
+	cfgYAML := "version: \"3.0\"\nname: x\npresets:\n  - devin\ngitignore: true\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".ai-rulez", "config.yaml"), []byte(cfgYAML), 0o644))
 	return dir
 }
 
-func newWindsurfGenerator(t *testing.T, dir string) *Generator {
+func newDevinGenerator(t *testing.T, dir string) *Generator {
 	t.Helper()
 	cfg, err := config.LoadConfig(context.Background(), dir)
 	require.NoError(t, err)
@@ -159,53 +158,53 @@ func newWindsurfGenerator(t *testing.T, dir string) *Generator {
 func TestGenerate_HandAuthoredRuleFile_SurvivesRepeatRunsAndClean(t *testing.T) {
 	t.Parallel()
 
-	dir := newWindsurfProject(t)
-	rel := ".windsurf/rules/coding-style.md"
+	dir := newDevinProject(t)
+	rel := ".devin/rules/coding-style.md"
 	abs := seedRuleFile(t, dir, rel, "my own rule\n")
 
 	for run := 1; run <= 2; run++ {
-		require.NoError(t, newWindsurfGenerator(t, dir).Generate("default"), "run %d", run)
+		require.NoError(t, newDevinGenerator(t, dir).Generate("default"), "run %d", run)
 
 		got, err := os.ReadFile(abs)
 		require.NoError(t, err)
 		assert.Equal(t, "my own rule\n", string(got), "run %d", run)
 	}
-	assert.FileExists(t, filepath.Join(dir, ".windsurf/rules/context-project-info.md"))
+	assert.FileExists(t, filepath.Join(dir, ".devin/rules/context-project-info.md"))
 
 	manifest, err := os.ReadFile(filepath.Join(dir, ".ai-rulez", generatedManifestName))
 	require.NoError(t, err)
 	assert.NotContains(t, string(manifest), rel)
-	assert.Contains(t, string(manifest), ".windsurf/rules/context-project-info.md")
+	assert.Contains(t, string(manifest), ".devin/rules/context-project-info.md")
 
 	ignore, err := os.ReadFile(filepath.Join(dir, ".gitignore"))
 	require.NoError(t, err)
 	assert.NotContains(t, string(ignore), rel)
-	assert.Contains(t, string(ignore), ".windsurf/rules/context-project-info.md")
+	assert.Contains(t, string(ignore), ".devin/rules/context-project-info.md")
 
-	plan, err := newWindsurfGenerator(t, dir).Clean("default", CleanOptions{})
+	plan, err := newDevinGenerator(t, dir).Clean("default", CleanOptions{})
 	require.NoError(t, err)
 	assert.NotContains(t, plan.Files, abs)
 	assert.FileExists(t, abs)
-	assert.NoFileExists(t, filepath.Join(dir, ".windsurf/rules/context-project-info.md"))
+	assert.NoFileExists(t, filepath.Join(dir, ".devin/rules/context-project-info.md"))
 }
 
 func TestGenerate_RewritesDirectoryPatternInManagedGitignoreBlock(t *testing.T) {
 	t.Parallel()
 
-	dir := newWindsurfProject(t)
-	seed := "node_modules/\n" + gitignore.BeginMarker + "\n.claude/rules/\n.windsurf/rules/\n" + gitignore.EndMarker + "\n"
+	dir := newDevinProject(t)
+	seed := "node_modules/\n" + gitignore.BeginMarker + "\n.claude/rules/\n.devin/rules/\n" + gitignore.EndMarker + "\n"
 	require.NoError(t, os.WriteFile(filepath.Join(dir, ".gitignore"), []byte(seed), 0o644))
 
-	require.NoError(t, newWindsurfGenerator(t, dir).Generate("default"))
+	require.NoError(t, newDevinGenerator(t, dir).Generate("default"))
 
 	data, err := os.ReadFile(filepath.Join(dir, ".gitignore"))
 	require.NoError(t, err)
 	got := string(data)
 	assert.Contains(t, got, "node_modules/")
 	assert.NotRegexp(t, `(?m)^\.claude/rules/$`, got)
-	assert.NotRegexp(t, `(?m)^\.windsurf/rules/$`, got)
-	assert.Contains(t, got, ".windsurf/rules/coding-style.md")
-	assert.Contains(t, got, ".windsurf/rules/context-project-info.md")
+	assert.NotRegexp(t, `(?m)^\.devin/rules/$`, got)
+	assert.Contains(t, got, ".devin/rules/coding-style.md")
+	assert.Contains(t, got, ".devin/rules/context-project-info.md")
 }
 
 func TestWriteOutput_RuleFileOwnershipDetection(t *testing.T) {

@@ -5,7 +5,7 @@ targets:
   - CLAUDE.md
   - GEMINI.md
   - .cursor/rules/*
-  - .windsurf/*
+  - .devin/*
   - .github/copilot-instructions.md
   - AGENTS.md
   - .hermes.md
@@ -14,7 +14,7 @@ targets:
 # AI-Rulez Overview
 
 AI-Rulez centralizes AI assistant governance in the `.ai-rulez/` directory and generates tool-specific outputs
-for Claude, Cursor, Windsurf, Copilot, Gemini, and other presets.
+for Claude, Cursor, Devin, Copilot, Gemini, and other presets.
 
 Key concepts:
 

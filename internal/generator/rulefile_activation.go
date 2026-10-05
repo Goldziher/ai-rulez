@@ -20,7 +20,7 @@ const (
 	dialectUnknown ruleFileDialect = iota
 	dialectPaths                   // claude, cline: `paths` makes a rule path-scoped
 	dialectCursor
-	dialectTrigger // windsurf, antigravity
+	dialectTrigger // devin, antigravity
 	dialectCopilot
 	dialectContinue
 	dialectAlwaysOnly // junie: no activation fields
@@ -34,7 +34,7 @@ var ruleFileDialects = []struct {
 	{".claude/rules/", dialectPaths},
 	{".clinerules/", dialectPaths},
 	{".cursor/rules/", dialectCursor},
-	{".windsurf/rules/", dialectTrigger},
+	{".devin/rules/", dialectTrigger},
 	{".agents/rules/", dialectTrigger},
 	{".github/instructions/", dialectCopilot},
 	{".continue/rules/", dialectContinue},

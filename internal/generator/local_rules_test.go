@@ -65,9 +65,8 @@ func TestLocalRuleFiles_SplitMode(t *testing.T) {
 		{"claude", "claude", ".claude/rules/x.md", ".claude/rules/x.local.md", "CLAUDE.local.md", "", ".claude/rules/*.local.*"},
 		{"junie", "junie", ".junie/rules/x.md", ".junie/rules/x.local.md", "", "", ".junie/rules/*.local.*"},
 		{"cursor", "cursor", ".cursor/rules/x.mdc", ".cursor/rules/x.local.mdc", "", "alwaysApply: true", ".cursor/rules/*.local.*"},
-		{"windsurf", "windsurf", ".windsurf/rules/x.md", ".windsurf/rules/x.local.md", "", "trigger: always_on", ".windsurf/rules/*.local.*"},
+		{"devin", "devin", ".devin/rules/x.md", ".devin/rules/x.local.md", "", "trigger: always_on", ".devin/rules/*.local.*"},
 		{"cline", "cline", ".clinerules/x.md", ".clinerules/x.local.md", "", "", ".clinerules/*.local.*"},
-		{"continue-dev", "continue-dev", ".continue/rules/x.md", ".continue/rules/x.local.md", "", "alwaysApply: true", ".continue/rules/*.local.*"},
 		{"copilot", "copilot", ".github/instructions/x.instructions.md", ".github/instructions/x.local.instructions.md", "", "applyTo", ".github/instructions/*.local.*"},
 		{"antigravity", "antigravity", ".agents/rules/x.md", ".agents/rules/x.local.md", "", "trigger: always_on", ".agents/rules/*.local.*"},
 	}

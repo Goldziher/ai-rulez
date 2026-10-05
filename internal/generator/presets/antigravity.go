@@ -256,7 +256,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{}
 
-		// Antigravity (Windsurf/Codeium lineage) has no transport/type key and keys
+		// Antigravity (Devin/Codeium lineage) has no transport/type key and keys
 		// remote servers on `serverUrl`. A stdio entry with an empty command is
 		// invalid, so omit command/args for remote (http/sse) transports.
 		switch server.GetTransport() {

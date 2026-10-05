@@ -26,9 +26,9 @@ func TestHasGeneratedBanner_ReleasedLayouts(t *testing.T) {
 		name, path, content string
 		want                bool
 	}{
-		{"4.20/4.21 cline and continue: header then title", ".clinerules/x.md", detailed + "# X\n\nBody.\n", true},
-		{"4.20/4.21 compact header", ".continue/rules/x.md", compact + "# X\n", true},
-		{"4.20/4.21 windsurf: trigger frontmatter, then header", ".windsurf/rules/x.md",
+		{"4.20/4.21 cline: header then title", ".clinerules/x.md", detailed + "# X\n\nBody.\n", true},
+		{"4.20/4.21 compact header", ".clinerules/x.md", compact + "# X\n", true},
+		{"4.20/4.21 devin: trigger frontmatter, then header", ".devin/rules/x.md",
 			"---\ntrigger: always_on\n---\n\n" + detailed + "# X\n", true},
 		{"4.20/4.21 hashes full: hashes inside the header", ".clinerules/x.md",
 			strings.Replace(detailed, "\n-->", "\nContent-Hash: blake3:a\nSource-Hash: blake3:b\n-->", 1) + "# X\n", true},
