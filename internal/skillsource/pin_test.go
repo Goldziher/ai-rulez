@@ -67,3 +67,25 @@ func TestResolve_LockedCommitRewrittenAwayFailsClosed(t *testing.T) {
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), pinned)
 }
+
+func TestResolve_NoHomeMeansNoWorldWritableCacheFallback(t *testing.T) {
+	t.Setenv("HOME", "")
+	t.Setenv("USERPROFILE", "")
+	t.Setenv("home", "")
+	f := newFixture(t)
+	_, err := Resolve(context.Background(), Spec{Name: "t", URL: "git+" + f.url, Ref: "v1.0.0"}, Options{})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "cache")
+}
+
+func TestResolve_ACompetingProcessStoringTheSameTreeIsTolerated(t *testing.T) {
+	f := newFixture(t)
+	cache := t.TempDir()
+	spec := Spec{Name: "t", URL: "git+" + f.url, Ref: "v1.0.0", Path: "skills"}
+	first, err := Resolve(context.Background(), spec, Options{CacheDir: cache})
+	require.NoError(t, err)
+	// Simulate the loser of a race: the tree exists although this process meant to store it.
+	var fetched bool
+	treeDir := cacheTree(cache, "git+"+f.url, first.Commit)
+	require.NoError(t, fetchInto(context.Background(), gitURL("git+"+f.url), "v1.0.0", kindTag, first.Commit, treeDir, &fetched))
+}

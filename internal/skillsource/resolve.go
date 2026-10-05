@@ -277,16 +277,23 @@ func rejectSymlinkedPath(root, rel string) error {
 }
 
 func fetchInto(ctx context.Context, url, ref, kind, commit, treeDir string, fetched *bool) error {
-	if err := os.MkdirAll(filepath.Dir(treeDir), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(treeDir), 0o700); err != nil {
 		return oops.Wrapf(err, "create skill source cache")
 	}
-	tmp := treeDir + ".partial"
-	_ = os.RemoveAll(tmp) //nolint:errcheck // a stale partial checkout is simply replaced
+	// A private name per fetch: two servers fetching the same commit do not share a checkout.
+	tmp, err := os.MkdirTemp(filepath.Dir(treeDir), "tree-*.partial")
+	if err != nil {
+		return oops.Wrapf(err, "create a checkout directory in the skill source cache")
+	}
 	if err := fetchCommit(ctx, url, ref, kind, commit, tmp); err != nil {
 		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
 		return err
 	}
 	if err := os.Rename(tmp, treeDir); err != nil {
+		_ = os.RemoveAll(tmp) //nolint:errcheck // best-effort cleanup
+		if _, statErr := os.Stat(treeDir); statErr == nil {
+			return nil // another process stored the same commit first; its tree is verified like ours
+		}
 		return oops.Wrapf(err, "store skill source in the cache")
 	}
 	*fetched = true
@@ -314,11 +321,19 @@ func cacheRoot(override string) (string, error) {
 	if override != "" {
 		return override, nil
 	}
+	// Never fall back to the shared temp directory: a cache other users can write
+	// to could hold a tree they planted (an unlocked source trusts the cache).
 	home, err := os.UserHomeDir()
-	if err != nil {
-		home = os.TempDir()
+	if err != nil || home == "" {
+		return "", oops.Hint("Set HOME, or run from an account with a home directory").
+			Errorf("cannot place the skill-source cache: no home directory")
 	}
 	return filepath.Join(home, ".cache", "ai-rulez", "skill-sources"), nil
+}
+
+// cacheTree is the directory holding the tree of a commit of url below the cache root.
+func cacheTree(root, url, commit string) string {
+	return filepath.Join(root, urlKey(gitURL(url)), commit, "tree")
 }
 
 func urlKey(url string) string {
@@ -347,10 +362,10 @@ func writeRef(repoDir, ref, commit string) {
 	}
 	m[refLabel(ref)] = commit
 	data, err := json.Marshal(m)
-	if err != nil || os.MkdirAll(repoDir, 0o755) != nil {
+	if err != nil || os.MkdirAll(repoDir, 0o700) != nil {
 		return
 	}
-	_ = os.WriteFile(path, data, 0o644) //nolint:errcheck,gosec // the index is only a convenience for offline runs
+	_ = os.WriteFile(path, data, 0o600) //nolint:errcheck // the index is only a convenience for offline runs
 }
 
 // Problem is one way the lock disagrees with the configured sources.
