@@ -96,6 +96,10 @@ type ServeOptions struct {
 	// Fingerprint summarizes the files the catalog is built from; a different
 	// value means Rebuild should run. Required with Rebuild.
 	Fingerprint func() (string, error)
+	// Baseline is the fingerprint taken before the catalog was built; Watch
+	// compares against it, so an edit made while the server starts is not missed.
+	// Empty means Watch takes its own first fingerprint.
+	Baseline string
 	// PollInterval is how often Fingerprint is checked; 0 selects two seconds.
 	PollInterval time.Duration
 }
