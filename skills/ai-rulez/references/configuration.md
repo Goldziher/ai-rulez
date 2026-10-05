@@ -70,6 +70,10 @@ name = "grafana"
 command = "uvx"
 args = ["mcp-grafana"]
 env = { GRAFANA_URL = "http://localhost:3000", GRAFANA_SERVICE_ACCOUNT_TOKEN = "${GRAFANA_SERVICE_ACCOUNT_TOKEN}" }
+
+[[roles]]                     # name, domains, skills/rules/agents/commands include+exclude, skill_mode, extends, match (docs/roles.md)
+[role_manifest]               # enabled = true writes .ai-rulez/roles.json
+[lock]                        # enforce, include_outputs, scope (docs/lockfile.md)
 ```
 
 ## Built-in Presets
