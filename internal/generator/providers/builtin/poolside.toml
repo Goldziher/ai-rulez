@@ -38,6 +38,23 @@ dialect = "yaml-standard"
 global_path = ".config/poolside/settings.yaml"
 
 # User-scope layout: Pool keeps its personal files under ~/.config/poolside.
+# Hooks: top-level [[hooks]] rendered in poolside's native format, read from the
+# vendor documentation (see docs/settings.md). Pool reads `hooks.<Event>` from settings.yaml (flat entries, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "poolside"
+path = ".poolside/settings.yaml"
+format = "yaml"
+global_path = ".config/poolside/settings.yaml"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".poolside/settings.yaml"
+format = "yaml"
+dialect = "poolside"
+global_path = ".config/poolside/settings.yaml"
+
 [global]
 root_file = ".config/poolside/AGENTS.md"
 skills_dir = ".config/poolside/skills"

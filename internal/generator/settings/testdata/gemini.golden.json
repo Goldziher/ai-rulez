@@ -27,7 +27,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$GEMINI_PROJECT_DIR\"/scripts/boot.sh --quick 'a b'",
+            "command": "\"$GEMINI_PROJECT_DIR\"/'scripts/boot.sh' --quick 'a b'",
             "timeout": 5000
           }
         ]

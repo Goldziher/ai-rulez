@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(src/**)",
+      "Write(src/**)",
+      "WebFetch(example.com)",
+      "Mcp(github:create_issue)"
+    ],
+    "deny": [
+      "Shell(rm:-rf*)",
+      "Read(.env)",
+      "WebFetch(evil.com)",
+      "Mcp(evil:tool)"
+    ]
+  }
+}

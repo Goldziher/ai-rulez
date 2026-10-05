@@ -1,0 +1,41 @@
+{
+  "hooks": [
+    {
+      "name": "ai-rulez-pretooluse-1",
+      "trigger": "PreToolUse",
+      "matcher": "shell",
+      "action": {
+        "type": "command",
+        "command": "echo guard"
+      },
+      "timeout": 10
+    },
+    {
+      "name": "ai-rulez-pretooluse-2",
+      "trigger": "PreToolUse",
+      "matcher": "shell",
+      "action": {
+        "type": "command",
+        "command": "audit --strict 'a b'"
+      }
+    },
+    {
+      "name": "ai-rulez-sessionstart-3",
+      "trigger": "SessionStart",
+      "action": {
+        "type": "command",
+        "command": "'./scripts/boot.sh'"
+      }
+    },
+    {
+      "name": "ai-rulez-stop-4",
+      "trigger": "Stop",
+      "action": {
+        "type": "command",
+        "command": "echo done"
+      },
+      "timeout": 5
+    }
+  ],
+  "version": "v1"
+}

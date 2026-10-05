@@ -48,6 +48,25 @@ global_path = ".kimi-code/mcp.json"
 emit_when = "has_mcp_servers"
 
 # KIMI_CODE_HOME replaces ~/.kimi-code as the data root.
+# Hooks: top-level [[hooks]] rendered in kimi's native format, read from the
+# vendor documentation (see docs/settings.md). Kimi Code documents hooks in the user config.toml only, so they are written with --user.
+[[sidecars]]
+kind = "hooks"
+dialect = "kimi"
+path = ".kimi-code/config.toml"
+format = "toml"
+global_path = ".kimi-code/config.toml"
+
+# Top-level [permissions]: the tool reads them from the user config only, so this
+# sidecar is rendered for `--user` runs.
+[[sidecars]]
+kind = "permissions"
+path = ".kimi-code/config.toml"
+format = "toml"
+dialect = "kimi"
+global_path = ".kimi-code/config.toml"
+user_only = true
+
 [global]
 home_env = "KIMI_CODE_HOME"
 home_dir = ".kimi-code"

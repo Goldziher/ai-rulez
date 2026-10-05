@@ -484,8 +484,11 @@ func (g *Generator) userFileIsOurs(abs string, output config.OutputFile) bool {
 // userStaleOK reports whether a file the manifest lists may still be removed: it
 // must not have been replaced by the user since ai-rulez wrote it. A file that can
 // carry a header must still look generated, whatever the header mode. A headerless
-// one (JSON, scripts, assets) is trusted to the manifest only inside a content
-// folder a layout owns (a skill's resources), never beside the tool's own files.
+// one is trusted to the manifest only where ai-rulez owns it outright: inside a
+// content folder a layout owns (a skill's resources), or at the exact file row of
+// a layout, where a text file (rules, plugin modules, hook scripts) must still
+// carry the generated banner and a JSON document (Copilot's hooks file, which has
+// no room for one) rests on the manifest alone.
 func (g *Generator) userStaleOK(abs string) bool {
 	info, err := os.Lstat(abs)
 	if err != nil || info.IsDir() || !g.userMayTouch(filepath.Dir(abs)) {
@@ -494,7 +497,27 @@ func (g *Generator) userStaleOK(abs string) bool {
 	if headerCapable(abs) {
 		return looksGenerated(abs)
 	}
-	return g.userInContentFolder(abs)
+	if g.userInContentFolder(abs) {
+		return true
+	}
+	if !g.userFileRow(abs) {
+		return false
+	}
+	return strings.EqualFold(filepath.Ext(abs), ".json") || looksGenerated(abs)
+}
+
+// userFileRow reports whether abs is the destination of a file row of some
+// user-level layout.
+func (g *Generator) userFileRow(abs string) bool {
+	abs = filepath.Clean(abs)
+	for _, layout := range g.userLayouts {
+		for _, row := range layout.Rows {
+			if !row.Dir && row.To != "" && abs == filepath.Clean(row.To) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // userMayTouch reports whether abs, which must exist or have an existing ancestor,

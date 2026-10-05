@@ -6,10 +6,18 @@
         "bash": "echo done"
       }
     ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "bash",
+        "bash": "echo guard",
+        "timeoutSec": 10
+      }
+    ],
     "sessionStart": [
       {
         "type": "command",
-        "bash": "\"$(git rev-parse --show-toplevel)\"/scripts/boot.sh --quick 'a b'",
+        "bash": "\"$(git rev-parse --show-toplevel)\"/'scripts/boot.sh' --quick 'a b'",
         "timeoutSec": 5
       }
     ]

@@ -73,6 +73,23 @@ type OutputFile struct {
 	// JSON document, so it can take exactly that back out on clean or when the
 	// preset or server that wrote it goes away.
 	MergeClaims []jsonmerge.Claim
+	// Merge, when set, lets two presets that write one document with different
+	// content be combined instead of reported as a conflict: each preset's owned
+	// keys are unioned and the document rendered once.
+	Merge *MergeSource
+}
+
+// MergeFormatOwnedHooks is the MergeSource.Format of a hooks file ai-rulez writes
+// whole (Copilot's .github/hooks/ai-rulez.json) rather than merges into.
+const MergeFormatOwnedHooks = "owned-hooks"
+
+// MergeSource is what an output was rendered from: the document (Path, the file
+// the merge read), its format (a docmerge format, or MergeFormatOwnedHooks) and
+// the keys ai-rulez owns in it.
+type MergeSource struct {
+	Path   string
+	Format string
+	Owned  []jsonmerge.OwnedKey
 }
 
 // LocalRootProvider is implemented by preset generators that emit a single

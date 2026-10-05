@@ -348,6 +348,16 @@ func TestValidatePluginAuthoring_HookScriptDeclarations(t *testing.T) {
 			wantErr: "hook script not found",
 		},
 		{
+			name:    "script with shell metacharacters is rejected",
+			action:  HookAction{Script: ".ai-rulez/hooks/a b;id.sh"},
+			wantErr: "may only contain",
+		},
+		{
+			name:    "script with a command substitution is rejected",
+			action:  HookAction{Script: ".ai-rulez/hooks/$(id).sh"},
+			wantErr: "may only contain",
+		},
+		{
 			name:    "script escaping the project is rejected",
 			action:  HookAction{Script: "../outside.sh"},
 			wantErr: "unsafe hook script",

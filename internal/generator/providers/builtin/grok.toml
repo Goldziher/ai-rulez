@@ -65,6 +65,22 @@ path = ".grok/config.toml"
 dialect = "grok"
 global_path = ".grok/config.toml"
 
+# Hooks: top-level [[hooks]] rendered in grok's native format, read from the
+# vendor documentation (see docs/settings.md). Grok reads every .grok/hooks/*.json (Claude-style groups, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "grok"
+path = ".grok/hooks/ai-rulez.json"
+format = "json"
+global_path = ".grok/hooks/ai-rulez.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".grok/config.toml"
+dialect = "grok"
+global_path = ".grok/config.toml"
+
 [global]
 root_file = ".grok/AGENTS.md"
 skills_dir = ".grok/skills"

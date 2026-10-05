@@ -105,6 +105,23 @@ kind = "checks"
 path = ".augment/code_review_guidelines.yaml"
 dialect = "augment"
 
+# Hooks: top-level [[hooks]] rendered in augment's native format, read from the
+# vendor documentation (see docs/settings.md). Auggie CLI reads `hooks` from settings.json (five events, milliseconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "augment"
+path = ".augment/settings.json"
+format = "json"
+global_path = ".augment/settings.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".augment/settings.json"
+format = "jsonc"
+dialect = "augment"
+global_path = ".augment/settings.json"
+
 [global]
 rules_dir = ".augment/rules"
 skills_dir = ".augment/skills"

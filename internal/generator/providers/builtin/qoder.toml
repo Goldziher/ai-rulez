@@ -86,6 +86,23 @@ path = ".mcp.json"
 emit_when = "has_mcp_json_entries"
 global_path = ".qoder/settings.json"
 
+# Hooks: top-level [[hooks]] rendered in qoder's native format, read from the
+# vendor documentation (see docs/settings.md). Qoder CLI reads `hooks` from settings.json (Claude-style groups, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "qoder"
+path = ".qoder/settings.json"
+format = "json"
+global_path = ".qoder/settings.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".qoder/settings.json"
+format = "json"
+dialect = "qoder"
+global_path = ".qoder/settings.json"
+
 [global]
 root_file = ".qoder/AGENTS.md"
 skills_dir = ".qoder/skills"

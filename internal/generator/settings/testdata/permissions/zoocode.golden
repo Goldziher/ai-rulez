@@ -1,0 +1,22 @@
+{
+  "chat.tools.edits.autoApprove": {
+    "**/src/**": true
+  },
+  "chat.tools.terminal.autoApprove": {
+    "/^npm run test(\\s|$)/": true,
+    "git push": false,
+    "rm -rf": false
+  },
+  "chat.tools.urls.autoApprove": {
+    "https://evil.com": false,
+    "https://evil.com/*": false,
+    "https://example.com": true,
+    "https://example.com/*": true
+  },
+  "zoo-code.allowedCommands": [
+    "npm run test "
+  ],
+  "zoo-code.deniedCommands": [
+    "rm -rf"
+  ]
+}
