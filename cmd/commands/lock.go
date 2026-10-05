@@ -127,18 +127,7 @@ func writeLockAt(path, kind string, names []string) int {
 		wanted[n] = true
 	}
 	remoteRefresh := !lockContentOnly
-	if remoteRefresh {
-		includes.Mode = includes.LockRefresh
-		includes.RefreshFilter = func(k, n string) bool {
-			return (kind == "" || kind == k) && (len(wanted) == 0 || wanted[n])
-		}
-		includes.ResetObserved()
-		defer func() { includes.Mode, includes.RefreshFilter = includes.LockAuto, nil }()
-	} else {
-		prev := includes.SkipFetch
-		includes.SkipFetch = true
-		defer func() { includes.SkipFetch = prev }()
-	}
+	defer prepareLockRun(remoteRefresh, kind, wanted)()
 
 	cfg, err := loadForLock(path, config.WithoutLocal())
 	if err != nil {
@@ -150,13 +139,54 @@ func writeLockAt(path, kind string, names []string) int {
 		fmtError(err)
 		return 1
 	}
+	next, err := nextLock(cfg, current, kind, wanted, remoteRefresh)
+	if err != nil {
+		fmtError(err)
+		return 1
+	}
+	if err := pinContent(cfg, current, next, kind, wanted); err != nil {
+		fmtError(err)
+		return 1
+	}
+	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
+		fmtError(err)
+		return 1
+	}
+	for _, e := range lockedEntries(next) {
+		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
+	}
+	if next.HasContentPins() {
+		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.Output), next.Tree)
+	}
+	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
+	return 0
+}
+
+// prepareLockRun sets the include policy of a `lock` run (refresh the remotes, or
+// stay offline for --content-only) and returns the function that restores it.
+func prepareLockRun(remoteRefresh bool, kind string, wanted map[string]bool) (restore func()) {
+	if remoteRefresh {
+		includes.Mode = includes.LockRefresh
+		includes.RefreshFilter = func(k, n string) bool {
+			return (kind == "" || kind == k) && (len(wanted) == 0 || wanted[n])
+		}
+		includes.ResetObserved()
+		return func() { includes.Mode, includes.RefreshFilter = includes.LockAuto, nil }
+	}
+	prev := includes.SkipFetch
+	includes.SkipFetch = true
+	return func() { includes.SkipFetch = prev }
+}
+
+// nextLock builds the remote, source and served entries of the new lock. The
+// content pins are added by pinContent.
+func nextLock(cfg *config.Config, current *lockfile.File, kind string, wanted map[string]bool, remoteRefresh bool) (*lockfile.File, error) {
 	next := &lockfile.File{Version: lockfile.Version}
 	if remoteRefresh {
 		var problems []string
 		next, problems = includes.BuildLock(cfg, current)
 		if len(problems) > 0 {
-			fmtError(oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  ")))
-			return 1
+			return nil, oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
 		}
 	} else if current != nil {
 		next.Include, next.Skill = current.Include, current.Skill
@@ -170,20 +200,22 @@ func writeLockAt(path, kind string, names []string) int {
 	}
 	if problems := mergeDynamicLock(cfg, current, next, dynamicKind, wanted); len(problems) > 0 {
 		if remoteRefresh {
-			fmtError(oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  ")))
-			return 1
+			return nil, oops.With("config", cfg.ConfigDir).Errorf("cannot write %s:\n  %s", lockfile.FileName, strings.Join(problems, "\n  "))
 		}
 		logger.Warn("Kept the served pins: they cannot be recomputed offline", "problems", strings.Join(problems, "; "))
 	}
 	for name := range wanted {
 		if !lockHasName(next, name) {
-			fmtError(oops.Errorf("%q is not a remote include, installed skill, skill source or served skill in %s", name, cfg.ConfigDir))
-			return 1
+			return nil, oops.Errorf("%q is not a remote include, installed skill, skill source or served skill in %s", name, cfg.ConfigDir)
 		}
 	}
+	return next, nil
+}
 
-	// A refresh limited to some remote sources leaves the content pins alone;
-	// otherwise they are recomputed from the sources on disk.
+// pinContent adds the content pins to next. A refresh limited to some remote
+// sources leaves the content pins alone; otherwise they are recomputed from the
+// sources on disk.
+func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) error {
 	if len(wanted) == 0 && kind == "" {
 		profileName := lockProfile
 		if profileName == "" && current != nil {
@@ -191,31 +223,21 @@ func writeLockAt(path, kind string, names []string) int {
 		}
 		snap, err := lockSnapshot(cfg, profileName, false)
 		if err != nil {
-			fmtError(err)
-			return 1
+			return err
 		}
 		contentlock.Build(next, snap)
-	} else if current != nil {
-		next.HashVersion, next.AIRulezVersion, next.Profile = current.HashVersion, current.AIRulezVersion, current.Profile
-		next.Scope, next.OutputsPinned = current.Scope, current.OutputsPinned
-		next.Item, next.Output = current.Item, current.Output
-		if next.HasContentPins() {
-			next.Tree = contentlock.TreeOf(next)
-		}
+		return nil
 	}
-
-	if err := lockfile.Save(cfg.ConfigDir, next); err != nil {
-		fmtError(err)
-		return 1
+	if current == nil {
+		return nil
 	}
-	for _, e := range lockedEntries(next) {
-		fmt.Printf("locked %s %s %s\n", e.Name, shortSHA(e.Commit), e.Digest)
-	}
+	next.HashVersion, next.AIRulezVersion, next.Profile = current.HashVersion, current.AIRulezVersion, current.Profile
+	next.Scope, next.OutputsPinned = current.Scope, current.OutputsPinned
+	next.Item, next.Output = current.Item, current.Output
 	if next.HasContentPins() {
-		fmt.Printf("pinned %d item(s) and %d output(s), tree %s\n", len(next.Item), len(next.Output), next.Tree)
+		next.Tree = contentlock.TreeOf(next)
 	}
-	logger.Success("Wrote lock file", "path", lockfile.Path(cfg.ConfigDir))
-	return 0
+	return nil
 }
 
 // lockProfileFor picks the profile a check renders: --profile, else the one the
