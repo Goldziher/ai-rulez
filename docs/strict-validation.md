@@ -106,6 +106,7 @@ still exits 1 and never reaches the content checks.
 | AR981 | `lock-source-drift` | error | An authored item was added, removed or changed since `ai-rulez.lock` was written. Raised only when a lock exists and `[lock] enforce = true` (see [Lock file](lockfile.md)) |
 | AR982 | `lock-output-drift` | error | A generated output differs from the digest in `ai-rulez.lock`. Same conditions as AR981 |
 | AR9C0 | `llm-config-invalid` | error | The `[llm]` table is invalid: an unknown `backend`, a literal secret (`api_key = ...`, or a key where `api_key_env` wants a variable name), credentials or a query string in `base_url`, or a negative limit (see [LLM access](llm.md)) |
+| AR9C1 | `llm-untrusted-key` | warning | A repository `[llm]` table (or its local overlay) sets `allow_network`, `base_url`, `api_key_env` or a price override; only the user config file and `AI_RULEZ_LLM_*` may, so the value is ignored (see [LLM access](llm.md#trust-rule)) |
 
 Codes are stable: they are never renumbered or reused. Both the code and the name are accepted everywhere a code
 is configured.
