@@ -61,12 +61,24 @@ func TestDeliveryFindings_FallbackAndNoServer(t *testing.T) {
 	assert.NotContains(t, codesOf(deliveryFindings(withServer)), lint.CodeServedNoServer)
 }
 
-func TestDeliveryFindings_StubMissingWhenAnMCPHarnessRendersNoSkills(t *testing.T) {
-	cfg := deliveryProject(t, `["claude", "codebuff"]`, "", servedSkillFiles)
+func TestDeliveryFindings_StubMissingWhenAnMCPHarnessDoesNotRenderIt(t *testing.T) {
+	// Every preset that can call MCP renders skills, so the stub goes missing only
+	// when something keeps it out of a tree: here an authored skill of the stub's
+	// name shadows it and is targeted at codex only.
+	files := map[string]string{
+		"skills/dynamic-skills/SKILL.md": "---\ndescription: My own loader\ntargets: [codex]\n---\nMine\n",
+	}
+	for k, v := range servedSkillFiles {
+		files[k] = v
+	}
+	cfg := deliveryProject(t, `["claude", "codex"]`, "\n[placement]\nhonor_targets = true\n", files)
 	got := codesOf(deliveryFindings(cfg))
 	require.Contains(t, got, lint.CodeDeliveryStubMissing)
-	assert.Contains(t, got[lint.CodeDeliveryStubMissing], `"codebuff"`)
-	assert.NotContains(t, got[lint.CodeDeliveryStubMissing], `"claude"`)
+	assert.Contains(t, got[lint.CodeDeliveryStubMissing], `"claude"`)
+	assert.NotContains(t, got[lint.CodeDeliveryStubMissing], `"codex"`)
+
+	withStub := deliveryProject(t, `["claude", "codebuff"]`, "", servedSkillFiles)
+	assert.NotContains(t, codesOf(deliveryFindings(withStub)), lint.CodeDeliveryStubMissing, "both presets render the stub")
 }
 
 func TestDeliveryFindings_LockEnforcementReportsUnpinnedSkills(t *testing.T) {
