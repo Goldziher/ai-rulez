@@ -17,7 +17,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 )
 
 // MigrationHint tells the author what to change and where the official guide lives.

@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"sort"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 )
 
 // OKF preset: keeps an Open Knowledge Format bundle (docs/okf by default) in

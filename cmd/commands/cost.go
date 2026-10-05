@@ -5,8 +5,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/cost"
-	"github.com/Goldziher/ai-rulez/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/cost"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )

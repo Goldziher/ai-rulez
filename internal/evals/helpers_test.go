@@ -3,7 +3,7 @@ package evals
 import (
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/tokens"
+	"github.com/Goldziher/ai-rulez/v5/internal/tokens"
 )
 
 func mustCounter(t *testing.T) tokens.Counter {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Goldziher/ai-rulez/cmd/commands"
-	_ "github.com/Goldziher/ai-rulez/internal/includes" // Register includes resolver callback
-	"github.com/Goldziher/ai-rulez/schema"
+	"github.com/Goldziher/ai-rulez/v5/cmd/commands"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/includes" // Register includes resolver callback
+	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 var version = "4.24.2"

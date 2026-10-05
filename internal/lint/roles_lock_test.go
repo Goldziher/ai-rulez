@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 func rolesFixture() map[string]string {

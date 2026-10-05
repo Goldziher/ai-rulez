@@ -6,9 +6,9 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/okf"
-	"github.com/Goldziher/ai-rulez/internal/okfbridge"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/okf"
+	"github.com/Goldziher/ai-rulez/v5/internal/okfbridge"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

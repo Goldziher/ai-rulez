@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/llm"
+	"github.com/Goldziher/ai-rulez/v5/internal/llm"
 )
 
 func TestLoadLLMTableAndLocalOverlay(t *testing.T) {

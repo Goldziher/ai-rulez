@@ -3,7 +3,7 @@ package rulefiles
 import (
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // Dialect selects the frontmatter vocabulary a tool understands.

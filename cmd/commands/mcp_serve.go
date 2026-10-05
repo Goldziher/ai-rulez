@@ -3,8 +3,8 @@ package commands
 import (
 	"context"
 
-	"github.com/Goldziher/ai-rulez/internal/includes"
-	"github.com/Goldziher/ai-rulez/internal/mcp"
+	"github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/mcp"
 	"github.com/samber/oops"
 	"github.com/spf13/cobra"
 )

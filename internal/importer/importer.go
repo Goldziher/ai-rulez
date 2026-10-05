@@ -7,10 +7,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/logger"
-	"github.com/Goldziher/ai-rulez/internal/parser"
-	"github.com/Goldziher/ai-rulez/internal/utils"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/parser"
+	"github.com/Goldziher/ai-rulez/v5/internal/utils"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 )

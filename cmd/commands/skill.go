@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Goldziher/ai-rulez/internal/crud"
-	incl "github.com/Goldziher/ai-rulez/internal/includes"
-	"github.com/Goldziher/ai-rulez/internal/logger"
+	"github.com/Goldziher/ai-rulez/v5/internal/crud"
+	incl "github.com/Goldziher/ai-rulez/v5/internal/includes"
+	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/spf13/cobra"
 )
 

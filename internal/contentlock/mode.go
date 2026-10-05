@@ -6,7 +6,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 )
 
 // fileMode returns the digest mode (ModeRegular or ModeExecutable) of the file at

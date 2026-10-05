@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/gitutil"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitutil"
 	"github.com/samber/oops"
 )
 

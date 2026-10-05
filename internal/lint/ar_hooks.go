@@ -10,7 +10,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 )
 
 // CodeHookSchema reports hook declarations that load but will not behave as

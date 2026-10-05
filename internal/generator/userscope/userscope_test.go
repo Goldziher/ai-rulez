@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/userscope"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/userscope"
 
-	_ "github.com/Goldziher/ai-rulez/internal/generator/presets"
-	_ "github.com/Goldziher/ai-rulez/internal/generator/providers"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	_ "github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 )
 
 var home = filepath.FromSlash("/home/probe")

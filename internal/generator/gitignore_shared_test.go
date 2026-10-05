@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/Goldziher/ai-rulez/internal/generator/providers"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/providers"
 )
 
 // TestGitignorePattern_SharedDirsNeverBecomeDirPatterns pins that a directory

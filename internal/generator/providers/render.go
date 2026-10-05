@@ -7,11 +7,11 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator/presets"
-	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
-	"github.com/Goldziher/ai-rulez/internal/generator/targetmatch"
-	"github.com/Goldziher/ai-rulez/internal/templates"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/presets"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator/targetmatch"
+	"github.com/Goldziher/ai-rulez/v5/internal/templates"
 	"github.com/samber/oops"
 )
 

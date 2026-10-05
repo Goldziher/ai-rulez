@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
-	"github.com/Goldziher/ai-rulez/internal/generator"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/generator"
 )
 
 const baseConfig = "version = \"4.0\"\nname = \"t\"\npresets = [\"claude\"]\ngitignore = false\n"

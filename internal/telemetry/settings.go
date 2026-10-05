@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/config"
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"

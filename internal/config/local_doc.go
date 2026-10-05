@@ -13,8 +13,8 @@ import (
 	"github.com/samber/oops"
 	"gopkg.in/yaml.v3"
 
-	"github.com/Goldziher/ai-rulez/internal/gitignore"
-	"github.com/Goldziher/ai-rulez/schema"
+	"github.com/Goldziher/ai-rulez/v5/internal/gitignore"
+	"github.com/Goldziher/ai-rulez/v5/schema"
 )
 
 // LocalDoc is an editable machine-local config.local.* document. Edits happen on
