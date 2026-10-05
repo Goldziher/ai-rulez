@@ -154,6 +154,10 @@ same objects survive. An entry the file already holds with the configured value 
 `clean`; one with a different value is replaced by the configured value on `generate` (the configuration
 wins, as for MCP servers) and removed on `clean`, and an entry you edit after generation stays yours.
 
+A [role](roles.md)'s `skill_mode` is rendered through the same ownership: `generate --role <name>` owns
+`skillOverrides.<skill>` for the skills the role sets, the role's value wins over the same skill in
+`skill_overrides`, and switching roles removes the previous role's entries.
+
 ## Files and ownership
 
 | File | Written when | On `clean` |
