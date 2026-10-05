@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -40,6 +41,9 @@ func sampleRequest(t *testing.T) *Request {
 }
 
 func TestCommandRunner_PipesRequestAndReadsResponse(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the runner is a POSIX shell script")
+	}
 	req := sampleRequest(t)
 	dir := t.TempDir()
 	captured := filepath.Join(dir, "request.json")
