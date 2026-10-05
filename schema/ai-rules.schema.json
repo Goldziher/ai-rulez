@@ -971,6 +971,61 @@
         "additionalProperties": false
       }
     },
+    "telemetry": {
+      "type": "object",
+      "description": "Item-load telemetry (opt-in). Local recording needs enabled; OTLP export also needs allow_network and an endpoint, which only user scope (the user config file or AI_RULEZ_TELEMETRY_* variables) can set. See docs/telemetry.md.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Record identifier-only load events for skills, rules, agents and context files to the local usage log. Default false."
+        },
+        "allow_network": {
+          "type": "boolean",
+          "description": "Consent to OTLP export. Ignored in a repository config; honoured in the user config and AI_RULEZ_TELEMETRY_ALLOW_NETWORK. Default false."
+        },
+        "otlp_endpoint": {
+          "type": "string",
+          "description": "OTLP/HTTP collector base URL (https, or http on loopback). /v1/logs and /v1/metrics are appended. Ignored in a repository config."
+        },
+        "otlp_protocol": {
+          "type": "string",
+          "enum": ["http/json"],
+          "description": "OTLP encoding. Only http/json is implemented."
+        },
+        "headers_env": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$"
+          },
+          "description": "Names of environment variables holding 'key=value,key2=value2' header lists. Names only; a literal credential is rejected. Ignored in a repository config."
+        },
+        "service_name": {
+          "type": "string",
+          "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,63}$",
+          "description": "service.name resource attribute. Default ai-rulez."
+        },
+        "sample": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Fraction of sessions exported, decided per salted session hash. Default 1."
+        },
+        "include_paths": {
+          "type": "boolean",
+          "description": "Add the repo-relative path of a loaded item to exported events. Default false. Ignored in a repository config."
+        },
+        "include_session": {
+          "type": "boolean",
+          "description": "Add the salted session hash to exported log records (never to metric labels). Default false. Ignored in a repository config."
+        },
+        "salt_file": {
+          "type": "string",
+          "description": "File holding the session-hash salt. Ignored in a repository config."
+        }
+      },
+      "additionalProperties": false
+    },
     "llm": {
       "type": "object",
       "description": "Model access for features that call a language model. Nothing calls out unless allow_network is true. Keys are never stored here: api_key_env names an environment variable (AR9C0).",

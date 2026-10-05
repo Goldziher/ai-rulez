@@ -117,7 +117,7 @@ func runUsageRecord(in io.Reader) error {
 		}
 		logPath = filepath.Join(root, ".ai-rulez", "local", "usage.jsonl")
 	}
-	_, err := usage.Record(in, usage.RecordOptions{
+	entry, err := usage.Record(in, usage.RecordOptions{
 		LogPath:     logPath,
 		SinkCommand: usageSinkCommand,
 		IndexPath:   usageIndex,
@@ -127,6 +127,7 @@ func runUsageRecord(in io.Reader) error {
 		Served:      usageServed,
 		SaltPath:    usageSalt,
 	})
+	emitUsageTelemetry(entry)
 	return err
 }
 
@@ -224,12 +225,19 @@ func runReportUsage(out io.Writer, logPath string) error {
 		return err
 	}
 
+	items, err := itemsSection(logPath)
+	if err != nil {
+		return err
+	}
 	if reportJSON {
 		encoder := json.NewEncoder(out)
 		encoder.SetIndent("", "  ")
-		return oops.Wrapf(encoder.Encode(report), "encode usage report")
+		return oops.Wrapf(encoder.Encode(usageReportJSON{Report: report, Items: items}), "encode usage report")
 	}
 	writeUsageReport(reportWriter{out}, report)
+	if items != nil {
+		writeItemsReport(reportWriter{out}, items)
+	}
 	return nil
 }
 
