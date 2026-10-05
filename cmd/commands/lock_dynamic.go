@@ -54,7 +54,7 @@ func usesDynamicSkills(cfg *config.Config) bool {
 // prevent writing a lock.
 func mergeDynamicLock(cfg *config.Config, current, next *lockfile.File, kind string, wanted map[string]bool) []string {
 	if current != nil {
-		next.Source, next.Served = current.Source, current.Served
+		next.Source, next.Served = append([]lockfile.Entry(nil), current.Source...), append([]lockfile.Entry(nil), current.Served...)
 	}
 	if !usesDynamicSkills(cfg) {
 		next.Source, next.Served = nil, nil
