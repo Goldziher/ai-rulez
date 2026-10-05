@@ -1,0 +1,19 @@
+# OpenClaw provider spec.
+#
+# OpenClaw injects the agent workspace AGENTS.md into every session and appends
+# the AGENTS.md of the folder a session runs from. It documents no rules folder,
+# skills layout this preset can target or per-directory walk, so only the shared
+# root AGENTS.md is written.
+
+name = "openclaw"
+display_name = "OpenClaw"
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# Only the default workspace is addressed; the workspace is relocatable through
+# several variables that do not share a single directory prefix.
+[global]
+root_file = ".openclaw/workspace/AGENTS.md"

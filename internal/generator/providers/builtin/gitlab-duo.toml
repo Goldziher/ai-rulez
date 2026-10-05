@@ -1,0 +1,49 @@
+# GitLab Duo CLI provider spec.
+#
+# Duo CLI reads one custom rules file, .gitlab/duo/chat-rules.md, with no rules
+# folder, so rules and context are inlined into it. MCP servers live in
+# .gitlab/duo/mcp.json and custom slash commands in the cross-tool
+# .agents/commands. Skills are not emitted: GitLab documents them only inside
+# plugins. https://docs.gitlab.com/user/gitlab_duo_cli/customize/
+
+name = "gitlab-duo"
+display_name = "GitLab Duo CLI"
+
+# .gitlab is shared with CI templates and CODEOWNERS, so only the Duo subtree is
+# declared and the generator ignores generated files there by exact path.
+directories = [".gitlab/duo", ".agents/commands"]
+
+[root]
+file = ".gitlab/duo/chat-rules.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# Commands are Markdown files named after the command with an optional
+# description in the frontmatter.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".agents/commands"
+filename = "{id}.md"
+filter = "include_if_targeting_provider"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+# Every documented server entry spells out type: stdio, http or sse, which is the
+# VS Code entry shape under the mcpServers key.
+[[sidecars]]
+kind = "mcp"
+path = ".gitlab/duo/mcp.json"
+format = "json"
+key = ["mcpServers"]
+dialect = "vscode"
+global_path = ".gitlab/duo/mcp.json"
+
+# User-scope layout: ~/.gitlab/duo on Linux and macOS.
+[global]
+root_file = ".gitlab/duo/chat-rules.md"
+commands_dir = ".gitlab/duo/commands"

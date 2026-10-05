@@ -1,0 +1,88 @@
+# Augment Code (Auggie CLI and IDE extensions) provider spec.
+#
+# Augment reads AGENTS.md and every .augment/rules/*.md file. A rule's `type`
+# frontmatter is always_apply, agent_requested (with a description) or manual;
+# Augment documents no glob scoping, so path-scoped rules are written as
+# always-on files. Skills, subagents and slash commands have their own
+# folders, and MCP servers live under `mcpServers` in .augment/settings.json.
+
+name = "augment"
+display_name = "Augment Code"
+
+directories = [".augment", ".augment/rules", ".augment/skills", ".augment/agents", ".augment/commands"]
+
+[root]
+file = "AGENTS.md"
+# Augment never reads AGENTS.local.md.
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".augment/rules"
+filename = "{id}.md"
+split = true
+
+[outputs.rules.activation.always]
+type = "always_apply"
+
+[outputs.rules.activation.auto]
+type = "agent_requested"
+description = "{description}"
+
+[outputs.rules.activation.manual]
+type = "manual"
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".augment/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".augment/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description", "color"]
+tools = true
+emit_model = true
+
+[model]
+field = "model"
+
+# Slash commands: .augment/commands/{id}.md, named after the file.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".augment/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description", "argument-hint"]
+omit_name = true
+
+# Auggie reads settings.json as JSON with comments, so the merge keeps them.
+[[sidecars]]
+kind = "mcp"
+path = ".augment/settings.json"
+format = "jsonc"
+global_path = ".augment/settings.json"
+
+[global]
+rules_dir = ".augment/rules"
+skills_dir = ".augment/skills"
+agents_dir = ".augment/agents"
+commands_dir = ".augment/commands"

@@ -33,7 +33,24 @@ func (g *ClinePresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".cline"),
 		filepath.Join(baseDir, ".cline", "skills"),
 		filepath.Join(baseDir, ".cline", "agents"),
+		filepath.Join(baseDir, ".clinerules", "workflows"),
 	}
+}
+
+// clineWorkflows is the folder of Cline workflows, its custom slash commands. A
+// workflow is a plain markdown file invoked as /{id}.md.
+var clineWorkflows = commandFilesSpec{preset: presetNameCline, dir: ".clinerules/workflows", ext: ".md", noFrontmatter: true}
+
+// GlobalOutputPaths is the Cline user-scope layout: rules and workflows under
+// ~/Documents/Cline, skills and agents under ~/.cline. Cline has no project MCP
+// file (its servers live in the extension's global settings).
+func (g *ClinePresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		RulesDir:    "Documents/Cline/Rules",
+		SkillsDir:   ".cline/skills",
+		AgentsDir:   ".cline/agents",
+		CommandsDir: "Documents/Cline/Workflows",
+	}.Resolve(home, getenv)
 }
 
 func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
@@ -77,6 +94,13 @@ func (g *ClinePresetGenerator) Generate(content *config.ContentTree, baseDir str
 		)
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
+
+	// Commands are workflows: .clinerules/workflows/{id}.md.
+	workflows, err := commandFileOutputs(content, baseDir, clineWorkflows)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, workflows...)
 
 	// Add .cline/agents directory
 	outputs = append(outputs, config.OutputFile{

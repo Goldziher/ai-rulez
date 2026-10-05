@@ -225,7 +225,7 @@ filename = "{id}/SKILL.md"
 [[sidecars]]
 kind = "mcp_json"
 path = ".my-tool/mcp.json"
-emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries, has_mcp_servers_or_plugin_settings
+emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries, has_mcp_servers_or_plugin_settings, has_resolved_effort_or_mcp_servers
 ```
 
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);

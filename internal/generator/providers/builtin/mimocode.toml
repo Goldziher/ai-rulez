@@ -1,0 +1,72 @@
+# MiMo Code provider spec (Xiaomi's OpenCode fork).
+#
+# MiMo Code reads AGENTS.md plus OpenCode-layout directories under .mimocode:
+# skills, subagents (Markdown with `mode: subagent`) and commands. MCP servers
+# live in the `mcp` key of .mimocode/mimocode.jsonc in the OpenCode dialect.
+# Rules stay inline in AGENTS.md: a rules folder would need registering in the
+# config's `instructions` array, which MiMo Code resolves differently.
+
+name = "mimocode"
+display_name = "MiMo Code"
+
+directories = [".mimocode", ".mimocode/skills", ".mimocode/agents", ".mimocode/commands"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+dir = ".mimocode/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".mimocode/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+emit_model = true
+omit_name = true
+
+[outputs.agents.frontmatter.constants]
+mode = "subagent"
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".mimocode/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+[[sidecars]]
+kind = "mcp"
+path = ".mimocode/mimocode.jsonc"
+dialect = "opencode"
+global_path = ".config/mimocode/mimocode.jsonc"
+
+[global]
+root_file = ".config/mimocode/AGENTS.md"
+skills_dir = ".config/mimocode/skills"
+agents_dir = ".config/mimocode/agents"
+commands_dir = ".config/mimocode/commands"

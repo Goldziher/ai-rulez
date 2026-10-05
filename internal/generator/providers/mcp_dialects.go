@@ -52,8 +52,15 @@ type mcpDialect struct {
 	// names a format: the files of these tools (Zed settings, VS Code mcp.json)
 	// routinely carry comments, which a strict JSON merge would not preserve.
 	jsoncDefault bool
+	// arrayKey, when set, makes the owned member an array of tables rather than a
+	// map: each server becomes one element carrying its name under this key
+	// ([[mcp_servers]] with name = "..."). TOML documents only.
+	arrayKey string
 }
 
+// mcpDialects is one map literal, so every dialect exists before any init() (the
+// builtin specs are validated against it in hints.go and init.go) and the
+// registration order cannot depend on file names.
 var mcpDialects = map[string]mcpDialect{
 	MCPDialectStandard:     {defaultKey: []string{"mcpServers"}, build: standardMCPEntry},
 	MCPDialectClaude:       {defaultKey: []string{"mcpServers"}, build: claudeMCPEntry},
@@ -64,6 +71,11 @@ var mcpDialects = map[string]mcpDialect{
 	MCPDialectCodex:        {defaultKey: []string{"mcp_servers"}, build: codexMCPEntry},
 	MCPDialectAmp:          {defaultKey: []string{"amp.mcpServers"}, build: ampMCPEntry},
 	MCPDialectYAMLStandard: {defaultKey: []string{"mcp_servers"}, build: yamlStandardMCPEntry},
+	MCPDialectBob:          {defaultKey: []string{"mcpServers"}, build: bobMCPEntry},
+	MCPDialectZcode:        {defaultKey: []string{"mcp", "servers"}, build: zcodeMCPEntry},
+	MCPDialectGrok:         {defaultKey: []string{"mcp_servers"}, build: grokMCPEntry},
+	MCPDialectTransport:    {defaultKey: []string{"mcpServers"}, build: transportMCPEntry},
+	MCPDialectVibe:         {defaultKey: []string{"mcp_servers"}, build: vibeMCPEntry, arrayKey: "name"},
 }
 
 // IsMCPDialect reports whether name is a known MCP entry dialect.
@@ -212,28 +224,7 @@ func opencodeMCPEntry(server *config.MCPServer) map[string]any {
 // vscodeMCPEntry is the .vscode/mcp.json entry. VS Code has no way to switch a
 // server off, so a disabled server is left out of the document.
 func vscodeMCPEntry(server *config.MCPServer) map[string]any {
-	if !server.IsEnabled() {
-		return nil
-	}
-	entry := map[string]any{}
-	switch t := server.GetTransport(); t {
-	case config.TransportHTTP, config.TransportSSE:
-		entry["type"] = t
-		entry["url"] = server.URL
-		if len(server.Headers) > 0 {
-			entry["headers"] = server.Headers
-		}
-	default:
-		entry["type"] = "stdio"
-		entry["command"] = server.Command
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
-		}
-		if len(server.Env) > 0 {
-			entry["env"] = server.Env
-		}
-	}
-	return entry
+	return presets.VSCodeMCPEntry(server)
 }
 
 // zedMCPEntry is the Zed context_servers entry; a disabled server is
@@ -265,25 +256,7 @@ func zedMCPEntry(server *config.MCPServer) map[string]any {
 
 // codexMCPEntry is the [mcp_servers.<name>] table of ~/.codex/config.toml.
 func codexMCPEntry(server *config.MCPServer) map[string]any {
-	entry := map[string]any{}
-	if isRemote(server) {
-		entry["url"] = server.URL
-		if len(server.Headers) > 0 {
-			entry["http_headers"] = server.Headers
-		}
-	} else {
-		entry["command"] = server.Command
-		if len(server.Args) > 0 {
-			entry["args"] = server.Args
-		}
-		if len(server.Env) > 0 {
-			entry["env"] = server.Env
-		}
-	}
-	if !server.IsEnabled() {
-		entry["enabled"] = false
-	}
-	return entry
+	return presets.CodexMCPEntry(server)
 }
 
 // ampMCPEntry is the standard entry without the description, which Amp does not

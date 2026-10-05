@@ -1,0 +1,93 @@
+# Qwen Code provider spec.
+#
+# Qwen Code reads QWEN.md (and AGENTS.md) for project guidance, a personal
+# .qwen/QWEN.local.md, a rules folder at .qwen/rules (a `paths:` list scopes a
+# rule to matching files; a rule without it loads at session start), skills
+# under .qwen/skills, subagents under .qwen/agents, Markdown custom commands
+# under .qwen/commands (the TOML command format is deprecated), and MCP servers
+# under `mcpServers` in .qwen/settings.json (gemini-style: `httpUrl` for
+# streamable HTTP, `url` for SSE).
+
+name = "qwen"
+display_name = "Qwen Code"
+
+directories = [".qwen", ".qwen/rules", ".qwen/skills", ".qwen/agents", ".qwen/commands"]
+
+[root]
+file = "QWEN.md"
+# Qwen loads the personal file from inside .qwen/, not next to QWEN.md.
+local_file = ".qwen/QWEN.local.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# Rules: .qwen/rules/{id}.md. Only glob-scoped rules carry frontmatter (`paths`);
+# every other rule is a plain baseline rule. In inline mode only the glob-scoped
+# rules still get a file, so they keep their scope.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".qwen/rules"
+filename = "{id}.md"
+split = true
+inline_filter = "path_scoped"
+
+[outputs.rules.activation]
+glob = { paths = "{globs_list}" }
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".qwen/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# Subagents: name, description, tools and model frontmatter.
+[outputs.agents]
+mode = "per_item_file"
+dir = ".qwen/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_model = true
+
+# Commands: .qwen/commands/{id}.md; the name comes from the file name.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".qwen/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+[[sidecars]]
+kind = "mcp"
+path = ".qwen/settings.json"
+format = "json"
+dialect = "gemini"
+emit_when = "has_mcp_servers"
+global_path = ".qwen/settings.json"
+
+# User-scope layout: everything lives under ~/.qwen.
+[global]
+home_env = "QWEN_HOME"
+home_dir = ".qwen"
+root_file = ".qwen/QWEN.md"
+skills_dir = ".qwen/skills"
+agents_dir = ".qwen/agents"
+commands_dir = ".qwen/commands"
+rules_dir = ".qwen/rules"

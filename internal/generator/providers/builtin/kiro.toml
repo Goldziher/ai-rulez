@@ -1,0 +1,89 @@
+# Kiro provider spec (Kiro IDE and Kiro CLI share one layout).
+#
+# Kiro reads project guidance from AGENTS.md and every .kiro/steering/*.md
+# steering file. A steering file's `inclusion` frontmatter decides when it is
+# loaded: no frontmatter means always, `fileMatch` with a `fileMatchPattern`
+# scopes it to files, `auto` loads it when a request matches its name and
+# description, and `manual` loads it on demand. Skills, subagents (the Markdown
+# format of the IDE) and slash-command prompts sit alongside, and MCP servers
+# live in .kiro/settings/mcp.json.
+
+name = "kiro"
+display_name = "Kiro"
+
+directories = [".kiro", ".kiro/steering", ".kiro/skills", ".kiro/agents", ".kiro/prompts"]
+
+[root]
+file = "AGENTS.md"
+# Kiro loads every steering file, so machine-local content goes there.
+local_file = ".kiro/steering/ai-rulez.local.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".kiro/steering"
+filename = "{id}.md"
+split = true
+
+[outputs.rules.activation.glob]
+inclusion = "fileMatch"
+fileMatchPattern = "{globs_list}"
+
+[outputs.rules.activation.auto]
+inclusion = "auto"
+name = "{name}"
+description = "{description}"
+
+[outputs.rules.activation.manual]
+inclusion = "manual"
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".kiro/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".kiro/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_model = true
+
+[model]
+field = "model"
+
+# Slash-command prompts: plain Markdown, the name comes from the file.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".kiro/prompts"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["content"]
+
+# .kiro/settings/mcp.json holds the MCP servers under `mcpServers`.
+[[sidecars]]
+kind = "mcp"
+path = ".kiro/settings/mcp.json"
+format = "json"
+global_path = ".kiro/settings/mcp.json"
+
+# User scope: Kiro does not read ~/AGENTS.md, so the root guidance is a steering file.
+[global]
+root_file = ".kiro/steering/product.md"
+rules_dir = ".kiro/steering"
+skills_dir = ".kiro/skills"
+agents_dir = ".kiro/agents"

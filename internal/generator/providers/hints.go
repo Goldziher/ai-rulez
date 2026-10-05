@@ -59,7 +59,7 @@ func init() {
 // every tracked file beside the generated one would be skipped by git.
 // ".agents" is not listed: its generated content lives in owned subdirectories
 // (.agents/skills/), which the generator narrows to.
-var sharedDirs = []string{".vscode", ".idea", ".zed", ".config", ".github", ".husky"}
+var sharedDirs = []string{".vscode", ".idea", ".zed", ".config", ".github", ".gitlab", ".husky"}
 
 // IsSharedDir reports whether name (one path segment) is a shared directory.
 func IsSharedDir(name string) bool { return slices.Contains(sharedDirs, name) }
@@ -161,8 +161,19 @@ func dotDir(p string, isDir bool) string {
 	if !strings.HasPrefix(first, ".") || IsSharedDir(first) || first == "." || first == ".." {
 		return ""
 	}
+	for _, deep := range nestedOwnedDirs {
+		if strings.HasPrefix(p+"/", deep) {
+			return deep
+		}
+	}
 	return first + "/"
 }
+
+// nestedOwnedDirs are directories below a dot-directory that ai-rulez owns while
+// the dot-directory itself holds the user's own files (.takt/ keeps config.yaml
+// and workflows beside the generated facets), so they stand in for the leading
+// segment as the directory to ignore.
+var nestedOwnedDirs = []string{".takt/facets/"}
 
 func sortedKeys(m map[string]bool) []string {
 	out := make([]string, 0, len(m))

@@ -1,0 +1,85 @@
+# GitHub Copilot CLI provider spec.
+#
+# Copilot CLI reads the same repository files as the GitHub Copilot preset:
+# .github/copilot-instructions.md, applyTo-scoped .github/instructions/*.instructions.md,
+# custom agents in .github/agents/*.agent.md, skills in .github/skills and (unlike
+# that preset) project MCP servers from .github/mcp.json.
+#
+# Both presets may be enabled together, so every output they share (the root file,
+# the instructions files, the agents and the skills) is declared to render
+# byte-identically to the copilot preset: the generator keeps one copy of a path
+# two presets write, and a divergent copy would silently replace the other.
+# https://docs.github.com/en/copilot/how-tos/copilot-cli
+
+name = "copilot-cli"
+display_name = "GitHub Copilot CLI"
+
+directories = [".github", ".github/skills", ".github/agents"]
+
+[root]
+file = ".github/copilot-instructions.md"
+# Copilot CLI reads no machine-local project file.
+local_file = "none"
+# The copilot preset reports agents=0 in the detailed header.
+omit_header_agents = true
+sections = ["header", "title", "description", "rules_inline", "context_inline"]
+
+# Path-specific instructions. Items Copilot cannot apply automatically (auto and
+# manual activation) stay inline in the root file.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".github/instructions"
+filename = "{id}.instructions.md"
+split = true
+inline_filter = "path_scoped"
+inline_unscoped = true
+dialect = "copilot"
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".github/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# The copilot preset writes name first and a double-quoted description.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".github/agents"
+filename = "{id}.agent.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description", "target", "user-invocable", "disable-model-invocation", "agents", "handoffs", "mcp-servers"]
+tools = true
+emit_model = true
+
+[model]
+field = "model"
+
+# Project servers are read from .github/mcp.json. Copilot CLI wants an explicit
+# type on every entry (stdio, http or sse), which is the VS Code entry shape under
+# the mcpServers key.
+[[sidecars]]
+kind = "mcp"
+path = ".github/mcp.json"
+format = "json"
+key = ["mcpServers"]
+dialect = "vscode"
+global_path = ".copilot/mcp-config.json"
+
+# User-scope layout: ~/.copilot.
+[global]
+root_file = ".copilot/copilot-instructions.md"
+skills_dir = ".copilot/skills"
+agents_dir = ".copilot/agents"
+rules_dir = ".copilot/instructions"

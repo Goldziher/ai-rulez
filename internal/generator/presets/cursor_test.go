@@ -626,8 +626,11 @@ func TestCursorPresetGenerator_renderMCPJSON_Transports(t *testing.T) {
 		if _, ok := entry["transport"]; ok {
 			t.Errorf("%s must not contain transport", name)
 		}
-		if _, ok := entry["type"]; ok {
-			t.Errorf("%s must not contain type", name)
+		// The root .mcp.json is shared with the mcp preset, which keys remote
+		// transport on `type`; the two must render the same bytes.
+		wantType := strings.TrimSuffix(name, "-server")
+		if entry["type"] != wantType {
+			t.Errorf("%s type = %v, want %s", name, entry["type"], wantType)
 		}
 	}
 }

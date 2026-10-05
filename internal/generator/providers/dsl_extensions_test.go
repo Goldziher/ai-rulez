@@ -375,9 +375,13 @@ func TestBuiltinGlobalPaths(t *testing.T) {
 			Sidecars: map[string]string{".amp/settings.json": j(".config/amp/settings.json")},
 		}},
 		{"pi", nil, providers.GlobalPaths{
-			RootFile: j(".pi/agent/AGENTS.md"), SkillsDir: j(".pi/agent/skills"), Sidecars: map[string]string{},
+			RootFile: j(".pi/agent/AGENTS.md"), SkillsDir: j(".pi/agent/skills"), AgentsDir: j(".pi/agent/agents"),
+			CommandsDir: j(".pi/agent/prompts"), Sidecars: map[string]string{},
 		}},
-		{"junie", nil, providers.GlobalPaths{RootFile: j(".junie/AGENTS.md"), Sidecars: map[string]string{}}},
+		{"junie", nil, providers.GlobalPaths{
+			RootFile: j(".junie/AGENTS.md"), SkillsDir: j(".junie/skills"), AgentsDir: j(".junie/agents"),
+			CommandsDir: j(".junie/commands"), Sidecars: map[string]string{".junie/mcp/mcp.json": j(".junie/mcp/mcp.json")},
+		}},
 		{"hermes", map[string]string{"HERMES_HOME": filepath.FromSlash("/data/hermes")}, providers.GlobalPaths{
 			SkillsDir: filepath.FromSlash("/data/hermes/skills"), Sidecars: map[string]string{},
 		}},

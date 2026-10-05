@@ -3,25 +3,45 @@ package testutil
 import (
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/Goldziher/ai-rulez/internal/config"
+	_ "github.com/Goldziher/ai-rulez/internal/generator/presets"   // register the Go-implemented presets
+	_ "github.com/Goldziher/ai-rulez/internal/generator/providers" // register the declarative presets
 )
 
 // V4 TOML Configuration Fixtures
 
-const V4FullConfigTOML = `version = "4.0"
+// AllV4Presets lists every built-in preset the full fixture enables: each
+// per-tool preset plus the shared mcp preset, derived from the registry so a new
+// preset is covered without editing this file.
+func AllV4Presets() []string {
+	return append(config.IndividualPresetNames(), string(config.PresetMCP))
+}
+
+func quotedPresetList(presets []string) string {
+	quoted := make([]string, len(presets))
+	for i, preset := range presets {
+		quoted[i] = strconv.Quote(preset)
+	}
+	return "[" + strings.Join(quoted, ", ") + "]"
+}
+
+// V4FullConfigTOML enables every built-in preset (see AllV4Presets).
+var V4FullConfigTOML = strings.Replace(v4FullConfigTemplate, "@PRESETS@", quotedPresetList(AllV4Presets()), 1)
+
+const v4FullConfigTemplate = `version = "4.0"
 name = "v4-test-project"
 description = "Full V4 test configuration with all presets"
 gitignore = false
 default = "full"
 builtins = false
 
-presets = [
-  "claude", "cursor", "devin", "copilot", "gemini",
-  "cline", "junie", "codex", "opencode",
-  "amp", "antigravity", "mcp", "xum", "pi"
-]
+presets = @PRESETS@
 
 [header]
 style = "compact"

@@ -91,7 +91,7 @@ func TestAgentsMD_PresetFileSets(t *testing.T) {
 			name:    "antigravity",
 			presets: []string{"antigravity"},
 			want: join(skills, []string{
-				".agents/agents/helper.md", ".agents/rules/go-style.md", ".agents/settings.json", ".mcp.json", "AGENTS.md",
+				".agents/agents/helper.md", ".agents/rules/go-style.md", ".agents/mcp_config.json", ".agents/settings.json", ".mcp.json", "AGENTS.md",
 			}),
 		},
 		{
@@ -103,7 +103,7 @@ func TestAgentsMD_PresetFileSets(t *testing.T) {
 			name:    "gemini and antigravity",
 			presets: []string{"gemini", "antigravity"},
 			want: join(skills, []string{
-				".agents/agents/helper.md", ".agents/rules/go-style.md", ".agents/settings.json", ".gemini/agents/helper.md",
+				".agents/agents/helper.md", ".agents/rules/go-style.md", ".agents/mcp_config.json", ".agents/settings.json", ".gemini/agents/helper.md",
 				".gemini/settings.json", ".mcp.json", "AGENTS.md",
 			}),
 		},

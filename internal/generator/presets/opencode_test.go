@@ -315,6 +315,7 @@ func TestOpencodePresetGenerator_GetOutputPaths(t *testing.T) {
 		filepath.Join("/base", ".opencode"),
 		filepath.Join("/base", ".opencode", "skills"),
 		filepath.Join("/base", ".opencode", "agents"),
+		filepath.Join("/base", ".opencode", "commands"),
 	}
 
 	if len(paths) != len(wantPaths) {

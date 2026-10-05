@@ -1,0 +1,88 @@
+# oh-my-pi (omp) provider spec.
+#
+# omp reads the repository-root AGENTS.md (its agents-md provider) and the
+# native .omp/ directory. Rules live in .omp/rules/*.md; omp only surfaces a rule
+# that is alwaysApply or carries a description, so every activation mode writes
+# one of the two. Skills are .omp/skills/{id}/SKILL.md, agents .omp/agents/*.md
+# (name and description required), commands .omp/commands/*.md and MCP servers
+# .omp/mcp.json with type stdio|http|sse. .omp/AGENTS.md is not written: it would
+# shadow the shared root AGENTS.md.
+
+name = "omp"
+display_name = "oh-my-pi"
+
+directories = [".omp", ".omp/rules", ".omp/skills", ".omp/agents", ".omp/commands"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".omp/rules"
+filename = "{id}.md"
+split = true
+
+[outputs.rules.activation]
+always = { alwaysApply = true }
+glob = { globs = "{globs_list}", description = "Applies to {globs}" }
+auto = { description = "{description}" }
+manual = { description = "{name}" }
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".omp/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".omp/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+emit_model = true
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".omp/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+[[sidecars]]
+kind = "mcp"
+dialect = "vscode"
+path = ".omp/mcp.json"
+format = "json"
+key = ["mcpServers"]
+global_path = ".omp/agent/mcp.json"
+emit_when = "has_mcp_servers"
+
+# The default profile keeps user config under ~/.omp/agent.
+[global]
+root_file = ".omp/agent/AGENTS.md"
+skills_dir = ".omp/agent/skills"
+agents_dir = ".omp/agent/agents"
+commands_dir = ".omp/agent/commands"
+rules_dir = ".omp/agent/rules"

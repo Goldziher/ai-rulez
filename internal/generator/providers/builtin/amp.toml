@@ -2,8 +2,8 @@
 #
 # Replaces the hand-written internal/generator/presets/amp.go. Amp reads
 # project guidance from AGENTS.md and supports per-agent and per-skill
-# files. Global effort is emitted via .amp/settings.json with the
-# `amp.anthropic.effort` key. Amp caps xhigh→high (it does not accept
+# files. Global effort (the `amp.anthropic.effort` key) and the MCP servers
+# (the flat `amp.mcpServers` key) are emitted via .amp/settings.json. Amp caps xhigh→high (it does not accept
 # xhigh at the moment); max passes through.
 
 name = "amp"
@@ -26,8 +26,12 @@ resources = true
 [outputs.skills.body]
 sections = ["frontmatter", "content", "resource_index"]
 
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
 [outputs.skills.frontmatter]
 fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
 
 [outputs.agents]
 mode = "per_item_file"
@@ -59,7 +63,7 @@ max = "max"
 kind = "amp_settings_json"
 path = ".amp/settings.json"
 global_path = ".config/amp/settings.json"
-emit_when = "has_resolved_effort"
+emit_when = "has_resolved_effort_or_mcp_servers"
 
 # User-scope layout: Amp keeps its memory and settings under ~/.config/amp and
 # shares skills through ~/.config/agents.

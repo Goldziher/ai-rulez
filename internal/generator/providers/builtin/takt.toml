@@ -1,0 +1,50 @@
+# Takt provider spec.
+#
+# Takt composes workflows from Markdown facets under .takt/facets: policies
+# (rules), instructions (commands), knowledge (skills) and personas (agents).
+# Facet files are plain Markdown without frontmatter and Takt has no root
+# instructions file, so every rule becomes a policy file. Takt keeps MCP server
+# definitions inside workflow YAML, so no MCP document is written.
+
+name = "takt"
+display_name = "Takt"
+
+directories = [".takt/facets/policies", ".takt/facets/instructions", ".takt/facets/knowledge", ".takt/facets/personas"]
+
+[outputs.rules]
+mode = "per_item_file"
+dir = ".takt/facets/policies"
+filename = "{id}.md"
+split = true
+always_files = true
+dialect = "junie"
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".takt/facets/knowledge"
+filename = "{id}.md"
+
+[outputs.skills.body]
+sections = ["content"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".takt/facets/personas"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["content"]
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".takt/facets/instructions"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["content"]
+
+[global]
+rules_dir = ".takt/facets/policies"
+skills_dir = ".takt/facets/knowledge"
+agents_dir = ".takt/facets/personas"
+commands_dir = ".takt/facets/instructions"
