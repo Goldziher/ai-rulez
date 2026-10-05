@@ -117,7 +117,7 @@ func runUsageRecord(in io.Reader) error {
 		}
 		logPath = filepath.Join(root, ".ai-rulez", "local", "usage.jsonl")
 	}
-	_, err := usage.Record(in, usage.RecordOptions{
+	entry, err := usage.Record(in, usage.RecordOptions{
 		LogPath:     logPath,
 		SinkCommand: usageSinkCommand,
 		IndexPath:   usageIndex,
@@ -127,6 +127,7 @@ func runUsageRecord(in io.Reader) error {
 		Served:      usageServed,
 		SaltPath:    usageSalt,
 	})
+	emitUsageTelemetry(entry)
 	return err
 }
 
