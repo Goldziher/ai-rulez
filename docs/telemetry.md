@@ -95,6 +95,8 @@ The local overlay (`config.local.*`) counts as repository scope: it is machine-l
 checkout. Network export is active only when `enabled`, `allow_network` and a valid endpoint are all present after
 this filtering, so a repository can at most switch on the local log.
 
+See the [trust model](trust-model.md) for the same rule across every knob.
+
 Precedence, highest first: kill switches (`AI_RULEZ_TELEMETRY=off`, `DO_NOT_TRACK=1`: nothing is recorded or
 exported) > environment (`AI_RULEZ_TELEMETRY`, `AI_RULEZ_TELEMETRY_ENDPOINT`, `_PROTOCOL`, `_ALLOW_NETWORK`,
 `_HEADERS_ENV` as a comma list of names, `_SERVICE_NAME`, `_SAMPLE`, `_INCLUDE_PATHS`, `_INCLUDE_SESSION`,
