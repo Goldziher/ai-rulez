@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 )
 
 const quiet = "--quiet"
@@ -138,9 +139,9 @@ func git(ctx context.Context, dir string, args ...string) error {
 		"-c", "protocol.https.allow=always", "-c", "protocol.ssh.allow=always", "-c", "protocol.file.allow=always",
 		"-c", "credential.helper=", "-c", "core.fsmonitor=false", "-c", "submodule.recurse=false",
 	}
-	cmd := exec.CommandContext(ctx, "git", append(base, args...)...) //nolint:gosec // fixed arguments; the URL follows "--" and cannot be read as an option
+	cmd := gitutil.Command(ctx, "", append(base, args...)...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=true", "GIT_CONFIG_NOSYSTEM=1", "GIT_LFS_SKIP_SMUDGE=1")
+	cmd.Env = append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0", "GIT_ASKPASS=true", "GIT_CONFIG_NOSYSTEM=1", "GIT_LFS_SKIP_SMUDGE=1")
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("git %s: %w: %s", args[0], err, strings.TrimSpace(string(out)))
 	}

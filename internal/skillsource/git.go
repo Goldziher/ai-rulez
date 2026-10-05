@@ -4,11 +4,11 @@ import (
 	"bytes"
 	"context"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/samber/oops"
 )
@@ -23,7 +23,7 @@ const (
 	kindHead   = "head"
 )
 
-func gitEnv() []string { return append(os.Environ(), "GIT_TERMINAL_PROMPT=0") }
+func gitEnv() []string { return append(gitutil.Env(nil), "GIT_TERMINAL_PROMPT=0") }
 
 func injectToken(u, token string) string {
 	if token == "" {
@@ -38,8 +38,7 @@ func injectToken(u, token string) string {
 }
 
 func runGit(ctx context.Context, dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", args...) //nolint:gosec // arguments are built from validated config, not shell input
-	cmd.Dir = dir
+	cmd := gitutil.Command(ctx, dir, args...)
 	cmd.Env = gitEnv()
 	var out, errOut bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errOut
