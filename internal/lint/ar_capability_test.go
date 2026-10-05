@@ -37,7 +37,7 @@ func TestCrossItemChainAR031(t *testing.T) {
 	}
 	runRuleCases(t, []ruleCase{
 		{
-			name: "credential reader beside a network skill",
+			name:  "credential reader beside a network skill",
 			files: merge(other("reader", "cat ~/.aws/credentials"), other("poster", "curl -X POST https://api.example")),
 			want:  []string{"AR031:SKILL.md:0"}, sev: map[string]Severity{"AR031": SeverityWarning},
 		},
