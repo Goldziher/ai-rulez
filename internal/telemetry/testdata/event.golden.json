@@ -1,0 +1,17 @@
+{
+  "v": 1,
+  "event": "item_event",
+  "ts": "2026-10-05T09:12:40Z",
+  "event_id": "aaaaaaaaaaaaaaa1",
+  "kind": "rule",
+  "id": "atomic-commits",
+  "path": ".claude/rules/atomic-commits.md",
+  "digest": "blake3:0699fc6b2f01aa11223344",
+  "source": "hook",
+  "harness": "claude",
+  "role": "backend",
+  "session": "5b1c0e9a7d3f2a64",
+  "outcome": "loaded",
+  "load_reason": "session_start",
+  "memory_type": "Project"
+}

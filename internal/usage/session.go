@@ -78,3 +78,13 @@ func loadSalt(path string) string {
 	}
 	return salt
 }
+
+// LoadSalt returns the session-hash salt for a salt file path (or the
+// AI_RULEZ_USAGE_SALT variable), creating the file with mode 0600 when missing.
+// It returns "" when no salt can be obtained.
+func LoadSalt(path string) string { return loadSalt(path) }
+
+// DefaultSaltPath is the salt file beside a usage log.
+func DefaultSaltPath(logPath string) string {
+	return filepath.Join(filepath.Dir(logPath), saltFileName)
+}
