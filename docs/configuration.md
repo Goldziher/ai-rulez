@@ -380,8 +380,8 @@ migrate = "name-only"
 
 ### `lock`
 
-`[lock]` tunes how strictly `ai-rulez.lock` is enforced: `enforce` (default `false`) makes `validate --strict`
-report content drift (or an unreadable lock) as `AR981` / `AR982` and makes `generate --locked` require content pins (`lock --check` always does); `include_outputs`
+`[lock]` tunes how strictly `ai-rulez.lock` is enforced: `enforce` (default `true` whenever `ai-rulez.lock` exists, `enforce = false` opts out) makes `validate --strict`
+report content drift (or an unreadable lock) as `AR981` / `AR982`, makes `generate` refuse a remote include or installed skill the lock does not pin (and `AR010` an error), and makes `generate --locked` require content pins (`lock --check` always does); `include_outputs`
 (default `true`) pins generated outputs; `scope` is `all` (default) or `skills`. See [Lock file](lockfile.md).
 
 ### `scopes`

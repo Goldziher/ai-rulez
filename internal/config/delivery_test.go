@@ -162,7 +162,8 @@ trust = "warn"
 	require.NoError(t, err)
 	assert.Equal(t, "served", cfg.Skills.Delivery)
 	assert.Equal(t, "both", cfg.DomainSettings["billing"].Delivery)
-	assert.True(t, cfg.Lock.Enforce)
+	require.NotNil(t, cfg.Lock.Enforce)
+	assert.True(t, *cfg.Lock.Enforce)
 	require.Len(t, cfg.SkillSources, 1)
 	assert.Equal(t, SkillSourceConfig{
 		Name: "team", URL: "git+https://example.com/org/skills", Ref: "v1.2.0", Path: "skills",
