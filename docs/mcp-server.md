@@ -356,7 +356,7 @@ so `git@host:org/repo.git` and `https://user@host/...` keep their user info. The
 
 ### Security scan
 
-Every served skill is scanned before it is served, with the rules of `validate --strict --security` (secrets,
+Every served skill is scanned before it is served, with the rules of `ai-rulez scan` (secrets,
 hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-tools`, encoded blobs) over
 `SKILL.md` and every text file. A skill that fails is not served: it is absent from `resources/list`,
 `skills/list` and `find_skill`, a warning names the finding on stderr, and `load_skill` says why. Inline
@@ -364,7 +364,7 @@ hidden characters, prompt-injection phrases, risky shell, unrestricted `allowed-
 
 | Level | Blocks |
 | ----- | ------ |
-| `error` | Any finding (every finding counts as an error). Default for source skills and for installed skills. |
+| `error` | Any finding (every finding counts as an error). Default for source skills and for skills installed from a git repository (`lint.security.scan_imports = "warn"` lowers installed skills to `warn`). |
 | `warn` | Findings that are errors by their own severity (secrets, hidden characters, risky shell). Default for skills authored in the project. |
 
 ### Lock enforcement
