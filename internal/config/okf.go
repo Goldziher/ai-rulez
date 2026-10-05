@@ -19,7 +19,7 @@ const DefaultOKFDir = "docs/okf"
 const PresetOKF = "okf"
 
 // okfKinds are the values accepted in okf.include.
-var okfKinds = []string{"rules", "context", "skills", "agents", "commands", "checks"}
+var okfKinds = []string{rulesDir, contextDir, skillsDir, agentsDir, commandsDir, "checks"}
 
 // OKFConfig configures the Open Knowledge Format bundle written by the okf
 // preset and linted by `validate --strict`.
