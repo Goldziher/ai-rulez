@@ -1,6 +1,7 @@
 package evals
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -155,19 +156,21 @@ func runCommandAssertion(a *Assertion, workDir string, opts GradeOptions) string
 	if timeout <= 0 {
 		timeout = 60 * time.Second
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
 	var cmd *exec.Cmd
 	if runtime.GOOS == "windows" {
-		cmd = exec.Command("cmd", "/C", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
+		cmd = exec.CommandContext(ctx, "cmd", "/C", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
 	} else {
-		cmd = exec.Command("sh", "-c", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
+		cmd = exec.CommandContext(ctx, "sh", "-c", a.Command) //nolint:gosec // authored eval command, gated by --allow-exec
 	}
 	cmd.Dir = workDir
+	killTreeOnCancel(cmd)
 	if err := cmd.Start(); err != nil {
 		return fmt.Sprintf("command did not run: %v", err)
 	}
-	timer := time.AfterFunc(timeout, func() { _ = cmd.Process.Kill() }) //nolint:errcheck // the process may already have exited
 	err := cmd.Wait()
-	timer.Stop()
+	killTree(cmd) // stragglers left behind by a command that exited
 	want := 0
 	if a.ExitCode != nil {
 		want = *a.ExitCode
