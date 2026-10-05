@@ -139,6 +139,15 @@ func (g *Generator) CheckDrift(profile string) ([]Drift, error) {
 	for _, stale := range g.staleManifestFiles(outputs) {
 		drift = append(drift, Drift{Path: g.relSlash(stale), Kind: DriftOrphan})
 	}
+	// A merged document that still holds what an earlier run wrote and this one
+	// no longer does (a role or setting that was removed) is rewritten by generate.
+	for _, edit := range g.planUnmerge(outputs, false) {
+		kind := DriftStale
+		if edit.delete {
+			kind = DriftOrphan
+		}
+		drift = append(drift, Drift{Path: edit.rel, Kind: kind})
+	}
 	sortDrift(drift)
 	return drift, nil
 }

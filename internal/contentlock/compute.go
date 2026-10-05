@@ -59,6 +59,10 @@ type Snapshot struct {
 	Options Options
 	Items   []lockfile.Item
 	Outputs []lockfile.OutputPin
+	// Problems are things that could not be pinned (for example a hook script
+	// outside the project). Compare reports each as a lock-scope change, so a
+	// check fails on them instead of the pinning aborting.
+	Problems []string
 }
 
 func (o Options) scope() string {
@@ -76,6 +80,7 @@ func Compute(cfg *config.Config, opts Options) (*Snapshot, error) {
 		return nil, err
 	}
 	snap.Items = c.items
+	snap.Problems = c.problems
 	sort.SliceStable(snap.Items, func(i, j int) bool { return itemLess(snap.Items[i], snap.Items[j]) })
 	disambiguate(snap.Items)
 	if opts.IncludeOutputs {
@@ -105,15 +110,16 @@ func itemLess(a, b lockfile.Item) bool {
 }
 
 // disambiguate suffixes the id of a second item with the same kind, domain and
-// id ("#2"), in path order, so every item has a unique key.
+// id ("#2", "#3", ...), in path order, so every item has a unique key even when
+// a real id already ends in such a suffix.
 func disambiguate(items []lockfile.Item) {
-	seen := map[string]int{}
+	used := map[string]bool{}
 	for i := range items {
-		key := items[i].Key()
-		seen[key]++
-		if n := seen[key]; n > 1 {
-			items[i].ID += "#" + strconv.Itoa(n)
+		orig := items[i].ID
+		for n := 2; used[items[i].Key()]; n++ {
+			items[i].ID = orig + "#" + strconv.Itoa(n)
 		}
+		used[items[i].Key()] = true
 	}
 }
 
@@ -121,6 +127,8 @@ type collector struct {
 	cfg   *config.Config
 	scope string
 	items []lockfile.Item
+	// problems are unpinnable declarations, see Snapshot.Problems.
+	problems []string
 }
 
 func (c *collector) wants(kind string) bool {
@@ -213,7 +221,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 	}
 	mode := ModeRegular
 	if info, statErr := os.Stat(cf.Path); statErr == nil {
-		mode = ModeFor(uint32(info.Mode().Perm()))
+		mode = fileMode(cf.Path, info)
 	}
 	leaves := []Leaf{{Path: filepath.Base(cf.Path), Mode: mode, Data: primary}}
 	dir := filepath.Dir(cf.Path)
@@ -223,7 +231,7 @@ func (c *collector) addFile(kind, domain string, cf *config.ContentFile) error {
 		if disk, readErr := os.ReadFile(abs); readErr == nil {
 			data = disk
 			if info, statErr := os.Stat(abs); statErr == nil {
-				resMode = ModeFor(uint32(info.Mode().Perm()))
+				resMode = fileMode(abs, info)
 			}
 		}
 		leaves = append(leaves, Leaf{Path: res.RelPath, Mode: resMode, Data: data})
@@ -258,43 +266,9 @@ func dirOf(p string) string {
 func (c *collector) collectDeclared() error {
 	ordinal := map[string]int{}
 	for i := range c.cfg.Hooks {
-		g := &c.cfg.Hooks[i]
-		matcher := g.Matcher
-		if matcher == "" {
-			matcher = "*"
-		}
-		base := g.Event + ":" + matcher
-		id := fmt.Sprintf("%s:%d", base, ordinal[base])
-		ordinal[base]++
-		data, err := canonicalJSON(g)
-		if err != nil {
+		if err := c.collectHook(&c.cfg.Hooks[i], ordinal); err != nil {
 			return err
 		}
-		leaves := []Leaf{{Path: "hook.json", Mode: ModeRegular, Data: data}}
-		for _, action := range g.Hooks {
-			if action.Script == "" {
-				continue
-			}
-			rel := filepath.ToSlash(filepath.Clean(action.Script))
-			abs := filepath.Join(c.cfg.BaseDir, filepath.FromSlash(rel))
-			leaf := Leaf{Path: "script/" + strings.TrimPrefix(rel, "./"), Mode: ModeRegular}
-			if disk, readErr := os.ReadFile(abs); readErr == nil {
-				leaf.Data = disk
-				if info, statErr := os.Stat(abs); statErr == nil {
-					leaf.Mode = ModeFor(uint32(info.Mode().Perm()))
-				}
-			} else {
-				leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
-			}
-			if !containsPath(leaves, leaf.Path) {
-				leaves = append(leaves, leaf)
-			}
-		}
-		digest, err := TreeDigest(KindHook, leaves)
-		if err != nil {
-			return err
-		}
-		c.items = append(c.items, lockfile.Item{Kind: KindHook, ID: id, Digest: digest})
 	}
 	for i := range c.cfg.Roles {
 		data, err := canonicalJSON(&c.cfg.Roles[i])
@@ -308,6 +282,56 @@ func (c *collector) collectDeclared() error {
 		c.items = append(c.items, lockfile.Item{Kind: KindRole, ID: c.cfg.Roles[i].Name, Digest: digest})
 	}
 	return c.collectSettings()
+}
+
+// collectHook pins one [[hooks]] group and the script files it runs.
+func (c *collector) collectHook(g *config.HookGroup, ordinal map[string]int) error {
+	matcher := g.Matcher
+	if matcher == "" {
+		matcher = "*"
+	}
+	base := g.Event + ":" + matcher
+	id := fmt.Sprintf("%s:%d", base, ordinal[base])
+	ordinal[base]++
+	data, err := canonicalJSON(g)
+	if err != nil {
+		return err
+	}
+	leaves := []Leaf{{Path: "hook.json", Mode: ModeRegular, Data: data}}
+	for _, action := range g.Hooks {
+		if action.Script == "" {
+			continue
+		}
+		rel := filepath.ToSlash(filepath.Clean(action.Script))
+		if filepath.IsAbs(action.Script) || rel == ".." || strings.HasPrefix(rel, "../") {
+			// Never read outside the project: pin the declaration only.
+			c.problems = append(c.problems, fmt.Sprintf("hook %s script %q is outside the project, so its content cannot be pinned; move it into the project", id, action.Script))
+			leaf := Leaf{Path: "outside/" + outsideName(rel), Mode: ModeRegular, Data: []byte(action.Script)}
+			if !containsPath(leaves, leaf.Path) {
+				leaves = append(leaves, leaf)
+			}
+			continue
+		}
+		abs := filepath.Join(c.cfg.BaseDir, filepath.FromSlash(rel))
+		leaf := Leaf{Path: "script/" + strings.TrimPrefix(rel, "./"), Mode: ModeRegular}
+		if disk, readErr := os.ReadFile(abs); readErr == nil {
+			leaf.Data = disk
+			if info, statErr := os.Stat(abs); statErr == nil {
+				leaf.Mode = fileMode(abs, info)
+			}
+		} else {
+			leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
+		}
+		if !containsPath(leaves, leaf.Path) {
+			leaves = append(leaves, leaf)
+		}
+	}
+	digest, err := TreeDigest(KindHook, leaves)
+	if err != nil {
+		return err
+	}
+	c.items = append(c.items, lockfile.Item{Kind: KindHook, ID: id, Digest: digest})
+	return nil
 }
 
 func (c *collector) collectSettings() error {
@@ -333,7 +357,20 @@ func (c *collector) collectSettings() error {
 			return err
 		}
 	}
+	if len(c.cfg.MCPServersRaw) > 0 {
+		// As written in the configuration (placeholders unresolved), by name.
+		servers := append([]config.MCPServer(nil), c.cfg.MCPServersRaw...)
+		sort.SliceStable(servers, func(i, j int) bool { return servers[i].Name < servers[j].Name })
+		if err := add("mcp-servers", servers); err != nil {
+			return err
+		}
+	}
 	return nil
+}
+
+// outsideName flattens a path outside the project into one valid leaf segment.
+func outsideName(rel string) string {
+	return strings.NewReplacer("/", "_", ":", "_", `\`, "_").Replace(strings.Trim(rel, "./"))
 }
 
 func containsPath(leaves []Leaf, p string) bool {
