@@ -3,6 +3,7 @@ package usage
 import (
 	"bufio"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -125,15 +126,17 @@ func RecordFeedback(skill, kind string, options FeedbackOptions) (*FeedbackEntry
 const maxNoteBytes = 64 << 10
 
 func keepNote(source, dir string, stamp time.Time, id, kind string) (string, error) {
-	data, err := os.ReadFile(source) //nolint:gosec // user-chosen note file
+	data, err := readNote(source)
 	if err != nil {
-		return "", oops.With("path", source).Wrapf(err, "read note file")
-	}
-	if len(data) > maxNoteBytes {
-		return "", oops.With("path", source).Errorf("note is larger than %d bytes", maxNoteBytes)
+		return "", err
 	}
 	if err := os.MkdirAll(dir, 0o700); err != nil {
 		return "", oops.Wrapf(err, "create notes directory")
+	}
+	// An older or hand-made directory may be world-listable; its file names carry
+	// the skill id and kind.
+	if err := os.Chmod(dir, 0o700); err != nil {
+		return "", oops.Wrapf(err, "restrict notes directory")
 	}
 	name := stamp.Format("20060102T150405Z") + "-" + id + "-" + kind + ".txt"
 	// O_EXCL keeps a second note in the same second from overwriting the first.
@@ -201,4 +204,29 @@ func FeedbackText(counts map[string]int) string {
 		}
 	}
 	return strings.Join(parts, ", ")
+}
+
+// readNote reads a note file without trusting its size: only a regular file is
+// accepted, and reading stops one byte past the limit.
+func readNote(source string) ([]byte, error) {
+	file, err := os.Open(source) //nolint:gosec // user-chosen note file
+	if err != nil {
+		return nil, oops.With("path", source).Wrapf(err, "read note file")
+	}
+	defer file.Close() //nolint:errcheck // read-only
+	info, err := file.Stat()
+	if err != nil {
+		return nil, oops.With("path", source).Wrapf(err, "read note file")
+	}
+	if !info.Mode().IsRegular() {
+		return nil, oops.With("path", source).Errorf("note file is not a regular file")
+	}
+	data, err := io.ReadAll(io.LimitReader(file, maxNoteBytes+1))
+	if err != nil {
+		return nil, oops.With("path", source).Wrapf(err, "read note file")
+	}
+	if len(data) > maxNoteBytes {
+		return nil, oops.With("path", source).Errorf("note is larger than %d bytes", maxNoteBytes)
+	}
+	return data, nil
 }
