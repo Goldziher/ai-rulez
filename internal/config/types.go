@@ -43,6 +43,7 @@ type Config struct {
 	MCP            *MCPConfig          `yaml:"mcp,omitempty" json:"mcp,omitempty" toml:"mcp,omitempty"`
 	Rules          *RulesConfig        `yaml:"rules,omitempty" json:"rules,omitempty" toml:"rules,omitempty"`
 	Lint           *LintConfig         `yaml:"lint,omitempty" json:"lint,omitempty" toml:"lint,omitempty"`
+	OKF            *OKFConfig          `yaml:"okf,omitempty" json:"okf,omitempty" toml:"okf,omitempty"`
 	Usage          *UsageConfig        `yaml:"usage,omitempty" json:"usage,omitempty" toml:"usage,omitempty"`
 	// Roles map a job to a slice of the shared content (see roles.go); RoleManifest
 	// is the [role_manifest] table, kept apart because [[roles]] is an array.
