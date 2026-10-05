@@ -277,3 +277,39 @@ func TestFileAssertions_DoNotFollowSymlinksOutOfTheWorkDir(t *testing.T) {
 	exists := false
 	assert.Empty(t, check(Assertion{Type: AssertFileExists, Path: "missing.txt", Exists: &exists}))
 }
+
+func TestDigests_IgnoreOSJunkAndResultsButNotSymlinkTargets(t *testing.T) {
+	cfg := t.TempDir()
+	writeSkill(t, cfg, "deploy", "body", twoCases)
+	skills, err := FindSkills(cfg)
+	require.NoError(t, err)
+	skill := &skills[0]
+	skillBefore, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	casesBefore, err := CasesDigest(skill)
+	require.NoError(t, err)
+
+	evalDir := filepath.Join(skill.Dir, "evals")
+	for _, junk := range []string{filepath.Join(skill.Dir, ".DS_Store"), filepath.Join(evalDir, ".DS_Store"), filepath.Join(evalDir, "._main.eval.yaml")} {
+		require.NoError(t, os.WriteFile(junk, []byte("junk"), 0o600))
+	}
+	require.NoError(t, os.MkdirAll(filepath.Join(evalDir, "results"), 0o750))
+	require.NoError(t, os.WriteFile(filepath.Join(evalDir, "results", "run.json"), []byte("{}"), 0o600))
+	skillAfter, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	casesAfter, err := CasesDigest(skill)
+	require.NoError(t, err)
+	assert.Equal(t, skillBefore, skillAfter)
+	assert.Equal(t, casesBefore, casesAfter)
+
+	// a symlink counts by its target, so retargeting it is a change
+	require.NoError(t, os.Symlink("SKILL.md", filepath.Join(skill.Dir, "alias.md")))
+	linked, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	assert.NotEqual(t, skillBefore, linked)
+	require.NoError(t, os.Remove(filepath.Join(skill.Dir, "alias.md")))
+	require.NoError(t, os.Symlink("other.md", filepath.Join(skill.Dir, "alias.md")))
+	retargeted, err := SkillDigest(skill.Dir)
+	require.NoError(t, err)
+	assert.NotEqual(t, linked, retargeted)
+}
