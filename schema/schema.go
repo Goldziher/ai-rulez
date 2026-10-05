@@ -165,7 +165,9 @@ func formatError(field string, err *jsonschema.EvaluationError, path string) str
 		}
 	}
 
-	return fmt.Sprintf("- %s: %s", field, err.Message)
+	// Message is the template ("Additional property {property} ..."); Error
+	// substitutes the parameters so the key name is printed, not the placeholder.
+	return fmt.Sprintf("- %s: %s", field, err.Error())
 }
 
 func extractNestedErrors(list *jsonschema.List, parentPath string) []string {
