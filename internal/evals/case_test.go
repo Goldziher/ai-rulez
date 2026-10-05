@@ -255,3 +255,25 @@ func TestFindSkills_RejectsEvalDirThatEscapesTheProject(t *testing.T) {
 	require.NotEmpty(t, problems)
 	assert.Contains(t, problems[0].Message, "outside")
 }
+
+func TestFileAssertions_DoNotFollowSymlinksOutOfTheWorkDir(t *testing.T) {
+	work := t.TempDir()
+	outside := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(outside, "secret.txt"), []byte("hunter2"), 0o600))
+	require.NoError(t, os.Symlink(filepath.Join(outside, "secret.txt"), filepath.Join(work, "out.txt")))
+	require.NoError(t, os.Symlink(outside, filepath.Join(work, "dir")))
+	require.NoError(t, os.WriteFile(filepath.Join(work, "real.txt"), []byte("hello"), 0o600))
+	require.NoError(t, os.WriteFile(filepath.Join(work, "big.txt"), make([]byte, maxCaseFileBytes+1), 0o600))
+
+	r := &Result{WorkDir: work}
+	check := func(a Assertion) string { return checkAssertion(&a, r, GradeOptions{}) }
+
+	assert.Empty(t, check(Assertion{Type: AssertContains, Path: "real.txt", Value: "hello"}))
+	assert.NotEmpty(t, check(Assertion{Type: AssertContains, Path: "out.txt", Value: "hunter2"}), "a symlink to a host file is not read")
+	assert.NotEmpty(t, check(Assertion{Type: AssertContains, Path: "dir/secret.txt", Value: "hunter2"}))
+	assert.NotEmpty(t, check(Assertion{Type: AssertFileExists, Path: "out.txt"}), "existence of host files is not leaked")
+	assert.NotEmpty(t, check(Assertion{Type: AssertFileExists, Path: "dir/secret.txt"}))
+	assert.NotEmpty(t, check(Assertion{Type: AssertContains, Path: "big.txt", Value: "x"}), "oversized files are refused")
+	exists := false
+	assert.Empty(t, check(Assertion{Type: AssertFileExists, Path: "missing.txt", Exists: &exists}))
+}
