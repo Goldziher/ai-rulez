@@ -291,6 +291,27 @@ own content; root content is exported as the generator sees it. The bundle is co
 never ignores it, and files are written verbatim with no generated-by banner. `generate --check` and `doctor` report a
 hand-edited, missing or stale bundle file as drift, and `generate` removes concept files whose source is gone.
 
+## OKF bundles as sources
+
+An OKF bundle can be used directly as an include, so a shared knowledge base feeds `generate` without a one-time
+import:
+
+```toml
+[[includes]]
+name = "team-kb"
+source = "https://github.com/acme/knowledge"   # or a local directory
+ref = "v1.2"                                     # git only; pin a commit for reproducibility
+path = "bundles/platform"                        # directory of the bundle inside the source
+format = "okf"
+include = ["rules", "skills"]                    # optional kind filter
+```
+
+At load time the bundle is converted with the same mapping as `import okf` (into a temporary directory that is
+discarded) and merged like any other include, with the usual precedence. The AR001-AR011 security scan runs on the
+converted text; a bundle with an error-level finding is refused as a whole, and the include is skipped with an error.
+OKF includes are not recorded in `ai-rulez.lock` (use a commit SHA as `ref`). `install_to` places the content in a
+domain like other includes. Configure with `includes[].format`; the only value is `okf`.
+
 ## Security
 
 - Import refuses a bundle containing symlinks or paths that differ only in case, writes only below the target
