@@ -793,6 +793,10 @@
           "type": "boolean",
           "description": "Add the repo-relative path of a loaded item to exported events. Default false. Ignored in a repository config."
         },
+        "include_session": {
+          "type": "boolean",
+          "description": "Add the salted session hash to exported log records (never to metric labels). Default false. Ignored in a repository config."
+        },
         "salt_file": {
           "type": "string",
           "description": "File holding the session-hash salt. Ignored in a repository config."
