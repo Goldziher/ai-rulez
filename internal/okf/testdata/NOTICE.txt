@@ -1,0 +1,6 @@
+testdata/acme_retail is a copy of bundles/acme_retail from
+https://github.com/GoogleCloudPlatform/open-knowledge-format (commit
+ad30107c31c06aec8a7d5636e0d1058118604e6f), without viz.html.
+It is licensed under the Apache License 2.0, Copyright Google LLC; the
+license text is in https://github.com/GoogleCloudPlatform/open-knowledge-format/blob/main/LICENSE.md.
+It is used only as a test fixture for reading and validating official OKF v0.2 bundles.

@@ -156,7 +156,8 @@ presets = [
   "antigravity",  # → .agents/ (rules/, skills/, agents/), GEMINI.md
   "xum",          # → AGENTS.md, .xum/skills, .xum/agents, .xum/mcp.jsonc (stdio with env as a shell prefix, http and sse MCP servers)
   "pi"            # → AGENTS.md, .agents/skills, .pi/agents, .pi/mcp.json (stdio and http MCP servers)
-  "baz"           # → AGENTS.md (root and nested), .agents/skills, .claude/agents; see baz.md
+  "baz",          # → AGENTS.md (root and nested), .agents/skills, .claude/agents; see baz.md
+  "okf"           # → docs/okf/, an Open Knowledge Format bundle of the content; see okf.md
 ]
 ```
 
@@ -1057,6 +1058,23 @@ claude = "inline"
 - **`rules.baz_scoped`**: `nested` (the default) writes the path-scoped rules and context of the `baz` preset to the `AGENTS.md` of the directory their globs point into; `root` keeps them in the root `AGENTS.md`. See [Baz](baz.md).
 
 Set `mode = "inline"` to restore the pre-4.22.0 output. Per-tool output, fallbacks and caveats are in [Rules and native rules folders](rules.md).
+
+### `okf`
+
+Settings for the opt-in `okf` preset, which keeps an [OKF](okf.md) bundle in sync with the sources:
+
+```toml
+presets = ["claude", "okf"]
+
+[okf]
+dir = "docs/okf"                                # bundle directory, relative to the project root (default)
+include = ["rules", "context", "skills"]        # kinds exported; default all of rules, context, skills, agents, commands, checks
+spec = "0.2"                                    # the only OKF spec version implemented
+```
+
+`dir` must stay inside the project and outside the configuration directory and `.git`. The bundle is committed
+documentation, so `gitignore` never ignores it, and every file is written without a generated-by banner because
+OKF requires frontmatter at the start of each concept.
 
 ### `lint`
 

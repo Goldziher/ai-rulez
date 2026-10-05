@@ -129,6 +129,7 @@ func Run(ctx context.Context, o Options) *Report {
 		checkDrift,
 		checkGitignore,
 		checkDocuments,
+		checkOKF,
 		checkHooks,
 		checkLock,
 		checkTools,

@@ -211,6 +211,28 @@ merged as `AR011` (with the scanner's severity) into the text and `--format json
 prints nothing parseable is itself reported. Because the command comes from the repository, it runs only when you
 pass `--external`.
 
+## OKF bundle checks
+
+A project that turns on the [`okf` preset](okf.md) (or sets `[okf] dir`) also has its Open Knowledge Format bundle
+linted by `validate --strict` and `doctor`. The same checks run on any third-party bundle with
+`ai-rulez okf validate <dir>`. Severities below are defaults; the spec says consumers must tolerate most of these
+(broken links, a missing or partial index), so only conformance failures and export drift are errors.
+
+| Code | Name | Default | Finds |
+| --- | --- | --- | --- |
+| AR9B0 | `okf-index-mismatch` | warning | An `index.md` entry points at a missing file, or a directory with an `index.md` has a concept or subdirectory it does not list |
+| AR9B1 | `okf-type-invalid` | error | Unparseable frontmatter, or a concept with no non-empty `type` (OKF conformance rules 1 and 2) |
+| AR9B2 | `okf-link-broken` | warning | A markdown link in a concept does not resolve to a file in the bundle |
+| AR9B3 | `okf-version-invalid` | warning | The root `okf_version` is not `MAJOR.MINOR` (info when well formed but not `0.2`) |
+| AR9B4 | `okf-orphan` | info | A concept no index entry and no link reaches (only when the bundle has an index) |
+| AR9B5 | `okf-export-drift` | error | The bundle differs from what the `okf` preset would write now (project lint only) |
+| AR9B6 | `okf-reserved-structure` | error | Frontmatter in a nested `index.md`, keys other than `okf_version` in the root one; a `log.md` heading that is not an ISO date is a warning |
+| AR9B7 | `okf-title-duplicate` | info | Two concepts in one directory share a title |
+| AR9B8 | `okf-path-unsafe` | error | A symlink, or paths differing only in case |
+| AR9B9 | `okf-lossy-mapping` | info | Reserved for import notes: `x-ai-rulez` data that could not be mapped |
+
+Severities are configured like any other code (`[lint.severity]`, `[lint.ignore]`). See [OKF](okf.md).
+
 ## JSON output
 
 ```json
