@@ -25,7 +25,7 @@ func init() {
 }
 
 // hookHandlerTypes are the handler types Claude Code documents.
-var hookHandlerTypes = []string{"command", "http", "prompt", "agent", "mcp_tool"}
+var hookHandlerTypes = []string{hookTypeCommand, transportHTTP, hookTypePrompt, hookTypeAgent, "mcp_tool"}
 
 // maxHookTimeout is the largest timeout, in seconds, that is plausible (a day).
 const maxHookTimeout = 86400
@@ -57,7 +57,7 @@ func checkHookSchema(r *runner) {
 		if json.Unmarshal(data, &root) != nil {
 			continue
 		}
-		raw, ok := root["hooks"]
+		raw, ok := root[keyHooks]
 		if !ok {
 			continue
 		}
@@ -79,7 +79,7 @@ func (r *runner) hookJSONFiles() []string {
 		files = append(files, p)
 	}
 	for _, rel := range r.tree.Paths() {
-		if path.Base(rel) == "hooks.json" && path.Base(path.Dir(rel)) == "hooks" {
+		if path.Base(rel) == "hooks.json" && path.Base(path.Dir(rel)) == keyHooks {
 			files = append(files, filepath.Join(r.tree.Top, filepath.FromSlash(rel)))
 		}
 	}
@@ -125,9 +125,7 @@ func configHookProblems(groups []config.HookGroup) []hookProblem {
 			hasIf = hasIf || a.If != ""
 		}
 		matcher := g.Matcher != "" || len(g.Matchers) > 0
-		for _, p := range eventProblems(g.Event, matcher, hasIf) {
-			out = append(out, p)
-		}
+		out = append(out, eventProblems(g.Event, matcher, hasIf)...)
 		for _, a := range g.Hooks {
 			if a.Type != "" && !slices.Contains(hookHandlerTypes, a.Type) {
 				out = append(out, hookProblem{"type", g.Event, quoteNeedle(g.Event), fmt.Sprintf("%s hook has unknown type %q (use %s)", g.Event, a.Type, strings.Join(hookHandlerTypes, ", "))})
@@ -143,7 +141,7 @@ func configHookProblems(groups []config.HookGroup) []hookProblem {
 func jsonHookProblems(raw json.RawMessage) []hookProblem {
 	var byEvent map[string]json.RawMessage
 	if json.Unmarshal(raw, &byEvent) != nil {
-		return []hookProblem{{"shape", "", `"hooks"`, `"hooks" must be an object keyed by event name`}}
+		return []hookProblem{{kindShape, "", `"hooks"`, `"hooks" must be an object keyed by event name`}}
 	}
 	events := make([]string, 0, len(byEvent))
 	for e := range byEvent {
@@ -154,7 +152,7 @@ func jsonHookProblems(raw json.RawMessage) []hookProblem {
 	for _, event := range events {
 		var groups []map[string]json.RawMessage
 		if json.Unmarshal(byEvent[event], &groups) != nil {
-			out = append(out, hookProblem{"shape", event, quoteNeedle(event), fmt.Sprintf("%s must be a list of matcher groups ({\"matcher\": ..., \"hooks\": [...]})", event)})
+			out = append(out, hookProblem{kindShape, event, quoteNeedle(event), fmt.Sprintf("%s must be a list of matcher groups ({\"matcher\": ..., \"hooks\": [...]})", event)})
 			continue
 		}
 		for _, g := range groups {
@@ -176,8 +174,8 @@ func jsonGroupProblems(event string, g map[string]json.RawMessage) []hookProblem
 		}
 	}
 	var handlers []map[string]json.RawMessage
-	if h, ok := g["hooks"]; !ok || json.Unmarshal(h, &handlers) != nil {
-		out = append(out, hookProblem{"shape", event, quoteNeedle(event), fmt.Sprintf("a %s group needs a \"hooks\" list of handlers", event)})
+	if h, ok := g[keyHooks]; !ok || json.Unmarshal(h, &handlers) != nil {
+		out = append(out, hookProblem{kindShape, event, quoteNeedle(event), fmt.Sprintf("a %s group needs a \"hooks\" list of handlers", event)})
 	}
 	hasIf := false
 	for _, h := range handlers {
@@ -221,7 +219,7 @@ func jsonHandlerProblems(event string, h map[string]json.RawMessage) []hookProbl
 	case !slices.Contains(hookHandlerTypes, typ):
 		add("type", needleOf("type"), "a %s handler has unknown type %q (use %s)", event, typ, strings.Join(hookHandlerTypes, ", "))
 	default:
-		field := map[string]string{"command": "command", "http": "url", "prompt": "prompt", "agent": "prompt", "mcp_tool": "tool"}[typ]
+		field := map[string]string{hookTypeCommand: hookTypeCommand, transportHTTP: "url", hookTypePrompt: hookTypePrompt, hookTypeAgent: hookTypePrompt, "mcp_tool": "tool"}[typ]
 		if v, has := jsonString(h, field); !has || strings.TrimSpace(v) == "" {
 			add("field", quoteNeedle(event), "a %s %s handler needs a non-empty %q", event, typ, field)
 		}

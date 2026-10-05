@@ -39,7 +39,7 @@ func importsIn(d doc) []importRef {
 			if p == "" || strings.Contains(p, "@") || strings.HasPrefix(p, "~") || strings.HasPrefix(p, "/") || strings.Contains(p, "://") || placeholderRe.MatchString(p) {
 				continue // home and absolute imports depend on the machine
 			}
-			if !(strings.HasPrefix(p, "./") || strings.HasPrefix(p, "../") || importExt[strings.ToLower(filepath.Ext(p))]) {
+			if !strings.HasPrefix(p, "./") && !strings.HasPrefix(p, "../") && !importExt[strings.ToLower(filepath.Ext(p))] {
 				continue
 			}
 			out = append(out, importRef{line: l.No, path: p})

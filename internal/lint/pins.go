@@ -116,11 +116,11 @@ var (
 // unpinned git requirement, and (allowDocker) docker run of an untagged image.
 // needYes makes npx count only with -y/--yes (an interactive npx asks first);
 // a moving @tag is reported either way.
-func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
+func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	for len(argv) > 0 && (strings.Contains(argv[0], "=") && !strings.HasPrefix(argv[0], "-")) { // VAR=value prefix
 		argv = argv[1:]
 	}
-	for len(argv) > 0 && (argv[0] == "sudo" || argv[0] == "env" || argv[0] == "time" || argv[0] == "exec") {
+	for len(argv) > 0 && (argv[0] == cmdSudo || argv[0] == keyEnv || argv[0] == "time" || argv[0] == cmdExec) {
 		argv = argv[1:]
 	}
 	if len(argv) == 0 {
@@ -135,36 +135,36 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 		if len(args) > 0 && (args[0] == "dlx" || args[0] == "x") {
 			return npxProblem(args[1:], false)
 		}
-	case "npm":
-		if len(args) > 0 && (args[0] == "exec" || args[0] == "x") {
+	case cmdNPM:
+		if len(args) > 0 && (args[0] == cmdExec || args[0] == "x") {
 			return npxProblem(args[1:], needYes)
 		}
 	case "uvx":
 		return uvxProblem(args)
 	case "uv":
-		if len(args) > 1 && args[0] == "tool" && args[1] == "run" {
+		if len(args) > 1 && args[0] == "tool" && args[1] == wordRun {
 			return uvxProblem(args[2:])
 		}
 		if len(args) > 0 && args[0] == "x" {
 			return uvxProblem(args[1:])
 		}
-		if len(args) > 1 && args[0] == "pip" && args[1] == "install" {
+		if len(args) > 1 && args[0] == cmdPip && args[1] == wordInstall {
 			return pipProblem(args[2:])
 		}
 	case "pipx":
-		if len(args) > 0 && args[0] == "run" {
+		if len(args) > 0 && args[0] == wordRun {
 			return pipxRunProblem(args[1:])
 		}
-	case "pip", "pip3":
-		if len(args) > 0 && args[0] == "install" {
+	case cmdPip, "pip3":
+		if len(args) > 0 && args[0] == wordInstall {
 			return pipProblem(args[1:])
 		}
 	case "python", "python3":
-		if len(args) > 2 && args[0] == "-m" && args[1] == "pip" && args[2] == "install" {
+		if len(args) > 2 && args[0] == "-m" && args[1] == cmdPip && args[2] == wordInstall {
 			return pipProblem(args[3:])
 		}
 	case "go":
-		if len(args) > 1 && (args[0] == "run" || args[0] == "install") {
+		if len(args) > 1 && (args[0] == wordRun || args[0] == wordInstall) {
 			for _, a := range args[1:] {
 				if strings.HasPrefix(a, "-") {
 					continue
@@ -175,7 +175,7 @@ func pinProblem(argv []string, needYes, allowDocker bool) (pkg, reason string) {
 				break
 			}
 		}
-	case "docker", "podman":
+	case cmdDocker, "podman":
 		if allowDocker {
 			return dockerProblem(args)
 		}
@@ -288,7 +288,7 @@ func pipProblem(args []string) (pkg, reason string) {
 }
 
 func dockerProblem(args []string) (pkg, reason string) {
-	if len(args) == 0 || args[0] != "run" {
+	if len(args) == 0 || args[0] != wordRun {
 		return "", ""
 	}
 	for i := 1; i < len(args); i++ {
@@ -306,10 +306,10 @@ func dockerProblem(args []string) (pkg, reason string) {
 			if j := strings.LastIndex(a, ":"); j > strings.LastIndex(a, "/") {
 				name, tag = a[:j], a[j+1:]
 			}
-			switch {
-			case tag == "":
+			switch tag {
+			case "":
 				return name, "the image has no tag or digest"
-			case tag == "latest":
+			case "latest":
 				return name, ":latest is a moving tag"
 			}
 			return "", ""

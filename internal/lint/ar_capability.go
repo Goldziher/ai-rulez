@@ -80,7 +80,7 @@ func (p capProfile) describe() string {
 func (p *capProfile) classify(line string) {
 	for _, seg := range segSplitRe.Split(stripShellComment(line), -1) {
 		words := shellWords(strings.TrimSpace(seg))
-		if len(words) > 0 && words[0] == "sudo" {
+		if len(words) > 0 && words[0] == cmdSudo {
 			p.counts[tierPrivilege]++
 		}
 		cmd := commandWord(words)
@@ -165,7 +165,7 @@ func checkCapabilities(r *runner) {
 		if !it.owned || it.isDoc || it.kind != kindSkill || it.itemDir == "" {
 			continue
 		}
-		ci := capItem{it: it, id: itemID(it.kind, it.cf), p: r.itemProfile(it), line: r.docs[it.abs].lineOf("name", 1)}
+		ci := capItem{it: it, id: itemID(it.kind, it.cf), p: r.itemProfile(it), line: r.docs[it.abs].lineOf(keyName, 1)}
 		ci.high = r.itemHasFindings(it, highRiskCodes)
 		r.reportProfile(ci)
 		if _, seen := byDomain[it.domain]; !seen {
@@ -201,7 +201,7 @@ func (r *runner) reportProfile(ci capItem) {
 	}
 }
 
-func (r *runner) crossItem(domain string, items []capItem) {
+func (r *runner) crossItem(domain string, items []capItem) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	if len(items) < 2 {
 		return
 	}

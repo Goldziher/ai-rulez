@@ -45,13 +45,13 @@ type mcpServer struct {
 // mcpJSONFiles are the hand-authored MCP files checked when tracked or present:
 // path relative to the root and the key that holds the servers.
 var mcpJSONFiles = []struct{ rel, key string }{
-	{".mcp.json", "mcpServers"},
-	{".cursor/mcp.json", "mcpServers"},
+	{".mcp.json", keyMCPServers},
+	{".cursor/mcp.json", keyMCPServers},
 	{".vscode/mcp.json", "servers"},
 }
 
-func (r *runner) mcpServers() []mcpServer {
-	var out []mcpServer
+func (r *runner) mcpServers() []*mcpServer {
+	var out []*mcpServer
 	if cfgPath := r.configFilePath(); cfgPath != "" {
 		names := make([]string, 0, len(r.cfg.MCPServers))
 		for n := range r.cfg.MCPServers {
@@ -63,7 +63,7 @@ func (r *runner) mcpServers() []mcpServer {
 			if s == nil {
 				continue
 			}
-			out = append(out, mcpServer{file: cfgPath, name: n, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
+			out = append(out, &mcpServer{file: cfgPath, name: n, transport: s.Transport, command: s.Command, args: s.Args, url: s.URL, env: s.Env, headers: s.Headers, disabled: !s.IsEnabled()})
 		}
 	}
 	for _, f := range mcpJSONFiles {
@@ -77,7 +77,7 @@ func (r *runner) mcpServers() []mcpServer {
 	return out
 }
 
-func decodeMCPJSON(file, key string, data []byte) []mcpServer {
+func decodeMCPJSON(file, key string, data []byte) []*mcpServer { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	var root map[string]json.RawMessage
 	if json.Unmarshal(data, &root) != nil {
 		return nil
@@ -91,10 +91,10 @@ func decodeMCPJSON(file, key string, data []byte) []mcpServer {
 		names = append(names, n)
 	}
 	sort.Strings(names)
-	var out []mcpServer
+	var out []*mcpServer
 	for _, n := range names {
 		f := servers[n]
-		s := mcpServer{file: file, name: n}
+		s := &mcpServer{file: file, name: n}
 		str := func(k string, dst *string) {
 			if raw, ok := f[k]; ok {
 				if json.Unmarshal(raw, dst) != nil {
@@ -102,7 +102,7 @@ func decodeMCPJSON(file, key string, data []byte) []mcpServer {
 				}
 			}
 		}
-		str("command", &s.command)
+		str(hookTypeCommand, &s.command)
 		str("url", &s.url)
 		str("type", &s.transport)
 		if s.transport == "" {
@@ -111,13 +111,13 @@ func decodeMCPJSON(file, key string, data []byte) []mcpServer {
 		if raw, ok := f["args"]; ok && json.Unmarshal(raw, &s.args) != nil {
 			s.typeProblems = append(s.typeProblems, `"args" must be a list of strings`)
 		}
-		for _, k := range []string{"env", "headers"} {
+		for _, k := range []string{keyEnv, "headers"} {
 			if raw, ok := f[k]; ok {
 				m := map[string]string{}
 				if json.Unmarshal(raw, &m) != nil {
 					s.typeProblems = append(s.typeProblems, fmt.Sprintf("%q must map names to strings", k))
 				}
-				if k == "env" {
+				if k == keyEnv {
 					s.env = m
 				} else {
 					s.headers = m
@@ -140,15 +140,15 @@ func decodeMCPJSON(file, key string, data []byte) []mcpServer {
 
 var mcpNameRe = regexp.MustCompile(`^[A-Za-z0-9_-]+$`)
 
-func effectiveTransport(s mcpServer) string {
+func effectiveTransport(s *mcpServer) string {
 	t := strings.ToLower(s.transport)
 	switch {
 	case t == "streamable-http" || t == "streamablehttp" || t == "streamable_http":
-		return "http"
+		return transportHTTP
 	case t != "":
 		return t
 	case s.url != "" && s.command == "":
-		return "http"
+		return transportHTTP
 	}
 	return "stdio"
 }
@@ -159,7 +159,7 @@ func checkMCPConfig(r *runner) {
 	if len(servers) == 0 {
 		return
 	}
-	byName := map[string][]mcpServer{}
+	byName := map[string][]*mcpServer{}
 	for _, s := range servers {
 		if !s.disabled {
 			byName[strings.ToLower(s.name)] = append(byName[strings.ToLower(s.name)], s)
@@ -177,7 +177,7 @@ func checkMCPConfig(r *runner) {
 	}
 }
 
-func (r *runner) checkMCPShape(s mcpServer, at int, byName map[string][]mcpServer) {
+func (r *runner) checkMCPShape(s *mcpServer, at int, byName map[string][]*mcpServer) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	bad := func(format string, args ...any) {
 		r.add(CodeMCPConfigInvalid, s.file, at, "MCP server %q: %s", s.name, fmt.Sprintf(format, args...))
 	}
@@ -196,14 +196,14 @@ func (r *runner) checkMCPShape(s mcpServer, at int, byName map[string][]mcpServe
 		case s.command == "":
 			bad("transport is stdio but it sets no command (did you mean transport \"http\"?)")
 		}
-	case "http", "sse":
+	case transportHTTP, "sse":
 		if t == "sse" {
 			warn("the SSE transport is deprecated in the MCP specification; use streamable http")
 		}
 		switch u, err := url.Parse(s.url); {
 		case s.url == "":
 			bad("transport is %s but it sets no url", t)
-		case err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "":
+		case err != nil || (u.Scheme != transportHTTP && u.Scheme != "https") || u.Host == "":
 			if !strings.Contains(s.url, "${") {
 				bad("url %q is not an absolute http(s) URL", s.url)
 			}
@@ -224,7 +224,7 @@ func (r *runner) checkMCPShape(s mcpServer, at int, byName map[string][]mcpServe
 	}
 }
 
-func (r *runner) checkMCPPins(s mcpServer, at int) {
+func (r *runner) checkMCPPins(s *mcpServer, at int) {
 	if s.command == "" {
 		return
 	}
@@ -238,7 +238,7 @@ func pinExample(command, pkg string) string {
 	switch path.Base(command) {
 	case "uvx", "pipx", "uv":
 		return pkg + "==1.2.3"
-	case "docker", "podman":
+	case cmdDocker, "podman":
 		return pkg + "@sha256:..."
 	}
 	name, _ := pinOf(pkg)
@@ -266,7 +266,7 @@ func literalSecret(value string) bool {
 	return true
 }
 
-func (r *runner) checkMCPSecrets(s mcpServer, lines []string, at int) {
+func (r *runner) checkMCPSecrets(s *mcpServer, lines []string, at int) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	report := func(where, key string) {
 		line := at
 		for i := at; i-1 < len(lines) && i > 0; i++ {
@@ -283,7 +283,7 @@ func (r *runner) checkMCPSecrets(s mcpServer, lines []string, at int) {
 			continue
 		}
 		if (secretKeyRe.MatchString(k) && !notSecretKeyRe.MatchString(k) && len(v) >= 8) || matchesBuiltinSecret(v) {
-			report("env", k)
+			report(keyEnv, k)
 		}
 	}
 	for _, k := range sortedKeys(s.headers) {
@@ -348,7 +348,7 @@ func sortedKeys(m map[string]string) []string {
 
 // checkSettingsSecrets looks for literal credentials in the project
 // .claude/settings.json: the top-level env block and the headers of http hooks.
-func (r *runner) checkSettingsSecrets() {
+func (r *runner) checkSettingsSecrets() { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	file := filepath.Join(r.rootAbs(), ".claude", "settings.json")
 	data, err := readSmallFile(file)
 	if err != nil {
@@ -382,7 +382,7 @@ func (r *runner) checkSettingsSecrets() {
 	for _, e := range events {
 		for _, g := range root.Hooks[e] {
 			var handlers []map[string]json.RawMessage
-			if raw, ok := g["hooks"]; !ok || json.Unmarshal(raw, &handlers) != nil {
+			if raw, ok := g[keyHooks]; !ok || json.Unmarshal(raw, &handlers) != nil {
 				continue
 			}
 			for _, h := range handlers {

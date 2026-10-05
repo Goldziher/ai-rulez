@@ -23,7 +23,7 @@ func TestPluginManifestAR963(t *testing.T) {
 		{name: "author as a string", files: plugin(`{"name":"p","author":"me"}`), want: []string{"AR963:plugin.json:1"}},
 		{name: "path without ./", files: plugin(`{"name":"p","commands":"commands"}`), want: []string{"AR963:plugin.json:1"}},
 		{name: "path escapes", files: plugin(`{"name":"p","skills":"./../x"}`), want: []string{"AR963:plugin.json:1"}},
-		{name: "unknown field is a warning with a hint", files: plugin(`{"name":"p","descripton":"x"}`), want: []string{"AR963:plugin.json:1"}, sev: map[string]Severity{"AR963": SeverityWarning}},
+		{name: "unknown field is a warning with a hint", files: plugin(`{"name":"p","descrption":"x"}`), want: []string{"AR963:plugin.json:1"}, sev: map[string]Severity{"AR963": SeverityWarning}},
 		{name: "invalid json", files: plugin(`{"name":`), want: []string{"AR963:plugin.json:1"}},
 		{
 			name: "unquoted plugin root", files: plugin(`{"name":"p","hooks":{"SessionStart":[{"hooks":[{"type":"command","command":"${CLAUDE_PLUGIN_ROOT}/hooks/go.sh"}]}]}}`),

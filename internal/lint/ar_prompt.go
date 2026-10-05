@@ -47,7 +47,7 @@ func scanDirectiveLabels(r *runner, t *scanText) {
 		if !t.prose(l) {
 			continue
 		}
-		if m := directiveRe.FindStringSubmatch(l.Text); m != nil && !scalarValueRe.MatchString(m[1]) {
+		if m := directiveRe.FindStringSubmatch(l.Text); len(m) > 1 && !scalarValueRe.MatchString(m[1]) {
 			r.add(CodeDirectiveLabel, t.abs, l.No, "the line starts with an uppercase privileged-looking label; a model may read it as a system or administrator message")
 		}
 	}

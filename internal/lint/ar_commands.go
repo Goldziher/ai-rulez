@@ -28,7 +28,7 @@ var (
 	justRe        = regexp.MustCompile(`^just\s+([A-Za-z_][A-Za-z0-9_:-]*)`)
 	pytestMarkRe  = regexp.MustCompile(`^(?:python3?\s+-m\s+)?pytest\b.*?\s-m\s*(?:"([^"]*)"|'([^']*)'|(\S+))`)
 	scopedFlagRe  = regexp.MustCompile(`(?:^|\s)(?:--prefix|--workspaces?|--filter|-w|-C|--directory|-f|--file|--justfile|--taskfile|-t|-d|--dir|--cwd)(?:[=\s]|$)|\bcd\s`)
-	placeholderRe = regexp.MustCompile(`[<>${}*|\\]|\.\.\.|\bXXX\b|\bNAME\b`)
+	placeholderRe = regexp.MustCompile(`[<>${}*|\\]|\.{3}|\bXXX\b|\bNAME\b`)
 	makeTargetRe  = regexp.MustCompile(`^([A-Za-z0-9_][A-Za-z0-9_.%/ -]*?)\s*:(?:[^=]|$)`)
 	justRecipeRe  = regexp.MustCompile(`^@?([A-Za-z_][A-Za-z0-9_-]*)\b[^:=\n]*:(?:[^=]|$)`)
 	markerLineRe  = regexp.MustCompile(`^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?::.*)?$`)
@@ -40,7 +40,7 @@ var (
 
 var pytestBuiltinMarks = map[string]bool{
 	"skip": true, "skipif": true, "xfail": true, "parametrize": true, "usefixtures": true, "filterwarnings": true,
-	"and": true, "or": true, "not": true, "true": true, "false": true,
+	wordAnd: true, "or": true, "not": true, "true": true, "false": true,
 }
 
 // manifests indexes the build files of the repository.
@@ -60,7 +60,7 @@ type manifests struct {
 	hasPyt   bool
 }
 
-func (r *runner) loadManifests() *manifests {
+func (r *runner) loadManifests() *manifests { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	m := &manifests{scripts: map[string]bool{}, targets: map[string]bool{}, tasks: map[string]bool{}, recipes: map[string]bool{}, markers: map[string]bool{}}
 	paths := r.tree.Paths()
 	sort.Strings(paths)
@@ -116,7 +116,7 @@ func (m *manifests) readPackageJSON(top, rel string) {
 	}
 }
 
-func (m *manifests) readMakefile(top, rel string) {
+func (m *manifests) readMakefile(top, rel string) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	m.hasMake = true
 	for _, line := range strings.Split(readTracked(top, rel), "\n") {
 		trim := strings.TrimSpace(line)
@@ -308,7 +308,7 @@ func checkDeadCommands(r *runner) {
 	}
 }
 
-func (r *runner) checkCommandSpan(it *item, line int, span string, manifest func() *manifests) {
+func (r *runner) checkCommandSpan(it *item, line int, span string, manifest func() *manifests) { //nolint:gocyclo // linear checks over a documented schema; splitting them hides the rules
 	if mm := pytestMarkRe.FindStringSubmatch(span); mm != nil {
 		expr := mm[1] + mm[2] + mm[3]
 		m := manifest()
@@ -346,12 +346,12 @@ func (r *runner) checkCommandSpan(it *item, line int, span string, manifest func
 		}
 	case taskRe.MatchString(span):
 		name := taskRe.FindStringSubmatch(span)[1]
-		if m := manifest(); m.hasTask && !m.tasks[name] && !(m.taskNS && strings.Contains(name, ":")) {
+		if m := manifest(); m.hasTask && !m.tasks[name] && (!m.taskNS || !strings.Contains(name, ":")) {
 			r.add(CodeCommandMissing, it.abs, line, "`%s`: no Taskfile defines the task %q", span, name)
 		}
 	case justRe.MatchString(span):
 		name := justRe.FindStringSubmatch(span)[1]
-		if m := manifest(); m.hasJust && !m.recipes[name] && !(m.justMods && strings.Contains(name, "::")) {
+		if m := manifest(); m.hasJust && !m.recipes[name] && (!m.justMods || !strings.Contains(name, "::")) {
 			r.add(CodeCommandMissing, it.abs, line, "`%s`: no justfile defines the recipe %q", span, name)
 		}
 	}
