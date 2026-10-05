@@ -52,6 +52,14 @@ Flags:
 
 - `--config-dir <name>` — Use a non-default config directory name instead of `.ai-rulez`
 
+### `ai-rulez export okf` / `import okf` / `okf validate`
+
+Open Knowledge Format (OKF v0.2) support, see `docs/okf.md`.
+
+- `ai-rulez export okf [--out <dir>] [--profile <p>] [--include rules,context,skills,agents,commands,checks] [--check]` — write the content as a deterministic OKF bundle (default `okf.dir`, `docs/okf`); `--check` writes nothing and exits 2 on drift
+- `ai-rulez import okf <dir|git-url[@ref][#subdir]> [--into rules|context|skills] [--domain <d>] [--dry-run] [--force]` — convert a bundle into `.ai-rulez/` sources; never overwrites without `--force`, scans imported text (AR001-AR011) first
+- `ai-rulez okf validate <dir|git-url> [--format json] [--fail-on error|warning|info|none]` — lint any bundle (AR9B0-AR9B9)
+
 ### `ai-rulez migrate v4`
 
 Convert V3 `.ai-rulez/` YAML configuration to V4 `.ai-rulez/` TOML configuration.
