@@ -127,6 +127,7 @@ func checkDynamicLock(cfg *config.Config, lock *lockfile.File) []string {
 		out = append(out, "  "+p.String())
 	}
 	if lock != nil && (len(lock.Served) > 0 || cfg.LockEnforced()) {
+		defer func(prev bool) { includes.SkipFetch = prev }(includes.SkipFetch)
 		includes.SkipFetch = true
 		setup := &mcp.ServeSetup{Version: Version, WorkDir: cfg.BaseDir, NoWatch: true}
 		problems, err := setup.ServedProblems(context.Background())
