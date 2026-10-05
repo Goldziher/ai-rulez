@@ -37,7 +37,7 @@ and keys are sorted, so output is deterministic.
 | `user-invocable`                                         | yes                                   | no                        | no                                              |
 | any other key (`model`, `context`, `hooks`, `argument-hint`, ...) | yes                          | no                        | no                                              |
 
-"Every other preset" means Codex, Copilot, OpenCode, Gemini, Windsurf, Cline, Antigravity, Xum, Baz and the shared
+"Every other preset" means Codex, Copilot, OpenCode, Gemini, Devin, Cline, Antigravity, Xum, Baz and the shared
 `.agents/skills` tree of `agents_md`. Keys a tool does not document are not written to its tree: some consumers reject
 unknown keys (Claude.ai uploads and the Skills API accept only `name`, `description`, `license`, `compatibility`,
 `metadata` and `allowed-tools`). Claude Code receives every key, like the `generate --plugin` bundle, which copies

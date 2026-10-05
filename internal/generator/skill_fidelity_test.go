@@ -90,7 +90,7 @@ func TestSkillFrontmatter_SpecFieldsReachEveryPreset(t *testing.T) {
 		"copilot":     ".github/skills/demo/SKILL.md",
 		"opencode":    ".opencode/skills/demo/SKILL.md",
 		"gemini":      ".agents/skills/demo/SKILL.md",
-		"windsurf":    ".windsurf/skills/demo/SKILL.md",
+		"devin":       ".devin/skills/demo/SKILL.md",
 		"cline":       ".cline/skills/demo/SKILL.md",
 		"antigravity": ".agents/skills/demo/SKILL.md",
 		"xum":         ".xum/skills/demo/SKILL.md",
