@@ -193,6 +193,9 @@ func validateOutputMode(typ string, out *OutputSpec) error {
 		if out.File != "" || out.Header != "" {
 			return fmt.Errorf("outputs[%q]: file and header are only valid with mode %q", typ, OutputModeAggregate)
 		}
+		if fm := out.Frontmatter; fm != nil && fm.JoinLists && !fm.Tools && !fm.Skills {
+			return fmt.Errorf("outputs[%q].frontmatter.join_lists needs tools or skills to be true", typ)
+		}
 	case OutputModeAggregate:
 		if typ != OutputTypeChecks {
 			return fmt.Errorf("outputs[%q].mode: %q is only valid on outputs.%s", typ, out.Mode, OutputTypeChecks)
@@ -249,7 +252,7 @@ func validateSidecar(i int, sc *SidecarSpec) error {
 		}
 	}
 	if !isGenericSidecarKind(sc.Kind) {
-		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" {
+		if sc.Format != "" || len(sc.Key) > 0 || sc.Dialect != "" || sc.Elements != nil {
 			return fmt.Errorf("sidecars[%d]: format, key and dialect are only valid on the generic kinds (%s, %s, %s)",
 				i, SidecarMCP, SidecarPermissions, SidecarHooks)
 		}
@@ -279,11 +282,15 @@ func validateGenericSidecar(i int, sc *SidecarSpec) error {
 			return fmt.Errorf("sidecars[%d].dialect: %w", i, err)
 		}
 		if sc.EmitWhen == "" {
-			// No servers, no document: an mcp sidecar is not an always-on file.
+			// No servers, no document: an mcp sidecar is not an always-on file,
+			// unless it also owns array elements, which need no server.
 			sc.EmitWhen = PredicateHasMCPServers
+			if sc.Elements != nil {
+				sc.EmitWhen = PredicateAlways
+			}
 		}
 	}
-	return nil
+	return validateElements(i, sc)
 }
 
 // validateGlobal checks the [global] block: every path is a relative,
@@ -343,7 +350,10 @@ func validateSplitEnums(typ string, out *OutputSpec) error {
 // validateSplitFields checks the split/inline_filter/dialect trio of a rules
 // output.
 func validateSplitFields(typ string, out *OutputSpec, rootSections []string) error {
-	if !out.Split && out.InlineFilter == "" && out.Dialect == "" && out.Activation == nil {
+	if out.InlineUnscoped && (typ != OutputTypeRules || !out.Split) {
+		return fmt.Errorf("outputs[%q].inline_unscoped is only valid on outputs.rules with split = true", typ)
+	}
+	if !out.Split && out.InlineFilter == "" && out.Dialect == "" && out.Activation == nil && !out.AlwaysFiles {
 		return nil
 	}
 	if out.Activation != nil && out.Dialect == "" {
@@ -362,9 +372,9 @@ func validateSplitFields(typ string, out *OutputSpec, rootSections []string) err
 		return fmt.Errorf("outputs[%q]: dialect cannot be combined with body or frontmatter blocks", typ)
 	}
 	if !out.Split {
-		return fmt.Errorf("outputs[%q]: inline_filter, dialect and activation require split = true", typ)
+		return fmt.Errorf("outputs[%q]: inline_filter, dialect, activation and always_files require split = true", typ)
 	}
-	if !slices.Contains(rootSections, SectionRootRulesInline) {
+	if !out.AlwaysFiles && !slices.Contains(rootSections, SectionRootRulesInline) {
 		return fmt.Errorf("outputs[%q]: split requires root.sections to include %q", typ, SectionRootRulesInline)
 	}
 	if out.Filter != "" {
@@ -491,7 +501,7 @@ func isValidBodySection(section string) bool {
 
 func isValidPredicate(p string) bool {
 	switch p {
-	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort:
+	case PredicateAlways, PredicateHasMCPServersOrPluginSettings, PredicateHasMCPServers, PredicateHasMCPJSONEntries, PredicateHasPlugins, PredicateHasResolvedEffort, PredicateHasResolvedEffortOrMCPServers:
 		return true
 	}
 	return false

@@ -1,0 +1,58 @@
+# Warp provider spec.
+#
+# Warp reads project rules from AGENTS.md (root and nested) and Agent Skills from
+# .warp/skills; its custom slash commands are skills, so commands are written as
+# skills too. MCP servers live in .warp/.mcp.json. Warp has no rules folder, so
+# rules and context stay inline. https://docs.warp.dev
+
+name = "warp"
+display_name = "Warp"
+
+directories = [".warp", ".warp/skills"]
+
+[root]
+file = "AGENTS.md"
+# Warp loads no machine-local instructions file.
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".warp/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# Warp invokes any skill as /{skill-name}, so a command is a skill directory with
+# name and description frontmatter.
+[outputs.commands]
+mode = "per_item_file"
+dir = ".warp/skills"
+filename = "{id}/SKILL.md"
+filter = "include_if_targeting_provider"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+
+[[sidecars]]
+kind = "mcp"
+path = ".warp/.mcp.json"
+format = "json"
+dialect = "standard"
+global_path = ".warp/.mcp.json"
+
+# User-scope layout: global rules come from ~/.agents/AGENTS.md and skills and MCP
+# servers from ~/.warp. The standalone Warp Agent CLI keeps its own .mcp.json in a
+# platform-specific directory (~/.warp_cli on macOS, ~/.config/warp-terminal/cli on
+# Linux), which a single declarative path cannot name, so it is not covered.
+[global]
+root_file = ".agents/AGENTS.md"
+skills_dir = ".warp/skills"

@@ -1,0 +1,70 @@
+# Command Code provider spec.
+#
+# Command Code loads the repository-root AGENTS.md (subdirectory files are only
+# pulled in lazily, so every rule stays inline), skills from .commandcode/skills,
+# custom agents from .commandcode/agents, slash commands from
+# .commandcode/commands, and MCP servers from the project .mcp.json (user
+# scope: ~/.commandcode/mcp.json).
+
+name = "commandcode"
+display_name = "Command Code"
+
+directories = [".commandcode", ".commandcode/skills", ".commandcode/agents", ".commandcode/commands"]
+
+[root]
+file = "AGENTS.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+dir = ".commandcode/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".commandcode/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description", "disallowedTools"]
+tools = true
+emit_model = true
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".commandcode/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+# The root .mcp.json is shared with the mcp preset and the other tools that read it,
+# so every writer renders the same shape (mcp_json) and the generator keeps one copy.
+[[sidecars]]
+kind = "mcp_json"
+path = ".mcp.json"
+emit_when = "has_mcp_json_entries"
+global_path = ".commandcode/mcp.json"
+
+[global]
+root_file = ".commandcode/AGENTS.md"
+skills_dir = ".commandcode/skills"
+agents_dir = ".commandcode/agents"
+commands_dir = ".commandcode/commands"

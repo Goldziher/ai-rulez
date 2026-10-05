@@ -45,20 +45,20 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 			name: "cursor", preset: "cursor",
 			want: sortedPaths(sharedSkills, []string{
 				".cursor/agents/helper.md", ".cursor/rules/auto.mdc", ".cursor/rules/context-scoped.mdc",
-				".cursor/rules/go-style.mdc", ".cursor/rules/manual.mdc", ".mcp.json", "AGENTS.md",
+				".cursor/rules/go-style.mdc", ".cursor/rules/manual.mdc", ".cursor/mcp.json", ".mcp.json", "AGENTS.md",
 			}),
 		},
 		{
 			name: "copilot", preset: "copilot",
 			want: sortedPaths(sharedSkills, []string{
 				".github/agents/helper.agent.md", ".github/instructions/context-scoped.instructions.md",
-				".github/instructions/go-style.instructions.md", ".mcp.json", "AGENTS.md",
+				".github/instructions/go-style.instructions.md", ".mcp.json", ".vscode/mcp.json", "AGENTS.md",
 			}),
 		},
 		{
 			name: "devin", preset: "devin",
 			want: sortedPaths(sharedSkills, []string{
-				".mcp.json", ".devin/agents/helper.md", ".devin/rules/auto.md", ".devin/rules/context-scoped.md",
+				".mcp.json", ".devin/mcp_config.json", ".devin/agents/helper.md", ".devin/rules/auto.md", ".devin/rules/context-scoped.md",
 				".devin/rules/go-style.md", ".devin/rules/manual.md", "AGENTS.md",
 			}),
 		},
@@ -73,7 +73,7 @@ func TestAgentsMD_RulesFolderPresetFileSets(t *testing.T) {
 			name: "junie", preset: "junie",
 			want: sortedPaths(sharedSkills, []string{
 				".junie/agents/helper.md", ".junie/rules/auto.md", ".junie/rules/context-scoped.md",
-				".junie/rules/go-style.md", ".junie/rules/manual.md", ".mcp.json", "AGENTS.md",
+				".junie/rules/go-style.md", ".junie/rules/manual.md", ".junie/mcp/mcp.json", ".mcp.json", "AGENTS.md",
 			}),
 		},
 	}

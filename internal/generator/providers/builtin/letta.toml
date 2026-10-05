@@ -1,0 +1,51 @@
+# Letta Code provider spec.
+#
+# Letta Code has custom subagents under .letta/agents and Agent Skills in the
+# shared .agents/skills tree. It documents no rules, commands or MCP file this
+# tool can target, so those are not written. https://docs.letta.com
+
+name = "letta"
+display_name = "Letta Code"
+
+directories = [".letta", ".letta/agents", ".agents", ".agents/skills"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".agents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+# .agents/skills is shared with codex, cursor and the agents_md tree, which write
+# `name` first and a double-quoted description; the files must be byte-identical.
+[outputs.skills.frontmatter]
+fields = ["description"]
+name_first = true
+quoted_fields = ["description"]
+
+# Letta's own frontmatter parser reads tools and skills only as comma-separated
+# strings and treats a YAML list as absent (which for tools means every tool).
+[outputs.agents]
+mode = "per_item_file"
+dir = ".letta/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+tools = true
+skills = true
+emit_model = true
+join_lists = true
+
+[model]
+field = "model"
+
+# User-scope layout: agents and skills live under ~/.letta.
+[global]
+agents_dir = ".letta/agents"
+skills_dir = ".letta/skills"

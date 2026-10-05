@@ -8,7 +8,9 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/rulefiles"
+	"github.com/Goldziher/ai-rulez/internal/markdown"
 )
 
 const devinPresetName = "devin"
@@ -42,6 +44,34 @@ func (g *DevinPresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".devin", "skills"),
 		filepath.Join(baseDir, ".devin", "agents"),
 	}
+}
+
+// GlobalOutputPaths is the Devin user-scope layout under ~/.config/devin.
+func (g *DevinPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		RootFile:  ".config/devin/AGENTS.md",
+		SkillsDir: ".config/devin/skills",
+		AgentsDir: ".config/devin/agents",
+		Sidecars:  map[string]string{MergedDocDevinMCP: ".config/devin/mcp_config.json"},
+	}.Resolve(home, getenv)
+}
+
+// renderCommandSkill renders a command as a user-invocable Devin skill: Devin has
+// no commands folder, a skill is invoked as /{name}.
+func renderCommandSkill(command config.ContentFile) (string, error) {
+	desc := commandDescription(command)
+	if desc == "" {
+		desc = command.Name + " command"
+	}
+	data, err := yaml.Marshal(map[string]any{
+		keyName:        sanitizeName(command.Name),
+		keyDescription: desc,
+		"triggers":     []string{"user"},
+	})
+	if err != nil {
+		return "", fmt.Errorf("marshal command frontmatter: %w", err)
+	}
+	return "---\n" + string(data) + "---\n\n" + markdown.ProcessEmbeddedContent(command.Content), nil
 }
 
 func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
@@ -84,6 +114,36 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 			},
 		)
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
+	}
+
+	// Commands become user-invocable skills, unless a skill of that id exists.
+	skillIDs := map[string]bool{}
+	for _, skill := range allSkills {
+		skillIDs[extractSkillID(skill.Path)] = true
+	}
+	for _, command := range allCommands(content) {
+		id := sanitizeName(command.Name)
+		if skillIDs[id] || !commandTargets(command, devinPresetName) {
+			continue
+		}
+		text, err := renderCommandSkill(command)
+		if err != nil {
+			return nil, err
+		}
+		skillDir := filepath.Join(baseDir, ".devin", "skills", id)
+		outputs = append(outputs,
+			config.OutputFile{Path: skillDir, IsDir: true},
+			config.OutputFile{Path: filepath.Join(skillDir, "SKILL.md"), Content: text})
+	}
+
+	// Devin reads project MCP servers from .devin/mcp_config.json.
+	if servers := mcpEntries(cfg, nativeMCPEntry); len(servers) > 0 {
+		path := filepath.Join(baseDir, filepath.FromSlash(MergedDocDevinMCP))
+		doc, err := renderMergedMCP(path, docmerge.FormatJSON, []string{keyMCPServers}, servers)
+		if err != nil {
+			return nil, fmt.Errorf("render .devin/mcp_config.json: %w", err)
+		}
+		outputs = append(outputs, mergedOutput(path, doc))
 	}
 
 	// Add .devin/agents directory

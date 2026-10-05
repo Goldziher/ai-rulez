@@ -1,0 +1,45 @@
+# Crush (Charm) provider spec.
+#
+# Crush reads project guidance from CRUSH.md (and CRUSH.local.md) and also from
+# AGENTS.md, discovers Agent Skills under .crush/skills (and .agents/skills),
+# and reads MCP servers from the `mcp` object of crush.json, where each entry
+# carries a `type` (stdio, http or sse). Crush has no rules folder, subagent or
+# command file format, so only inline guidance, skills and MCP are produced.
+
+name = "crush"
+display_name = "Crush"
+
+directories = [".crush", ".crush/skills"]
+
+[root]
+file = "CRUSH.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".crush/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# Crush's `mcp` entries are typed like VS Code's `servers` ones (stdio, http,
+# sse), so that dialect is written under the `mcp` key. A disabled server is left
+# out, which is the same as Crush's `disabled: true`. crush.json is plain JSON.
+[[sidecars]]
+kind = "mcp"
+path = "crush.json"
+format = "json"
+dialect = "vscode"
+key = ["mcp"]
+emit_when = "has_mcp_servers"
+global_path = ".config/crush/crush.json"
+
+# User-scope layout: Crush keeps its memory, skills and config under ~/.config/crush.
+[global]
+root_file = ".config/crush/CRUSH.md"
+skills_dir = ".config/crush/skills"

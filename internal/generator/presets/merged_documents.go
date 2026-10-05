@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/samber/oops"
 )
@@ -34,6 +35,11 @@ const (
 	MergedDocXumMCP         = ".xum/mcp.jsonc"
 	MergedDocOpencodeConfig = "opencode.json"
 	MergedDocPiMCP          = ".pi/mcp.json"
+	MergedDocCursorMCP      = ".cursor/mcp.json"
+	MergedDocVSCodeMCP      = ".vscode/mcp.json"
+	MergedDocCodexConfig    = ".codex/config.toml"
+	MergedDocDevinMCP       = ".devin/mcp_config.json"
+	MergedDocAgentsMCP      = ".agents/mcp_config.json"
 )
 
 // mergedDocumentPaths is the registry backing MergedDocumentPaths. Every path a
@@ -47,6 +53,11 @@ var mergedDocumentPaths = []string{
 	MergedDocXumMCP,
 	MergedDocOpencodeConfig,
 	MergedDocPiMCP,
+	MergedDocCursorMCP,
+	MergedDocVSCodeMCP,
+	MergedDocCodexConfig,
+	MergedDocDevinMCP,
+	MergedDocAgentsMCP,
 }
 
 // MergedDocumentPaths returns every base-relative, slash-separated path that a
@@ -131,6 +142,11 @@ func piMCPServers(cfg *config.Config) map[string]interface{} {
 // naming a file, so there is nothing on disk for the stale-deletion guard to
 // protect and the registry has no bearing on it.
 func applyMergedDocument(path string, owned []jsonmerge.OwnedKey) (jsonmerge.Result, error) {
+	return applyMergedDocumentAs(path, docmerge.FormatJSON, owned)
+}
+
+// applyMergedDocumentAs is applyMergedDocument for a document of another format.
+func applyMergedDocumentAs(path string, format docmerge.Format, owned []jsonmerge.OwnedKey) (jsonmerge.Result, error) {
 	if path != "" && !isRegisteredMergedDocument(path) {
 		return jsonmerge.Result{}, oops.
 			With("path", path).
@@ -138,7 +154,7 @@ func applyMergedDocument(path string, owned []jsonmerge.OwnedKey) (jsonmerge.Res
 			Errorf("merged JSON document path is not registered")
 	}
 
-	return jsonmerge.Apply(path, owned)
+	return docmerge.Apply(path, format, owned)
 }
 
 // isRegisteredMergedDocument reports whether path ends in one of the registered
@@ -211,6 +227,22 @@ func LegacyMergeClaims(rel string, cfg *config.Config) []jsonmerge.Claim {
 		return memberClaimsOf([]string{keyServers}, xumServers(cfg))
 	case MergedDocPiMCP:
 		return memberClaimsOf([]string{keyMCPServers}, piMCPServers(cfg))
+	case MergedDocCursorMCP:
+		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, nativeMCPEntry))
+	case MergedDocDevinMCP:
+		return memberClaimsOf([]string{keyMCPServers}, mcpEntries(cfg, nativeMCPEntry))
+	case MergedDocVSCodeMCP:
+		return memberClaimsOf([]string{keyServers}, mcpEntries(cfg, VSCodeMCPEntry))
+	case MergedDocAgentsMCP:
+		if result, err := (&AntigravityPresetGenerator{}).renderMCPConfigJSON("", cfg); err == nil {
+			return append([]jsonmerge.Claim{selfEntry}, result.Claims...)
+		}
+	case MergedDocCodexConfig:
+		claims := memberClaimsOf([]string{codexKeyMCPServers}, mcpEntries(cfg, CodexMCPEntry))
+		if effort := MapEffort(codexPresetName, ResolveGlobalEffort(codexPresetName, cfg)); effort != "" {
+			claims = append(claims, jsonmerge.Claim{Path: []string{codexKeyReasoningEffort}, Equals: effort})
+		}
+		return claims
 	case MergedDocOpencodeConfig:
 		claims := memberClaimsOf([]string{"mcp", keyServers}, (&OpencodePresetGenerator{}).mcpServersValue(cfg))
 		claims = append(claims,

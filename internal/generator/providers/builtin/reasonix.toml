@@ -1,0 +1,85 @@
+# Reasonix provider spec.
+#
+# Reasonix reads REASONIX.md (and a personal REASONIX.local.md) for project
+# guidance, Agent Skills from .reasonix/skills, Markdown slash commands from
+# .reasonix/commands, and project MCP servers from the shared root .mcp.json
+# (servers declared there stay off until enabled in Reasonix). A subagent is a
+# skill whose frontmatter says `invocation: manual` and `runAs: subagent`, so
+# subagents share the skills directory.
+
+name = "reasonix"
+display_name = "Reasonix"
+
+directories = [".reasonix", ".reasonix/skills", ".reasonix/commands"]
+
+[root]
+file = "REASONIX.md"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".reasonix/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+# Subagents: a manual-invocation skill that runs as a subagent. Reasonix names the
+# tool allowlist `allowed-tools`, which the agent `tools` field cannot be renamed
+# to, so tools are not emitted.
+[outputs.agents]
+mode = "per_item_file"
+dir = ".reasonix/skills"
+filename = "{id}/SKILL.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+emit_model = true
+emit_effort = true
+
+[outputs.agents.frontmatter.constants]
+invocation = "manual"
+runAs = "subagent"
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".reasonix/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+[effort_map]
+style = "string"
+
+[effort_map.values]
+low = "low"
+medium = "medium"
+high = "high"
+xhigh = "high"
+max = "max"
+
+[[sidecars]]
+kind = "mcp_json"
+path = ".mcp.json"
+emit_when = "has_mcp_json_entries"
+
+# User-scope layout: everything lives under ~/.reasonix.
+[global]
+root_file = ".reasonix/REASONIX.md"
+skills_dir = ".reasonix/skills"
+commands_dir = ".reasonix/commands"

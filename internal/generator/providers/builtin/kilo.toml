@@ -1,0 +1,87 @@
+# Kilo Code provider spec.
+#
+# Kilo reads AGENTS.md, skills from .kilo/skills, subagents from .kilo/agents
+# (OpenCode-format Markdown with `mode: subagent`) and slash commands from
+# .kilo/commands. Its project .kilo/rules folder is NOT auto-loaded: each glob
+# must be listed in the `instructions` array of kilo.jsonc, so the mcp sidecar
+# also owns that array element. MCP servers use the OpenCode dialect under the
+# top-level `mcp` key of kilo.jsonc.
+
+name = "kilo"
+display_name = "Kilo Code"
+
+directories = [".kilo", ".kilo/skills", ".kilo/agents", ".kilo/commands", ".kilo/rules"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+# Plain Markdown rule files; Kilo has no glob activation, so path-scoped rules
+# stay inline.
+[outputs.rules]
+mode = "per_item_file"
+dir = ".kilo/rules"
+filename = "{id}.md"
+split = true
+dialect = "junie"
+
+[outputs.skills]
+dir = ".kilo/skills"
+mode = "per_item_file"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".kilo/agents"
+filename = "{id}.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+emit_model = true
+omit_name = true
+
+[outputs.agents.frontmatter.constants]
+mode = "subagent"
+
+[outputs.commands]
+mode = "per_item_file"
+dir = ".kilo/commands"
+filename = "{id}.md"
+
+[outputs.commands.body]
+sections = ["frontmatter", "content"]
+
+[outputs.commands.frontmatter]
+fields = ["description"]
+omit_name = true
+
+[model]
+field = "model"
+
+[[sidecars]]
+kind = "mcp"
+path = "kilo.jsonc"
+dialect = "opencode"
+global_path = ".config/kilo/kilo.jsonc"
+
+[sidecars.elements]
+key = ["instructions"]
+values = [".kilo/rules/*.md"]
+
+[global]
+root_file = ".config/kilo/AGENTS.md"
+skills_dir = ".kilo/skills"
+agents_dir = ".config/kilo/agents"
+commands_dir = ".config/kilo/commands"
+rules_dir = ".kilo/rules"

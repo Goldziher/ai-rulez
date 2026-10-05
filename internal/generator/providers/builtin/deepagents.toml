@@ -1,0 +1,63 @@
+# deepagents (LangChain dcode) provider spec.
+#
+# dcode loads project context from AGENTS.md at the repository root and from
+# .deepagents/AGENTS.md; it never scans a rules folder, so rules and context
+# are inlined into the shared AGENTS.md. Skills live in .deepagents/skills,
+# subagents are one directory each with an AGENTS.md (flat .md files in the
+# agents directory are skipped by the loader), and MCP servers are read from
+# .deepagents/.mcp.json with an explicit stdio|http|sse `type`.
+
+name = "deepagents"
+display_name = "deepagents"
+
+directories = [".deepagents", ".deepagents/skills", ".deepagents/agents"]
+
+[root]
+file = "AGENTS.md"
+local_file = "none"
+sections = ["header", "title", "description", "rules_inline", "context_inline", "agents_delegation"]
+
+[outputs.skills]
+mode = "per_item_file"
+dir = ".deepagents/skills"
+filename = "{id}/SKILL.md"
+resources = true
+
+[outputs.skills.body]
+sections = ["frontmatter", "content", "resource_index"]
+
+[outputs.skills.frontmatter]
+fields = ["description"]
+
+[outputs.agents]
+mode = "per_item_file"
+dir = ".deepagents/agents"
+filename = "{id}/AGENTS.md"
+
+[outputs.agents.body]
+sections = ["frontmatter", "content"]
+
+[outputs.agents.frontmatter]
+fields = ["description"]
+emit_model = true
+
+[model]
+field = "model"
+
+[[sidecars]]
+kind = "mcp"
+dialect = "vscode"
+path = ".deepagents/.mcp.json"
+format = "json"
+key = ["mcpServers"]
+global_path = ".deepagents/.mcp.json"
+emit_when = "has_mcp_servers"
+
+# DEEPAGENTS_HOME is the profile root itself, so the ".deepagents" segment is
+# dropped when it is set; "agent" is dcode's default agent profile.
+[global]
+home_env = "DEEPAGENTS_HOME"
+home_dir = ".deepagents"
+root_file = ".deepagents/agent/AGENTS.md"
+skills_dir = ".deepagents/agent/skills"
+agents_dir = ".deepagents/agent/agents"

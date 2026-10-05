@@ -69,7 +69,22 @@ func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 		filepath.Join(baseDir, ".opencode"),
 		filepath.Join(baseDir, ".opencode", "skills"),
 		filepath.Join(baseDir, ".opencode", "agents"),
+		filepath.Join(baseDir, ".opencode", "commands"),
 	}
+}
+
+// opencodeCommands is the folder of OpenCode custom commands, invoked as /{id}.
+var opencodeCommands = commandFilesSpec{preset: opencodePresetName, dir: ".opencode/commands", ext: ".md"}
+
+// GlobalOutputPaths is the OpenCode user-scope layout under ~/.config/opencode.
+func (g *OpencodePresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		RootFile:    ".config/opencode/AGENTS.md",
+		SkillsDir:   ".config/opencode/skills",
+		AgentsDir:   ".config/opencode/agents",
+		CommandsDir: ".config/opencode/commands",
+		Sidecars:    map[string]string{MergedDocOpencodeConfig: ".config/opencode/opencode.json"},
+	}.Resolve(home, getenv)
 }
 
 func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir string, cfg *config.Config) ([]config.OutputFile, error) {
@@ -122,6 +137,13 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		)
 		outputs = append(outputs, SkillResourceOutputs(&skill, skillDir)...)
 	}
+
+	// Generate command files to .opencode/commands/
+	commands, err := commandFileOutputs(content, baseDir, opencodeCommands)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, commands...)
 
 	// Generate agent files to .opencode/agents/
 	allAgents := allAgents(content)

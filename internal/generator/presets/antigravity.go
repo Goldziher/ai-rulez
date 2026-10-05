@@ -96,8 +96,27 @@ func (g *AntigravityPresetGenerator) GetName() string {
 	return presetNameAntigravity
 }
 
+// antigravityWorkflows is the folder of Antigravity workflows (custom slash
+// commands), shared by the IDE and the CLI.
+var antigravityWorkflows = commandFilesSpec{preset: presetNameAntigravity, dir: ".agents/workflows", ext: ".md"}
+
+// GlobalOutputPaths is the Antigravity user-scope layout: the shared
+// ~/.gemini/config tree (rules, skills, agents, MCP), ~/.gemini/GEMINI.md and the
+// IDE's global workflows.
+func (g *AntigravityPresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
+	return GlobalLayout{
+		RootFile:    ".gemini/GEMINI.md",
+		RulesDir:    ".gemini/config/rules",
+		SkillsDir:   ".gemini/config/skills",
+		AgentsDir:   ".gemini/config/agents",
+		CommandsDir: ".gemini/antigravity/global_workflows",
+		Sidecars:    map[string]string{MergedDocAgentsMCP: ".gemini/config/mcp_config.json"},
+	}.Resolve(home, getenv)
+}
+
 func (g *AntigravityPresetGenerator) GetOutputPaths(baseDir string) []string {
 	return []string{
+		filepath.Join(baseDir, ".agents", "workflows"),
 		filepath.Join(baseDir, "GEMINI.md"),
 		filepath.Join(baseDir, ".agents"),
 		filepath.Join(baseDir, ".agents", "rules"),
@@ -149,6 +168,24 @@ func (g *AntigravityPresetGenerator) Generate(content *config.ContentTree, baseD
 			MergeClaims:    settings.Claims,
 		})
 	}
+
+	// Workspace MCP servers live in .agents/mcp_config.json (the file Antigravity
+	// reads); settings.json above is kept for output written by earlier versions.
+	if len(cfg.MCPServers) > 0 {
+		mcpPath := filepath.Join(baseDir, filepath.FromSlash(MergedDocAgentsMCP))
+		mcpConfig, err := g.renderMCPConfigJSON(mcpPath, cfg)
+		if err != nil {
+			return nil, fmt.Errorf("render mcp_config.json: %w", err)
+		}
+		outputs = append(outputs, mergedOutput(mcpPath, mcpConfig))
+	}
+
+	// Commands are workflows: .agents/workflows/{id}.md, invoked as /{id}.
+	workflows, err := commandFileOutputs(content, baseDir, antigravityWorkflows)
+	if err != nil {
+		return nil, err
+	}
+	outputs = append(outputs, workflows...)
 
 	routing, demoted := antigravityRouting(cfg, logger.Warn)
 	rules, contexts := allInlineRules(content), allInlineContext(content)
@@ -240,6 +277,22 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 	settingsPath string,
 	cfg *config.Config,
 ) (jsonmerge.Result, error) {
+	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
+		{Name: keyMCPServers, Value: antigravityMCPServers(cfg), Members: true},
+	})
+}
+
+// renderMCPConfigJSON renders the same servers into .agents/mcp_config.json, the
+// file Antigravity actually reads them from (workspace scope); settings.json is
+// kept for compatibility with earlier output.
+func (g *AntigravityPresetGenerator) renderMCPConfigJSON(path string, cfg *config.Config) (jsonmerge.Result, error) {
+	return applyMergedDocument(path, []jsonmerge.OwnedKey{
+		{Name: keyMCPServers, Value: antigravityMCPServers(cfg), Members: true},
+	})
+}
+
+// antigravityMCPServers is the mcpServers member Antigravity reads.
+func antigravityMCPServers(cfg *config.Config) map[string]interface{} {
 	mcpServers := make(map[string]interface{})
 
 	// Always include the hardcoded ai-rulez MCP server
@@ -284,9 +337,7 @@ func (g *AntigravityPresetGenerator) renderSettingsJSON(
 		mcpServers[name] = entry
 	}
 
-	return applyMergedDocument(settingsPath, []jsonmerge.OwnedKey{
-		{Name: keyMCPServers, Value: mcpServers, Members: true},
-	})
+	return mcpServers
 }
 
 func (g *AntigravityPresetGenerator) renderMarkdown(

@@ -667,20 +667,55 @@ func (g *Generator) disambiguateRuleCollisions(outputs []config.OutputFile) {
 }
 
 func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string, error) {
-	if err := g.resolveMCPEnv(); err != nil {
+	render, err := g.renderPresets(profile)
+	if err != nil {
 		return nil, "", err
+	}
+	activeProfile, contentTree, run := render.profile, render.content, render.run
+
+	// Flatten outputs for writing, detecting conflicts and deduplicating
+	flatOutputs, err := flattenPresetOutputs(render.byPreset)
+	if err != nil {
+		return nil, "", err
+	}
+
+	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
+	if err != nil {
+		return nil, "", err
+	}
+	flatOutputs = append(flatOutputs, scopedOutputs...)
+	g.disambiguateRuleCollisions(flatOutputs)
+	g.reclaimStaleMembers(flatOutputs)
+
+	return flatOutputs, activeProfile, nil
+}
+
+// presetRender is what rendering every configured preset for one profile yields,
+// before the outputs of the presets are merged into one list.
+type presetRender struct {
+	byPreset map[string][]config.OutputFile
+	profile  string
+	content  *config.ContentTree
+	run      *config.RunState
+}
+
+// renderPresets renders every configured preset, the auto-generated MCP output
+// and the machine-local variants, keyed by preset name.
+func (g *Generator) renderPresets(profile string) (*presetRender, error) {
+	if err := g.resolveMCPEnv(); err != nil {
+		return nil, err
 	}
 
 	activeProfile := g.resolveProfile(profile)
 
 	contentTree, err := g.getContentForProfile(activeProfile)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	contentTree, err = g.withCatalogSkill(contentTree)
 	if err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
 	logger.Debug("Content scanned",
@@ -728,7 +763,7 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// Generate outputs for all presets using the existing infrastructure
 	allOutputs, err := config.GeneratePresets(&tempCfg)
 	if err != nil {
-		return nil, "", oops.Wrapf(err, "generate presets")
+		return nil, oops.Wrapf(err, "generate presets")
 	}
 
 	applySharedOutputs(allOutputs, &tempCfg, contentTree)
@@ -756,21 +791,10 @@ func (g *Generator) collectOutputs(profile string) ([]config.OutputFile, string,
 	// duplicate local paths (codex + opencode both emit AGENTS.local.md) collapse,
 	// and removed local content deletes the file via stale-manifest cleanup.
 	if err := g.appendLocalOutputs(allOutputs, &tempCfg, activeProfile); err != nil {
-		return nil, "", err
+		return nil, err
 	}
 
-	// Flatten outputs for writing, detecting conflicts and deduplicating
-	flatOutputs := flattenPresetOutputs(allOutputs)
-
-	scopedOutputs, err := g.generateScopedOutputs(activeProfile, contentTree, run)
-	if err != nil {
-		return nil, "", err
-	}
-	flatOutputs = append(flatOutputs, scopedOutputs...)
-	g.disambiguateRuleCollisions(flatOutputs)
-	g.reclaimStaleMembers(flatOutputs)
-
-	return flatOutputs, activeProfile, nil
+	return &presetRender{byPreset: allOutputs, profile: activeProfile, content: contentTree, run: run}, nil
 }
 
 // appendLocalOutputs renders the machine-local outputs of every configured
@@ -913,7 +937,10 @@ func (g *Generator) isHandWritten(path string) bool {
 // and otherwise the last preset in name order to render one.
 func rootAgentsMD(allOutputs map[string][]config.OutputFile, baseDir string) (string, bool) {
 	path := filepath.Join(baseDir, string(config.SharedAgentsMD))
-	for _, o := range flattenPresetOutputs(allOutputs) {
+	// A conflict is reported by collectOutputs; the files found so far still tell
+	// what AGENTS.md says.
+	flat, _ := flattenPresetOutputs(allOutputs)
+	for _, o := range flat {
 		if !o.IsDir && o.RawContent == nil && samePath(o.Path, path) {
 			return o.Content, true
 		}
@@ -1102,17 +1129,35 @@ func (g *Generator) collectMCPServersForContent(content *config.ContentTree, pro
 	return collected
 }
 
-// flattenPresetOutputs merges outputs from all presets, deduplicating directories
-// and detecting file conflicts (last write wins with a warning).
-func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) []config.OutputFile {
+// flattenPresetOutputs merges outputs from all presets, deduplicating directories.
+// Several presets legitimately write one path (AGENTS.md, .mcp.json,
+// .agents/skills/*), but only with identical content: the file is kept once, so
+// two presets rendering different bytes to a path would let the one sorted last
+// silently replace the other's. That is reported as an error naming the presets;
+// the outputs found so far (first writer of each path) are returned with it.
+//
+// One divergence is resolved instead: a root file that omits the rules its tool
+// reads from a rules folder (OutputFile.OmitsRules) yields to the same file with
+// every rule inlined, because dropping the inlined rules would silently take
+// them from the tools that have no folder. The choice does not depend on the
+// order of the preset names, and a warning names the presets.
+func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) ([]config.OutputFile, error) {
 	var flatOutputs []config.OutputFile
-	seenPaths := make(map[string]string) // path -> first preset that claimed it
+	type claim struct {
+		preset string
+		index  int // position in flatOutputs
+	}
+	seenPaths := make(map[string]claim)
 	seenDirs := make(map[string]bool)
 	presetNames := make([]string, 0, len(allOutputs))
 	for presetName := range allOutputs {
 		presetNames = append(presetNames, presetName)
 	}
 	sort.Strings(presetNames)
+	conflicting := make(map[string][]string) // path -> presets that differ from its first writer
+	var conflictPaths []string
+	omitting := make(map[string][]string) // path -> presets whose rule-less version yielded
+	var omittingPaths []string
 	for _, presetName := range presetNames {
 		outputs := allOutputs[presetName]
 		logger.Debug("Generated outputs for preset", "preset", presetName, "count", len(outputs))
@@ -1124,26 +1169,60 @@ func flattenPresetOutputs(allOutputs map[string][]config.OutputFile) []config.Ou
 				}
 				continue
 			}
-			if prev, ok := seenPaths[output.Path]; ok {
-				// Multiple presets emitting the same path (e.g. cursor + copilot + auto-mcp
-				// all writing .mcp.json) is the expected case, not a configuration error.
-				logger.Debug("Multiple presets write to the same file, last write wins",
-					"path", output.Path, "presets", prev+" and "+presetName)
-				// Replace the existing entry with the latest version
-				for i, existing := range flatOutputs {
-					if existing.Path == output.Path {
-						flatOutputs[i] = output
-						break
-					}
-				}
-				seenPaths[output.Path] = presetName
-			} else {
-				seenPaths[output.Path] = presetName
+			prev, ok := seenPaths[output.Path]
+			if !ok {
+				seenPaths[output.Path] = claim{preset: presetName, index: len(flatOutputs)}
 				flatOutputs = append(flatOutputs, output)
+				continue
+			}
+			kept := flatOutputs[prev.index]
+			switch {
+			case sameOutputContent(kept, output):
+			case kept.OmitsRules && !output.OmitsRules:
+				omitting[output.Path] = append(omitting[output.Path], prev.preset)
+				if len(omitting[output.Path]) == 1 {
+					omittingPaths = append(omittingPaths, output.Path)
+				}
+				flatOutputs[prev.index] = output
+				seenPaths[output.Path] = claim{preset: presetName, index: prev.index}
+			case !kept.OmitsRules && output.OmitsRules:
+				omitting[output.Path] = append(omitting[output.Path], presetName)
+				if len(omitting[output.Path]) == 1 {
+					omittingPaths = append(omittingPaths, output.Path)
+				}
+			default:
+				if _, seen := conflicting[output.Path]; !seen {
+					conflictPaths = append(conflictPaths, output.Path)
+				}
+				conflicting[output.Path] = append(conflicting[output.Path], presetName)
 			}
 		}
 	}
-	return flatOutputs
+	for _, path := range omittingPaths {
+		logger.Warn("Presets with a rules folder and presets without one write the same file; "+
+			"keeping the version that inlines every rule. Set agents_md = true or rules.mode = \"inline\" to share it",
+			"path", path, "kept_from", seenPaths[path].preset, "rules_in_folder", strings.Join(omitting[path], ", "))
+	}
+	if len(conflictPaths) > 0 {
+		conflicts := make([]string, 0, len(conflictPaths))
+		for _, path := range conflictPaths {
+			conflicts = append(conflicts, fmt.Sprintf("%s (%s differs from %s)",
+				path, strings.Join(conflicting[path], ", "), seenPaths[path].preset))
+		}
+		return flatOutputs, oops.
+			With("conflicts", strings.Join(conflicts, "; ")).
+			Hint("Presets that write the same file must render identical content; "+
+				"drop one of the presets or report the divergence").
+			Errorf("presets write different content to the same path: %s", strings.Join(conflicts, "; "))
+	}
+	return flatOutputs, nil
+}
+
+// sameOutputContent reports whether two outputs for one path hold the same bytes
+// and are written with the same protections.
+func sameOutputContent(a, b config.OutputFile) bool {
+	return a.Content == b.Content && bytes.Equal(a.RawContent, b.RawContent) &&
+		a.Sensitive == b.Sensitive && a.LocalOnly == b.LocalOnly
 }
 
 func (g *Generator) writeOutputs(outputs []config.OutputFile) error {
@@ -2602,9 +2681,12 @@ func gitignorePatternForOutput(relPath string, isDir bool) string {
 		if rest == "" {
 			return ""
 		}
-		if !isDir {
-			return relPath
+		// A subfolder of a rules folder (.clinerules/workflows/) is hand-authored
+		// territory too, so it is never ignored as a whole either.
+		if isDir {
+			return ""
 		}
+		return relPath
 	}
 	if pattern, matched := githubGitignorePattern(relPath); matched {
 		return pattern

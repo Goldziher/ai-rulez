@@ -37,6 +37,9 @@ const (
 	// .amp/settings.json; users keep arbitrary Amp settings alongside it.
 	ampSettingsKeyEffort = "amp.anthropic.effort"
 
+	// ampSettingsKeyMCPServers is the flat key holding Amp's MCP servers.
+	ampSettingsKeyMCPServers = "amp.mcpServers"
+
 	// piMCPKeyServers is the only top-level key ai-rulez owns in .pi/mcp.json.
 	piMCPKeyServers = "mcpServers"
 
@@ -63,6 +66,8 @@ func (g *Generator) evalPredicate(predicate string, cfg *config.Config) bool {
 		return cfg != nil && (len(cfg.MCPServers) > 0 || cfg.HasSelfServer())
 	case PredicateHasPlugins:
 		return cfg != nil && len(cfg.Plugins) > 0
+	case PredicateHasResolvedEffortOrMCPServers:
+		return cfg != nil && (len(cfg.MCPServers) > 0 || g.resolveGlobalEffort(cfg) != "")
 	case PredicateHasResolvedEffort:
 		return g.resolveGlobalEffort(cfg) != ""
 	}
@@ -95,9 +100,7 @@ func (g *Generator) renderSidecar(kind string, cfg *config.Config, outputPath st
 	case SidecarMCPJSON:
 		return jsonmerge.Apply(outputPath, mcpJSONOwnedKeys(cfg))
 	case SidecarAmpSettingsJSON:
-		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
-			{Name: ampSettingsKeyEffort, Value: g.resolveGlobalEffort(cfg)},
-		})
+		return jsonmerge.Apply(outputPath, g.ampSettingsOwnedKeys(cfg))
 	case SidecarPiMCPJSON:
 		return jsonmerge.Apply(outputPath, []jsonmerge.OwnedKey{
 			{Name: piMCPKeyServers, Value: piMCPServerEntries(cfg), Members: true},
@@ -210,6 +213,22 @@ func mcpJSONOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
 		servers[config.SelfMCPServerName] = self
 	}
 	return []jsonmerge.OwnedKey{{Name: settingsKeyMCPServers, Value: servers, Members: true}}
+}
+
+// ampSettingsOwnedKeys decides what ai-rulez owns in .amp/settings.json: the
+// resolved global effort and, member by member, the MCP servers under the flat
+// "amp.mcpServers" key (the standard entry without the description Amp ignores).
+func (g *Generator) ampSettingsOwnedKeys(cfg *config.Config) []jsonmerge.OwnedKey {
+	var owned []jsonmerge.OwnedKey
+	if effort := g.resolveGlobalEffort(cfg); effort != "" {
+		owned = append(owned, jsonmerge.OwnedKey{Name: ampSettingsKeyEffort, Value: effort})
+	}
+	if cfg != nil && len(cfg.MCPServers) > 0 {
+		owned = append(owned, jsonmerge.OwnedKey{
+			Name: ampSettingsKeyMCPServers, Value: mcpDialectEntries(mcpDialects[MCPDialectAmp], cfg), Members: true,
+		})
+	}
+	return owned
 }
 
 // claudeSettingsOwnedKeys decides what ai-rulez owns in .claude/settings.json:
