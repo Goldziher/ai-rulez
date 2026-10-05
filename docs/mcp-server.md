@@ -417,6 +417,13 @@ the rendering for the default preset (`--targets` to serve another preset's rend
 design). Skills that only a role serves are pinned too: `lock` builds the unscoped view and the view of every
 role. `ai-rulez lock --kind served|source` refreshes one kind; `lock --check` verifies both without the network.
 
+`lock` pins the view a server started with no view flags serves: the configured `[[skill_sources]]`, the default
+profile and preset, the delivery rules (no `--include-static`), and every role. A server started with
+`--source`, `--include-static`, `--profile` or `--targets` serves a different set, and under `[lock] enforce`
+every skill that set adds is refused with `AR995` until it is in `[[served]]`; put a source you want pinned in
+`[[skill_sources]]` instead of passing it on the command line. A skill the security scan refuses is reported by
+`lock` and stops it from writing the lock, so a refused skill has to be fixed or excluded first.
+
 ### Usage telemetry
 
 Each successful `load_skill` goes through the usage recorder as one identifier-only JSON line: time, skill name,
