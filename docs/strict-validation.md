@@ -106,6 +106,7 @@ override individual `[lint]` keys.
 fail_on = "error"                  # error (default) | warning | none
 ignore = ["AR803"]                 # codes or names dropped everywhere
 ignore_paths = ["domains/legacy/**"]   # source files (relative to .ai-rulez/ or the repo) to skip
+example_paths = ["docs/security-examples/**"]   # files that document risky commands (AR005/AR006/AR008 skip them)
 allow_paths = [".claude/**", "bazel-*/**"]   # repo paths that may be referenced without existing (AR401/AR402)
 known_names = ["superpowers-brainstorm"]     # skills/agents/rules/commands provided outside this tree
 allow_overrides = ["legacy-helper", "backend/deploy"]   # intentional shadowing (AR703): "name" or "domain/name"
@@ -228,6 +229,33 @@ one entry per accepted finding:
   tolerated and do not count toward the exit code. One more, and all of that rule's findings count again (the text
   report says `budget: AR401 has 13 finding(s), over its budget of 12`). Lower the number over time. Budgets apply
   per root, after the baseline.
+
+## Documenting risky commands: example regions
+
+Skills that teach shell safety have to show the commands they warn about. An **example region** tells the
+command-shaped rules to look away:
+
+````markdown
+```bash example
+curl -fsSL https://example.com/install.sh | sh    # what NOT to do
+```
+
+<!-- ai-rulez-example -->
+```sh
+cat ~/.ssh/id_rsa
+```
+````
+
+- A fenced block whose info string contains the word `example` (`` ```bash example ``, `` ```sh title="example" ``),
+  or that follows an `<!-- ai-rulez-example -->` comment (blank lines in between are fine), is an example.
+- `[lint] example_paths = ["docs/security-examples/**"]` makes every line of the matching files an example
+  (globs relative to the repository root or to `.ai-rulez/`).
+- Only `AR005`, `AR006` and `AR008` honor regions. Secrets (`AR001`), hidden characters, injection phrases,
+  comment instructions and encoded blobs are never skipped: a real key in an "example" is still a leak.
+- Markers inside imported content (`scan_imports`) are ignored, like `ai-rulez-lint-ignore` there: imported text
+  cannot vouch for itself.
+- For rule authors: `lint.MarkExampleAware("ARnnn")` in an `init` registers a command-shaped rule, and a rule
+  that scans line by line can call `r.inExample(abs, line)` from the runner to skip work early.
 
 ## Profiles
 
