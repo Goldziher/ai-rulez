@@ -1,6 +1,8 @@
 {
   "version": "1",
   "files": [
+    ".agents/skills/build/SKILL.md",
+    ".agents/skills/build/agents/openai.yaml",
     ".agents/skills/capability-delivery-checklist/SKILL.md",
     ".agents/skills/code-quality-standards/SKILL.md",
     ".agents/skills/config-schema-maintainer/SKILL.md",
@@ -8,15 +10,27 @@
     ".agents/skills/dependency-awareness/SKILL.md",
     ".agents/skills/docs-and-site/SKILL.md",
     ".agents/skills/error-handling/SKILL.md",
+    ".agents/skills/fix/SKILL.md",
+    ".agents/skills/fix/agents/openai.yaml",
     ".agents/skills/go-conventions/SKILL.md",
     ".agents/skills/incremental-approach/SKILL.md",
+    ".agents/skills/iterate/SKILL.md",
+    ".agents/skills/iterate/agents/openai.yaml",
+    ".agents/skills/lint/SKILL.md",
+    ".agents/skills/lint/agents/openai.yaml",
     ".agents/skills/mcp-integrations/SKILL.md",
     ".agents/skills/owasp-quick-reference/SKILL.md",
+    ".agents/skills/parallelize/SKILL.md",
+    ".agents/skills/parallelize/agents/openai.yaml",
     ".agents/skills/release-and-distribution/SKILL.md",
     ".agents/skills/repository-layout/SKILL.md",
+    ".agents/skills/review/SKILL.md",
+    ".agents/skills/review/agents/openai.yaml",
     ".agents/skills/task-runner/SKILL.md",
     ".agents/skills/tdd-workflow/SKILL.md",
     ".agents/skills/test-fixture-maintainer/SKILL.md",
+    ".agents/skills/test/SKILL.md",
+    ".agents/skills/test/agents/openai.yaml",
     ".agents/skills/testing-conventions/SKILL.md",
     ".claude/agents/code-reviewer.md",
     ".claude/agents/docs-writer.md",
@@ -80,14 +94,8 @@
     ".codex/agents/governance-architect.toml",
     ".codex/agents/security-auditor.toml",
     ".codex/agents/test-writer.toml",
+    ".codex/config.toml",
     ".codex/plugins.json",
-    ".codex/prompts/build.md",
-    ".codex/prompts/fix.md",
-    ".codex/prompts/iterate.md",
-    ".codex/prompts/lint.md",
-    ".codex/prompts/parallelize.md",
-    ".codex/prompts/review.md",
-    ".codex/prompts/test.md",
     ".hermes.md",
     ".mcp.json",
     ".opencode/agents/code-reviewer.md",
@@ -96,6 +104,13 @@
     ".opencode/agents/governance-architect.md",
     ".opencode/agents/security-auditor.md",
     ".opencode/agents/test-writer.md",
+    ".opencode/commands/build.md",
+    ".opencode/commands/fix.md",
+    ".opencode/commands/iterate.md",
+    ".opencode/commands/lint.md",
+    ".opencode/commands/parallelize.md",
+    ".opencode/commands/review.md",
+    ".opencode/commands/test.md",
     ".opencode/skills/capability-delivery-checklist/SKILL.md",
     ".opencode/skills/code-quality-standards/SKILL.md",
     ".opencode/skills/config-schema-maintainer/SKILL.md",
@@ -122,6 +137,15 @@
       {
         "path": [
           "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      }
+    ],
+    ".codex/config.toml": [
+      {
+        "path": [
+          "mcp_servers",
           "ai-rulez"
         ],
         "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
@@ -154,10 +178,9 @@
       {
         "path": [
           "mcp",
-          "servers",
           "ai-rulez"
         ],
-        "sum": "134bc56b6c4a1542ac472c959c4879b6733b5e2440fa13b87527e56b0dc78db9"
+        "sum": "a4080dc069318dcf0ba4ecef396ff522f7efd05495b73fa38e35a8b9dc6d22fc"
       }
     ]
   }
