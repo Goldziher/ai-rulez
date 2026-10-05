@@ -13,13 +13,13 @@ func rec(id string, score SkillScore, digest string, passing bool) SkillRecord {
 
 func TestRank_ActionsAndOrdering(t *testing.T) {
 	store := NewStore()
-	store.Put(rec("healthy", SkillScore{Scored: 5, PassRate: 1, TriggerPrecision: fp(1), TriggerRecall: fp(1), AblationDelta: fp(0.4)}, "sha256:h", true))
-	store.Put(rec("low-pass", SkillScore{Scored: 5, PassRate: 0.4, TriggerPrecision: fp(1), TriggerRecall: fp(1), AblationDelta: fp(0.2)}, "sha256:l", false))
-	store.Put(rec("noisy", SkillScore{Scored: 5, PassRate: 0.9, TriggerPrecision: fp(0.5), TriggerRecall: fp(0.6), AblationDelta: fp(0.2)}, "sha256:n", true))
-	store.Put(rec("harmful", SkillScore{Scored: 5, PassRate: 0.9, AblationDelta: fp(-0.2)}, "sha256:x", true))
-	store.Put(rec("edited", SkillScore{Scored: 5, PassRate: 1, AblationDelta: fp(0.3)}, "sha256:old", true))
-	store.Put(rec("idle-useless", SkillScore{Scored: 5, PassRate: 1, AblationDelta: fp(0.0)}, "sha256:i", true))
-	store.Put(rec("idle-valuable", SkillScore{Scored: 5, PassRate: 1, AblationDelta: fp(0.5)}, "sha256:v", true))
+	store.Put(rec("healthy", SkillScore{Scored: 5, PassRate: 1, TriggerPrecision: fp(1), TriggerRecall: fp(1), AblationCases: 5, AblationDelta: fp(0.4)}, "sha256:h", true))
+	store.Put(rec("low-pass", SkillScore{Scored: 5, PassRate: 0.4, TriggerPrecision: fp(1), TriggerRecall: fp(1), AblationCases: 5, AblationDelta: fp(0.2)}, "sha256:l", false))
+	store.Put(rec("noisy", SkillScore{Scored: 5, PassRate: 0.9, TriggerPrecision: fp(0.5), TriggerRecall: fp(0.6), AblationCases: 5, AblationDelta: fp(0.2)}, "sha256:n", true))
+	store.Put(rec("harmful", SkillScore{Scored: 5, PassRate: 0.9, AblationCases: 5, AblationDelta: fp(-0.2)}, "sha256:x", true))
+	store.Put(rec("edited", SkillScore{Scored: 5, PassRate: 1, AblationCases: 5, AblationDelta: fp(0.3)}, "sha256:old", true))
+	store.Put(rec("idle-useless", SkillScore{Scored: 5, PassRate: 1, AblationCases: 5, AblationDelta: fp(0.0)}, "sha256:i", true))
+	store.Put(rec("idle-valuable", SkillScore{Scored: 5, PassRate: 1, AblationCases: 5, AblationDelta: fp(0.5)}, "sha256:v", true))
 
 	rows := Rank(RankInput{
 		Store: store,
@@ -88,4 +88,19 @@ func TestRank_ThresholdsAreConfigurable(t *testing.T) {
 	assert.Equal(t, ActionRewrite, Rank(in)[0].Action)
 	in.MinPassRate = 0.5
 	assert.Equal(t, ActionKeep, Rank(in)[0].Action)
+}
+
+func TestRank_WeakEvidenceDoesNotConcludeAnything(t *testing.T) {
+	store := NewStore()
+	// one flaky ablation case is a -100 point delta, but only one case
+	store.Put(rec("flaky", SkillScore{Scored: 4, PassRate: 1, AblationCases: 1, AblationDelta: fp(-1)}, "d", true))
+	rows := Rank(RankInput{Store: store, Skills: []RankSkill{{ID: "flaky", Digest: "d"}}, Uses: map[string]int{"flaky": 3}})
+	assert.Equal(t, ActionKeep, rows[0].Action, "a delta over fewer than %d cases is not evidence", MinAblationCases)
+
+	// a usage log without a single event cannot show that any skill is unused
+	rows = Rank(RankInput{Store: NewStore(), Skills: []RankSkill{{ID: "a"}}, Uses: map[string]int{}})
+	assert.NotEqual(t, ActionPrune, rows[0].Action)
+	rows = Rank(RankInput{Store: NewStore(), Skills: []RankSkill{{ID: "a"}, {ID: "b"}}, Uses: map[string]int{"b": 1}})
+	assert.Equal(t, ActionPrune, rows[0].Action, "with events in the log, a skill without any is unused")
+	assert.Equal(t, "a", rows[0].ID)
 }
