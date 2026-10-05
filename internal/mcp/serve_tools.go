@@ -223,6 +223,7 @@ func (s *Server) addProvenance(out map[string]any, skill *CatalogSkill) {
 	if skill.Delivery != "" {
 		prov["delivery"] = skill.Delivery
 	}
+	prov["lock_digest"] = skill.LockDigest
 	prov["locked"] = skill.Locked
 	if skill.ScanFindings > 0 {
 		prov["scan_warnings"] = skill.ScanFindings
