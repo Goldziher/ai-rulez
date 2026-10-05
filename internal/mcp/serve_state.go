@@ -1,6 +1,7 @@
 package mcp
 
 import (
+	"fmt"
 	"path"
 	"strings"
 	"sync"
@@ -14,6 +15,10 @@ const (
 	DefaultSessionBudgetBytes = 256 * 1024
 	// UnlimitedBudget disables the session cap.
 	UnlimitedBudget = -1
+
+	// maxTrackedSessions bounds the per-session byte counters a long-running
+	// server keeps; the oldest session is forgotten first.
+	maxTrackedSessions = 1024
 
 	defaultFindLimit = 5
 	maxFindLimit     = 20
@@ -111,6 +116,7 @@ type serveState struct {
 
 	mu   sync.Mutex
 	used map[string]int // bytes returned per session
+	seen []string       // sessions in first-use order, for eviction
 }
 
 func newServeState(opts ServeOptions) *serveState {
@@ -124,15 +130,38 @@ func (st *serveState) charge(session string, n int) (remaining int, ok bool) {
 	st.mu.Lock()
 	defer st.mu.Unlock()
 	if limit == UnlimitedBudget {
-		st.used[session] += n
+		st.add(session, n)
 		return UnlimitedBudget, true
 	}
 	left := limit - st.used[session]
 	if n > left {
 		return left, false
 	}
-	st.used[session] += n
+	st.add(session, n)
 	return left - n, true
+}
+
+// add records n bytes for a session, forgetting the oldest session when more
+// than maxTrackedSessions are tracked. The caller holds st.mu.
+func (st *serveState) add(session string, n int) {
+	if _, known := st.used[session]; !known {
+		st.seen = append(st.seen, session)
+		if len(st.seen) > maxTrackedSessions {
+			delete(st.used, st.seen[0])
+			st.seen = st.seen[1:]
+		}
+	}
+	st.used[session] += n
+}
+
+// chargeRead charges n bytes of skill content read outside load_skill
+// (get_skill, read_skill_file, resources/read) to the session, so no read path
+// bypasses the budget.
+func (s *Server) chargeRead(session string, n int) error {
+	if _, ok := s.serve.charge(session, n); !ok {
+		return fmt.Errorf("session budget exhausted: reading %d bytes would exceed the %d-byte cap; restart the session", n, s.serve.opts.budget())
+	}
+	return nil
 }
 
 // Used returns the bytes load_skill has returned to a session so far.

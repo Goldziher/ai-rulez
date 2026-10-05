@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/samber/oops"
 )
 
@@ -67,6 +68,9 @@ func (s *SkillSourceConfig) Validate(index int) error {
 		return oops.With("field", field("url")).Hint("Provide a git URL or a local directory").
 			Errorf("skill source %q missing required field 'url'", s.Name)
 	}
+	if err := s.validateGitArgsAndLimits(field); err != nil {
+		return err
+	}
 	if s.NamePrefix != "" && !namePrefixRe.MatchString(s.NamePrefix) {
 		return oops.With("field", field("name_prefix")).Hint("The prefix becomes part of a skill:// path segment").
 			Errorf("skill source %q has an invalid name_prefix %q", s.Name, s.NamePrefix)
@@ -86,6 +90,24 @@ func (s *SkillSourceConfig) Validate(index int) error {
 				return oops.With("field", field("include/exclude")).Errorf("skill source %q has an invalid glob %q", s.Name, g)
 			}
 		}
+	}
+	return nil
+}
+
+// validateGitArgsAndLimits rejects a url or ref git would read as an option and
+// negative limits.
+func (s *SkillSourceConfig) validateGitArgsAndLimits(field func(string) string) error {
+	if err := gitutil.CheckArg("url", strings.TrimPrefix(s.URL, "git+")); err != nil {
+		return oops.With("field", field("url")).Hint("A url or ref that starts with '-' would be read by git as an option").
+			Errorf("skill source %q: %s", s.Name, err.Error())
+	}
+	if err := gitutil.CheckArg("ref", s.Ref); err != nil {
+		return oops.With("field", field("ref")).Hint("A url or ref that starts with '-' would be read by git as an option").
+			Errorf("skill source %q: %s", s.Name, err.Error())
+	}
+	if s.MaxSkills < 0 || s.MaxBytes < 0 {
+		return oops.With("field", field("max_skills")).Hint("Use a positive number, or omit it for the default").
+			Errorf("skill source %q has a negative max_skills or max_bytes", s.Name)
 	}
 	return nil
 }

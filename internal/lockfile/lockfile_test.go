@@ -150,3 +150,15 @@ func TestSaveSortsContentPinsAndIsStable(t *testing.T) {
 	assert.Equal(t, "team", got.Item[1].Owner)
 	assert.NotContains(t, string(first), "Z\n", "no timestamps")
 }
+
+func TestDigestDir_RefusesASymlinkedRoot(t *testing.T) {
+	real := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(real, "a.md"), []byte("a"), 0o644))
+	link := filepath.Join(t.TempDir(), "link")
+	require.NoError(t, os.Symlink(real, link))
+
+	_, err := DigestDir(link)
+	require.Error(t, err, "a symlink root would otherwise digest to the empty hash")
+	_, err = DigestDir(real)
+	require.NoError(t, err)
+}

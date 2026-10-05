@@ -134,7 +134,7 @@ func (st *ServeSetup) initialFingerprint() (string, error) {
 			roots = append(roots, abs)
 		}
 	}
-	return fingerprint(roots)
+	return fingerprint(roots, st.UsageLog)
 }
 
 type buildOptions struct {
@@ -204,7 +204,7 @@ func (st *ServeSetup) build(ctx context.Context, bo buildOptions) (*built, error
 	b := &built{cfg: cfg, lock: lock}
 	taken := map[string]bool{}
 	for i := range served {
-		taken[served[i].ID] = true
+		taken[catalogName(&served[i])] = true
 	}
 	for _, spec := range specs {
 		res, err := skillsource.Resolve(ctx, spec, skillsource.Options{
@@ -309,6 +309,19 @@ func selectByDelivery(all []generator.ServedSkill, includeStatic bool) []generat
 	return out
 }
 
+// catalogName is the name a served skill gets in the catalog: the frontmatter
+// name, or the ID when the frontmatter names none.
+func catalogName(s *generator.ServedSkill) string {
+	if len(s.Files) > 0 && s.Files[0].RelPath == skillMarkdown {
+		if front, err := parseFrontmatter(s.Files[0].Content); err == nil {
+			if name := stringField(front, "name"); name != "" {
+				return name
+			}
+		}
+	}
+	return s.ID
+}
+
 func servedFromSource(res *skillsource.Resolved, sk skillsource.Skill) generator.ServedSkill {
 	files := make([]generator.ServedSkillFile, 0, len(sk.Files))
 	for _, f := range sk.Files {
@@ -320,7 +333,7 @@ func servedFromSource(res *skillsource.Resolved, sk skillsource.Skill) generator
 	}
 	return generator.ServedSkill{
 		ID: sk.Name, Source: source, Ref: res.Spec.Ref, Pinned: res.Pinned, Commit: res.Commit,
-		Trust: res.Spec.TrustLevel(), Delivery: config.DeliveryServed, Files: files,
+		Trust: res.Spec.TrustLevel(), Delivery: config.DeliveryServed, Verbatim: true, Files: files,
 	}
 }
 
@@ -377,9 +390,11 @@ func (st *ServeSetup) watchRoots(b *built) []string {
 }
 
 // fingerprint hashes the path, size and modification time of every file below
-// roots, leaving out VCS metadata and usage logs (a load_skill appends to one,
-// which must not trigger a reload).
-func fingerprint(roots []string) (string, error) {
+// roots, leaving out VCS metadata and the usage logs a load_skill appends to
+// (which must not trigger a reload): .jsonl files directly inside a `local`
+// directory, and the files named in logs. A .jsonl file anywhere else is skill
+// content and counts.
+func fingerprint(roots []string, logs ...string) (string, error) {
 	h := sha256.New()
 	for _, root := range roots {
 		err := filepath.WalkDir(root, func(p string, d fs.DirEntry, walkErr error) error {
@@ -395,7 +410,7 @@ func fingerprint(roots []string) (string, error) {
 				}
 				return nil
 			}
-			if strings.HasSuffix(d.Name(), ".jsonl") || strings.HasPrefix(d.Name(), ".cache_meta") {
+			if isUsageLog(p, logs) || strings.HasPrefix(d.Name(), ".cache_meta") {
 				return nil
 			}
 			info, err := d.Info()
@@ -413,6 +428,18 @@ func fingerprint(roots []string) (string, error) {
 		}
 	}
 	return hex.EncodeToString(h.Sum(nil)), nil
+}
+
+func isUsageLog(p string, logs []string) bool {
+	if strings.HasSuffix(p, ".jsonl") && filepath.Base(filepath.Dir(p)) == "local" {
+		return true
+	}
+	for _, l := range logs {
+		if l != "" && filepath.Clean(l) == filepath.Clean(p) {
+			return true
+		}
+	}
+	return false
 }
 
 // buildAll builds the full view and, for each role of the project, the role's
