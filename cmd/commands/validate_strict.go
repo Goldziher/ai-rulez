@@ -22,6 +22,8 @@ var (
 	validateFormat string
 	validateFailOn string
 	validateExtern bool
+	// validateAllowEgress names the egress = true scanners allowed to run (--allow-egress).
+	validateAllowEgress []string
 	// strictSecurityOnly restricts strict validation to the security family (the scan command).
 	strictSecurityOnly bool
 	strictTreeCache    lint.Loader
@@ -31,6 +33,9 @@ var (
 func checkStrictFlags() error {
 	if !validateStrict && (validateFormat != "" || validateFailOn != "" || validateExtern) {
 		return oops.Errorf("--format, --fail-on and --external require --strict")
+	}
+	if len(validateAllowEgress) > 0 && !validateExtern {
+		return oops.Errorf("--allow-egress requires --external")
 	}
 	switch validateFormat {
 	case "", "text", formatJSON:
@@ -62,7 +67,7 @@ func strictLint(cfg *config.Config) (*lint.Report, error) {
 		}
 		opts = append(opts, lint.WithPluginDrift(drift))
 	}
-	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern}, opts...)
+	return lint.RunWith(cfg, tree, lint.Options{SecurityOnly: strictSecurityOnly, External: validateExtern, AllowEgress: validateAllowEgress}, opts...)
 }
 
 // failOnFor resolves one root's threshold: the flag, else its [lint] fail_on,

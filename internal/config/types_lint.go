@@ -42,6 +42,15 @@ type LintConfig struct {
 	External []LintExternal `yaml:"external,omitempty" json:"external,omitempty" toml:"external,omitempty"`
 	// Evals configures the evals-missing check (AR962).
 	Evals *LintEvals `yaml:"evals,omitempty" json:"evals,omitempty" toml:"evals,omitempty"`
+	// Traps configures the harness trap checks (AR9C1...).
+	Traps *LintTraps `yaml:"traps,omitempty" json:"traps,omitempty" toml:"traps,omitempty"`
+}
+
+// LintTraps configures the checks for files a harness silently ignores.
+type LintTraps struct {
+	// ExtraHarnesses names harnesses whose traps run although no preset for them
+	// is configured, for hand-written files such as .cursor/rules.
+	ExtraHarnesses []string `yaml:"extra_harnesses,omitempty" json:"extra_harnesses,omitempty" toml:"extra_harnesses,omitempty"` //nolint:tagliatelle
 }
 
 // LintMetadataRule types one frontmatter key.
@@ -84,12 +93,25 @@ type LintSecretPattern struct {
 
 // LintExternal is an external scanner. Command is an argv, run from the
 // project root with the paths of the scanned files appended; it must print
-// SARIF 2.1.0 or the ai-rulez JSON list to stdout.
+// SARIF 2.1.0 or the ai-rulez JSON list to stdout. It never runs through a
+// shell, and every run is bounded by a timeout, an output cap and a process
+// group kill.
 type LintExternal struct {
 	Name    string   `yaml:"name" json:"name" toml:"name"`
 	Command []string `yaml:"command" json:"command" toml:"command"`
 	// Format is "sarif" (default) or "json".
 	Format string `yaml:"format,omitempty" json:"format,omitempty" toml:"format,omitempty"`
+	// Egress declares whether content derived from the scanned files can leave
+	// the machine (or a credential is used to call a network service). Unset keeps
+	// the legacy behaviour (full inherited environment) and is reported as AR9E1.
+	// false scrubs the environment and rejects known egress flags; true runs the
+	// scanner only when its name is passed to --allow-egress.
+	Egress *bool `yaml:"egress,omitempty" json:"egress,omitempty" toml:"egress,omitempty"`
+	// Timeout is a Go duration such as "90s"; default 2m, at most 15m.
+	Timeout string `yaml:"timeout,omitempty" json:"timeout,omitempty" toml:"timeout,omitempty"`
+	// EnvPass lists extra environment variable names passed through the scrubbed
+	// environment. Proxy and credential-like names are rejected when egress is false.
+	EnvPass []string `yaml:"env_pass,omitempty" json:"env_pass,omitempty" toml:"env_pass,omitempty"` //nolint:tagliatelle
 }
 
 // LintEvals configures the check for skills that have no eval cases. A skill

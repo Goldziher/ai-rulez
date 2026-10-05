@@ -9,11 +9,13 @@ All AI-Rulez CLI commands and flags.
 | Command                         | Description                                         |
 | ------------------------------- | --------------------------------------------------- |
 | `ai-rulez init`                 | Initialize V4 directory-based configuration         |
+| `ai-rulez convert`              | Convert existing tool files into `.ai-rulez/` with a lossiness report ([details](#convert-command)) |
 | `ai-rulez generate`             | Generate presets for specific profile               |
 | `ai-rulez clean`                | Remove files produced by `generate`                 |
 | `ai-rulez validate`             | Validate configuration                              |
 | `ai-rulez verify`               | Verify generated files against their hashes (`--plugin` for plugin bundles) |
 | `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
+| `ai-rulez verifiers run/list`   | Run the deterministic repo checks declared as `[[verifiers]]` ([details](#verifiers-command)) |
 | `ai-rulez lock`                 | Pin remote includes and installed skills in `ai-rulez.lock` |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
@@ -790,6 +792,61 @@ Show the full rules, context, skills, agents, and commands for a built-in domain
 
 ---
 
+## Convert Command
+
+### `ai-rulez convert`
+
+Read another tool's configuration and produce an equivalent `.ai-rulez/` tree, with a report that lists every input construct as `mapped`, `approximated`, `dropped`, `needs-action` or `unsupported`. It never modifies the source files, never runs or fetches anything, and writes nothing unless `--write` is given.
+
+```bash
+ai-rulez convert --dry-run                        # what would carry over, and what would be lost
+ai-rulez convert --write                          # write .ai-rulez/
+ai-rulez convert --from native,skills-lock --write
+ai-rulez convert --dry-run --format json --report convert.json
+ai-rulez convert --write --domain imported        # import beside an existing tree
+ai-rulez convert --list                           # importers and what each detects here
+```
+
+**Flags:**
+
+| Flag | Description |
+| ---- | ----------- |
+| `--from` | Importers, comma separated: `native`, `skills-lock` or `auto` (default). `auto` runs every importer that detects something, `skills-lock` first, so the skills it tracks are not also copied. |
+| `--source DIR` | Directory to read (default `.`). Reads are rooted there; symlinks are never followed, files over 2 MiB and inputs over 64 MiB are skipped with a finding. |
+| `--into DIR` | Config directory (default `.ai-rulez`). A relative path is resolved against `--source`, an absolute path is used as is. Nothing is ever written through a symlink at or below it: a symlinked config directory, content directory or target file stops the run (exit 1) with nothing written. |
+| `--domain NAME` | Put the imported rules, context, skills, agents and commands under `domains/NAME/`. |
+| `--dry-run` / `--write` | Preview or write. With neither flag a terminal gets a dry run and a script is refused, so CI never converts by surprise. |
+| `--force` | Overwrite existing content files (rules, context, skills, ...) whose content differs. Without it, an existing differing file stops the write (exit 1, nothing written). `--force` never replaces `config.toml` (see below). Files with identical content are `unchanged`, so a second run is a no-op. |
+| `--format text\|json` | Report format. JSON follows [`schema/convert-report.schema.json`](https://github.com/Goldziher/ai-rulez/blob/main/schema/convert-report.schema.json) (`schema_version: 1`). |
+| `--report FILE` | Also write the report to a file. |
+| `--fail-on` | Exit 2 when a finding has one of these statuses (`approximated`, `dropped`, `needs-action`, `unsupported`). |
+| `--best-effort` | Import the known fields of an unrecognised format version instead of stopping. |
+| `--split-headings` | Split root files such as `CLAUDE.md` into one context per H2 heading (default: one context per file). |
+| `--list` | Show each importer and the files it detects in `--source`. |
+
+**Importers:**
+
+| Importer | Reads | Writes |
+| -------- | ----- | ------ |
+| `native` | Root files (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, `QWEN.md`, `.github/copilot-instructions.md`, `.junie/guidelines.md`, `.cursorrules`, ...), rule folders (`.cursor/rules`, `.github/instructions`, `.kiro/steering`, `.windsurf/rules`, `.roo/rules`, `.clinerules`, `.claude/rules`, `.devin/rules`, `.qwen/rules`, ...), skills (`.claude/skills`, `.agents/skills`, `.kiro/skills`, ...), agents, commands and prompts of every built-in preset, plus MCP files (`.mcp.json`, `.cursor/mcp.json`, `.vscode/mcp.json`, `.kiro/settings/mcp.json`, `.roo/mcp.json`, `.gemini/settings.json`, `.qwen/settings.json`). Locations come from the preset layouts, so they follow `generate`. | `rules/`, `context/`, `skills/` (with their resource files), `agents/`, `commands/`, `[[mcp_servers]]` and `presets` in `config.toml` |
+| `skills-lock` | `skills-lock.json` (lock file version 1 of the Vercel [skills CLI](https://github.com/vercel-labs/skills)) | `[[installed_skills]]` (`source` as a git URL, `ref`, `path` from `skillPath`) |
+
+`config.toml` is merged, never replaced, with or without `--force`: new `presets`, `[[mcp_servers]]` and `[[installed_skills]]` are appended (existing entries win; a differing imported entry of the same name is a `needs-action` finding), and the file is rewritten with the config writer, which does not keep comments. When nothing is new it is `unchanged` and untouched. A config in another format (`config.yaml`, `config.yml`, `config.json`) is left alone and reported as `manual`; a `config.toml` that cannot be parsed stops the run. When nothing identifies a preset and the config already has presets, none is added.
+
+Rule frontmatter is translated, not copied: Cursor `alwaysApply`/`globs`/`description`, Copilot `applyTo`, Kiro `inclusion`/`fileMatchPattern`, Devin and Windsurf `trigger`, and `paths` become `activation`, `globs` and `description`; any other key is reported as `dropped`. A Cursor rule with `alwaysApply: true` and `globs` is always on, so its globs are dropped (`approximated`). Frontmatter that is not valid YAML as written (an unquoted `globs: **/*.ts`) is read leniently with block scalars and lists intact, and reported as `approximated`. Skills, agents and commands are copied with their frontmatter, and every key ai-rulez has no field for (Claude `color`, `permissionMode`; Copilot `handoffs`, `target`, `mode`, `agent`; ...) is reported as `approximated`, because only presets that copy unknown keys render it; a comma-separated Claude `tools` string becomes a list. The `name:` of a `SKILL.md` follows its directory when the directory is renamed to a valid name or suffixed after a collision. A name with no ASCII letters or digits (`日本語`) gets a stable derived name (`unnamed-<hash>`), reported as `approximated`. Presets are inferred only from files one tool owns (`.cursor/rules` implies `cursor`, `.windsurf` implies `devin`, `.roo` implies `zoocode`); shared files such as `AGENTS.md` and `.agents/skills` imply none, and with no other evidence `claude` is used and reported. Files ai-rulez generated are never read back as source: the `AI-RULEZ ::` header, the `GENERATED FILE` and `Generated by ai-rulez` banners (also in skill resource files), the `Content-Hash` and `Source-Hash` lines, and every path in `.ai-rulez/.generated-manifest.json` are skipped with a `dropped` finding, as are root files that only contain an `@path` pointer. A path that exists but cannot be read (permissions, a symlink, an invalid `.claude/settings.json`) is reported as `dropped` with the error, never silently ignored. Identical content found in several files (for example `CLAUDE.md` and `AGENTS.md`) is imported once; different content under one name gets a stable hash suffix.
+
+When `native` and `skills-lock` run together, skills named in `skills-lock.json` are imported only as `[[installed_skills]]`, not copied from `.agents/skills`. The lock's `computedHash` is never carried (its scheme differs from the `ai-rulez.lock` tree digest) and is reported as `needs-action`; run `ai-rulez lock` after converting. `node_modules` and `local` skill sources are `unsupported`; global skill locks are out of scope. A lock source must be an `https://`, `ssh://` or `git@host:path` URL: a leading `-`, a transport helper such as `ext::`, `file://`, `git://`, plain `http://` and URLs with embedded credentials are `unsupported`, as are a `ref` starting with `-` and a `skillPath` that is absolute or contains `..`. The planned `installed_skills` go through the same field validation as at config load, without any network access.
+
+MCP servers keep `command`, `args`, `env`, `url`, `headers` and transport. Every string is checked with the security scan's secret detectors: a literal under a credential-looking name (`*_KEY`, `*_TOKEN`, `Authorization`, ...), a recognised token or key in any value whatever its name, a connection string with a password, `--api-key x` and `--token=x` style arguments (and `KEY=value` arguments), URL userinfo and credential query parameters are replaced by a `${VAR}` reference and reported as `needs-action`; the value is never printed or written. Only an exact `$VAR` or `${VAR}` (upper case) counts as an existing reference. The scan of the planned tree also reads `config.toml`, so a secret that gets through (for example in a `description`) blocks the write. `hooks` and `permissions` in `.claude/settings.json` are reported as `needs-action` and not imported; imported hooks are never enabled automatically.
+
+**Safety:** the planned tree is loaded and security-scanned (the `AR0xx` family of `validate --strict`) in a scratch directory before anything is written. A blocking finding or a validation error exits 2 with `AR9F5`/validation messages and writes nothing; the security findings are reported even when validation fails, and inline `ai-rulez-lint-ignore` comments in converted text are not honoured. Writes are atomic per file; if one fails, every file written so far is restored or removed, the directories the run created are removed, and anything that could not be undone is named in the error.
+
+**Report codes:** `AR9F1` approximated, `AR9F2` dropped, `AR9F3` needs-action, `AR9F4` unsupported, `AR9F5` blocked by the scan; `AR9F0` marks an input file that cannot be parsed at all and appears only in the error that stops the run. They have their own range, apart from the `AR9E0`-`AR9E4` scanner codes, and appear in the convert report only; `validate` does not emit them.
+
+**Exit codes:** 0 done (the report may contain losses), 1 could not run or would overwrite existing files, 2 blocked by the scan or validation, or `--fail-on` matched.
+
+`ai-rulez init --from` keeps working unchanged. Formats not yet covered (rulesync, APM, Tessl, OKF) are planned for later phases.
+
 ## Initialization Command
 
 ### `ai-rulez init [project-name]`
@@ -823,6 +880,10 @@ place; if none of the three is present it logs a message and does nothing rather
 `.pre-commit-config.yaml`) are edited node by node, so existing comments, key order and indentation
 width survive. Husky has no configuration file to preserve — the validation step is appended to
 `.husky/pre-commit`. Re-running is a no-op once ai-rulez is already wired in.
+
+The generated config lists the built-in presets in a comment (`ai-rulez init --help` prints them too) and
+enables `claude`. Add the harnesses you use to `presets`; all 52 and what each supports are in
+[Supported harnesses](harnesses.md). The former `windsurf` preset is `devin`, and `continue-dev` is removed.
 
 **General Flags:**
 
@@ -1167,6 +1228,30 @@ When outputs cannot be rendered at all (for example because an MCP placeholder i
 
 Exit codes: `0` no errors (and, with `--strict`, no warnings), `2` at least one finding at the failing severity, `1` doctor could not run: the configuration does not load at all (the `config` finding is still printed) or the report could not be written. The MCP server exposes the same checks as the read-only `doctor` tool, with URL credentials removed from every message, hint and path.
 
+## Verifiers Command
+
+### `ai-rulez verifiers run|list [config-file]`
+
+Run the read-only, deterministic repo checks declared as `[[verifiers]]` in `config.toml` (a file exists or is absent, a glob matches a bounded number of files, a regex is required or forbidden, a JSON/YAML/TOML key has a value, generated files are in sync). Verifiers never use the network, never start a process and never write. Types, fields and semantics are in [Verifiers](verifiers.md) and the [`verifiers` reference](configuration.md#verifiers).
+
+```bash
+ai-rulez verifiers run [config-file] [--strict] [--json] [--name <name>]... [--profile <name>] [--no-local] [--config-dir <name>]
+ai-rulez verifiers list [config-file] [--no-local] [--config-dir <name>]
+```
+
+| Flag | Description |
+| --- | --- |
+| `--strict` | Also fail the run when a `warning`-severity verifier fails |
+| `--json` | Print `{"root", "summary": {"pass", "fail", "error"}, "results": [{"name", "type", "severity", "status", "description", "message"}]}` instead of the table |
+| `--name` | Run only the named verifier (repeatable) |
+| `--profile` / `-p` | Profile for `generated_in_sync` verifiers that name none |
+| `--no-local` | Ignore the machine-local overlay and `local/` content |
+| `--config-dir` / `-n` | Configuration directory name for non-default layouts |
+
+`list` prints what is declared without evaluating it. Both commands (and `validate`) check the configuration first: unknown types, fields that do not apply to the type, globs that do not compile or expand to more than 64 brace alternatives, an unsupported `key_equals` file extension or malformed key, and a `generated_in_sync` profile that is not defined are rejected at load time.
+
+Exit codes: `0` no verifier failed at a failing severity, `2` at least one failed, even when another verifier could not be evaluated (a failure is never hidden behind exit `1`; the report shows both), `1` nothing failed but the run could not complete: the configuration does not load or validate, a `--name` is unknown, or a verifier could not be evaluated (status `error`). A failing `info` verifier never fails the run. The MCP server exposes the same run as the read-only `run_verifiers` tool; it does not resolve includes, so `generated_in_sync` reports `error` there for a project that declares includes or installed skills.
+
 ## Tokens Command
 
 ### `ai-rulez tokens [config-file]`
@@ -1246,7 +1331,7 @@ included in the runtime's `always` figure, in the headline and in `--budget`.
 | `pi`                                     | skills, with path           | documented          |
 | `gemini`, `opencode`, `devin`, `cline`, `junie` | skills            | documented          |
 | `cursor`, `copilot`                      | skills                      | implied by the docs, not stated as a per-request listing |
-| `amp`, `antigravity`, `baz`, `continue-dev`, `hermes`, `xum` | not modeled | no listing is reported |
+| `amp`, `antigravity`, `baz`, `hermes`, `xum` | not modeled | no listing is reported |
 
 An item with `disable-model-invocation: true` is not offered to the model and is
 not listed. Each entry costs the token count of its name, description and path

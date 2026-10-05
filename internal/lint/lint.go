@@ -122,6 +122,9 @@ type Options struct {
 	SecurityOnly bool
 	// External also runs the scanners configured in lint.external.
 	External bool
+	// AllowEgress names the [[lint.external]] scanners with egress = true that
+	// may run in this invocation (--allow-egress).
+	AllowEgress []string
 }
 
 // PluginDrift describes a generated plugin whose content changed against the
@@ -183,6 +186,8 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	r.checkUnpinned()
 	r.scanImported()
 	r.checkPluginDrift()
+	r.checkExternalConfig()
+	r.checkTraps()
 	if so.External {
 		r.runExternal()
 	}
@@ -271,6 +276,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 		}
 	}
 	problems = append(problems, validateNewSettings(lc)...)
+	problems = append(problems, validateTraps(lc.Traps)...)
 	sort.Strings(problems)
 	return problems
 }

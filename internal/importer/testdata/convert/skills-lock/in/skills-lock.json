@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "skills": {
+    "frontend-design": {
+      "source": "acme/agent-skills",
+      "sourceType": "github",
+      "ref": "main",
+      "skillPath": "skills/frontend-design/SKILL.md",
+      "computedHash": "0f3a9c1b2d4e5f60718293a4b5c6d7e8f9a0b1c2d3e4f5061728394a5b6c7d8e"
+    },
+    "pdf-tools": {
+      "source": "https://git.example.com/team/pdf.git",
+      "sourceUrl": "https://git.example.com/team/pdf.git",
+      "sourceType": "git",
+      "ref": "v2.1.0",
+      "skillPath": "extras/pdf/SKILL.md",
+      "computedHash": "aa"
+    },
+    "from-npm": {
+      "source": "@acme/skill-pack",
+      "sourceType": "node_modules",
+      "computedHash": "bb"
+    }
+  }
+}
