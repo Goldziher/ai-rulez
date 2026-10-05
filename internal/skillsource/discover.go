@@ -33,8 +33,8 @@ type Skill struct {
 	Name string
 	// Dir is the skill directory name inside the source.
 	Dir string
-	// Files lists SKILL.md first, then the rest in path order. When the source
-	// has a name_prefix, SKILL.md's `name:` is rewritten to Name.
+	// Files lists SKILL.md first, then the rest in path order. SKILL.md's `name:`
+	// is rewritten to Name, so the catalog name and Name always agree.
 	Files []File
 }
 
@@ -69,9 +69,9 @@ func Discover(spec Spec, root string) ([]Skill, error) {
 			continue
 		}
 		name := spec.NamePrefix + base
-		if spec.NamePrefix != "" {
-			files[0].Content = rewriteName(files[0].Content, name)
-		}
+		// The served name is the directory name (with the prefix), whatever SKILL.md
+		// claims: a source cannot pick a name that another skill already has.
+		files[0].Content = rewriteName(files[0].Content, name)
 		skills = append(skills, Skill{Name: name, Dir: base, Files: files})
 	}
 	sort.Slice(skills, func(i, j int) bool { return skills[i].Name < skills[j].Name })
