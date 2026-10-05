@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
@@ -111,7 +112,7 @@ func (s *SkillGitSource) checkPin() error {
 	if dir == "" {
 		return nil
 	}
-	digest, err := lockfile.DigestDir(dir)
+	digest, err := contentlock.DigestDir(contentlock.KindInstalledSkill, dir)
 	if err != nil {
 		return oops.With("skill", s.name).Wrapf(err, "digest skill content")
 	}

@@ -9,6 +9,7 @@ import (
 	"sync"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/samber/oops"
 )
@@ -243,9 +244,10 @@ func CheckLock(cfg *config.Config, lock *lockfile.File) (problems []Problem, cac
 	return problems, cached
 }
 
-// cachedState reads the cached tree of a source without fetching.
-func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok bool) {
-	var dir, cacheDir string
+// cachedTree locates the cached tree of a source without fetching: the directory
+// that is digested, the cache directory holding its bookkeeping and the tree kind.
+func cachedTree(cfg *config.Config, w lockfile.Want) (dir, cacheDir, treeKind string) {
+	treeKind = contentlock.KindInstalledSkill
 	switch w.Kind {
 	case lockfile.KindInclude:
 		for i := range cfg.Includes {
@@ -253,12 +255,13 @@ func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok
 				continue
 			}
 			newSource := NewGitSource
+			treeKind = contentlock.KindInclude
 			if cfg.Includes[i].Format == config.IncludeFormatOKF {
-				newSource = NewOKFGitSource
+				newSource, treeKind = NewOKFGitSource, contentlock.KindOKFInclude
 			}
 			src, err := newSource(w.Name, cfg.Includes[i].Source, cfg.Includes[i].Path, cfg.Includes[i].Ref, cfg.BaseDir, nil, "")
 			if err != nil {
-				return "", "", false
+				return "", "", treeKind
 			}
 			dir, cacheDir = src.findAIRulezDir(), src.cacheDir
 		}
@@ -270,22 +273,33 @@ func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok
 			sk := &cfg.InstalledSkills[i]
 			src, err := NewSkillGitSource(w.Name, sk.Source, sk.GetPath(), sk.Ref, "")
 			if err != nil {
-				return "", "", false
+				return "", "", treeKind
 			}
 			dir, cacheDir = src.findSkillDir(), src.cacheDir
 		}
 	}
+	return dir, cacheDir, treeKind
+}
+
+// cachedCommit is the commit the cache at cacheDir was fetched at ("" unknown).
+func cachedCommit(cacheDir string) string {
+	if meta, err := readCacheMeta(cacheDir); err == nil && meta != nil {
+		return meta.RemoteHEADSHA
+	}
+	return ""
+}
+
+// cachedState reads the cached tree of a source without fetching.
+func cachedState(cfg *config.Config, w lockfile.Want) (digest, commit string, ok bool) {
+	dir, cacheDir, treeKind := cachedTree(cfg, w)
 	if dir == "" {
 		return "", "", false
 	}
-	d, err := lockfile.DigestDir(dir)
+	d, err := contentlock.DigestDir(treeKind, dir)
 	if err != nil {
 		return "", "", false
 	}
-	if meta, err := readCacheMeta(cacheDir); err == nil && meta != nil {
-		commit = meta.RemoteHEADSHA
-	}
-	return d, commit, true
+	return d, cachedCommit(cacheDir), true
 }
 
 // FormatProblems renders problems one per line.

@@ -235,7 +235,7 @@ func pinContent(cfg *config.Config, current, next *lockfile.File, kind string, w
 	if current == nil {
 		return nil
 	}
-	next.HashVersion, next.AIRulezVersion, next.Profile = current.HashVersion, current.AIRulezVersion, current.Profile
+	next.AIRulezVersion, next.Profile = current.AIRulezVersion, current.Profile
 	next.Scope, next.OutputsPinned = current.Scope, current.OutputsPinned
 	next.Item, next.Output = current.Item, current.Output
 	if next.HasContentPins() {

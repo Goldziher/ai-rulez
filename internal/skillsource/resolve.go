@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/v5/internal/config"
+	"github.com/Goldziher/ai-rulez/v5/internal/contentlock"
 	"github.com/Goldziher/ai-rulez/v5/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/v5/internal/logger"
 	"github.com/samber/oops"
@@ -95,7 +96,7 @@ func resolveLocal(spec Spec, opts Options) (*Resolved, error) {
 	if err != nil || !info.IsDir() {
 		return nil, oops.With("path", root).Errorf("skill source %q: %s is not a directory", spec.Name, root)
 	}
-	digest, err := lockfile.DigestDir(root)
+	digest, err := contentlock.DigestDir(contentlock.KindSkillSource, root)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already wrapped
 	}
@@ -239,7 +240,7 @@ func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, cove
 	if info, err := os.Stat(dir); err != nil || !info.IsDir() {
 		return nil, oops.With("url", spec.Redacted()).Errorf("skill source %q: path %q does not exist at commit %s", spec.Name, spec.Path, commit)
 	}
-	digest, err := lockfile.DigestDir(dir)
+	digest, err := contentlock.DigestDir(contentlock.KindSkillSource, dir)
 	if err != nil {
 		return nil, err //nolint:wrapcheck // already wrapped
 	}
@@ -410,7 +411,7 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 			if _, err := os.Stat(tree); err != nil {
 				continue
 			}
-			if d, err := lockfile.DigestDir(tree); err == nil && d != entry.Digest {
+			if d, err := contentlock.DigestDir(contentlock.KindSkillSource, tree); err == nil && d != entry.Digest {
 				problems = append(problems, Problem{spec.Name, fmt.Sprintf("cached content digest %s does not match the lock's %s", d, entry.Digest)})
 			}
 		}

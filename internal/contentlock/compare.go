@@ -55,10 +55,9 @@ type Diff struct {
 	SchemaVersion int `json:"schema_version"`
 	// InSync is true when nothing differs.
 	InSync bool `json:"in_sync"`
-	// NoPins is true when the lock carries no content pins (a version 1 lock).
+	// NoPins is true when the lock carries no content pins (a lock written by `lock` before any content was pinned).
 	NoPins      bool     `json:"no_content_pins,omitempty"`
 	LockVersion int      `json:"lock_version"`
-	HashVersion int      `json:"hash_version,omitempty"`
 	LockTool    string   `json:"lock_ai_rulez_version,omitempty"`
 	ToolVersion string   `json:"ai_rulez_version,omitempty"`
 	Changes     []Change `json:"changes"`
@@ -85,7 +84,7 @@ func (d *Diff) scoped(scope string) []Change {
 // Build fills the content pins of f from snap and recomputes the tree digest.
 // Remote entries already in f are kept.
 func Build(f *lockfile.File, snap *Snapshot) {
-	f.HashVersion = lockfile.HashVersion
+	f.Version = lockfile.Version
 	f.AIRulezVersion = snap.Options.ToolVersion
 	f.Profile = snap.Options.Profile
 	f.Scope = snap.Options.scope()
@@ -124,8 +123,8 @@ func TreeOf(f *lockfile.File) string {
 func Compare(lock *lockfile.File, snap *Snapshot) *Diff {
 	d := &Diff{
 		SchemaVersion: DiffSchemaVersion, Changes: []Change{},
-		LockVersion: lock.Version, HashVersion: lock.HashVersion,
-		LockTool: lock.AIRulezVersion, ToolVersion: snap.Options.ToolVersion,
+		LockVersion: lock.Version,
+		LockTool:    lock.AIRulezVersion, ToolVersion: snap.Options.ToolVersion,
 	}
 	if !lock.HasContentPins() {
 		d.NoPins = true
