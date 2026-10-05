@@ -65,6 +65,8 @@ type SkillScore struct {
 type ScoreOptions struct {
 	Grade       GradeOptions
 	SkillTokens int
+	// Price prices the reported tokens when a runner reports usage but no cost.
+	Price Price
 }
 
 // tally accumulates the counts behind the trigger and ablation figures.
@@ -76,7 +78,7 @@ type tally struct {
 func Score(cases []Case, resp *Response, opts ScoreOptions) (SkillScore, []CaseScore) {
 	byCase := map[string]map[string]*Result{}
 	var totalCost float64
-	var totalTokens int
+	var inTokens, outTokens, totalTokens int
 	for i := range resp.Results {
 		r := &resp.Results[i]
 		if byCase[r.Case] == nil {
@@ -84,10 +86,16 @@ func Score(cases []Case, resp *Response, opts ScoreOptions) (SkillScore, []CaseS
 		}
 		byCase[r.Case][r.Arm] = r
 		totalCost += r.CostUSD
+		inTokens += r.InputTokens
+		outTokens += r.OutputTokens
 		totalTokens += r.InputTokens + r.OutputTokens
 	}
-	if totalCost == 0 {
-		totalCost = resp.CostUSD
+	// Spend must never be undercounted, or the --max-cost stop can be missed: a
+	// missing case or an omitted per-case cost shows up as a lower sum than the
+	// runner's own total, and reported tokens price out when no cost is given.
+	totalCost = math.Max(totalCost, resp.CostUSD)
+	if totalCost == 0 && opts.Price != (Price{}) {
+		totalCost = (float64(inTokens)*opts.Price.InPerMTok + float64(outTokens)*opts.Price.OutPerMTok) / 1e6
 	}
 
 	score := SkillScore{Cases: len(cases), SkillTokens: opts.SkillTokens, RunTokens: totalTokens, CostUSD: round(totalCost)}
