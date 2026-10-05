@@ -73,6 +73,7 @@ The format is based on Keep a Changelog and this project adheres to Semantic Ver
 
 ### Fixed
 
+- **Top-level `[[hooks]]` handler `type`**: `validate` (JSON schema) rejected `type = "prompt"` or `"http"` while `generate` accepted it and silently wrote a `command` handler. Both now reject any type other than `command` (or omitted).
 - **Unknown top-level config key** is reported by name (`Additional property 'bogus_key' does not match the schema`) instead of the literal `{property}` placeholder.
 - **`validate --strict --repo-root <dir>`** (env `AI_RULEZ_REPO_ROOT`; also on `scan`): a configuration checked out away from its repository no longer reports false `AR402` missing-resource and `AR101` glob errors for paths that exist in the real repository. The root defaults to the git toplevel, else the config's parent. `AR402` now names both bases it tried (the skill directory and the repo root).
 - **`AR301` false positive on kind words**: prose such as "the `test-writer` rules" or "the `test-writer` agent" no longer reports an unknown rule or agent when `test-writer` exists as another kind (rule, skill, agent, command or context); only a name no namespace defines is reported.
