@@ -246,3 +246,24 @@ func TestRolesOverlayMergesByName(t *testing.T) {
 	}
 	assert.ElementsMatch(t, []string{"dev", "extra"}, names)
 }
+
+func TestRoleProblemsSameSkillIDWithDifferentModes(t *testing.T) {
+	c := roleFixture()
+	c.Content.Domains["frontend"].Skills = append(c.Content.Domains["frontend"].Skills,
+		ContentFile{Name: "deploy", Path: "/p/.ai-rulez/domains/frontend/skills/deploy/SKILL.md"})
+	c.Roles = []RoleConfig{
+		{Name: "split", Domains: []string{"backend", "frontend"}, SkillMode: map[string]string{"backend/deploy": "off"}},
+		{Name: "same", Domains: []string{"backend", "frontend"}, SkillMode: map[string]string{"deploy": "off"}},
+		{Name: "one", Domains: []string{"backend"}, SkillMode: map[string]string{"backend/deploy": "off"}},
+	}
+	var got []RoleProblem
+	for _, p := range c.RoleProblems() {
+		if p.Kind == RoleProblemReference {
+			got = append(got, p)
+		}
+	}
+	require.Len(t, got, 1, "only the role whose two deploy skills resolve to different modes")
+	assert.Equal(t, "split", got[0].Role)
+	assert.Contains(t, got[0].Message, `id "deploy"`)
+	assert.Contains(t, got[0].Message, "off in backend")
+}

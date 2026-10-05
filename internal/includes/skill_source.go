@@ -135,7 +135,7 @@ func (s *SkillGitSource) fetch(ctx context.Context) (config.ContentFile, error) 
 			return config.ContentFile{}, oops.
 				With("repo", redactURL(s.repoURL)).
 				With("cache_dir", s.cacheDir).
-				Errorf("--no-fetch specified but no cached skill found for '%s'", s.name)
+				Wrapf(ErrNotCached, "--no-fetch specified but no cached skill found for '%s'", s.name)
 		}
 		return ScanInstalledSkillDir(skillDir, s.name)
 	}

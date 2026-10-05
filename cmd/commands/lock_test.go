@@ -3,16 +3,20 @@ package commands
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/samber/oops"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/contentlock"
+	"github.com/Goldziher/ai-rulez/internal/includes"
 	"github.com/Goldziher/ai-rulez/internal/lockfile"
 	"github.com/Goldziher/ai-rulez/internal/progress"
 )
@@ -135,11 +139,26 @@ func TestLockCheckNamesSourceAndOutputChanges(t *testing.T) {
 	assert.Equal(t, 0, checkLockAt(""))
 }
 
+func TestLockCheckRejectsDowngradedLock(t *testing.T) {
+	root := lockProject(t, "")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	assert.Equal(t, 0, checkLockAt(""))
+	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nchanged\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", lockfile.FileName), "version = 1\n")
+	var code int
+	_, stderr := capture(t, func() { code = checkLockAt("") })
+	assert.Equal(t, exitDrift, code, "a downgraded lock must fail the check")
+	assert.Contains(t, stderr, "no content pins")
+}
+
 func TestLockCheckWithLegacyLock(t *testing.T) {
 	root := lockProject(t, "")
 	legacy := filepath.Join(root, ".ai-rulez", lockfile.FileName)
 	writeFile(t, legacy, "version = 1\n")
-	assert.Equal(t, 0, checkLockAt(""), "a version 1 lock has no content pins and passes without enforce")
+	var legacyCode int
+	_, legacyErr := capture(t, func() { legacyCode = checkLockAt("") })
+	assert.Equal(t, exitDrift, legacyCode, "a lock without content pins must not pass a check, enforce or not")
+	assert.Contains(t, legacyErr, "no content pins")
 
 	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
 	require.NoError(t, err)
@@ -199,20 +218,17 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	root := lockProject(t, "[lock]\nenforce = true\n")
 	cfg, err := loadForLock("")
 	require.NoError(t, err)
-	drift, err := lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift := lockDriftFor(cfg)
 	assert.Empty(t, drift, "no lock, no finding")
 
 	require.Equal(t, 0, writeLockAt("", "", nil))
-	drift, err = lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift = lockDriftFor(cfg)
 	assert.Empty(t, drift)
 
 	writeFile(t, filepath.Join(root, ".ai-rulez", "rules", "style.md"), "# Style\nchanged\n")
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	drift, err = lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift = lockDriftFor(cfg)
 	var sources, outputs int
 	for _, d := range drift {
 		if d.Output {
@@ -229,7 +245,103 @@ func TestLockDriftForNeedsEnforceAndLock(t *testing.T) {
 	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig)
 	cfg, err = loadForLock("")
 	require.NoError(t, err)
-	drift, err = lockDriftFor(cfg)
-	require.NoError(t, err)
+	drift = lockDriftFor(cfg)
 	assert.Empty(t, drift)
+}
+
+func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
+	root := lockProject(t, "[lock]\nenforce = true\n")
+	require.Equal(t, 0, writeLockAt("", "", nil))
+	lockPath := filepath.Join(root, ".ai-rulez", lockfile.FileName)
+	good, err := os.ReadFile(lockPath)
+	require.NoError(t, err)
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+
+	for name, content := range map[string]string{
+		"corrupt":               string(good) + "garbage = [\n",
+		"hash_version too new":  strings.Replace(string(good), "hash_version = 1", "hash_version = 9", 1),
+		"unsupported version":   "version = 99\n",
+		"content pins removed":  "version = 1\n",
+		"hash_version 0 and v2": strings.Replace(string(good), "hash_version = 1", "hash_version = 0", 1),
+	} {
+		t.Run(name, func(t *testing.T) {
+			writeFile(t, lockPath, content)
+			drift := lockDriftFor(cfg)
+			require.NotEmpty(t, drift, "an unverifiable lock must not pass silently")
+			assert.Equal(t, ".ai-rulez/"+lockfile.FileName, drift[0].Path)
+		})
+	}
+
+	// without enforce an unreadable lock is not this check's business
+	writeFile(t, lockPath, "garbage = [\n")
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig)
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	assert.Empty(t, lockDriftFor(cfg))
+}
+
+func TestLockDiffSkippedRemoteOutputsFailUnderEnforce(t *testing.T) {
+	root := lockProject(t, "")
+	cfg, err := loadForLock("")
+	require.NoError(t, err)
+	lock := &lockfile.File{Version: lockfile.Version}
+	hasCacheChange := func(d *contentlock.Diff) bool {
+		for _, c := range d.Changes {
+			if strings.Contains(c.Detail, "not in the local cache") {
+				return true
+			}
+		}
+		return false
+	}
+	diff, err := lockDiff(cfg, lock, "", true)
+	require.NoError(t, err)
+	assert.NotEmpty(t, diff.Notes, "without enforce the skipped outputs are a note")
+	assert.False(t, hasCacheChange(diff))
+
+	writeFile(t, filepath.Join(root, ".ai-rulez", "config.toml"), lockProjectConfig+"[lock]\nenforce = true\n")
+	cfg, err = loadForLock("")
+	require.NoError(t, err)
+	diff, err = lockDiff(cfg, lock, "", true)
+	require.NoError(t, err)
+	assert.True(t, hasCacheChange(diff), "under enforce skipped outputs fail the check")
+}
+
+func TestLoadWithCacheFallback(t *testing.T) {
+	ok := &config.Config{}
+	miss := oops.Wrapf(includes.ErrNotCached, "no cached content")
+	violation := oops.Wrapf(config.ErrLockViolation, "digest mismatch")
+
+	t.Run("cache miss falls back", func(t *testing.T) {
+		calls := 0
+		cfg, skipped, err := loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
+			calls++
+			if len(opts) == 0 {
+				return nil, miss
+			}
+			return ok, nil
+		})
+		require.NoError(t, err)
+		assert.Equal(t, 2, calls)
+		assert.Same(t, ok, cfg)
+		assert.False(t, skipped, "no lockable includes in an empty config")
+	})
+	t.Run("a lock violation is returned, not swallowed", func(t *testing.T) {
+		calls := 0
+		_, _, err := loadWithCacheFallback(func(...config.LoadOption) (*config.Config, error) {
+			calls++
+			return ok, violation
+		})
+		require.ErrorIs(t, err, config.ErrLockViolation)
+		assert.Equal(t, 1, calls, "no retry without remotes")
+	})
+	t.Run("a failing retry returns the original error", func(t *testing.T) {
+		_, _, err := loadWithCacheFallback(func(opts ...config.LoadOption) (*config.Config, error) {
+			if len(opts) == 0 {
+				return nil, miss
+			}
+			return nil, errors.New("second failure")
+		})
+		require.ErrorIs(t, err, includes.ErrNotCached)
+	})
 }
