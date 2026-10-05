@@ -48,6 +48,10 @@ func (c *Config) Validate() error {
 		return err
 	}
 
+	if err := c.validateOKF(); err != nil {
+		return err
+	}
+
 	if err := c.validateInstalledSkills(); err != nil {
 		return err
 	}
