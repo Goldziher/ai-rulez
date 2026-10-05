@@ -294,7 +294,7 @@ pins, or written with different `[lock]` settings).
 
 ```toml
 [lock]
-enforce = false          # true: strict validation reports drift (and an unreadable lock), generate --locked requires content pins
+enforce = true           # default whenever ai-rulez.lock exists; false opts out. Strict validation reports drift (and an unreadable lock), AR010 is an error, generate refuses an unlocked remote source, generate --locked requires content pins
 include_outputs = true   # false: pin sources only
 scope = "all"            # "skills": pin only skills, remote includes and installed skills
 ```

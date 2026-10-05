@@ -37,6 +37,11 @@ var (
 	Mode LockMode
 	// RefreshFilter selects what LockRefresh re-resolves; nil selects everything.
 	RefreshFilter func(kind, name string) bool
+	// RequireWhenEnforced makes an enforced lock ([lock] enforce, on by default
+	// when ai-rulez.lock exists) behave like LockRequire: a remote source the
+	// lock does not cover is a violation instead of an unpinned fetch. `generate`
+	// sets it; commands that only read or report leave it off.
+	RequireWhenEnforced bool
 )
 
 // observed is what a fetch actually resolved to, recorded so `ai-rulez lock`
@@ -108,7 +113,7 @@ func pinFor(cfg *config.Config, lock *lockfile.File, w lockfile.Want) (*pin, err
 			return nil, violation(w, "ref is pinned to %s but the lock records commit %s; run `ai-rulez lock`", w.Ref, entry.Commit)
 		}
 		return &pin{entry: *entry, kind: w.Kind, name: w.Name}, nil
-	case Mode == LockRequire || Mode == LockFrozen:
+	case Mode == LockRequire || Mode == LockFrozen || (RequireWhenEnforced && cfg.LockEnforced()):
 		if lock == nil {
 			return nil, violation(w, "%s not found in %s; run `ai-rulez lock` and commit it", lockfile.FileName, cfg.ConfigDir)
 		}
