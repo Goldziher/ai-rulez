@@ -259,12 +259,13 @@ func diffLockAt(path string) int {
 		fmtError(err)
 		return 1
 	}
-	if lockFormat == formatJSON {
+	switch {
+	case lockFormat == formatJSON:
 		err = diff.WriteJSON(os.Stdout)
-	} else if diff.InSync {
+	case diff.InSync:
 		fmt.Println("ai-rulez.lock matches the sources and outputs")
 		err = diff.WriteText(os.Stdout)
-	} else {
+	default:
 		err = diff.WriteText(os.Stdout)
 	}
 	if err != nil {

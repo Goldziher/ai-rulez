@@ -106,14 +106,16 @@ func runCatalog(out io.Writer) error {
 		return writeJSON(out, doc)
 	}
 	tw := tabwriter.NewWriter(out, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "KIND\tDOMAIN\tID\tOWNER\tVERSION\tTOKENS\tROLES")
-	for _, it := range doc.Items {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%s\t%d\t%d\n", it.Kind, dash(it.Domain), it.ID, dash(it.Owner), dash(it.Version), it.Tokens, len(it.Roles))
+	tp := reportWriter{tw}
+	tp.printf("KIND\tDOMAIN\tID\tOWNER\tVERSION\tTOKENS\tROLES\n")
+	for i := range doc.Items {
+		it := &doc.Items[i]
+		tp.printf("%s\t%s\t%s\t%s\t%s\t%d\t%d\n", it.Kind, dash(it.Domain), it.ID, dash(it.Owner), dash(it.Version), it.Tokens, len(it.Roles))
 	}
 	if err := tw.Flush(); err != nil {
 		return oops.Wrap(err)
 	}
-	fmt.Fprintf(out, "\n%d item(s), %d role(s); lock: %s\n", len(doc.Items), len(doc.Roles), lockSummary(doc.Lock))
+	reportWriter{out}.printf("\n%d item(s), %d role(s); lock: %s\n", len(doc.Items), len(doc.Roles), lockSummary(doc.Lock))
 	return nil
 }
 
@@ -141,7 +143,8 @@ func buildCatalog(cfg *config.Config, counter tokens.Counter) (*catalogDoc, erro
 		}
 		doc.Roles = append(doc.Roles, catalogRole{Name: role.Name, Description: role.Description, Extends: role.Extends,
 			Match: role.Match, Domains: role.Domains, Totals: role.Totals})
-		for _, it := range role.Items {
+		for i := range role.Items {
+			it := &role.Items[i]
 			key := it.Kind + "\x00" + it.Domain + "\x00" + it.ID
 			membership[key] = append(membership[key], role.Name)
 		}

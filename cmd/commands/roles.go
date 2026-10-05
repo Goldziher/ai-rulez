@@ -118,9 +118,11 @@ func runRolesList(out io.Writer) error {
 		return err //nolint:wrapcheck // writer error
 	}
 	tw := tabwriter.NewWriter(out, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "ROLE\tEXTENDS\tDOMAINS\tITEMS\tSKILLS\tTOKENS\tDESCRIPTION")
-	for _, r := range manifest.Roles {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%d\t%d\t%d\t%s\n", r.Name, dash(r.Extends), dash(strings.Join(r.Domains, ",")),
+	tp := reportWriter{tw}
+	tp.printf("ROLE\tEXTENDS\tDOMAINS\tITEMS\tSKILLS\tTOKENS\tDESCRIPTION\n")
+	for i := range manifest.Roles {
+		r := &manifest.Roles[i]
+		tp.printf("%s\t%s\t%s\t%d\t%d\t%d\t%s\n", r.Name, dash(r.Extends), dash(strings.Join(r.Domains, ",")),
 			r.Totals.Items, r.Totals.ByKind[config.RoleKindSkill], r.Totals.Tokens, r.Description)
 	}
 	return tw.Flush() //nolint:wrapcheck // writer error
@@ -167,25 +169,26 @@ func runRolesShow(out io.Writer, name string) error {
 	if rolesFormat == formatJSON {
 		return writeJSON(out, view)
 	}
-	printRole(out, "declared", declared)
+	printRole(reportWriter{out}, "declared", declared)
 	if declared.Extends != "" {
-		printRole(out, "effective (with "+declared.Extends+" merged in)", &flat.RoleConfig)
+		printRole(reportWriter{out}, "effective (with "+declared.Extends+" merged in)", &flat.RoleConfig)
 	}
+	w := reportWriter{out}
 	for _, p := range problems {
-		fmt.Fprintf(out, "problem [%s]: %s\n", p.Kind, p.Message)
+		w.printf("problem [%s]: %s\n", p.Kind, p.Message)
 	}
 	return nil
 }
 
-func printRole(out io.Writer, label string, r *config.RoleConfig) {
-	fmt.Fprintf(out, "%s: %s\n", r.Name, label)
+func printRole(w reportWriter, label string, r *config.RoleConfig) {
+	w.printf("%s: %s\n", r.Name, label)
 	if r.Description != "" {
-		fmt.Fprintf(out, "  description: %s\n", r.Description)
+		w.printf("  description: %s\n", r.Description)
 	}
 	if r.Extends != "" {
-		fmt.Fprintf(out, "  extends: %s\n", r.Extends)
+		w.printf("  extends: %s\n", r.Extends)
 	}
-	fmt.Fprintf(out, "  domains: %s\n", dash(strings.Join(r.Domains, ", ")))
+	w.printf("  domains: %s\n", dash(strings.Join(r.Domains, ", ")))
 	for _, kind := range config.RoleKinds {
 		sel := map[string]*config.RoleSelector{
 			config.RoleKindRule: r.Rules, config.RoleKindSkill: r.Skills, config.RoleKindAgent: r.Agents, config.RoleKindCommand: r.Commands,
@@ -194,10 +197,10 @@ func printRole(out io.Writer, label string, r *config.RoleConfig) {
 			continue
 		}
 		if len(sel.Include) > 0 {
-			fmt.Fprintf(out, "  %ss include: %s\n", kind, strings.Join(sel.Include, ", "))
+			w.printf("  %ss include: %s\n", kind, strings.Join(sel.Include, ", "))
 		}
 		if len(sel.Exclude) > 0 {
-			fmt.Fprintf(out, "  %ss exclude: %s\n", kind, strings.Join(sel.Exclude, ", "))
+			w.printf("  %ss exclude: %s\n", kind, strings.Join(sel.Exclude, ", "))
 		}
 	}
 	patterns := make([]string, 0, len(r.SkillMode))
@@ -206,10 +209,10 @@ func printRole(out io.Writer, label string, r *config.RoleConfig) {
 	}
 	sort.Strings(patterns)
 	for _, p := range patterns {
-		fmt.Fprintf(out, "  skill_mode %s = %s\n", p, r.SkillMode[p])
+		w.printf("  skill_mode %s = %s\n", p, r.SkillMode[p])
 	}
 	if r.Match != nil && len(r.Match.Groups) > 0 {
-		fmt.Fprintf(out, "  match groups: %s\n", strings.Join(r.Match.Groups, ", "))
+		w.printf("  match groups: %s\n", strings.Join(r.Match.Groups, ", "))
 	}
 }
 
@@ -229,11 +232,14 @@ func runRolesResolve(out io.Writer, name string) error {
 	if rolesFormat == formatJSON {
 		return writeJSON(out, map[string]any{"schema_version": roles.SchemaVersion, "tokenizer": counter.Name(), "role": role})
 	}
-	fmt.Fprintf(out, "role %s: %d item(s), %d bytes, ~%d tokens (%s)\n", role.Name, role.Totals.Items, role.Totals.Bytes, role.Totals.Tokens, counter.Name())
+	w := reportWriter{out}
+	w.printf("role %s: %d item(s), %d bytes, ~%d tokens (%s)\n", role.Name, role.Totals.Items, role.Totals.Bytes, role.Totals.Tokens, counter.Name())
 	tw := tabwriter.NewWriter(out, 0, 2, 2, ' ', 0)
-	fmt.Fprintln(tw, "KIND\tDOMAIN\tID\tMODE\tBYTES\tTOKENS")
-	for _, it := range role.Items {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\t%d\t%d\n", it.Kind, dash(it.Domain), it.ID, dash(it.Mode), it.Bytes, it.Tokens)
+	tp := reportWriter{tw}
+	tp.printf("KIND\tDOMAIN\tID\tMODE\tBYTES\tTOKENS\n")
+	for i := range role.Items {
+		it := &role.Items[i]
+		tp.printf("%s\t%s\t%s\t%s\t%d\t%d\n", it.Kind, dash(it.Domain), it.ID, dash(it.Mode), it.Bytes, it.Tokens)
 	}
 	return tw.Flush() //nolint:wrapcheck // writer error
 }
