@@ -644,3 +644,12 @@ func TestChangedSkills_RejectsOptionLikeBase(t *testing.T) {
 	_, err := ChangedSkills(git, t.TempDir(), "--output=/tmp/evil", nil)
 	assert.ErrorContains(t, err, "base")
 }
+
+func TestRun_InvalidCaseProblemsAreProjectRelative(t *testing.T) {
+	cfg := filepath.Join(t.TempDir(), ".ai-rulez")
+	writeSkill(t, cfg, "broken", "x", "cases:\n  - id: a\n    prompt: p\n")
+	report, err := Run(context.Background(), baseOptions(cfg, goodRunner()))
+	require.NoError(t, err)
+	require.Len(t, report.Skills[0].Problems, 1)
+	assert.Equal(t, ".ai-rulez/skills/broken/evals/main.eval.yaml", report.Skills[0].Problems[0].File)
+}

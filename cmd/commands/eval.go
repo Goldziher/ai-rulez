@@ -67,8 +67,9 @@ schema/eval-case.schema.json. A runner executes them:
   command              pipe the request JSON to --runner-command, read the response JSON
 
 Results are recorded in .ai-rulez/eval-results.json with the skill's sha256 digest, and a
-skill whose digest, cases, runner, harness, model and ablation setting are unchanged is not
-re-run (--force overrides). --dry-run lists what would run and an estimated cost without
+skill whose digest, cases, runner settings, harness, model, ablation setting and --allow-exec are
+unchanged is not re-run (--force overrides); runs with errored cases are never cached. Flags are
+checked before anything is run, and each skill's result is saved as soon as it finishes. --dry-run lists what would run and an estimated cost without
 calling any runner. The command exits 2 when a skill fails its pass threshold, errors, or has
 invalid cases.`,
 	Args: cobra.ArbitraryArgs,
@@ -104,7 +105,7 @@ func init() {
 	f.BoolVar(&evalFlags.changedOnly, "changed-only", false, "Only skills with files changed against --base (git diff, plus untracked files)")
 	f.StringVar(&evalFlags.base, "base", "HEAD", "Git ref --changed-only compares the working tree against")
 	f.BoolVar(&evalFlags.force, "force", false, "Ignore the result cache and re-run every selected skill")
-	f.Float64Var(&evalFlags.threshold, "threshold", 1, "Pass rate (0 to 1) a skill needs; 0 records scores without gating (default [lint.evals] min_pass_rate, else 1)")
+	f.Float64Var(&evalFlags.threshold, "threshold", 1, "Pass rate (0 to 1) a skill needs; 0 records scores without gating. Falls back to [lint.evals] min_pass_rate when not given")
 	f.BoolVar(&evalFlags.allowExec, "allow-exec", false, "Run command_exit assertions (they execute commands from the case files)")
 	f.BoolVar(&evalFlags.noWrite, "no-write", false, "Do not update the results file")
 	f.StringVar(&evalFlags.results, "results", "", "Results file (default <config dir>/eval-results.json)")
