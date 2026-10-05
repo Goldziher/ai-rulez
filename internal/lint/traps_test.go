@@ -83,7 +83,7 @@ func TestHarnessTraps(t *testing.T) {
 			if f.Code != tt.wantCode || f.Severity != tt.wantSev || f.Line != tt.wantLine {
 				t.Errorf("got %s %s line %d, want %s %s line %d", f.Code, f.Severity, f.Line, tt.wantCode, tt.wantSev, tt.wantLine)
 			}
-			if f.Harness == "" || f.Evidence == "" || f.VerifiedOn == "" || f.Hint == "" {
+			if f.Trap == nil || f.Trap.Harness == "" || f.Trap.Evidence == "" || f.Trap.VerifiedOn == "" || f.Trap.Hint == "" {
 				t.Errorf("finding lacks provenance: %+v", f)
 			}
 		})
