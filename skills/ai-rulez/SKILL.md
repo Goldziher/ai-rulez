@@ -1,9 +1,10 @@
 ---
 name: ai-rulez
 description: >-
-  Manage AI assistant governance rules across Claude, Cursor, Devin,
-  Copilot, Gemini, and other tools using ai-rulez. Use when configuring
-  rules, context, skills, domains, profiles, includes, plugins, or generating
+  Manage AI assistant governance rules across 52 harnesses (Claude Code,
+  Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, and more) using
+  ai-rulez. Use when configuring rules, context, skills, checks, hooks,
+  permissions, domains, profiles, includes, plugins, or generating
   tool-specific outputs.
 license: MIT
 metadata:
@@ -14,12 +15,14 @@ metadata:
 
 # AI-Rulez Governance
 
-AI-Rulez centralizes AI assistant governance in a config directory (default `.ai-rulez/`) and generates tool-specific outputs for Claude, Cursor, Devin, Copilot, Gemini, Codex, and other presets.
+AI-Rulez centralizes AI assistant governance in a config directory (default `.ai-rulez/`) and generates tool-specific outputs for 52 built-in harness presets (Claude Code, Cursor, Codex, Copilot, Gemini CLI, OpenCode, Devin, and others).
 
 Use this skill when:
 
 - Setting up or modifying `.ai-rulez/` configuration
-- Writing rules, context, skills, or agents for AI assistants
+- Writing rules, context, skills, agents, commands, or checks for AI assistants
+- Declaring `[[hooks]]` or `[permissions]` once for every harness
+- Generating a personal config into the home directory with `generate --user`
 - Configuring domains, profiles, or includes
 - Using custom config directory names via `--config-dir`
 - Generating outputs for specific AI tools
@@ -54,8 +57,14 @@ ai-rulez add context my-context
 # Generate outputs for all configured presets
 ai-rulez generate
 
+# Regenerate whenever .ai-rulez/ changes
+ai-rulez generate --watch
+
 # Validate configuration
 ai-rulez validate
+
+# Read-only diagnostics: drift, removed presets, missing tools
+ai-rulez doctor
 ```
 
 ## Configuration Structure
@@ -68,6 +77,7 @@ ai-rulez validate
   skills/              # Specialized capabilities (name/SKILL.md plus resources)
   agents/              # Agent definitions (.md files)
   commands/            # Custom commands (.md files)
+  checks/              # Code-review guidelines (.md files)
   domains/             # Domain-scoped content
     backend/
       rules/
@@ -204,7 +214,17 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-Available presets: `claude`, `cursor`, `gemini`, `copilot`, `devin`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`, `pi`, `baz`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
+52 presets are available (`ai-rulez init --help` prints them): `aiassistant`, `amp`, `antigravity`, `augment`, `baz`, `bob`, `claude`, `cline`, `codebuddy`, `codebuff`, `codewhale`, `codex`, `commandcode`, `copilot`, `copilot-cli`, `cortex`, `crush`, `cursor`, `deepagents`, `devin`, `dsh`, `factory`, `gemini`, `gitlab-duo`, `goose`, `grok`, `hermes`, `junie`, `kilo`, `kimi`, `kiro`, `letta`, `mimocode`, `muse`, `omp`, `openclaw`, `opencode`, `pi`, `poolside`, `qoder`, `qwen`, `reasonix`, `replit`, `rovodev`, `takt`, `trae`, `vibe`, `warp`, `xum`, `zcode`, `zed`, `zoocode`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
+
+`windsurf` is now `devin` and `continue-dev` was removed; `ai-rulez doctor` reports both. `docs/harnesses.md` has the per-preset feature matrix (rules folder, skills, agents, commands, MCP, hooks, permissions, checks, user scope).
+
+## Hooks, Permissions, Checks and User Scope
+
+- `[[hooks]]` in `config.toml` renders into the native hooks file of 36 harnesses (a generated plugin module for `opencode`, `kilo`, `mimocode`, `pi` and `amp`). Events, matchers and timeouts are translated per harness; a group a harness cannot express is skipped with a warning. See `docs/settings.md`.
+- `[permissions]` (`allow`, `ask`, `deny`, Claude Code rule syntax) is translated for 24 harnesses. A rule that cannot be expressed is skipped, never widened, and an unenforced deny is reported. See `docs/permissions.md`.
+- Checks are code-review guidelines in `.ai-rulez/checks/<name>.md` (frontmatter `description`, `severity`, `tools`, `targets`), rendered for `cursor`, `kilo`, `qwen`, `factory`, `rovodev`, `amp`, `augment` and `gitlab-duo`. Manage them with `ai-rulez add|remove|list check`. See `docs/checks.md`.
+- `ai-rulez generate --user` renders a user config (`~/.config/ai-rulez`) into the home directories of 47 harnesses; `clean --user` removes what it wrote. See `docs/user-scope.md`.
+- Settings files you also edit (JSON, JSONC, TOML, YAML) are merged key by key, so your own keys and comments survive `generate` and `clean`.
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 
