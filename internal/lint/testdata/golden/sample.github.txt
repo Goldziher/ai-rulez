@@ -1,0 +1,3 @@
+::error file=.ai-rulez/rules/a b.md,line=7,title=AR001 secret-detected::AWS access key id AKIA**** found
+::warning file=.ai-rulez/skills/s/SKILL.md,line=12,title=AR401 path-missing::path "src/x.go" does not exist | really,%0Areally
+::notice file=README.md,line=3,title=AR202 anchor-unresolved::no heading produces #x

@@ -12,6 +12,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/gitutil"
 	"github.com/Goldziher/ai-rulez/internal/okf"
 	"github.com/Goldziher/ai-rulez/internal/tokens"
 )
@@ -54,6 +55,17 @@ var builtinAgents = []string{"general-purpose", "explore", "plan", "statusline-s
 type Report struct {
 	Root     string    `json:"root"`
 	Findings []Finding `json:"findings"`
+	// Baseline is set when a baseline was applied to the report.
+	Baseline *BaselineResult `json:"-"`
+	// Deps maps a file to the files it refers to (repository-relative slash
+	// paths), the input of changed-only reporting.
+	Deps map[string][]string `json:"-"`
+	// Scope is set when the report was narrowed to changed files.
+	Scope *ChangedScope `json:"-"`
+	// Profile is the non-default lint profile the run used.
+	Profile string `json:"-"`
+	// Risk is the advisory risk score, set by the caller after the baseline.
+	Risk *RiskReport `json:"-"`
 }
 
 // Counts returns findings per severity.
@@ -74,8 +86,8 @@ func Failed(findings []Finding, failOn string) bool {
 	if !ok || threshold == SeverityOff {
 		threshold = SeverityError
 	}
-	for _, f := range findings {
-		if f.Severity.AtLeast(threshold) {
+	for i := range findings {
+		if findings[i].Severity.AtLeast(threshold) && !findings[i].IsAccepted() {
 			return true
 		}
 	}
@@ -120,9 +132,17 @@ type runner struct {
 	drift          []PluginDrift
 	delivery       []DeliveryFinding
 	lockDrift      []LockDrift
-
-	okfDir      string
-	okfFindings []okf.Finding
+	okfDir         string
+	okfFindings    []okf.Finding
+	// deps records which file refers to which (both absolute): links, name
+	// references, skill resources and hook scripts. --since uses it to report
+	// files that refer to a changed file.
+	deps  map[string]map[string]struct{}
+	names map[string][]string
+	// exampleGlobs are the lint.example_paths; exampleCache memoizes the
+	// example-fence lines per file.
+	exampleGlobs []globMatcher
+	exampleCache map[string]map[int]bool
 }
 
 // Options selects what a run does beyond the default strict checks.
@@ -165,7 +185,8 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 	if err != nil {
 		return nil, fmt.Errorf("token counter: %w", err)
 	}
-	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so}
+	r := &runner{cfg: cfg, tree: tree, docs: map[string]doc{}, counter: counter, opts: so,
+		deps: map[string]map[string]struct{}{}, names: map[string][]string{}}
 	for _, opt := range opts {
 		opt(r)
 	}
@@ -216,7 +237,12 @@ func RunWith(cfg *config.Config, tree *Tree, so Options, opts ...Option) (*Repor
 		}
 		return a.Code < b.Code
 	})
-	return &Report{Root: r.display(baseAbs), Findings: r.findings}, nil
+	assignIdentity(r.findings, tree, r.cwd)
+	rep := &Report{Root: r.display(baseAbs), Findings: r.findings, Deps: r.exportDeps()}
+	if p, ok := LookupProfile(r.lc.Profile); ok && p.Name != ProfileDefault {
+		rep.Profile = p.Name
+	}
+	return rep, nil
 }
 
 func (r *runner) resolveSettings() {
@@ -224,6 +250,7 @@ func (r *runner) resolveSettings() {
 	for _, rule := range registry {
 		r.sev[rule.Code] = rule.Default
 	}
+	r.applyProfile()
 	if r.lc.Description != nil && r.lc.Description.RequireUseWhen {
 		r.sev[CodeDescriptionStyle] = SeverityWarning
 	}
@@ -244,16 +271,20 @@ func (r *runner) resolveSettings() {
 			r.ignore[rule.Code] = true
 		}
 	}
-	for _, g := range r.lc.IgnorePaths {
+	r.ignorePaths = compileGlobs(r.lc.IgnorePaths)
+	r.exampleGlobs = compileGlobs(r.lc.ExamplePaths)
+	r.allow = compileGlobs(r.lc.AllowPaths)
+}
+
+// compileGlobs compiles the valid patterns of a config list.
+func compileGlobs(patterns []string) []globMatcher {
+	var out []globMatcher
+	for _, g := range patterns {
 		if m, ok := newGlob(g); ok {
-			r.ignorePaths = append(r.ignorePaths, m)
+			out = append(out, m)
 		}
 	}
-	for _, g := range r.lc.AllowPaths {
-		if m, ok := newGlob(g); ok {
-			r.allow = append(r.allow, m)
-		}
-	}
+	return out
 }
 
 // ValidateSettings reports lint settings that name no known rule or severity,
@@ -286,6 +317,7 @@ func ValidateSettings(lc *config.LintConfig) []string {
 			problems = append(problems, fmt.Sprintf("lint.require_metadata: unknown content kind %q", kind))
 		}
 	}
+	problems = append(problems, validateBudgetAndRisk(lc)...)
 	problems = append(problems, validateNewSettings(lc)...)
 	problems = append(problems, validateEvalSettings(lc)...)
 	sort.Strings(problems)
@@ -309,6 +341,9 @@ func (r *runner) add(code, abs string, line int, format string, args ...any) {
 	if r.pathIgnored(abs) || r.inlineIgnored(abs, line, code) {
 		return
 	}
+	if exampleAware[code] && r.inExample(abs, line) {
+		return
+	}
 	if r.forceSev != "" {
 		sev = r.forceSev
 	}
@@ -326,15 +361,27 @@ func (r *runner) rootAbs() string {
 	return abs
 }
 
+// configRel returns abs as a slash path relative to the configuration
+// directory, or "" when it lies elsewhere.
+func (r *runner) configRel(abs string) string {
+	cd, err := filepath.Abs(r.cfg.ConfigDir)
+	if err != nil {
+		return ""
+	}
+	rel, rerr := filepath.Rel(gitutil.Resolve(cd), gitutil.Resolve(abs))
+	if rerr != nil {
+		return ""
+	}
+	return filepath.ToSlash(rel)
+}
+
 func (r *runner) pathIgnored(abs string) bool {
 	if len(r.ignorePaths) == 0 {
 		return false
 	}
 	cands := []string{r.tree.Rel(abs)}
-	if cd, err := filepath.Abs(r.cfg.ConfigDir); err == nil {
-		if rel, rerr := filepath.Rel(cd, abs); rerr == nil {
-			cands = append(cands, filepath.ToSlash(rel))
-		}
+	if rel := r.configRel(abs); rel != "" {
+		cands = append(cands, rel)
 	}
 	for _, c := range cands {
 		for _, g := range r.ignorePaths {
@@ -453,6 +500,10 @@ func (r *runner) addItems(configDir, kind, domain string, files []config.Content
 			if set != nil {
 				set[n] = true
 			}
+			if r.names == nil {
+				r.names = map[string][]string{}
+			}
+			r.names[n] = append(r.names[n], abs)
 		}
 		it := item{kind: kind, abs: abs, domain: domain, cf: cf, owned: owned}
 		if base := strings.ToUpper(filepath.Base(abs)); owned && (base == "SKILL.MD" || base == "COMMAND.MD") {
@@ -644,9 +695,11 @@ func (r *runner) checkSkillName(it *item, d doc) {
 	line := d.lineOf("name", 1)
 	switch {
 	case !skillNameRe.MatchString(name) || len(name) > maxSkillNameLen:
-		r.add(CodeSkillNameInvalid, it.abs, line, "skill name %q must be lowercase letters, digits and single hyphens, at most %d characters", name, maxSkillNameLen)
+		r.addFix(r.renameSkillFix(it, d, line, normalizeSkillName(name), name), CodeSkillNameInvalid, it.abs, line,
+			"skill name %q must be lowercase letters, digits and single hyphens, at most %d characters", name, maxSkillNameLen)
 	case name != config.SkillID(it.cf):
-		r.add(CodeSkillNameInvalid, it.abs, line, "skill name %q differs from its directory %q", name, config.SkillID(it.cf))
+		r.addFix(r.renameSkillFix(it, d, line, config.SkillID(it.cf), name), CodeSkillNameInvalid, it.abs, line,
+			"skill name %q differs from its directory %q", name, config.SkillID(it.cf))
 	}
 }
 
@@ -656,6 +709,7 @@ func (r *runner) checkFrontmatterSkills(it *item, d doc) {
 	}
 	for _, s := range it.cf.Metadata.Skills {
 		key := strings.ToLower(strings.TrimSpace(s))
+		r.depName(it.abs, key)
 		if key == "" || strings.Contains(key, ":") || r.skills[key] || r.commands[key] {
 			continue
 		}
@@ -679,7 +733,7 @@ func (r *runner) checkScripts(it *item) {
 			}
 		}
 		if known && !exe {
-			r.add(CodeScriptNotExecutable, abs, 1, "script has a shebang but is not executable (chmod +x, and commit the mode)")
+			r.addFix(chmodFix(abs), CodeScriptNotExecutable, abs, 1, "script has a shebang but is not executable (chmod +x, and commit the mode)")
 		}
 	}
 }
@@ -883,9 +937,10 @@ func (r *runner) checkHookCommand(settings, event, command string) {
 			r.add(CodeHookMissing, settings, line, "%s hook runs %q, which does not exist", event, rel)
 			continue
 		}
+		r.dep(settings, filepath.Join(r.tree.Top, filepath.FromSlash(found)))
 		direct := m[0] == len(command)-len(trimmed)
 		if exe, known := r.tree.Executable(found); direct && known && !exe {
-			r.add(CodeHookNotExecutable, settings, line, "%s hook runs %q, which is not executable", event, rel)
+			r.addFix(chmodFix(filepath.Join(r.tree.Top, filepath.FromSlash(found))), CodeHookNotExecutable, settings, line, "%s hook runs %q, which is not executable", event, rel)
 		}
 	}
 }
@@ -1007,11 +1062,38 @@ func (r *runner) checkSettingsConfig() {
 				continue
 			}
 			if exe, known := r.tree.Executable(rel); known && !exe {
-				r.add(CodeHookSourceNotExec, path, lineOf(action.Script), "%s hook runs %q, which is not executable", group.Event, action.Script)
+				r.addFix(chmodFix(filepath.Join(r.tree.Top, filepath.FromSlash(rel))), CodeHookSourceNotExec, path, lineOf(action.Script), "%s hook runs %q, which is not executable", group.Event, action.Script)
 			}
 		}
 	}
 	for _, rule := range r.cfg.Permissions.OverbroadAllowRules() {
 		r.add(CodePermissionOverbroad, path, lineOf(rule), "permissions.allow %q permits every call of the tool; name the commands or paths it may run", rule)
 	}
+}
+
+// validateBudgetAndRisk checks [lint.budget] and [lint.risk].
+func validateBudgetAndRisk(lc *config.LintConfig) []string {
+	var problems []string
+	if _, ok := LookupProfile(lc.Profile); !ok {
+		problems = append(problems, fmt.Sprintf("lint.profile: unknown profile %q (use %s)", lc.Profile, strings.Join(ProfileNames(), ", ")))
+	}
+	for key, limit := range lc.Budget {
+		if _, ok := lookupRule(key); !ok {
+			problems = append(problems, fmt.Sprintf("lint.budget: unknown rule %q", key))
+		}
+		if limit < 0 {
+			problems = append(problems, fmt.Sprintf("lint.budget.%s: %d is negative", key, limit))
+		}
+	}
+	if lc.Risk != nil {
+		for _, w := range []struct {
+			name string
+			v    *int
+		}{{string(SeverityError), lc.Risk.Error}, {string(SeverityWarning), lc.Risk.Warning}, {string(SeverityInfo), lc.Risk.Info}} {
+			if w.v != nil && *w.v < 0 {
+				problems = append(problems, fmt.Sprintf("lint.risk.%s: %d is negative", w.name, *w.v))
+			}
+		}
+	}
+	return problems
 }

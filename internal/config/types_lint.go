@@ -3,6 +3,10 @@ package config
 // LintConfig configures `ai-rulez validate --strict`. Every field is optional;
 // the lint package applies defaults for anything left unset.
 type LintConfig struct {
+	// Profile selects a preset of severities and the failure threshold:
+	// "default", "strict" or "permissive". Explicit severity, fail_on and
+	// budget settings win over the preset.
+	Profile string `yaml:"profile,omitempty" json:"profile,omitempty" toml:"profile,omitempty"`
 	// FailOn is the lowest severity that makes the command exit non-zero:
 	// "error" (default), "warning", or "none".
 	FailOn string `yaml:"fail_on,omitempty" json:"fail_on,omitempty" toml:"fail_on,omitempty"` //nolint:tagliatelle
@@ -13,6 +17,10 @@ type LintConfig struct {
 	IgnorePaths []string `yaml:"ignore_paths,omitempty" json:"ignore_paths,omitempty" toml:"ignore_paths,omitempty"` //nolint:tagliatelle
 	// Severity overrides the severity of a code or name: error, warning, info, off.
 	Severity map[string]string `yaml:"severity,omitempty" json:"severity,omitempty" toml:"severity,omitempty"`
+	// ExamplePaths lists globs, relative to the config directory or the repo
+	// root, of files that document risky commands as examples: findings of the
+	// command-shaped rules (AR005, AR006, AR008) in them are dropped.
+	ExamplePaths []string `yaml:"example_paths,omitempty" json:"example_paths,omitempty" toml:"example_paths,omitempty"` //nolint:tagliatelle
 	// AllowPaths lists globs of repo paths that may be referenced without
 	// existing in the tracked tree (generated or machine-local outputs).
 	AllowPaths []string `yaml:"allow_paths,omitempty" json:"allow_paths,omitempty" toml:"allow_paths,omitempty"` //nolint:tagliatelle
@@ -21,6 +29,12 @@ type LintConfig struct {
 	KnownNames []string `yaml:"known_names,omitempty" json:"known_names,omitempty" toml:"known_names,omitempty"` //nolint:tagliatelle
 	// Description tunes the frontmatter description checks.
 	Description *LintDescription `yaml:"description,omitempty" json:"description,omitempty" toml:"description,omitempty"`
+	// Budget tolerates up to N findings per rule code or name: a rule whose
+	// unaccepted findings number at most N does not count toward the exit code.
+	// Lower N over time to ratchet a rule down.
+	Budget map[string]int `yaml:"budget,omitempty" json:"budget,omitempty" toml:"budget,omitempty"`
+	// Risk sets the weights of the advisory risk score.
+	Risk *LintRisk `yaml:"risk,omitempty" json:"risk,omitempty" toml:"risk,omitempty"`
 	// Budgets maps a content kind (rule, context, skill, agent, command) to its size limits.
 	Budgets map[string]LintBudget `yaml:"budgets,omitempty" json:"budgets,omitempty" toml:"budgets,omitempty"`
 	// RequireMetadata maps a content kind to frontmatter keys every item of that kind must set.
@@ -126,4 +140,13 @@ type LintDescription struct {
 type LintBudget struct {
 	MaxLines  int `yaml:"max_lines,omitempty" json:"max_lines,omitempty" toml:"max_lines,omitempty"`    //nolint:tagliatelle
 	MaxTokens int `yaml:"max_tokens,omitempty" json:"max_tokens,omitempty" toml:"max_tokens,omitempty"` //nolint:tagliatelle
+}
+
+// LintRisk weights the advisory risk score: the points one finding of each
+// severity adds (capped at 100 per item or bundle). Unset keeps the default
+// (error 25, warning 8, info 1); 0 is a valid weight.
+type LintRisk struct {
+	Error   *int `yaml:"error,omitempty" json:"error,omitempty" toml:"error,omitempty"`
+	Warning *int `yaml:"warning,omitempty" json:"warning,omitempty" toml:"warning,omitempty"`
+	Info    *int `yaml:"info,omitempty" json:"info,omitempty" toml:"info,omitempty"`
 }

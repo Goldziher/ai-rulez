@@ -6,6 +6,8 @@
 package lint
 
 import (
+	"encoding/json"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -176,7 +178,9 @@ func lookupRule(key string) (RuleInfo, bool) {
 	return RuleInfo{}, false
 }
 
-// Finding is one problem found in one place.
+// Finding is one problem found in one place. Keep it under 128 bytes:
+// code ranges over []Finding by value, and anything that does not belong in the
+// JSON report's fixed keys lives behind Meta.
 type Finding struct {
 	Code     string   `json:"code"`
 	Name     string   `json:"name"`
@@ -185,4 +189,81 @@ type Finding struct {
 	Line     int      `json:"line"`
 	Message  string   `json:"message"`
 	Root     string   `json:"root,omitempty"`
+	// Meta carries the optional annotations (repository path, baseline state,
+	// analyzer, fix); nil for a plain finding.
+	Meta *FindingMeta `json:"-"`
+}
+
+// FindingMeta is the optional, non-core data of a finding.
+type FindingMeta struct {
+	// Fingerprint is stable across line moves: it hashes the code, the
+	// repository-relative path and the normalized text of the flagged line.
+	Fingerprint string
+	// Path is File relative to the repository root (slash separated); SARIF
+	// artifact locations and baselines use it.
+	Path string
+	// Accepted marks a finding recorded in the baseline: it is reported but
+	// does not count toward the exit code.
+	Accepted bool
+	// AcceptReason is the baseline entry's reason.
+	AcceptReason string
+	// Analyzer and Scope classify the rule that produced the finding.
+	Analyzer, Scope string
+	// Fix is the mechanical correction, when one exists.
+	Fix *Fix
+}
+
+func (f *Finding) meta() *FindingMeta {
+	if f.Meta == nil {
+		f.Meta = &FindingMeta{}
+	}
+	return f.Meta
+}
+
+// RepoPath returns File relative to the repository root, or File itself when
+// the location is outside the repository.
+func (f *Finding) RepoPath() string {
+	if f.Meta != nil && f.Meta.Path != "" {
+		return f.Meta.Path
+	}
+	return filepath.ToSlash(f.File)
+}
+
+// Fingerprint returns the stable identity of the finding ("" before a run assigned one).
+func (f *Finding) Fingerprint() string {
+	if f.Meta == nil {
+		return ""
+	}
+	return f.Meta.Fingerprint
+}
+
+// IsAccepted reports whether the baseline accepts the finding.
+func (f *Finding) IsAccepted() bool { return f.Meta != nil && f.Meta.Accepted }
+
+type findingJSON struct {
+	Code         string   `json:"code"`
+	Name         string   `json:"name"`
+	Severity     Severity `json:"severity"`
+	File         string   `json:"file"`
+	Line         int      `json:"line"`
+	Message      string   `json:"message"`
+	Root         string   `json:"root,omitempty"`
+	Fingerprint  string   `json:"fingerprint,omitempty"`
+	Accepted     bool     `json:"accepted,omitempty"`
+	AcceptReason string   `json:"accept_reason,omitempty"`
+	Analyzer     string   `json:"analyzer,omitempty"`
+	Scope        string   `json:"scope,omitempty"`
+}
+
+// MarshalJSON flattens Meta's reportable fields next to the core ones.
+func (f Finding) MarshalJSON() ([]byte, error) {
+	out := findingJSON{
+		Code: f.Code, Name: f.Name, Severity: f.Severity, File: f.File, Line: f.Line,
+		Message: f.Message, Root: f.Root, Fingerprint: f.Fingerprint(),
+	}
+	if f.Meta != nil {
+		out.Accepted, out.AcceptReason = f.Meta.Accepted, f.Meta.AcceptReason
+		out.Analyzer, out.Scope = f.Meta.Analyzer, f.Meta.Scope
+	}
+	return json.Marshal(out) //nolint:wrapcheck // plain struct
 }

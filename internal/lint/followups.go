@@ -91,7 +91,8 @@ func (r *runner) checkFrontmatterKeys(it *item, fm frontmatter) {
 		if near := nearestKey(k.Name, known); near != "" {
 			hint = fmt.Sprintf("; did you mean %q?", near)
 		}
-		r.add(CodeFrontmatterKey, it.abs, k.Line, "unknown frontmatter key %q for a %s%s (list it in lint.allowed_keys if intended)", k.Name, it.kind, hint)
+		r.addFix(r.renameKeyFix(it, fm, k, nearestKey(k.Name, known)), CodeFrontmatterKey, it.abs, k.Line,
+			"unknown frontmatter key %q for a %s%s (list it in lint.allowed_keys if intended)", k.Name, it.kind, hint)
 	}
 }
 
@@ -638,4 +639,31 @@ func validateExternal(list []config.LintExternal) []string {
 		}
 	}
 	return problems
+}
+
+// renameKeyFix builds the safe fix for AR303: rename the key to the known key
+// it differs from only by case or separators. It returns nil when there is no
+// such key, the target key is already set, or the line is not a plain key line.
+func (r *runner) renameKeyFix(it *item, fm frontmatter, k fmKey, near string) *Fix {
+	if near == "" {
+		return nil
+	}
+	for _, other := range fm.keys {
+		if other.Name == near {
+			return nil // renaming would create a duplicate key
+		}
+	}
+	d, ok := r.docs[it.abs]
+	if !ok || k.Line < 1 || k.Line > len(d.lines) {
+		return nil
+	}
+	newLine, ok := renameKeyLine(d.lines[k.Line-1], k.Name, near)
+	if !ok {
+		return nil
+	}
+	return &Fix{
+		Description: fmt.Sprintf("rename frontmatter key %q to %q", k.Name, near),
+		Confidence:  FixSafe,
+		Edits:       []Edit{{File: it.abs, Line: k.Line, Old: d.lines[k.Line-1], New: newLine}},
+	}
 }
