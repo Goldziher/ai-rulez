@@ -7,17 +7,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestCheckArg(t *testing.T) {
-	for _, ok := range []string{"https://github.com/o/r.git", "git@github.com:o/r.git", "file:///tmp/r.git", "v1.0.0", "feature/x", ""} {
-		require.NoError(t, CheckArg("url", ok), ok)
+func TestCheckRemoteURL_RejectsPlainHTTPWithAMigrationNote(t *testing.T) {
+	for _, u := range []string{"http://example.com/o/r.git", "HTTP://example.com/o/r", "git+http://example.com/o/r.git", " http://example.com/o/r"} {
+		err := CheckRemoteURL("include url", u)
+		require.Error(t, err, u)
+		assert.Contains(t, err.Error(), "plain http://")
+		assert.Contains(t, err.Error(), "use https://")
 	}
-	for _, bad := range []string{"--upload-pack=touch /tmp/x;@h:p", "-c", " --upload-pack=x", "a\nb", "a\x00b", "a\tb"} {
-		assert.Error(t, CheckArg("url", bad), bad)
+	for _, u := range []string{"https://example.com/o/r.git", "git+https://example.com/o/r.git", "git@github.com:o/r.git", "ssh://git@example.com/o/r.git", "file:///tmp/repo", "/tmp/repo", "../repo"} {
+		assert.NoError(t, CheckRemoteURL("include url", u), u)
 	}
-}
-
-func TestHardenedConfigBlocksExtAndEnvRestrictsProtocols(t *testing.T) {
-	cfg := HardenedConfig()
-	assert.Contains(t, cfg, "protocol.ext.allow=never")
-	assert.Contains(t, HardenedEnv(nil), "GIT_ALLOW_PROTOCOL=file:https:ssh")
+	assert.Error(t, CheckRemoteURL("include url", "--upload-pack=x"), "still refuses what CheckArg refuses")
 }

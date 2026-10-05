@@ -55,6 +55,17 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
 - **The lock digest ignores the project-wide `Source-Hash` header**, so editing an unrelated file no longer changes
   the digest of a served skill.
 
+## Supply-chain defaults
+
+- **Plain `http://` remotes are rejected.** A remote include, OKF include, installed skill or skill source must use
+  `https://`, `ssh://` / `git@host:path`, or a local `file://` URL or path. The error names the source and says to
+  switch to `https://`; `include add` refuses `http://` too.
+- **Imported content is scanned by default.** `[lint.security] scan_imports` is on when unset: `generate` scans
+  includes and installed skills before writing anything and stops at an error-level finding. Set
+  `scan_imports = "off"` to opt out, or `"warn"` to log only.
+- **Unpinned MCP packages (`AR012`)** stay a warning in `validate`, and are an error whenever `[lock] enforce` is on
+  (whenever `ai-rulez.lock` exists, unless `enforce = false`), together with `AR010`.
+
 ## Trust rule for `[llm]` and `[telemetry]`
 
 `allow_network`, `base_url`, `api_key_env` and the price overrides of `[llm]`, and the egress keys of `[telemetry]`

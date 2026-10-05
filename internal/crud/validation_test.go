@@ -197,7 +197,7 @@ func TestValidateIncludeSource(t *testing.T) {
 		// Valid git URLs
 		{"https git URL", "https://github.com/user/repo", false},
 		{"https with .git suffix", "https://github.com/user/repo.git", false},
-		{"http git URL", "http://github.com/user/repo.git", false},
+		{"http git URL is rejected", "http://github.com/user/repo.git", true},
 		{"git SSH URL", "git@github.com:user/repo.git", false},
 
 		// Invalid cases

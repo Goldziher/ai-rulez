@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -51,5 +52,15 @@ func TestGitOpsTreatUserURLAsOperand(t *testing.T) {
 				t.Fatalf("expected an error for a bogus repository")
 			}
 		})
+	}
+}
+
+func TestCheckRemoteArgsRejectsPlainHTTP(t *testing.T) {
+	err := checkRemoteArgs("http://example.com/o/r.git", "main")
+	if err == nil || !strings.Contains(err.Error(), "plain http://") {
+		t.Fatalf("plain http:// must be rejected with a migration note, got %v", err)
+	}
+	if err := checkRemoteArgs("https://example.com/o/r.git", "main"); err != nil {
+		t.Fatalf("https must pass: %v", err)
 	}
 }

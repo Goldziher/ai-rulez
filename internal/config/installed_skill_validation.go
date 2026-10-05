@@ -69,6 +69,8 @@ func ValidateInstalledSkillFields(skill *InstalledSkillConfig) error {
 		return bad("source", "must not use a git transport helper such as ext::")
 	case hasControl(skill.Source):
 		return bad("source", "must not contain control characters")
+	case strings.HasPrefix(strings.ToLower(src), "http://"):
+		return bad("source", "uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh, git@host:path, file://)")
 	}
 	if skill.Ref != "" {
 		switch {

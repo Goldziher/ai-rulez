@@ -84,9 +84,10 @@ type LintMetadataRule struct {
 // LintSecurity configures the security checks. Everything is optional.
 type LintSecurity struct {
 	// ScanImports also scans content imported through includes and installed
-	// skills, and makes `generate` refuse to write it when a finding reaches
-	// the level: "off" (default), "warn" or "error". The level replaces the
-	// severity of findings in imported content.
+	// skills, and makes `generate` refuse to write it when it has an
+	// error-level finding. Unset (the default) scans and keeps each finding's own
+	// severity; "error" or "warn" replaces the severity of every finding in
+	// imported content; "off" opts out.
 	ScanImports string `yaml:"scan_imports,omitempty" json:"scan_imports,omitempty" toml:"scan_imports,omitempty"` //nolint:tagliatelle
 	// AllowedHosts restricts the hosts URLs may point to ("example.com", "*.example.com").
 	// Empty disables the outbound host check.

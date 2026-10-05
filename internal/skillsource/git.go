@@ -30,7 +30,7 @@ const (
 // checkRemote refuses a url or ref git would read as an option (for example
 // `--upload-pack=<command>`), before any git command is built from it.
 func checkRemote(url, ref string) error {
-	if err := gitutil.CheckArg("skill source url", gitURL(url)); err != nil {
+	if err := gitutil.CheckRemoteURL("skill source url", gitURL(url)); err != nil {
 		return oops.Wrap(err)
 	}
 	if err := gitutil.CheckArg("skill source ref", ref); err != nil {

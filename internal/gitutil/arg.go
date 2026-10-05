@@ -22,3 +22,17 @@ func CheckArg(what, value string) error {
 	}
 	return nil
 }
+
+// CheckRemoteURL is CheckArg for a repository URL that will be fetched: it also
+// refuses plain http://, which lets anyone on the path rewrite the instructions
+// an agent is about to follow. Only https://, ssh (git@host:path, ssh://) and
+// local file:// or path sources are accepted; a leading "git+" is ignored.
+func CheckRemoteURL(what, value string) error {
+	if err := CheckArg(what, value); err != nil {
+		return err
+	}
+	if strings.HasPrefix(strings.ToLower(strings.TrimPrefix(strings.TrimSpace(value), "git+")), "http://") {
+		return fmt.Errorf("%s %q uses plain http://, which is not accepted since ai-rulez 5: use https:// (or ssh://, git@host:path, file://)", what, value)
+	}
+	return nil
+}

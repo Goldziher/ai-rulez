@@ -329,9 +329,10 @@ func warnFrontmatter(cfg *config.Config) {
 	}
 }
 
-// enforceScanImports runs the security rules over imported content when
-// [lint.security] scan_imports is set, before anything is written. At level
-// "error" a finding stops the run; at "warn" it is logged.
+// enforceScanImports runs the security rules over imported content before
+// anything is written, unless [lint.security] scan_imports is "off". An
+// error-level finding (every finding at level "error") stops the run; the rest
+// are logged.
 func enforceScanImports(cfg *config.Config) error {
 	findings, err := lint.ScanImports(cfg)
 	if err != nil {
@@ -354,7 +355,7 @@ func enforceScanImports(cfg *config.Config) error {
 		}
 		return nil
 	}
-	return oops.Hint("Review the imported source, or lower [lint.security] scan_imports to \"warn\"").
+	return oops.Hint("Review the imported source, or set [lint.security] scan_imports to \"warn\" (or \"off\")").
 		Errorf("imported content failed the security scan; nothing was written:\n  %s", strings.Join(lines, "\n  "))
 }
 

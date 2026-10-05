@@ -675,7 +675,7 @@ func runGenerateCheck(args []string) {
 }
 
 // importGate scans imported content before anything is written, when
-// [lint.security] scan_imports asks for it. Dry runs and plugin bundles skip it.
+// [lint.security] scan_imports is not "off". Dry runs and plugin bundles skip it.
 func importGate(cfg *config.Config) error {
 	if dryRun || pluginMode {
 		return nil
