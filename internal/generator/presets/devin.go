@@ -58,7 +58,10 @@ func (g *DevinPresetGenerator) GlobalOutputPaths(home string, getenv func(string
 		RootFile:  ".config/devin/AGENTS.md",
 		SkillsDir: ".config/devin/skills",
 		AgentsDir: ".config/devin/agents",
-		Sidecars:  map[string]string{MergedDocDevinMCP: ".config/devin/mcp_config.json"},
+		Sidecars: map[string]string{
+			MergedDocDevinMCP:    ".config/devin/mcp_config.json",
+			MergedDocDevinConfig: ".config/devin/config.json",
+		},
 	}.Resolve(home, getenv)
 }
 
@@ -151,6 +154,12 @@ func (g *DevinPresetGenerator) Generate(content *config.ContentTree, baseDir str
 		}
 		outputs = append(outputs, mergedOutput(path, doc))
 	}
+
+	settingsOutputs, err := g.settingsOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("render devin permissions and hooks: %w", err)
+	}
+	outputs = append(outputs, settingsOutputs...)
 
 	// Add .devin/agents directory
 	outputs = append(outputs, config.OutputFile{

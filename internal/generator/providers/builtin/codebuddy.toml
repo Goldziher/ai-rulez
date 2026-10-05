@@ -76,6 +76,23 @@ path = ".mcp.json"
 emit_when = "has_mcp_json_entries"
 
 # User-scope layout: everything lives under ~/.codebuddy.
+# Hooks: top-level [[hooks]] rendered in codebuddy's native format, read from the
+# vendor documentation (see docs/settings.md). CodeBuddy Code reads `hooks` from settings.json (Claude-style groups, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "codebuddy"
+path = ".codebuddy/settings.json"
+format = "json"
+global_path = ".codebuddy/settings.json"
+
+# Top-level [permissions], translated to this tool's native permission format.
+[[sidecars]]
+kind = "permissions"
+path = ".codebuddy/settings.json"
+format = "json"
+dialect = "codebuddy"
+global_path = ".codebuddy/settings.json"
+
 [global]
 root_file = ".codebuddy/CODEBUDDY.md"
 skills_dir = ".codebuddy/skills"

@@ -1,0 +1,119 @@
+{{template "header" . }}
+{{template "runtime" . }}
+{{if or .Has.SessionStart .Has.Stop .Has.PostCompact}}
+// Session events: the v1 plugin API delivers them to the event hook, v2 through ctx.event.subscribe.
+async function handleEvent(event, dir) {
+  const sessionId = event?.properties?.sessionID ?? event?.properties?.info?.id ?? event?.sessionID ?? "";
+  try {
+    await handleSessionEvent(event, dir, sessionId);
+  } catch (error) {
+    log(`the ${event?.type} hooks failed: ${error?.message ?? error}`);
+  }
+}
+
+async function handleSessionEvent(event, dir, sessionId) {
+  switch (event?.type) {
+{{- if .Has.SessionStart}}
+    case "session.created":
+      await dispatch("SessionStart", dir, { session_id: sessionId, source: "startup" }, { subject: "startup" });
+      break;
+{{- end}}
+{{- if .Has.Stop}}
+    case "session.idle":
+      await dispatch("Stop", dir, { session_id: sessionId });
+      break;
+{{- end}}
+{{- if .Has.PostCompact}}
+    case "session.compacted":
+      await dispatch("PostCompact", dir, { session_id: sessionId });
+      break;
+{{- end}}
+    default:
+      break;
+  }
+}
+{{end}}
+// OpenCode v1 (and its forks): the hooks object the server function returns.
+async function server(ctx) {
+  const dir = ctx?.directory ?? process.cwd();
+  return {
+{{- if or .Has.SessionStart .Has.Stop .Has.PostCompact}}
+    event: async ({ event }) => {
+      await handleEvent(event, dir);
+    },
+{{- end}}
+{{- if .Has.PreToolUse}}
+    "tool.execute.before": async (input, output) => {
+      const reason = await dispatch(
+        "PreToolUse",
+        dir,
+        { session_id: input.sessionID, tool_use_id: input.callID, tool_input: output?.args },
+        { tool: input.tool },
+      );
+      if (reason !== null) throw new Error(reason);
+    },
+{{- end}}
+{{- if .Has.PostToolUse}}
+    "tool.execute.after": async (input, output) => {
+      await dispatch(
+        "PostToolUse",
+        dir,
+        {
+          session_id: input.sessionID,
+          tool_use_id: input.callID,
+          tool_input: input.args,
+          tool_response: { title: output?.title, output: output?.output },
+        },
+        { tool: input.tool },
+      );
+    },
+{{- end}}
+  };
+}
+{{if .V2}}
+// OpenCode v2: registers the same hooks on the plugin context. v2 ignores server and v1 ignores setup.
+async function setup(ctx) {
+  const dir = ctx?.location?.directory ?? process.cwd();
+{{- if .Has.PreToolUse}}
+  await ctx.tool.hook("execute.before", async (event) => {
+    const reason = await dispatch(
+      "PreToolUse",
+      dir,
+      { session_id: event.sessionID, tool_input: event.input },
+      { tool: event.tool },
+    );
+    if (reason !== null) throw new Error(reason);
+  });
+{{- end}}
+{{- if .Has.PostToolUse}}
+  await ctx.tool.hook("execute.after", async (event) => {
+    if (event.status !== "completed") return;
+    await dispatch(
+      "PostToolUse",
+      dir,
+      { session_id: event.sessionID, tool_input: event.input, tool_response: event.result },
+      { tool: event.tool },
+    );
+  });
+{{- end}}
+{{- if or .Has.SessionStart .Has.Stop .Has.PostCompact}}
+  const controller = new AbortController();
+  void (async () => {
+    try {
+      for await (const event of ctx.event.subscribe({ signal: controller.signal })) {
+        await handleEvent(event, dir);
+      }
+    } catch (error) {
+      if (!controller.signal.aborted) log(`the event stream ended: ${error?.message ?? error}`);
+    }
+  })();
+{{- end}}
+}
+{{end}}
+export default {
+  id: "ai-rulez-hooks",
+{{- if .V2}}
+  setup,
+{{- end}}
+  server,
+};

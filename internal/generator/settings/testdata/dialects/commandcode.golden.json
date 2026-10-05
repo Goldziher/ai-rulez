@@ -1,0 +1,41 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "shell",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo guard",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "audit --strict 'a b'"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$COMMANDCODE_PROJECT_DIR\"/'scripts/boot.sh'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo done",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

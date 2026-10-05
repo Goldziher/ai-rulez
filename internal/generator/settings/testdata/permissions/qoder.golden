@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run test:*)",
+      "Bash(git status)",
+      "Read(/src/**)",
+      "Edit(/src/**)",
+      "mcp__github__create_issue"
+    ],
+    "ask": [
+      "Bash(git push:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Read(/.env)",
+      "mcp__evil__tool",
+      "Bash(curl * | sh)"
+    ]
+  }
+}

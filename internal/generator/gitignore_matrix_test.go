@@ -54,6 +54,14 @@ func generateWithGitignore(t *testing.T, preset string, agentsMD bool) (string, 
 		sb.WriteString("agents_md = true\n")
 	}
 	sb.WriteString("presets = [\"" + preset + "\"]\n\n[[mcp_servers]]\nname = \"demo\"\ncommand = \"npx\"\nargs = [\"-y\", \"demo\"]\n")
+	// A [[hooks]] group every hook renderer accepts (a plain command on an event
+	// without a matcher), so the hooks documents join the matrix.
+	sb.WriteString("\n[[hooks]]\nevent = \"SessionStart\"\n[[hooks.hooks]]\ncommand = \"echo matrix\"\n\n" +
+		"[[hooks]]\nevent = \"PreToolUse\"\n[[hooks.hooks]]\ncommand = \"echo matrix\"\n")
+	// [permissions] rules every translator can express (a command prefix, a path, a
+	// domain), so the permission documents join the matrix.
+	sb.WriteString("\n[permissions]\nallow = [\"Bash(npm run test:*)\", \"Read(./src/**)\", \"Edit(src/**)\"]\n" +
+		"ask = [\"Bash(git push:*)\"]\ndeny = [\"Bash(rm -rf:*)\", \"Read(./.env)\", \"WebFetch(domain:evil.com)\"]\n")
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.toml"), []byte(sb.String()), 0o600))
 
 	cfg, err := config.LoadConfig(context.Background(), base)

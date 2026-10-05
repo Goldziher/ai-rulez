@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^shell$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo guard",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "audit --strict 'a b'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo done",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

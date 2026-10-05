@@ -278,7 +278,10 @@ func TestHarnessBatch_GlobalPaths(t *testing.T) {
 		{"kiro", providers.GlobalPaths{
 			RootFile: j(".kiro/steering/AGENTS.md"), RulesDir: j(".kiro/steering"),
 			SkillsDir: j(".kiro/skills"), AgentsDir: j(".kiro/agents"), CommandsDir: j(".kiro/prompts"),
-			Sidecars: map[string]string{".kiro/settings/mcp.json": j(".kiro/settings/mcp.json")},
+			Sidecars: map[string]string{
+				".kiro/settings/mcp.json":   j(".kiro/settings/mcp.json"),
+				".kiro/hooks/ai-rulez.json": j(".kiro/hooks/ai-rulez.json"),
+			},
 		}},
 		{"trae", providers.GlobalPaths{SkillsDir: j(".trae/skills"), Sidecars: map[string]string{}}},
 		{"zoocode", providers.GlobalPaths{
@@ -297,7 +300,7 @@ func TestHarnessBatch_GlobalPaths(t *testing.T) {
 		}},
 		{"cortex", providers.GlobalPaths{
 			SkillsDir: j(".snowflake/cortex/skills"), AgentsDir: j(".snowflake/cortex/agents"),
-			Sidecars: map[string]string{},
+			Sidecars: map[string]string{".cortex/settings.json": j(".snowflake/cortex/hooks.json")},
 		}},
 	}
 	for _, tt := range tests {

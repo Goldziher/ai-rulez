@@ -119,6 +119,10 @@ type Result struct {
 	// Claims record what ai-rulez wrote, so that Unmerge can take exactly that
 	// back out when the owning preset or server goes away or on clean.
 	Claims []Claim
+	// Owned are the keys the document was merged from. docmerge.Apply sets it, so
+	// a caller that must merge another preset's keys into the same document (see
+	// config.MergeSource) can render the union.
+	Owned []OwnedKey
 }
 
 // jsonMember is one top-level key/value pair of a JSON object, with the value

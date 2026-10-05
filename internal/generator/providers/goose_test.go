@@ -54,7 +54,8 @@ func TestGoose_Global(t *testing.T) {
 
 	want := providers.GlobalPaths{
 		RootFile: batchAJoin(".config/goose/.goosehints"), SkillsDir: batchAJoin(".agents/skills"),
-		AgentsDir: batchAJoin(".config/goose/agents"), Sidecars: map[string]string{},
+		AgentsDir: batchAJoin(".config/goose/agents"),
+		Sidecars:  map[string]string{".agents/plugins/ai-rulez/hooks/hooks.json": batchAJoin(".agents/plugins/ai-rulez/hooks/hooks.json")},
 	}
 	assert.Equal(t, want, batchAGlobal(t, "goose", nil))
 }

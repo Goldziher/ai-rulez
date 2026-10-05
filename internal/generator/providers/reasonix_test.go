@@ -56,7 +56,8 @@ func TestReasonix_Global(t *testing.T) {
 
 	want := providers.GlobalPaths{
 		RootFile: batchAJoin(".reasonix/REASONIX.md"), SkillsDir: batchAJoin(".reasonix/skills"),
-		CommandsDir: batchAJoin(".reasonix/commands"), Sidecars: map[string]string{},
+		CommandsDir: batchAJoin(".reasonix/commands"),
+		Sidecars:    map[string]string{".reasonix/settings.json": batchAJoin(".reasonix/settings.json")},
 	}
 	assert.Equal(t, want, batchAGlobal(t, "reasonix", nil))
 }

@@ -9,7 +9,7 @@
     ],
     "sessionStart": [
       {
-        "command": "./scripts/boot.sh --quick 'a b'",
+        "command": "'./scripts/boot.sh' --quick 'a b'",
         "timeout": 5
       }
     ],
