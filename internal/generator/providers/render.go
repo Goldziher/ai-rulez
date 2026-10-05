@@ -848,6 +848,8 @@ func buildBlacklistSet(blacklist []string) map[string]bool {
 	// always set explicitly first and re-emitting it from extras would
 	// double the key in the yaml map.
 	set["name"] = true
+	// "delivery" steers ai-rulez (static, served or both), not the harness.
+	set["delivery"] = true
 	return set
 }
 
