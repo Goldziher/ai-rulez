@@ -135,7 +135,25 @@ func LoadCases(skill *Skill) ([]Case, []Problem) {
 			}
 		}
 	}
-	return cases, problems
+	return cases, append(problems, nearMissCollisions(cases)...)
+}
+
+// nearMissCollisions reports an authored case whose id equals one derived from a
+// near_miss list: the runner's results for the two would overwrite each other.
+func nearMissCollisions(cases []Case) []Problem {
+	authored := map[string]bool{}
+	for i := range cases {
+		authored[cases[i].ID] = true
+	}
+	var problems []Problem
+	for i := range cases {
+		for n := range cases[i].NearMiss {
+			if id := nearMissID(cases[i].ID, n); authored[id] {
+				problems = append(problems, Problem{File: cases[i].File, Line: cases[i].Line, Message: fmt.Sprintf("case %q: near_miss %d derives the id %q, which another case already uses", cases[i].ID, n+1, id)})
+			}
+		}
+	}
+	return problems
 }
 
 // resolve replaces prompt_file and file sources with their contents so a case
