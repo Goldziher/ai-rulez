@@ -149,6 +149,7 @@ func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 	}
 
 	results := make(map[string][]OutputFile)
+	cfg.WarnDeliveryFallbacks()
 
 	for _, preset := range cfg.Presets {
 		var outputs []OutputFile
@@ -173,7 +174,7 @@ func GeneratePresets(cfg *Config) (map[string][]OutputFile, error) {
 			return nil, fmt.Errorf("resolve preset %s: %w", preset.GetName(), err)
 		}
 
-		outputs, err = generator.Generate(cfg.Content, cfg.BaseDir, cfg)
+		outputs, err = generator.Generate(cfg.ContentForPreset(preset.GetName()), cfg.BaseDir, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("generate preset %s: %w", preset.GetName(), err)
 		}

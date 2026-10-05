@@ -604,6 +604,9 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Rules           *RulesConfig           `toml:"rules"`
 		Lint            *LintConfig            `toml:"lint"`
 		Usage           *UsageConfig           `toml:"usage"`
+		Skills          *SkillsConfig          `toml:"skills"`
+		DomainSettings  DomainConfigs          `toml:"domains"`
+		SkillSources    []SkillSourceConfig    `toml:"skill_sources"`
 		Plugin          *PluginAuthoring       `toml:"plugin"`
 		Marketplace     *MarketplaceAuthoring  `toml:"marketplace"`
 		Placement       *PlacementConfig       `toml:"placement"`
@@ -670,6 +673,9 @@ func decodeConfigTOML(data []byte, path string) (*Config, error) {
 		Rules:           raw.Rules,
 		Lint:            raw.Lint,
 		Usage:           raw.Usage,
+		Skills:          raw.Skills,
+		DomainSettings:  raw.DomainSettings,
+		SkillSources:    raw.SkillSources,
 		Plugin:          raw.Plugin,
 		Marketplace:     raw.Marketplace,
 		Placement:       raw.Placement,
