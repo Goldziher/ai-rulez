@@ -139,19 +139,16 @@ func (f credFamily) wants(method string) bool {
 	return false
 }
 
-// scanCredentialAccess reports commands that read, copy or upload a credential
-// location. Merely naming a path (ls ~/.ssh, "the .env file holds secrets") is
-// not an access and is not reported.
-func (r *runner) scanCredentialAccess(abs string, no int, line string) {
-	if keychainCmdRe.MatchString(line) {
-		r.add(CodeShellAccess, abs, no, "reads a password from the macOS keychain (security find-*-password)")
-		return
-	}
-	var best struct {
-		sev          Severity
-		label, where string
-		method       string
-	}
+// credHit is one credential access found on a line.
+type credHit struct {
+	sev          Severity
+	label, where string
+	method       string
+}
+
+// detectCredentialAccess finds the most severe credential access on a line.
+func detectCredentialAccess(line string) (credHit, bool) {
+	var best credHit
 	for _, fam := range credentialTable {
 		for _, loc := range fam.re.FindAllStringSubmatchIndex(line, -1) {
 			m := make([]string, len(loc)/2)
@@ -169,12 +166,23 @@ func (r *runner) scanCredentialAccess(abs string, no int, line string) {
 			}
 			sev := credentialSeverity(fam.tier, method)
 			if best.sev == "" || sev.rank() > best.sev.rank() {
-				best.sev, best.label, best.where, best.method = sev, fam.label, strings.TrimSpace(m[0]), method
+				best = credHit{sev: sev, label: fam.label, where: strings.TrimSpace(m[0]), method: method}
 			}
 		}
 	}
-	if best.sev != "" {
-		r.addSev(best.sev, CodeShellAccess, abs, no, "%s", fmt.Sprintf("%s %s (%s)", methodVerb(best.method), best.label, best.where))
+	return best, best.sev != ""
+}
+
+// scanCredentialAccess reports commands that read, copy or upload a credential
+// location. Merely naming a path (ls ~/.ssh, "the .env file holds secrets") is
+// not an access and is not reported.
+func (r *runner) scanCredentialAccess(abs string, no int, line string) {
+	if keychainCmdRe.MatchString(line) {
+		r.add(CodeShellAccess, abs, no, "reads a password from the macOS keychain (security find-*-password)")
+		return
+	}
+	if hit, ok := detectCredentialAccess(line); ok {
+		r.addSev(hit.sev, CodeShellAccess, abs, no, "%s", fmt.Sprintf("%s %s (%s)", methodVerb(hit.method), hit.label, hit.where))
 	}
 	r.scanUnknownDotdir(abs, no, line)
 }
