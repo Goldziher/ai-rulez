@@ -26,7 +26,7 @@ func splitFrontmatter(t *testing.T, text string) (fm map[string]any, rest string
 	}
 	end := strings.Index(text[4:], "\n---\n")
 	require.GreaterOrEqual(t, end, 0)
-	// Cursor and Windsurf write globs as a bare comma list, which is not valid
+	// Cursor and Devin write globs as a bare comma list, which is not valid
 	// YAML when it starts with "*"; quote it for the parse.
 	block := unquotedGlobsLine.ReplaceAllStringFunc(text[4:4+end+1], func(line string) string {
 		return "globs: '" + strings.ReplaceAll(strings.TrimPrefix(line, "globs: "), "'", "''") + "'"
@@ -39,10 +39,9 @@ func TestRender_HashInjectionRoundTrip(t *testing.T) {
 	targets := []rulefiles.Target{
 		{Preset: "claude", Dir: ".claude/rules", Ext: ".md", Dialect: rulefiles.DialectClaude, Banner: true},
 		{Preset: "cursor", Dir: ".cursor/rules", Ext: ".mdc", Dialect: rulefiles.DialectCursor, Banner: true},
-		{Preset: "windsurf", Dir: ".windsurf/rules", Ext: ".md", Dialect: rulefiles.DialectTrigger, Banner: true},
+		{Preset: "devin", Dir: ".devin/rules", Ext: ".md", Dialect: rulefiles.DialectTrigger, Banner: true},
 		{Preset: "copilot", Dir: ".github/instructions", Ext: ".instructions.md", Dialect: rulefiles.DialectCopilot, Banner: true},
 		{Preset: "cline", Dir: ".clinerules", Ext: ".md", Dialect: rulefiles.DialectCline, Banner: true},
-		{Preset: "continue", Dir: ".continue/rules", Ext: ".md", Dialect: rulefiles.DialectContinue, Banner: true},
 		{Preset: "junie", Dir: ".junie/rules", Ext: ".md", Dialect: rulefiles.DialectJunie, Banner: true},
 	}
 	modes := []config.ActivationMode{

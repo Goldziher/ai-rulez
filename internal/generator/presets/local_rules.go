@@ -58,8 +58,8 @@ func PlanLocalRules(t rulefiles.Target, routing rulefiles.Routing, rules []confi
 }
 
 // alwaysFileLocalRules implements config.LocalRuleProvider for presets that write
-// one file per rule regardless of the rules mode (cursor, windsurf, cline,
-// continue-dev). A zero value plans nothing.
+// one file per rule regardless of the rules mode (cursor, devin, cline,
+// cline, devin). A zero value plans nothing.
 type alwaysFileLocalRules struct {
 	target  *rulefiles.Target
 	routing rulefiles.Routing

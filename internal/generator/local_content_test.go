@@ -113,7 +113,7 @@ func TestLocalContent_PerPreset(t *testing.T) {
 			".github/skills/mine-skill/SKILL.md":                   "LOCAL_SKILL.",
 			".github/skills/dom-skill/SKILL.md":                    "LOCAL_DOMAIN_SKILL.",
 			".github/agents/mine-agent.agent.md":                   "LOCAL_AGENT.",
-			".github/commands/mine-cmd.md":                         "LOCAL_COMMAND.",
+			".github/prompts/mine-cmd.prompt.md":                   "LOCAL_COMMAND.",
 		}},
 		{"antigravity", "antigravity", map[string]string{
 			".agents/rules/mine-rule.local.md":   "LOCAL_RULE.",
@@ -128,7 +128,7 @@ func TestLocalContent_PerPreset(t *testing.T) {
 			".agents/skills/mine-skill/SKILL.md": "LOCAL_SKILL.",
 			".agents/skills/dom-skill/SKILL.md":  "LOCAL_DOMAIN_SKILL.",
 			".codex/agents/mine-agent.toml":      "LOCAL_AGENT.",
-			".codex/commands/mine-cmd.md":        "LOCAL_COMMAND.",
+			".codex/prompts/mine-cmd.md":         "LOCAL_COMMAND.",
 		}},
 	}
 	for _, tt := range tests {

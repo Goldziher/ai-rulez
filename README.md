@@ -37,7 +37,7 @@ npx ai-rulez@latest init && npx ai-rulez@latest generate
 
 Prefer the project-level [`.config/` convention](https://github.com/pi0/config-dir)? `ai-rulez` auto-discovers `.config/ai-rulez/` as well, and `ai-rulez init --config-dir .config/ai-rulez` scaffolds it.
 
-ai-rulez generates correct, tool-native output for **15 platforms**: Claude, Cursor, Windsurf, Copilot, Gemini, Cline, Continue.dev, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, Xum, and pi. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
+ai-rulez generates correct, tool-native output for **15 platforms**: Claude, Cursor, Devin, Copilot, Gemini, Cline, Codex, OpenCode, Hermes, Amp, Junie, Antigravity, Xum, pi and Baz. Each preset respects the target tool's conventions — proper frontmatter, directory structure, file extensions, agent formats.
 
 For a tool that isn't built in, a custom preset can point at a declarative **provider spec** (`provider = ".ai-rulez/providers/my-tool.toml"`) and get the same full feature set as a built-in — root instructions file, skills/agents/commands, per-agent frontmatter, and MCP sidecars. See [Custom Presets](docs/configuration.md#provider-backed-presets-full-parity).
 
@@ -162,7 +162,7 @@ Include sources can use a bare/flattened layout — expose `rules/`, `context/`,
 directly (at the repo root or a sub-path via `path = "modules/core"`) with no `.ai-rulez/` wrapper.
 Recommended for shared, skill-first modules.
 
-**Native rules folders** — Rules are written to each tool's own rules folder (`.claude/rules`, `.cursor/rules`, `.github/instructions`, `.windsurf/rules`, ...) with native `paths`/`globs` frontmatter, so path-scoped rules load only when relevant. `split` is the default since 4.22.0; set `[rules] mode = "inline"` to keep rules in the root files. See [docs/rules.md](docs/rules.md).
+**Native rules folders** — Rules are written to each tool's own rules folder (`.claude/rules`, `.cursor/rules`, `.github/instructions`, `.devin/rules`, ...) with native `paths`/`globs` frontmatter, so path-scoped rules load only when relevant. `split` is the default since 4.22.0; set `[rules] mode = "inline"` to keep rules in the root files. See [docs/rules.md](docs/rules.md).
 
 **Local configuration** — Personal, machine-local content and settings that never get committed:
 
@@ -201,7 +201,7 @@ Accepted values: `low`, `medium`, `high`, `xhigh`, `max`, `inherit`. ai-rulez em
 - **Claude** — `effort` in `.claude/agents/*.md` frontmatter (per-agent)
 - **Codex** — `model_reasoning_effort` in `.codex/config.toml` and `.codex/agents/*.toml`
 - **Amp** — `amp.anthropic.effort` in `.amp/settings.json` (global)
-- **Windsurf** — `reasoning_effort` in `.windsurf/agents/*.md` frontmatter (per-agent)
+- **Devin** — `reasoning_effort` in `.devin/agents/*.md` frontmatter (per-agent)
 - **Opencode** — `variant` in `.opencode/agents/*.md` frontmatter (per-agent); a separate key beside the agent's `provider/model`
 - **Xum** — `ai.thinkingLevel` in `.xum/agents/*.md` frontmatter (per-agent)
 - **pi** — `thinking` in `.pi/agents/*.md` frontmatter (per-agent)

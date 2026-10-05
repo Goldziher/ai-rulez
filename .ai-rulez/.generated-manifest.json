@@ -1,6 +1,23 @@
 {
   "version": "1",
   "files": [
+    ".agents/skills/capability-delivery-checklist/SKILL.md",
+    ".agents/skills/code-quality-standards/SKILL.md",
+    ".agents/skills/config-schema-maintainer/SKILL.md",
+    ".agents/skills/core-workflows/SKILL.md",
+    ".agents/skills/dependency-awareness/SKILL.md",
+    ".agents/skills/docs-and-site/SKILL.md",
+    ".agents/skills/error-handling/SKILL.md",
+    ".agents/skills/go-conventions/SKILL.md",
+    ".agents/skills/incremental-approach/SKILL.md",
+    ".agents/skills/mcp-integrations/SKILL.md",
+    ".agents/skills/owasp-quick-reference/SKILL.md",
+    ".agents/skills/release-and-distribution/SKILL.md",
+    ".agents/skills/repository-layout/SKILL.md",
+    ".agents/skills/task-runner/SKILL.md",
+    ".agents/skills/tdd-workflow/SKILL.md",
+    ".agents/skills/test-fixture-maintainer/SKILL.md",
+    ".agents/skills/testing-conventions/SKILL.md",
     ".claude/agents/code-reviewer.md",
     ".claude/agents/docs-writer.md",
     ".claude/agents/golang-maintainer.md",
@@ -63,31 +80,14 @@
     ".codex/agents/governance-architect.toml",
     ".codex/agents/security-auditor.toml",
     ".codex/agents/test-writer.toml",
-    ".codex/commands/build.md",
-    ".codex/commands/fix.md",
-    ".codex/commands/iterate.md",
-    ".codex/commands/lint.md",
-    ".codex/commands/parallelize.md",
-    ".codex/commands/review.md",
-    ".codex/commands/test.md",
     ".codex/plugins.json",
-    ".codex/skills/capability-delivery-checklist/SKILL.md",
-    ".codex/skills/code-quality-standards/SKILL.md",
-    ".codex/skills/config-schema-maintainer/SKILL.md",
-    ".codex/skills/core-workflows/SKILL.md",
-    ".codex/skills/dependency-awareness/SKILL.md",
-    ".codex/skills/docs-and-site/SKILL.md",
-    ".codex/skills/error-handling/SKILL.md",
-    ".codex/skills/go-conventions/SKILL.md",
-    ".codex/skills/incremental-approach/SKILL.md",
-    ".codex/skills/mcp-integrations/SKILL.md",
-    ".codex/skills/owasp-quick-reference/SKILL.md",
-    ".codex/skills/release-and-distribution/SKILL.md",
-    ".codex/skills/repository-layout/SKILL.md",
-    ".codex/skills/task-runner/SKILL.md",
-    ".codex/skills/tdd-workflow/SKILL.md",
-    ".codex/skills/test-fixture-maintainer/SKILL.md",
-    ".codex/skills/testing-conventions/SKILL.md",
+    ".codex/prompts/build.md",
+    ".codex/prompts/fix.md",
+    ".codex/prompts/iterate.md",
+    ".codex/prompts/lint.md",
+    ".codex/prompts/parallelize.md",
+    ".codex/prompts/review.md",
+    ".codex/prompts/test.md",
     ".hermes.md",
     ".mcp.json",
     ".opencode/agents/code-reviewer.md",
@@ -116,5 +116,49 @@
     "AGENTS.md",
     "CLAUDE.md",
     "opencode.json"
-  ]
+  ],
+  "merged": {
+    ".claude/settings.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "34631fd75fcd70f269a38f5e6b367067e27e561b130c5454f50e6517ed562839"
+      }
+    ],
+    ".mcp.json": [
+      {
+        "path": [
+          "mcpServers",
+          "ai-rulez"
+        ],
+        "sum": "687b450bf90d36d32e71a4c08ce21969ad4f151f1d686a4fa6f001e862d38c0b"
+      }
+    ],
+    "opencode.json": [
+      {
+        "path": [
+          "$schema"
+        ],
+        "sum": "5b44767d48bb2a2ba170d7412d260e9c0d31fcdc2e7cbd38225464a63880d42e"
+      },
+      {
+        "path": [
+          "instructions"
+        ],
+        "elements": [
+          "AGENTS.local.md"
+        ]
+      },
+      {
+        "path": [
+          "mcp",
+          "servers",
+          "ai-rulez"
+        ],
+        "sum": "134bc56b6c4a1542ac472c959c4879b6733b5e2440fa13b87527e56b0dc78db9"
+      }
+    ]
+  }
 }

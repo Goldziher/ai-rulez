@@ -13,7 +13,7 @@ func TestTargetsAllow(t *testing.T) {
 	cursor := Target{Preset: "cursor", Dir: ".cursor/rules"}
 	amp := Target{Preset: "amp", RootFile: "AGENTS.md"}
 	antigravity := Target{Preset: "antigravity", Dir: ".agents/rules", RootFile: "GEMINI.md"}
-	junie := Target{Preset: "junie", Dir: ".junie/rules", RootFile: ".junie/guidelines.md"}
+	junie := Target{Preset: "junie", Dir: ".junie/rules", RootFile: "AGENTS.md"}
 	copilot := Target{Preset: "copilot", Dir: ".github/instructions", RootFile: ".github/copilot-instructions.md"}
 	tests := []struct {
 		name    string
@@ -32,8 +32,8 @@ func TestTargetsAllow(t *testing.T) {
 		{"root file base name selects inline", []string{"copilot-instructions.md"}, copilot, "", true},
 		{"root file base name selects rule files", []string{"copilot-instructions.md"}, copilot,
 			".github/instructions/x.instructions.md", true},
-		{"junie guidelines base name", []string{"guidelines.md"}, junie, ".junie/rules/x.md", true},
-		{"root file base name of other preset", []string{"guidelines.md"}, claude, "", false},
+		{"junie root base name", []string{"AGENTS.md"}, junie, ".junie/rules/x.md", true},
+		{"root file base name of other preset", []string{"AGENTS.md"}, claude, "", false},
 		{"root file of other preset", []string{"CLAUDE.md"}, cursor, ".cursor/rules/x.mdc", false},
 		{"exact path", []string{".cursor/rules/x.mdc"}, cursor, ".cursor/rules/x.mdc", true},
 		{"exact path with ./", []string{"./.cursor/rules/x.mdc"}, cursor, ".cursor/rules/x.mdc", true},
@@ -46,7 +46,7 @@ func TestTargetsAllow(t *testing.T) {
 		{"directory prefix never matches inline", []string{".cursor/rules/"}, cursor, "", false},
 		{"directory glob star", []string{".cursor/rules/*"}, cursor, ".cursor/rules/sub/x.mdc", true},
 		{"directory glob double star", []string{".cursor/**"}, cursor, ".cursor/rules/x.mdc", true},
-		{"directory glob elsewhere", []string{".windsurf/*"}, cursor, ".cursor/rules/x.mdc", false},
+		{"directory glob elsewhere", []string{".devin/*"}, cursor, ".cursor/rules/x.mdc", false},
 		{"shared AGENTS.md selected by a sibling preset", []string{"codex"}, amp, "", true},
 		{"shared AGENTS.md selected by its file", []string{"agents.md"}, amp, "", true},
 		{"shared AGENTS.md not selected by other preset", []string{"claude"}, amp, "", false},
@@ -58,7 +58,7 @@ func TestTargetsAllow(t *testing.T) {
 		{"path is case-insensitive", []string{".Cursor/Rules/X.mdc"}, cursor, ".cursor/rules/x.mdc", true},
 		{"bare star", []string{"*"}, cursor, ".cursor/rules/x.mdc", true},
 		{"junie dir prefix", []string{".junie/"}, junie, ".junie/rules/x.md", true},
-		{"junie dir prefix selects guidelines", []string{".junie/"}, junie, "", true},
+		{"junie dir prefix does not select the inline root", []string{".junie/"}, junie, "", false},
 		{"copilot dir prefix", []string{".github/"}, copilot, ".github/instructions/x.instructions.md", true},
 		{"copilot dir prefix selects root", []string{".github/"}, copilot, "", true},
 		{"skill-only target excludes root", []string{".claude/skills/*/SKILL.md"}, claude, "", false},
@@ -68,7 +68,7 @@ func TestTargetsAllow(t *testing.T) {
 		{"glob miss", []string{"*.md"}, cursor, ".cursor/rules/x.mdc", false},
 		{"glob matches root file inline", []string{"*.md"}, claude, "", true},
 		{"invalid glob", []string{"[x"}, cursor, ".cursor/rules/x.mdc", false},
-		{"any target matches", []string{"windsurf", "cursor"}, cursor, ".cursor/rules/x.mdc", true},
+		{"any target matches", []string{"devin", "cursor"}, cursor, ".cursor/rules/x.mdc", true},
 		{"blank target ignored", []string{" "}, cursor, ".cursor/rules/x.mdc", false},
 	}
 	for _, tt := range tests {
@@ -164,7 +164,7 @@ func TestPlan_SharedRootKeepsSiblingTargets(t *testing.T) {
 func TestTargetsAllow_RootAliases(t *testing.T) {
 	shared := Target{
 		Preset: "codex", RootFile: "AGENTS.md", Owners: []string{"codex", "claude"},
-		RootAliases: []string{"CLAUDE.md", "GEMINI.md", ".hermes.md", ".github/copilot-instructions.md", ".junie/guidelines.md"},
+		RootAliases: []string{"CLAUDE.md", "GEMINI.md", ".hermes.md", ".github/copilot-instructions.md"},
 	}
 	tests := []struct {
 		target string
@@ -177,8 +177,6 @@ func TestTargetsAllow_RootAliases(t *testing.T) {
 		{".hermes.md", true},
 		{".github/copilot-instructions.md", true},
 		{"copilot-instructions.md", true},
-		{".junie/guidelines.md", true},
-		{"guidelines.md", true},
 		{"OTHER.md", false},
 		{".cursor/rules/x.mdc", false},
 	}

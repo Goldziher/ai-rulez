@@ -44,7 +44,7 @@ const (
 	// everything for it.
 	RulesFolderNone RulesFolderKind = iota
 	// RulesFolderAlways: every item that is not always-on becomes a file, in
-	// both rules modes (cursor, windsurf, cline, continue).
+	// both rules modes (cursor, devin, cline).
 	RulesFolderAlways
 	// RulesFolderSplitOnly: files only in the "split" rules mode; in "inline"
 	// mode the preset writes none and AGENTS.md carries the scoped items (junie).
@@ -117,20 +117,19 @@ var sharedOutputConsumers = map[string]SharedOutputConsumer{
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".github/skills",
 		OwnRootFile: ".github/copilot-instructions.md", Folder: RulesFolderScopedOnly,
 	},
-	// Junie prefers AGENTS.md over .junie/guidelines.md and reads .agents/skills.
+	// Junie reads the open-standard AGENTS.md natively and, when a root
+	// AGENTS.md is present, combines it with every .junie/rules/*.md file, so
+	// the always-on content lives in AGENTS.md and the rest in .junie/rules.
 	string(PresetJunie): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".junie/skills",
-		OwnRootFile: ".junie/guidelines.md", Folder: RulesFolderSplitOnly,
+		Folder: RulesFolderSplitOnly,
 	},
-	string(PresetWindsurf): {
-		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".windsurf/skills", Folder: RulesFolderAlways,
+	string(PresetDevin): {
+		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".devin/skills", Folder: RulesFolderAlways,
 	},
 	string(PresetCline): {
 		Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnSkillsDir: ".cline/skills", Folder: RulesFolderAlways,
 	},
-	// Continue reads AGENTS.md at the repository root but not .agents/skills, so
-	// its prompts file keeps carrying skills.
-	string(PresetContinue): {Outputs: []SharedOutput{SharedAgentsMD}, Folder: RulesFolderAlways},
 	// Hermes would let .hermes.md shadow AGENTS.md, so the preset stops writing it.
 	string(PresetHermes): {Outputs: []SharedOutput{SharedAgentsMD, SharedAgentSkills}, OwnRootFile: ".hermes.md"},
 }

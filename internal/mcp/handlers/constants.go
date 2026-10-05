@@ -25,13 +25,12 @@ const (
 
 // Preset name constants used in MCP handlers.
 const (
-	presetAmp         = "amp"
-	presetClaude      = "claude"
-	presetCursor      = "cursor"
-	presetWindsurf    = "windsurf"
-	presetCopilot     = "copilot"
-	presetGemini      = "gemini"
-	presetCodex       = "codex"
-	presetCline       = "cline"
-	presetContinueDev = "continue-dev"
+	presetAmp     = "amp"
+	presetClaude  = "claude"
+	presetCursor  = "cursor"
+	presetDevin   = "devin"
+	presetCopilot = "copilot"
+	presetGemini  = "gemini"
+	presetCodex   = "codex"
+	presetCline   = "cline"
 )

@@ -102,8 +102,8 @@ func TestMergeConfigDocs(t *testing.T) {
 		{
 			name:   "presets union order",
 			shared: `presets = ["claude", "cursor"]`,
-			local:  `presets = ["cursor", "windsurf", "claude", "codex"]`,
-			want:   `{"presets":["claude","cursor","windsurf","codex"]}`,
+			local:  `presets = ["cursor", "devin", "claude", "codex"]`,
+			want:   `{"presets":["claude","cursor","devin","codex"]}`,
 		},
 		{
 			name:   "presets drop with bang",

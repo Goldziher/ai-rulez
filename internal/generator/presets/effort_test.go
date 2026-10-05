@@ -102,11 +102,11 @@ func TestMapEffort(t *testing.T) {
 		{"amp", "max", "max"},
 		{"amp", "inherit", ""},
 
-		// windsurf: max → high
-		{"windsurf", "max", "high"},
-		{"windsurf", "xhigh", "xhigh"},
+		// devin: max → high
+		{"devin", "max", "high"},
+		{"devin", "xhigh", "xhigh"},
 
-		// antigravity: same as windsurf
+		// antigravity: same as devin
 		{"antigravity", "max", "high"},
 		{"antigravity", "low", "low"},
 
@@ -117,11 +117,6 @@ func TestMapEffort(t *testing.T) {
 		{"opencode", "xhigh", "high"},
 		{"opencode", "max", "high"},
 		{"opencode", "inherit", ""},
-
-		// continue-dev: caps at high
-		{"continue-dev", "xhigh", "high"},
-		{"continue-dev", "max", "high"},
-		{"continue-dev", "low", "low"},
 
 		// unknown preset returns ""
 		{"junie", "high", ""},

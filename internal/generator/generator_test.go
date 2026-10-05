@@ -80,8 +80,8 @@ func TestGenerator_MultiPreset(t *testing.T) {
 	// Cursor preset creates .cursor directory
 	assert.DirExists(t, filepath.Join(tempDir, ".cursor"))
 
-	// Windsurf preset creates .windsurf directory
-	assert.DirExists(t, filepath.Join(tempDir, ".windsurf"))
+	// Devin preset creates .devin directory
+	assert.DirExists(t, filepath.Join(tempDir, ".devin"))
 }
 
 func TestGenerator_WithDomains_DefaultProfile(t *testing.T) {

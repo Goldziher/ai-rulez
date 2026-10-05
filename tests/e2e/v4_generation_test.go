@@ -268,35 +268,35 @@ func (s *V4GenerationSuite) TestCursor_Content() {
 }
 
 // ==========================================
-// WINDSURF PRESET
+// DEVIN PRESET
 // ==========================================
 
-func (s *V4GenerationSuite) TestWindsurf_FileStructure() {
-	outputs := s.getOutputs("windsurf")
+func (s *V4GenerationSuite) TestDevin_FileStructure() {
+	outputs := s.getOutputs("devin")
 
 	// Rule files
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".windsurf", "rules", "code-review-standards.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".devin", "rules", "code-review-standards.md")),
 		"Should generate root rule")
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".windsurf", "rules", "api-standards.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".devin", "rules", "api-standards.md")),
 		"Should generate domain rule")
 
 	// Skills
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".windsurf", "skills", "deployment-workflow", "SKILL.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".devin", "skills", "deployment-workflow", "SKILL.md")),
 		"Should generate skill file")
 
-	// Agents (NEW — currently not rendered for Windsurf)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".windsurf", "agents", "security-reviewer.md")),
+	// Agents (NEW — currently not rendered for Devin)
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".devin", "agents", "security-reviewer.md")),
 		"Should generate agent file (NEW)")
 }
 
-func (s *V4GenerationSuite) TestWindsurf_Content() {
-	outputs := s.getOutputs("windsurf")
+func (s *V4GenerationSuite) TestDevin_Content() {
+	outputs := s.getOutputs("devin")
 
 	// Rule content
-	ruleFile := s.requireFile(outputs, filepath.Join(".windsurf", "rules", "code-review-standards.md"))
+	ruleFile := s.requireFile(outputs, filepath.Join(".devin", "rules", "code-review-standards.md"))
 	s.assertContentContains(ruleFile, "code-review-standards")
 
-	// Context should be rendered (NEW — currently missing for Windsurf)
+	// Context should be rendered (NEW — currently missing for Devin)
 	hasContext := false
 	for _, output := range outputs {
 		if strings.Contains(output.Content, "hexagonal architecture") {
@@ -304,14 +304,14 @@ func (s *V4GenerationSuite) TestWindsurf_Content() {
 			break
 		}
 	}
-	s.Assert().True(hasContext, "Windsurf output should include context content")
+	s.Assert().True(hasContext, "Devin output should include context content")
 
 	// Skill frontmatter
-	skillFile := s.requireFile(outputs, filepath.Join(".windsurf", "skills", "deployment-workflow", "SKILL.md"))
+	skillFile := s.requireFile(outputs, filepath.Join(".devin", "skills", "deployment-workflow", "SKILL.md"))
 	s.assertContentContains(skillFile, "name: deployment-workflow")
 
 	// Agent frontmatter (NEW)
-	agentFile := s.requireFile(outputs, filepath.Join(".windsurf", "agents", "security-reviewer.md"))
+	agentFile := s.requireFile(outputs, filepath.Join(".devin", "agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "description:")
 }
 
@@ -341,7 +341,7 @@ func (s *V4GenerationSuite) TestCopilot_FileStructure() {
 		"Should generate .mcp.json with MCP servers")
 
 	// Commands (NEW — currently not rendered for Copilot)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".github", "commands", "run-tests.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".github", "prompts", "run-tests.prompt.md")),
 		"Should generate command file (NEW)")
 }
 
@@ -459,9 +459,9 @@ func (s *V4GenerationSuite) TestCline_Content() {
 func (s *V4GenerationSuite) TestJunie_FileStructure() {
 	outputs := s.getOutputs("junie")
 
-	// Main guidelines
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".junie", "guidelines.md")),
-		"Should generate guidelines.md")
+	// Junie reads the open-standard AGENTS.md as its root.
+	s.Require().NotNil(s.findFile(outputs, "AGENTS.md"),
+		"Should generate AGENTS.md")
 
 	// Skills
 	s.Require().NotNil(s.findFile(outputs, filepath.Join(".junie", "skills", "deployment-workflow", "SKILL.md")),
@@ -475,48 +475,15 @@ func (s *V4GenerationSuite) TestJunie_FileStructure() {
 func (s *V4GenerationSuite) TestJunie_Content() {
 	outputs := s.getOutputs("junie")
 
-	// Guidelines content
-	guidelines := s.withRuleFiles(outputs, s.requireFile(outputs, filepath.Join(".junie", "guidelines.md")),
+	// Root AGENTS.md content (always-on rules plus the .junie/rules files).
+	agents := s.withRuleFiles(outputs, s.requireFile(outputs, "AGENTS.md"),
 		filepath.Join(".junie", "rules"))
-	s.assertContentContains(guidelines, "code-review-standards")
-	s.assertContentContains(guidelines, "project-architecture")
+	s.assertContentContains(agents, "code-review-standards")
+	s.assertContentContains(agents, "project-architecture")
 
 	// Agent frontmatter
 	agentFile := s.requireFile(outputs, filepath.Join(".junie", "agents", "security-reviewer.md"))
 	s.assertContentContains(agentFile, "description:")
-}
-
-// ==========================================
-// CONTINUE.DEV PRESET
-// ==========================================
-
-func (s *V4GenerationSuite) TestContinueDev_FileStructure() {
-	outputs := s.getOutputs("continue-dev")
-
-	// Rule files
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".continue", "rules", "code-review-standards.md")),
-		"Should generate root rule")
-
-	// Prompts YAML (context + skills + commands)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".continue", "prompts", "ai_rulez_prompts.yaml")),
-		"Should generate prompts.yaml")
-
-	// Agents (NEW — currently not rendered for Continue.dev)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".continue", "agents", "security-reviewer.md")),
-		"Should generate agent file (NEW)")
-}
-
-func (s *V4GenerationSuite) TestContinueDev_Content() {
-	outputs := s.getOutputs("continue-dev")
-
-	// Rule content
-	ruleFile := s.requireFile(outputs, filepath.Join(".continue", "rules", "code-review-standards.md"))
-	s.assertContentContains(ruleFile, "code-review-standards")
-
-	// Prompts YAML should include context, skills, and commands
-	promptsFile := s.requireFile(outputs, filepath.Join(".continue", "prompts", "ai_rulez_prompts.yaml"))
-	s.assertContentContains(promptsFile, "deployment-workflow")
-	s.assertContentContains(promptsFile, "run-tests")
 }
 
 // ==========================================
@@ -542,7 +509,7 @@ func (s *V4GenerationSuite) TestCodex_FileStructure() {
 		"Should generate Codex plugin declarations (NEW)")
 
 	// Commands (NEW — currently not rendered for Codex)
-	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "commands", "run-tests.md")),
+	s.Require().NotNil(s.findFile(outputs, filepath.Join(".codex", "prompts", "run-tests.md")),
 		"Should generate command file (NEW)")
 }
 
@@ -802,8 +769,8 @@ func (s *V4GenerationSuite) TestMarketplaces_LoadedCorrectly() {
 
 func (s *V4GenerationSuite) TestAllPresets_Generated() {
 	expectedPresets := []string{
-		"claude", "cursor", "windsurf", "copilot", "gemini",
-		"cline", "junie", "continue-dev", "codex", "opencode",
+		"claude", "cursor", "devin", "copilot", "gemini",
+		"cline", "junie", "codex", "opencode",
 		"amp", "antigravity", "mcp", "xum", "pi",
 	}
 
@@ -823,7 +790,7 @@ func (s *V4GenerationSuite) TestV4Config_TOMLFormat() {
 	s.Assert().Equal("Full V4 test configuration with all presets", s.cfg.Description)
 	s.Assert().Equal("compact", s.cfg.GetHeaderStyle())
 	s.Assert().Equal("full", s.cfg.GetDefaultProfile())
-	s.Assert().Len(s.cfg.Presets, 15, "Should have 15 presets configured")
+	s.Assert().Len(s.cfg.Presets, 14, "Should have 14 presets configured")
 
 	// Profiles
 	s.Assert().Contains(s.cfg.Profiles, "full")

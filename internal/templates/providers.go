@@ -5,22 +5,21 @@ import (
 )
 
 type ProviderConfig struct {
-	Claude      bool
-	Cursor      bool
-	Windsurf    bool
-	Copilot     bool
-	Gemini      bool
-	Amp         bool
-	Codex       bool
-	Opencode    bool
-	Cline       bool
-	ContinueDev bool
-	Junie       bool
+	Claude   bool
+	Cursor   bool
+	Devin    bool
+	Copilot  bool
+	Gemini   bool
+	Amp      bool
+	Codex    bool
+	Opencode bool
+	Cline    bool
+	Junie    bool
 }
 
 func (p ProviderConfig) HasAny() bool {
-	return p.Claude || p.Cursor || p.Windsurf || p.Copilot ||
-		p.Gemini || p.Amp || p.Codex || p.Opencode || p.Cline || p.ContinueDev || p.Junie
+	return p.Claude || p.Cursor || p.Devin || p.Copilot ||
+		p.Gemini || p.Amp || p.Codex || p.Opencode || p.Cline || p.Junie
 }
 
 func getDefaultOutputPath(providers ProviderConfig) string {
@@ -36,8 +35,8 @@ func getDefaultOutputPath(providers ProviderConfig) string {
 	if providers.Amp || providers.Codex || providers.Opencode {
 		return "AGENTS.md"
 	}
-	if providers.Windsurf {
-		return ".windsurf/rules/01-main.md"
+	if providers.Devin {
+		return ".devin/rules/01-main.md"
 	}
 	if providers.Copilot {
 		return ".github/copilot-instructions.md"
@@ -45,11 +44,8 @@ func getDefaultOutputPath(providers ProviderConfig) string {
 	if providers.Cline {
 		return ".clinerules/01-main.md"
 	}
-	if providers.ContinueDev {
-		return ".continue/rules/01-main.md"
-	}
 	if providers.Junie {
-		return ".junie/guidelines.md"
+		return "AGENTS.md"
 	}
 	return "ai-rules.md"
 }
@@ -69,8 +65,8 @@ func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
 `)
 	}
 
-	if providers.Windsurf {
-		builder.WriteString(`  - path: ".windsurf/rules/"
+	if providers.Devin {
+		builder.WriteString(`  - path: ".devin/rules/"
     type: "rule"
     naming_scheme: "{name}.md"
 `)
@@ -98,25 +94,8 @@ func writeProviderOutputs(builder *strings.Builder, providers ProviderConfig) {
 `)
 	}
 
-	if providers.ContinueDev {
-		if defaultPath != ".continue/rules/01-main.md" {
-			builder.WriteString(`  - path: ".continue/rules/"
-    type: "rule"
-    naming_scheme: "{priority:02d}-{name}.md"
-  - path: ".continue/prompts/ai_rulez_prompts.yaml"
-    type: "agent"
-    naming_scheme: "ai_rulez_prompts.yaml"
-`)
-		} else {
-			builder.WriteString(`  - path: ".continue/prompts/ai_rulez_prompts.yaml"
-    type: "agent"
-    naming_scheme: "ai_rulez_prompts.yaml"
-`)
-		}
-	}
-
 	if providers.Junie {
-		builder.WriteString(`  - path: ".junie/guidelines.md"
+		builder.WriteString(`  - path: "AGENTS.md"
 `)
 	}
 
@@ -150,7 +129,7 @@ func writeCommentedExamples(builder *strings.Builder, providers ProviderConfig) 
 `)
 	}
 	if !providers.Junie {
-		builder.WriteString(`  # - path: ".junie/guidelines.md"   # For JetBrains Junie
+		builder.WriteString(`  # - path: "AGENTS.md"              # For JetBrains Junie
 `)
 	}
 }

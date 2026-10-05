@@ -63,16 +63,12 @@ func TestTargets_RuleFilesPerPreset(t *testing.T) {
 			wantFiles: []string{"free.mdc", "to-cursor.mdc", "to-cursor-dir.mdc", "to-glob.mdc", "windows.mdc", "context-ctx-free.mdc", "context-ctx-cursor.mdc"},
 		},
 		{
-			name: "windsurf", gen: &WindsurfPresetGenerator{}, cfg: &config.Config{Name: "test"}, dir: ".windsurf/rules",
+			name: "devin", gen: &DevinPresetGenerator{}, cfg: &config.Config{Name: "test"}, dir: ".devin/rules",
 			wantFiles: []string{"free.md", "context-ctx-free.md"},
 		},
 		{
 			name: "cline", gen: &ClinePresetGenerator{}, cfg: &config.Config{Name: "test"}, dir: ".clinerules",
 			wantFiles: []string{"free.md", "context-ctx-free.md"},
-		},
-		{
-			name: "continue-dev", gen: &ContinueDevPresetGenerator{}, cfg: &config.Config{Name: "test"}, dir: ".continue/rules",
-			wantFiles: []string{"free.md"},
 		},
 		{
 			name: "antigravity inline", gen: &AntigravityPresetGenerator{}, cfg: &config.Config{Name: "test", Rules: &config.RulesConfig{Mode: config.RulesModeInline}},
@@ -121,7 +117,7 @@ func TestTargets_RuleFilesPerPreset(t *testing.T) {
 func TestTargetMatchers_Agree(t *testing.T) {
 	targets := []string{
 		"CLAUDE.md", "claude.md", "./CLAUDE.md", "/CLAUDE.md", `.cursor\rules\x.mdc`, ".cursor/rules/x.mdc",
-		".cursor/rules/", ".cursor/rules", `.cursor\rules\`, ".cursor/rules/*", ".cursor/**", ".cursor/*", ".windsurf/*",
+		".cursor/rules/", ".cursor/rules", `.cursor\rules\`, ".cursor/rules/*", ".cursor/**", ".cursor/*", ".devin/*",
 		"*.mdc", "x.mdc", "*.md", "*", "**", "[x", ".claude/skills/*/SKILL.md", "GEMINI.md",
 	}
 	outputs := []string{".cursor/rules/x.mdc", ".cursor/rules/sub/x.mdc", "CLAUDE.md", ".claude/skills/a/SKILL.md"}

@@ -256,7 +256,7 @@ func TestRender_GlobsLineQuoting(t *testing.T) {
 		{"cursor bare list", cursor, glob("**/*.go", "**/*.ts"),
 			"---\nalwaysApply: false\nglobs: **/*.go,**/*.ts\n---\n"},
 		{"cursor brace expanded", cursor, glob("*.{ts,tsx}"), "---\nalwaysApply: false\nglobs: *.ts,*.tsx\n---\n"},
-		{"windsurf stays quoted", trigger, glob("**/*.go"), "---\nglobs: '**/*.go'\ntrigger: glob\n---\n"},
+		{"devin stays quoted", trigger, glob("**/*.go"), "---\nglobs: '**/*.go'\ntrigger: glob\n---\n"},
 		{"antigravity stays quoted", Target{Ext: ".md", Dialect: DialectTrigger}, glob("*.ts", "src/**"),
 			"---\nglobs: '*.ts,src/**'\ntrigger: glob\n---\n"},
 		{"cursor character class keeps quoting", cursor, glob("[a-z]*.go"),

@@ -166,10 +166,9 @@ func TestPromptWithRealAITools(t *testing.T) {
 		{"Gemini", templates.ProviderConfig{Gemini: true}},
 		{"Amp", templates.ProviderConfig{Amp: true}},
 		{"Codex", templates.ProviderConfig{Codex: true}},
-		{"Windsurf", templates.ProviderConfig{Windsurf: true}},
+		{"Devin", templates.ProviderConfig{Devin: true}},
 		{"Copilot", templates.ProviderConfig{Copilot: true}},
 		{"Cline", templates.ProviderConfig{Cline: true}},
-		{"ContinueDev", templates.ProviderConfig{ContinueDev: true}},
 	}
 
 	dir := t.TempDir()
@@ -203,8 +202,8 @@ go 1.21`
 				assert.Contains(t, prompt, "CLAUDE.md")
 			case tool.config.Cursor:
 				assert.Contains(t, prompt, ".cursorrules")
-			case tool.config.Windsurf:
-				assert.Contains(t, prompt, ".windsurf/rules/")
+			case tool.config.Devin:
+				assert.Contains(t, prompt, ".devin/rules/")
 			}
 
 			assert.Contains(t, prompt, "# agents:")

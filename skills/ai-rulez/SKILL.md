@@ -1,7 +1,7 @@
 ---
 name: ai-rulez
 description: >-
-  Manage AI assistant governance rules across Claude, Cursor, Windsurf,
+  Manage AI assistant governance rules across Claude, Cursor, Devin,
   Copilot, Gemini, and other tools using ai-rulez. Use when configuring
   rules, context, skills, domains, profiles, includes, plugins, or generating
   tool-specific outputs.
@@ -14,7 +14,7 @@ metadata:
 
 # AI-Rulez Governance
 
-AI-Rulez centralizes AI assistant governance in a config directory (default `.ai-rulez/`) and generates tool-specific outputs for Claude, Cursor, Windsurf, Copilot, Gemini, Codex, and other presets.
+AI-Rulez centralizes AI assistant governance in a config directory (default `.ai-rulez/`) and generates tool-specific outputs for Claude, Cursor, Devin, Copilot, Gemini, Codex, and other presets.
 
 Use this skill when:
 
@@ -164,9 +164,9 @@ Per-preset support:
 - **Claude**: per-agent in `.claude/agents/*.md` (full vocabulary including `max`; `inherit` is not a Claude value and is dropped)
 - **Codex**: global in `.codex/config.toml` and per-agent in `.codex/agents/*.toml` (`max` → `high`; `inherit` dropped)
 - **Amp**: global in `.amp/settings.json` (`xhigh` → `high`)
-- **Windsurf**: per-agent in `.windsurf/agents/*.md` frontmatter (`max` → `high`)
+- **Devin**: per-agent in `.devin/agents/*.md` frontmatter (`max` → `high`)
 - **Opencode**: per-agent `variant` in `.opencode/agents/*.md` (joins the agent's `model` as `model#variant`)
-- Cursor, Copilot, Gemini, Junie, Antigravity, Cline, Continue.dev: silently skipped (those tools expose effort via UI toggles or user-managed config files we don't generate).
+- Cursor, Copilot, Gemini, Junie, Antigravity, Cline: silently skipped (those tools expose effort via UI toggles or user-managed config files we don't generate).
 
 ## Domains and Profiles
 
@@ -204,7 +204,7 @@ Skill `references/`, `scripts/`, and `assets/` directories are preserved as sepa
 
 ## Built-in Presets
 
-Available presets: `claude`, `cursor`, `gemini`, `copilot`, `continue-dev`, `windsurf`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`, `pi`, `baz`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
+Available presets: `claude`, `cursor`, `gemini`, `copilot`, `devin`, `cline`, `codex`, `amp`, `junie`, `opencode`, `hermes`, `antigravity`, `xum`, `pi`, `baz`. The `mcp` preset is a shared utility (the generic `.mcp.json`) invoked automatically when MCP servers are configured.
 
 A tool that isn't built in can be supported at full parity with a provider-backed custom preset: set `provider = "<project-relative spec.toml>"` and point it at a declarative spec validated against `schema/provider.schema.json`. See the `ai-rulez` references for the spec shape.
 

@@ -369,53 +369,6 @@ func TestImportCursorRules(t *testing.T) {
 	})
 }
 
-func TestImportContinuePrompts(t *testing.T) {
-	t.Run("imports YAML prompt files", func(t *testing.T) {
-		// Arrange
-		tmpDir := t.TempDir()
-		promptsDir := filepath.Join(tmpDir, ".continue", "prompts")
-
-		createDir(t, tmpDir, ".continue/prompts")
-		createFile(t, tmpDir, ".continue/prompts/explain.yaml", `name: Explain Code
-description: Explains the selected code
-prompt: Please explain this code in detail.
-`)
-
-		importer := NewImporter(tmpDir, filepath.Join(tmpDir, ".ai-rulez"))
-
-		// Act
-		items, preset, err := importer.importContinuePrompts(".continue/prompts", promptsDir)
-
-		// Assert
-		require.NoError(t, err)
-		assert.Equal(t, "continue-dev", preset)
-		assert.Len(t, items, 1)
-
-		assert.Equal(t, "explain", items[0].Name)
-		assert.Equal(t, ContentTypeContext, items[0].Type)
-		assert.Contains(t, items[0].Content, "Explain Code")
-		assert.Contains(t, items[0].Content, "Please explain")
-	})
-
-	t.Run("skips invalid YAML files", func(t *testing.T) {
-		// Arrange
-		tmpDir := t.TempDir()
-		promptsDir := filepath.Join(tmpDir, ".continue", "prompts")
-
-		createDir(t, tmpDir, ".continue/prompts")
-		createFile(t, tmpDir, ".continue/prompts/invalid.yaml", "not: valid: yaml:")
-
-		importer := NewImporter(tmpDir, filepath.Join(tmpDir, ".ai-rulez"))
-
-		// Act
-		items, _, err := importer.importContinuePrompts(".continue/prompts", promptsDir)
-
-		// Assert
-		require.NoError(t, err)
-		assert.Empty(t, items)
-	})
-}
-
 func TestDetectPresetFromSource(t *testing.T) {
 	tests := []struct {
 		source   string
@@ -426,8 +379,7 @@ func TestDetectPresetFromSource(t *testing.T) {
 		{".cursor/rules", "cursor"},
 		{"GEMINI.md", "gemini"},
 		{".github/copilot-instructions.md", "copilot"},
-		{".continue/rules", "continue-dev"},
-		{".windsurf/rules", "windsurf"},
+		{".devin/rules", "devin"},
 		{".clinerules", "cline"},
 		{"unknown.md", ""},
 	}

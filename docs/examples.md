@@ -210,7 +210,7 @@ presets = [
   "claude",
   "cursor",
   "gemini",
-  "windsurf",
+  "devin",
   { name = "internal-guide", type = "markdown", path = "docs/AI_DEVELOPMENT_GUIDE.md" },
 ]
 default = "full"

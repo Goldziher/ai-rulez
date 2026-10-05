@@ -21,7 +21,6 @@ func TestAgentsMD_RootFileTargetsReachSharedAgentsMD(t *testing.T) {
 		{"gemini", "GEMINI.md", "gemini.md"},
 		{"hermes", ".hermes.md", ".hermes.md"},
 		{"copilot", ".github/copilot-instructions.md", "copilot-instructions.md"},
-		{"junie", ".junie/guidelines.md", "guidelines.md"},
 	}
 	for _, tc := range cases {
 		for _, target := range []string{tc.full, tc.base} {
@@ -329,10 +328,10 @@ func TestAgentsMD_PlacementMatrix(t *testing.T) {
 func TestAgentsMD_NoZedShadowingFiles(t *testing.T) {
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, "agents_md = true\n"+agentsMDConfig(
-		[]string{"claude", "codex", "cursor", "windsurf", "cline", "copilot", "gemini", "junie", "hermes", "continue-dev"}, "", ""))
+		[]string{"claude", "codex", "cursor", "devin", "cline", "copilot", "gemini", "junie", "hermes"}, "", ""))
 	runAgentsMDGenerate(t, root)
 
-	for _, name := range []string{".rules", ".cursorrules", ".windsurfrules", ".clinerules", ".github/copilot-instructions.md"} {
+	for _, name := range []string{".rules", ".cursorrules", ".devin/rules", ".clinerules", ".github/copilot-instructions.md"} {
 		path := filepath.Join(root, filepath.FromSlash(name))
 		info, err := os.Stat(path)
 		if err == nil {

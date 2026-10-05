@@ -24,8 +24,7 @@ type ruleFolderPreset struct {
 func ruleFolderPresets() []ruleFolderPreset {
 	return []ruleFolderPreset{
 		{"cline", &ClinePresetGenerator{}, ".clinerules/", ".md", true},
-		{"continue", &ContinueDevPresetGenerator{}, ".continue/rules/", ".md", false},
-		{"windsurf", &WindsurfPresetGenerator{}, ".windsurf/rules/", ".md", true},
+		{"devin", &DevinPresetGenerator{}, ".devin/rules/", ".md", true},
 		{"cursor", &CursorPresetGenerator{}, ".cursor/rules/", ".mdc", true},
 		{"copilot", &CopilotPresetGenerator{}, ".github/instructions/", ".instructions.md", false},
 		{"antigravity", &AntigravityPresetGenerator{}, ".agents/rules/", ".md", false},

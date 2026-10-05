@@ -53,10 +53,9 @@ func TestSharedOutputConsumerFor(t *testing.T) {
 		{preset: "hermes", ok: true, agentsMD: true, skills: true, ownRootFile: ".hermes.md"},
 		{preset: "cursor", ok: true, agentsMD: true, skills: true},
 		{preset: "copilot", ok: true, agentsMD: true, skills: true, ownSkill: ".github/skills", ownRootFile: ".github/copilot-instructions.md"},
-		{preset: "junie", ok: true, agentsMD: true, skills: true, ownSkill: ".junie/skills", ownRootFile: ".junie/guidelines.md"},
-		{preset: "windsurf", ok: true, agentsMD: true, skills: true, ownSkill: ".windsurf/skills"},
+		{preset: "junie", ok: true, agentsMD: true, skills: true, ownSkill: ".junie/skills"},
+		{preset: "devin", ok: true, agentsMD: true, skills: true, ownSkill: ".devin/skills"},
 		{preset: "cline", ok: true, agentsMD: true, skills: true, ownSkill: ".cline/skills"},
-		{preset: "continue-dev", ok: true, agentsMD: true},
 		{preset: "mcp"},
 	}
 	for _, tc := range cases {
@@ -76,7 +75,7 @@ func TestSharedOutputConsumerFor(t *testing.T) {
 func TestSharedOutputConsumerFor_RootFiles(t *testing.T) {
 	cases := map[string]string{
 		"claude": "CLAUDE.md", "gemini": "GEMINI.md", "antigravity": "GEMINI.md", "hermes": ".hermes.md",
-		"copilot": ".github/copilot-instructions.md", "junie": ".junie/guidelines.md", "codex": "", "cursor": "",
+		"copilot": ".github/copilot-instructions.md", "junie": "", "codex": "", "cursor": "",
 	}
 	for preset, want := range cases {
 		t.Run(preset, func(t *testing.T) {
@@ -96,7 +95,7 @@ func TestSharedAgentsMDInlining(t *testing.T) {
 		want    AgentsMDInlining
 	}{
 		{"no consumer", []string{"mcp"}, nil, AgentsMDInlining{}},
-		{"folder presets only", []string{"claude", "cursor", "windsurf", "cline", "continue-dev", "junie", "antigravity"}, nil, AgentsMDInlining{}},
+		{"folder presets only", []string{"claude", "cursor", "devin", "cline", "junie", "antigravity"}, nil, AgentsMDInlining{}},
 		{"copilot adds auto and manual", []string{"copilot", "cursor"}, nil, AgentsMDInlining{AutoManual: true}},
 		{"codex has no folder", []string{"claude", "codex"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},
 		{"gemini has no folder", []string{"cursor", "gemini"}, nil, AgentsMDInlining{Scoped: true, AutoManual: true}},

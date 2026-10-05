@@ -57,7 +57,7 @@ const (
 	// OutputKindResource is a bundled skill resource (references/, scripts/, assets/).
 	OutputKindResource OutputKind = "resource"
 	// OutputKindRuleFile is one rule or context file emitted into a provider's
-	// rules directory (.cursor/rules, .windsurf/rules, .continue/rules,
+	// rules directory (.cursor/rules, .devin/rules,
 	// .clinerules). These providers apply such files as project instructions,
 	// which makes them the rules-inline equivalent for a directory-shaped
 	// provider.

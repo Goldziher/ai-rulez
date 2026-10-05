@@ -3,7 +3,6 @@ priority: medium
 targets:
   - CLAUDE.md
   - GEMINI.md
-  - .continue/rules/*
   - AGENTS.md
   - .hermes.md
 ---

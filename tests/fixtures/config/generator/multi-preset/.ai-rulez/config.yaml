@@ -4,5 +4,5 @@ description: Test with multiple presets
 presets:
   - claude
   - cursor
-  - windsurf
+  - devin
 gitignore: false

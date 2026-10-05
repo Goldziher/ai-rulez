@@ -3,9 +3,10 @@
 Source analysed: `dyoshikawa/rulesync` (clone at `/tmp/rulesync`, HEAD `f17ee8e`).
 Our side: ai-rulez `4.24.x` at the time of writing.
 
-Goal: remove `continue-dev` (deprecated upstream), then close the gaps against a
-more complete competitor — adopt any harness that is **not** deprecated and
-identify capability gaps.
+Status: `continue-dev` has been **removed**, and the legacy `windsurf` preset has
+been **renamed to `devin`** (Windsurf was rebranded to Devin upstream). The plan
+below closes the remaining gaps against a more complete competitor — adopt any
+harness that is **not** deprecated and identify capability gaps.
 
 ---
 
@@ -54,8 +55,8 @@ legacy alias) are the interesting list.
 `claudecode`, `cursor`, `copilot`, `cline`, `cline`, `codexcli`, `opencode`,
 `antigravity-ide`+`antigravity-cli` (our single `antigravity`), `junie`,
 `hermesagent`, `amp`, `pi`, `zed`? (no — see below), `warp`? (no), `goose`? (no).
-Also `windsurf` → they renamed to `devin`; our `windsurf` preset is the legacy
-name of the same product.
+Also `windsurf` → they renamed to `devin`; our `devin` preset is the current name
+of the same product.
 
 > Note: rulesync **has no standalone `gemini` target** — Gemini lineage is served
 > by `antigravity-*`. We have a dedicated `gemini` preset, so we are *ahead*
@@ -100,8 +101,8 @@ use today, not a plugin/legacy alias):
 | 30 | `dsh` | DeepSeek Harness | `AGENTS.md`, `.dsh/skills` | low |
 | 31 | `dsh`/`musecode`/`codebuff`/`commandcode`/`codewhale`/`grokcli`/`gitlabduo`/`lettacode`/`codebuddy`/`zcode`/`vibe`/… | long tail of newer/regional agents | — | low |
 
-**Deprecated upstream (do NOT adopt):** `continue` (EOL — this is our
-`continue-dev`, to be removed), `roo` (EOL → use `zoocode`), `tabnine` (legacy
+**Deprecated upstream (do NOT adopt):** `continue` (EOL — our `continue-dev`
+preset, now removed), `roo` (EOL → use `zoocode`), `tabnine` (legacy
 CLI; new Tabnine is an OpenCode distro), `kiro` (alias).
 
 **Plugin/packaging targets (not a tool to add):** `*-plugin`,
@@ -191,29 +192,33 @@ Claude `permissions.deny` rendering that ignore used to do).
 
 ## 4. Recommended plan
 
-### 4.1 Remove `continue-dev` (deprecated upstream)
+### 4.1 Done: `continue-dev` removed; `windsurf` renamed to `devin`
 
-Rulesync removed/flagged Continue (joined Cursor 2026-06-18). Replace with a
-tombstone that fails validation with a clear message, or drop silently.
+`continue-dev` was removed (Rulesync removed/flagged Continue, which joined
+Cursor 2026-06-18). The legacy `windsurf` preset was renamed to `devin`, matching
+Windsurf's rebrand to Devin; there is no `windsurf` alias.
 
-Files to touch (non-test):
+What changed (non-test):
 
-- `internal/config/preset_names.go` — remove `PresetContinue`.
-- `internal/config/types.go` — remove from `builtInPresets`.
-- `internal/config/shared_outputs.go` — remove the consumer entry.
-- `internal/config/validation.go` — remove any special mention.
-- `internal/generator/presets/continue_dev.go` — delete.
-- `internal/generator/presets/effort.go` — drop `continueDevPresetName` mapping.
-- `internal/generator/presets/local_rules.go`, `skill_resources.go` — drop refs.
-- `internal/generator/providers/spec.go` — drop from any enum/doc list.
-- `internal/importer/importer.go` — drop detection.
-- `internal/mcp/handlers/{constants,project,utilities}.go` — drop refs.
-- `internal/templates/providers.go` — drop refs.
-- `internal/agents/{agents,chain}.go` — drop refs.
-- Tests + e2e fixtures: `continue_dev_test.go` and every list entry.
+- `internal/config/preset_names.go` — removed `PresetContinue`.
+- `internal/config/types.go` — removed from `builtInPresets`.
+- `internal/config/shared_outputs.go` — removed the consumer entry.
+- `internal/config/validation.go` — removed any special mention.
+- `internal/generator/presets/continue_dev.go` — deleted.
+- `internal/generator/presets/effort.go` — dropped `continueDevPresetName` mapping.
+- `internal/generator/presets/local_rules.go`, `skill_resources.go` — dropped refs.
+- `internal/generator/providers/spec.go` — dropped from any enum/doc list.
+- `internal/importer/importer.go` — dropped detection.
+- `internal/mcp/handlers/{constants,project,utilities}.go` — dropped refs.
+- `internal/templates/providers.go` — dropped refs.
+- `internal/agents/{agents,chain}.go` — dropped refs.
+- The `windsurf` preset, its `.windsurf` output directory and the `windsurf_model`
+  frontmatter key were renamed to `devin`, `.devin` and `devin_model`.
+- Tests + e2e fixtures: deleted `continue_dev_test.go` and every list entry.
 - Docs/schemas/skills + `release/{npm,pypi}` descriptions.
 
-Then `ai-rulez migrate` can warn on a config that still names `continue-dev`.
+`ai-rulez migrate` can warn on a config that still names `continue-dev` or the old
+`windsurf` preset.
 
 ### 4.2 Close tool-harness gaps (adopt, in order)
 

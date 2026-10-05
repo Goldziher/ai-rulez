@@ -6,7 +6,7 @@
 
 AI-Rulez is a CLI tool for managing AI assistant configurations across multiple tools.
 
-Write your AI instructions once in a single configuration and generate tool-specific outputs for Claude, Cursor, Windsurf, Copilot, Gemini, and others.
+Write your AI instructions once in a single configuration and generate tool-specific outputs for Claude, Cursor, Devin, Copilot, Gemini, and others.
 
 ## Core Concepts
 
@@ -28,8 +28,8 @@ Presets define how content is formatted and where it's output for different tool
 - `cursor` → generates `.cursor/rules/`
 - `gemini` → generates `GEMINI.md`
 - `copilot` → generates `.github/copilot-instructions.md` and `.github/instructions/`
-- `windsurf` → generates `.windsurf/rules/`
-- `junie` → generates `.junie/guidelines.md` and `.junie/rules/`
+- `devin` → generates `.devin/rules/`
+- `junie` → generates `AGENTS.md` and `.junie/rules/`
 - `hermes` → generates `.hermes.md`
 - `xum` → generates `AGENTS.md` and `.xum/`
 - `pi` → generates `AGENTS.md`, `.agents/skills/`, `.pi/agents/`, and `.pi/mcp.json`

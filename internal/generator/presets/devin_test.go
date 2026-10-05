@@ -10,7 +10,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 )
 
-func TestWindsurfPresetGenerator_Generate(t *testing.T) {
+func TestDevinPresetGenerator_Generate(t *testing.T) {
 	tests := []struct {
 		name        string
 		content     *config.ContentTree
@@ -29,7 +29,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 				},
 			},
 			baseDir:     "/test",
-			wantOutputs: 5, // 4 directories (.windsurf, .windsurf/rules, .windsurf/skills, .windsurf/agents) + 1 file
+			wantOutputs: 5, // 4 directories (.devin, .devin/rules, .devin/skills, .devin/agents) + 1 file
 			wantErr:     false,
 		},
 		{
@@ -54,7 +54,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &WindsurfPresetGenerator{}
+			g := &DevinPresetGenerator{}
 			cfg := &config.Config{
 				Name: "Test Project",
 			}
@@ -71,7 +71,7 @@ func TestWindsurfPresetGenerator_Generate(t *testing.T) {
 	}
 }
 
-func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
+func TestDevinPresetGenerator_TriggerFrontmatter(t *testing.T) {
 	tests := []struct {
 		name             string
 		rule             config.ContentFile
@@ -192,12 +192,12 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			g := &WindsurfPresetGenerator{}
+			g := &DevinPresetGenerator{}
 			cfg := &config.Config{
 				Name: "Test Project",
 			}
 
-			result := windsurfRuleFile(t, g, cfg, &config.ContentTree{Rules: []config.ContentFile{tt.rule}}, tt.rule.Name)
+			result := devinRuleFile(t, g, cfg, &config.ContentTree{Rules: []config.ContentFile{tt.rule}}, tt.rule.Name)
 
 			if tt.shouldContain != "" && !contains(result, tt.shouldContain) {
 				t.Errorf("Expected output to contain %q, but it didn't", tt.shouldContain)
@@ -210,25 +210,25 @@ func TestWindsurfPresetGenerator_TriggerFrontmatter(t *testing.T) {
 	}
 }
 
-func TestWindsurfPresetGenerator_GetName(t *testing.T) {
-	g := &WindsurfPresetGenerator{}
-	if got := g.GetName(); got != "windsurf" {
-		t.Errorf("GetName() = %v, want %v", got, "windsurf")
+func TestDevinPresetGenerator_GetName(t *testing.T) {
+	g := &DevinPresetGenerator{}
+	if got := g.GetName(); got != "devin" {
+		t.Errorf("GetName() = %v, want %v", got, "devin")
 	}
 }
 
-func TestWindsurfPresetGenerator_GetOutputPaths(t *testing.T) {
-	g := &WindsurfPresetGenerator{}
+func TestDevinPresetGenerator_GetOutputPaths(t *testing.T) {
+	g := &DevinPresetGenerator{}
 	baseDir := "/test/base"
 	paths := g.GetOutputPaths(baseDir)
 	if len(paths) != 4 {
 		t.Errorf("GetOutputPaths() returned %d paths, want 4", len(paths))
 	}
 	expectedPaths := []string{
-		filepath.Join(baseDir, ".windsurf"),
-		filepath.Join(baseDir, ".windsurf", "rules"),
-		filepath.Join(baseDir, ".windsurf", "skills"),
-		filepath.Join(baseDir, ".windsurf", "agents"),
+		filepath.Join(baseDir, ".devin"),
+		filepath.Join(baseDir, ".devin", "rules"),
+		filepath.Join(baseDir, ".devin", "skills"),
+		filepath.Join(baseDir, ".devin", "agents"),
 	}
 	for i, want := range expectedPaths {
 		if i < len(paths) && paths[i] != want {
@@ -252,11 +252,11 @@ func findSubstring(s, substr string) bool {
 	return false
 }
 
-func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing.T) {
-	g := &WindsurfPresetGenerator{}
+func TestDevinPresetGenerator_buildDevinAgentFrontmatter_Effort(t *testing.T) {
+	g := &DevinPresetGenerator{}
 
 	t.Run("agent effort emitted", func(t *testing.T) {
-		fm := g.buildWindsurfAgentFrontmatter(
+		fm := g.buildDevinAgentFrontmatter(
 			config.ContentFile{Name: "x", Metadata: &config.Metadata{Effort: "high"}},
 			&config.Config{},
 		)
@@ -266,7 +266,7 @@ func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing
 	})
 
 	t.Run("max maps to high", func(t *testing.T) {
-		fm := g.buildWindsurfAgentFrontmatter(
+		fm := g.buildDevinAgentFrontmatter(
 			config.ContentFile{Name: "x", Metadata: &config.Metadata{Effort: "max"}},
 			&config.Config{},
 		)
@@ -276,7 +276,7 @@ func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing
 	})
 
 	t.Run("inherit dropped", func(t *testing.T) {
-		fm := g.buildWindsurfAgentFrontmatter(
+		fm := g.buildDevinAgentFrontmatter(
 			config.ContentFile{Name: "x", Metadata: &config.Metadata{Effort: "inherit"}},
 			&config.Config{},
 		)
@@ -286,11 +286,11 @@ func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing
 	})
 
 	t.Run("per-preset override applied when no agent metadata", func(t *testing.T) {
-		fm := g.buildWindsurfAgentFrontmatter(
+		fm := g.buildDevinAgentFrontmatter(
 			config.ContentFile{Name: "x"},
 			&config.Config{Defaults: &config.DefaultsConfig{
 				Effort:         "low",
-				EffortByPreset: map[string]string{"windsurf": "xhigh"},
+				EffortByPreset: map[string]string{"devin": "xhigh"},
 			}},
 		)
 		if fm["reasoning_effort"] != "xhigh" {
@@ -299,7 +299,7 @@ func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing
 	})
 
 	t.Run("no effort when nothing set", func(t *testing.T) {
-		fm := g.buildWindsurfAgentFrontmatter(
+		fm := g.buildDevinAgentFrontmatter(
 			config.ContentFile{Name: "x"},
 			&config.Config{},
 		)
@@ -309,14 +309,14 @@ func TestWindsurfPresetGenerator_buildWindsurfAgentFrontmatter_Effort(t *testing
 	})
 }
 
-// windsurfRuleFile generates the preset and returns the content of the rules-folder file for name.
-func windsurfRuleFile(t *testing.T, g *WindsurfPresetGenerator, cfg *config.Config, content *config.ContentTree, fileName string) string {
+// devinRuleFile generates the preset and returns the content of the rules-folder file for name.
+func devinRuleFile(t *testing.T, g *DevinPresetGenerator, cfg *config.Config, content *config.ContentTree, fileName string) string {
 	t.Helper()
 	outputs, err := g.Generate(content, "/test", cfg)
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	want := filepath.Join("/test", ".windsurf", "rules", rulefiles.ItemID(fileName)+".md")
+	want := filepath.Join("/test", ".devin", "rules", rulefiles.ItemID(fileName)+".md")
 	for _, o := range outputs {
 		if o.Path == want {
 			return o.Content
@@ -326,7 +326,7 @@ func windsurfRuleFile(t *testing.T, g *WindsurfPresetGenerator, cfg *config.Conf
 	return ""
 }
 
-func TestWindsurf_PathsGlobsHonored(t *testing.T) {
+func TestDevin_PathsGlobsHonored(t *testing.T) {
 	tests := []struct {
 		name  string
 		extra map[string]string
@@ -347,7 +347,7 @@ func TestWindsurf_PathsGlobsHonored(t *testing.T) {
 				Metadata: &config.Metadata{Paths: tt.paths, Globs: tt.globs, Extra: tt.extra},
 			}
 			// Act
-			out := windsurfRuleFile(t, &WindsurfPresetGenerator{}, &config.Config{},
+			out := devinRuleFile(t, &DevinPresetGenerator{}, &config.Config{},
 				&config.ContentTree{Rules: []config.ContentFile{rule}}, "Scoped")
 			// Assert
 			if !strings.Contains(out, tt.want) {
@@ -360,7 +360,7 @@ func TestWindsurf_PathsGlobsHonored(t *testing.T) {
 	}
 }
 
-func TestWindsurf_ContextFrontmatter(t *testing.T) {
+func TestDevin_ContextFrontmatter(t *testing.T) {
 	tests := []struct {
 		name string
 		ctx  config.ContentFile
@@ -376,7 +376,7 @@ func TestWindsurf_ContextFrontmatter(t *testing.T) {
 			// Arrange
 			content := &config.ContentTree{Context: []config.ContentFile{tt.ctx}}
 			// Act
-			out := windsurfRuleFile(t, &WindsurfPresetGenerator{}, &config.Config{}, content, "context-Overview")
+			out := devinRuleFile(t, &DevinPresetGenerator{}, &config.Config{}, content, "context-Overview")
 			// Assert
 			if !strings.HasPrefix(out, "---\n") || !strings.Contains(out, tt.want) {
 				t.Errorf("want frontmatter %q in:\n%s", tt.want, out)
@@ -388,7 +388,7 @@ func TestWindsurf_ContextFrontmatter(t *testing.T) {
 	}
 }
 
-func TestWindsurf_MaxCharsWarning(t *testing.T) {
+func TestDevin_MaxCharsWarning(t *testing.T) {
 	tests := []struct {
 		name     string
 		size     int
@@ -401,13 +401,13 @@ func TestWindsurf_MaxCharsWarning(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Arrange
 			rules := []config.ContentFile{{Name: "Big", Content: strings.Repeat("x", tt.size)}}
-			items, _, _, err := rulefiles.Plan(rules, nil, &windsurfRulesTarget, rulefiles.RoutingEverything,
+			items, _, _, err := rulefiles.Plan(rules, nil, &devinRulesTarget, rulefiles.RoutingEverything,
 				rulefiles.ScopeInfo{}, nil)
 			if err != nil || len(items) != 1 {
 				t.Fatalf("items=%d err=%v", len(items), err)
 			}
 			// Act
-			_, notes, err := rulefiles.Render(windsurfRulesTarget, items[0], &config.Config{})
+			_, notes, err := rulefiles.Render(devinRulesTarget, items[0], &config.Config{})
 			// Assert
 			if err != nil {
 				t.Fatal(err)

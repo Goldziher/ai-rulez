@@ -1651,7 +1651,7 @@ func hashFromLine(raw string) (contentHash, sourceHash string) {
 //
 // Detection runs in the same priority order as injectHashes so that the body
 // passed to the body hash is symmetric with the body the injection sees.
-// Files may have multiple header layers (e.g. windsurf rule files have
+// Files may have multiple header layers (e.g. devin rule files have
 // trigger frontmatter THEN a generated-file banner) — we strip them all,
 // otherwise the banner's per-run timestamp would leak into the body hash.
 func stripHeader(content, outputPath string) string {
@@ -2710,7 +2710,7 @@ var generatedAssistantDirs = [...]string{
 	".continue/",
 	".cline/",
 	".clinerules/",
-	".windsurf/",
+	".devin/",
 	".junie/",
 	".opencode/",
 	".amp/",
