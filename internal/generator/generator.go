@@ -219,7 +219,7 @@ func (g *Generator) GeneratePluginFiles(profile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	stale, err := g.stalePluginDirs(profile)
+	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return 0, err
 	}
@@ -274,7 +274,7 @@ func (g *Generator) VerifyPlugin(profile string) error {
 	if err := verifyPluginOutputs(expected); err != nil {
 		return err
 	}
-	stale, err := g.stalePluginDirs(profile)
+	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return err
 	}
@@ -347,7 +347,7 @@ func (g *Generator) DryRunPlugin(profile string) ([]string, error) {
 	for _, output := range outputs {
 		lines = append(lines, "write-file: "+g.convertToRelativePath(g.absOutputPath(output.Path)))
 	}
-	stale, err := g.stalePluginDirs(profile)
+	stale, err := g.stalePluginDirs()
 	if err != nil {
 		return nil, err
 	}
@@ -437,13 +437,15 @@ func (g *Generator) warnUnreadConsumerFiles() {
 
 // stalePluginDirs lists the generated domain-plugin directories whose plugin is
 // no longer planned (its domain disappeared, or its declaration was removed).
-// Only directories carrying ai-rulez's provenance sidecar qualify.
-func (g *Generator) stalePluginDirs(profile string) ([]string, error) {
+// Only directories carrying ai-rulez's provenance sidecar qualify. The plan is
+// made over the unfiltered content tree: a profile that leaves a domain out
+// must not delete the plugin another profile generated for it.
+func (g *Generator) stalePluginDirs() ([]string, error) {
 	mkt := g.config.Marketplace
 	if mkt == nil || !mkt.HasDomainPlugins() {
 		return nil, nil
 	}
-	planned, err := g.planDomainPlugins(profile)
+	planned, err := plugin.PlanDomainPlugins(g.config, g.config.Content)
 	if err != nil {
 		return nil, err
 	}
