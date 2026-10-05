@@ -3,6 +3,7 @@ package schema_test
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -331,4 +332,30 @@ format = "sarif"
 	for name, extra := range bad {
 		assert.Error(t, schema.ValidateFile(write(header+extra)), name)
 	}
+}
+
+func TestValidateFile_UnknownKeyNamesTheKey(t *testing.T) {
+	for name, body := range map[string]string{
+		"one top-level key":  "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\n",
+		"two top-level keys": "version = \"4.0\"\nname = \"x\"\nbogus_key = 1\nother_key = 2\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			err := schema.ValidateFile(writeTOML(t, body))
+			require.Error(t, err)
+			msg := err.Error()
+			var detail string
+			if oe, ok := err.(interface{ Context() map[string]any }); ok { //nolint:errorlint // oops error carries context
+				detail = strings.Join(toStrings(oe.Context()["errors"]), "\n")
+			}
+			all := msg + "\n" + detail
+			assert.NotContains(t, all, "{property}")
+			assert.NotContains(t, all, "{properties}")
+			assert.Contains(t, all, "bogus_key")
+		})
+	}
+}
+
+func toStrings(v any) []string {
+	out, _ := v.([]string)
+	return out
 }
