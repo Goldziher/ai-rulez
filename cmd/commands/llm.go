@@ -55,7 +55,7 @@ information appears as the "llm" section of "ai-rulez doctor".`,
 var llmEstimateCmd = &cobra.Command{
 	Use:   "estimate <file>",
 	Short: "Estimate the tokens and cost of sending a file as a prompt (no call)",
-	Long: `Approximate the prompt tokens of <file> (about four bytes per token) and the worst-case
+	Long: `Approximate the prompt tokens of <file> (a conservative estimate of one token per three bytes) and the worst-case
 cost with the configured model, from the built-in price table or [llm] price_input_per_mtok /
 price_output_per_mtok. Nothing is sent. An unknown model prints "cost unknown".`,
 	Args: cobra.ExactArgs(1),
