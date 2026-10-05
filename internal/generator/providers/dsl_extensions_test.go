@@ -354,7 +354,7 @@ func TestGlobalPaths_NoneDeclared(t *testing.T) {
 func TestBuiltinGlobalPaths(t *testing.T) {
 	t.Parallel()
 
-	home := filepath.FromSlash("/h")
+	home := testutil.AbsolutePath("/h")
 	j := func(p string) string { return filepath.Join(home, filepath.FromSlash(p)) }
 	tests := []struct {
 		preset string
