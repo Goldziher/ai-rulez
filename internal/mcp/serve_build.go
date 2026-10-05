@@ -70,6 +70,9 @@ type built struct {
 // NewServer builds the catalog and the skills server around it. The caller runs
 // Server.Watch (when NoWatch is false) and the MCP transport.
 func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
+	// Fingerprint before building: an edit made while the catalog is built is
+	// then seen as a change by the watcher instead of being missed.
+	baseline, baselineErr := st.initialFingerprint()
 	first, err := st.build(ctx, buildOptions{admit: true})
 	if err != nil {
 		return nil, err
@@ -91,11 +94,40 @@ func (st *ServeSetup) NewServer(ctx context.Context) (*Server, error) {
 			return b.catalog, nil
 		}
 		opts.Fingerprint = func() (string, error) { return fingerprint(roots) }
+		if baselineErr == nil {
+			opts.Baseline = baseline
+		}
 	}
 	if len(first.catalog.Skills()) == 0 {
 		logger.Warn("No skills are served: nothing has delivery served or both, and no skill source is configured (pass --include-static to serve every skill)")
 	}
 	return NewSkillServerWith(st.Version, first.catalog, opts), nil
+}
+
+// initialFingerprint fingerprints the configuration directory and the local
+// --source directories as they are before the first build, without loading the
+// configuration twice. When the configuration itself names local sources the
+// watcher's first comparison differs once, which only costs one extra rebuild.
+func (st *ServeSetup) initialFingerprint() (string, error) {
+	if st.NoWatch {
+		return "", nil
+	}
+	wd := st.WorkDir
+	if wd == "" {
+		wd, _ = os.Getwd() //nolint:errcheck // an empty root fingerprints nothing
+	}
+	var roots []string
+	if name := config.ResolveConfigDirName(wd); name != "" {
+		abs, _ := filepath.Abs(filepath.Join(wd, filepath.FromSlash(name))) //nolint:errcheck // falls back to the given dir
+		roots = append(roots, abs)
+	}
+	for _, arg := range st.Sources {
+		if spec, err := skillsource.ParseArg(arg); err == nil && !spec.IsGit() {
+			abs, _ := filepath.Abs(filepath.Join(spec.URL, filepath.FromSlash(spec.Path))) //nolint:errcheck // falls back to the given dir
+			roots = append(roots, abs)
+		}
+	}
+	return fingerprint(roots)
 }
 
 type buildOptions struct {
@@ -372,7 +404,7 @@ func (st *ServeSetup) LockRecords(ctx context.Context) (sources, served []lockfi
 func (st *ServeSetup) ServedProblems(ctx context.Context) ([]string, error) {
 	off := *st
 	off.Offline = true
-	b, err := off.build(ctx, buildOptions{admit: true, ignoreLock: true})
+	b, err := off.build(config.WithOfflineIncludes(ctx), buildOptions{admit: true, ignoreLock: true})
 	if err != nil {
 		return nil, err
 	}
