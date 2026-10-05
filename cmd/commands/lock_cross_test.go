@@ -113,6 +113,7 @@ exclude = ["heavy"]
 `)
 	writeFile(t, filepath.Join(fx.root, ".ai-rulez", "skills", "heavy", "SKILL.md"),
 		"---\nname: heavy\ndescription: Heavy served skill. Use when it is heavy.\ndelivery: served\n---\nHEAVY\n")
+	writeFile(t, filepath.Join(fx.root, ".ai-rulez", "skills", "heavy", "scripts", "run.sh"), "#!/bin/sh\necho heavy\n")
 	require.Equal(t, 0, writeLockAt("", "", nil), "lock")
 	require.Equal(t, 0, runRecursiveGenerate(), "generate")
 	return fx
@@ -336,19 +337,6 @@ func TestLockCross_TamperedLockFile(t *testing.T) {
 			}
 			require.NoError(t, os.WriteFile(lockPath(fx), []byte(strings.Join(kept, "\n")), 0o644))
 		},
-		"content pins downgraded away": func(t *testing.T, fx *crossFixture) {
-			var kept []string
-			for _, line := range strings.Split(fx.read(t, ".ai-rulez/"+lockfile.FileName), "\n") {
-				switch {
-				case strings.HasPrefix(line, "hash_version"), strings.HasPrefix(line, "tree = "):
-				case line == "version = 2":
-					kept = append(kept, "version = 1")
-				default:
-					kept = append(kept, line)
-				}
-			}
-			require.NoError(t, os.WriteFile(lockPath(fx), []byte(strings.Join(kept, "\n")), 0o644))
-		},
 		"a pin edited by hand": func(t *testing.T, fx *crossFixture) {
 			text := fx.read(t, ".ai-rulez/"+lockfile.FileName)
 			i := strings.Index(text, "[[item]]")
@@ -399,4 +387,42 @@ func TestLockCross_TamperedGeneratedOutputIsCaughtByGenerateCheck(t *testing.T) 
 	// The lock pins the rendering of the sources; it does not read the files generate wrote.
 	assert.Equal(t, 0, d.check)
 	assert.NoError(t, d.locked)
+}
+
+// A script is hashed byte for byte: changing only its line endings is a change.
+func TestLockCross_ScriptLineEndingsAreContent(t *testing.T) {
+	fx := newCrossFixture(t)
+	require.NoError(t, os.WriteFile(fx.path(".ai-rulez/skills/heavy/scripts/run.sh"), []byte("#!/bin/sh\r\necho heavy\r\n"), 0o644))
+	d := fx.detect(t)
+	assert.Equal(t, exitDrift, d.check)
+	assert.Contains(t, d.diff, "heavy")
+	require.ErrorIs(t, d.locked, errLockedSourceDrift)
+	assert.Contains(t, d.served, "served heavy", "the served skill ships the script, so its digest changed")
+
+	// A document is not: CRLF in a rule is normalized.
+	fx = newCrossFixture(t)
+	style := fx.read(t, ".ai-rulez/rules/style.md")
+	require.NoError(t, os.WriteFile(fx.path(".ai-rulez/rules/style.md"), []byte(strings.ReplaceAll(style, "\n", "\r\n")), 0o644))
+	dd := fx.detect(t)
+	assert.NotContains(t, dd.diff, `"scope": "source"`, "line endings of a document do not move its pin")
+	assert.Zero(t, dd.sources, "no AR981")
+}
+
+// A lock of another format version is refused everywhere with the fix in the message.
+func TestLockCross_LockOfAnotherVersionIsRefusedWithTheFix(t *testing.T) {
+	for _, from := range []string{"version = 0", "version = 2"} {
+		fx := newCrossFixture(t)
+		text := strings.Replace(fx.read(t, ".ai-rulez/"+lockfile.FileName), "version = 1", from, 1)
+		require.NoError(t, os.WriteFile(fx.path(".ai-rulez/"+lockfile.FileName), []byte(text), 0o644))
+
+		var code int
+		_, stderr := capture(t, func() { code = checkLockAt("") })
+		assert.Equal(t, exitDrift, code, from)
+		assert.Contains(t, stderr, "run `ai-rulez lock`", from)
+
+		cfg, err := loadForLock("")
+		if err == nil {
+			assert.NotEmpty(t, lockDriftFor(cfg), "under enforce an unreadable lock is a finding: %s", from)
+		}
+	}
 }

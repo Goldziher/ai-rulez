@@ -80,7 +80,6 @@ func TestLockWritesContentPinsDeterministically(t *testing.T) {
 	lock, err := lockfile.Load(filepath.Join(root, ".ai-rulez"))
 	require.NoError(t, err)
 	assert.Equal(t, lockfile.Version, lock.Version)
-	assert.Equal(t, lockfile.HashVersion, lock.HashVersion)
 	assert.Equal(t, Version, lock.AIRulezVersion)
 	assert.True(t, strings.HasPrefix(lock.Tree, "sha256:"))
 	var ids []string
@@ -259,11 +258,10 @@ func TestLockDriftForUnreadableLockIsAFindingUnderEnforce(t *testing.T) {
 	require.NoError(t, err)
 
 	for name, content := range map[string]string{
-		"corrupt":               string(good) + "garbage = [\n",
-		"hash_version too new":  strings.Replace(string(good), "hash_version = 1", "hash_version = 9", 1),
-		"unsupported version":   "version = 99\n",
-		"content pins removed":  "version = 1\n",
-		"hash_version 0 and v2": strings.Replace(string(good), "hash_version = 1", "hash_version = 0", 1),
+		"corrupt":              string(good) + "garbage = [\n",
+		"unsupported version":  "version = 99\n",
+		"older version":        strings.Replace(string(good), "version = 1", "version = 0", 1),
+		"content pins removed": "version = 1\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			writeFile(t, lockPath, content)

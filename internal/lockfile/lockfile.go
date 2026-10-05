@@ -7,13 +7,9 @@ package lockfile
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"sort"
-	"strings"
 
 	"github.com/pelletier/go-toml/v2"
 	"github.com/samber/oops"
@@ -22,16 +18,10 @@ import (
 // FileName is the lock file, kept in the configuration directory.
 const FileName = "ai-rulez.lock"
 
-// Version is the lock format version. Version 2 adds content pins (Item,
-// Output, Tree); a version 1 lock is still accepted and has none.
-const Version = 2
-
-// MinVersion is the oldest lock format Load accepts.
-const MinVersion = 1
-
-// HashVersion identifies the content hashing scheme (see internal/contentlock
-// and docs/lockfile.md). A lock whose HashVersion is 0 carries no content pins.
-const HashVersion = 1
+// Version is the lock format version. It is the only version field: the content
+// hashing scheme of internal/contentlock (labels "ai-rulez/<kind>/v1") is part
+// of the format, so a change to either is a new Version.
+const Version = 1
 
 // Entry kinds.
 const (
@@ -54,7 +44,7 @@ type Entry struct {
 	Ref string `toml:"ref,omitempty"`
 	// Commit is the full SHA Ref resolved to when the lock was written.
 	Commit string `toml:"commit"`
-	// Digest is "sha256:<hex>" over the imported file tree (see DigestDir).
+	// Digest is "sha256:<hex>" over the imported file tree (contentlock.DigestDir).
 	Digest string `toml:"digest"`
 }
 
@@ -86,8 +76,6 @@ type OutputPin struct {
 // File is the parsed lock.
 type File struct {
 	Version int `toml:"version"`
-	// HashVersion is the content hashing scheme; 0 means the lock has no content pins.
-	HashVersion int `toml:"hash_version,omitempty"`
 	// AIRulezVersion is the ai-rulez release that wrote the content pins.
 	AIRulezVersion string `toml:"ai_rulez_version,omitempty"`
 	// Profile is the profile the output pins were rendered for ("" = the default).
@@ -108,13 +96,28 @@ type File struct {
 }
 
 // HasContentPins reports whether the lock pins authored content.
-func (f *File) HasContentPins() bool { return f != nil && f.HashVersion > 0 }
+func (f *File) HasContentPins() bool {
+	return f != nil && (f.Tree != "" || len(f.Item) > 0 || len(f.Output) > 0)
+}
 
 // Path returns the lock path for a configuration directory.
 func Path(configDir string) string { return filepath.Join(configDir, FileName) }
 
 // Load reads the lock in configDir. A missing file returns (nil, nil).
 func Load(configDir string) (*File, error) {
+	f, err := read(configDir)
+	if err != nil || f == nil {
+		return nil, err
+	}
+	if f.Version != Version {
+		return nil, oops.With("path", Path(configDir)).
+			Hint("Run `ai-rulez lock` to regenerate it").
+			Errorf("unsupported lock version %d (this ai-rulez reads version %d): run `ai-rulez lock` to regenerate %s", f.Version, Version, FileName)
+	}
+	return f, nil
+}
+
+func read(configDir string) (*File, error) {
 	data, err := os.ReadFile(Path(configDir))
 	if os.IsNotExist(err) {
 		return nil, nil
@@ -125,16 +128,6 @@ func Load(configDir string) (*File, error) {
 	var f File
 	if err := toml.Unmarshal(data, &f); err != nil {
 		return nil, oops.With("path", Path(configDir)).Wrapf(err, "parse lock file")
-	}
-	if f.Version < MinVersion || f.Version > Version {
-		return nil, oops.With("path", Path(configDir)).
-			Hint("Regenerate the lock with `ai-rulez lock`").
-			Errorf("unsupported lock file version %d (want %d or %d)", f.Version, MinVersion, Version)
-	}
-	if f.HashVersion > HashVersion {
-		return nil, oops.With("path", Path(configDir)).
-			Hint("Upgrade ai-rulez, or regenerate the lock with `ai-rulez lock`").
-			Errorf("lock file uses hash_version %d, this ai-rulez understands %d", f.HashVersion, HashVersion)
 	}
 	return &f, nil
 }
@@ -256,61 +249,4 @@ func IsFullSHA(ref string) bool {
 		}
 	}
 	return true
-}
-
-// DigestDir returns "sha256:<hex>" over the regular files below dir: for each
-// file in path order, its slash-separated relative path, its executable bit and
-// its bytes. VCS metadata and ai-rulez cache bookkeeping are left out, so the
-// digest of a fresh clone equals the digest of the same tree re-read later.
-func DigestDir(dir string) (string, error) {
-	// WalkDir does not follow a symlinked root: it would visit one non-directory
-	// entry and digest nothing, so every such tree would share one constant digest.
-	if info, err := os.Lstat(dir); err != nil {
-		return "", oops.With("dir", dir).Wrapf(err, "digest directory")
-	} else if !info.IsDir() {
-		return "", oops.With("dir", dir).Errorf("digest directory: %s is not a real directory (a symlink is not followed)", dir)
-	}
-	h := sha256.New()
-	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		name := d.Name()
-		if d.IsDir() {
-			if name == ".git" && path != dir {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if strings.HasPrefix(name, ".cache_meta.json") {
-			return nil
-		}
-		info, err := d.Info()
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped below
-		}
-		if !info.Mode().IsRegular() {
-			return nil
-		}
-		data, err := os.ReadFile(path) //nolint:gosec // path comes from WalkDir below a trusted cache directory
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped below
-		}
-		rel, err := filepath.Rel(dir, path)
-		if err != nil {
-			return err //nolint:wrapcheck // wrapped below
-		}
-		exec := "0"
-		if info.Mode().Perm()&0o111 != 0 {
-			exec = "1"
-		}
-		h.Write([]byte(filepath.ToSlash(rel) + "\x00" + exec + "\x00"))
-		sum := sha256.Sum256(data)
-		h.Write(sum[:])
-		return nil
-	})
-	if err != nil {
-		return "", oops.With("dir", dir).Wrapf(err, "digest directory")
-	}
-	return "sha256:" + hex.EncodeToString(h.Sum(nil)), nil
 }

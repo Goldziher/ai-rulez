@@ -37,14 +37,16 @@ git does not ignore. Then run `ai-rulez generate`, review the diff and commit th
 
 ## Lock file and enforcement
 
-- **`ai-rulez.lock` is format version 2.** `lock` now also pins the ai-rulez version, every authored rule, context
-  file, skill, agent, command, hook, role and settings source, the generated outputs and served skills, as
-  `sha256:` digests with a `hash_version`. Version 1 locks still load, but `lock --check` exits 2 on a lock without
-  content pins, whatever `[lock] enforce` says. Run `ai-rulez lock` once, review the diff and commit the file.
-  See [Lock file](lockfile.md).
+- **`ai-rulez.lock` pins content, under one hashing scheme.** `lock` now also pins the ai-rulez version, every
+  authored rule, context file, skill, agent, command, hook, role and settings source, the generated outputs and
+  served skills, as `sha256:` digests. Remote includes, OKF includes, installed skills and skill sources use the
+  same scheme (there is no second, older per-file hash). Scripts (`.sh`, `.py`, `.js`, ...) are hashed byte for byte:
+  a changed line ending in a script is a changed digest. `lock --check` exits 2 on a lock without content pins,
+  whatever `[lock] enforce` says. A lock with another `version` is refused with the instruction to run
+  `ai-rulez lock` again. Run it once, review the diff and commit the file. See [Lock file](lockfile.md).
 - **`[lock] enforce = true` is strict.** It makes `validate --strict` report `AR981` (source drift) and `AR982`
   (output drift), makes `generate --locked` fail on drift, and makes the skills server refuse a served skill that
-  the lock does not pin or whose digest differs. A corrupt lock, a newer `hash_version` or a source that cannot be
+  the lock does not pin or whose digest differs. A corrupt lock, a lock of another `version` or a source that cannot be
   snapshotted is an `AR981` finding, not a logged skip.
 - **The lock digest ignores the project-wide `Source-Hash` header**, so editing an unrelated file no longer changes
   the digest of a served skill.
