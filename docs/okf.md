@@ -285,9 +285,9 @@ include = ["rules", "context", "skills"]   # default: all six kinds
 spec = "0.2"                     # the only accepted value
 ```
 
-The preset exports the profile `generate` runs with, from the shared sources only (never `.ai-rulez/local/`), and
-includes content pulled in from includes and installed skills; domains that come from builtins or includes are skipped
-in `export okf` because they are not this project's own content. The bundle is committed documentation: `gitignore = true`
+The preset exports the profile `generate` runs with, from the shared sources only (never `.ai-rulez/local/`). Domains
+that come from builtins or includes are skipped, in the preset and in `export okf`, because they are not this project's
+own content; root content is exported as the generator sees it. The bundle is committed documentation: `gitignore = true`
 never ignores it, and files are written verbatim with no generated-by banner. `generate --check` and `doctor` report a
 hand-edited, missing or stale bundle file as drift, and `generate` removes concept files whose source is gone.
 
