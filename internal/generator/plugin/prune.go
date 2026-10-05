@@ -55,34 +55,55 @@ func planBundleStaleOutputs(sidecar string, keep map[string]bool) ([]StaleOutput
 	}
 	var stale []StaleOutput
 	for rel, expected := range document.Outputs {
-		target, err := safeOutputPath(root, rel)
+		output, err := planStaleOutput(root, rel, expected, document.SourceHash, keep)
 		if err != nil {
 			return nil, err
 		}
-		if keep[target] {
-			continue
+		if output != nil {
+			stale = append(stale, *output)
 		}
-		if err := regularOutputPath(root, rel); err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				continue
-			}
-			return nil, err
-		}
-		body, err := os.ReadFile(target)
-		if err != nil {
-			return nil, oops.With("path", target).Wrapf(err, "read obsolete plugin output")
-		}
-		payload := removeProvenanceHeader(body, target, expected.ContentHash, document.SourceHash)
-		generated := payload
-		if header := provenanceHeader(target, expected.ContentHash, document.SourceHash); header != "" {
-			generated = insertProvenanceHeader(payload, target, header)
-		}
-		if hashBytes(payload) != expected.ContentHash || !bytes.Equal(body, generated) {
-			return nil, oops.With("path", target).Errorf("modified obsolete plugin output; move or remove it explicitly before regenerating")
-		}
-		stale = append(stale, StaleOutput{Path: target, root: root, body: body})
 	}
+
 	return stale, nil
+}
+
+func planStaleOutput(root, rel string, expected provenanceOutput, sourceHash string, keep map[string]bool) (*StaleOutput, error) {
+	target, err := safeOutputPath(root, rel)
+	if err != nil {
+		return nil, err
+	}
+	if keep[target] {
+		return nil, nil
+	}
+	// A previous run may have completed a layout replacement but failed
+	// before committing its inventory. The obsolete file is already gone
+	// when its path is now a directory for planned descendants.
+	info, err := inspectOutputPath(root, rel)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	if info.IsDir() && hasPlannedDescendant(target, keep) {
+		return nil, nil
+	}
+	if !info.Mode().IsRegular() {
+		return nil, oops.With("path", target).Errorf("unsafe obsolete plugin output: expected regular file")
+	}
+	body, err := os.ReadFile(target)
+	if err != nil {
+		return nil, oops.With("path", target).Wrapf(err, "read obsolete plugin output")
+	}
+	payload := removeProvenanceHeader(body, target, expected.ContentHash, sourceHash)
+	generated := payload
+	if header := provenanceHeader(target, expected.ContentHash, sourceHash); header != "" {
+		generated = insertProvenanceHeader(payload, target, header)
+	}
+	if hashBytes(payload) != expected.ContentHash || !bytes.Equal(body, generated) {
+		return nil, oops.With("path", target).Errorf("modified obsolete plugin output; move or remove it explicitly before regenerating")
+	}
+	return &StaleOutput{Path: target, root: root, body: body}, nil
 }
 
 func readPreviousProvenance(sidecar string) (*provenanceDocument, error) {
@@ -109,8 +130,29 @@ func readPreviousProvenance(sidecar string) (*provenanceDocument, error) {
 // regularOutputPath refuses directories and symlinks, including symlinked
 // parent directories, so cleanup cannot follow a path outside its bundle.
 func regularOutputPath(root, rel string) error {
-	if _, err := safeOutputPath(root, rel); err != nil {
+	info, err := inspectOutputPath(root, rel)
+	if err != nil {
 		return err
+	}
+	if !info.Mode().IsRegular() {
+		return oops.With("path", rel).Errorf("unsafe obsolete plugin output: expected regular file")
+	}
+	return nil
+}
+
+func hasPlannedDescendant(path string, keep map[string]bool) bool {
+	prefix := path + string(filepath.Separator)
+	for planned := range keep {
+		if strings.HasPrefix(planned, prefix) {
+			return true
+		}
+	}
+	return false
+}
+
+func inspectOutputPath(root, rel string) (os.FileInfo, error) {
+	if _, err := safeOutputPath(root, rel); err != nil {
+		return nil, err
 	}
 	path := root
 	parts := append([]string{""}, strings.Split(filepath.Clean(filepath.FromSlash(rel)), string(filepath.Separator))...)
@@ -118,13 +160,24 @@ func regularOutputPath(root, rel string) error {
 		path = filepath.Join(path, part)
 		info, err := os.Lstat(path)
 		if err != nil {
-			return oops.With("path", path).Wrapf(err, "inspect plugin output")
+			return nil, oops.With("path", path).Wrapf(err, "inspect plugin output")
 		}
-		if info.Mode()&os.ModeSymlink != 0 || (i < len(parts)-1 && !info.IsDir()) || (i == len(parts)-1 && !info.Mode().IsRegular()) {
-			return oops.With("path", path).Errorf("unsafe obsolete plugin output: expected regular file and directory parents")
+		if info.Mode()&os.ModeSymlink != 0 {
+			return nil, oops.With("path", path).Errorf("unsafe obsolete plugin output: symlink")
+		}
+		if i == len(parts)-1 {
+			return info, nil
+		}
+		if info.Mode().IsRegular() {
+			// A descendant beneath a regular file no longer exists. This also
+			// permits retry after a directory-to-file layout replacement.
+			return nil, oops.With("path", path).Wrapf(os.ErrNotExist, "obsolete plugin output has a file parent")
+		}
+		if !info.IsDir() {
+			return nil, oops.With("path", path).Errorf("unsafe obsolete plugin output: expected directory parent")
 		}
 	}
-	return nil
+	return nil, oops.Errorf("invalid plugin output path")
 }
 
 // RemoveStaleOutputs removes only planned files whose bytes remain unchanged,

@@ -132,3 +132,39 @@ func TestGeneratePluginInventoryNamedResource(t *testing.T) {
 	assert.NoFileExists(t, target)
 	require.NoError(t, gen.VerifyPlugin(""))
 }
+
+func TestGeneratePluginRetriesPartialLayoutTransition(t *testing.T) {
+	for _, directoryFirst := range []bool{false, true} {
+		t.Run(map[bool]string{false: "file-to-directory", true: "directory-to-file"}[directoryFirst], func(t *testing.T) {
+			dir := newDomainsProject(t, "")
+			source := filepath.Join(dir, ".ai-rulez/skills/core-s/asset")
+			if directoryFirst {
+				writeDomainsFile(t, filepath.Join(source, "old.json"), "{}\n")
+			} else {
+				writeDomainsFile(t, source, "old\n")
+			}
+			gen := loadDomainsProject(t, dir)
+			require.NoError(t, gen.GeneratePlugin(""))
+			sidecar := filepath.Join(dir, ".ai-rulez-generated.json")
+			before, err := os.ReadFile(sidecar)
+			require.NoError(t, err)
+			require.NoError(t, os.RemoveAll(source))
+			if directoryFirst {
+				writeDomainsFile(t, source, "new\n")
+			} else {
+				writeDomainsFile(t, filepath.Join(source, "new.json"), "{}\n")
+			}
+			writeDomainsFile(t, filepath.Join(dir, ".ai-rulez/skills/core-s/zzblocked"), "new\n")
+			blocker := filepath.Join(dir, "skills/core-s/zzblocked")
+			require.NoError(t, os.Mkdir(blocker, 0o750))
+			gen = loadDomainsProject(t, dir)
+			require.Error(t, gen.GeneratePlugin(""))
+			after, err := os.ReadFile(sidecar)
+			require.NoError(t, err)
+			assert.Equal(t, before, after, "failed generation must retain ownership inventory")
+			require.NoError(t, os.Remove(blocker))
+			require.NoError(t, gen.GeneratePlugin(""))
+			require.NoError(t, gen.VerifyPlugin(""))
+		})
+	}
+}
