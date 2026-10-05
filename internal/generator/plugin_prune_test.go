@@ -30,7 +30,7 @@ func TestGeneratePluginPrunesRemovedSkills(t *testing.T) {
 			gen = loadDomainsProject(t, dir)
 			lines, err := gen.DryRunPlugin("")
 			require.NoError(t, err)
-			assert.Contains(t, strings.Join(lines, "\n"), "delete-stale: skills/core-s/SKILL.md")
+			assert.Contains(t, strings.Join(lines, "\n"), "delete-stale: "+filepath.Join("skills", "core-s", "SKILL.md"))
 			require.FileExists(t, old, "dry run must not delete")
 			require.NoError(t, gen.GeneratePlugin(""))
 			assert.NoFileExists(t, old)
