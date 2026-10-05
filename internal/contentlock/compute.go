@@ -266,52 +266,9 @@ func dirOf(p string) string {
 func (c *collector) collectDeclared() error {
 	ordinal := map[string]int{}
 	for i := range c.cfg.Hooks {
-		g := &c.cfg.Hooks[i]
-		matcher := g.Matcher
-		if matcher == "" {
-			matcher = "*"
-		}
-		base := g.Event + ":" + matcher
-		id := fmt.Sprintf("%s:%d", base, ordinal[base])
-		ordinal[base]++
-		data, err := canonicalJSON(g)
-		if err != nil {
+		if err := c.collectHook(&c.cfg.Hooks[i], ordinal); err != nil {
 			return err
 		}
-		leaves := []Leaf{{Path: "hook.json", Mode: ModeRegular, Data: data}}
-		for _, action := range g.Hooks {
-			if action.Script == "" {
-				continue
-			}
-			rel := filepath.ToSlash(filepath.Clean(action.Script))
-			if filepath.IsAbs(action.Script) || rel == ".." || strings.HasPrefix(rel, "../") {
-				// Never read outside the project: pin the declaration only.
-				c.problems = append(c.problems, fmt.Sprintf("hook %s script %q is outside the project, so its content cannot be pinned; move it into the project", id, action.Script))
-				leaf := Leaf{Path: "outside/" + outsideName(rel), Mode: ModeRegular, Data: []byte(action.Script)}
-				if !containsPath(leaves, leaf.Path) {
-					leaves = append(leaves, leaf)
-				}
-				continue
-			}
-			abs := filepath.Join(c.cfg.BaseDir, filepath.FromSlash(rel))
-			leaf := Leaf{Path: "script/" + strings.TrimPrefix(rel, "./"), Mode: ModeRegular}
-			if disk, readErr := os.ReadFile(abs); readErr == nil {
-				leaf.Data = disk
-				if info, statErr := os.Stat(abs); statErr == nil {
-					leaf.Mode = fileMode(abs, info)
-				}
-			} else {
-				leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
-			}
-			if !containsPath(leaves, leaf.Path) {
-				leaves = append(leaves, leaf)
-			}
-		}
-		digest, err := TreeDigest(KindHook, leaves)
-		if err != nil {
-			return err
-		}
-		c.items = append(c.items, lockfile.Item{Kind: KindHook, ID: id, Digest: digest})
 	}
 	for i := range c.cfg.Roles {
 		data, err := canonicalJSON(&c.cfg.Roles[i])
@@ -325,6 +282,56 @@ func (c *collector) collectDeclared() error {
 		c.items = append(c.items, lockfile.Item{Kind: KindRole, ID: c.cfg.Roles[i].Name, Digest: digest})
 	}
 	return c.collectSettings()
+}
+
+// collectHook pins one [[hooks]] group and the script files it runs.
+func (c *collector) collectHook(g *config.HookGroup, ordinal map[string]int) error {
+	matcher := g.Matcher
+	if matcher == "" {
+		matcher = "*"
+	}
+	base := g.Event + ":" + matcher
+	id := fmt.Sprintf("%s:%d", base, ordinal[base])
+	ordinal[base]++
+	data, err := canonicalJSON(g)
+	if err != nil {
+		return err
+	}
+	leaves := []Leaf{{Path: "hook.json", Mode: ModeRegular, Data: data}}
+	for _, action := range g.Hooks {
+		if action.Script == "" {
+			continue
+		}
+		rel := filepath.ToSlash(filepath.Clean(action.Script))
+		if filepath.IsAbs(action.Script) || rel == ".." || strings.HasPrefix(rel, "../") {
+			// Never read outside the project: pin the declaration only.
+			c.problems = append(c.problems, fmt.Sprintf("hook %s script %q is outside the project, so its content cannot be pinned; move it into the project", id, action.Script))
+			leaf := Leaf{Path: "outside/" + outsideName(rel), Mode: ModeRegular, Data: []byte(action.Script)}
+			if !containsPath(leaves, leaf.Path) {
+				leaves = append(leaves, leaf)
+			}
+			continue
+		}
+		abs := filepath.Join(c.cfg.BaseDir, filepath.FromSlash(rel))
+		leaf := Leaf{Path: "script/" + strings.TrimPrefix(rel, "./"), Mode: ModeRegular}
+		if disk, readErr := os.ReadFile(abs); readErr == nil {
+			leaf.Data = disk
+			if info, statErr := os.Stat(abs); statErr == nil {
+				leaf.Mode = fileMode(abs, info)
+			}
+		} else {
+			leaf.Path = "missing/" + strings.TrimPrefix(rel, "./") // reported by validate --strict (AR504)
+		}
+		if !containsPath(leaves, leaf.Path) {
+			leaves = append(leaves, leaf)
+		}
+	}
+	digest, err := TreeDigest(KindHook, leaves)
+	if err != nil {
+		return err
+	}
+	c.items = append(c.items, lockfile.Item{Kind: KindHook, ID: id, Digest: digest})
+	return nil
 }
 
 func (c *collector) collectSettings() error {
