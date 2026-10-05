@@ -32,15 +32,7 @@ func (c *Config) Validate() error {
 		return err
 	}
 
-	if err := c.validateProfiles(); err != nil {
-		return err
-	}
-
-	if err := c.validateRoles(); err != nil {
-		return err
-	}
-
-	if err := c.validateLock(); err != nil {
+	if err := c.validateSelectors(); err != nil {
 		return err
 	}
 
@@ -57,10 +49,6 @@ func (c *Config) Validate() error {
 	}
 
 	if err := c.validateInstalledSkills(); err != nil {
-		return err
-	}
-
-	if err := c.validateDynamicSkills(); err != nil {
 		return err
 	}
 
@@ -92,6 +80,21 @@ func (c *Config) Validate() error {
 	c.warnMissingDomainReferences()
 
 	return nil
+}
+
+// validateSelectors checks what selects content: profiles and roles, and the
+// lock settings and dynamic skill loading options that go with them.
+func (c *Config) validateSelectors() error {
+	if err := c.validateProfiles(); err != nil {
+		return err
+	}
+	if err := c.validateRoles(); err != nil {
+		return err
+	}
+	if err := c.validateLock(); err != nil {
+		return err
+	}
+	return c.validateDynamicSkills()
 }
 
 func (c *Config) validateOutputCollisions() error {
