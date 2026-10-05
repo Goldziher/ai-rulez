@@ -97,7 +97,7 @@ func (s *SkillSourceConfig) Validate(index int) error {
 // validateGitArgsAndLimits rejects a url or ref git would read as an option and
 // negative limits.
 func (s *SkillSourceConfig) validateGitArgsAndLimits(field func(string) string) error {
-	if err := gitutil.CheckArg("url", strings.TrimPrefix(s.URL, "git+")); err != nil {
+	if err := gitutil.CheckRemoteURL("url", strings.TrimPrefix(s.URL, "git+")); err != nil {
 		return oops.With("field", field("url")).Hint("A url or ref that starts with '-' would be read by git as an option").
 			Errorf("skill source %q: %s", s.Name, err.Error())
 	}

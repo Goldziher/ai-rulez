@@ -1011,7 +1011,7 @@
               "type": "array"
             },
             "scan_imports": {
-              "description": "Scan content imported through includes and installed skills; `generate` refuses to write it at level error. The level replaces the severity of findings in imports.",
+              "description": "Content imported through includes and installed skills is scanned by default and `generate` refuses to write it when a finding is an error. Unset keeps each finding's severity; `error` or `warn` replaces the severity of every finding in imports; `off` opts out.",
               "enum": [
                 "off",
                 "warn",

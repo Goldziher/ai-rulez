@@ -184,7 +184,7 @@ type = "enum"
 values = ["gold", "silver"]
 
 [lint.security]
-scan_imports = "error"             # off (default) | warn | error, see below
+scan_imports = "error"             # unset (default: scan, errors block) | off | warn | error, see below
 allowed_hosts = ["github.com", "*.example.org"]   # enables AR008
 allowed_tools = ["Bash"]           # unrestricted allowed-tools entries that are accepted (AR007)
 injection_phrases = ["as root user"]
@@ -439,9 +439,10 @@ They cover `SKILL.md`, rules, context, agents, commands, markdown references and
 `ai-rulez-lint-ignore`. The patterns are heuristics tuned for precision, and a finding in prose that *documents*
 a risky command needs an inline ignore.
 
-**Imported content.** Owned files are checked by default. With `[lint.security] scan_imports`, content from
-`includes` and `installed_skills` is scanned too: `validate --strict` reports it, and `generate` scans it *before
-writing anything* and stops at level `error` (`warn` only logs). The level replaces the severity of findings in
+**Imported content.** Content from `includes` and `installed_skills` is scanned by default: `validate --strict`
+reports it, and `generate` scans it *before writing anything* and stops at an error-level finding. With
+`[lint.security] scan_imports = "error"` every finding in imported text counts as an error, `"warn"` only logs, and
+`"off"` opts out of the scan (unset keeps each finding's own severity). The level replaces the severity of findings in
 imported text, and an `ai-rulez-lint-ignore` comment inside imported text is not honored, so an import cannot
 silence the check on its own content. Pair it with `ai-rulez lock` so the scanned bytes are the pinned bytes.
 
@@ -612,7 +613,7 @@ does not override it; a rule that reports mild and serious cases at different le
 | AR305 | `tool-name-unknown` | warning | An `allowed-tools`, `disallowed-tools`, `tools` or `disallowedTools` entry that names no Claude Code tool (with a did-you-mean), a malformed `mcp__server__tool` name, unbalanced parentheses in a `Bash(...)` pattern, or a tool listed as both allowed and denied. MCP tools, `Bash(...)`/`WebFetch(...)` patterns and `Agent(name)` are valid. Tools provided elsewhere go in `lint.known_names`. Not checked when `claude` is not among the presets |
 | AR403 | `command-missing` | warning | A backticked `npm run X` (also `pnpm`, `yarn`, `bun`), `make X`, `task X`, `just X` or `pytest -m X` that names a script, target, task, recipe or marker the repository does not define. The build files are read from the git index (`package.json` `scripts`, `Makefile` and `*.mk` targets, `Taskfile.y*ml` tasks, `justfile` recipes and aliases, pytest markers from `pyproject.toml`, `pytest.ini`, `setup.cfg`, `tox.ini`, `addinivalue_line` and `pytest.mark.X` uses). A command is skipped when no file of its kind exists, when it carries a placeholder (`<name>`, `$VAR`), when it is scoped elsewhere (`--prefix`, `--workspace`, `-C`, `-f`, `cd`), when the Makefile has dynamic targets or includes, and inside fenced blocks |
 | AR507 | `hook-schema-invalid` | warning | A hook declaration that loads but will not do what it says, in `config.toml` (`[[hooks]]`, `[[plugin.hooks]]`), the project `.claude/settings.json` and tracked plugin `hooks/hooks.json`: an event that is not a Claude Code event (with a did-you-mean), a `matcher` on an event without a matchable subject, an `if` on an event that never evaluates it, a handler with no or an unknown `type`, a `command`/`http`/`prompt` handler without its `command`/`url`/`prompt`, a `timeout` that is not a whole number of seconds, a group without a `hooks` list. The event tables are the ones the config loader uses. JSON files cannot carry an inline ignore; use `ignore_paths` |
-| AR012 | `mcp-unpinned-package` | warning | An MCP server that launches a package without a version pin: `npx`, `bunx`, `pnpm dlx` or `npm exec` with no `@version` or a moving tag (`@latest`), `uvx`, `uv tool run` or `pipx run` with no `==version`, and `docker run` with an untagged, `:latest` or digest-less image. Checked in `[[mcp_servers]]`, `.mcp.json`, `.cursor/mcp.json` and `.vscode/mcp.json`. Shares its pin predicate with AR021 |
+| AR012 | `mcp-unpinned-package` | warning (error under `[lock] enforce`, which is on whenever `ai-rulez.lock` exists) | An MCP server that launches a package without a version pin: `npx`, `bunx`, `pnpm dlx` or `npm exec` with no `@version` or a moving tag (`@latest`), `uvx`, `uv tool run` or `pipx run` with no `==version`, and `docker run` with an untagged, `:latest` or digest-less image. Checked in `[[mcp_servers]]`, `.mcp.json`, `.cursor/mcp.json` and `.vscode/mcp.json`. Shares its pin predicate with AR021 |
 | AR015 | `secret-in-env-or-header` | error | A literal credential (not a `${VAR}` reference or placeholder) in an MCP server `env` value whose key names a secret, in an `Authorization`/`X-Api-Key`-style header, in a `--token`/`--api-key` argument or a URL query/userinfo, in the top-level `env` of `.claude/settings.json`, or in the headers of an `http` hook. A value shaped like a known credential is reported under any key. The finding names the key and never prints the value |
 | AR602 | `mcp-config-invalid` | error | A malformed MCP server definition in `config.toml`, `.mcp.json`, `.cursor/mcp.json` or `.vscode/mcp.json`: an empty server, a stdio server without `command`, an `http`/`sse` server without an absolute `url`, an unknown transport, `args`/`env`/`headers` of the wrong type, or a name defined twice in one file (case-insensitively). The deprecated SSE transport is a warning and a name outside letters, digits, `_` and `-` is info (Claude Code rewrites it in the `mcp__<server>__<tool>` names). A server in `.mcp.json`, `.cursor/mcp.json` or `.vscode/mcp.json` that `config.toml` also defines is a generated copy and is checked once, at its source. A non-loopback `http://` URL is reported by AR024 |
 | AR013 | `auto-invocation-danger` | warning | A skill or command the model can invoke by itself (no `disable-model-invocation: true`) that is allowed unrestricted `Bash` (`Bash`, `Bash(*)`; entries in `lint.security.allowed_tools` pass) and ships `scripts/`, or a subagent with `permissionMode: bypassPermissions`. Text the model reads could start such an item without a request from the user |

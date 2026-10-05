@@ -69,7 +69,7 @@ func TestMergeDynamicLock_SecurityScanBlocksLocking(t *testing.T) {
 }
 
 func TestMergeDynamicLock_NothingDynamicLeavesTheLockAlone(t *testing.T) {
-	cfg := deliveryProject(t, `["claude"]`, "", map[string]string{"skills/core/SKILL.md": servedSkillFiles["skills/core/SKILL.md"]})
+	cfg := deliveryProject(t, `["claude"]`, "[lock]\nenforce = false\n", map[string]string{"skills/core/SKILL.md": servedSkillFiles["skills/core/SKILL.md"]})
 	next := &lockfile.File{Version: lockfile.Version}
 	current := &lockfile.File{Version: lockfile.Version, Served: []lockfile.Entry{{Name: "stale", Digest: "sha256:x"}}}
 	assert.Empty(t, mergeDynamicLock(cfg, current, next, "", nil))

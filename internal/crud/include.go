@@ -265,15 +265,21 @@ func isGitURL(source string) bool {
 
 // validateGitURL validates a git URL syntax
 func validateGitURL(gitURL string) error {
-	if !strings.HasPrefix(gitURL, "https://") && !strings.HasPrefix(gitURL, "http://") && !strings.HasPrefix(gitURL, "git@") {
+	if strings.HasPrefix(strings.ToLower(gitURL), "http://") {
 		return oops.
 			With("url", gitURL).
-			Hint("Git URLs must start with 'https://', 'http://', or 'git@'").
+			Hint("Plain http:// is not accepted since ai-rulez 5; use https:// or git@host:path").
+			Errorf("insecure git URL %q", gitURL)
+	}
+	if !strings.HasPrefix(gitURL, "https://") && !strings.HasPrefix(gitURL, "git@") {
+		return oops.
+			With("url", gitURL).
+			Hint("Git URLs must start with 'https://' or 'git@'").
 			Errorf("invalid git URL format")
 	}
 
 	// Basic validation - could be expanded with git ls-remote check
-	if strings.HasPrefix(gitURL, "https://") || strings.HasPrefix(gitURL, "http://") {
+	if strings.HasPrefix(gitURL, "https://") {
 		if _, err := url.Parse(gitURL); err != nil {
 			return oops.
 				With("url", gitURL).
