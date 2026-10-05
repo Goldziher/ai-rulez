@@ -739,6 +739,14 @@
           },
           "type": "array"
         },
+        "budget": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "description": "Tolerated finding count per rule code or name: a rule whose unaccepted findings number at most N does not count toward the exit code. Lower N over time to ratchet a rule down.",
+          "type": "object"
+        },
         "budgets": {
           "additionalProperties": {
             "additionalProperties": false,
@@ -809,6 +817,13 @@
             }
           },
           "type": "object"
+        },
+        "example_paths": {
+          "description": "Globs of files that document risky commands as examples: findings of the command-shaped rules (AR005, AR006, AR008) in them are dropped.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
         },
         "external": {
           "description": "External scanners run with `validate --strict --external` or `scan --external`. The command gets the scanned file paths appended and prints SARIF 2.1.0 or a JSON list; findings are merged as AR011.",
@@ -914,6 +929,15 @@
           "description": "Typed checks for frontmatter keys (top-level or inside `metadata`), keyed by the frontmatter key.",
           "type": "object"
         },
+        "profile": {
+          "description": "Preset of rule severities and the failure threshold. strict fails on warnings and promotes quality warnings to errors; permissive downgrades broken-reference errors to warnings and never weakens security rules. Explicit severity, fail_on and budget settings win over the preset.",
+          "enum": [
+            "default",
+            "strict",
+            "permissive"
+          ],
+          "type": "string"
+        },
         "require_metadata": {
           "additionalProperties": {
             "items": {
@@ -922,6 +946,28 @@
             "type": "array"
           },
           "description": "Frontmatter keys every item of a content kind must set. A key inside the Agent Skills `metadata` map counts.",
+          "type": "object"
+        },
+        "risk": {
+          "additionalProperties": false,
+          "description": "Weights of the advisory risk score shown next to the findings (never affects the exit code). Points per finding; the score is capped at 100.",
+          "properties": {
+            "error": {
+              "description": "Points per error finding. Default 25.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "info": {
+              "description": "Points per info finding. Default 1.",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "warning": {
+              "description": "Points per warning finding. Default 8.",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
           "type": "object"
         },
         "security": {
