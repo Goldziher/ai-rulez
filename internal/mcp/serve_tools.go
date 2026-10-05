@@ -72,35 +72,7 @@ func (s *Server) findSkillHandler(_ context.Context, req *handlers.ToolRequest) 
 		}
 	}
 
-	cat := s.cat()
-	ranked := bm25Rank(cat.Skills(), task)
-	results := make([]map[string]any, 0, limit)
-	add := func(hit FindHit, inRole bool) {
-		entry := map[string]any{
-			"name":        hit.Skill.Name,
-			"description": hit.Skill.Description,
-			"score":       hit.Score,
-			"domain":      domainLabel(hit.Skill.Domain),
-			keyDigest:     hit.Skill.Digest,
-		}
-		if role != "" {
-			entry["in_role"] = inRole
-		}
-		results = append(results, entry)
-	}
-	// Within the role first (keeping BM25 order), then the rest, each capped by limit.
-	for _, h := range ranked {
-		if len(results) < limit && (role == "" || scope.Includes(h.Skill)) {
-			add(h, true)
-		}
-	}
-	if role != "" {
-		for _, h := range ranked {
-			if len(results) < limit && !scope.Includes(h.Skill) {
-				add(h, false)
-			}
-		}
-	}
+	results := rankForRole(bm25Rank(s.cat().Skills(), task), role, scope, limit)
 	out := map[string]any{"task": task, "count": len(results), "results": results}
 	if role != "" {
 		out["role"] = role
@@ -134,7 +106,7 @@ func (s *Server) lookupServed(name string) (*CatalogSkill, error) {
 }
 
 func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
-	skill, err := s.lookupServed(req.GetString("name", ""))
+	skill, err := s.lookupServed(req.GetString(keyName, ""))
 	if err != nil {
 		return handlers.ToolError(err)
 	}
@@ -171,7 +143,7 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 			continue
 		}
 		f := &skill.Files[i]
-		resources = append(resources, map[string]any{"path": f.RelPath, keyURI: f.URI, "size": f.Size, keyDigest: f.Digest})
+		resources = append(resources, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, keyDigest: f.Digest})
 	}
 	out := skillSummary(skill, 0)
 	delete(out, "files")
@@ -192,16 +164,16 @@ func (s *Server) loadSkillHandler(ctx context.Context, req *handlers.ToolRequest
 }
 
 func (s *Server) listSkillResourcesHandler(_ context.Context, req *handlers.ToolRequest) (*sdkmcp.CallToolResult, error) {
-	skill, err := s.lookupServed(req.GetString("name", ""))
+	skill, err := s.lookupServed(req.GetString(keyName, ""))
 	if err != nil {
 		return handlers.ToolError(err)
 	}
 	files := make([]map[string]any, 0, len(skill.Files))
 	for i := range skill.Files {
 		f := &skill.Files[i]
-		files = append(files, map[string]any{"path": f.RelPath, keyURI: f.URI, "size": f.Size, "mime": f.MIME, keyDigest: f.Digest})
+		files = append(files, map[string]any{"path": f.RelPath, keyURI: f.URI, keySize: f.Size, "mime": f.MIME, keyDigest: f.Digest})
 	}
-	out := map[string]any{"name": skill.Name, keyDigest: skill.Digest, "resources": files}
+	out := map[string]any{keyName: skill.Name, keyDigest: skill.Digest, "resources": files}
 	s.addProvenance(out, skill)
 	return handlers.ToolSuccess(out)
 }
@@ -260,4 +232,36 @@ func (c *CatalogSkill) file(rel string) *CatalogFile {
 		}
 	}
 	return nil
+}
+
+// rankForRole lists the hits as find_skill returns them: with a role, the skills
+// in its scope first (keeping BM25 order) and then the rest, each capped by limit.
+func rankForRole(ranked []FindHit, role string, scope RoleScope, limit int) []map[string]any {
+	results := make([]map[string]any, 0, limit)
+	add := func(hit FindHit, inRole bool) {
+		entry := map[string]any{
+			keyName:       hit.Skill.Name,
+			"description": hit.Skill.Description,
+			"score":       hit.Score,
+			"domain":      domainLabel(hit.Skill.Domain),
+			keyDigest:     hit.Skill.Digest,
+		}
+		if role != "" {
+			entry["in_role"] = inRole
+		}
+		results = append(results, entry)
+	}
+	for _, h := range ranked {
+		if len(results) < limit && (role == "" || scope.Includes(h.Skill)) {
+			add(h, true)
+		}
+	}
+	if role != "" {
+		for _, h := range ranked {
+			if len(results) < limit && !scope.Includes(h.Skill) {
+				add(h, false)
+			}
+		}
+	}
+	return results
 }

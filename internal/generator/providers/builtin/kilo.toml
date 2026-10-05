@@ -49,6 +49,9 @@ sections = ["frontmatter", "content"]
 [outputs.agents.frontmatter]
 fields = ["description"]
 emit_model = true
+# The bare Claude aliases (sonnet, opus, haiku) are no model id of this tool: drop
+# them so the agent inherits the session model.
+drop_bare_aliases = true
 omit_name = true
 
 [outputs.agents.frontmatter.constants]
@@ -66,6 +69,14 @@ sections = ["frontmatter", "content"]
 fields = ["description"]
 omit_name = true
 
+# Code-review checks: Kilo Code Reviews reads one REVIEW.md at the repository
+# root, from the PR base branch, and only once "Use REVIEW.md" is enabled in the
+# Kilo web app. Kilo truncates the file at 10,000 characters.
+[outputs.checks]
+mode = "aggregate"
+file = "REVIEW.md"
+filter = "include_if_targeting_provider"
+
 [model]
 field = "model"
 
@@ -78,6 +89,8 @@ global_path = ".config/kilo/kilo.jsonc"
 [sidecars.elements]
 key = ["instructions"]
 values = [".kilo/rules/*.md"]
+# A project-relative glob: not written into the user-scope ~/.config/kilo/kilo.jsonc.
+project_only = true
 
 [global]
 root_file = ".config/kilo/AGENTS.md"

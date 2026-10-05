@@ -16,6 +16,7 @@ All AI-Rulez CLI commands and flags.
 | `ai-rulez lock`                 | Pin remote includes, installed skills and authored content in `ai-rulez.lock` ([Lock file](lockfile.md)) |
 | `ai-rulez roles`                | List, show and resolve `[[roles]]` ([Roles](roles.md)) |
 | `ai-rulez catalog`              | Items with owner, version, tokens, roles and lock status (`--format json`) |
+| `ai-rulez doctor`               | Read-only diagnostics for the project's setup ([details](#doctor-command)) |
 | `ai-rulez scan`                 | Security checks on skills, rules and scripts         |
 | `ai-rulez migrate`              | Migrate configuration versions (migrate v4 command) |
 | `ai-rulez tokens`               | Report the prompt-token cost of generated artifacts |
@@ -51,6 +52,9 @@ AI-Rulez provides CRUD commands to programmatically modify your V4 `.ai-rulez/` 
 `add agent` and `add command` take `--domain`/`-d`, `--description`/`-s`, `--content`/`-c` and
 `--local`. `remove agent|command` and `list agents|commands` take the same flags as their rule/skill
 counterparts.
+
+`add check`, `remove check` and `list checks` manage code-review guidelines (see [Checks](checks.md));
+they take `--domain`/`-d` (and `--description`/`-s`, `--content`/`-c` for `add`) but have no `--local`.
 
 ### Domain Management
 
@@ -895,6 +899,7 @@ ai-rulez generate [config-file] [flags]
 | `--no-local`                    | boolean | false         | Ignore the machine-local `config.local.*` overlay and `local/` content: generate the view a teammate without them sees. Also on `validate` and `tokens` (`verify` always checks the shared view) |
 | `--check`                       | boolean | false         | Write nothing; compare the sources with the files on disk, list the differing ones (`missing:`, `stale:`, `edited:`, `orphan:`) and exit 2 on drift. Works with `--recursive`, `--profile`, `--no-local` ([details](#detecting-drift)) |
 | `--locked`                      | boolean | false         | Require `ai-rulez.lock` to cover every remote include and installed skill, fetch exactly the pinned commits, and fail (exit 2) when an authored source differs from the lock's content pins (CI mode, see [Lock Command](#lock-command)). Never writes the lock |
+| `--watch` / `-w`                | boolean | false         | Generate, then watch the configuration directory and local include sources and regenerate on every change; stops on Ctrl-C ([details](#watch-mode)) |
 | `--frozen`                      | boolean | false         | `--locked` and never use the network: resolve only from the local cache, verified against the lock |
 | `--allow-local-drift`           | boolean | false         | Write output even when machine-local config would change files shared with the team (see [Local Configuration](#local-configuration))                  |
 | `--config-dir` / `-n`           | string  | `.ai-rulez`   | Configuration directory name for non-default layouts                                                                                                    |
@@ -923,6 +928,23 @@ Teams that commit generated files can gate CI on `generate --check`. It renders 
 | `orphan: <path>` | Listed in the previous manifest, no longer rendered; `generate` would delete it |
 
 Exit codes: `0` nothing differs, `1` the check could not run (configuration invalid, a nested root failed to load), `2` at least one file differs. A trailing-newline-only difference is not reported, because `generate` normalizes it. With `[header] hashes = "none"` there is no hash to compare, so every difference is `stale`. `--check` cannot be combined with `--dry-run`, `--plugin` (use `verify --plugin`) or `--gitignore`.
+
+#### Watch mode
+
+`generate --watch` (`-w`) generates once, then keeps running and regenerates whenever the sources change. It watches `.ai-rulez/` recursively (subdirectories created later included), the machine-local overlay files, the config file, and every `includes` / `local_override` source that is a local path. Remote includes are not polled.
+
+- Changes are debounced for 300 ms, so a save storm or `git checkout` produces one run.
+- Runs never overlap. A change that arrives during a run triggers exactly one more run afterwards.
+- Generated output, the generated manifests and editor swap/backup files (`*.swp`, `*~`, `.#*`, `4913`, ...) never trigger a run.
+- A configuration that fails to load or validate is logged and watching continues, so you can fix it and the next save regenerates.
+- If `.ai-rulez/` is deleted and re-created (for example by switching branches), it is watched again.
+- `SIGINT` / `SIGTERM` stop it cleanly, after any run in progress finishes. The first one cancels the run in progress; a second Ctrl-C kills the process immediately.
+- Files the previous run recorded as generated (the manifests list them) never trigger a run, even when an include source is a tree that also holds outputs. Editor and VCS names (`.git`, `node_modules`, swap files) are ignored below the watched root only, so a project that itself lives under a `node_modules` directory is still watched.
+- Symlinked watch roots and symlinked subdirectories are followed (a link back to a parent directory is not).
+- A local include removed from the configuration stops being watched after the next run.
+- If the operating system refuses to watch a directory (a limit such as `fs.inotify.max_user_watches` on Linux, or the open-file limit on macOS and BSD), one warning per run says so, with the hint to raise the limit; changes in the directories that could not be added are not noticed.
+
+`--watch` cannot be combined with `--dry-run`, `--check`, `--user`, `--plugin` or `--recursive`; it watches one configuration and writes on every change. Other flags (`--profile`, `--no-local`, `--env`, ...) apply to every run.
 
 **Examples:**
 
@@ -1111,6 +1133,42 @@ Recursive verification treats a marketplace root and its members as one atomic
 producer. Consumer-only plugin installation declarations are skipped. Missing
 authoring configuration is ignored only with `--if-configured`; stale, missing,
 or invalid generated outputs still fail verification.
+
+## Doctor Command
+
+### `ai-rulez doctor [config-file]`
+
+Read-only diagnostics. It never writes, and reports each problem as an `error`, a `warning` or `info`.
+
+```bash
+ai-rulez doctor [config-file] [--strict] [--json] [--profile <name>] [--no-local] [--config-dir <name>]
+```
+
+| Check | Reports | Severity |
+| --- | --- | --- |
+| `config` | The configuration fails to load, match the schema or validate (same as `validate`) | error |
+| `presets` | An unknown or removed preset name, with a suggestion: `windsurf` is now `devin`, `continue-dev` has no replacement, a typo gets a "did you mean" | error |
+| `mcp-env` | An MCP `${VAR}` placeholder in `env` or `headers` that no environment variable, `.env` file or `--env` value resolves (`${PROJECT_ROOT}` always resolves). Only servers active in the selected profile are checked | warning |
+| `drift` | Generated files that are `missing`, `stale`, `edited` or `orphan` (the machinery behind [`generate --check`](#detecting-drift)) | warning |
+| `gitignore` | Generated paths `generate` wants git to ignore (committed outputs with `gitignore = true`, machine-local and secret outputs always) that git does not ignore; asked through `git check-ignore`, skipped outside a git repository | warning |
+| `documents` | A shared settings document ai-rulez merges into (`.claude/settings.json`, `.mcp.json`, `.codex/config.toml`, ...) that no longer parses as JSON, JSONC, TOML or YAML | error |
+| `hooks` | A `[[hooks]]` script that does not exist or is not executable. The script paths are checked directly, so the result does not depend on git state or on `[lint]` overrides of `AR504` and `AR505` | error |
+| `lock` | `ai-rulez.lock` does not match the remote includes and installed skills (checked offline, as in `lock --check`) | warning |
+| `tools` | The binary behind a preset (`claude`, `codex`, `gemini`, ...) is not on `PATH`; presets whose binary is not known are skipped | info |
+
+When outputs cannot be rendered at all (for example because an MCP placeholder is unset), `drift` says so and the `gitignore` check is skipped; the `mcp-env` finding names the cause.
+
+`doctor` never uses the network and never writes the include cache: it loads the configuration without resolving includes and installed skills. A project that declares them gets one `info` finding on `drift` saying the comparison was skipped (`generate --check` does it against the resolved content), and the `gitignore` check is skipped with it.
+
+| Flag | Description |
+| --- | --- |
+| `--strict` | Also exit non-zero on warnings |
+| `--json` | Print `{"root", "summary": {"error", "warning", "info"}, "findings": [{"check", "severity", "message", "path", "hint"}]}` instead of the table |
+| `--profile` / `-p` | Profile rendered for the `drift` and `gitignore` checks |
+| `--no-local` | Ignore the machine-local overlay and `local/` content |
+| `--config-dir` / `-n` | Configuration directory name for non-default layouts |
+
+Exit codes: `0` no errors (and, with `--strict`, no warnings), `2` at least one finding at the failing severity, `1` doctor could not run: the configuration does not load at all (the `config` finding is still printed) or the report could not be written. The MCP server exposes the same checks as the read-only `doctor` tool, with URL credentials removed from every message, hint and path.
 
 ## Tokens Command
 

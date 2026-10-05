@@ -174,6 +174,15 @@
           "items": {
             "enum": ["frontmatter", "content", "resource_index", "targeted_rules", "targeted_context"]
           }
+        },
+        "replace": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Placeholders rewritten in the item's content: every key is replaced by its value (a command's $ARGUMENTS becomes Junie's $prompt)."
+        },
+        "replace_flag": {
+          "type": "string",
+          "description": "Frontmatter key written true when `replace` changed the content (Junie's allowPromptArgument)."
         }
       }
     },
@@ -244,6 +253,29 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "Frontmatter keys whose string value is always written double-quoted."
         },
+        "tool_names": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "description": "Claude tool name -> the tool's own name for the `tools` list (matched ignoring case). A tool the table does not name is dropped; an agent left with none writes no `tools` key."
+        },
+        "tool_case": {
+          "enum": ["lower"],
+          "description": "\"lower\" writes every tool name lower-case (after tool_names)."
+        },
+        "model_aliases": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Resolved model (matched ignoring case) -> the tool's own model id; an empty value drops the model. Other models pass through."
+        },
+        "drop_bare_aliases": {
+          "type": "boolean",
+          "description": "When true, drop a model that is a bare Claude alias (sonnet, opus, haiku, inherit) the tool cannot take, so the agent inherits the session model. Runs after model_aliases."
+        },
+        "renames": {
+          "type": "object",
+          "additionalProperties": { "type": "string", "minLength": 1 },
+          "description": "Field name -> the frontmatter key it is written under (renames = { severity = \"severity-default\" })."
+        },
         "join_lists": {
           "type": "boolean",
           "description": "When true, write the tools and skills lists as one comma-separated string (\"read, grep\") instead of a YAML list, for tools whose frontmatter parser reads only scalars (Letta Code)."
@@ -294,6 +326,7 @@
             "amp_settings_json",
             "pi_mcp_json",
             "mcp",
+            "checks",
             "permissions",
             "hooks"
           ],
@@ -343,9 +376,12 @@
             "vibe",
             "bob",
             "zcode",
-            "grok"
+            "grok",
+            "augment",
+            "gitlab-duo",
+            "roo"
           ],
-          "description": "Kind `mcp` only. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block), transport (mcpServers keyed on `transport`, Kimi Code), vibe ([[mcp_servers]] array of tables with name, Mistral Vibe). Defaults to standard. Each dialect has a default `key`."
+          "description": "Kind `checks`: augment (an `areas` map, one area per check) or gitlab-duo (an `instructions` list of groups). Kind `mcp` only otherwise. Entry style: standard (mcpServers command/args/env, url/headers), claude (type http|sse), gemini (httpUrl), opencode (mcp.<name> type local|remote, command array, environment, enabled), vscode (servers, type stdio|http|sse), zed (context_servers), codex ([mcp_servers.<name>] with http_headers), amp (flat key amp.mcpServers), yaml-standard (Poolside mcp_servers with a transport block), transport (mcpServers keyed on `transport`, Kimi Code), vibe ([[mcp_servers]] array of tables with name, Mistral Vibe). Defaults to standard. Each dialect has a default `key`."
         },
         "global_path": {
           "type": "string",
@@ -368,8 +404,21 @@
               "minItems": 1,
               "items": { "type": "string", "minLength": 1 },
               "description": "Elements ai-rulez adds."
+            },
+            "project_only": {
+              "type": "boolean",
+              "description": "The values are project-relative globs, left out of the user-scope document."
             }
           }
+        },
+        "env_ref_syntax": {
+          "enum": ["dollar", "env_prefix"],
+          "description": "kind mcp only. Write a value that came from a ${VAR} placeholder as a reference the tool expands itself instead of the resolved secret: dollar is $NAME, env_prefix is ${env:NAME}."
+        },
+        "transports": {
+          "type": "array",
+          "items": { "enum": ["stdio", "http", "sse"] },
+          "description": "kind mcp only. Limit the sidecar to MCP servers with these transports; empty means every server."
         },
         "global_mcp_path": {
           "type": "string",
@@ -419,7 +468,7 @@
     "global": {
       "type": "object",
       "additionalProperties": false,
-      "description": "User-scope (home directory) layout of the tool. Every path is relative to the user's home and slash-separated. Declarative only: parsed and validated, exposed through ProviderSpec.GlobalPaths.",
+      "description": "User-scope (home directory) layout of the tool. Every path is relative to the user's home and slash-separated. `generate --user` maps the spec's outputs onto these paths.",
       "properties": {
         "home_env": {
           "type": "string",
@@ -445,6 +494,15 @@
         },
         "rules_dir": {
           "type": "string"
+        },
+        "skill_readers": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Every user-level skill directory the tool reads, when more than `skills_dir`. A skill of the same name in two of them loads twice."
+        },
+        "skill_precedence": {
+          "type": "string",
+          "description": "Which copy of a skill runs when the same name exists at user and project level, as the vendor documents it. Empty: none documented."
         }
       }
     }

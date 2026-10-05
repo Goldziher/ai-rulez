@@ -5,6 +5,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 
@@ -97,10 +98,13 @@ func lsRemote(ctx context.Context, url, ref, token string) (commit, kind string,
 // fetchCommit materializes commit of url into dest (a fresh directory) and
 // removes the git metadata, leaving only the tree. It verifies the checkout is
 // at commit so a tag that moved between resolution and fetch fails closed.
+// flagQuiet keeps git silent.
+const flagQuiet = "--quiet"
+
 func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string) error {
 	remote := injectToken(url, token)
 	if kind == kindTag || kind == kindBranch {
-		if _, err := runGit(ctx, "", "clone", "--quiet", "--depth", "1", "--branch", ref, remote, dest); err != nil {
+		if _, err := runGit(ctx, "", "clone", flagQuiet, "--depth", "1", "--branch", ref, remote, dest); err != nil {
 			return oops.With("url", includes.RedactURL(url)).With("ref", ref).Wrapf(err, "clone")
 		}
 	} else {
@@ -108,10 +112,10 @@ func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string
 			return oops.Wrapf(err, "create checkout directory")
 		}
 		for _, args := range [][]string{
-			{"init", "--quiet"},
+			{"init", flagQuiet},
 			{"remote", "add", "origin", remote},
-			{"fetch", "--quiet", "--depth", "1", "origin", commit},
-			{"checkout", "--quiet", "--detach", "FETCH_HEAD"},
+			{"fetch", flagQuiet, "--depth", "1", "origin", commit},
+			{"checkout", flagQuiet, "--detach", "FETCH_HEAD"},
 		} {
 			if _, err := runGit(ctx, dest, args...); err != nil {
 				return oops.With("url", includes.RedactURL(url)).With("commit", commit).Wrapf(err, "fetch pinned commit")
@@ -126,5 +130,5 @@ func fetchCommit(ctx context.Context, url, ref, kind, commit, token, dest string
 		return oops.With("url", includes.RedactURL(url)).Errorf("fetched commit %s but %s was resolved; the ref moved during the fetch, retry", head, commit)
 	}
 	// Dropping .git makes the cached tree immutable and smaller; the digest ignores it anyway.
-	return oops.Wrapf(os.RemoveAll(dest+string(os.PathSeparator)+".git"), "drop git metadata")
+	return oops.Wrapf(os.RemoveAll(filepath.Join(dest, ".git")), "drop git metadata")
 }

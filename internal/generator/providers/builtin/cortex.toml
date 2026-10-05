@@ -27,6 +27,7 @@ sections = ["frontmatter", "content", "resource_index"]
 [outputs.skills.frontmatter]
 fields = ["description"]
 tools = true
+tool_case = "lower"
 
 [outputs.agents]
 mode = "per_item_file"
@@ -40,6 +41,10 @@ sections = ["frontmatter", "content"]
 fields = ["description"]
 tools = true
 emit_model = true
+# Cortex Code tool ids are lower-case ("Bash" never resolves), and the bare
+# Claude model aliases are no Cortex model.
+tool_case = "lower"
+drop_bare_aliases = true
 
 [model]
 field = "model"

@@ -24,7 +24,7 @@ import (
 const opencodePresetName = "opencode"
 
 // opencodeSchemaURL points an author's editor at OpenCode's config schema.
-// ai-rulez owns this key alongside mcp.servers: emitting it means a freshly
+// ai-rulez owns this key alongside the mcp entries: emitting it means a freshly
 // generated opencode.json is entirely ai-rulez's (so it is gitignored and
 // manifest-tracked), while a hand-authored file that adds further keys — model,
 // mcp.timeout — still counts as the consumer's and is preserved (#185).
@@ -76,6 +76,12 @@ func (g *OpencodePresetGenerator) GetOutputPaths(baseDir string) []string {
 // opencodeCommands is the folder of OpenCode custom commands, invoked as /{id}.
 var opencodeCommands = commandFilesSpec{preset: opencodePresetName, dir: ".opencode/commands", ext: ".md"}
 
+// ProjectLayout is where the preset writes project-level files; user scope maps them
+// onto GlobalOutputPaths.
+func (g *OpencodePresetGenerator) ProjectLayout() ProjectLayout {
+	return ProjectLayout{RootFile: "AGENTS.md", SkillsDir: ".opencode/skills", AgentsDir: ".opencode/agents", CommandsDir: ".opencode/commands"}
+}
+
 // GlobalOutputPaths is the OpenCode user-scope layout under ~/.config/opencode.
 func (g *OpencodePresetGenerator) GlobalOutputPaths(home string, getenv func(string) string) *GlobalPaths {
 	return GlobalLayout{
@@ -84,6 +90,8 @@ func (g *OpencodePresetGenerator) GlobalOutputPaths(home string, getenv func(str
 		AgentsDir:   ".config/opencode/agents",
 		CommandsDir: ".config/opencode/commands",
 		Sidecars:    map[string]string{MergedDocOpencodeConfig: ".config/opencode/opencode.json"},
+		// OpenCode also reads the Claude Code and shared agent skill directories.
+		SkillReaders: []string{".config/opencode/skills", ".claude/skills", ".agents/skills"},
 	}.Resolve(home, getenv)
 }
 
@@ -160,13 +168,14 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 		})
 	}
 
-	// Generate opencode.json in OpenCode's native v2 shape. ai-rulez owns
-	// $schema, mcp.servers and its own entry of instructions, so a fresh document
+	// Generate opencode.json in OpenCode's stable config shape. ai-rulez owns
+	// $schema, mcp.<name> entries and its own entry of instructions, so a fresh document
 	// is entirely ours; any other key a hand-authored opencode.json carries is
 	// preserved (#185, #194). The instructions entry is written at the project
 	// root whether or not MCP servers exist (see renderMCPConfig); a monorepo
 	// scope writes the document only for its servers.
-	if len(cfg.MCPServers) > 0 || !rulefiles.InScope(cfg) {
+	// User scope has neither: MCP servers and the machine-local entry are project-only.
+	if !cfg.UserScope && (len(cfg.MCPServers) > 0 || !rulefiles.InScope(cfg)) {
 		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
 		mcpFile, err := g.renderMCPDocument(mcpPath, cfg)
 		if err != nil {
@@ -188,8 +197,8 @@ func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Co
 	return g.renderMCPDocument(mcpPath, cfg)
 }
 
-// renderMCPDocument renders OpenCode's native v2 MCP servers and the machine-local
-// instructions entry into opencode.json. It owns the nested mcp.servers key (when
+// renderMCPDocument renders OpenCode's MCP servers (mcp.<name>) and the machine-local
+// instructions entry into opencode.json. It owns the mcp.<name> members (when
 // servers are configured) and, at the project root, the AGENTS.local.md entry of
 // instructions: OpenCode reads no AGENTS.local.md on its own, and a listed file
 // that is missing is skipped silently, so the entry is written whether or not
@@ -217,8 +226,9 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 		}
 	}
 	if len(cfg.MCPServers) > 0 {
-		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", keyServers}, Value: g.mcpServersValue(cfg), Members: true})
+		owned = append(owned, jsonmerge.OwnedKey{Path: []string{opencodeMCPKey}, Value: g.mcpServersValue(cfg), Members: true})
 	}
+	owned = append(owned, g.opencodeLegacyServers(cfg, mcpPath)...)
 	result, err = applyMergedDocument(mcpPath, owned)
 	// An entry the user listed is theirs even when it is the only key left.
 	result.PartiallyOwned = result.PartiallyOwned || userEntries
@@ -252,6 +262,59 @@ func (g *OpencodePresetGenerator) ownsSchema(path string, cfg *config.Config) bo
 		}
 	}
 	return false
+}
+
+// opencodeMCPKey is the object of MCP servers, one member per server (the stable
+// OpenCode config shape: mcp.<name>).
+const opencodeMCPKey = "mcp"
+
+// keyEnabled is the on/off switch of an OpenCode MCP server entry.
+const keyEnabled = "enabled"
+
+// opencodeLegacyServers removes the mcp.servers.<name> members earlier versions
+// wrote (a v2 shape OpenCode's stable config does not read: it would see a server
+// called "servers"). Each removal is guarded by the value the previous run
+// recorded, so a member the user since rewrote stays. With no record at all, the
+// whole mcp.servers object goes only when every member is exactly the entry
+// ai-rulez renders for a configured server of that name. Nothing is removed when a
+// configured server is itself named "servers": mcp.servers is then current.
+func (g *OpencodePresetGenerator) opencodeLegacyServers(cfg *config.Config, path string) []jsonmerge.OwnedKey {
+	if _, current := cfg.MCPServers[keyServers]; current {
+		return nil
+	}
+	previous := cfg.Run.PreviousClaims(projectRelative(cfg, path))
+	if len(previous) == 0 {
+		return []jsonmerge.OwnedKey{{
+			Path: []string{opencodeMCPKey, keyServers}, Remove: true, RemoveIf: g.matchesRenderedServers(cfg),
+		}}
+	}
+	var removals []jsonmerge.OwnedKey
+	for _, claim := range previous {
+		if len(claim.Path) >= 2 && claim.Path[0] == opencodeMCPKey && claim.Path[1] == keyServers {
+			removals = append(removals, jsonmerge.OwnedKey{Path: claim.Path, Remove: true, RemoveIf: claim.Matches})
+		}
+	}
+	return removals
+}
+
+// matchesRenderedServers accepts an mcp.servers value whose members are all the
+// entries ai-rulez renders for the configured servers of the same names.
+func (g *OpencodePresetGenerator) matchesRenderedServers(cfg *config.Config) func(json.RawMessage) bool {
+	rendered := g.mcpServersValue(cfg)
+	return func(raw json.RawMessage) bool {
+		var members map[string]json.RawMessage
+		if json.Unmarshal(raw, &members) != nil || len(members) == 0 {
+			return false
+		}
+		for name, member := range members {
+			want, ok := rendered[name]
+			var got any
+			if !ok || json.Unmarshal(member, &got) != nil || jsonmerge.Digest(got) != jsonmerge.Digest(want) {
+				return false
+			}
+		}
+		return true
+	}
 }
 
 // opencodeInstructionsKey is the top-level array of extra instruction files.
@@ -336,16 +399,17 @@ func readOpencodeInstructions(path string) (entries []any, isArray bool, err err
 	return entries, json.Unmarshal(raw, &entries) == nil, nil
 }
 
-// mcpServersValue renders the configured MCP servers in OpenCode's v2 shape.
+// mcpServersValue renders the configured MCP servers in OpenCode's config shape:
+// type local (command array, environment) or remote (url, headers), and
+// `enabled` on every entry.
 func (g *OpencodePresetGenerator) mcpServersValue(cfg *config.Config) map[string]interface{} {
 	servers := make(map[string]interface{})
 
 	for name, server := range cfg.MCPServers {
 		entry := map[string]interface{}{
-			keyDisabled: !server.IsEnabled(),
+			keyEnabled: server.IsEnabled(),
 		}
 
-		// V2 has exactly two types: local (stdio) and remote (Streamable HTTP).
 		switch server.GetTransport() {
 		case config.TransportHTTP, config.TransportSSE:
 			entry["type"] = "remote"
@@ -358,7 +422,7 @@ func (g *OpencodePresetGenerator) mcpServersValue(cfg *config.Config) map[string
 		default:
 			entry["type"] = "local"
 			if server.Command != "" {
-				// V2 takes the executable and its arguments as one array.
+				// The executable and its arguments are one array.
 				entry[keyCommand] = append([]string{server.Command}, server.Args...)
 			}
 			if len(server.Env) > 0 {
@@ -472,7 +536,7 @@ func OpencodeAgentSettings(agent config.ContentFile, cfg *config.Config) map[str
 	return (&OpencodePresetGenerator{}).buildOpencodeAgentFrontmatter(agent, cfg)
 }
 
-// buildOpencodeAgentFrontmatter builds native v2 frontmatter for an OpenCode
+// buildOpencodeAgentFrontmatter builds native frontmatter for an OpenCode
 // agent file. The agent's identity comes from its filename, so no `name` key is
 // emitted; effort is expressed as a separate model variant key.
 func (g *OpencodePresetGenerator) buildOpencodeAgentFrontmatter(agent config.ContentFile, cfg *config.Config) map[string]interface{} {

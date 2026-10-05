@@ -39,6 +39,7 @@ const (
 	skillsDir           = "skills"
 	agentsDir           = "agents"
 	commandsDir         = "commands"
+	checksDir           = "checks"
 	domainsDir          = "domains"
 	skillMarkerFile     = "SKILL.md"
 	commandMarkerFile   = "COMMAND.md"
@@ -791,6 +792,16 @@ func ScanContentTreeWith(configDir string, bundleExclude []string) (*ContentTree
 	tree.Commands = commands
 	logger.Debug("Scanned commands directory", "path", commandsPath, "count", len(commands))
 
+	// Scan root checks/
+	checksPath := filepath.Join(configDir, checksDir)
+	var checks []ContentFile
+	if checks, err = scanMarkdownFiles(checksPath); err != nil {
+		return nil, oops.
+			With("path", checksPath).
+			Wrapf(err, "scan checks directory")
+	}
+	tree.Checks = checks
+
 	// Scan domains/
 	domainsPath := filepath.Join(configDir, domainsDir)
 	var domains map[string]*Domain
@@ -1114,6 +1125,17 @@ func scanDomains(domainsDir string, bundleExclude []string) (map[string]*Domain,
 		}
 		domain.Commands = domainCommands
 		logger.Debug("Scanned domain commands directory", "domain", domainName, "path", domainCommandsPath, "count", len(domainCommands))
+
+		// Scan domain/checks/
+		domainChecksPath := filepath.Join(domainPath, checksDir)
+		var domainChecks []ContentFile
+		if domainChecks, err = scanMarkdownFiles(domainChecksPath); err != nil {
+			return nil, oops.
+				With("domain", domainName).
+				With("path", domainChecksPath).
+				Wrapf(err, "scan domain checks")
+		}
+		domain.Checks = domainChecks
 
 		domains[domainName] = domain
 	}

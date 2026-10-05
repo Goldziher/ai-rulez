@@ -146,12 +146,12 @@ func (r *runner) resourceOfServed(doc *item, served map[string]bool) bool {
 func referencedNames(l bodyLine, served map[string]bool) []string {
 	found := map[string]bool{}
 	for _, m := range nameAfterRe.FindAllStringSubmatch(l.Text, -1) {
-		if m[2] == "skill" {
+		if m[2] == kindSkill {
 			found[m[1]] = true
 		}
 	}
 	for _, m := range nameBeforeRe.FindAllStringSubmatch(l.Text, -1) {
-		if m[1] == "skill" {
+		if m[1] == kindSkill {
 			found[m[2]] = true
 		}
 	}
