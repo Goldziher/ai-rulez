@@ -71,7 +71,7 @@ type CatalogSkill struct {
 	// ScanFindings counts security findings that did not block serving.
 	ScanFindings int
 	Frontmatter  map[string]any
-	Files       []CatalogFile
+	Files        []CatalogFile
 	// Digest identifies the skill as a whole: sha256 over its sorted file URIs
 	// and digests, so one value changes whenever any file does.
 	Digest string
