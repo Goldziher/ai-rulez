@@ -1,7 +1,6 @@
 package generator
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -10,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
+	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/presets"
 	"github.com/Goldziher/ai-rulez/internal/generator/providers"
@@ -22,7 +22,7 @@ import (
 // regenerates them whole. What it wrote into them is recorded as claims in the
 // machine-local manifest (the names of MCP servers can come from the local
 // overlay, so the record is per machine), and a claim that stops being produced,
-// or that clean is asked to remove, is taken back out with jsonmerge.Unmerge.
+// or that clean is asked to remove, is taken back out with docmerge.Unmerge.
 //
 // Every claim is guarded by a digest of the value ai-rulez wrote, and only a value
 // that still matches it is taken back: an entry the user edited is theirs, stays,
@@ -121,7 +121,7 @@ func (g *Generator) reclaimStaleMembers(outputs []config.OutputFile) {
 			continue
 		}
 		claims = append(guardClaims(claims, output.MergeClaims), output.MergeClaims...)
-		result, err := jsonmerge.UnmergeDocument(rel, g.finalContent(*output), claims)
+		result, err := docmerge.UnmergeDocument(rel, mergedDocFormat(rel), g.finalContent(*output), claims)
 		if err == nil && result.Empty {
 			output.PartiallyOwned = false
 		}
@@ -197,6 +197,22 @@ func guardClaims(claims, current []jsonmerge.Claim) []jsonmerge.Claim {
 	return guarded
 }
 
+// mergedDocFormat is the syntax of the merged document at the base-relative path
+// rel: the format a builtin provider spec declares, else the one the extension
+// names (a custom provider's document), else JSON, which every Go preset document
+// is.
+func mergedDocFormat(rel string) docmerge.Format {
+	for _, doc := range providers.MergedSidecarDocs() {
+		if doc.Path == rel && doc.Format != "" {
+			return docmerge.Format(doc.Format)
+		}
+	}
+	if format, ok := docmerge.FormatFromPath(rel); ok {
+		return format
+	}
+	return docmerge.FormatJSON
+}
+
 // mergedDocuments lists every base-relative merged document path, sorted.
 func mergedDocuments() []string {
 	docs := append(providers.MergedSidecarPaths(), presets.MergedDocumentPaths()...)
@@ -226,7 +242,7 @@ func (g *Generator) planUnmerge(outputs []config.OutputFile, clean bool) []merge
 		if !isUnderBaseDir(g.config.BaseDir, abs) || !pathIsFile(abs) {
 			continue
 		}
-		result, err := jsonmerge.Unmerge(abs, claims[rel])
+		result, err := docmerge.Unmerge(abs, mergedDocFormat(rel), claims[rel])
 		if err != nil {
 			g.warnUnmerge(rel, err)
 			continue
@@ -294,11 +310,6 @@ func (g *Generator) warnOnce(msg string, args ...any) {
 
 // warnUnmerge reports a document ai-rulez could not take its content out of.
 func (g *Generator) warnUnmerge(rel string, err error) {
-	if errors.Is(err, jsonmerge.ErrNotStrictJSON) {
-		g.warnOnce(rel+" has comments or trailing commas, so ai-rulez leaves it alone and what it merged there stays",
-			"hint", "remove the ai-rulez entries by hand")
-		return
-	}
 	g.warnOnce("Could not remove ai-rulez content from "+rel, "error", err)
 }
 

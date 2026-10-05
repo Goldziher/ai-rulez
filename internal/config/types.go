@@ -5,6 +5,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Goldziher/ai-rulez/internal/builtins"
@@ -571,6 +572,10 @@ func (p *Preset) GetName() string {
 }
 
 // IsValid returns true if the preset is valid
+//
+// For a built-in name the answer depends on registration: provider-spec presets
+// are known only once internal/generator/providers is linked into the binary
+// (see AllPresetNames). Import internal/generator before validating presets.
 func (p *Preset) IsValid() bool {
 	if p.IsBuiltIn() {
 		return isValidBuiltInPreset(p.BuiltIn)
@@ -582,27 +587,49 @@ func (p *Preset) IsValid() bool {
 	return p.Name != "" && p.Type != "" && p.Path != ""
 }
 
-// Built-in preset names
-var builtInPresets = map[string]bool{
-	string(PresetClaude):      true,
-	string(PresetCursor):      true,
-	string(PresetGemini):      true,
-	string(PresetCopilot):     true,
-	string(PresetDevin):       true,
-	string(PresetCline):       true,
-	string(PresetCodex):       true,
-	string(PresetAmp):         true,
-	string(PresetJunie):       true,
-	string(PresetHermes):      true,
-	"opencode":                true,
-	string(PresetAntigravity): true,
-	"mcp":                     true,
-	string(PresetXum):         true,
-	string(PresetPi):          true,
-	string(PresetBaz):         true,
+// builtInPresets holds the names accepted as `presets = ["<name>"]`. It is seeded
+// with the Go-implemented presets (their PresetName constants) and extended at
+// init time by RegisterBuiltInPresetName, which internal/generator/providers
+// calls for every embedded provider spec, so a new builtin/*.toml needs no edit
+// here. Guarded by builtInPresetsMu because registration is a package-level
+// side effect that tests may also trigger.
+var (
+	builtInPresetsMu sync.RWMutex
+	builtInPresets   = map[string]bool{
+		string(PresetClaude):      true,
+		string(PresetCursor):      true,
+		string(PresetGemini):      true,
+		string(PresetCopilot):     true,
+		string(PresetDevin):       true,
+		string(PresetCline):       true,
+		string(PresetCodex):       true,
+		string(PresetAmp):         true,
+		string(PresetJunie):       true,
+		string(PresetHermes):      true,
+		string(PresetOpenCode):    true,
+		string(PresetAntigravity): true,
+		string(PresetMCP):         true,
+		string(PresetXum):         true,
+		string(PresetPi):          true,
+		string(PresetBaz):         true,
+	}
+)
+
+// RegisterBuiltInPresetName makes name a valid built-in preset. It is idempotent.
+// Config cannot import the providers package (providers imports config), so
+// providers pushes its embedded spec names in from its init().
+func RegisterBuiltInPresetName(name string) {
+	if name == "" {
+		return
+	}
+	builtInPresetsMu.Lock()
+	builtInPresets[name] = true
+	builtInPresetsMu.Unlock()
 }
 
 func isValidBuiltInPreset(name string) bool {
+	builtInPresetsMu.RLock()
+	defer builtInPresetsMu.RUnlock()
 	return builtInPresets[name]
 }
 

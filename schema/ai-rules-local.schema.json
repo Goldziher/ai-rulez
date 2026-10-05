@@ -166,7 +166,8 @@
               "antigravity",
               "mcp",
               "xum",
-              "pi"
+              "pi",
+              "baz"
             ]
           },
           "type": "object"
@@ -192,7 +193,8 @@
               "antigravity",
               "mcp",
               "xum",
-              "pi"
+              "pi",
+              "baz"
             ]
           },
           "type": "object"

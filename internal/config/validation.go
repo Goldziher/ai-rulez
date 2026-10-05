@@ -643,11 +643,7 @@ func (c *Config) hasLocalDomain(domain string) bool {
 
 // getBuiltInPresetNames returns a list of built-in preset names
 func getBuiltInPresetNames() []string {
-	names := make([]string, 0, len(builtInPresets))
-	for name := range builtInPresets {
-		names = append(names, name)
-	}
-	return names
+	return AllPresetNames()
 }
 
 // scopeRoot names root content in diagnostics. Domain scopes read

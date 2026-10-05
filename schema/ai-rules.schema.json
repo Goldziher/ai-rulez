@@ -518,7 +518,8 @@
               "antigravity",
               "mcp",
               "xum",
-              "pi"
+              "pi",
+              "baz"
             ]
           },
           "additionalProperties": {
@@ -545,7 +546,8 @@
               "antigravity",
               "mcp",
               "xum",
-              "pi"
+              "pi",
+              "baz"
             ]
           },
           "additionalProperties": {

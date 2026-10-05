@@ -29,7 +29,7 @@ import (
 // stripHeader removes frontmatter then banner. A file with neither (Banner
 // false and no fields) cannot carry hashes, so callers keep Banner on.
 func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, err error) {
-	fm, notes := Frontmatter(t.Dialect, it)
+	fm, notes := FrontmatterFor(t, it)
 	if fm == nil && !t.Banner {
 		return "", nil, oops.With("rule", it.File.Name, "preset", t.Preset).
 			Errorf("rule file would have neither frontmatter nor banner, so it could not carry hashes")
@@ -37,12 +37,16 @@ func Render(t Target, it Item, cfg *config.Config) (text string, notes []Note, e
 
 	var b strings.Builder
 	if fm != nil {
-		marshaled, err := yaml.Marshal(fm) // yaml.v3 sorts map keys
-		if err != nil {
-			return "", nil, oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
-		}
 		b.WriteString("---\n")
-		b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
+		if t.IsMappedLines() {
+			b.WriteString(MappedLines(fm))
+		} else {
+			marshaled, err := yaml.Marshal(fm) // yaml.v3 sorts map keys
+			if err != nil {
+				return "", nil, oops.With("rule", it.File.Name).Wrapf(err, "marshal frontmatter")
+			}
+			b.Write(unquoteGlobs(t.Dialect, fm, marshaled))
+		}
 		b.WriteString("---\n")
 	}
 	if t.Banner {

@@ -150,7 +150,7 @@ func TestDropCoveredPatterns(t *testing.T) {
 	}
 }
 
-func TestGenerate_ManagedGitignoreOmitsEntriesADirectoryCovers(t *testing.T) {
+func TestGenerate_ManagedGitignoreNarrowsXumDir(t *testing.T) {
 	// Arrange
 	p := newDriftProject(t, strings.Replace(strings.Replace(driftShared, `presets = ["claude"]`, `presets = ["xum"]`, 1),
 		"gitignore = false", "gitignore = true", 1))
@@ -158,12 +158,11 @@ func TestGenerate_ManagedGitignoreOmitsEntriesADirectoryCovers(t *testing.T) {
 	// Act
 	require.NoError(t, NewGenerator(p.load(t)).Generate(""))
 
-	// Assert
-	block := p.read(t, ".gitignore")
-	assert.Contains(t, block, ".xum/")
-	for _, line := range strings.Split(block, "\n") {
-		assert.False(t, strings.HasPrefix(line, ".xum/") && line != ".xum/", "redundant entry %q", line)
-	}
+	// Assert: the shared .xum/ directory is never ignored whole, so a hand-authored
+	// file in it stays visible to git; only the generated parts are listed.
+	lines := strings.Split(p.read(t, ".gitignore"), "\n")
+	assert.NotContains(t, lines, ".xum/")
+	assert.Contains(t, lines, ".xum/skills/")
 }
 
 // hintOf returns the hint carried by an error, or "".

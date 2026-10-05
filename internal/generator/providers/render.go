@@ -129,12 +129,18 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 
 	// Per-type rendering in a fixed iteration order so output is deterministic
 	// across map iterations. Rules were rendered above from the routing plan.
-	for _, typ := range []string{OutputTypeSkills, OutputTypeAgents, OutputTypeCommands} {
+	for _, typ := range []string{OutputTypeSkills, OutputTypeAgents, OutputTypeCommands, OutputTypeChecks} {
 		spec, ok := g.Spec.Outputs[typ]
 		if !ok || spec == nil {
 			continue
 		}
 		items := collectItemsByType(content, typ)
+		if spec.Mode == OutputModeAggregate {
+			if aggregated := g.renderAggregate(typ, spec, items, baseDir, cfg); aggregated != nil {
+				outputs = append(outputs, *aggregated)
+			}
+			continue
+		}
 		for _, item := range items {
 			if !g.itemAllowed(typ, spec, item, content, cfg) {
 				continue
@@ -152,7 +158,7 @@ func (g *Generator) Generate(content *config.ContentTree, baseDir string, cfg *c
 			continue
 		}
 		outputPath := filepath.Join(baseDir, sidecar.Path)
-		rendered, err := g.renderSidecar(sidecar.Kind, cfg, outputPath)
+		rendered, err := g.renderSidecarSpec(sidecar, cfg, outputPath)
 		if err != nil {
 			return nil, fmt.Errorf("render sidecar %s: %w", sidecar.Kind, err)
 		}
@@ -185,8 +191,19 @@ func collectItemsByType(content *config.ContentTree, typ string) []config.Conten
 		return presets.AllAgents(content)
 	case OutputTypeCommands:
 		return presets.AllCommands(content)
+	case OutputTypeChecks:
+		return checkItems(content)
 	}
 	return nil
+}
+
+// activationMap converts a spec's activation block into the rulefiles form; nil
+// when the spec has none.
+func activationMap(a *ActivationSpec) *rulefiles.ActivationMap {
+	if a == nil {
+		return nil
+	}
+	return &rulefiles.ActivationMap{Always: a.Always, Glob: a.Glob, Auto: a.Auto, Manual: a.Manual, Format: a.Format}
 }
 
 // rulesPlan is the routing of rules and context between the root file and the
@@ -382,6 +399,7 @@ func (g *Generator) rulesTarget(spec *OutputSpec) rulefiles.Target {
 		RootFile:  g.rootTarget().RootFile,
 		Ext:       strings.TrimPrefix(spec.Filename, "{id}"),
 		Dialect:   dialect,
+		Mapping:   activationMap(spec.Activation),
 		Recursive: dialect == rulefiles.DialectClaude,
 		Banner:    true,
 	}
@@ -610,6 +628,10 @@ func writeTargetedSection(b *strings.Builder, heading string, items []config.Con
 // fields without re-parsing the rendered YAML.
 func (g *Generator) writeFrontmatter(b *strings.Builder, typ string, spec *FrontmatterSpec, item config.ContentFile, cfg *config.Config) (map[string]any, error) {
 	frontmatter := g.buildFrontmatterMap(typ, spec, item, cfg)
+	if len(frontmatter) == 0 {
+		// omit_name left nothing to write: no empty "{}" block.
+		return frontmatter, nil
+	}
 
 	yamlData, err := yaml.Marshal(frontmatter)
 	if err != nil {
@@ -627,6 +649,9 @@ func (g *Generator) buildFrontmatterMap(typ string, spec *FrontmatterSpec, item 
 	frontmatter := map[string]any{"name": item.Name}
 	if spec == nil {
 		return frontmatter
+	}
+	if spec.OmitName {
+		delete(frontmatter, "name")
 	}
 	for k, v := range spec.Constants {
 		frontmatter[k] = v

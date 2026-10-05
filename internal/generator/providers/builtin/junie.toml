@@ -60,3 +60,7 @@ emit_model = true
 
 [model]
 field = "model"
+
+# User-scope layout: Junie merges ~/.junie/AGENTS.md with the project guidelines.
+[global]
+root_file = ".junie/AGENTS.md"

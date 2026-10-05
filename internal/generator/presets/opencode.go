@@ -146,28 +146,24 @@ func (g *OpencodePresetGenerator) Generate(content *config.ContentTree, baseDir 
 	// scope writes the document only for its servers.
 	if len(cfg.MCPServers) > 0 || !rulefiles.InScope(cfg) {
 		mcpPath := filepath.Join(baseDir, MergedDocOpencodeConfig)
-		mcpFile, write, err := g.renderMCPDocument(mcpPath, cfg)
+		mcpFile, err := g.renderMCPDocument(mcpPath, cfg)
 		if err != nil {
 			return nil, fmt.Errorf("render opencode.json: %w", err)
 		}
-		if write {
-			outputs = append(outputs, config.OutputFile{
-				Path:           mcpPath,
-				Content:        mcpFile.Body,
-				PartiallyOwned: mcpFile.PartiallyOwned,
-				MergeClaims:    mcpFile.Claims,
-			})
-		}
+		outputs = append(outputs, config.OutputFile{
+			Path:           mcpPath,
+			Content:        mcpFile.Body,
+			PartiallyOwned: mcpFile.PartiallyOwned,
+			MergeClaims:    mcpFile.Claims,
+		})
 	}
 
 	return outputs, nil
 }
 
-// renderMCPConfig is renderMCPDocument without the write decision, for callers
-// that only want the merged body.
+// renderMCPConfig renders the merged opencode.json body.
 func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Config) (jsonmerge.Result, error) {
-	result, _, err := g.renderMCPDocument(mcpPath, cfg)
-	return result, err
+	return g.renderMCPDocument(mcpPath, cfg)
 }
 
 // renderMCPDocument renders OpenCode's native v2 MCP servers and the machine-local
@@ -180,10 +176,9 @@ func (g *OpencodePresetGenerator) renderMCPConfig(mcpPath string, cfg *config.Co
 // mcp.timeout), every other top-level key and every other instructions entry
 // survive the merge.
 //
-// write is false when the document uses comments (OpenCode accepts them) and no
-// MCP servers need writing: merging would delete the comments, and the
-// instructions entry is not worth that, so a warning says what is missing.
-func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.Config) (result jsonmerge.Result, write bool, err error) {
+// Comments and trailing commas in an existing document (OpenCode accepts them)
+// are preserved; a document that is not valid JSON is an error.
+func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.Config) (result jsonmerge.Result, err error) {
 	var owned []jsonmerge.OwnedKey
 	if g.ownsSchema(mcpPath, cfg) {
 		owned = append(owned, jsonmerge.OwnedKey{Path: []string{keySchema}, Value: opencodeSchemaURL})
@@ -192,7 +187,7 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 	if !rulefiles.InScope(cfg) {
 		entries, claimed, user, err := opencodeInstructions(mcpPath, g.LocalRootFile(), previousClaimedInstructions(cfg, mcpPath))
 		if err != nil {
-			return jsonmerge.Result{}, false, err
+			return jsonmerge.Result{}, err
 		}
 		userEntries = user
 		if entries != nil {
@@ -203,15 +198,9 @@ func (g *OpencodePresetGenerator) renderMCPDocument(mcpPath string, cfg *config.
 		owned = append(owned, jsonmerge.OwnedKey{Path: []string{"mcp", keyServers}, Value: g.mcpServersValue(cfg), Members: true})
 	}
 	result, err = applyMergedDocument(mcpPath, owned)
-	if err != nil && len(cfg.MCPServers) == 0 {
-		rulefiles.Warn("opencode.json could not be merged into, so "+g.LocalRootFile()+
-			" is not listed in its instructions and OpenCode does not load machine-local content: "+err.Error(),
-			"hint", "add \""+g.LocalRootFile()+"\" to instructions by hand, or remove the comments", "path", mcpPath)
-		return jsonmerge.Result{}, false, nil
-	}
 	// An entry the user listed is theirs even when it is the only key left.
 	result.PartiallyOwned = result.PartiallyOwned || userEntries
-	return result, true, err
+	return result, err
 }
 
 // ownsSchema reports whether $schema is ai-rulez's in the document at path: it is

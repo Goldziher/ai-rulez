@@ -13,6 +13,7 @@ require (
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
+	github.com/tailscale/hujson v0.0.0-20260727124030-b80ff77dac4f
 	github.com/teekennedy/goldmark-markdown v0.5.1
 	github.com/tiktoken-go/tokenizer v0.8.1
 	github.com/yuin/goldmark v1.8.6

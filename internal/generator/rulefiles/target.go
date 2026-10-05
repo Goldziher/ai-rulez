@@ -23,7 +23,7 @@ const (
 // IsDialect reports whether name is a supported dialect.
 func IsDialect(name string) bool {
 	switch Dialect(name) {
-	case DialectClaude, DialectCursor, DialectTrigger, DialectCopilot, DialectCline, DialectContinue, DialectJunie:
+	case DialectClaude, DialectCursor, DialectTrigger, DialectCopilot, DialectCline, DialectContinue, DialectJunie, DialectMapped:
 		return true
 	}
 	return false
@@ -36,9 +36,10 @@ type Target struct {
 	RootFile  string // root instruction file of the preset, "" when it has none; matched by frontmatter targets
 	Ext       string // file extension including the dot, e.g. ".md" or ".instructions.md"
 	Dialect   Dialect
-	Recursive bool // the tool discovers rules in subdirectories
-	MaxChars  int  // soft per-file limit; 0 means unlimited
-	Banner    bool // emit the generated-file banner
+	Mapping   *ActivationMap // frontmatter of DialectMapped; nil for the Go dialects
+	Recursive bool           // the tool discovers rules in subdirectories
+	MaxChars  int            // soft per-file limit; 0 means unlimited
+	Banner    bool           // emit the generated-file banner
 	// Owners, when set, replaces the default owners of RootFile for target
 	// matching: the shared AGENTS.md is owned by every configured preset that
 	// relies on it.

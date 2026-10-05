@@ -1,7 +1,6 @@
 package jsonmerge_test
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -212,16 +211,17 @@ func TestUnmergeMissingFile(t *testing.T) {
 	assert.False(t, got.Changed)
 }
 
-func TestApplyReportsCommentsDistinctly(t *testing.T) {
+func TestApply_JSONCIsMergedAndMalformedIsRefused(t *testing.T) {
 	tests := []struct {
-		name     string
-		doc      string
-		wantSoft bool
+		name    string
+		doc     string
+		wantErr bool
 	}{
-		{"line comment", "{\n  // keep\n  \"a\": 1\n}\n", true},
-		{"block comment and trailing comma", "{ /* c */ \"a\": [1,2,], }", true},
-		{"comment markers inside strings are data", `{"url": "http://x//y", "a": 1,}`, true},
-		{"plain syntax error", `{"a": }`, false},
+		{"line comment", "{\n  // keep\n  \"a\": 1\n}\n", false},
+		{"block comment and trailing comma", "{ /* c */ \"a\": [1,2,], }", false},
+		{"comment markers inside strings are data", `{"url": "http://x//y", "a": 1,}`, false},
+		{"plain syntax error", `{"a": }`, true},
+		{"unterminated block comment", "{\"a\": 1 /* oops }", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -233,8 +233,7 @@ func TestApplyReportsCommentsDistinctly(t *testing.T) {
 			_, err := jsonmerge.Apply(path, []jsonmerge.OwnedKey{{Name: "x", Value: 1}})
 
 			// Assert
-			require.Error(t, err)
-			assert.Equal(t, tt.wantSoft, errors.Is(err, jsonmerge.ErrNotStrictJSON))
+			assert.Equal(t, tt.wantErr, err != nil)
 		})
 	}
 }

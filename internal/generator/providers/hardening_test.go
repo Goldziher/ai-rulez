@@ -1,0 +1,115 @@
+package providers_test
+
+import (
+	"strings"
+	"testing"
+
+	"github.com/Goldziher/ai-rulez/internal/generator/providers"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestLoadProviderSpec_Hardening(t *testing.T) {
+	t.Parallel()
+
+	rulesBase := "name = \"t\"\n[root]\nfile = \"AGENTS.md\"\nsections = [\"rules_inline\"]\n"
+	rules := rulesBase + "[outputs.rules]\nmode = \"per_item_file\"\ndir = \".x\"\nfilename = \"{id}.md\"\nsplit = true\n"
+	tests := []struct {
+		name    string
+		toml    string
+		wantErr string
+	}{
+		{"sidecar path traversal", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"../x.json\"", "sidecars[0].path"},
+		{"sidecar absolute path", "name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"/etc/x.json\"", "sidecars[0].path"},
+		{"legacy sidecar traversal", "name = \"t\"\n[[sidecars]]\nkind = \"mcp_json\"\npath = \"a/../../x.json\"", "sidecars[0].path"},
+		{"root file traversal", "name = \"t\"\n[root]\nfile = \"../AGENTS.md\"", "root.file"},
+		{"root file absolute", "name = \"t\"\n[root]\nfile = \"/AGENTS.md\"", "root.file"},
+		{"directory traversal", "name = \"t\"\ndirectories = [\".ok\", \"../up\"]", "directories[1]"},
+		{"output dir traversal", "name = \"t\"\n[outputs.skills]\nmode = \"per_item_file\"\ndir = \"../skills\"\nfilename = \"{id}.md\"", "outputs[\"skills\"].dir"},
+		{"output dir absolute", "name = \"t\"\n[outputs.agents]\nmode = \"per_item_file\"\ndir = \"/abs\"\nfilename = \"{id}.md\"", "outputs[\"agents\"].dir"},
+		{"name uppercase", "name = \"Tool\"", "name"},
+		{"name with slash", "name = \"a/b\"", "name"},
+		{"name leading dash", "name = \"-a\"", "name"},
+		{"permissions not yet supported", "name = \"t\"\n[[sidecars]]\nkind = \"permissions\"\npath = \"p.json\"", "not yet supported"},
+		{"hooks not yet supported", "name = \"t\"\n[[sidecars]]\nkind = \"hooks\"\npath = \"h.json\"", "not yet supported"},
+		{"activation bad key", rules + "[outputs.rules.activation]\nalways = {\"a\\nb\" = \"x\"}", "must match"},
+		{"activation key with colon", rules + "[outputs.rules.activation]\nalways = {\"a:b\" = \"x\"}", "must match"},
+		{"embedded globs_list", rules + "[outputs.rules.activation]\nglob = {paths = \"x {globs_list}\"}", "whole value"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			// Act
+			_, err := providers.LoadProviderSpec([]byte(tt.toml), "spec.toml", providers.FormatAuto)
+
+			// Assert
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.wantErr)
+		})
+	}
+}
+
+func TestBuiltinSpecNamesMatchFileStems(t *testing.T) {
+	names, err := providers.BuiltinNames()
+	require.NoError(t, err)
+	for _, name := range names {
+		gen, err := providers.LoadBuiltin(name)
+		require.NoError(t, err, name)
+		assert.Equal(t, name, gen.Spec.Name)
+		assert.False(t, strings.ContainsAny(name, "/\\ "), name)
+	}
+}
+
+func TestGlobalPaths_RelativeHomeAndEnv(t *testing.T) {
+	t.Parallel()
+
+	spec := loadSpec(t, "name = \"t\"\n[global]\nhome_env = \"T_HOME\"\nhome_dir = \".t\"\nroot_file = \".t/AGENTS.md\"\n").Spec
+
+	// A relative home is not a user-scope root.
+	assert.Nil(t, spec.GlobalPaths("relative/home", func(string) string { return "" }))
+
+	// A relative env override is ignored with the home-based path used instead.
+	g := spec.GlobalPaths("/home/u", func(string) string { return "rel/dir" })
+	require.NotNil(t, g)
+	assert.Equal(t, "/home/u/.t/AGENTS.md", strings.ReplaceAll(g.RootFile, "\\", "/"))
+
+	g = spec.GlobalPaths("/home/u", func(string) string { return "/opt/t" })
+	require.NotNil(t, g)
+	assert.Equal(t, "/opt/t/AGENTS.md", strings.ReplaceAll(g.RootFile, "\\", "/"))
+}
+
+func TestSharedDirs(t *testing.T) {
+	for _, d := range []string{".vscode", ".idea", ".zed", ".config", ".github", ".husky"} {
+		assert.True(t, providers.IsSharedDir(d), d)
+	}
+	assert.False(t, providers.IsSharedDir(".claude"))
+	assert.False(t, providers.IsSharedDir(".agents"), ".agents keeps its skills/ narrowing")
+}
+
+func TestMCPConfigPaths_ExplicitKindsOnly(t *testing.T) {
+	// Arrange
+	paths := providers.MCPConfigPaths()
+
+	// Assert: derived from sidecar kinds, never from a file name containing "mcp".
+	assert.Contains(t, paths, ".mcp.json")
+	assert.True(t, providers.IsMCPSidecarKind("mcp"))
+	for _, kind := range []string{"claude_settings_json", "mcp_json", "amp_settings_json", "pi_mcp_json"} {
+		assert.True(t, providers.IsMCPSidecarKind(kind), kind)
+	}
+	for _, kind := range []string{"claude_plugins_json", "permissions", "hooks", "my_mcp_notes"} {
+		assert.False(t, providers.IsMCPSidecarKind(kind), kind)
+	}
+}
+
+func TestLoadProviderSpec_GlobalMCPPath(t *testing.T) {
+	t.Parallel()
+
+	_, err := providers.LoadProviderSpec([]byte("name = \"t\"\n[[sidecars]]\nkind = \"mcp\"\npath = \"a.json\"\nglobal_mcp_path = \"../x.json\""), "s.toml", providers.FormatAuto)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "global_mcp_path")
+
+	_, err = providers.LoadProviderSpec([]byte("name = \"t\"\n[[sidecars]]\nkind = \"claude_plugins_json\"\npath = \"a.json\"\nglobal_mcp_path = \".x.json\""), "s.toml", providers.FormatAuto)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "only valid on a sidecar that holds MCP servers")
+}

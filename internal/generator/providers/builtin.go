@@ -42,5 +42,8 @@ func LoadBuiltin(name string) (*Generator, error) {
 	if err != nil {
 		return nil, fmt.Errorf("load embedded provider %q: %w", name, err)
 	}
+	if spec.Name != name {
+		return nil, fmt.Errorf("embedded provider %q: spec name %q must equal the file name", name, spec.Name)
+	}
 	return New(spec), nil
 }

@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"reflect"
 	"sort"
@@ -13,12 +12,6 @@ import (
 
 	"github.com/samber/oops"
 )
-
-// ErrNotStrictJSON marks a document that is not valid JSON but parses once its
-// comments and trailing commas are dropped (JSONC, which Gemini CLI and OpenCode
-// accept in their config files). Rewriting it would delete the comments, so
-// ai-rulez does not; callers decide whether the keys they own are worth that.
-var ErrNotStrictJSON = errors.New("document uses comments or trailing commas")
 
 // Claim records one thing ai-rulez wrote into a merged document, addressed by
 // key path. A claim is the only license ai-rulez has to take something out of a
@@ -33,6 +26,13 @@ var ErrNotStrictJSON = errors.New("document uses comments or trailing commas")
 //     hold a resolved secret (a header, an env variable) that must not be copied
 //     into another file.
 //   - Alone restricts removal to when no other top-level key remains.
+//   - Preexisting names ancestor paths of Path that were already in the document,
+//     holding nothing, when ai-rulez first merged into it (a user's empty
+//     [parent] table, a null "parent:"). Unmerge never removes those, only what
+//     ai-rulez put under them. It is recorded only in that case, so a document
+//     ai-rulez created itself leaves it empty. An ancestor that already held
+//     only ai-rulez's own content when the claim was recorded (a regeneration)
+//     cannot be told from one ai-rulez made, and is treated as ai-rulez's.
 //
 // A claim with Equals or Sum removes only the value ai-rulez wrote: a user who
 // edited it has taken it over, and it stays.
@@ -42,6 +42,13 @@ type Claim struct {
 	Equals   any      `json:"equals,omitempty"`
 	Sum      string   `json:"sum,omitempty"`
 	Alone    bool     `json:"alone,omitempty"`
+
+	Preexisting [][]string `json:"preexisting,omitempty"`
+
+	// NoFinalNewline records that the document did not end in a newline when
+	// ai-rulez first merged into it (Apply adds one), so Unmerge takes the newline
+	// it added back out and restores the original bytes.
+	NoFinalNewline bool `json:"noFinalNewline,omitempty"`
 }
 
 // Digest is the canonical fingerprint of a JSON value: the hex SHA-256 of its
@@ -164,9 +171,14 @@ func Unmerge(path string, claims []Claim) (Unmerged, error) {
 // UnmergeDocument is Unmerge for a document already read; path only names it in
 // errors.
 func UnmergeDocument(path, existing string, claims []Claim) (Unmerged, error) {
+	bom, existing := SplitBOM(existing)
 	members, err := decodeObjectMembers([]byte(existing))
 	if err != nil {
-		return Unmerged{}, parseFailure(path, existing, err)
+		result, err := unmergeJSONC(path, existing, claims, err)
+		if result.Changed && !result.Empty {
+			result.Body = bom + result.Body
+		}
+		return result, err
 	}
 
 	indent := detectTopLevelIndent(existing)
@@ -182,7 +194,19 @@ func UnmergeDocument(path, existing string, claims []Claim) (Unmerged, error) {
 	if err != nil {
 		return Unmerged{}, oops.With("path", path).Wrapf(err, "encode JSON settings document")
 	}
-	return Unmerged{Body: rendered + newline, Changed: true, Empty: len(members) == 0, Kept: kept}, nil
+	body := RestoreFinalNewline(claims, rendered+newline)
+	if err := checkPreservedDocuments(existing, body, func(before, after map[string]any) error {
+		return CheckPreservedUnmerge(before, after, claims)
+	}); err != nil {
+		return Unmerged{}, oops.With("path", path).
+			Hint("ai-rulez could not remove its keys from this JSON document without altering the rest of it; the file was left untouched").
+			Wrapf(err, "unmerged JSON settings document does not preserve the existing content")
+	}
+	empty := len(members) == 0
+	if !empty {
+		body = bom + body
+	}
+	return Unmerged{Body: body, Changed: true, Empty: empty, Kept: kept}, nil
 }
 
 // unmergeAll applies the claims in order, the Alone ones last and only while a
@@ -335,88 +359,13 @@ func jsonEquals(raw json.RawMessage, want any) bool {
 	return reflect.DeepEqual(got, wanted)
 }
 
-// parseFailure builds the error for a document decodeObjectMembers rejected,
-// marking the JSONC case (see ErrNotStrictJSON).
-func parseFailure(path, doc string, cause error) error {
-	if stripped := stripJSONC(doc); stripped != doc {
-		if _, err := decodeObjectMembers([]byte(stripped)); err == nil {
-			return oops.
-				With("path", path).
-				Hint(fmt.Sprintf("%s has comments or trailing commas; ai-rulez cannot merge into it without deleting them.", path)).
-				Wrapf(ErrNotStrictJSON, "parse existing JSON settings document")
-		}
-	}
+// parseFailure builds the error for a document that is neither strict JSON nor
+// JSONC with an object root.
+func parseFailure(path string, cause error) error {
 	return oops.
 		With("path", path).
 		Hint(fmt.Sprintf(
 			"%s is not parseable JSON, and ai-rulez will not overwrite a file it cannot merge into. "+
-				"Fix the syntax (comments and trailing commas are not valid JSON), or move the file aside.", path)).
+				"Fix the syntax, or move the file aside.", path)).
 		Wrapf(cause, "parse existing JSON settings document")
-}
-
-// stripJSONC drops // and /* */ comments and trailing commas that sit outside
-// string literals. Anything it leaves behind that is still not JSON stays an
-// error for the caller.
-func stripJSONC(doc string) string {
-	var b []byte
-	inString, escaped := false, false
-	for i := 0; i < len(doc); i++ {
-		c := doc[i]
-		if inString {
-			inString, escaped = advanceWithinString(c, escaped)
-			b = append(b, c)
-			continue
-		}
-		switch {
-		case c == '"':
-			inString = true
-			b = append(b, c)
-		case c == '/' && i+1 < len(doc) && doc[i+1] == '/':
-			for i < len(doc) && doc[i] != '\n' {
-				i++
-			}
-			if i < len(doc) {
-				b = append(b, '\n')
-			}
-		case c == '/' && i+1 < len(doc) && doc[i+1] == '*':
-			end := bytes.Index([]byte(doc[i+2:]), []byte("*/"))
-			if end < 0 {
-				return doc
-			}
-			i += end + 3
-			b = append(b, ' ')
-		default:
-			b = append(b, c)
-		}
-	}
-	return dropTrailingCommas(string(b))
-}
-
-// dropTrailingCommas removes a comma whose next significant character closes an
-// object or array.
-func dropTrailingCommas(doc string) string {
-	var b []byte
-	inString, escaped := false, false
-	for i := 0; i < len(doc); i++ {
-		c := doc[i]
-		if inString {
-			inString, escaped = advanceWithinString(c, escaped)
-			b = append(b, c)
-			continue
-		}
-		if c == '"' {
-			inString = true
-		}
-		if c == ',' {
-			j := i + 1
-			for j < len(doc) && (doc[j] == ' ' || doc[j] == '\t' || doc[j] == '\n' || doc[j] == '\r') {
-				j++
-			}
-			if j < len(doc) && (doc[j] == '}' || doc[j] == ']') {
-				continue
-			}
-		}
-		b = append(b, c)
-	}
-	return string(b)
 }

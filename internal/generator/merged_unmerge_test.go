@@ -221,13 +221,15 @@ func TestOpencode_DocumentWeCreatedIsDeletedByClean(t *testing.T) {
 	assert.NoFileExists(t, filepath.Join(root, "opencode.json"))
 }
 
-func TestGenerate_CommentedConfigsAreLeftAloneWithAWarning(t *testing.T) {
+func TestGenerate_CommentedConfigsKeepTheirCommentsAndGetTheLocalEntry(t *testing.T) {
 	tests := []struct {
 		name, path, doc string
 		preset          string
+		comment         string
+		want            string
 	}{
-		{"opencode.json", "opencode.json", "{\n  // my model\n  \"model\": \"x\",\n}\n", "opencode"},
-		{"gemini settings", ".gemini/settings.json", "{\n  /* theme */\n  \"theme\": \"dark\"\n}\n", "gemini"},
+		{"opencode.json", "opencode.json", "{\n  // my model\n  \"model\": \"x\",\n}\n", "opencode", "// my model", "AGENTS.local.md"},
+		{"gemini settings", ".gemini/settings.json", "{\n  /* theme */\n  \"theme\": \"dark\"\n}\n", "gemini", "/* theme */", "GEMINI.local.md"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -239,25 +241,37 @@ func TestGenerate_CommentedConfigsAreLeftAloneWithAWarning(t *testing.T) {
 
 			// Act
 			runAgentsMDGenerate(t, root)
+			merged := readAgentsMDFile(t, root, tt.path)
+			_, err := NewGenerator(loadAgentsMDConfig(t, root)).Clean("", CleanOptions{})
 
 			// Assert
-			assert.Equal(t, tt.doc, readAgentsMDFile(t, root, tt.path), "the user's file is untouched")
-			assert.Positive(t, countContaining(*warned, "local.md"), *warned)
+			require.NoError(t, err)
+			assert.Contains(t, merged, tt.comment, "the comment survives the merge")
+			assert.Contains(t, merged, tt.want, "the local entry is written into the commented document")
+			assert.Equal(t, tt.doc, readAgentsMDFile(t, root, tt.path), "clean restores the user's file byte for byte")
+			assert.Empty(t, *warned)
 		})
 	}
 }
 
-func TestGenerate_CommentedConfigWithMCPServersStillFails(t *testing.T) {
+func TestGenerate_CommentedConfigWithMCPServersIsMergedAndUnmerged(t *testing.T) {
 	// Arrange
 	root := t.TempDir()
 	writeAgentsMDProject(t, root, agentsMDConfig([]string{"opencode"}, "", agentsMDMCPServer))
-	writeAgentsMDFile(t, root, "opencode.json", "{\n  // keep\n  \"model\": \"x\"\n}\n")
+	doc := "{\n  // keep\n  \"model\": \"x\"\n}\n"
+	writeAgentsMDFile(t, root, "opencode.json", doc)
 
 	// Act
 	err := NewGenerator(loadAgentsMDConfig(t, root)).Generate("")
+	merged := readAgentsMDFile(t, root, "opencode.json")
+	_, cleanErr := NewGenerator(loadAgentsMDConfig(t, root)).Clean("", CleanOptions{})
 
 	// Assert
-	require.Error(t, err, "writing servers would delete the comments, so it refuses as before")
+	require.NoError(t, err)
+	assert.Contains(t, merged, "// keep")
+	assert.Contains(t, merged, `"mcp"`)
+	require.NoError(t, cleanErr)
+	assert.Equal(t, doc, readAgentsMDFile(t, root, "opencode.json"), "clean restores the commented file")
 }
 
 func TestClean_DoesNotWarnAboutGeminiContext(t *testing.T) {
