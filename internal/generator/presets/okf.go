@@ -36,6 +36,11 @@ func (g *OKFPresetGenerator) Generate(content *config.ContentTree, baseDir strin
 	if rulefiles.InScope(cfg) {
 		return nil, nil
 	}
+	// A role renders one person's slice for their machine; the committed bundle
+	// documents the whole project and must not shrink to that slice.
+	if cfg.RoleActive() {
+		return nil, nil
+	}
 	kinds, err := okfbridge.ParseKinds(cfg.OKFInclude())
 	if err != nil {
 		return nil, err
