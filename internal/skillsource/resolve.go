@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/Goldziher/ai-rulez/internal/config"
@@ -122,6 +123,10 @@ func resolveGit(ctx context.Context, spec Spec, opts Options) (*Resolved, error)
 	if covered && entry.Commit == "" {
 		covered = false
 	}
+	if covered && !lockCommit.MatchString(entry.Commit) {
+		return nil, oops.Wrapf(errors.Join(config.ErrLockViolation, errLockCommit),
+			"skill source %q: the lock's commit %q is not a full hexadecimal commit SHA; run `ai-rulez lock`", spec.Name, entry.Commit)
+	}
 	if opts.Frozen && !covered {
 		return nil, errLock(spec, "not covered by %s (or the lock is stale); run `ai-rulez lock`", lockfile.FileName)
 	}
@@ -213,6 +218,12 @@ func pickCommit(ctx context.Context, spec Spec, opts Options, q commitSearch) (c
 }
 
 var errDigest = errors.New("content digest mismatch")
+
+// lockCommit is the only shape a lock's commit may have: it becomes a cache path
+// component, so anything else (a path traversal) is a violation, never a path.
+var lockCommit = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
+
+var errLockCommit = errors.New("invalid commit in the lock")
 
 func finish(spec Spec, treeDir, commit, kind string, entry *lockfile.Entry, covered bool) (*Resolved, error) {
 	dir := treeDir
@@ -346,6 +357,8 @@ func CheckLock(sources []config.SkillSourceConfig, lock *lockfile.File, cacheDir
 			problems = append(problems, Problem{spec.Name, "not covered by the lock"})
 		case !entry.Covers(spec.Want()):
 			problems = append(problems, Problem{spec.Name, "lock is stale: url, path or ref changed since it was written"})
+		case spec.IsGit() && !lockCommit.MatchString(entry.Commit):
+			problems = append(problems, Problem{spec.Name, fmt.Sprintf("the lock's commit %q is not a full hexadecimal commit SHA", entry.Commit)})
 		case spec.IsGit():
 			root, _ := cacheRoot(cacheDir) //nolint:errcheck // never fails
 			tree := filepath.Join(root, urlKey(gitURL(spec.URL)), entry.Commit, "tree")
