@@ -260,6 +260,11 @@ type SidecarSpec struct {
 	// GlobalPath is where the sidecar lives in the user scope, relative to the
 	// home directory. Empty means the sidecar has no user-scope counterpart.
 	GlobalPath string `toml:"global_path,omitempty" yaml:"global_path,omitempty" json:"global_path,omitempty"`
+	// UserOnly limits the sidecar to a user-scope run (`--user`); it needs a
+	// GlobalPath. It is for a document whose setting the tool reads from the user
+	// file only (Zed's agent.tool_permissions), so a project run does not write a
+	// file the tool would ignore.
+	UserOnly bool `toml:"user_only,omitempty" yaml:"user_only,omitempty" json:"user_only,omitempty"`
 	// GlobalMCPPath is where the MCP servers of the sidecar live in the user scope
 	// when that is a different file than GlobalPath (Claude Code keeps user-scope
 	// MCP servers in ~/.claude.json and its other settings in
@@ -278,6 +283,9 @@ type SidecarSpec struct {
 	// Elements (kind "mcp" on a json or jsonc document) also adds values to an
 	// array member of the document, such as Kilo's `instructions` globs.
 	Elements *ElementsSpec `toml:"elements,omitempty" yaml:"elements,omitempty" json:"elements,omitempty"`
+	// Flavor (kind "hook_plugin") is the plugin dialect of the generated module:
+	// opencode, opencode-v1, pi or amp (see internal/generator/hookplugins).
+	Flavor string `toml:"flavor,omitempty" yaml:"flavor,omitempty" json:"flavor,omitempty"`
 }
 
 // Closed-set enum constants. Extending any of these is a deliberate Go change
@@ -346,6 +354,13 @@ const (
 	// [permissions] or [claude.settings.managed].
 	PredicateHasClaudeSettings = "has_claude_settings"
 
+	// PredicateHasHooks holds when the config declares top-level [[hooks]].
+	PredicateHasHooks = "has_hooks"
+
+	// PredicateHasPermissions holds when the config declares a top-level
+	// [permissions] block with at least one rule.
+	PredicateHasPermissions = "has_permissions"
+
 	// sidecars[].kind
 	SidecarClaudeSettingsJSON = "claude_settings_json"
 	SidecarClaudePluginsJSON  = "claude_plugins_json"
@@ -360,6 +375,10 @@ const (
 	SidecarChecks      = "checks"
 	SidecarPermissions = "permissions"
 	SidecarHooks       = "hooks"
+	// SidecarHookPlugin renders [[hooks]] as a JavaScript or TypeScript plugin
+	// module that ai-rulez owns wholly, for harnesses whose hooks are code (OpenCode
+	// and its forks, Pi, Amp). The flavor picks the plugin dialect.
+	SidecarHookPlugin = "hook_plugin"
 
 	// sidecars[].format
 	DocFormatJSON  = "json"

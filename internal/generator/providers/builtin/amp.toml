@@ -69,6 +69,13 @@ path = ".amp/settings.json"
 global_path = ".config/amp/settings.json"
 emit_when = "has_resolved_effort_or_mcp_servers"
 
+# [[hooks]] become an Amp plugin: Amp's hooks are code, loaded from .amp/plugins.
+[[sidecars]]
+kind = "hook_plugin"
+flavor = "amp"
+path = ".amp/plugins/ai-rulez-hooks.ts"
+global_path = ".config/amp/plugins/ai-rulez-hooks.ts"
+
 # User-scope layout: Amp keeps its memory and settings under ~/.config/amp and
 # shares skills through ~/.config/agents.
 [global]

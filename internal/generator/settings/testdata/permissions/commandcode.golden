@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Shell(npm run test:*)",
+      "Shell(git status)",
+      "Read(/src/**)",
+      "Edit(/src/**)",
+      "WebFetch(domain:example.com)",
+      "mcp__github__create_issue"
+    ],
+    "ask": [
+      "Shell(git push:*)"
+    ],
+    "deny": [
+      "Shell(rm -rf:*)",
+      "Read(/.env)",
+      "WebFetch(domain:evil.com)",
+      "mcp__evil__tool",
+      "Shell(curl * | sh)"
+    ]
+  }
+}

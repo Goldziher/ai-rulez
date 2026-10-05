@@ -97,6 +97,15 @@ global_path = ".kiro/settings/mcp.json"
 
 # User scope: Kiro does not read ~/AGENTS.md, but it reads an AGENTS.md in the
 # global steering folder.
+# Hooks: top-level [[hooks]] rendered in kiro's native format, read from the
+# vendor documentation (see docs/settings.md). Kiro loads every .kiro/hooks/*.json ({version: "v1", hooks: [...]}, seconds).
+[[sidecars]]
+kind = "hooks"
+dialect = "kiro"
+path = ".kiro/hooks/ai-rulez.json"
+format = "json"
+global_path = ".kiro/hooks/ai-rulez.json"
+
 [global]
 root_file = ".kiro/steering/AGENTS.md"
 commands_dir = ".kiro/prompts"

@@ -1,0 +1,102 @@
+{{template "header" . }}
+// @ts-nocheck
+{{template "runtime" . }}
+
+const SESSION_SOURCES = { startup: "startup", reload: "startup", new: "clear", resume: "resume", fork: "startup" };
+
+function sessionId(ctx) {
+  try {
+    return ctx.sessionManager.getSessionId() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function transcriptPath(ctx) {
+  try {
+    return ctx.sessionManager.getSessionFile() ?? undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function base(ctx) {
+  return { session_id: sessionId(ctx), transcript_path: transcriptPath(ctx) };
+}
+
+function directory(ctx) {
+  return ctx?.cwd ?? process.cwd();
+}
+
+export default function (pi: any) {
+{{- if .Has.SessionStart}}
+  pi.on("session_start", async (event, ctx) => {
+    const source = SESSION_SOURCES[event.reason] ?? "startup";
+    await dispatch("SessionStart", directory(ctx), { ...base(ctx), source }, { subject: source });
+  });
+{{- end}}
+{{- if .Has.SessionEnd}}
+  pi.on("session_shutdown", async (event, ctx) => {
+    await dispatch("SessionEnd", directory(ctx), { ...base(ctx), reason: event.reason });
+  });
+{{- end}}
+{{- if .Has.UserPromptSubmit}}
+  pi.on("input", async (event, ctx) => {
+    if (event.source === "extension") return { action: "continue" };
+    const reason = await dispatch("UserPromptSubmit", directory(ctx), { ...base(ctx), prompt: event.text });
+    if (reason === null) return { action: "continue" };
+    try {
+      if (ctx.hasUI) ctx.ui.notify(reason, "error");
+      else console.error(reason);
+    } catch {
+      console.error(reason);
+    }
+    return { action: "handled" };
+  });
+{{- end}}
+{{- if .Has.PreToolUse}}
+  pi.on("tool_call", async (event, ctx) => {
+    const reason = await dispatch(
+      "PreToolUse",
+      directory(ctx),
+      { ...base(ctx), tool_use_id: event.toolCallId, tool_input: event.input },
+      { tool: event.toolName },
+    );
+    if (reason !== null) return { block: true, reason };
+  });
+{{- end}}
+{{- if or .Has.PostToolUse .Has.PostToolUseFailure}}
+  pi.on("tool_result", async (event, ctx) => {
+    const failed = event.isError === true;
+    const fields = {
+      ...base(ctx),
+      tool_use_id: event.toolCallId,
+      tool_input: event.input,
+      tool_response: { content: event.content, is_error: failed },
+    };
+{{- if .Has.PostToolUse}}
+    if (!failed) await dispatch("PostToolUse", directory(ctx), fields, { tool: event.toolName });
+{{- end}}
+{{- if .Has.PostToolUseFailure}}
+    if (failed) await dispatch("PostToolUseFailure", directory(ctx), fields, { tool: event.toolName });
+{{- end}}
+  });
+{{- end}}
+{{- if .Has.PreCompact}}
+  pi.on("session_before_compact", async (event, ctx) => {
+    const trigger = event.reason === "manual" ? "manual" : "auto";
+    await dispatch("PreCompact", directory(ctx), { ...base(ctx), trigger }, { subject: trigger });
+  });
+{{- end}}
+{{- if .Has.PostCompact}}
+  pi.on("session_compact", async (event, ctx) => {
+    const trigger = event.reason === "manual" ? "manual" : "auto";
+    await dispatch("PostCompact", directory(ctx), { ...base(ctx), trigger }, { subject: trigger });
+  });
+{{- end}}
+{{- if .Has.Stop}}
+  pi.on("agent_settled", async (_event, ctx) => {
+    await dispatch("Stop", directory(ctx), base(ctx));
+  });
+{{- end}}
+}

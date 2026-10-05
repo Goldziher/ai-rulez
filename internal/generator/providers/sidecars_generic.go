@@ -9,6 +9,7 @@ import (
 	"github.com/Goldziher/ai-rulez/internal/config"
 	"github.com/Goldziher/ai-rulez/internal/generator/docmerge"
 	"github.com/Goldziher/ai-rulez/internal/generator/jsonmerge"
+	"github.com/Goldziher/ai-rulez/internal/generator/settings"
 	"github.com/samber/oops"
 )
 
@@ -62,6 +63,9 @@ func (s *SidecarSpec) ownedKeyPath(d mcpDialect) []string {
 // renderSidecarSpec renders one sidecar of the spec: a generic kind through its
 // format-agnostic renderer, a tool-specific kind through renderSidecar.
 func (g *Generator) renderSidecarSpec(sc *SidecarSpec, cfg *config.Config, outputPath string) (sidecarRender, error) {
+	if sc.Kind == SidecarHookPlugin {
+		return g.renderHookPlugin(sc, cfg, outputPath)
+	}
 	if isGenericSidecarKind(sc.Kind) {
 		return g.renderGenericSidecar(sc, cfg, outputPath)
 	}
@@ -71,18 +75,101 @@ func (g *Generator) renderSidecarSpec(sc *SidecarSpec, cfg *config.Config, outpu
 // renderGenericSidecar merges what ai-rulez owns into the document at outputPath,
 // whatever its format, leaving every other member alone.
 func (g *Generator) renderGenericSidecar(sc *SidecarSpec, cfg *config.Config, outputPath string) (sidecarRender, error) {
+	if sc.Kind == SidecarHooks && settings.HookDialectOwnsFile(sc.Dialect) {
+		// A hooks file of its own (Copilot's): written whole, never merged.
+		keys, ok, err := settings.OwnedHooksKeys(cfg, sc.Dialect)
+		if err != nil || !ok {
+			return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+		}
+		body, err := settings.RenderOwnedHooks(keys)
+		if err != nil {
+			return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+		}
+		return sidecarRender{Body: body, Owned: keys}, nil
+	}
+	owned, err := g.genericOwnedKeys(sc, cfg, outputPath)
+	if err != nil {
+		return sidecarRender{}, err
+	}
+	if len(owned) == 0 && (sc.Kind == SidecarHooks || sc.Kind == SidecarPermissions) {
+		return sidecarRender{}, nil // nothing applies: the user's file is not rewritten or registered
+	}
+	return mergeDocument(outputPath, sc.DocFormat(), owned)
+}
+
+// sharedSidecars returns the sidecars of the spec that merge into the document
+// the sidecar sc merges into (an MCP sidecar and a hooks sidecar of one settings
+// file), in spec order, those whose predicate does not hold left out. It is
+// just sc when the document is not shared.
+func (g *Generator) sharedSidecars(sc *SidecarSpec, cfg *config.Config) []*SidecarSpec {
+	if !isMergedGenericSidecar(sc) {
+		return []*SidecarSpec{sc}
+	}
+	var group []*SidecarSpec
+	for _, other := range g.Spec.Sidecars {
+		if other != nil && other.Path == sc.Path && isMergedGenericSidecar(other) &&
+			g.evalPredicate(other.EmitWhen, cfg) && (!other.UserOnly || cfg.UserScope) {
+			group = append(group, other)
+		}
+	}
+	return group
+}
+
+// sidecarIsMerged is SidecarIsMergedDocument for one sidecar: a hooks file the
+// harness loads next to others and ai-rulez writes whole (Copilot's) is not merged.
+func sidecarIsMerged(sc *SidecarSpec) bool {
+	return SidecarIsMergedDocument(sc.Kind) && !(sc.Kind == SidecarHooks && settings.HookDialectOwnsFile(sc.Dialect))
+}
+
+// isMergedGenericSidecar reports whether the sidecar merges into a shared document.
+func isMergedGenericSidecar(sc *SidecarSpec) bool {
+	return isGenericSidecarKind(sc.Kind) && sc.Kind != SidecarChecks &&
+		!(sc.Kind == SidecarHooks && settings.HookDialectOwnsFile(sc.Dialect))
+}
+
+// renderSidecarGroup merges the owned keys of several sidecars into their one
+// document: each merge starts from what is on disk, so rendering them one after
+// the other would keep only the last.
+func (g *Generator) renderSidecarGroup(group []*SidecarSpec, cfg *config.Config, outputPath string) (sidecarRender, error) {
+	var owned []jsonmerge.OwnedKey
+	for _, sc := range group {
+		if !sameDocFormat(sc.DocFormat(), group[0].DocFormat()) {
+			return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).
+				Errorf("sidecars %q and %q merge into %s with different formats", group[0].Kind, sc.Kind, sc.Path)
+		}
+		keys, err := g.genericOwnedKeys(sc, cfg, outputPath)
+		if err != nil {
+			return sidecarRender{}, err
+		}
+		owned = append(owned, keys...)
+	}
+	if len(owned) == 0 {
+		return sidecarRender{}, nil // nothing applies: the user's file is not rewritten or registered
+	}
+	return mergeDocument(outputPath, group[0].DocFormat(), owned)
+}
+
+// sameDocFormat reports whether two formats are one syntax: JSON and JSONC are
+// merged by the same engine, which keeps the comments of a document that has them.
+func sameDocFormat(a, b string) bool {
+	jsonLike := func(f string) bool { return f == DocFormatJSON || f == DocFormatJSONC }
+	return a == b || (jsonLike(a) && jsonLike(b))
+}
+
+// genericOwnedKeys is what a generic sidecar owns in the document at outputPath.
+func (g *Generator) genericOwnedKeys(sc *SidecarSpec, cfg *config.Config, outputPath string) ([]jsonmerge.OwnedKey, error) {
 	switch sc.Kind {
 	case SidecarMCP:
 		dialect, err := mcpDialectFor(sc.Dialect)
 		if err != nil {
-			return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+			return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
 		}
 		if dialect.arrayKey != "" {
 			key, err := arrayOwnedKey(sc, dialect, cfg, outputPath)
 			if err != nil {
-				return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+				return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
 			}
-			return mergeDocument(outputPath, sc.DocFormat(), []jsonmerge.OwnedKey{key})
+			return []jsonmerge.OwnedKey{key}, nil
 		}
 		// Elements that are project-relative globs mean nothing in the user scope.
 		elements := sc.Elements
@@ -97,20 +184,27 @@ func (g *Generator) renderGenericSidecar(sc *SidecarSpec, cfg *config.Config, ou
 		if elements != nil {
 			key, ok, err := elementsOwnedKey(sc, cfg, outputPath)
 			if err != nil {
-				return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+				return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
 			}
 			if ok {
 				owned = append(owned, key)
 			}
 		}
-		return mergeDocument(outputPath, sc.DocFormat(), owned)
-	case SidecarPermissions, SidecarHooks:
-		// Reserved: validated by the loader so specs can declare them, rendered
-		// once their owner lands.
-		return sidecarRender{}, oops.With("preset", g.Spec.Name, "path", sc.Path).
-			Errorf("sidecar kind %q is not yet supported", sc.Kind)
+		return owned, nil
+	case SidecarHooks:
+		keys, err := settings.HookKeys(cfg, sc.Dialect, outputPath)
+		if err != nil {
+			return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+		}
+		return keys, nil
+	case SidecarPermissions:
+		keys, err := settings.PermissionKeys(cfg, sc.Dialect, outputPath)
+		if err != nil {
+			return nil, oops.With("preset", g.Spec.Name, "path", sc.Path).Wrap(err)
+		}
+		return keys, nil
 	}
-	return sidecarRender{}, oops.Errorf("unknown generic sidecar kind %q", sc.Kind)
+	return nil, oops.Errorf("unknown generic sidecar kind %q", sc.Kind)
 }
 
 // mergeDocument merges owned keys into the document at outputPath, whatever its
@@ -132,7 +226,7 @@ func MergedSidecarDocs() []MergedSidecarDoc {
 	var docs []MergedSidecarDoc
 	for _, spec := range loadBuiltinSpecs() {
 		for _, sc := range spec.Sidecars {
-			if sc == nil || !SidecarIsMergedDocument(sc.Kind) || seen[sc.Path] {
+			if sc == nil || !sidecarIsMerged(sc) || seen[sc.Path] {
 				continue
 			}
 			seen[sc.Path] = true
@@ -149,4 +243,18 @@ func MergedSidecarDocs() []MergedSidecarDoc {
 	}
 	slices.SortFunc(docs, func(a, b MergedSidecarDoc) int { return strings.Compare(a.Path, b.Path) })
 	return docs
+}
+
+// sidecarMergeSource records what a generic sidecar's document was rendered from,
+// so that presets writing it with different keys are combined instead of
+// conflicting (see config.MergeSource). It is nil for a sidecar of another kind.
+func sidecarMergeSource(sc *SidecarSpec, outputPath string, rendered sidecarRender) *config.MergeSource {
+	if len(rendered.Owned) == 0 || !isGenericSidecarKind(sc.Kind) || sc.Kind == SidecarChecks {
+		return nil
+	}
+	format := sc.DocFormat()
+	if sc.Kind == SidecarHooks && settings.HookDialectOwnsFile(sc.Dialect) {
+		format = config.MergeFormatOwnedHooks
+	}
+	return &config.MergeSource{Path: outputPath, Format: format, Owned: rendered.Owned}
 }

@@ -1,0 +1,8 @@
+{
+  "allowedUrls": [
+    "example.com"
+  ],
+  "deniedUrls": [
+    "evil.com"
+  ]
+}

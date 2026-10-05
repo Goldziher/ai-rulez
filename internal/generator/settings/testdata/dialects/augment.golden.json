@@ -1,0 +1,31 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "^launch-process$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo guard",
+            "timeout": 10000
+          },
+          {
+            "type": "command",
+            "command": "audit --strict 'a b'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo done",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

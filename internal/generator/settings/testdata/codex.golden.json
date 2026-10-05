@@ -17,7 +17,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "\"$(git rev-parse --show-toplevel)\"/scripts/boot.sh --quick 'a b'",
+            "command": "\"$(git rev-parse --show-toplevel)\"/'scripts/boot.sh' --quick 'a b'",
             "timeout": 5,
             "statusMessage": "Booting"
           }

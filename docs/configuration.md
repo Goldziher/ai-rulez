@@ -226,7 +226,7 @@ filename = "{id}/SKILL.md"
 [[sidecars]]
 kind = "mcp_json"
 path = ".my-tool/mcp.json"
-emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries, has_mcp_servers_or_plugin_settings, has_resolved_effort_or_mcp_servers
+emit_when = "has_mcp_servers"   # also: always, has_plugins, has_resolved_effort, has_mcp_json_entries, has_mcp_servers_or_plugin_settings, has_resolved_effort_or_mcp_servers, has_hooks
 ```
 
 Built-in presets are written as plain strings (`presets = ["claude", "xum"]`);
@@ -250,6 +250,22 @@ These keys go under `[outputs.<kind>.frontmatter]`:
 An `mcp` sidecar takes `transports` (`["stdio"]` leaves remote servers out), `env_ref_syntax` (`"dollar"` or
 `"env_prefix"`: a value that came from a `${VAR}` placeholder is written as `$VAR` or `${env:VAR}` instead of the
 resolved secret), and `elements.project_only` (the elements are project-relative and skipped in the user scope).
+
+A `hooks` sidecar renders the top-level `[[hooks]]` into the tool's own hooks file. Its `dialect` names the
+harness whose hook format is used (`claude`, `qwen`, `factory`, `kiro`, `vibe`, ...; the harnesses and what
+each writes are in [Hooks and permissions](settings.md)), which fixes the key and the layout, so a hooks
+sidecar takes no `key`; it is emitted when `[[hooks]]` are declared (`emit_when = "has_hooks"`):
+
+```toml
+[[sidecars]]
+kind = "hooks"
+dialect = "qwen"
+path = ".qwen/settings.json"
+global_path = ".qwen/settings.json"
+```
+
+Sidecars that name one `path` (an `mcp` and a `hooks` sidecar of one settings file) are merged into a single
+document, so neither replaces the other.
 
 ##### Split rule files in a provider spec
 
@@ -746,10 +762,10 @@ project_doc_max_bytes = 65536
 
 ### `hooks` and `permissions`
 
-Top-level `[[hooks]]` (lifecycle hooks for `claude`, `codex`, `cursor`, `gemini` and `copilot`) and
-`[permissions]` (`allow`, `ask`, `deny` rules for `claude`) are rendered into each harness's native
-settings file outside any plugin, merged key by key so hand-authored content survives. See
-[Hooks and permissions](settings.md).
+Top-level `[[hooks]]` (lifecycle hooks for `claude`, `codex`, `cursor`, `gemini`, `copilot` and some thirty more harnesses; `settings.md` lists them) and
+`[permissions]` (`allow`, `ask`, `deny` rules, translated for every harness with a native permission
+surface) are rendered into each harness's native settings file outside any plugin, merged key by key so
+hand-authored content survives. See [Hooks and permissions](settings.md) and [Permissions](permissions.md).
 
 ### `builtins`
 

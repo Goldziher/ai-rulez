@@ -1,0 +1,9 @@
+hooks:
+  on_session_start:
+    - command: '''/home/u/.ai-rulez/scripts/boot.sh'''
+  pre_tool_call:
+    - command: echo guard
+      matcher: terminal
+      timeout: 10
+    - command: audit --strict 'a b'
+      matcher: terminal

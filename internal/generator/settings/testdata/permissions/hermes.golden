@@ -1,0 +1,9 @@
+approvals:
+  deny:
+    - rm -rf
+    - rm -rf *
+    - curl * | sh
+command_allowlist:
+  - npm run test
+  - npm run test *
+  - git status

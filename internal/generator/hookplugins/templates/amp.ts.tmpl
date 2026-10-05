@@ -1,0 +1,54 @@
+{{template "header" . }}
+// @ts-nocheck
+{{template "runtime" . }}
+
+export default function (amp: any) {
+  const dir = process.cwd();
+{{- if .Has.SessionStart}}
+  amp.on("session.start", async (event) => {
+    await dispatch("SessionStart", dir, { session_id: event.thread?.id, source: "startup" }, { subject: "startup" });
+  });
+{{- end}}
+{{- if .Has.UserPromptSubmit}}
+  amp.on("agent.start", async (event) => {
+    await dispatch("UserPromptSubmit", dir, { session_id: event.thread?.id, prompt: event.message });
+  });
+{{- end}}
+{{- if .Has.PreToolUse}}
+  amp.on("tool.call", async (event) => {
+    const reason = await dispatch(
+      "PreToolUse",
+      dir,
+      { session_id: event.thread?.id, tool_use_id: event.toolUseID, tool_input: event.input },
+      { tool: event.tool },
+    );
+    if (reason !== null) return { action: "reject-and-continue", message: reason };
+    // Amp's plugin API requires a result from a tool.call handler (documented in
+    // https://ampcode.com/manual/plugin-api: "For request events (e.g., tool.call), the handler must
+    // return a result"), and "allow" is the only one that neither rejects nor rewrites the call. It
+    // runs the tool with its original input; Amp documents no way to defer to its permission rules.
+    return { action: "allow" };
+  });
+{{- end}}
+{{- if or .Has.PostToolUse .Has.PostToolUseFailure}}
+  amp.on("tool.result", async (event) => {
+    const fields = {
+      session_id: event.thread?.id,
+      tool_use_id: event.toolUseID,
+      tool_input: event.input,
+      tool_response: { status: event.status, output: event.output, error: event.error },
+    };
+{{- if .Has.PostToolUse}}
+    if (event.status === "done") await dispatch("PostToolUse", dir, fields, { tool: event.tool });
+{{- end}}
+{{- if .Has.PostToolUseFailure}}
+    if (event.status === "error") await dispatch("PostToolUseFailure", dir, fields, { tool: event.tool });
+{{- end}}
+  });
+{{- end}}
+{{- if .Has.Stop}}
+  amp.on("agent.end", async (event) => {
+    await dispatch("Stop", dir, { session_id: event.thread?.id });
+  });
+{{- end}}
+}

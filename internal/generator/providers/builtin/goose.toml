@@ -64,6 +64,15 @@ transports = ["stdio"]
 emit_when = "has_mcp_servers"
 
 # User-scope layout: hints live in ~/.config/goose, skills in the shared ~/.agents.
+# Hooks: top-level [[hooks]] rendered in goose's native format, read from the
+# vendor documentation (see docs/settings.md). goose discovers hooks/hooks.json of a plugin directory.
+[[sidecars]]
+kind = "hooks"
+dialect = "goose"
+path = ".agents/plugins/ai-rulez/hooks/hooks.json"
+format = "json"
+global_path = ".agents/plugins/ai-rulez/hooks/hooks.json"
+
 [global]
 root_file = ".config/goose/.goosehints"
 skills_dir = ".agents/skills"

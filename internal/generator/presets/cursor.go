@@ -192,6 +192,12 @@ func (g *CursorPresetGenerator) Generate(content *config.ContentTree, baseDir st
 		})
 	}
 
+	permissionOutputs, err := g.permissionsOutputs(cfg, baseDir)
+	if err != nil {
+		return nil, fmt.Errorf("render cursor permissions: %w", err)
+	}
+	outputs = append(outputs, permissionOutputs...)
+
 	hookOutputs, err := g.hooksOutputs(cfg, baseDir)
 	if err != nil {
 		return nil, err

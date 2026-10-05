@@ -121,6 +121,8 @@ var expectedUserFiles = []string{
 	".codex/hooks.json",
 	".config/opencode/AGENTS.md",
 	".config/opencode/agents/helper.md",
+	".config/opencode/opencode.json",
+	".config/opencode/plugins/ai-rulez-hooks.js",
 	".config/opencode/skills/my-skill/SKILL.md",
 	".copilot/agents/helper.agent.md",
 	".copilot/copilot-instructions.md",
@@ -134,6 +136,7 @@ var expectedUserFiles = []string{
 	".gemini/settings.json",
 	".pi/agent/AGENTS.md",
 	".pi/agent/agents/helper.md",
+	".pi/agent/extensions/ai-rulez-hooks.ts",
 	".pi/agent/skills/my-skill/SKILL.md",
 }
 
