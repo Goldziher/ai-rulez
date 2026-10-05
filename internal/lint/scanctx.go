@@ -89,7 +89,10 @@ func newScanText(r *runner, abs, raw string) *scanText {
 				if run[0] != '`' || !strings.Contains(info, "`") {
 					open = run
 					block++
-					lang = strings.ToLower(strings.Fields(info + " ")[0])
+					lang = ""
+					if f := strings.Fields(info); len(f) > 0 {
+						lang = strings.ToLower(f[0])
+					}
 					openNeg = negRe.MatchString(info) || negRe.MatchString(prev[0]) || negRe.MatchString(prev[1])
 					l.Fenced, l.Lang, l.Block, l.Neg = true, lang, block, openNeg
 					t.lines = append(t.lines, l)
