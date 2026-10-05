@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 	"time"
 
@@ -65,6 +66,9 @@ func evalProject(t *testing.T) string {
 
 func writeRunnerScript(t *testing.T, reply string) string {
 	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("the runner is a POSIX shell script")
+	}
 	path := filepath.Join(t.TempDir(), "runner.sh")
 	require.NoError(t, os.WriteFile(path, []byte("#!/bin/sh\ncat >/dev/null\nprintf '%s' '"+reply+"'\n"), 0o700))
 	return path

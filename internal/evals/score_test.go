@@ -3,6 +3,7 @@ package evals
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -171,6 +172,9 @@ func TestGradeOutcome_Assertions(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			if runtime.GOOS == "windows" && tt.a.Type == AssertCommandExit {
+				t.Skip("command_exit cases use POSIX shell builtins")
+			}
 			c := &Case{ID: "x", Assertions: []Assertion{tt.a}}
 			grade := GradeOutcome(c, r, tt.opts)
 			assert.Equal(t, tt.passes, grade.Passed, grade.Failures)
